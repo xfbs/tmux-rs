@@ -19,6 +19,9 @@
 #ifndef XMALLOC_H
 #define XMALLOC_H
 
+#include <stdarg.h>
+#include <stddef.h>
+
 #if !defined(__bounded__)
 #define __bounded__(x, y, z)
 #endif

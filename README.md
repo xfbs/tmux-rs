@@ -1,0 +1,2 @@
+- [X] log
+- [ ] xmalloc

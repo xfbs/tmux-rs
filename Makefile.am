@@ -158,7 +158,6 @@ dist_tmux_SOURCES = \
 	layout-custom.c \
 	layout-set.c \
 	layout.c \
-	log.c \
 	menu.c \
 	mode-tree.c \
 	names.c \
@@ -198,7 +197,6 @@ dist_tmux_SOURCES = \
 	window-customize.c \
 	window-tree.c \
 	window.c \
-	xmalloc.c \
 	xmalloc.h
 nodist_tmux_SOURCES = osdep-@PLATFORM@.c
 
