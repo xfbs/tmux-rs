@@ -1,2 +1,4 @@
 - [X] log
 - [ ] xmalloc
+  - [ ] reacallocarray
+- [ ] compat

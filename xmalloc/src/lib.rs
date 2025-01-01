@@ -2,6 +2,7 @@
 #![allow(unused_variables)]
 #![allow(clippy::missing_safety_doc)]
 use core::ffi::{VaList, c_char, c_int, c_void};
+use core::ptr::NonNull;
 
 use libc::{__errno_location, calloc, malloc, reallocarray, strdup, strerror, strndup};
 
@@ -12,69 +13,67 @@ unsafe extern "C" {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn xmalloc(size: usize) -> *mut c_void {
+pub extern "C" fn xmalloc(size: usize) -> NonNull<c_void> {
     unsafe {
         if size == 0 {
             fatalx(c"xmalloc: zero size".as_ptr());
         }
 
-        let ptr = malloc(size);
-        if ptr.is_null() {
-            fatalx(
+        match NonNull::new(malloc(size)) {
+            None => fatalx(
                 c"xmalloc: allocating %zu bytes: %s".as_ptr(),
                 size,
                 strerror(*__errno_location()),
-            );
+            ),
+            Some(ptr) => ptr,
         }
-
-        ptr
     }
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn xcalloc(nmemb: usize, size: usize) -> *mut c_void {
+pub extern "C" fn xcalloc(nmemb: usize, size: usize) -> NonNull<c_void> {
     unsafe {
         if size == 0 || nmemb == 0 {
             fatalx(c"xcalloc: zero size".as_ptr());
         }
 
-        let ptr = calloc(nmemb, size);
-        if ptr.is_null() {
-            fatalx(
+        match NonNull::new(calloc(nmemb, size)) {
+            None => fatalx(
                 c"xcalloc: allocating %zu * %zu bytes: %s".as_ptr(),
                 nmemb,
                 size,
                 strerror(*__errno_location()),
-            );
+            ),
+            Some(ptr) => ptr,
         }
-
-        ptr
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn xrealloc(ptr: *mut c_void, size: usize) -> *mut c_void {
+pub unsafe extern "C" fn xrealloc(ptr: *mut c_void, size: usize) -> NonNull<c_void> {
     unsafe { xreallocarray(ptr, 1, size) }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn xreallocarray(ptr: *mut c_void, nmemb: usize, size: usize) -> *mut c_void {
+pub unsafe extern "C" fn xreallocarray(
+    ptr: *mut c_void,
+    nmemb: usize,
+    size: usize,
+) -> NonNull<c_void> {
     unsafe {
         if nmemb == 0 || size == 0 {
             fatalx(c"xreallocarray: zero size".as_ptr());
         }
 
-        let new_ptr = reallocarray(ptr, nmemb, size);
-        if new_ptr.is_null() {
-            fatalx(
+        match NonNull::new(reallocarray(ptr, nmemb, size)) {
+            None => fatalx(
                 c"xreallocarray: allocating %zu * %zu bytes: %s".as_ptr(),
                 nmemb,
                 size,
                 strerror(*__errno_location()),
-            );
+            ),
+            Some(new_ptr) => new_ptr,
         }
-
-        new_ptr
     }
 }
 
@@ -108,28 +107,22 @@ pub unsafe extern "C" fn xrecallocarray(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn xstrdup(str: *const c_char) -> *mut c_char {
+pub unsafe extern "C" fn xstrdup(str: *const c_char) -> NonNull<c_char> {
     unsafe {
-        let cp = strdup(str);
-
-        if cp.is_null() {
-            fatalx(c"xstrdup: %s".as_ptr(), strerror(*__errno_location()));
+        match NonNull::new(strdup(str)) {
+            Some(cp) => cp,
+            None => fatalx(c"xstrdup: %s".as_ptr(), strerror(*__errno_location())),
         }
-
-        cp
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn xstrndup(str: *const c_char, maxlen: usize) -> *mut c_char {
+pub unsafe extern "C" fn xstrndup(str: *const c_char, maxlen: usize) -> NonNull<c_char> {
     unsafe {
-        let cp = strndup(str, maxlen);
-
-        if cp.is_null() {
-            fatalx(c"xstrndup: %s".as_ptr(), strerror(*__errno_location()));
+        match NonNull::new(strndup(str, maxlen)) {
+            Some(cp) => cp,
+            None => fatalx(c"xstrndup: %s".as_ptr(), strerror(*__errno_location())),
         }
-
-        cp
     }
 }
 
