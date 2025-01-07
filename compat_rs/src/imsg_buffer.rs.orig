@@ -1,0 +1,825 @@
+use ::libc;
+extern "C" {
+    fn sendmsg(__fd: libc::c_int, __message: *const msghdr, __flags: libc::c_int) -> ssize_t;
+    fn writev(__fd: libc::c_int, __iovec: *const iovec, __count: libc::c_int) -> ssize_t;
+    fn __errno_location() -> *mut libc::c_int;
+    fn calloc(_: libc::c_ulong, _: libc::c_ulong) -> *mut libc::c_void;
+    fn free(_: *mut libc::c_void);
+    fn abort() -> !;
+    fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: libc::c_ulong) -> *mut libc::c_void;
+    fn memset(_: *mut libc::c_void, _: libc::c_int, _: libc::c_ulong) -> *mut libc::c_void;
+    fn close(__fd: libc::c_int) -> libc::c_int;
+    fn recallocarray(_: *mut libc::c_void, _: size_t, _: size_t, _: size_t) -> *mut libc::c_void;
+    fn htonll(_: uint64_t) -> uint64_t;
+    fn ntohll(_: uint64_t) -> uint64_t;
+    fn freezero(_: *mut libc::c_void, _: size_t);
+}
+pub type __uint8_t = libc::c_uchar;
+pub type __uint16_t = libc::c_ushort;
+pub type __uint32_t = libc::c_uint;
+pub type __uint64_t = libc::c_ulong;
+pub type __ssize_t = libc::c_long;
+pub type __caddr_t = *mut libc::c_char;
+pub type __socklen_t = libc::c_uint;
+pub type ssize_t = __ssize_t;
+pub type caddr_t = __caddr_t;
+pub type size_t = usize;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct iovec {
+    pub iov_base: *mut libc::c_void,
+    pub iov_len: size_t,
+}
+pub type socklen_t = __socklen_t;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct msghdr {
+    pub msg_name: *mut libc::c_void,
+    pub msg_namelen: socklen_t,
+    pub msg_iov: *mut iovec,
+    pub msg_iovlen: size_t,
+    pub msg_control: *mut libc::c_void,
+    pub msg_controllen: size_t,
+    pub msg_flags: libc::c_int,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct cmsghdr {
+    pub cmsg_len: size_t,
+    pub cmsg_level: libc::c_int,
+    pub cmsg_type: libc::c_int,
+    pub __cmsg_data: [libc::c_uchar; 0],
+}
+pub type C2RustUnnamed = libc::c_uint;
+pub const SCM_CREDENTIALS: C2RustUnnamed = 2;
+pub const SCM_RIGHTS: C2RustUnnamed = 1;
+pub type uint32_t = __uint32_t;
+pub type uint16_t = __uint16_t;
+pub type uint8_t = __uint8_t;
+pub type uint64_t = __uint64_t;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct ibuf {
+    pub entry: C2RustUnnamed_0,
+    pub buf: *mut libc::c_uchar,
+    pub size: size_t,
+    pub max: size_t,
+    pub wpos: size_t,
+    pub rpos: size_t,
+    pub fd: libc::c_int,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2RustUnnamed_0 {
+    pub tqe_next: *mut ibuf,
+    pub tqe_prev: *mut *mut ibuf,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct msgbuf {
+    pub bufs: C2RustUnnamed_1,
+    pub queued: uint32_t,
+    pub fd: libc::c_int,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2RustUnnamed_1 {
+    pub tqh_first: *mut ibuf,
+    pub tqh_last: *mut *mut ibuf,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2RustUnnamed_2 {
+    pub hdr: cmsghdr,
+    pub buf: [libc::c_char; 24],
+}
+#[inline]
+unsafe extern "C" fn __bswap_16(mut __bsx: __uint16_t) -> __uint16_t {
+    return (__bsx as libc::c_int >> 8 as libc::c_int & 0xff as libc::c_int
+        | (__bsx as libc::c_int & 0xff as libc::c_int) << 8 as libc::c_int) as __uint16_t;
+}
+#[inline]
+unsafe extern "C" fn __bswap_32(mut __bsx: __uint32_t) -> __uint32_t {
+    return (__bsx & 0xff000000 as libc::c_uint) >> 24 as libc::c_int
+        | (__bsx & 0xff0000 as libc::c_uint) >> 8 as libc::c_int
+        | (__bsx & 0xff00 as libc::c_uint) << 8 as libc::c_int
+        | (__bsx & 0xff as libc::c_uint) << 24 as libc::c_int;
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_open(mut len: size_t) -> *mut ibuf {
+    let mut buf: *mut ibuf = 0 as *mut ibuf;
+    if len == 0 as libc::c_int as libc::c_ulong {
+        *__errno_location() = 22 as libc::c_int;
+        return 0 as *mut ibuf;
+    }
+    buf = calloc(
+        1 as libc::c_int as libc::c_ulong,
+        ::core::mem::size_of::<ibuf>() as libc::c_ulong,
+    ) as *mut ibuf;
+    if buf.is_null() {
+        return 0 as *mut ibuf;
+    }
+    (*buf).buf = calloc(len, 1 as libc::c_int as libc::c_ulong) as *mut libc::c_uchar;
+    if ((*buf).buf).is_null() {
+        free(buf as *mut libc::c_void);
+        return 0 as *mut ibuf;
+    }
+    (*buf).max = len;
+    (*buf).size = (*buf).max;
+    (*buf).fd = -(1 as libc::c_int);
+    return buf;
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_dynamic(mut len: size_t, mut max: size_t) -> *mut ibuf {
+    let mut buf: *mut ibuf = 0 as *mut ibuf;
+    if max == 0 as libc::c_int as libc::c_ulong || max < len {
+        *__errno_location() = 22 as libc::c_int;
+        return 0 as *mut ibuf;
+    }
+    buf = calloc(
+        1 as libc::c_int as libc::c_ulong,
+        ::core::mem::size_of::<ibuf>() as libc::c_ulong,
+    ) as *mut ibuf;
+    if buf.is_null() {
+        return 0 as *mut ibuf;
+    }
+    if len > 0 as libc::c_int as libc::c_ulong {
+        (*buf).buf = calloc(len, 1 as libc::c_int as libc::c_ulong) as *mut libc::c_uchar;
+        if ((*buf).buf).is_null() {
+            free(buf as *mut libc::c_void);
+            return 0 as *mut ibuf;
+        }
+    }
+    (*buf).size = len;
+    (*buf).max = max;
+    (*buf).fd = -(1 as libc::c_int);
+    return buf;
+}
+unsafe extern "C" fn ibuf_realloc(mut buf: *mut ibuf, mut len: size_t) -> libc::c_int {
+    let mut b: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
+    if len > (18446744073709551615 as libc::c_ulong).wrapping_sub((*buf).wpos)
+        || ((*buf).wpos).wrapping_add(len) > (*buf).max
+    {
+        *__errno_location() = 34 as libc::c_int;
+        return -(1 as libc::c_int);
+    }
+    b = recallocarray(
+        (*buf).buf as *mut libc::c_void,
+        (*buf).size,
+        ((*buf).wpos).wrapping_add(len),
+        1 as libc::c_int as size_t,
+    ) as *mut libc::c_uchar;
+    if b.is_null() {
+        return -(1 as libc::c_int);
+    }
+    (*buf).buf = b;
+    (*buf).size = ((*buf).wpos).wrapping_add(len);
+    return 0 as libc::c_int;
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_reserve(mut buf: *mut ibuf, mut len: size_t) -> *mut libc::c_void {
+    let mut b: *mut libc::c_void = 0 as *mut libc::c_void;
+    if len > (18446744073709551615 as libc::c_ulong).wrapping_sub((*buf).wpos)
+        || (*buf).max == 0 as libc::c_int as libc::c_ulong
+    {
+        *__errno_location() = 34 as libc::c_int;
+        return 0 as *mut libc::c_void;
+    }
+    if ((*buf).wpos).wrapping_add(len) > (*buf).size {
+        if ibuf_realloc(buf, len) == -(1 as libc::c_int) {
+            return 0 as *mut libc::c_void;
+        }
+    }
+    b = ((*buf).buf).offset((*buf).wpos as isize) as *mut libc::c_void;
+    (*buf).wpos = ((*buf).wpos as libc::c_ulong).wrapping_add(len) as size_t as size_t;
+    return b;
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_add(mut buf: *mut ibuf, mut data: *const libc::c_void, mut len: size_t) -> libc::c_int {
+    let mut b: *mut libc::c_void = 0 as *mut libc::c_void;
+    b = ibuf_reserve(buf, len);
+    if b.is_null() {
+        return -(1 as libc::c_int);
+    }
+    memcpy(b, data, len);
+    return 0 as libc::c_int;
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_add_ibuf(mut buf: *mut ibuf, mut from: *const ibuf) -> libc::c_int {
+    return ibuf_add(buf, ibuf_data(from), ibuf_size(from));
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_add_buf(mut buf: *mut ibuf, mut from: *const ibuf) -> libc::c_int {
+    return ibuf_add_ibuf(buf, from);
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_add_n8(mut buf: *mut ibuf, mut value: uint64_t) -> libc::c_int {
+    let mut v: uint8_t = 0;
+    if value > 255 as libc::c_int as libc::c_ulong {
+        *__errno_location() = 22 as libc::c_int;
+        return -(1 as libc::c_int);
+    }
+    v = value as uint8_t;
+    return ibuf_add(
+        buf,
+        &mut v as *mut uint8_t as *const libc::c_void,
+        ::core::mem::size_of::<uint8_t>() as libc::c_ulong,
+    );
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_add_n16(mut buf: *mut ibuf, mut value: uint64_t) -> libc::c_int {
+    let mut v: uint16_t = 0;
+    if value > 65535 as libc::c_int as libc::c_ulong {
+        *__errno_location() = 22 as libc::c_int;
+        return -(1 as libc::c_int);
+    }
+    v = __bswap_16(value as __uint16_t);
+    return ibuf_add(
+        buf,
+        &mut v as *mut uint16_t as *const libc::c_void,
+        ::core::mem::size_of::<uint16_t>() as libc::c_ulong,
+    );
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_add_n32(mut buf: *mut ibuf, mut value: uint64_t) -> libc::c_int {
+    let mut v: uint32_t = 0;
+    if value > 4294967295 as libc::c_uint as libc::c_ulong {
+        *__errno_location() = 22 as libc::c_int;
+        return -(1 as libc::c_int);
+    }
+    v = __bswap_32(value as __uint32_t);
+    return ibuf_add(
+        buf,
+        &mut v as *mut uint32_t as *const libc::c_void,
+        ::core::mem::size_of::<uint32_t>() as libc::c_ulong,
+    );
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_add_n64(mut buf: *mut ibuf, mut value: uint64_t) -> libc::c_int {
+    value = htonll(value);
+    return ibuf_add(
+        buf,
+        &mut value as *mut uint64_t as *const libc::c_void,
+        ::core::mem::size_of::<uint64_t>() as libc::c_ulong,
+    );
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_add_h16(mut buf: *mut ibuf, mut value: uint64_t) -> libc::c_int {
+    let mut v: uint16_t = 0;
+    if value > 65535 as libc::c_int as libc::c_ulong {
+        *__errno_location() = 22 as libc::c_int;
+        return -(1 as libc::c_int);
+    }
+    v = value as uint16_t;
+    return ibuf_add(
+        buf,
+        &mut v as *mut uint16_t as *const libc::c_void,
+        ::core::mem::size_of::<uint16_t>() as libc::c_ulong,
+    );
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_add_h32(mut buf: *mut ibuf, mut value: uint64_t) -> libc::c_int {
+    let mut v: uint32_t = 0;
+    if value > 4294967295 as libc::c_uint as libc::c_ulong {
+        *__errno_location() = 22 as libc::c_int;
+        return -(1 as libc::c_int);
+    }
+    v = value as uint32_t;
+    return ibuf_add(
+        buf,
+        &mut v as *mut uint32_t as *const libc::c_void,
+        ::core::mem::size_of::<uint32_t>() as libc::c_ulong,
+    );
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_add_h64(mut buf: *mut ibuf, mut value: uint64_t) -> libc::c_int {
+    return ibuf_add(
+        buf,
+        &mut value as *mut uint64_t as *const libc::c_void,
+        ::core::mem::size_of::<uint64_t>() as libc::c_ulong,
+    );
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_add_zero(mut buf: *mut ibuf, mut len: size_t) -> libc::c_int {
+    let mut b: *mut libc::c_void = 0 as *mut libc::c_void;
+    b = ibuf_reserve(buf, len);
+    if b.is_null() {
+        return -(1 as libc::c_int);
+    }
+    memset(b, 0 as libc::c_int, len);
+    return 0 as libc::c_int;
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_seek(mut buf: *mut ibuf, mut pos: size_t, mut len: size_t) -> *mut libc::c_void {
+    if ibuf_size(buf) < pos
+        || (18446744073709551615 as libc::c_ulong).wrapping_sub(pos) < len
+        || ibuf_size(buf) < pos.wrapping_add(len)
+    {
+        *__errno_location() = 34 as libc::c_int;
+        return 0 as *mut libc::c_void;
+    }
+    return ((*buf).buf).offset((*buf).rpos as isize).offset(pos as isize) as *mut libc::c_void;
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_set(
+    mut buf: *mut ibuf,
+    mut pos: size_t,
+    mut data: *const libc::c_void,
+    mut len: size_t,
+) -> libc::c_int {
+    let mut b: *mut libc::c_void = 0 as *mut libc::c_void;
+    b = ibuf_seek(buf, pos, len);
+    if b.is_null() {
+        return -(1 as libc::c_int);
+    }
+    memcpy(b, data, len);
+    return 0 as libc::c_int;
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_set_n8(mut buf: *mut ibuf, mut pos: size_t, mut value: uint64_t) -> libc::c_int {
+    let mut v: uint8_t = 0;
+    if value > 255 as libc::c_int as libc::c_ulong {
+        *__errno_location() = 22 as libc::c_int;
+        return -(1 as libc::c_int);
+    }
+    v = value as uint8_t;
+    return ibuf_set(
+        buf,
+        pos,
+        &mut v as *mut uint8_t as *const libc::c_void,
+        ::core::mem::size_of::<uint8_t>() as libc::c_ulong,
+    );
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_set_n16(mut buf: *mut ibuf, mut pos: size_t, mut value: uint64_t) -> libc::c_int {
+    let mut v: uint16_t = 0;
+    if value > 65535 as libc::c_int as libc::c_ulong {
+        *__errno_location() = 22 as libc::c_int;
+        return -(1 as libc::c_int);
+    }
+    v = __bswap_16(value as __uint16_t);
+    return ibuf_set(
+        buf,
+        pos,
+        &mut v as *mut uint16_t as *const libc::c_void,
+        ::core::mem::size_of::<uint16_t>() as libc::c_ulong,
+    );
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_set_n32(mut buf: *mut ibuf, mut pos: size_t, mut value: uint64_t) -> libc::c_int {
+    let mut v: uint32_t = 0;
+    if value > 4294967295 as libc::c_uint as libc::c_ulong {
+        *__errno_location() = 22 as libc::c_int;
+        return -(1 as libc::c_int);
+    }
+    v = __bswap_32(value as __uint32_t);
+    return ibuf_set(
+        buf,
+        pos,
+        &mut v as *mut uint32_t as *const libc::c_void,
+        ::core::mem::size_of::<uint32_t>() as libc::c_ulong,
+    );
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_set_n64(mut buf: *mut ibuf, mut pos: size_t, mut value: uint64_t) -> libc::c_int {
+    value = htonll(value);
+    return ibuf_set(
+        buf,
+        pos,
+        &mut value as *mut uint64_t as *const libc::c_void,
+        ::core::mem::size_of::<uint64_t>() as libc::c_ulong,
+    );
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_set_h16(mut buf: *mut ibuf, mut pos: size_t, mut value: uint64_t) -> libc::c_int {
+    let mut v: uint16_t = 0;
+    if value > 65535 as libc::c_int as libc::c_ulong {
+        *__errno_location() = 22 as libc::c_int;
+        return -(1 as libc::c_int);
+    }
+    v = value as uint16_t;
+    return ibuf_set(
+        buf,
+        pos,
+        &mut v as *mut uint16_t as *const libc::c_void,
+        ::core::mem::size_of::<uint16_t>() as libc::c_ulong,
+    );
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_set_h32(mut buf: *mut ibuf, mut pos: size_t, mut value: uint64_t) -> libc::c_int {
+    let mut v: uint32_t = 0;
+    if value > 4294967295 as libc::c_uint as libc::c_ulong {
+        *__errno_location() = 22 as libc::c_int;
+        return -(1 as libc::c_int);
+    }
+    v = value as uint32_t;
+    return ibuf_set(
+        buf,
+        pos,
+        &mut v as *mut uint32_t as *const libc::c_void,
+        ::core::mem::size_of::<uint32_t>() as libc::c_ulong,
+    );
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_set_h64(mut buf: *mut ibuf, mut pos: size_t, mut value: uint64_t) -> libc::c_int {
+    return ibuf_set(
+        buf,
+        pos,
+        &mut value as *mut uint64_t as *const libc::c_void,
+        ::core::mem::size_of::<uint64_t>() as libc::c_ulong,
+    );
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_data(mut buf: *const ibuf) -> *mut libc::c_void {
+    return ((*buf).buf).offset((*buf).rpos as isize) as *mut libc::c_void;
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_size(mut buf: *const ibuf) -> size_t {
+    return ((*buf).wpos).wrapping_sub((*buf).rpos);
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_left(mut buf: *const ibuf) -> size_t {
+    if (*buf).max == 0 as libc::c_int as libc::c_ulong {
+        return 0 as libc::c_int as size_t;
+    }
+    return ((*buf).max).wrapping_sub((*buf).wpos);
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_truncate(mut buf: *mut ibuf, mut len: size_t) -> libc::c_int {
+    if ibuf_size(buf) >= len {
+        (*buf).wpos = ((*buf).rpos).wrapping_add(len);
+        return 0 as libc::c_int;
+    }
+    if (*buf).max == 0 as libc::c_int as libc::c_ulong {
+        *__errno_location() = 34 as libc::c_int;
+        return -(1 as libc::c_int);
+    }
+    return ibuf_add_zero(buf, len.wrapping_sub(ibuf_size(buf)));
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_rewind(mut buf: *mut ibuf) {
+    (*buf).rpos = 0 as libc::c_int as size_t;
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_close(mut msgbuf: *mut msgbuf, mut buf: *mut ibuf) {
+    ibuf_enqueue(msgbuf, buf);
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_from_buffer(mut buf: *mut ibuf, mut data: *mut libc::c_void, mut len: size_t) {
+    memset(
+        buf as *mut libc::c_void,
+        0 as libc::c_int,
+        ::core::mem::size_of::<ibuf>() as libc::c_ulong,
+    );
+    (*buf).buf = data as *mut libc::c_uchar;
+    (*buf).wpos = len;
+    (*buf).size = (*buf).wpos;
+    (*buf).fd = -(1 as libc::c_int);
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_from_ibuf(mut buf: *mut ibuf, mut from: *const ibuf) {
+    ibuf_from_buffer(buf, ibuf_data(from), ibuf_size(from));
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_get(mut buf: *mut ibuf, mut data: *mut libc::c_void, mut len: size_t) -> libc::c_int {
+    if ibuf_size(buf) < len {
+        *__errno_location() = 74 as libc::c_int;
+        return -(1 as libc::c_int);
+    }
+    memcpy(data, ibuf_data(buf), len);
+    (*buf).rpos = ((*buf).rpos as libc::c_ulong).wrapping_add(len) as size_t as size_t;
+    return 0 as libc::c_int;
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_get_ibuf(mut buf: *mut ibuf, mut len: size_t, mut new: *mut ibuf) -> libc::c_int {
+    if ibuf_size(buf) < len {
+        *__errno_location() = 74 as libc::c_int;
+        return -(1 as libc::c_int);
+    }
+    ibuf_from_buffer(new, ibuf_data(buf), len);
+    (*buf).rpos = ((*buf).rpos as libc::c_ulong).wrapping_add(len) as size_t as size_t;
+    return 0 as libc::c_int;
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_get_n8(mut buf: *mut ibuf, mut value: *mut uint8_t) -> libc::c_int {
+    return ibuf_get(
+        buf,
+        value as *mut libc::c_void,
+        ::core::mem::size_of::<uint8_t>() as libc::c_ulong,
+    );
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_get_n16(mut buf: *mut ibuf, mut value: *mut uint16_t) -> libc::c_int {
+    let mut rv: libc::c_int = 0;
+    rv = ibuf_get(
+        buf,
+        value as *mut libc::c_void,
+        ::core::mem::size_of::<uint16_t>() as libc::c_ulong,
+    );
+    *value = __bswap_16(*value);
+    return rv;
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_get_n32(mut buf: *mut ibuf, mut value: *mut uint32_t) -> libc::c_int {
+    let mut rv: libc::c_int = 0;
+    rv = ibuf_get(
+        buf,
+        value as *mut libc::c_void,
+        ::core::mem::size_of::<uint32_t>() as libc::c_ulong,
+    );
+    *value = __bswap_32(*value);
+    return rv;
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_get_n64(mut buf: *mut ibuf, mut value: *mut uint64_t) -> libc::c_int {
+    let mut rv: libc::c_int = 0;
+    rv = ibuf_get(
+        buf,
+        value as *mut libc::c_void,
+        ::core::mem::size_of::<uint64_t>() as libc::c_ulong,
+    );
+    *value = ntohll(*value);
+    return rv;
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_get_h16(mut buf: *mut ibuf, mut value: *mut uint16_t) -> libc::c_int {
+    return ibuf_get(
+        buf,
+        value as *mut libc::c_void,
+        ::core::mem::size_of::<uint16_t>() as libc::c_ulong,
+    );
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_get_h32(mut buf: *mut ibuf, mut value: *mut uint32_t) -> libc::c_int {
+    return ibuf_get(
+        buf,
+        value as *mut libc::c_void,
+        ::core::mem::size_of::<uint32_t>() as libc::c_ulong,
+    );
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_get_h64(mut buf: *mut ibuf, mut value: *mut uint64_t) -> libc::c_int {
+    return ibuf_get(
+        buf,
+        value as *mut libc::c_void,
+        ::core::mem::size_of::<uint64_t>() as libc::c_ulong,
+    );
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_skip(mut buf: *mut ibuf, mut len: size_t) -> libc::c_int {
+    if ibuf_size(buf) < len {
+        *__errno_location() = 74 as libc::c_int;
+        return -(1 as libc::c_int);
+    }
+    (*buf).rpos = ((*buf).rpos as libc::c_ulong).wrapping_add(len) as size_t as size_t;
+    return 0 as libc::c_int;
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_free(mut buf: *mut ibuf) {
+    if buf.is_null() {
+        return;
+    }
+    if (*buf).max == 0 as libc::c_int as libc::c_ulong {
+        abort();
+    }
+    if (*buf).fd != -(1 as libc::c_int) {
+        close((*buf).fd);
+    }
+    freezero((*buf).buf as *mut libc::c_void, (*buf).size);
+    free(buf as *mut libc::c_void);
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_fd_avail(mut buf: *mut ibuf) -> libc::c_int {
+    return ((*buf).fd != -(1 as libc::c_int)) as libc::c_int;
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_fd_get(mut buf: *mut ibuf) -> libc::c_int {
+    let mut fd: libc::c_int = 0;
+    fd = (*buf).fd;
+    (*buf).fd = -(1 as libc::c_int);
+    return fd;
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_fd_set(mut buf: *mut ibuf, mut fd: libc::c_int) {
+    if (*buf).max == 0 as libc::c_int as libc::c_ulong {
+        abort();
+    }
+    if (*buf).fd != -(1 as libc::c_int) {
+        close((*buf).fd);
+    }
+    (*buf).fd = fd;
+}
+#[no_mangle]
+pub unsafe extern "C" fn ibuf_write(mut msgbuf: *mut msgbuf) -> libc::c_int {
+    let mut iov: [iovec; 1024] = [iovec {
+        iov_base: 0 as *mut libc::c_void,
+        iov_len: 0,
+    }; 1024];
+    let mut buf: *mut ibuf = 0 as *mut ibuf;
+    let mut i: libc::c_uint = 0 as libc::c_int as libc::c_uint;
+    let mut n: ssize_t = 0;
+    memset(
+        &mut iov as *mut [iovec; 1024] as *mut libc::c_void,
+        0 as libc::c_int,
+        ::core::mem::size_of::<[iovec; 1024]>() as libc::c_ulong,
+    );
+    buf = (*msgbuf).bufs.tqh_first;
+    while !buf.is_null() {
+        if i >= 1024 as libc::c_int as libc::c_uint {
+            break;
+        }
+        iov[i as usize].iov_base = ibuf_data(buf);
+        iov[i as usize].iov_len = ibuf_size(buf);
+        i = i.wrapping_add(1);
+        i;
+        buf = (*buf).entry.tqe_next;
+    }
+    's_62: {
+        loop {
+            n = writev((*msgbuf).fd, iov.as_mut_ptr(), i as libc::c_int);
+            if n == -(1 as libc::c_int) as libc::c_long {
+                if *__errno_location() == 4 as libc::c_int {
+                    continue;
+                }
+                if *__errno_location() == 105 as libc::c_int {
+                    *__errno_location() = 11 as libc::c_int;
+                }
+                return -(1 as libc::c_int);
+            } else {
+                break 's_62;
+            }
+        }
+    }
+    if n == 0 as libc::c_int as libc::c_long {
+        *__errno_location() = 0 as libc::c_int;
+        return 0 as libc::c_int;
+    }
+    msgbuf_drain(msgbuf, n as size_t);
+    return 1 as libc::c_int;
+}
+#[no_mangle]
+pub unsafe extern "C" fn msgbuf_init(mut msgbuf: *mut msgbuf) {
+    (*msgbuf).queued = 0 as libc::c_int as uint32_t;
+    (*msgbuf).fd = -(1 as libc::c_int);
+    (*msgbuf).bufs.tqh_first = 0 as *mut ibuf;
+    (*msgbuf).bufs.tqh_last = &mut (*msgbuf).bufs.tqh_first;
+}
+unsafe extern "C" fn msgbuf_drain(mut msgbuf: *mut msgbuf, mut n: size_t) {
+    let mut buf: *mut ibuf = 0 as *mut ibuf;
+    let mut next: *mut ibuf = 0 as *mut ibuf;
+    buf = (*msgbuf).bufs.tqh_first;
+    while !buf.is_null() && n > 0 as libc::c_int as libc::c_ulong {
+        next = (*buf).entry.tqe_next;
+        if n >= ibuf_size(buf) {
+            n = (n as libc::c_ulong).wrapping_sub(ibuf_size(buf)) as size_t as size_t;
+            ibuf_dequeue(msgbuf, buf);
+        } else {
+            (*buf).rpos = ((*buf).rpos as libc::c_ulong).wrapping_add(n) as size_t as size_t;
+            n = 0 as libc::c_int as size_t;
+        }
+        buf = next;
+    }
+}
+#[no_mangle]
+pub unsafe extern "C" fn msgbuf_clear(mut msgbuf: *mut msgbuf) {
+    let mut buf: *mut ibuf = 0 as *mut ibuf;
+    loop {
+        buf = (*msgbuf).bufs.tqh_first;
+        if buf.is_null() {
+            break;
+        }
+        ibuf_dequeue(msgbuf, buf);
+    }
+}
+#[no_mangle]
+pub unsafe extern "C" fn msgbuf_write(mut msgbuf: *mut msgbuf) -> libc::c_int {
+    let mut iov: [iovec; 1024] = [iovec {
+        iov_base: 0 as *mut libc::c_void,
+        iov_len: 0,
+    }; 1024];
+    let mut buf: *mut ibuf = 0 as *mut ibuf;
+    let mut buf0: *mut ibuf = 0 as *mut ibuf;
+    let mut i: libc::c_uint = 0 as libc::c_int as libc::c_uint;
+    let mut n: ssize_t = 0;
+    let mut msg: msghdr = msghdr {
+        msg_name: 0 as *mut libc::c_void,
+        msg_namelen: 0,
+        msg_iov: 0 as *mut iovec,
+        msg_iovlen: 0,
+        msg_control: 0 as *mut libc::c_void,
+        msg_controllen: 0,
+        msg_flags: 0,
+    };
+    let mut cmsg: *mut cmsghdr = 0 as *mut cmsghdr;
+    let mut cmsgbuf: C2RustUnnamed_2 = C2RustUnnamed_2 {
+        hdr: cmsghdr {
+            cmsg_len: 0,
+            cmsg_level: 0,
+            cmsg_type: 0,
+            __cmsg_data: [],
+        },
+    };
+    memset(
+        &mut iov as *mut [iovec; 1024] as *mut libc::c_void,
+        0 as libc::c_int,
+        ::core::mem::size_of::<[iovec; 1024]>() as libc::c_ulong,
+    );
+    memset(
+        &mut msg as *mut msghdr as *mut libc::c_void,
+        0 as libc::c_int,
+        ::core::mem::size_of::<msghdr>() as libc::c_ulong,
+    );
+    memset(
+        &mut cmsgbuf as *mut C2RustUnnamed_2 as *mut libc::c_void,
+        0 as libc::c_int,
+        ::core::mem::size_of::<C2RustUnnamed_2>() as libc::c_ulong,
+    );
+    buf = (*msgbuf).bufs.tqh_first;
+    while !buf.is_null() {
+        if i >= 1024 as libc::c_int as libc::c_uint {
+            break;
+        }
+        if i > 0 as libc::c_int as libc::c_uint && (*buf).fd != -(1 as libc::c_int) {
+            break;
+        }
+        iov[i as usize].iov_base = ibuf_data(buf);
+        iov[i as usize].iov_len = ibuf_size(buf);
+        i = i.wrapping_add(1);
+        i;
+        if (*buf).fd != -(1 as libc::c_int) {
+            buf0 = buf;
+        }
+        buf = (*buf).entry.tqe_next;
+    }
+    msg.msg_iov = iov.as_mut_ptr();
+    msg.msg_iovlen = i as size_t;
+    if !buf0.is_null() {
+        msg.msg_control = &mut cmsgbuf.buf as *mut [libc::c_char; 24] as caddr_t as *mut libc::c_void;
+        msg.msg_controllen = ::core::mem::size_of::<[libc::c_char; 24]>() as libc::c_ulong;
+        cmsg = if msg.msg_controllen >= ::core::mem::size_of::<cmsghdr>() as libc::c_ulong {
+            msg.msg_control as *mut cmsghdr
+        } else {
+            0 as *mut cmsghdr
+        };
+        (*cmsg).cmsg_len = ((::core::mem::size_of::<cmsghdr>() as libc::c_ulong)
+            .wrapping_add(::core::mem::size_of::<size_t>() as libc::c_ulong)
+            .wrapping_sub(1 as libc::c_int as libc::c_ulong)
+            & !(::core::mem::size_of::<size_t>() as libc::c_ulong).wrapping_sub(1 as libc::c_int as libc::c_ulong))
+        .wrapping_add(::core::mem::size_of::<libc::c_int>() as libc::c_ulong);
+        (*cmsg).cmsg_level = 1 as libc::c_int;
+        (*cmsg).cmsg_type = SCM_RIGHTS as libc::c_int;
+        *(((*cmsg).__cmsg_data).as_mut_ptr() as *mut libc::c_int) = (*buf0).fd;
+    }
+    's_123: {
+        loop {
+            n = sendmsg((*msgbuf).fd, &mut msg, 0 as libc::c_int);
+            if n == -(1 as libc::c_int) as libc::c_long {
+                if *__errno_location() == 4 as libc::c_int {
+                    continue;
+                }
+                if *__errno_location() == 105 as libc::c_int {
+                    *__errno_location() = 11 as libc::c_int;
+                }
+                return -(1 as libc::c_int);
+            } else {
+                break 's_123;
+            }
+        }
+    }
+    if n == 0 as libc::c_int as libc::c_long {
+        *__errno_location() = 0 as libc::c_int;
+        return 0 as libc::c_int;
+    }
+    if !buf0.is_null() {
+        close((*buf0).fd);
+        (*buf0).fd = -(1 as libc::c_int);
+    }
+    msgbuf_drain(msgbuf, n as size_t);
+    return 1 as libc::c_int;
+}
+#[no_mangle]
+pub unsafe extern "C" fn msgbuf_queuelen(mut msgbuf: *mut msgbuf) -> uint32_t {
+    return (*msgbuf).queued;
+}
+unsafe extern "C" fn ibuf_enqueue(mut msgbuf: *mut msgbuf, mut buf: *mut ibuf) {
+    if (*buf).max == 0 as libc::c_int as libc::c_ulong {
+        abort();
+    }
+    (*buf).entry.tqe_next = 0 as *mut ibuf;
+    (*buf).entry.tqe_prev = (*msgbuf).bufs.tqh_last;
+    *(*msgbuf).bufs.tqh_last = buf;
+    (*msgbuf).bufs.tqh_last = &mut (*buf).entry.tqe_next;
+    (*msgbuf).queued = ((*msgbuf).queued).wrapping_add(1);
+    (*msgbuf).queued;
+}
+unsafe extern "C" fn ibuf_dequeue(mut msgbuf: *mut msgbuf, mut buf: *mut ibuf) {
+    if !((*buf).entry.tqe_next).is_null() {
+        (*(*buf).entry.tqe_next).entry.tqe_prev = (*buf).entry.tqe_prev;
+    } else {
+        (*msgbuf).bufs.tqh_last = (*buf).entry.tqe_prev;
+    }
+    *(*buf).entry.tqe_prev = (*buf).entry.tqe_next;
+    (*msgbuf).queued = ((*msgbuf).queued).wrapping_sub(1);
+    (*msgbuf).queued;
+    ibuf_free(buf);
+}

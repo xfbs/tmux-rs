@@ -6,6 +6,8 @@ use core::ptr::NonNull;
 
 use libc::{__errno_location, calloc, malloc, reallocarray, strdup, strerror, strndup};
 
+use compat_rs::recallocarray;
+
 unsafe extern "C" {
     fn vsnprintf(_: *mut c_char, _: usize, _: *const c_char, _: VaList) -> c_int;
     fn vasprintf(_: *mut *mut c_char, _: *const c_char, _: VaList) -> c_int;
@@ -83,27 +85,22 @@ pub unsafe extern "C" fn xrecallocarray(
     oldnmemb: usize,
     nmemb: usize,
     size: usize,
-) -> *mut c_void {
-    /*
+) -> NonNull<c_void> {
     unsafe {
         if nmemb == 0 || size == 0 {
             fatalx(c"xrecallocarray: zero size".as_ptr());
         }
 
-        let mut new_ptr = recallocarray(ptr, oldnmemb, nmemb, size);
-        if new_ptr.is_null() {
-            fatalx(
+        match NonNull::new(recallocarray(ptr, oldnmemb, nmemb, size)) {
+            None => fatalx(
                 c"xrecallocarray: allocating %zu * %zu bytes: %s".as_ptr(),
                 nmemb,
                 size,
                 strerror(*__errno_location()),
-            );
+            ),
+            Some(new_ptr) => new_ptr,
         }
-
-        new_ptr
     }
-    */
-    todo!()
 }
 
 #[unsafe(no_mangle)]

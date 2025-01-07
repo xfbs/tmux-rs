@@ -90,7 +90,6 @@ dist_tmux_SOURCES = \
 	cmd-if-shell.c \
 	cmd-join-pane.c \
 	cmd-kill-pane.c \
-	cmd-kill-server.c \
 	cmd-kill-session.c \
 	cmd-kill-window.c \
 	cmd-list-buffers.c \
@@ -196,7 +195,6 @@ dist_tmux_SOURCES = \
 	window-copy.c \
 	window-customize.c \
 	window-tree.c \
-	window.c \
 	xmalloc.h
 nodist_tmux_SOURCES = osdep-@PLATFORM@.c
 

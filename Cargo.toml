@@ -1,3 +1,6 @@
 [workspace]
-members = ["log", "xmalloc"]
+members = ["log", "xmalloc", "compat_rs", "bsd-sys", "tmux_h", "cmd_kill_server", "alerts", "window"]
 resolver = "2"
+
+[workspace.dependencies]
+libc = "0.2.169"

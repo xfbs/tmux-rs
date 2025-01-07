@@ -1,0 +1,8 @@
+[package]
+name = "bsd-sys"
+version = "0.1.0"
+edition = "2021"
+links = "bsd"
+
+[build-dependencies]
+bindgen = "0.71.0"

@@ -1,5 +1,5 @@
 [package]
-name = "log"
+name = "cmd_kill_server"
 version = "0.1.0"
 edition = "2024"
 
@@ -7,4 +7,5 @@ edition = "2024"
 crate-type = ["cdylib", "lib"]
 
 [dependencies]
-libc = "0.2.169"
+libc = { workspace = true }
+tmux_h = { path = "../tmux_h" }

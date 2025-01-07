@@ -12,6 +12,7 @@ autom4te.cache/
 config.log
 config.status
 etc/
+target
 tmux
 Makefile
 Makefile.in

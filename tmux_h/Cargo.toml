@@ -1,10 +1,9 @@
 [package]
-name = "log"
+name = "tmux_h"
 version = "0.1.0"
 edition = "2024"
 
-[lib]
-crate-type = ["cdylib", "lib"]
-
 [dependencies]
+compat_rs = { path = "../compat_rs" }
 libc = "0.2.169"
+libevent-sys = "0.3.0"
