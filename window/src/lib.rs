@@ -9,7 +9,7 @@ use core::{
 use std::{ffi::c_char, ptr::null};
 
 use compat_rs::{
-    queue::{tailq_insert_head, tailq_insert_tail, tailq_remove},
+    queue::{tailq_foreach, tailq_insert_head, tailq_insert_tail, tailq_remove},
     strtonum,
     tree::{rb_find, rb_foreach, rb_insert, rb_min, rb_next, rb_prev, rb_remove},
 };
@@ -507,8 +507,95 @@ fn window_pane_send_resize(wp: *mut window_pane, sx: u32, sy: u32) {
         ws.ws_xpixel = (*w).xpixel as u16 * ws.ws_col;
         ws.ws_ypixel = (*w).ypixel as u16 * ws.ws_row;
 
+        // TODO sun ifdef
+
         if ioctl((*wp).fd, TIOCSWINSZ, &ws) == -1 {
             fatal(c"ioctl failed".as_ptr());
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn window_has_pane(w: *mut window, wp: *mut window_pane) -> i32 {
+    unsafe {
+        if tailq_foreach(&raw mut (*w).panes, |wp1| {
+            if wp1 == wp {
+                return ControlFlow::Break(());
+            }
+            ControlFlow::Continue(())
+        })
+        .is_break()
+        {
+            return 1;
+        }
+    }
+
+    0
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn window_update_focus(w: *mut window) {
+    if !w.is_null() {
+        log_debug(
+            c"%s: @%u".as_ptr(),
+            c"window_update_focus".as_ptr(),
+            (*w).id,
+        );
+        window_pane_update_focus((*w).active);
+    }
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn window_pane_update_focus(wp: *mut window_pane) {
+    unsafe {
+        let mut focused = false;
+
+        if !wp.is_null() && ((!(*wp).flags) & PANE_EXITED) != 0 {
+            if wp != (*(*wp).window).active {
+                focused = false
+            } else {
+                // TODO import clients from server.c
+                tailq_foreach(&raw mut clients, |c| {
+                    if !(*c).session.is_null()
+                        && (*c).session.attached != 0
+                        && (*c).flags & CLIENT_FOCUSED != 0
+                        && (*(*(*c).session).curw).window == (*wp).window
+                    {
+                        focused = true;
+                        return ControlFlow::Break(());
+                    }
+                    ControlFlow::Continue(())
+                });
+            }
+            if !focused && (*wp).flags & PANE_FOCUSED != 0 {
+                log_debug(
+                    c"%s: %%%u focus out".as_ptr(),
+                    c"window_pane_update_focus".as_ptr(),
+                    (*wp).id,
+                );
+                if (*wp).base.mode & MODE_FOCUSON != 0 {
+                    bufferevent_write((*wp).event, c"\x1b[O".as_ptr(), 3);
+                }
+                notify_pane(c"pane-focus-out".as_ptr(), wp);
+                (*wp).flags &= !PANE_FOCUSED;
+            } else if focused && (!(*wp).flags & PANE_FOCUSED) != 0 {
+                log_debug(
+                    c"%s: %%%u focus in".as_ptr(),
+                    c"window_pane_update_focus".as_ptr(),
+                    (*wp).id,
+                );
+                if (*wp).base.mode & MODE_FOCUSON != 0 {
+                    bufferevent_write((*wp).event, c"\x1b[I".as_ptr(), 3);
+                }
+                notify_pane(c"pane-focus-in".as_ptr(), wp);
+                (*wp).flags |= PANE_FOCUSED;
+            } else {
+                log_debug(
+                    c"%s: %%%u focus unchanged".as_ptr(),
+                    c"window_pane_update_focus".as_ptr(),
+                    (*wp).id,
+                );
+            }
         }
     }
 }

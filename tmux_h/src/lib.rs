@@ -753,6 +753,13 @@ pub struct window_pane {
     pub sentry: tailq_entry<window_pane>,
     pub tree_entry: rb_entry<window_pane>,
 }
+
+impl Entry<window_pane> for window_pane {
+    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<window_pane> {
+        unsafe { &raw mut (*this).entry }
+    }
+}
+
 pub type window_panes = tailq_head<window_pane>;
 pub type window_pane_tree = rb_head<window_pane>;
 

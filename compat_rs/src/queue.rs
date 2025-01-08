@@ -1,4 +1,5 @@
 use core::ptr::null_mut;
+use std::ops::ControlFlow;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -90,7 +91,7 @@ macro_rules! tailq_remove {
 }
 pub use tailq_remove;
 
-pub unsafe fn tailq_foreach<F, T>(head: *mut tailq_head<T>, mut f: F)
+pub unsafe fn tailq_foreach<F, T>(head: *mut tailq_head<T>, mut f: F) -> std::ops::ControlFlow<()>
 where
     F: FnMut(*mut T) -> std::ops::ControlFlow<()>,
     T: Entry<T>,
@@ -98,11 +99,13 @@ where
     let mut curr = tailq_first(head);
 
     while !curr.is_null() {
-        if f(curr).is_break() {
-            break;
+        if let ControlFlow::Break(()) = f(curr) {
+            return ControlFlow::Break(());
         }
         curr = tailq_next(curr);
     }
+
+    ControlFlow::Continue(())
 }
 
 #[repr(C)]
