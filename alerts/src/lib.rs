@@ -1,8 +1,14 @@
+#![allow(dead_code)]
+#![allow(non_upper_case_globals)]
+#![allow(unused_variables)]
 use ::core::ffi::c_int;
 
 use tmux_h::{session, window};
 
-use compat_rs::{queue::tailq_head, tree::rb_foreach};
+use compat_rs::{
+    queue::tailq_head,
+    // tree::rb_foreach
+};
 
 static mut alerts_list: tailq_head<window> = tailq_head::new();
 

@@ -7,3 +7,6 @@ edition = "2024"
 compat_rs = { path = "../compat_rs" }
 libc = "0.2.169"
 libevent-sys = "0.3.0"
+
+[features]
+sixel = []

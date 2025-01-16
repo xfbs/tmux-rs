@@ -1,8 +1,21 @@
+#![feature(extern_types)]
+#![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
-use core::{ffi::*, mem::ManuallyDrop};
+#![allow(non_snake_case)]
+#![allow(clippy::new_without_default)]
+#![allow(clippy::manual_range_contains)]
 
-use libc::{pid_t, termios, time_t, timeval};
-use libevent_sys::{bufferevent, evbuffer, event};
+pub use core::{
+    ffi::{
+        CStr, c_char, c_int, c_longlong, c_short, c_uchar, c_uint, c_ulonglong, c_ushort, c_void,
+    },
+    mem::{ManuallyDrop, zeroed},
+    ops::ControlFlow,
+    ptr::{NonNull, null_mut},
+};
+
+pub use libc::{pid_t, termios, time_t, timeval};
+pub use libevent_sys::{bufferevent, evbuffer, event, event_base};
 
 use compat_rs::queue::{Entry, list_entry, list_head, tailq_entry, tailq_head};
 use compat_rs::tree::{rb_entry, rb_head};
@@ -13,23 +26,12 @@ pub type bitstr_t = c_uchar;
 
 const TTY_NAME_MAX: usize = 32;
 
-// forward defs
-pub struct cmds;
-pub struct control_state;
-pub struct environ;
-pub struct format_job_tree;
-pub struct format_tree;
-pub struct hyperlinks_uri;
-pub struct hyperlinks;
-pub struct input_ctx;
-pub struct job;
-pub struct menu_data;
-pub struct mode_tree_data;
-pub struct options_array_item;
-pub struct options_entry;
-pub struct screen_write_citem;
-pub struct screen_write_cline;
-pub struct prompt_free_cb;
+// TODO remove once options.c is ported
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct options_array_item {
+    _opaque: [u8; 0],
+}
 
 // opaque types
 macro_rules! opaque_types {
@@ -45,17 +47,35 @@ opaque_types! {
     cmd,
     cmdq_item,
     cmdq_list,
+    cmds,
+    control_state,
+    environ,
+    format_job_tree,
+    format_tree,
+    hyperlinks,
+    hyperlinks_uri,
+    input_ctx,
+    job,
+    menu_data,
+    mode_tree_data,
+    msgtype,
     options,
-    msgtype
+    options_entry,
+    screen_write_citem,
+    screen_write_cline
 }
 
 #[cfg(feature = "sixel")]
-struct sixel_image;
+opaque_types! {
+    sixel_image
+}
 
-pub struct tty_code;
-pub struct tty_key;
-pub struct tmuxpeer;
-pub struct tmuxproc;
+opaque_types! {
+    tty_code,
+    tty_key,
+    tmuxpeer,
+    tmuxproc
+}
 
 pub const TMUX_CONF: &CStr = c"/etc/tmux.conf:~/.tmux.conf";
 pub const TMUX_SOCK: &CStr = c"$TMUX_TMPDIR:/tmp/";
@@ -193,7 +213,7 @@ pub const MOUSE_PARAM_BTN_OFF: i32 = 0x20;
 pub const MOUSE_PARAM_POS_OFF: i32 = 0x21;
 
 /* A single UTF-8 character. */
-type utf8_char = c_uint;
+pub type utf8_char = c_uint;
 
 // An expanded UTF-8 character. UTF8_SIZE must be big enough to hold combining
 // characters as well. It can't be more than 32 bytes without changes to how
@@ -202,14 +222,14 @@ const UTF8_SIZE: usize = 21;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub(crate) struct utf8_data {
-    pub(crate) data: [c_uchar; UTF8_SIZE],
+pub struct utf8_data {
+    pub data: [c_uchar; UTF8_SIZE],
 
-    pub(crate) have: c_uchar,
-    pub(crate) size: c_uchar,
+    pub have: c_uchar,
+    pub size: c_uchar,
 
     /// 0xff if invalid
-    pub(crate) width: c_uchar,
+    pub width: c_uchar,
 }
 
 pub use utf8_state::*;
@@ -231,103 +251,104 @@ pub fn COLOR_DEFAULT(c: i32) -> bool {
 }
 
 // Replacement palette.
+#[repr(C)]
 #[derive(Copy, Clone)]
-pub(crate) struct colour_palette {
-    pub(crate) fg: i32,
-    pub(crate) bg: i32,
+pub struct colour_palette {
+    pub fg: i32,
+    pub bg: i32,
 
-    pub(crate) palette: *mut i32,
-    pub(crate) default_palette: *mut i32,
+    pub palette: *mut i32,
+    pub default_palette: *mut i32,
 }
 
 // Grid attributes. Anything above 0xff is stored in an extended cell.
-pub(crate) const GRID_ATTR_BRIGHT: i32 = 0x1;
-pub(crate) const GRID_ATTR_DIM: i32 = 0x2;
-pub(crate) const GRID_ATTR_UNDERSCORE: i32 = 0x4;
-pub(crate) const GRID_ATTR_BLINK: i32 = 0x8;
-pub(crate) const GRID_ATTR_REVERSE: i32 = 0x10;
-pub(crate) const GRID_ATTR_HIDDEN: i32 = 0x20;
-pub(crate) const GRID_ATTR_ITALICS: i32 = 0x40;
-pub(crate) const GRID_ATTR_CHARSET: i32 = 0x80; // alternative character set
-pub(crate) const GRID_ATTR_STRIKETHROUGH: i32 = 0x100;
-pub(crate) const GRID_ATTR_UNDERSCORE_2: i32 = 0x200;
-pub(crate) const GRID_ATTR_UNDERSCORE_3: i32 = 0x400;
-pub(crate) const GRID_ATTR_UNDERSCORE_4: i32 = 0x800;
-pub(crate) const GRID_ATTR_UNDERSCORE_5: i32 = 0x1000;
-pub(crate) const GRID_ATTR_OVERLINE: i32 = 0x2000;
+pub const GRID_ATTR_BRIGHT: i32 = 0x1;
+pub const GRID_ATTR_DIM: i32 = 0x2;
+pub const GRID_ATTR_UNDERSCORE: i32 = 0x4;
+pub const GRID_ATTR_BLINK: i32 = 0x8;
+pub const GRID_ATTR_REVERSE: i32 = 0x10;
+pub const GRID_ATTR_HIDDEN: i32 = 0x20;
+pub const GRID_ATTR_ITALICS: i32 = 0x40;
+pub const GRID_ATTR_CHARSET: i32 = 0x80; // alternative character set
+pub const GRID_ATTR_STRIKETHROUGH: i32 = 0x100;
+pub const GRID_ATTR_UNDERSCORE_2: i32 = 0x200;
+pub const GRID_ATTR_UNDERSCORE_3: i32 = 0x400;
+pub const GRID_ATTR_UNDERSCORE_4: i32 = 0x800;
+pub const GRID_ATTR_UNDERSCORE_5: i32 = 0x1000;
+pub const GRID_ATTR_OVERLINE: i32 = 0x2000;
 
 /// All underscore attributes.
-pub(crate) const GRID_ATTR_ALL_UNDERSCORE: i32 = GRID_ATTR_UNDERSCORE
+pub const GRID_ATTR_ALL_UNDERSCORE: i32 = GRID_ATTR_UNDERSCORE
     | GRID_ATTR_UNDERSCORE_2
     | GRID_ATTR_UNDERSCORE_3
     | GRID_ATTR_UNDERSCORE_4
     | GRID_ATTR_UNDERSCORE_5;
 
 // Grid flags.
-pub(crate) const GRID_FLAG_FG256: i32 = 0x1;
-pub(crate) const GRID_FLAG_BG256: i32 = 0x2;
-pub(crate) const GRID_FLAG_PADDING: i32 = 0x4;
-pub(crate) const GRID_FLAG_EXTENDED: i32 = 0x8;
-pub(crate) const GRID_FLAG_SELECTED: i32 = 0x10;
-pub(crate) const GRID_FLAG_NOPALETTE: i32 = 0x20;
-pub(crate) const GRID_FLAG_CLEARED: i32 = 0x40;
+pub const GRID_FLAG_FG256: i32 = 0x1;
+pub const GRID_FLAG_BG256: i32 = 0x2;
+pub const GRID_FLAG_PADDING: i32 = 0x4;
+pub const GRID_FLAG_EXTENDED: i32 = 0x8;
+pub const GRID_FLAG_SELECTED: i32 = 0x10;
+pub const GRID_FLAG_NOPALETTE: i32 = 0x20;
+pub const GRID_FLAG_CLEARED: i32 = 0x40;
 
 // Grid line flags.
-pub(crate) const GRID_LINE_WRAPPED: i32 = 0x1;
-pub(crate) const GRID_LINE_EXTENDED: i32 = 0x2;
-pub(crate) const GRID_LINE_DEAD: i32 = 0x4;
-pub(crate) const GRID_LINE_START_PROMPT: i32 = 0x8;
-pub(crate) const GRID_LINE_START_OUTPUT: i32 = 0x10;
+pub const GRID_LINE_WRAPPED: i32 = 0x1;
+pub const GRID_LINE_EXTENDED: i32 = 0x2;
+pub const GRID_LINE_DEAD: i32 = 0x4;
+pub const GRID_LINE_START_PROMPT: i32 = 0x8;
+pub const GRID_LINE_START_OUTPUT: i32 = 0x10;
 
 // Grid string flags.
-pub(crate) const GRID_STRING_WITH_SEQUENCES: i32 = 0x1;
-pub(crate) const GRID_STRING_ESCAPE_SEQUENCES: i32 = 0x2;
-pub(crate) const GRID_STRING_TRIM_SPACES: i32 = 0x4;
-pub(crate) const GRID_STRING_USED_ONLY: i32 = 0x8;
-pub(crate) const GRID_STRING_EMPTY_CELLS: i32 = 0x10;
+pub const GRID_STRING_WITH_SEQUENCES: i32 = 0x1;
+pub const GRID_STRING_ESCAPE_SEQUENCES: i32 = 0x2;
+pub const GRID_STRING_TRIM_SPACES: i32 = 0x4;
+pub const GRID_STRING_USED_ONLY: i32 = 0x8;
+pub const GRID_STRING_EMPTY_CELLS: i32 = 0x10;
 
 // Cell positions.
-pub(crate) const CELL_INSIDE: i32 = 0;
-pub(crate) const CELL_TOPBOTTOM: i32 = 1;
-pub(crate) const CELL_LEFTRIGHT: i32 = 2;
-pub(crate) const CELL_TOPLEFT: i32 = 3;
-pub(crate) const CELL_TOPRIGHT: i32 = 4;
-pub(crate) const CELL_BOTTOMLEFT: i32 = 5;
-pub(crate) const CELL_BOTTOMRIGHT: i32 = 6;
-pub(crate) const CELL_TOPJOIN: i32 = 7;
-pub(crate) const CELL_BOTTOMJOIN: i32 = 8;
-pub(crate) const CELL_LEFTJOIN: i32 = 9;
-pub(crate) const CELL_RIGHTJOIN: i32 = 10;
-pub(crate) const CELL_JOIN: i32 = 11;
-pub(crate) const CELL_OUTSIDE: i32 = 12;
+pub const CELL_INSIDE: i32 = 0;
+pub const CELL_TOPBOTTOM: i32 = 1;
+pub const CELL_LEFTRIGHT: i32 = 2;
+pub const CELL_TOPLEFT: i32 = 3;
+pub const CELL_TOPRIGHT: i32 = 4;
+pub const CELL_BOTTOMLEFT: i32 = 5;
+pub const CELL_BOTTOMRIGHT: i32 = 6;
+pub const CELL_TOPJOIN: i32 = 7;
+pub const CELL_BOTTOMJOIN: i32 = 8;
+pub const CELL_LEFTJOIN: i32 = 9;
+pub const CELL_RIGHTJOIN: i32 = 10;
+pub const CELL_JOIN: i32 = 11;
+pub const CELL_OUTSIDE: i32 = 12;
 
 // Cell borders.
-pub(crate) const CELL_BORDERS: &CStr = c" xqlkmjwvtun~";
-pub(crate) const SIMPLE_BORDERS: &CStr = c" |-+++++++++.";
-pub(crate) const PADDED_BORDERS: &CStr = c"             ";
+pub const CELL_BORDERS: &CStr = c" xqlkmjwvtun~";
+pub const SIMPLE_BORDERS: &CStr = c" |-+++++++++.";
+pub const PADDED_BORDERS: &CStr = c"             ";
 
 /// Grid cell data.
-#[derive(Copy, Clone)]
 #[repr(C)]
-pub(crate) struct grid_cell {
-    pub(crate) data: utf8_data,
-    pub(crate) attr: c_ushort,
-    pub(crate) flags: c_uchar,
-    pub(crate) fg: i32,
-    pub(crate) bg: i32,
-    pub(crate) us: i32,
-    pub(crate) link: u32,
+#[derive(Copy, Clone)]
+pub struct grid_cell {
+    pub data: utf8_data,
+    pub attr: c_ushort,
+    pub flags: c_uchar,
+    pub fg: i32,
+    pub bg: i32,
+    pub us: i32,
+    pub link: u32,
 }
 
 /// Grid extended cell entry.
-pub(crate) type grid_extd_entry = grid_cell;
+pub type grid_extd_entry = grid_cell;
 
 #[repr(C, align(4))]
-pub(crate) struct grid_cell_entry_data {
-    pub(crate) attr: c_uchar,
-    pub(crate) fg: c_uchar,
-    pub(crate) bg: c_uchar,
-    pub(crate) data: c_uchar,
+pub struct grid_cell_entry_data {
+    pub attr: c_uchar,
+    pub fg: c_uchar,
+    pub bg: c_uchar,
+    pub data: c_uchar,
 }
 #[repr(C)]
 pub struct grid_cell_entry {
@@ -336,6 +357,7 @@ pub struct grid_cell_entry {
 }
 
 /// Grid line.
+#[repr(C)]
 pub struct grid_line {
     pub celldata: *mut grid_cell_entry,
     pub cellused: u32,
@@ -351,6 +373,7 @@ pub struct grid_line {
 pub const GRID_HISTORY: i32 = 0x1; // scroll lines into history
 
 /// Entire grid of cells.
+#[repr(C)]
 pub struct grid {
     pub flags: i32,
 
@@ -365,6 +388,7 @@ pub struct grid {
 }
 
 /// Virtual cursor in a grid.
+#[repr(C)]
 pub struct grid_reader {
     pub gd: *mut grid,
     pub cx: u32,
@@ -372,6 +396,7 @@ pub struct grid_reader {
 }
 
 /// Style alignment.
+#[repr(i32)]
 pub enum style_align {
     STYLE_ALIGN_DEFAULT,
     STYLE_ALIGN_LEFT,
@@ -381,6 +406,7 @@ pub enum style_align {
 }
 
 /// Style list.
+#[repr(i32)]
 pub enum style_list {
     STYLE_LIST_OFF,
     STYLE_LIST_ON,
@@ -390,6 +416,7 @@ pub enum style_list {
 }
 
 /// Style range.
+#[repr(i32)]
 pub enum style_range_type {
     STYLE_RANGE_NONE,
     STYLE_RANGE_LEFT,
@@ -400,6 +427,7 @@ pub enum style_range_type {
     STYLE_RANGE_USER,
 }
 
+#[repr(C)]
 pub struct style_range {
     pub type_: style_range_type,
     pub argument: u32,
@@ -420,6 +448,7 @@ pub enum style_default_type {
 }
 
 /// Style option.
+#[repr(C)]
 pub struct style {
     pub gc: grid_cell,
     pub ignore: i32,
@@ -436,6 +465,8 @@ pub struct style {
 }
 
 #[cfg(feature = "sixel")]
+#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct image {
     s: *mut screen,
     data: *mut sixel_image,
@@ -450,9 +481,10 @@ pub struct image {
 }
 
 #[cfg(feature = "sixel")]
-pub static mut images: tailq_head<image> = tailq_head::const_default();
+pub type images = tailq_head<image>;
 
 /// Cursor style.
+#[repr(C)]
 #[derive(Copy, Clone)]
 pub enum screen_cursor_style {
     SCREEN_CURSOR_DEFAULT,
@@ -461,9 +493,13 @@ pub enum screen_cursor_style {
     SCREEN_CURSOR_BAR,
 }
 
-pub struct screen_sel;
-pub struct screen_titles;
+opaque_types! {
+    screen_sel,
+    screen_titles
+}
+
 /// Virtual screen.
+#[repr(C)]
 #[derive(Copy, Clone)]
 pub struct screen {
     pub title: *mut c_char,
@@ -514,7 +550,8 @@ pub struct screen {
 pub const SCREEN_WRITE_SYNC: i32 = 0x1;
 
 // Screen write context.
-pub type screen_write_init_ctx_cb = fn(*mut screen_write_ctx, *mut tty_ctx);
+pub type screen_write_init_ctx_cb =
+    Option<unsafe extern "C" fn(*mut screen_write_ctx, *mut tty_ctx)>;
 pub struct screen_write_ctx {
     pub wp: *mut window_pane,
     pub s: *mut screen,
@@ -531,6 +568,7 @@ pub struct screen_write_ctx {
 }
 
 /// Box border lines option.
+#[repr(i32)]
 pub enum box_lines {
     BOX_LINES_DEFAULT = -1,
     BOX_LINES_SINGLE,
@@ -543,6 +581,7 @@ pub enum box_lines {
 }
 
 /// Pane border lines option.
+#[repr(i32)]
 pub enum pane_lines {
     PANE_LINES_SINGLE,
     PANE_LINES_DOUBLE,
@@ -563,6 +602,7 @@ pub const WINDOW_PANE_COPY_MODE: i32 = 1;
 pub const WINDOW_PANE_VIEW_MODE: i32 = 2;
 
 // Screen redraw context.
+#[repr(C)]
 pub struct screen_redraw_ctx {
     pub c: *mut client,
 
@@ -584,26 +624,31 @@ pub struct screen_redraw_ctx {
 // screen size macros skipped for now
 
 // Menu.
+#[repr(C)]
 pub struct menu_item {
     pub name: *const c_char,
     pub key: key_code,
     pub command: *const c_char,
 }
+#[repr(C)]
 pub struct menu {
     pub title: *const c_char,
     pub items: *mut menu_item,
     pub count: u32,
     pub width: u32,
 }
-pub type menu_choice_cb = fn(*mut menu, u32, key_code, *mut c_void);
+pub type menu_choice_cb = Option<unsafe extern "C" fn(*mut menu, u32, key_code, *mut c_void)>;
 
 // Window mode. Windows can be in several modes and this is used to call the
 // right function to handle input and output.
+#[repr(C)]
 pub struct window_mode {
     pub name: *const c_char,
     pub default_format: *const c_char,
 
-    pub init: Option<unsafe extern "C" fn(*mut window_mode_entry, *mut cmd_find_state, *mut args)>,
+    pub init: Option<
+        unsafe extern "C" fn(*mut window_mode_entry, *mut cmd_find_state, *mut args) -> *mut screen,
+    >,
     pub free: Option<unsafe extern "C" fn(*mut window_mode_entry)>,
     pub resize: Option<unsafe extern "C" fn(*mut window_mode_entry, u32, u32)>,
     pub update: Option<unsafe extern "C" fn(*mut window_mode_entry)>,
@@ -633,6 +678,7 @@ pub struct window_mode {
 }
 
 // Active window mode.
+#[repr(C)]
 #[derive(Copy, Clone)]
 pub struct window_mode_entry {
     pub wp: *mut window_pane,
@@ -646,14 +692,21 @@ pub struct window_mode_entry {
 
     pub entry: tailq_entry<window_mode_entry>,
 }
+impl Entry<window_mode_entry> for window_mode_entry {
+    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<window_mode_entry> {
+        unsafe { &raw mut (*this).entry }
+    }
+}
 
 /// Offsets into pane buffer.
+#[repr(C)]
 #[derive(Copy, Clone)]
 pub struct window_pane_offset {
     pub used: usize,
 }
 
 /// Queued pane resize.
+#[repr(C)]
 #[derive(Copy, Clone)]
 pub struct window_pane_resize {
     pub sx: u32,
@@ -665,6 +718,11 @@ pub struct window_pane_resize {
     pub entry: tailq_entry<window_pane_resize>,
 }
 pub type window_pane_resizes = tailq_head<window_pane_resize>;
+impl Entry<window_pane_resize> for window_pane_resize {
+    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<window_pane_resize> {
+        unsafe { &raw mut (*this).entry }
+    }
+}
 
 pub const PANE_REDRAW: i32 = 0x1;
 pub const PANE_DROP: i32 = 0x2;
@@ -682,6 +740,7 @@ pub const PANE_STYLECHANGED: i32 = 0x1000;
 pub const PANE_UNSEENCHANGES: i32 = 0x2000;
 
 /// Child window structure.
+#[repr(C)]
 #[derive(Copy, Clone)]
 pub struct window_pane {
     pub id: u32,
@@ -759,6 +818,28 @@ impl Entry<window_pane> for window_pane {
         unsafe { &raw mut (*this).entry }
     }
 }
+impl compat_rs::tree::GetEntry<window_pane> for window_pane {
+    fn entry_mut(this: *mut Self) -> *mut rb_entry<window_pane> {
+        // <https://github.com/rust-lang/rust/pull/129248#issue-2472094687>
+        #![expect(
+            clippy::not_unsafe_ptr_arg_deref,
+            reason = "false positive. no load occurs. see: https://www.ralfj.de/blog/2024/08/14/places.html"
+        )]
+        unsafe { &raw mut (*this).tree_entry }
+    }
+
+    fn entry(this: *const Self) -> *const rb_entry<window_pane> {
+        #![expect(
+            clippy::not_unsafe_ptr_arg_deref,
+            reason = "false positive. no load occurs. see: https://www.ralfj.de/blog/2024/08/14/places.html"
+        )]
+        unsafe { &raw const (*this).tree_entry }
+    }
+
+    unsafe fn cmp(this: *const Self, other: *const Self) -> i32 {
+        unsafe { (*this).id.wrapping_sub((*other).id) as i32 }
+    }
+}
 
 pub type window_panes = tailq_head<window_pane>;
 pub type window_pane_tree = rb_head<window_pane>;
@@ -772,6 +853,7 @@ pub const WINDOW_RESIZE: i32 = 0x20;
 pub const WINDOW_ALERTFLAGS: i32 = WINDOW_BELL | WINDOW_ACTIVITY | WINDOW_SILENCE;
 
 /// Window structure.
+#[repr(C)]
 #[derive(Copy, Clone)]
 pub struct window {
     pub id: u32,
@@ -849,6 +931,7 @@ pub const WINLINK_SILENCE: i32 = 0x4;
 pub const WINLINK_ALERTFLAGS: i32 = WINLINK_BELL | WINLINK_ACTIVITY | WINLINK_SILENCE;
 pub const WINLINK_VISITED: i32 = 0x8;
 
+#[repr(C)]
 #[derive(Copy, Clone)]
 pub struct winlink {
     pub idx: i32,
@@ -861,6 +944,12 @@ pub struct winlink {
 
     pub wentry: tailq_entry<winlink>,
     pub sentry: tailq_entry<winlink>,
+}
+
+impl compat_rs::queue::Entry<winlink> for winlink {
+    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<winlink> {
+        unsafe { &raw mut (*this).wentry }
+    }
 }
 
 impl compat_rs::tree::GetEntry<winlink> for winlink {
@@ -900,6 +989,7 @@ pub const PANE_STATUS_TOP: i32 = 1;
 pub const PANE_STATUS_BOTTOM: i32 = 2;
 
 /// Layout direction.
+#[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum layout_type {
     LAYOUT_LEFTRIGHT,
@@ -911,6 +1001,7 @@ pub enum layout_type {
 pub type layout_cells = tailq_head<layout_cell>;
 
 /// Layout cell.
+#[repr(C)]
 pub struct layout_cell {
     pub type_: layout_type,
 
@@ -951,6 +1042,7 @@ pub type session_groups = rb_head<session_group>;
 pub const SESSION_PASTING: i32 = 0x1;
 pub const SESSION_ALERTED: i32 = 0x2;
 
+#[repr(C)]
 pub struct session {
     pub id: u32,
     pub name: *mut c_char,
@@ -1059,6 +1151,7 @@ pub struct mouse_event {
 }
 
 /// Key event.
+#[repr(C)]
 pub struct key_event {
     pub key: key_code,
     pub m: mouse_event,
@@ -1073,6 +1166,7 @@ pub const TERM_VT100LIKE: i32 = 0x20;
 pub const TERM_SIXEL: i32 = 0x40;
 
 /// Terminal definition.
+#[repr(C)]
 pub struct tty_term {
     pub name: *mut c_char,
     pub tty: *mut tty,
@@ -1103,6 +1197,7 @@ pub const TTY_HAVEDA2: i32 = 0x800; // Secondary DA.
 pub const TTY_ALL_REQUEST_FLAGS: i32 = TTY_HAVEDA | TTY_HAVEDA2 | TTY_HAVEXDA;
 
 /// Client terminal.
+#[repr(C)]
 pub struct tty {
     pub client: *mut client,
     pub start_timer: event,
@@ -1156,16 +1251,17 @@ pub struct tty {
     pub mouse_last_y: u32,
     pub mouse_last_b: u32,
     pub mouse_drag_flag: i32,
-    pub mouse_drag_update: fn(*mut client, *mut mouse_event),
-    pub mouse_drag_release: fn(*mut client, *mut mouse_event),
+    pub mouse_drag_update: Option<unsafe extern "C" fn(*mut client, *mut mouse_event)>,
+    pub mouse_drag_release: Option<unsafe extern "C" fn(*mut client, *mut mouse_event)>,
 
     pub key_timer: event,
     pub key_tree: tty_key,
 }
 
-pub type tty_ctx_redraw_cb = fn(*const tty_ctx);
-pub type tty_ctx_set_client_cb = fn(*mut tty_ctx, *mut client);
+pub type tty_ctx_redraw_cb = Option<unsafe extern "C" fn(*const tty_ctx)>;
+pub type tty_ctx_set_client_cb = Option<unsafe extern "C" fn(*mut tty_ctx, *mut client)>;
 
+#[repr(C)]
 pub struct tty_ctx {
     pub s: *mut screen,
 
@@ -1217,6 +1313,7 @@ pub struct tty_ctx {
 }
 
 // Saved message entry.
+#[repr(C)]
 pub struct message_entry {
     pub msg: *mut c_char,
     pub msg_num: u32,
@@ -1239,6 +1336,7 @@ pub union args_value_union {
 }
 
 /// Argument value.
+#[repr(C)]
 pub struct args_value {
     pub type_: args_type,
     pub args_value_union: args_value_union,
@@ -1246,7 +1344,9 @@ pub struct args_value {
     pub entry: tailq_entry<args_value>,
 }
 
-struct args_entry;
+opaque_types! {
+    args_entry
+}
 /// Arguments set.
 pub type args_tree = rb_head<args_entry>;
 
@@ -1277,6 +1377,8 @@ pub enum cmd_find_type {
     CMD_FIND_WINDOW,
     CMD_FIND_SESSION,
 }
+
+#[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cmd_find_state {
     pub flags: i32,
@@ -1299,6 +1401,7 @@ pub const CMD_FIND_EXACT_WINDOW: i32 = 0x20;
 pub const CMD_FIND_CANFAIL: i32 = 0x40;
 
 /// List of commands.
+#[repr(C)]
 pub struct cmd_list {
     pub references: i32,
     pub group: u32,
@@ -1316,10 +1419,12 @@ pub enum cmd_retval {
 }
 
 // Command parse result.
+#[repr(i32)]
 pub enum cmd_parse_status {
     CMD_PARSE_ERROR,
     CMD_PARSE_SUCCESS,
 }
+#[repr(C)]
 pub struct cmd_parse_result {
     pub status: cmd_parse_status,
     pub cmdlist: *mut cmd_list,
@@ -1332,6 +1437,7 @@ pub const CMD_PARSE_NOALIAS: i32 = 0x4;
 pub const CMD_PARSE_VERBOSE: i32 = 0x8;
 pub const CMD_PARSE_ONEGROUP: i32 = 0x10;
 
+#[repr(C)]
 pub struct cmd_parse_input {
     pub flags: i32,
 
@@ -1349,7 +1455,7 @@ pub const CMDQ_STATE_CONTROL: i32 = 0x2;
 pub const CMDQ_STATE_NOHOOKS: i32 = 0x4;
 
 // Command queue callback.
-pub type cmdq_cb = fn(*mut cmdq_item, *mut c_void) -> cmd_retval;
+pub type cmdq_cb = Option<unsafe extern "C" fn(*mut cmdq_item, *mut c_void) -> cmd_retval>;
 
 // Command definition flag.
 #[repr(C)]
@@ -1386,9 +1492,10 @@ pub struct cmd_entry {
 
 /* Status line. */
 pub const STATUS_LINES_LIMIT: usize = 5;
-struct status_line_entry {
-    expanded: *mut c_char,
-    ranges: style_ranges,
+#[repr(C)]
+pub struct status_line_entry {
+    pub expanded: *mut c_char,
+    pub ranges: style_ranges,
 }
 #[repr(C)]
 pub struct status_line {
@@ -1403,7 +1510,8 @@ pub struct status_line {
 }
 
 /* Prompt type. */
-const PROMPT_NTYPES: usize = 4;
+pub const PROMPT_NTYPES: usize = 4;
+#[repr(i32)]
 pub enum prompt_type {
     PROMPT_TYPE_COMMAND,
     PROMPT_TYPE_SEARCH,
@@ -1413,7 +1521,9 @@ pub enum prompt_type {
 }
 
 /* File in client. */
-pub type client_file_cb = fn(*mut client, *mut c_char, i32, i32, *mut evbuffer, *mut c_void);
+pub type client_file_cb =
+    Option<unsafe extern "C" fn(*mut client, *mut c_char, i32, i32, *mut evbuffer, *mut c_void)>;
+#[repr(C)]
 pub struct client_file {
     pub c: *mut client,
     pub peer: *mut tmuxpeer,
@@ -1438,6 +1548,7 @@ pub struct client_file {
 pub type client_files = rb_head<client_file>;
 
 // Client window.
+#[repr(C)]
 pub struct client_window {
     pub window: u32,
     pub pane: *mut window_pane,
@@ -1451,19 +1562,25 @@ pub type client_windows = rb_head<client_window>;
 
 /* Visible areas not obstructed by overlays. */
 pub const OVERLAY_MAX_RANGES: usize = 3;
+#[repr(C)]
 pub struct overlay_ranges {
     pub px: [u32; OVERLAY_MAX_RANGES],
     pub nx: [u32; OVERLAY_MAX_RANGES],
 }
 
-pub type prompt_input_cb = fn(*mut client, *mut c_void, *const c_char, i32) -> i32;
-pub type prompt_free_fb = fn(*mut c_void);
-pub type overlay_check_cb = fn(*mut client, *mut c_void, u32, u32, u32, *mut overlay_ranges);
-pub type overlay_mode_cb = fn(*mut client, *mut c_void, *mut u32, *mut u32) -> *mut screen;
-pub type overlay_draw_cb = fn(*mut client, *mut c_void, *mut screen_redraw_ctx);
-pub type overlay_key_cb = fn(*mut client, *mut c_void, *mut key_event) -> i32;
-pub type overlay_free_cb = fn(*mut client, *mut c_void);
-pub type overlay_resize_cb = fn(*mut client, *mut c_void);
+pub type prompt_input_cb =
+    Option<unsafe extern "C" fn(*mut client, *mut c_void, *const c_char, i32) -> i32>;
+pub type prompt_free_cb = Option<unsafe extern "C" fn(*mut c_void)>;
+pub type overlay_check_cb =
+    Option<unsafe extern "C" fn(*mut client, *mut c_void, u32, u32, u32, *mut overlay_ranges)>;
+pub type overlay_mode_cb =
+    Option<unsafe extern "C" fn(*mut client, *mut c_void, *mut u32, *mut u32) -> *mut screen>;
+pub type overlay_draw_cb =
+    Option<unsafe extern "C" fn(*mut client, *mut c_void, *mut screen_redraw_ctx)>;
+pub type overlay_key_cb =
+    Option<unsafe extern "C" fn(*mut client, *mut c_void, *mut key_event) -> i32>;
+pub type overlay_free_cb = Option<unsafe extern "C" fn(*mut client, *mut c_void)>;
+pub type overlay_resize_cb = Option<unsafe extern "C" fn(*mut client, *mut c_void)>;
 
 pub const CLIENT_TERMINAL: u64 = 0x1;
 pub const CLIENT_LOGIN: u64 = 0x2;
@@ -1635,6 +1752,7 @@ pub enum control_sub_type {
 pub const KEY_BINDING_REPEAT: i32 = 0x1;
 
 /// Key binding and key table.
+#[repr(C)]
 pub struct key_binding {
     pub key: key_code,
     pub cmdlist: cmd_list,
@@ -1646,6 +1764,7 @@ pub struct key_binding {
 }
 pub type key_bindings = rb_head<key_binding>;
 
+#[repr(C)]
 pub struct key_table {
     pub name: *mut c_char,
     pub key_bindings: key_bindings,
@@ -1663,7 +1782,7 @@ pub union options_value {
     pub string: *mut c_char,
     pub number: c_longlong,
     pub style: ManuallyDrop<style>,
-    pub array: ManuallyDrop<options_array>,
+    pub array: options_array,
     pub cmdlist: *mut cmd_list,
 }
 
@@ -1688,6 +1807,7 @@ pub const OPTIONS_TABLE_IS_ARRAY: i32 = 0x1;
 pub const OPTIONS_TABLE_IS_HOOK: i32 = 0x2;
 pub const OPTIONS_TABLE_IS_STYLE: i32 = 0x4;
 
+#[repr(C)]
 pub struct options_table_entry {
     pub name: *mut c_char,
     pub alternative_name: *mut c_char,
@@ -1710,6 +1830,7 @@ pub struct options_table_entry {
     pub unit: *mut c_char,
 }
 
+#[repr(C)]
 pub struct options_name_map {
     pub from: *mut c_char,
     pub to: *mut c_char,
@@ -1736,6 +1857,7 @@ pub const SPAWN_EMPTY: i32 = 0x40;
 pub const SPAWN_ZOOM: i32 = 0x80;
 
 /// Spawn common context.
+#[repr(C)]
 pub struct spawn_context {
     pub item: *mut cmdq_item,
 
@@ -1758,22 +1880,49 @@ pub struct spawn_context {
 }
 
 /// Mode tree sort order.
+#[repr(C)]
 pub struct mode_tree_sort_criteria {
     pub field: u32,
     pub reversed: i32,
 }
 
+/* tmux.c */
+// TODO after implementing tmux.c, remove all these
+// and just re-export them.
+unsafe extern "C" {
+    pub static mut global_options: *mut options;
+    pub static mut global_s_options: *mut options;
+    pub static mut global_w_options: *mut options;
+    pub static mut global_environ: *mut environ;
+    pub static start_time: timeval;
+    pub static mut socket_path: *mut c_char;
+    pub static mut ptm_fd: c_int;
+    pub static mut shell_command: *mut c_char;
+
+    pub fn checkshell(_: *mut c_char) -> c_int;
+    pub fn setblocking(_: c_int, _: c_int);
+    pub fn shell_argv0(_: *mut c_char, _: c_int) -> *mut c_char;
+    pub fn get_timer() -> u64;
+    pub fn sig2name(_: i32) -> *mut c_char;
+    pub fn find_cwd() -> *mut c_char;
+    pub fn find_home() -> *mut c_char;
+    pub fn getversion() -> *mut c_char;
+}
+
 // panic!();
+//
 
 pub const WINDOW_MINIMUM: i32 = PANE_MINIMUM;
 pub const WINDOW_MAXIMUM: i32 = 10_000;
 
+#[repr(i32)]
 pub enum exit_type {
     CLIENT_EXIT_RETURN,
     CLIENT_EXIT_SHUTDOWN,
     CLIENT_EXIT_DETACH,
 }
 
+#[repr(i32)]
 pub enum prompt_mode {
     PROMPT_ENTRY,
     PROMPT_COMMAND,
@@ -1786,3 +1935,8 @@ pub const FORMAT_VERBOSE: i32 = 0x8;
 pub const FORMAT_NONE: i32 = 0;
 pub const FORMAT_PANE: u32 = 0x80000000;
 pub const FORMAT_WINDOW: u32 = 0x40000000;
+
+// cmd-find
+unsafe extern "C" {
+    pub fn cmd_find_valid_state(_: *mut cmd_find_state) -> i32;
+}

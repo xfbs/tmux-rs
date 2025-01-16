@@ -9,6 +9,10 @@ crate-type = ["cdylib", "lib"]
 [dependencies]
 compat_rs = { path = "../compat_rs" }
 libc = { workspace = true }
+libevent-sys = "0.3.0"
 log = { path = "../log" }
 tmux_h = { path = "../tmux_h" }
 xmalloc = { path = "../xmalloc" }
+
+[features]
+utempter = []

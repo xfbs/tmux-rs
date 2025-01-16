@@ -13,7 +13,6 @@ log              = "0.4.22"
 non_camel_case_types = "allow"
 non_snake_case       = "allow"
 unused               = "allow"
-unsafe_block_in_unsafe_fn = "allow" # renable after port finished
 
 [lints.clippy]
 missing_safety_doc   = "allow"
