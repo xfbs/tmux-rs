@@ -1,9 +1,17 @@
 #![feature(extern_types)]
-#![allow(non_upper_case_globals)]
+#![feature(c_variadic)]
+#![allow(clippy::manual_range_contains)]
+#![allow(clippy::missing_safety_doc)]
+#![allow(clippy::new_without_default)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
-#![allow(clippy::new_without_default)]
-#![allow(clippy::manual_range_contains)]
+#![allow(non_upper_case_globals)]
+
+pub mod server;
+pub mod window_copy;
+
+#[path = "window.rs"]
+pub mod mod_window;
 
 pub use core::{
     ffi::{
@@ -14,8 +22,16 @@ pub use core::{
     ptr::{NonNull, null_mut},
 };
 
-pub use libc::{pid_t, termios, time_t, timeval};
-pub use libevent_sys::{bufferevent, evbuffer, event, event_base};
+pub use libc::{REG_EXTENDED, REG_ICASE, pid_t, termios, time_t, timeval};
+pub use libevent_sys::{
+    bufferevent, evbuffer, evbuffer_get_length, evbuffer_pullup, event, event_base,
+};
+pub unsafe fn EVBUFFER_LENGTH(x: *mut evbuffer) -> usize {
+    unsafe { evbuffer_get_length(x) }
+}
+pub unsafe fn EVBUFFER_DATA(x: *mut evbuffer) -> *mut c_uchar {
+    unsafe { evbuffer_pullup(x, -1) }
+}
 
 use compat_rs::queue::{Entry, list_entry, list_head, tailq_entry, tailq_head};
 use compat_rs::tree::{rb_entry, rb_head};
@@ -621,7 +637,18 @@ pub struct screen_redraw_ctx {
     pub oy: u32,
 }
 
-// screen size macros skipped for now
+pub unsafe fn screen_size_x(s: *const screen) -> u32 {
+    unsafe { (*(*s).grid).sx }
+}
+pub unsafe fn screen_size_y(s: *const screen) -> u32 {
+    unsafe { (*(*s).grid).sx }
+}
+pub unsafe fn screen_hsize(s: *const screen) -> u32 {
+    unsafe { (*(*s).grid).hsize }
+}
+pub unsafe fn screen_hlimit(s: *const screen) -> u32 {
+    unsafe { (*(*s).grid).hlimit }
+}
 
 // Menu.
 #[repr(C)]
@@ -843,6 +870,7 @@ impl compat_rs::tree::GetEntry<window_pane> for window_pane {
 
 pub type window_panes = tailq_head<window_pane>;
 pub type window_pane_tree = rb_head<window_pane>;
+compat_rs::impl_rb_tree_protos!(window_pane_tree, window_pane);
 
 pub const WINDOW_BELL: i32 = 0x1;
 pub const WINDOW_ACTIVITY: i32 = 0x2;
@@ -902,6 +930,7 @@ pub struct window {
     pub entry: rb_entry<window>,
 }
 pub type windows = rb_head<window>;
+compat_rs::impl_rb_tree_protos!(windows, window);
 
 impl compat_rs::tree::GetEntry<window> for window {
     fn entry_mut(this: *mut Self) -> *mut rb_entry<window> {
@@ -975,7 +1004,9 @@ impl compat_rs::tree::GetEntry<winlink> for winlink {
 }
 
 pub type winlinks = rb_head<winlink>;
+compat_rs::impl_rb_tree_protos!(winlinks, winlink);
 pub type winlink_stack = tailq_head<winlink>;
+compat_rs::impl_rb_tree_protos!(winlink_stack, winlink);
 
 // Window size option.
 pub const WINDOW_SIZE_LARGEST: i32 = 0;
@@ -999,6 +1030,7 @@ pub enum layout_type {
 
 /// Layout cells queue.
 pub type layout_cells = tailq_head<layout_cell>;
+// compat_rs::impl_rb_tree_protos!(layout_cells, layout_cell);
 
 /// Layout cell.
 #[repr(C)]
@@ -1936,7 +1968,104 @@ pub const FORMAT_NONE: i32 = 0;
 pub const FORMAT_PANE: u32 = 0x80000000;
 pub const FORMAT_WINDOW: u32 = 0x40000000;
 
-// cmd-find
+// cmd.c
+unsafe extern "C" {
+    pub fn cmd_free_argv(...);
+}
+
+// cmd-queue.c
+unsafe extern "C" {
+    pub fn cmdq_continue(...);
+    pub fn cmdq_get_client(...) -> *mut client;
+}
+
+// colour.c
+unsafe extern "C" {
+    pub fn colour_palette_free(...);
+    pub fn colour_palette_from_option(...);
+    pub fn colour_palette_get(...) -> i32;
+    pub fn colour_palette_init(...);
+    pub fn control_write_output(...);
+}
+
+// cmd-find.c
 unsafe extern "C" {
     pub fn cmd_find_valid_state(_: *mut cmd_find_state) -> i32;
+}
+
+// file.c
+unsafe extern "C" {
+    pub fn file_cancel(...);
+    pub fn file_read(...) -> *mut client_file;
+}
+
+// grid.c
+unsafe extern "C" {
+    pub fn grid_cells_look_equal(...) -> i32;
+    pub fn grid_view_string_cells(...) -> *mut c_char;
+}
+
+// input.c
+unsafe extern "C" {
+    pub fn input_free(...);
+    pub fn input_init(...) -> *mut input_ctx;
+    pub fn input_key_pane(...) -> i32;
+    pub fn input_parse_buffer(...);
+    pub fn input_parse_pane(...);
+}
+
+// layout.c
+unsafe extern "C" {
+    pub fn layout_fix_panes(...);
+    pub fn layout_free(...);
+    pub fn layout_free_cell(...);
+    pub fn layout_init(...);
+}
+
+// options.c
+unsafe extern "C" {
+    pub fn options_create(...) -> *mut options;
+    pub fn options_free(...);
+    pub fn options_get_string(...) -> *mut c_char;
+}
+
+// server.c
+unsafe extern "C" {
+    pub fn server_check_marked(...) -> bool;
+    pub fn server_clear_marked(...);
+    pub fn server_client_unref(...);
+    pub fn server_destroy_pane(...);
+    pub fn server_redraw_window_borders(...);
+    pub fn server_status_session(...);
+    pub fn server_status_window(...);
+}
+
+// screen.c
+unsafe extern "C" {
+    pub fn screen_free(...);
+    pub fn screen_init(...);
+    pub fn screen_resize(...);
+    pub fn screen_set_cursor_style(...);
+    pub fn screen_set_title(...);
+}
+
+// notify.c
+unsafe extern "C" {
+    pub fn notify_pane(...);
+}
+
+// server.c
+pub use crate::server::{marked_pane, server_proc};
+
+// window.c
+pub use mod_window::*;
+
+// window-copy.c
+pub use crate::window_copy::{window_copy_mode, window_view_mode};
+
+// utf8.c
+unsafe extern "C" {
+    pub fn utf8_fromcstr(...) -> *mut utf8_data;
+    pub fn utf8_isvalid(...) -> bool;
+    pub fn utf8_stravis(...);
 }

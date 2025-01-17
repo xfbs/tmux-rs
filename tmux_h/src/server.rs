@@ -1,10 +1,4 @@
-#![feature(extern_types)]
-#![feature(c_variadic)]
-#![allow(non_camel_case_types)]
-#![allow(clippy::missing_safety_doc)]
-#![allow(non_upper_case_globals)]
-
-use tmux_h::*;
+use super::*;
 
 pub static mut clients: clients = unsafe { zeroed() };
 pub static mut server_proc: *mut tmuxproc = null_mut();
@@ -74,17 +68,17 @@ pub unsafe extern "C" fn server_check_marked() -> c_int {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_create_socket(flags: u64, cause: *mut *mut c_char) -> c_int {
+pub unsafe extern "C" fn server_create_socket(_flags: u64, _cause: *mut *mut c_char) -> c_int {
     todo!()
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_start(
-    client: *mut tmuxproc,
-    flags: u64,
-    base: *mut event_base,
-    lockfd: c_int,
-    lockfile: *mut c_char,
+    _client: *mut tmuxproc,
+    _flags: u64,
+    _base: *mut event_base,
+    _lockfd: c_int,
+    _lockfile: *mut c_char,
 ) -> c_int {
     todo!()
 }
@@ -95,11 +89,11 @@ pub unsafe extern "C" fn server_update_socket() {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_add_accept(timeout: c_int) {
+pub unsafe extern "C" fn server_add_accept(_timeout: c_int) {
     todo!()
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_add_message(fmt: *const c_char, args: ...) {
+pub unsafe extern "C" fn server_add_message(_fmt: *const c_char, _args: ...) {
     todo!()
 }

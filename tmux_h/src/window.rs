@@ -1,10 +1,4 @@
-#![feature(extern_types)]
-#![allow(clippy::missing_safety_doc)]
-#![allow(non_camel_case_types)]
-#![allow(non_upper_case_globals)]
-#![allow(clippy::new_without_default)]
-
-use tmux_h::*;
+use super::*;
 
 use compat_rs::{
     HOST_NAME_MAX,
@@ -18,86 +12,28 @@ use compat_rs::{
     vis::{VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB},
 };
 use libc::{
-    FIONREAD, TIOCSWINSZ, close, fnmatch, free, gethostname, gettimeofday, ioctl, isspace, memset,
-    regcomp, regex_t, regexec, regfree, strcasecmp, strlen, winsize,
+    FIONREAD, FNM_CASEFOLD, TIOCSWINSZ, close, fnmatch, free, gethostname, gettimeofday, ioctl,
+    isspace, memset, regcomp, regex_t, regexec, regfree, strcasecmp, strlen, winsize,
 };
 use libevent_sys::{
     EV_READ, EV_WRITE, bufferevent, bufferevent_disable, bufferevent_enable, bufferevent_free,
     bufferevent_new, bufferevent_write, evbuffer, evbuffer_drain, event_del, event_initialized,
 };
 use log::{fatal, fatalx, log_debug};
+#[cfg(feature = "utempter")]
+use utempter_sys::utempter_remove_record;
 use xmalloc::{xasprintf, xcalloc, xmalloc, xreallocarray, xstrdup};
 
+#[unsafe(no_mangle)]
 pub static mut windows: windows = unsafe { std::mem::zeroed() };
 
+#[unsafe(no_mangle)]
 pub static mut all_window_panes: window_pane_tree = unsafe { std::mem::zeroed() };
+
 static mut next_window_pane_id: u32 = 0;
 static mut next_window_id: u32 = 0;
 static mut next_active_point: u32 = 0;
 
-unsafe extern "C" {
-    fn cmd_free_argv(...);
-    fn cmdq_continue(...);
-    fn cmdq_get_client(...) -> *mut client;
-
-    fn colour_palette_free(...);
-    fn colour_palette_from_option(...);
-    fn colour_palette_get(...) -> i32;
-    fn colour_palette_init(...);
-    fn control_write_output(...);
-
-    fn EVBUFFER_DATA(...) -> *mut c_uchar;
-    fn EVBUFFER_LENGTH(...) -> usize;
-    fn evbuffer_length(...) -> i32;
-
-    fn file_cancel(...);
-    fn file_read(...) -> *mut client_file;
-
-    fn grid_cells_look_equal(...) -> i32;
-    fn grid_view_string_cells(...) -> *mut c_char;
-
-    fn input_free(...);
-    fn input_init(...) -> *mut tmux_h::input_ctx;
-    fn input_key_pane(...) -> i32;
-    fn input_parse_buffer(...);
-    fn input_parse_pane(...);
-
-    fn layout_fix_panes(...);
-    fn layout_free(...);
-    fn layout_free_cell(...);
-    fn layout_init(...);
-
-    fn notify_pane(...);
-
-    fn options_create(...) -> *mut options;
-    fn options_free(...);
-    fn options_get_string(...) -> *mut c_char;
-
-    fn screen_free(...);
-    fn screen_init(...);
-    fn screen_resize(...);
-    fn screen_set_cursor_style(...);
-    fn screen_set_title(...);
-    fn screen_size_x(...) -> u32;
-    fn screen_size_y(...) -> u32;
-
-    fn server_check_marked(...) -> bool;
-    fn server_clear_marked(...);
-    fn server_client_unref(...);
-    fn server_destroy_pane(...);
-    fn server_redraw_window_borders(...);
-    fn server_status_session(...);
-    fn server_status_window(...);
-
-    fn utf8_fromcstr(...) -> *mut utf8_data;
-    fn utf8_isvalid(...) -> bool;
-    fn utf8_stravis(...);
-}
-const FNM_CASEFOLD: i32 = 0;
-const REG_ICASE: i32 = 0;
-const REG_EXTENDED: i32 = 0;
-
-#[expect(unused)]
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct window_pane_input_data {
@@ -451,11 +387,12 @@ unsafe extern "C" fn window_destroy(w: *mut window) {
     }
 }
 
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_pane_destroy_ready(wp: *mut window_pane) -> i32 {
     let mut n = 0;
     unsafe {
         if (*wp).pipe_fd != -1 {
-            if evbuffer_length((*(*wp).pipe_event).output) != 0 {
+            if EVBUFFER_LENGTH((*(*wp).pipe_event).output) != 0 {
                 return 0;
             }
             if ioctl((*wp).fd, FIONREAD, &raw mut n) != -1 && n > 0 {
@@ -555,7 +492,8 @@ pub unsafe fn window_resize(w: *mut window, sx: u32, sy: u32, mut xpixel: i32, m
     }
 }
 
-fn window_pane_send_resize(wp: *mut window_pane, sx: u32, sy: u32) {
+#[unsafe(no_mangle)]
+unsafe extern "C" fn window_pane_send_resize(wp: *mut window_pane, sx: u32, sy: u32) {
     unsafe {
         let w = (*wp).window;
         let mut ws: winsize = core::mem::zeroed();
@@ -629,9 +567,9 @@ unsafe extern "C" fn window_pane_update_focus(wp: *mut window_pane) {
                 focused = false
             } else {
                 // TODO import clients from server.c
-                tailq_foreach(&raw mut clients, |c| {
+                tailq_foreach(&raw mut crate::server::clients, |c| {
                     if !(*c).session.is_null()
-                        && (*c).session.attached != 0
+                        && (*(*c).session).attached != 0
                         && (*c).flags & CLIENT_FOCUSED != 0
                         && (*(*(*c).session).curw).window == (*wp).window
                     {
@@ -881,7 +819,7 @@ unsafe extern "C" fn window_unzoom(w: *mut window, notify: i32) -> i32 {
             (*wp).saved_layout_cell = null_mut();
             ControlFlow::<(), ()>::Continue(())
         });
-        layout_fix_panes(w, null_mut() as *mut ());
+        layout_fix_panes(w, null_mut::<c_void>());
 
         if notify != 0 {
             notify_window("window-layout-changed", w);
@@ -1116,7 +1054,7 @@ unsafe extern "C" fn window_printable_flags(wl: *mut winlink, escape: i32) -> *c
     static mut flags: [c_char; 32] = [0; 32];
 
     unsafe {
-        let mut s = (*wl).session;
+        let s = (*wl).session;
 
         let mut pos = 0;
         if (*wl).flags & WINLINK_ACTIVITY != 0 {
@@ -1152,7 +1090,7 @@ unsafe extern "C" fn window_printable_flags(wl: *mut winlink, escape: i32) -> *c
             pos += 1;
         }
         flags[pos] = b'\0' as c_char;
-        flags.as_ptr()
+        &raw mut flags as *mut i8
     }
 }
 
@@ -1191,32 +1129,30 @@ unsafe extern "C" fn window_pane_create(
 ) -> *mut window_pane {
     unsafe {
         let mut host: [c_char; HOST_NAME_MAX + 1] = zeroed();
-        let wp: &mut window_pane = xcalloc(1, size_of::<window_pane>()).cast().as_mut();
-        wp.window = w;
-        wp.options = options_create((*w).options);
-        wp.flags = PANE_STYLECHANGED;
+        let wp: *mut window_pane = xcalloc(1, size_of::<window_pane>()).cast().as_ptr();
+        (*wp).window = w;
+        (*wp).options = options_create((*w).options);
+        (*wp).flags = PANE_STYLECHANGED;
 
-        wp.id = next_window_pane_id;
+        (*wp).id = next_window_pane_id;
         next_window_pane_id += 1;
         // TOOD, maybe the invariant is broken when creating
         // the ref and then passing a *mut away
         rb_insert(&raw mut all_window_panes, wp);
 
-        wp.fd = -1;
+        (*wp).fd = -1;
 
         tailq_init(&raw mut (*wp).modes);
 
         tailq_init(&raw mut (*wp).resize_queue);
 
-        wp.sx = sx;
-        wp.sy = sy;
+        (*wp).sx = sx;
+        (*wp).sy = sy;
 
-        wp.pipe_fd = -1;
+        (*wp).pipe_fd = -1;
 
-        wp.control_bg = -1;
-        wp.control_fg = -1;
-
-        let wp = wp as *mut window_pane;
+        (*wp).control_bg = -1;
+        (*wp).control_fg = -1;
 
         colour_palette_init(&raw mut (*wp).palette);
         colour_palette_from_option(&(*wp).palette, (*wp).options);
@@ -1300,11 +1236,11 @@ unsafe extern "C" fn window_pane_read_callback(_bufev: *mut bufferevent, data: *
         }
 
         log_debug(c"%%%u has %zu bytes".as_ptr(), (*wp).id, size);
-        tailq_foreach(&raw mut clients, |c| {
-            if !(*c).session.is_null() && ((*c).flags & CLIENT_CONTROL) {
+        tailq_foreach(&raw mut crate::server::clients, |c| {
+            if !(*c).session.is_null() && (*c).flags & CLIENT_CONTROL != 0 {
                 control_write_output(c, wp);
             }
-            ControlFlow::Continue(())
+            ControlFlow::Continue::<(), ()>(())
         });
         input_parse_pane(wp);
         bufferevent_disable((*wp).event, EV_READ as i16);
@@ -1489,7 +1425,7 @@ unsafe extern "C" fn window_pane_copy_key(wp: *mut window_pane, key: key_code) {
                 && window_pane_visible(loop_) != 0
                 && options_get_number((*loop_).options, c"synchronize-panes".as_ptr()) != 0
             {
-                input_key_pane(loop_, key, null_mut() as *mut ());
+                input_key_pane(loop_, key, null_mut::<c_void>());
             }
             ControlFlow::Continue::<(), ()>(())
         });
@@ -1511,7 +1447,7 @@ unsafe extern "C" fn window_pane_key(
     unsafe {
         let wme = tailq_first(&raw mut (*wp).modes);
         if !wme.is_null() {
-            if !(*(*wme).mode).key.is_none() && !c.is_null() {
+            if (*(*wme).mode).key.is_some() && !c.is_null() {
                 key &= !KEYC_MASK_FLAGS;
                 (*(*wme).mode).key.unwrap()(wme, c, s, wl, key, m);
             }
@@ -1672,7 +1608,7 @@ unsafe extern "C" fn window_pane_find_up(wp: *mut window_pane) -> *mut window_pa
                 edge = (*w).sy;
             }
         } else {
-            #[expect(clippy::collapsible_else_if)]
+            #[allow(clippy::collapsible_else_if)]
             if edge == 0 {
                 edge = (*w).sy + 1;
             }
@@ -1691,6 +1627,7 @@ unsafe extern "C" fn window_pane_find_up(wp: *mut window_pane) -> *mut window_pa
             let end = (*next).xoff + (*next).sx - 1;
 
             let mut found = 0;
+            #[allow(clippy::if_same_then_else)]
             if (*next).xoff < left && end > right {
                 found = 1;
             } else if (*next).xoff >= left && (*next).xoff <= right {
@@ -1738,7 +1675,7 @@ unsafe extern "C" fn window_pane_find_down(wp: *mut window_pane) -> *mut window_
                 edge = 0;
             }
         } else {
-            #[expect(clippy::collapsible_else_if)]
+            #[allow(clippy::collapsible_else_if)]
             if edge >= (*w).sy {
                 edge = 0;
             }
@@ -1757,6 +1694,7 @@ unsafe extern "C" fn window_pane_find_down(wp: *mut window_pane) -> *mut window_
             let end = (*next).xoff + (*next).sx - 1;
 
             let mut found = 0;
+            #[allow(clippy::if_same_then_else)]
             if (*next).xoff < left && end > right {
                 found = 1;
             } else if (*next).xoff >= left && (*next).xoff <= right {
@@ -1812,6 +1750,7 @@ unsafe extern "C" fn window_pane_find_left(wp: *mut window_pane) -> *mut window_
             let end = (*next).yoff + (*next).sy - 1;
 
             let mut found = false;
+            #[allow(clippy::if_same_then_else)]
             if (*next).yoff < top && end > bottom {
                 found = true;
             } else if (*next).yoff >= top && (*next).yoff <= bottom {
@@ -1866,6 +1805,7 @@ unsafe extern "C" fn window_pane_find_right(wp: *mut window_pane) -> *mut window
             let end = (*next).yoff + (*next).sy - 1;
 
             let mut found = false;
+            #[allow(clippy::if_same_then_else)]
             if (*next).yoff < top && end > bottom {
                 found = true;
             } else if (*next).yoff >= top && (*next).yoff <= bottom {

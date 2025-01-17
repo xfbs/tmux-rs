@@ -3,10 +3,18 @@ name = "tmux_h"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+crate-type = ["cdylib", "lib"]
+
 [dependencies]
 compat_rs = { path = "../compat_rs" }
-libc = "0.2.169"
+libc = { workspace = true }
 libevent-sys = "0.3.0"
+log = { path = "../log" }
+paste = "1.0.15"
+utempter-sys = { version = "0.1.0", path = "../utempter-sys" }
+xmalloc = { path = "../xmalloc" }
 
 [features]
 sixel = []
+utempter = []

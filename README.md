@@ -42,17 +42,11 @@ calls make and cargo.
 - [ ] window
   - [ ] TODO remove temporary `extern "C"` shim blocks
   - [ ] Fix errors
-    - [ ] clients (server.c 557)
-    - [ ] marked_pane (server.c 557)
-    - [ ] window_copy_mode (window-copy.c)
-    - [ ] window_view_mode (window-copy.c)
 - [ ] tmux.h
   - [ ] many extra functions are not included
 - [ ] alert.c
     - [ ] implement TODO's
 - [ ] ...
-
-I'll add more when I expect they will be next.
 
 # Notes
 

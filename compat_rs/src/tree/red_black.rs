@@ -151,6 +151,29 @@ where
     todo!()
 }
 
+#[macro_export]
+macro_rules! impl_rb_tree_protos {
+    ($head_ty:ty, $ty:ty) => {
+        ::paste::paste! {
+            #[unsafe(no_mangle)]
+            pub unsafe extern "C" fn [<$head_ty _RB_MINMAX>](head: *mut rb_head<$ty>, val: i32) -> *mut $ty {
+                unsafe { $crate::tree::rb_minmax(head, val) }
+            }
+
+            #[unsafe(no_mangle)]
+            pub unsafe extern "C" fn [<$head_ty _RB_NEXT>](elm: *mut $ty) -> *mut $ty {
+                unsafe { $crate::tree::rb_next(elm) }
+            }
+
+            #[unsafe(no_mangle)]
+            pub unsafe extern "C" fn [<$head_ty _RB_PREV>](elm: *mut $ty) -> *mut $ty {
+                unsafe { $crate::tree::rb_prev(elm) }
+            }
+        }
+    };
+}
+pub use impl_rb_tree_protos;
+
 pub unsafe fn rb_minmax<T>(head: *mut rb_head<T>, val: i32) -> *mut T
 where
     T: GetEntry<T>,
