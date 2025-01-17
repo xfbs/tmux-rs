@@ -7,11 +7,17 @@
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 
+// pub mod alerts;
+pub mod cmd_kill_server;
+pub mod log;
 pub mod server;
-pub mod window_copy;
-
 #[path = "window.rs"]
-pub mod mod_window;
+pub mod window_;
+pub mod window_copy;
+pub mod xmalloc;
+
+#[cfg(feature = "utempter")]
+pub mod utempter;
 
 pub use core::{
     ffi::{
@@ -2058,7 +2064,7 @@ unsafe extern "C" {
 pub use crate::server::{marked_pane, server_proc};
 
 // window.c
-pub use mod_window::*;
+pub use window_::*;
 
 // window-copy.c
 pub use crate::window_copy::{window_copy_mode, window_view_mode};

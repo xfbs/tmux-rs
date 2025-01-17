@@ -1,9 +1,5 @@
 #![allow(dead_code)]
-#![allow(non_upper_case_globals)]
-#![allow(unused_variables)]
-use ::core::ffi::c_int;
-
-use tmux_h::{session, window};
+use super::*;
 
 use compat_rs::{
     queue::tailq_head,
@@ -19,11 +15,11 @@ unsafe extern "C" fn alerts_reset_all() {
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn alerts_queue(window: *mut window, flags: c_int) {
+unsafe extern "C" fn alerts_queue(_window: *mut window, _flags: c_int) {
     todo!()
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn alerts_check_session(session: *mut session) {
+unsafe extern "C" fn alerts_check_session(_session: *mut session) {
     todo!()
 }

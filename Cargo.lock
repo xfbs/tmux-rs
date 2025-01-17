@@ -12,15 +12,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "alerts"
-version = "0.1.0"
-dependencies = [
- "compat_rs",
- "libc",
- "tmux_h",
-]
-
-[[package]]
 name = "bindgen"
 version = "0.64.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -31,7 +22,7 @@ dependencies = [
  "clang-sys",
  "lazy_static",
  "lazycell",
- "log 0.4.22",
+ "log",
  "peeking_take_while",
  "proc-macro2",
  "quote",
@@ -52,7 +43,7 @@ dependencies = [
  "cexpr",
  "clang-sys",
  "itertools",
- "log 0.4.22",
+ "log",
  "prettyplease",
  "proc-macro2",
  "quote",
@@ -117,21 +108,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "cmd_kill_server"
-version = "0.1.0"
-dependencies = [
- "libc",
- "tmux_h",
-]
-
-[[package]]
 name = "compat_rs"
 version = "0.1.0"
 dependencies = [
  "bsd-sys",
  "libc",
  "libevent-sys",
- "log 0.4.22",
+ "log",
  "paste",
 ]
 
@@ -219,13 +202,6 @@ name = "linux-raw-sys"
 version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78b3ae25bc7c8c38cec158d1f2757ee79e9b3740fbc7ccf0e59e4b08d793fa89"
-
-[[package]]
-name = "log"
-version = "0.1.0"
-dependencies = [
- "libc",
-]
 
 [[package]]
 name = "log"
@@ -408,10 +384,7 @@ dependencies = [
  "compat_rs",
  "libc",
  "libevent-sys",
- "log 0.1.0",
  "paste",
- "utempter-sys",
- "xmalloc",
 ]
 
 [[package]]
@@ -419,13 +392,6 @@ name = "unicode-ident"
 version = "1.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "adb9e6ca4f869e1180728b7950e35922a7fc6397f7b641499e8f3ef06e50dc83"
-
-[[package]]
-name = "utempter-sys"
-version = "0.1.0"
-dependencies = [
- "bindgen 0.71.1",
-]
 
 [[package]]
 name = "vcpkg"
@@ -517,11 +483,3 @@ name = "windows_x86_64_msvc"
 version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
-
-[[package]]
-name = "xmalloc"
-version = "0.1.0"
-dependencies = [
- "compat_rs",
- "libc",
-]

@@ -1,5 +1,6 @@
 use libc::{SIGTERM, getpid, kill};
-use tmux_h::{
+
+use crate::{
     CMD_STARTSERVER, args_parse, cmd, cmd_entry, cmd_entry_flag, cmd_find_type, cmd_retval,
     cmdq_item,
 };

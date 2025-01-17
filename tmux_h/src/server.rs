@@ -1,6 +1,8 @@
 use super::*;
 
+#[unsafe(no_mangle)]
 pub static mut clients: clients = unsafe { zeroed() };
+#[unsafe(no_mangle)]
 pub static mut server_proc: *mut tmuxproc = null_mut();
 pub static mut server_fd: c_int = -1;
 pub static mut server_client_flags: u64 = 0;
@@ -8,11 +10,14 @@ pub static mut server_exit: c_int = 0;
 pub static mut server_ev_accept: event = unsafe { zeroed() };
 pub static mut server_ev_tidy: event = unsafe { zeroed() };
 
+#[unsafe(no_mangle)]
 pub static mut marked_pane: cmd_find_state = unsafe { zeroed() };
 
 pub static mut message_next: c_uint = 0;
+#[unsafe(no_mangle)]
 pub static mut message_log: message_list = unsafe { zeroed() };
 
+#[unsafe(no_mangle)]
 pub static mut current_time: time_t = unsafe { zeroed() };
 
 unsafe extern "C" {

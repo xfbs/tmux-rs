@@ -1,4 +1,3 @@
-#![feature(c_variadic)]
 #![allow(unused_variables)]
 #![allow(clippy::missing_safety_doc)]
 use core::ffi::{VaList, c_char, c_int, c_void};

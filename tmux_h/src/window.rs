@@ -1,5 +1,8 @@
 use super::*;
 
+use crate::log::{fatal, fatalx, log_debug};
+use crate::xmalloc::{xasprintf, xcalloc, xmalloc, xreallocarray, xstrdup};
+
 use compat_rs::{
     HOST_NAME_MAX,
     queue::{
@@ -19,10 +22,9 @@ use libevent_sys::{
     EV_READ, EV_WRITE, bufferevent, bufferevent_disable, bufferevent_enable, bufferevent_free,
     bufferevent_new, bufferevent_write, evbuffer, evbuffer_drain, event_del, event_initialized,
 };
-use log::{fatal, fatalx, log_debug};
+
 #[cfg(feature = "utempter")]
-use utempter_sys::utempter_remove_record;
-use xmalloc::{xasprintf, xcalloc, xmalloc, xreallocarray, xstrdup};
+use crate::utempter::utempter_remove_record;
 
 #[unsafe(no_mangle)]
 pub static mut windows: windows = unsafe { std::mem::zeroed() };

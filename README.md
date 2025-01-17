@@ -32,6 +32,11 @@ If my understanding of autotools was better, I'd try to seamlessly integrate the
 crates into the original project structure. For now I have a `build.sh` script in the root which
 calls make and cargo.
 
+I think the better approach is to mimic the C functions abi with rust extern ffi definitions.
+Then successively convert the ffi bindings into implementations. Using a single crate with modules
+so it's easy to handle circular deps. I guess the problem is build system. It's difficult to have
+a single file partially implemented. each can be all or nothing
+
 
 # Progress
 
