@@ -1,6 +1,6 @@
 [workspace]
-members = ["compat_rs", "bsd-sys", "tmux_h"]
+members = ["compat_rs", "bsd-sys", "tmux_rs"]
 resolver = "2"
 
 [workspace.dependencies]
-libc = "0.2.169"
+libc = { version = "0.2.169" }
