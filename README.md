@@ -44,12 +44,11 @@ a single file partially implemented. each can be all or nothing
 - [X] xmalloc
 - [X] compat
 - [X] cmd-kill-server
-- [ ] window
-  - [ ] TODO remove temporary `extern "C"` shim blocks
-  - [ ] Fix errors
-- [ ] tmux.h
-  - [ ] many extra functions are not included
+- [X] window
+- [X] tmux.h
 - [ ] alert.c
+    - [ ] implement TODO's
+- [ ] server.c
     - [ ] implement TODO's
 - [ ] ...
 

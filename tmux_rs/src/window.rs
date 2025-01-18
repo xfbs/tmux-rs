@@ -1,6 +1,5 @@
 use super::*;
 
-use crate::log::{fatal, fatalx, log_debug};
 use crate::xmalloc::{xasprintf, xcalloc, xmalloc, xreallocarray, xstrdup};
 
 use compat_rs::{
@@ -286,8 +285,7 @@ unsafe extern "C" fn window_find_by_id(id: u32) -> *mut window {
 unsafe extern "C" fn window_update_activity(w: *mut window) {
     unsafe {
         gettimeofday(&raw mut (*w).activity_time, null_mut());
-        todo!()
-        // alerts_queue(w, WINDOW_ACTIVITY);
+        alerts_queue(w, WINDOW_ACTIVITY);
     }
 }
 
@@ -614,11 +612,6 @@ unsafe extern "C" fn window_pane_update_focus(wp: *mut window_pane) {
     }
 }
 
-unsafe extern "C" {
-    fn tty_update_window_offset(...);
-    fn options_get_number(...) -> u32;
-    fn notify_window(...);
-}
 #[unsafe(no_mangle)]
 unsafe extern "C" fn window_set_active_pane(
     w: *mut window,
@@ -738,9 +731,9 @@ unsafe extern "C" fn window_find_string(w: *mut window, s: *const c_char) -> *mu
         let mut y = (*w).sy / 2;
 
         let status = options_get_number((*w).options, c"pane-border-status".as_ptr());
-        if status == PANE_STATUS_TOP as u32 {
+        if status == PANE_STATUS_TOP as _ {
             top += 1;
-        } else if status == PANE_STATUS_BOTTOM as u32 {
+        } else if status == PANE_STATUS_BOTTOM as _ {
             bottom -= 1;
         }
 
@@ -821,10 +814,10 @@ unsafe extern "C" fn window_unzoom(w: *mut window, notify: i32) -> i32 {
             (*wp).saved_layout_cell = null_mut();
             ControlFlow::<(), ()>::Continue(())
         });
-        layout_fix_panes(w, null_mut::<c_void>());
+        layout_fix_panes(w, null_mut());
 
         if notify != 0 {
-            notify_window("window-layout-changed", w);
+            notify_window(c"window-layout-changed".as_ptr(), w);
         }
 
         0
@@ -950,7 +943,7 @@ unsafe extern "C" fn window_remove_pane(w: *mut window, wp: *mut window_pane) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn window_pane_at_index(w: *mut window, idx: u32) -> *mut window_pane {
     unsafe {
-        let mut n: u32 = options_get_number((*w).options, c"pane-base-index".as_ptr());
+        let mut n: u32 = options_get_number((*w).options, c"pane-base-index".as_ptr()) as _;
 
         match tailq_foreach(&raw mut (*w).panes, |wp| {
             if n == idx {
@@ -1006,7 +999,7 @@ unsafe extern "C" fn window_pane_index(wp: *mut window_pane, i: *mut u32) -> i32
     unsafe {
         let w = (*wp).window;
 
-        *i = options_get_number((*w).options, c"pane-base-index".as_ptr());
+        *i = options_get_number((*w).options, c"pane-base-index".as_ptr()) as _;
         match tailq_foreach(&raw mut (*w).panes, |wq| {
             if wp == wq {
                 return ControlFlow::Break(0);
@@ -1083,7 +1076,7 @@ unsafe extern "C" fn window_printable_flags(wl: *mut winlink, escape: i32) -> *c
             flags[pos] = b'-' as c_char;
             pos += 1;
         }
-        if server_check_marked() && wl == marked_pane.wl {
+        if server_check_marked() != 0 && wl == marked_pane.wl {
             flags[pos] = b'M' as c_char;
             pos += 1;
         }
@@ -1157,7 +1150,7 @@ unsafe extern "C" fn window_pane_create(
         (*wp).control_fg = -1;
 
         colour_palette_init(&raw mut (*wp).palette);
-        colour_palette_from_option(&(*wp).palette, (*wp).options);
+        colour_palette_from_option(&raw mut (*wp).palette, (*wp).options);
 
         screen_init(&raw mut (*wp).base, sx, sy, hlimit);
         (*wp).screen = &raw mut (*wp).base;
@@ -1215,7 +1208,7 @@ unsafe extern "C" fn window_pane_destroy(wp: *mut window_pane) {
         free((*wp).cwd as _);
         free((*wp).shell as _);
         cmd_free_argv((*wp).argc, (*wp).argv);
-        colour_palette_free(&(*wp).palette);
+        colour_palette_free(&raw mut (*wp).palette);
         free(wp as _);
     }
 }
@@ -1427,7 +1420,7 @@ unsafe extern "C" fn window_pane_copy_key(wp: *mut window_pane, key: key_code) {
                 && window_pane_visible(loop_) != 0
                 && options_get_number((*loop_).options, c"synchronize-panes".as_ptr()) != 0
             {
-                input_key_pane(loop_, key, null_mut::<c_void>());
+                input_key_pane(loop_, key, null_mut());
             }
             ControlFlow::Continue::<(), ()>(())
         });
@@ -1601,11 +1594,11 @@ unsafe extern "C" fn window_pane_find_up(wp: *mut window_pane) -> *mut window_pa
         let mut size = 0;
 
         let mut edge = (*wp).yoff;
-        if status == PANE_STATUS_TOP as u32 {
+        if status == PANE_STATUS_TOP as _ {
             if edge == 1 {
                 edge = (*w).sy + 1;
             }
-        } else if status == PANE_STATUS_BOTTOM as u32 {
+        } else if status == PANE_STATUS_BOTTOM as _ {
             if edge == 0 {
                 edge = (*w).sy;
             }
@@ -1668,11 +1661,11 @@ unsafe extern "C" fn window_pane_find_down(wp: *mut window_pane) -> *mut window_
         let mut size = 0;
 
         let mut edge = (*wp).yoff + (*wp).sy + 1;
-        if status == PANE_STATUS_TOP as u32 {
+        if status == PANE_STATUS_TOP as _ {
             if edge >= (*w).sy {
                 edge = 1;
             }
-        } else if status == PANE_STATUS_BOTTOM as u32 {
+        } else if status == PANE_STATUS_BOTTOM as _ {
             if edge >= (*w).sy - 1 {
                 edge = 0;
             }
@@ -1912,7 +1905,7 @@ unsafe extern "C" fn winlink_shuffle_up(s: *mut session, mut wl: *mut winlink, b
 #[unsafe(no_mangle)]
 unsafe extern "C" fn window_pane_input_callback(
     c: *mut client,
-    _path: *const c_char,
+    _path: *mut c_char,
     error: i32,
     closed: i32,
     buffer: *mut evbuffer,
@@ -1965,7 +1958,12 @@ unsafe extern "C" fn window_pane_start_input(
             xmalloc(size_of::<window_pane_input_data>()).cast().as_ptr();
         (*cdata).item = item;
         (*cdata).wp = (*wp).id;
-        (*cdata).file = file_read(c, c"-".as_ptr(), Some(window_pane_input_callback), cdata);
+        (*cdata).file = file_read(
+            c,
+            c"-".as_ptr(),
+            Some(window_pane_input_callback),
+            cdata as _,
+        );
         (*c).references += 1;
 
         0
@@ -2011,7 +2009,7 @@ unsafe extern "C" fn window_set_fill_character(w: *mut window) {
         (*w).fill_character = null_mut();
 
         let value = options_get_string((*w).options, c"fill-character".as_ptr());
-        if *value != b'\0' as _ && utf8_isvalid(value) {
+        if *value != b'\0' as _ && utf8_isvalid(value) != 0 {
             let ud = utf8_fromcstr(value);
             if !ud.is_null() && (*ud).width == 1 {
                 (*w).fill_character = ud;
@@ -2025,12 +2023,16 @@ unsafe extern "C" fn window_pane_default_cursor(wp: *mut window_pane) {
     unsafe {
         let s = (*wp).screen;
 
-        let c = options_get_number((*wp).options, c"cursor-colour".as_ptr());
-        (*s).default_ccolour = c as i32;
+        let c: i32 = options_get_number((*wp).options, c"cursor-colour".as_ptr()) as i32;
+        (*s).default_ccolour = c;
 
-        let c = options_get_number((*wp).options, c"cursor-style".as_ptr());
+        let c: i32 = options_get_number((*wp).options, c"cursor-style".as_ptr()) as i32;
         (*s).default_mode = 0;
-        screen_set_cursor_style(c, &raw mut (*s).default_cstyle, &raw mut (*s).default_mode);
+        screen_set_cursor_style(
+            c as u32,
+            &raw mut (*s).default_cstyle,
+            &raw mut (*s).default_mode,
+        );
     }
 }
 
