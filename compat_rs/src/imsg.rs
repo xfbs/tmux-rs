@@ -8,7 +8,7 @@ use crate::imsg_buffer::{
     ibuf_add, ibuf_add_buf, ibuf_close, ibuf_data, ibuf_dynamic, ibuf_fd_avail, ibuf_fd_set, ibuf_free, ibuf_get,
     ibuf_get_ibuf, ibuf_open, ibuf_rewind, ibuf_size, msgbuf_clear, msgbuf_init, msgbuf_write,
 };
-use crate::queue::{Entry, tailq_entry, tailq_first, tailq_head, tailq_init, tailq_insert_tail, tailq_remove};
+use crate::queue::{tailq_entry, tailq_first, tailq_head, tailq_init, tailq_insert_tail, tailq_remove, Entry};
 
 pub const MAX_IMSGSIZE: u32 = 16384;
 const IMSGF_HASFD: u16 = 1; // this needs to be u16, i think, but it's u32 in auto generated header

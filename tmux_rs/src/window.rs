@@ -5,21 +5,20 @@ use crate::xmalloc::{xasprintf, xcalloc, xmalloc, xreallocarray, xstrdup};
 use compat_rs::{
     HOST_NAME_MAX,
     queue::{
-        tailq_empty, tailq_first, tailq_foreach, tailq_foreach_safe, tailq_init,
-        tailq_insert_after, tailq_insert_before, tailq_insert_head, tailq_insert_tail, tailq_last,
-        tailq_next, tailq_prev, tailq_remove,
+        tailq_empty, tailq_first, tailq_foreach, tailq_foreach_safe, tailq_init, tailq_insert_after,
+        tailq_insert_before, tailq_insert_head, tailq_insert_tail, tailq_last, tailq_next, tailq_prev, tailq_remove,
     },
     strtonum,
     tree::{rb_find, rb_foreach, rb_insert, rb_min, rb_next, rb_prev, rb_remove},
     vis::{VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB},
 };
 use libc::{
-    FIONREAD, FNM_CASEFOLD, TIOCSWINSZ, close, fnmatch, free, gethostname, gettimeofday, ioctl,
-    isspace, memset, regcomp, regex_t, regexec, regfree, strcasecmp, strlen, winsize,
+    FIONREAD, FNM_CASEFOLD, TIOCSWINSZ, close, fnmatch, free, gethostname, gettimeofday, ioctl, isspace, memset,
+    regcomp, regex_t, regexec, regfree, strcasecmp, strlen, winsize,
 };
 use libevent_sys::{
-    EV_READ, EV_WRITE, bufferevent, bufferevent_disable, bufferevent_enable, bufferevent_free,
-    bufferevent_new, bufferevent_write, evbuffer, evbuffer_drain, event_del, event_initialized,
+    EV_READ, EV_WRITE, bufferevent, bufferevent_disable, bufferevent_enable, bufferevent_free, bufferevent_new,
+    bufferevent_write, evbuffer, evbuffer_drain, event_del, event_initialized,
 };
 
 #[cfg(feature = "utempter")]
@@ -59,10 +58,7 @@ pub unsafe extern "C" fn window_pane_cmp(wp1: *const window_pane, wp2: *const wi
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn winlink_find_by_window(
-    wwl: *mut winlinks,
-    w: *mut window,
-) -> *mut winlink {
+pub unsafe extern "C" fn winlink_find_by_window(wwl: *mut winlinks, w: *mut window) -> *mut winlink {
     unsafe {
         rb_foreach(wwl, |wl| {
             if (*wl).window == w {
@@ -195,11 +191,7 @@ unsafe extern "C" fn winlink_previous(wl: *mut winlink) -> *mut winlink {
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn winlink_next_by_number(
-    mut wl: *mut winlink,
-    s: *mut session,
-    n: i32,
-) -> *mut winlink {
+unsafe extern "C" fn winlink_next_by_number(mut wl: *mut winlink, s: *mut session, n: i32) -> *mut winlink {
     unsafe {
         for _ in 0..n {
             wl = rb_next(wl);
@@ -213,11 +205,7 @@ unsafe extern "C" fn winlink_next_by_number(
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn winlink_previous_by_number(
-    mut wl: *mut winlink,
-    s: *mut session,
-    n: i32,
-) -> *mut winlink {
+unsafe extern "C" fn winlink_previous_by_number(mut wl: *mut winlink, s: *mut session, n: i32) -> *mut winlink {
     unsafe {
         for _ in 0..n {
             wl = rb_prev(wl);
@@ -290,12 +278,7 @@ unsafe extern "C" fn window_update_activity(w: *mut window) {
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_create(
-    sx: u32,
-    sy: u32,
-    mut xpixel: u32,
-    mut ypixel: u32,
-) -> *mut window {
+unsafe extern "C" fn window_create(sx: u32, sy: u32, mut xpixel: u32, mut ypixel: u32) -> *mut window {
     if xpixel == 0 {
         xpixel = DEFAULT_XPIXEL as u32;
     }
@@ -444,11 +427,7 @@ pub unsafe fn window_remove_ref(w: *mut window, from: *const c_char) {
 pub unsafe fn window_set_name(w: *mut window, new_name: *mut c_char) {
     unsafe {
         free((*w).name as _);
-        utf8_stravis(
-            &raw mut (*w).name,
-            new_name,
-            VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL,
-        );
+        utf8_stravis(&raw mut (*w).name, new_name, VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL);
         notify_window(c"window-renamed".as_ptr(), w);
     }
 }
@@ -469,16 +448,8 @@ pub unsafe fn window_resize(w: *mut window, sx: u32, sy: u32, mut xpixel: i32, m
             (*w).id,
             sx,
             sy,
-            if xpixel == -1 {
-                (*w).xpixel
-            } else {
-                xpixel as u32
-            },
-            if ypixel == -1 {
-                (*w).ypixel
-            } else {
-                ypixel as u32
-            },
+            if xpixel == -1 { (*w).xpixel } else { xpixel as u32 },
+            if ypixel == -1 { (*w).ypixel } else { ypixel as u32 },
         );
 
         (*w).sx = sx;
@@ -547,11 +518,7 @@ unsafe extern "C" fn window_has_pane(w: *mut window, wp: *mut window_pane) -> i3
 unsafe extern "C" fn window_update_focus(w: *mut window) {
     unsafe {
         if !w.is_null() {
-            log_debug(
-                c"%s: @%u".as_ptr(),
-                c"window_update_focus".as_ptr(),
-                (*w).id,
-            );
+            log_debug(c"%s: @%u".as_ptr(), c"window_update_focus".as_ptr(), (*w).id);
             window_pane_update_focus((*w).active);
         }
     }
@@ -613,18 +580,10 @@ unsafe extern "C" fn window_pane_update_focus(wp: *mut window_pane) {
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_set_active_pane(
-    w: *mut window,
-    wp: *mut window_pane,
-    notify: i32,
-) -> i32 {
+unsafe extern "C" fn window_set_active_pane(w: *mut window, wp: *mut window_pane, notify: i32) -> i32 {
     let lastwp: *mut window_pane;
     unsafe {
-        log_debug(
-            c"%s: pane %%%u".as_ptr(),
-            c"window_set_active_pane".as_ptr(),
-            (*wp).id,
-        );
+        log_debug(c"%s: pane %%%u".as_ptr(), c"window_set_active_pane".as_ptr(), (*wp).id);
 
         if wp == (*w).active {
             return 0;
@@ -959,11 +918,7 @@ unsafe extern "C" fn window_pane_at_index(w: *mut window, idx: u32) -> *mut wind
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_pane_next_by_number(
-    w: *mut window,
-    mut wp: *mut window_pane,
-    n: u32,
-) -> *mut window_pane {
+unsafe extern "C" fn window_pane_next_by_number(w: *mut window, mut wp: *mut window_pane, n: u32) -> *mut window_pane {
     unsafe {
         for _ in 0..n {
             wp = tailq_next(wp);
@@ -1116,12 +1071,7 @@ unsafe extern "C" fn window_pane_find_by_id(id: u32) -> *mut window_pane {
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_pane_create(
-    w: *mut window,
-    sx: u32,
-    sy: u32,
-    hlimit: u32,
-) -> *mut window_pane {
+unsafe extern "C" fn window_pane_create(w: *mut window, sx: u32, sy: u32, hlimit: u32) -> *mut window_pane {
     unsafe {
         let mut host: [c_char; HOST_NAME_MAX + 1] = zeroed();
         let wp: *mut window_pane = xcalloc(1, size_of::<window_pane>()).cast().as_ptr();
@@ -1243,11 +1193,7 @@ unsafe extern "C" fn window_pane_read_callback(_bufev: *mut bufferevent, data: *
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_pane_error_callback(
-    _bufev: *mut bufferevent,
-    _what: c_short,
-    data: *mut c_void,
-) {
+unsafe extern "C" fn window_pane_error_callback(_bufev: *mut bufferevent, _what: c_short, data: *mut c_void) {
     let wp: *mut window_pane = data as _;
     unsafe {
         log_debug(c"%%%u error".as_ptr(), (*wp).id);
@@ -1304,12 +1250,7 @@ unsafe extern "C" fn window_pane_resize(wp: *mut window_pane, sx: u32, sy: u32) 
             sx,
             sy,
         );
-        screen_resize(
-            &raw mut (*wp).base,
-            sx,
-            sy,
-            (*wp).base.saved_grid.is_null() as i32,
-        );
+        screen_resize(&raw mut (*wp).base, sx, sy, (*wp).base.saved_grid.is_null() as i32);
 
         let wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
         if !wme.is_null() {
@@ -1490,12 +1431,7 @@ unsafe extern "C" fn window_pane_exited(wp: *mut window_pane) -> i32 {
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_pane_search(
-    wp: *mut window_pane,
-    term: *const c_char,
-    regex: i32,
-    ignore: i32,
-) -> u32 {
+unsafe extern "C" fn window_pane_search(wp: *mut window_pane, term: *const c_char, regex: i32, ignore: i32) -> u32 {
     unsafe {
         let s: *mut screen = &raw mut (*wp).base;
         let mut r: regex_t = zeroed();
@@ -1557,10 +1493,7 @@ unsafe extern "C" fn window_pane_search(
 
 /* Get MRU pane from a list. */
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_pane_choose_best(
-    list: *mut *mut window_pane,
-    size: u32,
-) -> *mut window_pane {
+unsafe extern "C" fn window_pane_choose_best(list: *mut *mut window_pane, size: u32) -> *mut window_pane {
     if size == 0 {
         return null_mut();
     }
@@ -1871,11 +1804,7 @@ unsafe extern "C" fn winlink_shuffle_up(s: *mut session, mut wl: *mut winlink, b
         return -1;
     }
     unsafe {
-        let idx = if before != 0 {
-            (*wl).idx
-        } else {
-            (*wl).idx + 1
-        };
+        let idx = if before != 0 { (*wl).idx } else { (*wl).idx + 1 };
 
         /* Find the next free index. */
         let mut last = idx;
@@ -1954,16 +1883,10 @@ unsafe extern "C" fn window_pane_start_input(
             return 1;
         }
 
-        let cdata: *mut window_pane_input_data =
-            xmalloc(size_of::<window_pane_input_data>()).cast().as_ptr();
+        let cdata: *mut window_pane_input_data = xmalloc(size_of::<window_pane_input_data>()).cast().as_ptr();
         (*cdata).item = item;
         (*cdata).wp = (*wp).id;
-        (*cdata).file = file_read(
-            c,
-            c"-".as_ptr(),
-            Some(window_pane_input_callback),
-            cdata as _,
-        );
+        (*cdata).file = file_read(c, c"-".as_ptr(), Some(window_pane_input_callback), cdata as _);
         (*c).references += 1;
 
         0
@@ -1985,11 +1908,7 @@ unsafe extern "C" fn window_pane_get_new_data(
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_pane_update_used_data(
-    wp: *mut window_pane,
-    wpo: *mut window_pane_offset,
-    mut size: usize,
-) {
+unsafe extern "C" fn window_pane_update_used_data(wp: *mut window_pane, wpo: *mut window_pane_offset, mut size: usize) {
     unsafe {
         let used = (*wpo).used - (*wp).base_offset;
 
@@ -2028,11 +1947,7 @@ unsafe extern "C" fn window_pane_default_cursor(wp: *mut window_pane) {
 
         let c: i32 = options_get_number((*wp).options, c"cursor-style".as_ptr()) as i32;
         (*s).default_mode = 0;
-        screen_set_cursor_style(
-            c as u32,
-            &raw mut (*s).default_cstyle,
-            &raw mut (*s).default_mode,
-        );
+        screen_set_cursor_style(c as u32, &raw mut (*s).default_cstyle, &raw mut (*s).default_mode);
     }
 }
 

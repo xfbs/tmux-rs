@@ -1,9 +1,6 @@
 use libc::{SIGTERM, getpid, kill};
 
-use crate::{
-    CMD_STARTSERVER, args_parse, cmd, cmd_entry, cmd_entry_flag, cmd_find_type, cmd_retval,
-    cmdq_item,
-};
+use crate::{CMD_STARTSERVER, args_parse, cmd, cmd_entry, cmd_entry_flag, cmd_find_type, cmd_retval, cmdq_item};
 
 unsafe extern "C" {
     fn cmd_get_entry(_: *mut cmd) -> *const cmd_entry;

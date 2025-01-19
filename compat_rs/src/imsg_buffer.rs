@@ -1,6 +1,9 @@
-use core::ffi::c_int;
-use core::{ffi::c_void, mem::size_of, ptr::null_mut};
-use std::ops::ControlFlow;
+use core::{
+    ffi::{c_int, c_void},
+    mem::size_of,
+    ops::ControlFlow,
+    ptr::null_mut,
+};
 
 use bsd_sys::recallocarray;
 use libc::{calloc, cmsghdr, free, msghdr};
@@ -46,7 +49,7 @@ pub unsafe extern "C" fn ibuf_dynamic(len: usize, max: usize) -> *mut ibuf {
     if len > 0 {
         (*buf).buf = calloc(len, 1) as *mut libc::c_uchar;
         if (*buf).buf.is_null() {
-            free(buf as *mut libc::c_void);
+            free(buf as *mut c_void);
             return null_mut();
         }
     }
@@ -66,7 +69,7 @@ pub unsafe extern "C" fn ibuf_realloc(buf: *mut ibuf, len: usize) -> i32 {
         return -1;
     }
 
-    let b = recallocarray((*buf).buf as *mut libc::c_void, (*buf).size, (*buf).wpos + len, 1);
+    let b = recallocarray((*buf).buf as *mut c_void, (*buf).size, (*buf).wpos + len, 1);
     if b.is_null() {
         return -1;
     }

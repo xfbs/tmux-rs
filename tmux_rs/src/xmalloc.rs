@@ -56,11 +56,7 @@ pub unsafe extern "C" fn xrealloc(ptr: *mut c_void, size: usize) -> NonNull<c_vo
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn xreallocarray(
-    ptr: *mut c_void,
-    nmemb: usize,
-    size: usize,
-) -> NonNull<c_void> {
+pub unsafe extern "C" fn xreallocarray(ptr: *mut c_void, nmemb: usize, size: usize) -> NonNull<c_void> {
     unsafe {
         if nmemb == 0 || size == 0 {
             fatalx(c"xreallocarray: zero size".as_ptr());
@@ -123,20 +119,12 @@ pub unsafe extern "C" fn xstrndup(str: *const c_char, maxlen: usize) -> NonNull<
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn xasprintf(
-    ret: *mut *mut c_char,
-    fmt: *const c_char,
-    mut args: ...
-) -> c_int {
+pub unsafe extern "C" fn xasprintf(ret: *mut *mut c_char, fmt: *const c_char, mut args: ...) -> c_int {
     unsafe { xvasprintf(ret, fmt, args.as_va_list()) }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn xvasprintf(
-    ret: *mut *mut c_char,
-    fmt: *const c_char,
-    args: VaList,
-) -> c_int {
+pub unsafe extern "C" fn xvasprintf(ret: *mut *mut c_char, fmt: *const c_char, args: VaList) -> c_int {
     unsafe {
         let i = vasprintf(ret, fmt, args);
 
@@ -149,22 +137,12 @@ pub unsafe extern "C" fn xvasprintf(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn xsnprintf(
-    str: *mut c_char,
-    len: usize,
-    fmt: *const c_char,
-    mut args: ...
-) -> c_int {
+pub unsafe extern "C" fn xsnprintf(str: *mut c_char, len: usize, fmt: *const c_char, mut args: ...) -> c_int {
     unsafe { xvsnprintf(str, len, fmt, args.as_va_list()) }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn xvsnprintf(
-    str: *mut c_char,
-    len: usize,
-    fmt: *const c_char,
-    args: VaList,
-) -> c_int {
+pub unsafe extern "C" fn xvsnprintf(str: *mut c_char, len: usize, fmt: *const c_char, args: VaList) -> c_int {
     unsafe {
         if len > i32::MAX as usize {
             fatalx(c"xsnprintf: len > INT_MAX".as_ptr());

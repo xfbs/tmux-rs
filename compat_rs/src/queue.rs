@@ -159,10 +159,7 @@ where
 }
 
 // need to store next before calling func so can be used for deallocation
-pub unsafe fn tailq_foreach_safe<F, T, B>(
-    head: *mut tailq_head<T>,
-    mut f: F,
-) -> std::ops::ControlFlow<B>
+pub unsafe fn tailq_foreach_safe<F, T, B>(head: *mut tailq_head<T>, mut f: F) -> std::ops::ControlFlow<B>
 where
     F: FnMut(*mut T) -> std::ops::ControlFlow<B>,
     T: Entry<T>,
@@ -188,9 +185,7 @@ pub struct list_head<T> {
 
 impl<T> list_head<T> {
     pub const fn const_default() -> Self {
-        Self {
-            lh_first: null_mut(),
-        }
+        Self { lh_first: null_mut() }
     }
 }
 

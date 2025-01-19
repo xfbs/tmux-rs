@@ -21,11 +21,7 @@ pub static mut message_log: message_list = unsafe { zeroed() };
 pub static mut current_time: time_t = unsafe { zeroed() };
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_set_marked(
-    s: *mut session,
-    wl: *mut winlink,
-    wp: *mut window_pane,
-) {
+pub unsafe extern "C" fn server_set_marked(s: *mut session, wl: *mut winlink, wp: *mut window_pane) {
     unsafe {
         cmd_find_clear_state(&raw mut marked_pane, 0);
         marked_pane.s = s;
@@ -43,11 +39,7 @@ pub unsafe extern "C" fn server_clear_marked() {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_is_marked(
-    s: *mut session,
-    wl: *mut winlink,
-    wp: *mut window_pane,
-) -> c_int {
+pub unsafe extern "C" fn server_is_marked(s: *mut session, wl: *mut winlink, wp: *mut window_pane) -> c_int {
     if s.is_null() || wl.is_null() || wp.is_null() {
         return 0;
     }

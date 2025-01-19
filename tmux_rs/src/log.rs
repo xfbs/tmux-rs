@@ -10,8 +10,8 @@ use ::core::{
 };
 
 use ::libc::{
-    __errno_location, FILE, fclose, fflush, fopen, fprintf, free, getpid, gettimeofday, setvbuf,
-    snprintf, strerror, timeval,
+    __errno_location, FILE, fclose, fflush, fopen, fprintf, free, getpid, gettimeofday, setvbuf, snprintf, strerror,
+    timeval,
 };
 
 unsafe extern "C" {
@@ -97,22 +97,14 @@ unsafe extern "C" fn log_vwrite(msg: *const c_char, mut ap: VaList, prefix: *con
     unsafe {
         let mut s: *mut c_char = null_mut();
         let mut out: *mut c_char = null_mut();
-        let mut tv: timeval = timeval {
-            tv_sec: 0,
-            tv_usec: 0,
-        };
+        let mut tv: timeval = timeval { tv_sec: 0, tv_usec: 0 };
         if log_file.is_null() {
             return;
         }
         if vasprintf(&mut s, msg, ap.as_va_list()) == -1 {
             return;
         }
-        if stravis(
-            &mut out,
-            s,
-            0x1 as c_int | 0x2 as c_int | 0x8 as c_int | 0x10 as c_int,
-        ) == -1
-        {
+        if stravis(&mut out, s, 0x1 as c_int | 0x2 as c_int | 0x8 as c_int | 0x10 as c_int) == -1 {
             free(s as _);
             return;
         }

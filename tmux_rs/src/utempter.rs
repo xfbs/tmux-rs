@@ -5,4 +5,3 @@ unsafe extern "C" {
     pub unsafe fn utempter_remove_record(master_fd: c_int) -> c_int;
     pub unsafe fn utempter_set_helper(pathname: *const c_char);
 }
-

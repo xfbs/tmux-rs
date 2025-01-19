@@ -16,9 +16,7 @@ pub struct rb_head<T> {
 
 impl<T> Default for rb_head<T> {
     fn default() -> Self {
-        Self {
-            rbh_root: null_mut(),
-        }
+        Self { rbh_root: null_mut() }
     }
 }
 
@@ -53,9 +51,7 @@ pub trait GetEntry<T> {
 }
 
 pub const fn rb_initializer<T>() -> rb_head<T> {
-    rb_head {
-        rbh_root: null_mut(),
-    }
+    rb_head { rbh_root: null_mut() }
 }
 
 macro_rules! rb_left {
