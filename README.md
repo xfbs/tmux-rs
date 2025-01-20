@@ -46,9 +46,9 @@ a single file partially implemented. each can be all or nothing
 - [X] cmd-kill-server
 - [X] window
 - [X] tmux.h
-- [ ] alert.c
+- [ ] alert.c 325
     - [ ] implement TODO's
-- [ ] server.c
+- [ ] server.c 557
     - [ ] implement TODO's
 - [ ] ...
 

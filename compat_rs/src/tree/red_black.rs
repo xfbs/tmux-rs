@@ -50,6 +50,12 @@ pub trait GetEntry<T> {
     unsafe fn cmp(this: *const Self, other: *const Self) -> i32;
 }
 
+pub const unsafe fn rb_init<T>(head: *mut rb_head<T>) {
+    unsafe {
+        (*head).rbh_root = null_mut();
+    }
+}
+
 pub const fn rb_initializer<T>() -> rb_head<T> {
     rb_head { rbh_root: null_mut() }
 }

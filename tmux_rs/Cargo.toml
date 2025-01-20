@@ -13,5 +13,6 @@ libevent-sys = { version = "0.3.0" }
 paste = { version = "1.0.15" }
 
 [features]
+systemd = []
 sixel = []
 utempter = []

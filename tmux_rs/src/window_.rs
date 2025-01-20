@@ -533,7 +533,6 @@ unsafe extern "C" fn window_pane_update_focus(wp: *mut window_pane) {
             if wp != (*(*wp).window).active {
                 focused = false
             } else {
-                // TODO import clients from server.c
                 tailq_foreach(&raw mut crate::server::clients, |c| {
                     if !(*c).session.is_null()
                         && (*(*c).session).attached != 0

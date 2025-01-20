@@ -7,11 +7,11 @@
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 
-// pub mod alerts;
+pub mod alerts;
 pub mod cmd_kill_server;
+pub mod event_;
 pub mod log;
 pub mod server;
-#[path = "window.rs"]
 pub mod window_;
 pub mod window_copy;
 pub mod xmalloc;
@@ -30,15 +30,18 @@ pub use core::{
 };
 
 pub type wchar_t = core::ffi::c_int;
+unsafe extern "C" {
+    #[expect(dead_code)]
+    static mut stdin: *mut FILE;
+    #[expect(dead_code)]
+    static mut stdout: *mut FILE;
+    static mut stderr: *mut FILE;
+}
 
 pub use libc::{FILE, REG_EXTENDED, REG_ICASE, pid_t, termios, time_t, timeval, uid_t};
+
+pub use crate::event_::{EVBUFFER_DATA, EVBUFFER_LENGTH, evtimer_add, evtimer_set};
 pub use libevent_sys::{bufferevent, evbuffer, evbuffer_get_length, evbuffer_pullup, event, event_base};
-pub unsafe fn EVBUFFER_LENGTH(x: *mut evbuffer) -> usize {
-    unsafe { evbuffer_get_length(x) }
-}
-pub unsafe fn EVBUFFER_DATA(x: *mut evbuffer) -> *mut c_uchar {
-    unsafe { evbuffer_pullup(x, -1) }
-}
 
 use compat_rs::queue::{Entry, list_entry, list_head, tailq_entry, tailq_head};
 use compat_rs::tree::{rb_entry, rb_head};
@@ -65,8 +68,10 @@ macro_rules! opaque_types {
         )*
     };
 }
+
 opaque_types! {
     args,
+    args_command_state,
     cmd,
     cmdq_item,
     cmdq_list,
@@ -2184,7 +2189,7 @@ unsafe extern "C" {
     pub static mut global_s_options: *mut options;
     pub static mut global_w_options: *mut options;
     pub static mut global_environ: *mut environ;
-    pub static start_time: timeval;
+    pub static mut start_time: timeval;
     pub static mut socket_path: *mut c_char;
     pub static mut ptm_fd: c_int;
     pub static mut shell_command: *mut c_char;
@@ -2293,7 +2298,7 @@ pub type format_cb = Option<unsafe extern "C" fn(_: *mut format_tree) -> *mut c_
 unsafe extern "C" {
     pub fn format_tidy_jobs();
     pub fn format_skip(_: *const c_char, _: *const c_char) -> *const c_char;
-    pub fn format_true(arg1: *const c_char) -> c_int;
+    pub fn format_true(_: *const c_char) -> c_int;
     pub fn format_create(_: *mut client, _: *mut cmdq_item, _: c_int, _: c_int) -> *mut format_tree;
     pub fn format_free(_: *mut format_tree);
     pub fn format_merge(_: *mut format_tree, _: *mut format_tree);
@@ -2361,10 +2366,10 @@ unsafe extern "C" {
 
 // notify.c
 unsafe extern "C" {
-    pub fn notify_hook(_: *mut cmdq_item, arg2: *const c_char);
-    pub fn notify_client(_: *const c_char, arg2: *mut client);
-    pub fn notify_session(_: *const c_char, arg2: *mut session);
-    pub fn notify_winlink(_: *const c_char, arg2: *mut winlink);
+    pub fn notify_hook(_: *mut cmdq_item, _: *const c_char);
+    pub fn notify_client(_: *const c_char, _: *mut client);
+    pub fn notify_session(_: *const c_char, _: *mut session);
+    pub fn notify_winlink(_: *const c_char, _: *mut winlink);
     pub fn notify_session_window(_: *const c_char, _: *mut session, _: *mut window);
     pub fn notify_window(_: *const c_char, _: *mut window);
     pub fn notify_pane(_: *const c_char, _: *mut window_pane);
@@ -2624,293 +2629,246 @@ unsafe extern "C" {
 
 // tty-features.c
 unsafe extern "C" {
-    pub fn tty_add_features(arg1: *mut c_int, arg2: *const c_char, arg3: *const c_char);
-    pub fn tty_get_features(arg1: c_int) -> *const c_char;
-    pub fn tty_apply_features(arg1: *mut tty_term, arg2: c_int) -> c_int;
-    pub fn tty_default_features(arg1: *mut c_int, arg2: *const c_char, arg3: c_uint);
+    pub fn tty_add_features(_: *mut c_int, _: *const c_char, _: *const c_char);
+    pub fn tty_get_features(_: c_int) -> *const c_char;
+    pub fn tty_apply_features(_: *mut tty_term, _: c_int) -> c_int;
+    pub fn tty_default_features(_: *mut c_int, _: *const c_char, _: c_uint);
 }
 
 /* tty-acs.c */
 unsafe extern "C" {
-    pub fn tty_acs_needed(arg1: *mut tty) -> c_int;
-    pub fn tty_acs_get(arg1: *mut tty, arg2: c_uchar) -> *const c_char;
-    pub fn tty_acs_reverse_get(arg1: *mut tty, arg2: *const c_char, arg3: usize) -> c_int;
-    pub fn tty_acs_double_borders(arg1: c_int) -> *const utf8_data;
-    pub fn tty_acs_heavy_borders(arg1: c_int) -> *const utf8_data;
-    pub fn tty_acs_rounded_borders(arg1: c_int) -> *const utf8_data;
+    pub fn tty_acs_needed(_: *mut tty) -> c_int;
+    pub fn tty_acs_get(_: *mut tty, _: c_uchar) -> *const c_char;
+    pub fn tty_acs_reverse_get(_: *mut tty, _: *const c_char, _: usize) -> c_int;
+    pub fn tty_acs_double_borders(_: c_int) -> *const utf8_data;
+    pub fn tty_acs_heavy_borders(_: c_int) -> *const utf8_data;
+    pub fn tty_acs_rounded_borders(_: c_int) -> *const utf8_data;
 }
 /* tty-keys.c */
 unsafe extern "C" {
 
-    pub fn tty_keys_build(arg1: *mut tty);
-    pub fn tty_keys_free(arg1: *mut tty);
-    pub fn tty_keys_next(arg1: *mut tty) -> c_int;
+    pub fn tty_keys_build(_: *mut tty);
+    pub fn tty_keys_free(_: *mut tty);
+    pub fn tty_keys_next(_: *mut tty) -> c_int;
     pub fn tty_keys_colours(
-        arg1: *mut tty,
-        arg2: *const c_char,
-        arg3: usize,
-        arg4: *mut usize,
-        arg5: *mut c_int,
-        arg6: *mut c_int,
+        _: *mut tty,
+        _: *const c_char,
+        _: usize,
+        _: *mut usize,
+        _: *mut c_int,
+        _: *mut c_int,
     ) -> c_int;
 }
 /* arguments.c */
-#[repr(C)]
-struct args_command_state([u8; 0]);
 unsafe extern "C" {
-    pub fn args_set(arg1: *mut args, arg2: c_uchar, arg3: *mut args_value, arg4: c_int);
+    pub fn args_set(_: *mut args, _: c_uchar, _: *mut args_value, _: c_int);
     pub fn args_create() -> *mut args;
-    pub fn args_parse(
-        arg1: *const args_parse,
-        arg2: *mut args_value,
-        arg3: c_uint,
-        arg4: *mut *mut c_char,
-    ) -> *mut args;
-    pub fn args_copy(arg1: *mut args, arg2: c_int, arg3: *mut *mut c_char) -> *mut args;
-    pub fn args_to_vector(arg1: *mut args, arg2: *mut c_int, arg3: *mut *mut *mut c_char);
-    pub fn args_from_vector(arg1: c_int, arg2: *mut *mut c_char) -> *mut args_value;
-    pub fn args_free_value(arg1: *mut args_value);
-    pub fn args_free_values(arg1: *mut args_value, arg2: c_uint);
-    pub fn args_free(arg1: *mut args);
-    pub fn args_print(arg1: *mut args) -> *mut c_char;
-    pub fn args_escape(arg1: *const c_char) -> *mut c_char;
-    pub fn args_has(arg1: *mut args, arg2: c_uchar) -> c_int;
-    pub fn args_get(arg1: *mut args, arg2: c_uchar) -> *const c_char;
-    pub fn args_first(arg1: *mut args, arg2: *mut *mut args_entry) -> c_uchar;
-    pub fn args_next(arg1: *mut *mut args_entry) -> c_uchar;
-    pub fn args_count(arg1: *mut args) -> c_uint;
-    pub fn args_values(arg1: *mut args) -> *mut args_value;
-    pub fn args_value(arg1: *mut args, arg2: c_uint) -> *mut args_value;
-    pub fn args_string(arg1: *mut args, arg2: c_uint) -> *const c_char;
-    pub fn args_make_commands_now(arg1: *mut cmd, arg2: *mut cmdq_item, arg3: c_uint, arg4: c_int) -> *mut cmd_list;
+    pub fn args_parse(_: *const args_parse, _: *mut args_value, _: c_uint, _: *mut *mut c_char) -> *mut args;
+    pub fn args_copy(_: *mut args, _: c_int, _: *mut *mut c_char) -> *mut args;
+    pub fn args_to_vector(_: *mut args, _: *mut c_int, _: *mut *mut *mut c_char);
+    pub fn args_from_vector(_: c_int, _: *mut *mut c_char) -> *mut args_value;
+    pub fn args_free_value(_: *mut args_value);
+    pub fn args_free_values(_: *mut args_value, _: c_uint);
+    pub fn args_free(_: *mut args);
+    pub fn args_print(_: *mut args) -> *mut c_char;
+    pub fn args_escape(_: *const c_char) -> *mut c_char;
+    pub fn args_has(_: *mut args, _: c_uchar) -> c_int;
+    pub fn args_get(_: *mut args, _: c_uchar) -> *const c_char;
+    pub fn args_first(_: *mut args, _: *mut *mut args_entry) -> c_uchar;
+    pub fn args_next(_: *mut *mut args_entry) -> c_uchar;
+    pub fn args_count(_: *mut args) -> c_uint;
+    pub fn args_values(_: *mut args) -> *mut args_value;
+    pub fn args_value(_: *mut args, _: c_uint) -> *mut args_value;
+    pub fn args_string(_: *mut args, _: c_uint) -> *const c_char;
+    pub fn args_make_commands_now(_: *mut cmd, _: *mut cmdq_item, _: c_uint, _: c_int) -> *mut cmd_list;
     pub fn args_make_commands_prepare(
-        arg1: *mut cmd,
-        arg2: *mut cmdq_item,
-        arg3: c_uint,
-        arg4: *const c_char,
-        arg5: c_int,
-        arg6: c_int,
+        _: *mut cmd,
+        _: *mut cmdq_item,
+        _: c_uint,
+        _: *const c_char,
+        _: c_int,
+        _: c_int,
     ) -> *mut args_command_state;
     pub fn args_make_commands(
-        arg1: *mut args_command_state,
-        arg2: c_int,
-        arg3: *mut *mut c_char,
-        arg4: *mut *mut c_char,
+        _: *mut args_command_state,
+        _: c_int,
+        _: *mut *mut c_char,
+        _: *mut *mut c_char,
     ) -> *mut cmd_list;
-    pub fn args_make_commands_free(arg1: *mut args_command_state);
-    pub fn args_make_commands_get_command(arg1: *mut args_command_state) -> *mut c_char;
-    pub fn args_first_value(arg1: *mut args, arg2: c_uchar) -> *mut args_value;
-    pub fn args_next_value(arg1: *mut args_value) -> *mut args_value;
-    pub fn args_strtonum(
-        arg1: *mut args,
-        arg2: c_uchar,
-        arg3: c_longlong,
-        arg4: c_longlong,
-        arg5: *mut *mut c_char,
-    ) -> c_longlong;
+    pub fn args_make_commands_free(_: *mut args_command_state);
+    pub fn args_make_commands_get_command(_: *mut args_command_state) -> *mut c_char;
+    pub fn args_first_value(_: *mut args, _: c_uchar) -> *mut args_value;
+    pub fn args_next_value(_: *mut args_value) -> *mut args_value;
+    pub fn args_strtonum(_: *mut args, _: c_uchar, _: c_longlong, _: c_longlong, _: *mut *mut c_char) -> c_longlong;
     pub fn args_strtonum_and_expand(
-        arg1: *mut args,
-        arg2: c_uchar,
-        arg3: c_longlong,
-        arg4: c_longlong,
-        arg5: *mut cmdq_item,
-        arg6: *mut *mut c_char,
+        _: *mut args,
+        _: c_uchar,
+        _: c_longlong,
+        _: c_longlong,
+        _: *mut cmdq_item,
+        _: *mut *mut c_char,
     ) -> c_longlong;
     pub fn args_percentage(
-        arg1: *mut args,
-        arg2: c_uchar,
-        arg3: c_longlong,
-        arg4: c_longlong,
-        arg5: c_longlong,
-        arg6: *mut *mut c_char,
+        _: *mut args,
+        _: c_uchar,
+        _: c_longlong,
+        _: c_longlong,
+        _: c_longlong,
+        _: *mut *mut c_char,
     ) -> c_longlong;
     pub fn args_string_percentage(
-        arg1: *const c_char,
-        arg2: c_longlong,
-        arg3: c_longlong,
-        arg4: c_longlong,
-        arg5: *mut *mut c_char,
+        _: *const c_char,
+        _: c_longlong,
+        _: c_longlong,
+        _: c_longlong,
+        _: *mut *mut c_char,
     ) -> c_longlong;
     pub fn args_percentage_and_expand(
-        arg1: *mut args,
-        arg2: c_uchar,
-        arg3: c_longlong,
-        arg4: c_longlong,
-        arg5: c_longlong,
-        arg6: *mut cmdq_item,
-        arg7: *mut *mut c_char,
+        _: *mut args,
+        _: c_uchar,
+        _: c_longlong,
+        _: c_longlong,
+        _: c_longlong,
+        _: *mut cmdq_item,
+        _: *mut *mut c_char,
     ) -> c_longlong;
     pub fn args_string_percentage_and_expand(
-        arg1: *const c_char,
-        arg2: c_longlong,
-        arg3: c_longlong,
-        arg4: c_longlong,
-        arg5: *mut cmdq_item,
-        arg6: *mut *mut c_char,
+        _: *const c_char,
+        _: c_longlong,
+        _: c_longlong,
+        _: c_longlong,
+        _: *mut cmdq_item,
+        _: *mut *mut c_char,
     ) -> c_longlong;
 }
 /* cmd-find.c */
 unsafe extern "C" {
     pub fn cmd_find_target(
-        arg1: *mut cmd_find_state,
-        arg2: *mut cmdq_item,
-        arg3: *const c_char,
-        arg4: cmd_find_type,
-        arg5: c_int,
+        _: *mut cmd_find_state,
+        _: *mut cmdq_item,
+        _: *const c_char,
+        _: cmd_find_type,
+        _: c_int,
     ) -> c_int;
-    pub fn cmd_find_best_client(arg1: *mut session) -> *mut client;
-    pub fn cmd_find_client(arg1: *mut cmdq_item, arg2: *const c_char, arg3: c_int) -> *mut client;
-    pub fn cmd_find_clear_state(arg1: *mut cmd_find_state, arg2: c_int);
-    pub fn cmd_find_empty_state(arg1: *mut cmd_find_state) -> c_int;
-    pub fn cmd_find_valid_state(arg1: *mut cmd_find_state) -> c_int;
-    pub fn cmd_find_copy_state(arg1: *mut cmd_find_state, arg2: *mut cmd_find_state);
-    pub fn cmd_find_from_session(arg1: *mut cmd_find_state, arg2: *mut session, arg3: c_int);
-    pub fn cmd_find_from_winlink(arg1: *mut cmd_find_state, arg2: *mut winlink, arg3: c_int);
-    pub fn cmd_find_from_session_window(
-        arg1: *mut cmd_find_state,
-        arg2: *mut session,
-        arg3: *mut window,
-        arg4: c_int,
-    ) -> c_int;
-    pub fn cmd_find_from_window(arg1: *mut cmd_find_state, arg2: *mut window, arg3: c_int) -> c_int;
-    pub fn cmd_find_from_winlink_pane(
-        arg1: *mut cmd_find_state,
-        arg2: *mut winlink,
-        arg3: *mut window_pane,
-        arg4: c_int,
-    );
-    pub fn cmd_find_from_pane(arg1: *mut cmd_find_state, arg2: *mut window_pane, arg3: c_int) -> c_int;
-    pub fn cmd_find_from_client(arg1: *mut cmd_find_state, arg2: *mut client, arg3: c_int) -> c_int;
-    pub fn cmd_find_from_mouse(arg1: *mut cmd_find_state, arg2: *mut mouse_event, arg3: c_int) -> c_int;
-    pub fn cmd_find_from_nothing(arg1: *mut cmd_find_state, arg2: c_int) -> c_int;
+    pub fn cmd_find_best_client(_: *mut session) -> *mut client;
+    pub fn cmd_find_client(_: *mut cmdq_item, _: *const c_char, _: c_int) -> *mut client;
+    pub fn cmd_find_clear_state(_: *mut cmd_find_state, _: c_int);
+    pub fn cmd_find_empty_state(_: *mut cmd_find_state) -> c_int;
+    pub fn cmd_find_valid_state(_: *mut cmd_find_state) -> c_int;
+    pub fn cmd_find_copy_state(_: *mut cmd_find_state, _: *mut cmd_find_state);
+    pub fn cmd_find_from_session(_: *mut cmd_find_state, _: *mut session, _: c_int);
+    pub fn cmd_find_from_winlink(_: *mut cmd_find_state, _: *mut winlink, _: c_int);
+    pub fn cmd_find_from_session_window(_: *mut cmd_find_state, _: *mut session, _: *mut window, _: c_int) -> c_int;
+    pub fn cmd_find_from_window(_: *mut cmd_find_state, _: *mut window, _: c_int) -> c_int;
+    pub fn cmd_find_from_winlink_pane(_: *mut cmd_find_state, _: *mut winlink, _: *mut window_pane, _: c_int);
+    pub fn cmd_find_from_pane(_: *mut cmd_find_state, _: *mut window_pane, _: c_int) -> c_int;
+    pub fn cmd_find_from_client(_: *mut cmd_find_state, _: *mut client, _: c_int) -> c_int;
+    pub fn cmd_find_from_mouse(_: *mut cmd_find_state, _: *mut mouse_event, _: c_int) -> c_int;
+    pub fn cmd_find_from_nothing(_: *mut cmd_find_state, _: c_int) -> c_int;
 }
 /* cmd.c */
 unsafe extern "C" {
     pub static mut cmd_table: [*const cmd_entry; 0usize];
-    pub fn cmd_log_argv(arg1: c_int, arg2: *mut *mut c_char, arg3: *const c_char, ...);
-    pub fn cmd_prepend_argv(arg1: *mut c_int, arg2: *mut *mut *mut c_char, arg3: *const c_char);
-    pub fn cmd_append_argv(arg1: *mut c_int, arg2: *mut *mut *mut c_char, arg3: *const c_char);
-    pub fn cmd_pack_argv(arg1: c_int, arg2: *mut *mut c_char, arg3: *mut c_char, arg4: usize) -> c_int;
-    pub fn cmd_unpack_argv(arg1: *mut c_char, arg2: usize, arg3: c_int, arg4: *mut *mut *mut c_char) -> c_int;
-    pub fn cmd_copy_argv(arg1: c_int, arg2: *mut *mut c_char) -> *mut *mut c_char;
-    pub fn cmd_free_argv(arg1: c_int, arg2: *mut *mut c_char);
-    pub fn cmd_stringify_argv(arg1: c_int, arg2: *mut *mut c_char) -> *mut c_char;
-    pub fn cmd_get_alias(arg1: *const c_char) -> *mut c_char;
-    pub fn cmd_get_entry(arg1: *mut cmd) -> *const cmd_entry;
-    pub fn cmd_get_args(arg1: *mut cmd) -> *mut args;
-    pub fn cmd_get_group(arg1: *mut cmd) -> c_uint;
-    pub fn cmd_get_source(arg1: *mut cmd, arg2: *mut *const c_char, arg3: *mut c_uint);
-    pub fn cmd_parse(
-        arg1: *mut args_value,
-        arg2: c_uint,
-        arg3: *const c_char,
-        arg4: c_uint,
-        arg5: *mut *mut c_char,
-    ) -> *mut cmd;
-    pub fn cmd_copy(arg1: *mut cmd, arg2: c_int, arg3: *mut *mut c_char) -> *mut cmd;
-    pub fn cmd_free(arg1: *mut cmd);
-    pub fn cmd_print(arg1: *mut cmd) -> *mut c_char;
+    pub fn cmd_log_argv(_: c_int, _: *mut *mut c_char, _: *const c_char, ...);
+    pub fn cmd_prepend_argv(_: *mut c_int, _: *mut *mut *mut c_char, _: *const c_char);
+    pub fn cmd_append_argv(_: *mut c_int, _: *mut *mut *mut c_char, _: *const c_char);
+    pub fn cmd_pack_argv(_: c_int, _: *mut *mut c_char, _: *mut c_char, _: usize) -> c_int;
+    pub fn cmd_unpack_argv(_: *mut c_char, _: usize, _: c_int, _: *mut *mut *mut c_char) -> c_int;
+    pub fn cmd_copy_argv(_: c_int, _: *mut *mut c_char) -> *mut *mut c_char;
+    pub fn cmd_free_argv(_: c_int, _: *mut *mut c_char);
+    pub fn cmd_stringify_argv(_: c_int, _: *mut *mut c_char) -> *mut c_char;
+    pub fn cmd_get_alias(_: *const c_char) -> *mut c_char;
+    pub fn cmd_get_entry(_: *mut cmd) -> *const cmd_entry;
+    pub fn cmd_get_args(_: *mut cmd) -> *mut args;
+    pub fn cmd_get_group(_: *mut cmd) -> c_uint;
+    pub fn cmd_get_source(_: *mut cmd, _: *mut *const c_char, _: *mut c_uint);
+    pub fn cmd_parse(_: *mut args_value, _: c_uint, _: *const c_char, _: c_uint, _: *mut *mut c_char) -> *mut cmd;
+    pub fn cmd_copy(_: *mut cmd, _: c_int, _: *mut *mut c_char) -> *mut cmd;
+    pub fn cmd_free(_: *mut cmd);
+    pub fn cmd_print(_: *mut cmd) -> *mut c_char;
     pub fn cmd_list_new() -> *mut cmd_list;
-    pub fn cmd_list_copy(arg1: *mut cmd_list, arg2: c_int, arg3: *mut *mut c_char) -> *mut cmd_list;
-    pub fn cmd_list_append(arg1: *mut cmd_list, arg2: *mut cmd);
-    pub fn cmd_list_append_all(arg1: *mut cmd_list, arg2: *mut cmd_list);
-    pub fn cmd_list_move(arg1: *mut cmd_list, arg2: *mut cmd_list);
-    pub fn cmd_list_free(arg1: *mut cmd_list);
-    pub fn cmd_list_print(arg1: *mut cmd_list, arg2: c_int) -> *mut c_char;
-    pub fn cmd_list_first(arg1: *mut cmd_list) -> *mut cmd;
-    pub fn cmd_list_next(arg1: *mut cmd) -> *mut cmd;
-    pub fn cmd_list_all_have(arg1: *mut cmd_list, arg2: c_int) -> c_int;
-    pub fn cmd_list_any_have(arg1: *mut cmd_list, arg2: c_int) -> c_int;
-    pub fn cmd_mouse_at(
-        arg1: *mut window_pane,
-        arg2: *mut mouse_event,
-        arg3: *mut c_uint,
-        arg4: *mut c_uint,
-        arg5: c_int,
-    ) -> c_int;
-    pub fn cmd_mouse_window(arg1: *mut mouse_event, arg2: *mut *mut session) -> *mut winlink;
-    pub fn cmd_mouse_pane(arg1: *mut mouse_event, arg2: *mut *mut session, arg3: *mut *mut winlink)
-    -> *mut window_pane;
-    pub fn cmd_template_replace(arg1: *const c_char, arg2: *const c_char, arg3: c_int) -> *mut c_char;
+    pub fn cmd_list_copy(_: *mut cmd_list, _: c_int, _: *mut *mut c_char) -> *mut cmd_list;
+    pub fn cmd_list_append(_: *mut cmd_list, _: *mut cmd);
+    pub fn cmd_list_append_all(_: *mut cmd_list, _: *mut cmd_list);
+    pub fn cmd_list_move(_: *mut cmd_list, _: *mut cmd_list);
+    pub fn cmd_list_free(_: *mut cmd_list);
+    pub fn cmd_list_print(_: *mut cmd_list, _: c_int) -> *mut c_char;
+    pub fn cmd_list_first(_: *mut cmd_list) -> *mut cmd;
+    pub fn cmd_list_next(_: *mut cmd) -> *mut cmd;
+    pub fn cmd_list_all_have(_: *mut cmd_list, _: c_int) -> c_int;
+    pub fn cmd_list_any_have(_: *mut cmd_list, _: c_int) -> c_int;
+    pub fn cmd_mouse_at(_: *mut window_pane, _: *mut mouse_event, _: *mut c_uint, _: *mut c_uint, _: c_int) -> c_int;
+    pub fn cmd_mouse_window(_: *mut mouse_event, _: *mut *mut session) -> *mut winlink;
+    pub fn cmd_mouse_pane(_: *mut mouse_event, _: *mut *mut session, _: *mut *mut winlink) -> *mut window_pane;
+    pub fn cmd_template_replace(_: *const c_char, _: *const c_char, _: c_int) -> *mut c_char;
 }
 /* cmd-attach-session.c */
 unsafe extern "C" {
     pub fn cmd_attach_session(
-        arg1: *mut cmdq_item,
-        arg2: *const c_char,
-        arg3: c_int,
-        arg4: c_int,
-        arg5: c_int,
-        arg6: *const c_char,
-        arg7: c_int,
-        arg8: *const c_char,
+        _: *mut cmdq_item,
+        _: *const c_char,
+        _: c_int,
+        _: c_int,
+        _: c_int,
+        _: *const c_char,
+        _: c_int,
+        _: *const c_char,
     ) -> cmd_retval;
 }
 /* cmd-parse.c */
 unsafe extern "C" {
-    pub fn cmd_parse_from_file(arg1: *mut FILE, arg2: *mut cmd_parse_input) -> *mut cmd_parse_result;
-    pub fn cmd_parse_from_string(arg1: *const c_char, arg2: *mut cmd_parse_input) -> *mut cmd_parse_result;
+    pub fn cmd_parse_from_file(_: *mut FILE, _: *mut cmd_parse_input) -> *mut cmd_parse_result;
+    pub fn cmd_parse_from_string(_: *const c_char, _: *mut cmd_parse_input) -> *mut cmd_parse_result;
     pub fn cmd_parse_and_insert(
-        arg1: *const c_char,
-        arg2: *mut cmd_parse_input,
-        arg3: *mut cmdq_item,
-        arg4: *mut cmdq_state,
-        arg5: *mut *mut c_char,
+        _: *const c_char,
+        _: *mut cmd_parse_input,
+        _: *mut cmdq_item,
+        _: *mut cmdq_state,
+        _: *mut *mut c_char,
     ) -> cmd_parse_status;
     pub fn cmd_parse_and_append(
-        arg1: *const c_char,
-        arg2: *mut cmd_parse_input,
-        arg3: *mut client,
-        arg4: *mut cmdq_state,
-        arg5: *mut *mut c_char,
+        _: *const c_char,
+        _: *mut cmd_parse_input,
+        _: *mut client,
+        _: *mut cmdq_state,
+        _: *mut *mut c_char,
     ) -> cmd_parse_status;
-    pub fn cmd_parse_from_buffer(arg1: *const c_void, arg2: usize, arg3: *mut cmd_parse_input)
-    -> *mut cmd_parse_result;
-    pub fn cmd_parse_from_arguments(
-        arg1: *mut args_value,
-        arg2: c_uint,
-        arg3: *mut cmd_parse_input,
-    ) -> *mut cmd_parse_result;
+    pub fn cmd_parse_from_buffer(_: *const c_void, _: usize, _: *mut cmd_parse_input) -> *mut cmd_parse_result;
+    pub fn cmd_parse_from_arguments(_: *mut args_value, _: c_uint, _: *mut cmd_parse_input) -> *mut cmd_parse_result;
 }
 /* cmd-queue.c */
 unsafe extern "C" {
-    pub fn cmdq_new_state(arg1: *mut cmd_find_state, arg2: *mut key_event, arg3: c_int) -> *mut cmdq_state;
-    pub fn cmdq_link_state(arg1: *mut cmdq_state) -> *mut cmdq_state;
-    pub fn cmdq_copy_state(arg1: *mut cmdq_state, arg2: *mut cmd_find_state) -> *mut cmdq_state;
-    pub fn cmdq_free_state(arg1: *mut cmdq_state);
-    pub fn cmdq_add_format(arg1: *mut cmdq_state, arg2: *const c_char, arg3: *const c_char, ...);
-    pub fn cmdq_add_formats(arg1: *mut cmdq_state, arg2: *mut format_tree);
-    pub fn cmdq_merge_formats(arg1: *mut cmdq_item, arg2: *mut format_tree);
+    pub fn cmdq_new_state(_: *mut cmd_find_state, _: *mut key_event, _: c_int) -> *mut cmdq_state;
+    pub fn cmdq_link_state(_: *mut cmdq_state) -> *mut cmdq_state;
+    pub fn cmdq_copy_state(_: *mut cmdq_state, _: *mut cmd_find_state) -> *mut cmdq_state;
+    pub fn cmdq_free_state(_: *mut cmdq_state);
+    pub fn cmdq_add_format(_: *mut cmdq_state, _: *const c_char, _: *const c_char, ...);
+    pub fn cmdq_add_formats(_: *mut cmdq_state, _: *mut format_tree);
+    pub fn cmdq_merge_formats(_: *mut cmdq_item, _: *mut format_tree);
     pub fn cmdq_new() -> *mut cmdq_list;
-    pub fn cmdq_free(arg1: *mut cmdq_list);
-    pub fn cmdq_get_name(arg1: *mut cmdq_item) -> *const c_char;
-    pub fn cmdq_get_client(arg1: *mut cmdq_item) -> *mut client;
-    pub fn cmdq_get_target_client(arg1: *mut cmdq_item) -> *mut client;
-    pub fn cmdq_get_state(arg1: *mut cmdq_item) -> *mut cmdq_state;
-    pub fn cmdq_get_target(arg1: *mut cmdq_item) -> *mut cmd_find_state;
-    pub fn cmdq_get_source(arg1: *mut cmdq_item) -> *mut cmd_find_state;
-    pub fn cmdq_get_event(arg1: *mut cmdq_item) -> *mut key_event;
-    pub fn cmdq_get_current(arg1: *mut cmdq_item) -> *mut cmd_find_state;
-    pub fn cmdq_get_flags(arg1: *mut cmdq_item) -> c_int;
-    pub fn cmdq_get_command(arg1: *mut cmd_list, arg2: *mut cmdq_state) -> *mut cmdq_item;
-    pub fn cmdq_get_callback1(arg1: *const c_char, arg2: cmdq_cb, arg3: *mut c_void) -> *mut cmdq_item;
-    pub fn cmdq_get_error(arg1: *const c_char) -> *mut cmdq_item;
-    pub fn cmdq_insert_after(arg1: *mut cmdq_item, arg2: *mut cmdq_item) -> *mut cmdq_item;
-    pub fn cmdq_append(arg1: *mut client, arg2: *mut cmdq_item) -> *mut cmdq_item;
-    pub fn cmdq_insert_hook(
-        arg1: *mut session,
-        arg2: *mut cmdq_item,
-        arg3: *mut cmd_find_state,
-        arg4: *const c_char,
-        ...
-    );
-    pub fn cmdq_continue(arg1: *mut cmdq_item);
-    pub fn cmdq_next(arg1: *mut client) -> c_uint;
-    pub fn cmdq_running(arg1: *mut client) -> *mut cmdq_item;
-    pub fn cmdq_guard(arg1: *mut cmdq_item, arg2: *const c_char, arg3: c_int);
-    pub fn cmdq_print(arg1: *mut cmdq_item, arg2: *const c_char, ...);
-    pub fn cmdq_print_data(arg1: *mut cmdq_item, arg2: c_int, arg3: *mut evbuffer);
-    pub fn cmdq_error(arg1: *mut cmdq_item, arg2: *const c_char, ...);
+    pub fn cmdq_free(_: *mut cmdq_list);
+    pub fn cmdq_get_name(_: *mut cmdq_item) -> *const c_char;
+    pub fn cmdq_get_client(_: *mut cmdq_item) -> *mut client;
+    pub fn cmdq_get_target_client(_: *mut cmdq_item) -> *mut client;
+    pub fn cmdq_get_state(_: *mut cmdq_item) -> *mut cmdq_state;
+    pub fn cmdq_get_target(_: *mut cmdq_item) -> *mut cmd_find_state;
+    pub fn cmdq_get_source(_: *mut cmdq_item) -> *mut cmd_find_state;
+    pub fn cmdq_get_event(_: *mut cmdq_item) -> *mut key_event;
+    pub fn cmdq_get_current(_: *mut cmdq_item) -> *mut cmd_find_state;
+    pub fn cmdq_get_flags(_: *mut cmdq_item) -> c_int;
+    pub fn cmdq_get_command(_: *mut cmd_list, _: *mut cmdq_state) -> *mut cmdq_item;
+    pub fn cmdq_get_callback1(_: *const c_char, _: cmdq_cb, _: *mut c_void) -> *mut cmdq_item;
+    pub fn cmdq_get_error(_: *const c_char) -> *mut cmdq_item;
+    pub fn cmdq_insert_after(_: *mut cmdq_item, _: *mut cmdq_item) -> *mut cmdq_item;
+    pub fn cmdq_append(_: *mut client, _: *mut cmdq_item) -> *mut cmdq_item;
+    pub fn cmdq_insert_hook(_: *mut session, _: *mut cmdq_item, _: *mut cmd_find_state, _: *const c_char, ...);
+    pub fn cmdq_continue(_: *mut cmdq_item);
+    pub fn cmdq_next(_: *mut client) -> c_uint;
+    pub fn cmdq_running(_: *mut client) -> *mut cmdq_item;
+    pub fn cmdq_guard(_: *mut cmdq_item, _: *const c_char, _: c_int);
+    pub fn cmdq_print(_: *mut cmdq_item, _: *const c_char, ...);
+    pub fn cmdq_print_data(_: *mut cmdq_item, _: c_int, _: *mut evbuffer);
+    pub fn cmdq_error(_: *mut cmdq_item, _: *const c_char, ...);
 }
 /* cmd-wait-for.c */
 unsafe extern "C" {
@@ -2918,582 +2876,521 @@ unsafe extern "C" {
 }
 /* client.c */
 unsafe extern "C" {
-    pub fn client_main(arg1: *mut event_base, arg2: c_int, arg3: *mut *mut c_char, arg4: u64, arg5: c_int) -> c_int;
+    pub fn client_main(_: *mut event_base, _: c_int, _: *mut *mut c_char, _: u64, _: c_int) -> c_int;
 }
 /* key-bindings.c */
 unsafe extern "C" {
-    pub fn key_bindings_get_table(arg1: *const c_char, arg2: c_int) -> *mut key_table;
+    pub fn key_bindings_get_table(_: *const c_char, _: c_int) -> *mut key_table;
     pub fn key_bindings_first_table() -> *mut key_table;
-    pub fn key_bindings_next_table(arg1: *mut key_table) -> *mut key_table;
-    pub fn key_bindings_unref_table(arg1: *mut key_table);
-    pub fn key_bindings_get(arg1: *mut key_table, arg2: key_code) -> *mut key_binding;
-    pub fn key_bindings_get_default(arg1: *mut key_table, arg2: key_code) -> *mut key_binding;
-    pub fn key_bindings_first(arg1: *mut key_table) -> *mut key_binding;
-    pub fn key_bindings_next(arg1: *mut key_table, arg2: *mut key_binding) -> *mut key_binding;
-    pub fn key_bindings_add(arg1: *const c_char, arg2: key_code, arg3: *const c_char, arg4: c_int, arg5: *mut cmd_list);
-    pub fn key_bindings_remove(arg1: *const c_char, arg2: key_code);
-    pub fn key_bindings_reset(arg1: *const c_char, arg2: key_code);
-    pub fn key_bindings_remove_table(arg1: *const c_char);
-    pub fn key_bindings_reset_table(arg1: *const c_char);
+    pub fn key_bindings_next_table(_: *mut key_table) -> *mut key_table;
+    pub fn key_bindings_unref_table(_: *mut key_table);
+    pub fn key_bindings_get(_: *mut key_table, _: key_code) -> *mut key_binding;
+    pub fn key_bindings_get_default(_: *mut key_table, _: key_code) -> *mut key_binding;
+    pub fn key_bindings_first(_: *mut key_table) -> *mut key_binding;
+    pub fn key_bindings_next(_: *mut key_table, _: *mut key_binding) -> *mut key_binding;
+    pub fn key_bindings_add(_: *const c_char, _: key_code, _: *const c_char, _: c_int, _: *mut cmd_list);
+    pub fn key_bindings_remove(_: *const c_char, _: key_code);
+    pub fn key_bindings_reset(_: *const c_char, _: key_code);
+    pub fn key_bindings_remove_table(_: *const c_char);
+    pub fn key_bindings_reset_table(_: *const c_char);
     pub fn key_bindings_init();
     pub fn key_bindings_dispatch(
-        arg1: *mut key_binding,
-        arg2: *mut cmdq_item,
-        arg3: *mut client,
-        arg4: *mut key_event,
-        arg5: *mut cmd_find_state,
+        _: *mut key_binding,
+        _: *mut cmdq_item,
+        _: *mut client,
+        _: *mut key_event,
+        _: *mut cmd_find_state,
     ) -> *mut cmdq_item;
 }
 /* key-string.c */
 unsafe extern "C" {
-    pub fn key_string_lookup_string(arg1: *const c_char) -> key_code;
-    pub fn key_string_lookup_key(arg1: key_code, arg2: c_int) -> *const c_char;
+    pub fn key_string_lookup_string(_: *const c_char) -> key_code;
+    pub fn key_string_lookup_key(_: key_code, _: c_int) -> *const c_char;
 }
-/* alerts.c */
-unsafe extern "C" {
-    pub fn alerts_reset_all();
-    pub fn alerts_queue(arg1: *mut window, arg2: c_int);
-    pub fn alerts_check_session(arg1: *mut session);
-}
+
+// alerts.c
+pub use crate::alerts::{alerts_check_session, alerts_queue, alerts_reset_all};
+
 /* file.c */
 unsafe extern "C" {
-    pub fn file_cmp(arg1: *mut client_file, arg2: *mut client_file) -> c_int;
-    pub fn client_files_RB_INSERT_COLOR(arg1: *mut client_files, arg2: *mut client_file);
-    pub fn client_files_RB_REMOVE_COLOR(arg1: *mut client_files, arg2: *mut client_file, arg3: *mut client_file);
-    pub fn client_files_RB_REMOVE(arg1: *mut client_files, arg2: *mut client_file) -> *mut client_file;
-    pub fn client_files_RB_INSERT(arg1: *mut client_files, arg2: *mut client_file) -> *mut client_file;
-    pub fn client_files_RB_FIND(arg1: *mut client_files, arg2: *mut client_file) -> *mut client_file;
-    pub fn client_files_RB_NFIND(arg1: *mut client_files, arg2: *mut client_file) -> *mut client_file;
+    pub fn file_cmp(_: *mut client_file, _: *mut client_file) -> c_int;
+    pub fn client_files_RB_INSERT_COLOR(_: *mut client_files, _: *mut client_file);
+    pub fn client_files_RB_REMOVE_COLOR(_: *mut client_files, _: *mut client_file, _: *mut client_file);
+    pub fn client_files_RB_REMOVE(_: *mut client_files, _: *mut client_file) -> *mut client_file;
+    pub fn client_files_RB_INSERT(_: *mut client_files, _: *mut client_file) -> *mut client_file;
+    pub fn client_files_RB_FIND(_: *mut client_files, _: *mut client_file) -> *mut client_file;
+    pub fn client_files_RB_NFIND(_: *mut client_files, _: *mut client_file) -> *mut client_file;
     pub fn file_create_with_peer(
-        arg1: *mut tmuxpeer,
-        arg2: *mut client_files,
-        arg3: c_int,
-        arg4: client_file_cb,
-        arg5: *mut c_void,
+        _: *mut tmuxpeer,
+        _: *mut client_files,
+        _: c_int,
+        _: client_file_cb,
+        _: *mut c_void,
     ) -> *mut client_file;
-    pub fn file_create_with_client(
-        arg1: *mut client,
-        arg2: c_int,
-        arg3: client_file_cb,
-        arg4: *mut c_void,
-    ) -> *mut client_file;
-    pub fn file_free(arg1: *mut client_file);
-    pub fn file_fire_done(arg1: *mut client_file);
-    pub fn file_fire_read(arg1: *mut client_file);
-    pub fn file_can_print(arg1: *mut client) -> c_int;
-    pub fn file_print(arg1: *mut client, arg2: *const c_char, ...);
-    pub fn file_vprint(arg1: *mut client, arg2: *const c_char, arg3: *mut VaList);
-    pub fn file_print_buffer(arg1: *mut client, arg2: *mut c_void, arg3: usize);
-    pub fn file_error(arg1: *mut client, arg2: *const c_char, ...);
+    pub fn file_create_with_client(_: *mut client, _: c_int, _: client_file_cb, _: *mut c_void) -> *mut client_file;
+    pub fn file_free(_: *mut client_file);
+    pub fn file_fire_done(_: *mut client_file);
+    pub fn file_fire_read(_: *mut client_file);
+    pub fn file_can_print(_: *mut client) -> c_int;
+    pub fn file_print(_: *mut client, _: *const c_char, ...);
+    pub fn file_vprint(_: *mut client, _: *const c_char, _: *mut VaList);
+    pub fn file_print_buffer(_: *mut client, _: *mut c_void, _: usize);
+    pub fn file_error(_: *mut client, _: *const c_char, ...);
     pub fn file_write(
-        arg1: *mut client,
-        arg2: *const c_char,
-        arg3: c_int,
-        arg4: *const c_void,
-        arg5: usize,
-        arg6: client_file_cb,
-        arg7: *mut c_void,
+        _: *mut client,
+        _: *const c_char,
+        _: c_int,
+        _: *const c_void,
+        _: usize,
+        _: client_file_cb,
+        _: *mut c_void,
     );
-    pub fn file_read(
-        arg1: *mut client,
-        arg2: *const c_char,
-        arg3: client_file_cb,
-        arg4: *mut c_void,
-    ) -> *mut client_file;
-    pub fn file_cancel(arg1: *mut client_file);
-    pub fn file_push(arg1: *mut client_file);
-    pub fn file_write_left(arg1: *mut client_files) -> c_int;
+    pub fn file_read(_: *mut client, _: *const c_char, _: client_file_cb, _: *mut c_void) -> *mut client_file;
+    pub fn file_cancel(_: *mut client_file);
+    pub fn file_push(_: *mut client_file);
+    pub fn file_write_left(_: *mut client_files) -> c_int;
     pub fn file_write_open(
-        arg1: *mut client_files,
-        arg2: *mut tmuxpeer,
-        arg3: *mut imsg,
-        arg4: c_int,
-        arg5: c_int,
-        arg6: client_file_cb,
-        arg7: *mut c_void,
+        _: *mut client_files,
+        _: *mut tmuxpeer,
+        _: *mut imsg,
+        _: c_int,
+        _: c_int,
+        _: client_file_cb,
+        _: *mut c_void,
     );
-    pub fn file_write_data(arg1: *mut client_files, arg2: *mut imsg);
-    pub fn file_write_close(arg1: *mut client_files, arg2: *mut imsg);
+    pub fn file_write_data(_: *mut client_files, _: *mut imsg);
+    pub fn file_write_close(_: *mut client_files, _: *mut imsg);
     pub fn file_read_open(
-        arg1: *mut client_files,
-        arg2: *mut tmuxpeer,
-        arg3: *mut imsg,
-        arg4: c_int,
-        arg5: c_int,
-        arg6: client_file_cb,
-        arg7: *mut c_void,
+        _: *mut client_files,
+        _: *mut tmuxpeer,
+        _: *mut imsg,
+        _: c_int,
+        _: c_int,
+        _: client_file_cb,
+        _: *mut c_void,
     );
-    pub fn file_write_ready(arg1: *mut client_files, arg2: *mut imsg);
-    pub fn file_read_data(arg1: *mut client_files, arg2: *mut imsg);
-    pub fn file_read_done(arg1: *mut client_files, arg2: *mut imsg);
-    pub fn file_read_cancel(arg1: *mut client_files, arg2: *mut imsg);
+    pub fn file_write_ready(_: *mut client_files, _: *mut imsg);
+    pub fn file_read_data(_: *mut client_files, _: *mut imsg);
+    pub fn file_read_done(_: *mut client_files, _: *mut imsg);
+    pub fn file_read_cancel(_: *mut client_files, _: *mut imsg);
 }
 
 // server.c
-// pub use crate::server::{marked_pane, server_proc};
-// server.c
-unsafe extern "C" {
-    pub static mut server_proc: *mut tmuxproc;
-    pub static mut clients: clients;
-    pub static mut marked_pane: cmd_find_state;
-    pub static mut message_log: message_list;
-    pub static mut current_time: time_t;
-    pub fn server_set_marked(arg1: *mut session, arg2: *mut winlink, arg3: *mut window_pane);
-    pub fn server_clear_marked();
-    pub fn server_is_marked(arg1: *mut session, arg2: *mut winlink, arg3: *mut window_pane) -> c_int;
-    pub fn server_check_marked() -> c_int;
-    pub fn server_start(arg1: *mut tmuxproc, arg2: u64, arg3: *mut event_base, arg4: c_int, arg5: *mut c_char)
-    -> c_int;
-    pub fn server_update_socket();
-    pub fn server_add_accept(arg1: c_int);
-    pub fn server_add_message(arg1: *const c_char, ...);
-    pub fn server_create_socket(arg1: u64, arg2: *mut *mut c_char) -> c_int;
-}
+pub use crate::server::{
+    clients, current_time, marked_pane, message_log, server_add_accept, server_add_message, server_check_marked,
+    server_clear_marked, server_create_socket, server_is_marked, server_proc, server_set_marked, server_start,
+    server_update_socket,
+};
+
 /* server-client.c */
 unsafe extern "C" {
-    pub fn client_windows_RB_INSERT_COLOR(arg1: *mut client_windows, arg2: *mut client_window);
-    pub fn client_windows_RB_REMOVE_COLOR(
-        arg1: *mut client_windows,
-        arg2: *mut client_window,
-        arg3: *mut client_window,
-    );
-    pub fn client_windows_RB_REMOVE(arg1: *mut client_windows, arg2: *mut client_window) -> *mut client_window;
-    pub fn client_windows_RB_INSERT(arg1: *mut client_windows, arg2: *mut client_window) -> *mut client_window;
-    pub fn client_windows_RB_FIND(arg1: *mut client_windows, arg2: *mut client_window) -> *mut client_window;
-    pub fn client_windows_RB_NFIND(arg1: *mut client_windows, arg2: *mut client_window) -> *mut client_window;
+    pub fn client_windows_RB_INSERT_COLOR(_: *mut client_windows, _: *mut client_window);
+    pub fn client_windows_RB_REMOVE_COLOR(_: *mut client_windows, _: *mut client_window, _: *mut client_window);
+    pub fn client_windows_RB_REMOVE(_: *mut client_windows, _: *mut client_window) -> *mut client_window;
+    pub fn client_windows_RB_INSERT(_: *mut client_windows, _: *mut client_window) -> *mut client_window;
+    pub fn client_windows_RB_FIND(_: *mut client_windows, _: *mut client_window) -> *mut client_window;
+    pub fn client_windows_RB_NFIND(_: *mut client_windows, _: *mut client_window) -> *mut client_window;
     pub fn server_client_how_many() -> c_uint;
     pub fn server_client_set_overlay(
-        arg1: *mut client,
-        arg2: c_uint,
-        arg3: overlay_check_cb,
-        arg4: overlay_mode_cb,
-        arg5: overlay_draw_cb,
-        arg6: overlay_key_cb,
-        arg7: overlay_free_cb,
-        arg8: overlay_resize_cb,
-        arg9: *mut c_void,
+        _: *mut client,
+        _: c_uint,
+        _: overlay_check_cb,
+        _: overlay_mode_cb,
+        _: overlay_draw_cb,
+        _: overlay_key_cb,
+        _: overlay_free_cb,
+        _: overlay_resize_cb,
+        _: *mut c_void,
     );
-    pub fn server_client_clear_overlay(arg1: *mut client);
+    pub fn server_client_clear_overlay(_: *mut client);
     pub fn server_client_overlay_range(
-        arg1: c_uint,
-        arg2: c_uint,
-        arg3: c_uint,
-        arg4: c_uint,
-        arg5: c_uint,
-        arg6: c_uint,
-        arg7: c_uint,
-        arg8: *mut overlay_ranges,
+        _: c_uint,
+        _: c_uint,
+        _: c_uint,
+        _: c_uint,
+        _: c_uint,
+        _: c_uint,
+        _: c_uint,
+        _: *mut overlay_ranges,
     );
-    pub fn server_client_set_key_table(arg1: *mut client, arg2: *const c_char);
-    pub fn server_client_get_key_table(arg1: *mut client) -> *const c_char;
-    pub fn server_client_check_nested(arg1: *mut client) -> c_int;
-    pub fn server_client_handle_key(arg1: *mut client, arg2: *mut key_event) -> c_int;
-    pub fn server_client_create(arg1: c_int) -> *mut client;
-    pub fn server_client_open(arg1: *mut client, arg2: *mut *mut c_char) -> c_int;
-    pub fn server_client_unref(arg1: *mut client);
-    pub fn server_client_set_session(arg1: *mut client, arg2: *mut session);
-    pub fn server_client_lost(arg1: *mut client);
-    pub fn server_client_suspend(arg1: *mut client);
-    pub fn server_client_detach(arg1: *mut client, arg2: msgtype);
-    pub fn server_client_exec(arg1: *mut client, arg2: *const c_char);
+    pub fn server_client_set_key_table(_: *mut client, _: *const c_char);
+    pub fn server_client_get_key_table(_: *mut client) -> *const c_char;
+    pub fn server_client_check_nested(_: *mut client) -> c_int;
+    pub fn server_client_handle_key(_: *mut client, _: *mut key_event) -> c_int;
+    pub fn server_client_create(_: c_int) -> *mut client;
+    pub fn server_client_open(_: *mut client, _: *mut *mut c_char) -> c_int;
+    pub fn server_client_unref(_: *mut client);
+    pub fn server_client_set_session(_: *mut client, _: *mut session);
+    pub fn server_client_lost(_: *mut client);
+    pub fn server_client_suspend(_: *mut client);
+    pub fn server_client_detach(_: *mut client, _: msgtype);
+    pub fn server_client_exec(_: *mut client, _: *const c_char);
     pub fn server_client_loop();
-    pub fn server_client_get_cwd(arg1: *mut client, arg2: *mut session) -> *const c_char;
-    pub fn server_client_set_flags(arg1: *mut client, arg2: *const c_char);
-    pub fn server_client_get_flags(arg1: *mut client) -> *const c_char;
-    pub fn server_client_get_client_window(arg1: *mut client, arg2: c_uint) -> *mut client_window;
-    pub fn server_client_add_client_window(arg1: *mut client, arg2: c_uint) -> *mut client_window;
-    pub fn server_client_get_pane(arg1: *mut client) -> *mut window_pane;
-    pub fn server_client_set_pane(arg1: *mut client, arg2: *mut window_pane);
-    pub fn server_client_remove_pane(arg1: *mut window_pane);
-    pub fn server_client_print(arg1: *mut client, arg2: c_int, arg3: *mut evbuffer);
+    pub fn server_client_get_cwd(_: *mut client, _: *mut session) -> *const c_char;
+    pub fn server_client_set_flags(_: *mut client, _: *const c_char);
+    pub fn server_client_get_flags(_: *mut client) -> *const c_char;
+    pub fn server_client_get_client_window(_: *mut client, _: c_uint) -> *mut client_window;
+    pub fn server_client_add_client_window(_: *mut client, _: c_uint) -> *mut client_window;
+    pub fn server_client_get_pane(_: *mut client) -> *mut window_pane;
+    pub fn server_client_set_pane(_: *mut client, _: *mut window_pane);
+    pub fn server_client_remove_pane(_: *mut window_pane);
+    pub fn server_client_print(_: *mut client, _: c_int, _: *mut evbuffer);
 }
 /* server-fn.c */
 unsafe extern "C" {
-    pub fn server_redraw_client(arg1: *mut client);
-    pub fn server_status_client(arg1: *mut client);
-    pub fn server_redraw_session(arg1: *mut session);
-    pub fn server_redraw_session_group(arg1: *mut session);
-    pub fn server_status_session(arg1: *mut session);
-    pub fn server_status_session_group(arg1: *mut session);
-    pub fn server_redraw_window(arg1: *mut window);
-    pub fn server_redraw_window_borders(arg1: *mut window);
-    pub fn server_status_window(arg1: *mut window);
+    pub fn server_redraw_client(_: *mut client);
+    pub fn server_status_client(_: *mut client);
+    pub fn server_redraw_session(_: *mut session);
+    pub fn server_redraw_session_group(_: *mut session);
+    pub fn server_status_session(_: *mut session);
+    pub fn server_status_session_group(_: *mut session);
+    pub fn server_redraw_window(_: *mut window);
+    pub fn server_redraw_window_borders(_: *mut window);
+    pub fn server_status_window(_: *mut window);
     pub fn server_lock();
-    pub fn server_lock_session(arg1: *mut session);
-    pub fn server_lock_client(arg1: *mut client);
-    pub fn server_kill_pane(arg1: *mut window_pane);
-    pub fn server_kill_window(arg1: *mut window, arg2: c_int);
-    pub fn server_renumber_session(arg1: *mut session);
+    pub fn server_lock_session(_: *mut session);
+    pub fn server_lock_client(_: *mut client);
+    pub fn server_kill_pane(_: *mut window_pane);
+    pub fn server_kill_window(_: *mut window, _: c_int);
+    pub fn server_renumber_session(_: *mut session);
     pub fn server_renumber_all();
     pub fn server_link_window(
-        arg1: *mut session,
-        arg2: *mut winlink,
-        arg3: *mut session,
-        arg4: c_int,
-        arg5: c_int,
-        arg6: c_int,
-        arg7: *mut *mut c_char,
+        _: *mut session,
+        _: *mut winlink,
+        _: *mut session,
+        _: c_int,
+        _: c_int,
+        _: c_int,
+        _: *mut *mut c_char,
     ) -> c_int;
-    pub fn server_unlink_window(arg1: *mut session, arg2: *mut winlink);
-    pub fn server_destroy_pane(arg1: *mut window_pane, arg2: c_int);
-    pub fn server_destroy_session(arg1: *mut session);
+    pub fn server_unlink_window(_: *mut session, _: *mut winlink);
+    pub fn server_destroy_pane(_: *mut window_pane, _: c_int);
+    pub fn server_destroy_session(_: *mut session);
     pub fn server_check_unattached();
-    pub fn server_unzoom_window(arg1: *mut window);
+    pub fn server_unzoom_window(_: *mut window);
 }
 /* status.c */
 unsafe extern "C" {
     pub static mut status_prompt_hlist: [*mut *mut c_char; 0usize];
     pub static mut status_prompt_hsize: [c_uint; 0usize];
-    pub fn status_timer_start(arg1: *mut client);
+    pub fn status_timer_start(_: *mut client);
     pub fn status_timer_start_all();
-    pub fn status_update_cache(arg1: *mut session);
-    pub fn status_at_line(arg1: *mut client) -> c_int;
-    pub fn status_line_size(arg1: *mut client) -> c_uint;
-    pub fn status_get_range(arg1: *mut client, arg2: c_uint, arg3: c_uint) -> *mut style_range;
-    pub fn status_init(arg1: *mut client);
-    pub fn status_free(arg1: *mut client);
-    pub fn status_redraw(arg1: *mut client) -> c_int;
-    pub fn status_message_set(arg1: *mut client, arg2: c_int, arg3: c_int, arg4: c_int, arg5: *const c_char, ...);
-    pub fn status_message_clear(arg1: *mut client);
-    pub fn status_message_redraw(arg1: *mut client) -> c_int;
+    pub fn status_update_cache(_: *mut session);
+    pub fn status_at_line(_: *mut client) -> c_int;
+    pub fn status_line_size(_: *mut client) -> c_uint;
+    pub fn status_get_range(_: *mut client, _: c_uint, _: c_uint) -> *mut style_range;
+    pub fn status_init(_: *mut client);
+    pub fn status_free(_: *mut client);
+    pub fn status_redraw(_: *mut client) -> c_int;
+    pub fn status_message_set(_: *mut client, _: c_int, _: c_int, _: c_int, _: *const c_char, ...);
+    pub fn status_message_clear(_: *mut client);
+    pub fn status_message_redraw(_: *mut client) -> c_int;
     pub fn status_prompt_set(
-        arg1: *mut client,
-        arg2: *mut cmd_find_state,
-        arg3: *const c_char,
-        arg4: *const c_char,
-        arg5: prompt_input_cb,
-        arg6: prompt_free_cb,
-        arg7: *mut c_void,
-        arg8: c_int,
-        arg9: prompt_type,
+        _: *mut client,
+        _: *mut cmd_find_state,
+        _: *const c_char,
+        _: *const c_char,
+        _: prompt_input_cb,
+        _: prompt_free_cb,
+        _: *mut c_void,
+        _: c_int,
+        _: prompt_type,
     );
-    pub fn status_prompt_clear(arg1: *mut client);
-    pub fn status_prompt_redraw(arg1: *mut client) -> c_int;
-    pub fn status_prompt_key(arg1: *mut client, arg2: key_code) -> c_int;
-    pub fn status_prompt_update(arg1: *mut client, arg2: *const c_char, arg3: *const c_char);
+    pub fn status_prompt_clear(_: *mut client);
+    pub fn status_prompt_redraw(_: *mut client) -> c_int;
+    pub fn status_prompt_key(_: *mut client, _: key_code) -> c_int;
+    pub fn status_prompt_update(_: *mut client, _: *const c_char, _: *const c_char);
     pub fn status_prompt_load_history();
     pub fn status_prompt_save_history();
-    pub fn status_prompt_type_string(arg1: c_uint) -> *const c_char;
+    pub fn status_prompt_type_string(_: c_uint) -> *const c_char;
     pub fn status_prompt_type(type_: *const c_char) -> prompt_type;
 }
 /* resize.c */
 unsafe extern "C" {
-    pub fn resize_window(arg1: *mut window, arg2: c_uint, arg3: c_uint, arg4: c_int, arg5: c_int);
+    pub fn resize_window(_: *mut window, _: c_uint, _: c_uint, _: c_int, _: c_int);
     pub fn default_window_size(
-        arg1: *mut client,
-        arg2: *mut session,
-        arg3: *mut window,
-        arg4: *mut c_uint,
-        arg5: *mut c_uint,
-        arg6: *mut c_uint,
-        arg7: *mut c_uint,
-        arg8: c_int,
+        _: *mut client,
+        _: *mut session,
+        _: *mut window,
+        _: *mut c_uint,
+        _: *mut c_uint,
+        _: *mut c_uint,
+        _: *mut c_uint,
+        _: c_int,
     );
-    pub fn recalculate_size(arg1: *mut window, arg2: c_int);
+    pub fn recalculate_size(_: *mut window, _: c_int);
     pub fn recalculate_sizes();
-    pub fn recalculate_sizes_now(arg1: c_int);
+    pub fn recalculate_sizes_now(_: c_int);
 }
 /* input.c */
 unsafe extern "C" {
-    pub fn input_init(arg1: *mut window_pane, arg2: *mut bufferevent, arg3: *mut colour_palette) -> *mut input_ctx;
-    pub fn input_free(arg1: *mut input_ctx);
-    pub fn input_reset(arg1: *mut input_ctx, arg2: c_int);
-    pub fn input_pending(arg1: *mut input_ctx) -> *mut evbuffer;
-    pub fn input_parse_pane(arg1: *mut window_pane);
-    pub fn input_parse_buffer(arg1: *mut window_pane, arg2: *mut c_uchar, arg3: usize);
+    pub fn input_init(_: *mut window_pane, _: *mut bufferevent, _: *mut colour_palette) -> *mut input_ctx;
+    pub fn input_free(_: *mut input_ctx);
+    pub fn input_reset(_: *mut input_ctx, _: c_int);
+    pub fn input_pending(_: *mut input_ctx) -> *mut evbuffer;
+    pub fn input_parse_pane(_: *mut window_pane);
+    pub fn input_parse_buffer(_: *mut window_pane, _: *mut c_uchar, _: usize);
     pub fn input_parse_screen(
-        arg1: *mut input_ctx,
-        arg2: *mut screen,
-        arg3: screen_write_init_ctx_cb,
-        arg4: *mut c_void,
-        arg5: *mut c_uchar,
-        arg6: usize,
+        _: *mut input_ctx,
+        _: *mut screen,
+        _: screen_write_init_ctx_cb,
+        _: *mut c_void,
+        _: *mut c_uchar,
+        _: usize,
     );
-    pub fn input_reply_clipboard(arg1: *mut bufferevent, arg2: *const c_char, arg3: usize, arg4: *const c_char);
+    pub fn input_reply_clipboard(_: *mut bufferevent, _: *const c_char, _: usize, _: *const c_char);
 }
 /* input-key.c */
 unsafe extern "C" {
     pub fn input_key_build();
-    pub fn input_key_pane(arg1: *mut window_pane, arg2: key_code, arg3: *mut mouse_event) -> c_int;
-    pub fn input_key(arg1: *mut screen, arg2: *mut bufferevent, arg3: key_code) -> c_int;
+    pub fn input_key_pane(_: *mut window_pane, _: key_code, _: *mut mouse_event) -> c_int;
+    pub fn input_key(_: *mut screen, _: *mut bufferevent, _: key_code) -> c_int;
     pub fn input_key_get_mouse(
-        arg1: *mut screen,
-        arg2: *mut mouse_event,
-        arg3: c_uint,
-        arg4: c_uint,
-        arg5: *mut *const c_char,
-        arg6: *mut usize,
+        _: *mut screen,
+        _: *mut mouse_event,
+        _: c_uint,
+        _: c_uint,
+        _: *mut *const c_char,
+        _: *mut usize,
     ) -> c_int;
 }
 /* colour.c */
 unsafe extern "C" {
-    pub fn colour_find_rgb(arg1: c_uchar, arg2: c_uchar, arg3: c_uchar) -> c_int;
-    pub fn colour_join_rgb(arg1: c_uchar, arg2: c_uchar, arg3: c_uchar) -> c_int;
-    pub fn colour_split_rgb(arg1: c_int, arg2: *mut c_uchar, arg3: *mut c_uchar, arg4: *mut c_uchar);
-    pub fn colour_force_rgb(arg1: c_int) -> c_int;
-    pub fn colour_tostring(arg1: c_int) -> *const c_char;
+    pub fn colour_find_rgb(_: c_uchar, _: c_uchar, _: c_uchar) -> c_int;
+    pub fn colour_join_rgb(_: c_uchar, _: c_uchar, _: c_uchar) -> c_int;
+    pub fn colour_split_rgb(_: c_int, _: *mut c_uchar, _: *mut c_uchar, _: *mut c_uchar);
+    pub fn colour_force_rgb(_: c_int) -> c_int;
+    pub fn colour_tostring(_: c_int) -> *const c_char;
     pub fn colour_fromstring(s: *const c_char) -> c_int;
-    pub fn colour_256toRGB(arg1: c_int) -> c_int;
-    pub fn colour_256to16(arg1: c_int) -> c_int;
-    pub fn colour_byname(arg1: *const c_char) -> c_int;
-    pub fn colour_parseX11(arg1: *const c_char) -> c_int;
-    pub fn colour_palette_init(arg1: *mut colour_palette);
-    pub fn colour_palette_clear(arg1: *mut colour_palette);
-    pub fn colour_palette_free(arg1: *mut colour_palette);
-    pub fn colour_palette_get(arg1: *mut colour_palette, arg2: c_int) -> c_int;
-    pub fn colour_palette_set(arg1: *mut colour_palette, arg2: c_int, arg3: c_int) -> c_int;
-    pub fn colour_palette_from_option(arg1: *mut colour_palette, arg2: *mut options);
+    pub fn colour_256toRGB(_: c_int) -> c_int;
+    pub fn colour_256to16(_: c_int) -> c_int;
+    pub fn colour_byname(_: *const c_char) -> c_int;
+    pub fn colour_parseX11(_: *const c_char) -> c_int;
+    pub fn colour_palette_init(_: *mut colour_palette);
+    pub fn colour_palette_clear(_: *mut colour_palette);
+    pub fn colour_palette_free(_: *mut colour_palette);
+    pub fn colour_palette_get(_: *mut colour_palette, _: c_int) -> c_int;
+    pub fn colour_palette_set(_: *mut colour_palette, _: c_int, _: c_int) -> c_int;
+    pub fn colour_palette_from_option(_: *mut colour_palette, _: *mut options);
 }
 /* attributes.c */
 unsafe extern "C" {
-    pub fn attributes_tostring(arg1: c_int) -> *const c_char;
-    pub fn attributes_fromstring(arg1: *const c_char) -> c_int;
+    pub fn attributes_tostring(_: c_int) -> *const c_char;
+    pub fn attributes_fromstring(_: *const c_char) -> c_int;
 }
 /* grid.c */
 unsafe extern "C" {
     pub static grid_default_cell: grid_cell;
-    pub fn grid_empty_line(arg1: *mut grid, arg2: c_uint, arg3: c_uint);
-    pub fn grid_cells_equal(arg1: *const grid_cell, arg2: *const grid_cell) -> c_int;
-    pub fn grid_cells_look_equal(arg1: *const grid_cell, arg2: *const grid_cell) -> c_int;
-    pub fn grid_create(arg1: c_uint, arg2: c_uint, arg3: c_uint) -> *mut grid;
-    pub fn grid_destroy(arg1: *mut grid);
-    pub fn grid_compare(arg1: *mut grid, arg2: *mut grid) -> c_int;
-    pub fn grid_collect_history(arg1: *mut grid);
-    pub fn grid_remove_history(arg1: *mut grid, arg2: c_uint);
-    pub fn grid_scroll_history(arg1: *mut grid, arg2: c_uint);
-    pub fn grid_scroll_history_region(arg1: *mut grid, arg2: c_uint, arg3: c_uint, arg4: c_uint);
-    pub fn grid_clear_history(arg1: *mut grid);
-    pub fn grid_peek_line(arg1: *mut grid, arg2: c_uint) -> *const grid_line;
-    pub fn grid_get_cell(arg1: *mut grid, arg2: c_uint, arg3: c_uint, arg4: *mut grid_cell);
-    pub fn grid_set_cell(arg1: *mut grid, arg2: c_uint, arg3: c_uint, arg4: *const grid_cell);
-    pub fn grid_set_padding(arg1: *mut grid, arg2: c_uint, arg3: c_uint);
-    pub fn grid_set_cells(
-        arg1: *mut grid,
-        arg2: c_uint,
-        arg3: c_uint,
-        arg4: *const grid_cell,
-        arg5: *const c_char,
-        arg6: usize,
-    );
-    pub fn grid_get_line(arg1: *mut grid, arg2: c_uint) -> *mut grid_line;
-    pub fn grid_adjust_lines(arg1: *mut grid, arg2: c_uint);
-    pub fn grid_clear(arg1: *mut grid, arg2: c_uint, arg3: c_uint, arg4: c_uint, arg5: c_uint, arg6: c_uint);
-    pub fn grid_clear_lines(arg1: *mut grid, arg2: c_uint, arg3: c_uint, arg4: c_uint);
-    pub fn grid_move_lines(arg1: *mut grid, arg2: c_uint, arg3: c_uint, arg4: c_uint, arg5: c_uint);
-    pub fn grid_move_cells(arg1: *mut grid, arg2: c_uint, arg3: c_uint, arg4: c_uint, arg5: c_uint, arg6: c_uint);
+    pub fn grid_empty_line(_: *mut grid, _: c_uint, _: c_uint);
+    pub fn grid_cells_equal(_: *const grid_cell, _: *const grid_cell) -> c_int;
+    pub fn grid_cells_look_equal(_: *const grid_cell, _: *const grid_cell) -> c_int;
+    pub fn grid_create(_: c_uint, _: c_uint, _: c_uint) -> *mut grid;
+    pub fn grid_destroy(_: *mut grid);
+    pub fn grid_compare(_: *mut grid, _: *mut grid) -> c_int;
+    pub fn grid_collect_history(_: *mut grid);
+    pub fn grid_remove_history(_: *mut grid, _: c_uint);
+    pub fn grid_scroll_history(_: *mut grid, _: c_uint);
+    pub fn grid_scroll_history_region(_: *mut grid, _: c_uint, _: c_uint, _: c_uint);
+    pub fn grid_clear_history(_: *mut grid);
+    pub fn grid_peek_line(_: *mut grid, _: c_uint) -> *const grid_line;
+    pub fn grid_get_cell(_: *mut grid, _: c_uint, _: c_uint, _: *mut grid_cell);
+    pub fn grid_set_cell(_: *mut grid, _: c_uint, _: c_uint, _: *const grid_cell);
+    pub fn grid_set_padding(_: *mut grid, _: c_uint, _: c_uint);
+    pub fn grid_set_cells(_: *mut grid, _: c_uint, _: c_uint, _: *const grid_cell, _: *const c_char, _: usize);
+    pub fn grid_get_line(_: *mut grid, _: c_uint) -> *mut grid_line;
+    pub fn grid_adjust_lines(_: *mut grid, _: c_uint);
+    pub fn grid_clear(_: *mut grid, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
+    pub fn grid_clear_lines(_: *mut grid, _: c_uint, _: c_uint, _: c_uint);
+    pub fn grid_move_lines(_: *mut grid, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
+    pub fn grid_move_cells(_: *mut grid, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
     pub fn grid_string_cells(
-        arg1: *mut grid,
-        arg2: c_uint,
-        arg3: c_uint,
-        arg4: c_uint,
-        arg5: *mut *mut grid_cell,
-        arg6: c_int,
-        arg7: *mut screen,
+        _: *mut grid,
+        _: c_uint,
+        _: c_uint,
+        _: c_uint,
+        _: *mut *mut grid_cell,
+        _: c_int,
+        _: *mut screen,
     ) -> *mut c_char;
-    pub fn grid_duplicate_lines(arg1: *mut grid, arg2: c_uint, arg3: *mut grid, arg4: c_uint, arg5: c_uint);
-    pub fn grid_reflow(arg1: *mut grid, arg2: c_uint);
-    pub fn grid_wrap_position(arg1: *mut grid, arg2: c_uint, arg3: c_uint, arg4: *mut c_uint, arg5: *mut c_uint);
-    pub fn grid_unwrap_position(arg1: *mut grid, arg2: *mut c_uint, arg3: *mut c_uint, arg4: c_uint, arg5: c_uint);
-    pub fn grid_line_length(arg1: *mut grid, arg2: c_uint) -> c_uint;
+    pub fn grid_duplicate_lines(_: *mut grid, _: c_uint, _: *mut grid, _: c_uint, _: c_uint);
+    pub fn grid_reflow(_: *mut grid, _: c_uint);
+    pub fn grid_wrap_position(_: *mut grid, _: c_uint, _: c_uint, _: *mut c_uint, _: *mut c_uint);
+    pub fn grid_unwrap_position(_: *mut grid, _: *mut c_uint, _: *mut c_uint, _: c_uint, _: c_uint);
+    pub fn grid_line_length(_: *mut grid, _: c_uint) -> c_uint;
 }
 /* grid-reader.c */
 unsafe extern "C" {
-    pub fn grid_reader_start(arg1: *mut grid_reader, arg2: *mut grid, arg3: c_uint, arg4: c_uint);
-    pub fn grid_reader_get_cursor(arg1: *mut grid_reader, arg2: *mut c_uint, arg3: *mut c_uint);
-    pub fn grid_reader_line_length(arg1: *mut grid_reader) -> c_uint;
-    pub fn grid_reader_in_set(arg1: *mut grid_reader, arg2: *const c_char) -> c_int;
-    pub fn grid_reader_cursor_right(arg1: *mut grid_reader, arg2: c_int, arg3: c_int);
-    pub fn grid_reader_cursor_left(arg1: *mut grid_reader, arg2: c_int);
-    pub fn grid_reader_cursor_down(arg1: *mut grid_reader);
-    pub fn grid_reader_cursor_up(arg1: *mut grid_reader);
-    pub fn grid_reader_cursor_start_of_line(arg1: *mut grid_reader, arg2: c_int);
-    pub fn grid_reader_cursor_end_of_line(arg1: *mut grid_reader, arg2: c_int, arg3: c_int);
-    pub fn grid_reader_cursor_next_word(arg1: *mut grid_reader, arg2: *const c_char);
-    pub fn grid_reader_cursor_next_word_end(arg1: *mut grid_reader, arg2: *const c_char);
-    pub fn grid_reader_cursor_previous_word(arg1: *mut grid_reader, arg2: *const c_char, arg3: c_int, arg4: c_int);
-    pub fn grid_reader_cursor_jump(arg1: *mut grid_reader, arg2: *const utf8_data) -> c_int;
-    pub fn grid_reader_cursor_jump_back(arg1: *mut grid_reader, arg2: *const utf8_data) -> c_int;
-    pub fn grid_reader_cursor_back_to_indentation(arg1: *mut grid_reader);
+    pub fn grid_reader_start(_: *mut grid_reader, _: *mut grid, _: c_uint, _: c_uint);
+    pub fn grid_reader_get_cursor(_: *mut grid_reader, _: *mut c_uint, _: *mut c_uint);
+    pub fn grid_reader_line_length(_: *mut grid_reader) -> c_uint;
+    pub fn grid_reader_in_set(_: *mut grid_reader, _: *const c_char) -> c_int;
+    pub fn grid_reader_cursor_right(_: *mut grid_reader, _: c_int, _: c_int);
+    pub fn grid_reader_cursor_left(_: *mut grid_reader, _: c_int);
+    pub fn grid_reader_cursor_down(_: *mut grid_reader);
+    pub fn grid_reader_cursor_up(_: *mut grid_reader);
+    pub fn grid_reader_cursor_start_of_line(_: *mut grid_reader, _: c_int);
+    pub fn grid_reader_cursor_end_of_line(_: *mut grid_reader, _: c_int, _: c_int);
+    pub fn grid_reader_cursor_next_word(_: *mut grid_reader, _: *const c_char);
+    pub fn grid_reader_cursor_next_word_end(_: *mut grid_reader, _: *const c_char);
+    pub fn grid_reader_cursor_previous_word(_: *mut grid_reader, _: *const c_char, _: c_int, _: c_int);
+    pub fn grid_reader_cursor_jump(_: *mut grid_reader, _: *const utf8_data) -> c_int;
+    pub fn grid_reader_cursor_jump_back(_: *mut grid_reader, _: *const utf8_data) -> c_int;
+    pub fn grid_reader_cursor_back_to_indentation(_: *mut grid_reader);
 }
 /* grid-view.c */
 unsafe extern "C" {
-    pub fn grid_view_get_cell(arg1: *mut grid, arg2: c_uint, arg3: c_uint, arg4: *mut grid_cell);
-    pub fn grid_view_set_cell(arg1: *mut grid, arg2: c_uint, arg3: c_uint, arg4: *const grid_cell);
-    pub fn grid_view_set_padding(arg1: *mut grid, arg2: c_uint, arg3: c_uint);
-    pub fn grid_view_set_cells(
-        arg1: *mut grid,
-        arg2: c_uint,
-        arg3: c_uint,
-        arg4: *const grid_cell,
-        arg5: *const c_char,
-        arg6: usize,
-    );
-    pub fn grid_view_clear_history(arg1: *mut grid, arg2: c_uint);
-    pub fn grid_view_clear(arg1: *mut grid, arg2: c_uint, arg3: c_uint, arg4: c_uint, arg5: c_uint, arg6: c_uint);
-    pub fn grid_view_scroll_region_up(arg1: *mut grid, arg2: c_uint, arg3: c_uint, arg4: c_uint);
-    pub fn grid_view_scroll_region_down(arg1: *mut grid, arg2: c_uint, arg3: c_uint, arg4: c_uint);
-    pub fn grid_view_insert_lines(arg1: *mut grid, arg2: c_uint, arg3: c_uint, arg4: c_uint);
-    pub fn grid_view_insert_lines_region(arg1: *mut grid, arg2: c_uint, arg3: c_uint, arg4: c_uint, arg5: c_uint);
-    pub fn grid_view_delete_lines(arg1: *mut grid, arg2: c_uint, arg3: c_uint, arg4: c_uint);
-    pub fn grid_view_delete_lines_region(arg1: *mut grid, arg2: c_uint, arg3: c_uint, arg4: c_uint, arg5: c_uint);
-    pub fn grid_view_insert_cells(arg1: *mut grid, arg2: c_uint, arg3: c_uint, arg4: c_uint, arg5: c_uint);
-    pub fn grid_view_delete_cells(arg1: *mut grid, arg2: c_uint, arg3: c_uint, arg4: c_uint, arg5: c_uint);
-    pub fn grid_view_string_cells(arg1: *mut grid, arg2: c_uint, arg3: c_uint, arg4: c_uint) -> *mut c_char;
+    pub fn grid_view_get_cell(_: *mut grid, _: c_uint, _: c_uint, _: *mut grid_cell);
+    pub fn grid_view_set_cell(_: *mut grid, _: c_uint, _: c_uint, _: *const grid_cell);
+    pub fn grid_view_set_padding(_: *mut grid, _: c_uint, _: c_uint);
+    pub fn grid_view_set_cells(_: *mut grid, _: c_uint, _: c_uint, _: *const grid_cell, _: *const c_char, _: usize);
+    pub fn grid_view_clear_history(_: *mut grid, _: c_uint);
+    pub fn grid_view_clear(_: *mut grid, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
+    pub fn grid_view_scroll_region_up(_: *mut grid, _: c_uint, _: c_uint, _: c_uint);
+    pub fn grid_view_scroll_region_down(_: *mut grid, _: c_uint, _: c_uint, _: c_uint);
+    pub fn grid_view_insert_lines(_: *mut grid, _: c_uint, _: c_uint, _: c_uint);
+    pub fn grid_view_insert_lines_region(_: *mut grid, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
+    pub fn grid_view_delete_lines(_: *mut grid, _: c_uint, _: c_uint, _: c_uint);
+    pub fn grid_view_delete_lines_region(_: *mut grid, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
+    pub fn grid_view_insert_cells(_: *mut grid, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
+    pub fn grid_view_delete_cells(_: *mut grid, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
+    pub fn grid_view_string_cells(_: *mut grid, _: c_uint, _: c_uint, _: c_uint) -> *mut c_char;
 }
 /* screen-write.c */
 unsafe extern "C" {
-    pub fn screen_write_make_list(arg1: *mut screen);
-    pub fn screen_write_free_list(arg1: *mut screen);
-    pub fn screen_write_start_pane(arg1: *mut screen_write_ctx, arg2: *mut window_pane, arg3: *mut screen);
-    pub fn screen_write_start(arg1: *mut screen_write_ctx, arg2: *mut screen);
+    pub fn screen_write_make_list(_: *mut screen);
+    pub fn screen_write_free_list(_: *mut screen);
+    pub fn screen_write_start_pane(_: *mut screen_write_ctx, _: *mut window_pane, _: *mut screen);
+    pub fn screen_write_start(_: *mut screen_write_ctx, _: *mut screen);
     pub fn screen_write_start_callback(
-        arg1: *mut screen_write_ctx,
-        arg2: *mut screen,
-        arg3: screen_write_init_ctx_cb,
-        arg4: *mut c_void,
+        _: *mut screen_write_ctx,
+        _: *mut screen,
+        _: screen_write_init_ctx_cb,
+        _: *mut c_void,
     );
-    pub fn screen_write_stop(arg1: *mut screen_write_ctx);
-    pub fn screen_write_reset(arg1: *mut screen_write_ctx);
-    pub fn screen_write_strlen(arg1: *const c_char, ...) -> usize;
+    pub fn screen_write_stop(_: *mut screen_write_ctx);
+    pub fn screen_write_reset(_: *mut screen_write_ctx);
+    pub fn screen_write_strlen(_: *const c_char, ...) -> usize;
     pub fn screen_write_text(
-        arg1: *mut screen_write_ctx,
-        arg2: c_uint,
-        arg3: c_uint,
-        arg4: c_uint,
-        arg5: c_int,
-        arg6: *const grid_cell,
-        arg7: *const c_char,
+        _: *mut screen_write_ctx,
+        _: c_uint,
+        _: c_uint,
+        _: c_uint,
+        _: c_int,
+        _: *const grid_cell,
+        _: *const c_char,
         ...
     ) -> c_int;
-    pub fn screen_write_puts(arg1: *mut screen_write_ctx, arg2: *const grid_cell, arg3: *const c_char, ...);
-    pub fn screen_write_nputs(
-        arg1: *mut screen_write_ctx,
-        arg2: isize,
-        arg3: *const grid_cell,
-        arg4: *const c_char,
-        ...
-    );
+    pub fn screen_write_puts(_: *mut screen_write_ctx, _: *const grid_cell, _: *const c_char, ...);
+    pub fn screen_write_nputs(_: *mut screen_write_ctx, _: isize, _: *const grid_cell, _: *const c_char, ...);
     pub fn screen_write_vnputs(
-        arg1: *mut screen_write_ctx,
-        arg2: isize,
-        arg3: *const grid_cell,
-        arg4: *const c_char,
-        arg5: *mut VaList,
+        _: *mut screen_write_ctx,
+        _: isize,
+        _: *const grid_cell,
+        _: *const c_char,
+        _: *mut VaList,
     );
-    pub fn screen_write_putc(arg1: *mut screen_write_ctx, arg2: *const grid_cell, arg3: c_uchar);
-    pub fn screen_write_fast_copy(
-        arg1: *mut screen_write_ctx,
-        arg2: *mut screen,
-        arg3: c_uint,
-        arg4: c_uint,
-        arg5: c_uint,
-        arg6: c_uint,
-    );
+    pub fn screen_write_putc(_: *mut screen_write_ctx, _: *const grid_cell, _: c_uchar);
+    pub fn screen_write_fast_copy(_: *mut screen_write_ctx, _: *mut screen, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
     pub fn screen_write_hline(
-        arg1: *mut screen_write_ctx,
-        arg2: c_uint,
-        arg3: c_int,
-        arg4: c_int,
-        arg5: box_lines,
-        arg6: *const grid_cell,
+        _: *mut screen_write_ctx,
+        _: c_uint,
+        _: c_int,
+        _: c_int,
+        _: box_lines,
+        _: *const grid_cell,
     );
-    pub fn screen_write_vline(arg1: *mut screen_write_ctx, arg2: c_uint, arg3: c_int, arg4: c_int);
+    pub fn screen_write_vline(_: *mut screen_write_ctx, _: c_uint, _: c_int, _: c_int);
     pub fn screen_write_menu(
-        arg1: *mut screen_write_ctx,
-        arg2: *mut menu,
-        arg3: c_int,
-        arg4: box_lines,
-        arg5: *const grid_cell,
-        arg6: *const grid_cell,
-        arg7: *const grid_cell,
+        _: *mut screen_write_ctx,
+        _: *mut menu,
+        _: c_int,
+        _: box_lines,
+        _: *const grid_cell,
+        _: *const grid_cell,
+        _: *const grid_cell,
     );
     pub fn screen_write_box(
-        arg1: *mut screen_write_ctx,
-        arg2: c_uint,
-        arg3: c_uint,
-        arg4: box_lines,
-        arg5: *const grid_cell,
-        arg6: *const c_char,
+        _: *mut screen_write_ctx,
+        _: c_uint,
+        _: c_uint,
+        _: box_lines,
+        _: *const grid_cell,
+        _: *const c_char,
     );
-    pub fn screen_write_preview(arg1: *mut screen_write_ctx, arg2: *mut screen, arg3: c_uint, arg4: c_uint);
-    pub fn screen_write_backspace(arg1: *mut screen_write_ctx);
-    pub fn screen_write_mode_set(arg1: *mut screen_write_ctx, arg2: c_int);
-    pub fn screen_write_mode_clear(arg1: *mut screen_write_ctx, arg2: c_int);
-    pub fn screen_write_cursorup(arg1: *mut screen_write_ctx, arg2: c_uint);
-    pub fn screen_write_cursordown(arg1: *mut screen_write_ctx, arg2: c_uint);
-    pub fn screen_write_cursorright(arg1: *mut screen_write_ctx, arg2: c_uint);
-    pub fn screen_write_cursorleft(arg1: *mut screen_write_ctx, arg2: c_uint);
-    pub fn screen_write_alignmenttest(arg1: *mut screen_write_ctx);
-    pub fn screen_write_insertcharacter(arg1: *mut screen_write_ctx, arg2: c_uint, arg3: c_uint);
-    pub fn screen_write_deletecharacter(arg1: *mut screen_write_ctx, arg2: c_uint, arg3: c_uint);
-    pub fn screen_write_clearcharacter(arg1: *mut screen_write_ctx, arg2: c_uint, arg3: c_uint);
-    pub fn screen_write_insertline(arg1: *mut screen_write_ctx, arg2: c_uint, arg3: c_uint);
-    pub fn screen_write_deleteline(arg1: *mut screen_write_ctx, arg2: c_uint, arg3: c_uint);
-    pub fn screen_write_clearline(arg1: *mut screen_write_ctx, arg2: c_uint);
-    pub fn screen_write_clearendofline(arg1: *mut screen_write_ctx, arg2: c_uint);
-    pub fn screen_write_clearstartofline(arg1: *mut screen_write_ctx, arg2: c_uint);
-    pub fn screen_write_cursormove(arg1: *mut screen_write_ctx, arg2: c_int, arg3: c_int, arg4: c_int);
-    pub fn screen_write_reverseindex(arg1: *mut screen_write_ctx, arg2: c_uint);
-    pub fn screen_write_scrollregion(arg1: *mut screen_write_ctx, arg2: c_uint, arg3: c_uint);
-    pub fn screen_write_linefeed(arg1: *mut screen_write_ctx, arg2: c_int, arg3: c_uint);
-    pub fn screen_write_scrollup(arg1: *mut screen_write_ctx, arg2: c_uint, arg3: c_uint);
-    pub fn screen_write_scrolldown(arg1: *mut screen_write_ctx, arg2: c_uint, arg3: c_uint);
-    pub fn screen_write_carriagereturn(arg1: *mut screen_write_ctx);
-    pub fn screen_write_clearendofscreen(arg1: *mut screen_write_ctx, arg2: c_uint);
-    pub fn screen_write_clearstartofscreen(arg1: *mut screen_write_ctx, arg2: c_uint);
-    pub fn screen_write_clearscreen(arg1: *mut screen_write_ctx, arg2: c_uint);
-    pub fn screen_write_clearhistory(arg1: *mut screen_write_ctx);
-    pub fn screen_write_fullredraw(arg1: *mut screen_write_ctx);
-    pub fn screen_write_collect_end(arg1: *mut screen_write_ctx);
-    pub fn screen_write_collect_add(arg1: *mut screen_write_ctx, arg2: *const grid_cell);
-    pub fn screen_write_cell(arg1: *mut screen_write_ctx, arg2: *const grid_cell);
-    pub fn screen_write_setselection(
-        arg1: *mut screen_write_ctx,
-        arg2: *const c_char,
-        arg3: *mut c_uchar,
-        arg4: c_uint,
-    );
-    pub fn screen_write_rawstring(arg1: *mut screen_write_ctx, arg2: *mut c_uchar, arg3: c_uint, arg4: c_int);
-    pub fn screen_write_alternateon(arg1: *mut screen_write_ctx, arg2: *mut grid_cell, arg3: c_int);
-    pub fn screen_write_alternateoff(arg1: *mut screen_write_ctx, arg2: *mut grid_cell, arg3: c_int);
+    pub fn screen_write_preview(_: *mut screen_write_ctx, _: *mut screen, _: c_uint, _: c_uint);
+    pub fn screen_write_backspace(_: *mut screen_write_ctx);
+    pub fn screen_write_mode_set(_: *mut screen_write_ctx, _: c_int);
+    pub fn screen_write_mode_clear(_: *mut screen_write_ctx, _: c_int);
+    pub fn screen_write_cursorup(_: *mut screen_write_ctx, _: c_uint);
+    pub fn screen_write_cursordown(_: *mut screen_write_ctx, _: c_uint);
+    pub fn screen_write_cursorright(_: *mut screen_write_ctx, _: c_uint);
+    pub fn screen_write_cursorleft(_: *mut screen_write_ctx, _: c_uint);
+    pub fn screen_write_alignmenttest(_: *mut screen_write_ctx);
+    pub fn screen_write_insertcharacter(_: *mut screen_write_ctx, _: c_uint, _: c_uint);
+    pub fn screen_write_deletecharacter(_: *mut screen_write_ctx, _: c_uint, _: c_uint);
+    pub fn screen_write_clearcharacter(_: *mut screen_write_ctx, _: c_uint, _: c_uint);
+    pub fn screen_write_insertline(_: *mut screen_write_ctx, _: c_uint, _: c_uint);
+    pub fn screen_write_deleteline(_: *mut screen_write_ctx, _: c_uint, _: c_uint);
+    pub fn screen_write_clearline(_: *mut screen_write_ctx, _: c_uint);
+    pub fn screen_write_clearendofline(_: *mut screen_write_ctx, _: c_uint);
+    pub fn screen_write_clearstartofline(_: *mut screen_write_ctx, _: c_uint);
+    pub fn screen_write_cursormove(_: *mut screen_write_ctx, _: c_int, _: c_int, _: c_int);
+    pub fn screen_write_reverseindex(_: *mut screen_write_ctx, _: c_uint);
+    pub fn screen_write_scrollregion(_: *mut screen_write_ctx, _: c_uint, _: c_uint);
+    pub fn screen_write_linefeed(_: *mut screen_write_ctx, _: c_int, _: c_uint);
+    pub fn screen_write_scrollup(_: *mut screen_write_ctx, _: c_uint, _: c_uint);
+    pub fn screen_write_scrolldown(_: *mut screen_write_ctx, _: c_uint, _: c_uint);
+    pub fn screen_write_carriagereturn(_: *mut screen_write_ctx);
+    pub fn screen_write_clearendofscreen(_: *mut screen_write_ctx, _: c_uint);
+    pub fn screen_write_clearstartofscreen(_: *mut screen_write_ctx, _: c_uint);
+    pub fn screen_write_clearscreen(_: *mut screen_write_ctx, _: c_uint);
+    pub fn screen_write_clearhistory(_: *mut screen_write_ctx);
+    pub fn screen_write_fullredraw(_: *mut screen_write_ctx);
+    pub fn screen_write_collect_end(_: *mut screen_write_ctx);
+    pub fn screen_write_collect_add(_: *mut screen_write_ctx, _: *const grid_cell);
+    pub fn screen_write_cell(_: *mut screen_write_ctx, _: *const grid_cell);
+    pub fn screen_write_setselection(_: *mut screen_write_ctx, _: *const c_char, _: *mut c_uchar, _: c_uint);
+    pub fn screen_write_rawstring(_: *mut screen_write_ctx, _: *mut c_uchar, _: c_uint, _: c_int);
+    pub fn screen_write_alternateon(_: *mut screen_write_ctx, _: *mut grid_cell, _: c_int);
+    pub fn screen_write_alternateoff(_: *mut screen_write_ctx, _: *mut grid_cell, _: c_int);
 }
 /* screen-redraw.c */
 unsafe extern "C" {
-    pub fn screen_redraw_screen(arg1: *mut client);
-    pub fn screen_redraw_pane(arg1: *mut client, arg2: *mut window_pane);
+    pub fn screen_redraw_screen(_: *mut client);
+    pub fn screen_redraw_pane(_: *mut client, _: *mut window_pane);
 }
 /* screen.c */
 unsafe extern "C" {
-    pub fn screen_init(arg1: *mut screen, arg2: c_uint, arg3: c_uint, arg4: c_uint);
-    pub fn screen_reinit(arg1: *mut screen);
-    pub fn screen_free(arg1: *mut screen);
-    pub fn screen_reset_tabs(arg1: *mut screen);
-    pub fn screen_reset_hyperlinks(arg1: *mut screen);
-    pub fn screen_set_cursor_style(arg1: c_uint, arg2: *mut screen_cursor_style, arg3: *mut c_int);
-    pub fn screen_set_cursor_colour(arg1: *mut screen, arg2: c_int);
-    pub fn screen_set_title(arg1: *mut screen, arg2: *const c_char) -> c_int;
-    pub fn screen_set_path(arg1: *mut screen, arg2: *const c_char);
-    pub fn screen_push_title(arg1: *mut screen);
-    pub fn screen_pop_title(arg1: *mut screen);
-    pub fn screen_resize(arg1: *mut screen, arg2: c_uint, arg3: c_uint, arg4: c_int);
-    pub fn screen_resize_cursor(arg1: *mut screen, arg2: c_uint, arg3: c_uint, arg4: c_int, arg5: c_int, arg6: c_int);
+    pub fn screen_init(_: *mut screen, _: c_uint, _: c_uint, _: c_uint);
+    pub fn screen_reinit(_: *mut screen);
+    pub fn screen_free(_: *mut screen);
+    pub fn screen_reset_tabs(_: *mut screen);
+    pub fn screen_reset_hyperlinks(_: *mut screen);
+    pub fn screen_set_cursor_style(_: c_uint, _: *mut screen_cursor_style, _: *mut c_int);
+    pub fn screen_set_cursor_colour(_: *mut screen, _: c_int);
+    pub fn screen_set_title(_: *mut screen, _: *const c_char) -> c_int;
+    pub fn screen_set_path(_: *mut screen, _: *const c_char);
+    pub fn screen_push_title(_: *mut screen);
+    pub fn screen_pop_title(_: *mut screen);
+    pub fn screen_resize(_: *mut screen, _: c_uint, _: c_uint, _: c_int);
+    pub fn screen_resize_cursor(_: *mut screen, _: c_uint, _: c_uint, _: c_int, _: c_int, _: c_int);
     pub fn screen_set_selection(
-        arg1: *mut screen,
-        arg2: c_uint,
-        arg3: c_uint,
-        arg4: c_uint,
-        arg5: c_uint,
-        arg6: c_uint,
-        arg7: c_int,
-        arg8: *mut grid_cell,
+        _: *mut screen,
+        _: c_uint,
+        _: c_uint,
+        _: c_uint,
+        _: c_uint,
+        _: c_uint,
+        _: c_int,
+        _: *mut grid_cell,
     );
-    pub fn screen_clear_selection(arg1: *mut screen);
-    pub fn screen_hide_selection(arg1: *mut screen);
-    pub fn screen_check_selection(arg1: *mut screen, arg2: c_uint, arg3: c_uint) -> c_int;
-    pub fn screen_select_cell(arg1: *mut screen, arg2: *mut grid_cell, arg3: *const grid_cell);
-    pub fn screen_alternate_on(arg1: *mut screen, arg2: *mut grid_cell, arg3: c_int);
-    pub fn screen_alternate_off(arg1: *mut screen, arg2: *mut grid_cell, arg3: c_int);
-    pub fn screen_mode_to_string(arg1: c_int) -> *const c_char;
+    pub fn screen_clear_selection(_: *mut screen);
+    pub fn screen_hide_selection(_: *mut screen);
+    pub fn screen_check_selection(_: *mut screen, _: c_uint, _: c_uint) -> c_int;
+    pub fn screen_select_cell(_: *mut screen, _: *mut grid_cell, _: *const grid_cell);
+    pub fn screen_alternate_on(_: *mut screen, _: *mut grid_cell, _: c_int);
+    pub fn screen_alternate_off(_: *mut screen, _: *mut grid_cell, _: c_int);
+    pub fn screen_mode_to_string(_: c_int) -> *const c_char;
 }
 
 // window.c
@@ -3501,241 +3398,220 @@ pub use crate::window_::*;
 unsafe extern "C" {
     pub static mut windows: windows;
     pub static mut all_window_panes: window_pane_tree;
-    pub fn window_cmp(arg1: *mut window, arg2: *mut window) -> c_int;
-    pub fn windows_RB_INSERT_COLOR(arg1: *mut windows, arg2: *mut window);
-    pub fn windows_RB_REMOVE_COLOR(arg1: *mut windows, arg2: *mut window, arg3: *mut window);
-    pub fn windows_RB_REMOVE(arg1: *mut windows, arg2: *mut window) -> *mut window;
-    pub fn windows_RB_INSERT(arg1: *mut windows, arg2: *mut window) -> *mut window;
-    pub fn windows_RB_FIND(arg1: *mut windows, arg2: *mut window) -> *mut window;
-    pub fn windows_RB_NFIND(arg1: *mut windows, arg2: *mut window) -> *mut window;
-    pub fn winlink_cmp(arg1: *mut winlink, arg2: *mut winlink) -> c_int;
-    pub fn winlinks_RB_INSERT_COLOR(arg1: *mut winlinks, arg2: *mut winlink);
-    pub fn winlinks_RB_REMOVE_COLOR(arg1: *mut winlinks, arg2: *mut winlink, arg3: *mut winlink);
-    pub fn winlinks_RB_REMOVE(arg1: *mut winlinks, arg2: *mut winlink) -> *mut winlink;
-    pub fn winlinks_RB_INSERT(arg1: *mut winlinks, arg2: *mut winlink) -> *mut winlink;
-    pub fn winlinks_RB_FIND(arg1: *mut winlinks, arg2: *mut winlink) -> *mut winlink;
-    pub fn winlinks_RB_NFIND(arg1: *mut winlinks, arg2: *mut winlink) -> *mut winlink;
-    pub fn window_pane_cmp(arg1: *mut window_pane, arg2: *mut window_pane) -> c_int;
-    pub fn window_pane_tree_RB_INSERT_COLOR(arg1: *mut window_pane_tree, arg2: *mut window_pane);
-    pub fn window_pane_tree_RB_REMOVE_COLOR(
-        arg1: *mut window_pane_tree,
-        arg2: *mut window_pane,
-        arg3: *mut window_pane,
-    );
-    pub fn window_pane_tree_RB_REMOVE(arg1: *mut window_pane_tree, arg2: *mut window_pane) -> *mut window_pane;
-    pub fn window_pane_tree_RB_INSERT(arg1: *mut window_pane_tree, arg2: *mut window_pane) -> *mut window_pane;
-    pub fn window_pane_tree_RB_FIND(arg1: *mut window_pane_tree, arg2: *mut window_pane) -> *mut window_pane;
-    pub fn window_pane_tree_RB_NFIND(arg1: *mut window_pane_tree, arg2: *mut window_pane) -> *mut window_pane;
-    pub fn winlink_find_by_index(arg1: *mut winlinks, arg2: c_int) -> *mut winlink;
-    pub fn winlink_find_by_window(arg1: *mut winlinks, arg2: *mut window) -> *mut winlink;
-    pub fn winlink_find_by_window_id(arg1: *mut winlinks, arg2: c_uint) -> *mut winlink;
-    pub fn winlink_count(arg1: *mut winlinks) -> c_uint;
-    pub fn winlink_add(arg1: *mut winlinks, arg2: c_int) -> *mut winlink;
-    pub fn winlink_set_window(arg1: *mut winlink, arg2: *mut window);
-    pub fn winlink_remove(arg1: *mut winlinks, arg2: *mut winlink);
-    pub fn winlink_next(arg1: *mut winlink) -> *mut winlink;
-    pub fn winlink_previous(arg1: *mut winlink) -> *mut winlink;
-    pub fn winlink_next_by_number(arg1: *mut winlink, arg2: *mut session, arg3: c_int) -> *mut winlink;
-    pub fn winlink_previous_by_number(arg1: *mut winlink, arg2: *mut session, arg3: c_int) -> *mut winlink;
-    pub fn winlink_stack_push(arg1: *mut winlink_stack, arg2: *mut winlink);
-    pub fn winlink_stack_remove(arg1: *mut winlink_stack, arg2: *mut winlink);
-    pub fn window_find_by_id_str(arg1: *const c_char) -> *mut window;
-    pub fn window_find_by_id(arg1: c_uint) -> *mut window;
-    pub fn window_update_activity(arg1: *mut window);
-    pub fn window_create(arg1: c_uint, arg2: c_uint, arg3: c_uint, arg4: c_uint) -> *mut window;
-    pub fn window_pane_set_event(arg1: *mut window_pane);
-    pub fn window_get_active_at(arg1: *mut window, arg2: c_uint, arg3: c_uint) -> *mut window_pane;
-    pub fn window_find_string(arg1: *mut window, arg2: *const c_char) -> *mut window_pane;
-    pub fn window_has_pane(arg1: *mut window, arg2: *mut window_pane) -> c_int;
-    pub fn window_set_active_pane(arg1: *mut window, arg2: *mut window_pane, arg3: c_int) -> c_int;
-    pub fn window_update_focus(arg1: *mut window);
-    pub fn window_pane_update_focus(arg1: *mut window_pane);
-    pub fn window_redraw_active_switch(arg1: *mut window, arg2: *mut window_pane);
-    pub fn window_add_pane(arg1: *mut window, arg2: *mut window_pane, arg3: c_uint, arg4: c_int) -> *mut window_pane;
-    pub fn window_resize(arg1: *mut window, arg2: c_uint, arg3: c_uint, arg4: c_int, arg5: c_int);
-    pub fn window_pane_send_resize(arg1: *mut window_pane, arg2: c_uint, arg3: c_uint);
-    pub fn window_zoom(arg1: *mut window_pane) -> c_int;
-    pub fn window_unzoom(arg1: *mut window, arg2: c_int) -> c_int;
-    pub fn window_push_zoom(arg1: *mut window, arg2: c_int, arg3: c_int) -> c_int;
-    pub fn window_pop_zoom(arg1: *mut window) -> c_int;
-    pub fn window_lost_pane(arg1: *mut window, arg2: *mut window_pane);
-    pub fn window_remove_pane(arg1: *mut window, arg2: *mut window_pane);
-    pub fn window_pane_at_index(arg1: *mut window, arg2: c_uint) -> *mut window_pane;
-    pub fn window_pane_next_by_number(arg1: *mut window, arg2: *mut window_pane, arg3: c_uint) -> *mut window_pane;
-    pub fn window_pane_previous_by_number(arg1: *mut window, arg2: *mut window_pane, arg3: c_uint) -> *mut window_pane;
-    pub fn window_pane_index(arg1: *mut window_pane, arg2: *mut c_uint) -> c_int;
-    pub fn window_count_panes(arg1: *mut window) -> c_uint;
-    pub fn window_destroy_panes(arg1: *mut window);
-    pub fn window_pane_find_by_id_str(arg1: *const c_char) -> *mut window_pane;
-    pub fn window_pane_find_by_id(arg1: c_uint) -> *mut window_pane;
-    pub fn window_pane_destroy_ready(arg1: *mut window_pane) -> c_int;
-    pub fn window_pane_resize(arg1: *mut window_pane, arg2: c_uint, arg3: c_uint);
+    pub fn window_cmp(_: *mut window, _: *mut window) -> c_int;
+    pub fn windows_RB_INSERT_COLOR(_: *mut windows, _: *mut window);
+    pub fn windows_RB_REMOVE_COLOR(_: *mut windows, _: *mut window, _: *mut window);
+    pub fn windows_RB_REMOVE(_: *mut windows, _: *mut window) -> *mut window;
+    pub fn windows_RB_INSERT(_: *mut windows, _: *mut window) -> *mut window;
+    pub fn windows_RB_FIND(_: *mut windows, _: *mut window) -> *mut window;
+    pub fn windows_RB_NFIND(_: *mut windows, _: *mut window) -> *mut window;
+    pub fn winlink_cmp(_: *mut winlink, _: *mut winlink) -> c_int;
+    pub fn winlinks_RB_INSERT_COLOR(_: *mut winlinks, _: *mut winlink);
+    pub fn winlinks_RB_REMOVE_COLOR(_: *mut winlinks, _: *mut winlink, _: *mut winlink);
+    pub fn winlinks_RB_REMOVE(_: *mut winlinks, _: *mut winlink) -> *mut winlink;
+    pub fn winlinks_RB_INSERT(_: *mut winlinks, _: *mut winlink) -> *mut winlink;
+    pub fn winlinks_RB_FIND(_: *mut winlinks, _: *mut winlink) -> *mut winlink;
+    pub fn winlinks_RB_NFIND(_: *mut winlinks, _: *mut winlink) -> *mut winlink;
+    pub fn window_pane_cmp(_: *mut window_pane, _: *mut window_pane) -> c_int;
+    pub fn window_pane_tree_RB_INSERT_COLOR(_: *mut window_pane_tree, _: *mut window_pane);
+    pub fn window_pane_tree_RB_REMOVE_COLOR(_: *mut window_pane_tree, _: *mut window_pane, _: *mut window_pane);
+    pub fn window_pane_tree_RB_REMOVE(_: *mut window_pane_tree, _: *mut window_pane) -> *mut window_pane;
+    pub fn window_pane_tree_RB_INSERT(_: *mut window_pane_tree, _: *mut window_pane) -> *mut window_pane;
+    pub fn window_pane_tree_RB_FIND(_: *mut window_pane_tree, _: *mut window_pane) -> *mut window_pane;
+    pub fn window_pane_tree_RB_NFIND(_: *mut window_pane_tree, _: *mut window_pane) -> *mut window_pane;
+    pub fn winlink_find_by_index(_: *mut winlinks, _: c_int) -> *mut winlink;
+    pub fn winlink_find_by_window(_: *mut winlinks, _: *mut window) -> *mut winlink;
+    pub fn winlink_find_by_window_id(_: *mut winlinks, _: c_uint) -> *mut winlink;
+    pub fn winlink_count(_: *mut winlinks) -> c_uint;
+    pub fn winlink_add(_: *mut winlinks, _: c_int) -> *mut winlink;
+    pub fn winlink_set_window(_: *mut winlink, _: *mut window);
+    pub fn winlink_remove(_: *mut winlinks, _: *mut winlink);
+    pub fn winlink_next(_: *mut winlink) -> *mut winlink;
+    pub fn winlink_previous(_: *mut winlink) -> *mut winlink;
+    pub fn winlink_next_by_number(_: *mut winlink, _: *mut session, _: c_int) -> *mut winlink;
+    pub fn winlink_previous_by_number(_: *mut winlink, _: *mut session, _: c_int) -> *mut winlink;
+    pub fn winlink_stack_push(_: *mut winlink_stack, _: *mut winlink);
+    pub fn winlink_stack_remove(_: *mut winlink_stack, _: *mut winlink);
+    pub fn window_find_by_id_str(_: *const c_char) -> *mut window;
+    pub fn window_find_by_id(_: c_uint) -> *mut window;
+    pub fn window_update_activity(_: *mut window);
+    pub fn window_create(_: c_uint, _: c_uint, _: c_uint, _: c_uint) -> *mut window;
+    pub fn window_pane_set_event(_: *mut window_pane);
+    pub fn window_get_active_at(_: *mut window, _: c_uint, _: c_uint) -> *mut window_pane;
+    pub fn window_find_string(_: *mut window, _: *const c_char) -> *mut window_pane;
+    pub fn window_has_pane(_: *mut window, _: *mut window_pane) -> c_int;
+    pub fn window_set_active_pane(_: *mut window, _: *mut window_pane, _: c_int) -> c_int;
+    pub fn window_update_focus(_: *mut window);
+    pub fn window_pane_update_focus(_: *mut window_pane);
+    pub fn window_redraw_active_switch(_: *mut window, _: *mut window_pane);
+    pub fn window_add_pane(_: *mut window, _: *mut window_pane, _: c_uint, _: c_int) -> *mut window_pane;
+    pub fn window_resize(_: *mut window, _: c_uint, _: c_uint, _: c_int, _: c_int);
+    pub fn window_pane_send_resize(_: *mut window_pane, _: c_uint, _: c_uint);
+    pub fn window_zoom(_: *mut window_pane) -> c_int;
+    pub fn window_unzoom(_: *mut window, _: c_int) -> c_int;
+    pub fn window_push_zoom(_: *mut window, _: c_int, _: c_int) -> c_int;
+    pub fn window_pop_zoom(_: *mut window) -> c_int;
+    pub fn window_lost_pane(_: *mut window, _: *mut window_pane);
+    pub fn window_remove_pane(_: *mut window, _: *mut window_pane);
+    pub fn window_pane_at_index(_: *mut window, _: c_uint) -> *mut window_pane;
+    pub fn window_pane_next_by_number(_: *mut window, _: *mut window_pane, _: c_uint) -> *mut window_pane;
+    pub fn window_pane_previous_by_number(_: *mut window, _: *mut window_pane, _: c_uint) -> *mut window_pane;
+    pub fn window_pane_index(_: *mut window_pane, _: *mut c_uint) -> c_int;
+    pub fn window_count_panes(_: *mut window) -> c_uint;
+    pub fn window_destroy_panes(_: *mut window);
+    pub fn window_pane_find_by_id_str(_: *const c_char) -> *mut window_pane;
+    pub fn window_pane_find_by_id(_: c_uint) -> *mut window_pane;
+    pub fn window_pane_destroy_ready(_: *mut window_pane) -> c_int;
+    pub fn window_pane_resize(_: *mut window_pane, _: c_uint, _: c_uint);
     pub fn window_pane_set_mode(
-        arg1: *mut window_pane,
-        arg2: *mut window_pane,
-        arg3: *const window_mode,
-        arg4: *mut cmd_find_state,
-        arg5: *mut args,
+        _: *mut window_pane,
+        _: *mut window_pane,
+        _: *const window_mode,
+        _: *mut cmd_find_state,
+        _: *mut args,
     ) -> c_int;
-    pub fn window_pane_reset_mode(arg1: *mut window_pane);
-    pub fn window_pane_reset_mode_all(arg1: *mut window_pane);
+    pub fn window_pane_reset_mode(_: *mut window_pane);
+    pub fn window_pane_reset_mode_all(_: *mut window_pane);
     pub fn window_pane_key(
-        arg1: *mut window_pane,
-        arg2: *mut client,
-        arg3: *mut session,
-        arg4: *mut winlink,
-        arg5: key_code,
-        arg6: *mut mouse_event,
+        _: *mut window_pane,
+        _: *mut client,
+        _: *mut session,
+        _: *mut winlink,
+        _: key_code,
+        _: *mut mouse_event,
     ) -> c_int;
-    pub fn window_pane_visible(arg1: *mut window_pane) -> c_int;
-    pub fn window_pane_exited(arg1: *mut window_pane) -> c_int;
-    pub fn window_pane_search(arg1: *mut window_pane, arg2: *const c_char, arg3: c_int, arg4: c_int) -> c_uint;
-    pub fn window_printable_flags(arg1: *mut winlink, arg2: c_int) -> *const c_char;
-    pub fn window_pane_find_up(arg1: *mut window_pane) -> *mut window_pane;
-    pub fn window_pane_find_down(arg1: *mut window_pane) -> *mut window_pane;
-    pub fn window_pane_find_left(arg1: *mut window_pane) -> *mut window_pane;
-    pub fn window_pane_find_right(arg1: *mut window_pane) -> *mut window_pane;
-    pub fn window_pane_stack_push(arg1: *mut window_panes, arg2: *mut window_pane);
-    pub fn window_pane_stack_remove(arg1: *mut window_panes, arg2: *mut window_pane);
-    pub fn window_set_name(arg1: *mut window, arg2: *const c_char);
-    pub fn window_add_ref(arg1: *mut window, arg2: *const c_char);
-    pub fn window_remove_ref(arg1: *mut window, arg2: *const c_char);
-    pub fn winlink_clear_flags(arg1: *mut winlink);
-    pub fn winlink_shuffle_up(arg1: *mut session, arg2: *mut winlink, arg3: c_int) -> c_int;
-    pub fn window_pane_start_input(arg1: *mut window_pane, arg2: *mut cmdq_item, arg3: *mut *mut c_char) -> c_int;
-    pub fn window_pane_get_new_data(
-        arg1: *mut window_pane,
-        arg2: *mut window_pane_offset,
-        arg3: *mut usize,
-    ) -> *mut c_void;
-    pub fn window_pane_update_used_data(arg1: *mut window_pane, arg2: *mut window_pane_offset, arg3: usize);
-    pub fn window_set_fill_character(arg1: *mut window);
-    pub fn window_pane_default_cursor(arg1: *mut window_pane);
-    pub fn window_pane_mode(arg1: *mut window_pane) -> c_int;
+    pub fn window_pane_visible(_: *mut window_pane) -> c_int;
+    pub fn window_pane_exited(_: *mut window_pane) -> c_int;
+    pub fn window_pane_search(_: *mut window_pane, _: *const c_char, _: c_int, _: c_int) -> c_uint;
+    pub fn window_printable_flags(_: *mut winlink, _: c_int) -> *const c_char;
+    pub fn window_pane_find_up(_: *mut window_pane) -> *mut window_pane;
+    pub fn window_pane_find_down(_: *mut window_pane) -> *mut window_pane;
+    pub fn window_pane_find_left(_: *mut window_pane) -> *mut window_pane;
+    pub fn window_pane_find_right(_: *mut window_pane) -> *mut window_pane;
+    pub fn window_pane_stack_push(_: *mut window_panes, _: *mut window_pane);
+    pub fn window_pane_stack_remove(_: *mut window_panes, _: *mut window_pane);
+    pub fn window_set_name(_: *mut window, _: *const c_char);
+    pub fn window_add_ref(_: *mut window, _: *const c_char);
+    pub fn window_remove_ref(_: *mut window, _: *const c_char);
+    pub fn winlink_clear_flags(_: *mut winlink);
+    pub fn winlink_shuffle_up(_: *mut session, _: *mut winlink, _: c_int) -> c_int;
+    pub fn window_pane_start_input(_: *mut window_pane, _: *mut cmdq_item, _: *mut *mut c_char) -> c_int;
+    pub fn window_pane_get_new_data(_: *mut window_pane, _: *mut window_pane_offset, _: *mut usize) -> *mut c_void;
+    pub fn window_pane_update_used_data(_: *mut window_pane, _: *mut window_pane_offset, _: usize);
+    pub fn window_set_fill_character(_: *mut window);
+    pub fn window_pane_default_cursor(_: *mut window_pane);
+    pub fn window_pane_mode(_: *mut window_pane) -> c_int;
 }
 /* layout.c */
 unsafe extern "C" {
-    pub fn layout_count_cells(arg1: *mut layout_cell) -> c_uint;
-    pub fn layout_create_cell(arg1: *mut layout_cell) -> *mut layout_cell;
-    pub fn layout_free_cell(arg1: *mut layout_cell);
-    pub fn layout_print_cell(arg1: *mut layout_cell, arg2: *const c_char, arg3: c_uint);
-    pub fn layout_destroy_cell(arg1: *mut window, arg2: *mut layout_cell, arg3: *mut *mut layout_cell);
-    pub fn layout_resize_layout(arg1: *mut window, arg2: *mut layout_cell, arg3: layout_type, arg4: c_int, arg5: c_int);
-    pub fn layout_search_by_border(arg1: *mut layout_cell, arg2: c_uint, arg3: c_uint) -> *mut layout_cell;
-    pub fn layout_set_size(arg1: *mut layout_cell, arg2: c_uint, arg3: c_uint, arg4: c_uint, arg5: c_uint);
-    pub fn layout_make_leaf(arg1: *mut layout_cell, arg2: *mut window_pane);
-    pub fn layout_make_node(arg1: *mut layout_cell, arg2: layout_type);
-    pub fn layout_fix_offsets(arg1: *mut window);
-    pub fn layout_fix_panes(arg1: *mut window, arg2: *mut window_pane);
-    pub fn layout_resize_adjust(arg1: *mut window, arg2: *mut layout_cell, arg3: layout_type, arg4: c_int);
-    pub fn layout_init(arg1: *mut window, arg2: *mut window_pane);
-    pub fn layout_free(arg1: *mut window);
-    pub fn layout_resize(arg1: *mut window, arg2: c_uint, arg3: c_uint);
-    pub fn layout_resize_pane(arg1: *mut window_pane, arg2: layout_type, arg3: c_int, arg4: c_int);
-    pub fn layout_resize_pane_to(arg1: *mut window_pane, arg2: layout_type, arg3: c_uint);
-    pub fn layout_assign_pane(arg1: *mut layout_cell, arg2: *mut window_pane, arg3: c_int);
-    pub fn layout_split_pane(arg1: *mut window_pane, arg2: layout_type, arg3: c_int, arg4: c_int) -> *mut layout_cell;
-    pub fn layout_close_pane(arg1: *mut window_pane);
-    pub fn layout_spread_cell(arg1: *mut window, arg2: *mut layout_cell) -> c_int;
-    pub fn layout_spread_out(arg1: *mut window_pane);
+    pub fn layout_count_cells(_: *mut layout_cell) -> c_uint;
+    pub fn layout_create_cell(_: *mut layout_cell) -> *mut layout_cell;
+    pub fn layout_free_cell(_: *mut layout_cell);
+    pub fn layout_print_cell(_: *mut layout_cell, _: *const c_char, _: c_uint);
+    pub fn layout_destroy_cell(_: *mut window, _: *mut layout_cell, _: *mut *mut layout_cell);
+    pub fn layout_resize_layout(_: *mut window, _: *mut layout_cell, _: layout_type, _: c_int, _: c_int);
+    pub fn layout_search_by_border(_: *mut layout_cell, _: c_uint, _: c_uint) -> *mut layout_cell;
+    pub fn layout_set_size(_: *mut layout_cell, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
+    pub fn layout_make_leaf(_: *mut layout_cell, _: *mut window_pane);
+    pub fn layout_make_node(_: *mut layout_cell, _: layout_type);
+    pub fn layout_fix_offsets(_: *mut window);
+    pub fn layout_fix_panes(_: *mut window, _: *mut window_pane);
+    pub fn layout_resize_adjust(_: *mut window, _: *mut layout_cell, _: layout_type, _: c_int);
+    pub fn layout_init(_: *mut window, _: *mut window_pane);
+    pub fn layout_free(_: *mut window);
+    pub fn layout_resize(_: *mut window, _: c_uint, _: c_uint);
+    pub fn layout_resize_pane(_: *mut window_pane, _: layout_type, _: c_int, _: c_int);
+    pub fn layout_resize_pane_to(_: *mut window_pane, _: layout_type, _: c_uint);
+    pub fn layout_assign_pane(_: *mut layout_cell, _: *mut window_pane, _: c_int);
+    pub fn layout_split_pane(_: *mut window_pane, _: layout_type, _: c_int, _: c_int) -> *mut layout_cell;
+    pub fn layout_close_pane(_: *mut window_pane);
+    pub fn layout_spread_cell(_: *mut window, _: *mut layout_cell) -> c_int;
+    pub fn layout_spread_out(_: *mut window_pane);
 }
 /* layout-custom.c */
 unsafe extern "C" {
-    pub fn layout_dump(arg1: *mut layout_cell) -> *mut c_char;
-    pub fn layout_parse(arg1: *mut window, arg2: *const c_char, arg3: *mut *mut c_char) -> c_int;
+    pub fn layout_dump(_: *mut layout_cell) -> *mut c_char;
+    pub fn layout_parse(_: *mut window, _: *const c_char, _: *mut *mut c_char) -> c_int;
 }
 /* layout-set.c */
 unsafe extern "C" {
-    pub fn layout_set_lookup(arg1: *const c_char) -> c_int;
-    pub fn layout_set_select(arg1: *mut window, arg2: c_uint) -> c_uint;
-    pub fn layout_set_next(arg1: *mut window) -> c_uint;
-    pub fn layout_set_previous(arg1: *mut window) -> c_uint;
+    pub fn layout_set_lookup(_: *const c_char) -> c_int;
+    pub fn layout_set_select(_: *mut window, _: c_uint) -> c_uint;
+    pub fn layout_set_next(_: *mut window) -> c_uint;
+    pub fn layout_set_previous(_: *mut window) -> c_uint;
 }
 /* mode-tree.c */
 pub type mode_tree_build_cb = ::std::option::Option<
-    unsafe extern "C" fn(arg1: *mut c_void, arg2: *mut mode_tree_sort_criteria, arg3: *mut u64, arg4: *const c_char),
+    unsafe extern "C" fn(_: *mut c_void, _: *mut mode_tree_sort_criteria, _: *mut u64, _: *const c_char),
 >;
 pub type mode_tree_draw_cb = ::std::option::Option<
-    unsafe extern "C" fn(arg1: *mut c_void, arg2: *mut c_void, arg3: *mut screen_write_ctx, arg4: c_uint, arg5: c_uint),
+    unsafe extern "C" fn(_: *mut c_void, _: *mut c_void, _: *mut screen_write_ctx, _: c_uint, _: c_uint),
 >;
 pub type mode_tree_search_cb =
-    ::std::option::Option<unsafe extern "C" fn(arg1: *mut c_void, arg2: *mut c_void, arg3: *const c_char) -> c_int>;
-pub type mode_tree_menu_cb =
-    ::std::option::Option<unsafe extern "C" fn(arg1: *mut c_void, arg2: *mut client, arg3: key_code)>;
-pub type mode_tree_height_cb = ::std::option::Option<unsafe extern "C" fn(arg1: *mut c_void, arg2: c_uint) -> c_uint>;
+    ::std::option::Option<unsafe extern "C" fn(_: *mut c_void, _: *mut c_void, _: *const c_char) -> c_int>;
+pub type mode_tree_menu_cb = ::std::option::Option<unsafe extern "C" fn(_: *mut c_void, _: *mut client, _: key_code)>;
+pub type mode_tree_height_cb = ::std::option::Option<unsafe extern "C" fn(_: *mut c_void, _: c_uint) -> c_uint>;
 pub type mode_tree_key_cb =
-    ::std::option::Option<unsafe extern "C" fn(arg1: *mut c_void, arg2: *mut c_void, arg3: c_uint) -> key_code>;
-pub type mode_tree_each_cb = ::std::option::Option<
-    unsafe extern "C" fn(arg1: *mut c_void, arg2: *mut c_void, arg3: *mut client, arg4: key_code),
->;
+    ::std::option::Option<unsafe extern "C" fn(_: *mut c_void, _: *mut c_void, _: c_uint) -> key_code>;
+pub type mode_tree_each_cb =
+    ::std::option::Option<unsafe extern "C" fn(_: *mut c_void, _: *mut c_void, _: *mut client, _: key_code)>;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct mode_tree_item {
     _unused: [u8; 0],
 }
 unsafe extern "C" {
-    pub fn mode_tree_count_tagged(arg1: *mut mode_tree_data) -> c_uint;
-    pub fn mode_tree_get_current(arg1: *mut mode_tree_data) -> *mut c_void;
-    pub fn mode_tree_get_current_name(arg1: *mut mode_tree_data) -> *const c_char;
-    pub fn mode_tree_expand_current(arg1: *mut mode_tree_data);
-    pub fn mode_tree_collapse_current(arg1: *mut mode_tree_data);
-    pub fn mode_tree_expand(arg1: *mut mode_tree_data, arg2: u64);
-    pub fn mode_tree_set_current(arg1: *mut mode_tree_data, arg2: u64) -> c_int;
-    pub fn mode_tree_each_tagged(
-        arg1: *mut mode_tree_data,
-        arg2: mode_tree_each_cb,
-        arg3: *mut client,
-        arg4: key_code,
-        arg5: c_int,
-    );
-    pub fn mode_tree_up(arg1: *mut mode_tree_data, arg2: c_int);
-    pub fn mode_tree_down(arg1: *mut mode_tree_data, arg2: c_int) -> c_int;
+    pub fn mode_tree_count_tagged(_: *mut mode_tree_data) -> c_uint;
+    pub fn mode_tree_get_current(_: *mut mode_tree_data) -> *mut c_void;
+    pub fn mode_tree_get_current_name(_: *mut mode_tree_data) -> *const c_char;
+    pub fn mode_tree_expand_current(_: *mut mode_tree_data);
+    pub fn mode_tree_collapse_current(_: *mut mode_tree_data);
+    pub fn mode_tree_expand(_: *mut mode_tree_data, _: u64);
+    pub fn mode_tree_set_current(_: *mut mode_tree_data, _: u64) -> c_int;
+    pub fn mode_tree_each_tagged(_: *mut mode_tree_data, _: mode_tree_each_cb, _: *mut client, _: key_code, _: c_int);
+    pub fn mode_tree_up(_: *mut mode_tree_data, _: c_int);
+    pub fn mode_tree_down(_: *mut mode_tree_data, _: c_int) -> c_int;
     pub fn mode_tree_start(
-        arg1: *mut window_pane,
-        arg2: *mut args,
-        arg3: mode_tree_build_cb,
-        arg4: mode_tree_draw_cb,
-        arg5: mode_tree_search_cb,
-        arg6: mode_tree_menu_cb,
-        arg7: mode_tree_height_cb,
-        arg8: mode_tree_key_cb,
-        arg9: *mut c_void,
-        arg10: *const menu_item,
-        arg11: *mut *const c_char,
-        arg12: c_uint,
-        arg13: *mut *mut screen,
+        _: *mut window_pane,
+        _: *mut args,
+        _: mode_tree_build_cb,
+        _: mode_tree_draw_cb,
+        _: mode_tree_search_cb,
+        _: mode_tree_menu_cb,
+        _: mode_tree_height_cb,
+        _: mode_tree_key_cb,
+        _: *mut c_void,
+        _: *const menu_item,
+        _: *mut *const c_char,
+        _: c_uint,
+        _: *mut *mut screen,
     ) -> *mut mode_tree_data;
-    pub fn mode_tree_zoom(arg1: *mut mode_tree_data, arg2: *mut args);
-    pub fn mode_tree_build(arg1: *mut mode_tree_data);
-    pub fn mode_tree_free(arg1: *mut mode_tree_data);
-    pub fn mode_tree_resize(arg1: *mut mode_tree_data, arg2: c_uint, arg3: c_uint);
+    pub fn mode_tree_zoom(_: *mut mode_tree_data, _: *mut args);
+    pub fn mode_tree_build(_: *mut mode_tree_data);
+    pub fn mode_tree_free(_: *mut mode_tree_data);
+    pub fn mode_tree_resize(_: *mut mode_tree_data, _: c_uint, _: c_uint);
     pub fn mode_tree_add(
-        arg1: *mut mode_tree_data,
-        arg2: *mut mode_tree_item,
-        arg3: *mut c_void,
-        arg4: u64,
-        arg5: *const c_char,
-        arg6: *const c_char,
-        arg7: c_int,
+        _: *mut mode_tree_data,
+        _: *mut mode_tree_item,
+        _: *mut c_void,
+        _: u64,
+        _: *const c_char,
+        _: *const c_char,
+        _: c_int,
     ) -> *mut mode_tree_item;
-    pub fn mode_tree_draw_as_parent(arg1: *mut mode_tree_item);
-    pub fn mode_tree_no_tag(arg1: *mut mode_tree_item);
-    pub fn mode_tree_remove(arg1: *mut mode_tree_data, arg2: *mut mode_tree_item);
-    pub fn mode_tree_draw(arg1: *mut mode_tree_data);
+    pub fn mode_tree_draw_as_parent(_: *mut mode_tree_item);
+    pub fn mode_tree_no_tag(_: *mut mode_tree_item);
+    pub fn mode_tree_remove(_: *mut mode_tree_data, _: *mut mode_tree_item);
+    pub fn mode_tree_draw(_: *mut mode_tree_data);
     pub fn mode_tree_key(
-        arg1: *mut mode_tree_data,
-        arg2: *mut client,
-        arg3: *mut key_code,
-        arg4: *mut mouse_event,
-        arg5: *mut c_uint,
-        arg6: *mut c_uint,
+        _: *mut mode_tree_data,
+        _: *mut client,
+        _: *mut key_code,
+        _: *mut mouse_event,
+        _: *mut c_uint,
+        _: *mut c_uint,
     ) -> c_int;
-    pub fn mode_tree_run_command(
-        arg1: *mut client,
-        arg2: *mut cmd_find_state,
-        arg3: *const c_char,
-        arg4: *const c_char,
-    );
+    pub fn mode_tree_run_command(_: *mut client, _: *mut cmd_find_state, _: *const c_char, _: *const c_char);
 }
 /* window-buffer.c */
 unsafe extern "C" {
@@ -3761,13 +3637,13 @@ unsafe extern "C" {
 unsafe extern "C" {
     pub static mut window_copy_mode: window_mode;
     pub static mut window_view_mode: window_mode;
-    pub fn window_copy_add(arg1: *mut window_pane, arg2: c_int, arg3: *const c_char, ...);
-    pub fn window_copy_vadd(arg1: *mut window_pane, arg2: c_int, arg3: *const c_char, arg4: *mut VaList);
-    pub fn window_copy_pageup(arg1: *mut window_pane, arg2: c_int);
-    pub fn window_copy_pagedown(arg1: *mut window_pane, arg2: c_int, arg3: c_int);
-    pub fn window_copy_start_drag(arg1: *mut client, arg2: *mut mouse_event);
-    pub fn window_copy_get_word(arg1: *mut window_pane, arg2: c_uint, arg3: c_uint) -> *mut c_char;
-    pub fn window_copy_get_line(arg1: *mut window_pane, arg2: c_uint) -> *mut c_char;
+    pub fn window_copy_add(_: *mut window_pane, _: c_int, _: *const c_char, ...);
+    pub fn window_copy_vadd(_: *mut window_pane, _: c_int, _: *const c_char, _: *mut VaList);
+    pub fn window_copy_pageup(_: *mut window_pane, _: c_int);
+    pub fn window_copy_pagedown(_: *mut window_pane, _: c_int, _: c_int);
+    pub fn window_copy_start_drag(_: *mut client, _: *mut mouse_event);
+    pub fn window_copy_get_word(_: *mut window_pane, _: c_uint, _: c_uint) -> *mut c_char;
+    pub fn window_copy_get_line(_: *mut window_pane, _: c_uint) -> *mut c_char;
 }
 /* window-option.c */
 unsafe extern "C" {
@@ -3775,271 +3651,240 @@ unsafe extern "C" {
 }
 /* names.c */
 unsafe extern "C" {
-    pub fn check_window_name(arg1: *mut window);
-    pub fn default_window_name(arg1: *mut window) -> *mut c_char;
-    pub fn parse_window_name(arg1: *const c_char) -> *mut c_char;
+    pub fn check_window_name(_: *mut window);
+    pub fn default_window_name(_: *mut window) -> *mut c_char;
+    pub fn parse_window_name(_: *const c_char) -> *mut c_char;
 }
 /* control.c */
 unsafe extern "C" {
-    pub fn control_discard(arg1: *mut client);
-    pub fn control_start(arg1: *mut client);
-    pub fn control_ready(arg1: *mut client);
-    pub fn control_stop(arg1: *mut client);
-    pub fn control_set_pane_on(arg1: *mut client, arg2: *mut window_pane);
-    pub fn control_set_pane_off(arg1: *mut client, arg2: *mut window_pane);
-    pub fn control_continue_pane(arg1: *mut client, arg2: *mut window_pane);
-    pub fn control_pause_pane(arg1: *mut client, arg2: *mut window_pane);
-    pub fn control_pane_offset(arg1: *mut client, arg2: *mut window_pane, arg3: *mut c_int) -> *mut window_pane_offset;
-    pub fn control_reset_offsets(arg1: *mut client);
-    pub fn control_write(arg1: *mut client, arg2: *const c_char, ...);
-    pub fn control_write_output(arg1: *mut client, arg2: *mut window_pane);
-    pub fn control_all_done(arg1: *mut client) -> c_int;
-    pub fn control_add_sub(
-        arg1: *mut client,
-        arg2: *const c_char,
-        arg3: control_sub_type,
-        arg4: c_int,
-        arg5: *const c_char,
-    );
-    pub fn control_remove_sub(arg1: *mut client, arg2: *const c_char);
+    pub fn control_discard(_: *mut client);
+    pub fn control_start(_: *mut client);
+    pub fn control_ready(_: *mut client);
+    pub fn control_stop(_: *mut client);
+    pub fn control_set_pane_on(_: *mut client, _: *mut window_pane);
+    pub fn control_set_pane_off(_: *mut client, _: *mut window_pane);
+    pub fn control_continue_pane(_: *mut client, _: *mut window_pane);
+    pub fn control_pause_pane(_: *mut client, _: *mut window_pane);
+    pub fn control_pane_offset(_: *mut client, _: *mut window_pane, _: *mut c_int) -> *mut window_pane_offset;
+    pub fn control_reset_offsets(_: *mut client);
+    pub fn control_write(_: *mut client, _: *const c_char, ...);
+    pub fn control_write_output(_: *mut client, _: *mut window_pane);
+    pub fn control_all_done(_: *mut client) -> c_int;
+    pub fn control_add_sub(_: *mut client, _: *const c_char, _: control_sub_type, _: c_int, _: *const c_char);
+    pub fn control_remove_sub(_: *mut client, _: *const c_char);
 }
 /* control-notify.c */
 unsafe extern "C" {
-    pub fn control_notify_pane_mode_changed(arg1: c_int);
-    pub fn control_notify_window_layout_changed(arg1: *mut window);
-    pub fn control_notify_window_pane_changed(arg1: *mut window);
-    pub fn control_notify_window_unlinked(arg1: *mut session, arg2: *mut window);
-    pub fn control_notify_window_linked(arg1: *mut session, arg2: *mut window);
-    pub fn control_notify_window_renamed(arg1: *mut window);
-    pub fn control_notify_client_session_changed(arg1: *mut client);
-    pub fn control_notify_client_detached(arg1: *mut client);
-    pub fn control_notify_session_renamed(arg1: *mut session);
-    pub fn control_notify_session_created(arg1: *mut session);
-    pub fn control_notify_session_closed(arg1: *mut session);
-    pub fn control_notify_session_window_changed(arg1: *mut session);
-    pub fn control_notify_paste_buffer_changed(arg1: *const c_char);
-    pub fn control_notify_paste_buffer_deleted(arg1: *const c_char);
+    pub fn control_notify_pane_mode_changed(_: c_int);
+    pub fn control_notify_window_layout_changed(_: *mut window);
+    pub fn control_notify_window_pane_changed(_: *mut window);
+    pub fn control_notify_window_unlinked(_: *mut session, _: *mut window);
+    pub fn control_notify_window_linked(_: *mut session, _: *mut window);
+    pub fn control_notify_window_renamed(_: *mut window);
+    pub fn control_notify_client_session_changed(_: *mut client);
+    pub fn control_notify_client_detached(_: *mut client);
+    pub fn control_notify_session_renamed(_: *mut session);
+    pub fn control_notify_session_created(_: *mut session);
+    pub fn control_notify_session_closed(_: *mut session);
+    pub fn control_notify_session_window_changed(_: *mut session);
+    pub fn control_notify_paste_buffer_changed(_: *const c_char);
+    pub fn control_notify_paste_buffer_deleted(_: *const c_char);
 }
 /* session.c */
 unsafe extern "C" {
     pub static mut sessions: sessions;
     pub static mut next_session_id: c_uint;
-    pub fn session_cmp(arg1: *mut session, arg2: *mut session) -> c_int;
-    pub fn sessions_RB_INSERT_COLOR(arg1: *mut sessions, arg2: *mut session);
-    pub fn sessions_RB_REMOVE_COLOR(arg1: *mut sessions, arg2: *mut session, arg3: *mut session);
-    pub fn sessions_RB_REMOVE(arg1: *mut sessions, arg2: *mut session) -> *mut session;
-    pub fn sessions_RB_INSERT(arg1: *mut sessions, arg2: *mut session) -> *mut session;
-    pub fn sessions_RB_FIND(arg1: *mut sessions, arg2: *mut session) -> *mut session;
-    pub fn sessions_RB_NFIND(arg1: *mut sessions, arg2: *mut session) -> *mut session;
-    pub fn session_alive(arg1: *mut session) -> c_int;
-    pub fn session_find(arg1: *const c_char) -> *mut session;
-    pub fn session_find_by_id_str(arg1: *const c_char) -> *mut session;
-    pub fn session_find_by_id(arg1: c_uint) -> *mut session;
+    pub fn session_cmp(_: *mut session, _: *mut session) -> c_int;
+    pub fn sessions_RB_INSERT_COLOR(_: *mut sessions, _: *mut session);
+    pub fn sessions_RB_REMOVE_COLOR(_: *mut sessions, _: *mut session, _: *mut session);
+    pub fn sessions_RB_REMOVE(_: *mut sessions, _: *mut session) -> *mut session;
+    pub fn sessions_RB_INSERT(_: *mut sessions, _: *mut session) -> *mut session;
+    pub fn sessions_RB_FIND(_: *mut sessions, _: *mut session) -> *mut session;
+    pub fn sessions_RB_NFIND(_: *mut sessions, _: *mut session) -> *mut session;
+    pub fn session_alive(_: *mut session) -> c_int;
+    pub fn session_find(_: *const c_char) -> *mut session;
+    pub fn session_find_by_id_str(_: *const c_char) -> *mut session;
+    pub fn session_find_by_id(_: c_uint) -> *mut session;
     pub fn session_create(
-        arg1: *const c_char,
-        arg2: *const c_char,
-        arg3: *const c_char,
-        arg4: *mut environ,
-        arg5: *mut options,
-        arg6: *mut termios,
+        _: *const c_char,
+        _: *const c_char,
+        _: *const c_char,
+        _: *mut environ,
+        _: *mut options,
+        _: *mut termios,
     ) -> *mut session;
-    pub fn session_destroy(arg1: *mut session, arg2: c_int, arg3: *const c_char);
-    pub fn session_add_ref(arg1: *mut session, arg2: *const c_char);
-    pub fn session_remove_ref(arg1: *mut session, arg2: *const c_char);
-    pub fn session_check_name(arg1: *const c_char) -> *mut c_char;
-    pub fn session_update_activity(arg1: *mut session, arg2: *mut timeval);
-    pub fn session_next_session(arg1: *mut session) -> *mut session;
-    pub fn session_previous_session(arg1: *mut session) -> *mut session;
-    pub fn session_attach(arg1: *mut session, arg2: *mut window, arg3: c_int, arg4: *mut *mut c_char) -> *mut winlink;
-    pub fn session_detach(arg1: *mut session, arg2: *mut winlink) -> c_int;
-    pub fn session_has(arg1: *mut session, arg2: *mut window) -> c_int;
-    pub fn session_is_linked(arg1: *mut session, arg2: *mut window) -> c_int;
-    pub fn session_next(arg1: *mut session, arg2: c_int) -> c_int;
-    pub fn session_previous(arg1: *mut session, arg2: c_int) -> c_int;
-    pub fn session_select(arg1: *mut session, arg2: c_int) -> c_int;
-    pub fn session_last(arg1: *mut session) -> c_int;
-    pub fn session_set_current(arg1: *mut session, arg2: *mut winlink) -> c_int;
-    pub fn session_group_contains(arg1: *mut session) -> *mut session_group;
-    pub fn session_group_find(arg1: *const c_char) -> *mut session_group;
-    pub fn session_group_new(arg1: *const c_char) -> *mut session_group;
-    pub fn session_group_add(arg1: *mut session_group, arg2: *mut session);
-    pub fn session_group_synchronize_to(arg1: *mut session);
-    pub fn session_group_synchronize_from(arg1: *mut session);
-    pub fn session_group_count(arg1: *mut session_group) -> c_uint;
-    pub fn session_group_attached_count(arg1: *mut session_group) -> c_uint;
-    pub fn session_renumber_windows(arg1: *mut session);
+    pub fn session_destroy(_: *mut session, _: c_int, _: *const c_char);
+    pub fn session_add_ref(_: *mut session, _: *const c_char);
+    pub fn session_remove_ref(_: *mut session, _: *const c_char);
+    pub fn session_check_name(_: *const c_char) -> *mut c_char;
+    pub fn session_update_activity(_: *mut session, _: *mut timeval);
+    pub fn session_next_session(_: *mut session) -> *mut session;
+    pub fn session_previous_session(_: *mut session) -> *mut session;
+    pub fn session_attach(_: *mut session, _: *mut window, _: c_int, _: *mut *mut c_char) -> *mut winlink;
+    pub fn session_detach(_: *mut session, _: *mut winlink) -> c_int;
+    pub fn session_has(_: *mut session, _: *mut window) -> c_int;
+    pub fn session_is_linked(_: *mut session, _: *mut window) -> c_int;
+    pub fn session_next(_: *mut session, _: c_int) -> c_int;
+    pub fn session_previous(_: *mut session, _: c_int) -> c_int;
+    pub fn session_select(_: *mut session, _: c_int) -> c_int;
+    pub fn session_last(_: *mut session) -> c_int;
+    pub fn session_set_current(_: *mut session, _: *mut winlink) -> c_int;
+    pub fn session_group_contains(_: *mut session) -> *mut session_group;
+    pub fn session_group_find(_: *const c_char) -> *mut session_group;
+    pub fn session_group_new(_: *const c_char) -> *mut session_group;
+    pub fn session_group_add(_: *mut session_group, _: *mut session);
+    pub fn session_group_synchronize_to(_: *mut session);
+    pub fn session_group_synchronize_from(_: *mut session);
+    pub fn session_group_count(_: *mut session_group) -> c_uint;
+    pub fn session_group_attached_count(_: *mut session_group) -> c_uint;
+    pub fn session_renumber_windows(_: *mut session);
 }
 /* utf8.c */
 unsafe extern "C" {
-    pub fn utf8_towc(arg1: *const utf8_data, arg2: *mut wchar_t) -> utf8_state;
-    pub fn utf8_fromwc(wc: wchar_t, arg1: *mut utf8_data) -> utf8_state;
-    pub fn utf8_in_table(arg1: wchar_t, arg2: *const wchar_t, arg3: c_uint) -> c_int;
-    pub fn utf8_build_one(arg1: c_uchar) -> utf8_char;
-    pub fn utf8_from_data(arg1: *const utf8_data, arg2: *mut utf8_char) -> utf8_state;
-    pub fn utf8_to_data(arg1: utf8_char, arg2: *mut utf8_data);
-    pub fn utf8_set(arg1: *mut utf8_data, arg2: c_uchar);
-    pub fn utf8_copy(arg1: *mut utf8_data, arg2: *const utf8_data);
-    pub fn utf8_open(arg1: *mut utf8_data, arg2: c_uchar) -> utf8_state;
-    pub fn utf8_append(arg1: *mut utf8_data, arg2: c_uchar) -> utf8_state;
-    pub fn utf8_isvalid(arg1: *const c_char) -> c_int;
-    pub fn utf8_strvis(arg1: *mut c_char, arg2: *const c_char, arg3: usize, arg4: c_int) -> c_int;
-    pub fn utf8_stravis(arg1: *mut *mut c_char, arg2: *const c_char, arg3: c_int) -> c_int;
-    pub fn utf8_stravisx(arg1: *mut *mut c_char, arg2: *const c_char, arg3: usize, arg4: c_int) -> c_int;
-    pub fn utf8_sanitize(arg1: *const c_char) -> *mut c_char;
-    pub fn utf8_strlen(arg1: *const utf8_data) -> usize;
-    pub fn utf8_strwidth(arg1: *const utf8_data, arg2: isize) -> c_uint;
-    pub fn utf8_fromcstr(arg1: *const c_char) -> *mut utf8_data;
-    pub fn utf8_tocstr(arg1: *mut utf8_data) -> *mut c_char;
-    pub fn utf8_cstrwidth(arg1: *const c_char) -> c_uint;
-    pub fn utf8_padcstr(arg1: *const c_char, arg2: c_uint) -> *mut c_char;
-    pub fn utf8_rpadcstr(arg1: *const c_char, arg2: c_uint) -> *mut c_char;
-    pub fn utf8_cstrhas(arg1: *const c_char, arg2: *const utf8_data) -> c_int;
+    pub fn utf8_towc(_: *const utf8_data, _: *mut wchar_t) -> utf8_state;
+    pub fn utf8_fromwc(wc: wchar_t, _: *mut utf8_data) -> utf8_state;
+    pub fn utf8_in_table(_: wchar_t, _: *const wchar_t, _: c_uint) -> c_int;
+    pub fn utf8_build_one(_: c_uchar) -> utf8_char;
+    pub fn utf8_from_data(_: *const utf8_data, _: *mut utf8_char) -> utf8_state;
+    pub fn utf8_to_data(_: utf8_char, _: *mut utf8_data);
+    pub fn utf8_set(_: *mut utf8_data, _: c_uchar);
+    pub fn utf8_copy(_: *mut utf8_data, _: *const utf8_data);
+    pub fn utf8_open(_: *mut utf8_data, _: c_uchar) -> utf8_state;
+    pub fn utf8_append(_: *mut utf8_data, _: c_uchar) -> utf8_state;
+    pub fn utf8_isvalid(_: *const c_char) -> c_int;
+    pub fn utf8_strvis(_: *mut c_char, _: *const c_char, _: usize, _: c_int) -> c_int;
+    pub fn utf8_stravis(_: *mut *mut c_char, _: *const c_char, _: c_int) -> c_int;
+    pub fn utf8_stravisx(_: *mut *mut c_char, _: *const c_char, _: usize, _: c_int) -> c_int;
+    pub fn utf8_sanitize(_: *const c_char) -> *mut c_char;
+    pub fn utf8_strlen(_: *const utf8_data) -> usize;
+    pub fn utf8_strwidth(_: *const utf8_data, _: isize) -> c_uint;
+    pub fn utf8_fromcstr(_: *const c_char) -> *mut utf8_data;
+    pub fn utf8_tocstr(_: *mut utf8_data) -> *mut c_char;
+    pub fn utf8_cstrwidth(_: *const c_char) -> c_uint;
+    pub fn utf8_padcstr(_: *const c_char, _: c_uint) -> *mut c_char;
+    pub fn utf8_rpadcstr(_: *const c_char, _: c_uint) -> *mut c_char;
+    pub fn utf8_cstrhas(_: *const c_char, _: *const utf8_data) -> c_int;
 }
 /* osdep-*.c */
 unsafe extern "C" {
-    pub fn osdep_get_name(arg1: c_int, arg2: *mut c_char) -> *mut c_char;
-    pub fn osdep_get_cwd(arg1: c_int) -> *mut c_char;
+    pub fn osdep_get_name(_: c_int, _: *mut c_char) -> *mut c_char;
+    pub fn osdep_get_cwd(_: c_int) -> *mut c_char;
     pub fn osdep_event_init() -> *mut event_base;
 }
 /* utf8-combined.c */
 unsafe extern "C" {
-    pub fn utf8_has_zwj(arg1: *const utf8_data) -> c_int;
-    pub fn utf8_is_zwj(arg1: *const utf8_data) -> c_int;
-    pub fn utf8_is_vs(arg1: *const utf8_data) -> c_int;
-    pub fn utf8_is_modifier(arg1: *const utf8_data) -> c_int;
+    pub fn utf8_has_zwj(_: *const utf8_data) -> c_int;
+    pub fn utf8_is_zwj(_: *const utf8_data) -> c_int;
+    pub fn utf8_is_vs(_: *const utf8_data) -> c_int;
+    pub fn utf8_is_modifier(_: *const utf8_data) -> c_int;
 }
 /* procname.c */
 unsafe extern "C" {
-    pub fn get_proc_name(arg1: c_int, arg2: *mut c_char) -> *mut c_char;
-    pub fn get_proc_cwd(arg1: c_int) -> *mut c_char;
+    pub fn get_proc_name(_: c_int, _: *mut c_char) -> *mut c_char;
+    pub fn get_proc_cwd(_: c_int) -> *mut c_char;
 }
 /* log.c */
 unsafe extern "C" {
     pub fn log_add_level();
     pub fn log_get_level() -> c_int;
-    pub fn log_open(arg1: *const c_char);
-    pub fn log_toggle(arg1: *const c_char);
+    pub fn log_open(_: *const c_char);
+    pub fn log_toggle(_: *const c_char);
     pub fn log_close();
-    pub fn log_debug(arg1: *const c_char, ...);
-    pub fn fatal(arg1: *const c_char, ...) -> !;
-    pub fn fatalx(arg1: *const c_char, ...) -> !;
+    pub fn log_debug(_: *const c_char, ...);
+    pub fn fatal(_: *const c_char, ...) -> !;
+    pub fn fatalx(_: *const c_char, ...) -> !;
 }
 /* menu.c */
 unsafe extern "C" {
-    pub fn menu_create(arg1: *const c_char) -> *mut menu;
-    pub fn menu_add_items(
-        arg1: *mut menu,
-        arg2: *const menu_item,
-        arg3: *mut cmdq_item,
-        arg4: *mut client,
-        arg5: *mut cmd_find_state,
-    );
-    pub fn menu_add_item(
-        arg1: *mut menu,
-        arg2: *const menu_item,
-        arg3: *mut cmdq_item,
-        arg4: *mut client,
-        arg5: *mut cmd_find_state,
-    );
-    pub fn menu_free(arg1: *mut menu);
+    pub fn menu_create(_: *const c_char) -> *mut menu;
+    pub fn menu_add_items(_: *mut menu, _: *const menu_item, _: *mut cmdq_item, _: *mut client, _: *mut cmd_find_state);
+    pub fn menu_add_item(_: *mut menu, _: *const menu_item, _: *mut cmdq_item, _: *mut client, _: *mut cmd_find_state);
+    pub fn menu_free(_: *mut menu);
     pub fn menu_prepare(
-        arg1: *mut menu,
-        arg2: c_int,
-        arg3: c_int,
-        arg4: *mut cmdq_item,
-        arg5: c_uint,
-        arg6: c_uint,
-        arg7: *mut client,
-        arg8: box_lines,
-        arg9: *const c_char,
-        arg10: *const c_char,
-        arg11: *const c_char,
-        arg12: *mut cmd_find_state,
-        arg13: menu_choice_cb,
-        arg14: *mut c_void,
+        _: *mut menu,
+        _: c_int,
+        _: c_int,
+        _: *mut cmdq_item,
+        _: c_uint,
+        _: c_uint,
+        _: *mut client,
+        _: box_lines,
+        _: *const c_char,
+        _: *const c_char,
+        _: *const c_char,
+        _: *mut cmd_find_state,
+        _: menu_choice_cb,
+        _: *mut c_void,
     ) -> *mut menu_data;
     pub fn menu_display(
-        arg1: *mut menu,
-        arg2: c_int,
-        arg3: c_int,
-        arg4: *mut cmdq_item,
-        arg5: c_uint,
-        arg6: c_uint,
-        arg7: *mut client,
-        arg8: box_lines,
-        arg9: *const c_char,
-        arg10: *const c_char,
-        arg11: *const c_char,
-        arg12: *mut cmd_find_state,
-        arg13: menu_choice_cb,
-        arg14: *mut c_void,
+        _: *mut menu,
+        _: c_int,
+        _: c_int,
+        _: *mut cmdq_item,
+        _: c_uint,
+        _: c_uint,
+        _: *mut client,
+        _: box_lines,
+        _: *const c_char,
+        _: *const c_char,
+        _: *const c_char,
+        _: *mut cmd_find_state,
+        _: menu_choice_cb,
+        _: *mut c_void,
     ) -> c_int;
-    pub fn menu_mode_cb(arg1: *mut client, arg2: *mut c_void, arg3: *mut c_uint, arg4: *mut c_uint) -> *mut screen;
-    pub fn menu_check_cb(
-        arg1: *mut client,
-        arg2: *mut c_void,
-        arg3: c_uint,
-        arg4: c_uint,
-        arg5: c_uint,
-        arg6: *mut overlay_ranges,
-    );
-    pub fn menu_draw_cb(arg1: *mut client, arg2: *mut c_void, arg3: *mut screen_redraw_ctx);
-    pub fn menu_free_cb(arg1: *mut client, arg2: *mut c_void);
-    pub fn menu_key_cb(arg1: *mut client, arg2: *mut c_void, arg3: *mut key_event) -> c_int;
+    pub fn menu_mode_cb(_: *mut client, _: *mut c_void, _: *mut c_uint, _: *mut c_uint) -> *mut screen;
+    pub fn menu_check_cb(_: *mut client, _: *mut c_void, _: c_uint, _: c_uint, _: c_uint, _: *mut overlay_ranges);
+    pub fn menu_draw_cb(_: *mut client, _: *mut c_void, _: *mut screen_redraw_ctx);
+    pub fn menu_free_cb(_: *mut client, _: *mut c_void);
+    pub fn menu_key_cb(_: *mut client, _: *mut c_void, _: *mut key_event) -> c_int;
 }
 /* popup.c */
 pub type popup_close_cb =
-    ::std::option::Option<unsafe extern "C" fn(arg1: ::std::os::raw::c_int, arg2: *mut ::std::os::raw::c_void)>;
+    ::std::option::Option<unsafe extern "C" fn(_: ::std::os::raw::c_int, _: *mut ::std::os::raw::c_void)>;
 pub type popup_finish_edit_cb = ::std::option::Option<
-    unsafe extern "C" fn(arg1: *mut ::std::os::raw::c_char, arg2: usize, arg3: *mut ::std::os::raw::c_void),
+    unsafe extern "C" fn(_: *mut ::std::os::raw::c_char, _: usize, _: *mut ::std::os::raw::c_void),
 >;
 unsafe extern "C" {
     pub fn popup_display(
-        arg1: c_int,
-        arg2: box_lines,
-        arg3: *mut cmdq_item,
-        arg4: c_uint,
-        arg5: c_uint,
-        arg6: c_uint,
-        arg7: c_uint,
-        arg8: *mut environ,
-        arg9: *const c_char,
-        arg10: c_int,
-        arg11: *mut *mut c_char,
-        arg12: *const c_char,
-        arg13: *const c_char,
-        arg14: *mut client,
-        arg15: *mut session,
-        arg16: *const c_char,
-        arg17: *const c_char,
-        arg18: popup_close_cb,
-        arg19: *mut c_void,
+        _: c_int,
+        _: box_lines,
+        _: *mut cmdq_item,
+        _: c_uint,
+        _: c_uint,
+        _: c_uint,
+        _: c_uint,
+        _: *mut environ,
+        _: *const c_char,
+        _: c_int,
+        _: *mut *mut c_char,
+        _: *const c_char,
+        _: *const c_char,
+        _: *mut client,
+        _: *mut session,
+        _: *const c_char,
+        _: *const c_char,
+        _: popup_close_cb,
+        _: *mut c_void,
     ) -> c_int;
-    pub fn popup_editor(
-        arg1: *mut client,
-        arg2: *const c_char,
-        arg3: usize,
-        arg4: popup_finish_edit_cb,
-        arg5: *mut c_void,
-    ) -> c_int;
+    pub fn popup_editor(_: *mut client, _: *const c_char, _: usize, _: popup_finish_edit_cb, _: *mut c_void) -> c_int;
 }
 /* style.c */
 unsafe extern "C" {
-    pub fn style_parse(arg1: *mut style, arg2: *const grid_cell, arg3: *const c_char) -> c_int;
-    pub fn style_tostring(arg1: *mut style) -> *const c_char;
-    pub fn style_add(arg1: *mut grid_cell, arg2: *mut options, arg3: *const c_char, arg4: *mut format_tree);
-    pub fn style_apply(arg1: *mut grid_cell, arg2: *mut options, arg3: *const c_char, arg4: *mut format_tree);
-    pub fn style_set(arg1: *mut style, arg2: *const grid_cell);
-    pub fn style_copy(arg1: *mut style, arg2: *mut style);
+    pub fn style_parse(_: *mut style, _: *const grid_cell, _: *const c_char) -> c_int;
+    pub fn style_tostring(_: *mut style) -> *const c_char;
+    pub fn style_add(_: *mut grid_cell, _: *mut options, _: *const c_char, _: *mut format_tree);
+    pub fn style_apply(_: *mut grid_cell, _: *mut options, _: *const c_char, _: *mut format_tree);
+    pub fn style_set(_: *mut style, _: *const grid_cell);
+    pub fn style_copy(_: *mut style, _: *mut style);
 }
 /* spawn.c */
 unsafe extern "C" {
-    pub fn spawn_window(arg1: *mut spawn_context, arg2: *mut *mut c_char) -> *mut winlink;
-    pub fn spawn_pane(arg1: *mut spawn_context, arg2: *mut *mut c_char) -> *mut window_pane;
+    pub fn spawn_window(_: *mut spawn_context, _: *mut *mut c_char) -> *mut winlink;
+    pub fn spawn_pane(_: *mut spawn_context, _: *mut *mut c_char) -> *mut window_pane;
 }
 /* regsub.c */
 unsafe extern "C" {
-    pub fn regsub(arg1: *const c_char, arg2: *const c_char, arg3: *const c_char, arg4: c_int) -> *mut c_char;
+    pub fn regsub(_: *const c_char, _: *const c_char, _: *const c_char, _: c_int) -> *mut c_char;
 }
 /* image.c */
 unsafe extern "C" {}
@@ -4049,27 +3894,27 @@ unsafe extern "C" {}
 opaque_types! {server_acl_user}
 unsafe extern "C" {
     pub fn server_acl_init();
-    pub fn server_acl_user_find(arg1: uid_t) -> *mut server_acl_user;
-    pub fn server_acl_display(arg1: *mut cmdq_item);
-    pub fn server_acl_user_allow(arg1: uid_t);
-    pub fn server_acl_user_deny(arg1: uid_t);
-    pub fn server_acl_user_allow_write(arg1: uid_t);
-    pub fn server_acl_user_deny_write(arg1: uid_t);
-    pub fn server_acl_join(arg1: *mut client) -> c_int;
-    pub fn server_acl_get_uid(arg1: *mut server_acl_user) -> uid_t;
+    pub fn server_acl_user_find(_: uid_t) -> *mut server_acl_user;
+    pub fn server_acl_display(_: *mut cmdq_item);
+    pub fn server_acl_user_allow(_: uid_t);
+    pub fn server_acl_user_deny(_: uid_t);
+    pub fn server_acl_user_allow_write(_: uid_t);
+    pub fn server_acl_user_deny_write(_: uid_t);
+    pub fn server_acl_join(_: *mut client) -> c_int;
+    pub fn server_acl_get_uid(_: *mut server_acl_user) -> uid_t;
 }
 /* hyperlink.c */
 unsafe extern "C" {
-    pub fn hyperlinks_put(arg1: *mut hyperlinks, arg2: *const c_char, arg3: *const c_char) -> c_uint;
+    pub fn hyperlinks_put(_: *mut hyperlinks, _: *const c_char, _: *const c_char) -> c_uint;
     pub fn hyperlinks_get(
-        arg1: *mut hyperlinks,
-        arg2: c_uint,
-        arg3: *mut *const c_char,
-        arg4: *mut *const c_char,
-        arg5: *mut *const c_char,
+        _: *mut hyperlinks,
+        _: c_uint,
+        _: *mut *const c_char,
+        _: *mut *const c_char,
+        _: *mut *const c_char,
     ) -> c_int;
     pub fn hyperlinks_init() -> *mut hyperlinks;
-    pub fn hyperlinks_copy(arg1: *mut hyperlinks) -> *mut hyperlinks;
-    pub fn hyperlinks_reset(arg1: *mut hyperlinks);
-    pub fn hyperlinks_free(arg1: *mut hyperlinks);
+    pub fn hyperlinks_copy(_: *mut hyperlinks) -> *mut hyperlinks;
+    pub fn hyperlinks_reset(_: *mut hyperlinks);
+    pub fn hyperlinks_free(_: *mut hyperlinks);
 }
