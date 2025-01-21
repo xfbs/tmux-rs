@@ -16,7 +16,7 @@ AM_CPPFLAGS += @XOPEN_DEFINES@ \
 	-DTMUX_TERM='"@DEFAULT_TERM@"'
 
 # Additional object files.
-LDADD = $(LIBOBJS)
+LDADD = $(LIBOBJS) -L/home/collin/Git/tmux/tmux-3.5a/target/release -ltmux_rs
 
 # Set flags for gcc.
 if IS_GCC
@@ -67,8 +67,9 @@ AM_CPPFLAGS += -D_BSD_SOURCE
 endif
 
 # List of sources.
+# alerts.c
+# server.c
 dist_tmux_SOURCES = \
-	alerts.c \
 	arguments.c \
 	attributes.c \
 	cfg.c \
@@ -174,7 +175,6 @@ dist_tmux_SOURCES = \
 	server-acl.c \
 	server-client.c \
 	server-fn.c \
-	server.c \
 	session.c \
 	spawn.c \
 	status.c \

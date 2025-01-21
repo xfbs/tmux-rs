@@ -38,19 +38,157 @@ so it's easy to handle circular deps. I guess the problem is build system. It's 
 a single file partially implemented. each can be all or nothing
 
 
+# Steps
+
+1. Pick a C file to port
+2. Modify Makefile.am to remove the C file from sources list
+3. Re-implement c file in rust
+4. Change tmux_h/src/lib.rs to re-export rust definitions instead of using extern "C".
+
 # Progress
 
-- [X] log
-- [X] xmalloc
-- [X] compat
+Current status: building, but aborting immediately.
+
+# TODO
+- dump backtrace on abort
+- research extern c-unwind vs c
+- run under miri
+
+Next, need to remove todo calls causing crashes.
+
+- [ ] 325 alert
+  - [ ] implement TODO's
+- [ ] 1097 arguments
+- [ ] 108 attributes
+- [ ] 277 cfg
+- [ ] 809 client
+- [ ] 175 cmd-attach-session
+- [ ] 107 cmd-bind-key
+- [ ] 143 cmd-break-pane
+- [ ] 253 cmd-capture-pane
+- [ ] 117 cmd-choose-tree
+- [ ] 242 cmd-command-prompt
+- [ ] 163 cmd-confirm-before
+- [ ] 98 cmd-copy-mode
+- [ ] 109 cmd-detach-client
+- [ ] 502 cmd-display-menu
+- [ ] 159 cmd-display-message
+- [ ] 312 cmd-display-panes
+- [ ] 116 cmd-find-window
+- [ ] 1314 cmd-find
+- [ ] 190 cmd-if-shell
+- [ ] 180 cmd-join-pane
+- [ ] 67 cmd-kill-pane
 - [X] cmd-kill-server
-- [X] window
+- [ ] 71 cmd-kill-session
+- [ ] 110 cmd-kill-window
+- [ ] 81 cmd-list-buffers
+- [ ] 102 cmd-list-clients
+- [ ] 372 cmd-list-keys
+- [ ] 148 cmd-list-panes
+- [ ] 90 cmd-list-sessions
+- [ ] 130 cmd-list-windows
+- [ ] 113 cmd-load-buffer
+- [ ] 79 cmd-lock-server
+- [ ] 122 cmd-move-window
+- [ ] 370 cmd-new-session
+- [ ] 159 cmd-new-window
+- [ ] 159 cmd-parse
+- [ ] 113 cmd-paste-buffer
+- [ ] 230 cmd-pipe-pane
+- [ ] 899 cmd-queue
+- [ ] 335 cmd-refresh-client
+- [ ] 81 cmd-rename-session
+- [ ] 62 cmd-rename-window
+- [ ] 215 cmd-resize-pane
+- [ ] 115 cmd-resize-window
+- [ ] 98 cmd-respawn-pane
+- [ ] 95 cmd-respawn-window
+- [ ] 115 cmd-rotate-window
+- [ ] 290 cmd-run-shell
+- [ ] 120 cmd-save-buffer
+- [ ] 149 cmd-select-layout
+- [ ] 242 cmd-select-pane
+- [ ] 150 cmd-select-wind
+- [ ] 237 cmd-send-keys
+- [ ] 147 cmd-server-access
+- [ ] 137 cmd-set-buffer
+- [ ] 119 cmd-set-environment
+- [ ] 239 cmd-set-option
+- [ ] 143 cmd-show-environment
+- [ ] 107 cmd-show-messages
+- [ ] 260 cmd-show-options
+- [ ] 108 cmd-show-prompt-history
+- [ ] 208 cmd-source-file
+- [ ] 199 cmd-split-window
+- [ ] 148 cmd-swap-pane
+- [ ] 94 cmd-swap-window
+- [ ] 142 cmd-switch-client
+- [ ] 104 cmd-unbind-key
+- [ ] 264 cmd-wait-for
+- [ ] 874 cmd
+- [ ] 1117 colour
+- [X] compat
+- [ ] 262 control-notify
+- [ ] 1117 control
+- [ ] 281 environ
+- [ ] 859 file
+- [ ] 5294 format
+- [ ] 1243 format-draw
+- [ ] 429 grid-reader
+- [ ] 235 grid-view
+- [ ] 1535 grid
+- [ ] 239 hyperlinks
+- [ ] 794 input-keys
+- [ ] 3025 input
+- [ ] 435 job
+- [ ] 692 key-bindings
+- [ ] 477 key-string
+- [ ] 370 layout-custom
+- [ ] 691 layout-set
+- [ ] 1120 layout
+- [X] log
+- [ ] 556 menu
+- [ ] 1266 mode-tree
+- [ ] 172 names
+- [ ] 323 notify
+- [ ] 1370 options-table
+- [ ] 1204 options
+- [ ] 342 paste
+- [ ] 818 popup
+- [ ] 388 proc
+- [ ] 120 regsub
+- [ ] 467 resize
+- [ ] 868 screen-redraw
+- [ ] 2347 screen-write
+- [ ] 740 screen
+- [ ] 557 server
+    - [ ] implement TODO's
+- [ ] 186 server-acl
+- [ ] 3392 server-client
+- [ ] 493 server-fn
+- [ ] 759 session
+- [ ] 497 spawn
+- [ ] 2035 status
+- [ ] 383 style
+- [ ] 538 tmux.c
 - [X] tmux.h
-- [ ] alert.c 325
-    - [ ] implement TODO's
-- [ ] server.c 557
-    - [ ] implement TODO's
-- [ ] ...
+- [ ] tmux-protocol.h
+- [ ] 269 tty-acs
+- [ ] 510 tty-features
+- [ ] 1591 tty-keys
+- [ ] 924 tty-term
+- [ ] 3186 tty
+- [ ] 100 utf8-combined
+- [ ] 822 utf8
+- [X] window
+- [ ] 559 window-buffer
+- [ ] 418 window-client
+- [ ] 286 window-clock
+- [ ] 5786 window-copy
+- [ ] 1512 window-customize
+- [ ] 1348 window-tree
+- [X] xmalloc
 
 # Notes
 
@@ -73,6 +211,14 @@ The auto-generated expanded C macros generated a mess from this code. This code 
 properly to make use of rust generics which is abi compatible with the original C code. Maybe in the future
 it would make sense to instead make use of a crate which provides the same functionality such as [intrusive_collections](https://docs.rs/intrusive-collections/latest/intrusive_collections/).
 
+## C pointer field access operator `->`
+
+Once annoyance of porting C code which makes heavy use of pointers is having to convert uses of the `->` operator.
+Rust has no such operator and pointers don't implement deref, so they must be translated to something like `(*w).field`.
+
+For a bit, I thought I could implement by own smart pointer type which wrapped a `*mut T` or `NonNull` and also
+implemented DerefMut. Unfortunately doing this requires that you can create a `&mut T` which would likely invoke
+undefined behaviour in this context.
 
 # References
 

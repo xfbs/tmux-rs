@@ -7,13 +7,68 @@
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 
-pub mod alerts;
+pub mod cmd_bind_key;
+pub mod cmd_break_pane;
+pub mod cmd_capture_pane;
+pub mod cmd_choose_tree;
+pub mod cmd_command_prompt;
+pub mod cmd_confirm_before;
+pub mod cmd_copy_mode;
+pub mod cmd_detach_client;
+pub mod cmd_display_menu;
+pub mod cmd_display_message;
+pub mod cmd_display_panes;
+pub mod cmd_find_window;
+pub mod cmd_if_shell;
+pub mod cmd_join_pane;
+pub mod cmd_kill_pane;
 pub mod cmd_kill_server;
+pub mod cmd_kill_session;
+pub mod cmd_kill_window;
+pub mod cmd_list_buffers;
+pub mod cmd_list_clients;
+pub mod cmd_list_keys;
+pub mod cmd_list_panes;
+pub mod cmd_list_sessions;
+pub mod cmd_list_windows;
+pub mod cmd_load_buffer;
+pub mod cmd_lock_server;
+pub mod cmd_move_window;
+pub mod cmd_new_session;
+pub mod cmd_new_window;
+pub mod cmd_paste_buffer;
+pub mod cmd_pipe_pane;
+pub mod cmd_refresh_client;
+pub mod cmd_rename_session;
+pub mod cmd_rename_window;
+pub mod cmd_resize_pane;
+pub mod cmd_resize_window;
+pub mod cmd_respawn_pane;
+pub mod cmd_respawn_window;
+pub mod cmd_rotate_window;
+pub mod cmd_run_shell;
+pub mod cmd_save_buffer;
+pub mod cmd_select_layout;
+pub mod cmd_select_pane;
+pub mod cmd_select_window;
+pub mod cmd_send_keys;
+pub mod cmd_server_access;
+pub mod cmd_set_buffer;
+pub mod cmd_set_environment;
+pub mod cmd_set_option;
+pub mod cmd_show_environment;
+pub mod cmd_show_messages;
+pub mod cmd_show_options;
+pub mod cmd_show_prompt_history;
+pub mod cmd_source_file;
+pub mod cmd_split_window;
+pub mod cmd_swap_pane;
+pub mod cmd_swap_window;
+pub mod cmd_switch_client;
+pub mod cmd_unbind_key;
 pub mod event_;
-pub mod log;
-pub mod server;
-pub mod window_;
-pub mod window_copy;
+pub mod image_;
+pub mod image_sixel;
 pub mod xmalloc;
 
 #[cfg(feature = "utempter")]
@@ -83,15 +138,19 @@ opaque_types! {
     format_tree,
     hyperlinks,
     hyperlinks_uri,
+    imsg,
     input_ctx,
     job,
     menu_data,
     mode_tree_data,
+    mode_tree_item,
     msgtype,
     options,
     options_entry,
+    paste_buffer,
     screen_write_citem,
-    screen_write_cline
+    screen_write_cline,
+    server_acl_user
 }
 
 #[cfg(feature = "sixel")]
@@ -2164,9 +2223,6 @@ pub struct mode_tree_sort_criteria {
     pub reversed: i32,
 }
 
-// panic!();
-//
-
 pub const WINDOW_MINIMUM: i32 = PANE_MINIMUM;
 pub const WINDOW_MAXIMUM: i32 = 10_000;
 
@@ -2183,1738 +2239,468 @@ pub enum prompt_mode {
     PROMPT_COMMAND,
 }
 
-// tmux.c
-unsafe extern "C" {
-    pub static mut global_options: *mut options;
-    pub static mut global_s_options: *mut options;
-    pub static mut global_w_options: *mut options;
-    pub static mut global_environ: *mut environ;
-    pub static mut start_time: timeval;
-    pub static mut socket_path: *mut c_char;
-    pub static mut ptm_fd: c_int;
-    pub static mut shell_command: *mut c_char;
+mod tmux;
+pub use crate::tmux::{
+    checkshell, find_cwd, find_home, get_timer, getversion, global_environ, global_options, global_s_options,
+    global_w_options, ptm_fd, setblocking, shell_argv0, shell_command, sig2name, socket_path, start_time,
+};
 
-    pub fn checkshell(_: *mut c_char) -> c_int;
-    pub fn setblocking(_: c_int, _: c_int);
-    pub fn shell_argv0(_: *mut c_char, _: c_int) -> *mut c_char;
-    pub fn get_timer() -> u64;
-    pub fn sig2name(_: i32) -> *mut c_char;
-    pub fn find_cwd() -> *mut c_char;
-    pub fn find_home() -> *mut c_char;
-    pub fn getversion() -> *mut c_char;
-}
+mod proc;
+pub use crate::proc::{
+    proc_add_peer, proc_clear_signals, proc_exit, proc_flush_peer, proc_fork_and_daemon, proc_get_peer_uid,
+    proc_kill_peer, proc_loop, proc_remove_peer, proc_send, proc_set_signals, proc_start, proc_toggle_log,
+};
 
-// proc.c
-#[repr(C)]
-struct imsg {
-    _opaque: [u8; 0],
-}
-unsafe extern "C" {
-    pub fn proc_send(_: *mut tmuxpeer, _: msgtype, _: c_int, _: *const c_void, _: usize) -> c_int;
-    pub fn proc_start(_: *const c_char) -> *mut tmuxproc;
-    pub fn proc_loop(_: *mut tmuxproc, _: Option<unsafe extern "C" fn() -> c_int>);
-    pub fn proc_exit(_: *mut tmuxproc);
-    pub fn proc_set_signals(_: *mut tmuxproc, _: Option<unsafe extern "C" fn(_: c_int)>);
-    pub fn proc_clear_signals(_: *mut tmuxproc, _: c_int);
-    #[expect(private_interfaces)]
-    pub fn proc_add_peer(
-        _: *mut tmuxproc,
-        _: c_int,
-        _: Option<unsafe extern "C" fn(_: *mut imsg, _: *mut c_void)>,
-        _: *mut c_void,
-    ) -> *mut tmuxpeer;
-    pub fn proc_remove_peer(_: *mut tmuxpeer);
-    pub fn proc_kill_peer(_: *mut tmuxpeer);
-    pub fn proc_flush_peer(_: *mut tmuxpeer);
-    pub fn proc_toggle_log(_: *mut tmuxproc);
-    pub fn proc_fork_and_daemon(_: *mut c_int) -> pid_t;
-    pub fn proc_get_peer_uid(_: *mut tmuxpeer) -> uid_t;
-}
+mod cfg_;
+pub use crate::cfg_::{
+    cfg_add_cause, cfg_client, cfg_files, cfg_finished, cfg_nfiles, cfg_print_causes, cfg_quiet, cfg_show_causes,
+    load_cfg, load_cfg_from_buffer, start_cfg,
+};
 
-// cfg.c
-unsafe extern "C" {
-    pub static mut cfg_finished: c_int;
-    pub static mut cfg_client: *mut client;
-    pub static mut cfg_files: *mut *mut c_char;
-    pub static mut cfg_nfiles: c_uint;
-    pub static mut cfg_quiet: c_int;
-    pub fn start_cfg();
-    pub fn load_cfg(
-        _: *const c_char,
-        _: *mut client,
-        _: *mut cmdq_item,
-        _: *mut cmd_find_state,
-        _: c_int,
-        _: *mut *mut cmdq_item,
-    ) -> c_int;
-    pub fn load_cfg_from_buffer(
-        _: *const c_void,
-        _: usize,
-        _: *const c_char,
-        _: *mut client,
-        _: *mut cmdq_item,
-        _: *mut cmd_find_state,
-        _: c_int,
-        _: *mut *mut cmdq_item,
-    ) -> c_int;
-    pub fn cfg_add_cause(_: *const c_char, ...);
-    pub fn cfg_print_causes(_: *mut cmdq_item);
-    pub fn cfg_show_causes(_: *mut session);
-}
+mod paste;
+pub use crate::paste::{
+    paste_add, paste_buffer_created, paste_buffer_data, paste_buffer_name, paste_buffer_order, paste_free,
+    paste_get_name, paste_get_top, paste_is_empty, paste_make_sample, paste_rename, paste_replace, paste_set,
+    paste_walk,
+};
 
-// paste.c
-#[repr(C)]
-struct paste_buffer {
-    _opaque: [u8; 0],
-}
-#[expect(private_interfaces)]
-unsafe extern "C" {
-    pub fn paste_buffer_name(_: *mut paste_buffer) -> *const c_char;
-    pub fn paste_buffer_order(_: *mut paste_buffer) -> c_uint;
-    pub fn paste_buffer_created(_: *mut paste_buffer) -> time_t;
-    pub fn paste_buffer_data(_: *mut paste_buffer, _: *mut usize) -> *const c_char;
-    pub fn paste_walk(_: *mut paste_buffer) -> *mut paste_buffer;
-    pub fn paste_is_empty() -> c_int;
-    pub fn paste_get_top(_: *mut *const c_char) -> *mut paste_buffer;
-    pub fn paste_get_name(_: *const c_char) -> *mut paste_buffer;
-    pub fn paste_free(_: *mut paste_buffer);
-    pub fn paste_add(_: *const c_char, _: *mut c_char, _: usize);
-    pub fn paste_rename(_: *const c_char, _: *const c_char, _: *mut *mut c_char) -> c_int;
-    pub fn paste_set(_: *mut c_char, _: usize, _: *const c_char, _: *mut *mut c_char) -> c_int;
-    pub fn paste_replace(_: *mut paste_buffer, _: *mut c_char, _: usize);
-    pub fn paste_make_sample(_: *mut paste_buffer) -> *mut c_char;
-}
+mod format;
+pub use crate::format::{
+    FORMAT_FORCE, FORMAT_NOJOBS, FORMAT_NONE, FORMAT_PANE, FORMAT_STATUS, FORMAT_VERBOSE, FORMAT_WINDOW, format_add,
+    format_add_cb, format_add_tv, format_cb, format_create, format_create_defaults, format_create_from_state,
+    format_create_from_target, format_defaults, format_defaults_pane, format_defaults_paste_buffer,
+    format_defaults_window, format_each, format_expand, format_expand_time, format_free, format_get_pane,
+    format_grid_hyperlink, format_grid_line, format_grid_word, format_log_debug, format_lost_client, format_merge,
+    format_pretty_time, format_single, format_single_from_state, format_single_from_target, format_skip,
+    format_tidy_jobs, format_true,
+};
 
-// format.c
-pub const FORMAT_STATUS: u32 = 1;
-pub const FORMAT_FORCE: u32 = 2;
-pub const FORMAT_NOJOBS: u32 = 4;
-pub const FORMAT_VERBOSE: u32 = 8;
-pub const FORMAT_NONE: u32 = 0;
-pub const FORMAT_PANE: u32 = 0x80000000;
-pub const FORMAT_WINDOW: u32 = 0x40000000;
-pub type format_cb = Option<unsafe extern "C" fn(_: *mut format_tree) -> *mut c_void>;
-#[expect(private_interfaces)]
-unsafe extern "C" {
-    pub fn format_tidy_jobs();
-    pub fn format_skip(_: *const c_char, _: *const c_char) -> *const c_char;
-    pub fn format_true(_: *const c_char) -> c_int;
-    pub fn format_create(_: *mut client, _: *mut cmdq_item, _: c_int, _: c_int) -> *mut format_tree;
-    pub fn format_free(_: *mut format_tree);
-    pub fn format_merge(_: *mut format_tree, _: *mut format_tree);
-    pub fn format_get_pane(_: *mut format_tree) -> *mut window_pane;
-    pub fn format_add(_: *mut format_tree, _: *const c_char, _: *const c_char, ...);
-    pub fn format_add_tv(_: *mut format_tree, _: *const c_char, _: *mut timeval);
-    pub fn format_add_cb(_: *mut format_tree, _: *const c_char, _: format_cb);
-    pub fn format_log_debug(_: *mut format_tree, _: *const c_char);
-    pub fn format_each(
-        _: *mut format_tree,
-        _: Option<unsafe extern "C" fn(_: *const c_char, _: *const c_char, _: *mut c_void)>,
-        _: *mut c_void,
-    );
-    pub fn format_pretty_time(_: time_t, _: c_int) -> *mut c_char;
-    pub fn format_expand_time(_: *mut format_tree, _: *const c_char) -> *mut c_char;
-    pub fn format_expand(_: *mut format_tree, _: *const c_char) -> *mut c_char;
-    pub fn format_single(
-        _: *mut cmdq_item,
-        _: *const c_char,
-        _: *mut client,
-        _: *mut session,
-        _: *mut winlink,
-        _: *mut window_pane,
-    ) -> *mut c_char;
-    pub fn format_single_from_state(
-        _: *mut cmdq_item,
-        _: *const c_char,
-        _: *mut client,
-        _: *mut cmd_find_state,
-    ) -> *mut c_char;
-    pub fn format_single_from_target(_: *mut cmdq_item, _: *const c_char) -> *mut c_char;
-    pub fn format_create_defaults(
-        _: *mut cmdq_item,
-        _: *mut client,
-        _: *mut session,
-        _: *mut winlink,
-        _: *mut window_pane,
-    ) -> *mut format_tree;
-    pub fn format_create_from_state(_: *mut cmdq_item, _: *mut client, _: *mut cmd_find_state) -> *mut format_tree;
-    pub fn format_create_from_target(_: *mut cmdq_item) -> *mut format_tree;
-    pub fn format_defaults(_: *mut format_tree, _: *mut client, _: *mut session, _: *mut winlink, _: *mut window_pane);
-    pub fn format_defaults_window(_: *mut format_tree, _: *mut window);
-    pub fn format_defaults_pane(_: *mut format_tree, _: *mut window_pane);
-    pub fn format_defaults_paste_buffer(_: *mut format_tree, _: *mut paste_buffer);
-    pub fn format_lost_client(_: *mut client);
-    pub fn format_grid_word(_: *mut grid, _: c_uint, _: c_uint) -> *mut c_char;
-    pub fn format_grid_hyperlink(_: *mut grid, _: c_uint, _: c_uint, _: *mut screen) -> *mut c_char;
-    pub fn format_grid_line(_: *mut grid, _: c_uint) -> *mut c_char;
-}
+mod format_draw_;
+pub use crate::format_draw_::{format_draw, format_trim_left, format_trim_right, format_width};
 
-// format-draw.c
-unsafe extern "C" {
-    pub fn format_draw(
-        _: *mut screen_write_ctx,
-        _: *const grid_cell,
-        _: c_uint,
-        _: *const c_char,
-        _: *mut style_ranges,
-        _: c_int,
-    );
-    pub fn format_width(_: *const c_char) -> c_uint;
-    pub fn format_trim_left(_: *const c_char, _: c_uint) -> *mut c_char;
-    pub fn format_trim_right(_: *const c_char, _: c_uint) -> *mut c_char;
-}
+mod notify;
+pub use crate::notify::{
+    notify_client, notify_hook, notify_pane, notify_paste_buffer, notify_session, notify_session_window, notify_window,
+    notify_winlink,
+};
 
-// notify.c
-unsafe extern "C" {
-    pub fn notify_hook(_: *mut cmdq_item, _: *const c_char);
-    pub fn notify_client(_: *const c_char, _: *mut client);
-    pub fn notify_session(_: *const c_char, _: *mut session);
-    pub fn notify_winlink(_: *const c_char, _: *mut winlink);
-    pub fn notify_session_window(_: *const c_char, _: *mut session, _: *mut window);
-    pub fn notify_window(_: *const c_char, _: *mut window);
-    pub fn notify_pane(_: *const c_char, _: *mut window_pane);
-    pub fn notify_paste_buffer(_: *const c_char, _: c_int);
-}
+mod options_;
+pub use crate::options_::{
+    options_array_assign, options_array_clear, options_array_first, options_array_get, options_array_item_index,
+    options_array_item_value, options_array_next, options_array_set, options_create, options_default,
+    options_default_to_string, options_empty, options_first, options_free, options_from_string, options_get,
+    options_get_number, options_get_only, options_get_parent, options_get_string, options_is_array, options_is_string,
+    options_match, options_match_get, options_name, options_next, options_owner, options_parse, options_parse_get,
+    options_push_changes, options_remove_or_default, options_scope_from_flags, options_scope_from_name,
+    options_set_number, options_set_parent, options_set_string, options_string_to_style, options_table_entry,
+    options_to_string,
+};
 
-// options.c
-unsafe extern "C" {
-    pub fn options_create(_: *mut options) -> *mut options;
-    pub fn options_free(_: *mut options);
-    pub fn options_get_parent(_: *mut options) -> *mut options;
-    pub fn options_set_parent(_: *mut options, _: *mut options);
-    pub fn options_first(_: *mut options) -> *mut options_entry;
-    pub fn options_next(_: *mut options_entry) -> *mut options_entry;
-    pub fn options_empty(_: *mut options, _: *const options_table_entry) -> *mut options_entry;
-    pub fn options_default(_: *mut options, _: *const options_table_entry) -> *mut options_entry;
-    pub fn options_default_to_string(_: *const options_table_entry) -> *mut c_char;
-    pub fn options_name(_: *mut options_entry) -> *const c_char;
-    pub fn options_owner(_: *mut options_entry) -> *mut options;
-    pub fn options_table_entry(_: *mut options_entry) -> *const options_table_entry;
-    pub fn options_get_only(_: *mut options, _: *const c_char) -> *mut options_entry;
-    pub fn options_get(_: *mut options, _: *const c_char) -> *mut options_entry;
-    pub fn options_array_clear(_: *mut options_entry);
-    pub fn options_array_get(_: *mut options_entry, _: c_uint) -> *mut options_value;
-    pub fn options_array_set(
-        _: *mut options_entry,
-        _: c_uint,
-        _: *const c_char,
-        _: c_int,
-        _: *mut *mut c_char,
-    ) -> c_int;
-    pub fn options_array_assign(_: *mut options_entry, _: *const c_char, _: *mut *mut c_char) -> c_int;
-    pub fn options_array_first(_: *mut options_entry) -> *mut options_array_item;
-    pub fn options_array_next(_: *mut options_array_item) -> *mut options_array_item;
-    pub fn options_array_item_index(_: *mut options_array_item) -> c_uint;
-    pub fn options_array_item_value(_: *mut options_array_item) -> *mut options_value;
-    pub fn options_is_array(_: *mut options_entry) -> c_int;
-    pub fn options_is_string(_: *mut options_entry) -> c_int;
-    pub fn options_to_string(_: *mut options_entry, _: c_int, _: c_int) -> *mut c_char;
-    pub fn options_parse(_: *const c_char, _: *mut c_int) -> *mut c_char;
-    pub fn options_parse_get(_: *mut options, _: *const c_char, _: *mut c_int, _: c_int) -> *mut options_entry;
-    pub fn options_match(_: *const c_char, _: *mut c_int, _: *mut c_int) -> *mut c_char;
-    pub fn options_match_get(
-        _: *mut options,
-        _: *const c_char,
-        _: *mut c_int,
-        _: c_int,
-        _: *mut c_int,
-    ) -> *mut options_entry;
-    pub fn options_get_string(_: *mut options, _: *const c_char) -> *const c_char;
-    pub fn options_get_number(_: *mut options, _: *const c_char) -> c_longlong;
-    pub fn options_set_string(_: *mut options, _: *const c_char, _: c_int, _: *const c_char, ...)
-    -> *mut options_entry;
-    pub fn options_set_number(_: *mut options, _: *const c_char, _: c_longlong) -> *mut options_entry;
-    pub fn options_scope_from_name(
-        _: *mut args,
-        _: c_int,
-        _: *const c_char,
-        _: *mut cmd_find_state,
-        _: *mut *mut options,
-        _: *mut *mut c_char,
-    ) -> c_int;
-    pub fn options_scope_from_flags(
-        _: *mut args,
-        _: c_int,
-        _: *mut cmd_find_state,
-        _: *mut *mut options,
-        _: *mut *mut c_char,
-    ) -> c_int;
-    pub fn options_string_to_style(_: *mut options, _: *const c_char, _: *mut format_tree) -> *mut style;
-    pub fn options_from_string(
-        _: *mut options,
-        _: *const options_table_entry,
-        _: *const c_char,
-        _: *const c_char,
-        _: c_int,
-        _: *mut *mut c_char,
-    ) -> c_int;
-    pub fn options_find_choice(_: *const options_table_entry, _: *const c_char, _: *mut *mut c_char) -> c_int;
-    pub fn options_push_changes(_: *const c_char);
-    pub fn options_remove_or_default(_: *mut options_entry, _: c_int, _: *mut *mut c_char) -> c_int;
-}
+mod options_table;
+pub use crate::options_table::{options_other_names, options_table};
 
-// options-table.c
-unsafe extern "C" {
-    pub static options_table: [options_table_entry; 0usize];
-    pub static options_other_names: [options_name_map; 0usize];
-}
+mod job_;
+pub use crate::job_::{
+    job_check_died, job_complete_cb, job_free, job_free_cb, job_get_data, job_get_event, job_get_status, job_kill_all,
+    job_print_summary, job_resize, job_run, job_still_running, job_transfer, job_update_cb,
+};
 
-// job.c
-pub type job_update_cb = Option<unsafe extern "C" fn(_: *mut job)>;
-pub type job_complete_cb = Option<unsafe extern "C" fn(_: *mut job)>;
-pub type job_free_cb = Option<unsafe extern "C" fn(_: *mut c_void)>;
-unsafe extern "C" {
-    pub fn job_run(
-        _: *const c_char,
-        _: c_int,
-        _: *mut *mut c_char,
-        _: *mut environ,
-        _: *mut session,
-        _: *const c_char,
-        _: job_update_cb,
-        _: job_complete_cb,
-        _: job_free_cb,
-        _: *mut c_void,
-        _: c_int,
-        _: c_int,
-        _: c_int,
-    ) -> *mut job;
-    pub fn job_free(_: *mut job);
-    pub fn job_transfer(_: *mut job, _: *mut pid_t, _: *mut c_char, _: usize) -> c_int;
-    pub fn job_resize(_: *mut job, _: c_uint, _: c_uint);
-    pub fn job_check_died(_: pid_t, _: c_int);
-    pub fn job_get_status(_: *mut job) -> c_int;
-    pub fn job_get_data(_: *mut job) -> *mut c_void;
-    pub fn job_get_event(_: *mut job) -> *mut bufferevent;
-    pub fn job_kill_all();
-    pub fn job_still_running() -> c_int;
-    pub fn job_print_summary(_: *mut cmdq_item, _: c_int);
-}
+mod environ_;
+pub use crate::environ_::{
+    environ_clear, environ_copy, environ_create, environ_find, environ_first, environ_for_session, environ_free,
+    environ_log, environ_next, environ_push, environ_put, environ_set, environ_unset, environ_update,
+};
 
-// environ.c
-unsafe extern "C" {
-    pub fn environ_create() -> *mut environ;
-    pub fn environ_free(_: *mut environ);
-    pub fn environ_first(_: *mut environ) -> *mut environ_entry;
-    pub fn environ_next(_: *mut environ_entry) -> *mut environ_entry;
-    pub fn environ_copy(_: *mut environ, _: *mut environ);
-    pub fn environ_find(_: *mut environ, _: *const c_char) -> *mut environ_entry;
-    pub fn environ_set(_: *mut environ, _: *const c_char, _: c_int, _: *const c_char, ...);
-    pub fn environ_clear(_: *mut environ, _: *const c_char);
-    pub fn environ_put(_: *mut environ, _: *const c_char, _: c_int);
-    pub fn environ_unset(_: *mut environ, _: *const c_char);
-    pub fn environ_update(_: *mut options, _: *mut environ, _: *mut environ);
-    pub fn environ_push(_: *mut environ);
-    pub fn environ_log(_: *mut environ, _: *const c_char, ...);
-    pub fn environ_for_session(_: *mut session, _: c_int) -> *mut environ;
-}
+mod tty_;
+pub use crate::tty_::{
+    tty_attributes, tty_cell, tty_clipboard_query, tty_close, tty_cmd_alignmenttest, tty_cmd_cell, tty_cmd_cells,
+    tty_cmd_clearcharacter, tty_cmd_clearendofline, tty_cmd_clearendofscreen, tty_cmd_clearline, tty_cmd_clearscreen,
+    tty_cmd_clearstartofline, tty_cmd_clearstartofscreen, tty_cmd_deletecharacter, tty_cmd_deleteline,
+    tty_cmd_insertcharacter, tty_cmd_insertline, tty_cmd_linefeed, tty_cmd_rawstring, tty_cmd_reverseindex,
+    tty_cmd_scrolldown, tty_cmd_scrollup, tty_cmd_setselection, tty_cmd_syncstart, tty_create_log, tty_cursor,
+    tty_default_colours, tty_draw_line, tty_free, tty_init, tty_m_in_off, tty_open, tty_putc, tty_putcode,
+    tty_putcode_i, tty_putcode_ii, tty_putcode_iii, tty_putcode_s, tty_putcode_ss, tty_putn, tty_puts, tty_raw,
+    tty_region_off, tty_repeat_requests, tty_reset, tty_resize, tty_send_requests, tty_set_path, tty_set_selection,
+    tty_set_size, tty_set_title, tty_start_tty, tty_stop_tty, tty_sync_end, tty_sync_start, tty_update_client_offset,
+    tty_update_features, tty_update_mode, tty_update_window_offset, tty_window_bigger, tty_window_offset, tty_write,
+};
 
-// tty.c
-unsafe extern "C" {
-    pub fn tty_create_log();
-    pub fn tty_window_bigger(_: *mut tty) -> c_int;
-    pub fn tty_window_offset(_: *mut tty, _: *mut c_uint, _: *mut c_uint, _: *mut c_uint, _: *mut c_uint) -> c_int;
-    pub fn tty_update_window_offset(_: *mut window);
-    pub fn tty_update_client_offset(_: *mut client);
-    pub fn tty_raw(_: *mut tty, _: *const c_char);
-    pub fn tty_attributes(
-        _: *mut tty,
-        _: *const grid_cell,
-        _: *const grid_cell,
-        _: *mut colour_palette,
-        _: *mut hyperlinks,
-    );
-    pub fn tty_reset(_: *mut tty);
-    pub fn tty_region_off(_: *mut tty);
-    pub fn tty_m_in_off(_: *mut tty);
-    pub fn tty_cursor(_: *mut tty, _: c_uint, _: c_uint);
-    pub fn tty_clipboard_query(_: *mut tty);
-    pub fn tty_putcode(_: *mut tty, _: tty_code_code);
-    pub fn tty_putcode_i(_: *mut tty, _: tty_code_code, _: c_int);
-    pub fn tty_putcode_ii(_: *mut tty, _: tty_code_code, _: c_int, _: c_int);
-    pub fn tty_putcode_iii(_: *mut tty, _: tty_code_code, _: c_int, _: c_int, _: c_int);
-    pub fn tty_putcode_s(_: *mut tty, _: tty_code_code, _: *const c_char);
-    pub fn tty_putcode_ss(_: *mut tty, _: tty_code_code, _: *const c_char, _: *const c_char);
-    pub fn tty_puts(_: *mut tty, _: *const c_char);
-    pub fn tty_putc(_: *mut tty, _: c_uchar);
-    pub fn tty_putn(_: *mut tty, _: *const c_void, _: usize, _: c_uint);
-    pub fn tty_cell(_: *mut tty, _: *const grid_cell, _: *const grid_cell, _: *mut colour_palette, _: *mut hyperlinks);
-    pub fn tty_init(_: *mut tty, _: *mut client) -> c_int;
-    pub fn tty_resize(_: *mut tty);
-    pub fn tty_set_size(_: *mut tty, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
-    pub fn tty_start_tty(_: *mut tty);
-    pub fn tty_send_requests(_: *mut tty);
-    pub fn tty_repeat_requests(_: *mut tty);
-    pub fn tty_stop_tty(_: *mut tty);
-    pub fn tty_set_title(_: *mut tty, _: *const c_char);
-    pub fn tty_set_path(_: *mut tty, _: *const c_char);
-    pub fn tty_update_mode(_: *mut tty, _: c_int, _: *mut screen);
-    pub fn tty_draw_line(
-        _: *mut tty,
-        _: *mut screen,
-        _: c_uint,
-        _: c_uint,
-        _: c_uint,
-        _: c_uint,
-        _: c_uint,
-        _: *const grid_cell,
-        _: *mut colour_palette,
-    );
-    pub fn tty_sync_start(_: *mut tty);
-    pub fn tty_sync_end(_: *mut tty);
-    pub fn tty_open(_: *mut tty, _: *mut *mut c_char) -> c_int;
-    pub fn tty_close(_: *mut tty);
-    pub fn tty_free(_: *mut tty);
-    pub fn tty_update_features(_: *mut tty);
-    pub fn tty_set_selection(_: *mut tty, _: *const c_char, _: *const c_char, _: usize);
-    pub fn tty_write(_: Option<unsafe extern "C" fn(_: *mut tty, _: *const tty_ctx)>, _: *mut tty_ctx);
-    pub fn tty_cmd_alignmenttest(_: *mut tty, _: *const tty_ctx);
-    pub fn tty_cmd_cell(_: *mut tty, _: *const tty_ctx);
-    pub fn tty_cmd_cells(_: *mut tty, _: *const tty_ctx);
-    pub fn tty_cmd_clearendofline(_: *mut tty, _: *const tty_ctx);
-    pub fn tty_cmd_clearendofscreen(_: *mut tty, _: *const tty_ctx);
-    pub fn tty_cmd_clearline(_: *mut tty, _: *const tty_ctx);
-    pub fn tty_cmd_clearscreen(_: *mut tty, _: *const tty_ctx);
-    pub fn tty_cmd_clearstartofline(_: *mut tty, _: *const tty_ctx);
-    pub fn tty_cmd_clearstartofscreen(_: *mut tty, _: *const tty_ctx);
-    pub fn tty_cmd_deletecharacter(_: *mut tty, _: *const tty_ctx);
-    pub fn tty_cmd_clearcharacter(_: *mut tty, _: *const tty_ctx);
-    pub fn tty_cmd_deleteline(_: *mut tty, _: *const tty_ctx);
-    pub fn tty_cmd_insertcharacter(_: *mut tty, _: *const tty_ctx);
-    pub fn tty_cmd_insertline(_: *mut tty, _: *const tty_ctx);
-    pub fn tty_cmd_linefeed(_: *mut tty, _: *const tty_ctx);
-    pub fn tty_cmd_scrollup(_: *mut tty, _: *const tty_ctx);
-    pub fn tty_cmd_scrolldown(_: *mut tty, _: *const tty_ctx);
-    pub fn tty_cmd_reverseindex(_: *mut tty, _: *const tty_ctx);
-    pub fn tty_cmd_setselection(_: *mut tty, _: *const tty_ctx);
-    pub fn tty_cmd_rawstring(_: *mut tty, _: *const tty_ctx);
-    pub fn tty_cmd_syncstart(_: *mut tty, _: *const tty_ctx);
-    pub fn tty_default_colours(_: *mut grid_cell, _: *mut window_pane);
-}
+mod tty_term_;
+pub use crate::tty_term_::{
+    tty_term_apply, tty_term_apply_overrides, tty_term_create, tty_term_describe, tty_term_flag, tty_term_free,
+    tty_term_free_list, tty_term_has, tty_term_ncodes, tty_term_number, tty_term_read_list, tty_term_string,
+    tty_term_string_i, tty_term_string_ii, tty_term_string_iii, tty_term_string_s, tty_term_string_ss, tty_terms,
+};
 
-// tty-term.c
-unsafe extern "C" {
-    pub static mut tty_terms: tty_terms;
-    pub fn tty_term_ncodes() -> c_uint;
-    pub fn tty_term_apply(_: *mut tty_term, _: *const c_char, _: c_int);
-    pub fn tty_term_apply_overrides(_: *mut tty_term);
-    pub fn tty_term_create(
-        _: *mut tty,
-        _: *mut c_char,
-        _: *mut *mut c_char,
-        _: c_uint,
-        _: *mut c_int,
-        _: *mut *mut c_char,
-    ) -> *mut tty_term;
-    pub fn tty_term_free(_: *mut tty_term);
-    pub fn tty_term_read_list(
-        _: *const c_char,
-        _: c_int,
-        _: *mut *mut *mut c_char,
-        _: *mut c_uint,
-        _: *mut *mut c_char,
-    ) -> c_int;
-    pub fn tty_term_free_list(_: *mut *mut c_char, _: c_uint);
-    pub fn tty_term_has(_: *mut tty_term, _: tty_code_code) -> c_int;
-    pub fn tty_term_string(_: *mut tty_term, _: tty_code_code) -> *const c_char;
-    pub fn tty_term_string_i(_: *mut tty_term, _: tty_code_code, _: c_int) -> *const c_char;
-    pub fn tty_term_string_ii(_: *mut tty_term, _: tty_code_code, _: c_int, _: c_int) -> *const c_char;
-    pub fn tty_term_string_iii(_: *mut tty_term, _: tty_code_code, _: c_int, _: c_int, _: c_int) -> *const c_char;
-    pub fn tty_term_string_s(_: *mut tty_term, _: tty_code_code, _: *const c_char) -> *const c_char;
-    pub fn tty_term_string_ss(_: *mut tty_term, _: tty_code_code, _: *const c_char, _: *const c_char) -> *const c_char;
-    pub fn tty_term_number(_: *mut tty_term, _: tty_code_code) -> c_int;
-    pub fn tty_term_flag(_: *mut tty_term, _: tty_code_code) -> c_int;
-    pub fn tty_term_describe(_: *mut tty_term, _: tty_code_code) -> *const c_char;
-}
+mod tty_features;
+pub use crate::tty_features::{tty_add_features, tty_apply_features, tty_default_features, tty_get_features};
 
-// tty-features.c
-unsafe extern "C" {
-    pub fn tty_add_features(_: *mut c_int, _: *const c_char, _: *const c_char);
-    pub fn tty_get_features(_: c_int) -> *const c_char;
-    pub fn tty_apply_features(_: *mut tty_term, _: c_int) -> c_int;
-    pub fn tty_default_features(_: *mut c_int, _: *const c_char, _: c_uint);
-}
+mod tty_acs;
+pub use crate::tty_acs::{
+    tty_acs_double_borders, tty_acs_get, tty_acs_heavy_borders, tty_acs_needed, tty_acs_reverse_get,
+    tty_acs_rounded_borders,
+};
 
-/* tty-acs.c */
-unsafe extern "C" {
-    pub fn tty_acs_needed(_: *mut tty) -> c_int;
-    pub fn tty_acs_get(_: *mut tty, _: c_uchar) -> *const c_char;
-    pub fn tty_acs_reverse_get(_: *mut tty, _: *const c_char, _: usize) -> c_int;
-    pub fn tty_acs_double_borders(_: c_int) -> *const utf8_data;
-    pub fn tty_acs_heavy_borders(_: c_int) -> *const utf8_data;
-    pub fn tty_acs_rounded_borders(_: c_int) -> *const utf8_data;
-}
-/* tty-keys.c */
-unsafe extern "C" {
+mod tty_keys;
+pub use crate::tty_keys::{tty_keys_build, tty_keys_colours, tty_keys_free, tty_keys_next};
 
-    pub fn tty_keys_build(_: *mut tty);
-    pub fn tty_keys_free(_: *mut tty);
-    pub fn tty_keys_next(_: *mut tty) -> c_int;
-    pub fn tty_keys_colours(
-        _: *mut tty,
-        _: *const c_char,
-        _: usize,
-        _: *mut usize,
-        _: *mut c_int,
-        _: *mut c_int,
-    ) -> c_int;
-}
-/* arguments.c */
-unsafe extern "C" {
-    pub fn args_set(_: *mut args, _: c_uchar, _: *mut args_value, _: c_int);
-    pub fn args_create() -> *mut args;
-    pub fn args_parse(_: *const args_parse, _: *mut args_value, _: c_uint, _: *mut *mut c_char) -> *mut args;
-    pub fn args_copy(_: *mut args, _: c_int, _: *mut *mut c_char) -> *mut args;
-    pub fn args_to_vector(_: *mut args, _: *mut c_int, _: *mut *mut *mut c_char);
-    pub fn args_from_vector(_: c_int, _: *mut *mut c_char) -> *mut args_value;
-    pub fn args_free_value(_: *mut args_value);
-    pub fn args_free_values(_: *mut args_value, _: c_uint);
-    pub fn args_free(_: *mut args);
-    pub fn args_print(_: *mut args) -> *mut c_char;
-    pub fn args_escape(_: *const c_char) -> *mut c_char;
-    pub fn args_has(_: *mut args, _: c_uchar) -> c_int;
-    pub fn args_get(_: *mut args, _: c_uchar) -> *const c_char;
-    pub fn args_first(_: *mut args, _: *mut *mut args_entry) -> c_uchar;
-    pub fn args_next(_: *mut *mut args_entry) -> c_uchar;
-    pub fn args_count(_: *mut args) -> c_uint;
-    pub fn args_values(_: *mut args) -> *mut args_value;
-    pub fn args_value(_: *mut args, _: c_uint) -> *mut args_value;
-    pub fn args_string(_: *mut args, _: c_uint) -> *const c_char;
-    pub fn args_make_commands_now(_: *mut cmd, _: *mut cmdq_item, _: c_uint, _: c_int) -> *mut cmd_list;
-    pub fn args_make_commands_prepare(
-        _: *mut cmd,
-        _: *mut cmdq_item,
-        _: c_uint,
-        _: *const c_char,
-        _: c_int,
-        _: c_int,
-    ) -> *mut args_command_state;
-    pub fn args_make_commands(
-        _: *mut args_command_state,
-        _: c_int,
-        _: *mut *mut c_char,
-        _: *mut *mut c_char,
-    ) -> *mut cmd_list;
-    pub fn args_make_commands_free(_: *mut args_command_state);
-    pub fn args_make_commands_get_command(_: *mut args_command_state) -> *mut c_char;
-    pub fn args_first_value(_: *mut args, _: c_uchar) -> *mut args_value;
-    pub fn args_next_value(_: *mut args_value) -> *mut args_value;
-    pub fn args_strtonum(_: *mut args, _: c_uchar, _: c_longlong, _: c_longlong, _: *mut *mut c_char) -> c_longlong;
-    pub fn args_strtonum_and_expand(
-        _: *mut args,
-        _: c_uchar,
-        _: c_longlong,
-        _: c_longlong,
-        _: *mut cmdq_item,
-        _: *mut *mut c_char,
-    ) -> c_longlong;
-    pub fn args_percentage(
-        _: *mut args,
-        _: c_uchar,
-        _: c_longlong,
-        _: c_longlong,
-        _: c_longlong,
-        _: *mut *mut c_char,
-    ) -> c_longlong;
-    pub fn args_string_percentage(
-        _: *const c_char,
-        _: c_longlong,
-        _: c_longlong,
-        _: c_longlong,
-        _: *mut *mut c_char,
-    ) -> c_longlong;
-    pub fn args_percentage_and_expand(
-        _: *mut args,
-        _: c_uchar,
-        _: c_longlong,
-        _: c_longlong,
-        _: c_longlong,
-        _: *mut cmdq_item,
-        _: *mut *mut c_char,
-    ) -> c_longlong;
-    pub fn args_string_percentage_and_expand(
-        _: *const c_char,
-        _: c_longlong,
-        _: c_longlong,
-        _: c_longlong,
-        _: *mut cmdq_item,
-        _: *mut *mut c_char,
-    ) -> c_longlong;
-}
-/* cmd-find.c */
-unsafe extern "C" {
-    pub fn cmd_find_target(
-        _: *mut cmd_find_state,
-        _: *mut cmdq_item,
-        _: *const c_char,
-        _: cmd_find_type,
-        _: c_int,
-    ) -> c_int;
-    pub fn cmd_find_best_client(_: *mut session) -> *mut client;
-    pub fn cmd_find_client(_: *mut cmdq_item, _: *const c_char, _: c_int) -> *mut client;
-    pub fn cmd_find_clear_state(_: *mut cmd_find_state, _: c_int);
-    pub fn cmd_find_empty_state(_: *mut cmd_find_state) -> c_int;
-    pub fn cmd_find_valid_state(_: *mut cmd_find_state) -> c_int;
-    pub fn cmd_find_copy_state(_: *mut cmd_find_state, _: *mut cmd_find_state);
-    pub fn cmd_find_from_session(_: *mut cmd_find_state, _: *mut session, _: c_int);
-    pub fn cmd_find_from_winlink(_: *mut cmd_find_state, _: *mut winlink, _: c_int);
-    pub fn cmd_find_from_session_window(_: *mut cmd_find_state, _: *mut session, _: *mut window, _: c_int) -> c_int;
-    pub fn cmd_find_from_window(_: *mut cmd_find_state, _: *mut window, _: c_int) -> c_int;
-    pub fn cmd_find_from_winlink_pane(_: *mut cmd_find_state, _: *mut winlink, _: *mut window_pane, _: c_int);
-    pub fn cmd_find_from_pane(_: *mut cmd_find_state, _: *mut window_pane, _: c_int) -> c_int;
-    pub fn cmd_find_from_client(_: *mut cmd_find_state, _: *mut client, _: c_int) -> c_int;
-    pub fn cmd_find_from_mouse(_: *mut cmd_find_state, _: *mut mouse_event, _: c_int) -> c_int;
-    pub fn cmd_find_from_nothing(_: *mut cmd_find_state, _: c_int) -> c_int;
-}
-/* cmd.c */
-unsafe extern "C" {
-    pub static mut cmd_table: [*const cmd_entry; 0usize];
-    pub fn cmd_log_argv(_: c_int, _: *mut *mut c_char, _: *const c_char, ...);
-    pub fn cmd_prepend_argv(_: *mut c_int, _: *mut *mut *mut c_char, _: *const c_char);
-    pub fn cmd_append_argv(_: *mut c_int, _: *mut *mut *mut c_char, _: *const c_char);
-    pub fn cmd_pack_argv(_: c_int, _: *mut *mut c_char, _: *mut c_char, _: usize) -> c_int;
-    pub fn cmd_unpack_argv(_: *mut c_char, _: usize, _: c_int, _: *mut *mut *mut c_char) -> c_int;
-    pub fn cmd_copy_argv(_: c_int, _: *mut *mut c_char) -> *mut *mut c_char;
-    pub fn cmd_free_argv(_: c_int, _: *mut *mut c_char);
-    pub fn cmd_stringify_argv(_: c_int, _: *mut *mut c_char) -> *mut c_char;
-    pub fn cmd_get_alias(_: *const c_char) -> *mut c_char;
-    pub fn cmd_get_entry(_: *mut cmd) -> *const cmd_entry;
-    pub fn cmd_get_args(_: *mut cmd) -> *mut args;
-    pub fn cmd_get_group(_: *mut cmd) -> c_uint;
-    pub fn cmd_get_source(_: *mut cmd, _: *mut *const c_char, _: *mut c_uint);
-    pub fn cmd_parse(_: *mut args_value, _: c_uint, _: *const c_char, _: c_uint, _: *mut *mut c_char) -> *mut cmd;
-    pub fn cmd_copy(_: *mut cmd, _: c_int, _: *mut *mut c_char) -> *mut cmd;
-    pub fn cmd_free(_: *mut cmd);
-    pub fn cmd_print(_: *mut cmd) -> *mut c_char;
-    pub fn cmd_list_new() -> *mut cmd_list;
-    pub fn cmd_list_copy(_: *mut cmd_list, _: c_int, _: *mut *mut c_char) -> *mut cmd_list;
-    pub fn cmd_list_append(_: *mut cmd_list, _: *mut cmd);
-    pub fn cmd_list_append_all(_: *mut cmd_list, _: *mut cmd_list);
-    pub fn cmd_list_move(_: *mut cmd_list, _: *mut cmd_list);
-    pub fn cmd_list_free(_: *mut cmd_list);
-    pub fn cmd_list_print(_: *mut cmd_list, _: c_int) -> *mut c_char;
-    pub fn cmd_list_first(_: *mut cmd_list) -> *mut cmd;
-    pub fn cmd_list_next(_: *mut cmd) -> *mut cmd;
-    pub fn cmd_list_all_have(_: *mut cmd_list, _: c_int) -> c_int;
-    pub fn cmd_list_any_have(_: *mut cmd_list, _: c_int) -> c_int;
-    pub fn cmd_mouse_at(_: *mut window_pane, _: *mut mouse_event, _: *mut c_uint, _: *mut c_uint, _: c_int) -> c_int;
-    pub fn cmd_mouse_window(_: *mut mouse_event, _: *mut *mut session) -> *mut winlink;
-    pub fn cmd_mouse_pane(_: *mut mouse_event, _: *mut *mut session, _: *mut *mut winlink) -> *mut window_pane;
-    pub fn cmd_template_replace(_: *const c_char, _: *const c_char, _: c_int) -> *mut c_char;
-}
-/* cmd-attach-session.c */
-unsafe extern "C" {
-    pub fn cmd_attach_session(
-        _: *mut cmdq_item,
-        _: *const c_char,
-        _: c_int,
-        _: c_int,
-        _: c_int,
-        _: *const c_char,
-        _: c_int,
-        _: *const c_char,
-    ) -> cmd_retval;
-}
-/* cmd-parse.c */
-unsafe extern "C" {
-    pub fn cmd_parse_from_file(_: *mut FILE, _: *mut cmd_parse_input) -> *mut cmd_parse_result;
-    pub fn cmd_parse_from_string(_: *const c_char, _: *mut cmd_parse_input) -> *mut cmd_parse_result;
-    pub fn cmd_parse_and_insert(
-        _: *const c_char,
-        _: *mut cmd_parse_input,
-        _: *mut cmdq_item,
-        _: *mut cmdq_state,
-        _: *mut *mut c_char,
-    ) -> cmd_parse_status;
-    pub fn cmd_parse_and_append(
-        _: *const c_char,
-        _: *mut cmd_parse_input,
-        _: *mut client,
-        _: *mut cmdq_state,
-        _: *mut *mut c_char,
-    ) -> cmd_parse_status;
-    pub fn cmd_parse_from_buffer(_: *const c_void, _: usize, _: *mut cmd_parse_input) -> *mut cmd_parse_result;
-    pub fn cmd_parse_from_arguments(_: *mut args_value, _: c_uint, _: *mut cmd_parse_input) -> *mut cmd_parse_result;
-}
-/* cmd-queue.c */
-unsafe extern "C" {
-    pub fn cmdq_new_state(_: *mut cmd_find_state, _: *mut key_event, _: c_int) -> *mut cmdq_state;
-    pub fn cmdq_link_state(_: *mut cmdq_state) -> *mut cmdq_state;
-    pub fn cmdq_copy_state(_: *mut cmdq_state, _: *mut cmd_find_state) -> *mut cmdq_state;
-    pub fn cmdq_free_state(_: *mut cmdq_state);
-    pub fn cmdq_add_format(_: *mut cmdq_state, _: *const c_char, _: *const c_char, ...);
-    pub fn cmdq_add_formats(_: *mut cmdq_state, _: *mut format_tree);
-    pub fn cmdq_merge_formats(_: *mut cmdq_item, _: *mut format_tree);
-    pub fn cmdq_new() -> *mut cmdq_list;
-    pub fn cmdq_free(_: *mut cmdq_list);
-    pub fn cmdq_get_name(_: *mut cmdq_item) -> *const c_char;
-    pub fn cmdq_get_client(_: *mut cmdq_item) -> *mut client;
-    pub fn cmdq_get_target_client(_: *mut cmdq_item) -> *mut client;
-    pub fn cmdq_get_state(_: *mut cmdq_item) -> *mut cmdq_state;
-    pub fn cmdq_get_target(_: *mut cmdq_item) -> *mut cmd_find_state;
-    pub fn cmdq_get_source(_: *mut cmdq_item) -> *mut cmd_find_state;
-    pub fn cmdq_get_event(_: *mut cmdq_item) -> *mut key_event;
-    pub fn cmdq_get_current(_: *mut cmdq_item) -> *mut cmd_find_state;
-    pub fn cmdq_get_flags(_: *mut cmdq_item) -> c_int;
-    pub fn cmdq_get_command(_: *mut cmd_list, _: *mut cmdq_state) -> *mut cmdq_item;
-    pub fn cmdq_get_callback1(_: *const c_char, _: cmdq_cb, _: *mut c_void) -> *mut cmdq_item;
-    pub fn cmdq_get_error(_: *const c_char) -> *mut cmdq_item;
-    pub fn cmdq_insert_after(_: *mut cmdq_item, _: *mut cmdq_item) -> *mut cmdq_item;
-    pub fn cmdq_append(_: *mut client, _: *mut cmdq_item) -> *mut cmdq_item;
-    pub fn cmdq_insert_hook(_: *mut session, _: *mut cmdq_item, _: *mut cmd_find_state, _: *const c_char, ...);
-    pub fn cmdq_continue(_: *mut cmdq_item);
-    pub fn cmdq_next(_: *mut client) -> c_uint;
-    pub fn cmdq_running(_: *mut client) -> *mut cmdq_item;
-    pub fn cmdq_guard(_: *mut cmdq_item, _: *const c_char, _: c_int);
-    pub fn cmdq_print(_: *mut cmdq_item, _: *const c_char, ...);
-    pub fn cmdq_print_data(_: *mut cmdq_item, _: c_int, _: *mut evbuffer);
-    pub fn cmdq_error(_: *mut cmdq_item, _: *const c_char, ...);
-}
-/* cmd-wait-for.c */
-unsafe extern "C" {
-    pub fn cmd_wait_for_flush();
-}
-/* client.c */
-unsafe extern "C" {
-    pub fn client_main(_: *mut event_base, _: c_int, _: *mut *mut c_char, _: u64, _: c_int) -> c_int;
-}
-/* key-bindings.c */
-unsafe extern "C" {
-    pub fn key_bindings_get_table(_: *const c_char, _: c_int) -> *mut key_table;
-    pub fn key_bindings_first_table() -> *mut key_table;
-    pub fn key_bindings_next_table(_: *mut key_table) -> *mut key_table;
-    pub fn key_bindings_unref_table(_: *mut key_table);
-    pub fn key_bindings_get(_: *mut key_table, _: key_code) -> *mut key_binding;
-    pub fn key_bindings_get_default(_: *mut key_table, _: key_code) -> *mut key_binding;
-    pub fn key_bindings_first(_: *mut key_table) -> *mut key_binding;
-    pub fn key_bindings_next(_: *mut key_table, _: *mut key_binding) -> *mut key_binding;
-    pub fn key_bindings_add(_: *const c_char, _: key_code, _: *const c_char, _: c_int, _: *mut cmd_list);
-    pub fn key_bindings_remove(_: *const c_char, _: key_code);
-    pub fn key_bindings_reset(_: *const c_char, _: key_code);
-    pub fn key_bindings_remove_table(_: *const c_char);
-    pub fn key_bindings_reset_table(_: *const c_char);
-    pub fn key_bindings_init();
-    pub fn key_bindings_dispatch(
-        _: *mut key_binding,
-        _: *mut cmdq_item,
-        _: *mut client,
-        _: *mut key_event,
-        _: *mut cmd_find_state,
-    ) -> *mut cmdq_item;
-}
-/* key-string.c */
-unsafe extern "C" {
-    pub fn key_string_lookup_string(_: *const c_char) -> key_code;
-    pub fn key_string_lookup_key(_: key_code, _: c_int) -> *const c_char;
-}
+mod arguments;
+pub use crate::arguments::{
+    args_copy, args_count, args_create, args_escape, args_first, args_first_value, args_free, args_free_value,
+    args_free_values, args_from_vector, args_get, args_has, args_make_commands, args_make_commands_free,
+    args_make_commands_get_command, args_make_commands_now, args_make_commands_prepare, args_next, args_next_value,
+    args_parse, args_percentage, args_percentage_and_expand, args_print, args_set, args_string, args_string_percentage,
+    args_string_percentage_and_expand, args_strtonum, args_strtonum_and_expand, args_to_vector, args_value,
+    args_values,
+};
 
-// alerts.c
+mod cmd_find;
+pub use crate::cmd_find::{
+    cmd_find_best_client, cmd_find_clear_state, cmd_find_client, cmd_find_copy_state, cmd_find_empty_state,
+    cmd_find_from_client, cmd_find_from_mouse, cmd_find_from_nothing, cmd_find_from_pane, cmd_find_from_session,
+    cmd_find_from_session_window, cmd_find_from_window, cmd_find_from_winlink, cmd_find_from_winlink_pane,
+    cmd_find_target, cmd_find_valid_state,
+};
+
+mod cmd_;
+pub use crate::cmd_::{
+    cmd_append_argv, cmd_copy, cmd_copy_argv, cmd_free, cmd_free_argv, cmd_get_alias, cmd_get_args, cmd_get_entry,
+    cmd_get_group, cmd_get_source, cmd_list_all_have, cmd_list_any_have, cmd_list_append, cmd_list_append_all,
+    cmd_list_copy, cmd_list_first, cmd_list_free, cmd_list_move, cmd_list_new, cmd_list_next, cmd_list_print,
+    cmd_log_argv, cmd_mouse_at, cmd_mouse_pane, cmd_mouse_window, cmd_pack_argv, cmd_parse, cmd_prepend_argv,
+    cmd_print, cmd_stringify_argv, cmd_table, cmd_template_replace, cmd_unpack_argv,
+};
+
+mod cmd_attach_session;
+pub use crate::cmd_attach_session::cmd_attach_session;
+
+mod cmd_parse;
+pub use crate::cmd_parse::{
+    cmd_parse_and_append, cmd_parse_and_insert, cmd_parse_from_arguments, cmd_parse_from_buffer, cmd_parse_from_file,
+    cmd_parse_from_string,
+};
+
+mod cmd_queue;
+pub use crate::cmd_queue::{
+    cmdq_add_format, cmdq_add_formats, cmdq_append, cmdq_continue, cmdq_copy_state, cmdq_error, cmdq_free,
+    cmdq_free_state, cmdq_get_callback1, cmdq_get_client, cmdq_get_command, cmdq_get_current, cmdq_get_error,
+    cmdq_get_event, cmdq_get_flags, cmdq_get_name, cmdq_get_source, cmdq_get_state, cmdq_get_target,
+    cmdq_get_target_client, cmdq_guard, cmdq_insert_after, cmdq_insert_hook, cmdq_link_state, cmdq_merge_formats,
+    cmdq_new, cmdq_new_state, cmdq_next, cmdq_print, cmdq_print_data, cmdq_running,
+};
+
+mod cmd_wait_for;
+pub use crate::cmd_wait_for::cmd_wait_for_flush;
+
+mod client_;
+pub use crate::client_::client_main;
+
+mod key_bindings_;
+pub use crate::key_bindings_::{
+    key_bindings_add, key_bindings_dispatch, key_bindings_first, key_bindings_first_table, key_bindings_get,
+    key_bindings_get_default, key_bindings_get_table, key_bindings_init, key_bindings_next, key_bindings_next_table,
+    key_bindings_remove, key_bindings_remove_table, key_bindings_reset, key_bindings_reset_table,
+    key_bindings_unref_table,
+};
+
+mod key_string;
+pub use crate::key_string::{key_string_lookup_key, key_string_lookup_string};
+
+mod alerts;
 pub use crate::alerts::{alerts_check_session, alerts_queue, alerts_reset_all};
 
-/* file.c */
-unsafe extern "C" {
-    pub fn file_cmp(_: *mut client_file, _: *mut client_file) -> c_int;
-    pub fn client_files_RB_INSERT_COLOR(_: *mut client_files, _: *mut client_file);
-    pub fn client_files_RB_REMOVE_COLOR(_: *mut client_files, _: *mut client_file, _: *mut client_file);
-    pub fn client_files_RB_REMOVE(_: *mut client_files, _: *mut client_file) -> *mut client_file;
-    pub fn client_files_RB_INSERT(_: *mut client_files, _: *mut client_file) -> *mut client_file;
-    pub fn client_files_RB_FIND(_: *mut client_files, _: *mut client_file) -> *mut client_file;
-    pub fn client_files_RB_NFIND(_: *mut client_files, _: *mut client_file) -> *mut client_file;
-    pub fn file_create_with_peer(
-        _: *mut tmuxpeer,
-        _: *mut client_files,
-        _: c_int,
-        _: client_file_cb,
-        _: *mut c_void,
-    ) -> *mut client_file;
-    pub fn file_create_with_client(_: *mut client, _: c_int, _: client_file_cb, _: *mut c_void) -> *mut client_file;
-    pub fn file_free(_: *mut client_file);
-    pub fn file_fire_done(_: *mut client_file);
-    pub fn file_fire_read(_: *mut client_file);
-    pub fn file_can_print(_: *mut client) -> c_int;
-    pub fn file_print(_: *mut client, _: *const c_char, ...);
-    pub fn file_vprint(_: *mut client, _: *const c_char, _: *mut VaList);
-    pub fn file_print_buffer(_: *mut client, _: *mut c_void, _: usize);
-    pub fn file_error(_: *mut client, _: *const c_char, ...);
-    pub fn file_write(
-        _: *mut client,
-        _: *const c_char,
-        _: c_int,
-        _: *const c_void,
-        _: usize,
-        _: client_file_cb,
-        _: *mut c_void,
-    );
-    pub fn file_read(_: *mut client, _: *const c_char, _: client_file_cb, _: *mut c_void) -> *mut client_file;
-    pub fn file_cancel(_: *mut client_file);
-    pub fn file_push(_: *mut client_file);
-    pub fn file_write_left(_: *mut client_files) -> c_int;
-    pub fn file_write_open(
-        _: *mut client_files,
-        _: *mut tmuxpeer,
-        _: *mut imsg,
-        _: c_int,
-        _: c_int,
-        _: client_file_cb,
-        _: *mut c_void,
-    );
-    pub fn file_write_data(_: *mut client_files, _: *mut imsg);
-    pub fn file_write_close(_: *mut client_files, _: *mut imsg);
-    pub fn file_read_open(
-        _: *mut client_files,
-        _: *mut tmuxpeer,
-        _: *mut imsg,
-        _: c_int,
-        _: c_int,
-        _: client_file_cb,
-        _: *mut c_void,
-    );
-    pub fn file_write_ready(_: *mut client_files, _: *mut imsg);
-    pub fn file_read_data(_: *mut client_files, _: *mut imsg);
-    pub fn file_read_done(_: *mut client_files, _: *mut imsg);
-    pub fn file_read_cancel(_: *mut client_files, _: *mut imsg);
-}
+mod file;
+pub use crate::file::{
+    client_files_RB_FIND, client_files_RB_INSERT, client_files_RB_INSERT_COLOR, client_files_RB_NFIND,
+    client_files_RB_REMOVE, client_files_RB_REMOVE_COLOR, file_can_print, file_cancel, file_cmp,
+    file_create_with_client, file_create_with_peer, file_error, file_fire_done, file_fire_read, file_free, file_print,
+    file_print_buffer, file_push, file_read, file_read_cancel, file_read_data, file_read_done, file_read_open,
+    file_vprint, file_write, file_write_close, file_write_data, file_write_left, file_write_open, file_write_ready,
+};
 
-// server.c
+mod server;
 pub use crate::server::{
     clients, current_time, marked_pane, message_log, server_add_accept, server_add_message, server_check_marked,
     server_clear_marked, server_create_socket, server_is_marked, server_proc, server_set_marked, server_start,
     server_update_socket,
 };
 
-/* server-client.c */
-unsafe extern "C" {
-    pub fn client_windows_RB_INSERT_COLOR(_: *mut client_windows, _: *mut client_window);
-    pub fn client_windows_RB_REMOVE_COLOR(_: *mut client_windows, _: *mut client_window, _: *mut client_window);
-    pub fn client_windows_RB_REMOVE(_: *mut client_windows, _: *mut client_window) -> *mut client_window;
-    pub fn client_windows_RB_INSERT(_: *mut client_windows, _: *mut client_window) -> *mut client_window;
-    pub fn client_windows_RB_FIND(_: *mut client_windows, _: *mut client_window) -> *mut client_window;
-    pub fn client_windows_RB_NFIND(_: *mut client_windows, _: *mut client_window) -> *mut client_window;
-    pub fn server_client_how_many() -> c_uint;
-    pub fn server_client_set_overlay(
-        _: *mut client,
-        _: c_uint,
-        _: overlay_check_cb,
-        _: overlay_mode_cb,
-        _: overlay_draw_cb,
-        _: overlay_key_cb,
-        _: overlay_free_cb,
-        _: overlay_resize_cb,
-        _: *mut c_void,
-    );
-    pub fn server_client_clear_overlay(_: *mut client);
-    pub fn server_client_overlay_range(
-        _: c_uint,
-        _: c_uint,
-        _: c_uint,
-        _: c_uint,
-        _: c_uint,
-        _: c_uint,
-        _: c_uint,
-        _: *mut overlay_ranges,
-    );
-    pub fn server_client_set_key_table(_: *mut client, _: *const c_char);
-    pub fn server_client_get_key_table(_: *mut client) -> *const c_char;
-    pub fn server_client_check_nested(_: *mut client) -> c_int;
-    pub fn server_client_handle_key(_: *mut client, _: *mut key_event) -> c_int;
-    pub fn server_client_create(_: c_int) -> *mut client;
-    pub fn server_client_open(_: *mut client, _: *mut *mut c_char) -> c_int;
-    pub fn server_client_unref(_: *mut client);
-    pub fn server_client_set_session(_: *mut client, _: *mut session);
-    pub fn server_client_lost(_: *mut client);
-    pub fn server_client_suspend(_: *mut client);
-    pub fn server_client_detach(_: *mut client, _: msgtype);
-    pub fn server_client_exec(_: *mut client, _: *const c_char);
-    pub fn server_client_loop();
-    pub fn server_client_get_cwd(_: *mut client, _: *mut session) -> *const c_char;
-    pub fn server_client_set_flags(_: *mut client, _: *const c_char);
-    pub fn server_client_get_flags(_: *mut client) -> *const c_char;
-    pub fn server_client_get_client_window(_: *mut client, _: c_uint) -> *mut client_window;
-    pub fn server_client_add_client_window(_: *mut client, _: c_uint) -> *mut client_window;
-    pub fn server_client_get_pane(_: *mut client) -> *mut window_pane;
-    pub fn server_client_set_pane(_: *mut client, _: *mut window_pane);
-    pub fn server_client_remove_pane(_: *mut window_pane);
-    pub fn server_client_print(_: *mut client, _: c_int, _: *mut evbuffer);
-}
-/* server-fn.c */
-unsafe extern "C" {
-    pub fn server_redraw_client(_: *mut client);
-    pub fn server_status_client(_: *mut client);
-    pub fn server_redraw_session(_: *mut session);
-    pub fn server_redraw_session_group(_: *mut session);
-    pub fn server_status_session(_: *mut session);
-    pub fn server_status_session_group(_: *mut session);
-    pub fn server_redraw_window(_: *mut window);
-    pub fn server_redraw_window_borders(_: *mut window);
-    pub fn server_status_window(_: *mut window);
-    pub fn server_lock();
-    pub fn server_lock_session(_: *mut session);
-    pub fn server_lock_client(_: *mut client);
-    pub fn server_kill_pane(_: *mut window_pane);
-    pub fn server_kill_window(_: *mut window, _: c_int);
-    pub fn server_renumber_session(_: *mut session);
-    pub fn server_renumber_all();
-    pub fn server_link_window(
-        _: *mut session,
-        _: *mut winlink,
-        _: *mut session,
-        _: c_int,
-        _: c_int,
-        _: c_int,
-        _: *mut *mut c_char,
-    ) -> c_int;
-    pub fn server_unlink_window(_: *mut session, _: *mut winlink);
-    pub fn server_destroy_pane(_: *mut window_pane, _: c_int);
-    pub fn server_destroy_session(_: *mut session);
-    pub fn server_check_unattached();
-    pub fn server_unzoom_window(_: *mut window);
-}
-/* status.c */
-unsafe extern "C" {
-    pub static mut status_prompt_hlist: [*mut *mut c_char; 0usize];
-    pub static mut status_prompt_hsize: [c_uint; 0usize];
-    pub fn status_timer_start(_: *mut client);
-    pub fn status_timer_start_all();
-    pub fn status_update_cache(_: *mut session);
-    pub fn status_at_line(_: *mut client) -> c_int;
-    pub fn status_line_size(_: *mut client) -> c_uint;
-    pub fn status_get_range(_: *mut client, _: c_uint, _: c_uint) -> *mut style_range;
-    pub fn status_init(_: *mut client);
-    pub fn status_free(_: *mut client);
-    pub fn status_redraw(_: *mut client) -> c_int;
-    pub fn status_message_set(_: *mut client, _: c_int, _: c_int, _: c_int, _: *const c_char, ...);
-    pub fn status_message_clear(_: *mut client);
-    pub fn status_message_redraw(_: *mut client) -> c_int;
-    pub fn status_prompt_set(
-        _: *mut client,
-        _: *mut cmd_find_state,
-        _: *const c_char,
-        _: *const c_char,
-        _: prompt_input_cb,
-        _: prompt_free_cb,
-        _: *mut c_void,
-        _: c_int,
-        _: prompt_type,
-    );
-    pub fn status_prompt_clear(_: *mut client);
-    pub fn status_prompt_redraw(_: *mut client) -> c_int;
-    pub fn status_prompt_key(_: *mut client, _: key_code) -> c_int;
-    pub fn status_prompt_update(_: *mut client, _: *const c_char, _: *const c_char);
-    pub fn status_prompt_load_history();
-    pub fn status_prompt_save_history();
-    pub fn status_prompt_type_string(_: c_uint) -> *const c_char;
-    pub fn status_prompt_type(type_: *const c_char) -> prompt_type;
-}
-/* resize.c */
-unsafe extern "C" {
-    pub fn resize_window(_: *mut window, _: c_uint, _: c_uint, _: c_int, _: c_int);
-    pub fn default_window_size(
-        _: *mut client,
-        _: *mut session,
-        _: *mut window,
-        _: *mut c_uint,
-        _: *mut c_uint,
-        _: *mut c_uint,
-        _: *mut c_uint,
-        _: c_int,
-    );
-    pub fn recalculate_size(_: *mut window, _: c_int);
-    pub fn recalculate_sizes();
-    pub fn recalculate_sizes_now(_: c_int);
-}
-/* input.c */
-unsafe extern "C" {
-    pub fn input_init(_: *mut window_pane, _: *mut bufferevent, _: *mut colour_palette) -> *mut input_ctx;
-    pub fn input_free(_: *mut input_ctx);
-    pub fn input_reset(_: *mut input_ctx, _: c_int);
-    pub fn input_pending(_: *mut input_ctx) -> *mut evbuffer;
-    pub fn input_parse_pane(_: *mut window_pane);
-    pub fn input_parse_buffer(_: *mut window_pane, _: *mut c_uchar, _: usize);
-    pub fn input_parse_screen(
-        _: *mut input_ctx,
-        _: *mut screen,
-        _: screen_write_init_ctx_cb,
-        _: *mut c_void,
-        _: *mut c_uchar,
-        _: usize,
-    );
-    pub fn input_reply_clipboard(_: *mut bufferevent, _: *const c_char, _: usize, _: *const c_char);
-}
-/* input-key.c */
-unsafe extern "C" {
-    pub fn input_key_build();
-    pub fn input_key_pane(_: *mut window_pane, _: key_code, _: *mut mouse_event) -> c_int;
-    pub fn input_key(_: *mut screen, _: *mut bufferevent, _: key_code) -> c_int;
-    pub fn input_key_get_mouse(
-        _: *mut screen,
-        _: *mut mouse_event,
-        _: c_uint,
-        _: c_uint,
-        _: *mut *const c_char,
-        _: *mut usize,
-    ) -> c_int;
-}
-/* colour.c */
-unsafe extern "C" {
-    pub fn colour_find_rgb(_: c_uchar, _: c_uchar, _: c_uchar) -> c_int;
-    pub fn colour_join_rgb(_: c_uchar, _: c_uchar, _: c_uchar) -> c_int;
-    pub fn colour_split_rgb(_: c_int, _: *mut c_uchar, _: *mut c_uchar, _: *mut c_uchar);
-    pub fn colour_force_rgb(_: c_int) -> c_int;
-    pub fn colour_tostring(_: c_int) -> *const c_char;
-    pub fn colour_fromstring(s: *const c_char) -> c_int;
-    pub fn colour_256toRGB(_: c_int) -> c_int;
-    pub fn colour_256to16(_: c_int) -> c_int;
-    pub fn colour_byname(_: *const c_char) -> c_int;
-    pub fn colour_parseX11(_: *const c_char) -> c_int;
-    pub fn colour_palette_init(_: *mut colour_palette);
-    pub fn colour_palette_clear(_: *mut colour_palette);
-    pub fn colour_palette_free(_: *mut colour_palette);
-    pub fn colour_palette_get(_: *mut colour_palette, _: c_int) -> c_int;
-    pub fn colour_palette_set(_: *mut colour_palette, _: c_int, _: c_int) -> c_int;
-    pub fn colour_palette_from_option(_: *mut colour_palette, _: *mut options);
-}
-/* attributes.c */
-unsafe extern "C" {
-    pub fn attributes_tostring(_: c_int) -> *const c_char;
-    pub fn attributes_fromstring(_: *const c_char) -> c_int;
-}
-/* grid.c */
-unsafe extern "C" {
-    pub static grid_default_cell: grid_cell;
-    pub fn grid_empty_line(_: *mut grid, _: c_uint, _: c_uint);
-    pub fn grid_cells_equal(_: *const grid_cell, _: *const grid_cell) -> c_int;
-    pub fn grid_cells_look_equal(_: *const grid_cell, _: *const grid_cell) -> c_int;
-    pub fn grid_create(_: c_uint, _: c_uint, _: c_uint) -> *mut grid;
-    pub fn grid_destroy(_: *mut grid);
-    pub fn grid_compare(_: *mut grid, _: *mut grid) -> c_int;
-    pub fn grid_collect_history(_: *mut grid);
-    pub fn grid_remove_history(_: *mut grid, _: c_uint);
-    pub fn grid_scroll_history(_: *mut grid, _: c_uint);
-    pub fn grid_scroll_history_region(_: *mut grid, _: c_uint, _: c_uint, _: c_uint);
-    pub fn grid_clear_history(_: *mut grid);
-    pub fn grid_peek_line(_: *mut grid, _: c_uint) -> *const grid_line;
-    pub fn grid_get_cell(_: *mut grid, _: c_uint, _: c_uint, _: *mut grid_cell);
-    pub fn grid_set_cell(_: *mut grid, _: c_uint, _: c_uint, _: *const grid_cell);
-    pub fn grid_set_padding(_: *mut grid, _: c_uint, _: c_uint);
-    pub fn grid_set_cells(_: *mut grid, _: c_uint, _: c_uint, _: *const grid_cell, _: *const c_char, _: usize);
-    pub fn grid_get_line(_: *mut grid, _: c_uint) -> *mut grid_line;
-    pub fn grid_adjust_lines(_: *mut grid, _: c_uint);
-    pub fn grid_clear(_: *mut grid, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
-    pub fn grid_clear_lines(_: *mut grid, _: c_uint, _: c_uint, _: c_uint);
-    pub fn grid_move_lines(_: *mut grid, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
-    pub fn grid_move_cells(_: *mut grid, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
-    pub fn grid_string_cells(
-        _: *mut grid,
-        _: c_uint,
-        _: c_uint,
-        _: c_uint,
-        _: *mut *mut grid_cell,
-        _: c_int,
-        _: *mut screen,
-    ) -> *mut c_char;
-    pub fn grid_duplicate_lines(_: *mut grid, _: c_uint, _: *mut grid, _: c_uint, _: c_uint);
-    pub fn grid_reflow(_: *mut grid, _: c_uint);
-    pub fn grid_wrap_position(_: *mut grid, _: c_uint, _: c_uint, _: *mut c_uint, _: *mut c_uint);
-    pub fn grid_unwrap_position(_: *mut grid, _: *mut c_uint, _: *mut c_uint, _: c_uint, _: c_uint);
-    pub fn grid_line_length(_: *mut grid, _: c_uint) -> c_uint;
-}
-/* grid-reader.c */
-unsafe extern "C" {
-    pub fn grid_reader_start(_: *mut grid_reader, _: *mut grid, _: c_uint, _: c_uint);
-    pub fn grid_reader_get_cursor(_: *mut grid_reader, _: *mut c_uint, _: *mut c_uint);
-    pub fn grid_reader_line_length(_: *mut grid_reader) -> c_uint;
-    pub fn grid_reader_in_set(_: *mut grid_reader, _: *const c_char) -> c_int;
-    pub fn grid_reader_cursor_right(_: *mut grid_reader, _: c_int, _: c_int);
-    pub fn grid_reader_cursor_left(_: *mut grid_reader, _: c_int);
-    pub fn grid_reader_cursor_down(_: *mut grid_reader);
-    pub fn grid_reader_cursor_up(_: *mut grid_reader);
-    pub fn grid_reader_cursor_start_of_line(_: *mut grid_reader, _: c_int);
-    pub fn grid_reader_cursor_end_of_line(_: *mut grid_reader, _: c_int, _: c_int);
-    pub fn grid_reader_cursor_next_word(_: *mut grid_reader, _: *const c_char);
-    pub fn grid_reader_cursor_next_word_end(_: *mut grid_reader, _: *const c_char);
-    pub fn grid_reader_cursor_previous_word(_: *mut grid_reader, _: *const c_char, _: c_int, _: c_int);
-    pub fn grid_reader_cursor_jump(_: *mut grid_reader, _: *const utf8_data) -> c_int;
-    pub fn grid_reader_cursor_jump_back(_: *mut grid_reader, _: *const utf8_data) -> c_int;
-    pub fn grid_reader_cursor_back_to_indentation(_: *mut grid_reader);
-}
-/* grid-view.c */
-unsafe extern "C" {
-    pub fn grid_view_get_cell(_: *mut grid, _: c_uint, _: c_uint, _: *mut grid_cell);
-    pub fn grid_view_set_cell(_: *mut grid, _: c_uint, _: c_uint, _: *const grid_cell);
-    pub fn grid_view_set_padding(_: *mut grid, _: c_uint, _: c_uint);
-    pub fn grid_view_set_cells(_: *mut grid, _: c_uint, _: c_uint, _: *const grid_cell, _: *const c_char, _: usize);
-    pub fn grid_view_clear_history(_: *mut grid, _: c_uint);
-    pub fn grid_view_clear(_: *mut grid, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
-    pub fn grid_view_scroll_region_up(_: *mut grid, _: c_uint, _: c_uint, _: c_uint);
-    pub fn grid_view_scroll_region_down(_: *mut grid, _: c_uint, _: c_uint, _: c_uint);
-    pub fn grid_view_insert_lines(_: *mut grid, _: c_uint, _: c_uint, _: c_uint);
-    pub fn grid_view_insert_lines_region(_: *mut grid, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
-    pub fn grid_view_delete_lines(_: *mut grid, _: c_uint, _: c_uint, _: c_uint);
-    pub fn grid_view_delete_lines_region(_: *mut grid, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
-    pub fn grid_view_insert_cells(_: *mut grid, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
-    pub fn grid_view_delete_cells(_: *mut grid, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
-    pub fn grid_view_string_cells(_: *mut grid, _: c_uint, _: c_uint, _: c_uint) -> *mut c_char;
-}
-/* screen-write.c */
-unsafe extern "C" {
-    pub fn screen_write_make_list(_: *mut screen);
-    pub fn screen_write_free_list(_: *mut screen);
-    pub fn screen_write_start_pane(_: *mut screen_write_ctx, _: *mut window_pane, _: *mut screen);
-    pub fn screen_write_start(_: *mut screen_write_ctx, _: *mut screen);
-    pub fn screen_write_start_callback(
-        _: *mut screen_write_ctx,
-        _: *mut screen,
-        _: screen_write_init_ctx_cb,
-        _: *mut c_void,
-    );
-    pub fn screen_write_stop(_: *mut screen_write_ctx);
-    pub fn screen_write_reset(_: *mut screen_write_ctx);
-    pub fn screen_write_strlen(_: *const c_char, ...) -> usize;
-    pub fn screen_write_text(
-        _: *mut screen_write_ctx,
-        _: c_uint,
-        _: c_uint,
-        _: c_uint,
-        _: c_int,
-        _: *const grid_cell,
-        _: *const c_char,
-        ...
-    ) -> c_int;
-    pub fn screen_write_puts(_: *mut screen_write_ctx, _: *const grid_cell, _: *const c_char, ...);
-    pub fn screen_write_nputs(_: *mut screen_write_ctx, _: isize, _: *const grid_cell, _: *const c_char, ...);
-    pub fn screen_write_vnputs(
-        _: *mut screen_write_ctx,
-        _: isize,
-        _: *const grid_cell,
-        _: *const c_char,
-        _: *mut VaList,
-    );
-    pub fn screen_write_putc(_: *mut screen_write_ctx, _: *const grid_cell, _: c_uchar);
-    pub fn screen_write_fast_copy(_: *mut screen_write_ctx, _: *mut screen, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
-    pub fn screen_write_hline(
-        _: *mut screen_write_ctx,
-        _: c_uint,
-        _: c_int,
-        _: c_int,
-        _: box_lines,
-        _: *const grid_cell,
-    );
-    pub fn screen_write_vline(_: *mut screen_write_ctx, _: c_uint, _: c_int, _: c_int);
-    pub fn screen_write_menu(
-        _: *mut screen_write_ctx,
-        _: *mut menu,
-        _: c_int,
-        _: box_lines,
-        _: *const grid_cell,
-        _: *const grid_cell,
-        _: *const grid_cell,
-    );
-    pub fn screen_write_box(
-        _: *mut screen_write_ctx,
-        _: c_uint,
-        _: c_uint,
-        _: box_lines,
-        _: *const grid_cell,
-        _: *const c_char,
-    );
-    pub fn screen_write_preview(_: *mut screen_write_ctx, _: *mut screen, _: c_uint, _: c_uint);
-    pub fn screen_write_backspace(_: *mut screen_write_ctx);
-    pub fn screen_write_mode_set(_: *mut screen_write_ctx, _: c_int);
-    pub fn screen_write_mode_clear(_: *mut screen_write_ctx, _: c_int);
-    pub fn screen_write_cursorup(_: *mut screen_write_ctx, _: c_uint);
-    pub fn screen_write_cursordown(_: *mut screen_write_ctx, _: c_uint);
-    pub fn screen_write_cursorright(_: *mut screen_write_ctx, _: c_uint);
-    pub fn screen_write_cursorleft(_: *mut screen_write_ctx, _: c_uint);
-    pub fn screen_write_alignmenttest(_: *mut screen_write_ctx);
-    pub fn screen_write_insertcharacter(_: *mut screen_write_ctx, _: c_uint, _: c_uint);
-    pub fn screen_write_deletecharacter(_: *mut screen_write_ctx, _: c_uint, _: c_uint);
-    pub fn screen_write_clearcharacter(_: *mut screen_write_ctx, _: c_uint, _: c_uint);
-    pub fn screen_write_insertline(_: *mut screen_write_ctx, _: c_uint, _: c_uint);
-    pub fn screen_write_deleteline(_: *mut screen_write_ctx, _: c_uint, _: c_uint);
-    pub fn screen_write_clearline(_: *mut screen_write_ctx, _: c_uint);
-    pub fn screen_write_clearendofline(_: *mut screen_write_ctx, _: c_uint);
-    pub fn screen_write_clearstartofline(_: *mut screen_write_ctx, _: c_uint);
-    pub fn screen_write_cursormove(_: *mut screen_write_ctx, _: c_int, _: c_int, _: c_int);
-    pub fn screen_write_reverseindex(_: *mut screen_write_ctx, _: c_uint);
-    pub fn screen_write_scrollregion(_: *mut screen_write_ctx, _: c_uint, _: c_uint);
-    pub fn screen_write_linefeed(_: *mut screen_write_ctx, _: c_int, _: c_uint);
-    pub fn screen_write_scrollup(_: *mut screen_write_ctx, _: c_uint, _: c_uint);
-    pub fn screen_write_scrolldown(_: *mut screen_write_ctx, _: c_uint, _: c_uint);
-    pub fn screen_write_carriagereturn(_: *mut screen_write_ctx);
-    pub fn screen_write_clearendofscreen(_: *mut screen_write_ctx, _: c_uint);
-    pub fn screen_write_clearstartofscreen(_: *mut screen_write_ctx, _: c_uint);
-    pub fn screen_write_clearscreen(_: *mut screen_write_ctx, _: c_uint);
-    pub fn screen_write_clearhistory(_: *mut screen_write_ctx);
-    pub fn screen_write_fullredraw(_: *mut screen_write_ctx);
-    pub fn screen_write_collect_end(_: *mut screen_write_ctx);
-    pub fn screen_write_collect_add(_: *mut screen_write_ctx, _: *const grid_cell);
-    pub fn screen_write_cell(_: *mut screen_write_ctx, _: *const grid_cell);
-    pub fn screen_write_setselection(_: *mut screen_write_ctx, _: *const c_char, _: *mut c_uchar, _: c_uint);
-    pub fn screen_write_rawstring(_: *mut screen_write_ctx, _: *mut c_uchar, _: c_uint, _: c_int);
-    pub fn screen_write_alternateon(_: *mut screen_write_ctx, _: *mut grid_cell, _: c_int);
-    pub fn screen_write_alternateoff(_: *mut screen_write_ctx, _: *mut grid_cell, _: c_int);
-}
-/* screen-redraw.c */
-unsafe extern "C" {
-    pub fn screen_redraw_screen(_: *mut client);
-    pub fn screen_redraw_pane(_: *mut client, _: *mut window_pane);
-}
-/* screen.c */
-unsafe extern "C" {
-    pub fn screen_init(_: *mut screen, _: c_uint, _: c_uint, _: c_uint);
-    pub fn screen_reinit(_: *mut screen);
-    pub fn screen_free(_: *mut screen);
-    pub fn screen_reset_tabs(_: *mut screen);
-    pub fn screen_reset_hyperlinks(_: *mut screen);
-    pub fn screen_set_cursor_style(_: c_uint, _: *mut screen_cursor_style, _: *mut c_int);
-    pub fn screen_set_cursor_colour(_: *mut screen, _: c_int);
-    pub fn screen_set_title(_: *mut screen, _: *const c_char) -> c_int;
-    pub fn screen_set_path(_: *mut screen, _: *const c_char);
-    pub fn screen_push_title(_: *mut screen);
-    pub fn screen_pop_title(_: *mut screen);
-    pub fn screen_resize(_: *mut screen, _: c_uint, _: c_uint, _: c_int);
-    pub fn screen_resize_cursor(_: *mut screen, _: c_uint, _: c_uint, _: c_int, _: c_int, _: c_int);
-    pub fn screen_set_selection(
-        _: *mut screen,
-        _: c_uint,
-        _: c_uint,
-        _: c_uint,
-        _: c_uint,
-        _: c_uint,
-        _: c_int,
-        _: *mut grid_cell,
-    );
-    pub fn screen_clear_selection(_: *mut screen);
-    pub fn screen_hide_selection(_: *mut screen);
-    pub fn screen_check_selection(_: *mut screen, _: c_uint, _: c_uint) -> c_int;
-    pub fn screen_select_cell(_: *mut screen, _: *mut grid_cell, _: *const grid_cell);
-    pub fn screen_alternate_on(_: *mut screen, _: *mut grid_cell, _: c_int);
-    pub fn screen_alternate_off(_: *mut screen, _: *mut grid_cell, _: c_int);
-    pub fn screen_mode_to_string(_: c_int) -> *const c_char;
-}
+mod server_client;
+pub use crate::server_client::{
+    client_windows_RB_FIND, client_windows_RB_INSERT, client_windows_RB_INSERT_COLOR, client_windows_RB_NFIND,
+    client_windows_RB_REMOVE, client_windows_RB_REMOVE_COLOR, server_client_add_client_window,
+    server_client_check_nested, server_client_clear_overlay, server_client_create, server_client_detach,
+    server_client_exec, server_client_get_client_window, server_client_get_cwd, server_client_get_flags,
+    server_client_get_key_table, server_client_get_pane, server_client_handle_key, server_client_how_many,
+    server_client_loop, server_client_lost, server_client_open, server_client_overlay_range, server_client_print,
+    server_client_remove_pane, server_client_set_flags, server_client_set_key_table, server_client_set_overlay,
+    server_client_set_pane, server_client_set_session, server_client_suspend, server_client_unref,
+};
 
-// window.c
-pub use crate::window_::*;
+mod server_fn;
+pub use crate::server_fn::{
+    server_check_unattached, server_destroy_pane, server_destroy_session, server_kill_pane, server_kill_window,
+    server_link_window, server_lock, server_lock_client, server_lock_session, server_redraw_client,
+    server_redraw_session, server_redraw_session_group, server_redraw_window, server_redraw_window_borders,
+    server_renumber_all, server_renumber_session, server_status_client, server_status_session,
+    server_status_session_group, server_status_window, server_unlink_window, server_unzoom_window,
+};
+
+mod status;
+pub use crate::status::{
+    status_at_line, status_free, status_get_range, status_init, status_line_size, status_message_clear,
+    status_message_redraw, status_message_set, status_prompt_clear, status_prompt_hlist, status_prompt_hsize,
+    status_prompt_key, status_prompt_load_history, status_prompt_redraw, status_prompt_save_history, status_prompt_set,
+    status_prompt_type, status_prompt_type_string, status_prompt_update, status_redraw, status_timer_start,
+    status_timer_start_all, status_update_cache,
+};
+
+mod resize;
+pub use crate::resize::{
+    default_window_size, recalculate_size, recalculate_sizes, recalculate_sizes_now, resize_window,
+};
+
+mod input;
+pub use crate::input::{
+    input_free, input_init, input_parse_buffer, input_parse_pane, input_parse_screen, input_pending,
+    input_reply_clipboard, input_reset,
+};
+
+mod input_keys;
+pub use crate::input_keys::{input_key, input_key_build, input_key_get_mouse, input_key_pane};
+
+mod colour;
+pub use crate::colour::{
+    colour_256to16, colour_256toRGB, colour_byname, colour_find_rgb, colour_force_rgb, colour_fromstring,
+    colour_join_rgb, colour_palette_clear, colour_palette_free, colour_palette_from_option, colour_palette_get,
+    colour_palette_init, colour_palette_set, colour_parseX11, colour_split_rgb, colour_tostring,
+};
+
+mod attributes;
+pub use crate::attributes::{attributes_fromstring, attributes_tostring};
+
+mod grid_;
+pub use crate::grid_::{
+    grid_adjust_lines, grid_cells_equal, grid_cells_look_equal, grid_clear, grid_clear_history, grid_clear_lines,
+    grid_collect_history, grid_compare, grid_create, grid_default_cell, grid_destroy, grid_duplicate_lines,
+    grid_empty_line, grid_get_cell, grid_get_line, grid_line_length, grid_move_cells, grid_move_lines, grid_peek_line,
+    grid_reflow, grid_remove_history, grid_scroll_history, grid_scroll_history_region, grid_set_cell, grid_set_cells,
+    grid_set_padding, grid_string_cells, grid_unwrap_position, grid_wrap_position,
+};
+
+mod grid_reader_;
+pub use crate::grid_reader_::{
+    grid_reader_cursor_back_to_indentation, grid_reader_cursor_down, grid_reader_cursor_end_of_line,
+    grid_reader_cursor_jump, grid_reader_cursor_jump_back, grid_reader_cursor_left, grid_reader_cursor_next_word,
+    grid_reader_cursor_next_word_end, grid_reader_cursor_previous_word, grid_reader_cursor_right,
+    grid_reader_cursor_start_of_line, grid_reader_cursor_up, grid_reader_get_cursor, grid_reader_in_set,
+    grid_reader_line_length, grid_reader_start,
+};
+
+mod grid_view;
+pub use crate::grid_view::{
+    grid_view_clear, grid_view_clear_history, grid_view_delete_cells, grid_view_delete_lines,
+    grid_view_delete_lines_region, grid_view_get_cell, grid_view_insert_cells, grid_view_insert_lines,
+    grid_view_insert_lines_region, grid_view_scroll_region_down, grid_view_scroll_region_up, grid_view_set_cell,
+    grid_view_set_cells, grid_view_set_padding, grid_view_string_cells,
+};
+
+mod screen_write;
+pub use crate::screen_write::{
+    screen_write_alignmenttest, screen_write_alternateoff, screen_write_alternateon, screen_write_backspace,
+    screen_write_box, screen_write_carriagereturn, screen_write_cell, screen_write_clearcharacter,
+    screen_write_clearendofline, screen_write_clearendofscreen, screen_write_clearhistory, screen_write_clearline,
+    screen_write_clearscreen, screen_write_clearstartofline, screen_write_clearstartofscreen, screen_write_collect_add,
+    screen_write_collect_end, screen_write_cursordown, screen_write_cursorleft, screen_write_cursormove,
+    screen_write_cursorright, screen_write_cursorup, screen_write_deletecharacter, screen_write_deleteline,
+    screen_write_fast_copy, screen_write_free_list, screen_write_fullredraw, screen_write_hline,
+    screen_write_insertcharacter, screen_write_insertline, screen_write_linefeed, screen_write_make_list,
+    screen_write_menu, screen_write_mode_clear, screen_write_mode_set, screen_write_nputs, screen_write_preview,
+    screen_write_putc, screen_write_puts, screen_write_rawstring, screen_write_reset, screen_write_reverseindex,
+    screen_write_scrolldown, screen_write_scrollregion, screen_write_scrollup, screen_write_setselection,
+    screen_write_start, screen_write_start_callback, screen_write_start_pane, screen_write_stop, screen_write_strlen,
+    screen_write_text, screen_write_vline, screen_write_vnputs,
+};
+
+mod screen_redraw;
+pub use crate::screen_redraw::{screen_redraw_pane, screen_redraw_screen};
+
+mod screen_;
+pub use crate::screen_::{
+    screen_alternate_off, screen_alternate_on, screen_check_selection, screen_clear_selection, screen_free,
+    screen_hide_selection, screen_init, screen_mode_to_string, screen_pop_title, screen_push_title, screen_reinit,
+    screen_reset_hyperlinks, screen_reset_tabs, screen_resize, screen_resize_cursor, screen_select_cell,
+    screen_set_cursor_colour, screen_set_cursor_style, screen_set_path, screen_set_selection, screen_set_title,
+};
+
+mod window_;
+pub use crate::window_::{
+    all_window_panes, window_add_pane, window_add_ref, window_cmp, window_count_panes, window_create,
+    window_destroy_panes, window_find_by_id, window_find_by_id_str, window_find_string, window_get_active_at,
+    window_has_pane, window_lost_pane, window_pane_at_index, window_pane_cmp, window_pane_default_cursor,
+    window_pane_destroy_ready, window_pane_exited, window_pane_find_by_id, window_pane_find_by_id_str,
+    window_pane_find_down, window_pane_find_left, window_pane_find_right, window_pane_find_up,
+    window_pane_get_new_data, window_pane_index, window_pane_key, window_pane_mode, window_pane_next_by_number,
+    window_pane_previous_by_number, window_pane_reset_mode, window_pane_reset_mode_all, window_pane_resize,
+    window_pane_search, window_pane_send_resize, window_pane_set_event, window_pane_set_mode, window_pane_stack_push,
+    window_pane_stack_remove, window_pane_start_input, window_pane_update_focus, window_pane_update_used_data,
+    window_pane_visible, window_pop_zoom, window_printable_flags, window_push_zoom, window_redraw_active_switch,
+    window_remove_pane, window_remove_ref, window_resize, window_set_active_pane, window_set_fill_character,
+    window_set_name, window_unzoom, window_update_activity, window_update_focus, window_zoom, windows, winlink_add,
+    winlink_clear_flags, winlink_cmp, winlink_count, winlink_find_by_index, winlink_find_by_window,
+    winlink_find_by_window_id, winlink_next, winlink_next_by_number, winlink_previous, winlink_previous_by_number,
+    winlink_remove, winlink_set_window, winlink_shuffle_up, winlink_stack_push, winlink_stack_remove,
+};
 unsafe extern "C" {
-    pub static mut windows: windows;
-    pub static mut all_window_panes: window_pane_tree;
-    pub fn window_cmp(_: *mut window, _: *mut window) -> c_int;
+    // TODO remove these, generated by macro
     pub fn windows_RB_INSERT_COLOR(_: *mut windows, _: *mut window);
     pub fn windows_RB_REMOVE_COLOR(_: *mut windows, _: *mut window, _: *mut window);
     pub fn windows_RB_REMOVE(_: *mut windows, _: *mut window) -> *mut window;
     pub fn windows_RB_INSERT(_: *mut windows, _: *mut window) -> *mut window;
     pub fn windows_RB_FIND(_: *mut windows, _: *mut window) -> *mut window;
     pub fn windows_RB_NFIND(_: *mut windows, _: *mut window) -> *mut window;
-    pub fn winlink_cmp(_: *mut winlink, _: *mut winlink) -> c_int;
     pub fn winlinks_RB_INSERT_COLOR(_: *mut winlinks, _: *mut winlink);
     pub fn winlinks_RB_REMOVE_COLOR(_: *mut winlinks, _: *mut winlink, _: *mut winlink);
     pub fn winlinks_RB_REMOVE(_: *mut winlinks, _: *mut winlink) -> *mut winlink;
     pub fn winlinks_RB_INSERT(_: *mut winlinks, _: *mut winlink) -> *mut winlink;
     pub fn winlinks_RB_FIND(_: *mut winlinks, _: *mut winlink) -> *mut winlink;
     pub fn winlinks_RB_NFIND(_: *mut winlinks, _: *mut winlink) -> *mut winlink;
-    pub fn window_pane_cmp(_: *mut window_pane, _: *mut window_pane) -> c_int;
     pub fn window_pane_tree_RB_INSERT_COLOR(_: *mut window_pane_tree, _: *mut window_pane);
     pub fn window_pane_tree_RB_REMOVE_COLOR(_: *mut window_pane_tree, _: *mut window_pane, _: *mut window_pane);
     pub fn window_pane_tree_RB_REMOVE(_: *mut window_pane_tree, _: *mut window_pane) -> *mut window_pane;
     pub fn window_pane_tree_RB_INSERT(_: *mut window_pane_tree, _: *mut window_pane) -> *mut window_pane;
     pub fn window_pane_tree_RB_FIND(_: *mut window_pane_tree, _: *mut window_pane) -> *mut window_pane;
     pub fn window_pane_tree_RB_NFIND(_: *mut window_pane_tree, _: *mut window_pane) -> *mut window_pane;
-    pub fn winlink_find_by_index(_: *mut winlinks, _: c_int) -> *mut winlink;
-    pub fn winlink_find_by_window(_: *mut winlinks, _: *mut window) -> *mut winlink;
-    pub fn winlink_find_by_window_id(_: *mut winlinks, _: c_uint) -> *mut winlink;
-    pub fn winlink_count(_: *mut winlinks) -> c_uint;
-    pub fn winlink_add(_: *mut winlinks, _: c_int) -> *mut winlink;
-    pub fn winlink_set_window(_: *mut winlink, _: *mut window);
-    pub fn winlink_remove(_: *mut winlinks, _: *mut winlink);
-    pub fn winlink_next(_: *mut winlink) -> *mut winlink;
-    pub fn winlink_previous(_: *mut winlink) -> *mut winlink;
-    pub fn winlink_next_by_number(_: *mut winlink, _: *mut session, _: c_int) -> *mut winlink;
-    pub fn winlink_previous_by_number(_: *mut winlink, _: *mut session, _: c_int) -> *mut winlink;
-    pub fn winlink_stack_push(_: *mut winlink_stack, _: *mut winlink);
-    pub fn winlink_stack_remove(_: *mut winlink_stack, _: *mut winlink);
-    pub fn window_find_by_id_str(_: *const c_char) -> *mut window;
-    pub fn window_find_by_id(_: c_uint) -> *mut window;
-    pub fn window_update_activity(_: *mut window);
-    pub fn window_create(_: c_uint, _: c_uint, _: c_uint, _: c_uint) -> *mut window;
-    pub fn window_pane_set_event(_: *mut window_pane);
-    pub fn window_get_active_at(_: *mut window, _: c_uint, _: c_uint) -> *mut window_pane;
-    pub fn window_find_string(_: *mut window, _: *const c_char) -> *mut window_pane;
-    pub fn window_has_pane(_: *mut window, _: *mut window_pane) -> c_int;
-    pub fn window_set_active_pane(_: *mut window, _: *mut window_pane, _: c_int) -> c_int;
-    pub fn window_update_focus(_: *mut window);
-    pub fn window_pane_update_focus(_: *mut window_pane);
-    pub fn window_redraw_active_switch(_: *mut window, _: *mut window_pane);
-    pub fn window_add_pane(_: *mut window, _: *mut window_pane, _: c_uint, _: c_int) -> *mut window_pane;
-    pub fn window_resize(_: *mut window, _: c_uint, _: c_uint, _: c_int, _: c_int);
-    pub fn window_pane_send_resize(_: *mut window_pane, _: c_uint, _: c_uint);
-    pub fn window_zoom(_: *mut window_pane) -> c_int;
-    pub fn window_unzoom(_: *mut window, _: c_int) -> c_int;
-    pub fn window_push_zoom(_: *mut window, _: c_int, _: c_int) -> c_int;
-    pub fn window_pop_zoom(_: *mut window) -> c_int;
-    pub fn window_lost_pane(_: *mut window, _: *mut window_pane);
-    pub fn window_remove_pane(_: *mut window, _: *mut window_pane);
-    pub fn window_pane_at_index(_: *mut window, _: c_uint) -> *mut window_pane;
-    pub fn window_pane_next_by_number(_: *mut window, _: *mut window_pane, _: c_uint) -> *mut window_pane;
-    pub fn window_pane_previous_by_number(_: *mut window, _: *mut window_pane, _: c_uint) -> *mut window_pane;
-    pub fn window_pane_index(_: *mut window_pane, _: *mut c_uint) -> c_int;
-    pub fn window_count_panes(_: *mut window) -> c_uint;
-    pub fn window_destroy_panes(_: *mut window);
-    pub fn window_pane_find_by_id_str(_: *const c_char) -> *mut window_pane;
-    pub fn window_pane_find_by_id(_: c_uint) -> *mut window_pane;
-    pub fn window_pane_destroy_ready(_: *mut window_pane) -> c_int;
-    pub fn window_pane_resize(_: *mut window_pane, _: c_uint, _: c_uint);
-    pub fn window_pane_set_mode(
-        _: *mut window_pane,
-        _: *mut window_pane,
-        _: *const window_mode,
-        _: *mut cmd_find_state,
-        _: *mut args,
-    ) -> c_int;
-    pub fn window_pane_reset_mode(_: *mut window_pane);
-    pub fn window_pane_reset_mode_all(_: *mut window_pane);
-    pub fn window_pane_key(
-        _: *mut window_pane,
-        _: *mut client,
-        _: *mut session,
-        _: *mut winlink,
-        _: key_code,
-        _: *mut mouse_event,
-    ) -> c_int;
-    pub fn window_pane_visible(_: *mut window_pane) -> c_int;
-    pub fn window_pane_exited(_: *mut window_pane) -> c_int;
-    pub fn window_pane_search(_: *mut window_pane, _: *const c_char, _: c_int, _: c_int) -> c_uint;
-    pub fn window_printable_flags(_: *mut winlink, _: c_int) -> *const c_char;
-    pub fn window_pane_find_up(_: *mut window_pane) -> *mut window_pane;
-    pub fn window_pane_find_down(_: *mut window_pane) -> *mut window_pane;
-    pub fn window_pane_find_left(_: *mut window_pane) -> *mut window_pane;
-    pub fn window_pane_find_right(_: *mut window_pane) -> *mut window_pane;
-    pub fn window_pane_stack_push(_: *mut window_panes, _: *mut window_pane);
-    pub fn window_pane_stack_remove(_: *mut window_panes, _: *mut window_pane);
-    pub fn window_set_name(_: *mut window, _: *const c_char);
-    pub fn window_add_ref(_: *mut window, _: *const c_char);
-    pub fn window_remove_ref(_: *mut window, _: *const c_char);
-    pub fn winlink_clear_flags(_: *mut winlink);
-    pub fn winlink_shuffle_up(_: *mut session, _: *mut winlink, _: c_int) -> c_int;
-    pub fn window_pane_start_input(_: *mut window_pane, _: *mut cmdq_item, _: *mut *mut c_char) -> c_int;
-    pub fn window_pane_get_new_data(_: *mut window_pane, _: *mut window_pane_offset, _: *mut usize) -> *mut c_void;
-    pub fn window_pane_update_used_data(_: *mut window_pane, _: *mut window_pane_offset, _: usize);
-    pub fn window_set_fill_character(_: *mut window);
-    pub fn window_pane_default_cursor(_: *mut window_pane);
-    pub fn window_pane_mode(_: *mut window_pane) -> c_int;
-}
-/* layout.c */
-unsafe extern "C" {
-    pub fn layout_count_cells(_: *mut layout_cell) -> c_uint;
-    pub fn layout_create_cell(_: *mut layout_cell) -> *mut layout_cell;
-    pub fn layout_free_cell(_: *mut layout_cell);
-    pub fn layout_print_cell(_: *mut layout_cell, _: *const c_char, _: c_uint);
-    pub fn layout_destroy_cell(_: *mut window, _: *mut layout_cell, _: *mut *mut layout_cell);
-    pub fn layout_resize_layout(_: *mut window, _: *mut layout_cell, _: layout_type, _: c_int, _: c_int);
-    pub fn layout_search_by_border(_: *mut layout_cell, _: c_uint, _: c_uint) -> *mut layout_cell;
-    pub fn layout_set_size(_: *mut layout_cell, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
-    pub fn layout_make_leaf(_: *mut layout_cell, _: *mut window_pane);
-    pub fn layout_make_node(_: *mut layout_cell, _: layout_type);
-    pub fn layout_fix_offsets(_: *mut window);
-    pub fn layout_fix_panes(_: *mut window, _: *mut window_pane);
-    pub fn layout_resize_adjust(_: *mut window, _: *mut layout_cell, _: layout_type, _: c_int);
-    pub fn layout_init(_: *mut window, _: *mut window_pane);
-    pub fn layout_free(_: *mut window);
-    pub fn layout_resize(_: *mut window, _: c_uint, _: c_uint);
-    pub fn layout_resize_pane(_: *mut window_pane, _: layout_type, _: c_int, _: c_int);
-    pub fn layout_resize_pane_to(_: *mut window_pane, _: layout_type, _: c_uint);
-    pub fn layout_assign_pane(_: *mut layout_cell, _: *mut window_pane, _: c_int);
-    pub fn layout_split_pane(_: *mut window_pane, _: layout_type, _: c_int, _: c_int) -> *mut layout_cell;
-    pub fn layout_close_pane(_: *mut window_pane);
-    pub fn layout_spread_cell(_: *mut window, _: *mut layout_cell) -> c_int;
-    pub fn layout_spread_out(_: *mut window_pane);
-}
-/* layout-custom.c */
-unsafe extern "C" {
-    pub fn layout_dump(_: *mut layout_cell) -> *mut c_char;
-    pub fn layout_parse(_: *mut window, _: *const c_char, _: *mut *mut c_char) -> c_int;
-}
-/* layout-set.c */
-unsafe extern "C" {
-    pub fn layout_set_lookup(_: *const c_char) -> c_int;
-    pub fn layout_set_select(_: *mut window, _: c_uint) -> c_uint;
-    pub fn layout_set_next(_: *mut window) -> c_uint;
-    pub fn layout_set_previous(_: *mut window) -> c_uint;
-}
-/* mode-tree.c */
-pub type mode_tree_build_cb = ::std::option::Option<
-    unsafe extern "C" fn(_: *mut c_void, _: *mut mode_tree_sort_criteria, _: *mut u64, _: *const c_char),
->;
-pub type mode_tree_draw_cb = ::std::option::Option<
-    unsafe extern "C" fn(_: *mut c_void, _: *mut c_void, _: *mut screen_write_ctx, _: c_uint, _: c_uint),
->;
-pub type mode_tree_search_cb =
-    ::std::option::Option<unsafe extern "C" fn(_: *mut c_void, _: *mut c_void, _: *const c_char) -> c_int>;
-pub type mode_tree_menu_cb = ::std::option::Option<unsafe extern "C" fn(_: *mut c_void, _: *mut client, _: key_code)>;
-pub type mode_tree_height_cb = ::std::option::Option<unsafe extern "C" fn(_: *mut c_void, _: c_uint) -> c_uint>;
-pub type mode_tree_key_cb =
-    ::std::option::Option<unsafe extern "C" fn(_: *mut c_void, _: *mut c_void, _: c_uint) -> key_code>;
-pub type mode_tree_each_cb =
-    ::std::option::Option<unsafe extern "C" fn(_: *mut c_void, _: *mut c_void, _: *mut client, _: key_code)>;
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct mode_tree_item {
-    _unused: [u8; 0],
-}
-unsafe extern "C" {
-    pub fn mode_tree_count_tagged(_: *mut mode_tree_data) -> c_uint;
-    pub fn mode_tree_get_current(_: *mut mode_tree_data) -> *mut c_void;
-    pub fn mode_tree_get_current_name(_: *mut mode_tree_data) -> *const c_char;
-    pub fn mode_tree_expand_current(_: *mut mode_tree_data);
-    pub fn mode_tree_collapse_current(_: *mut mode_tree_data);
-    pub fn mode_tree_expand(_: *mut mode_tree_data, _: u64);
-    pub fn mode_tree_set_current(_: *mut mode_tree_data, _: u64) -> c_int;
-    pub fn mode_tree_each_tagged(_: *mut mode_tree_data, _: mode_tree_each_cb, _: *mut client, _: key_code, _: c_int);
-    pub fn mode_tree_up(_: *mut mode_tree_data, _: c_int);
-    pub fn mode_tree_down(_: *mut mode_tree_data, _: c_int) -> c_int;
-    pub fn mode_tree_start(
-        _: *mut window_pane,
-        _: *mut args,
-        _: mode_tree_build_cb,
-        _: mode_tree_draw_cb,
-        _: mode_tree_search_cb,
-        _: mode_tree_menu_cb,
-        _: mode_tree_height_cb,
-        _: mode_tree_key_cb,
-        _: *mut c_void,
-        _: *const menu_item,
-        _: *mut *const c_char,
-        _: c_uint,
-        _: *mut *mut screen,
-    ) -> *mut mode_tree_data;
-    pub fn mode_tree_zoom(_: *mut mode_tree_data, _: *mut args);
-    pub fn mode_tree_build(_: *mut mode_tree_data);
-    pub fn mode_tree_free(_: *mut mode_tree_data);
-    pub fn mode_tree_resize(_: *mut mode_tree_data, _: c_uint, _: c_uint);
-    pub fn mode_tree_add(
-        _: *mut mode_tree_data,
-        _: *mut mode_tree_item,
-        _: *mut c_void,
-        _: u64,
-        _: *const c_char,
-        _: *const c_char,
-        _: c_int,
-    ) -> *mut mode_tree_item;
-    pub fn mode_tree_draw_as_parent(_: *mut mode_tree_item);
-    pub fn mode_tree_no_tag(_: *mut mode_tree_item);
-    pub fn mode_tree_remove(_: *mut mode_tree_data, _: *mut mode_tree_item);
-    pub fn mode_tree_draw(_: *mut mode_tree_data);
-    pub fn mode_tree_key(
-        _: *mut mode_tree_data,
-        _: *mut client,
-        _: *mut key_code,
-        _: *mut mouse_event,
-        _: *mut c_uint,
-        _: *mut c_uint,
-    ) -> c_int;
-    pub fn mode_tree_run_command(_: *mut client, _: *mut cmd_find_state, _: *const c_char, _: *const c_char);
-}
-/* window-buffer.c */
-unsafe extern "C" {
-    pub static window_buffer_mode: window_mode;
-}
-/* window-tree.c */
-unsafe extern "C" {
-    pub static window_tree_mode: window_mode;
-}
-/* window-clock.c */
-unsafe extern "C" {
-    pub static window_clock_mode: window_mode;
-    pub static mut window_clock_table: [[[c_char; 5usize]; 5usize]; 14usize];
-}
-/* window-client.c */
-unsafe extern "C" {
-    pub static window_client_mode: window_mode;
 }
 
-// window-copy.c
-// pub use crate::window_copy::{window_copy_mode, window_view_mode};
-/* window-copy.c */
+mod layout;
+pub use crate::layout::{
+    layout_assign_pane, layout_close_pane, layout_count_cells, layout_create_cell, layout_destroy_cell,
+    layout_fix_offsets, layout_fix_panes, layout_free, layout_free_cell, layout_init, layout_make_leaf,
+    layout_make_node, layout_print_cell, layout_resize, layout_resize_adjust, layout_resize_layout, layout_resize_pane,
+    layout_resize_pane_to, layout_search_by_border, layout_set_size, layout_split_pane, layout_spread_cell,
+    layout_spread_out,
+};
+
+mod layout_custom;
+pub use crate::layout_custom::{layout_dump, layout_parse};
+
+mod layout_set;
+pub use crate::layout_set::{layout_set_lookup, layout_set_next, layout_set_previous, layout_set_select};
+
+mod mode_tree;
+pub use crate::mode_tree::{
+    mode_tree_add, mode_tree_build, mode_tree_build_cb, mode_tree_collapse_current, mode_tree_count_tagged,
+    mode_tree_down, mode_tree_draw, mode_tree_draw_as_parent, mode_tree_draw_cb, mode_tree_each_cb,
+    mode_tree_each_tagged, mode_tree_expand, mode_tree_expand_current, mode_tree_free, mode_tree_get_current,
+    mode_tree_get_current_name, mode_tree_height_cb, mode_tree_key, mode_tree_key_cb, mode_tree_menu_cb,
+    mode_tree_no_tag, mode_tree_remove, mode_tree_resize, mode_tree_run_command, mode_tree_search_cb,
+    mode_tree_set_current, mode_tree_start, mode_tree_up, mode_tree_zoom,
+};
+
+mod window_buffer;
+pub use crate::window_buffer::window_buffer_mode;
+
+mod window_tree;
+pub use crate::window_tree::window_tree_mode;
+
+mod window_clock;
+pub use crate::window_clock::{window_clock_mode, window_clock_table};
+
+mod window_client;
+pub use crate::window_client::window_client_mode;
+
+mod window_copy;
+pub use crate::window_copy::{
+    window_copy_add, window_copy_get_line, window_copy_get_word, window_copy_mode, window_copy_pagedown,
+    window_copy_pageup, window_copy_start_drag, window_copy_vadd, window_view_mode,
+};
+
+mod window_customize;
+pub use crate::window_customize::window_customize_mode;
+
+mod names;
+pub use crate::names::{check_window_name, default_window_name, parse_window_name};
+
+mod control;
+pub use crate::control::{
+    control_add_sub, control_all_done, control_continue_pane, control_discard, control_pane_offset, control_pause_pane,
+    control_ready, control_remove_sub, control_reset_offsets, control_set_pane_off, control_set_pane_on, control_start,
+    control_stop, control_write, control_write_output,
+};
+
+mod control_notify;
+pub use crate::control_notify::{
+    control_notify_client_detached, control_notify_client_session_changed, control_notify_pane_mode_changed,
+    control_notify_paste_buffer_changed, control_notify_paste_buffer_deleted, control_notify_session_closed,
+    control_notify_session_created, control_notify_session_renamed, control_notify_session_window_changed,
+    control_notify_window_layout_changed, control_notify_window_linked, control_notify_window_pane_changed,
+    control_notify_window_renamed, control_notify_window_unlinked,
+};
+
+mod session_;
+pub use crate::session_::{
+    next_session_id, session_add_ref, session_alive, session_attach, session_check_name, session_cmp, session_create,
+    session_destroy, session_detach, session_find, session_find_by_id, session_find_by_id_str, session_group_add,
+    session_group_attached_count, session_group_contains, session_group_count, session_group_find, session_group_new,
+    session_group_synchronize_from, session_group_synchronize_to, session_has, session_is_linked, session_last,
+    session_next, session_next_session, session_previous, session_previous_session, session_remove_ref,
+    session_renumber_windows, session_select, session_set_current, session_update_activity, sessions, sessions_RB_FIND,
+    sessions_RB_INSERT, sessions_RB_INSERT_COLOR, sessions_RB_NFIND, sessions_RB_REMOVE, sessions_RB_REMOVE_COLOR,
+};
+
+mod utf8;
+pub use crate::utf8::{
+    utf8_append, utf8_build_one, utf8_copy, utf8_cstrhas, utf8_cstrwidth, utf8_from_data, utf8_fromcstr, utf8_fromwc,
+    utf8_in_table, utf8_isvalid, utf8_open, utf8_padcstr, utf8_rpadcstr, utf8_sanitize, utf8_set, utf8_stravis,
+    utf8_stravisx, utf8_strlen, utf8_strvis, utf8_strwidth, utf8_to_data, utf8_tocstr, utf8_towc,
+};
+
+mod osdep;
+pub use crate::osdep::{osdep_event_init, osdep_get_cwd, osdep_get_name};
+
+mod utf8_combined;
+pub use crate::utf8_combined::{utf8_has_zwj, utf8_is_modifier, utf8_is_vs, utf8_is_zwj};
+
+// procname.c
 unsafe extern "C" {
-    pub static mut window_copy_mode: window_mode;
-    pub static mut window_view_mode: window_mode;
-    pub fn window_copy_add(_: *mut window_pane, _: c_int, _: *const c_char, ...);
-    pub fn window_copy_vadd(_: *mut window_pane, _: c_int, _: *const c_char, _: *mut VaList);
-    pub fn window_copy_pageup(_: *mut window_pane, _: c_int);
-    pub fn window_copy_pagedown(_: *mut window_pane, _: c_int, _: c_int);
-    pub fn window_copy_start_drag(_: *mut client, _: *mut mouse_event);
-    pub fn window_copy_get_word(_: *mut window_pane, _: c_uint, _: c_uint) -> *mut c_char;
-    pub fn window_copy_get_line(_: *mut window_pane, _: c_uint) -> *mut c_char;
+    pub unsafe fn get_proc_name(_: c_int, _: *mut c_char) -> *mut c_char;
+    pub unsafe fn get_proc_cwd(_: c_int) -> *mut c_char;
 }
-/* window-option.c */
-unsafe extern "C" {
-    pub static window_customize_mode: window_mode;
-}
-/* names.c */
-unsafe extern "C" {
-    pub fn check_window_name(_: *mut window);
-    pub fn default_window_name(_: *mut window) -> *mut c_char;
-    pub fn parse_window_name(_: *const c_char) -> *mut c_char;
-}
-/* control.c */
-unsafe extern "C" {
-    pub fn control_discard(_: *mut client);
-    pub fn control_start(_: *mut client);
-    pub fn control_ready(_: *mut client);
-    pub fn control_stop(_: *mut client);
-    pub fn control_set_pane_on(_: *mut client, _: *mut window_pane);
-    pub fn control_set_pane_off(_: *mut client, _: *mut window_pane);
-    pub fn control_continue_pane(_: *mut client, _: *mut window_pane);
-    pub fn control_pause_pane(_: *mut client, _: *mut window_pane);
-    pub fn control_pane_offset(_: *mut client, _: *mut window_pane, _: *mut c_int) -> *mut window_pane_offset;
-    pub fn control_reset_offsets(_: *mut client);
-    pub fn control_write(_: *mut client, _: *const c_char, ...);
-    pub fn control_write_output(_: *mut client, _: *mut window_pane);
-    pub fn control_all_done(_: *mut client) -> c_int;
-    pub fn control_add_sub(_: *mut client, _: *const c_char, _: control_sub_type, _: c_int, _: *const c_char);
-    pub fn control_remove_sub(_: *mut client, _: *const c_char);
-}
-/* control-notify.c */
-unsafe extern "C" {
-    pub fn control_notify_pane_mode_changed(_: c_int);
-    pub fn control_notify_window_layout_changed(_: *mut window);
-    pub fn control_notify_window_pane_changed(_: *mut window);
-    pub fn control_notify_window_unlinked(_: *mut session, _: *mut window);
-    pub fn control_notify_window_linked(_: *mut session, _: *mut window);
-    pub fn control_notify_window_renamed(_: *mut window);
-    pub fn control_notify_client_session_changed(_: *mut client);
-    pub fn control_notify_client_detached(_: *mut client);
-    pub fn control_notify_session_renamed(_: *mut session);
-    pub fn control_notify_session_created(_: *mut session);
-    pub fn control_notify_session_closed(_: *mut session);
-    pub fn control_notify_session_window_changed(_: *mut session);
-    pub fn control_notify_paste_buffer_changed(_: *const c_char);
-    pub fn control_notify_paste_buffer_deleted(_: *const c_char);
-}
-/* session.c */
-unsafe extern "C" {
-    pub static mut sessions: sessions;
-    pub static mut next_session_id: c_uint;
-    pub fn session_cmp(_: *mut session, _: *mut session) -> c_int;
-    pub fn sessions_RB_INSERT_COLOR(_: *mut sessions, _: *mut session);
-    pub fn sessions_RB_REMOVE_COLOR(_: *mut sessions, _: *mut session, _: *mut session);
-    pub fn sessions_RB_REMOVE(_: *mut sessions, _: *mut session) -> *mut session;
-    pub fn sessions_RB_INSERT(_: *mut sessions, _: *mut session) -> *mut session;
-    pub fn sessions_RB_FIND(_: *mut sessions, _: *mut session) -> *mut session;
-    pub fn sessions_RB_NFIND(_: *mut sessions, _: *mut session) -> *mut session;
-    pub fn session_alive(_: *mut session) -> c_int;
-    pub fn session_find(_: *const c_char) -> *mut session;
-    pub fn session_find_by_id_str(_: *const c_char) -> *mut session;
-    pub fn session_find_by_id(_: c_uint) -> *mut session;
-    pub fn session_create(
-        _: *const c_char,
-        _: *const c_char,
-        _: *const c_char,
-        _: *mut environ,
-        _: *mut options,
-        _: *mut termios,
-    ) -> *mut session;
-    pub fn session_destroy(_: *mut session, _: c_int, _: *const c_char);
-    pub fn session_add_ref(_: *mut session, _: *const c_char);
-    pub fn session_remove_ref(_: *mut session, _: *const c_char);
-    pub fn session_check_name(_: *const c_char) -> *mut c_char;
-    pub fn session_update_activity(_: *mut session, _: *mut timeval);
-    pub fn session_next_session(_: *mut session) -> *mut session;
-    pub fn session_previous_session(_: *mut session) -> *mut session;
-    pub fn session_attach(_: *mut session, _: *mut window, _: c_int, _: *mut *mut c_char) -> *mut winlink;
-    pub fn session_detach(_: *mut session, _: *mut winlink) -> c_int;
-    pub fn session_has(_: *mut session, _: *mut window) -> c_int;
-    pub fn session_is_linked(_: *mut session, _: *mut window) -> c_int;
-    pub fn session_next(_: *mut session, _: c_int) -> c_int;
-    pub fn session_previous(_: *mut session, _: c_int) -> c_int;
-    pub fn session_select(_: *mut session, _: c_int) -> c_int;
-    pub fn session_last(_: *mut session) -> c_int;
-    pub fn session_set_current(_: *mut session, _: *mut winlink) -> c_int;
-    pub fn session_group_contains(_: *mut session) -> *mut session_group;
-    pub fn session_group_find(_: *const c_char) -> *mut session_group;
-    pub fn session_group_new(_: *const c_char) -> *mut session_group;
-    pub fn session_group_add(_: *mut session_group, _: *mut session);
-    pub fn session_group_synchronize_to(_: *mut session);
-    pub fn session_group_synchronize_from(_: *mut session);
-    pub fn session_group_count(_: *mut session_group) -> c_uint;
-    pub fn session_group_attached_count(_: *mut session_group) -> c_uint;
-    pub fn session_renumber_windows(_: *mut session);
-}
-/* utf8.c */
-unsafe extern "C" {
-    pub fn utf8_towc(_: *const utf8_data, _: *mut wchar_t) -> utf8_state;
-    pub fn utf8_fromwc(wc: wchar_t, _: *mut utf8_data) -> utf8_state;
-    pub fn utf8_in_table(_: wchar_t, _: *const wchar_t, _: c_uint) -> c_int;
-    pub fn utf8_build_one(_: c_uchar) -> utf8_char;
-    pub fn utf8_from_data(_: *const utf8_data, _: *mut utf8_char) -> utf8_state;
-    pub fn utf8_to_data(_: utf8_char, _: *mut utf8_data);
-    pub fn utf8_set(_: *mut utf8_data, _: c_uchar);
-    pub fn utf8_copy(_: *mut utf8_data, _: *const utf8_data);
-    pub fn utf8_open(_: *mut utf8_data, _: c_uchar) -> utf8_state;
-    pub fn utf8_append(_: *mut utf8_data, _: c_uchar) -> utf8_state;
-    pub fn utf8_isvalid(_: *const c_char) -> c_int;
-    pub fn utf8_strvis(_: *mut c_char, _: *const c_char, _: usize, _: c_int) -> c_int;
-    pub fn utf8_stravis(_: *mut *mut c_char, _: *const c_char, _: c_int) -> c_int;
-    pub fn utf8_stravisx(_: *mut *mut c_char, _: *const c_char, _: usize, _: c_int) -> c_int;
-    pub fn utf8_sanitize(_: *const c_char) -> *mut c_char;
-    pub fn utf8_strlen(_: *const utf8_data) -> usize;
-    pub fn utf8_strwidth(_: *const utf8_data, _: isize) -> c_uint;
-    pub fn utf8_fromcstr(_: *const c_char) -> *mut utf8_data;
-    pub fn utf8_tocstr(_: *mut utf8_data) -> *mut c_char;
-    pub fn utf8_cstrwidth(_: *const c_char) -> c_uint;
-    pub fn utf8_padcstr(_: *const c_char, _: c_uint) -> *mut c_char;
-    pub fn utf8_rpadcstr(_: *const c_char, _: c_uint) -> *mut c_char;
-    pub fn utf8_cstrhas(_: *const c_char, _: *const utf8_data) -> c_int;
-}
-/* osdep-*.c */
-unsafe extern "C" {
-    pub fn osdep_get_name(_: c_int, _: *mut c_char) -> *mut c_char;
-    pub fn osdep_get_cwd(_: c_int) -> *mut c_char;
-    pub fn osdep_event_init() -> *mut event_base;
-}
-/* utf8-combined.c */
-unsafe extern "C" {
-    pub fn utf8_has_zwj(_: *const utf8_data) -> c_int;
-    pub fn utf8_is_zwj(_: *const utf8_data) -> c_int;
-    pub fn utf8_is_vs(_: *const utf8_data) -> c_int;
-    pub fn utf8_is_modifier(_: *const utf8_data) -> c_int;
-}
-/* procname.c */
-unsafe extern "C" {
-    pub fn get_proc_name(_: c_int, _: *mut c_char) -> *mut c_char;
-    pub fn get_proc_cwd(_: c_int) -> *mut c_char;
-}
-/* log.c */
-unsafe extern "C" {
-    pub fn log_add_level();
-    pub fn log_get_level() -> c_int;
-    pub fn log_open(_: *const c_char);
-    pub fn log_toggle(_: *const c_char);
-    pub fn log_close();
-    pub fn log_debug(_: *const c_char, ...);
-    pub fn fatal(_: *const c_char, ...) -> !;
-    pub fn fatalx(_: *const c_char, ...) -> !;
-}
-/* menu.c */
-unsafe extern "C" {
-    pub fn menu_create(_: *const c_char) -> *mut menu;
-    pub fn menu_add_items(_: *mut menu, _: *const menu_item, _: *mut cmdq_item, _: *mut client, _: *mut cmd_find_state);
-    pub fn menu_add_item(_: *mut menu, _: *const menu_item, _: *mut cmdq_item, _: *mut client, _: *mut cmd_find_state);
-    pub fn menu_free(_: *mut menu);
-    pub fn menu_prepare(
-        _: *mut menu,
-        _: c_int,
-        _: c_int,
-        _: *mut cmdq_item,
-        _: c_uint,
-        _: c_uint,
-        _: *mut client,
-        _: box_lines,
-        _: *const c_char,
-        _: *const c_char,
-        _: *const c_char,
-        _: *mut cmd_find_state,
-        _: menu_choice_cb,
-        _: *mut c_void,
-    ) -> *mut menu_data;
-    pub fn menu_display(
-        _: *mut menu,
-        _: c_int,
-        _: c_int,
-        _: *mut cmdq_item,
-        _: c_uint,
-        _: c_uint,
-        _: *mut client,
-        _: box_lines,
-        _: *const c_char,
-        _: *const c_char,
-        _: *const c_char,
-        _: *mut cmd_find_state,
-        _: menu_choice_cb,
-        _: *mut c_void,
-    ) -> c_int;
-    pub fn menu_mode_cb(_: *mut client, _: *mut c_void, _: *mut c_uint, _: *mut c_uint) -> *mut screen;
-    pub fn menu_check_cb(_: *mut client, _: *mut c_void, _: c_uint, _: c_uint, _: c_uint, _: *mut overlay_ranges);
-    pub fn menu_draw_cb(_: *mut client, _: *mut c_void, _: *mut screen_redraw_ctx);
-    pub fn menu_free_cb(_: *mut client, _: *mut c_void);
-    pub fn menu_key_cb(_: *mut client, _: *mut c_void, _: *mut key_event) -> c_int;
-}
-/* popup.c */
-pub type popup_close_cb =
-    ::std::option::Option<unsafe extern "C" fn(_: ::std::os::raw::c_int, _: *mut ::std::os::raw::c_void)>;
-pub type popup_finish_edit_cb = ::std::option::Option<
-    unsafe extern "C" fn(_: *mut ::std::os::raw::c_char, _: usize, _: *mut ::std::os::raw::c_void),
->;
-unsafe extern "C" {
-    pub fn popup_display(
-        _: c_int,
-        _: box_lines,
-        _: *mut cmdq_item,
-        _: c_uint,
-        _: c_uint,
-        _: c_uint,
-        _: c_uint,
-        _: *mut environ,
-        _: *const c_char,
-        _: c_int,
-        _: *mut *mut c_char,
-        _: *const c_char,
-        _: *const c_char,
-        _: *mut client,
-        _: *mut session,
-        _: *const c_char,
-        _: *const c_char,
-        _: popup_close_cb,
-        _: *mut c_void,
-    ) -> c_int;
-    pub fn popup_editor(_: *mut client, _: *const c_char, _: usize, _: popup_finish_edit_cb, _: *mut c_void) -> c_int;
-}
-/* style.c */
-unsafe extern "C" {
-    pub fn style_parse(_: *mut style, _: *const grid_cell, _: *const c_char) -> c_int;
-    pub fn style_tostring(_: *mut style) -> *const c_char;
-    pub fn style_add(_: *mut grid_cell, _: *mut options, _: *const c_char, _: *mut format_tree);
-    pub fn style_apply(_: *mut grid_cell, _: *mut options, _: *const c_char, _: *mut format_tree);
-    pub fn style_set(_: *mut style, _: *const grid_cell);
-    pub fn style_copy(_: *mut style, _: *mut style);
-}
-/* spawn.c */
-unsafe extern "C" {
-    pub fn spawn_window(_: *mut spawn_context, _: *mut *mut c_char) -> *mut winlink;
-    pub fn spawn_pane(_: *mut spawn_context, _: *mut *mut c_char) -> *mut window_pane;
-}
-/* regsub.c */
-unsafe extern "C" {
-    pub fn regsub(_: *const c_char, _: *const c_char, _: *const c_char, _: c_int) -> *mut c_char;
-}
+
+mod log;
+pub use crate::log::{fatal, fatalx, log_add_level, log_close, log_debug, log_get_level, log_open, log_toggle};
+
+mod menu_;
+pub use crate::menu_::{
+    menu_add_item, menu_add_items, menu_check_cb, menu_create, menu_display, menu_draw_cb, menu_free, menu_free_cb,
+    menu_key_cb, menu_mode_cb, menu_prepare,
+};
+
+mod popup;
+pub use crate::popup::{popup_close_cb, popup_display, popup_editor, popup_finish_edit_cb};
+
+mod style_;
+pub use crate::style_::{style_add, style_apply, style_copy, style_parse, style_set, style_tostring};
+
+mod spawn;
+pub use crate::spawn::{spawn_pane, spawn_window};
+
+mod regsub;
+pub use crate::regsub::regsub;
+
 /* image.c */
 unsafe extern "C" {}
 /* image-sixel.c */
 unsafe extern "C" {}
-/* server-acl.c */
-opaque_types! {server_acl_user}
-unsafe extern "C" {
-    pub fn server_acl_init();
-    pub fn server_acl_user_find(_: uid_t) -> *mut server_acl_user;
-    pub fn server_acl_display(_: *mut cmdq_item);
-    pub fn server_acl_user_allow(_: uid_t);
-    pub fn server_acl_user_deny(_: uid_t);
-    pub fn server_acl_user_allow_write(_: uid_t);
-    pub fn server_acl_user_deny_write(_: uid_t);
-    pub fn server_acl_join(_: *mut client) -> c_int;
-    pub fn server_acl_get_uid(_: *mut server_acl_user) -> uid_t;
-}
-/* hyperlink.c */
-unsafe extern "C" {
-    pub fn hyperlinks_put(_: *mut hyperlinks, _: *const c_char, _: *const c_char) -> c_uint;
-    pub fn hyperlinks_get(
-        _: *mut hyperlinks,
-        _: c_uint,
-        _: *mut *const c_char,
-        _: *mut *const c_char,
-        _: *mut *const c_char,
-    ) -> c_int;
-    pub fn hyperlinks_init() -> *mut hyperlinks;
-    pub fn hyperlinks_copy(_: *mut hyperlinks) -> *mut hyperlinks;
-    pub fn hyperlinks_reset(_: *mut hyperlinks);
-    pub fn hyperlinks_free(_: *mut hyperlinks);
-}
+
+mod server_acl;
+pub use crate::server_acl::{
+    server_acl_display, server_acl_get_uid, server_acl_init, server_acl_join, server_acl_user_allow,
+    server_acl_user_allow_write, server_acl_user_deny, server_acl_user_deny_write, server_acl_user_find,
+};
+
+mod hyperlinks_;
+pub use crate::hyperlinks_::{
+    hyperlinks_copy, hyperlinks_free, hyperlinks_get, hyperlinks_init, hyperlinks_put, hyperlinks_reset,
+};
