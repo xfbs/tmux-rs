@@ -2,6 +2,7 @@ use libc::{strcasecmp, strchr, strcspn, strlen, strncasecmp, strspn};
 
 use super::*;
 
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn attributes_tostring(attr: c_int) -> *const c_char {
     type buffer = [c_char; 512];
     static mut buf: buffer = unsafe { zeroed() };
@@ -16,20 +17,20 @@ pub unsafe extern "C" fn attributes_tostring(attr: c_int) -> *const c_char {
             &raw mut buf as _,
             size_of::<buffer>(),
             c"%s%s%s%s%s%s%s%s%s%s%s%s%s%s".as_ptr(),
-            if attr & GRID_ATTR_CHARSET != 0 { "acs," } else { "" },
-            if attr & GRID_ATTR_BRIGHT != 0 { "bright," } else { "" },
-            if attr & GRID_ATTR_DIM != 0 { "dim," } else { "" },
-            if attr & GRID_ATTR_UNDERSCORE != 0 { "underscore," } else { "" },
-            if attr & GRID_ATTR_BLINK != 0 { "blink," } else { "" },
-            if attr & GRID_ATTR_REVERSE != 0 { "reverse," } else { "" },
-            if attr & GRID_ATTR_HIDDEN != 0 { "hidden," } else { "" },
-            if attr & GRID_ATTR_ITALICS != 0 { "italics," } else { "" },
-            if attr & GRID_ATTR_STRIKETHROUGH != 0 { "strikethrough," } else { "" },
-            if attr & GRID_ATTR_UNDERSCORE_2 != 0 { "double-underscore," } else { "" },
-            if attr & GRID_ATTR_UNDERSCORE_3 != 0 { "curly-underscore," } else { "" },
-            if attr & GRID_ATTR_UNDERSCORE_4 != 0 { "dotted-underscore," } else { "" },
-            if attr & GRID_ATTR_UNDERSCORE_5 != 0 { "dashed-underscore," } else { "" },
-            if attr & GRID_ATTR_OVERLINE != 0 { "overline," } else { "" },
+            if attr & GRID_ATTR_CHARSET != 0 { c"acs,".as_ptr() } else { c"".as_ptr() },
+            if attr & GRID_ATTR_BRIGHT != 0 { c"bright,".as_ptr() } else { c"".as_ptr() },
+            if attr & GRID_ATTR_DIM != 0 { c"dim,".as_ptr() } else { c"".as_ptr() },
+            if attr & GRID_ATTR_UNDERSCORE != 0 { c"underscore,".as_ptr() } else { c"".as_ptr() },
+            if attr & GRID_ATTR_BLINK != 0 { c"blink,".as_ptr() } else { c"".as_ptr() },
+            if attr & GRID_ATTR_REVERSE != 0 { c"reverse,".as_ptr() } else { c"".as_ptr() },
+            if attr & GRID_ATTR_HIDDEN != 0 { c"hidden,".as_ptr() } else { c"".as_ptr() },
+            if attr & GRID_ATTR_ITALICS != 0 { c"italics,".as_ptr() } else { c"".as_ptr() },
+            if attr & GRID_ATTR_STRIKETHROUGH != 0 { c"strikethrough,".as_ptr() } else { c"".as_ptr() },
+            if attr & GRID_ATTR_UNDERSCORE_2 != 0 { c"double-underscore,".as_ptr() } else { c"".as_ptr() },
+            if attr & GRID_ATTR_UNDERSCORE_3 != 0 { c"curly-underscore,".as_ptr() } else { c"".as_ptr() },
+            if attr & GRID_ATTR_UNDERSCORE_4 != 0 { c"dotted-underscore,".as_ptr() } else { c"".as_ptr() },
+            if attr & GRID_ATTR_UNDERSCORE_5 != 0 { c"dashed-underscore,".as_ptr() } else { c"".as_ptr() },
+            if attr & GRID_ATTR_OVERLINE != 0 { c"overline,".as_ptr() } else { c"".as_ptr() },
         ) as isize;
         if len > 0 {
             buf[len as usize - 1] = b'\0' as c_char;
@@ -39,6 +40,7 @@ pub unsafe extern "C" fn attributes_tostring(attr: c_int) -> *const c_char {
     }
 }
 
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn attributes_fromstring(mut str: *const c_char) -> c_int {
     struct table_entry {
         name: *const c_char,

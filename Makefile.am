@@ -67,11 +67,11 @@ AM_CPPFLAGS += -D_BSD_SOURCE
 endif
 
 # List of sources.
+# attributes.c
 # alerts.c
 # server.c
 dist_tmux_SOURCES = \
 	arguments.c \
-	attributes.c \
 	cfg.c \
 	client.c \
 	cmd-attach-session.c \
