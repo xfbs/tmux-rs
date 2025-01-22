@@ -141,6 +141,7 @@ macro_rules! tailq_remove {
 }
 pub use tailq_remove;
 
+#[inline]
 pub unsafe fn tailq_foreach<F, T, B>(head: *mut tailq_head<T>, mut f: F) -> std::ops::ControlFlow<B>
 where
     F: FnMut(*mut T) -> std::ops::ControlFlow<B>,
@@ -159,6 +160,7 @@ where
 }
 
 // need to store next before calling func so can be used for deallocation
+#[inline]
 pub unsafe fn tailq_foreach_safe<F, T, B>(head: *mut tailq_head<T>, mut f: F) -> std::ops::ControlFlow<B>
 where
     F: FnMut(*mut T) -> std::ops::ControlFlow<B>,

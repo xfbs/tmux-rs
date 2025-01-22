@@ -5,18 +5,12 @@ edition = "2021"
 
 [dependencies]
 bsd-sys          = { path = "../bsd-sys" }
+compat_derive    = { path = "../compat_derive" }
+
 libc             = "0.2"
 libevent-sys     = "=0.3.0"
 log              = "0.4.22"
-paste = "1.0.15"
+paste            = "1.0.15"
 
-[lints.rust]
-non_camel_case_types = "allow"
-non_snake_case       = "allow"
-unused               = "allow"
-
-[lints.clippy]
-missing_safety_doc   = "allow"
-needless_return      = "allow"
-non_camel_case_types = "allow"
-zero_ptr             = "allow"
+[lints]
+workspace = true

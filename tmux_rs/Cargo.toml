@@ -16,3 +16,6 @@ paste = { version = "1.0.15" }
 systemd = []
 sixel = []
 utempter = []
+
+[lints]
+workspace = true

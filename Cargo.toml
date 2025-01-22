@@ -1,9 +1,26 @@
 [workspace]
-members = ["compat_rs", "bsd-sys", "tmux_rs"]
+members = ["compat_rs", "bsd-sys", "tmux_rs", "compat_derive"]
 resolver = "2"
 
 [profile.release]
 debug = true
+panic = "abort"
 
 [workspace.dependencies]
 libc = { version = "0.2.169" }
+
+[workspace.lints.rust]
+non_camel_case_types   = "allow"
+non_snake_case         = "allow"
+non_upper_case_globals = "allow"
+private_interfaces     = "allow"
+unused                 = "allow"
+
+[workspace.lints.clippy]
+collapsible_if        = "allow"
+manual_range_contains = "allow"
+missing_safety_doc    = "allow"
+needless_return       = "allow"
+new_without_default   = "allow"
+non_camel_case_types  = "allow"
+zero_ptr              = "allow"

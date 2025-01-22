@@ -1,11 +1,4 @@
 #![feature(c_variadic)]
-#![allow(private_interfaces)]
-#![allow(clippy::manual_range_contains)]
-#![allow(clippy::missing_safety_doc)]
-#![allow(clippy::new_without_default)]
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
-#![allow(non_upper_case_globals)]
 
 pub mod cmd_bind_key;
 pub mod cmd_break_pane;
@@ -98,8 +91,11 @@ pub use libc::{FILE, REG_EXTENDED, REG_ICASE, pid_t, termios, time_t, timeval, u
 pub use crate::event_::{EVBUFFER_DATA, EVBUFFER_LENGTH, evtimer_add, evtimer_set};
 pub use libevent_sys::{bufferevent, evbuffer, evbuffer_get_length, evbuffer_pullup, event, event_base};
 
-use compat_rs::queue::{Entry, list_entry, list_head, tailq_entry, tailq_head};
 use compat_rs::tree::{rb_entry, rb_head};
+use compat_rs::{
+    queue::{Entry, list_entry, list_head, tailq_entry, tailq_head},
+    tree::GetEntry,
+};
 
 // use crate::tmux_protocol_h::*;
 
@@ -127,6 +123,7 @@ macro_rules! opaque_types {
 opaque_types! {
     args,
     args_command_state,
+    args_entry,
     cmd,
     cmdq_item,
     cmdq_list,
@@ -1012,7 +1009,7 @@ pub struct window_mode {
 
 // Active window mode.
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, compat_rs::TailQEntry)]
 pub struct window_mode_entry {
     pub wp: *mut window_pane,
     pub swp: *mut window_pane,
@@ -1023,12 +1020,8 @@ pub struct window_mode_entry {
     pub screen: *mut screen,
     pub prefix: u32,
 
+    #[entry]
     pub entry: tailq_entry<window_mode_entry>,
-}
-impl Entry<window_mode_entry> for window_mode_entry {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<window_mode_entry> {
-        unsafe { &raw mut (*this).entry }
-    }
 }
 
 /// Offsets into pane buffer.
@@ -1040,7 +1033,7 @@ pub struct window_pane_offset {
 
 /// Queued pane resize.
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, compat_rs::TailQEntry)]
 pub struct window_pane_resize {
     pub sx: u32,
     pub sy: u32,
@@ -1048,14 +1041,10 @@ pub struct window_pane_resize {
     pub osx: u32,
     pub osy: u32,
 
+    #[entry]
     pub entry: tailq_entry<window_pane_resize>,
 }
 pub type window_pane_resizes = tailq_head<window_pane_resize>;
-impl Entry<window_pane_resize> for window_pane_resize {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<window_pane_resize> {
-        unsafe { &raw mut (*this).entry }
-    }
-}
 
 pub const PANE_REDRAW: i32 = 0x1;
 pub const PANE_DROP: i32 = 0x2;
@@ -1418,6 +1407,20 @@ pub struct session {
 }
 pub type sessions = rb_head<session>;
 
+impl GetEntry<session> for session {
+    fn entry_mut(this: *mut Self) -> *mut rb_entry<session> {
+        unsafe { &raw mut (*this).entry }
+    }
+
+    fn entry(this: *const Self) -> *const rb_entry<session> {
+        unsafe { &raw const (*this).entry }
+    }
+
+    unsafe fn cmp(this: *const Self, other: *const Self) -> i32 {
+        unsafe { libc::strcmp((*this).name, (*other).name) }
+    }
+}
+
 pub const MOUSE_MASK_BUTTONS: i32 = 195;
 pub const MOUSE_MASK_SHIFT: i32 = 4;
 pub const MOUSE_MASK_META: i32 = 8;
@@ -1653,11 +1656,13 @@ pub struct tty_ctx {
 
 // Saved message entry.
 #[repr(C)]
+#[derive(Copy, Clone, compat_rs::TailQEntry)]
 pub struct message_entry {
     pub msg: *mut c_char,
     pub msg_num: u32,
     pub msg_time: timeval,
 
+    #[entry]
     pub entry: tailq_entry<message_entry>,
 }
 pub type message_list = tailq_head<message_entry>;
@@ -1678,17 +1683,14 @@ pub union args_value_union {
 
 /// Argument value.
 #[repr(C)]
+#[derive(compat_rs::TailQEntry)]
 pub struct args_value {
     pub type_: args_type,
     pub args_value_union: args_value_union,
     pub cached: *mut c_char,
+    #[entry]
     pub entry: tailq_entry<args_value>,
 }
-
-opaque_types! {
-    args_entry
-}
-/// Arguments set.
 pub type args_tree = rb_head<args_entry>;
 
 /// Arguments parsing type.

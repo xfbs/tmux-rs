@@ -1,9 +1,5 @@
 #![allow(clippy::missing_safety_doc)]
 #![allow(non_upper_case_globals)]
-//
-// TODO
-// cleanup the extern usage
-//
 use ::core::{
     ffi::{VaList, c_char, c_int, c_long, c_longlong, c_void},
     ptr::null_mut,
@@ -14,17 +10,18 @@ use ::libc::{
     timeval,
 };
 
+use libevent_sys::event_set_log_callback;
+
+use crate::xmalloc::xasprintf;
+
 unsafe extern "C" {
-    fn vasprintf(_: *mut *mut c_char, _: *const c_char, _: VaList) -> c_int;
-    fn stravis(_: *mut *mut c_char, _: *const c_char, _: c_int) -> c_int;
-    fn xasprintf(_: *mut *mut c_char, _: *const c_char, _: ...) -> c_int;
-    fn event_set_log_callback(cb: Option<unsafe extern "C" fn(c_int, *const c_char)>);
+    // TODO remove the extern usage
+    unsafe fn vasprintf(_: *mut *mut c_char, _: *const c_char, _: VaList) -> c_int;
+    unsafe fn stravis(_: *mut *mut c_char, _: *const c_char, _: c_int) -> c_int;
 }
 
 static mut log_file: *mut FILE = null_mut();
 static mut log_level: c_int = 0;
-
-// TODO log_event_cb
 
 unsafe extern "C" fn log_event_cb(_severity: c_int, msg: *const c_char) {
     unsafe { log_debug(c"%s".as_ptr(), msg) }

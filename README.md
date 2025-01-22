@@ -38,12 +38,25 @@ so it's easy to handle circular deps. I guess the problem is build system. It's 
 a single file partially implemented. each can be all or nothing
 
 
+One problem is translation has to occur at the file level. Requiring porting to happen in such
+a way that there is a large amount of work in progress. Consider instead if it's possible to
+break it up at the function level for larger files. It would depend on the file and function,
+but I remove the function from the C file, but have it in the rust code so that there is no linking
+issue.
+
 # Steps
 
 1. Pick a C file to port
-2. Modify Makefile.am to remove the C file from sources list
-3. Re-implement c file in rust
-4. Change tmux_h/src/lib.rs to re-export rust definitions instead of using extern "C".
+  a. Pick a function to port
+  b. cut the function from the C file
+  c. paste into the rust file and translate from C to Rust
+2. Once all functions in a C file are ported, Modify Makefile.am to remove the C file from sources list
+
+
+## Tips
+
+- Picking a C file: Start with root files in the project. (files with no or few dependencies on the rest of the project)
+- You cannot link multiple static rust libraries (.a) into a single compilation artifact. There will be duplicate symbols.
 
 # Progress
 
@@ -51,8 +64,11 @@ Current status: building, but aborting immediately.
 
 # TODO
 - dump backtrace on abort
-- research extern c-unwind vs c
+- research extern c-unwind vs c: <https://rust-lang.github.io/rfcs/2945-c-unwind-abi.html>
+  - should I use c-unwind for all abi's?
 - run under miri
+- derive macro for rbtree and tailq
+- better rust format string style logging functions
 
 Next, need to remove todo calls causing crashes.
 
@@ -163,7 +179,7 @@ Next, need to remove todo calls causing crashes.
 - [ ] 2347 screen-write
 - [ ] 740 screen
 - [ ] 557 server
-    - [ ] implement TODO's
+    - [ ] implement 6/7 TODO's
 - [ ] 186 server-acl
 - [ ] 3392 server-client
 - [ ] 493 server-fn
@@ -229,3 +245,4 @@ undefined behaviour in this context.
 - [Porting C to Rust for a Fast and Safe AV1 Media Decoder](https://www.memorysafety.org/blog/porting-c-to-rust-for-av1/)
 - [Fish 4.0: The Fish Of Theseus](https://fishshell.com/blog/rustport/)
 - [Immunant's C2Rust tmux](https://github.com/immunant/tmux-rs)
+- [Improved C Variadics in Rust and C2Rust](https://immunant.com/blog/2019/09/variadics/)

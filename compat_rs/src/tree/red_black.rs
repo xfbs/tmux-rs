@@ -117,8 +117,8 @@ pub unsafe fn rb_root<T>(head: *mut rb_head<T>) -> *mut T {
     (*head).rbh_root
 }
 
-pub unsafe fn rb_empty<T>(head: rb_head<T>) -> bool {
-    head.rbh_root.is_null()
+pub unsafe fn rb_empty<T>(head: *mut rb_head<T>) -> bool {
+    (*head).rbh_root.is_null()
 }
 
 pub unsafe fn rb_set<T>(elm: *mut T, parent: *mut T)
@@ -390,6 +390,26 @@ where
         match f(x) {
             ControlFlow::Continue(cont) => {
                 x = rb_next(x);
+            }
+            ControlFlow::Break(brk) => return Some(brk),
+        }
+    }
+
+    None
+}
+
+pub unsafe fn rb_foreach_safe<F, T, C>(head: *mut rb_head<T>, mut f: F) -> Option<C>
+where
+    F: FnMut(*mut T) -> ControlFlow<C>,
+    T: GetEntry<T>,
+{
+    let mut x = rb_min(head);
+
+    while !x.is_null() {
+        let tmp = rb_next(x);
+        match f(x) {
+            ControlFlow::Continue(cont) => {
+                x = tmp;
             }
             ControlFlow::Break(brk) => return Some(brk),
         }

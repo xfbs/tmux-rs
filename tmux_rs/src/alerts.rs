@@ -82,7 +82,6 @@ pub unsafe extern "C" fn alerts_check_session(s: *mut session) {
     }
 }
 
-#[expect(clippy::collapsible_if)]
 pub unsafe fn alerts_enabled(w: *mut window, flags: c_int) -> c_int {
     unsafe {
         if flags & WINDOW_BELL != 0 {
@@ -174,7 +173,7 @@ unsafe fn alerts_check_bell(w: *mut window) -> c_int {
 
         tailq_foreach(&raw mut (*w).winlinks, |wl| {
             (*(*wl).session).flags &= !SESSION_ALERTED;
-            return ControlFlow::<(), ()>::Continue(());
+            ControlFlow::<(), ()>::Continue(())
         });
 
         // TODO for wentry, double check

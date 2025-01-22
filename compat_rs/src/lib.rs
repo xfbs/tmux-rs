@@ -1,5 +1,3 @@
-#![allow(non_camel_case_types)]
-#![allow(non_upper_case_globals)]
 pub mod fdforkpty;
 pub mod getdtablecount;
 pub mod imsg;
@@ -17,3 +15,9 @@ pub use bsd_sys::strlcpy;
 pub use bsd_sys::{bsd_getopt, optarg, optind, strtonum};
 
 pub const HOST_NAME_MAX: usize = 255;
+
+pub const WAIT_ANY: libc::pid_t = -1;
+
+pub const ACCESSPERMS: libc::mode_t = (libc::S_IRWXU | libc::S_IRWXG | libc::S_IRWXO);
+
+pub use compat_derive::TailQEntry;
