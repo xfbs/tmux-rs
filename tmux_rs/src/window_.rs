@@ -1787,10 +1787,7 @@ pub unsafe extern "C" fn window_pane_stack_remove(stack: *mut window_panes, wp: 
 pub unsafe extern "C" fn winlink_clear_flags(wl: *mut winlink) {
     unsafe {
         (*(*wl).window).flags &= !WINDOW_ALERTFLAGS;
-        // BIG TODO: wrong assumption was made before
-        // tailq_foreach needs to operate on wentry field here, not
-        // entry
-        tailq_foreach(&raw mut (*(*wl).window).winlinks, |loop_| {
+        tailq_foreach::<_, _, _, crate::wentry>(&raw mut (*(*wl).window).winlinks, |loop_| {
             if ((*loop_).flags & WINLINK_ALERTFLAGS) != 0 {
                 (*loop_).flags &= !WINLINK_ALERTFLAGS;
                 server_status_session((*loop_).session);

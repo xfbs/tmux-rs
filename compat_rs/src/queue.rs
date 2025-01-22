@@ -24,7 +24,7 @@ pub struct tailq_entry<T> {
     pub tqe_prev: *mut *mut T,
 }
 
-pub trait Entry<T> {
+pub trait Entry<T, Discriminant = ()> {
     unsafe fn entry(this: *mut Self) -> *mut tailq_entry<T>;
 }
 
@@ -44,9 +44,9 @@ pub unsafe fn tailq_end<T>(_head: *mut tailq_head<T>) -> *mut T {
     core::ptr::null_mut()
 }
 
-pub unsafe fn tailq_next<T, Q>(elm: *mut T) -> *mut Q
+pub unsafe fn tailq_next<T, Q, D>(elm: *mut T) -> *mut Q
 where
-    T: Entry<Q>,
+    T: Entry<Q, D>,
 {
     (*Entry::entry(elm)).tqe_next
 }
@@ -142,10 +142,10 @@ macro_rules! tailq_remove {
 pub use tailq_remove;
 
 #[inline]
-pub unsafe fn tailq_foreach<F, T, B>(head: *mut tailq_head<T>, mut f: F) -> std::ops::ControlFlow<B>
+pub unsafe fn tailq_foreach<F, T, B, D>(head: *mut tailq_head<T>, mut f: F) -> std::ops::ControlFlow<B>
 where
     F: FnMut(*mut T) -> std::ops::ControlFlow<B>,
-    T: Entry<T>,
+    T: Entry<T, D>,
 {
     let mut curr = tailq_first(head);
 
@@ -161,10 +161,10 @@ where
 
 // need to store next before calling func so can be used for deallocation
 #[inline]
-pub unsafe fn tailq_foreach_safe<F, T, B>(head: *mut tailq_head<T>, mut f: F) -> std::ops::ControlFlow<B>
+pub unsafe fn tailq_foreach_safe<F, T, B, D>(head: *mut tailq_head<T>, mut f: F) -> std::ops::ControlFlow<B>
 where
     F: FnMut(*mut T) -> std::ops::ControlFlow<B>,
-    T: Entry<T>,
+    T: Entry<T, D>,
 {
     let mut curr = tailq_first(head);
 

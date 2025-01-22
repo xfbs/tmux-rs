@@ -12,7 +12,7 @@ libc = { version = "0.2.169" }
 [workspace.lints.rust]
 non_camel_case_types   = "allow"
 non_snake_case         = "allow"
-non_upper_case_globals = "allow"
+non_upper_case_globals = "allow" # warning still shows in rust-analyzer. bug: <https://github.com/rust-lang/rust-analyzer/issues/15344>
 private_interfaces     = "allow"
 unused                 = "allow"
 
@@ -22,5 +22,4 @@ manual_range_contains = "allow"
 missing_safety_doc    = "allow"
 needless_return       = "allow"
 new_without_default   = "allow"
-non_camel_case_types  = "allow"
 zero_ptr              = "allow"

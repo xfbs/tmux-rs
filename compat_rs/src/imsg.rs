@@ -98,7 +98,7 @@ pub unsafe extern "C" fn imsg_init(imsgbuf: *mut imsgbuf, fd: c_int) {
 pub unsafe extern "C" fn imsg_read(imsgbuf: *mut imsgbuf) -> isize {
     union cmsgbuf {
         hdr: cmsghdr,
-        buf: [c_uchar; unsafe { libc::CMSG_SPACE(size_of::<c_int>() as u32 * 1) } as usize],
+        buf: [c_uchar; unsafe { libc::CMSG_SPACE(size_of::<c_int>() as u32) } as usize],
     };
     let n: isize = -1;
     let fd: i32;

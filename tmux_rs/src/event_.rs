@@ -17,7 +17,10 @@ pub unsafe fn evtimer_set(
 // #define evtimer_add(ev, tv)		event_add((ev), (tv))
 pub unsafe fn evtimer_add(ev: *mut event, tv: *const libc::timeval) {
     unsafe {
-        libevent_sys::event_add(ev, core::mem::transmute(tv));
+        libevent_sys::event_add(
+            ev,
+            core::mem::transmute::<*const libc::timeval, *const libevent_sys::timeval>(tv),
+        );
     }
 }
 

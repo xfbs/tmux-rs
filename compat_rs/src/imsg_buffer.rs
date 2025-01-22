@@ -147,11 +147,7 @@ pub unsafe extern "C" fn ibuf_add_n32(buf: *mut ibuf, value: u64) -> c_int {
 }
 #[no_mangle]
 pub unsafe extern "C" fn ibuf_add_n64(buf: *mut ibuf, value: u64) -> c_int {
-    if value > u64::MAX as u64 {
-        *libc::__errno_location() = libc::EINVAL;
-        return -1;
-    }
-    let v = (value as u64).to_be();
+    let v = value.to_be();
     ibuf_add(buf, &raw const v as _, size_of::<u64>())
 }
 #[no_mangle]
@@ -235,7 +231,7 @@ pub unsafe extern "C" fn ibuf_set_n32(buf: *mut ibuf, pos: usize, value: u64) ->
 }
 #[no_mangle]
 pub unsafe extern "C" fn ibuf_set_n64(buf: *mut ibuf, pos: usize, value: u64) -> c_int {
-    let v = u64::to_be(value as u64);
+    let v = u64::to_be(value);
     ibuf_set(buf, pos, &raw const v as *const c_void, size_of::<u64>())
 }
 #[no_mangle]

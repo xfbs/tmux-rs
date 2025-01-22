@@ -1141,21 +1141,8 @@ impl Entry<window_pane> for window_pane {
     }
 }
 impl compat_rs::tree::GetEntry<window_pane> for window_pane {
-    fn entry_mut(this: *mut Self) -> *mut rb_entry<window_pane> {
-        // <https://github.com/rust-lang/rust/pull/129248#issue-2472094687>
-        #![expect(
-            clippy::not_unsafe_ptr_arg_deref,
-            reason = "false positive. no load occurs. see: https://www.ralfj.de/blog/2024/08/14/places.html"
-        )]
+    unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<window_pane> {
         unsafe { &raw mut (*this).tree_entry }
-    }
-
-    fn entry(this: *const Self) -> *const rb_entry<window_pane> {
-        #![expect(
-            clippy::not_unsafe_ptr_arg_deref,
-            reason = "false positive. no load occurs. see: https://www.ralfj.de/blog/2024/08/14/places.html"
-        )]
-        unsafe { &raw const (*this).tree_entry }
     }
 
     unsafe fn cmp(this: *const Self, other: *const Self) -> i32 {
@@ -1228,20 +1215,8 @@ pub type windows = rb_head<window>;
 compat_rs::impl_rb_tree_protos!(windows, window);
 
 impl compat_rs::tree::GetEntry<window> for window {
-    fn entry_mut(this: *mut Self) -> *mut rb_entry<window> {
-        #![expect(
-            clippy::not_unsafe_ptr_arg_deref,
-            reason = "false positive. no load occurs. see: https://www.ralfj.de/blog/2024/08/14/places.html"
-        )]
+    unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<window> {
         unsafe { &raw mut (*this).entry }
-    }
-
-    fn entry(this: *const Self) -> *const rb_entry<window> {
-        #![expect(
-            clippy::not_unsafe_ptr_arg_deref,
-            reason = "false positive. no load occurs. see: https://www.ralfj.de/blog/2024/08/14/places.html"
-        )]
-        unsafe { &raw const (*this).entry }
     }
 
     unsafe fn cmp(this: *const Self, other: *const Self) -> i32 {
@@ -1270,27 +1245,23 @@ pub struct winlink {
     pub sentry: tailq_entry<winlink>,
 }
 
-impl compat_rs::queue::Entry<winlink> for winlink {
+pub struct wentry;
+impl compat_rs::queue::Entry<winlink, wentry> for winlink {
     unsafe fn entry(this: *mut Self) -> *mut tailq_entry<winlink> {
         unsafe { &raw mut (*this).wentry }
     }
 }
 
-impl compat_rs::tree::GetEntry<winlink> for winlink {
-    fn entry_mut(this: *mut Self) -> *mut rb_entry<winlink> {
-        #![expect(
-            clippy::not_unsafe_ptr_arg_deref,
-            reason = "false positive. no load occurs. see: https://www.ralfj.de/blog/2024/08/14/places.html"
-        )]
-        unsafe { &raw mut (*this).entry }
+pub struct sentry;
+impl compat_rs::queue::Entry<winlink, sentry> for winlink {
+    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<winlink> {
+        unsafe { &raw mut (*this).sentry }
     }
+}
 
-    fn entry(this: *const Self) -> *const rb_entry<winlink> {
-        #![expect(
-            clippy::not_unsafe_ptr_arg_deref,
-            reason = "false positive. no load occurs. see: https://www.ralfj.de/blog/2024/08/14/places.html"
-        )]
-        unsafe { &raw const (*this).entry }
+impl compat_rs::tree::GetEntry<winlink> for winlink {
+    unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<winlink> {
+        unsafe { &raw mut (*this).entry }
     }
 
     unsafe fn cmp(this: *const Self, other: *const Self) -> i32 {
@@ -1408,12 +1379,8 @@ pub struct session {
 pub type sessions = rb_head<session>;
 
 impl GetEntry<session> for session {
-    fn entry_mut(this: *mut Self) -> *mut rb_entry<session> {
+    unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<session> {
         unsafe { &raw mut (*this).entry }
-    }
-
-    fn entry(this: *const Self) -> *const rb_entry<session> {
-        unsafe { &raw const (*this).entry }
     }
 
     unsafe fn cmp(this: *const Self, other: *const Self) -> i32 {

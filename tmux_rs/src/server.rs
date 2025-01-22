@@ -284,15 +284,16 @@ unsafe extern "C" fn server_loop() -> i32 {
             }
         }
 
-        match tailq_foreach(&raw mut clients, |c| {
+        if tailq_foreach(&raw mut clients, |c| {
             if !(*c).session.is_null() {
-                return ControlFlow::Break(0);
+                return ControlFlow::Break(());
             }
             ControlFlow::Continue(())
-        }) {
-            ControlFlow::Break(value) => return value,
-            _ => (),
-        };
+        })
+        .is_break()
+        {
+            return 0;
+        }
 
         /*
          * No attached clients therefore want to exit - flush any waiting

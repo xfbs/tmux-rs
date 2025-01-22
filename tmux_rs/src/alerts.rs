@@ -171,13 +171,12 @@ unsafe fn alerts_check_bell(w: *mut window) -> c_int {
             return 0;
         }
 
-        tailq_foreach(&raw mut (*w).winlinks, |wl| {
+        tailq_foreach::<_, _, _, crate::wentry>(&raw mut (*w).winlinks, |wl| {
             (*(*wl).session).flags &= !SESSION_ALERTED;
             ControlFlow::<(), ()>::Continue(())
         });
 
-        // TODO for wentry, double check
-        tailq_foreach(&raw mut (*w).winlinks, |wl| {
+        tailq_foreach::<_, _, _, crate::wentry>(&raw mut (*w).winlinks, |wl| {
             /*
              * Bells are allowed even if there is an existing bell (so do
              * not check WINLINK_BELL).
@@ -213,13 +212,12 @@ unsafe fn alerts_check_activity(w: *mut window) -> c_int {
             return 0;
         }
 
-        tailq_foreach(&raw mut (*w).winlinks, |wl| {
+        tailq_foreach::<_, _, _, crate::wentry>(&raw mut (*w).winlinks, |wl| {
             (*(*wl).session).flags &= !SESSION_ALERTED;
             ControlFlow::<(), ()>::Continue(())
         });
 
-        // TODO for wentry, double check
-        tailq_foreach(&raw mut (*w).winlinks, |wl| {
+        tailq_foreach::<_, _, _, crate::wentry>(&raw mut (*w).winlinks, |wl| {
             let s = (*wl).session;
             if (*s).curw != wl || (*s).attached == 0 {
                 (*wl).flags |= WINLINK_ACTIVITY;
@@ -251,12 +249,12 @@ unsafe fn alerts_check_silence(w: *mut window) -> c_int {
             return 0;
         }
 
-        tailq_foreach(&raw mut (*w).winlinks, |wl| {
+        tailq_foreach::<_, _, _, crate::wentry>(&raw mut (*w).winlinks, |wl| {
             (*(*wl).session).flags &= !SESSION_ALERTED;
             ControlFlow::Continue::<(), ()>(())
         });
 
-        tailq_foreach(&raw mut (*w).winlinks, |wl| {
+        tailq_foreach::<_, _, _, crate::wentry>(&raw mut (*w).winlinks, |wl| {
             if (*wl).flags & WINLINK_SILENCE != 0 {
                 return ControlFlow::Continue::<(), ()>(());
             }

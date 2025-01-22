@@ -63,6 +63,8 @@ issue.
 Current status: building, but aborting immediately.
 
 # TODO
+- fix problem with tailqentry on winlink
+  - basically trait needs two implementations
 - dump backtrace on abort
 - research extern c-unwind vs c: <https://rust-lang.github.io/rfcs/2945-c-unwind-abi.html>
   - should I use c-unwind for all abi's?
