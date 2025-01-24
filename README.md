@@ -50,7 +50,9 @@ issue.
   a. Pick a function to port
   b. cut the function from the C file
   c. paste into the rust file and translate from C to Rust
-2. Once all functions in a C file are ported, Modify Makefile.am to remove the C file from sources list
+2. Once all functions in a C file are ported
+  a. Modify Makefile.am to remove the C file from sources list
+  b. run `sh autogen.sh && ./configure` to regenerate Makefile
 
 
 ## Tips
@@ -60,19 +62,55 @@ issue.
 
 # Progress
 
-Current status: building, but aborting immediately.
+Current status: crashes / hanging
+
+process is hanging, probably should try backing out server.rs for server.c
+and see if that makes it functional.
+
+It doesn't.
+
+need to be able to get some more useful information when.
+more then just server exited unexpectedly.
+- figure out debug logs
+- figure out abort / panic logs
+
+- try backing out each change and see if it runs
+- i feel like it's probably something related to the rbtree or queue
+
 
 # TODO
-- fix problem with tailqentry on winlink
-  - basically trait needs two implementations
 - dump backtrace on abort
-- research extern c-unwind vs c: <https://rust-lang.github.io/rfcs/2945-c-unwind-abi.html>
-  - should I use c-unwind for all abi's?
+  - gdb break
+    - client_main
+    - client_connect
+    - server_start
+    - proc_fork_and_daemon
+    - proc loop server loop
+
+  - modify build to include C debug symbols
+  - research extern c-unwind vs c: <https://rust-lang.github.io/rfcs/2945-c-unwind-abi.html>
+    - should I use c-unwind for all abi's?
 - run under miri
-- derive macro for rbtree and tailq
 - better rust format string style logging functions
+- tailq and rbtree
+  - recheck all tailq, and rbtree structs for multiple links.
+  - derive macro for rbtree and tailq
+    - tailq support new generic type discriminant
 
 Next, need to remove todo calls causing crashes.
+
+maybe it's just todo's in tree
+
+alerts.c
+xmalloc.c
+attributes.c
+cmd-kill-server.c
+log.c
+----
+
+Okay so the problem is either in window.c translation or on some of the macros in `tmux_rs/src/lib.rs`.
+
+things to correct, convert tailq macros to generics.
 
 - [ ] 325 alert
   - [ ] implement TODO's
@@ -237,6 +275,10 @@ Rust has no such operator and pointers don't implement deref, so they must be tr
 For a bit, I thought I could implement by own smart pointer type which wrapped a `*mut T` or `NonNull` and also
 implemented DerefMut. Unfortunately doing this requires that you can create a `&mut T` which would likely invoke
 undefined behaviour in this context.
+
+## Translation Bugs
+
+- Incorrect do while translation
 
 # References
 

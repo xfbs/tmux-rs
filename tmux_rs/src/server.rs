@@ -86,12 +86,14 @@ pub unsafe extern "C" fn server_create_socket(flags: u64, cause: *mut *mut c_cha
             if size >= size_of_val(&sa.sun_path) {
                 *__errno_location() = libc::ENAMETOOLONG;
                 // goto fail;
+                break 'fail;
             }
             unlink(sa.sun_path.as_ptr());
 
             let fd = socket(AF_UNIX, SOCK_STREAM, 0);
             if fd == -1 {
                 // goto fail;
+                break 'fail;
             }
 
             let mask = if flags & CLIENT_DEFAULTSOCKET != 0 {
@@ -255,7 +257,8 @@ pub unsafe extern "C" fn server_start(
     }
 }
 
-unsafe extern "C" fn server_loop() -> i32 {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn server_loop() -> i32 {
     unsafe {
         current_time = libc::time(null_mut());
 
@@ -267,7 +270,8 @@ unsafe extern "C" fn server_loop() -> i32 {
                 }
                 ControlFlow::Continue::<(), ()>(())
             });
-            if items != 0 {
+
+            if items == 0 {
                 break;
             }
         }

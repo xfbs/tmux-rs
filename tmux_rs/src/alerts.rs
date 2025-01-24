@@ -23,32 +23,24 @@ unsafe extern "C" fn alerts_timer(_fd: i32, _events: i16, arg: *mut c_void) {
 }
 
 pub unsafe extern "C" fn alerts_callback(_fd: c_int, _events: c_short, arg: *mut c_void) {
-    let mut alerts: i32;
-
     unsafe {
-        // TODO window has 2 tailq so need to modify how tailq
-        // trait is used to support making use of both with
-        // generics
-        /*
-                tailq_foreach_safe(&raw mut alerts_list, |w| {
-                    unsafe {
-                        alerts = alerts_check_all(w as _);
+        tailq_foreach_safe::<_, _, _, crate::alerts_entry>(&raw mut alerts_list, |w| {
+            unsafe {
+                let alerts = alerts_check_all(w);
 
-                        log_debug(c"@%u alerts check, alerts %#x".as_ptr(), (*w).id, alerts);
+                log_debug(c"@%u alerts check, alerts %#x".as_ptr(), (*w).id, alerts);
 
-                        (*w).alerts_queued = 0;
-                        tailq_remove!(&raw mut alerts_list, w, alerts_entry);
+                (*w).alerts_queued = 0;
+                tailq_remove::<_, crate::alerts_entry>(&raw mut alerts_list, w);
 
-                        (*w).flags &= !WINDOW_ALERTFLAGS;
-                        window_remove_ref(w, c"alerts_callback".as_ptr());
-                    }
+                (*w).flags &= !WINDOW_ALERTFLAGS;
+                window_remove_ref(w, c"alerts_callback".as_ptr());
+            }
 
-                    ControlFlow::Continue::<(), ()>(())
-                });
-        */
+            ControlFlow::Continue::<(), ()>(())
+        });
         alerts_fired = 0;
     }
-    todo!()
 }
 
 pub unsafe fn alerts_action_applies(wl: *mut winlink, name: *const c_char) -> c_int {

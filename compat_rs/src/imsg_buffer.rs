@@ -565,7 +565,7 @@ unsafe fn ibuf_enqueue(msgbuf: *mut msgbuf, buf: *mut ibuf) {
 }
 
 unsafe fn ibuf_dequeue(msgbuf: *mut msgbuf, buf: *mut ibuf) {
-    tailq_remove!(&raw mut (*msgbuf).bufs, buf, entry);
+    tailq_remove(&raw mut (*msgbuf).bufs, buf);
     (*msgbuf).queued -= 1;
     ibuf_free(buf);
 }

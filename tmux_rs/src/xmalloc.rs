@@ -7,11 +7,7 @@ use libc::{__errno_location, calloc, malloc, reallocarray, strdup, strerror, str
 
 use compat_rs::recallocarray;
 
-unsafe extern "C" {
-    fn vsnprintf(_: *mut c_char, _: usize, _: *const c_char, _: VaList) -> c_int;
-    fn vasprintf(_: *mut *mut c_char, _: *const c_char, _: VaList) -> c_int;
-    fn fatalx(_: *const c_char, _: ...) -> !;
-}
+use crate::{fatalx, vasprintf, vsnprintf};
 
 #[unsafe(no_mangle)]
 pub extern "C" fn xmalloc(size: usize) -> NonNull<c_void> {

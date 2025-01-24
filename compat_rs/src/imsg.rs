@@ -27,7 +27,7 @@ pub struct ibuf {
 
 impl Entry<ibuf> for ibuf {
     unsafe fn entry(this: *mut Self) -> *mut tailq_entry<ibuf> {
-        &raw mut (*this).entry
+        unsafe { &raw mut (*this).entry }
     }
 }
 
@@ -80,6 +80,12 @@ pub struct imsg {
 pub struct imsg_fd {
     entry: tailq_entry<imsg_fd>,
     fd: i32,
+}
+
+impl crate::queue::Entry<imsg_fd> for imsg_fd {
+    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<imsg_fd> {
+        unsafe { &raw mut (*this).entry }
+    }
 }
 
 static imsg_fd_overhead: i32 = 0;
@@ -494,7 +500,7 @@ unsafe extern "C" fn imsg_dequeue_fd(imsgbuf: *mut imsgbuf) -> i32 {
     }
 
     let fd = (*ifd).fd;
-    tailq_remove!(&raw mut (*imsgbuf).fds, ifd, entry);
+    tailq_remove(&raw mut (*imsgbuf).fds, ifd);
     libc::free(ifd as *mut c_void);
 
     fd

@@ -128,18 +128,17 @@ macro_rules! tailq_insert_before {
 }
 pub use tailq_insert_before;
 
-#[macro_export]
-macro_rules! tailq_remove {
-    ($head:expr, $elm:ident, $field:ident) => {
-        if !((*$elm).$field.tqe_next).is_null() {
-            (*(*$elm).$field.tqe_next).$field.tqe_prev = (*$elm).$field.tqe_prev;
-        } else {
-            (*$head).tqh_last = (*$elm).$field.tqe_prev;
-        }
-        *(*$elm).$field.tqe_prev = (*$elm).$field.tqe_next;
-    };
+pub unsafe fn tailq_remove<T, D>(head: *mut tailq_head<T>, elm: *mut T)
+where
+    T: Entry<T, D>,
+{
+    if !(*Entry::<_, D>::entry(elm)).tqe_next.is_null() {
+        (*Entry::<_, D>::entry((*Entry::<_, D>::entry(elm)).tqe_next)).tqe_prev = (*Entry::<_, D>::entry(elm)).tqe_prev;
+    } else {
+        (*head).tqh_last = (*Entry::<_, D>::entry(elm)).tqe_prev;
+    }
+    *(*Entry::<_, D>::entry(elm)).tqe_prev = (*Entry::<_, D>::entry(elm)).tqe_next;
 }
-pub use tailq_remove;
 
 #[inline]
 pub unsafe fn tailq_foreach<F, T, B, D>(head: *mut tailq_head<T>, mut f: F) -> std::ops::ControlFlow<B>
@@ -159,7 +158,6 @@ where
     ControlFlow::Continue(())
 }
 
-// need to store next before calling func so can be used for deallocation
 #[inline]
 pub unsafe fn tailq_foreach_safe<F, T, B, D>(head: *mut tailq_head<T>, mut f: F) -> std::ops::ControlFlow<B>
 where

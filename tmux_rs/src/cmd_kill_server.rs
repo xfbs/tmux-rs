@@ -1,15 +1,15 @@
+use core::ptr::null;
+
 use libc::{SIGTERM, getpid, kill};
 
-use crate::{CMD_STARTSERVER, args_parse, cmd, cmd_entry, cmd_entry_flag, cmd_find_type, cmd_retval, cmdq_item};
-
-unsafe extern "C" {
-    fn cmd_get_entry(_: *mut cmd) -> *const cmd_entry;
-}
+use crate::{
+    CMD_STARTSERVER, args_parse, cmd, cmd_entry, cmd_entry_flag, cmd_find_type, cmd_get_entry, cmd_retval, cmdq_item,
+};
 
 #[unsafe(no_mangle)]
 pub static mut cmd_kill_server_entry: cmd_entry = cmd_entry {
     name: c"kill-server".as_ptr(),
-    alias: std::ptr::null(),
+    alias: null(),
     args: args_parse {
         template: c"".as_ptr(),
         lower: 0,

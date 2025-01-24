@@ -24,7 +24,7 @@ enum rb_color {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Debug)]
 pub struct rb_entry<T> {
     pub rbe_left: *mut T,
     pub rbe_right: *mut T,
@@ -39,6 +39,16 @@ impl<T> Default for rb_entry<T> {
             rbe_right: null_mut(),
             rbe_parent: null_mut(),
             rbe_color: Default::default(),
+        }
+    }
+}
+impl<T> Clone for rb_entry<T> {
+    fn clone(&self) -> Self {
+        Self {
+            rbe_left: self.rbe_left,
+            rbe_right: self.rbe_right,
+            rbe_parent: self.rbe_parent,
+            rbe_color: self.rbe_color,
         }
     }
 }
@@ -141,14 +151,47 @@ pub unsafe fn rb_rotate_left<T>(head: *mut rb_head<T>, elm: *mut T)
 where
     T: GetEntry<T>,
 {
-    todo!()
+    let tmp = rb_right(elm);
+    rb_right!(elm) = rb_left(tmp);
+    if !rb_right!(elm).is_null() {
+        rb_parent!(rb_left(tmp)) = elm;
+    }
+    rb_parent!(tmp) = rb_parent(elm);
+    if !rb_parent(tmp).is_null() {
+        if elm == rb_left(rb_parent(elm)) {
+            rb_left!(rb_parent(elm)) = tmp;
+        } else {
+            rb_right!(rb_parent(elm)) = tmp;
+        }
+    } else {
+        (*head).rbh_root = tmp;
+    }
+
+    rb_left!(tmp) = elm;
+    rb_parent!(elm) = tmp;
 }
 
 pub unsafe fn rb_rotate_right<T>(head: *mut rb_head<T>, elm: *mut T)
 where
     T: GetEntry<T>,
 {
-    todo!()
+    let tmp = rb_left(elm);
+    rb_left!(elm) = rb_right(tmp);
+    if !rb_left(elm).is_null() {
+        rb_parent!(rb_right(tmp)) = elm;
+    }
+    rb_parent!(tmp) = rb_parent(elm);
+    if !rb_parent(tmp).is_null() {
+        if elm == rb_left(rb_parent(elm)) {
+            rb_left!(rb_parent(elm)) = tmp;
+        } else {
+            rb_right!(rb_parent(elm)) = tmp;
+        }
+    } else {
+        (*head).rbh_root = tmp;
+    }
+    rb_right!(tmp) = elm;
+    rb_parent!(elm) = tmp;
 }
 
 #[macro_export]
@@ -245,9 +288,10 @@ pub unsafe fn rb_remove_color<T>(head: *mut rb_head<T>, mut parent: *mut T, mut 
 where
     T: GetEntry<T>,
 {
+    let mut tmp: *mut T;
     while (elm.is_null() || rb_color(elm) == rb_color::RB_BLACK) && elm != rb_root(head) {
         if rb_left(parent) == elm {
-            let mut tmp = rb_right(parent);
+            tmp = rb_right(parent);
             if rb_color(tmp) == rb_color::RB_RED {
                 rb_set_blackred(tmp, parent);
                 rb_rotate_left(head, parent);
@@ -279,7 +323,37 @@ where
                 break;
             }
         } else {
-            todo!()
+            tmp = rb_left(parent);
+            if rb_color(tmp) == rb_color::RB_RED {
+                rb_set_blackred(tmp, parent);
+                rb_rotate_right(head, parent);
+                tmp = rb_left(parent);
+            }
+            if (rb_left(tmp).is_null() || rb_color(rb_left(tmp)) == rb_color::RB_BLACK)
+                && (rb_right(tmp).is_null() || rb_color(rb_right(tmp)) == rb_color::RB_BLACK)
+            {
+                rb_color!(tmp) = rb_color::RB_RED;
+                elm = parent;
+                parent = rb_parent(elm);
+            } else {
+                if rb_left(tmp).is_null() || rb_color(rb_left(tmp)) == rb_color::RB_BLACK {
+                    let oright = rb_right(tmp);
+                    if !oright.is_null() {
+                        rb_color!(oright) = rb_color::RB_BLACK;
+                    }
+                    rb_color!(tmp) = rb_color::RB_RED;
+                    rb_rotate_left(head, oright);
+                    tmp = rb_left(parent);
+                }
+                rb_color!(tmp) = rb_color(parent);
+                rb_color!(parent) = rb_color::RB_BLACK;
+                if !rb_left(tmp).is_null() {
+                    rb_color!(rb_left(tmp)) = rb_color::RB_BLACK;
+                }
+                rb_rotate_right(head, parent);
+                elm = rb_root(head);
+                break;
+            }
         }
     }
 
@@ -292,7 +366,83 @@ pub unsafe fn rb_remove<T>(head: *mut rb_head<T>, mut elm: *mut T) -> *mut T
 where
     T: GetEntry<T>,
 {
-    todo!()
+    let mut old: *mut T = elm;
+    let mut child: *mut T;
+    let mut parent: *mut T;
+    let mut color: rb_color;
+
+    'color: loop {
+        if rb_left(elm).is_null() {
+            child = rb_right(elm);
+        } else if rb_right(elm).is_null() {
+            child = rb_left(elm);
+        } else {
+            elm = rb_right(elm);
+            let mut left: *mut T;
+            while ({
+                left = rb_left(elm);
+                !left.is_null()
+            }) {
+                elm = left;
+            }
+            child = rb_right(elm);
+            parent = rb_parent(elm);
+            color = rb_color(elm);
+            if !child.is_null() {
+                rb_parent!(child) = parent;
+            }
+            if !parent.is_null() {
+                if rb_left(parent) == elm {
+                    rb_left!(parent) = child;
+                } else {
+                    rb_right!(parent) = child;
+                }
+            } else {
+                rb_root!(head) = child
+            }
+            if rb_parent(elm) == old {
+                parent = elm;
+            }
+            *GetEntry::entry_mut(elm) = (*GetEntry::entry_mut(old)).clone();
+            if !rb_parent(old).is_null() {
+                if rb_left(rb_parent(old)) == old {
+                    rb_left!(rb_parent(old)) = elm;
+                } else {
+                    rb_right!(rb_parent(old)) = elm;
+                }
+            } else {
+                rb_root!(head) = elm;
+            }
+            rb_parent!(rb_left(old)) = elm;
+            if !rb_right(old).is_null() {
+                rb_parent!(rb_right(old)) = elm;
+            }
+            if !parent.is_null() {
+                left = parent;
+            }
+            // goto color;
+            break 'color;
+        }
+        parent = rb_parent(elm);
+        color = rb_color(elm);
+        if !child.is_null() {
+            rb_parent!(child) = parent;
+        }
+        if !parent.is_null() {
+            if rb_left(parent) == elm {
+                rb_left!(parent) = child;
+            } else {
+                rb_right!(parent) = child;
+            }
+        } else {
+            rb_root!(head) = child;
+        }
+    }
+    // color:
+    if color == rb_color::RB_BLACK {
+        rb_remove_color(head, parent, child);
+    }
+    return old;
 }
 
 pub unsafe fn rb_insert<T>(head: *mut rb_head<T>, mut elm: *mut T) -> *mut T

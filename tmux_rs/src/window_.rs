@@ -1,7 +1,5 @@
 use super::*;
 
-use crate::xmalloc::{xasprintf, xcalloc, xmalloc, xreallocarray, xstrdup};
-
 use compat_rs::{
     HOST_NAME_MAX,
     queue::{
@@ -29,7 +27,6 @@ pub static mut windows: windows = unsafe { std::mem::zeroed() };
 
 #[unsafe(no_mangle)]
 pub static mut all_window_panes: window_pane_tree = unsafe { std::mem::zeroed() };
-
 static mut next_window_pane_id: u32 = 0;
 static mut next_window_id: u32 = 0;
 static mut next_active_point: u32 = 0;
@@ -41,6 +38,10 @@ pub struct window_pane_input_data {
     wp: u32,
     file: *mut client_file,
 }
+
+// RB_GENERATE(windows, window, entry, window_cmp);
+// RB_GENERATE(winlinks, winlink, entry, winlink_cmp);
+// RB_GENERATE(window_pane_tree, window_pane, tree_entry, window_pane_cmp);
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_cmp(w1: *const window, w2: *const window) -> i32 {
@@ -144,11 +145,11 @@ pub unsafe extern "C" fn winlink_add(wwl: *mut winlinks, mut idx: i32) -> *mut w
             return null_mut();
         }
 
-        let wl: NonNull<winlink> = xcalloc(1, size_of::<winlink>()).cast();
-        (*wl.as_ptr()).idx = idx;
-        rb_insert(wwl, wl.as_ptr());
+        let wl: *mut winlink = xcalloc(1, size_of::<winlink>()).cast().as_ptr();
+        (*wl).idx = idx;
+        rb_insert(wwl, wl);
 
-        wl.as_ptr()
+        wl
     }
 }
 
@@ -156,7 +157,7 @@ pub unsafe extern "C" fn winlink_add(wwl: *mut winlinks, mut idx: i32) -> *mut w
 pub unsafe extern "C" fn winlink_set_window(wl: *mut winlink, w: *mut window) {
     unsafe {
         if (*wl).window.is_null() {
-            tailq_remove!(&raw mut (*(*wl).window).winlinks, wl, wentry);
+            tailq_remove::<_, wentry>(&raw mut (*(*wl).window).winlinks, wl);
             window_remove_ref((*wl).window, c"winlink_set_window".as_ptr());
         }
         tailq_insert_tail!(&raw mut (*w).winlinks, wl, wentry);
@@ -171,7 +172,7 @@ pub unsafe extern "C" fn winlink_remove(wwl: *mut winlinks, wl: *mut winlink) {
         let w = (*wl).window;
 
         if !w.is_null() {
-            tailq_remove!(&raw mut (*w).winlinks, wl, wentry);
+            tailq_remove::<_, wentry>(&raw mut (*w).winlinks, wl);
             window_remove_ref(w, c"winlink_remove".as_ptr());
         }
 
@@ -235,7 +236,7 @@ pub unsafe extern "C" fn winlink_stack_push(stack: *mut winlink_stack, wl: *mut 
 pub unsafe extern "C" fn winlink_stack_remove(stack: *mut winlink_stack, wl: *mut winlink) {
     unsafe {
         if !wl.is_null() && (*wl).flags & WINLINK_VISITED != 0 {
-            tailq_remove!(stack, wl, sentry);
+            tailq_remove::<_, sentry>(stack, wl);
             (*wl).flags &= !WINLINK_VISITED;
         }
     }
@@ -392,7 +393,7 @@ pub unsafe extern "C" fn window_pane_destroy_ready(wp: *mut window_pane) -> i32 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe fn window_add_ref(w: *mut window, from: *const c_char) {
+pub unsafe extern "C" fn window_add_ref(w: *mut window, from: *const c_char) {
     unsafe {
         (*w).references += 1;
         log_debug(
@@ -406,7 +407,7 @@ pub unsafe fn window_add_ref(w: *mut window, from: *const c_char) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe fn window_remove_ref(w: *mut window, from: *const c_char) {
+pub unsafe extern "C" fn window_remove_ref(w: *mut window, from: *const c_char) {
     unsafe {
         (*w).references -= 1;
         log_debug(
@@ -424,7 +425,7 @@ pub unsafe fn window_remove_ref(w: *mut window, from: *const c_char) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe fn window_set_name(w: *mut window, new_name: *mut c_char) {
+pub unsafe extern "C" fn window_set_name(w: *mut window, new_name: *mut c_char) {
     unsafe {
         free((*w).name as _);
         utf8_stravis(&raw mut (*w).name, new_name, VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL);
@@ -433,7 +434,7 @@ pub unsafe fn window_set_name(w: *mut window, new_name: *mut c_char) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe fn window_resize(w: *mut window, sx: u32, sy: u32, mut xpixel: i32, mut ypixel: i32) {
+pub unsafe extern "C" fn window_resize(w: *mut window, sx: u32, sy: u32, mut xpixel: i32, mut ypixel: i32) {
     if xpixel == 0 {
         xpixel = DEFAULT_XPIXEL;
     }
@@ -499,7 +500,7 @@ pub unsafe extern "C" fn window_pane_send_resize(wp: *mut window_pane, sx: u32, 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_has_pane(w: *mut window, wp: *mut window_pane) -> i32 {
     unsafe {
-        if tailq_foreach(&raw mut (*w).panes, |wp1| {
+        if tailq_foreach::<_, _, _, entry>(&raw mut (*w).panes, |wp1| {
             if wp1 == wp {
                 return ControlFlow::Break(());
             }
@@ -533,7 +534,7 @@ pub unsafe extern "C" fn window_pane_update_focus(wp: *mut window_pane) {
             if wp != (*(*wp).window).active {
                 focused = false
             } else {
-                tailq_foreach(&raw mut crate::server::clients, |c| {
+                tailq_foreach(&raw mut clients, |c| {
                     if !(*c).session.is_null()
                         && (*(*c).session).attached != 0
                         && (*c).flags & CLIENT_FOCUSED != 0
@@ -660,7 +661,7 @@ pub unsafe extern "C" fn window_redraw_active_switch(w: *mut window, mut wp: *mu
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_get_active_at(w: *mut window, x: u32, y: u32) -> *mut window_pane {
     unsafe {
-        if let ControlFlow::Break(value) = tailq_foreach(&raw mut (*w).panes, |wp| {
+        if let ControlFlow::Break(value) = tailq_foreach::<_, _, _, entry>(&raw mut (*w).panes, |wp| {
             if window_pane_visible(wp) != 0 {
                 return ControlFlow::Continue(());
             }
@@ -740,7 +741,7 @@ pub unsafe extern "C" fn window_zoom(wp: *mut window_pane) -> i32 {
             window_set_active_pane(w, wp, 1);
         }
 
-        tailq_foreach(&raw mut (*w).panes, |wp1| {
+        tailq_foreach::<_, _, _, entry>(&raw mut (*w).panes, |wp1| {
             (*wp1).saved_layout_cell = (*wp1).layout_cell;
             (*wp1).layout_cell = null_mut();
             ControlFlow::<(), ()>::Continue(())
@@ -767,7 +768,7 @@ pub unsafe extern "C" fn window_unzoom(w: *mut window, notify: i32) -> i32 {
         (*w).layout_root = (*w).saved_layout_root;
         (*w).saved_layout_root = null_mut();
 
-        tailq_foreach(&raw mut (*w).panes, |wp| {
+        tailq_foreach::<_, _, _, entry>(&raw mut (*w).panes, |wp| {
             (*wp).layout_cell = (*wp).saved_layout_cell;
             (*wp).saved_layout_cell = null_mut();
             ControlFlow::<(), ()>::Continue(())
@@ -875,7 +876,7 @@ pub unsafe extern "C" fn window_lost_pane(w: *mut window, wp: *mut window_pane) 
             if (*w).active.is_null() {
                 (*w).active = tailq_prev!(wp, window_panes, entry);
                 if (*w).active.is_null() {
-                    (*w).active = tailq_next(wp);
+                    (*w).active = tailq_next::<_, _, entry>(wp);
                 }
             }
             if !(*w).active.is_null() {
@@ -893,7 +894,7 @@ pub unsafe extern "C" fn window_remove_pane(w: *mut window, wp: *mut window_pane
     unsafe {
         window_lost_pane(w, wp);
 
-        tailq_remove!(&raw mut (*w).panes, wp, entry);
+        tailq_remove::<_, entry>(&raw mut (*w).panes, wp);
         window_pane_destroy(wp);
     }
 }
@@ -903,7 +904,7 @@ pub unsafe extern "C" fn window_pane_at_index(w: *mut window, idx: u32) -> *mut 
     unsafe {
         let mut n: u32 = options_get_number((*w).options, c"pane-base-index".as_ptr()) as _;
 
-        match tailq_foreach(&raw mut (*w).panes, |wp| {
+        match tailq_foreach::<_, _, _, entry>(&raw mut (*w).panes, |wp| {
             if n == idx {
                 return ControlFlow::Break(wp);
             }
@@ -924,7 +925,7 @@ pub unsafe extern "C" fn window_pane_next_by_number(
 ) -> *mut window_pane {
     unsafe {
         for _ in 0..n {
-            wp = tailq_next(wp);
+            wp = tailq_next::<_, _, entry>(wp);
             if wp.is_null() {
                 wp = tailq_first(&raw mut (*w).panes);
             }
@@ -958,7 +959,7 @@ pub unsafe extern "C" fn window_pane_index(wp: *mut window_pane, i: *mut u32) ->
         let w = (*wp).window;
 
         *i = options_get_number((*w).options, c"pane-base-index".as_ptr()) as _;
-        match tailq_foreach(&raw mut (*w).panes, |wq| {
+        match tailq_foreach::<_, _, _, entry>(&raw mut (*w).panes, |wq| {
             if wp == wq {
                 return ControlFlow::Break(0);
             }
@@ -976,7 +977,7 @@ pub unsafe extern "C" fn window_count_panes(w: *mut window) -> u32 {
     let mut n = 0;
 
     unsafe {
-        tailq_foreach(&raw mut (*w).panes, |_wp| {
+        tailq_foreach::<_, _, _, entry>(&raw mut (*w).panes, |_wp| {
             n += 1;
             ControlFlow::Continue::<(), ()>(())
         });
@@ -996,7 +997,7 @@ pub unsafe extern "C" fn window_destroy_panes(w: *mut window) {
 
         while !tailq_empty(&raw mut (*w).panes) {
             wp = tailq_first(&raw mut (*w).panes);
-            tailq_remove!(&raw mut (*w).panes, wp, entry);
+            tailq_remove::<_, entry>(&raw mut (*w).panes, wp);
             window_pane_destroy(wp);
         }
     }
@@ -1150,7 +1151,7 @@ unsafe extern "C" fn window_pane_destroy(wp: *mut window_pane) {
             event_del(&raw mut (*wp).resize_timer);
         }
         tailq_foreach_safe(&raw mut (*wp).resize_queue, |r| {
-            tailq_remove!(&raw mut (*wp).resize_queue, r, entry);
+            tailq_remove::<_, ()>(&raw mut (*wp).resize_queue, r);
             free(r as _);
             ControlFlow::Continue::<(), ()>(())
         });
@@ -1184,7 +1185,7 @@ unsafe extern "C" fn window_pane_read_callback(_bufev: *mut bufferevent, data: *
         }
 
         log_debug(c"%%%u has %zu bytes".as_ptr(), (*wp).id, size);
-        tailq_foreach(&raw mut crate::server::clients, |c| {
+        tailq_foreach(&raw mut clients, |c| {
             if !(*c).session.is_null() && (*c).flags & CLIENT_CONTROL != 0 {
                 control_write_output(c, wp);
             }
@@ -1288,7 +1289,7 @@ pub unsafe extern "C" fn window_pane_set_mode(
         if let ControlFlow::Break(break_value) = control_flow {
             wme = break_value;
 
-            tailq_remove!(&raw mut (*wp).modes, wme, entry);
+            tailq_remove::<_, ()>(&raw mut (*wp).modes, wme);
             tailq_insert_head!(&raw mut (*wp).modes, wme, entry);
         } else {
             wme = xcalloc(1, size_of::<window_mode_entry>()).cast().as_ptr();
@@ -1319,7 +1320,7 @@ pub unsafe extern "C" fn window_pane_reset_mode(wp: *mut window_pane) {
         }
 
         let wme = tailq_first(&raw mut (*wp).modes);
-        tailq_remove!(&raw mut (*wp).modes, wme, entry);
+        tailq_remove::<_, ()>(&raw mut (*wp).modes, wme);
         (*(*wme).mode).free.unwrap()(wme);
         free(wme as _);
 
@@ -1356,7 +1357,7 @@ pub unsafe extern "C" fn window_pane_reset_mode_all(wp: *mut window_pane) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn window_pane_copy_key(wp: *mut window_pane, key: key_code) {
     unsafe {
-        tailq_foreach(&raw mut (*(*wp).window).panes, |loop_| {
+        tailq_foreach::<_, _, _, entry>(&raw mut (*(*wp).window).panes, |loop_| {
             if loop_ != wp
                 && tailq_empty(&raw mut (*loop_).modes)
                 && (*loop_).fd != -1
@@ -1548,7 +1549,7 @@ pub unsafe extern "C" fn window_pane_find_up(wp: *mut window_pane) -> *mut windo
         let left = (*wp).xoff;
         let right = (*wp).xoff + (*wp).sx;
 
-        tailq_foreach(&raw mut (*w).panes, |next| {
+        tailq_foreach::<_, _, _, entry>(&raw mut (*w).panes, |next| {
             if next == wp {
                 return ControlFlow::Continue::<(), ()>(());
             }
@@ -1615,7 +1616,7 @@ pub unsafe extern "C" fn window_pane_find_down(wp: *mut window_pane) -> *mut win
         let left = (*wp).xoff;
         let right = (*wp).xoff + (*wp).sx;
 
-        tailq_foreach(&raw mut (*w).panes, |next| {
+        tailq_foreach::<_, _, _, entry>(&raw mut (*w).panes, |next| {
             if next == wp {
                 return ControlFlow::Continue::<(), ()>(());
             }
@@ -1671,7 +1672,7 @@ pub unsafe extern "C" fn window_pane_find_left(wp: *mut window_pane) -> *mut win
         let top = (*wp).yoff;
         let bottom = (*wp).yoff + (*wp).sy;
 
-        tailq_foreach(&raw mut (*w).panes, |next| {
+        tailq_foreach::<_, _, _, entry>(&raw mut (*w).panes, |next| {
             if next == wp {
                 return ControlFlow::Continue::<(), ()>(());
             }
@@ -1726,7 +1727,7 @@ pub unsafe extern "C" fn window_pane_find_right(wp: *mut window_pane) -> *mut wi
         let top = (*wp).yoff;
         let bottom = (*wp).yoff + (*wp).sy;
 
-        tailq_foreach(&raw mut (*w).panes, |next| {
+        tailq_foreach::<_, _, _, entry>(&raw mut (*w).panes, |next| {
             if next == wp {
                 return ControlFlow::Continue::<(), ()>(());
             }
@@ -1776,7 +1777,7 @@ pub unsafe extern "C" fn window_pane_stack_push(stack: *mut window_panes, wp: *m
 pub unsafe extern "C" fn window_pane_stack_remove(stack: *mut window_panes, wp: *mut window_pane) {
     unsafe {
         if !wp.is_null() && (*wp).flags & PANE_VISITED != 0 {
-            tailq_remove!(stack, wp, sentry);
+            tailq_remove::<_, crate::sentry>(stack, wp);
             (*wp).flags &= !PANE_VISITED;
         }
     }

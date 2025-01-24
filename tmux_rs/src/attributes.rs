@@ -13,7 +13,7 @@ pub unsafe extern "C" fn attributes_tostring(attr: c_int) -> *const c_char {
 
     unsafe {
         #[rustfmt::skip]
-        let len: isize = xmalloc::xsnprintf(
+        let len: isize = xsnprintf(
             &raw mut buf as _,
             size_of::<buffer>(),
             c"%s%s%s%s%s%s%s%s%s%s%s%s%s%s".as_ptr(),

@@ -16,7 +16,8 @@ AM_CPPFLAGS += @XOPEN_DEFINES@ \
 	-DTMUX_TERM='"@DEFAULT_TERM@"'
 
 # Additional object files.
-LDADD = $(LIBOBJS) -L/home/collin/Git/tmux/tmux-3.5a/target/release -ltmux_rs
+LDADD = $(LIBOBJS) -L/home/collin/Git/tmux/tmux-3.5a/target/debug -ltmux_rs
+# LDADD = $(LIBOBJS) -L/home/collin/Git/tmux/tmux-3.5a/target/release -ltmux_rs
 
 # Set flags for gcc.
 if IS_GCC
@@ -67,9 +68,12 @@ AM_CPPFLAGS += -D_BSD_SOURCE
 endif
 
 # List of sources.
-# attributes.c
 # alerts.c
-# server.c
+# attributes.c
+# cmd-kill-server.c
+# log.c
+# window.c
+# xmalloc.c
 dist_tmux_SOURCES = \
 	arguments.c \
 	cfg.c \
@@ -172,6 +176,7 @@ dist_tmux_SOURCES = \
 	screen-redraw.c \
 	screen-write.c \
 	screen.c \
+	server.c \
 	server-acl.c \
 	server-client.c \
 	server-fn.c \
