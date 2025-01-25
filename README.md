@@ -59,15 +59,12 @@ issue.
 
 - Picking a C file: Start with root files in the project. (files with no or few dependencies on the rest of the project)
 - You cannot link multiple static rust libraries (.a) into a single compilation artifact. There will be duplicate symbols.
+- Seems a common source of bugs is stubbing something and intending to come back to it later, but not. Avoid this.
+- SEGFAULTS, crashes, panics are much easier to debug then infinite loops and other types of bugs because you get a stack trace
 
 # Progress
 
-Current status: crashes / hanging
-
-process is hanging, probably should try backing out server.rs for server.c
-and see if that makes it functional.
-
-It doesn't.
+Current status: runs
 
 need to be able to get some more useful information when.
 more then just server exited unexpectedly.
@@ -75,11 +72,9 @@ more then just server exited unexpectedly.
 - figure out abort / panic logs
 - get a stacktrace on segfault
 
-- try backing out each change and see if it runs
-- i feel like it's probably something related to the rbtree or queue
-
-
 # TODO
+- miri (once fully rust)
+- memory sanitizer
 - dump backtrace on abort
   - gdb break
     - client_main
@@ -97,48 +92,6 @@ more then just server exited unexpectedly.
   - recheck all tailq, and rbtree structs for multiple links.
   - derive macro for rbtree and tailq
     - tailq support new generic type discriminant
-
-Next, need to remove todo calls causing crashes.
-
-maybe it's just todo's in tree
-
-alerts.c
-xmalloc.c
-attributes.c
-cmd-kill-server.c
-log.c
-----
-
-Okay so the problem is either in window.c translation or on some of the macros in `tmux_rs/src/lib.rs`.
-
-things to correct, convert tailq macros to generics.
-
-
-```
-coredumpctl gdb
-bt
-#0  0x00005555556ccde0 in compat_rs::queue::tailq_remove<tmux_rs::winlink, tmux_rs::wentry> (head=0x258, elm=0x5555557af7c0) at compat_rs/src/queue.rs:138
-138	        (*head).tqh_last = (*Entry::<_, D>::entry(elm)).tqe_prev;
-warning: Missing auto-load script at offset 0 in section .debug_gdb_scripts
-of file /home/collin/Git/tmux/tmux-3.5a/tmux.
-Use `info auto-load python-scripts [REGEXP]' to list them.
-(gdb) bt
-#0  0x00005555556ccde0 in compat_rs::queue::tailq_remove<tmux_rs::winlink, tmux_rs::wentry> (head=0x258, elm=0x5555557af7c0) at compat_rs/src/queue.rs:138
-#1  0x0000555555618512 in tmux_rs::window_::winlink_set_window (wl=0x5555557af7c0, w=0x5555557e4640) at tmux_rs/src/window_.rs:160
-#2  0x00005555555ecb4c in spawn_window (sc=sc@entry=0x7fffffffd490, cause=cause@entry=0x7fffffffd408) at spawn.c:166
-#3  0x0000555555595fb7 in cmd_new_session_exec (self=<optimized out>, item=0x55555578e5f0) at cmd-new-session.c:294
-#4  0x000055555559ba61 in cmdq_fire_command (item=0x55555578e5f0) at cmd-queue.c:649
-#5  cmdq_next (c=c@entry=0x555555803560) at cmd-queue.c:774
-#6  0x00005555555dfc25 in server_loop () at server.c:273
-#7  0x00005555555d6a12 in proc_loop (tp=0x555555787b00, loopcb=loopcb@entry=0x5555555dfbd0 <server_loop>) at proc.c:218
-#8  0x00005555555e02af in server_start (client=0x555555786cc0, flags=flags@entry=402718720, base=base@entry=0x5555557869d0, lockfd=lockfd@entry=5, 
-    lockfile=0x555555787ad0 "") at server.c:252
-#9  0x000055555558c794 in client_connect (flags=402718720, path=0x5555557867a0 "/tmp/tmux-1000/default", base=0x5555557869d0) at client.c:164
-#10 client_main (base=0x5555557869d0, argc=argc@entry=0, argv=argv@entry=0x7fffffffdb40, flags=<optimized out>, flags@entry=134283264, feat=feat@entry=0) at client.c:290
-#11 0x0000555555587fd4 in main (argc=0, argv=0x7fffffffdb40) at tmux.c:537
-(gdb) 
-```
-
 
 - [ ] 325 alert
   - [ ] implement TODO's
@@ -304,12 +257,26 @@ For a bit, I thought I could implement by own smart pointer type which wrapped a
 implemented DerefMut. Unfortunately doing this requires that you can create a `&mut T` which would likely invoke
 undefined behaviour in this context.
 
+## BUGS
+
+```
+seems stuck in loop
+#0  compat_rs::tree::rb_parent<tmux_rs::window_pane> (this=0x6190000c2180) at compat_rs/src/tree.rs:116
+#1  0x000055ad36529653 in compat_rs::tree::rb_remove<tmux_rs::window_pane> (head=0x55ad370dc200 <all_window_panes>, elm=0x6190000c2180) at compat_rs/src/tree.rs:437
+#2  0x000055ad3653745f in tmux_rs::window_::window_pane_destroy (wp=0x6190000c2180) at tmux_rs/src/window_.rs:1171
+#3  0x000055ad36534296 in tmux_rs::window_::window_remove_pane (w=0x617000038e80, wp=0x6190000c2180) at tmux_rs/src/window_.rs:910
+#4  0x000055ad3648db29 in server_destroy_pane (wp=0x6190000c2180, notify=<optimized out>) at server-fn.c:373
+#5  0x000055ad36537e98 in tmux_rs::window_::window_pane_error_callback (_bufev=0x61600003e180, _what=33, data=0x6190000c2180) at tmux_rs/src/window_.rs:
+```
+
 ## BUGS (found)
 
 - Incorrect translation of do while
 - Incorrect translation of != null check
 - incorrect translation of self-referential struct (just used null to init because lazyness when translating)
 - missing init for tailq in struct // the big one causing crash on init
+- missing break at end of loop emulating goto in rb_remove: hangs on Ctrl-D
+
 
 # References
 

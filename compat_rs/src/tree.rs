@@ -448,6 +448,7 @@ where
         } else {
             rb_root!(head) = child;
         }
+        break;
     }
     // color:
     if color == rb_color::RB_BLACK {

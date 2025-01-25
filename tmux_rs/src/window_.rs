@@ -1085,8 +1085,7 @@ pub unsafe extern "C" fn window_pane_create(w: *mut window, sx: u32, sy: u32, hl
 
         (*wp).id = next_window_pane_id;
         next_window_pane_id += 1;
-        // TOOD, maybe the invariant is broken when creating
-        // the ref and then passing a *mut away
+
         rb_insert(&raw mut all_window_panes, wp);
 
         (*wp).fd = -1;
