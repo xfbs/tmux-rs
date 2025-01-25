@@ -156,11 +156,11 @@ pub unsafe extern "C" fn winlink_add(wwl: *mut winlinks, mut idx: i32) -> *mut w
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn winlink_set_window(wl: *mut winlink, w: *mut window) {
     unsafe {
-        if (*wl).window.is_null() {
+        if !(*wl).window.is_null() {
             tailq_remove::<_, wentry>(&raw mut (*(*wl).window).winlinks, wl);
             window_remove_ref((*wl).window, c"winlink_set_window".as_ptr());
         }
-        tailq_insert_tail!(&raw mut (*w).winlinks, wl, wentry);
+        tailq_insert_tail::<_, wentry>(&raw mut (*w).winlinks, wl);
         (*wl).window = w;
         window_add_ref(w, c"winlink_set_window".as_ptr());
     }
@@ -308,7 +308,7 @@ pub unsafe extern "C" fn window_create(sx: u32, sy: u32, mut xpixel: u32, mut yp
         (*w).options = options_create(global_w_options);
 
         (*w).references = 0;
-        // tailq_init
+        tailq_init(&raw mut (*w).winlinks);
 
         (*w).id = next_window_id;
         next_window_id += 1;
@@ -846,7 +846,7 @@ pub unsafe extern "C" fn window_add_pane(
         } else {
             log_debug(c"%s: @%u after %%%u".as_ptr(), func, (*w).id, (*wp).id);
             if flags & SPAWN_FULLSIZE != 0 {
-                tailq_insert_tail!(&raw mut (*w).panes, wp, entry);
+                tailq_insert_tail::<_, entry>(&raw mut (*w).panes, wp);
             } else {
                 tailq_insert_after!(&raw mut (*w).panes, other, wp, entry);
             }
@@ -1242,7 +1242,7 @@ pub unsafe extern "C" fn window_pane_resize(wp: *mut window_pane, sx: u32, sy: u
         (*r).sy = sy;
         (*r).osx = (*wp).sx;
         (*r).osy = (*wp).sy;
-        tailq_insert_tail!(&raw mut (*wp).resize_queue, r, entry);
+        tailq_insert_tail(&raw mut (*wp).resize_queue, r);
 
         (*wp).sx = sx;
         (*wp).sy = sy;
