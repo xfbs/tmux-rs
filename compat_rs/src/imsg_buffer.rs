@@ -560,7 +560,7 @@ unsafe fn ibuf_enqueue(msgbuf: *mut msgbuf, buf: *mut ibuf) {
         /* if buf lives on the stack */
         libc::abort(); /* abort before causing more harm */
     }
-    tailq_insert_tail!(&raw mut (*msgbuf).bufs, buf, entry);
+    tailq_insert_tail::<_, _>(&raw mut (*msgbuf).bufs, buf);
     (*msgbuf).queued += 1;
 }
 

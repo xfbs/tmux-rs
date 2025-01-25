@@ -1,0 +1,3 @@
+[build]
+rustflags = ["-Zsanitizer=address"]
+target = "x86_64-unknown-linux-gnu"

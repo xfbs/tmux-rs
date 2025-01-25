@@ -160,7 +160,7 @@ pub unsafe extern "C" fn imsg_read(imsgbuf: *mut imsgbuf) -> isize {
                     let fd = *(libc::CMSG_DATA(cmsg) as *mut c_int).add(i as usize);
                     if !ifd.is_null() {
                         (*ifd).fd = fd;
-                        tailq_insert_tail!(&raw mut (*imsgbuf).fds, ifd, entry);
+                        tailq_insert_tail::<_, ()>(&raw mut (*imsgbuf).fds, ifd);
                         ifd = null_mut();
                     } else {
                         libc::close(fd);

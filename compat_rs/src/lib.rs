@@ -20,4 +20,5 @@ pub const WAIT_ANY: libc::pid_t = -1;
 
 pub const ACCESSPERMS: libc::mode_t = (libc::S_IRWXU | libc::S_IRWXG | libc::S_IRWXO);
 
+extern crate compat_derive;
 pub use compat_derive::TailQEntry;

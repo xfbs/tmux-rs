@@ -7,7 +7,12 @@ debug = true
 panic = "abort"
 
 [workspace.dependencies]
-libc = { version = "0.2.169" }
+compat_rs    = { path = "./compat_rs" }
+libc         = { version = "0.2.169" }
+libevent-sys = { version = "0.3.0" }
+paste        = { version = "1.0.15"  }
+quote        = { version = "1.0.38"  }
+syn          = { version = "2.0.96"  }
 
 [workspace.lints.rust]
 non_camel_case_types   = "allow"

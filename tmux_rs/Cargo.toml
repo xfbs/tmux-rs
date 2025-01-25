@@ -7,10 +7,10 @@ edition = "2024"
 crate-type = ["staticlib", "lib"]
 
 [dependencies]
-compat_rs = { path = "../compat_rs" }
-libc = { workspace = true }
-libevent-sys = { version = "0.3.0" }
-paste = { version = "1.0.15" }
+compat_rs    = { workspace = true }
+libc         = { workspace = true }
+libevent-sys = { workspace = true }
+paste        = { workspace = true }
 
 [features]
 systemd = []

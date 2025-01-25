@@ -11,7 +11,13 @@ use compat_rs::{
 use libevent_sys::{EV_TIMEOUT, event_add, event_del, event_initialized, event_once};
 
 static mut alerts_fired: i32 = 0;
-static mut alerts_list: tailq_head<window> = tailq_head::new();
+
+static mut alerts_list: tailq_head<window> = const {
+    tailq_head {
+        tqh_first: null_mut(),
+        tqh_last: unsafe { &raw mut alerts_list.tqh_first },
+    }
+};
 
 unsafe extern "C" fn alerts_timer(_fd: i32, _events: i16, arg: *mut c_void) {
     let w = arg as *mut window;
@@ -141,7 +147,7 @@ pub unsafe extern "C" fn alerts_queue(w: *mut window, flags: c_int) {
         if alerts_enabled(w, flags) != 0 {
             if (*w).alerts_queued == 0 {
                 (*w).alerts_queued = 1;
-                compat_rs::queue::tailq_insert_tail!(&raw mut alerts_list, w, alerts_entry);
+                compat_rs::queue::tailq_insert_tail::<_, alerts_entry>(&raw mut alerts_list, w);
                 window_add_ref(w, c"alerts_queue".as_ptr());
             }
 

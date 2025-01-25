@@ -16,9 +16,10 @@ AM_CPPFLAGS += @XOPEN_DEFINES@ \
 	-DTMUX_TERM='"@DEFAULT_TERM@"'
 
 # Additional object files.
-LDADD = $(LIBOBJS) -L/home/collin/Git/tmux/tmux-3.5a/target/debug -ltmux_rs
+LDADD = $(LIBOBJS) -L/home/collin/Git/tmux/tmux-3.5a/target/x86_64-unknown-linux-gnu/debug -ltmux_rs
 # LDADD = $(LIBOBJS) -L/home/collin/Git/tmux/tmux-3.5a/target/release -ltmux_rs
 
+AM_CFLAGS += -fsanitize=address -fno-omit-frame-pointer
 # Set flags for gcc.
 if IS_GCC
 AM_CFLAGS += -std=gnu99 -O2

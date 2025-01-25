@@ -24,12 +24,23 @@ enum rb_color {
 }
 
 #[repr(C)]
-#[derive(Copy, Debug)]
+#[derive(Copy)]
 pub struct rb_entry<T> {
     pub rbe_left: *mut T,
     pub rbe_right: *mut T,
     pub rbe_parent: *mut T,
     pub rbe_color: rb_color,
+}
+
+impl<T> std::fmt::Debug for rb_entry<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("rb_entry")
+            .field("rbe_left", &self.rbe_left)
+            .field("rbe_right", &self.rbe_right)
+            .field("rbe_parent", &self.rbe_parent)
+            .field("rbe_color", &self.rbe_color)
+            .finish()
+    }
 }
 
 impl<T> Default for rb_entry<T> {

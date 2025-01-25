@@ -8,20 +8,27 @@ pub struct tailq_head<T> {
     pub tqh_last: *mut *mut T,
 }
 
-impl<T> tailq_head<T> {
-    pub const fn new() -> Self {
-        Self {
-            tqh_first: null_mut(),
-            tqh_last: null_mut(),
-        }
+const fn tailq_head_initializer<T>(head: *mut tailq_head<T>) {
+    unsafe {
+        (*head).tqh_first = null_mut();
+        (*head).tqh_last = &raw mut (*head).tqh_first;
     }
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone)]
 pub struct tailq_entry<T> {
     pub tqe_next: *mut T,
     pub tqe_prev: *mut *mut T,
+}
+
+impl<T> std::fmt::Debug for tailq_entry<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("tailq_entry")
+            .field("tqe_next", &self.tqe_next)
+            .field("tqe_prev", &self.tqe_prev)
+            .finish()
+    }
 }
 
 pub trait Entry<T, Discriminant = ()> {
@@ -89,16 +96,15 @@ macro_rules! tailq_insert_head {
 }
 pub use tailq_insert_head;
 
-#[macro_export]
-macro_rules! tailq_insert_tail {
-    ($head:expr, $elm:ident, $field:ident) => {
-        (*$elm).$field.tqe_next = null_mut();
-        (*$elm).$field.tqe_prev = (*$head).tqh_last;
-        *(*$head).tqh_last = $elm;
-        (*$head).tqh_last = &raw mut (*$elm).$field.tqe_next;
-    };
+pub unsafe extern "C" fn tailq_insert_tail<T, D>(head: *mut tailq_head<T>, elm: *mut T)
+where
+    T: Entry<T, D>,
+{
+    (*Entry::<_, D>::entry(elm)).tqe_next = null_mut();
+    (*Entry::<_, D>::entry(elm)).tqe_prev = (*head).tqh_last;
+    *(*head).tqh_last = elm;
+    (*head).tqh_last = &raw mut (*Entry::<_, D>::entry(elm)).tqe_next;
 }
-pub use tailq_insert_tail;
 
 #[macro_export]
 macro_rules! tailq_insert_after {
