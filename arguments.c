@@ -64,13 +64,16 @@ static int	args_cmp(struct args_entry *, struct args_entry *);
 RB_GENERATE_STATIC(args_tree, args_entry, entry, args_cmp);
 
 /* Arguments tree comparison function. */
+/*
 static int
 args_cmp(struct args_entry *a1, struct args_entry *a2)
 {
 	return (a1->flag - a2->flag);
 }
+*/
 
 /* Find a flag in the arguments tree. */
+/*
 static struct args_entry *
 args_find(struct args *args, u_char flag)
 {
@@ -79,8 +82,10 @@ args_find(struct args *args, u_char flag)
 	entry.flag = flag;
 	return (RB_FIND(args_tree, &args->tree, &entry));
 }
+*/
 
 /* Copy value. */
+/*
 static void
 args_copy_value(struct args_value *to, struct args_value *from)
 {
@@ -98,7 +103,6 @@ args_copy_value(struct args_value *to, struct args_value *from)
 	}
 }
 
-/* Type to string. */
 static const char *
 args_type_to_string (enum args_type type)
 {
@@ -114,7 +118,6 @@ args_type_to_string (enum args_type type)
 	return "INVALID";
 }
 
-/* Get value as string. */
 static const char *
 args_value_as_string(struct args_value *value)
 {
@@ -131,7 +134,6 @@ args_value_as_string(struct args_value *value)
 	fatalx("unexpected argument type");
 }
 
-/* Create an empty arguments set. */
 struct args *
 args_create(void)
 {
@@ -141,6 +143,7 @@ args_create(void)
 	RB_INIT(&args->tree);
 	return (args);
 }
+*/
 
 /* Parse a single flag. */
 static int
@@ -649,6 +652,7 @@ args_has(struct args *args, u_char flag)
 }
 
 /* Set argument value in the arguments tree. */
+/*
 void
 args_set(struct args *args, u_char flag, struct args_value *value, int flags)
 {
@@ -669,6 +673,7 @@ args_set(struct args *args, u_char flag, struct args_value *value, int flags)
 	else
 		free(value);
 }
+*/
 
 /* Get argument value. Will be NULL if it isn't present. */
 const char *

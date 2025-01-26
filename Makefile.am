@@ -71,6 +71,7 @@ endif
 # List of sources.
 # alerts.c
 # attributes.c
+# cmd-copy-mode.c
 # cmd-kill-server.c
 # log.c
 # window.c
@@ -86,7 +87,6 @@ dist_tmux_SOURCES = \
 	cmd-choose-tree.c \
 	cmd-command-prompt.c \
 	cmd-confirm-before.c \
-	cmd-copy-mode.c \
 	cmd-detach-client.c \
 	cmd-display-menu.c \
 	cmd-display-message.c \

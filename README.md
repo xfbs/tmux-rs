@@ -47,8 +47,8 @@ issue.
 # Steps
 
 1. Pick a C file to port
-  a. Pick a function to port
-  b. cut the function from the C file
+  a. Pick a symbol (function or variable) to port
+  b. cut the definition from the C file
   c. paste into the rust file and translate from C to Rust
 2. Once all functions in a C file are ported
   a. Modify Makefile.am to remove the C file from sources list
@@ -73,7 +73,6 @@ more then just server exited unexpectedly.
 - get a stacktrace on segfault
 
 # TODO
-- miri (once fully rust)
 - memory sanitizer
 - dump backtrace on abort
   - gdb break
@@ -82,21 +81,22 @@ more then just server exited unexpectedly.
     - server_start
     - proc_fork_and_daemon
     - proc loop server loop
-
-  - modify build to include C debug symbols
   - research extern c-unwind vs c: <https://rust-lang.github.io/rfcs/2945-c-unwind-abi.html>
     - should I use c-unwind for all abi's?
-- run under miri
 - better rust format string style logging functions
 - tailq and rbtree
   - recheck all tailq, and rbtree structs for multiple links.
   - derive macro for rbtree and tailq
     - tailq support new generic type discriminant
 
-- [ ] 325 alert
-  - [ ] implement TODO's
-- [ ] 1097 arguments
-- [ ] 108 attributes
+# TODO After 100% Rust
+- miri
+- coverage
+- convert to references instead of pointers
+
+- [X] 325 alert
+- [...] 1097 arguments
+- [X] 108 attributes
 - [ ] 277 cfg
 - [ ] 809 client
 - [ ] 175 cmd-attach-session
@@ -106,7 +106,7 @@ more then just server exited unexpectedly.
 - [ ] 117 cmd-choose-tree
 - [ ] 242 cmd-command-prompt
 - [ ] 163 cmd-confirm-before
-- [ ] 98 cmd-copy-mode
+- [x] 98 cmd-copy-mode
 - [ ] 109 cmd-detach-client
 - [ ] 502 cmd-display-menu
 - [ ] 159 cmd-display-message

@@ -1,73 +1,14 @@
 #![feature(c_variadic)]
 
-pub mod cmd_bind_key;
-pub mod cmd_break_pane;
-pub mod cmd_capture_pane;
-pub mod cmd_choose_tree;
-pub mod cmd_command_prompt;
-pub mod cmd_confirm_before;
-pub mod cmd_copy_mode;
-pub mod cmd_detach_client;
-pub mod cmd_display_menu;
-pub mod cmd_display_message;
-pub mod cmd_display_panes;
-pub mod cmd_find_window;
-pub mod cmd_if_shell;
-pub mod cmd_join_pane;
-pub mod cmd_kill_pane;
-pub mod cmd_kill_server;
-pub mod cmd_kill_session;
-pub mod cmd_kill_window;
-pub mod cmd_list_buffers;
-pub mod cmd_list_clients;
-pub mod cmd_list_keys;
-pub mod cmd_list_panes;
-pub mod cmd_list_sessions;
-pub mod cmd_list_windows;
-pub mod cmd_load_buffer;
-pub mod cmd_lock_server;
-pub mod cmd_move_window;
-pub mod cmd_new_session;
-pub mod cmd_new_window;
-pub mod cmd_paste_buffer;
-pub mod cmd_pipe_pane;
-pub mod cmd_refresh_client;
-pub mod cmd_rename_session;
-pub mod cmd_rename_window;
-pub mod cmd_resize_pane;
-pub mod cmd_resize_window;
-pub mod cmd_respawn_pane;
-pub mod cmd_respawn_window;
-pub mod cmd_rotate_window;
-pub mod cmd_run_shell;
-pub mod cmd_save_buffer;
-pub mod cmd_select_layout;
-pub mod cmd_select_pane;
-pub mod cmd_select_window;
-pub mod cmd_send_keys;
-pub mod cmd_server_access;
-pub mod cmd_set_buffer;
-pub mod cmd_set_environment;
-pub mod cmd_set_option;
-pub mod cmd_show_environment;
-pub mod cmd_show_messages;
-pub mod cmd_show_options;
-pub mod cmd_show_prompt_history;
-pub mod cmd_source_file;
-pub mod cmd_split_window;
-pub mod cmd_swap_pane;
-pub mod cmd_swap_window;
-pub mod cmd_switch_client;
-pub mod cmd_unbind_key;
 pub mod event_;
 pub mod image_;
 pub mod image_sixel;
 
 // discriminant structs
-pub struct alerts_entry;
-pub struct entry;
-pub struct sentry;
-pub struct wentry;
+pub struct discr_alerts_entry;
+pub struct discr_entry;
+pub struct discr_sentry;
+pub struct discr_wentry;
 
 #[cfg(feature = "utempter")]
 pub mod utempter;
@@ -91,7 +32,7 @@ unsafe extern "C" {
     static mut stderr: *mut FILE;
 }
 
-pub use libc::{FILE, REG_EXTENDED, REG_ICASE, pid_t, termios, time_t, timeval, uid_t};
+pub use libc::{FILE, REG_EXTENDED, REG_ICASE, free, pid_t, termios, time_t, timeval, uid_t};
 
 pub use crate::event_::{EVBUFFER_DATA, EVBUFFER_LENGTH, evtimer_add, evtimer_set};
 pub use libevent_sys::{bufferevent, evbuffer, evbuffer_get_length, evbuffer_pullup, event, event_base};
@@ -125,10 +66,10 @@ macro_rules! opaque_types {
     };
 }
 
+// args,
+// args_entry,
 opaque_types! {
-    args,
     args_command_state,
-    args_entry,
     cmd,
     cmdq_item,
     cmdq_list,
@@ -1140,12 +1081,12 @@ pub struct window_pane {
     pub tree_entry: rb_entry<window_pane>,
 }
 
-impl Entry<window_pane, entry> for window_pane {
+impl Entry<window_pane, discr_entry> for window_pane {
     unsafe fn entry(this: *mut Self) -> *mut tailq_entry<window_pane> {
         unsafe { &raw mut (*this).entry }
     }
 }
-impl Entry<window_pane, sentry> for window_pane {
+impl Entry<window_pane, discr_sentry> for window_pane {
     unsafe fn entry(this: *mut Self) -> *mut tailq_entry<window_pane> {
         unsafe { &raw mut (*this).sentry }
     }
@@ -1225,7 +1166,7 @@ pub struct window {
 pub type windows = rb_head<window>;
 compat_rs::impl_rb_tree_protos!(windows, window);
 
-impl compat_rs::queue::Entry<window, alerts_entry> for window {
+impl compat_rs::queue::Entry<window, discr_alerts_entry> for window {
     unsafe fn entry(this: *mut Self) -> *mut tailq_entry<window> {
         unsafe { &raw mut (*this).alerts_entry }
     }
@@ -1262,13 +1203,13 @@ pub struct winlink {
     pub sentry: tailq_entry<winlink>,
 }
 
-impl compat_rs::queue::Entry<winlink, wentry> for winlink {
+impl compat_rs::queue::Entry<winlink, discr_wentry> for winlink {
     unsafe fn entry(this: *mut Self) -> *mut tailq_entry<winlink> {
         unsafe { &raw mut (*this).wentry }
     }
 }
 
-impl compat_rs::queue::Entry<winlink, sentry> for winlink {
+impl compat_rs::queue::Entry<winlink, discr_sentry> for winlink {
     unsafe fn entry(this: *mut Self) -> *mut tailq_entry<winlink> {
         unsafe { &raw mut (*this).sentry }
     }
@@ -1651,6 +1592,7 @@ pub type message_list = tailq_head<message_entry>;
 
 /// Argument type.
 #[repr(i32)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub enum args_type {
     ARGS_NONE,
     ARGS_STRING,
@@ -1663,12 +1605,22 @@ pub union args_value_union {
     pub cmdlist: *mut cmd_list,
 }
 
+// something is wrong with accessing this type
+#[repr(C, i32)]
+#[derive(Copy, Clone)]
+enum args_value_enum {
+    None,
+    String(*mut c_char),
+    Commands(*mut cmd_list),
+}
+
 /// Argument value.
 #[repr(C)]
 #[derive(compat_rs::TailQEntry)]
 pub struct args_value {
-    pub type_: args_type,
-    pub args_value_union: args_value_union,
+    // pub type_: args_type,
+    // pub args_value_union: args_value_union,
+    pub value: args_value_enum,
     pub cached: *mut c_char,
     #[entry]
     pub entry: tailq_entry<args_value>,
@@ -2327,20 +2279,12 @@ pub use crate::tty_keys::{tty_keys_build, tty_keys_colours, tty_keys_free, tty_k
 
 mod arguments;
 pub use crate::arguments::{
-    args_copy, args_count, args_create, args_escape, args_first, args_first_value, args_free, args_free_value,
-    args_free_values, args_from_vector, args_get, args_has, args_make_commands, args_make_commands_free,
-    args_make_commands_get_command, args_make_commands_now, args_make_commands_prepare, args_next, args_next_value,
-    args_parse, args_percentage, args_percentage_and_expand, args_print, args_set, args_string, args_string_percentage,
-    args_string_percentage_and_expand, args_strtonum, args_strtonum_and_expand, args_to_vector, args_value,
-    args_values,
-};
-
-mod cmd_find;
-pub use crate::cmd_find::{
-    cmd_find_best_client, cmd_find_clear_state, cmd_find_client, cmd_find_copy_state, cmd_find_empty_state,
-    cmd_find_from_client, cmd_find_from_mouse, cmd_find_from_nothing, cmd_find_from_pane, cmd_find_from_session,
-    cmd_find_from_session_window, cmd_find_from_window, cmd_find_from_winlink, cmd_find_from_winlink_pane,
-    cmd_find_target, cmd_find_valid_state,
+    args, args_copy, args_count, args_create, args_entry, args_escape, args_first, args_first_value, args_free,
+    args_free_value, args_free_values, args_from_vector, args_get, args_has, args_make_commands,
+    args_make_commands_free, args_make_commands_get_command, args_make_commands_now, args_make_commands_prepare,
+    args_next, args_next_value, args_parse, args_percentage, args_percentage_and_expand, args_print, args_set,
+    args_string, args_string_percentage, args_string_percentage_and_expand, args_strtonum, args_strtonum_and_expand,
+    args_to_vector, args_value, args_values,
 };
 
 mod cmd_;
@@ -2352,17 +2296,21 @@ pub use crate::cmd_::{
     cmd_print, cmd_stringify_argv, cmd_table, cmd_template_replace, cmd_unpack_argv,
 };
 
-mod cmd_attach_session;
-pub use crate::cmd_attach_session::cmd_attach_session;
+pub use crate::cmd_::cmd_attach_session::cmd_attach_session;
 
-mod cmd_parse;
-pub use crate::cmd_parse::{
+pub use crate::cmd_::cmd_find::{
+    cmd_find_best_client, cmd_find_clear_state, cmd_find_client, cmd_find_copy_state, cmd_find_empty_state,
+    cmd_find_from_client, cmd_find_from_mouse, cmd_find_from_nothing, cmd_find_from_pane, cmd_find_from_session,
+    cmd_find_from_session_window, cmd_find_from_window, cmd_find_from_winlink, cmd_find_from_winlink_pane,
+    cmd_find_target, cmd_find_valid_state,
+};
+
+pub use crate::cmd_::cmd_parse::{
     cmd_parse_and_append, cmd_parse_and_insert, cmd_parse_from_arguments, cmd_parse_from_buffer, cmd_parse_from_file,
     cmd_parse_from_string,
 };
 
-mod cmd_queue;
-pub use crate::cmd_queue::{
+pub use crate::cmd_::cmd_queue::{
     cmdq_add_format, cmdq_add_formats, cmdq_append, cmdq_continue, cmdq_copy_state, cmdq_error, cmdq_free,
     cmdq_free_state, cmdq_get_callback1, cmdq_get_client, cmdq_get_command, cmdq_get_current, cmdq_get_error,
     cmdq_get_event, cmdq_get_flags, cmdq_get_name, cmdq_get_source, cmdq_get_state, cmdq_get_target,
@@ -2370,8 +2318,7 @@ pub use crate::cmd_queue::{
     cmdq_new, cmdq_new_state, cmdq_next, cmdq_print, cmdq_print_data, cmdq_running,
 };
 
-mod cmd_wait_for;
-pub use crate::cmd_wait_for::cmd_wait_for_flush;
+pub use crate::cmd_::cmd_wait_for::cmd_wait_for_flush;
 
 mod client_;
 pub use crate::client_::client_main;
