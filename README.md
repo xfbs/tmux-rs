@@ -100,7 +100,7 @@ more then just server exited unexpectedly.
 - [X] 325 alert
 - [...] 1097 arguments
 - [X] 108 attributes
-- [ ] 277 cfg
+- [X] 277 cfg
 - [ ] 809 client
 - [ ] 1117 colour
 - [X] compat
@@ -132,7 +132,7 @@ more then just server exited unexpectedly.
 - [ ] 342 paste
 - [ ] 818 popup
 - [ ] 388 proc
-- [ ] 120 regsub
+- [X] 120 regsub
 - [ ] 467 resize
 - [ ] 868 screen-redraw
 - [ ] 2347 screen-write

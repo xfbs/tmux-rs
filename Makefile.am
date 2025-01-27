@@ -77,6 +77,7 @@ endif
 # window.c
 # xmalloc.c
 # cfg.c
+# regsub.c
 dist_tmux_SOURCES = \
 	arguments.c \
 	client.c \
@@ -172,7 +173,6 @@ dist_tmux_SOURCES = \
 	paste.c \
 	popup.c \
 	proc.c \
-	regsub.c \
 	resize.c \
 	screen-redraw.c \
 	screen-write.c \
