@@ -87,7 +87,6 @@ opaque_types! {
     menu_data,
     mode_tree_data,
     mode_tree_item,
-    msgtype,
     options,
     options_entry,
     paste_buffer,
@@ -1605,22 +1604,12 @@ pub union args_value_union {
     pub cmdlist: *mut cmd_list,
 }
 
-// something is wrong with accessing this type
-#[repr(C, i32)]
-#[derive(Copy, Clone)]
-enum args_value_enum {
-    None,
-    String(*mut c_char),
-    Commands(*mut cmd_list),
-}
-
 /// Argument value.
 #[repr(C)]
 #[derive(compat_rs::TailQEntry)]
 pub struct args_value {
-    // pub type_: args_type,
-    // pub args_value_union: args_value_union,
-    pub value: args_value_enum,
+    pub type_: args_type,
+    pub union_: args_value_union,
     pub cached: *mut c_char,
     #[entry]
     pub entry: tailq_entry<args_value>,
@@ -1696,6 +1685,7 @@ pub enum cmd_retval {
 
 // Command parse result.
 #[repr(i32)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub enum cmd_parse_status {
     CMD_PARSE_ERROR,
     CMD_PARSE_SUCCESS,
@@ -1971,7 +1961,7 @@ pub struct client {
     pub prompt_index: usize,
     pub prompt_inputcb: prompt_input_cb,
     pub prompt_freecb: prompt_free_cb,
-    pub prompt_data: *mut libc::c_void,
+    pub prompt_data: *mut c_void,
     pub prompt_hindex: [c_uint; 4],
     pub prompt_mode: prompt_mode,
     pub prompt_saved: *mut utf8_data,
@@ -1984,7 +1974,7 @@ pub struct client {
 
     pub references: c_int,
 
-    pub pan_window: *mut libc::c_void,
+    pub pan_window: *mut c_void,
     pub pan_ox: c_uint,
     pub pan_oy: c_uint,
 
@@ -1994,7 +1984,7 @@ pub struct client {
     pub overlay_key: overlay_key_cb,
     pub overlay_free: overlay_free_cb,
     pub overlay_resize: overlay_resize_cb,
-    pub overlay_data: *mut libc::c_void,
+    pub overlay_data: *mut c_void,
     pub overlay_timer: event,
 
     pub files: client_files,
@@ -2035,6 +2025,7 @@ pub type key_bindings = rb_head<key_binding>;
 #[repr(C)]
 pub struct key_table {
     pub name: *mut c_char,
+    pub activity_time: timeval,
     pub key_bindings: key_bindings,
     pub default_key_bindings: key_bindings,
 
@@ -2667,7 +2658,7 @@ pub use crate::hyperlinks_::{
 };
 
 pub mod xmalloc;
-pub use crate::xmalloc::{xasprintf, xcalloc, xmalloc, xreallocarray, xsnprintf, xstrdup};
+pub use crate::xmalloc::{xasprintf, xcalloc, xmalloc, xreallocarray, xsnprintf, xstrdup, xvasprintf};
 /*
 unsafe extern "C" {
     pub unsafe fn xasprintf(ret: *mut *mut c_char, fmt: *const c_char, args: ...) -> c_int;
@@ -2677,6 +2668,12 @@ unsafe extern "C" {
     pub unsafe fn xstrdup(str: *const c_char) -> NonNull<c_char>;
 }
 */
+
+pub mod tmux_protocol;
+pub use crate::tmux_protocol::{
+    PROTOCOL_VERSION, msg_command, msg_read_cancel, msg_read_data, msg_read_done, msg_read_open, msg_write_close,
+    msg_write_data, msg_write_open, msg_write_ready, msgtype,
+};
 
 unsafe extern "C" {
     pub fn vsnprintf(_: *mut c_char, _: usize, _: *const c_char, _: VaList) -> c_int;

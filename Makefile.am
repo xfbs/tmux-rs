@@ -19,10 +19,10 @@ AM_CPPFLAGS += @XOPEN_DEFINES@ \
 LDADD = $(LIBOBJS) -L/home/collin/Git/tmux/tmux-3.5a/target/x86_64-unknown-linux-gnu/debug -ltmux_rs
 # LDADD = $(LIBOBJS) -L/home/collin/Git/tmux/tmux-3.5a/target/release -ltmux_rs
 
-AM_CFLAGS += -fsanitize=address -fno-omit-frame-pointer
+AM_CFLAGS += -fsanitize=address -fno-omit-frame-pointer -O0
 # Set flags for gcc.
 if IS_GCC
-AM_CFLAGS += -std=gnu99 -O2
+AM_CFLAGS += -std=gnu99
 if IS_DEBUG
 AM_CFLAGS += -g
 AM_CFLAGS += -Wno-long-long -Wall -W -Wformat=2
@@ -76,9 +76,9 @@ endif
 # log.c
 # window.c
 # xmalloc.c
+# cfg.c
 dist_tmux_SOURCES = \
 	arguments.c \
-	cfg.c \
 	client.c \
 	cmd-attach-session.c \
 	cmd-bind-key.c \

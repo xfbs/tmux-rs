@@ -13,6 +13,7 @@ config.log
 config.status
 etc/
 target
+.gdbinit
 tmux
 Makefile
 Makefile.in

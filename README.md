@@ -89,6 +89,9 @@ more then just server exited unexpectedly.
   - derive macro for rbtree and tailq
     - tailq support new generic type discriminant
 
+# Thoughts
+- better rust-analyzer integration with C code
+
 # TODO After 100% Rust
 - miri
 - coverage
@@ -99,71 +102,6 @@ more then just server exited unexpectedly.
 - [X] 108 attributes
 - [ ] 277 cfg
 - [ ] 809 client
-- [ ] 175 cmd-attach-session
-- [ ] 107 cmd-bind-key
-- [ ] 143 cmd-break-pane
-- [ ] 253 cmd-capture-pane
-- [ ] 117 cmd-choose-tree
-- [ ] 242 cmd-command-prompt
-- [ ] 163 cmd-confirm-before
-- [x] 98 cmd-copy-mode
-- [ ] 109 cmd-detach-client
-- [ ] 502 cmd-display-menu
-- [ ] 159 cmd-display-message
-- [ ] 312 cmd-display-panes
-- [ ] 116 cmd-find-window
-- [ ] 1314 cmd-find
-- [ ] 190 cmd-if-shell
-- [ ] 180 cmd-join-pane
-- [ ] 67 cmd-kill-pane
-- [X] cmd-kill-server
-- [ ] 71 cmd-kill-session
-- [ ] 110 cmd-kill-window
-- [ ] 81 cmd-list-buffers
-- [ ] 102 cmd-list-clients
-- [ ] 372 cmd-list-keys
-- [ ] 148 cmd-list-panes
-- [ ] 90 cmd-list-sessions
-- [ ] 130 cmd-list-windows
-- [ ] 113 cmd-load-buffer
-- [ ] 79 cmd-lock-server
-- [ ] 122 cmd-move-window
-- [ ] 370 cmd-new-session
-- [ ] 159 cmd-new-window
-- [ ] 159 cmd-parse
-- [ ] 113 cmd-paste-buffer
-- [ ] 230 cmd-pipe-pane
-- [ ] 899 cmd-queue
-- [ ] 335 cmd-refresh-client
-- [ ] 81 cmd-rename-session
-- [ ] 62 cmd-rename-window
-- [ ] 215 cmd-resize-pane
-- [ ] 115 cmd-resize-window
-- [ ] 98 cmd-respawn-pane
-- [ ] 95 cmd-respawn-window
-- [ ] 115 cmd-rotate-window
-- [ ] 290 cmd-run-shell
-- [ ] 120 cmd-save-buffer
-- [ ] 149 cmd-select-layout
-- [ ] 242 cmd-select-pane
-- [ ] 150 cmd-select-wind
-- [ ] 237 cmd-send-keys
-- [ ] 147 cmd-server-access
-- [ ] 137 cmd-set-buffer
-- [ ] 119 cmd-set-environment
-- [ ] 239 cmd-set-option
-- [ ] 143 cmd-show-environment
-- [ ] 107 cmd-show-messages
-- [ ] 260 cmd-show-options
-- [ ] 108 cmd-show-prompt-history
-- [ ] 208 cmd-source-file
-- [ ] 199 cmd-split-window
-- [ ] 148 cmd-swap-pane
-- [ ] 94 cmd-swap-window
-- [ ] 142 cmd-switch-client
-- [ ] 104 cmd-unbind-key
-- [ ] 264 cmd-wait-for
-- [ ] 874 cmd
 - [ ] 1117 colour
 - [X] compat
 - [ ] 262 control-notify
@@ -226,6 +164,71 @@ more then just server exited unexpectedly.
 - [ ] 1512 window-customize
 - [ ] 1348 window-tree
 - [X] xmalloc
+- [ ] 874 cmd
+  - [ ] 175 cmd-attach-session
+  - [ ] 107 cmd-bind-key
+  - [ ] 143 cmd-break-pane
+  - [ ] 253 cmd-capture-pane
+  - [ ] 117 cmd-choose-tree
+  - [ ] 242 cmd-command-prompt
+  - [ ] 163 cmd-confirm-before
+  - [x] 98 cmd-copy-mode
+  - [ ] 109 cmd-detach-client
+  - [ ] 502 cmd-display-menu
+  - [ ] 159 cmd-display-message
+  - [ ] 312 cmd-display-panes
+  - [ ] 116 cmd-find-window
+  - [ ] 1314 cmd-find
+  - [ ] 190 cmd-if-shell
+  - [ ] 180 cmd-join-pane
+  - [ ] 67 cmd-kill-pane
+  - [X] cmd-kill-server
+  - [ ] 71 cmd-kill-session
+  - [ ] 110 cmd-kill-window
+  - [ ] 81 cmd-list-buffers
+  - [ ] 102 cmd-list-clients
+  - [ ] 372 cmd-list-keys
+  - [ ] 148 cmd-list-panes
+  - [ ] 90 cmd-list-sessions
+  - [ ] 130 cmd-list-windows
+  - [ ] 113 cmd-load-buffer
+  - [ ] 79 cmd-lock-server
+  - [ ] 122 cmd-move-window
+  - [ ] 370 cmd-new-session
+  - [ ] 159 cmd-new-window
+  - [ ] 159 cmd-parse
+  - [ ] 113 cmd-paste-buffer
+  - [ ] 230 cmd-pipe-pane
+  - [ ] 899 cmd-queue
+  - [ ] 335 cmd-refresh-client
+  - [ ] 81 cmd-rename-session
+  - [ ] 62 cmd-rename-window
+  - [ ] 215 cmd-resize-pane
+  - [ ] 115 cmd-resize-window
+  - [ ] 98 cmd-respawn-pane
+  - [ ] 95 cmd-respawn-window
+  - [ ] 115 cmd-rotate-window
+  - [ ] 290 cmd-run-shell
+  - [ ] 120 cmd-save-buffer
+  - [ ] 149 cmd-select-layout
+  - [ ] 242 cmd-select-pane
+  - [ ] 150 cmd-select-wind
+  - [ ] 237 cmd-send-keys
+  - [ ] 147 cmd-server-access
+  - [ ] 137 cmd-set-buffer
+  - [ ] 119 cmd-set-environment
+  - [ ] 239 cmd-set-option
+  - [ ] 143 cmd-show-environment
+  - [ ] 107 cmd-show-messages
+  - [ ] 260 cmd-show-options
+  - [ ] 108 cmd-show-prompt-history
+  - [ ] 208 cmd-source-file
+  - [ ] 199 cmd-split-window
+  - [ ] 148 cmd-swap-pane
+  - [ ] 94 cmd-swap-window
+  - [ ] 142 cmd-switch-client
+  - [ ] 104 cmd-unbind-key
+  - [ ] 264 cmd-wait-for
 
 # Notes
 
@@ -259,15 +262,8 @@ undefined behaviour in this context.
 
 ## BUGS
 
-```
-seems stuck in loop
-#0  compat_rs::tree::rb_parent<tmux_rs::window_pane> (this=0x6190000c2180) at compat_rs/src/tree.rs:116
-#1  0x000055ad36529653 in compat_rs::tree::rb_remove<tmux_rs::window_pane> (head=0x55ad370dc200 <all_window_panes>, elm=0x6190000c2180) at compat_rs/src/tree.rs:437
-#2  0x000055ad3653745f in tmux_rs::window_::window_pane_destroy (wp=0x6190000c2180) at tmux_rs/src/window_.rs:1171
-#3  0x000055ad36534296 in tmux_rs::window_::window_remove_pane (w=0x617000038e80, wp=0x6190000c2180) at tmux_rs/src/window_.rs:910
-#4  0x000055ad3648db29 in server_destroy_pane (wp=0x6190000c2180, notify=<optimized out>) at server-fn.c:373
-#5  0x000055ad36537e98 in tmux_rs::window_::window_pane_error_callback (_bufev=0x61600003e180, _what=33, data=0x6190000c2180) at tmux_rs/src/window_.rs:
-```
+- keybinding for vertical split prefix - doesn't seem to perform the correct action
+  - related to current translation of arguments.c
 
 ## BUGS (found)
 
@@ -276,7 +272,10 @@ seems stuck in loop
 - incorrect translation of self-referential struct (just used null to init because lazyness when translating)
 - missing init for tailq in struct // the big one causing crash on init
 - missing break at end of loop emulating goto in rb_remove: hangs on Ctrl-D
-
+- missing field in struct translation
+- incorrect field in struct. used struct instead of struct pointer
+- flipped == args_type::ARGS_NONE instead of flipped != args_type::ARGS_NONE
+- flipped != 0 instead of == 0 for coverting from !int_like_value in conditional
 
 # References
 

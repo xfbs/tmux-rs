@@ -33,3 +33,19 @@ unsafe extern "C" {
     pub unsafe fn cmdq_print_data(_: *mut cmdq_item, _: c_int, _: *mut evbuffer);
     pub unsafe fn cmdq_error(_: *mut cmdq_item, _: *const c_char, ...);
 }
+
+macro_rules! cstringify {
+    ($e:expr) => {
+        unsafe { ::core::ffi::CStr::from_bytes_with_nul_unchecked(concat!(stringify!($e), "\0").as_bytes()).as_ptr() }
+    };
+}
+pub(crate) use cstringify;
+
+// #define cmdq_get_callback(cb, data) cmdq_get_callback1(#cb, cb, data)
+#[macro_export]
+macro_rules! cmdq_get_callback {
+    ($cb:ident, $data:expr) => {
+        $crate::cmd_::cmd_queue::cmdq_get_callback1($crate::cmd_::cmd_queue::cstringify!($cb), Some($cb), $data)
+    };
+}
+pub use cmdq_get_callback;
