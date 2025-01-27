@@ -78,6 +78,7 @@ endif
 # xmalloc.c
 # cfg.c
 # regsub.c
+# colour.c
 dist_tmux_SOURCES = \
 	arguments.c \
 	client.c \
@@ -144,7 +145,6 @@ dist_tmux_SOURCES = \
 	cmd-unbind-key.c \
 	cmd-wait-for.c \
 	cmd.c \
-	colour.c \
 	compat.h \
 	control-notify.c \
 	control.c \

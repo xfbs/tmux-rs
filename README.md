@@ -96,13 +96,18 @@ more then just server exited unexpectedly.
 - miri
 - coverage
 - convert to references instead of pointers
+  - requirements to convert pointer to reference <https://doc.rust-lang.org/core/ptr/index.html#pointer-to-reference-conversion>
+    - interleaving accesses between refs and ptrs seems to be not allowed <https://doc.rust-lang.org/nightly/core/ptr/index.html#safety>
+    - when converting from ptr to ref need to ensure types are initialized and valid when passed into a function
+    - read or writes through a ptr will invalidate a reference
+    - also need to ensure no pointers are created and stored from the references
 
 - [X] 325 alert
 - [...] 1097 arguments
 - [X] 108 attributes
 - [X] 277 cfg
 - [ ] 809 client
-- [ ] 1117 colour
+- [X] 1117 colour
 - [X] compat
 - [ ] 262 control-notify
 - [ ] 1117 control
@@ -148,7 +153,7 @@ more then just server exited unexpectedly.
 - [ ] 383 style
 - [ ] 538 tmux.c
 - [X] tmux.h
-- [ ] tmux-protocol.h
+- [X] tmux-protocol.h
 - [ ] 269 tty-acs
 - [ ] 510 tty-features
 - [ ] 1591 tty-keys
