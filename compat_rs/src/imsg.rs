@@ -8,7 +8,7 @@ use crate::imsg_buffer::{
     ibuf_add, ibuf_add_buf, ibuf_close, ibuf_data, ibuf_dynamic, ibuf_fd_avail, ibuf_fd_set, ibuf_free, ibuf_get,
     ibuf_get_ibuf, ibuf_open, ibuf_rewind, ibuf_size, msgbuf_clear, msgbuf_init, msgbuf_write,
 };
-use crate::queue::{tailq_entry, tailq_first, tailq_head, tailq_init, tailq_insert_tail, tailq_remove, Entry};
+use crate::queue::{Entry, tailq_entry, tailq_first, tailq_head, tailq_init, tailq_insert_tail, tailq_remove};
 
 pub const MAX_IMSGSIZE: u32 = 16384;
 const IMSGF_HASFD: u16 = 1; // this needs to be u16, i think, but it's u32 in auto generated header
@@ -90,7 +90,7 @@ impl crate::queue::Entry<imsg_fd> for imsg_fd {
 
 static imsg_fd_overhead: i32 = 0;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_init(imsgbuf: *mut imsgbuf, fd: c_int) {
     msgbuf_init(&raw mut (*imsgbuf).w);
     (*imsgbuf).r = core::mem::zeroed();
@@ -100,7 +100,7 @@ pub unsafe extern "C" fn imsg_init(imsgbuf: *mut imsgbuf, fd: c_int) {
     tailq_init(&raw mut (*imsgbuf).fds);
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_read(imsgbuf: *mut imsgbuf) -> isize {
     union cmsgbuf {
         hdr: cmsghdr,
@@ -175,7 +175,7 @@ pub unsafe extern "C" fn imsg_read(imsgbuf: *mut imsgbuf) -> isize {
     n
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_get(imsgbuf: *mut imsgbuf, imsg: *mut imsg) -> isize {
     let mut m: imsg = std::mem::zeroed();
     let av: usize = (*imsgbuf).r.wpos;
@@ -237,7 +237,7 @@ pub unsafe extern "C" fn imsg_get(imsgbuf: *mut imsgbuf, imsg: *mut imsg) -> isi
     (datalen + IMSG_HEADER_SIZE) as isize
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_get_ibuf(imsg: *mut imsg, ibuf: *mut ibuf) -> c_int {
     if (*imsg).buf.is_null() {
         *libc::__errno_location() = libc::EBADMSG;
@@ -246,7 +246,7 @@ pub unsafe extern "C" fn imsg_get_ibuf(imsg: *mut imsg, ibuf: *mut ibuf) -> c_in
     ibuf_get_ibuf((*imsg).buf, ibuf_size((*imsg).buf), ibuf)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_get_data(imsg: *mut imsg, data: *mut c_void, len: usize) -> c_int {
     if len == 0 {
         *libc::__errno_location() = libc::EINVAL;
@@ -259,7 +259,7 @@ pub unsafe extern "C" fn imsg_get_data(imsg: *mut imsg, data: *mut c_void, len: 
     ibuf_get((*imsg).buf, data, len)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_get_fd(imsg: *mut imsg) -> c_int {
     let fd = (*imsg).fd;
 
@@ -267,12 +267,12 @@ pub unsafe extern "C" fn imsg_get_fd(imsg: *mut imsg) -> c_int {
     fd
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_get_id(imsg: *mut imsg) -> u32 {
     (*imsg).hdr.peerid
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_get_len(imsg: *mut imsg) -> usize {
     if (*imsg).buf.is_null() {
         return 0;
@@ -280,17 +280,17 @@ pub unsafe extern "C" fn imsg_get_len(imsg: *mut imsg) -> usize {
     ibuf_size((*imsg).buf)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_get_pid(imsg: *mut imsg) -> pid_t {
     (*imsg).hdr.pid as pid_t
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_get_type(imsg: *mut imsg) -> u32 {
     (*imsg).hdr.type_
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_compose(
     imsgbuf: *mut imsgbuf,
     type_: u32,
@@ -315,7 +315,7 @@ pub unsafe extern "C" fn imsg_compose(
     1
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_composev(
     imsgbuf: *mut imsgbuf,
     type_: u32,
@@ -348,7 +348,7 @@ pub unsafe extern "C" fn imsg_composev(
     1
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_compose_ibuf(
     imsgbuf: *mut imsgbuf,
     type_: u32,
@@ -397,7 +397,7 @@ pub unsafe extern "C" fn imsg_compose_ibuf(
     return 1;
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_forward(imsgbuf: *mut imsgbuf, msg: *mut imsg) -> c_int {
     let mut len = 0;
 
@@ -427,7 +427,7 @@ pub unsafe extern "C" fn imsg_forward(imsgbuf: *mut imsgbuf, msg: *mut imsg) -> 
     1
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_create(
     imsgbuf: *mut imsgbuf,
     type_: u32,
@@ -463,7 +463,7 @@ pub unsafe extern "C" fn imsg_create(
     wbuf
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_add(msg: *mut ibuf, data: *const c_void, datalen: usize) -> c_int {
     if datalen != 0 {
         if ibuf_add(msg, data, datalen) == -1 {
@@ -473,7 +473,7 @@ pub unsafe extern "C" fn imsg_add(msg: *mut ibuf, data: *const c_void, datalen: 
     }
     datalen as _
 }
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_close(imsgbuf: *mut imsgbuf, msg: *mut ibuf) {
     let hdr: *mut imsg_hdr = (*msg).buf as *mut imsg_hdr;
 
@@ -486,12 +486,12 @@ pub unsafe extern "C" fn imsg_close(imsgbuf: *mut imsgbuf, msg: *mut ibuf) {
     ibuf_close(&raw mut (*imsgbuf).w, msg)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_free(imsg: *mut imsg) {
     ibuf_free((*imsg).buf)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 unsafe extern "C" fn imsg_dequeue_fd(imsgbuf: *mut imsgbuf) -> i32 {
     let ifd = tailq_first(&raw mut (*imsgbuf).fds);
 
@@ -506,7 +506,7 @@ unsafe extern "C" fn imsg_dequeue_fd(imsgbuf: *mut imsgbuf) -> i32 {
     fd
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_flush(imsgbuf: *mut imsgbuf) -> c_int {
     while (*imsgbuf).w.queued != 0 {
         if msgbuf_write(&raw mut (*imsgbuf).w) <= 0 {
@@ -516,7 +516,7 @@ pub unsafe extern "C" fn imsg_flush(imsgbuf: *mut imsgbuf) -> c_int {
     0
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_clear(imsgbuf: *mut imsgbuf) {
     msgbuf_clear(&raw mut (*imsgbuf).w);
 

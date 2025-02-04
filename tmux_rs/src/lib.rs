@@ -1,4 +1,6 @@
 #![feature(c_variadic)]
+#![allow(non_upper_case_globals)]
+#![allow(non_camel_case_types)]
 
 pub mod event_;
 pub mod image_;
@@ -15,13 +17,26 @@ pub mod utempter;
 
 pub use core::{
     ffi::{
-        CStr, c_char, c_int, c_longlong, c_short, c_uchar, c_uint, c_ulonglong, c_ushort, c_void,
+        CStr, c_char, c_int, c_long, c_longlong, c_short, c_uchar, c_uint, c_ulonglong, c_ushort, c_void,
         va_list::{VaList, VaListImpl},
     },
     mem::{ManuallyDrop, zeroed},
     ops::ControlFlow,
     ptr::{NonNull, null_mut},
 };
+
+unsafe extern "C" {
+    pub static mut environ: *mut *mut c_char;
+}
+
+// #define S_ISDIR(mode)  (((mode) & S_IFMT) == S_IFDIR)
+// TODO move this to a better spot
+#[inline]
+pub fn S_ISDIR(mode: u32) -> bool {
+    mode & libc::S_IFMT == libc::S_IFDIR
+}
+
+pub const _PATH_BSHELL: *const c_char = c"/bin/sh".as_ptr();
 
 pub type wchar_t = core::ffi::c_int;
 unsafe extern "C" {
@@ -34,7 +49,7 @@ unsafe extern "C" {
 
 pub use libc::{FILE, REG_EXTENDED, REG_ICASE, free, pid_t, termios, time_t, timeval, uid_t};
 
-pub use crate::event_::{EVBUFFER_DATA, EVBUFFER_LENGTH, evtimer_add, evtimer_set};
+pub use crate::event_::{EVBUFFER_DATA, EVBUFFER_LENGTH, evtimer_add, evtimer_del, evtimer_pending, evtimer_set};
 pub use libevent_sys::{bufferevent, evbuffer, evbuffer_get_length, evbuffer_pullup, event, event_base};
 
 use compat_rs::tree::{rb_entry, rb_head};
@@ -76,7 +91,6 @@ opaque_types! {
     cmdq_state,
     cmds,
     control_state,
-    environ,
     format_job_tree,
     format_tree,
     hyperlinks,
@@ -1282,6 +1296,18 @@ pub struct environ_entry {
     pub flags: i32,
     pub entry: rb_entry<environ_entry>,
 }
+//TODO re-add later
+/*
+impl compat_rs::tree::GetEntry<environ_entry> for environ_entry {
+    unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<environ_entry> {
+        unsafe { &raw mut (*this).entry }
+    }
+
+    unsafe fn cmp(this: *const Self, other: *const Self) -> i32 {
+        unsafe { environ_::environ_cmp(this, other) }
+    }
+}
+*/
 
 /// Client session.
 #[repr(C)]
@@ -2224,6 +2250,10 @@ mod options_table;
 pub use crate::options_table::{options_other_names, options_table};
 
 mod job_;
+pub const JOB_NOWAIT: i32 = 1;
+pub const JOB_KEEPWRITE: i32 = 2;
+pub const JOB_PTY: i32 = 4;
+pub const JOB_DEFAULTSHELL: i32 = 8;
 pub use crate::job_::{
     job_check_died, job_complete_cb, job_free, job_free_cb, job_get_data, job_get_event, job_get_status, job_kill_all,
     job_print_summary, job_resize, job_run, job_still_running, job_transfer, job_update_cb,
@@ -2231,8 +2261,8 @@ pub use crate::job_::{
 
 mod environ_;
 pub use crate::environ_::{
-    environ_clear, environ_copy, environ_create, environ_find, environ_first, environ_for_session, environ_free,
-    environ_log, environ_next, environ_push, environ_put, environ_set, environ_unset, environ_update,
+    environ, environ_clear, environ_copy, environ_create, environ_find, environ_first, environ_for_session,
+    environ_free, environ_log, environ_next, environ_push, environ_put, environ_set, environ_unset, environ_update,
 };
 
 mod tty_;
@@ -2353,6 +2383,8 @@ pub use crate::server::{
 unsafe extern "C" {
     pub unsafe static mut clients: clients;
     pub unsafe static mut marked_pane: cmd_find_state;
+    pub unsafe static mut server_proc: *mut tmuxproc;
+
     pub unsafe fn server_check_marked() -> c_int;
     pub unsafe fn server_clear_marked();
 }

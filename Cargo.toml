@@ -4,6 +4,8 @@ resolver = "2"
 
 [profile.release]
 debug = true
+debug-assertions = true
+overflow-checks = true
 panic = "abort"
 
 [workspace.dependencies]
@@ -14,12 +16,20 @@ paste        = { version = "1.0.15"  }
 quote        = { version = "1.0.38"  }
 syn          = { version = "2.0.96"  }
 
+# # BUGS
+#
+# Warnings disabled in Cargo.toml still show in rust-analyzer
+# and must be allowed separately.
+# - <https://github.com/rust-lang/rust-analyzer/issues/16628>
+# - <https://github.com/rust-lang/rust-analyzer/issues/15344>
+
 [workspace.lints.rust]
 non_camel_case_types   = "allow"
 non_snake_case         = "allow"
-non_upper_case_globals = "allow" # warning still shows in rust-analyzer. bug: <https://github.com/rust-lang/rust-analyzer/issues/15344>
+non_upper_case_globals = "allow"
 private_interfaces     = "allow"
 unused                 = "allow"
+unsafe_op_in_unsafe_fn = "allow"
 
 [workspace.lints.clippy]
 collapsible_if        = "allow"

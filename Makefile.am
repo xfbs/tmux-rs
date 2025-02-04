@@ -79,7 +79,10 @@ endif
 # cfg.c
 # regsub.c
 # colour.c
+# names.c
+# tmux.c
 dist_tmux_SOURCES = \
+	environ.c \
 	arguments.c \
 	client.c \
 	cmd-attach-session.c \
@@ -148,7 +151,6 @@ dist_tmux_SOURCES = \
 	compat.h \
 	control-notify.c \
 	control.c \
-	environ.c \
 	file.c \
 	format.c \
 	format-draw.c \
@@ -166,7 +168,6 @@ dist_tmux_SOURCES = \
 	layout.c \
 	menu.c \
 	mode-tree.c \
-	names.c \
 	notify.c \
 	options-table.c \
 	options.c \
@@ -185,7 +186,6 @@ dist_tmux_SOURCES = \
 	spawn.c \
 	status.c \
 	style.c \
-	tmux.c \
 	tmux.h \
 	tmux-protocol.h \
 	tty-acs.c \

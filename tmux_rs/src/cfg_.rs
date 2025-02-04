@@ -243,7 +243,7 @@ pub unsafe extern "C" fn cfg_print_causes(item: *mut cmdq_item) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cfg_show_causes(mut s: *mut session) {
     unsafe {
-        'out: loop {
+        'out: {
             let mut c = tailq_first(&raw mut clients);
 
             if cfg_ncauses == 0 {
@@ -279,7 +279,7 @@ pub unsafe extern "C" fn cfg_show_causes(mut s: *mut session) {
                 window_copy_add(wp, 0, c"%s".as_ptr(), *cfg_causes.add(i as usize));
                 free(*cfg_causes.add(i as usize) as _);
             }
-            break;
+            break 'out;
         }
         // out:
         free(cfg_causes as _);

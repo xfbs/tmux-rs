@@ -17,10 +17,13 @@
 
 use crate::*;
 use core::ffi::{CStr, c_char, c_double, c_int, c_longlong, c_uchar, c_uint, c_void};
-use std::{io::Write as _, ptr::null_mut};
+use std::{
+    io::Write as _,
+    ptr::{null, null_mut},
+};
 
 use compat_rs::strtonum;
-use libc::{free, sscanf, strcasecmp, strncasecmp};
+use libc::{free, sscanf, strcasecmp, strncasecmp, strncmp};
 use xmalloc::xstrndup;
 
 const COLOUR_FLAG_256: i32 = 0x01000000;
@@ -205,7 +208,7 @@ pub unsafe extern "C" fn colour_fromstring(s: *const c_char) -> c_int {
         }
 
         if strncasecmp(s, c"colour".as_ptr(), 6) == 0 {
-            let mut errstr: *const c_char = std::ptr::null();
+            let mut errstr: *const c_char = null();
             let n = strtonum(s.add(6), 0, 255, &raw mut errstr) as i32;
             if !errstr.is_null() {
                 return -1;
@@ -214,7 +217,7 @@ pub unsafe extern "C" fn colour_fromstring(s: *const c_char) -> c_int {
         }
 
         if strncasecmp(s, c"color".as_ptr(), 5) == 0 {
-            let mut errstr: *const c_char = std::ptr::null();
+            let mut errstr: *const c_char = null();
             let n = strtonum(s.add(5), 0, 255, &raw mut errstr) as i32;
             if !errstr.is_null() {
                 return -1;
@@ -896,31 +899,31 @@ pub unsafe extern "C" fn colour_byname(name: *const c_char) -> i32 {
         (c"yellow4", 0x8b8b00),
     ];
 
-    if unsafe { libc::strncmp(name, c"grey".as_ptr(), 4) } == 0
-        || unsafe { libc::strncmp(name, c"gray".as_ptr(), 4) } == 0
-    {
-        if unsafe { *name.add(4) } == 0 {
-            return -1;
+    unsafe {
+        if strncmp(name, c"grey".as_ptr(), 4) == 0 || strncmp(name, c"gray".as_ptr(), 4) == 0 {
+            if *name.add(4) == 0 {
+                return -1;
+            }
+
+            let mut errstr: *const c_char = null();
+            let mut c = strtonum(name.add(4), 0, 100, &raw mut errstr);
+            if !errstr.is_null() {
+                return -1;
+            }
+            let c = (2.55f32 * (c as f32)).round() as i32;
+
+            if !(0..=255).contains(&c) {
+                return -1;
+            }
+
+            let c = c as u8;
+            return colour_join_rgb(c, c, c);
         }
 
-        let mut errstr: *const c_char = std::ptr::null();
-        let mut c = unsafe { strtonum(unsafe { name.add(4) }, 0, 100, &raw mut errstr) };
-        if !errstr.is_null() {
-            return -1;
-        }
-        let c = (2.55f32 * (c as f32)).round() as i32;
-
-        if !(0..=255).contains(&c) {
-            return -1;
-        }
-
-        let c = c as u8;
-        return colour_join_rgb(c, c, c);
-    }
-
-    for colour in &COLOURS {
-        if unsafe { strcasecmp(colour.0.as_ptr(), name) } == 0 {
-            return colour.1 | COLOUR_FLAG_RGB;
+        for (color_name, color_hex) in &COLOURS {
+            if strcasecmp(color_name.as_ptr(), name) == 0 {
+                return color_hex | COLOUR_FLAG_RGB;
+            }
         }
     }
 

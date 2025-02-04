@@ -64,7 +64,35 @@ issue.
 
 # Progress
 
-Current status: runs
+Current status:
+
+reverted environ from build. porting tmux.c next, function by function. currently running
+NEXT: finish porting tmux.c but ensure it still runs
+
+```
+0x606000001160 rb_entry { rbe_left: 0x0, rbe_right: 0x606000001820, rbe_parent: 0x6060000009e0, rbe_color: RB_BLACK }
+0x0
+AddressSanitizer:DEADLYSIGNAL
+=================================================================
+==80540==ERROR: AddressSanitizer: SEGV on unknown address 0x000000000030 (pc 0x55741df91844 bp 0x7ffd34fc7cd0 sp 0x7ffd34fc7890 T0)
+==80540==The signal is caused by a READ memory access.
+==80540==Hint: address points to the zero page.
+    #0 0x55741df91844 in compat_rs::tree::rb_color::h5bf1ff1355d9e6c7 /home/collin/Git/tmux/tmux-3.5a/compat_rs/src/tree.rs:123:14
+    #1 0x55741df8b1e3 in compat_rs::tree::rb_remove_color::h69ea0937ab2c4b6f /home/collin/Git/tmux/tmux-3.5a/compat_rs/src/tree.rs:317:20
+    #2 0x55741df941bf in compat_rs::tree::rb_remove::h2dc7ad830c5919d2 /home/collin/Git/tmux/tmux-3.5a/compat_rs/src/tree.rs:475:13
+    #3 0x55741dfc1cf8 in tmux_rs::environ_::environ_free::_$u7b$$u7b$closure$u7d$$u7d$::hbb3f0349d4e4a987 /home/collin/Git/tmux/tmux-3.5a/tmux_rs/src/environ_.rs:32:13
+    #4 0x55741df8811d in compat_rs::tree::rb_foreach_safe::hb20b2c7acc7dc97b /home/collin/Git/tmux/tmux-3.5a/compat_rs/src/tree.rs:598:19
+    #5 0x55741dfbabcc in environ_free /home/collin/Git/tmux/tmux-3.5a/tmux_rs/src/environ_.rs:29:9
+    #6 0x55741dcd7d30 in client_main /home/collin/Git/tmux/tmux-3.5a/client.c:341:2
+    #7 0x55741ded0adb in main /home/collin/Git/tmux/tmux-3.5a/tmux.c:537:7
+    #8 0x7f5e1e244249 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #9 0x7f5e1e244304 in __libc_start_main csu/../csu/libc-start.c:360:3
+    #10 0x55741dc0b8e0 in _start (/home/collin/Git/tmux/tmux-3.5a/tmux+0x1098e0) (BuildId: 75e35fd9ba583f7712f4e9194bec4b2337c0dbf7)
+
+AddressSanitizer can not provide additional info.
+SUMMARY: AddressSanitizer: SEGV /home/collin/Git/tmux/tmux-3.5a/compat_rs/src/tree.rs:123:14 in compat_rs::tree::rb_color::h5bf1ff1355d9e6c7
+==80540==ABORTING
+```
 
 need to be able to get some more useful information when.
 more then just server exited unexpectedly.
@@ -97,7 +125,9 @@ more then just server exited unexpectedly.
 - coverage
 - convert to references instead of pointers
   - requirements to convert pointer to reference <https://doc.rust-lang.org/core/ptr/index.html#pointer-to-reference-conversion>
-    - interleaving accesses between refs and ptrs seems to be not allowed <https://doc.rust-lang.org/nightly/core/ptr/index.html#safety>
+    - interleaving accesses between refs and ptrs seems to be not allowed
+      - <https://doc.rust-lang.org/nightly/core/ptr/index.html#safety>
+      - <https://github.com/rust-lang/unsafe-code-guidelines/issues/463>
     - when converting from ptr to ref need to ensure types are initialized and valid when passed into a function
     - read or writes through a ptr will invalidate a reference
     - also need to ensure no pointers are created and stored from the references
@@ -130,7 +160,7 @@ more then just server exited unexpectedly.
 - [X] log
 - [ ] 556 menu
 - [ ] 1266 mode-tree
-- [ ] 172 names
+- [X] 172 names
 - [ ] 323 notify
 - [ ] 1370 options-table
 - [ ] 1204 options
@@ -151,7 +181,7 @@ more then just server exited unexpectedly.
 - [ ] 497 spawn
 - [ ] 2035 status
 - [ ] 383 style
-- [ ] 538 tmux.c
+- [X] 538 tmux.c
 - [X] tmux.h
 - [X] tmux-protocol.h
 - [ ] 269 tty-acs

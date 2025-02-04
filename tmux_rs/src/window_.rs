@@ -425,7 +425,7 @@ pub unsafe extern "C" fn window_remove_ref(w: *mut window, from: *const c_char) 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_set_name(w: *mut window, new_name: *mut c_char) {
+pub unsafe extern "C" fn window_set_name(w: *mut window, new_name: *const c_char) {
     unsafe {
         free((*w).name as _);
         utf8_stravis(&raw mut (*w).name, new_name, VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL);

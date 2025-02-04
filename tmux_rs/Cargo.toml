@@ -16,6 +16,7 @@ paste        = { workspace = true }
 systemd = []
 sixel = []
 utempter = []
+sys_signame = []
 
 [lints]
 workspace = true

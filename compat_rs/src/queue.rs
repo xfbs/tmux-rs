@@ -1,6 +1,151 @@
 use core::ptr::null_mut;
 use std::ops::ControlFlow;
 
+pub trait ListEntry<T, Discriminant = ()> {
+    unsafe fn field(this: *mut Self) -> *mut list_entry<T>;
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct list_head<T> {
+    pub lh_first: *mut T,
+}
+pub const fn list_head_initializer<T>() -> list_head<T> {
+    list_head { lh_first: null_mut() }
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct list_entry<T> {
+    pub le_next: *mut T,
+    pub le_prev: *mut *mut T,
+}
+
+pub unsafe fn list_first<T>(head: *mut list_head<T>) -> *mut T {
+    unsafe { (*head).lh_first }
+}
+
+pub fn list_end<T>() -> *mut T {
+    null_mut()
+}
+
+pub unsafe fn list_empty<T>(head: *mut list_head<T>) -> bool {
+    unsafe { list_first(head).is_null() }
+}
+
+pub unsafe fn list_next<T, Discriminant>(elm: *mut T) -> *mut T
+where
+    T: ListEntry<T, Discriminant>,
+{
+    unsafe { (*ListEntry::field(elm)).le_next }
+}
+
+pub unsafe fn list_foreach<F, T, B, D>(head: *mut list_head<T>, mut f: F) -> std::ops::ControlFlow<B>
+where
+    F: FnMut(*mut T) -> std::ops::ControlFlow<B>,
+    T: ListEntry<T, D>,
+{
+    let mut var = unsafe { list_first(head) };
+    while !var.is_null() {
+        if let ControlFlow::Break(break_value) = f(var) {
+            return ControlFlow::Break(break_value);
+        }
+        var = list_next::<T, D>(var);
+    }
+    ControlFlow::Continue(())
+}
+
+pub unsafe fn list_foreach_safe<F, T, B, D>(head: *mut list_head<T>, mut f: F) -> std::ops::ControlFlow<B>
+where
+    F: FnMut(*mut T) -> std::ops::ControlFlow<B>,
+    T: ListEntry<T, D>,
+{
+    let mut var = unsafe { list_first(head) };
+    while !var.is_null() {
+        let tmp = list_next::<T, D>(var);
+        if let ControlFlow::Break(break_value) = f(var) {
+            return ControlFlow::Break(break_value);
+        }
+        var = tmp;
+    }
+    ControlFlow::Continue(())
+}
+
+pub unsafe fn list_init<T>(head: *mut list_head<T>) {
+    unsafe {
+        (*head).lh_first = list_end();
+    }
+}
+
+pub unsafe fn list_insert_after<T, D>(listelm: *mut T, elm: *mut T)
+where
+    T: ListEntry<T, D>,
+{
+    unsafe {
+        (*ListEntry::field(elm)).le_next = (*ListEntry::field(listelm)).le_next;
+        if !(*ListEntry::field(elm)).le_next.is_null() {
+            (*ListEntry::field((*ListEntry::field(listelm)).le_next)).le_prev =
+                &raw mut (*ListEntry::field(elm)).le_next;
+        }
+        (*ListEntry::field(listelm)).le_next = elm;
+        (*ListEntry::field(elm)).le_prev = &raw mut (*ListEntry::field(listelm)).le_next;
+    }
+}
+
+pub unsafe fn list_insert_before<T, D>(listelm: *mut T, elm: *mut T)
+where
+    T: ListEntry<T, D>,
+{
+    unsafe {
+        (*ListEntry::field(elm)).le_prev = (*ListEntry::field(listelm)).le_prev;
+        (*ListEntry::field(elm)).le_next = listelm;
+        *(*ListEntry::field(listelm)).le_prev = elm;
+        (*ListEntry::field(listelm)).le_prev = &raw mut (*ListEntry::field(elm)).le_next;
+    }
+}
+
+pub unsafe fn list_insert_head<T, D>(head: *mut list_head<T>, elm: *mut T)
+where
+    T: ListEntry<T, D>,
+{
+    unsafe {
+        (*ListEntry::field(elm)).le_next = (*head).lh_first;
+        if !(*ListEntry::field(elm)).le_next.is_null() {
+            (*ListEntry::field((*head).lh_first)).le_prev = &raw mut (*ListEntry::field(elm)).le_next;
+        }
+        (*head).lh_first = elm;
+        (*ListEntry::field(elm)).le_prev = &raw mut (*head).lh_first;
+    }
+}
+
+pub unsafe fn list_remove<T, D>(elm: *mut T)
+where
+    T: ListEntry<T, D>,
+{
+    unsafe {
+        if !(*ListEntry::field(elm)).le_next.is_null() {
+            (*ListEntry::field((*ListEntry::field(elm)).le_next)).le_prev = (*ListEntry::field(elm)).le_prev;
+        }
+        *(*ListEntry::field(elm)).le_prev = (*ListEntry::field(elm)).le_next;
+    }
+}
+
+pub unsafe fn list_replace<T, D>(elm: *mut T, elm2: *mut T)
+where
+    T: ListEntry<T, D>,
+{
+    unsafe {
+        (*ListEntry::field(elm2)).le_next = (*ListEntry::field(elm)).le_next;
+        if !(*ListEntry::field(elm2)).le_next.is_null() {
+            (*ListEntry::field((*ListEntry::field(elm2)).le_next)).le_prev = &raw mut (*ListEntry::field(elm2)).le_next;
+        }
+        (*ListEntry::field(elm2)).le_prev = (*ListEntry::field(elm)).le_prev;
+        *(*ListEntry::field(elm2)).le_prev = elm2;
+    }
+}
+
+// tailq
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct tailq_head<T> {
@@ -8,7 +153,7 @@ pub struct tailq_head<T> {
     pub tqh_last: *mut *mut T,
 }
 
-const fn tailq_head_initializer<T>(head: *mut tailq_head<T>) {
+pub const unsafe fn tailq_head_initializer<T>(head: *mut tailq_head<T>) {
     unsafe {
         (*head).tqh_first = null_mut();
         (*head).tqh_last = &raw mut (*head).tqh_first;
@@ -181,23 +326,4 @@ where
     }
 
     ControlFlow::Continue(())
-}
-
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct list_head<T> {
-    pub lh_first: *mut T,
-}
-
-impl<T> list_head<T> {
-    pub const fn const_default() -> Self {
-        Self { lh_first: null_mut() }
-    }
-}
-
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct list_entry<T> {
-    pub le_next: *mut T,
-    pub le_prev: *mut *mut T,
 }

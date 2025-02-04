@@ -115,7 +115,7 @@ pub unsafe extern "C" fn alerts_reset_all() {
 #[unsafe(no_mangle)]
 unsafe fn alerts_reset(w: *mut window) {
     unsafe {
-        if event_initialized(&raw mut (*w).alerts_timer) == 0 {
+        if event_initialized(&raw const (*w).alerts_timer) == 0 {
             evtimer_set(&raw mut (*w).alerts_timer, Some(alerts_timer), w as _);
         }
 

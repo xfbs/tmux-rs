@@ -1,6 +1,6 @@
 use core::ptr::null;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn getdtablecount() -> libc::c_int {
     if let Ok(read_dir) = std::fs::read_dir("/proc/self/fd") {
         let mut i = 0;
@@ -13,7 +13,7 @@ pub extern "C" fn getdtablecount() -> libc::c_int {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn getdtablecount1() -> libc::c_int {
     let mut n = 0;
     let mut g: libc::glob_t = unsafe { std::mem::zeroed() };

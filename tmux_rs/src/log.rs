@@ -160,3 +160,53 @@ pub unsafe extern "C" fn fatalx(msg: *const c_char, mut args: ...) -> ! {
     }
     std::process::exit(1)
 }
+
+// below are more ergonomic rust implementations
+/*
+unsafe extern "C" fn log_vwrite_rs(msg: std::fmt::Arguments<'_>, prefix: std::fmt::Arguments<'_>) {
+    unsafe {
+        if log_file.is_null() {
+            return;
+        }
+
+        // TODO strip formatted msg
+        /*
+        if stravis(&mut out, s, 0x1 | 0x2 | 0x8 | 0x10 ) == -1 {
+            return;
+        }
+        */
+        let mut tv: timeval = timeval { tv_sec: 0, tv_usec: 0 };
+        gettimeofday(&mut tv, null_mut());
+        let s = format!("{}.{:06} {}{}\n\0", tv.tv_sec, tv.tv_usec, prefix, msg);
+        fprintf(log_file, "%s", s.as_ptr());
+        fflush(log_file);
+    }
+}
+
+
+macro_rules! fatal_rs {
+    ($e:expr) => {};
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fatal_rs(args: &std::fmt::Arguments<'_>) -> ! {
+    unsafe {
+        let mut tmp: [u8; 256] = [0; 256];
+
+        if std::fmt::write(tmp, args).is_err() {
+            std::process::exit(1);
+        }
+        if snprintf(
+            tmp.as_mut_ptr() as _,
+            size_of_val(&tmp),
+            c"fatal: %s: ".as_ptr(),
+            strerror(*__errno_location()),
+        ) < 0
+        {}
+
+        log_vwrite_rs();
+
+        std::process::exit(1)
+    }
+}
+*/

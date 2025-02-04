@@ -222,7 +222,7 @@ pub unsafe extern "C" fn args_parse_flag_argument(
     let mut new: *mut args_value;
     let mut s: *mut c_char;
     unsafe {
-        'out: loop {
+        'out: {
             new = xcalloc(1, size_of::<args_value>()).cast().as_ptr();
 
             if *string != b'\0' as c_char {
@@ -263,7 +263,7 @@ pub unsafe extern "C" fn args_parse_flag_argument(
             args_copy_value(new, argument);
             (*i) += 1;
 
-            break;
+            break 'out;
         }
         // out:
         let s = args_value_as_string(new);
