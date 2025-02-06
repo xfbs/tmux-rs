@@ -22,7 +22,7 @@ pub use core::{
     },
     mem::{ManuallyDrop, zeroed},
     ops::ControlFlow,
-    ptr::{NonNull, null_mut},
+    ptr::{NonNull, null, null_mut},
 };
 
 unsafe extern "C" {
@@ -83,13 +83,13 @@ macro_rules! opaque_types {
 
 // args,
 // args_entry,
+// cmd,
+// cmds,
 opaque_types! {
     args_command_state,
-    cmd,
     cmdq_item,
     cmdq_list,
     cmdq_state,
-    cmds,
     control_state,
     format_job_tree,
     format_tree,
@@ -2310,11 +2310,11 @@ pub use crate::arguments::{
 
 mod cmd_;
 pub use crate::cmd_::{
-    cmd_append_argv, cmd_copy, cmd_copy_argv, cmd_free, cmd_free_argv, cmd_get_alias, cmd_get_args, cmd_get_entry,
+    cmd, cmd_append_argv, cmd_copy, cmd_copy_argv, cmd_free, cmd_free_argv, cmd_get_alias, cmd_get_args, cmd_get_entry,
     cmd_get_group, cmd_get_source, cmd_list_all_have, cmd_list_any_have, cmd_list_append, cmd_list_append_all,
     cmd_list_copy, cmd_list_first, cmd_list_free, cmd_list_move, cmd_list_new, cmd_list_next, cmd_list_print,
     cmd_log_argv, cmd_mouse_at, cmd_mouse_pane, cmd_mouse_window, cmd_pack_argv, cmd_parse, cmd_prepend_argv,
-    cmd_print, cmd_stringify_argv, cmd_table, cmd_template_replace, cmd_unpack_argv,
+    cmd_print, cmd_stringify_argv, cmd_table, cmd_template_replace, cmd_unpack_argv, cmds,
 };
 
 pub use crate::cmd_::cmd_attach_session::cmd_attach_session;

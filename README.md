@@ -139,7 +139,7 @@ more then just server exited unexpectedly.
 - [ ] 809 client
 - [X] 1117 colour
 - [X] compat
-- [ ] 262 control-notify
+- [X] 262 control-notify
 - [ ] 1117 control
 - [ ] 281 environ
 - [ ] 859 file
@@ -199,7 +199,7 @@ more then just server exited unexpectedly.
 - [ ] 1512 window-customize
 - [ ] 1348 window-tree
 - [X] xmalloc
-- [ ] 874 cmd
+- [X] 874 cmd
   - [ ] 175 cmd-attach-session
   - [ ] 107 cmd-bind-key
   - [ ] 143 cmd-break-pane
@@ -311,6 +311,7 @@ undefined behaviour in this context.
 - incorrect field in struct. used struct instead of struct pointer
 - flipped == args_type::ARGS_NONE instead of flipped != args_type::ARGS_NONE
 - flipped != 0 instead of == 0 for coverting from !int_like_value in conditional
+- incorrect translation of for loop with continue to while with continue and increment at end; increment isn't applied (cmd_find)
 
 # References
 

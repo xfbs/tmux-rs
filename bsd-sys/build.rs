@@ -16,6 +16,7 @@ fn main() {
         .allowlist_function("setproctitle")
         .allowlist_function("strlcat")
         .allowlist_function("strlcpy")
+        .allowlist_function("strlcat")
         .allowlist_function("strtonum")
         .allowlist_var("optarg")
         .allowlist_var("optind")

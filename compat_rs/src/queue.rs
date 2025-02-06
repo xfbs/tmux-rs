@@ -185,14 +185,16 @@ pub trait Head<T> {
 }
 
 pub unsafe fn tailq_init<T>(head: *mut tailq_head<T>) {
-    (*head).tqh_first = core::ptr::null_mut();
-    (*head).tqh_last = &raw mut (*head).tqh_first;
+    unsafe {
+        (*head).tqh_first = core::ptr::null_mut();
+        (*head).tqh_last = &raw mut (*head).tqh_first;
+    }
 }
 
 pub unsafe fn tailq_first<T>(head: *mut tailq_head<T>) -> *mut T {
-    (*head).tqh_first
+    unsafe { (*head).tqh_first }
 }
-pub unsafe fn tailq_end<T>(_head: *mut tailq_head<T>) -> *mut T {
+pub fn tailq_end<T>(_head: *mut tailq_head<T>) -> *mut T {
     core::ptr::null_mut()
 }
 
@@ -200,7 +202,7 @@ pub unsafe fn tailq_next<T, Q, D>(elm: *mut T) -> *mut Q
 where
     T: Entry<Q, D>,
 {
-    (*Entry::entry(elm)).tqe_next
+    unsafe { (*Entry::entry(elm)).tqe_next }
 }
 
 #[macro_export]
@@ -245,10 +247,12 @@ pub unsafe extern "C" fn tailq_insert_tail<T, D>(head: *mut tailq_head<T>, elm: 
 where
     T: Entry<T, D>,
 {
-    (*Entry::<_, D>::entry(elm)).tqe_next = null_mut();
-    (*Entry::<_, D>::entry(elm)).tqe_prev = (*head).tqh_last;
-    *(*head).tqh_last = elm;
-    (*head).tqh_last = &raw mut (*Entry::<_, D>::entry(elm)).tqe_next;
+    unsafe {
+        (*Entry::<_, D>::entry(elm)).tqe_next = null_mut();
+        (*Entry::<_, D>::entry(elm)).tqe_prev = (*head).tqh_last;
+        *(*head).tqh_last = elm;
+        (*head).tqh_last = &raw mut (*Entry::<_, D>::entry(elm)).tqe_next;
+    }
 }
 
 #[macro_export]
@@ -283,12 +287,15 @@ pub unsafe fn tailq_remove<T, D>(head: *mut tailq_head<T>, elm: *mut T)
 where
     T: Entry<T, D>,
 {
-    if !(*Entry::<_, D>::entry(elm)).tqe_next.is_null() {
-        (*Entry::<_, D>::entry((*Entry::<_, D>::entry(elm)).tqe_next)).tqe_prev = (*Entry::<_, D>::entry(elm)).tqe_prev;
-    } else {
-        (*head).tqh_last = (*Entry::<_, D>::entry(elm)).tqe_prev;
+    unsafe {
+        if !(*Entry::<_, D>::entry(elm)).tqe_next.is_null() {
+            (*Entry::<_, D>::entry((*Entry::<_, D>::entry(elm)).tqe_next)).tqe_prev =
+                (*Entry::<_, D>::entry(elm)).tqe_prev;
+        } else {
+            (*head).tqh_last = (*Entry::<_, D>::entry(elm)).tqe_prev;
+        }
+        *(*Entry::<_, D>::entry(elm)).tqe_prev = (*Entry::<_, D>::entry(elm)).tqe_next;
     }
-    *(*Entry::<_, D>::entry(elm)).tqe_prev = (*Entry::<_, D>::entry(elm)).tqe_next;
 }
 
 #[inline]
@@ -297,16 +304,18 @@ where
     F: FnMut(*mut T) -> std::ops::ControlFlow<B>,
     T: Entry<T, D>,
 {
-    let mut curr = tailq_first(head);
+    unsafe {
+        let mut curr = tailq_first(head);
 
-    while !curr.is_null() {
-        if let ControlFlow::Break(break_value) = f(curr) {
-            return ControlFlow::Break(break_value);
+        while !curr.is_null() {
+            if let ControlFlow::Break(break_value) = f(curr) {
+                return ControlFlow::Break(break_value);
+            }
+            curr = tailq_next(curr);
         }
-        curr = tailq_next(curr);
-    }
 
-    ControlFlow::Continue(())
+        ControlFlow::Continue(())
+    }
 }
 
 #[inline]
@@ -315,15 +324,32 @@ where
     F: FnMut(*mut T) -> std::ops::ControlFlow<B>,
     T: Entry<T, D>,
 {
-    let mut curr = tailq_first(head);
+    unsafe {
+        let mut curr = tailq_first(head);
 
-    while !curr.is_null() {
-        let tmp = tailq_next(curr);
-        if let ControlFlow::Break(break_value) = f(curr) {
-            return ControlFlow::Break(break_value);
+        while !curr.is_null() {
+            let tmp = tailq_next(curr);
+            if let ControlFlow::Break(break_value) = f(curr) {
+                return ControlFlow::Break(break_value);
+            }
+            curr = tmp;
         }
-        curr = tmp;
-    }
 
-    ControlFlow::Continue(())
+        ControlFlow::Continue(())
+    }
+}
+
+#[inline]
+pub unsafe fn tailq_concat<T, D>(head1: *mut tailq_head<T>, head2: *mut tailq_head<T>)
+where
+    T: Entry<T, D>,
+{
+    unsafe {
+        if !tailq_empty::<T>(head2) {
+            *(*head1).tqh_last = (*head2).tqh_first;
+            (*Entry::entry((*head2).tqh_first)).tqe_prev = (*head1).tqh_last;
+            (*head1).tqh_last = (*head2).tqh_last;
+            tailq_init(head2);
+        }
+    }
 }

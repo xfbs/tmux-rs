@@ -20,6 +20,7 @@ unsafe extern "C" {
     // pub unsafe fn find_home() -> *mut c_char;
     // pub unsafe fn getversion() -> *mut c_char;
 
+    // TODO move/remove
     fn errx(_: c_int, _: *const c_char, ...);
     fn err(_: c_int, _: *const c_char, ...);
 

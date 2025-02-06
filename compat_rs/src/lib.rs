@@ -14,7 +14,7 @@ pub mod vis;
 pub use crate::systemd::systemd_create_socket;
 
 // pub use bsd_sys::{bsd_getopt, optarg as BSDoptarg, optind as BSDoptind};
-pub use bsd_sys::{bsd_getopt, closefrom, optarg, optind, recallocarray, strlcpy, strtonum};
+pub use bsd_sys::{bsd_getopt, closefrom, optarg, optind, recallocarray, strlcat, strlcpy, strtonum};
 
 pub const HOST_NAME_MAX: usize = 255;
 

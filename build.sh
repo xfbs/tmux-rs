@@ -11,6 +11,12 @@ set -xe
 export CC=clang
 cargo clean
 make clean
+rm -f tmux
 sh autogen.sh && ./configure --enable-debug
 cargo build
 make
+
+# export CC=clang
+# rm -f tmux
+# cargo build
+# make

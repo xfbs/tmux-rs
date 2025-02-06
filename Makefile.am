@@ -81,6 +81,8 @@ endif
 # colour.c
 # names.c
 # tmux.c
+# control-notify.c
+# cmd.c
 dist_tmux_SOURCES = \
 	environ.c \
 	arguments.c \
@@ -147,9 +149,7 @@ dist_tmux_SOURCES = \
 	cmd-switch-client.c \
 	cmd-unbind-key.c \
 	cmd-wait-for.c \
-	cmd.c \
 	compat.h \
-	control-notify.c \
 	control.c \
 	file.c \
 	format.c \
