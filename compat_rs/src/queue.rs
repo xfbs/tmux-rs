@@ -205,6 +205,7 @@ where
     unsafe { (*Entry::entry(elm)).tqe_next }
 }
 
+/*
 #[macro_export]
 macro_rules! tailq_last {
     ($head:expr, $headname:ty) => {{
@@ -213,7 +214,16 @@ macro_rules! tailq_last {
     }};
 }
 pub use tailq_last;
+*/
 
+pub unsafe fn tailq_last<T>(head: *mut tailq_head<T>) -> *mut T {
+    unsafe {
+        let head: *mut tailq_head<T> = (*head).tqh_last.cast();
+        *(*head).tqh_last
+    }
+}
+
+/*
 #[macro_export]
 macro_rules! tailq_prev {
     ($elm:expr, $headname:ty, $field:ident) => {{
@@ -222,6 +232,17 @@ macro_rules! tailq_prev {
     }};
 }
 pub use tailq_prev;
+*/
+
+pub unsafe fn tailq_prev<T, Q, D>(elm: *mut T) -> *mut Q
+where
+    T: Entry<Q, D>,
+{
+    unsafe {
+        let head: *mut tailq_head<Q> = (*Entry::entry(elm)).tqe_prev.cast();
+        *(*head).tqh_last
+    }
+}
 
 pub unsafe fn tailq_empty<T>(head: *mut tailq_head<T>) -> bool {
     unsafe { tailq_first(head) == tailq_end(head) }
@@ -329,6 +350,27 @@ where
 
         while !curr.is_null() {
             let tmp = tailq_next(curr);
+            if let ControlFlow::Break(break_value) = f(curr) {
+                return ControlFlow::Break(break_value);
+            }
+            curr = tmp;
+        }
+
+        ControlFlow::Continue(())
+    }
+}
+
+#[inline]
+pub unsafe fn tailq_foreach_reverse<F, T, B, D>(head: *mut tailq_head<T>, mut f: F) -> std::ops::ControlFlow<B>
+where
+    F: FnMut(*mut T) -> std::ops::ControlFlow<B>,
+    T: Entry<T, D>,
+{
+    unsafe {
+        let mut curr = tailq_last(head);
+
+        while !curr.is_null() {
+            let tmp = tailq_prev(curr);
             if let ControlFlow::Break(break_value) = f(curr) {
                 return ControlFlow::Break(break_value);
             }

@@ -54,7 +54,10 @@ pub use libc::{FILE, REG_EXTENDED, REG_ICASE, free, pid_t, termios, time_t, time
 pub use crate::event_::{EVBUFFER_DATA, EVBUFFER_LENGTH, evtimer_add, evtimer_del, evtimer_pending, evtimer_set};
 pub use libevent_sys::{bufferevent, evbuffer, evbuffer_get_length, evbuffer_pullup, event, event_base};
 
-use compat_rs::tree::{rb_entry, rb_head};
+use compat_rs::{
+    queue::ListEntry,
+    tree::{rb_entry, rb_head},
+};
 use compat_rs::{
     queue::{Entry, list_entry, list_head, tailq_entry, tailq_head},
     tree::GetEntry,
@@ -1501,6 +1504,11 @@ pub struct tty_term {
     pub entry: list_entry<tty_term>,
 }
 pub type tty_terms = list_head<tty_term>;
+impl ListEntry<tty_term, discr_entry> for tty_term {
+    unsafe fn field(this: *mut Self) -> *mut list_entry<tty_term> {
+        unsafe { &raw mut (*this).entry }
+    }
+}
 
 pub const TTY_NOCURSOR: i32 = 0x1;
 pub const TTY_FREEZE: i32 = 0x2;
@@ -2230,7 +2238,7 @@ pub struct spawn_context {
     pub environ: *mut environ,
 
     pub idx: i32,
-    pub cwd: *mut c_char,
+    pub cwd: *const c_char,
 
     pub flags: i32,
 }

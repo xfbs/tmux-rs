@@ -142,34 +142,34 @@ more then just server exited unexpectedly.
 
 - [X] 325 alert
 - [...] 1097 arguments
-- [X] 108 attributes
-- [X] 277 cfg
-- [X] 809 client
+- [X]  108 attributes
+- [X]  277 cfg
+- [X]  809 client
 - [X] 1117 colour
-- [X] compat
-- [X] 262 control-notify
+- [X]      compat
+- [X]  262 control-notify
 - [ ] 1117 control
-- [ ] 281 environ (problems when cut over)
-- [ ] 859 file (in progress)
+- [ ]  281 environ (problems when cut over)
+- [ ]  859 file (in progress)
 - [ ] 5294 format
   - [ ] 1243 format-draw
 - [ ] 1535 grid
   - [ ] 429 grid-reader
   - [ ] 235 grid-view
-- [ ] 239 hyperlinks
-- [ ] 794 input-keys
+- [ ]  239 hyperlinks
+- [ ]  794 input-keys
 - [ ] 3025 input
-- [ ] 435 job
-- [ ] 692 key-bindings
-- [ ] 477 key-string
+- [ ]  435 job
+- [ ]  692 key-bindings
+- [ ]  477 key-string
 - [ ] 1120 layout
   - [ ] 370 layout-custom
   - [ ] 691 layout-set
-- [X] log
-- [ ] 556 menu
+- [X]      log
+- [ ]  556 menu
 - [ ] 1266 mode-tree
-- [X] 172 names
-- [ ] 323 notify
+- [X]  172 names
+- [ ]  323 notify
 - [ ] 1204 options
   - [ ] 1370 options-table
 - [ ] 342 paste
@@ -178,100 +178,101 @@ more then just server exited unexpectedly.
 - [X] 120 regsub
 - [ ] 467 resize
 - [ ] 740 screen
-  - [ ] 868 screen-redraw
+  - [ ]  868 screen-redraw
   - [ ] 2347 screen-write
 - [ ] 557 server
   - [ ] implement 6/7 TODO's
-  - [ ] 186 server-acl
+  - [ ]  186 server-acl
+  - [ ]  493 server-fn
   - [ ] 3392 server-client
-  - [ ] 493 server-fn
-- [ ] 759 session
-- [ ] 497 spawn
+- [ ]  497 spawn
+- [ ]  759 session
 - [ ] 2035 status
-- [X] 383 style
-- [X] 538 tmux.c
+- [X]  383 style
+- [X]  538 tmux.c
 - [X] tmux.h
 - [X] tmux-protocol.h
 - [ ] 3186 tty
-  - [ ] 269 tty-acs
-  - [ ] 510 tty-features
+  - [ ]  269 tty-acs
+  - [ ]  510 tty-features
+  - [ ]  924 tty-term
   - [ ] 1591 tty-keys
-  - [ ] 924 tty-term
 - [ ] 100 utf8-combined
 - [ ] 822 utf8
 - [X] window
-  - [ ] 559 window-buffer
-  - [ ] 418 window-client
-  - [ ] 286 window-clock
-  - [ ] 5786 window-copy
-  - [ ] 1512 window-customize
+  - [ ]  286 window-clock
+  - [ ]  418 window-client
+  - [ ]  559 window-buffer
   - [ ] 1348 window-tree
+  - [ ] 1512 window-customize
+  - [ ] 5786 window-copy
 - [X] xmalloc
 - [X] 874 cmd
-  - [X] 175 cmd-attach-session
-  - [X] 107 cmd-bind-key
-  - [X] 143 cmd-break-pane
-  - [X] 253 cmd-capture-pane
-  - [X] 117 cmd-choose-tree
-  - [ ] 242 cmd-command-prompt
-  - [ ] 163 cmd-confirm-before
-  - [x] 98 cmd-copy-mode
-  - [ ] 109 cmd-detach-client
-  - [ ] 502 cmd-display-menu
-  - [ ] 159 cmd-display-message
-  - [ ] 312 cmd-display-panes
-  - [ ] 116 cmd-find-window
+  - [ ]  108 cmd-show-prompt-history
+  - [ ]  110 cmd-kill-window
+  - [ ]  113 cmd-load-buffer
+  - [ ]  113 cmd-paste-buffer
+  - [ ]  115 cmd-resize-window
+  - [ ]  115 cmd-rotate-window
+  - [ ]  119 cmd-set-environment
+  - [ ]  120 cmd-save-buffer
+  - [ ]  122 cmd-move-window
+  - [ ]  130 cmd-list-windows
+  - [ ]  137 cmd-set-buffer
+  - [ ]  142 cmd-switch-client
+  - [ ]  143 cmd-show-environment
+  - [ ]  147 cmd-server-access
+  - [ ]  148 cmd-list-panes
+  - [ ]  148 cmd-swap-pane
+  - [ ]  149 cmd-select-layout
+  - [ ]  150 cmd-select-wind
+  - [ ]  159 cmd-display-message
+  - [ ]  159 cmd-new-window
+  - [ ]  159 cmd-parse
+  =====
+  - [ ]  180 cmd-join-pane
+  - [ ]  190 cmd-if-shell
+  - [ ]  199 cmd-split-window
+  - [ ]  208 cmd-source-file
+  - [ ]  215 cmd-resize-pane
+  - [ ]  230 cmd-pipe-pane
+  - [ ]  237 cmd-send-keys
+  - [ ]  239 cmd-set-option
+  - [ ]  242 cmd-select-pane
+  - [ ]  260 cmd-show-options
+  - [ ]  264 cmd-wait-for
+  - [ ]  290 cmd-run-shell
+  - [ ]  312 cmd-display-panes
+  - [ ]  335 cmd-refresh-client
+  - [ ]  370 cmd-new-session
+  - [ ]  372 cmd-list-keys
+  - [ ]  502 cmd-display-menu
+  - [ ]  899 cmd-queue
   - [ ] 1314 cmd-find
-  - [ ] 190 cmd-if-shell
-  - [ ] 180 cmd-join-pane
-  - [ ] 67 cmd-kill-pane
-  - [X] cmd-kill-server
-  - [X] 71 cmd-kill-session
-  - [ ] 110 cmd-kill-window
-  - [ ] 81 cmd-list-buffers
-  - [ ] 102 cmd-list-clients
-  - [ ] 372 cmd-list-keys
-  - [ ] 148 cmd-list-panes
-  - [ ] 90 cmd-list-sessions
-  - [ ] 130 cmd-list-windows
-  - [ ] 113 cmd-load-buffer
-  - [ ] 79 cmd-lock-server
-  - [ ] 122 cmd-move-window
-  - [ ] 370 cmd-new-session
-  - [ ] 159 cmd-new-window
-  - [ ] 159 cmd-parse
-  - [ ] 113 cmd-paste-buffer
-  - [ ] 230 cmd-pipe-pane
-  - [ ] 899 cmd-queue
-  - [ ] 335 cmd-refresh-client
-  - [ ] 81 cmd-rename-session
-  - [ ] 62 cmd-rename-window
-  - [ ] 215 cmd-resize-pane
-  - [ ] 115 cmd-resize-window
-  - [ ] 98 cmd-respawn-pane
-  - [ ] 95 cmd-respawn-window
-  - [ ] 115 cmd-rotate-window
-  - [ ] 290 cmd-run-shell
-  - [ ] 120 cmd-save-buffer
-  - [ ] 149 cmd-select-layout
-  - [ ] 242 cmd-select-pane
-  - [ ] 150 cmd-select-wind
-  - [ ] 237 cmd-send-keys
-  - [ ] 147 cmd-server-access
-  - [ ] 137 cmd-set-buffer
-  - [ ] 119 cmd-set-environment
-  - [ ] 239 cmd-set-option
-  - [ ] 143 cmd-show-environment
-  - [ ] 107 cmd-show-messages
-  - [ ] 260 cmd-show-options
-  - [ ] 108 cmd-show-prompt-history
-  - [ ] 208 cmd-source-file
-  - [ ] 199 cmd-split-window
-  - [ ] 148 cmd-swap-pane
-  - [ ] 94 cmd-swap-window
-  - [ ] 142 cmd-switch-client
-  - [ ] 104 cmd-unbind-key
-  - [ ] 264 cmd-wait-for
+  - [X]  107 cmd-show-messages
+  - [X]  102 cmd-list-clients
+  - [X]  104 cmd-unbind-key
+  - [X]      cmd-kill-server
+  - [X]   62 cmd-rename-window
+  - [X]   67 cmd-kill-pane
+  - [X]   71 cmd-kill-session
+  - [X]   79 cmd-lock-server
+  - [X]   81 cmd-list-buffers
+  - [X]   81 cmd-rename-session
+  - [X]   90 cmd-list-sessions
+  - [X]   94 cmd-swap-window
+  - [X]   95 cmd-respawn-window
+  - [X]   98 cmd-respawn-pane
+  - [X]   98 cmd-copy-mode
+  - [X]  107 cmd-bind-key
+  - [X]  109 cmd-detach-client
+  - [X]  116 cmd-find-window
+  - [X]  117 cmd-choose-tree
+  - [X]  143 cmd-break-pane
+  - [X]  163 cmd-confirm-before
+  - [X]  175 cmd-attach-session
+  - [X]  242 cmd-command-prompt
+  - [X]  253 cmd-capture-pane
 
 # Notes
 

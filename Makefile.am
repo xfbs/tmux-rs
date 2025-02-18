@@ -92,28 +92,36 @@ endif
 # cmd-choose-tree.c
 # cmd-command-prompt.c
 # style.c
+# cmd-confirm-before.c
+# cmd-detach-client.c
+# cmd-kill-pane.c
+# cmd-swap-window.c
+# cmd-find-window.c
+# cmd-rename-window.c
+# cmd-lock-server.c
+# cmd-list-buffers.c
+# cmd-rename-session.c
+# cmd-list-sessions.c
+# cmd-respawn-window.c
+# cmd-respawn-pane.c
+# cmd-list-clients.c
+# cmd-unbind-key.c
+# cmd-show-messages.c
 dist_tmux_SOURCES = \
+	cmd-show-prompt-history.c \
+	cmd-kill-window.c \
+	cmd-load-buffer.c \
 	environ.c \
 	arguments.c \
-	cmd-confirm-before.c \
-	cmd-detach-client.c \
 	cmd-display-menu.c \
 	cmd-display-message.c \
 	cmd-display-panes.c \
-	cmd-find-window.c \
 	cmd-find.c \
 	cmd-if-shell.c \
 	cmd-join-pane.c \
-	cmd-kill-pane.c \
-	cmd-kill-window.c \
-	cmd-list-buffers.c \
-	cmd-list-clients.c \
 	cmd-list-keys.c \
 	cmd-list-panes.c \
-	cmd-list-sessions.c \
 	cmd-list-windows.c \
-	cmd-load-buffer.c \
-	cmd-lock-server.c \
 	cmd-move-window.c \
 	cmd-new-session.c \
 	cmd-new-window.c \
@@ -122,12 +130,8 @@ dist_tmux_SOURCES = \
 	cmd-pipe-pane.c \
 	cmd-queue.c \
 	cmd-refresh-client.c \
-	cmd-rename-session.c \
-	cmd-rename-window.c \
 	cmd-resize-pane.c \
 	cmd-resize-window.c \
-	cmd-respawn-pane.c \
-	cmd-respawn-window.c \
 	cmd-rotate-window.c \
 	cmd-run-shell.c \
 	cmd-save-buffer.c \
@@ -140,15 +144,11 @@ dist_tmux_SOURCES = \
 	cmd-set-environment.c \
 	cmd-set-option.c \
 	cmd-show-environment.c \
-	cmd-show-messages.c \
 	cmd-show-options.c \
-	cmd-show-prompt-history.c \
 	cmd-source-file.c \
 	cmd-split-window.c \
 	cmd-swap-pane.c \
-	cmd-swap-window.c \
 	cmd-switch-client.c \
-	cmd-unbind-key.c \
 	cmd-wait-for.c \
 	compat.h \
 	control.c \

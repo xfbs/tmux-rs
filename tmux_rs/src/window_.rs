@@ -874,7 +874,7 @@ pub unsafe extern "C" fn window_lost_pane(w: *mut window, wp: *mut window_pane) 
         if wp == (*w).active {
             (*w).active = tailq_first(&raw mut (*w).last_panes);
             if (*w).active.is_null() {
-                (*w).active = tailq_prev!(wp, window_panes, entry);
+                (*w).active = tailq_prev::<_, _, discr_entry>(wp);
                 if (*w).active.is_null() {
                     (*w).active = tailq_next::<_, _, discr_entry>(wp);
                 }
@@ -943,9 +943,9 @@ pub unsafe extern "C" fn window_pane_previous_by_number(
 ) -> *mut window_pane {
     unsafe {
         for _ in 0..n {
-            wp = tailq_prev!(wp, window_panes, entry);
+            wp = tailq_prev::<_, _, discr_entry>(wp);
             if wp.is_null() {
-                wp = tailq_last!(&raw mut (*w).panes, window_panes);
+                wp = tailq_last(&raw mut (*w).panes);
             }
         }
     }
