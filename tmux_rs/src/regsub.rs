@@ -1,13 +1,13 @@
 use core::ffi::{c_char, c_int};
 use libc::{memcpy, regcomp, regex_t, regexec, regfree, regmatch_t, strlen};
-use xmalloc::xrealloc;
+use xmalloc::xrealloc_;
 
 use super::*;
 
 unsafe fn regsub_copy(buf: *mut *mut c_char, len: *mut isize, text: *const c_char, start: usize, end: usize) {
     let add: usize = end - start;
     unsafe {
-        *buf = xrealloc((*buf) as _, (*len) as usize + add + 1).cast().as_ptr();
+        *buf = xrealloc_((*buf), (*len) as usize + add + 1).as_ptr();
         memcpy((*buf).add(*len as usize) as _, text.add(start) as _, add);
         (*len) += add as isize;
     }
@@ -43,7 +43,7 @@ pub unsafe fn regsub_expand(
                     }
                 }
             }
-            *buf = xrealloc(*buf as _, (*len) as usize + 2).cast().as_ptr();
+            *buf = xrealloc_(*buf, (*len) as usize + 2).as_ptr();
             *(*buf).add((*len) as usize) = *cp;
             (*len) += 1;
 

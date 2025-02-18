@@ -145,7 +145,7 @@ pub unsafe extern "C" fn winlink_add(wwl: *mut winlinks, mut idx: i32) -> *mut w
             return null_mut();
         }
 
-        let wl: *mut winlink = xcalloc(1, size_of::<winlink>()).cast().as_ptr();
+        let wl: *mut winlink = xcalloc_::<winlink>(1).as_ptr();
         (*wl).idx = idx;
         rb_insert(wwl, wl);
 
@@ -287,12 +287,12 @@ pub unsafe extern "C" fn window_create(sx: u32, sy: u32, mut xpixel: u32, mut yp
         ypixel = DEFAULT_YPIXEL as u32;
     }
     unsafe {
-        let w: *mut window = xcalloc(1, size_of::<window>()).cast().as_ptr();
+        let w: *mut window = xcalloc_::<window>(1).as_ptr();
         (*w).name = xstrdup(c"".as_ptr()).as_ptr();
         (*w).flags = 0;
 
-        // tailq_init
-        // tailq_init
+        tailq_init(&raw mut (*w).panes);
+        tailq_init(&raw mut (*w).last_panes);
         (*w).active = null_mut();
 
         (*w).lastlayout = -1;
@@ -326,7 +326,7 @@ pub unsafe extern "C" fn window_create(sx: u32, sy: u32, mut xpixel: u32, mut yp
             (*w).xpixel,
             (*w).ypixel,
         );
-        w as _
+        w
     }
 }
 
@@ -1078,7 +1078,7 @@ pub unsafe extern "C" fn window_pane_find_by_id(id: u32) -> *mut window_pane {
 pub unsafe extern "C" fn window_pane_create(w: *mut window, sx: u32, sy: u32, hlimit: u32) -> *mut window_pane {
     unsafe {
         let mut host: [c_char; HOST_NAME_MAX + 1] = zeroed();
-        let wp: *mut window_pane = xcalloc(1, size_of::<window_pane>()).cast().as_ptr();
+        let wp: *mut window_pane = xcalloc_::<window_pane>(1).as_ptr();
         (*wp).window = w;
         (*wp).options = options_create((*w).options);
         (*wp).flags = PANE_STYLECHANGED;
@@ -1236,7 +1236,7 @@ pub unsafe extern "C" fn window_pane_resize(wp: *mut window_pane, sx: u32, sy: u
             return;
         }
 
-        let r: *mut window_pane_resize = xmalloc(size_of::<window_pane_resize>()).cast().as_ptr();
+        let r: *mut window_pane_resize = xmalloc_::<window_pane_resize>().as_ptr();
         (*r).sx = sx;
         (*r).sy = sy;
         (*r).osx = (*wp).sx;
@@ -1291,7 +1291,7 @@ pub unsafe extern "C" fn window_pane_set_mode(
             tailq_remove::<_, ()>(&raw mut (*wp).modes, wme);
             tailq_insert_head!(&raw mut (*wp).modes, wme, entry);
         } else {
-            wme = xcalloc(1, size_of::<window_mode_entry>()).cast().as_ptr();
+            wme = xcalloc_::<window_mode_entry>(1).as_ptr();
             (*wme).wp = wp;
             (*wme).swp = swp;
             (*wme).mode = mode;
@@ -1569,9 +1569,7 @@ pub unsafe extern "C" fn window_pane_find_up(wp: *mut window_pane) -> *mut windo
             if found == 0 {
                 return ControlFlow::Continue(());
             }
-            list = xreallocarray(list as _, size + 1, size_of::<*mut window_pane>())
-                .cast()
-                .as_ptr();
+            list = xreallocarray_::<*mut window_pane>(list, size + 1).as_ptr();
             *list.add(size) = next;
             size += 1;
             ControlFlow::Continue::<(), ()>(())
@@ -1636,9 +1634,7 @@ pub unsafe extern "C" fn window_pane_find_down(wp: *mut window_pane) -> *mut win
             if found == 0 {
                 return ControlFlow::Continue::<(), ()>(());
             }
-            list = xreallocarray(list as _, size + 1, size_of::<*mut window_pane>())
-                .cast()
-                .as_ptr();
+            list = xreallocarray_::<*mut window_pane>(list, size + 1).as_ptr();
             *list.add(size) = next;
             size += 1;
 
@@ -1692,9 +1688,7 @@ pub unsafe extern "C" fn window_pane_find_left(wp: *mut window_pane) -> *mut win
             if !found {
                 return ControlFlow::Continue::<(), ()>(());
             }
-            list = xreallocarray(list as _, size + 1, size_of::<*mut window_pane>())
-                .cast()
-                .as_ptr();
+            list = xreallocarray_::<*mut window_pane>(list, size + 1).as_ptr();
             *list.add(size) = next;
             size += 1;
             ControlFlow::Continue::<(), ()>(())
@@ -1747,9 +1741,7 @@ pub unsafe extern "C" fn window_pane_find_right(wp: *mut window_pane) -> *mut wi
             if !found {
                 return ControlFlow::Continue::<(), ()>(());
             }
-            list = xreallocarray(list as _, size + 1, size_of::<*mut window_pane>())
-                .cast()
-                .as_ptr();
+            list = xreallocarray_::<*mut window_pane>(list, size + 1).as_ptr();
             *list.add(size) = next;
             size += 1;
             ControlFlow::Continue::<(), ()>(())
@@ -1883,7 +1875,7 @@ pub unsafe extern "C" fn window_pane_start_input(
             return 1;
         }
 
-        let cdata: *mut window_pane_input_data = xmalloc(size_of::<window_pane_input_data>()).cast().as_ptr();
+        let cdata: *mut window_pane_input_data = xmalloc_::<window_pane_input_data>().as_ptr();
         (*cdata).item = item;
         (*cdata).wp = (*wp).id;
         (*cdata).file = file_read(c, c"-".as_ptr(), Some(window_pane_input_callback), cdata as _);

@@ -37,7 +37,18 @@ static int	file_next_stream = 3;
 
 RB_GENERATE(client_files, client_file, entry, file_cmp);
 
-/* Get path for file, either as given or from working directory. */
+
+char * file_get_path(struct client *c, const char *file);
+int file_cmp(struct client_file *cf1, struct client_file *cf2);
+struct client_file * file_create_with_peer(struct tmuxpeer *peer, struct client_files *files, int stream, client_file_cb cb, void *cbdata);
+struct client_file * file_create_with_client(struct client *c, int stream, client_file_cb cb, void *cbdata);
+void file_free(struct client_file *cf);
+void file_fire_done_cb(__unused int fd, __unused short events, void *arg);
+void file_fire_done(struct client_file *cf);
+void file_fire_read(struct client_file *cf);
+int file_can_print(struct client *c);
+void file_error(struct client *c, const char *fmt, ...);
+/*
 static char *
 file_get_path(struct client *c, const char *file)
 {
@@ -50,7 +61,6 @@ file_get_path(struct client *c, const char *file)
 	return (path);
 }
 
-/* Tree comparison function. */
 int
 file_cmp(struct client_file *cf1, struct client_file *cf2)
 {
@@ -61,12 +71,6 @@ file_cmp(struct client_file *cf1, struct client_file *cf2)
 	return (0);
 }
 
-/*
- * Create a file object in the client process - the peer is the server to send
- * messages to. Check callback is fired when the file is finished with so the
- * process can decide if it needs to exit (if it is waiting for files to
- * flush).
- */
 struct client_file *
 file_create_with_peer(struct tmuxpeer *peer, struct client_files *files,
     int stream, client_file_cb cb, void *cbdata)
@@ -92,7 +96,7 @@ file_create_with_peer(struct tmuxpeer *peer, struct client_files *files,
 	return (cf);
 }
 
-/* Create a file object in the server, communicating with the given client. */
+
 struct client_file *
 file_create_with_client(struct client *c, int stream, client_file_cb cb,
     void *cbdata)
@@ -124,7 +128,6 @@ file_create_with_client(struct client *c, int stream, client_file_cb cb,
 	return (cf);
 }
 
-/* Free a file. */
 void
 file_free(struct client_file *cf)
 {
@@ -142,8 +145,7 @@ file_free(struct client_file *cf)
 	free(cf);
 }
 
-/* Event to fire the done callback. */
-static void
+void
 file_fire_done_cb(__unused int fd, __unused short events, void *arg)
 {
 	struct client_file	*cf = arg;
@@ -155,14 +157,11 @@ file_fire_done_cb(__unused int fd, __unused short events, void *arg)
 	file_free(cf);
 }
 
-/* Add an event to fire the done callback (used by the server). */
-void
-file_fire_done(struct client_file *cf)
+void file_fire_done(struct client_file *cf)
 {
 	event_once(-1, EV_TIMEOUT, file_fire_done_cb, cf, NULL);
 }
 
-/* Fire the read callback. */
 void
 file_fire_read(struct client_file *cf)
 {
@@ -170,7 +169,6 @@ file_fire_read(struct client_file *cf)
 		cf->cb(cf->c, cf->path, cf->error, 0, cf->buffer, cf->data);
 }
 
-/* Can this file be printed to? */
 int
 file_can_print(struct client *c)
 {
@@ -181,7 +179,6 @@ file_can_print(struct client *c)
 	return (1);
 }
 
-/* Print a message to a file. */
 void
 file_print(struct client *c, const char *fmt, ...)
 {
@@ -192,7 +189,6 @@ file_print(struct client *c, const char *fmt, ...)
 	va_end(ap);
 }
 
-/* Print a message to a file. */
 void
 file_vprint(struct client *c, const char *fmt, va_list ap)
 {
@@ -219,7 +215,6 @@ file_vprint(struct client *c, const char *fmt, va_list ap)
 	}
 }
 
-/* Print a buffer to a file. */
 void
 file_print_buffer(struct client *c, void *data, size_t size)
 {
@@ -246,7 +241,6 @@ file_print_buffer(struct client *c, void *data, size_t size)
 	}
 }
 
-/* Report an error to a file. */
 void
 file_error(struct client *c, const char *fmt, ...)
 {
@@ -277,8 +271,8 @@ file_error(struct client *c, const char *fmt, ...)
 
 	va_end(ap);
 }
+*/
 
-/* Write data to a file. */
 void
 file_write(struct client *c, const char *path, int flags, const void *bdata,
     size_t bsize, client_file_cb cb, void *cbdata)

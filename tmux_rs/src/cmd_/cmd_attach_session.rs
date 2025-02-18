@@ -1,14 +1,193 @@
 use super::*;
 
+use compat_rs::tree::rb_empty;
+use libc::strcspn;
+
 unsafe extern "C" {
-    pub unsafe fn cmd_attach_session(
-        _: *mut cmdq_item,
-        _: *const c_char,
-        _: c_int,
-        _: c_int,
-        _: c_int,
-        _: *const c_char,
-        _: c_int,
-        _: *const c_char,
-    ) -> cmd_retval;
+    // pub unsafe fn cmd_attach_session( item: *mut cmdq_item, tflags: *const c_char, dflag: c_int, xflag: c_int, rflag: c_int, cflag: *const c_char, Eflag: c_int, fflag: *const c_char,) -> cmd_retval;
+}
+
+#[unsafe(no_mangle)]
+pub static mut cmd_attach_session_entry: cmd_entry = cmd_entry {
+    name: c"attach-session".as_ptr(),
+    alias: c"attach".as_ptr(),
+
+    args: args_parse {
+        template: c"c:dEf:rt:x".as_ptr(),
+        lower: 0,
+        upper: 0,
+        cb: None,
+    },
+    usage: c"[-dErx] [-c working-directory] [-f flags] [-t target-session]".as_ptr(),
+
+    flags: CMD_STARTSERVER | CMD_READONLY,
+    exec: Some(cmd_attach_session_exec),
+    ..unsafe { zeroed() }
+};
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn cmd_attach_session(
+    item: *mut cmdq_item,
+    tflag: *const c_char,
+    dflag: c_int,
+    xflag: c_int,
+    rflag: c_int,
+    cflag: *const c_char,
+    Eflag: c_int,
+    fflag: *const c_char,
+) -> cmd_retval {
+    unsafe {
+        let mut current: *mut cmd_find_state = cmdq_get_current(item);
+        let mut target: cmd_find_state = zeroed(); // TODO can be uninit
+        let mut type_: cmd_find_type;
+        let mut flags: i32 = 0;
+        let mut c: *mut client = cmdq_get_client(item);
+        let mut c_loop: *mut client = null_mut();
+        let mut s: *mut session = null_mut();
+        let mut wl: *mut winlink = null_mut();
+        let mut wp: *mut window_pane = null_mut();
+
+        let mut cwd: *mut c_char = null_mut();
+        let mut cause: *mut c_char = null_mut();
+
+        let mut msgtype: msgtype;
+
+        if rb_empty(&raw mut sessions) {
+            cmdq_error(item, c"no sessions".as_ptr());
+            return cmd_retval::CMD_RETURN_ERROR;
+        }
+
+        if c.is_null() {
+            return cmd_retval::CMD_RETURN_NORMAL;
+        }
+
+        if server_client_check_nested(c) != 0 {
+            cmdq_error(
+                item,
+                c"sessions should be nested with care, unset $TMUX to force".as_ptr(),
+            );
+            return cmd_retval::CMD_RETURN_ERROR;
+        }
+
+        if !tflag.is_null() && *tflag.add(strcspn(tflag, c":.".as_ptr())) != b'\0' as c_char {
+            type_ = cmd_find_type::CMD_FIND_PANE;
+            flags = 0;
+        } else {
+            type_ = cmd_find_type::CMD_FIND_SESSION;
+            flags = CMD_FIND_PREFER_UNATTACHED;
+        }
+        if cmd_find_target(&raw mut target, item, tflag, type_, flags) != 0 {
+            return cmd_retval::CMD_RETURN_ERROR;
+        }
+        s = target.s;
+        wl = target.wl;
+        wp = target.wp;
+
+        if !wl.is_null() {
+            if !wp.is_null() {
+                window_set_active_pane((*wp).window, wp, 1);
+            }
+            session_set_current(s, wl);
+            if !wp.is_null() {
+                cmd_find_from_winlink_pane(current, wl, wp, 0);
+            } else {
+                cmd_find_from_winlink(current, wl, 0);
+            }
+        }
+
+        if !cflag.is_null() {
+            cwd = format_single(item, cflag, c, s, wl, wp);
+            free_((*s).cwd);
+            (*s).cwd = cwd;
+        }
+        if !fflag.is_null() {
+            server_client_set_flags(c, fflag);
+        }
+        if rflag != 0 {
+            (*c).flags |= (CLIENT_READONLY | CLIENT_IGNORESIZE);
+        }
+
+        (*c).last_session = (*c).session;
+        if !(*c).session.is_null() {
+            if dflag != 0 || xflag != 0 {
+                if xflag != 0 {
+                    msgtype = msgtype::MSG_DETACHKILL;
+                } else {
+                    msgtype = msgtype::MSG_DETACH;
+                }
+                tailq_foreach(&raw mut clients, |c_loop| {
+                    if ((*c_loop).session != s || c == c_loop) {
+                        return ControlFlow::<(), ()>::Continue(());
+                    }
+                    server_client_detach(c_loop, msgtype);
+                    ControlFlow::<(), ()>::Continue(())
+                });
+            }
+            if Eflag == 0 {
+                environ_update((*s).options, (*c).environ, (*s).environ);
+            }
+
+            server_client_set_session(c, s);
+            if !cmdq_get_flags(item) & CMDQ_STATE_REPEAT != 0 {
+                server_client_set_key_table(c, null_mut());
+            }
+        } else {
+            if (server_client_open(c, &raw mut cause) != 0) {
+                cmdq_error(item, c"open terminal failed: %s".as_ptr(), cause);
+                free_(cause);
+                return cmd_retval::CMD_RETURN_ERROR;
+            }
+
+            if dflag != 0 || xflag != 0 {
+                msgtype = if xflag != 0 {
+                    msgtype::MSG_DETACHKILL
+                } else {
+                    msgtype::MSG_DETACH
+                };
+                tailq_foreach(&raw mut clients, |c_loop| {
+                    if ((*c_loop).session != s || c == c_loop) {
+                        return ControlFlow::<(), ()>::Continue(());
+                    }
+                    server_client_detach(c_loop, msgtype);
+
+                    ControlFlow::<(), ()>::Continue(())
+                });
+            }
+            if Eflag == 0 {
+                environ_update((*s).options, (*c).environ, (*s).environ);
+            }
+
+            server_client_set_session(c, s);
+            server_client_set_key_table(c, null_mut());
+
+            if !(*c).flags & CLIENT_CONTROL != 0 {
+                proc_send((*c).peer, msgtype::MSG_READY, -1, null_mut(), 0);
+            }
+            notify_client(c"client-attached".as_ptr(), c);
+            (*c).flags |= CLIENT_ATTACHED;
+
+            if cfg_finished != 0 {
+                cfg_show_causes(s);
+            }
+        }
+        return cmd_retval::CMD_RETURN_NORMAL;
+    }
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn cmd_attach_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+    unsafe {
+        let mut args = cmd_get_args(self_);
+
+        cmd_attach_session(
+            item,
+            args_get(args, b't'),
+            args_has(args, b'd'),
+            args_has(args, b'x'),
+            args_has(args, b'r'),
+            args_get(args, b'c'),
+            args_has(args, b'E'),
+            args_get(args, b'f'),
+        )
+    }
 }

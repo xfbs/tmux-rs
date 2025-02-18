@@ -1,3 +1,5 @@
+use crate::xmalloc::xcalloc_;
+
 use super::*;
 
 use compat_rs::tree::{rb_find, rb_foreach, rb_foreach_safe, rb_init, rb_insert, rb_min, rb_next, rb_remove};
@@ -21,6 +23,7 @@ unsafe extern "C" {
 }
 
 pub type environ = rb_head<environ_entry>;
+
 /*
 
 #[unsafe(no_mangle)]
@@ -31,7 +34,7 @@ pub unsafe extern "C" fn environ_cmp(envent1: *const environ_entry, envent2: *co
 #[unsafe(no_mangle)]
 pub extern "C" fn environ_create() -> *mut environ {
     unsafe {
-        let mut env: *mut environ = xcalloc(1, size_of::<environ>()).cast().as_ptr();
+        let mut env: *mut environ = xcalloc_::<environ>(1).as_ptr();
         rb_init(env);
         env
     }
@@ -41,15 +44,15 @@ pub extern "C" fn environ_create() -> *mut environ {
 pub unsafe extern "C" fn environ_free(env: *mut environ) {
     unsafe {
         rb_foreach_safe(env, |envent| {
-            eprintln!("{:?} {:?}", envent, (*envent).entry);
+            // eprintln!("{:?} {:?}", envent, (*envent).entry);
 
             rb_remove(env, envent);
-            free((*envent).name as _);
-            free((*envent).value as _);
-            free(envent as _);
+            free_((*envent).name);
+            free_((*envent).value);
+            free_(envent);
             ControlFlow::Continue::<(), ()>(())
         });
-        free(env as _);
+        free_(env);
     }
 }
 
@@ -101,11 +104,11 @@ pub unsafe extern "C" fn environ_set(
         let mut envent = environ_find(env, name);
         if !envent.is_null() {
             (*envent).flags = flags;
-            free((*envent).value as _);
+            free_((*envent).value);
             let mut ap = args.clone();
             xvasprintf(&raw mut (*envent).value, fmt, ap.as_va_list());
         } else {
-            envent = xmalloc(size_of::<environ_entry>()).cast().as_ptr();
+            envent = xmalloc_::<environ_entry>().as_ptr();
             (*envent).name = xstrdup(name).cast().as_ptr();
             (*envent).flags = flags;
             let mut ap = args.clone();
@@ -120,10 +123,10 @@ pub unsafe extern "C" fn environ_clear(env: *mut environ, name: *const c_char) {
     unsafe {
         let mut envent = environ_find(env, name);
         if !envent.is_null() {
-            free((*envent).value as _);
+            free_((*envent).value);
             (*envent).value = null_mut();
         } else {
-            envent = xmalloc(size_of::<environ_entry>()).cast().as_ptr();
+            envent = xmalloc_::<environ_entry>().as_ptr();
             (*envent).name = xstrdup(name).cast().as_ptr();
             (*envent).flags = 0;
             (*envent).value = null_mut();
@@ -145,7 +148,7 @@ pub unsafe extern "C" fn environ_put(env: *mut environ, var: *const c_char, flag
         *name.add(strcspn(name, c"=".as_ptr())) = b'\0' as c_char;
 
         environ_set(env, name, flags, c"%s".as_ptr(), value);
-        free(name as _);
+        free_(name);
     }
 }
 
@@ -157,9 +160,9 @@ pub unsafe extern "C" fn environ_unset(env: *mut environ, name: *const c_char) {
             return;
         }
         rb_remove(env, envent);
-        free((*envent).name as _);
-        free((*envent).value as _);
-        free(envent as _);
+        free_((*envent).name);
+        free_((*envent).value);
+        free_(envent);
     }
 }
 
@@ -196,7 +199,7 @@ pub unsafe extern "C" fn environ_push(env: *mut environ) {
     unsafe {
         let mut envent: *mut environ_entry;
 
-        environ = xcalloc(1, size_of::<*mut c_char>()).cast().as_ptr();
+        environ = xcalloc_::<*mut c_char>(1).as_ptr();
         rb_foreach(env, |envent| {
             if !(*envent).value.is_null()
                 && *(*envent).name != b'\0' as c_char
@@ -223,7 +226,7 @@ pub unsafe extern "C" fn environ_log(env: *mut environ, fmt: *const c_char, mut 
             ControlFlow::<(), ()>::Continue(())
         });
 
-        free(prefix as _);
+        free_(prefix);
     }
 }
 
@@ -267,4 +270,5 @@ pub unsafe extern "C" fn environ_for_session(s: *mut session, no_TERM: c_int) ->
         env
     }
 }
+
 */

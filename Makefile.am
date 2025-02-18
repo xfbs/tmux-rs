@@ -83,16 +83,18 @@ endif
 # tmux.c
 # control-notify.c
 # cmd.c
+# client.c
+# cmd-attach-session.c
+# cmd-bind-key.c
+# cmd-break-pane.c
+# cmd-kill-session.c
+# cmd-capture-pane.c
+# cmd-choose-tree.c
+# cmd-command-prompt.c
+# style.c
 dist_tmux_SOURCES = \
 	environ.c \
 	arguments.c \
-	client.c \
-	cmd-attach-session.c \
-	cmd-bind-key.c \
-	cmd-break-pane.c \
-	cmd-capture-pane.c \
-	cmd-choose-tree.c \
-	cmd-command-prompt.c \
 	cmd-confirm-before.c \
 	cmd-detach-client.c \
 	cmd-display-menu.c \
@@ -103,7 +105,6 @@ dist_tmux_SOURCES = \
 	cmd-if-shell.c \
 	cmd-join-pane.c \
 	cmd-kill-pane.c \
-	cmd-kill-session.c \
 	cmd-kill-window.c \
 	cmd-list-buffers.c \
 	cmd-list-clients.c \
@@ -185,7 +186,6 @@ dist_tmux_SOURCES = \
 	session.c \
 	spawn.c \
 	status.c \
-	style.c \
 	tmux.h \
 	tmux-protocol.h \
 	tty-acs.c \

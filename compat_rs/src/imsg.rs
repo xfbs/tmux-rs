@@ -56,7 +56,7 @@ pub struct imsgbuf {
     pub pid: pid_t,
 }
 
-const IMSG_HEADER_SIZE: usize = size_of::<imsg_hdr>();
+pub const IMSG_HEADER_SIZE: usize = size_of::<imsg_hdr>();
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct imsg_hdr {

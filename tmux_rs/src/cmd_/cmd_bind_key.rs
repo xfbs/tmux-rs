@@ -1,1 +1,81 @@
+use crate::*;
 
+#[unsafe(no_mangle)]
+static mut cmd_bind_key_entry: cmd_entry = cmd_entry {
+    name: c"bind-key".as_ptr(),
+    alias: c"bind".as_ptr(),
+
+    args: args_parse {
+        template: c"nrN:T:".as_ptr(),
+        lower: 1,
+        upper: -1,
+        cb: Some(cmd_bind_key_args_parse),
+    },
+    usage: c"[-nr] [-T key-table] [-N note] key [command [arguments]]".as_ptr(),
+
+    flags: CMD_AFTERHOOK,
+    exec: Some(cmd_bind_key_exec),
+    ..unsafe { zeroed() }
+};
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn cmd_bind_key_args_parse(_args: *mut args, _idx: u32, _cause: *mut *mut c_char) -> args_parse_type {
+    args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn cmd_bind_key_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+    unsafe {
+        let mut args: *mut args = cmd_get_args(self_);
+        let mut note = args_get(args, b'N');
+        let mut repeat = 0;
+
+        let mut value: *mut args_value = null_mut();
+        let mut count: u32 = args_count(args);
+
+        let mut key: key_code = key_string_lookup_string(args_string(args, 0));
+        if key == KEYC_NONE || key == KEYC_UNKNOWN {
+            cmdq_error(item, c"unknown key: %s".as_ptr(), args_string(args, 0));
+            return cmd_retval::CMD_RETURN_ERROR;
+        }
+
+        let mut tablename: *const c_char = if args_has(args, b'T') != 0 {
+            args_get(args, b'T')
+        } else if args_has(args, b'n') != 0 {
+            c"root".as_ptr()
+        } else {
+            c"prefix".as_ptr()
+        };
+        repeat = args_has(args, b'r');
+
+        if (count == 1) {
+            key_bindings_add(tablename, key, note, repeat, null_mut());
+            return cmd_retval::CMD_RETURN_NORMAL;
+        }
+
+        value = args_value(args, 1);
+        if (count == 2 && (*value).type_ == args_type::ARGS_COMMANDS) {
+            key_bindings_add(tablename, key, note, repeat, (*value).union_.cmdlist);
+            (*(*value).union_.cmdlist).references += 1;
+            return cmd_retval::CMD_RETURN_NORMAL;
+        }
+
+        let pr = if count == 2 {
+            cmd_parse_from_string(args_string(args, 1), null_mut())
+        } else {
+            cmd_parse_from_arguments(args_values(args).add(1), count - 1, null_mut())
+        };
+
+        match (*pr).status {
+            cmd_parse_status::CMD_PARSE_ERROR => {
+                cmdq_error(item, c"%s".as_ptr(), (*pr).error);
+                free_((*pr).error);
+                return cmd_retval::CMD_RETURN_ERROR;
+            }
+            cmd_parse_status::CMD_PARSE_SUCCESS => (),
+        }
+        key_bindings_add(tablename, key, note, repeat, (*pr).cmdlist);
+
+        cmd_retval::CMD_RETURN_NORMAL
+    }
+}

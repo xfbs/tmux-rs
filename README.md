@@ -67,7 +67,10 @@ issue.
 Current status:
 
 reverted environ from build. porting tmux.c next, function by function. currently running
-NEXT: finish porting tmux.c but ensure it still runs
+NEXT:
+finish porting tmux.c but ensure it still runs
+
+implement fatal and fatalx which accept static rust string
 
 ```
 0x606000001160 rb_entry { rbe_left: 0x0, rbe_right: 0x606000001820, rbe_parent: 0x6060000009e0, rbe_color: RB_BLACK }
@@ -120,6 +123,10 @@ more then just server exited unexpectedly.
 # Thoughts
 - better rust-analyzer integration with C code
 
+# Interesting Patterns
+
+- goto labeled block translation
+
 # TODO After 100% Rust
 - miri
 - coverage
@@ -131,80 +138,81 @@ more then just server exited unexpectedly.
     - when converting from ptr to ref need to ensure types are initialized and valid when passed into a function
     - read or writes through a ptr will invalidate a reference
     - also need to ensure no pointers are created and stored from the references
+    - NonNull use as_uninit_mut
 
 - [X] 325 alert
 - [...] 1097 arguments
 - [X] 108 attributes
 - [X] 277 cfg
-- [ ] 809 client
+- [X] 809 client
 - [X] 1117 colour
 - [X] compat
 - [X] 262 control-notify
 - [ ] 1117 control
-- [ ] 281 environ
-- [ ] 859 file
+- [ ] 281 environ (problems when cut over)
+- [ ] 859 file (in progress)
 - [ ] 5294 format
-- [ ] 1243 format-draw
-- [ ] 429 grid-reader
-- [ ] 235 grid-view
+  - [ ] 1243 format-draw
 - [ ] 1535 grid
+  - [ ] 429 grid-reader
+  - [ ] 235 grid-view
 - [ ] 239 hyperlinks
 - [ ] 794 input-keys
 - [ ] 3025 input
 - [ ] 435 job
 - [ ] 692 key-bindings
 - [ ] 477 key-string
-- [ ] 370 layout-custom
-- [ ] 691 layout-set
 - [ ] 1120 layout
+  - [ ] 370 layout-custom
+  - [ ] 691 layout-set
 - [X] log
 - [ ] 556 menu
 - [ ] 1266 mode-tree
 - [X] 172 names
 - [ ] 323 notify
-- [ ] 1370 options-table
 - [ ] 1204 options
+  - [ ] 1370 options-table
 - [ ] 342 paste
 - [ ] 818 popup
 - [ ] 388 proc
 - [X] 120 regsub
 - [ ] 467 resize
-- [ ] 868 screen-redraw
-- [ ] 2347 screen-write
 - [ ] 740 screen
+  - [ ] 868 screen-redraw
+  - [ ] 2347 screen-write
 - [ ] 557 server
-    - [ ] implement 6/7 TODO's
-- [ ] 186 server-acl
-- [ ] 3392 server-client
-- [ ] 493 server-fn
+  - [ ] implement 6/7 TODO's
+  - [ ] 186 server-acl
+  - [ ] 3392 server-client
+  - [ ] 493 server-fn
 - [ ] 759 session
 - [ ] 497 spawn
 - [ ] 2035 status
-- [ ] 383 style
+- [X] 383 style
 - [X] 538 tmux.c
 - [X] tmux.h
 - [X] tmux-protocol.h
-- [ ] 269 tty-acs
-- [ ] 510 tty-features
-- [ ] 1591 tty-keys
-- [ ] 924 tty-term
 - [ ] 3186 tty
+  - [ ] 269 tty-acs
+  - [ ] 510 tty-features
+  - [ ] 1591 tty-keys
+  - [ ] 924 tty-term
 - [ ] 100 utf8-combined
 - [ ] 822 utf8
 - [X] window
-- [ ] 559 window-buffer
-- [ ] 418 window-client
-- [ ] 286 window-clock
-- [ ] 5786 window-copy
-- [ ] 1512 window-customize
-- [ ] 1348 window-tree
+  - [ ] 559 window-buffer
+  - [ ] 418 window-client
+  - [ ] 286 window-clock
+  - [ ] 5786 window-copy
+  - [ ] 1512 window-customize
+  - [ ] 1348 window-tree
 - [X] xmalloc
 - [X] 874 cmd
-  - [ ] 175 cmd-attach-session
-  - [ ] 107 cmd-bind-key
-  - [ ] 143 cmd-break-pane
-  - [ ] 253 cmd-capture-pane
-  - [ ] 117 cmd-choose-tree
+  - [X] 175 cmd-attach-session
+  - [X] 107 cmd-bind-key
+  - [X] 143 cmd-break-pane
+  - [X] 253 cmd-capture-pane
+  - [X] 117 cmd-choose-tree
   - [ ] 242 cmd-command-prompt
   - [ ] 163 cmd-confirm-before
   - [x] 98 cmd-copy-mode
@@ -218,7 +226,7 @@ more then just server exited unexpectedly.
   - [ ] 180 cmd-join-pane
   - [ ] 67 cmd-kill-pane
   - [X] cmd-kill-server
-  - [ ] 71 cmd-kill-session
+  - [X] 71 cmd-kill-session
   - [ ] 110 cmd-kill-window
   - [ ] 81 cmd-list-buffers
   - [ ] 102 cmd-list-clients
@@ -299,6 +307,28 @@ undefined behaviour in this context.
 
 - keybinding for vertical split prefix - doesn't seem to perform the correct action
   - related to current translation of arguments.c
+- keybinding for new window prefix-c doesn't seem to work
+  - started occurring after translating client.c
+- TODO, noticed I flipped tranlation order of fields of args_parse struct. need to double check that all translations which use the initialization is correct
+- Attaching to an existing tmux session is broken.
+  - running `tmux attach` immediately crashes when a session exists
+  - when running tmux while an existing tmux instance is running causes it to hang, killing the pane causes it to properly attach (likely do to my tmux config)
+- Anything entered in command prompt enter causes crash
+
+leak on exit:
+```
+❯ ./tmux
+[exited]
+
+=================================================================
+==32510==ERROR: LeakSanitizer: detected memory leaks
+
+Direct leak of 28 byte(s) in 1 object(s) allocated from:
+    #0 0x5596d8e5f64e in __interceptor_malloc (/home/collin/Git/tmux/tmux-3.5a/tmux+0x19964e) (BuildId: 960e62ee7f022a651d2c597decbeb02aba2b15cd)
+    #1 0x7fbd5e1b0427 in __vasprintf_internal libio/./libio/vasprintf.c:71:30
+
+SUMMARY: AddressSanitizer: 28 byte(s) leaked in 1 allocation(s).
+```
 
 ## BUGS (found)
 
@@ -312,6 +342,9 @@ undefined behaviour in this context.
 - flipped == args_type::ARGS_NONE instead of flipped != args_type::ARGS_NONE
 - flipped != 0 instead of == 0 for coverting from !int_like_value in conditional
 - incorrect translation of for loop with continue to while with continue and increment at end; increment isn't applied (cmd_find)
+
+- memcpy_(&raw mut tmp as *mut i8, in_, end); should have been: memcpy_(tmp, in_, end)
+  -  because I switched to a pointer instead of buffer,but didn't change memcpy code
 
 # References
 

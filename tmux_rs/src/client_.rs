@@ -1,5 +1,930 @@
-use super::*;
+use compat_rs::{
+    WAIT_ANY, closefrom,
+    imsg::{IMSG_HEADER_SIZE, MAX_IMSGSIZE, imsg, imsg_hdr},
+    strlcpy,
+    tree::rb_initializer,
+};
+use libc::{
+    __errno_location, _IOLBF, AF_UNIX, CREAD, CS8, EAGAIN, ECHILD, ECONNREFUSED, EINTR, ENAMETOOLONG, ENOENT, HUPCL,
+    ICRNL, IXANY, LOCK_EX, LOCK_NB, O_CREAT, O_WRONLY, ONLCR, OPOST, SA_RESTART, SIG_DFL, SIG_IGN, SIGCHLD, SIGCONT,
+    SIGHUP, SIGTERM, SIGTSTP, SIGWINCH, SOCK_STREAM, STDERR_FILENO, STDIN_FILENO, STDOUT_FILENO, TCSAFLUSH, TCSANOW,
+    VMIN, VTIME, WNOHANG, cfgetispeed, cfgetospeed, cfmakeraw, cfsetispeed, cfsetospeed, close, connect, dup, execl,
+    fflush, flock, fprintf, getenv, getline, getpid, getppid, isatty, kill, memcpy, memset, open, printf, setenv,
+    setvbuf, sigaction, sigemptyset, sockaddr, sockaddr_un, socket, strerror, strlen, strsignal, system, tcgetattr,
+    tcsetattr, unlink, waitpid,
+};
+
+use crate::*;
+
+#[unsafe(no_mangle)]
+pub static mut client_proc: *mut tmuxproc = null_mut();
+
+#[unsafe(no_mangle)]
+pub static mut client_peer: *mut tmuxpeer = null_mut();
+
+#[unsafe(no_mangle)]
+pub static mut client_flags: u64 = 0;
+
+#[unsafe(no_mangle)]
+pub static mut client_suspended: i32 = 0;
+
+#[repr(i32)]
+#[derive(Copy, Clone, Eq, PartialEq)]
+enum client_exitreason {
+    CLIENT_EXIT_NONE,
+    CLIENT_EXIT_DETACHED,
+    CLIENT_EXIT_DETACHED_HUP,
+    CLIENT_EXIT_LOST_TTY,
+    CLIENT_EXIT_TERMINATED,
+    CLIENT_EXIT_LOST_SERVER,
+    CLIENT_EXIT_EXITED,
+    CLIENT_EXIT_SERVER_EXITED,
+    CLIENT_EXIT_MESSAGE_PROVIDED,
+}
+
+#[unsafe(no_mangle)]
+pub static mut client_exitreason: client_exitreason = client_exitreason::CLIENT_EXIT_NONE;
+
+#[unsafe(no_mangle)]
+pub static mut client_exitflag: i32 = 0;
+#[unsafe(no_mangle)]
+pub static mut client_exitval: i32 = 0;
+
+#[unsafe(no_mangle)]
+static mut client_exittype: msgtype = msgtype::ZERO; // TODO
+#[unsafe(no_mangle)]
+static mut client_exitsession: *mut c_char = null_mut();
+#[unsafe(no_mangle)]
+static mut client_exitmessage: *mut c_char = null_mut();
+#[unsafe(no_mangle)]
+static mut client_execshell: *mut c_char = null_mut();
+#[unsafe(no_mangle)]
+static mut client_execcmd: *mut c_char = null_mut();
+#[unsafe(no_mangle)]
+static mut client_attached: i32 = 0;
+#[unsafe(no_mangle)]
+static mut client_files: client_files = rb_initializer();
 
 unsafe extern "C" {
-    pub unsafe fn client_main(_: *mut event_base, _: c_int, _: *mut *mut c_char, _: u64, _: c_int) -> c_int;
+    // fn client_exec(_: *const c_char, _: *const c_char);
+    // fn client_get_lock(_: *mut c_char) -> i32;
+    // fn client_connect(_: *mut event_base, _: *mut c_char, _: i64) -> i32;
+    // fn client_send_identify( _: *const c_char, _: *const c_char, _: *const *const c_char, _: u32, _: *mut c_char, _: i32,);
+    // fn client_dispatch_attached(_: *mut imsg);
+    // fn client_dispatch_wait(_: *mut imsg);
+    // fn client_exit_message() -> *mut c_char;
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn client_get_lock(lockfile: *mut c_char) -> i32 {
+    unsafe {
+        log_debug(c"lock file is %s".as_ptr(), lockfile);
+
+        let lockfd = open(lockfile, O_WRONLY | O_CREAT, 0o600);
+        if lockfd == -1 {
+            log_debug(c"open failed: %s".as_ptr(), strerror(*__errno_location()));
+            return -1;
+        }
+
+        if flock(lockfd, LOCK_EX | LOCK_NB) == -1 {
+            log_debug(c"flock failed: %s".as_ptr(), strerror(*__errno_location()));
+            if *__errno_location() != EAGAIN {
+                return lockfd;
+            }
+            while flock(lockfd, LOCK_EX) == -1 && *__errno_location() == EINTR {}
+            close(lockfd);
+            return -2;
+        }
+        log_debug(c"flock succeeded".as_ptr());
+
+        lockfd
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn client_connect(base: *mut event_base, path: *const c_char, flags: i64) -> i32 {
+    unsafe {
+        let mut sa: sockaddr_un = zeroed();
+        let mut fd = 0;
+        let mut lockfd = -1;
+        let mut locked: i32 = 0;
+        let mut lockfile: *mut c_char = null_mut();
+
+        sa.sun_family = AF_UNIX as u16;
+        let size = strlcpy(&raw mut sa.sun_path as _, path, size_of_val(&sa.sun_path));
+        if size >= size_of_val(&sa.sun_path) {
+            *__errno_location() = ENAMETOOLONG;
+            return -1;
+        }
+        log_debug(c"socket is %s".as_ptr(), path);
+
+        'failed: {
+            'retry: loop {
+                fd = socket(AF_UNIX, SOCK_STREAM, 0);
+                if fd == -1 {
+                    return -1;
+                }
+
+                log_debug(c"trying connect".as_ptr());
+                if connect(fd, &raw mut sa as _, size_of::<sockaddr_un>() as u32) == -1 {
+                    log_debug(c"connect failed: %s".as_ptr(), strerror(*__errno_location()));
+                    if (*__errno_location() != ECONNREFUSED && *__errno_location() != ENOENT) {
+                        break 'failed;
+                    }
+                    if flags & CLIENT_NOSTARTSERVER as i64 != 0 {
+                        break 'failed;
+                    }
+                    if !flags & CLIENT_STARTSERVER as i64 != 0 {
+                        break 'failed;
+                    }
+                    close(fd);
+
+                    if locked == 0 {
+                        xasprintf(&raw mut lockfile, c"%s.lock".as_ptr(), path);
+                        let lockfd = client_get_lock(lockfile);
+                        if lockfd < 0 {
+                            log_debug(c"didn't get lock (%d)".as_ptr(), lockfd);
+
+                            free(lockfile as _);
+                            lockfile = null_mut();
+
+                            if lockfd == -2 {
+                                continue 'retry;
+                            }
+                        }
+                        log_debug(c"got lock (%d)".as_ptr(), lockfd);
+
+                        locked = 1;
+                        continue 'retry;
+                    }
+
+                    if lockfd >= 0 && unlink(path) != 0 && *__errno_location() != ENOENT {
+                        free(lockfile as _);
+                        close(lockfd);
+                        return (-1);
+                    }
+                    fd = server_start(client_proc, flags as _, base, lockfd, lockfile);
+                }
+
+                break 'retry;
+            }
+
+            if locked != 0 && lockfd >= 0 {
+                free(lockfile as _);
+                close(lockfd);
+            }
+            setblocking(fd, 0);
+            return fd;
+        }
+
+        // failed:
+        if locked != 0 {
+            free(lockfile as _);
+            close(lockfd);
+        }
+        close(fd);
+        return -1;
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn client_exit_message() -> *const c_char {
+    type msgbuf = [c_char; 256];
+    static mut msg: msgbuf = [0; 256];
+
+    match unsafe { client_exitreason } {
+        client_exitreason::CLIENT_EXIT_DETACHED => {
+            unsafe {
+                if !client_exitsession.is_null() {
+                    xsnprintf(
+                        &raw mut msg as _,
+                        size_of::<msgbuf>(),
+                        c"detached (from session %s)".as_ptr(),
+                        client_exitsession,
+                    );
+                    return &raw mut msg as _;
+                }
+            }
+            c"detached".as_ptr()
+        }
+        client_exitreason::CLIENT_EXIT_DETACHED_HUP => {
+            unsafe {
+                if !client_exitsession.is_null() {
+                    xsnprintf(
+                        &raw mut msg as _,
+                        size_of::<msgbuf>(),
+                        c"detached and SIGHUP (from session %s)".as_ptr(),
+                        client_exitsession,
+                    );
+                    return &raw mut msg as _;
+                }
+            }
+            c"detached and SIGHUP".as_ptr()
+        }
+        client_exitreason::CLIENT_EXIT_LOST_TTY => c"lost tty".as_ptr(),
+        client_exitreason::CLIENT_EXIT_TERMINATED => c"terminated".as_ptr(),
+        client_exitreason::CLIENT_EXIT_LOST_SERVER => c"server exited unexpectedly".as_ptr(),
+        client_exitreason::CLIENT_EXIT_EXITED => c"exited".as_ptr(),
+        client_exitreason::CLIENT_EXIT_SERVER_EXITED => c"server exited".as_ptr(),
+        client_exitreason::CLIENT_EXIT_MESSAGE_PROVIDED => unsafe { client_exitmessage },
+        client_exitreason::CLIENT_EXIT_NONE => c"unknown reason".as_ptr(),
+    }
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn client_exit() {
+    unsafe {
+        if file_write_left(&raw mut client_files) == 0 {
+            proc_exit(client_proc);
+        }
+    }
+}
+
+unsafe extern "C" {
+    fn ttyname(fd: i32) -> *mut c_char;
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn client_main(
+    base: *mut event_base,
+    argc: i32,
+    argv: *mut *mut c_char,
+    mut flags: u64,
+    feat: i32,
+) -> i32 {
+    unsafe {
+        let mut pr: *mut cmd_parse_result = null_mut();
+        let mut data: *mut msg_command = null_mut();
+        let mut fd = 0;
+        let mut cwd: *const c_char = null_mut();
+        let mut ttynam: *const c_char = null_mut();
+        let mut termname: *const c_char = null_mut();
+        let mut msg: msgtype;
+        let mut tio: termios = zeroed();
+        let mut saved_tio: termios = zeroed();
+        let mut linesize = 0;
+        let mut line: *mut c_char = null_mut();
+        let mut caps: *mut *mut c_char = null_mut();
+        let mut cause: *mut c_char = null_mut();
+        let mut ncaps: u32 = 0;
+        let mut values: *mut args_value = null_mut();
+
+        if !shell_command.is_null() {
+            msg = msgtype::MSG_SHELL;
+            flags |= CLIENT_STARTSERVER;
+        } else if argc == 0 {
+            msg = msgtype::MSG_COMMAND;
+            flags |= CLIENT_STARTSERVER;
+        } else {
+            msg = msgtype::MSG_COMMAND;
+
+            values = args_from_vector(argc, argv);
+            pr = cmd_parse_from_arguments(values, argc as u32, null_mut());
+            if (*pr).status == cmd_parse_status::CMD_PARSE_SUCCESS {
+                if cmd_list_any_have((*pr).cmdlist, CMD_STARTSERVER) != 0 {
+                    flags |= CLIENT_STARTSERVER;
+                }
+                cmd_list_free((*pr).cmdlist);
+            } else {
+                free((*pr).error as _);
+            }
+            args_free_values(values, argc as u32);
+            free(values as _);
+        }
+
+        client_proc = proc_start(c"client".as_ptr());
+        proc_set_signals(client_proc, Some(client_signal));
+
+        client_flags = flags;
+        log_debug(c"flags are %#llx".as_ptr(), client_flags as c_ulonglong);
+
+        // #ifdef HAVE_SYSTEMD
+        #[cfg(feature = "systemd")]
+        {
+            unsafe extern "C" {
+                fn systemd_activated() -> i32;
+            }
+            if systemd_activated() != 0 {
+                fd = server_start(client_proc, flags, base, 0, null_mut());
+            } else {
+                fd = client_connect(base, socket_path, client_flags as i64);
+            }
+        }
+        #[cfg(not(feature = "systemd"))]
+        {
+            fd = client_connect(base, socket_path, client_flags as _);
+        }
+        if fd == -1 {
+            if *__errno_location() == ECONNREFUSED {
+                fprintf(stderr, c"no server running on %s\n".as_ptr(), socket_path);
+            } else {
+                fprintf(
+                    stderr,
+                    c"error connecting to %s (%s)\n".as_ptr(),
+                    socket_path,
+                    strerror(*__errno_location()),
+                );
+            }
+            return 1;
+        }
+        client_peer = proc_add_peer(client_proc, fd, Some(client_dispatch), null_mut());
+
+        cwd = find_cwd();
+        if cwd.is_null()
+            && ({
+                cwd = find_home();
+                cwd.is_null()
+            })
+        {
+            cwd = c"/".as_ptr();
+        }
+        ttynam = ttyname(STDIN_FILENO);
+        if ttynam.is_null() {
+            ttynam = c"".as_ptr();
+        }
+        termname = getenv(c"TERM".as_ptr());
+        if termname.is_null() {
+            termname = c"".as_ptr();
+        }
+
+        /*
+            // TODO no pledge
+            if pledge(c"stdio rpath wpath cpath unix sendfd proc exec tty".as_ptr(), null_mut()) != 0 {
+                fatal(c"pledge failed".as_ptr());
+            }
+        */
+
+        if isatty(STDIN_FILENO) != 0
+            && *termname != b'\0' as c_char
+            && tty_term_read_list(termname, STDIN_FILENO, &raw mut caps, &raw mut ncaps, &raw mut cause) != 0
+        {
+            fprintf(stderr, c"%s\n".as_ptr(), cause);
+            free(cause as _);
+            return 1;
+        }
+
+        if ptm_fd != -1 {
+            close(ptm_fd);
+        }
+        options_free(global_options);
+        options_free(global_s_options);
+        options_free(global_w_options);
+        environ_free(global_environ);
+
+        if client_flags & CLIENT_CONTROLCONTROL != 0 {
+            if tcgetattr(STDIN_FILENO, &raw mut saved_tio) != 0 {
+                fprintf(
+                    stderr,
+                    c"tcgetattr failed: %s\n".as_ptr(),
+                    strerror(*__errno_location()),
+                );
+                return 1;
+            }
+            cfmakeraw(&raw mut tio);
+            tio.c_iflag = ICRNL | IXANY;
+            tio.c_oflag = OPOST | ONLCR;
+            #[cfg(feature = "nokerninfo")]
+            {
+                // tio.c_lflag = NOKERNINFO;
+            }
+            tio.c_cflag = CREAD | CS8 | HUPCL;
+            tio.c_cc[VMIN] = 1;
+            tio.c_cc[VTIME] = 0;
+            cfsetispeed(&raw mut tio, cfgetispeed(&raw mut saved_tio));
+            cfsetospeed(&raw mut tio, cfgetospeed(&raw mut saved_tio));
+            tcsetattr(STDIN_FILENO, TCSANOW, &tio);
+        }
+
+        client_send_identify(ttynam, termname, caps, ncaps, cwd, feat);
+        tty_term_free_list(caps, ncaps);
+        proc_flush_peer(client_peer);
+
+        if msg == msgtype::MSG_COMMAND {
+            let mut size = 0;
+            for i in 0..argc {
+                size += strlen(*argv.add(i as _)) + 1;
+            }
+            if size > MAX_IMSGSIZE as usize - size_of::<msg_command>() {
+                fprintf(stderr, c"command too long\n".as_ptr());
+                return 1;
+            }
+            data = xmalloc(size_of::<msg_command>() + size).cast().as_ptr();
+
+            (*data).argc = argc;
+            // TODO this cast seems fishy
+            if cmd_pack_argv(argc, argv, data.add(1).cast(), size) != 0 {
+                fprintf(stderr, c"command too long\n".as_ptr());
+                free(data as _);
+                return 1;
+            }
+            size += size_of::<msg_command>();
+
+            if proc_send(client_peer, msg, -1, data as _, size) != 0 {
+                fprintf(stderr, c"failed to send command\n".as_ptr());
+                free(data as _);
+                return (1);
+            }
+            free(data as _);
+        } else if msg == msgtype::MSG_SHELL {
+            proc_send(client_peer, msg, -1, null_mut(), 0);
+        }
+
+        proc_loop(client_proc, None);
+
+        if client_exittype == msgtype::MSG_EXEC {
+            if client_flags & CLIENT_CONTROLCONTROL != 0 {
+                tcsetattr(STDOUT_FILENO, TCSAFLUSH, &saved_tio);
+            }
+            client_exec(client_execshell, client_execcmd);
+        }
+
+        setblocking(STDIN_FILENO, 1);
+        setblocking(STDOUT_FILENO, 1);
+        setblocking(STDERR_FILENO, 1);
+
+        if client_attached != 0 {
+            if client_exitreason != client_exitreason::CLIENT_EXIT_NONE {
+                printf(c"[%s]\n".as_ptr(), client_exit_message());
+            }
+
+            let ppid = getppid();
+            if client_exittype == msgtype::MSG_DETACHKILL && ppid > 1 {
+                kill(ppid, SIGHUP);
+            }
+        } else if client_flags & CLIENT_CONTROL != 0 {
+            if client_exitreason != client_exitreason::CLIENT_EXIT_NONE {
+                printf(c"%%exit %s\n".as_ptr(), client_exit_message());
+            } else {
+                printf(c"%%exit\n".as_ptr());
+            }
+            fflush(stdout);
+            if client_flags & CLIENT_CONTROL_WAITEXIT != 0 {
+                setvbuf(stdin, null_mut(), _IOLBF, 0);
+                loop {
+                    let linelen = getline(&raw mut line, &raw mut linesize, stdin);
+                    if linelen <= 1 {
+                        break;
+                    }
+                }
+                free(line as _);
+            }
+            if client_flags & CLIENT_CONTROLCONTROL != 0 {
+                // TODO originally octal 033
+                printf(c"\x1b\\".as_ptr());
+                fflush(stdout);
+                tcsetattr(STDOUT_FILENO, TCSAFLUSH, &raw mut saved_tio);
+            }
+        } else if client_exitreason != client_exitreason::CLIENT_EXIT_NONE {
+            fprintf(stderr, c"%s\n".as_ptr(), client_exit_message());
+        }
+
+        client_exitval
+    }
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn client_send_identify(
+    ttynam: *const c_char,
+    termname: *const c_char,
+    caps: *mut *mut c_char,
+    ncaps: u32,
+    cwd: *const c_char,
+    mut feat: i32,
+) {
+    unsafe {
+        // char	**ss;
+        let mut sslen: usize = 0;
+        // int	  fd;
+        let mut flags: u64 = client_flags;
+        // pid_t	  pid;
+        // u_int	  i;
+
+        proc_send(
+            client_peer,
+            msgtype::MSG_IDENTIFY_LONGFLAGS,
+            -1,
+            &raw mut flags as _,
+            size_of::<u64>(),
+        );
+        proc_send(
+            client_peer,
+            msgtype::MSG_IDENTIFY_LONGFLAGS,
+            -1,
+            &raw mut client_flags as _,
+            size_of::<u64>(),
+        );
+
+        proc_send(
+            client_peer,
+            msgtype::MSG_IDENTIFY_TERM,
+            -1,
+            termname as _,
+            strlen(termname) + 1,
+        );
+        proc_send(
+            client_peer,
+            msgtype::MSG_IDENTIFY_FEATURES,
+            -1,
+            &raw mut feat as _,
+            size_of::<i32>(),
+        );
+
+        proc_send(
+            client_peer,
+            msgtype::MSG_IDENTIFY_TTYNAME,
+            -1,
+            ttynam as _,
+            strlen(ttynam) + 1,
+        );
+        proc_send(client_peer, msgtype::MSG_IDENTIFY_CWD, -1, cwd as _, strlen(cwd) + 1);
+
+        for i in 0..ncaps {
+            proc_send(
+                client_peer,
+                msgtype::MSG_IDENTIFY_TERMINFO,
+                -1,
+                *caps.add(i as usize) as _,
+                strlen(*caps.add(i as usize)) + 1,
+            );
+        }
+
+        let fd = dup(STDIN_FILENO);
+        if fd == -1 {
+            fatal(c"dup failed".as_ptr());
+        }
+        proc_send(client_peer, msgtype::MSG_IDENTIFY_STDIN, fd, null_mut(), 0);
+
+        let fd = dup(STDOUT_FILENO);
+        if fd == -1 {
+            fatal(c"dup failed".as_ptr());
+        }
+        proc_send(client_peer, msgtype::MSG_IDENTIFY_STDOUT, fd, null_mut(), 0);
+
+        let mut pid = getpid();
+        proc_send(
+            client_peer,
+            msgtype::MSG_IDENTIFY_CLIENTPID,
+            -1,
+            &raw mut pid as _,
+            size_of::<i32>(),
+        );
+
+        let mut ss = environ;
+        while !(*ss).is_null() {
+            let sslen = strlen(*ss) + 1;
+            if sslen > MAX_IMSGSIZE as usize - IMSG_HEADER_SIZE {
+                ss = ss.add(1);
+                continue;
+            }
+            proc_send(client_peer, msgtype::MSG_IDENTIFY_ENVIRON, -1, *ss as _, sslen);
+            ss = ss.add(1);
+        }
+
+        proc_send(client_peer, msgtype::MSG_IDENTIFY_DONE, -1, null_mut(), 0);
+    }
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn client_exec(shell: *mut c_char, shellcmd: *mut c_char) {
+    unsafe {
+        log_debug(c"shell %s, command %s".as_ptr(), shell, shellcmd);
+        let argv0 = shell_argv0(shell, !!(client_flags & CLIENT_LOGIN) as c_int);
+        setenv(c"SHELL".as_ptr(), shell, 1);
+
+        proc_clear_signals(client_proc, 1);
+
+        setblocking(STDIN_FILENO, 1);
+        setblocking(STDOUT_FILENO, 1);
+        setblocking(STDERR_FILENO, 1);
+        closefrom(STDERR_FILENO + 1);
+
+        execl(shell, argv0, c"-c".as_ptr(), shellcmd, null_mut::<c_void>());
+        fatal(c"execl failed".as_ptr());
+    }
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn client_signal(sig: i32) {
+    unsafe {
+        let mut sigact: sigaction = zeroed();
+        let mut status: i32 = 0;
+        let mut pid: pid_t = 0;
+
+        log_debug(c"%s: %s".as_ptr(), c"client_signal".as_ptr(), strsignal(sig));
+        if (sig == SIGCHLD) {
+            loop {
+                pid = waitpid(WAIT_ANY, &raw mut status, WNOHANG);
+                if pid == 0 {
+                    break;
+                }
+                if (pid == -1) {
+                    if *__errno_location() == ECHILD {
+                        break;
+                    }
+                    log_debug(c"waitpid failed: %s".as_ptr(), strerror(*__errno_location()));
+                }
+            }
+        } else if client_attached == 0 {
+            if sig == SIGTERM || sig == SIGHUP {
+                proc_exit(client_proc);
+            }
+        } else {
+            match sig {
+                SIGHUP => {
+                    client_exitreason = client_exitreason::CLIENT_EXIT_LOST_TTY;
+                    client_exitval = 1;
+                    proc_send(client_peer, msgtype::MSG_EXITING, -1, null_mut(), 0);
+                }
+                SIGTERM => {
+                    if client_suspended == 0 {
+                        client_exitreason = client_exitreason::CLIENT_EXIT_TERMINATED;
+                    }
+                    client_exitval = 1;
+                    proc_send(client_peer, msgtype::MSG_EXITING, -1, null_mut(), 0);
+                }
+                SIGWINCH => {
+                    proc_send(client_peer, msgtype::MSG_RESIZE, -1, null_mut(), 0);
+                }
+                SIGCONT => {
+                    memset(&raw mut sigact as _, 0, size_of::<sigaction>());
+                    sigemptyset(&raw mut sigact.sa_mask);
+                    sigact.sa_flags = SA_RESTART;
+                    sigact.sa_sigaction = SIG_IGN;
+                    if sigaction(SIGTSTP, &raw mut sigact, null_mut()) != 0 {
+                        fatal(c"sigaction failed".as_ptr());
+                    }
+                    proc_send(client_peer, msgtype::MSG_WAKEUP, -1, null_mut(), 0);
+                    client_suspended = 0;
+                }
+                _ => (),
+            }
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn client_file_check_cb(
+    _c: *mut client,
+    _path: *mut c_char,
+    _error: i32,
+    _closed: i32,
+    _buffer: *mut evbuffer,
+    data: *mut c_void,
+) {
+    unsafe {
+        if client_exitflag != 0 {
+            client_exit();
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn client_dispatch(imsg: *mut imsg, _arg: *mut c_void) {
+    unsafe {
+        if imsg.is_null() {
+            if client_exitflag == 0 {
+                client_exitreason = client_exitreason::CLIENT_EXIT_LOST_SERVER;
+                client_exitval = 1;
+            }
+            proc_exit(client_proc);
+            return;
+        }
+
+        if client_attached != 0 {
+            client_dispatch_attached(imsg);
+        } else {
+            client_dispatch_wait(imsg);
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn client_dispatch_exit_message(mut data: *const c_char, mut datalen: usize) {
+    unsafe {
+        let mut retval = 0;
+        const size_of_retval: usize = size_of::<i32>();
+
+        if datalen < size_of_retval && datalen != 0 {
+            fatalx(c"bad MSG_EXIT size".as_ptr());
+        }
+
+        if (datalen >= size_of_retval) {
+            memcpy(&raw mut retval as _, data as _, size_of_retval);
+            client_exitval = retval;
+        }
+
+        if (datalen > size_of_retval) {
+            datalen -= size_of_retval;
+            data = data.add(size_of_retval);
+
+            client_exitmessage = xmalloc(datalen).cast().as_ptr();
+            memcpy(client_exitmessage as _, data as _, datalen);
+            *client_exitmessage.add(datalen - 1) = b'\0' as c_char;
+
+            client_exitreason = client_exitreason::CLIENT_EXIT_MESSAGE_PROVIDED;
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
+    // char		*data;
+    // ssize_t		 datalen;
+    static mut pledge_applied: i32 = 0;
+
+    unsafe {
+        /*
+        // TODO no pledge
+        if pledge_applied == 0 {
+            if pledge("stdio rpath wpath cpath unix proc exec tty", null_mut()) != 0 {
+                fatal(c"pledge failed".as_ptr());
+            }
+            pledge_applied = 1;
+        }
+        */
+
+        let data: *mut c_char = (*imsg).data as _;
+        let datalen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
+
+        let msg_hdr_type: msgtype = (*imsg).hdr.type_.try_into().expect("invalid enum variant"); // TODO
+        match msg_hdr_type {
+            msgtype::MSG_EXIT | msgtype::MSG_SHUTDOWN => {
+                client_dispatch_exit_message(data, datalen);
+                client_exitflag = 1;
+                client_exit();
+            }
+            msgtype::MSG_READY => {
+                if (datalen != 0) {
+                    fatalx(c"bad MSG_READY size".as_ptr());
+                }
+
+                client_attached = 1;
+                proc_send(client_peer, msgtype::MSG_RESIZE, -1, null_mut(), 0);
+            }
+            msgtype::MSG_VERSION => {
+                if (datalen != 0) {
+                    fatalx(c"bad MSG_VERSION size".as_ptr());
+                }
+
+                fprintf(
+                    stderr,
+                    c"protocol version mismatch (client %d, server %u)\n".as_ptr(),
+                    PROTOCOL_VERSION,
+                    (*imsg).hdr.peerid & 0xff,
+                );
+                client_exitval = 1;
+                proc_exit(client_proc);
+            }
+            msgtype::MSG_FLAGS => {
+                if (datalen != size_of::<u64>()) {
+                    fatalx(c"bad MSG_FLAGS string".as_ptr());
+                }
+
+                memcpy(&raw mut client_flags as _, data as _, size_of::<u64>());
+                log_debug(c"new flags are %#llx".as_ptr(), client_flags as c_ulonglong);
+            }
+            msgtype::MSG_SHELL => {
+                if (datalen == 0 || *data.add(datalen - 1) != b'\0' as c_char) {
+                    fatalx(c"bad MSG_SHELL string".as_ptr());
+                }
+
+                client_exec(data as _, shell_command);
+            }
+            msgtype::MSG_DETACH | msgtype::MSG_DETACHKILL => {
+                proc_send(client_peer, msgtype::MSG_EXITING, -1, null_mut(), 0);
+            }
+            msgtype::MSG_EXITED => {
+                proc_exit(client_proc);
+            }
+            msgtype::MSG_READ_OPEN => {
+                file_read_open(
+                    &raw mut client_files,
+                    client_peer,
+                    imsg,
+                    1,
+                    !(client_flags & CLIENT_CONTROL) as i32,
+                    Some(client_file_check_cb),
+                    null_mut(),
+                );
+            }
+            msgtype::MSG_READ_CANCEL => {
+                file_read_cancel(&raw mut client_files, imsg);
+            }
+            msgtype::MSG_WRITE_OPEN => {
+                file_write_open(
+                    &raw mut client_files,
+                    client_peer,
+                    imsg,
+                    1,
+                    !(client_flags & CLIENT_CONTROL) as i32,
+                    Some(client_file_check_cb),
+                    null_mut(),
+                );
+            }
+            msgtype::MSG_WRITE => {
+                file_write_data(&raw mut client_files, imsg);
+            }
+            msgtype::MSG_WRITE_CLOSE => {
+                file_write_close(&raw mut client_files, imsg);
+            }
+            msgtype::MSG_OLDSTDERR | msgtype::MSG_OLDSTDIN | msgtype::MSG_OLDSTDOUT => {
+                fprintf(stderr, c"server version is too old for client\n".as_ptr());
+                proc_exit(client_proc);
+            }
+            _ => (), // TODO
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn client_dispatch_attached(imsg: *mut imsg) {
+    unsafe {
+        let mut sigact: sigaction = zeroed();
+        let mut data: *mut c_char = (*imsg).data as _;
+        let mut datalen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
+
+        let mht: msgtype = (*imsg).hdr.type_.try_into().expect("invalid enum variant"); // TODO
+        match mht {
+            msgtype::MSG_FLAGS => {
+                if datalen != size_of::<u64>() {
+                    // TODO use size_of_val_raw
+                    fatalx(c"bad MSG_FLAGS string".as_ptr());
+                }
+
+                memcpy(&raw mut client_flags as _, data as _, size_of::<u64>());
+                log_debug(c"new flags are %#llx".as_ptr(), client_flags as c_ulonglong);
+            }
+            msgtype::MSG_DETACH | msgtype::MSG_DETACHKILL => {
+                if datalen == 0 || *data.add(datalen - 1) != b'\0' as c_char {
+                    fatalx(c"bad MSG_DETACH string".as_ptr());
+                }
+
+                client_exitsession = xstrdup(data).as_ptr();
+                client_exittype = mht;
+                if ((*imsg).hdr.type_ == msgtype::MSG_DETACHKILL as u32) {
+                    client_exitreason = client_exitreason::CLIENT_EXIT_DETACHED_HUP;
+                } else {
+                    client_exitreason = client_exitreason::CLIENT_EXIT_DETACHED;
+                }
+                proc_send(client_peer, msgtype::MSG_EXITING, -1, null_mut(), 0);
+            }
+            msgtype::MSG_EXEC => {
+                if datalen == 0 || *data.add(datalen - 1) != b'\0' as c_char || strlen(data) + 1 == datalen {
+                    fatalx(c"bad MSG_EXEC string".as_ptr());
+                }
+                client_execcmd = xstrdup(data).as_ptr();
+                client_execshell = xstrdup(data.add(strlen(data) + 1)).as_ptr();
+
+                client_exittype = mht;
+                proc_send(client_peer, msgtype::MSG_EXITING, -1, null_mut(), 0);
+            }
+            msgtype::MSG_EXIT => {
+                client_dispatch_exit_message(data, datalen);
+                if client_exitreason == client_exitreason::CLIENT_EXIT_NONE {
+                    client_exitreason = client_exitreason::CLIENT_EXIT_EXITED;
+                }
+                proc_send(client_peer, msgtype::MSG_EXITING, -1, null_mut(), 0);
+            }
+            msgtype::MSG_EXITED => {
+                if datalen != 0 {
+                    fatalx(c"bad MSG_EXITED size".as_ptr());
+                }
+
+                proc_exit(client_proc);
+            }
+            msgtype::MSG_SHUTDOWN => {
+                if (datalen != 0) {
+                    fatalx(c"bad MSG_SHUTDOWN size".as_ptr());
+                }
+
+                proc_send(client_peer, msgtype::MSG_EXITING, -1, null_mut(), 0);
+                client_exitreason = client_exitreason::CLIENT_EXIT_SERVER_EXITED;
+                client_exitval = 1;
+            }
+            msgtype::MSG_SUSPEND => {
+                if (datalen != 0) {
+                    fatalx(c"bad MSG_SUSPEND size".as_ptr());
+                }
+
+                memset(&raw mut sigact as _, 0, size_of::<sigaction>());
+                sigemptyset(&raw mut sigact.sa_mask);
+                sigact.sa_flags = SA_RESTART;
+                sigact.sa_sigaction = SIG_DFL;
+                if sigaction(SIGTSTP, &raw mut sigact, null_mut()) != 0 {
+                    fatal(c"sigaction failed".as_ptr());
+                }
+                client_suspended = 1;
+                kill(getpid(), SIGTSTP);
+            }
+            msgtype::MSG_LOCK => {
+                if (datalen == 0 || *data.add(datalen - 1) != b'\0' as c_char) {
+                    fatalx(c"bad MSG_LOCK string".as_ptr());
+                }
+
+                system(data);
+                proc_send(client_peer, msgtype::MSG_UNLOCK, -1, null_mut(), 0);
+            }
+            _ => (),
+        }
+    }
 }

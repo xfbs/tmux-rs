@@ -17,6 +17,7 @@ systemd = []
 sixel = []
 utempter = []
 sys_signame = []
+nokerninfo = []
 
 [lints]
 workspace = true

@@ -20,14 +20,18 @@ pub use core::{
         CStr, c_char, c_int, c_long, c_longlong, c_short, c_uchar, c_uint, c_ulonglong, c_ushort, c_void,
         va_list::{VaList, VaListImpl},
     },
-    mem::{ManuallyDrop, zeroed},
+    mem::{ManuallyDrop, size_of, zeroed},
     ops::ControlFlow,
     ptr::{NonNull, null, null_mut},
 };
 
 unsafe extern "C" {
     pub static mut environ: *mut *mut c_char;
+    fn strsep(_: *mut *mut c_char, _delim: *const c_char) -> *mut c_char;
+    // fn strsep(_: *mut *mut c_char, _delim: *const c_char) -> *mut c_char;
 }
+
+pub use compat_rs::imsg::imsg; // TODO move
 
 // #define S_ISDIR(mode)  (((mode) & S_IFMT) == S_IFDIR)
 // TODO move this to a better spot
@@ -40,9 +44,7 @@ pub const _PATH_BSHELL: *const c_char = c"/bin/sh".as_ptr();
 
 pub type wchar_t = core::ffi::c_int;
 unsafe extern "C" {
-    #[expect(dead_code)]
     static mut stdin: *mut FILE;
-    #[expect(dead_code)]
     static mut stdout: *mut FILE;
     static mut stderr: *mut FILE;
 }
@@ -85,8 +87,8 @@ macro_rules! opaque_types {
 // args_entry,
 // cmd,
 // cmds,
+// imsg,
 opaque_types! {
-    args_command_state,
     cmdq_item,
     cmdq_list,
     cmdq_state,
@@ -95,7 +97,6 @@ opaque_types! {
     format_tree,
     hyperlinks,
     hyperlinks_uri,
-    imsg,
     input_ctx,
     job,
     menu_data,
@@ -511,6 +512,17 @@ pub struct utf8_data {
     pub width: c_uchar,
 }
 
+impl utf8_data {
+    pub const fn new(data: [c_uchar; UTF8_SIZE], have: c_uchar, size: c_uchar, width: c_uchar) -> Self {
+        Self {
+            data,
+            have,
+            size,
+            width,
+        }
+    }
+}
+
 pub use utf8_state::*;
 #[repr(i32)]
 pub enum utf8_state {
@@ -619,6 +631,20 @@ pub struct grid_cell {
     pub link: u32,
 }
 
+impl grid_cell {
+    pub const fn new(data: utf8_data, attr: c_ushort, flags: c_uchar, fg: i32, bg: i32, us: i32, link: u32) -> Self {
+        Self {
+            data,
+            attr,
+            flags,
+            fg,
+            bg,
+            us,
+            link,
+        }
+    }
+}
+
 /// Grid extended cell entry.
 pub type grid_extd_entry = grid_cell;
 
@@ -676,6 +702,7 @@ pub struct grid_reader {
 
 /// Style alignment.
 #[repr(i32)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub enum style_align {
     STYLE_ALIGN_DEFAULT,
     STYLE_ALIGN_LEFT,
@@ -686,6 +713,7 @@ pub enum style_align {
 
 /// Style list.
 #[repr(i32)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub enum style_list {
     STYLE_LIST_OFF,
     STYLE_LIST_ON,
@@ -696,6 +724,7 @@ pub enum style_list {
 
 /// Style range.
 #[repr(i32)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub enum style_range_type {
     STYLE_RANGE_NONE,
     STYLE_RANGE_LEFT,
@@ -721,6 +750,7 @@ pub type style_ranges = tailq_head<style_range>;
 
 /// Style default.
 #[repr(i32)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub enum style_default_type {
     STYLE_DEFAULT_BASE,
     STYLE_DEFAULT_PUSH,
@@ -1132,7 +1162,7 @@ pub const WINDOW_ALERTFLAGS: i32 = WINDOW_BELL | WINDOW_ACTIVITY | WINDOW_SILENC
 #[derive(Copy, Clone)]
 pub struct window {
     pub id: u32,
-    pub latest: *mut (),
+    pub latest: *mut c_void,
 
     pub name: *mut c_char,
     pub name_event: event,
@@ -1660,6 +1690,17 @@ pub struct args_parse {
     pub cb: args_parse_cb,
 }
 
+impl args_parse {
+    pub const fn new(template: &CStr, lower: i32, upper: i32, cb: args_parse_cb) -> Self {
+        Self {
+            template: template.as_ptr(),
+            lower,
+            upper,
+            cb,
+        }
+    }
+}
+
 /// Command find structures.
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -1758,6 +1799,16 @@ pub struct cmd_entry_flag {
     pub flags: i32,
 }
 
+impl cmd_entry_flag {
+    pub const fn new(flag: u8, type_: cmd_find_type, flags: i32) -> Self {
+        Self {
+            flag: flag as c_char,
+            type_,
+            flags,
+        }
+    }
+}
+
 pub const CMD_STARTSERVER: i32 = 0x1;
 pub const CMD_READONLY: i32 = 0x2;
 pub const CMD_AFTERHOOK: i32 = 0x4;
@@ -1804,6 +1855,7 @@ pub struct status_line {
 /* Prompt type. */
 pub const PROMPT_NTYPES: usize = 4;
 #[repr(i32)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub enum prompt_type {
     PROMPT_TYPE_COMMAND,
     PROMPT_TYPE_SEARCH,
@@ -1837,6 +1889,16 @@ pub struct client_file {
     pub entry: rb_entry<client_file>,
 }
 pub type client_files = rb_head<client_file>;
+
+impl GetEntry<client_file> for client_file {
+    unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<client_file> {
+        unsafe { &raw mut (*this).entry }
+    }
+
+    unsafe fn cmp(this: *const Self, other: *const Self) -> i32 {
+        unsafe { file_cmp(this, other) }
+    }
+}
 
 // Client window.
 #[repr(C)]
@@ -1915,6 +1977,12 @@ pub const CLIENT_UNATTACHEDFLAGS: u64 = CLIENT_DEAD | CLIENT_SUSPENDED | CLIENT_
 pub const CLIENT_NODETACHFLAGS: u64 = CLIENT_DEAD | CLIENT_EXIT;
 pub const CLIENT_NOSIZEFLAGS: u64 = CLIENT_DEAD | CLIENT_SUSPENDED | CLIENT_EXIT;
 
+pub const PROMPT_SINGLE: i32 = 0x1;
+pub const PROMPT_NUMERIC: i32 = 0x2;
+pub const PROMPT_INCREMENTAL: i32 = 0x4;
+pub const PROMPT_NOFORMAT: i32 = 0x8;
+pub const PROMPT_KEY: i32 = 0x8;
+
 //#[derive(Copy, Clone)]
 #[repr(C)]
 #[derive(compat_rs::TailQEntry)]
@@ -1991,6 +2059,7 @@ pub struct client {
     pub prompt_hindex: [c_uint; 4],
     pub prompt_mode: prompt_mode,
     pub prompt_saved: *mut utf8_data,
+
     pub prompt_flags: c_int,
     pub prompt_type: prompt_type,
     pub prompt_cursor: c_int,
@@ -2300,12 +2369,12 @@ pub use crate::tty_keys::{tty_keys_build, tty_keys_colours, tty_keys_free, tty_k
 
 mod arguments;
 pub use crate::arguments::{
-    args, args_copy, args_count, args_create, args_entry, args_escape, args_first, args_first_value, args_free,
-    args_free_value, args_free_values, args_from_vector, args_get, args_has, args_make_commands,
-    args_make_commands_free, args_make_commands_get_command, args_make_commands_now, args_make_commands_prepare,
-    args_next, args_next_value, args_parse, args_percentage, args_percentage_and_expand, args_print, args_set,
-    args_string, args_string_percentage, args_string_percentage_and_expand, args_strtonum, args_strtonum_and_expand,
-    args_to_vector, args_value, args_values,
+    args, args_command_state, args_copy, args_count, args_create, args_entry, args_escape, args_first,
+    args_first_value, args_free, args_free_value, args_free_values, args_from_vector, args_get, args_has,
+    args_make_commands, args_make_commands_free, args_make_commands_get_command, args_make_commands_now,
+    args_make_commands_prepare, args_next, args_next_value, args_parse, args_percentage, args_percentage_and_expand,
+    args_print, args_set, args_string, args_string_percentage, args_string_percentage_and_expand, args_strtonum,
+    args_strtonum_and_expand, args_to_vector, args_value, args_values,
 };
 
 mod cmd_;
@@ -2372,6 +2441,16 @@ pub use crate::file::{
     file_vprint, file_write, file_write_close, file_write_data, file_write_left, file_write_open, file_write_ready,
 };
 
+unsafe extern "C" {
+    #[unsafe(no_mangle)]
+    pub fn server_start(
+        client: *mut tmuxproc,
+        flags: u64,
+        base: *mut event_base,
+        lockfd: c_int,
+        lockfile: *mut c_char,
+    ) -> c_int;
+}
 /*
 mod server;
 pub use crate::server::{
@@ -2690,7 +2769,10 @@ pub use crate::hyperlinks_::{
 };
 
 pub mod xmalloc;
-pub use crate::xmalloc::{xasprintf, xcalloc, xmalloc, xreallocarray, xsnprintf, xstrdup, xvasprintf};
+pub use crate::xmalloc::{
+    free_, memcpy_, memcpy__, xasprintf, xcalloc, xcalloc_, xmalloc, xmalloc_, xrealloc, xrealloc_, xreallocarray_,
+    xsnprintf, xstrdup, xstrdup_, xvasprintf,
+};
 /*
 unsafe extern "C" {
     pub unsafe fn xasprintf(ret: *mut *mut c_char, fmt: *const c_char, args: ...) -> c_int;

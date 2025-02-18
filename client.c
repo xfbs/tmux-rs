@@ -32,7 +32,7 @@
 
 #include "tmux.h"
 
-static struct tmuxproc	*client_proc;
+// static struct tmuxproc	*client_proc;
 static struct tmuxpeer	*client_peer;
 static uint64_t		 client_flags;
 static int		 client_suspended;
@@ -58,7 +58,7 @@ static int		 client_attached;
 static struct client_files client_files = RB_INITIALIZER(&client_files);
 
 static __dead void	 client_exec(const char *,const char *);
-static int		 client_get_lock(char *);
+int		 client_get_lock(char *);
 static int		 client_connect(struct event_base *, const char *,
 			     uint64_t);
 static void		 client_send_identify(const char *, const char *,
@@ -70,10 +70,6 @@ static void		 client_dispatch_wait(struct imsg *);
 static const char	*client_exit_message(void);
 
 /*
- * Get server create lock. If already held then server start is happening in
- * another client, so block until the lock is released and return -2 to
- * retry. Return -1 on failure to continue and start the server anyway.
- */
 static int
 client_get_lock(char *lockfile)
 {
@@ -91,7 +87,6 @@ client_get_lock(char *lockfile)
 		if (errno != EAGAIN)
 			return (lockfd);
 		while (flock(lockfd, LOCK_EX) == -1 && errno == EINTR)
-			/* nothing */;
 		close(lockfd);
 		return (-2);
 	}
@@ -100,7 +95,6 @@ client_get_lock(char *lockfile)
 	return (lockfd);
 }
 
-/* Connect client to server. */
 static int
 client_connect(struct event_base *base, const char *path, uint64_t flags)
 {
@@ -146,12 +140,6 @@ retry:
 			}
 			log_debug("got lock (%d)", lockfd);
 
-			/*
-			 * Always retry at least once, even if we got the lock,
-			 * because another client could have taken the lock,
-			 * started the server and released the lock between our
-			 * connect() and flock().
-			 */
 			locked = 1;
 			goto retry;
 		}
@@ -179,8 +167,8 @@ failed:
 	close(fd);
 	return (-1);
 }
+*/
 
-/* Get exit string from reason number. */
 const char *
 client_exit_message(void)
 {

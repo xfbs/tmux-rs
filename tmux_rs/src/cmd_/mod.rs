@@ -7,7 +7,10 @@ use compat_rs::{
 };
 use libc::{strchr, strcmp, strlen, strncmp};
 
-use crate::{xmalloc::xrealloc, *};
+use crate::{
+    xmalloc::{xrealloc_, xreallocarray_},
+    *,
+};
 
 pub mod cmd_attach_session;
 pub mod cmd_bind_key;
@@ -341,7 +344,7 @@ pub unsafe extern "C" fn cmd_log_argv(argc: i32, argv: *mut *mut c_char, fmt: *c
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_prepend_argv(argc: *mut c_int, argv: *mut *mut *mut c_char, arg: *const c_char) {
     unsafe {
-        let new_argv: *mut *mut c_char = xreallocarray(null_mut(), (*argc) as usize + 1, size_of::<*mut c_char>())
+        let new_argv: *mut *mut c_char = xreallocarray_::<*mut c_char>(null_mut(), (*argc) as usize + 1)
             .cast()
             .as_ptr();
         *new_argv = xstrdup(arg).as_ptr();
@@ -358,9 +361,7 @@ pub unsafe extern "C" fn cmd_prepend_argv(argc: *mut c_int, argv: *mut *mut *mut
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_append_argv(argc: *mut c_int, argv: *mut *mut *mut c_char, arg: *const c_char) {
     unsafe {
-        *argv = xreallocarray(*argv as _, (*argc) as usize + 1, size_of::<*mut c_char>())
-            .cast()
-            .as_ptr();
+        *argv = xreallocarray_::<*mut c_char>(*argv, (*argc) as usize + 1).as_ptr();
         *(*argv).add((*argc) as usize) = xstrdup(arg).as_ptr();
         *argc += 1;
     }
@@ -405,9 +406,9 @@ pub unsafe extern "C" fn cmd_unpack_argv(
         if argc == 0 {
             return 0;
         }
-        *argv = xcalloc(argc as usize, size_of::<*mut c_char>()).cast().as_ptr();
+        *argv = xcalloc_::<*mut c_char>(argc as usize).as_ptr();
 
-        *buf.add(len as usize - 1) = b'\0' as c_char;
+        *buf.add(len - 1) = b'\0' as c_char;
         for i in 0..argc {
             if len == 0 {
                 cmd_free_argv(argc, *argv);
@@ -480,7 +481,7 @@ pub unsafe extern "C" fn cmd_stringify_argv(argc: c_int, argv: *mut *mut c_char)
             );
 
             len += strlen(s) + 1;
-            buf = xrealloc(buf as _, len).cast().as_ptr();
+            buf = xrealloc_(buf, len).as_ptr();
 
             if (i == 0) {
                 *buf = b'\0' as c_char;
@@ -803,7 +804,7 @@ pub unsafe extern "C" fn cmd_list_print(cmdlist: *mut cmd_list, escaped: c_int) 
             let mut this = cmd_print(cmd);
 
             len += strlen(this) + 6;
-            buf = xrealloc(buf as _, len).cast().as_ptr();
+            buf = xrealloc_(buf, len).as_ptr();
 
             strlcat(buf, this, len);
 
@@ -1027,7 +1028,7 @@ pub unsafe extern "C" fn cmd_template_replace(template: *const c_char, s: *const
                         ptr = ptr.add(1);
                     }
 
-                    buf = xrealloc(buf as _, len + (strlen(s) * 3) + 1).cast().as_ptr();
+                    buf = xrealloc_(buf, len + (strlen(s) * 3) + 1).as_ptr();
                     let mut cp = s;
                     while *cp != b'\0' as c_char {
                         if quoted && !strchr(quote.as_ptr(), *cp as i32).is_null() {
@@ -1043,7 +1044,7 @@ pub unsafe extern "C" fn cmd_template_replace(template: *const c_char, s: *const
                 }
                 _ => (),
             }
-            buf = xrealloc(buf as _, len + 2).cast().as_ptr();
+            buf = xrealloc_(buf, len + 2).as_ptr();
             *buf.add(len) = ch;
             len += 1;
             *buf.add(len) = b'\0' as c_char;

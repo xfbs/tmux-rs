@@ -219,9 +219,7 @@ pub unsafe extern "C" fn cfg_add_cause(fmt: *const c_char, mut args: ...) {
         xvasprintf(&raw mut msg, fmt, args.as_va_list());
 
         cfg_ncauses += 1;
-        cfg_causes = xreallocarray(cfg_causes as _, cfg_ncauses as usize, size_of::<*mut c_char>())
-            .cast()
-            .as_ptr();
+        cfg_causes = xreallocarray_::<*mut c_char>(cfg_causes, cfg_ncauses as usize).as_ptr();
         *cfg_causes.add(cfg_ncauses as usize - 1) = msg;
     }
 }

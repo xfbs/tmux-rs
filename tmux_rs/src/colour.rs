@@ -1006,7 +1006,7 @@ pub unsafe extern "C" fn colour_palette_set(p: *mut colour_palette, n: i32, c: i
 
         if c != -1 && (*p).palette.is_null() {
             if (*p).palette.is_null() {
-                (*p).palette = xcalloc(256, size_of::<colour_palette>()).cast().as_ptr();
+                (*p).palette = xcalloc_(256).as_ptr();
             }
             for i in 0..256 {
                 *(*p).palette.add(i) = -1;
@@ -1037,7 +1037,7 @@ pub unsafe extern "C" fn colour_palette_from_option(p: *mut colour_palette, oo: 
         }
 
         if (*p).default_palette.is_null() {
-            (*p).default_palette = xcalloc(256, size_of::<c_int>()).cast().as_ptr();
+            (*p).default_palette = xcalloc_::<c_int>(256).as_ptr();
         }
         for i in 0..256 {
             *(*p).default_palette.add(i) = -1;

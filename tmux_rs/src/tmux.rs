@@ -144,11 +144,6 @@ pub unsafe extern "C" fn expand_path(path: *const c_char, home: *const c_char) -
     }
 }
 
-unsafe extern "C" {
-    // TODO move to some libc compat
-    fn strsep(_: *const *const c_char, _delim: *const c_char) -> *const c_char;
-}
-
 #[unsafe(no_mangle)]
 unsafe extern "C" fn expand_paths(s: *const c_char, paths: *mut *mut *mut c_char, n: *mut u32, ignore_errors: i32) {
     unsafe {
@@ -201,9 +196,7 @@ unsafe extern "C" fn expand_paths(s: *const c_char, paths: *mut *mut *mut c_char
                 free(path as _);
                 continue;
             }
-            *paths = xreallocarray(*paths as _, (*n + 1) as usize, size_of::<*mut *const c_char>())
-                .cast()
-                .as_ptr();
+            *paths = xreallocarray_::<*mut c_char>(*paths, (*n + 1) as usize).as_ptr();
             *(*paths).add((*n) as usize) = path;
             *n += 1;
         }
@@ -474,9 +467,7 @@ extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char) {
                         }
                         cfg_nfiles = 0;
                     }
-                    cfg_files = xreallocarray(cfg_files as _, cfg_nfiles as usize + 1, size_of::<*mut c_char>())
-                        .cast()
-                        .as_ptr();
+                    cfg_files = xreallocarray_::<*mut c_char>(cfg_files, cfg_nfiles as usize + 1).as_ptr();
                     *cfg_files.add(cfg_nfiles as usize) = xstrdup(optarg).cast().as_ptr();
                     cfg_nfiles += 1;
                     cfg_quiet = 0;

@@ -29,13 +29,10 @@
  * Prompt for command in client.
  */
 
-static enum args_parse_type	cmd_command_prompt_args_parse(struct args *,
-				    u_int, char **);
-static enum cmd_retval		cmd_command_prompt_exec(struct cmd *,
-				    struct cmdq_item *);
+static enum args_parse_type	cmd_command_prompt_args_parse(struct args *, u_int, char **);
+static enum cmd_retval		cmd_command_prompt_exec(struct cmd *, struct cmdq_item *);
 
-static int	cmd_command_prompt_callback(struct client *, void *,
-		    const char *, int);
+static int	cmd_command_prompt_callback(struct client *, void *, const char *, int);
 static void	cmd_command_prompt_free(void *);
 
 const struct cmd_entry cmd_command_prompt_entry = {
