@@ -15,10 +15,9 @@ use compat_rs::vis::{VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB};
 use libevent_sys::event_set_log_callback;
 
 use crate::xmalloc::xasprintf;
+use crate::*;
 
 unsafe extern "C" {
-    // TODO remove the extern usage
-    unsafe fn vasprintf(_: *mut *mut c_char, _: *const c_char, _: VaList) -> c_int;
     unsafe fn stravis(_: *mut *mut c_char, _: *const c_char, _: c_int) -> c_int;
 }
 

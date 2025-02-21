@@ -33,7 +33,7 @@ unsafe extern "C" {
         _: client_file_cb,
         _: *mut c_void,
     );
-    pub fn file_read(_: *mut client, _: *const c_char, _: client_file_cb, _: *mut c_void) -> *mut client_file;
+    pub fn file_read(_: *mut client, _: *const c_char, _: client_file_cb, _: *const c_void) -> *mut client_file;
     pub fn file_cancel(_: *mut client_file);
     pub fn file_push(_: *mut client_file);
     pub fn file_write_left(_: *mut client_files) -> c_int;

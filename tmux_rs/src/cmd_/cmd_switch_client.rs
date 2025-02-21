@@ -1,1 +1,118 @@
+use libc::strcspn;
 
+use crate::*;
+
+#[unsafe(no_mangle)]
+static mut cmd_switch_client_entry: cmd_entry = cmd_entry {
+    name: c"switch-client".as_ptr(),
+    alias: c"switchc".as_ptr(),
+
+    args: args_parse::new(c"lc:EFnpt:rT:Z", 0, 0, None),
+    usage: c"[-ElnprZ] [-c target-client] [-t target-session] [-T key-table]".as_ptr(),
+
+    flags: CMD_READONLY | CMD_CLIENT_CFLAG,
+    exec: Some(cmd_switch_client_exec),
+    ..unsafe { zeroed() }
+};
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn cmd_switch_client_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+    unsafe {
+        let mut args = cmd_get_args(self_);
+        let mut current = cmdq_get_current(item);
+        let mut target: cmd_find_state = zeroed(); // TODO use uninit
+        let mut tflag = args_get_(args, 't');
+        let mut type_: cmd_find_type;
+        let mut flags: i32 = 0;
+        let mut tc = cmdq_get_target_client(item);
+
+        if !tflag.is_null() && *tflag.add(strcspn(tflag, c":.%".as_ptr())) != b'\0' as c_char {
+            type_ = cmd_find_type::CMD_FIND_PANE;
+            flags = 0;
+        } else {
+            type_ = cmd_find_type::CMD_FIND_SESSION;
+            flags = CMD_FIND_PREFER_UNATTACHED;
+        }
+        if (cmd_find_target(&raw mut target, item, tflag, type_, flags) != 0) {
+            return (cmd_retval::CMD_RETURN_ERROR);
+        }
+        let mut s = target.s;
+        let mut wl = target.wl;
+        let mut wp = target.wp;
+
+        if (args_has_(args, 'r')) {
+            if ((*tc).flags & CLIENT_READONLY != 0) {
+                (*tc).flags &= !(CLIENT_READONLY | CLIENT_IGNORESIZE);
+            } else {
+                (*tc).flags |= (CLIENT_READONLY | CLIENT_IGNORESIZE);
+            }
+        }
+
+        let mut tablename = args_get_(args, 'T');
+        if !tablename.is_null() {
+            let mut table = key_bindings_get_table(tablename, 0);
+            if table.is_null() {
+                cmdq_error(item, c"table %s doesn't exist".as_ptr(), tablename);
+                return (cmd_retval::CMD_RETURN_ERROR);
+            }
+            (*table).references += 1;
+            key_bindings_unref_table((*tc).keytable);
+            (*tc).keytable = table;
+            return (cmd_retval::CMD_RETURN_NORMAL);
+        }
+
+        if (args_has_(args, 'n')) {
+            s = session_next_session((*tc).session);
+            if (s.is_null()) {
+                cmdq_error(item, c"can't find next session".as_ptr());
+                return (cmd_retval::CMD_RETURN_ERROR);
+            }
+        } else if (args_has_(args, 'p')) {
+            s = session_previous_session((*tc).session);
+            if s.is_null() {
+                cmdq_error(item, c"can't find previous session".as_ptr());
+                return (cmd_retval::CMD_RETURN_ERROR);
+            }
+        } else if (args_has_(args, 'l')) {
+            if !(*tc).last_session.is_null() && session_alive((*tc).last_session) != 0 {
+                s = (*tc).last_session;
+            } else {
+                s = null_mut();
+            }
+            if (s.is_null()) {
+                cmdq_error(item, c"can't find last session".as_ptr());
+                return (cmd_retval::CMD_RETURN_ERROR);
+            }
+        } else {
+            if (cmdq_get_client(item).is_null()) {
+                return (cmd_retval::CMD_RETURN_NORMAL);
+            }
+            if (!wl.is_null() && !wp.is_null() && wp != (*(*wl).window).active) {
+                let w = (*wl).window;
+                if (window_push_zoom(w, 0, args_has(args, b'Z')) != 0) {
+                    server_redraw_window(w);
+                }
+                window_redraw_active_switch(w, wp);
+                window_set_active_pane(w, wp, 1);
+                if (window_pop_zoom(w) != 0) {
+                    server_redraw_window(w);
+                }
+            }
+            if (!wl.is_null()) {
+                session_set_current(s, wl);
+                cmd_find_from_session(current, s, 0);
+            }
+        }
+
+        if !args_has_(args, 'E') {
+            environ_update((*s).options, (*tc).environ, (*s).environ);
+        }
+
+        server_client_set_session(tc, s);
+        if !cmdq_get_flags(item) & CMDQ_STATE_REPEAT != 0 {
+            server_client_set_key_table(tc, null_mut());
+        }
+
+        cmd_retval::CMD_RETURN_NORMAL
+    }
+}

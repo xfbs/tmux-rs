@@ -1,0 +1,2 @@
+InsertBraces: true
+RemoveParentheses: ReturnStatement

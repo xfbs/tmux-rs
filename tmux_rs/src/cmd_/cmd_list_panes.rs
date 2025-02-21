@@ -1,1 +1,130 @@
+use compat_rs::{queue::tailq_foreach, tree::rb_foreach};
 
+use crate::*;
+
+#[unsafe(no_mangle)]
+static mut cmd_list_panes_entry: cmd_entry = cmd_entry {
+    name: c"list-panes".as_ptr(),
+    alias: c"lsp".as_ptr(),
+
+    args: args_parse::new(c"asF:f:t:", 0, 0, None),
+    usage: c"[-as] [-F format] [-f filter] [-t target-window]".as_ptr(),
+
+    target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_WINDOW, 0),
+
+    flags: CMD_AFTERHOOK,
+    exec: Some(cmd_list_panes_exec),
+    ..unsafe { zeroed() }
+};
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn cmd_list_panes_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+    unsafe {
+        let mut args = cmd_get_args(self_);
+        let mut target = cmdq_get_target(item);
+        let mut s = (*target).s;
+        let mut wl = (*target).wl;
+
+        if (args_has_(args, 'a')) {
+            cmd_list_panes_server(self_, item);
+        } else if (args_has_(args, 's')) {
+            cmd_list_panes_session(self_, s, item, 1);
+        } else {
+            cmd_list_panes_window(self_, s, wl, item, 0);
+        }
+
+        cmd_retval::CMD_RETURN_NORMAL
+    }
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn cmd_list_panes_server(self_: *mut cmd, item: *mut cmdq_item) {
+    unsafe {
+        rb_foreach(&raw mut sessions, |s| {
+            cmd_list_panes_session(self_, s, item, 2);
+            ControlFlow::<(), ()>::Continue(())
+        });
+    }
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn cmd_list_panes_session(self_: *mut cmd, s: *mut session, item: *mut cmdq_item, type_: i32) {
+    unsafe {
+        rb_foreach(&raw mut (*s).windows, |wl| {
+            cmd_list_panes_window(self_, s, wl, item, type_);
+            ControlFlow::<(), ()>::Continue(())
+        });
+    }
+}
+
+fn cmd_list_panes_window(self_: *mut cmd, s: *mut session, wl: *mut winlink, item: *mut cmdq_item, type_: i32) {
+    unsafe {
+        let mut args = cmd_get_args(self_);
+
+        let mut template = args_get_(args, 'F');
+        if (template.is_null()) {
+            match (type_) {
+                0 => {
+                    template = concat!(
+                        "#{pane_index}: ",
+                        "[#{pane_width}x#{pane_height}] [history ",
+                        "#{history_size}/#{history_limit}, ",
+                        "#{history_bytes} bytes] #{pane_id}",
+                        "#{?pane_active, (active),}#{?pane_dead, (dead),}\0"
+                    )
+                    .as_ptr()
+                    .cast();
+                }
+                1 => {
+                    template = concat!(
+                        "#{window_index}.#{pane_index}: ",
+                        "[#{pane_width}x#{pane_height}] [history ",
+                        "#{history_size}/#{history_limit}, ",
+                        "#{history_bytes} bytes] #{pane_id}",
+                        "#{?pane_active, (active),}#{?pane_dead, (dead),}\0"
+                    )
+                    .as_ptr()
+                    .cast();
+                }
+                2 => {
+                    template = concat!(
+                        "#{session_name}:#{window_index}.",
+                        "#{pane_index}: [#{pane_width}x#{pane_height}] ",
+                        "[history #{history_size}/#{history_limit}, ",
+                        "#{history_bytes} bytes] #{pane_id}",
+                        "#{?pane_active, (active),}#{?pane_dead, (dead),}\0"
+                    )
+                    .as_ptr()
+                    .cast();
+                }
+                _ => (),
+            }
+        }
+        let mut filter = args_get_(args, 'f');
+
+        let mut n = 0u32;
+        tailq_foreach::<_, _, _, discr_entry>(&raw mut (*(*wl).window).panes, |wp| {
+            let mut ft = format_create(cmdq_get_client(item), item, FORMAT_NONE, 0);
+            format_add(ft, c"line".as_ptr(), c"%u".as_ptr(), n);
+            format_defaults(ft, null_mut(), s, wl, wp);
+
+            let mut flag = 0;
+            if !filter.is_null() {
+                let expanded = format_expand(ft, filter);
+                flag = format_true(expanded);
+                free_(expanded);
+            } else {
+                flag = 1;
+            }
+            if (flag != 0) {
+                let line = format_expand(ft, template);
+                cmdq_print(item, c"%s".as_ptr(), line);
+                free_(line);
+            }
+
+            format_free(ft);
+            n += 1;
+            ControlFlow::<(), ()>::Continue(())
+        });
+    }
+}

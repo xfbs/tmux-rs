@@ -1,1 +1,98 @@
+use crate::*;
 
+#[unsafe(no_mangle)]
+static mut cmd_set_environment_entry: cmd_entry = cmd_entry {
+    name: c"set-environment".as_ptr(),
+    alias: c"setenv".as_ptr(),
+
+    args: args_parse::new(c"Fhgrt:u", 1, 2, None),
+    usage: c"[-Fhgru] [-t target-session] name [value]".as_ptr(),
+
+    target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_SESSION, CMD_FIND_CANFAIL),
+
+    flags: CMD_AFTERHOOK,
+    exec: Some(cmd_set_environment_exec),
+    ..unsafe { zeroed() }
+};
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn cmd_set_environment_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+    unsafe {
+        let mut args = cmd_get_args(self_);
+        let mut target = cmdq_get_target(item);
+        let mut env: *mut environ;
+        let mut name = args_string(args, 0);
+        let mut value = null();
+        let mut tflag;
+        let mut expanded = null_mut();
+        let mut retval = cmd_retval::CMD_RETURN_NORMAL;
+
+        'out: {
+            if *name == b'\0' as _ {
+                cmdq_error(item, c"empty variable name".as_ptr());
+                return (cmd_retval::CMD_RETURN_ERROR);
+            }
+            if !strchr_(name, '=').is_null() {
+                cmdq_error(item, c"variable name contains =".as_ptr());
+                return (cmd_retval::CMD_RETURN_ERROR);
+            }
+
+            if args_count(args) < 2 {
+                value = null_mut();
+            } else {
+                value = args_string(args, 1);
+            }
+            if (!value.is_null() && args_has_(args, 'F')) {
+                expanded = format_single_from_target(item, value);
+                value = expanded;
+            }
+            if args_has_(args, 'g') {
+                env = global_environ;
+            } else {
+                if ((*target).s.is_null()) {
+                    tflag = args_get_(args, 't');
+                    if !tflag.is_null() {
+                        cmdq_error(item, c"no such session: %s".as_ptr(), tflag);
+                    } else {
+                        cmdq_error(item, c"no current session".as_ptr());
+                    }
+                    retval = cmd_retval::CMD_RETURN_ERROR;
+                    break 'out;
+                }
+                env = (*(*target).s).environ;
+            }
+
+            if (args_has_(args, 'u')) {
+                if !value.is_null() {
+                    cmdq_error(item, c"can't specify a value with -u".as_ptr());
+                    retval = cmd_retval::CMD_RETURN_ERROR;
+                    break 'out;
+                }
+                environ_unset(env, name);
+            } else if (args_has_(args, 'r')) {
+                if !value.is_null() {
+                    cmdq_error(item, c"can't specify a value with -r".as_ptr());
+                    retval = cmd_retval::CMD_RETURN_ERROR;
+                    break 'out;
+                }
+                environ_clear(env, name);
+            } else {
+                if value.is_null() {
+                    cmdq_error(item, c"no value specified".as_ptr());
+                    retval = cmd_retval::CMD_RETURN_ERROR;
+                    break 'out;
+                }
+
+                if (args_has_(args, 'h')) {
+                    environ_set(env, name, ENVIRON_HIDDEN, c"%s".as_ptr(), value);
+                } else {
+                    environ_set(env, name, 0, c"%s".as_ptr(), value);
+                }
+            }
+        }
+
+        //out:
+        free_(expanded);
+        retval
+    }
+}

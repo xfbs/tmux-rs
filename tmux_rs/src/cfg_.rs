@@ -1,3 +1,5 @@
+use std::mem::MaybeUninit;
+
 use compat_rs::{queue::tailq_first, tree::rb_min};
 use libc::{__errno_location, ENOENT, fclose, fopen, strerror};
 
@@ -213,14 +215,14 @@ pub unsafe extern "C" fn load_cfg_from_buffer(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cfg_add_cause(fmt: *const c_char, mut args: ...) {
-    unsafe {
-        let mut msg: *mut c_char = null_mut();
+    let mut msg = MaybeUninit::<*mut c_char>::uninit();
 
-        xvasprintf(&raw mut msg, fmt, args.as_va_list());
+    unsafe {
+        xvasprintf(msg.as_mut_ptr(), fmt, args.as_va_list());
 
         cfg_ncauses += 1;
         cfg_causes = xreallocarray_::<*mut c_char>(cfg_causes, cfg_ncauses as usize).as_ptr();
-        *cfg_causes.add(cfg_ncauses as usize - 1) = msg;
+        *cfg_causes.add(cfg_ncauses as usize - 1) = msg.assume_init();
     }
 }
 
@@ -229,10 +231,10 @@ pub unsafe extern "C" fn cfg_print_causes(item: *mut cmdq_item) {
     unsafe {
         for i in 0..cfg_ncauses {
             cmdq_print(item, c"%s".as_ptr(), *cfg_causes.add(i as usize));
-            free(*cfg_causes.add(i as usize) as _);
+            free_(*cfg_causes.add(i as usize));
         }
 
-        free(cfg_causes as _);
+        free_(cfg_causes);
         cfg_causes = null_mut();
         cfg_ncauses = 0;
     }
@@ -251,9 +253,8 @@ pub unsafe extern "C" fn cfg_show_causes(mut s: *mut session) {
             if !c.is_null() && (*c).flags & CLIENT_CONTROL != 0 {
                 for i in 0..cfg_ncauses {
                     control_write(c, c"%%config-error %s".as_ptr(), *cfg_causes.add(i as usize));
-                    free(*cfg_causes.add(i as usize) as _);
+                    free_(*cfg_causes.add(i as usize));
                 }
-                // goto out;
                 break 'out;
             }
 
@@ -280,7 +281,7 @@ pub unsafe extern "C" fn cfg_show_causes(mut s: *mut session) {
             break 'out;
         }
         // out:
-        free(cfg_causes as _);
+        free_(cfg_causes);
         cfg_causes = null_mut();
         cfg_ncauses = 0;
     }

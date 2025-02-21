@@ -319,6 +319,23 @@ where
     }
 }
 
+pub unsafe fn tailq_replace<T, D>(head: *mut tailq_head<T>, elm: *mut T, elm2: *mut T)
+where
+    T: Entry<T, D>,
+{
+    unsafe {
+        (*Entry::<_, D>::entry(elm2)).tqe_next = (*Entry::<_, D>::entry(elm)).tqe_next;
+        if !(*Entry::<_, D>::entry(elm2)).tqe_next.is_null() {
+            (*Entry::<_, D>::entry((*Entry::<_, D>::entry(elm2)).tqe_next)).tqe_prev =
+                &raw mut (*Entry::<_, D>::entry(elm2)).tqe_next;
+        } else {
+            (*head).tqh_last = &raw mut (*Entry::<_, D>::entry(elm2)).tqe_next;
+        }
+        (*Entry::<_, D>::entry(elm2)).tqe_prev = (*Entry::<_, D>::entry(elm)).tqe_prev;
+        *(*Entry::<_, D>::entry(elm2)).tqe_prev = elm2;
+    }
+}
+
 #[inline]
 pub unsafe fn tailq_foreach<F, T, B, D>(head: *mut tailq_head<T>, mut f: F) -> std::ops::ControlFlow<B>
 where

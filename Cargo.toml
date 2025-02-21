@@ -2,6 +2,12 @@
 members = ["compat_rs", "bsd-sys", "tmux_rs", "compat_derive"]
 resolver = "2"
 
+[profile.dev]
+debug = true
+debug-assertions = true
+overflow-checks = true
+panic = "abort"
+
 [profile.release]
 debug = true
 debug-assertions = true
@@ -9,9 +15,11 @@ overflow-checks = true
 panic = "abort"
 
 [workspace.dependencies]
+bindgen      = { version = "0.71.0", default-features = false, features = ["runtime"] } # want to tie to what libevent-sys uses, but 0.64.0 doesn't work for rust 2024
 compat_rs    = { path = "./compat_rs" }
 libc         = { version = "0.2.169" }
-libevent-sys = { version = "0.3.0" }
+# libevent-sys = { version = "=0.3.0", default-features = false, features = ["buildtime_bindgen", "pkgconfig", "threading"]}
+libevent-sys = { version = "=0.3.0", default-features = false, features = ["buildtime_bindgen", "pkgconfig"] }
 paste        = { version = "1.0.15"  }
 quote        = { version = "1.0.38"  }
 syn          = { version = "2.0.96"  }

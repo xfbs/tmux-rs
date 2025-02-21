@@ -49,7 +49,12 @@ unsafe extern "C" {
     static mut stderr: *mut FILE;
 }
 
-pub use libc::{FILE, REG_EXTENDED, REG_ICASE, free, pid_t, termios, time_t, timeval, uid_t};
+// TODO move to compat
+pub unsafe fn strchr_(cs: *const c_char, c: char) -> *mut c_char {
+    unsafe { libc::strchr(cs, c as i32) }
+}
+
+pub use libc::{FILE, REG_EXTENDED, REG_ICASE, free, pid_t, strerror, strlen, termios, time_t, timeval, uid_t};
 
 pub use crate::event_::{EVBUFFER_DATA, EVBUFFER_LENGTH, evtimer_add, evtimer_del, evtimer_pending, evtimer_set};
 pub use libevent_sys::{bufferevent, evbuffer, evbuffer_get_length, evbuffer_pullup, event, event_base};
@@ -739,6 +744,7 @@ pub enum style_range_type {
 }
 
 #[repr(C)]
+#[derive(compat_rs::TailQEntry)]
 pub struct style_range {
     pub type_: style_range_type,
     pub argument: u32,
@@ -747,6 +753,7 @@ pub struct style_range {
     /// not included
     pub end: u32,
 
+    #[entry]
     pub entry: tailq_entry<style_range>,
 }
 pub type style_ranges = tailq_head<style_range>;
@@ -1861,7 +1868,7 @@ pub struct status_line {
 }
 
 /* Prompt type. */
-pub const PROMPT_NTYPES: usize = 4;
+pub const PROMPT_NTYPES: u32 = 4;
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum prompt_type {
@@ -2116,7 +2123,7 @@ pub const KEY_BINDING_REPEAT: i32 = 0x1;
 #[repr(C)]
 pub struct key_binding {
     pub key: key_code,
-    pub cmdlist: cmd_list,
+    pub cmdlist: *mut cmd_list,
     pub note: *const c_char,
 
     pub flags: i32,
@@ -2232,7 +2239,7 @@ pub struct spawn_context {
     pub wp0: *mut window_pane,
     pub lc: *mut layout_cell,
 
-    pub name: *mut c_char,
+    pub name: *const c_char,
     pub argv: *mut *mut c_char,
     pub argc: i32,
     pub environ: *mut environ,
@@ -2376,6 +2383,19 @@ mod tty_keys;
 pub use crate::tty_keys::{tty_keys_build, tty_keys_colours, tty_keys_free, tty_keys_next};
 
 mod arguments;
+
+// TODO convert calls to args_has to args_has_
+pub unsafe fn args_has_(args: *mut args, flag: char) -> bool {
+    debug_assert!(flag.is_ascii());
+    unsafe { args_has(args, flag as u8) != 0 }
+}
+
+// pub unsafe fn args_get(_: *mut args, _: c_uchar) -> *const c_char;
+pub unsafe fn args_get_(args: *mut args, flag: char) -> *const c_char {
+    debug_assert!(flag.is_ascii());
+    unsafe { args_get(args, flag as u8) }
+}
+
 pub use crate::arguments::{
     args, args_command_state, args_copy, args_count, args_create, args_entry, args_escape, args_first,
     args_first_value, args_free, args_free_value, args_free_values, args_from_vector, args_get, args_has,
@@ -2742,12 +2762,18 @@ unsafe extern "C" {
 }
 */
 
+pub const MENU_NOMOUSE: i32 = 0x1;
+pub const MENU_TAB: i32 = 0x2;
+pub const MENU_STAYOPEN: i32 = 0x4;
 mod menu_;
 pub use crate::menu_::{
     menu_add_item, menu_add_items, menu_check_cb, menu_create, menu_display, menu_draw_cb, menu_free, menu_free_cb,
     menu_key_cb, menu_mode_cb, menu_prepare,
 };
 
+pub const POPUP_CLOSEEXIT: i32 = 0x1;
+pub const POPUP_CLOSEEXITZERO: i32 = 0x2;
+pub const POPUP_INTERNAL: i32 = 0x4;
 mod popup;
 pub use crate::popup::{popup_close_cb, popup_display, popup_editor, popup_finish_edit_cb};
 
@@ -2797,7 +2823,7 @@ pub use crate::tmux_protocol::{
     msg_write_data, msg_write_open, msg_write_ready, msgtype,
 };
 
-unsafe extern "C" {
+unsafe extern "C-unwind" {
     pub fn vsnprintf(_: *mut c_char, _: usize, _: *const c_char, _: VaList) -> c_int;
     pub fn vasprintf(_: *mut *mut c_char, _: *const c_char, _: VaList) -> c_int;
 }

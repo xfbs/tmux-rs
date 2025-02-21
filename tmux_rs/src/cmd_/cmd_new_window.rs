@@ -1,1 +1,153 @@
+use compat_rs::tree::rb_foreach;
+use libc::strcmp;
 
+use crate::*;
+
+const NEW_WINDOW_TEMPLATE: &CStr = c"#{session_name}:#{window_index}.#{pane_index}";
+
+#[unsafe(no_mangle)]
+static mut cmd_new_window_entry: cmd_entry = cmd_entry {
+    name: c"new-window".as_ptr(),
+    alias: c"neww".as_ptr(),
+
+    args: args_parse::new(c"abc:de:F:kn:PSt:", 0, -1, None),
+    usage: c"[-abdkPS] [-c start-directory] [-e environment] [-F format] [-n window-name] [-t target-window] [shell-command]".as_ptr(),
+
+    target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_WINDOW, CMD_FIND_WINDOW_INDEX),
+
+    flags: 0,
+    exec: Some(cmd_new_window_exec),
+    ..unsafe{zeroed()}
+};
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+    unsafe {
+        let mut args = cmd_get_args(self_);
+        let mut c = cmdq_get_client(item);
+        let mut current = cmdq_get_current(item);
+        let mut target = cmdq_get_target(item);
+        let mut sc: spawn_context = zeroed();
+        let mut tc = cmdq_get_target_client(item);
+        let mut s = (*target).s;
+        let mut wl = (*target).wl;
+        let mut new_wl: *mut winlink = null_mut();
+        let mut idx = (*target).idx;
+        // before;
+        let mut cause = null_mut();
+        //char			*cause = NULL, *cp, *expanded;
+        //const char		*template, *name;
+        //struct cmd_find_state	 fs;
+        //struct args_value	*av;
+
+        /*
+         * If -S and -n are given and -t is not and a single window with this
+         * name already exists, select it.
+         */
+        let mut name = args_get(args, b'n');
+        if (args_has_(args, 'S') && !name.is_null() && (*target).idx == -1) {
+            let expanded = format_single(item, name, c, s, null_mut(), null_mut());
+            if rb_foreach(&raw mut (*s).windows, |wl| {
+                if (strcmp((*(*wl).window).name, expanded) != 0) {
+                    return ControlFlow::Continue(());
+                }
+                if (new_wl.is_null()) {
+                    new_wl = wl;
+                    return ControlFlow::Continue(());
+                }
+                cmdq_error(item, c"multiple windows named %s".as_ptr(), name);
+                free_(expanded);
+                ControlFlow::Break(())
+            })
+            .is_some()
+            {
+                return cmd_retval::CMD_RETURN_ERROR;
+            }
+
+            free_(expanded);
+            if (!new_wl.is_null()) {
+                if (args_has_(args, 'd')) {
+                    return (cmd_retval::CMD_RETURN_NORMAL);
+                }
+                if (session_set_current(s, new_wl) == 0) {
+                    server_redraw_session(s);
+                }
+                if (!c.is_null() && !(*c).session.is_null()) {
+                    (*(*(*s).curw).window).latest = c as _;
+                }
+                recalculate_sizes();
+                return (cmd_retval::CMD_RETURN_NORMAL);
+            }
+        }
+
+        let before = args_has(args, b'b');
+        if (args_has_(args, 'a') || before != 0) {
+            idx = winlink_shuffle_up(s, wl, before);
+            if (idx == -1) {
+                idx = (*target).idx;
+            }
+        }
+
+        sc.item = item;
+        sc.s = s;
+        sc.tc = tc;
+
+        sc.name = args_get(args, b'n');
+        args_to_vector(args, &raw mut sc.argc, &raw mut sc.argv);
+        sc.environ = environ_create();
+
+        let mut av = args_first_value(args, b'e');
+        while (!av.is_null()) {
+            environ_put(sc.environ, (*av).union_.string, 0);
+            av = args_next_value(av);
+        }
+
+        sc.idx = idx;
+        sc.cwd = args_get_(args, 'c');
+
+        sc.flags = 0;
+        if (args_has_(args, 'd')) {
+            sc.flags |= SPAWN_DETACHED;
+        }
+        if (args_has_(args, 'k')) {
+            sc.flags |= SPAWN_KILL;
+        }
+
+        let new_wl = spawn_window(&raw mut sc, &raw mut cause);
+        if (new_wl.is_null()) {
+            cmdq_error(item, c"create window failed: %s".as_ptr(), cause);
+            free_(cause);
+            if (!sc.argv.is_null()) {
+                cmd_free_argv(sc.argc, sc.argv);
+            }
+            environ_free(sc.environ);
+            return (cmd_retval::CMD_RETURN_ERROR);
+        }
+        if (!args_has_(args, 'd') || new_wl == (*s).curw) {
+            cmd_find_from_winlink(current, new_wl, 0);
+            server_redraw_session_group(s);
+        } else {
+            server_status_session_group(s);
+        }
+
+        if (args_has_(args, 'P')) {
+            let mut template = args_get_(args, 'F');
+            if (template.is_null()) {
+                template = NEW_WINDOW_TEMPLATE.as_ptr();
+            }
+            let cp = format_single(item, template, tc, s, new_wl, (*(*new_wl).window).active);
+            cmdq_print(item, c"%s".as_ptr(), cp);
+            free_(cp);
+        }
+
+        let mut fs: cmd_find_state = zeroed(); //TODO can be uninit
+        cmd_find_from_winlink(&raw mut fs, new_wl, 0);
+        cmdq_insert_hook(s, item, &raw mut fs, c"after-new-window".as_ptr());
+
+        if (!sc.argv.is_null()) {
+            cmd_free_argv(sc.argc, sc.argv);
+        }
+        environ_free(sc.environ);
+        cmd_retval::CMD_RETURN_NORMAL
+    }
+}

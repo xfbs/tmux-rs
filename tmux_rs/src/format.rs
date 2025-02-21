@@ -1,12 +1,12 @@
 use super::*;
 
-pub const FORMAT_STATUS: u32 = 1;
-pub const FORMAT_FORCE: u32 = 2;
-pub const FORMAT_NOJOBS: u32 = 4;
-pub const FORMAT_VERBOSE: u32 = 8;
-pub const FORMAT_NONE: u32 = 0;
-pub const FORMAT_PANE: u32 = 0x80000000;
-pub const FORMAT_WINDOW: u32 = 0x40000000;
+pub const FORMAT_STATUS: i32 = 1;
+pub const FORMAT_FORCE: i32 = 2;
+pub const FORMAT_NOJOBS: i32 = 4;
+pub const FORMAT_VERBOSE: i32 = 8;
+pub const FORMAT_NONE: i32 = 0;
+pub const FORMAT_PANE: u32 = 0x80000000u32;
+pub const FORMAT_WINDOW: u32 = 0x40000000u32;
 
 pub type format_cb = Option<unsafe extern "C" fn(_: *mut format_tree) -> *mut c_void>;
 

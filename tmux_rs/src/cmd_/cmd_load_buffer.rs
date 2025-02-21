@@ -1,1 +1,95 @@
+use crate::*;
 
+#[unsafe(no_mangle)]
+static mut cmd_load_buffer_entry: cmd_entry = cmd_entry {
+    name: c"load-buffer".as_ptr(),
+    alias: c"loadb".as_ptr(),
+
+    args: args_parse::new(c"b:t:w", 1, 1, None),
+    usage: c"[-b buffer-name] [-t target-client] path".as_ptr(),
+
+    flags: CMD_AFTERHOOK | CMD_CLIENT_TFLAG | CMD_CLIENT_CANFAIL,
+    exec: Some(cmd_load_buffer_exec),
+    ..unsafe { zeroed() }
+};
+
+#[repr(C)]
+pub struct cmd_load_buffer_data {
+    pub client: *mut client,
+    pub item: *mut cmdq_item,
+    pub name: *mut c_char,
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn cmd_load_buffer_done(
+    _c: *mut client,
+    path: *mut c_char,
+    error: i32,
+    closed: i32,
+    buffer: *mut evbuffer,
+    data: *mut c_void,
+) {
+    unsafe {
+        let mut cdata = data as *mut cmd_load_buffer_data;
+        let mut tc = (*cdata).client;
+        let mut item = (*cdata).item;
+        let mut bdata = EVBUFFER_DATA(buffer);
+        let mut bsize = EVBUFFER_LENGTH(buffer);
+
+        if closed == 0 {
+            return;
+        }
+
+        if (error != 0) {
+            cmdq_error(item, c"%s: %s".as_ptr(), path, strerror(error));
+        } else if (bsize != 0) {
+            let mut copy = xmalloc(bsize).as_ptr();
+            memcpy_(copy, bdata as _, bsize);
+            let mut cause = null_mut();
+            if paste_set(copy as _, bsize, (*cdata).name, &raw mut cause) != 0 {
+                cmdq_error(item, c"%s".as_ptr(), cause);
+                free_(cause);
+                free_(copy);
+            } else if !tc.is_null() && !(*tc).session.is_null() && !(*tc).flags & CLIENT_DEAD != 0 {
+                tty_set_selection(&raw mut (*tc).tty, c"".as_ptr(), copy as _, bsize);
+            }
+            if !tc.is_null() {
+                server_client_unref(tc);
+            }
+        }
+        cmdq_continue(item);
+
+        free_((*cdata).name);
+        free_(cdata);
+    }
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn cmd_load_buffer_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+    unsafe {
+        let mut args = cmd_get_args(self_);
+        let mut tc = cmdq_get_target_client(item);
+        let mut bufname = args_get(args, b'b');
+
+        let mut cdata = xcalloc_::<cmd_load_buffer_data>(1).as_ptr();
+        (*cdata).item = item;
+        if !bufname.is_null() {
+            (*cdata).name = xstrdup(bufname).as_ptr();
+        }
+        if (args_has(args, b'w') != 0 && !tc.is_null()) {
+            (*cdata).client = tc;
+            (*(*cdata).client).references += 1;
+        }
+
+        let mut path = format_single_from_target(item, args_string(args, 0));
+        file_read(
+            cmdq_get_client(item),
+            path,
+            Some(cmd_load_buffer_done),
+            cdata as *const c_void,
+        );
+        free_(path);
+    }
+
+    cmd_retval::CMD_RETURN_WAIT
+}

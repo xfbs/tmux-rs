@@ -41,7 +41,7 @@ pub mod cmd_list_windows;
 pub mod cmd_load_buffer;
 pub mod cmd_lock_server;
 pub mod cmd_move_window;
-pub mod cmd_new_session;
+// pub mod cmd_new_session;
 pub mod cmd_new_window;
 pub mod cmd_parse;
 pub mod cmd_paste_buffer;
@@ -337,7 +337,7 @@ pub unsafe extern "C" fn cmd_log_argv(argc: i32, argv: *mut *mut c_char, fmt: *c
         for i in 0..argc {
             log_debug(c"%s: argv[%d]=%s".as_ptr(), prefix, i, *argv.add(i as usize));
         }
-        free(prefix as _);
+        free_(prefix);
     }
 }
 

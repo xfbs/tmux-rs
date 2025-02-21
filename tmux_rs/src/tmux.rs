@@ -129,7 +129,7 @@ pub unsafe extern "C" fn expand_path(path: *const c_char, home: *const c_char) -
                 xstrndup(path.add(1), end.addr() - path.addr() - 1).cast().as_ptr()
             };
             let mut value = environ_find(global_environ, name);
-            free(name as _);
+            free_(name);
             if value.is_null() {
                 return null_mut();
             }
@@ -176,13 +176,13 @@ unsafe extern "C" fn expand_paths(s: *const c_char, paths: *mut *mut *mut c_char
                     strerror(*__errno_location()),
                 );
                 if ignore_errors != 0 {
-                    free(expanded as _);
+                    free_(expanded);
                     continue;
                 }
                 path = expanded;
             } else {
                 path = xstrdup(resolved.as_ptr()).cast().as_ptr();
-                free(expanded as _);
+                free_(expanded);
             }
             let mut i = 0;
             for j in 0..*n {
@@ -193,14 +193,14 @@ unsafe extern "C" fn expand_paths(s: *const c_char, paths: *mut *mut *mut c_char
             }
             if (i != *n) {
                 log_debug(c"%s: duplicate path: %s".as_ptr(), func, path);
-                free(path as _);
+                free_(path);
                 continue;
             }
             *paths = xreallocarray_::<*mut c_char>(*paths, (*n + 1) as usize).as_ptr();
             *(*paths).add((*n) as usize) = path;
             *n += 1;
         }
-        free(copy as _);
+        free_(copy);
     }
 }
 
@@ -227,12 +227,12 @@ unsafe extern "C" fn make_label(mut label: *const c_char, cause: *mut *mut c_cha
             }
             let mut path = *paths; /* can only have one socket! */
             for i in 1..n {
-                free((*paths.add(i as usize)).cast());
+                free_(*paths.add(i as usize));
             }
-            free(paths as _);
+            free_(paths);
 
             xasprintf(&raw mut base, c"%s/tmux-%ld".as_ptr(), path, uid as c_long);
-            free(path as _);
+            free_(path);
             if mkdir(base, S_IRWXU) != 0 && *__errno_location() != EEXIST {
                 xasprintf(
                     cause,
@@ -260,12 +260,12 @@ unsafe extern "C" fn make_label(mut label: *const c_char, cause: *mut *mut c_cha
                 break 'fail;
             }
             xasprintf(&raw mut path, c"%s/%s".as_ptr(), base, label);
-            free(base as _);
+            free_(base);
             return path;
         }
 
         // fail:
-        free(base as _);
+        free_(base);
         null_mut()
     }
 }

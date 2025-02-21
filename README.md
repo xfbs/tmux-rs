@@ -57,6 +57,8 @@ issue.
 
 ## Tips
 
+- Use clang-format or other to reformat the C code quickly
+
 - Picking a C file: Start with root files in the project. (files with no or few dependencies on the rest of the project)
 - You cannot link multiple static rust libraries (.a) into a single compilation artifact. There will be duplicate symbols.
 - Seems a common source of bugs is stubbing something and intending to come back to it later, but not. Avoid this.
@@ -66,9 +68,7 @@ issue.
 
 Current status:
 
-reverted environ from build. porting tmux.c next, function by function. currently running
-NEXT:
-finish porting tmux.c but ensure it still runs
+reverted environ from build
 
 implement fatal and fatalx which accept static rust string
 
@@ -103,7 +103,10 @@ more then just server exited unexpectedly.
 - figure out abort / panic logs
 - get a stacktrace on segfault
 
+# NEXT (ensure only has one item)
+
 # TODO
+- review cmd_rotate_window.rs cmd_rotate_window_exec tailq_foreach calls
 - memory sanitizer
 - dump backtrace on abort
   - gdb break
@@ -119,6 +122,7 @@ more then just server exited unexpectedly.
   - recheck all tailq, and rbtree structs for multiple links.
   - derive macro for rbtree and tailq
     - tailq support new generic type discriminant
+  - fully complete library / crate implementation with documentation
 
 # Thoughts
 - better rust-analyzer integration with C code
@@ -208,31 +212,6 @@ more then just server exited unexpectedly.
   - [ ] 5786 window-copy
 - [X] xmalloc
 - [X] 874 cmd
-  - [ ]  108 cmd-show-prompt-history
-  - [ ]  110 cmd-kill-window
-  - [ ]  113 cmd-load-buffer
-  - [ ]  113 cmd-paste-buffer
-  - [ ]  115 cmd-resize-window
-  - [ ]  115 cmd-rotate-window
-  - [ ]  119 cmd-set-environment
-  - [ ]  120 cmd-save-buffer
-  - [ ]  122 cmd-move-window
-  - [ ]  130 cmd-list-windows
-  - [ ]  137 cmd-set-buffer
-  - [ ]  142 cmd-switch-client
-  - [ ]  143 cmd-show-environment
-  - [ ]  147 cmd-server-access
-  - [ ]  148 cmd-list-panes
-  - [ ]  148 cmd-swap-pane
-  - [ ]  149 cmd-select-layout
-  - [ ]  150 cmd-select-wind
-  - [ ]  159 cmd-display-message
-  - [ ]  159 cmd-new-window
-  - [ ]  159 cmd-parse
-  =====
-  - [ ]  180 cmd-join-pane
-  - [ ]  190 cmd-if-shell
-  - [ ]  199 cmd-split-window
   - [ ]  208 cmd-source-file
   - [ ]  215 cmd-resize-pane
   - [ ]  230 cmd-pipe-pane
@@ -242,16 +221,16 @@ more then just server exited unexpectedly.
   - [ ]  260 cmd-show-options
   - [ ]  264 cmd-wait-for
   - [ ]  290 cmd-run-shell
-  - [ ]  312 cmd-display-panes
   - [ ]  335 cmd-refresh-client
-  - [ ]  370 cmd-new-session
-  - [ ]  372 cmd-list-keys
-  - [ ]  502 cmd-display-menu
+  - [ ]  370 cmd-new-session (doesn't work, crashes)
+  =====
   - [ ]  899 cmd-queue
   - [ ] 1314 cmd-find
-  - [X]  107 cmd-show-messages
-  - [X]  102 cmd-list-clients
-  - [X]  104 cmd-unbind-key
+  - [ ]  159 cmd-parse.y (don't translate)
+  =====
+  - [X]  199 cmd-split-window
+  - [X]  372 cmd-list-keys
+  - [X]  312 cmd-display-panes
   - [X]      cmd-kill-server
   - [X]   62 cmd-rename-window
   - [X]   67 cmd-kill-pane
@@ -262,17 +241,48 @@ more then just server exited unexpectedly.
   - [X]   90 cmd-list-sessions
   - [X]   94 cmd-swap-window
   - [X]   95 cmd-respawn-window
-  - [X]   98 cmd-respawn-pane
   - [X]   98 cmd-copy-mode
+  - [X]   98 cmd-respawn-pane
+  - [X]  102 cmd-list-clients
+  - [X]  104 cmd-unbind-key
   - [X]  107 cmd-bind-key
+  - [X]  107 cmd-show-messages
+  - [X]  108 cmd-show-prompt-history
   - [X]  109 cmd-detach-client
+  - [X]  110 cmd-kill-window
+  - [X]  113 cmd-load-buffer
+  - [X]  113 cmd-paste-buffer
+  - [X]  115 cmd-resize-window
+  - [X]  115 cmd-rotate-window
   - [X]  116 cmd-find-window
   - [X]  117 cmd-choose-tree
+  - [X]  119 cmd-set-environment
+  - [X]  120 cmd-save-buffer
+  - [X]  122 cmd-move-window
+  - [X]  130 cmd-list-windows
+  - [X]  137 cmd-set-buffer
+  - [X]  142 cmd-switch-client
   - [X]  143 cmd-break-pane
+  - [X]  143 cmd-show-environment
+  - [X]  147 cmd-server-access
+  - [X]  148 cmd-list-panes
+  - [X]  148 cmd-swap-pane
+  - [X]  149 cmd-select-layout
+  - [X]  150 cmd-select-wind
+  - [X]  159 cmd-display-message
+  - [X]  159 cmd-new-window
   - [X]  163 cmd-confirm-before
   - [X]  175 cmd-attach-session
+  - [X]  180 cmd-join-pane
+  - [X]  190 cmd-if-shell
   - [X]  242 cmd-command-prompt
   - [X]  253 cmd-capture-pane
+  - [X]  502 cmd-display-menu
+
+# Ideas
+
+- emulate rust scoped enums with modules, structs and constants
+
 
 # Notes
 
@@ -343,6 +353,7 @@ SUMMARY: AddressSanitizer: 28 byte(s) leaked in 1 allocation(s).
 - flipped == args_type::ARGS_NONE instead of flipped != args_type::ARGS_NONE
 - flipped != 0 instead of == 0 for coverting from !int_like_value in conditional
 - incorrect translation of for loop with continue to while with continue and increment at end; increment isn't applied (cmd_find)
+- incorrect translation of cmd_entry args_parse cb None, when should have been Some(cb): after translating cmd-display-menu immediately aborts on start
 
 - memcpy_(&raw mut tmp as *mut i8, in_, end); should have been: memcpy_(tmp, in_, end)
   -  because I switched to a pointer instead of buffer,but didn't change memcpy code

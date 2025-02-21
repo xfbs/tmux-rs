@@ -107,48 +107,48 @@ endif
 # cmd-list-clients.c
 # cmd-unbind-key.c
 # cmd-show-messages.c
+# cmd-show-prompt-history.c
+# cmd-kill-window.c 
+# cmd-load-buffer.c
+# cmd-paste-buffer.c
+# cmd-resize-window.c
+# cmd-rotate-window.c
+# cmd-set-environment.c
+# cmd-save-buffer.c
+# cmd-move-window.c
+# cmd-list-windows.c
+# cmd-set-buffer.c
+# cmd-switch-client.c
+# cmd-show-environment.c
+# cmd-server-access.c
+# cmd-list-panes.c
+# cmd-swap-pane.c
+# cmd-select-layout.c
+# cmd-select-window.c
+# cmd-display-message.c
+# cmd-new-window.c
+# cmd-display-menu.c
+# cmd-join-pane.c
+# cmd-if-shell.c
+# cmd-display-panes.c
+# cmd-list-keys.c
+# cmd-split-window.c
 dist_tmux_SOURCES = \
-	cmd-show-prompt-history.c \
-	cmd-kill-window.c \
-	cmd-load-buffer.c \
+	cmd-new-session.c \
 	environ.c \
 	arguments.c \
-	cmd-display-menu.c \
-	cmd-display-message.c \
-	cmd-display-panes.c \
 	cmd-find.c \
-	cmd-if-shell.c \
-	cmd-join-pane.c \
-	cmd-list-keys.c \
-	cmd-list-panes.c \
-	cmd-list-windows.c \
-	cmd-move-window.c \
-	cmd-new-session.c \
-	cmd-new-window.c \
 	cmd-parse.y \
-	cmd-paste-buffer.c \
 	cmd-pipe-pane.c \
 	cmd-queue.c \
 	cmd-refresh-client.c \
 	cmd-resize-pane.c \
-	cmd-resize-window.c \
-	cmd-rotate-window.c \
 	cmd-run-shell.c \
-	cmd-save-buffer.c \
-	cmd-select-layout.c \
 	cmd-select-pane.c \
-	cmd-select-window.c \
 	cmd-send-keys.c \
-	cmd-server-access.c \
-	cmd-set-buffer.c \
-	cmd-set-environment.c \
 	cmd-set-option.c \
-	cmd-show-environment.c \
 	cmd-show-options.c \
 	cmd-source-file.c \
-	cmd-split-window.c \
-	cmd-swap-pane.c \
-	cmd-switch-client.c \
 	cmd-wait-for.c \
 	compat.h \
 	control.c \

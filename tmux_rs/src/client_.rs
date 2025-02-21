@@ -145,7 +145,7 @@ pub unsafe extern "C" fn client_connect(base: *mut event_base, path: *const c_ch
                         if lockfd < 0 {
                             log_debug(c"didn't get lock (%d)".as_ptr(), lockfd);
 
-                            free(lockfile as _);
+                            free_(lockfile);
                             lockfile = null_mut();
 
                             if lockfd == -2 {
@@ -159,9 +159,9 @@ pub unsafe extern "C" fn client_connect(base: *mut event_base, path: *const c_ch
                     }
 
                     if lockfd >= 0 && unlink(path) != 0 && *__errno_location() != ENOENT {
-                        free(lockfile as _);
+                        free_(lockfile);
                         close(lockfd);
-                        return (-1);
+                        return -1;
                     }
                     fd = server_start(client_proc, flags as _, base, lockfd, lockfile);
                 }
@@ -170,7 +170,7 @@ pub unsafe extern "C" fn client_connect(base: *mut event_base, path: *const c_ch
             }
 
             if locked != 0 && lockfd >= 0 {
-                free(lockfile as _);
+                free_(lockfile);
                 close(lockfd);
             }
             setblocking(fd, 0);
@@ -179,11 +179,11 @@ pub unsafe extern "C" fn client_connect(base: *mut event_base, path: *const c_ch
 
         // failed:
         if locked != 0 {
-            free(lockfile as _);
+            free_(lockfile as _);
             close(lockfd);
         }
         close(fd);
-        return -1;
+        -1
     }
 }
 

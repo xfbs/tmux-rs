@@ -45,7 +45,11 @@ pub(crate) use cstringify;
 #[macro_export]
 macro_rules! cmdq_get_callback {
     ($cb:ident, $data:expr) => {
-        $crate::cmd_::cmd_queue::cmdq_get_callback1($crate::cmd_::cmd_queue::cstringify!($cb), Some($cb), $data)
+        $crate::cmd_::cmd_queue::cmdq_get_callback1(
+            const { $crate::cmd_::cmd_queue::cstringify!($cb) },
+            Some($cb),
+            $data,
+        )
     };
 }
 pub use cmdq_get_callback;
