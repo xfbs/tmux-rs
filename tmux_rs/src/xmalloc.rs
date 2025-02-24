@@ -13,40 +13,35 @@ use crate::{fatalx, vasprintf, vsnprintf};
 
 #[unsafe(no_mangle)]
 pub extern "C" fn xmalloc(size: usize) -> NonNull<c_void> {
-    unsafe {
-        if size == 0 {
-            fatalx_(format_args!("xmalloc: zero size"));
-        }
+    debug_assert!(size != 0, "xmalloc: zero size");
 
-        match NonNull::new(malloc(size)) {
-            None => fatalx_(format_args!(
-                "xmalloc: allocating {size} bytes: {}",
-                PercentS::from_raw(strerror(*__errno_location()))
-            )),
-            Some(ptr) => ptr,
-        }
-    }
+    NonNull::new(unsafe { malloc(size) }).unwrap_or_else(|| panic!("xmalloc: allocating {size}"))
+}
+
+#[inline]
+pub fn malloc_(size: usize) -> *mut c_void {
+    debug_assert!(size != 0);
+
+    unsafe { malloc(size) }
 }
 
 pub fn xmalloc_<T>() -> NonNull<T> {
-    xmalloc(size_of::<T>()).cast()
+    let size = size_of::<T>();
+    NonNull::new(malloc_(size))
+        .unwrap_or_else(|| panic!("xmalloc: allocating {size} bytes"))
+        .cast()
+}
+
+#[inline]
+pub fn calloc_(nmemb: usize, size: usize) -> *mut c_void {
+    unsafe { calloc(nmemb, size) }
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn xcalloc(nmemb: usize, size: usize) -> NonNull<c_void> {
-    unsafe {
-        if size == 0 || nmemb == 0 {
-            fatalx_(format_args!("xcalloc: zero size"));
-        }
+    debug_assert!(size != 0 && nmemb != 0, "xcalloc: zero size");
 
-        match NonNull::new(calloc(nmemb, size)) {
-            None => fatalx_(format_args!(
-                "xcalloc: allocating {nmemb} * {size} bytes: {}",
-                PercentS::from_raw(strerror(*__errno_location()))
-            )),
-            Some(ptr) => ptr,
-        }
-    }
+    NonNull::new(calloc_(nmemb, size)).unwrap_or_else(|| panic!("xcalloc: allocating {nmemb} * {size}"))
 }
 
 pub fn xcalloc_<T>(nmemb: usize) -> NonNull<T> {
@@ -106,32 +101,18 @@ unsafe extern "C" fn xrecallocarray(ptr: *mut c_void, oldnmemb: usize, nmemb: us
 }
 
 pub unsafe fn xrecallocarray_<T>(ptr: *mut T, oldnmemb: usize, nmemb: usize, size: usize) -> NonNull<T> {
-    unsafe {
-        if nmemb == 0 || size == 0 {
-            fatalx_(format_args!("xrecallocarray: zero size"));
-        }
-
-        match NonNull::new(recallocarray(ptr as _, oldnmemb, nmemb, size)) {
-            None => fatalx_(format_args!(
-                "xrecallocarray: allocating {nmemb} * {size} bytes: {}",
-                PercentS::from_raw(strerror(*__errno_location()))
-            )),
-            Some(new_ptr) => new_ptr.cast(),
-        }
+    if nmemb == 0 || size == 0 {
+        panic!("xrecallocarray: zero size");
     }
+
+    NonNull::new(unsafe { recallocarray(ptr as *mut c_void, oldnmemb, nmemb, size) })
+        .unwrap_or_else(|| panic!("xrecallocarray: allocating {nmemb} * {size}"))
+        .cast()
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn xstrdup(str: *const c_char) -> NonNull<c_char> {
-    unsafe {
-        match NonNull::new(strdup(str)) {
-            Some(cp) => cp,
-            None => fatalx_(format_args!(
-                "xstrdup: {}",
-                PercentS::from_raw(strerror(*__errno_location()))
-            )),
-        }
-    }
+    NonNull::new(unsafe { strdup(str) }).unwrap()
 }
 
 pub fn xstrdup_(str: &CStr) -> NonNull<c_char> {
@@ -140,15 +121,7 @@ pub fn xstrdup_(str: &CStr) -> NonNull<c_char> {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn xstrndup(str: *const c_char, maxlen: usize) -> NonNull<c_char> {
-    unsafe {
-        match NonNull::new(strndup(str, maxlen)) {
-            Some(cp) => cp,
-            None => fatalx_(format_args!(
-                "xstrndup: {}",
-                PercentS::from_raw(strerror(*__errno_location()))
-            )),
-        }
-    }
+    NonNull::new(unsafe { strndup(str, maxlen) }).unwrap()
 }
 
 #[unsafe(no_mangle)]
@@ -162,10 +135,7 @@ pub unsafe extern "C" fn xvasprintf(ret: *mut *mut c_char, fmt: *const c_char, a
         let i = vasprintf(ret, fmt, args);
 
         if i == -1 {
-            fatalx_(format_args!(
-                "xasprintf: {}",
-                PercentS::from_raw(strerror(*__errno_location()))
-            ));
+            panic!("xasprintf");
         }
 
         i
@@ -181,12 +151,12 @@ pub unsafe extern "C" fn xsnprintf(str: *mut c_char, len: usize, fmt: *const c_c
 pub unsafe extern "C" fn xvsnprintf(str: *mut c_char, len: usize, fmt: *const c_char, args: VaList) -> c_int {
     unsafe {
         if len > i32::MAX as usize {
-            fatalx_(format_args!("xsnprintf: len > INT_MAX"));
+            panic!("xsnprintf: len > INT_MAX");
         }
 
         let i = vsnprintf(str, len, fmt, args);
         if i < 0 || i >= len as c_int {
-            fatalx_(format_args!("xsnprintf: overflow"));
+            panic!("xsnprintf: overflow");
         }
 
         i

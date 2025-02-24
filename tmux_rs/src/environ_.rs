@@ -1,3 +1,5 @@
+use std::mem::MaybeUninit;
+
 use crate::xmalloc::xcalloc_;
 
 use super::*;
@@ -6,10 +8,10 @@ use compat_rs::tree::{rb_find, rb_foreach, rb_foreach_safe, rb_init, rb_insert, 
 use libc::{fnmatch, getpid, setenv, strchr, strcmp, strcspn};
 
 unsafe extern "C" {
-    pub fn environ_create() -> *mut environ;
+    // pub fn environ_create() -> *mut environ;
     pub fn environ_free(_: *mut environ);
-    pub fn environ_first(_: *mut environ) -> *mut environ_entry;
-    pub fn environ_next(_: *mut environ_entry) -> *mut environ_entry;
+    // pub fn environ_first(_: *mut environ) -> *mut environ_entry;
+    // pub fn environ_next(_: *mut environ_entry) -> *mut environ_entry;
     pub fn environ_copy(_: *mut environ, _: *mut environ);
     pub fn environ_find(_: *mut environ, _: *const c_char) -> *mut environ_entry;
     pub fn environ_set(_: *mut environ, _: *const c_char, _: c_int, _: *const c_char, ...);
@@ -24,22 +26,22 @@ unsafe extern "C" {
 
 pub type environ = rb_head<environ_entry>;
 
-/*
-
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_cmp(envent1: *const environ_entry, envent2: *const environ_entry) -> c_int {
     unsafe { strcmp((*envent1).name, (*envent2).name) }
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn environ_create() -> *mut environ {
+pub extern "C" fn environ_create() -> NonNull<environ> {
     unsafe {
-        let mut env: *mut environ = xcalloc_::<environ>(1).as_ptr();
-        rb_init(env);
+        let env: NonNull<environ> = xcalloc_::<environ>(1);
+        rb_init(env.as_ptr());
         env
     }
 }
 
+// TODO this function is broken in port
+/*
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_free(env: *mut environ) {
     unsafe {
@@ -55,6 +57,7 @@ pub unsafe extern "C" fn environ_free(env: *mut environ) {
         free_(env);
     }
 }
+*/
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_first(env: *mut environ) -> *mut environ_entry {
@@ -66,6 +69,8 @@ pub unsafe extern "C" fn environ_next(envent: *mut environ_entry) -> *mut enviro
     unsafe { rb_next(envent) }
 }
 
+/*
+// TODO bad
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_copy(srcenv: *mut environ, dstenv: *mut environ) {
     unsafe {
@@ -79,17 +84,20 @@ pub unsafe extern "C" fn environ_copy(srcenv: *mut environ, dstenv: *mut environ
         });
     }
 }
+*/
 
+// TODO bad, get strange behavior, command pane has ~ after each character
+/*
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_find(env: *mut environ, name: *const c_char) -> *mut environ_entry {
-    unsafe {
-        let mut envent = environ_entry {
-            name: name as _,
-            ..zeroed()
-        };
+    let mut envent: MaybeUninit<environ_entry> = MaybeUninit::uninit();
+    let envent = envent.as_mut_ptr();
 
-        rb_find(env, &raw mut envent)
+    unsafe {
+        std::ptr::write(&raw mut (*envent).name, name);
     }
+
+    unsafe { rb_find(env, envent) }
 }
 
 #[unsafe(no_mangle)]
@@ -104,20 +112,22 @@ pub unsafe extern "C" fn environ_set(
         let mut envent = environ_find(env, name);
         if !envent.is_null() {
             (*envent).flags = flags;
-            free_((*envent).value);
+            free((*envent).value as *mut c_void);
             let mut ap = args.clone();
-            xvasprintf(&raw mut (*envent).value, fmt, ap.as_va_list());
+            xvasprintf(&raw mut (*envent).value as _, fmt, ap.as_va_list());
         } else {
             envent = xmalloc_::<environ_entry>().as_ptr();
             (*envent).name = xstrdup(name).cast().as_ptr();
             (*envent).flags = flags;
             let mut ap = args.clone();
-            xvasprintf(&raw mut (*envent).value, fmt, ap.as_va_list());
+            xvasprintf(&raw mut (*envent).value as _, fmt, ap.as_va_list());
             rb_insert(env, envent);
         }
     }
 }
+*/
 
+/*
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_clear(env: *mut environ, name: *const c_char) {
     unsafe {

@@ -107,7 +107,7 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
         sc.lc = lc;
 
         args_to_vector(args, &raw mut sc.argc, &raw mut sc.argv);
-        sc.environ = environ_create();
+        sc.environ = environ_create().as_ptr();
 
         let mut av = args_first_value(args, b'e');
         while (!av.is_null()) {

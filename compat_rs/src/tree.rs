@@ -313,7 +313,7 @@ where
             if rb_left(parent) == elm {
                 tmp = rb_right(parent);
 
-                eprintln!("{:?}", tmp);
+                // eprintln!("{:?}", tmp);
                 if rb_color(tmp) == rb_color::RB_RED {
                     rb_set_blackred(tmp, parent);
                     rb_rotate_left(head, parent);
@@ -499,9 +499,10 @@ where
         }
         rb_set(elm, parent);
         if !parent.is_null() {
-            match comp {
-                ..0 => rb_left!(parent) = elm,
-                0.. => rb_right!(parent) = elm,
+            if comp < 0 {
+                rb_left!(parent) = elm;
+            } else {
+                rb_right!(parent) = elm;
             }
         } else {
             rb_root!(head) = elm;
@@ -519,7 +520,8 @@ where
         let mut tmp: *mut T = (*head).rbh_root;
 
         while !tmp.is_null() {
-            tmp = match T::cmp(elm, tmp) {
+            let comp: i32 = T::cmp(elm, tmp);
+            tmp = match comp {
                 ..0 => rb_left(tmp),
                 1.. => rb_right(tmp),
                 0 => return tmp,

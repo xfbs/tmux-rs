@@ -134,13 +134,13 @@ endif
 # cmd-list-keys.c
 # cmd-split-window.c
 dist_tmux_SOURCES = \
+	cmd-queue.c \
 	cmd-new-session.c \
 	environ.c \
 	arguments.c \
 	cmd-find.c \
 	cmd-parse.y \
 	cmd-pipe-pane.c \
-	cmd-queue.c \
 	cmd-refresh-client.c \
 	cmd-resize-pane.c \
 	cmd-run-shell.c \

@@ -98,13 +98,13 @@ type args_values = tailq_head<args_value>;
 const ARGS_ENTRY_OPTIONAL_VALUE: c_int = 1;
 #[repr(C)]
 pub struct args_entry {
-    flag: c_uchar,
-    values: args_values,
-    count: c_uint,
+    pub flag: c_uchar,
+    pub values: args_values,
+    pub count: c_uint,
 
-    flags: c_int,
+    pub flags: c_int,
 
-    entry: rb_entry<args_entry>,
+    pub entry: rb_entry<args_entry>,
 }
 
 unsafe extern "C" {
@@ -123,16 +123,16 @@ impl GetEntry<args_entry> for args_entry {
 
 #[repr(C)]
 pub struct args {
-    tree: args_tree,
-    count: u32,
-    values: *mut args_value,
+    pub tree: args_tree,
+    pub count: u32,
+    pub values: *mut args_value,
 }
 
 #[repr(C)]
 pub struct args_command_state {
-    cmdlist: *mut cmd_list,
-    cmd: *mut c_char,
-    pi: cmd_parse_input,
+    pub cmdlist: *mut cmd_list,
+    pub cmd: *mut c_char,
+    pub pi: cmd_parse_input,
 }
 
 /*

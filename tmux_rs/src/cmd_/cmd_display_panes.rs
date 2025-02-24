@@ -260,7 +260,7 @@ unsafe extern "C" fn cmd_display_panes_key(c: *mut client, data: *mut c_void, ev
         let mut error = null_mut();
         let cmdlist = args_make_commands((*cdata).state, 1, &raw mut expanded, &raw mut error);
         if (cmdlist.is_null()) {
-            cmdq_append(c, cmdq_get_error(error));
+            cmdq_append(c, cmdq_get_error(error).as_ptr());
             free_(error);
         } else if (item.is_null()) {
             let new_item = cmdq_get_command(cmdlist, null_mut());

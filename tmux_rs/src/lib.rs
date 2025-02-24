@@ -97,8 +97,6 @@ macro_rules! opaque_types {
 // cmds,
 // imsg,
 opaque_types! {
-    cmdq_item,
-    cmdq_list,
     cmdq_state,
     control_state,
     format_job_tree,
@@ -1330,14 +1328,13 @@ pub const ENVIRON_HIDDEN: i32 = 0x1;
 /// Environment variable.
 #[repr(C)]
 pub struct environ_entry {
-    pub name: *mut c_char,
-    pub value: *mut c_char,
+    pub name: *const c_char,
+    pub value: *const c_char,
 
     pub flags: i32,
     pub entry: rb_entry<environ_entry>,
 }
 //TODO re-add later
-/*
 impl compat_rs::tree::GetEntry<environ_entry> for environ_entry {
     unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<environ_entry> {
         unsafe { &raw mut (*this).entry }
@@ -1347,7 +1344,6 @@ impl compat_rs::tree::GetEntry<environ_entry> for environ_entry {
         unsafe { environ_::environ_cmp(this, other) }
     }
 }
-*/
 
 /// Client session.
 #[repr(C)]
@@ -1757,7 +1753,7 @@ pub struct cmd_list {
 
 /* Command return values. */
 #[repr(i32)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub enum cmd_retval {
     CMD_RETURN_ERROR = -1,
     CMD_RETURN_NORMAL = 0,
@@ -2432,8 +2428,8 @@ pub use crate::cmd_::cmd_queue::{
     cmdq_add_format, cmdq_add_formats, cmdq_append, cmdq_continue, cmdq_copy_state, cmdq_error, cmdq_free,
     cmdq_free_state, cmdq_get_callback1, cmdq_get_client, cmdq_get_command, cmdq_get_current, cmdq_get_error,
     cmdq_get_event, cmdq_get_flags, cmdq_get_name, cmdq_get_source, cmdq_get_state, cmdq_get_target,
-    cmdq_get_target_client, cmdq_guard, cmdq_insert_after, cmdq_insert_hook, cmdq_link_state, cmdq_merge_formats,
-    cmdq_new, cmdq_new_state, cmdq_next, cmdq_print, cmdq_print_data, cmdq_running,
+    cmdq_get_target_client, cmdq_guard, cmdq_insert_after, cmdq_insert_hook, cmdq_item, cmdq_link_state, cmdq_list,
+    cmdq_merge_formats, cmdq_new, cmdq_new_state, cmdq_next, cmdq_print, cmdq_print_data, cmdq_running,
 };
 
 pub use crate::cmd_::cmd_wait_for::cmd_wait_for_flush;
@@ -2478,6 +2474,9 @@ unsafe extern "C" {
         lockfd: c_int,
         lockfile: *mut c_char,
     ) -> c_int;
+
+    #[unsafe(no_mangle)]
+    pub unsafe fn server_add_message(fmt: *const c_char, ...);
 }
 /*
 mod server;

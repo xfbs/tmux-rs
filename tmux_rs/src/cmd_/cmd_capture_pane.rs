@@ -225,7 +225,7 @@ unsafe extern "C" fn cmd_capture_pane_exec(self_: *mut cmd, item: *mut cmdq_item
         let mut c = cmdq_get_client(item);
         let mut wp = (*cmdq_get_target(item)).wp;
 
-        if cmd_get_entry(self_) == &raw const cmd_clear_history_entry {
+        if cmd_get_entry(self_) == &raw mut cmd_clear_history_entry {
             window_pane_reset_mode_all(wp);
             grid_clear_history((*wp).base.grid);
             if args_has(args, b'H') != 0 {

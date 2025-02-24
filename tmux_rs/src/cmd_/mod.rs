@@ -497,7 +497,7 @@ pub unsafe extern "C" fn cmd_stringify_argv(argc: c_int, argv: *mut *mut c_char)
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_get_entry(cmd: *mut cmd) -> *const cmd_entry {
+pub unsafe extern "C" fn cmd_get_entry(cmd: *mut cmd) -> *mut cmd_entry {
     unsafe { (*cmd).entry }
 }
 

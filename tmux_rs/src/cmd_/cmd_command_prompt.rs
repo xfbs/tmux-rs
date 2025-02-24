@@ -217,7 +217,7 @@ unsafe extern "C" fn cmd_command_prompt_callback(
 
             let mut cmdlist = args_make_commands((*cdata).state, argc, argv, &raw mut error);
             if cmdlist.is_null() {
-                cmdq_append(c, cmdq_get_error(error));
+                cmdq_append(c, cmdq_get_error(error).as_ptr());
                 free_(error);
             } else if item.is_null() {
                 let new_item = cmdq_get_command(cmdlist, null_mut());

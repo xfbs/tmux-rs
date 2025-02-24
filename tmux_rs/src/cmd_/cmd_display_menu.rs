@@ -554,7 +554,7 @@ unsafe extern "C" fn cmd_display_popup_exec(self_: *mut cmd, item: *mut cmdq_ite
         }
 
         if (args_has(args, b'e') >= 1) {
-            env = environ_create();
+            env = environ_create().as_ptr();
             let mut av = args_first_value(args, b'e');
             while (!av.is_null()) {
                 environ_put(env, (*av).union_.string, 0);

@@ -94,7 +94,7 @@ unsafe extern "C" fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) 
 
         sc.name = args_get(args, b'n');
         args_to_vector(args, &raw mut sc.argc, &raw mut sc.argv);
-        sc.environ = environ_create();
+        sc.environ = environ_create().as_ptr();
 
         let mut av = args_first_value(args, b'e');
         while (!av.is_null()) {

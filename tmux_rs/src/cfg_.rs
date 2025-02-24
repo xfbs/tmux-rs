@@ -69,7 +69,7 @@ pub unsafe extern "C" fn start_cfg() {
         c = tailq_first(&raw mut clients);
         cfg_client = c;
         if !c.is_null() {
-            cfg_item = cmdq_get_callback!(cfg_client_done, null_mut());
+            cfg_item = cmdq_get_callback!(cfg_client_done, null_mut()).as_ptr();
             cmdq_append(c, cfg_item);
         }
 
@@ -83,7 +83,7 @@ pub unsafe extern "C" fn start_cfg() {
             i += 1;
         }
 
-        cmdq_append(null_mut(), cmdq_get_callback!(cfg_done, null_mut()));
+        cmdq_append(null_mut(), cmdq_get_callback!(cfg_done, null_mut()).as_ptr());
     }
 }
 

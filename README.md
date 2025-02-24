@@ -224,7 +224,7 @@ more then just server exited unexpectedly.
   - [ ]  335 cmd-refresh-client
   - [ ]  370 cmd-new-session (doesn't work, crashes)
   =====
-  - [ ]  899 cmd-queue
+  - [ ]  899 cmd-queue (some tailq functions used port isn't working)
   - [ ] 1314 cmd-find
   - [ ]  159 cmd-parse.y (don't translate)
   =====

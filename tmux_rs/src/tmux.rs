@@ -429,7 +429,7 @@ extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char) {
             flags = CLIENT_LOGIN;
         }
 
-        global_environ = environ_create();
+        global_environ = environ_create().as_ptr();
 
         let mut var = environ;
         while !(*var).is_null() {
