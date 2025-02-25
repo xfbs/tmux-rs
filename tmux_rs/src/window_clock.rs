@@ -1,5 +1,320 @@
-use super::*;
+use compat_rs::{queue::tailq_first, strlcat};
+use libc::{gmtime_r, localtime, strftime, tm};
+
+use crate::*;
 unsafe extern "C" {
-    pub static mut window_clock_mode: window_mode;
-    pub static mut window_clock_table: [[[c_char; 5usize]; 5usize]; 14usize];
+    // pub static mut window_clock_mode: window_mode;
+    // pub static mut window_clock_table: [[[c_char; 5usize]; 5usize]; 14usize];
+}
+
+#[unsafe(no_mangle)]
+pub static mut window_clock_mode: window_mode = window_mode {
+    name: c"clock-mode".as_ptr(),
+
+    init: Some(window_clock_init),
+    free: Some(window_clock_free),
+    resize: Some(window_clock_resize),
+    key: Some(window_clock_key),
+    ..unsafe { zeroed() }
+};
+
+#[repr(C)]
+pub struct window_clock_mode_data {
+    pub screen: screen,
+    pub tim: time_t,
+    pub timer: event,
+}
+
+#[unsafe(no_mangle)]
+pub static mut window_clock_table: [[[c_char; 5]; 5]; 14] = [
+    [
+        [1, 1, 1, 1, 1], /* 0 */
+        [1, 0, 0, 0, 1],
+        [1, 0, 0, 0, 1],
+        [1, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1],
+    ],
+    [
+        [0, 0, 0, 0, 1], /* 1 */
+        [0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 1],
+    ],
+    [
+        [1, 1, 1, 1, 1], /* 2 */
+        [0, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1],
+        [1, 0, 0, 0, 0],
+        [1, 1, 1, 1, 1],
+    ],
+    [
+        [1, 1, 1, 1, 1], /* 3 */
+        [0, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1],
+        [0, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1],
+    ],
+    [
+        [1, 0, 0, 0, 1], /* 4 */
+        [1, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1],
+        [0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 1],
+    ],
+    [
+        [1, 1, 1, 1, 1], /* 5 */
+        [1, 0, 0, 0, 0],
+        [1, 1, 1, 1, 1],
+        [0, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1],
+    ],
+    [
+        [1, 1, 1, 1, 1], /* 6 */
+        [1, 0, 0, 0, 0],
+        [1, 1, 1, 1, 1],
+        [1, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1],
+    ],
+    [
+        [1, 1, 1, 1, 1], /* 7 */
+        [0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 1],
+    ],
+    [
+        [1, 1, 1, 1, 1], /* 8 */
+        [1, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1],
+        [1, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1],
+    ],
+    [
+        [1, 1, 1, 1, 1], /* 9 */
+        [1, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1],
+        [0, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1],
+    ],
+    [
+        [0, 0, 0, 0, 0], /* : */
+        [0, 0, 1, 0, 0],
+        [0, 0, 0, 0, 0],
+        [0, 0, 1, 0, 0],
+        [0, 0, 0, 0, 0],
+    ],
+    [
+        [1, 1, 1, 1, 1], /* A */
+        [1, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1],
+        [1, 0, 0, 0, 1],
+        [1, 0, 0, 0, 1],
+    ],
+    [
+        [1, 1, 1, 1, 1], /* P */
+        [1, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1],
+        [1, 0, 0, 0, 0],
+        [1, 0, 0, 0, 0],
+    ],
+    [
+        [1, 0, 0, 0, 1], /* M */
+        [1, 1, 0, 1, 1],
+        [1, 0, 1, 0, 1],
+        [1, 0, 0, 0, 1],
+        [1, 0, 0, 0, 1],
+    ],
+];
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_clock_timer_callback(fd: i32, events: i16, arg: *mut c_void) {
+    unsafe {
+        let mut wme = arg as *mut window_mode_entry;
+        let mut wp = (*wme).wp;
+        let mut data = (*wme).data as *mut window_clock_mode_data;
+        let mut now: tm = zeroed();
+        let mut then: tm = zeroed();
+        let mut t: time_t;
+        let mut tv: timeval = timeval { tv_sec: 1, tv_usec: 0 };
+
+        evtimer_del(&raw mut (*data).timer);
+        evtimer_add(&raw mut (*data).timer, &tv);
+
+        if (tailq_first(&raw mut (*wp).modes) != wme) {
+            return;
+        }
+
+        t = libc::time(null_mut());
+        gmtime_r(&raw mut t, &raw mut now);
+        gmtime_r(&raw mut (*data).tim, &raw mut then);
+        if (now.tm_min == then.tm_min) {
+            return;
+        }
+        (*data).tim = t;
+
+        window_clock_draw_screen(wme);
+        (*wp).flags |= PANE_REDRAW;
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_clock_init(
+    wme: *mut window_mode_entry,
+    _fs: *mut cmd_find_state,
+    args: *mut args,
+) -> *mut screen {
+    unsafe {
+        let mut wp = (*wme).wp as *mut window_pane;
+        let mut tv = timeval { tv_sec: 1, tv_usec: 0 };
+
+        let data = xmalloc_::<window_clock_mode_data>().as_ptr();
+        (*wme).data = data.cast();
+        (*data).tim = libc::time(null_mut());
+
+        evtimer_set(&raw mut (*data).timer, Some(window_clock_timer_callback), wme.cast());
+        evtimer_add(&raw mut (*data).timer, &raw mut tv);
+
+        let mut s = &raw mut (*data).screen;
+        screen_init(
+            s,
+            screen_size_x(&raw mut (*wp).base),
+            screen_size_y(&raw mut (*wp).base),
+            0,
+        );
+        (*s).mode &= !MODE_CURSOR;
+
+        window_clock_draw_screen(wme);
+
+        s
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_clock_free(wme: *mut window_mode_entry) {
+    unsafe {
+        let data = (*wme).data as *mut window_clock_mode_data;
+
+        evtimer_del(&raw mut (*data).timer);
+        screen_free(&raw mut (*data).screen);
+        free_(data);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_clock_resize(wme: *mut window_mode_entry, sx: u32, sy: u32) {
+    unsafe {
+        let data = (*wme).data as *mut window_clock_mode_data;
+        let mut s = &raw mut (*data).screen;
+
+        screen_resize(s, sx, sy, 0);
+        window_clock_draw_screen(wme);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_clock_key(
+    wme: *mut window_mode_entry,
+    c: *mut client,
+    s: *mut session,
+    wl: *mut winlink,
+    key: key_code,
+    m: *mut mouse_event,
+) {
+    unsafe {
+        window_pane_reset_mode((*wme).wp);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_clock_draw_screen(wme: *mut window_mode_entry) {
+    unsafe {
+        let mut wp = (*wme).wp;
+        let mut data = (*wme).data as *mut window_clock_mode_data;
+        let mut ctx: screen_write_ctx = zeroed();
+        let mut colour: i32;
+        let mut style: i32;
+        let mut s = &raw mut (*data).screen;
+        const sizeof_tim: usize = 64;
+        let mut tim: [c_char; 64] = [0; 64];
+        let mut x: u32 = 0;
+        let mut y: u32 = 0;
+        let mut idx: u32 = 0;
+
+        let colour = options_get_number((*(*wp).window).options, c"clock-mode-colour".as_ptr());
+        let style = options_get_number((*(*wp).window).options, c"clock-mode-style".as_ptr());
+
+        screen_write_start(&raw mut ctx, s);
+
+        let mut t = libc::time(null_mut());
+        let tm = localtime(&raw mut t);
+        if (style == 0) {
+            strftime(&raw mut tim as _, sizeof_tim, c"%l:%M ".as_ptr(), localtime(&raw mut t));
+            if ((*tm).tm_hour >= 12) {
+                strlcat(&raw mut tim as _, c"PM".as_ptr(), sizeof_tim);
+            } else {
+                strlcat(&raw mut tim as _, c"AM".as_ptr(), sizeof_tim);
+            }
+        } else {
+            strftime(&raw mut tim as _, sizeof_tim, c"%H:%M".as_ptr(), tm);
+        }
+
+        screen_write_clearscreen(&raw mut ctx, 8);
+
+        let mut gc = MaybeUninit::<grid_cell>::uninit();
+        let tim_len = strlen(&raw const tim as _) as u32;
+        if (screen_size_x(s) < 6 * tim_len || screen_size_y(s) < 6) {
+            if (screen_size_x(s) >= tim_len && screen_size_y(s) != 0) {
+                x = (screen_size_x(s) / 2) - (tim_len / 2) as u32;
+                y = screen_size_y(s) / 2;
+                screen_write_cursormove(&raw mut ctx, x as i32, y as i32, 0);
+
+                gc.write(grid_default_cell);
+                (*gc.as_mut_ptr()).flags |= GRID_FLAG_NOPALETTE as u8;
+                (*gc.as_mut_ptr()).fg = colour as i32;
+                screen_write_puts(&raw mut ctx, gc.as_mut_ptr(), c"%s".as_ptr(), tim);
+            }
+
+            screen_write_stop(&raw mut ctx);
+            return;
+        }
+
+        x = (screen_size_x(s) / 2) - 3 * tim_len;
+        y = (screen_size_y(s) / 2) - 3;
+
+        gc.write(grid_default_cell);
+        (*gc.as_mut_ptr()).flags |= GRID_FLAG_NOPALETTE as u8;
+        (*gc.as_mut_ptr()).bg = colour as i32;
+        let mut ptr = &raw mut tim as *mut i8;
+        while *ptr != b'\0' as c_char {
+            if (*ptr >= b'0' as c_char && *ptr <= b'9' as c_char) {
+                idx = (*ptr - b'0' as i8) as u32;
+            } else if (*ptr == b':' as c_char) {
+                idx = 10;
+            } else if (*ptr == b'A' as c_char) {
+                idx = 11;
+            } else if (*ptr == b'P' as c_char) {
+                idx = 12;
+            } else if (*ptr == b'M' as c_char) {
+                idx = 13;
+            } else {
+                x += 6;
+                ptr = ptr.add(1);
+                continue;
+            }
+
+            for j in 0..5 {
+                for i in 0..5 {
+                    screen_write_cursormove(&raw mut ctx, (x + i) as i32, (y + j) as i32, 0);
+                    if (window_clock_table[idx as usize][j as usize][i as usize] != 0) {
+                        screen_write_putc(&raw mut ctx, gc.as_ptr(), b' ');
+                    }
+                }
+            }
+            x += 6;
+            ptr = ptr.add(1);
+        }
+
+        screen_write_stop(&raw mut ctx);
+    }
 }

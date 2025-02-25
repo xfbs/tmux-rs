@@ -205,7 +205,7 @@ more then just server exited unexpectedly.
 - [ ] 100 utf8-combined
 - [ ] 822 utf8
 - [X] window
-  - [ ]  286 window-clock
+  - [X]  286 window-clock
   - [ ]  418 window-client
   - [ ]  559 window-buffer
   - [ ] 1348 window-tree

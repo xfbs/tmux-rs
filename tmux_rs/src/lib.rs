@@ -1015,7 +1015,7 @@ pub struct window_mode_entry {
     pub swp: *mut window_pane,
 
     pub mode: *mut window_mode,
-    pub data: *mut (),
+    pub data: *mut c_void,
 
     pub screen: *mut screen,
     pub prefix: u32,

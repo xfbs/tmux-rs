@@ -136,6 +136,7 @@ endif
 # job.c
 # cmd-source-file.c
 # file.c
+# window-clock.c
 dist_tmux_SOURCES = \
 	cmd-resize-pane.c \
 	cmd-queue.c \
@@ -197,7 +198,6 @@ dist_tmux_SOURCES = \
 	utf8.c \
 	window-buffer.c \
 	window-client.c \
-	window-clock.c \
 	window-copy.c \
 	window-customize.c \
 	window-tree.c \
