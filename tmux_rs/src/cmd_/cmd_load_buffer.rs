@@ -82,12 +82,7 @@ unsafe extern "C" fn cmd_load_buffer_exec(self_: *mut cmd, item: *mut cmdq_item)
         }
 
         let mut path = format_single_from_target(item, args_string(args, 0));
-        file_read(
-            cmdq_get_client(item),
-            path,
-            Some(cmd_load_buffer_done),
-            cdata as *const c_void,
-        );
+        file_read(cmdq_get_client(item), path, Some(cmd_load_buffer_done), cdata.cast());
         free_(path);
     }
 

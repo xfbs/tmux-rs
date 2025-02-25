@@ -10,7 +10,7 @@ use crate::imsg_buffer::{
 };
 use crate::queue::{Entry, tailq_entry, tailq_first, tailq_head, tailq_init, tailq_insert_tail, tailq_remove};
 
-pub const MAX_IMSGSIZE: u32 = 16384;
+pub const MAX_IMSGSIZE: usize = 16384;
 const IMSGF_HASFD: u16 = 1; // this needs to be u16, i think, but it's u32 in auto generated header
 
 #[repr(C)]
@@ -189,7 +189,7 @@ pub unsafe extern "C" fn imsg_get(imsgbuf: *mut imsgbuf, imsg: *mut imsg) -> isi
         (*imsgbuf).r.buf.as_ptr() as *const c_void,
         size_of::<imsg_hdr>(),
     );
-    if (m.hdr.len as usize) < IMSG_HEADER_SIZE || (m.hdr.len as u32) > MAX_IMSGSIZE {
+    if (m.hdr.len as usize) < IMSG_HEADER_SIZE || (m.hdr.len as usize) > MAX_IMSGSIZE {
         *libc::__errno_location() = libc::ERANGE;
         return -1;
     }

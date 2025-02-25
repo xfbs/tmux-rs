@@ -133,7 +133,11 @@ endif
 # cmd-display-panes.c
 # cmd-list-keys.c
 # cmd-split-window.c
+# job.c
+# cmd-source-file.c
+# file.c
 dist_tmux_SOURCES = \
+	cmd-resize-pane.c \
 	cmd-queue.c \
 	cmd-new-session.c \
 	environ.c \
@@ -142,17 +146,14 @@ dist_tmux_SOURCES = \
 	cmd-parse.y \
 	cmd-pipe-pane.c \
 	cmd-refresh-client.c \
-	cmd-resize-pane.c \
 	cmd-run-shell.c \
 	cmd-select-pane.c \
 	cmd-send-keys.c \
 	cmd-set-option.c \
 	cmd-show-options.c \
-	cmd-source-file.c \
 	cmd-wait-for.c \
 	compat.h \
 	control.c \
-	file.c \
 	format.c \
 	format-draw.c \
 	grid-reader.c \
@@ -161,7 +162,6 @@ dist_tmux_SOURCES = \
 	hyperlinks.c \
 	input-keys.c \
 	input.c \
-	job.c \
 	key-bindings.c \
 	key-string.c \
 	layout-custom.c \

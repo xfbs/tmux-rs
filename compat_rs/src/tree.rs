@@ -96,7 +96,7 @@ pub unsafe fn rb_right<T>(this: *mut T) -> *mut T
 where
     T: GetEntry<T>,
 {
-    unsafe { (*T::entry_mut(this)).rbe_left }
+    unsafe { (*T::entry_mut(this)).rbe_right }
 }
 
 macro_rules! rb_parent {

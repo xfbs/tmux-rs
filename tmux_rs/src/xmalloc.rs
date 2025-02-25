@@ -124,6 +124,12 @@ pub unsafe extern "C" fn xstrndup(str: *const c_char, maxlen: usize) -> NonNull<
     NonNull::new(unsafe { strndup(str, maxlen) }).unwrap()
 }
 
+pub unsafe extern "C" fn xasprintf_(fmt: &CStr, mut args: ...) -> NonNull<c_char> {
+    let mut ret = core::ptr::null_mut();
+    unsafe { xvasprintf(&raw mut ret, fmt.as_ptr(), args.as_va_list()) };
+    NonNull::new(ret).unwrap()
+}
+
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn xasprintf(ret: *mut *mut c_char, fmt: *const c_char, mut args: ...) -> c_int {
     unsafe { xvasprintf(ret, fmt, args.as_va_list()) }

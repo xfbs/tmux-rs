@@ -1,6 +1,7 @@
 // libeventsys
 use core::ffi::{c_int, c_short, c_uchar, c_void};
 
+use libevent_sys::bufferevent_get_output;
 pub use libevent_sys::{bufferevent, evbuffer, evbuffer_get_length, evbuffer_pullup, event, event_base};
 // /usr/include/event2/event.h
 
@@ -41,9 +42,15 @@ pub unsafe extern "C" fn evtimer_pending(ev: *const event, tv: *mut libc::timeva
     }
 }
 
+#[inline]
 pub unsafe fn EVBUFFER_LENGTH(x: *mut evbuffer) -> usize {
     unsafe { evbuffer_get_length(x) }
 }
+#[inline]
 pub unsafe fn EVBUFFER_DATA(x: *mut evbuffer) -> *mut c_uchar {
     unsafe { evbuffer_pullup(x, -1) }
+}
+#[inline]
+pub unsafe fn EVBUFFER_OUTPUT(x: *mut bufferevent) -> *mut evbuffer {
+    unsafe { bufferevent_get_output(x) }
 }

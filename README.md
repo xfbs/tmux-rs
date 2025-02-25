@@ -152,9 +152,18 @@ more then just server exited unexpectedly.
 - [X] 1117 colour
 - [X]      compat
 - [X]  262 control-notify
+- [X]  435 job
+- [X]      log
+- [X]  172 names
+- [X] 120 regsub
+- [X]  383 style
+- [X]  538 tmux.c
+- [X] tmux.h
+- [X] tmux-protocol.h
+- [X] xmalloc
+- [X]  859 file
 - [ ] 1117 control
-- [ ]  281 environ (problems when cut over)
-- [ ]  859 file (in progress)
+- [ ]  281 environ (environ_free is broken, everything else works)
 - [ ] 5294 format
   - [ ] 1243 format-draw
 - [ ] 1535 grid
@@ -163,23 +172,19 @@ more then just server exited unexpectedly.
 - [ ]  239 hyperlinks
 - [ ]  794 input-keys
 - [ ] 3025 input
-- [ ]  435 job
 - [ ]  692 key-bindings
 - [ ]  477 key-string
 - [ ] 1120 layout
   - [ ] 370 layout-custom
   - [ ] 691 layout-set
-- [X]      log
 - [ ]  556 menu
 - [ ] 1266 mode-tree
-- [X]  172 names
 - [ ]  323 notify
 - [ ] 1204 options
   - [ ] 1370 options-table
 - [ ] 342 paste
 - [ ] 818 popup
 - [ ] 388 proc
-- [X] 120 regsub
 - [ ] 467 resize
 - [ ] 740 screen
   - [ ]  868 screen-redraw
@@ -192,10 +197,6 @@ more then just server exited unexpectedly.
 - [ ]  497 spawn
 - [ ]  759 session
 - [ ] 2035 status
-- [X]  383 style
-- [X]  538 tmux.c
-- [X] tmux.h
-- [X] tmux-protocol.h
 - [ ] 3186 tty
   - [ ]  269 tty-acs
   - [ ]  510 tty-features
@@ -210,10 +211,7 @@ more then just server exited unexpectedly.
   - [ ] 1348 window-tree
   - [ ] 1512 window-customize
   - [ ] 5786 window-copy
-- [X] xmalloc
 - [X] 874 cmd
-  - [ ]  208 cmd-source-file
-  - [ ]  215 cmd-resize-pane
   - [ ]  230 cmd-pipe-pane
   - [ ]  237 cmd-send-keys
   - [ ]  239 cmd-set-option
@@ -222,6 +220,7 @@ more then just server exited unexpectedly.
   - [ ]  264 cmd-wait-for
   - [ ]  290 cmd-run-shell
   - [ ]  335 cmd-refresh-client
+  - [ ]  215 cmd-resize-pane (doesn't work)
   - [ ]  370 cmd-new-session (doesn't work, crashes)
   =====
   - [ ]  899 cmd-queue (some tailq functions used port isn't working)
@@ -354,6 +353,7 @@ SUMMARY: AddressSanitizer: 28 byte(s) leaked in 1 allocation(s).
 - flipped != 0 instead of == 0 for coverting from !int_like_value in conditional
 - incorrect translation of for loop with continue to while with continue and increment at end; increment isn't applied (cmd_find)
 - incorrect translation of cmd_entry args_parse cb None, when should have been Some(cb): after translating cmd-display-menu immediately aborts on start
+- typo in rb_right macro, expanded to access left field
 
 - memcpy_(&raw mut tmp as *mut i8, in_, end); should have been: memcpy_(tmp, in_, end)
   -  because I switched to a pointer instead of buffer,but didn't change memcpy code

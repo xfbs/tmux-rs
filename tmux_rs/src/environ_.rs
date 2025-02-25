@@ -12,16 +12,16 @@ unsafe extern "C" {
     pub fn environ_free(_: *mut environ);
     // pub fn environ_first(_: *mut environ) -> *mut environ_entry;
     // pub fn environ_next(_: *mut environ_entry) -> *mut environ_entry;
-    pub fn environ_copy(_: *mut environ, _: *mut environ);
-    pub fn environ_find(_: *mut environ, _: *const c_char) -> *mut environ_entry;
-    pub fn environ_set(_: *mut environ, _: *const c_char, _: c_int, _: *const c_char, ...);
-    pub fn environ_clear(_: *mut environ, _: *const c_char);
-    pub fn environ_put(_: *mut environ, _: *const c_char, _: c_int);
-    pub fn environ_unset(_: *mut environ, _: *const c_char);
-    pub fn environ_update(_: *mut options, _: *mut environ, _: *mut environ);
-    pub fn environ_push(_: *mut environ);
-    pub fn environ_log(_: *mut environ, _: *const c_char, ...);
-    pub fn environ_for_session(_: *mut session, _: c_int) -> *mut environ;
+    // pub fn environ_copy(_: *mut environ, _: *mut environ);
+    // pub fn environ_find(_: *mut environ, _: *const c_char) -> *mut environ_entry;
+    // pub fn environ_set(_: *mut environ, _: *const c_char, _: c_int, _: *const c_char, ...);
+    // pub fn environ_clear(_: *mut environ, _: *const c_char);
+    // pub fn environ_put(_: *mut environ, _: *const c_char, _: c_int);
+    // pub fn environ_unset(_: *mut environ, _: *const c_char);
+    // pub fn environ_update(_: *mut options, _: *mut environ, _: *mut environ);
+    // pub fn environ_push(_: *mut environ);
+    // pub fn environ_log(_: *mut environ, _: *const c_char, ...);
+    // pub fn environ_for_session(_: *mut session, _: c_int) -> *mut environ;
 }
 
 pub type environ = rb_head<environ_entry>;
@@ -49,8 +49,8 @@ pub unsafe extern "C" fn environ_free(env: *mut environ) {
             // eprintln!("{:?} {:?}", envent, (*envent).entry);
 
             rb_remove(env, envent);
-            free_((*envent).name);
-            free_((*envent).value);
+            free((*envent).name as *mut c_void);
+            free((*envent).value as *mut c_void);
             free_(envent);
             ControlFlow::Continue::<(), ()>(())
         });
@@ -69,8 +69,6 @@ pub unsafe extern "C" fn environ_next(envent: *mut environ_entry) -> *mut enviro
     unsafe { rb_next(envent) }
 }
 
-/*
-// TODO bad
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_copy(srcenv: *mut environ, dstenv: *mut environ) {
     unsafe {
@@ -84,10 +82,7 @@ pub unsafe extern "C" fn environ_copy(srcenv: *mut environ, dstenv: *mut environ
         });
     }
 }
-*/
 
-// TODO bad, get strange behavior, command pane has ~ after each character
-/*
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_find(env: *mut environ, name: *const c_char) -> *mut environ_entry {
     let mut envent: MaybeUninit<environ_entry> = MaybeUninit::uninit();
@@ -125,15 +120,13 @@ pub unsafe extern "C" fn environ_set(
         }
     }
 }
-*/
 
-/*
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_clear(env: *mut environ, name: *const c_char) {
     unsafe {
         let mut envent = environ_find(env, name);
         if !envent.is_null() {
-            free_((*envent).value);
+            free((*envent).value as *mut c_void);
             (*envent).value = null_mut();
         } else {
             envent = xmalloc_::<environ_entry>().as_ptr();
@@ -148,11 +141,11 @@ pub unsafe extern "C" fn environ_clear(env: *mut environ, name: *const c_char) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_put(env: *mut environ, var: *const c_char, flags: c_int) {
     unsafe {
-        let mut value = strchr(var, b'=' as _);
+        let mut value = strchr(var, b'=' as c_int);
         if value.is_null() {
             return;
         }
-        value = value.wrapping_add(1);
+        value = value.add(1);
 
         let mut name: *mut c_char = xstrdup(var).cast().as_ptr();
         *name.add(strcspn(name, c"=".as_ptr())) = b'\0' as c_char;
@@ -170,8 +163,8 @@ pub unsafe extern "C" fn environ_unset(env: *mut environ, name: *const c_char) {
             return;
         }
         rb_remove(env, envent);
-        free_((*envent).name);
-        free_((*envent).value);
+        free((*envent).name as *mut c_void);
+        free((*envent).value as *mut c_void);
         free_(envent);
     }
 }
@@ -242,10 +235,9 @@ pub unsafe extern "C" fn environ_log(env: *mut environ, fmt: *const c_char, mut 
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_for_session(s: *mut session, no_TERM: c_int) -> *mut environ {
-    unsafe {
-        let mut env: *mut environ = null_mut();
+    let env: *mut environ = environ_create().as_ptr();
 
-        let mut env = environ_create();
+    unsafe {
         environ_copy(global_environ, env);
         if !s.is_null() {
             environ_copy((*s).environ, env);
@@ -280,5 +272,3 @@ pub unsafe extern "C" fn environ_for_session(s: *mut session, no_TERM: c_int) ->
         env
     }
 }
-
-*/

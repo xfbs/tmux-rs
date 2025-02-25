@@ -20,7 +20,7 @@ pub use core::{
         CStr, c_char, c_int, c_long, c_longlong, c_short, c_uchar, c_uint, c_ulonglong, c_ushort, c_void,
         va_list::{VaList, VaListImpl},
     },
-    mem::{ManuallyDrop, size_of, zeroed},
+    mem::{ManuallyDrop, MaybeUninit, size_of, zeroed},
     ops::ControlFlow,
     ptr::{NonNull, null, null_mut},
 };
@@ -41,6 +41,7 @@ pub fn S_ISDIR(mode: u32) -> bool {
 }
 
 pub const _PATH_BSHELL: *const c_char = c"/bin/sh".as_ptr();
+pub const _PATH_DEVNULL: *const c_char = c"/dev/null".as_ptr();
 
 pub type wchar_t = core::ffi::c_int;
 unsafe extern "C" {
@@ -56,7 +57,9 @@ pub unsafe fn strchr_(cs: *const c_char, c: char) -> *mut c_char {
 
 pub use libc::{FILE, REG_EXTENDED, REG_ICASE, free, pid_t, strerror, strlen, termios, time_t, timeval, uid_t};
 
-pub use crate::event_::{EVBUFFER_DATA, EVBUFFER_LENGTH, evtimer_add, evtimer_del, evtimer_pending, evtimer_set};
+pub use crate::event_::{
+    EVBUFFER_DATA, EVBUFFER_LENGTH, EVBUFFER_OUTPUT, evtimer_add, evtimer_del, evtimer_pending, evtimer_set,
+};
 pub use libevent_sys::{bufferevent, evbuffer, evbuffer_get_length, evbuffer_pullup, event, event_base};
 
 use compat_rs::{
@@ -96,6 +99,7 @@ macro_rules! opaque_types {
 // cmd,
 // cmds,
 // imsg,
+// job,
 opaque_types! {
     cmdq_state,
     control_state,
@@ -104,7 +108,6 @@ opaque_types! {
     hyperlinks,
     hyperlinks_uri,
     input_ctx,
-    job,
     menu_data,
     mode_tree_data,
     mode_tree_item,
@@ -1900,6 +1903,7 @@ pub struct client_file {
     pub entry: rb_entry<client_file>,
 }
 pub type client_files = rb_head<client_file>;
+compat_rs::impl_rb_tree_protos!(client_files, client_file);
 
 impl GetEntry<client_file> for client_file {
     unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<client_file> {
@@ -2335,8 +2339,8 @@ pub const JOB_KEEPWRITE: i32 = 2;
 pub const JOB_PTY: i32 = 4;
 pub const JOB_DEFAULTSHELL: i32 = 8;
 pub use crate::job_::{
-    job_check_died, job_complete_cb, job_free, job_free_cb, job_get_data, job_get_event, job_get_status, job_kill_all,
-    job_print_summary, job_resize, job_run, job_still_running, job_transfer, job_update_cb,
+    job, job_check_died, job_complete_cb, job_free, job_free_cb, job_get_data, job_get_event, job_get_status,
+    job_kill_all, job_print_summary, job_resize, job_run, job_still_running, job_transfer, job_update_cb,
 };
 
 mod environ_;
@@ -2803,8 +2807,8 @@ pub use crate::hyperlinks_::{
 
 pub mod xmalloc;
 pub use crate::xmalloc::{
-    free_, memcpy_, memcpy__, xasprintf, xcalloc, xcalloc_, xmalloc, xmalloc_, xrealloc, xrealloc_, xreallocarray_,
-    xsnprintf, xstrdup, xstrdup_, xvasprintf,
+    free_, memcpy_, memcpy__, xasprintf, xasprintf_, xcalloc, xcalloc_, xmalloc, xmalloc_, xrealloc, xrealloc_,
+    xreallocarray_, xsnprintf, xstrdup, xstrdup_, xvasprintf,
 };
 /*
 unsafe extern "C" {
