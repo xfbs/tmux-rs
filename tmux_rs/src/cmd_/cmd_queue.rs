@@ -719,7 +719,7 @@ pub unsafe extern "C" fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
             }
 
             if ((*entry).flags & CMD_AFTERHOOK != 0) {
-                let fps = if cmd_find_valid_state(&raw mut (*item).target) != 0 {
+                fsp = if cmd_find_valid_state(&raw mut (*item).target) != 0 {
                     &raw mut (*item).target
                 } else if cmd_find_valid_state(&raw mut (*(*item).state).current) != 0 {
                     &raw mut (*(*item).state).current

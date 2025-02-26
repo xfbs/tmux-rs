@@ -209,9 +209,19 @@ where
     }
 }
 
+// RB_GENERATE_STATIC name, type, field, cmp
 #[macro_export]
-macro_rules! impl_rb_tree_protos {
-    ($head_ty:ty, $ty:ty) => {
+macro_rules! RB_GENERATE {
+    ($head_ty:ty, $ty:ty, $entry_field:ident, $cmp_fn:ident) => {
+        impl ::compat_rs::tree::GetEntry<$ty> for $ty {
+            unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<$ty> {
+                unsafe { &raw mut (*this).$entry_field }
+            }
+            unsafe fn cmp(this: *const Self, other: *const Self) -> i32 {
+                unsafe { $cmp_fn(this, other) }
+            }
+        }
+
         ::paste::paste! {
             #[unsafe(no_mangle)]
             pub unsafe extern "C" fn [<$head_ty _RB_MINMAX>](head: *mut rb_head<$ty>, val: i32) -> *mut $ty {
@@ -230,7 +240,7 @@ macro_rules! impl_rb_tree_protos {
         }
     };
 }
-pub use impl_rb_tree_protos;
+pub use RB_GENERATE;
 
 pub unsafe fn rb_minmax<T>(head: *mut rb_head<T>, val: i32) -> *mut T
 where

@@ -70,7 +70,7 @@ unsafe extern "C" fn cmd_copy_mode_exec(self_: *mut cmd, item: *mut cmdq_item) -
 
         if args_has(args, b'M') != 0 {
             let wp = cmd_mouse_pane(&raw mut (*event).m, &raw mut s, null_mut());
-            if wp.is_null() {
+            if wp.is_none() {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
             if c.is_null() || (*c).session != s {

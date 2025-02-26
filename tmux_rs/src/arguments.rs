@@ -1,9 +1,9 @@
+use crate::*;
+
 use compat_rs::{
     queue::{tailq_init, tailq_insert_tail},
     tree::{rb_find, rb_init, rb_insert},
 };
-
-use super::*;
 
 unsafe extern "C" {
     pub unsafe fn args_set(args: *mut args, flag: c_uchar, value: *mut args_value, flags: c_int);
@@ -110,16 +110,7 @@ pub struct args_entry {
 unsafe extern "C" {
     fn args_cmp(a1: *const args_entry, a2: *const args_entry) -> i32;
 }
-
-impl GetEntry<args_entry> for args_entry {
-    unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<args_entry> {
-        unsafe { &raw mut (*this).entry }
-    }
-
-    unsafe fn cmp(this: *const Self, other: *const Self) -> i32 {
-        unsafe { args_cmp(this, other) }
-    }
-}
+RB_GENERATE!(args_tree, args_entry, entry, args_cmp);
 
 #[repr(C)]
 pub struct args {

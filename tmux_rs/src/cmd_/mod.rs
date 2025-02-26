@@ -928,13 +928,13 @@ pub unsafe extern "C" fn cmd_mouse_at(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_mouse_window(m: *mut mouse_event, sp: *mut *mut session) -> *mut winlink {
+pub unsafe extern "C" fn cmd_mouse_window(m: *mut mouse_event, sp: *mut *mut session) -> Option<NonNull<winlink>> {
     unsafe {
         let mut s: *mut session = null_mut();
-        let mut wl: *mut winlink = null_mut();
+        let mut wl: Option<NonNull<winlink>> = None;
 
         if (*m).valid == 0 {
-            return null_mut();
+            return None;
         }
         if (*m).s == -1
             || ({
@@ -942,17 +942,17 @@ pub unsafe extern "C" fn cmd_mouse_window(m: *mut mouse_event, sp: *mut *mut ses
                 s.is_null()
             })
         {
-            return null_mut();
+            return None;
         }
         if ((*m).w == -1) {
-            wl = (*s).curw;
+            wl = NonNull::new((*s).curw);
         } else {
             let mut w;
             if ({
                 w = window_find_by_id((*m).w as u32);
                 w.is_null()
             }) {
-                return null_mut();
+                return None;
             }
             wl = winlink_find_by_window(&raw mut (*s).windows, w);
         }
@@ -968,28 +968,22 @@ pub unsafe extern "C" fn cmd_mouse_pane(
     m: *mut mouse_event,
     sp: *mut *mut session,
     wlp: *mut *mut winlink,
-) -> *mut window_pane {
+) -> Option<NonNull<window_pane>> {
     unsafe {
-        let wl = cmd_mouse_window(m, sp);
-        let mut wp = null_mut();
-        if wl.is_null() {
-            return null_mut();
-        }
+        let wl = cmd_mouse_window(m, sp)?;
+        let mut wp = None;
 
         if (*m).wp == -1 {
-            wp = (*(*wl).window).active;
+            wp = NonNull::new((*(*wl.as_ptr()).window).active);
         } else {
-            let wp = window_pane_find_by_id((*m).wp as u32);
-            if wp.is_null() {
-                return null_mut();
-            }
-            if window_has_pane((*wl).window, wp) == 0 {
-                return null_mut();
+            let wp = NonNull::new(window_pane_find_by_id((*m).wp as u32))?;
+            if window_has_pane((*wl.as_ptr()).window, wp.as_ptr()) == 0 {
+                return None;
             }
         }
 
         if !wlp.is_null() {
-            *wlp = wl;
+            *wlp = wl.as_ptr();
         }
         wp
     }

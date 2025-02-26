@@ -137,6 +137,7 @@ endif
 # cmd-source-file.c
 # file.c
 # window-clock.c
+# control.c
 dist_tmux_SOURCES = \
 	cmd-resize-pane.c \
 	cmd-queue.c \
@@ -154,7 +155,6 @@ dist_tmux_SOURCES = \
 	cmd-show-options.c \
 	cmd-wait-for.c \
 	compat.h \
-	control.c \
 	format.c \
 	format-draw.c \
 	grid-reader.c \

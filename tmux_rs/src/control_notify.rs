@@ -62,9 +62,8 @@ pub unsafe extern "C" fn control_notify_window_layout_changed(w: *mut window) {
                 return ControlFlow::<(), ()>::Continue(());
             }
 
-            let wl = winlink_find_by_window(&raw mut (*s).windows, w);
-            if !wl.is_null() {
-                let cp = format_single(null_mut(), template, c, null_mut(), wl, null_mut());
+            if let Some(wl) = winlink_find_by_window(&raw mut (*s).windows, w) {
+                let cp = format_single(null_mut(), template, c, null_mut(), wl.as_ptr(), null_mut());
                 control_write(c, c"%s".as_ptr(), cp);
                 free(cp as _);
             }

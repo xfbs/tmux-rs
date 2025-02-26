@@ -190,6 +190,7 @@ pub unsafe extern "C" fn fatalx(msg: *const c_char, mut args: ...) -> ! {
     }
     std::process::exit(1)
 }
+
 pub fn fatalx_(args: std::fmt::Arguments) -> ! {
     unsafe {
         log_vwrite_rs(args, c"fatal: ");

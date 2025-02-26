@@ -162,7 +162,7 @@ more then just server exited unexpectedly.
 - [X] tmux-protocol.h
 - [X] xmalloc
 - [X]  859 file
-- [ ] 1117 control
+- [X] 1117 control
 - [ ]  281 environ (environ_free is broken, everything else works)
 - [ ] 5294 format
   - [ ] 1243 format-draw
@@ -324,6 +324,7 @@ undefined behaviour in this context.
   - running `tmux attach` immediately crashes when a session exists
   - when running tmux while an existing tmux instance is running causes it to hang, killing the pane causes it to properly attach (likely do to my tmux config)
 - Anything entered in command prompt enter causes crash
+- with my rebinding C-b C to new window in current directory causes issues. with it unbound, there's no problem.
 
 leak on exit:
 ```
@@ -357,6 +358,7 @@ SUMMARY: AddressSanitizer: 28 byte(s) leaked in 1 allocation(s).
 
 - memcpy_(&raw mut tmp as *mut i8, in_, end); should have been: memcpy_(tmp, in_, end)
   -  because I switched to a pointer instead of buffer,but didn't change memcpy code
+- typo fps, fsp, variable unused null , cmd-queue.c ( causing crash when C-b t for clock)
 
 # References
 

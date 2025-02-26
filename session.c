@@ -47,7 +47,7 @@ session_cmp(struct session *s1, struct session *s2)
 }
 RB_GENERATE(sessions, session, entry, session_cmp);
 
-static int
+int
 session_group_cmp(struct session_group *s1, struct session_group *s2)
 {
 	return (strcmp(s1->name, s2->name));

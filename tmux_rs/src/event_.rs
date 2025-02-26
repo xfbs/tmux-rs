@@ -26,6 +26,10 @@ pub unsafe extern "C" fn evtimer_add(ev: *mut event, tv: *const libc::timeval) -
     }
 }
 
+pub unsafe extern "C" fn evtimer_initialized(ev: *mut event) -> c_int {
+    unsafe { libevent_sys::event_initialized(ev) }
+}
+
 // #define evtimer_del(ev)			event_del(ev)
 pub unsafe extern "C" fn evtimer_del(ev: *mut event) -> c_int {
     unsafe { libevent_sys::event_del(ev) }

@@ -1,8 +1,11 @@
-use super::*;
+use compat_rs::RB_GENERATE;
+
+use crate::*;
+
 unsafe extern "C" {
     pub unsafe static mut sessions: sessions;
     pub unsafe static mut next_session_id: c_uint;
-    pub unsafe fn session_cmp(_: *mut session, _: *mut session) -> c_int;
+    pub unsafe fn session_cmp(_: *const session, _: *const session) -> c_int;
     pub unsafe fn sessions_RB_INSERT_COLOR(_: *mut sessions, _: *mut session);
     pub unsafe fn sessions_RB_REMOVE_COLOR(_: *mut sessions, _: *mut session, _: *mut session);
     pub unsafe fn sessions_RB_REMOVE(_: *mut sessions, _: *mut session) -> *mut session;
@@ -37,6 +40,7 @@ unsafe extern "C" {
     pub unsafe fn session_select(_: *mut session, _: c_int) -> c_int;
     pub unsafe fn session_last(_: *mut session) -> c_int;
     pub unsafe fn session_set_current(_: *mut session, _: *mut winlink) -> c_int;
+    pub unsafe fn session_group_cmp(_: *const session_group, _: *const session_group) -> c_int;
     pub unsafe fn session_group_contains(_: *mut session) -> *mut session_group;
     pub unsafe fn session_group_find(_: *const c_char) -> *mut session_group;
     pub unsafe fn session_group_new(_: *const c_char) -> *mut session_group;
@@ -47,3 +51,6 @@ unsafe extern "C" {
     pub unsafe fn session_group_attached_count(_: *mut session_group) -> c_uint;
     pub unsafe fn session_renumber_windows(_: *mut session);
 }
+
+RB_GENERATE!(sessions, session, entry, session_cmp);
+RB_GENERATE!(session_groups, session_group, entry, session_group_cmp);

@@ -48,6 +48,21 @@ pub fn xcalloc_<T>(nmemb: usize) -> NonNull<T> {
     xcalloc(nmemb, size_of::<T>()).cast()
 }
 
+// a new signature could look like:
+//  https://doc.rust-lang.org/nightly/core/ptr/index.html#pointer-to-reference-conversion
+// - aligned
+// - non-null
+// - at least size_of::<T> bytes
+// - initialized & valid
+// - exclusive
+//
+// I'm not yet sure if it's sound, so probably won't use it yet
+pub unsafe trait Zeroable {}
+pub fn xcalloc__<'a, T: Zeroable>(nmemb: usize) -> &'a mut [T] {
+    let ptr: *mut T = xcalloc(nmemb, size_of::<T>()).cast().as_ptr();
+    unsafe { core::slice::from_raw_parts_mut(ptr, nmemb) }
+}
+
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn xrealloc(ptr: *mut c_void, size: usize) -> NonNull<c_void> {
     unsafe { xrealloc_(ptr, size) }
@@ -117,6 +132,10 @@ pub unsafe extern "C" fn xstrdup(str: *const c_char) -> NonNull<c_char> {
 
 pub fn xstrdup_(str: &CStr) -> NonNull<c_char> {
     unsafe { xstrdup(str.as_ptr()) }
+}
+
+pub fn xstrdup__<'a>(str: &CStr) -> &'a CStr {
+    unsafe { CStr::from_ptr(xstrdup(str.as_ptr()).as_ptr()) }
 }
 
 #[unsafe(no_mangle)]

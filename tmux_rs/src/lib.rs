@@ -6,12 +6,6 @@ pub mod event_;
 pub mod image_;
 pub mod image_sixel;
 
-// discriminant structs
-pub struct discr_alerts_entry;
-pub struct discr_entry;
-pub struct discr_sentry;
-pub struct discr_wentry;
-
 #[cfg(feature = "utempter")]
 pub mod utempter;
 
@@ -23,6 +17,21 @@ pub use core::{
     mem::{ManuallyDrop, MaybeUninit, size_of, zeroed},
     ops::ControlFlow,
     ptr::{NonNull, null, null_mut},
+};
+
+pub use libc::{FILE, REG_EXTENDED, REG_ICASE, free, pid_t, strerror, strlen, termios, time_t, timeval, uid_t};
+
+// libevent2
+pub use crate::event_::{
+    EVBUFFER_DATA, EVBUFFER_LENGTH, EVBUFFER_OUTPUT, evtimer_add, evtimer_del, evtimer_initialized, evtimer_pending,
+    evtimer_set,
+};
+pub use libevent_sys::{bufferevent, evbuffer, evbuffer_get_length, evbuffer_pullup, event, event_base};
+
+use compat_rs::{
+    RB_GENERATE,
+    queue::{Entry, ListEntry, list_entry, list_head, tailq_entry, tailq_head},
+    tree::{rb_entry, rb_head},
 };
 
 unsafe extern "C" {
@@ -40,9 +49,6 @@ pub fn S_ISDIR(mode: u32) -> bool {
     mode & libc::S_IFMT == libc::S_IFDIR
 }
 
-pub const _PATH_BSHELL: *const c_char = c"/bin/sh".as_ptr();
-pub const _PATH_DEVNULL: *const c_char = c"/dev/null".as_ptr();
-
 pub type wchar_t = core::ffi::c_int;
 unsafe extern "C" {
     static mut stdin: *mut FILE;
@@ -55,27 +61,19 @@ pub unsafe fn strchr_(cs: *const c_char, c: char) -> *mut c_char {
     unsafe { libc::strchr(cs, c as i32) }
 }
 
-pub use libc::{FILE, REG_EXTENDED, REG_ICASE, free, pid_t, strerror, strlen, termios, time_t, timeval, uid_t};
-
-pub use crate::event_::{
-    EVBUFFER_DATA, EVBUFFER_LENGTH, EVBUFFER_OUTPUT, evtimer_add, evtimer_del, evtimer_pending, evtimer_set,
-};
-pub use libevent_sys::{bufferevent, evbuffer, evbuffer_get_length, evbuffer_pullup, event, event_base};
-
-use compat_rs::{
-    queue::ListEntry,
-    tree::{rb_entry, rb_head},
-};
-use compat_rs::{
-    queue::{Entry, list_entry, list_head, tailq_entry, tailq_head},
-    tree::GetEntry,
-};
-
 // use crate::tmux_protocol_h::*;
 
 pub type bitstr_t = c_uchar;
 
 const TTY_NAME_MAX: usize = 32;
+
+// discriminant structs
+pub struct discr_alerts_entry;
+pub struct discr_all_entry;
+pub struct discr_entry;
+pub struct discr_pending_entry;
+pub struct discr_sentry;
+pub struct discr_wentry;
 
 // TODO remove once options.c is ported
 #[repr(C)]
@@ -101,8 +99,6 @@ macro_rules! opaque_types {
 // imsg,
 // job,
 opaque_types! {
-    cmdq_state,
-    control_state,
     format_job_tree,
     format_tree,
     hyperlinks,
@@ -130,6 +126,9 @@ opaque_types! {
     tmuxpeer,
     tmuxproc
 }
+
+pub const _PATH_BSHELL: *const c_char = c"/bin/sh".as_ptr();
+pub const _PATH_DEVNULL: *const c_char = c"/dev/null".as_ptr();
 
 pub const TMUX_CONF: &CStr = c"/etc/tmux.conf:~/.tmux.conf";
 pub const TMUX_SOCK: &CStr = c"$TMUX_TMPDIR:/tmp/";
@@ -1146,19 +1145,8 @@ impl Entry<window_pane, discr_sentry> for window_pane {
     }
 }
 
-impl compat_rs::tree::GetEntry<window_pane> for window_pane {
-    unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<window_pane> {
-        unsafe { &raw mut (*this).tree_entry }
-    }
-
-    unsafe fn cmp(this: *const Self, other: *const Self) -> i32 {
-        unsafe { (*this).id.wrapping_sub((*other).id) as i32 }
-    }
-}
-
 pub type window_panes = tailq_head<window_pane>;
 pub type window_pane_tree = rb_head<window_pane>;
-compat_rs::impl_rb_tree_protos!(window_pane_tree, window_pane);
 
 pub const WINDOW_BELL: i32 = 0x1;
 pub const WINDOW_ACTIVITY: i32 = 0x2;
@@ -1218,21 +1206,11 @@ pub struct window {
     pub entry: rb_entry<window>,
 }
 pub type windows = rb_head<window>;
-compat_rs::impl_rb_tree_protos!(windows, window);
+// compat_rs::impl_rb_tree_protos!(windows, window);
 
 impl compat_rs::queue::Entry<window, discr_alerts_entry> for window {
     unsafe fn entry(this: *mut Self) -> *mut tailq_entry<window> {
         unsafe { &raw mut (*this).alerts_entry }
-    }
-}
-
-impl compat_rs::tree::GetEntry<window> for window {
-    unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<window> {
-        unsafe { &raw mut (*this).entry }
-    }
-
-    unsafe fn cmp(this: *const Self, other: *const Self) -> i32 {
-        unsafe { (*this).id.wrapping_sub((*other).id) as i32 }
     }
 }
 
@@ -1269,20 +1247,10 @@ impl compat_rs::queue::Entry<winlink, discr_sentry> for winlink {
     }
 }
 
-impl compat_rs::tree::GetEntry<winlink> for winlink {
-    unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<winlink> {
-        unsafe { &raw mut (*this).entry }
-    }
-
-    unsafe fn cmp(this: *const Self, other: *const Self) -> i32 {
-        unsafe { (*this).idx.wrapping_sub((*other).idx) }
-    }
-}
-
 pub type winlinks = rb_head<winlink>;
-compat_rs::impl_rb_tree_protos!(winlinks, winlink);
+// compat_rs::impl_rb_tree_protos!(winlinks, winlink);
 pub type winlink_stack = tailq_head<winlink>;
-compat_rs::impl_rb_tree_protos!(winlink_stack, winlink);
+// compat_rs::impl_rb_tree_protos!(winlink_stack, winlink);
 
 // Window size option.
 pub const WINDOW_SIZE_LARGEST: i32 = 0;
@@ -1337,16 +1305,6 @@ pub struct environ_entry {
     pub flags: i32,
     pub entry: rb_entry<environ_entry>,
 }
-//TODO re-add later
-impl compat_rs::tree::GetEntry<environ_entry> for environ_entry {
-    unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<environ_entry> {
-        unsafe { &raw mut (*this).entry }
-    }
-
-    unsafe fn cmp(this: *const Self, other: *const Self) -> i32 {
-        unsafe { environ_::environ_cmp(this, other) }
-    }
-}
 
 /// Client session.
 #[repr(C)]
@@ -1397,16 +1355,6 @@ pub struct session {
     pub entry: rb_entry<session>,
 }
 pub type sessions = rb_head<session>;
-
-impl GetEntry<session> for session {
-    unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<session> {
-        unsafe { &raw mut (*this).entry }
-    }
-
-    unsafe fn cmp(this: *const Self, other: *const Self) -> i32 {
-        unsafe { libc::strcmp((*this).name, (*other).name) }
-    }
-}
 
 pub const MOUSE_MASK_BUTTONS: i32 = 195;
 pub const MOUSE_MASK_SHIFT: i32 = 4;
@@ -1903,17 +1851,7 @@ pub struct client_file {
     pub entry: rb_entry<client_file>,
 }
 pub type client_files = rb_head<client_file>;
-compat_rs::impl_rb_tree_protos!(client_files, client_file);
-
-impl GetEntry<client_file> for client_file {
-    unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<client_file> {
-        unsafe { &raw mut (*this).entry }
-    }
-
-    unsafe fn cmp(this: *const Self, other: *const Self) -> i32 {
-        unsafe { file_cmp(this, other) }
-    }
-}
+RB_GENERATE!(client_files, client_file, entry, file_cmp);
 
 // Client window.
 #[repr(C)]
@@ -2433,7 +2371,7 @@ pub use crate::cmd_::cmd_queue::{
     cmdq_free_state, cmdq_get_callback1, cmdq_get_client, cmdq_get_command, cmdq_get_current, cmdq_get_error,
     cmdq_get_event, cmdq_get_flags, cmdq_get_name, cmdq_get_source, cmdq_get_state, cmdq_get_target,
     cmdq_get_target_client, cmdq_guard, cmdq_insert_after, cmdq_insert_hook, cmdq_item, cmdq_link_state, cmdq_list,
-    cmdq_merge_formats, cmdq_new, cmdq_new_state, cmdq_next, cmdq_print, cmdq_print_data, cmdq_running,
+    cmdq_merge_formats, cmdq_new, cmdq_new_state, cmdq_next, cmdq_print, cmdq_print_data, cmdq_running, cmdq_state,
 };
 
 pub use crate::cmd_::cmd_wait_for::cmd_wait_for_flush;
@@ -2708,7 +2646,7 @@ mod control;
 pub use crate::control::{
     control_add_sub, control_all_done, control_continue_pane, control_discard, control_pane_offset, control_pause_pane,
     control_ready, control_remove_sub, control_reset_offsets, control_set_pane_off, control_set_pane_on, control_start,
-    control_stop, control_write, control_write_output,
+    control_state, control_stop, control_write, control_write_output,
 };
 
 mod control_notify;
@@ -2807,8 +2745,8 @@ pub use crate::hyperlinks_::{
 
 pub mod xmalloc;
 pub use crate::xmalloc::{
-    free_, memcpy_, memcpy__, xasprintf, xasprintf_, xcalloc, xcalloc_, xmalloc, xmalloc_, xrealloc, xrealloc_,
-    xreallocarray_, xsnprintf, xstrdup, xstrdup_, xvasprintf,
+    free_, memcpy_, memcpy__, xasprintf, xasprintf_, xcalloc, xcalloc_, xcalloc__, xmalloc, xmalloc_, xrealloc,
+    xrealloc_, xreallocarray_, xsnprintf, xstrdup, xstrdup_, xvasprintf,
 };
 /*
 unsafe extern "C" {

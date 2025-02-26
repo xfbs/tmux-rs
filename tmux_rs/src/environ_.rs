@@ -4,7 +4,10 @@ use crate::xmalloc::xcalloc_;
 
 use super::*;
 
-use compat_rs::tree::{rb_find, rb_foreach, rb_foreach_safe, rb_init, rb_insert, rb_min, rb_next, rb_remove};
+use compat_rs::{
+    RB_GENERATE,
+    tree::{rb_find, rb_foreach, rb_foreach_safe, rb_init, rb_insert, rb_min, rb_next, rb_remove},
+};
 use libc::{fnmatch, getpid, setenv, strchr, strcmp, strcspn};
 
 unsafe extern "C" {
@@ -25,6 +28,7 @@ unsafe extern "C" {
 }
 
 pub type environ = rb_head<environ_entry>;
+RB_GENERATE!(environ, environ_entry, entry, environ_cmp);
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_cmp(envent1: *const environ_entry, envent2: *const environ_entry) -> c_int {

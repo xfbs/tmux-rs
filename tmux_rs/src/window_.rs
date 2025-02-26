@@ -1,7 +1,7 @@
 use super::*;
 
 use compat_rs::{
-    HOST_NAME_MAX,
+    HOST_NAME_MAX, RB_GENERATE,
     queue::{
         tailq_empty, tailq_first, tailq_foreach, tailq_foreach_safe, tailq_init, tailq_insert_after,
         tailq_insert_before, tailq_insert_head, tailq_insert_tail, tailq_last, tailq_next, tailq_prev, tailq_remove,
@@ -39,9 +39,9 @@ pub struct window_pane_input_data {
     file: *mut client_file,
 }
 
-// RB_GENERATE(windows, window, entry, window_cmp);
-// RB_GENERATE(winlinks, winlink, entry, winlink_cmp);
-// RB_GENERATE(window_pane_tree, window_pane, tree_entry, window_pane_cmp);
+RB_GENERATE!(windows, window, entry, window_cmp);
+RB_GENERATE!(winlinks, winlink, entry, winlink_cmp);
+RB_GENERATE!(window_pane_tree, window_pane, tree_entry, window_pane_cmp);
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_cmp(w1: *const window, w2: *const window) -> i32 {
@@ -59,16 +59,19 @@ pub unsafe extern "C" fn window_pane_cmp(wp1: *const window_pane, wp2: *const wi
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn winlink_find_by_window(wwl: *mut winlinks, w: *mut window) -> *mut winlink {
+pub unsafe extern "C" fn winlink_find_by_window(wwl: *mut winlinks, w: *mut window) -> Option<NonNull<winlink>> {
     unsafe {
-        rb_foreach(wwl, |wl| {
+        if let Some(ptr) = rb_foreach(wwl, |wl| {
             if (*wl).window == w {
                 return ControlFlow::Break(wl);
             }
 
             ControlFlow::Continue(())
-        })
-        .unwrap_or(null_mut())
+        }) {
+            return NonNull::new(ptr);
+        }
+
+        None
     }
 }
 
