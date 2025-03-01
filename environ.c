@@ -50,7 +50,6 @@ struct environ * environ_create(void)
 }
 */
 
-void environ_free(struct environ *env);
 void environ_free(struct environ *env) {
   struct environ_entry *envent, *envent1;
 

@@ -684,11 +684,6 @@ pub unsafe extern "C" fn control_write_data(c: *mut client, message: *mut evbuff
     }
 }
 
-#[inline]
-fn transmute_ptr<T>(value: Option<NonNull<T>>) -> *mut T {
-    unsafe { transmute::<Option<NonNull<T>>, *mut T>(value) }
-}
-
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_write_pending(c: *mut client, cp: *mut control_pane, limit: usize) -> i32 {
     let __func__ = c"control_write_pending".as_ptr();

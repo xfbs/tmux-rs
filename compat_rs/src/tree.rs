@@ -87,6 +87,22 @@ where
     unsafe { (*T::entry_mut(this)).rbe_left }
 }
 
+#[inline]
+pub unsafe fn is_left_sibling<T>(this: *mut T) -> bool
+where
+    T: GetEntry<T>,
+{
+    unsafe { this == rb_left(rb_parent(this)) }
+}
+
+#[inline]
+pub unsafe fn is_right_sibling<T>(this: *mut T) -> bool
+where
+    T: GetEntry<T>,
+{
+    unsafe { this == rb_right(rb_parent(this)) }
+}
+
 macro_rules! rb_right {
     ($elm:expr) => {
         (*GetEntry::entry_mut($elm)).rbe_right
@@ -170,7 +186,7 @@ where
         }
         rb_parent!(tmp) = rb_parent(elm);
         if !rb_parent(tmp).is_null() {
-            if elm == rb_left(rb_parent(elm)) {
+            if is_left_sibling(elm) {
                 rb_left!(rb_parent(elm)) = tmp;
             } else {
                 rb_right!(rb_parent(elm)) = tmp;
@@ -196,7 +212,7 @@ where
         }
         rb_parent!(tmp) = rb_parent(elm);
         if !rb_parent(tmp).is_null() {
-            if elm == rb_left(rb_parent(elm)) {
+            if is_left_sibling(elm) {
                 rb_left!(rb_parent(elm)) = tmp;
             } else {
                 rb_right!(rb_parent(elm)) = tmp;
@@ -323,7 +339,6 @@ where
             if rb_left(parent) == elm {
                 tmp = rb_right(parent);
 
-                // eprintln!("{:?}", tmp);
                 if rb_color(tmp) == rb_color::RB_RED {
                     rb_set_blackred(tmp, parent);
                     rb_rotate_left(head, parent);
@@ -439,7 +454,7 @@ where
                 }
                 *GetEntry::entry_mut(elm) = *GetEntry::entry_mut(old);
                 if !rb_parent(old).is_null() {
-                    if rb_left(rb_parent(old)) == old {
+                    if is_left_sibling(old) {
                         rb_left!(rb_parent(old)) = elm;
                     } else {
                         rb_right!(rb_parent(old)) = elm;
@@ -459,7 +474,6 @@ where
                 if !parent.is_null() {
                     left = parent;
                 }
-                // goto color;
                 break 'color;
             }
 
@@ -477,8 +491,6 @@ where
             } else {
                 rb_root!(head) = child;
             }
-
-            break 'color;
         }
         // color:
         if color == rb_color::RB_BLACK {
@@ -606,11 +618,13 @@ where
         let mut x = rb_min(head);
 
         while !x.is_null() {
-            let tmp = rb_next(x);
-            match f(x) {
-                ControlFlow::Continue(cont) => x = tmp,
-                ControlFlow::Break(brk) => return Some(brk),
+            let y = rb_next(x);
+
+            if let ControlFlow::Break(brk) = f(x) {
+                return Some(brk);
             }
+
+            x = y;
         }
     }
 
@@ -629,10 +643,10 @@ where
                 elm = rb_left(elm);
             }
         } else {
-            if !rb_parent(elm).is_null() && elm == rb_left(rb_parent(elm)) {
+            if !rb_parent(elm).is_null() && is_left_sibling(elm) {
                 elm = rb_parent(elm);
             } else {
-                while !rb_parent(elm).is_null() && elm == rb_right(rb_parent(elm)) {
+                while !rb_parent(elm).is_null() && is_right_sibling(elm) {
                     elm = rb_parent(elm);
                 }
                 elm = rb_parent(elm);
@@ -655,10 +669,10 @@ where
                 elm = rb_right(elm);
             }
         } else {
-            if !rb_parent(elm).is_null() && elm == rb_right(rb_parent(elm)) {
+            if !rb_parent(elm).is_null() && is_right_sibling(elm) {
                 elm = rb_parent(elm);
             } else {
-                while !rb_parent(elm).is_null() && elm == rb_left(rb_parent(elm)) {
+                while !rb_parent(elm).is_null() && is_left_sibling(elm) {
                     elm = rb_parent(elm);
                 }
                 elm = rb_parent(elm);

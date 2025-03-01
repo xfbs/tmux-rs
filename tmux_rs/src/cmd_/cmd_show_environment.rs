@@ -18,7 +18,7 @@ static mut cmd_show_environment_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_show_environment_escape(envent: *mut environ_entry) -> *mut c_char {
     unsafe {
-        let mut value = (*envent).value;
+        let mut value = transmute_ptr((*envent).value);
         let mut ret: *mut i8 = xmalloc(strlen(value) * 2 + 1).as_ptr().cast(); /* at most twice the size */
         let mut out = ret;
 
@@ -56,15 +56,15 @@ unsafe extern "C" fn cmd_show_environment_print(self_: *mut cmd, item: *mut cmdq
         }
 
         if (!args_has_(args, 's')) {
-            if !(*envent).value.is_null() {
-                cmdq_print(item, c"%s=%s".as_ptr(), (*envent).name, (*envent).value);
+            if let Some(value) = (*envent).value {
+                cmdq_print(item, c"%s=%s".as_ptr(), (*envent).name, value);
             } else {
                 cmdq_print(item, c"-%s".as_ptr(), (*envent).name);
             }
             return;
         }
 
-        if (!(*envent).value.is_null()) {
+        if (*envent).value.is_some() {
             escaped = cmd_show_environment_escape(envent);
             cmdq_print(
                 item,

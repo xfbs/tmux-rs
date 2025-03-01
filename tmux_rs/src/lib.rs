@@ -19,14 +19,14 @@ pub use core::{
     ptr::{NonNull, null, null_mut},
 };
 
-pub use libc::{FILE, REG_EXTENDED, REG_ICASE, free, pid_t, strerror, strlen, termios, time_t, timeval, uid_t};
+pub use libc::{FILE, REG_EXTENDED, REG_ICASE, free, memcmp, pid_t, strerror, strlen, termios, time_t, timeval, uid_t};
 
 // libevent2
 pub use crate::event_::{
     EVBUFFER_DATA, EVBUFFER_LENGTH, EVBUFFER_OUTPUT, evtimer_add, evtimer_del, evtimer_initialized, evtimer_pending,
     evtimer_set,
 };
-pub use libevent_sys::{bufferevent, evbuffer, evbuffer_get_length, evbuffer_pullup, event, event_base};
+pub use libevent_sys::{bufferevent, evbuffer, evbuffer_get_length, evbuffer_pullup, event, event_base, event_set};
 
 use compat_rs::{
     RB_GENERATE,
@@ -38,6 +38,11 @@ unsafe extern "C" {
     pub static mut environ: *mut *mut c_char;
     fn strsep(_: *mut *mut c_char, _delim: *const c_char) -> *mut c_char;
     // fn strsep(_: *mut *mut c_char, _delim: *const c_char) -> *mut c_char;
+}
+
+#[inline]
+pub fn transmute_ptr<T>(value: Option<NonNull<T>>) -> *mut T {
+    unsafe { core::mem::transmute::<Option<NonNull<T>>, *mut T>(value) }
 }
 
 pub use compat_rs::imsg::imsg; // TODO move
@@ -122,9 +127,7 @@ opaque_types! {
 
 opaque_types! {
     tty_code,
-    tty_key,
-    tmuxpeer,
-    tmuxproc
+    tty_key
 }
 
 pub const _PATH_BSHELL: *const c_char = c"/bin/sh".as_ptr();
@@ -533,6 +536,7 @@ impl utf8_data {
 
 pub use utf8_state::*;
 #[repr(i32)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub enum utf8_state {
     UTF8_MORE,
     UTF8_DONE,
@@ -1299,8 +1303,8 @@ pub const ENVIRON_HIDDEN: i32 = 0x1;
 /// Environment variable.
 #[repr(C)]
 pub struct environ_entry {
-    pub name: *const c_char,
-    pub value: *const c_char,
+    pub name: Option<NonNull<c_char>>,
+    pub value: Option<NonNull<c_char>>,
 
     pub flags: i32,
     pub entry: rb_entry<environ_entry>,
@@ -2220,7 +2224,8 @@ pub use crate::tmux::{
 mod proc;
 pub use crate::proc::{
     proc_add_peer, proc_clear_signals, proc_exit, proc_flush_peer, proc_fork_and_daemon, proc_get_peer_uid,
-    proc_kill_peer, proc_loop, proc_remove_peer, proc_send, proc_set_signals, proc_start, proc_toggle_log,
+    proc_kill_peer, proc_loop, proc_remove_peer, proc_send, proc_set_signals, proc_start, proc_toggle_log, tmuxpeer,
+    tmuxproc,
 };
 
 mod cfg_;
@@ -2745,8 +2750,8 @@ pub use crate::hyperlinks_::{
 
 pub mod xmalloc;
 pub use crate::xmalloc::{
-    free_, memcpy_, memcpy__, xasprintf, xasprintf_, xcalloc, xcalloc_, xcalloc__, xmalloc, xmalloc_, xrealloc,
-    xrealloc_, xreallocarray_, xsnprintf, xstrdup, xstrdup_, xvasprintf,
+    free_, memcpy_, memcpy__, xasprintf, xasprintf_, xcalloc, xcalloc_, xcalloc__, xcalloc1, xmalloc, xmalloc_,
+    xrealloc, xrealloc_, xreallocarray_, xsnprintf, xstrdup, xstrdup_, xvasprintf,
 };
 /*
 unsafe extern "C" {

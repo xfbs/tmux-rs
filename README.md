@@ -123,6 +123,7 @@ more then just server exited unexpectedly.
   - derive macro for rbtree and tailq
     - tailq support new generic type discriminant
   - fully complete library / crate implementation with documentation
+- use bitflags instead of manually 
 
 # Thoughts
 - better rust-analyzer integration with C code
@@ -163,6 +164,7 @@ more then just server exited unexpectedly.
 - [X] xmalloc
 - [X]  859 file
 - [X] 1117 control
+- [X] 388 proc
 - [ ]  281 environ (environ_free is broken, everything else works)
 - [ ] 5294 format
   - [ ] 1243 format-draw
@@ -184,7 +186,6 @@ more then just server exited unexpectedly.
   - [ ] 1370 options-table
 - [ ] 342 paste
 - [ ] 818 popup
-- [ ] 388 proc
 - [ ] 467 resize
 - [ ] 740 screen
   - [ ]  868 screen-redraw

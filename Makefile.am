@@ -138,11 +138,13 @@ endif
 # file.c
 # window-clock.c
 # control.c
+# proc.c
+# utf8-combined.c
 dist_tmux_SOURCES = \
+	environ.c \
 	cmd-resize-pane.c \
 	cmd-queue.c \
 	cmd-new-session.c \
-	environ.c \
 	arguments.c \
 	cmd-find.c \
 	cmd-parse.y \
@@ -175,7 +177,6 @@ dist_tmux_SOURCES = \
 	options.c \
 	paste.c \
 	popup.c \
-	proc.c \
 	resize.c \
 	screen-redraw.c \
 	screen-write.c \
@@ -194,7 +195,6 @@ dist_tmux_SOURCES = \
 	tty-keys.c \
 	tty-term.c \
 	tty.c \
-	utf8-combined.c \
 	utf8.c \
 	window-buffer.c \
 	window-client.c \

@@ -19,7 +19,7 @@ bindgen      = { version = "0.71.0", default-features = false, features = ["runt
 compat_rs    = { path = "./compat_rs" }
 libc         = { version = "0.2.169" }
 # libevent-sys = { version = "=0.3.0", default-features = false, features = ["buildtime_bindgen", "pkgconfig", "threading"]}
-libevent-sys = { version = "=0.3.0", default-features = false, features = ["buildtime_bindgen", "pkgconfig"] }
+libevent-sys = { path = "./libevent-sys", default-features = false, features = ["buildtime_bindgen", "pkgconfig"] }
 paste        = { version = "1.0.15"  }
 quote        = { version = "1.0.38"  }
 syn          = { version = "2.0.96"  }

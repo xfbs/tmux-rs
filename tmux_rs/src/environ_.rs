@@ -1,8 +1,4 @@
-use std::mem::MaybeUninit;
-
-use crate::xmalloc::xcalloc_;
-
-use super::*;
+use crate::{xmalloc::xcalloc_, *};
 
 use compat_rs::{
     RB_GENERATE,
@@ -12,7 +8,7 @@ use libc::{fnmatch, getpid, setenv, strchr, strcmp, strcspn};
 
 unsafe extern "C" {
     // pub fn environ_create() -> *mut environ;
-    pub fn environ_free(_: *mut environ);
+    pub unsafe fn environ_free(_: *mut environ);
     // pub fn environ_first(_: *mut environ) -> *mut environ_entry;
     // pub fn environ_next(_: *mut environ_entry) -> *mut environ_entry;
     // pub fn environ_copy(_: *mut environ, _: *mut environ);
@@ -32,7 +28,7 @@ RB_GENERATE!(environ, environ_entry, entry, environ_cmp);
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_cmp(envent1: *const environ_entry, envent2: *const environ_entry) -> c_int {
-    unsafe { strcmp((*envent1).name, (*envent2).name) }
+    unsafe { strcmp(transmute_ptr((*envent1).name), transmute_ptr((*envent2).name)) }
 }
 
 #[unsafe(no_mangle)]
@@ -50,11 +46,9 @@ pub extern "C" fn environ_create() -> NonNull<environ> {
 pub unsafe extern "C" fn environ_free(env: *mut environ) {
     unsafe {
         rb_foreach_safe(env, |envent| {
-            // eprintln!("{:?} {:?}", envent, (*envent).entry);
-
             rb_remove(env, envent);
-            free((*envent).name as *mut c_void);
-            free((*envent).value as *mut c_void);
+            free_(transmute_ptr((*envent).name));
+            free_(transmute_ptr((*envent).value));
             free_(envent);
             ControlFlow::Continue::<(), ()>(())
         });
@@ -62,7 +56,6 @@ pub unsafe extern "C" fn environ_free(env: *mut environ) {
     }
 }
 */
-
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_first(env: *mut environ) -> *mut environ_entry {
     unsafe { rb_min(env) }
@@ -77,10 +70,16 @@ pub unsafe extern "C" fn environ_next(envent: *mut environ_entry) -> *mut enviro
 pub unsafe extern "C" fn environ_copy(srcenv: *mut environ, dstenv: *mut environ) {
     unsafe {
         rb_foreach(srcenv, |envent| {
-            if (*envent).value.is_null() {
-                environ_clear(dstenv, (*envent).name);
+            if let Some(value) = (*envent).value {
+                environ_set(
+                    dstenv,
+                    (*envent).name.unwrap().as_ptr(),
+                    (*envent).flags,
+                    c"%s".as_ptr(),
+                    value.as_ptr(),
+                );
             } else {
-                environ_set(dstenv, (*envent).name, (*envent).flags, c"%s".as_ptr(), (*envent).value);
+                environ_clear(dstenv, transmute_ptr((*envent).name));
             }
             ControlFlow::Continue::<(), ()>(())
         });
@@ -93,7 +92,8 @@ pub unsafe extern "C" fn environ_find(env: *mut environ, name: *const c_char) ->
     let envent = envent.as_mut_ptr();
 
     unsafe {
-        std::ptr::write(&raw mut (*envent).name, name);
+        (*envent).name = NonNull::new(name.cast_mut());
+        // std::ptr::write(&raw mut (*envent).name, name);
     }
 
     unsafe { rb_find(env, envent) }
@@ -111,12 +111,12 @@ pub unsafe extern "C" fn environ_set(
         let mut envent = environ_find(env, name);
         if !envent.is_null() {
             (*envent).flags = flags;
-            free((*envent).value as *mut c_void);
+            free_(transmute_ptr((*envent).value));
             let mut ap = args.clone();
             xvasprintf(&raw mut (*envent).value as _, fmt, ap.as_va_list());
         } else {
             envent = xmalloc_::<environ_entry>().as_ptr();
-            (*envent).name = xstrdup(name).cast().as_ptr();
+            (*envent).name = Some(xstrdup(name).cast());
             (*envent).flags = flags;
             let mut ap = args.clone();
             xvasprintf(&raw mut (*envent).value as _, fmt, ap.as_va_list());
@@ -130,13 +130,13 @@ pub unsafe extern "C" fn environ_clear(env: *mut environ, name: *const c_char) {
     unsafe {
         let mut envent = environ_find(env, name);
         if !envent.is_null() {
-            free((*envent).value as *mut c_void);
-            (*envent).value = null_mut();
+            free_(transmute_ptr((*envent).value));
+            (*envent).value = None;
         } else {
             envent = xmalloc_::<environ_entry>().as_ptr();
-            (*envent).name = xstrdup(name).cast().as_ptr();
+            (*envent).name = Some(xstrdup(name).cast());
             (*envent).flags = 0;
-            (*envent).value = null_mut();
+            (*envent).value = None;
             rb_insert(env, envent);
         }
     }
@@ -167,8 +167,8 @@ pub unsafe extern "C" fn environ_unset(env: *mut environ, name: *const c_char) {
             return;
         }
         rb_remove(env, envent);
-        free((*envent).name as *mut c_void);
-        free((*envent).value as *mut c_void);
+        free_(transmute_ptr((*envent).name));
+        free_(transmute_ptr((*envent).value));
         free_(envent);
     }
 }
@@ -187,8 +187,8 @@ pub unsafe extern "C" fn environ_update(oo: *mut options, src: *mut environ, dst
             let ov = options_array_item_value(a);
             found = 0;
             rb_foreach_safe(src, |envent| {
-                if fnmatch((*ov).string, (*envent).name, 0) == 0 {
-                    environ_set(dst, (*envent).name, 0, c"%s".as_ptr(), (*envent).value);
+                if fnmatch((*ov).string, transmute_ptr((*envent).name), 0) == 0 {
+                    environ_set(dst, transmute_ptr((*envent).name), 0, c"%s".as_ptr(), (*envent).value);
                     found = 1;
                 }
                 ControlFlow::<(), ()>::Continue(())
@@ -208,11 +208,11 @@ pub unsafe extern "C" fn environ_push(env: *mut environ) {
 
         environ = xcalloc_::<*mut c_char>(1).as_ptr();
         rb_foreach(env, |envent| {
-            if !(*envent).value.is_null()
-                && *(*envent).name != b'\0' as c_char
+            if !(*envent).value.is_none()
+                && *(*envent).name.unwrap().as_ptr() != b'\0' as c_char
                 && !(*envent).flags & ENVIRON_HIDDEN != 0
             {
-                setenv((*envent).name, (*envent).value, 1);
+                setenv(transmute_ptr((*envent).name), transmute_ptr((*envent).value), 1);
             }
             ControlFlow::<(), ()>::Continue(())
         });
@@ -227,7 +227,7 @@ pub unsafe extern "C" fn environ_log(env: *mut environ, fmt: *const c_char, mut 
         vasprintf(&raw mut prefix, fmt, args.as_va_list());
 
         rb_foreach(env, |envent| {
-            if (!(*envent).value.is_null() && *(*envent).name != b'\0' as c_char) {
+            if (!(*envent).value.is_none() && *(*envent).name.unwrap().as_ptr() != b'\0' as c_char) {
                 log_debug(c"%s%s=%s".as_ptr(), prefix, (*envent).name, (*envent).value);
             }
             ControlFlow::<(), ()>::Continue(())
