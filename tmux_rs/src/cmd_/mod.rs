@@ -318,9 +318,7 @@ pub type cmds = tailq_head<cmd>;
 
 pub struct qentry;
 impl Entry<cmd, qentry> for cmd {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<cmd> {
-        unsafe { &raw mut (*this).qentry }
-    }
+    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<cmd> { unsafe { &raw mut (*this).qentry } }
 }
 
 // Next group number for new command list.
@@ -497,19 +495,13 @@ pub unsafe extern "C" fn cmd_stringify_argv(argc: c_int, argv: *mut *mut c_char)
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_get_entry(cmd: *mut cmd) -> *mut cmd_entry {
-    unsafe { (*cmd).entry }
-}
+pub unsafe extern "C" fn cmd_get_entry(cmd: *mut cmd) -> *mut cmd_entry { unsafe { (*cmd).entry } }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_get_args(cmd: *mut cmd) -> *mut args {
-    unsafe { (*cmd).args }
-}
+pub unsafe extern "C" fn cmd_get_args(cmd: *mut cmd) -> *mut args { unsafe { (*cmd).args } }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_get_group(cmd: *mut cmd) -> c_uint {
-    unsafe { (*cmd).group }
-}
+pub unsafe extern "C" fn cmd_get_group(cmd: *mut cmd) -> c_uint { unsafe { (*cmd).group } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_get_source(cmd: *mut cmd, file: *mut *const c_char, line: *mut c_uint) {
@@ -835,14 +827,10 @@ pub unsafe extern "C" fn cmd_list_print(cmdlist: *mut cmd_list, escaped: c_int) 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_list_first(cmdlist: *mut cmd_list) -> *mut cmd {
-    unsafe { tailq_first((*cmdlist).list) }
-}
+pub unsafe extern "C" fn cmd_list_first(cmdlist: *mut cmd_list) -> *mut cmd { unsafe { tailq_first((*cmdlist).list) } }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_list_next(cmd: *mut cmd) -> *mut cmd {
-    unsafe { tailq_next::<_, _, qentry>(cmd) }
-}
+pub unsafe extern "C" fn cmd_list_next(cmd: *mut cmd) -> *mut cmd { unsafe { tailq_next::<_, _, qentry>(cmd) } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_list_all_have(cmdlist: *mut cmd_list, flag: c_int) -> c_int {

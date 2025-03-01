@@ -24,9 +24,7 @@ unsafe extern "C" {
 static mut log_file: *mut FILE = null_mut();
 static mut log_level: c_int = 0;
 
-unsafe extern "C" fn log_event_cb(_severity: c_int, msg: *const c_char) {
-    unsafe { log_debug(c"%s".as_ptr(), msg) }
-}
+unsafe extern "C" fn log_event_cb(_severity: c_int, msg: *const c_char) { unsafe { log_debug(c"%s".as_ptr(), msg) } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn log_add_level() {
@@ -36,9 +34,7 @@ pub unsafe extern "C" fn log_add_level() {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn log_get_level() -> c_int {
-    unsafe { log_level }
-}
+pub unsafe extern "C" fn log_get_level() -> c_int { unsafe { log_level } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn log_open(name: *const c_char) {

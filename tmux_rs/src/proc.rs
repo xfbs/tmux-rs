@@ -457,6 +457,4 @@ pub unsafe extern "C" fn proc_fork_and_daemon(fd: *mut i32) -> pid_t {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn proc_get_peer_uid(peer: *const tmuxpeer) -> uid_t {
-    unsafe { (*peer).uid }
-}
+pub unsafe extern "C" fn proc_get_peer_uid(peer: *const tmuxpeer) -> uid_t { unsafe { (*peer).uid } }

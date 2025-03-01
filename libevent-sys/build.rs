@@ -155,9 +155,7 @@ fn find_libevent() -> Option<Vec<String>> {
     Some(vec![format!("{}/include", build_libevent("libevent").display())])
 }
 #[cfg(not(feature = "bundled"))]
-fn find_libevent() -> Option<Vec<String>> {
-    run_pkg_config()
-}
+fn find_libevent() -> Option<Vec<String>> { run_pkg_config() }
 
 #[cfg(feature = "buildtime_bindgen")]
 fn generate_bindings(include_paths: Vec<String>, out_path: impl AsRef<Path>) {

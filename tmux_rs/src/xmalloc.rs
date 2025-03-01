@@ -33,9 +33,7 @@ pub fn xmalloc_<T>() -> NonNull<T> {
 }
 
 #[inline]
-pub fn calloc_(nmemb: usize, size: usize) -> *mut c_void {
-    unsafe { calloc(nmemb, size) }
-}
+pub fn calloc_(nmemb: usize, size: usize) -> *mut c_void { unsafe { calloc(nmemb, size) } }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn xcalloc(nmemb: usize, size: usize) -> NonNull<c_void> {
@@ -44,9 +42,7 @@ pub extern "C" fn xcalloc(nmemb: usize, size: usize) -> NonNull<c_void> {
     NonNull::new(calloc_(nmemb, size)).unwrap_or_else(|| panic!("xcalloc: allocating {nmemb} * {size}"))
 }
 
-pub fn xcalloc_<T>(nmemb: usize) -> NonNull<T> {
-    xcalloc(nmemb, size_of::<T>()).cast()
-}
+pub fn xcalloc_<T>(nmemb: usize) -> NonNull<T> { xcalloc(nmemb, size_of::<T>()).cast() }
 
 // a new signature could look like:
 //  https://doc.rust-lang.org/nightly/core/ptr/index.html#pointer-to-reference-conversion
@@ -69,13 +65,9 @@ pub fn xcalloc1<'a, T: Zeroable>() -> &'a mut T {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn xrealloc(ptr: *mut c_void, size: usize) -> NonNull<c_void> {
-    unsafe { xrealloc_(ptr, size) }
-}
+pub unsafe extern "C" fn xrealloc(ptr: *mut c_void, size: usize) -> NonNull<c_void> { unsafe { xrealloc_(ptr, size) } }
 
-pub unsafe fn xrealloc_<T>(ptr: *mut T, size: usize) -> NonNull<T> {
-    unsafe { xreallocarray_old(ptr, 1, size) }
-}
+pub unsafe fn xrealloc_<T>(ptr: *mut T, size: usize) -> NonNull<T> { unsafe { xreallocarray_old(ptr, 1, size) } }
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn xreallocarray(ptr: *mut c_void, nmemb: usize, size: usize) -> NonNull<c_void> {
@@ -135,13 +127,9 @@ pub unsafe extern "C" fn xstrdup(str: *const c_char) -> NonNull<c_char> {
     NonNull::new(unsafe { strdup(str) }).unwrap()
 }
 
-pub fn xstrdup_(str: &CStr) -> NonNull<c_char> {
-    unsafe { xstrdup(str.as_ptr()) }
-}
+pub fn xstrdup_(str: &CStr) -> NonNull<c_char> { unsafe { xstrdup(str.as_ptr()) } }
 
-pub fn xstrdup__<'a>(str: &CStr) -> &'a CStr {
-    unsafe { CStr::from_ptr(xstrdup(str.as_ptr()).as_ptr()) }
-}
+pub fn xstrdup__<'a>(str: &CStr) -> &'a CStr { unsafe { CStr::from_ptr(xstrdup(str.as_ptr()).as_ptr()) } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn xstrndup(str: *const c_char, maxlen: usize) -> NonNull<c_char> {
@@ -193,9 +181,7 @@ pub unsafe extern "C" fn xvsnprintf(str: *mut c_char, len: usize, fmt: *const c_
     }
 }
 
-pub unsafe fn free_<T>(p: *mut T) {
-    unsafe { libc::free(p as *mut c_void) }
-}
+pub unsafe fn free_<T>(p: *mut T) { unsafe { libc::free(p as *mut c_void) } }
 
 pub unsafe fn memcpy_<T>(dest: *mut T, src: *const T, n: usize) -> *mut T {
     unsafe { libc::memcpy(dest as *mut c_void, src as *const c_void, n).cast() }
@@ -210,9 +196,7 @@ pub unsafe fn memcpy__<T>(dest: *mut T, src: *const T) -> *mut T {
 #[repr(transparent)]
 struct PercentS(*const u8);
 impl PercentS {
-    unsafe fn from_raw(s: *const c_char) -> Self {
-        PercentS(s as _)
-    }
+    unsafe fn from_raw(s: *const c_char) -> Self { PercentS(s as _) }
 }
 impl std::fmt::Display for PercentS {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

@@ -179,14 +179,10 @@ pub unsafe extern "C" fn cmdq_free(queue: *mut cmdq_list) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe fn cmdq_get_name(item: *mut cmdq_item) -> *mut c_char {
-    unsafe { (*item).name }
-}
+pub unsafe fn cmdq_get_name(item: *mut cmdq_item) -> *mut c_char { unsafe { (*item).name } }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmdq_get_client(item: *mut cmdq_item) -> *mut client {
-    unsafe { (*item).client }
-}
+pub unsafe extern "C" fn cmdq_get_client(item: *mut cmdq_item) -> *mut client { unsafe { (*item).client } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmdq_get_target_client(item: *mut cmdq_item) -> *mut client {
@@ -194,9 +190,7 @@ pub unsafe extern "C" fn cmdq_get_target_client(item: *mut cmdq_item) -> *mut cl
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmdq_get_state(item: *mut cmdq_item) -> *mut cmdq_state {
-    unsafe { (*item).state }
-}
+pub unsafe extern "C" fn cmdq_get_state(item: *mut cmdq_item) -> *mut cmdq_state { unsafe { (*item).state } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmdq_get_target(item: *mut cmdq_item) -> *mut cmd_find_state {
@@ -219,9 +213,7 @@ pub unsafe extern "C" fn cmdq_get_current(item: *mut cmdq_item) -> *mut cmd_find
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmdq_get_flags(item: *mut cmdq_item) -> i32 {
-    unsafe { (*(*item).state).flags }
-}
+pub unsafe extern "C" fn cmdq_get_flags(item: *mut cmdq_item) -> i32 { unsafe { (*(*item).state).flags } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmdq_new_state(

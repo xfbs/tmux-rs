@@ -27,14 +27,10 @@ pub unsafe extern "C" fn evtimer_add(ev: *mut event, tv: *const libc::timeval) -
     }
 }
 
-pub unsafe extern "C" fn evtimer_initialized(ev: *mut event) -> c_int {
-    unsafe { libevent_sys::event_initialized(ev) }
-}
+pub unsafe extern "C" fn evtimer_initialized(ev: *mut event) -> c_int { unsafe { libevent_sys::event_initialized(ev) } }
 
 // #define evtimer_del(ev)			event_del(ev)
-pub unsafe extern "C" fn evtimer_del(ev: *mut event) -> c_int {
-    unsafe { libevent_sys::event_del(ev) }
-}
+pub unsafe extern "C" fn evtimer_del(ev: *mut event) -> c_int { unsafe { libevent_sys::event_del(ev) } }
 
 // #define evtimer_pending(ev, tv)		event_pending((ev), EV_TIMEOUT, (tv))
 pub unsafe extern "C" fn evtimer_pending(ev: *const event, tv: *mut libc::timeval) -> c_int {
@@ -69,14 +65,8 @@ pub unsafe extern "C" fn signal_set(
 // #define signal_initialized(ev)		event_initialized(ev)
 
 #[inline]
-pub unsafe fn EVBUFFER_LENGTH(x: *mut evbuffer) -> usize {
-    unsafe { evbuffer_get_length(x) }
-}
+pub unsafe fn EVBUFFER_LENGTH(x: *mut evbuffer) -> usize { unsafe { evbuffer_get_length(x) } }
 #[inline]
-pub unsafe fn EVBUFFER_DATA(x: *mut evbuffer) -> *mut c_uchar {
-    unsafe { evbuffer_pullup(x, -1) }
-}
+pub unsafe fn EVBUFFER_DATA(x: *mut evbuffer) -> *mut c_uchar { unsafe { evbuffer_pullup(x, -1) } }
 #[inline]
-pub unsafe fn EVBUFFER_OUTPUT(x: *mut bufferevent) -> *mut evbuffer {
-    unsafe { bufferevent_get_output(x) }
-}
+pub unsafe fn EVBUFFER_OUTPUT(x: *mut bufferevent) -> *mut evbuffer { unsafe { bufferevent_get_output(x) } }

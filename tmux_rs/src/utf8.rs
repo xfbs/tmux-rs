@@ -94,16 +94,8 @@ static mut utf8_index_tree: utf8_index_tree = rb_initializer();
 
 static mut utf8_next_index: u32 = 0;
 
-fn UTF8_GET_SIZE(uc: utf8_char) -> utf8_char {
-    (((uc) >> 24) & 0x1f)
-}
-fn UTF8_GET_WIDTH(uc: utf8_char) -> utf8_char {
-    (((uc) >> 29) - 1)
-}
+fn UTF8_GET_SIZE(uc: utf8_char) -> utf8_char { (((uc) >> 24) & 0x1f) }
+fn UTF8_GET_WIDTH(uc: utf8_char) -> utf8_char { (((uc) >> 29) - 1) }
 
-fn UTF8_SET_SIZE(size: utf8_char) -> utf8_char {
-    size << 24
-}
-fn UTF8_SET_WIDTH(width: utf8_char) -> utf8_char {
-    (width + 1) << 29
-}
+fn UTF8_SET_SIZE(size: utf8_char) -> utf8_char { size << 24 }
+fn UTF8_SET_WIDTH(width: utf8_char) -> utf8_char { (width + 1) << 29 }

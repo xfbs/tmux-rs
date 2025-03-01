@@ -65,9 +65,7 @@ pub struct job {
     pub entry: list_entry<job>,
 }
 impl ListEntry<job, ()> for job {
-    unsafe fn field(this: *mut Self) -> *mut list_entry<job> {
-        unsafe { &raw mut (*this).entry }
-    }
+    unsafe fn field(this: *mut Self) -> *mut list_entry<job> { unsafe { &raw mut (*this).entry } }
 }
 
 type joblist = list_head<job>;
@@ -473,17 +471,11 @@ pub unsafe extern "C" fn job_check_died(mut pid: pid_t, mut status: i32) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn job_get_status(job: *mut job) -> i32 {
-    unsafe { (*job).status }
-}
+pub unsafe extern "C" fn job_get_status(job: *mut job) -> i32 { unsafe { (*job).status } }
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn job_get_data(job: *mut job) -> *mut c_void {
-    unsafe { (*job).data }
-}
+pub unsafe extern "C" fn job_get_data(job: *mut job) -> *mut c_void { unsafe { (*job).data } }
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn job_get_event(job: *mut job) -> *mut bufferevent {
-    unsafe { (*job).event }
-}
+pub unsafe extern "C" fn job_get_event(job: *mut job) -> *mut bufferevent { unsafe { (*job).event } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn job_kill_all() {

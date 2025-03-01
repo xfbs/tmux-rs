@@ -50,9 +50,7 @@ pub use compat_rs::imsg::imsg; // TODO move
 // #define S_ISDIR(mode)  (((mode) & S_IFMT) == S_IFDIR)
 // TODO move this to a better spot
 #[inline]
-pub fn S_ISDIR(mode: u32) -> bool {
-    mode & libc::S_IFMT == libc::S_IFDIR
-}
+pub fn S_ISDIR(mode: u32) -> bool { mode & libc::S_IFMT == libc::S_IFDIR }
 
 pub type wchar_t = core::ffi::c_int;
 unsafe extern "C" {
@@ -62,9 +60,7 @@ unsafe extern "C" {
 }
 
 // TODO move to compat
-pub unsafe fn strchr_(cs: *const c_char, c: char) -> *mut c_char {
-    unsafe { libc::strchr(cs, c as i32) }
-}
+pub unsafe fn strchr_(cs: *const c_char, c: char) -> *mut c_char { unsafe { libc::strchr(cs, c as i32) } }
 
 // use crate::tmux_protocol_h::*;
 
@@ -549,9 +545,7 @@ pub const COLOUR_FLAG_RGB: i32 = 0x02000000;
 
 /// Special colours.
 #[inline]
-pub fn COLOR_DEFAULT(c: i32) -> bool {
-    c == 8 || c == 9
-}
+pub fn COLOR_DEFAULT(c: i32) -> bool { c == 8 || c == 9 }
 
 // Replacement palette.
 #[repr(C)]
@@ -945,18 +939,10 @@ pub struct screen_redraw_ctx {
     pub oy: u32,
 }
 
-pub unsafe fn screen_size_x(s: *const screen) -> u32 {
-    unsafe { (*(*s).grid).sx }
-}
-pub unsafe fn screen_size_y(s: *const screen) -> u32 {
-    unsafe { (*(*s).grid).sx }
-}
-pub unsafe fn screen_hsize(s: *const screen) -> u32 {
-    unsafe { (*(*s).grid).hsize }
-}
-pub unsafe fn screen_hlimit(s: *const screen) -> u32 {
-    unsafe { (*(*s).grid).hlimit }
-}
+pub unsafe fn screen_size_x(s: *const screen) -> u32 { unsafe { (*(*s).grid).sx } }
+pub unsafe fn screen_size_y(s: *const screen) -> u32 { unsafe { (*(*s).grid).sx } }
+pub unsafe fn screen_hsize(s: *const screen) -> u32 { unsafe { (*(*s).grid).hsize } }
+pub unsafe fn screen_hlimit(s: *const screen) -> u32 { unsafe { (*(*s).grid).hlimit } }
 
 // Menu.
 #[repr(C)]
@@ -1139,14 +1125,10 @@ pub struct window_pane {
 }
 
 impl Entry<window_pane, discr_entry> for window_pane {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<window_pane> {
-        unsafe { &raw mut (*this).entry }
-    }
+    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<window_pane> { unsafe { &raw mut (*this).entry } }
 }
 impl Entry<window_pane, discr_sentry> for window_pane {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<window_pane> {
-        unsafe { &raw mut (*this).sentry }
-    }
+    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<window_pane> { unsafe { &raw mut (*this).sentry } }
 }
 
 pub type window_panes = tailq_head<window_pane>;
@@ -1213,9 +1195,7 @@ pub type windows = rb_head<window>;
 // compat_rs::impl_rb_tree_protos!(windows, window);
 
 impl compat_rs::queue::Entry<window, discr_alerts_entry> for window {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<window> {
-        unsafe { &raw mut (*this).alerts_entry }
-    }
+    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<window> { unsafe { &raw mut (*this).alerts_entry } }
 }
 
 pub const WINLINK_BELL: i32 = 0x1;
@@ -1240,15 +1220,11 @@ pub struct winlink {
 }
 
 impl compat_rs::queue::Entry<winlink, discr_wentry> for winlink {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<winlink> {
-        unsafe { &raw mut (*this).wentry }
-    }
+    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<winlink> { unsafe { &raw mut (*this).wentry } }
 }
 
 impl compat_rs::queue::Entry<winlink, discr_sentry> for winlink {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<winlink> {
-        unsafe { &raw mut (*this).sentry }
-    }
+    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<winlink> { unsafe { &raw mut (*this).sentry } }
 }
 
 pub type winlinks = rb_head<winlink>;
@@ -1384,21 +1360,15 @@ pub const MOUSE_BUTTON_11: i32 = 131;
 
 // Mouse helpers.
 #[inline]
-pub fn MOUSE_BUTTONS(b: i32) -> bool {
-    b & MOUSE_MASK_BUTTONS != 0
-}
+pub fn MOUSE_BUTTONS(b: i32) -> bool { b & MOUSE_MASK_BUTTONS != 0 }
 #[inline]
 pub fn MOUSE_WHEEL(b: i32) -> bool {
     ((b) & MOUSE_MASK_BUTTONS) == MOUSE_WHEEL_UP || ((b) & MOUSE_MASK_BUTTONS) == MOUSE_WHEEL_DOWN
 }
 #[inline]
-pub fn MOUSE_DRAG(b: i32) -> bool {
-    b & MOUSE_MASK_DRAG != 0
-}
+pub fn MOUSE_DRAG(b: i32) -> bool { b & MOUSE_MASK_DRAG != 0 }
 #[inline]
-pub fn MOUSE_RELEASE(b: i32) -> bool {
-    b & MOUSE_MASK_BUTTONS == 3
-}
+pub fn MOUSE_RELEASE(b: i32) -> bool { b & MOUSE_MASK_BUTTONS == 3 }
 
 // Mouse input.
 #[repr(C)]
@@ -1463,9 +1433,7 @@ pub struct tty_term {
 }
 pub type tty_terms = list_head<tty_term>;
 impl ListEntry<tty_term, discr_entry> for tty_term {
-    unsafe fn field(this: *mut Self) -> *mut list_entry<tty_term> {
-        unsafe { &raw mut (*this).entry }
-    }
+    unsafe fn field(this: *mut Self) -> *mut list_entry<tty_term> { unsafe { &raw mut (*this).entry } }
 }
 
 pub const TTY_NOCURSOR: i32 = 0x1;

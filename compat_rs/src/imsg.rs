@@ -26,9 +26,7 @@ pub struct ibuf {
 }
 
 impl Entry<ibuf> for ibuf {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<ibuf> {
-        unsafe { &raw mut (*this).entry }
-    }
+    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<ibuf> { unsafe { &raw mut (*this).entry } }
 }
 
 #[repr(C)]
@@ -83,9 +81,7 @@ pub struct imsg_fd {
 }
 
 impl crate::queue::Entry<imsg_fd> for imsg_fd {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<imsg_fd> {
-        unsafe { &raw mut (*this).entry }
-    }
+    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<imsg_fd> { unsafe { &raw mut (*this).entry } }
 }
 
 static imsg_fd_overhead: i32 = 0;
@@ -268,9 +264,7 @@ pub unsafe extern "C" fn imsg_get_fd(imsg: *mut imsg) -> c_int {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn imsg_get_id(imsg: *mut imsg) -> u32 {
-    (*imsg).hdr.peerid
-}
+pub unsafe extern "C" fn imsg_get_id(imsg: *mut imsg) -> u32 { (*imsg).hdr.peerid }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_get_len(imsg: *mut imsg) -> usize {
@@ -281,14 +275,10 @@ pub unsafe extern "C" fn imsg_get_len(imsg: *mut imsg) -> usize {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn imsg_get_pid(imsg: *mut imsg) -> pid_t {
-    (*imsg).hdr.pid as pid_t
-}
+pub unsafe extern "C" fn imsg_get_pid(imsg: *mut imsg) -> pid_t { (*imsg).hdr.pid as pid_t }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn imsg_get_type(imsg: *mut imsg) -> u32 {
-    (*imsg).hdr.type_
-}
+pub unsafe extern "C" fn imsg_get_type(imsg: *mut imsg) -> u32 { (*imsg).hdr.type_ }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_compose(
@@ -487,9 +477,7 @@ pub unsafe extern "C" fn imsg_close(imsgbuf: *mut imsgbuf, msg: *mut ibuf) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn imsg_free(imsg: *mut imsg) {
-    ibuf_free((*imsg).buf)
-}
+pub unsafe extern "C" fn imsg_free(imsg: *mut imsg) { ibuf_free((*imsg).buf) }
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn imsg_dequeue_fd(imsgbuf: *mut imsgbuf) -> i32 {

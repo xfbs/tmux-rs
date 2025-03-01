@@ -6,9 +6,7 @@ unsafe extern "C" {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn getptmfd() -> c_int {
-    c_int::MAX
-}
+pub extern "C" fn getptmfd() -> c_int { c_int::MAX }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn fdforkpty(

@@ -42,15 +42,11 @@ pub struct control_block {
 }
 
 impl compat_rs::queue::Entry<control_block, discr_entry> for control_block {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<control_block> {
-        unsafe { &raw mut (*this).entry }
-    }
+    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<control_block> { unsafe { &raw mut (*this).entry } }
 }
 
 impl compat_rs::queue::Entry<control_block, discr_all_entry> for control_block {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<control_block> {
-        unsafe { &raw mut (*this).all_entry }
-    }
+    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<control_block> { unsafe { &raw mut (*this).all_entry } }
 }
 
 pub const CONTROL_PANE_OFF: i32 = 1;
@@ -75,9 +71,7 @@ pub struct control_pane {
 pub type control_panes = rb_head<control_pane>;
 
 impl Entry<control_pane, discr_pending_entry> for control_pane {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<control_pane> {
-        unsafe { &raw mut (*this).pending_entry }
-    }
+    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<control_pane> { unsafe { &raw mut (*this).pending_entry } }
 }
 
 #[repr(C)]

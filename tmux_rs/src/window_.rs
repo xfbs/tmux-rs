@@ -185,14 +185,10 @@ pub unsafe extern "C" fn winlink_remove(wwl: *mut winlinks, wl: *mut winlink) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn winlink_next(wl: *mut winlink) -> *mut winlink {
-    unsafe { rb_next(wl) }
-}
+pub unsafe extern "C" fn winlink_next(wl: *mut winlink) -> *mut winlink { unsafe { rb_next(wl) } }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn winlink_previous(wl: *mut winlink) -> *mut winlink {
-    unsafe { rb_prev(wl) }
-}
+pub unsafe extern "C" fn winlink_previous(wl: *mut winlink) -> *mut winlink { unsafe { rb_prev(wl) } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn winlink_next_by_number(mut wl: *mut winlink, s: *mut session, n: i32) -> *mut winlink {

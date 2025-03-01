@@ -10,9 +10,7 @@ pub struct rb_head<T> {
 }
 
 impl<T> Default for rb_head<T> {
-    fn default() -> Self {
-        Self { rbh_root: null_mut() }
-    }
+    fn default() -> Self { Self { rbh_root: null_mut() } }
 }
 
 #[repr(i32)]
@@ -55,9 +53,7 @@ impl<T> Default for rb_entry<T> {
 
 impl<T> Copy for rb_entry<T> {}
 impl<T> Clone for rb_entry<T> {
-    fn clone(&self) -> Self {
-        *self
-    }
+    fn clone(&self) -> Self { *self }
 }
 
 pub trait GetEntry<T> {
@@ -71,9 +67,7 @@ pub const unsafe fn rb_init<T>(head: *mut rb_head<T>) {
     }
 }
 
-pub const fn rb_initializer<T>() -> rb_head<T> {
-    rb_head { rbh_root: null_mut() }
-}
+pub const fn rb_initializer<T>() -> rb_head<T> { rb_head { rbh_root: null_mut() } }
 
 macro_rules! rb_left {
     ($elm:expr) => {
@@ -144,13 +138,9 @@ macro_rules! rb_root {
         (*$head).rbh_root
     };
 }
-pub unsafe fn rb_root<T>(head: *mut rb_head<T>) -> *mut T {
-    unsafe { (*head).rbh_root }
-}
+pub unsafe fn rb_root<T>(head: *mut rb_head<T>) -> *mut T { unsafe { (*head).rbh_root } }
 
-pub unsafe fn rb_empty<T>(head: *mut rb_head<T>) -> bool {
-    unsafe { (*head).rbh_root.is_null() }
-}
+pub unsafe fn rb_empty<T>(head: *mut rb_head<T>) -> bool { unsafe { (*head).rbh_root.is_null() } }
 
 pub unsafe fn rb_set<T>(elm: *mut T, parent: *mut T)
 where
@@ -230,12 +220,8 @@ where
 macro_rules! RB_GENERATE {
     ($head_ty:ty, $ty:ty, $entry_field:ident, $cmp_fn:ident) => {
         impl ::compat_rs::tree::GetEntry<$ty> for $ty {
-            unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<$ty> {
-                unsafe { &raw mut (*this).$entry_field }
-            }
-            unsafe fn cmp(this: *const Self, other: *const Self) -> i32 {
-                unsafe { $cmp_fn(this, other) }
-            }
+            unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<$ty> { unsafe { &raw mut (*this).$entry_field } }
+            unsafe fn cmp(this: *const Self, other: *const Self) -> i32 { unsafe { $cmp_fn(this, other) } }
         }
 
         ::paste::paste! {

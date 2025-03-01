@@ -113,9 +113,7 @@ pub unsafe extern "C" fn ibuf_add_ibuf(buf: *mut ibuf, from: *const ibuf) -> c_i
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ibuf_add_buf(buf: *mut ibuf, from: *const ibuf) -> c_int {
-    ibuf_add_ibuf(buf, from)
-}
+pub unsafe extern "C" fn ibuf_add_buf(buf: *mut ibuf, from: *const ibuf) -> c_int { ibuf_add_ibuf(buf, from) }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ibuf_add_n8(buf: *mut ibuf, value: u64) -> c_int {
@@ -257,13 +255,9 @@ pub unsafe extern "C" fn ibuf_set_h64(buf: *mut ibuf, pos: usize, value: u64) ->
     ibuf_set(buf, pos, &raw const value as *const c_void, size_of::<u64>())
 }
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ibuf_data(buf: *const ibuf) -> *mut c_void {
-    (*buf).buf.add((*buf).rpos) as *mut c_void
-}
+pub unsafe extern "C" fn ibuf_data(buf: *const ibuf) -> *mut c_void { (*buf).buf.add((*buf).rpos) as *mut c_void }
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ibuf_size(buf: *const ibuf) -> usize {
-    (*buf).wpos - (*buf).rpos
-}
+pub unsafe extern "C" fn ibuf_size(buf: *const ibuf) -> usize { (*buf).wpos - (*buf).rpos }
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ibuf_left(buf: *const ibuf) -> usize {
     if (*buf).max == 0 {
@@ -285,13 +279,9 @@ pub unsafe extern "C" fn ibuf_truncate(buf: *mut ibuf, len: usize) -> c_int {
     return ibuf_add_zero(buf, len - ibuf_size(buf));
 }
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ibuf_rewind(buf: *mut ibuf) {
-    (*buf).rpos = 0;
-}
+pub unsafe extern "C" fn ibuf_rewind(buf: *mut ibuf) { (*buf).rpos = 0; }
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ibuf_close(msgbuf: *mut msgbuf, buf: *mut ibuf) {
-    ibuf_enqueue(msgbuf, buf);
-}
+pub unsafe extern "C" fn ibuf_close(msgbuf: *mut msgbuf, buf: *mut ibuf) { ibuf_enqueue(msgbuf, buf); }
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ibuf_from_buffer(buf: *mut ibuf, data: *mut c_void, len: usize) {
     libc::memset(buf as _, 0, size_of::<ibuf>());
@@ -386,9 +376,7 @@ pub unsafe extern "C" fn ibuf_free(buf: *mut ibuf) {
     libc::free(buf as *mut libc::c_void);
 }
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ibuf_fd_avail(buf: *mut ibuf) -> c_int {
-    ((*buf).fd != -1) as c_int
-}
+pub unsafe extern "C" fn ibuf_fd_avail(buf: *mut ibuf) -> c_int { ((*buf).fd != -1) as c_int }
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ibuf_fd_get(buf: *mut ibuf) -> c_int {
     let fd = (*buf).fd;
@@ -551,9 +539,7 @@ pub unsafe extern "C" fn msgbuf_write(msgbuf: *mut msgbuf) -> c_int {
     1
 }
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn msgbuf_queuelen(msgbuf: *mut msgbuf) -> u32 {
-    (*msgbuf).queued
-}
+pub unsafe extern "C" fn msgbuf_queuelen(msgbuf: *mut msgbuf) -> u32 { (*msgbuf).queued }
 
 unsafe fn ibuf_enqueue(msgbuf: *mut msgbuf, buf: *mut ibuf) {
     if (*buf).max == 0 {

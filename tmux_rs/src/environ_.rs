@@ -57,14 +57,10 @@ pub unsafe extern "C" fn environ_free(env: *mut environ) {
 }
 */
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn environ_first(env: *mut environ) -> *mut environ_entry {
-    unsafe { rb_min(env) }
-}
+pub unsafe extern "C" fn environ_first(env: *mut environ) -> *mut environ_entry { unsafe { rb_min(env) } }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn environ_next(envent: *mut environ_entry) -> *mut environ_entry {
-    unsafe { rb_next(envent) }
-}
+pub unsafe extern "C" fn environ_next(envent: *mut environ_entry) -> *mut environ_entry { unsafe { rb_next(envent) } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_copy(srcenv: *mut environ, dstenv: *mut environ) {

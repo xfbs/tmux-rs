@@ -10,9 +10,7 @@ pub trait ListEntry<T, Discriminant = ()> {
 pub struct list_head<T> {
     pub lh_first: *mut T,
 }
-pub const fn list_head_initializer<T>() -> list_head<T> {
-    list_head { lh_first: null_mut() }
-}
+pub const fn list_head_initializer<T>() -> list_head<T> { list_head { lh_first: null_mut() } }
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -21,17 +19,11 @@ pub struct list_entry<T> {
     pub le_prev: *mut *mut T,
 }
 
-pub unsafe fn list_first<T>(head: *mut list_head<T>) -> *mut T {
-    unsafe { (*head).lh_first }
-}
+pub unsafe fn list_first<T>(head: *mut list_head<T>) -> *mut T { unsafe { (*head).lh_first } }
 
-pub fn list_end<T>() -> *mut T {
-    null_mut()
-}
+pub fn list_end<T>() -> *mut T { null_mut() }
 
-pub unsafe fn list_empty<T>(head: *mut list_head<T>) -> bool {
-    unsafe { list_first(head).is_null() }
-}
+pub unsafe fn list_empty<T>(head: *mut list_head<T>) -> bool { unsafe { list_first(head).is_null() } }
 
 pub unsafe fn list_next<T, Discriminant>(elm: *mut T) -> *mut T
 where
@@ -191,12 +183,8 @@ pub unsafe fn tailq_init<T>(head: *mut tailq_head<T>) {
     }
 }
 
-pub unsafe fn tailq_first<T>(head: *mut tailq_head<T>) -> *mut T {
-    unsafe { (*head).tqh_first }
-}
-pub fn tailq_end<T>(_head: *mut tailq_head<T>) -> *mut T {
-    core::ptr::null_mut()
-}
+pub unsafe fn tailq_first<T>(head: *mut tailq_head<T>) -> *mut T { unsafe { (*head).tqh_first } }
+pub fn tailq_end<T>(_head: *mut tailq_head<T>) -> *mut T { core::ptr::null_mut() }
 
 pub unsafe fn tailq_next<T, Q, D>(elm: *mut T) -> *mut Q
 where
@@ -244,9 +232,7 @@ where
     }
 }
 
-pub unsafe fn tailq_empty<T>(head: *mut tailq_head<T>) -> bool {
-    unsafe { tailq_first(head) == tailq_end(head) }
-}
+pub unsafe fn tailq_empty<T>(head: *mut tailq_head<T>) -> bool { unsafe { tailq_first(head) == tailq_end(head) } }
 
 #[macro_export]
 macro_rules! tailq_insert_head {
