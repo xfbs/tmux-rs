@@ -167,28 +167,30 @@ more then just server exited unexpectedly.
 - [X] 388 proc
 - [X] 100 utf8-combined
 - [X] 822 utf8
+- [X] 342 paste
+- [X]  239 hyperlinks
 - [ ]  281 environ (environ_free is broken, everything else works)
+- [ ]  323 notify
+- [ ]  467 resize
+- [ ]  497 spawn
+- [ ]  556 menu
+- [ ]  759 session
+- [ ]  794 input-keys
+- [ ]  818 popup
 - [ ] 5294 format
   - [ ] 1243 format-draw
 - [ ] 1535 grid
   - [ ] 429 grid-reader
   - [ ] 235 grid-view
-- [ ]  239 hyperlinks
-- [ ]  794 input-keys
 - [ ] 3025 input
 - [ ]  692 key-bindings
 - [ ]  477 key-string
 - [ ] 1120 layout
   - [ ] 370 layout-custom
   - [ ] 691 layout-set
-- [ ]  556 menu
 - [ ] 1266 mode-tree
-- [ ]  323 notify
 - [ ] 1204 options
   - [ ] 1370 options-table
-- [ ] 342 paste
-- [ ] 818 popup
-- [ ] 467 resize
 - [ ] 740 screen
   - [ ]  868 screen-redraw
   - [ ] 2347 screen-write
@@ -197,8 +199,6 @@ more then just server exited unexpectedly.
   - [ ]  186 server-acl
   - [ ]  493 server-fn
   - [ ] 3392 server-client
-- [ ]  497 spawn
-- [ ]  759 session
 - [ ] 2035 status
 - [ ] 3186 tty
   - [ ]  269 tty-acs

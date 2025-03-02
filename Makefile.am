@@ -142,6 +142,7 @@ endif
 # utf8-combined.c
 # utf8.c
 # paste.c
+# hyperlinks.c
 dist_tmux_SOURCES = \
 	cmd-new-session.c \
 	environ.c \
@@ -164,7 +165,6 @@ dist_tmux_SOURCES = \
 	grid-reader.c \
 	grid-view.c \
 	grid.c \
-	hyperlinks.c \
 	input-keys.c \
 	input.c \
 	key-bindings.c \

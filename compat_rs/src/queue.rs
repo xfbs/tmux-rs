@@ -54,7 +54,7 @@ where
 {
     let mut var = unsafe { list_first(head) };
     while !var.is_null() {
-        let tmp = list_next::<T, D>(var);
+        let tmp = unsafe { list_next::<T, D>(var) };
         if let ControlFlow::Break(break_value) = f(var) {
             return ControlFlow::Break(break_value);
         }
@@ -151,6 +151,17 @@ pub const unsafe fn tailq_head_initializer<T>(head: *mut tailq_head<T>) {
         (*head).tqh_last = &raw mut (*head).tqh_first;
     }
 }
+
+#[macro_export]
+macro_rules! TAILQ_HEAD_INITIALIZER {
+    ($ident:ident) => {
+        compat_rs::queue::tailq_head {
+            tqh_first: null_mut(),
+            tqh_last: unsafe { &raw mut $ident.tqh_first },
+        }
+    };
+}
+pub use TAILQ_HEAD_INITIALIZER;
 
 #[repr(C)]
 #[derive(Copy, Clone)]

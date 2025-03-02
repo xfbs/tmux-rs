@@ -76,6 +76,8 @@ const TTY_NAME_MAX: usize = 32;
 // discriminant structs
 pub struct discr_alerts_entry;
 pub struct discr_all_entry;
+pub struct discr_by_uri_entry;
+pub struct discr_by_inner_entry;
 pub struct discr_data_entry;
 pub struct discr_entry;
 pub struct discr_index_entry;
