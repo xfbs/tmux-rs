@@ -140,11 +140,13 @@ endif
 # control.c
 # proc.c
 # utf8-combined.c
+# utf8.c
+# paste.c
 dist_tmux_SOURCES = \
+	cmd-new-session.c \
 	environ.c \
 	cmd-resize-pane.c \
 	cmd-queue.c \
-	cmd-new-session.c \
 	arguments.c \
 	cmd-find.c \
 	cmd-parse.y \
@@ -175,7 +177,6 @@ dist_tmux_SOURCES = \
 	notify.c \
 	options-table.c \
 	options.c \
-	paste.c \
 	popup.c \
 	resize.c \
 	screen-redraw.c \
@@ -188,19 +189,18 @@ dist_tmux_SOURCES = \
 	session.c \
 	spawn.c \
 	status.c \
-	tmux.h \
-	tmux-protocol.h \
 	tty-acs.c \
 	tty-features.c \
 	tty-keys.c \
 	tty-term.c \
 	tty.c \
-	utf8.c \
 	window-buffer.c \
 	window-client.c \
 	window-copy.c \
 	window-customize.c \
 	window-tree.c \
+	tmux.h \
+	tmux-protocol.h \
 	xmalloc.h
 nodist_tmux_SOURCES = osdep-@PLATFORM@.c
 

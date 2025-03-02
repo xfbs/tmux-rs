@@ -10,16 +10,12 @@ use ::libc::{
     __errno_location, FILE, fclose, fflush, fopen, fprintf, free, getpid, gettimeofday, setvbuf, snprintf, strerror,
     timeval,
 };
-use compat_rs::vis::{VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB};
+use compat_rs::{VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB, stravis};
 
 use libevent_sys::event_set_log_callback;
 
 use crate::xmalloc::xasprintf;
 use crate::*;
-
-unsafe extern "C" {
-    unsafe fn stravis(_: *mut *mut c_char, _: *const c_char, _: c_int) -> c_int;
-}
 
 static mut log_file: *mut FILE = null_mut();
 static mut log_level: c_int = 0;
@@ -129,7 +125,12 @@ fn log_vwrite_rs(args: std::fmt::Arguments, prefix: &CStr) {
         if log_file.is_null() {
             return;
         }
-        if stravis(&mut out, msg.as_ptr() as _, VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL) == -1 {
+        if stravis(
+            &mut out,
+            msg.as_ptr() as _,
+            (VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL) as i32,
+        ) == -1
+        {
             return;
         }
         gettimeofday(&mut tv, null_mut());

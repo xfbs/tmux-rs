@@ -1,7 +1,7 @@
-use compat_rs::vis::VIS_GLOB;
-use libc::{EINVAL, ENOENT, ENOMEM, GLOB_NOMATCH, GLOB_NOSPACE, glob, glob_t, globfree, strcmp};
-
 use crate::*;
+
+use compat_rs::VIS_GLOB;
+use libc::{EINVAL, ENOENT, ENOMEM, GLOB_NOMATCH, GLOB_NOSPACE, glob, glob_t, globfree, strcmp};
 
 #[unsafe(no_mangle)]
 static mut cmd_source_file_entry: cmd_entry = cmd_entry {
@@ -155,7 +155,7 @@ unsafe extern "C" fn cmd_source_file_exec(self_: *mut cmd, item: *mut cmdq_item)
             (*cdata).flags |= CMD_PARSE_VERBOSE;
         }
 
-        utf8_stravis(&raw mut cwd, server_client_get_cwd(c, null_mut()), VIS_GLOB);
+        utf8_stravis(&raw mut cwd, server_client_get_cwd(c, null_mut()), VIS_GLOB as i32);
 
         for i in 0..args_count(args) {
             let mut path = args_string(args, i);

@@ -1,8 +1,12 @@
 #![allow(unused_variables)]
 #![allow(clippy::missing_safety_doc)]
-use core::ffi::{VaList, c_char, c_int, c_void};
-use core::ptr::NonNull;
-use std::ffi::CStr;
+
+use core::{
+    ffi::{CStr, VaList, c_char, c_int, c_void},
+    mem::MaybeUninit,
+    ptr::NonNull,
+};
+use std::num::NonZero;
 
 use libc::{__errno_location, calloc, malloc, reallocarray, strdup, strerror, strndup};
 
@@ -18,18 +22,29 @@ pub extern "C" fn xmalloc(size: usize) -> NonNull<c_void> {
     NonNull::new(unsafe { malloc(size) }).unwrap_or_else(|| panic!("xmalloc: allocating {size}"))
 }
 
+// note this function definition is safe
 #[inline]
-pub fn malloc_(size: usize) -> *mut c_void {
-    debug_assert!(size != 0);
-
-    unsafe { malloc(size) }
-}
+fn malloc_(size: NonZero<usize>) -> *mut c_void { unsafe { malloc(size.get()) } }
 
 pub fn xmalloc_<T>() -> NonNull<T> {
     let size = size_of::<T>();
-    NonNull::new(malloc_(size))
+    debug_assert!(size != 0);
+    let nz_size = NonZero::<usize>::try_from(size).unwrap();
+    NonNull::new(malloc_(nz_size))
         .unwrap_or_else(|| panic!("xmalloc: allocating {size} bytes"))
         .cast()
+}
+
+pub fn xmalloc__<'a, T>() -> &'a mut MaybeUninit<T> {
+    let size = size_of::<T>();
+    debug_assert!(size != 0);
+    let nz_size = NonZero::<usize>::try_from(size).unwrap();
+
+    let ptr = NonNull::new(malloc_(nz_size))
+        .unwrap_or_else(|| panic!("xmalloc: allocating {size} bytes"))
+        .cast();
+
+    unsafe { ptr.as_uninit_mut() }
 }
 
 #[inline]
@@ -70,7 +85,7 @@ pub unsafe extern "C" fn xrealloc(ptr: *mut c_void, size: usize) -> NonNull<c_vo
 pub unsafe fn xrealloc_<T>(ptr: *mut T, size: usize) -> NonNull<T> { unsafe { xreallocarray_old(ptr, 1, size) } }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn xreallocarray(ptr: *mut c_void, nmemb: usize, size: usize) -> NonNull<c_void> {
+pub unsafe extern "C" fn xreallocarray(ptr: *mut c_void, nmemb: usize, size: usize) -> NonNull<c_void> {
     unsafe { xreallocarray_old(ptr, nmemb, size) }
 }
 

@@ -9,14 +9,13 @@ pub mod imsg_buffer;
 pub mod queue;
 pub mod systemd;
 pub mod tree;
-pub mod vis;
+pub mod vis_;
 
 pub use crate::systemd::systemd_create_socket;
 
 // pub use bsd_sys::{bsd_getopt, optarg as BSDoptarg, optind as BSDoptind};
-pub use bsd_sys::{
-    bsd_getopt, closefrom, getpeereid, optarg, optind, recallocarray, setproctitle, strlcat, strlcpy, strtonum,
-};
+// bsd_getopt, closefrom, getpeereid, optarg, optind, recallocarray, setproctitle, strlcat, strlcpy, strtonum, vis,
+pub use bsd_sys::*;
 
 pub const HOST_NAME_MAX: usize = 255;
 

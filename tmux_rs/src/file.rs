@@ -100,7 +100,7 @@ pub unsafe extern "C" fn file_create_with_peer(
 
         (*cf).peer = peer;
         (*cf).tree = files;
-        rb_insert::<client_file>(files, cf);
+        rb_insert::<client_file, _>(files, cf);
 
         cf
     }

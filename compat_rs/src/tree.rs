@@ -56,8 +56,9 @@ impl<T> Clone for rb_entry<T> {
     fn clone(&self) -> Self { *self }
 }
 
-pub trait GetEntry<T> {
+pub trait GetEntry<T, D = ()> {
     unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<T>;
+    unsafe fn entry(this: *const Self) -> *const rb_entry<T>;
     unsafe fn cmp(this: *const Self, other: *const Self) -> i32;
 }
 
@@ -74,25 +75,25 @@ macro_rules! rb_left {
         (*GetEntry::entry_mut($elm)).rbe_left
     };
 }
-pub unsafe fn rb_left<T>(this: *mut T) -> *mut T
+pub unsafe fn rb_left<T, D>(this: *mut T) -> *mut T
 where
-    T: GetEntry<T>,
+    T: GetEntry<T, D>,
 {
     unsafe { (*T::entry_mut(this)).rbe_left }
 }
 
 #[inline]
-pub unsafe fn is_left_sibling<T>(this: *mut T) -> bool
+pub unsafe fn is_left_sibling<T, D>(this: *mut T) -> bool
 where
-    T: GetEntry<T>,
+    T: GetEntry<T, D>,
 {
     unsafe { this == rb_left(rb_parent(this)) }
 }
 
 #[inline]
-pub unsafe fn is_right_sibling<T>(this: *mut T) -> bool
+pub unsafe fn is_right_sibling<T, D>(this: *mut T) -> bool
 where
-    T: GetEntry<T>,
+    T: GetEntry<T, D>,
 {
     unsafe { this == rb_right(rb_parent(this)) }
 }
@@ -102,9 +103,9 @@ macro_rules! rb_right {
         (*GetEntry::entry_mut($elm)).rbe_right
     };
 }
-pub unsafe fn rb_right<T>(this: *mut T) -> *mut T
+pub unsafe fn rb_right<T, D>(this: *mut T) -> *mut T
 where
-    T: GetEntry<T>,
+    T: GetEntry<T, D>,
 {
     unsafe { (*T::entry_mut(this)).rbe_right }
 }
@@ -114,9 +115,9 @@ macro_rules! rb_parent {
         (*GetEntry::entry_mut($elm)).rbe_parent
     };
 }
-pub unsafe fn rb_parent<T>(this: *mut T) -> *mut T
+pub unsafe fn rb_parent<T, D>(this: *mut T) -> *mut T
 where
-    T: GetEntry<T>,
+    T: GetEntry<T, D>,
 {
     unsafe { (*T::entry_mut(this)).rbe_parent }
 }
@@ -126,9 +127,9 @@ macro_rules! rb_color {
         (*GetEntry::entry_mut($elm)).rbe_color
     };
 }
-pub unsafe fn rb_color<T>(elm: *mut T) -> rb_color
+pub unsafe fn rb_color<T, D>(elm: *mut T) -> rb_color
 where
-    T: GetEntry<T>,
+    T: GetEntry<T, D>,
 {
     unsafe { (*T::entry_mut(elm)).rbe_color }
 }
@@ -142,9 +143,9 @@ pub unsafe fn rb_root<T>(head: *mut rb_head<T>) -> *mut T { unsafe { (*head).rbh
 
 pub unsafe fn rb_empty<T>(head: *mut rb_head<T>) -> bool { unsafe { (*head).rbh_root.is_null() } }
 
-pub unsafe fn rb_set<T>(elm: *mut T, parent: *mut T)
+pub unsafe fn rb_set<T, D>(elm: *mut T, parent: *mut T)
 where
-    T: GetEntry<T>,
+    T: GetEntry<T, D>,
 {
     unsafe {
         (*T::entry_mut(elm)).rbe_parent = parent;
@@ -154,9 +155,9 @@ where
     }
 }
 
-pub unsafe fn rb_set_blackred<T>(black: *mut T, red: *mut T)
+pub unsafe fn rb_set_blackred<T, D>(black: *mut T, red: *mut T)
 where
-    T: GetEntry<T>,
+    T: GetEntry<T, D>,
 {
     unsafe {
         (*T::entry_mut(black)).rbe_color = rb_color::RB_BLACK;
@@ -164,9 +165,9 @@ where
     }
 }
 
-pub unsafe fn rb_rotate_left<T>(head: *mut rb_head<T>, elm: *mut T)
+pub unsafe fn rb_rotate_left<T, D>(head: *mut rb_head<T>, elm: *mut T)
 where
-    T: GetEntry<T>,
+    T: GetEntry<T, D>,
 {
     unsafe {
         let tmp = rb_right(elm);
@@ -190,9 +191,9 @@ where
     }
 }
 
-pub unsafe fn rb_rotate_right<T>(head: *mut rb_head<T>, elm: *mut T)
+pub unsafe fn rb_rotate_right<T, D>(head: *mut rb_head<T>, elm: *mut T)
 where
-    T: GetEntry<T>,
+    T: GetEntry<T, D>,
 {
     unsafe {
         let tmp = rb_left(elm);
@@ -219,34 +220,35 @@ where
 #[macro_export]
 macro_rules! RB_GENERATE {
     ($head_ty:ty, $ty:ty, $entry_field:ident, $cmp_fn:ident) => {
-        impl ::compat_rs::tree::GetEntry<$ty> for $ty {
-            unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<$ty> { unsafe { &raw mut (*this).$entry_field } }
-            unsafe fn cmp(this: *const Self, other: *const Self) -> i32 { unsafe { $cmp_fn(this, other) } }
-        }
-
         ::paste::paste! {
+            impl ::compat_rs::tree::GetEntry<$ty, [<discr_ $entry_field>] > for $ty {
+                unsafe fn entry(this: *const Self) -> *const rb_entry<$ty> { unsafe { &raw const (*this).$entry_field } }
+                unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<$ty> { unsafe { &raw mut (*this).$entry_field } }
+                unsafe fn cmp(this: *const Self, other: *const Self) -> i32 { unsafe { $cmp_fn(this, other) } }
+            }
+
             #[unsafe(no_mangle)]
             pub unsafe extern "C" fn [<$head_ty _RB_MINMAX>](head: *mut rb_head<$ty>, val: i32) -> *mut $ty {
-                unsafe { $crate::tree::rb_minmax(head, val) }
+                unsafe { $crate::tree::rb_minmax::<$ty, [<discr_ $entry_field>]>(head, val) }
             }
 
             #[unsafe(no_mangle)]
             pub unsafe extern "C" fn [<$head_ty _RB_NEXT>](elm: *mut $ty) -> *mut $ty {
-                unsafe { $crate::tree::rb_next(elm) }
+                unsafe { $crate::tree::rb_next::<$ty, [<discr_ $entry_field>]>(elm) }
             }
 
             #[unsafe(no_mangle)]
             pub unsafe extern "C" fn [<$head_ty _RB_PREV>](elm: *mut $ty) -> *mut $ty {
-                unsafe { $crate::tree::rb_prev(elm) }
+                unsafe { $crate::tree::rb_prev::<$ty, [<discr_ $entry_field>]>(elm) }
             }
         }
     };
 }
 pub use RB_GENERATE;
 
-pub unsafe fn rb_minmax<T>(head: *mut rb_head<T>, val: i32) -> *mut T
+pub unsafe fn rb_minmax<T, D>(head: *mut rb_head<T>, val: i32) -> *mut T
 where
-    T: GetEntry<T>,
+    T: GetEntry<T, D>,
 {
     unsafe {
         let mut tmp: *mut T = (*head).rbh_root;
@@ -265,9 +267,9 @@ where
     }
 }
 
-pub unsafe fn rb_insert_color<T>(head: *mut rb_head<T>, mut elm: *mut T)
+pub unsafe fn rb_insert_color<T, D>(head: *mut rb_head<T>, mut elm: *mut T)
 where
-    T: GetEntry<T>,
+    T: GetEntry<T, D>,
 {
     unsafe {
         let mut parent;
@@ -315,9 +317,9 @@ where
     }
 }
 
-pub unsafe fn rb_remove_color<T>(head: *mut rb_head<T>, mut parent: *mut T, mut elm: *mut T)
+pub unsafe fn rb_remove_color<T, D>(head: *mut rb_head<T>, mut parent: *mut T, mut elm: *mut T)
 where
-    T: GetEntry<T>,
+    T: GetEntry<T, D>,
 {
     unsafe {
         let mut tmp: *mut T;
@@ -396,9 +398,9 @@ where
     }
 }
 
-pub unsafe fn rb_remove<T>(head: *mut rb_head<T>, mut elm: *mut T) -> *mut T
+pub unsafe fn rb_remove<T, D>(head: *mut rb_head<T>, mut elm: *mut T) -> *mut T
 where
-    T: GetEntry<T>,
+    T: GetEntry<T, D>,
 {
     unsafe {
         let mut old: *mut T = elm;
@@ -486,9 +488,9 @@ where
     }
 }
 
-pub unsafe fn rb_insert<T>(head: *mut rb_head<T>, mut elm: *mut T) -> *mut T
+pub unsafe fn rb_insert<T, D>(head: *mut rb_head<T>, mut elm: *mut T) -> *mut T
 where
-    T: GetEntry<T>,
+    T: GetEntry<T, D>,
 {
     unsafe {
         let mut parent = null_mut();
@@ -520,9 +522,9 @@ where
     null_mut()
 }
 
-pub unsafe fn rb_find<T>(head: *mut rb_head<T>, elm: *mut T) -> *mut T
+pub unsafe fn rb_find<T, D>(head: *mut rb_head<T>, elm: *const T) -> *mut T
 where
-    T: GetEntry<T>,
+    T: GetEntry<T, D>,
 {
     unsafe {
         let mut tmp: *mut T = (*head).rbh_root;
@@ -540,9 +542,9 @@ where
     null_mut()
 }
 
-pub unsafe fn rb_nfind<T>(head: *mut rb_head<T>, elm: *mut T) -> *mut T
+pub unsafe fn rb_nfind<T, D>(head: *mut rb_head<T>, elm: *const T) -> *mut T
 where
-    T: GetEntry<T>,
+    T: GetEntry<T, D>,
 {
     unsafe {
         let mut tmp = rb_root(head);
@@ -562,24 +564,24 @@ where
     }
 }
 
-pub unsafe fn rb_min<T>(head: *mut rb_head<T>) -> *mut T
+pub unsafe fn rb_min<T, D>(head: *mut rb_head<T>) -> *mut T
 where
-    T: GetEntry<T>,
+    T: GetEntry<T, D>,
 {
     unsafe { rb_minmax(head, -1) }
 }
 
-pub unsafe fn rb_max<T>(head: *mut rb_head<T>) -> *mut T
+pub unsafe fn rb_max<T, D>(head: *mut rb_head<T>) -> *mut T
 where
-    T: GetEntry<T>,
+    T: GetEntry<T, D>,
 {
     unsafe { rb_minmax(head, 1) }
 }
 
-pub unsafe fn rb_foreach<F, T, C>(head: *mut rb_head<T>, mut f: F) -> Option<C>
+pub unsafe fn rb_foreach<F, T, C, D>(head: *mut rb_head<T>, mut f: F) -> Option<C>
 where
     F: FnMut(*mut T) -> ControlFlow<C>,
-    T: GetEntry<T>,
+    T: GetEntry<T, D>,
 {
     unsafe {
         let mut x = rb_min(head);
@@ -595,10 +597,10 @@ where
     None
 }
 
-pub unsafe fn rb_foreach_safe<F, T, C>(head: *mut rb_head<T>, mut f: F) -> Option<C>
+pub unsafe fn rb_foreach_safe<F, T, C, D>(head: *mut rb_head<T>, mut f: F) -> Option<C>
 where
     F: FnMut(*mut T) -> ControlFlow<C>,
-    T: GetEntry<T>,
+    T: GetEntry<T, D>,
 {
     unsafe {
         let mut x = rb_min(head);
@@ -617,10 +619,32 @@ where
     None
 }
 
-#[allow(clippy::collapsible_else_if)]
-pub unsafe fn rb_next<T>(mut elm: *mut T) -> *mut T
+pub unsafe fn rb_foreach_reverse_safe<F, T, C, D>(head: *mut rb_head<T>, mut f: F) -> Option<C>
 where
-    T: GetEntry<T>,
+    F: FnMut(*mut T) -> ControlFlow<C>,
+    T: GetEntry<T, D>,
+{
+    unsafe {
+        let mut x = rb_max(head);
+
+        while !x.is_null() {
+            let y = rb_prev(x);
+
+            if let ControlFlow::Break(brk) = f(x) {
+                return Some(brk);
+            }
+
+            x = y;
+        }
+    }
+
+    None
+}
+
+#[allow(clippy::collapsible_else_if)]
+pub unsafe fn rb_next<T, D>(mut elm: *mut T) -> *mut T
+where
+    T: GetEntry<T, D>,
 {
     unsafe {
         if !rb_right(elm).is_null() {
@@ -644,9 +668,9 @@ where
 }
 
 #[allow(clippy::collapsible_else_if)]
-pub unsafe fn rb_prev<T>(mut elm: *mut T) -> *mut T
+pub unsafe fn rb_prev<T, D>(mut elm: *mut T) -> *mut T
 where
-    T: GetEntry<T>,
+    T: GetEntry<T, D>,
 {
     unsafe {
         if !rb_left(elm).is_null() {

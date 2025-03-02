@@ -165,6 +165,8 @@ more then just server exited unexpectedly.
 - [X]  859 file
 - [X] 1117 control
 - [X] 388 proc
+- [X] 100 utf8-combined
+- [X] 822 utf8
 - [ ]  281 environ (environ_free is broken, everything else works)
 - [ ] 5294 format
   - [ ] 1243 format-draw
@@ -203,8 +205,6 @@ more then just server exited unexpectedly.
   - [ ]  510 tty-features
   - [ ]  924 tty-term
   - [ ] 1591 tty-keys
-- [ ] 100 utf8-combined
-- [ ] 822 utf8
 - [X] window
   - [X]  286 window-clock
   - [ ]  418 window-client

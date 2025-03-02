@@ -337,7 +337,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                 }
                 session_group_add(sg, s);
                 session_group_synchronize_to(s);
-                session_select(s, (*rb_min::<winlink>(&raw mut (*s).windows)).idx);
+                session_select(s, (*rb_min::<winlink, _>(&raw mut (*s).windows)).idx);
             }
             notify_session(c"session-created".as_ptr(), s);
 

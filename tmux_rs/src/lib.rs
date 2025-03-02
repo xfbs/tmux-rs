@@ -1,6 +1,11 @@
+#![feature(array_ptr_get)]
 #![feature(c_variadic)]
+#![feature(ptr_as_uninit)]
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
+
+pub mod libc_;
+pub use libc_::*; // want to rexport everything from here
 
 pub mod event_;
 pub mod image_;
@@ -71,9 +76,14 @@ const TTY_NAME_MAX: usize = 32;
 // discriminant structs
 pub struct discr_alerts_entry;
 pub struct discr_all_entry;
+pub struct discr_data_entry;
 pub struct discr_entry;
+pub struct discr_index_entry;
+pub struct discr_name_entry;
 pub struct discr_pending_entry;
 pub struct discr_sentry;
+pub struct discr_time_entry;
+pub struct discr_tree_entry;
 pub struct discr_wentry;
 
 // TODO remove once options.c is ported
@@ -110,7 +120,6 @@ opaque_types! {
     mode_tree_item,
     options,
     options_entry,
-    paste_buffer,
     screen_write_citem,
     screen_write_cline,
     server_acl_user
@@ -2204,9 +2213,9 @@ pub use crate::cfg_::{
 
 mod paste;
 pub use crate::paste::{
-    paste_add, paste_buffer_created, paste_buffer_data, paste_buffer_name, paste_buffer_order, paste_free,
-    paste_get_name, paste_get_top, paste_is_empty, paste_make_sample, paste_rename, paste_replace, paste_set,
-    paste_walk,
+    paste_add, paste_buffer, paste_buffer_created, paste_buffer_data, paste_buffer_name, paste_buffer_order,
+    paste_free, paste_get_name, paste_get_top, paste_is_empty, paste_make_sample, paste_rename, paste_replace,
+    paste_set, paste_walk,
 };
 
 mod format;

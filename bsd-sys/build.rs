@@ -1,25 +1,51 @@
 // man 7 libbsd
+// https://rust-lang.github.io/rust-bindgen/tutorial-3.html
+
+const ITEMS: &[&str] = &[
+    "VIS_CSTYLE",
+    "VIS_DQ",
+    "VIS_GLOB",
+    "VIS_NL",
+    "VIS_OCTAL",
+    "VIS_TAB",
+    // ...
+];
+const VARS: &[&str] = &["optarg", "optind", "optreset"];
+const FUNCS: &[&str] = &[
+    "bsd_getopt",
+    "closefrom",
+    "fgetln",
+    "freezero",
+    "getopt",
+    "getpeereid",
+    "getprogname",
+    "recallocarray",
+    "setproctitle",
+    "strlcat",
+    "strlcpy",
+    "strtonum",
+    "vis",
+    "stravis",
+];
+
 fn main() {
     println!("cargo:rustc-link-lib=bsd");
 
-    // https://rust-lang.github.io/rust-bindgen/tutorial-3.html
-    let bindings = bindgen::Builder::default()
-        .header("wrapper.h")
-        .allowlist_function("bsd_getopt")
-        .allowlist_function("closefrom")
-        .allowlist_function("fgetln")
-        .allowlist_function("freezero")
-        .allowlist_function("getopt")
-        .allowlist_function("getpeereid")
-        .allowlist_function("getprogname")
-        .allowlist_function("recallocarray")
-        .allowlist_function("setproctitle")
-        .allowlist_function("strlcat")
-        .allowlist_function("strlcpy")
-        .allowlist_function("strtonum")
-        .allowlist_var("optarg")
-        .allowlist_var("optind")
-        .allowlist_var("optreset")
+    let mut builder = bindgen::Builder::default().header("wrapper.h");
+
+    for func in FUNCS {
+        builder = builder.allowlist_function(func);
+    }
+
+    for item in ITEMS {
+        builder = builder.allowlist_item(item);
+    }
+
+    for var in VARS {
+        builder = builder.allowlist_var(var);
+    }
+
+    let bindings = builder
         .merge_extern_blocks(true)
         .generate()
         .expect("Unable to generate bindings");

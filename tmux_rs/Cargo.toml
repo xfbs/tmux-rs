@@ -13,11 +13,13 @@ libevent-sys = { workspace = true }
 paste        = { workspace = true }
 
 [features]
-systemd = []
-sixel = []
-utempter = []
-sys_signame = []
+ncurses = []
 nokerninfo = []
+sixel = []
+sys_signame = []
+systemd = []
+utempter = []
+utf8proc = []
 
 [lints]
 workspace = true

@@ -1,9 +1,7 @@
-use crate::{utf8_data, utf8_in_table, utf8_state, utf8_towc};
+use crate::{utf8_data, utf8_in_table, utf8_state, utf8_towc, wchar_t};
 
 use core::ffi::c_void;
 use libc::memcmp;
-
-pub type wchar_t = core::ffi::c_int;
 
 unsafe extern "C" {
     // pub unsafe fn utf8_has_zwj(_: *const utf8_data) -> c_int;

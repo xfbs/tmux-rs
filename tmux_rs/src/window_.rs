@@ -1,14 +1,13 @@
 use super::*;
 
 use compat_rs::{
-    HOST_NAME_MAX, RB_GENERATE,
+    HOST_NAME_MAX, RB_GENERATE, VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB,
     queue::{
         tailq_empty, tailq_first, tailq_foreach, tailq_foreach_safe, tailq_init, tailq_insert_after,
         tailq_insert_before, tailq_insert_head, tailq_insert_tail, tailq_last, tailq_next, tailq_prev, tailq_remove,
     },
     strtonum,
     tree::{rb_find, rb_foreach, rb_insert, rb_min, rb_next, rb_prev, rb_remove},
-    vis::{VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB},
 };
 use libc::{
     FIONREAD, FNM_CASEFOLD, TIOCSWINSZ, close, fnmatch, free, gethostname, gettimeofday, ioctl, isspace, memset,
@@ -426,8 +425,12 @@ pub unsafe extern "C" fn window_remove_ref(w: *mut window, from: *const c_char) 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_set_name(w: *mut window, new_name: *const c_char) {
     unsafe {
-        free((*w).name as _);
-        utf8_stravis(&raw mut (*w).name, new_name, VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL);
+        free_((*w).name);
+        utf8_stravis(
+            &raw mut (*w).name,
+            new_name,
+            (VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL) as i32,
+        );
         notify_window(c"window-renamed".as_ptr(), w);
     }
 }
