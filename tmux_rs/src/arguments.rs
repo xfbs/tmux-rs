@@ -24,7 +24,7 @@ unsafe extern "C" {
     pub unsafe fn args_count(_: *mut args) -> c_uint;
     pub unsafe fn args_values(_: *mut args) -> *mut args_value;
     pub unsafe fn args_value(_: *mut args, _: c_uint) -> *mut args_value;
-    pub unsafe fn args_string(_: *mut args, _: c_uint) -> *const c_char;
+    pub unsafe fn args_string(_: *mut args, _: c_uint) -> *mut c_char;
     pub unsafe fn args_make_commands_now(_: *mut cmd, _: *mut cmdq_item, _: c_uint, _: c_int) -> *mut cmd_list;
     pub unsafe fn args_make_commands_prepare(
         _: *mut cmd,

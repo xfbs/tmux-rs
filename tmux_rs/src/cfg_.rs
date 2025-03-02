@@ -156,7 +156,7 @@ pub unsafe extern "C" fn load_cfg(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn load_cfg_from_buffer(
-    buf: *const c_void,
+    buf: *mut c_void,
     len: usize,
     path: *const c_char,
     c: *mut client,

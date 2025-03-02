@@ -123,7 +123,12 @@ pub unsafe fn xreallocarray_<T>(ptr: *mut T, nmemb: usize) -> NonNull<T> {
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn xrecallocarray(ptr: *mut c_void, oldnmemb: usize, nmemb: usize, size: usize) -> NonNull<c_void> {
+pub unsafe extern "C" fn xrecallocarray(
+    ptr: *mut c_void,
+    oldnmemb: usize,
+    nmemb: usize,
+    size: usize,
+) -> NonNull<c_void> {
     unsafe { xrecallocarray_(ptr, oldnmemb, nmemb, size) }
 }
 
