@@ -33,5 +33,5 @@ pub fn MB_CUR_MAX() -> usize {
 unsafe extern "C" {
     pub fn wcwidth(c: wchar_t) -> i32;
     pub fn mbtowc(pwc: *mut wchar_t, s: *const c_char, n: usize) -> i32;
-    pub fn wctomb(s: *mut char, wc: wchar_t) -> i32;
+    pub fn wctomb(s: *mut c_char, wc: wchar_t) -> i32;
 }

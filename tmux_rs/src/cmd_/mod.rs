@@ -43,7 +43,7 @@ pub mod cmd_lock_server;
 pub mod cmd_move_window;
 // pub mod cmd_new_session;
 pub mod cmd_new_window;
-// pub mod cmd_parse;
+pub mod cmd_parse;
 pub mod cmd_paste_buffer;
 pub mod cmd_pipe_pane;
 pub mod cmd_queue;

@@ -9,8 +9,8 @@ use crate::{
     *,
 };
 
+#[rustfmt::skip]
 unsafe extern "C" {
-
     fn yyparse() -> i32;
 
     // pub fn cmd_parse_from_file(_: *mut FILE, _: *mut cmd_parse_input) -> *mut cmd_parse_result;
@@ -500,11 +500,6 @@ pub unsafe extern "C" fn cmd_parse_from_string(s: *mut c_char, mut pi: *mut cmd_
             pi = &raw mut input;
         }
 
-        /*
-         * When parsing a string, put commands in one group even if there are
-         * multiple lines. This means { a \n b } is identical to "a ; b" when
-         * given as an argument to another command.
-         */
         (*pi).flags |= CMD_PARSE_ONEGROUP;
         cmd_parse_from_buffer(s.cast(), strlen(s), pi)
     }
@@ -612,11 +607,6 @@ pub unsafe extern "C" fn cmd_parse_from_arguments(
     unsafe {
         static mut pr: cmd_parse_result = unsafe { zeroed() };
         let mut input: cmd_parse_input;
-
-        /*
-         * The commands are already split up into arguments, so just separate
-         * into a set of commands by ';'.
-         */
 
         if (pi.is_null()) {
             input = zeroed();

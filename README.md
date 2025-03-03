@@ -360,6 +360,8 @@ SUMMARY: AddressSanitizer: 28 byte(s) leaked in 1 allocation(s).
 - memcpy_(&raw mut tmp as *mut i8, in_, end); should have been: memcpy_(tmp, in_, end)
   -  because I switched to a pointer instead of buffer,but didn't change memcpy code
 - typo fps, fsp, variable unused null , cmd-queue.c ( causing crash when C-b t for clock)
+- missing C prototype :struct cmd_parse_commands * cmd_parse_do_buffer(const char *buf, size_t len, struct cmd_parse_input *pi, char **cause)
+  - return address value truncated to int
 
 # References
 
