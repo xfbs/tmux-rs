@@ -243,7 +243,7 @@ where
     }
 }
 
-pub unsafe fn tailq_empty<T>(head: *mut tailq_head<T>) -> bool { unsafe { tailq_first(head) == tailq_end(head) } }
+pub unsafe fn tailq_empty<T>(head: *const tailq_head<T>) -> bool { unsafe { (*head).tqh_first.is_null() } }
 
 #[macro_export]
 macro_rules! tailq_insert_head {

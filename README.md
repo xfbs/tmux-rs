@@ -194,9 +194,8 @@ more then just server exited unexpectedly.
 - [ ] 740 screen
   - [ ]  868 screen-redraw
   - [ ] 2347 screen-write
-- [ ] 557 server
-  - [ ] implement 6/7 TODO's
-  - [ ]  186 server-acl
+- [ ] 557 server (server_loop is broken)
+  - [X]  186 server-acl
   - [ ]  493 server-fn
   - [ ] 3392 server-client
 - [ ] 2035 status
@@ -213,21 +212,21 @@ more then just server exited unexpectedly.
   - [ ] 1512 window-customize
   - [ ] 5786 window-copy
 - [X] 874 cmd
-  - [ ]  230 cmd-pipe-pane
-  - [ ]  237 cmd-send-keys
-  - [ ]  239 cmd-set-option
   - [ ]  242 cmd-select-pane
   - [ ]  260 cmd-show-options
   - [ ]  264 cmd-wait-for
   - [ ]  290 cmd-run-shell
-  - [ ]  335 cmd-refresh-client
   - [ ]  215 cmd-resize-pane (doesn't work)
   - [ ]  370 cmd-new-session (doesn't work, crashes)
   =====
   - [ ]  899 cmd-queue (some tailq functions used port isn't working)
   - [ ] 1314 cmd-find
-  - [ ]  159 cmd-parse.y (don't translate)
+  - [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
   =====
+  - [X]  335 cmd-refresh-client
+  - [X]  239 cmd-set-option
+  - [X]  237 cmd-send-keys
+  - [X]  230 cmd-pipe-pane
   - [X]  199 cmd-split-window
   - [X]  372 cmd-list-keys
   - [X]  312 cmd-display-panes

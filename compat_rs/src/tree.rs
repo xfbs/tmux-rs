@@ -141,17 +141,18 @@ macro_rules! rb_root {
 }
 pub unsafe fn rb_root<T>(head: *mut rb_head<T>) -> *mut T { unsafe { (*head).rbh_root } }
 
-pub unsafe fn rb_empty<T>(head: *mut rb_head<T>) -> bool { unsafe { (*head).rbh_root.is_null() } }
+pub unsafe fn rb_empty<T>(head: *const rb_head<T>) -> bool { unsafe { (*head).rbh_root.is_null() } }
 
 pub unsafe fn rb_set<T, D>(elm: *mut T, parent: *mut T)
 where
     T: GetEntry<T, D>,
 {
     unsafe {
-        (*T::entry_mut(elm)).rbe_parent = parent;
-        (*T::entry_mut(elm)).rbe_right = null_mut();
-        (*T::entry_mut(elm)).rbe_left = null_mut();
-        (*T::entry_mut(elm)).rbe_color = rb_color::RB_RED;
+        let ptr = T::entry_mut(elm);
+        (*ptr).rbe_parent = parent;
+        (*ptr).rbe_right = null_mut();
+        (*ptr).rbe_left = null_mut();
+        (*ptr).rbe_color = rb_color::RB_RED;
     }
 }
 

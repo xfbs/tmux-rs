@@ -282,6 +282,7 @@ dependencies = [
 name = "tmux_rs"
 version = "0.1.0"
 dependencies = [
+ "bitflags",
  "compat_rs",
  "libc",
  "libevent-sys",

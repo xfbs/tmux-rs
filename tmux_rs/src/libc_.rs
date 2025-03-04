@@ -26,7 +26,6 @@ pub fn MB_CUR_MAX() -> usize {
     unsafe extern "C" {
         unsafe fn __ctype_get_mb_cur_max() -> usize;
     }
-
     unsafe { __ctype_get_mb_cur_max() }
 }
 
@@ -35,3 +34,6 @@ unsafe extern "C" {
     pub fn mbtowc(pwc: *mut wchar_t, s: *const c_char, n: usize) -> i32;
     pub fn wctomb(s: *mut c_char, wc: wchar_t) -> i32;
 }
+
+#[inline]
+pub unsafe fn memset0<T>(dest: *mut T) -> *mut T { unsafe { libc::memset(dest.cast(), 0, size_of::<T>()).cast() } }

@@ -1,34 +1,55 @@
+use crate::*;
+
 use compat_rs::{
-    queue::{tailq_empty, tailq_foreach, tailq_foreach_safe, tailq_init},
-    tailq_remove,
+    ACCESSPERMS,
+    queue::{tailq_empty, tailq_foreach, tailq_foreach_safe, tailq_init, tailq_insert_tail, tailq_remove},
+    strlcpy,
     tree::{rb_empty, rb_foreach, rb_foreach_safe, rb_init},
 };
 use libc::{
-    __errno_location, AF_UNIX, ECHILD, S_IRGRP, S_IROTH, S_IRUSR, S_IRWXG, S_IRWXO, S_IXGRP, S_IXOTH, S_IXUSR,
-    SIG_BLOCK, SIG_SETMASK, SIGCONT, SIGTTIN, SIGTTOU, SOCK_STREAM, WIFEXITED, WIFSIGNALED, WIFSTOPPED, WNOHANG,
-    WSTOPSIG, WUNTRACED, bind, chmod, close, fprintf, free, gettimeofday, listen, malloc_trim, sigfillset, sigprocmask,
-    sigset_t, socket, strsignal, umask, unlink, waitpid,
+    __errno_location, AF_UNIX, ECHILD, ENAMETOOLONG, S_IRGRP, S_IROTH, S_IRUSR, S_IRWXG, S_IRWXO, S_IXGRP, S_IXOTH,
+    S_IXUSR, SIG_BLOCK, SIG_SETMASK, SIGCONT, SIGTTIN, SIGTTOU, SOCK_STREAM, WIFEXITED, WIFSIGNALED, WIFSTOPPED,
+    WNOHANG, WSTOPSIG, WUNTRACED, accept, bind, chmod, close, fprintf, free, gettimeofday, kill, killpg, listen,
+    malloc_trim, sigfillset, sigprocmask, sigset_t, sockaddr_storage, sockaddr_un, socket, socklen_t, stat, strerror,
+    strsignal, umask, unlink, waitpid,
 };
 use libevent_sys::{EV_READ, EV_TIMEOUT, event_add, event_del, event_initialized, event_reinit, event_set};
 
-use super::*;
+unsafe extern "C" {
+    pub unsafe fn server_loop() -> i32;
+    // pub unsafe fn server_update_socket();
+
+    // pub unsafe fn server_start( client: *mut tmuxproc, flags: u64, base: *mut event_base, lockfd: c_int, lockfile: *mut c_char,) -> c_int;
+
+    // pub unsafe fn server_send_exit();
+    // pub unsafe fn server_set_marked(s: *mut session, wl: *mut winlink, wp: *mut window_pane);
+    // pub unsafe fn server_clear_marked();
+    // pub unsafe fn server_check_marked() -> c_int;
+    // pub unsafe fn server_is_marked(s: *mut session, wl: *mut winlink, wp: *mut window_pane) -> c_int;
+    // pub unsafe fn server_add_accept(timeout: c_int);
+    // pub unsafe fn server_create_socket(flags: u64, cause: *mut *mut c_char) -> c_int;
+}
 
 #[unsafe(no_mangle)]
 pub static mut clients: clients = unsafe { zeroed() };
 
 #[unsafe(no_mangle)]
 pub static mut server_proc: *mut tmuxproc = null_mut();
+#[unsafe(no_mangle)] // TODO remove
 pub static mut server_fd: c_int = -1;
+#[unsafe(no_mangle)] // TODO remove
 pub static mut server_client_flags: u64 = 0;
+#[unsafe(no_mangle)] // TODO remove
 pub static mut server_exit: c_int = 0;
+#[unsafe(no_mangle)] // TODO remove
 pub static mut server_ev_accept: event = unsafe { zeroed() };
+#[unsafe(no_mangle)] // TODO remove
 pub static mut server_ev_tidy: event = unsafe { zeroed() };
 
 #[unsafe(no_mangle)]
 pub static mut marked_pane: cmd_find_state = unsafe { zeroed() };
 
 pub static mut message_next: c_uint = 0;
-
 #[unsafe(no_mangle)]
 pub static mut message_log: message_list = unsafe { zeroed() };
 
@@ -71,28 +92,23 @@ pub unsafe extern "C" fn server_is_marked(s: *mut session, wl: *mut winlink, wp:
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_check_marked() -> c_int {
-    unsafe { cmd_find_valid_state(&raw mut marked_pane) }
-}
+pub unsafe extern "C" fn server_check_marked() -> c_int { unsafe { cmd_find_valid_state(&raw mut marked_pane) } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_create_socket(flags: u64, cause: *mut *mut c_char) -> c_int {
     unsafe {
-        #[allow(clippy::never_loop)]
-        'fail: loop {
-            let mut sa: libc::sockaddr_un = zeroed();
-            sa.sun_family = libc::AF_UNIX as _;
-            let size = compat_rs::strlcpy(sa.sun_path.as_mut_ptr(), socket_path, size_of_val(&sa.sun_path));
+        'fail: {
+            let mut sa: sockaddr_un = zeroed();
+            sa.sun_family = AF_UNIX as _;
+            let size = strlcpy(sa.sun_path.as_mut_ptr(), socket_path, size_of_val(&sa.sun_path));
             if size >= size_of_val(&sa.sun_path) {
-                *__errno_location() = libc::ENAMETOOLONG;
-                // goto fail;
+                errno!() = ENAMETOOLONG;
                 break 'fail;
             }
             unlink(sa.sun_path.as_ptr());
 
             let fd = socket(AF_UNIX, SOCK_STREAM, 0);
             if fd == -1 {
-                // goto fail;
                 break 'fail;
             }
 
@@ -103,18 +119,18 @@ pub unsafe extern "C" fn server_create_socket(flags: u64, cause: *mut *mut c_cha
             };
 
             let saved_errno: c_int;
-            if bind(fd, &raw const sa as _, size_of::<libc::sockaddr_un>() as _) == -1 {
-                saved_errno = *__errno_location();
+            if bind(fd, &raw const sa as _, size_of::<sockaddr_un>() as _) == -1 {
+                saved_errno = errno!();
                 close(fd);
-                *__errno_location() = saved_errno;
+                errno!() = saved_errno;
                 break 'fail;
             }
             umask(mask);
 
             if listen(fd, 128) == -1 {
-                saved_errno = *__errno_location();
+                saved_errno = errno!();
                 close(fd);
-                *__errno_location() = saved_errno;
+                errno!() = saved_errno;
                 break 'fail;
             }
             setblocking(fd, 0);
@@ -128,7 +144,7 @@ pub unsafe extern "C" fn server_create_socket(flags: u64, cause: *mut *mut c_cha
                 cause,
                 c"error creating %s (%s)".as_ptr(),
                 socket_path,
-                libc::strerror(*__errno_location()),
+                strerror(errno!()),
             );
         }
         -1
@@ -136,6 +152,7 @@ pub unsafe extern "C" fn server_create_socket(flags: u64, cause: *mut *mut c_cha
 }
 
 /// Tidy up every hour.
+#[unsafe(no_mangle)]
 unsafe extern "C" fn server_tidy_event(_fd: i32, _events: i16, _data: *mut c_void) {
     let tv = libevent_sys::timeval {
         tv_sec: 3600,
@@ -228,7 +245,7 @@ pub unsafe extern "C" fn server_start(
 
         if lockfd >= 0 {
             unlink(lockfile);
-            free(lockfile as _);
+            free_(lockfile);
             close(lockfd);
         }
 
@@ -238,7 +255,7 @@ pub unsafe extern "C" fn server_start(
                 (*c).flags |= CLIENT_EXIT;
             } else {
                 fprintf(stderr, c"%s\n".as_ptr(), cause);
-                std::process::exit(1);
+                libc::exit(1);
             }
         }
 
@@ -253,10 +270,11 @@ pub unsafe extern "C" fn server_start(
         job_kill_all();
         status_prompt_save_history();
 
-        std::process::exit(0)
+        libc::exit(0)
     }
 }
 
+/*
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_loop() -> i32 {
     unsafe {
@@ -304,7 +322,7 @@ pub unsafe extern "C" fn server_loop() -> i32 {
          * clients but don't actually exit until they've gone.
          */
         cmd_wait_for_flush();
-        if !tailq_empty(&raw mut clients) {
+        if !tailq_empty(&raw const clients) {
             return 0;
         }
 
@@ -315,7 +333,9 @@ pub unsafe extern "C" fn server_loop() -> i32 {
         1
     }
 }
+*/
 
+#[unsafe(no_mangle)]
 unsafe extern "C" fn server_send_exit() {
     unsafe {
         cmd_wait_for_flush();
@@ -342,9 +362,9 @@ unsafe extern "C" fn server_send_exit() {
 pub unsafe extern "C" fn server_update_socket() {
     static mut last: c_int = -1;
     unsafe {
-        let mut sb: libc::stat = zeroed(); // TODO remove unecessary init
-        let mut n = 0;
+        let mut sb: stat = zeroed(); // TODO remove unecessary init
 
+        let mut n = 0;
         rb_foreach(&raw mut sessions, |s| {
             if (*s).attached != 0 {
                 n += 1;
@@ -356,10 +376,10 @@ pub unsafe extern "C" fn server_update_socket() {
         if n != last {
             last = n;
 
-            if libc::stat(socket_path, &raw mut sb) != 0 {
+            if stat(socket_path, &raw mut sb) != 0 {
                 return;
             }
-            let mut mode = sb.st_mode & compat_rs::ACCESSPERMS;
+            let mut mode = sb.st_mode & ACCESSPERMS;
             if n != 0 {
                 if mode & S_IRUSR != 0 {
                     mode |= S_IXUSR;
@@ -378,30 +398,27 @@ pub unsafe extern "C" fn server_update_socket() {
     }
 }
 
+#[unsafe(no_mangle)]
 unsafe extern "C" fn server_accept(fd: i32, events: i16, _data: *mut c_void) {
     unsafe {
-        let mut sa: libc::sockaddr_storage = zeroed(); // TODO remove this init
-        let mut slen: libc::socklen_t = size_of::<libc::sockaddr_storage>() as libc::socklen_t;
+        let mut sa: sockaddr_storage = zeroed(); // TODO remove this init
+        let mut slen: socklen_t = size_of::<sockaddr_storage>() as socklen_t;
 
         server_add_accept(0);
         if events & EV_READ as i16 == 0 {
             return;
         }
 
-        let newfd = libc::accept(fd, &raw mut sa as _, &raw mut slen);
+        let newfd = accept(fd, &raw mut sa as _, &raw mut slen);
         if newfd == -1 {
-            match *__errno_location() {
-                libc::EAGAIN | libc::EINTR | libc::ECONNABORTED => {
-                    return;
-                }
+            match errno!() {
+                libc::EAGAIN | libc::EINTR | libc::ECONNABORTED => return,
                 libc::ENFILE | libc::EMFILE => {
                     /* Delete and don't try again for 1 second. */
                     server_add_accept(1);
                     return;
                 }
-                _ => {
-                    fatal(c"accept failed".as_ptr());
-                }
+                _ => fatal(c"accept failed".as_ptr()),
             }
         }
 
@@ -456,6 +473,7 @@ pub unsafe extern "C" fn server_add_accept(timeout: c_int) {
 }
 
 // Signal handler.
+#[unsafe(no_mangle)]
 unsafe extern "C" fn server_signal(sig: i32) {
     unsafe {
         log_debug(c"%s: %s".as_ptr(), c"server_signal".as_ptr(), strsignal(sig));
@@ -464,9 +482,7 @@ unsafe extern "C" fn server_signal(sig: i32) {
                 server_exit = 1;
                 server_send_exit();
             }
-            libc::SIGCHLD => {
-                server_child_signal();
-            }
+            libc::SIGCHLD => server_child_signal(),
             libc::SIGUSR1 => {
                 libevent_sys::event_del(&raw mut server_ev_accept);
                 let fd = server_create_socket(server_client_flags, null_mut());
@@ -477,9 +493,7 @@ unsafe extern "C" fn server_signal(sig: i32) {
                 }
                 server_add_accept(0);
             }
-            libc::SIGUSR2 => {
-                proc_toggle_log(server_proc);
-            }
+            libc::SIGUSR2 => proc_toggle_log(server_proc),
             _ => {
                 // nop
             }
@@ -488,6 +502,7 @@ unsafe extern "C" fn server_signal(sig: i32) {
 }
 
 // handle SIGCHLD
+#[unsafe(no_mangle)]
 unsafe extern "C" fn server_child_signal() {
     let mut status = 0i32;
     unsafe {
@@ -495,7 +510,7 @@ unsafe extern "C" fn server_child_signal() {
             let pid: pid_t = waitpid(compat_rs::WAIT_ANY, &raw mut status, WNOHANG | WUNTRACED);
             match pid {
                 -1 => {
-                    if *__errno_location() == ECHILD {
+                    if errno!() == ECHILD {
                         return;
                     }
                     fatal(c"waitpid failed".as_ptr());
@@ -513,10 +528,11 @@ unsafe extern "C" fn server_child_signal() {
     }
 }
 
+#[unsafe(no_mangle)]
 unsafe extern "C" fn server_child_exited(pid: pid_t, status: i32) {
     unsafe {
         rb_foreach_safe(&raw mut windows, |w| {
-            tailq_foreach(&raw mut (*w).panes, |wp| {
+            tailq_foreach::<_, _, _, discr_entry>(&raw mut (*w).panes, |wp| {
                 if (*wp).pid == pid {
                     (*wp).status = status;
                     (*wp).flags |= PANE_STATUSREADY;
@@ -536,6 +552,7 @@ unsafe extern "C" fn server_child_exited(pid: pid_t, status: i32) {
         job_check_died(pid, status);
     }
 }
+#[unsafe(no_mangle)]
 unsafe extern "C" fn server_child_stopped(pid: pid_t, status: i32) {
     unsafe {
         if WSTOPSIG(status) == SIGTTIN || WSTOPSIG(status) == SIGTTOU {
@@ -543,10 +560,10 @@ unsafe extern "C" fn server_child_stopped(pid: pid_t, status: i32) {
         }
 
         rb_foreach(&raw mut windows, |w| {
-            tailq_foreach(&raw mut (*w).panes, |wp| {
+            tailq_foreach::<_, _, _, discr_entry>(&raw mut (*w).panes, |wp| {
                 if (*wp).pid == pid {
-                    if libc::killpg(pid, SIGCONT) != 0 {
-                        libc::kill(pid, SIGCONT);
+                    if killpg(pid, SIGCONT) != 0 {
+                        kill(pid, SIGCONT);
                     }
                 }
                 ControlFlow::Continue::<(), ()>(())
@@ -573,16 +590,16 @@ pub unsafe extern "C" fn server_add_message(fmt: *const c_char, mut args: ...) {
         message_next += 1;
         (*msg).msg = s;
 
-        compat_rs::queue::tailq_insert_tail!(&raw mut message_log, msg, entry);
+        tailq_insert_tail(&raw mut message_log, msg);
 
         let limit = options_get_number(global_options, c"message-limit".as_ptr()) as u32;
         tailq_foreach_safe(&raw mut message_log, |msg| {
             if (*msg).msg_num + limit >= message_next {
                 return ControlFlow::Continue::<(), ()>(());
             }
-            free((*msg).msg as _);
-            tailq_remove!(&raw mut message_log, msg, entry);
-            free(msg as _);
+            free_((*msg).msg);
+            tailq_remove(&raw mut message_log, msg);
+            free_(msg);
             ControlFlow::Continue::<(), ()>(())
         });
     }

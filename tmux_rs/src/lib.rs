@@ -2391,7 +2391,20 @@ pub use crate::file::{
     file_vprint, file_write, file_write_close, file_write_data, file_write_left, file_write_open, file_write_ready,
 };
 
+mod server;
+pub use crate::server::{
+    clients, current_time, marked_pane, message_log, server_add_accept, server_add_message, server_check_marked,
+    server_clear_marked, server_create_socket, server_is_marked, server_proc, server_set_marked, server_start,
+    server_update_socket,
+};
+
+/*
 unsafe extern "C" {
+    pub unsafe static mut clients: clients;
+    pub unsafe static mut marked_pane: cmd_find_state;
+    pub unsafe static mut server_proc: *mut tmuxproc;
+
+
     #[unsafe(no_mangle)]
     pub fn server_start(
         client: *mut tmuxproc,
@@ -2403,23 +2416,10 @@ unsafe extern "C" {
 
     #[unsafe(no_mangle)]
     pub unsafe fn server_add_message(fmt: *const c_char, ...);
-}
-/*
-mod server;
-pub use crate::server::{
-    clients, current_time, marked_pane, message_log, server_add_accept, server_add_message, server_check_marked,
-    server_clear_marked, server_create_socket, server_is_marked, server_proc, server_set_marked, server_start,
-    server_update_socket,
-};
-*/
-unsafe extern "C" {
-    pub unsafe static mut clients: clients;
-    pub unsafe static mut marked_pane: cmd_find_state;
-    pub unsafe static mut server_proc: *mut tmuxproc;
-
     pub unsafe fn server_check_marked() -> c_int;
     pub unsafe fn server_clear_marked();
 }
+*/
 
 mod server_client;
 pub use crate::server_client::{

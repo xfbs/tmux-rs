@@ -143,7 +143,13 @@ endif
 # utf8.c
 # paste.c
 # hyperlinks.c
+# cmd-pipe-pane.c
+# cmd-send-keys.c
+# server-acl.c
+# cmd-set-option.c
+# cmd-refresh-client.c
 dist_tmux_SOURCES = \
+	server.c \
 	cmd-new-session.c \
 	environ.c \
 	cmd-resize-pane.c \
@@ -151,12 +157,8 @@ dist_tmux_SOURCES = \
 	arguments.c \
 	cmd-find.c \
 	cmd-parse.y \
-	cmd-pipe-pane.c \
-	cmd-refresh-client.c \
 	cmd-run-shell.c \
 	cmd-select-pane.c \
-	cmd-send-keys.c \
-	cmd-set-option.c \
 	cmd-show-options.c \
 	cmd-wait-for.c \
 	compat.h \
@@ -182,8 +184,6 @@ dist_tmux_SOURCES = \
 	screen-redraw.c \
 	screen-write.c \
 	screen.c \
-	server.c \
-	server-acl.c \
 	server-client.c \
 	server-fn.c \
 	session.c \
