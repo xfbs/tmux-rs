@@ -1,5 +1,7 @@
 use core::ffi::{c_char, c_void};
 
+use libc::timeval;
+
 pub type wchar_t = core::ffi::c_int;
 
 #[inline]
@@ -37,3 +39,25 @@ unsafe extern "C" {
 
 #[inline]
 pub unsafe fn memset0<T>(dest: *mut T) -> *mut T { unsafe { libc::memset(dest.cast(), 0, size_of::<T>()).cast() } }
+
+#[inline]
+pub unsafe fn timerclear(tv: *mut timeval) {
+    // implemented as a macro by most libc's
+    unsafe {
+        (*tv).tv_sec = 0;
+        (*tv).tv_usec = 0;
+    }
+}
+
+#[inline]
+pub unsafe fn timersub(a: *mut timeval, b: *mut timeval, result: *mut timeval) {
+    // implemented as a macro by most libc's
+    unsafe {
+        (*result).tv_sec = (*a).tv_sec - (*b).tv_sec;
+        (*result).tv_usec = (*a).tv_usec - (*b).tv_usec;
+        if (*result).tv_usec < 0 {
+            (*result).tv_sec -= 1;
+            (*result).tv_usec += 1000000;
+        }
+    }
+}

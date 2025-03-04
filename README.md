@@ -146,7 +146,7 @@ more then just server exited unexpectedly.
     - NonNull use as_uninit_mut
 
 - [X] 325 alert
-- [...] 1097 arguments
+- [X] 1097 arguments
 - [X]  108 attributes
 - [X]  277 cfg
 - [X]  809 client
@@ -212,10 +212,6 @@ more then just server exited unexpectedly.
   - [ ] 1512 window-customize
   - [ ] 5786 window-copy
 - [X] 874 cmd
-  - [ ]  242 cmd-select-pane
-  - [ ]  260 cmd-show-options
-  - [ ]  264 cmd-wait-for
-  - [ ]  290 cmd-run-shell
   - [ ]  215 cmd-resize-pane (doesn't work)
   - [ ]  370 cmd-new-session (doesn't work, crashes)
   =====
@@ -223,6 +219,10 @@ more then just server exited unexpectedly.
   - [ ] 1314 cmd-find
   - [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
   =====
+  - [X]  290 cmd-run-shell
+  - [X]  264 cmd-wait-for
+  - [X]  260 cmd-show-options
+  - [X]  242 cmd-select-pane
   - [X]  335 cmd-refresh-client
   - [X]  239 cmd-set-option
   - [X]  237 cmd-send-keys
@@ -361,6 +361,8 @@ SUMMARY: AddressSanitizer: 28 byte(s) leaked in 1 allocation(s).
 - typo fps, fsp, variable unused null , cmd-queue.c ( causing crash when C-b t for clock)
 - missing C prototype :struct cmd_parse_commands * cmd_parse_do_buffer(const char *buf, size_t len, struct cmd_parse_input *pi, char **cause)
   - return address value truncated to int
+- for loop never entered didn't init variable needed for side effect after for loop ended (arguments)
+- incorrect for loop translation. used 1..count, but should have used while loop
 
 # References
 

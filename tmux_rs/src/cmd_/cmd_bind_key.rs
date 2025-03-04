@@ -61,7 +61,7 @@ unsafe extern "C" fn cmd_bind_key_exec(self_: *mut cmd, item: *mut cmdq_item) ->
         }
 
         let pr = if count == 2 {
-            cmd_parse_from_string(args_string(args, 1), null_mut())
+            cmd_parse_from_string(args_string(args, 1) as *mut i8, null_mut()) // TODO casting away const
         } else {
             cmd_parse_from_arguments(args_values(args).add(1), count - 1, null_mut())
         };

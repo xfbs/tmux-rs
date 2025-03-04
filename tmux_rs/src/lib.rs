@@ -5,7 +5,8 @@
 #![allow(non_camel_case_types)]
 
 pub mod libc_;
-pub use libc_::*; // want to rexport everything from here
+pub use libc_::*;
+use xmalloc::Zeroable; // want to rexport everything from here
 
 pub mod event_;
 pub mod image_;
@@ -1605,6 +1606,7 @@ pub union args_value_union {
     pub cmdlist: *mut cmd_list,
 }
 
+unsafe impl Zeroable for args_value {}
 /// Argument value.
 #[repr(C)]
 #[derive(compat_rs::TailQEntry)]
@@ -1619,6 +1621,7 @@ pub type args_tree = rb_head<args_entry>;
 
 /// Arguments parsing type.
 #[repr(C)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub enum args_parse_type {
     ARGS_PARSE_INVALID,
     ARGS_PARSE_STRING,

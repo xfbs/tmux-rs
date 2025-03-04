@@ -6,27 +6,6 @@ unsafe extern "C" {
     unsafe fn basename(_: *mut c_char) -> *mut c_char;
 }
 
-#[inline]
-unsafe fn timerclear(tv: *mut timeval) {
-    unsafe {
-        (*tv).tv_sec = 0;
-        (*tv).tv_usec = 0;
-    }
-}
-
-#[inline]
-unsafe fn timersub(a: *mut timeval, b: *mut timeval, result: *mut timeval) {
-    // implemented as a macro by most libc's
-    unsafe {
-        (*result).tv_sec = (*a).tv_sec - (*b).tv_sec;
-        (*result).tv_usec = (*a).tv_usec - (*b).tv_usec;
-        if (*result).tv_usec < 0 {
-            (*result).tv_sec -= 1;
-            (*result).tv_usec += 1000000;
-        }
-    }
-}
-
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn name_time_callback(_fd: c_int, _events: c_short, arg: *mut c_void) {
     let mut w = arg as *mut window;

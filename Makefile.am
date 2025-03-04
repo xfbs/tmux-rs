@@ -148,19 +148,19 @@ endif
 # server-acl.c
 # cmd-set-option.c
 # cmd-refresh-client.c
+# cmd-select-pane.c
+# cmd-show-options.c
+# cmd-wait-for.c
+# cmd-run-shell.c
+# arguments.c
 dist_tmux_SOURCES = \
 	server.c \
 	cmd-new-session.c \
 	environ.c \
 	cmd-resize-pane.c \
 	cmd-queue.c \
-	arguments.c \
 	cmd-find.c \
 	cmd-parse.y \
-	cmd-run-shell.c \
-	cmd-select-pane.c \
-	cmd-show-options.c \
-	cmd-wait-for.c \
 	compat.h \
 	format.c \
 	format-draw.c \
