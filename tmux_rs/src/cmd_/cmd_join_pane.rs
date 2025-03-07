@@ -121,7 +121,7 @@ unsafe extern "C" fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
 
         (*src_wp).window = dst_w;
         options_set_parent((*src_wp).options, (*dst_w).options);
-        (*src_wp).flags |= PANE_STYLECHANGED;
+        (*src_wp).flags |= window_pane_flags::PANE_STYLECHANGED;
         if (flags & SPAWN_BEFORE != 0) {
             tailq_insert_before!(dst_wp, src_wp, entry);
         } else {

@@ -46,12 +46,12 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
             }
             grid_remove_history(gd, adjust);
             (*wp).base.cy += adjust;
-            (*wp).flags |= PANE_REDRAW;
+            (*wp).flags |= window_pane_flags::PANE_REDRAW;
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
         if (args_has_(args, 'M')) {
-            if (*event).m.valid == 0 || cmd_mouse_window(&raw mut (*event).m, &raw mut s).is_null() {
+            if (*event).m.valid == 0 || cmd_mouse_window(&raw mut (*event).m, &raw mut s).is_none() {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
             if (c.is_null() || (*c).session != s) {
@@ -134,7 +134,6 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_resize_pane_mouse_update(c: *mut client, m: *mut mouse_event) {
     unsafe {
-        let mut wl: *mut winlink = null_mut();
         let mut w: *mut window = null_mut();
         let mut y: u32 = 0;
         let mut ly: u32 = 0;
@@ -145,7 +144,7 @@ unsafe extern "C" fn cmd_resize_pane_mouse_update(c: *mut client, m: *mut mouse_
         let mut cells: [*mut layout_cell; offsets.len()] = zeroed();
         let mut resizes: u32 = 0;
 
-        let wl = cmd_mouse_window(m, null_mut());
+        let wl: *mut winlink = transmute_ptr(cmd_mouse_window(m, null_mut()));
         if wl.is_null() {
             (*c).tty.mouse_drag_update = None;
             return;

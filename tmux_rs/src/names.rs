@@ -43,7 +43,7 @@ pub unsafe fn check_window_name(w: *mut window) {
             return;
         }
 
-        if !(*(*w).active).flags & PANE_CHANGED != 0 {
+        if !(*(*w).active).flags.intersects(window_pane_flags::PANE_CHANGED) {
             log_debug(c"@%u active pane not changed".as_ptr(), (*w).id);
             return;
         }
@@ -73,7 +73,7 @@ pub unsafe fn check_window_name(w: *mut window) {
             evtimer_del(&raw mut (*w).name_event);
         }
 
-        (*(*w).active).flags &= !PANE_CHANGED;
+        (*(*w).active).flags &= !window_pane_flags::PANE_CHANGED;
 
         let name = format_window_name(w);
         if strcmp(name, (*w).name) != 0 {

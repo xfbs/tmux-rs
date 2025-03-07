@@ -64,6 +64,18 @@ issue.
 - Seems a common source of bugs is stubbing something and intending to come back to it later, but not. Avoid this.
 - SEGFAULTS, crashes, panics are much easier to debug then infinite loops and other types of bugs because you get a stack trace
 
+## Debugging Tips
+- reduce problem to single function. set a breakpoint on that function. walk through it in old and new version and notice differences
+- if crashing on user action, start, get pid of second process; attach gdb on second process without follow child mode; continue; trigger action, hopefully gdb will be at the point where the crash occurred
+
+# C Stuff
+
+- integer promotion rules
+- rust literal value inference
+- prototypes
+- variadics
+
+
 # Progress
 
 Current status:
@@ -131,6 +143,7 @@ more then just server exited unexpectedly.
 # Interesting Patterns
 
 - goto labeled block translation
+- bitflags
 
 # TODO After 100% Rust
 - miri
@@ -145,6 +158,53 @@ more then just server exited unexpectedly.
     - also need to ensure no pointers are created and stored from the references
     - NonNull use as_uninit_mut
 
+- [ ]  370 layout-custom
+- [ ]  418 window-client
+- [ ]  429 grid-reader
+- [ ]  467 resize
+- [ ]  477 key-string
+- [ ]  493 server-fn
+- [ ]  510 tty-features
+- [ ]  556 menu
+- [ ]  559 window-buffer
+- [ ]  691 layout-set
+- [ ]  692 key-bindings
+- [ ]  740 screen
+- [ ]  759 session
+- [ ]  794 input-keys
+- [ ]  818 popup
+- [ ]  868 screen-redraw
+- [ ]  924 tty-term
+- [ ] 1120 layout
+- [ ] 1204 options
+- [ ] 1243 format-draw
+- [ ] 1266 mode-tree
+- [ ] 1348 window-tree
+- [ ] 1370 options-table
+- [ ] 1512 window-customize
+- [ ] 1535 grid
+- [ ] 1591 tty-keys
+- [ ] 2035 status
+- [ ] 2347 screen-write
+- [ ] 3025 input
+- [ ] 3186 tty
+- [ ] 3392 server-client
+- [ ] 5294 format
+- [ ] 5786 window-copy
+- [ ] broken, partially ported files
+  - [ ]  281 environ (environ_free is broken, everything else works)
+  - [ ]  323 notify (notify_add)
+  - [ ] 557 server (server_loop is broken)
+  - [ ]  899 cmd-queue (some tailq functions used port isn't working) (TODO move into broken)
+- [X] 874 cmd
+  - [ ]  370 cmd-new-session (doesn't work, crashes on startup)
+  =====
+  - [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
+  =====
+- [X]  269 tty-acs
+- [X]  235 grid-view
+- [X]  286 window-clock
+- [X] window
 - [X] 325 alert
 - [X] 1097 arguments
 - [X]  108 attributes
@@ -169,56 +229,10 @@ more then just server exited unexpectedly.
 - [X] 822 utf8
 - [X] 342 paste
 - [X]  239 hyperlinks
-- [ ]  281 environ (environ_free is broken, everything else works)
-- [ ]  323 notify
-- [ ]  467 resize
-- [ ]  497 spawn
-- [ ]  556 menu
-- [ ]  759 session
-- [ ]  794 input-keys
-- [ ]  818 popup
-- [ ] 5294 format
-  - [ ] 1243 format-draw
-- [ ] 1535 grid
-  - [ ] 429 grid-reader
-  - [ ] 235 grid-view
-- [ ] 3025 input
-- [ ]  692 key-bindings
-- [ ]  477 key-string
-- [ ] 1120 layout
-  - [ ] 370 layout-custom
-  - [ ] 691 layout-set
-- [ ] 1266 mode-tree
-- [ ] 1204 options
-  - [ ] 1370 options-table
-- [ ] 740 screen
-  - [ ]  868 screen-redraw
-  - [ ] 2347 screen-write
-- [ ] 557 server (server_loop is broken)
-  - [X]  186 server-acl
-  - [ ]  493 server-fn
-  - [ ] 3392 server-client
-- [ ] 2035 status
-- [ ] 3186 tty
-  - [ ]  269 tty-acs
-  - [ ]  510 tty-features
-  - [ ]  924 tty-term
-  - [ ] 1591 tty-keys
-- [X] window
-  - [X]  286 window-clock
-  - [ ]  418 window-client
-  - [ ]  559 window-buffer
-  - [ ] 1348 window-tree
-  - [ ] 1512 window-customize
-  - [ ] 5786 window-copy
-- [X] 874 cmd
-  - [ ]  215 cmd-resize-pane (doesn't work)
-  - [ ]  370 cmd-new-session (doesn't work, crashes)
-  =====
-  - [ ]  899 cmd-queue (some tailq functions used port isn't working)
-  - [ ] 1314 cmd-find
-  - [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
-  =====
+- [X]  497 spawn
+- [X]  186 server-acl
+  - [X] 1314 cmd-find
+  - [X]  215 cmd-resize-pane
   - [X]  290 cmd-run-shell
   - [X]  264 cmd-wait-for
   - [X]  260 cmd-show-options
@@ -325,7 +339,12 @@ undefined behaviour in this context.
   - when running tmux while an existing tmux instance is running causes it to hang, killing the pane causes it to properly attach (likely do to my tmux config)
 - Anything entered in command prompt enter causes crash
 - with my rebinding C-b C to new window in current directory causes issues. with it unbound, there's no problem.
+- crashes when typing 'c' because of one of my bindings
+- crashes on my binding prefix g
 
+
+Due to use after shadowing in client_.rs client_connect xasprintf usage
+found by using LSAN_OPTIONS=report_objects=1
 leak on exit:
 ```
 ❯ ./tmux
@@ -363,6 +382,9 @@ SUMMARY: AddressSanitizer: 28 byte(s) leaked in 1 allocation(s).
   - return address value truncated to int
 - for loop never entered didn't init variable needed for side effect after for loop ended (arguments)
 - incorrect for loop translation. used 1..count, but should have used while loop
+- extra copy paste: duplicate value += 1; value +=1;
+- flipped null check
+- flipped : char		 acs[UCHAR_MAX + 1][2]; -> pub acs: [[c_char; c_uchar::MAX as usize + 1]; 2], should be [[c_char; 2]; c_uchar::MAX as usize + 1],
 
 # References
 

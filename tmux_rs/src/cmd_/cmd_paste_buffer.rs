@@ -46,7 +46,7 @@ unsafe extern "C" fn cmd_paste_buffer_exec(self_: *mut cmd, item: *mut cmdq_item
             }
         }
 
-        if (!pb.is_null() && !(*wp).flags & PANE_INPUTOFF != 0) {
+        if (!pb.is_null() && !(*wp).flags.intersects(window_pane_flags::PANE_INPUTOFF)) {
             let mut sepstr = args_get(args, b's');
             if (sepstr.is_null()) {
                 if (args_has(args, b'r') != 0) {

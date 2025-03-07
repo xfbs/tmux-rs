@@ -90,7 +90,7 @@ pub unsafe extern "C" fn cmd_break_pane_exec(self_: *mut cmd, item: *mut cmdq_it
         w = (*wp).window;
 
         options_set_parent((*wp).options, (*w).options);
-        (*wp).flags |= PANE_STYLECHANGED;
+        (*wp).flags |= window_pane_flags::PANE_STYLECHANGED;
         tailq_insert_head!(&raw mut (*w).panes, wp, entry);
         (*w).active = wp;
         (*w).latest = tc as *mut c_void;
@@ -105,7 +105,7 @@ pub unsafe extern "C" fn cmd_break_pane_exec(self_: *mut cmd, item: *mut cmdq_it
         }
 
         layout_init(w, wp);
-        (*wp).flags |= PANE_CHANGED;
+        (*wp).flags |= window_pane_flags::PANE_CHANGED;
         colour_palette_from_option(&raw mut (*wp).palette, (*wp).options);
 
         if idx == -1 {

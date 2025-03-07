@@ -59,7 +59,7 @@ unsafe extern "C" fn cmd_respawn_pane_exec(self_: *mut cmd, item: *mut cmdq_item
             return (cmd_retval::CMD_RETURN_ERROR);
         }
 
-        (*wp).flags |= PANE_REDRAW;
+        (*wp).flags |= window_pane_flags::PANE_REDRAW;
         server_redraw_window_borders((*wp).window);
         server_status_window((*wp).window);
 

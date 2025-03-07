@@ -148,8 +148,7 @@ pub unsafe extern "C" fn cmd_send_keys_inject_string(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-cmd_send_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+pub unsafe extern "C" fn cmd_send_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let mut args = cmd_get_args(self_);
         let mut target = cmdq_get_target(item);
@@ -218,7 +217,7 @@ cmd_send_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
         if (args_has_(args, 'R')) {
             colour_palette_clear(&raw mut (*wp).palette);
             input_reset((*wp).ictx, 1);
-            (*wp).flags |= (PANE_STYLECHANGED | PANE_REDRAW);
+            (*wp).flags |= (window_pane_flags::PANE_STYLECHANGED | window_pane_flags::PANE_REDRAW);
         }
 
         if (count == 0) {

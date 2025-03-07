@@ -67,7 +67,7 @@ pub type cmd_parse_commands = tailq_head<cmd_parse_command>;
 pub struct cmd_parse_state {
     pub f: *mut FILE,
 
-    pub buf: *mut c_char,
+    pub buf: *const c_char,
     pub len: usize,
     pub off: usize,
 
@@ -211,7 +211,7 @@ pub unsafe extern "C" fn cmd_parse_do_file(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_parse_do_buffer(
-    buf: *mut c_char,
+    buf: *const c_char,
     len: usize,
     pi: *mut cmd_parse_input,
     cause: *mut *mut c_char,

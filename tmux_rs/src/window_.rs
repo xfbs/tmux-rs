@@ -382,7 +382,7 @@ pub unsafe extern "C" fn window_pane_destroy_ready(wp: *mut window_pane) -> i32 
             }
         }
 
-        if !(*wp).flags & PANE_EXITED != 0 {
+        if !(*wp).flags.intersects(window_pane_flags::PANE_EXITED) {
             return 0;
         }
     }
@@ -532,7 +532,7 @@ pub unsafe extern "C" fn window_pane_update_focus(wp: *mut window_pane) {
     unsafe {
         let mut focused = false;
 
-        if !wp.is_null() && ((!(*wp).flags) & PANE_EXITED) != 0 {
+        if !wp.is_null() && !(*wp).flags.intersects(window_pane_flags::PANE_EXITED) {
             if wp != (*(*wp).window).active {
                 focused = false
             } else {
@@ -548,7 +548,7 @@ pub unsafe extern "C" fn window_pane_update_focus(wp: *mut window_pane) {
                     ControlFlow::Continue(())
                 });
             }
-            if !focused && (*wp).flags & PANE_FOCUSED != 0 {
+            if !focused && (*wp).flags.intersects(window_pane_flags::PANE_FOCUSED) {
                 log_debug(
                     c"%s: %%%u focus out".as_ptr(),
                     c"window_pane_update_focus".as_ptr(),
@@ -558,8 +558,8 @@ pub unsafe extern "C" fn window_pane_update_focus(wp: *mut window_pane) {
                     bufferevent_write((*wp).event, c"\x1b[O".as_ptr() as _, 3);
                 }
                 notify_pane(c"pane-focus-out".as_ptr(), wp);
-                (*wp).flags &= !PANE_FOCUSED;
-            } else if focused && (!(*wp).flags & PANE_FOCUSED) != 0 {
+                (*wp).flags &= !window_pane_flags::PANE_FOCUSED;
+            } else if focused && !(*wp).flags.intersects(window_pane_flags::PANE_FOCUSED) {
                 log_debug(
                     c"%s: %%%u focus in".as_ptr(),
                     c"window_pane_update_focus".as_ptr(),
@@ -569,7 +569,7 @@ pub unsafe extern "C" fn window_pane_update_focus(wp: *mut window_pane) {
                     bufferevent_write((*wp).event, c"\x1b[I".as_ptr() as _, 3);
                 }
                 notify_pane(c"pane-focus-in".as_ptr(), wp);
-                (*wp).flags |= PANE_FOCUSED;
+                (*wp).flags |= window_pane_flags::PANE_FOCUSED;
             } else {
                 log_debug(
                     c"%s: %%%u focus unchanged".as_ptr(),
@@ -598,7 +598,7 @@ pub unsafe extern "C" fn window_set_active_pane(w: *mut window, wp: *mut window_
         (*w).active = wp;
         (*(*w).active).active_point = next_active_point;
         next_active_point += 1;
-        (*(*w).active).flags |= PANE_CHANGED;
+        (*(*w).active).flags |= window_pane_flags::PANE_CHANGED;
 
         if options_get_number(global_options, c"focus-events".as_ptr()) != 0 {
             window_pane_update_focus(lastwp);
@@ -638,17 +638,17 @@ pub unsafe extern "C" fn window_redraw_active_switch(w: *mut window, mut wp: *mu
             let gc1 = &raw mut (*wp).cached_gc;
             let gc2 = &raw mut (*wp).cached_active_gc;
             if grid_cells_look_equal(gc1, gc2) == 0 {
-                (*wp).flags |= PANE_REDRAW;
+                (*wp).flags |= window_pane_flags::PANE_REDRAW;
             } else {
                 let mut c1 = window_pane_get_palette(wp, (*gc1).fg);
                 let mut c2 = window_pane_get_palette(wp, (*gc2).fg);
                 if c1 != c2 {
-                    (*wp).flags |= PANE_REDRAW;
+                    (*wp).flags |= window_pane_flags::PANE_REDRAW;
                 } else {
                     c1 = window_pane_get_palette(wp, (*gc1).bg);
                     c2 = window_pane_get_palette(wp, (*gc2).bg);
                     if c1 != c2 {
-                        (*wp).flags |= PANE_REDRAW;
+                        (*wp).flags |= window_pane_flags::PANE_REDRAW;
                     }
                 }
             }
@@ -883,7 +883,7 @@ pub unsafe extern "C" fn window_lost_pane(w: *mut window, wp: *mut window_pane) 
             }
             if !(*w).active.is_null() {
                 window_pane_stack_remove(&raw mut (*w).last_panes, (*w).active);
-                (*(*w).active).flags |= PANE_CHANGED;
+                (*(*w).active).flags |= window_pane_flags::PANE_CHANGED;
                 notify_window(c"window-pane-changed".as_ptr(), w);
                 window_update_focus(w);
             }
@@ -1051,7 +1051,7 @@ pub unsafe extern "C" fn window_printable_flags(wl: *mut winlink, escape: i32) -
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_pane_find_by_id_str(s: *mut c_char) -> *mut window_pane {
+pub unsafe extern "C" fn window_pane_find_by_id_str(s: *const c_char) -> *mut window_pane {
     let mut errstr: *const c_char = null_mut();
     unsafe {
         if *s != b'%' as c_char {
@@ -1083,7 +1083,7 @@ pub unsafe extern "C" fn window_pane_create(w: *mut window, sx: u32, sy: u32, hl
         let wp: *mut window_pane = xcalloc_::<window_pane>(1).as_ptr();
         (*wp).window = w;
         (*wp).options = options_create((*w).options);
-        (*wp).flags = PANE_STYLECHANGED;
+        (*wp).flags = window_pane_flags::PANE_STYLECHANGED;
 
         (*wp).id = next_window_pane_id;
         next_window_pane_id += 1;
@@ -1202,7 +1202,7 @@ unsafe extern "C" fn window_pane_error_callback(_bufev: *mut bufferevent, _what:
     let wp: *mut window_pane = data as _;
     unsafe {
         log_debug(c"%%%u error".as_ptr(), (*wp).id);
-        (*wp).flags |= PANE_EXITED;
+        (*wp).flags |= window_pane_flags::PANE_EXITED;
 
         if window_pane_destroy_ready(wp) != 0 {
             server_destroy_pane(wp, 1);
@@ -1303,7 +1303,7 @@ pub unsafe extern "C" fn window_pane_set_mode(
         }
 
         (*wp).screen = (*wme).screen;
-        (*wp).flags |= PANE_REDRAW | PANE_CHANGED;
+        (*wp).flags |= window_pane_flags::PANE_REDRAW | window_pane_flags::PANE_CHANGED;
 
         server_redraw_window_borders((*wp).window);
         server_status_window((*wp).window);
@@ -1328,7 +1328,7 @@ pub unsafe extern "C" fn window_pane_reset_mode(wp: *mut window_pane) {
         let next = tailq_first(&raw mut (*wp).modes);
         let func = c"window_pane_reset_mode".as_ptr();
         if next.is_null() {
-            (*wp).flags &= !PANE_UNSEENCHANGES;
+            (*wp).flags &= !window_pane_flags::PANE_UNSEENCHANGES;
             log_debug(c"%s: no next mode".as_ptr(), func);
             (*wp).screen = &raw mut (*wp).base;
         } else {
@@ -1338,7 +1338,7 @@ pub unsafe extern "C" fn window_pane_reset_mode(wp: *mut window_pane) {
                 resize(next, (*wp).sx, (*wp).sy);
             }
         }
-        (*wp).flags |= PANE_REDRAW | PANE_CHANGED;
+        (*wp).flags |= window_pane_flags::PANE_REDRAW | window_pane_flags::PANE_CHANGED;
 
         server_redraw_window_borders((*wp).window);
         server_status_window((*wp).window);
@@ -1362,7 +1362,7 @@ unsafe extern "C" fn window_pane_copy_key(wp: *mut window_pane, key: key_code) {
             if loop_ != wp
                 && tailq_empty(&raw mut (*loop_).modes)
                 && (*loop_).fd != -1
-                && (!(*loop_).flags & PANE_INPUTOFF) != 0
+                && !(*loop_).flags.intersects(window_pane_flags::PANE_INPUTOFF)
                 && window_pane_visible(loop_) != 0
                 && options_get_number((*loop_).options, c"synchronize-panes".as_ptr()) != 0
             {
@@ -1395,7 +1395,7 @@ pub unsafe extern "C" fn window_pane_key(
             return 0;
         }
 
-        if (*wp).fd == -1 || (*wp).flags & PANE_INPUTOFF != 0 {
+        if (*wp).fd == -1 || (*wp).flags.intersects(window_pane_flags::PANE_INPUTOFF) {
             return 0;
         }
 
@@ -1427,7 +1427,7 @@ pub unsafe extern "C" fn window_pane_visible(wp: *mut window_pane) -> i32 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_pane_exited(wp: *mut window_pane) -> i32 {
     unsafe {
-        if (*wp).fd == -1 || (*wp).flags & PANE_EXITED != 0 {
+        if (*wp).fd == -1 || (*wp).flags.intersects(window_pane_flags::PANE_EXITED) {
             1
         } else {
             0
@@ -1761,7 +1761,7 @@ pub unsafe extern "C" fn window_pane_stack_push(stack: *mut window_panes, wp: *m
         if !wp.is_null() {
             window_pane_stack_remove(stack, wp);
             tailq_insert_head!(stack, wp, sentry);
-            (*wp).flags |= PANE_VISITED;
+            (*wp).flags |= window_pane_flags::PANE_VISITED;
         }
     }
 }
@@ -1769,9 +1769,9 @@ pub unsafe extern "C" fn window_pane_stack_push(stack: *mut window_panes, wp: *m
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_pane_stack_remove(stack: *mut window_panes, wp: *mut window_pane) {
     unsafe {
-        if !wp.is_null() && (*wp).flags & PANE_VISITED != 0 {
+        if !wp.is_null() && (*wp).flags.intersects(window_pane_flags::PANE_VISITED) {
             tailq_remove::<_, crate::discr_sentry>(stack, wp);
-            (*wp).flags &= !PANE_VISITED;
+            (*wp).flags &= !window_pane_flags::PANE_VISITED;
         }
     }
 }
@@ -1866,7 +1866,7 @@ pub unsafe extern "C" fn window_pane_start_input(
     unsafe {
         let c: *mut client = cmdq_get_client(item);
 
-        if !(*wp).flags & PANE_EMPTY != 0 {
+        if !(*wp).flags.intersects(window_pane_flags::PANE_EMPTY) {
             *cause = xstrdup(c"pane is not empty".as_ptr()).cast().as_ptr();
             return -1;
         }

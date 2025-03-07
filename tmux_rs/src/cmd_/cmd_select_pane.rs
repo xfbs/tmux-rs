@@ -95,11 +95,11 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
                 return cmd_retval::CMD_RETURN_ERROR;
             }
             if (args_has_(args, 'e')) {
-                (*lastwp).flags &= !PANE_INPUTOFF;
+                (*lastwp).flags &= !window_pane_flags::PANE_INPUTOFF;
                 server_redraw_window_borders((*lastwp).window);
                 server_status_window((*lastwp).window);
             } else if (args_has_(args, 'd')) {
-                (*lastwp).flags |= PANE_INPUTOFF;
+                (*lastwp).flags |= window_pane_flags::PANE_INPUTOFF;
                 server_redraw_window_borders((*lastwp).window);
                 server_status_window((*lastwp).window);
             } else {
@@ -136,12 +136,12 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
             markedwp = marked_pane.wp;
 
             if (!lastwp.is_null()) {
-                (*lastwp).flags |= (PANE_REDRAW | PANE_STYLECHANGED);
+                (*lastwp).flags |= (window_pane_flags::PANE_REDRAW | window_pane_flags::PANE_STYLECHANGED);
                 server_redraw_window_borders((*lastwp).window);
                 server_status_window((*lastwp).window);
             }
             if (!markedwp.is_null()) {
-                (*markedwp).flags |= (PANE_REDRAW | PANE_STYLECHANGED);
+                (*markedwp).flags |= (window_pane_flags::PANE_REDRAW | window_pane_flags::PANE_STYLECHANGED);
                 server_redraw_window_borders((*markedwp).window);
                 server_status_window((*markedwp).window);
             }
@@ -156,7 +156,7 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
                 return cmd_retval::CMD_RETURN_ERROR;
             }
             options_set_string(oo, c"window-active-style".as_ptr(), 0, c"%s".as_ptr(), style);
-            (*wp).flags |= (PANE_REDRAW | PANE_STYLECHANGED);
+            (*wp).flags |= (window_pane_flags::PANE_REDRAW | window_pane_flags::PANE_STYLECHANGED);
         }
         if (args_has_(args, 'g')) {
             cmdq_print(item, c"%s".as_ptr(), options_get_string(oo, c"window-style".as_ptr()));
@@ -185,13 +185,13 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
         }
 
         if (args_has_(args, 'e')) {
-            (*wp).flags &= !PANE_INPUTOFF;
+            (*wp).flags &= !window_pane_flags::PANE_INPUTOFF;
             server_redraw_window_borders((*wp).window);
             server_status_window((*wp).window);
             return cmd_retval::CMD_RETURN_NORMAL;
         }
         if (args_has_(args, 'd')) {
-            (*wp).flags |= PANE_INPUTOFF;
+            (*wp).flags |= window_pane_flags::PANE_INPUTOFF;
             server_redraw_window_borders((*wp).window);
             server_status_window((*wp).window);
             return cmd_retval::CMD_RETURN_NORMAL;

@@ -20,6 +20,7 @@ LDADD = $(LIBOBJS) -L/home/collin/Git/tmux/tmux-3.5a/target/x86_64-unknown-linux
 # LDADD = $(LIBOBJS) -L/home/collin/Git/tmux/tmux-3.5a/target/release -ltmux_rs
 
 AM_CFLAGS += -fsanitize=address -fno-omit-frame-pointer -O0
+
 # Set flags for gcc.
 if IS_GCC
 AM_CFLAGS += -std=gnu99
@@ -153,19 +154,27 @@ endif
 # cmd-wait-for.c
 # cmd-run-shell.c
 # arguments.c
+# cmd-resize-pane.c
+# spawn.c
+# cmd-find.c
+# grid-view.c
+# tty-acs.c
+
+# Broken:
+# notify.c (notify_add)
+# environ.c (environ_free)
+# server.c (server_loop)
+
+
 dist_tmux_SOURCES = \
-	server.c \
 	cmd-new-session.c \
-	environ.c \
-	cmd-resize-pane.c \
+	broken.c \
 	cmd-queue.c \
-	cmd-find.c \
 	cmd-parse.y \
 	compat.h \
 	format.c \
 	format-draw.c \
 	grid-reader.c \
-	grid-view.c \
 	grid.c \
 	input-keys.c \
 	input.c \
@@ -176,7 +185,6 @@ dist_tmux_SOURCES = \
 	layout.c \
 	menu.c \
 	mode-tree.c \
-	notify.c \
 	options-table.c \
 	options.c \
 	popup.c \
@@ -187,9 +195,7 @@ dist_tmux_SOURCES = \
 	server-client.c \
 	server-fn.c \
 	session.c \
-	spawn.c \
 	status.c \
-	tty-acs.c \
 	tty-features.c \
 	tty-keys.c \
 	tty-term.c \

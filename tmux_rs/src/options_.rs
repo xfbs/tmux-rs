@@ -42,7 +42,7 @@ unsafe extern "C" {
         _: c_int,
         _: *mut c_int,
     ) -> *mut options_entry;
-    pub fn options_get_string(_: *mut options, _: *const c_char) -> *const c_char;
+    pub fn options_get_string(_: *mut options, _: *const c_char) -> *mut c_char;
     pub fn options_get_number(_: *mut options, _: *const c_char) -> c_longlong;
     pub fn options_set_string(_: *mut options, _: *const c_char, _: c_int, _: *const c_char, ...)
     -> *mut options_entry;

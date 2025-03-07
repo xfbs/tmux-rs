@@ -43,6 +43,11 @@ static int cmd_find_get_pane_with_session(struct cmd_find_state *,
                                           const char *);
 static int cmd_find_get_pane_with_window(struct cmd_find_state *, const char *);
 
+const char *cmd_find_session_table[][2];
+const char *cmd_find_window_table[][2];
+const char *cmd_find_pane_table[][2];
+
+/*
 static const char *cmd_find_session_table[][2] = {{NULL, NULL}};
 static const char *cmd_find_window_table[][2] = {
     {"{start}", "^"}, {"{last}", "!"},     {"{end}", "$"},
@@ -64,6 +69,7 @@ static const char *cmd_find_pane_table[][2] = {
     {"{left-of}", "{left-of}"},
     {"{right-of}", "{right-of}"},
     {NULL, NULL}};
+    */
 
 /* Find pane containing client if any. */
 static struct window_pane *cmd_find_inside_pane(struct client *c) {

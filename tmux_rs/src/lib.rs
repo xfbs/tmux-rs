@@ -1,4 +1,5 @@
 #![feature(array_ptr_get)]
+#![feature(core_intrinsics)] // for const type_name
 #![feature(c_variadic)]
 #![feature(ptr_as_uninit)]
 #![allow(non_upper_case_globals)]
@@ -139,7 +140,11 @@ opaque_types! {
 }
 
 pub const _PATH_BSHELL: *const c_char = c"/bin/sh".as_ptr();
+pub const _PATH_DEFPATH: *const c_char = c"/usr/bin:/bin".as_ptr();
+pub const _PATH_DEV: *const c_char = c"/dev/".as_ptr();
 pub const _PATH_DEVNULL: *const c_char = c"/dev/null".as_ptr();
+
+pub const SIZEOF_PATH_DEV: usize = 6;
 
 pub const TMUX_CONF: &CStr = c"/etc/tmux.conf:~/.tmux.conf";
 pub const TMUX_SOCK: &CStr = c"$TMUX_TMPDIR:/tmp/";
@@ -532,9 +537,20 @@ pub struct utf8_data {
 }
 
 impl utf8_data {
-    pub const fn new(data: [c_uchar; UTF8_SIZE], have: c_uchar, size: c_uchar, width: c_uchar) -> Self {
+    pub const fn new<const N: usize>(data: [u8; N], have: c_uchar, size: c_uchar, width: c_uchar) -> Self {
+        if N >= UTF8_SIZE {
+            panic!("invalid size");
+        }
+
+        let mut padded_data = [0u8; 21];
+        let mut i = 0usize;
+        while i < N {
+            padded_data[i] = data[i];
+            i += 1;
+        }
+
         Self {
-            data,
+            data: padded_data,
             have,
             size,
             width,
@@ -1047,20 +1063,26 @@ pub struct window_pane_resize {
 }
 pub type window_pane_resizes = tailq_head<window_pane_resize>;
 
-pub const PANE_REDRAW: i32 = 0x1;
-pub const PANE_DROP: i32 = 0x2;
-pub const PANE_FOCUSED: i32 = 0x4;
-pub const PANE_VISITED: i32 = 0x8;
-/* 0x10 unused */
-/* 0x20 unused */
-pub const PANE_INPUTOFF: i32 = 0x40;
-pub const PANE_CHANGED: i32 = 0x80;
-pub const PANE_EXITED: i32 = 0x100;
-pub const PANE_STATUSREADY: i32 = 0x200;
-pub const PANE_STATUSDRAWN: i32 = 0x400;
-pub const PANE_EMPTY: i32 = 0x800;
-pub const PANE_STYLECHANGED: i32 = 0x1000;
-pub const PANE_UNSEENCHANGES: i32 = 0x2000;
+bitflags::bitflags! {
+    #[repr(transparent)]
+    #[derive(Copy, Clone, Eq, PartialEq)]
+    pub struct window_pane_flags : i32 {
+        const PANE_REDRAW = 0x1;
+        const PANE_DROP = 0x2;
+        const PANE_FOCUSED = 0x4;
+        const PANE_VISITED = 0x8;
+        /* 0x10 unused */
+        /* 0x20 unused */
+        const PANE_INPUTOFF = 0x40;
+        const PANE_CHANGED = 0x80;
+        const PANE_EXITED = 0x100;
+        const PANE_STATUSREADY = 0x200;
+        const PANE_STATUSDRAWN = 0x400;
+        const PANE_EMPTY = 0x800;
+        const PANE_STYLECHANGED = 0x1000;
+        const PANE_UNSEENCHANGES = 0x2000;
+    }
+}
 
 /// Child window structure.
 #[repr(C)]
@@ -1081,7 +1103,7 @@ pub struct window_pane {
     pub xoff: u32,
     pub yoff: u32,
 
-    pub flags: i32,
+    pub flags: window_pane_flags,
 
     pub argc: i32,
     pub argv: *mut *mut c_char,
@@ -1435,7 +1457,7 @@ pub struct tty_term {
     pub tty: *mut tty,
     pub features: i32,
 
-    pub acs: [[c_char; c_uchar::MAX as usize + 1]; 2],
+    pub acs: [[c_char; 2]; c_uchar::MAX as usize + 1],
 
     pub codes: *mut tty_code,
 
@@ -1448,19 +1470,26 @@ impl ListEntry<tty_term, discr_entry> for tty_term {
     unsafe fn field(this: *mut Self) -> *mut list_entry<tty_term> { unsafe { &raw mut (*this).entry } }
 }
 
-pub const TTY_NOCURSOR: i32 = 0x1;
-pub const TTY_FREEZE: i32 = 0x2;
-pub const TTY_TIMER: i32 = 0x4;
-pub const TTY_NOBLOCK: i32 = 0x8;
-pub const TTY_STARTED: i32 = 0x10;
-pub const TTY_OPENED: i32 = 0x20;
-pub const TTY_OSC52QUERY: i32 = 0x40;
-pub const TTY_BLOCK: i32 = 0x80;
-pub const TTY_HAVEDA: i32 = 0x100; // Primary DA.
-pub const TTY_HAVEXDA: i32 = 0x200;
-pub const TTY_SYNCING: i32 = 0x400;
-pub const TTY_HAVEDA2: i32 = 0x800; // Secondary DA.
-pub const TTY_ALL_REQUEST_FLAGS: i32 = TTY_HAVEDA | TTY_HAVEDA2 | TTY_HAVEXDA;
+bitflags::bitflags! {
+    #[repr(transparent)]
+    pub struct tty_flags: i32 {
+        const TTY_NOCURSOR = 0x1;
+        const TTY_FREEZE = 0x2;
+        const TTY_TIMER = 0x4;
+        const TTY_NOBLOCK = 0x8;
+        const TTY_STARTED = 0x10;
+        const TTY_OPENED = 0x20;
+        const TTY_OSC52QUERY = 0x40;
+        const TTY_BLOCK = 0x80;
+        const TTY_HAVEDA = 0x100; // Primary DA.
+        const TTY_HAVEXDA = 0x200;
+        const TTY_SYNCING = 0x400;
+        const TTY_HAVEDA2 = 0x800; // Secondary DA.
+    }
+}
+pub const TTY_ALL_REQUEST_FLAGS: tty_flags = tty_flags::TTY_HAVEDA
+    .union(tty_flags::TTY_HAVEDA2)
+    .union(tty_flags::TTY_HAVEXDA);
 
 /// Client terminal.
 #[repr(C)]
@@ -1509,7 +1538,7 @@ pub struct tty {
     pub cell: grid_cell,
     pub last_cell: grid_cell,
 
-    pub flags: i32,
+    pub flags: tty_flags,
 
     pub term: *mut tty_term,
 

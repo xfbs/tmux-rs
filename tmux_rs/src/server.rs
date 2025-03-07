@@ -535,10 +535,10 @@ unsafe extern "C" fn server_child_exited(pid: pid_t, status: i32) {
             tailq_foreach::<_, _, _, discr_entry>(&raw mut (*w).panes, |wp| {
                 if (*wp).pid == pid {
                     (*wp).status = status;
-                    (*wp).flags |= PANE_STATUSREADY;
+                    (*wp).flags |= window_pane_flags::PANE_STATUSREADY;
 
                     log_debug(c"%%%u exited".as_ptr(), (*wp).id);
-                    (*wp).flags |= PANE_EXITED;
+                    (*wp).flags |= window_pane_flags::PANE_EXITED;
 
                     if window_pane_destroy_ready(wp) != 0 {
                         server_destroy_pane(wp, 1);

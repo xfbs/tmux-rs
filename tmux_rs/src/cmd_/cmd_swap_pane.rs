@@ -83,10 +83,10 @@ unsafe extern "C" fn cmd_swap_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
 
             (*src_wp).window = dst_w;
             options_set_parent((*src_wp).options, (*dst_w).options);
-            (*src_wp).flags |= PANE_STYLECHANGED;
+            (*src_wp).flags |= window_pane_flags::PANE_STYLECHANGED;
             (*dst_wp).window = src_w;
             options_set_parent((*dst_wp).options, (*src_w).options);
-            (*dst_wp).flags |= PANE_STYLECHANGED;
+            (*dst_wp).flags |= window_pane_flags::PANE_STYLECHANGED;
 
             let sx = (*src_wp).sx;
             let sy = (*src_wp).sy;

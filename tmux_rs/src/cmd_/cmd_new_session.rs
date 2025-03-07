@@ -1,9 +1,7 @@
+use crate::*;
+
 use compat_rs::{strtonum, tree::rb_min};
 use libc::{sscanf, strcmp, tcgetattr};
-
-use crate::*;
-type u_int = u32;
-type u_char = u8;
 
 const NEW_SESSION_TEMPLATE: &CStr = c"#{session_name}:";
 
@@ -60,7 +58,6 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
         let mut tiop = null_mut();
         let mut sg: *mut session_group = null_mut();
         let mut errstr: *const c_char = null();
-        let mut template: *const c_char = null();
         let mut group: *const c_char = null();
         let mut tmp: *const c_char = null();
         let mut cause = null_mut();
@@ -79,7 +76,6 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
         let mut count = args_count(args);
         let mut sc: spawn_context = zeroed();
         let mut retval = cmd_retval::CMD_RETURN_NORMAL;
-        let mut fs: cmd_find_state;
         let mut av: *mut args_value;
 
         'fail: {
@@ -228,28 +224,24 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                 80
             };
 
-            dsy = 0;
-            if (args_has_(args, 'y')) {
+            dsy = if (args_has_(args, 'y')) {
                 tmp = args_get_(args, 'y');
                 if (strcmp(tmp, c"-".as_ptr()) == 0) {
-                    if (!c.is_null()) {
-                        dsy = (*c).tty.sy;
-                    } else {
-                        dsy = 24;
-                    }
+                    if (!c.is_null()) { (*c).tty.sy } else { 24 }
                 } else {
-                    dsy = strtonum(tmp, 1, u16::MAX as i64, &raw mut errstr) as u32;
+                    let dsy_ = strtonum(tmp, 1, u16::MAX as i64, &raw mut errstr) as u32;
                     if (!errstr.is_null()) {
                         cmdq_error(item, c"height %s".as_ptr(), errstr);
                         break 'fail;
                     }
+                    dsy_
                 }
             } else {
-                dsy = 24;
-            }
+                24
+            };
 
-            sx = 0;
-            sy = 0;
+            // sx = 0;
+            // sy = 0;
             /* Find new session size. */
             if (!detached && !is_control) {
                 sx = (*c).tty.sx;
@@ -364,7 +356,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
 
             /* Print if requested. */
             if (args_has_(args, 'P')) {
-                template = args_get_(args, 'F');
+                let mut template: *const c_char = args_get_(args, 'F');
                 if (template.is_null()) {
                     template = NEW_SESSION_TEMPLATE.as_ptr();
                 }
@@ -380,15 +372,15 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                 cmd_find_from_session(current, s, 0);
             }
 
-            fs = zeroed(); //TODO use uninit;
-            cmd_find_from_session(&raw mut fs, s, 0);
-            cmdq_insert_hook(s, item, &raw mut fs, c"after-new-session".as_ptr());
+            let mut fs: MaybeUninit<cmd_find_state> = MaybeUninit::<cmd_find_state>::uninit(); //TODO use uninit;
+            cmd_find_from_session(fs.as_mut_ptr(), s, 0);
+            cmdq_insert_hook(s, item, fs.as_mut_ptr(), c"after-new-session".as_ptr());
 
             if (cfg_finished != 0) {
                 cfg_show_causes(s);
             }
 
-            if (sc.argv.is_null()) {
+            if (!sc.argv.is_null()) {
                 cmd_free_argv(sc.argc, sc.argv);
             }
             free_(cwd);
@@ -405,6 +397,6 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
         free_(cwd);
         free_(newname);
         free_(prefix);
-        return cmd_retval::CMD_RETURN_ERROR;
+        cmd_retval::CMD_RETURN_ERROR
     }
 }

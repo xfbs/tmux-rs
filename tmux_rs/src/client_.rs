@@ -141,7 +141,7 @@ pub unsafe extern "C" fn client_connect(base: *mut event_base, path: *const c_ch
 
                     if locked == 0 {
                         xasprintf(&raw mut lockfile, c"%s.lock".as_ptr(), path);
-                        let lockfd = client_get_lock(lockfile);
+                        lockfd = client_get_lock(lockfile);
                         if lockfd < 0 {
                             log_debug(c"didn't get lock (%d)".as_ptr(), lockfd);
 

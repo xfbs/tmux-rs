@@ -50,7 +50,7 @@ pub mod cmd_queue;
 pub mod cmd_refresh_client;
 pub mod cmd_rename_session;
 pub mod cmd_rename_window;
-// pub mod cmd_resize_pane;
+pub mod cmd_resize_pane;
 pub mod cmd_resize_window;
 pub mod cmd_respawn_pane;
 pub mod cmd_respawn_window;

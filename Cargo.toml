@@ -39,6 +39,7 @@ non_upper_case_globals = "allow"
 private_interfaces     = "allow"
 unused                 = "allow"
 unsafe_op_in_unsafe_fn = "allow"
+unexpected_cfgs        = { level = "warn", check-cfg = ['cfg(disabled)'] }
 
 [workspace.lints.clippy]
 collapsible_if        = "allow"

@@ -154,7 +154,7 @@ pub unsafe extern "C" fn window_clock_timer_callback(fd: i32, events: i16, arg: 
         (*data).tim = t;
 
         window_clock_draw_screen(wme);
-        (*wp).flags |= PANE_REDRAW;
+        (*wp).flags |= window_pane_flags::PANE_REDRAW;
     }
 }
 
