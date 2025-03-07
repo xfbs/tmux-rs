@@ -159,6 +159,8 @@ endif
 # cmd-find.c
 # grid-view.c
 # tty-acs.c
+# layout-custom.c
+# window-client.c
 
 # Broken:
 # notify.c (notify_add)
@@ -180,7 +182,6 @@ dist_tmux_SOURCES = \
 	input.c \
 	key-bindings.c \
 	key-string.c \
-	layout-custom.c \
 	layout-set.c \
 	layout.c \
 	menu.c \
@@ -201,7 +202,6 @@ dist_tmux_SOURCES = \
 	tty-term.c \
 	tty.c \
 	window-buffer.c \
-	window-client.c \
 	window-copy.c \
 	window-customize.c \
 	window-tree.c \

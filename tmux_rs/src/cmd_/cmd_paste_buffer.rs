@@ -1,5 +1,3 @@
-use libevent_sys::bufferevent_write;
-
 use crate::*;
 
 #[unsafe(no_mangle)]

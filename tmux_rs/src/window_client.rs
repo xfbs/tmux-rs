@@ -1,4 +1,458 @@
-use super::*;
+use compat_rs::queue::{tailq_first, tailq_foreach};
+use libc::{qsort, strcmp};
+
+use crate::*;
+
 unsafe extern "C" {
-    pub static mut window_client_mode: window_mode;
+    // pub static mut window_client_mode: window_mode;
+}
+
+static WINDOW_CLIENT_DEFAULT_COMMAND: &CStr = c"detach-client -t '%%'";
+static WINDOW_CLIENT_DEFAULT_FORMAT: &CStr = c"#{t/p:client_activity}: session #{session_name}";
+static WINDOW_CLIENT_DEFAULT_KEY_FORMAT: &CStr =
+    c"#{?#{e|<:#{line},10},#{line},#{?#{e|<:#{line},36},M-#{a:#{e|+:97,#{e|-:#{line},10}}},}}";
+
+static mut window_client_menu_items: [menu_item; 9] = [
+    menu_item::new(c"Detach".as_ptr(), b'd' as _, null()),
+    menu_item::new(c"Detach Tagged".as_ptr(), b'D' as _, null()),
+    menu_item::new(c"".as_ptr(), KEYC_NONE, null()),
+    menu_item::new(c"Tag".as_ptr(), b't' as _, null()),
+    menu_item::new(c"Tag All".as_ptr(), b'\x14' as _, null()),
+    menu_item::new(c"Tag None".as_ptr(), b'T' as _, null()),
+    menu_item::new(c"".as_ptr(), KEYC_NONE, null()),
+    menu_item::new(c"Cancel".as_ptr(), b'q' as _, null()),
+    menu_item::new(null(), KEYC_NONE, null()),
+];
+
+#[unsafe(no_mangle)]
+pub static mut window_client_mode: window_mode = window_mode {
+    name: c"client-mode".as_ptr(),
+    default_format: WINDOW_CLIENT_DEFAULT_FORMAT.as_ptr(),
+
+    init: Some(window_client_init),
+    free: Some(window_client_free),
+    resize: Some(window_client_resize),
+    update: Some(window_client_update),
+    key: Some(window_client_key),
+    ..unsafe { zeroed() }
+};
+
+#[repr(u32)]
+pub enum window_client_sort_type {
+    WINDOW_CLIENT_BY_NAME,
+    WINDOW_CLIENT_BY_SIZE,
+    WINDOW_CLIENT_BY_CREATION_TIME,
+    WINDOW_CLIENT_BY_ACTIVITY_TIME,
+}
+pub struct UnknownValue(u32);
+impl TryFrom<u32> for window_client_sort_type {
+    type Error = UnknownValue;
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        Ok(match value {
+            0 => window_client_sort_type::WINDOW_CLIENT_BY_NAME,
+            1 => window_client_sort_type::WINDOW_CLIENT_BY_SIZE,
+            2 => window_client_sort_type::WINDOW_CLIENT_BY_CREATION_TIME,
+            3 => window_client_sort_type::WINDOW_CLIENT_BY_ACTIVITY_TIME,
+            x => return Err(UnknownValue(x)),
+        })
+    }
+}
+
+const WINDOW_CLIENT_SORT_LIST_LEN: u32 = 4;
+static mut window_client_sort_list: [*const c_char; 4] = [
+    c"name".as_ptr(),
+    c"size".as_ptr(),
+    c"creation".as_ptr(),
+    c"activity".as_ptr(),
+];
+
+static mut window_client_sort: *mut mode_tree_sort_criteria = null_mut();
+
+unsafe impl Zeroable for window_client_itemdata {}
+#[repr(C)]
+struct window_client_itemdata {
+    c: *mut client,
+}
+
+unsafe impl Zeroable for window_client_modedata {}
+#[repr(C)]
+struct window_client_modedata {
+    wp: *mut window_pane,
+
+    data: *mut mode_tree_data,
+    format: *mut c_char,
+    key_format: *mut c_char,
+    command: *mut c_char,
+
+    item_list: *mut *mut window_client_itemdata,
+    item_size: u32,
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_client_add_item(data: *mut window_client_modedata) -> *mut window_client_itemdata {
+    unsafe {
+        (*data).item_list = xreallocarray_((*data).item_list, (*data).item_size as usize + 1).as_ptr();
+        let item = xcalloc1::<window_client_itemdata>() as *mut window_client_itemdata;
+        *(*data).item_list.add((*data).item_size as usize) = item;
+        (*data).item_size += 1;
+
+        item
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_client_free_item(item: *mut window_client_itemdata) {
+    unsafe {
+        server_client_unref((*item).c);
+        free_(item);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_client_cmp(a0: *const c_void, b0: *const c_void) -> i32 {
+    unsafe {
+        let mut a: *const *const window_client_itemdata = a0 as _;
+        let mut b: *const *const window_client_itemdata = b0 as _;
+        let mut itema: *const window_client_itemdata = *a;
+        let mut itemb: *const window_client_itemdata = *b;
+        let ca = (*itema).c;
+        let cb = (*itemb).c;
+        let mut result: i32 = 0;
+
+        match window_client_sort_type::try_from((*window_client_sort).field) {
+            Ok(window_client_sort_type::WINDOW_CLIENT_BY_SIZE) => {
+                result = (*ca).tty.sx.wrapping_sub((*cb).tty.sx) as i32;
+                if (result == 0) {
+                    result = (*ca).tty.sy.wrapping_sub((*cb).tty.sy) as i32;
+                }
+            }
+            Ok(window_client_sort_type::WINDOW_CLIENT_BY_CREATION_TIME) => {
+                if timer::new(&raw const (*ca).creation_time) > timer::new(&raw const (*cb).creation_time) {
+                    result = -1;
+                } else if timer::new(&raw mut (*ca).creation_time) < timer::new(&raw mut (*cb).creation_time) {
+                    result = 1;
+                }
+            }
+            Ok(window_client_sort_type::WINDOW_CLIENT_BY_ACTIVITY_TIME) => {
+                if timer::new(&raw mut (*ca).activity_time) > timer::new(&raw mut (*cb).activity_time) {
+                    result = -1;
+                } else if timer::new(&raw mut (*ca).activity_time) < timer::new(&raw mut (*cb).activity_time) {
+                    result = 1;
+                }
+            }
+            _ => (),
+        }
+
+        /* Use WINDOW_CLIENT_BY_NAME as default order and tie breaker. */
+        if (result == 0) {
+            result = strcmp((*ca).name, (*cb).name);
+        }
+
+        if ((*window_client_sort).reversed != 0) {
+            result = -result;
+        }
+
+        result
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_client_build(
+    modedata: *mut c_void,
+    sort_crit: *mut mode_tree_sort_criteria,
+    _tag: *mut u64,
+    filter: *const c_char,
+) {
+    unsafe {
+        let mut data = modedata as *mut window_client_modedata;
+        let mut item: *mut window_client_itemdata = null_mut();
+
+        for i in 0..(*data).item_size {
+            window_client_free_item(*(*data).item_list.add(i as usize));
+        }
+        free_((*data).item_list);
+        (*data).item_list = null_mut();
+        (*data).item_size = 0;
+
+        tailq_foreach(&raw mut clients, |c| {
+            if ((*c).session.is_null() || ((*c).flags & CLIENT_UNATTACHEDFLAGS != 0)) {
+                return ControlFlow::<(), ()>::Continue(());
+            }
+
+            item = window_client_add_item(data);
+            (*item).c = c;
+
+            (*c).references += 1;
+            ControlFlow::<(), ()>::Continue(())
+        });
+
+        window_client_sort = sort_crit;
+        qsort(
+            (*data).item_list.cast(),
+            (*data).item_size as usize,
+            size_of::<window_client_itemdata>(),
+            Some(window_client_cmp),
+        );
+
+        for i in 0..(*data).item_size {
+            item = *(*data).item_list.add(i as usize);
+            let c = (*item).c;
+
+            if (!filter.is_null()) {
+                let cp = format_single(null_mut(), filter, c, null_mut(), null_mut(), null_mut());
+                if (format_true(cp) == 0) {
+                    free_(cp);
+                    continue;
+                }
+                free_(cp);
+            }
+
+            let text = format_single(null_mut(), (*data).format, c, null_mut(), null_mut(), null_mut());
+            mode_tree_add((*data).data, null_mut(), item.cast(), c as u64, (*c).name, text, -1);
+            free_(text);
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_client_draw(
+    modedata: *mut c_void,
+    itemdata: *mut c_void,
+    ctx: *mut screen_write_ctx,
+    sx: u32,
+    sy: u32,
+) {
+    unsafe {
+        let mut item = itemdata as *mut window_client_itemdata;
+        let mut c = (*item).c;
+        let mut s = (*ctx).s;
+
+        let mut cx = (*s).cx as u32;
+        let mut cy = (*s).cy as u32;
+
+        if ((*c).session.is_null() || ((*c).flags & CLIENT_UNATTACHEDFLAGS != 0)) {
+            return;
+        }
+        let mut wp = (*(*(*(*c).session).curw).window).active;
+
+        let mut lines = status_line_size(c);
+        if (lines >= sy) {
+            lines = 0;
+        }
+        let at = if (status_at_line(c) == 0) { lines } else { 0 };
+
+        screen_write_cursormove(ctx, cx as i32, (cy + at) as i32, 0);
+        screen_write_preview(ctx, &raw mut (*wp).base, sx, sy - 2 - lines);
+
+        if (at != 0) {
+            screen_write_cursormove(ctx, cx as i32, (cy + 2) as i32, 0);
+        } else {
+            screen_write_cursormove(ctx, cx as i32, (cy + sy - 1 - lines) as i32, 0);
+        }
+        screen_write_hline(ctx, sx, 0, 0, box_lines::BOX_LINES_DEFAULT, null());
+
+        if (at != 0) {
+            screen_write_cursormove(ctx, cx as i32, cy as i32, 0);
+        } else {
+            screen_write_cursormove(ctx, cx as i32, (cy + sy - lines) as i32, 0);
+        }
+        screen_write_fast_copy(ctx, &raw mut (*c).status.screen, 0, 0, sx, lines);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_client_menu(modedata: *mut c_void, c: *mut client, key: key_code) {
+    unsafe {
+        let data = modedata as *mut window_client_modedata;
+        let wp = (*data).wp as *mut window_pane;
+
+        let wme = tailq_first(&raw mut (*wp).modes);
+        if (wme.is_null() || (*wme).data != modedata) {
+            return;
+        }
+        window_client_key(wme, c, null_mut(), null_mut(), key, null_mut());
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_client_get_key(modedata: *mut c_void, itemdata: *mut c_void, line: u32) -> key_code {
+    unsafe {
+        let data = modedata as *mut window_client_modedata;
+        let item = itemdata as *mut window_client_itemdata;
+
+        let ft = format_create(null_mut(), null_mut(), FORMAT_NONE, 0);
+        format_defaults(ft, (*item).c, null_mut(), null_mut(), null_mut());
+        format_add(ft, c"line".as_ptr(), c"%u".as_ptr(), line);
+
+        let expanded = format_expand(ft, (*data).key_format);
+        let key = key_string_lookup_string(expanded);
+        free_(expanded);
+        format_free(ft);
+        key
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_client_init(
+    wme: *mut window_mode_entry,
+    _fs: *mut cmd_find_state,
+    args: *mut args,
+) -> *mut screen {
+    unsafe {
+        let mut wp = (*wme).wp as *mut window_pane;
+        let mut s: *mut screen = null_mut();
+
+        let mut data: *mut window_client_modedata = xcalloc1::<window_client_modedata>() as *mut window_client_modedata;
+        (*wme).data = data.cast();
+        (*data).wp = wp;
+
+        if (args.is_null() || !args_has_(args, 'F')) {
+            (*data).format = xstrdup_(WINDOW_CLIENT_DEFAULT_FORMAT).as_ptr();
+        } else {
+            (*data).format = xstrdup(args_get_(args, 'F')).as_ptr();
+        }
+        if (args.is_null() || !args_has_(args, 'K')) {
+            (*data).key_format = xstrdup_(WINDOW_CLIENT_DEFAULT_KEY_FORMAT).as_ptr();
+        } else {
+            (*data).key_format = xstrdup(args_get_(args, 'K')).as_ptr();
+        }
+        if (args.is_null() || args_count(args) == 0) {
+            (*data).command = xstrdup_(WINDOW_CLIENT_DEFAULT_COMMAND).as_ptr();
+        } else {
+            (*data).command = xstrdup(args_string(args, 0)).as_ptr();
+        }
+
+        (*data).data = mode_tree_start(
+            wp,
+            args,
+            Some(window_client_build),
+            Some(window_client_draw),
+            None,
+            Some(window_client_menu),
+            None,
+            Some(window_client_get_key),
+            data.cast(),
+            &raw const window_client_menu_items as *const menu_item,
+            &raw mut window_client_sort_list as *mut *const i8,
+            WINDOW_CLIENT_SORT_LIST_LEN,
+            &raw mut s,
+        );
+        mode_tree_zoom((*data).data, args);
+
+        mode_tree_build((*data).data);
+        mode_tree_draw((*data).data);
+
+        s
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_client_free(wme: *mut window_mode_entry) {
+    unsafe {
+        let data: *mut window_client_modedata = (*wme).data as *mut window_client_modedata;
+
+        if (data.is_null()) {
+            return;
+        }
+
+        mode_tree_free((*data).data);
+
+        for i in 0..(*data).item_size {
+            window_client_free_item(*(*data).item_list.add(i as usize));
+        }
+        free_((*data).item_list);
+
+        free_((*data).format);
+        free_((*data).key_format);
+        free_((*data).command);
+
+        free_(data);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_client_resize(wme: *mut window_mode_entry, sx: u32, sy: u32) {
+    unsafe {
+        let mut data = (*wme).data as *mut window_client_modedata;
+
+        mode_tree_resize((*data).data, sx, sy);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_client_update(wme: *mut window_mode_entry) {
+    unsafe {
+        let data = (*wme).data as *mut window_client_modedata;
+
+        mode_tree_build((*data).data);
+        mode_tree_draw((*data).data);
+        (*(*data).wp).flags |= window_pane_flags::PANE_REDRAW;
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_client_do_detach(
+    modedata: *mut c_void,
+    itemdata: *mut c_void,
+    c: *mut client,
+    key: key_code,
+) {
+    let data = modedata as *mut window_client_modedata;
+    let item = itemdata as *mut window_client_itemdata;
+
+    unsafe {
+        if (item == mode_tree_get_current((*data).data).cast()) {
+            mode_tree_down((*data).data, 0);
+        }
+        if (key == 'd' as _ || key == 'D' as _) {
+            server_client_detach((*item).c, msgtype::MSG_DETACH);
+        } else if (key == 'x' as _ || key == 'X' as _) {
+            server_client_detach((*item).c, msgtype::MSG_DETACHKILL);
+        } else if (key == 'z' as _ || key == 'Z' as _) {
+            server_client_suspend((*item).c);
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_client_key(
+    wme: *mut window_mode_entry,
+    c: *mut client,
+    _s: *mut session,
+    _wl: *mut winlink,
+    mut key: key_code,
+    m: *mut mouse_event,
+) {
+    unsafe {
+        let mut wp = (*wme).wp;
+        let mut data = (*wme).data as *mut window_client_modedata;
+        let mut mtd = (*data).data as *mut mode_tree_data;
+        let mut item: *mut window_client_itemdata = null_mut();
+
+        let mut finished = mode_tree_key(mtd, c, &raw mut key, m, null_mut(), null_mut()) != 0;
+        match key as u8 {
+            b'd' | b'x' | b'z' => {
+                item = mode_tree_get_current(mtd).cast();
+                window_client_do_detach(data.cast(), item.cast(), c, key);
+                mode_tree_build(mtd);
+            }
+            b'D' | b'X' | b'Z' => {
+                mode_tree_each_tagged(mtd, Some(window_client_do_detach), c, key, 0);
+                mode_tree_build(mtd);
+            }
+            b'\r' => {
+                item = mode_tree_get_current(mtd).cast();
+                mode_tree_run_command(c, null_mut(), (*data).command, (*(*item).c).ttyname);
+                finished = true;
+            }
+            _ => (),
+        }
+
+        if (finished || server_client_how_many() == 0) {
+            window_pane_reset_mode(wp);
+        } else {
+            mode_tree_draw(mtd);
+            (*wp).flags |= window_pane_flags::PANE_REDRAW;
+        }
+    }
 }

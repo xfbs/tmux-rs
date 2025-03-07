@@ -5,10 +5,6 @@ use libc::{
     STDERR_FILENO, STDIN_FILENO, STDOUT_FILENO, TIOCSWINSZ, WIFSTOPPED, WSTOPSIG, chdir, close, dup2, execl, execvp,
     fork, ioctl, kill, killpg, memset, open, setenv, shutdown, sigfillset, sigprocmask, sigset_t, socketpair, winsize,
 };
-use libevent_sys::{
-    EV_READ, EV_WRITE, bufferevent, bufferevent_disable, bufferevent_enable, bufferevent_free, bufferevent_get_output,
-    bufferevent_new,
-};
 
 use compat_rs::{
     closefrom,

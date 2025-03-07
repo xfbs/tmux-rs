@@ -9,11 +9,13 @@ crate-type = ["staticlib", "lib"]
 [dependencies]
 bitflags     = { workspace = true }
 compat_rs    = { workspace = true }
+event        = { workspace = true }
 libc         = { workspace = true }
-libevent-sys = { workspace = true }
 paste        = { workspace = true }
 
 [features]
+cgroups     = []
+iutf8       = []
 ncurses     = []
 nokerninfo  = []
 sixel       = []

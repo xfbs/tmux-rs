@@ -1,5 +1,4 @@
 #![feature(array_ptr_get)]
-#![feature(core_intrinsics)] // for const type_name
 #![feature(c_variadic)]
 #![feature(ptr_as_uninit)]
 #![allow(non_upper_case_globals)]
@@ -9,7 +8,6 @@ pub mod libc_;
 pub use libc_::*;
 use xmalloc::Zeroable; // want to rexport everything from here
 
-pub mod event_;
 pub mod image_;
 pub mod image_sixel;
 
@@ -29,11 +27,7 @@ pub use core::{
 pub use libc::{FILE, REG_EXTENDED, REG_ICASE, free, memcmp, pid_t, strerror, strlen, termios, time_t, timeval, uid_t};
 
 // libevent2
-pub use crate::event_::{
-    EVBUFFER_DATA, EVBUFFER_LENGTH, EVBUFFER_OUTPUT, evtimer_add, evtimer_del, evtimer_initialized, evtimer_pending,
-    evtimer_set,
-};
-pub use libevent_sys::{bufferevent, evbuffer, evbuffer_get_length, evbuffer_pullup, event, event_base, event_set};
+pub use ::event::*;
 
 use compat_rs::{
     RB_GENERATE,
@@ -979,6 +973,10 @@ pub struct menu_item {
     pub key: key_code,
     pub command: *const c_char,
 }
+impl menu_item {
+    const fn new(name: *const c_char, key: key_code, command: *const c_char) -> Self { Self { name, key, command } }
+}
+
 #[repr(C)]
 pub struct menu {
     pub title: *const c_char,
@@ -1086,7 +1084,7 @@ bitflags::bitflags! {
 
 /// Child window structure.
 #[repr(C)]
-#[derive(Copy, Clone)]
+// #[derive(Copy, Clone)]
 pub struct window_pane {
     pub id: u32,
     pub active_point: u32,
@@ -1178,7 +1176,7 @@ pub const WINDOW_ALERTFLAGS: i32 = WINDOW_BELL | WINDOW_ACTIVITY | WINDOW_SILENC
 
 /// Window structure.
 #[repr(C)]
-#[derive(Copy, Clone)]
+// #[derive(Copy, Clone)]
 pub struct window {
     pub id: u32,
     pub latest: *mut c_void,
@@ -1291,6 +1289,7 @@ pub type layout_cells = tailq_head<layout_cell>;
 
 /// Layout cell.
 #[repr(C)]
+#[derive(compat_rs::TailQEntry)]
 pub struct layout_cell {
     pub type_: layout_type,
 
@@ -1305,6 +1304,7 @@ pub struct layout_cell {
     pub wp: *mut window_pane,
     pub cells: layout_cells,
 
+    #[entry]
     pub entry: tailq_entry<layout_cell>,
 }
 

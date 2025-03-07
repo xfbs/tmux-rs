@@ -1,5 +1,4 @@
 use libc::{O_APPEND, O_TRUNC};
-use libevent_sys::{evbuffer_add, evbuffer_free, evbuffer_new};
 
 use crate::*;
 

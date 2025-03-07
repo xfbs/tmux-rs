@@ -1,7 +1,8 @@
-use libc::{gettimeofday, isalnum, ispunct, memcpy, strchr, strcmp, strcspn, strlen, strncmp};
-use libevent_sys::{event_add, event_initialized};
+use crate::*;
 
-use super::*;
+use ::event::{event_add, event_initialized};
+use ::libc::{gettimeofday, isalnum, ispunct, memcpy, strchr, strcmp, strcspn, strlen, strncmp};
+
 unsafe extern "C" {
     unsafe fn basename(_: *mut c_char) -> *mut c_char;
 }
@@ -17,8 +18,10 @@ pub unsafe extern "C" fn name_time_callback(_fd: c_int, _events: c_short, arg: *
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn name_time_expired(w: *mut window, tv: *mut timeval) -> c_int {
     unsafe {
-        let mut offset: timeval = zeroed();
-        timersub(tv, &raw mut (*w).name_time, &raw mut offset);
+        let mut offset: MaybeUninit<timeval> = MaybeUninit::<timeval>::uninit();
+
+        timersub(tv, &raw mut (*w).name_time, offset.as_mut_ptr());
+        let offset = offset.assume_init_ref();
 
         if offset.tv_sec != 0 || offset.tv_usec > NAME_INTERVAL as i64 {
             0
@@ -59,10 +62,7 @@ pub unsafe fn check_window_name(w: *mut window) {
                 log_debug(c"@%u name timer queued (%d left)".as_ptr(), (*w).id, left);
                 timerclear(&raw mut next);
                 next.tv_usec = left as i64;
-                event_add(
-                    &raw mut (*w).name_event,
-                    core::mem::transmute::<*const libc::timeval, *const libevent_sys::timeval>(&raw const next),
-                );
+                event_add(&raw mut (*w).name_event, &raw const next);
             } else {
                 log_debug(c"@%u name timer already queued (%d left)".as_ptr(), (*w).id, left);
             }

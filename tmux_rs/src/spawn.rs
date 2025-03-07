@@ -8,7 +8,6 @@ use libc::{
     _exit, SIG_BLOCK, SIG_SETMASK, SIGCHLD, STDERR_FILENO, STDIN_FILENO, TCSANOW, VERASE, chdir, close, execl, execvp,
     getpid, kill, sigfillset, sigprocmask, strrchr, tcgetattr, tcsetattr,
 };
-use libevent_sys::bufferevent_free;
 
 #[cfg(feature = "utempter")]
 use crate::utempter::utempter_add_record;

@@ -1,19 +1,16 @@
 #![allow(clippy::missing_safety_doc)]
 #![allow(non_upper_case_globals)]
 use ::core::{
-    ffi::{VaList, c_char, c_int, c_long, c_longlong, c_void},
+    ffi::{CStr, VaList, c_char, c_int, c_long, c_longlong, c_void},
     ptr::null_mut,
 };
-use std::ffi::CStr;
 
-use ::libc::{
-    __errno_location, FILE, fclose, fflush, fopen, fprintf, free, getpid, gettimeofday, setvbuf, snprintf, strerror,
-    timeval,
-};
-use compat_rs::{VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB, stravis};
+use ::libc::{FILE, fclose, fflush, fopen, fprintf, free, getpid, gettimeofday, setvbuf, snprintf, strerror, timeval};
 
-use libevent_sys::event_set_log_callback;
+use ::compat_rs::{VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB, stravis};
+use ::event::event_set_log_callback;
 
+use crate::libc_::errno;
 use crate::xmalloc::xasprintf;
 use crate::*;
 
@@ -168,7 +165,7 @@ pub unsafe extern "C" fn fatal(msg: *const c_char, mut ap: ...) -> ! {
             tmp.as_mut_ptr() as _,
             size_of_val(&tmp),
             c"fatal: %s: ".as_ptr(),
-            strerror(*__errno_location()),
+            strerror(errno!()),
         ) < 0
         {
             std::process::exit(1);
@@ -234,7 +231,7 @@ pub unsafe extern "C" fn fatal_rs(args: &std::fmt::Arguments<'_>) -> ! {
             tmp.as_mut_ptr() as _,
             size_of_val(&tmp),
             c"fatal: %s: ".as_ptr(),
-            strerror(*__errno_location()),
+            strerror(errno!()),
         ) < 0
         {}
 

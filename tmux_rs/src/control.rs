@@ -5,11 +5,6 @@ use compat_rs::{
     tree::{rb_empty, rb_find, rb_foreach, rb_foreach_safe, rb_init, rb_insert, rb_remove},
 };
 use libc::{close, strcmp};
-use libevent_sys::{
-    EV_READ, EV_WRITE, SIZE_MAX, bufferevent_disable, bufferevent_enable, bufferevent_free, bufferevent_new,
-    bufferevent_setwatermark, bufferevent_write, bufferevent_write_buffer, evbuffer_add, evbuffer_add_printf,
-    evbuffer_eol_style, evbuffer_eol_style_EVBUFFER_EOL_LF, evbuffer_free, evbuffer_new, evbuffer_readln,
-};
 
 use crate::{xmalloc::Zeroable, *};
 unsafe extern "C" {

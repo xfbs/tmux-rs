@@ -13,10 +13,6 @@ use libc::{
     FIONREAD, FNM_CASEFOLD, TIOCSWINSZ, close, fnmatch, free, gethostname, gettimeofday, ioctl, isspace, memset,
     regcomp, regex_t, regexec, regfree, strcasecmp, strlen, winsize,
 };
-use libevent_sys::{
-    EV_READ, EV_WRITE, bufferevent, bufferevent_disable, bufferevent_enable, bufferevent_free, bufferevent_new,
-    bufferevent_write, evbuffer, evbuffer_drain, event_del, event_initialized,
-};
 
 #[cfg(feature = "utempter")]
 use crate::utempter::utempter_remove_record;

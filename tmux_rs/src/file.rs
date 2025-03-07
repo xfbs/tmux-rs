@@ -1,3 +1,5 @@
+use crate::*;
+
 use compat_rs::{
     imsg::{IMSG_HEADER_SIZE, MAX_IMSGSIZE},
     tree::{rb_find, rb_foreach, rb_insert, rb_remove},
@@ -6,14 +8,8 @@ use libc::{
     __errno_location, BUFSIZ, E2BIG, EBADF, EINVAL, EIO, ENOMEM, O_APPEND, O_CREAT, O_NONBLOCK, O_RDONLY, O_WRONLY,
     STDERR_FILENO, STDIN_FILENO, STDOUT_FILENO, close, dup, fclose, ferror, fopen, fread, fwrite, memcpy, open, strcmp,
 };
-use libevent_sys::{
-    EV_READ, EV_TIMEOUT, EV_WRITE, bufferevent_enable, bufferevent_free, bufferevent_new, bufferevent_write,
-    evbuffer_add, evbuffer_add_vprintf, evbuffer_drain, evbuffer_free, evbuffer_new, event_once,
-};
 
 use crate::log::fatalx_;
-
-use super::*;
 
 unsafe extern "C" {
     // pub fn file_cmp(_: *mut client_file, _: *mut client_file) -> c_int;

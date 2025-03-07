@@ -8,7 +8,7 @@ bsd-sys          = { path = "../bsd-sys" }
 compat_derive    = { path = "../compat_derive" }
 
 libc             = { workspace = true }
-libevent-sys     = { workspace = true }
+# libevent-sys     = { workspace = true }
 paste            = { workspace = true }
 
 [lints]

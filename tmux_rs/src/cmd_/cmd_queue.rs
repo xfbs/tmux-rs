@@ -58,7 +58,6 @@ macro_rules! cmdq_get_callback {
 }
 pub use cmdq_get_callback;
 use libc::{getpwuid, getuid, toupper};
-use libevent_sys::{evbuffer_add_vprintf, evbuffer_free, evbuffer_new};
 
 /* Command queue flags. */
 pub const CMDQ_FIRED: i32 = 0x1;

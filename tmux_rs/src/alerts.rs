@@ -8,8 +8,6 @@ use compat_rs::{
     tree::rb_foreach,
 };
 
-use libevent_sys::{EV_TIMEOUT, event_add, event_del, event_initialized, event_once};
-
 static mut alerts_fired: i32 = 0;
 
 static mut alerts_list: tailq_head<window> = const {
@@ -122,7 +120,7 @@ unsafe fn alerts_reset(w: *mut window) {
         (*w).flags &= !WINDOW_SILENCE;
         event_del(&raw mut (*w).alerts_timer);
 
-        let mut tv = libevent_sys::timeval {
+        let mut tv = timeval {
             tv_sec: options_get_number((*w).options, c"monitor-silence".as_ptr()),
             tv_usec: 0,
         };

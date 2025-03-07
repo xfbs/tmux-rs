@@ -1,5 +1,3 @@
-use libevent_sys::{evbuffer_add_printf, evbuffer_free, evbuffer_new};
-
 use crate::*;
 
 const DISPLAY_MESSAGE_TEMPLATE: &CStr =

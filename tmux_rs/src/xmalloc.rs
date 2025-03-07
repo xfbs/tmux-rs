@@ -1,19 +1,19 @@
 #![allow(unused_variables)]
 #![allow(clippy::missing_safety_doc)]
 
-use core::{
+use ::core::{
     ffi::{CStr, VaList, c_char, c_int, c_void},
     mem::MaybeUninit,
+    num::NonZero,
     ptr::NonNull,
 };
-use std::num::NonZero;
 
-use libc::{__errno_location, calloc, malloc, reallocarray, strdup, strerror, strndup};
+use ::libc::{calloc, malloc, reallocarray, strdup, strerror, strndup};
 
-use compat_rs::recallocarray;
+use ::compat_rs::recallocarray;
 
 use crate::log::fatalx_;
-use crate::{fatalx, vasprintf, vsnprintf};
+use crate::{errno, fatalx, vasprintf, vsnprintf};
 
 #[unsafe(no_mangle)]
 pub extern "C" fn xmalloc(size: usize) -> NonNull<c_void> {
@@ -98,7 +98,7 @@ pub unsafe fn xreallocarray_old<T>(ptr: *mut T, nmemb: usize, size: usize) -> No
         match NonNull::new(reallocarray(ptr as _, nmemb, size)) {
             None => fatalx_(format_args!(
                 "xreallocarray: allocating {nmemb} * {size} bytes: {}",
-                PercentS::from_raw(strerror(*__errno_location()))
+                PercentS::from_raw(strerror(errno!()))
             )),
             Some(new_ptr) => new_ptr.cast(),
         }
@@ -115,7 +115,7 @@ pub unsafe fn xreallocarray_<T>(ptr: *mut T, nmemb: usize) -> NonNull<T> {
         match NonNull::new(reallocarray(ptr as _, nmemb, size)) {
             None => fatalx_(format_args!(
                 "xreallocarray: allocating {nmemb} * {size} bytes: {}",
-                PercentS::from_raw(strerror(*__errno_location()))
+                PercentS::from_raw(strerror(errno!()))
             )),
             Some(new_ptr) => new_ptr.cast(),
         }
@@ -156,6 +156,7 @@ pub unsafe extern "C" fn xstrndup(str: *const c_char, maxlen: usize) -> NonNull<
     NonNull::new(unsafe { strndup(str, maxlen) }).unwrap()
 }
 
+#[allow(improper_ctypes_definitions, reason = "must be extern C to use c variadics")]
 pub unsafe extern "C" fn xasprintf_(fmt: &CStr, mut args: ...) -> NonNull<c_char> {
     let mut ret = core::ptr::null_mut();
     unsafe { xvasprintf(&raw mut ret, fmt.as_ptr(), args.as_va_list()) };

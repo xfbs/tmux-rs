@@ -1,13 +1,10 @@
+use crate::*;
+
 use compat_rs::closefrom;
 use libc::{
     _exit, AF_UNIX, O_WRONLY, PF_UNSPEC, SIG_BLOCK, SIG_SETMASK, STDERR_FILENO, STDIN_FILENO, STDOUT_FILENO, close,
     dup2, execl, open, sigfillset, sigprocmask, sigset_t, socketpair,
 };
-use libevent_sys::{
-    EV_READ, EV_WRITE, bufferevent_enable, bufferevent_free, bufferevent_new, bufferevent_write, evbuffer_drain,
-};
-
-use crate::*;
 
 #[unsafe(no_mangle)]
 static mut cmd_pipe_pane_entry: cmd_entry = cmd_entry {

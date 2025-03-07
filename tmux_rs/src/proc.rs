@@ -1,3 +1,4 @@
+use ::event::{signal_add, signal_set};
 use compat_rs::{
     getpeereid,
     imsg::{imsg_clear, imsg_compose, imsg_flush, imsg_free, imsg_get, imsg_get_fd, imsg_init, imsg_read, imsgbuf},
@@ -10,15 +11,8 @@ use libc::{
     SIGPIPE, SIGQUIT, SIGTERM, SIGTSTP, SIGTTIN, SIGTTOU, SIGUSR1, SIGUSR2, SIGWINCH, close, daemon, getpid, gid_t,
     memset, sigaction, sigemptyset, socketpair, uname, utsname,
 };
-use libevent_sys::{
-    EV_READ, EV_WRITE, EVLOOP_ONCE, event_add, event_del, event_get_method, event_get_version, event_loop, event_set,
-};
 
-use crate::{
-    event_::{signal_add, signal_set},
-    xmalloc::Zeroable,
-    *,
-};
+use crate::{xmalloc::Zeroable, *};
 
 unsafe extern "C" {
     // pub unsafe fn proc_send(_: *mut tmuxpeer, _: msgtype, _: c_int, _: *const c_void, _: usize) -> c_int;

@@ -158,8 +158,6 @@ more then just server exited unexpectedly.
     - also need to ensure no pointers are created and stored from the references
     - NonNull use as_uninit_mut
 
-- [ ]  370 layout-custom
-- [ ]  418 window-client
 - [ ]  429 grid-reader
 - [ ]  467 resize
 - [ ]  477 key-string
@@ -175,6 +173,7 @@ more then just server exited unexpectedly.
 - [ ]  818 popup
 - [ ]  868 screen-redraw
 - [ ]  924 tty-term
+
 - [ ] 1120 layout
 - [ ] 1204 options
 - [ ] 1243 format-draw
@@ -201,6 +200,8 @@ more then just server exited unexpectedly.
   =====
   - [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
   =====
+- [X]  418 window-client
+- [X]  370 layout-custom
 - [X]  269 tty-acs
 - [X]  235 grid-view
 - [X]  286 window-clock
@@ -358,6 +359,20 @@ Direct leak of 28 byte(s) in 1 object(s) allocated from:
     #1 0x7fbd5e1b0427 in __vasprintf_internal libio/./libio/vasprintf.c:71:30
 
 SUMMARY: AddressSanitizer: 28 byte(s) leaked in 1 allocation(s).
+```
+
+```
+// cs is null and causes segfault on tmux attach
+    395  #[unsafe(no_mangle)]
+    396  pub unsafe extern "C" fn control_write(c: *mut client, fmt: *const c_char, mut ap: ...) {
+    397      let __func__ = c"control_write".as_ptr();
+    398      unsafe {
+    399          let cs = (*c).control_state;
+    400
+>   401          if tailq_empty(&raw mut (*cs).all_blocks) {
+    402              control_vwrite(c, fmt, ap.as_va_list());
+    403              return;
+    404          }
 ```
 
 ## BUGS (found)

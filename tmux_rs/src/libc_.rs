@@ -49,6 +49,7 @@ pub unsafe fn timerclear(tv: *mut timeval) {
     }
 }
 
+/// result must be initialized after this function
 #[inline]
 pub unsafe fn timersub(a: *const timeval, b: *const timeval, result: *mut timeval) {
     // implemented as a macro by most libc's
@@ -84,34 +85,5 @@ impl PartialOrd for timer {
                 (*self.0).tv_sec.partial_cmp(&(*other.0).tv_sec)
             }
         }
-    }
-}
-
-macro_rules! function_name {
-    () => {{
-        fn f() {}
-        const { trim_fn(f) }
-    }};
-}
-// https://stackoverflow.com/questions/38088067/equivalent-of-func-or-function-in-rust
-const fn trim_fn<T: Copy>(_: T) -> &'static str {
-    let name = std::intrinsics::type_name::<T>();
-    let (name_without_last_three, _) = name.split_at(name.len() - 3);
-    let bytes = name_without_last_three.as_bytes();
-
-    let mut pos = None;
-    let mut i = (bytes.len() - 1) as isize;
-    while i >= 0 {
-        if bytes[i as usize] == b':' {
-            pos = Some(i as usize);
-            break;
-        }
-
-        i -= 1;
-    }
-
-    match pos {
-        Some(pos) => name_without_last_three.split_at(pos + 1).1,
-        None => name_without_last_three,
     }
 }

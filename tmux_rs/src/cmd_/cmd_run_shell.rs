@@ -1,6 +1,5 @@
 use compat_rs::queue::tailq_first;
 use libc::{WEXITSTATUS, WIFEXITED, WIFSIGNALED, WTERMSIG, memcpy, strtod, toupper};
-use libevent_sys::{EV_TIMEOUT, evbuffer_eol_style_EVBUFFER_EOL_LF, evbuffer_readln, event_active};
 
 use crate::{xmalloc::Zeroable, *};
 

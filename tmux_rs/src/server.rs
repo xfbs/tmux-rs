@@ -13,7 +13,6 @@ use libc::{
     malloc_trim, sigfillset, sigprocmask, sigset_t, sockaddr_storage, sockaddr_un, socket, socklen_t, stat, strerror,
     strsignal, umask, unlink, waitpid,
 };
-use libevent_sys::{EV_READ, EV_TIMEOUT, event_add, event_del, event_initialized, event_reinit, event_set};
 
 unsafe extern "C" {
     pub unsafe fn server_loop() -> i32;
@@ -154,7 +153,7 @@ pub unsafe extern "C" fn server_create_socket(flags: u64, cause: *mut *mut c_cha
 /// Tidy up every hour.
 #[unsafe(no_mangle)]
 unsafe extern "C" fn server_tidy_event(_fd: i32, _events: i16, _data: *mut c_void) {
-    let tv = libevent_sys::timeval {
+    let tv = timeval {
         tv_sec: 3600,
         tv_usec: 0,
     };
@@ -437,7 +436,7 @@ unsafe extern "C" fn server_accept(fd: i32, events: i16, _data: *mut c_void) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_add_accept(timeout: c_int) {
     unsafe {
-        let mut tv = libevent_sys::timeval {
+        let mut tv = timeval {
             tv_sec: timeout as i64,
             tv_usec: 0,
         };
@@ -484,7 +483,7 @@ unsafe extern "C" fn server_signal(sig: i32) {
             }
             libc::SIGCHLD => server_child_signal(),
             libc::SIGUSR1 => {
-                libevent_sys::event_del(&raw mut server_ev_accept);
+                event_del(&raw mut server_ev_accept);
                 let fd = server_create_socket(server_client_flags, null_mut());
                 if fd != -1 {
                     close(server_fd);
