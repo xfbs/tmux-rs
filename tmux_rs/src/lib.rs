@@ -603,21 +603,32 @@ pub const GRID_ATTR_ALL_UNDERSCORE: i32 = GRID_ATTR_UNDERSCORE
     | GRID_ATTR_UNDERSCORE_4
     | GRID_ATTR_UNDERSCORE_5;
 
-// Grid flags.
-pub const GRID_FLAG_FG256: i32 = 0x1;
-pub const GRID_FLAG_BG256: i32 = 0x2;
-pub const GRID_FLAG_PADDING: i32 = 0x4;
-pub const GRID_FLAG_EXTENDED: i32 = 0x8;
-pub const GRID_FLAG_SELECTED: i32 = 0x10;
-pub const GRID_FLAG_NOPALETTE: i32 = 0x20;
-pub const GRID_FLAG_CLEARED: i32 = 0x40;
+bitflags::bitflags! {
+    /// Grid flags.
+    #[repr(transparent)]
+    #[derive(Copy, Clone)]
+    pub struct grid_flag : u8 {
+        const FG256 = 0x1;
+        const BG256 = 0x2;
+        const PADDING = 0x4;
+        const EXTENDED = 0x8;
+        const SELECTED = 0x10;
+        const NOPALETTE = 0x20;
+        const CLEARED = 0x40;
+    }
+}
 
-// Grid line flags.
-pub const GRID_LINE_WRAPPED: i32 = 0x1;
-pub const GRID_LINE_EXTENDED: i32 = 0x2;
-pub const GRID_LINE_DEAD: i32 = 0x4;
-pub const GRID_LINE_START_PROMPT: i32 = 0x8;
-pub const GRID_LINE_START_OUTPUT: i32 = 0x10;
+/// Grid line flags.
+bitflags::bitflags! {
+    #[repr(transparent)]
+    pub struct grid_line_flag: i32 {
+        const WRAPPED      = 1 << 0; // 0x1
+        const EXTENDED     = 1 << 1; // 0x2
+        const DEAD         = 1 << 2; // 0x4
+        const START_PROMPT = 1 << 3; // 0x8
+        const START_OUTPUT = 1 << 4; // 0x10
+    }
+}
 
 // Grid string flags.
 pub const GRID_STRING_WITH_SEQUENCES: i32 = 0x1;
@@ -652,7 +663,7 @@ pub const PADDED_BORDERS: &CStr = c"             ";
 pub struct grid_cell {
     pub data: utf8_data,
     pub attr: c_ushort,
-    pub flags: c_uchar,
+    pub flags: grid_flag,
     pub fg: i32,
     pub bg: i32,
     pub us: i32,
@@ -660,7 +671,7 @@ pub struct grid_cell {
 }
 
 impl grid_cell {
-    pub const fn new(data: utf8_data, attr: c_ushort, flags: c_uchar, fg: i32, bg: i32, us: i32, link: u32) -> Self {
+    pub const fn new(data: utf8_data, attr: c_ushort, flags: grid_flag, fg: i32, bg: i32, us: i32, link: u32) -> Self {
         Self {
             data,
             attr,
@@ -699,7 +710,7 @@ pub struct grid_line {
     pub extddata: *mut grid_extd_entry,
     pub extdsize: u32,
 
-    pub flags: i32,
+    pub flags: grid_line_flag,
     pub time: time_t,
 }
 

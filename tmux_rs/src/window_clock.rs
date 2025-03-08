@@ -270,7 +270,7 @@ pub unsafe extern "C" fn window_clock_draw_screen(wme: *mut window_mode_entry) {
                 screen_write_cursormove(&raw mut ctx, x as i32, y as i32, 0);
 
                 gc.write(grid_default_cell);
-                (*gc.as_mut_ptr()).flags |= GRID_FLAG_NOPALETTE as u8;
+                (*gc.as_mut_ptr()).flags |= grid_flag::NOPALETTE;
                 (*gc.as_mut_ptr()).fg = colour as i32;
                 screen_write_puts(&raw mut ctx, gc.as_mut_ptr(), c"%s".as_ptr(), tim);
             }
@@ -283,7 +283,7 @@ pub unsafe extern "C" fn window_clock_draw_screen(wme: *mut window_mode_entry) {
         y = (screen_size_y(s) / 2) - 3;
 
         gc.write(grid_default_cell);
-        (*gc.as_mut_ptr()).flags |= GRID_FLAG_NOPALETTE as u8;
+        (*gc.as_mut_ptr()).flags |= grid_flag::NOPALETTE;
         (*gc.as_mut_ptr()).bg = colour as i32;
         let mut ptr = &raw mut tim as *mut i8;
         while *ptr != b'\0' as c_char {

@@ -207,7 +207,7 @@ unsafe extern "C" fn cmd_capture_pane_history(
             buf = cmd_capture_pane_append(buf, len, line, linelen);
 
             gl = grid_peek_line(gd, i);
-            if join_lines == 0 || (*gl).flags & GRID_LINE_WRAPPED == 0 {
+            if join_lines == 0 || !(*gl).flags.intersects(grid_line_flag::WRAPPED) {
                 *buf.add(*len) = b'\n' as _;
                 (*len) += 1;
             }

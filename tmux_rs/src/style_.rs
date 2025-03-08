@@ -17,7 +17,7 @@ unsafe extern "C" {
 
 #[unsafe(no_mangle)]
 pub static mut style_default: style = style {
-    gc: grid_cell::new(utf8_data::new([b' '], 0, 1, 1), 0, 0, 8, 8, 0, 0),
+    gc: grid_cell::new(utf8_data::new([b' '], 0, 1, 1), 0, grid_flag::empty(), 8, 8, 0, 0),
     ignore: 0,
 
     fill: 8,

@@ -161,6 +161,7 @@ endif
 # tty-acs.c
 # layout-custom.c
 # window-client.c
+# grid-reader.c
 
 # Broken:
 # notify.c (notify_add)
@@ -176,7 +177,6 @@ dist_tmux_SOURCES = \
 	compat.h \
 	format.c \
 	format-draw.c \
-	grid-reader.c \
 	grid.c \
 	input-keys.c \
 	input.c \
