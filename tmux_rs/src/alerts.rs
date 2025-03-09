@@ -22,7 +22,7 @@ unsafe extern "C" fn alerts_timer(_fd: i32, _events: i16, arg: *mut c_void) {
 
     unsafe {
         log_debug(c"@%u alerts timer expired".as_ptr(), (*w).id);
-        alerts_queue(w, WINDOW_SILENCE);
+        alerts_queue(w, window_flag::SILENCE);
     }
 }
 
@@ -59,7 +59,7 @@ pub unsafe fn alerts_action_applies(wl: *mut winlink, name: *const c_char) -> c_
     }
 }
 
-pub unsafe fn alerts_check_all(w: *mut window) -> c_int {
+pub unsafe fn alerts_check_all(w: *mut window) -> window_flag {
     unsafe {
         let mut alerts = alerts_check_bell(w);
         alerts |= alerts_check_activity(w);
@@ -78,19 +78,19 @@ pub unsafe extern "C" fn alerts_check_session(s: *mut session) {
     }
 }
 
-pub unsafe fn alerts_enabled(w: *mut window, flags: c_int) -> c_int {
+pub unsafe fn alerts_enabled(w: *mut window, flags: window_flag) -> c_int {
     unsafe {
-        if flags & WINDOW_BELL != 0 {
+        if flags.intersects(window_flag::BELL) {
             if options_get_number((*w).options, c"monitor-bell".as_ptr()) != 0 {
                 return 1;
             }
         }
-        if flags & WINDOW_ACTIVITY != 0 {
+        if flags.intersects(window_flag::ACTIVITY) {
             if options_get_number((*w).options, c"monitor-activity".as_ptr()) != 0 {
                 return 1;
             }
         }
-        if flags & WINDOW_SILENCE != 0 {
+        if flags.intersects(window_flag::SILENCE) {
             if options_get_number((*w).options, c"monitor-silence".as_ptr()) != 0 {
                 return 1;
             }
@@ -117,7 +117,7 @@ unsafe fn alerts_reset(w: *mut window) {
             evtimer_set(&raw mut (*w).alerts_timer, Some(alerts_timer), w as _);
         }
 
-        (*w).flags &= !WINDOW_SILENCE;
+        (*w).flags &= !window_flag::SILENCE;
         event_del(&raw mut (*w).alerts_timer);
 
         let mut tv = timeval {
@@ -133,7 +133,7 @@ unsafe fn alerts_reset(w: *mut window) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn alerts_queue(w: *mut window, flags: c_int) {
+pub unsafe extern "C" fn alerts_queue(w: *mut window, flags: window_flag) {
     unsafe {
         alerts_reset(w);
 
@@ -158,13 +158,13 @@ pub unsafe extern "C" fn alerts_queue(w: *mut window, flags: c_int) {
     }
 }
 
-unsafe fn alerts_check_bell(w: *mut window) -> c_int {
+unsafe fn alerts_check_bell(w: *mut window) -> window_flag {
     unsafe {
-        if !(*w).flags & WINDOW_BELL != 0 {
-            return 0;
+        if !(*w).flags.intersects(window_flag::BELL) {
+            return window_flag::empty();
         }
         if options_get_number((*w).options, c"monitor-bell".as_ptr()) == 0 {
-            return 0;
+            return window_flag::empty();
         }
 
         tailq_foreach::<_, _, _, crate::discr_wentry>(&raw mut (*w).winlinks, |wl| {
@@ -196,16 +196,16 @@ unsafe fn alerts_check_bell(w: *mut window) -> c_int {
             ControlFlow::<(), ()>::Continue(())
         });
     }
-    WINDOW_BELL
+    window_flag::BELL
 }
 
-unsafe fn alerts_check_activity(w: *mut window) -> c_int {
+unsafe fn alerts_check_activity(w: *mut window) -> window_flag {
     unsafe {
-        if !(*w).flags & WINDOW_ACTIVITY != 0 {
-            return 0;
+        if !(*w).flags.intersects(window_flag::ACTIVITY) {
+            return window_flag::empty();
         }
         if options_get_number((*w).options, c"monitor-activity".as_ptr()) == 0 {
-            return 0;
+            return window_flag::empty();
         }
 
         tailq_foreach::<_, _, _, crate::discr_wentry>(&raw mut (*w).winlinks, |wl| {
@@ -233,16 +233,16 @@ unsafe fn alerts_check_activity(w: *mut window) -> c_int {
             ControlFlow::<(), ()>::Continue(())
         });
     }
-    WINDOW_ACTIVITY
+    window_flag::ACTIVITY
 }
 
-unsafe fn alerts_check_silence(w: *mut window) -> c_int {
+unsafe fn alerts_check_silence(w: *mut window) -> window_flag {
     unsafe {
-        if !(*w).flags & WINDOW_SILENCE != 0 {
-            return 0;
+        if !(*w).flags.intersects(window_flag::SILENCE) {
+            return window_flag::empty();
         }
         if options_get_number((*w).options, c"monitor-silence".as_ptr()) == 0 {
-            return 0;
+            return window_flag::empty();
         }
 
         tailq_foreach::<_, _, _, crate::discr_wentry>(&raw mut (*w).winlinks, |wl| {
@@ -274,7 +274,7 @@ unsafe fn alerts_check_silence(w: *mut window) -> c_int {
         });
     }
 
-    WINDOW_SILENCE
+    window_flag::SILENCE
 }
 
 unsafe fn alerts_set_message(wl: *mut winlink, type_: *const c_char, option: *const c_char) {

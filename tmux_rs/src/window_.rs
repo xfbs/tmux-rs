@@ -1,4 +1,4 @@
-use super::*;
+use crate::*;
 
 use compat_rs::{
     HOST_NAME_MAX, RB_GENERATE, VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB,
@@ -268,22 +268,22 @@ pub unsafe extern "C" fn window_find_by_id(id: u32) -> *mut window {
 pub unsafe extern "C" fn window_update_activity(w: *mut window) {
     unsafe {
         gettimeofday(&raw mut (*w).activity_time, null_mut());
-        alerts_queue(w, WINDOW_ACTIVITY);
+        alerts_queue(w, window_flag::ACTIVITY);
     }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_create(sx: u32, sy: u32, mut xpixel: u32, mut ypixel: u32) -> *mut window {
     if xpixel == 0 {
-        xpixel = DEFAULT_XPIXEL as u32;
+        xpixel = DEFAULT_XPIXEL;
     }
     if ypixel == 0 {
-        ypixel = DEFAULT_YPIXEL as u32;
+        ypixel = DEFAULT_YPIXEL;
     }
     unsafe {
         let w: *mut window = xcalloc_::<window>(1).as_ptr();
         (*w).name = xstrdup(c"".as_ptr()).as_ptr();
-        (*w).flags = 0;
+        (*w).flags = window_flag::empty();
 
         tailq_init(&raw mut (*w).panes);
         tailq_init(&raw mut (*w).last_panes);
@@ -434,10 +434,10 @@ pub unsafe extern "C" fn window_set_name(w: *mut window, new_name: *const c_char
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_resize(w: *mut window, sx: u32, sy: u32, mut xpixel: i32, mut ypixel: i32) {
     if xpixel == 0 {
-        xpixel = DEFAULT_XPIXEL;
+        xpixel = DEFAULT_XPIXEL as i32;
     }
     if ypixel == 0 {
-        ypixel = DEFAULT_YPIXEL;
+        ypixel = DEFAULT_YPIXEL as i32;
     }
 
     unsafe {
@@ -727,7 +727,7 @@ pub unsafe extern "C" fn window_zoom(wp: *mut window_pane) -> i32 {
     unsafe {
         let w = (*wp).window;
 
-        if (*w).flags & WINDOW_ZOOMED != 0 {
+        if (*w).flags.intersects(window_flag::ZOOMED) {
             return -1;
         }
 
@@ -747,7 +747,7 @@ pub unsafe extern "C" fn window_zoom(wp: *mut window_pane) -> i32 {
 
         (*w).saved_layout_root = (*w).layout_root;
         layout_init(w, wp);
-        (*w).flags |= WINDOW_ZOOMED;
+        (*w).flags |= window_flag::ZOOMED;
         notify_window(c"window-layout-changed".as_ptr(), w);
 
         0
@@ -757,11 +757,11 @@ pub unsafe extern "C" fn window_zoom(wp: *mut window_pane) -> i32 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_unzoom(w: *mut window, notify: i32) -> i32 {
     unsafe {
-        if (*w).flags & WINDOW_ZOOMED == 0 {
+        if !(*w).flags.intersects(window_flag::ZOOMED) {
             return -1;
         }
 
-        (*w).flags &= !WINDOW_ZOOMED;
+        (*w).flags &= !window_flag::ZOOMED;
         layout_free(w);
         (*w).layout_root = (*w).saved_layout_root;
         (*w).saved_layout_root = null_mut();
@@ -788,12 +788,12 @@ pub unsafe extern "C" fn window_push_zoom(w: *mut window, always: i32, flag: i32
             c"%s: @%u %d".as_ptr(),
             c"window_push_zoom".as_ptr(),
             (*w).id,
-            (flag != 0 && (*w).flags & WINDOW_ZOOMED != 0) as i32,
+            (flag != 0 && (*w).flags.intersects(window_flag::ZOOMED)) as i32,
         );
-        if flag != 0 && (always != 0 || (*w).flags & WINDOW_ZOOMED != 0) {
-            (*w).flags |= WINDOW_WASZOOMED;
+        if flag != 0 && (always != 0 || (*w).flags.intersects(window_flag::ZOOMED)) {
+            (*w).flags |= window_flag::WASZOOMED;
         } else {
-            (*w).flags &= !WINDOW_WASZOOMED;
+            (*w).flags &= !window_flag::WASZOOMED;
         }
 
         if window_unzoom(w, 1) == 0 { 1 } else { 0 }
@@ -807,9 +807,9 @@ pub unsafe extern "C" fn window_pop_zoom(w: *mut window) -> i32 {
             c"%s: @%u %d".as_ptr(),
             c"window_pop_zoom".as_ptr(),
             (*w).id,
-            !!((*w).flags & WINDOW_WASZOOMED),
+            (*w).flags.intersects(window_flag::WASZOOMED) as i32,
         );
-        if (*w).flags & WINDOW_WASZOOMED != 0 {
+        if (*w).flags.intersects(window_flag::WASZOOMED) {
             return if window_zoom((*w).active) == 0 { 1 } else { 0 };
         }
     }
@@ -1037,7 +1037,7 @@ pub unsafe extern "C" fn window_printable_flags(wl: *mut winlink, escape: i32) -
             flags[pos] = b'M' as c_char;
             pos += 1;
         }
-        if (*(*wl).window).flags & WINDOW_ZOOMED != 0 {
+        if (*(*wl).window).flags.intersects(window_flag::ZOOMED) {
             flags[pos] = b'Z' as c_char;
             pos += 1;
         }
@@ -1413,7 +1413,7 @@ pub unsafe extern "C" fn window_pane_key(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_pane_visible(wp: *mut window_pane) -> i32 {
     unsafe {
-        if !(*(*wp).window).flags & WINDOW_ZOOMED != 0 {
+        if !(*(*wp).window).flags.intersects(window_flag::ZOOMED) {
             return 1;
         }
         if wp == (*(*wp).window).active { 1 } else { 0 }

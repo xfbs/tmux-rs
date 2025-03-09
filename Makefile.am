@@ -162,6 +162,7 @@ endif
 # layout-custom.c
 # window-client.c
 # grid-reader.c
+# resize.c
 
 # Broken:
 # notify.c (notify_add)
@@ -189,7 +190,6 @@ dist_tmux_SOURCES = \
 	options-table.c \
 	options.c \
 	popup.c \
-	resize.c \
 	screen-redraw.c \
 	screen-write.c \
 	screen.c \

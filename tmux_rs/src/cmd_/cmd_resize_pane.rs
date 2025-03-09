@@ -63,7 +63,7 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
         }
 
         if (args_has_(args, 'Z')) {
-            if ((*w).flags & WINDOW_ZOOMED != 0) {
+            if (*w).flags.intersects(window_flag::ZOOMED) {
                 window_unzoom(w, 1);
             } else {
                 window_zoom(wp);

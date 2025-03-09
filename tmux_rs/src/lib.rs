@@ -146,14 +146,14 @@ pub const TMUX_TERM: &CStr = c"screen";
 pub const TMUX_LOCK_CMD: &CStr = c"lock -np";
 
 /// Minimum layout cell size, NOT including border lines.
-pub const PANE_MINIMUM: i32 = 1;
+pub const PANE_MINIMUM: u32 = 1;
 
 /// Automatic name refresh interval, in microseconds. Must be < 1 second.
 pub const NAME_INTERVAL: i32 = 500000;
 
 /// Default pixel cell sizes.
-pub const DEFAULT_XPIXEL: i32 = 16;
-pub const DEFAULT_YPIXEL: i32 = 32;
+pub const DEFAULT_XPIXEL: u32 = 16;
+pub const DEFAULT_YPIXEL: u32 = 32;
 
 // Alert option values
 pub const ALERT_NONE: i32 = 0;
@@ -1177,13 +1177,21 @@ impl Entry<window_pane, discr_sentry> for window_pane {
 pub type window_panes = tailq_head<window_pane>;
 pub type window_pane_tree = rb_head<window_pane>;
 
-pub const WINDOW_BELL: i32 = 0x1;
-pub const WINDOW_ACTIVITY: i32 = 0x2;
-pub const WINDOW_SILENCE: i32 = 0x4;
-pub const WINDOW_ZOOMED: i32 = 0x8;
-pub const WINDOW_WASZOOMED: i32 = 0x10;
-pub const WINDOW_RESIZE: i32 = 0x20;
-pub const WINDOW_ALERTFLAGS: i32 = WINDOW_BELL | WINDOW_ACTIVITY | WINDOW_SILENCE;
+bitflags::bitflags! {
+    #[repr(transparent)]
+    #[derive(Copy, Clone, Eq, PartialEq)]
+    pub struct window_flag: i32 {
+        const BELL = 0x1;
+        const ACTIVITY = 0x2;
+        const SILENCE = 0x4;
+        const ZOOMED = 0x8;
+        const WASZOOMED = 0x10;
+        const RESIZE = 0x20;
+    }
+}
+pub const WINDOW_ALERTFLAGS: window_flag = window_flag::BELL
+    .union(window_flag::ACTIVITY)
+    .union(window_flag::SILENCE);
 
 /// Window structure.
 #[repr(C)]
@@ -1223,7 +1231,7 @@ pub struct window {
     pub new_ypixel: u32,
 
     pub fill_character: *mut utf8_data,
-    pub flags: i32,
+    pub flags: window_flag,
 
     pub alerts_queued: i32,
     pub alerts_entry: tailq_entry<window>,
@@ -2221,8 +2229,8 @@ pub struct mode_tree_sort_criteria {
     pub reversed: i32,
 }
 
-pub const WINDOW_MINIMUM: i32 = PANE_MINIMUM;
-pub const WINDOW_MAXIMUM: i32 = 10_000;
+pub const WINDOW_MINIMUM: u32 = PANE_MINIMUM;
+pub const WINDOW_MAXIMUM: u32 = 10_000;
 
 #[repr(i32)]
 pub enum exit_type {
