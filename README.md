@@ -158,8 +158,6 @@ more then just server exited unexpectedly.
     - also need to ensure no pointers are created and stored from the references
     - NonNull use as_uninit_mut
 
-- [ ]  467 resize
-- [ ]  477 key-string
 - [ ]  493 server-fn
 - [ ]  510 tty-features
 - [ ]  556 menu
@@ -199,6 +197,8 @@ more then just server exited unexpectedly.
   =====
   - [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
   =====
+- [X]  477 key-string
+- [X]  467 resize
 - [X]  429 grid-reader
 - [X]  418 window-client
 - [X]  370 layout-custom

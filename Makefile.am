@@ -163,6 +163,7 @@ endif
 # window-client.c
 # grid-reader.c
 # resize.c
+# key-string.c
 
 # Broken:
 # notify.c (notify_add)
@@ -182,7 +183,6 @@ dist_tmux_SOURCES = \
 	input-keys.c \
 	input.c \
 	key-bindings.c \
-	key-string.c \
 	layout-set.c \
 	layout.c \
 	menu.c \
