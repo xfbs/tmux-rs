@@ -4,6 +4,9 @@
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 
+pub mod ncurses_;
+pub use ncurses_::*;
+
 pub mod libc_;
 pub use libc_::*;
 use xmalloc::Zeroable; // want to rexport everything from here
@@ -129,7 +132,6 @@ opaque_types! {
 }
 
 opaque_types! {
-    tty_code,
     tty_key
 }
 
@@ -274,6 +276,7 @@ include!("keyc_mouse_key.rs");
 
 /// Termcap codes.
 #[repr(i32)]
+#[derive(Copy, Clone)]
 pub enum tty_code_code {
     TTYC_ACSC,
     TTYC_AM,
@@ -1507,6 +1510,7 @@ pub const TERM_RGBCOLOURS: i32 = 0x10;
 pub const TERM_VT100LIKE: i32 = 0x20;
 pub const TERM_SIXEL: i32 = 0x40;
 
+unsafe impl Zeroable for tty_term {}
 /// Terminal definition.
 #[repr(C)]
 pub struct tty_term {
@@ -2376,9 +2380,10 @@ pub use crate::tty_::{
 
 mod tty_term_;
 pub use crate::tty_term_::{
-    tty_term_apply, tty_term_apply_overrides, tty_term_create, tty_term_describe, tty_term_flag, tty_term_free,
-    tty_term_free_list, tty_term_has, tty_term_ncodes, tty_term_number, tty_term_read_list, tty_term_string,
-    tty_term_string_i, tty_term_string_ii, tty_term_string_iii, tty_term_string_s, tty_term_string_ss, tty_terms,
+    tty_code, tty_term_apply, tty_term_apply_overrides, tty_term_create, tty_term_describe, tty_term_flag,
+    tty_term_free, tty_term_free_list, tty_term_has, tty_term_ncodes, tty_term_number, tty_term_read_list,
+    tty_term_string, tty_term_string_i, tty_term_string_ii, tty_term_string_iii, tty_term_string_s, tty_term_string_ss,
+    tty_terms,
 };
 
 mod tty_features;

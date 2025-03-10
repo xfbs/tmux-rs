@@ -8,10 +8,6 @@ const ITEMS: &[&str] = &[
     "VIS_NL",
     "VIS_OCTAL",
     "VIS_TAB",
-    // ...
-];
-const VARS: &[&str] = &["optarg", "optind", "optreset"];
-const FUNCS: &[&str] = &[
     "bsd_getopt",
     "closefrom",
     "fgetln",
@@ -19,34 +15,36 @@ const FUNCS: &[&str] = &[
     "getopt",
     "getpeereid",
     "getprogname",
+    "optarg",
+    "optind",
+    "optreset",
     "recallocarray",
     "setproctitle",
+    "stravis",
     "strlcat",
     "strlcpy",
+    "strnvis",
     "strtonum",
+    "strunvis",
     "vis",
-    "stravis",
 ];
 
 fn main() {
     println!("cargo:rustc-link-lib=bsd");
 
-    let mut builder = bindgen::Builder::default().header("wrapper.h");
-
-    for func in FUNCS {
-        builder = builder.allowlist_function(func);
-    }
-
+    let mut builder = bindgen::Builder::default();
     for item in ITEMS {
         builder = builder.allowlist_item(item);
     }
 
-    for var in VARS {
-        builder = builder.allowlist_var(var);
-    }
-
     let bindings = builder
+        .header("wrapper.h")
+        .layout_tests(false)
         .merge_extern_blocks(true)
+        .rust_edition(bindgen::RustEdition::Edition2024)
+        .rust_target(bindgen::RustTarget::nightly())
+        .use_core()
+        .wrap_unsafe_ops(true)
         .generate()
         .expect("Unable to generate bindings");
 

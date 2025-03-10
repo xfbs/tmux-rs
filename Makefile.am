@@ -164,6 +164,7 @@ endif
 # grid-reader.c
 # resize.c
 # key-string.c
+# tty-term.c
 
 # Broken:
 # notify.c (notify_add)
@@ -199,7 +200,6 @@ dist_tmux_SOURCES = \
 	status.c \
 	tty-features.c \
 	tty-keys.c \
-	tty-term.c \
 	tty.c \
 	window-buffer.c \
 	window-copy.c \

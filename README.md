@@ -169,7 +169,6 @@ more then just server exited unexpectedly.
 - [ ]  794 input-keys
 - [ ]  818 popup
 - [ ]  868 screen-redraw
-- [ ]  924 tty-term
 
 - [ ] 1120 layout
 - [ ] 1204 options
@@ -197,6 +196,7 @@ more then just server exited unexpectedly.
   =====
   - [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
   =====
+- [X]  924 tty-term
 - [X]  477 key-string
 - [X]  467 resize
 - [X]  429 grid-reader

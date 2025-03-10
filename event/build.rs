@@ -64,10 +64,7 @@ fn main() {
 
     let mut builder = bindgen::Builder::default()
         .header("wrapper.h")
-        .rust_edition(bindgen::RustEdition::Edition2021) // 2024 isn't supported in bindgen yet, and panics
-        .layout_tests(false)
         .blocklist_item("IPPORT_RESERVED");
-
     for allow in ALLOW_LIST {
         builder = builder.allowlist_item(allow);
     }
@@ -75,10 +72,13 @@ fn main() {
         builder = builder.blocklist_item(block);
     }
 
-    // "timeval",
-
     let bindings = builder
+        .rust_target(bindgen::RustTarget::nightly()) // 2024 isn't supported in bindgen latest stable yet, and panics
+        .rust_edition(bindgen::RustEdition::Edition2024)
+        .layout_tests(false)
         .merge_extern_blocks(true)
+        .wrap_unsafe_ops(true)
+        .use_core()
         .generate()
         .expect("Unable to generate bindings");
 

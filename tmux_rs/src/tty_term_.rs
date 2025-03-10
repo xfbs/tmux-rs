@@ -1,35 +1,1066 @@
-use super::*;
+use std::mem::transmute;
+
+use crate::{xmalloc::xreallocarray, *};
+
+use compat_rs::{
+    VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB,
+    queue::{list_head_initializer, list_insert_head, list_remove},
+    strnvis, strtonum, strunvis,
+};
+use libc::{fnmatch, memset, strchr, strcmp, strcspn, strncmp};
 
 unsafe extern "C" {
-    pub static mut tty_terms: tty_terms;
-    pub fn tty_term_ncodes() -> c_uint;
-    pub fn tty_term_apply(_: *mut tty_term, _: *const c_char, _: c_int);
-    pub fn tty_term_apply_overrides(_: *mut tty_term);
-    pub fn tty_term_create(
-        _: *mut tty,
-        _: *mut c_char,
-        _: *mut *mut c_char,
-        _: c_uint,
-        _: *mut c_int,
-        _: *mut *mut c_char,
-    ) -> *mut tty_term;
-    pub fn tty_term_free(_: *mut tty_term);
-    pub fn tty_term_read_list(
-        _: *const c_char,
-        _: c_int,
-        _: *mut *mut *mut c_char,
-        _: *mut c_uint,
-        _: *mut *mut c_char,
-    ) -> c_int;
-    pub fn tty_term_free_list(_: *mut *mut c_char, _: c_uint);
-    pub fn tty_term_has(_: *mut tty_term, _: tty_code_code) -> c_int;
-    pub fn tty_term_string(_: *mut tty_term, _: tty_code_code) -> *const c_char;
-    pub fn tty_term_string_i(_: *mut tty_term, _: tty_code_code, _: c_int) -> *const c_char;
-    pub fn tty_term_string_ii(_: *mut tty_term, _: tty_code_code, _: c_int, _: c_int) -> *const c_char;
-    pub fn tty_term_string_iii(_: *mut tty_term, _: tty_code_code, _: c_int, _: c_int, _: c_int) -> *const c_char;
-    pub fn tty_term_string_s(_: *mut tty_term, _: tty_code_code, _: *const c_char) -> *const c_char;
-    pub fn tty_term_string_ss(_: *mut tty_term, _: tty_code_code, _: *const c_char, _: *const c_char) -> *const c_char;
-    pub fn tty_term_number(_: *mut tty_term, _: tty_code_code) -> c_int;
-    pub fn tty_term_flag(_: *mut tty_term, _: tty_code_code) -> c_int;
-    pub fn tty_term_describe(_: *mut tty_term, _: tty_code_code) -> *const c_char;
+    // pub static mut tty_terms: tty_terms;
+    // pub fn tty_term_ncodes() -> c_uint;
+    // pub fn tty_term_apply(_: *mut tty_term, _: *const c_char, _: c_int);
+    // pub fn tty_term_apply_overrides(_: *mut tty_term);
+    // pub fn tty_term_create( _: *mut tty, _: *mut c_char, _: *mut *mut c_char, _: c_uint, _: *mut c_int, _: *mut *mut c_char,) -> *mut tty_term;
+    // pub fn tty_term_free(_: *mut tty_term);
+    // pub fn tty_term_read_list( _: *const c_char, _: c_int, _: *mut *mut *mut c_char, _: *mut c_uint, _: *mut *mut c_char,) -> c_int;
+    // pub fn tty_term_free_list(_: *mut *mut c_char, _: c_uint);
+    // pub fn tty_term_has(_: *mut tty_term, _: tty_code_code) -> c_int;
+    // pub fn tty_term_string(_: *mut tty_term, _: tty_code_code) -> *const c_char;
+    // pub fn tty_term_string_i(_: *mut tty_term, _: tty_code_code, _: c_int) -> *const c_char;
+    // pub fn tty_term_string_ii(_: *mut tty_term, _: tty_code_code, _: c_int, _: c_int) -> *const c_char;
+    // pub fn tty_term_string_iii(_: *mut tty_term, _: tty_code_code, _: c_int, _: c_int, _: c_int) -> *const c_char;
+    // pub fn tty_term_string_s(_: *mut tty_term, _: tty_code_code, _: *const c_char) -> *const c_char;
+    // pub fn tty_term_string_ss(_: *mut tty_term, _: tty_code_code, _: *const c_char, _: *const c_char) -> *const c_char;
+    // pub fn tty_term_number(_: *mut tty_term, _: tty_code_code) -> c_int;
+    // pub fn tty_term_flag(_: *mut tty_term, _: tty_code_code) -> c_int;
+    // pub fn tty_term_describe(_: *mut tty_term, _: tty_code_code) -> *const c_char;
+}
+
+pub static mut tty_terms: tty_terms = list_head_initializer();
+
+#[repr(i32)]
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum tty_code_type {
+    NONE = 0,
+    STRING,
+    NUMBER,
+    FLAG,
+}
+
+#[repr(C)]
+pub union tty_code_union {
+    string: *mut c_char,
+    number: i32,
+    flag: i32,
+}
+
+#[repr(C)]
+pub struct tty_code {
+    pub type_: tty_code_type,
+    pub value: tty_code_union,
+}
+
+unsafe impl Sync for tty_term_code_entry {}
+#[repr(C)]
+pub struct tty_term_code_entry {
+    pub type_: tty_code_type,
+    pub name: *const c_char,
+}
+
+impl tty_term_code_entry {
+    const fn new(type_: tty_code_type, name: &'static CStr) -> Self {
+        Self {
+            type_,
+            name: name.as_ptr(),
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+static tty_term_codes: [tty_term_code_entry; 232] = const {
+    let mut tmp: [tty_term_code_entry; 232] = unsafe { zeroed() };
+
+    tmp[tty_code_code::TTYC_ACSC as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"acsc");
+    tmp[tty_code_code::TTYC_AM as usize] = tty_term_code_entry::new(tty_code_type::FLAG, c"am");
+    tmp[tty_code_code::TTYC_AX as usize] = tty_term_code_entry::new(tty_code_type::FLAG, c"AX");
+    tmp[tty_code_code::TTYC_BCE as usize] = tty_term_code_entry::new(tty_code_type::FLAG, c"bce");
+    tmp[tty_code_code::TTYC_BEL as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"bel");
+    tmp[tty_code_code::TTYC_BIDI as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Bidi");
+    tmp[tty_code_code::TTYC_BLINK as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"blink");
+    tmp[tty_code_code::TTYC_BOLD as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"bold");
+    tmp[tty_code_code::TTYC_CIVIS as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"civis");
+    tmp[tty_code_code::TTYC_CLEAR as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"clear");
+    tmp[tty_code_code::TTYC_CLMG as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Clmg");
+    tmp[tty_code_code::TTYC_CMG as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Cmg");
+    tmp[tty_code_code::TTYC_CNORM as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"cnorm");
+    tmp[tty_code_code::TTYC_COLORS as usize] = tty_term_code_entry::new(tty_code_type::NUMBER, c"colors");
+    tmp[tty_code_code::TTYC_CR as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Cr");
+    tmp[tty_code_code::TTYC_CSR as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"csr");
+    tmp[tty_code_code::TTYC_CS as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Cs");
+    tmp[tty_code_code::TTYC_CUB1 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"cub1");
+    tmp[tty_code_code::TTYC_CUB as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"cub");
+    tmp[tty_code_code::TTYC_CUD1 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"cud1");
+    tmp[tty_code_code::TTYC_CUD as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"cud");
+    tmp[tty_code_code::TTYC_CUF1 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"cuf1");
+    tmp[tty_code_code::TTYC_CUF as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"cuf");
+    tmp[tty_code_code::TTYC_CUP as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"cup");
+    tmp[tty_code_code::TTYC_CUU1 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"cuu1");
+    tmp[tty_code_code::TTYC_CUU as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"cuu");
+    tmp[tty_code_code::TTYC_CVVIS as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"cvvis");
+    tmp[tty_code_code::TTYC_DCH1 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"dch1");
+    tmp[tty_code_code::TTYC_DCH as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"dch");
+    tmp[tty_code_code::TTYC_DIM as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"dim");
+    tmp[tty_code_code::TTYC_DL1 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"dl1");
+    tmp[tty_code_code::TTYC_DL as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"dl");
+    tmp[tty_code_code::TTYC_DSEKS as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Dseks");
+    tmp[tty_code_code::TTYC_DSFCS as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Dsfcs");
+    tmp[tty_code_code::TTYC_DSBP as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Dsbp");
+    tmp[tty_code_code::TTYC_DSMG as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Dsmg");
+    tmp[tty_code_code::TTYC_E3 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"E3");
+    tmp[tty_code_code::TTYC_ECH as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"ech");
+    tmp[tty_code_code::TTYC_ED as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"ed");
+    tmp[tty_code_code::TTYC_EL1 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"el1");
+    tmp[tty_code_code::TTYC_EL as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"el");
+    tmp[tty_code_code::TTYC_ENACS as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"enacs");
+    tmp[tty_code_code::TTYC_ENBP as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Enbp");
+    tmp[tty_code_code::TTYC_ENEKS as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Eneks");
+    tmp[tty_code_code::TTYC_ENFCS as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Enfcs");
+    tmp[tty_code_code::TTYC_ENMG as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Enmg");
+    tmp[tty_code_code::TTYC_FSL as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"fsl");
+    tmp[tty_code_code::TTYC_HLS as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Hls");
+    tmp[tty_code_code::TTYC_HOME as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"home");
+    tmp[tty_code_code::TTYC_HPA as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"hpa");
+    tmp[tty_code_code::TTYC_ICH1 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"ich1");
+    tmp[tty_code_code::TTYC_ICH as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"ich");
+    tmp[tty_code_code::TTYC_IL1 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"il1");
+    tmp[tty_code_code::TTYC_IL as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"il");
+    tmp[tty_code_code::TTYC_INDN as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"indn");
+    tmp[tty_code_code::TTYC_INVIS as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"invis");
+    tmp[tty_code_code::TTYC_KCBT as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kcbt");
+    tmp[tty_code_code::TTYC_KCUB1 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kcub1");
+    tmp[tty_code_code::TTYC_KCUD1 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kcud1");
+    tmp[tty_code_code::TTYC_KCUF1 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kcuf1");
+    tmp[tty_code_code::TTYC_KCUU1 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kcuu1");
+    tmp[tty_code_code::TTYC_KDC2 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kDC");
+    tmp[tty_code_code::TTYC_KDC3 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kDC3");
+    tmp[tty_code_code::TTYC_KDC4 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kDC4");
+    tmp[tty_code_code::TTYC_KDC5 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kDC5");
+    tmp[tty_code_code::TTYC_KDC6 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kDC6");
+    tmp[tty_code_code::TTYC_KDC7 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kDC7");
+    tmp[tty_code_code::TTYC_KDCH1 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kdch1");
+    tmp[tty_code_code::TTYC_KDN2 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kDN"); // not kDN2
+    tmp[tty_code_code::TTYC_KDN3 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kDN3");
+    tmp[tty_code_code::TTYC_KDN4 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kDN4");
+    tmp[tty_code_code::TTYC_KDN5 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kDN5");
+    tmp[tty_code_code::TTYC_KDN6 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kDN6");
+    tmp[tty_code_code::TTYC_KDN7 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kDN7");
+    tmp[tty_code_code::TTYC_KEND2 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kEND");
+    tmp[tty_code_code::TTYC_KEND3 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kEND3");
+    tmp[tty_code_code::TTYC_KEND4 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kEND4");
+    tmp[tty_code_code::TTYC_KEND5 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kEND5");
+    tmp[tty_code_code::TTYC_KEND6 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kEND6");
+    tmp[tty_code_code::TTYC_KEND7 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kEND7");
+    tmp[tty_code_code::TTYC_KEND as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kend");
+    tmp[tty_code_code::TTYC_KF10 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf10");
+    tmp[tty_code_code::TTYC_KF11 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf11");
+    tmp[tty_code_code::TTYC_KF12 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf12");
+    tmp[tty_code_code::TTYC_KF13 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf13");
+    tmp[tty_code_code::TTYC_KF14 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf14");
+    tmp[tty_code_code::TTYC_KF15 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf15");
+    tmp[tty_code_code::TTYC_KF16 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf16");
+    tmp[tty_code_code::TTYC_KF17 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf17");
+    tmp[tty_code_code::TTYC_KF18 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf18");
+    tmp[tty_code_code::TTYC_KF19 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf19");
+    tmp[tty_code_code::TTYC_KF1 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf1");
+    tmp[tty_code_code::TTYC_KF20 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf20");
+    tmp[tty_code_code::TTYC_KF21 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf21");
+    tmp[tty_code_code::TTYC_KF22 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf22");
+    tmp[tty_code_code::TTYC_KF23 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf23");
+    tmp[tty_code_code::TTYC_KF24 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf24");
+    tmp[tty_code_code::TTYC_KF25 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf25");
+    tmp[tty_code_code::TTYC_KF26 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf26");
+    tmp[tty_code_code::TTYC_KF27 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf27");
+    tmp[tty_code_code::TTYC_KF28 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf28");
+    tmp[tty_code_code::TTYC_KF29 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf29");
+    tmp[tty_code_code::TTYC_KF2 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf2");
+    tmp[tty_code_code::TTYC_KF30 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf30");
+    tmp[tty_code_code::TTYC_KF31 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf31");
+    tmp[tty_code_code::TTYC_KF32 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf32");
+    tmp[tty_code_code::TTYC_KF33 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf33");
+    tmp[tty_code_code::TTYC_KF34 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf34");
+    tmp[tty_code_code::TTYC_KF35 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf35");
+    tmp[tty_code_code::TTYC_KF36 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf36");
+    tmp[tty_code_code::TTYC_KF37 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf37");
+    tmp[tty_code_code::TTYC_KF38 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf38");
+    tmp[tty_code_code::TTYC_KF39 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf39");
+    tmp[tty_code_code::TTYC_KF3 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf3");
+    tmp[tty_code_code::TTYC_KF40 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf40");
+    tmp[tty_code_code::TTYC_KF41 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf41");
+    tmp[tty_code_code::TTYC_KF42 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf42");
+    tmp[tty_code_code::TTYC_KF43 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf43");
+    tmp[tty_code_code::TTYC_KF44 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf44");
+    tmp[tty_code_code::TTYC_KF45 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf45");
+    tmp[tty_code_code::TTYC_KF46 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf46");
+    tmp[tty_code_code::TTYC_KF47 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf47");
+    tmp[tty_code_code::TTYC_KF48 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf48");
+    tmp[tty_code_code::TTYC_KF49 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf49");
+    tmp[tty_code_code::TTYC_KF4 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf4");
+    tmp[tty_code_code::TTYC_KF50 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf50");
+    tmp[tty_code_code::TTYC_KF51 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf51");
+    tmp[tty_code_code::TTYC_KF52 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf52");
+    tmp[tty_code_code::TTYC_KF53 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf53");
+    tmp[tty_code_code::TTYC_KF54 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf54");
+    tmp[tty_code_code::TTYC_KF55 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf55");
+    tmp[tty_code_code::TTYC_KF56 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf56");
+    tmp[tty_code_code::TTYC_KF57 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf57");
+    tmp[tty_code_code::TTYC_KF58 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf58");
+    tmp[tty_code_code::TTYC_KF59 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf59");
+    tmp[tty_code_code::TTYC_KF5 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf5");
+    tmp[tty_code_code::TTYC_KF60 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf60");
+    tmp[tty_code_code::TTYC_KF61 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf61");
+    tmp[tty_code_code::TTYC_KF62 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf62");
+    tmp[tty_code_code::TTYC_KF63 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf63");
+    tmp[tty_code_code::TTYC_KF6 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf6");
+    tmp[tty_code_code::TTYC_KF7 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf7");
+    tmp[tty_code_code::TTYC_KF8 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf8");
+    tmp[tty_code_code::TTYC_KF9 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kf9");
+    tmp[tty_code_code::TTYC_KHOM2 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kHOM");
+    tmp[tty_code_code::TTYC_KHOM3 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kHOM3");
+    tmp[tty_code_code::TTYC_KHOM4 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kHOM4");
+    tmp[tty_code_code::TTYC_KHOM5 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kHOM5");
+    tmp[tty_code_code::TTYC_KHOM6 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kHOM6");
+    tmp[tty_code_code::TTYC_KHOM7 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kHOM7");
+    tmp[tty_code_code::TTYC_KHOME as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"khome");
+    tmp[tty_code_code::TTYC_KIC2 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kIC");
+    tmp[tty_code_code::TTYC_KIC3 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kIC3");
+    tmp[tty_code_code::TTYC_KIC4 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kIC4");
+    tmp[tty_code_code::TTYC_KIC5 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kIC5");
+    tmp[tty_code_code::TTYC_KIC6 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kIC6");
+    tmp[tty_code_code::TTYC_KIC7 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kIC7");
+    tmp[tty_code_code::TTYC_KICH1 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kich1");
+    tmp[tty_code_code::TTYC_KIND as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kind");
+    tmp[tty_code_code::TTYC_KLFT2 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kLFT");
+    tmp[tty_code_code::TTYC_KLFT3 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kLFT3");
+    tmp[tty_code_code::TTYC_KLFT4 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kLFT4");
+    tmp[tty_code_code::TTYC_KLFT5 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kLFT5");
+    tmp[tty_code_code::TTYC_KLFT6 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kLFT6");
+    tmp[tty_code_code::TTYC_KLFT7 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kLFT7");
+    tmp[tty_code_code::TTYC_KMOUS as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kmous");
+    tmp[tty_code_code::TTYC_KNP as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"knp");
+    tmp[tty_code_code::TTYC_KNXT2 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kNXT");
+    tmp[tty_code_code::TTYC_KNXT3 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kNXT3");
+    tmp[tty_code_code::TTYC_KNXT4 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kNXT4");
+    tmp[tty_code_code::TTYC_KNXT5 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kNXT5");
+    tmp[tty_code_code::TTYC_KNXT6 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kNXT6");
+    tmp[tty_code_code::TTYC_KNXT7 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kNXT7");
+    tmp[tty_code_code::TTYC_KPP as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kpp");
+    tmp[tty_code_code::TTYC_KPRV2 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kPRV");
+    tmp[tty_code_code::TTYC_KPRV3 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kPRV3");
+    tmp[tty_code_code::TTYC_KPRV4 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kPRV4");
+    tmp[tty_code_code::TTYC_KPRV5 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kPRV5");
+    tmp[tty_code_code::TTYC_KPRV6 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kPRV6");
+    tmp[tty_code_code::TTYC_KPRV7 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kPRV7");
+    tmp[tty_code_code::TTYC_KRIT2 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kRIT");
+    tmp[tty_code_code::TTYC_KRIT3 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kRIT3");
+    tmp[tty_code_code::TTYC_KRIT4 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kRIT4");
+    tmp[tty_code_code::TTYC_KRIT5 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kRIT5");
+    tmp[tty_code_code::TTYC_KRIT6 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kRIT6");
+    tmp[tty_code_code::TTYC_KRIT7 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kRIT7");
+    tmp[tty_code_code::TTYC_KRI as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kri");
+    tmp[tty_code_code::TTYC_KUP2 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kUP"); // not kUP2
+    tmp[tty_code_code::TTYC_KUP3 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kUP3");
+    tmp[tty_code_code::TTYC_KUP4 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kUP4");
+    tmp[tty_code_code::TTYC_KUP5 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kUP5");
+    tmp[tty_code_code::TTYC_KUP6 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kUP6");
+    tmp[tty_code_code::TTYC_KUP7 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"kUP7");
+    tmp[tty_code_code::TTYC_MS as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Ms");
+    tmp[tty_code_code::TTYC_NOBR as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Nobr");
+    tmp[tty_code_code::TTYC_OL as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"ol");
+    tmp[tty_code_code::TTYC_OP as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"op");
+    tmp[tty_code_code::TTYC_RECT as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Rect");
+    tmp[tty_code_code::TTYC_REV as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"rev");
+    tmp[tty_code_code::TTYC_RGB as usize] = tty_term_code_entry::new(tty_code_type::FLAG, c"RGB");
+    tmp[tty_code_code::TTYC_RIN as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"rin");
+    tmp[tty_code_code::TTYC_RI as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"ri");
+    tmp[tty_code_code::TTYC_RMACS as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"rmacs");
+    tmp[tty_code_code::TTYC_RMCUP as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"rmcup");
+    tmp[tty_code_code::TTYC_RMKX as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"rmkx");
+    tmp[tty_code_code::TTYC_SETAB as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"setab");
+    tmp[tty_code_code::TTYC_SETAF as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"setaf");
+    tmp[tty_code_code::TTYC_SETAL as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"setal");
+    tmp[tty_code_code::TTYC_SETRGBB as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"setrgbb");
+    tmp[tty_code_code::TTYC_SETRGBF as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"setrgbf");
+    tmp[tty_code_code::TTYC_SETULC as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Setulc");
+    tmp[tty_code_code::TTYC_SETULC1 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Setulc1");
+    tmp[tty_code_code::TTYC_SE as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Se");
+    tmp[tty_code_code::TTYC_SXL as usize] = tty_term_code_entry::new(tty_code_type::FLAG, c"Sxl");
+    tmp[tty_code_code::TTYC_SGR0 as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"sgr0");
+    tmp[tty_code_code::TTYC_SITM as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"sitm");
+    tmp[tty_code_code::TTYC_SMACS as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"smacs");
+    tmp[tty_code_code::TTYC_SMCUP as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"smcup");
+    tmp[tty_code_code::TTYC_SMKX as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"smkx");
+    tmp[tty_code_code::TTYC_SMOL as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Smol");
+    tmp[tty_code_code::TTYC_SMSO as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"smso");
+    tmp[tty_code_code::TTYC_SMULX as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Smulx");
+    tmp[tty_code_code::TTYC_SMUL as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"smul");
+    tmp[tty_code_code::TTYC_SMXX as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"smxx");
+    tmp[tty_code_code::TTYC_SS as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Ss");
+    tmp[tty_code_code::TTYC_SWD as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Swd");
+    tmp[tty_code_code::TTYC_SYNC as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"Sync");
+    tmp[tty_code_code::TTYC_TC as usize] = tty_term_code_entry::new(tty_code_type::FLAG, c"Tc");
+    tmp[tty_code_code::TTYC_TSL as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"tsl");
+    tmp[tty_code_code::TTYC_U8 as usize] = tty_term_code_entry::new(tty_code_type::NUMBER, c"U8");
+    tmp[tty_code_code::TTYC_VPA as usize] = tty_term_code_entry::new(tty_code_type::STRING, c"vpa");
+    tmp[tty_code_code::TTYC_XT as usize] = tty_term_code_entry::new(tty_code_type::FLAG, c"XT");
+
+    tmp
+};
+
+#[unsafe(no_mangle)]
+pub const unsafe extern "C" fn tty_term_ncodes() -> u32 { tty_term_codes.len() as u32 }
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tty_term_strip(s: *const c_char) -> *mut c_char {
+    let sizeof_buf: usize = 8192;
+    static mut buf: [c_char; 8192] = [0; 8192];
+
+    unsafe {
+        // const char *ptr;
+        // static char buf[8192];
+        // size_t len;
+
+        // Ignore strings with no padding.
+        if (strchr(s, b'$' as i32).is_null()) {
+            return xstrdup(s).as_ptr();
+        }
+
+        let mut len = 0;
+        let mut ptr = s as *const u8;
+        while *ptr != b'\0' {
+            if (*ptr == b'$' && *(ptr.add(1)) == b'<') {
+                while (*ptr != b'\0' && *ptr != b'>') {
+                    ptr = ptr.add(1);
+                }
+                if (*ptr == b'>') {
+                    ptr = ptr.add(1);
+                }
+                if (*ptr == b'\0') {
+                    break;
+                }
+            }
+
+            buf[len] = *ptr as c_char;
+            len += 1;
+            if (len == (sizeof_buf) - 1) {
+                break;
+            }
+            ptr = ptr.add(1);
+        }
+        buf[len] = b'\0' as c_char;
+
+        xstrdup(&raw mut buf as *mut c_char).as_ptr()
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tty_term_override_next(s: *const c_char, offset: *mut usize) -> *mut c_char {
+    let sizeof_value = 8192;
+    static mut value: [c_char; 8192] = [0; 8192];
+    unsafe {
+        let mut n = 0;
+        let mut at = *offset;
+
+        if (*s.add(at) == b'\0' as c_char) {
+            return null_mut();
+        }
+
+        while (*s.add(at) != b'\0' as c_char) {
+            if (*s.add(at) == b':' as c_char) {
+                if (*s.add(at + 1) == b':' as c_char) {
+                    value[n] = b':' as c_char;
+                    n += 1;
+                    at += 2;
+                } else {
+                    break;
+                }
+            } else {
+                value[n] = *s.add(at);
+                n += 1;
+                at += 1;
+            }
+            if (n == (sizeof_value) - 1) {
+                return null_mut();
+            }
+        }
+        if (*s.add(at) != b'\0' as c_char) {
+            *offset = at + 1;
+        } else {
+            *offset = at;
+        }
+        value[n] = b'\0' as c_char;
+
+        &raw mut value as *mut c_char
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tty_term_apply(term: *mut tty_term, capabilities: *const c_char, quiet: i32) {
+    unsafe {
+        // const struct tty_term_code_entry *ent;
+        let mut code: *mut tty_code = null_mut();
+        let mut offset = 0usize;
+        let mut cp = null_mut();
+        let mut value = null_mut();
+        let mut s = null_mut();
+
+        let mut errstr = null();
+        let mut name = (*term).name;
+        // u_int i;
+        // int n, remove;
+
+        while ({
+            s = tty_term_override_next(capabilities, &raw mut offset);
+            !s.is_null()
+        }) {
+            if (*s == b'\0' as c_char) {
+                continue;
+            }
+            value = null_mut();
+
+            let mut remove = 0;
+            cp = strchr(s, b'=' as i32);
+            if !cp.is_null() {
+                *cp = b'\0' as c_char;
+                cp = cp.add(1);
+                value = xstrdup(cp).as_ptr();
+                if (strunvis(value, cp) == -1) {
+                    free_(value);
+                    value = xstrdup(cp).as_ptr();
+                }
+            } else if (*s.add(strlen(s) - 1) == b'@' as c_char) {
+                *s.add(strlen(s) - 1) = b'\0' as c_char;
+                remove = 1;
+            } else {
+                value = xstrdup_(c"").as_ptr();
+            }
+
+            if (quiet == 0) {
+                if (remove != 0) {
+                    log_debug(c"%s override: %s@".as_ptr(), name, s);
+                } else if (*value == b'\0' as c_char) {
+                    log_debug(c"%s override: %s".as_ptr(), name, s);
+                } else {
+                    log_debug(c"%s override: %s=%s".as_ptr(), name, s, value);
+                }
+            }
+
+            for i in 0..tty_term_ncodes() {
+                let ent = &raw const tty_term_codes[i as usize];
+                if (strcmp(s, (*ent).name) != 0) {
+                    continue;
+                }
+                code = (*term).codes.add(i as usize);
+
+                if (remove != 0) {
+                    (*code).type_ = tty_code_type::NONE;
+                    continue;
+                }
+                match (*ent).type_ {
+                    tty_code_type::NONE => (),
+                    tty_code_type::STRING => {
+                        if ((*code).type_ == tty_code_type::STRING) {
+                            free_((*code).value.string);
+                        }
+                        (*code).value.string = xstrdup(value).as_ptr();
+                        (*code).type_ = (*ent).type_;
+                    }
+                    tty_code_type::NUMBER => {
+                        let n = strtonum(value, 0, i32::MAX as i64, &raw mut errstr) as i32;
+                        if (errstr.is_null()) {
+                            break;
+                        }
+                        (*code).value.number = n;
+                        (*code).type_ = (*ent).type_;
+                    }
+                    tty_code_type::FLAG => {
+                        (*code).value.flag = 1;
+                        (*code).type_ = (*ent).type_;
+                    }
+                }
+            }
+
+            free_(value);
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tty_term_apply_overrides(term: *mut tty_term) {
+    let mut ov: *mut options_value = null_mut();
+    let mut s: *const c_char = null();
+    let mut acs: *const c_char = null();
+    let mut offset: usize = 0;
+    let mut first: *mut c_char = null_mut();
+
+    unsafe {
+        /* Update capabilities from the option. */
+        let mut o = options_get_only(global_options, c"terminal-overrides".as_ptr());
+        let mut a = options_array_first(o);
+        unsafe {
+            while !a.is_null() {
+                ov = options_array_item_value(a);
+                s = (*ov).string;
+
+                offset = 0;
+                first = tty_term_override_next(s, &raw mut offset);
+                if (!first.is_null() && fnmatch(first, (*term).name, 0) == 0) {
+                    tty_term_apply(term, s.add(offset), 0);
+                }
+                a = options_array_next(a);
+            }
+
+            /* Log the SIXEL flag. */
+            log_debug(c"SIXEL flag is %d".as_ptr(), !!((*term).flags & TERM_SIXEL));
+
+            /* Update the RGB flag if the terminal has RGB colours. */
+            if tty_term_has(term, tty_code_code::TTYC_SETRGBF) != 0
+                && tty_term_has(term, tty_code_code::TTYC_SETRGBB) != 0
+            {
+                (*term).flags |= TERM_RGBCOLOURS;
+            } else {
+                (*term).flags &= !TERM_RGBCOLOURS;
+            }
+            log_debug(c"RGBCOLOURS flag is %d".as_ptr(), !!((*term).flags & TERM_RGBCOLOURS));
+
+            /*
+             * Set or clear the DECSLRM flag if the terminal has the margin
+             * capabilities.
+             */
+            if tty_term_has(term, tty_code_code::TTYC_CMG) != 0 && tty_term_has(term, tty_code_code::TTYC_CLMG) != 0 {
+                (*term).flags |= TERM_DECSLRM;
+            } else {
+                (*term).flags &= !TERM_DECSLRM;
+            }
+            log_debug(c"DECSLRM flag is %d".as_ptr(), !!((*term).flags & TERM_DECSLRM));
+
+            /*
+             * Set or clear the DECFRA flag if the terminal has the rectangle
+             * capability.
+             */
+            if (tty_term_has(term, tty_code_code::TTYC_RECT) != 0) {
+                (*term).flags |= TERM_DECFRA;
+            } else {
+                (*term).flags &= !TERM_DECFRA;
+            }
+            log_debug(c"DECFRA flag is %d".as_ptr(), !!((*term).flags & TERM_DECFRA));
+
+            /*
+             * Terminals without am (auto right margin) wrap at at $COLUMNS - 1
+             * rather than $COLUMNS (the cursor can never be beyond $COLUMNS - 1).
+             *
+             * Terminals without xenl (eat newline glitch) ignore a newline beyond
+             * the right edge of the terminal, but tmux doesn't care about this -
+             * it always uses absolute only moves the cursor with a newline when
+             * also sending a linefeed.
+             *
+             * This is irritating, most notably because it is painful to write to
+             * the very bottom-right of the screen without scrolling.
+             *
+             * Flag the terminal here and apply some workarounds in other places to
+             * do the best possible.
+             */
+            if tty_term_flag(term, tty_code_code::TTYC_AM) == 0 {
+                (*term).flags |= TERM_NOAM;
+            } else {
+                (*term).flags &= !TERM_NOAM;
+            }
+            log_debug(c"NOAM flag is %d".as_ptr(), !!((*term).flags & TERM_NOAM));
+
+            /* Generate ACS table. If none is present, use nearest ASCII. */
+            memset(&raw mut (*term).acs as *mut c_void, 0, size_of::<[[i8; 2]; 256]>());
+            if (tty_term_has(term, tty_code_code::TTYC_ACSC) != 0) {
+                acs = tty_term_string(term, tty_code_code::TTYC_ACSC);
+            } else {
+                acs = c"a#j+k+l+m+n+o-p-q-r-s-t+u+v+w+x|y<z>~.".as_ptr();
+            }
+            while *acs != b'\0' as c_char && *acs.add(1) != b'\0' as c_char {
+                (*term).acs[*acs as u8 as usize][0] = (*acs.add(1));
+                acs = acs.add(2);
+            }
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tty_term_create(
+    tty: *mut tty,
+    name: *mut c_char,
+    caps: *mut *mut c_char,
+    ncaps: u32,
+    feat: *mut i32,
+    cause: *mut *mut c_char,
+) -> *mut tty_term {
+    unsafe {
+        // struct tty_term *term;
+        // const struct tty_term_code_entry *ent;
+        // struct tty_code *code;
+        // struct options_entry *o;
+        // struct options_array_item *a;
+        // union options_value *ov;
+        // u_int i, j;
+        // const char *s, *value, *errstr;
+        // size_t offset, namelen;
+        // char *first;
+        // int n;
+        let mut errstr: *const c_char = null();
+
+        log_debug(c"adding term %s".as_ptr(), name);
+        let term = xcalloc1::<tty_term>() as *mut tty_term;
+        (*term).tty = tty;
+        (*term).name = xstrdup(name).as_ptr();
+        (*term).codes = xcalloc_(tty_term_ncodes() as usize).as_ptr();
+        list_insert_head(&raw mut tty_terms, term);
+        'error: {
+            // Fill in codes.
+            for i in 0..ncaps as usize {
+                let namelen = strcspn(*caps.add(i as usize), c"=".as_ptr());
+                if (namelen == 0) {
+                    continue;
+                }
+                let value = (*caps.add(i as usize)).add(namelen + 1);
+
+                for j in 0..tty_term_ncodes() as usize {
+                    let ent = &raw const tty_term_codes[j];
+                    if strncmp((*ent).name, *caps.add(i as usize), namelen) != 0 {
+                        continue;
+                    }
+                    if *(*ent).name.add(namelen) != b'\0' as c_char {
+                        continue;
+                    }
+
+                    let code = (*term).codes.add(j);
+                    (*code).type_ = tty_code_type::NONE;
+                    match ((*ent).type_) {
+                        tty_code_type::NONE => (),
+                        tty_code_type::STRING => {
+                            (*code).type_ = tty_code_type::STRING;
+                            (*code).value.string = tty_term_strip(value);
+                        }
+                        tty_code_type::NUMBER => {
+                            let n = strtonum(value, 0, i32::MAX as i64, &raw mut errstr) as i32;
+                            if (!errstr.is_null()) {
+                                log_debug(c"%s: %s".as_ptr(), (*ent).name, errstr);
+                            } else {
+                                (*code).type_ = tty_code_type::NUMBER;
+                                (*code).value.number = n;
+                            }
+                        }
+                        tty_code_type::FLAG => {
+                            (*code).type_ = tty_code_type::FLAG;
+                            (*code).value.flag = (*value == b'1' as c_char) as i32;
+                        }
+                    }
+                }
+            }
+
+            /* Apply terminal features. */
+            let o = options_get_only(global_options, c"terminal-features".as_ptr());
+            let mut a = options_array_first(o);
+            while (!a.is_null()) {
+                let ov = options_array_item_value(a);
+                let s = (*ov).string;
+
+                let mut offset = 0;
+                let first = tty_term_override_next(s, &raw mut offset);
+                if (!first.is_null() && fnmatch(first, (*term).name, 0) == 0) {
+                    tty_add_features(feat, s.add(offset), c":".as_ptr());
+                }
+                a = options_array_next(a);
+            }
+
+            /* Delete curses data. */
+            // #if !defined(NCURSES_VERSION_MAJOR) || NCURSES_VERSION_MAJOR > 5 || (NCURSES_VERSION_MAJOR == 5 && NCURSES_VERSION_MINOR > 6)
+            del_curterm(cur_term);
+            // #endif
+
+            /* Apply overrides so any capabilities used for features are changed. */
+            tty_term_apply_overrides(term);
+
+            /* These are always required. */
+            if tty_term_has(term, tty_code_code::TTYC_CLEAR) == 0 {
+                xasprintf(cause, c"terminal does not support clear".as_ptr());
+                break 'error;
+            }
+            if tty_term_has(term, tty_code_code::TTYC_CUP) == 0 {
+                xasprintf(cause, c"terminal does not support cup".as_ptr());
+                break 'error;
+            }
+
+            /*
+             * If TERM has XT or clear starts with CSI then it is safe to assume
+             * the terminal is derived from the VT100. This controls whether device
+             * attributes requests are sent to get more information.
+             *
+             * This is a bit of a hack but there aren't that many alternatives.
+             * Worst case tmux will just fall back to using whatever terminfo(5)
+             * says without trying to correct anything that is missing.
+             *
+             * Also add few features that VT100-like terminals should either
+             * support or safely ignore.
+             */
+            let mut s = tty_term_string(term, tty_code_code::TTYC_CLEAR);
+            if (tty_term_flag(term, tty_code_code::TTYC_XT) != 0 || strncmp(s, c"\x1b[".as_ptr(), 2) == 0) {
+                (*term).flags |= TERM_VT100LIKE;
+                tty_add_features(feat, c"bpaste,focus,title".as_ptr(), c",".as_ptr());
+            }
+
+            /* Add RGB feature if terminal has RGB colours. */
+            if ((tty_term_flag(term, tty_code_code::TTYC_TC) != 0 || tty_term_has(term, tty_code_code::TTYC_RGB) != 0)
+                && (tty_term_has(term, tty_code_code::TTYC_SETRGBF) == 0
+                    || tty_term_has(term, tty_code_code::TTYC_SETRGBB) == 0))
+            {
+                tty_add_features(feat, c"RGB".as_ptr(), c",".as_ptr());
+            }
+
+            /* Apply the features and overrides again. */
+            if (tty_apply_features(term, *feat) != 0) {
+                tty_term_apply_overrides(term);
+            }
+
+            /* Log the capabilities. */
+            for i in 0..tty_term_ncodes() {
+                log_debug(c"%s%s".as_ptr(), name, tty_term_describe(term, transmute(i)));
+            }
+
+            return term;
+        }
+
+        // error:
+        tty_term_free(term);
+        null_mut()
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tty_term_free(term: *mut tty_term) {
+    unsafe {
+        log_debug(c"removing term %s".as_ptr(), (*term).name);
+
+        for i in 0..tty_term_ncodes() as usize {
+            if (*(*term).codes.add(i)).type_ == tty_code_type::STRING {
+                free_((*(*term).codes.add(i)).value.string);
+            }
+        }
+        free_((*term).codes);
+
+        list_remove(term);
+        free_((*term).name);
+        free_(term);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tty_term_read_list(
+    name: *const c_char,
+    fd: i32,
+    caps: *mut *mut *mut c_char,
+    ncaps: *mut u32,
+    cause: *mut *mut c_char,
+) -> i32 {
+    unsafe {
+        let mut ent: *mut tty_term_code_entry = null_mut();
+        let mut error = 0;
+        let mut n = 0;
+        let mut tmp: [c_char; 11] = [0; 11];
+        let sizeof_tmp = 11;
+
+        if setupterm(name, fd, &raw mut error) != OK {
+            match (error) {
+                1 => xasprintf(cause, c"can't use hardcopy terminal: %s".as_ptr(), name),
+                0 => xasprintf(cause, c"missing or unsuitable terminal: %s".as_ptr(), name),
+                -1 => xasprintf(cause, c"can't find terminfo database".as_ptr()),
+                _ => xasprintf(cause, c"unknown error".as_ptr()),
+            };
+            return -1;
+        }
+
+        *ncaps = 0;
+        *caps = null_mut();
+
+        let mut s = null();
+        for i in 0..tty_term_ncodes() as usize {
+            let ent = &raw const tty_term_codes[i];
+            match (*ent).type_ {
+                tty_code_type::NONE => (),
+                tty_code_type::STRING => {
+                    s = tigetstr((*ent).name);
+                    if s.is_null() || s == (-1i32 as *const c_char) {
+                        continue;
+                    }
+                }
+                tty_code_type::NUMBER => {
+                    let n = tigetnum((*ent).name);
+                    if (n == -1 || n == -2) {
+                        continue;
+                    }
+                    xsnprintf(&raw mut tmp as *mut i8, sizeof_tmp, c"%d".as_ptr(), n);
+                    s = &raw mut tmp as *mut i8;
+                }
+                tty_code_type::FLAG => {
+                    let n = tigetflag((*ent).name);
+                    if (n == -1) {
+                        continue;
+                    }
+                    if (n != 0) {
+                        s = c"1".as_ptr();
+                    } else {
+                        s = c"0".as_ptr();
+                    }
+                }
+                _ => fatalx(c"unknown capability type".as_ptr()),
+            }
+            *caps = xreallocarray((*caps).cast(), (*ncaps) as usize + 1, size_of::<*mut c_char>())
+                .as_ptr()
+                .cast();
+            xasprintf((*caps).add(*ncaps as usize), c"%s=%s".as_ptr(), (*ent).name, s);
+            (*ncaps) += 1;
+        }
+
+        // #if !defined(NCURSES_VERSION_MAJOR) || NCURSES_VERSION_MAJOR > 5 || (NCURSES_VERSION_MAJOR == 5 && NCURSES_VERSION_MINOR > 6)
+        del_curterm(cur_term);
+        // #endif
+        0
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tty_term_free_list(caps: *mut *mut c_char, ncaps: u32) {
+    unsafe {
+        for i in 0..ncaps {
+            free_(*caps.add(i as usize));
+        }
+        free_(caps);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tty_term_has(term: *mut tty_term, code: tty_code_code) -> i32 {
+    unsafe { ((*(*term).codes.add(code as usize)).type_ != tty_code_type::NONE) as i32 }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tty_term_string(term: *mut tty_term, code: tty_code_code) -> *const c_char {
+    unsafe {
+        if tty_term_has(term, code) == 0 {
+            return c"".as_ptr();
+        }
+        if ((*(*term).codes.add(code as usize)).type_ != tty_code_type::STRING) {
+            fatalx(c"not a string: %d".as_ptr(), code);
+        }
+        (*(*term).codes.add(code as usize)).value.string
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tty_term_string_i(term: *mut tty_term, code: tty_code_code, a: i32) -> *const c_char {
+    unsafe {
+        let mut x = tty_term_string(term, code);
+
+        // #if defined(HAVE_TIPARM_S)
+        // s = tiparm_s(1, 0, x, a);
+        // #elif defined(HAVE_TIPARM)
+        // s = tiparm(x, a);
+        // #else
+        let s = tparm(x as *const c_char, a, 0, 0, 0, 0, 0, 0, 0, 0);
+        // #endif
+        if (s.is_null()) {
+            log_debug(c"could not expand %s".as_ptr(), tty_term_codes[code as usize].name);
+            return c"c".as_ptr();
+        }
+        s
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tty_term_string_ii(term: *mut tty_term, code: tty_code_code, a: i32, b: i32) -> *const c_char {
+    unsafe {
+        let mut x = tty_term_string(term, code);
+
+        // TODO
+        // #if defined(HAVE_TIPARM_S)
+        // s = tiparm_s(2, 0, x, a, b);
+        // #elif defined(HAVE_TIPARM)
+        // s = tiparm(x, a, b);
+        // #else
+        let s = tparm(x as *const c_char, a, b, 0, 0, 0, 0, 0, 0, 0);
+        // #endif
+        if (s.is_null()) {
+            log_debug(c"could not expand %s".as_ptr(), tty_term_codes[code as usize].name);
+            return c"".as_ptr();
+        }
+
+        s
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tty_term_string_iii(
+    term: *mut tty_term,
+    code: tty_code_code,
+    a: i32,
+    b: i32,
+    c: i32,
+) -> *const c_char {
+    unsafe {
+        let mut x = tty_term_string(term, code);
+
+        // TODO
+        // #if defined(HAVE_TIPARM_S)
+        // s = tiparm_s(3, 0, x, a, b, c);
+        // #elif defined(HAVE_TIPARM)
+        // s = tiparm(x, a, b, c);
+        // #else
+        let s = tparm(x as *const c_char, a, b, c, 0, 0, 0, 0, 0, 0);
+        // #endif
+        if (s.is_null()) {
+            log_debug(c"could not expand %s".as_ptr(), tty_term_codes[code as usize].name);
+            return c"".as_ptr();
+        }
+        s
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tty_term_string_s(term: *mut tty_term, code: tty_code_code, a: *const c_char) -> *const i8 {
+    unsafe {
+        let mut x = tty_term_string(term, code);
+
+        // TODO
+        // #if defined(HAVE_TIPARM_S)
+        // s = tiparm_s(1, 1, x, a);
+        // #elif defined(HAVE_TIPARM)
+        // s = tiparm(x, a);
+        // #else
+        let s = tparm(x as *const c_char, a as c_long, 0, 0, 0, 0, 0, 0, 0, 0);
+        // #endif
+        if (s.is_null()) {
+            log_debug(c"could not expand %s".as_ptr(), tty_term_codes[code as usize].name);
+            return c"".as_ptr();
+        }
+
+        s
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tty_term_string_ss(
+    term: *mut tty_term,
+    code: tty_code_code,
+    a: *const c_char,
+    b: *const c_char,
+) -> *const c_char {
+    unsafe {
+        let mut x = tty_term_string(term, code);
+        // *s;
+
+        // #if defined(HAVE_TIPARM_S)
+        // let s = tiparm_s(2, 3, x, a, b);
+        // #elif defined(HAVE_TIPARM)
+        // let s = tiparm(x, a, b);
+        // #else
+        // TODO
+        let s = tparm(x, a as c_long, b as c_long, 0, 0, 0, 0, 0, 0, 0);
+        // #endif
+        if s.is_null() {
+            log_debug(c"could not expand %s".as_ptr(), tty_term_codes[code as usize].name);
+            return c"".as_ptr();
+        }
+
+        s
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tty_term_number(term: *mut tty_term, code: tty_code_code) -> i32 {
+    unsafe {
+        if tty_term_has(term, code) == 0 {
+            return 0;
+        }
+        if (*(*term).codes.add(code as usize)).type_ != tty_code_type::NUMBER {
+            fatalx(c"not a number: %d".as_ptr(), code);
+        }
+        (*(*term).codes.add(code as usize)).value.number
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tty_term_flag(term: *mut tty_term, code: tty_code_code) -> i32 {
+    unsafe {
+        if tty_term_has(term, code) == 0 {
+            return 0;
+        }
+        if (*(*term).codes.add(code as usize)).type_ != tty_code_type::FLAG {
+            fatalx(c"not a flag: %d".as_ptr(), code);
+        }
+        (*(*term).codes.add(code as usize)).value.flag
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tty_term_describe(term: *mut tty_term, code: tty_code_code) -> *const c_char {
+    let sizeof_s = 256;
+    static mut s: [c_char; 256] = [0; 256];
+
+    unsafe {
+        let sizeof_out = 128;
+        let mut out: [c_char; 128] = [0; 128];
+
+        match (*(*term).codes.add(code as usize)).type_ {
+            tty_code_type::NONE => {
+                xsnprintf(
+                    &raw mut s as *mut c_char,
+                    sizeof_s,
+                    c"%4u: %s: [missing]".as_ptr(),
+                    code,
+                    tty_term_codes[code as usize].name,
+                );
+            }
+            tty_code_type::STRING => {
+                strnvis(
+                    &raw mut out as *mut c_char,
+                    (*(*term).codes.add(code as usize)).value.string,
+                    sizeof_out,
+                    (VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL) as i32,
+                );
+                xsnprintf(
+                    &raw mut s as *mut c_char,
+                    sizeof_s,
+                    c"%4u: %s: (string) %s".as_ptr(),
+                    code,
+                    tty_term_codes[code as usize].name,
+                    &raw const out as *const c_char,
+                );
+            }
+            tty_code_type::NUMBER => {
+                xsnprintf(
+                    &raw mut s as *mut c_char,
+                    sizeof_s,
+                    c"%4u: %s: (number) %d".as_ptr(),
+                    code,
+                    tty_term_codes[code as usize].name,
+                    (*(*term).codes.add(code as usize)).value.number,
+                );
+            }
+            tty_code_type::FLAG => {
+                xsnprintf(
+                    &raw mut s as *mut c_char,
+                    sizeof_s,
+                    c"%4u: %s: (flag) %s".as_ptr(),
+                    code,
+                    tty_term_codes[code as usize].name,
+                    if (*(*term).codes.add(code as usize)).value.flag != 0 {
+                        c"true".as_ptr()
+                    } else {
+                        c"false".as_ptr()
+                    },
+                );
+            }
+        };
+
+        &raw const s as *const c_char
+    }
 }
