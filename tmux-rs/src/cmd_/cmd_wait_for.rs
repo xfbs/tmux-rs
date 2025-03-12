@@ -25,10 +25,11 @@ static mut cmd_wait_for_entry: cmd_entry = cmd_entry {
 
 unsafe impl Zeroable for wait_item {}
 #[repr(C)]
-#[derive(compat_rs::TailQEntry)]
+// #[derive(compat_rs::TailQEntry)]
+compat_rs::impl_tailq_entry!(wait_item, entry, tailq_entry<wait_item>);
 pub struct wait_item {
     item: *mut cmdq_item,
-    #[entry]
+    // #[entry]
     entry: tailq_entry<wait_item>,
 }
 
@@ -45,6 +46,7 @@ pub struct wait_channel {
 }
 
 pub type wait_channels = rb_head<wait_channel>;
+#[unsafe(no_mangle)]
 static mut wait_channels: wait_channels = rb_initializer();
 
 RB_GENERATE!(wait_channels, wait_channel, entry, wait_channel_cmp);

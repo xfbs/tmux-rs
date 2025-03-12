@@ -247,6 +247,32 @@ macro_rules! RB_GENERATE {
 }
 pub use RB_GENERATE;
 
+#[macro_export]
+macro_rules! RB_GENERATE_STATIC {
+    ($head_ty:ty, $ty:ty, $entry_field:ident, $cmp_fn:ident) => {
+        ::paste::paste! {
+            impl ::compat_rs::tree::GetEntry<$ty, [<discr_ $entry_field>] > for $ty {
+                unsafe fn entry(this: *const Self) -> *const rb_entry<$ty> { unsafe { &raw const (*this).$entry_field } }
+                unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<$ty> { unsafe { &raw mut (*this).$entry_field } }
+                unsafe fn cmp(this: *const Self, other: *const Self) -> i32 { unsafe { $cmp_fn(this, other) } }
+            }
+
+            pub unsafe extern "C" fn [<$head_ty _RB_MINMAX>](head: *mut rb_head<$ty>, val: i32) -> *mut $ty {
+                unsafe { $crate::tree::rb_minmax::<$ty, [<discr_ $entry_field>]>(head, val) }
+            }
+
+            pub unsafe extern "C" fn [<$head_ty _RB_NEXT>](elm: *mut $ty) -> *mut $ty {
+                unsafe { $crate::tree::rb_next::<$ty, [<discr_ $entry_field>]>(elm) }
+            }
+
+            pub unsafe extern "C" fn [<$head_ty _RB_PREV>](elm: *mut $ty) -> *mut $ty {
+                unsafe { $crate::tree::rb_prev::<$ty, [<discr_ $entry_field>]>(elm) }
+            }
+        }
+    };
+}
+pub use RB_GENERATE_STATIC;
+
 pub unsafe fn rb_minmax<T, D>(head: *mut rb_head<T>, val: i32) -> *mut T
 where
     T: GetEntry<T, D>,

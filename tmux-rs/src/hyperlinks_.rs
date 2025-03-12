@@ -22,8 +22,9 @@ static mut hyperlinks_next_external_id: c_longlong = 1;
 static mut global_hyperlinks_count: u32 = 0;
 
 unsafe impl Zeroable for hyperlinks_uri {}
+compat_rs::impl_tailq_entry!(hyperlinks_uri, list_entry, tailq_entry<hyperlinks_uri>);
 #[repr(C)]
-#[derive(compat_rs::TailQEntry)]
+// #[derive(compat_rs::TailQEntry)]
 pub struct hyperlinks_uri {
     pub tree: *mut hyperlinks,
 
@@ -32,7 +33,7 @@ pub struct hyperlinks_uri {
     pub external_id: *mut c_char,
     pub uri: *mut c_char,
 
-    #[entry]
+    // #[entry]
     pub list_entry: tailq_entry<hyperlinks_uri>,
 
     pub by_inner_entry: rb_entry<hyperlinks_uri>,

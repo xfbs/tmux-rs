@@ -376,13 +376,13 @@ void		 setproctitle(const char *, ...);
 int		 clock_gettime(int, struct timespec *);
 #endif
 
-#ifndef HAVE_B64_NTOP
+// #ifndef HAVE_B64_NTOP
 /* base64.c */
-#undef b64_ntop
-#undef b64_pton
-int		 b64_ntop(const char *, size_t, char *, size_t);
-int		 b64_pton(const char *, u_char *, size_t);
-#endif
+// #undef b64_ntop
+// #undef b64_pton
+// int		 b64_ntop(const char *, size_t, char *, size_t);
+// int		 b64_pton(const char *, u_char *, size_t);
+// #endif
 
 #ifndef HAVE_FDFORKPTY
 /* fdforkpty.c */

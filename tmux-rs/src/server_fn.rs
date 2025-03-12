@@ -1,7 +1,7 @@
-use super::*;
+use crate::*;
 
 unsafe extern "C" {
-    pub fn server_redraw_client(_: *mut client);
+    // pub fn server_redraw_client(_: *mut client);
     pub fn server_status_client(_: *mut client);
     pub fn server_redraw_session(_: *mut session);
     pub fn server_redraw_session_group(_: *mut session);
@@ -31,4 +31,11 @@ unsafe extern "C" {
     pub fn server_destroy_session(_: *mut session);
     pub fn server_check_unattached();
     pub fn server_unzoom_window(_: *mut window);
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn server_redraw_client(c: *mut client) {
+    unsafe {
+        (*c).flags |= CLIENT_ALLREDRAWFLAGS;
+    }
 }

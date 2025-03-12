@@ -114,10 +114,10 @@ pub unsafe extern "C" fn imsg_read(imsgbuf: *mut imsgbuf) -> isize {
     };
     msg.msg_iov = &raw mut iov;
     msg.msg_iovlen = 1;
-    msg.msg_control = cmsgbuf.buf.as_mut_ptr() as *mut c_void;
-    msg.msg_controllen = size_of_val(&cmsgbuf.buf);
+    msg.msg_control = &raw mut cmsgbuf.buf as *mut c_void;
+    msg.msg_controllen = libc::CMSG_SPACE(size_of::<c_int>() as u32) as usize;
 
-    let mut ifd: *mut imsg_fd = libc::calloc(1, size_of::<imsg_fd>()) as _;
+    let mut ifd: *mut imsg_fd = libc::calloc(1, size_of::<imsg_fd>()) as *mut imsg_fd;
     if ifd.is_null() {
         return -1;
     }
@@ -144,14 +144,13 @@ pub unsafe extern "C" fn imsg_read(imsgbuf: *mut imsgbuf) -> isize {
 
         (*imsgbuf).r.wpos += n as usize;
 
-        let mut cmsg: *mut cmsghdr = libc::CMSG_FIRSTHDR(&raw mut msg);
+        // really?
+        let mut cmsg: *mut cmsghdr = libc::CMSG_FIRSTHDR(&raw const msg);
         while !cmsg.is_null() {
             if (*cmsg).cmsg_level == libc::SOL_SOCKET && (*cmsg).cmsg_type == libc::SCM_RIGHTS {
                 let mut i: c_int;
 
-                let mut j: c_int = (((cmsg as *mut c_char).add((*cmsg).cmsg_len) as isize
-                    - libc::CMSG_DATA(cmsg) as isize)
-                    / size_of::<c_int>() as isize) as i32;
+                let mut j: c_int = (((cmsg as *mut c_char).add((*cmsg).cmsg_len).addr() - libc::CMSG_DATA(cmsg).addr()) / size_of::<c_int>()) as i32;
                 for i in 0..j {
                     let fd = *(libc::CMSG_DATA(cmsg) as *mut c_int).add(i as usize);
                     if !ifd.is_null() {

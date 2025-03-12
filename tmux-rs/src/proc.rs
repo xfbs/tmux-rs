@@ -1,4 +1,3 @@
-use ::event::{signal_add, signal_set};
 use compat_rs::{
     getpeereid,
     imsg::{imsg_clear, imsg_compose, imsg_flush, imsg_free, imsg_get, imsg_get_fd, imsg_init, imsg_read, imsgbuf},
@@ -9,9 +8,10 @@ use compat_rs::{
 use libc::{
     __errno_location, AF_UNIX, EAGAIN, PF_UNSPEC, SA_RESTART, SIG_DFL, SIG_IGN, SIGCHLD, SIGCONT, SIGHUP, SIGINT,
     SIGPIPE, SIGQUIT, SIGTERM, SIGTSTP, SIGTTIN, SIGTTOU, SIGUSR1, SIGUSR2, SIGWINCH, close, daemon, getpid, gid_t,
-    memset, sigaction, sigemptyset, socketpair, uname, utsname,
+    sigaction, sigemptyset, socketpair, uname, utsname,
 };
 
+use crate::event_::{signal_add, signal_set};
 use crate::{xmalloc::Zeroable, *};
 
 unsafe extern "C" {
@@ -53,7 +53,8 @@ pub struct tmuxproc {
 pub const PEER_BAD: i32 = 0x1;
 
 unsafe impl Zeroable for tmuxpeer {}
-#[derive(compat_rs::TailQEntry)]
+compat_rs::impl_tailq_entry!(tmuxpeer, entry, tailq_entry<tmuxpeer>);
+// #[derive(compat_rs::TailQEntry)]
 #[repr(C)]
 pub struct tmuxpeer {
     pub parent: *mut tmuxproc,
@@ -67,7 +68,7 @@ pub struct tmuxpeer {
     pub dispatchcb: Option<unsafe extern "C" fn(*mut imsg, *mut c_void)>,
     pub arg: *mut c_void,
 
-    #[entry]
+    // #[entry]
     pub entry: tailq_entry<tmuxpeer>,
 }
 
@@ -76,16 +77,17 @@ pub unsafe extern "C" fn proc_event_cb(_fd: i32, events: i16, arg: *mut c_void) 
     unsafe {
         let mut peer = arg as *mut tmuxpeer;
         let mut n = 0isize;
-        let mut imsg: imsg = zeroed(); // TODO need non-opaque imsg type
+        let mut imsg: MaybeUninit<imsg> = MaybeUninit::<imsg>::uninit();
+        let imsg = imsg.as_mut_ptr();
 
-        if ((*peer).flags & PEER_BAD == 0 && (events & EV_READ as i16 != 0)) {
+        if ((*peer).flags & PEER_BAD == 0 && events & EV_READ != 0) {
             n = imsg_read(&raw mut (*peer).ibuf);
-            if ((n == -1 && *__errno_location() != EAGAIN) || n == 0) {
+            if ((n == -1 && errno!() != EAGAIN) || n == 0) {
                 ((*peer).dispatchcb.unwrap())(null_mut(), (*peer).arg);
                 return;
             }
             loop {
-                n = imsg_get(&raw mut (*peer).ibuf, &raw mut imsg);
+                n = imsg_get(&raw mut (*peer).ibuf, imsg);
                 if (n == -1) {
                     ((*peer).dispatchcb.unwrap())(null_mut(), (*peer).arg);
                     return;
@@ -93,24 +95,24 @@ pub unsafe extern "C" fn proc_event_cb(_fd: i32, events: i16, arg: *mut c_void) 
                 if (n == 0) {
                     break;
                 }
-                log_debug(c"peer %p message %d".as_ptr(), peer, imsg.hdr.type_);
+                log_debug(c"peer %p message %d".as_ptr(), peer, (*imsg).hdr.type_);
 
-                if (peer_check_version(peer, &raw mut imsg) != 0) {
-                    let fd = imsg_get_fd(&raw mut imsg);
+                if (peer_check_version(peer, imsg) != 0) {
+                    let fd = imsg_get_fd(imsg);
                     if (fd != -1) {
                         close(fd);
                     }
-                    imsg_free(&raw mut imsg);
+                    imsg_free(imsg);
                     break;
                 }
 
-                ((*peer).dispatchcb.unwrap())(&raw mut imsg, (*peer).arg);
-                imsg_free(&raw mut imsg);
+                ((*peer).dispatchcb.unwrap())(imsg, (*peer).arg);
+                imsg_free(imsg);
             }
         }
 
         if (events & EV_WRITE as i16 != 0) {
-            if (msgbuf_write(&raw mut (*peer).ibuf.w) <= 0 && *__errno_location() != EAGAIN) {
+            if msgbuf_write(&raw mut (*peer).ibuf.w) <= 0 && errno!() != EAGAIN {
                 ((*peer).dispatchcb.unwrap())(null_mut(), (*peer).arg);
                 return;
             }
@@ -197,17 +199,17 @@ pub unsafe extern "C" fn proc_send(
     }
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn proc_start(name: *const c_char) -> *mut tmuxproc {
+pub unsafe fn proc_start(name: &CStr) -> *mut tmuxproc {
     unsafe {
+        let name = name.as_ptr();
         log_open(name);
         setproctitle(c"%s (%s)".as_ptr(), name, socket_path);
 
         let mut u = MaybeUninit::<utsname>::uninit();
-        if (uname(u.as_mut_ptr()) < 0) {
-            memset(u.as_mut_ptr().cast(), 0, size_of::<utsname>());
+        if uname(u.as_mut_ptr()) < 0 {
+            memset0(u.as_mut_ptr());
         }
-        let u = u.assume_init();
+        let u = u.as_mut_ptr();
 
         log_debug(
             c"%s started (%ld): version %s, socket %s, protocol %d".as_ptr(),
@@ -217,7 +219,12 @@ pub unsafe extern "C" fn proc_start(name: *const c_char) -> *mut tmuxproc {
             socket_path,
             PROTOCOL_VERSION,
         );
-        log_debug(c"on %s %s %s".as_ptr(), u.sysname, u.release, u.version);
+        log_debug(
+            c"on %s %s %s".as_ptr(),
+            (*u).sysname.as_ptr(),
+            (*u).release.as_ptr(),
+            (*u).version.as_ptr(),
+        );
         log_debug(
             c"using libevent %s %s".as_ptr(),
             event_get_version(),
@@ -249,7 +256,7 @@ pub unsafe extern "C" fn proc_loop(tp: *mut tmuxproc, loopcb: Option<unsafe exte
     unsafe {
         log_debug(c"%s loop enter".as_ptr(), (*tp).name);
         loop {
-            event_loop(EVLOOP_ONCE as i32);
+            event_loop(EVLOOP_ONCE);
 
             if (*tp).exit != 0 {
                 break;
@@ -368,7 +375,7 @@ pub unsafe extern "C" fn proc_add_peer(
         event_set(
             &raw mut (*peer).event,
             fd,
-            EV_READ as i16,
+            EV_READ,
             Some(proc_event_cb),
             peer.cast(), // TODO could be ub if this and function below both write
         );

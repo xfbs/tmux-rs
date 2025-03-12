@@ -78,6 +78,10 @@ pub fn xcalloc1<'a, T: Zeroable>() -> &'a mut T {
     let mut ptr: NonNull<T> = xcalloc(1, size_of::<T>()).cast();
     unsafe { ptr.as_mut() }
 }
+pub unsafe fn xcalloc1_<'a, T>() -> &'a mut T {
+    let mut ptr: NonNull<T> = xcalloc(1, size_of::<T>()).cast();
+    unsafe { ptr.as_mut() }
+}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn xrealloc(ptr: *mut c_void, size: usize) -> NonNull<c_void> { unsafe { xrealloc_(ptr, size) } }

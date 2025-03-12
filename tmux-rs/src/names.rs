@@ -1,7 +1,7 @@
-use crate::*;
-
-use ::event::{event_add, event_initialized};
 use ::libc::{gettimeofday, isalnum, ispunct, memcpy, strchr, strcmp, strcspn, strlen, strncmp};
+
+use crate::event_::{event_add, event_initialized};
+use crate::*;
 
 unsafe extern "C" {
     unsafe fn basename(_: *mut c_char) -> *mut c_char;

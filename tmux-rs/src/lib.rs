@@ -30,7 +30,8 @@ pub use core::{
 pub use libc::{FILE, REG_EXTENDED, REG_ICASE, free, memcmp, pid_t, strerror, strlen, termios, time_t, timeval, uid_t};
 
 // libevent2
-pub use ::event::*;
+mod event_;
+pub use event_::*;
 
 use compat_rs::{
     RB_GENERATE,
@@ -815,8 +816,9 @@ pub enum style_range_type {
     STYLE_RANGE_USER,
 }
 
+compat_rs::impl_tailq_entry!(style_range, entry, tailq_entry<style_range>);
+// #[derive(compat_rs::TailQEntry)]
 #[repr(C)]
-#[derive(compat_rs::TailQEntry)]
 pub struct style_range {
     pub type_: style_range_type,
     pub argument: u32,
@@ -825,7 +827,7 @@ pub struct style_range {
     /// not included
     pub end: u32,
 
-    #[entry]
+    // #[entry]
     pub entry: tailq_entry<style_range>,
 }
 pub type style_ranges = tailq_head<style_range>;
@@ -1075,8 +1077,9 @@ pub struct window_mode {
 }
 
 // Active window mode.
+compat_rs::impl_tailq_entry!(window_mode_entry, entry, tailq_entry<window_mode_entry>);
+// #[derive(Copy, Clone, compat_rs::TailQEntry)]
 #[repr(C)]
-#[derive(Copy, Clone, compat_rs::TailQEntry)]
 pub struct window_mode_entry {
     pub wp: *mut window_pane,
     pub swp: *mut window_pane,
@@ -1087,7 +1090,7 @@ pub struct window_mode_entry {
     pub screen: *mut screen,
     pub prefix: u32,
 
-    #[entry]
+    // #[entry]
     pub entry: tailq_entry<window_mode_entry>,
 }
 
@@ -1099,8 +1102,9 @@ pub struct window_pane_offset {
 }
 
 /// Queued pane resize.
+compat_rs::impl_tailq_entry!(window_pane_resize, entry, tailq_entry<window_pane_resize>);
+// #[derive(Copy, Clone, compat_rs::TailQEntry)]
 #[repr(C)]
-#[derive(Copy, Clone, compat_rs::TailQEntry)]
 pub struct window_pane_resize {
     pub sx: u32,
     pub sy: u32,
@@ -1108,7 +1112,7 @@ pub struct window_pane_resize {
     pub osx: u32,
     pub osy: u32,
 
-    #[entry]
+    // #[entry]
     pub entry: tailq_entry<window_pane_resize>,
 }
 pub type window_pane_resizes = tailq_head<window_pane_resize>;
@@ -1348,8 +1352,9 @@ pub enum layout_type {
 pub type layout_cells = tailq_head<layout_cell>;
 
 /// Layout cell.
+compat_rs::impl_tailq_entry!(layout_cell, entry, tailq_entry<layout_cell>);
+// #[derive(compat_rs::TailQEntry)]
 #[repr(C)]
-#[derive(compat_rs::TailQEntry)]
 pub struct layout_cell {
     pub type_: layout_type,
 
@@ -1364,7 +1369,7 @@ pub struct layout_cell {
     pub wp: *mut window_pane,
     pub cells: layout_cells,
 
-    #[entry]
+    // #[entry]
     pub entry: tailq_entry<layout_cell>,
 }
 
@@ -1669,14 +1674,15 @@ pub struct tty_ctx {
 }
 
 // Saved message entry.
+compat_rs::impl_tailq_entry!(message_entry, entry, tailq_entry<message_entry>);
+// #[derive(Copy, Clone, compat_rs::TailQEntry)]
 #[repr(C)]
-#[derive(Copy, Clone, compat_rs::TailQEntry)]
 pub struct message_entry {
     pub msg: *mut c_char,
     pub msg_num: u32,
     pub msg_time: timeval,
 
-    #[entry]
+    // #[entry]
     pub entry: tailq_entry<message_entry>,
 }
 pub type message_list = tailq_head<message_entry>;
@@ -1698,13 +1704,14 @@ pub union args_value_union {
 
 unsafe impl Zeroable for args_value {}
 /// Argument value.
+compat_rs::impl_tailq_entry!(args_value, entry, tailq_entry<args_value>);
+// #[derive(compat_rs::TailQEntry)]
 #[repr(C)]
-#[derive(compat_rs::TailQEntry)]
 pub struct args_value {
     pub type_: args_type,
     pub union_: args_value_union,
     pub cached: *mut c_char,
-    #[entry]
+    // #[entry]
     pub entry: tailq_entry<args_value>,
 }
 pub type args_tree = rb_head<args_entry>;
@@ -2013,8 +2020,9 @@ pub const PROMPT_NOFORMAT: i32 = 0x8;
 pub const PROMPT_KEY: i32 = 0x8;
 
 //#[derive(Copy, Clone)]
+compat_rs::impl_tailq_entry!(client, entry, tailq_entry<client>);
+// #[derive(compat_rs::TailQEntry)]
 #[repr(C)]
-#[derive(compat_rs::TailQEntry)]
 pub struct client {
     pub name: *const c_char,
     pub peer: *mut tmuxpeer,
@@ -2116,7 +2124,7 @@ pub struct client {
     pub clipboard_panes: *mut c_uint,
     pub clipboard_npanes: c_uint,
 
-    #[entry]
+    // #[entry]
     pub entry: tailq_entry<client>,
 }
 pub type clients = tailq_head<client>;
@@ -2290,7 +2298,7 @@ pub enum prompt_mode {
 mod tmux;
 pub use crate::tmux::{
     checkshell, find_cwd, find_home, get_timer, getversion, global_environ, global_options, global_s_options,
-    global_w_options, ptm_fd, setblocking, shell_argv0, shell_command, sig2name, socket_path, start_time,
+    global_w_options, ptm_fd, setblocking, shell_argv0, shell_command, sig2name, socket_path, start_time, main,
 };
 
 mod proc;

@@ -40,17 +40,8 @@ impl key_string_table_entry {
 // 	{ #s "StatusDefault", KEYC_ ## name ## _STATUS_DEFAULT },
 // 	{ #s "Border", KEYC_ ## name ## _BORDER }
 macro_rules! KEYC_MOUSE_STRING {
-    ($name:ident, $s:ident) => {
-        ::paste::paste! {
-            [
-                key_string_table_entry{string: stringify!($s, "Pane\0").as_ptr().cast(), key: keyc::[<KEYC_ $name _PANE>] as u64},
-                key_string_table_entry{string: stringify!($s, "Status\0").as_ptr().cast(), key: keyc::[<KEYC_ $name _STATUS>] as u64 },
-                key_string_table_entry{string: stringify!($s, "StatusLeft\0").as_ptr().cast(), key: keyc::[<KEYC_ $name _STATUS_LEFT>] as u64},
-                key_string_table_entry{string: stringify!($s, "StatusRight\0").as_ptr().cast(), key: keyc::[<KEYC_ $name _STATUS_RIGHT>] as u64},
-                key_string_table_entry{string: stringify!($s, "StatusDefault\0").as_ptr().cast(), key: keyc::[<KEYC_ $name _STATUS_DEFAULT>] as u64 },
-                key_string_table_entry{string: stringify!($s, "Border\0").as_ptr().cast(), key: keyc::[<KEYC_ $name _BORDER>] as u64},
-            ]
-        }
+    ($name:expr, $s:ident) => {
+        KEYC_MOUSE_STRING_I!($name, $s, 1)
     };
 }
 
@@ -66,23 +57,48 @@ macro_rules! concat_array {
     };
 }
 
+/*
+* N. B. the order of the enum variants is incremental
+    KEYC_MOUSEDOWN1_PANE,
+    KEYC_MOUSEDOWN1_STATUS,
+    KEYC_MOUSEDOWN1_STATUS_LEFT,
+    KEYC_MOUSEDOWN1_STATUS_RIGHT,
+    KEYC_MOUSEDOWN1_STATUS_DEFAULT,
+    KEYC_MOUSEDOWN1_BORDER,
+*/
 macro_rules! KEYC_MOUSE_STRING_I {
-    ($name:ident, $s:ident, $i:literal) => {
-        ::paste::paste! {
-            [
-                key_string_table_entry{string: stringify!($s, $i, "Pane\0").as_ptr().cast(), key: keyc::[<KEYC_ $name $i _PANE>] as u64},
-                key_string_table_entry{string: stringify!($s, $i, "Status\0").as_ptr().cast(), key: keyc::[<KEYC_ $name $i _STATUS>] as u64 },
-                key_string_table_entry{string: stringify!($s, $i, "StatusLeft\0").as_ptr().cast(), key: keyc::[<KEYC_ $name $i _STATUS_LEFT>] as u64},
-                key_string_table_entry{string: stringify!($s, $i, "StatusRight\0").as_ptr().cast(), key: keyc::[<KEYC_ $name $i _STATUS_RIGHT>] as u64},
-                key_string_table_entry{string: stringify!($s, $i, "StatusDefault\0").as_ptr().cast(), key: keyc::[<KEYC_ $name $i _STATUS_DEFAULT>] as u64 },
-                key_string_table_entry{string: stringify!($s, $i, "Border\0").as_ptr().cast(), key: keyc::[<KEYC_ $name $i _BORDER>] as u64},
-            ]
-        }
+    ($name:expr, $s:ident, $i:literal) => {
+        [
+            key_string_table_entry {
+                string: stringify!($s, $i, "Pane\0").as_ptr().cast(),
+                key: ($name as u64) + 6 * ($i - 1),
+            },
+            key_string_table_entry {
+                string: stringify!($s, $i, "Status\0").as_ptr().cast(),
+                key: ($name as u64) + 6 * ($i - 1) + 1,
+            },
+            key_string_table_entry {
+                string: stringify!($s, $i, "StatusLeft\0").as_ptr().cast(),
+                key: ($name as u64) + 6 * ($i - 1) + 2,
+            },
+            key_string_table_entry {
+                string: stringify!($s, $i, "StatusRight\0").as_ptr().cast(),
+                key: ($name as u64) + 6 * ($i - 1) + 3,
+            },
+            key_string_table_entry {
+                string: stringify!($s, $i, "StatusDefault\0").as_ptr().cast(),
+                key: ($name as u64) + 6 * ($i - 1) + 4,
+            },
+            key_string_table_entry {
+                string: stringify!($s, $i, "Border\0").as_ptr().cast(),
+                key: ($name as u64) + 6 * ($i - 1) + 5,
+            },
+        ]
     };
 }
 
 macro_rules! KEYC_MOUSE_STRING11 {
-    ($out:ident, $out_i: ident, $name:ident, $s:ident) => {
+    ($out:ident, $out_i: ident, $name:expr, $s:ident) => {
         concat_array!($out, $out_i, KEYC_MOUSE_STRING_I!($name, $s, 1));
         concat_array!($out, $out_i, KEYC_MOUSE_STRING_I!($name, $s, 2));
         concat_array!($out, $out_i, KEYC_MOUSE_STRING_I!($name, $s, 3));
@@ -193,15 +209,15 @@ static key_string_table: [key_string_table_entry; 469] = const {
     concat_array!(out, out_i, function_keys);
 
     // Mouse keys.
-    KEYC_MOUSE_STRING11!(out, out_i, MOUSEDOWN, MouseDown);
-    KEYC_MOUSE_STRING11!(out, out_i, MOUSEUP, MouseUp);
-    KEYC_MOUSE_STRING11!(out, out_i, MOUSEDRAG, MouseDrag);
-    KEYC_MOUSE_STRING11!(out, out_i, MOUSEDRAGEND, MouseEnd);
-    concat_array!(out, out_i, KEYC_MOUSE_STRING!(WHEELUP, WheelUp));
-    concat_array!(out, out_i, KEYC_MOUSE_STRING!(WHEELDOWN, WheelDown));
-    KEYC_MOUSE_STRING11!(out, out_i, SECONDCLICK, SecondClick);
-    KEYC_MOUSE_STRING11!(out, out_i, DOUBLECLICK, DoubleClick);
-    KEYC_MOUSE_STRING11!(out, out_i, TRIPLECLICK, TripleClick);
+    KEYC_MOUSE_STRING11!(out, out_i, keyc::KEYC_MOUSEDOWN1_PANE, MouseDown);
+    KEYC_MOUSE_STRING11!(out, out_i, keyc::KEYC_MOUSEUP1_PANE, MouseUp);
+    KEYC_MOUSE_STRING11!(out, out_i, keyc::KEYC_MOUSEDRAG1_PANE, MouseDrag);
+    KEYC_MOUSE_STRING11!(out, out_i, keyc::KEYC_MOUSEDRAGEND1_PANE, MouseEnd);
+    concat_array!(out, out_i, KEYC_MOUSE_STRING!(keyc::KEYC_WHEELUP_PANE, WheelUp));
+    concat_array!(out, out_i, KEYC_MOUSE_STRING!(keyc::KEYC_WHEELDOWN_PANE, WheelDown));
+    KEYC_MOUSE_STRING11!(out, out_i, keyc::KEYC_SECONDCLICK1_PANE, SecondClick);
+    KEYC_MOUSE_STRING11!(out, out_i, keyc::KEYC_DOUBLECLICK1_PANE, DoubleClick);
+    KEYC_MOUSE_STRING11!(out, out_i, keyc::KEYC_TRIPLECLICK1_PANE, TripleClick);
 
     out
 };

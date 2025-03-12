@@ -116,6 +116,10 @@ more then just server exited unexpectedly.
 - get a stacktrace on segfault
 
 # NEXT (ensure only has one item)
+I suspect that linking is shadowing some broken rust implementations,
+and maybe when compiling with rust the rust implementation is prefered
+improve imsg and imsg buffer implemnentation
+
 
 # TODO
 - review cmd_rotate_window.rs cmd_rotate_window_exec tailq_foreach calls
@@ -157,6 +161,8 @@ more then just server exited unexpectedly.
     - read or writes through a ptr will invalidate a reference
     - also need to ensure no pointers are created and stored from the references
     - NonNull use as_uninit_mut
+- get rid of paste crate, won't need to join symbols any more for C code
+- figure out why building rust binary doesn't work
 
 - [ ]  493 server-fn
 - [ ]  510 tty-features
@@ -343,6 +349,8 @@ undefined behaviour in this context.
 - crashes when typing 'c' because of one of my bindings
 - crashes on my binding prefix g
 
+- sendmsg in client to server causes SIGPIPE to be handled and exit control loop
+
 
 Due to use after shadowing in client_.rs client_connect xasprintf usage
 found by using LSAN_OPTIONS=report_objects=1
@@ -375,6 +383,18 @@ SUMMARY: AddressSanitizer: 28 byte(s) leaked in 1 allocation(s).
     404          }
 ```
 
+
+```
+   1684                  case EV_CLOSURE_EVENT: {                                        
+   1685                          void (*evcb_callback)(evutil_socket_t, short, void *);
+   1686                          short res;                                               
+   1687                          EVUTIL_ASSERT(ev != NULL);                               
+   1688                          evcb_callback = *ev->ev_callback;                        
+   1689                          res = ev->ev_res;                                        
+   1690                          EVBASE_RELEASE_LOCK(base, th_base_lock);                 
+>  1691                          evcb_callback(ev->ev_fd, res, ev->ev_arg);  
+```
+
 ## BUGS (found)
 
 - Incorrect translation of do while
@@ -389,6 +409,7 @@ SUMMARY: AddressSanitizer: 28 byte(s) leaked in 1 allocation(s).
 - incorrect translation of for loop with continue to while with continue and increment at end; increment isn't applied (cmd_find)
 - incorrect translation of cmd_entry args_parse cb None, when should have been Some(cb): after translating cmd-display-menu immediately aborts on start
 - typo in rb_right macro, expanded to access left field
+- crashes when config file is completely commented out: missing early exit in cmdq_get_command, no return in function
 
 - memcpy_(&raw mut tmp as *mut i8, in_, end); should have been: memcpy_(tmp, in_, end)
   -  because I switched to a pointer instead of buffer,but didn't change memcpy code

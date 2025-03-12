@@ -5,11 +5,11 @@ use core::{
     ptr::null_mut,
 };
 
-use bsd_sys::recallocarray;
 use libc::{calloc, cmsghdr, free, msghdr};
 
-use super::imsg::{ibuf, msgbuf};
-use super::queue::{tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_next, tailq_remove};
+use crate::imsg::{ibuf, msgbuf};
+use crate::queue::{tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_next, tailq_remove};
+use crate::{freezero, recallocarray};
 
 const IOV_MAX: usize = 1024; // TODO find where IOV_MAX is defined
 
@@ -372,7 +372,7 @@ pub unsafe extern "C" fn ibuf_free(buf: *mut ibuf) {
     if ((*buf).fd != -1) {
         libc::close((*buf).fd);
     }
-    bsd_sys::freezero((*buf).buf as _, (*buf).size);
+    freezero((*buf).buf.cast(), (*buf).size);
     libc::free(buf as *mut libc::c_void);
 }
 #[unsafe(no_mangle)]
@@ -475,7 +475,7 @@ pub unsafe extern "C" fn msgbuf_write(msgbuf: *mut msgbuf) -> c_int {
     let mut i: u32 = 0;
     let mut n = 0;
     let mut msg: msghdr = std::mem::zeroed();
-    let mut cmsg: cmsghdr = std::mem::zeroed();
+    let mut cmsg: *mut cmsghdr = std::mem::zeroed();
     let mut cmsgbuf: cmsgbuf = std::mem::zeroed();
     union cmsgbuf {
         hdr: cmsghdr,
@@ -504,11 +504,11 @@ pub unsafe extern "C" fn msgbuf_write(msgbuf: *mut msgbuf) -> c_int {
     if !buf0.is_null() {
         msg.msg_control = &raw mut cmsgbuf.buf as _;
         msg.msg_controllen = size_of_val(&cmsgbuf.buf);
-        cmsg = *libc::CMSG_FIRSTHDR(&raw const msg);
-        cmsg.cmsg_len = libc::CMSG_LEN(size_of::<c_int>() as u32) as usize;
-        cmsg.cmsg_level = libc::SOL_SOCKET;
-        cmsg.cmsg_type = libc::SCM_RIGHTS;
-        *(libc::CMSG_DATA(&raw const cmsg) as *mut c_int) = (*buf0).fd;
+        cmsg = libc::CMSG_FIRSTHDR(&raw const msg);
+        (*cmsg).cmsg_len = libc::CMSG_LEN(size_of::<c_int>() as u32) as usize;
+        (*cmsg).cmsg_level = libc::SOL_SOCKET;
+        (*cmsg).cmsg_type = libc::SCM_RIGHTS;
+        *libc::CMSG_DATA(cmsg).cast() = (*buf0).fd;
     }
 
     loop {

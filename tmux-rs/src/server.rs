@@ -208,7 +208,7 @@ pub unsafe extern "C" fn server_start(
         if event_reinit(base) != 0 {
             fatalx(c"event_reinit failed".as_ptr());
         }
-        server_proc = proc_start(c"server".as_ptr());
+        server_proc = proc_start(c"server");
 
         proc_set_signals(server_proc, Some(server_signal));
         sigprocmask(SIG_SETMASK, &raw mut oldset, null_mut());

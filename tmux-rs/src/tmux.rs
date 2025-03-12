@@ -401,9 +401,14 @@ pub unsafe extern "C" fn getversion() -> *const c_char {
     c"3.5rs".as_ptr()
 }
 
+unsafe extern "C" {
+    fn setproctitle_init(argc: i32, argv: *const *const c_char, envp: *const *const c_char);
+}
+
 #[unsafe(no_mangle)]
-extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char) {
+pub extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *mut *mut c_char) {
     unsafe {
+        setproctitle_init(argc, argv.cast(), env.cast());
         let mut cause: *mut c_char = null_mut();
         let mut path: *const c_char = null_mut();
         let mut label: *mut c_char = null_mut();

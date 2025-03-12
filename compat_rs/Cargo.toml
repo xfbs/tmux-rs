@@ -4,11 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bsd-sys          = { path = "../bsd-sys" }
-compat_derive    = { path = "../compat_derive" }
-
+# compat_derive    = { path = "../compat_derive" }
 libc             = { workspace = true }
-# libevent-sys     = { workspace = true }
 paste            = { workspace = true }
 
 [lints]

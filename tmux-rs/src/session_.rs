@@ -1,4 +1,5 @@
 use compat_rs::RB_GENERATE;
+use compat_rs::RB_GENERATE_STATIC;
 
 use crate::*;
 
@@ -52,5 +53,8 @@ unsafe extern "C" {
     pub unsafe fn session_renumber_windows(_: *mut session);
 }
 
-RB_GENERATE!(sessions, session, entry, session_cmp);
-RB_GENERATE!(session_groups, session_group, entry, session_group_cmp);
+RB_GENERATE_STATIC!(sessions, session, entry, session_cmp);
+RB_GENERATE_STATIC!(session_groups, session_group, entry, session_group_cmp);
+
+// RB_GENERATE!(sessions, session, entry, session_cmp);
+// RB_GENERATE!(session_groups, session_group, entry, session_group_cmp);

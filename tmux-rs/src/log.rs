@@ -8,8 +8,8 @@ use ::core::{
 use ::libc::{FILE, fclose, fflush, fopen, fprintf, free, getpid, gettimeofday, setvbuf, snprintf, strerror, timeval};
 
 use ::compat_rs::{VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB, stravis};
-use ::event::event_set_log_callback;
 
+use crate::event_::event_set_log_callback;
 use crate::libc_::errno;
 use crate::xmalloc::xasprintf;
 use crate::*;

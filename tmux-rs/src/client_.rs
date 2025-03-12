@@ -5,13 +5,13 @@ use compat_rs::{
     tree::rb_initializer,
 };
 use libc::{
-    __errno_location, _IOLBF, AF_UNIX, CREAD, CS8, EAGAIN, ECHILD, ECONNREFUSED, EINTR, ENAMETOOLONG, ENOENT, HUPCL,
-    ICRNL, IXANY, LOCK_EX, LOCK_NB, O_CREAT, O_WRONLY, ONLCR, OPOST, SA_RESTART, SIG_DFL, SIG_IGN, SIGCHLD, SIGCONT,
-    SIGHUP, SIGTERM, SIGTSTP, SIGWINCH, SOCK_STREAM, STDERR_FILENO, STDIN_FILENO, STDOUT_FILENO, TCSAFLUSH, TCSANOW,
-    VMIN, VTIME, WNOHANG, cfgetispeed, cfgetospeed, cfmakeraw, cfsetispeed, cfsetospeed, close, connect, dup, execl,
-    fflush, flock, fprintf, getenv, getline, getpid, getppid, isatty, kill, memcpy, memset, open, printf, setenv,
-    setvbuf, sigaction, sigemptyset, sockaddr, sockaddr_un, socket, strerror, strlen, strsignal, system, tcgetattr,
-    tcsetattr, unlink, waitpid,
+    _IOLBF, AF_UNIX, CREAD, CS8, EAGAIN, ECHILD, ECONNREFUSED, EINTR, ENAMETOOLONG, ENOENT, HUPCL, ICRNL, IXANY,
+    LOCK_EX, LOCK_NB, O_CREAT, O_WRONLY, ONLCR, OPOST, SA_RESTART, SIG_DFL, SIG_IGN, SIGCHLD, SIGCONT, SIGHUP, SIGTERM,
+    SIGTSTP, SIGWINCH, SOCK_STREAM, STDERR_FILENO, STDIN_FILENO, STDOUT_FILENO, TCSAFLUSH, TCSANOW, VMIN, VTIME,
+    WNOHANG, cfgetispeed, cfgetospeed, cfmakeraw, cfsetispeed, cfsetospeed, close, connect, dup, execl, fflush, flock,
+    fprintf, getenv, getline, getpid, getppid, isatty, kill, memcpy, memset, open, printf, setenv, setvbuf, sigaction,
+    sigemptyset, sockaddr, sockaddr_un, socket, strerror, strlen, strsignal, system, tcgetattr, tcsetattr, unlink,
+    waitpid,
 };
 
 use crate::*;
@@ -82,16 +82,16 @@ pub unsafe extern "C" fn client_get_lock(lockfile: *mut c_char) -> i32 {
 
         let lockfd = open(lockfile, O_WRONLY | O_CREAT, 0o600);
         if lockfd == -1 {
-            log_debug(c"open failed: %s".as_ptr(), strerror(*__errno_location()));
+            log_debug(c"open failed: %s".as_ptr(), strerror(errno!()));
             return -1;
         }
 
         if flock(lockfd, LOCK_EX | LOCK_NB) == -1 {
-            log_debug(c"flock failed: %s".as_ptr(), strerror(*__errno_location()));
-            if *__errno_location() != EAGAIN {
+            log_debug(c"flock failed: %s".as_ptr(), strerror(errno!()));
+            if errno!() != EAGAIN {
                 return lockfd;
             }
-            while flock(lockfd, LOCK_EX) == -1 && *__errno_location() == EINTR {}
+            while flock(lockfd, LOCK_EX) == -1 && errno!() == EINTR {}
             close(lockfd);
             return -2;
         }
@@ -113,7 +113,7 @@ pub unsafe extern "C" fn client_connect(base: *mut event_base, path: *const c_ch
         sa.sun_family = AF_UNIX as u16;
         let size = strlcpy(&raw mut sa.sun_path as _, path, size_of_val(&sa.sun_path));
         if size >= size_of_val(&sa.sun_path) {
-            *__errno_location() = ENAMETOOLONG;
+            errno!() = ENAMETOOLONG;
             return -1;
         }
         log_debug(c"socket is %s".as_ptr(), path);
@@ -126,9 +126,9 @@ pub unsafe extern "C" fn client_connect(base: *mut event_base, path: *const c_ch
                 }
 
                 log_debug(c"trying connect".as_ptr());
-                if connect(fd, &raw mut sa as _, size_of::<sockaddr_un>() as u32) == -1 {
-                    log_debug(c"connect failed: %s".as_ptr(), strerror(*__errno_location()));
-                    if (*__errno_location() != ECONNREFUSED && *__errno_location() != ENOENT) {
+                if connect(fd, &raw const sa as *const sockaddr, size_of::<sockaddr_un>() as u32) == -1 {
+                    log_debug(c"connect failed: %s".as_ptr(), strerror(errno!()));
+                    if (errno!() != ECONNREFUSED && errno!() != ENOENT) {
                         break 'failed;
                     }
                     if flags & CLIENT_NOSTARTSERVER as i64 != 0 {
@@ -158,7 +158,7 @@ pub unsafe extern "C" fn client_connect(base: *mut event_base, path: *const c_ch
                         continue 'retry;
                     }
 
-                    if lockfd >= 0 && unlink(path) != 0 && *__errno_location() != ENOENT {
+                    if lockfd >= 0 && unlink(path) != 0 && errno!() != ENOENT {
                         free_(lockfile);
                         close(lockfd);
                         return -1;
@@ -292,7 +292,7 @@ pub unsafe extern "C" fn client_main(
             free(values as _);
         }
 
-        client_proc = proc_start(c"client".as_ptr());
+        client_proc = proc_start(c"client");
         proc_set_signals(client_proc, Some(client_signal));
 
         client_flags = flags;
@@ -312,17 +312,17 @@ pub unsafe extern "C" fn client_main(
         }
         #[cfg(not(feature = "systemd"))]
         {
-            fd = client_connect(base, socket_path, client_flags as _);
+            fd = client_connect(base, socket_path, client_flags as i64);
         }
         if fd == -1 {
-            if *__errno_location() == ECONNREFUSED {
+            if errno!() == ECONNREFUSED {
                 fprintf(stderr, c"no server running on %s\n".as_ptr(), socket_path);
             } else {
                 fprintf(
                     stderr,
                     c"error connecting to %s (%s)\n".as_ptr(),
                     socket_path,
-                    strerror(*__errno_location()),
+                    strerror(errno!()),
                 );
             }
             return 1;
@@ -373,11 +373,7 @@ pub unsafe extern "C" fn client_main(
 
         if client_flags & CLIENT_CONTROLCONTROL != 0 {
             if tcgetattr(STDIN_FILENO, &raw mut saved_tio) != 0 {
-                fprintf(
-                    stderr,
-                    c"tcgetattr failed: %s\n".as_ptr(),
-                    strerror(*__errno_location()),
-                );
+                fprintf(stderr, c"tcgetattr failed: %s\n".as_ptr(), strerror(errno!()));
                 return 1;
             }
             cfmakeraw(&raw mut tio);
@@ -618,10 +614,10 @@ unsafe extern "C" fn client_signal(sig: i32) {
                     break;
                 }
                 if (pid == -1) {
-                    if *__errno_location() == ECHILD {
+                    if errno!() == ECHILD {
                         break;
                     }
-                    log_debug(c"waitpid failed: %s".as_ptr(), strerror(*__errno_location()));
+                    log_debug(c"waitpid failed: %s".as_ptr(), strerror(errno!()));
                 }
             }
         } else if client_attached == 0 {
@@ -788,14 +784,12 @@ unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
                     fatalx(c"bad MSG_SHELL string".as_ptr());
                 }
 
-                client_exec(data as _, shell_command);
+                client_exec(data, shell_command);
             }
             msgtype::MSG_DETACH | msgtype::MSG_DETACHKILL => {
                 proc_send(client_peer, msgtype::MSG_EXITING, -1, null_mut(), 0);
             }
-            msgtype::MSG_EXITED => {
-                proc_exit(client_proc);
-            }
+            msgtype::MSG_EXITED => proc_exit(client_proc),
             msgtype::MSG_READ_OPEN => {
                 file_read_open(
                     &raw mut client_files,
@@ -807,9 +801,7 @@ unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
                     null_mut(),
                 );
             }
-            msgtype::MSG_READ_CANCEL => {
-                file_read_cancel(&raw mut client_files, imsg);
-            }
+            msgtype::MSG_READ_CANCEL => file_read_cancel(&raw mut client_files, imsg),
             msgtype::MSG_WRITE_OPEN => {
                 file_write_open(
                     &raw mut client_files,
@@ -821,12 +813,8 @@ unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
                     null_mut(),
                 );
             }
-            msgtype::MSG_WRITE => {
-                file_write_data(&raw mut client_files, imsg);
-            }
-            msgtype::MSG_WRITE_CLOSE => {
-                file_write_close(&raw mut client_files, imsg);
-            }
+            msgtype::MSG_WRITE => file_write_data(&raw mut client_files, imsg),
+            msgtype::MSG_WRITE_CLOSE => file_write_close(&raw mut client_files, imsg),
             msgtype::MSG_OLDSTDERR | msgtype::MSG_OLDSTDIN | msgtype::MSG_OLDSTDOUT => {
                 fprintf(stderr, c"server version is too old for client\n".as_ptr());
                 proc_exit(client_proc);

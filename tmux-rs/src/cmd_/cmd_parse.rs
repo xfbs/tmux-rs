@@ -21,11 +21,12 @@ unsafe extern "C" {
     // pub fn cmd_parse_from_arguments(_: *mut args_value, _: c_uint, _: *mut cmd_parse_input) -> *mut cmd_parse_result;
 }
 
-#[derive(compat_rs::TailQEntry)]
+compat_rs::impl_tailq_entry!(cmd_parse_scope, entry, tailq_entry<cmd_parse_scope>);
+// #[derive(compat_rs::TailQEntry)]
 #[repr(C)]
 pub struct cmd_parse_scope {
     pub flag: i32,
-    #[entry]
+    // #[entry]
     pub entry: tailq_entry<cmd_parse_scope>,
 }
 
@@ -38,7 +39,8 @@ pub enum cmd_parse_argument_type {
 }
 
 unsafe impl Zeroable for cmd_parse_argument {}
-#[derive(compat_rs::TailQEntry)]
+compat_rs::impl_tailq_entry!(cmd_parse_argument, entry, tailq_entry<cmd_parse_argument>);
+// #[derive(compat_rs::TailQEntry)]
 #[repr(C)]
 pub struct cmd_parse_argument {
     pub type_: cmd_parse_argument_type,
@@ -46,19 +48,20 @@ pub struct cmd_parse_argument {
     pub commands: *mut cmd_parse_commands,
     pub cmdlist: *mut cmd_list,
 
-    #[entry]
+    // #[entry]
     pub entry: tailq_entry<cmd_parse_argument>,
 }
 pub type cmd_parse_arguments = tailq_head<cmd_parse_argument>;
 
 unsafe impl Zeroable for cmd_parse_command {}
-#[derive(compat_rs::TailQEntry)]
+compat_rs::impl_tailq_entry!(cmd_parse_command, entry, tailq_entry<cmd_parse_command>);
+// #[derive(compat_rs::TailQEntry)]
 #[repr(C)]
 pub struct cmd_parse_command {
     pub line: u32,
     pub arguments: cmd_parse_arguments,
 
-    #[entry]
+    // #[entry]
     pub entry: tailq_entry<cmd_parse_command>,
 }
 pub type cmd_parse_commands = tailq_head<cmd_parse_command>;

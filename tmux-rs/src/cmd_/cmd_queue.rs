@@ -1,4 +1,4 @@
-use crate::*;
+use crate::{xmalloc::xcalloc1_, *};
 
 unsafe extern "C" {
     // pub unsafe fn cmdq_new_state(_: *mut cmd_find_state, _: *mut key_event, _: c_int) -> *mut cmdq_state;
@@ -71,8 +71,9 @@ pub enum cmdq_type {
     CMDQ_CALLBACK,
 }
 
+// #[derive(compat_rs::TailQEntry)]
+compat_rs::impl_tailq_entry!(cmdq_item, entry, tailq_entry<cmdq_item>);
 #[repr(C)]
-#[derive(compat_rs::TailQEntry)]
 pub struct cmdq_item {
     pub name: *mut c_char,
     pub queue: *mut cmdq_list,
@@ -99,7 +100,7 @@ pub struct cmdq_item {
     pub cb: cmdq_cb,
     pub data: *mut c_void,
 
-    #[entry]
+    // #[entry]
     pub entry: tailq_entry<cmdq_item>,
 }
 
@@ -160,11 +161,11 @@ pub unsafe extern "C" fn cmdq_get(c: *mut client) -> *mut cmdq_list {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmdq_new() -> NonNull<cmdq_list> {
-    let queue = xcalloc_::<cmdq_list>(1);
     unsafe {
+        let queue = NonNull::from(xcalloc1_::<cmdq_list>());
         tailq_init(&raw mut (*queue.as_ptr()).list);
+        queue
     }
-    queue
 }
 
 #[unsafe(no_mangle)]
@@ -221,8 +222,7 @@ pub unsafe extern "C" fn cmdq_new_state(
     flags: i32,
 ) -> *mut cmdq_state {
     unsafe {
-        let mut state = xcalloc_::<cmdq_state>(1);
-        let state = state.as_ptr();
+        let state: *mut cmdq_state = xcalloc1_::<cmdq_state>();
         (*state).references = 1;
         (*state).flags = flags;
 
@@ -537,7 +537,7 @@ pub unsafe extern "C" fn cmdq_get_command(cmdlist: *mut cmd_list, mut state: *mu
 
         let mut cmd = cmd_list_first(cmdlist);
         if cmd.is_null() {
-            cmdq_get_callback!(cmdq_empty_command, null_mut());
+            return cmdq_get_callback!(cmdq_empty_command, null_mut()).as_ptr();
         }
 
         if (state.is_null()) {
@@ -548,7 +548,7 @@ pub unsafe extern "C" fn cmdq_get_command(cmdlist: *mut cmd_list, mut state: *mu
         while !cmd.is_null() {
             let entry = cmd_get_entry(cmd);
 
-            let mut item = xcalloc_::<cmdq_item>(1).as_ptr();
+            let mut item = xcalloc1_::<cmdq_item>() as *mut cmdq_item;
             xasprintf(&raw mut (*item).name, c"[%s/%p]".as_ptr(), (*entry).name, item);
             (*item).type_ = cmdq_type::CMDQ_COMMAND;
 

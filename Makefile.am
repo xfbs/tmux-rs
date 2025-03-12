@@ -16,7 +16,7 @@ AM_CPPFLAGS += @XOPEN_DEFINES@ \
 	-DTMUX_TERM='"@DEFAULT_TERM@"'
 
 # Additional object files.
-LDADD = $(LIBOBJS) -L/home/collin/Git/tmux/tmux-3.5a/target/x86_64-unknown-linux-gnu/debug -ltmux_rs
+LDADD = $(LIBOBJS) -L/home/collin/Git/tmux/tmux-3.5a/target/x86_64-unknown-linux-gnu/debug -ltmux_rs -lbsd
 # LDADD = $(LIBOBJS) -L/home/collin/Git/tmux/tmux-3.5a/target/release -ltmux_rs
 
 AM_CFLAGS += -fsanitize=address -fno-omit-frame-pointer -O0
@@ -165,48 +165,51 @@ endif
 # resize.c
 # key-string.c
 # tty-term.c
+#
+# TMP moved to build.rs cc:
+# menu.c
+#
+# 	broken.c \
+# 	cmd-new-session.c \
+# 	cmd-queue.c \
+# 	format-draw.c \
+# 	format.c \
+# 	grid.c \
+# 	input-keys.c \
+# 	input.c \
+# 	key-bindings.c \
+# 	layout-set.c \
+# 	layout.c \
+# 	mode-tree.c \
+# 	options-table.c \
+# 	options.c \
+# 	popup.c \
+# 	screen-redraw.c \
+# 	screen-write.c \
+# 	screen.c \
+# 	server-client.c \
+# 	server-fn.c \
+# 	session.c \
+# 	status.c \
+# 	tty-features.c \
+# 	tty-keys.c \
+# 	tty.c \
+# 	window-buffer.c \
+# 	window-copy.c \
+# 	window-customize.c \
+# 	window-tree.c \
+# 	
 
 # Broken:
 # notify.c (notify_add)
 # environ.c (environ_free)
 # server.c (server_loop)
 
-
 dist_tmux_SOURCES = \
-	cmd-new-session.c \
-	broken.c \
-	cmd-queue.c \
+	tmux-protocol.h \
+	tmux.h \
 	cmd-parse.y \
 	compat.h \
-	format.c \
-	format-draw.c \
-	grid.c \
-	input-keys.c \
-	input.c \
-	key-bindings.c \
-	layout-set.c \
-	layout.c \
-	menu.c \
-	mode-tree.c \
-	options-table.c \
-	options.c \
-	popup.c \
-	screen-redraw.c \
-	screen-write.c \
-	screen.c \
-	server-client.c \
-	server-fn.c \
-	session.c \
-	status.c \
-	tty-features.c \
-	tty-keys.c \
-	tty.c \
-	window-buffer.c \
-	window-copy.c \
-	window-customize.c \
-	window-tree.c \
-	tmux.h \
-	tmux-protocol.h \
 	xmalloc.h
 nodist_tmux_SOURCES = osdep-@PLATFORM@.c
 
