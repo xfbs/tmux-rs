@@ -42,17 +42,17 @@ pub unsafe extern "C" fn cmd_select_pane_redraw(w: *mut window) {
          */
 
         tailq_foreach(&raw mut clients, |c| {
-            if ((*c).session.is_null() || ((*c).flags & CLIENT_CONTROL != 0)) {
+            if ((*c).session.is_null() || ((*c).flags.intersects(client_flag::CONTROL))) {
                 return ControlFlow::<(), ()>::Continue(());
             }
             if ((*(*(*c).session).curw).window == w && tty_window_bigger(&raw mut (*c).tty) != 0) {
                 server_redraw_client(c);
             } else {
                 if ((*(*(*c).session).curw).window == w) {
-                    (*c).flags |= CLIENT_REDRAWBORDERS;
+                    (*c).flags |= client_flag::REDRAWBORDERS;
                 }
                 if (session_has((*c).session, w) != 0) {
-                    (*c).flags |= CLIENT_REDRAWSTATUS;
+                    (*c).flags |= client_flag::REDRAWSTATUS;
                 }
             }
             ControlFlow::<(), ()>::Continue(())
@@ -208,7 +208,7 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        if (!c.is_null() && !(*c).session.is_null() && ((*c).flags & CLIENT_ACTIVEPANE != 0)) {
+        if (!c.is_null() && !(*c).session.is_null() && ((*c).flags.intersects(client_flag::ACTIVEPANE))) {
             activewp = server_client_get_pane(c);
         } else {
             activewp = (*w).active;
@@ -220,7 +220,7 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
             server_redraw_window(w);
         }
         window_redraw_active_switch(w, wp);
-        if (!c.is_null() && !(*c).session.is_null() && ((*c).flags & CLIENT_ACTIVEPANE != 0)) {
+        if (!c.is_null() && !(*c).session.is_null() && ((*c).flags.intersects(client_flag::ACTIVEPANE))) {
             server_client_set_pane(c, wp);
         } else if (window_set_active_pane(w, wp, 1) != 0) {
             cmd_find_from_winlink_pane(current, wl, wp, 0);

@@ -132,7 +132,7 @@ pub const CONTROL_WRITE_MINIMUM: i32 = 32;
 /// Maximum age for clients that are not using pause mode.
 pub const CONTROL_MAXIMUM_AGE: u64 = 300000;
 
-pub const CONTROL_IGNORE_FLAGS: u64 = CLIENT_CONTROL_NOOUTPUT | CLIENT_UNATTACHEDFLAGS;
+pub const CONTROL_IGNORE_FLAGS: client_flag = client_flag::CONTROL_NOOUTPUT.union(CLIENT_UNATTACHEDFLAGS);
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_pane_cmp(cp1: *const control_pane, cp2: *const control_pane) -> i32 {
@@ -230,9 +230,9 @@ pub unsafe extern "C" fn control_free_block(cs: *mut control_state, cb: *mut con
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_get_pane(c: *mut client, wp: *mut window_pane) -> *mut control_pane {
-    let cs = (*c).control_state;
-    let mut cp = MaybeUninit::<control_pane>::uninit();
     unsafe {
+        let cs = (*c).control_state;
+        let mut cp = MaybeUninit::<control_pane>::uninit();
         (*cp.as_mut_ptr()).pane = (*wp).id;
         rb_find(&raw mut (*cs).panes, cp.as_mut_ptr())
     }
@@ -310,7 +310,7 @@ pub unsafe extern "C" fn control_pane_offset(
     unsafe {
         let mut cs = (*c).control_state;
 
-        if ((*c).flags & CLIENT_CONTROL_NOOUTPUT != 0) {
+        if ((*c).flags.intersects(client_flag::CONTROL_NOOUTPUT)) {
             *off = 0;
             return null_mut();
         }
@@ -435,7 +435,7 @@ pub unsafe extern "C" fn control_check_age(c: *mut client, wp: *mut window_pane,
             age as c_ulonglong,
         );
 
-        if ((*c).flags & CLIENT_CONTROL_PAUSEAFTER != 0) {
+        if ((*c).flags.intersects(client_flag::CONTROL_PAUSEAFTER)) {
             if (age < (*c).pause_age as u64) {
                 return 0;
             }
@@ -447,7 +447,7 @@ pub unsafe extern "C" fn control_check_age(c: *mut client, wp: *mut window_pane,
                 return 0;
             }
             (*c).exit_message = xstrdup_(c"too far behind").as_ptr();
-            (*c).flags |= CLIENT_EXIT;
+            (*c).flags |= client_flag::EXIT;
             control_discard(c);
         }
     }
@@ -468,7 +468,7 @@ pub unsafe extern "C" fn control_write_output(c: *mut client, wp: *mut window_pa
                 return;
             }
 
-            if ((*c).flags & CONTROL_IGNORE_FLAGS != 0) {
+            if ((*c).flags.intersects(CONTROL_IGNORE_FLAGS)) {
                 cp = control_get_pane(c, wp);
                 if (!cp.is_null()) {
                     break 'ignore;
@@ -539,7 +539,7 @@ pub unsafe extern "C" fn control_error_callback(_bufev: *mut bufferevent, what: 
     let mut c: *mut client = data.cast();
 
     unsafe {
-        (*c).flags |= CLIENT_EXIT;
+        (*c).flags |= client_flag::EXIT;
     }
 }
 
@@ -561,7 +561,7 @@ pub unsafe extern "C" fn control_read_callback(bufev: *mut bufferevent, data: *m
             log_debug(c"%s: %s: %s".as_ptr(), __func__, (*c).name, line);
             if *line == b'\0' as c_char {
                 free_(line);
-                (*c).flags |= CLIENT_EXIT;
+                (*c).flags |= client_flag::EXIT;
                 break;
             }
 
@@ -624,7 +624,7 @@ pub unsafe extern "C" fn control_append_data(
             if (message.is_null()) {
                 fatalx(c"out of memory".as_ptr());
             }
-            if ((*c).flags & CLIENT_CONTROL_PAUSEAFTER != 0) {
+            if ((*c).flags.intersects(client_flag::CONTROL_PAUSEAFTER)) {
                 evbuffer_add_printf(
                     message,
                     c"%%extended-output %%%u %llu : ".as_ptr(),
@@ -798,7 +798,7 @@ pub unsafe extern "C" fn control_write_callback(bufev: *mut bufferevent, data: *
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_start(c: *mut client) {
     unsafe {
-        if ((*c).flags & CLIENT_CONTROLCONTROL != 0) {
+        if ((*c).flags.intersects(client_flag::CONTROLCONTROL)) {
             close((*c).out_fd);
             (*c).out_fd = -1;
         } else {
@@ -824,7 +824,7 @@ pub unsafe extern "C" fn control_start(c: *mut client) {
             fatalx(c"out of memory".as_ptr());
         }
 
-        if ((*c).flags & CLIENT_CONTROLCONTROL != 0) {
+        if ((*c).flags.intersects(client_flag::CONTROLCONTROL)) {
             (*cs).write_event = (*cs).read_event;
         } else {
             (*cs).write_event = bufferevent_new(
@@ -840,7 +840,7 @@ pub unsafe extern "C" fn control_start(c: *mut client) {
         }
         bufferevent_setwatermark((*cs).write_event, EV_WRITE as i16, CONTROL_BUFFER_LOW as usize, 0);
 
-        if ((*c).flags & CLIENT_CONTROLCONTROL != 0) {
+        if ((*c).flags.intersects(client_flag::CONTROLCONTROL)) {
             bufferevent_write((*cs).write_event, c"\x1bP1000p".as_ptr().cast(), 7);
             bufferevent_enable((*cs).write_event, EV_WRITE as i16);
         }
@@ -870,7 +870,7 @@ pub unsafe extern "C" fn control_discard(c: *mut client) {
 pub unsafe extern "C" fn control_stop(c: *mut client) {
     unsafe {
         let mut cs = (*c).control_state;
-        if (!(*c).flags & CLIENT_CONTROLCONTROL != 0) {
+        if (!(*c).flags.intersects(client_flag::CONTROLCONTROL)) {
             bufferevent_free((*cs).write_event);
         }
         bufferevent_free((*cs).read_event);

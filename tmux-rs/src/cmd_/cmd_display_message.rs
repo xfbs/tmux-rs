@@ -117,7 +117,7 @@ unsafe extern "C" fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_i
             cmdq_error(item, c"%s".as_ptr(), msg);
         } else if (args_has_(args, 'p')) {
             cmdq_print(item, c"%s".as_ptr(), msg);
-        } else if (!tc.is_null() && ((*tc).flags & CLIENT_CONTROL) != 0) {
+        } else if (!tc.is_null() && (*tc).flags.intersects(client_flag::CONTROL)) {
             let evb = evbuffer_new();
             if (evb.is_null()) {
                 fatalx(c"out of memory".as_ptr());

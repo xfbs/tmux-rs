@@ -23,7 +23,7 @@ pub static mut client_proc: *mut tmuxproc = null_mut();
 pub static mut client_peer: *mut tmuxpeer = null_mut();
 
 #[unsafe(no_mangle)]
-pub static mut client_flags: u64 = 0;
+pub static mut client_flags: client_flag = client_flag::empty();
 
 #[unsafe(no_mangle)]
 pub static mut client_suspended: i32 = 0;
@@ -102,7 +102,7 @@ pub unsafe extern "C" fn client_get_lock(lockfile: *mut c_char) -> i32 {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn client_connect(base: *mut event_base, path: *const c_char, flags: i64) -> i32 {
+pub unsafe extern "C" fn client_connect(base: *mut event_base, path: *const c_char, flags: client_flag) -> i32 {
     unsafe {
         let mut sa: sockaddr_un = zeroed();
         let mut fd = 0;
@@ -131,10 +131,10 @@ pub unsafe extern "C" fn client_connect(base: *mut event_base, path: *const c_ch
                     if (errno!() != ECONNREFUSED && errno!() != ENOENT) {
                         break 'failed;
                     }
-                    if flags & CLIENT_NOSTARTSERVER as i64 != 0 {
+                    if flags.intersects(client_flag::NOSTARTSERVER) {
                         break 'failed;
                     }
-                    if !flags & CLIENT_STARTSERVER as i64 != 0 {
+                    if !flags.intersects(client_flag::STARTSERVER) {
                         break 'failed;
                     }
                     close(fd);
@@ -163,7 +163,7 @@ pub unsafe extern "C" fn client_connect(base: *mut event_base, path: *const c_ch
                         close(lockfd);
                         return -1;
                     }
-                    fd = server_start(client_proc, flags as _, base, lockfd, lockfile);
+                    fd = server_start(client_proc, flags, base, lockfd, lockfile);
                 }
 
                 break 'retry;
@@ -249,7 +249,7 @@ pub unsafe extern "C" fn client_main(
     base: *mut event_base,
     argc: i32,
     argv: *mut *mut c_char,
-    mut flags: u64,
+    mut flags: client_flag,
     feat: i32,
 ) -> i32 {
     unsafe {
@@ -271,10 +271,10 @@ pub unsafe extern "C" fn client_main(
 
         if !shell_command.is_null() {
             msg = msgtype::MSG_SHELL;
-            flags |= CLIENT_STARTSERVER;
+            flags |= client_flag::STARTSERVER;
         } else if argc == 0 {
             msg = msgtype::MSG_COMMAND;
-            flags |= CLIENT_STARTSERVER;
+            flags |= client_flag::STARTSERVER;
         } else {
             msg = msgtype::MSG_COMMAND;
 
@@ -282,7 +282,7 @@ pub unsafe extern "C" fn client_main(
             pr = cmd_parse_from_arguments(values, argc as u32, null_mut());
             if (*pr).status == cmd_parse_status::CMD_PARSE_SUCCESS {
                 if cmd_list_any_have((*pr).cmdlist, CMD_STARTSERVER) != 0 {
-                    flags |= CLIENT_STARTSERVER;
+                    flags |= client_flag::STARTSERVER;
                 }
                 cmd_list_free((*pr).cmdlist);
             } else {
@@ -296,7 +296,10 @@ pub unsafe extern "C" fn client_main(
         proc_set_signals(client_proc, Some(client_signal));
 
         client_flags = flags;
-        log_debug(c"flags are %#llx".as_ptr(), client_flags as c_ulonglong);
+        log_debug(
+            c"flags are %#llx".as_ptr(),
+            (*&raw mut client_flags).bits() as c_ulonglong,
+        );
 
         // #ifdef HAVE_SYSTEMD
         #[cfg(feature = "systemd")]
@@ -307,12 +310,12 @@ pub unsafe extern "C" fn client_main(
             if systemd_activated() != 0 {
                 fd = server_start(client_proc, flags, base, 0, null_mut());
             } else {
-                fd = client_connect(base, socket_path, client_flags as i64);
+                fd = client_connect(base, socket_path, client_flags);
             }
         }
         #[cfg(not(feature = "systemd"))]
         {
-            fd = client_connect(base, socket_path, client_flags as i64);
+            fd = client_connect(base, socket_path, client_flags);
         }
         if fd == -1 {
             if errno!() == ECONNREFUSED {
@@ -371,7 +374,7 @@ pub unsafe extern "C" fn client_main(
         options_free(global_w_options);
         environ_free(global_environ);
 
-        if client_flags & CLIENT_CONTROLCONTROL != 0 {
+        if (*&raw const client_flags).intersects(client_flag::CONTROLCONTROL) {
             if tcgetattr(STDIN_FILENO, &raw mut saved_tio) != 0 {
                 fprintf(stderr, c"tcgetattr failed: %s\n".as_ptr(), strerror(errno!()));
                 return 1;
@@ -428,7 +431,7 @@ pub unsafe extern "C" fn client_main(
         proc_loop(client_proc, None);
 
         if client_exittype == msgtype::MSG_EXEC {
-            if client_flags & CLIENT_CONTROLCONTROL != 0 {
+            if (*&raw const client_flags).intersects(client_flag::CONTROLCONTROL) {
                 tcsetattr(STDOUT_FILENO, TCSAFLUSH, &saved_tio);
             }
             client_exec(client_execshell, client_execcmd);
@@ -447,14 +450,14 @@ pub unsafe extern "C" fn client_main(
             if client_exittype == msgtype::MSG_DETACHKILL && ppid > 1 {
                 kill(ppid, SIGHUP);
             }
-        } else if client_flags & CLIENT_CONTROL != 0 {
+        } else if (*&raw const client_flags).intersects(client_flag::CONTROL) {
             if client_exitreason != client_exitreason::CLIENT_EXIT_NONE {
                 printf(c"%%exit %s\n".as_ptr(), client_exit_message());
             } else {
                 printf(c"%%exit\n".as_ptr());
             }
             fflush(stdout);
-            if client_flags & CLIENT_CONTROL_WAITEXIT != 0 {
+            if (*&raw const client_flags).intersects(client_flag::CONTROL_WAITEXIT) {
                 setvbuf(stdin, null_mut(), _IOLBF, 0);
                 loop {
                     let linelen = getline(&raw mut line, &raw mut linesize, stdin);
@@ -464,7 +467,7 @@ pub unsafe extern "C" fn client_main(
                 }
                 free(line as _);
             }
-            if client_flags & CLIENT_CONTROLCONTROL != 0 {
+            if (*&raw const client_flags).intersects(client_flag::CONTROLCONTROL) {
                 // TODO originally octal 033
                 printf(c"\x1b\\".as_ptr());
                 fflush(stdout);
@@ -491,7 +494,7 @@ unsafe extern "C" fn client_send_identify(
         // char	**ss;
         let mut sslen: usize = 0;
         // int	  fd;
-        let mut flags: u64 = client_flags;
+        let mut flags: client_flag = client_flags;
         // pid_t	  pid;
         // u_int	  i;
 
@@ -584,7 +587,10 @@ unsafe extern "C" fn client_send_identify(
 unsafe extern "C" fn client_exec(shell: *mut c_char, shellcmd: *mut c_char) {
     unsafe {
         log_debug(c"shell %s, command %s".as_ptr(), shell, shellcmd);
-        let argv0 = shell_argv0(shell, !!(client_flags & CLIENT_LOGIN) as c_int);
+        let argv0 = shell_argv0(
+            shell,
+            (*&raw const client_flags).intersects(client_flag::LOGIN) as c_int,
+        );
         setenv(c"SHELL".as_ptr(), shell, 1);
 
         proc_clear_signals(client_proc, 1);
@@ -776,8 +782,15 @@ unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
                     fatalx(c"bad MSG_FLAGS string".as_ptr());
                 }
 
-                memcpy(&raw mut client_flags as _, data as _, size_of::<u64>());
-                log_debug(c"new flags are %#llx".as_ptr(), client_flags as c_ulonglong);
+                memcpy(
+                    &raw mut client_flags as *mut c_void,
+                    data as *const c_void,
+                    size_of::<u64>(),
+                );
+                log_debug(
+                    c"new flags are %#llx".as_ptr(),
+                    (*&raw const client_flags).bits() as c_ulonglong,
+                );
             }
             msgtype::MSG_SHELL => {
                 if (datalen == 0 || *data.add(datalen - 1) != b'\0' as c_char) {
@@ -796,7 +809,7 @@ unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
                     client_peer,
                     imsg,
                     1,
-                    !(client_flags & CLIENT_CONTROL) as i32,
+                    !(*&raw const client_flags).intersects(client_flag::CONTROL) as i32,
                     Some(client_file_check_cb),
                     null_mut(),
                 );
@@ -808,7 +821,7 @@ unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
                     client_peer,
                     imsg,
                     1,
-                    !(client_flags & CLIENT_CONTROL) as i32,
+                    !(*&raw const client_flags).intersects(client_flag::CONTROL) as i32,
                     Some(client_file_check_cb),
                     null_mut(),
                 );
@@ -839,8 +852,15 @@ unsafe extern "C" fn client_dispatch_attached(imsg: *mut imsg) {
                     fatalx(c"bad MSG_FLAGS string".as_ptr());
                 }
 
-                memcpy(&raw mut client_flags as _, data as _, size_of::<u64>());
-                log_debug(c"new flags are %#llx".as_ptr(), client_flags as c_ulonglong);
+                memcpy(
+                    &raw mut client_flags as *mut c_void,
+                    data as *const c_void,
+                    size_of::<u64>(),
+                );
+                log_debug(
+                    c"new flags are %#llx".as_ptr(),
+                    (*&raw const client_flags).bits() as c_ulonglong,
+                );
             }
             msgtype::MSG_DETACH | msgtype::MSG_DETACHKILL => {
                 if datalen == 0 || *data.add(datalen - 1) != b'\0' as c_char {

@@ -110,7 +110,7 @@ pub unsafe extern "C" fn file_create_with_client(
     cbdata: *mut c_void,
 ) -> *mut client_file {
     unsafe {
-        if !c.is_null() && (*c).flags & CLIENT_ATTACHED != 0 {
+        if !c.is_null() && (*c).flags.intersects(client_flag::ATTACHED) {
             c = null_mut();
         }
 
@@ -167,7 +167,7 @@ pub unsafe extern "C" fn file_fire_done_cb(_fd: i32, _events: i16, arg: *mut c_v
         let mut c: *mut client = (*cf).c;
 
         if let Some(cb) = (*cf).cb {
-            if ((*cf).closed != 0 || c.is_null() || !(*c).flags & CLIENT_DEAD != 0) {
+            if ((*cf).closed != 0 || c.is_null() || !(*c).flags.intersects(client_flag::DEAD)) {
                 cb(c, (*cf).path, (*cf).error, 1, (*cf).buffer, (*cf).data);
             }
         }
@@ -194,7 +194,7 @@ pub unsafe extern "C" fn file_fire_read(cf: *mut client_file) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_can_print(c: *mut client) -> c_int {
     unsafe {
-        if c.is_null() || (*c).flags & CLIENT_ATTACHED != 0 || (*c).flags & CLIENT_CONTROL != 0 {
+        if c.is_null() || (*c).flags.intersects(client_flag::ATTACHED) || (*c).flags.intersects(client_flag::CONTROL) {
             0
         } else {
             1
@@ -349,7 +349,10 @@ pub unsafe extern "C" fn file_write(
                     (*cf).path = xstrdup_(c"-").as_ptr();
 
                     fd = STDOUT_FILENO;
-                    if (c.is_null() || ((*c).flags & CLIENT_ATTACHED != 0) || ((*c).flags & CLIENT_CONTROL != 0)) {
+                    if (c.is_null()
+                        || ((*c).flags.intersects(client_flag::ATTACHED))
+                        || ((*c).flags.intersects(client_flag::CONTROL)))
+                    {
                         (*cf).error = EBADF;
                         break 'done;
                     }
@@ -359,7 +362,7 @@ pub unsafe extern "C" fn file_write(
                 cf = file_create_with_client(c, stream as i32, cb, cbdata);
                 (*cf).path = file_get_path(c, path).as_ptr();
 
-                if c.is_null() || (*c).flags & CLIENT_ATTACHED != 0 {
+                if c.is_null() || (*c).flags.intersects(client_flag::ATTACHED) {
                     if (flags & O_APPEND != 0) {
                         mode = c"ab".as_ptr();
                     } else {
@@ -435,7 +438,10 @@ pub unsafe extern "C" fn file_read(
                     (*cf).path = xstrdup_(c"-").as_ptr();
 
                     fd = STDIN_FILENO;
-                    if (c.is_null() || ((*c).flags & CLIENT_ATTACHED != 0) || ((*c).flags & CLIENT_CONTROL != 0)) {
+                    if (c.is_null()
+                        || ((*c).flags.intersects(client_flag::ATTACHED))
+                        || ((*c).flags.intersects(client_flag::CONTROL)))
+                    {
                         (*cf).error = EBADF;
                         break 'done;
                     }
@@ -445,7 +451,7 @@ pub unsafe extern "C" fn file_read(
                 cf = file_create_with_client(c, stream as i32, cb, cbdata);
                 (*cf).path = file_get_path(c, path).as_ptr();
 
-                if (c.is_null() || (*c).flags & CLIENT_ATTACHED != 0) {
+                if (c.is_null() || (*c).flags.intersects(client_flag::ATTACHED)) {
                     f = fopen((*cf).path, c"rb".as_ptr());
                     if (f.is_null()) {
                         (*cf).error = *__errno_location();
@@ -525,7 +531,7 @@ pub unsafe extern "C" fn file_push_cb(_fd: i32, _events: i16, arg: *mut c_void) 
     let mut cf = arg as *mut client_file;
 
     unsafe {
-        if (*cf).c.is_null() || !(*(*cf).c).flags & CLIENT_DEAD != 0 {
+        if (*cf).c.is_null() || !(*(*cf).c).flags.intersects(client_flag::DEAD) {
             file_push(cf);
         }
         file_free(cf);

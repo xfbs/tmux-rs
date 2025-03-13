@@ -120,6 +120,9 @@ I suspect that linking is shadowing some broken rust implementations,
 and maybe when compiling with rust the rust implementation is prefered
 improve imsg and imsg buffer implemnentation
 
+something in client -> tty struct
+concrete opaque struct in struct causing field offset into adjacent struct be incorrect
+
 
 # TODO
 - review cmd_rotate_window.rs cmd_rotate_window_exec tailq_foreach calls
@@ -164,7 +167,6 @@ improve imsg and imsg buffer implemnentation
 - get rid of paste crate, won't need to join symbols any more for C code
 - figure out why building rust binary doesn't work
 
-- [ ]  493 server-fn
 - [ ]  510 tty-features
 - [ ]  556 menu
 - [ ]  559 window-buffer
@@ -202,6 +204,7 @@ improve imsg and imsg buffer implemnentation
   =====
   - [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
   =====
+- [X]  493 server-fn
 - [X]  924 tty-term
 - [X]  477 key-string
 - [X]  467 resize

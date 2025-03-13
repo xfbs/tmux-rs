@@ -414,7 +414,7 @@ pub extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *mut *mut
         let mut label: *mut c_char = null_mut();
         let mut feat: i32 = 0;
         let mut fflag: i32 = 0;
-        let mut flags: u64 = 0;
+        let mut flags: client_flag = client_flag::empty();
 
         if setlocale(LC_CTYPE, c"en_US.UTF-8".as_ptr()).is_null() && setlocale(LC_CTYPE, c"C.UTF-8".as_ptr()).is_null()
         {
@@ -431,7 +431,7 @@ pub extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *mut *mut
         tzset();
 
         if **argv == b'-' as c_char {
-            flags = CLIENT_LOGIN;
+            flags = client_flag::LOGIN;
         }
 
         global_environ = environ_create().as_ptr();
@@ -456,12 +456,12 @@ pub extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *mut *mut
             match opt as u8 {
                 b'2' => tty_add_features(&raw mut feat, c"256".as_ptr(), c":,".as_ptr()),
                 b'c' => shell_command = optarg,
-                b'D' => flags |= CLIENT_NOFORK,
+                b'D' => flags |= client_flag::NOFORK,
                 b'C' => {
-                    if flags & CLIENT_CONTROL != 0 {
-                        flags |= CLIENT_CONTROLCONTROL;
+                    if flags.intersects(client_flag::CONTROL) {
+                        flags |= client_flag::CONTROLCONTROL;
                     } else {
-                        flags |= CLIENT_CONTROL;
+                        flags |= client_flag::CONTROL;
                     }
                 }
                 b'f' => {
@@ -481,19 +481,19 @@ pub extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *mut *mut
                     printf(c"tmux %s\n".as_ptr(), getversion());
                     std::process::exit(0);
                 }
-                b'l' => flags |= CLIENT_LOGIN,
+                b'l' => flags |= client_flag::LOGIN,
                 b'L' => {
                     free(label as _);
                     label = xstrdup(optarg).cast().as_ptr();
                 }
-                b'N' => flags |= CLIENT_NOSTARTSERVER,
+                b'N' => flags |= client_flag::NOSTARTSERVER,
                 b'q' => (),
                 b'S' => {
                     free(path as _);
                     path = xstrdup(optarg).cast().as_ptr();
                 }
                 b'T' => tty_add_features(&raw mut feat, optarg, c":,".as_ptr()),
-                b'u' => flags |= CLIENT_UTF8,
+                b'u' => flags |= client_flag::UTF8,
                 b'v' => log_add_level(),
                 _ => usage(),
             }
@@ -504,7 +504,7 @@ pub extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *mut *mut
         if !shell_command.is_null() && argc != 0 {
             usage();
         }
-        if flags & CLIENT_NOFORK != 0 && argc != 0 {
+        if flags.intersects(client_flag::NOFORK) && argc != 0 {
             usage();
         }
 
@@ -526,7 +526,7 @@ pub extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *mut *mut
         // terminal, or if not they know that output from UTF-8-capable
         // programs may be wrong.
         if !getenv(c"TMUX".as_ptr()).is_null() {
-            flags |= CLIENT_UTF8;
+            flags |= client_flag::UTF8;
         } else {
             let mut s = getenv(c"LC_ALL".as_ptr()) as *const c_char;
             if s.is_null() || *s == b'\0' as c_char {
@@ -539,7 +539,7 @@ pub extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *mut *mut
                 s = c"".as_ptr();
             }
             if !strcasestr(s, c"UTF-8".as_ptr()).is_null() || !strcasestr(s, c"UTF8".as_ptr()).is_null() {
-                flags |= CLIENT_UTF8;
+                flags |= client_flag::UTF8;
             }
         }
 
@@ -611,7 +611,7 @@ pub extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *mut *mut
                 }
                 std::process::exit(1);
             }
-            flags |= CLIENT_DEFAULTSOCKET;
+            flags |= client_flag::DEFAULTSOCKET;
         }
         socket_path = path;
         free(label as _);

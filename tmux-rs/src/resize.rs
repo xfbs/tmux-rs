@@ -76,10 +76,10 @@ pub unsafe extern "C" fn ignore_client_size(c: *mut client) -> i32 {
         if ((*c).session.is_null()) {
             return 1;
         }
-        if ((*c).flags & CLIENT_NOSIZEFLAGS != 0) {
+        if (*c).flags.intersects(CLIENT_NOSIZEFLAGS) {
             return 1;
         }
-        if ((*c).flags & CLIENT_IGNORESIZE != 0) {
+        if (*c).flags.intersects(client_flag::IGNORESIZE) {
             /*
              * Ignore flagged clients if there are any attached clients
              * that aren't flagged.
@@ -88,10 +88,10 @@ pub unsafe extern "C" fn ignore_client_size(c: *mut client) -> i32 {
                 if ((*loop_).session.is_null()) {
                     return ControlFlow::Continue(());
                 }
-                if ((*loop_).flags & CLIENT_NOSIZEFLAGS != 0) {
+                if (*loop_).flags.intersects(CLIENT_NOSIZEFLAGS) {
                     return ControlFlow::Continue(());
                 }
-                if (!(*loop_).flags & CLIENT_IGNORESIZE != 0) {
+                if (!(*loop_).flags.intersects(client_flag::IGNORESIZE)) {
                     return ControlFlow::Break(());
                 }
                 ControlFlow::Continue(())
@@ -101,9 +101,9 @@ pub unsafe extern "C" fn ignore_client_size(c: *mut client) -> i32 {
                 return 1;
             }
         }
-        if (((*c).flags & CLIENT_CONTROL != 0)
-            && (!(*c).flags & CLIENT_SIZECHANGED != 0)
-            && (!(*c).flags & CLIENT_WINDOWSIZECHANGED != 0))
+        if (*c).flags.intersects(client_flag::CONTROL)
+            && !(*c).flags.intersects(client_flag::SIZECHANGED)
+            && !(*c).flags.intersects(client_flag::WINDOWSIZECHANGED)
         {
             return 1;
         }
@@ -277,7 +277,7 @@ pub unsafe extern "C" fn clients_calculate_size(
                     }
 
                     /* Look up per-window size if any. */
-                    if (!(*loop_).flags & CLIENT_WINDOWSIZECHANGED != 0) {
+                    if (!(*loop_).flags.intersects(client_flag::WINDOWSIZECHANGED)) {
                         return ControlFlow::Continue(());
                     }
                     cw = server_client_get_client_window(loop_, (*w).id);
@@ -394,7 +394,7 @@ pub unsafe extern "C" fn default_window_size(
              * Ignore the given client if it is a control client - the creating
              * client should only affect the size if it is not a control client.
              */
-            if (!c.is_null() && ((*c).flags & CLIENT_CONTROL != 0)) {
+            if (!c.is_null() && ((*c).flags.intersects(client_flag::CONTROL))) {
                 c = null_mut();
             }
 
@@ -583,16 +583,16 @@ pub unsafe extern "C" fn recalculate_sizes_now(now: i32) {
          */
         tailq_foreach(&raw mut clients, |c| {
             let s = (*c).session;
-            if (!s.is_null() && !((*c).flags & CLIENT_UNATTACHEDFLAGS != 0)) {
+            if (!s.is_null() && !((*c).flags.intersects(CLIENT_UNATTACHEDFLAGS))) {
                 (*s).attached += 1;
             }
             if (ignore_client_size(c) != 0) {
                 return ControlFlow::<(), ()>::Continue(());
             }
-            if ((*c).tty.sy <= (*s).statuslines || ((*c).flags & CLIENT_CONTROL != 0)) {
-                (*c).flags |= CLIENT_STATUSOFF;
+            if ((*c).tty.sy <= (*s).statuslines || ((*c).flags.intersects(client_flag::CONTROL))) {
+                (*c).flags |= client_flag::STATUSOFF;
             } else {
-                (*c).flags &= !CLIENT_STATUSOFF;
+                (*c).flags &= !client_flag::STATUSOFF;
             }
             ControlFlow::<(), ()>::Continue(())
         });

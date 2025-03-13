@@ -104,7 +104,7 @@ unsafe extern "C" fn cmd_confirm_before_callback(
         let mut retcode: i32 = 1;
 
         'out: {
-            if ((*c).flags & CLIENT_DEAD) != 0 {
+            if (*c).flags.intersects(client_flag::DEAD) {
                 break 'out;
             }
 

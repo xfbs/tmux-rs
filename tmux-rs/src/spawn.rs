@@ -443,8 +443,8 @@ pub unsafe extern "C" fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut c_c
                      * isolation.
                      */
                     if (systemd_move_pid_to_new_cgroup((*new_wp).pid, cause) < 0) {
-                        log_debug("%s: moving pane to new cgroup failed: %s", __func__, *cause);
-                        free(*cause);
+                        log_debug(c"%s: moving pane to new cgroup failed: %s".as_ptr(), __func__, *cause);
+                        free_(*cause);
                     }
                 }
                 break 'complete;

@@ -36,7 +36,7 @@ pub use event_::*;
 use compat_rs::{
     RB_GENERATE,
     queue::{Entry, ListEntry, list_entry, list_head, tailq_entry, tailq_head},
-    tree::{rb_entry, rb_head},
+    tree::{GetEntry, rb_entry, rb_head},
 };
 
 unsafe extern "C" {
@@ -933,9 +933,8 @@ pub struct screen {
     pub tabs: *mut bitstr_t,
     pub sel: *mut screen_sel,
 
-    #[cfg(feature = "sixel")]
-    images: images,
-
+    // #[cfg(feature = "sixel")]
+    // images: images,
     pub write_list: *mut screen_write_cline,
 
     pub hyperlinks: *mut hyperlinks,
@@ -1434,6 +1433,7 @@ pub struct session {
     pub entry: rb_entry<session>,
 }
 pub type sessions = rb_head<session>;
+compat_rs::impl_tailq_entry!(session, gentry, tailq_entry<session>);
 
 pub const MOUSE_MASK_BUTTONS: i32 = 195;
 pub const MOUSE_MASK_SHIFT: i32 = 4;
@@ -1616,7 +1616,7 @@ pub struct tty {
     pub mouse_drag_release: Option<unsafe extern "C" fn(*mut client, *mut mouse_event)>,
 
     pub key_timer: event,
-    pub key_tree: tty_key,
+    pub key_tree: *mut tty_key,
 }
 
 pub type tty_ctx_redraw_cb = Option<unsafe extern "C" fn(*const tty_ctx)>;
@@ -1966,52 +1966,60 @@ pub type overlay_key_cb = Option<unsafe extern "C" fn(*mut client, *mut c_void, 
 pub type overlay_free_cb = Option<unsafe extern "C" fn(*mut client, *mut c_void)>;
 pub type overlay_resize_cb = Option<unsafe extern "C" fn(*mut client, *mut c_void)>;
 
-pub const CLIENT_TERMINAL: u64 = 0x1;
-pub const CLIENT_LOGIN: u64 = 0x2;
-pub const CLIENT_EXIT: u64 = 0x4;
-pub const CLIENT_REDRAWWINDOW: u64 = 0x8;
-pub const CLIENT_REDRAWSTATUS: u64 = 0x10;
-pub const CLIENT_REPEAT: u64 = 0x20;
-pub const CLIENT_SUSPENDED: u64 = 0x40;
-pub const CLIENT_ATTACHED: u64 = 0x80;
-pub const CLIENT_EXITED: u64 = 0x100;
-pub const CLIENT_DEAD: u64 = 0x200;
-pub const CLIENT_REDRAWBORDERS: u64 = 0x400;
-pub const CLIENT_READONLY: u64 = 0x800;
-pub const CLIENT_NOSTARTSERVER: u64 = 0x1000;
-pub const CLIENT_CONTROL: u64 = 0x2000;
-pub const CLIENT_CONTROLCONTROL: u64 = 0x4000;
-pub const CLIENT_FOCUSED: u64 = 0x8000;
-pub const CLIENT_UTF8: u64 = 0x10000;
-pub const CLIENT_IGNORESIZE: u64 = 0x20000;
-pub const CLIENT_IDENTIFIED: u64 = 0x40000;
-pub const CLIENT_STATUSFORCE: u64 = 0x80000;
-pub const CLIENT_DOUBLECLICK: u64 = 0x100000;
-pub const CLIENT_TRIPLECLICK: u64 = 0x200000;
-pub const CLIENT_SIZECHANGED: u64 = 0x400000;
-pub const CLIENT_STATUSOFF: u64 = 0x800000;
-pub const CLIENT_REDRAWSTATUSALWAYS: u64 = 0x1000000;
-pub const CLIENT_REDRAWOVERLAY: u64 = 0x2000000;
-pub const CLIENT_CONTROL_NOOUTPUT: u64 = 0x4000000;
-pub const CLIENT_DEFAULTSOCKET: u64 = 0x8000000;
-pub const CLIENT_STARTSERVER: u64 = 0x10000000;
-pub const CLIENT_REDRAWPANES: u64 = 0x20000000;
-pub const CLIENT_NOFORK: u64 = 0x40000000;
-pub const CLIENT_ACTIVEPANE: u64 = 0x80000000u64;
-pub const CLIENT_CONTROL_PAUSEAFTER: u64 = 0x100000000u64;
-pub const CLIENT_CONTROL_WAITEXIT: u64 = 0x200000000u64;
-pub const CLIENT_WINDOWSIZECHANGED: u64 = 0x400000000u64;
-pub const CLIENT_CLIPBOARDBUFFER: u64 = 0x800000000u64;
-pub const CLIENT_BRACKETPASTING: u64 = 0x1000000000u64;
-pub const CLIENT_ALLREDRAWFLAGS: u64 = CLIENT_REDRAWWINDOW
-    | CLIENT_REDRAWSTATUS
-    | CLIENT_REDRAWSTATUSALWAYS
-    | CLIENT_REDRAWBORDERS
-    | CLIENT_REDRAWOVERLAY
-    | CLIENT_REDRAWPANES;
-pub const CLIENT_UNATTACHEDFLAGS: u64 = CLIENT_DEAD | CLIENT_SUSPENDED | CLIENT_EXIT;
-pub const CLIENT_NODETACHFLAGS: u64 = CLIENT_DEAD | CLIENT_EXIT;
-pub const CLIENT_NOSIZEFLAGS: u64 = CLIENT_DEAD | CLIENT_SUSPENDED | CLIENT_EXIT;
+bitflags::bitflags! {
+    #[repr(transparent)]
+    #[derive(Copy, Clone)]
+    struct client_flag: u64 {
+        const TERMINAL           = 0x0000000001u64;
+        const LOGIN              = 0x0000000002u64;
+        const EXIT               = 0x0000000004u64;
+        const REDRAWWINDOW       = 0x0000000008u64;
+        const REDRAWSTATUS       = 0x0000000010u64;
+        const REPEAT             = 0x0000000020u64;
+        const SUSPENDED          = 0x0000000040u64;
+        const ATTACHED           = 0x0000000080u64;
+        const EXITED             = 0x0000000100u64;
+        const DEAD               = 0x0000000200u64;
+        const REDRAWBORDERS      = 0x0000000400u64;
+        const READONLY           = 0x0000000800u64;
+        const NOSTARTSERVER      = 0x0000001000u64;
+        const CONTROL            = 0x0000002000u64;
+        const CONTROLCONTROL     = 0x0000004000u64;
+        const FOCUSED            = 0x0000008000u64;
+        const UTF8               = 0x0000010000u64;
+        const IGNORESIZE         = 0x0000020000u64;
+        const IDENTIFIED         = 0x0000040000u64;
+        const STATUSFORCE        = 0x0000080000u64;
+        const DOUBLECLICK        = 0x0000100000u64;
+        const TRIPLECLICK        = 0x0000200000u64;
+        const SIZECHANGED        = 0x0000400000u64;
+        const STATUSOFF          = 0x0000800000u64;
+        const REDRAWSTATUSALWAYS = 0x0001000000u64;
+        const REDRAWOVERLAY      = 0x0002000000u64;
+        const CONTROL_NOOUTPUT   = 0x0004000000u64;
+        const DEFAULTSOCKET      = 0x0008000000u64;
+        const STARTSERVER        = 0x0010000000u64;
+        const REDRAWPANES        = 0x0020000000u64;
+        const NOFORK             = 0x0040000000u64;
+        const ACTIVEPANE         = 0x0080000000u64;
+        const CONTROL_PAUSEAFTER = 0x0100000000u64;
+        const CONTROL_WAITEXIT   = 0x0200000000u64;
+        const WINDOWSIZECHANGED  = 0x0400000000u64;
+        const CLIPBOARDBUFFER    = 0x0800000000u64;
+        const BRACKETPASTING     = 0x1000000000u64;
+    }
+}
+
+pub const CLIENT_ALLREDRAWFLAGS: client_flag = client_flag::REDRAWWINDOW
+    .union(client_flag::REDRAWSTATUS)
+    .union(client_flag::REDRAWSTATUSALWAYS)
+    .union(client_flag::REDRAWBORDERS)
+    .union(client_flag::REDRAWOVERLAY)
+    .union(client_flag::REDRAWPANES);
+pub const CLIENT_UNATTACHEDFLAGS: client_flag =
+    client_flag::DEAD.union(client_flag::SUSPENDED).union(client_flag::EXIT);
+pub const CLIENT_NODETACHFLAGS: client_flag = client_flag::DEAD.union(client_flag::EXIT);
+pub const CLIENT_NOSIZEFLAGS: client_flag = client_flag::DEAD.union(client_flag::SUSPENDED).union(client_flag::EXIT);
 
 pub const PROMPT_SINGLE: i32 = 0x1;
 pub const PROMPT_NUMERIC: i32 = 0x2;
@@ -2070,7 +2078,7 @@ pub struct client {
 
     pub status: status_line,
 
-    pub flags: u64,
+    pub flags: client_flag,
 
     pub exit_type: exit_type,
     pub exit_msgtype: msgtype,
@@ -2298,7 +2306,7 @@ pub enum prompt_mode {
 mod tmux;
 pub use crate::tmux::{
     checkshell, find_cwd, find_home, get_timer, getversion, global_environ, global_options, global_s_options,
-    global_w_options, ptm_fd, setblocking, shell_argv0, shell_command, sig2name, socket_path, start_time, main,
+    global_w_options, main, ptm_fd, setblocking, shell_argv0, shell_command, sig2name, socket_path, start_time,
 };
 
 mod proc;

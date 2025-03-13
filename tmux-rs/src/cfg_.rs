@@ -250,7 +250,7 @@ pub unsafe extern "C" fn cfg_show_causes(mut s: *mut session) {
                 return;
             }
 
-            if !c.is_null() && (*c).flags & CLIENT_CONTROL != 0 {
+            if !c.is_null() && (*c).flags.intersects(client_flag::CONTROL) {
                 for i in 0..cfg_ncauses {
                     control_write(c, c"%%config-error %s".as_ptr(), *cfg_causes.add(i as usize));
                     free_(*cfg_causes.add(i as usize));

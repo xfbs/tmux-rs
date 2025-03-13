@@ -79,7 +79,7 @@ unsafe extern "C" fn cmd_save_buffer_exec(self_: *mut cmd, item: *mut cmdq_item)
         let mut bufdata = paste_buffer_data(pb, &raw mut bufsize);
 
         if (cmd_get_entry(self_) == &raw mut cmd_show_buffer_entry) {
-            if (!(*c).session.is_null() || ((*c).flags & CLIENT_CONTROL) != 0) {
+            if !(*c).session.is_null() || (*c).flags.intersects(client_flag::CONTROL) {
                 evb = evbuffer_new();
                 if evb.is_null() {
                     fatalx(c"out of memory".as_ptr());

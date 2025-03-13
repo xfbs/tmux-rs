@@ -50,7 +50,7 @@ unsafe extern "C" fn cmd_load_buffer_done(
                 cmdq_error(item, c"%s".as_ptr(), cause);
                 free_(cause);
                 free_(copy);
-            } else if !tc.is_null() && !(*tc).session.is_null() && !(*tc).flags & CLIENT_DEAD != 0 {
+            } else if !tc.is_null() && !(*tc).session.is_null() && !(*tc).flags.intersects(client_flag::DEAD) {
                 tty_set_selection(&raw mut (*tc).tty, c"".as_ptr(), copy as _, bsize);
             }
             if !tc.is_null() {

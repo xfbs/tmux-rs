@@ -535,7 +535,7 @@ pub unsafe extern "C" fn window_pane_update_focus(wp: *mut window_pane) {
                 tailq_foreach(&raw mut clients, |c| {
                     if !(*c).session.is_null()
                         && (*(*c).session).attached != 0
-                        && (*c).flags & CLIENT_FOCUSED != 0
+                        && (*c).flags.intersects(client_flag::FOCUSED)
                         && (*(*(*c).session).curw).window == (*wp).window
                     {
                         focused = true;
@@ -1183,7 +1183,7 @@ unsafe extern "C" fn window_pane_read_callback(_bufev: *mut bufferevent, data: *
 
         log_debug(c"%%%u has %zu bytes".as_ptr(), (*wp).id, size);
         tailq_foreach(&raw mut clients, |c| {
-            if !(*c).session.is_null() && (*c).flags & CLIENT_CONTROL != 0 {
+            if !(*c).session.is_null() && (*c).flags.intersects(client_flag::CONTROL) {
                 control_write_output(c, wp);
             }
             ControlFlow::Continue::<(), ()>(())
@@ -1836,10 +1836,10 @@ unsafe extern "C" fn window_pane_input_callback(
         let len: usize = EVBUFFER_LENGTH(buffer);
 
         let wp = window_pane_find_by_id((*cdata).wp);
-        if !(*cdata).file.is_null() && (wp.is_null() || (*c).flags & CLIENT_DEAD != 0) {
+        if !(*cdata).file.is_null() && (wp.is_null() || (*c).flags.intersects(client_flag::DEAD)) {
             if wp.is_null() {
                 (*c).retval = 1;
-                (*c).flags |= CLIENT_EXIT;
+                (*c).flags |= client_flag::EXIT;
             }
             file_cancel((*cdata).file);
         } else if (*cdata).file.is_null() || closed != 0 || error != 0 {
@@ -1866,7 +1866,7 @@ pub unsafe extern "C" fn window_pane_start_input(
             *cause = xstrdup(c"pane is not empty".as_ptr()).cast().as_ptr();
             return -1;
         }
-        if ((*c).flags & (CLIENT_DEAD | CLIENT_EXITED)) != 0 {
+        if (*c).flags.intersects(client_flag::DEAD | client_flag::EXITED) {
             return 1;
         }
         if !(*c).session.is_null() {

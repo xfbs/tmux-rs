@@ -41,10 +41,10 @@ unsafe extern "C" fn cmd_switch_client_exec(self_: *mut cmd, item: *mut cmdq_ite
         let mut wp = target.wp;
 
         if (args_has_(args, 'r')) {
-            if ((*tc).flags & CLIENT_READONLY != 0) {
-                (*tc).flags &= !(CLIENT_READONLY | CLIENT_IGNORESIZE);
+            if ((*tc).flags.intersects(client_flag::READONLY)) {
+                (*tc).flags &= !(client_flag::READONLY | client_flag::IGNORESIZE);
             } else {
-                (*tc).flags |= (CLIENT_READONLY | CLIENT_IGNORESIZE);
+                (*tc).flags |= (client_flag::READONLY | client_flag::IGNORESIZE);
             }
         }
 

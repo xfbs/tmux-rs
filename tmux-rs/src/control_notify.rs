@@ -20,7 +20,7 @@ unsafe extern "C" {
 
 macro_rules! CONTROL_SHOULD_NOTIFY_CLIENT {
     ($c:expr) => {
-        !$c.is_null() && (*$c).flags & CLIENT_CONTROL != 0
+        !$c.is_null() && (*$c).flags.intersects(client_flag::CONTROL)
     };
 }
 

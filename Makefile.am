@@ -165,40 +165,9 @@ endif
 # resize.c
 # key-string.c
 # tty-term.c
-#
+# server-fn.c
+
 # TMP moved to build.rs cc:
-# menu.c
-#
-# 	broken.c \
-# 	cmd-new-session.c \
-# 	cmd-queue.c \
-# 	format-draw.c \
-# 	format.c \
-# 	grid.c \
-# 	input-keys.c \
-# 	input.c \
-# 	key-bindings.c \
-# 	layout-set.c \
-# 	layout.c \
-# 	mode-tree.c \
-# 	options-table.c \
-# 	options.c \
-# 	popup.c \
-# 	screen-redraw.c \
-# 	screen-write.c \
-# 	screen.c \
-# 	server-client.c \
-# 	server-fn.c \
-# 	session.c \
-# 	status.c \
-# 	tty-features.c \
-# 	tty-keys.c \
-# 	tty.c \
-# 	window-buffer.c \
-# 	window-copy.c \
-# 	window-customize.c \
-# 	window-tree.c \
-# 	
 
 # Broken:
 # notify.c (notify_add)
@@ -206,6 +175,35 @@ endif
 # server.c (server_loop)
 
 dist_tmux_SOURCES = \
+	menu.c \
+	broken.c \
+	cmd-new-session.c \
+	cmd-queue.c \
+	format-draw.c \
+	format.c \
+	grid.c \
+	input-keys.c \
+	input.c \
+	key-bindings.c \
+	layout-set.c \
+	layout.c \
+	mode-tree.c \
+	options-table.c \
+	options.c \
+	popup.c \
+	screen-redraw.c \
+	screen-write.c \
+	screen.c \
+	server-client.c \
+	session.c \
+	status.c \
+	tty-features.c \
+	tty-keys.c \
+	tty.c \
+	window-buffer.c \
+	window-copy.c \
+	window-customize.c \
+	window-tree.c \
 	tmux-protocol.h \
 	tmux.h \
 	cmd-parse.y \

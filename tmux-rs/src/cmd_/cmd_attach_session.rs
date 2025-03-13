@@ -104,7 +104,7 @@ pub unsafe extern "C" fn cmd_attach_session(
             server_client_set_flags(c, fflag);
         }
         if rflag != 0 {
-            (*c).flags |= (CLIENT_READONLY | CLIENT_IGNORESIZE);
+            (*c).flags |= (client_flag::READONLY | client_flag::IGNORESIZE);
         }
 
         (*c).last_session = (*c).session;
@@ -160,11 +160,11 @@ pub unsafe extern "C" fn cmd_attach_session(
             server_client_set_session(c, s);
             server_client_set_key_table(c, null_mut());
 
-            if !(*c).flags & CLIENT_CONTROL != 0 {
+            if !(*c).flags.intersects(client_flag::CONTROL) {
                 proc_send((*c).peer, msgtype::MSG_READY, -1, null_mut(), 0);
             }
             notify_client(c"client-attached".as_ptr(), c);
-            (*c).flags |= CLIENT_ATTACHED;
+            (*c).flags |= client_flag::ATTACHED;
 
             if cfg_finished != 0 {
                 cfg_show_causes(s);

@@ -212,7 +212,7 @@ pub unsafe extern "C" fn tty_acs_needed(tty: *const tty) -> i32 {
             return (1);
         }
 
-        if (*(*tty).client).flags & CLIENT_UTF8 != 0 {
+        if (*(*tty).client).flags.intersects(client_flag::UTF8) {
             return (0);
         }
         1

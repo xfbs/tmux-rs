@@ -895,7 +895,7 @@ pub unsafe extern "C" fn cmdq_guard(item: *mut cmdq_item, guard: *const c_char, 
         let t = (*item).time;
         let number = (*item).number;
 
-        if !c.is_null() && (*c).flags & CLIENT_CONTROL != 0 {
+        if !c.is_null() && (*c).flags.intersects(client_flag::CONTROL) {
             control_write(c, c"%%%s %ld %u %d".as_ptr(), guard, t, number, flags);
         }
     }
@@ -941,14 +941,14 @@ pub unsafe extern "C" fn cmdq_error(item: *mut cmdq_item, fmt: *const c_char, mu
         if c.is_null() {
             cmd_get_source(cmd, &raw mut file, &raw mut line);
             cfg_add_cause(c"%s:%u: %s".as_ptr(), file, line, msg);
-        } else if ((*c).session.is_null() || ((*c).flags & CLIENT_CONTROL) != 0) {
+        } else if ((*c).session.is_null() || (*c).flags.intersects(client_flag::CONTROL)) {
             server_add_message(c"%s message: %s".as_ptr(), (*c).name, msg);
-            if (!(*c).flags & CLIENT_UTF8 != 0) {
+            if (!(*c).flags.intersects(client_flag::UTF8)) {
                 tmp = msg;
                 msg = utf8_sanitize(tmp);
                 free_(tmp);
             }
-            if ((*c).flags & CLIENT_CONTROL != 0) {
+            if ((*c).flags.intersects(client_flag::CONTROL)) {
                 control_write(c, c"%s".as_ptr(), msg);
             } else {
                 file_error(c, c"%s\n".as_ptr(), msg);

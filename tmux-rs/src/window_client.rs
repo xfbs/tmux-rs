@@ -175,7 +175,7 @@ pub unsafe extern "C" fn window_client_build(
         (*data).item_size = 0;
 
         tailq_foreach(&raw mut clients, |c| {
-            if ((*c).session.is_null() || ((*c).flags & CLIENT_UNATTACHEDFLAGS != 0)) {
+            if (*c).session.is_null() || (*c).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
                 return ControlFlow::<(), ()>::Continue(());
             }
 
@@ -230,7 +230,7 @@ pub unsafe extern "C" fn window_client_draw(
         let mut cx = (*s).cx as u32;
         let mut cy = (*s).cy as u32;
 
-        if ((*c).session.is_null() || ((*c).flags & CLIENT_UNATTACHEDFLAGS != 0)) {
+        if ((*c).session.is_null() || (*c).flags.intersects(CLIENT_UNATTACHEDFLAGS)) {
             return;
         }
         let mut wp = (*(*(*(*c).session).curw).window).active;

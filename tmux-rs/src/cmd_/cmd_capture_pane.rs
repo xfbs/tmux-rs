@@ -248,7 +248,7 @@ unsafe extern "C" fn cmd_capture_pane_exec(self_: *mut cmd, item: *mut cmdq_item
             if len > 0 && *buf.add(len - 1) == b'\n' as _ {
                 len -= 1;
             }
-            if (*c).flags & CLIENT_CONTROL != 0 {
+            if (*c).flags.intersects(client_flag::CONTROL) {
                 control_write(c, c"%.*s".as_ptr(), len as i32, buf);
             } else {
                 if file_can_print(c) == 0 {

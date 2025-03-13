@@ -282,7 +282,7 @@ unsafe fn alerts_set_message(wl: *mut winlink, type_: *const c_char, option: *co
         let visual: i32 = options_get_number((*(*wl).session).options, option) as i32;
 
         tailq_foreach(&raw mut clients, |c| {
-            if (*c).session != (*wl).session || (*c).flags & CLIENT_CONTROL != 0 {
+            if (*c).session != (*wl).session || (*c).flags.intersects(client_flag::CONTROL) {
                 return ControlFlow::Continue::<(), ()>(());
             }
 

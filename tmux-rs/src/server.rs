@@ -37,7 +37,7 @@ pub static mut server_proc: *mut tmuxproc = null_mut();
 #[unsafe(no_mangle)] // TODO remove
 pub static mut server_fd: c_int = -1;
 #[unsafe(no_mangle)] // TODO remove
-pub static mut server_client_flags: u64 = 0;
+pub static mut server_client_flags: client_flag = client_flag::empty();
 #[unsafe(no_mangle)] // TODO remove
 pub static mut server_exit: c_int = 0;
 #[unsafe(no_mangle)] // TODO remove
@@ -94,7 +94,7 @@ pub unsafe extern "C" fn server_is_marked(s: *mut session, wl: *mut winlink, wp:
 pub unsafe extern "C" fn server_check_marked() -> c_int { unsafe { cmd_find_valid_state(&raw mut marked_pane) } }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_create_socket(flags: u64, cause: *mut *mut c_char) -> c_int {
+pub unsafe extern "C" fn server_create_socket(flags: client_flag, cause: *mut *mut c_char) -> c_int {
     unsafe {
         'fail: {
             let mut sa: sockaddr_un = zeroed();
@@ -111,7 +111,7 @@ pub unsafe extern "C" fn server_create_socket(flags: u64, cause: *mut *mut c_cha
                 break 'fail;
             }
 
-            let mask = if flags & CLIENT_DEFAULTSOCKET != 0 {
+            let mask = if flags.intersects(client_flag::DEFAULTSOCKET) {
                 umask(S_IXUSR | S_IXGRP | S_IRWXO)
             } else {
                 umask(S_IXUSR | S_IRWXG | S_IRWXO)
@@ -176,7 +176,7 @@ unsafe extern "C" fn server_tidy_event(_fd: i32, _events: i16, _data: *mut c_voi
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_start(
     client: *mut tmuxproc,
-    flags: u64,
+    flags: client_flag,
     base: *mut event_base,
     lockfd: c_int,
     lockfile: *mut c_char,
@@ -196,7 +196,7 @@ pub unsafe extern "C" fn server_start(
         sigfillset(&raw mut set);
         sigprocmask(SIG_BLOCK, &set, &raw mut oldset);
 
-        if !flags & CLIENT_NOFORK != 0 {
+        if !flags.intersects(client_flag::NOFORK) {
             if proc_fork_and_daemon(&raw mut fd) != 0 {
                 sigprocmask(SIG_SETMASK, &raw mut oldset, null_mut());
                 return fd;
@@ -229,14 +229,15 @@ pub unsafe extern "C" fn server_start(
         gettimeofday(&raw mut start_time, null_mut());
 
         if cfg!(feature = "systemd") {
-            server_fd = compat_rs::systemd::systemd_create_socket(flags as i32, &raw mut cause);
+            // TODO we could be truncating important bits
+            server_fd = compat_rs::systemd::systemd_create_socket(flags.bits() as i32, &raw mut cause);
         } else {
             server_fd = server_create_socket(flags, &raw mut cause);
         }
         if server_fd != -1 {
             server_update_socket();
         }
-        if !flags & CLIENT_NOFORK != 0 {
+        if !flags.intersects(client_flag::NOFORK) {
             c = server_client_create(fd);
         } else {
             options_set_number(global_options, c"exit-empty".as_ptr(), 0);
@@ -251,7 +252,7 @@ pub unsafe extern "C" fn server_start(
         if !cause.is_null() {
             if !c.is_null() {
                 (*c).exit_message = cause;
-                (*c).flags |= CLIENT_EXIT;
+                (*c).flags |= client_flag::EXIT;
             } else {
                 fprintf(stderr, c"%s\n".as_ptr(), cause);
                 libc::exit(1);
@@ -340,10 +341,10 @@ unsafe extern "C" fn server_send_exit() {
         cmd_wait_for_flush();
 
         tailq_foreach_safe(&raw mut clients, |c| {
-            if (*c).flags & CLIENT_SUSPENDED != 0 {
+            if (*c).flags.intersects(client_flag::SUSPENDED) {
                 server_client_lost(c);
             } else {
-                (*c).flags |= CLIENT_EXIT;
+                (*c).flags |= client_flag::EXIT;
                 (*c).exit_type = exit_type::CLIENT_EXIT_SHUTDOWN;
             }
             (*c).session = null_mut();
@@ -428,7 +429,7 @@ unsafe extern "C" fn server_accept(fd: i32, events: i16, _data: *mut c_void) {
         let c = server_client_create(newfd);
         if server_acl_join(c) == 0 {
             (*c).exit_message = xmalloc::xstrdup(c"access not allowed".as_ptr()).cast().as_ptr();
-            (*c).flags |= CLIENT_EXIT;
+            (*c).flags |= client_flag::EXIT;
         }
     }
 }
