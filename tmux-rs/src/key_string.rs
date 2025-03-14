@@ -40,15 +40,15 @@ impl key_string_table_entry {
 // 	{ #s "StatusDefault", KEYC_ ## name ## _STATUS_DEFAULT },
 // 	{ #s "Border", KEYC_ ## name ## _BORDER }
 macro_rules! KEYC_MOUSE_STRING {
-    ($name:ident, $s:ident) => {
+    ($name:ident, $s:literal) => {
         ::paste::paste! {
             [
-                key_string_table_entry{string: stringify!($s, "Pane\0").as_ptr().cast(), key: keyc::[<KEYC_ $name _PANE>] as u64},
-                key_string_table_entry{string: stringify!($s, "Status\0").as_ptr().cast(), key: keyc::[<KEYC_ $name _STATUS>] as u64 },
-                key_string_table_entry{string: stringify!($s, "StatusLeft\0").as_ptr().cast(), key: keyc::[<KEYC_ $name _STATUS_LEFT>] as u64},
-                key_string_table_entry{string: stringify!($s, "StatusRight\0").as_ptr().cast(), key: keyc::[<KEYC_ $name _STATUS_RIGHT>] as u64},
-                key_string_table_entry{string: stringify!($s, "StatusDefault\0").as_ptr().cast(), key: keyc::[<KEYC_ $name _STATUS_DEFAULT>] as u64 },
-                key_string_table_entry{string: stringify!($s, "Border\0").as_ptr().cast(), key: keyc::[<KEYC_ $name _BORDER>] as u64},
+                key_string_table_entry{string: concat!($s, "Pane\0").as_ptr().cast(), key: keyc::[<KEYC_ $name _PANE>] as u64},
+                key_string_table_entry{string: concat!($s, "Status\0").as_ptr().cast(), key: keyc::[<KEYC_ $name _STATUS>] as u64 },
+                key_string_table_entry{string: concat!($s, "StatusLeft\0").as_ptr().cast(), key: keyc::[<KEYC_ $name _STATUS_LEFT>] as u64},
+                key_string_table_entry{string: concat!($s, "StatusRight\0").as_ptr().cast(), key: keyc::[<KEYC_ $name _STATUS_RIGHT>] as u64},
+                key_string_table_entry{string: concat!($s, "StatusDefault\0").as_ptr().cast(), key: keyc::[<KEYC_ $name _STATUS_DEFAULT>] as u64 },
+                key_string_table_entry{string: concat!($s, "Border\0").as_ptr().cast(), key: keyc::[<KEYC_ $name _BORDER>] as u64},
             ]
         }
     };
@@ -76,23 +76,23 @@ macro_rules! concat_array {
     KEYC_MOUSEDOWN1_BORDER,
 */
 macro_rules! KEYC_MOUSE_STRING_I {
-    ($name:ident, $s:ident, $i:literal) => {
+    ($name:ident, $s:literal, $i:literal) => {
 
         ::paste::paste! {
             [
-                key_string_table_entry{string: stringify!($s, $i, "Pane\0").as_ptr().cast(), key: keyc::[<KEYC_ $name $i _PANE>] as u64},
-                key_string_table_entry{string: stringify!($s, $i, "Status\0").as_ptr().cast(), key: keyc::[<KEYC_ $name $i _STATUS>] as u64 },
-                key_string_table_entry{string: stringify!($s, $i, "StatusLeft\0").as_ptr().cast(), key: keyc::[<KEYC_ $name $i _STATUS_LEFT>] as u64},
-                key_string_table_entry{string: stringify!($s, $i, "StatusRight\0").as_ptr().cast(), key: keyc::[<KEYC_ $name $i _STATUS_RIGHT>] as u64},
-                key_string_table_entry{string: stringify!($s, $i, "StatusDefault\0").as_ptr().cast(), key: keyc::[<KEYC_ $name $i _STATUS_DEFAULT>] as u64 },
-                key_string_table_entry{string: stringify!($s, $i, "Border\0").as_ptr().cast(), key: keyc::[<KEYC_ $name $i _BORDER>] as u64},
+                key_string_table_entry{string: concat!($s, $i, "Pane\0").as_ptr().cast(), key: keyc::[<KEYC_ $name $i _PANE>] as u64},
+                key_string_table_entry{string: concat!($s, $i, "Status\0").as_ptr().cast(), key: keyc::[<KEYC_ $name $i _STATUS>] as u64 },
+                key_string_table_entry{string: concat!($s, $i, "StatusLeft\0").as_ptr().cast(), key: keyc::[<KEYC_ $name $i _STATUS_LEFT>] as u64},
+                key_string_table_entry{string: concat!($s, $i, "StatusRight\0").as_ptr().cast(), key: keyc::[<KEYC_ $name $i _STATUS_RIGHT>] as u64},
+                key_string_table_entry{string: concat!($s, $i, "StatusDefault\0").as_ptr().cast(), key: keyc::[<KEYC_ $name $i _STATUS_DEFAULT>] as u64 },
+                key_string_table_entry{string: concat!($s, $i, "Border\0").as_ptr().cast(), key: keyc::[<KEYC_ $name $i _BORDER>] as u64},
             ]
         }
     };
 }
 
 macro_rules! KEYC_MOUSE_STRING11 {
-    ($out:ident, $out_i: ident, $name:ident, $s:ident) => {
+    ($out:ident, $out_i: ident, $name:ident, $s:literal) => {
         concat_array!($out, $out_i, KEYC_MOUSE_STRING_I!($name, $s, 1));
         concat_array!($out, $out_i, KEYC_MOUSE_STRING_I!($name, $s, 2));
         concat_array!($out, $out_i, KEYC_MOUSE_STRING_I!($name, $s, 3));
@@ -203,15 +203,15 @@ static key_string_table: [key_string_table_entry; 469] = const {
     concat_array!(out, out_i, function_keys);
 
     // Mouse keys.
-    KEYC_MOUSE_STRING11!(out, out_i, MOUSEDOWN, MouseDown);
-    KEYC_MOUSE_STRING11!(out, out_i, MOUSEUP, MouseUp);
-    KEYC_MOUSE_STRING11!(out, out_i, MOUSEDRAG, MouseDrag);
-    KEYC_MOUSE_STRING11!(out, out_i, MOUSEDRAGEND, MouseDragEnd);
-    concat_array!(out, out_i, KEYC_MOUSE_STRING!(WHEELUP, WheelUp));
-    concat_array!(out, out_i, KEYC_MOUSE_STRING!(WHEELDOWN, WheelDown));
-    KEYC_MOUSE_STRING11!(out, out_i, SECONDCLICK, SecondClick);
-    KEYC_MOUSE_STRING11!(out, out_i, DOUBLECLICK, DoubleClick);
-    KEYC_MOUSE_STRING11!(out, out_i, TRIPLECLICK, TripleClick);
+    KEYC_MOUSE_STRING11!(out, out_i, MOUSEDOWN, "MouseDown");
+    KEYC_MOUSE_STRING11!(out, out_i, MOUSEUP, "MouseUp");
+    KEYC_MOUSE_STRING11!(out, out_i, MOUSEDRAG, "MouseDrag");
+    KEYC_MOUSE_STRING11!(out, out_i, MOUSEDRAGEND, "MouseDragEnd");
+    concat_array!(out, out_i, KEYC_MOUSE_STRING!(WHEELUP, "WheelUp"));
+    concat_array!(out, out_i, KEYC_MOUSE_STRING!(WHEELDOWN, "WheelDown"));
+    KEYC_MOUSE_STRING11!(out, out_i, SECONDCLICK, "SecondClick");
+    KEYC_MOUSE_STRING11!(out, out_i, DOUBLECLICK, "DoubleClick");
+    KEYC_MOUSE_STRING11!(out, out_i, TRIPLECLICK, "TripleClick");
 
     out
 };
@@ -276,11 +276,10 @@ pub unsafe extern "C" fn key_string_lookup_string(mut string: *const c_char) -> 
         let mut u: u32 = 0;
         let mut i: u32 = 0;
         let mut ud: utf8_data = zeroed();
-        let mut udp: *mut utf8_data = null_mut();
-        let mut more: utf8_state;
         let mut uc: utf8_char = 0;
-        let mut m: [c_char; MB_LEN_MAX + 1] = zeroed(); // TODO use uninit
         let mut mlen = 0i32;
+
+        let mut m = [MaybeUninit::<c_char>::uninit(); MB_LEN_MAX + 1];
 
         /* Is this no key or any key? */
         if (strcasecmp(string, c"None".as_ptr()) == 0) {
@@ -298,13 +297,13 @@ pub unsafe extern "C" fn key_string_lookup_string(mut string: *const c_char) -> 
             if (u < 32) {
                 return u as u64;
             }
-            let mlen = wctomb(m.as_mut_ptr(), u as i32);
+            let mlen = wctomb(m.as_mut_slice().as_mut_ptr().cast(), u as i32);
             if (mlen <= 0 || mlen > MB_LEN_MAX as i32) {
                 return KEYC_UNKNOWN;
             }
-            m[mlen as usize] = b'\0' as c_char;
+            m[mlen as usize].write(b'\0' as c_char);
 
-            udp = utf8_fromcstr(m.as_ptr());
+            let udp: *mut utf8_data = utf8_fromcstr(m.as_slice().as_ptr().cast());
             if (udp.is_null() || (*udp).size == 0 || (*udp).size != 0 || utf8_from_data(udp, &raw mut uc) != UTF8_DONE)
             {
                 free_(udp);
@@ -323,7 +322,7 @@ pub unsafe extern "C" fn key_string_lookup_string(mut string: *const c_char) -> 
             string = string.add(1);
         }
 
-        /* Check for modifiers. */
+        // Check for modifiers.
         modifiers |= key_string_get_modifiers(&raw mut string);
         if (string.is_null() || *string == b'\0' as c_char) {
             return KEYC_UNKNOWN;
@@ -337,7 +336,7 @@ pub unsafe extern "C" fn key_string_lookup_string(mut string: *const c_char) -> 
             }
         } else {
             /* Try as a UTF-8 key. */
-            more = utf8_open(&raw mut ud, *string as u8);
+            let mut more: utf8_state = utf8_open(&raw mut ud, *string as u8);
             if more == UTF8_MORE {
                 if (strlen(string) != ud.size as usize) {
                     return KEYC_UNKNOWN;

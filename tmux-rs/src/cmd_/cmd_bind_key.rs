@@ -35,7 +35,7 @@ unsafe extern "C" fn cmd_bind_key_exec(self_: *mut cmd, item: *mut cmdq_item) ->
 
         let mut key: key_code = key_string_lookup_string(args_string(args, 0));
         if key == KEYC_NONE || key == KEYC_UNKNOWN {
-            cmdq_error(item, c"unknown key: %s".as_ptr(), args_string(args, 0));
+            cmdq_error(item, c"unknown key bind: %s".as_ptr(), args_string(args, 0));
             return cmd_retval::CMD_RETURN_ERROR;
         }
 

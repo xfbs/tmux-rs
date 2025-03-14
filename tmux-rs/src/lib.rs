@@ -1,5 +1,6 @@
 #![feature(array_ptr_get)]
 #![feature(c_variadic)]
+#![feature(maybe_uninit_slice)]
 #![feature(ptr_as_uninit)]
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]

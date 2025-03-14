@@ -58,7 +58,7 @@ unsafe extern "C" fn cmd_unbind_key_exec(self_: *mut cmd, item: *mut cmdq_item) 
         let key = key_string_lookup_string(keystr);
         if (key == KEYC_NONE || key == KEYC_UNKNOWN) {
             if (quiet == 0) {
-                cmdq_error(item, c"unknown key: %s".as_ptr(), keystr);
+                cmdq_error(item, c"unknown key unbind: %s".as_ptr(), keystr);
             }
             return (cmd_retval::CMD_RETURN_ERROR);
         }

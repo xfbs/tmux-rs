@@ -311,7 +311,7 @@ unsafe extern "C" fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -
         }
 
         if (only != KEYC_UNKNOWN && found == 0) {
-            cmdq_error(item, c"unknown key: %s".as_ptr(), args_string(args, 0));
+            cmdq_error(item, c"unknown key list: %s".as_ptr(), args_string(args, 0));
             return cmd_retval::CMD_RETURN_ERROR;
         }
         return cmd_retval::CMD_RETURN_NORMAL;
