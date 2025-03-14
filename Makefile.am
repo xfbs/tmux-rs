@@ -169,6 +169,7 @@ endif
 # cmd-new-session.c
 # menu.c
 # tty-features.c
+# key-bindings.c
 
 # TMP moved to build.rs cc:
 
@@ -188,7 +189,6 @@ dist_tmux_SOURCES = \
 	grid.c \
 	input-keys.c \
 	input.c \
-	key-bindings.c \
 	layout-set.c \
 	layout.c \
 	mode-tree.c \

@@ -150,7 +150,8 @@ pub unsafe extern "C" fn imsg_read(imsgbuf: *mut imsgbuf) -> isize {
             if (*cmsg).cmsg_level == libc::SOL_SOCKET && (*cmsg).cmsg_type == libc::SCM_RIGHTS {
                 let mut i: c_int;
 
-                let mut j: c_int = (((cmsg as *mut c_char).add((*cmsg).cmsg_len).addr() - libc::CMSG_DATA(cmsg).addr()) / size_of::<c_int>()) as i32;
+                let mut j: c_int = (((cmsg as *mut c_char).add((*cmsg).cmsg_len).addr() - libc::CMSG_DATA(cmsg).addr())
+                    / size_of::<c_int>()) as i32;
                 for i in 0..j {
                     let fd = *(libc::CMSG_DATA(cmsg) as *mut c_int).add(i as usize);
                     if !ifd.is_null() {

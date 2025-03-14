@@ -480,14 +480,14 @@ where
                 rb_parent!(rb_left(old)) = elm;
                 if !rb_right(old).is_null() {
                     rb_parent!(rb_right(old)) = elm;
+                }
+                if !parent.is_null() {
+                    left = parent;
 
                     while ({
                         left = rb_parent(left);
                         !left.is_null()
                     }) {}
-                }
-                if !parent.is_null() {
-                    left = parent;
                 }
                 break 'color;
             }

@@ -15,8 +15,7 @@ static mut cmd_list_sessions_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-const LIST_SESSIONS_TEMPLATE:*const i8 = 
-	c"#{session_name}: #{session_windows} windows (created #{t:session_created})#{?session_grouped, (group ,}#{session_group}#{?session_grouped,),}#{?session_attached, (attached),}".as_ptr();
+const LIST_SESSIONS_TEMPLATE:*const i8 = c"#{session_name}: #{session_windows} windows (created #{t:session_created})#{?session_grouped, (group ,}#{session_group}#{?session_grouped,),}#{?session_attached, (attached),}".as_ptr();
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_list_sessions_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {

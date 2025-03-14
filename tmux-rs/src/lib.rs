@@ -2156,7 +2156,7 @@ pub const KEY_BINDING_REPEAT: i32 = 0x1;
 pub struct key_binding {
     pub key: key_code,
     pub cmdlist: *mut cmd_list,
-    pub note: *const c_char,
+    pub note: *mut c_char,
 
     pub flags: i32,
 

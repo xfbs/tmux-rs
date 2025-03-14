@@ -494,13 +494,17 @@ pub unsafe extern "C" fn cmd_parse_from_file(f: *mut FILE, mut pi: *mut cmd_pars
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_parse_from_string(s: *mut c_char, mut pi: *mut cmd_parse_input) -> *mut cmd_parse_result {
+pub unsafe extern "C" fn cmd_parse_from_string(
+    s: *const c_char,
+    mut pi: *mut cmd_parse_input,
+) -> *mut cmd_parse_result {
     unsafe {
-        let mut input: cmd_parse_input;
+        let mut input = MaybeUninit::<cmd_parse_input>::uninit();
+        let input = input.as_mut_ptr();
 
         if (pi.is_null()) {
-            input = zeroed();
-            pi = &raw mut input;
+            memset0(input);
+            pi = input;
         }
 
         (*pi).flags |= CMD_PARSE_ONEGROUP;
@@ -566,7 +570,7 @@ pub unsafe extern "C" fn cmd_parse_and_append(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_parse_from_buffer(
-    buf: *mut c_void,
+    buf: *const c_void,
     len: usize,
     mut pi: *mut cmd_parse_input,
 ) -> *mut cmd_parse_result {
