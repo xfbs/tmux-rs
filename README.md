@@ -167,6 +167,7 @@ concrete opaque struct in struct causing field offset into adjacent struct be in
 - get rid of paste crate, won't need to join symbols any more for C code
 - figure out why building rust binary doesn't work
 
+10 small files:
 - [ ]  510 tty-features
 - [ ]  556 menu
 - [ ]  559 window-buffer
@@ -178,6 +179,7 @@ concrete opaque struct in struct causing field offset into adjacent struct be in
 - [ ]  818 popup
 - [ ]  868 screen-redraw
 
+17 big files:
 - [ ] 1120 layout
 - [ ] 1204 options
 - [ ] 1243 format-draw
@@ -194,16 +196,15 @@ concrete opaque struct in struct causing field offset into adjacent struct be in
 - [ ] 3392 server-client
 - [ ] 5294 format
 - [ ] 5786 window-copy
-- [ ] broken, partially ported files
-  - [ ]  281 environ (environ_free is broken, everything else works)
-  - [ ]  323 notify (notify_add)
-  - [ ] 557 server (server_loop is broken)
   - [ ]  899 cmd-queue (some tailq functions used port isn't working) (TODO move into broken)
 - [X] 874 cmd
-  - [ ]  370 cmd-new-session (doesn't work, crashes on startup)
   =====
   - [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
   =====
+- [X]  281 environ (environ_free is broken, everything else works)
+- [X]  323 notify (notify_add)
+- [X] 557 server (server_loop is broken)
+- [X]  370 cmd-new-session (didn't work, crashes on startup, maybe due to the misoffset struct)
 - [X]  493 server-fn
 - [X]  924 tty-term
 - [X]  477 key-string
@@ -349,7 +350,6 @@ undefined behaviour in this context.
   - when running tmux while an existing tmux instance is running causes it to hang, killing the pane causes it to properly attach (likely do to my tmux config)
 - Anything entered in command prompt enter causes crash
 - with my rebinding C-b C to new window in current directory causes issues. with it unbound, there's no problem.
-- crashes when typing 'c' because of one of my bindings
 - crashes on my binding prefix g
 
 - sendmsg in client to server causes SIGPIPE to be handled and exit control loop
@@ -424,6 +424,7 @@ SUMMARY: AddressSanitizer: 28 byte(s) leaked in 1 allocation(s).
 - extra copy paste: duplicate value += 1; value +=1;
 - flipped null check
 - flipped : char		 acs[UCHAR_MAX + 1][2]; -> pub acs: [[c_char; c_uchar::MAX as usize + 1]; 2], should be [[c_char; 2]; c_uchar::MAX as usize + 1],
+- crashes when typing 'c' because of one of my bindings (seems something fixed this)
 
 # References
 

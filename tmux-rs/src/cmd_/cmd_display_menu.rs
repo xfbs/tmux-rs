@@ -386,7 +386,7 @@ unsafe extern "C" fn cmd_display_menu_exec(self_: *mut cmd, item: *mut cmdq_item
             menu_item.command = args_string(args, i);
             i += 1;
 
-            menu_add_item(menu, &menu_item, item, tc, target);
+            menu_add_item(menu, &raw mut menu_item, item, tc, target);
         }
         if (menu.is_null()) {
             cmdq_error(item, c"invalid menu arguments".as_ptr());

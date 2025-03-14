@@ -441,7 +441,12 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn style_add(gc: *mut grid_cell, oo: *mut options, name: *mut c_char, mut ft: *mut format_tree) {
+pub unsafe extern "C" fn style_add(
+    gc: *mut grid_cell,
+    oo: *mut options,
+    name: *const c_char,
+    mut ft: *mut format_tree,
+) {
     unsafe {
         let mut sy: *mut style = null_mut();
         let mut ft0: *mut format_tree = null_mut();
@@ -473,7 +478,7 @@ pub unsafe extern "C" fn style_add(gc: *mut grid_cell, oo: *mut options, name: *
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn style_apply(gc: *mut grid_cell, oo: *mut options, name: *mut c_char, ft: *mut format_tree) {
+pub unsafe extern "C" fn style_apply(gc: *mut grid_cell, oo: *mut options, name: *const c_char, ft: *mut format_tree) {
     unsafe {
         memcpy__(gc, &raw const grid_default_cell);
         style_add(gc, oo, name, ft);
@@ -481,7 +486,7 @@ pub unsafe extern "C" fn style_apply(gc: *mut grid_cell, oo: *mut options, name:
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn style_set(sy: *mut style, gc: *mut grid_cell) {
+pub unsafe extern "C" fn style_set(sy: *mut style, gc: *const grid_cell) {
     unsafe {
         memcpy__(sy, &raw const style_default);
         memcpy__(&raw mut (*sy).gc, gc);

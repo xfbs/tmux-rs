@@ -74,13 +74,21 @@ pub fn xcalloc__<'a, T: Zeroable>(nmemb: usize) -> &'a mut [T] {
     unsafe { core::slice::from_raw_parts_mut(ptr, nmemb) }
 }
 
-pub fn xcalloc1<'a, T: Zeroable>() -> &'a mut T {
+pub unsafe fn xcalloc1<'a, T>() -> &'a mut T {
     let mut ptr: NonNull<T> = xcalloc(1, size_of::<T>()).cast();
     unsafe { ptr.as_mut() }
 }
-pub unsafe fn xcalloc1_<'a, T>() -> &'a mut T {
-    let mut ptr: NonNull<T> = xcalloc(1, size_of::<T>()).cast();
-    unsafe { ptr.as_mut() }
+
+pub fn xcalloc1__<'a, T>() -> &'a mut MaybeUninit<T> {
+    let size = size_of::<T>();
+    debug_assert!(size != 0, "xcalloc: zero size");
+
+    let ptr: *mut T = unsafe { calloc(1, size).cast() };
+    if ptr.is_null() {
+        panic!("bad xcalloc1_: out of memory");
+    }
+
+    unsafe { std::mem::transmute::<*mut T, &'a mut MaybeUninit<T>>(ptr) }
 }
 
 #[unsafe(no_mangle)]

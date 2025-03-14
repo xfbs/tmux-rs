@@ -15,15 +15,7 @@ unsafe extern "C" {
     // pub unsafe fn notify_insert_hook(item: *mut cmdq_item, ne: *mut notify_entry);
     // pub unsafe fn notify_insert_one_hook( item: *mut cmdq_item, ne: *mut notify_entry, cmdlist: *mut cmd_list, state: *mut cmdq_state,) -> *mut cmdq_item;
     // pub unsafe fn notify_callback(item: *mut cmdq_item, data: *mut c_void) -> cmd_retval;
-    pub unsafe fn notify_add(
-        name: *const c_char,
-        fs: *mut cmd_find_state,
-        c: *mut client,
-        s: *mut session,
-        w: *mut window,
-        wp: *mut window_pane,
-        pbname: *const c_char,
-    );
+    // pub unsafe fn notify_add( name: *const c_char, fs: *mut cmd_find_state, c: *mut client, s: *mut session, w: *mut window, wp: *mut window_pane, pbname: *const c_char,);
 }
 
 unsafe impl Zeroable for notify_entry {}
@@ -218,7 +210,6 @@ pub unsafe extern "C" fn notify_callback(item: *mut cmdq_item, data: *mut c_void
     cmd_retval::CMD_RETURN_NORMAL
 }
 
-#[cfg(disabled)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn notify_add(
     name: *const c_char,

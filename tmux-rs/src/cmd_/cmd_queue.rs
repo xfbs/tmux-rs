@@ -1,4 +1,4 @@
-use crate::{xmalloc::xcalloc1_, *};
+use crate::{xmalloc::xcalloc1, *};
 
 unsafe extern "C" {
     // pub unsafe fn cmdq_new_state(_: *mut cmd_find_state, _: *mut key_event, _: c_int) -> *mut cmdq_state;
@@ -162,7 +162,7 @@ pub unsafe extern "C" fn cmdq_get(c: *mut client) -> *mut cmdq_list {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmdq_new() -> NonNull<cmdq_list> {
     unsafe {
-        let queue = NonNull::from(xcalloc1_::<cmdq_list>());
+        let queue = NonNull::from(xcalloc1::<cmdq_list>());
         tailq_init(&raw mut (*queue.as_ptr()).list);
         queue
     }
@@ -222,7 +222,7 @@ pub unsafe extern "C" fn cmdq_new_state(
     flags: i32,
 ) -> *mut cmdq_state {
     unsafe {
-        let state: *mut cmdq_state = xcalloc1_::<cmdq_state>();
+        let state: *mut cmdq_state = xcalloc1::<cmdq_state>();
         (*state).references = 1;
         (*state).flags = flags;
 
@@ -548,7 +548,7 @@ pub unsafe extern "C" fn cmdq_get_command(cmdlist: *mut cmd_list, mut state: *mu
         while !cmd.is_null() {
             let entry = cmd_get_entry(cmd);
 
-            let mut item = xcalloc1_::<cmdq_item>() as *mut cmdq_item;
+            let mut item = xcalloc1::<cmdq_item>() as *mut cmdq_item;
             xasprintf(&raw mut (*item).name, c"[%s/%p]".as_ptr(), (*entry).name, item);
             (*item).type_ = cmdq_type::CMDQ_COMMAND;
 

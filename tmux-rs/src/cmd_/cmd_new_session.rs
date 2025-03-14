@@ -155,7 +155,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
             detached = args_has_(args, 'd');
             if (c.is_null()) {
                 detached = true;
-            } else if ((*c).flags & CLIENT_CONTROL != 0) {
+            } else if ((*c).flags.intersects(client_flag::CONTROL)) {
                 is_control = true;
             }
 
@@ -182,7 +182,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
              * the terminal as that calls tcsetattr() to prepare for tmux taking
              * over.
              */
-            if (!detached && !already_attached && (*c).fd != -1 && !(*c).flags & CLIENT_CONTROL != 0) {
+            if !detached && !already_attached && (*c).fd != -1 && !(*c).flags.intersects(client_flag::CONTROL) {
                 if (server_client_check_nested(cmdq_get_client(item)) != 0) {
                     cmdq_error(
                         item,
@@ -342,7 +342,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                     server_client_set_flags(c, args_get_(args, 'f'));
                 }
                 if (!already_attached) {
-                    if (!(*c).flags & CLIENT_CONTROL != 0) {
+                    if !(*c).flags.intersects(client_flag::CONTROL) {
                         proc_send((*c).peer, msgtype::MSG_READY, -1, null(), 0);
                     }
                 } else if (!(*c).session.is_null()) {
@@ -366,7 +366,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
             }
 
             if (!detached) {
-                (*c).flags |= CLIENT_ATTACHED;
+                (*c).flags |= client_flag::ATTACHED;
             }
             if (!args_has_(args, 'd')) {
                 cmd_find_from_session(current, s, 0);

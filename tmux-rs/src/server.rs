@@ -15,7 +15,7 @@ use libc::{
 };
 
 unsafe extern "C" {
-    pub unsafe fn server_loop() -> i32;
+    // pub unsafe fn server_loop() -> i32;
     // pub unsafe fn server_update_socket();
 
     // pub unsafe fn server_start( client: *mut tmuxproc, flags: u64, base: *mut event_base, lockfd: c_int, lockfile: *mut c_char,) -> c_int;
@@ -274,7 +274,6 @@ pub unsafe extern "C" fn server_start(
     }
 }
 
-/*
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_loop() -> i32 {
     unsafe {
@@ -283,7 +282,7 @@ pub unsafe extern "C" fn server_loop() -> i32 {
         loop {
             let mut items = cmdq_next(null_mut());
             tailq_foreach(&raw mut clients, |c| {
-                if (*c).flags & CLIENT_IDENTIFIED != 0 {
+                if (*c).flags.intersects(client_flag::IDENTIFIED) {
                     items += cmdq_next(c);
                 }
                 ControlFlow::Continue::<(), ()>(())
@@ -333,7 +332,6 @@ pub unsafe extern "C" fn server_loop() -> i32 {
         1
     }
 }
-*/
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn server_send_exit() {

@@ -166,18 +166,21 @@ endif
 # key-string.c
 # tty-term.c
 # server-fn.c
+# cmd-new-session.c
+# menu.c
 
 # TMP moved to build.rs cc:
+
 
 # Broken:
 # notify.c (notify_add)
 # environ.c (environ_free)
 # server.c (server_loop)
+#
+
 
 dist_tmux_SOURCES = \
-	menu.c \
 	broken.c \
-	cmd-new-session.c \
 	cmd-queue.c \
 	format-draw.c \
 	format.c \

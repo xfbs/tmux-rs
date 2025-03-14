@@ -40,8 +40,7 @@ pub extern "C" fn environ_create() -> NonNull<environ> {
     }
 }
 
-// TODO this function is broken in port
-/*
+#[cfg(disabled)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_free(env: *mut environ) {
     unsafe {
@@ -55,7 +54,7 @@ pub unsafe extern "C" fn environ_free(env: *mut environ) {
         free_(env);
     }
 }
-*/
+
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_first(env: *mut environ) -> *mut environ_entry { unsafe { rb_min(env) } }
 

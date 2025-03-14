@@ -962,6 +962,7 @@ pub struct screen_write_ctx {
 
 /// Box border lines option.
 #[repr(i32)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub enum box_lines {
     BOX_LINES_DEFAULT = -1,
     BOX_LINES_SINGLE,
@@ -1435,39 +1436,39 @@ pub struct session {
 pub type sessions = rb_head<session>;
 compat_rs::impl_tailq_entry!(session, gentry, tailq_entry<session>);
 
-pub const MOUSE_MASK_BUTTONS: i32 = 195;
-pub const MOUSE_MASK_SHIFT: i32 = 4;
-pub const MOUSE_MASK_META: i32 = 8;
-pub const MOUSE_MASK_CTRL: i32 = 16;
-pub const MOUSE_MASK_DRAG: i32 = 32;
-pub const MOUSE_MASK_MODIFIERS: i32 = MOUSE_MASK_SHIFT | MOUSE_MASK_META | MOUSE_MASK_CTRL;
+pub const MOUSE_MASK_BUTTONS: u32 = 195;
+pub const MOUSE_MASK_SHIFT: u32 = 4;
+pub const MOUSE_MASK_META: u32 = 8;
+pub const MOUSE_MASK_CTRL: u32 = 16;
+pub const MOUSE_MASK_DRAG: u32 = 32;
+pub const MOUSE_MASK_MODIFIERS: u32 = MOUSE_MASK_SHIFT | MOUSE_MASK_META | MOUSE_MASK_CTRL;
 
 /* Mouse wheel type. */
-pub const MOUSE_WHEEL_UP: i32 = 64;
-pub const MOUSE_WHEEL_DOWN: i32 = 65;
+pub const MOUSE_WHEEL_UP: u32 = 64;
+pub const MOUSE_WHEEL_DOWN: u32 = 65;
 
 /* Mouse button type. */
-pub const MOUSE_BUTTON_1: i32 = 0;
-pub const MOUSE_BUTTON_2: i32 = 1;
-pub const MOUSE_BUTTON_3: i32 = 2;
-pub const MOUSE_BUTTON_6: i32 = 66;
-pub const MOUSE_BUTTON_7: i32 = 67;
-pub const MOUSE_BUTTON_8: i32 = 128;
-pub const MOUSE_BUTTON_9: i32 = 129;
-pub const MOUSE_BUTTON_10: i32 = 130;
-pub const MOUSE_BUTTON_11: i32 = 131;
+pub const MOUSE_BUTTON_1: u32 = 0;
+pub const MOUSE_BUTTON_2: u32 = 1;
+pub const MOUSE_BUTTON_3: u32 = 2;
+pub const MOUSE_BUTTON_6: u32 = 66;
+pub const MOUSE_BUTTON_7: u32 = 67;
+pub const MOUSE_BUTTON_8: u32 = 128;
+pub const MOUSE_BUTTON_9: u32 = 129;
+pub const MOUSE_BUTTON_10: u32 = 130;
+pub const MOUSE_BUTTON_11: u32 = 131;
 
 // Mouse helpers.
 #[inline]
-pub fn MOUSE_BUTTONS(b: i32) -> bool { b & MOUSE_MASK_BUTTONS != 0 }
+pub fn MOUSE_BUTTONS(b: u32) -> u32 { b & MOUSE_MASK_BUTTONS }
 #[inline]
-pub fn MOUSE_WHEEL(b: i32) -> bool {
+pub fn MOUSE_WHEEL(b: u32) -> bool {
     ((b) & MOUSE_MASK_BUTTONS) == MOUSE_WHEEL_UP || ((b) & MOUSE_MASK_BUTTONS) == MOUSE_WHEEL_DOWN
 }
 #[inline]
-pub fn MOUSE_DRAG(b: i32) -> bool { b & MOUSE_MASK_DRAG != 0 }
+pub fn MOUSE_DRAG(b: u32) -> bool { b & MOUSE_MASK_DRAG != 0 }
 #[inline]
-pub fn MOUSE_RELEASE(b: i32) -> bool { b & MOUSE_MASK_BUTTONS == 3 }
+pub fn MOUSE_RELEASE(b: u32) -> bool { b & MOUSE_MASK_BUTTONS == 3 }
 
 // Mouse input.
 #[repr(C)]
