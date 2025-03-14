@@ -168,6 +168,7 @@ endif
 # server-fn.c
 # cmd-new-session.c
 # menu.c
+# tty-features.c
 
 # TMP moved to build.rs cc:
 
@@ -200,7 +201,6 @@ dist_tmux_SOURCES = \
 	server-client.c \
 	session.c \
 	status.c \
-	tty-features.c \
 	tty-keys.c \
 	tty.c \
 	window-buffer.c \

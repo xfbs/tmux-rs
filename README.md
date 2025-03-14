@@ -167,8 +167,7 @@ concrete opaque struct in struct causing field offset into adjacent struct be in
 - get rid of paste crate, won't need to join symbols any more for C code
 - figure out why building rust binary doesn't work
 
-10 small files:
-- [ ]  510 tty-features
+8 small files:
 - [ ]  559 window-buffer
 - [ ]  691 layout-set
 - [ ]  692 key-bindings
@@ -200,6 +199,7 @@ concrete opaque struct in struct causing field offset into adjacent struct be in
   =====
   - [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
   =====
+- [X]  510 tty-features
 - [X]  556 menu
 - [X]  281 environ (environ_free is broken, everything else works)
 - [X]  323 notify (notify_add)
