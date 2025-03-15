@@ -548,10 +548,10 @@ pub const CURSOR_MODES: i32 = MODE_CURSOR | MODE_CURSOR_BLINKING | MODE_CURSOR_V
 pub const EXTENDED_KEY_MODES: i32 = MODE_KEYS_EXTENDED | MODE_KEYS_EXTENDED_2;
 
 // Mouse protocol constants.
-pub const MOUSE_PARAM_MAX: i32 = 0xff;
-pub const MOUSE_PARAM_UTF8_MAX: i32 = 0x7ff;
-pub const MOUSE_PARAM_BTN_OFF: i32 = 0x20;
-pub const MOUSE_PARAM_POS_OFF: i32 = 0x21;
+pub const MOUSE_PARAM_MAX: u32 = 0xff;
+pub const MOUSE_PARAM_UTF8_MAX: u32 = 0x7ff;
+pub const MOUSE_PARAM_BTN_OFF: u32 = 0x20;
+pub const MOUSE_PARAM_POS_OFF: u32 = 0x21;
 
 /* A single UTF-8 character. */
 pub type utf8_char = c_uint;

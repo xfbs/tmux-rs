@@ -1,14 +1,697 @@
-use super::*;
+use compat_rs::{
+    RB_GENERATE_STATIC,
+    tree::{rb_find, rb_foreach, rb_initializer, rb_insert},
+};
+use libc::{strchr, strcspn};
+
+use crate::*;
+
 unsafe extern "C" {
-    pub fn input_key_build();
-    pub fn input_key_pane(_: *mut window_pane, _: key_code, _: *mut mouse_event) -> c_int;
-    pub fn input_key(_: *mut screen, _: *mut bufferevent, _: key_code) -> c_int;
-    pub fn input_key_get_mouse(
-        _: *mut screen,
-        _: *mut mouse_event,
-        _: c_uint,
-        _: c_uint,
-        _: *mut *const c_char,
-        _: *mut usize,
-    ) -> c_int;
+    // pub fn input_key_build();
+    // pub fn input_key_pane(_: *mut window_pane, _: key_code, _: *mut mouse_event) -> c_int;
+    // pub fn input_key(_: *mut screen, _: *mut bufferevent, _: key_code) -> c_int;
+    // pub fn input_key_get_mouse( _: *mut screen, _: *mut mouse_event, _: c_uint, _: c_uint, _: *mut *const c_char, _: *mut usize,) -> c_int;
+}
+
+// Entry in the key tree.
+pub struct input_key_entry {
+    pub key: key_code,
+    pub data: *const c_char,
+
+    pub entry: rb_entry<input_key_entry>,
+}
+pub type input_key_tree = rb_head<input_key_entry>;
+
+impl input_key_entry {
+    const fn new(key: key_code, data: &'static CStr) -> Self {
+        Self {
+            key,
+            data: data.as_ptr(),
+            entry: unsafe { zeroed() },
+        }
+    }
+}
+
+/// Input key comparison function.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn input_key_cmp(ike1: *const input_key_entry, ike2: *const input_key_entry) -> i32 {
+    unsafe {
+        if ((*ike1).key < (*ike2).key) {
+            -1
+        } else if ((*ike1).key > (*ike2).key) {
+            1
+        } else {
+            0
+        }
+    }
+}
+
+RB_GENERATE_STATIC!(input_key_tree, input_key_entry, entry, input_key_cmp);
+static mut input_key_tree: input_key_tree = rb_initializer();
+
+const input_key_defaults_len: usize = 83;
+#[unsafe(no_mangle)]
+static mut input_key_defaults: [input_key_entry; 83] = [
+    /* Paste keys. */
+    input_key_entry::new(keyc::KEYC_PASTE_START as u64, c"\xb11[200~"),
+    input_key_entry::new(keyc::KEYC_PASTE_END as u64, c"\xb11[201~"),
+    /* Function keys. */
+    input_key_entry::new(keyc::KEYC_F1 as u64, c"\xb11OP"),
+    input_key_entry::new(keyc::KEYC_F2 as u64, c"\xb11OQ"),
+    input_key_entry::new(keyc::KEYC_F3 as u64, c"\xb11OR"),
+    input_key_entry::new(keyc::KEYC_F4 as u64, c"\xb11OS"),
+    input_key_entry::new(keyc::KEYC_F5 as u64, c"\xb11[15~"),
+    input_key_entry::new(keyc::KEYC_F6 as u64, c"\xb11[17~"),
+    input_key_entry::new(keyc::KEYC_F7 as u64, c"\xb11[18~"),
+    input_key_entry::new(keyc::KEYC_F8 as u64, c"\xb11[19~"),
+    input_key_entry::new(keyc::KEYC_F9 as u64, c"\xb11[20~"),
+    input_key_entry::new(keyc::KEYC_F10 as u64, c"\xb11[21~"),
+    input_key_entry::new(keyc::KEYC_F11 as u64, c"\xb11[23~"),
+    input_key_entry::new(keyc::KEYC_F12 as u64, c"\xb11[24~"),
+    input_key_entry::new(keyc::KEYC_IC as u64, c"\xb11[2~"),
+    input_key_entry::new(keyc::KEYC_DC as u64, c"\xb11[3~"),
+    input_key_entry::new(keyc::KEYC_HOME as u64, c"\xb11[1~"),
+    input_key_entry::new(keyc::KEYC_END as u64, c"\xb11[4~"),
+    input_key_entry::new(keyc::KEYC_NPAGE as u64, c"\xb11[6~"),
+    input_key_entry::new(keyc::KEYC_PPAGE as u64, c"\xb11[5~"),
+    input_key_entry::new(keyc::KEYC_BTAB as u64, c"\xb11[Z"),
+    /* Arrow keys. */
+    input_key_entry::new(keyc::KEYC_UP as u64 | KEYC_CURSOR, c"\xb11OA"),
+    input_key_entry::new(keyc::KEYC_DOWN as u64 | KEYC_CURSOR, c"\xb11OB"),
+    input_key_entry::new(keyc::KEYC_RIGHT as u64 | KEYC_CURSOR, c"\xb11OC"),
+    input_key_entry::new(keyc::KEYC_LEFT as u64 | KEYC_CURSOR, c"\xb11OD"),
+    input_key_entry::new(keyc::KEYC_UP as u64, c"\xb11[A"),
+    input_key_entry::new(keyc::KEYC_DOWN as u64, c"\xb11[B"),
+    input_key_entry::new(keyc::KEYC_RIGHT as u64, c"\xb11[C"),
+    input_key_entry::new(keyc::KEYC_LEFT as u64, c"\xb11[D"),
+    /* Keypad keys. */
+    input_key_entry::new(keyc::KEYC_KP_SLASH as u64 | KEYC_KEYPAD, c"\xb11Oo"),
+    input_key_entry::new(keyc::KEYC_KP_STAR as u64 | KEYC_KEYPAD, c"\xb11Oj"),
+    input_key_entry::new(keyc::KEYC_KP_MINUS as u64 | KEYC_KEYPAD, c"\xb11Om"),
+    input_key_entry::new(keyc::KEYC_KP_SEVEN as u64 | KEYC_KEYPAD, c"\xb11Ow"),
+    input_key_entry::new(keyc::KEYC_KP_EIGHT as u64 | KEYC_KEYPAD, c"\xb11Ox"),
+    input_key_entry::new(keyc::KEYC_KP_NINE as u64 | KEYC_KEYPAD, c"\xb11Oy"),
+    input_key_entry::new(keyc::KEYC_KP_PLUS as u64 | KEYC_KEYPAD, c"\xb11Ok"),
+    input_key_entry::new(keyc::KEYC_KP_FOUR as u64 | KEYC_KEYPAD, c"\xb11Ot"),
+    input_key_entry::new(keyc::KEYC_KP_FIVE as u64 | KEYC_KEYPAD, c"\xb11Ou"),
+    input_key_entry::new(keyc::KEYC_KP_SIX as u64 | KEYC_KEYPAD, c"\xb11Ov"),
+    input_key_entry::new(keyc::KEYC_KP_ONE as u64 | KEYC_KEYPAD, c"\xb11Oq"),
+    input_key_entry::new(keyc::KEYC_KP_TWO as u64 | KEYC_KEYPAD, c"\xb11Or"),
+    input_key_entry::new(keyc::KEYC_KP_THREE as u64 | KEYC_KEYPAD, c"\xb11Os"),
+    input_key_entry::new(keyc::KEYC_KP_ENTER as u64 | KEYC_KEYPAD, c"\xb11OM"),
+    input_key_entry::new(keyc::KEYC_KP_ZERO as u64 | KEYC_KEYPAD, c"\xb11Op"),
+    input_key_entry::new(keyc::KEYC_KP_PERIOD as u64 | KEYC_KEYPAD, c"\xb11On"),
+    input_key_entry::new(keyc::KEYC_KP_SLASH as u64, c"/"),
+    input_key_entry::new(keyc::KEYC_KP_STAR as u64, c"*"),
+    input_key_entry::new(keyc::KEYC_KP_MINUS as u64, c"-"),
+    input_key_entry::new(keyc::KEYC_KP_SEVEN as u64, c"7"),
+    input_key_entry::new(keyc::KEYC_KP_EIGHT as u64, c"8"),
+    input_key_entry::new(keyc::KEYC_KP_NINE as u64, c"9"),
+    input_key_entry::new(keyc::KEYC_KP_PLUS as u64, c"+"),
+    input_key_entry::new(keyc::KEYC_KP_FOUR as u64, c"4"),
+    input_key_entry::new(keyc::KEYC_KP_FIVE as u64, c"5"),
+    input_key_entry::new(keyc::KEYC_KP_SIX as u64, c"6"),
+    input_key_entry::new(keyc::KEYC_KP_ONE as u64, c"1"),
+    input_key_entry::new(keyc::KEYC_KP_TWO as u64, c"2"),
+    input_key_entry::new(keyc::KEYC_KP_THREE as u64, c"3"),
+    input_key_entry::new(keyc::KEYC_KP_ENTER as u64, c"\n"),
+    input_key_entry::new(keyc::KEYC_KP_ZERO as u64, c"0"),
+    input_key_entry::new(keyc::KEYC_KP_PERIOD as u64, c"."),
+    /* Keys with an embedded modifier. */
+    input_key_entry::new(keyc::KEYC_F1 as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[1;_P"),
+    input_key_entry::new(keyc::KEYC_F2 as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[1;_Q"),
+    input_key_entry::new(keyc::KEYC_F3 as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[1;_R"),
+    input_key_entry::new(keyc::KEYC_F4 as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[1;_S"),
+    input_key_entry::new(keyc::KEYC_F5 as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[15;_~"),
+    input_key_entry::new(keyc::KEYC_F6 as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[17;_~"),
+    input_key_entry::new(keyc::KEYC_F7 as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[18;_~"),
+    input_key_entry::new(keyc::KEYC_F8 as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[19;_~"),
+    input_key_entry::new(keyc::KEYC_F9 as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[20;_~"),
+    input_key_entry::new(keyc::KEYC_F10 as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[21;_~"),
+    input_key_entry::new(keyc::KEYC_F11 as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[23;_~"),
+    input_key_entry::new(keyc::KEYC_F12 as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[24;_~"),
+    input_key_entry::new(keyc::KEYC_UP as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[1;_A"),
+    input_key_entry::new(keyc::KEYC_DOWN as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[1;_B"),
+    input_key_entry::new(keyc::KEYC_RIGHT as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[1;_C"),
+    input_key_entry::new(keyc::KEYC_LEFT as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[1;_D"),
+    input_key_entry::new(keyc::KEYC_HOME as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[1;_H"),
+    input_key_entry::new(keyc::KEYC_END as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[1;_F"),
+    input_key_entry::new(keyc::KEYC_PPAGE as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[5;_~"),
+    input_key_entry::new(keyc::KEYC_NPAGE as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[6;_~"),
+    input_key_entry::new(keyc::KEYC_IC as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[2;_~"),
+    input_key_entry::new(keyc::KEYC_DC as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[3;_~"),
+];
+
+#[unsafe(no_mangle)]
+static input_key_modifiers: [key_code; 9] = [
+    0,
+    0,
+    KEYC_SHIFT,
+    KEYC_META | KEYC_IMPLIED_META,
+    KEYC_SHIFT | KEYC_META | KEYC_IMPLIED_META,
+    KEYC_CTRL,
+    KEYC_SHIFT | KEYC_CTRL,
+    KEYC_META | KEYC_IMPLIED_META | KEYC_CTRL,
+    KEYC_SHIFT | KEYC_META | KEYC_IMPLIED_META | KEYC_CTRL,
+];
+
+/// Look for key in tree.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn input_key_get(key: key_code) -> *mut input_key_entry {
+    unsafe {
+        let mut entry = MaybeUninit::<input_key_entry>::uninit();
+        (*entry.as_mut_ptr()).key = key;
+        rb_find(&raw mut input_key_tree, entry.as_mut_ptr())
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn input_key_split2(c: u32, dst: *mut u8) -> usize {
+    unsafe {
+        if (c > 0x7f) {
+            *dst = (c >> 6) as u8 | 0xc0;
+            *dst.add(1) = (c as u8 & 0x3f) | 0x80;
+
+            2
+        } else {
+            *dst = c as u8;
+
+            1
+        }
+    }
+}
+
+/// Build input key tree.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn input_key_build() {
+    let __func__ = c"input_key_build".as_ptr();
+    unsafe {
+        for i in 0..input_key_defaults_len {
+            let ike = &raw mut input_key_defaults[i];
+            if (!(*ike).key & KEYC_BUILD_MODIFIERS != 0) {
+                rb_insert(&raw mut input_key_tree, ike);
+                continue;
+            }
+
+            for j in 2..input_key_modifiers.len() {
+                let key = ((*ike).key & !KEYC_BUILD_MODIFIERS);
+                let data = xstrdup((*ike).data).as_ptr();
+                *data.add(strcspn(data, c"_".as_ptr())) = b'0' as c_char + j as c_char;
+
+                let new = xcalloc1::<input_key_entry>();
+                new.key = key | input_key_modifiers[j];
+                new.data = data;
+                rb_insert(&raw mut input_key_tree, new);
+            }
+        }
+
+        rb_foreach(&raw mut input_key_tree, |ike| {
+            log_debug(
+                c"%s: 0x%llx (%s) is %s".as_ptr(),
+                __func__,
+                (*ike).key,
+                key_string_lookup_key((*ike).key, 1),
+                (*ike).data,
+            );
+            ControlFlow::<(), ()>::Continue(())
+        });
+    }
+}
+
+/// Translate a key code into an output key sequence for a pane.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn input_key_pane(wp: *mut window_pane, key: key_code, m: *mut mouse_event) -> i32 {
+    unsafe {
+        if log_get_level() != 0 {
+            log_debug(
+                c"writing key 0x%llx (%s) to %%%u".as_ptr(),
+                key,
+                key_string_lookup_key(key, 1),
+                (*wp).id,
+            );
+        }
+
+        if (KEYC_IS_MOUSE(key)) {
+            if (!m.is_null() && (*m).wp != -1 && (*m).wp as u32 == (*wp).id) {
+                input_key_mouse(wp, m);
+            }
+            return 0;
+        }
+        input_key((*wp).screen, (*wp).event, key)
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn input_key_write(from: *const c_char, bev: *mut bufferevent, data: *const c_char, size: usize) {
+    unsafe {
+        log_debug(c"%s: %.*s".as_ptr(), from, size as i32, data);
+        bufferevent_write(bev, data.cast(), size);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn input_key_extended(bev: *mut bufferevent, mut key: key_code) -> i32 {
+    let __func__ = c"input_key_extended".as_ptr();
+    unsafe {
+        let sizeof_tmp = 64;
+        let mut tmp = MaybeUninit::<[c_char; 64]>::uninit();
+        let mut ud = MaybeUninit::<utf8_data>::uninit();
+        let mut wc: wchar_t = 0;
+
+        const KEYC_SHIFT_OR_META: u64 = KEYC_SHIFT | KEYC_META;
+        const KEYC_SHIFT_OR_CTRL: u64 = KEYC_SHIFT | KEYC_CTRL;
+        const KEYC_META_OR_CTRL: u64 = KEYC_META | KEYC_CTRL;
+        const KEYC_SHIFT_OR_META_OR_CTRL: u64 = KEYC_SHIFT | KEYC_META | KEYC_CTRL;
+
+        let modifier = match key & KEYC_MASK_MODIFIERS {
+            KEYC_SHIFT => b'2',
+            KEYC_META => b'3',
+            KEYC_SHIFT_OR_META => b'4',
+            KEYC_CTRL => b'5',
+            KEYC_SHIFT_OR_CTRL => b'6',
+            KEYC_META_OR_CTRL => b'7',
+            KEYC_SHIFT_OR_META_OR_CTRL => b'8',
+            _ => return -1,
+        };
+
+        if KEYC_IS_UNICODE(key) {
+            utf8_to_data((key & KEYC_MASK_KEY) as u32, ud.as_mut_ptr());
+            if utf8_towc(ud.as_mut_ptr(), &raw mut wc) == UTF8_DONE {
+                key = wc as u64;
+            } else {
+                return -1;
+            }
+        } else {
+            key &= KEYC_MASK_KEY;
+        }
+
+        if (options_get_number(global_options, c"extended-keys-format".as_ptr()) == 1) {
+            xsnprintf(
+                tmp.as_mut_ptr().cast(),
+                sizeof_tmp,
+                c"\x1b[27;%c;%llu~".as_ptr(),
+                modifier as u32,
+                key,
+            );
+        } else {
+            xsnprintf(
+                tmp.as_mut_ptr().cast(),
+                sizeof_tmp,
+                c"\x1b[%llu;%cu".as_ptr(),
+                key,
+                modifier as u32,
+            );
+        }
+
+        input_key_write(__func__, bev, tmp.as_ptr().cast(), strlen(tmp.as_ptr().cast()));
+        0
+    }
+}
+
+/*
+ * Outputs the key in the "standard" mode. This is by far the most
+ * complicated output mode, with a lot of remapping in order to
+ * emulate quirks of terminals that today can be only found in museums.
+ */
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn input_key_vt10x(bev: *mut bufferevent, mut key: key_code) -> i32 {
+    let __func__ = c"input_key_vt10x".as_ptr();
+    unsafe {
+        let mut ud: utf8_data = zeroed(); // TODO use uninit
+        let mut onlykey: key_code;
+
+        static mut standard_map: [*const i8; 2] = [
+            c"1!9(0)=+;:'\",<.>/-8? 2".as_ptr(),
+            b"119900=+;;'',,..\x1f\x1f\x7f\x7f\0\0\0".as_ptr().cast(),
+        ];
+
+        log_debug(c"%s: key in %llx".as_ptr(), __func__, key);
+
+        if (key & KEYC_META != 0) {
+            input_key_write(__func__, bev, c"\x1b".as_ptr(), 1);
+        }
+
+        /*
+         * There's no way to report modifiers for unicode keys in standard mode
+         * so lose the modifiers.
+         */
+        if (KEYC_IS_UNICODE(key)) {
+            utf8_to_data(key as u32, &raw mut ud);
+            input_key_write(__func__, bev, ud.data.as_ptr().cast(), ud.size as usize);
+            return 0;
+        }
+
+        /* Prevent TAB and RET from being swallowed by C0 remapping logic. */
+        onlykey = key & KEYC_MASK_KEY;
+        if (onlykey == b'\r' as u64 || onlykey == b'\t' as u64) {
+            key &= !KEYC_CTRL;
+        }
+
+        /*
+         * Convert keys with Ctrl modifier into corresponding C0 control codes,
+         * with the exception of *some* keys, which are remapped into printable
+         * ASCII characters.
+         *
+         * There is no special handling for Shift modifier, which is pretty
+         * much redundant anyway, as no terminal will send <base key>|SHIFT,
+         * but only <shifted key>|SHIFT.
+         */
+        if (key & KEYC_CTRL != 0) {
+            let p = strchr(standard_map[0], onlykey as i32);
+            key = if (!p.is_null()) {
+                *standard_map[1].add(p.addr() - standard_map[0].addr()) as u64
+            } else if (onlykey >= b'3' as u64 && onlykey <= b'7' as u64) {
+                onlykey - b'\x18' as u64
+            } else if (onlykey >= b'@' as u64 && onlykey <= b'~' as u64) {
+                onlykey & 0x1f
+            } else {
+                return -1;
+            };
+        }
+
+        log_debug(c"%s: key out %llx".as_ptr(), __func__, key);
+
+        ud.data[0] = (key & 0x7f) as u8;
+        input_key_write(__func__, bev, ud.data.as_ptr().cast(), 1);
+
+        0
+    }
+}
+
+/* Pick keys that are reported as vt10x keys in modifyOtherKeys=1 mode. */
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn input_key_mode1(bev: *mut bufferevent, key: key_code) -> i32 {
+    let __func__ = c"input_key_mode1".as_ptr();
+    unsafe {
+        log_debug(c"%s: key in %llx".as_ptr(), __func__, key);
+
+        /*
+         * As per
+         * https://invisible-island.net/xterm/modified-keys-us-pc105.html.
+         */
+        let onlykey = key & KEYC_MASK_KEY;
+        if ((key & (KEYC_META | KEYC_CTRL)) == KEYC_CTRL
+            && (onlykey == ' ' as u64
+                || onlykey == '/' as u64
+                || onlykey == '@' as u64
+                || onlykey == '^' as u64
+                || (onlykey >= '2' as u64 && onlykey <= '8' as u64)
+                || (onlykey >= '@' as u64 && onlykey <= '~' as u64)))
+        {
+            return input_key_vt10x(bev, key);
+        }
+
+        /*
+         * A regular key + Meta. In the absence of a standard to back this, we
+         * mimic what iTerm 2 does.
+         */
+        if ((key & (KEYC_CTRL | KEYC_META)) == KEYC_META) {
+            return input_key_vt10x(bev, key);
+        }
+    }
+
+    -1
+}
+
+/* Translate a key code into an output key sequence. */
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn input_key(s: *mut screen, bev: *mut bufferevent, mut key: key_code) -> i32 {
+    let __func__ = c"input_key".as_ptr();
+    unsafe {
+        let mut ike: *mut input_key_entry = null_mut();
+        let mut ud: utf8_data = zeroed();
+
+        /* Mouse keys need a pane. */
+        if (KEYC_IS_MOUSE(key)) {
+            return 0;
+        }
+
+        /* Literal keys go as themselves (can't be more than eight bits). */
+        if (key & KEYC_LITERAL != 0) {
+            ud.data[0] = key as u8;
+            input_key_write(__func__, bev, ud.data.as_ptr().cast(), 1);
+            return 0;
+        }
+
+        /* Is this backspace? */
+        if ((key & KEYC_MASK_KEY) == keyc::KEYC_BSPACE as u64) {
+            let mut newkey = options_get_number(global_options, c"backspace".as_ptr()) as key_code;
+            if (newkey >= 0x7f) {
+                newkey = '\x7f' as u64;
+            }
+            key = newkey | (key & (KEYC_MASK_MODIFIERS | KEYC_MASK_FLAGS));
+        }
+
+        /* Is this backtab? */
+        if ((key & KEYC_MASK_KEY) == keyc::KEYC_BTAB as u64) {
+            if (((*s).mode & EXTENDED_KEY_MODES) != 0) {
+                /* When in xterm extended mode, remap into S-Tab. */
+                key = '\x09' as u64 | (key & !KEYC_MASK_KEY) | KEYC_SHIFT;
+            } else {
+                /* Otherwise clear modifiers. */
+                key &= !KEYC_MASK_MODIFIERS;
+            }
+        }
+
+        /*
+         * A trivial case, that is a 7-bit key, excluding C0 control characters
+         * that can't be entered from the keyboard, and no modifiers; or a UTF-8
+         * key and no modifiers.
+         */
+        if (key & !KEYC_MASK_KEY) == 0 {
+            if (key == c0::C0_HT as u64
+                || key == c0::C0_CR as u64
+                || key == c0::C0_ESC as u64
+                || (key >= 0x20 && key <= 0x7f))
+            {
+                ud.data[0] = key as u8;
+                input_key_write(__func__, bev, ud.data.as_ptr().cast(), 1);
+                return 0;
+            }
+            if (KEYC_IS_UNICODE(key)) {
+                utf8_to_data(key as u32, &raw mut ud);
+                input_key_write(__func__, bev, ud.data.as_ptr().cast(), ud.size as usize);
+                return 0;
+            }
+        }
+
+        /*
+         * Look up the standard VT10x keys in the tree. If not in application
+         * keypad or cursor mode, remove the respective flags from the key.
+         */
+        if (!(*s).mode & MODE_KKEYPAD != 0) {
+            key &= !KEYC_KEYPAD;
+        }
+        if (!(*s).mode & MODE_KCURSOR != 0) {
+            key &= !KEYC_CURSOR;
+        }
+        if (ike.is_null()) {
+            ike = input_key_get(key);
+        }
+        if (ike.is_null() && (key & KEYC_META != 0) && (!key & KEYC_IMPLIED_META != 0)) {
+            ike = input_key_get(key & !KEYC_META);
+        }
+        if (ike.is_null() && (key & KEYC_CURSOR != 0)) {
+            ike = input_key_get(key & !KEYC_CURSOR);
+        }
+        if (ike.is_null() && (key & KEYC_KEYPAD != 0)) {
+            ike = input_key_get(key & !KEYC_KEYPAD);
+        }
+        if (!ike.is_null()) {
+            log_debug(c"%s: found key 0x%llx: \"%s\"".as_ptr(), __func__, key, (*ike).data);
+            if ((key == keyc::KEYC_PASTE_START as u64 || key == keyc::KEYC_PASTE_END as u64)
+                && (!(*s).mode & MODE_BRACKETPASTE != 0))
+            {
+                return 0;
+            }
+            if ((key & KEYC_META != 0) && (!key & KEYC_IMPLIED_META != 0)) {
+                input_key_write(__func__, bev, c"\x1b".as_ptr(), 1);
+            }
+            input_key_write(__func__, bev, (*ike).data, strlen((*ike).data));
+            return 0;
+        }
+
+        /* Ignore internal function key codes. */
+        if ((key >= KEYC_BASE && key < keyc::KEYC_BASE_END as u64) || (key >= KEYC_USER && key < KEYC_USER_END)) {
+            log_debug(c"%s: ignoring key 0x%llx".as_ptr(), __func__, key);
+            return 0;
+        }
+
+        /*
+         * No builtin key sequence; construct an extended key sequence
+         * depending on the client mode.
+         *
+         * If something invalid reaches here, an invalid output may be
+         * produced. For example Ctrl-Shift-2 is invalid (as there's
+         * no way to enter it). The correct form is Ctrl-Shift-@, at
+         * least in US English keyboard layout.
+         */
+        match ((*s).mode & EXTENDED_KEY_MODES) {
+            MODE_KEYS_EXTENDED_2 =>
+            /*
+             * The simplest mode to handle - *all* modified keys are
+             * reported in the extended form.
+             */
+            {
+                return input_key_extended(bev, key);
+            }
+            MODE_KEYS_EXTENDED => {
+                /*
+                 * Some keys are still reported in standard mode, to maintain
+                 * compatibility with applications unaware of extended keys.
+                 */
+                if (input_key_mode1(bev, key) == -1) {
+                    return input_key_extended(bev, key);
+                }
+                return 0;
+            }
+            _ =>
+            /* The standard mode. */
+            {
+                return input_key_vt10x(bev, key);
+            }
+        }
+    }
+}
+
+/* Get mouse event string. */
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn input_key_get_mouse(
+    s: *mut screen,
+    m: *mut mouse_event,
+    x: u32,
+    y: u32,
+    rbuf: *mut *const c_char,
+    rlen: *mut usize,
+) -> i32 {
+    static mut buf: [c_char; 40] = [0; 40];
+    let mut len = 0usize;
+
+    unsafe {
+        let sizeof_buf = 40;
+        *rbuf = null_mut();
+        *rlen = 0;
+
+        /* If this pane is not in button or all mode, discard motion events. */
+        if (MOUSE_DRAG((*m).b) && ((*s).mode & MOTION_MOUSE_MODES) == 0) {
+            return 0;
+        }
+        if (((*s).mode & ALL_MOUSE_MODES) == 0) {
+            return 0;
+        }
+
+        /*
+         * If this event is a release event and not in all mode, discard it.
+         * In SGR mode we can tell absolutely because a release is normally
+         * shown by the last character. Without SGR, we check if the last
+         * buttons was also a release.
+         */
+        if ((*m).sgr_type != b' ' as u32) {
+            if (MOUSE_DRAG((*m).sgr_b) && MOUSE_RELEASE((*m).sgr_b) && (!(*s).mode & MODE_MOUSE_ALL != 0)) {
+                return 0;
+            }
+        } else {
+            if (MOUSE_DRAG((*m).b)
+                && MOUSE_RELEASE((*m).b)
+                && MOUSE_RELEASE((*m).lb)
+                && (!(*s).mode & MODE_MOUSE_ALL != 0))
+            {
+                return 0;
+            }
+        }
+
+        /*
+         * Use the SGR (1006) extension only if the application requested it
+         * and the underlying terminal also sent the event in this format (this
+         * is because an old style mouse release event cannot be converted into
+         * the new SGR format, since the released button is unknown). Otherwise
+         * pretend that tmux doesn't speak this extension, and fall back to the
+         * UTF-8 (1005) extension if the application requested, or to the
+         * legacy format.
+         */
+        let mut len: usize = 0;
+        if ((*m).sgr_type != ' ' as u32 && ((*s).mode & MODE_MOUSE_SGR) != 0) {
+            len = xsnprintf(
+                &raw mut buf as *mut c_char,
+                sizeof_buf,
+                c"\x1b[<%u;%u;%u%c".as_ptr(),
+                (*m).sgr_b,
+                x + 1,
+                y + 1,
+                (*m).sgr_type,
+            ) as usize;
+        } else if ((*s).mode & MODE_MOUSE_UTF8 != 0) {
+            if ((*m).b > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_BTN_OFF) as u32
+                || x > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_POS_OFF) as u32
+                || y > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_POS_OFF) as u32)
+            {
+                return 0;
+            }
+            len = xsnprintf(&raw mut buf as *mut c_char, sizeof_buf, c"\x1b[M".as_ptr()) as usize;
+            len += input_key_split2((*m).b + MOUSE_PARAM_BTN_OFF, &raw mut buf[len] as _);
+            len += input_key_split2(x + MOUSE_PARAM_POS_OFF, &raw mut buf[len] as _);
+            len += input_key_split2(y + MOUSE_PARAM_POS_OFF, &raw mut buf[len] as _);
+        } else {
+            if ((*m).b + MOUSE_PARAM_BTN_OFF > MOUSE_PARAM_MAX) {
+                return 0;
+            }
+
+            len = xsnprintf(&raw mut buf as *mut c_char, sizeof_buf, c"\x1b[M".as_ptr()) as usize;
+            buf[len] = ((*m).b + MOUSE_PARAM_BTN_OFF) as c_char;
+            len += 1;
+
+            /*
+             * The incoming x and y may be out of the range which can be
+             * supported by the "normal" mouse protocol. Clamp the
+             * coordinates to the supported range.
+             */
+            if (x + MOUSE_PARAM_POS_OFF > MOUSE_PARAM_MAX) {
+                buf[len] = MOUSE_PARAM_MAX as c_char;
+                len += 1;
+            } else {
+                buf[len] = x as c_char + MOUSE_PARAM_POS_OFF as c_char;
+                len += 1;
+            }
+            if (y + MOUSE_PARAM_POS_OFF > MOUSE_PARAM_MAX) {
+                buf[len] = MOUSE_PARAM_MAX as c_char;
+                len += 1;
+            } else {
+                buf[len] = y as c_char + MOUSE_PARAM_POS_OFF as c_char;
+                len += 1;
+            }
+        }
+
+        *rbuf = &raw const buf as *const c_char;
+        *rlen = len;
+    }
+    1
+}
+
+/* Translate mouse and output. */
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn input_key_mouse(wp: *mut window_pane, m: *mut mouse_event) {
+    let __func__ = c"input_key_mouse".as_ptr();
+    unsafe {
+        let mut s = (*wp).screen;
+        let mut x = 0;
+        let mut y = 0;
+        let mut buf = null();
+        let mut len: usize = 0;
+
+        /* Ignore events if no mouse mode or the pane is not visible. */
+        if ((*m).ignore != 0 || ((*s).mode & ALL_MOUSE_MODES == 0)) {
+            return;
+        }
+        if (cmd_mouse_at(wp, m, &raw mut x, &raw mut y, 0) != 0) {
+            return;
+        }
+        if (window_pane_visible(wp) == 0) {
+            return;
+        }
+        if (input_key_get_mouse(s, m, x, y, &raw mut buf, &raw mut len) == 0) {
+            return;
+        }
+        log_debug(c"writing mouse %.*s to %%%u".as_ptr(), len, buf, (*wp).id);
+        input_key_write(__func__, (*wp).event, buf, len);
+    }
 }

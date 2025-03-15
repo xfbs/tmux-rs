@@ -123,6 +123,8 @@ improve imsg and imsg buffer implemnentation
 something in client -> tty struct
 concrete opaque struct in struct causing field offset into adjacent struct be incorrect
 
+input-keys is ported but ctrl-c and others doesn't work
+
 
 # TODO
 - review cmd_rotate_window.rs cmd_rotate_window_exec tailq_foreach calls
@@ -167,13 +169,11 @@ concrete opaque struct in struct causing field offset into adjacent struct be in
 - get rid of paste crate, won't need to join symbols any more for C code
 - figure out why building rust binary doesn't work
 
-8 small files:
+6 small files:
 - [ ]  559 window-buffer
 - [ ]  691 layout-set
-- [ ]  692 key-bindings
 - [ ]  740 screen
 - [ ]  759 session
-- [ ]  794 input-keys
 - [ ]  818 popup
 - [ ]  868 screen-redraw
 
@@ -199,6 +199,8 @@ concrete opaque struct in struct causing field offset into adjacent struct be in
   =====
   - [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
   =====
+- [X]  794 input-keys
+- [X]  692 key-bindings
 - [X]  510 tty-features
 - [X]  556 menu
 - [X]  281 environ (environ_free is broken, everything else works)

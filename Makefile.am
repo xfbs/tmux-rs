@@ -170,6 +170,7 @@ endif
 # menu.c
 # tty-features.c
 # key-bindings.c
+# input-keys.c
 
 # TMP moved to build.rs cc:
 
@@ -187,7 +188,6 @@ dist_tmux_SOURCES = \
 	format-draw.c \
 	format.c \
 	grid.c \
-	input-keys.c \
 	input.c \
 	layout-set.c \
 	layout.c \
