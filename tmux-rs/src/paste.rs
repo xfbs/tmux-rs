@@ -130,8 +130,9 @@ pub unsafe extern "C" fn paste_get_name(name: *const c_char) -> *mut paste_buffe
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn paste_free(pb: *mut paste_buffer) {
+pub unsafe extern "C" fn paste_free(pb: NonNull<paste_buffer>) {
     unsafe {
+        let pb = pb.as_ptr();
         notify_paste_buffer((*pb).name, 1);
 
         rb_remove::<_, discr_name_entry>(&raw mut paste_by_name, pb);
@@ -164,7 +165,7 @@ pub unsafe extern "C" fn paste_add(mut prefix: *const c_char, data: *mut c_char,
                 return ControlFlow::<(), ()>::Break(());
             }
             if ((*pb).automatic != 0) {
-                paste_free(pb);
+                paste_free(NonNull::new(pb).expect("in for loop should be non-null"));
             }
             ControlFlow::<(), ()>::Continue(())
         });
@@ -226,8 +227,7 @@ pub unsafe extern "C" fn paste_rename(oldname: *const c_char, newname: *const c_
             return -1;
         }
 
-        let pb_new = paste_get_name(newname);
-        if (!pb_new.is_null()) {
+        if let Some(pb_new) = NonNull::new(paste_get_name(newname)) {
             paste_free(pb_new);
         }
 
@@ -290,8 +290,7 @@ pub unsafe extern "C" fn paste_set(
 
         (*pb).created = libc::time(null_mut());
 
-        let old = paste_get_name(name);
-        if (!old.is_null()) {
+        if let Some(old) = NonNull::new(paste_get_name(name)) {
             paste_free(old);
         }
 

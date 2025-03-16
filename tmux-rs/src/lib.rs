@@ -1,5 +1,6 @@
 #![feature(array_ptr_get)]
 #![feature(c_variadic)]
+#![feature(let_chains)]
 #![feature(maybe_uninit_slice)]
 #![feature(ptr_as_uninit)]
 #![allow(non_upper_case_globals)]
@@ -70,7 +71,7 @@ pub unsafe fn strchr_(cs: *const c_char, c: char) -> *mut c_char { unsafe { libc
 
 // use crate::tmux_protocol_h::*;
 
-pub type bitstr_t = c_uchar;
+pub type bitstr_t = u8;
 
 const TTY_NAME_MAX: usize = 32;
 
@@ -106,16 +107,9 @@ macro_rules! opaque_types {
     };
 }
 
-// args,
-// args_entry,
-// cmd,
-// cmds,
-// imsg,
-// job,
 opaque_types! {
     format_job_tree,
     format_tree,
-    hyperlinks,
     hyperlinks_uri,
     input_ctx,
     menu_data,
@@ -707,6 +701,7 @@ pub struct grid_cell {
     pub data: utf8_data,
     pub attr: c_ushort,
     pub flags: grid_flag,
+    pub _padding: u8,
     pub fg: i32,
     pub bg: i32,
     pub us: i32,
@@ -719,6 +714,7 @@ impl grid_cell {
             data,
             attr,
             flags,
+            _padding: 0,
             fg,
             bg,
             us,
@@ -879,18 +875,13 @@ pub struct image {
 pub type images = tailq_head<image>;
 
 /// Cursor style.
-#[repr(C)]
+#[repr(i32)]
 #[derive(Copy, Clone)]
 pub enum screen_cursor_style {
     SCREEN_CURSOR_DEFAULT,
     SCREEN_CURSOR_BLOCK,
     SCREEN_CURSOR_UNDERLINE,
     SCREEN_CURSOR_BAR,
-}
-
-opaque_types! {
-    screen_sel,
-    screen_titles
 }
 
 /// Virtual screen.
@@ -1017,7 +1008,7 @@ pub struct screen_redraw_ctx {
 }
 
 pub unsafe fn screen_size_x(s: *const screen) -> u32 { unsafe { (*(*s).grid).sx } }
-pub unsafe fn screen_size_y(s: *const screen) -> u32 { unsafe { (*(*s).grid).sx } }
+pub unsafe fn screen_size_y(s: *const screen) -> u32 { unsafe { (*(*s).grid).sy } }
 pub unsafe fn screen_hsize(s: *const screen) -> u32 { unsafe { (*(*s).grid).hsize } }
 pub unsafe fn screen_hlimit(s: *const screen) -> u32 { unsafe { (*(*s).grid).hlimit } }
 
@@ -2637,8 +2628,9 @@ mod screen_;
 pub use crate::screen_::{
     screen_alternate_off, screen_alternate_on, screen_check_selection, screen_clear_selection, screen_free,
     screen_hide_selection, screen_init, screen_mode_to_string, screen_pop_title, screen_push_title, screen_reinit,
-    screen_reset_hyperlinks, screen_reset_tabs, screen_resize, screen_resize_cursor, screen_select_cell,
+    screen_reset_hyperlinks, screen_reset_tabs, screen_resize, screen_resize_cursor, screen_sel, screen_select_cell,
     screen_set_cursor_colour, screen_set_cursor_style, screen_set_path, screen_set_selection, screen_set_title,
+    screen_titles,
 };
 
 mod window_;
@@ -2836,7 +2828,7 @@ pub use crate::server_acl::{
 
 mod hyperlinks_;
 pub use crate::hyperlinks_::{
-    hyperlinks_copy, hyperlinks_free, hyperlinks_get, hyperlinks_init, hyperlinks_put, hyperlinks_reset,
+    hyperlinks, hyperlinks_copy, hyperlinks_free, hyperlinks_get, hyperlinks_init, hyperlinks_put, hyperlinks_reset,
 };
 
 pub mod xmalloc;
@@ -2863,4 +2855,29 @@ pub use crate::tmux_protocol::{
 unsafe extern "C-unwind" {
     pub fn vsnprintf(_: *mut c_char, _: usize, _: *const c_char, _: VaList) -> c_int;
     pub fn vasprintf(_: *mut *mut c_char, _: *const c_char, _: VaList) -> c_int;
+}
+
+unsafe impl Sync for SyncCharPtr {}
+#[repr(transparent)]
+#[derive(Copy, Clone)]
+struct SyncCharPtr(*const c_char);
+impl SyncCharPtr {
+    const fn new(value: &'static CStr) -> Self { Self(value.as_ptr()) }
+    const fn null() -> Self { Self(null()) }
+    const fn as_ptr(&self) -> *const c_char { self.0 }
+}
+
+// TODO this will eventually swap to be bool, but for now, while there is C code should be ffi compatible with i32
+#[repr(transparent)]
+pub struct boolint(i32);
+impl boolint {
+    const fn true_() -> Self { Self(1) }
+    const fn false_() -> Self { Self(0) }
+    const fn as_bool(&self) -> bool { self.0 != 0 }
+    const fn as_int(&self) -> i32 { self.0 }
+}
+
+impl std::ops::Not for boolint {
+    type Output = bool;
+    fn not(self) -> bool { self.0 == 0 }
 }

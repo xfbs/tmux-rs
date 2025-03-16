@@ -123,8 +123,6 @@ improve imsg and imsg buffer implemnentation
 something in client -> tty struct
 concrete opaque struct in struct causing field offset into adjacent struct be incorrect
 
-input-keys is ported but ctrl-c and others doesn't work
-
 
 # TODO
 - review cmd_rotate_window.rs cmd_rotate_window_exec tailq_foreach calls
@@ -169,15 +167,13 @@ input-keys is ported but ctrl-c and others doesn't work
 - get rid of paste crate, won't need to join symbols any more for C code
 - figure out why building rust binary doesn't work
 
-6 small files:
-- [ ]  559 window-buffer
-- [ ]  691 layout-set
-- [ ]  740 screen
+4 small files:
 - [ ]  759 session
 - [ ]  818 popup
 - [ ]  868 screen-redraw
 
 17 big files:
+- [ ] 1535 grid // should probably be next, seeing crashes in grid-view
 - [ ] 1120 layout
 - [ ] 1204 options
 - [ ] 1243 format-draw
@@ -185,7 +181,6 @@ input-keys is ported but ctrl-c and others doesn't work
 - [ ] 1348 window-tree
 - [ ] 1370 options-table
 - [ ] 1512 window-customize
-- [ ] 1535 grid
 - [ ] 1591 tty-keys
 - [ ] 2035 status
 - [ ] 2347 screen-write
@@ -194,11 +189,13 @@ input-keys is ported but ctrl-c and others doesn't work
 - [ ] 3392 server-client
 - [ ] 5294 format
 - [ ] 5786 window-copy
-  - [ ]  899 cmd-queue (some tailq functions used port isn't working) (TODO move into broken)
+- [ ]  899 cmd-queue (some tailq functions used port isn't working) (TODO move into broken)
+- [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
+  =====
+- [X]  740 screen
+- [X]  691 layout-set
 - [X] 874 cmd
-  =====
-  - [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
-  =====
+- [X]  559 window-buffer
 - [X]  794 input-keys
 - [X]  692 key-bindings
 - [X]  510 tty-features

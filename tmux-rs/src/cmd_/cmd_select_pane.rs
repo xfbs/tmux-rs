@@ -122,13 +122,13 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
             if (args_has_(args, 'm') && window_pane_visible(wp) == 0) {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
-            if (server_check_marked() != 0) {
+            if (server_check_marked().as_bool()) {
                 lastwp = marked_pane.wp;
             } else {
                 lastwp = null_mut();
             }
 
-            if (args_has_(args, 'M') || server_is_marked(s, wl, wp) != 0) {
+            if (args_has_(args, 'M') || server_is_marked(s, wl, wp).as_bool()) {
                 server_clear_marked();
             } else {
                 server_set_marked(s, wl, wp);

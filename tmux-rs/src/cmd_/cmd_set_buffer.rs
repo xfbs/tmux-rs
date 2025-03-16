@@ -55,7 +55,7 @@ unsafe extern "C" fn cmd_set_buffer_exec(self_: *mut cmd, item: *mut cmdq_item) 
                 cmdq_error(item, c"no buffer".as_ptr());
                 return (cmd_retval::CMD_RETURN_ERROR);
             }
-            paste_free(pb);
+            paste_free(NonNull::new_unchecked(pb));
             return (cmd_retval::CMD_RETURN_NORMAL);
         }
 

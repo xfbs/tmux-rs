@@ -496,7 +496,7 @@ pub unsafe extern "C" fn window_pane_send_resize(wp: *mut window_pane, sx: u32, 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_has_pane(w: *mut window, wp: *mut window_pane) -> i32 {
+pub unsafe extern "C" fn window_has_pane(w: *mut window, wp: *mut window_pane) -> boolint {
     unsafe {
         if tailq_foreach::<_, _, _, discr_entry>(&raw mut (*w).panes, |wp1| {
             if wp1 == wp {
@@ -506,11 +506,11 @@ pub unsafe extern "C" fn window_has_pane(w: *mut window, wp: *mut window_pane) -
         })
         .is_break()
         {
-            return 1;
+            return boolint::true_();
         }
     }
 
-    0
+    boolint::false_()
 }
 
 #[unsafe(no_mangle)]
@@ -1033,7 +1033,7 @@ pub unsafe extern "C" fn window_printable_flags(wl: *mut winlink, escape: i32) -
             flags[pos] = b'-' as c_char;
             pos += 1;
         }
-        if server_check_marked() != 0 && wl == marked_pane.wl {
+        if server_check_marked().as_bool() && wl == marked_pane.wl {
             flags[pos] = b'M' as c_char;
             pos += 1;
         }
@@ -1922,7 +1922,7 @@ pub unsafe extern "C" fn window_set_fill_character(w: *mut window) {
         (*w).fill_character = null_mut();
 
         let value = options_get_string((*w).options, c"fill-character".as_ptr());
-        if *value != b'\0' as _ && utf8_isvalid(value) != 0 {
+        if *value != b'\0' as _ && utf8_isvalid(value).as_bool() {
             let ud = utf8_fromcstr(value);
             if !ud.is_null() && (*ud).width == 1 {
                 (*w).fill_character = ud;

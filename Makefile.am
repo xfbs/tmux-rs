@@ -157,7 +157,6 @@ endif
 # cmd-resize-pane.c
 # spawn.c
 # cmd-find.c
-# grid-view.c
 # tty-acs.c
 # layout-custom.c
 # window-client.c
@@ -171,6 +170,10 @@ endif
 # tty-features.c
 # key-bindings.c
 # input-keys.c
+# window-buffer.c
+# layout-set.c
+# grid-view.c
+# screen.c
 
 # TMP moved to build.rs cc:
 
@@ -189,7 +192,6 @@ dist_tmux_SOURCES = \
 	format.c \
 	grid.c \
 	input.c \
-	layout-set.c \
 	layout.c \
 	mode-tree.c \
 	options-table.c \
@@ -197,13 +199,11 @@ dist_tmux_SOURCES = \
 	popup.c \
 	screen-redraw.c \
 	screen-write.c \
-	screen.c \
 	server-client.c \
 	session.c \
 	status.c \
 	tty-keys.c \
 	tty.c \
-	window-buffer.c \
 	window-copy.c \
 	window-customize.c \
 	window-tree.c \

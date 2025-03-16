@@ -965,7 +965,7 @@ pub unsafe extern "C" fn cmd_mouse_pane(
             wp = NonNull::new((*(*wl.as_ptr()).window).active);
         } else {
             let wp = NonNull::new(window_pane_find_by_id((*m).wp as u32))?;
-            if window_has_pane((*wl.as_ptr()).window, wp.as_ptr()) == 0 {
+            if !window_has_pane((*wl.as_ptr()).window, wp.as_ptr()) {
                 return None;
             }
         }

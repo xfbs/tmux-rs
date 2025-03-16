@@ -1,4 +1,7 @@
-use core::{ffi::c_char, ptr::null_mut};
+use ::core::{
+    ffi::{c_char, c_uint},
+    ptr::null_mut,
+};
 
 use crate::{
     GRID_HISTORY, grid, grid_cell, grid_clear, grid_collect_history, grid_get_cell, grid_get_line, grid_move_cells,
@@ -163,8 +166,16 @@ pub unsafe extern "C" fn grid_view_delete_lines(gd: *mut grid, mut py: u32, ny: 
 
         let sy = grid_view_y(gd, (*gd).sy);
 
-        grid_move_lines(gd, py, py + ny, sy - py - ny, bg);
-        grid_clear(gd, 0, sy - ny, (*gd).sx, py + ny - (sy - ny), bg);
+        // TODO does this bug exist upstream?
+        grid_move_lines(gd, py, py + ny, sy.saturating_sub(py).saturating_sub(ny), bg);
+        grid_clear(
+            gd,
+            0,
+            sy.saturating_sub(ny),
+            (*gd).sx,
+            (py + ny + ny).saturating_sub(sy),
+            bg,
+        );
     }
 }
 

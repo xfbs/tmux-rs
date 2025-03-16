@@ -679,14 +679,14 @@ pub unsafe extern "C" fn cmd_find_empty_state(fs: *mut cmd_find_state) -> i32 {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_find_valid_state(fs: *mut cmd_find_state) -> i32 {
+pub unsafe extern "C" fn cmd_find_valid_state(fs: *mut cmd_find_state) -> boolint {
     unsafe {
         if ((*fs).s.is_null() || (*fs).wl.is_null() || (*fs).w.is_null() || (*fs).wp.is_null()) {
-            return 0;
+            return boolint::false_();
         }
 
         if (session_alive((*fs).s) == 0) {
-            return 0;
+            return boolint::false_();
         }
 
         let mut wl = null_mut();
@@ -699,11 +699,11 @@ pub unsafe extern "C" fn cmd_find_valid_state(fs: *mut cmd_find_state) -> i32 {
         });
 
         if (wl.is_null()) {
-            return 0;
+            return boolint::false_();
         }
 
         if ((*fs).w != (*(*fs).wl).window) {
-            return 0;
+            return boolint::false_();
         }
 
         window_has_pane((*fs).w, (*fs).wp)
@@ -1031,10 +1031,10 @@ pub unsafe extern "C" fn cmd_find_target(
 
                                 cmd_find_clear_state(fs, flags);
 
-                                if (server_check_marked() != 0 && (flags & CMD_FIND_DEFAULT_MARKED != 0)) {
+                                if server_check_marked().as_bool() && (flags & CMD_FIND_DEFAULT_MARKED != 0) {
                                     (*fs).current = &raw mut marked_pane;
                                     log_debug(c"%s: current is marked pane".as_ptr(), __func__);
-                                } else if (cmd_find_valid_state(cmdq_get_current(item)) != 0) {
+                                } else if cmd_find_valid_state(cmdq_get_current(item)).as_bool() {
                                     (*fs).current = cmdq_get_current(item);
                                     log_debug(c"%s: current is from queue".as_ptr(), __func__);
                                 } else if (cmd_find_from_client(&raw mut current, cmdq_get_client(item), flags) == 0) {
@@ -1046,7 +1046,7 @@ pub unsafe extern "C" fn cmd_find_target(
                                     }
                                     break 'error;
                                 }
-                                if (cmd_find_valid_state((*fs).current) == 0) {
+                                if !cmd_find_valid_state((*fs).current) {
                                     fatalx(c"invalid current find state".as_ptr());
                                 }
 
@@ -1097,7 +1097,7 @@ pub unsafe extern "C" fn cmd_find_target(
                                 }
 
                                 if (strcmp(target, c"~".as_ptr()) == 0 || strcmp(target, c"{marked}".as_ptr()) == 0) {
-                                    if (server_check_marked() == 0) {
+                                    if !server_check_marked() {
                                         if (!flags & CMD_FIND_QUIET != 0) {
                                             cmdq_error(item, c"no marked target".as_ptr());
                                         }

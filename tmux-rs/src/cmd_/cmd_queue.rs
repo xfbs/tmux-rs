@@ -231,7 +231,7 @@ pub unsafe extern "C" fn cmdq_new_state(
         } else {
             (*state).event.key = KEYC_NONE;
         }
-        if !current.is_null() && cmd_find_valid_state(current) != 0 {
+        if !current.is_null() && cmd_find_valid_state(current).as_bool() {
             cmd_find_copy_state(&raw mut (*state).current, current);
         } else {
             cmd_find_clear_state(&raw mut (*state).current, 0);
@@ -710,9 +710,9 @@ pub unsafe extern "C" fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
             }
 
             if ((*entry).flags & CMD_AFTERHOOK != 0) {
-                fsp = if cmd_find_valid_state(&raw mut (*item).target) != 0 {
+                fsp = if cmd_find_valid_state(&raw mut (*item).target).as_bool() {
                     &raw mut (*item).target
-                } else if cmd_find_valid_state(&raw mut (*(*item).state).current) != 0 {
+                } else if cmd_find_valid_state(&raw mut (*(*item).state).current).as_bool() {
                     &raw mut (*(*item).state).current
                 } else if cmd_find_from_client(&raw mut fs, (*item).client, 0) == 0 {
                     &raw mut fs
@@ -726,9 +726,9 @@ pub unsafe extern "C" fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
         (*item).client = saved;
         if (retval == cmd_retval::CMD_RETURN_ERROR) {
             fsp = null_mut();
-            if cmd_find_valid_state(&raw mut (*item).target) != 0 {
+            if cmd_find_valid_state(&raw mut (*item).target).as_bool() {
                 fsp = &raw mut (*item).target;
-            } else if cmd_find_valid_state(&raw mut (*(*item).state).current) != 0 {
+            } else if cmd_find_valid_state(&raw mut (*(*item).state).current).as_bool() {
                 fsp = &raw mut (*(*item).state).current;
             } else if (cmd_find_from_client(&raw mut fs, (*item).client, 0) == 0) {
                 fsp = &raw mut fs;

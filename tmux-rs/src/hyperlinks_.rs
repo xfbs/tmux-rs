@@ -47,6 +47,7 @@ pub type hyperlinks_list = tailq_head<hyperlinks_uri>;
 
 static mut global_hyperlinks: hyperlinks_list = TAILQ_HEAD_INITIALIZER!(global_hyperlinks);
 
+#[repr(C)]
 pub struct hyperlinks {
     pub next_inner: u32,
     pub by_inner: hyperlinks_by_inner_tree,

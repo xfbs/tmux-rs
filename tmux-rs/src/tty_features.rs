@@ -27,16 +27,6 @@ impl tty_feature {
     }
 }
 
-unsafe impl Sync for SyncCharPtr {}
-#[repr(transparent)]
-#[derive(Copy, Clone)]
-struct SyncCharPtr(*const c_char);
-impl SyncCharPtr {
-    const fn new(value: &'static CStr) -> Self { Self(value.as_ptr()) }
-    const fn null() -> Self { Self(null()) }
-    const fn as_ptr(&self) -> *const c_char { self.0 }
-}
-
 static tty_feature_title_capabilities: &[SyncCharPtr] = &[
     SyncCharPtr::new(c"tsl=\\E]0;"), /* should be using TS really */
     SyncCharPtr::new(c"fsl=\\a"),

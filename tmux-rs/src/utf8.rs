@@ -515,7 +515,7 @@ pub unsafe extern "C" fn utf8_stravisx(dst: *mut *mut c_char, src: *const c_char
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn utf8_isvalid(mut s: *const c_char) -> i32 {
+pub unsafe extern "C" fn utf8_isvalid(mut s: *const c_char) -> boolint {
     unsafe {
         let mut ud: utf8_data = zeroed();
         let mut more: utf8_state = zeroed();
@@ -533,15 +533,15 @@ pub unsafe extern "C" fn utf8_isvalid(mut s: *const c_char) -> i32 {
                 if (more == utf8_state::UTF8_DONE) {
                     continue;
                 }
-                return 0;
+                return boolint::false_();
             }
             if (*s < 0x20 || *s > 0x7e) {
-                return 0;
+                return boolint::false_();
             }
             s = s.add(1);
         }
     }
-    1
+    boolint::true_()
 }
 
 #[unsafe(no_mangle)]

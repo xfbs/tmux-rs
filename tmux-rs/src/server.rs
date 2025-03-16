@@ -74,24 +74,24 @@ pub unsafe extern "C" fn server_clear_marked() {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_is_marked(s: *mut session, wl: *mut winlink, wp: *mut window_pane) -> c_int {
+pub unsafe extern "C" fn server_is_marked(s: *mut session, wl: *mut winlink, wp: *mut window_pane) -> boolint {
     if s.is_null() || wl.is_null() || wp.is_null() {
-        return 0;
+        return boolint::false_();
     }
 
     unsafe {
         if marked_pane.s != s || marked_pane.wl != wl {
-            return 0;
+            return boolint::false_();
         }
         if marked_pane.wp != wp {
-            return 0;
+            return boolint::false_();
         }
         server_check_marked()
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_check_marked() -> c_int { unsafe { cmd_find_valid_state(&raw mut marked_pane) } }
+pub unsafe extern "C" fn server_check_marked() -> boolint { unsafe { cmd_find_valid_state(&raw mut marked_pane) } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_create_socket(flags: client_flag, cause: *mut *mut c_char) -> c_int {

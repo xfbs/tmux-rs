@@ -84,8 +84,10 @@ unsafe extern "C" fn cmd_paste_buffer_exec(self_: *mut cmd, item: *mut cmdq_item
             }
         }
 
-        if !pb.is_null() && args_has(args, b'd') != 0 {
-            paste_free(pb);
+        if let Some(non_null_pb) = NonNull::new(pb)
+            && args_has_(args, 'd')
+        {
+            paste_free(non_null_pb);
         }
 
         cmd_retval::CMD_RETURN_NORMAL

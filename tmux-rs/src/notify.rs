@@ -73,7 +73,7 @@ pub unsafe extern "C" fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut n
         let mut fs: cmd_find_state = zeroed();
 
         cmd_find_clear_state(&raw mut fs, 0);
-        if (cmd_find_empty_state(&raw mut (*ne).fs) != 0 || cmd_find_valid_state(&raw mut (*ne).fs) == 0) {
+        if cmd_find_empty_state(&raw mut (*ne).fs) != 0 || !cmd_find_valid_state(&raw mut (*ne).fs) {
             cmd_find_from_nothing(&raw mut fs, 0);
         } else {
             cmd_find_copy_state(&raw mut fs, &raw mut (*ne).fs);
