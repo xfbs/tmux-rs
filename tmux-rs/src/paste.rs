@@ -66,13 +66,15 @@ fn paste_cmp_times(a: *const paste_buffer, b: *const paste_buffer) -> i32 {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn paste_buffer_name(pb: *mut paste_buffer) -> *const c_char { unsafe { (*pb).name } }
+pub unsafe extern "C" fn paste_buffer_name(pb: NonNull<paste_buffer>) -> *const c_char {
+    unsafe { (*pb.as_ptr()).name }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn paste_buffer_order(pb: *mut paste_buffer) -> u32 { unsafe { (*pb).order } }
+pub unsafe extern "C" fn paste_buffer_order(pb: NonNull<paste_buffer>) -> u32 { unsafe { (*pb.as_ptr()).order } }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn paste_buffer_created(pb: *mut paste_buffer) -> time_t { unsafe { (*pb).created } }
+pub unsafe extern "C" fn paste_buffer_created(pb: NonNull<paste_buffer>) -> time_t { unsafe { (*pb.as_ptr()).created } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn paste_buffer_data(pb: *mut paste_buffer, size: *mut usize) -> *const c_char {
@@ -81,6 +83,13 @@ pub unsafe extern "C" fn paste_buffer_data(pb: *mut paste_buffer, size: *mut usi
             *size = (*pb).size;
         }
         (*pb).data
+    }
+}
+// all usages seen pass in a param and don't use null, so we can remove the check
+pub unsafe fn paste_buffer_data_(pb: NonNull<paste_buffer>, size: &mut usize) -> *const c_char {
+    unsafe {
+        *size = (*pb.as_ptr()).size;
+        (*pb.as_ptr()).data
     }
 }
 
@@ -302,14 +311,13 @@ pub unsafe extern "C" fn paste_set(
     0
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn paste_replace(pb: *mut paste_buffer, data: *mut c_char, size: usize) {
+pub unsafe fn paste_replace(pb: NonNull<paste_buffer>, data: *mut c_char, size: usize) {
     unsafe {
-        free_((*pb).data);
-        (*pb).data = data;
-        (*pb).size = size;
+        free_((*pb.as_ptr()).data);
+        (*pb.as_ptr()).data = data;
+        (*pb.as_ptr()).size = size;
 
-        notify_paste_buffer((*pb).name, 0);
+        notify_paste_buffer((*pb.as_ptr()).name, 0);
     }
 }
 

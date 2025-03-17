@@ -91,8 +91,10 @@ unsafe extern "C" fn cmd_set_buffer_exec(self_: *mut cmd, item: *mut cmdq_item) 
         let mut bufsize = 0;
         let mut bufdata = null_mut();
 
-        if (args_has_(args, 'a') && !pb.is_null()) {
-            olddata = paste_buffer_data(pb, &raw mut bufsize);
+        if let Some(pb_non_null) = NonNull::new(pb)
+            && args_has_(args, 'a')
+        {
+            olddata = paste_buffer_data_(pb_non_null, &mut bufsize);
             bufdata = xmalloc(bufsize).as_ptr().cast();
             memcpy_(bufdata, olddata, bufsize);
         }

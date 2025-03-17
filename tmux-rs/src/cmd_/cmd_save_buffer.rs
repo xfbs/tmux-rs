@@ -56,27 +56,26 @@ unsafe extern "C" fn cmd_save_buffer_exec(self_: *mut cmd, item: *mut cmdq_item)
     unsafe {
         let mut args = cmd_get_args(self_);
         let mut c = cmdq_get_client(item);
-        let mut pb;
         let mut flags = 0;
         let mut bufname = args_get_(args, 'b');
-        let mut bufsize: usize = 0;
         let mut path = null_mut();
         let mut evb = null_mut();
 
-        if bufname.is_null() {
-            pb = paste_get_top(null_mut());
-            if pb.is_null() {
+        let pb = if bufname.is_null() {
+            let Some(pb) = NonNull::new(paste_get_top(null_mut())) else {
                 cmdq_error(item, c"no buffers".as_ptr());
                 return (cmd_retval::CMD_RETURN_ERROR);
-            }
+            };
+            pb
         } else {
-            pb = paste_get_name(bufname);
-            if pb.is_null() {
+            let Some(pb) = NonNull::new(paste_get_name(bufname)) else {
                 cmdq_error(item, c"no buffer %s".as_ptr(), bufname);
                 return (cmd_retval::CMD_RETURN_ERROR);
-            }
-        }
-        let mut bufdata = paste_buffer_data(pb, &raw mut bufsize);
+            };
+            pb
+        };
+        let mut bufsize: usize = 0;
+        let mut bufdata = paste_buffer_data_(pb, &mut bufsize);
 
         if (cmd_get_entry(self_) == &raw mut cmd_show_buffer_entry) {
             if !(*c).session.is_null() || (*c).flags.intersects(client_flag::CONTROL) {

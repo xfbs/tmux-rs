@@ -180,6 +180,23 @@ endif
 # cmd-queue.c
 
 # TMP moved to build.rs cc:
+# format-draw.c \
+# format.c \
+# grid.c \
+# input.c \
+# layout.c \
+# mode-tree.c \
+# options-table.c \
+# options.c \
+# screen-write.c \
+# server-client.c \
+# session.c \
+# status.c \
+# tty-keys.c \
+# tty.c \
+# window-copy.c \
+# window-customize.c \
+# window-tree.c
 
 # Broken:
 # notify.c (notify_add)
@@ -187,28 +204,10 @@ endif
 # server.c (server_loop)
 #
 
-
 dist_tmux_SOURCES = \
-	format-draw.c \
-	format.c \
-	grid.c \
-	input.c \
-	layout.c \
-	mode-tree.c \
-	options-table.c \
-	options.c \
-	screen-write.c \
-	server-client.c \
-	session.c \
-	status.c \
-	tty-keys.c \
-	tty.c \
-	window-copy.c \
-	window-customize.c \
-	window-tree.c \
+	cmd-parse.y \
 	tmux-protocol.h \
 	tmux.h \
-	cmd-parse.y \
 	compat.h \
 	xmalloc.h
 nodist_tmux_SOURCES = osdep-@PLATFORM@.c

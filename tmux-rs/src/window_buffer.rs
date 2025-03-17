@@ -162,15 +162,13 @@ pub unsafe extern "C" fn window_buffer_build(
         (*data).item_list = null_mut();
         (*data).item_size = 0;
 
-        let mut pb = null_mut();
-        while ({
-            pb = paste_walk(pb);
-            !pb.is_null()
-        }) {
+        let mut pb = paste_walk(null_mut());
+        while let Some(pb_non_null) = NonNull::new(pb) {
             let mut item = window_buffer_add_item(data);
-            (*item).name = xstrdup(paste_buffer_name(pb)).as_ptr();
-            paste_buffer_data(pb, &raw mut (*item).size);
-            (*item).order = paste_buffer_order(pb);
+            (*item).name = xstrdup(paste_buffer_name(pb_non_null)).as_ptr();
+            paste_buffer_data(pb, &raw mut (*item).size); // I'm sure if we follow alias rules on item.size here, so keep using older function
+            (*item).order = paste_buffer_order(pb_non_null);
+            pb = paste_walk(pb);
         }
 
         window_buffer_sort = sort_crit;
@@ -235,17 +233,16 @@ pub unsafe extern "C" fn window_buffer_draw(
 ) {
     unsafe {
         let item = itemdata as *mut window_buffer_itemdata;
-        let mut psize: usize = 0;
         let mut cx = (*(*ctx).s).cx;
         let mut cy = (*(*ctx).s).cy;
 
-        let pb = paste_get_name((*item).name);
-        if (pb.is_null()) {
+        let Some(pb) = NonNull::new(paste_get_name((*item).name)) else {
             return;
-        }
+        };
 
+        let mut psize: usize = 0;
         let mut buf: *mut c_char = null_mut();
-        let mut end = paste_buffer_data(pb, &raw mut psize);
+        let mut end = paste_buffer_data_(pb, &mut psize);
         let pdata = end;
         for i in 0..sy {
             let start = end;
@@ -279,15 +276,14 @@ pub unsafe extern "C" fn window_buffer_draw(
 pub unsafe extern "C" fn window_buffer_search(modedata: *mut c_void, itemdata: *mut c_void, ss: *const c_char) -> i32 {
     unsafe {
         let item = itemdata as *mut window_buffer_itemdata;
-        let pb = paste_get_name((*item).name);
-        if pb.is_null() {
+        let Some(pb) = NonNull::new(paste_get_name((*item).name)) else {
             return 0;
-        }
+        };
         if !strstr((*item).name, ss).is_null() {
             return 1;
         }
         let mut bufsize = 0;
-        let bufdata = paste_buffer_data(pb, &raw mut bufsize);
+        let bufdata = paste_buffer_data_(pb, &mut bufsize);
         !memmem(bufdata.cast(), bufsize, ss.cast(), strlen(ss)).is_null() as i32
     }
 }
@@ -500,7 +496,6 @@ pub unsafe extern "C" fn window_buffer_finish_edit(ed: *mut window_buffer_editda
 pub unsafe extern "C" fn window_buffer_edit_close_cb(buf: *mut c_char, mut len: usize, arg: *mut c_void) {
     unsafe {
         let ed = arg as *mut window_buffer_editdata;
-        let mut oldlen = 0;
 
         if (buf.is_null() || len == 0) {
             window_buffer_finish_edit(ed);
@@ -512,8 +507,10 @@ pub unsafe extern "C" fn window_buffer_edit_close_cb(buf: *mut c_char, mut len: 
             window_buffer_finish_edit(ed);
             return;
         }
+        let pb = NonNull::new(pb).expect("just checked");
 
-        let oldbuf = paste_buffer_data(pb, &raw mut oldlen);
+        let mut oldlen = 0;
+        let oldbuf = paste_buffer_data_(pb, &mut oldlen);
         if (oldlen != 0 && *oldbuf.add(oldlen - 1) != b'\n' as c_char && *buf.add(len - 1) == b'\n' as c_char) {
             len -= 1;
         }
@@ -547,17 +544,16 @@ pub unsafe extern "C" fn window_buffer_start_edit(
         // size_t len;
         // struct window_buffer_editdata *ed;
 
-        let pb = paste_get_name((*item).name);
-        if pb.is_null() {
+        let Some(pb) = NonNull::new(paste_get_name((*item).name)) else {
             return;
-        }
+        };
         let mut len = 0;
-        let buf = paste_buffer_data(pb, &raw mut len);
+        let buf = paste_buffer_data_(pb, &mut len);
 
         let ed = xcalloc1::<window_buffer_editdata>();
         ed.wp_id = (*(*data).wp).id;
         ed.name = xstrdup(paste_buffer_name(pb)).as_ptr();
-        ed.pb = pb;
+        ed.pb = pb.as_ptr();
         let ed = ed as *mut window_buffer_editdata;
 
         if popup_editor(c, buf, len, Some(window_buffer_edit_close_cb), ed.cast()) != 0 {

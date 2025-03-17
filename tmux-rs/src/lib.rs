@@ -2381,9 +2381,9 @@ pub use crate::cfg_::{
 
 mod paste;
 pub use crate::paste::{
-    paste_add, paste_buffer, paste_buffer_created, paste_buffer_data, paste_buffer_name, paste_buffer_order,
-    paste_free, paste_get_name, paste_get_top, paste_is_empty, paste_make_sample, paste_rename, paste_replace,
-    paste_set, paste_walk,
+    paste_add, paste_buffer, paste_buffer_created, paste_buffer_data, paste_buffer_data_, paste_buffer_name,
+    paste_buffer_order, paste_free, paste_get_name, paste_get_top, paste_is_empty, paste_make_sample, paste_rename,
+    paste_replace, paste_set, paste_walk,
 };
 
 mod format;

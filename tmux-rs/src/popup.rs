@@ -436,10 +436,9 @@ pub extern "C" fn popup_menu_done(_menu: *mut menu, _choice: u32, key: key_code,
 
         match key as u8 {
             b'p' => {
-                let pb = paste_get_top(null_mut());
-                if !pb.is_null() {
+                if let Some(pb) = NonNull::new(paste_get_top(null_mut())) {
                     let mut len: usize = 0;
-                    let buf = paste_buffer_data(pb, &raw mut len);
+                    let buf = paste_buffer_data_(pb, &mut len);
                     bufferevent_write(job_get_event((*pd).job), buf as *const c_void, len);
                 }
             }

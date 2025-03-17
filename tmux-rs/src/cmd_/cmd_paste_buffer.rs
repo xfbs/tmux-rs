@@ -44,7 +44,9 @@ unsafe extern "C" fn cmd_paste_buffer_exec(self_: *mut cmd, item: *mut cmdq_item
             }
         }
 
-        if (!pb.is_null() && !(*wp).flags.intersects(window_pane_flags::PANE_INPUTOFF)) {
+        if let Some(pb) = NonNull::new(pb)
+            && !(*wp).flags.intersects(window_pane_flags::PANE_INPUTOFF)
+        {
             let mut sepstr = args_get(args, b's');
             if (sepstr.is_null()) {
                 if (args_has(args, b'r') != 0) {
@@ -60,7 +62,7 @@ unsafe extern "C" fn cmd_paste_buffer_exec(self_: *mut cmd, item: *mut cmdq_item
             }
 
             let mut bufsize: usize = 0;
-            let mut bufdata = paste_buffer_data(pb, &raw mut bufsize);
+            let mut bufdata = paste_buffer_data_(pb, &mut bufsize);
             let mut bufend = bufdata.add(bufsize);
 
             loop {

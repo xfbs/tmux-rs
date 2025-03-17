@@ -330,12 +330,11 @@ pub unsafe extern "C" fn tty_add_features(feat: *mut i32, s: *const c_char, sepa
     }
 }
 
-#[warn(static_mut_refs)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_get_features(feat: i32) -> *const c_char {
     static mut s_buf: [MaybeUninit<c_char>; 512] = [MaybeUninit::uninit(); 512];
     unsafe {
-        let s: *mut c_char = s_buf.as_mut_ptr().cast();
+        let s: *mut c_char = (&raw mut s_buf).cast();
         // const struct tty_feature *tf;
 
         *s = b'\0' as c_char;
