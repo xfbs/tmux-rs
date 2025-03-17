@@ -371,8 +371,8 @@ where
                         if !oleft.is_null() {
                             rb_color!(oleft) = rb_color::RB_BLACK;
                         }
-                        rb_color!(elm) = rb_color::RB_RED;
-                        rb_rotate_right(head, oleft);
+                        rb_color!(tmp) = rb_color::RB_RED;
+                        rb_rotate_right(head, tmp);
                         tmp = rb_right(parent);
                     }
                     rb_color!(tmp) = rb_color(parent);

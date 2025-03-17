@@ -29,7 +29,11 @@ pub use core::{
     ptr::{NonNull, null, null_mut},
 };
 
-pub use libc::{FILE, REG_EXTENDED, REG_ICASE, free, memcmp, pid_t, strerror, strlen, termios, time_t, timeval, uid_t};
+pub use libc::{
+    FILE, REG_EXTENDED, REG_ICASE, SEEK_END, SEEK_SET, SIGHUP, WEXITSTATUS, WIFEXITED, WIFSIGNALED, WTERMSIG, fclose,
+    fdopen, fopen, fread, free, fseeko, ftello, fwrite, malloc, memcmp, mkstemp, pid_t, strcpy, strerror, strlen,
+    termios, time_t, timeval, uid_t, unlink,
+};
 
 // libevent2
 mod event_;
@@ -49,7 +53,12 @@ unsafe extern "C" {
 
 #[inline]
 pub fn transmute_ptr<T>(value: Option<NonNull<T>>) -> *mut T {
-    unsafe { core::mem::transmute::<Option<NonNull<T>>, *mut T>(value) }
+    // unsafe { core::mem::transmute::<Option<NonNull<T>>, *mut T>(value) }
+    // unsafe { core::mem::transmute::<Option<NonNull<T>>, *mut T>(value) }
+    match value {
+        Some(ptr) => ptr.as_ptr(),
+        None => null_mut(),
+    }
 }
 
 pub use compat_rs::imsg::imsg; // TODO move
@@ -112,7 +121,6 @@ opaque_types! {
     format_tree,
     hyperlinks_uri,
     input_ctx,
-    menu_data,
     mode_tree_data,
     mode_tree_item,
     options,
@@ -975,6 +983,23 @@ pub enum box_lines {
     BOX_LINES_NONE,
 }
 
+impl TryFrom<i32> for box_lines {
+    type Error = InvalidVariant;
+
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        Ok(match value {
+            -1 => box_lines::BOX_LINES_DEFAULT,
+            0 => box_lines::BOX_LINES_NONE,
+            1 => box_lines::BOX_LINES_SINGLE,
+            2 => box_lines::BOX_LINES_DOUBLE,
+            3 => box_lines::BOX_LINES_HEAVY,
+            4 => box_lines::BOX_LINES_SIMPLE,
+            5 => box_lines::BOX_LINES_PADDED,
+            _ => return Err(InvalidVariant),
+        })
+    }
+}
+
 /// Pane border lines option.
 #[repr(i32)]
 #[derive(Copy, Clone, Default, Eq, PartialEq)]
@@ -1651,7 +1676,7 @@ pub struct tty {
 }
 
 pub type tty_ctx_redraw_cb = Option<unsafe extern "C" fn(*const tty_ctx)>;
-pub type tty_ctx_set_client_cb = Option<unsafe extern "C" fn(*mut tty_ctx, *mut client)>;
+pub type tty_ctx_set_client_cb = Option<unsafe extern "C" fn(*mut tty_ctx, *mut client) -> i32>;
 
 #[repr(C)]
 pub struct tty_ctx {
@@ -1694,7 +1719,7 @@ pub struct tty_ctx {
 
     // The default colours and palette.
     pub defaults: grid_cell,
-    pub palette: colour_palette,
+    pub palette: *const colour_palette,
 
     // Containing region (usually window) offset and size.
     pub bigger: i32,
@@ -2834,8 +2859,8 @@ pub const MENU_TAB: i32 = 0x2;
 pub const MENU_STAYOPEN: i32 = 0x4;
 mod menu_;
 pub use crate::menu_::{
-    menu_add_item, menu_add_items, menu_check_cb, menu_create, menu_display, menu_draw_cb, menu_free, menu_free_cb,
-    menu_key_cb, menu_mode_cb, menu_prepare,
+    menu_add_item, menu_add_items, menu_check_cb, menu_create, menu_data, menu_display, menu_draw_cb, menu_free,
+    menu_free_cb, menu_key_cb, menu_mode_cb, menu_prepare,
 };
 
 pub const POPUP_CLOSEEXIT: i32 = 0x1;

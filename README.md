@@ -123,6 +123,8 @@ improve imsg and imsg buffer implemnentation
 something in client -> tty struct
 concrete opaque struct in struct causing field offset into adjacent struct be incorrect
 
+refactor paste_buffer_data to use a mut ref
+
 
 # TODO
 - review cmd_rotate_window.rs cmd_rotate_window_exec tailq_foreach calls
@@ -167,9 +169,8 @@ concrete opaque struct in struct causing field offset into adjacent struct be in
 - get rid of paste crate, won't need to join symbols any more for C code
 - figure out why building rust binary doesn't work
 
-3 small files:
+1 small files:
 - [ ]  759 session
-- [ ]  818 popup
 
 17 big files:
 - [ ] 1535 grid // should probably be next, seeing crashes in grid-view
@@ -192,6 +193,7 @@ concrete opaque struct in struct causing field offset into adjacent struct be in
 - [ ]  899 cmd-queue (some tailq functions used port isn't working) (TODO move into broken)
 - [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
   =====
+- [X]  818 popup
 - [X]  868 screen-redraw
 - [X]  740 screen
 - [X]  691 layout-set

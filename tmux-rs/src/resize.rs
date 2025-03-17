@@ -173,7 +173,7 @@ pub unsafe extern "C" fn clients_calculate_size(
                  * For latest, count the number of clients with this window. We only
                  * care if there is more than one.
                  */
-                if (type_ == WINDOW_SIZE_LATEST && w.is_null()) {
+                if (type_ == WINDOW_SIZE_LATEST && !w.is_null()) {
                     n = clients_with_window(w);
                 }
 

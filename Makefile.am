@@ -175,9 +175,10 @@ endif
 # grid-view.c
 # screen.c
 # screen-redraw.c
+# popup.c
+# broken.c
 
 # TMP moved to build.rs cc:
-
 
 # Broken:
 # notify.c (notify_add)
@@ -187,7 +188,6 @@ endif
 
 
 dist_tmux_SOURCES = \
-	broken.c \
 	cmd-queue.c \
 	format-draw.c \
 	format.c \
@@ -197,7 +197,6 @@ dist_tmux_SOURCES = \
 	mode-tree.c \
 	options-table.c \
 	options.c \
-	popup.c \
 	screen-write.c \
 	server-client.c \
 	session.c \

@@ -204,7 +204,7 @@ pub unsafe extern "C" fn menu_add_item(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn menu_create(title: *mut c_char) -> *mut menu {
+pub unsafe extern "C" fn menu_create(title: *const c_char) -> *mut menu {
     unsafe {
         let menu = xcalloc1::<menu>() as *mut menu;
         (*menu).title = xstrdup(title).as_ptr();

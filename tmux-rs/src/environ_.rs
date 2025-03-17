@@ -8,7 +8,7 @@ use libc::{fnmatch, getpid, setenv, strchr, strcmp, strcspn};
 
 unsafe extern "C" {
     // pub fn environ_create() -> *mut environ;
-    pub unsafe fn environ_free(_: *mut environ);
+    // pub unsafe fn environ_free(_: *mut environ);
     // pub fn environ_first(_: *mut environ) -> *mut environ_entry;
     // pub fn environ_next(_: *mut environ_entry) -> *mut environ_entry;
     // pub fn environ_copy(_: *mut environ, _: *mut environ);
@@ -40,7 +40,6 @@ pub extern "C" fn environ_create() -> NonNull<environ> {
     }
 }
 
-#[cfg(disabled)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_free(env: *mut environ) {
     unsafe {
