@@ -37,7 +37,7 @@ pub use event_::*;
 
 use compat_rs::{
     RB_GENERATE,
-    queue::{Entry, ListEntry, list_entry, list_head, tailq_entry, tailq_head},
+    queue::{Entry, ListEntry, list_entry, list_head, tailq_entry, tailq_first, tailq_foreach, tailq_head, tailq_next},
     tree::{GetEntry, rb_entry, rb_head},
 };
 
@@ -618,14 +618,14 @@ pub struct colour_palette {
 }
 
 // Grid attributes. Anything above 0xff is stored in an extended cell.
-pub const GRID_ATTR_BRIGHT: i32 = 0x1;
-pub const GRID_ATTR_DIM: i32 = 0x2;
-pub const GRID_ATTR_UNDERSCORE: i32 = 0x4;
-pub const GRID_ATTR_BLINK: i32 = 0x8;
-pub const GRID_ATTR_REVERSE: i32 = 0x10;
-pub const GRID_ATTR_HIDDEN: i32 = 0x20;
-pub const GRID_ATTR_ITALICS: i32 = 0x40;
-pub const GRID_ATTR_CHARSET: i32 = 0x80; // alternative character set
+pub const GRID_ATTR_BRIGHT: u16 = 0x1;
+pub const GRID_ATTR_DIM: u16 = 0x2;
+pub const GRID_ATTR_UNDERSCORE: u16 = 0x4;
+pub const GRID_ATTR_BLINK: u16 = 0x8;
+pub const GRID_ATTR_REVERSE: u16 = 0x10;
+pub const GRID_ATTR_HIDDEN: u16 = 0x20;
+pub const GRID_ATTR_ITALICS: u16 = 0x40;
+pub const GRID_ATTR_CHARSET: u16 = 0x80; // alternative character set
 pub const GRID_ATTR_STRIKETHROUGH: i32 = 0x100;
 pub const GRID_ATTR_UNDERSCORE_2: i32 = 0x200;
 pub const GRID_ATTR_UNDERSCORE_3: i32 = 0x400;
@@ -634,7 +634,7 @@ pub const GRID_ATTR_UNDERSCORE_5: i32 = 0x1000;
 pub const GRID_ATTR_OVERLINE: i32 = 0x2000;
 
 /// All underscore attributes.
-pub const GRID_ATTR_ALL_UNDERSCORE: i32 = GRID_ATTR_UNDERSCORE
+pub const GRID_ATTR_ALL_UNDERSCORE: i32 = GRID_ATTR_UNDERSCORE as i32
     | GRID_ATTR_UNDERSCORE_2
     | GRID_ATTR_UNDERSCORE_3
     | GRID_ATTR_UNDERSCORE_4
@@ -674,25 +674,34 @@ pub const GRID_STRING_TRIM_SPACES: i32 = 0x4;
 pub const GRID_STRING_USED_ONLY: i32 = 0x8;
 pub const GRID_STRING_EMPTY_CELLS: i32 = 0x10;
 
-// Cell positions.
-pub const CELL_INSIDE: i32 = 0;
-pub const CELL_TOPBOTTOM: i32 = 1;
-pub const CELL_LEFTRIGHT: i32 = 2;
-pub const CELL_TOPLEFT: i32 = 3;
-pub const CELL_TOPRIGHT: i32 = 4;
-pub const CELL_BOTTOMLEFT: i32 = 5;
-pub const CELL_BOTTOMRIGHT: i32 = 6;
-pub const CELL_TOPJOIN: i32 = 7;
-pub const CELL_BOTTOMJOIN: i32 = 8;
-pub const CELL_LEFTJOIN: i32 = 9;
-pub const CELL_RIGHTJOIN: i32 = 10;
-pub const CELL_JOIN: i32 = 11;
-pub const CELL_OUTSIDE: i32 = 12;
+/// Cell positions.
+#[repr(i32)]
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum cell_type {
+    CELL_INSIDE = 0,
+    CELL_TOPBOTTOM = 1,
+    CELL_LEFTRIGHT = 2,
+    CELL_TOPLEFT = 3,
+    CELL_TOPRIGHT = 4,
+    CELL_BOTTOMLEFT = 5,
+    CELL_BOTTOMRIGHT = 6,
+    CELL_TOPJOIN = 7,
+    CELL_BOTTOMJOIN = 8,
+    CELL_LEFTJOIN = 9,
+    CELL_RIGHTJOIN = 10,
+    CELL_JOIN = 11,
+    CELL_OUTSIDE = 12,
+}
+use cell_type::*; // TODO remove
 
 // Cell borders.
-pub const CELL_BORDERS: &CStr = c" xqlkmjwvtun~";
-pub const SIMPLE_BORDERS: &CStr = c" |-+++++++++.";
-pub const PADDED_BORDERS: &CStr = c"             ";
+pub const CELL_BORDERS: [u8; 13] = [
+    b' ', b'x', b'q', b'l', b'k', b'm', b'j', b'w', b'v', b't', b'u', b'n', b'~',
+];
+pub const SIMPLE_BORDERS: [u8; 13] = [
+    b' ', b'|', b'-', b'+', b'+', b'+', b'+', b'+', b'+', b'+', b'+', b'+', b'.',
+];
+pub const PADDED_BORDERS: [u8; 13] = [b' '; 13];
 
 /// Grid cell data.
 #[repr(C)]
@@ -968,12 +977,41 @@ pub enum box_lines {
 
 /// Pane border lines option.
 #[repr(i32)]
+#[derive(Copy, Clone, Default, Eq, PartialEq)]
 pub enum pane_lines {
+    #[default]
     PANE_LINES_SINGLE,
     PANE_LINES_DOUBLE,
     PANE_LINES_HEAVY,
     PANE_LINES_SIMPLE,
     PANE_LINES_NUMBER,
+}
+
+macro_rules! define_error_unit {
+    ($error_type:ident) => {
+        #[derive(Debug)]
+        pub struct $error_type;
+        impl ::std::error::Error for $error_type {}
+        impl ::std::fmt::Display for $error_type {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "{self:?}") }
+        }
+    };
+}
+
+define_error_unit!(InvalidVariant);
+impl TryFrom<i32> for pane_lines {
+    type Error = InvalidVariant;
+
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        Ok(match value {
+            0 => pane_lines::PANE_LINES_SINGLE,
+            1 => pane_lines::PANE_LINES_DOUBLE,
+            2 => pane_lines::PANE_LINES_HEAVY,
+            3 => pane_lines::PANE_LINES_SIMPLE,
+            4 => pane_lines::PANE_LINES_NUMBER,
+            _ => return Err(InvalidVariant),
+        })
+    }
 }
 
 // Pane border indicator option.

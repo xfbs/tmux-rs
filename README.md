@@ -167,15 +167,15 @@ concrete opaque struct in struct causing field offset into adjacent struct be in
 - get rid of paste crate, won't need to join symbols any more for C code
 - figure out why building rust binary doesn't work
 
-4 small files:
+3 small files:
 - [ ]  759 session
 - [ ]  818 popup
-- [ ]  868 screen-redraw
 
 17 big files:
 - [ ] 1535 grid // should probably be next, seeing crashes in grid-view
-- [ ] 1120 layout
 - [ ] 1204 options
+
+- [ ] 1120 layout
 - [ ] 1243 format-draw
 - [ ] 1266 mode-tree
 - [ ] 1348 window-tree
@@ -192,6 +192,7 @@ concrete opaque struct in struct causing field offset into adjacent struct be in
 - [ ]  899 cmd-queue (some tailq functions used port isn't working) (TODO move into broken)
 - [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
   =====
+- [X]  868 screen-redraw
 - [X]  740 screen
 - [X]  691 layout-set
 - [X] 874 cmd

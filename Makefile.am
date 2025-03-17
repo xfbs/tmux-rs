@@ -174,6 +174,7 @@ endif
 # layout-set.c
 # grid-view.c
 # screen.c
+# screen-redraw.c
 
 # TMP moved to build.rs cc:
 
@@ -197,7 +198,6 @@ dist_tmux_SOURCES = \
 	options-table.c \
 	options.c \
 	popup.c \
-	screen-redraw.c \
 	screen-write.c \
 	server-client.c \
 	session.c \

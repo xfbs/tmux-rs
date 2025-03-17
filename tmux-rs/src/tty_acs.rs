@@ -163,18 +163,18 @@ static tty_acs_rounded_borders_list: [utf8_data; 13] = [
 ];
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tty_acs_double_borders(cell_type: i32) -> *const utf8_data {
+pub unsafe extern "C" fn tty_acs_double_borders(cell_type: cell_type) -> *const utf8_data {
     unsafe { &raw const tty_acs_double_borders_list[cell_type as usize] }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tty_acs_heavy_borders(cell_type: i32) -> *const utf8_data {
+pub unsafe extern "C" fn tty_acs_heavy_borders(cell_type: cell_type) -> *const utf8_data {
     unsafe { &raw const tty_acs_heavy_borders_list[cell_type as usize] }
 }
 
 /* Get cell border character for rounded style. */
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tty_acs_rounded_borders(cell_type: i32) -> *const utf8_data {
+pub unsafe extern "C" fn tty_acs_rounded_borders(cell_type: cell_type) -> *const utf8_data {
     unsafe { &raw const tty_acs_rounded_borders_list[cell_type as usize] }
 }
 
