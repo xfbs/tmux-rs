@@ -342,6 +342,7 @@ undefined behaviour in this context.
 
 ## BUGS
 
+- exiting an opened window (not the original one ) causes server exit
 - keybinding for vertical split prefix - doesn't seem to perform the correct action
   - related to current translation of arguments.c
 - keybinding for new window prefix-c doesn't seem to work

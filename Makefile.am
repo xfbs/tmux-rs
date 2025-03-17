@@ -177,6 +177,7 @@ endif
 # screen-redraw.c
 # popup.c
 # broken.c
+# cmd-queue.c
 
 # TMP moved to build.rs cc:
 
@@ -188,7 +189,6 @@ endif
 
 
 dist_tmux_SOURCES = \
-	cmd-queue.c \
 	format-draw.c \
 	format.c \
 	grid.c \

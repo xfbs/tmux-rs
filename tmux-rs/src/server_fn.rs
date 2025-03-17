@@ -63,10 +63,10 @@ pub unsafe extern "C" fn server_redraw_session(s: *mut session) {
 pub unsafe extern "C" fn server_redraw_session_group(s: *mut session) {
     unsafe {
         let sg = session_group_contains(s);
-        if s.is_null() {
+        if sg.is_null() {
             server_redraw_session(s);
         } else {
-            tailq_foreach::<_, _, _, _>(&raw mut (*sg).sessions, |s| {
+            tailq_foreach::<_, _, _, ()>(&raw mut (*sg).sessions, |s| {
                 server_redraw_session(s);
                 ControlFlow::<(), ()>::Continue(())
             });

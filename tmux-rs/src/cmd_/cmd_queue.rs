@@ -22,11 +22,11 @@ unsafe extern "C" {
     // pub unsafe fn cmdq_get_command(_: *mut cmd_list, _: *mut cmdq_state) -> *mut cmdq_item;
     // pub unsafe fn cmdq_get_callback1(_: *const c_char, _: cmdq_cb, _: *mut c_void) -> NonNull<cmdq_item>;
     // pub unsafe fn cmdq_get_error(_: *const c_char) -> NonNull<cmdq_item>;
-    pub unsafe fn cmdq_insert_after(_: *mut cmdq_item, _: *mut cmdq_item) -> *mut cmdq_item;
-    pub unsafe fn cmdq_append(_: *mut client, _: *mut cmdq_item) -> *mut cmdq_item;
+    // pub unsafe fn cmdq_insert_after(_: *mut cmdq_item, _: *mut cmdq_item) -> *mut cmdq_item;
+    // pub unsafe fn cmdq_append(_: *mut client, _: *mut cmdq_item) -> *mut cmdq_item;
     // pub unsafe fn cmdq_insert_hook(_: *mut session, _: *mut cmdq_item, _: *mut cmd_find_state, _: *const c_char, ...);
     // pub unsafe fn cmdq_continue(_: *mut cmdq_item);
-    pub unsafe fn cmdq_next(_: *mut client) -> c_uint;
+    // pub unsafe fn cmdq_next(_: *mut client) -> c_uint;
     // pub unsafe fn cmdq_running(_: *mut client) -> *mut cmdq_item;
     // pub unsafe fn cmdq_guard(_: *mut cmdq_item, _: *const c_char, _: c_int);
     // pub unsafe fn cmdq_print(_: *mut cmdq_item, _: *const c_char, ...);
@@ -319,11 +319,9 @@ pub unsafe extern "C" fn cmdq_merge_formats(item: *mut cmdq_item, ft: *mut forma
     }
 }
 
-// TODO: this function is broken, likely due to tailq_insert_tail or tailq_last being incorrect
-/*
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmdq_append(c: *mut client, mut item: *mut cmdq_item) -> *mut cmdq_item {
-    let func = "cmdq_append".as_ptr();
+    let __func__ = c"cmdq_append".as_ptr();
 
     unsafe {
         let mut queue = cmdq_get(c);
@@ -340,7 +338,7 @@ pub unsafe extern "C" fn cmdq_append(c: *mut client, mut item: *mut cmdq_item) -
 
             (*item).queue = queue;
             tailq_insert_tail::<_, ()>(&raw mut (*queue).list, item);
-            log_debug(c"%s %s: %s".as_ptr(), func, cmdq_name(c), (*item).name);
+            log_debug(c"%s %s: %s".as_ptr(), __func__, cmdq_name(c), (*item).name);
 
             item = next;
             if item.is_null() {
@@ -350,10 +348,8 @@ pub unsafe extern "C" fn cmdq_append(c: *mut client, mut item: *mut cmdq_item) -
         tailq_last(&raw mut (*queue).list)
     }
 }
-*/
 
 // TODO crashes with this one
-/*
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmdq_insert_after(mut after: *mut cmdq_item, mut item: *mut cmdq_item) -> *mut cmdq_item {
     unsafe {
@@ -389,7 +385,6 @@ pub unsafe extern "C" fn cmdq_insert_after(mut after: *mut cmdq_item, mut item: 
         after
     }
 }
-*/
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmdq_insert_hook(
@@ -787,8 +782,6 @@ pub unsafe extern "C" fn cmdq_fire_callback(item: *mut cmdq_item) -> cmd_retval 
     unsafe { ((*item).cb.unwrap())(item, (*item).data) }
 }
 
-// TODO this translation is broken
-/*
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmdq_next(c: *mut client) -> u32 {
     let __func__ = c"cmdq_next".as_ptr();
@@ -842,14 +835,9 @@ pub unsafe extern "C" fn cmdq_next(c: *mut client) -> u32 {
                             if (retval == cmd_retval::CMD_RETURN_ERROR) {
                                 cmdq_remove_group(item);
                             }
-                            break;
                         }
-                        cmdq_type::CMDQ_CALLBACK => {
-                            retval = cmdq_fire_callback(item);
-                        }
-                        _ => {
-                            retval = cmd_retval::CMD_RETURN_ERROR;
-                        }
+                        cmdq_type::CMDQ_CALLBACK => retval = cmdq_fire_callback(item),
+                        _ => retval = cmd_retval::CMD_RETURN_ERROR,
                     }
                     (*item).flags |= CMDQ_FIRED;
 
@@ -871,7 +859,6 @@ pub unsafe extern "C" fn cmdq_next(c: *mut client) -> u32 {
         items
     }
 }
-*/
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmdq_running(c: *mut client) -> *mut cmdq_item {

@@ -91,6 +91,7 @@ pub struct discr_by_uri_entry;
 pub struct discr_by_inner_entry;
 pub struct discr_data_entry;
 pub struct discr_entry;
+pub struct discr_gentry;
 pub struct discr_index_entry;
 pub struct discr_name_entry;
 pub struct discr_pending_entry;
