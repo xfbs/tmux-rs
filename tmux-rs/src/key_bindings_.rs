@@ -330,12 +330,11 @@ pub unsafe extern "C" fn key_bindings_remove_table(name: *const c_char) {
             rb_remove(&raw mut key_tables, table);
             key_bindings_unref_table(table);
         }
-        tailq_foreach(&raw mut clients, |c| {
+        for c in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
             if ((*c).keytable == table) {
                 server_client_set_key_table(c, null_mut());
             }
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 }
 

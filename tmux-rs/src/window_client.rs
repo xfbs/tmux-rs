@@ -174,17 +174,16 @@ pub unsafe extern "C" fn window_client_build(
         (*data).item_list = null_mut();
         (*data).item_size = 0;
 
-        tailq_foreach(&raw mut clients, |c| {
+        for c in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
             if (*c).session.is_null() || (*c).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
-                return ControlFlow::<(), ()>::Continue(());
+                continue;
             }
 
             item = window_client_add_item(data);
             (*item).c = c;
 
             (*c).references += 1;
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
 
         window_client_sort = sort_crit;
         qsort(

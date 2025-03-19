@@ -38,9 +38,9 @@ unsafe extern "C" fn cmd_list_clients_exec(self_: *mut cmd, item: *mut cmdq_item
         let mut filter = args_get(args, b'f');
 
         let mut idx = 0;
-        tailq_foreach(&raw mut clients, |c| {
+        for c in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
             if ((*c).session.is_null() || (!s.is_null() && s != (*c).session)) {
-                return ControlFlow::<(), ()>::Continue(());
+                continue;
             }
 
             let mut ft = format_create(cmdq_get_client(item), item, FORMAT_NONE as i32, 0);
@@ -64,9 +64,7 @@ unsafe extern "C" fn cmd_list_clients_exec(self_: *mut cmd, item: *mut cmdq_item
             format_free(ft);
 
             idx += 1;
-
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
 
         cmd_retval::CMD_RETURN_NORMAL
     }

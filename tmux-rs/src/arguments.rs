@@ -427,12 +427,12 @@ pub unsafe extern "C" fn args_copy(args: *mut args, argc: i32, argv: *mut *mut c
                 }
                 return ControlFlow::<(), ()>::Continue(());
             }
-            tailq_foreach(&raw mut (*entry).values, |value| {
+            for value in compat_rs::queue::tailq_foreach_(&raw mut (*entry).values) {
                 let new_value = xcalloc1();
-                args_copy_copy_value(new_value, value, argc, argv);
+                args_copy_copy_value(new_value, value.as_ptr(), argc, argv);
                 args_set(new_args, (*entry).flag, new_value, 0);
-                ControlFlow::<(), ()>::Continue(())
-            });
+            }
+
             ControlFlow::<(), ()>::Continue(())
         });
         if ((*args).count == 0) {
@@ -605,15 +605,16 @@ pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
             if (tailq_empty(&raw mut (*entry).values)) {
                 return ControlFlow::<(), ()>::Continue(());
             }
-            tailq_foreach(&raw mut (*entry).values, |value| {
-                if (*buf != b'\0' as c_char) {
-                    args_print_add(&raw mut buf, &raw mut len, c" -%c".as_ptr(), (*entry).flag as i32);
-                } else {
-                    args_print_add(&raw mut buf, &raw mut len, c"-%c".as_ptr(), (*entry).flag as i32);
+            for value in compat_rs::queue::tailq_foreach_(&raw mut (*entry).values) {
+                {
+                    if (*buf != b'\0' as c_char) {
+                        args_print_add(&raw mut buf, &raw mut len, c" -%c".as_ptr(), (*entry).flag as i32);
+                    } else {
+                        args_print_add(&raw mut buf, &raw mut len, c"-%c".as_ptr(), (*entry).flag as i32);
+                    }
+                    args_print_add_value(&raw mut buf, &raw mut len, value.as_ptr());
                 }
-                args_print_add_value(&raw mut buf, &raw mut len, value);
-                ControlFlow::<(), ()>::Continue(())
-            });
+            }
             last = entry;
 
             ControlFlow::<(), ()>::Continue(())

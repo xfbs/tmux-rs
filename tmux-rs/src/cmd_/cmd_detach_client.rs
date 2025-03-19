@@ -55,7 +55,7 @@ pub unsafe extern "C" fn cmd_detach_client_exec(self_: *mut cmd, item: *mut cmdq
             if s.is_null() {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
-            tailq_foreach(&raw mut clients, |loop_| {
+            for loop_ in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
                 if ((*loop_).session == s) {
                     if !cmd.is_null() {
                         server_client_exec(loop_, cmd);
@@ -63,13 +63,12 @@ pub unsafe extern "C" fn cmd_detach_client_exec(self_: *mut cmd, item: *mut cmdq
                         server_client_detach(loop_, msgtype);
                     }
                 }
-                ControlFlow::<(), ()>::Continue(())
-            });
+            }
             return cmd_retval::CMD_RETURN_STOP;
         }
 
         if args_has(args, b'a') != 0 {
-            tailq_foreach(&raw mut clients, |loop_| {
+            for loop_ in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
                 if !(*loop_).session.is_null() && loop_ != tc {
                     if !cmd.is_null() {
                         server_client_exec(loop_, cmd);
@@ -77,8 +76,7 @@ pub unsafe extern "C" fn cmd_detach_client_exec(self_: *mut cmd, item: *mut cmdq
                         server_client_detach(loop_, msgtype);
                     }
                 }
-                ControlFlow::<(), ()>::Continue(())
-            });
+            }
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 

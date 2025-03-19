@@ -133,13 +133,12 @@ pub unsafe extern "C" fn server_acl_user_allow_write(mut uid: uid_t) {
         }
         (*user).flags &= !server_acl_user_flags::SERVER_ACL_READONLY;
 
-        tailq_foreach(&raw mut clients, |c| {
+        for c in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
             uid = proc_get_peer_uid((*c).peer);
             if (uid != -1i32 as uid_t && uid == (*user).uid) {
                 (*c).flags &= !client_flag::READONLY;
             }
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 }
 
@@ -153,13 +152,12 @@ pub unsafe extern "C" fn server_acl_user_deny_write(mut uid: uid_t) {
             }
             (*user).flags |= server_acl_user_flags::SERVER_ACL_READONLY;
 
-            tailq_foreach(&raw mut clients, |c| {
+            for c in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
                 uid = proc_get_peer_uid((*c).peer);
                 if (uid != -1i32 as uid_t && uid == (*user).uid) {
                     (*c).flags &= !client_flag::READONLY;
                 }
-                ControlFlow::<(), ()>::Continue(())
-            });
+            }
         }
     }
 }

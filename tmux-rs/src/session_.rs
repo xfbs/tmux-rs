@@ -642,20 +642,12 @@ pub unsafe extern "C" fn session_set_current(s: *mut session, wl: *mut winlink) 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_group_contains(target: *mut session) -> *mut session_group {
     unsafe {
-        if let Some(sg) = rb_foreach(&raw mut session_groups, |sg| {
-            if tailq_foreach(&raw mut (*sg).sessions, |s| {
-                if (s == target) {
-                    return ControlFlow::<(), ()>::Break(());
+        for sg in rb_foreach_(&raw mut session_groups) {
+            for s in tailq_foreach_(&raw mut (*sg.as_ptr()).sessions) {
+                if (s.as_ptr() == target) {
+                    return sg.as_ptr();
                 }
-                ControlFlow::<(), ()>::Continue(())
-            })
-            .is_break()
-            {
-                return ControlFlow::Break(sg);
             }
-            ControlFlow::Continue(())
-        }) {
-            return sg;
         }
 
         null_mut()

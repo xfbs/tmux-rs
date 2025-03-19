@@ -767,7 +767,7 @@ pub unsafe extern "C" fn cmd_list_copy(cmdlist: *mut cmd_list, argc: c_int, argv
         free(s as _);
 
         let new_cmdlist = cmd_list_new();
-        tailq_foreach((*cmdlist).list, |cmd| {
+        for cmd in compat_rs::queue::tailq_foreach_((*cmdlist).list).map(NonNull::as_ptr) {
             if ((*cmd).group != group) {
                 (*new_cmdlist).group = cmd_list_next_group;
                 cmd_list_next_group += 1;
@@ -775,8 +775,7 @@ pub unsafe extern "C" fn cmd_list_copy(cmdlist: *mut cmd_list, argc: c_int, argv
             }
             let new_cmd = cmd_copy(cmd, argc, argv);
             cmd_list_append(new_cmdlist, new_cmd);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
 
         let s = cmd_list_print(new_cmdlist, 0);
         log_debug(c"%s: %s".as_ptr(), c"cmd_list_copy".as_ptr(), s);
@@ -835,15 +834,10 @@ pub unsafe extern "C" fn cmd_list_next(cmd: *mut cmd) -> *mut cmd { unsafe { tai
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_list_all_have(cmdlist: *mut cmd_list, flag: c_int) -> c_int {
     unsafe {
-        if tailq_foreach((*cmdlist).list, |cmd| {
-            if !(*(*cmd).entry).flags & flag != 0 {
-                return ControlFlow::Break(());
+        for cmd in compat_rs::queue::tailq_foreach_((*cmdlist).list) {
+            if !(*(*cmd.as_ptr()).entry).flags & flag != 0 {
+                return 0;
             }
-            ControlFlow::Continue(())
-        })
-        .is_break()
-        {
-            return 0;
         }
         1
     }
@@ -852,15 +846,10 @@ pub unsafe extern "C" fn cmd_list_all_have(cmdlist: *mut cmd_list, flag: c_int) 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_list_any_have(cmdlist: *mut cmd_list, flag: c_int) -> c_int {
     unsafe {
-        if tailq_foreach((*cmdlist).list, |cmd| {
-            if !(*(*cmd).entry).flags & flag != 0 {
-                return ControlFlow::Break(());
+        for cmd in compat_rs::queue::tailq_foreach_((*cmdlist).list) {
+            if !(*(*cmd.as_ptr()).entry).flags & flag != 0 {
+                return 1;
             }
-            ControlFlow::Continue(())
-        })
-        .is_break()
-        {
-            return 1;
         }
         0
     }

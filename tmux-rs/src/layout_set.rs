@@ -733,4 +733,3 @@ pub unsafe extern "C" fn layout_set_tiled(w: *mut window) {
         server_redraw_window(w);
     }
 }
-

@@ -281,23 +281,22 @@ unsafe fn alerts_set_message(wl: *mut winlink, type_: *const c_char, option: *co
     unsafe {
         let visual: i32 = options_get_number((*(*wl).session).options, option) as i32;
 
-        tailq_foreach(&raw mut clients, |c| {
+        for c in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
             if (*c).session != (*wl).session || (*c).flags.intersects(client_flag::CONTROL) {
-                return ControlFlow::Continue::<(), ()>(());
+                continue;
             }
 
             if visual == VISUAL_OFF || visual == VISUAL_BOTH {
                 tty_putcode(&raw mut (*c).tty, tty_code_code::TTYC_BEL);
             }
             if visual == VISUAL_OFF {
-                return ControlFlow::Continue(());
+                continue;
             }
             if (*(*c).session).curw == wl {
                 status_message_set(c, -1, 1, 0, c"%s in current window".as_ptr(), type_);
             } else {
                 status_message_set(c, -1, 1, 0, c"%s in window %d".as_ptr(), type_, (*wl).idx);
             }
-            ControlFlow::Continue(())
-        });
+        }
     }
 }

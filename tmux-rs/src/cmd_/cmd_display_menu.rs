@@ -135,16 +135,16 @@ unsafe extern "C" fn cmd_display_menu_get_position(
             for line_ in 0..lines {
                 line = line_;
                 ranges = &raw mut (*tc).status.entries[line as usize].ranges;
-                tailq_foreach(ranges, |sr_| {
-                    sr = sr_;
+                for sr_ in compat_rs::queue::tailq_foreach_(ranges) {
+                    sr = sr_.as_ptr();
                     if ((*sr).type_ != style_range_type::STYLE_RANGE_WINDOW) {
-                        return ControlFlow::Continue(());
+                        continue;
                     }
                     if ((*sr).argument == (*wl).idx as u32) {
-                        return ControlFlow::Break(());
+                        break;
                     }
-                    ControlFlow::Continue(())
-                });
+                    continue;
+                }
                 if (!sr.is_null()) {
                     break;
                 }

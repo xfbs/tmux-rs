@@ -114,18 +114,13 @@ pub unsafe extern "C" fn layout_append(lc: *mut layout_cell, buf: *mut c_char, l
                 if (strlcat(buf, brackets.add(1), len) >= len) {
                     return -1;
                 }
-                if tailq_foreach(&raw mut (*lc).cells, |lcchild| {
-                    if (layout_append(lcchild, buf, len) != 0) {
-                        return ControlFlow::<(), ()>::Break(());
+                for lcchild in compat_rs::queue::tailq_foreach_(&raw mut (*lc).cells) {
+                    if (layout_append(lcchild.as_ptr(), buf, len) != 0) {
+                        return -1;
                     }
                     if (strlcat(buf, c",".as_ptr(), len) >= len) {
-                        return ControlFlow::<(), ()>::Break(());
+                        return -1;
                     }
-                    ControlFlow::<(), ()>::Continue(())
-                })
-                .is_break()
-                {
-                    return -1;
                 }
                 *buf.add(strlen(buf) - 1) = *brackets;
             }
@@ -144,38 +139,28 @@ pub unsafe extern "C" fn layout_check(lc: *mut layout_cell) -> i32 {
         match ((*lc).type_) {
             layout_type::LAYOUT_WINDOWPANE => (),
             layout_type::LAYOUT_LEFTRIGHT => {
-                if tailq_foreach(&raw mut (*lc).cells, |lcchild| {
+                for lcchild in compat_rs::queue::tailq_foreach_(&raw mut (*lc).cells).map(NonNull::as_ptr) {
                     if ((*lcchild).sy != (*lc).sy) {
-                        return ControlFlow::Break(());
+                        return 0;
                     }
                     if (layout_check(lcchild) == 0) {
-                        return ControlFlow::Break(());
+                        return 0;
                     }
                     n += (*lcchild).sx + 1;
-                    ControlFlow::Continue(())
-                })
-                .is_break()
-                {
-                    return 0;
                 }
                 if (n - 1 != (*lc).sx) {
                     return 0;
                 }
             }
             layout_type::LAYOUT_TOPBOTTOM => {
-                if tailq_foreach(&raw mut (*lc).cells, |lcchild| {
+                for lcchild in compat_rs::queue::tailq_foreach_(&raw mut (*lc).cells).map(NonNull::as_ptr) {
                     if ((*lcchild).sx != (*lc).sx) {
-                        return ControlFlow::Break(());
+                        return 0;
                     }
                     if (layout_check(lcchild) == 0) {
-                        return ControlFlow::Break(());
+                        return 0;
                     }
                     n += (*lcchild).sy + 1;
-                    ControlFlow::Break(())
-                })
-                .is_break()
-                {
-                    return 0;
                 }
                 if (n - 1 != (*lc).sy) {
                     return 0;
@@ -247,18 +232,18 @@ pub unsafe extern "C" fn layout_parse(w: *mut window, mut layout: *const c_char,
             match ((*lc).type_) {
                 layout_type::LAYOUT_WINDOWPANE => (),
                 layout_type::LAYOUT_LEFTRIGHT => {
-                    tailq_foreach(&raw mut (*lc).cells, |lcchild| {
+                    for lcchild in compat_rs::queue::tailq_foreach_(&raw mut (*lc).cells).map(NonNull::as_ptr) {
                         sy = (*lcchild).sy + 1;
                         sx += (*lcchild).sx + 1;
-                        ControlFlow::<(), ()>::Continue(())
-                    });
+                        continue;
+                    }
                 }
                 layout_type::LAYOUT_TOPBOTTOM => {
-                    tailq_foreach(&raw mut (*lc).cells, |lcchild| {
+                    for lcchild in compat_rs::queue::tailq_foreach_(&raw mut (*lc).cells).map(NonNull::as_ptr) {
                         sx = (*lcchild).sx + 1;
                         sy += (*lcchild).sy + 1;
-                        ControlFlow::<(), ()>::Continue(())
-                    });
+                        continue;
+                    }
                 }
             }
             if ((*lc).type_ != layout_type::LAYOUT_WINDOWPANE && ((*lc).sx != sx || (*lc).sy != sy)) {
@@ -312,10 +297,9 @@ unsafe extern "C" fn layout_assign(wp: *mut *mut window_pane, lc: *mut layout_ce
                 *wp = tailq_next::<_, _, discr_entry>(*wp);
             }
             layout_type::LAYOUT_LEFTRIGHT | layout_type::LAYOUT_TOPBOTTOM => {
-                tailq_foreach(&raw mut (*lc).cells, |lcchild| {
+                for lcchild in compat_rs::queue::tailq_foreach_(&raw mut (*lc).cells).map(NonNull::as_ptr) {
                     layout_assign(wp, lcchild);
-                    ControlFlow::<(), ()>::Continue(())
-                });
+                }
             }
         }
     }

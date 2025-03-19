@@ -114,18 +114,17 @@ pub unsafe extern "C" fn cmd_find_best_client(mut s: *mut session) -> *mut clien
         }
 
         let mut c = null_mut();
-        tailq_foreach(&raw mut clients, |c_loop| {
+        for c_loop in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
             if ((*c_loop).session.is_null()) {
-                return ControlFlow::<(), ()>::Continue(());
+                continue;
             }
             if (!s.is_null() && (*c_loop).session != s) {
-                return ControlFlow::<(), ()>::Continue(());
+                continue;
             }
             if (cmd_find_client_better(c_loop, c) != 0) {
                 c = c_loop;
             }
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
 
         c
     }
@@ -1370,30 +1369,30 @@ pub unsafe extern "C" fn cmd_find_client(item: *mut cmdq_item, target: *const c_
 
         let mut c = null_mut();
         /* Check name and path of each client. */
-        tailq_foreach(&raw mut clients, |c_| {
-            c = c_;
+        for c_ in compat_rs::queue::tailq_foreach_(&raw mut clients) {
+            c = c_.as_ptr();
             if ((*c).session.is_null()) {
-                return ControlFlow::Continue(());
+                continue;
             }
             if (strcmp(copy, (*c).name) == 0) {
-                return ControlFlow::Break(());
+                break;
             }
 
             if (*(*c).ttyname == b'\0' as _) {
-                return ControlFlow::Continue(());
+                continue;
             }
             if (strcmp(copy, (*c).ttyname) == 0) {
-                return ControlFlow::Break(());
+                break;
             }
             if (strncmp((*c).ttyname, _PATH_DEV, SIZEOF_PATH_DEV - 1) != 0) {
-                return ControlFlow::Continue(());
+                continue;
             }
             if (strcmp(copy, (*c).ttyname.add(SIZEOF_PATH_DEV - 1)) == 0) {
-                return ControlFlow::Break(());
+                break;
             }
 
-            ControlFlow::Continue(())
-        });
+            continue;
+        }
 
         if (c.is_null() && quiet == 0) {
             cmdq_error(item, c"can't find client: %s".as_ptr(), copy);

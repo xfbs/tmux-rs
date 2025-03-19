@@ -3,7 +3,7 @@ use crate::*;
 use compat_rs::{
     HOST_NAME_MAX, RB_GENERATE, VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB,
     queue::{
-        tailq_empty, tailq_first, tailq_foreach, tailq_foreach_safe, tailq_init, tailq_insert_after,
+        tailq_empty, tailq_first, tailq_foreach, tailq_foreach_, tailq_foreach_safe, tailq_init, tailq_insert_after,
         tailq_insert_before, tailq_insert_head, tailq_insert_tail, tailq_last, tailq_next, tailq_prev, tailq_remove,
     },
     strtonum,
@@ -532,17 +532,16 @@ pub unsafe extern "C" fn window_pane_update_focus(wp: *mut window_pane) {
             if wp != (*(*wp).window).active {
                 focused = false
             } else {
-                tailq_foreach(&raw mut clients, |c| {
+                for c in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
                     if !(*c).session.is_null()
                         && (*(*c).session).attached != 0
                         && (*c).flags.intersects(client_flag::FOCUSED)
                         && (*(*(*c).session).curw).window == (*wp).window
                     {
                         focused = true;
-                        return ControlFlow::Break(());
+                        break;
                     }
-                    ControlFlow::Continue(())
-                });
+                }
             }
             if !focused && (*wp).flags.intersects(window_pane_flags::PANE_FOCUSED) {
                 log_debug(
@@ -1147,11 +1146,10 @@ unsafe extern "C" fn window_pane_destroy(wp: *mut window_pane) {
         if event_initialized(&raw mut (*wp).resize_timer) != 0 {
             event_del(&raw mut (*wp).resize_timer);
         }
-        tailq_foreach_safe(&raw mut (*wp).resize_queue, |r| {
+        for r in tailq_foreach_(&raw mut (*wp).resize_queue).map(NonNull::as_ptr) {
             tailq_remove::<_, ()>(&raw mut (*wp).resize_queue, r);
-            free(r as _);
-            ControlFlow::Continue::<(), ()>(())
-        });
+            free_(r);
+        }
 
         rb_remove(&raw mut all_window_panes, wp);
 
@@ -1182,12 +1180,11 @@ unsafe extern "C" fn window_pane_read_callback(_bufev: *mut bufferevent, data: *
         }
 
         log_debug(c"%%%u has %zu bytes".as_ptr(), (*wp).id, size);
-        tailq_foreach(&raw mut clients, |c| {
+        for c in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
             if !(*c).session.is_null() && (*c).flags.intersects(client_flag::CONTROL) {
                 control_write_output(c, wp);
             }
-            ControlFlow::Continue::<(), ()>(())
-        });
+        }
         input_parse_pane(wp);
         bufferevent_disable((*wp).event, EV_READ as i16);
     }
@@ -1275,17 +1272,15 @@ pub unsafe extern "C" fn window_pane_set_mode(
             return 1;
         }
 
-        let control_flow = tailq_foreach(&raw mut (*wp).modes, |wme| {
+        let mut wme: *mut window_mode_entry = null_mut();
+        for wme_ in compat_rs::queue::tailq_foreach_(&raw mut (*wp).modes).map(NonNull::as_ptr) {
+            wme = wme_;
             if (*wme).mode == mode {
-                return ControlFlow::Break(wme);
+                break;
             }
-            ControlFlow::Continue(())
-        });
+        }
 
-        let wme: *mut window_mode_entry;
-        if let ControlFlow::Break(break_value) = control_flow {
-            wme = break_value;
-
+        if !wme.is_null() {
             tailq_remove::<_, ()>(&raw mut (*wp).modes, wme);
             tailq_insert_head!(&raw mut (*wp).modes, wme, entry);
         } else {

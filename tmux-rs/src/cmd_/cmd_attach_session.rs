@@ -115,13 +115,14 @@ pub unsafe extern "C" fn cmd_attach_session(
                 } else {
                     msgtype = msgtype::MSG_DETACH;
                 }
-                tailq_foreach(&raw mut clients, |c_loop| {
-                    if ((*c_loop).session != s || c == c_loop) {
-                        return ControlFlow::<(), ()>::Continue(());
+                for c_loop in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+                    {
+                        if ((*c_loop).session != s || c == c_loop) {
+                            continue;
+                        }
+                        server_client_detach(c_loop, msgtype);
                     }
-                    server_client_detach(c_loop, msgtype);
-                    ControlFlow::<(), ()>::Continue(())
-                });
+                }
             }
             if Eflag == 0 {
                 environ_update((*s).options, (*c).environ, (*s).environ);
@@ -144,14 +145,12 @@ pub unsafe extern "C" fn cmd_attach_session(
                 } else {
                     msgtype::MSG_DETACH
                 };
-                tailq_foreach(&raw mut clients, |c_loop| {
+                for c_loop in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
                     if ((*c_loop).session != s || c == c_loop) {
-                        return ControlFlow::<(), ()>::Continue(());
+                        continue;
                     }
                     server_client_detach(c_loop, msgtype);
-
-                    ControlFlow::<(), ()>::Continue(())
-                });
+                }
             }
             if Eflag == 0 {
                 environ_update((*s).options, (*c).environ, (*s).environ);

@@ -1,6 +1,9 @@
 use crate::*;
 
-use compat_rs::{queue::tailq_foreach, tree::rb_foreach};
+use compat_rs::{
+    queue::tailq_foreach,
+    tree::{rb_foreach, rb_foreach_},
+};
 use libc::sscanf;
 
 unsafe extern "C" {
@@ -84,21 +87,16 @@ pub unsafe extern "C" fn ignore_client_size(c: *mut client) -> i32 {
              * Ignore flagged clients if there are any attached clients
              * that aren't flagged.
              */
-            if tailq_foreach(&raw mut clients, |loop_| {
+            for loop_ in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
                 if ((*loop_).session.is_null()) {
-                    return ControlFlow::Continue(());
+                    continue;
                 }
                 if (*loop_).flags.intersects(CLIENT_NOSIZEFLAGS) {
-                    return ControlFlow::Continue(());
+                    continue;
                 }
                 if (!(*loop_).flags.intersects(client_flag::IGNORESIZE)) {
-                    return ControlFlow::Break(());
+                    return 1;
                 }
-                ControlFlow::Continue(())
-            })
-            .is_break()
-            {
-                return 1;
             }
         }
         if (*c).flags.intersects(client_flag::CONTROL)
@@ -115,16 +113,15 @@ pub unsafe extern "C" fn ignore_client_size(c: *mut client) -> i32 {
 pub unsafe extern "C" fn clients_with_window(w: *mut window) -> u32 {
     let mut n = 0u32;
     unsafe {
-        tailq_foreach(&raw mut clients, |loop_| {
+        for loop_ in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
             if (ignore_client_size(loop_) != 0 || session_has((*loop_).session, w) == 0) {
-                return ControlFlow::Continue(());
+                continue;
             }
             n += 1;
             if (n > 1) {
-                return ControlFlow::Break(());
+                break;
             }
-            ControlFlow::Continue(())
-        });
+        }
     }
     n
 }
@@ -142,190 +139,185 @@ pub unsafe extern "C" fn clients_calculate_size(
     xpixel: *mut u32,
     ypixel: *mut u32,
 ) -> i32 {
-    {
-        let mut cx = 0u32;
-        let mut cy = 0u32;
-        let mut cw = null_mut();
-        let mut n = 0;
-        let __func__ = c"clients_calculate_size".as_ptr();
+    let mut cx = 0u32;
+    let mut cy = 0u32;
+    let mut cw = null_mut();
+    let mut n = 0;
+    let __func__ = c"clients_calculate_size".as_ptr();
 
-        unsafe {
-            'skip: {
+    unsafe {
+        'skip: {
+            /*
+             * Start comparing with 0 for largest and UINT_MAX for smallest or
+             * latest.
+             */
+            if (type_ == WINDOW_SIZE_LARGEST) {
+                *sx = 0;
+                *sy = 0;
+            } else if (type_ == WINDOW_SIZE_MANUAL) {
+                *sx = (*w).manual_sx;
+                *sy = (*w).manual_sy;
+                log_debug(c"%s: manual size %ux%u".as_ptr(), __func__, *sx, *sy);
+            } else {
+                *sx = u32::MAX;
+                *sy = u32::MAX;
+            }
+            *xpixel = 0;
+            *ypixel = 0;
+
+            /*
+             * For latest, count the number of clients with this window. We only
+             * care if there is more than one.
+             */
+            if (type_ == WINDOW_SIZE_LATEST && !w.is_null()) {
+                n = clients_with_window(w);
+            }
+
+            /* Skip setting the size if manual */
+            if (type_ == WINDOW_SIZE_MANUAL) {
+                break 'skip;
+            }
+
+            /* loop_ over the clients and work out the size. */
+            for loop_ in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+                if (loop_ != c && ignore_client_size(loop_) != 0) {
+                    log_debug(c"%s: ignoring %s (1)".as_ptr(), __func__, (*loop_).name);
+                    continue;
+                }
+                if (loop_ != c && skip_client.unwrap()(loop_, type_, current, s, w) != 0) {
+                    log_debug(c"%s: skipping %s (1)".as_ptr(), __func__, (*loop_).name);
+                    continue;
+                }
+
                 /*
-                 * Start comparing with 0 for largest and UINT_MAX for smallest or
-                 * latest.
+                 * If there are multiple clients attached, only accept the
+                 * latest client; otherwise let the only client be chosen as
+                 * for smallest.
+                 */
+                if (type_ == WINDOW_SIZE_LATEST && n > 1 && loop_ != (*w).latest.cast()) {
+                    log_debug(c"%s: %s is not latest".as_ptr(), __func__, (*loop_).name);
+                    continue;
+                }
+
+                /*
+                 * If the client has a per-window size, use this instead if it is
+                 * smaller.
+                 */
+                if (!w.is_null()) {
+                    cw = server_client_get_client_window(loop_, (*w).id);
+                } else {
+                    cw = null_mut();
+                }
+
+                /* Work out this client's size. */
+                if (!cw.is_null() && (*cw).sx != 0 && (*cw).sy != 0) {
+                    cx = (*cw).sx;
+                    cy = (*cw).sy;
+                } else {
+                    cx = (*loop_).tty.sx;
+                    cy = (*loop_).tty.sy - status_line_size(loop_);
+                }
+
+                /*
+                 * If it is larger or smaller than the best so far, update the
+                 * new size.
                  */
                 if (type_ == WINDOW_SIZE_LARGEST) {
-                    *sx = 0;
-                    *sy = 0;
-                } else if (type_ == WINDOW_SIZE_MANUAL) {
-                    *sx = (*w).manual_sx;
-                    *sy = (*w).manual_sy;
-                    log_debug(c"%s: manual size %ux%u".as_ptr(), __func__, *sx, *sy);
+                    if (cx > *sx) {
+                        *sx = cx;
+                    }
+                    if (cy > *sy) {
+                        *sy = cy;
+                    }
                 } else {
-                    *sx = u32::MAX;
-                    *sy = u32::MAX;
+                    if (cx < *sx) {
+                        *sx = cx;
+                    }
+                    if (cy < *sy) {
+                        *sy = cy;
+                    }
                 }
-                *xpixel = 0;
-                *ypixel = 0;
-
-                /*
-                 * For latest, count the number of clients with this window. We only
-                 * care if there is more than one.
-                 */
-                if (type_ == WINDOW_SIZE_LATEST && !w.is_null()) {
-                    n = clients_with_window(w);
+                if ((*loop_).tty.xpixel > *xpixel && (*loop_).tty.ypixel > *ypixel) {
+                    *xpixel = (*loop_).tty.xpixel;
+                    *ypixel = (*loop_).tty.ypixel;
                 }
-
-                /* Skip setting the size if manual */
-                if (type_ == WINDOW_SIZE_MANUAL) {
-                    break 'skip;
-                }
-
-                /* loop_ over the clients and work out the size. */
-                tailq_foreach(&raw mut clients, |loop_| {
-                    if (loop_ != c && ignore_client_size(loop_) != 0) {
-                        log_debug(c"%s: ignoring %s (1)".as_ptr(), __func__, (*loop_).name);
-                        return ControlFlow::Continue(());
-                    }
-                    if (loop_ != c && skip_client.unwrap()(loop_, type_, current, s, w) != 0) {
-                        log_debug(c"%s: skipping %s (1)".as_ptr(), __func__, (*loop_).name);
-                        return ControlFlow::Continue(());
-                    }
-
-                    /*
-                     * If there are multiple clients attached, only accept the
-                     * latest client; otherwise let the only client be chosen as
-                     * for smallest.
-                     */
-                    if (type_ == WINDOW_SIZE_LATEST && n > 1 && loop_ != (*w).latest.cast()) {
-                        log_debug(c"%s: %s is not latest".as_ptr(), __func__, (*loop_).name);
-                        return ControlFlow::Continue(());
-                    }
-
-                    /*
-                     * If the client has a per-window size, use this instead if it is
-                     * smaller.
-                     */
-                    if (!w.is_null()) {
-                        cw = server_client_get_client_window(loop_, (*w).id);
-                    } else {
-                        cw = null_mut();
-                    }
-
-                    /* Work out this client's size. */
-                    if (!cw.is_null() && (*cw).sx != 0 && (*cw).sy != 0) {
-                        cx = (*cw).sx;
-                        cy = (*cw).sy;
-                    } else {
-                        cx = (*loop_).tty.sx;
-                        cy = (*loop_).tty.sy - status_line_size(loop_);
-                    }
-
-                    /*
-                     * If it is larger or smaller than the best so far, update the
-                     * new size.
-                     */
-                    if (type_ == WINDOW_SIZE_LARGEST) {
-                        if (cx > *sx) {
-                            *sx = cx;
-                        }
-                        if (cy > *sy) {
-                            *sy = cy;
-                        }
-                    } else {
-                        if (cx < *sx) {
-                            *sx = cx;
-                        }
-                        if (cy < *sy) {
-                            *sy = cy;
-                        }
-                    }
-                    if ((*loop_).tty.xpixel > *xpixel && (*loop_).tty.ypixel > *ypixel) {
-                        *xpixel = (*loop_).tty.xpixel;
-                        *ypixel = (*loop_).tty.ypixel;
-                    }
-                    log_debug(
-                        c"%s: after %s (%ux%u), size is %ux%u".as_ptr(),
-                        __func__,
-                        (*loop_).name,
-                        cx,
-                        cy,
-                        *sx,
-                        *sy,
-                    );
-                    ControlFlow::<(), ()>::Continue(())
-                });
-                if (*sx != u32::MAX && *sy != u32::MAX) {
-                    log_debug(c"%s: calculated size %ux%u".as_ptr(), __func__, *sx, *sy);
-                } else {
-                    log_debug(c"%s: no calculated size".as_ptr(), __func__);
-                }
-            }
-            // skip:
-            /*
-             * Do not allow any size to be larger than the per-client window size
-             * if one exists.
-             */
-            if (w.is_null()) {
-                tailq_foreach(&raw mut clients, |loop_| {
-                    if (loop_ != c && ignore_client_size(loop_) != 0) {
-                        return ControlFlow::Continue(());
-                    }
-                    if (loop_ != c && skip_client.unwrap()(loop_, type_, current, s, w) != 0) {
-                        return ControlFlow::Continue(());
-                    }
-
-                    /* Look up per-window size if any. */
-                    if (!(*loop_).flags.intersects(client_flag::WINDOWSIZECHANGED)) {
-                        return ControlFlow::Continue(());
-                    }
-                    cw = server_client_get_client_window(loop_, (*w).id);
-                    if (cw.is_null()) {
-                        return ControlFlow::Continue(());
-                    }
-
-                    /* Clamp the size. */
-                    log_debug(
-                        c"%s: %s size for @%u is %ux%u".as_ptr(),
-                        __func__,
-                        (*loop_).name,
-                        (*w).id,
-                        (*cw).sx,
-                        (*cw).sy,
-                    );
-                    if ((*cw).sx != 0 && *sx > (*cw).sx) {
-                        *sx = (*cw).sx;
-                    }
-                    if ((*cw).sy != 0 && *sy > (*cw).sy) {
-                        *sy = (*cw).sy;
-                    }
-
-                    ControlFlow::<(), ()>::Continue(())
-                });
+                log_debug(
+                    c"%s: after %s (%ux%u), size is %ux%u".as_ptr(),
+                    __func__,
+                    (*loop_).name,
+                    cx,
+                    cy,
+                    *sx,
+                    *sy,
+                );
             }
             if (*sx != u32::MAX && *sy != u32::MAX) {
                 log_debug(c"%s: calculated size %ux%u".as_ptr(), __func__, *sx, *sy);
             } else {
                 log_debug(c"%s: no calculated size".as_ptr(), __func__);
             }
-
-            /* Return whether a suitable size was found. */
-            if (type_ == WINDOW_SIZE_MANUAL) {
-                log_debug(c"%s: type_ is manual".as_ptr(), __func__);
-                return 1;
-            }
-            if (type_ == WINDOW_SIZE_LARGEST) {
-                log_debug(c"%s: type_ is largest".as_ptr(), __func__);
-                return (*sx != 0 && *sy != 0) as i32;
-            }
-            if (type_ == WINDOW_SIZE_LATEST) {
-                log_debug(c"%s: type_ is latest".as_ptr(), __func__);
-            } else {
-                log_debug(c"%s: type_ is smallest".as_ptr(), __func__);
-            }
-            (*sx != u32::MAX && *sy != u32::MAX) as i32
         }
+        // skip:
+        /*
+         * Do not allow any size to be larger than the per-client window size
+         * if one exists.
+         */
+        if (w.is_null()) {
+            for loop_ in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+                if (loop_ != c && ignore_client_size(loop_) != 0) {
+                    continue;
+                }
+                if (loop_ != c && skip_client.unwrap()(loop_, type_, current, s, w) != 0) {
+                    continue;
+                }
+
+                /* Look up per-window size if any. */
+                if (!(*loop_).flags.intersects(client_flag::WINDOWSIZECHANGED)) {
+                    continue;
+                }
+                cw = server_client_get_client_window(loop_, (*w).id);
+                if (cw.is_null()) {
+                    continue;
+                }
+
+                /* Clamp the size. */
+                log_debug(
+                    c"%s: %s size for @%u is %ux%u".as_ptr(),
+                    __func__,
+                    (*loop_).name,
+                    (*w).id,
+                    (*cw).sx,
+                    (*cw).sy,
+                );
+                if ((*cw).sx != 0 && *sx > (*cw).sx) {
+                    *sx = (*cw).sx;
+                }
+                if ((*cw).sy != 0 && *sy > (*cw).sy) {
+                    *sy = (*cw).sy;
+                }
+            }
+        }
+        if (*sx != u32::MAX && *sy != u32::MAX) {
+            log_debug(c"%s: calculated size %ux%u".as_ptr(), __func__, *sx, *sy);
+        } else {
+            log_debug(c"%s: no calculated size".as_ptr(), __func__);
+        }
+
+        /* Return whether a suitable size was found. */
+        if (type_ == WINDOW_SIZE_MANUAL) {
+            log_debug(c"%s: type_ is manual".as_ptr(), __func__);
+            return 1;
+        }
+        if (type_ == WINDOW_SIZE_LARGEST) {
+            log_debug(c"%s: type_ is largest".as_ptr(), __func__);
+            return (*sx != 0 && *sy != 0) as i32;
+        }
+        if (type_ == WINDOW_SIZE_LATEST) {
+            log_debug(c"%s: type_ is latest".as_ptr(), __func__);
+        } else {
+            log_debug(c"%s: type_ is smallest".as_ptr(), __func__);
+        }
+        (*sx != u32::MAX && *sy != u32::MAX) as i32
     }
 }
 
@@ -571,36 +563,33 @@ pub unsafe extern "C" fn recalculate_sizes_now(now: i32) {
          * Clear attached count and update saved status line information for
          * each session.
          */
-        rb_foreach(&raw mut sessions, |s| {
+        for s in rb_foreach_(&raw mut sessions).map(NonNull::as_ptr) {
             (*s).attached = 0;
             status_update_cache(s);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
 
         /*
          * Increment attached count and check the status line size for each
          * client.
          */
-        tailq_foreach(&raw mut clients, |c| {
+        for c in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
             let s = (*c).session;
             if (!s.is_null() && !((*c).flags.intersects(CLIENT_UNATTACHEDFLAGS))) {
                 (*s).attached += 1;
             }
             if (ignore_client_size(c) != 0) {
-                return ControlFlow::<(), ()>::Continue(());
+                continue;
             }
             if ((*c).tty.sy <= (*s).statuslines || ((*c).flags.intersects(client_flag::CONTROL))) {
                 (*c).flags |= client_flag::STATUSOFF;
             } else {
                 (*c).flags &= !client_flag::STATUSOFF;
             }
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
 
         /* Walk each window and adjust the size. */
-        rb_foreach(&raw mut windows, |w| {
-            recalculate_size(w, now);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        for w in rb_foreach_(&raw mut windows) {
+            recalculate_size(w.as_ptr(), now);
+        }
     }
 }

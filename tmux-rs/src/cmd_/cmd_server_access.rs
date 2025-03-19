@@ -24,14 +24,13 @@ unsafe extern "C" fn cmd_server_access_deny(item: *mut cmdq_item, pw: *mut libc:
             cmdq_error(item, c"user %s not found".as_ptr(), (*pw).pw_name);
             return cmd_retval::CMD_RETURN_ERROR;
         }
-        tailq_foreach(&raw mut clients, |loop_| {
+        for loop_ in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
             let uid = proc_get_peer_uid((*loop_).peer);
             if (uid == server_acl_get_uid(user)) {
                 (*loop_).exit_message = xstrdup_(c"access not allowed").as_ptr();
                 (*loop_).flags |= client_flag::EXIT;
             }
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
         server_acl_user_deny((*pw).pw_uid);
 
         return (cmd_retval::CMD_RETURN_NORMAL);

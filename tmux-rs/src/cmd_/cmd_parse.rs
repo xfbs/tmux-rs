@@ -234,9 +234,9 @@ pub unsafe extern "C" fn cmd_parse_do_buffer(
 pub unsafe extern "C" fn cmd_parse_log_commands(cmds: *mut cmd_parse_commands, prefix: *const c_char) {
     unsafe {
         let mut i = 0;
-        tailq_foreach(cmds, |cmd| {
+        for cmd in compat_rs::queue::tailq_foreach_(cmds).map(NonNull::as_ptr) {
             let mut j = 0;
-            tailq_foreach(&raw mut (*cmd).arguments, |arg| {
+            for arg in compat_rs::queue::tailq_foreach_(&raw mut (*cmd).arguments).map(NonNull::as_ptr) {
                 match ((*arg).type_) {
                     cmd_parse_argument_type::CMD_PARSE_STRING => {
                         log_debug(c"%s %u:%u: %s".as_ptr(), prefix, i, j, (*arg).string)
@@ -254,12 +254,9 @@ pub unsafe extern "C" fn cmd_parse_log_commands(cmds: *mut cmd_parse_commands, p
                     }
                 }
                 j += 1;
-
-                ControlFlow::<(), ()>::Continue(())
-            });
+            }
             i += 1;
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 }
 
@@ -345,9 +342,9 @@ pub unsafe extern "C" fn cmd_parse_build_command(
         }
 
         'out: {
-            if tailq_foreach(&raw mut (*cmd).arguments, |arg| {
+            for arg in compat_rs::queue::tailq_foreach_(&raw mut (*cmd).arguments).map(NonNull::as_ptr) {
                 values = xrecallocarray_(values, count as usize, count as usize + 1, size_of::<args_value>()).as_ptr();
-                match ((*arg).type_) {
+                match (*arg).type_ {
                     cmd_parse_argument_type::CMD_PARSE_STRING => {
                         (*values.add(count as usize)).type_ = args_type::ARGS_STRING;
                         (*values.add(count as usize)).union_.string = xstrdup((*arg).string).as_ptr();
@@ -355,7 +352,7 @@ pub unsafe extern "C" fn cmd_parse_build_command(
                     cmd_parse_argument_type::CMD_PARSE_COMMANDS => {
                         cmd_parse_build_commands((*arg).commands, pi, pr);
                         if ((*pr).status != cmd_parse_status::CMD_PARSE_SUCCESS) {
-                            return ControlFlow::<(), ()>::Break(());
+                            break 'out;
                         }
                         (*values.add(count as _)).type_ = args_type::ARGS_COMMANDS;
                         (*values.add(count as _)).union_.cmdlist = (*pr).cmdlist;
@@ -367,11 +364,6 @@ pub unsafe extern "C" fn cmd_parse_build_command(
                     }
                 }
                 count += 1;
-                ControlFlow::<(), ()>::Continue(())
-            })
-            .is_break()
-            {
-                break 'out;
             }
 
             let add = cmd_parse(values, count, (*pi).file, (*pi).line, &raw mut cause);
@@ -424,7 +416,7 @@ pub unsafe extern "C" fn cmd_parse_build_commands(
          * executed).
          */
         let result = cmd_list_new();
-        if tailq_foreach(cmds, |cmd| {
+        for cmd in compat_rs::queue::tailq_foreach_(cmds).map(NonNull::as_ptr) {
             if ((!(*pi).flags & CMD_PARSE_ONEGROUP != 0) && (*cmd).line != line) {
                 if (!current.is_null()) {
                     cmd_parse_print_commands(pi, current);
@@ -443,16 +435,12 @@ pub unsafe extern "C" fn cmd_parse_build_commands(
             if ((*pr).status != cmd_parse_status::CMD_PARSE_SUCCESS) {
                 cmd_list_free(result);
                 cmd_list_free(current);
-                return ControlFlow::<(), ()>::Break(());
+                return;
             }
             cmd_list_append_all(current, (*pr).cmdlist);
             cmd_list_free((*pr).cmdlist);
-            ControlFlow::<(), ()>::Continue(())
-        })
-        .is_break()
-        {
-            return;
         }
+
         if (!current.is_null()) {
             cmd_parse_print_commands(pi, current);
             cmd_list_move(result, current);

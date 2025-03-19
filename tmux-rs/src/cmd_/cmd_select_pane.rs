@@ -41,9 +41,9 @@ pub unsafe extern "C" fn cmd_select_pane_redraw(w: *mut window) {
          * offset may change), otherwise just draw borders.
          */
 
-        tailq_foreach(&raw mut clients, |c| {
+        for c in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
             if ((*c).session.is_null() || ((*c).flags.intersects(client_flag::CONTROL))) {
-                return ControlFlow::<(), ()>::Continue(());
+                continue;
             }
             if ((*(*(*c).session).curw).window == w && tty_window_bigger(&raw mut (*c).tty) != 0) {
                 server_redraw_client(c);
@@ -55,8 +55,7 @@ pub unsafe extern "C" fn cmd_select_pane_redraw(w: *mut window) {
                     (*c).flags |= client_flag::REDRAWSTATUS;
                 }
             }
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 }
 
