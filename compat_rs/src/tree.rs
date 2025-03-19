@@ -605,6 +605,36 @@ where
     unsafe { rb_minmax(head, 1) }
 }
 
+pub unsafe fn rb_foreach_<T, D>(head: *mut rb_head<T>) -> RBIterator<T, D>
+where
+    T: GetEntry<T, D>,
+{
+    RBIterator {
+        curr: unsafe { rb_min(head) },
+        _phantom: std::marker::PhantomData,
+    }
+}
+pub struct RBIterator<T, D> {
+    curr: *mut T,
+    _phantom: std::marker::PhantomData<D>,
+}
+
+impl<T, D> Iterator for RBIterator<T, D>
+where
+    T: GetEntry<T, D>,
+{
+    type Item = *mut T;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.curr.is_null() {
+            return None;
+        }
+
+        let tmp = unsafe { rb_next(self.curr) };
+        self.curr = tmp;
+        Some(tmp)
+    }
+}
+
 pub unsafe fn rb_foreach<F, T, C, D>(head: *mut rb_head<T>, mut f: F) -> Option<C>
 where
     F: FnMut(*mut T) -> ControlFlow<C>,

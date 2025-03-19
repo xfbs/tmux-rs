@@ -138,7 +138,6 @@ static FILES: &[&str] = &[
     "options.c",
     "screen-write.c",
     "server-client.c",
-    "session.c",
     "status.c",
     "tty-keys.c",
     "tty.c",
@@ -146,3 +145,6 @@ static FILES: &[&str] = &[
     "window-customize.c",
     "window-tree.c",
 ];
+
+// removed:
+// "session.c",

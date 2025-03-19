@@ -5,9 +5,21 @@ An in-progress rust port of tmux. This project should be considered pre-alpha qu
 I don't think or want this project to displace tmux. I love using tmux.
 Tmux will also continue development while I'm working on this port,
 so the structure of the rust code must match that of the C project.
-I tried out using [zellij](https://zellij.dev/) once and gave up when the compilation time was something like 40 minutes on my machine.
+I tried out using [zellij](https://zellij.dev/) once and gave up when the compilation time was something like 8 minutes on my machine.
 For me, this refactor is kinda like gardening (I don't garden, but if I did I'd imagine that's what it's like).
 Every minute I spend on this is a minute I don't spend mindlessly playing some video game, so I take it as a net win.
+
+```
+    Finished `release` profile [optimized] target(s) in 8m 01s
+  Installing /home/collin/.config/cargo/bin/zellij
+   Installed package `zellij v0.42.0` (executable `zellij`)
+
+________________________________________________________
+Executed in  482.22 secs    fish           external
+   usr time   29.30 mins   49.48 millis   29.30 mins
+   sys time    1.76 mins    3.75 millis    1.76 mins
+size: 38
+```
 
 I started this endeavour as a way of getting first hand experience with using C2Rust.
 It's simultaneously a great and a terrible tool. I was amazed when I used it that it
@@ -123,7 +135,7 @@ improve imsg and imsg buffer implemnentation
 something in client -> tty struct
 concrete opaque struct in struct causing field offset into adjacent struct be incorrect
 
-refactor paste_buffer_data to use a mut ref
+impl for_each tree and rb to use std::iterator
 
 
 # TODO
@@ -169,9 +181,6 @@ refactor paste_buffer_data to use a mut ref
 - get rid of paste crate, won't need to join symbols any more for C code
 - figure out why building rust binary doesn't work
 
-1 small files:
-- [ ]  759 session
-
 17 big files:
 - [ ] 1535 grid // should probably be next, seeing crashes in grid-view
 - [ ] 1204 options
@@ -190,9 +199,10 @@ refactor paste_buffer_data to use a mut ref
 - [ ] 3392 server-client
 - [ ] 5294 format
 - [ ] 5786 window-copy
-- [ ]  899 cmd-queue (some tailq functions used port isn't working) (TODO move into broken)
 - [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
   =====
+- [X]  759 session
+- [X]  899 cmd-queue (some tailq functions used port isn't working) (TODO move into broken)
 - [X]  818 popup
 - [X]  868 screen-redraw
 - [X]  740 screen

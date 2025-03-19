@@ -266,7 +266,7 @@ pub unsafe extern "C" fn cmd_find_get_session(fs: *mut cmd_find_state, session: 
             return 0;
         }
 
-        (*fs).s = session_find(session);
+        (*fs).s = session_find(session.cast_mut()); // TODO this is invalid casting away const
         if (!(*fs).s.is_null()) {
             return 0;
         }
@@ -685,7 +685,7 @@ pub unsafe extern "C" fn cmd_find_valid_state(fs: *mut cmd_find_state) -> boolin
             return boolint::false_();
         }
 
-        if (session_alive((*fs).s) == 0) {
+        if !session_alive((*fs).s) {
             return boolint::false_();
         }
 

@@ -353,6 +353,40 @@ where
     }
 }
 
+pub unsafe fn tailq_foreach_<T, D>(head: *mut tailq_head<T>) -> TailQIterator<T, D>
+where
+    T: Entry<T, D>,
+{
+    unsafe {
+        TailQIterator {
+            curr: tailq_first(head),
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+// this implementation can be used in place of safe and non-safe
+pub struct TailQIterator<T, D> {
+    curr: *mut T,
+    _phantom: std::marker::PhantomData<D>,
+}
+impl<T, D> Iterator for TailQIterator<T, D>
+where
+    T: Entry<T, D>,
+{
+    type Item = *mut T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.curr.is_null() {
+            return None;
+        }
+
+        let tmp = unsafe { tailq_next(self.curr) };
+        self.curr = tmp;
+        Some(tmp)
+    }
+}
+
 #[inline]
 pub unsafe fn tailq_foreach_safe<F, T, B, D>(head: *mut tailq_head<T>, mut f: F) -> std::ops::ControlFlow<B>
 where

@@ -1,5 +1,5 @@
 [workspace]
-members = ["tmux-rs", "compat_rs"]
+members = ["tmux-rs", "compat_rs", "parser"]
 resolver = "2"
 
 [profile.dev]

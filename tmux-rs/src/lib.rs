@@ -2817,9 +2817,9 @@ pub use crate::session_::{
     session_group_attached_count, session_group_contains, session_group_count, session_group_find, session_group_new,
     session_group_synchronize_from, session_group_synchronize_to, session_has, session_is_linked, session_last,
     session_next, session_next_session, session_previous, session_previous_session, session_remove_ref,
-    session_renumber_windows, session_select, session_set_current, session_update_activity, sessions, sessions_RB_FIND,
-    sessions_RB_INSERT, sessions_RB_INSERT_COLOR, sessions_RB_NFIND, sessions_RB_REMOVE, sessions_RB_REMOVE_COLOR,
+    session_renumber_windows, session_select, session_set_current, session_update_activity, sessions,
 };
+// sessions_RB_INSERT, sessions_RB_INSERT_COLOR, sessions_RB_NFIND, sessions_RB_REMOVE, sessions_RB_REMOVE_COLOR, sessions_RB_FIND
 
 mod utf8;
 pub use crate::utf8::{

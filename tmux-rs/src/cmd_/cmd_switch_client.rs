@@ -74,7 +74,7 @@ unsafe extern "C" fn cmd_switch_client_exec(self_: *mut cmd, item: *mut cmdq_ite
                 return (cmd_retval::CMD_RETURN_ERROR);
             }
         } else if (args_has_(args, 'l')) {
-            if !(*tc).last_session.is_null() && session_alive((*tc).last_session) != 0 {
+            if !(*tc).last_session.is_null() && session_alive((*tc).last_session).as_bool() {
                 s = (*tc).last_session;
             } else {
                 s = null_mut();
