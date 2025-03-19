@@ -14,7 +14,7 @@ static mut cmd_list_clients_entry: cmd_entry = cmd_entry {
 
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_SESSION, 0),
 
-    flags: CMD_READONLY | CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_READONLY.union(cmd_flag::CMD_AFTERHOOK),
     exec: Some(cmd_list_clients_exec),
     ..unsafe { zeroed() }
 };

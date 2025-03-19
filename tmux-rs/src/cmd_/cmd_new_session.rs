@@ -15,7 +15,7 @@ static mut cmd_new_session_entry : cmd_entry = cmd_entry  {
 
 	target : cmd_entry_flag::new( b't', cmd_find_type::CMD_FIND_SESSION, CMD_FIND_CANFAIL ),
 
-	flags : CMD_STARTSERVER,
+	flags : cmd_flag::CMD_STARTSERVER,
 	exec : Some(cmd_new_session_exec),
     ..unsafe{zeroed()}
 };
@@ -30,7 +30,7 @@ static mut cmd_has_session_entry: cmd_entry = cmd_entry {
 
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_SESSION, 0),
 
-    flags: 0,
+    flags: cmd_flag::empty(),
     exec: Some(cmd_new_session_exec),
 
     ..unsafe { zeroed() }

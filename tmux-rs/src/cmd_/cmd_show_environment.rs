@@ -10,7 +10,7 @@ static mut cmd_show_environment_entry: cmd_entry = cmd_entry {
 
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_SESSION, CMD_FIND_CANFAIL),
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_show_environment_exec),
     ..unsafe { zeroed() }
 };

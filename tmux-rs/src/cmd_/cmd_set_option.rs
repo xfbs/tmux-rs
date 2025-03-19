@@ -12,7 +12,7 @@ static mut cmd_set_option_entry: cmd_entry = cmd_entry {
 
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_PANE, CMD_FIND_CANFAIL),
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_set_option_exec),
     ..unsafe { zeroed() }
 };
@@ -27,7 +27,7 @@ static mut cmd_set_window_option_entry: cmd_entry = cmd_entry {
 
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_WINDOW, CMD_FIND_CANFAIL),
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_set_option_exec),
     ..unsafe { zeroed() }
 };
@@ -42,7 +42,7 @@ static mut cmd_set_hook_entry: cmd_entry = cmd_entry {
 
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_PANE, CMD_FIND_CANFAIL),
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_set_option_exec),
     ..unsafe { zeroed() }
 };

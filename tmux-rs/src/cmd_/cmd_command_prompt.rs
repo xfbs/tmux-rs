@@ -8,7 +8,7 @@ static mut cmd_command_prompt_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"1bFkiI:Np:t:T:", 0, 1, Some(cmd_command_prompt_args_parse)),
     usage: c"[-1bFkiN] [-I inputs] [-p prompts] [-t target-pane] [-T type] [template]".as_ptr(),
 
-    flags: CMD_CLIENT_TFLAG,
+    flags: cmd_flag::CMD_CLIENT_TFLAG,
     exec: Some(cmd_command_prompt_exec),
     ..unsafe { zeroed() }
 };

@@ -13,7 +13,9 @@ static mut cmd_send_keys_entry: cmd_entry = cmd_entry {
 
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_PANE, 0),
 
-    flags: CMD_AFTERHOOK | CMD_CLIENT_CFLAG | CMD_CLIENT_CANFAIL,
+    flags: cmd_flag::CMD_AFTERHOOK
+        .union(cmd_flag::CMD_CLIENT_CFLAG)
+        .union(cmd_flag::CMD_CLIENT_CANFAIL),
     exec: Some(cmd_send_keys_exec),
 
     ..unsafe { zeroed() }
@@ -29,7 +31,7 @@ static mut cmd_send_prefix_entry: cmd_entry = cmd_entry {
 
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_PANE, 0),
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_send_keys_exec),
     ..unsafe { zeroed() }
 };

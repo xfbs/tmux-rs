@@ -13,7 +13,7 @@ static mut cmd_source_file_entry: cmd_entry = cmd_entry {
 
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_PANE, CMD_FIND_CANFAIL),
 
-    flags: 0,
+    flags: cmd_flag::empty(),
     exec: Some(cmd_source_file_exec),
     ..unsafe { zeroed() }
 };

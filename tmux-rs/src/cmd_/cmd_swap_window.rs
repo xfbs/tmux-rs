@@ -13,7 +13,7 @@ static mut cmd_swap_window_entry: cmd_entry = cmd_entry {
     source: cmd_entry_flag::new(b's', cmd_find_type::CMD_FIND_WINDOW, CMD_FIND_DEFAULT_MARKED),
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_WINDOW, 0),
 
-    flags: 0,
+    flags: cmd_flag::empty(),
     exec: Some(cmd_swap_window_exec),
 };
 

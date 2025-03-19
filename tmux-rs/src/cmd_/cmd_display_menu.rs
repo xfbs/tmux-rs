@@ -12,7 +12,7 @@ static mut cmd_display_menu_entry : cmd_entry = cmd_entry  {
     usage : c"[-MO] [-b border-lines] [-c target-client] [-C starting-choice] [-H selected-style] [-s style] [-S border-style] [-t target-pane][-T title] [-x position] [-y position] name key command ...".as_ptr(),
     target : cmd_entry_flag::new( b't', cmd_find_type::CMD_FIND_PANE, 0 ),
 
-    flags : CMD_AFTERHOOK|CMD_CLIENT_CFLAG,
+    flags : cmd_flag::CMD_AFTERHOOK.union(cmd_flag::CMD_CLIENT_CFLAG),
     exec : Some(cmd_display_menu_exec),
 ..unsafe{zeroed()}
 };
@@ -26,7 +26,7 @@ static mut cmd_display_popup_entry : cmd_entry = cmd_entry  {
     usage : c"[-BCE] [-b border-lines] [-c target-client] [-d start-directory] [-e environment] [-h height] [-s style] [-S border-style] [-t target-pane][-T title] [-w width] [-x position] [-y position] [shell-command]".as_ptr(),
     target : cmd_entry_flag::new( b't', cmd_find_type::CMD_FIND_PANE, 0 ),
 
-    flags : CMD_AFTERHOOK|CMD_CLIENT_CFLAG,
+    flags : cmd_flag::CMD_AFTERHOOK.union(cmd_flag::CMD_CLIENT_CFLAG),
     exec : Some(cmd_display_popup_exec),
 ..unsafe{zeroed()}
 };

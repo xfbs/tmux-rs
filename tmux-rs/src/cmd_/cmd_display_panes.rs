@@ -10,7 +10,7 @@ static mut cmd_display_panes_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"bd:Nt:", 0, 1, Some(cmd_display_panes_args_parse)),
     usage: c"[-bN] [-d duration] [-t target-client] [template]".as_ptr(),
 
-    flags: CMD_AFTERHOOK | CMD_CLIENT_TFLAG,
+    flags: cmd_flag::CMD_AFTERHOOK.union(cmd_flag::CMD_CLIENT_TFLAG),
     exec: Some(cmd_display_panes_exec),
     ..unsafe { zeroed() }
 };

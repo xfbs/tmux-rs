@@ -8,7 +8,9 @@ static mut cmd_set_buffer_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"ab:t:n:w", 0, 1, None),
     usage: c"[-aw] [-b buffer-name] [-n new-buffer-name] [-t target-client] data".as_ptr(),
 
-    flags: CMD_AFTERHOOK | CMD_CLIENT_TFLAG | CMD_CLIENT_CANFAIL,
+    flags: cmd_flag::CMD_AFTERHOOK
+        .union(cmd_flag::CMD_CLIENT_TFLAG)
+        .union(cmd_flag::CMD_CLIENT_CANFAIL),
     exec: Some(cmd_set_buffer_exec),
     ..unsafe { zeroed() }
 };
@@ -21,7 +23,7 @@ static mut cmd_delete_buffer_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"b:", 0, 0, None),
     usage: CMD_BUFFER_USAGE.as_ptr(),
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_set_buffer_exec),
     ..unsafe { zeroed() }
 };

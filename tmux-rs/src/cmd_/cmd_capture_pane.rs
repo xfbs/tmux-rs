@@ -2,29 +2,18 @@ use libc::{INT_MIN, strcmp, strlen};
 
 use crate::*;
 
-pub const SHRT_MAX: i64 = 32767;
-
 #[unsafe(no_mangle)]
 pub static mut cmd_capture_pane_entry: cmd_entry = cmd_entry {
     name: c"capture-pane".as_ptr(),
     alias: c"capturep".as_ptr(),
 
-    args: args_parse {
-        template: c"ab:CeE:JNpPqS:Tt:".as_ptr(),
-        lower: 0,
-        upper: 0,
-        cb: None,
-    },
+    args: args_parse::new(c"ab:CeE:JNpPqS:Tt:", 0, 0, None),
     usage: c"[-aCeJNpPqT] [-b buffer-name] [-E end-line] [-S start-line] [-t target-pane]".as_ptr(),
 
     source: unsafe { zeroed() },
-    target: cmd_entry_flag {
-        flag: b't' as _,
-        type_: cmd_find_type::CMD_FIND_PANE,
-        flags: 0,
-    },
+    target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_PANE, 0),
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_capture_pane_exec),
 };
 
@@ -48,7 +37,7 @@ pub static mut cmd_clear_history_entry: cmd_entry = cmd_entry {
         flags: 0,
     },
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_capture_pane_exec),
 };
 
@@ -147,7 +136,14 @@ unsafe extern "C" fn cmd_capture_pane_history(
         if !Sflag.is_null() && strcmp(Sflag, c"-".as_ptr()) == 0 {
             top = 0;
         } else {
-            n = args_strtonum_and_expand(args, b'S', libc::INT_MIN as i64, SHRT_MAX, item, &raw mut cause);
+            n = args_strtonum_and_expand(
+                args,
+                b'S',
+                libc::INT_MIN as i64,
+                c_short::MAX as i64,
+                item,
+                &raw mut cause,
+            );
             if !cause.is_null() {
                 top = (*gd).hsize;
                 free_(cause);
@@ -165,7 +161,7 @@ unsafe extern "C" fn cmd_capture_pane_history(
         if !Eflag.is_null() && strcmp(Eflag, c"-".as_ptr()) == 0 {
             bottom = (*gd).hsize + (*gd).sy - 1;
         } else {
-            n = args_strtonum_and_expand(args, b'E', INT_MIN as i64, SHRT_MAX, item, &raw mut cause);
+            n = args_strtonum_and_expand(args, b'E', INT_MIN as i64, i16::MAX as i64, item, &raw mut cause);
             if !cause.is_null() {
                 bottom = (*gd).hsize + (*gd).sy - 1;
                 free_(cause);

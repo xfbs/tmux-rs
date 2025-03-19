@@ -12,7 +12,7 @@ static mut cmd_select_pane_entry: cmd_entry = cmd_entry {
 
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_PANE, 0),
 
-    flags: 0,
+    flags: cmd_flag::empty(),
     exec: Some(cmd_select_pane_exec),
 
     ..unsafe { zeroed() }
@@ -28,7 +28,7 @@ static mut cmd_last_pane_entry: cmd_entry = cmd_entry {
 
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_WINDOW, 0),
 
-    flags: 0,
+    flags: cmd_flag::empty(),
     exec: Some(cmd_select_pane_exec),
     ..unsafe { zeroed() }
 };

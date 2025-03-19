@@ -8,7 +8,7 @@ static mut cmd_unbind_key_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"anqT:", 0, 1, None),
     usage: c"[-anq] [-T key-table] key".as_ptr(),
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_unbind_key_exec),
     ..unsafe { zeroed() }
 };

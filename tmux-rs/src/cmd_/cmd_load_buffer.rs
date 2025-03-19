@@ -8,7 +8,9 @@ static mut cmd_load_buffer_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"b:t:w", 1, 1, None),
     usage: c"[-b buffer-name] [-t target-client] path".as_ptr(),
 
-    flags: CMD_AFTERHOOK | CMD_CLIENT_TFLAG | CMD_CLIENT_CANFAIL,
+    flags: cmd_flag::CMD_AFTERHOOK
+        .union(cmd_flag::CMD_CLIENT_TFLAG)
+        .union(cmd_flag::CMD_CLIENT_CANFAIL),
     exec: Some(cmd_load_buffer_exec),
     ..unsafe { zeroed() }
 };

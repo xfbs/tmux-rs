@@ -13,7 +13,9 @@ static mut cmd_display_message_entry: cmd_entry = cmd_entry {
 
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_PANE, CMD_FIND_CANFAIL),
 
-    flags: CMD_AFTERHOOK | CMD_CLIENT_CFLAG | CMD_CLIENT_CANFAIL,
+    flags: cmd_flag::CMD_AFTERHOOK
+        .union(cmd_flag::CMD_CLIENT_CFLAG)
+        .union(cmd_flag::CMD_CLIENT_CANFAIL),
     exec: Some(cmd_display_message_exec),
     ..unsafe { zeroed() }
 };

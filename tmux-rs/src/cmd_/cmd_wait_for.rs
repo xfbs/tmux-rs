@@ -18,7 +18,7 @@ static mut cmd_wait_for_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"LSU", 1, 1, None),
     usage: c"[-L|-S|-U] channel".as_ptr(),
 
-    flags: 0,
+    flags: cmd_flag::empty(),
     exec: Some(cmd_wait_for_exec),
     ..unsafe { zeroed() }
 };

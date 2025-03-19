@@ -13,7 +13,7 @@ static mut cmd_split_window_entry: cmd_entry = cmd_entry {
 
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_PANE, 0),
 
-    flags: 0,
+    flags: cmd_flag::empty(),
     exec: Some(cmd_split_window_exec),
     ..unsafe { zeroed() }
 };

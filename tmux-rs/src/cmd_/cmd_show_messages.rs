@@ -12,7 +12,7 @@ static mut cmd_show_messages_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"JTt:", 0, 0, None),
     usage: c"[-JT] [-t target-client]".as_ptr(),
 
-    flags: CMD_AFTERHOOK | CMD_CLIENT_TFLAG,
+    flags: cmd_flag::CMD_AFTERHOOK.union(cmd_flag::CMD_CLIENT_TFLAG),
     exec: Some(cmd_show_messages_exec),
     ..unsafe { zeroed() }
 };

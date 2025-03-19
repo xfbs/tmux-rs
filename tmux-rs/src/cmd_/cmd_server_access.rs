@@ -11,7 +11,7 @@ static mut cmd_server_access_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"adlrw", 0, 1, None),
     usage: c"[-adlrw] [-t target-pane] [user]".as_ptr(),
 
-    flags: CMD_CLIENT_CANFAIL,
+    flags: cmd_flag::CMD_CLIENT_CANFAIL,
     exec: Some(cmd_server_access_exec),
     ..unsafe { zeroed() }
 };

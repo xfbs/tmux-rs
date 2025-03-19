@@ -12,7 +12,7 @@ static mut cmd_list_panes_entry: cmd_entry = cmd_entry {
 
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_WINDOW, 0),
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_list_panes_exec),
     ..unsafe { zeroed() }
 };

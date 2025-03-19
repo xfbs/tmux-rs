@@ -670,16 +670,16 @@ pub unsafe extern "C" fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
                 (*item).client = cmd_find_client(item, null_mut(), 1);
             }
 
-            if (*entry).flags & CMD_CLIENT_CANFAIL != 0 {
+            if (*entry).flags.intersects(cmd_flag::CMD_CLIENT_CANFAIL) {
                 quiet = 1;
             }
-            if (*entry).flags & CMD_CLIENT_CFLAG != 0 {
+            if (*entry).flags.intersects(cmd_flag::CMD_CLIENT_CFLAG) {
                 tc = cmd_find_client(item, args_get_(args, 'c'), quiet);
                 if (tc.is_null() && quiet == 0) {
                     retval = cmd_retval::CMD_RETURN_ERROR;
                     break 'out;
                 }
-            } else if ((*entry).flags & CMD_CLIENT_TFLAG != 0) {
+            } else if (*entry).flags.intersects(cmd_flag::CMD_CLIENT_TFLAG) {
                 tc = cmd_find_client(item, args_get_(args, 't'), quiet);
                 if (tc.is_null() && quiet == 0) {
                     retval = cmd_retval::CMD_RETURN_ERROR;
@@ -704,7 +704,7 @@ pub unsafe extern "C" fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
                 break 'out;
             }
 
-            if ((*entry).flags & CMD_AFTERHOOK != 0) {
+            if (*entry).flags.intersects(cmd_flag::CMD_AFTERHOOK) {
                 fsp = if cmd_find_valid_state(&raw mut (*item).target).as_bool() {
                     &raw mut (*item).target
                 } else if cmd_find_valid_state(&raw mut (*(*item).state).current).as_bool() {

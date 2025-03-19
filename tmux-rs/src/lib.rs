@@ -1911,12 +1911,18 @@ impl cmd_entry_flag {
     }
 }
 
-pub const CMD_STARTSERVER: i32 = 0x1;
-pub const CMD_READONLY: i32 = 0x2;
-pub const CMD_AFTERHOOK: i32 = 0x4;
-pub const CMD_CLIENT_CFLAG: i32 = 0x8;
-pub const CMD_CLIENT_TFLAG: i32 = 0x10;
-pub const CMD_CLIENT_CANFAIL: i32 = 0x20;
+bitflags::bitflags! {
+    #[repr(transparent)]
+    #[derive(Copy, Clone, Eq, PartialEq)]
+    pub struct cmd_flag: i32 {
+        const CMD_STARTSERVER = 0x1;
+        const CMD_READONLY = 0x2;
+        const CMD_AFTERHOOK = 0x4;
+        const CMD_CLIENT_CFLAG = 0x8;
+        const CMD_CLIENT_TFLAG = 0x10;
+        const CMD_CLIENT_CANFAIL = 0x20;
+    }
+}
 
 // Command definition.
 #[repr(C)]
@@ -1930,7 +1936,7 @@ pub struct cmd_entry {
     pub source: cmd_entry_flag,
     pub target: cmd_entry_flag,
 
-    pub flags: i32,
+    pub flags: cmd_flag,
 
     pub exec: Option<unsafe extern "C" fn(*mut cmd, *mut cmdq_item) -> cmd_retval>,
 }
@@ -2939,6 +2945,10 @@ impl boolint {
     const fn false_() -> Self { Self(0) }
     const fn as_bool(&self) -> bool { self.0 != 0 }
     const fn as_int(&self) -> i32 { self.0 }
+}
+
+impl From<bool> for boolint {
+    fn from(value: bool) -> Self { Self(value as i32) }
 }
 
 impl std::ops::Not for boolint {

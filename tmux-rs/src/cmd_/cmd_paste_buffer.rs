@@ -10,7 +10,7 @@ static mut cmd_paste_buffer_entry: cmd_entry = cmd_entry {
 
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_PANE, 0),
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_paste_buffer_exec),
     ..unsafe { zeroed() }
 };

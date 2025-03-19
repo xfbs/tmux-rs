@@ -12,7 +12,7 @@ static mut cmd_detach_client_entry: cmd_entry = cmd_entry {
 
     source: cmd_entry_flag::new(b's', cmd_find_type::CMD_FIND_SESSION, CMD_FIND_CANFAIL),
 
-    flags: CMD_READONLY | CMD_CLIENT_TFLAG,
+    flags: cmd_flag::CMD_READONLY.union(cmd_flag::CMD_CLIENT_TFLAG),
     exec: Some(cmd_detach_client_exec),
     ..unsafe { zeroed() }
 };
@@ -25,7 +25,7 @@ static mut cmd_suspend_client_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"t:", 0, 0, None),
     usage: c"[-t target-client]".as_ptr(),
 
-    flags: CMD_CLIENT_TFLAG,
+    flags: cmd_flag::CMD_CLIENT_TFLAG,
     exec: Some(cmd_detach_client_exec),
     ..unsafe { zeroed() }
 };

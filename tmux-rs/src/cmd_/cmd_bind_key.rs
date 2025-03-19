@@ -5,15 +5,10 @@ static mut cmd_bind_key_entry: cmd_entry = cmd_entry {
     name: c"bind-key".as_ptr(),
     alias: c"bind".as_ptr(),
 
-    args: args_parse {
-        template: c"nrN:T:".as_ptr(),
-        lower: 1,
-        upper: -1,
-        cb: Some(cmd_bind_key_args_parse),
-    },
+    args: args_parse::new(c"nrN:T:", 1, -1, Some(cmd_bind_key_args_parse)),
     usage: c"[-nr] [-T key-table] [-N note] key [command [arguments]]".as_ptr(),
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_bind_key_exec),
     ..unsafe { zeroed() }
 };

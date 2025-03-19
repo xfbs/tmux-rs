@@ -10,7 +10,7 @@ static mut cmd_move_window_entry: cmd_entry = cmd_entry {
 
     source: cmd_entry_flag::new(b's', cmd_find_type::CMD_FIND_WINDOW, 0),
 
-    flags: 0,
+    flags: cmd_flag::empty(),
     exec: Some(cmd_move_window_exec),
     ..unsafe { zeroed() }
 };
@@ -25,7 +25,7 @@ static mut cmd_link_window_entry: cmd_entry = cmd_entry {
 
     source: cmd_entry_flag::new(b's', cmd_find_type::CMD_FIND_WINDOW, 0),
 
-    flags: 0,
+    flags: cmd_flag::empty(),
     exec: Some(cmd_move_window_exec),
     ..unsafe { zeroed() }
 };

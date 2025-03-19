@@ -10,7 +10,7 @@ static mut cmd_switch_client_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"lc:EFnpt:rT:Z", 0, 0, None),
     usage: c"[-ElnprZ] [-c target-client] [-t target-session] [-T key-table]".as_ptr(),
 
-    flags: CMD_READONLY | CMD_CLIENT_CFLAG,
+    flags: cmd_flag::CMD_READONLY.union(cmd_flag::CMD_CLIENT_CFLAG),
     exec: Some(cmd_switch_client_exec),
     ..unsafe { zeroed() }
 };

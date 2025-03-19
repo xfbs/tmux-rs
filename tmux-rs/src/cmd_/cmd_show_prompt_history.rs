@@ -8,7 +8,7 @@ static mut cmd_show_prompt_history_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"T:", 0, 0, None),
     usage: c"[-T type]".as_ptr(),
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_show_prompt_history_exec),
     ..unsafe { zeroed() }
 };
@@ -21,7 +21,7 @@ static mut cmd_clear_prompt_history_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"T:", 0, 0, None),
     usage: c"[-T type]".as_ptr(),
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_show_prompt_history_exec),
     ..unsafe { zeroed() }
 };

@@ -832,26 +832,23 @@ pub unsafe extern "C" fn cmd_list_first(cmdlist: *mut cmd_list) -> *mut cmd { un
 pub unsafe extern "C" fn cmd_list_next(cmd: *mut cmd) -> *mut cmd { unsafe { tailq_next::<_, _, qentry>(cmd) } }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_list_all_have(cmdlist: *mut cmd_list, flag: c_int) -> c_int {
+pub unsafe extern "C" fn cmd_list_all_have(cmdlist: *mut cmd_list, flag: cmd_flag) -> boolint {
     unsafe {
-        for cmd in compat_rs::queue::tailq_foreach_((*cmdlist).list) {
-            if !(*(*cmd.as_ptr()).entry).flags & flag != 0 {
-                return 0;
-            }
-        }
-        1
+        boolint::from(
+            compat_rs::queue::tailq_foreach_((*cmdlist).list)
+                .into_iter()
+                .all(|cmd| (*(*cmd.as_ptr()).entry).flags.intersects(flag)),
+        )
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_list_any_have(cmdlist: *mut cmd_list, flag: c_int) -> c_int {
+pub unsafe extern "C" fn cmd_list_any_have(cmdlist: *mut cmd_list, flag: cmd_flag) -> boolint {
     unsafe {
-        for cmd in compat_rs::queue::tailq_foreach_((*cmdlist).list) {
-            if !(*(*cmd.as_ptr()).entry).flags & flag != 0 {
-                return 1;
-            }
-        }
-        0
+        compat_rs::queue::tailq_foreach_((*cmdlist).list)
+            .into_iter()
+            .any(|cmd| (*(*cmd.as_ptr()).entry).flags.intersects(flag))
+            .into()
     }
 }
 

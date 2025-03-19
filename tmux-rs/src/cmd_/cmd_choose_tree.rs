@@ -11,7 +11,7 @@ static mut cmd_choose_tree_entry: cmd_entry = cmd_entry {
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_PANE, 0),
     source: unsafe { zeroed() },
 
-    flags: 0,
+    flags: cmd_flag::empty(),
     exec: Some(cmd_choose_tree_exec),
 };
 
@@ -26,7 +26,7 @@ static mut cmd_choose_client_entry: cmd_entry = cmd_entry {
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_PANE, 0),
     source: unsafe { zeroed() },
 
-    flags: 0,
+    flags: cmd_flag::empty(),
     exec: Some(cmd_choose_tree_exec),
 };
 
@@ -41,7 +41,7 @@ static mut cmd_choose_buffer_entry: cmd_entry = cmd_entry {
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_PANE, 0),
     source: unsafe { zeroed() },
 
-    flags: 0,
+    flags: cmd_flag::empty(),
     exec: Some(cmd_choose_tree_exec),
 };
 
@@ -56,7 +56,7 @@ static mut cmd_customize_mode_entry: cmd_entry = cmd_entry {
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_PANE, 0),
     source: unsafe { zeroed() },
 
-    flags: 0,
+    flags: cmd_flag::empty(),
     exec: Some(cmd_choose_tree_exec),
 };
 

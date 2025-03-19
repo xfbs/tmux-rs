@@ -10,7 +10,7 @@ static mut cmd_select_layout_entry: cmd_entry = cmd_entry {
 
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_PANE, 0),
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_select_layout_exec),
     ..unsafe { zeroed() }
 };
@@ -25,7 +25,7 @@ static mut cmd_next_layout_entry: cmd_entry = cmd_entry {
 
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_WINDOW, 0),
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_select_layout_exec),
     ..unsafe { zeroed() }
 };
@@ -40,7 +40,7 @@ static mut cmd_previous_layout_entry: cmd_entry = cmd_entry {
 
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_WINDOW, 0),
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_select_layout_exec),
     ..unsafe { zeroed() }
 };

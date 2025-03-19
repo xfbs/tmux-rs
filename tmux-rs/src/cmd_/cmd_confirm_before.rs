@@ -8,7 +8,7 @@ static mut cmd_confirm_before_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"bc:p:t:y", 1, 1, Some(cmd_confirm_before_args_parse)),
     usage: c"[-by] [-c confirm_key] [-p prompt] [-t target-pane] command".as_ptr(),
 
-    flags: CMD_CLIENT_TFLAG,
+    flags: cmd_flag::CMD_CLIENT_TFLAG,
     exec: Some(cmd_confirm_before_exec),
     ..unsafe { zeroed() }
 };

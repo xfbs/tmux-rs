@@ -10,7 +10,7 @@ static mut cmd_save_buffer_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"ab:", 1, 1, None),
     usage: c"[-a] [-b buffer-name] path".as_ptr(),
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_save_buffer_exec),
     ..unsafe { zeroed() }
 };
@@ -23,7 +23,7 @@ static mut cmd_show_buffer_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"b:", 0, 0, None),
     usage: c"[-b buffer-name]".as_ptr(),
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_save_buffer_exec),
     ..unsafe { zeroed() }
 };

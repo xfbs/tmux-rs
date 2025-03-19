@@ -11,7 +11,7 @@ static mut cmd_list_keys_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"1aNP:T:", 0, 1, None),
     usage: c"[-1aN] [-P prefix-string] [-T key-table] [key]".as_ptr(),
 
-    flags: CMD_STARTSERVER | CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_STARTSERVER.union(cmd_flag::CMD_AFTERHOOK),
     exec: Some(cmd_list_keys_exec),
     ..unsafe { zeroed() }
 };
@@ -24,7 +24,7 @@ static mut cmd_list_commands_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"F:", 0, 1, None),
     usage: c"[-F format] [command]".as_ptr(),
 
-    flags: CMD_STARTSERVER | CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_STARTSERVER.union(cmd_flag::CMD_AFTERHOOK),
     exec: Some(cmd_list_keys_exec),
     ..unsafe { zeroed() }
 };

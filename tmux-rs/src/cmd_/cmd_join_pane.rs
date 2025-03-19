@@ -13,7 +13,7 @@ static mut cmd_join_pane_entry: cmd_entry = cmd_entry {
     source: cmd_entry_flag::new(b's', cmd_find_type::CMD_FIND_PANE, CMD_FIND_DEFAULT_MARKED),
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_PANE, 0),
 
-    flags: 0,
+    flags: cmd_flag::empty(),
     exec: Some(cmd_join_pane_exec),
 };
 
@@ -28,7 +28,7 @@ static mut cmd_move_pane_entry: cmd_entry = cmd_entry {
     source: cmd_entry_flag::new(b's', cmd_find_type::CMD_FIND_PANE, CMD_FIND_DEFAULT_MARKED),
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_PANE, 0),
 
-    flags: 0,
+    flags: cmd_flag::empty(),
     exec: Some(cmd_join_pane_exec),
 };
 

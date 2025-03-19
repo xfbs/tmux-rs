@@ -15,18 +15,10 @@ static mut cmd_break_pane_entry: cmd_entry = cmd_entry {
     },
     usage: c"[-abdP] [-F format] [-n window-name] [-s src-pane] [-t dst-window]".as_ptr(),
 
-    source: cmd_entry_flag {
-        flag: b's' as c_char,
-        type_: cmd_find_type::CMD_FIND_PANE,
-        flags: 0,
-    },
-    target: cmd_entry_flag {
-        flag: b't' as c_char,
-        type_: cmd_find_type::CMD_FIND_WINDOW,
-        flags: CMD_FIND_WINDOW_INDEX,
-    },
+    source: cmd_entry_flag::new(b's', cmd_find_type::CMD_FIND_PANE, 0),
+    target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_WINDOW, CMD_FIND_WINDOW_INDEX),
 
-    flags: 0,
+    flags: cmd_flag::empty(),
     exec: Some(cmd_break_pane_exec),
 };
 

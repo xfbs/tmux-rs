@@ -22,7 +22,7 @@ static mut cmd_kill_session_entry: cmd_entry = cmd_entry {
         flags: 0,
     },
 
-    flags: 0,
+    flags: cmd_flag::empty(),
     exec: Some(cmd_kill_session_exec),
 };
 

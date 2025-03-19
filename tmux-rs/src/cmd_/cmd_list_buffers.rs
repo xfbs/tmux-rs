@@ -8,7 +8,7 @@ static mut cmd_list_buffers_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"F:f:", 0, 0, None),
     usage: c"[-F format] [-f filter]".as_ptr(),
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_list_buffers_exec),
     ..unsafe { zeroed() }
 };

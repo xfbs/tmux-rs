@@ -8,7 +8,7 @@ static mut cmd_lock_server_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"", 0, 0, None),
     usage: c"".as_ptr(),
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_lock_server_exec),
     ..unsafe { zeroed() }
 };
@@ -23,7 +23,7 @@ static mut cmd_lock_session_entry: cmd_entry = cmd_entry {
 
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_SESSION, 0),
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_lock_server_exec),
     ..unsafe { zeroed() }
 };
@@ -36,7 +36,7 @@ static mut cmd_lock_client_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"t:", 0, 0, None),
     usage: c"[-t target-client]".as_ptr(),
 
-    flags: CMD_AFTERHOOK | CMD_CLIENT_TFLAG,
+    flags: cmd_flag::CMD_AFTERHOOK.union(cmd_flag::CMD_CLIENT_TFLAG),
     exec: Some(cmd_lock_server_exec),
     ..unsafe { zeroed() }
 };

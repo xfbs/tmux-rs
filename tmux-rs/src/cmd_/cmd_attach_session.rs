@@ -12,15 +12,10 @@ pub static mut cmd_attach_session_entry: cmd_entry = cmd_entry {
     name: c"attach-session".as_ptr(),
     alias: c"attach".as_ptr(),
 
-    args: args_parse {
-        template: c"c:dEf:rt:x".as_ptr(),
-        lower: 0,
-        upper: 0,
-        cb: None,
-    },
+    args: args_parse::new(c"c:dEf:rt:x", 0, 0, None),
     usage: c"[-dErx] [-c working-directory] [-f flags] [-t target-session]".as_ptr(),
 
-    flags: CMD_STARTSERVER | CMD_READONLY,
+    flags: cmd_flag::CMD_STARTSERVER.union(cmd_flag::CMD_READONLY),
     exec: Some(cmd_attach_session_exec),
     ..unsafe { zeroed() }
 };

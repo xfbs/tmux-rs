@@ -24,7 +24,7 @@ static mut cmd_copy_mode_entry: cmd_entry = cmd_entry {
         flags: 0,
     },
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_copy_mode_exec),
 };
 
@@ -48,7 +48,7 @@ static mut cmd_clock_mode_entry: cmd_entry = cmd_entry {
         flags: 0,
     },
 
-    flags: CMD_AFTERHOOK,
+    flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_copy_mode_exec),
 };
 
