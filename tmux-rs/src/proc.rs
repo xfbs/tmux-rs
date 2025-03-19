@@ -2,7 +2,7 @@ use compat_rs::{
     getpeereid,
     imsg::{imsg_clear, imsg_compose, imsg_flush, imsg_free, imsg_get, imsg_get_fd, imsg_init, imsg_read, imsgbuf},
     imsg_buffer::msgbuf_write,
-    queue::{tailq_foreach, tailq_init, tailq_insert_tail, tailq_remove},
+    queue::{tailq_foreach_, tailq_init, tailq_insert_tail, tailq_remove},
     setproctitle,
 };
 use libc::{
@@ -255,17 +255,25 @@ pub unsafe fn proc_start(name: &CStr) -> *mut tmuxproc {
 pub unsafe extern "C" fn proc_loop(tp: *mut tmuxproc, loopcb: Option<unsafe extern "C" fn() -> i32>) {
     unsafe {
         log_debug(c"%s loop enter".as_ptr(), (*tp).name);
-        loop {
-            event_loop(EVLOOP_ONCE);
+        match loopcb {
+            None => loop {
+                event_loop(EVLOOP_ONCE);
 
-            if (*tp).exit != 0 {
-                break;
-            }
-            if let Some(loopcb) = loopcb {
+                if (*tp).exit != 0 {
+                    break;
+                }
+            },
+            Some(loopcb) => loop {
+                event_loop(EVLOOP_ONCE);
+
+                if (*tp).exit != 0 {
+                    break;
+                }
+
                 if loopcb() != 0 {
                     break;
                 }
-            }
+            },
         }
         log_debug(c"%s loop exit".as_ptr(), (*tp).name);
     }
@@ -274,10 +282,9 @@ pub unsafe extern "C" fn proc_loop(tp: *mut tmuxproc, loopcb: Option<unsafe exte
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn proc_exit(tp: *mut tmuxproc) {
     unsafe {
-        tailq_foreach(&raw mut (*tp).peers, |peer| {
+        for peer in tailq_foreach_(&raw mut (*tp).peers).map(NonNull::as_ptr) {
             imsg_flush(&raw mut (*peer).ibuf);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
         (*tp).exit = 1;
     }
 }

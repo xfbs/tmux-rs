@@ -2,7 +2,9 @@ use crate::*;
 
 use compat_rs::{
     ACCESSPERMS,
-    queue::{tailq_empty, tailq_foreach, tailq_foreach_safe, tailq_init, tailq_insert_tail, tailq_remove},
+    queue::{
+        tailq_empty, tailq_foreach, tailq_foreach_, tailq_foreach_safe, tailq_init, tailq_insert_tail, tailq_remove,
+    },
     strlcpy,
     tree::{rb_empty, rb_foreach, rb_foreach_, rb_foreach_safe, rb_init},
 };
@@ -281,12 +283,11 @@ pub unsafe extern "C" fn server_loop() -> i32 {
 
         loop {
             let mut items = cmdq_next(null_mut());
-            tailq_foreach(&raw mut clients, |c| {
+            for c in tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
                 if (*c).flags.intersects(client_flag::IDENTIFIED) {
                     items += cmdq_next(c);
                 }
-                ControlFlow::Continue::<(), ()>(())
-            });
+            }
 
             if items == 0 {
                 break;
@@ -305,15 +306,10 @@ pub unsafe extern "C" fn server_loop() -> i32 {
             }
         }
 
-        if tailq_foreach(&raw mut clients, |c| {
-            if !(*c).session.is_null() {
-                return ControlFlow::Break(());
+        for c in tailq_foreach_(&raw mut clients) {
+            if !(*c.as_ptr()).session.is_null() {
+                return 0;
             }
-            ControlFlow::Continue(())
-        })
-        .is_break()
-        {
-            return 0;
         }
 
         /*

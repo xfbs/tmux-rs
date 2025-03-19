@@ -210,7 +210,8 @@ dist_tmux_SOURCES = \
 	tmux.h \
 	compat.h \
 	xmalloc.h
-nodist_tmux_SOURCES = osdep-@PLATFORM@.c
+nodist_tmux_SOURCES = 
+# nodist_tmux_SOURCES = osdep-@PLATFORM@.c
 
 # Add compat file for forkpty.
 if NEED_FORKPTY

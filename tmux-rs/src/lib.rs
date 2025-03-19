@@ -613,7 +613,7 @@ pub const COLOUR_FLAG_RGB: i32 = 0x02000000;
 
 /// Special colours.
 #[inline]
-pub fn COLOR_DEFAULT(c: i32) -> bool { c == 8 || c == 9 }
+pub fn COLOUR_DEFAULT(c: i32) -> bool { c == 8 || c == 9 }
 
 // Replacement palette.
 #[repr(C)]

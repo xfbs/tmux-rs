@@ -152,6 +152,8 @@ AC_CHECK_FUNCS([ \
 	sysconf
 ])
 
+# freezero
+
 # Check for functions with a compatibility implementation.
 AC_REPLACE_FUNCS([ \
 	asprintf \
@@ -160,7 +162,6 @@ AC_REPLACE_FUNCS([ \
 	closefrom \
 	explicit_bzero \
 	fgetln \
-	freezero \
 	getdtablecount \
 	getdtablesize \
 	getpeereid \

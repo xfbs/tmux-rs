@@ -258,6 +258,7 @@ unsafe extern "C" {
         errorcb: bufferevent_event_cb,
         cbarg: *mut c_void,
     ) -> *mut bufferevent;
+    pub fn event_init() -> *mut event_base;
     pub fn event_reinit(base: *mut event_base) -> c_int;
     pub fn event_set_log_callback(cb: event_log_cb);
     pub fn event_add(ev: *mut event, timeout: *const timeval) -> c_int;

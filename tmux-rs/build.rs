@@ -12,13 +12,13 @@ fn main() {
 
     // let out_dir = std::env::var("OUT_DIR").unwrap();
     // let command = format!( "/bin/bash ./etc/ylwrap cmd-parse.y y.tab.c {out_dir}/cmd-parse.c y.tab.h `echo {out_dir}/cmd-parse.c | sed -e s/cc$/hh/ -e s/cpp$/hpp/ -e s/cxx$/hxx/ -e s/c++$/h++/ -e s/c$/h/` y.output cmd-parse.output -- byacc",);
+    // builder = builder.file(std::path::PathBuf::from(out_dir).join("cmd-parse.c"));
 
     for f in FILES {
         println!("cargo::rerun-if-changed=../{f}");
         builder = builder.file(std::path::PathBuf::from("..").join(f))
     }
-    // builder = builder.file(std::path::PathBuf::from(out_dir).join("cmd-parse.c"));
-    // builder = builder.file("../cmd-parse.c");
+    builder = builder.file("../cmd-parse.c");
 
     // clang -DPACKAGE_NAME=\"tmux\" -DPACKAGE_TARNAME=\"tmux\" -DPACKAGE_VERSION=\"3.5a\" -DPACKAGE_STRING=\"tmux\ 3.5a\" -DPACKAGE_BUGREPORT=\"\" -DPACKAGE_URL=\"\" -DPACKAGE=\"tmux\" -DVERSION=\"3.5a\"
     // -DHAVE_STDIO_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_STRINGS_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_SYS_TYPES_H=1
@@ -127,7 +127,6 @@ fn main() {
 }
 
 static FILES: &[&str] = &[
-    "osdep-linux.c",
     "format-draw.c",
     "format.c",
     "grid.c",
