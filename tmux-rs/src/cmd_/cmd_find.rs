@@ -1,7 +1,7 @@
 use compat_rs::{
     queue::{tailq_first, tailq_foreach},
     strlcat, strtonum,
-    tree::{rb_foreach, rb_max, rb_min},
+    tree::{rb_foreach_, rb_max, rb_min},
 };
 use libc::{fnmatch, strchr, strcmp, strncmp};
 
@@ -78,13 +78,12 @@ pub unsafe extern "C" fn cmd_find_inside_pane(c: *mut client) -> *mut window_pan
         }
 
         let mut wp: *mut window_pane = null_mut();
-        rb_foreach(&raw mut all_window_panes, |wp_| {
-            wp = wp_;
+        for wp_ in rb_foreach_(&raw mut all_window_panes) {
+            wp = wp_.as_ptr();
             if ((*wp).fd != -1 && strcmp((*wp).tty.as_ptr(), (*c).ttyname) == 0) {
-                return ControlFlow::<(), ()>::Break(());
+                break;
             }
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
 
         if (wp.is_null()) {
             let envent = environ_find((*c).environ, c"TMUX_PANE".as_ptr());
@@ -164,12 +163,11 @@ pub unsafe extern "C" fn cmd_find_best_session(slist: *mut *mut session, ssize: 
                 }
             }
         } else {
-            rb_foreach(&raw mut sessions, |s_loop| {
+            for s_loop in rb_foreach_(&raw mut sessions).map(|e| e.as_ptr()) {
                 if (cmd_find_session_better(s_loop, s, flags) != 0) {
                     s = s_loop;
                 }
-                ControlFlow::<(), ()>::Continue(())
-            });
+            }
         }
 
         s
@@ -185,15 +183,14 @@ pub unsafe extern "C" fn cmd_find_best_session_with_window(fs: *mut cmd_find_sta
 
         'fail: {
             let mut ssize: u32 = 0;
-            rb_foreach(&raw mut sessions, |s| {
+            for s in rb_foreach_(&raw mut sessions).map(NonNull::as_ptr) {
                 if (session_has(s, (*fs).w) == 0) {
-                    return ControlFlow::<(), ()>::Continue(());
+                    continue;
                 }
                 slist = xreallocarray_(slist, ssize as usize + 1).as_ptr();
                 *slist.add(ssize as usize) = s;
                 ssize += 1;
-                ControlFlow::<(), ()>::Continue(())
-            });
+            }
             if (ssize == 0) {
                 break 'fail;
             }
@@ -221,13 +218,12 @@ pub unsafe extern "C" fn cmd_find_best_winlink_with_window(fs: *mut cmd_find_sta
         if (!(*(*fs).s).curw.is_null() && (*(*(*fs).s).curw).window == (*fs).w) {
             wl = (*(*fs).s).curw;
         } else {
-            rb_foreach(&raw mut (*(*fs).s).windows, |wl_loop| {
+            for wl_loop in rb_foreach_(&raw mut (*(*fs).s).windows).map(NonNull::as_ptr) {
                 if ((*wl_loop).window == (*fs).w) {
                     wl = wl_loop;
-                    return ControlFlow::<(), ()>::Break(());
+                    break;
                 }
-                ControlFlow::<(), ()>::Continue(())
-            });
+            }
         }
         if (wl.is_null()) {
             return -1;
@@ -282,18 +278,13 @@ pub unsafe extern "C" fn cmd_find_get_session(fs: *mut cmd_find_state, session: 
         }
 
         let mut s: *mut session = null_mut();
-        if rb_foreach(&raw mut sessions, |s_loop| {
+        for s_loop in rb_foreach_(&raw mut sessions).map(NonNull::as_ptr) {
             if (strncmp(session, (*s_loop).name, strlen(session)) == 0) {
                 if (!s.is_null()) {
-                    return ControlFlow::<(), ()>::Break(());
+                    return -1;
                 }
                 s = s_loop;
             }
-            ControlFlow::<(), ()>::Continue(())
-        })
-        .is_some()
-        {
-            return -1;
         }
         if (!s.is_null()) {
             (*fs).s = s;
@@ -301,18 +292,13 @@ pub unsafe extern "C" fn cmd_find_get_session(fs: *mut cmd_find_state, session: 
         }
 
         s = null_mut();
-        if rb_foreach(&raw mut sessions, |s_loop| {
+        for s_loop in rb_foreach_(&raw mut sessions).map(NonNull::as_ptr) {
             if (fnmatch(session, (*s_loop).name, 0) == 0) {
                 if (!s.is_null()) {
-                    return ControlFlow::<(), ()>::Break(());
+                    return -1;
                 }
                 s = s_loop;
             }
-            ControlFlow::<(), ()>::Continue(())
-        })
-        .is_some()
-        {
-            return -1;
         }
         if (!s.is_null()) {
             (*fs).s = s;
@@ -456,19 +442,15 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(fs: *mut cmd_find_stat
         }
 
         (*fs).wl = null_mut();
-        if rb_foreach(&raw mut (*(*fs).s).windows, |wl| {
+        for wl in rb_foreach_(&raw mut (*(*fs).s).windows).map(NonNull::as_ptr) {
             if (strcmp(window, (*(*wl).window).name) == 0) {
                 if (!(*fs).wl.is_null()) {
-                    return ControlFlow::<(), ()>::Break(());
+                    return -1;
                 }
                 (*fs).wl = wl;
             }
-            ControlFlow::<(), ()>::Continue(())
-        })
-        .is_some()
-        {
-            return -1;
         }
+
         if (!(*fs).wl.is_null()) {
             (*fs).idx = (*(*fs).wl).idx;
             (*fs).w = (*(*fs).wl).window;
@@ -480,19 +462,15 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(fs: *mut cmd_find_stat
         }
 
         (*fs).wl = null_mut();
-        if rb_foreach(&raw mut (*(*fs).s).windows, |wl| {
+        for wl in rb_foreach_(&raw mut (*(*fs).s).windows).map(NonNull::as_ptr) {
             if (strncmp(window, (*(*wl).window).name, strlen(window)) == 0) {
                 if (!(*fs).wl.is_null()) {
-                    return ControlFlow::<(), ()>::Break(());
+                    return -1;
                 }
                 (*fs).wl = wl;
             }
-            ControlFlow::<(), ()>::Continue(())
-        })
-        .is_some()
-        {
-            return -1;
-        };
+        }
+
         if (!(*fs).wl.is_null()) {
             (*fs).idx = (*(*fs).wl).idx;
             (*fs).w = (*(*fs).wl).window;
@@ -500,19 +478,15 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(fs: *mut cmd_find_stat
         }
 
         (*fs).wl = null_mut();
-        if rb_foreach(&raw mut (*(*fs).s).windows, |wl| {
+        for wl in rb_foreach_(&raw mut (*(*fs).s).windows).map(NonNull::as_ptr) {
             if (fnmatch(window, (*(*wl).window).name, 0) == 0) {
                 if (!(*fs).wl.is_null()) {
-                    return ControlFlow::<(), ()>::Break(());
+                    return -1;
                 }
                 (*fs).wl = wl;
             }
-            ControlFlow::<(), ()>::Continue(())
-        })
-        .is_some()
-        {
-            return -1;
         }
+
         if (!(*fs).wl.is_null()) {
             (*fs).idx = (*(*fs).wl).idx;
             (*fs).w = (*(*fs).wl).window;
@@ -690,13 +664,12 @@ pub unsafe extern "C" fn cmd_find_valid_state(fs: *mut cmd_find_state) -> boolin
         }
 
         let mut wl = null_mut();
-        rb_foreach(&raw mut (*(*fs).s).windows, |wl_| {
-            wl = wl_;
+        for wl_ in rb_foreach_(&raw mut (*(*fs).s).windows) {
+            wl = wl_.as_ptr();
             if ((*wl).window == (*fs).w && wl == (*fs).wl) {
-                return ControlFlow::Break(());
+                break;
             }
-            ControlFlow::Continue(())
-        });
+        }
 
         if (wl.is_null()) {
             return boolint::false_();

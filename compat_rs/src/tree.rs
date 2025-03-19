@@ -2,6 +2,7 @@
 // probably best way define a generic struct
 // make the macros call the generic struct
 use core::{ops::ControlFlow, ptr::null_mut};
+use std::ptr::NonNull;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -610,12 +611,12 @@ where
     T: GetEntry<T, D>,
 {
     RBIterator {
-        curr: unsafe { rb_min(head) },
+        curr: unsafe { NonNull::new(rb_min(head)) },
         _phantom: std::marker::PhantomData,
     }
 }
 pub struct RBIterator<T, D> {
-    curr: *mut T,
+    curr: Option<NonNull<T>>,
     _phantom: std::marker::PhantomData<D>,
 }
 
@@ -623,15 +624,11 @@ impl<T, D> Iterator for RBIterator<T, D>
 where
     T: GetEntry<T, D>,
 {
-    type Item = *mut T;
+    type Item = NonNull<T>;
     fn next(&mut self) -> Option<Self::Item> {
-        if self.curr.is_null() {
-            return None;
-        }
-
-        let tmp = unsafe { rb_next(self.curr) };
-        self.curr = tmp;
-        Some(tmp)
+        let curr = self.curr?.as_ptr();
+        let next_value = NonNull::new(unsafe { rb_next(curr) });
+        std::mem::replace(&mut self.curr, next_value)
     }
 }
 

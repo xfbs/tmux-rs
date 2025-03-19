@@ -1,5 +1,5 @@
 use core::ptr::null_mut;
-use std::ops::ControlFlow;
+use std::{ops::ControlFlow, ptr::NonNull};
 
 pub trait ListEntry<T, Discriminant = ()> {
     unsafe fn field(this: *mut Self) -> *mut list_entry<T>;
@@ -359,7 +359,7 @@ where
 {
     unsafe {
         TailQIterator {
-            curr: tailq_first(head),
+            curr: NonNull::new(tailq_first(head)),
             _phantom: std::marker::PhantomData,
         }
     }
@@ -367,23 +367,18 @@ where
 
 // this implementation can be used in place of safe and non-safe
 pub struct TailQIterator<T, D> {
-    curr: *mut T,
+    curr: Option<NonNull<T>>,
     _phantom: std::marker::PhantomData<D>,
 }
 impl<T, D> Iterator for TailQIterator<T, D>
 where
     T: Entry<T, D>,
 {
-    type Item = *mut T;
+    type Item = NonNull<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.curr.is_null() {
-            return None;
-        }
-
-        let tmp = unsafe { tailq_next(self.curr) };
-        self.curr = tmp;
-        Some(tmp)
+        let curr = self.curr?.as_ptr();
+        std::mem::replace(&mut self.curr, NonNull::new(unsafe { tailq_next(curr) }))
     }
 }
 

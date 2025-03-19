@@ -4,7 +4,7 @@ use compat_rs::{
     ACCESSPERMS,
     queue::{tailq_empty, tailq_foreach, tailq_foreach_safe, tailq_init, tailq_insert_tail, tailq_remove},
     strlcpy,
-    tree::{rb_empty, rb_foreach, rb_foreach_safe, rb_init},
+    tree::{rb_empty, rb_foreach, rb_foreach_, rb_foreach_safe, rb_init},
 };
 use libc::{
     __errno_location, AF_UNIX, ECHILD, ENAMETOOLONG, S_IRGRP, S_IROTH, S_IRUSR, S_IRWXG, S_IRWXO, S_IXGRP, S_IXOTH,
@@ -363,13 +363,12 @@ pub unsafe extern "C" fn server_update_socket() {
         let mut sb: stat = zeroed(); // TODO remove unecessary init
 
         let mut n = 0;
-        rb_foreach(&raw mut sessions, |s| {
+        for s in rb_foreach_(&raw mut sessions).map(|s| s.as_ptr()) {
             if (*s).attached != 0 {
                 n += 1;
-                return ControlFlow::Break(());
+                break;
             }
-            ControlFlow::Continue(())
-        });
+        }
 
         if n != last {
             last = n;
