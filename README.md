@@ -65,52 +65,12 @@ issue.
 - reduce problem to single function. set a breakpoint on that function. walk through it in old and new version and notice differences
 - if crashing on user action, start, get pid of second process; attach gdb on second process without follow child mode; continue; trigger action, hopefully gdb will be at the point where the crash occurred
 
-# C Stuff
-
-- integer promotion rules
-- rust literal value inference
-- prototypes
-- variadics
-
-
 # Progress
-
-Current status:
-
-reverted environ from build
-
-implement fatal and fatalx which accept static rust string
-
-```
-0x606000001160 rb_entry { rbe_left: 0x0, rbe_right: 0x606000001820, rbe_parent: 0x6060000009e0, rbe_color: RB_BLACK }
-0x0
-AddressSanitizer:DEADLYSIGNAL
-=================================================================
-==80540==ERROR: AddressSanitizer: SEGV on unknown address 0x000000000030 (pc 0x55741df91844 bp 0x7ffd34fc7cd0 sp 0x7ffd34fc7890 T0)
-==80540==The signal is caused by a READ memory access.
-==80540==Hint: address points to the zero page.
-    #0 0x55741df91844 in compat_rs::tree::rb_color::h5bf1ff1355d9e6c7 /home/collin/Git/tmux/tmux-3.5a/compat_rs/src/tree.rs:123:14
-    #1 0x55741df8b1e3 in compat_rs::tree::rb_remove_color::h69ea0937ab2c4b6f /home/collin/Git/tmux/tmux-3.5a/compat_rs/src/tree.rs:317:20
-    #2 0x55741df941bf in compat_rs::tree::rb_remove::h2dc7ad830c5919d2 /home/collin/Git/tmux/tmux-3.5a/compat_rs/src/tree.rs:475:13
-    #3 0x55741dfc1cf8 in tmux_rs::environ_::environ_free::_$u7b$$u7b$closure$u7d$$u7d$::hbb3f0349d4e4a987 /home/collin/Git/tmux/tmux-3.5a/tmux_rs/src/environ_.rs:32:13
-    #4 0x55741df8811d in compat_rs::tree::rb_foreach_safe::hb20b2c7acc7dc97b /home/collin/Git/tmux/tmux-3.5a/compat_rs/src/tree.rs:598:19
-    #5 0x55741dfbabcc in environ_free /home/collin/Git/tmux/tmux-3.5a/tmux_rs/src/environ_.rs:29:9
-    #6 0x55741dcd7d30 in client_main /home/collin/Git/tmux/tmux-3.5a/client.c:341:2
-    #7 0x55741ded0adb in main /home/collin/Git/tmux/tmux-3.5a/tmux.c:537:7
-    #8 0x7f5e1e244249 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
-    #9 0x7f5e1e244304 in __libc_start_main csu/../csu/libc-start.c:360:3
-    #10 0x55741dc0b8e0 in _start (/home/collin/Git/tmux/tmux-3.5a/tmux+0x1098e0) (BuildId: 75e35fd9ba583f7712f4e9194bec4b2337c0dbf7)
-
-AddressSanitizer can not provide additional info.
-SUMMARY: AddressSanitizer: SEGV /home/collin/Git/tmux/tmux-3.5a/compat_rs/src/tree.rs:123:14 in compat_rs::tree::rb_color::h5bf1ff1355d9e6c7
-==80540==ABORTING
-```
 
 need to be able to get some more useful information when.
 more then just server exited unexpectedly.
-- figure out debug logs
 - figure out abort / panic logs
-- get a stacktrace on segfault
+- print a stacktrace on server process segfault
 
 # NEXT (ensure only has one item)
 I suspect that linking is shadowing some broken rust implementations,
@@ -119,9 +79,6 @@ improve imsg and imsg buffer implemnentation
 
 something in client -> tty struct
 concrete opaque struct in struct causing field offset into adjacent struct be incorrect
-
-impl for_each tree and rb to use std::iterator
-
 
 # TODO
 - review cmd_rotate_window.rs cmd_rotate_window_exec tailq_foreach calls
@@ -133,8 +90,6 @@ impl for_each tree and rb to use std::iterator
     - server_start
     - proc_fork_and_daemon
     - proc loop server loop
-  - research extern c-unwind vs c: <https://rust-lang.github.io/rfcs/2945-c-unwind-abi.html>
-    - should I use c-unwind for all abi's?
 - better rust format string style logging functions
 - tailq and rbtree
   - recheck all tailq, and rbtree structs for multiple links.
@@ -142,29 +97,16 @@ impl for_each tree and rb to use std::iterator
     - tailq support new generic type discriminant
   - fully complete library / crate implementation with documentation
 - use bitflags instead of manually 
+- use for_each_ in all instances
+- implement fatal and fatalx which accept static rust string
 
-# Thoughts
-- better rust-analyzer integration with C code
 
-# Interesting Patterns
+remove these from the linking process
+```
+clang -fsanitize=address -fno-omit-frame-pointer -O0 -std=gnu99 -g -Wno-long-long -Wall -W -Wformat=2 -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Wwrite-strings -Wshadow -Wpointer-arith -Wsign-compare -Wundef -Wbad-function-cast -Winline -Wcast-align -Wdeclaration-after-statement -Wno-pointer-sign -Wno-attributes -Wno-unused-result -Wno-format-y2k      -o tmux cmd-parse.o     compat/fgetln.o compat/freezero.o compat/getdtablecount.o compat/getpeereid.o compat/getprogname.o compat/htonll.o compat/ntohll.o compat/setproctitle.o compat/strlcat.o compat/strlcpy.o compat/strtonum.o compat/recallocarray.o compat/getopt.o compat/imsg.o compat/imsg-buffer.o compat/vis.o compat/unvis.o compat/fdforkpty.o -L/home/collin/Git/tmux/tmux-3.5a/target/x86_64-unknown-linux-gnu/debug -ltmux_rs -lbsd -ltinfo  -levent_core  -lm  -lresolv
+```
 
-- goto labeled block translation
-- bitflags
 
-# TODO After 100% Rust
-- miri
-- coverage
-- convert to references instead of pointers
-  - requirements to convert pointer to reference <https://doc.rust-lang.org/core/ptr/index.html#pointer-to-reference-conversion>
-    - interleaving accesses between refs and ptrs seems to be not allowed
-      - <https://doc.rust-lang.org/nightly/core/ptr/index.html#safety>
-      - <https://github.com/rust-lang/unsafe-code-guidelines/issues/463>
-    - when converting from ptr to ref need to ensure types are initialized and valid when passed into a function
-    - read or writes through a ptr will invalidate a reference
-    - also need to ensure no pointers are created and stored from the references
-    - NonNull use as_uninit_mut
-- get rid of paste crate, won't need to join symbols any more for C code
-- figure out why building rust binary doesn't work
 
 17 big files:
 - [ ] 1535 grid // should probably be next, seeing crashes in grid-view
@@ -185,125 +127,40 @@ impl for_each tree and rb to use std::iterator
 - [ ] 5294 format
 - [ ] 5786 window-copy
 - [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
-  =====
-- [X]  759 session
-- [X]  899 cmd-queue (some tailq functions used port isn't working) (TODO move into broken)
-- [X]  818 popup
-- [X]  868 screen-redraw
-- [X]  740 screen
-- [X]  691 layout-set
-- [X] 874 cmd
-- [X]  559 window-buffer
-- [X]  794 input-keys
-- [X]  692 key-bindings
-- [X]  510 tty-features
-- [X]  556 menu
-- [X]  281 environ (environ_free is broken, everything else works)
-- [X]  323 notify (notify_add)
-- [X] 557 server (server_loop is broken)
-- [X]  370 cmd-new-session (didn't work, crashes on startup, maybe due to the misoffset struct)
-- [X]  493 server-fn
-- [X]  924 tty-term
-- [X]  477 key-string
-- [X]  467 resize
-- [X]  429 grid-reader
-- [X]  418 window-client
-- [X]  370 layout-custom
-- [X]  269 tty-acs
-- [X]  235 grid-view
-- [X]  286 window-clock
-- [X] window
-- [X] 325 alert
-- [X] 1097 arguments
-- [X]  108 attributes
-- [X]  277 cfg
-- [X]  809 client
-- [X] 1117 colour
-- [X]      compat
-- [X]  262 control-notify
-- [X]  435 job
-- [X]      log
-- [X]  172 names
-- [X] 120 regsub
-- [X]  383 style
-- [X]  538 tmux.c
-- [X] tmux.h
-- [X] tmux-protocol.h
-- [X] xmalloc
-- [X]  859 file
-- [X] 1117 control
-- [X] 388 proc
-- [X] 100 utf8-combined
-- [X] 822 utf8
-- [X] 342 paste
-- [X]  239 hyperlinks
-- [X]  497 spawn
-- [X]  186 server-acl
-  - [X] 1314 cmd-find
-  - [X]  215 cmd-resize-pane
-  - [X]  290 cmd-run-shell
-  - [X]  264 cmd-wait-for
-  - [X]  260 cmd-show-options
-  - [X]  242 cmd-select-pane
-  - [X]  335 cmd-refresh-client
-  - [X]  239 cmd-set-option
-  - [X]  237 cmd-send-keys
-  - [X]  230 cmd-pipe-pane
-  - [X]  199 cmd-split-window
-  - [X]  372 cmd-list-keys
-  - [X]  312 cmd-display-panes
-  - [X]      cmd-kill-server
-  - [X]   62 cmd-rename-window
-  - [X]   67 cmd-kill-pane
-  - [X]   71 cmd-kill-session
-  - [X]   79 cmd-lock-server
-  - [X]   81 cmd-list-buffers
-  - [X]   81 cmd-rename-session
-  - [X]   90 cmd-list-sessions
-  - [X]   94 cmd-swap-window
-  - [X]   95 cmd-respawn-window
-  - [X]   98 cmd-copy-mode
-  - [X]   98 cmd-respawn-pane
-  - [X]  102 cmd-list-clients
-  - [X]  104 cmd-unbind-key
-  - [X]  107 cmd-bind-key
-  - [X]  107 cmd-show-messages
-  - [X]  108 cmd-show-prompt-history
-  - [X]  109 cmd-detach-client
-  - [X]  110 cmd-kill-window
-  - [X]  113 cmd-load-buffer
-  - [X]  113 cmd-paste-buffer
-  - [X]  115 cmd-resize-window
-  - [X]  115 cmd-rotate-window
-  - [X]  116 cmd-find-window
-  - [X]  117 cmd-choose-tree
-  - [X]  119 cmd-set-environment
-  - [X]  120 cmd-save-buffer
-  - [X]  122 cmd-move-window
-  - [X]  130 cmd-list-windows
-  - [X]  137 cmd-set-buffer
-  - [X]  142 cmd-switch-client
-  - [X]  143 cmd-break-pane
-  - [X]  143 cmd-show-environment
-  - [X]  147 cmd-server-access
-  - [X]  148 cmd-list-panes
-  - [X]  148 cmd-swap-pane
-  - [X]  149 cmd-select-layout
-  - [X]  150 cmd-select-wind
-  - [X]  159 cmd-display-message
-  - [X]  159 cmd-new-window
-  - [X]  163 cmd-confirm-before
-  - [X]  175 cmd-attach-session
-  - [X]  180 cmd-join-pane
-  - [X]  190 cmd-if-shell
-  - [X]  242 cmd-command-prompt
-  - [X]  253 cmd-capture-pane
-  - [X]  502 cmd-display-menu
 
-# Ideas
+## After 100% Rust
+
+- miri
+- coverage
+- convert to references instead of pointers
+  - requirements to convert pointer to reference <https://doc.rust-lang.org/core/ptr/index.html#pointer-to-reference-conversion>
+    - interleaving accesses between refs and ptrs seems to be not allowed
+      - <https://doc.rust-lang.org/nightly/core/ptr/index.html#safety>
+      - <https://github.com/rust-lang/unsafe-code-guidelines/issues/463>
+    - when converting from ptr to ref need to ensure types are initialized and valid when passed into a function
+    - read or writes through a ptr will invalidate a reference
+    - also need to ensure no pointers are created and stored from the references
+    - NonNull use as_uninit_mut
+- get rid of paste crate, won't need to join symbols any more for C code
+- figure out why building rust binary doesn't work
+- implement cmd-parse.y parser in pest or nom to remove yacc as a build dependency
+
+
+# Thoughts & Ideas
 
 - emulate rust scoped enums with modules, structs and constants
+- better rust-analyzer integration with C code
 
+# Interesting Patterns
+
+- goto labeled block translation
+- bitflags
+
+# C Stuff
+- integer promotion rules
+- rust literal value inference
+- prototypes
+- variadics
 
 # Notes
 
