@@ -147,7 +147,6 @@ clang -fsanitize=address -fno-omit-frame-pointer -O0 -std=gnu99 -g -Wno-long-lon
 
 
 # Thoughts & Ideas
-
 - emulate rust scoped enums with modules, structs and constants
 - better rust-analyzer integration with C code
 
