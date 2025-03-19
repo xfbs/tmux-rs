@@ -215,7 +215,7 @@ pub unsafe extern "C" fn cmd_show_options_all(
                 o = options_next(o);
             }
         }
-        let mut oe = options_table.as_ptr();
+        let mut oe = &raw const options_table as *const options_table_entry;
         while !(*oe).name.is_null() {
             if (!(*oe).scope & scope != 0) {
                 oe = oe.add(1);

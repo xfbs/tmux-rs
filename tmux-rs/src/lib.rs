@@ -144,6 +144,7 @@ pub const _PATH_BSHELL: *const c_char = c"/bin/sh".as_ptr();
 pub const _PATH_DEFPATH: *const c_char = c"/usr/bin:/bin".as_ptr();
 pub const _PATH_DEV: *const c_char = c"/dev/".as_ptr();
 pub const _PATH_DEVNULL: *const c_char = c"/dev/null".as_ptr();
+pub const _PATH_VI: *const c_char = c"/usr/bin/vi".as_ptr();
 
 pub const SIZEOF_PATH_DEV: usize = 6;
 
@@ -2273,7 +2274,7 @@ pub const OPTIONS_TABLE_IS_STYLE: i32 = 0x4;
 
 #[repr(C)]
 pub struct options_table_entry {
-    pub name: *mut c_char,
+    pub name: *const c_char,
     pub alternative_name: *mut c_char,
     pub type_: options_table_type,
     pub scope: i32,
@@ -2281,23 +2282,26 @@ pub struct options_table_entry {
     pub minimum: u32,
     pub maximum: u32,
 
-    pub choices: *mut *mut c_char,
+    pub choices: *const *const c_char,
 
-    pub default_str: *mut c_char,
+    pub default_str: *const c_char,
     pub default_num: c_longlong,
-    pub default_arr: *mut *mut c_char,
+    pub default_arr: *const *const c_char,
 
-    pub separator: *mut c_char,
-    pub pattern: *mut c_char,
+    pub separator: *const c_char,
+    pub pattern: *const c_char,
 
-    pub text: *mut c_char,
-    pub unit: *mut c_char,
+    pub text: *const c_char,
+    pub unit: *const c_char,
 }
 
 #[repr(C)]
 pub struct options_name_map {
-    pub from: *mut c_char,
-    pub to: *mut c_char,
+    pub from: *const c_char,
+    pub to: *const c_char,
+}
+impl options_name_map {
+    const fn new(from: *const c_char, to: *const c_char) -> Self { Self { from, to } }
 }
 
 /* Common command usages. */

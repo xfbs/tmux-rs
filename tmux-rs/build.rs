@@ -133,7 +133,7 @@ static FILES: &[&str] = &[
     "input.c",
     "layout.c",
     "mode-tree.c",
-    "options-table.c",
+    // "options-table.c",
     "options.c",
     "screen-write.c",
     "server-client.c",
