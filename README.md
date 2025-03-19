@@ -5,21 +5,6 @@ An in-progress rust port of tmux. This project should be considered pre-alpha qu
 I don't think or want this project to displace tmux. I love using tmux.
 Tmux will also continue development while I'm working on this port,
 so the structure of the rust code must match that of the C project.
-I tried out using [zellij](https://zellij.dev/) once and gave up when the compilation time was something like 8 minutes on my machine.
-For me, this refactor is kinda like gardening (I don't garden, but if I did I'd imagine that's what it's like).
-Every minute I spend on this is a minute I don't spend mindlessly playing some video game, so I take it as a net win.
-
-```
-    Finished `release` profile [optimized] target(s) in 8m 01s
-  Installing /home/collin/.config/cargo/bin/zellij
-   Installed package `zellij v0.42.0` (executable `zellij`)
-
-________________________________________________________
-Executed in  482.22 secs    fish           external
-   usr time   29.30 mins   49.48 millis   29.30 mins
-   sys time    1.76 mins    3.75 millis    1.76 mins
-size: 38
-```
 
 I started this endeavour as a way of getting first hand experience with using C2Rust.
 It's simultaneously a great and a terrible tool. I was amazed when I used it that it
@@ -438,6 +423,10 @@ SUMMARY: AddressSanitizer: 28 byte(s) leaked in 1 allocation(s).
 - flipped null check
 - flipped : char		 acs[UCHAR_MAX + 1][2]; -> pub acs: [[c_char; c_uchar::MAX as usize + 1]; 2], should be [[c_char; 2]; c_uchar::MAX as usize + 1],
 - crashes when typing 'c' because of one of my bindings (seems something fixed this)
+
+## Why not [zellij](https://zellij.dev/)
+
+I like tmux. I want tmux, not something else. Also I tried out using it before and the compilation time was 8 minutes on my machine.
 
 # References
 
