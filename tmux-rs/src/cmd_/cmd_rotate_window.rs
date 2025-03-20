@@ -53,13 +53,11 @@ unsafe extern "C" fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_ite
             sx = (*wp).sx;
             sy = (*wp).sy;
 
-            // big TODO, it seems the original code is modifying the pointer used for iteration
-            // or maybe just reusing the variable name wp
-            // I think I'll need to read the value out of the break variant
-            tailq_foreach::<_, _, _, discr_entry>(&raw mut (*w).panes, |wp| {
+            for wp_ in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+                wp = wp_;
                 let wp2 = tailq_next::<_, _, discr_entry>(wp);
                 if wp2.is_null() {
-                    return ControlFlow::Break(());
+                    break;
                 }
                 (*wp).layout_cell = (*wp2).layout_cell;
                 if !(*wp).layout_cell.is_null() {
@@ -68,8 +66,7 @@ unsafe extern "C" fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_ite
                 (*wp).xoff = (*wp2).xoff;
                 (*wp).yoff = (*wp2).yoff;
                 window_pane_resize(wp, (*wp2).sx, (*wp2).sy);
-                ControlFlow::Continue(())
-            });
+            }
             (*wp).layout_cell = lc;
             if !(*wp).layout_cell.is_null() {
                 (*(*wp).layout_cell).wp = wp;
@@ -92,10 +89,11 @@ unsafe extern "C" fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_ite
             yoff = (*wp).yoff;
             sx = (*wp).sx;
             sy = (*wp).sy;
-            tailq_foreach_reverse::<_, _, _, discr_entry>(&raw mut (*w).panes, |wp| {
+            for wp_ in tailq_foreach_reverse::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+                wp = wp;
                 let wp2 = tailq_prev::<_, _, discr_entry>(wp);
                 if wp2.is_null() {
-                    return ControlFlow::Break(());
+                    break;
                 }
                 (*wp).layout_cell = (*wp2).layout_cell;
                 if !(*wp).layout_cell.is_null() {
@@ -104,8 +102,7 @@ unsafe extern "C" fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_ite
                 (*wp).xoff = (*wp2).xoff;
                 (*wp).yoff = (*wp2).yoff;
                 window_pane_resize(wp, (*wp2).sx, (*wp2).sy);
-                ControlFlow::Continue(())
-            });
+            }
             (*wp).layout_cell = lc;
             if !(*wp).layout_cell.is_null() {
                 (*(*wp).layout_cell).wp = wp;

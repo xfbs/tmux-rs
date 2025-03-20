@@ -2,7 +2,7 @@ use crate::{xmalloc::xcalloc_, *};
 
 use compat_rs::{
     RB_GENERATE,
-    tree::{rb_find, rb_foreach, rb_foreach_safe, rb_init, rb_insert, rb_min, rb_next, rb_remove},
+    tree::{rb_find, rb_foreach, rb_init, rb_insert, rb_min, rb_next, rb_remove},
 };
 use libc::{fnmatch, getpid, setenv, strchr, strcmp, strcspn};
 
@@ -43,13 +43,12 @@ pub extern "C" fn environ_create() -> NonNull<environ> {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_free(env: *mut environ) {
     unsafe {
-        rb_foreach_safe(env, |envent| {
+        for envent in rb_foreach(env).map(NonNull::as_ptr) {
             rb_remove(env, envent);
             free_(transmute_ptr((*envent).name));
             free_(transmute_ptr((*envent).value));
             free_(envent);
-            ControlFlow::Continue::<(), ()>(())
-        });
+        }
         free_(env);
     }
 }
@@ -63,7 +62,7 @@ pub unsafe extern "C" fn environ_next(envent: *mut environ_entry) -> *mut enviro
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_copy(srcenv: *mut environ, dstenv: *mut environ) {
     unsafe {
-        rb_foreach(srcenv, |envent| {
+        for envent in rb_foreach(srcenv).map(NonNull::as_ptr) {
             if let Some(value) = (*envent).value {
                 environ_set(
                     dstenv,
@@ -75,8 +74,7 @@ pub unsafe extern "C" fn environ_copy(srcenv: *mut environ, dstenv: *mut environ
             } else {
                 environ_clear(dstenv, transmute_ptr((*envent).name));
             }
-            ControlFlow::Continue::<(), ()>(())
-        });
+        }
     }
 }
 
@@ -180,13 +178,12 @@ pub unsafe extern "C" fn environ_update(oo: *mut options, src: *mut environ, dst
         while !a.is_null() {
             let ov = options_array_item_value(a);
             found = 0;
-            rb_foreach_safe(src, |envent| {
+            for envent in rb_foreach(src).map(NonNull::as_ptr) {
                 if fnmatch((*ov).string, transmute_ptr((*envent).name), 0) == 0 {
                     environ_set(dst, transmute_ptr((*envent).name), 0, c"%s".as_ptr(), (*envent).value);
                     found = 1;
                 }
-                ControlFlow::<(), ()>::Continue(())
-            });
+            }
             if found == 0 {
                 environ_clear(dst, (*ov).string);
             }
@@ -201,15 +198,14 @@ pub unsafe extern "C" fn environ_push(env: *mut environ) {
         let mut envent: *mut environ_entry;
 
         environ = xcalloc_::<*mut c_char>(1).as_ptr();
-        rb_foreach(env, |envent| {
+        for envent in rb_foreach(env).map(NonNull::as_ptr) {
             if !(*envent).value.is_none()
                 && *(*envent).name.unwrap().as_ptr() != b'\0' as c_char
                 && !(*envent).flags & ENVIRON_HIDDEN != 0
             {
                 setenv(transmute_ptr((*envent).name), transmute_ptr((*envent).value), 1);
             }
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 }
 
@@ -220,12 +216,11 @@ pub unsafe extern "C" fn environ_log(env: *mut environ, fmt: *const c_char, mut 
 
         vasprintf(&raw mut prefix, fmt, args.as_va_list());
 
-        rb_foreach(env, |envent| {
+        for envent in rb_foreach(env).map(NonNull::as_ptr) {
             if (!(*envent).value.is_none() && *(*envent).name.unwrap().as_ptr() != b'\0' as c_char) {
                 log_debug(c"%s%s=%s".as_ptr(), prefix, (*envent).name, (*envent).value);
             }
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
 
         free_(prefix);
     }

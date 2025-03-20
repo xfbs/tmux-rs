@@ -40,20 +40,18 @@ unsafe extern "C" fn cmd_list_panes_exec(self_: *mut cmd, item: *mut cmdq_item) 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_list_panes_server(self_: *mut cmd, item: *mut cmdq_item) {
     unsafe {
-        rb_foreach(&raw mut sessions, |s| {
+        for s in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
             cmd_list_panes_session(self_, s, item, 2);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 }
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_list_panes_session(self_: *mut cmd, s: *mut session, item: *mut cmdq_item, type_: i32) {
     unsafe {
-        rb_foreach(&raw mut (*s).windows, |wl| {
+        for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
             cmd_list_panes_window(self_, s, wl, item, type_);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 }
 
@@ -103,7 +101,7 @@ fn cmd_list_panes_window(self_: *mut cmd, s: *mut session, wl: *mut winlink, ite
         let mut filter = args_get_(args, 'f');
 
         let mut n = 0u32;
-        tailq_foreach::<_, _, _, discr_entry>(&raw mut (*(*wl).window).panes, |wp| {
+        for wp in tailq_foreach::<_, discr_entry>(&raw mut (*(*wl).window).panes).map(NonNull::as_ptr) {
             let mut ft = format_create(cmdq_get_client(item), item, FORMAT_NONE, 0);
             format_add(ft, c"line".as_ptr(), c"%u".as_ptr(), n);
             format_defaults(ft, null_mut(), s, wl, wp);
@@ -124,7 +122,6 @@ fn cmd_list_panes_window(self_: *mut cmd, s: *mut session, wl: *mut winlink, ite
 
             format_free(ft);
             n += 1;
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 }

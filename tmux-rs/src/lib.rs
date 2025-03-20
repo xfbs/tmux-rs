@@ -2413,15 +2413,14 @@ pub use crate::notify::{
 
 mod options_;
 pub use crate::options_::{
-    options_array_item, options_entry, options,
-    options_array_assign, options_array_clear, options_array_first, options_array_get, options_array_item_index,
-    options_array_item_value, options_array_next, options_array_set, options_create, options_default,
-    options_default_to_string, options_empty, options_first, options_free, options_from_string, options_get,
-    options_get_number, options_get_only, options_get_parent, options_get_string, options_is_array, options_is_string,
-    options_match, options_match_get, options_name, options_next, options_owner, options_parse, options_parse_get,
-    options_push_changes, options_remove_or_default, options_scope_from_flags, options_scope_from_name,
-    options_set_number, options_set_parent, options_set_string, options_string_to_style, options_table_entry,
-    options_to_string,
+    options, options_array_assign, options_array_clear, options_array_first, options_array_get, options_array_item,
+    options_array_item_index, options_array_item_value, options_array_next, options_array_set, options_create,
+    options_default, options_default_to_string, options_empty, options_entry, options_first, options_free,
+    options_from_string, options_get, options_get_number, options_get_only, options_get_parent, options_get_string,
+    options_is_array, options_is_string, options_match, options_match_get, options_name, options_next, options_owner,
+    options_parse, options_parse_get, options_push_changes, options_remove_or_default, options_scope_from_flags,
+    options_scope_from_name, options_set_number, options_set_parent, options_set_string, options_string_to_style,
+    options_table_entry, options_to_string,
 };
 
 mod options_table;

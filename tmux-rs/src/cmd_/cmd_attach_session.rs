@@ -110,7 +110,7 @@ pub unsafe extern "C" fn cmd_attach_session(
                 } else {
                     msgtype = msgtype::MSG_DETACH;
                 }
-                for c_loop in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+                for c_loop in compat_rs::queue::tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
                     {
                         if ((*c_loop).session != s || c == c_loop) {
                             continue;
@@ -140,7 +140,7 @@ pub unsafe extern "C" fn cmd_attach_session(
                 } else {
                     msgtype::MSG_DETACH
                 };
-                for c_loop in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+                for c_loop in compat_rs::queue::tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
                     if ((*c_loop).session != s || c == c_loop) {
                         continue;
                     }

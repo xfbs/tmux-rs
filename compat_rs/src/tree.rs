@@ -606,93 +606,56 @@ where
     unsafe { rb_minmax(head, 1) }
 }
 
-pub unsafe fn rb_foreach_<T, D>(head: *mut rb_head<T>) -> RBIterator<T, D>
+pub unsafe fn rb_foreach<T, D>(head: *mut rb_head<T>) -> RbForwardIterator<T, D>
 where
     T: GetEntry<T, D>,
 {
-    RBIterator {
-        curr: unsafe { NonNull::new(rb_min(head)) },
+    RbForwardIterator {
+        curr: NonNull::new(unsafe { rb_min(head) }),
         _phantom: std::marker::PhantomData,
     }
 }
-pub struct RBIterator<T, D> {
+pub struct RbForwardIterator<T, D> {
     curr: Option<NonNull<T>>,
     _phantom: std::marker::PhantomData<D>,
 }
 
-impl<T, D> Iterator for RBIterator<T, D>
+impl<T, D> Iterator for RbForwardIterator<T, D>
 where
     T: GetEntry<T, D>,
 {
     type Item = NonNull<T>;
     fn next(&mut self) -> Option<Self::Item> {
         let curr = self.curr?.as_ptr();
-        let next_value = NonNull::new(unsafe { rb_next(curr) });
-        std::mem::replace(&mut self.curr, next_value)
+        std::mem::replace(&mut self.curr, NonNull::new(unsafe { rb_next(curr) }))
     }
 }
 
-pub unsafe fn rb_foreach<F, T, C, D>(head: *mut rb_head<T>, mut f: F) -> Option<C>
+pub unsafe fn rb_foreach_reverse<T, D>(head: *mut rb_head<T>) -> RbReverseIterator<T, D>
 where
-    F: FnMut(*mut T) -> ControlFlow<C>,
     T: GetEntry<T, D>,
 {
-    unsafe {
-        let mut x = rb_min(head);
-
-        while !x.is_null() {
-            match f(x) {
-                ControlFlow::Continue(cont) => x = rb_next(x),
-                ControlFlow::Break(brk) => return Some(brk),
-            }
-        }
+    RbReverseIterator {
+        curr: NonNull::new(unsafe { rb_max(head) }),
+        _phantom: std::marker::PhantomData,
     }
-
-    None
 }
 
-pub unsafe fn rb_foreach_safe<F, T, C, D>(head: *mut rb_head<T>, mut f: F) -> Option<C>
-where
-    F: FnMut(*mut T) -> ControlFlow<C>,
-    T: GetEntry<T, D>,
-{
-    unsafe {
-        let mut x = rb_min(head);
-
-        while !x.is_null() {
-            let y = rb_next(x);
-
-            if let ControlFlow::Break(brk) = f(x) {
-                return Some(brk);
-            }
-
-            x = y;
-        }
-    }
-
-    None
+pub struct RbReverseIterator<T, D> {
+    curr: Option<NonNull<T>>,
+    _phantom: std::marker::PhantomData<D>,
 }
 
-pub unsafe fn rb_foreach_reverse_safe<F, T, C, D>(head: *mut rb_head<T>, mut f: F) -> Option<C>
+impl<T, D> Iterator for RbReverseIterator<T, D>
 where
-    F: FnMut(*mut T) -> ControlFlow<C>,
     T: GetEntry<T, D>,
 {
-    unsafe {
-        let mut x = rb_max(head);
+    type Item = NonNull<T>;
 
-        while !x.is_null() {
-            let y = rb_prev(x);
-
-            if let ControlFlow::Break(brk) = f(x) {
-                return Some(brk);
-            }
-
-            x = y;
-        }
+    fn next(&mut self) -> Option<Self::Item> {
+        let curr = self.curr?.as_ptr();
+        std::mem::replace(&mut self.curr, NonNull::new(unsafe { rb_prev(curr) }))
     }
-
-    None
 }
 
 #[allow(clippy::collapsible_else_if)]

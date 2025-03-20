@@ -1,8 +1,6 @@
 use compat_rs::{
     VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB, strlcpy,
-    tree::{
-        rb_find, rb_foreach, rb_foreach_reverse_safe, rb_initializer, rb_insert, rb_min, rb_next, rb_remove, rb_root,
-    },
+    tree::{rb_find, rb_foreach_reverse, rb_initializer, rb_insert, rb_min, rb_next, rb_remove, rb_root},
 };
 use libc::strcmp;
 
@@ -169,15 +167,14 @@ pub unsafe extern "C" fn paste_add(mut prefix: *const c_char, data: *mut c_char,
         }
 
         let limit = options_get_number(global_options, c"buffer-limit".as_ptr());
-        rb_foreach_reverse_safe::<_, _, _, discr_time_entry>(&raw mut paste_by_time, |pb| {
+        for pb in rb_foreach_reverse::<_, discr_time_entry>(&raw mut paste_by_time) {
             if (paste_num_automatic as i64) < limit {
-                return ControlFlow::<(), ()>::Break(());
+                break;
             }
-            if ((*pb).automatic != 0) {
-                paste_free(NonNull::new(pb).expect("in for loop should be non-null"));
+            if ((*pb.as_ptr()).automatic != 0) {
+                paste_free(pb);
             }
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
 
         let mut pb = xmalloc_::<paste_buffer>().as_ptr();
 

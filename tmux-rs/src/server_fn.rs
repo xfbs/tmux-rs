@@ -2,8 +2,8 @@ use crate::*;
 
 use compat_rs::{
     imsg::{IMSG_HEADER_SIZE, MAX_IMSGSIZE},
-    queue::{tailq_empty, tailq_foreach_},
-    tree::rb_foreach_,
+    queue::{tailq_empty, tailq_foreach},
+    tree::rb_foreach,
 };
 use libc::{WEXITSTATUS, WIFEXITED, close, gettimeofday, memcpy};
 
@@ -50,7 +50,7 @@ pub unsafe extern "C" fn server_status_client(c: *mut client) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_redraw_session(s: *mut session) {
     unsafe {
-        for c in tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+        for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if ((*c).session == s) {
                 server_redraw_client(c);
             }
@@ -65,7 +65,7 @@ pub unsafe extern "C" fn server_redraw_session_group(s: *mut session) {
         if sg.is_null() {
             server_redraw_session(s);
         } else {
-            for s in tailq_foreach_(&raw mut (*sg).sessions) {
+            for s in tailq_foreach(&raw mut (*sg).sessions) {
                 server_redraw_session(s.as_ptr());
             }
         }
@@ -75,7 +75,7 @@ pub unsafe extern "C" fn server_redraw_session_group(s: *mut session) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_status_session(s: *mut session) {
     unsafe {
-        for c in tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+        for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if ((*c).session == s) {
                 server_status_client(c);
             }
@@ -90,7 +90,7 @@ pub unsafe extern "C" fn server_status_session_group(s: *mut session) {
         if sg.is_null() {
             server_status_session(s);
         } else {
-            for s in tailq_foreach_(&raw mut (*sg).sessions) {
+            for s in tailq_foreach(&raw mut (*sg).sessions) {
                 server_status_session(s.as_ptr());
             }
         }
@@ -100,7 +100,7 @@ pub unsafe extern "C" fn server_status_session_group(s: *mut session) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_redraw_window(w: *mut window) {
     unsafe {
-        for c in tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+        for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if (!(*c).session.is_null() && (*(*(*c).session).curw).window == w) {
                 server_redraw_client(c);
             }
@@ -111,7 +111,7 @@ pub unsafe extern "C" fn server_redraw_window(w: *mut window) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_redraw_window_borders(w: *mut window) {
     unsafe {
-        for c in tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+        for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if (!(*c).session.is_null() && (*(*(*c).session).curw).window == w) {
                 (*c).flags |= client_flag::REDRAWBORDERS;
             }
@@ -128,7 +128,7 @@ pub unsafe extern "C" fn server_status_window(w: *mut window) {
          * current window.
          */
 
-        for s in rb_foreach_(&raw mut sessions).map(NonNull::as_ptr) {
+        for s in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
             if session_has(s, w) != 0 {
                 server_status_session(s);
             }
@@ -139,7 +139,7 @@ pub unsafe extern "C" fn server_status_window(w: *mut window) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_lock() {
     unsafe {
-        for c in tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+        for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if (!(*c).session.is_null()) {
                 server_lock_client(c);
             }
@@ -150,7 +150,7 @@ pub unsafe extern "C" fn server_lock() {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_lock_session(s: *mut session) {
     unsafe {
-        for c in tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+        for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if ((*c).session == s) {
                 server_lock_client(c);
             }
@@ -214,7 +214,7 @@ pub unsafe extern "C" fn server_kill_pane(wp: *mut window_pane) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_kill_window(w: *mut window, renumber: i32) {
     unsafe {
-        for s in rb_foreach_(&raw mut sessions).map(NonNull::as_ptr) {
+        for s in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
             if session_has(s, w) == 0 {
                 continue;
             }
@@ -243,7 +243,7 @@ pub unsafe extern "C" fn server_renumber_session(s: *mut session) {
         if options_get_number((*s).options, c"renumber-windows".as_ptr()) != 0 {
             let sg = session_group_contains(s);
             if (!sg.is_null()) {
-                for s in tailq_foreach_(&raw mut (*sg).sessions) {
+                for s in tailq_foreach(&raw mut (*sg).sessions) {
                     session_renumber_windows(s.as_ptr());
                 }
             } else {
@@ -256,7 +256,7 @@ pub unsafe extern "C" fn server_renumber_session(s: *mut session) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_renumber_all() {
     unsafe {
-        for s in rb_foreach_(&raw mut sessions) {
+        for s in rb_foreach(&raw mut sessions) {
             server_renumber_session(s.as_ptr());
         }
     }
@@ -431,7 +431,7 @@ pub unsafe extern "C" fn server_destroy_session_group(s: *mut session) {
             server_destroy_session(s);
             session_destroy(s, 1, c"server_destroy_session_group".as_ptr());
         } else {
-            for s in tailq_foreach_(&raw mut (*sg).sessions).map(NonNull::as_ptr) {
+            for s in tailq_foreach(&raw mut (*sg).sessions).map(NonNull::as_ptr) {
                 server_destroy_session(s);
                 session_destroy(s, 1, c"server_destroy_session_group".as_ptr());
             }
@@ -446,7 +446,7 @@ pub unsafe extern "C" fn server_find_session(
 ) -> *mut session {
     unsafe {
         let mut s_out: *mut session = null_mut();
-        for s_loop in rb_foreach_(&raw mut sessions).map(NonNull::as_ptr) {
+        for s_loop in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
             if (s_loop != s && (s_out.is_null() || f(s_loop, s_out) != 0)) {
                 s_out = s_loop;
             }
@@ -490,7 +490,7 @@ pub unsafe extern "C" fn server_destroy_session(s: *mut session) {
         if (s_new == s) {
             s_new = null_mut()
         }
-        for c in tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+        for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if ((*c).session != s) {
                 continue;
             }
@@ -508,7 +508,7 @@ pub unsafe extern "C" fn server_destroy_session(s: *mut session) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_check_unattached() {
     unsafe {
-        for s in rb_foreach_(&raw mut sessions).map(NonNull::as_ptr) {
+        for s in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
             if ((*s).attached != 0) {
                 continue;
             }

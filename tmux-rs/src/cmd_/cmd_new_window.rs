@@ -47,20 +47,16 @@ unsafe extern "C" fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) 
         let mut name = args_get(args, b'n');
         if (args_has_(args, 'S') && !name.is_null() && (*target).idx == -1) {
             let expanded = format_single(item, name, c, s, null_mut(), null_mut());
-            if rb_foreach(&raw mut (*s).windows, |wl| {
+            for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
                 if (strcmp((*(*wl).window).name, expanded) != 0) {
-                    return ControlFlow::Continue(());
+                    continue;
                 }
                 if (new_wl.is_null()) {
                     new_wl = wl;
-                    return ControlFlow::Continue(());
+                    continue;
                 }
                 cmdq_error(item, c"multiple windows named %s".as_ptr(), name);
                 free_(expanded);
-                ControlFlow::Break(())
-            })
-            .is_some()
-            {
                 return cmd_retval::CMD_RETURN_ERROR;
             }
 

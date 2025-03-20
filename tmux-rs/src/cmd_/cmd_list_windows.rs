@@ -39,10 +39,9 @@ unsafe extern "C" fn cmd_list_windows_exec(self_: *mut cmd, item: *mut cmdq_item
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_list_windows_server(self_: *mut cmd, item: *mut cmdq_item) {
     unsafe {
-        rb_foreach(&raw mut sessions, |s| {
+        for s in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
             cmd_list_windows_session(self_, s, item, 1);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 }
 
@@ -67,7 +66,7 @@ unsafe extern "C" fn cmd_list_windows_session(self_: *mut cmd, s: *mut session, 
         let mut filter = args_get_(args, 'f');
 
         let mut n = 0;
-        rb_foreach(&raw mut (*s).windows, |wl| {
+        for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
             let ft = format_create(cmdq_get_client(item), item, FORMAT_NONE as i32, 0);
             format_add(ft, c"line".as_ptr(), c"%u".as_ptr(), n);
             format_defaults(ft, null_mut(), s, wl, null_mut());
@@ -87,7 +86,6 @@ unsafe extern "C" fn cmd_list_windows_session(self_: *mut cmd, s: *mut session, 
 
             format_free(ft);
             n += 1;
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 }

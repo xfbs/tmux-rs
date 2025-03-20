@@ -96,13 +96,12 @@ pub unsafe extern "C" fn spawn_window(sc: *mut spawn_context, cause: *mut *mut c
         if ((*sc).flags & SPAWN_RESPAWN != 0) {
             w = (*(*sc).wl).window;
             if (!(*sc).flags & SPAWN_KILL != 0) {
-                tailq_foreach::<_, _, _, discr_entry>(&raw mut (*w).panes, |wp_| {
+                for wp_ in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
                     wp = wp_;
                     if ((*wp).fd != -1) {
-                        return ControlFlow::<(), ()>::Break(());
+                        break;
                     }
-                    ControlFlow::<(), ()>::Continue(())
-                });
+                }
                 if (!wp.is_null()) {
                     xasprintf(cause, c"window %s:%d still active".as_ptr(), (*s).name, (*(*sc).wl).idx);
                     return null_mut();

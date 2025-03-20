@@ -2,11 +2,9 @@ use crate::*;
 
 use compat_rs::{
     ACCESSPERMS,
-    queue::{
-        tailq_empty, tailq_foreach, tailq_foreach_, tailq_foreach_safe, tailq_init, tailq_insert_tail, tailq_remove,
-    },
+    queue::{tailq_empty, tailq_foreach, tailq_init, tailq_insert_tail, tailq_remove},
     strlcpy,
-    tree::{rb_empty, rb_foreach, rb_foreach_, rb_foreach_safe, rb_init},
+    tree::{rb_empty, rb_foreach, rb_init},
 };
 use libc::{
     __errno_location, AF_UNIX, ECHILD, ENAMETOOLONG, S_IRGRP, S_IROTH, S_IRUSR, S_IRWXG, S_IRWXO, S_IXGRP, S_IXOTH,
@@ -283,7 +281,7 @@ pub unsafe extern "C" fn server_loop() -> i32 {
 
         loop {
             let mut items = cmdq_next(null_mut());
-            for c in tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+            for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
                 if (*c).flags.intersects(client_flag::IDENTIFIED) {
                     items += cmdq_next(c);
                 }
@@ -306,7 +304,7 @@ pub unsafe extern "C" fn server_loop() -> i32 {
             }
         }
 
-        for c in tailq_foreach_(&raw mut clients) {
+        for c in tailq_foreach(&raw mut clients) {
             if !(*c.as_ptr()).session.is_null() {
                 return 0;
             }
@@ -334,7 +332,7 @@ unsafe extern "C" fn server_send_exit() {
     unsafe {
         cmd_wait_for_flush();
 
-        tailq_foreach_safe(&raw mut clients, |c| {
+        for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if (*c).flags.intersects(client_flag::SUSPENDED) {
                 server_client_lost(c);
             } else {
@@ -342,13 +340,11 @@ unsafe extern "C" fn server_send_exit() {
                 (*c).exit_type = exit_type::CLIENT_EXIT_SHUTDOWN;
             }
             (*c).session = null_mut();
-            ControlFlow::Continue::<(), ()>(())
-        });
+        }
 
-        compat_rs::tree::rb_foreach_safe(&raw mut sessions, |s| {
+        for s in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
             session_destroy(s, 1, c"server_send_exit".as_ptr());
-            ControlFlow::Continue::<(), ()>(())
-        });
+        }
     }
 }
 
@@ -359,7 +355,7 @@ pub unsafe extern "C" fn server_update_socket() {
         let mut sb: stat = zeroed(); // TODO remove unecessary init
 
         let mut n = 0;
-        for s in rb_foreach_(&raw mut sessions).map(|s| s.as_ptr()) {
+        for s in rb_foreach(&raw mut sessions).map(|s| s.as_ptr()) {
             if (*s).attached != 0 {
                 n += 1;
                 break;
@@ -524,8 +520,8 @@ unsafe extern "C" fn server_child_signal() {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn server_child_exited(pid: pid_t, status: i32) {
     unsafe {
-        rb_foreach_safe(&raw mut windows, |w| {
-            tailq_foreach::<_, _, _, discr_entry>(&raw mut (*w).panes, |wp| {
+        for w in rb_foreach(&raw mut windows).map(NonNull::as_ptr) {
+            for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
                 if (*wp).pid == pid {
                     (*wp).status = status;
                     (*wp).flags |= window_pane_flags::PANE_STATUSREADY;
@@ -536,12 +532,10 @@ unsafe extern "C" fn server_child_exited(pid: pid_t, status: i32) {
                     if window_pane_destroy_ready(wp) != 0 {
                         server_destroy_pane(wp, 1);
                     }
-                    return ControlFlow::Break(());
+                    break;
                 }
-                ControlFlow::Continue(())
-            });
-            ControlFlow::Continue::<(), ()>(())
-        });
+            }
+        }
         job_check_died(pid, status);
     }
 }
@@ -552,17 +546,15 @@ unsafe extern "C" fn server_child_stopped(pid: pid_t, status: i32) {
             return;
         }
 
-        rb_foreach(&raw mut windows, |w| {
-            tailq_foreach::<_, _, _, discr_entry>(&raw mut (*w).panes, |wp| {
+        for w in rb_foreach(&raw mut windows).map(NonNull::as_ptr) {
+            for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
                 if (*wp).pid == pid {
                     if killpg(pid, SIGCONT) != 0 {
                         kill(pid, SIGCONT);
                     }
                 }
-                ControlFlow::Continue::<(), ()>(())
-            });
-            ControlFlow::Continue::<(), ()>(())
-        });
+            }
+        }
         job_check_died(pid, status);
     }
 }
@@ -586,14 +578,13 @@ pub unsafe extern "C" fn server_add_message(fmt: *const c_char, mut args: ...) {
         tailq_insert_tail(&raw mut message_log, msg);
 
         let limit = options_get_number(global_options, c"message-limit".as_ptr()) as u32;
-        tailq_foreach_safe(&raw mut message_log, |msg| {
+        for msg in tailq_foreach(&raw mut message_log).map(NonNull::as_ptr) {
             if (*msg).msg_num + limit >= message_next {
-                return ControlFlow::Continue::<(), ()>(());
+                continue;
             }
             free_((*msg).msg);
             tailq_remove(&raw mut message_log, msg);
             free_(msg);
-            ControlFlow::Continue::<(), ()>(())
-        });
+        }
     }
 }

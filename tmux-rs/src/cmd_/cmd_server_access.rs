@@ -24,7 +24,7 @@ unsafe extern "C" fn cmd_server_access_deny(item: *mut cmdq_item, pw: *mut libc:
             cmdq_error(item, c"user %s not found".as_ptr(), (*pw).pw_name);
             return cmd_retval::CMD_RETURN_ERROR;
         }
-        for loop_ in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+        for loop_ in compat_rs::queue::tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             let uid = proc_get_peer_uid((*loop_).peer);
             if (uid == server_acl_get_uid(user)) {
                 (*loop_).exit_message = xstrdup_(c"access not allowed").as_ptr();

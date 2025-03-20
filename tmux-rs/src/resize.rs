@@ -1,9 +1,6 @@
 use crate::*;
 
-use compat_rs::{
-    queue::tailq_foreach,
-    tree::{rb_foreach, rb_foreach_},
-};
+use compat_rs::{queue::tailq_foreach, tree::rb_foreach};
 use libc::sscanf;
 
 unsafe extern "C" {
@@ -87,7 +84,7 @@ pub unsafe extern "C" fn ignore_client_size(c: *mut client) -> i32 {
              * Ignore flagged clients if there are any attached clients
              * that aren't flagged.
              */
-            for loop_ in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+            for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
                 if ((*loop_).session.is_null()) {
                     continue;
                 }
@@ -113,7 +110,7 @@ pub unsafe extern "C" fn ignore_client_size(c: *mut client) -> i32 {
 pub unsafe extern "C" fn clients_with_window(w: *mut window) -> u32 {
     let mut n = 0u32;
     unsafe {
-        for loop_ in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+        for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if (ignore_client_size(loop_) != 0 || session_has((*loop_).session, w) == 0) {
                 continue;
             }
@@ -179,7 +176,7 @@ pub unsafe extern "C" fn clients_calculate_size(
             }
 
             /* loop_ over the clients and work out the size. */
-            for loop_ in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+            for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
                 if (loop_ != c && ignore_client_size(loop_) != 0) {
                     log_debug(c"%s: ignoring %s (1)".as_ptr(), __func__, (*loop_).name);
                     continue;
@@ -263,7 +260,7 @@ pub unsafe extern "C" fn clients_calculate_size(
          * if one exists.
          */
         if (w.is_null()) {
-            for loop_ in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+            for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
                 if (loop_ != c && ignore_client_size(loop_) != 0) {
                     continue;
                 }
@@ -563,7 +560,7 @@ pub unsafe extern "C" fn recalculate_sizes_now(now: i32) {
          * Clear attached count and update saved status line information for
          * each session.
          */
-        for s in rb_foreach_(&raw mut sessions).map(NonNull::as_ptr) {
+        for s in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
             (*s).attached = 0;
             status_update_cache(s);
         }
@@ -572,7 +569,7 @@ pub unsafe extern "C" fn recalculate_sizes_now(now: i32) {
          * Increment attached count and check the status line size for each
          * client.
          */
-        for c in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+        for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             let s = (*c).session;
             if (!s.is_null() && !((*c).flags.intersects(CLIENT_UNATTACHEDFLAGS))) {
                 (*s).attached += 1;
@@ -588,7 +585,7 @@ pub unsafe extern "C" fn recalculate_sizes_now(now: i32) {
         }
 
         /* Walk each window and adjust the size. */
-        for w in rb_foreach_(&raw mut windows) {
+        for w in rb_foreach(&raw mut windows) {
             recalculate_size(w.as_ptr(), now);
         }
     }

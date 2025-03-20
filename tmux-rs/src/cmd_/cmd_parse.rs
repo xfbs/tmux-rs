@@ -1,6 +1,5 @@
 use compat_rs::queue::{
-    tailq_empty, tailq_first, tailq_foreach, tailq_foreach_safe, tailq_init, tailq_insert_tail, tailq_last,
-    tailq_remove,
+    tailq_empty, tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_last, tailq_remove,
 };
 use libc::memset;
 
@@ -134,11 +133,10 @@ pub unsafe extern "C" fn cmd_parse_free_argument(arg: *mut cmd_parse_argument) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_parse_free_arguments(args: *mut cmd_parse_arguments) {
     unsafe {
-        tailq_foreach_safe(args, |arg| {
+        for arg in tailq_foreach(args).map(NonNull::as_ptr) {
             tailq_remove(args, arg);
             cmd_parse_free_argument(arg);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 }
 
@@ -162,11 +160,10 @@ pub unsafe extern "C" fn cmd_parse_new_commands() -> *mut cmd_parse_commands {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_parse_free_commands(cmds: *mut cmd_parse_commands) {
     unsafe {
-        tailq_foreach_safe(cmds, |cmd| {
+        for cmd in tailq_foreach(cmds).map(NonNull::as_ptr) {
             tailq_remove(cmds, cmd);
             cmd_parse_free_command(cmd);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
         free_(cmds);
     }
 }
@@ -180,11 +177,10 @@ pub unsafe extern "C" fn cmd_parse_run_parser(cause: *mut *mut c_char) -> *mut c
         tailq_init(&raw mut (*ps).stack);
 
         let retval = yyparse();
-        tailq_foreach_safe(&raw mut (*ps).stack, |scope| {
+        for scope in tailq_foreach(&raw mut (*ps).stack).map(NonNull::as_ptr) {
             tailq_remove(&raw mut (*ps).stack, scope);
             free_(scope);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
         if (retval != 0) {
             *cause = (*ps).error;
             return null_mut();
@@ -234,9 +230,9 @@ pub unsafe extern "C" fn cmd_parse_do_buffer(
 pub unsafe extern "C" fn cmd_parse_log_commands(cmds: *mut cmd_parse_commands, prefix: *const c_char) {
     unsafe {
         let mut i = 0;
-        for cmd in compat_rs::queue::tailq_foreach_(cmds).map(NonNull::as_ptr) {
+        for cmd in compat_rs::queue::tailq_foreach(cmds).map(NonNull::as_ptr) {
             let mut j = 0;
-            for arg in compat_rs::queue::tailq_foreach_(&raw mut (*cmd).arguments).map(NonNull::as_ptr) {
+            for arg in compat_rs::queue::tailq_foreach(&raw mut (*cmd).arguments).map(NonNull::as_ptr) {
                 match ((*arg).type_) {
                     cmd_parse_argument_type::CMD_PARSE_STRING => {
                         log_debug(c"%s %u:%u: %s".as_ptr(), prefix, i, j, (*arg).string)
@@ -306,11 +302,10 @@ pub unsafe extern "C" fn cmd_parse_expand_alias(
         tailq_remove(&raw mut (*cmd).arguments, first);
         cmd_parse_free_argument(first);
 
-        tailq_foreach_safe(&raw mut (*cmd).arguments, |arg| {
+        for arg in tailq_foreach(&raw mut (*cmd).arguments).map(NonNull::as_ptr) {
             tailq_remove(&raw mut (*cmd).arguments, arg);
             tailq_insert_tail(&raw mut (*last).arguments, arg);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
         cmd_parse_log_commands(cmds, __func__);
 
         (*pi).flags |= CMD_PARSE_NOALIAS;
@@ -342,7 +337,7 @@ pub unsafe extern "C" fn cmd_parse_build_command(
         }
 
         'out: {
-            for arg in compat_rs::queue::tailq_foreach_(&raw mut (*cmd).arguments).map(NonNull::as_ptr) {
+            for arg in compat_rs::queue::tailq_foreach(&raw mut (*cmd).arguments).map(NonNull::as_ptr) {
                 values = xrecallocarray_(values, count as usize, count as usize + 1, size_of::<args_value>()).as_ptr();
                 match (*arg).type_ {
                     cmd_parse_argument_type::CMD_PARSE_STRING => {
@@ -416,7 +411,7 @@ pub unsafe extern "C" fn cmd_parse_build_commands(
          * executed).
          */
         let result = cmd_list_new();
-        for cmd in compat_rs::queue::tailq_foreach_(cmds).map(NonNull::as_ptr) {
+        for cmd in compat_rs::queue::tailq_foreach(cmds).map(NonNull::as_ptr) {
             if ((!(*pi).flags & CMD_PARSE_ONEGROUP != 0) && (*cmd).line != line) {
                 if (!current.is_null()) {
                     cmd_parse_print_commands(pi, current);

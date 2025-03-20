@@ -1,7 +1,7 @@
 use compat_rs::{
     TAILQ_HEAD_INITIALIZER, VIS_CSTYLE, VIS_OCTAL,
     queue::{tailq_first, tailq_insert_tail, tailq_remove},
-    tree::{rb_find, rb_foreach_safe, rb_init, rb_insert, rb_remove},
+    tree::{rb_find, rb_foreach, rb_init, rb_insert, rb_remove},
 };
 use libc::strcmp;
 
@@ -227,10 +227,9 @@ pub unsafe extern "C" fn hyperlinks_copy(hl: *mut hyperlinks) -> *mut hyperlinks
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn hyperlinks_reset(hl: *mut hyperlinks) {
     unsafe {
-        rb_foreach_safe::<_, _, _, discr_by_inner_entry>(&raw mut (*hl).by_inner, |hlu| {
-            hyperlinks_remove(hlu);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        for hlu in rb_foreach::<_, discr_by_inner_entry>(&raw mut (*hl).by_inner) {
+            hyperlinks_remove(hlu.as_ptr());
+        }
     }
 }
 

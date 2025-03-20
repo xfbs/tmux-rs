@@ -61,14 +61,13 @@ unsafe extern "C" fn cmd_kill_window_exec(self_: *mut cmd, item: *mut cmdq_item)
             /* Kill all windows except the current one. */
             loop {
                 found = 0;
-                rb_foreach(&raw mut (*s).windows, |loop_| {
+                for loop_ in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
                     if ((*loop_).window != (*wl).window) {
                         server_kill_window((*loop_).window, 0);
                         found += 1;
-                        return ControlFlow::Break(());
+                        break;
                     }
-                    ControlFlow::Continue(())
-                });
+                }
 
                 if found == 0 {
                     break;
@@ -80,12 +79,11 @@ unsafe extern "C" fn cmd_kill_window_exec(self_: *mut cmd, item: *mut cmdq_item)
              * kill it as well.
              */
             found = 0;
-            rb_foreach(&raw mut (*s).windows, |loop_| {
+            for loop_ in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
                 if ((*loop_).window == (*wl).window) {
                     found += 1;
                 }
-                ControlFlow::<(), ()>::Continue(())
-            });
+            }
             if (found > 1) {
                 {
                     server_kill_window((*wl).window, 0);

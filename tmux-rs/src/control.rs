@@ -1,8 +1,8 @@
 use std::mem::transmute;
 
 use compat_rs::{
-    queue::{tailq_empty, tailq_first, tailq_foreach, tailq_foreach_safe, tailq_init, tailq_insert_tail, tailq_remove},
-    tree::{rb_empty, rb_find, rb_foreach, rb_foreach_safe, rb_init, rb_insert, rb_remove},
+    queue::{tailq_empty, tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_remove},
+    tree::{rb_empty, rb_find, rb_foreach, rb_init, rb_insert, rb_remove},
 };
 use libc::{close, strcmp};
 
@@ -200,16 +200,14 @@ RB_GENERATE!(control_sub_windows, control_sub_window, entry, control_sub_window_
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_free_sub(cs: *mut control_state, csub: *mut control_sub) {
     unsafe {
-        rb_foreach_safe(&raw mut (*csub).panes, |csp| {
+        for csp in rb_foreach(&raw mut (*csub).panes).map(NonNull::as_ptr) {
             rb_remove(&raw mut (*csub).panes, csp);
             free_(csp);
-            ControlFlow::<(), ()>::Continue(())
-        });
-        rb_foreach_safe(&raw mut (*csub).windows, |csw| {
+        }
+        for csw in rb_foreach(&raw mut (*csub).windows).map(NonNull::as_ptr) {
             rb_remove(&raw mut (*csub).windows, csw);
             free_(csw);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
         free_((*csub).last);
 
         rb_remove(&raw mut (*cs).subs, csub);
@@ -264,11 +262,10 @@ pub unsafe extern "C" fn control_discard_pane(c: *mut client, cp: *mut control_p
     unsafe {
         let mut cs = (*c).control_state;
 
-        tailq_foreach_safe::<_, _, _, discr_entry>(&raw mut (*cp).blocks, |cb| {
+        for cb in tailq_foreach::<_, discr_entry>(&raw mut (*cp).blocks).map(NonNull::as_ptr) {
             tailq_remove::<_, discr_entry>(&raw mut (*cp).blocks, cb);
             control_free_block(cs, cb);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 }
 
@@ -291,11 +288,10 @@ pub unsafe extern "C" fn control_reset_offsets(c: *mut client) {
     unsafe {
         let cs = (*c).control_state;
 
-        rb_foreach_safe(&raw mut (*cs).panes, |cp| {
+        for cp in rb_foreach(&raw mut (*cs).panes).map(NonNull::as_ptr) {
             rb_remove(&raw mut (*cs).panes, cp);
             free_(cp);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
 
         tailq_init(&raw mut (*cs).pending_list);
         (*cs).pending_count = 0;
@@ -595,17 +591,16 @@ pub unsafe extern "C" fn control_flush_all_blocks(c: *mut client) {
     unsafe {
         let mut cs = (*c).control_state;
 
-        tailq_foreach_safe::<_, _, _, discr_all_entry>(&raw mut (*cs).all_blocks, |cb| {
+        for cb in tailq_foreach::<_, discr_all_entry>(&raw mut (*cs).all_blocks).map(NonNull::as_ptr) {
             if ((*cb).size != 0) {
-                return ControlFlow::<(), ()>::Break(());
+                break;
             }
             log_debug(c"%s: %s: flushing line: %s".as_ptr(), __func__, (*c).name, (*cb).line);
 
             bufferevent_write((*cs).write_event, (*cb).line.cast(), strlen((*cb).line));
             bufferevent_write((*cs).write_event, c"\n".as_ptr().cast(), 1);
             control_free_block(cs, cb);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 }
 
@@ -686,12 +681,11 @@ pub unsafe extern "C" fn control_write_pending(c: *mut client, cp: *mut control_
 
         let wp = control_window_pane(c, (*cp).pane);
         if (wp.is_none() || (*wp.unwrap().as_ptr()).fd == -1) {
-            tailq_foreach_safe::<_, _, _, discr_entry>(&raw mut (*cp).blocks, |cb_| {
+            for cb_ in tailq_foreach::<_, discr_entry>(&raw mut (*cp).blocks).map(NonNull::as_ptr) {
                 cb = cb_;
                 tailq_remove::<_, discr_entry>(&raw mut (*cp).blocks, cb);
                 control_free_block(cs, cb);
-                ControlFlow::<(), ()>::Continue(())
-            });
+            }
             control_flush_all_blocks(c);
             return 0;
         }
@@ -776,18 +770,17 @@ pub unsafe extern "C" fn control_write_callback(bufev: *mut bufferevent, data: *
                 limit = CONTROL_WRITE_MINIMUM as usize;
             }
 
-            tailq_foreach_safe::<_, _, _, discr_pending_entry>(&raw mut (*cs).pending_list, |cp| {
+            for cp in tailq_foreach::<_, discr_pending_entry>(&raw mut (*cs).pending_list).map(NonNull::as_ptr) {
                 if (EVBUFFER_LENGTH(evb) >= CONTROL_BUFFER_HIGH as usize) {
-                    return ControlFlow::Break(());
+                    break;
                 }
                 if (control_write_pending(c, cp, limit) != 0) {
-                    return ControlFlow::Continue(());
+                    continue;
                 }
                 tailq_remove::<_, discr_pending_entry>(&raw mut (*cs).pending_list, cp);
                 (*cp).pending_flag = 0;
                 (*cs).pending_count -= 1;
-                ControlFlow::Continue(())
-            });
+            }
         }
         if (EVBUFFER_LENGTH(evb) == 0) {
             bufferevent_disable((*cs).write_event, EV_WRITE as i16);
@@ -858,10 +851,9 @@ pub unsafe extern "C" fn control_ready(c: *mut client) {
 pub unsafe extern "C" fn control_discard(c: *mut client) {
     unsafe {
         let mut cs = (*c).control_state;
-        rb_foreach(&raw mut (*cs).panes, |cp| {
-            control_discard_pane(c, cp);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        for cp in rb_foreach(&raw mut (*cs).panes) {
+            control_discard_pane(c, cp.as_ptr());
+        }
         bufferevent_disable((*cs).read_event, EV_READ as i16);
     }
 }
@@ -875,18 +867,16 @@ pub unsafe extern "C" fn control_stop(c: *mut client) {
         }
         bufferevent_free((*cs).read_event);
 
-        rb_foreach_safe(&raw mut (*cs).subs, |csub| {
+        for csub in rb_foreach(&raw mut (*cs).subs).map(NonNull::as_ptr) {
             control_free_sub(cs, csub);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
         if evtimer_initialized(&raw mut (*cs).subs_timer) != 0 {
             evtimer_del(&raw mut (*cs).subs_timer);
         }
 
-        tailq_foreach_safe::<_, _, _, discr_all_entry>(&raw mut (*cs).all_blocks, |cb| {
+        for cb in tailq_foreach::<_, discr_all_entry>(&raw mut (*cs).all_blocks).map(NonNull::as_ptr) {
             control_free_block(cs, cb);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
         control_reset_offsets(c);
 
         free_(cs);
@@ -930,9 +920,9 @@ pub unsafe extern "C" fn control_check_subs_pane(c: *mut client, csub: *mut cont
         }
         let w = (*wp).window;
 
-        tailq_foreach::<_, _, _, discr_wentry>(&raw mut (*w).winlinks, |wl| {
+        for wl in tailq_foreach::<_, discr_wentry>(&raw mut (*w).winlinks).map(NonNull::as_ptr) {
             if ((*wl).session != s) {
-                return ControlFlow::<(), ()>::Continue(());
+                continue;
             }
 
             let ft = format_create_defaults(null_mut(), c, s, wl, wp);
@@ -952,7 +942,7 @@ pub unsafe extern "C" fn control_check_subs_pane(c: *mut client, csub: *mut cont
 
             if (!(*csp).last.is_null() && strcmp(value, (*csp).last) == 0) {
                 free_(value);
-                return ControlFlow::Continue(());
+                continue;
             }
             control_write(
                 c,
@@ -966,9 +956,7 @@ pub unsafe extern "C" fn control_check_subs_pane(c: *mut client, csub: *mut cont
             );
             free_((*csp).last);
             (*csp).last = value;
-
-            ControlFlow::Continue(())
-        });
+        }
     }
 }
 
@@ -978,9 +966,9 @@ pub unsafe extern "C" fn control_check_subs_all_panes(c: *mut client, csub: *mut
         let mut s = (*c).session;
         let mut find: control_sub_pane = zeroed();
 
-        rb_foreach(&raw mut (*s).windows, |wl| {
+        for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
             let w = (*wl).window;
-            tailq_foreach::<_, _, _, discr_entry>(&raw mut (*w).panes, |wp| {
+            for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
                 let ft = format_create_defaults(null_mut(), c, s, wl, wp);
                 let value = format_expand(ft, (*csub).format);
                 format_free(ft);
@@ -998,7 +986,7 @@ pub unsafe extern "C" fn control_check_subs_all_panes(c: *mut client, csub: *mut
 
                 if (!(*csp).last.is_null() && strcmp(value, (*csp).last) == 0) {
                     free_(value);
-                    return ControlFlow::<(), ()>::Continue(());
+                    continue;
                 }
                 control_write(
                     c,
@@ -1012,10 +1000,8 @@ pub unsafe extern "C" fn control_check_subs_all_panes(c: *mut client, csub: *mut
                 );
                 free_((*csp).last);
                 (*csp).last = value;
-                ControlFlow::<(), ()>::Continue(())
-            });
-            ControlFlow::<(), ()>::Continue(())
-        });
+            }
+        }
     }
 }
 
@@ -1030,9 +1016,9 @@ pub unsafe extern "C" fn control_check_subs_window(c: *mut client, csub: *mut co
             return;
         }
 
-        tailq_foreach::<_, winlink, _, discr_wentry>(&raw mut (*w).winlinks, |wl| {
+        for wl in tailq_foreach::<winlink, discr_wentry>(&raw mut (*w).winlinks).map(NonNull::as_ptr) {
             if ((*wl).session != s) {
-                return ControlFlow::<(), ()>::Continue(());
+                continue;
             }
 
             let ft = format_create_defaults(null_mut(), c, s, wl, null_mut());
@@ -1052,7 +1038,7 @@ pub unsafe extern "C" fn control_check_subs_window(c: *mut client, csub: *mut co
 
             if (!(*csw).last.is_null() && strcmp(value, (*csw).last) == 0) {
                 free_(value);
-                return ControlFlow::<(), ()>::Continue(());
+                continue;
             }
             control_write(
                 c,
@@ -1065,8 +1051,7 @@ pub unsafe extern "C" fn control_check_subs_window(c: *mut client, csub: *mut co
             );
             free_((*csw).last);
             (*csw).last = value;
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 }
 
@@ -1076,7 +1061,7 @@ pub unsafe extern "C" fn control_check_subs_all_windows(c: *mut client, csub: *m
         let mut s = (*c).session;
         let mut find: control_sub_window = zeroed();
 
-        rb_foreach(&raw mut (*s).windows, |wl| {
+        for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
             let w = (*wl).window;
 
             let ft = format_create_defaults(null_mut(), c, s, wl, null_mut());
@@ -1096,7 +1081,7 @@ pub unsafe extern "C" fn control_check_subs_all_windows(c: *mut client, csub: *m
 
             if (!(*csw).last.is_null() && strcmp(value, (*csw).last) == 0) {
                 free_(value);
-                return ControlFlow::<(), ()>::Continue(());
+                continue;
             }
             control_write(
                 c,
@@ -1109,8 +1094,7 @@ pub unsafe extern "C" fn control_check_subs_all_windows(c: *mut client, csub: *m
             );
             free_((*csw).last);
             (*csw).last = value;
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 }
 
@@ -1125,7 +1109,7 @@ pub unsafe extern "C" fn control_check_subs_timer(fd: i32, events: i16, data: *m
         log_debug(c"%s: timer fired".as_ptr(), __func__);
         evtimer_add(&raw mut (*cs).subs_timer, &raw mut tv);
 
-        rb_foreach_safe(&raw mut (*cs).subs, |csub| {
+        for csub in rb_foreach(&raw mut (*cs).subs).map(NonNull::as_ptr) {
             match ((*csub).type_) {
                 control_sub_type::CONTROL_SUB_SESSION => control_check_subs_session(c, csub),
                 control_sub_type::CONTROL_SUB_PANE => control_check_subs_pane(c, csub),
@@ -1133,8 +1117,7 @@ pub unsafe extern "C" fn control_check_subs_timer(fd: i32, events: i16, data: *m
                 control_sub_type::CONTROL_SUB_WINDOW => control_check_subs_window(c, csub),
                 control_sub_type::CONTROL_SUB_ALL_WINDOWS => control_check_subs_all_windows(c, csub),
             }
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 }
 

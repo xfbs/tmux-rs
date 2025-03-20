@@ -200,12 +200,11 @@ unsafe extern "C" fn cmd_display_panes_draw(c: *mut client, data: *mut c_void, c
             (*w).id,
         );
 
-        tailq_foreach::<_, _, _, discr_entry>(&raw mut (*w).panes, |wp| {
+        for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
             if window_pane_visible(wp) != 0 {
                 cmd_display_panes_draw_pane(ctx, wp);
             }
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 }
 

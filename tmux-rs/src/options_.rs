@@ -1,9 +1,9 @@
 use crate::*;
 use compat_rs::{
     RB_GENERATE_STATIC,
-    queue::tailq_foreach_,
+    queue::tailq_foreach,
     strtonum,
-    tree::{rb_find, rb_foreach_, rb_init, rb_insert, rb_min, rb_next, rb_remove},
+    tree::{rb_find, rb_foreach, rb_init, rb_insert, rb_min, rb_next, rb_remove},
 };
 use libc::{fnmatch, isdigit, sscanf, strcasecmp, strchr, strcmp, strncmp, strstr};
 
@@ -242,7 +242,7 @@ pub unsafe extern "C" fn options_create(parent: *mut options) -> *mut options {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn options_free(oo: *mut options) {
     unsafe {
-        for o in rb_foreach_(&raw mut (*oo).tree) {
+        for o in rb_foreach(&raw mut (*oo).tree) {
             options_remove(o.as_ptr());
         }
         free_(oo);
@@ -1322,7 +1322,7 @@ pub unsafe extern "C" fn options_push_changes(name: *const c_char) {
         log_debug(c"%s: %s".as_ptr(), c"__func__".as_ptr(), name);
 
         if strcmp(name, c"automatic-rename".as_ptr()) == 0 {
-            for w in rb_foreach_(&raw mut windows).map(NonNull::as_ptr) {
+            for w in rb_foreach(&raw mut windows).map(NonNull::as_ptr) {
                 if (*w).active.is_null() {
                     continue;
                 }
@@ -1333,31 +1333,31 @@ pub unsafe extern "C" fn options_push_changes(name: *const c_char) {
         }
 
         if strcmp(name, c"cursor-colour".as_ptr()) == 0 {
-            for wp in rb_foreach_(&raw mut all_window_panes) {
+            for wp in rb_foreach(&raw mut all_window_panes) {
                 window_pane_default_cursor(wp.as_ptr());
             }
         }
 
         if strcmp(name, c"cursor-style".as_ptr()) == 0 {
-            for wp in rb_foreach_(&raw mut all_window_panes) {
+            for wp in rb_foreach(&raw mut all_window_panes) {
                 window_pane_default_cursor(wp.as_ptr());
             }
         }
 
         if strcmp(name, c"fill-character".as_ptr()) == 0 {
-            for w in rb_foreach_(&raw mut windows) {
-                window_set_fill_character(w.as_ptr());
+            for w in rb_foreach(&raw mut windows) {
+                window_set_fill_character(w);
             }
         }
 
         if strcmp(name, c"key-table".as_ptr()) == 0 {
-            for loop_ in tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+            for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
                 server_client_set_key_table(loop_, null_mut());
             }
         }
 
         if strcmp(name, c"user-keys".as_ptr()) == 0 {
-            for loop_ in tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+            for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
                 if (*loop_).tty.flags.intersects(tty_flags::TTY_OPENED) {
                     tty_keys_build(&mut (*loop_).tty);
                 }
@@ -1373,30 +1373,30 @@ pub unsafe extern "C" fn options_push_changes(name: *const c_char) {
         }
 
         if strcmp(name, c"window-style".as_ptr()) == 0 || strcmp(name, c"window-active-style".as_ptr()) == 0 {
-            for wp in rb_foreach_(&raw mut all_window_panes) {
+            for wp in rb_foreach(&raw mut all_window_panes) {
                 (*wp.as_ptr()).flags |= window_pane_flags::PANE_STYLECHANGED;
             }
         }
 
         if strcmp(name, c"pane-colours".as_ptr()) == 0 {
-            for wp in rb_foreach_(&raw mut all_window_panes).map(NonNull::as_ptr) {
+            for wp in rb_foreach(&raw mut all_window_panes).map(NonNull::as_ptr) {
                 colour_palette_from_option(&raw mut (*wp).palette, (*wp).options);
             }
         }
 
         if strcmp(name, c"pane-border-status".as_ptr()) == 0 {
-            for w in rb_foreach_(&raw mut windows) {
+            for w in rb_foreach(&raw mut windows) {
                 layout_fix_panes(w.as_ptr(), null_mut());
             }
         }
 
-        for s in rb_foreach_(&raw mut sessions) {
+        for s in rb_foreach(&raw mut sessions) {
             status_update_cache(s.as_ptr());
         }
 
         recalculate_sizes();
 
-        for loop_ in tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+        for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if !(*loop_).session.is_null() {
                 server_redraw_client(loop_);
             }

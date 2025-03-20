@@ -55,7 +55,7 @@ pub unsafe extern "C" fn cmd_detach_client_exec(self_: *mut cmd, item: *mut cmdq
             if s.is_null() {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
-            for loop_ in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+            for loop_ in compat_rs::queue::tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
                 if ((*loop_).session == s) {
                     if !cmd.is_null() {
                         server_client_exec(loop_, cmd);
@@ -68,7 +68,7 @@ pub unsafe extern "C" fn cmd_detach_client_exec(self_: *mut cmd, item: *mut cmdq
         }
 
         if args_has(args, b'a') != 0 {
-            for loop_ in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+            for loop_ in compat_rs::queue::tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
                 if !(*loop_).session.is_null() && loop_ != tc {
                     if !cmd.is_null() {
                         server_client_exec(loop_, cmd);

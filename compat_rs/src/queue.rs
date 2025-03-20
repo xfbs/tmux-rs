@@ -32,35 +32,31 @@ where
     unsafe { (*ListEntry::field(elm)).le_next }
 }
 
-pub unsafe fn list_foreach<F, T, B, D>(head: *mut list_head<T>, mut f: F) -> std::ops::ControlFlow<B>
+pub unsafe fn list_foreach<T, D>(head: *mut list_head<T>) -> ListIterator<T, D>
 where
-    F: FnMut(*mut T) -> std::ops::ControlFlow<B>,
     T: ListEntry<T, D>,
 {
-    let mut var = unsafe { list_first(head) };
-    while !var.is_null() {
-        if let ControlFlow::Break(break_value) = f(var) {
-            return ControlFlow::Break(break_value);
-        }
-        var = list_next::<T, D>(var);
+    ListIterator {
+        curr: unsafe { NonNull::new(list_first(head)) },
+        _phantom: std::marker::PhantomData,
     }
-    ControlFlow::Continue(())
 }
 
-pub unsafe fn list_foreach_safe<F, T, B, D>(head: *mut list_head<T>, mut f: F) -> std::ops::ControlFlow<B>
+// this implementation can be used in place of safe and non-safe
+pub struct ListIterator<T, D> {
+    curr: Option<NonNull<T>>,
+    _phantom: std::marker::PhantomData<D>,
+}
+impl<T, D> Iterator for ListIterator<T, D>
 where
-    F: FnMut(*mut T) -> std::ops::ControlFlow<B>,
     T: ListEntry<T, D>,
 {
-    let mut var = unsafe { list_first(head) };
-    while !var.is_null() {
-        let tmp = unsafe { list_next::<T, D>(var) };
-        if let ControlFlow::Break(break_value) = f(var) {
-            return ControlFlow::Break(break_value);
-        }
-        var = tmp;
+    type Item = NonNull<T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let curr = self.curr?.as_ptr();
+        std::mem::replace(&mut self.curr, NonNull::new(unsafe { list_next(curr) }))
     }
-    ControlFlow::Continue(())
 }
 
 pub unsafe fn list_init<T>(head: *mut list_head<T>) {
@@ -333,32 +329,12 @@ where
     }
 }
 
-#[inline]
-pub unsafe fn tailq_foreach<F, T, B, D>(head: *mut tailq_head<T>, mut f: F) -> std::ops::ControlFlow<B>
-where
-    F: FnMut(*mut T) -> std::ops::ControlFlow<B>,
-    T: Entry<T, D>,
-{
-    unsafe {
-        let mut curr = tailq_first(head);
-
-        while !curr.is_null() {
-            if let ControlFlow::Break(break_value) = f(curr) {
-                return ControlFlow::Break(break_value);
-            }
-            curr = tailq_next(curr);
-        }
-
-        ControlFlow::Continue(())
-    }
-}
-
-pub unsafe fn tailq_foreach_<T, D>(head: *mut tailq_head<T>) -> TailQIterator<T, D>
+pub unsafe fn tailq_foreach<T, D>(head: *mut tailq_head<T>) -> TailqForwardIterator<T, D>
 where
     T: Entry<T, D>,
 {
     unsafe {
-        TailQIterator {
+        TailqForwardIterator {
             curr: NonNull::new(tailq_first(head)),
             _phantom: std::marker::PhantomData,
         }
@@ -366,11 +342,11 @@ where
 }
 
 // this implementation can be used in place of safe and non-safe
-pub struct TailQIterator<T, D> {
+pub struct TailqForwardIterator<T, D> {
     curr: Option<NonNull<T>>,
     _phantom: std::marker::PhantomData<D>,
 }
-impl<T, D> Iterator for TailQIterator<T, D>
+impl<T, D> Iterator for TailqForwardIterator<T, D>
 where
     T: Entry<T, D>,
 {
@@ -382,45 +358,32 @@ where
     }
 }
 
-#[inline]
-pub unsafe fn tailq_foreach_safe<F, T, B, D>(head: *mut tailq_head<T>, mut f: F) -> std::ops::ControlFlow<B>
+pub unsafe fn tailq_foreach_reverse<T, D>(head: *mut tailq_head<T>) -> TailqReverseIterator<T, D>
 where
-    F: FnMut(*mut T) -> std::ops::ControlFlow<B>,
     T: Entry<T, D>,
 {
     unsafe {
-        let mut curr = tailq_first(head);
-
-        while !curr.is_null() {
-            let tmp = tailq_next(curr);
-            if let ControlFlow::Break(break_value) = f(curr) {
-                return ControlFlow::Break(break_value);
-            }
-            curr = tmp;
+        TailqReverseIterator {
+            curr: NonNull::new(tailq_last(head)),
+            _phantom: std::marker::PhantomData,
         }
-
-        ControlFlow::Continue(())
     }
 }
 
-#[inline]
-pub unsafe fn tailq_foreach_reverse<F, T, B, D>(head: *mut tailq_head<T>, mut f: F) -> std::ops::ControlFlow<B>
+// this implementation can be used in place of safe and non-safe
+pub struct TailqReverseIterator<T, D> {
+    curr: Option<NonNull<T>>,
+    _phantom: std::marker::PhantomData<D>,
+}
+impl<T, D> Iterator for TailqReverseIterator<T, D>
 where
-    F: FnMut(*mut T) -> std::ops::ControlFlow<B>,
     T: Entry<T, D>,
 {
-    unsafe {
-        let mut curr = tailq_last(head);
+    type Item = NonNull<T>;
 
-        while !curr.is_null() {
-            let tmp = tailq_prev(curr);
-            if let ControlFlow::Break(break_value) = f(curr) {
-                return ControlFlow::Break(break_value);
-            }
-            curr = tmp;
-        }
-
-        ControlFlow::Continue(())
+    fn next(&mut self) -> Option<Self::Item> {
+        let curr = self.curr?.as_ptr();
+        std::mem::replace(&mut self.curr, NonNull::new(unsafe { tailq_prev(curr) }))
     }
 }
 

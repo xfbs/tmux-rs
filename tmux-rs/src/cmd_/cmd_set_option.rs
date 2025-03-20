@@ -159,22 +159,16 @@ pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_it
 
                 /* Change the option. */
                 if (args_has_(args, 'U') && scope == OPTIONS_TABLE_WINDOW) {
-                    if tailq_foreach::<_, _, _, discr_entry>(&raw mut (*(*target).w).panes, |loop_| {
+                    for loop_ in tailq_foreach::<_, discr_entry>(&raw mut (*(*target).w).panes).map(NonNull::as_ptr) {
                         let po = options_get_only((*loop_).options, name);
                         if (po.is_null()) {
-                            return ControlFlow::<(), ()>::Continue(());
+                            continue;
                         }
                         if (options_remove_or_default(po, idx, &raw mut cause) != 0) {
                             cmdq_error(item, c"%s".as_ptr(), cause);
                             free_(cause);
-                            return ControlFlow::<(), ()>::Break(());
+                            break 'fail;
                         }
-
-                        ControlFlow::<(), ()>::Continue(())
-                    })
-                    .is_break()
-                    {
-                        break 'fail;
                     }
                 }
                 if (args_has_(args, 'u') || args_has_(args, 'U')) {

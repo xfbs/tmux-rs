@@ -427,7 +427,7 @@ pub unsafe extern "C" fn ibuf_write(msgbuf: *mut msgbuf) -> c_int {
     let mut i: u32 = 0;
     let mut n: isize = 0;
 
-    for buf in crate::queue::tailq_foreach_(&raw mut (*msgbuf).bufs).map(NonNull::as_ptr) {
+    for buf in tailq_foreach(&raw mut (*msgbuf).bufs).map(NonNull::as_ptr) {
         if i as usize >= IOV_MAX {
             break;
         }
@@ -507,7 +507,7 @@ pub unsafe extern "C" fn msgbuf_write(msgbuf: *mut msgbuf) -> c_int {
         buf: [u8; unsafe { libc::CMSG_SPACE(size_of::<c_int>() as _) as usize }],
     }
 
-    for buf in crate::queue::tailq_foreach_(&raw mut (*msgbuf).bufs).map(NonNull::as_ptr) {
+    for buf in tailq_foreach(&raw mut (*msgbuf).bufs).map(NonNull::as_ptr) {
         if i as usize >= IOV_MAX {
             break;
         }

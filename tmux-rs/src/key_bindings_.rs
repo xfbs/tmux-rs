@@ -1,9 +1,7 @@
 use compat_rs::{
     RB_GENERATE_STATIC,
     queue::tailq_foreach,
-    tree::{
-        rb_empty, rb_find, rb_foreach, rb_foreach_safe, rb_init, rb_initializer, rb_insert, rb_min, rb_next, rb_remove,
-    },
+    tree::{rb_empty, rb_find, rb_foreach, rb_init, rb_initializer, rb_insert, rb_min, rb_next, rb_remove},
 };
 use libc::strcmp;
 
@@ -159,16 +157,14 @@ pub unsafe extern "C" fn key_bindings_unref_table(table: *mut key_table) {
             return;
         }
 
-        rb_foreach_safe(&raw mut (*table).key_bindings, |bd| {
+        for bd in rb_foreach(&raw mut (*table).key_bindings).map(NonNull::as_ptr) {
             rb_remove(&raw mut (*table).key_bindings, bd);
             key_bindings_free(bd);
-            ControlFlow::<(), ()>::Continue(())
-        });
-        rb_foreach_safe(&raw mut (*table).default_key_bindings, |bd| {
+        }
+        for bd in rb_foreach(&raw mut (*table).default_key_bindings).map(NonNull::as_ptr) {
             rb_remove(&raw mut (*table).default_key_bindings, bd);
             key_bindings_free(bd);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
 
         free_((*table).name);
         free_(table);
@@ -330,7 +326,7 @@ pub unsafe extern "C" fn key_bindings_remove_table(name: *const c_char) {
             rb_remove(&raw mut key_tables, table);
             key_bindings_unref_table(table);
         }
-        for c in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+        for c in compat_rs::queue::tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if ((*c).keytable == table) {
                 server_client_set_key_table(c, null_mut());
             }
@@ -349,18 +345,17 @@ pub unsafe extern "C" fn key_bindings_reset_table(name: *const c_char) {
             key_bindings_remove_table(name);
             return;
         }
-        rb_foreach_safe(&raw mut (*table).key_bindings, |bd| {
+        for bd in rb_foreach(&raw mut (*table).key_bindings).map(NonNull::as_ptr) {
             key_bindings_reset(name, (*bd).key);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn key_bindings_init_done(_item: *mut cmdq_item, data: *mut c_void) -> cmd_retval {
     unsafe {
-        rb_foreach(&raw mut key_tables, |table| {
-            rb_foreach(&raw mut (*table).key_bindings, |bd| {
+        for table in rb_foreach(&raw mut key_tables).map(NonNull::as_ptr) {
+            for bd in rb_foreach(&raw mut (*table).key_bindings).map(NonNull::as_ptr) {
                 let new_bd = xcalloc1::<key_binding>();
                 new_bd.key = (*bd).key;
                 if (!(*bd).note.is_null()) {
@@ -370,10 +365,8 @@ pub unsafe extern "C" fn key_bindings_init_done(_item: *mut cmdq_item, data: *mu
                 new_bd.cmdlist = (*bd).cmdlist;
                 (*new_bd.cmdlist).references += 1;
                 rb_insert(&raw mut (*table).default_key_bindings, new_bd);
-                ControlFlow::<(), ()>::Continue(())
-            });
-            ControlFlow::<(), ()>::Continue(())
-        });
+            }
+        }
     }
 
     cmd_retval::CMD_RETURN_NORMAL

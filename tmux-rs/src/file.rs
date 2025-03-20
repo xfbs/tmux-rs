@@ -588,17 +588,16 @@ pub unsafe extern "C" fn file_write_left(files: *mut client_files) -> c_int {
     let mut waiting: i32 = 0;
 
     unsafe {
-        rb_foreach(files, |cf| {
+        for cf in rb_foreach(files).map(NonNull::as_ptr) {
             if ((*cf).event.is_null()) {
-                return ControlFlow::<(), ()>::Continue(());
+                continue;
             }
             left = EVBUFFER_LENGTH((*(*cf).event).output);
             if (left != 0) {
                 waiting += 1;
                 log_debug(c"file %u %zu bytes left".as_ptr(), (*cf).stream, left);
             }
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 
     (waiting != 0) as i32

@@ -6,11 +6,10 @@ use crate::{
 use compat_rs::{
     VIS_CSTYLE, VIS_DQ, VIS_NL, VIS_OCTAL, VIS_TAB,
     queue::{
-        tailq_empty, tailq_first, tailq_foreach, tailq_foreach_safe, tailq_init, tailq_insert_tail, tailq_last,
-        tailq_next, tailq_remove,
+        tailq_empty, tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_last, tailq_next, tailq_remove,
     },
     strlcat, strtonum,
-    tree::{rb_find, rb_foreach, rb_foreach_safe, rb_init, rb_insert, rb_min, rb_next, rb_remove},
+    tree::{rb_find, rb_foreach, rb_init, rb_insert, rb_min, rb_next, rb_remove},
 };
 use libc::{isalnum, strchr, strcspn};
 
@@ -420,21 +419,19 @@ pub unsafe extern "C" fn args_copy(args: *mut args, argc: i32, argv: *mut *mut c
         cmd_log_argv(argc, argv, c"%s".as_ptr(), __func__);
 
         let new_args = args_create();
-        rb_foreach(&raw mut (*args).tree, |entry| {
+        for entry in rb_foreach(&raw mut (*args).tree).map(NonNull::as_ptr) {
             if (tailq_empty(&raw mut (*entry).values)) {
                 for i in 0..(*entry).count {
                     args_set(new_args, (*entry).flag, null_mut(), 0);
                 }
-                return ControlFlow::<(), ()>::Continue(());
+                continue;
             }
-            for value in compat_rs::queue::tailq_foreach_(&raw mut (*entry).values) {
+            for value in tailq_foreach(&raw mut (*entry).values) {
                 let new_value = xcalloc1();
                 args_copy_copy_value(new_value, value.as_ptr(), argc, argv);
                 args_set(new_args, (*entry).flag, new_value, 0);
             }
-
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
         if ((*args).count == 0) {
             return new_args;
         }
@@ -476,17 +473,15 @@ pub unsafe extern "C" fn args_free(args: *mut args) {
         args_free_values((*args).values, (*args).count);
         free_((*args).values);
 
-        rb_foreach_safe(&raw mut (*args).tree, |entry| {
+        for entry in rb_foreach(&raw mut (*args).tree).map(NonNull::as_ptr) {
             rb_remove(&raw mut (*args).tree, entry);
-            tailq_foreach_safe(&raw mut (*entry).values, |value| {
+            for value in tailq_foreach(&raw mut (*entry).values).map(NonNull::as_ptr) {
                 tailq_remove(&raw mut (*entry).values, value);
                 args_free_value(value);
                 free_(value);
-                ControlFlow::<(), ()>::Continue(())
-            });
+            }
             free_(entry);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
 
         free_(args);
     }
@@ -574,12 +569,12 @@ pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
         let mut buf: *mut c_char = xcalloc(1, len).cast().as_ptr();
 
         /* Process the flags first. */
-        rb_foreach(&raw mut (*args).tree, |entry| {
+        for entry in rb_foreach(&raw mut (*args).tree).map(NonNull::as_ptr) {
             if ((*entry).flags & ARGS_ENTRY_OPTIONAL_VALUE != 0) {
-                return ControlFlow::<(), ()>::Continue(());
+                continue;
             }
             if (!tailq_empty(&raw mut (*entry).values)) {
-                return ControlFlow::<(), ()>::Continue(());
+                continue;
             }
 
             if (*buf == b'\0' as c_char) {
@@ -588,11 +583,10 @@ pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
             for j in 0..(*entry).count {
                 args_print_add(&raw mut buf, &raw mut len, c"%c".as_ptr(), (*entry).flag as i32);
             }
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
 
         /* Then the flags with arguments. */
-        rb_foreach(&raw mut (*args).tree, |entry| {
+        for entry in rb_foreach(&raw mut (*args).tree).map(NonNull::as_ptr) {
             if ((*entry).flags & ARGS_ENTRY_OPTIONAL_VALUE != 0) {
                 if (*buf != b'\0' as c_char) {
                     args_print_add(&raw mut buf, &raw mut len, c" -%c".as_ptr(), (*entry).flag as i32);
@@ -600,12 +594,12 @@ pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
                     args_print_add(&raw mut buf, &raw mut len, c"-%c".as_ptr(), (*entry).flag as i32);
                 }
                 last = entry;
-                return ControlFlow::<(), ()>::Continue(());
+                continue;
             }
             if (tailq_empty(&raw mut (*entry).values)) {
-                return ControlFlow::<(), ()>::Continue(());
+                continue;
             }
-            for value in compat_rs::queue::tailq_foreach_(&raw mut (*entry).values) {
+            for value in tailq_foreach(&raw mut (*entry).values) {
                 {
                     if (*buf != b'\0' as c_char) {
                         args_print_add(&raw mut buf, &raw mut len, c" -%c".as_ptr(), (*entry).flag as i32);
@@ -616,9 +610,7 @@ pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
                 }
             }
             last = entry;
-
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
         if (!last.is_null() && ((*last).flags & ARGS_ENTRY_OPTIONAL_VALUE != 0)) {
             args_print_add(&raw mut buf, &raw mut len, c" --".as_ptr());
         }

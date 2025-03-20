@@ -25,9 +25,9 @@ unsafe extern "C" fn cmd_show_messages_terminals(self_: *mut cmd, item: *mut cmd
         let mut blank = 0;
 
         let mut n = 0u32;
-        list_foreach::<_, _, _, discr_entry>(&raw mut tty_terms, |term| {
+        for term in list_foreach::<_, discr_entry>(&raw mut tty_terms).map(NonNull::as_ptr) {
             if (args_has(args, b't') != 0 && term != (*tc).tty.term) {
-                return ControlFlow::<(), ()>::Continue(());
+                continue;
             }
             if (blank != 0) {
                 cmdq_print(item, c"%s".as_ptr(), c"".as_ptr());
@@ -49,9 +49,7 @@ unsafe extern "C" fn cmd_show_messages_terminals(self_: *mut cmd, item: *mut cmd
                     tty_term_describe(term, std::mem::transmute::<_, tty_code_code>(i)),
                 );
             }
-
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
         (n != 0) as i32
     }
 }
@@ -85,7 +83,7 @@ unsafe extern "C" fn cmd_show_messages_exec(self_: *mut cmd, item: *mut cmdq_ite
             pub static mut message_log: message_list; // TODO remove
         }
 
-        tailq_foreach_reverse(&raw mut message_log, |msg| {
+        for msg in tailq_foreach_reverse(&raw mut message_log).map(NonNull::as_ptr) {
             format_add(ft, c"message_text".as_ptr(), c"%s".as_ptr(), (*msg).msg);
             format_add(ft, c"message_number".as_ptr(), c"%u".as_ptr(), (*msg).msg_num);
             format_add_tv(ft, c"message_time".as_ptr(), &raw mut (*msg).msg_time);
@@ -93,8 +91,7 @@ unsafe extern "C" fn cmd_show_messages_exec(self_: *mut cmd, item: *mut cmdq_ite
             let s = format_expand(ft, SHOW_MESSAGES_TEMPLATE.as_ptr());
             cmdq_print(item, c"%s".as_ptr(), s);
             free_(s);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
         format_free(ft);
 
         cmd_retval::CMD_RETURN_NORMAL

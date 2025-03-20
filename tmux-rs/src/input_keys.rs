@@ -205,7 +205,7 @@ pub unsafe extern "C" fn input_key_build() {
             }
         }
 
-        rb_foreach(&raw mut input_key_tree, |ike| {
+        for ike in rb_foreach(&raw mut input_key_tree).map(NonNull::as_ptr) {
             log_debug(
                 c"%s: 0x%llx (%s) is %s".as_ptr(),
                 __func__,
@@ -213,8 +213,7 @@ pub unsafe extern "C" fn input_key_build() {
                 key_string_lookup_key((*ike).key, 1),
                 (*ike).data,
             );
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 }
 

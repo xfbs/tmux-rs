@@ -1,7 +1,5 @@
 use crate::*;
 
-use compat_rs::queue::tailq_foreach_safe;
-
 #[unsafe(no_mangle)]
 static mut cmd_kill_pane_entry: cmd_entry = cmd_entry {
     name: c"kill-pane".as_ptr(),
@@ -27,15 +25,14 @@ unsafe extern "C" fn cmd_kill_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
 
         if args_has(args, b'a') != 0 {
             server_unzoom_window((*wl).window);
-            tailq_foreach_safe::<_, _, _, discr_entry>(&raw mut (*(*wl).window).panes, |loopwp| {
+            for loopwp in tailq_foreach::<_, discr_entry>(&raw mut (*(*wl).window).panes).map(NonNull::as_ptr) {
                 if (loopwp == wp) {
-                    return ControlFlow::<(), ()>::Continue(());
+                    continue;
                 }
                 server_client_remove_pane(loopwp);
                 layout_close_pane(loopwp);
                 window_remove_pane((*wl).window, loopwp);
-                ControlFlow::<(), ()>::Continue(())
-            });
+            }
             server_redraw_window((*wl).window);
             return cmd_retval::CMD_RETURN_NORMAL;
         }

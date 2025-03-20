@@ -29,7 +29,7 @@ unsafe extern "C" fn cmd_list_sessions_exec(self_: *mut cmd, item: *mut cmdq_ite
         let mut filter = args_get(args, b'f');
 
         let mut n = 0;
-        rb_foreach(&raw mut sessions, |s| {
+        for s in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
             let mut ft = format_create(cmdq_get_client(item), item, FORMAT_NONE as i32, 0);
             format_add(ft, c"line".as_ptr(), c"%u".as_ptr(), n);
             format_defaults(ft, null_mut(), s, null_mut(), null_mut());
@@ -50,8 +50,7 @@ unsafe extern "C" fn cmd_list_sessions_exec(self_: *mut cmd, item: *mut cmdq_ite
 
             format_free(ft);
             n += 1;
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
 
         cmd_retval::CMD_RETURN_NORMAL
     }

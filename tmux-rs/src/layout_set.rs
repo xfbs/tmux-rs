@@ -159,14 +159,13 @@ pub unsafe extern "C" fn layout_set_even(w: *mut window, type_: layout_type) {
         layout_make_node(lc, type_);
 
         /* Build new leaf cells. */
-        tailq_foreach::<_, _, _, discr_entry>(&raw mut (*w).panes, |wp| {
+        for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
             let lcnew = layout_create_cell(lc);
             layout_make_leaf(lcnew, wp);
             (*lcnew).sx = (*w).sx;
             (*lcnew).sy = (*w).sy;
             tailq_insert_tail(&raw mut (*lc).cells, lcnew);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
 
         /* Spread out cells. */
         layout_spread_cell(w, lc);
@@ -279,16 +278,15 @@ pub unsafe extern "C" fn layout_set_main_h(w: *mut window) {
             tailq_insert_tail(&raw mut (*lc).cells, lcother);
 
             /* Add the remaining panes as children. */
-            tailq_foreach::<_, _, _, discr_entry>(&raw mut (*w).panes, |wp| {
+            for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
                 if (wp == tailq_first(&raw mut (*w).panes)) {
-                    return ControlFlow::<(), ()>::Continue(());
+                    continue;
                 }
                 let lcchild = layout_create_cell(lcother);
                 layout_set_size(lcchild, PANE_MINIMUM, otherh, 0, 0);
                 layout_make_leaf(lcchild, wp);
                 tailq_insert_tail(&raw mut (*lcother).cells, lcchild);
-                ControlFlow::<(), ()>::Continue(())
-            });
+            }
             layout_spread_cell(w, lcother);
         }
 
@@ -377,16 +375,15 @@ pub unsafe extern "C" fn layout_set_main_h_mirrored(w: *mut window) {
             tailq_insert_tail(&raw mut (*lc).cells, lcother);
 
             // Add the remaining panes as children.
-            tailq_foreach::<_, _, _, discr_entry>(&raw mut (*w).panes, |wp| {
+            for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
                 if wp == tailq_first(&raw mut (*w).panes) {
-                    return ControlFlow::<(), ()>::Continue(());
+                    continue;
                 }
                 let lcchild = layout_create_cell(lcother);
                 layout_set_size(lcchild, PANE_MINIMUM, otherh, 0, 0);
                 layout_make_leaf(lcchild, wp);
                 tailq_insert_tail(&raw mut (*lcother).cells, lcchild);
-                ControlFlow::<(), ()>::Continue(())
-            });
+            }
             layout_spread_cell(w, lcother);
         }
 
@@ -487,16 +484,15 @@ pub unsafe extern "C" fn layout_set_main_v(w: *mut window) {
             tailq_insert_tail(&raw mut (*lc).cells, lcother);
 
             // Add the remaining panes as children.
-            tailq_foreach::<_, _, _, discr_entry>(&raw mut (*w).panes, |wp| {
+            for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
                 if wp == tailq_first(&raw mut (*w).panes) {
-                    return ControlFlow::<(), ()>::Continue(());
+                    continue;
                 }
                 let lcchild = layout_create_cell(lcother);
                 layout_set_size(lcchild, otherw, PANE_MINIMUM, 0, 0);
                 layout_make_leaf(lcchild, wp);
                 tailq_insert_tail(&raw mut (*lcother).cells, lcchild);
-                ControlFlow::<(), ()>::Continue(())
-            });
+            }
             layout_spread_cell(w, lcother);
         }
 
@@ -585,16 +581,15 @@ pub unsafe extern "C" fn layout_set_main_v_mirrored(w: *mut window) {
             tailq_insert_tail(&raw mut (*lc).cells, lcother);
 
             // Add the remaining panes as children.
-            tailq_foreach::<_, _, _, discr_entry>(&raw mut (*w).panes, |wp| {
+            for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
                 if wp == tailq_first(&raw mut (*w).panes) {
-                    return ControlFlow::<(), ()>::Continue(());
+                    continue;
                 }
                 let lcchild = layout_create_cell(lcother);
                 layout_set_size(lcchild, otherw, PANE_MINIMUM, 0, 0);
                 layout_make_leaf(lcchild, wp);
                 tailq_insert_tail(&raw mut (*lcother).cells, lcchild);
-                ControlFlow::<(), ()>::Continue(())
-            });
+            }
             layout_spread_cell(w, lcother);
         }
 

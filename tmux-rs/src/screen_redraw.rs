@@ -220,24 +220,23 @@ pub unsafe extern "C" fn screen_redraw_cell_border(ctx: *mut screen_redraw_ctx, 
 
         // Check all the panes
         let mut result = 0;
-        tailq_foreach::<_, _, _, discr_entry>(&raw mut (*w).panes, |wp| {
+        for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
             if window_pane_visible(wp) == 0 {
-                return ControlFlow::Continue(());
+                continue;
             }
 
             match screen_redraw_pane_border(ctx, wp, px, py) {
                 screen_redraw_border_type::SCREEN_REDRAW_INSIDE => {
                     result = 0;
-                    return ControlFlow::Break(());
+                    break;
                 }
                 screen_redraw_border_type::SCREEN_REDRAW_OUTSIDE => {}
                 _ => {
                     result = 1;
-                    return ControlFlow::Break(());
+                    break;
                 }
             }
-            ControlFlow::Continue(())
-        });
+        }
 
         result
     }
@@ -521,9 +520,9 @@ pub unsafe extern "C" fn screen_redraw_draw_pane_status(ctx: *mut screen_redraw_
             (*w).id,
         );
 
-        tailq_foreach::<_, _, _, discr_entry>(&raw mut (*w).panes, |wp| {
+        for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
             if window_pane_visible(wp) == 0 {
-                return ControlFlow::<(), ()>::Continue(());
+                continue;
             }
             let s = &raw mut (*wp).status_screen;
 
@@ -540,7 +539,7 @@ pub unsafe extern "C" fn screen_redraw_draw_pane_status(ctx: *mut screen_redraw_
                 || yoff < (*ctx).oy
                 || yoff >= (*ctx).oy + (*ctx).sy
             {
-                return ControlFlow::<(), ()>::Continue(());
+                continue;
             }
 
             let (i, x, width) = if xoff >= (*ctx).ox && xoff + size <= (*ctx).ox + (*ctx).sx {
@@ -571,8 +570,7 @@ pub unsafe extern "C" fn screen_redraw_draw_pane_status(ctx: *mut screen_redraw_
                 &raw const grid_default_cell,
                 null_mut(),
             );
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
         tty_cursor(tty, 0, 0);
     }
 }
@@ -903,10 +901,9 @@ pub unsafe extern "C" fn screen_redraw_draw_borders(ctx: *mut screen_redraw_ctx)
             (*w).id,
         );
 
-        tailq_foreach::<_, _, _, discr_entry>(&raw mut (*w).panes, |wp| {
+        for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
             (*wp).border_gc_set = 0;
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
 
         for j in 0..(*c).tty.sy - (*ctx).statuslines {
             for i in 0..(*c).tty.sx {
@@ -931,12 +928,11 @@ pub unsafe extern "C" fn screen_redraw_draw_panes(ctx: *mut screen_redraw_ctx) {
             (*w).id,
         );
 
-        tailq_foreach::<_, _, _, discr_entry>(&raw mut (*w).panes, |wp| {
+        for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
             if window_pane_visible(wp) != 0 {
                 screen_redraw_draw_pane(ctx, wp);
             }
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 }
 

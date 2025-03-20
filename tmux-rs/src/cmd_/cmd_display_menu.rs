@@ -135,7 +135,7 @@ unsafe extern "C" fn cmd_display_menu_get_position(
             for line_ in 0..lines {
                 line = line_;
                 ranges = &raw mut (*tc).status.entries[line as usize].ranges;
-                for sr_ in compat_rs::queue::tailq_foreach_(ranges) {
+                for sr_ in compat_rs::queue::tailq_foreach(ranges) {
                     sr = sr_.as_ptr();
                     if ((*sr).type_ != style_range_type::STYLE_RANGE_WINDOW) {
                         continue;

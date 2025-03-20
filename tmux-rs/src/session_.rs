@@ -2,11 +2,11 @@ use crate::*;
 
 use compat_rs::{
     RB_GENERATE, RB_GENERATE_STATIC, VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB,
-    queue::{tailq_empty, tailq_foreach_, tailq_init, tailq_insert_tail, tailq_remove},
+    queue::{tailq_empty, tailq_foreach, tailq_init, tailq_insert_tail, tailq_remove},
     strtonum,
     tree::{
-        rb_empty, rb_find, rb_foreach, rb_foreach_, rb_init, rb_initializer, rb_insert, rb_max, rb_min, rb_next,
-        rb_prev, rb_remove, rb_root,
+        rb_empty, rb_find, rb_foreach, rb_init, rb_initializer, rb_insert, rb_max, rb_min, rb_next, rb_prev, rb_remove,
+        rb_root,
     },
 };
 use libc::{gettimeofday, strcmp};
@@ -82,15 +82,10 @@ pub unsafe extern "C" fn session_group_cmp(s1: *const session_group, s2: *const 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_alive(s: *mut session) -> boolint {
     unsafe {
-        if rb_foreach(&raw mut sessions, |s_loop| {
+        for s_loop in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
             if s_loop == s {
-                return ControlFlow::<(), ()>::Break(());
+                return boolint::true_();
             }
-            ControlFlow::<(), ()>::Continue(())
-        })
-        .is_some()
-        {
-            return boolint::true_();
         }
     }
 
@@ -122,25 +117,18 @@ pub unsafe extern "C" fn session_find_by_id_str(s: *const c_char) -> *mut sessio
         if (!errstr.is_null()) {
             return null_mut();
         }
-        session_find_by_id(id)
+        transmute_ptr(session_find_by_id(id))
     }
 }
 
 /// Find session by id.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn session_find_by_id(id: u32) -> *mut session {
+pub unsafe extern "C" fn session_find_by_id(id: u32) -> Option<NonNull<session>> {
     unsafe {
-        if let Some(value) = rb_foreach(&raw mut sessions, |s| {
-            if ((*s).id == id) {
-                return ControlFlow::Break(s);
-            }
-            ControlFlow::Continue(())
-        }) {
-            return value;
-        }
+        rb_foreach(&raw mut sessions)
+            .into_iter()
+            .find(|s| (*s.as_ptr()).id == id)
     }
-
-    null_mut()
 }
 
 /// Create a new session.
@@ -473,18 +461,10 @@ pub unsafe extern "C" fn session_detach(s: *mut session, wl: *mut winlink) -> i3
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_has(s: *mut session, w: *mut window) -> i32 {
     unsafe {
-        if tailq_foreach::<_, _, _, discr_wentry>(&raw mut (*w).winlinks, |wl| {
-            if ((*wl).session == s) {
-                return ControlFlow::<(), ()>::Break(());
-            }
-            ControlFlow::<(), ()>::Continue(())
-        })
-        .is_break()
-        {
-            return 1;
-        }
+        tailq_foreach::<_, discr_wentry>(&raw mut (*w).winlinks)
+            .into_iter()
+            .any(|wl| (*wl.as_ptr()).session == s) as i32
     }
-    0
 }
 
 /*
@@ -631,7 +611,7 @@ pub unsafe extern "C" fn session_set_current(s: *mut session, wl: *mut winlink) 
             window_update_focus((*wl).window);
         }
         winlink_clear_flags(wl);
-        window_update_activity((*wl).window);
+        window_update_activity(NonNull::new_unchecked((*wl).window));
         tty_update_window_offset((*wl).window);
         notify_session(c"session-window-changed".as_ptr(), s);
         return 0;
@@ -642,8 +622,8 @@ pub unsafe extern "C" fn session_set_current(s: *mut session, wl: *mut winlink) 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_group_contains(target: *mut session) -> *mut session_group {
     unsafe {
-        for sg in rb_foreach_(&raw mut session_groups) {
-            for s in tailq_foreach_(&raw mut (*sg.as_ptr()).sessions) {
+        for sg in rb_foreach(&raw mut session_groups) {
+            for s in tailq_foreach(&raw mut (*sg.as_ptr()).sessions) {
                 if (s.as_ptr() == target) {
                     return sg.as_ptr();
                 }
@@ -715,14 +695,14 @@ pub unsafe extern "C" fn session_group_remove(s: *mut session) {
 /* Count number of sessions in session group. */
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_group_count(sg: *mut session_group) -> u32 {
-    unsafe { tailq_foreach_(&raw mut (*sg).sessions).count() as u32 }
+    unsafe { tailq_foreach(&raw mut (*sg).sessions).count() as u32 }
 }
 
 /* Count number of clients attached to sessions in session group. */
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_group_attached_count(sg: *mut session_group) -> u32 {
     unsafe {
-        tailq_foreach_(&raw mut (*sg).sessions)
+        tailq_foreach(&raw mut (*sg).sessions)
             .map(|s| (*s.as_ptr()).attached)
             .sum()
     }
@@ -738,7 +718,7 @@ pub unsafe extern "C" fn session_group_synchronize_to(s: *mut session) {
         }
 
         let mut target = null_mut();
-        for target_ in tailq_foreach_(&raw mut (*sg).sessions).map(|e| e.as_ptr()) {
+        for target_ in tailq_foreach(&raw mut (*sg).sessions).map(|e| e.as_ptr()) {
             target = target_;
             if (target != s) {
                 break;
@@ -759,7 +739,7 @@ pub unsafe extern "C" fn session_group_synchronize_from(target: *mut session) {
             return;
         }
 
-        for s in tailq_foreach_(&raw mut (*sg).sessions).map(|e| e.as_ptr()) {
+        for s in tailq_foreach(&raw mut (*sg).sessions).map(|e| e.as_ptr()) {
             if (s != target) {
                 session_group_synchronize1(target, s);
             }
@@ -798,7 +778,7 @@ pub unsafe extern "C" fn session_group_synchronize1(target: *mut session, s: *mu
         rb_init(&raw mut (*s).windows);
 
         /* Link all the windows from the target. */
-        for wl in rb_foreach_(ww).map(|e| e.as_ptr()) {
+        for wl in rb_foreach(ww).map(|e| e.as_ptr()) {
             let wl2 = winlink_add(&raw mut (*s).windows, (*wl).idx);
             (*wl2).session = s;
             winlink_set_window(wl2, (*wl).window);
@@ -817,7 +797,7 @@ pub unsafe extern "C" fn session_group_synchronize1(target: *mut session, s: *mu
         memcpy__(old_lastw.as_mut_ptr(), &raw mut (*s).lastw);
         tailq_init(&raw mut (*s).lastw);
 
-        for wl in tailq_foreach_::<_, discr_sentry>(old_lastw.as_mut_ptr()).map(|e| e.as_ptr()) {
+        for wl in tailq_foreach::<_, discr_sentry>(old_lastw.as_mut_ptr()).map(|e| e.as_ptr()) {
             if let Some(wl2) = NonNull::new(winlink_find_by_index(&raw mut (*s).windows, (*wl).idx)) {
                 tailq_insert_tail::<_, discr_sentry>(&raw mut (*s).lastw, wl2.as_ptr());
                 (*wl2.as_ptr()).flags |= WINLINK_VISITED;
@@ -857,7 +837,7 @@ pub unsafe extern "C" fn session_renumber_windows(s: *mut session) {
         let mut new_curw_idx = 0;
 
         /* Go through the winlinks and assign new indexes. */
-        for wl in rb_foreach_(old_wins.as_mut_ptr()).map(|e| e.as_ptr()) {
+        for wl in rb_foreach(old_wins.as_mut_ptr()).map(|e| e.as_ptr()) {
             let wl_new = winlink_add(&raw mut (*s).windows, new_idx);
             (*wl_new).session = s;
             winlink_set_window(wl_new, (*wl).window);
@@ -876,7 +856,7 @@ pub unsafe extern "C" fn session_renumber_windows(s: *mut session) {
         /// Fix the stack of last windows now.
         memcpy__(old_lastw.as_mut_ptr(), &raw mut (*s).lastw);
         tailq_init(&raw mut (*s).lastw);
-        for wl in tailq_foreach_::<_, discr_sentry>(old_lastw.as_mut_ptr()).map(|e| e.as_ptr()) {
+        for wl in tailq_foreach::<_, discr_sentry>(old_lastw.as_mut_ptr()).map(|e| e.as_ptr()) {
             (*wl).flags &= !WINLINK_VISITED;
 
             if let Some(wl_new) = winlink_find_by_window(&raw mut (*s).windows, (*wl).window) {
@@ -895,7 +875,7 @@ pub unsafe extern "C" fn session_renumber_windows(s: *mut session) {
         (*s).curw = winlink_find_by_index(&raw mut (*s).windows, new_curw_idx);
 
         // Free the old winlinks (reducing window references too).
-        for wl in rb_foreach_(old_wins.as_mut_ptr()).map(|e| e.as_ptr()) {
+        for wl in rb_foreach(old_wins.as_mut_ptr()).map(|e| e.as_ptr()) {
             winlink_remove(old_wins.as_mut_ptr(), wl);
         }
     }

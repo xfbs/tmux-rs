@@ -38,7 +38,7 @@ unsafe extern "C" fn cmd_list_clients_exec(self_: *mut cmd, item: *mut cmdq_item
         let mut filter = args_get(args, b'f');
 
         let mut idx = 0;
-        for c in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+        for c in compat_rs::queue::tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if ((*c).session.is_null() || (!s.is_null() && s != (*c).session)) {
                 continue;
             }

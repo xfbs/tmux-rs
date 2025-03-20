@@ -174,7 +174,7 @@ pub unsafe extern "C" fn window_client_build(
         (*data).item_list = null_mut();
         (*data).item_size = 0;
 
-        for c in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+        for c in compat_rs::queue::tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if (*c).session.is_null() || (*c).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
                 continue;
             }

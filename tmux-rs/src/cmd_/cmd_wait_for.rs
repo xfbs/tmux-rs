@@ -1,6 +1,6 @@
 use compat_rs::{
-    queue::{tailq_empty, tailq_first, tailq_foreach_safe, tailq_init, tailq_insert_tail, tailq_remove},
-    tree::{rb_find, rb_foreach_safe, rb_initializer, rb_insert, rb_remove},
+    queue::{tailq_empty, tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_remove},
+    tree::{rb_find, rb_foreach, rb_initializer, rb_insert, rb_remove},
 };
 use libc::strcmp;
 
@@ -136,13 +136,12 @@ pub unsafe extern "C" fn cmd_wait_for_signal(
         }
         log_debug(c"signal wait channel %s, with waiters".as_ptr(), (*wc).name);
 
-        tailq_foreach_safe::<_, _, _, ()>(&raw mut (*wc).waiters, |wi| {
+        for wi in tailq_foreach::<_, ()>(&raw mut (*wc).waiters).map(NonNull::as_ptr) {
             cmdq_continue((*wi).item);
 
             tailq_remove::<_, ()>(&raw mut (*wc).waiters, wi);
             free_(wi);
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
 
         cmd_wait_for_remove(wc);
 
@@ -237,24 +236,20 @@ pub unsafe extern "C" fn cmd_wait_for_unlock(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_wait_for_flush() {
     unsafe {
-        rb_foreach_safe(&raw mut wait_channels, |wc| {
-            tailq_foreach_safe(&raw mut (*wc).waiters, |wi| {
+        for wc in rb_foreach(&raw mut wait_channels).map(NonNull::as_ptr) {
+            for wi in tailq_foreach(&raw mut (*wc).waiters).map(NonNull::as_ptr) {
                 cmdq_continue((*wi).item);
                 tailq_remove(&raw mut (*wc).waiters, wi);
                 free_(wi);
-                ControlFlow::<(), ()>::Continue(())
-            });
+            }
             (*wc).woken = 1;
-            tailq_foreach_safe(&raw mut (*wc).lockers, |wi| {
+            for wi in tailq_foreach(&raw mut (*wc).lockers).map(NonNull::as_ptr) {
                 cmdq_continue((*wi).item);
                 tailq_remove(&raw mut (*wc).lockers, wi);
                 free_(wi);
-                ControlFlow::<(), ()>::Continue(())
-            });
+            }
             (*wc).locked = 0;
             cmd_wait_for_remove(wc);
-
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 }

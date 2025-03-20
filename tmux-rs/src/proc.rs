@@ -2,7 +2,7 @@ use compat_rs::{
     getpeereid,
     imsg::{imsg_clear, imsg_compose, imsg_flush, imsg_free, imsg_get, imsg_get_fd, imsg_init, imsg_read, imsgbuf},
     imsg_buffer::msgbuf_write,
-    queue::{tailq_foreach_, tailq_init, tailq_insert_tail, tailq_remove},
+    queue::{tailq_foreach, tailq_init, tailq_insert_tail, tailq_remove},
     setproctitle,
 };
 use libc::{
@@ -282,7 +282,7 @@ pub unsafe extern "C" fn proc_loop(tp: *mut tmuxproc, loopcb: Option<unsafe exte
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn proc_exit(tp: *mut tmuxproc) {
     unsafe {
-        for peer in tailq_foreach_(&raw mut (*tp).peers).map(NonNull::as_ptr) {
+        for peer in tailq_foreach(&raw mut (*tp).peers).map(NonNull::as_ptr) {
             imsg_flush(&raw mut (*peer).ibuf);
         }
         (*tp).exit = 1;

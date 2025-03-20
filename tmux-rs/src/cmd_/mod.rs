@@ -1,8 +1,5 @@
 use compat_rs::{
-    queue::{
-        tailq_concat, tailq_first, tailq_foreach, tailq_foreach_safe, tailq_init, tailq_insert_tail, tailq_next,
-        tailq_remove,
-    },
+    queue::{tailq_concat, tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_next, tailq_remove},
     strlcat, strlcpy,
 };
 use libc::{strchr, strcmp, strlen, strncmp};
@@ -723,10 +720,9 @@ pub unsafe extern "C" fn cmd_list_append(cmdlist: *mut cmd_list, cmd: *mut cmd) 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_list_append_all(cmdlist: *mut cmd_list, from: *mut cmd_list) {
     unsafe {
-        tailq_foreach::<_, _, _, qentry>((*from).list, |cmd| {
+        for cmd in tailq_foreach::<_, qentry>((*from).list).map(NonNull::as_ptr) {
             (*cmd).group = (*cmdlist).group;
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
         tailq_concat::<_, qentry>((*cmdlist).list, (*from).list);
     }
 }
@@ -748,13 +744,12 @@ pub unsafe extern "C" fn cmd_list_free(cmdlist: *mut cmd_list) {
             return;
         }
 
-        tailq_foreach_safe::<_, _, _, qentry>((*cmdlist).list, |cmd| {
+        for cmd in tailq_foreach::<_, qentry>((*cmdlist).list).map(NonNull::as_ptr) {
             tailq_remove::<_, qentry>((*cmdlist).list, cmd);
             cmd_free(cmd);
-            ControlFlow::<(), ()>::Continue(())
-        });
-        free((*cmdlist).list as _);
-        free(cmdlist as _);
+        }
+        free_((*cmdlist).list);
+        free_(cmdlist);
     }
 }
 
@@ -767,7 +762,7 @@ pub unsafe extern "C" fn cmd_list_copy(cmdlist: *mut cmd_list, argc: c_int, argv
         free(s as _);
 
         let new_cmdlist = cmd_list_new();
-        for cmd in compat_rs::queue::tailq_foreach_((*cmdlist).list).map(NonNull::as_ptr) {
+        for cmd in compat_rs::queue::tailq_foreach((*cmdlist).list).map(NonNull::as_ptr) {
             if ((*cmd).group != group) {
                 (*new_cmdlist).group = cmd_list_next_group;
                 cmd_list_next_group += 1;
@@ -791,7 +786,7 @@ pub unsafe extern "C" fn cmd_list_print(cmdlist: *mut cmd_list, escaped: c_int) 
         let mut len = 1;
         let mut buf: *mut c_char = xcalloc(1, len).cast().as_ptr();
 
-        tailq_foreach::<_, _, _, qentry>((*cmdlist).list, |cmd| {
+        for cmd in tailq_foreach::<_, qentry>((*cmdlist).list).map(NonNull::as_ptr) {
             let mut this = cmd_print(cmd);
 
             len += strlen(this) + 6;
@@ -817,9 +812,8 @@ pub unsafe extern "C" fn cmd_list_print(cmdlist: *mut cmd_list, escaped: c_int) 
                 }
             }
 
-            free(this as _);
-            ControlFlow::Continue::<(), ()>(())
-        });
+            free_(this);
+        }
 
         buf
     }
@@ -835,7 +829,7 @@ pub unsafe extern "C" fn cmd_list_next(cmd: *mut cmd) -> *mut cmd { unsafe { tai
 pub unsafe extern "C" fn cmd_list_all_have(cmdlist: *mut cmd_list, flag: cmd_flag) -> boolint {
     unsafe {
         boolint::from(
-            compat_rs::queue::tailq_foreach_((*cmdlist).list)
+            compat_rs::queue::tailq_foreach((*cmdlist).list)
                 .into_iter()
                 .all(|cmd| (*(*cmd.as_ptr()).entry).flags.intersects(flag)),
         )
@@ -845,7 +839,7 @@ pub unsafe extern "C" fn cmd_list_all_have(cmdlist: *mut cmd_list, flag: cmd_fla
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_list_any_have(cmdlist: *mut cmd_list, flag: cmd_flag) -> boolint {
     unsafe {
-        compat_rs::queue::tailq_foreach_((*cmdlist).list)
+        compat_rs::queue::tailq_foreach((*cmdlist).list)
             .into_iter()
             .any(|cmd| (*(*cmd.as_ptr()).entry).flags.intersects(flag))
             .into()
@@ -912,7 +906,7 @@ pub unsafe extern "C" fn cmd_mouse_window(m: *mut mouse_event, sp: *mut *mut ses
         }
         if (*m).s == -1
             || ({
-                s = session_find_by_id((*m).s as u32);
+                s = transmute_ptr(session_find_by_id((*m).s as u32));
                 s.is_null()
             })
         {

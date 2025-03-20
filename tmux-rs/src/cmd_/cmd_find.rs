@@ -1,7 +1,7 @@
 use compat_rs::{
     queue::{tailq_first, tailq_foreach},
     strlcat, strtonum,
-    tree::{rb_foreach_, rb_max, rb_min},
+    tree::{rb_foreach, rb_max, rb_min},
 };
 use libc::{fnmatch, strchr, strcmp, strncmp};
 
@@ -78,7 +78,7 @@ pub unsafe extern "C" fn cmd_find_inside_pane(c: *mut client) -> *mut window_pan
         }
 
         let mut wp: *mut window_pane = null_mut();
-        for wp_ in rb_foreach_(&raw mut all_window_panes) {
+        for wp_ in rb_foreach(&raw mut all_window_panes) {
             wp = wp_.as_ptr();
             if ((*wp).fd != -1 && strcmp((*wp).tty.as_ptr(), (*c).ttyname) == 0) {
                 break;
@@ -114,7 +114,7 @@ pub unsafe extern "C" fn cmd_find_best_client(mut s: *mut session) -> *mut clien
         }
 
         let mut c = null_mut();
-        for c_loop in compat_rs::queue::tailq_foreach_(&raw mut clients).map(NonNull::as_ptr) {
+        for c_loop in compat_rs::queue::tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if ((*c_loop).session.is_null()) {
                 continue;
             }
@@ -162,7 +162,7 @@ pub unsafe extern "C" fn cmd_find_best_session(slist: *mut *mut session, ssize: 
                 }
             }
         } else {
-            for s_loop in rb_foreach_(&raw mut sessions).map(|e| e.as_ptr()) {
+            for s_loop in rb_foreach(&raw mut sessions).map(|e| e.as_ptr()) {
                 if (cmd_find_session_better(s_loop, s, flags) != 0) {
                     s = s_loop;
                 }
@@ -182,7 +182,7 @@ pub unsafe extern "C" fn cmd_find_best_session_with_window(fs: *mut cmd_find_sta
 
         'fail: {
             let mut ssize: u32 = 0;
-            for s in rb_foreach_(&raw mut sessions).map(NonNull::as_ptr) {
+            for s in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
                 if (session_has(s, (*fs).w) == 0) {
                     continue;
                 }
@@ -217,7 +217,7 @@ pub unsafe extern "C" fn cmd_find_best_winlink_with_window(fs: *mut cmd_find_sta
         if (!(*(*fs).s).curw.is_null() && (*(*(*fs).s).curw).window == (*fs).w) {
             wl = (*(*fs).s).curw;
         } else {
-            for wl_loop in rb_foreach_(&raw mut (*(*fs).s).windows).map(NonNull::as_ptr) {
+            for wl_loop in rb_foreach(&raw mut (*(*fs).s).windows).map(NonNull::as_ptr) {
                 if ((*wl_loop).window == (*fs).w) {
                     wl = wl_loop;
                     break;
@@ -277,7 +277,7 @@ pub unsafe extern "C" fn cmd_find_get_session(fs: *mut cmd_find_state, session: 
         }
 
         let mut s: *mut session = null_mut();
-        for s_loop in rb_foreach_(&raw mut sessions).map(NonNull::as_ptr) {
+        for s_loop in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
             if (strncmp(session, (*s_loop).name, strlen(session)) == 0) {
                 if (!s.is_null()) {
                     return -1;
@@ -291,7 +291,7 @@ pub unsafe extern "C" fn cmd_find_get_session(fs: *mut cmd_find_state, session: 
         }
 
         s = null_mut();
-        for s_loop in rb_foreach_(&raw mut sessions).map(NonNull::as_ptr) {
+        for s_loop in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
             if (fnmatch(session, (*s_loop).name, 0) == 0) {
                 if (!s.is_null()) {
                     return -1;
@@ -441,7 +441,7 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(fs: *mut cmd_find_stat
         }
 
         (*fs).wl = null_mut();
-        for wl in rb_foreach_(&raw mut (*(*fs).s).windows).map(NonNull::as_ptr) {
+        for wl in rb_foreach(&raw mut (*(*fs).s).windows).map(NonNull::as_ptr) {
             if (strcmp(window, (*(*wl).window).name) == 0) {
                 if (!(*fs).wl.is_null()) {
                     return -1;
@@ -461,7 +461,7 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(fs: *mut cmd_find_stat
         }
 
         (*fs).wl = null_mut();
-        for wl in rb_foreach_(&raw mut (*(*fs).s).windows).map(NonNull::as_ptr) {
+        for wl in rb_foreach(&raw mut (*(*fs).s).windows).map(NonNull::as_ptr) {
             if (strncmp(window, (*(*wl).window).name, strlen(window)) == 0) {
                 if (!(*fs).wl.is_null()) {
                     return -1;
@@ -477,7 +477,7 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(fs: *mut cmd_find_stat
         }
 
         (*fs).wl = null_mut();
-        for wl in rb_foreach_(&raw mut (*(*fs).s).windows).map(NonNull::as_ptr) {
+        for wl in rb_foreach(&raw mut (*(*fs).s).windows).map(NonNull::as_ptr) {
             if (fnmatch(window, (*(*wl).window).name, 0) == 0) {
                 if (!(*fs).wl.is_null()) {
                     return -1;
@@ -663,7 +663,7 @@ pub unsafe extern "C" fn cmd_find_valid_state(fs: *mut cmd_find_state) -> boolin
         }
 
         let mut wl = null_mut();
-        for wl_ in rb_foreach_(&raw mut (*(*fs).s).windows) {
+        for wl_ in rb_foreach(&raw mut (*(*fs).s).windows) {
             wl = wl_.as_ptr();
             if ((*wl).window == (*fs).w && wl == (*fs).wl) {
                 break;
@@ -1369,7 +1369,7 @@ pub unsafe extern "C" fn cmd_find_client(item: *mut cmdq_item, target: *const c_
 
         let mut c = null_mut();
         /* Check name and path of each client. */
-        for c_ in compat_rs::queue::tailq_foreach_(&raw mut clients) {
+        for c_ in compat_rs::queue::tailq_foreach(&raw mut clients) {
             c = c_.as_ptr();
             if ((*c).session.is_null()) {
                 continue;

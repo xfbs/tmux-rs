@@ -426,14 +426,12 @@ pub unsafe extern "C" fn job_check_died(mut pid: pid_t, mut status: i32) {
     unsafe {
         let mut job: *mut job = null_mut();
 
-        list_foreach(&raw mut all_jobs, |job_| {
+        for job_ in list_foreach(&raw mut all_jobs).map(NonNull::as_ptr) {
             job = job_;
             if (pid == (*job).pid) {
-                return ControlFlow::Break(());
+                break;
             }
-
-            ControlFlow::Continue(())
-        });
+        }
 
         if (job.is_null()) {
             return;
@@ -476,27 +474,21 @@ pub unsafe extern "C" fn job_get_event(job: *mut job) -> *mut bufferevent { unsa
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn job_kill_all() {
     unsafe {
-        list_foreach(&raw mut all_jobs, |job| {
+        for job in list_foreach(&raw mut all_jobs).map(NonNull::as_ptr) {
             if (*job).pid != -1 {
                 kill((*job).pid, SIGTERM);
             }
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn job_still_running() -> i32 {
     unsafe {
-        if list_foreach(&raw mut all_jobs, |job| {
+        for job in list_foreach(&raw mut all_jobs).map(NonNull::as_ptr) {
             if (!(*job).flags & JOB_NOWAIT != 0) && (*job).state == job_state::JOB_RUNNING {
-                return ControlFlow::Break(());
+                return 1;
             }
-            ControlFlow::<(), ()>::Continue(())
-        })
-        .is_break()
-        {
-            return 1;
         }
 
         0
@@ -507,7 +499,7 @@ pub unsafe extern "C" fn job_still_running() -> i32 {
 pub unsafe extern "C" fn job_print_summary(mut item: *mut cmdq_item, mut blank: i32) {
     let mut n = 0u32;
     unsafe {
-        list_foreach(&raw mut all_jobs, |job| {
+        for job in list_foreach(&raw mut all_jobs).map(NonNull::as_ptr) {
             if blank != 0 {
                 cmdq_print(item, c"%s".as_ptr(), c"".as_ptr());
                 blank = 0;
@@ -522,7 +514,6 @@ pub unsafe extern "C" fn job_print_summary(mut item: *mut cmdq_item, mut blank: 
                 (*job).status,
             );
             n += 1;
-            ControlFlow::<(), ()>::Continue(())
-        });
+        }
     }
 }

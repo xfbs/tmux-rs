@@ -114,7 +114,7 @@ pub unsafe extern "C" fn layout_append(lc: *mut layout_cell, buf: *mut c_char, l
                 if (strlcat(buf, brackets.add(1), len) >= len) {
                     return -1;
                 }
-                for lcchild in compat_rs::queue::tailq_foreach_(&raw mut (*lc).cells) {
+                for lcchild in tailq_foreach(&raw mut (*lc).cells) {
                     if (layout_append(lcchild.as_ptr(), buf, len) != 0) {
                         return -1;
                     }
@@ -139,7 +139,7 @@ pub unsafe extern "C" fn layout_check(lc: *mut layout_cell) -> i32 {
         match ((*lc).type_) {
             layout_type::LAYOUT_WINDOWPANE => (),
             layout_type::LAYOUT_LEFTRIGHT => {
-                for lcchild in compat_rs::queue::tailq_foreach_(&raw mut (*lc).cells).map(NonNull::as_ptr) {
+                for lcchild in tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr) {
                     if ((*lcchild).sy != (*lc).sy) {
                         return 0;
                     }
@@ -153,7 +153,7 @@ pub unsafe extern "C" fn layout_check(lc: *mut layout_cell) -> i32 {
                 }
             }
             layout_type::LAYOUT_TOPBOTTOM => {
-                for lcchild in compat_rs::queue::tailq_foreach_(&raw mut (*lc).cells).map(NonNull::as_ptr) {
+                for lcchild in compat_rs::queue::tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr) {
                     if ((*lcchild).sx != (*lc).sx) {
                         return 0;
                     }
@@ -232,14 +232,14 @@ pub unsafe extern "C" fn layout_parse(w: *mut window, mut layout: *const c_char,
             match ((*lc).type_) {
                 layout_type::LAYOUT_WINDOWPANE => (),
                 layout_type::LAYOUT_LEFTRIGHT => {
-                    for lcchild in compat_rs::queue::tailq_foreach_(&raw mut (*lc).cells).map(NonNull::as_ptr) {
+                    for lcchild in compat_rs::queue::tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr) {
                         sy = (*lcchild).sy + 1;
                         sx += (*lcchild).sx + 1;
                         continue;
                     }
                 }
                 layout_type::LAYOUT_TOPBOTTOM => {
-                    for lcchild in compat_rs::queue::tailq_foreach_(&raw mut (*lc).cells).map(NonNull::as_ptr) {
+                    for lcchild in compat_rs::queue::tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr) {
                         sx = (*lcchild).sx + 1;
                         sy += (*lcchild).sy + 1;
                         continue;
@@ -297,7 +297,7 @@ unsafe extern "C" fn layout_assign(wp: *mut *mut window_pane, lc: *mut layout_ce
                 *wp = tailq_next::<_, _, discr_entry>(*wp);
             }
             layout_type::LAYOUT_LEFTRIGHT | layout_type::LAYOUT_TOPBOTTOM => {
-                for lcchild in compat_rs::queue::tailq_foreach_(&raw mut (*lc).cells).map(NonNull::as_ptr) {
+                for lcchild in compat_rs::queue::tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr) {
                     layout_assign(wp, lcchild);
                 }
             }
