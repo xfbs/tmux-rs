@@ -72,13 +72,9 @@ more then just server exited unexpectedly.
 - figure out abort / panic logs
 - print a stacktrace on server process segfault
 
-# NEXT (ensure only has one item)
-I suspect that linking is shadowing some broken rust implementations,
-and maybe when compiling with rust the rust implementation is prefered
-improve imsg and imsg buffer implemnentation
-
-something in client -> tty struct
-concrete opaque struct in struct causing field offset into adjacent struct be incorrect
+# NEXT
+- I suspect that linking is shadowing some broken rust implementations, and maybe when compiling with rust the rust implementation is preferred
+- improve imsg and imsg buffer implemnentation
 
 # TODO
 - review cmd_rotate_window.rs cmd_rotate_window_exec tailq_foreach calls

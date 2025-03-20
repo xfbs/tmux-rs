@@ -153,65 +153,70 @@ AC_CHECK_FUNCS([ \
 ])
 
 # freezero
+# strlcat
+# strlcpy
+# getprogname
+# setproctitle
+# getdtablecount
+# getdtablesize
+# getpeereid
+# memmem
+
+# htonll, ntohll are needed for imsg and imsg-buffer, which seems rust impl is broken
+#
+
 
 # Check for functions with a compatibility implementation.
 AC_REPLACE_FUNCS([ \
+	fgetln \
+	htonll \
+	ntohll \
 	asprintf \
 	cfmakeraw \
 	clock_gettime \
 	closefrom \
 	explicit_bzero \
-	fgetln \
-	getdtablecount \
-	getdtablesize \
-	getpeereid \
 	getline \
-	getprogname \
-	htonll \
-	memmem \
-	ntohll \
 	setenv \
-	setproctitle \
 	strcasestr \
-	strlcat \
-	strlcpy \
 	strndup \
 	strsep \
 ])
 AC_FUNC_STRNLEN
 
 # Check if strtonum works.
-AC_MSG_CHECKING([for working strtonum])
-AC_RUN_IFELSE([AC_LANG_PROGRAM(
-		[#include <stdlib.h>],
-		[return (strtonum("0", 0, 1, NULL) == 0 ? 0 : 1);]
-	)],
-	[AC_DEFINE(HAVE_STRTONUM) AC_MSG_RESULT(yes)],
-	[AC_LIBOBJ(strtonum) AC_MSG_RESULT(no)],
-	[AC_LIBOBJ(strtonum) AC_MSG_RESULT(no)]
-)
+# AC_MSG_CHECKING([for working strtonum])
+# AC_RUN_IFELSE([AC_LANG_PROGRAM(
+# 		[#include <stdlib.h>],
+# 		[return (strtonum("0", 0, 1, NULL) == 0 ? 0 : 1);]
+# 	)],
+# 	[AC_DEFINE(HAVE_STRTONUM) AC_MSG_RESULT(yes)],
+# 	[AC_LIBOBJ(strtonum) AC_MSG_RESULT(no)],
+# 	[AC_LIBOBJ(strtonum) AC_MSG_RESULT(no)]
+# )
 
 # Clang sanitizers wrap reallocarray even if it isn't available on the target
 # system. When compiled it always returns NULL and crashes the program. To
 # detect this we need a more complicated test.
-AC_MSG_CHECKING([for working reallocarray])
-AC_RUN_IFELSE([AC_LANG_PROGRAM(
-		[#include <stdlib.h>],
-		[return (reallocarray(NULL, 1, 1) == NULL);]
-	)],
-	AC_MSG_RESULT(yes),
-	[AC_LIBOBJ(reallocarray) AC_MSG_RESULT([no])],
-	[AC_LIBOBJ(reallocarray) AC_MSG_RESULT([no])]
-)
-AC_MSG_CHECKING([for working recallocarray])
-AC_RUN_IFELSE([AC_LANG_PROGRAM(
-		[#include <stdlib.h>],
-		[return (recallocarray(NULL, 1, 1, 1) == NULL);]
-	)],
-	AC_MSG_RESULT(yes),
-	[AC_LIBOBJ(recallocarray) AC_MSG_RESULT([no])],
-	[AC_LIBOBJ(recallocarray) AC_MSG_RESULT([no])]
-)
+#
+# AC_MSG_CHECKING([for working reallocarray])
+# AC_RUN_IFELSE([AC_LANG_PROGRAM(
+# 		[#include <stdlib.h>],
+# 		[return (reallocarray(NULL, 1, 1) == NULL);]
+# 	)],
+# 	AC_MSG_RESULT(yes),
+# 	[AC_LIBOBJ(reallocarray) AC_MSG_RESULT([no])],
+# 	[AC_LIBOBJ(reallocarray) AC_MSG_RESULT([no])]
+# )
+# AC_MSG_CHECKING([for working recallocarray])
+# AC_RUN_IFELSE([AC_LANG_PROGRAM(
+# 		[#include <stdlib.h>],
+# 		[return (recallocarray(NULL, 1, 1, 1) == NULL);]
+# 	)],
+# 	AC_MSG_RESULT(yes),
+# 	[AC_LIBOBJ(recallocarray) AC_MSG_RESULT([no])],
+# 	[AC_LIBOBJ(recallocarray) AC_MSG_RESULT([no])]
+# )
 
 # Look for clock_gettime. Must come before event_init.
 AC_SEARCH_LIBS(clock_gettime, rt)
@@ -220,7 +225,7 @@ AC_SEARCH_LIBS(clock_gettime, rt)
 # musl does not set optarg to NULL for flags without arguments (although it is
 # not required to, but it is helpful) 3) there are probably other weird
 # implementations.
-AC_LIBOBJ(getopt)
+# AC_LIBOBJ(getopt)
 
 # Look for libevent. Try libevent_core or libevent with pkg-config first then
 # look for the library.
@@ -690,12 +695,12 @@ if test "x$found_stravis" = xyes; then
 		]
 )
 fi
-if test "x$found_stravis" = xyes; then
-	AC_DEFINE(HAVE_VIS)
-else
-	AC_LIBOBJ(vis)
-	AC_LIBOBJ(unvis)
-fi
+# if test "x$found_stravis" = xyes; then
+# 	AC_DEFINE(HAVE_VIS)
+# else
+# 	AC_LIBOBJ(vis)
+# 	AC_LIBOBJ(unvis)
+# fi
 
 # # Look for fdforkpty and forkpty in libutil.
 # AC_SEARCH_LIBS(fdforkpty, util, found_fdforkpty=yes, found_fdforkpty=no)
