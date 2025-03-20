@@ -2,8 +2,8 @@ use core::ffi::{c_int, c_uchar, c_void};
 use std::{mem::MaybeUninit, ptr::null_mut};
 
 use libc::{
-    __errno_location, CMSG_DATA, CMSG_FIRSTHDR, CMSG_NXTHDR, CMSG_SPACE, EAGAIN, EBADMSG, EINTR, EINVAL, SCM_RIGHTS,
-    SOL_SOCKET, c_char, calloc, close, cmsghdr, free, getdtablesize, iovec, memcpy, memmove, msghdr, pid_t,
+    __errno_location, CMSG_DATA, CMSG_FIRSTHDR, CMSG_NXTHDR, CMSG_SPACE, EAGAIN, EBADMSG, EINTR, EINVAL, ERANGE,
+    SCM_RIGHTS, SOL_SOCKET, c_char, calloc, close, cmsghdr, free, getdtablesize, iovec, memcpy, memmove, msghdr, pid_t,
 };
 
 use crate::getdtablecount::getdtablecount;
@@ -115,7 +115,7 @@ pub unsafe extern "C" fn imsg_read(imsgbuf: *mut imsgbuf) -> isize {
     };
 
     unsafe {
-        let n: isize = -1;
+        let mut n: isize = -1;
         let fd: i32;
 
         let mut msg: msghdr = core::mem::zeroed();
@@ -135,47 +135,55 @@ pub unsafe extern "C" fn imsg_read(imsgbuf: *mut imsgbuf) -> isize {
             return -1;
         }
 
-        loop {
-            if getdtablecount()
-                + imsg_fd_overhead
-                + ((CMSG_SPACE(size_of::<libc::c_int>() as u32) - CMSG_SPACE(0)) as i32 / size_of::<c_int>() as i32)
-                >= getdtablesize()
-            {
-                *__errno_location() = EAGAIN;
-                free(ifd as *mut c_void);
-                return -1;
-            }
-
-            let n = libc::recvmsg((*imsgbuf).fd, &raw mut msg, 0);
-            if n == -1 {
-                if (*__errno_location() == EINTR) {
-                    continue;
+        // this extra labeled block isn't necessary, but makes the breaks more semantic
+        // goto fail => break 'fail
+        // goto again => continue 'again
+        'fail: {
+            'again: loop {
+                if getdtablecount()
+                    + imsg_fd_overhead
+                    + ((CMSG_SPACE(size_of::<libc::c_int>() as u32) - CMSG_SPACE(0)) as i32 / size_of::<c_int>() as i32)
+                    >= getdtablesize()
+                {
+                    *__errno_location() = EAGAIN;
+                    free(ifd as *mut c_void);
+                    return -1;
                 }
-                break;
-            }
 
-            (*imsgbuf).r.wpos += n as usize;
+                n = libc::recvmsg((*imsgbuf).fd, &raw mut msg, 0);
+                if n == -1 {
+                    if (*__errno_location() == EINTR) {
+                        continue 'again;
+                    }
+                    break 'fail;
+                }
 
-            // really?
-            let mut cmsg: *mut cmsghdr = CMSG_FIRSTHDR(&raw const msg);
-            while !cmsg.is_null() {
-                if (*cmsg).cmsg_level == SOL_SOCKET && (*cmsg).cmsg_type == SCM_RIGHTS {
-                    let mut i: c_int;
+                (*imsgbuf).r.wpos += n as usize;
 
-                    let mut j: c_int = (((cmsg as *mut c_char).add((*cmsg).cmsg_len).addr() - CMSG_DATA(cmsg).addr())
-                        / size_of::<c_int>()) as i32;
-                    for i in 0..j {
-                        let fd = *(CMSG_DATA(cmsg) as *mut c_int).add(i as usize);
-                        if !ifd.is_null() {
-                            (*ifd).fd = fd;
-                            tailq_insert_tail(&raw mut (*imsgbuf).fds, ifd);
-                            ifd = null_mut();
-                        } else {
-                            close(fd);
+                // really?
+                let mut cmsg: *mut cmsghdr = CMSG_FIRSTHDR(&raw const msg);
+                while !cmsg.is_null() {
+                    if (*cmsg).cmsg_level == SOL_SOCKET && (*cmsg).cmsg_type == SCM_RIGHTS {
+                        let mut i: c_int;
+
+                        let mut j: c_int = (((cmsg as *mut c_char).add((*cmsg).cmsg_len).addr()
+                            - CMSG_DATA(cmsg).addr())
+                            / size_of::<c_int>()) as i32;
+                        for i in 0..j {
+                            let fd = *(CMSG_DATA(cmsg) as *mut c_int).add(i as usize);
+                            if !ifd.is_null() {
+                                (*ifd).fd = fd;
+                                tailq_insert_tail(&raw mut (*imsgbuf).fds, ifd);
+                                ifd = null_mut();
+                            } else {
+                                close(fd);
+                            }
                         }
                     }
+                    cmsg = CMSG_NXTHDR(&raw const msg, cmsg);
                 }
-                cmsg = CMSG_NXTHDR(&raw const msg, cmsg);
+
+                break; // no looping on success
             }
         }
 
@@ -202,7 +210,7 @@ pub unsafe extern "C" fn imsg_get(imsgbuf: *mut imsgbuf, imsg: *mut imsg) -> isi
             size_of::<imsg_hdr>(),
         );
         if ((*m).hdr.len as usize) < IMSG_HEADER_SIZE || ((*m).hdr.len as usize) > MAX_IMSGSIZE {
-            *__errno_location() = libc::ERANGE;
+            *__errno_location() = ERANGE;
             return -1;
         }
         if ((*m).hdr.len as usize) > av {
@@ -383,7 +391,7 @@ pub unsafe extern "C" fn imsg_compose_ibuf(
         };
 
         if ibuf_size(buf) + IMSG_HEADER_SIZE > MAX_IMSGSIZE as usize {
-            *__errno_location() = libc::ERANGE;
+            *__errno_location() = ERANGE;
             return fail();
         }
 
@@ -462,7 +470,7 @@ pub unsafe extern "C" fn imsg_create(
 
         datalen += IMSG_HEADER_SIZE;
         if datalen > MAX_IMSGSIZE {
-            *__errno_location() = libc::ERANGE;
+            *__errno_location() = ERANGE;
             return null_mut();
         }
 
@@ -506,9 +514,9 @@ pub unsafe extern "C" fn imsg_close(imsgbuf: *mut imsgbuf, msg: *mut ibuf) {
 
         (*hdr).flags &= !IMSGF_HASFD;
         if ibuf_fd_avail(msg) != 0 {
-            (*hdr).flags |= !IMSGF_HASFD;
+            (*hdr).flags |= IMSGF_HASFD;
         }
-        (*hdr).len = ibuf_size(msg).try_into().expect("buf size too large");
+        (*hdr).len = ibuf_size(msg) as u16;
 
         ibuf_close(&raw mut (*imsgbuf).w, msg)
     }
