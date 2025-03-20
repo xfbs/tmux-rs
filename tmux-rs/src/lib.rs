@@ -100,13 +100,6 @@ pub struct discr_time_entry;
 pub struct discr_tree_entry;
 pub struct discr_wentry;
 
-// TODO remove once options.c is ported
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct options_array_item {
-    _opaque: [u8; 0],
-}
-
 // opaque types
 macro_rules! opaque_types {
     ( $($ident:ident),* ) => {
@@ -124,8 +117,6 @@ opaque_types! {
     input_ctx,
     mode_tree_data,
     mode_tree_item,
-    options,
-    options_entry,
     screen_write_citem,
     screen_write_cline,
     server_acl_user
@@ -859,6 +850,7 @@ pub enum style_default_type {
 
 /// Style option.
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct style {
     pub gc: grid_cell,
     pub ignore: i32,
@@ -2241,17 +2233,20 @@ pub type key_tables = rb_head<key_table>;
 
 // Option data.
 pub type options_array = rb_head<options_array_item>;
+
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub union options_value {
     pub string: *mut c_char,
     pub number: c_longlong,
-    pub style: ManuallyDrop<style>,
+    pub style: style,
     pub array: options_array,
     pub cmdlist: *mut cmd_list,
 }
 
 // Option table entries.
 #[repr(i32)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum options_table_type {
     OPTIONS_TABLE_STRING,
     OPTIONS_TABLE_NUMBER,
@@ -2418,6 +2413,7 @@ pub use crate::notify::{
 
 mod options_;
 pub use crate::options_::{
+    options_array_item, options_entry, options,
     options_array_assign, options_array_clear, options_array_first, options_array_get, options_array_item_index,
     options_array_item_value, options_array_next, options_array_set, options_create, options_default,
     options_default_to_string, options_empty, options_first, options_free, options_from_string, options_get,
@@ -2949,6 +2945,10 @@ impl boolint {
     const fn false_() -> Self { Self(0) }
     const fn as_bool(&self) -> bool { self.0 != 0 }
     const fn as_int(&self) -> i32 { self.0 }
+}
+
+impl From<boolint> for bool {
+    fn from(value: boolint) -> Self { value.as_bool() }
 }
 
 impl From<bool> for boolint {

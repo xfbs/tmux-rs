@@ -108,13 +108,11 @@ clang -fsanitize=address -fno-omit-frame-pointer -O0 -std=gnu99 -g -Wno-long-lon
 
 17 big files:
 - [ ] 1535 grid // should probably be next, seeing crashes in grid-view
-- [ ] 1204 options
 
 - [ ] 1120 layout
 - [ ] 1243 format-draw
 - [ ] 1266 mode-tree
 - [ ] 1348 window-tree
-- [ ] 1370 options-table
 - [ ] 1512 window-customize
 - [ ] 1591 tty-keys
 - [ ] 2035 status
