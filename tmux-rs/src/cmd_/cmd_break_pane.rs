@@ -7,12 +7,7 @@ static mut cmd_break_pane_entry: cmd_entry = cmd_entry {
     name: c"break-pane".as_ptr(),
     alias: c"breakp".as_ptr(),
 
-    args: args_parse {
-        template: c"abdPF:n:s:t:".as_ptr(),
-        lower: 0,
-        upper: 0,
-        cb: None,
-    },
+    args: args_parse::new(c"abdPF:n:s:t:", 0, 0, None),
     usage: c"[-abdP] [-F format] [-n window-name] [-s src-pane] [-t dst-window]".as_ptr(),
 
     source: cmd_entry_flag::new(b's', cmd_find_type::CMD_FIND_PANE, 0),

@@ -22,12 +22,7 @@ pub static mut cmd_clear_history_entry: cmd_entry = cmd_entry {
     name: c"clear-history".as_ptr(),
     alias: c"clearhist".as_ptr(),
 
-    args: args_parse {
-        template: c"Ht:".as_ptr(),
-        lower: 0,
-        upper: 0,
-        cb: None,
-    },
+    args: args_parse::new(c"Ht:", 0, 0, None),
     usage: c"[-H] [-t target-pane]".as_ptr(),
 
     source: unsafe { zeroed() },

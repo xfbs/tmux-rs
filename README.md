@@ -140,6 +140,7 @@ clang -fsanitize=address -fno-omit-frame-pointer -O0 -std=gnu99 -g -Wno-long-lon
 - get rid of paste crate, won't need to join symbols any more for C code
 - figure out why building rust binary doesn't work
 - implement cmd-parse.y parser in pest or nom to remove yacc as a build dependency
+- performance
 
 
 # Thoughts & Ideas
@@ -188,65 +189,9 @@ implemented DerefMut. Unfortunately doing this requires that you can create a `&
 undefined behaviour in this context.
 
 ## BUGS
-
 - exiting an opened window (not the original one ) causes server exit
-- keybinding for vertical split prefix - doesn't seem to perform the correct action
-  - related to current translation of arguments.c
-- keybinding for new window prefix-c doesn't seem to work
-  - started occurring after translating client.c
-- TODO, noticed I flipped tranlation order of fields of args_parse struct. need to double check that all translations which use the initialization is correct
-- Attaching to an existing tmux session is broken.
-  - running `tmux attach` immediately crashes when a session exists
-  - when running tmux while an existing tmux instance is running causes it to hang, killing the pane causes it to properly attach (likely do to my tmux config)
-- Anything entered in command prompt enter causes crash
-- with my rebinding C-b C to new window in current directory causes issues. with it unbound, there's no problem.
-- crashes on my binding prefix g
-
 - sendmsg in client to server causes SIGPIPE to be handled and exit control loop
-
-
-Due to use after shadowing in client_.rs client_connect xasprintf usage
-found by using LSAN_OPTIONS=report_objects=1
-leak on exit:
-```
-❯ ./tmux
-[exited]
-
-=================================================================
-==32510==ERROR: LeakSanitizer: detected memory leaks
-
-Direct leak of 28 byte(s) in 1 object(s) allocated from:
-    #0 0x5596d8e5f64e in __interceptor_malloc (/home/collin/Git/tmux/tmux-3.5a/tmux+0x19964e) (BuildId: 960e62ee7f022a651d2c597decbeb02aba2b15cd)
-    #1 0x7fbd5e1b0427 in __vasprintf_internal libio/./libio/vasprintf.c:71:30
-
-SUMMARY: AddressSanitizer: 28 byte(s) leaked in 1 allocation(s).
-```
-
-```
-// cs is null and causes segfault on tmux attach
-    395  #[unsafe(no_mangle)]
-    396  pub unsafe extern "C" fn control_write(c: *mut client, fmt: *const c_char, mut ap: ...) {
-    397      let __func__ = c"control_write".as_ptr();
-    398      unsafe {
-    399          let cs = (*c).control_state;
-    400
->   401          if tailq_empty(&raw mut (*cs).all_blocks) {
-    402              control_vwrite(c, fmt, ap.as_va_list());
-    403              return;
-    404          }
-```
-
-
-```
-   1684                  case EV_CLOSURE_EVENT: {                                        
-   1685                          void (*evcb_callback)(evutil_socket_t, short, void *);
-   1686                          short res;                                               
-   1687                          EVUTIL_ASSERT(ev != NULL);                               
-   1688                          evcb_callback = *ev->ev_callback;                        
-   1689                          res = ev->ev_res;                                        
-   1690                          EVBASE_RELEASE_LOCK(base, th_base_lock);                 
->  1691                          evcb_callback(ev->ev_fd, res, ev->ev_arg);  
-```
+- TODO, noticed I flipped translation order of fields of args_parse struct. need to double check that all translations which use the initialization is correct
 
 ## BUGS (found)
 
@@ -263,6 +208,7 @@ SUMMARY: AddressSanitizer: 28 byte(s) leaked in 1 allocation(s).
 - incorrect translation of cmd_entry args_parse cb None, when should have been Some(cb): after translating cmd-display-menu immediately aborts on start
 - typo in rb_right macro, expanded to access left field
 - crashes when config file is completely commented out: missing early exit in cmdq_get_command, no return in function
+- Due to use after shadowing in client_.rs client_connect xasprintf usage found by using LSAN_OPTIONS=report_objects=1 leak on exit:
 
 - memcpy_(&raw mut tmp as *mut i8, in_, end); should have been: memcpy_(tmp, in_, end)
   -  because I switched to a pointer instead of buffer,but didn't change memcpy code

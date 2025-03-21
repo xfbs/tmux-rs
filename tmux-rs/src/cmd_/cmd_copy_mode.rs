@@ -5,24 +5,11 @@ static mut cmd_copy_mode_entry: cmd_entry = cmd_entry {
     name: c"copy-mode".as_ptr(),
     alias: null_mut(),
 
-    args: args_parse {
-        template: c"deHMs:t:uq".as_ptr(),
-        lower: 0,
-        upper: 0,
-        cb: None,
-    },
+    args: args_parse::new(c"deHMs:t:uq", 0, 0, None),
     usage: c"[-deHMuq] [-s src-pane] [-t target-pane]".as_ptr(),
 
-    source: cmd_entry_flag {
-        flag: b's' as c_char,
-        type_: cmd_find_type::CMD_FIND_PANE,
-        flags: 0,
-    },
-    target: cmd_entry_flag {
-        flag: b't' as c_char,
-        type_: cmd_find_type::CMD_FIND_PANE,
-        flags: 0,
-    },
+    source: cmd_entry_flag::new(b's', cmd_find_type::CMD_FIND_PANE, 0),
+    target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_PANE, 0),
 
     flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_copy_mode_exec),
@@ -33,20 +20,11 @@ static mut cmd_clock_mode_entry: cmd_entry = cmd_entry {
     name: c"clock-mode".as_ptr(),
     alias: null_mut(),
 
-    args: args_parse {
-        template: c"t:".as_ptr(),
-        lower: 0,
-        upper: 0,
-        cb: None,
-    },
+    args: args_parse::new(c"t:", 0, 0, None),
     usage: CMD_TARGET_PANE_USAGE.as_ptr(),
 
+    target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_PANE, 0),
     source: unsafe { zeroed() },
-    target: cmd_entry_flag {
-        flag: b't' as c_char,
-        type_: cmd_find_type::CMD_FIND_PANE,
-        flags: 0,
-    },
 
     flags: cmd_flag::CMD_AFTERHOOK,
     exec: Some(cmd_copy_mode_exec),

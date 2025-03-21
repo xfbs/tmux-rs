@@ -13,7 +13,7 @@ cargo clean
 make clean
 rm -f tmux
 sh autogen.sh && ./configure
-cargo build
+cargo build --release
 make
 
 # export CC=clang

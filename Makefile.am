@@ -17,6 +17,7 @@ AM_CPPFLAGS += @XOPEN_DEFINES@ \
 
 # Additional object files.
 LDADD = $(LIBOBJS) -L/home/collin/Git/tmux/tmux-3.5a/target/x86_64-unknown-linux-gnu/debug -ltmux_rs -lbsd
+# LDADD = $(LIBOBJS) -L/home/collin/Git/tmux/tmux-3.5a/target/x86_64-unknown-linux-gnu/release -ltmux_rs -lbsd
 # LDADD = $(LIBOBJS) -L/home/collin/Git/tmux/tmux-3.5a/target/release -ltmux_rs
 
 AM_CFLAGS += -fsanitize=address -fno-omit-frame-pointer -O0

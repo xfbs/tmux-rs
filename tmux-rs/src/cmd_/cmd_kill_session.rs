@@ -7,20 +7,11 @@ static mut cmd_kill_session_entry: cmd_entry = cmd_entry {
     name: c"kill-session".as_ptr(),
     alias: null_mut(),
 
-    args: args_parse {
-        template: c"aCt:".as_ptr(),
-        upper: 0,
-        lower: 0,
-        cb: None,
-    },
+    args: args_parse::new(c"aCt:", 0, 0, None),
     usage: c"[-aC] [-t target-session]".as_ptr(),
 
+    target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_SESSION, 0),
     source: unsafe { zeroed() },
-    target: cmd_entry_flag {
-        flag: b't' as _,
-        type_: cmd_find_type::CMD_FIND_SESSION,
-        flags: 0,
-    },
 
     flags: cmd_flag::empty(),
     exec: Some(cmd_kill_session_exec),
