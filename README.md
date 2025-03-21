@@ -74,6 +74,7 @@ more then just server exited unexpectedly.
 
 # NEXT
 - I suspect that linking is shadowing some broken rust implementations, and maybe when compiling with rust the rust implementation is preferred
+  - it's interesting I notice differences in behavior between debug and release for this
 - improve imsg and imsg buffer implemnentation
 
 # TODO
@@ -89,11 +90,9 @@ more then just server exited unexpectedly.
 - better rust format string style logging functions
 - tailq and rbtree
   - recheck all tailq, and rbtree structs for multiple links.
-  - derive macro for rbtree and tailq
-    - tailq support new generic type discriminant
+  - tailq support new generic type discriminant
   - fully complete library / crate implementation with documentation
 - use bitflags instead of manually 
-- use for_each_ in all instances
 - implement fatal and fatalx which accept static rust string
 
 
@@ -141,6 +140,7 @@ clang -fsanitize=address -fno-omit-frame-pointer -O0 -std=gnu99 -g -Wno-long-lon
 - figure out why building rust binary doesn't work
 - implement cmd-parse.y parser in pest or nom to remove yacc as a build dependency
 - performance
+- lints
 
 
 # Thoughts & Ideas

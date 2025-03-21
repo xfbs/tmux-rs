@@ -3,8 +3,19 @@
 #![feature(let_chains)]
 #![feature(maybe_uninit_slice)]
 #![feature(ptr_as_uninit)]
-#![allow(non_upper_case_globals)]
+#![allow(clippy::collapsible_else_if)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::manual_range_contains)]
+#![allow(clippy::missing_safety_doc)]
+#![allow(clippy::needless_return)]
+#![allow(clippy::new_without_default)]
+#![allow(clippy::zero_ptr)]
 #![allow(non_camel_case_types)]
+#![allow(non_snake_case)]
+#![allow(non_upper_case_globals)]
+#![allow(private_interfaces)]
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(unused)]
 
 pub mod ncurses_;
 pub use ncurses_::*;

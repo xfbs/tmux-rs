@@ -8,5 +8,5 @@ edition = "2024"
 libc             = { workspace = true }
 paste            = { workspace = true }
 
-[lints]
-workspace = true
+# [lints]
+# workspace = true

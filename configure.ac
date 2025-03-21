@@ -164,13 +164,12 @@ AC_CHECK_FUNCS([ \
 
 # htonll, ntohll are needed for imsg and imsg-buffer, which seems rust impl is broken
 #
-
+# htonll
+# ntohll
 
 # Check for functions with a compatibility implementation.
 AC_REPLACE_FUNCS([ \
 	fgetln \
-	htonll \
-	ntohll \
 	asprintf \
 	cfmakeraw \
 	clock_gettime \
@@ -652,6 +651,7 @@ else
 	AC_LIBOBJ(imsg)
 	AC_LIBOBJ(imsg-buffer)
 fi
+
 
 # Look for daemon, compat/daemon.c used if missing. Solaris 10 has it in
 # libresolv, but no declaration anywhere, so check for declaration as well as

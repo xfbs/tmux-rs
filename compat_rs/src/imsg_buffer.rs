@@ -1,12 +1,9 @@
-use core::{
+use ::core::{
     ffi::{c_int, c_void},
-    mem::size_of,
-    ops::ControlFlow,
-    ptr::null_mut,
+    ptr::{NonNull, null_mut},
 };
-use std::ptr::NonNull;
 
-use libc::{calloc, cmsghdr, free, msghdr};
+use ::libc::{calloc, cmsghdr, free, msghdr};
 
 use crate::imsg::{ibuf, msgbuf};
 use crate::queue::{tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_next, tailq_remove};

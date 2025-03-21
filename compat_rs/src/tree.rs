@@ -1,8 +1,7 @@
 // https://man.openbsd.org/tree.3
 // probably best way define a generic struct
 // make the macros call the generic struct
-use core::{ops::ControlFlow, ptr::null_mut};
-use std::ptr::NonNull;
+use ::core::ptr::{NonNull, null_mut};
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -16,7 +15,7 @@ impl<T> Default for rb_head<T> {
 
 #[repr(i32)]
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
-enum rb_color {
+pub enum rb_color {
     #[default]
     RB_BLACK = 0,
     RB_RED = 1,
@@ -27,7 +26,7 @@ pub struct rb_entry<T> {
     pub rbe_left: *mut T,
     pub rbe_right: *mut T,
     pub rbe_parent: *mut T,
-    pub rbe_color: rb_color,
+    rbe_color: rb_color,
 }
 
 impl<T> std::fmt::Debug for rb_entry<T> {
@@ -141,9 +140,7 @@ macro_rules! rb_root {
     };
 }
 pub unsafe fn rb_root<T>(head: *mut rb_head<T>) -> *mut T { unsafe { (*head).rbh_root } }
-
 pub unsafe fn rb_empty<T>(head: *const rb_head<T>) -> bool { unsafe { (*head).rbh_root.is_null() } }
-
 pub unsafe fn rb_set<T, D>(elm: *mut T, parent: *mut T)
 where
     T: GetEntry<T, D>,
@@ -300,13 +297,11 @@ where
     T: GetEntry<T, D>,
 {
     unsafe {
-        let mut parent;
-
-        while ({
-            parent = rb_parent(elm);
-            !parent.is_null() && rb_color(parent) == rb_color::RB_RED
-        }) {
-            let mut gparent = rb_parent(parent);
+        while let Some(parent) = NonNull::new(rb_parent(elm))
+            && rb_color(parent.as_ptr()) == rb_color::RB_RED
+        {
+            let mut parent = parent.as_ptr();
+            let gparent = rb_parent(parent);
             if parent == rb_left(gparent) {
                 let mut tmp = rb_right(gparent);
                 if !tmp.is_null() && rb_color(tmp) == rb_color::RB_RED {
@@ -360,15 +355,15 @@ where
                     rb_rotate_left(head, parent);
                     tmp = rb_right(parent);
                 }
-                if ((rb_left(tmp).is_null() || rb_color(rb_left(tmp)) == rb_color::RB_BLACK)
-                    && (rb_right(tmp).is_null() || rb_color(rb_right(tmp)) == rb_color::RB_BLACK))
+                if (rb_left(tmp).is_null() || rb_color(rb_left(tmp)) == rb_color::RB_BLACK)
+                    && (rb_right(tmp).is_null() || rb_color(rb_right(tmp)) == rb_color::RB_BLACK)
                 {
                     rb_color!(tmp) = rb_color::RB_RED;
                     elm = parent;
                     parent = rb_parent(elm);
                 } else {
                     if rb_right(tmp).is_null() || rb_color(rb_right(tmp)) == rb_color::RB_BLACK {
-                        let mut oleft = rb_left(tmp);
+                        let oleft = rb_left(tmp);
                         if !oleft.is_null() {
                             rb_color!(oleft) = rb_color::RB_BLACK;
                         }
@@ -431,10 +426,10 @@ where
     T: GetEntry<T, D>,
 {
     unsafe {
-        let mut old: *mut T = elm;
-        let mut child: *mut T;
+        let old: *mut T = elm;
+        let child: *mut T;
         let mut parent: *mut T;
-        let mut color: rb_color;
+        let color: rb_color;
 
         'color: {
             if rb_left(elm).is_null() {
@@ -444,10 +439,10 @@ where
             } else {
                 elm = rb_right(elm);
                 let mut left: *mut T;
-                while ({
+                while {
                     left = rb_left(elm);
                     !left.is_null()
-                }) {
+                } {
                     elm = left;
                 }
                 child = rb_right(elm);
@@ -485,10 +480,10 @@ where
                 if !parent.is_null() {
                     left = parent;
 
-                    while ({
+                    while {
                         left = rb_parent(left);
                         !left.is_null()
-                    }) {}
+                    } {}
                 }
                 break 'color;
             }
@@ -516,7 +511,7 @@ where
     }
 }
 
-pub unsafe fn rb_insert<T, D>(head: *mut rb_head<T>, mut elm: *mut T) -> *mut T
+pub unsafe fn rb_insert<T, D>(head: *mut rb_head<T>, elm: *mut T) -> *mut T
 where
     T: GetEntry<T, D>,
 {
@@ -577,7 +572,6 @@ where
     unsafe {
         let mut tmp = rb_root(head);
         let mut res = null_mut();
-        let mut comp = 0;
         while !tmp.is_null() {
             tmp = match T::cmp(elm, tmp) {
                 ..0 => {

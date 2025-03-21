@@ -123,7 +123,7 @@ pub unsafe extern "C" fn imsg_read(imsgbuf: *mut imsgbuf) -> isize {
 
         let mut iov: iovec = iovec {
             iov_base: (*imsgbuf).r.buf.as_mut_ptr().add((*imsgbuf).r.wpos) as *mut c_void,
-            iov_len: BUFSIZE - (*imsgbuf).r.wpos,
+            iov_len: 65535usize - (*imsgbuf).r.wpos,
         };
         msg.msg_iov = &raw mut iov;
         msg.msg_iovlen = 1;

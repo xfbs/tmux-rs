@@ -19,6 +19,7 @@ cc = { workspace = true }
 
 [features]
 cgroups     = []
+hyperlinks  = []
 iutf8       = []
 ncurses     = []
 nokerninfo  = []
@@ -28,6 +29,6 @@ systemd     = []
 utempter    = []
 utf8proc    = []
 
-[lints]
-workspace = true
+# [lints]
+# workspace = true
 

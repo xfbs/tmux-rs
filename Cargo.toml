@@ -1,5 +1,5 @@
 [workspace]
-members = ["tmux-rs", "compat_rs", "parser"]
+members = ["tmux-rs", "compat_rs"]
 resolver = "2"
 
 [profile.dev]
@@ -29,22 +29,22 @@ paste        = { version = "1.0.15"  }
 # - <https://github.com/rust-lang/rust-analyzer/issues/16628>
 # - <https://github.com/rust-lang/rust-analyzer/issues/15344>
 
-[workspace.lints.rust]
-non_camel_case_types   = "allow"
-non_snake_case         = "allow"
-non_upper_case_globals = "allow"
-private_interfaces     = "allow"
-unused                 = "allow"
-unsafe_op_in_unsafe_fn = "allow"
-
-# oddly enough having this causes rust-analyzer to break, because of cargo clippy breaking
-# unexpected_cfgs        = { level = "warn", check-cfg = ['cfg(disabled)'] }
-
-[workspace.lints.clippy]
-collapsible_if        = "allow"
-collapsible_else_if   = "allow"
-manual_range_contains = "allow"
-missing_safety_doc    = "allow"
-needless_return       = "allow"
-new_without_default   = "allow"
-zero_ptr              = "allow"
+# [workspace.lints.rust]
+# non_camel_case_types   = "allow"
+# non_snake_case         = "allow"
+# non_upper_case_globals = "allow"
+# private_interfaces     = "allow"
+# unused                 = "allow"
+# unsafe_op_in_unsafe_fn = "allow"
+# 
+# # oddly enough having this causes rust-analyzer to break, because of cargo clippy breaking
+# # unexpected_cfgs        = { level = "warn", check-cfg = ['cfg(disabled)'] }
+# 
+# [workspace.lints.clippy]
+# collapsible_if        = "allow"
+# collapsible_else_if   = "allow"
+# manual_range_contains = "allow"
+# missing_safety_doc    = "allow"
+# needless_return       = "allow"
+# new_without_default   = "allow"
+# zero_ptr              = "allow"
