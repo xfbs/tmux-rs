@@ -1,5 +1,3 @@
-use core::ptr::null;
-
 #[unsafe(no_mangle)]
 pub extern "C" fn getdtablecount_() -> libc::c_int {
     if let Ok(read_dir) = std::fs::read_dir("/proc/self/fd") {

@@ -1,5 +1,5 @@
 use core::ptr::null_mut;
-use std::{ops::ControlFlow, ptr::NonNull};
+use std::ptr::NonNull;
 
 pub trait ListEntry<T, Discriminant = ()> {
     unsafe fn field(this: *mut Self) -> *mut list_entry<T>;

@@ -152,7 +152,7 @@ pub unsafe extern "C" fn imsg_read(imsgbuf: *mut imsgbuf) -> isize {
 
                 n = libc::recvmsg((*imsgbuf).fd, &raw mut msg, 0);
                 if n == -1 {
-                    if (*__errno_location() == EINTR) {
+                    if *__errno_location() == EINTR {
                         continue 'again;
                     }
                     break 'fail;
@@ -166,8 +166,7 @@ pub unsafe extern "C" fn imsg_read(imsgbuf: *mut imsgbuf) -> isize {
                     if (*cmsg).cmsg_level == SOL_SOCKET && (*cmsg).cmsg_type == SCM_RIGHTS {
                         let mut i: c_int;
 
-                        let mut j: c_int = (((cmsg as *mut c_char).add((*cmsg).cmsg_len).addr()
-                            - CMSG_DATA(cmsg).addr())
+                        let j: c_int = (((cmsg as *mut c_char).add((*cmsg).cmsg_len).addr() - CMSG_DATA(cmsg).addr())
                             / size_of::<c_int>()) as i32;
                         for i in 0..j {
                             let fd = *(CMSG_DATA(cmsg) as *mut c_int).add(i as usize);
@@ -390,7 +389,7 @@ pub unsafe extern "C" fn imsg_compose_ibuf(
             -1
         };
 
-        if ibuf_size(buf) + IMSG_HEADER_SIZE > MAX_IMSGSIZE as usize {
+        if ibuf_size(buf) + IMSG_HEADER_SIZE > MAX_IMSGSIZE {
             *__errno_location() = ERANGE;
             return fail();
         }
@@ -445,11 +444,9 @@ pub unsafe extern "C" fn imsg_forward(imsgbuf: *mut imsgbuf, msg: *mut imsg) -> 
             return -1;
         }
 
-        if !(*msg).buf.is_null() {
-            if ibuf_add_buf(wbuf, (*msg).buf) == -1 {
-                ibuf_free(wbuf);
-                return -1;
-            }
+        if !(*msg).buf.is_null() && ibuf_add_buf(wbuf, (*msg).buf) == -1 {
+            ibuf_free(wbuf);
+            return -1;
         }
 
         imsg_close(imsgbuf, wbuf);
@@ -498,11 +495,9 @@ pub unsafe extern "C" fn imsg_create(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_add(msg: *mut ibuf, data: *const c_void, datalen: usize) -> i32 {
     unsafe {
-        if datalen != 0 {
-            if ibuf_add(msg, data, datalen) == -1 {
-                ibuf_free(msg);
-                return -1;
-            }
+        if datalen != 0 && ibuf_add(msg, data, datalen) == -1 {
+            ibuf_free(msg);
+            return -1;
         }
         datalen as i32
     }

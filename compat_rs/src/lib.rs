@@ -58,7 +58,7 @@ pub const HOST_NAME_MAX: usize = 255;
 
 pub const WAIT_ANY: pid_t = -1;
 
-pub const ACCESSPERMS: mode_t = (S_IRWXU | S_IRWXG | S_IRWXO);
+pub const ACCESSPERMS: mode_t = S_IRWXU | S_IRWXG | S_IRWXO;
 
 // extern crate compat_derive;
 // pub use compat_derive::TailQEntry;

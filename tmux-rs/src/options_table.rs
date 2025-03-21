@@ -200,20 +200,20 @@ pub const OPTIONS_TABLE_STATUS_FORMAT1: *const c_char = concat!(
     "#{T;=/#{status-right-length}:status-right}",
     "#[pop-default]",
     "#[norange default]\0"
-).as_ptr().cast();
+)
+.as_ptr()
+.cast();
 
 pub const OPTIONS_TABLE_STATUS_FORMAT2: *const c_char = concat!(
     "#[align=centre]#{P:#{?pane_active,#[reverse],}",
     "#{pane_index}[#{pane_width}x#{pane_height}]#[default] }\0"
-).as_ptr().cast();
+)
+.as_ptr()
+.cast();
 
 #[unsafe(no_mangle)]
-pub static mut options_table_status_format_default: [*const c_char; 3] = [
-    OPTIONS_TABLE_STATUS_FORMAT1,
-    OPTIONS_TABLE_STATUS_FORMAT2,
-    null()
-];
-
+pub static mut options_table_status_format_default: [*const c_char; 3] =
+    [OPTIONS_TABLE_STATUS_FORMAT1, OPTIONS_TABLE_STATUS_FORMAT2, null()];
 
 /* Helpers for hook options. */
 macro_rules! options_table_hook {
