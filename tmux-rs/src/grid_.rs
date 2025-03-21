@@ -1,40 +1,1695 @@
-use super::*;
+use std::ptr::null_mut;
+
+use compat_rs::strlcat;
+use libc::strlen;
+
+use crate::{xmalloc::xreallocarray, *};
+
+#[rustfmt::skip]
 unsafe extern "C" {
-    pub static grid_default_cell: grid_cell;
-    pub fn grid_empty_line(_: *mut grid, _: c_uint, _: c_uint);
-    pub fn grid_cells_equal(_: *const grid_cell, _: *const grid_cell) -> c_int;
-    pub fn grid_cells_look_equal(_: *const grid_cell, _: *const grid_cell) -> c_int;
-    pub fn grid_create(_: c_uint, _: c_uint, _: c_uint) -> *mut grid;
-    pub fn grid_destroy(_: *mut grid);
-    pub fn grid_compare(_: *mut grid, _: *mut grid) -> c_int;
-    pub fn grid_collect_history(_: *mut grid);
-    pub fn grid_remove_history(_: *mut grid, _: c_uint);
-    pub fn grid_scroll_history(_: *mut grid, _: c_uint);
-    pub fn grid_scroll_history_region(_: *mut grid, _: c_uint, _: c_uint, _: c_uint);
-    pub fn grid_clear_history(_: *mut grid);
-    pub fn grid_peek_line(_: *mut grid, _: c_uint) -> *const grid_line;
-    pub fn grid_get_cell(_: *mut grid, _: c_uint, _: c_uint, _: *mut grid_cell);
-    pub fn grid_set_cell(_: *mut grid, _: c_uint, _: c_uint, _: *const grid_cell);
-    pub fn grid_set_padding(_: *mut grid, _: c_uint, _: c_uint);
-    pub fn grid_set_cells(_: *mut grid, _: c_uint, _: c_uint, _: *const grid_cell, _: *const c_char, _: usize);
-    pub fn grid_get_line(_: *mut grid, _: c_uint) -> *mut grid_line;
-    pub fn grid_adjust_lines(_: *mut grid, _: c_uint);
-    pub fn grid_clear(_: *mut grid, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
-    pub fn grid_clear_lines(_: *mut grid, _: c_uint, _: c_uint, _: c_uint);
-    pub fn grid_move_lines(_: *mut grid, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
-    pub fn grid_move_cells(_: *mut grid, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
-    pub fn grid_string_cells(
-        _: *mut grid,
-        _: c_uint,
-        _: c_uint,
-        _: c_uint,
-        _: *mut *mut grid_cell,
-        _: c_int,
-        _: *mut screen,
-    ) -> *mut c_char;
-    pub fn grid_duplicate_lines(_: *mut grid, _: c_uint, _: *mut grid, _: c_uint, _: c_uint);
-    pub fn grid_reflow(_: *mut grid, _: c_uint);
-    pub fn grid_wrap_position(_: *mut grid, _: c_uint, _: c_uint, _: *mut c_uint, _: *mut c_uint);
-    pub fn grid_unwrap_position(_: *mut grid, _: *mut c_uint, _: *mut c_uint, _: c_uint, _: c_uint);
-    pub fn grid_line_length(_: *mut grid, _: c_uint) -> c_uint;
+    // pub static grid_default_cell: grid_cell;
+    // pub fn grid_empty_line(_: *mut grid, _: c_uint, _: c_uint);
+    // pub fn grid_cells_equal(_: *const grid_cell, _: *const grid_cell) -> c_int;
+    // pub fn grid_cells_look_equal(_: *const grid_cell, _: *const grid_cell) -> c_int;
+    // pub fn grid_create(_: c_uint, _: c_uint, _: c_uint) -> *mut grid;
+    // pub fn grid_destroy(_: *mut grid);
+    // pub fn grid_compare(_: *mut grid, _: *mut grid) -> c_int;
+    // pub fn grid_collect_history(_: *mut grid);
+    // pub fn grid_remove_history(_: *mut grid, _: c_uint);
+    // pub fn grid_scroll_history(_: *mut grid, _: c_uint);
+    // pub fn grid_scroll_history_region(_: *mut grid, _: c_uint, _: c_uint, _: c_uint);
+    // pub fn grid_clear_history(_: *mut grid);
+    // pub fn grid_peek_line(_: *mut grid, _: c_uint) -> *const grid_line;
+    // pub fn grid_get_cell(_: *mut grid, _: c_uint, _: c_uint, _: *mut grid_cell);
+    // pub fn grid_set_cell(_: *mut grid, _: c_uint, _: c_uint, _: *const grid_cell);
+    // pub fn grid_set_padding(_: *mut grid, _: c_uint, _: c_uint);
+    // pub fn grid_set_cells(_: *mut grid, _: c_uint, _: c_uint, _: *const grid_cell, _: *const c_char, _: usize);
+    // pub fn grid_get_line(_: *mut grid, _: c_uint) -> *mut grid_line;
+    // pub fn grid_adjust_lines(_: *mut grid, _: c_uint);
+    // pub fn grid_clear(_: *mut grid, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
+    // pub fn grid_clear_lines(_: *mut grid, _: c_uint, _: c_uint, _: c_uint);
+    // pub fn grid_move_lines(_: *mut grid, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
+    // pub fn grid_move_cells(_: *mut grid, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
+    // pub fn grid_string_cells( _: *mut grid, _: c_uint, _: c_uint, _: c_uint, _: *mut *mut grid_cell, _: c_int, _: *mut screen,) -> *mut c_char;
+
+    //pub fn grid_duplicate_lines(_: *mut grid, _: c_uint, _: *mut grid, _: c_uint, _: c_uint);
+    //pub fn grid_reflow(_: *mut grid, _: c_uint);
+    //pub fn grid_wrap_position(_: *mut grid, _: c_uint, _: c_uint, _: *mut c_uint, _: *mut c_uint);
+    //pub fn grid_unwrap_position(_: *mut grid, _: *mut c_uint, _: *mut c_uint, _: c_uint, _: c_uint);
+    //pub fn grid_line_length(_: *mut grid, _: c_uint) -> c_uint;
+}
+
+/// Default grid cell data.
+#[unsafe(no_mangle)]
+pub static grid_default_cell: grid_cell =
+    grid_cell::new(utf8_data::new([b' '], 0, 1, 1), 0, grid_flag::empty(), 8, 8, 8, 0);
+
+/// Padding grid cell data. Padding cells are the only zero width cell that
+/// appears in the grid - because of this, they are always extended cells.
+#[unsafe(no_mangle)]
+pub static grid_padding_cell: grid_cell =
+    grid_cell::new(utf8_data::new([b'!'], 0, 0, 0), 0, grid_flag::PADDING, 8, 8, 8, 0);
+
+/// Cleared grid cell data.
+#[unsafe(no_mangle)]
+pub static grid_cleared_cell: grid_cell =
+    grid_cell::new(utf8_data::new([b' '], 0, 1, 1), 0, grid_flag::CLEARED, 8, 8, 8, 0);
+
+#[unsafe(no_mangle)]
+pub static grid_cleared_entry: grid_cell_entry = grid_cell_entry {
+    union_: grid_cell_entry_union {
+    data: grid_cell_entry_data {
+        attr: 0,
+        fg: 8,
+        bg: 8,
+        data: b' ',
+    }
+  },
+    flags: grid_flag::CLEARED,
+};
+
+/// Store cell in entry.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_store_cell(gce: *mut grid_cell_entry, gc: *const grid_cell, c: u8) {
+  unsafe {
+    (*gce).flags = (*gc).flags & !grid_flag::CLEARED;
+
+    (*gce).union_.data.fg = ((*gc).fg & 0xff) as u8;
+    if (*gc).fg & COLOUR_FLAG_256 != 0 {
+        (*gce).flags |= grid_flag::FG256;
+    }
+
+    (*gce).union_.data.bg = ((*gc).bg & 0xff) as u8;
+    if (*gc).bg & COLOUR_FLAG_256 != 0 {
+        (*gce).flags |= grid_flag::BG256;
+    }
+
+    (*gce).union_.data.attr = (*gc).attr as u8;
+    (*gce).union_.data.data = c;
+  }
+}
+
+/// Check if a cell should be an extended cell.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_need_extended_cell(gce: *const grid_cell_entry, gc: *const grid_cell) -> i32 {
+    unsafe {
+        if (*gce).flags.contains(grid_flag::EXTENDED) {
+            return 1;
+        }
+        if (*gc).attr > 0xff {
+            return 1;
+        }
+        if (*gc).data.size != 1 || (*gc).data.width != 1 {
+            return 1;
+        }
+        if ((*gc).fg & COLOUR_FLAG_RGB != 0) || ((*gc).bg & COLOUR_FLAG_RGB != 0) {
+            return 1;
+        }
+        if (*gc).us != 8 { // only supports 256 or RGB
+            return 1;
+        }
+        if (*gc).link != 0 {
+            return 1;
+        }
+        0
+    }
+}
+
+/// Get an extended cell.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_get_extended_cell(gl: *mut grid_line, gce: *mut grid_cell_entry, flags: grid_flag) {
+    unsafe {
+        let at = (*gl).extdsize + 1;
+
+        (*gl).extddata = xreallocarray_((*gl).extddata, at as usize).as_ptr();
+        (*gl).extdsize = at;
+
+        (*gce).union_.offset = at - 1;
+        (*gce).flags = flags | grid_flag::EXTENDED;
+    }
+}
+
+
+/// Set cell as extended.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_extended_cell(gl: *mut grid_line, gce: *mut grid_cell_entry, gc: *const grid_cell) -> *mut grid_extd_entry {
+    unsafe {
+        let flags = (*gc).flags & !grid_flag::CLEARED;
+
+        if !(*gce).flags.contains(grid_flag::EXTENDED) {
+            grid_get_extended_cell(gl, gce, flags);
+        } else if (*gce).union_.offset >= (*gl).extdsize {
+            fatalx(c"offset too big".as_ptr());
+        }
+        (*gl).flags |= grid_line_flag::EXTENDED;
+
+        let mut uc = MaybeUninit::<utf8_char>::uninit();
+        let uc = uc.as_mut_ptr();
+        utf8_from_data(&raw const (*gc).data, uc);
+
+        let gee = &mut *(*gl).extddata.offset((*gce).union_.offset as isize);
+        (*gee).data = *uc;
+        (*gee).attr = (*gc).attr;
+        (*gee).flags = flags.bits() as u8;
+        (*gee).fg = (*gc).fg ;
+        (*gee).bg = (*gc).bg ;
+        (*gee).us = (*gc).us;
+        (*gee).link = (*gc).link;
+        gee
+    }
+}
+
+/// Free up unused extended cells.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_compact_line(gl: *mut grid_line) {
+    unsafe {
+        let mut new_extdsize = 0u32;
+
+        if (*gl).extdsize == 0 {
+            return;
+        }
+
+        // Count extended cells
+        for px in 0..(*gl).cellsize {
+            let gce = &raw mut *(*gl).celldata.add(px as usize);
+            if (*gce).flags.contains(grid_flag::EXTENDED) {
+                new_extdsize += 1;
+            }
+        }
+
+        if new_extdsize == 0 {
+            free_((*gl).extddata);
+            (*gl).extddata = null_mut();
+            (*gl).extdsize = 0;
+            return;
+        }
+
+        // Allocate new array
+        let new_extddata: *mut grid_extd_entry = xreallocarray_(null_mut(), new_extdsize as usize).as_ptr();
+
+        let mut idx = 0;
+        for px in 0..(*gl).cellsize {
+            let gce = (*gl).celldata.add(px as usize);
+            if (*gce).flags.contains(grid_flag::EXTENDED) {
+                let gee = (*gl).extddata.add((*gce).union_.offset as usize);
+                std::ptr::copy_nonoverlapping(
+                    gee as *const grid_extd_entry,
+                    new_extddata.add(idx as usize),
+                    1
+                );
+                (*gce).union_.offset = idx;
+                idx += 1;
+            }
+        }
+
+        free_((*gl).extddata);
+        (*gl).extddata = new_extddata;
+        (*gl).extdsize = new_extdsize;
+    }
+}
+
+/// Get line data.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_get_line(gd: *mut grid, line: c_uint) -> *mut grid_line {
+    unsafe {
+        (*gd).linedata.add(line as usize)
+    }
+}
+
+/// Adjust number of lines.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_adjust_lines(gd: *mut grid, lines: c_uint) {
+    unsafe {
+        (*gd).linedata = xreallocarray_((*gd).linedata, lines as usize).as_ptr();
+    }
+}
+/// Copy default into a cell.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_clear_cell(gd: *mut grid, px: c_uint, py: c_uint, bg: c_uint) {
+  unsafe {
+    let gl = (*gd).linedata.add(py as usize);
+    let gce = (*gl).celldata.add(px as usize);
+    std::ptr::copy_nonoverlapping(&raw const grid_cleared_entry, gce, 1);
+    if bg != 8 {
+        if (bg & COLOUR_FLAG_RGB as u32) != 0 {
+            grid_get_extended_cell(gl, gce, (*gce).flags);
+            let mut gee = grid_extended_cell(gl, gce, &raw const grid_cleared_cell);
+            (*gee).bg = bg as i32;
+        } else {
+            if (bg & COLOUR_FLAG_256 as u32) != 0 {
+                (*gce).flags |= grid_flag::BG256;
+            }
+            (*gce).union_.data.bg = bg as c_uchar;
+        }
+    }
+  }
+}
+
+/// Check grid y position.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_check_y(gd: *mut grid, from: *const c_char, py: c_uint) -> c_int {
+  unsafe {
+    if py >= (*gd).hsize as c_uint + (*gd).sy as c_uint {
+        log_debug(c"%s: y out of range: %u".as_ptr(), from, py);
+        return -1;
+    }
+  }
+    0
+}
+
+/// Check if two styles are (visibly) the same.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_cells_look_equal(gc1: *const grid_cell, gc2: *const grid_cell) -> c_int {
+    unsafe {
+        if (*gc1).fg != (*gc2).fg || (*gc1).bg != (*gc2).bg {
+            return 0;
+        }
+        if (*gc1).attr != (*gc2).attr || (*gc1).flags != (*gc2).flags {
+            return 0;
+        }
+        if (*gc1).link != (*gc2).link {
+            return 0;
+        }
+        1
+    }
+}
+
+/// Compare grid cells. Return 1 if equal, 0 if not.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_cells_equal(gc1: *const grid_cell, gc2: *const grid_cell) -> c_int {
+    unsafe {
+        if grid_cells_look_equal(gc1, gc2) == 0 {
+            return 0;
+        }
+        if (*gc1).data.width != (*gc2).data.width {
+            return 0;
+        }
+        if (*gc1).data.size != (*gc2).data.size {
+            return 0;
+        }
+        if libc::memcmp(
+            (*gc1).data.data.as_ptr() as *const libc::c_void,
+            (*gc2).data.data.as_ptr() as *const libc::c_void,
+            (*gc1).data.size as usize,
+        ) == 0
+        {
+            1
+        } else {
+            0
+        }
+    }
+}
+
+/// Free one line.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_free_line(gd: *mut grid, py: c_uint) {
+    unsafe {
+        free_((*(*gd).linedata.add(py as usize)).celldata);
+        (*(*gd).linedata.add(py as usize)).celldata = null_mut();
+        free_((*(*gd).linedata.add(py as usize)).extddata);
+        (*(*gd).linedata.add(py as usize)).extddata = null_mut();
+    }
+}
+
+/// Free several lines.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_free_lines(gd: *mut grid, py: c_uint, ny: c_uint) {
+    unsafe {
+        for yy in py..(py + ny) {
+            grid_free_line(gd, yy);
+        }
+    }
+}
+
+/// Create a new grid.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_create(sx: u32, sy: u32, hlimit: u32) -> *mut grid {
+    unsafe {
+        let gd = xmalloc_::<grid>().as_ptr();
+        (*gd).sx = sx;
+        (*gd).sy = sy;
+        (*gd).flags = if hlimit != 0 {
+            GRID_HISTORY
+        } else {
+            0
+        };
+
+        (*gd).hscrolled = 0;
+        (*gd).hsize = 0;
+        (*gd).hlimit = hlimit;
+
+        if (*gd).sy != 0 {
+            (*gd).linedata = xcalloc_::<grid_line>((*gd).sy as usize).as_ptr();
+        } else {
+            (*gd).linedata = null_mut();
+        }
+
+        gd
+    }
+}
+
+/// Destroy grid.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_destroy(gd: *mut grid) {
+    unsafe {
+        grid_free_lines(gd, 0, (*gd).hsize + (*gd).sy);
+        free_((*gd).linedata);
+        free_(gd);
+    }
+}
+
+/// Compare grids.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_compare(ga: *mut grid, gb: *mut grid) -> c_int {
+    unsafe {
+        if (*ga).sx != (*gb).sx || (*ga).sy != (*gb).sy {
+            return 1;
+        }
+
+        for yy in 0..(*ga).sy {
+            let gla = &mut (*(*ga).linedata.add(yy as usize));
+            let glb = &mut (*(*gb).linedata.add(yy as usize));
+            
+            if gla.cellsize != glb.cellsize {
+                return 1;
+            }
+
+            for xx in 0..gla.cellsize {
+                let mut gca = grid_cell::new(utf8_data::new([0; 4], 0, 0, 0), 0, grid_flag::empty(), 0, 0, 0, 0);
+                let mut gcb = grid_cell::new(utf8_data::new([0; 4], 0, 0, 0), 0, grid_flag::empty(), 0, 0, 0, 0);
+
+                grid_get_cell(ga, xx, yy, &mut gca);
+                grid_get_cell(gb, xx, yy, &mut gcb);
+
+                if grid_cells_equal(&gca, &gcb) == 0 {
+                    return 1;
+                }
+            }
+        }
+
+        0
+    }
+}
+
+/// Trim lines from the history.
+#[unsafe(no_mangle)]
+unsafe extern "C" fn grid_trim_history(gd: *mut grid, ny: c_uint) {
+    unsafe {
+        grid_free_lines(gd, 0, ny);
+        libc::memmove(
+            (*gd).linedata as *mut c_void,
+            (*gd).linedata.add(ny as usize) as *const c_void,
+            ((*gd).hsize + (*gd).sy - ny) as usize * size_of::<grid_line>(),
+        );
+    }
+}
+
+/// Collect lines from the history if at the limit. Free the top (oldest) 10%
+/// and shift up.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_collect_history(gd: *mut grid) {
+    unsafe {
+        if (*gd).hsize == 0 || (*gd).hsize < (*gd).hlimit {
+            return;
+        }
+
+        let mut ny = (*gd).hlimit / 10;
+        if ny < 1 {
+            ny = 1;
+        }
+        if ny > (*gd).hsize {
+            ny = (*gd).hsize;
+        }
+
+        // Free the lines from 0 to ny then move the remaining lines over them.
+        grid_trim_history(gd, ny);
+
+        (*gd).hsize -= ny;
+        if (*gd).hscrolled > (*gd).hsize {
+            (*gd).hscrolled = (*gd).hsize;
+        }
+    }
+}
+
+/// Remove lines from the bottom of the history.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_remove_history(gd: *mut grid, ny: c_uint) {
+    unsafe {
+        if ny > (*gd).hsize {
+            return;
+        }
+        for yy in 0..ny {
+            grid_free_line(gd, (*gd).hsize + (*gd).sy - 1 - yy);
+        }
+        (*gd).hsize -= ny;
+    }
+}
+
+/// Scroll the entire visible screen, moving one line into the history. Just
+/// allocate a new line at the bottom and move the history size indicator.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_scroll_history(gd: *mut grid, bg: c_uint) {
+    unsafe {
+        let yy = (*gd).hsize + (*gd).sy;
+        (*gd).linedata = xreallocarray_(
+            (*gd).linedata,
+            (yy + 1) as usize,
+        ).as_ptr();
+
+        grid_empty_line(gd, yy, bg);
+
+        (*gd).hscrolled += 1;
+        grid_compact_line(&mut (*(*gd).linedata.add((*gd).hsize as usize)));
+        (*(*gd).linedata.add((*gd).hsize as usize)).time = current_time;
+        (*gd).hsize += 1;
+    }
+}
+
+/// Clear the history.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_clear_history(gd: *mut grid) {
+    unsafe {
+        grid_trim_history(gd, (*gd).hsize);
+
+        (*gd).hscrolled = 0;
+        (*gd).hsize = 0;
+
+        (*gd).linedata = xreallocarray_(
+            (*gd).linedata,
+            (*gd).sy as usize,
+        ).as_ptr();
+    }
+}
+
+/// Scroll a region up, moving the top line into the history.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_scroll_history_region(gd: *mut grid, mut upper: c_uint, mut lower: c_uint, bg: c_uint) {
+    unsafe {
+        let mut yy = (*gd).hsize + (*gd).sy;
+        
+        // Create space for new line
+        (*gd).linedata = xreallocarray_(
+            (*gd).linedata,
+            (yy + 1) as usize,
+        ).as_ptr();
+
+        // Move screen down to free space
+        let gl_history = (*gd).linedata.add((*gd).hsize as usize);
+        std::ptr::copy(
+            gl_history,
+            gl_history.add(1),
+            ((*gd).sy as usize) * std::mem::size_of::<grid_line>()
+        );
+
+        // Adjust region and find start/end
+        upper = upper + 1;
+        let gl_upper = (*gd).linedata.add(upper as usize);
+        lower = lower + 1;
+
+        // Move line into history
+        std::ptr::copy_nonoverlapping(
+            gl_upper,
+            gl_history,
+            size_of::<grid_line>()
+        );
+        (*gl_history).time = current_time;
+
+        // Move region up and clear bottom line
+        std::ptr::copy(
+            gl_upper.add(1),
+            gl_upper,
+            ((lower - upper) as usize) * size_of::<grid_line>()
+        );
+        grid_empty_line(gd, lower, bg);
+
+        // Move history offset down
+        (*gd).hscrolled += 1;
+        (*gd).hsize += 1;
+    }
+}
+
+/// Expand line to fit to cell.
+#[unsafe(no_mangle)]
+unsafe fn grid_expand_line(gd: *mut grid, py: c_uint, mut sx: c_uint, bg: c_uint) {
+  unsafe {
+    let gl = (*gd).linedata.add(py as usize);
+    if sx <= (*gl).cellsize {
+        return;
+    }
+
+    if sx < (*gd).sx / 4 {
+        sx = (*gd).sx / 4;
+    } else if sx < (*gd).sx / 2 {
+        sx = (*gd).sx / 2;
+    } else if (*gd).sx > sx {
+        sx = (*gd).sx;
+    }
+
+    (*gl).celldata = xreallocarray_(
+        (*gl).celldata,
+        sx as usize,
+    ).as_ptr();
+
+    for xx in (*gl).cellsize..sx {
+        grid_clear_cell(gd, xx, py, bg);
+    }
+    (*gl).cellsize = sx;
+  }
+}
+
+/// Empty a line and set background colour if needed.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_empty_line(gd: *mut grid, py: c_uint, bg: c_uint) {
+    unsafe {
+      (*gd).linedata.add(py as usize).write(zeroed());
+        if !COLOUR_DEFAULT(bg as i32) {
+            grid_expand_line(gd, py, (*gd).sx, bg);
+        }
+    }
+}
+
+/// Peek at grid line.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_peek_line(gd: *mut grid, py: c_uint) -> *const grid_line {
+    unsafe {
+        if grid_check_y(gd, c"grid_peek_line".as_ptr(), py) != 0 {
+            return null();
+        }
+        (*gd).linedata.add(py as usize)
+    }
+}
+
+/// Get cell from line.
+#[unsafe(no_mangle)]
+unsafe fn grid_get_cell1(gl: *mut grid_line, px: c_uint, gc: *mut grid_cell) {
+  unsafe {
+    let gce = (*gl).celldata.add(px as usize);
+
+    if (*gce).flags.contains(grid_flag::EXTENDED) {
+        if (*gce).union_.offset >= (*gl).extdsize {
+            std::ptr::copy(&grid_default_cell, gc, 1);
+        } else {
+            let gee = (*gl).extddata.add((*gce).union_.offset as usize);
+            (*gc).flags = grid_flag::from_bits((*gee).flags).unwrap();
+            (*gc).attr = (*gee).attr;
+            (*gc).fg = (*gee).fg;
+            (*gc).bg = (*gee).bg;
+            (*gc).us = (*gee).us;
+            (*gc).link = (*gee).link;
+            utf8_to_data((*gee).data, &mut (*gc).data);
+        }
+        return;
+    }
+
+    (*gc).flags = (*gce).flags & !(grid_flag::FG256 | grid_flag::BG256);
+    (*gc).attr = (*gce).union_.data.attr as u16;
+    (*gc).fg = (*gce).union_.data.fg as i32;
+    if (*gce).flags.contains(grid_flag::FG256) {
+        (*gc).fg |= COLOUR_FLAG_256;
+    }
+    (*gc).bg = (*gce).union_.data.bg as i32;
+    if (*gce).flags.contains(grid_flag::BG256) {
+        (*gc).bg |= COLOUR_FLAG_256;
+    }
+    (*gc).us = 8;
+    utf8_set(&mut (*gc).data, (*gce).union_.data.data);
+    (*gc).link = 0;
+  }
+}
+
+/// Get cell for reading.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_get_cell(gd: *mut grid, px: c_uint, py: c_uint, gc: *mut grid_cell) {
+    unsafe {
+        if grid_check_y(gd, c"grid_get_cell".as_ptr(), py) != 0 || px >= (*(*gd).linedata.add(py as usize)).cellsize {
+            std::ptr::copy(&raw const grid_default_cell, gc, 1);
+        } else {
+            grid_get_cell1((*gd).linedata.add(py as usize), px, gc);
+        }
+    }
+}
+
+/// Set cell at position.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_set_cell(gd: *mut grid, px: c_uint, py: c_uint, gc: *const grid_cell) {
+    unsafe {
+        if grid_check_y(gd, c"grid_set_cell".as_ptr(), py) != 0 {
+            return;
+        }
+
+        grid_expand_line(gd, py, px + 1, 8);
+
+        let gl = &mut (*(*gd).linedata.add(py as usize));
+        if px + 1 > gl.cellused {
+            gl.cellused = px + 1;
+        }
+
+        let gce = (*gl).celldata.add(px as usize);
+        if grid_need_extended_cell(gce, gc) != 0 {
+            grid_extended_cell(gl, gce, gc);
+        } else {
+            grid_store_cell(gce, gc, (*gc).data.data[0]);
+        }
+    }
+}
+
+/// Set padding at position.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_set_padding(gd: *mut grid, px: c_uint, py: c_uint) {
+    unsafe {
+        grid_set_cell(gd, px, py, &grid_padding_cell);
+    }
+}
+
+/// Set cells at position.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_set_cells(
+    gd: *mut grid,
+    px: u32,
+    py: u32,
+    gc: *const grid_cell,
+    s: *const c_char,
+    slen: usize,
+) {
+    unsafe {
+        if grid_check_y(gd, c"grid_set_cells".as_ptr(), py) != 0 {
+            return;
+        }
+
+        grid_expand_line(gd, py, px + slen as c_uint, 8);
+
+        let gl = (*gd).linedata.add(py as usize);
+        if px + slen as c_uint > (*gl).cellused {
+            (*gl).cellused = px + slen as c_uint;
+        }
+
+        for i in 0..slen {
+            let gce = (*gl).celldata.add((px + i as c_uint) as usize);
+            if grid_need_extended_cell(gce, gc) != 0 {
+                let gee = grid_extended_cell(gl, gce, gc);
+                (*gee).data = utf8_build_one(*s.add(i) as u8);
+            } else {
+                grid_store_cell(gce, gc, *s.add(i) as u8);
+            }
+        }
+    }
+}
+
+/// Clear area.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_clear(gd: *mut grid, px: c_uint, py: c_uint, nx: c_uint, ny: c_uint, bg: c_uint) {
+    unsafe {
+        if nx == 0 || ny == 0 {
+            return;
+        }
+
+        if px == 0 && nx == (*gd).sx {
+            grid_clear_lines(gd, py, ny, bg);
+            return;
+        }
+
+        if grid_check_y(gd, c"grid_clear".as_ptr(), py) != 0 {
+            return;
+        }
+        if grid_check_y(gd, c"grid_clear".as_ptr(), py + ny - 1) != 0 {
+            return;
+        }
+
+        for yy in py..py + ny {
+            let gl = (*gd).linedata.add(yy as usize);
+
+            let mut sx = (*gd).sx;
+            if sx > (*gl).cellsize {
+                sx = (*gl).cellsize;
+            }
+            let mut ox = nx;
+            if COLOUR_DEFAULT(bg as i32) {
+                if px > sx {
+                    continue;
+                }
+                if px + nx > sx {
+                    ox = sx - px;
+                }
+            }
+
+            grid_expand_line(gd, yy, px + ox, 8); // default bg first
+            for xx in px..px + ox {
+                grid_clear_cell(gd, xx, yy, bg);
+            }
+        }
+    }
+}
+
+/// Clear lines. This just frees and truncates the lines.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_clear_lines(gd: *mut grid, py: c_uint, ny: c_uint, bg: c_uint) {
+    unsafe {
+        if ny == 0 {
+            return;
+        }
+
+        if grid_check_y(gd, c"grid_clear_lines".as_ptr(), py) != 0 {
+            return;
+        }
+        if grid_check_y(gd, c"grid_clear_lines".as_ptr(), py + ny - 1) != 0 {
+            return;
+        }
+
+        for yy in py..py + ny {
+            grid_free_line(gd, yy);
+            grid_empty_line(gd, yy, bg);
+        }
+        if py != 0 {
+            (*(*gd).linedata.add(py as usize - 1)).flags &= !grid_line_flag::WRAPPED;
+        }
+    }
+}
+
+/// Move a group of lines.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_move_lines(gd: *mut grid, dy: c_uint, py: c_uint, ny: c_uint, bg: c_uint) {
+    unsafe {
+        if ny == 0 || py == dy {
+            return;
+        }
+
+        if grid_check_y(gd, c"grid_move_lines".as_ptr(), py) != 0 {
+            return;
+        }
+        if grid_check_y(gd, c"grid_move_lines".as_ptr(), py + ny - 1) != 0 {
+            return;
+        }
+        if grid_check_y(gd, c"grid_move_lines".as_ptr(), dy) != 0 {
+            return;
+        }
+        if grid_check_y(gd, c"grid_move_lines".as_ptr(), dy + ny - 1) != 0 {
+            return;
+        }
+
+        // Free any lines which are being replaced
+        for yy in dy..dy + ny {
+            if yy >= py && yy < py + ny {
+                continue;
+            }
+            grid_free_line(gd, yy);
+        }
+        if dy != 0 {
+            (*(*gd).linedata.add(dy as usize - 1)).flags &= !grid_line_flag::WRAPPED;
+        }
+
+        // Move the lines
+        let src = (*gd).linedata.add(py as usize);
+        let dst = (*gd).linedata.add(dy as usize);
+        std::ptr::copy(src, dst, ny as usize);
+
+        // Wipe any lines that have been moved (without freeing them - they are still present)
+        for yy in py..py + ny {
+            if yy < dy || yy >= dy + ny {
+                grid_empty_line(gd, yy, bg);
+            }
+        }
+        if py != 0 && (py < dy || py >= dy + ny) {
+            (*(*gd).linedata.add(py as usize - 1)).flags &= !grid_line_flag::WRAPPED;
+        }
+    }
+}
+
+/// Move a group of cells.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_move_cells(gd: *mut grid, dx: c_uint, px: c_uint, py: c_uint, nx: c_uint, bg: c_uint) {
+    unsafe {
+        if nx == 0 || px == dx {
+            return;
+        }
+
+        if grid_check_y(gd, c"grid_move_cells".as_ptr(), py) != 0 {
+            return;
+        }
+        let gl = (*gd).linedata.add(py as usize);
+
+        grid_expand_line(gd, py, px + nx, 8);
+        grid_expand_line(gd, py, dx + nx, 8);
+        
+        let src = (*gl).celldata.add(px as usize);
+        let dst = (*gl).celldata.add(dx as usize);
+        std::ptr::copy(src, dst, nx as usize);
+
+        if dx + nx > (*gl).cellused {
+            (*gl).cellused = dx + nx;
+        }
+
+        // Wipe any cells that have been moved
+        for xx in px..px + nx {
+            if xx >= dx && xx < dx + nx {
+                continue;
+            }
+            grid_clear_cell(gd, xx, py, bg);
+        }
+    }
+}
+
+/// Get ANSI foreground sequence.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_string_cells_fg(gc: *const grid_cell, values: *mut c_int) -> usize {
+    unsafe {
+        let mut n: usize = 0;
+        let mut r: u8 = 0; // TODO use uninit
+        let mut g: u8 = 0; // TODO use uninit
+        let mut b: u8 = 0; // TODO use uninit
+
+        if (*gc).fg & COLOUR_FLAG_256 != 0 {
+            *values.add(n) = 38;
+            n += 1;
+            *values.add(n) = 5;
+            n += 1;
+            *values.add(n) = ((*gc).fg & 0xff) as c_int;
+            n += 1;
+        } else if (*gc).fg & COLOUR_FLAG_RGB != 0 {
+            *values.add(n) = 38;
+            n += 1;
+            *values.add(n) = 2;
+            n += 1;
+            colour_split_rgb((*gc).fg, &raw mut r, &raw mut g, &raw mut b);
+            *values.add(n) = r as c_int;
+            n += 1;
+            *values.add(n) = g as c_int;
+            n += 1;
+            *values.add(n) = b as c_int;
+            n += 1;
+        } else {
+            match (*gc).fg {
+                0..=7 => {
+                    *values.add(n) = (*gc).fg + 30;
+                    n += 1;
+                }
+                8 => {
+                    *values.add(n) = 39;
+                    n += 1;
+                }
+                90..=97 => {
+                    *values.add(n) = (*gc).fg;
+                    n += 1;
+                }
+                _ => {}
+            }
+        }
+        n
+    }
+}
+
+/// Get ANSI background sequence.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_string_cells_bg(gc: *const grid_cell, values: *mut c_int) -> usize {
+    unsafe {
+        let mut n: usize = 0;
+        let mut r: u8 = 0; // TODO use uninit
+        let mut g: u8 = 0; // TODO use uninit
+        let mut b: u8 = 0; // TODO use uninit
+
+        if (*gc).bg & COLOUR_FLAG_256 != 0 {
+            *values.add(n) = 48;
+            n += 1;
+            *values.add(n) = 5;
+            n += 1;
+            *values.add(n) = ((*gc).bg & 0xff) as c_int;
+            n += 1;
+        } else if (*gc).bg & COLOUR_FLAG_RGB != 0 {
+            *values.add(n) = 48;
+            n += 1;
+            *values.add(n) = 2;
+            n += 1;
+            colour_split_rgb((*gc).bg, &mut r, &mut g, &mut b);
+            *values.add(n) = r as c_int;
+            n += 1;
+            *values.add(n) = g as c_int;
+            n += 1;
+            *values.add(n) = b as c_int;
+            n += 1;
+        } else {
+            match (*gc).bg {
+                0..=7 => {
+                    *values.add(n) = (*gc).bg + 40;
+                    n += 1;
+                }
+                8 => {
+                    *values.add(n) = 49;
+                    n += 1;
+                }
+                90..=97 => {
+                    *values.add(n) = (*gc).bg + 10;
+                    n += 1;
+                }
+                _ => {}
+            }
+        }
+        n
+    }
+}
+
+/// Get underscore colour sequence.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_string_cells_us(gc: *const grid_cell, values: *mut c_int) -> usize {
+    unsafe {
+        let mut n: usize = 0;
+        let mut r: u8 = 0; // TODO use uninit
+        let mut g: u8 = 0; // TODO use uninit
+        let mut b: u8 = 0; // TODO use uninit
+
+        if (*gc).us & COLOUR_FLAG_256 != 0 {
+            *values.add(n) = 58;
+            n += 1;
+            *values.add(n) = 5;
+            n += 1;
+            *values.add(n) = ((*gc).us & 0xff) as c_int;
+            n += 1;
+        } else if (*gc).us & COLOUR_FLAG_RGB != 0 {
+            *values.add(n) = 58;
+            n += 1;
+            *values.add(n) = 2;
+            n += 1;
+            colour_split_rgb((*gc).us, &mut r, &mut g, &mut b);
+            *values.add(n) = r as c_int;
+            n += 1;
+            *values.add(n) = g as c_int;
+            n += 1;
+            *values.add(n) = b as c_int;
+            n += 1;
+        }
+        n
+    }
+}
+
+/// Add on SGR code.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_string_cells_add_code(
+    buf: *mut c_char,
+    len: usize,
+    n: c_uint,
+    s: *mut c_int,
+    newc: *mut c_int,
+    oldc: *mut c_int,
+    nnewc: usize,
+    noldc: usize,
+    flags: c_int,
+) {
+    unsafe {
+        let mut tmp: [c_char; 64] = [0; 64];
+        let reset = n != 0 && *s == 0;
+
+        if nnewc == 0 {
+            return; // no code to add
+        }
+        if !reset && nnewc == noldc && libc::memcmp(
+            newc as *const c_void,
+            oldc as *const c_void,
+            nnewc * std::mem::size_of::<c_int>(),
+        ) == 0
+        {
+            return; // no reset and colour unchanged
+        }
+        if reset && (*newc == 49 || *newc == 39) {
+            return; // reset and colour default
+        }
+
+        if flags & GRID_STRING_ESCAPE_SEQUENCES != 0 {
+            strlcat(buf, c"\\033[".as_ptr() as *const c_char, len);
+        } else {
+            strlcat(buf, c"\x1b[".as_ptr() as *const c_char, len);
+        }
+
+        for i in 0..nnewc {
+            if i + 1 < nnewc {
+                xsnprintf(
+                    tmp.as_mut_ptr(),
+                    tmp.len(),
+                    c"%d;".as_ptr() as *const c_char,
+                    *newc.add(i),
+                );
+            } else {
+                xsnprintf(
+                    tmp.as_mut_ptr(),
+                    tmp.len(),
+                    c"%d".as_ptr() as *const c_char,
+                    *newc.add(i),
+                );
+            }
+            strlcat(buf, tmp.as_ptr(), len);
+        }
+        strlcat(buf, c"m".as_ptr() as *const c_char, len);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_string_cells_add_hyperlink(
+    buf: *mut c_char,
+    len: usize,
+    id: *const c_char,
+    uri: *const c_char,
+    flags: c_int,
+) -> c_int {
+    unsafe {
+        let mut tmp: *mut c_char = null_mut();
+
+        if strlen(uri) + strlen(id) + 17 >= len {
+            return 0;
+        }
+
+        if flags & GRID_STRING_ESCAPE_SEQUENCES != 0 {
+            strlcat(buf, c"\\033]8;".as_ptr() as *const c_char, len);
+        } else {
+            strlcat(buf, c"\x1b]8;".as_ptr() as *const c_char, len);
+        }
+
+        if *id != 0 {
+            xasprintf(&mut tmp, c"id=%s;".as_ptr() as *const c_char, id);
+            strlcat(buf, tmp, len);
+            free_(tmp);
+        } else {
+            strlcat(buf, c";".as_ptr() as *const c_char, len);
+        }
+
+        strlcat(buf, uri, len);
+
+        if flags & GRID_STRING_ESCAPE_SEQUENCES != 0 {
+            strlcat(buf, c"\\033\\\\".as_ptr() as *const c_char, len);
+        } else {
+            strlcat(buf, c"\x1b\\".as_ptr() as *const c_char, len);
+        }
+
+        1
+    }
+}
+
+/// Returns ANSI code to set particular attributes (colour, bold and so on)
+/// given a current state.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_string_cells_code(
+    lastgc: *const grid_cell,
+    gc: *const grid_cell,
+    buf: *mut c_char,
+    len: usize,
+    flags: c_int,
+    sc: *mut screen,
+    has_link: *mut c_int,
+) {
+    unsafe {
+        let mut oldc: [c_int; 64] = [0; 64];
+        let mut newc: [c_int; 64] = [0; 64];
+        let mut s: [c_int; 128] = [0; 128];
+        let mut noldc: usize = 0;
+        let mut nnewc: usize = 0;
+        let mut n: u32 = 0;
+        let mut i: usize;
+        let attr = (*gc).attr;
+        let mut lastattr = (*lastgc).attr;
+        let mut tmp: [c_char; 64] = [0; 64];
+        let mut uri: *const c_char = null();
+        let mut id: *const c_char = null();
+
+        static ATTRS: [(i32, c_uint); 13] = [
+            (GRID_ATTR_BRIGHT as i32, 1),
+            (GRID_ATTR_DIM as i32, 2),
+            (GRID_ATTR_ITALICS as i32, 3),
+            (GRID_ATTR_UNDERSCORE as i32, 4),
+            (GRID_ATTR_BLINK as i32, 5),
+            (GRID_ATTR_REVERSE as i32, 7),
+            (GRID_ATTR_HIDDEN as i32, 8),
+            (GRID_ATTR_STRIKETHROUGH , 9),
+            (GRID_ATTR_UNDERSCORE_2, 42),
+            (GRID_ATTR_UNDERSCORE_3, 43),
+            (GRID_ATTR_UNDERSCORE_4, 44),
+            (GRID_ATTR_UNDERSCORE_5, 45),
+            (GRID_ATTR_OVERLINE, 53),
+        ];
+
+        // If any attribute is removed, begin with 0
+        for (i, &(mask, _)) in ATTRS.iter().enumerate() {
+            if ((!attr & mask as u16) != 0 && (lastattr as i32 & mask) != 0) || ((*lastgc).us != 8 && (*gc).us == 8) {
+                s[n as usize] = 0;
+                n += 1;
+                lastattr &= GRID_ATTR_CHARSET;
+                break;
+            }
+        }
+
+        // For each attribute that is newly set, add its code
+        for &(mask, code) in ATTRS.iter() {
+            if (attr as i32 & mask) != 0 && (lastattr as i32 & mask) == 0 {
+                s[n as usize] = code as c_int;
+                n += 1;
+            }
+        }
+
+        // Write the attributes
+        *buf = 0;
+        if n > 0 {
+            if flags & GRID_STRING_ESCAPE_SEQUENCES != 0 {
+                strlcat(buf, c"\\033[".as_ptr() as *const c_char, len);
+            } else {
+                strlcat(buf, c"\x1b[".as_ptr() as *const c_char, len);
+            }
+
+            for i in 0..n {
+                if s[i as usize] < 10 {
+                    xsnprintf(tmp.as_mut_ptr(), tmp.len(), c"%d".as_ptr() as *const c_char, s[i as usize]);
+                } else {
+                    xsnprintf(tmp.as_mut_ptr(), tmp.len(), c"%d:%d".as_ptr() as *const c_char, s[i as usize] / 10, s[i as usize] % 10);
+                }
+                strlcat(buf, tmp.as_ptr(), len);
+                if i + 1 < n {
+                    strlcat(buf, c";".as_ptr() as *const c_char, len);
+                }
+            }
+            strlcat(buf, c"m".as_ptr() as *const c_char, len);
+        }
+
+        // If the foreground colour changed, write its parameters
+        nnewc = grid_string_cells_fg(gc, newc.as_mut_ptr());
+        noldc = grid_string_cells_fg(lastgc, oldc.as_mut_ptr());
+        grid_string_cells_add_code(buf, len, n, s.as_mut_ptr(), newc.as_mut_ptr(), oldc.as_mut_ptr(), nnewc, noldc, flags);
+
+        // If the background colour changed, append its parameters
+        nnewc = grid_string_cells_bg(gc, newc.as_mut_ptr());
+        noldc = grid_string_cells_bg(lastgc, oldc.as_mut_ptr());
+        grid_string_cells_add_code(buf, len, n, s.as_mut_ptr(), newc.as_mut_ptr(), oldc.as_mut_ptr(), nnewc, noldc, flags);
+
+        // If the underscore colour changed, append its parameters
+        nnewc = grid_string_cells_us(gc, newc.as_mut_ptr());
+        noldc = grid_string_cells_us(lastgc, oldc.as_mut_ptr());
+        grid_string_cells_add_code(buf, len, n, s.as_mut_ptr(), newc.as_mut_ptr(), oldc.as_mut_ptr(), nnewc, noldc, flags);
+
+        // Append shift in/shift out if needed
+        if (attr & GRID_ATTR_CHARSET) != 0 && (lastattr & GRID_ATTR_CHARSET) == 0 {
+            if flags & GRID_STRING_ESCAPE_SEQUENCES != 0 {
+                strlcat(buf, c"\\016".as_ptr() as *const c_char, len); // SO
+            } else {
+                strlcat(buf, c"\x0e".as_ptr() as *const c_char, len); // SO
+            }
+        }
+        if (attr & GRID_ATTR_CHARSET) == 0 && (lastattr & GRID_ATTR_CHARSET) != 0 {
+            if flags & GRID_STRING_ESCAPE_SEQUENCES != 0 {
+                strlcat(buf, c"\\017".as_ptr() as *const c_char, len); // SI
+            } else {
+                strlcat(buf, c"\x0f".as_ptr() as *const c_char, len); // SI
+            }
+        }
+
+        // Add hyperlink if changed
+        if !sc.is_null() && !(*sc).hyperlinks.is_null() && (*lastgc).link != (*gc).link {
+            if hyperlinks_get((*sc).hyperlinks, (*gc).link, &raw mut uri, &raw mut id, null_mut()) != 0 {
+                *has_link = grid_string_cells_add_hyperlink(buf, len, id, uri, flags);
+            } else if *has_link != 0 {
+                grid_string_cells_add_hyperlink(buf, len, c"".as_ptr() as *const c_char, c"".as_ptr() as *const c_char, flags);
+                *has_link = 0;
+            }
+        }
+    }
+}
+
+/// Convert cells into a string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_string_cells(gd: *mut grid, px: c_uint, py: c_uint, nx: c_uint, lastgc: *mut *mut grid_cell, flags: c_int, s: *mut screen) -> *mut c_char {
+    static mut lastgc1: grid_cell = unsafe {zeroed()};
+    unsafe {
+        let mut gc: grid_cell = zeroed();
+        let mut data: *const c_char;
+        let mut code: [c_char; 8192] = [0; 8192];
+        let mut len: usize = 128;
+        let mut off: usize = 0;
+        let mut size: usize = 0;
+        let mut codelen: usize;
+        let mut has_link: c_int = 0;
+
+        if !lastgc.is_null() && (*lastgc).is_null() {
+            std::ptr::copy(&grid_default_cell, &raw mut lastgc1, 1);
+            *lastgc = &raw mut lastgc1;
+        }
+
+        let mut buf: *mut c_char = xmalloc(len).as_ptr() as *mut c_char;
+
+        let gl = grid_peek_line(gd, py);
+        let end = if flags & GRID_STRING_EMPTY_CELLS != 0 {
+            (*gl).cellsize
+        } else {
+            (*gl).cellused
+        };
+
+        for xx in px..px + nx {
+            if gl.is_null() || xx >= end {
+                break;
+            }
+            grid_get_cell(gd, xx, py, &mut gc);
+            if gc.flags.intersects(grid_flag::PADDING) {
+                continue;
+            }
+
+            if flags & GRID_STRING_WITH_SEQUENCES != 0 {
+                grid_string_cells_code(*lastgc, &gc, code.as_mut_ptr(), code.len(), flags, s, &raw mut has_link);
+                codelen = strlen(code.as_ptr());
+                std::ptr::copy(&gc, *lastgc, 1);
+            } else {
+                codelen = 0;
+            }
+
+            data = &raw const gc.data.data as *const c_char;
+            size = gc.data.size as usize;
+            if flags & GRID_STRING_ESCAPE_SEQUENCES != 0 && size == 1 && *data as u8 == b'\\' {
+                data = c"\\\\".as_ptr() as *const c_char;
+                size = 2;
+            }
+
+            while len < off + size + codelen + 1 {
+                buf = xreallocarray(buf.cast(), 2, len).as_ptr() as *mut c_char;
+                len *= 2;
+            }
+
+            if codelen != 0 {
+                std::ptr::copy(code.as_ptr(), buf.add(off), codelen);
+                off += codelen;
+            }
+            std::ptr::copy(data, buf.add(off), size);
+            off += size;
+        }
+
+        if has_link != 0 {
+            grid_string_cells_add_hyperlink(code.as_mut_ptr(), code.len(), c"".as_ptr() as *const c_char, c"".as_ptr() as *const c_char, flags);
+            codelen = strlen(code.as_ptr());
+            while len < off + size + codelen + 1 {
+                buf = xreallocarray(buf.cast(), 2, len).as_ptr() as *mut c_char;
+                len *= 2;
+            }
+            std::ptr::copy(code.as_ptr(), buf.add(off), codelen);
+            off += codelen;
+        }
+
+        if flags & GRID_STRING_TRIM_SPACES != 0 {
+            while off > 0 && *buf.add(off - 1) as u8 == b' ' {
+                off -= 1;
+            }
+        }
+        *buf.add(off) = 0;
+
+        buf
+    }
+}
+
+/// Duplicate a set of lines between two grids. Both source and destination
+/// should be big enough.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_duplicate_lines(dst: *mut grid, mut dy: c_uint, src: *mut grid, mut sy: c_uint, mut ny: c_uint) {
+    unsafe {
+        let mut ny = ny;
+        if dy + ny > (*dst).hsize + (*dst).sy {
+            ny = (*dst).hsize + (*dst).sy - dy;
+        }
+        if sy + ny > (*src).hsize + (*src).sy {
+            ny = (*src).hsize + (*src).sy - sy;
+        }
+        grid_free_lines(dst, dy, ny);
+
+        for _ in 0..ny {
+            let srcl = (*src).linedata.add(sy as usize);
+            let dstl = (*dst).linedata.add(dy as usize);
+
+            std::ptr::copy_nonoverlapping(srcl, dstl, 1);
+            if (*srcl).cellsize != 0 {
+                (*dstl).celldata = xreallocarray_::<grid_cell_entry>(null_mut(), (*srcl).cellsize as usize).as_ptr();
+                std::ptr::copy_nonoverlapping((*srcl).celldata, (*dstl).celldata, (*srcl).cellsize as usize);
+            } else {
+                (*dstl).celldata = null_mut();
+            }
+            if (*srcl).extdsize != 0 {
+                (*dstl).extdsize = (*srcl).extdsize;
+                (*dstl).extddata = xreallocarray_::<grid_extd_entry>(null_mut(), (*dstl).extdsize as usize).as_ptr();
+                std::ptr::copy_nonoverlapping((*srcl).extddata, (*dstl).extddata, (*dstl).extdsize as usize);
+            } else {
+                (*dstl).extddata = null_mut();
+            }
+
+            sy += 1;
+            dy += 1;
+        }
+    }
+}
+
+/// Mark line as dead.
+unsafe fn grid_reflow_dead(gl: *mut grid_line) {
+  unsafe{
+    std::ptr::write_bytes(gl as *mut u8, 0, std::mem::size_of::<grid_line>());
+    (*gl).flags = grid_line_flag::DEAD;
+  }
+}
+
+/// Add lines, return the first new one.
+unsafe fn grid_reflow_add(gd: *mut grid, n: c_uint) -> *mut grid_line {
+  unsafe{
+    let sy = (*gd).sy + n;
+
+    (*gd).linedata = xreallocarray_((*gd).linedata, sy as usize).as_ptr();
+    let gl = (*gd).linedata.add((*gd).sy as usize);
+    std::ptr::write_bytes(gl as *mut u8, 0, (n as usize) * std::mem::size_of::<grid_line>());
+    (*gd).sy = sy;
+    gl
+  }
+}
+
+/// Move a line across.
+unsafe fn grid_reflow_move(gd: *mut grid, from: *mut grid_line) -> *mut grid_line {
+  unsafe{
+    let to = grid_reflow_add(gd, 1);
+    std::ptr::copy_nonoverlapping(from, to, 1);
+    grid_reflow_dead(from);
+    to
+  }
+}
+
+/// Join line below onto this one.
+unsafe fn grid_reflow_join(target: *mut grid, gd: *mut grid, sx: c_uint, yy: c_uint, mut width: c_uint, already: c_int) {
+  unsafe{
+    let mut from: *mut grid_line = null_mut();
+    let mut gc = zeroed();
+    let mut lines = 0;
+    let mut wrapped = 1;
+    let mut want = 0;
+
+    // Add a new target line
+    let (to, gl) = if already == 0 {
+        let to = (*target).sy;
+        let gl = grid_reflow_move(target, (*gd).linedata.add(yy as usize));
+        (to, gl)
+    } else {
+        let to = (*target).sy - 1;
+        let gl = (*target).linedata.add(to as usize);
+        (to, gl)
+    };
+    let mut at = (*gl).cellused;
+
+    // Loop until no more to consume or target line is full
+    loop {
+        // If this is now the last line, nothing more to do
+        if yy + 1 + lines == (*gd).hsize + (*gd).sy {
+            break;
+        }
+        let line = yy + 1 + lines;
+
+        // If next line is empty, skip it
+        if !(*(*gd).linedata.add(line as usize)).flags.intersects(grid_line_flag::WRAPPED) {
+            wrapped = 0;
+        }
+        if (*(*gd).linedata.add(line as usize)).cellused == 0 {
+            if wrapped == 0 {
+                break;
+            }
+            lines += 1;
+            continue;
+        }
+
+        // Is destination line now full? Copy first char separately
+        grid_get_cell1((*gd).linedata.add(line as usize), 0, &mut gc);
+        if width + gc.data.width as u32 > sx {
+            break;
+        }
+        width += gc.data.width as u32;
+        grid_set_cell(target, at, to, &gc);
+        at += 1;
+
+        // Join as much more as possible onto current line
+        from = (*gd).linedata.add(line as usize);
+        want = 1;
+        while want < (*from).cellused {
+            grid_get_cell1(from, want, &mut gc);
+            if width + gc.data.width as u32 > sx {
+                break;
+            }
+            width += gc.data.width as u32;
+
+            grid_set_cell(target, at, to, &gc);
+            at += 1;
+            want += 1;
+        }
+        lines += 1;
+
+        // If line wasn't wrapped or we didn't consume entire line,
+        // don't try to join further lines
+        if wrapped == 0 || want != (*from).cellused || width == sx {
+            break;
+        }
+    }
+    if lines == 0 {
+        return;
+    }
+
+    // If we didn't consume entire final line, remove what we did consume.
+    // If we consumed entire line and it wasn't wrapped, remove wrap flag.
+    let left = (*from).cellused - want;
+    if left != 0 {
+        grid_move_cells(gd, 0, want, yy + lines, left, 8);
+        (*from).cellsize = left;
+        (*from).cellused = left;
+        lines -= 1;
+    } else if wrapped == 0 {
+        (*gl).flags &= !grid_line_flag::WRAPPED;
+    }
+
+    // Remove lines that were completely consumed
+    for i in (yy + 1)..(yy + 1 + lines) {
+        free((*(*gd).linedata.add(i as usize)).celldata.cast());
+        free((*(*gd).linedata.add(i as usize)).extddata.cast());
+        grid_reflow_dead((*gd).linedata.add(i as usize));
+    }
+
+    // Adjust scroll position
+    if (*gd).hscrolled > to + lines {
+        (*gd).hscrolled -= lines;
+    } else if (*gd).hscrolled > to {
+        (*gd).hscrolled = to;
+    }
+  }
+}
+
+
+
+/// Split this line into several new ones
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_reflow_split(target: *mut grid, gd: *mut grid, sx: u32, yy: u32, at: u32) {
+  unsafe {
+    let gl = (*gd).linedata.add(yy as usize);
+    let mut gc = zeroed();
+    let used = (*gl).cellused;
+    let flags = (*gl).flags;
+
+    // How many lines do we need to insert? We know we need at least two.
+    let mut lines = if !(*gl).flags.intersects(grid_line_flag::EXTENDED) {
+        1 + ((*gl).cellused - 1) / sx
+    } else {
+        let mut lines = 2;
+        let mut width = 0;
+        for i in at..used {
+            grid_get_cell1(gl, i, &mut gc);
+            if width + gc.data.width as u32 > sx {
+                lines += 1;
+                width = 0;
+            }
+            width += gc.data.width as u32;
+        }
+        lines
+    };
+
+    // Insert new lines
+    let mut line = (*target).sy + 1;
+    let first = grid_reflow_add(target, lines);
+
+    // Copy sections from original line
+    let mut width = 0;
+    let mut xx = 0;
+    for i in at..used {
+        grid_get_cell1(gl, i, &raw mut gc);
+        if width + gc.data.width as u32 > sx {
+            (*(*target).linedata.add(line as usize)).flags |= grid_line_flag::WRAPPED;
+
+            line += 1;
+            width = 0;
+            xx = 0;
+        }
+        width += gc.data.width as u32;
+        grid_set_cell(target, xx, line, &gc);
+        xx += 1;
+    }
+    if flags.intersects(grid_line_flag::WRAPPED) {
+        (*(*target).linedata.add(line as usize)).flags |= grid_line_flag::WRAPPED;
+    }
+
+    // Move remainder of original line
+    (*gl).cellsize = at;
+    (*gl).cellused = at;
+    (*gl).flags |= grid_line_flag::WRAPPED;
+    std::ptr::copy_nonoverlapping(gl as *const grid_line, first, 1);
+    grid_reflow_dead(gl);
+
+    // Adjust scroll position
+    if yy <= (*gd).hscrolled {
+        (*gd).hscrolled += lines - 1;
+    }
+
+    // If original line had wrapped flag and there is still space in last new line,
+    // try to join with next lines
+    if width < sx && flags.intersects(grid_line_flag::WRAPPED) {
+        grid_reflow_join(target, gd, sx, yy, width, 1);
+    }
+  }
+}
+
+/// Reflow lines on grid to new width
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_reflow(gd: *mut grid, sx: u32) {
+  unsafe {
+    // Create destination grid - just used as container for line data
+    let target = grid_create((*gd).sx, 0, 0);
+
+    // Loop over each source line
+    for yy in 0..((*gd).hsize + (*gd).sy) {
+        let gl = (*gd).linedata.add(yy as usize);
+        if (*gl).flags.intersects(grid_line_flag::DEAD) {
+            continue;
+        }
+
+        // Work out width of this line. at is point where available width is hit,
+        // width is full line width
+        let mut at = 0;
+        let mut width = 0;
+        let mut gc = zeroed();
+
+        if !(*gl).flags.intersects(grid_line_flag::EXTENDED) {
+            width = (*gl).cellused;
+            if width > sx {
+                at = sx;
+            } else {
+                at = width;
+            }
+        } else {
+            for i in 0..(*gl).cellused {
+                grid_get_cell1(gl, i, &mut gc);
+                if at == 0 && width + gc.data.width as u32 > sx {
+                    at = i;
+                }
+                width += gc.data.width as u32;
+            }
+        }
+
+        // If line exactly right, move across unchanged
+        if width == sx {
+            grid_reflow_move(target, gl);
+            continue;
+        }
+
+        // If line too big, needs to be split
+        if width > sx {
+            grid_reflow_split(target, gd, sx, yy, at);
+            continue;
+        }
+
+        // If line was previously wrapped, join as much as possible of next line
+        if (*gl).flags.intersects(grid_line_flag::WRAPPED) {
+            grid_reflow_join(target, gd, sx, yy, width, 0);
+        } else {
+            grid_reflow_move(target, gl);
+        }
+    }
+
+    // Replace old grid with new
+    if (*target).sy < (*gd).sy {
+        grid_reflow_add(target, (*gd).sy - (*target).sy);
+    }
+    (*gd).hsize = (*target).sy - (*gd).sy;
+    if (*gd).hscrolled > (*gd).hsize {
+        (*gd).hscrolled = (*gd).hsize;
+    }
+    free((*gd).linedata.cast());
+    (*gd).linedata = (*target).linedata;
+    free(target.cast());
+  }
+}
+
+/// Convert to position based on wrapped lines
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_wrap_position(gd: *mut grid, px: u32, py: u32, wx: *mut u32, wy: *mut u32) {
+  unsafe {
+    let mut ax = 0;
+    let mut ay = 0;
+
+    for yy in 0..py {
+        if (*(*gd).linedata.add(yy as usize)).flags.intersects(grid_line_flag::WRAPPED) {
+            ax += (*(*gd).linedata.add(yy as usize)).cellused;
+        } else {
+            ax = 0;
+            ay += 1;
+        }
+    }
+
+    if px >= (*(*gd).linedata.add(py as usize)).cellused {
+        ax = u32::MAX;
+    } else {
+        ax += px;
+    }
+    *wx = ax;
+    *wy = ay;
+  }
+}
+
+/// Convert position based on wrapped lines back
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_unwrap_position(gd: *mut grid, px: *mut u32, py: *mut u32, mut wx: u32, wy: u32) {
+  unsafe {
+    let mut ay = 0;
+    let mut yy = 0;
+
+    while yy < (*gd).hsize + (*gd).sy - 1 {
+        if ay == wy {
+            break;
+        }
+        if !(*(*gd).linedata.add(yy as usize)).flags.intersects(grid_line_flag::WRAPPED) {
+            ay += 1;
+        }
+        yy += 1;
+    }
+
+    // yy is now 0 on unwrapped line containing wx
+    // Walk forwards until we find end or line now containing wx
+    if wx == u32::MAX {
+        while (*(*gd).linedata.add(yy as usize)).flags.intersects(grid_line_flag::WRAPPED) {
+            yy += 1;
+        }
+        wx = (*(*gd).linedata.add(yy as usize)).cellused;
+    } else {
+        while (*(*gd).linedata.add(yy as usize)).flags.intersects(grid_line_flag::WRAPPED) {
+            if wx < (*(*gd).linedata.add(yy as usize)).cellused {
+                break;
+            }
+            wx -= (*(*gd).linedata.add(yy as usize)).cellused;
+            yy += 1;
+        }
+    }
+    *px = wx;
+    *py = yy;
+  }
+}
+
+/// Get length of line
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn grid_line_length(gd: *mut grid, py: u32) -> u32 {
+  unsafe {
+    let mut gc = zeroed();
+    let mut px = (*grid_get_line(gd, py)).cellsize;
+    if px > (*gd).sx {
+        px = (*gd).sx;
+    }
+    while px > 0 {
+        grid_get_cell(gd, px - 1, py, &mut gc);
+        if (gc.flags.intersects(grid_flag::PADDING)) || gc.data.size != 1 || gc.data.data[0] != b' ' {
+            break;
+        }
+        px -= 1;
+    }
+    px
+  }
 }

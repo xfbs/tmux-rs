@@ -102,22 +102,26 @@ remove these from the linking process
 clang -fsanitize=address -fno-omit-frame-pointer -O0 -std=gnu99 -g -Wno-long-long -Wall -W -Wformat=2 -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Wwrite-strings -Wshadow -Wpointer-arith -Wsign-compare -Wundef -Wbad-function-cast -Winline -Wcast-align -Wdeclaration-after-statement -Wno-pointer-sign -Wno-attributes -Wno-unused-result -Wno-format-y2k      -o tmux cmd-parse.o     compat/fgetln.o compat/freezero.o compat/getdtablecount.o compat/getpeereid.o compat/getprogname.o compat/htonll.o compat/ntohll.o compat/setproctitle.o compat/strlcat.o compat/strlcpy.o compat/strtonum.o compat/recallocarray.o compat/getopt.o compat/imsg.o compat/imsg-buffer.o compat/vis.o compat/unvis.o compat/fdforkpty.o -L/home/collin/Git/tmux/tmux-3.5a/target/x86_64-unknown-linux-gnu/debug -ltmux_rs -lbsd -ltinfo  -levent_core  -lm  -lresolv
 ```
 
-17 big files:
-- [ ] 1535 grid // should probably be next, seeing crashes in grid-view
-
+6 Medium
 - [ ] 1120 layout
 - [ ] 1243 format-draw
 - [ ] 1266 mode-tree
 - [ ] 1348 window-tree
 - [ ] 1512 window-customize
 - [ ] 1591 tty-keys
+
+5 Large
 - [ ] 2035 status
 - [ ] 2347 screen-write
 - [ ] 3025 input
 - [ ] 3186 tty
 - [ ] 3392 server-client
+
+2 XL
 - [ ] 5294 format
 - [ ] 5786 window-copy
+
+1 Difficult
 - [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
 
 ## After 100% Rust

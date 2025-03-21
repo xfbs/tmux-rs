@@ -180,9 +180,9 @@ pub unsafe extern "C" fn hyperlinks_put(
 pub unsafe extern "C" fn hyperlinks_get(
     hl: *mut hyperlinks,
     inner: u32,
-    uri_out: *mut c_char,
-    internal_id_out: *mut *mut c_char,
-    external_id_out: *mut *mut c_char,
+    uri_out: *mut *const c_char,
+    internal_id_out: *mut *const c_char,
+    external_id_out: *mut *const c_char,
 ) -> i32 {
     unsafe {
         let mut find = MaybeUninit::<hyperlinks_uri>::uninit();

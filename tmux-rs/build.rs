@@ -88,6 +88,7 @@ fn main() {
         .define("HAVE_PR_SET_NAME", "1")
         .define("HAVE_SO_PEERCRED", "1")
         .define("DEBUG", None)
+        .define("__packed", None) // packed attributes causes ffi issues
         .define("HAVE_PROC_PID", "1")
         .define(
             "TMUX_CONF",
@@ -129,7 +130,6 @@ fn main() {
 static FILES: &[&str] = &[
     "format-draw.c",
     "format.c",
-    "grid.c",
     "input.c",
     "layout.c",
     "mode-tree.c",

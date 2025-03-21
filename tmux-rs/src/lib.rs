@@ -644,7 +644,7 @@ pub const GRID_ATTR_ALL_UNDERSCORE: i32 = GRID_ATTR_UNDERSCORE as i32
 bitflags::bitflags! {
     /// Grid flags.
     #[repr(transparent)]
-    #[derive(Copy, Clone)]
+    #[derive(Copy, Clone, Eq, PartialEq)]
     pub struct grid_flag : u8 {
         const FG256 = 0x1;
         const BG256 = 0x2;
@@ -659,6 +659,7 @@ bitflags::bitflags! {
 /// Grid line flags.
 bitflags::bitflags! {
     #[repr(transparent)]
+    #[derive(Copy, Clone, Eq, PartialEq)]
     pub struct grid_line_flag: i32 {
         const WRAPPED      = 1 << 0; // 0x1
         const EXTENDED     = 1 << 1; // 0x2
@@ -711,7 +712,6 @@ pub struct grid_cell {
     pub data: utf8_data,
     pub attr: c_ushort,
     pub flags: grid_flag,
-    pub _padding: u8,
     pub fg: i32,
     pub bg: i32,
     pub us: i32,
@@ -724,7 +724,6 @@ impl grid_cell {
             data,
             attr,
             flags,
-            _padding: 0,
             fg,
             bg,
             us,
@@ -734,8 +733,18 @@ impl grid_cell {
 }
 
 /// Grid extended cell entry.
-pub type grid_extd_entry = grid_cell;
+#[repr(C)]
+pub struct grid_extd_entry {
+    pub data: utf8_char,
+    pub attr: u16,
+    pub flags: u8,
+    pub fg: i32,
+    pub bg: i32,
+    pub us: i32,
+    pub link: u32,
+}
 
+#[derive(Copy, Clone)]
 #[repr(C, align(4))]
 pub struct grid_cell_entry_data {
     pub attr: c_uchar,
@@ -743,10 +752,17 @@ pub struct grid_cell_entry_data {
     pub bg: c_uchar,
     pub data: c_uchar,
 }
+
+#[repr(C)]
+pub union grid_cell_entry_union {
+    pub offset: u32,
+    pub data: grid_cell_entry_data,
+}
+
 #[repr(C)]
 pub struct grid_cell_entry {
-    pub data: grid_cell_entry_data,
-    pub flags: c_uchar,
+    pub union_: grid_cell_entry_union,
+    pub flags: grid_flag,
 }
 
 /// Grid line.
