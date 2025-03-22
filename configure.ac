@@ -166,10 +166,10 @@ AC_CHECK_FUNCS([ \
 #
 # htonll
 # ntohll
+# fgetln
 
 # Check for functions with a compatibility implementation.
 AC_REPLACE_FUNCS([ \
-	fgetln \
 	asprintf \
 	cfmakeraw \
 	clock_gettime \
@@ -644,14 +644,14 @@ else
 fi
 
 # Look for imsg_init in libutil.
-AC_SEARCH_LIBS(imsg_init, util, found_imsg_init=yes, found_imsg_init=no)
-if test "x$found_imsg_init" = xyes; then
-	AC_DEFINE(HAVE_IMSG)
-else
-	AC_LIBOBJ(imsg)
-	AC_LIBOBJ(imsg-buffer)
-fi
-
+# AC_SEARCH_LIBS(imsg_init, util, found_imsg_init=yes, found_imsg_init=no)
+# if test "x$found_imsg_init" = xyes; then
+# 	AC_DEFINE(HAVE_IMSG)
+# else
+# 	AC_LIBOBJ(imsg)
+# 	AC_LIBOBJ(imsg-buffer)
+# fi
+# 
 
 # Look for daemon, compat/daemon.c used if missing. Solaris 10 has it in
 # libresolv, but no declaration anywhere, so check for declaration as well as

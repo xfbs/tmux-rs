@@ -1,21 +1,25 @@
 use core::ffi::{c_int, c_uchar, c_void};
+use std::ptr::NonNull;
 use std::{mem::MaybeUninit, ptr::null_mut};
 
 use libc::{
-    __errno_location, CMSG_DATA, CMSG_FIRSTHDR, CMSG_NXTHDR, CMSG_SPACE, EAGAIN, EBADMSG, EINTR, EINVAL, ERANGE,
-    SCM_RIGHTS, SOL_SOCKET, c_char, calloc, close, cmsghdr, free, getdtablesize, iovec, memcpy, memmove, msghdr, pid_t,
+    CMSG_DATA, CMSG_FIRSTHDR, CMSG_NXTHDR, CMSG_SPACE, EAGAIN, EBADMSG, EINTR, EINVAL, ERANGE, SCM_RIGHTS, SOL_SOCKET,
+    c_char, calloc, close, cmsghdr, free, getdtablesize, getpid, iovec, memcpy, memmove, memset, msghdr, pid_t,
 };
 
+use crate::errno;
 use crate::getdtablecount::getdtablecount;
 use crate::imsg_buffer::{
     ibuf_add, ibuf_add_buf, ibuf_close, ibuf_data, ibuf_dynamic, ibuf_fd_avail, ibuf_fd_set, ibuf_free, ibuf_get,
     ibuf_get_ibuf, ibuf_open, ibuf_rewind, ibuf_size, msgbuf_clear, msgbuf_init, msgbuf_write,
 };
 use crate::queue::{Entry, tailq_entry, tailq_first, tailq_head, tailq_init, tailq_insert_tail, tailq_remove};
-
 // begin imsg.h
 
+pub const IBUF_READ_SIZE: usize = 65535;
+pub const IMSG_HEADER_SIZE: usize = size_of::<imsg_hdr>();
 pub const MAX_IMSGSIZE: usize = 16384;
+
 const IMSGF_HASFD: u16 = 1; // this needs to be u16, i think, but it's u32 in auto generated header
 
 #[repr(C)]
@@ -29,7 +33,6 @@ pub struct ibuf {
     pub rpos: usize,
     pub fd: c_int,
 }
-
 impl Entry<ibuf> for ibuf {
     unsafe fn entry(this: *mut Self) -> *mut tailq_entry<ibuf> { unsafe { &raw mut (*this).entry } }
 }
@@ -45,8 +48,8 @@ pub struct msgbuf {
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct ibuf_read {
-    pub buf: [c_uchar; 65535usize],
-    pub rptr: *mut c_uchar,
+    pub buf: [u8; IBUF_READ_SIZE],
+    pub rptr: *mut u8,
     pub wpos: usize,
 }
 #[repr(C)]
@@ -59,7 +62,6 @@ pub struct imsgbuf {
     pub pid: pid_t,
 }
 
-pub const IMSG_HEADER_SIZE: usize = size_of::<imsg_hdr>();
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct imsg_hdr {
@@ -69,6 +71,7 @@ pub struct imsg_hdr {
     pub peerid: u32,
     pub pid: u32,
 }
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct imsg {
@@ -77,11 +80,6 @@ pub struct imsg {
     pub data: *mut c_void,
     pub buf: *mut ibuf,
 }
-
-impl crate::queue::Entry<imsg_fd> for imsg_fd {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<imsg_fd> { unsafe { &raw mut (*this).entry } }
-}
-
 // end imsg.h
 // begin imsg.c
 
@@ -91,17 +89,21 @@ pub struct imsg_fd {
     entry: tailq_entry<imsg_fd>,
     fd: i32,
 }
+impl crate::queue::Entry<imsg_fd> for imsg_fd {
+    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<imsg_fd> { unsafe { &raw mut (*this).entry } }
+}
 
+#[unsafe(no_mangle)]
 static mut imsg_fd_overhead: i32 = 0;
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_init(imsgbuf: *mut imsgbuf, fd: c_int) {
     unsafe {
         msgbuf_init(&raw mut (*imsgbuf).w);
-        (*imsgbuf).r = core::mem::zeroed();
+        memset((&raw mut (*imsgbuf).r).cast(), 0, size_of::<ibuf_read>());
         (*imsgbuf).fd = fd;
         (*imsgbuf).w.fd = fd;
-        (*imsgbuf).pid = libc::getpid();
+        (*imsgbuf).pid = getpid();
         tailq_init(&raw mut (*imsgbuf).fds);
     }
 }
@@ -110,20 +112,17 @@ pub unsafe extern "C" fn imsg_init(imsgbuf: *mut imsgbuf, fd: c_int) {
 pub unsafe extern "C" fn imsg_read(imsgbuf: *mut imsgbuf) -> isize {
     const BUFSIZE: usize = unsafe { CMSG_SPACE(size_of::<c_int>() as u32) } as usize;
     union cmsgbuf {
-        hdr: cmsghdr,
-        buf: [c_uchar; BUFSIZE],
-    };
+        _hdr: cmsghdr,
+        buf: [u8; BUFSIZE],
+    }
 
     unsafe {
-        let mut n: isize = -1;
-        let fd: i32;
-
         let mut msg: msghdr = core::mem::zeroed();
         let mut cmsgbuf: cmsgbuf = core::mem::zeroed();
 
         let mut iov: iovec = iovec {
             iov_base: (*imsgbuf).r.buf.as_mut_ptr().add((*imsgbuf).r.wpos) as *mut c_void,
-            iov_len: 65535usize - (*imsgbuf).r.wpos,
+            iov_len: IBUF_READ_SIZE - (*imsgbuf).r.wpos, // size_of(imsgbuf->.r.buf)
         };
         msg.msg_iov = &raw mut iov;
         msg.msg_iovlen = 1;
@@ -135,6 +134,7 @@ pub unsafe extern "C" fn imsg_read(imsgbuf: *mut imsgbuf) -> isize {
             return -1;
         }
 
+        let mut n: isize;
         // this extra labeled block isn't necessary, but makes the breaks more semantic
         // goto fail => break 'fail
         // goto again => continue 'again
@@ -145,14 +145,14 @@ pub unsafe extern "C" fn imsg_read(imsgbuf: *mut imsgbuf) -> isize {
                     + ((CMSG_SPACE(size_of::<libc::c_int>() as u32) - CMSG_SPACE(0)) as i32 / size_of::<c_int>() as i32)
                     >= getdtablesize()
                 {
-                    *__errno_location() = EAGAIN;
+                    errno!() = EAGAIN;
                     free(ifd as *mut c_void);
                     return -1;
                 }
 
                 n = libc::recvmsg((*imsgbuf).fd, &raw mut msg, 0);
                 if n == -1 {
-                    if *__errno_location() == EINTR {
+                    if errno!() == EINTR {
                         continue 'again;
                     }
                     break 'fail;
@@ -164,9 +164,7 @@ pub unsafe extern "C" fn imsg_read(imsgbuf: *mut imsgbuf) -> isize {
                 let mut cmsg: *mut cmsghdr = CMSG_FIRSTHDR(&raw const msg);
                 while !cmsg.is_null() {
                     if (*cmsg).cmsg_level == SOL_SOCKET && (*cmsg).cmsg_type == SCM_RIGHTS {
-                        let mut i: c_int;
-
-                        let j: c_int = (((cmsg as *mut c_char).add((*cmsg).cmsg_len).addr() - CMSG_DATA(cmsg).addr())
+                        let j: i32 = (((cmsg as *mut c_char).add((*cmsg).cmsg_len).addr() - CMSG_DATA(cmsg).addr())
                             / size_of::<c_int>()) as i32;
                         for i in 0..j {
                             let fd = *(CMSG_DATA(cmsg) as *mut c_int).add(i as usize);
@@ -179,6 +177,7 @@ pub unsafe extern "C" fn imsg_read(imsgbuf: *mut imsgbuf) -> isize {
                             }
                         }
                     }
+
                     cmsg = CMSG_NXTHDR(&raw const msg, cmsg);
                 }
 
@@ -196,6 +195,7 @@ pub unsafe extern "C" fn imsg_read(imsgbuf: *mut imsgbuf) -> isize {
 pub unsafe extern "C" fn imsg_get(imsgbuf: *mut imsgbuf, imsg: *mut imsg) -> isize {
     unsafe {
         let mut m = MaybeUninit::<imsg>::uninit();
+        #[allow(clippy::shadow_reuse)]
         let m = m.as_mut_ptr();
         let av: usize = (*imsgbuf).r.wpos;
 
@@ -208,8 +208,8 @@ pub unsafe extern "C" fn imsg_get(imsgbuf: *mut imsgbuf, imsg: *mut imsg) -> isi
             (*imsgbuf).r.buf.as_ptr() as *const c_void,
             size_of::<imsg_hdr>(),
         );
-        if ((*m).hdr.len as usize) < IMSG_HEADER_SIZE || ((*m).hdr.len as usize) > MAX_IMSGSIZE {
-            *__errno_location() = ERANGE;
+        if ((*m).hdr.len as usize) < IMSG_HEADER_SIZE || (*m).hdr.len > MAX_IMSGSIZE as u16 {
+            errno!() = ERANGE;
             return -1;
         }
         if ((*m).hdr.len as usize) > av {
@@ -261,7 +261,7 @@ pub unsafe extern "C" fn imsg_get(imsgbuf: *mut imsgbuf, imsg: *mut imsg) -> isi
 pub unsafe extern "C" fn imsg_get_ibuf(imsg: *mut imsg, ibuf: *mut ibuf) -> c_int {
     unsafe {
         if (*imsg).buf.is_null() {
-            *__errno_location() = EBADMSG;
+            errno!() = EBADMSG;
             return -1;
         }
         ibuf_get_ibuf((*imsg).buf, ibuf_size((*imsg).buf), ibuf)
@@ -272,11 +272,11 @@ pub unsafe extern "C" fn imsg_get_ibuf(imsg: *mut imsg, ibuf: *mut ibuf) -> c_in
 pub unsafe extern "C" fn imsg_get_data(imsg: *mut imsg, data: *mut c_void, len: usize) -> i32 {
     unsafe {
         if len == 0 {
-            *__errno_location() = EINVAL;
+            errno!() = EINVAL;
             return -1;
         }
         if (*imsg).buf.is_null() || ibuf_size((*imsg).buf) != len {
-            *__errno_location() = EBADMSG;
+            errno!() = EBADMSG;
             return -1;
         }
         ibuf_get((*imsg).buf, data, len)
@@ -374,47 +374,42 @@ pub unsafe extern "C" fn imsg_compose_ibuf(
     id: u32,
     pid: pid_t,
     buf: *mut ibuf,
-) -> c_int {
+) -> i32 {
     unsafe {
-        let hdrbuf: *mut ibuf = null_mut();
-        let mut hdr: imsg_hdr = std::mem::zeroed();
+        let mut hdrbuf: *mut ibuf = null_mut();
 
-        let fail = || {
-            // TODO is this equivalent to the goto fail;
-            // TODO is the old value of the pointer captured?
-            let save_errno = *__errno_location();
-            ibuf_free(buf);
-            ibuf_free(hdrbuf);
-            *__errno_location() = save_errno;
-            -1
-        };
+        'fail: {
+            if ibuf_size(buf) + IMSG_HEADER_SIZE > MAX_IMSGSIZE {
+                errno!() = ERANGE;
+                break 'fail;
+            }
 
-        if ibuf_size(buf) + IMSG_HEADER_SIZE > MAX_IMSGSIZE {
-            *__errno_location() = ERANGE;
-            return fail();
+            let mut hdr: imsg_hdr = imsg_hdr {
+                type_,
+                len: (ibuf_size(buf) + IMSG_HEADER_SIZE) as u16,
+                flags: 0,
+                peerid: id,
+                pid: if pid != 0 { pid as u32 } else { (*imsgbuf).pid as u32 },
+            };
+
+            hdrbuf = ibuf_open(IMSG_HEADER_SIZE);
+            if hdrbuf.is_null() {
+                break 'fail;
+            }
+            if imsg_add(hdrbuf, &raw mut hdr as *mut c_void, size_of::<imsg_hdr>()) == -1 {
+                break 'fail;
+            }
+
+            ibuf_close(&raw mut (*imsgbuf).w, hdrbuf);
+            ibuf_close(&raw mut (*imsgbuf).w, buf);
+            return 1;
         }
 
-        hdr.type_ = type_;
-        hdr.len = (ibuf_size(buf) + IMSG_HEADER_SIZE) as u16;
-        hdr.flags = 0;
-        hdr.peerid = id;
-
-        hdr.pid = pid as u32;
-        if hdr.pid == 0 {
-            hdr.pid = (*imsgbuf).pid as u32;
-        }
-
-        let hdrbuf = ibuf_open(IMSG_HEADER_SIZE);
-        if hdrbuf.is_null() {
-            return fail();
-        }
-        if imsg_add(hdrbuf, &raw mut hdr as *mut c_void, size_of::<imsg_hdr>()) == -1 {
-            return fail();
-        }
-
-        ibuf_close(&raw mut (*imsgbuf).w, hdrbuf);
-        ibuf_close(&raw mut (*imsgbuf).w, buf);
-        1
+        let save_errno = errno!();
+        ibuf_free(buf);
+        ibuf_free(hdrbuf);
+        errno!() = save_errno;
+        -1
     }
 }
 
@@ -463,28 +458,25 @@ pub unsafe extern "C" fn imsg_create(
     mut datalen: usize,
 ) -> *mut ibuf {
     unsafe {
-        let mut hdr: imsg_hdr = std::mem::zeroed();
-
         datalen += IMSG_HEADER_SIZE;
         if datalen > MAX_IMSGSIZE {
-            *__errno_location() = ERANGE;
+            errno!() = ERANGE;
             return null_mut();
         }
 
-        hdr.type_ = type_;
-        hdr.flags = 0;
-        hdr.peerid = id;
-
-        hdr.pid = pid as _;
-        if hdr.pid == 0 {
-            hdr.pid = (*imsgbuf).pid as _;
-        }
+        let hdr: imsg_hdr = imsg_hdr {
+            type_,
+            flags: 0,
+            peerid: id,
+            pid: if pid != 0 { pid as u32 } else { (*imsgbuf).pid as u32 },
+            len: 0, // TODO can be uninit
+        };
 
         let wbuf = ibuf_dynamic(datalen, MAX_IMSGSIZE);
         if wbuf.is_null() {
             return null_mut();
         }
-        if imsg_add(wbuf, &raw mut hdr as *mut c_void, size_of::<imsg_hdr>()) == -1 {
+        if imsg_add(wbuf, &raw const hdr as *const c_void, size_of::<imsg_hdr>()) == -1 {
             return null_mut();
         }
 
@@ -523,11 +515,11 @@ pub unsafe extern "C" fn imsg_free(imsg: *mut imsg) { unsafe { ibuf_free((*imsg)
 #[unsafe(no_mangle)]
 unsafe extern "C" fn imsg_dequeue_fd(imsgbuf: *mut imsgbuf) -> i32 {
     unsafe {
-        let ifd = tailq_first(&raw mut (*imsgbuf).fds);
-
-        if ifd.is_null() {
+        let Some(ifd) = NonNull::new(tailq_first(&raw mut (*imsgbuf).fds)) else {
             return -1;
-        }
+        };
+        #[allow(clippy::shadow_reuse)]
+        let ifd = ifd.as_ptr();
 
         let fd = (*ifd).fd;
         tailq_remove(&raw mut (*imsgbuf).fds, ifd);
@@ -554,13 +546,11 @@ pub unsafe extern "C" fn imsg_clear(imsgbuf: *mut imsgbuf) {
     unsafe {
         msgbuf_clear(&raw mut (*imsgbuf).w);
 
-        loop {
-            let fd = imsg_dequeue_fd(imsgbuf);
-
-            if fd == -1 {
-                break;
-            }
-
+        let mut fd;
+        while {
+            fd = imsg_dequeue_fd(imsgbuf);
+            fd != -1
+        } {
             close(fd);
         }
     }

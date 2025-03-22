@@ -81,13 +81,13 @@ pub unsafe extern "C" fn proc_event_cb(_fd: i32, events: i16, arg: *mut c_void) 
         let imsg = imsg.as_mut_ptr();
 
         if ((*peer).flags & PEER_BAD == 0 && events & EV_READ != 0) {
-            n = imsg_read(&raw mut (*peer).ibuf);
+            n = imsg_read(&raw mut (*peer).ibuf) as isize;
             if ((n == -1 && errno!() != EAGAIN) || n == 0) {
                 ((*peer).dispatchcb.unwrap())(null_mut(), (*peer).arg);
                 return;
             }
             loop {
-                n = imsg_get(&raw mut (*peer).ibuf, imsg);
+                n = imsg_get(&raw mut (*peer).ibuf, imsg) as isize;
                 if (n == -1) {
                     ((*peer).dispatchcb.unwrap())(null_mut(), (*peer).arg);
                     return;
@@ -112,7 +112,7 @@ pub unsafe extern "C" fn proc_event_cb(_fd: i32, events: i16, arg: *mut c_void) 
         }
 
         if (events & EV_WRITE as i16 != 0) {
-            if msgbuf_write(&raw mut (*peer).ibuf.w) <= 0 && errno!() != EAGAIN {
+            if msgbuf_write((&raw mut (*peer).ibuf.w).cast()) <= 0 && errno!() != EAGAIN {
                 ((*peer).dispatchcb.unwrap())(null_mut(), (*peer).arg);
                 return;
             }

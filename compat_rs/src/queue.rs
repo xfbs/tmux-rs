@@ -212,10 +212,7 @@ pub use tailq_last;
 */
 
 pub unsafe fn tailq_last<T>(head: *mut tailq_head<T>) -> *mut T {
-    unsafe {
-        let head: *mut tailq_head<T> = (*head).tqh_last.cast();
-        *(*head).tqh_last
-    }
+    unsafe { *(*(*head).tqh_last.cast::<tailq_head<T>>()).tqh_last }
 }
 
 /*

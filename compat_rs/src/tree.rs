@@ -300,6 +300,7 @@ where
         while let Some(parent) = NonNull::new(rb_parent(elm))
             && rb_color(parent.as_ptr()) == rb_color::RB_RED
         {
+            #[allow(clippy::shadow_reuse)]
             let mut parent = parent.as_ptr();
             let gparent = rb_parent(parent);
             if parent == rb_left(gparent) {

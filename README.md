@@ -73,9 +73,10 @@ more then just server exited unexpectedly.
 - print a stacktrace on server process segfault
 
 # NEXT
+- found many bugs in imsg and imsg-buffer implementation, seem to have not been caught when implemented due to how symbols are resolved
+  - completely retranslate imsg and imsg-buffer
 - I suspect that linking is shadowing some broken rust implementations, and maybe when compiling with rust the rust implementation is preferred
   - it's interesting I notice differences in behavior between debug and release for this
-- improve imsg and imsg buffer implemnentation
 
 # TODO
 - review cmd_rotate_window.rs cmd_rotate_window_exec tailq_foreach calls

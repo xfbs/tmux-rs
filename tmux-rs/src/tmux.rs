@@ -343,10 +343,10 @@ pub unsafe extern "C" fn sig2name(signo: i32) -> *mut c_char {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn find_cwd() -> *mut c_char {
-    static mut cwd: [c_char; PATH_MAX as usize] = unsafe { zeroed() };
+    static mut cwd: [c_char; PATH_MAX as usize] = [0; PATH_MAX as usize];
     unsafe {
-        let mut resolved1: [c_char; PATH_MAX as usize] = unsafe { zeroed() };
-        let mut resolved2: [c_char; PATH_MAX as usize] = unsafe { zeroed() };
+        let mut resolved1: [c_char; PATH_MAX as usize] = [0; PATH_MAX as usize];
+        let mut resolved2: [c_char; PATH_MAX as usize] = [0; PATH_MAX as usize];
 
         if getcwd(&raw mut cwd as _, size_of::<[c_char; PATH_MAX as usize]>()).is_null() {
             return null_mut();

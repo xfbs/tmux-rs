@@ -2,6 +2,9 @@
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 #![allow(clippy::missing_safety_doc)]
+#![warn(clippy::shadow_reuse)]
+#![warn(clippy::shadow_same)]
+#![warn(clippy::shadow_unrelated)]
 
 pub mod fdforkpty;
 pub mod getdtablecount;
@@ -62,3 +65,10 @@ pub const ACCESSPERMS: mode_t = S_IRWXU | S_IRWXG | S_IRWXO;
 
 // extern crate compat_derive;
 // pub use compat_derive::TailQEntry;
+
+macro_rules! errno {
+    () => {
+        *::libc::__errno_location()
+    };
+}
+use errno;

@@ -34,6 +34,7 @@ struct imsg_fd {
   int fd;
 };
 
+// extern int imsg_fd_overhead; // = 0;
 int imsg_fd_overhead = 0;
 
 static int imsg_dequeue_fd(struct imsgbuf *);

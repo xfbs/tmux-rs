@@ -10,7 +10,7 @@ pub extern "C" fn getptmfd() -> c_int { c_int::MAX }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn fdforkpty(
-    ptmfd: c_int,
+    _ptmfd: c_int,
     master: *mut c_int,
     name: *mut c_char,
     tio: *mut termios,

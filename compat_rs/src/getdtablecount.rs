@@ -2,7 +2,7 @@
 pub extern "C" fn getdtablecount_() -> libc::c_int {
     if let Ok(read_dir) = std::fs::read_dir("/proc/self/fd") {
         let mut i = 0;
-        for e in read_dir {
+        for _ in read_dir {
             i += 1;
         }
         i
