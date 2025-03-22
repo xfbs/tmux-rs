@@ -408,6 +408,7 @@ unsafe extern "C" {
 #[unsafe(no_mangle)]
 pub extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *mut *mut c_char) {
     unsafe {
+        #[cfg(not(miri))]
         setproctitle_init(argc, argv.cast(), env.cast());
         let mut cause: *mut c_char = null_mut();
         let mut path: *const c_char = null_mut();
@@ -614,7 +615,7 @@ pub extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *mut *mut
             flags |= client_flag::DEFAULTSOCKET;
         }
         socket_path = path;
-        free(label as _);
+        free_(label);
 
         // Pass control to the client.
         std::process::exit(client_main(osdep_event_init(), argc, argv, flags, feat));

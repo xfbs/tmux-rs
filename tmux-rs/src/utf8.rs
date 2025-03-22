@@ -216,7 +216,7 @@ pub unsafe extern "C" fn utf8_from_data(ud: *const utf8_data, uc: *mut utf8_char
                 (*ud).width as u32,
                 (*ud).size as u32,
                 (*ud).size as i32,
-                (*ud).data,
+                (*ud).data.as_ptr(),
                 *uc,
             );
             return UTF8_DONE;
@@ -359,7 +359,7 @@ pub unsafe extern "C" fn utf8_towc(ud: *const utf8_data, wc: *mut wchar_t) -> ut
         log_debug(
             c"UTF-8 %.*s is %05X".as_ptr(),
             (*ud).size as i32,
-            (*ud).data,
+            (*ud).data.as_ptr(),
             *wc as u32,
         );
     }

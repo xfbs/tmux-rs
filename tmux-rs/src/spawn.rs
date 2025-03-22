@@ -60,7 +60,7 @@ pub unsafe extern "C" fn spawn_log(from: *const c_char, sc: *mut spawn_context) 
                 c"wl=none wp0=none".as_ptr(),
             );
         }
-        log_debug(c"%s: s=$%u %s idx=%d".as_ptr(), from, (*s).id, tmp, (*sc).idx);
+        log_debug(c"%s: s=$%u %s idx=%d".as_ptr(), from, (*s).id, tmp.as_ptr(), (*sc).idx);
         log_debug(
             c"%s: name=%s".as_ptr(),
             from,

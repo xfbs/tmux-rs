@@ -73,10 +73,6 @@ more then just server exited unexpectedly.
 - print a stacktrace on server process segfault
 
 # NEXT
-- found many bugs in imsg and imsg-buffer implementation, seem to have not been caught when implemented due to how symbols are resolved
-  - completely retranslate imsg and imsg-buffer
-- I suspect that linking is shadowing some broken rust implementations, and maybe when compiling with rust the rust implementation is preferred
-  - it's interesting I notice differences in behavior between debug and release for this
 
 # TODO
 - review cmd_rotate_window.rs cmd_rotate_window_exec tailq_foreach calls
@@ -118,7 +114,7 @@ clang -fsanitize=address -fno-omit-frame-pointer -O0 -std=gnu99 -g -Wno-long-lon
 - [ ] 3392 server-client
 
 2 XL
-- [ ] 5294 format
+- [ ] 5294 format <- maybe this one next to knock one out and get rid of a compiler warning
 - [ ] 5786 window-copy
 
 1 Difficult
@@ -126,7 +122,6 @@ clang -fsanitize=address -fno-omit-frame-pointer -O0 -std=gnu99 -g -Wno-long-lon
 
 ## After 100% Rust
 
-- miri
 - coverage
 - convert to references instead of pointers
   - requirements to convert pointer to reference <https://doc.rust-lang.org/core/ptr/index.html#pointer-to-reference-conversion>
@@ -140,8 +135,9 @@ clang -fsanitize=address -fno-omit-frame-pointer -O0 -std=gnu99 -g -Wno-long-lon
 - get rid of paste crate, won't need to join symbols any more for C code
 - figure out why building rust binary doesn't work
 - implement cmd-parse.y parser in pest or nom to remove yacc as a build dependency
-- performance
+- performance: perf command like: perf record -F 99 -i -p 696418 -p 696420
 - lints
+- miri (too many libc functions, maybe possible for tests)
 
 
 # Thoughts & Ideas
@@ -210,7 +206,6 @@ undefined behaviour in this context.
 - typo in rb_right macro, expanded to access left field
 - crashes when config file is completely commented out: missing early exit in cmdq_get_command, no return in function
 - Due to use after shadowing in client_.rs client_connect xasprintf usage found by using LSAN_OPTIONS=report_objects=1 leak on exit:
-
 - memcpy_(&raw mut tmp as *mut i8, in_, end); should have been: memcpy_(tmp, in_, end)
   -  because I switched to a pointer instead of buffer,but didn't change memcpy code
 - typo fps, fsp, variable unused null , cmd-queue.c ( causing crash when C-b t for clock)
@@ -222,6 +217,12 @@ undefined behaviour in this context.
 - flipped null check
 - flipped : char		 acs[UCHAR_MAX + 1][2]; -> pub acs: [[c_char; c_uchar::MAX as usize + 1]; 2], should be [[c_char; 2]; c_uchar::MAX as usize + 1],
 - crashes when typing 'c' because of one of my bindings (seems something fixed this)
+- linking problem
+  - found many bugs in imsg and imsg-buffer implementation, seem to have not been caught when implemented due to how symbols are resolved
+    - completely retranslate imsg and imsg-buffer
+  - I suspect that linking is shadowing some broken rust implementations, and maybe when compiling with rust the rust implementation is preferred
+    - it's interesting I notice differences in behavior between debug and release for this
+
 
 ## Why not [zellij](https://zellij.dev/)
 

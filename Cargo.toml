@@ -2,16 +2,8 @@
 members = ["tmux-rs", "compat_rs"]
 resolver = "2"
 
-[profile.dev]
-debug = true
-debug-assertions = true
-overflow-checks = true
-panic = "abort"
-
 [profile.release]
 debug = true
-debug-assertions = true
-overflow-checks = true
 panic = "abort"
 
 [workspace.dependencies]

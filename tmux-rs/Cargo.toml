@@ -2,17 +2,12 @@
 name = "tmux-rs"
 version = "0.1.0"
 edition = "2024"
-# autobins = false
-
-[lib]
-# crate-type = ["staticlib"]
-crate-type = ["staticlib", "lib"]
 
 [dependencies]
 bitflags     = { workspace = true }
 compat_rs    = { workspace = true }
 libc         = { workspace = true }
-paste.workspace = true
+paste        = { workspace = true }
 
 [build-dependencies]
 cc = { workspace = true }

@@ -567,7 +567,6 @@ pub unsafe extern "C" fn msgbuf_write(msgbuf: *mut msgbuf) -> c_int {
         let mut buf0: *mut ibuf = null_mut();
         let mut i: u32 = 0;
         let mut msg: msghdr = std::mem::zeroed();
-        let mut cmsg: *mut cmsghdr = std::mem::zeroed();
         let mut cmsgbuf: cmsgbuf = std::mem::zeroed();
         union cmsgbuf {
             _hdr: cmsghdr,
@@ -595,7 +594,7 @@ pub unsafe extern "C" fn msgbuf_write(msgbuf: *mut msgbuf) -> c_int {
         if !buf0.is_null() {
             msg.msg_control = &raw mut cmsgbuf.buf as _;
             msg.msg_controllen = size_of_val(&cmsgbuf.buf);
-            cmsg = CMSG_FIRSTHDR(&raw const msg);
+            let cmsg = CMSG_FIRSTHDR(&raw const msg);
             (*cmsg).cmsg_len = CMSG_LEN(size_of::<c_int>() as u32) as usize;
             (*cmsg).cmsg_level = SOL_SOCKET;
             (*cmsg).cmsg_type = SCM_RIGHTS;
