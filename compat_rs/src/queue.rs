@@ -285,7 +285,7 @@ pub use tailq_insert_after;
 
 #[macro_export]
 macro_rules! tailq_insert_before {
-    ($listelm:ident, $elm:ident, $field:ident) => {
+    ($listelm:expr, $elm:ident, $field:ident) => {
         (*$elm).$field.tqe_prev = (*$listelm).$field.tqe_prev;
         (*$elm).$field.tqe_next = $listelm;
         *(*$listelm).$field.tqe_prev = $elm;

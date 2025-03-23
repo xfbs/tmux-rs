@@ -132,7 +132,7 @@ pub unsafe extern "C" fn screen_redraw_pane_border(
         }
 
         // Left/right borders
-        if pane_status == PANE_STATUS_OFF {
+        if pane_status == pane_status::PANE_STATUS_OFF {
             if screen_redraw_two_panes((*wp).window, 0) != 0 && split != 0 {
                 if (*wp).xoff == 0 && px == (*wp).sx && py <= (*wp).sy / 2 {
                     return screen_redraw_border_type::SCREEN_REDRAW_BORDER_RIGHT;
@@ -162,7 +162,7 @@ pub unsafe extern "C" fn screen_redraw_pane_border(
         }
 
         // Top/bottom borders
-        if pane_status == PANE_STATUS_OFF {
+        if pane_status == pane_status::PANE_STATUS_OFF {
             if screen_redraw_two_panes((*wp).window, 1) != 0 && split != 0 {
                 if (*wp).yoff == 0 && py == (*wp).sy && px <= (*wp).sx / 2 {
                     return screen_redraw_border_type::SCREEN_REDRAW_BORDER_BOTTOM;
@@ -180,7 +180,7 @@ pub unsafe extern "C" fn screen_redraw_pane_border(
                     }
                 }
             }
-        } else if pane_status == PANE_STATUS_TOP {
+        } else if pane_status == pane_status::PANE_STATUS_TOP {
             if ((*wp).xoff == 0 || px >= (*wp).xoff - 1) && px <= ex {
                 if (*wp).yoff != 0 && py == (*wp).yoff - 1 {
                     return screen_redraw_border_type::SCREEN_REDRAW_BORDER_TOP;
@@ -269,7 +269,7 @@ pub unsafe extern "C" fn screen_redraw_type_of_cell(ctx: *mut screen_redraw_ctx,
             borders |= 4;
         }
         match pane_status {
-            PANE_STATUS_TOP => {
+            pane_status::PANE_STATUS_TOP => {
                 if py != 0 && screen_redraw_cell_border(ctx, px, py - 1) != 0 {
                     borders |= 2;
                 }
@@ -277,7 +277,7 @@ pub unsafe extern "C" fn screen_redraw_type_of_cell(ctx: *mut screen_redraw_ctx,
                     borders |= 1;
                 }
             }
-            PANE_STATUS_BOTTOM => {
+            pane_status::PANE_STATUS_BOTTOM => {
                 if py == 0 || screen_redraw_cell_border(ctx, px, py - 1) != 0 {
                     borders |= 2;
                 }
@@ -345,7 +345,7 @@ pub unsafe extern "C" fn screen_redraw_check_cell(
             return screen_redraw_type_of_cell(ctx, px, py);
         }
 
-        if pane_status != PANE_STATUS_OFF {
+        if pane_status != pane_status::PANE_STATUS_OFF {
             wp = server_client_get_pane(c);
             active = wp;
             loop {
@@ -354,7 +354,7 @@ pub unsafe extern "C" fn screen_redraw_check_cell(
                         break 'next1;
                     }
 
-                    if pane_status == PANE_STATUS_TOP {
+                    if pane_status == pane_status::PANE_STATUS_TOP {
                         line = (*wp).yoff - 1;
                     } else {
                         line = (*wp).yoff + (*wp).sy;
@@ -477,7 +477,7 @@ pub unsafe extern "C" fn screen_redraw_make_pane_status(
 
         for i in 0..width {
             px = (*wp).xoff + 2 + i;
-            if pane_status == PANE_STATUS_TOP {
+            if pane_status == pane_status::PANE_STATUS_TOP {
                 py = (*wp).yoff - 1;
             } else {
                 py = (*wp).yoff + (*wp).sy;
@@ -527,7 +527,7 @@ pub unsafe extern "C" fn screen_redraw_draw_pane_status(ctx: *mut screen_redraw_
             let s = &raw mut (*wp).status_screen;
 
             let size: u32 = (*wp).status_size as u32;
-            let mut yoff = if (*ctx).pane_status == PANE_STATUS_TOP {
+            let mut yoff = if (*ctx).pane_status == pane_status::PANE_STATUS_TOP {
                 (*wp).yoff - 1
             } else {
                 (*wp).yoff + (*wp).sy
@@ -601,7 +601,7 @@ unsafe extern "C" fn screen_redraw_update(c: *mut client, mut flags: client_flag
             flags |= client_flag::REDRAWOVERLAY;
         }
 
-        if options_get_number(wo, c"pane-border-status".as_ptr()) as i32 != PANE_STATUS_OFF {
+        if options_get_number(wo, c"pane-border-status".as_ptr()) as i32 != pane_status::PANE_STATUS_OFF as i32 {
             screen_redraw_set_context(c, ctx.as_mut_ptr());
             let lines =
                 pane_lines::try_from(options_get_number(wo, c"pane-border-lines".as_ptr()) as i32).unwrap_or_default();
@@ -647,7 +647,9 @@ pub unsafe extern "C" fn screen_redraw_set_context(c: *mut client, ctx: *mut scr
         }
         (*ctx).statuslines = lines;
 
-        (*ctx).pane_status = options_get_number(wo, c"pane-border-status".as_ptr()) as i32;
+        (*ctx).pane_status = (options_get_number(wo, c"pane-border-status".as_ptr()) as i32)
+            .try_into()
+            .unwrap();
         (*ctx).pane_lines = (options_get_number(wo, c"pane-border-lines".as_ptr()) as i32)
             .try_into()
             .unwrap();
@@ -698,7 +700,7 @@ pub unsafe extern "C" fn screen_redraw_screen(c: *mut client) {
 
         if flags.intersects(client_flag::REDRAWWINDOW | client_flag::REDRAWBORDERS) {
             log_debug(c"%s: redrawing borders".as_ptr(), (*c).name);
-            if (*ctx).pane_status != PANE_STATUS_OFF {
+            if (*ctx).pane_status != pane_status::PANE_STATUS_OFF {
                 screen_redraw_draw_pane_status(ctx);
             }
             screen_redraw_draw_borders(ctx);

@@ -268,7 +268,7 @@ pub unsafe extern "C" fn utf8_to_data(uc: utf8_char, ud: *mut utf8_data) {
             (*ud).width as u32,
             (*ud).size as u32,
             (*ud).size as i32,
-            (*ud).data,
+            (*ud).data.as_ptr(),
         );
     }
 }
@@ -347,7 +347,7 @@ pub unsafe extern "C" fn utf8_towc(ud: *const utf8_data, wc: *mut wchar_t) -> ut
                 log_debug(
                     c"UTF-8 %.*s, mbtowc() %d".as_ptr(),
                     (*ud).size as i32,
-                    (*ud).data,
+                    (*ud).data.as_ptr(),
                     errno!(),
                 );
                 mbtowc(null_mut(), null(), MB_CUR_MAX());

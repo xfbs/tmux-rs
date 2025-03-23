@@ -1278,7 +1278,7 @@ pub static mut options_table: [options_table_entry; 191] = [options_table_entry 
         type_: options_table_type::OPTIONS_TABLE_CHOICE,
         scope: OPTIONS_TABLE_WINDOW,
         choices: &raw const options_table_pane_status_list as *const *const c_char,
-        default_num: PANE_STATUS_OFF as i64,
+        default_num: pane_status::PANE_STATUS_OFF as i64,
         text: c"Position of the pane status lines.".as_ptr(),
         ..unsafe { zeroed() }
     },

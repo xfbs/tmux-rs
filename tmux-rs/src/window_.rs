@@ -663,11 +663,12 @@ pub unsafe extern "C" fn window_find_string(w: *mut window, s: *const c_char) ->
         let mut x = (*w).sx / 2;
         let mut y = (*w).sy / 2;
 
-        let status = options_get_number((*w).options, c"pane-border-status".as_ptr());
-        if status == PANE_STATUS_TOP as _ {
-            top += 1;
-        } else if status == PANE_STATUS_BOTTOM as _ {
-            bottom -= 1;
+        let status: Result<pane_status, _> =
+            (options_get_number((*w).options, c"pane-border-status".as_ptr()) as i32).try_into();
+        match status {
+            Ok(pane_status::PANE_STATUS_TOP) => top += 1,
+            Ok(pane_status::PANE_STATUS_BOTTOM) => bottom -= 1,
+            _ => (),
         }
 
         if strcasecmp(s, c"top".as_ptr()) == 0 {
@@ -1477,24 +1478,29 @@ pub unsafe extern "C" fn window_pane_find_up(wp: *mut window_pane) -> *mut windo
             return null_mut();
         }
         let w = (*wp).window;
-        let status = options_get_number((*w).options, c"pane-border-status".as_ptr());
+        let status: pane_status = (options_get_number((*w).options, c"pane-border-status".as_ptr()) as i32)
+            .try_into()
+            .unwrap();
 
         let mut list: *mut *mut window_pane = null_mut();
         let mut size = 0;
 
         let mut edge = (*wp).yoff;
-        if status == PANE_STATUS_TOP as _ {
-            if edge == 1 {
-                edge = (*w).sy + 1;
+        match status {
+            pane_status::PANE_STATUS_TOP => {
+                if edge == 1 {
+                    edge = (*w).sy + 1;
+                }
             }
-        } else if status == PANE_STATUS_BOTTOM as _ {
-            if edge == 0 {
-                edge = (*w).sy;
+            pane_status::PANE_STATUS_BOTTOM => {
+                if edge == 0 {
+                    edge = (*w).sy;
+                }
             }
-        } else {
-            #[allow(clippy::collapsible_else_if)]
-            if edge == 0 {
-                edge = (*w).sy + 1;
+            _ => {
+                if edge == 0 {
+                    edge = (*w).sy + 1;
+                }
             }
         }
 
@@ -1541,24 +1547,29 @@ pub unsafe extern "C" fn window_pane_find_down(wp: *mut window_pane) -> *mut win
             return null_mut();
         }
         let w = (*wp).window;
-        let status = options_get_number((*w).options, c"pane-border-status".as_ptr());
+        let status: pane_status = (options_get_number((*w).options, c"pane-border-status".as_ptr()) as i32)
+            .try_into()
+            .unwrap();
 
         let mut list: *mut *mut window_pane = null_mut();
         let mut size = 0;
 
         let mut edge = (*wp).yoff + (*wp).sy + 1;
-        if status == PANE_STATUS_TOP as _ {
-            if edge >= (*w).sy {
-                edge = 1;
+        match status {
+            pane_status::PANE_STATUS_TOP => {
+                if edge >= (*w).sy {
+                    edge = 1;
+                }
             }
-        } else if status == PANE_STATUS_BOTTOM as _ {
-            if edge >= (*w).sy - 1 {
-                edge = 0;
+            pane_status::PANE_STATUS_BOTTOM => {
+                if edge >= (*w).sy - 1 {
+                    edge = 0;
+                }
             }
-        } else {
-            #[allow(clippy::collapsible_else_if)]
-            if edge >= (*w).sy {
-                edge = 0;
+            _ => {
+                if edge >= (*w).sy {
+                    edge = 0;
+                }
             }
         }
 

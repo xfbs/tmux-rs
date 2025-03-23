@@ -3,6 +3,7 @@
 #![feature(let_chains)]
 #![feature(maybe_uninit_slice)]
 #![feature(ptr_as_uninit)]
+#![feature(cfg_boolean_literals)]
 #![allow(clippy::collapsible_else_if)]
 #![allow(clippy::collapsible_if)]
 #![allow(clippy::manual_range_contains)]
@@ -1079,7 +1080,7 @@ pub struct screen_redraw_ctx {
     pub statuslines: u32,
     pub statustop: i32,
 
-    pub pane_status: i32,
+    pub pane_status: pane_status,
     pub pane_lines: pane_lines,
 
     pub no_pane_gc: grid_cell,
@@ -1410,10 +1411,27 @@ pub const WINDOW_SIZE_SMALLEST: i32 = 1;
 pub const WINDOW_SIZE_MANUAL: i32 = 2;
 pub const WINDOW_SIZE_LATEST: i32 = 3;
 
-// Pane border status option.
-pub const PANE_STATUS_OFF: i32 = 0;
-pub const PANE_STATUS_TOP: i32 = 1;
-pub const PANE_STATUS_BOTTOM: i32 = 2;
+/// Pane border status option.
+#[repr(i32)]
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum pane_status {
+    PANE_STATUS_OFF,
+    PANE_STATUS_TOP,
+    PANE_STATUS_BOTTOM,
+}
+
+impl TryFrom<i32> for pane_status {
+    type Error = InvalidVariant;
+
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        Ok(match value {
+            0 => pane_status::PANE_STATUS_OFF,
+            1 => pane_status::PANE_STATUS_TOP,
+            2 => pane_status::PANE_STATUS_BOTTOM,
+            _ => return Err(InvalidVariant),
+        })
+    }
+}
 
 /// Layout direction.
 #[repr(i32)]

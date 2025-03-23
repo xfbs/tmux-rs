@@ -73,6 +73,11 @@ more then just server exited unexpectedly.
 - print a stacktrace on server process segfault
 
 # NEXT
+- improve interface on:
+  - debug_log
+  - options_get_number
+  - fatalx
+
 
 # TODO
 - review cmd_rotate_window.rs cmd_rotate_window_exec tailq_foreach calls
@@ -91,6 +96,7 @@ more then just server exited unexpectedly.
   - fully complete library / crate implementation with documentation
 - use bitflags instead of manually 
 - implement fatal and fatalx which accept static rust string
+- consider enum usage
 
 
 remove these from the linking process
@@ -98,8 +104,7 @@ remove these from the linking process
 clang -fsanitize=address -fno-omit-frame-pointer -O0 -std=gnu99 -g -Wno-long-long -Wall -W -Wformat=2 -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Wwrite-strings -Wshadow -Wpointer-arith -Wsign-compare -Wundef -Wbad-function-cast -Winline -Wcast-align -Wdeclaration-after-statement -Wno-pointer-sign -Wno-attributes -Wno-unused-result -Wno-format-y2k      -o tmux cmd-parse.o     compat/fgetln.o compat/freezero.o compat/getdtablecount.o compat/getpeereid.o compat/getprogname.o compat/htonll.o compat/ntohll.o compat/setproctitle.o compat/strlcat.o compat/strlcpy.o compat/strtonum.o compat/recallocarray.o compat/getopt.o compat/imsg.o compat/imsg-buffer.o compat/vis.o compat/unvis.o compat/fdforkpty.o -L/home/collin/Git/tmux/tmux-3.5a/target/x86_64-unknown-linux-gnu/debug -ltmux_rs -lbsd -ltinfo  -levent_core  -lm  -lresolv
 ```
 
-6 Medium
-- [ ] 1120 layout
+5 Medium
 - [ ] 1243 format-draw
 - [ ] 1266 mode-tree
 - [ ] 1348 window-tree
@@ -186,7 +191,8 @@ implemented DerefMut. Unfortunately doing this requires that you can create a `&
 undefined behaviour in this context.
 
 ## BUGS
-- exiting an opened window (not the original one ) causes server exit
+- exiting an opened window (not the original one ) causes server exit when asan is enabled
+- multiple issues due to untype safe logging translation
 - sendmsg in client to server causes SIGPIPE to be handled and exit control loop
 - TODO, noticed I flipped translation order of fields of args_parse struct. need to double check that all translations which use the initialization is correct
 
