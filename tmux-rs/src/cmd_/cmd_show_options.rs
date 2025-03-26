@@ -61,7 +61,6 @@ unsafe extern "C" fn cmd_show_options_exec(self_: *mut cmd, item: *mut cmdq_item
         let mut idx = 0;
         let mut ambiguous = 0;
         let mut parent = 0;
-        let mut scope = 0;
         let mut o: *mut options_entry = null_mut();
 
         let mut window = (cmd_get_entry(self_) == &raw mut cmd_show_window_options_entry) as i32;

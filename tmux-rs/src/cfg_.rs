@@ -101,7 +101,7 @@ pub unsafe extern "C" fn load_cfg(
             *new_item = null_mut();
         }
 
-        log_debug(c"loading %s".as_ptr(), path);
+        log_debug!("loading {}", _s(path));
         let mut f = fopen(path, c"rb".as_ptr());
         if f.is_null() {
             if *__errno_location() == ENOENT && flags & CMD_PARSE_QUIET != 0 {
@@ -170,7 +170,7 @@ pub unsafe extern "C" fn load_cfg_from_buffer(
             *new_item = null_mut();
         }
 
-        log_debug(c"loading %s".as_ptr(), path);
+        log_debug!("loading {}", _s(path));
 
         let mut pi: cmd_parse_input = zeroed();
         pi.flags = flags;

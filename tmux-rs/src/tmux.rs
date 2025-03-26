@@ -152,7 +152,7 @@ unsafe extern "C" fn expand_paths(s: *const c_char, paths: *mut *mut *mut c_char
         let mut resolved: [c_char; PATH_MAX as usize] = zeroed(); // TODO use unint version
         let mut path = null_mut();
 
-        let func = c"expand_paths".as_ptr();
+        let func = "expand_paths";
 
         *paths = null_mut();
         *n = 0;
@@ -165,15 +165,15 @@ unsafe extern "C" fn expand_paths(s: *const c_char, paths: *mut *mut *mut c_char
         }) {
             let expanded = expand_path(next, home);
             if expanded.is_null() {
-                log_debug(c"%s: invalid path: %s".as_ptr(), func, next);
+                log_debug!("{}: invalid path: {}", func, _s(next));
                 continue;
             }
             if realpath(expanded, resolved.as_mut_ptr()).is_null() {
-                log_debug(
-                    c"%s: realpath(\"%s\") failed: %s".as_ptr(),
+                log_debug!(
+                    "{}: realpath(\"{}\") failed: {}",
                     func,
-                    expanded,
-                    strerror(*__errno_location()),
+                    _s(expanded),
+                    _s(strerror(*__errno_location())),
                 );
                 if ignore_errors != 0 {
                     free_(expanded);
@@ -192,7 +192,7 @@ unsafe extern "C" fn expand_paths(s: *const c_char, paths: *mut *mut *mut c_char
                 }
             }
             if (i != *n) {
-                log_debug(c"%s: duplicate path: %s".as_ptr(), func, path);
+                log_debug!("{}: duplicate path: {}", func, _s(path));
                 free_(path);
                 continue;
             }
@@ -225,7 +225,7 @@ unsafe extern "C" fn make_label(mut label: *const c_char, cause: *mut *mut c_cha
                 xasprintf(cause, c"no suitable socket path".as_ptr());
                 return null_mut();
             }
-            let mut path = *paths; /* can only have one socket! */
+            path = *paths; /* can only have one socket! */
             for i in 1..n {
                 free_(*paths.add(i as usize));
             }
@@ -405,10 +405,15 @@ unsafe extern "C" {
     fn setproctitle_init(argc: i32, argv: *const *const c_char, envp: *const *const c_char);
 }
 
-#[unsafe(no_mangle)]
+#[cfg_attr(not(test), unsafe(no_mangle))]
 pub extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *mut *mut c_char) {
+    std::panic::set_hook(Box::new(|panic_info| {
+        let backtrace = std::backtrace::Backtrace::capture();
+        let err_str = format!("{backtrace:#?}");
+        std::fs::write("client-panic.txt", err_str).unwrap();
+    }));
+
     unsafe {
-        #[cfg(not(miri))]
         setproctitle_init(argc, argv.cast(), env.cast());
         let mut cause: *mut c_char = null_mut();
         let mut path: *const c_char = null_mut();
@@ -618,6 +623,6 @@ pub extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *mut *mut
         free_(label);
 
         // Pass control to the client.
-        std::process::exit(client_main(osdep_event_init(), argc, argv, flags, feat));
+        std::process::exit(client_main(osdep_event_init(), argc, argv, flags, feat))
     }
 }

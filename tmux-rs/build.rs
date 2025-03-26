@@ -99,7 +99,7 @@ fn main() {
         .define("b64_ntop", "__b64_ntop")
         .define("b64_pton", "__b64_pton")
         //
-        .flag("-fsanitize=address")
+        // .flag("-fsanitize=address")
         .flag("-fno-omit-frame-pointer")
         .flag("-O0")
         .flag("-std=gnu99")
@@ -124,6 +124,7 @@ fn main() {
         .flag("-Wno-attributes")
         .flag("-Wno-unused-result")
         .flag("-Wno-format-y2k")
+        .flag("-fexceptions")
         .compile("foo");
 }
 

@@ -417,7 +417,7 @@ pub unsafe extern "C" fn window_client_do_detach(
 pub unsafe extern "C" fn window_client_key(
     wme: *mut window_mode_entry,
     c: *mut client,
-    _s: *mut session,
+    _: *mut session,
     _wl: *mut winlink,
     mut key: key_code,
     m: *mut mouse_event,

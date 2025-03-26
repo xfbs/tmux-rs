@@ -60,6 +60,7 @@ issue.
 - You cannot link multiple static rust libraries (.a) into a single compilation artifact. There will be duplicate symbols.
 - Seems a common source of bugs is stubbing something and intending to come back to it later, but not. Avoid this.
 - SEGFAULTS, crashes, panics are much easier to debug then infinite loops and other types of bugs because you get a stack trace
+- export ASAN_OPTIONS=log_path=asan , log asan issues to file because tmux owns stdout,stderr
 
 ## Debugging Tips
 - reduce problem to single function. set a breakpoint on that function. walk through it in old and new version and notice differences

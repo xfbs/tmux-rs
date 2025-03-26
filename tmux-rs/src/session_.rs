@@ -124,11 +124,7 @@ pub unsafe extern "C" fn session_find_by_id_str(s: *const c_char) -> *mut sessio
 /// Find session by id.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_find_by_id(id: u32) -> Option<NonNull<session>> {
-    unsafe {
-        rb_foreach(&raw mut sessions)
-            .into_iter()
-            .find(|s| (*s.as_ptr()).id == id)
-    }
+    unsafe { rb_foreach(&raw mut sessions).find(|s| (*s.as_ptr()).id == id) }
 }
 
 /// Create a new session.
@@ -184,7 +180,7 @@ pub unsafe extern "C" fn session_create(
         }
         rb_insert(&raw mut sessions, s);
 
-        log_debug(c"new session %s $%u".as_ptr(), (*s).name, (*s).id);
+        log_debug!("new session {} ${}", _s((*s).name), (*s).id);
 
         if gettimeofday(&raw mut (*s).creation_time, null_mut()) != 0 {
             fatal(c"gettimeofday failed".as_ptr());
@@ -198,32 +194,20 @@ pub unsafe extern "C" fn session_create(
 /// Add a reference to a session.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_add_ref(s: *mut session, from: *const c_char) {
-    let __func__ = c"session_add_ref".as_ptr();
+    let __func__ = "session_add_ref";
     unsafe {
         (*s).references += 1;
-        log_debug(
-            c"%s: %s %s, now %d".as_ptr(),
-            __func__,
-            (*s).name,
-            from,
-            (*s).references,
-        );
+        log_debug!("{}: {} {}, now {}", __func__, _s((*s).name), _s(from), (*s).references);
     }
 }
 
 /// Remove a reference from a session.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_remove_ref(s: *mut session, from: *const c_char) {
-    let __func__ = c"session_remove_ref".as_ptr();
+    let __func__ = "session_remove_ref";
     unsafe {
         (*s).references -= 1;
-        log_debug(
-            c"%s: %s %s, now %d".as_ptr(),
-            __func__,
-            (*s).name,
-            from,
-            (*s).references,
-        );
+        log_debug!("{}: {} {}, now {}", __func__, _s((*s).name), _s(from), (*s).references);
 
         if ((*s).references == 0) {
             event_once(-1, EV_TIMEOUT, Some(session_free), s.cast(), null_mut());
@@ -237,7 +221,7 @@ pub unsafe extern "C" fn session_free(_fd: i32, _events: i16, arg: *mut c_void) 
     unsafe {
         let mut s = arg as *mut session;
 
-        log_debug(c"session %s freed (%d references)".as_ptr(), (*s).name, (*s).references);
+        log_debug!("session {} freed ({} references)", _s((*s).name), (*s).references);
 
         if ((*s).references == 0) {
             environ_free((*s).environ);
@@ -253,7 +237,7 @@ pub unsafe extern "C" fn session_free(_fd: i32, _events: i16, arg: *mut c_void) 
 pub unsafe extern "C" fn session_destroy(s: *mut session, notify: i32, from: *const c_char) {
     let __func__ = c"session_destroy".as_ptr();
     unsafe {
-        log_debug(c"session %s destroyed (%s)".as_ptr(), (*s).name, from);
+        log_debug!("session {} destroyed ({})", _s((*s).name), _s(from));
 
         if ((*s).curw.is_null()) {
             return;
@@ -320,9 +304,9 @@ pub unsafe extern "C" fn session_lock_timer(fd: i32, events: i16, arg: *mut c_vo
             return;
         }
 
-        log_debug(
-            c"session %s locked, activity time %lld".as_ptr(),
-            (*s).name,
+        log_debug!(
+            "session {} locked, activity time {}",
+            _s((*s).name),
             (*s).activity_time.tv_sec as i64,
         );
 
@@ -344,10 +328,10 @@ pub unsafe extern "C" fn session_update_activity(s: *mut session, from: *mut tim
             memcpy__(&raw mut (*s).activity_time, from);
         }
 
-        log_debug(
-            c"session $%u %s activity %lld.%06d (last %lld.%06d)".as_ptr(),
+        log_debug!(
+            "session ${} {} activity {}.{:06} (last {}.{:06})",
             (*s).id,
-            (*s).name,
+            _s((*s).name),
             (*s).activity_time.tv_sec as i64,
             (*s).activity_time.tv_usec as i32,
             (*last).tv_sec as i64,
@@ -460,11 +444,7 @@ pub unsafe extern "C" fn session_detach(s: *mut session, wl: *mut winlink) -> i3
 /// Return if session has window.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_has(s: *mut session, w: *mut window) -> i32 {
-    unsafe {
-        tailq_foreach::<_, discr_wentry>(&raw mut (*w).winlinks)
-            .into_iter()
-            .any(|wl| (*wl.as_ptr()).session == s) as i32
-    }
+    unsafe { tailq_foreach::<_, discr_wentry>(&raw mut (*w).winlinks).any(|wl| (*wl.as_ptr()).session == s) as i32 }
 }
 
 /*

@@ -299,9 +299,9 @@ pub unsafe extern "C" fn window_create(sx: u32, sy: u32, mut xpixel: u32, mut yp
         window_set_fill_character(NonNull::new_unchecked(w));
         window_update_activity(NonNull::new_unchecked(w));
 
-        log_debug(
-            c"%s: @%u create %ux%u (%ux%u)".as_ptr(),
-            c"window_create".as_ptr(),
+        log_debug!(
+            "{}: @{} create {}x{} ({}x{})",
+            "window_create",
             (*w).id,
             sx,
             sy,
@@ -315,11 +315,7 @@ pub unsafe extern "C" fn window_create(sx: u32, sy: u32, mut xpixel: u32, mut yp
 #[unsafe(no_mangle)]
 unsafe extern "C" fn window_destroy(w: *mut window) {
     unsafe {
-        log_debug(
-            c"window @%u destroyed (%d references)".as_ptr(),
-            (*w).id,
-            (*w).references,
-        );
+        log_debug!("window @{} destroyed ({} references)", (*w).id, (*w).references);
 
         window_unzoom(w, 0);
         rb_remove(&raw mut windows, w);
@@ -378,11 +374,11 @@ pub unsafe extern "C" fn window_pane_destroy_ready(wp: *mut window_pane) -> i32 
 pub unsafe extern "C" fn window_add_ref(w: *mut window, from: *const c_char) {
     unsafe {
         (*w).references += 1;
-        log_debug(
-            c"%s: @%u %s, now %d".as_ptr(),
-            c"window_add_ref".as_ptr(),
+        log_debug!(
+            "{}: @{} {}, now {}",
+            "window_add_ref",
             (*w).id,
-            from,
+            _s(from),
             (*w).references,
         );
     }
@@ -392,11 +388,11 @@ pub unsafe extern "C" fn window_add_ref(w: *mut window, from: *const c_char) {
 pub unsafe extern "C" fn window_remove_ref(w: *mut window, from: *const c_char) {
     unsafe {
         (*w).references -= 1;
-        log_debug(
-            c"%s: @%u %s, now %d".as_ptr(),
-            c"window_remove_ref".as_ptr(),
+        log_debug!(
+            "{}: @{} {}, now {}",
+            "window_remove_ref",
             (*w).id,
-            from,
+            _s(from),
             (*w).references,
         );
 
@@ -429,9 +425,9 @@ pub unsafe extern "C" fn window_resize(w: *mut window, sx: u32, sy: u32, mut xpi
     }
 
     unsafe {
-        log_debug(
-            c"%s: @%u resize %ux%u (%ux%u)".as_ptr(),
-            c"window_resize".as_ptr(),
+        log_debug!(
+            "{}: @{} resize {}x{} ({}x{})",
+            "window_resize",
             (*w).id,
             sx,
             sy,
@@ -460,13 +456,7 @@ pub unsafe extern "C" fn window_pane_send_resize(wp: *mut window_pane, sx: u32, 
             return;
         }
 
-        log_debug(
-            c"%s: %%%u resize to %u,%u".as_ptr(),
-            c"window_pane_send_resize".as_ptr(),
-            (*wp).id,
-            sx,
-            sy,
-        );
+        log_debug!("{}: %%{} resize to {},{}", "window_pane_send_resize", (*wp).id, sx, sy,);
 
         memset(&raw mut ws as _, 0, size_of::<winsize>());
 
@@ -497,7 +487,7 @@ pub unsafe extern "C" fn window_has_pane(w: *mut window, wp: *mut window_pane) -
 pub unsafe extern "C" fn window_update_focus(w: *mut window) {
     unsafe {
         if !w.is_null() {
-            log_debug(c"%s: @%u".as_ptr(), c"window_update_focus".as_ptr(), (*w).id);
+            log_debug!("{}: @{}", "window_update_focus", (*w).id);
             window_pane_update_focus((*w).active);
         }
     }
@@ -524,33 +514,21 @@ pub unsafe extern "C" fn window_pane_update_focus(wp: *mut window_pane) {
                 }
             }
             if !focused && (*wp).flags.intersects(window_pane_flags::PANE_FOCUSED) {
-                log_debug(
-                    c"%s: %%%u focus out".as_ptr(),
-                    c"window_pane_update_focus".as_ptr(),
-                    (*wp).id,
-                );
+                log_debug!("{}: %%{} focus out", "window_pane_update_focus", (*wp).id);
                 if (*wp).base.mode & MODE_FOCUSON != 0 {
                     bufferevent_write((*wp).event, c"\x1b[O".as_ptr() as _, 3);
                 }
                 notify_pane(c"pane-focus-out".as_ptr(), wp);
                 (*wp).flags &= !window_pane_flags::PANE_FOCUSED;
             } else if focused && !(*wp).flags.intersects(window_pane_flags::PANE_FOCUSED) {
-                log_debug(
-                    c"%s: %%%u focus in".as_ptr(),
-                    c"window_pane_update_focus".as_ptr(),
-                    (*wp).id,
-                );
+                log_debug!("{}: %%{} focus in", "window_pane_update_focus", (*wp).id);
                 if (*wp).base.mode & MODE_FOCUSON != 0 {
                     bufferevent_write((*wp).event, c"\x1b[I".as_ptr() as _, 3);
                 }
                 notify_pane(c"pane-focus-in".as_ptr(), wp);
                 (*wp).flags |= window_pane_flags::PANE_FOCUSED;
             } else {
-                log_debug(
-                    c"%s: %%%u focus unchanged".as_ptr(),
-                    c"window_pane_update_focus".as_ptr(),
-                    (*wp).id,
-                );
+                log_debug!("{}: %%{} focus unchanged", "window_pane_update_focus", (*wp).id,);
             }
         }
     }
@@ -560,7 +538,7 @@ pub unsafe extern "C" fn window_pane_update_focus(wp: *mut window_pane) {
 pub unsafe extern "C" fn window_set_active_pane(w: *mut window, wp: *mut window_pane, notify: i32) -> i32 {
     let lastwp: *mut window_pane;
     unsafe {
-        log_debug(c"%s: pane %%%u".as_ptr(), c"window_set_active_pane".as_ptr(), (*wp).id);
+        log_debug!("{}: pane %%{}", "window_set_active_pane", (*wp).id);
 
         if wp == (*w).active {
             return 0;
@@ -759,9 +737,9 @@ pub unsafe extern "C" fn window_unzoom(w: *mut window, notify: i32) -> i32 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_push_zoom(w: *mut window, always: i32, flag: i32) -> i32 {
     unsafe {
-        log_debug(
-            c"%s: @%u %d".as_ptr(),
-            c"window_push_zoom".as_ptr(),
+        log_debug!(
+            "{}: @{} {}",
+            "window_push_zoom",
             (*w).id,
             (flag != 0 && (*w).flags.intersects(window_flag::ZOOMED)) as i32,
         );
@@ -778,9 +756,9 @@ pub unsafe extern "C" fn window_push_zoom(w: *mut window, always: i32, flag: i32
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_pop_zoom(w: *mut window) -> i32 {
     unsafe {
-        log_debug(
-            c"%s: @%u %d".as_ptr(),
-            c"window_pop_zoom".as_ptr(),
+        log_debug!(
+            "{}: @{} {}",
+            "window_pop_zoom",
             (*w).id,
             (*w).flags.intersects(window_flag::WASZOOMED) as i32,
         );
@@ -799,7 +777,7 @@ pub unsafe extern "C" fn window_add_pane(
     hlimit: u32,
     flags: i32,
 ) -> *mut window_pane {
-    let func = c"window_add_pane".as_ptr();
+    let func = "window_add_pane";
     unsafe {
         if other.is_null() {
             other = (*w).active;
@@ -807,17 +785,17 @@ pub unsafe extern "C" fn window_add_pane(
 
         let wp = window_pane_create(w, (*w).sx, (*w).sy, hlimit);
         if tailq_empty(&raw mut (*w).panes) {
-            log_debug(c"%s: @%u at start".as_ptr(), func, (*w).id);
+            log_debug!("{}: @{} at start", func, (*w).id);
             tailq_insert_head!(&raw mut (*w).panes, wp, entry);
         } else if flags & SPAWN_BEFORE != 0 {
-            log_debug(c"%s: @%u before %%%u".as_ptr(), func, (*w).id, (*wp).id);
+            log_debug!("{}: @{} before %%{}", func, (*w).id, (*wp).id);
             if flags & SPAWN_FULLSIZE != 0 {
                 tailq_insert_head!(&raw mut (*w).panes, wp, entry);
             } else {
                 tailq_insert_before!(other, wp, entry);
             }
         } else {
-            log_debug(c"%s: @%u after %%%u".as_ptr(), func, (*w).id, (*wp).id);
+            log_debug!("{}: @{} after %%{}", func, (*w).id, (*wp).id);
             if flags & SPAWN_FULLSIZE != 0 {
                 tailq_insert_tail::<_, discr_entry>(&raw mut (*w).panes, wp);
             } else {
@@ -832,12 +810,7 @@ pub unsafe extern "C" fn window_add_pane(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_lost_pane(w: *mut window, wp: *mut window_pane) {
     unsafe {
-        log_debug(
-            c"%s: @%u pane %%%u".as_ptr(),
-            c"window_lost_pane".as_ptr(),
-            (*w).id,
-            (*wp).id,
-        );
+        log_debug!("{}: @{} pane %%{}", "window_lost_pane", (*w).id, (*wp).id);
 
         if wp == marked_pane.wp {
             server_clear_marked();
@@ -1141,7 +1114,7 @@ unsafe extern "C" fn window_pane_read_callback(_bufev: *mut bufferevent, data: *
             }
         }
 
-        log_debug(c"%%%u has %zu bytes".as_ptr(), (*wp).id, size);
+        log_debug!("%%{} has {} bytes", (*wp).id, size);
         for c in compat_rs::queue::tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if !(*c).session.is_null() && (*c).flags.intersects(client_flag::CONTROL) {
                 control_write_output(c, wp);
@@ -1156,7 +1129,7 @@ unsafe extern "C" fn window_pane_read_callback(_bufev: *mut bufferevent, data: *
 unsafe extern "C" fn window_pane_error_callback(_bufev: *mut bufferevent, _what: c_short, data: *mut c_void) {
     let wp: *mut window_pane = data as _;
     unsafe {
-        log_debug(c"%%%u error".as_ptr(), (*wp).id);
+        log_debug!("%%{} error", (*wp).id);
         (*wp).flags |= window_pane_flags::PANE_EXITED;
 
         if window_pane_destroy_ready(wp) != 0 {
@@ -1203,13 +1176,7 @@ pub unsafe extern "C" fn window_pane_resize(wp: *mut window_pane, sx: u32, sy: u
         (*wp).sx = sx;
         (*wp).sy = sy;
 
-        log_debug(
-            c"%s: %%%u resize %ux%u".as_ptr(),
-            c"window_pane_resize".as_ptr(),
-            (*wp).id,
-            sx,
-            sy,
-        );
+        log_debug!("{}: %%{} resize {}x{}", "window_pane_resize", (*wp).id, sx, sy,);
         screen_resize(&raw mut (*wp).base, sx, sy, (*wp).base.saved_grid.is_null() as i32);
 
         let wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
@@ -1279,13 +1246,13 @@ pub unsafe extern "C" fn window_pane_reset_mode(wp: *mut window_pane) {
         free(wme as _);
 
         let next = tailq_first(&raw mut (*wp).modes);
-        let func = c"window_pane_reset_mode".as_ptr();
+        let func = "window_pane_reset_mode";
         if next.is_null() {
             (*wp).flags &= !window_pane_flags::PANE_UNSEENCHANGES;
-            log_debug(c"%s: no next mode".as_ptr(), func);
+            log_debug!("{}: no next mode", func);
             (*wp).screen = &raw mut (*wp).base;
         } else {
-            log_debug(c"%s: next mode is %s".as_ptr(), func, (*(*next).mode).name);
+            log_debug!("{}: next mode is {}", func, _s((*(*next).mode).name));
             (*wp).screen = (*next).screen;
             if let Some(resize) = (*(*next).mode).resize {
                 resize(next, (*wp).sx, (*wp).sy);
@@ -1421,7 +1388,7 @@ pub unsafe extern "C" fn window_pane_search(wp: *mut window_pane, term: *const c
                 *line.add(n - 1) = b'\0' as _;
             }
 
-            log_debug(c"%s: %s".as_ptr(), c"window_pane_search".as_ptr(), line);
+            log_debug!("{}: {}", "window_pane_search", _s(line));
             let found = if regex == 0 {
                 fnmatch(new, line, flags) == 0
             } else {

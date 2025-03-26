@@ -211,7 +211,7 @@ pub unsafe extern "C" fn control_notify_session_renamed(s: *mut session) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn control_notify_session_created(_s: *mut session) {
+pub unsafe extern "C" fn control_notify_session_created(_: *mut session) {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             {
@@ -226,7 +226,7 @@ pub unsafe extern "C" fn control_notify_session_created(_s: *mut session) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn control_notify_session_closed(_s: *mut session) {
+pub unsafe extern "C" fn control_notify_session_closed(_: *mut session) {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             {

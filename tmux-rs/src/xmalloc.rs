@@ -12,8 +12,7 @@ use ::libc::{calloc, malloc, reallocarray, strdup, strerror, strndup};
 
 use ::compat_rs::recallocarray;
 
-use crate::log::fatalx_;
-use crate::{errno, fatalx, vasprintf, vsnprintf};
+use crate::{_s, errno, fatalx, vasprintf, vsnprintf};
 
 #[unsafe(no_mangle)]
 pub extern "C" fn xmalloc(size: usize) -> NonNull<c_void> {
@@ -104,14 +103,11 @@ pub unsafe extern "C" fn xreallocarray(ptr: *mut c_void, nmemb: usize, size: usi
 pub unsafe fn xreallocarray_old<T>(ptr: *mut T, nmemb: usize, size: usize) -> NonNull<T> {
     unsafe {
         if nmemb == 0 || size == 0 {
-            fatalx_(format_args!("xreallocarray: zero size"));
+            fatalx(c"xreallocarray: zero size".as_ptr());
         }
 
         match NonNull::new(reallocarray(ptr as _, nmemb, size)) {
-            None => fatalx_(format_args!(
-                "xreallocarray: allocating {nmemb} * {size} bytes: {}",
-                PercentS::from_raw(strerror(errno!()))
-            )),
+            None => fatalx(c"xreallocarray: allocating ".as_ptr()),
             Some(new_ptr) => new_ptr.cast(),
         }
     }
@@ -121,14 +117,11 @@ pub unsafe fn xreallocarray_<T>(ptr: *mut T, nmemb: usize) -> NonNull<T> {
     let size = size_of::<T>();
     unsafe {
         if nmemb == 0 || size == 0 {
-            fatalx_(format_args!("xreallocarray: zero size"));
+            fatalx(c"xreallocarray: zero size".as_ptr());
         }
 
         match NonNull::new(reallocarray(ptr as _, nmemb, size)) {
-            None => fatalx_(format_args!(
-                "xreallocarray: allocating {nmemb} * {size} bytes: {}",
-                PercentS::from_raw(strerror(errno!()))
-            )),
+            None => fatalx(c"xreallocarray: allocating".as_ptr()),
             Some(new_ptr) => new_ptr.cast(),
         }
     }
@@ -222,20 +215,4 @@ pub unsafe fn memcpy_<T>(dest: *mut T, src: *const T, n: usize) -> *mut T {
 
 pub unsafe fn memcpy__<T>(dest: *mut T, src: *const T) -> *mut T {
     unsafe { libc::memcpy(dest as *mut c_void, src as *const c_void, size_of::<T>()).cast() }
-}
-
-// TODO struct should have some sort of lifetime
-/// Display wrapper for a *c_char pointer
-#[repr(transparent)]
-struct PercentS(*const u8);
-impl PercentS {
-    unsafe fn from_raw(s: *const c_char) -> Self { PercentS(s as _) }
-}
-impl std::fmt::Display for PercentS {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let len = unsafe { libc::strlen(self.0 as *const i8) };
-        let s: &[u8] = unsafe { std::slice::from_raw_parts(self.0, len) };
-        let s = std::str::from_utf8(s).expect("invalid utf8 in logging");
-        f.write_str(s)
-    }
 }

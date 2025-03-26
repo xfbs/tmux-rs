@@ -97,7 +97,8 @@ pub unsafe extern "C" fn job_run(
         let mut oldset = MaybeUninit::<sigset_t>::uninit();
         let mut ws = MaybeUninit::<winsize>::uninit();
         let mut argvp: *mut *mut c_char = null_mut();
-        let mut tty = MaybeUninit::<[c_char; TTY_NAME_MAX]>::uninit();
+        // let mut tty = MaybeUninit::<[c_char; TTY_NAME_MAX]>::uninit();
+        let mut tty = [0i8; 64];
         let mut argv0: *mut c_char = null_mut();
         let mut oo: *mut options = null_mut();
 
@@ -145,19 +146,19 @@ pub unsafe extern "C" fn job_run(
 
             if cmd.is_null() {
                 cmd_log_argv(argc, argv, c"%s:".as_ptr(), __func__);
-                log_debug(
-                    c"%s: cwd=%s, shell=%s".as_ptr(),
-                    __func__,
-                    if cwd.is_null() { c"".as_ptr() } else { cwd },
-                    shell,
+                log_debug!(
+                    "{} cwd={} shell={}",
+                    _s(__func__),
+                    _s(if cwd.is_null() { c"".as_ptr() } else { cwd }),
+                    _s(shell),
                 );
             } else {
-                log_debug(
-                    c"%s: cmd=%s, cwd=%s, shell=%s".as_ptr(),
-                    __func__,
-                    cmd,
-                    if cwd.is_null() { c"".as_ptr() } else { cwd },
-                    shell,
+                log_debug!(
+                    "{} cmd={} cwd={} shell={}",
+                    _s(__func__),
+                    _s(cmd),
+                    _s(if cwd.is_null() { c"".as_ptr() } else { cwd }),
+                    _s(shell),
                 );
             }
 
@@ -268,12 +269,7 @@ pub unsafe extern "C" fn job_run(
             }
             bufferevent_enable((*job).event, EV_READ as i16 | EV_WRITE as i16);
 
-            log_debug(
-                c"run job %p: %s, pid %ld".as_ptr(),
-                job,
-                (*job).cmd,
-                (*job).pid as c_long,
-            );
+            log_debug!("run job {:p}: {} pid {}", job, _s((*job).cmd), (*job).pid);
             return job;
         }
 
@@ -294,7 +290,7 @@ pub unsafe extern "C" fn job_transfer(
     unsafe {
         let mut fd = (*job).fd;
 
-        log_debug(c"transfer job %p: %s".as_ptr(), job, (*job).cmd);
+        log_debug!("transfer job {:p}: {}", job, _s((*job).cmd));
 
         if !pid.is_null() {
             *pid = (*job).pid;
@@ -324,7 +320,7 @@ pub unsafe extern "C" fn job_transfer(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn job_free(mut job: *mut job) {
     unsafe {
-        log_debug(c"free job %p: %s".as_ptr(), job, (*job).cmd);
+        log_debug!("free job {:p}: {}", job, _s((*job).cmd));
 
         list_remove(job);
         free_((*job).cmd);
@@ -356,7 +352,7 @@ pub unsafe extern "C" fn job_resize(mut job: *mut job, mut sx: c_uint, mut sy: c
         if (*job).fd == -1 || !(*job).flags & JOB_PTY != 0 {
             return;
         }
-        log_debug(c"resize job %p: %ux%u".as_ptr(), job, sx, sy);
+        log_debug!("resize job {:p}: {}x{}", job, sx, sy);
         (*ws).ws_col = sx as u16;
         (*ws).ws_row = sy as u16;
 
@@ -380,11 +376,11 @@ unsafe extern "C" fn job_write_callback(mut bufev: *mut bufferevent, mut data: *
         let job = data as *mut job;
         let len = EVBUFFER_LENGTH(EVBUFFER_OUTPUT((*job).event));
 
-        log_debug(
-            c"job write %p: %s, pid %ld, output left %zu".as_ptr(),
+        log_debug!(
+            "job write {:p}: {}, pid {}, output left {}",
             job,
-            (*job).cmd,
-            (*job).pid as c_long,
+            _s((*job).cmd),
+            (*job).pid,
             len,
         );
 
@@ -403,12 +399,7 @@ unsafe extern "C" fn job_error_callback(
     let job: *mut job = data.cast();
 
     unsafe {
-        log_debug(
-            c"job error %p: %s, pid %ld".as_ptr(),
-            job,
-            (*job).cmd,
-            (*job).pid as c_long,
-        );
+        log_debug!("job error {:p}: {}, pid {}", job, _s((*job).cmd), (*job).pid);
         if (*job).state == job_state::JOB_DEAD {
             if let Some(completecb) = (*job).completecb {
                 completecb(job);
@@ -443,12 +434,7 @@ pub unsafe extern "C" fn job_check_died(mut pid: pid_t, mut status: i32) {
             killpg((*job).pid, SIGCONT);
             return;
         }
-        log_debug(
-            c"job died %p: %s, pid %ld".as_ptr(),
-            job,
-            (*job).cmd,
-            (*job).pid as c_long,
-        );
+        log_debug!("job died {:p}: {} pid {}", job, _s((*job).cmd), (*job).pid as c_long);
 
         (*job).status = status;
 

@@ -29,7 +29,7 @@ pub unsafe extern "C" fn spawn_log(from: *const c_char, sc: *mut spawn_context) 
         type tmp_type = [c_char; 128];
         let mut tmp = MaybeUninit::<tmp_type>::uninit();
 
-        log_debug(c"%s: %s, flags=%#x".as_ptr(), from, name, (*sc).flags);
+        log_debug!("{}: {}, flags={:#x}", _s(from), _s(name), (*sc).flags);
 
         if (!wl.is_null() && !wp0.is_null()) {
             xsnprintf(
@@ -60,15 +60,21 @@ pub unsafe extern "C" fn spawn_log(from: *const c_char, sc: *mut spawn_context) 
                 c"wl=none wp0=none".as_ptr(),
             );
         }
-        log_debug(c"%s: s=$%u %s idx=%d".as_ptr(), from, (*s).id, tmp.as_ptr(), (*sc).idx);
-        log_debug(
-            c"%s: name=%s".as_ptr(),
-            from,
-            if (*sc).name.is_null() {
+        log_debug!(
+            "{}: s=${} {} idx={}",
+            _s(from),
+            (*s).id,
+            _s(tmp.as_ptr().cast()),
+            (*sc).idx
+        );
+        log_debug!(
+            "{}: name={}",
+            _s(from),
+            _s(if (*sc).name.is_null() {
                 c"none".as_ptr()
             } else {
                 (*sc).name
-            },
+            }),
         );
     }
 }
@@ -383,13 +389,13 @@ pub unsafe extern "C" fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut c_c
             environ_set(child, c"SHELL".as_ptr(), 0, c"%s".as_ptr(), (*new_wp).shell);
 
             /* Log the arguments we are going to use. */
-            log_debug(c"%s: shell=%s".as_ptr(), __func__, (*new_wp).shell);
+            log_debug!("{}: shell={}", _s(__func__), _s((*new_wp).shell));
             if ((*new_wp).argc != 0) {
                 cp = cmd_stringify_argv((*new_wp).argc, (*new_wp).argv);
-                log_debug(c"%s: cmd=%s".as_ptr(), __func__, cp);
+                log_debug!("{}: cmd={}", _s(__func__), _s(cp));
                 free_(cp);
             }
-            log_debug(c"%s: cwd=%s".as_ptr(), __func__, (*new_wp).cwd);
+            log_debug!("{}: cwd={}", _s(__func__), _s((*new_wp).cwd));
             cmd_log_argv((*new_wp).argc, (*new_wp).argv, c"%s".as_ptr(), __func__);
             environ_log(child, c"%s: environment ".as_ptr(), __func__);
 
@@ -442,7 +448,7 @@ pub unsafe extern "C" fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut c_c
                      * isolation.
                      */
                     if (systemd_move_pid_to_new_cgroup((*new_wp).pid, cause) < 0) {
-                        log_debug(c"%s: moving pane to new cgroup failed: %s".as_ptr(), __func__, *cause);
+                        log_debug!("{}: moving pane to new cgroup failed: {}", _s(__func__), _s(*cause));
                         free_(*cause);
                     }
                 }

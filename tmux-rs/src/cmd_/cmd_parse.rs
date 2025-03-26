@@ -235,7 +235,7 @@ pub unsafe extern "C" fn cmd_parse_log_commands(cmds: *mut cmd_parse_commands, p
             for arg in compat_rs::queue::tailq_foreach(&raw mut (*cmd).arguments).map(NonNull::as_ptr) {
                 match ((*arg).type_) {
                     cmd_parse_argument_type::CMD_PARSE_STRING => {
-                        log_debug(c"%s %u:%u: %s".as_ptr(), prefix, i, j, (*arg).string)
+                        log_debug!("{} {}:{}: {}", _s(prefix), i, j, _s((*arg).string))
                     }
                     cmd_parse_argument_type::CMD_PARSE_COMMANDS => {
                         let mut s = null_mut();
@@ -245,7 +245,7 @@ pub unsafe extern "C" fn cmd_parse_log_commands(cmds: *mut cmd_parse_commands, p
                     }
                     cmd_parse_argument_type::CMD_PARSE_PARSED_COMMANDS => {
                         let s = cmd_list_print((*arg).cmdlist, 0);
-                        log_debug(c"%s %u:%u: %s".as_ptr(), prefix, i, j, s);
+                        log_debug!("{} {}:{}: {}", _s(prefix), i, j, _s(s));
                         free_(s);
                     }
                 }
@@ -281,7 +281,7 @@ pub unsafe extern "C" fn cmd_parse_expand_alias(
         if (alias.is_null()) {
             return (0);
         }
-        log_debug(c"%s: %u alias %s = %s".as_ptr(), __func__, (*pi).line, name, alias);
+        log_debug!("{}: {} alias {} = {}", _s(__func__), (*pi).line, _s(name), _s(alias));
 
         let mut cause = null_mut();
         let cmds = cmd_parse_do_buffer(alias, strlen(alias), pi, &raw mut cause);
@@ -443,7 +443,7 @@ pub unsafe extern "C" fn cmd_parse_build_commands(
         }
 
         let s = cmd_list_print(result, 0);
-        log_debug(c"%s: %s".as_ptr(), __func__, s);
+        log_debug!("{}: {}", _s(__func__), _s(s));
         free_(s);
 
         (*pr).status = cmd_parse_status::CMD_PARSE_SUCCESS;

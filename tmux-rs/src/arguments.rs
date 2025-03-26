@@ -193,11 +193,7 @@ pub unsafe extern "C" fn args_parse_flag_argument(
                 args_free_value(new);
                 free(new as _);
                 if optional_argument != 0 {
-                    log_debug(
-                        c"%s: -%c (optional)".as_ptr(),
-                        c"args_parse_flag_argument".as_ptr(),
-                        flag,
-                    );
+                    log_debug!("{}: -{} (optional)", "args_parse_flag_argument", flag);
                     args_set(args, flag as c_uchar, null_mut(), ARGS_ENTRY_OPTIONAL_VALUE);
                     return 0; /* either - or end */
                 }
@@ -212,7 +208,7 @@ pub unsafe extern "C" fn args_parse_flag_argument(
         }
         // out:
         let s = args_value_as_string(new);
-        log_debug(c"%s: -%c = %s".as_ptr(), c"args_parse_flag_argument".as_ptr(), flag, s);
+        log_debug!("{}: -{} = {}", "args_parse_flag_argument", flag, _s(s));
         args_set(args, flag as c_uchar, new, 0);
     }
 
@@ -228,7 +224,7 @@ pub unsafe extern "C" fn args_parse_flags(
     args: *mut args,
     i: *mut u32,
 ) -> i32 {
-    let __func__ = c"args_parse_flags".as_ptr();
+    let __func__ = "args_parse_flags";
     unsafe {
         let value = values.add(*i as usize);
         if ((*value).type_ != args_type::ARGS_STRING) {
@@ -236,7 +232,7 @@ pub unsafe extern "C" fn args_parse_flags(
         }
 
         let mut string = (*value).union_.string;
-        log_debug(c"%s: next %s".as_ptr(), __func__, string);
+        log_debug!("{}: next {}", __func__, _s(string));
         if ({
             let tmp = *string != b'-' as c_char;
             string = string.add(1);
@@ -270,7 +266,7 @@ pub unsafe extern "C" fn args_parse_flags(
                 return -1;
             }
             if (*found.add(1) != b':' as c_char) {
-                log_debug(c"%s: -%c".as_ptr(), __func__, flag as i32);
+                log_debug!("{}: -{}", __func__, flag as i32);
                 args_set(args, flag, null_mut(), 0);
                 continue;
             }
@@ -288,7 +284,7 @@ pub unsafe extern "C" fn args_parse(
     count: u32,
     cause: *mut *mut c_char,
 ) -> *mut args {
-    let __func__ = c"args_parse".as_ptr();
+    let __func__ = "args_parse";
     unsafe {
         let mut type_: args_parse_type;
         let mut value: *mut args_value = null_mut();
@@ -313,18 +309,18 @@ pub unsafe extern "C" fn args_parse(
                 break;
             }
         }
-        log_debug(c"%s: flags end at %u of %u".as_ptr(), __func__, i, count);
+        log_debug!("{}: flags end at {} of {}", __func__, i, count);
         if i != count {
             while i < count {
                 value = values.add(i as usize);
 
                 s = args_value_as_string(value);
-                log_debug(
-                    c"%s: %u = %s (type %s)".as_ptr(),
+                log_debug!(
+                    "{}: {} = {} (type {})",
                     __func__,
                     i,
-                    s,
-                    args_type_to_string((*value).type_),
+                    _s(s),
+                    _s(args_type_to_string((*value).type_)),
                 );
 
                 if let Some(cb) = (*parse).cb {
@@ -814,7 +810,7 @@ pub unsafe extern "C" fn args_make_commands_prepare(
     wait: i32,
     expand: i32,
 ) -> *mut args_command_state {
-    let __func__ = c"args_make_commands_prepare".as_ptr();
+    let __func__ = "args_make_commands_prepare";
     unsafe {
         let mut args = cmd_get_args(self_);
         let mut target = cmdq_get_target(item);
@@ -849,7 +845,7 @@ pub unsafe extern "C" fn args_make_commands_prepare(
         } else {
             (*state).cmd = xstrdup(cmd).as_ptr();
         }
-        log_debug(c"%s: %s".as_ptr(), __func__, (*state).cmd);
+        log_debug!("{}: {}", __func__, _s((*state).cmd));
 
         if (wait != 0) {
             (*state).pi.item = item;
@@ -876,7 +872,7 @@ pub unsafe extern "C" fn args_make_commands(
     argv: *mut *mut c_char,
     error: *mut *mut c_char,
 ) -> *mut cmd_list {
-    let __func__ = c"args_make_commands".as_ptr();
+    let __func__ = "args_make_commands";
     unsafe {
         // struct cmd_parse_result *pr;
         // char *cmd, *new_cmd;
@@ -890,21 +886,21 @@ pub unsafe extern "C" fn args_make_commands(
         }
 
         let mut cmd = xstrdup((*state).cmd).as_ptr();
-        log_debug(c"%s: %s".as_ptr(), __func__, cmd);
-        cmd_log_argv(argc, argv, __func__);
+        log_debug!("{}: {}", __func__, _s(cmd));
+        cmd_log_argv(argc, argv, c"args_make_commands".as_ptr());
         for i in 0..argc {
             let new_cmd = cmd_template_replace(cmd, *argv.add(i as usize), i + 1);
-            log_debug(
-                c"%s: %%%u %s: %s".as_ptr(),
+            log_debug!(
+                "{}: %%{} {}: {}",
                 __func__,
                 i + 1,
-                *argv.add(i as usize),
-                new_cmd,
+                _s(*argv.add(i as usize)),
+                _s(new_cmd)
             );
             free_(cmd);
             cmd = new_cmd;
         }
-        log_debug(c"%s: %s".as_ptr(), __func__, cmd);
+        log_debug!("{}: {}", __func__, _s(cmd));
 
         let pr = cmd_parse_from_string(cmd, &raw mut (*state).pi);
         free_(cmd);

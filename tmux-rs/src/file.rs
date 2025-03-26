@@ -9,8 +9,6 @@ use libc::{
     STDERR_FILENO, STDIN_FILENO, STDOUT_FILENO, close, dup, fclose, ferror, fopen, fread, fwrite, memcpy, open, strcmp,
 };
 
-use crate::log::fatalx_;
-
 unsafe extern "C" {
     // pub fn file_cmp(_: *mut client_file, _: *mut client_file) -> c_int;
     pub fn client_files_RB_INSERT_COLOR(_: *mut client_files, _: *mut client_file);
@@ -88,7 +86,7 @@ pub unsafe extern "C" fn file_create_with_peer(
 
         (*cf).buffer = evbuffer_new();
         if ((*cf).buffer.is_null()) {
-            fatalx_(format_args!("out of memory"));
+            fatalx(c"out of memory".as_ptr());
         }
 
         (*cf).cb = cb;
@@ -121,7 +119,7 @@ pub unsafe extern "C" fn file_create_with_client(
 
         (*cf).buffer = evbuffer_new();
         if (*cf).buffer.is_null() {
-            fatalx_(format_args!("out of memory"));
+            fatalx(c"out of memory".as_ptr());
         }
 
         (*cf).cb = cb;
@@ -508,7 +506,7 @@ pub unsafe extern "C" fn file_read(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_cancel(cf: *mut client_file) {
     unsafe {
-        log_debug(c"read cancel file %d".as_ptr(), (*cf).stream);
+        log_debug!("read cancel file {}", (*cf).stream);
 
         if ((*cf).closed != 0) {
             return;
@@ -562,7 +560,7 @@ pub unsafe extern "C" fn file_push(cf: *mut client_file) {
             evbuffer_drain((*cf).buffer, sent);
 
             left = EVBUFFER_LENGTH((*cf).buffer);
-            log_debug(c"file %d sent %zu, left %zuc".as_ptr(), (*cf).stream, sent, left);
+            log_debug!("file {} sent {}, left {}", (*cf).stream, sent, left);
         }
         if (left != 0) {
             (*cf).references += 1;
@@ -595,7 +593,7 @@ pub unsafe extern "C" fn file_write_left(files: *mut client_files) -> c_int {
             left = EVBUFFER_LENGTH((*(*cf).event).output);
             if (left != 0) {
                 waiting += 1;
-                log_debug(c"file %u %zu bytes left".as_ptr(), (*cf).stream, left);
+                log_debug!("file {} {} bytes left", (*cf).stream, left);
             }
         }
     }
@@ -608,7 +606,7 @@ pub unsafe extern "C" fn file_write_error_callback(bev: *mut bufferevent, what: 
     unsafe {
         let cf = arg as *mut client_file;
 
-        log_debug(c"write error file %d".as_ptr(), (*cf).stream);
+        log_debug!("write error file {}", (*cf).stream);
 
         bufferevent_free((*cf).event);
         (*cf).event = null_mut();
@@ -627,7 +625,7 @@ pub unsafe extern "C" fn file_write_callback(bev: *mut bufferevent, arg: *mut c_
     unsafe {
         let cf = arg as *mut client_file;
 
-        log_debug(c"write check file %d".as_ptr(), (*cf).stream);
+        log_debug!("write check file {}", (*cf).stream);
 
         if let Some(cb) = (*cf).cb {
             cb(null_mut(), null_mut(), 0, -1, null_mut(), (*cf).data);
@@ -668,7 +666,7 @@ pub unsafe extern "C" fn file_write_open(
             } else {
                 path = msg.add(1).cast();
             }
-            log_debug(c"open write file %d %s".as_ptr(), (*msg).stream, path);
+            log_debug!("open write file {} {}", (*msg).stream, _s(path));
 
             find.stream = (*msg).stream;
             if !rb_find(files, &raw mut find).is_null() {
@@ -746,7 +744,7 @@ pub unsafe extern "C" fn file_write_data(files: *mut client_files, imsg: *mut im
         if cf.is_null() {
             fatalx(c"unknown stream number".as_ptr());
         }
-        log_debug(c"write %zu to file %d".as_ptr(), size, (*cf).stream);
+        log_debug!("write {} to file {}", size, (*cf).stream);
 
         if (!(*cf).event.is_null()) {
             bufferevent_write((*cf).event, msg.add(1).cast(), size);
@@ -770,7 +768,7 @@ pub unsafe extern "C" fn file_write_close(files: *mut client_files, imsg: *mut i
         if (cf.is_null()) {
             fatalx(c"unknown stream number".as_ptr());
         }
-        log_debug(c"close file %d".as_ptr(), (*cf).stream);
+        log_debug!("close file {}", (*cf).stream);
 
         if ((*cf).event.is_null() || EVBUFFER_LENGTH((*(*cf).event).output) == 0) {
             if (!(*cf).event.is_null()) {
@@ -790,7 +788,7 @@ pub unsafe extern "C" fn file_read_error_callback(_bev: *mut bufferevent, what: 
     unsafe {
         let cf = arg as *mut client_file;
 
-        log_debug(c"read error file %d".as_ptr(), (*cf).stream);
+        log_debug!("read error file {}", (*cf).stream);
 
         let msg: msg_read_done = msg_read_done {
             stream: (*cf).stream,
@@ -827,7 +825,7 @@ pub unsafe extern "C" fn file_read_callback(bev: *mut bufferevent, arg: *mut c_v
             if bsize > MAX_IMSGSIZE - IMSG_HEADER_SIZE - size_of::<msg_read_data>() {
                 bsize = MAX_IMSGSIZE - IMSG_HEADER_SIZE - size_of::<msg_read_data>();
             }
-            log_debug(c"read %zu from file %d".as_ptr(), bsize, (*cf).stream);
+            log_debug!("read {} from file {}", bsize, (*cf).stream);
 
             let msglen = size_of::<msg_read_data>() + bsize;
             msg = xrealloc_(msg.as_ptr(), msglen);
@@ -870,7 +868,7 @@ pub unsafe extern "C" fn file_read_open(
             } else {
                 path = msg.add(1).cast();
             }
-            log_debug(c"open read file %d %s".as_ptr(), (*msg).stream, path);
+            log_debug!("open read file {} {}", (*msg).stream, _s(path));
 
             (*find.as_mut_ptr()).stream = (*msg).stream;
             if !rb_find(files, find.as_mut_ptr()).is_null() {
@@ -946,7 +944,7 @@ pub unsafe extern "C" fn file_read_cancel(files: *mut client_files, imsg: *mut i
         if cf.is_null() {
             fatalx(c"unknown stream number".as_ptr());
         }
-        log_debug(c"cancel file %d".as_ptr(), (*cf).stream);
+        log_debug!("cancel file {}", (*cf).stream);
 
         file_read_error_callback(null_mut(), 0, cf.cast());
     }
@@ -994,7 +992,7 @@ pub unsafe extern "C" fn file_read_data(files: *mut client_files, imsg: *mut ims
             return;
         }
 
-        log_debug(c"file %d read %zu bytes".as_ptr(), (*cf).stream, bsize);
+        log_debug!("file {} read {} bytes", (*cf).stream, bsize);
         if ((*cf).error == 0 && (*cf).closed == 0) {
             if (evbuffer_add((*cf).buffer, bdata, bsize) != 0) {
                 (*cf).error = ENOMEM;
@@ -1022,7 +1020,7 @@ pub unsafe extern "C" fn file_read_done(files: *mut client_files, imsg: *mut ims
             return;
         }
 
-        log_debug(c"file %d read done".as_ptr(), (*cf).stream);
+        log_debug!("file {} read done", (*cf).stream);
         (*cf).error = (*msg).error;
         file_fire_done(cf);
     }

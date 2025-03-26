@@ -11,7 +11,7 @@ unsafe extern "C" {
 pub unsafe extern "C" fn name_time_callback(_fd: c_int, _events: c_short, arg: *mut c_void) {
     let mut w = arg as *mut window;
     unsafe {
-        log_debug(c"@%u name timer expired".as_ptr(), (*w).id);
+        log_debug!("@{} timer expired", (*w).id);
     }
 }
 
@@ -47,10 +47,10 @@ pub unsafe fn check_window_name(w: *mut window) {
         }
 
         if !(*(*w).active).flags.intersects(window_pane_flags::PANE_CHANGED) {
-            log_debug(c"@%u active pane not changed".as_ptr(), (*w).id);
+            log_debug!("@{} pane not changed", (*w).id);
             return;
         }
-        log_debug(c"@%u active pane changed".as_ptr(), (*w).id);
+        log_debug!("@{} pane changed", (*w).id);
 
         gettimeofday(&raw mut tv, null_mut());
         let left = name_time_expired(w, &raw mut tv);
@@ -59,12 +59,12 @@ pub unsafe fn check_window_name(w: *mut window) {
                 evtimer_set(&raw mut (*w).name_event, Some(name_time_callback), w as _);
             }
             if evtimer_pending(&raw mut (*w).name_event, null_mut()) == 0 {
-                log_debug(c"@%u name timer queued (%d left)".as_ptr(), (*w).id, left);
+                log_debug!("@{} timer queued ({})", (*w).id, left);
                 timerclear(&raw mut next);
                 next.tv_usec = left as i64;
                 event_add(&raw mut (*w).name_event, &raw const next);
             } else {
-                log_debug(c"@%u name timer already queued (%d left)".as_ptr(), (*w).id, left);
+                log_debug!("@{} timer already queued ({})", (*w).id, left);
             }
             return;
         }
@@ -77,12 +77,12 @@ pub unsafe fn check_window_name(w: *mut window) {
 
         let name = format_window_name(w);
         if strcmp(name, (*w).name) != 0 {
-            log_debug(c"@%u new name %s (was %s)".as_ptr(), (*w).id, name, (*w).name);
+            log_debug!("@{} name {} (was {})", (*w).id, _s(name), _s((*w).name));
             window_set_name(w, name);
             server_redraw_window_borders(w);
             server_status_window(w);
         } else {
-            log_debug(c"@%u name not changed (still %s)".as_ptr(), (*w).id, (*w).name);
+            log_debug!("@{} not changed (still {})", (*w).id, _s((*w).name));
         }
 
         free(name as _);

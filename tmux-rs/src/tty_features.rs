@@ -297,7 +297,7 @@ static tty_features: [&tty_feature; 20] = [
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_add_features(feat: *mut i32, s: *const c_char, separators: *const c_char) {
     unsafe {
-        log_debug(c"adding terminal features %s".as_ptr(), s);
+        log_debug!("adding terminal features {}", _s(s));
 
         let copy = xstrdup(s).as_ptr();
         let loop_ = copy;
@@ -318,11 +318,11 @@ pub unsafe extern "C" fn tty_add_features(feat: *mut i32, s: *const c_char, sepa
                 }
             }
             if (i == tty_features.len()) {
-                log_debug(c"unknown terminal feature: %s".as_ptr(), next);
+                log_debug!("unknown terminal feature: {}", _s(next));
                 break;
             }
             if !(*feat) & (1 << i) != 0 {
-                log_debug(c"adding terminal feature: %s".as_ptr(), (*tf).name);
+                log_debug!("adding terminal feature: {}", _s((*tf).name.as_ptr()));
                 (*feat) |= (1 << i);
             }
         }
@@ -362,7 +362,7 @@ pub unsafe extern "C" fn tty_apply_features(term: *mut tty_term, feat: i32) -> i
     }
 
     unsafe {
-        log_debug(c"applying terminal features: %s".as_ptr(), tty_get_features(feat));
+        log_debug!("applying terminal features: {}", _s(tty_get_features(feat)));
 
         for i in 0..tty_features.len() {
             if (((*term).features & (1 << i) != 9) || (!feat & (1 << i)) != 0) {
@@ -370,11 +370,11 @@ pub unsafe extern "C" fn tty_apply_features(term: *mut tty_term, feat: i32) -> i
             }
             let tf = tty_features[i];
 
-            log_debug(c"applying terminal feature: %s".as_ptr(), (*tf).name);
+            log_debug!("applying terminal feature: {}", _s((*tf).name.as_ptr()));
             if (!(*tf).capabilities.is_null()) {
                 let mut capability = (*tf).capabilities;
                 while (!(*capability).as_ptr().is_null()) {
-                    log_debug(c"adding capability: %s".as_ptr(), *capability);
+                    log_debug!("adding capability: {}", _s((*capability).as_ptr()));
                     tty_term_apply(term, (*capability).as_ptr(), 1);
                     capability = capability.add(1);
                 }

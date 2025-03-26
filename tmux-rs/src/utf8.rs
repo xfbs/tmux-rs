@@ -1,4 +1,5 @@
 use crate::{
+    log::log_debug_c,
     xmalloc::{Zeroable, xreallocarray},
     *,
 };
@@ -147,7 +148,13 @@ pub unsafe extern "C" fn utf8_put_item(data: *const [c_char; UTF8_SIZE], size: u
         let ui = utf8_item_by_data(data, size);
         if (!ui.is_null()) {
             *index = (*ui).index;
-            log_debug(c"%s: found %.*s = %u".as_ptr(), __func__, size as i32, data, *index);
+            log_debug_c(
+                c"%s: found %.*s = %u".as_ptr(),
+                __func__,
+                size as i32,
+                data.as_ptr(),
+                *index,
+            );
             return 0;
         }
 
@@ -165,7 +172,13 @@ pub unsafe extern "C" fn utf8_put_item(data: *const [c_char; UTF8_SIZE], size: u
         rb_insert::<_, discr_data_entry>(&raw mut utf8_data_tree, ui);
 
         *index = ui.index;
-        log_debug(c"%s: added %.*s = %u".as_ptr(), __func__, size as i32, data, *index);
+        log_debug_c(
+            c"%s: added %.*s = %u".as_ptr(),
+            __func__,
+            size as i32,
+            data.as_ptr(),
+            *index,
+        );
         0
     }
 }
@@ -210,7 +223,7 @@ pub unsafe extern "C" fn utf8_from_data(ud: *const utf8_data, uc: *mut utf8_char
                 break 'fail;
             }
             *uc = UTF8_SET_SIZE((*ud).size) | UTF8_SET_WIDTH((*ud).width) | index;
-            log_debug(
+            log_debug_c(
                 c"%s: (%d %d %.*s) -> %08x".as_ptr(),
                 __func__,
                 (*ud).width as u32,
@@ -261,7 +274,7 @@ pub unsafe extern "C" fn utf8_to_data(uc: utf8_char, ud: *mut utf8_data) {
             }
         }
 
-        log_debug(
+        log_debug_c(
             c"%s: %08x -> (%d %d %.*s)".as_ptr(),
             __func__,
             uc,
@@ -318,11 +331,11 @@ pub unsafe extern "C" fn utf8_width(ud: *mut utf8_data, width: *mut i32) -> utf8
             #[cfg(feature = "utf8proc")]
             {
                 *width = utf8proc_wcwidth(wc);
-                log_debug(c"utf8proc_wcwidth(%05X) returned %d".as_ptr(), wc as u32, *width);
+                log_debug_c(c"utf8proc_wcwidth(%05X) returned %d".as_ptr(), wc as u32, *width);
             }
         } else {
             *width = wcwidth(wc);
-            log_debug(c"wcwidth(%05X) returned %d".as_ptr(), wc as u32, *width);
+            log_debug_c(c"wcwidth(%05X) returned %d".as_ptr(), wc as u32, *width);
             if (*width < 0) {
                 *width = if (wc >= 0x80 && wc <= 0x9f) { 0 } else { 1 };
             }
@@ -344,7 +357,7 @@ pub unsafe extern "C" fn utf8_towc(ud: *const utf8_data, wc: *mut wchar_t) -> ut
 
         match value {
             -1 => {
-                log_debug(
+                log_debug_c(
                     c"UTF-8 %.*s, mbtowc() %d".as_ptr(),
                     (*ud).size as i32,
                     (*ud).data.as_ptr(),
@@ -356,7 +369,7 @@ pub unsafe extern "C" fn utf8_towc(ud: *const utf8_data, wc: *mut wchar_t) -> ut
             0 => return UTF8_ERROR,
             _ => (),
         }
-        log_debug(
+        log_debug_c(
             c"UTF-8 %.*s is %05X".as_ptr(),
             (*ud).size as i32,
             (*ud).data.as_ptr(),
@@ -378,7 +391,7 @@ pub unsafe extern "C" fn utf8_fromwc(wc: wchar_t, ud: *mut utf8_data) -> utf8_st
         let size = wctomb((*ud).data.as_mut_ptr().cast(), wc);
 
         if (size < 0) {
-            log_debug(c"UTF-8 %d, wctomb() %d".as_ptr(), wc, errno!());
+            log_debug!("UTF-8 {}, wctomb() {}", wc, errno!());
             wctomb(null_mut(), 0);
             return UTF8_ERROR;
         }

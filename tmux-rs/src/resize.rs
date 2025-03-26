@@ -47,9 +47,9 @@ pub unsafe extern "C" fn resize_window(w: *mut window, mut sx: u32, mut sy: u32,
             sy = (*(*w).layout_root).sy;
         }
         window_resize(w, sx, sy, xpixel, ypixel);
-        log_debug(
-            c"%s: @%u resized to %ux%u; layout %ux%u".as_ptr(),
-            c"resize_window".as_ptr(),
+        log_debug!(
+            "{}: @{} resized to {}x{}; layout {}x{}",
+            "resize_window",
             (*w).id,
             sx,
             sy,
@@ -140,7 +140,7 @@ pub unsafe extern "C" fn clients_calculate_size(
     let mut cy = 0u32;
     let mut cw = null_mut();
     let mut n = 0;
-    let __func__ = c"clients_calculate_size".as_ptr();
+    let __func__ = "clients_calculate_size";
 
     unsafe {
         'skip: {
@@ -154,7 +154,7 @@ pub unsafe extern "C" fn clients_calculate_size(
             } else if (type_ == WINDOW_SIZE_MANUAL) {
                 *sx = (*w).manual_sx;
                 *sy = (*w).manual_sy;
-                log_debug(c"%s: manual size %ux%u".as_ptr(), __func__, *sx, *sy);
+                log_debug!("{}: manual size {}x{}", __func__, *sx, *sy);
             } else {
                 *sx = u32::MAX;
                 *sy = u32::MAX;
@@ -178,11 +178,11 @@ pub unsafe extern "C" fn clients_calculate_size(
             /* loop_ over the clients and work out the size. */
             for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
                 if (loop_ != c && ignore_client_size(loop_) != 0) {
-                    log_debug(c"%s: ignoring %s (1)".as_ptr(), __func__, (*loop_).name);
+                    log_debug!("{}: ignoring {} (1)", __func__, _s((*loop_).name));
                     continue;
                 }
                 if (loop_ != c && skip_client.unwrap()(loop_, type_, current, s, w) != 0) {
-                    log_debug(c"%s: skipping %s (1)".as_ptr(), __func__, (*loop_).name);
+                    log_debug!("{}: skipping {} (1)", __func__, _s((*loop_).name));
                     continue;
                 }
 
@@ -192,7 +192,7 @@ pub unsafe extern "C" fn clients_calculate_size(
                  * for smallest.
                  */
                 if (type_ == WINDOW_SIZE_LATEST && n > 1 && loop_ != (*w).latest.cast()) {
-                    log_debug(c"%s: %s is not latest".as_ptr(), __func__, (*loop_).name);
+                    log_debug!("{}: {} is not latest", __func__, _s((*loop_).name));
                     continue;
                 }
 
@@ -238,10 +238,10 @@ pub unsafe extern "C" fn clients_calculate_size(
                     *xpixel = (*loop_).tty.xpixel;
                     *ypixel = (*loop_).tty.ypixel;
                 }
-                log_debug(
-                    c"%s: after %s (%ux%u), size is %ux%u".as_ptr(),
+                log_debug!(
+                    "{}: after {} ({}x{}), size is {}x{}",
                     __func__,
-                    (*loop_).name,
+                    _s((*loop_).name),
                     cx,
                     cy,
                     *sx,
@@ -249,9 +249,9 @@ pub unsafe extern "C" fn clients_calculate_size(
                 );
             }
             if (*sx != u32::MAX && *sy != u32::MAX) {
-                log_debug(c"%s: calculated size %ux%u".as_ptr(), __func__, *sx, *sy);
+                log_debug!("{}: calculated size {}x{}", __func__, *sx, *sy);
             } else {
-                log_debug(c"%s: no calculated size".as_ptr(), __func__);
+                log_debug!("{}: no calculated size", __func__);
             }
         }
         // skip:
@@ -278,10 +278,10 @@ pub unsafe extern "C" fn clients_calculate_size(
                 }
 
                 /* Clamp the size. */
-                log_debug(
-                    c"%s: %s size for @%u is %ux%u".as_ptr(),
+                log_debug!(
+                    "{}: {} size for @{} is {}x{}",
                     __func__,
-                    (*loop_).name,
+                    _s((*loop_).name),
                     (*w).id,
                     (*cw).sx,
                     (*cw).sy,
@@ -295,24 +295,24 @@ pub unsafe extern "C" fn clients_calculate_size(
             }
         }
         if (*sx != u32::MAX && *sy != u32::MAX) {
-            log_debug(c"%s: calculated size %ux%u".as_ptr(), __func__, *sx, *sy);
+            log_debug!("{}: calculated size {}x{}", __func__, *sx, *sy);
         } else {
-            log_debug(c"%s: no calculated size".as_ptr(), __func__);
+            log_debug!("{}: no calculated size", __func__);
         }
 
         /* Return whether a suitable size was found. */
         if (type_ == WINDOW_SIZE_MANUAL) {
-            log_debug(c"%s: type_ is manual".as_ptr(), __func__);
+            log_debug!("{}: type_ is manual", __func__);
             return 1;
         }
         if (type_ == WINDOW_SIZE_LARGEST) {
-            log_debug(c"%s: type_ is largest".as_ptr(), __func__);
+            log_debug!("{}: type_ is largest", __func__);
             return (*sx != 0 && *sy != 0) as i32;
         }
         if (type_ == WINDOW_SIZE_LATEST) {
-            log_debug(c"%s: type_ is latest".as_ptr(), __func__);
+            log_debug!("{}: type_ is latest", __func__);
         } else {
-            log_debug(c"%s: type_ is smallest".as_ptr(), __func__);
+            log_debug!("{}: type_ is smallest", __func__);
         }
         (*sx != u32::MAX && *sy != u32::MAX) as i32
     }
@@ -356,7 +356,7 @@ pub unsafe extern "C" fn default_window_size(
     ypixel: *mut u32,
     mut type_: i32,
 ) {
-    let __func__ = c"default_window_size".as_ptr();
+    let __func__ = "default_window_size";
     unsafe {
         'done: {
             // const char *value;
@@ -375,7 +375,7 @@ pub unsafe extern "C" fn default_window_size(
                 *sy = (*c).tty.sy - status_line_size(c);
                 *xpixel = (*c).tty.xpixel;
                 *ypixel = (*c).tty.ypixel;
-                log_debug(c"%s: using %ux%u from %s".as_ptr(), __func__, *sx, *sy, (*c).name);
+                log_debug!("{}: using {}x{} from {}", __func__, *sx, *sy, _s((*c).name));
                 break 'done;
             }
 
@@ -409,7 +409,7 @@ pub unsafe extern "C" fn default_window_size(
                     *sx = 80;
                     *sy = 24;
                 }
-                log_debug(c"%s: using %ux%u from default-size".as_ptr(), __func__, *sx, *sy);
+                log_debug!("{}: using {}x{} from default-size", __func__, *sx, *sy);
             }
         }
         // done:
@@ -426,7 +426,7 @@ pub unsafe extern "C" fn default_window_size(
         if (*sy > WINDOW_MAXIMUM) {
             *sy = WINDOW_MAXIMUM;
         }
-        log_debug(c"%s: resulting size is %ux%u".as_ptr(), __func__, *sx, *sy);
+        log_debug!("{}: resulting size is {}x{}", __func__, *sx, *sy);
     }
 }
 
@@ -457,7 +457,7 @@ pub unsafe extern "C" fn recalculate_size_skip_client(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn recalculate_size(w: *mut window, now: i32) {
-    let __func__ = c"recalculate_size".as_ptr();
+    let __func__ = "recalculate_size";
 
     unsafe {
         let mut sx = 0;
@@ -474,7 +474,7 @@ pub unsafe extern "C" fn recalculate_size(w: *mut window, now: i32) {
         if ((*w).active.is_null()) {
             return;
         }
-        log_debug(c"%s: @%u is %ux%u".as_ptr(), __func__, (*w).id, (*w).sx, (*w).sy);
+        log_debug!("{}: @{} is {}x{}", __func__, (*w).id, (*w).sx, (*w).sy);
 
         /*
          * type_ is manual, smallest, largest, latest. Current is the
@@ -517,7 +517,7 @@ pub unsafe extern "C" fn recalculate_size(w: *mut window, now: i32) {
          * size.
          */
         if (changed == 0) {
-            log_debug(c"%s: @%u no size change".as_ptr(), __func__, (*w).id);
+            log_debug!("{}: @{} no size change", __func__, (*w).id);
             tty_update_window_offset(w);
             return;
         }
@@ -527,7 +527,7 @@ pub unsafe extern "C" fn recalculate_size(w: *mut window, now: i32) {
          * the size immediately. Otherwise set the flag and it will be done
          * later.
          */
-        log_debug(c"%s: @%u new size %ux%u".as_ptr(), __func__, (*w).id, sx, sy);
+        log_debug!("{}: @{} new size {}x{}", __func__, (*w).id, sx, sy);
         if (now != 0 || type_ == WINDOW_SIZE_MANUAL) {
             resize_window(w, sx, sy, xpixel as i32, ypixel as i32);
         } else {

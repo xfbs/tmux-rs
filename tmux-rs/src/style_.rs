@@ -44,8 +44,6 @@ pub unsafe extern "C" fn style_parse(sy: *mut style, base: *const grid_cell, mut
         let mut delimiters = c" ,\n".as_ptr();
         let mut errstr: *mut c_char = null_mut();
 
-        let func = c"style_parse".as_ptr();
-
         type tmp_type = [c_char; 256];
         let mut tmp_bak: tmp_type = [0; 256];
         let mut tmp = tmp_bak.as_mut_ptr();
@@ -64,7 +62,7 @@ pub unsafe extern "C" fn style_parse(sy: *mut style, base: *const grid_cell, mut
         let mut saved = unsafe { saved.assume_init() };
 
         'error: {
-            log_debug(c"%s: %s".as_ptr(), c"style_parse".as_ptr(), in_);
+            log_debug!("{}: {}", "style_parse", _s(in_));
             loop {
                 while *in_ != b'\0' as _ && !strchr(delimiters, *in_ as _).is_null() {
                     in_ = in_.add(1);
@@ -80,7 +78,7 @@ pub unsafe extern "C" fn style_parse(sy: *mut style, base: *const grid_cell, mut
                 memcpy_(tmp, in_, end);
                 *tmp.add(end) = b'\0' as _;
 
-                log_debug(c"%s: %s".as_ptr(), func, tmp);
+                log_debug!("{}: {}", "style_parse", _s(tmp));
                 if strcasecmp(tmp, c"default".as_ptr()) == 0 {
                     (*sy).gc.fg = (*base).fg;
                     (*sy).gc.bg = (*base).bg;
@@ -270,17 +268,19 @@ pub unsafe extern "C" fn style_parse(sy: *mut style, base: *const grid_cell, mut
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
+    type s_type = [i8; 256];
+    static mut s_buf: MaybeUninit<s_type> = MaybeUninit::<s_type>::uninit();
+
     unsafe {
         let mut gc = &raw const (*sy).gc;
         let mut off: i32 = 0;
         let mut comma = c"".as_ptr();
         let mut tmp = c"".as_ptr();
-        type s_type = [i8; 256];
         type b_type = [i8; 21];
-        let mut s: s_type = [0; 256]; // TODO use uninit
         let mut b: b_type = [0; 21];
 
-        s[0] = b'\0' as c_char;
+        let mut s = &raw mut s_buf as *mut c_char;
+        *s = b'\0' as c_char;
 
         if ((*sy).list != style_list::STYLE_LIST_OFF) {
             if ((*sy).list == style_list::STYLE_LIST_ON) {
@@ -293,7 +293,7 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
                 tmp = c"right-marker".as_ptr();
             }
             off += xsnprintf(
-                (&raw mut s as *mut i8).add(off as usize),
+                s.add(off as usize),
                 size_of::<s_type>() - off as usize,
                 c"%slist=%s".as_ptr(),
                 comma,
@@ -340,7 +340,7 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
                 tmp = &raw const b as _;
             }
             off += xsnprintf(
-                (&raw mut s as *mut i8).add(off as usize),
+                s.add(off as usize),
                 size_of::<s_type>() - off as usize,
                 c"%srange=%s".as_ptr(),
                 comma,
@@ -359,7 +359,7 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
                 tmp = c"absolute-centre".as_ptr();
             }
             off += xsnprintf(
-                (&raw mut s as *mut i8).add(off as usize),
+                s.add(off as usize),
                 size_of::<s_type>() - off as usize,
                 c"%salign=%s".as_ptr(),
                 comma,
@@ -374,7 +374,7 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
                 tmp = c"pop-default".as_ptr();
             }
             off += xsnprintf(
-                (&raw mut s as *mut i8).add(off as usize),
+                s.add(off as usize),
                 size_of::<s_type>() - off as usize,
                 c"%s%s".as_ptr(),
                 comma,
@@ -384,7 +384,7 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
         }
         if ((*sy).fill != 8) {
             off += xsnprintf(
-                (&raw mut s as *mut i8).add(off as usize),
+                s.add(off as usize),
                 size_of::<s_type>() - off as usize,
                 c"%sfill=%s".as_ptr(),
                 comma,
@@ -394,7 +394,7 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
         }
         if ((*gc).fg != 8) {
             off += xsnprintf(
-                (&raw mut s as *mut i8).add(off as usize),
+                s.add(off as usize),
                 size_of::<s_type>() - off as usize,
                 c"%sfg=%s".as_ptr(),
                 comma,
@@ -404,7 +404,7 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
         }
         if ((*gc).bg != 8) {
             off += xsnprintf(
-                (&raw mut s as *mut i8).add(off as usize),
+                s.add(off as usize),
                 size_of::<s_type>() - off as usize,
                 c"%sbg=%s".as_ptr(),
                 comma,
@@ -414,7 +414,7 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
         }
         if ((*gc).us != 8) {
             off += xsnprintf(
-                (&raw mut s as *mut i8).add(off as usize),
+                s.add(off as usize),
                 size_of::<s_type>() - off as usize,
                 c"%sus=%s".as_ptr(),
                 comma,
@@ -424,7 +424,7 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
         }
         if ((*gc).attr != 0) {
             xsnprintf(
-                (&raw mut s as *mut i8).add(off as usize),
+                s.add(off as usize),
                 size_of::<s_type>() - off as usize,
                 c"%s%s".as_ptr(),
                 comma,
@@ -433,10 +433,10 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
             comma = c",".as_ptr();
         }
 
-        if s[0] == b'\0' as _ {
+        if *s == b'\0' as c_char {
             return c"default".as_ptr();
         }
-        &raw const s as _
+        s
     }
 }
 

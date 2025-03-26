@@ -6,7 +6,7 @@ use compat_rs::{
 };
 use libc::{close, strcmp};
 
-use crate::{xmalloc::Zeroable, *};
+use crate::{log::log_debug_c, xmalloc::Zeroable, *};
 unsafe extern "C" {
     // pub unsafe fn control_discard(_: *mut client);
     // pub unsafe fn control_start(_: *mut client);
@@ -372,13 +372,12 @@ pub unsafe extern "C" fn control_pause_pane(c: *mut client, wp: *mut window_pane
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_vwrite(c: *mut client, fmt: *const c_char, ap: VaList) {
-    let __func__ = c"control_vwrite".as_ptr();
     unsafe {
         let cs = (*c).control_state;
         let mut s = null_mut();
 
         xvasprintf(&raw mut s, fmt, ap);
-        log_debug(c"%s: %s: writing line: %s".as_ptr(), __func__, (*c).name, s);
+        log_debug!("{}: {}: writing line: {}", "control_vwrite", _s((*c).name), _s(s));
 
         bufferevent_write((*cs).write_event, s.cast(), strlen(s));
         bufferevent_write((*cs).write_event, c"\n".as_ptr().cast(), 1);
@@ -390,7 +389,6 @@ pub unsafe extern "C" fn control_vwrite(c: *mut client, fmt: *const c_char, ap: 
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_write(c: *mut client, fmt: *const c_char, mut ap: ...) {
-    let __func__ = c"control_write".as_ptr();
     unsafe {
         let cs = (*c).control_state;
 
@@ -404,14 +402,19 @@ pub unsafe extern "C" fn control_write(c: *mut client, fmt: *const c_char, mut a
         tailq_insert_tail::<_, discr_all_entry>(&raw mut (*cs).all_blocks, cb);
         (*cb).t = get_timer();
 
-        log_debug(c"%s: %s: storing line: %s".as_ptr(), __func__, (*c).name, (*cb).line);
+        log_debug!(
+            "{}: {}: storing line: {}",
+            "control_write",
+            _s((*c).name),
+            _s((*cb).line)
+        );
         bufferevent_enable((*cs).write_event, EV_WRITE as i16);
     }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_check_age(c: *mut client, wp: *mut window_pane, cp: *mut control_pane) -> i32 {
-    let __func__ = c"control_check_age".as_ptr();
+    let __func__ = "control_check_age";
     unsafe {
         let cb = tailq_first(&raw mut (*cp).blocks);
         if (cb.is_null()) {
@@ -423,10 +426,10 @@ pub unsafe extern "C" fn control_check_age(c: *mut client, wp: *mut window_pane,
         }
 
         let age = t - (*cb).t;
-        log_debug(
-            c"%s: %s: %%%u is %llu behind".as_ptr(),
+        log_debug!(
+            "{}: {}: %%{} is {} behind",
             __func__,
-            (*c).name,
+            _s((*c).name),
             (*wp).id,
             age as c_ulonglong,
         );
@@ -453,7 +456,7 @@ pub unsafe extern "C" fn control_check_age(c: *mut client, wp: *mut window_pane,
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_write_output(c: *mut client, wp: *mut window_pane) {
-    let mut __func__ = c"control_write_output".as_ptr();
+    let __func__ = "control_write_output";
     unsafe {
         let cs = (*c).control_state;
         let mut cp = null_mut::<control_pane>();
@@ -491,16 +494,16 @@ pub unsafe extern "C" fn control_write_output(c: *mut client, wp: *mut window_pa
             (*cb).t = get_timer();
 
             tailq_insert_tail::<_, discr_entry>(&raw mut (*cp).blocks, cb);
-            log_debug(
-                c"%s: %s: new output block of %zu for %%%u".as_ptr(),
+            log_debug!(
+                "{}: {}: new output block of {} for %%{}",
                 __func__,
-                (*c).name,
+                _s((*c).name),
                 (*cb).size,
                 (*wp).id,
             );
 
             if (*cp).pending_flag == 0 {
-                log_debug(c"%s: %s: %%%u now pending".as_ptr(), __func__, (*c).name, (*wp).id);
+                log_debug!("{}: {}: %%{} now pending", __func__, _s((*c).name), (*wp).id);
                 tailq_insert_tail::<_, discr_pending_entry>(&raw mut (*cs).pending_list, cp);
                 (*cp).pending_flag = 1;
                 (*cs).pending_count += 1;
@@ -509,7 +512,7 @@ pub unsafe extern "C" fn control_write_output(c: *mut client, wp: *mut window_pa
             return;
         }
         //ignore:
-        log_debug(c"%s: %s: ignoring pane %%%u".as_ptr(), __func__, (*c).name, (*wp).id);
+        log_debug!("{}: {}: ignoring pane %%{}", __func__, _s((*c).name), (*wp).id);
         window_pane_update_used_data(wp, &raw mut (*cp).offset, usize::MAX);
         window_pane_update_used_data(wp, &raw mut (*cp).queued, usize::MAX);
     }
@@ -541,7 +544,7 @@ pub unsafe extern "C" fn control_error_callback(_bufev: *mut bufferevent, what: 
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_read_callback(bufev: *mut bufferevent, data: *mut c_void) {
-    let __func__ = c"control_read_callback".as_ptr();
+    let __func__ = "control_read_callback";
     let mut c: *mut client = data.cast();
 
     unsafe {
@@ -554,7 +557,7 @@ pub unsafe extern "C" fn control_read_callback(bufev: *mut bufferevent, data: *m
             if (line.is_null()) {
                 break;
             }
-            log_debug(c"%s: %s: %s".as_ptr(), __func__, (*c).name, line);
+            log_debug!("{}: {}: {}", __func__, _s((*c).name), _s(line));
             if *line == b'\0' as c_char {
                 free_(line);
                 (*c).flags |= client_flag::EXIT;
@@ -587,7 +590,7 @@ pub unsafe extern "C" fn control_all_done(c: *mut client) -> i32 {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_flush_all_blocks(c: *mut client) {
-    let __func__ = c"control_flush_all_blocks".as_ptr();
+    let __func__ = "control_flush_all_blocks";
     unsafe {
         let mut cs = (*c).control_state;
 
@@ -595,7 +598,7 @@ pub unsafe extern "C" fn control_flush_all_blocks(c: *mut client) {
             if ((*cb).size != 0) {
                 break;
             }
-            log_debug(c"%s: %s: flushing line: %s".as_ptr(), __func__, (*c).name, (*cb).line);
+            log_debug!("{}: {}: flushing line: {}", __func__, _s((*c).name), _s((*cb).line));
 
             bufferevent_write((*cs).write_event, (*cb).line.cast(), strlen((*cb).line));
             bufferevent_write((*cs).write_event, c"\n".as_ptr().cast(), 1);
@@ -650,16 +653,15 @@ pub unsafe extern "C" fn control_append_data(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_write_data(c: *mut client, message: *mut evbuffer) {
-    let __func__ = c"control_write_data".as_ptr();
     unsafe {
-        let mut cs = (*c).control_state;
+        let cs = (*c).control_state;
 
-        log_debug(
+        log_debug_c(
             c"%s: %s: %.*s".as_ptr(),
-            __func__,
+            c"control_write_data".as_ptr(),
             (*c).name,
             EVBUFFER_LENGTH(message) as i32,
-            EVBUFFER_DATA(message) as i32,
+            EVBUFFER_DATA(message),
         );
 
         evbuffer_add(message, c"\n".as_ptr().cast(), 1);
@@ -670,7 +672,6 @@ pub unsafe extern "C" fn control_write_data(c: *mut client, message: *mut evbuff
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_write_pending(c: *mut client, cp: *mut control_pane, limit: usize) -> i32 {
-    let __func__ = c"control_write_pending".as_ptr();
     unsafe {
         let mut cs = (*c).control_state;
         let mut message: *mut evbuffer = null_mut();
@@ -701,12 +702,12 @@ pub unsafe extern "C" fn control_write_pending(c: *mut client, cp: *mut control_
 
             cb = tailq_first(&raw mut (*cp).blocks);
             let age = if ((*cb).t < t) { t - (*cb).t } else { 0 };
-            log_debug(
-                c"%s: %s: output block %zu (age %llu) for %%%u (used %zu/%zu)".as_ptr(),
-                __func__,
-                (*c).name,
+            log_debug!(
+                "{}: {}: output block {} (age {}) for %%{} (used {}/{})",
+                "control_write_pending",
+                _s((*c).name),
                 (*cb).size,
-                age as c_ulonglong,
+                age,
                 (*cp).pane,
                 used,
                 limit,
@@ -744,7 +745,6 @@ pub unsafe extern "C" fn control_write_pending(c: *mut client, cp: *mut control_
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_write_callback(bufev: *mut bufferevent, data: *mut c_void) {
-    let __func__ = c"control_write_callback".as_ptr();
     unsafe {
         let mut c: *mut client = data.cast();
         let mut cs = (*c).control_state;
@@ -757,10 +757,10 @@ pub unsafe extern "C" fn control_write_callback(bufev: *mut bufferevent, data: *
                 break;
             }
             let space = CONTROL_BUFFER_HIGH as usize - EVBUFFER_LENGTH(evb);
-            log_debug(
-                c"%s: %s: %zu bytes available, %u panes".as_ptr(),
-                __func__,
-                (*c).name,
+            log_debug!(
+                "{}: {}: {} bytes available, {} panes",
+                "control_write_callback",
+                _s((*c).name),
                 space,
                 (*cs).pending_count,
             );
@@ -1100,13 +1100,12 @@ pub unsafe extern "C" fn control_check_subs_all_windows(c: *mut client, csub: *m
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_check_subs_timer(fd: i32, events: i16, data: *mut c_void) {
-    let __func__ = c"control_check_subs_timer".as_ptr();
     unsafe {
         let mut c: *mut client = data.cast();
         let mut cs = (*c).control_state;
         let mut tv = timeval { tv_sec: 1, tv_usec: 0 };
 
-        log_debug(c"%s: timer fired".as_ptr(), __func__);
+        log_debug!("{}: timer fired", "control_check_subs_timer");
         evtimer_add(&raw mut (*cs).subs_timer, &raw mut tv);
 
         for csub in rb_foreach(&raw mut (*cs).subs).map(NonNull::as_ptr) {

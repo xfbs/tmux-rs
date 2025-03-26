@@ -39,14 +39,13 @@ pub unsafe extern "C" fn notify_insert_one_hook(
     cmdlist: *mut cmd_list,
     state: *mut cmdq_state,
 ) -> *mut cmdq_item {
-    let __func__ = c"notify_insert_one_hook".as_ptr();
     unsafe {
         if (cmdlist.is_null()) {
             return (item);
         }
         if (log_get_level() != 0) {
             let s = cmd_list_print(cmdlist, 0);
-            log_debug(c"%s: hook %s is: %s".as_ptr(), __func__, (*ne).name, s);
+            log_debug!("{}: hook {}: {}", "notify_insert_one_hook", _s((*ne).name), _s(s));
             free_(s);
         }
         let new_item = cmdq_get_command(cmdlist, state);
@@ -56,7 +55,7 @@ pub unsafe extern "C" fn notify_insert_one_hook(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut notify_entry) {
-    let __func__ = c"notify_insert_hook".as_ptr();
+    let __func__ = "notify_insert_hook";
     unsafe {
         // struct options			*oo;
         // struct cmdq_state		*state;
@@ -66,7 +65,7 @@ pub unsafe extern "C" fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut n
         // const char			*value;
         // struct cmd_parse_result		*pr;
 
-        log_debug(c"%s: inserting hook %s".as_ptr(), __func__, (*ne).name);
+        log_debug!("{}: inserting hook {}", __func__, _s((*ne).name));
 
         let mut o: *mut options_entry = null_mut();
         let mut oo: *mut options = null_mut();
@@ -94,7 +93,7 @@ pub unsafe extern "C" fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut n
             o = options_get(oo, (*ne).name);
         }
         if (o.is_null()) {
-            log_debug(c"%s: hook %s not found".as_ptr(), __func__, (*ne).name);
+            log_debug!("{}: hook {} not found", __func__, _s((*ne).name));
             return;
         }
 
@@ -106,12 +105,7 @@ pub unsafe extern "C" fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut n
             let pr = cmd_parse_from_string(value, null_mut());
             match (*pr).status {
                 cmd_parse_status::CMD_PARSE_ERROR => {
-                    log_debug(
-                        c"%s: can't parse hook %s: %s".as_ptr(),
-                        __func__,
-                        (*ne).name,
-                        (*pr).error,
-                    );
+                    log_debug!("{}: can't parse hook {}: {}", __func__, _s((*ne).name), _s((*pr).error));
                     free_((*pr).error);
                 }
                 cmd_parse_status::CMD_PARSE_SUCCESS => {
@@ -140,7 +134,7 @@ pub unsafe extern "C" fn notify_callback(item: *mut cmdq_item, data: *mut c_void
     unsafe {
         let mut ne = data as *mut notify_entry;
 
-        log_debug(c"%s: %s".as_ptr(), __func__, (*ne).name);
+        log_debug!("{}: {}", _s(__func__), _s((*ne).name));
 
         if (strcmp((*ne).name, c"pane-mode-changed".as_ptr()) == 0) {
             control_notify_pane_mode_changed((*ne).pane);

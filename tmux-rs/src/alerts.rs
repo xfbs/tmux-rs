@@ -21,7 +21,7 @@ unsafe extern "C" fn alerts_timer(_fd: i32, _events: i16, arg: *mut c_void) {
     let w = arg as *mut window;
 
     unsafe {
-        log_debug(c"@%u alerts timer expired".as_ptr(), (*w).id);
+        log_debug!("@{} alerts timer expired", (*w).id);
         alerts_queue(NonNull::new_unchecked(w), window_flag::SILENCE);
     }
 }
@@ -32,7 +32,7 @@ pub unsafe extern "C" fn alerts_callback(_fd: c_int, _events: c_short, arg: *mut
             unsafe {
                 let alerts = alerts_check_all(w);
 
-                log_debug(c"@%u alerts check, alerts %#x".as_ptr(), (*w).id, alerts);
+                log_debug!("@{} alerts check, alerts {:#x}", (*w).id, alerts);
 
                 (*w).alerts_queued = 0;
                 tailq_remove::<_, crate::discr_alerts_entry>(&raw mut alerts_list, w);
@@ -122,7 +122,7 @@ unsafe fn alerts_reset(w: NonNull<window>) {
             tv_usec: 0,
         };
 
-        log_debug(c"@%u alerts timer reset %u".as_ptr(), (*w).id, tv.tv_sec as u32);
+        log_debug!("@{} alerts timer reset {}", (*w).id, tv.tv_sec);
         if tv.tv_sec != 0 {
             event_add(&raw mut (*w).alerts_timer, &raw mut tv);
         }
@@ -137,7 +137,7 @@ pub unsafe extern "C" fn alerts_queue(w: NonNull<window>, flags: window_flag) {
 
         if ((*w).flags & flags) != flags {
             (*w).flags |= flags;
-            log_debug(c"@%u alerts flags added %#x".as_ptr(), (*w).id, flags);
+            log_debug!("@{} alerts flags added {:#x}", (*w).id, flags);
         }
 
         if alerts_enabled(w, flags) != 0 {
@@ -148,7 +148,7 @@ pub unsafe extern "C" fn alerts_queue(w: NonNull<window>, flags: window_flag) {
             }
 
             if alerts_fired == 0 {
-                log_debug(c"alerts check queued (by @%u)".as_ptr(), (*w).id);
+                log_debug!("alerts check queued (by @{})", (*w).id);
                 event_once(-1, EV_TIMEOUT as i16, Some(alerts_callback), null_mut(), null_mut());
                 alerts_fired = 1;
             }

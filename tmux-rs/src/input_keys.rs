@@ -4,7 +4,7 @@ use compat_rs::{
 };
 use libc::{strchr, strcspn};
 
-use crate::*;
+use crate::{log::log_debug_c, *};
 
 unsafe extern "C" {
     // pub fn input_key_build();
@@ -183,7 +183,7 @@ pub unsafe extern "C" fn input_key_split2(c: u32, dst: *mut u8) -> usize {
 
 /// Build input key tree.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn input_key_build() {
+pub unsafe extern "C-unwind" fn input_key_build() {
     let __func__ = c"input_key_build".as_ptr();
     unsafe {
         for i in 0..input_key_defaults_len {
@@ -206,13 +206,7 @@ pub unsafe extern "C" fn input_key_build() {
         }
 
         for ike in rb_foreach(&raw mut input_key_tree).map(NonNull::as_ptr) {
-            log_debug(
-                c"%s: 0x%llx (%s) is %s".as_ptr(),
-                __func__,
-                (*ike).key,
-                key_string_lookup_key((*ike).key, 1),
-                (*ike).data,
-            );
+            // log_debug_!( "{}:{} : 0x{:x} ({}) is {}", file!(), line!(), (*ike).key, PercentS(key_string_lookup_key((*ike).key, 1)), PercentS((*ike).data),);
         }
     }
 }
@@ -222,12 +216,7 @@ pub unsafe extern "C" fn input_key_build() {
 pub unsafe extern "C" fn input_key_pane(wp: *mut window_pane, key: key_code, m: *mut mouse_event) -> i32 {
     unsafe {
         if log_get_level() != 0 {
-            log_debug(
-                c"writing key 0x%llx (%s) to %%%u".as_ptr(),
-                key,
-                key_string_lookup_key(key, 1),
-                (*wp).id,
-            );
+            // log_debug( c"writing key 0x%llx (%s) to %%%u".as_ptr(), key, key_string_lookup_key(key, 1), (*wp).id,);
         }
 
         if (KEYC_IS_MOUSE(key)) {
@@ -243,7 +232,7 @@ pub unsafe extern "C" fn input_key_pane(wp: *mut window_pane, key: key_code, m: 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn input_key_write(from: *const c_char, bev: *mut bufferevent, data: *const c_char, size: usize) {
     unsafe {
-        log_debug(c"%s: %.*s".as_ptr(), from, size as i32, data);
+        log_debug_c(c"%s: %.*s".as_ptr(), from, size as i32, data);
         bufferevent_write(bev, data.cast(), size);
     }
 }
@@ -324,7 +313,7 @@ pub unsafe extern "C" fn input_key_vt10x(bev: *mut bufferevent, mut key: key_cod
             b"119900=+;;'',,..\x1f\x1f\x7f\x7f\0\0\0".as_ptr().cast(),
         ];
 
-        log_debug(c"%s: key in %llx".as_ptr(), __func__, key);
+        log_debug!("{}: key in {}", _s(__func__), key);
 
         if (key & KEYC_META != 0) {
             input_key_write(__func__, bev, c"\x1b".as_ptr(), 1);
@@ -368,7 +357,7 @@ pub unsafe extern "C" fn input_key_vt10x(bev: *mut bufferevent, mut key: key_cod
             };
         }
 
-        log_debug(c"%s: key out %llx".as_ptr(), __func__, key);
+        log_debug!("{}: key out {}", _s(__func__), key);
 
         ud.data[0] = (key & 0x7f) as u8;
         input_key_write(__func__, bev, ud.data.as_ptr().cast(), 1);
@@ -380,9 +369,8 @@ pub unsafe extern "C" fn input_key_vt10x(bev: *mut bufferevent, mut key: key_cod
 /* Pick keys that are reported as vt10x keys in modifyOtherKeys=1 mode. */
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn input_key_mode1(bev: *mut bufferevent, key: key_code) -> i32 {
-    let __func__ = c"input_key_mode1".as_ptr();
     unsafe {
-        log_debug(c"%s: key in %llx".as_ptr(), __func__, key);
+        log_debug!("{}: key in {}", "input_key_mode1", key);
 
         /*
          * As per
@@ -497,7 +485,7 @@ pub unsafe extern "C" fn input_key(s: *mut screen, bev: *mut bufferevent, mut ke
             ike = input_key_get(key & !KEYC_KEYPAD);
         }
         if (!ike.is_null()) {
-            log_debug(c"%s: found key 0x%llx: \"%s\"".as_ptr(), __func__, key, (*ike).data);
+            log_debug!("{}: found key 0x{}: \"{}\"", _s(__func__), key, _s((*ike).data));
             if ((key == keyc::KEYC_PASTE_START as u64 || key == keyc::KEYC_PASTE_END as u64)
                 && (!(*s).mode & MODE_BRACKETPASTE != 0))
             {
@@ -512,7 +500,7 @@ pub unsafe extern "C" fn input_key(s: *mut screen, bev: *mut bufferevent, mut ke
 
         /* Ignore internal function key codes. */
         if ((key >= KEYC_BASE && key < keyc::KEYC_BASE_END as u64) || (key >= KEYC_USER && key < KEYC_USER_END)) {
-            log_debug(c"%s: ignoring key 0x%llx".as_ptr(), __func__, key);
+            log_debug!("{}: ignoring key 0x{}", _s(__func__), key);
             return 0;
         }
 
@@ -690,7 +678,7 @@ pub unsafe extern "C" fn input_key_mouse(wp: *mut window_pane, m: *mut mouse_eve
         if (input_key_get_mouse(s, m, x, y, &raw mut buf, &raw mut len) == 0) {
             return;
         }
-        log_debug(c"writing mouse %.*s to %%%u".as_ptr(), len, buf, (*wp).id);
+        log_debug_c(c"writing mouse %.*s to %%%u".as_ptr(), len, buf, (*wp).id);
         input_key_write(__func__, (*wp).event, buf, len);
     }
 }

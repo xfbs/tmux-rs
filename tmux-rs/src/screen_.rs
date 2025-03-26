@@ -324,7 +324,7 @@ pub unsafe extern "C" fn screen_resize_cursor(
     eat_empty: i32,
     cursor: i32,
 ) {
-    let __func__ = c"screen_resize_cursor".as_ptr();
+    let __func__ = "screen_resize_cursor";
     unsafe {
         let mut cx = (*s).cx;
         let mut cy = (*(*s).grid).hsize + (*s).cy;
@@ -333,8 +333,8 @@ pub unsafe extern "C" fn screen_resize_cursor(
             screen_write_free_list(s);
         }
 
-        log_debug(
-            c"%s: new size %ux%u, now %ux%u (cursor %u,%u = %u,%u)".as_ptr(),
+        log_debug!(
+            "{}: new size {}{}, now {}x{} (cursor {},{} = {},{})",
             __func__,
             sx,
             sy,
@@ -375,8 +375,8 @@ pub unsafe extern "C" fn screen_resize_cursor(
             (*s).cy = 0;
         }
 
-        log_debug(
-            c"%s: cursor finished at %u,%u = %u,%u".as_ptr(),
+        log_debug!(
+            "{}: cursor finished at {},{} = {},{}",
             __func__,
             (*s).cx,
             (*s).cy,
@@ -686,21 +686,14 @@ unsafe extern "C" fn screen_reflow(s: *mut screen, new_x: u32, cx: *mut u32, cy:
 
         if cursor != 0 {
             grid_wrap_position((*s).grid, *cx, *cy, &mut wx, &mut wy);
-            log_debug(
-                c"%s: cursor %u,%u is %u,%u".as_ptr(),
-                c"screen_reflow".as_ptr(),
-                *cx,
-                *cy,
-                wx,
-                wy,
-            );
+            log_debug!("{}: cursor {},{} is {},{}", "screen_reflow", *cx, *cy, wx, wy,);
         }
 
         grid_reflow((*s).grid, new_x);
 
         if cursor != 0 {
             grid_unwrap_position((*s).grid, cx, cy, wx, wy);
-            log_debug(c"%s: new cursor is %u,%u".as_ptr(), c"screen_reflow".as_ptr(), *cx, *cy);
+            log_debug!("{}: new cursor is {},{}", "screen_reflow", *cx, *cy);
         } else {
             *cx = 0;
             *cy = (*(*s).grid).hsize;

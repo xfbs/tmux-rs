@@ -513,12 +513,7 @@ pub unsafe extern "C" fn screen_redraw_draw_pane_status(ctx: *mut screen_redraw_
         let c = (*ctx).c;
         let w = (*(*(*c).session).curw).window;
         let tty = &raw mut (*c).tty;
-        log_debug(
-            c"%s: %s @%u".as_ptr(),
-            c"screen_redraw_draw_pane_status".as_ptr(),
-            (*c).name,
-            (*w).id,
-        );
+        log_debug!("{}: {} @{}", "screen_redraw_draw_pane_status", _s((*c).name), (*w).id,);
 
         for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
             if window_pane_visible(wp) == 0 {
@@ -662,10 +657,10 @@ pub unsafe extern "C" fn screen_redraw_set_context(c: *mut client, ctx: *mut scr
             &raw mut (*ctx).sy,
         );
 
-        log_debug(
-            c"%s: %s @%u ox=%u oy=%u sx=%u sy=%u %u/%d".as_ptr(),
-            c"screen_redraw_set_context".as_ptr(),
-            (*c).name,
+        log_debug!(
+            "{}: {} @{} ox={} oy={} sx={} sy={} {}/{}",
+            "screen_redraw_set_context",
+            _s((*c).name),
             (*w).id,
             (*ctx).ox,
             (*ctx).oy,
@@ -699,24 +694,24 @@ pub unsafe extern "C" fn screen_redraw_screen(c: *mut client) {
         tty_update_mode(&raw mut (*c).tty, (*c).tty.mode, null_mut());
 
         if flags.intersects(client_flag::REDRAWWINDOW | client_flag::REDRAWBORDERS) {
-            log_debug(c"%s: redrawing borders".as_ptr(), (*c).name);
+            log_debug!("{}: redrawing borders", _s((*c).name));
             if (*ctx).pane_status != pane_status::PANE_STATUS_OFF {
                 screen_redraw_draw_pane_status(ctx);
             }
             screen_redraw_draw_borders(ctx);
         }
         if flags.intersects(client_flag::REDRAWWINDOW) {
-            log_debug(c"%s: redrawing panes".as_ptr(), (*c).name);
+            log_debug!("{}: redrawing panes", _s((*c).name));
             screen_redraw_draw_panes(ctx);
         }
         if (*ctx).statuslines != 0 && flags.intersects(client_flag::REDRAWSTATUS | client_flag::REDRAWSTATUSALWAYS) {
-            log_debug(c"%s: redrawing status".as_ptr(), (*c).name);
+            log_debug!("{}: redrawing status", _s((*c).name));
             screen_redraw_draw_status(ctx);
         }
         if let Some(overlay_draw) = (*c).overlay_draw
             && flags.intersects(client_flag::REDRAWOVERLAY)
         {
-            log_debug(c"%s: redrawing overlay".as_ptr(), (*c).name);
+            log_debug!("{}: redrawing overlay", _s((*c).name));
             overlay_draw(c, (*c).overlay_data, ctx);
         }
 
@@ -896,12 +891,7 @@ pub unsafe extern "C" fn screen_redraw_draw_borders(ctx: *mut screen_redraw_ctx)
         let s = (*c).session;
         let w = (*(*s).curw).window;
 
-        log_debug(
-            c"%s: %s @%u".as_ptr(),
-            c"screen_redraw_draw_borders".as_ptr(),
-            (*c).name,
-            (*w).id,
-        );
+        log_debug!("{}: {} @{}", "screen_redraw_draw_borders", _s((*c).name), (*w).id,);
 
         for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
             (*wp).border_gc_set = 0;
@@ -923,12 +913,7 @@ pub unsafe extern "C" fn screen_redraw_draw_panes(ctx: *mut screen_redraw_ctx) {
         let c = (*ctx).c;
         let w = (*(*(*c).session).curw).window;
 
-        log_debug(
-            c"%s: %s @%u".as_ptr(),
-            c"screen_redraw_draw_panes".as_ptr(),
-            (*c).name,
-            (*w).id,
-        );
+        log_debug!("{}: {} @{}", "screen_redraw_draw_panes", _s((*c).name), (*w).id);
 
         for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
             if window_pane_visible(wp) != 0 {
@@ -949,12 +934,7 @@ pub unsafe extern "C" fn screen_redraw_draw_status(ctx: *mut screen_redraw_ctx) 
         let tty = &raw mut (*c).tty;
         let s = (*c).status.active;
 
-        log_debug(
-            c"%s: %s @%u".as_ptr(),
-            c"screen_redraw_draw_status".as_ptr(),
-            (*c).name,
-            (*w).id,
-        );
+        log_debug!("{}: {} @{}", "screen_redraw_draw_status", _s((*c).name), (*w).id);
 
         let y = if (*ctx).statustop != 0 {
             0
@@ -980,10 +960,10 @@ pub unsafe extern "C" fn screen_redraw_draw_pane(ctx: *mut screen_redraw_ctx, wp
         let palette = &raw mut (*wp).palette;
         let mut defaults: grid_cell = zeroed();
 
-        log_debug(
-            c"%s: %s @%u %%%u".as_ptr(),
-            c"screen_redraw_draw_pane".as_ptr(),
-            (*c).name,
+        log_debug!(
+            "{}: {} @{} %%{}",
+            "screen_redraw_draw_pane",
+            _s((*c).name),
             (*w).id,
             (*wp).id,
         );
@@ -1016,10 +996,10 @@ pub unsafe extern "C" fn screen_redraw_draw_pane(ctx: *mut screen_redraw_ctx, wp
                 (0, x, (*ctx).sx - x)
             };
 
-            log_debug(
-                c"%s: %s %%%u line %u,%u at %u,%u, width %u".as_ptr(),
-                c"screen_redraw_draw_pane".as_ptr(),
-                (*c).name,
+            log_debug!(
+                "{}: {} %%{} line {},{} at {},{}, width {}",
+                "screen_redraw_draw_pane",
+                _s((*c).name),
                 (*wp).id,
                 i,
                 j,

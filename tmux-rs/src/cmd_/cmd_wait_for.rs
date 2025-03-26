@@ -69,7 +69,7 @@ pub unsafe extern "C" fn cmd_wait_for_add(name: *const c_char) -> *mut wait_chan
 
         rb_insert(&raw mut wait_channels, wc);
 
-        log_debug(c"add wait channel %s".as_ptr(), (*wc).name);
+        log_debug!("add wait channel {}", _s((*wc).name));
     }
     wc
 }
@@ -84,7 +84,7 @@ pub unsafe extern "C" fn cmd_wait_for_remove(wc: *mut wait_channel) {
             return;
         }
 
-        log_debug(c"remove wait channel %s".as_ptr(), (*wc).name);
+        log_debug!("remove wait channel {}", _s((*wc).name));
 
         rb_remove(&raw mut wait_channels, wc);
 
@@ -130,11 +130,11 @@ pub unsafe extern "C" fn cmd_wait_for_signal(
         }
 
         if (tailq_empty(&raw mut (*wc).waiters) && (*wc).woken == 0) {
-            log_debug(c"signal wait channel %s, no waiters".as_ptr(), (*wc).name);
+            log_debug!("signal wait channel {}, no waiters", _s((*wc).name));
             (*wc).woken = 1;
             return cmd_retval::CMD_RETURN_NORMAL;
         }
-        log_debug(c"signal wait channel %s, with waiters".as_ptr(), (*wc).name);
+        log_debug!("signal wait channel {}, with waiters", _s((*wc).name));
 
         for wi in tailq_foreach::<_, ()>(&raw mut (*wc).waiters).map(NonNull::as_ptr) {
             cmdq_continue((*wi).item);
@@ -168,11 +168,11 @@ pub unsafe extern "C" fn cmd_wait_for_wait(
         }
 
         if ((*wc).woken != 0) {
-            log_debug(c"wait channel %s already woken (%p)".as_ptr(), (*wc).name, c);
+            log_debug!("wait channel {} already woken ({:p})", _s((*wc).name), c);
             cmd_wait_for_remove(wc);
             return cmd_retval::CMD_RETURN_NORMAL;
         }
-        log_debug(c"wait channel %s not woken (%p)".as_ptr(), (*wc).name, c);
+        log_debug!("wait channel {} not woken ({:p})", _s((*wc).name), c);
 
         let mut wi: *mut wait_item = xcalloc1();
         (*wi).item = item;

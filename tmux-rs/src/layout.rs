@@ -82,13 +82,12 @@ pub unsafe extern "C" fn layout_print_cell(lc: *mut layout_cell, hdr: *const c_c
             _ => c"UNKNOWN",
         };
 
-        log_debug(
-            c"%s:%*s%p type %s [parent %p] wp=%p [%u,%u %ux%u]".as_ptr(),
-            hdr,
-            n,
-            c" ".as_ptr(),
+        log_debug!(
+            "{}:{}{:p} type {} [parent {:p}] wp={:p} [{},{} {}x{}]",
+            _s(hdr),
+            if n == 0 { "" } else { " " },
             lc as *mut c_void,
-            type_str.as_ptr(),
+            type_str.to_string_lossy(),
             (*lc).parent as *mut c_void,
             (*lc).wp as *mut c_void,
             (*lc).xoff,

@@ -193,12 +193,7 @@ unsafe extern "C" fn cmd_display_panes_draw(c: *mut client, data: *mut c_void, c
     unsafe {
         let mut w: *mut window = (*(*(*c).session).curw).window;
 
-        log_debug(
-            c"%s: %s @%u".as_ptr(),
-            c"cmd_display_panes_draw".as_ptr(),
-            (*c).name,
-            (*w).id,
-        );
+        log_debug!("{}: {} @{}", "cmd_display_panes_draw", _s((*c).name), (*w).id);
 
         for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
             if window_pane_visible(wp) != 0 {

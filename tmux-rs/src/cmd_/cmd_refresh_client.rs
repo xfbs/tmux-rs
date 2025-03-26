@@ -62,7 +62,7 @@ pub unsafe extern "C" fn cmd_refresh_client_update_subscription(tc: *mut client,
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_refresh_client_control_client_size(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
-    let __func__ = c"cmd_refresh_client_control_client_size".as_ptr();
+    let __func__ = "cmd_refresh_client_control_client_size";
     unsafe {
         let mut args = cmd_get_args(self_);
         let mut tc = cmdq_get_target_client(item);
@@ -82,14 +82,7 @@ pub unsafe extern "C" fn cmd_refresh_client_control_client_size(self_: *mut cmd,
                 cmdq_error(item, c"size too small or too big".as_ptr());
                 return cmd_retval::CMD_RETURN_ERROR;
             }
-            log_debug(
-                c"%s: client %s window @%u: size %ux%u".as_ptr(),
-                __func__,
-                (*tc).name,
-                w,
-                x,
-                y,
-            );
+            log_debug!("{}: client {} window @{}: size {}x{}", __func__, _s((*tc).name), w, x, y);
             let cw = server_client_add_client_window(tc, w);
             (*cw).sx = x;
             (*cw).sy = y;
@@ -100,7 +93,7 @@ pub unsafe extern "C" fn cmd_refresh_client_control_client_size(self_: *mut cmd,
         if (sscanf(size, c"@%u:".as_ptr(), &w) == 1) {
             let cw = server_client_get_client_window(tc, w);
             if (!cw.is_null()) {
-                log_debug(c"%s: client %s window @%u: no size".as_ptr(), __func__, (*tc).name, w);
+                log_debug!("{}: client {} window @{}: no size", __func__, _s((*tc).name), w);
                 (*cw).sx = 0;
                 (*cw).sy = 0;
                 recalculate_sizes_now(1);

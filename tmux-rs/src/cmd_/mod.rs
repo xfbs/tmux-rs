@@ -330,7 +330,7 @@ pub unsafe extern "C" fn cmd_log_argv(argc: i32, argv: *mut *mut c_char, fmt: *c
         xvasprintf(&raw mut prefix, fmt, args.as_va_list());
 
         for i in 0..argc {
-            log_debug(c"%s: argv[%d]=%s".as_ptr(), prefix, i, *argv.add(i as usize));
+            log_debug!("{}: argv[{}]{}", _s(prefix), i, _s(*argv.add(i as usize)));
         }
         free_(prefix);
     }
@@ -467,13 +467,7 @@ pub unsafe extern "C" fn cmd_stringify_argv(argc: c_int, argv: *mut *mut c_char)
 
         for i in 0..argc {
             let s = args_escape(*argv.add(i as usize));
-            log_debug(
-                c"%s: %u %s = %s".as_ptr(),
-                c"cmd_stringify_argv".as_ptr(),
-                i,
-                *argv.add(i as usize),
-                s,
-            );
+            log_debug!("{}: {} {} = {}", "cmd_stringify_argv", i, _s(*argv.add(i as usize)), _s(s));
 
             len += strlen(s) + 1;
             buf = xrealloc_(buf, len).as_ptr();
@@ -758,7 +752,7 @@ pub unsafe extern "C" fn cmd_list_copy(cmdlist: *mut cmd_list, argc: c_int, argv
     unsafe {
         let mut group: u32 = (*cmdlist).group;
         let s = cmd_list_print(cmdlist, 0);
-        log_debug(c"%s: %s".as_ptr(), c"cmd_list_copy".as_ptr(), s);
+        log_debug!("{}: {}", "cmd_list_copy", _s(s));
         free(s as _);
 
         let new_cmdlist = cmd_list_new();
@@ -773,7 +767,7 @@ pub unsafe extern "C" fn cmd_list_copy(cmdlist: *mut cmd_list, argc: c_int, argv
         }
 
         let s = cmd_list_print(new_cmdlist, 0);
-        log_debug(c"%s: %s".as_ptr(), c"cmd_list_copy".as_ptr(), s);
+        log_debug!("{}: {}", "cmd_list_copy", _s(s));
         free(s as _);
 
         new_cmdlist
@@ -865,13 +859,7 @@ pub unsafe extern "C" fn cmd_mouse_at(
             x = (*m).x + (*m).ox;
             y = (*m).y + (*m).oy;
         }
-        log_debug(
-            c"%s: x=%u, y=%u%s".as_ptr(),
-            c"cmd_mouse_at".as_ptr(),
-            x,
-            y,
-            if last != 0 { c" (last)".as_ptr() } else { c"".as_ptr() },
-        );
+        log_debug!("{}: x={}, y={}{}", "cmd_mouse_at", x, y, if last != 0 { " (last)" } else { "" });
 
         if (*m).statusat == 0 && y >= (*m).statuslines {
             y -= (*m).statuslines;

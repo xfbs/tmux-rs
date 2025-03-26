@@ -262,11 +262,11 @@ unsafe extern "C" fn cmd_display_menu_get_position(
             n = 0;
         }
         *px = n as u32;
-        log_debug(
-            c"%s: -x: %s = %s = %u (-w %u)".as_ptr(),
-            c"cmd_display_menu_get_position".as_ptr(),
-            xp,
-            p,
+        log_debug!(
+            "{}: -x: {} = {} = {} (-w {})",
+            "cmd_display_menu_get_position",
+            _s(xp),
+            _s(p),
             *px,
             w,
         );
@@ -298,11 +298,11 @@ unsafe extern "C" fn cmd_display_menu_get_position(
             n = 0;
         }
         *py = n as u32;
-        log_debug(
-            c"%s: -y: %s = %s = %u (-h %u)".as_ptr(),
-            c"cmd_display_menu_get_position".as_ptr(),
-            yp,
-            p,
+        log_debug!(
+            "{}: -y: {} = {} = {} (-h {})",
+            "cmd_display_menu_get_position",
+            _s(yp),
+            _s(p),
             *py,
             h,
         );

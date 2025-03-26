@@ -118,8 +118,8 @@ unsafe extern "C" fn cmd_source_file_done(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_source_file_add(cdata: *mut cmd_source_file_data, path: *const c_char) {
     unsafe {
-        let mut __func__ = c"cmd_source_file_add".as_ptr();
-        log_debug(c"%s: %s".as_ptr(), __func__, path);
+        let mut __func__ = "cmd_source_file_add";
+        log_debug!("{}: {}", __func__, _s(path));
         (*cdata).files = xreallocarray_((*cdata).files, ((*cdata).nfiles + 1) as usize).as_ptr();
         *(*cdata).files.add((*cdata).nfiles as usize) = xstrdup(path).as_ptr();
         (*cdata).nfiles += 1;
@@ -128,7 +128,7 @@ unsafe extern "C" fn cmd_source_file_add(cdata: *mut cmd_source_file_data, path:
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_source_file_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
-    let __func__ = c"cmd_source_file_exec".as_ptr();
+    let __func__ = "cmd_source_file_exec";
 
     unsafe {
         let mut args = cmd_get_args(self_);
@@ -174,7 +174,7 @@ unsafe extern "C" fn cmd_source_file_exec(self_: *mut cmd, item: *mut cmdq_item)
             } else {
                 xasprintf(&raw mut pattern, c"%s/%s".as_ptr(), cwd, path);
             }
-            log_debug(c"%s: %s".as_ptr(), __func__, pattern);
+            log_debug!("{}: {}", __func__, _s(pattern));
 
             result = glob(pattern, 0, None, g.as_mut_ptr());
             if result != 0 {

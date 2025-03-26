@@ -2,6 +2,9 @@
 members = ["tmux-rs", "compat_rs"]
 resolver = "2"
 
+[profile.dev]
+# debug-assertions = false
+
 [profile.release]
 debug = true
 panic = "abort"

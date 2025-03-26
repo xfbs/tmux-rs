@@ -2,7 +2,7 @@ pub const PROTOCOL_VERSION: i32 = 8;
 
 /// Message types.
 #[repr(i32)]
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum msgtype {
     ZERO = 0, // TODO rust added so not ub on static init
     MSG_VERSION = 12,

@@ -266,6 +266,7 @@ pub unsafe extern "C" fn options_first(oo: *mut options) -> *mut options_entry {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn options_next(o: *mut options_entry) -> *mut options_entry { unsafe { rb_next(o) } }
+
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn options_get_only(oo: *mut options, name: *const c_char) -> *mut options_entry {
     unsafe {
@@ -274,7 +275,7 @@ pub unsafe extern "C" fn options_get_only(oo: *mut options, name: *const c_char)
             ..unsafe { zeroed() } // TODO use uninit
         };
 
-        let found = rb_find(&raw mut (*oo).tree, &o);
+        let found = rb_find(&raw mut (*oo).tree, &raw const o);
         if found.is_null() {
             o.name = options_map_name(name);
             rb_find(&raw mut (*oo).tree, &o)
@@ -294,6 +295,22 @@ pub unsafe extern "C" fn options_get(mut oo: *mut options, name: *const c_char) 
                 break;
             }
             o = options_get_only(oo, name);
+        }
+        o
+    }
+}
+
+pub unsafe fn options_get_(mut oo: *mut options, name: &CStr) -> *mut options_entry {
+    unsafe {
+        let mut o;
+        while {
+            o = options_get_only(oo, name.as_ptr());
+            o.is_null()
+        } {
+            oo = (*oo).parent;
+            if oo.is_null() {
+                break;
+            }
         }
         o
     }
@@ -837,6 +854,19 @@ pub unsafe extern "C" fn options_get_number(oo: *mut options, name: *const c_cha
     }
 }
 
+pub unsafe fn options_get_number_(oo: *mut options, name: &CStr) -> i64 {
+    unsafe {
+        let o = options_get_(oo, name);
+        if o.is_null() {
+            fatalx(c"missing option %s".as_ptr(), name);
+        }
+        if !OPTIONS_IS_NUMBER(o) {
+            fatalx(c"option %s is not a number".as_ptr(), name);
+        }
+        (*o).value.number
+    }
+}
+
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn options_set_string(
     oo: *mut options,
@@ -1074,6 +1104,7 @@ pub unsafe extern "C" fn options_string_to_style(
     name: *const c_char,
     ft: *mut format_tree,
 ) -> *mut style {
+    let __func__ = c"options_string_to_style".as_ptr();
     unsafe {
         let o = options_get(oo, name);
         if o.is_null() || !OPTIONS_IS_STRING(o) {
@@ -1084,7 +1115,7 @@ pub unsafe extern "C" fn options_string_to_style(
             return &mut (*o).style;
         }
         let s = (*o).value.string;
-        log_debug(c"%s: %s is '%s'".as_ptr(), c"__func__".as_ptr(), name, s);
+        log_debug!("{}: {} is '{}'", _s(__func__), _s(name), _s(s));
 
         style_set(&mut (*o).style, &grid_default_cell);
         (*o).cached = if strstr(s, c"#{".as_ptr()).is_null() { 1 } else { 0 };
@@ -1313,13 +1344,14 @@ pub unsafe extern "C" fn options_from_string(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn options_push_changes(name: *const c_char) {
+    let __func__ = c"options_push_changes".as_ptr();
     unsafe {
         let mut loop_: *mut client;
         let mut s: *mut session;
         let mut w: *mut window;
         let mut wp: *mut window_pane;
 
-        log_debug(c"%s: %s".as_ptr(), c"__func__".as_ptr(), name);
+        log_debug!("{}: {}", _s(__func__), _s(name));
 
         if strcmp(name, c"automatic-rename".as_ptr()) == 0 {
             for w in rb_foreach(&raw mut windows).map(NonNull::as_ptr) {

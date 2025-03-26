@@ -185,7 +185,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_read_callback(_bufev: *mut bufferevent, d
         let mut evb = (*(*wp).pipe_event).input;
 
         let available = EVBUFFER_LENGTH(evb);
-        log_debug(c"%%%u pipe read %zu".as_ptr(), (*wp).id, available);
+        log_debug!("%%{} pipe read {}", (*wp).id, available);
 
         bufferevent_write((*wp).event, EVBUFFER_DATA(evb).cast(), available);
         evbuffer_drain(evb, available);
@@ -201,7 +201,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_write_callback(_bufev: *mut bufferevent, 
     unsafe {
         let wp: *mut window_pane = data as *mut window_pane;
 
-        log_debug(c"%%%u pipe empty".as_ptr(), (*wp).id);
+        log_debug!("%%{} pipe empty", (*wp).id);
 
         if (window_pane_destroy_ready(wp) != 0) {
             server_destroy_pane(wp, 1);
@@ -214,7 +214,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_error_callback(_bufev: *mut bufferevent, 
     unsafe {
         let wp: *mut window_pane = data as *mut window_pane;
 
-        log_debug(c"%%%u pipe error".as_ptr(), (*wp).id);
+        log_debug!("%%{} pipe error", (*wp).id);
 
         bufferevent_free((*wp).pipe_event);
         close((*wp).pipe_fd);

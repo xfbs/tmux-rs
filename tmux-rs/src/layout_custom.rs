@@ -247,7 +247,7 @@ pub unsafe extern "C" fn layout_parse(w: *mut window, mut layout: *const c_char,
                 }
             }
             if ((*lc).type_ != layout_type::LAYOUT_WINDOWPANE && ((*lc).sx != sx || (*lc).sy != sy)) {
-                log_debug(c"fix layout %u,%u to %u,%u".as_ptr(), (*lc).sx, (*lc).sy, sx, sy);
+                log_debug!("fix layout {},{} to {},{}", (*lc).sx, (*lc).sy, sx, sy);
                 layout_print_cell(lc, __func__, 0);
                 (*lc).sx = sx - 1;
                 (*lc).sy = sy - 1;

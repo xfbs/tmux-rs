@@ -440,11 +440,11 @@ pub unsafe extern "C" fn tty_term_apply(term: *mut tty_term, capabilities: *cons
 
             if (quiet == 0) {
                 if (remove != 0) {
-                    log_debug(c"%s override: %s@".as_ptr(), name, s);
+                    log_debug!("{} override: {}@", _s(name), _s(s));
                 } else if (*value == b'\0' as c_char) {
-                    log_debug(c"%s override: %s".as_ptr(), name, s);
+                    log_debug!("{} override: {}", _s(name), _s(s));
                 } else {
-                    log_debug(c"%s override: %s=%s".as_ptr(), name, s, value);
+                    log_debug!("{} override: {}={}", _s(name), _s(s), _s(value));
                 }
             }
 
@@ -514,7 +514,7 @@ pub unsafe extern "C" fn tty_term_apply_overrides(term: *mut tty_term) {
             }
 
             /* Log the SIXEL flag. */
-            log_debug(c"SIXEL flag is %d".as_ptr(), !!((*term).flags & TERM_SIXEL));
+            log_debug!("SIXEL flag is {}", !!((*term).flags & TERM_SIXEL));
 
             /* Update the RGB flag if the terminal has RGB colours. */
             if tty_term_has(term, tty_code_code::TTYC_SETRGBF) != 0
@@ -524,7 +524,7 @@ pub unsafe extern "C" fn tty_term_apply_overrides(term: *mut tty_term) {
             } else {
                 (*term).flags &= !TERM_RGBCOLOURS;
             }
-            log_debug(c"RGBCOLOURS flag is %d".as_ptr(), !!((*term).flags & TERM_RGBCOLOURS));
+            log_debug!("RGBCOLOURS flag is {}", !!((*term).flags & TERM_RGBCOLOURS));
 
             /*
              * Set or clear the DECSLRM flag if the terminal has the margin
@@ -535,7 +535,7 @@ pub unsafe extern "C" fn tty_term_apply_overrides(term: *mut tty_term) {
             } else {
                 (*term).flags &= !TERM_DECSLRM;
             }
-            log_debug(c"DECSLRM flag is %d".as_ptr(), !!((*term).flags & TERM_DECSLRM));
+            log_debug!("DECSLRM flag is {}", !!((*term).flags & TERM_DECSLRM));
 
             /*
              * Set or clear the DECFRA flag if the terminal has the rectangle
@@ -546,7 +546,7 @@ pub unsafe extern "C" fn tty_term_apply_overrides(term: *mut tty_term) {
             } else {
                 (*term).flags &= !TERM_DECFRA;
             }
-            log_debug(c"DECFRA flag is %d".as_ptr(), !!((*term).flags & TERM_DECFRA));
+            log_debug!("DECFRA flag is {}", !!((*term).flags & TERM_DECFRA));
 
             /*
              * Terminals without am (auto right margin) wrap at at $COLUMNS - 1
@@ -568,7 +568,7 @@ pub unsafe extern "C" fn tty_term_apply_overrides(term: *mut tty_term) {
             } else {
                 (*term).flags &= !TERM_NOAM;
             }
-            log_debug(c"NOAM flag is %d".as_ptr(), !!((*term).flags & TERM_NOAM));
+            log_debug!("NOAM flag is {}", !!((*term).flags & TERM_NOAM));
 
             /* Generate ACS table. If none is present, use nearest ASCII. */
             memset(&raw mut (*term).acs as *mut c_void, 0, size_of::<[[i8; 2]; 256]>());
@@ -608,7 +608,7 @@ pub unsafe extern "C" fn tty_term_create(
         // int n;
         let mut errstr: *const c_char = null();
 
-        log_debug(c"adding term %s".as_ptr(), name);
+        log_debug!("adding term {}", _s(name));
         let term = xcalloc1::<tty_term>() as *mut tty_term;
         (*term).tty = tty;
         (*term).name = xstrdup(name).as_ptr();
@@ -643,7 +643,7 @@ pub unsafe extern "C" fn tty_term_create(
                         tty_code_type::NUMBER => {
                             let n = strtonum(value, 0, i32::MAX as i64, &raw mut errstr) as i32;
                             if (!errstr.is_null()) {
-                                log_debug(c"%s: %s".as_ptr(), (*ent).name, errstr);
+                                log_debug!("{}: {}", _s((*ent).name), _s(errstr));
                             } else {
                                 (*code).type_ = tty_code_type::NUMBER;
                                 (*code).value.number = n;
@@ -723,7 +723,7 @@ pub unsafe extern "C" fn tty_term_create(
 
             /* Log the capabilities. */
             for i in 0..tty_term_ncodes() {
-                log_debug(c"%s%s".as_ptr(), name, tty_term_describe(term, transmute(i)));
+                log_debug!("{}{}", _s(name), _s(tty_term_describe(term, transmute(i))));
             }
 
             return term;
@@ -738,7 +738,7 @@ pub unsafe extern "C" fn tty_term_create(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_term_free(term: *mut tty_term) {
     unsafe {
-        log_debug(c"removing term %s".as_ptr(), (*term).name);
+        log_debug!("removing term {}", _s((*term).name));
 
         for i in 0..tty_term_ncodes() as usize {
             if (*(*term).codes.add(i)).type_ == tty_code_type::STRING {
@@ -868,7 +868,7 @@ pub unsafe extern "C" fn tty_term_string_i(term: *mut tty_term, code: tty_code_c
         let s = tparm(x as *const c_char, a, 0, 0, 0, 0, 0, 0, 0, 0);
         // #endif
         if (s.is_null()) {
-            log_debug(c"could not expand %s".as_ptr(), tty_term_codes[code as usize].name);
+            log_debug!("could not expand {}", _s(tty_term_codes[code as usize].name));
             return c"c".as_ptr();
         }
         s
@@ -889,7 +889,7 @@ pub unsafe extern "C" fn tty_term_string_ii(term: *mut tty_term, code: tty_code_
         let s = tparm(x as *const c_char, a, b, 0, 0, 0, 0, 0, 0, 0);
         // #endif
         if (s.is_null()) {
-            log_debug(c"could not expand %s".as_ptr(), tty_term_codes[code as usize].name);
+            log_debug!("could not expand {}", _s(tty_term_codes[code as usize].name));
             return c"".as_ptr();
         }
 
@@ -917,7 +917,7 @@ pub unsafe extern "C" fn tty_term_string_iii(
         let s = tparm(x as *const c_char, a, b, c, 0, 0, 0, 0, 0, 0);
         // #endif
         if (s.is_null()) {
-            log_debug(c"could not expand %s".as_ptr(), tty_term_codes[code as usize].name);
+            log_debug!("could not expand {}", _s(tty_term_codes[code as usize].name));
             return c"".as_ptr();
         }
         s
@@ -938,7 +938,7 @@ pub unsafe extern "C" fn tty_term_string_s(term: *mut tty_term, code: tty_code_c
         let s = tparm(x as *const c_char, a as c_long, 0, 0, 0, 0, 0, 0, 0, 0);
         // #endif
         if (s.is_null()) {
-            log_debug(c"could not expand %s".as_ptr(), tty_term_codes[code as usize].name);
+            log_debug!("could not expand {}", _s(tty_term_codes[code as usize].name));
             return c"".as_ptr();
         }
 
@@ -966,7 +966,7 @@ pub unsafe extern "C" fn tty_term_string_ss(
         let s = tparm(x, a as c_long, b as c_long, 0, 0, 0, 0, 0, 0, 0);
         // #endif
         if s.is_null() {
-            log_debug(c"could not expand %s".as_ptr(), tty_term_codes[code as usize].name);
+            log_debug!("could not expand {}", _s(tty_term_codes[code as usize].name));
             return c"".as_ptr();
         }
 

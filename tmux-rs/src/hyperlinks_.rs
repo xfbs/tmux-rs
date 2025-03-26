@@ -137,8 +137,8 @@ pub unsafe extern "C" fn hyperlinks_put(
             internal_id_in = c"".as_ptr();
         }
 
-        utf8_stravis(&raw mut uri, uri_in, (VIS_OCTAL | VIS_CSTYLE) as i32);
-        utf8_stravis(&raw mut internal_id, internal_id_in, (VIS_OCTAL | VIS_CSTYLE) as i32);
+        utf8_stravis(&raw mut uri, uri_in, VIS_OCTAL | VIS_CSTYLE);
+        utf8_stravis(&raw mut internal_id, internal_id_in, VIS_OCTAL | VIS_CSTYLE);
 
         if (*internal_id_in != b'\0' as _) {
             let mut find = MaybeUninit::<hyperlinks_uri>::uninit();

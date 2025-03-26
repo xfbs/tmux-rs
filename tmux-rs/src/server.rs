@@ -164,11 +164,7 @@ unsafe extern "C" fn server_tidy_event(_fd: i32, _events: i16, _data: *mut c_voi
 
         malloc_trim(0);
 
-        log_debug(
-            c"%s: took %llu milliseconds".as_ptr(),
-            c"server_tidy_event".as_ptr(),
-            get_timer() - t,
-        );
+        log_debug!("{}: took {} milliseconds", "server_tidy_event", get_timer() - t);
         event_add(&raw mut server_ev_tidy, &raw const tv);
     }
 }
@@ -198,10 +194,23 @@ pub unsafe extern "C" fn server_start(
 
         if !flags.intersects(client_flag::NOFORK) {
             if proc_fork_and_daemon(&raw mut fd) != 0 {
+                // in parent process i.e. client
                 sigprocmask(SIG_SETMASK, &raw mut oldset, null_mut());
                 return fd;
             }
         }
+
+        std::panic::set_hook(Box::new(|panic_info| {
+            let backtrace = std::backtrace::Backtrace::capture();
+            let err_str = format!("{backtrace:#?}");
+            log_debug!("{err_str}");
+            log_close();
+            if let Err(err) = std::fs::write("server-panic.txt", err_str) {
+                eprintln!("error in panic handler! {err}")
+            }
+        }));
+
+        // now in child process i.e. server
         proc_clear_signals(client, 0);
         server_client_flags = flags;
 
@@ -465,7 +474,7 @@ pub unsafe extern "C" fn server_add_accept(timeout: c_int) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn server_signal(sig: i32) {
     unsafe {
-        log_debug(c"%s: %s".as_ptr(), c"server_signal".as_ptr(), strsignal(sig));
+        log_debug!("{}: {}", "server_signal", _s(strsignal(sig)));
         match sig {
             libc::SIGINT | libc::SIGTERM => {
                 server_exit = 1;
@@ -526,7 +535,7 @@ unsafe extern "C" fn server_child_exited(pid: pid_t, status: i32) {
                     (*wp).status = status;
                     (*wp).flags |= window_pane_flags::PANE_STATUSREADY;
 
-                    log_debug(c"%%%u exited".as_ptr(), (*wp).id);
+                    log_debug!("%%{} exited", (*wp).id);
                     (*wp).flags |= window_pane_flags::PANE_EXITED;
 
                     if window_pane_destroy_ready(wp) != 0 {
@@ -567,7 +576,7 @@ pub unsafe extern "C" fn server_add_message(fmt: *const c_char, mut args: ...) {
         let mut ap: VaListImpl = args.clone();
         xmalloc::xvasprintf(&raw mut s, fmt, ap.as_va_list());
 
-        log_debug(c"message: %s".as_ptr(), s);
+        log_debug!("message: {}", _s(s));
 
         let msg: *mut message_entry = xmalloc::xcalloc(1, size_of::<message_entry>()).cast().as_ptr();
         gettimeofday(&raw mut (*msg).msg_time, null_mut());

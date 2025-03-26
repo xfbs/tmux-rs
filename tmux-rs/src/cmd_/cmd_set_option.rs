@@ -96,7 +96,7 @@ pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_it
                 }
 
                 /* Parse option name and index. */
-                let name = options_match(argument, &raw mut idx, &raw mut ambiguous);
+                name = options_match(argument, &raw mut idx, &raw mut ambiguous);
                 if (name.is_null()) {
                     if (args_has_(args, 'q')) {
                         break 'out;

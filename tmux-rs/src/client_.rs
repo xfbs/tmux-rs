@@ -78,16 +78,16 @@ unsafe extern "C" {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn client_get_lock(lockfile: *mut c_char) -> i32 {
     unsafe {
-        log_debug(c"lock file is %s".as_ptr(), lockfile);
+        log_debug!("lock file is {}", _s(lockfile));
 
         let lockfd = open(lockfile, O_WRONLY | O_CREAT, 0o600);
         if lockfd == -1 {
-            log_debug(c"open failed: %s".as_ptr(), strerror(errno!()));
+            log_debug!("open failed: {}", _s(strerror(errno!())));
             return -1;
         }
 
         if flock(lockfd, LOCK_EX | LOCK_NB) == -1 {
-            log_debug(c"flock failed: %s".as_ptr(), strerror(errno!()));
+            log_debug!("flock failed: {}", _s(strerror(errno!())));
             if errno!() != EAGAIN {
                 return lockfd;
             }
@@ -95,7 +95,7 @@ pub unsafe extern "C" fn client_get_lock(lockfile: *mut c_char) -> i32 {
             close(lockfd);
             return -2;
         }
-        log_debug(c"flock succeeded".as_ptr());
+        log_debug!("flock succeeded");
 
         lockfd
     }
@@ -116,7 +116,7 @@ pub unsafe extern "C" fn client_connect(base: *mut event_base, path: *const c_ch
             errno!() = ENAMETOOLONG;
             return -1;
         }
-        log_debug(c"socket is %s".as_ptr(), path);
+        log_debug!("socket is {}", _s(path));
 
         'failed: {
             'retry: loop {
@@ -125,9 +125,9 @@ pub unsafe extern "C" fn client_connect(base: *mut event_base, path: *const c_ch
                     return -1;
                 }
 
-                log_debug(c"trying connect".as_ptr());
+                log_debug!("trying connect");
                 if connect(fd, &raw const sa as *const sockaddr, size_of::<sockaddr_un>() as u32) == -1 {
-                    log_debug(c"connect failed: %s".as_ptr(), strerror(errno!()));
+                    log_debug!("connect failed: {}", _s(strerror(errno!())));
                     if (errno!() != ECONNREFUSED && errno!() != ENOENT) {
                         break 'failed;
                     }
@@ -143,7 +143,7 @@ pub unsafe extern "C" fn client_connect(base: *mut event_base, path: *const c_ch
                         xasprintf(&raw mut lockfile, c"%s.lock".as_ptr(), path);
                         lockfd = client_get_lock(lockfile);
                         if lockfd < 0 {
-                            log_debug(c"didn't get lock (%d)".as_ptr(), lockfd);
+                            log_debug!("didn't get lock ({})", lockfd);
 
                             free_(lockfile);
                             lockfile = null_mut();
@@ -152,7 +152,7 @@ pub unsafe extern "C" fn client_connect(base: *mut event_base, path: *const c_ch
                                 continue 'retry;
                             }
                         }
-                        log_debug(c"got lock (%d)".as_ptr(), lockfd);
+                        log_debug!("got lock ({})", lockfd);
 
                         locked = 1;
                         continue 'retry;
@@ -245,7 +245,7 @@ unsafe extern "C" {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn client_main(
+pub unsafe extern "C-unwind" fn client_main(
     base: *mut event_base,
     argc: i32,
     argv: *mut *mut c_char,
@@ -296,10 +296,7 @@ pub unsafe extern "C" fn client_main(
         proc_set_signals(client_proc, Some(client_signal));
 
         client_flags = flags;
-        log_debug(
-            c"flags are %#llx".as_ptr(),
-            (*&raw mut client_flags).bits() as c_ulonglong,
-        );
+        log_debug!("flags are {:#x}", (*&raw mut client_flags).bits() as c_ulonglong);
 
         // #ifdef HAVE_SYSTEMD
         #[cfg(feature = "systemd")]
@@ -413,17 +410,17 @@ pub unsafe extern "C" fn client_main(
             // TODO this cast seems fishy
             if cmd_pack_argv(argc, argv, data.add(1).cast(), size) != 0 {
                 fprintf(stderr, c"command too long\n".as_ptr());
-                free(data as _);
+                free_(data);
                 return 1;
             }
             size += size_of::<msg_command>();
 
             if proc_send(client_peer, msg, -1, data as _, size) != 0 {
                 fprintf(stderr, c"failed to send command\n".as_ptr());
-                free(data as _);
+                free_(data);
                 return (1);
             }
-            free(data as _);
+            free_(data);
         } else if msg == msgtype::MSG_SHELL {
             proc_send(client_peer, msg, -1, null_mut(), 0);
         }
@@ -586,7 +583,7 @@ unsafe extern "C" fn client_send_identify(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn client_exec(shell: *mut c_char, shellcmd: *mut c_char) {
     unsafe {
-        log_debug(c"shell %s, command %s".as_ptr(), shell, shellcmd);
+        log_debug!("shell {}, command {}", _s(shell), _s(shellcmd));
         let argv0 = shell_argv0(
             shell,
             (*&raw const client_flags).intersects(client_flag::LOGIN) as c_int,
@@ -612,7 +609,7 @@ unsafe extern "C" fn client_signal(sig: i32) {
         let mut status: i32 = 0;
         let mut pid: pid_t = 0;
 
-        log_debug(c"%s: %s".as_ptr(), c"client_signal".as_ptr(), strsignal(sig));
+        log_debug!("{}: {}", "client_signal", _s(strsignal(sig)));
         if (sig == SIGCHLD) {
             loop {
                 pid = waitpid(WAIT_ANY, &raw mut status, WNOHANG);
@@ -623,7 +620,7 @@ unsafe extern "C" fn client_signal(sig: i32) {
                     if errno!() == ECHILD {
                         break;
                     }
-                    log_debug(c"waitpid failed: %s".as_ptr(), strerror(errno!()));
+                    log_debug!("waitpid failed: {}", _s(strerror(errno!())));
                 }
             }
         } else if client_attached == 0 {
@@ -787,10 +784,7 @@ unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
                     data as *const c_void,
                     size_of::<u64>(),
                 );
-                log_debug(
-                    c"new flags are %#llx".as_ptr(),
-                    (*&raw const client_flags).bits() as c_ulonglong,
-                );
+                log_debug!("new flags are {:#x}", (*&raw const client_flags).bits() as c_ulonglong);
             }
             msgtype::MSG_SHELL => {
                 if (datalen == 0 || *data.add(datalen - 1) != b'\0' as c_char) {
@@ -857,10 +851,7 @@ unsafe extern "C" fn client_dispatch_attached(imsg: *mut imsg) {
                     data as *const c_void,
                     size_of::<u64>(),
                 );
-                log_debug(
-                    c"new flags are %#llx".as_ptr(),
-                    (*&raw const client_flags).bits() as c_ulonglong,
-                );
+                log_debug!("new flags are {:#x}", (*&raw const client_flags).bits() as c_ulonglong);
             }
             msgtype::MSG_DETACH | msgtype::MSG_DETACHKILL => {
                 if datalen == 0 || *data.add(datalen - 1) != b'\0' as c_char {

@@ -218,7 +218,7 @@ pub unsafe extern "C" fn environ_log(env: *mut environ, fmt: *const c_char, mut 
 
         for envent in rb_foreach(env).map(NonNull::as_ptr) {
             if (!(*envent).value.is_none() && *(*envent).name.unwrap().as_ptr() != b'\0' as c_char) {
-                log_debug(c"%s%s=%s".as_ptr(), prefix, (*envent).name, (*envent).value);
+                log_debug!("{}{}={}", _s(prefix), _s(transmute_ptr((*envent).name)), _s(transmute_ptr((*envent).value)));
             }
         }
 

@@ -1120,12 +1120,7 @@ pub unsafe extern "C" fn colour_parseX11(mut p: *const c_char) -> c_int {
             colour = colour_byname(copy);
             free(copy as _);
         }
-        log_debug(
-            c"%s: %s = %s".as_ptr(),
-            c"colour_parseX11".as_ptr(),
-            p,
-            colour_tostring(colour),
-        );
+        log_debug!("{}: {} = {}", "colour_parseX11", _s(p), _s(colour_tostring(colour)));
         colour
     }
 }

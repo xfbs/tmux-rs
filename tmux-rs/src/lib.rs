@@ -4,12 +4,17 @@
 #![feature(maybe_uninit_slice)]
 #![feature(ptr_as_uninit)]
 #![feature(cfg_boolean_literals)]
+#![warn(static_mut_refs)]
+// #![warn(clippy::shadow_reuse)]
+// #![warn(clippy::shadow_same)]
+#![warn(clippy::shadow_unrelated)]
 #![allow(clippy::collapsible_else_if)]
 #![allow(clippy::collapsible_if)]
 #![allow(clippy::manual_range_contains)]
 #![allow(clippy::missing_safety_doc)]
 #![allow(clippy::needless_return)]
 #![allow(clippy::new_without_default)]
+#![allow(clippy::deref_addrof, reason = "many false positive, required for unsafe code")]
 #![allow(clippy::zero_ptr)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
@@ -2411,9 +2416,13 @@ pub enum prompt_mode {
 }
 
 mod tmux;
+
+#[cfg(not(test))]
+pub use crate::tmux::main;
+
 pub use crate::tmux::{
     checkshell, find_cwd, find_home, get_timer, getversion, global_environ, global_options, global_s_options,
-    global_w_options, main, ptm_fd, setblocking, shell_argv0, shell_command, sig2name, socket_path, start_time,
+    global_w_options, ptm_fd, setblocking, shell_argv0, shell_command, sig2name, socket_path, start_time,
 };
 
 mod proc;
@@ -2890,8 +2899,9 @@ unsafe extern "C" {
     pub unsafe fn get_proc_cwd(_: c_int) -> *mut c_char;
 }
 
+#[macro_use] // log_debug
 mod log;
-pub use crate::log::{fatal, fatalx, log_add_level, log_close, log_debug, log_get_level, log_open, log_toggle};
+pub use crate::log::{fatal, fatalx, log_add_level, log_close, log_get_level, log_open, log_toggle};
 /*
 unsafe extern "C" {
     pub unsafe fn fatal(msg: *const c_char, ap: ...) -> !;
@@ -3002,4 +3012,24 @@ impl From<bool> for boolint {
 impl std::ops::Not for boolint {
     type Output = bool;
     fn not(self) -> bool { self.0 == 0 }
+}
+
+// TODO struct should have some sort of lifetime
+/// Display wrapper for a *c_char pointer
+#[repr(transparent)]
+pub struct _s(*const i8);
+impl _s {
+    unsafe fn from_raw(s: *const c_char) -> Self { _s(s) }
+}
+impl std::fmt::Display for _s {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.0.is_null() {
+            f.write_str("(null)")
+        } else {
+            let len = unsafe { libc::strlen(self.0 as *const i8) };
+            let s: &[u8] = unsafe { std::slice::from_raw_parts(self.0 as *const u8, len) };
+            let s = std::str::from_utf8(s).unwrap_or("%s-invalid-utf8");
+            f.write_str(s)
+        }
+    }
 }

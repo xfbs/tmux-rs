@@ -95,7 +95,8 @@ pub unsafe extern "C" fn proc_event_cb(_fd: i32, events: i16, arg: *mut c_void) 
                 if (n == 0) {
                     break;
                 }
-                log_debug(c"peer %p message %d".as_ptr(), peer, (*imsg).hdr.type_);
+                let msgtype = msgtype::try_from((*imsg).hdr.type_);
+                log_debug!("peer {:p} message {:?}", peer, msgtype);
 
                 if (peer_check_version(peer, imsg) != 0) {
                     let fd = imsg_get_fd(imsg);
@@ -141,7 +142,7 @@ pub unsafe extern "C" fn peer_check_version(peer: *mut tmuxpeer, imsg: *mut imsg
     unsafe {
         let version = (*imsg).hdr.peerid & 0xff;
         if ((*imsg).hdr.type_ != msgtype::MSG_VERSION as u32 && version != PROTOCOL_VERSION as u32) {
-            log_debug(c"peer %p bad version %d".as_ptr(), peer, version);
+            log_debug!("peer {:p} bad version {}", peer, version);
 
             proc_send(peer, msgtype::MSG_VERSION, -1, null_mut(), 0);
             (*peer).flags |= PEER_BAD;
@@ -188,7 +189,7 @@ pub unsafe extern "C" fn proc_send(
         if ((*peer).flags & PEER_BAD != 0) {
             return -1;
         }
-        log_debug(c"sending message %d to peer %p (%zu bytes)".as_ptr(), type_, peer, len);
+        // log_debug_!("sending message {type_:?} to peer {peer:p} ({len} bytes)");
 
         let retval = imsg_compose(ibuf, type_ as u32, PROTOCOL_VERSION as u32, -1, fd, vp, len);
         if (retval != 1) {
@@ -201,8 +202,8 @@ pub unsafe extern "C" fn proc_send(
 
 pub unsafe fn proc_start(name: &CStr) -> *mut tmuxproc {
     unsafe {
-        let name = name.as_ptr();
         log_open(name);
+        let name = name.as_ptr();
         setproctitle(c"%s (%s)".as_ptr(), name, socket_path);
 
         let mut u = MaybeUninit::<utsname>::uninit();
@@ -211,40 +212,32 @@ pub unsafe fn proc_start(name: &CStr) -> *mut tmuxproc {
         }
         let u = u.as_mut_ptr();
 
-        log_debug(
-            c"%s started (%ld): version %s, socket %s, protocol %d".as_ptr(),
-            name,
+        log_debug!(
+            "{} started ({}): version {}, socket {}, protocol {}",
+            _s(name),
             getpid() as c_long,
-            getversion(),
-            socket_path,
+            _s(getversion()),
+            _s(socket_path),
             PROTOCOL_VERSION,
         );
-        log_debug(
-            c"on %s %s %s".as_ptr(),
-            (*u).sysname.as_ptr(),
-            (*u).release.as_ptr(),
-            (*u).version.as_ptr(),
+        log_debug!(
+            "on {} {} {}",
+            _s((*u).sysname.as_ptr()),
+            _s((*u).release.as_ptr()),
+            _s((*u).version.as_ptr()),
         );
-        log_debug(
-            c"using libevent %s %s".as_ptr(),
-            event_get_version(),
-            event_get_method(),
-        );
+        log_debug!("using libevent {} {}", _s(event_get_version()), _s(event_get_method()));
         #[cfg(feature = "utf8proc")]
         {
-            log_debug(c"using utf8proc %s".as_ptr(), utf8proc_version());
+            log_debug!("using utf8proc {}", _s(utf8proc_version()));
         }
         #[cfg(feature = "ncurses")]
         {
-            log_debug(
-                c"using ncurses %s %06u".as_ptr(),
-                NCURSES_VERSION,
-                NCURSES_VERSION_PATCH,
-            );
+            log_debug!("using ncurses {} {:06}", _s(NCURSES_VERSION), NCURSES_VERSION_PATCH);
         }
 
         let tp = xcalloc1::<tmuxproc>();
-        tp.name = xstrdup(name).as_ptr();
+        tp.name = xstrdup(name.cast()).as_ptr();
         tailq_init(&raw mut tp.peers);
 
         tp
@@ -254,7 +247,7 @@ pub unsafe fn proc_start(name: &CStr) -> *mut tmuxproc {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn proc_loop(tp: *mut tmuxproc, loopcb: Option<unsafe extern "C" fn() -> i32>) {
     unsafe {
-        log_debug(c"%s loop enter".as_ptr(), (*tp).name);
+        log_debug!("{} loop enter", _s((*tp).name));
         match loopcb {
             None => loop {
                 event_loop(EVLOOP_ONCE);
@@ -275,7 +268,7 @@ pub unsafe extern "C" fn proc_loop(tp: *mut tmuxproc, loopcb: Option<unsafe exte
                 }
             },
         }
-        log_debug(c"%s loop exit".as_ptr(), (*tp).name);
+        log_debug!("{} loop exit", _s((*tp).name));
     }
 }
 
@@ -369,14 +362,11 @@ pub unsafe extern "C" fn proc_add_peer(
 ) -> *mut tmuxpeer {
     unsafe {
         let mut gid: gid_t = 0;
-        let mut peer = xcalloc1::<tmuxpeer>();
-        peer.parent = tp;
+        let mut peer = xcalloc1::<tmuxpeer>() as *mut tmuxpeer;
+        (*peer).parent = tp;
 
-        peer.dispatchcb = dispatchcb;
-        peer.arg = arg;
-
-        let peer_uid = &raw mut peer.uid;
-        let peer = peer as *mut tmuxpeer;
+        (*peer).dispatchcb = dispatchcb;
+        (*peer).arg = arg;
 
         imsg_init(&raw mut (*peer).ibuf, fd);
         event_set(
@@ -387,11 +377,11 @@ pub unsafe extern "C" fn proc_add_peer(
             peer.cast(), // TODO could be ub if this and function below both write
         );
 
-        if getpeereid(fd, peer_uid, &raw mut gid) != 0 {
+        if getpeereid(fd, &raw mut (*peer).uid, &raw mut gid) != 0 {
             (*peer).uid = -1i32 as uid_t;
         }
 
-        log_debug(c"add peer %p: %d (%p)".as_ptr(), peer, fd, arg);
+        log_debug!("add peer {:p}: {} ({:p})", peer, fd, arg);
         tailq_insert_tail(&raw mut (*tp).peers, peer);
 
         proc_update_event(peer);
@@ -403,7 +393,7 @@ pub unsafe extern "C" fn proc_add_peer(
 pub unsafe extern "C" fn proc_remove_peer(peer: *mut tmuxpeer) {
     unsafe {
         tailq_remove(&raw mut (*(*peer).parent).peers, peer);
-        log_debug(c"remove peer %p".as_ptr(), peer);
+        log_debug!("remove peer {:p}", peer);
 
         event_del(&raw mut (*peer).event);
         imsg_clear(&raw mut (*peer).ibuf);
@@ -430,10 +420,11 @@ pub unsafe extern "C" fn proc_flush_peer(peer: *mut tmuxpeer) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn proc_toggle_log(tp: *mut tmuxproc) {
     unsafe {
-        log_toggle((*tp).name);
+        log_toggle(CStr::from_ptr((*tp).name));
     }
 }
 
+/// On success, the PID of the child process is returned in the parent, and 0 is returned in the child.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn proc_fork_and_daemon(fd: *mut i32) -> pid_t {
     unsafe {
@@ -444,9 +435,7 @@ pub unsafe extern "C" fn proc_fork_and_daemon(fd: *mut i32) -> pid_t {
         }
 
         match libc::fork() {
-            -1 => {
-                fatal(c"fork failed".as_ptr());
-            }
+            -1 => fatal(c"fork failed".as_ptr()),
             0 => {
                 close(pair[0]);
                 *fd = pair[1];

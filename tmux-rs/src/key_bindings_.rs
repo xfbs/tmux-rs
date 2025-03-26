@@ -244,12 +244,12 @@ pub unsafe extern "C" fn key_bindings_add(
         (*bd).cmdlist = cmdlist;
 
         let s = cmd_list_print((*bd).cmdlist, 0);
-        log_debug(
-            c"%s: %#llx %s = %s".as_ptr(),
-            c"key_bindings_add".as_ptr(),
+        log_debug!(
+            "{}: {:#x} {} = {}",
+            "key_bindings_add",
             (*bd).key,
-            key_string_lookup_key((*bd).key, 1),
-            s,
+            _s(key_string_lookup_key((*bd).key, 1)),
+            _s(s),
         );
         free_(s);
     }
@@ -268,11 +268,11 @@ pub unsafe extern "C" fn key_bindings_remove(name: *const c_char, key: key_code)
             return;
         }
 
-        log_debug(
-            c"%s: %#llx %s".as_ptr(),
-            c"key_bindings_remove".as_ptr(),
+        log_debug!(
+            "{}: {:#x} {}",
+            "key_bindings_remove",
             (*bd).key,
-            key_string_lookup_key((*bd).key, 1),
+            _s(key_string_lookup_key((*bd).key, 1)),
         );
 
         rb_remove(&raw mut (*table).key_bindings, bd);
@@ -661,7 +661,7 @@ pub unsafe extern "C" fn key_bindings_init() {
         for default in defaults {
             let pr = cmd_parse_from_string(default, null_mut());
             if (*pr).status != cmd_parse_status::CMD_PARSE_SUCCESS {
-                log_debug(c"%s".as_ptr(), (*pr).error);
+                log_debug!("{}", _s((*pr).error));
                 fatalx(c"bad default key: %s".as_ptr(), default);
             }
             cmdq_append(null_mut(), cmdq_get_command((*pr).cmdlist, null_mut()));

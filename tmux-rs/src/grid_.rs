@@ -248,7 +248,7 @@ pub unsafe extern "C" fn grid_clear_cell(gd: *mut grid, px: c_uint, py: c_uint, 
 pub unsafe extern "C" fn grid_check_y(gd: *mut grid, from: *const c_char, py: c_uint) -> c_int {
     unsafe {
         if py >= (*gd).hsize as c_uint + (*gd).sy as c_uint {
-            log_debug(c"%s: y out of range: %u".as_ptr(), from, py);
+            log_debug!("{}: y out of range: {}", _s(from), py);
             return -1;
         }
     }
