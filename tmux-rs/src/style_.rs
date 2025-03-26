@@ -452,7 +452,7 @@ pub unsafe extern "C" fn style_add(
         let mut ft0: *mut format_tree = null_mut();
 
         if ft.is_null() {
-            ft0 = format_create(null_mut(), null_mut(), 0, FORMAT_NOJOBS as _);
+            ft0 = format_create(null_mut(), null_mut(), 0, format_flags::FORMAT_NOJOBS);
             ft = ft0;
         }
 

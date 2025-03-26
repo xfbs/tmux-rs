@@ -6,7 +6,7 @@ use compat_rs::{
 };
 use libc::{
     _exit, SIG_BLOCK, SIG_SETMASK, SIGCHLD, STDERR_FILENO, STDIN_FILENO, TCSANOW, VERASE, chdir, close, execl, execvp,
-    getpid, kill, sigfillset, sigprocmask, strrchr, tcgetattr, tcsetattr,
+    kill, sigfillset, sigprocmask, strrchr, tcgetattr, tcsetattr,
 };
 
 #[cfg(feature = "utempter")]
@@ -545,11 +545,11 @@ pub unsafe extern "C" fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut c_c
                 xasprintf(
                     &raw mut cp,
                     c"tmux(%lu).%%%u".as_ptr(),
-                    getpid() as c_long,
+                    std::process::id() as c_long,
                     (*new_wp).id,
                 );
                 utempter_add_record((*new_wp).fd, cp);
-                kill(getpid(), SIGCHLD);
+                kill(std::process::id() as i32, SIGCHLD);
                 free_(cp);
             }
         }

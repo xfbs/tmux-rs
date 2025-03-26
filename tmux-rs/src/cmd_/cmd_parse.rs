@@ -639,7 +639,7 @@ pub unsafe extern "C" fn cmd_parse_from_arguments(
                 (*(*arg).cmdlist).references += 1;
                 tailq_insert_tail(&raw mut (*cmd).arguments, arg);
             } else {
-                fatalx(c"unknown argument type".as_ptr());
+                fatalx(c"unknown argument type");
             }
             if (end != 0) {
                 tailq_insert_tail(cmds, cmd);

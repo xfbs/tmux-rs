@@ -172,7 +172,7 @@ pub unsafe extern "C" fn cmdq_new() -> NonNull<cmdq_list> {
 pub unsafe extern "C" fn cmdq_free(queue: *mut cmdq_list) {
     unsafe {
         if !tailq_empty(&raw mut (*queue).list) {
-            fatalx(c"queue not empty".as_ptr());
+            fatalx(c"queue not empty");
         }
         free_(queue);
     }
@@ -287,7 +287,7 @@ pub unsafe extern "C" fn cmdq_add_format(
         xvasprintf(&raw mut value, fmt, args.as_va_list());
 
         if ((*state).formats.is_null()) {
-            (*state).formats = format_create(null_mut(), null_mut(), FORMAT_NONE, 0);
+            (*state).formats = format_create(null_mut(), null_mut(), FORMAT_NONE, format_flags::empty());
         }
         format_add((*state).formats, key, c"%s".as_ptr(), value);
 
@@ -299,7 +299,7 @@ pub unsafe extern "C" fn cmdq_add_format(
 pub unsafe extern "C" fn cmdq_add_formats(state: *mut cmdq_state, ft: *mut format_tree) {
     unsafe {
         if ((*state).formats.is_null()) {
-            (*state).formats = format_create(null_mut(), null_mut(), FORMAT_NONE, 0);
+            (*state).formats = format_create(null_mut(), null_mut(), FORMAT_NONE, format_flags::empty());
         }
         format_merge((*state).formats, ft);
     }
@@ -897,7 +897,7 @@ pub unsafe extern "C" fn cmdq_print(item: *mut cmdq_item, fmt: *const c_char, mu
     unsafe {
         let evb = evbuffer_new();
         if (evb.is_null()) {
-            fatalx(c"out of memory".as_ptr());
+            fatalx(c"out of memory");
         }
 
         evbuffer_add_vprintf(evb, fmt, core::mem::transmute(args.as_va_list()));

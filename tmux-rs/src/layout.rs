@@ -174,7 +174,7 @@ pub unsafe extern "C" fn layout_make_leaf(lc: *mut layout_cell, wp: *mut window_
 pub unsafe extern "C" fn layout_make_node(lc: *mut layout_cell, type_: layout_type) {
     unsafe {
         if type_ == layout_type::LAYOUT_WINDOWPANE {
-            fatalx(c"bad layout type".as_ptr());
+            fatalx(c"bad layout type");
         }
         (*lc).type_ = type_;
         tailq_init(&raw mut (*lc).cells);
@@ -980,7 +980,7 @@ pub unsafe extern "C" fn layout_split_pane(
                 return null_mut();
             }
         }
-        _ => fatalx(c"bad layout type".as_ptr()),
+        _ => fatalx(c"bad layout type"),
     }
 
     // Calculate new cell sizes. size is the target size or -1 for middle

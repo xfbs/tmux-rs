@@ -69,7 +69,7 @@ pub unsafe extern "C" fn winlink_find_by_window(wwl: *mut winlinks, w: *mut wind
 pub unsafe extern "C" fn winlink_find_by_index(wwl: *mut winlinks, idx: i32) -> *mut winlink {
     unsafe {
         if idx < 0 {
-            fatalx(c"bad index".as_ptr());
+            fatalx(c"bad index");
         }
 
         let mut wl: winlink = std::mem::zeroed();
@@ -1151,7 +1151,7 @@ pub unsafe extern "C" fn window_pane_set_event(wp: *mut window_pane) {
             wp as _,
         );
         if (*wp).event.is_null() {
-            fatalx(c"out of memory".as_ptr());
+            fatalx(c"out of memory");
         }
         (*wp).ictx = input_init(wp, (*wp).event, &raw mut (*wp).palette);
 

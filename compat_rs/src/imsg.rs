@@ -4,7 +4,7 @@ use std::{mem::MaybeUninit, ptr::null_mut};
 
 use libc::{
     CMSG_DATA, CMSG_FIRSTHDR, CMSG_NXTHDR, CMSG_SPACE, EAGAIN, EBADMSG, EINTR, EINVAL, ERANGE, SCM_RIGHTS, SOL_SOCKET,
-    c_char, calloc, close, cmsghdr, free, getdtablesize, getpid, iovec, memcpy, memmove, memset, msghdr, pid_t,
+    c_char, calloc, close, cmsghdr, free, getdtablesize, iovec, memcpy, memmove, memset, msghdr, pid_t,
 };
 
 use crate::errno;
@@ -103,7 +103,7 @@ pub unsafe extern "C" fn imsg_init(imsgbuf: *mut imsgbuf, fd: c_int) {
         memset((&raw mut (*imsgbuf).r).cast(), 0, size_of::<ibuf_read>());
         (*imsgbuf).fd = fd;
         (*imsgbuf).w.fd = fd;
-        (*imsgbuf).pid = getpid();
+        (*imsgbuf).pid = std::process::id() as i32;
         tailq_init(&raw mut (*imsgbuf).fds);
     }
 }

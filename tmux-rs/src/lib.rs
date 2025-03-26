@@ -8,8 +8,10 @@
 // #![warn(clippy::shadow_reuse)]
 // #![warn(clippy::shadow_same)]
 #![warn(clippy::shadow_unrelated)]
+#![allow(clippy::upper_case_acronyms)]
 #![allow(clippy::collapsible_else_if)]
 #![allow(clippy::collapsible_if)]
+#![allow(clippy::manual_clamp)]
 #![allow(clippy::manual_range_contains)]
 #![allow(clippy::missing_safety_doc)]
 #![allow(clippy::needless_return)]
@@ -128,7 +130,6 @@ macro_rules! opaque_types {
 }
 
 opaque_types! {
-    format_job_tree,
     format_tree,
     hyperlinks_uri,
     input_ctx,
@@ -1221,8 +1222,8 @@ bitflags::bitflags! {
 }
 
 /// Child window structure.
-#[repr(C)]
 // #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct window_pane {
     pub id: u32,
     pub active_point: u32,
@@ -1293,6 +1294,8 @@ pub struct window_pane {
     pub sentry: tailq_entry<window_pane>,
     pub tree_entry: rb_entry<window_pane>,
 }
+pub type window_panes = tailq_head<window_pane>;
+pub type window_pane_tree = rb_head<window_pane>;
 
 impl Entry<window_pane, discr_entry> for window_pane {
     unsafe fn entry(this: *mut Self) -> *mut tailq_entry<window_pane> { unsafe { &raw mut (*this).entry } }
@@ -1300,9 +1303,6 @@ impl Entry<window_pane, discr_entry> for window_pane {
 impl Entry<window_pane, discr_sentry> for window_pane {
     unsafe fn entry(this: *mut Self) -> *mut tailq_entry<window_pane> { unsafe { &raw mut (*this).sentry } }
 }
-
-pub type window_panes = tailq_head<window_pane>;
-pub type window_pane_tree = rb_head<window_pane>;
 
 bitflags::bitflags! {
     #[repr(transparent)]
@@ -2447,13 +2447,12 @@ pub use crate::paste::{
 
 mod format;
 pub use crate::format::{
-    FORMAT_FORCE, FORMAT_NOJOBS, FORMAT_NONE, FORMAT_PANE, FORMAT_STATUS, FORMAT_VERBOSE, FORMAT_WINDOW, format_add,
-    format_add_cb, format_add_tv, format_cb, format_create, format_create_defaults, format_create_from_state,
-    format_create_from_target, format_defaults, format_defaults_pane, format_defaults_paste_buffer,
-    format_defaults_window, format_each, format_expand, format_expand_time, format_free, format_get_pane,
-    format_grid_hyperlink, format_grid_line, format_grid_word, format_log_debug, format_lost_client, format_merge,
-    format_pretty_time, format_single, format_single_from_state, format_single_from_target, format_skip,
-    format_tidy_jobs, format_true,
+    FORMAT_NONE, FORMAT_PANE, FORMAT_WINDOW, format_add, format_add_cb, format_add_tv, format_cb, format_create,
+    format_create_defaults, format_create_from_state, format_create_from_target, format_defaults, format_defaults_pane,
+    format_defaults_paste_buffer, format_defaults_window, format_each, format_expand, format_expand_time, format_flags,
+    format_free, format_get_pane, format_grid_hyperlink, format_grid_line, format_grid_word, format_job_tree,
+    format_log_debug, format_lost_client, format_merge, format_pretty_time, format_single, format_single_from_state,
+    format_single_from_target, format_skip, format_tidy_jobs, format_true,
 };
 
 mod format_draw_;

@@ -1,5 +1,5 @@
 use crate::{
-    log::log_debug_c,
+    log::{fatalx_c, log_debug_c},
     xmalloc::{Zeroable, xreallocarray},
     *,
 };
@@ -211,7 +211,7 @@ pub unsafe extern "C" fn utf8_from_data(ud: *const utf8_data, uc: *mut utf8_char
         let mut index: u32 = 0;
         'fail: {
             if ((*ud).width > 2) {
-                fatalx(c"invalid UTF-8 width: %u".as_ptr(), (*ud).width as u32);
+                fatalx_c(c"invalid UTF-8 width: %u".as_ptr(), (*ud).width as u32);
             }
 
             if ((*ud).size > UTF8_SIZE as u8) {
@@ -432,10 +432,10 @@ pub unsafe extern "C" fn utf8_append(ud: *mut utf8_data, ch: c_uchar) -> utf8_st
         let mut width: i32 = 0;
 
         if ((*ud).have >= (*ud).size) {
-            fatalx(c"UTF-8 character overflow".as_ptr());
+            fatalx(c"UTF-8 character overflow");
         }
         if ((*ud).size > UTF8_SIZE as u8) {
-            fatalx(c"UTF-8 character size too large".as_ptr());
+            fatalx(c"UTF-8 character size too large");
         }
 
         if ((*ud).have != 0 && (ch & 0xc0) != 0x80) {

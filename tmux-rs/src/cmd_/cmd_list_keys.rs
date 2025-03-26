@@ -339,7 +339,7 @@ unsafe extern "C" fn cmd_list_keys_commands(self_: *mut cmd, item: *mut cmdq_ite
             .cast();
         }
 
-        let ft = format_create(cmdq_get_client(item), item, FORMAT_NONE, 0);
+        let ft = format_create(cmdq_get_client(item), item, FORMAT_NONE, format_flags::empty());
         format_defaults(ft, null_mut(), null_mut(), null_mut(), null_mut());
 
         let command = args_string(args, 0);

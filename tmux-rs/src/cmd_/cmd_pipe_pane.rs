@@ -92,7 +92,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
         }
 
         /* Expand the command. */
-        let ft = format_create(cmdq_get_client(item), item, FORMAT_NONE, 0);
+        let ft = format_create(cmdq_get_client(item), item, FORMAT_NONE, format_flags::empty());
         format_defaults(ft, tc, s, wl, wp);
         let cmd = format_expand_time(ft, args_string(args, 0));
         format_free(ft);
@@ -162,7 +162,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
                     wp.cast(),
                 );
                 if ((*wp).pipe_event.is_null()) {
-                    fatalx(c"out of memory".as_ptr());
+                    fatalx(c"out of memory");
                 }
                 if (out != 0) {
                     bufferevent_enable((*wp).pipe_event, EV_WRITE as i16);

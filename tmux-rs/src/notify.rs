@@ -237,7 +237,7 @@ pub unsafe extern "C" fn notify_add(
             null_mut()
         });
 
-        (*ne).formats = format_create(null_mut(), null_mut(), 0, FORMAT_NOJOBS);
+        (*ne).formats = format_create(null_mut(), null_mut(), 0, format_flags::FORMAT_NOJOBS);
         format_add((*ne).formats, c"hook".as_ptr(), c"%s".as_ptr(), name);
         if (!c.is_null()) {
             format_add((*ne).formats, c"hook_client".as_ptr(), c"%s".as_ptr(), (*c).name);
@@ -294,7 +294,7 @@ pub unsafe extern "C" fn notify_hook(item: *mut cmdq_item, name: *mut c_char) {
             -1
         });
 
-        ne.formats = format_create(null_mut(), null_mut(), 0, FORMAT_NOJOBS);
+        ne.formats = format_create(null_mut(), null_mut(), 0, format_flags::FORMAT_NOJOBS);
         format_add(ne.formats, c"hook".as_ptr(), c"%s".as_ptr(), name);
         format_log_debug(ne.formats, __func__);
 

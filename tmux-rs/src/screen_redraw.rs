@@ -450,7 +450,12 @@ pub unsafe extern "C" fn screen_redraw_make_pane_status(
         let mut old: MaybeUninit<screen> = MaybeUninit::uninit();
         let pane_status = (*rctx).pane_status;
 
-        let ft = format_create(c, null_mut(), (FORMAT_PANE | (*wp).id) as i32, FORMAT_STATUS as i32);
+        let ft = format_create(
+            c,
+            null_mut(),
+            (FORMAT_PANE | (*wp).id) as i32,
+            format_flags::FORMAT_STATUS,
+        );
         format_defaults(ft, c, (*c).session, (*(*c).session).curw, wp);
 
         if wp == server_client_get_pane(c) {

@@ -205,7 +205,7 @@ pub unsafe extern "C" fn server_start(
             let err_str = format!("{backtrace:#?}");
             log_debug!("{err_str}");
             log_close();
-            if let Err(err) = std::fs::write("server-panic.txt", err_str) {
+            if let Err(err) = std::fs::write(format!("server-panic-{}.txt", std::process::id()), err_str) {
                 eprintln!("error in panic handler! {err}")
             }
         }));
@@ -215,7 +215,7 @@ pub unsafe extern "C" fn server_start(
         server_client_flags = flags;
 
         if event_reinit(base) != 0 {
-            fatalx(c"event_reinit failed".as_ptr());
+            fatalx(c"event_reinit failed");
         }
         server_proc = proc_start(c"server");
 

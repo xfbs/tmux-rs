@@ -5,7 +5,7 @@ use compat_rs::{
 };
 use libc::strcmp;
 
-use crate::*;
+use crate::{log::fatalx_c, *};
 
 unsafe extern "C" {
     // pub fn key_bindings_get_table(_: *const c_char, _: c_int) -> *mut key_table;
@@ -662,7 +662,7 @@ pub unsafe extern "C" fn key_bindings_init() {
             let pr = cmd_parse_from_string(default, null_mut());
             if (*pr).status != cmd_parse_status::CMD_PARSE_SUCCESS {
                 log_debug!("{}", _s((*pr).error));
-                fatalx(c"bad default key: %s".as_ptr(), default);
+                fatalx_c(c"bad default key: %s".as_ptr(), default);
             }
             cmdq_append(null_mut(), cmdq_get_command((*pr).cmdlist, null_mut()));
             cmd_list_free((*pr).cmdlist);

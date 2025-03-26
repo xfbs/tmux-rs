@@ -1,4 +1,4 @@
-use crate::*;
+use crate::{log::fatalx_c, *};
 use compat_rs::{
     RB_GENERATE_STATIC,
     queue::tailq_foreach,
@@ -151,12 +151,12 @@ pub unsafe extern "C" fn options_map_name(name: *const c_char) -> *const c_char 
 pub unsafe extern "C" fn options_parent_table_entry(oo: *mut options, s: *const c_char) -> *const options_table_entry {
     unsafe {
         if (*oo).parent.is_null() {
-            fatalx(c"no parent options for %s".as_ptr(), s);
+            fatalx_c(c"no parent options for %s".as_ptr(), s);
         }
 
         let o = options_get((*oo).parent, s);
         if o.is_null() {
-            fatalx(c"%s not in parent options".as_ptr(), s);
+            fatalx_c(c"%s not in parent options".as_ptr(), s);
         }
 
         (*o).tableentry
@@ -215,7 +215,7 @@ pub unsafe extern "C" fn options_value_to_string(
                     s = xstrdup(*(*(*o).tableentry).choices.add((*ov).number as usize)).as_ptr();
                 }
                 _ => {
-                    fatalx(c"not a number option type".as_ptr());
+                    fatalx(c"not a number option type");
                 }
             }
             return s;
@@ -831,10 +831,10 @@ pub unsafe extern "C" fn options_get_string(oo: *mut options, name: *const c_cha
     unsafe {
         let o = options_get(oo, name);
         if o.is_null() {
-            fatalx(c"missing option %s".as_ptr(), name);
+            fatalx_c(c"missing option %s".as_ptr(), name);
         }
         if !OPTIONS_IS_STRING(o) {
-            fatalx(c"option %s is not a string".as_ptr(), name);
+            fatalx_c(c"option %s is not a string".as_ptr(), name);
         }
         (*o).value.string
     }
@@ -845,10 +845,10 @@ pub unsafe extern "C" fn options_get_number(oo: *mut options, name: *const c_cha
     unsafe {
         let o = options_get(oo, name);
         if o.is_null() {
-            fatalx(c"missing option %s".as_ptr(), name);
+            fatalx_c(c"missing option %s".as_ptr(), name);
         }
         if !OPTIONS_IS_NUMBER(o) {
-            fatalx(c"option %s is not a number".as_ptr(), name);
+            fatalx_c(c"option %s is not a number".as_ptr(), name);
         }
         (*o).value.number
     }
@@ -858,10 +858,10 @@ pub unsafe fn options_get_number_(oo: *mut options, name: &CStr) -> i64 {
     unsafe {
         let o = options_get_(oo, name);
         if o.is_null() {
-            fatalx(c"missing option %s".as_ptr(), name);
+            fatalx_c(c"missing option %s".as_ptr(), name);
         }
         if !OPTIONS_IS_NUMBER(o) {
-            fatalx(c"option %s is not a number".as_ptr(), name);
+            fatalx_c(c"option %s is not a number".as_ptr(), name);
         }
         (*o).value.number
     }
@@ -906,7 +906,7 @@ pub unsafe extern "C" fn options_set_string(
         }
 
         if !OPTIONS_IS_STRING(o) {
-            fatalx(c"option %s is not a string".as_ptr(), name);
+            fatalx_c(c"option %s is not a string".as_ptr(), name);
         }
         free_((*o).value.string);
         (*o).value.string = value;
@@ -919,7 +919,7 @@ pub unsafe extern "C" fn options_set_string(
 pub unsafe extern "C" fn options_set_number(oo: *mut options, name: *const c_char, value: i64) -> *mut options_entry {
     unsafe {
         if *name == b'@' as c_char {
-            fatalx(c"user option %s must be a string".as_ptr(), name);
+            fatalx_c(c"user option %s must be a string".as_ptr(), name);
         }
 
         let mut o = options_get_only(oo, name);
@@ -931,7 +931,7 @@ pub unsafe extern "C" fn options_set_number(oo: *mut options, name: *const c_cha
         }
 
         if !OPTIONS_IS_NUMBER(o) {
-            fatalx(c"option %s is not a number".as_ptr(), name);
+            fatalx_c(c"option %s is not a number".as_ptr(), name);
         }
         (*o).value.number = value;
         o

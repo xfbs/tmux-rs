@@ -265,7 +265,7 @@ pub unsafe extern "C" fn job_run(
                 job as *mut c_void,
             );
             if ((*job).event.is_null()) {
-                fatalx(c"out of memory".as_ptr());
+                fatalx(c"out of memory");
             }
             bufferevent_enable((*job).event, EV_READ as i16 | EV_WRITE as i16);
 

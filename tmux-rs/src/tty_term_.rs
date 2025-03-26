@@ -1,6 +1,6 @@
 use std::mem::transmute;
 
-use crate::{xmalloc::xreallocarray, *};
+use crate::{log::fatalx_c, xmalloc::xreallocarray, *};
 
 use compat_rs::{
     VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB,
@@ -811,7 +811,7 @@ pub unsafe extern "C" fn tty_term_read_list(
                         s = c"0".as_ptr();
                     }
                 }
-                _ => fatalx(c"unknown capability type".as_ptr()),
+                _ => fatalx(c"unknown capability type"),
             }
             *caps = xreallocarray((*caps).cast(), (*ncaps) as usize + 1, size_of::<*mut c_char>())
                 .as_ptr()
@@ -849,7 +849,7 @@ pub unsafe extern "C" fn tty_term_string(term: *mut tty_term, code: tty_code_cod
             return c"".as_ptr();
         }
         if ((*(*term).codes.add(code as usize)).type_ != tty_code_type::STRING) {
-            fatalx(c"not a string: %d".as_ptr(), code);
+            fatalx_c(c"not a string: %d".as_ptr(), code);
         }
         (*(*term).codes.add(code as usize)).value.string
     }
@@ -981,7 +981,7 @@ pub unsafe extern "C" fn tty_term_number(term: *mut tty_term, code: tty_code_cod
             return 0;
         }
         if (*(*term).codes.add(code as usize)).type_ != tty_code_type::NUMBER {
-            fatalx(c"not a number: %d".as_ptr(), code);
+            fatalx_c(c"not a number: %d".as_ptr(), code);
         }
         (*(*term).codes.add(code as usize)).value.number
     }
@@ -994,7 +994,7 @@ pub unsafe extern "C" fn tty_term_flag(term: *mut tty_term, code: tty_code_code)
             return 0;
         }
         if (*(*term).codes.add(code as usize)).type_ != tty_code_type::FLAG {
-            fatalx(c"not a flag: %d".as_ptr(), code);
+            fatalx_c(c"not a flag: %d".as_ptr(), code);
         }
         (*(*term).codes.add(code as usize)).value.flag
     }

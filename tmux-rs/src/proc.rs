@@ -7,8 +7,8 @@ use compat_rs::{
 };
 use libc::{
     __errno_location, AF_UNIX, EAGAIN, PF_UNSPEC, SA_RESTART, SIG_DFL, SIG_IGN, SIGCHLD, SIGCONT, SIGHUP, SIGINT,
-    SIGPIPE, SIGQUIT, SIGTERM, SIGTSTP, SIGTTIN, SIGTTOU, SIGUSR1, SIGUSR2, SIGWINCH, close, daemon, getpid, gid_t,
-    sigaction, sigemptyset, socketpair, uname, utsname,
+    SIGPIPE, SIGQUIT, SIGTERM, SIGTSTP, SIGTTIN, SIGTTOU, SIGUSR1, SIGUSR2, SIGWINCH, close, daemon, gid_t, sigaction,
+    sigemptyset, socketpair, uname, utsname,
 };
 
 use crate::event_::{signal_add, signal_set};
@@ -215,7 +215,7 @@ pub unsafe fn proc_start(name: &CStr) -> *mut tmuxproc {
         log_debug!(
             "{} started ({}): version {}, socket {}, protocol {}",
             _s(name),
-            getpid() as c_long,
+            std::process::id(),
             _s(getversion()),
             _s(socket_path),
             PROTOCOL_VERSION,

@@ -192,7 +192,7 @@ pub unsafe extern "C" fn window_buffer_build(
             if (pb.is_null()) {
                 continue;
             }
-            let ft = format_create(null_mut(), null_mut(), FORMAT_NONE, 0);
+            let ft = format_create(null_mut(), null_mut(), FORMAT_NONE, format_flags::empty());
             format_defaults(ft, null_mut(), s, wl, wp);
             format_defaults_paste_buffer(ft, pb);
 
@@ -329,7 +329,7 @@ pub unsafe extern "C" fn window_buffer_get_key(modedata: *mut c_void, itemdata: 
             return KEYC_NONE;
         };
 
-        let ft = format_create(null_mut(), null_mut(), FORMAT_NONE, 0);
+        let ft = format_create(null_mut(), null_mut(), FORMAT_NONE, format_flags::empty());
         format_defaults(ft, null_mut(), null_mut(), null_mut(), null_mut());
         format_defaults(ft, null_mut(), s, wl, wp);
         format_defaults_paste_buffer(ft, pb.as_ptr());

@@ -107,10 +107,14 @@ pub unsafe extern "C" fn default_window_name(w: *mut window) -> *mut c_char {
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn format_window_name(w: *mut window) -> *const c_char {
     unsafe {
-        let ft = format_create(null_mut(), null_mut(), (FORMAT_WINDOW | (*w).id) as i32, 0);
+        let ft = format_create(
+            null_mut(),
+            null_mut(),
+            (FORMAT_WINDOW | (*w).id) as i32,
+            format_flags::empty(),
+        );
         format_defaults_window(ft, w);
         format_defaults_pane(ft, (*w).active);
 

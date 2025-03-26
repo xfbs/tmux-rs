@@ -1,7 +1,7 @@
 use core::mem::zeroed;
 use core::ptr::null;
 
-use libc::{SIGTERM, getpid, kill};
+use libc::{SIGTERM, kill, pid_t};
 
 use crate::{
     args_parse, cmd, cmd_entry, cmd_entry_flag, cmd_find_type, cmd_flag, cmd_get_entry, cmd_retval, cmdq_item,
@@ -35,7 +35,7 @@ pub static mut cmd_start_server_entry: cmd_entry = cmd_entry {
 unsafe extern "C" fn cmd_kill_server_exec(self_: *mut cmd, _: *mut cmdq_item) -> cmd_retval {
     unsafe {
         if cmd_get_entry(self_) == &raw mut cmd_kill_server_entry {
-            kill(getpid(), SIGTERM);
+            kill(std::process::id() as pid_t, SIGTERM);
         }
     }
 

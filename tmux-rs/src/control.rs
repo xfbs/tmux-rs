@@ -6,7 +6,11 @@ use compat_rs::{
 };
 use libc::{close, strcmp};
 
-use crate::{log::log_debug_c, xmalloc::Zeroable, *};
+use crate::{
+    log::{fatalx_c, log_debug_c},
+    xmalloc::Zeroable,
+    *,
+};
 unsafe extern "C" {
     // pub unsafe fn control_discard(_: *mut client);
     // pub unsafe fn control_start(_: *mut client);
@@ -620,7 +624,7 @@ pub unsafe extern "C" fn control_append_data(
         if (message.is_null()) {
             let message = evbuffer_new();
             if (message.is_null()) {
-                fatalx(c"out of memory".as_ptr());
+                fatalx(c"out of memory");
             }
             if ((*c).flags.intersects(client_flag::CONTROL_PAUSEAFTER)) {
                 evbuffer_add_printf(
@@ -637,7 +641,7 @@ pub unsafe extern "C" fn control_append_data(
         let mut new_size = 0usize;
         let new_data: *mut c_uchar = window_pane_get_new_data(wp, &raw mut (*cp).offset, &raw mut new_size).cast();
         if (new_size < size) {
-            fatalx(c"not enough data: %zu < %zu".as_ptr(), new_size, size);
+            fatalx_c(c"not enough data: %zu < %zu".as_ptr(), new_size, size);
         }
         for i in 0..size {
             if (*new_data.add(i) < b' ' || *new_data.add(i) == b'\\') {
@@ -814,7 +818,7 @@ pub unsafe extern "C" fn control_start(c: *mut client) {
             c.cast(),
         );
         if ((*cs).read_event.is_null()) {
-            fatalx(c"out of memory".as_ptr());
+            fatalx(c"out of memory");
         }
 
         if ((*c).flags.intersects(client_flag::CONTROLCONTROL)) {
@@ -828,7 +832,7 @@ pub unsafe extern "C" fn control_start(c: *mut client) {
                 c.cast(),
             );
             if ((*cs).write_event.is_null()) {
-                fatalx(c"out of memory".as_ptr());
+                fatalx(c"out of memory");
             }
         }
         bufferevent_setwatermark((*cs).write_event, EV_WRITE as i16, CONTROL_BUFFER_LOW as usize, 0);

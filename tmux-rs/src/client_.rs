@@ -9,7 +9,7 @@ use libc::{
     LOCK_EX, LOCK_NB, O_CREAT, O_WRONLY, ONLCR, OPOST, SA_RESTART, SIG_DFL, SIG_IGN, SIGCHLD, SIGCONT, SIGHUP, SIGTERM,
     SIGTSTP, SIGWINCH, SOCK_STREAM, STDERR_FILENO, STDIN_FILENO, STDOUT_FILENO, TCSAFLUSH, TCSANOW, VMIN, VTIME,
     WNOHANG, cfgetispeed, cfgetospeed, cfmakeraw, cfsetispeed, cfsetospeed, close, connect, dup, execl, fflush, flock,
-    fprintf, getenv, getline, getpid, getppid, isatty, kill, memcpy, memset, open, printf, setenv, setvbuf, sigaction,
+    fprintf, getenv, getline, getppid, isatty, kill, memcpy, memset, open, printf, setenv, setvbuf, sigaction,
     sigemptyset, sockaddr, sockaddr_un, socket, strerror, strlen, strsignal, system, tcgetattr, tcsetattr, unlink,
     waitpid,
 };
@@ -556,7 +556,7 @@ unsafe extern "C" fn client_send_identify(
         }
         proc_send(client_peer, msgtype::MSG_IDENTIFY_STDOUT, fd, null_mut(), 0);
 
-        let mut pid = getpid();
+        let mut pid = std::process::id() as i32;
         proc_send(
             client_peer,
             msgtype::MSG_IDENTIFY_CLIENTPID,
@@ -704,7 +704,7 @@ unsafe extern "C" fn client_dispatch_exit_message(mut data: *const c_char, mut d
         const size_of_retval: usize = size_of::<i32>();
 
         if datalen < size_of_retval && datalen != 0 {
-            fatalx(c"bad MSG_EXIT size".as_ptr());
+            fatalx(c"bad MSG_EXIT size");
         }
 
         if (datalen >= size_of_retval) {
@@ -754,7 +754,7 @@ unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
             }
             msgtype::MSG_READY => {
                 if (datalen != 0) {
-                    fatalx(c"bad MSG_READY size".as_ptr());
+                    fatalx(c"bad MSG_READY size");
                 }
 
                 client_attached = 1;
@@ -762,7 +762,7 @@ unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
             }
             msgtype::MSG_VERSION => {
                 if (datalen != 0) {
-                    fatalx(c"bad MSG_VERSION size".as_ptr());
+                    fatalx(c"bad MSG_VERSION size");
                 }
 
                 fprintf(
@@ -776,7 +776,7 @@ unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
             }
             msgtype::MSG_FLAGS => {
                 if (datalen != size_of::<u64>()) {
-                    fatalx(c"bad MSG_FLAGS string".as_ptr());
+                    fatalx(c"bad MSG_FLAGS string");
                 }
 
                 memcpy(
@@ -788,7 +788,7 @@ unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
             }
             msgtype::MSG_SHELL => {
                 if (datalen == 0 || *data.add(datalen - 1) != b'\0' as c_char) {
-                    fatalx(c"bad MSG_SHELL string".as_ptr());
+                    fatalx(c"bad MSG_SHELL string");
                 }
 
                 client_exec(data, shell_command);
@@ -843,7 +843,7 @@ unsafe extern "C" fn client_dispatch_attached(imsg: *mut imsg) {
             msgtype::MSG_FLAGS => {
                 if datalen != size_of::<u64>() {
                     // TODO use size_of_val_raw
-                    fatalx(c"bad MSG_FLAGS string".as_ptr());
+                    fatalx(c"bad MSG_FLAGS string");
                 }
 
                 memcpy(
@@ -855,7 +855,7 @@ unsafe extern "C" fn client_dispatch_attached(imsg: *mut imsg) {
             }
             msgtype::MSG_DETACH | msgtype::MSG_DETACHKILL => {
                 if datalen == 0 || *data.add(datalen - 1) != b'\0' as c_char {
-                    fatalx(c"bad MSG_DETACH string".as_ptr());
+                    fatalx(c"bad MSG_DETACH string");
                 }
 
                 client_exitsession = xstrdup(data).as_ptr();
@@ -869,7 +869,7 @@ unsafe extern "C" fn client_dispatch_attached(imsg: *mut imsg) {
             }
             msgtype::MSG_EXEC => {
                 if datalen == 0 || *data.add(datalen - 1) != b'\0' as c_char || strlen(data) + 1 == datalen {
-                    fatalx(c"bad MSG_EXEC string".as_ptr());
+                    fatalx(c"bad MSG_EXEC string");
                 }
                 client_execcmd = xstrdup(data).as_ptr();
                 client_execshell = xstrdup(data.add(strlen(data) + 1)).as_ptr();
@@ -886,14 +886,14 @@ unsafe extern "C" fn client_dispatch_attached(imsg: *mut imsg) {
             }
             msgtype::MSG_EXITED => {
                 if datalen != 0 {
-                    fatalx(c"bad MSG_EXITED size".as_ptr());
+                    fatalx(c"bad MSG_EXITED size");
                 }
 
                 proc_exit(client_proc);
             }
             msgtype::MSG_SHUTDOWN => {
                 if (datalen != 0) {
-                    fatalx(c"bad MSG_SHUTDOWN size".as_ptr());
+                    fatalx(c"bad MSG_SHUTDOWN size");
                 }
 
                 proc_send(client_peer, msgtype::MSG_EXITING, -1, null_mut(), 0);
@@ -902,7 +902,7 @@ unsafe extern "C" fn client_dispatch_attached(imsg: *mut imsg) {
             }
             msgtype::MSG_SUSPEND => {
                 if (datalen != 0) {
-                    fatalx(c"bad MSG_SUSPEND size".as_ptr());
+                    fatalx(c"bad MSG_SUSPEND size");
                 }
 
                 memset(&raw mut sigact as _, 0, size_of::<sigaction>());
@@ -913,11 +913,11 @@ unsafe extern "C" fn client_dispatch_attached(imsg: *mut imsg) {
                     fatal(c"sigaction failed".as_ptr());
                 }
                 client_suspended = 1;
-                kill(getpid(), SIGTSTP);
+                kill(std::process::id() as i32, SIGTSTP);
             }
             msgtype::MSG_LOCK => {
                 if (datalen == 0 || *data.add(datalen - 1) != b'\0' as c_char) {
-                    fatalx(c"bad MSG_LOCK string".as_ptr());
+                    fatalx(c"bad MSG_LOCK string");
                 }
 
                 system(data);

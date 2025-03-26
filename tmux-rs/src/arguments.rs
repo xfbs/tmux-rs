@@ -345,7 +345,7 @@ pub unsafe extern "C" fn args_parse(
                 (*args).count += 1;
 
                 match (type_) {
-                    args_parse_type::ARGS_PARSE_INVALID => fatalx(c"unexpected argument type".as_ptr()),
+                    args_parse_type::ARGS_PARSE_INVALID => fatalx(c"unexpected argument type"),
                     args_parse_type::ARGS_PARSE_STRING => {
                         if ((*value).type_ != args_type::ARGS_STRING) {
                             xasprintf(cause, c"argument %u must be \"string\"".as_ptr(), (*args).count);
@@ -835,7 +835,7 @@ pub unsafe extern "C" fn args_make_commands_prepare(
             cmd = (*value).union_.string;
         } else {
             if (default_command.is_null()) {
-                fatalx(c"argument out of range".as_ptr());
+                fatalx(c"argument out of range");
             }
             cmd = default_command;
         }
@@ -911,7 +911,7 @@ pub unsafe extern "C" fn args_make_commands(
             }
             cmd_parse_status::CMD_PARSE_SUCCESS => return (*pr).cmdlist,
         }
-        fatalx(c"invalid parse return state".as_ptr());
+        fatalx(c"invalid parse return state");
     }
 }
 

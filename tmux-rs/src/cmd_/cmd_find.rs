@@ -1016,7 +1016,7 @@ pub unsafe extern "C" fn cmd_find_target(
                                     break 'error;
                                 }
                                 if !cmd_find_valid_state((*fs).current) {
-                                    fatalx(c"invalid current find state".as_ptr());
+                                    fatalx(c"invalid current find state");
                                 }
 
                                 /* An empty or NULL target is the current. */

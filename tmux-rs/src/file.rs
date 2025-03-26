@@ -86,7 +86,7 @@ pub unsafe extern "C" fn file_create_with_peer(
 
         (*cf).buffer = evbuffer_new();
         if ((*cf).buffer.is_null()) {
-            fatalx(c"out of memory".as_ptr());
+            fatalx(c"out of memory");
         }
 
         (*cf).cb = cb;
@@ -119,7 +119,7 @@ pub unsafe extern "C" fn file_create_with_client(
 
         (*cf).buffer = evbuffer_new();
         if (*cf).buffer.is_null() {
-            fatalx(c"out of memory".as_ptr());
+            fatalx(c"out of memory");
         }
 
         (*cf).cb = cb;
@@ -659,7 +659,7 @@ pub unsafe extern "C" fn file_write_open(
         let mut error: i32 = 0;
         'reply: {
             if msglen < size_of::<msg_write_open>() {
-                fatalx(c"bad MSG_WRITE_OPEN size".as_ptr());
+                fatalx(c"bad MSG_WRITE_OPEN size");
             }
             if msglen == size_of::<msg_write_open>() {
                 path = c"-".as_ptr();
@@ -707,7 +707,7 @@ pub unsafe extern "C" fn file_write_open(
                 cf.cast(),
             );
             if ((*cf).event.is_null()) {
-                fatalx(c"out of memory".as_ptr());
+                fatalx(c"out of memory");
             }
             bufferevent_enable((*cf).event, EV_WRITE as i16);
             break 'reply;
@@ -737,12 +737,12 @@ pub unsafe extern "C" fn file_write_data(files: *mut client_files, imsg: *mut im
         let size = msglen - size_of::<msg_write_data>();
 
         if msglen < size_of::<msg_write_data>() {
-            fatalx(c"bad MSG_WRITE size".as_ptr());
+            fatalx(c"bad MSG_WRITE size");
         }
         find.stream = (*msg).stream;
         let cf = rb_find(files, &raw mut find);
         if cf.is_null() {
-            fatalx(c"unknown stream number".as_ptr());
+            fatalx(c"unknown stream number");
         }
         log_debug!("write {} to file {}", size, (*cf).stream);
 
@@ -761,12 +761,12 @@ pub unsafe extern "C" fn file_write_close(files: *mut client_files, imsg: *mut i
         // struct client_file find, *cf;
 
         if msglen != size_of::<msg_write_close>() {
-            fatalx(c"bad MSG_WRITE_CLOSE size".as_ptr());
+            fatalx(c"bad MSG_WRITE_CLOSE size");
         }
         find.stream = (*msg).stream;
         let cf = rb_find(files, &raw mut find);
         if (cf.is_null()) {
-            fatalx(c"unknown stream number".as_ptr());
+            fatalx(c"unknown stream number");
         }
         log_debug!("close file {}", (*cf).stream);
 
@@ -861,7 +861,7 @@ pub unsafe extern "C" fn file_read_open(
 
         'reply: {
             if msglen < size_of::<msg_read_done>() {
-                fatalx(c"bad MSG_READ_OPEN size".as_ptr());
+                fatalx(c"bad MSG_READ_OPEN size");
             }
             if msglen == size_of::<msg_read_done>() {
                 path = c"-".as_ptr();
@@ -909,7 +909,7 @@ pub unsafe extern "C" fn file_read_open(
                 cf.cast(),
             );
             if ((*cf).event.is_null()) {
-                fatalx(c"out of memory".as_ptr());
+                fatalx(c"out of memory");
             }
             bufferevent_enable((*cf).event, EV_READ as i16);
             return;
@@ -937,12 +937,12 @@ pub unsafe extern "C" fn file_read_cancel(files: *mut client_files, imsg: *mut i
         let mut find = MaybeUninit::<client_file>::uninit();
 
         if msglen != size_of::<msg_read_cancel>() {
-            fatalx(c"bad MSG_READ_CANCEL size".as_ptr());
+            fatalx(c"bad MSG_READ_CANCEL size");
         }
         (*find.as_mut_ptr()).stream = (*msg).stream;
         let cf = rb_find(files, find.as_mut_ptr());
         if cf.is_null() {
-            fatalx(c"unknown stream number".as_ptr());
+            fatalx(c"unknown stream number");
         }
         log_debug!("cancel file {}", (*cf).stream);
 
@@ -958,7 +958,7 @@ pub unsafe extern "C" fn file_write_ready(files: *mut client_files, imsg: *mut i
         let mut find = MaybeUninit::<client_file>::uninit();
 
         if (msglen != size_of::<msg_write_ready>()) {
-            fatalx(c"bad MSG_WRITE_READY size".as_ptr());
+            fatalx(c"bad MSG_WRITE_READY size");
         }
         (*find.as_mut_ptr()).stream = (*msg).stream;
         let cf = rb_find(files, find.as_mut_ptr());
@@ -984,7 +984,7 @@ pub unsafe extern "C" fn file_read_data(files: *mut client_files, imsg: *mut ims
         let mut find = MaybeUninit::<client_file>::uninit();
 
         if (msglen < size_of::<msg_read_data>()) {
-            fatalx(c"bad MSG_READ_DATA size".as_ptr());
+            fatalx(c"bad MSG_READ_DATA size");
         }
         (*find.as_mut_ptr()).stream = (*msg).stream;
         let cf = rb_find(files, find.as_mut_ptr());
@@ -1012,7 +1012,7 @@ pub unsafe extern "C" fn file_read_done(files: *mut client_files, imsg: *mut ims
         let mut find = MaybeUninit::<client_file>::uninit();
 
         if (msglen != size_of::<msg_read_done>()) {
-            fatalx(c"bad MSG_READ_DONE size".as_ptr());
+            fatalx(c"bad MSG_READ_DONE size");
         }
         (*find.as_mut_ptr()).stream = (*msg).stream;
         let cf = rb_find(files, find.as_mut_ptr());

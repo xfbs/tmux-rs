@@ -43,7 +43,7 @@ unsafe extern "C" fn cmd_list_clients_exec(self_: *mut cmd, item: *mut cmdq_item
                 continue;
             }
 
-            let mut ft = format_create(cmdq_get_client(item), item, FORMAT_NONE as i32, 0);
+            let mut ft = format_create(cmdq_get_client(item), item, FORMAT_NONE as i32, format_flags::empty());
             format_add(ft, c"line".as_ptr(), c"%u".as_ptr(), idx);
             format_defaults(ft, c, null_mut(), null_mut(), null_mut());
 

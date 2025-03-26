@@ -10,7 +10,7 @@ use ::std::{
 };
 use std::{io::BufWriter, sync::Mutex};
 
-use ::libc::{free, getpid, gettimeofday, setvbuf, snprintf, strerror};
+use ::libc::{free, gettimeofday, setvbuf, snprintf, strerror};
 
 use ::compat_rs::{VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB, stravis};
 
@@ -43,7 +43,7 @@ pub fn log_open(name: &CStr) {
     }
 
     log_close();
-    let pid = unsafe { getpid() };
+    let pid = std::process::id();
     let Ok(file) = std::fs::File::options()
         .read(false)
         .write(true)
@@ -100,6 +100,7 @@ pub fn log_close() {
     }
 }
 
+#[allow(improper_ctypes_definitions)]
 unsafe extern "C" fn log_vwrite(msg: &CStr, mut ap: VaList, prefix: &CStr) {
     unsafe {
         if log_file.lock().unwrap().is_none() {
@@ -192,7 +193,7 @@ pub unsafe extern "C" fn log_debug_c(msg: *const c_char, mut args: ...) {
         if log_file.lock().unwrap().is_none() {
             return;
         }
-        log_vwrite(CStr::from_ptr(msg), args.as_va_list(), c"from_c ");
+        log_vwrite(CStr::from_ptr(msg), args.as_va_list(), c"");
     }
 }
 
@@ -200,7 +201,7 @@ pub fn log_debug_rs(args: std::fmt::Arguments) {
     if log_file.lock().unwrap().is_none() {
         return;
     }
-    log_vwrite_rs(args, "from_rs ");
+    log_vwrite_rs(args, "");
 }
 
 fn log_vwrite_rs(args: std::fmt::Arguments, prefix: &str) {
@@ -255,11 +256,17 @@ pub unsafe extern "C" fn fatal(msg: *const c_char, mut ap: ...) -> ! {
     }
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn fatalx(msg: *const c_char, mut args: ...) -> ! {
+#[unsafe(export_name = "fatalx")]
+pub unsafe extern "C" fn fatalx_c(msg: *const c_char, mut args: ...) -> ! {
     unsafe {
         log_vwrite(CStr::from_ptr(msg), args.as_va_list(), c"fatal: ");
     }
+    std::process::exit(1)
+}
+
+pub fn fatalx(msg: &CStr) -> ! {
+    let msg = msg.to_str().unwrap();
+    log_vwrite_rs(format_args!("{msg}"), "fatal: ");
     std::process::exit(1)
 }
 

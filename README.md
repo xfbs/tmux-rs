@@ -197,6 +197,8 @@ undefined behaviour in this context.
 - sendmsg in client to server causes SIGPIPE to be handled and exit control loop
 - TODO, noticed I flipped translation order of fields of args_parse struct. need to double check that all translations which use the initialization is correct
 
+- redraw is broken with vim
+
 ## BUGS (found)
 
 - Incorrect translation of do while

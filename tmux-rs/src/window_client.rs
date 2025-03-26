@@ -279,7 +279,7 @@ pub unsafe extern "C" fn window_client_get_key(modedata: *mut c_void, itemdata: 
         let data = modedata as *mut window_client_modedata;
         let item = itemdata as *mut window_client_itemdata;
 
-        let ft = format_create(null_mut(), null_mut(), FORMAT_NONE, 0);
+        let ft = format_create(null_mut(), null_mut(), FORMAT_NONE, format_flags::empty());
         format_defaults(ft, (*item).c, null_mut(), null_mut(), null_mut());
         format_add(ft, c"line".as_ptr(), c"%u".as_ptr(), line);
 

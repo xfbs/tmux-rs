@@ -100,7 +100,11 @@ unsafe extern "C" fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_i
             null_mut()
         };
 
-        let flags = if (args_has_(args, 'v')) { FORMAT_VERBOSE } else { 0 };
+        let flags = if (args_has_(args, 'v')) {
+            format_flags::FORMAT_VERBOSE
+        } else {
+            format_flags::empty()
+        };
         let mut ft = format_create(cmdq_get_client(item), item, FORMAT_NONE, flags);
         format_defaults(ft, c, s, wl, wp);
 
@@ -122,7 +126,7 @@ unsafe extern "C" fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_i
         } else if (!tc.is_null() && (*tc).flags.intersects(client_flag::CONTROL)) {
             let evb = evbuffer_new();
             if (evb.is_null()) {
-                fatalx(c"out of memory".as_ptr());
+                fatalx(c"out of memory");
             }
             evbuffer_add_printf(evb, c"%%message %s".as_ptr(), msg);
             server_client_print(tc, 0, evb);

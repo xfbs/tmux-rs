@@ -96,7 +96,7 @@ unsafe extern "C" fn cmd_display_panes_draw_pane(ctx: *mut screen_redraw_ctx, wp
 
             let mut pane = 0;
             if (window_pane_index(wp, &raw mut pane) != 0) {
-                fatalx(c"index not found".as_ptr());
+                fatalx(c"index not found");
             }
             let mut buf = [0i8; 16];
             let mut len: usize = xsnprintf(&raw mut buf as _, bufsize, c"%u".as_ptr(), pane) as _;

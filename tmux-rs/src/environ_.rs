@@ -4,7 +4,7 @@ use compat_rs::{
     RB_GENERATE,
     tree::{rb_find, rb_foreach, rb_init, rb_insert, rb_min, rb_next, rb_remove},
 };
-use libc::{fnmatch, getpid, setenv, strchr, strcmp, strcspn};
+use libc::{fnmatch, setenv, strchr, strcmp, strcspn};
 
 unsafe extern "C" {
     // pub fn environ_create() -> *mut environ;
@@ -263,7 +263,7 @@ pub unsafe extern "C" fn environ_for_session(s: *mut session, no_TERM: c_int) ->
             0,
             c"%s,%ld,%d".as_ptr(),
             socket_path,
-            getpid() as c_long,
+            std::process::id() as c_long,
             idx,
         );
 
