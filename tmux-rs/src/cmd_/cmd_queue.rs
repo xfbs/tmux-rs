@@ -807,7 +807,14 @@ pub unsafe extern "C" fn cmdq_next(c: *mut client) -> u32 {
                 if item.is_null() {
                     break;
                 }
-                log_debug!("{} {}: {} ({}), flags {}", __func__, _s(name), _s((*item).name), (*item).type_ as i32, (*item).flags);
+                log_debug!(
+                    "{} {}: {} ({}), flags {}",
+                    __func__,
+                    _s(name),
+                    _s((*item).name),
+                    (*item).type_ as i32,
+                    (*item).flags
+                );
 
                 if ((*item).flags & CMDQ_WAITING != 0) {
                     break 'waiting;

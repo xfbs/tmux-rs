@@ -82,7 +82,14 @@ pub unsafe extern "C" fn cmd_refresh_client_control_client_size(self_: *mut cmd,
                 cmdq_error(item, c"size too small or too big".as_ptr());
                 return cmd_retval::CMD_RETURN_ERROR;
             }
-            log_debug!("{}: client {} window @{}: size {}x{}", __func__, _s((*tc).name), w, x, y);
+            log_debug!(
+                "{}: client {} window @{}: size {}x{}",
+                __func__,
+                _s((*tc).name),
+                w,
+                x,
+                y
+            );
             let cw = server_client_add_client_window(tc, w);
             (*cw).sx = x;
             (*cw).sy = y;

@@ -467,7 +467,13 @@ pub unsafe extern "C" fn cmd_stringify_argv(argc: c_int, argv: *mut *mut c_char)
 
         for i in 0..argc {
             let s = args_escape(*argv.add(i as usize));
-            log_debug!("{}: {} {} = {}", "cmd_stringify_argv", i, _s(*argv.add(i as usize)), _s(s));
+            log_debug!(
+                "{}: {} {} = {}",
+                "cmd_stringify_argv",
+                i,
+                _s(*argv.add(i as usize)),
+                _s(s)
+            );
 
             len += strlen(s) + 1;
             buf = xrealloc_(buf, len).as_ptr();
@@ -859,7 +865,13 @@ pub unsafe extern "C" fn cmd_mouse_at(
             x = (*m).x + (*m).ox;
             y = (*m).y + (*m).oy;
         }
-        log_debug!("{}: x={}, y={}{}", "cmd_mouse_at", x, y, if last != 0 { " (last)" } else { "" });
+        log_debug!(
+            "{}: x={}, y={}{}",
+            "cmd_mouse_at",
+            x,
+            y,
+            if last != 0 { " (last)" } else { "" }
+        );
 
         if (*m).statusat == 0 && y >= (*m).statuslines {
             y -= (*m).statuslines;
