@@ -240,6 +240,8 @@ unsafe extern "C" {
     pub fn evbuffer_free(buf: *mut evbuffer);
     pub fn evbuffer_get_length(buf: *const evbuffer) -> usize;
     pub fn evbuffer_add(buf: *mut evbuffer, data: *const c_void, datlen: usize) -> c_int;
+
+    pub fn evbuffer_readline(buffer: *mut evbuffer) -> *mut c_char;
     pub fn evbuffer_readln(buffer: *mut evbuffer, n_read_out: *mut usize, eol_style: evbuffer_eol_style)
     -> *mut c_char;
     pub fn evbuffer_drain(buf: *mut evbuffer, len: usize) -> c_int;

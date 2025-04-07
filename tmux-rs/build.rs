@@ -130,7 +130,6 @@ fn main() {
 
 static FILES: &[&str] = &[
     "format-draw.c",
-    "format.c",
     "input.c",
     "mode-tree.c",
     "screen-write.c",

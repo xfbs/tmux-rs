@@ -119,8 +119,7 @@ clang -fsanitize=address -fno-omit-frame-pointer -O0 -std=gnu99 -g -Wno-long-lon
 - [ ] 3186 tty
 - [ ] 3392 server-client
 
-2 XL
-- [ ] 5294 format <- maybe this one next to knock one out and get rid of a compiler warning
+1 XL
 - [ ] 5786 window-copy
 
 1 Difficult
@@ -196,6 +195,7 @@ undefined behaviour in this context.
 - multiple issues due to untype safe logging translation
 - sendmsg in client to server causes SIGPIPE to be handled and exit control loop
 - TODO, noticed I flipped translation order of fields of args_parse struct. need to double check that all translations which use the initialization is correct
+- Window borders are incorrect
 
 - redraw is broken with vim
 

@@ -161,6 +161,9 @@ pub unsafe extern "C" fn xstrndup(str: *const c_char, maxlen: usize) -> NonNull<
     NonNull::new(unsafe { strndup(str, maxlen) }).unwrap()
 }
 
+// #[allow(improper_ctypes_definitions, reason = "must be extern C to use c variadics")]
+// pub unsafe extern "C" fn xasprintf__(args: std::fmt::Arguments<'_>) -> NonNull<c_char> {}
+
 #[allow(improper_ctypes_definitions, reason = "must be extern C to use c variadics")]
 pub unsafe extern "C" fn xasprintf_(fmt: &CStr, mut args: ...) -> NonNull<c_char> {
     let mut ret = core::ptr::null_mut();

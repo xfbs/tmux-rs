@@ -16,13 +16,13 @@ unsafe fn regsub_copy(buf: *mut *mut c_char, len: *mut isize, text: *const c_cha
 pub unsafe fn regsub_expand(
     buf: *mut *mut c_char,
     len: *mut isize,
-    with: *mut c_char,
+    with: *const c_char,
     text: *const c_char,
     m: *mut regmatch_t,
     n: c_uint,
 ) {
     unsafe {
-        let mut cp: *mut c_char = null_mut();
+        let mut cp: *const c_char = null();
         let mut i: u32 = 0;
 
         cp = with;
@@ -53,7 +53,7 @@ pub unsafe fn regsub_expand(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe fn regsub(pattern: *const c_char, with: *mut c_char, text: *const c_char, flags: c_int) -> *mut c_char {
+pub unsafe fn regsub(pattern: *const c_char, with: *const c_char, text: *const c_char, flags: c_int) -> *mut c_char {
     unsafe {
         let mut r: regex_t = zeroed();
         let mut m: [regmatch_t; 10] = zeroed(); // TODO can use uninit

@@ -11,7 +11,7 @@ unsafe extern "C" {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn osdep_get_name(fd: i32, tty: *const c_char) -> *const c_char {
+pub unsafe extern "C" fn osdep_get_name(fd: i32, tty: *const c_char) -> *mut c_char {
     unsafe {
         let mut pgrp = tcgetpgrp(fd);
         if (pgrp == -1) {

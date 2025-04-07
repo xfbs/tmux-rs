@@ -4,6 +4,7 @@
 #![feature(maybe_uninit_slice)]
 #![feature(ptr_as_uninit)]
 #![feature(cfg_boolean_literals)]
+#![feature(const_type_name)]
 #![warn(static_mut_refs)]
 // #![warn(clippy::shadow_reuse)]
 // #![warn(clippy::shadow_same)]
@@ -101,6 +102,26 @@ pub unsafe fn strchr_(cs: *const c_char, c: char) -> *mut c_char { unsafe { libc
 
 pub type bitstr_t = u8;
 
+pub unsafe fn bit_alloc(nbits: u32) -> *mut u8 { unsafe { libc::calloc(((nbits + 7) / 8) as usize, 1).cast() } }
+pub unsafe fn bit_set(bits: *mut u8, i: u32) {
+    unsafe {
+        let byte_index = i / 8;
+        let bit_index = i % 8;
+        *bits.add(byte_index as usize) |= 1 << bit_index;
+    }
+}
+
+pub unsafe fn bit_test(bits: *const u8, i: u32) -> bool {
+    unsafe {
+        let byte_index = i / 8;
+        let bit_index = i % 8;
+        (*bits.add(byte_index as usize) & (1 << bit_index)) != 0
+    }
+}
+
+
+
+
 const TTY_NAME_MAX: usize = 32;
 
 // discriminant structs
@@ -129,8 +150,11 @@ macro_rules! opaque_types {
     };
 }
 
+unsafe extern "C" {
+    unsafe fn basename(_: *mut c_char) -> *mut c_char;
+}
+
 opaque_types! {
-    format_tree,
     hyperlinks_uri,
     input_ctx,
     mode_tree_data,
@@ -2452,7 +2476,7 @@ pub use crate::format::{
     format_defaults_paste_buffer, format_defaults_window, format_each, format_expand, format_expand_time, format_flags,
     format_free, format_get_pane, format_grid_hyperlink, format_grid_line, format_grid_word, format_job_tree,
     format_log_debug, format_lost_client, format_merge, format_pretty_time, format_single, format_single_from_state,
-    format_single_from_target, format_skip, format_tidy_jobs, format_true,
+    format_single_from_target, format_skip, format_tidy_jobs, format_tree, format_true,
 };
 
 mod format_draw_;
@@ -3031,4 +3055,21 @@ impl std::fmt::Display for _s {
             f.write_str(s)
         }
     }
+}
+
+// TOOD make usable in const context
+// https://stackoverflow.com/a/63904992
+#[macro_export]
+macro_rules! function_name {
+    () => {{
+        fn f() {}
+        fn type_name_of<T>(_: T) -> &'static str { std::any::type_name::<T>() }
+        let name = type_name_of(f);
+
+        // Find and cut the rest of the path
+        match &name[..name.len() - 3].rfind(':') {
+            Some(pos) => &name[pos + 1..name.len() - 3],
+            None => &name[..name.len() - 3],
+        }
+    }};
 }
