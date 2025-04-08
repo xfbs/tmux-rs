@@ -1,0 +1,12 @@
+# https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions
+on:
+  push:
+    branches: [tmux-rs]
+name: build
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - run: cargo build
