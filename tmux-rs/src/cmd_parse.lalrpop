@@ -1,0 +1,459 @@
+use crate::*;
+
+use crate::cmd_parse::{cmd_parse_argument_type, yystype_elif, cmd_parse_state, cmd_parse_command};
+use compat_rs::queue::{tailq_concat, tailq_init, tailq_insert_head, tailq_remove, tailq_insert_tail, tailq_empty};
+
+grammar(ps: NonNull<cmd_parse_state>);
+
+pub Lines: () = {
+    => (),
+    <s:Statements> => unsafe {
+      (*ps.as_ptr()).commands = s.as_ptr();
+    }
+};
+
+pub Statements: NonNull<cmd_parse_commands> = {
+    <s:Statement> "\n" => s,
+    <arg1:Statements> <arg2:Statement> "\n" => unsafe {
+      let mut value = arg1;
+      tailq_concat(value.as_ptr(), arg2.as_ptr());
+      free_(arg2.as_ptr());
+      value
+    }
+};
+
+pub Statement: NonNull<cmd_parse_commands> = {
+    => unsafe { // Empty
+      let mut value = xmalloc_::<cmd_parse_commands>();
+      tailq_init(value.as_ptr());
+      value
+    },
+    HiddenAssignment => unsafe {
+      let mut value = xmalloc_::<cmd_parse_commands>();
+      tailq_init(value.as_ptr());
+      value
+    },
+    <arg1:Condition> => unsafe {
+      if (*ps.as_ptr()).scope.is_null() || (*(*ps.as_ptr()).scope).flag != 0 {
+        arg1
+      } else {
+        let value = cmd_parse_new_commands();
+        cmd_parse_free_commands(arg1.as_ptr());
+        value
+      }
+    },
+    <arg1:Commands> => unsafe {
+      if (*ps.as_ptr()).scope.is_null() || (*(*ps.as_ptr()).scope).flag != 0 {
+        arg1
+      } else {
+        let value = cmd_parse_new_commands();
+        cmd_parse_free_commands(arg1.as_ptr());
+        value
+      }
+    }
+};
+
+pub Format: NonNull<c_char> = { FORMAT, TOKEN };
+
+pub Expanded: NonNull<c_char> = {
+    <arg1:Format> => unsafe {
+      let pi = (*ps.as_ptr()).input;
+      let c = (*pi).c;
+      let flags = format_flags::FORMAT_NOJOBS;
+
+      let mut fs = MaybeUninit::<cmd_find_state>::uninit();
+      let fsp = if cmd_find_valid_state(&raw mut (*pi).fs).as_bool() {
+        &raw mut (*pi).fs
+      } else {
+        cmd_find_from_client(fs.as_mut_ptr(), c, 0);
+        fs.as_mut_ptr()
+      };
+      let mut ft = format_create(null_mut(), (*pi).item, FORMAT_NONE, flags);
+      format_defaults(ft, c, NonNull::new((*fsp).s), NonNull::new((*fsp).wl), NonNull::new((*fsp).wp));
+
+      let value = format_expand(ft, arg1.as_ptr());
+      format_free(ft);
+      free_(arg1.as_ptr());
+      NonNull::new_unchecked(value)
+    }
+};
+
+pub OptionalAssignment: () = { Assignment? };
+
+pub Assignment: () = {
+    <arg1:EQUALS> => unsafe {
+      let flags = (*(*ps.as_ptr()).input).flags;
+      if !flags.intersects(cmd_parse_input_flags::CMD_PARSE_PARSEONLY) && ((*ps.as_ptr()).scope.is_null() || (*(*ps.as_ptr()).scope).flag != 0) {
+        environ_put(global_environ, arg1.as_ptr(), 0);
+      }
+      free_(arg1.as_ptr());
+    }
+};
+
+pub HiddenAssignment: () = {
+    "%hidden" <arg2:EQUALS> => unsafe {
+      let flags = (*(*ps.as_ptr()).input).flags;
+      if !flags.intersects(cmd_parse_input_flags::CMD_PARSE_PARSEONLY) && ((*ps.as_ptr()).scope.is_null() || (*(*ps.as_ptr()).scope).flag != 0) {
+        environ_put(global_environ, arg2.as_ptr(), ENVIRON_HIDDEN);
+      }
+      free_(arg2.as_ptr());
+    }
+};
+
+pub IfOpen: i32 = {
+    "%if" <arg2:Expanded> => unsafe {
+      let mut scope = xmalloc_::<cmd_parse_scope>().as_ptr();
+      let mut value = format_true(arg2.as_ptr());
+      (*scope).flag = value;
+      free_(arg2.as_ptr());
+
+      if !(*ps.as_ptr()).scope.is_null() {
+        tailq_insert_head!(&raw mut (*ps.as_ptr()).stack, (*ps.as_ptr()).scope, entry);
+      }
+      (*ps.as_ptr()).scope = scope;
+
+      value
+    }
+};
+
+pub IfElse: () = {
+    "%else" => unsafe {
+      let mut scope = xmalloc_::<cmd_parse_scope>().as_ptr();
+      (*scope).flag = !(*(*ps.as_ptr()).scope).flag;
+
+      free_((*ps.as_ptr()).scope);
+      (*ps.as_ptr()).scope = scope;
+    }
+};
+
+pub IfElif: i32 = {
+    "%elif" <arg2:Expanded> => unsafe {
+      let mut scope = xmalloc_::<cmd_parse_scope>().as_ptr();
+      let mut value = format_true(arg2.as_ptr());
+      (*scope).flag = value;
+      free_(arg2.as_ptr());
+
+      free_((*ps.as_ptr()).scope);
+      (*ps.as_ptr()).scope = scope;
+
+      value
+    }
+};
+
+pub IfClose: () = {
+    "%endif" => unsafe {
+      free_((*ps.as_ptr()).scope);
+      (*ps.as_ptr()).scope = tailq_first(&raw mut (*ps.as_ptr()).stack);
+      if !(*ps.as_ptr()).scope.is_null() {
+        tailq_remove(&raw mut (*ps.as_ptr()).stack, (*ps.as_ptr()).scope);
+      }
+    }
+};
+
+pub Condition: NonNull<cmd_parse_commands> = {
+    <arg1:IfOpen> "\n" <arg3:Statements> <arg4:IfClose> => unsafe {
+      if arg1 != 0 {
+        arg3
+      } else {
+        cmd_parse_free_commands(arg3.as_ptr());
+        cmd_parse_new_commands()
+      }
+    },
+    <arg1:IfOpen> "\n" <arg3:Statements> <arg4:IfElse> "\n" <arg6:Statements> <arg7:IfClose> => unsafe {
+      if arg1 != 0 {
+        cmd_parse_free_commands(arg6.as_ptr());
+        arg3
+      } else {
+        cmd_parse_free_commands(arg3.as_ptr());
+        arg6
+      }
+    },
+    <arg1:IfOpen> "\n" <arg3:Statements> <arg4:Elif> IfClose => unsafe {
+      if arg1 != 0 {
+        cmd_parse_free_commands(arg4.commands);
+        arg3
+      } else if arg4.flag != 0 {
+        cmd_parse_free_commands(arg3.as_ptr());
+        NonNull::new_unchecked(arg4.commands)
+      } else {
+        cmd_parse_free_commands(arg3.as_ptr());
+        cmd_parse_free_commands(arg4.commands);
+
+        cmd_parse_new_commands()
+      }
+    },
+    <arg1:IfOpen> "\n" <arg3:Statements> <arg4:Elif> <arg5:IfElse> "\n" <arg7:Statements> <arg8:IfClose> => unsafe {
+      if arg1 != 0 {
+        cmd_parse_free_commands(arg4.commands);
+        cmd_parse_free_commands(arg7.as_ptr());
+        arg3
+      } else if arg4.flag != 0 {
+        cmd_parse_free_commands(arg3.as_ptr());
+        cmd_parse_free_commands(arg7.as_ptr());
+
+        NonNull::new_unchecked(arg4.commands)
+      } else {
+        cmd_parse_free_commands(arg3.as_ptr());
+        cmd_parse_free_commands(arg4.commands);
+
+        arg7
+      }
+    }
+};
+
+pub Elif: yystype_elif = {
+    <arg1:IfElif> "\n" <arg3:Statements> => unsafe {
+      let mut value = yystype_elif { flag: 0, commands: null_mut() };
+      if arg1 != 0 {
+        value.flag = 1;
+        value.commands = arg3.as_ptr();
+      } else {
+        value.flag = 0;
+        value.commands = cmd_parse_new_commands().as_ptr();
+        cmd_parse_free_commands(arg3.as_ptr());
+      }
+      value
+    },
+    <arg1:IfElif> "\n" <arg3:Statements> <arg4:Elif> => unsafe {
+      let mut value = yystype_elif { flag: 0, commands: null_mut() };
+
+      if arg1 != 0 {
+        value.flag = 1;
+        value.commands = arg3.as_ptr();
+        cmd_parse_free_commands(arg4.commands);
+      } else if arg4.flag != 0 {
+        value.flag = 1;
+        value.commands = arg4.commands;
+        cmd_parse_free_commands(arg3.as_ptr());
+      } else {
+        value.flag = 0;
+        value.commands = cmd_parse_new_commands().as_ptr();
+        cmd_parse_free_commands(arg3.as_ptr());
+        cmd_parse_free_commands(arg4.commands);
+      }
+      value
+    }
+};
+
+pub Commands: NonNull<cmd_parse_commands> = {
+    <arg1:Command> => unsafe {
+      let value = cmd_parse_new_commands();
+
+      if !tailq_empty(&raw mut (*arg1.as_ptr()).arguments) && ((*ps.as_ptr()).scope.is_null() || (*(*ps.as_ptr()).scope).flag != 0) {
+        tailq_insert_tail(value.as_ptr(), arg1.as_ptr());
+      } else {
+        cmd_parse_free_command(arg1.as_ptr());
+      }
+
+      value
+    },
+
+    <arg1:Commands> ";" => arg1,
+
+    <arg1:Commands> <_arg2:";"> <arg3:Condition1> => unsafe {
+      let value = arg1;
+
+      tailq_concat(value.as_ptr(), arg3.as_ptr());
+      free_(arg3.as_ptr());
+
+      value
+    },
+
+    <arg1:Commands> <_arg2:";"> <arg3:Command> => unsafe {
+      let mut value;
+      if !tailq_empty(&raw mut (*arg3.as_ptr()).arguments) && ((*ps.as_ptr()).scope.is_null() || (*(*ps.as_ptr()).scope).flag != 0) {
+        value = arg1;
+        tailq_insert_tail(value.as_ptr(), arg3.as_ptr());
+      } else {
+        value = cmd_parse_new_commands();
+        cmd_parse_free_commands(arg1.as_ptr());
+        cmd_parse_free_command(arg3.as_ptr());
+      }
+      value
+    },
+
+    <arg1:Condition1> => arg1,
+};
+
+pub Command: NonNull<cmd_parse_command> = {
+    Assignment => unsafe {
+        let mut command = xcalloc1::<cmd_parse_command>() as *mut cmd_parse_command;
+        (*command).line = (*(*ps.as_ptr()).input).line;
+        tailq_init(&raw mut (*command).arguments);
+        NonNull::new_unchecked(command)
+    },
+    <_arg1:OptionalAssignment> <arg2:TOKEN> => unsafe {
+        let mut command: *mut cmd_parse_command = xcalloc1::<cmd_parse_command>();
+        (*command).line = (*(*ps.as_ptr()).input).line;
+        tailq_init(&raw mut (*command).arguments);
+
+        let mut arg: *mut cmd_parse_argument = xcalloc1::<cmd_parse_argument>();
+        (*arg).type_ = cmd_parse_argument_type::CMD_PARSE_STRING;
+        (*arg).string = arg2.as_ptr();
+        tailq_insert_head!(&raw mut (*command).arguments, arg, entry);
+
+        NonNull::new_unchecked(command)
+    },
+    <_arg1:OptionalAssignment> <arg2:TOKEN> <arg3:Arguments> => unsafe {
+        let mut command: *mut cmd_parse_command = xcalloc1::<cmd_parse_command>();
+        (*command).line = (*(*ps.as_ptr()).input).line;
+        tailq_init(&raw mut (*command).arguments);
+
+        let arg3 = arg3.as_ptr(); // TODO update after fixing types
+        tailq_concat(&raw mut (*command).arguments, arg3);
+        free_(arg3);
+
+        let mut arg: *mut cmd_parse_argument = xcalloc1::<cmd_parse_argument>();
+        (*arg).type_ = cmd_parse_argument_type::CMD_PARSE_STRING;
+        (*arg).string = arg2.as_ptr();
+        tailq_insert_head!(&raw mut (*command).arguments, arg, entry);
+
+        NonNull::new_unchecked(command)
+    },
+};
+
+pub Condition1: NonNull<cmd_parse_commands> = {
+    <arg1:IfOpen> <arg2:Commands> <_arg3:IfClose> => unsafe {
+      if arg1 != 0 {
+        arg2
+      } else {
+        let value = cmd_parse_new_commands();
+        cmd_parse_free_commands(arg2.as_ptr());
+        value
+      }
+    },
+    <arg1:IfOpen> <arg2:Commands> <_arg3:IfElse> <arg4:Commands> <_arg5:IfClose> => unsafe {
+      if arg1 != 0 {
+        cmd_parse_free_commands(arg4.as_ptr());
+        arg2
+      } else {
+        cmd_parse_free_commands(arg2.as_ptr());
+        arg4
+      }
+    },
+    <arg1:IfOpen> <arg2:Commands> <arg3:Elif1> <arg4:IfClose> => unsafe {
+      if arg1 != 0 {
+        cmd_parse_free_commands(arg3.commands);
+        arg2
+      } else if arg3.flag != 0 {
+        cmd_parse_free_commands(arg2.as_ptr());
+        NonNull::new(arg3.commands).unwrap()
+      } else {
+        let value = cmd_parse_new_commands();
+        cmd_parse_free_commands(arg2.as_ptr());
+        cmd_parse_free_commands(arg3.commands);
+        value
+      }
+    },
+    <arg1:IfOpen> <arg2:Commands> <arg3:Elif1> <arg4:IfElse> <arg5:Commands> <arg6:IfClose> => unsafe {
+      if arg1 != 0 {
+        let value = arg2;
+        cmd_parse_free_commands(arg3.commands);
+        cmd_parse_free_commands(arg5.as_ptr());
+        value
+      } else if arg3.flag != 0 {
+        let value = arg3.commands;
+        cmd_parse_free_commands(arg2.as_ptr());
+        cmd_parse_free_commands(arg5.as_ptr());
+        NonNull::new(value).unwrap()
+      } else {
+        let value = arg5;
+        cmd_parse_free_commands(arg2.as_ptr());
+        cmd_parse_free_commands(arg3.commands);
+        value
+      }
+    }
+};
+
+pub Elif1: yystype_elif  = {
+    <arg1:IfElif> <arg2:Commands> => unsafe {
+      let mut value = yystype_elif {flag:0, commands:null_mut()};
+
+      if arg1 != 0 {
+        value.flag = 1;
+        value.commands = arg2.as_ptr();
+      } else {
+        value.flag = 0;
+        value.commands = cmd_parse_new_commands().as_ptr();
+        cmd_parse_free_commands(arg2.as_ptr());
+      }
+
+      value
+    },
+    <arg1:IfElif> <arg2:Commands> <arg3:Elif1> => unsafe {
+      let mut value = yystype_elif {flag:0, commands:null_mut()};
+      if arg1 != 0 {
+        value.flag = 1;
+        value.commands = arg2.as_ptr();
+      } else if arg3.flag != 0 {
+        value.flag = 1;
+        value.commands = arg3.commands;
+      } else {
+        value.flag = 0;
+        value.commands = cmd_parse_new_commands().as_ptr();
+        cmd_parse_free_commands(arg2.as_ptr());
+        cmd_parse_free_commands(arg3.commands);
+      }
+
+      value
+    }
+}
+
+pub Arguments: NonNull<cmd_parse_arguments> = {
+    <Argument> => unsafe {
+      let mut value = NonNull::new_unchecked(xcalloc1::<cmd_parse_arguments>());
+      tailq_init(value.as_ptr());
+
+      tailq_insert_head!(value.as_ptr(), (<>).as_ptr(), entry);
+
+      value
+    },
+    <arg1:Argument> <arg2:Arguments> => unsafe {
+      tailq_insert_head!(arg2.as_ptr(), arg1.as_ptr(), entry);
+      arg2
+    },
+};
+
+pub Argument: NonNull<cmd_parse_argument> = {
+    TOKEN => unsafe {
+      let value = NonNull::new_unchecked(xcalloc1::<cmd_parse_argument>());
+      (*value.as_ptr()).type_ = cmd_parse_argument_type::CMD_PARSE_STRING;
+      (*value.as_ptr()).string = (<>).as_ptr();
+      value
+    },
+    EQUALS => unsafe {
+      let value = NonNull::new_unchecked(xcalloc1::<cmd_parse_argument>());
+      (*value.as_ptr()).type_ = cmd_parse_argument_type::CMD_PARSE_STRING;
+      (*value.as_ptr()).string = (<>).as_ptr();
+      value
+    },
+    "{" <ArgumentStatements> => unsafe {
+      let value = NonNull::new_unchecked(xcalloc1::<cmd_parse_argument>());
+      (*value.as_ptr()).type_ = cmd_parse_argument_type::CMD_PARSE_COMMANDS;
+      (*value.as_ptr()).commands = (<>).as_ptr();
+      value
+    }
+};
+
+pub ArgumentStatements: NonNull<cmd_parse_commands> = {
+    <Statement> "}" => (<>),
+    <arg1:Statements> <arg2:Statement> "}" => unsafe {
+        let mut value = arg1;
+        tailq_concat(value.as_ptr(), arg2.as_ptr());
+        free_(arg2.as_ptr());
+        value
+    }
+};
+
+// the C lexer seems to pair braces in the format string
+// maybe better to not do that at the lexer level?
+pub FORMAT: NonNull<c_char> = r"#\{" => NonNull::new((<>).to_string().leak().as_mut_ptr().cast()).unwrap();
+pub EQUALS: NonNull<c_char> = r"=[^\n]*" => NonNull::new((<>).to_string().leak().as_mut_ptr().cast()).unwrap();
+pub TOKEN: NonNull<c_char> = r"[^=#].*" => NonNull::new((<>).to_string().leak().as_mut_ptr().cast()).unwrap();
+
+// equals seems to consume everything after =
+
+// match {
+//     r"\s*" => { }, // The default whitespace skipping is disabled if an `ignore pattern` is specified
+//     r"#[^{][^\n\r]*[\n\r]*" => { }, // # followed by anything other then { is a comment
+// }

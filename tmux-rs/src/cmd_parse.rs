@@ -3,6 +3,8 @@ use compat_rs::queue::{
 };
 use libc::memset;
 
+use lalrpop_util::lalrpop_mod;
+
 use crate::{
     xmalloc::{Zeroable, xrecallocarray, xrecallocarray_},
     *,
@@ -18,6 +20,14 @@ unsafe extern "C" {
     // pub fn cmd_parse_and_append( _: *const c_char, _: *mut cmd_parse_input, _: *mut client, _: *mut cmdq_state, _: *mut *mut c_char,) -> cmd_parse_status;
     // pub fn cmd_parse_from_buffer(_: *const c_void, _: usize, _: *mut cmd_parse_input) -> *mut cmd_parse_result;
     // pub fn cmd_parse_from_arguments(_: *mut args_value, _: c_uint, _: *mut cmd_parse_input) -> *mut cmd_parse_result;
+}
+
+lalrpop_mod!(cmd_parse);
+
+#[derive(Copy, Clone)]
+pub struct yystype_elif {
+    flag: i32,
+    commands: *mut cmd_parse_commands,
 }
 
 compat_rs::impl_tailq_entry!(cmd_parse_scope, entry, tailq_entry<cmd_parse_scope>);
@@ -105,7 +115,7 @@ pub unsafe extern "C" fn cmd_parse_get_error(file: *const c_char, line: u32, err
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_parse_print_commands(pi: *mut cmd_parse_input, cmdlist: *mut cmd_list) {
     unsafe {
-        if ((*pi).item.is_null() || (!(*pi).flags & CMD_PARSE_VERBOSE != 0)) {
+        if (*pi).item.is_null() || !(*pi).flags.intersects(cmd_parse_input_flags::CMD_PARSE_VERBOSE) {
             return;
         }
         let s = cmd_list_print(cmdlist, 0);
@@ -149,10 +159,10 @@ pub unsafe extern "C" fn cmd_parse_free_command(cmd: *mut cmd_parse_command) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_parse_new_commands() -> *mut cmd_parse_commands {
+pub unsafe extern "C" fn cmd_parse_new_commands() -> NonNull<cmd_parse_commands> {
     unsafe {
-        let cmds = xmalloc_::<cmd_parse_commands>().as_ptr();
-        tailq_init(cmds);
+        let cmds = xmalloc_::<cmd_parse_commands>();
+        tailq_init(cmds.as_ptr());
         cmds
     }
 }
@@ -187,7 +197,7 @@ pub unsafe extern "C" fn cmd_parse_run_parser(cause: *mut *mut c_char) -> *mut c
         }
 
         if ((*ps).commands.is_null()) {
-            return (cmd_parse_new_commands());
+            return cmd_parse_new_commands().as_ptr();
         }
         (*ps).commands
     }
@@ -264,7 +274,7 @@ pub unsafe extern "C" fn cmd_parse_expand_alias(
 ) -> i32 {
     let __func__ = c"cmd_parse_expand_alias".as_ptr();
     unsafe {
-        if ((*pi).flags & CMD_PARSE_NOALIAS != 0) {
+        if (*pi).flags.intersects(cmd_parse_input_flags::CMD_PARSE_NOALIAS) {
             return (0);
         }
         memset(pr.cast(), 0, size_of::<cmd_parse_result>());
@@ -308,9 +318,9 @@ pub unsafe extern "C" fn cmd_parse_expand_alias(
         }
         cmd_parse_log_commands(cmds, __func__);
 
-        (*pi).flags |= CMD_PARSE_NOALIAS;
+        (*pi).flags |= cmd_parse_input_flags::CMD_PARSE_NOALIAS;
         cmd_parse_build_commands(cmds, pi, pr);
-        (*pi).flags &= !CMD_PARSE_NOALIAS;
+        (*pi).flags &= !cmd_parse_input_flags::CMD_PARSE_NOALIAS;
         1
     }
 }
@@ -412,7 +422,7 @@ pub unsafe extern "C" fn cmd_parse_build_commands(
          */
         let result = cmd_list_new();
         for cmd in compat_rs::queue::tailq_foreach(cmds).map(NonNull::as_ptr) {
-            if ((!(*pi).flags & CMD_PARSE_ONEGROUP != 0) && (*cmd).line != line) {
+            if !(*pi).flags.intersects(cmd_parse_input_flags::CMD_PARSE_ONEGROUP) && (*cmd).line != line {
                 if (!current.is_null()) {
                     cmd_parse_print_commands(pi, current);
                     cmd_list_move(result, current);
@@ -490,7 +500,7 @@ pub unsafe extern "C" fn cmd_parse_from_string(
             pi = input;
         }
 
-        (*pi).flags |= CMD_PARSE_ONEGROUP;
+        (*pi).flags |= cmd_parse_input_flags::CMD_PARSE_ONEGROUP;
         cmd_parse_from_buffer(s.cast(), strlen(s), pi)
     }
 }
@@ -604,7 +614,7 @@ pub unsafe extern "C" fn cmd_parse_from_arguments(
         }
         pr = zeroed();
 
-        let cmds = cmd_parse_new_commands();
+        let cmds = cmd_parse_new_commands().as_ptr();
 
         let mut cmd = xcalloc1::<cmd_parse_command>() as *mut cmd_parse_command;
         (*cmd).line = (*pi).line;
@@ -657,5 +667,46 @@ pub unsafe extern "C" fn cmd_parse_from_arguments(
         cmd_parse_build_commands(cmds, pi, &raw mut pr);
         cmd_parse_free_commands(cmds);
         &raw mut pr
+    }
+}
+
+// ===================================
+
+mod parser {
+    use super::*;
+
+    // yyparse modifies global state
+    // see YYPARSE_DECL()
+    //
+    // #[unsafe(no_mangle)]
+    // unsafe extern "C" fn yyparse_() -> i32 {}
+}
+
+#[test]
+fn test_parse_lines() {
+    use compat_rs::queue::tailq_init;
+
+    unsafe {
+        let lines = "set -g clock-mode-color magenta";
+
+        // need a way to update all the things that are updated by
+        // the C implmentation in parser state
+        //
+        //
+        //
+        // TODO:
+        // need to properly initialize state for this test
+        // input.line
+        // stack
+        // scope
+
+        let mut state: cmd_parse_state = unsafe { zeroed() };
+        state.commands = null_mut();
+        tailq_init(&raw mut state.stack);
+        let ps = NonNull::new(&raw mut state).unwrap();
+
+        let mut parser = cmd_parse::StatementParser::new();
+        let parsed = parser.parse(ps, lines).unwrap();
+        println!("{parsed:?}");
     }
 }

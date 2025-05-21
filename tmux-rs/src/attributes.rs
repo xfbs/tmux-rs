@@ -26,11 +26,11 @@ pub unsafe extern "C" fn attributes_tostring(attr: c_int) -> *const c_char {
             if attr & GRID_ATTR_HIDDEN as i32 != 0 { c"hidden,".as_ptr() } else { c"".as_ptr() },
             if attr & GRID_ATTR_ITALICS as i32 != 0 { c"italics,".as_ptr() } else { c"".as_ptr() },
             if attr & GRID_ATTR_STRIKETHROUGH as i32 != 0 { c"strikethrough,".as_ptr() } else { c"".as_ptr() },
-            if attr & GRID_ATTR_UNDERSCORE_2 != 0 { c"double-underscore,".as_ptr() } else { c"".as_ptr() },
-            if attr & GRID_ATTR_UNDERSCORE_3 != 0 { c"curly-underscore,".as_ptr() } else { c"".as_ptr() },
-            if attr & GRID_ATTR_UNDERSCORE_4 != 0 { c"dotted-underscore,".as_ptr() } else { c"".as_ptr() },
-            if attr & GRID_ATTR_UNDERSCORE_5 != 0 { c"dashed-underscore,".as_ptr() } else { c"".as_ptr() },
-            if attr & GRID_ATTR_OVERLINE != 0 { c"overline,".as_ptr() } else { c"".as_ptr() },
+            if attr & GRID_ATTR_UNDERSCORE_2 as i32 != 0 { c"double-underscore,".as_ptr() } else { c"".as_ptr() },
+            if attr & GRID_ATTR_UNDERSCORE_3 as i32 != 0 { c"curly-underscore,".as_ptr() } else { c"".as_ptr() },
+            if attr & GRID_ATTR_UNDERSCORE_4 as i32 != 0 { c"dotted-underscore,".as_ptr() } else { c"".as_ptr() },
+            if attr & GRID_ATTR_UNDERSCORE_5 as i32 != 0 { c"dashed-underscore,".as_ptr() } else { c"".as_ptr() },
+            if attr & GRID_ATTR_OVERLINE as i32 != 0 { c"overline,".as_ptr() } else { c"".as_ptr() },
         ) as isize;
         if len > 0 {
             buf[len as usize - 1] = b'\0' as c_char;
@@ -59,12 +59,12 @@ pub unsafe extern "C" fn attributes_fromstring(mut str: *const c_char) -> c_int 
         table_entry { name: c"reverse".as_ptr(), attr: GRID_ATTR_REVERSE as i32, },
         table_entry { name: c"hidden".as_ptr(), attr: GRID_ATTR_HIDDEN as i32, },
         table_entry { name: c"italics".as_ptr(), attr: GRID_ATTR_ITALICS as i32, },
-        table_entry { name: c"strikethrough".as_ptr(), attr: GRID_ATTR_STRIKETHROUGH, },
-        table_entry { name: c"double-underscore".as_ptr(), attr: GRID_ATTR_UNDERSCORE_2, },
-        table_entry { name: c"curly-underscore".as_ptr(), attr: GRID_ATTR_UNDERSCORE_3, },
-        table_entry { name: c"dotted-underscore".as_ptr(), attr: GRID_ATTR_UNDERSCORE_4, },
-        table_entry { name: c"dashed-underscore".as_ptr(), attr: GRID_ATTR_UNDERSCORE_5, },
-        table_entry { name: c"overline".as_ptr(), attr: GRID_ATTR_OVERLINE, },
+        table_entry { name: c"strikethrough".as_ptr(), attr: GRID_ATTR_STRIKETHROUGH as i32, },
+        table_entry { name: c"double-underscore".as_ptr(), attr: GRID_ATTR_UNDERSCORE_2 as i32, },
+        table_entry { name: c"curly-underscore".as_ptr(), attr: GRID_ATTR_UNDERSCORE_3 as i32, },
+        table_entry { name: c"dotted-underscore".as_ptr(), attr: GRID_ATTR_UNDERSCORE_4 as i32, },
+        table_entry { name: c"dashed-underscore".as_ptr(), attr: GRID_ATTR_UNDERSCORE_5 as i32, },
+        table_entry { name: c"overline".as_ptr(), attr: GRID_ATTR_OVERLINE as i32, },
     ];
 
     unsafe {

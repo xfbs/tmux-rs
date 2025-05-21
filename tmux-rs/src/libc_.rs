@@ -5,15 +5,10 @@ use libc::timeval;
 pub type wchar_t = core::ffi::c_int;
 
 #[inline]
-pub unsafe fn bsearch_<T>(
-    key: *const T,
-    base: *const T,
-    num: usize,
-    size: usize,
-    compar: unsafe extern "C" fn(*const c_void, *const c_void) -> i32,
-) -> *mut T {
-    unsafe { ::libc::bsearch(key.cast(), base.cast(), num, size, Some(compar)).cast() }
-}
+pub unsafe fn bsearch_<T>(key: *const T, base: *const T, num: usize, size: usize, compar: unsafe extern "C" fn(*const c_void, *const c_void) -> i32) -> *mut T { unsafe { ::libc::bsearch(key.cast(), base.cast(), num, size, Some(compar)).cast() } }
+
+#[inline]
+pub unsafe fn bsearch__<T>(key: *const T, base: *const T, num: usize, compar: unsafe extern "C" fn(*const c_void, *const c_void) -> i32) -> *mut T { unsafe { ::libc::bsearch(key.cast(), base.cast(), num, size_of::<T>(), Some(compar)).cast() } }
 
 #[macro_export]
 macro_rules! errno {
@@ -69,9 +64,7 @@ impl timer {
 }
 impl Eq for timer {}
 impl PartialEq for timer {
-    fn eq(&self, other: &Self) -> bool {
-        unsafe { (*self.0).tv_sec == (*other.0).tv_sec && (*self.0).tv_usec == (*other.0).tv_usec }
-    }
+    fn eq(&self, other: &Self) -> bool { unsafe { (*self.0).tv_sec == (*other.0).tv_sec && (*self.0).tv_usec == (*other.0).tv_usec } }
 }
 impl Ord for timer {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering { self.partial_cmp(other).unwrap() }

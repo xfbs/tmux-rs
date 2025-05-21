@@ -12,7 +12,7 @@ const WINDOW_BUFFER_DEFAULT_COMMAND: *const i8 = c"paste-buffer -p -b '%%'".as_p
 const WINDOW_BUFFER_DEFAULT_FORMAT: *const i8 = c"#{t/p:buffer_created}: #{buffer_sample}".as_ptr();
 
 const WINDOW_BUFFER_DEFAULT_KEY_FORMAT: *const i8 = concat!(
-    "#{?#{e|<:#{line},10},",
+    "#{?#{e|<:#{line},10},", //
     "#{line}",
     ",",
     "#{?#{e|<:#{line},36},",
@@ -25,25 +25,26 @@ const WINDOW_BUFFER_DEFAULT_KEY_FORMAT: *const i8 = concat!(
 .as_ptr()
 .cast();
 
+#[unsafe(no_mangle)]
 static mut window_buffer_menu_items: [menu_item; 12] = [
-    menu_item::new(c"Paste".as_ptr(), 'p' as u64, null_mut()),
-    menu_item::new(c"Paste Tagged".as_ptr(), 'P' as u64, null_mut()),
-    menu_item::new(c"".as_ptr(), KEYC_NONE, null_mut()),
-    menu_item::new(c"Tag".as_ptr(), 't' as u64, null_mut()),
-    menu_item::new(c"Tag All".as_ptr(), '\x14' as u64, null_mut()),
-    menu_item::new(c"Tag None".as_ptr(), 'T' as u64, null_mut()),
-    menu_item::new(c"".as_ptr(), KEYC_NONE, null_mut()),
-    menu_item::new(c"Delete".as_ptr(), 'd' as u64, null_mut()),
-    menu_item::new(c"Delete Tagged".as_ptr(), 'D' as u64, null_mut()),
-    menu_item::new(c"".as_ptr(), KEYC_NONE, null_mut()),
-    menu_item::new(c"Cancel".as_ptr(), 'q' as u64, null_mut()),
-    menu_item::new(null_mut(), KEYC_NONE, null_mut()),
+    menu_item::new(Some(c"Paste"), 'p' as u64, null_mut()),
+    menu_item::new(Some(c"Paste Tagged"), 'P' as u64, null_mut()),
+    menu_item::new(Some(c""), KEYC_NONE, null_mut()),
+    menu_item::new(Some(c"Tag"), 't' as u64, null_mut()),
+    menu_item::new(Some(c"Tag All"), '\x14' as u64, null_mut()),
+    menu_item::new(Some(c"Tag None"), 'T' as u64, null_mut()),
+    menu_item::new(Some(c""), KEYC_NONE, null_mut()),
+    menu_item::new(Some(c"Delete"), 'd' as u64, null_mut()),
+    menu_item::new(Some(c"Delete Tagged"), 'D' as u64, null_mut()),
+    menu_item::new(Some(c""), KEYC_NONE, null_mut()),
+    menu_item::new(Some(c"Cancel"), 'q' as u64, null_mut()),
+    menu_item::new(None, KEYC_NONE, null_mut()),
 ];
 
 #[unsafe(no_mangle)]
 pub static mut window_buffer_mode: window_mode = window_mode {
-    name: c"buffer-mode".as_ptr(),
-    default_format: WINDOW_BUFFER_DEFAULT_FORMAT,
+    name: SyncCharPtr::new(c"buffer-mode"),
+    default_format: SyncCharPtr::from_ptr(WINDOW_BUFFER_DEFAULT_FORMAT),
 
     init: Some(window_buffer_init),
     free: Some(window_buffer_free),
@@ -61,11 +62,7 @@ enum window_buffer_sort_type {
 }
 
 const window_buffer_sort_list_len: u32 = 3;
-static mut window_buffer_sort_list: [SyncCharPtr; 3] = [
-    SyncCharPtr::new(c"time"),
-    SyncCharPtr::new(c"name"),
-    SyncCharPtr::new(c"size"),
-];
+static mut window_buffer_sort_list: [SyncCharPtr; 3] = [SyncCharPtr::new(c"time"), SyncCharPtr::new(c"name"), SyncCharPtr::new(c"size")];
 
 static mut window_buffer_sort: *mut mode_tree_sort_criteria = null_mut();
 
@@ -140,20 +137,16 @@ pub unsafe extern "C" fn window_buffer_cmp(a0: *const c_void, b0: *const c_void)
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_build(
-    modedata: *mut c_void,
-    sort_crit: *mut mode_tree_sort_criteria,
-    tag: *mut u64,
-    filter: *const c_char,
-) {
+pub unsafe extern "C" fn window_buffer_build(modedata: NonNull<c_void>, sort_crit: *mut mode_tree_sort_criteria, tag: *mut u64, filter: *const c_char) {
     unsafe {
-        let mut data = modedata as *mut window_buffer_modedata;
+        let mut data: NonNull<window_buffer_modedata> = modedata.cast();
         let mut item: *mut window_buffer_itemdata = null_mut();
+        let data = data.as_ptr();
         // char *text, *cp;
         // struct format_tree *ft;
-        let mut s = null_mut();
-        let mut wl = null_mut();
-        let mut wp = null_mut();
+        let mut s = None;
+        let mut wl = None;
+        let mut wp = None;
 
         for i in 0..(*data).item_size {
             window_buffer_free_item(*(*data).item_list.add(i as usize));
@@ -172,17 +165,12 @@ pub unsafe extern "C" fn window_buffer_build(
         }
 
         window_buffer_sort = sort_crit;
-        qsort(
-            (*data).item_list.cast(),
-            (*data).item_size as usize,
-            size_of::<*const window_buffer_itemdata>(),
-            Some(window_buffer_cmp),
-        );
+        qsort((*data).item_list.cast(), (*data).item_size as usize, size_of::<*const window_buffer_itemdata>(), Some(window_buffer_cmp));
 
         if cmd_find_valid_state(&raw mut (*data).fs).as_bool() {
-            s = (*data).fs.s;
-            wl = (*data).fs.wl;
-            wp = (*data).fs.wp;
+            s = NonNull::new((*data).fs.s);
+            wl = NonNull::new((*data).fs.wl);
+            wp = NonNull::new((*data).fs.wp);
         }
 
         for i in 0..(*data).item_size {
@@ -207,15 +195,7 @@ pub unsafe extern "C" fn window_buffer_build(
             }
 
             let text = format_expand(ft, (*data).format);
-            mode_tree_add(
-                (*data).data.cast(),
-                null_mut(),
-                item.cast(),
-                (*item).order as u64,
-                (*item).name,
-                text,
-                -1,
-            );
+            mode_tree_add((*data).data.cast(), null_mut(), item.cast(), (*item).order as u64, (*item).name, text, -1);
             free_(text);
 
             format_free(ft);
@@ -224,19 +204,13 @@ pub unsafe extern "C" fn window_buffer_build(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_draw(
-    modedata: *mut c_void,
-    itemdata: *mut c_void,
-    ctx: *mut screen_write_ctx,
-    sx: u32,
-    sy: u32,
-) {
+pub unsafe extern "C" fn window_buffer_draw(modedata: *mut c_void, itemdata: NonNull<c_void>, ctx: *mut screen_write_ctx, sx: u32, sy: u32) {
     unsafe {
-        let item = itemdata as *mut window_buffer_itemdata;
+        let item: NonNull<window_buffer_itemdata> = itemdata.cast();
         let mut cx = (*(*ctx).s).cx;
         let mut cy = (*(*ctx).s).cy;
 
-        let Some(pb) = NonNull::new(paste_get_name((*item).name)) else {
+        let Some(pb) = NonNull::new(paste_get_name((*item.as_ptr()).name)) else {
             return;
         };
 
@@ -249,15 +223,8 @@ pub unsafe extern "C" fn window_buffer_draw(
             while (end != pdata.add(psize) && *end != b'\n' as c_char) {
                 end = end.add(1);
             }
-            buf = xreallocarray(buf.cast(), 4, end.offset_from(start) as usize + 1)
-                .as_ptr()
-                .cast();
-            utf8_strvis(
-                buf,
-                start,
-                end.offset_from(start) as usize,
-                VIS_OCTAL | VIS_CSTYLE | VIS_TAB,
-            );
+            buf = xreallocarray(buf.cast(), 4, end.offset_from(start) as usize + 1).as_ptr().cast();
+            utf8_strvis(buf, start, end.offset_from(start) as usize, VIS_OCTAL | VIS_CSTYLE | VIS_TAB);
             if (*buf != b'\0' as c_char) {
                 screen_write_cursormove(ctx, cx as i32, (cy + i) as i32, 0);
                 screen_write_nputs(ctx, sx as isize, &raw const grid_default_cell, c"%s".as_ptr(), buf);
@@ -273,69 +240,60 @@ pub unsafe extern "C" fn window_buffer_draw(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_search(modedata: *mut c_void, itemdata: *mut c_void, ss: *const c_char) -> i32 {
+pub unsafe extern "C" fn window_buffer_search(modedata: *mut c_void, itemdata: NonNull<c_void>, ss: *const c_char) -> boolint {
     unsafe {
-        let item = itemdata as *mut window_buffer_itemdata;
-        let Some(pb) = NonNull::new(paste_get_name((*item).name)) else {
-            return 0;
+        let item: NonNull<window_buffer_itemdata> = itemdata.cast();
+        let Some(pb) = NonNull::new(paste_get_name((*item.as_ptr()).name)) else {
+            return boolint::false_();
         };
-        if !strstr((*item).name, ss).is_null() {
-            return 1;
+        if !strstr((*item.as_ptr()).name, ss).is_null() {
+            return boolint::true_();
         }
         let mut bufsize = 0;
         let bufdata = paste_buffer_data_(pb, &mut bufsize);
-        !memmem(bufdata.cast(), bufsize, ss.cast(), strlen(ss)).is_null() as i32
+        boolint::from(!memmem(bufdata.cast(), bufsize, ss.cast(), strlen(ss)).is_null())
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_menu(modedata: *mut c_void, c: *mut client, key: key_code) {
+pub unsafe extern "C" fn window_buffer_menu(modedata: NonNull<c_void>, c: *mut client, key: key_code) {
     unsafe {
-        let mut data = modedata as *mut window_buffer_modedata;
-        let mut wp = (*data).wp as *mut window_pane;
-        // window_mode_entry *wme;
+        let mut data: NonNull<window_buffer_modedata> = modedata.cast();
+        let mut wp = (*data.as_ptr()).wp as *mut window_pane;
 
-        let mut wme = tailq_first(&raw mut (*wp).modes);
-        if wme.is_null() || (*wme).data != modedata {
-            return;
+        if let Some(wme) = NonNull::new(tailq_first(&raw mut (*wp).modes))
+            && (*wme.as_ptr()).data == modedata.as_ptr()
+        {
+            window_buffer_key(wme, c, null_mut(), null_mut(), key, null_mut())
         }
-        window_buffer_key(wme, c, null_mut(), null_mut(), key, null_mut())
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_get_key(modedata: *mut c_void, itemdata: *mut c_void, line: u32) -> key_code {
+pub unsafe extern "C" fn window_buffer_get_key(modedata: NonNull<c_void>, itemdata: NonNull<c_void>, line: u32) -> key_code {
     unsafe {
-        let mut data = modedata as *mut window_buffer_modedata;
-        let mut item = itemdata as *mut window_buffer_itemdata;
-        // struct format_tree *ft;
-        // struct session *s = NULL;
-        // struct winlink *wl = NULL;
-        // struct window_pane *wp = NULL;
-        // struct paste_buffer *pb;
-        // char *expanded;
-        // key_code key;
+        let mut data: NonNull<window_buffer_modedata> = modedata.cast();
+        let mut item: NonNull<window_buffer_itemdata> = itemdata.cast();
+        let mut s = None;
+        let mut wl = None;
+        let mut wp = None;
 
-        let mut s = null_mut::<session>();
-        let mut wl = null_mut::<winlink>();
-        let mut wp = null_mut::<window_pane>();
-
-        if cmd_find_valid_state(&raw mut (*data).fs).as_bool() {
-            s = (*data).fs.s;
-            wl = (*data).fs.wl;
-            wp = (*data).fs.wp;
+        if cmd_find_valid_state(&raw mut (*data.as_ptr()).fs).as_bool() {
+            s = NonNull::new((*data.as_ptr()).fs.s);
+            wl = NonNull::new((*data.as_ptr()).fs.wl);
+            wp = NonNull::new((*data.as_ptr()).fs.wp);
         }
-        let Some(pb) = NonNull::new(paste_get_name((*item).name)) else {
+        let Some(pb) = NonNull::new(paste_get_name((*item.as_ptr()).name)) else {
             return KEYC_NONE;
         };
 
         let ft = format_create(null_mut(), null_mut(), FORMAT_NONE, format_flags::empty());
-        format_defaults(ft, null_mut(), null_mut(), null_mut(), null_mut());
+        format_defaults(ft, null_mut(), None, None, None);
         format_defaults(ft, null_mut(), s, wl, wp);
         format_defaults_paste_buffer(ft, pb.as_ptr());
         format_add(ft, c"line".as_ptr(), c"%u".as_ptr(), line);
 
-        let expanded = format_expand(ft, (*data).key_format);
+        let expanded = format_expand(ft, (*data.as_ptr()).key_format);
         let key = key_string_lookup_string(expanded);
         free_(expanded);
         format_free(ft);
@@ -344,16 +302,12 @@ pub unsafe extern "C" fn window_buffer_get_key(modedata: *mut c_void, itemdata: 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_init(
-    wme: *mut window_mode_entry,
-    fs: *mut cmd_find_state,
-    args: *mut args,
-) -> *mut screen {
+pub unsafe extern "C" fn window_buffer_init(wme: NonNull<window_mode_entry>, fs: *mut cmd_find_state, args: *mut args) -> *mut screen {
     unsafe {
         let mut s = null_mut();
-        let mut wp = (*wme).wp;
+        let mut wp = (*wme.as_ptr()).wp;
         let data = xcalloc1::<window_buffer_modedata>();
-        (*wme).data = data as *mut window_buffer_modedata as *mut c_void;
+        (*wme.as_ptr()).data = data as *mut window_buffer_modedata as *mut c_void;
         (*data).wp = wp;
         cmd_find_copy_state(&raw mut (*data).fs, fs);
 
@@ -398,11 +352,11 @@ pub unsafe extern "C" fn window_buffer_init(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_free(wme: *mut window_mode_entry) {
+pub unsafe extern "C" fn window_buffer_free(wme: NonNull<window_mode_entry>) {
     unsafe {
-        let mut data = (*wme).data as *mut window_buffer_modedata;
+        let mut data = (*wme.as_ptr()).data as *mut window_buffer_modedata;
 
-        if (data.is_null()) {
+        if data.is_null() {
             return;
         }
 
@@ -422,17 +376,17 @@ pub unsafe extern "C" fn window_buffer_free(wme: *mut window_mode_entry) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_resize(wme: *mut window_mode_entry, sx: u32, sy: u32) {
+pub unsafe extern "C" fn window_buffer_resize(wme: NonNull<window_mode_entry>, sx: u32, sy: u32) {
     unsafe {
-        let mut data = (*wme).data as *mut window_buffer_modedata;
+        let mut data = (*wme.as_ptr()).data as *mut window_buffer_modedata;
         mode_tree_resize((*data).data, sx, sy);
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_update(wme: *mut window_mode_entry) {
+pub unsafe extern "C" fn window_buffer_update(wme: NonNull<window_mode_entry>) {
     unsafe {
-        let mut data = (*wme).data as *mut window_buffer_modedata;
+        let mut data = (*wme.as_ptr()).data as *mut window_buffer_modedata;
 
         mode_tree_build((*data).data);
         mode_tree_draw((*data).data);
@@ -441,45 +395,35 @@ pub unsafe extern "C" fn window_buffer_update(wme: *mut window_mode_entry) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_do_delete(
-    modedata: *mut c_void,
-    itemdata: *mut c_void,
-    c: *mut client,
-    key: key_code,
-) {
+pub unsafe extern "C" fn window_buffer_do_delete(modedata: NonNull<c_void>, itemdata: NonNull<c_void>, c: *mut client, key: key_code) {
     unsafe {
-        let mut data = modedata as *mut window_buffer_modedata;
-        let mut item = itemdata as *mut window_buffer_itemdata;
+        let mut data: NonNull<window_buffer_modedata> = modedata.cast();
+        let mut item: NonNull<window_buffer_itemdata> = itemdata.cast();
 
-        if item == mode_tree_get_current((*data).data).cast() && mode_tree_down((*data).data, 0) == 0 {
+        if item == mode_tree_get_current((*data.as_ptr()).data).cast() && mode_tree_down((*data.as_ptr()).data, 0) == 0 {
             /*
              *If we were unable to select the item further down we are at
              * the end of the list. Move one element up instead, to make
              * sure that we preserve a valid selection or we risk having
              * the tree build logic reset it to the first item.
              */
-            mode_tree_up((*data).data, 0);
+            mode_tree_up((*data.as_ptr()).data, 0);
         }
 
-        if let Some(pb) = NonNull::new(paste_get_name((*item).name)) {
+        if let Some(pb) = NonNull::new(paste_get_name((*item.as_ptr()).name)) {
             paste_free(pb);
         }
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_do_paste(
-    modedata: *mut c_void,
-    itemdata: *mut c_void,
-    c: *mut client,
-    key: key_code,
-) {
+pub unsafe extern "C" fn window_buffer_do_paste(modedata: NonNull<c_void>, itemdata: NonNull<c_void>, c: *mut client, key: key_code) {
     unsafe {
-        let mut data = modedata as *mut window_buffer_modedata;
-        let item = itemdata as *mut window_buffer_itemdata;
+        let data: NonNull<window_buffer_modedata> = modedata.cast();
+        let item: NonNull<window_buffer_itemdata> = itemdata.cast();
 
-        if (!paste_get_name((*item).name).is_null()) {
-            mode_tree_run_command(c, null_mut(), (*data).command, (*item).name);
+        if !paste_get_name((*item.as_ptr()).name).is_null() {
+            mode_tree_run_command(c, null_mut(), (*data.as_ptr()).command, (*item.as_ptr()).name);
         }
     }
 }
@@ -519,9 +463,9 @@ pub unsafe extern "C" fn window_buffer_edit_close_cb(buf: *mut c_char, mut len: 
         }
 
         let wp = window_pane_find_by_id((*ed).wp_id);
-        if (!wp.is_null()) {
+        if !wp.is_null() {
             let wme = tailq_first(&raw mut (*wp).modes);
-            if ((*wme).mode == &raw mut window_buffer_mode) {
+            if ((*wme).mode.addr() == (&raw const window_buffer_mode).addr()) {
                 let data = (*wme).data as *mut window_buffer_modedata;
                 mode_tree_build((*data).data);
                 mode_tree_draw((*data).data);
@@ -533,11 +477,7 @@ pub unsafe extern "C" fn window_buffer_edit_close_cb(buf: *mut c_char, mut len: 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_start_edit(
-    data: *mut window_buffer_modedata,
-    item: *mut window_buffer_itemdata,
-    c: *mut client,
-) {
+pub unsafe extern "C" fn window_buffer_start_edit(data: *mut window_buffer_modedata, item: *mut window_buffer_itemdata, c: *mut client) {
     unsafe {
         // struct paste_buffer *pb;
         // const char *buf;
@@ -563,17 +503,10 @@ pub unsafe extern "C" fn window_buffer_start_edit(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_key(
-    wme: *mut window_mode_entry,
-    c: *mut client,
-    s: *mut session,
-    wl: *mut winlink,
-    mut key: key_code,
-    m: *mut mouse_event,
-) {
+pub unsafe extern "C" fn window_buffer_key(wme: NonNull<window_mode_entry>, c: *mut client, s: *mut session, wl: *mut winlink, mut key: key_code, m: *mut mouse_event) {
     unsafe {
-        let mut wp = (*wme).wp;
-        let mut data = (*wme).data as *mut window_buffer_modedata;
+        let mut wp = (*wme.as_ptr()).wp;
+        let mut data = (*wme.as_ptr()).data as *mut window_buffer_modedata;
         let mut mtd = (*data).data as *mut mode_tree_data;
         let mut finished = false;
 
@@ -586,12 +519,12 @@ pub unsafe extern "C" fn window_buffer_key(
             finished = mode_tree_key(mtd, c, &raw mut key, m, null_mut(), null_mut()) != 0;
             match key as u8 {
                 b'e' => {
-                    let item = mode_tree_get_current(mtd) as *mut window_buffer_itemdata;
-                    window_buffer_start_edit(data, item, c);
+                    let item: NonNull<window_buffer_itemdata> = mode_tree_get_current(mtd).cast();
+                    window_buffer_start_edit(data, item.as_ptr(), c);
                 }
                 b'd' => {
                     let item = mode_tree_get_current(mtd);
-                    window_buffer_do_delete(data.cast(), item, c, key);
+                    window_buffer_do_delete(NonNull::new(data.cast()).unwrap(), item, c, key);
                     mode_tree_build(mtd);
                 }
                 b'D' => {
@@ -604,7 +537,7 @@ pub unsafe extern "C" fn window_buffer_key(
                 }
                 b'p' | b'\r' => {
                     let item = mode_tree_get_current(mtd);
-                    window_buffer_do_paste(data.cast(), item, c, key);
+                    window_buffer_do_paste(NonNull::new(data.cast()).unwrap(), item, c, key);
                     finished = true;
                 }
                 _ => (),

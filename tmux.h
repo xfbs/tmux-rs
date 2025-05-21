@@ -3194,7 +3194,7 @@ void mode_tree_run_command(struct client *, struct cmd_find_state *,
 extern const struct window_mode window_buffer_mode;
 
 /* window-tree.c */
-extern const struct window_mode window_tree_mode;
+extern struct window_mode window_tree_mode;
 
 /* window-clock.c */
 extern const struct window_mode window_clock_mode;

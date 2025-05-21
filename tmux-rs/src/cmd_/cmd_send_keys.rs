@@ -13,9 +13,7 @@ static mut cmd_send_keys_entry: cmd_entry = cmd_entry {
 
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_PANE, 0),
 
-    flags: cmd_flag::CMD_AFTERHOOK
-        .union(cmd_flag::CMD_CLIENT_CFLAG)
-        .union(cmd_flag::CMD_CLIENT_CANFAIL),
+    flags: cmd_flag::CMD_AFTERHOOK.union(cmd_flag::CMD_CLIENT_CFLAG).union(cmd_flag::CMD_CLIENT_CANFAIL),
     exec: Some(cmd_send_keys_exec),
 
     ..unsafe { zeroed() }
@@ -37,12 +35,7 @@ static mut cmd_send_prefix_entry: cmd_entry = cmd_entry {
 };
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_send_keys_inject_key(
-    item: *mut cmdq_item,
-    mut after: *mut cmdq_item,
-    args: *mut args,
-    key: key_code,
-) -> *mut cmdq_item {
+pub unsafe extern "C" fn cmd_send_keys_inject_key(item: *mut cmdq_item, mut after: *mut cmdq_item, args: *mut args, key: key_code) -> *mut cmdq_item {
     unsafe {
         let mut target = cmdq_get_target(item);
         let mut tc = cmdq_get_target_client(item);
@@ -87,12 +80,7 @@ pub unsafe extern "C" fn cmd_send_keys_inject_key(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_send_keys_inject_string(
-    item: *mut cmdq_item,
-    mut after: *mut cmdq_item,
-    args: *mut args,
-    i: i32,
-) -> *mut cmdq_item {
+pub unsafe extern "C" fn cmd_send_keys_inject_string(item: *mut cmdq_item, mut after: *mut cmdq_item, args: *mut args, i: i32) -> *mut cmdq_item {
     unsafe {
         let mut s = args_string(args, i as u32);
         let mut ud: *mut utf8_data;
@@ -192,7 +180,7 @@ pub unsafe extern "C" fn cmd_send_keys_exec(self_: *mut cmd, item: *mut cmdq_ite
             if ((*m).valid == 0) {
                 m = null_mut();
             }
-            (*(*wme).mode).command.unwrap()(wme, tc, s, wl, args, m);
+            (*(*wme).mode).command.unwrap()(NonNull::new_unchecked(wme), tc, s, wl, args, m);
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 

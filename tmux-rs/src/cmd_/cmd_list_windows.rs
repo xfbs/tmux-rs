@@ -3,7 +3,7 @@ use compat_rs::tree::rb_foreach;
 use crate::*;
 
 const LIST_WINDOWS_TEMPLATE: &CStr = c"#{window_index}: #{window_name}#{window_raw_flags} (#{window_panes} panes) [#{window_width}x#{window_height}] [layout #{window_layout}] #{window_id}#{?window_active, (active),}";
-const LIST_WINDOWS_WITH_SESSION_TEMPLATE	: &CStr = c"#{session_name}:#{window_index}: #{window_name}#{window_raw_flags} (#{window_panes} panes) [#{window_width}x#{window_height}] ";
+const LIST_WINDOWS_WITH_SESSION_TEMPLATE: &CStr = c"#{session_name}:#{window_index}: #{window_name}#{window_raw_flags} (#{window_panes} panes) [#{window_width}x#{window_height}] ";
 
 #[unsafe(no_mangle)]
 static mut cmd_list_windows_entry: cmd_entry = cmd_entry {
@@ -29,7 +29,7 @@ unsafe extern "C" fn cmd_list_windows_exec(self_: *mut cmd, item: *mut cmdq_item
         if args_has_(args, 'a') {
             cmd_list_windows_server(self_, item);
         } else {
-            cmd_list_windows_session(self_, (*target).s, item, 0);
+            cmd_list_windows_session(self_, NonNull::new_unchecked((*target).s), item, 0);
         }
 
         cmd_retval::CMD_RETURN_NORMAL
@@ -39,14 +39,14 @@ unsafe extern "C" fn cmd_list_windows_exec(self_: *mut cmd, item: *mut cmdq_item
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_list_windows_server(self_: *mut cmd, item: *mut cmdq_item) {
     unsafe {
-        for s in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
+        for s in rb_foreach(&raw mut sessions) {
             cmd_list_windows_session(self_, s, item, 1);
         }
     }
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn cmd_list_windows_session(self_: *mut cmd, s: *mut session, item: *mut cmdq_item, type_: i32) {
+unsafe extern "C" fn cmd_list_windows_session(self_: *mut cmd, s: NonNull<session>, item: *mut cmdq_item, type_: i32) {
     unsafe {
         let mut args = cmd_get_args(self_);
         let mut flag = 0;
@@ -66,10 +66,10 @@ unsafe extern "C" fn cmd_list_windows_session(self_: *mut cmd, s: *mut session, 
         let mut filter = args_get_(args, 'f');
 
         let mut n = 0;
-        for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
+        for wl in rb_foreach(&raw mut (*s.as_ptr()).windows) {
             let ft = format_create(cmdq_get_client(item), item, FORMAT_NONE as i32, format_flags::empty());
             format_add(ft, c"line".as_ptr(), c"%u".as_ptr(), n);
-            format_defaults(ft, null_mut(), s, wl, null_mut());
+            format_defaults(ft, null_mut(), Some(s), Some(wl), None);
 
             if !filter.is_null() {
                 let expanded = format_expand(ft, filter);

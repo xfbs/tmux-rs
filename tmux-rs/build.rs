@@ -1,4 +1,7 @@
 fn main() {
+    println!("cargo::rerun-if-changed=src/grammar.lalrpop");
+    lalrpop::process_root().unwrap();
+
     println!("cargo::rerun-if-changed=build.rs");
     println!("cargo::rustc-link-lib=bsd");
     println!("cargo::rustc-link-lib=tinfo");
@@ -90,10 +93,7 @@ fn main() {
         .define("DEBUG", None)
         .define("__packed", None) // packed attributes causes ffi issues
         .define("HAVE_PROC_PID", "1")
-        .define(
-            "TMUX_CONF",
-            "\"/etc/tmux.conf:~/.tmux.conf:$XDG_CONFIG_HOME/tmux/tmux.conf:~/.config/tmux/tmux.conf\"",
-        )
+        .define("TMUX_CONF", "\"/etc/tmux.conf:~/.tmux.conf:$XDG_CONFIG_HOME/tmux/tmux.conf:~/.config/tmux/tmux.conf\"")
         .define("TMUX_TERM", "\"tmux-256color\"")
         //
         .define("b64_ntop", "__b64_ntop")
@@ -129,9 +129,7 @@ fn main() {
 }
 
 static FILES: &[&str] = &[
-    "format-draw.c",
-    "input.c",
-    "mode-tree.c",
+    "mode-tree.c", //
     "screen-write.c",
     "server-client.c",
     "status.c",
@@ -139,5 +137,4 @@ static FILES: &[&str] = &[
     "tty.c",
     "window-copy.c",
     "window-customize.c",
-    "window-tree.c",
 ];

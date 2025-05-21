@@ -21,7 +21,7 @@ static mut cmd_source_file_entry: cmd_entry = cmd_entry {
 #[repr(C)]
 pub struct cmd_source_file_data {
     pub item: *mut cmdq_item,
-    pub flags: i32,
+    pub flags: cmd_parse_input_flags,
 
     pub after: *mut cmdq_item,
     pub retval: cmd_retval,
@@ -146,13 +146,13 @@ unsafe extern "C" fn cmd_source_file_exec(self_: *mut cmd, item: *mut cmdq_item)
         (*cdata).item = item;
 
         if (args_has_(args, 'q')) {
-            (*cdata).flags |= CMD_PARSE_QUIET;
+            (*cdata).flags |= cmd_parse_input_flags::CMD_PARSE_QUIET;
         }
         if (args_has_(args, 'n')) {
-            (*cdata).flags |= CMD_PARSE_PARSEONLY;
+            (*cdata).flags |= cmd_parse_input_flags::CMD_PARSE_PARSEONLY;
         }
         if (args_has_(args, 'v')) {
-            (*cdata).flags |= CMD_PARSE_VERBOSE;
+            (*cdata).flags |= cmd_parse_input_flags::CMD_PARSE_VERBOSE;
         }
 
         utf8_stravis(&raw mut cwd, server_client_get_cwd(c, null_mut()), VIS_GLOB as i32);
@@ -178,7 +178,7 @@ unsafe extern "C" fn cmd_source_file_exec(self_: *mut cmd, item: *mut cmdq_item)
 
             result = glob(pattern, 0, None, g.as_mut_ptr());
             if result != 0 {
-                if result != GLOB_NOMATCH || !(*cdata).flags & CMD_PARSE_QUIET != 0 {
+                if result != GLOB_NOMATCH || !(*cdata).flags.intersects(cmd_parse_input_flags::CMD_PARSE_QUIET) {
                     if (result == GLOB_NOMATCH) {
                         error = strerror(ENOENT);
                     } else if result == GLOB_NOSPACE {

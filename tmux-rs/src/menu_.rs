@@ -89,16 +89,10 @@ pub struct menu_data {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn menu_add_items(
-    menu: *mut menu,
-    items: *mut menu_item,
-    qitem: *mut cmdq_item,
-    c: *mut client,
-    fs: *mut cmd_find_state,
-) {
+pub unsafe extern "C" fn menu_add_items(menu: *mut menu, items: *mut menu_item, qitem: *mut cmdq_item, c: *mut client, fs: *mut cmd_find_state) {
     let mut loop_ = items;
     unsafe {
-        while !(*loop_).name.is_null() {
+        while !(*loop_).name.as_ptr().is_null() {
             menu_add_item(menu, loop_, qitem, c, fs);
             loop_ = loop_.add(1);
         }
@@ -106,19 +100,13 @@ pub unsafe extern "C" fn menu_add_items(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn menu_add_item(
-    menu: *mut menu,
-    item: *mut menu_item,
-    qitem: *mut cmdq_item,
-    c: *mut client,
-    fs: *mut cmd_find_state,
-) {
+pub unsafe extern "C" fn menu_add_item(menu: *mut menu, item: *mut menu_item, qitem: *mut cmdq_item, c: *mut client, fs: *mut cmd_find_state) {
     unsafe {
-        let line = (item.is_null() || (*item).name.is_null() || *(*item).name == b'\0' as c_char);
+        let line = (item.is_null() || (*item).name.as_ptr().is_null() || *(*item).name.as_ptr() == b'\0' as c_char);
         if (line && (*menu).count == 0) {
             return;
         }
-        if (line && (*(*menu).items.add((*menu).count as usize - 1)).name.is_null()) {
+        if (line && (*(*menu).items.add((*menu).count as usize - 1)).name.as_ptr().is_null()) {
             return;
         }
 
@@ -132,9 +120,9 @@ pub unsafe extern "C" fn menu_add_item(
         }
 
         let s = if (!fs.is_null()) {
-            format_single_from_state(qitem, (*item).name, c, fs)
+            format_single_from_state(qitem, (*item).name.as_ptr(), c, fs)
         } else {
-            format_single(qitem, (*item).name, c, null_mut(), null_mut(), null_mut())
+            format_single(qitem, (*item).name.as_ptr(), c, null_mut(), null_mut(), null_mut())
         };
 
         if (*s == b'\0' as c_char) {
@@ -163,38 +151,28 @@ pub unsafe extern "C" fn menu_add_item(
             c"".as_ptr()
         };
         let trimmed = format_trim_right(s, max_width);
-        let mut name = null_mut();
+        let mut name: *mut c_char = null_mut();
         if (!key.is_null()) {
-            xasprintf(
-                &raw mut name,
-                c"%s%s#[default] #[align=right](%s)".as_ptr(),
-                trimmed,
-                suffix,
-                key,
-            );
+            xasprintf(&raw mut name, c"%s%s#[default] #[align=right](%s)".as_ptr(), trimmed, suffix, key);
         } else {
             xasprintf(&raw mut name, c"%s%s".as_ptr(), trimmed, suffix);
         }
         free_(trimmed);
 
-        (*new_item).name = name;
+        (*new_item).name = SyncCharPtr::from_ptr(name);
         free_(s);
 
-        let cmd = (*item).command;
-        let s = if (!cmd.is_null()) {
-            if (!fs.is_null()) {
-                format_single_from_state(qitem, cmd, c, fs)
-            } else {
-                format_single(qitem, cmd, c, null_mut(), null_mut(), null_mut())
-            }
+        let cmd: *const c_char = (*item).command.as_ptr();
+        let s: *mut c_char = if !cmd.is_null() {
+            if (!fs.is_null()) { format_single_from_state(qitem, cmd, c, fs) } else { format_single(qitem, cmd, c, null_mut(), null_mut(), null_mut()) }
         } else {
             null_mut()
         };
-        (*new_item).command = s;
+        (*new_item).command = SyncCharPtr::from_ptr(s);
         (*new_item).key = (*item).key;
 
-        let mut width = format_width((*new_item).name);
-        if (*(*new_item).name == b'-' as c_char) {
+        let mut width = format_width((*new_item).name.as_ptr());
+        if *(*new_item).name.as_ptr() == b'-' as c_char {
             width -= 1;
         }
         if (width > (*menu).width) {
@@ -219,8 +197,8 @@ pub unsafe extern "C" fn menu_free(menu: *mut menu) {
     unsafe {
         for i in 0..(*menu).count {
             // TODO consider making the struct hold mut pointer
-            free_((*(*menu).items.add(i as usize)).name.cast_mut());
-            free_((*(*menu).items.add(i as usize)).command.cast_mut());
+            free_((*(*menu).items.add(i as usize)).name.as_ptr().cast_mut());
+            free_((*(*menu).items.add(i as usize)).command.as_ptr().cast_mut());
         }
         free_((*menu).items);
 
@@ -246,14 +224,7 @@ pub unsafe extern "C" fn menu_mode_cb(_c: *mut client, data: *mut c_void, cx: *m
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn menu_check_cb(
-    c: *mut client,
-    data: *mut c_void,
-    px: u32,
-    py: u32,
-    nx: u32,
-    r: *mut overlay_ranges,
-) {
+pub unsafe extern "C" fn menu_check_cb(c: *mut client, data: *mut c_void, px: u32, py: u32, nx: u32, r: *mut overlay_ranges) {
     unsafe {
         let md = data as *mut menu_data;
         let menu = (*md).menu;
@@ -279,39 +250,14 @@ pub unsafe extern "C" fn menu_draw_cb(c: *mut client, data: *mut c_void, rctx: *
         screen_write_clearscreen(ctx, 8);
 
         if ((*md).border_lines != box_lines::BOX_LINES_NONE) {
-            screen_write_box(
-                ctx,
-                (*menu).width + 4,
-                (*menu).count + 2,
-                (*md).border_lines,
-                &raw mut (*md).border_style,
-                (*menu).title,
-            );
+            screen_write_box(ctx, (*menu).width + 4, (*menu).count + 2, (*md).border_lines, &raw mut (*md).border_style, (*menu).title);
         }
 
-        screen_write_menu(
-            ctx,
-            menu,
-            (*md).choice,
-            (*md).border_lines,
-            &raw mut (*md).style,
-            &raw mut (*md).border_style,
-            &raw mut (*md).selected_style,
-        );
+        screen_write_menu(ctx, menu, (*md).choice, (*md).border_lines, &raw mut (*md).style, &raw mut (*md).border_style, &raw mut (*md).selected_style);
         screen_write_stop(ctx);
 
         for i in 0..screen_size_y(&raw mut (*md).s) {
-            tty_draw_line(
-                tty,
-                s,
-                0,
-                i,
-                (*menu).width + 4,
-                px,
-                py + i,
-                &raw const grid_default_cell,
-                null_mut(),
-            );
+            tty_draw_line(tty, s, 0, i, (*menu).width + 4, px, py + i, &raw const grid_default_cell, null_mut());
         }
     }
 }
@@ -358,11 +304,7 @@ pub unsafe extern "C" fn menu_key_cb(c: *mut client, data: *mut c_void, mut even
                     }
                     return 0;
                 }
-                if ((*m).x < (*md).px
-                    || (*m).x > (*md).px + 4 + (*menu).width
-                    || (*m).y < (*md).py + 1
-                    || (*m).y > (*md).py + 1 + count - 1)
-                {
+                if ((*m).x < (*md).px || (*m).x > (*md).px + 4 + (*menu).width || (*m).y < (*md).py + 1 || (*m).y > (*md).py + 1 + count - 1) {
                     if (!(*md).flags & MENU_STAYOPEN != 0) {
                         if (MOUSE_RELEASE((*m).b)) {
                             return 1;
@@ -394,7 +336,7 @@ pub unsafe extern "C" fn menu_key_cb(c: *mut client, data: *mut c_void, mut even
                 return 0;
             }
             for i in 0..count {
-                name = (*(*menu).items.add(i as usize)).name;
+                name = (*(*menu).items.add(i as usize)).name.as_ptr();
                 if (name.is_null() || *name == b'-' as c_char) {
                     continue;
                 }
@@ -463,9 +405,8 @@ pub unsafe extern "C" fn menu_key_cb(c: *mut client, data: *mut c_void, mut even
                                                 } else {
                                                     (*md).choice -= 1;
                                                 }
-                                                name = (*(*menu).items.add((*md).choice as usize)).name;
-                                                if !((name.is_null() || *name == b'-' as c_char) && (*md).choice != old)
-                                                {
+                                                name = (*(*menu).items.add((*md).choice as usize)).name.as_ptr();
+                                                if !((name.is_null() || *name == b'-' as c_char) && (*md).choice != old) {
                                                     break;
                                                 }
                                             }
@@ -502,7 +443,7 @@ pub unsafe extern "C" fn menu_key_cb(c: *mut client, data: *mut c_void, mut even
                                     } else {
                                         (*md).choice += 1;
                                     }
-                                    name = (*(*menu).items.add((*md).choice as usize)).name;
+                                    name = (*(*menu).items.add((*md).choice as usize)).name.as_ptr();
                                     if !((name.is_null() || *name == b'-' as c_char) && (*md).choice != old) {
                                         break;
                                     }
@@ -518,7 +459,7 @@ pub unsafe extern "C" fn menu_key_cb(c: *mut client, data: *mut c_void, mut even
                                 let mut i = 5;
                                 while (i > 0) {
                                     (*md).choice -= 1;
-                                    name = (*(*menu).items.add((*md).choice as usize)).name;
+                                    name = (*(*menu).items.add((*md).choice as usize)).name.as_ptr();
                                     if ((*md).choice != 0 && (!name.is_null() && *name != b'-' as c_char)) {
                                         i -= 1;
                                     } else if ((*md).choice == 0) {
@@ -533,12 +474,12 @@ pub unsafe extern "C" fn menu_key_cb(c: *mut client, data: *mut c_void, mut even
 
                         if (*md).choice > count as i32 - 6 {
                             (*md).choice = count as i32 - 1;
-                            name = (*(*menu).items.add((*md).choice as usize)).name;
+                            name = (*(*menu).items.add((*md).choice as usize)).name.as_ptr();
                         } else {
                             let mut i = 5;
                             while (i > 0) {
                                 (*md).choice += 1;
-                                name = (*(*menu).items.add((*md).choice as usize)).name;
+                                name = (*(*menu).items.add((*md).choice as usize)).name.as_ptr();
                                 if ((*md).choice != count as i32 - 1 && (!name.is_null() && *name != b'-' as c_char)) {
                                     i += 1;
                                 } else if ((*md).choice == count as i32 - 1) {
@@ -548,7 +489,7 @@ pub unsafe extern "C" fn menu_key_cb(c: *mut client, data: *mut c_void, mut even
                         }
                         while (name.is_null() || *name == b'-' as c_char) {
                             (*md).choice -= 1;
-                            name = (*(*menu).items.add((*md).choice as usize)).name;
+                            name = (*(*menu).items.add((*md).choice as usize)).name.as_ptr();
                         }
                         (*c).flags |= client_flag::REDRAWOVERLAY;
                         break 'outer;
@@ -556,10 +497,10 @@ pub unsafe extern "C" fn menu_key_cb(c: *mut client, data: *mut c_void, mut even
                     // 'top:
 
                     (*md).choice = 0;
-                    name = (*(*menu).items.add((*md).choice as usize)).name;
+                    name = (*(*menu).items.add((*md).choice as usize)).name.as_ptr();
                     while (name.is_null() || *name == b'-' as c_char) {
                         (*md).choice += 1;
-                        name = (*(*menu).items.add((*md).choice as usize)).name;
+                        name = (*(*menu).items.add((*md).choice as usize)).name.as_ptr();
                     }
                     (*c).flags |= client_flag::REDRAWOVERLAY;
                     break 'outer;
@@ -567,10 +508,10 @@ pub unsafe extern "C" fn menu_key_cb(c: *mut client, data: *mut c_void, mut even
                 // 'bottom:
 
                 (*md).choice = count as i32 - 1;
-                name = (*(*menu).items.add((*md).choice as usize)).name;
+                name = (*(*menu).items.add((*md).choice as usize)).name.as_ptr();
                 while (name.is_null() || *name == b'-' as c_char) {
                     (*md).choice -= 1;
-                    name = (*(*menu).items.add((*md).choice as usize)).name;
+                    name = (*(*menu).items.add((*md).choice as usize)).name.as_ptr();
                 }
                 (*c).flags |= client_flag::REDRAWOVERLAY;
                 break 'outer;
@@ -583,7 +524,7 @@ pub unsafe extern "C" fn menu_key_cb(c: *mut client, data: *mut c_void, mut even
             return 1;
         }
         item = (*menu).items.add((*md).choice as usize);
-        if ((*item).name.is_null() || *(*item).name == b'-' as c_char) {
+        if ((*item).name.as_ptr().is_null() || *(*item).name.as_ptr() == b'-' as c_char) {
             if ((*md).flags & MENU_STAYOPEN != 0) {
                 return 0;
             }
@@ -603,7 +544,7 @@ pub unsafe extern "C" fn menu_key_cb(c: *mut client, data: *mut c_void, mut even
         state = cmdq_new_state(&raw mut (*md).fs, event, 0);
 
         // TODO fix this cast
-        let status = cmd_parse_and_append((*item).command.cast_mut(), null_mut(), c, state, &raw mut error);
+        let status = cmd_parse_and_append((*item).command.as_ptr().cast_mut(), null_mut(), c, state, &raw mut error);
         if (status == cmd_parse_status::CMD_PARSE_ERROR) {
             cmdq_append(c, cmdq_get_error(error).as_ptr());
             free_(error);
@@ -654,7 +595,7 @@ pub unsafe extern "C" fn menu_prepare(
 ) -> *mut menu_data {
     unsafe {
         let mut choice = 0;
-        let mut name = null();
+        let mut name: *const c_char = null();
 
         let o = (*(*(*(*c).session).curw).window).options;
 
@@ -679,18 +620,8 @@ pub unsafe extern "C" fn menu_prepare(
         (*md).border_lines = lines;
 
         menu_set_style(c, &raw mut (*md).style, style, c"menu-style".as_ptr());
-        menu_set_style(
-            c,
-            &raw mut (*md).selected_style,
-            selected_style,
-            c"menu-selected-style".as_ptr(),
-        );
-        menu_set_style(
-            c,
-            &raw mut (*md).border_style,
-            border_style,
-            c"menu-border-style".as_ptr(),
-        );
+        menu_set_style(c, &raw mut (*md).selected_style, selected_style, c"menu-selected-style".as_ptr());
+        menu_set_style(c, &raw mut (*md).border_style, border_style, c"menu-border-style".as_ptr());
 
         if (!fs.is_null()) {
             cmd_find_copy_state(&raw mut (*md).fs, fs);
@@ -712,7 +643,7 @@ pub unsafe extern "C" fn menu_prepare(
                 starting_choice = (*menu).count as i32 - 1;
                 choice = starting_choice + 1;
                 loop {
-                    name = (*(*menu).items.add(choice as usize - 1)).name;
+                    name = (*(*menu).items.add(choice as usize - 1)).name.as_ptr();
                     if (!name.is_null() && *name != b'-' as c_char) {
                         (*md).choice = choice - 1;
                         break;
@@ -728,7 +659,7 @@ pub unsafe extern "C" fn menu_prepare(
             } else if (starting_choice >= 0) {
                 choice = starting_choice;
                 loop {
-                    name = (*(*menu).items.add(choice as usize)).name;
+                    name = (*(*menu).items.add(choice as usize)).name.as_ptr();
                     if (!name.is_null() && *name != b'-' as c_char) {
                         (*md).choice = choice;
                         break;
@@ -768,36 +699,11 @@ pub unsafe extern "C" fn menu_display(
     data: *mut c_void,
 ) -> i32 {
     unsafe {
-        let md = menu_prepare(
-            menu,
-            flags,
-            starting_choice,
-            item,
-            px,
-            py,
-            c,
-            lines,
-            style,
-            selected_style,
-            border_style,
-            fs,
-            cb,
-            data,
-        );
+        let md = menu_prepare(menu, flags, starting_choice, item, px, py, c, lines, style, selected_style, border_style, fs, cb, data);
         if md.is_null() {
             return -1;
         }
-        server_client_set_overlay(
-            c,
-            0,
-            None,
-            Some(menu_mode_cb),
-            Some(menu_draw_cb),
-            Some(menu_key_cb),
-            Some(menu_free_cb),
-            None,
-            md.cast(),
-        );
+        server_client_set_overlay(c, 0, None, Some(menu_mode_cb), Some(menu_draw_cb), Some(menu_key_cb), Some(menu_free_cb), None, md.cast());
     }
     0
 }

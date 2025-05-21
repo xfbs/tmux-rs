@@ -49,11 +49,7 @@ pub(crate) use cstringify;
 #[macro_export]
 macro_rules! cmdq_get_callback {
     ($cb:ident, $data:expr) => {
-        $crate::cmd_::cmd_queue::cmdq_get_callback1(
-            const { $crate::cmd_::cmd_queue::cstringify!($cb) },
-            Some($cb),
-            $data,
-        )
+        $crate::cmd_::cmd_queue::cmdq_get_callback1(const { $crate::cmd_::cmd_queue::cstringify!($cb) }, Some($cb), $data)
     };
 }
 pub use cmdq_get_callback;
@@ -185,42 +181,28 @@ pub unsafe fn cmdq_get_name(item: *mut cmdq_item) -> *mut c_char { unsafe { (*it
 pub unsafe extern "C" fn cmdq_get_client(item: *mut cmdq_item) -> *mut client { unsafe { (*item).client } }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmdq_get_target_client(item: *mut cmdq_item) -> *mut client {
-    unsafe { (*item).target_client }
-}
+pub unsafe extern "C" fn cmdq_get_target_client(item: *mut cmdq_item) -> *mut client { unsafe { (*item).target_client } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmdq_get_state(item: *mut cmdq_item) -> *mut cmdq_state { unsafe { (*item).state } }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmdq_get_target(item: *mut cmdq_item) -> *mut cmd_find_state {
-    unsafe { &raw mut (*item).target }
-}
+pub unsafe extern "C" fn cmdq_get_target(item: *mut cmdq_item) -> *mut cmd_find_state { unsafe { &raw mut (*item).target } }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmdq_get_source(item: *mut cmdq_item) -> *mut cmd_find_state {
-    unsafe { &raw mut (*item).source }
-}
+pub unsafe extern "C" fn cmdq_get_source(item: *mut cmdq_item) -> *mut cmd_find_state { unsafe { &raw mut (*item).source } }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmdq_get_event(item: *mut cmdq_item) -> *mut key_event {
-    unsafe { &raw mut (*(*item).state).event }
-}
+pub unsafe extern "C" fn cmdq_get_event(item: *mut cmdq_item) -> *mut key_event { unsafe { &raw mut (*(*item).state).event } }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmdq_get_current(item: *mut cmdq_item) -> *mut cmd_find_state {
-    unsafe { &raw mut (*(*item).state).current }
-}
+pub unsafe extern "C" fn cmdq_get_current(item: *mut cmdq_item) -> *mut cmd_find_state { unsafe { &raw mut (*(*item).state).current } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmdq_get_flags(item: *mut cmdq_item) -> i32 { unsafe { (*(*item).state).flags } }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmdq_new_state(
-    current: *mut cmd_find_state,
-    event: *mut key_event,
-    flags: i32,
-) -> *mut cmdq_state {
+pub unsafe extern "C" fn cmdq_new_state(current: *mut cmd_find_state, event: *mut key_event, flags: i32) -> *mut cmdq_state {
     unsafe {
         let state: *mut cmdq_state = xcalloc1::<cmdq_state>();
         (*state).references = 1;
@@ -276,12 +258,7 @@ pub unsafe extern "C" fn cmdq_free_state(state: *mut cmdq_state) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmdq_add_format(
-    state: *mut cmdq_state,
-    key: *const c_char,
-    fmt: *const c_char,
-    mut args: ...
-) {
+pub unsafe extern "C" fn cmdq_add_format(state: *mut cmdq_state, key: *const c_char, fmt: *const c_char, mut args: ...) {
     let mut value = null_mut();
     unsafe {
         xvasprintf(&raw mut value, fmt, args.as_va_list());
@@ -368,13 +345,7 @@ pub unsafe extern "C" fn cmdq_insert_after(mut after: *mut cmdq_item, mut item: 
 
             (*item).queue = queue;
             tailq_insert_after!(&raw mut (*queue).list, after, item, entry);
-            log_debug!(
-                "{} {}: {} after {}",
-                "cmdq_insert_after",
-                _s(cmdq_name(c)),
-                _s((*item).name),
-                _s((*after).name),
-            );
+            log_debug!("{} {}: {} after {}", "cmdq_insert_after", _s(cmdq_name(c)), _s((*item).name), _s((*after).name),);
 
             after = item;
             item = next;
@@ -387,13 +358,7 @@ pub unsafe extern "C" fn cmdq_insert_after(mut after: *mut cmdq_item, mut item: 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmdq_insert_hook(
-    s: *mut session,
-    mut item: *mut cmdq_item,
-    current: *mut cmd_find_state,
-    fmt: *const c_char,
-    mut ap: ...
-) {
+pub unsafe extern "C" fn cmdq_insert_hook(s: *mut session, mut item: *mut cmdq_item, current: *mut cmd_find_state, fmt: *const c_char, mut ap: ...) {
     unsafe {
         let mut state = (*item).state;
         let mut cmd = (*item).cmd;
@@ -519,9 +484,7 @@ pub unsafe extern "C" fn cmdq_remove_group(item: *mut cmdq_item) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmdq_empty_command(item: *mut cmdq_item, data: *mut c_void) -> cmd_retval {
-    cmd_retval::CMD_RETURN_NORMAL
-}
+pub unsafe extern "C" fn cmdq_empty_command(item: *mut cmdq_item, data: *mut c_void) -> cmd_retval { cmd_retval::CMD_RETURN_NORMAL }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmdq_get_command(cmdlist: *mut cmd_list, mut state: *mut cmdq_state) -> *mut cmdq_item {
@@ -575,11 +538,7 @@ pub unsafe extern "C" fn cmdq_get_command(cmdlist: *mut cmd_list, mut state: *mu
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmdq_find_flag(
-    item: *mut cmdq_item,
-    fs: *mut cmd_find_state,
-    flag: *mut cmd_entry_flag,
-) -> cmd_retval {
+pub unsafe extern "C" fn cmdq_find_flag(item: *mut cmdq_item, fs: *mut cmd_find_state, flag: *mut cmd_entry_flag) -> cmd_retval {
     unsafe {
         if ((*flag).flag == 0) {
             cmd_find_from_client(fs, (*item).target_client, 0);
@@ -725,12 +684,7 @@ pub unsafe extern "C" fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
             } else if (cmd_find_from_client(&raw mut fs, (*item).client, 0) == 0) {
                 fsp = &raw mut fs;
             }
-            cmdq_insert_hook(
-                if !fsp.is_null() { (*fsp).s } else { null_mut() },
-                item,
-                fsp,
-                c"command-error".as_ptr(),
-            );
+            cmdq_insert_hook(if !fsp.is_null() { (*fsp).s } else { null_mut() }, item, fsp, c"command-error".as_ptr());
             cmdq_guard(item, c"error".as_ptr(), flags);
         } else {
             cmdq_guard(item, c"end".as_ptr(), flags);
@@ -770,14 +724,10 @@ pub unsafe extern "C" fn cmdq_error_callback(item: *mut cmdq_item, data: *mut c_
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmdq_get_error(error: *const c_char) -> NonNull<cmdq_item> {
-    unsafe { cmdq_get_callback!(cmdq_error_callback, xstrdup(error).as_ptr()) }
-}
+pub unsafe extern "C" fn cmdq_get_error(error: *const c_char) -> NonNull<cmdq_item> { unsafe { cmdq_get_callback!(cmdq_error_callback, xstrdup(error).as_ptr()) } }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmdq_fire_callback(item: *mut cmdq_item) -> cmd_retval {
-    unsafe { ((*item).cb.unwrap())(item, (*item).data) }
-}
+pub unsafe extern "C" fn cmdq_fire_callback(item: *mut cmdq_item) -> cmd_retval { unsafe { ((*item).cb.unwrap())(item, (*item).data) } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmdq_next(c: *mut client) -> u32 {
@@ -807,14 +757,7 @@ pub unsafe extern "C" fn cmdq_next(c: *mut client) -> u32 {
                 if item.is_null() {
                     break;
                 }
-                log_debug!(
-                    "{} {}: {} ({}), flags {}",
-                    __func__,
-                    _s(name),
-                    _s((*item).name),
-                    (*item).type_ as i32,
-                    (*item).flags
-                );
+                log_debug!("{} {}: {} ({}), flags {}", __func__, _s(name), _s((*item).name), (*item).type_ as i32, (*item).flags);
 
                 if ((*item).flags & CMDQ_WAITING != 0) {
                     break 'waiting;

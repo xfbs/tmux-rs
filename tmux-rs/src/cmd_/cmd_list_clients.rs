@@ -2,7 +2,7 @@ use compat_rs::queue::tailq_foreach;
 
 use crate::*;
 
-const LIST_CLIENTS_TEMPLATE : &CStr = c"#{client_name}: #{session_name} [#{client_width}x#{client_height} #{client_termname}] #{?#{!=:#{client_uid},#{uid}},[user #{?client_user,#{client_user},#{client_uid},}] ,}#{?client_flags,(,}#{client_flags}#{?client_flags,),}";
+const LIST_CLIENTS_TEMPLATE: &CStr = c"#{client_name}: #{session_name} [#{client_width}x#{client_height} #{client_termname}] #{?#{!=:#{client_uid},#{uid}},[user #{?client_user,#{client_user},#{client_uid},}] ,}#{?client_flags,(,}#{client_flags}#{?client_flags,),}";
 
 #[unsafe(no_mangle)]
 static mut cmd_list_clients_entry: cmd_entry = cmd_entry {
@@ -25,11 +25,7 @@ unsafe extern "C" fn cmd_list_clients_exec(self_: *mut cmd, item: *mut cmdq_item
         let mut args = cmd_get_args(self_);
         let mut target = cmdq_get_target(item);
 
-        let mut s = if (args_has(args, b't') != 0) {
-            (*target).s
-        } else {
-            null_mut()
-        };
+        let mut s = if (args_has(args, b't') != 0) { (*target).s } else { null_mut() };
 
         let mut template = args_get(args, b'F');
         if (template.is_null()) {
@@ -45,7 +41,7 @@ unsafe extern "C" fn cmd_list_clients_exec(self_: *mut cmd, item: *mut cmdq_item
 
             let mut ft = format_create(cmdq_get_client(item), item, FORMAT_NONE as i32, format_flags::empty());
             format_add(ft, c"line".as_ptr(), c"%u".as_ptr(), idx);
-            format_defaults(ft, c, null_mut(), null_mut(), null_mut());
+            format_defaults(ft, c, None, None, None);
 
             let mut flag = 0;
             if !filter.is_null() {

@@ -101,10 +101,10 @@ fn cmd_list_panes_window(self_: *mut cmd, s: *mut session, wl: *mut winlink, ite
         let mut filter = args_get_(args, 'f');
 
         let mut n = 0u32;
-        for wp in tailq_foreach::<_, discr_entry>(&raw mut (*(*wl).window).panes).map(NonNull::as_ptr) {
+        for wp in tailq_foreach::<_, discr_entry>(&raw mut (*(*wl).window).panes) {
             let mut ft = format_create(cmdq_get_client(item), item, FORMAT_NONE, format_flags::empty());
             format_add(ft, c"line".as_ptr(), c"%u".as_ptr(), n);
-            format_defaults(ft, null_mut(), s, wl, wp);
+            format_defaults(ft, null_mut(), NonNull::new(s), NonNull::new(wl), Some(wp));
 
             let mut flag = 0;
             if !filter.is_null() {

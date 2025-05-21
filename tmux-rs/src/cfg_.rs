@@ -53,7 +53,7 @@ unsafe extern "C" fn cfg_done(item: *mut cmdq_item, _data: *mut c_void) -> cmd_r
 pub unsafe extern "C" fn start_cfg() {
     let mut c: *mut client;
     let mut i: u32;
-    let mut flags: i32 = 0;
+    let mut flags: cmd_parse_input_flags = cmd_parse_input_flags::empty();
 
     //
     // Configuration files are loaded without a client, so commands are run
@@ -74,7 +74,7 @@ pub unsafe extern "C" fn start_cfg() {
         }
 
         if cfg_quiet != 0 {
-            flags = CMD_PARSE_QUIET;
+            flags = cmd_parse_input_flags::CMD_PARSE_QUIET;
         }
 
         i = 0;
@@ -93,7 +93,7 @@ pub unsafe extern "C" fn load_cfg(
     c: *mut client,
     item: *mut cmdq_item,
     current: *mut cmd_find_state,
-    flags: c_int,
+    flags: cmd_parse_input_flags,
     new_item: *mut *mut cmdq_item,
 ) -> c_int {
     unsafe {
@@ -104,7 +104,7 @@ pub unsafe extern "C" fn load_cfg(
         log_debug!("loading {}", _s(path));
         let mut f = fopen(path, c"rb".as_ptr());
         if f.is_null() {
-            if *__errno_location() == ENOENT && flags & CMD_PARSE_QUIET != 0 {
+            if errno!() == ENOENT && flags.intersects(cmd_parse_input_flags::CMD_PARSE_QUIET) {
                 return 0;
             }
             cfg_add_cause(c"%s: %s".as_ptr(), path, strerror(*__errno_location()));
@@ -125,7 +125,7 @@ pub unsafe extern "C" fn load_cfg(
             free((*pr).error as _);
             return -1;
         }
-        if flags & CMD_PARSE_PARSEONLY != 0 {
+        if flags.intersects(cmd_parse_input_flags::CMD_PARSE_PARSEONLY) {
             cmd_list_free((*pr).cmdlist);
             return 0;
         }
@@ -162,7 +162,7 @@ pub unsafe extern "C" fn load_cfg_from_buffer(
     c: *mut client,
     item: *mut cmdq_item,
     current: *mut cmd_find_state,
-    flags: c_int,
+    flags: cmd_parse_input_flags,
     new_item: *mut *mut cmdq_item,
 ) -> c_int {
     unsafe {
@@ -185,7 +185,7 @@ pub unsafe extern "C" fn load_cfg_from_buffer(
             free((*pr).error as _);
             return -1;
         }
-        if flags & CMD_PARSE_PARSEONLY != 0 {
+        if flags.intersects(cmd_parse_input_flags::CMD_PARSE_PARSEONLY) {
             cmd_list_free((*pr).cmdlist);
             return 0;
         }

@@ -20,9 +20,7 @@ pub struct cmd_confirm_before_data {
     default_yes: i32,
 }
 
-unsafe extern "C" fn cmd_confirm_before_args_parse(_: *mut args, _: u32, _: *mut *mut c_char) -> args_parse_type {
-    args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING
-}
+unsafe extern "C" fn cmd_confirm_before_args_parse(_: *mut args, _: u32, _: *mut *mut c_char) -> args_parse_type { args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING }
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_confirm_before_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
@@ -63,25 +61,10 @@ unsafe extern "C" fn cmd_confirm_before_exec(self_: *mut cmd, item: *mut cmdq_it
             xasprintf(&raw mut new_prompt, c"%s ".as_ptr(), prompt);
         } else {
             let cmd = (*cmd_get_entry(cmd_list_first((*cdata).cmdlist))).name;
-            xasprintf(
-                &raw mut new_prompt,
-                c"Confirm '%s'? (%c/n) ".as_ptr(),
-                cmd,
-                (*cdata).confirm_key as u32,
-            );
+            xasprintf(&raw mut new_prompt, c"Confirm '%s'? (%c/n) ".as_ptr(), cmd, (*cdata).confirm_key as u32);
         }
 
-        status_prompt_set(
-            tc,
-            target,
-            new_prompt,
-            null_mut(),
-            Some(cmd_confirm_before_callback),
-            Some(cmd_confirm_before_free),
-            cdata as _,
-            PROMPT_SINGLE,
-            prompt_type::PROMPT_TYPE_COMMAND,
-        );
+        status_prompt_set(tc, target, new_prompt, null_mut(), Some(cmd_confirm_before_callback), Some(cmd_confirm_before_free), cdata as _, PROMPT_SINGLE, prompt_type::PROMPT_TYPE_COMMAND);
         free_(new_prompt);
 
         if wait == 0 {
@@ -92,15 +75,10 @@ unsafe extern "C" fn cmd_confirm_before_exec(self_: *mut cmd, item: *mut cmdq_it
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn cmd_confirm_before_callback(
-    c: *mut client,
-    data: *mut c_void,
-    s: *const c_char,
-    _done: i32,
-) -> i32 {
+unsafe extern "C" fn cmd_confirm_before_callback(c: *mut client, data: NonNull<c_void>, s: *const c_char, _done: i32) -> i32 {
     unsafe {
-        let mut cdata: *mut cmd_confirm_before_data = data as _;
-        let mut item = (*cdata).item;
+        let mut cdata: NonNull<cmd_confirm_before_data> = data.cast();
+        let mut item = (*cdata.as_ptr()).item;
         let mut retcode: i32 = 1;
 
         'out: {
@@ -111,17 +89,17 @@ unsafe extern "C" fn cmd_confirm_before_callback(
             if s.is_null() {
                 break 'out;
             }
-            if (*s != (*cdata).confirm_key as _ && (*s != b'\0' as _ || (*cdata).default_yes == 0)) {
+            if (*s != (*cdata.as_ptr()).confirm_key as _ && (*s != b'\0' as _ || (*cdata.as_ptr()).default_yes == 0)) {
                 break 'out;
             }
             retcode = 0;
 
             let mut new_item = null_mut();
             if item.is_null() {
-                new_item = cmdq_get_command((*cdata).cmdlist, null_mut());
+                new_item = cmdq_get_command((*cdata.as_ptr()).cmdlist, null_mut());
                 cmdq_append(c, new_item);
             } else {
-                new_item = cmdq_get_command((*cdata).cmdlist, cmdq_get_state(item));
+                new_item = cmdq_get_command((*cdata.as_ptr()).cmdlist, cmdq_get_state(item));
                 cmdq_insert_after(item, new_item);
             }
         }
@@ -138,10 +116,10 @@ unsafe extern "C" fn cmd_confirm_before_callback(
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn cmd_confirm_before_free(data: *mut c_void) {
+unsafe extern "C" fn cmd_confirm_before_free(data: NonNull<c_void>) {
     unsafe {
-        let mut cdata = data as *mut cmd_confirm_before_data;
-        cmd_list_free((*cdata).cmdlist);
-        free_(cdata);
+        let mut cdata: NonNull<cmd_confirm_before_data> = data.cast();
+        cmd_list_free((*cdata.as_ptr()).cmdlist);
+        free_(cdata.as_ptr());
     }
 }

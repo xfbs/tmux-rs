@@ -1,10 +1,7 @@
 use crate::*;
 
 use compat_rs::closefrom;
-use libc::{
-    _exit, AF_UNIX, O_WRONLY, PF_UNSPEC, SIG_BLOCK, SIG_SETMASK, STDERR_FILENO, STDIN_FILENO, STDOUT_FILENO, close,
-    dup2, execl, open, sigfillset, sigprocmask, sigset_t, socketpair,
-};
+use libc::{_exit, AF_UNIX, O_WRONLY, PF_UNSPEC, SIG_BLOCK, SIG_SETMASK, STDERR_FILENO, STDIN_FILENO, STDOUT_FILENO, close, dup2, execl, open, sigfillset, sigprocmask, sigset_t, socketpair};
 
 #[unsafe(no_mangle)]
 static mut cmd_pipe_pane_entry: cmd_entry = cmd_entry {
@@ -93,7 +90,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
 
         /* Expand the command. */
         let ft = format_create(cmdq_get_client(item), item, FORMAT_NONE, format_flags::empty());
-        format_defaults(ft, tc, s, wl, wp);
+        format_defaults(ft, tc, NonNull::new(s), NonNull::new(wl), NonNull::new(wp));
         let cmd = format_expand_time(ft, args_string(args, 0));
         format_free(ft);
 
@@ -154,13 +151,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
                 memcpy__(wpo, &raw mut (*wp).offset);
 
                 setblocking((*wp).pipe_fd, 0);
-                (*wp).pipe_event = bufferevent_new(
-                    (*wp).pipe_fd,
-                    Some(cmd_pipe_pane_read_callback),
-                    Some(cmd_pipe_pane_write_callback),
-                    Some(cmd_pipe_pane_error_callback),
-                    wp.cast(),
-                );
+                (*wp).pipe_event = bufferevent_new((*wp).pipe_fd, Some(cmd_pipe_pane_read_callback), Some(cmd_pipe_pane_write_callback), Some(cmd_pipe_pane_error_callback), wp.cast());
                 if ((*wp).pipe_event.is_null()) {
                     fatalx(c"out of memory");
                 }

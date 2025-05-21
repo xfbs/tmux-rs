@@ -1,10 +1,8 @@
 # tmux-rs
 
-An in-progress rust port of tmux. This project should be considered pre-alpha quality and may not necessarily be in a building state.
+A rust port of tmux.
 
-I don't think or want this project to displace tmux. I love using tmux.
-Tmux will also continue development while I'm working on this port,
-so the structure of the rust code must match that of the C project.
+This project should be considered alpha quality and may not necessarily be in a building state.
 
 I started this endeavour as a way of getting first hand experience with using C2Rust.
 It's simultaneously a great and a terrible tool. I was amazed when I used it that it
@@ -105,17 +103,17 @@ remove these from the linking process
 clang -fsanitize=address -fno-omit-frame-pointer -O0 -std=gnu99 -g -Wno-long-long -Wall -W -Wformat=2 -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Wwrite-strings -Wshadow -Wpointer-arith -Wsign-compare -Wundef -Wbad-function-cast -Winline -Wcast-align -Wdeclaration-after-statement -Wno-pointer-sign -Wno-attributes -Wno-unused-result -Wno-format-y2k      -o tmux cmd-parse.o     compat/fgetln.o compat/freezero.o compat/getdtablecount.o compat/getpeereid.o compat/getprogname.o compat/htonll.o compat/ntohll.o compat/setproctitle.o compat/strlcat.o compat/strlcpy.o compat/strtonum.o compat/recallocarray.o compat/getopt.o compat/imsg.o compat/imsg-buffer.o compat/vis.o compat/unvis.o compat/fdforkpty.o -L/home/collin/Git/tmux/tmux-3.5a/target/x86_64-unknown-linux-gnu/debug -ltmux_rs -lbsd -ltinfo  -levent_core  -lm  -lresolv
 ```
 
+TODAY all 5 medium?:
+NEXT:
+
 5 Medium
-- [ ] 1243 format-draw
 - [ ] 1266 mode-tree
-- [ ] 1348 window-tree
 - [ ] 1512 window-customize
 - [ ] 1591 tty-keys
 
 5 Large
 - [ ] 2035 status
 - [ ] 2347 screen-write
-- [ ] 3025 input
 - [ ] 3186 tty
 - [ ] 3392 server-client
 
@@ -231,6 +229,8 @@ undefined behaviour in this context.
     - completely retranslate imsg and imsg-buffer
   - I suspect that linking is shadowing some broken rust implementations, and maybe when compiling with rust the rust implementation is preferred
     - it's interesting I notice differences in behavior between debug and release for this
+- incorrect terminal behavior ; typed keys not displayed properly; lowercased ascii value in table when should be upper (likely caused by vim mistype u in visual)
+- incorrect terminal behavior ; bad flag check should be valu == 0, but i did !value != 0)
 
 
 ## Why not [zellij](https://zellij.dev/)

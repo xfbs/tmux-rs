@@ -34,13 +34,7 @@ struct cmd_command_prompt_cdata {
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn cmd_command_prompt_args_parse(
-    _args: *mut args,
-    _idx: u32,
-    _cause: *mut *mut c_char,
-) -> args_parse_type {
-    args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING
-}
+unsafe extern "C" fn cmd_command_prompt_args_parse(_args: *mut args, _idx: u32, _cause: *mut *mut c_char) -> args_parse_type { args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING }
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_command_prompt_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
@@ -50,7 +44,6 @@ unsafe extern "C" fn cmd_command_prompt_exec(self_: *mut cmd, item: *mut cmdq_it
         let mut target = cmdq_get_target(item);
         // const char			*type, *s, *input;
         // struct cmd_command_prompt_cdata	*cdata;
-        let mut cdata: *mut cmd_command_prompt_cdata = null_mut();
         let mut prompts = null_mut();
         let mut prompt: *const i8 = null();
         let mut next_prompt = null_mut();
@@ -102,8 +95,7 @@ unsafe extern "C" fn cmd_command_prompt_exec(self_: *mut cmd, item: *mut cmdq_it
             prompt = strsep(&raw mut next_prompt as _, c",".as_ptr());
             !prompt.is_null()
         }) {
-            (*cdata).prompts =
-                xreallocarray_::<cmd_command_prompt_prompt>((*cdata).prompts, (*cdata).count as usize + 1).as_ptr();
+            (*cdata).prompts = xreallocarray_::<cmd_command_prompt_prompt>((*cdata).prompts, (*cdata).count as usize + 1).as_ptr();
             if space == 0 {
                 tmp = xstrdup(prompt).as_ptr();
             } else {
@@ -132,7 +124,7 @@ unsafe extern "C" fn cmd_command_prompt_exec(self_: *mut cmd, item: *mut cmdq_it
             (*cdata).prompt_type = status_prompt_type(type_);
             if (*cdata).prompt_type == prompt_type::PROMPT_TYPE_INVALID {
                 cmdq_error(item, c"unknown type: %s".as_ptr(), type_);
-                cmd_command_prompt_free(cdata as _);
+                cmd_command_prompt_free(NonNull::new(cdata.cast()).unwrap());
                 return cmd_retval::CMD_RETURN_ERROR;
             }
         } else {
@@ -168,14 +160,10 @@ unsafe extern "C" fn cmd_command_prompt_exec(self_: *mut cmd, item: *mut cmdq_it
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn cmd_command_prompt_callback(
-    c: *mut client,
-    data: *mut c_void,
-    s: *const c_char,
-    done: i32,
-) -> i32 {
+unsafe extern "C" fn cmd_command_prompt_callback(c: *mut client, data: NonNull<c_void>, s: *const c_char, done: i32) -> i32 {
     unsafe {
-        let mut cdata: *mut cmd_command_prompt_cdata = data as _;
+        let mut cdata: NonNull<cmd_command_prompt_cdata> = data.cast();
+        let cdata = cdata.as_ptr();
         let mut error: *mut c_char = null_mut();
 
         let mut item: *mut cmdq_item = (*cdata).item;
@@ -245,17 +233,17 @@ unsafe extern "C" fn cmd_command_prompt_callback(
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn cmd_command_prompt_free(data: *mut c_void) {
+unsafe extern "C" fn cmd_command_prompt_free(data: NonNull<c_void>) {
     unsafe {
-        let mut cdata: *mut cmd_command_prompt_cdata = data as _;
+        let mut cdata: NonNull<cmd_command_prompt_cdata> = data.cast();
 
-        for i in 0u32..(*cdata).count {
-            free_((*(*cdata).prompts.add(i as usize)).prompt);
-            free_((*(*cdata).prompts.add(i as usize)).input);
+        for i in 0u32..(*cdata.as_ptr()).count {
+            free_((*(*cdata.as_ptr()).prompts.add(i as usize)).prompt);
+            free_((*(*cdata.as_ptr()).prompts.add(i as usize)).input);
         }
-        free_((*cdata).prompts);
-        cmd_free_argv((*cdata).argc, (*cdata).argv);
-        args_make_commands_free((*cdata).state);
-        free_(cdata);
+        free_((*cdata.as_ptr()).prompts);
+        cmd_free_argv((*cdata.as_ptr()).argc, (*cdata.as_ptr()).argv);
+        args_make_commands_free((*cdata.as_ptr()).state);
+        free_(cdata.as_ptr());
     }
 }

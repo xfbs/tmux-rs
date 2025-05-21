@@ -15,7 +15,7 @@ static mut cmd_list_sessions_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-const LIST_SESSIONS_TEMPLATE:*const i8 = c"#{session_name}: #{session_windows} windows (created #{t:session_created})#{?session_grouped, (group ,}#{session_group}#{?session_grouped,),}#{?session_attached, (attached),}".as_ptr();
+const LIST_SESSIONS_TEMPLATE: *const i8 = c"#{session_name}: #{session_windows} windows (created #{t:session_created})#{?session_grouped, (group ,}#{session_group}#{?session_grouped,),}#{?session_attached, (attached),}".as_ptr();
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_list_sessions_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
@@ -29,10 +29,10 @@ unsafe extern "C" fn cmd_list_sessions_exec(self_: *mut cmd, item: *mut cmdq_ite
         let mut filter = args_get(args, b'f');
 
         let mut n = 0;
-        for s in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
+        for s in rb_foreach(&raw mut sessions) {
             let mut ft = format_create(cmdq_get_client(item), item, FORMAT_NONE as i32, format_flags::empty());
             format_add(ft, c"line".as_ptr(), c"%u".as_ptr(), n);
-            format_defaults(ft, null_mut(), s, null_mut(), null_mut());
+            format_defaults(ft, null_mut(), Some(s), None, None);
 
             let mut flag = 0;
             if !filter.is_null() {

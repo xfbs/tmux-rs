@@ -29,13 +29,7 @@ const BORDER_MARKERS: [u8; 6] = [b' ', b' ', b'+', b',', b'.', b'-'];
 // #[cfg(disabled)]
 /// Get cell border character.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn screen_redraw_border_set(
-    w: *mut window,
-    wp: *mut window_pane,
-    pane_lines: pane_lines,
-    cell_type: cell_type,
-    gc: *mut grid_cell,
-) {
+pub unsafe extern "C" fn screen_redraw_border_set(w: *mut window, wp: *mut window_pane, pane_lines: pane_lines, cell_type: cell_type, gc: *mut grid_cell) {
     unsafe {
         let mut idx: u32 = 0;
 
@@ -105,12 +99,7 @@ pub unsafe extern "C" fn screen_redraw_two_panes(w: *mut window, direction: i32)
 // #[cfg(disabled)]
 /// Check if cell is on the border of a pane.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn screen_redraw_pane_border(
-    ctx: *mut screen_redraw_ctx,
-    wp: *mut window_pane,
-    px: u32,
-    py: u32,
-) -> screen_redraw_border_type {
+pub unsafe extern "C" fn screen_redraw_pane_border(ctx: *mut screen_redraw_ctx, wp: *mut window_pane, px: u32, py: u32) -> screen_redraw_border_type {
     unsafe {
         let oo = (*(*wp).window).options;
         let mut split = 0;
@@ -319,12 +308,7 @@ pub unsafe extern "C" fn screen_redraw_type_of_cell(ctx: *mut screen_redraw_ctx,
 // #[cfg(disabled)]
 /// Check if cell inside a pane.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn screen_redraw_check_cell(
-    ctx: *mut screen_redraw_ctx,
-    px: u32,
-    py: u32,
-    wpp: *mut *mut window_pane,
-) -> cell_type {
+pub unsafe extern "C" fn screen_redraw_check_cell(ctx: *mut screen_redraw_ctx, px: u32, py: u32, wpp: *mut *mut window_pane) -> cell_type {
     unsafe {
         let c = (*ctx).c;
         let w = (*(*(*c).session).curw).window;
@@ -414,17 +398,10 @@ pub unsafe extern "C" fn screen_redraw_check_cell(
 // #[cfg(disabled)]
 /// Check if the border of a particular pane.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn screen_redraw_check_is(
-    ctx: *mut screen_redraw_ctx,
-    px: u32,
-    py: u32,
-    wp: *mut window_pane,
-) -> i32 {
+pub unsafe extern "C" fn screen_redraw_check_is(ctx: *mut screen_redraw_ctx, px: u32, py: u32, wp: *mut window_pane) -> i32 {
     unsafe {
         let border = screen_redraw_pane_border(ctx, wp, px, py);
-        if border != screen_redraw_border_type::SCREEN_REDRAW_INSIDE
-            && border != screen_redraw_border_type::SCREEN_REDRAW_OUTSIDE
-        {
+        if border != screen_redraw_border_type::SCREEN_REDRAW_INSIDE && border != screen_redraw_border_type::SCREEN_REDRAW_OUTSIDE {
             return 1;
         }
         0
@@ -434,14 +411,9 @@ pub unsafe extern "C" fn screen_redraw_check_is(
 // pub unsafe fn screen_redraw_make_pane_status( c: *mut client, wp: *mut window_pane, rctx: *mut screen_redraw_ctx, pane_lines: pane_lines,) -> i32;
 /// Update pane status.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn screen_redraw_make_pane_status(
-    c: *mut client,
-    wp: *mut window_pane,
-    rctx: *mut screen_redraw_ctx,
-    pane_lines: pane_lines,
-) -> i32 {
+pub unsafe extern "C" fn screen_redraw_make_pane_status(c: *mut client, wp: NonNull<window_pane>, rctx: *mut screen_redraw_ctx, pane_lines: pane_lines) -> i32 {
     unsafe {
-        let w = (*wp).window;
+        let w = (*wp.as_ptr()).window;
         let mut gc: grid_cell = std::mem::zeroed();
         let mut width: u32;
         let mut px: u32;
@@ -450,19 +422,15 @@ pub unsafe extern "C" fn screen_redraw_make_pane_status(
         let mut old: MaybeUninit<screen> = MaybeUninit::uninit();
         let pane_status = (*rctx).pane_status;
 
-        let ft = format_create(
-            c,
-            null_mut(),
-            (FORMAT_PANE | (*wp).id) as i32,
-            format_flags::FORMAT_STATUS,
-        );
-        format_defaults(ft, c, (*c).session, (*(*c).session).curw, wp);
+        let ft = format_create(c, null_mut(), (FORMAT_PANE | (*wp.as_ptr()).id) as i32, format_flags::FORMAT_STATUS);
+        format_defaults(ft, c, NonNull::new((*c).session), NonNull::new((*(*c).session).curw), Some(wp));
 
-        if wp == server_client_get_pane(c) {
+        if wp.as_ptr() == server_client_get_pane(c) {
             style_apply(&mut gc, (*w).options, c"pane-active-border-style".as_ptr(), ft);
         } else {
             style_apply(&mut gc, (*w).options, c"pane-border-style".as_ptr(), ft);
         }
+        let wp = wp.as_ptr();
         let fmt = options_get_string((*wp).options, c"pane-border-format".as_ptr());
 
         let expanded = format_expand_time(ft, fmt);
@@ -527,18 +495,10 @@ pub unsafe extern "C" fn screen_redraw_draw_pane_status(ctx: *mut screen_redraw_
             let s = &raw mut (*wp).status_screen;
 
             let size: u32 = (*wp).status_size as u32;
-            let mut yoff = if (*ctx).pane_status == pane_status::PANE_STATUS_TOP {
-                (*wp).yoff - 1
-            } else {
-                (*wp).yoff + (*wp).sy
-            };
+            let mut yoff = if (*ctx).pane_status == pane_status::PANE_STATUS_TOP { (*wp).yoff - 1 } else { (*wp).yoff + (*wp).sy };
             let mut xoff = (*wp).xoff + 2;
 
-            if xoff + size <= (*ctx).ox
-                || xoff >= (*ctx).ox + (*ctx).sx
-                || yoff < (*ctx).oy
-                || yoff >= (*ctx).oy + (*ctx).sy
-            {
+            if xoff + size <= (*ctx).ox || xoff >= (*ctx).ox + (*ctx).sx || yoff < (*ctx).oy || yoff >= (*ctx).oy + (*ctx).sy {
                 continue;
             }
 
@@ -559,17 +519,7 @@ pub unsafe extern "C" fn screen_redraw_draw_pane_status(ctx: *mut screen_redraw_
             if (*ctx).statustop != 0 {
                 yoff += (*ctx).statuslines;
             }
-            tty_draw_line(
-                tty,
-                s,
-                i,
-                0,
-                width,
-                x,
-                yoff - (*ctx).oy,
-                &raw const grid_default_cell,
-                null_mut(),
-            );
+            tty_draw_line(tty, s, i, 0, width, x, yoff - (*ctx).oy, &raw const grid_default_cell, null_mut());
         }
         tty_cursor(tty, 0, 0);
     }
@@ -603,14 +553,13 @@ unsafe extern "C" fn screen_redraw_update(c: *mut client, mut flags: client_flag
 
         if options_get_number(wo, c"pane-border-status".as_ptr()) as i32 != pane_status::PANE_STATUS_OFF as i32 {
             screen_redraw_set_context(c, ctx.as_mut_ptr());
-            let lines =
-                pane_lines::try_from(options_get_number(wo, c"pane-border-lines".as_ptr()) as i32).unwrap_or_default();
+            let lines = pane_lines::try_from(options_get_number(wo, c"pane-border-lines".as_ptr()) as i32).unwrap_or_default();
             redraw = 0;
 
             // Safe replacement for TAILQ_FOREACH macro
             let mut wp = (*w).panes.tqh_first;
             while !wp.is_null() {
-                if screen_redraw_make_pane_status(c, wp, ctx.as_mut_ptr(), lines) != 0 {
+                if screen_redraw_make_pane_status(c, NonNull::new_unchecked(wp), ctx.as_mut_ptr(), lines) != 0 {
                     redraw = 1;
                 }
                 wp = (*wp).entry.tqe_next;
@@ -647,33 +596,12 @@ pub unsafe extern "C" fn screen_redraw_set_context(c: *mut client, ctx: *mut scr
         }
         (*ctx).statuslines = lines;
 
-        (*ctx).pane_status = (options_get_number(wo, c"pane-border-status".as_ptr()) as i32)
-            .try_into()
-            .unwrap();
-        (*ctx).pane_lines = (options_get_number(wo, c"pane-border-lines".as_ptr()) as i32)
-            .try_into()
-            .unwrap();
+        (*ctx).pane_status = (options_get_number(wo, c"pane-border-status".as_ptr()) as i32).try_into().unwrap();
+        (*ctx).pane_lines = (options_get_number(wo, c"pane-border-lines".as_ptr()) as i32).try_into().unwrap();
 
-        tty_window_offset(
-            &raw mut (*c).tty,
-            &raw mut (*ctx).ox,
-            &raw mut (*ctx).oy,
-            &raw mut (*ctx).sx,
-            &raw mut (*ctx).sy,
-        );
+        tty_window_offset(&raw mut (*c).tty, &raw mut (*ctx).ox, &raw mut (*ctx).oy, &raw mut (*ctx).sx, &raw mut (*ctx).sy);
 
-        log_debug!(
-            "{}: {} @{} ox={} oy={} sx={} sy={} {}/{}",
-            "screen_redraw_set_context",
-            _s((*c).name),
-            (*w).id,
-            (*ctx).ox,
-            (*ctx).oy,
-            (*ctx).sx,
-            (*ctx).sy,
-            (*ctx).statuslines,
-            (*ctx).statustop,
-        );
+        log_debug!("{}: {} @{} ox={} oy={} sx={} sy={} {}/{}", "screen_redraw_set_context", _s((*c).name), (*w).id, (*ctx).ox, (*ctx).oy, (*ctx).sx, (*ctx).sy, (*ctx).statuslines, (*ctx).statustop,);
     }
 }
 // unsafe extern "C" { pub fn screen_redraw_screen(c: *mut client); }
@@ -748,12 +676,7 @@ pub unsafe extern "C" fn screen_redraw_pane(c: *mut client, wp: *mut window_pane
 // #[cfg(disabled)]
 /// Get border cell style.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn screen_redraw_draw_borders_style(
-    ctx: *mut screen_redraw_ctx,
-    x: u32,
-    y: u32,
-    wp: *mut window_pane,
-) -> *const grid_cell {
+pub unsafe extern "C" fn screen_redraw_draw_borders_style(ctx: *mut screen_redraw_ctx, x: u32, y: u32, wp: *mut window_pane) -> *const grid_cell {
     unsafe {
         let c = (*ctx).c;
         let s = (*c).session;
@@ -827,18 +750,13 @@ pub unsafe extern "C" fn screen_redraw_draw_borders_cell(ctx: *mut screen_redraw
             }
             memcpy__(&raw mut gc, tmp);
 
-            if server_is_marked(s, (*s).curw, marked_pane.wp).as_bool()
-                && screen_redraw_check_is(ctx, x, y, marked_pane.wp) != 0
-            {
+            if server_is_marked(s, (*s).curw, marked_pane.wp).as_bool() && screen_redraw_check_is(ctx, x, y, marked_pane.wp) != 0 {
                 gc.attr ^= GRID_ATTR_REVERSE;
             }
         }
         screen_redraw_border_set(w, wp, (*ctx).pane_lines, cell_type, &raw mut gc);
 
-        if cell_type == CELL_TOPBOTTOM
-            && (*c).flags.intersects(client_flag::UTF8)
-            && tty_term_has((*tty).term, tty_code_code::TTYC_BIDI) != 0
-        {
+        if cell_type == CELL_TOPBOTTOM && (*c).flags.intersects(client_flag::UTF8) && tty_term_has((*tty).term, tty_code_code::TTYC_BIDI) != 0 {
             isolates = 1;
         } else {
             isolates = 0;
@@ -860,18 +778,8 @@ pub unsafe extern "C" fn screen_redraw_draw_borders_cell(ctx: *mut screen_redraw
 
         if !wp.is_null() && arrows != 0 {
             border = screen_redraw_pane_border(ctx, active, x, y);
-            if ((i == (*wp).xoff + 1
-                && (cell_type == CELL_LEFTRIGHT
-                    || (cell_type == CELL_TOPJOIN
-                        && border == screen_redraw_border_type::SCREEN_REDRAW_BORDER_BOTTOM)
-                    || (cell_type == CELL_BOTTOMJOIN
-                        && border == screen_redraw_border_type::SCREEN_REDRAW_BORDER_TOP)))
-                || (j == (*wp).yoff + 1
-                    && (cell_type == CELL_TOPBOTTOM
-                        || (cell_type == CELL_LEFTJOIN
-                            && border == screen_redraw_border_type::SCREEN_REDRAW_BORDER_RIGHT)
-                        || (cell_type == CELL_RIGHTJOIN
-                            && border == screen_redraw_border_type::SCREEN_REDRAW_BORDER_LEFT))))
+            if ((i == (*wp).xoff + 1 && (cell_type == CELL_LEFTRIGHT || (cell_type == CELL_TOPJOIN && border == screen_redraw_border_type::SCREEN_REDRAW_BORDER_BOTTOM) || (cell_type == CELL_BOTTOMJOIN && border == screen_redraw_border_type::SCREEN_REDRAW_BORDER_TOP)))
+                || (j == (*wp).yoff + 1 && (cell_type == CELL_TOPBOTTOM || (cell_type == CELL_LEFTJOIN && border == screen_redraw_border_type::SCREEN_REDRAW_BORDER_RIGHT) || (cell_type == CELL_RIGHTJOIN && border == screen_redraw_border_type::SCREEN_REDRAW_BORDER_LEFT))))
                 && screen_redraw_check_is(ctx, x, y, active) != 0
             {
                 gc.attr |= GRID_ATTR_CHARSET;
@@ -941,11 +849,7 @@ pub unsafe extern "C" fn screen_redraw_draw_status(ctx: *mut screen_redraw_ctx) 
 
         log_debug!("{}: {} @{}", "screen_redraw_draw_status", _s((*c).name), (*w).id);
 
-        let y = if (*ctx).statustop != 0 {
-            0
-        } else {
-            (*c).tty.sy - (*ctx).statuslines
-        };
+        let y = if (*ctx).statustop != 0 { 0 } else { (*c).tty.sy - (*ctx).statuslines };
 
         for i in 0..(*ctx).statuslines {
             tty_draw_line(tty, s, 0, i, u32::MAX, 0, y + i, &grid_default_cell, null_mut());
@@ -965,13 +869,7 @@ pub unsafe extern "C" fn screen_redraw_draw_pane(ctx: *mut screen_redraw_ctx, wp
         let palette = &raw mut (*wp).palette;
         let mut defaults: grid_cell = zeroed();
 
-        log_debug!(
-            "{}: {} @{} %%{}",
-            "screen_redraw_draw_pane",
-            _s((*c).name),
-            (*w).id,
-            (*wp).id,
-        );
+        log_debug!("{}: {} @{} %%{}", "screen_redraw_draw_pane", _s((*c).name), (*w).id, (*wp).id,);
 
         if (*wp).xoff + (*wp).sx <= (*ctx).ox || (*wp).xoff >= (*ctx).ox + (*ctx).sx {
             return;
@@ -1001,17 +899,7 @@ pub unsafe extern "C" fn screen_redraw_draw_pane(ctx: *mut screen_redraw_ctx, wp
                 (0, x, (*ctx).sx - x)
             };
 
-            log_debug!(
-                "{}: {} %%{} line {},{} at {},{}, width {}",
-                "screen_redraw_draw_pane",
-                _s((*c).name),
-                (*wp).id,
-                i,
-                j,
-                x,
-                y,
-                width,
-            );
+            log_debug!("{}: {} %%{} line {},{} at {},{}, width {}", "screen_redraw_draw_pane", _s((*c).name), (*wp).id, i, j, x, y, width,);
 
             tty_default_colours(&raw mut defaults, wp);
             tty_draw_line(tty, s, i, j, width, x, y, &raw mut defaults, palette);

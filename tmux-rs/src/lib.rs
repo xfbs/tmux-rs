@@ -1,10 +1,11 @@
 #![feature(array_ptr_get)]
 #![feature(c_variadic)]
-#![feature(let_chains)]
-#![feature(maybe_uninit_slice)]
-#![feature(ptr_as_uninit)]
 #![feature(cfg_boolean_literals)]
 #![feature(const_type_name)]
+#![feature(let_chains)]
+#![feature(maybe_uninit_array_assume_init)]
+#![feature(maybe_uninit_slice)]
+#![feature(ptr_as_uninit)]
 #![warn(static_mut_refs)]
 // #![warn(clippy::shadow_reuse)]
 // #![warn(clippy::shadow_same)]
@@ -49,11 +50,7 @@ pub use core::{
     ptr::{NonNull, null, null_mut},
 };
 
-pub use libc::{
-    FILE, REG_EXTENDED, REG_ICASE, SEEK_END, SEEK_SET, SIGHUP, WEXITSTATUS, WIFEXITED, WIFSIGNALED, WTERMSIG, fclose,
-    fdopen, fopen, fread, free, fseeko, ftello, fwrite, malloc, memcmp, mkstemp, pid_t, strcpy, strerror, strlen,
-    termios, time_t, timeval, uid_t, unlink,
-};
+pub use libc::{FILE, REG_EXTENDED, REG_ICASE, SEEK_END, SEEK_SET, SIGHUP, WEXITSTATUS, WIFEXITED, WIFSIGNALED, WTERMSIG, fclose, fdopen, fopen, fread, free, fseeko, ftello, fwrite, malloc, memcmp, mkstemp, pid_t, strcpy, strerror, strlen, termios, time_t, timeval, uid_t, unlink};
 
 // libevent2
 mod event_;
@@ -111,6 +108,25 @@ pub unsafe fn bit_set(bits: *mut u8, i: u32) {
     }
 }
 
+#[inline]
+pub unsafe fn bit_clear(bits: *mut u8, i: u32) {
+    unsafe {
+        let byte_index = i / 8;
+        let bit_index = i % 8;
+        *bits.add(byte_index as usize) &= !(1 << bit_index);
+    }
+}
+
+/// clear bits start..=stop in bitstring
+pub unsafe fn bit_nclear(bits: *mut u8, start: u32, stop: u32) {
+    unsafe {
+        // TODO this is written inefficiently, assuming the compiler will optimize it. if it doesn't rewrite it
+        for i in start..=stop {
+            bit_clear(bits, i);
+        }
+    }
+}
+
 pub unsafe fn bit_test(bits: *const u8, i: u32) -> bool {
     unsafe {
         let byte_index = i / 8;
@@ -118,9 +134,6 @@ pub unsafe fn bit_test(bits: *const u8, i: u32) -> bool {
         (*bits.add(byte_index as usize) & (1 << bit_index)) != 0
     }
 }
-
-
-
 
 const TTY_NAME_MAX: usize = 32;
 
@@ -156,7 +169,6 @@ unsafe extern "C" {
 
 opaque_types! {
     hyperlinks_uri,
-    input_ctx,
     mode_tree_data,
     mode_tree_item,
     screen_write_citem,
@@ -623,12 +635,7 @@ impl utf8_data {
             i += 1;
         }
 
-        Self {
-            data: padded_data,
-            have,
-            size,
-            width,
-        }
+        Self { data: padded_data, have, size, width }
     }
 }
 
@@ -669,19 +676,15 @@ pub const GRID_ATTR_REVERSE: u16 = 0x10;
 pub const GRID_ATTR_HIDDEN: u16 = 0x20;
 pub const GRID_ATTR_ITALICS: u16 = 0x40;
 pub const GRID_ATTR_CHARSET: u16 = 0x80; // alternative character set
-pub const GRID_ATTR_STRIKETHROUGH: i32 = 0x100;
-pub const GRID_ATTR_UNDERSCORE_2: i32 = 0x200;
-pub const GRID_ATTR_UNDERSCORE_3: i32 = 0x400;
-pub const GRID_ATTR_UNDERSCORE_4: i32 = 0x800;
-pub const GRID_ATTR_UNDERSCORE_5: i32 = 0x1000;
-pub const GRID_ATTR_OVERLINE: i32 = 0x2000;
+pub const GRID_ATTR_STRIKETHROUGH: u16 = 0x100;
+pub const GRID_ATTR_UNDERSCORE_2: u16 = 0x200;
+pub const GRID_ATTR_UNDERSCORE_3: u16 = 0x400;
+pub const GRID_ATTR_UNDERSCORE_4: u16 = 0x800;
+pub const GRID_ATTR_UNDERSCORE_5: u16 = 0x1000;
+pub const GRID_ATTR_OVERLINE: u16 = 0x2000;
 
 /// All underscore attributes.
-pub const GRID_ATTR_ALL_UNDERSCORE: i32 = GRID_ATTR_UNDERSCORE as i32
-    | GRID_ATTR_UNDERSCORE_2
-    | GRID_ATTR_UNDERSCORE_3
-    | GRID_ATTR_UNDERSCORE_4
-    | GRID_ATTR_UNDERSCORE_5;
+pub const GRID_ATTR_ALL_UNDERSCORE: u16 = GRID_ATTR_UNDERSCORE | GRID_ATTR_UNDERSCORE_2 | GRID_ATTR_UNDERSCORE_3 | GRID_ATTR_UNDERSCORE_4 | GRID_ATTR_UNDERSCORE_5;
 
 bitflags::bitflags! {
     /// Grid flags.
@@ -739,12 +742,8 @@ pub enum cell_type {
 use cell_type::*; // TODO remove
 
 // Cell borders.
-pub const CELL_BORDERS: [u8; 13] = [
-    b' ', b'x', b'q', b'l', b'k', b'm', b'j', b'w', b'v', b't', b'u', b'n', b'~',
-];
-pub const SIMPLE_BORDERS: [u8; 13] = [
-    b' ', b'|', b'-', b'+', b'+', b'+', b'+', b'+', b'+', b'+', b'+', b'+', b'.',
-];
+pub const CELL_BORDERS: [u8; 13] = [b' ', b'x', b'q', b'l', b'k', b'm', b'j', b'w', b'v', b't', b'u', b'n', b'~'];
+pub const SIMPLE_BORDERS: [u8; 13] = [b' ', b'|', b'-', b'+', b'+', b'+', b'+', b'+', b'+', b'+', b'+', b'+', b'.'];
 pub const PADDED_BORDERS: [u8; 13] = [b' '; 13];
 
 /// Grid cell data.
@@ -761,17 +760,7 @@ pub struct grid_cell {
 }
 
 impl grid_cell {
-    pub const fn new(data: utf8_data, attr: c_ushort, flags: grid_flag, fg: i32, bg: i32, us: i32, link: u32) -> Self {
-        Self {
-            data,
-            attr,
-            flags,
-            fg,
-            bg,
-            us,
-            link,
-        }
-    }
+    pub const fn new(data: utf8_data, attr: c_ushort, flags: grid_flag, fg: i32, bg: i32, us: i32, link: u32) -> Self { Self { data, attr, flags, fg, bg, us, link } }
 }
 
 /// Grid extended cell entry.
@@ -1023,8 +1012,9 @@ pub struct screen_write_ctx {
 
 /// Box border lines option.
 #[repr(i32)]
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Default, Eq, PartialEq, num_enum::TryFromPrimitive)]
 pub enum box_lines {
+    #[default]
     BOX_LINES_DEFAULT = -1,
     BOX_LINES_SINGLE,
     BOX_LINES_DOUBLE,
@@ -1035,26 +1025,9 @@ pub enum box_lines {
     BOX_LINES_NONE,
 }
 
-impl TryFrom<i32> for box_lines {
-    type Error = InvalidVariant;
-
-    fn try_from(value: i32) -> Result<Self, Self::Error> {
-        Ok(match value {
-            -1 => box_lines::BOX_LINES_DEFAULT,
-            0 => box_lines::BOX_LINES_NONE,
-            1 => box_lines::BOX_LINES_SINGLE,
-            2 => box_lines::BOX_LINES_DOUBLE,
-            3 => box_lines::BOX_LINES_HEAVY,
-            4 => box_lines::BOX_LINES_SIMPLE,
-            5 => box_lines::BOX_LINES_PADDED,
-            _ => return Err(InvalidVariant),
-        })
-    }
-}
-
 /// Pane border lines option.
 #[repr(i32)]
-#[derive(Copy, Clone, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Default, Eq, PartialEq, num_enum::TryFromPrimitive)]
 pub enum pane_lines {
     #[default]
     PANE_LINES_SINGLE,
@@ -1073,22 +1046,6 @@ macro_rules! define_error_unit {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "{self:?}") }
         }
     };
-}
-
-define_error_unit!(InvalidVariant);
-impl TryFrom<i32> for pane_lines {
-    type Error = InvalidVariant;
-
-    fn try_from(value: i32) -> Result<Self, Self::Error> {
-        Ok(match value {
-            0 => pane_lines::PANE_LINES_SINGLE,
-            1 => pane_lines::PANE_LINES_DOUBLE,
-            2 => pane_lines::PANE_LINES_HEAVY,
-            3 => pane_lines::PANE_LINES_SIMPLE,
-            4 => pane_lines::PANE_LINES_NUMBER,
-            _ => return Err(InvalidVariant),
-        })
-    }
 }
 
 // Pane border indicator option.
@@ -1130,12 +1087,21 @@ pub unsafe fn screen_hlimit(s: *const screen) -> u32 { unsafe { (*(*s).grid).hli
 // Menu.
 #[repr(C)]
 pub struct menu_item {
-    pub name: *const c_char,
+    pub name: SyncCharPtr,
     pub key: key_code,
-    pub command: *const c_char,
+    pub command: SyncCharPtr,
 }
 impl menu_item {
-    const fn new(name: *const c_char, key: key_code, command: *const c_char) -> Self { Self { name, key, command } }
+    const fn new(name: Option<&'static CStr>, key: key_code, command: *const c_char) -> Self {
+        Self {
+            name: match name {
+                Some(n) => SyncCharPtr::new(n),
+                None => SyncCharPtr::null(),
+            },
+            key,
+            command: SyncCharPtr(command),
+        }
+    }
 }
 
 #[repr(C)]
@@ -1151,35 +1117,17 @@ pub type menu_choice_cb = Option<unsafe extern "C" fn(*mut menu, u32, key_code, 
 // right function to handle input and output.
 #[repr(C)]
 pub struct window_mode {
-    pub name: *const c_char,
-    pub default_format: *const c_char,
+    pub name: SyncCharPtr,
+    pub default_format: SyncCharPtr,
 
-    pub init: Option<unsafe extern "C" fn(*mut window_mode_entry, *mut cmd_find_state, *mut args) -> *mut screen>,
-    pub free: Option<unsafe extern "C" fn(*mut window_mode_entry)>,
-    pub resize: Option<unsafe extern "C" fn(*mut window_mode_entry, u32, u32)>,
-    pub update: Option<unsafe extern "C" fn(*mut window_mode_entry)>,
-    pub key: Option<
-        unsafe extern "C" fn(
-            *mut window_mode_entry,
-            *mut client,
-            *mut session,
-            *mut winlink,
-            key_code,
-            *mut mouse_event,
-        ),
-    >,
+    pub init: Option<unsafe extern "C" fn(NonNull<window_mode_entry>, *mut cmd_find_state, *mut args) -> *mut screen>,
+    pub free: Option<unsafe extern "C" fn(NonNull<window_mode_entry>)>,
+    pub resize: Option<unsafe extern "C" fn(NonNull<window_mode_entry>, u32, u32)>,
+    pub update: Option<unsafe extern "C" fn(NonNull<window_mode_entry>)>,
+    pub key: Option<unsafe extern "C" fn(NonNull<window_mode_entry>, *mut client, *mut session, *mut winlink, key_code, *mut mouse_event)>,
 
     pub key_table: Option<unsafe extern "C" fn(*mut window_mode_entry) -> *const c_char>,
-    pub command: Option<
-        unsafe extern "C" fn(
-            *mut window_mode_entry,
-            *mut client,
-            *mut session,
-            *mut winlink,
-            *mut args,
-            *mut mouse_event,
-        ),
-    >,
+    pub command: Option<unsafe extern "C" fn(NonNull<window_mode_entry>, *mut client, *mut session, *mut winlink, *mut args, *mut mouse_event)>,
     pub formats: Option<unsafe extern "C" fn(*mut window_mode_entry, *mut format_tree)>,
 }
 
@@ -1340,9 +1288,7 @@ bitflags::bitflags! {
         const RESIZE = 0x20;
     }
 }
-pub const WINDOW_ALERTFLAGS: window_flag = window_flag::BELL
-    .union(window_flag::ACTIVITY)
-    .union(window_flag::SILENCE);
+pub const WINDOW_ALERTFLAGS: window_flag = window_flag::BELL.union(window_flag::ACTIVITY).union(window_flag::SILENCE);
 
 /// Window structure.
 #[repr(C)]
@@ -1442,24 +1388,11 @@ pub const WINDOW_SIZE_LATEST: i32 = 3;
 
 /// Pane border status option.
 #[repr(i32)]
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, num_enum::TryFromPrimitive)]
 pub enum pane_status {
     PANE_STATUS_OFF,
     PANE_STATUS_TOP,
     PANE_STATUS_BOTTOM,
-}
-
-impl TryFrom<i32> for pane_status {
-    type Error = InvalidVariant;
-
-    fn try_from(value: i32) -> Result<Self, Self::Error> {
-        Ok(match value {
-            0 => pane_status::PANE_STATUS_OFF,
-            1 => pane_status::PANE_STATUS_TOP,
-            2 => pane_status::PANE_STATUS_BOTTOM,
-            _ => return Err(InvalidVariant),
-        })
-    }
 }
 
 /// Layout direction.
@@ -1585,9 +1518,7 @@ pub const MOUSE_BUTTON_11: u32 = 131;
 #[inline]
 pub fn MOUSE_BUTTONS(b: u32) -> u32 { b & MOUSE_MASK_BUTTONS }
 #[inline]
-pub fn MOUSE_WHEEL(b: u32) -> bool {
-    ((b) & MOUSE_MASK_BUTTONS) == MOUSE_WHEEL_UP || ((b) & MOUSE_MASK_BUTTONS) == MOUSE_WHEEL_DOWN
-}
+pub fn MOUSE_WHEEL(b: u32) -> bool { ((b) & MOUSE_MASK_BUTTONS) == MOUSE_WHEEL_UP || ((b) & MOUSE_MASK_BUTTONS) == MOUSE_WHEEL_DOWN }
 #[inline]
 pub fn MOUSE_DRAG(b: u32) -> bool { b & MOUSE_MASK_DRAG != 0 }
 #[inline]
@@ -1677,9 +1608,7 @@ bitflags::bitflags! {
         const TTY_HAVEDA2 = 0x800; // Secondary DA.
     }
 }
-pub const TTY_ALL_REQUEST_FLAGS: tty_flags = tty_flags::TTY_HAVEDA
-    .union(tty_flags::TTY_HAVEDA2)
-    .union(tty_flags::TTY_HAVEXDA);
+pub const TTY_ALL_REQUEST_FLAGS: tty_flags = tty_flags::TTY_HAVEDA.union(tty_flags::TTY_HAVEDA2).union(tty_flags::TTY_HAVEXDA);
 
 /// Client terminal.
 #[repr(C)]
@@ -1860,14 +1789,7 @@ pub struct args_parse {
 }
 
 impl args_parse {
-    pub const fn new(template: &CStr, lower: i32, upper: i32, cb: args_parse_cb) -> Self {
-        Self {
-            template: template.as_ptr(),
-            lower,
-            upper,
-            cb,
-        }
-    }
+    pub const fn new(template: &CStr, lower: i32, upper: i32, cb: args_parse_cb) -> Self { Self { template: template.as_ptr(), lower, upper, cb } }
 }
 
 /// Command find structures.
@@ -1933,15 +1855,21 @@ pub struct cmd_parse_result {
     pub error: *mut c_char,
 }
 
-pub const CMD_PARSE_QUIET: i32 = 0x1;
-pub const CMD_PARSE_PARSEONLY: i32 = 0x2;
-pub const CMD_PARSE_NOALIAS: i32 = 0x4;
-pub const CMD_PARSE_VERBOSE: i32 = 0x8;
-pub const CMD_PARSE_ONEGROUP: i32 = 0x10;
+bitflags::bitflags! {
+    #[repr(transparent)]
+    #[derive(Copy, Clone, Eq, PartialEq)]
+    pub struct cmd_parse_input_flags: i32 {
+        const CMD_PARSE_QUIET = 0x1;
+        const CMD_PARSE_PARSEONLY = 0x2;
+        const CMD_PARSE_NOALIAS = 0x4;
+        const CMD_PARSE_VERBOSE = 0x8;
+        const CMD_PARSE_ONEGROUP = 0x10;
+    }
+}
 
 #[repr(C)]
 pub struct cmd_parse_input {
-    pub flags: i32,
+    pub flags: cmd_parse_input_flags,
 
     pub file: *const c_char,
     pub line: u32,
@@ -1969,13 +1897,7 @@ pub struct cmd_entry_flag {
 }
 
 impl cmd_entry_flag {
-    pub const fn new(flag: u8, type_: cmd_find_type, flags: i32) -> Self {
-        Self {
-            flag: flag as c_char,
-            type_,
-            flags,
-        }
-    }
+    pub const fn new(flag: u8, type_: cmd_find_type, flags: i32) -> Self { Self { flag: flag as c_char, type_, flags } }
 }
 
 bitflags::bitflags! {
@@ -2087,8 +2009,8 @@ pub struct overlay_ranges {
     pub nx: [u32; OVERLAY_MAX_RANGES],
 }
 
-pub type prompt_input_cb = Option<unsafe extern "C" fn(*mut client, *mut c_void, *const c_char, i32) -> i32>;
-pub type prompt_free_cb = Option<unsafe extern "C" fn(*mut c_void)>;
+pub type prompt_input_cb = Option<unsafe extern "C" fn(*mut client, NonNull<c_void>, *const c_char, i32) -> i32>;
+pub type prompt_free_cb = Option<unsafe extern "C" fn(NonNull<c_void>)>;
 pub type overlay_check_cb = Option<unsafe extern "C" fn(*mut client, *mut c_void, u32, u32, u32, *mut overlay_ranges)>;
 pub type overlay_mode_cb = Option<unsafe extern "C" fn(*mut client, *mut c_void, *mut u32, *mut u32) -> *mut screen>;
 pub type overlay_draw_cb = Option<unsafe extern "C" fn(*mut client, *mut c_void, *mut screen_redraw_ctx)>;
@@ -2146,8 +2068,7 @@ pub const CLIENT_ALLREDRAWFLAGS: client_flag = client_flag::REDRAWWINDOW
     .union(client_flag::REDRAWBORDERS)
     .union(client_flag::REDRAWOVERLAY)
     .union(client_flag::REDRAWPANES);
-pub const CLIENT_UNATTACHEDFLAGS: client_flag =
-    client_flag::DEAD.union(client_flag::SUSPENDED).union(client_flag::EXIT);
+pub const CLIENT_UNATTACHEDFLAGS: client_flag = client_flag::DEAD.union(client_flag::SUSPENDED).union(client_flag::EXIT);
 pub const CLIENT_NODETACHFLAGS: client_flag = client_flag::DEAD.union(client_flag::EXIT);
 pub const CLIENT_NOSIZEFLAGS: client_flag = client_flag::DEAD.union(client_flag::SUSPENDED).union(client_flag::EXIT);
 
@@ -2444,60 +2365,35 @@ mod tmux;
 #[cfg(not(test))]
 pub use crate::tmux::main;
 
-pub use crate::tmux::{
-    checkshell, find_cwd, find_home, get_timer, getversion, global_environ, global_options, global_s_options,
-    global_w_options, ptm_fd, setblocking, shell_argv0, shell_command, sig2name, socket_path, start_time,
-};
+pub use crate::tmux::{checkshell, find_cwd, find_home, get_timer, getversion, global_environ, global_options, global_s_options, global_w_options, ptm_fd, setblocking, shell_argv0, shell_command, sig2name, socket_path, start_time};
 
 mod proc;
-pub use crate::proc::{
-    proc_add_peer, proc_clear_signals, proc_exit, proc_flush_peer, proc_fork_and_daemon, proc_get_peer_uid,
-    proc_kill_peer, proc_loop, proc_remove_peer, proc_send, proc_set_signals, proc_start, proc_toggle_log, tmuxpeer,
-    tmuxproc,
-};
+pub use crate::proc::{proc_add_peer, proc_clear_signals, proc_exit, proc_flush_peer, proc_fork_and_daemon, proc_get_peer_uid, proc_kill_peer, proc_loop, proc_remove_peer, proc_send, proc_set_signals, proc_start, proc_toggle_log, tmuxpeer, tmuxproc};
 
 mod cfg_;
-pub use crate::cfg_::{
-    cfg_add_cause, cfg_client, cfg_files, cfg_finished, cfg_nfiles, cfg_print_causes, cfg_quiet, cfg_show_causes,
-    load_cfg, load_cfg_from_buffer, start_cfg,
-};
+pub use crate::cfg_::{cfg_add_cause, cfg_client, cfg_files, cfg_finished, cfg_nfiles, cfg_print_causes, cfg_quiet, cfg_show_causes, load_cfg, load_cfg_from_buffer, start_cfg};
 
 mod paste;
-pub use crate::paste::{
-    paste_add, paste_buffer, paste_buffer_created, paste_buffer_data, paste_buffer_data_, paste_buffer_name,
-    paste_buffer_order, paste_free, paste_get_name, paste_get_top, paste_is_empty, paste_make_sample, paste_rename,
-    paste_replace, paste_set, paste_walk,
-};
+pub use crate::paste::{paste_add, paste_buffer, paste_buffer_created, paste_buffer_data, paste_buffer_data_, paste_buffer_name, paste_buffer_order, paste_free, paste_get_name, paste_get_top, paste_is_empty, paste_make_sample, paste_rename, paste_replace, paste_set, paste_walk};
 
 mod format;
 pub use crate::format::{
-    FORMAT_NONE, FORMAT_PANE, FORMAT_WINDOW, format_add, format_add_cb, format_add_tv, format_cb, format_create,
-    format_create_defaults, format_create_from_state, format_create_from_target, format_defaults, format_defaults_pane,
-    format_defaults_paste_buffer, format_defaults_window, format_each, format_expand, format_expand_time, format_flags,
-    format_free, format_get_pane, format_grid_hyperlink, format_grid_line, format_grid_word, format_job_tree,
-    format_log_debug, format_lost_client, format_merge, format_pretty_time, format_single, format_single_from_state,
-    format_single_from_target, format_skip, format_tidy_jobs, format_tree, format_true,
+    FORMAT_NONE, FORMAT_PANE, FORMAT_WINDOW, format_add, format_add_cb, format_add_tv, format_cb, format_create, format_create_defaults, format_create_from_state, format_create_from_target, format_defaults, format_defaults_pane, format_defaults_paste_buffer, format_defaults_window, format_each,
+    format_expand, format_expand_time, format_flags, format_free, format_get_pane, format_grid_hyperlink, format_grid_line, format_grid_word, format_job_tree, format_log_debug, format_lost_client, format_merge, format_pretty_time, format_single, format_single_from_state, format_single_from_target,
+    format_skip, format_tidy_jobs, format_tree, format_true,
 };
 
 mod format_draw_;
 pub use crate::format_draw_::{format_draw, format_trim_left, format_trim_right, format_width};
 
 mod notify;
-pub use crate::notify::{
-    notify_client, notify_hook, notify_pane, notify_paste_buffer, notify_session, notify_session_window, notify_window,
-    notify_winlink,
-};
+pub use crate::notify::{notify_client, notify_hook, notify_pane, notify_paste_buffer, notify_session, notify_session_window, notify_window, notify_winlink};
 
 mod options_;
 pub use crate::options_::{
-    options, options_array_assign, options_array_clear, options_array_first, options_array_get, options_array_item,
-    options_array_item_index, options_array_item_value, options_array_next, options_array_set, options_create,
-    options_default, options_default_to_string, options_empty, options_entry, options_first, options_free,
-    options_from_string, options_get, options_get_number, options_get_only, options_get_parent, options_get_string,
-    options_is_array, options_is_string, options_match, options_match_get, options_name, options_next, options_owner,
-    options_parse, options_parse_get, options_push_changes, options_remove_or_default, options_scope_from_flags,
-    options_scope_from_name, options_set_number, options_set_parent, options_set_string, options_string_to_style,
-    options_table_entry, options_to_string,
+    options, options_array_assign, options_array_clear, options_array_first, options_array_get, options_array_item, options_array_item_index, options_array_item_value, options_array_next, options_array_set, options_create, options_default, options_default_to_string, options_empty, options_entry,
+    options_first, options_free, options_from_string, options_get, options_get_number, options_get_only, options_get_parent, options_get_string, options_is_array, options_is_string, options_match, options_match_get, options_name, options_next, options_owner, options_parse, options_parse_get,
+    options_push_changes, options_remove_or_default, options_scope_from_flags, options_scope_from_name, options_set_number, options_set_parent, options_set_string, options_string_to_style, options_table_entry, options_to_string,
 };
 
 mod options_table;
@@ -2508,47 +2404,30 @@ pub const JOB_NOWAIT: i32 = 1;
 pub const JOB_KEEPWRITE: i32 = 2;
 pub const JOB_PTY: i32 = 4;
 pub const JOB_DEFAULTSHELL: i32 = 8;
-pub use crate::job_::{
-    job, job_check_died, job_complete_cb, job_free, job_free_cb, job_get_data, job_get_event, job_get_status,
-    job_kill_all, job_print_summary, job_resize, job_run, job_still_running, job_transfer, job_update_cb,
-};
+pub use crate::job_::{job, job_check_died, job_complete_cb, job_free, job_free_cb, job_get_data, job_get_event, job_get_status, job_kill_all, job_print_summary, job_resize, job_run, job_still_running, job_transfer, job_update_cb};
 
 mod environ_;
-pub use crate::environ_::{
-    environ, environ_clear, environ_copy, environ_create, environ_find, environ_first, environ_for_session,
-    environ_free, environ_log, environ_next, environ_push, environ_put, environ_set, environ_unset, environ_update,
-};
+pub use crate::environ_::{environ, environ_clear, environ_copy, environ_create, environ_find, environ_first, environ_for_session, environ_free, environ_log, environ_next, environ_push, environ_put, environ_set, environ_unset, environ_update};
 
 mod tty_;
 pub use crate::tty_::{
-    tty_attributes, tty_cell, tty_clipboard_query, tty_close, tty_cmd_alignmenttest, tty_cmd_cell, tty_cmd_cells,
-    tty_cmd_clearcharacter, tty_cmd_clearendofline, tty_cmd_clearendofscreen, tty_cmd_clearline, tty_cmd_clearscreen,
-    tty_cmd_clearstartofline, tty_cmd_clearstartofscreen, tty_cmd_deletecharacter, tty_cmd_deleteline,
-    tty_cmd_insertcharacter, tty_cmd_insertline, tty_cmd_linefeed, tty_cmd_rawstring, tty_cmd_reverseindex,
-    tty_cmd_scrolldown, tty_cmd_scrollup, tty_cmd_setselection, tty_cmd_syncstart, tty_create_log, tty_cursor,
-    tty_default_colours, tty_draw_line, tty_free, tty_init, tty_m_in_off, tty_open, tty_putc, tty_putcode,
-    tty_putcode_i, tty_putcode_ii, tty_putcode_iii, tty_putcode_s, tty_putcode_ss, tty_putn, tty_puts, tty_raw,
-    tty_region_off, tty_repeat_requests, tty_reset, tty_resize, tty_send_requests, tty_set_path, tty_set_selection,
-    tty_set_size, tty_set_title, tty_start_tty, tty_stop_tty, tty_sync_end, tty_sync_start, tty_update_client_offset,
-    tty_update_features, tty_update_mode, tty_update_window_offset, tty_window_bigger, tty_window_offset, tty_write,
+    tty_attributes, tty_cell, tty_clipboard_query, tty_close, tty_cmd_alignmenttest, tty_cmd_cell, tty_cmd_cells, tty_cmd_clearcharacter, tty_cmd_clearendofline, tty_cmd_clearendofscreen, tty_cmd_clearline, tty_cmd_clearscreen, tty_cmd_clearstartofline, tty_cmd_clearstartofscreen,
+    tty_cmd_deletecharacter, tty_cmd_deleteline, tty_cmd_insertcharacter, tty_cmd_insertline, tty_cmd_linefeed, tty_cmd_rawstring, tty_cmd_reverseindex, tty_cmd_scrolldown, tty_cmd_scrollup, tty_cmd_setselection, tty_cmd_syncstart, tty_create_log, tty_cursor, tty_default_colours, tty_draw_line,
+    tty_free, tty_init, tty_m_in_off, tty_open, tty_putc, tty_putcode, tty_putcode_i, tty_putcode_ii, tty_putcode_iii, tty_putcode_s, tty_putcode_ss, tty_putn, tty_puts, tty_raw, tty_region_off, tty_repeat_requests, tty_reset, tty_resize, tty_send_requests, tty_set_path, tty_set_selection,
+    tty_set_size, tty_set_title, tty_start_tty, tty_stop_tty, tty_sync_end, tty_sync_start, tty_update_client_offset, tty_update_features, tty_update_mode, tty_update_window_offset, tty_window_bigger, tty_window_offset, tty_write,
 };
 
 mod tty_term_;
 pub use crate::tty_term_::{
-    tty_code, tty_term_apply, tty_term_apply_overrides, tty_term_create, tty_term_describe, tty_term_flag,
-    tty_term_free, tty_term_free_list, tty_term_has, tty_term_ncodes, tty_term_number, tty_term_read_list,
-    tty_term_string, tty_term_string_i, tty_term_string_ii, tty_term_string_iii, tty_term_string_s, tty_term_string_ss,
-    tty_terms,
+    tty_code, tty_term_apply, tty_term_apply_overrides, tty_term_create, tty_term_describe, tty_term_flag, tty_term_free, tty_term_free_list, tty_term_has, tty_term_ncodes, tty_term_number, tty_term_read_list, tty_term_string, tty_term_string_i, tty_term_string_ii, tty_term_string_iii,
+    tty_term_string_s, tty_term_string_ss, tty_terms,
 };
 
 mod tty_features;
 pub use crate::tty_features::{tty_add_features, tty_apply_features, tty_default_features, tty_get_features};
 
 mod tty_acs;
-pub use crate::tty_acs::{
-    tty_acs_double_borders, tty_acs_get, tty_acs_heavy_borders, tty_acs_needed, tty_acs_reverse_get,
-    tty_acs_rounded_borders,
-};
+pub use crate::tty_acs::{tty_acs_double_borders, tty_acs_get, tty_acs_heavy_borders, tty_acs_needed, tty_acs_reverse_get, tty_acs_rounded_borders};
 
 mod tty_keys;
 pub use crate::tty_keys::{tty_keys_build, tty_keys_colours, tty_keys_free, tty_keys_next};
@@ -2568,43 +2447,30 @@ pub unsafe fn args_get_(args: *mut args, flag: char) -> *const c_char {
 }
 
 pub use crate::arguments::{
-    args, args_command_state, args_copy, args_count, args_create, args_entry, args_escape, args_first,
-    args_first_value, args_free, args_free_value, args_free_values, args_from_vector, args_get, args_has,
-    args_make_commands, args_make_commands_free, args_make_commands_get_command, args_make_commands_now,
-    args_make_commands_prepare, args_next, args_next_value, args_parse, args_percentage, args_percentage_and_expand,
-    args_print, args_set, args_string, args_string_percentage, args_string_percentage_and_expand, args_strtonum,
-    args_strtonum_and_expand, args_to_vector, args_value, args_values,
+    args, args_command_state, args_copy, args_count, args_create, args_entry, args_escape, args_first, args_first_value, args_free, args_free_value, args_free_values, args_from_vector, args_get, args_has, args_make_commands, args_make_commands_free, args_make_commands_get_command,
+    args_make_commands_now, args_make_commands_prepare, args_next, args_next_value, args_parse, args_percentage, args_percentage_and_expand, args_print, args_set, args_string, args_string_percentage, args_string_percentage_and_expand, args_strtonum, args_strtonum_and_expand, args_to_vector,
+    args_value, args_values,
 };
 
 mod cmd_;
 pub use crate::cmd_::{
-    cmd, cmd_append_argv, cmd_copy, cmd_copy_argv, cmd_free, cmd_free_argv, cmd_get_alias, cmd_get_args, cmd_get_entry,
-    cmd_get_group, cmd_get_source, cmd_list_all_have, cmd_list_any_have, cmd_list_append, cmd_list_append_all,
-    cmd_list_copy, cmd_list_first, cmd_list_free, cmd_list_move, cmd_list_new, cmd_list_next, cmd_list_print,
-    cmd_log_argv, cmd_mouse_at, cmd_mouse_pane, cmd_mouse_window, cmd_pack_argv, cmd_parse, cmd_prepend_argv,
-    cmd_print, cmd_stringify_argv, cmd_table, cmd_template_replace, cmd_unpack_argv, cmds,
+    cmd, cmd_append_argv, cmd_copy, cmd_copy_argv, cmd_free, cmd_free_argv, cmd_get_alias, cmd_get_args, cmd_get_entry, cmd_get_group, cmd_get_source, cmd_list_all_have, cmd_list_any_have, cmd_list_append, cmd_list_append_all, cmd_list_copy, cmd_list_first, cmd_list_free, cmd_list_move,
+    cmd_list_new, cmd_list_next, cmd_list_print, cmd_log_argv, cmd_mouse_at, cmd_mouse_pane, cmd_mouse_window, cmd_pack_argv, cmd_parse, cmd_prepend_argv, cmd_print, cmd_stringify_argv, cmd_table, cmd_template_replace, cmd_unpack_argv, cmds,
 };
 
 pub use crate::cmd_::cmd_attach_session::cmd_attach_session;
 
 pub use crate::cmd_::cmd_find::{
-    cmd_find_best_client, cmd_find_clear_state, cmd_find_client, cmd_find_copy_state, cmd_find_empty_state,
-    cmd_find_from_client, cmd_find_from_mouse, cmd_find_from_nothing, cmd_find_from_pane, cmd_find_from_session,
-    cmd_find_from_session_window, cmd_find_from_window, cmd_find_from_winlink, cmd_find_from_winlink_pane,
-    cmd_find_target, cmd_find_valid_state,
+    cmd_find_best_client, cmd_find_clear_state, cmd_find_client, cmd_find_copy_state, cmd_find_empty_state, cmd_find_from_client, cmd_find_from_mouse, cmd_find_from_nothing, cmd_find_from_pane, cmd_find_from_session, cmd_find_from_session_window, cmd_find_from_window, cmd_find_from_winlink,
+    cmd_find_from_winlink_pane, cmd_find_target, cmd_find_valid_state,
 };
 
-pub use crate::cmd_::cmd_parse::{
-    cmd_parse_and_append, cmd_parse_and_insert, cmd_parse_from_arguments, cmd_parse_from_buffer, cmd_parse_from_file,
-    cmd_parse_from_string,
-};
+pub mod cmd_parse;
+pub use crate::cmd_parse::{cmd_parse_and_append, cmd_parse_and_insert, cmd_parse_command, cmd_parse_from_arguments, cmd_parse_from_buffer, cmd_parse_from_file, cmd_parse_from_string, cmd_parse_state, *};
 
 pub use crate::cmd_::cmd_queue::{
-    cmdq_add_format, cmdq_add_formats, cmdq_append, cmdq_continue, cmdq_copy_state, cmdq_error, cmdq_free,
-    cmdq_free_state, cmdq_get_callback1, cmdq_get_client, cmdq_get_command, cmdq_get_current, cmdq_get_error,
-    cmdq_get_event, cmdq_get_flags, cmdq_get_name, cmdq_get_source, cmdq_get_state, cmdq_get_target,
-    cmdq_get_target_client, cmdq_guard, cmdq_insert_after, cmdq_insert_hook, cmdq_item, cmdq_link_state, cmdq_list,
-    cmdq_merge_formats, cmdq_new, cmdq_new_state, cmdq_next, cmdq_print, cmdq_print_data, cmdq_running, cmdq_state,
+    cmdq_add_format, cmdq_add_formats, cmdq_append, cmdq_continue, cmdq_copy_state, cmdq_error, cmdq_free, cmdq_free_state, cmdq_get_callback1, cmdq_get_client, cmdq_get_command, cmdq_get_current, cmdq_get_error, cmdq_get_event, cmdq_get_flags, cmdq_get_name, cmdq_get_source, cmdq_get_state,
+    cmdq_get_target, cmdq_get_target_client, cmdq_guard, cmdq_insert_after, cmdq_insert_hook, cmdq_item, cmdq_link_state, cmdq_list, cmdq_merge_formats, cmdq_new, cmdq_new_state, cmdq_next, cmdq_print, cmdq_print_data, cmdq_running, cmdq_state,
 };
 
 pub use crate::cmd_::cmd_wait_for::cmd_wait_for_flush;
@@ -2614,10 +2480,8 @@ pub use crate::client_::client_main;
 
 mod key_bindings_;
 pub use crate::key_bindings_::{
-    key_bindings_add, key_bindings_dispatch, key_bindings_first, key_bindings_first_table, key_bindings_get,
-    key_bindings_get_default, key_bindings_get_table, key_bindings_init, key_bindings_next, key_bindings_next_table,
-    key_bindings_remove, key_bindings_remove_table, key_bindings_reset, key_bindings_reset_table,
-    key_bindings_unref_table,
+    key_bindings_add, key_bindings_dispatch, key_bindings_first, key_bindings_first_table, key_bindings_get, key_bindings_get_default, key_bindings_get_table, key_bindings_init, key_bindings_next, key_bindings_next_table, key_bindings_remove, key_bindings_remove_table, key_bindings_reset,
+    key_bindings_reset_table, key_bindings_unref_table,
 };
 
 mod key_string;
@@ -2633,19 +2497,12 @@ unsafe extern "C" {
 
 mod file;
 pub use crate::file::{
-    client_files_RB_FIND, client_files_RB_INSERT, client_files_RB_INSERT_COLOR, client_files_RB_NFIND,
-    client_files_RB_REMOVE, client_files_RB_REMOVE_COLOR, file_can_print, file_cancel, file_cmp,
-    file_create_with_client, file_create_with_peer, file_error, file_fire_done, file_fire_read, file_free, file_print,
-    file_print_buffer, file_push, file_read, file_read_cancel, file_read_data, file_read_done, file_read_open,
-    file_vprint, file_write, file_write_close, file_write_data, file_write_left, file_write_open, file_write_ready,
+    client_files_RB_FIND, client_files_RB_INSERT, client_files_RB_INSERT_COLOR, client_files_RB_NFIND, client_files_RB_REMOVE, client_files_RB_REMOVE_COLOR, file_can_print, file_cancel, file_cmp, file_create_with_client, file_create_with_peer, file_error, file_fire_done, file_fire_read, file_free,
+    file_print, file_print_buffer, file_push, file_read, file_read_cancel, file_read_data, file_read_done, file_read_open, file_vprint, file_write, file_write_close, file_write_data, file_write_left, file_write_open, file_write_ready,
 };
 
 mod server;
-pub use crate::server::{
-    clients, current_time, marked_pane, message_log, server_add_accept, server_add_message, server_check_marked,
-    server_clear_marked, server_create_socket, server_is_marked, server_proc, server_set_marked, server_start,
-    server_update_socket,
-};
+pub use crate::server::{clients, current_time, marked_pane, message_log, server_add_accept, server_add_message, server_check_marked, server_clear_marked, server_create_socket, server_is_marked, server_proc, server_set_marked, server_start, server_update_socket};
 
 /*
 unsafe extern "C" {
@@ -2672,53 +2529,36 @@ unsafe extern "C" {
 
 mod server_client;
 pub use crate::server_client::{
-    client_windows_RB_FIND, client_windows_RB_INSERT, client_windows_RB_INSERT_COLOR, client_windows_RB_NFIND,
-    client_windows_RB_REMOVE, client_windows_RB_REMOVE_COLOR, server_client_add_client_window,
-    server_client_check_nested, server_client_clear_overlay, server_client_create, server_client_detach,
-    server_client_exec, server_client_get_client_window, server_client_get_cwd, server_client_get_flags,
-    server_client_get_key_table, server_client_get_pane, server_client_handle_key, server_client_how_many,
-    server_client_loop, server_client_lost, server_client_open, server_client_overlay_range, server_client_print,
-    server_client_remove_pane, server_client_set_flags, server_client_set_key_table, server_client_set_overlay,
-    server_client_set_pane, server_client_set_session, server_client_suspend, server_client_unref,
+    client_windows_RB_FIND, client_windows_RB_INSERT, client_windows_RB_INSERT_COLOR, client_windows_RB_NFIND, client_windows_RB_REMOVE, client_windows_RB_REMOVE_COLOR, server_client_add_client_window, server_client_check_nested, server_client_clear_overlay, server_client_create,
+    server_client_detach, server_client_exec, server_client_get_client_window, server_client_get_cwd, server_client_get_flags, server_client_get_key_table, server_client_get_pane, server_client_handle_key, server_client_how_many, server_client_loop, server_client_lost, server_client_open,
+    server_client_overlay_range, server_client_print, server_client_remove_pane, server_client_set_flags, server_client_set_key_table, server_client_set_overlay, server_client_set_pane, server_client_set_session, server_client_suspend, server_client_unref,
 };
 
 mod server_fn;
 pub use crate::server_fn::{
-    server_check_unattached, server_destroy_pane, server_destroy_session, server_kill_pane, server_kill_window,
-    server_link_window, server_lock, server_lock_client, server_lock_session, server_redraw_client,
-    server_redraw_session, server_redraw_session_group, server_redraw_window, server_redraw_window_borders,
-    server_renumber_all, server_renumber_session, server_status_client, server_status_session,
-    server_status_session_group, server_status_window, server_unlink_window, server_unzoom_window,
+    server_check_unattached, server_destroy_pane, server_destroy_session, server_kill_pane, server_kill_window, server_link_window, server_lock, server_lock_client, server_lock_session, server_redraw_client, server_redraw_session, server_redraw_session_group, server_redraw_window,
+    server_redraw_window_borders, server_renumber_all, server_renumber_session, server_status_client, server_status_session, server_status_session_group, server_status_window, server_unlink_window, server_unzoom_window,
 };
 
 mod status;
 pub use crate::status::{
-    status_at_line, status_free, status_get_range, status_init, status_line_size, status_message_clear,
-    status_message_redraw, status_message_set, status_prompt_clear, status_prompt_hlist, status_prompt_hsize,
-    status_prompt_key, status_prompt_load_history, status_prompt_redraw, status_prompt_save_history, status_prompt_set,
-    status_prompt_type, status_prompt_type_string, status_prompt_update, status_redraw, status_timer_start,
-    status_timer_start_all, status_update_cache,
+    status_at_line, status_free, status_get_range, status_init, status_line_size, status_message_clear, status_message_redraw, status_message_set, status_prompt_clear, status_prompt_hlist, status_prompt_hsize, status_prompt_key, status_prompt_load_history, status_prompt_redraw,
+    status_prompt_save_history, status_prompt_set, status_prompt_type, status_prompt_type_string, status_prompt_update, status_redraw, status_timer_start, status_timer_start_all, status_update_cache,
 };
 
 mod resize;
-pub use crate::resize::{
-    default_window_size, recalculate_size, recalculate_sizes, recalculate_sizes_now, resize_window,
-};
+pub use crate::resize::{default_window_size, recalculate_size, recalculate_sizes, recalculate_sizes_now, resize_window};
 
 mod input;
-pub use crate::input::{
-    input_free, input_init, input_parse_buffer, input_parse_pane, input_parse_screen, input_pending,
-    input_reply_clipboard, input_reset,
-};
+pub use crate::input::{input_ctx, input_free, input_init, input_parse_buffer, input_parse_pane, input_parse_screen, input_pending, input_reply_clipboard, input_reset};
 
 mod input_keys;
 pub use crate::input_keys::{input_key, input_key_build, input_key_get_mouse, input_key_pane};
 
 mod colour;
 pub use crate::colour::{
-    colour_256to16, colour_256toRGB, colour_byname, colour_find_rgb, colour_force_rgb, colour_fromstring,
-    colour_join_rgb, colour_palette_clear, colour_palette_free, colour_palette_from_option, colour_palette_get,
-    colour_palette_init, colour_palette_set, colour_parseX11, colour_split_rgb, colour_tostring,
+    colour_256to16, colour_256toRGB, colour_byname, colour_find_rgb, colour_force_rgb, colour_fromstring, colour_join_rgb, colour_palette_clear, colour_palette_free, colour_palette_from_option, colour_palette_get, colour_palette_init, colour_palette_set, colour_parseX11, colour_split_rgb,
+    colour_tostring,
 };
 
 mod attributes;
@@ -2726,45 +2566,29 @@ pub use crate::attributes::{attributes_fromstring, attributes_tostring};
 
 mod grid_;
 pub use crate::grid_::{
-    grid_adjust_lines, grid_cells_equal, grid_cells_look_equal, grid_clear, grid_clear_history, grid_clear_lines,
-    grid_collect_history, grid_compare, grid_create, grid_default_cell, grid_destroy, grid_duplicate_lines,
-    grid_empty_line, grid_get_cell, grid_get_line, grid_line_length, grid_move_cells, grid_move_lines, grid_peek_line,
-    grid_reflow, grid_remove_history, grid_scroll_history, grid_scroll_history_region, grid_set_cell, grid_set_cells,
-    grid_set_padding, grid_string_cells, grid_unwrap_position, grid_wrap_position,
+    grid_adjust_lines, grid_cells_equal, grid_cells_look_equal, grid_clear, grid_clear_history, grid_clear_lines, grid_collect_history, grid_compare, grid_create, grid_default_cell, grid_destroy, grid_duplicate_lines, grid_empty_line, grid_get_cell, grid_get_line, grid_line_length, grid_move_cells,
+    grid_move_lines, grid_peek_line, grid_reflow, grid_remove_history, grid_scroll_history, grid_scroll_history_region, grid_set_cell, grid_set_cells, grid_set_padding, grid_string_cells, grid_unwrap_position, grid_wrap_position,
 };
 
 mod grid_reader_;
 pub use crate::grid_reader_::{
-    grid_reader_cursor_back_to_indentation, grid_reader_cursor_down, grid_reader_cursor_end_of_line,
-    grid_reader_cursor_jump, grid_reader_cursor_jump_back, grid_reader_cursor_left, grid_reader_cursor_next_word,
-    grid_reader_cursor_next_word_end, grid_reader_cursor_previous_word, grid_reader_cursor_right,
-    grid_reader_cursor_start_of_line, grid_reader_cursor_up, grid_reader_get_cursor, grid_reader_in_set,
-    grid_reader_line_length, grid_reader_start,
+    grid_reader_cursor_back_to_indentation, grid_reader_cursor_down, grid_reader_cursor_end_of_line, grid_reader_cursor_jump, grid_reader_cursor_jump_back, grid_reader_cursor_left, grid_reader_cursor_next_word, grid_reader_cursor_next_word_end, grid_reader_cursor_previous_word,
+    grid_reader_cursor_right, grid_reader_cursor_start_of_line, grid_reader_cursor_up, grid_reader_get_cursor, grid_reader_in_set, grid_reader_line_length, grid_reader_start,
 };
 
 mod grid_view;
 pub use crate::grid_view::{
-    grid_view_clear, grid_view_clear_history, grid_view_delete_cells, grid_view_delete_lines,
-    grid_view_delete_lines_region, grid_view_get_cell, grid_view_insert_cells, grid_view_insert_lines,
-    grid_view_insert_lines_region, grid_view_scroll_region_down, grid_view_scroll_region_up, grid_view_set_cell,
-    grid_view_set_cells, grid_view_set_padding, grid_view_string_cells,
+    grid_view_clear, grid_view_clear_history, grid_view_delete_cells, grid_view_delete_lines, grid_view_delete_lines_region, grid_view_get_cell, grid_view_insert_cells, grid_view_insert_lines, grid_view_insert_lines_region, grid_view_scroll_region_down, grid_view_scroll_region_up,
+    grid_view_set_cell, grid_view_set_cells, grid_view_set_padding, grid_view_string_cells,
 };
 
 mod screen_write;
 pub use crate::screen_write::{
-    screen_write_alignmenttest, screen_write_alternateoff, screen_write_alternateon, screen_write_backspace,
-    screen_write_box, screen_write_carriagereturn, screen_write_cell, screen_write_clearcharacter,
-    screen_write_clearendofline, screen_write_clearendofscreen, screen_write_clearhistory, screen_write_clearline,
-    screen_write_clearscreen, screen_write_clearstartofline, screen_write_clearstartofscreen, screen_write_collect_add,
-    screen_write_collect_end, screen_write_cursordown, screen_write_cursorleft, screen_write_cursormove,
-    screen_write_cursorright, screen_write_cursorup, screen_write_deletecharacter, screen_write_deleteline,
-    screen_write_fast_copy, screen_write_free_list, screen_write_fullredraw, screen_write_hline,
-    screen_write_insertcharacter, screen_write_insertline, screen_write_linefeed, screen_write_make_list,
-    screen_write_menu, screen_write_mode_clear, screen_write_mode_set, screen_write_nputs, screen_write_preview,
-    screen_write_putc, screen_write_puts, screen_write_rawstring, screen_write_reset, screen_write_reverseindex,
-    screen_write_scrolldown, screen_write_scrollregion, screen_write_scrollup, screen_write_setselection,
-    screen_write_start, screen_write_start_callback, screen_write_start_pane, screen_write_stop, screen_write_strlen,
-    screen_write_text, screen_write_vline, screen_write_vnputs,
+    screen_write_alignmenttest, screen_write_alternateoff, screen_write_alternateon, screen_write_backspace, screen_write_box, screen_write_carriagereturn, screen_write_cell, screen_write_clearcharacter, screen_write_clearendofline, screen_write_clearendofscreen, screen_write_clearhistory,
+    screen_write_clearline, screen_write_clearscreen, screen_write_clearstartofline, screen_write_clearstartofscreen, screen_write_collect_add, screen_write_collect_end, screen_write_cursordown, screen_write_cursorleft, screen_write_cursormove, screen_write_cursorright, screen_write_cursorup,
+    screen_write_deletecharacter, screen_write_deleteline, screen_write_fast_copy, screen_write_free_list, screen_write_fullredraw, screen_write_hline, screen_write_insertcharacter, screen_write_insertline, screen_write_linefeed, screen_write_make_list, screen_write_menu, screen_write_mode_clear,
+    screen_write_mode_set, screen_write_nputs, screen_write_preview, screen_write_putc, screen_write_puts, screen_write_rawstring, screen_write_reset, screen_write_reverseindex, screen_write_scrolldown, screen_write_scrollregion, screen_write_scrollup, screen_write_setselection, screen_write_start,
+    screen_write_start_callback, screen_write_start_pane, screen_write_stop, screen_write_strlen, screen_write_text, screen_write_vline, screen_write_vnputs,
 };
 
 mod screen_redraw;
@@ -2772,30 +2596,18 @@ pub use crate::screen_redraw::{screen_redraw_pane, screen_redraw_screen};
 
 mod screen_;
 pub use crate::screen_::{
-    screen_alternate_off, screen_alternate_on, screen_check_selection, screen_clear_selection, screen_free,
-    screen_hide_selection, screen_init, screen_mode_to_string, screen_pop_title, screen_push_title, screen_reinit,
-    screen_reset_hyperlinks, screen_reset_tabs, screen_resize, screen_resize_cursor, screen_sel, screen_select_cell,
-    screen_set_cursor_colour, screen_set_cursor_style, screen_set_path, screen_set_selection, screen_set_title,
-    screen_titles,
+    screen_alternate_off, screen_alternate_on, screen_check_selection, screen_clear_selection, screen_free, screen_hide_selection, screen_init, screen_mode_to_string, screen_pop_title, screen_push_title, screen_reinit, screen_reset_hyperlinks, screen_reset_tabs, screen_resize, screen_resize_cursor,
+    screen_sel, screen_select_cell, screen_set_cursor_colour, screen_set_cursor_style, screen_set_path, screen_set_selection, screen_set_title, screen_titles,
 };
 
 mod window_;
 pub use crate::window_::{
-    all_window_panes, window_add_pane, window_add_ref, window_cmp, window_count_panes, window_create,
-    window_destroy_panes, window_find_by_id, window_find_by_id_str, window_find_string, window_get_active_at,
-    window_has_pane, window_lost_pane, window_pane_at_index, window_pane_cmp, window_pane_default_cursor,
-    window_pane_destroy_ready, window_pane_exited, window_pane_find_by_id, window_pane_find_by_id_str,
-    window_pane_find_down, window_pane_find_left, window_pane_find_right, window_pane_find_up,
-    window_pane_get_new_data, window_pane_index, window_pane_key, window_pane_mode, window_pane_next_by_number,
-    window_pane_previous_by_number, window_pane_reset_mode, window_pane_reset_mode_all, window_pane_resize,
-    window_pane_search, window_pane_send_resize, window_pane_set_event, window_pane_set_mode, window_pane_stack_push,
-    window_pane_stack_remove, window_pane_start_input, window_pane_update_focus, window_pane_update_used_data,
-    window_pane_visible, window_pop_zoom, window_printable_flags, window_push_zoom, window_redraw_active_switch,
-    window_remove_pane, window_remove_ref, window_resize, window_set_active_pane, window_set_fill_character,
-    window_set_name, window_unzoom, window_update_activity, window_update_focus, window_zoom, windows, winlink_add,
-    winlink_clear_flags, winlink_cmp, winlink_count, winlink_find_by_index, winlink_find_by_window,
-    winlink_find_by_window_id, winlink_next, winlink_next_by_number, winlink_previous, winlink_previous_by_number,
-    winlink_remove, winlink_set_window, winlink_shuffle_up, winlink_stack_push, winlink_stack_remove,
+    all_window_panes, window_add_pane, window_add_ref, window_cmp, window_count_panes, window_create, window_destroy_panes, window_find_by_id, window_find_by_id_str, window_find_string, window_get_active_at, window_has_pane, window_lost_pane, window_pane_at_index, window_pane_cmp,
+    window_pane_default_cursor, window_pane_destroy_ready, window_pane_exited, window_pane_find_by_id, window_pane_find_by_id_str, window_pane_find_down, window_pane_find_left, window_pane_find_right, window_pane_find_up, window_pane_get_new_data, window_pane_index, window_pane_key,
+    window_pane_mode, window_pane_next_by_number, window_pane_previous_by_number, window_pane_reset_mode, window_pane_reset_mode_all, window_pane_resize, window_pane_search, window_pane_send_resize, window_pane_set_event, window_pane_set_mode, window_pane_stack_push, window_pane_stack_remove,
+    window_pane_start_input, window_pane_update_focus, window_pane_update_used_data, window_pane_visible, window_pop_zoom, window_printable_flags, window_push_zoom, window_redraw_active_switch, window_remove_pane, window_remove_ref, window_resize, window_set_active_pane, window_set_fill_character,
+    window_set_name, window_unzoom, window_update_activity, window_update_focus, window_zoom, windows, winlink_add, winlink_clear_flags, winlink_cmp, winlink_count, winlink_find_by_index, winlink_find_by_window, winlink_find_by_window_id, winlink_next, winlink_next_by_number, winlink_previous,
+    winlink_previous_by_number, winlink_remove, winlink_set_window, winlink_shuffle_up, winlink_stack_push, winlink_stack_remove,
 };
 /*
 unsafe extern "C" {
@@ -2829,11 +2641,8 @@ unsafe extern "C" {
 
 mod layout;
 pub use crate::layout::{
-    layout_assign_pane, layout_close_pane, layout_count_cells, layout_create_cell, layout_destroy_cell,
-    layout_fix_offsets, layout_fix_panes, layout_free, layout_free_cell, layout_init, layout_make_leaf,
-    layout_make_node, layout_print_cell, layout_resize, layout_resize_adjust, layout_resize_layout, layout_resize_pane,
-    layout_resize_pane_to, layout_search_by_border, layout_set_size, layout_split_pane, layout_spread_cell,
-    layout_spread_out,
+    layout_assign_pane, layout_close_pane, layout_count_cells, layout_create_cell, layout_destroy_cell, layout_fix_offsets, layout_fix_panes, layout_free, layout_free_cell, layout_init, layout_make_leaf, layout_make_node, layout_print_cell, layout_resize, layout_resize_adjust, layout_resize_layout,
+    layout_resize_pane, layout_resize_pane_to, layout_search_by_border, layout_set_size, layout_split_pane, layout_spread_cell, layout_spread_out,
 };
 
 mod layout_custom;
@@ -2844,12 +2653,8 @@ pub use crate::layout_set::{layout_set_lookup, layout_set_next, layout_set_previ
 
 mod mode_tree;
 pub use crate::mode_tree::{
-    mode_tree_add, mode_tree_build, mode_tree_build_cb, mode_tree_collapse_current, mode_tree_count_tagged,
-    mode_tree_down, mode_tree_draw, mode_tree_draw_as_parent, mode_tree_draw_cb, mode_tree_each_cb,
-    mode_tree_each_tagged, mode_tree_expand, mode_tree_expand_current, mode_tree_free, mode_tree_get_current,
-    mode_tree_get_current_name, mode_tree_height_cb, mode_tree_key, mode_tree_key_cb, mode_tree_menu_cb,
-    mode_tree_no_tag, mode_tree_remove, mode_tree_resize, mode_tree_run_command, mode_tree_search_cb,
-    mode_tree_set_current, mode_tree_start, mode_tree_up, mode_tree_zoom,
+    mode_tree_add, mode_tree_build, mode_tree_build_cb, mode_tree_collapse_current, mode_tree_count_tagged, mode_tree_down, mode_tree_draw, mode_tree_draw_as_parent, mode_tree_draw_cb, mode_tree_each_cb, mode_tree_each_tagged, mode_tree_expand, mode_tree_expand_current, mode_tree_free,
+    mode_tree_get_current, mode_tree_get_current_name, mode_tree_height_cb, mode_tree_key, mode_tree_key_cb, mode_tree_menu_cb, mode_tree_no_tag, mode_tree_remove, mode_tree_resize, mode_tree_run_command, mode_tree_search_cb, mode_tree_set_current, mode_tree_start, mode_tree_up, mode_tree_zoom,
 };
 
 mod window_buffer;
@@ -2865,10 +2670,7 @@ mod window_client;
 pub use crate::window_client::window_client_mode;
 
 mod window_copy;
-pub use crate::window_copy::{
-    window_copy_add, window_copy_get_line, window_copy_get_word, window_copy_mode, window_copy_pagedown,
-    window_copy_pageup, window_copy_start_drag, window_copy_vadd, window_view_mode,
-};
+pub use crate::window_copy::{window_copy_add, window_copy_get_line, window_copy_get_word, window_copy_mode, window_copy_pagedown, window_copy_pageup, window_copy_start_drag, window_copy_vadd, window_view_mode};
 
 mod window_customize;
 pub use crate::window_customize::window_customize_mode;
@@ -2878,36 +2680,28 @@ pub use crate::names::{check_window_name, default_window_name, parse_window_name
 
 mod control;
 pub use crate::control::{
-    control_add_sub, control_all_done, control_continue_pane, control_discard, control_pane_offset, control_pause_pane,
-    control_ready, control_remove_sub, control_reset_offsets, control_set_pane_off, control_set_pane_on, control_start,
-    control_state, control_stop, control_write, control_write_output,
+    control_add_sub, control_all_done, control_continue_pane, control_discard, control_pane_offset, control_pause_pane, control_ready, control_remove_sub, control_reset_offsets, control_set_pane_off, control_set_pane_on, control_start, control_state, control_stop, control_write,
+    control_write_output,
 };
 
 mod control_notify;
 pub use crate::control_notify::{
-    control_notify_client_detached, control_notify_client_session_changed, control_notify_pane_mode_changed,
-    control_notify_paste_buffer_changed, control_notify_paste_buffer_deleted, control_notify_session_closed,
-    control_notify_session_created, control_notify_session_renamed, control_notify_session_window_changed,
-    control_notify_window_layout_changed, control_notify_window_linked, control_notify_window_pane_changed,
-    control_notify_window_renamed, control_notify_window_unlinked,
+    control_notify_client_detached, control_notify_client_session_changed, control_notify_pane_mode_changed, control_notify_paste_buffer_changed, control_notify_paste_buffer_deleted, control_notify_session_closed, control_notify_session_created, control_notify_session_renamed,
+    control_notify_session_window_changed, control_notify_window_layout_changed, control_notify_window_linked, control_notify_window_pane_changed, control_notify_window_renamed, control_notify_window_unlinked,
 };
 
 mod session_;
 pub use crate::session_::{
-    next_session_id, session_add_ref, session_alive, session_attach, session_check_name, session_cmp, session_create,
-    session_destroy, session_detach, session_find, session_find_by_id, session_find_by_id_str, session_group_add,
-    session_group_attached_count, session_group_contains, session_group_count, session_group_find, session_group_new,
-    session_group_synchronize_from, session_group_synchronize_to, session_has, session_is_linked, session_last,
-    session_next, session_next_session, session_previous, session_previous_session, session_remove_ref,
-    session_renumber_windows, session_select, session_set_current, session_update_activity, sessions,
+    next_session_id, session_add_ref, session_alive, session_attach, session_check_name, session_cmp, session_create, session_destroy, session_detach, session_find, session_find_by_id, session_find_by_id_str, session_group_add, session_group_attached_count, session_group_contains,
+    session_group_count, session_group_find, session_group_new, session_group_synchronize_from, session_group_synchronize_to, session_has, session_is_linked, session_last, session_next, session_next_session, session_previous, session_previous_session, session_remove_ref, session_renumber_windows,
+    session_select, session_set_current, session_update_activity, sessions,
 };
 // sessions_RB_INSERT, sessions_RB_INSERT_COLOR, sessions_RB_NFIND, sessions_RB_REMOVE, sessions_RB_REMOVE_COLOR, sessions_RB_FIND
 
 mod utf8;
 pub use crate::utf8::{
-    utf8_append, utf8_build_one, utf8_copy, utf8_cstrhas, utf8_cstrwidth, utf8_from_data, utf8_fromcstr, utf8_fromwc,
-    utf8_in_table, utf8_isvalid, utf8_open, utf8_padcstr, utf8_rpadcstr, utf8_sanitize, utf8_set, utf8_stravis,
-    utf8_stravisx, utf8_strlen, utf8_strvis, utf8_strwidth, utf8_to_data, utf8_tocstr, utf8_towc,
+    utf8_append, utf8_build_one, utf8_copy, utf8_cstrhas, utf8_cstrwidth, utf8_from_data, utf8_fromcstr, utf8_fromwc, utf8_in_table, utf8_isvalid, utf8_open, utf8_padcstr, utf8_rpadcstr, utf8_sanitize, utf8_set, utf8_stravis, utf8_stravisx, utf8_strlen, utf8_strvis, utf8_strwidth, utf8_to_data,
+    utf8_tocstr, utf8_towc,
 };
 
 mod osdep;
@@ -2942,10 +2736,7 @@ pub const MENU_NOMOUSE: i32 = 0x1;
 pub const MENU_TAB: i32 = 0x2;
 pub const MENU_STAYOPEN: i32 = 0x4;
 mod menu_;
-pub use crate::menu_::{
-    menu_add_item, menu_add_items, menu_check_cb, menu_create, menu_data, menu_display, menu_draw_cb, menu_free,
-    menu_free_cb, menu_key_cb, menu_mode_cb, menu_prepare,
-};
+pub use crate::menu_::{menu_add_item, menu_add_items, menu_check_cb, menu_create, menu_data, menu_display, menu_draw_cb, menu_free, menu_free_cb, menu_key_cb, menu_mode_cb, menu_prepare};
 
 pub const POPUP_CLOSEEXIT: i32 = 0x1;
 pub const POPUP_CLOSEEXITZERO: i32 = 0x2;
@@ -2968,21 +2759,13 @@ unsafe extern "C" {}
 unsafe extern "C" {}
 
 mod server_acl;
-pub use crate::server_acl::{
-    server_acl_display, server_acl_get_uid, server_acl_init, server_acl_join, server_acl_user_allow,
-    server_acl_user_allow_write, server_acl_user_deny, server_acl_user_deny_write, server_acl_user_find,
-};
+pub use crate::server_acl::{server_acl_display, server_acl_get_uid, server_acl_init, server_acl_join, server_acl_user_allow, server_acl_user_allow_write, server_acl_user_deny, server_acl_user_deny_write, server_acl_user_find};
 
 mod hyperlinks_;
-pub use crate::hyperlinks_::{
-    hyperlinks, hyperlinks_copy, hyperlinks_free, hyperlinks_get, hyperlinks_init, hyperlinks_put, hyperlinks_reset,
-};
+pub use crate::hyperlinks_::{hyperlinks, hyperlinks_copy, hyperlinks_free, hyperlinks_get, hyperlinks_init, hyperlinks_put, hyperlinks_reset};
 
 pub mod xmalloc;
-pub use crate::xmalloc::{
-    free_, memcpy_, memcpy__, xasprintf, xasprintf_, xcalloc, xcalloc_, xcalloc__, xcalloc1, xmalloc, xmalloc_,
-    xrealloc, xrealloc_, xreallocarray_, xsnprintf, xstrdup, xstrdup_, xvasprintf,
-};
+pub use crate::xmalloc::{free_, memcpy_, memcpy__, xasprintf, xasprintf_, xcalloc, xcalloc_, xcalloc__, xcalloc1, xmalloc, xmalloc_, xrealloc, xrealloc_, xreallocarray_, xsnprintf, xstrdup, xstrdup_, xvasprintf};
 /*
 unsafe extern "C" {
     pub unsafe fn xasprintf(ret: *mut *mut c_char, fmt: *const c_char, args: ...) -> c_int;
@@ -2994,10 +2777,7 @@ unsafe extern "C" {
 */
 
 pub mod tmux_protocol;
-pub use crate::tmux_protocol::{
-    PROTOCOL_VERSION, msg_command, msg_read_cancel, msg_read_data, msg_read_done, msg_read_open, msg_write_close,
-    msg_write_data, msg_write_open, msg_write_ready, msgtype,
-};
+pub use crate::tmux_protocol::{PROTOCOL_VERSION, msg_command, msg_read_cancel, msg_read_data, msg_read_done, msg_read_open, msg_write_close, msg_write_data, msg_write_open, msg_write_ready, msgtype};
 
 unsafe extern "C-unwind" {
     pub fn vsnprintf(_: *mut c_char, _: usize, _: *const c_char, _: VaList) -> c_int;
@@ -3010,6 +2790,7 @@ unsafe impl Sync for SyncCharPtr {}
 struct SyncCharPtr(*const c_char);
 impl SyncCharPtr {
     const fn new(value: &'static CStr) -> Self { Self(value.as_ptr()) }
+    const fn from_ptr(value: *const c_char) -> Self { Self(value) }
     const fn null() -> Self { Self(null()) }
     const fn as_ptr(&self) -> *const c_char { self.0 }
 }
@@ -3072,4 +2853,23 @@ macro_rules! function_name {
             None => &name[..name.len() - 3],
         }
     }};
+}
+
+pub const fn concat_array<const N: usize, const M: usize, const O: usize, T: Copy>(a1: [T; N], a2: [T; M]) -> [T; O] {
+    let mut out: [MaybeUninit<T>; O] = [MaybeUninit::uninit(); O];
+
+    let mut i: usize = 0;
+    while i < a1.len() {
+        out[i].write(a1[i]);
+        i += 1;
+    }
+    while i < a1.len() + a2.len() {
+        out[i].write(a2[i - a1.len()]);
+        i += 1;
+    }
+
+    assert!(a1.len() + a2.len() == out.len());
+    assert!(i == out.len());
+
+    unsafe { MaybeUninit::array_assume_init(out) }
 }

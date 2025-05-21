@@ -1,7 +1,6 @@
 use crate::*;
 
-const DISPLAY_MESSAGE_TEMPLATE: &CStr =
-    c"[#{session_name}] #{window_index}:#{window_name}, current pane #{pane_index} - (%H:%M %d-%b-%y)";
+const DISPLAY_MESSAGE_TEMPLATE: &CStr = c"[#{session_name}] #{window_index}:#{window_name}, current pane #{pane_index} - (%H:%M %d-%b-%y)";
 
 #[unsafe(no_mangle)]
 static mut cmd_display_message_entry: cmd_entry = cmd_entry {
@@ -13,9 +12,7 @@ static mut cmd_display_message_entry: cmd_entry = cmd_entry {
 
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_PANE, CMD_FIND_CANFAIL),
 
-    flags: cmd_flag::CMD_AFTERHOOK
-        .union(cmd_flag::CMD_CLIENT_CFLAG)
-        .union(cmd_flag::CMD_CLIENT_CANFAIL),
+    flags: cmd_flag::CMD_AFTERHOOK.union(cmd_flag::CMD_CLIENT_CFLAG).union(cmd_flag::CMD_CLIENT_CANFAIL),
     exec: Some(cmd_display_message_exec),
     ..unsafe { zeroed() }
 };
@@ -77,11 +74,7 @@ unsafe extern "C" fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_i
             }
         }
 
-        let mut template = if (count != 0) {
-            args_string(args, 0)
-        } else {
-            args_get_(args, 'F')
-        };
+        let mut template = if (count != 0) { args_string(args, 0) } else { args_get_(args, 'F') };
         if (template.is_null()) {
             template = DISPLAY_MESSAGE_TEMPLATE.as_ptr();
         }
@@ -100,24 +93,16 @@ unsafe extern "C" fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_i
             null_mut()
         };
 
-        let flags = if (args_has_(args, 'v')) {
-            format_flags::FORMAT_VERBOSE
-        } else {
-            format_flags::empty()
-        };
+        let flags = if (args_has_(args, 'v')) { format_flags::FORMAT_VERBOSE } else { format_flags::empty() };
         let mut ft = format_create(cmdq_get_client(item), item, FORMAT_NONE, flags);
-        format_defaults(ft, c, s, wl, wp);
+        format_defaults(ft, c, NonNull::new(s), NonNull::new(wl), NonNull::new(wp));
 
         if (args_has_(args, 'a')) {
             format_each(ft, Some(cmd_display_message_each), item as _);
             return (cmd_retval::CMD_RETURN_NORMAL);
         }
 
-        let msg = if (args_has_(args, 'l')) {
-            xstrdup(template).as_ptr()
-        } else {
-            format_expand_time(ft, template)
-        };
+        let msg = if (args_has_(args, 'l')) { xstrdup(template).as_ptr() } else { format_expand_time(ft, template) };
 
         if (cmdq_get_client(item).is_null()) {
             cmdq_error(item, c"%s".as_ptr(), msg);

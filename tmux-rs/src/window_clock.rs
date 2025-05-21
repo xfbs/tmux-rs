@@ -9,7 +9,7 @@ unsafe extern "C" {
 
 #[unsafe(no_mangle)]
 pub static mut window_clock_mode: window_mode = window_mode {
-    name: c"clock-mode".as_ptr(),
+    name: SyncCharPtr::new(c"clock-mode"),
 
     init: Some(window_clock_init),
     free: Some(window_clock_free),
@@ -25,6 +25,7 @@ pub struct window_clock_mode_data {
     pub timer: event,
 }
 
+#[rustfmt::skip]
 #[unsafe(no_mangle)]
 pub static mut window_clock_table: [[[c_char; 5]; 5]; 14] = [
     [
@@ -153,35 +154,26 @@ pub unsafe extern "C" fn window_clock_timer_callback(fd: i32, events: i16, arg: 
         }
         (*data).tim = t;
 
-        window_clock_draw_screen(wme);
+        window_clock_draw_screen(NonNull::new(wme).unwrap());
         (*wp).flags |= window_pane_flags::PANE_REDRAW;
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_clock_init(
-    wme: *mut window_mode_entry,
-    _fs: *mut cmd_find_state,
-    args: *mut args,
-) -> *mut screen {
+pub unsafe extern "C" fn window_clock_init(wme: NonNull<window_mode_entry>, _fs: *mut cmd_find_state, args: *mut args) -> *mut screen {
     unsafe {
-        let mut wp = (*wme).wp as *mut window_pane;
+        let mut wp = (*wme.as_ptr()).wp as *mut window_pane;
         let mut tv = timeval { tv_sec: 1, tv_usec: 0 };
 
         let data = xmalloc_::<window_clock_mode_data>().as_ptr();
-        (*wme).data = data.cast();
+        (*wme.as_ptr()).data = data.cast();
         (*data).tim = libc::time(null_mut());
 
-        evtimer_set(&raw mut (*data).timer, Some(window_clock_timer_callback), wme.cast());
+        evtimer_set(&raw mut (*data).timer, Some(window_clock_timer_callback), wme.cast().as_ptr());
         evtimer_add(&raw mut (*data).timer, &raw mut tv);
 
         let mut s = &raw mut (*data).screen;
-        screen_init(
-            s,
-            screen_size_x(&raw mut (*wp).base),
-            screen_size_y(&raw mut (*wp).base),
-            0,
-        );
+        screen_init(s, screen_size_x(&raw mut (*wp).base), screen_size_y(&raw mut (*wp).base), 0);
         (*s).mode &= !MODE_CURSOR;
 
         window_clock_draw_screen(wme);
@@ -191,9 +183,9 @@ pub unsafe extern "C" fn window_clock_init(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_clock_free(wme: *mut window_mode_entry) {
+pub unsafe extern "C" fn window_clock_free(wme: NonNull<window_mode_entry>) {
     unsafe {
-        let data = (*wme).data as *mut window_clock_mode_data;
+        let data = (*wme.as_ptr()).data as *mut window_clock_mode_data;
 
         evtimer_del(&raw mut (*data).timer);
         screen_free(&raw mut (*data).screen);
@@ -202,9 +194,9 @@ pub unsafe extern "C" fn window_clock_free(wme: *mut window_mode_entry) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_clock_resize(wme: *mut window_mode_entry, sx: u32, sy: u32) {
+pub unsafe extern "C" fn window_clock_resize(wme: NonNull<window_mode_entry>, sx: u32, sy: u32) {
     unsafe {
-        let data = (*wme).data as *mut window_clock_mode_data;
+        let data = (*wme.as_ptr()).data as *mut window_clock_mode_data;
         let mut s = &raw mut (*data).screen;
 
         screen_resize(s, sx, sy, 0);
@@ -213,24 +205,17 @@ pub unsafe extern "C" fn window_clock_resize(wme: *mut window_mode_entry, sx: u3
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_clock_key(
-    wme: *mut window_mode_entry,
-    c: *mut client,
-    s: *mut session,
-    wl: *mut winlink,
-    key: key_code,
-    m: *mut mouse_event,
-) {
+pub unsafe extern "C" fn window_clock_key(wme: NonNull<window_mode_entry>, c: *mut client, s: *mut session, wl: *mut winlink, key: key_code, m: *mut mouse_event) {
     unsafe {
-        window_pane_reset_mode((*wme).wp);
+        window_pane_reset_mode((*wme.as_ptr()).wp);
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_clock_draw_screen(wme: *mut window_mode_entry) {
+pub unsafe extern "C" fn window_clock_draw_screen(wme: NonNull<window_mode_entry>) {
     unsafe {
-        let mut wp = (*wme).wp;
-        let mut data = (*wme).data as *mut window_clock_mode_data;
+        let mut wp = (*wme.as_ptr()).wp;
+        let mut data = (*wme.as_ptr()).data as *mut window_clock_mode_data;
         let mut ctx: screen_write_ctx = zeroed();
         let mut colour: i32;
         let mut style: i32;
