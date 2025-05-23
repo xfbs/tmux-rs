@@ -1,7 +1,7 @@
 use super::*;
 
 pub type mode_tree_build_cb = Option<unsafe extern "C" fn(_: NonNull<c_void>, _: *mut mode_tree_sort_criteria, _: *mut u64, _: *const c_char)>;
-pub type mode_tree_draw_cb = Option<unsafe extern "C" fn(_: *mut c_void, _: NonNull<c_void>, _: *mut screen_write_ctx, _: c_uint, _: c_uint)>;
+pub type mode_tree_draw_cb = Option<unsafe extern "C" fn(_: *mut c_void, _: Option<NonNull<c_void>>, _: *mut screen_write_ctx, _: c_uint, _: c_uint)>;
 pub type mode_tree_search_cb = Option<unsafe extern "C" fn(_: *mut c_void, _: NonNull<c_void>, _: *const c_char) -> boolint>;
 pub type mode_tree_menu_cb = Option<unsafe extern "C" fn(_: NonNull<c_void>, _: *mut client, _: key_code)>;
 pub type mode_tree_height_cb = Option<unsafe extern "C" fn(_: *mut c_void, _: c_uint) -> c_uint>;

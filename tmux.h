@@ -3217,7 +3217,7 @@ char *window_copy_get_word(struct window_pane *, u_int, u_int);
 char *window_copy_get_line(struct window_pane *, u_int);
 
 /* window-option.c */
-extern const struct window_mode window_customize_mode;
+extern struct window_mode window_customize_mode;
 
 /* names.c */
 void check_window_name(struct window *);

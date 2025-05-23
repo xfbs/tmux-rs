@@ -43,7 +43,6 @@ pub unsafe extern "C" fn cmd_send_keys_inject_key(item: *mut cmdq_item, mut afte
         let mut wl = (*target).wl;
         let mut wp = (*target).wp;
         //struct window_mode_entry *wme;
-        let mut table = null_mut();
         // struct key_binding *bd;
         // struct *event;
 
@@ -67,9 +66,10 @@ pub unsafe extern "C" fn cmd_send_keys_inject_key(item: *mut cmdq_item, mut afte
             }
             return item;
         }
-        table = key_bindings_get_table((*(*wme).mode).key_table.unwrap()(wme), 1);
 
-        let bd = key_bindings_get(table, key & !KEYC_MASK_FLAGS);
+        let mut table = key_bindings_get_table((*(*wme).mode).key_table.unwrap()(wme), 1);
+
+        let bd = key_bindings_get(NonNull::new(table).unwrap(), key & !KEYC_MASK_FLAGS);
         if (!bd.is_null()) {
             (*table).references += 1;
             after = key_bindings_dispatch(bd, after, tc, null_mut(), target);

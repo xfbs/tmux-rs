@@ -4,62 +4,20 @@ unsafe extern "C" {
     pub fn screen_write_free_list(_: *mut screen);
     pub fn screen_write_start_pane(_: *mut screen_write_ctx, _: *mut window_pane, _: *mut screen);
     pub fn screen_write_start(_: *mut screen_write_ctx, _: *mut screen);
-    pub fn screen_write_start_callback(
-        _: *mut screen_write_ctx,
-        _: *mut screen,
-        _: screen_write_init_ctx_cb,
-        _: *mut c_void,
-    );
+    pub fn screen_write_start_callback(_: *mut screen_write_ctx, _: *mut screen, _: screen_write_init_ctx_cb, _: *mut c_void);
     pub fn screen_write_stop(_: *mut screen_write_ctx);
     pub fn screen_write_reset(_: *mut screen_write_ctx);
     pub fn screen_write_strlen(_: *const c_char, ...) -> usize;
-    pub fn screen_write_text(
-        _: *mut screen_write_ctx,
-        _: c_uint,
-        _: c_uint,
-        _: c_uint,
-        _: c_int,
-        _: *const grid_cell,
-        _: *const c_char,
-        ...
-    ) -> c_int;
+    pub fn screen_write_text(_: *mut screen_write_ctx, _: c_uint, _: c_uint, _: c_uint, _: c_int, _: *const grid_cell, _: *const c_char, ...) -> boolint;
     pub fn screen_write_puts(_: *mut screen_write_ctx, _: *const grid_cell, _: *const c_char, ...);
     pub fn screen_write_nputs(_: *mut screen_write_ctx, _: isize, _: *const grid_cell, _: *const c_char, ...);
-    pub fn screen_write_vnputs(
-        _: *mut screen_write_ctx,
-        _: isize,
-        _: *const grid_cell,
-        _: *const c_char,
-        _: *mut VaList,
-    );
+    pub fn screen_write_vnputs(_: *mut screen_write_ctx, _: isize, _: *const grid_cell, _: *const c_char, _: *mut VaList);
     pub fn screen_write_putc(_: *mut screen_write_ctx, _: *const grid_cell, _: c_uchar);
     pub fn screen_write_fast_copy(_: *mut screen_write_ctx, _: *mut screen, _: c_uint, _: c_uint, _: c_uint, _: c_uint);
-    pub fn screen_write_hline(
-        _: *mut screen_write_ctx,
-        _: c_uint,
-        _: c_int,
-        _: c_int,
-        _: box_lines,
-        _: *const grid_cell,
-    );
+    pub fn screen_write_hline(_: *mut screen_write_ctx, _: c_uint, _: c_int, _: c_int, _: box_lines, _: *const grid_cell);
     pub fn screen_write_vline(_: *mut screen_write_ctx, _: c_uint, _: c_int, _: c_int);
-    pub fn screen_write_menu(
-        _: *mut screen_write_ctx,
-        _: *mut menu,
-        _: c_int,
-        _: box_lines,
-        _: *const grid_cell,
-        _: *const grid_cell,
-        _: *const grid_cell,
-    );
-    pub fn screen_write_box(
-        _: *mut screen_write_ctx,
-        _: c_uint,
-        _: c_uint,
-        _: box_lines,
-        _: *const grid_cell,
-        _: *const c_char,
-    );
+    pub fn screen_write_menu(_: *mut screen_write_ctx, _: *mut menu, _: c_int, _: box_lines, _: *const grid_cell, _: *const grid_cell, _: *const grid_cell);
+    pub fn screen_write_box(_: *mut screen_write_ctx, _: c_uint, _: c_uint, _: box_lines, _: *const grid_cell, _: *const c_char);
     pub fn screen_write_preview(_: *mut screen_write_ctx, _: *mut screen, _: c_uint, _: c_uint);
     pub fn screen_write_backspace(_: *mut screen_write_ctx);
     pub fn screen_write_mode_set(_: *mut screen_write_ctx, _: c_int);

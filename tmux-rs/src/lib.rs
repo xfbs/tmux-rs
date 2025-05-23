@@ -5,6 +5,7 @@
 #![feature(let_chains)]
 #![feature(maybe_uninit_array_assume_init)]
 #![feature(maybe_uninit_slice)]
+#![feature(non_null_from_ref)]
 #![feature(ptr_as_uninit)]
 #![warn(static_mut_refs)]
 // #![warn(clippy::shadow_reuse)]

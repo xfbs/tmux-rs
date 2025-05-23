@@ -204,13 +204,13 @@ pub unsafe extern "C" fn window_buffer_build(modedata: NonNull<c_void>, sort_cri
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_draw(modedata: *mut c_void, itemdata: NonNull<c_void>, ctx: *mut screen_write_ctx, sx: u32, sy: u32) {
+pub unsafe extern "C" fn window_buffer_draw(modedata: *mut c_void, itemdata: Option<NonNull<c_void>>, ctx: *mut screen_write_ctx, sx: u32, sy: u32) {
     unsafe {
-        let item: NonNull<window_buffer_itemdata> = itemdata.cast();
+        let item: Option<NonNull<window_buffer_itemdata>> = itemdata.map(NonNull::cast);
         let mut cx = (*(*ctx).s).cx;
         let mut cy = (*(*ctx).s).cy;
 
-        let Some(pb) = NonNull::new(paste_get_name((*item.as_ptr()).name)) else {
+        let Some(pb) = NonNull::new(paste_get_name((*item.unwrap().as_ptr()).name)) else {
             return;
         };
 

@@ -845,19 +845,19 @@ unsafe extern "C" fn window_tree_draw_window(data: *mut window_tree_modedata, s:
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_tree_draw(modedata: *mut c_void, itemdata: NonNull<c_void>, ctx: *mut screen_write_ctx, sx: u32, sy: u32) {
+unsafe extern "C" fn window_tree_draw(modedata: *mut c_void, itemdata: Option<NonNull<c_void>>, ctx: *mut screen_write_ctx, sx: u32, sy: u32) {
     unsafe {
-        let mut item: NonNull<window_tree_itemdata> = itemdata.cast();
+        let mut item: Option<NonNull<window_tree_itemdata>> = itemdata.map(NonNull::cast);
         let mut sp: Option<NonNull<session>> = None;
         let mut wlp: Option<NonNull<winlink>> = None;
         let mut wp: Option<NonNull<window_pane>> = None;
 
-        window_tree_pull_item(item, &raw mut sp, &raw mut wlp, &raw mut wp);
+        window_tree_pull_item(item.unwrap(), &raw mut sp, &raw mut wlp, &raw mut wp);
         let Some(wp) = wp else {
             return;
         };
 
-        match (*item.as_ptr()).type_ {
+        match (*item.unwrap().as_ptr()).type_ {
             window_tree_type::WINDOW_TREE_NONE => (),
             window_tree_type::WINDOW_TREE_SESSION => window_tree_draw_session(modedata.cast(), transmute_ptr(sp), ctx, sx, sy),
             window_tree_type::WINDOW_TREE_WINDOW => window_tree_draw_window(modedata.cast(), transmute_ptr(sp), (*transmute_ptr(wlp)).window, ctx, sx, sy),

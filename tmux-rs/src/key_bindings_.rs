@@ -58,7 +58,7 @@ macro_rules! DEFAULT_WINDOW_MENU {
     };
 }
 
-macro_rules! DEFAULT_PANE_MENU  {
+macro_rules! DEFAULT_PANE_MENU {
     () => {
         concat!(
             " '#{?#{m/r:(copy|view)-mode,#{pane_mode}},Go To Top,}' '<' {send -X history-top}",
@@ -84,7 +84,7 @@ macro_rules! DEFAULT_PANE_MENU  {
             " '#{?pane_marked,Unmark,Mark}' 'm' {select-pane -m}",
             " '#{?#{>:#{window_panes},1},,-}#{?window_zoomed_flag,Unzoom,Zoom}' 'z' {resize-pane -Z}",
         )
-    }
+    };
 }
 
 RB_GENERATE_STATIC!(key_bindings, key_binding, entry, key_bindings_cmp);
@@ -92,9 +92,7 @@ RB_GENERATE_STATIC!(key_tables, key_table, entry, key_table_cmp);
 static mut key_tables: key_tables = rb_initializer();
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn key_table_cmp(table1: *const key_table, table2: *const key_table) -> i32 {
-    unsafe { strcmp((*table1).name, (*table2).name) }
-}
+pub unsafe extern "C" fn key_table_cmp(table1: *const key_table, table2: *const key_table) -> i32 { unsafe { strcmp((*table1).name, (*table2).name) } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn key_bindings_cmp(bd1: *const key_binding, bd2: *const key_binding) -> i32 {
@@ -172,13 +170,13 @@ pub unsafe extern "C" fn key_bindings_unref_table(table: *mut key_table) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn key_bindings_get(table: *mut key_table, key: key_code) -> *mut key_binding {
+pub unsafe extern "C" fn key_bindings_get(table: NonNull<key_table>, key: key_code) -> *mut key_binding {
     unsafe {
         let mut bd = MaybeUninit::<key_binding>::uninit();
         let bd = bd.as_mut_ptr();
 
         (*bd).key = key;
-        rb_find(&raw mut (*table).key_bindings, bd)
+        rb_find(&raw mut (*table.as_ptr()).key_bindings, bd)
     }
 }
 
@@ -194,27 +192,17 @@ pub unsafe extern "C" fn key_bindings_get_default(table: *mut key_table, key: ke
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn key_bindings_first(table: *mut key_table) -> *mut key_binding {
-    unsafe { rb_min(&raw mut (*table).key_bindings) }
-}
+pub unsafe extern "C" fn key_bindings_first(table: *mut key_table) -> *mut key_binding { unsafe { rb_min(&raw mut (*table).key_bindings) } }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn key_bindings_next(_table: *mut key_table, bd: *mut key_binding) -> *mut key_binding {
-    unsafe { rb_next(bd) }
-}
+pub unsafe extern "C" fn key_bindings_next(_table: *mut key_table, bd: *mut key_binding) -> *mut key_binding { unsafe { rb_next(bd) } }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn key_bindings_add(
-    name: *const c_char,
-    key: key_code,
-    note: *const c_char,
-    repeat: i32,
-    cmdlist: *mut cmd_list,
-) {
+pub unsafe extern "C" fn key_bindings_add(name: *const c_char, key: key_code, note: *const c_char, repeat: i32, cmdlist: *mut cmd_list) {
     unsafe {
         let table = key_bindings_get_table(name, 1);
 
-        let mut bd = key_bindings_get(table, key & !KEYC_MASK_FLAGS);
+        let mut bd = key_bindings_get(NonNull::new(table).unwrap(), key & !KEYC_MASK_FLAGS);
         if (cmdlist.is_null()) {
             if (!bd.is_null()) {
                 free_((*bd).note);
@@ -244,13 +232,7 @@ pub unsafe extern "C" fn key_bindings_add(
         (*bd).cmdlist = cmdlist;
 
         let s = cmd_list_print((*bd).cmdlist, 0);
-        log_debug!(
-            "{}: {:#x} {} = {}",
-            "key_bindings_add",
-            (*bd).key,
-            _s(key_string_lookup_key((*bd).key, 1)),
-            _s(s),
-        );
+        log_debug!("{}: {:#x} {} = {}", "key_bindings_add", (*bd).key, _s(key_string_lookup_key((*bd).key, 1)), _s(s),);
         free_(s);
     }
 }
@@ -258,29 +240,23 @@ pub unsafe extern "C" fn key_bindings_add(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn key_bindings_remove(name: *const c_char, key: key_code) {
     unsafe {
-        let table = key_bindings_get_table(name, 0);
-        if table.is_null() {
+        let Some(table) = NonNull::new(key_bindings_get_table(name, 0)) else {
             return;
-        }
+        };
 
         let bd = key_bindings_get(table, key & !KEYC_MASK_FLAGS);
         if bd.is_null() {
             return;
         }
 
-        log_debug!(
-            "{}: {:#x} {}",
-            "key_bindings_remove",
-            (*bd).key,
-            _s(key_string_lookup_key((*bd).key, 1)),
-        );
+        log_debug!("{}: {:#x} {}", "key_bindings_remove", (*bd).key, _s(key_string_lookup_key((*bd).key, 1)),);
 
-        rb_remove(&raw mut (*table).key_bindings, bd);
+        rb_remove(&raw mut (*table.as_ptr()).key_bindings, bd);
         key_bindings_free(bd);
 
-        if (rb_empty(&raw mut (*table).key_bindings) && rb_empty(&raw mut (*table).default_key_bindings)) {
-            rb_remove(&raw mut key_tables, table);
-            key_bindings_unref_table(table);
+        if (rb_empty(&raw mut (*table.as_ptr()).key_bindings) && rb_empty(&raw mut (*table.as_ptr()).default_key_bindings)) {
+            rb_remove(&raw mut key_tables, table.as_ptr());
+            key_bindings_unref_table(table.as_ptr());
         }
     }
 }
@@ -288,17 +264,16 @@ pub unsafe extern "C" fn key_bindings_remove(name: *const c_char, key: key_code)
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn key_bindings_reset(name: *const c_char, key: key_code) {
     unsafe {
-        let table = key_bindings_get_table(name, 0);
-        if (table.is_null()) {
+        let Some(table) = NonNull::new(key_bindings_get_table(name, 0)) else {
             return;
-        }
+        };
 
         let bd = key_bindings_get(table, key & !KEYC_MASK_FLAGS);
         if (bd.is_null()) {
             return;
         }
 
-        let dd = key_bindings_get_default(table, (*bd).key);
+        let dd = key_bindings_get_default(table.as_ptr(), (*bd).key);
         if (dd.is_null()) {
             key_bindings_remove(name, (*bd).key);
             return;
@@ -667,10 +642,7 @@ pub unsafe extern "C" fn key_bindings_init() {
             cmdq_append(null_mut(), cmdq_get_command((*pr).cmdlist, null_mut()));
             cmd_list_free((*pr).cmdlist);
         }
-        cmdq_append(
-            null_mut(),
-            cmdq_get_callback!(key_bindings_init_done, null_mut()).as_ptr(),
-        );
+        cmdq_append(null_mut(), cmdq_get_callback!(key_bindings_init_done, null_mut()).as_ptr());
     }
 }
 
@@ -683,21 +655,11 @@ pub unsafe extern "C" fn key_bindings_read_only(item: *mut cmdq_item, data: *mut
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn key_bindings_dispatch(
-    bd: *mut key_binding,
-    item: *mut cmdq_item,
-    c: *mut client,
-    event: *mut key_event,
-    fs: *mut cmd_find_state,
-) -> *mut cmdq_item {
+pub unsafe extern "C" fn key_bindings_dispatch(bd: *mut key_binding, item: *mut cmdq_item, c: *mut client, event: *mut key_event, fs: *mut cmd_find_state) -> *mut cmdq_item {
     unsafe {
         let mut flags = 0;
 
-        let readonly = if c.is_null() || !(*c).flags.intersects(client_flag::READONLY) {
-            true
-        } else {
-            cmd_list_all_have((*bd).cmdlist, cmd_flag::CMD_READONLY).as_bool()
-        };
+        let readonly = if c.is_null() || !(*c).flags.intersects(client_flag::READONLY) { true } else { cmd_list_all_have((*bd).cmdlist, cmd_flag::CMD_READONLY).as_bool() };
 
         let mut new_item = null_mut();
         if !readonly {

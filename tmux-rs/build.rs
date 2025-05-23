@@ -129,12 +129,11 @@ fn main() {
 }
 
 static FILES: &[&str] = &[
-    "mode-tree.c", //
-    "screen-write.c",
-    "server-client.c",
-    "status.c",
-    "tty-keys.c",
-    "tty.c",
-    "window-copy.c",
-    "window-customize.c",
+    "mode-tree.c",     //
+    "screen-write.c",  //
+    "server-client.c", //
+    "status.c",        //
+    "tty-keys.c",      //
+    "tty.c",           //
+    "window-copy.c",   //
 ];

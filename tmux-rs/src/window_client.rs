@@ -186,10 +186,10 @@ pub unsafe extern "C" fn window_client_build(modedata: NonNull<c_void>, sort_cri
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_client_draw(modedata: *mut c_void, itemdata: NonNull<c_void>, ctx: *mut screen_write_ctx, sx: u32, sy: u32) {
+pub unsafe extern "C" fn window_client_draw(modedata: *mut c_void, itemdata: Option<NonNull<c_void>>, ctx: *mut screen_write_ctx, sx: u32, sy: u32) {
     unsafe {
-        let mut item: NonNull<window_client_itemdata> = itemdata.cast();
-        let mut c = (*item.as_ptr()).c;
+        let mut item: Option<NonNull<window_client_itemdata>> = itemdata.map(NonNull::cast);
+        let mut c = (*item.unwrap().as_ptr()).c;
         let mut s = (*ctx).s;
 
         let mut cx = (*s).cx as u32;
