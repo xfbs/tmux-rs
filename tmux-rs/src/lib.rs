@@ -1,11 +1,5 @@
-#![feature(array_ptr_get)]
 #![feature(c_variadic)]
-#![feature(cfg_boolean_literals)]
-#![feature(const_type_name)]
-#![feature(let_chains)]
 #![feature(maybe_uninit_array_assume_init)]
-#![feature(maybe_uninit_slice)]
-#![feature(non_null_from_ref)]
 #![feature(ptr_as_uninit)]
 #![warn(static_mut_refs)]
 // #![warn(clippy::shadow_reuse)]
@@ -180,10 +174,6 @@ opaque_types! {
 #[cfg(feature = "sixel")]
 opaque_types! {
     sixel_image
-}
-
-opaque_types! {
-    tty_key
 }
 
 pub const _PATH_BSHELL: *const c_char = c"/bin/sh".as_ptr();
@@ -2431,7 +2421,7 @@ mod tty_acs;
 pub use crate::tty_acs::{tty_acs_double_borders, tty_acs_get, tty_acs_heavy_borders, tty_acs_needed, tty_acs_reverse_get, tty_acs_rounded_borders};
 
 mod tty_keys;
-pub use crate::tty_keys::{tty_keys_build, tty_keys_colours, tty_keys_free, tty_keys_next};
+pub use crate::tty_keys::{tty_key, tty_keys_build, tty_keys_colours, tty_keys_free, tty_keys_next};
 
 mod arguments;
 

@@ -97,25 +97,12 @@ more then just server exited unexpectedly.
 - implement fatal and fatalx which accept static rust string
 - consider enum usage
 
-
-remove these from the linking process
-```
-clang -fsanitize=address -fno-omit-frame-pointer -O0 -std=gnu99 -g -Wno-long-long -Wall -W -Wformat=2 -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Wwrite-strings -Wshadow -Wpointer-arith -Wsign-compare -Wundef -Wbad-function-cast -Winline -Wcast-align -Wdeclaration-after-statement -Wno-pointer-sign -Wno-attributes -Wno-unused-result -Wno-format-y2k      -o tmux cmd-parse.o     compat/fgetln.o compat/freezero.o compat/getdtablecount.o compat/getpeereid.o compat/getprogname.o compat/htonll.o compat/ntohll.o compat/setproctitle.o compat/strlcat.o compat/strlcpy.o compat/strtonum.o compat/recallocarray.o compat/getopt.o compat/imsg.o compat/imsg-buffer.o compat/vis.o compat/unvis.o compat/fdforkpty.o -L/home/collin/Git/tmux/tmux-3.5a/target/x86_64-unknown-linux-gnu/debug -ltmux_rs -lbsd -ltinfo  -levent_core  -lm  -lresolv
-```
-
-NEXT: all medium?
-
-2 Medium
-- [ ] 1266 mode-tree
-- [ ] 1591 tty-keys
-
-4 Large
+NEXT:
 - [ ] 2035 status
+- [ ] 1266 mode-tree
 - [ ] 2347 screen-write
 - [ ] 3186 tty
 - [ ] 3392 server-client
-
-1 XL
 - [ ] 5786 window-copy
 
 1 Difficult
@@ -123,6 +110,8 @@ NEXT: all medium?
 
 ## After 100% Rust
 
+- migrate to stable rust
+  - remove usages of c_variadics or help stabilize
 - coverage
 - convert to references instead of pointers
   - requirements to convert pointer to reference <https://doc.rust-lang.org/core/ptr/index.html#pointer-to-reference-conversion>
@@ -134,7 +123,6 @@ NEXT: all medium?
     - also need to ensure no pointers are created and stored from the references
     - NonNull use as_uninit_mut
 - get rid of paste crate, won't need to join symbols any more for C code
-- figure out why building rust binary doesn't work
 - implement cmd-parse.y parser in pest or nom to remove yacc as a build dependency
 - performance: perf command like: perf record -F 99 -i -p 696418 -p 696420
 - lints
@@ -185,6 +173,10 @@ Rust has no such operator and pointers don't implement deref, so they must be tr
 For a bit, I thought I could implement by own smart pointer type which wrapped a `*mut T` or `NonNull` and also
 implemented DerefMut. Unfortunately doing this requires that you can create a `&mut T` which would likely invoke
 undefined behaviour in this context.
+
+## Translation of goto in irreducible control flow
+
+see tty-keys.c tty_key_next
 
 ## BUGS
 - exiting an opened window (not the original one ) causes server exit when asan is enabled

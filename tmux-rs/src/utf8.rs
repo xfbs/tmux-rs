@@ -45,20 +45,12 @@ unsafe extern "C" {
 }
 
 static utf8_force_wide: [wchar_t; 162] = [
-    0x0261D, 0x026F9, 0x0270A, 0x0270B, 0x0270C, 0x0270D, 0x1F1E6, 0x1F1E7, 0x1F1E8, 0x1F1E9, 0x1F1EA, 0x1F1EB,
-    0x1F1EC, 0x1F1ED, 0x1F1EE, 0x1F1EF, 0x1F1F0, 0x1F1F1, 0x1F1F2, 0x1F1F3, 0x1F1F4, 0x1F1F5, 0x1F1F6, 0x1F1F7,
-    0x1F1F8, 0x1F1F9, 0x1F1FA, 0x1F1FB, 0x1F1FC, 0x1F1FD, 0x1F1FE, 0x1F1FF, 0x1F385, 0x1F3C2, 0x1F3C3, 0x1F3C4,
-    0x1F3C7, 0x1F3CA, 0x1F3CB, 0x1F3CC, 0x1F3FB, 0x1F3FC, 0x1F3FD, 0x1F3FE, 0x1F3FF, 0x1F442, 0x1F443, 0x1F446,
-    0x1F447, 0x1F448, 0x1F449, 0x1F44A, 0x1F44B, 0x1F44C, 0x1F44D, 0x1F44E, 0x1F44F, 0x1F450, 0x1F466, 0x1F467,
-    0x1F468, 0x1F469, 0x1F46B, 0x1F46C, 0x1F46D, 0x1F46E, 0x1F470, 0x1F471, 0x1F472, 0x1F473, 0x1F474, 0x1F475,
-    0x1F476, 0x1F477, 0x1F478, 0x1F47C, 0x1F481, 0x1F482, 0x1F483, 0x1F485, 0x1F486, 0x1F487, 0x1F48F, 0x1F491,
-    0x1F4AA, 0x1F574, 0x1F575, 0x1F57A, 0x1F590, 0x1F595, 0x1F596, 0x1F645, 0x1F646, 0x1F647, 0x1F64B, 0x1F64C,
-    0x1F64D, 0x1F64E, 0x1F64F, 0x1F6A3, 0x1F6B4, 0x1F6B5, 0x1F6B6, 0x1F6C0, 0x1F6CC, 0x1F90C, 0x1F90F, 0x1F918,
-    0x1F919, 0x1F91A, 0x1F91B, 0x1F91C, 0x1F91D, 0x1F91E, 0x1F91F, 0x1F926, 0x1F930, 0x1F931, 0x1F932, 0x1F933,
-    0x1F934, 0x1F935, 0x1F936, 0x1F937, 0x1F938, 0x1F939, 0x1F93D, 0x1F93E, 0x1F977, 0x1F9B5, 0x1F9B6, 0x1F9B8,
-    0x1F9B9, 0x1F9BB, 0x1F9CD, 0x1F9CE, 0x1F9CF, 0x1F9D1, 0x1F9D2, 0x1F9D3, 0x1F9D4, 0x1F9D5, 0x1F9D6, 0x1F9D7,
-    0x1F9D8, 0x1F9D9, 0x1F9DA, 0x1F9DB, 0x1F9DC, 0x1F9DD, 0x1FAC3, 0x1FAC4, 0x1FAC5, 0x1FAF0, 0x1FAF1, 0x1FAF2,
-    0x1FAF3, 0x1FAF4, 0x1FAF5, 0x1FAF6, 0x1FAF7, 0x1FAF8,
+    0x0261D, 0x026F9, 0x0270A, 0x0270B, 0x0270C, 0x0270D, 0x1F1E6, 0x1F1E7, 0x1F1E8, 0x1F1E9, 0x1F1EA, 0x1F1EB, 0x1F1EC, 0x1F1ED, 0x1F1EE, 0x1F1EF, 0x1F1F0, 0x1F1F1, 0x1F1F2, 0x1F1F3, 0x1F1F4, 0x1F1F5, 0x1F1F6, 0x1F1F7, 0x1F1F8, 0x1F1F9, 0x1F1FA, 0x1F1FB, 0x1F1FC, 0x1F1FD, 0x1F1FE, 0x1F1FF,
+    0x1F385, 0x1F3C2, 0x1F3C3, 0x1F3C4, 0x1F3C7, 0x1F3CA, 0x1F3CB, 0x1F3CC, 0x1F3FB, 0x1F3FC, 0x1F3FD, 0x1F3FE, 0x1F3FF, 0x1F442, 0x1F443, 0x1F446, 0x1F447, 0x1F448, 0x1F449, 0x1F44A, 0x1F44B, 0x1F44C, 0x1F44D, 0x1F44E, 0x1F44F, 0x1F450, 0x1F466, 0x1F467, 0x1F468, 0x1F469, 0x1F46B, 0x1F46C,
+    0x1F46D, 0x1F46E, 0x1F470, 0x1F471, 0x1F472, 0x1F473, 0x1F474, 0x1F475, 0x1F476, 0x1F477, 0x1F478, 0x1F47C, 0x1F481, 0x1F482, 0x1F483, 0x1F485, 0x1F486, 0x1F487, 0x1F48F, 0x1F491, 0x1F4AA, 0x1F574, 0x1F575, 0x1F57A, 0x1F590, 0x1F595, 0x1F596, 0x1F645, 0x1F646, 0x1F647, 0x1F64B, 0x1F64C,
+    0x1F64D, 0x1F64E, 0x1F64F, 0x1F6A3, 0x1F6B4, 0x1F6B5, 0x1F6B6, 0x1F6C0, 0x1F6CC, 0x1F90C, 0x1F90F, 0x1F918, 0x1F919, 0x1F91A, 0x1F91B, 0x1F91C, 0x1F91D, 0x1F91E, 0x1F91F, 0x1F926, 0x1F930, 0x1F931, 0x1F932, 0x1F933, 0x1F934, 0x1F935, 0x1F936, 0x1F937, 0x1F938, 0x1F939, 0x1F93D, 0x1F93E,
+    0x1F977, 0x1F9B5, 0x1F9B6, 0x1F9B8, 0x1F9B9, 0x1F9BB, 0x1F9CD, 0x1F9CE, 0x1F9CF, 0x1F9D1, 0x1F9D2, 0x1F9D3, 0x1F9D4, 0x1F9D5, 0x1F9D6, 0x1F9D7, 0x1F9D8, 0x1F9D9, 0x1F9DA, 0x1F9DB, 0x1F9DC, 0x1F9DD, 0x1FAC3, 0x1FAC4, 0x1FAC5, 0x1FAF0, 0x1FAF1, 0x1FAF2, 0x1FAF3, 0x1FAF4, 0x1FAF5, 0x1FAF6,
+    0x1FAF7, 0x1FAF8,
 ];
 
 unsafe impl Zeroable for utf8_item {}
@@ -81,11 +73,7 @@ pub unsafe extern "C" fn utf8_data_cmp(ui1: *const utf8_item, ui2: *const utf8_i
         if ((*ui1).size > (*ui2).size) {
             return 1;
         }
-        memcmp(
-            (*ui1).data.as_ptr().cast(),
-            (*ui2).data.as_ptr().cast(),
-            (*ui1).size as usize,
-        )
+        memcmp((*ui1).data.as_ptr().cast(), (*ui2).data.as_ptr().cast(), (*ui1).size as usize)
     }
 }
 pub type utf8_data_tree = rb_head<utf8_item>;
@@ -122,7 +110,7 @@ pub unsafe extern "C" fn utf8_item_by_data(data: *const [i8; UTF8_SIZE], size: u
         let mut ui = MaybeUninit::<utf8_item>::uninit();
         let ui = ui.as_mut_ptr();
 
-        memcpy((*ui).data.as_mut_ptr().cast(), data.as_ptr().cast(), size);
+        memcpy((*ui).data.as_mut_ptr().cast(), (&raw const data).cast(), size);
         (*ui).size = size as u8;
 
         rb_find::<_, discr_data_entry>(&raw mut utf8_data_tree, ui)
@@ -148,13 +136,7 @@ pub unsafe extern "C" fn utf8_put_item(data: *const [c_char; UTF8_SIZE], size: u
         let ui = utf8_item_by_data(data, size);
         if (!ui.is_null()) {
             *index = (*ui).index;
-            log_debug_c(
-                c"%s: found %.*s = %u".as_ptr(),
-                __func__,
-                size as i32,
-                data.as_ptr(),
-                *index,
-            );
+            log_debug_c(c"%s: found %.*s = %u".as_ptr(), __func__, size as i32, (&raw const data) as *const c_char, *index);
             return 0;
         }
 
@@ -172,13 +154,7 @@ pub unsafe extern "C" fn utf8_put_item(data: *const [c_char; UTF8_SIZE], size: u
         rb_insert::<_, discr_data_entry>(&raw mut utf8_data_tree, ui);
 
         *index = ui.index;
-        log_debug_c(
-            c"%s: added %.*s = %u".as_ptr(),
-            __func__,
-            size as i32,
-            data.as_ptr(),
-            *index,
-        );
+        log_debug_c(c"%s: added %.*s = %u".as_ptr(), __func__, size as i32, (&raw const data) as *const c_char, *index);
         0
     }
 }
@@ -193,13 +169,7 @@ pub unsafe extern "C" fn utf8_table_cmp(vp1: *const c_void, vp2: *const c_void) 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn utf8_in_table(find: wchar_t, table: *const wchar_t, count: u32) -> i32 {
     unsafe {
-        let found = bsearch_(
-            &raw const find,
-            table,
-            count as usize,
-            size_of::<wchar_t>(),
-            utf8_table_cmp,
-        );
+        let found = bsearch_(&raw const find, table, count as usize, size_of::<wchar_t>(), utf8_table_cmp);
         !found.is_null() as i32
     }
 }
@@ -223,15 +193,7 @@ pub unsafe extern "C" fn utf8_from_data(ud: *const utf8_data, uc: *mut utf8_char
                 break 'fail;
             }
             *uc = UTF8_SET_SIZE((*ud).size) | UTF8_SET_WIDTH((*ud).width) | index;
-            log_debug_c(
-                c"%s: (%d %d %.*s) -> %08x".as_ptr(),
-                __func__,
-                (*ud).width as u32,
-                (*ud).size as u32,
-                (*ud).size as i32,
-                (*ud).data.as_ptr(),
-                *uc,
-            );
+            log_debug_c(c"%s: (%d %d %.*s) -> %08x".as_ptr(), __func__, (*ud).width as u32, (*ud).size as u32, (*ud).size as i32, (*ud).data.as_ptr(), *uc);
             return UTF8_DONE;
         }
 
@@ -266,23 +228,11 @@ pub unsafe extern "C" fn utf8_to_data(uc: utf8_char, ud: *mut utf8_data) {
             if (ui.is_null()) {
                 memset((*ud).data.as_mut_ptr().cast(), b' ' as i32, (*ud).size as usize);
             } else {
-                memcpy(
-                    (*ud).data.as_mut_ptr().cast(),
-                    (*ui).data.as_mut_ptr().cast(),
-                    (*ud).size as usize,
-                );
+                memcpy((*ud).data.as_mut_ptr().cast(), (*ui).data.as_mut_ptr().cast(), (*ud).size as usize);
             }
         }
 
-        log_debug_c(
-            c"%s: %08x -> (%d %d %.*s)".as_ptr(),
-            __func__,
-            uc,
-            (*ud).width as u32,
-            (*ud).size as u32,
-            (*ud).size as i32,
-            (*ud).data.as_ptr(),
-        );
+        log_debug_c(c"%s: %08x -> (%d %d %.*s)".as_ptr(), __func__, uc, (*ud).width as u32, (*ud).size as u32, (*ud).size as i32, (*ud).data.as_ptr());
     }
 }
 
@@ -291,12 +241,7 @@ pub extern "C" fn utf8_build_one(ch: c_uchar) -> u32 { UTF8_SET_SIZE(1) | UTF8_S
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn utf8_set(ud: *mut utf8_data, ch: c_uchar) {
-    static empty: utf8_data = utf8_data {
-        data: unsafe { zeroed() },
-        have: 1,
-        size: 1,
-        width: 1,
-    };
+    static empty: utf8_data = utf8_data { data: unsafe { zeroed() }, have: 1, size: 1, width: 1 };
 
     unsafe {
         memcpy__(ud, &raw const empty);
@@ -357,24 +302,14 @@ pub unsafe extern "C" fn utf8_towc(ud: *const utf8_data, wc: *mut wchar_t) -> ut
 
         match value {
             -1 => {
-                log_debug_c(
-                    c"UTF-8 %.*s, mbtowc() %d".as_ptr(),
-                    (*ud).size as i32,
-                    (*ud).data.as_ptr(),
-                    errno!(),
-                );
+                log_debug_c(c"UTF-8 %.*s, mbtowc() %d".as_ptr(), (*ud).size as i32, (*ud).data.as_ptr(), errno!());
                 mbtowc(null_mut(), null(), MB_CUR_MAX());
                 return UTF8_ERROR;
             }
             0 => return UTF8_ERROR,
             _ => (),
         }
-        log_debug_c(
-            c"UTF-8 %.*s is %05X".as_ptr(),
-            (*ud).size as i32,
-            (*ud).data.as_ptr(),
-            *wc as u32,
-        );
+        log_debug_c(c"UTF-8 %.*s is %05X".as_ptr(), (*ud).size as i32, (*ud).data.as_ptr(), *wc as u32);
     }
 
     utf8_state::UTF8_DONE
@@ -766,12 +701,7 @@ pub unsafe extern "C" fn utf8_cstrhas(s: *const c_char, ud: *const utf8_data) ->
                 loop_ = loop_.add(1);
                 continue;
             }
-            if memcmp(
-                (*loop_).data.as_ptr().cast(),
-                (*ud).data.as_ptr().cast(),
-                (*loop_).size as usize,
-            ) == 0
-            {
+            if memcmp((*loop_).data.as_ptr().cast(), (*ud).data.as_ptr().cast(), (*loop_).size as usize) == 0 {
                 found = 1;
                 break;
             }
