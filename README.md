@@ -99,7 +99,6 @@ more then just server exited unexpectedly.
 
 NEXT:
 - [ ] 2035 status
-- [ ] 1266 mode-tree
 - [ ] 2347 screen-write
 - [ ] 3186 tty
 - [ ] 3392 server-client
@@ -127,6 +126,10 @@ NEXT:
 - performance: perf command like: perf record -F 99 -i -p 696418 -p 696420
 - lints
 - miri (too many libc functions, maybe possible for tests)
+- eliminate libbsd and other libc functions (use rust equivalent)
+
+- misc rust refactoring:
+  - keyc should just be u64
 
 
 # Thoughts & Ideas
@@ -143,6 +146,7 @@ NEXT:
 - rust literal value inference
 - prototypes
 - variadics
+- function pointer equality comparison
 
 # Notes
 
@@ -237,3 +241,8 @@ I like tmux. I want tmux, not something else. Also I tried out using it before a
 - [Fish 4.0: The Fish Of Theseus](https://fishshell.com/blog/rustport/)
 - [Immunant's C2Rust tmux](https://github.com/immunant/tmux-rs)
 - [Improved C Variadics in Rust and C2Rust](https://immunant.com/blog/2019/09/variadics/)
+- [$20,000 rav1d AV1 Decoder Performance Bounty](https://www.memorysafety.org/blog/rav1d-perf-bounty/)
+- [Making the rav1d Video Decoder 1% Faster](https://ohadravid.github.io/posts/2025-05-rav1d-faster/)
+- [Multiple Security Issues in Screen](https://www.openwall.com/lists/oss-security/2025/05/12/1)
+- [A 10x Faster TypeScript](https://devblogs.microsoft.com/typescript/typescript-native-port/)
+

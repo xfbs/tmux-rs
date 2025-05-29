@@ -89,7 +89,7 @@ pub struct menu_data {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn menu_add_items(menu: *mut menu, items: *mut menu_item, qitem: *mut cmdq_item, c: *mut client, fs: *mut cmd_find_state) {
+pub unsafe extern "C" fn menu_add_items(menu: *mut menu, items: *const menu_item, qitem: *mut cmdq_item, c: *mut client, fs: *mut cmd_find_state) {
     let mut loop_ = items;
     unsafe {
         while !(*loop_).name.as_ptr().is_null() {
@@ -100,7 +100,7 @@ pub unsafe extern "C" fn menu_add_items(menu: *mut menu, items: *mut menu_item, 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn menu_add_item(menu: *mut menu, item: *mut menu_item, qitem: *mut cmdq_item, c: *mut client, fs: *mut cmd_find_state) {
+pub unsafe extern "C" fn menu_add_item(menu: *mut menu, item: *const menu_item, qitem: *mut cmdq_item, c: *mut client, fs: *mut cmd_find_state) {
     unsafe {
         let line = (item.is_null() || (*item).name.as_ptr().is_null() || *(*item).name.as_ptr() == b'\0' as c_char);
         if (line && (*menu).count == 0) {

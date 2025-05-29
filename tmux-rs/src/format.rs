@@ -3017,15 +3017,15 @@ pub unsafe extern "C" fn format_cb_window_activity(ft: *mut format_tree) -> *mut
 
 /// Callback for buffer_mode_format.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn format_cb_buffer_mode_format(_ft: *mut format_tree) -> *mut c_void { unsafe { xstrdup(window_buffer_mode.default_format.as_ptr()).as_ptr().cast() } }
+pub unsafe extern "C" fn format_cb_buffer_mode_format(_ft: *mut format_tree) -> *mut c_void { unsafe { xstrdup(window_buffer_mode.default_format.0).as_ptr().cast() } }
 
 /// Callback for client_mode_format.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn format_cb_client_mode_format(_ft: *mut format_tree) -> *mut c_void { unsafe { xstrdup(window_client_mode.default_format.as_ptr()).as_ptr().cast() } }
+pub unsafe extern "C" fn format_cb_client_mode_format(_ft: *mut format_tree) -> *mut c_void { unsafe { xstrdup(window_client_mode.default_format.0).as_ptr().cast() } }
 
 /// Callback for tree_mode_format.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn format_cb_tree_mode_format(_ft: *mut format_tree) -> *mut c_void { unsafe { xstrdup(window_tree_mode.default_format.as_ptr()).as_ptr().cast() } }
+pub unsafe extern "C" fn format_cb_tree_mode_format(_ft: *mut format_tree) -> *mut c_void { unsafe { xstrdup(window_tree_mode.default_format.0).as_ptr().cast() } }
 
 /// Callback for uid.
 #[unsafe(no_mangle)]

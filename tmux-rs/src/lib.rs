@@ -164,8 +164,6 @@ unsafe extern "C" {
 
 opaque_types! {
     hyperlinks_uri,
-    mode_tree_data,
-    mode_tree_item,
     screen_write_citem,
     screen_write_cline,
     server_acl_user
@@ -2644,8 +2642,9 @@ pub use crate::layout_set::{layout_set_lookup, layout_set_next, layout_set_previ
 
 mod mode_tree;
 pub use crate::mode_tree::{
-    mode_tree_add, mode_tree_build, mode_tree_build_cb, mode_tree_collapse_current, mode_tree_count_tagged, mode_tree_down, mode_tree_draw, mode_tree_draw_as_parent, mode_tree_draw_cb, mode_tree_each_cb, mode_tree_each_tagged, mode_tree_expand, mode_tree_expand_current, mode_tree_free,
-    mode_tree_get_current, mode_tree_get_current_name, mode_tree_height_cb, mode_tree_key, mode_tree_key_cb, mode_tree_menu_cb, mode_tree_no_tag, mode_tree_remove, mode_tree_resize, mode_tree_run_command, mode_tree_search_cb, mode_tree_set_current, mode_tree_start, mode_tree_up, mode_tree_zoom,
+    mode_tree_add, mode_tree_build, mode_tree_build_cb, mode_tree_collapse_current, mode_tree_count_tagged, mode_tree_data, mode_tree_down, mode_tree_draw, mode_tree_draw_as_parent, mode_tree_draw_cb, mode_tree_each_cb, mode_tree_each_tagged, mode_tree_expand, mode_tree_expand_current,
+    mode_tree_free, mode_tree_get_current, mode_tree_get_current_name, mode_tree_height_cb, mode_tree_item, mode_tree_key, mode_tree_key_cb, mode_tree_menu_cb, mode_tree_no_tag, mode_tree_remove, mode_tree_resize, mode_tree_run_command, mode_tree_search_cb, mode_tree_set_current, mode_tree_start,
+    mode_tree_up, mode_tree_zoom,
 };
 
 mod window_buffer;
