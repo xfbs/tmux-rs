@@ -1,8 +1,17 @@
-This project should be considered alpha quality and may not necessarily be in a building state.
+> [!WARNING]
+> This project is alpha quality and known memory bugs.
 
 # tmux-rs
 
-A rust port of tmux.
+A rust port of [tmux](https://github.com/tmux/tmux).
+
+# Files Remaining
+
+- [ ] 2347 screen-write
+- [ ] 3186 tty
+- [ ] 3392 server-client
+- [ ] 5786 window-copy
+- [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
 
 ## Tips
 
@@ -30,7 +39,6 @@ more then just server exited unexpectedly.
   - options_get_number
   - fatalx
 
-
 # TODO
 - review cmd_rotate_window.rs cmd_rotate_window_exec tailq_foreach calls
 - memory sanitizer
@@ -50,16 +58,6 @@ more then just server exited unexpectedly.
 - implement fatal and fatalx which accept static rust string
 - consider enum usage
 - fix commented out debug lines because I was too lazy to translate properly
-
-NEXT:
-- [ ] 2035 status
-- [ ] 2347 screen-write
-- [ ] 3186 tty
-- [ ] 3392 server-client
-- [ ] 5786 window-copy
-
-1 Difficult
-- [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
 
 ## After 100% Rust
 
