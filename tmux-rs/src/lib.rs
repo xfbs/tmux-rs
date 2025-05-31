@@ -1940,8 +1940,8 @@ pub struct status_line {
 
 /* Prompt type. */
 pub const PROMPT_NTYPES: u32 = 4;
-#[repr(i32)]
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[repr(u32)]
+#[derive(Copy, Clone, Eq, PartialEq, num_enum::TryFromPrimitive)]
 pub enum prompt_type {
     PROMPT_TYPE_COMMAND,
     PROMPT_TYPE_SEARCH,
@@ -2344,6 +2344,7 @@ pub enum exit_type {
 }
 
 #[repr(i32)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub enum prompt_mode {
     PROMPT_ENTRY,
     PROMPT_COMMAND,

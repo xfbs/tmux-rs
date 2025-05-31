@@ -32,6 +32,8 @@ pub const VIS_DQ: i32 = 32768;
 
 // from libbsd
 unsafe extern "C" {
+    pub fn fgetln(stream: *mut libc::FILE, len: *mut usize) -> *mut c_char;
+
     pub fn getprogname() -> *const c_char;
     pub fn recallocarray(ptr: *mut c_void, oldnmemb: usize, nmemb: usize, size: usize) -> *mut c_void;
     pub fn freezero(ptr: *mut c_void, size: usize);
