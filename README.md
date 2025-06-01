@@ -1,11 +1,32 @@
 > [!WARNING]
-> This project is alpha quality and known memory bugs.
+> This project is alpha quality and has known memory bugs.
 
 # tmux-rs
 
 A rust port of [tmux](https://github.com/tmux/tmux).
 
-# Files Remaining
+## Why?
+
+Why not? This a fun hobby project for me. It's been my gardening for the past year.
+
+I started this project as a way of getting first hand experience using C2Rust.
+It's simultaneously a great and a terrible tool. I was amazed when I used it that it
+was able to produce Rust code which compiled to a binary which was effectively equivalent to the original C binary.
+Unfortunately, the quality of the resulting rust code ... leaves a lot to be desired.
+It doesn't always retain the intent of the original code, despite being equivalent.
+After discovering this I opted to complete the porting process by hand. The bulk of the work
+was done without AI (llm) assistance. When I was about 70% complete I started integrating using
+Cursor into my workflow for porting some files.
+
+## Why not just use [zellij](https://zellij.dev/)
+
+I like tmux. I want tmux, not something else. Also I tried out using it before and the compilation time was 8 minutes on my machine.
+That's a bit to long for me.
+
+### Files Remaining
+
+I'm in the home stretch of the first part of this project. After finishing translating these files I will begin
+refactoring the Rust code to make it more idiomatic and use less unsafe.
 
 - [ ] 2347 screen-write
 - [ ] 3186 tty
@@ -182,10 +203,6 @@ see tty-keys.c tty_key_next
 - incorrect terminal behavior ; typed keys not displayed properly; lowercased ascii value in table when should be upper (likely caused by vim mistype u in visual)
 - incorrect terminal behavior ; bad flag check should be valu == 0, but i did !value != 0)
 
-
-## Why not [zellij](https://zellij.dev/)
-
-I like tmux. I want tmux, not something else. Also I tried out using it before and the compilation time was 8 minutes on my machine.
 
 # References
 
