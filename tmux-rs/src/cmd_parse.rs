@@ -1,12 +1,10 @@
-use compat_rs::queue::{
-    tailq_empty, tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_last, tailq_remove,
-};
+use compat_rs::queue::{tailq_empty, tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_last, tailq_remove};
 use libc::memset;
 
 use lalrpop_util::lalrpop_mod;
 
 use crate::{
-    xmalloc::{Zeroable, xrecallocarray, xrecallocarray_},
+    xmalloc::{Zeroable, xrecallocarray, xrecallocarray__},
     *,
 };
 
@@ -204,11 +202,7 @@ pub unsafe extern "C" fn cmd_parse_run_parser(cause: *mut *mut c_char) -> *mut c
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_parse_do_file(
-    f: *mut FILE,
-    pi: *mut cmd_parse_input,
-    cause: *mut *mut c_char,
-) -> *mut cmd_parse_commands {
+pub unsafe extern "C" fn cmd_parse_do_file(f: *mut FILE, pi: *mut cmd_parse_input, cause: *mut *mut c_char) -> *mut cmd_parse_commands {
     let mut ps = &raw mut parse_state;
     unsafe {
         memset(ps.cast(), 0, size_of::<cmd_parse_state>());
@@ -219,12 +213,7 @@ pub unsafe extern "C" fn cmd_parse_do_file(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_parse_do_buffer(
-    buf: *const c_char,
-    len: usize,
-    pi: *mut cmd_parse_input,
-    cause: *mut *mut c_char,
-) -> *mut cmd_parse_commands {
+pub unsafe extern "C" fn cmd_parse_do_buffer(buf: *const c_char, len: usize, pi: *mut cmd_parse_input, cause: *mut *mut c_char) -> *mut cmd_parse_commands {
     unsafe {
         let mut ps = &raw mut parse_state;
 
@@ -267,11 +256,7 @@ pub unsafe extern "C" fn cmd_parse_log_commands(cmds: *mut cmd_parse_commands, p
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_parse_expand_alias(
-    cmd: *mut cmd_parse_command,
-    pi: *mut cmd_parse_input,
-    pr: *mut cmd_parse_result,
-) -> i32 {
+pub unsafe extern "C" fn cmd_parse_expand_alias(cmd: *mut cmd_parse_command, pi: *mut cmd_parse_input, pr: *mut cmd_parse_result) -> i32 {
     let __func__ = c"cmd_parse_expand_alias".as_ptr();
     unsafe {
         if (*pi).flags.intersects(cmd_parse_input_flags::CMD_PARSE_NOALIAS) {
@@ -326,11 +311,7 @@ pub unsafe extern "C" fn cmd_parse_expand_alias(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_parse_build_command(
-    cmd: *mut cmd_parse_command,
-    pi: *mut cmd_parse_input,
-    pr: *mut cmd_parse_result,
-) {
+pub unsafe extern "C" fn cmd_parse_build_command(cmd: *mut cmd_parse_command, pi: *mut cmd_parse_input, pr: *mut cmd_parse_result) {
     unsafe {
         let mut cause = null_mut();
         let mut values: *mut args_value = null_mut();
@@ -348,7 +329,7 @@ pub unsafe extern "C" fn cmd_parse_build_command(
 
         'out: {
             for arg in compat_rs::queue::tailq_foreach(&raw mut (*cmd).arguments).map(NonNull::as_ptr) {
-                values = xrecallocarray_(values, count as usize, count as usize + 1, size_of::<args_value>()).as_ptr();
+                values = xrecallocarray__::<args_value>(values, count as usize, count as usize + 1).as_ptr();
                 match (*arg).type_ {
                     cmd_parse_argument_type::CMD_PARSE_STRING => {
                         (*values.add(count as usize)).type_ = args_type::ARGS_STRING;
@@ -391,11 +372,7 @@ pub unsafe extern "C" fn cmd_parse_build_command(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_parse_build_commands(
-    cmds: *mut cmd_parse_commands,
-    pi: *mut cmd_parse_input,
-    pr: *mut cmd_parse_result,
-) {
+pub unsafe extern "C" fn cmd_parse_build_commands(cmds: *mut cmd_parse_commands, pi: *mut cmd_parse_input, pr: *mut cmd_parse_result) {
     let __func__ = c"cmd_parse_build_commands".as_ptr();
     unsafe {
         // struct cmd_parse_command	*cmd;
@@ -487,10 +464,7 @@ pub unsafe extern "C" fn cmd_parse_from_file(f: *mut FILE, mut pi: *mut cmd_pars
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_parse_from_string(
-    s: *const c_char,
-    mut pi: *mut cmd_parse_input,
-) -> *mut cmd_parse_result {
+pub unsafe extern "C" fn cmd_parse_from_string(s: *const c_char, mut pi: *mut cmd_parse_input) -> *mut cmd_parse_result {
     unsafe {
         let mut input = MaybeUninit::<cmd_parse_input>::uninit();
         let input = input.as_mut_ptr();
@@ -506,13 +480,7 @@ pub unsafe extern "C" fn cmd_parse_from_string(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_parse_and_insert(
-    s: *mut c_char,
-    pi: *mut cmd_parse_input,
-    after: *mut cmdq_item,
-    state: *mut cmdq_state,
-    error: *mut *mut c_char,
-) -> cmd_parse_status {
+pub unsafe extern "C" fn cmd_parse_and_insert(s: *mut c_char, pi: *mut cmd_parse_input, after: *mut cmdq_item, state: *mut cmdq_state, error: *mut *mut c_char) -> cmd_parse_status {
     unsafe {
         let pr = cmd_parse_from_string(s, pi);
         match ((*pr).status) {
@@ -534,13 +502,7 @@ pub unsafe extern "C" fn cmd_parse_and_insert(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_parse_and_append(
-    s: *mut c_char,
-    pi: *mut cmd_parse_input,
-    c: *mut client,
-    state: *mut cmdq_state,
-    error: *mut *mut c_char,
-) -> cmd_parse_status {
+pub unsafe extern "C" fn cmd_parse_and_append(s: *mut c_char, pi: *mut cmd_parse_input, c: *mut client, state: *mut cmdq_state, error: *mut *mut c_char) -> cmd_parse_status {
     unsafe {
         let pr = cmd_parse_from_string(s, pi);
         match ((*pr).status) {
@@ -562,11 +524,7 @@ pub unsafe extern "C" fn cmd_parse_and_append(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_parse_from_buffer(
-    buf: *const c_void,
-    len: usize,
-    mut pi: *mut cmd_parse_input,
-) -> *mut cmd_parse_result {
+pub unsafe extern "C" fn cmd_parse_from_buffer(buf: *const c_void, len: usize, mut pi: *mut cmd_parse_input) -> *mut cmd_parse_result {
     static mut pr: cmd_parse_result = unsafe { zeroed() };
     let mut input: cmd_parse_input;
     let mut cause = null_mut();
@@ -599,11 +557,7 @@ pub unsafe extern "C" fn cmd_parse_from_buffer(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_parse_from_arguments(
-    values: *mut args_value,
-    count: u32,
-    mut pi: *mut cmd_parse_input,
-) -> *mut cmd_parse_result {
+pub unsafe extern "C" fn cmd_parse_from_arguments(values: *mut args_value, count: u32, mut pi: *mut cmd_parse_input) -> *mut cmd_parse_result {
     unsafe {
         static mut pr: cmd_parse_result = unsafe { zeroed() };
         let mut input: cmd_parse_input;

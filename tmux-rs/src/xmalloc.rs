@@ -29,9 +29,7 @@ pub fn xmalloc_<T>() -> NonNull<T> {
     let size = size_of::<T>();
     debug_assert!(size != 0);
     let nz_size = NonZero::<usize>::try_from(size).unwrap();
-    NonNull::new(malloc_(nz_size))
-        .unwrap_or_else(|| panic!("xmalloc: allocating {size} bytes"))
-        .cast()
+    NonNull::new(malloc_(nz_size)).unwrap_or_else(|| panic!("xmalloc: allocating {size} bytes")).cast()
 }
 
 pub fn xmalloc__<'a, T>() -> &'a mut MaybeUninit<T> {
@@ -39,9 +37,7 @@ pub fn xmalloc__<'a, T>() -> &'a mut MaybeUninit<T> {
     debug_assert!(size != 0);
     let nz_size = NonZero::<usize>::try_from(size).unwrap();
 
-    let ptr = NonNull::new(malloc_(nz_size))
-        .unwrap_or_else(|| panic!("xmalloc: allocating {size} bytes"))
-        .cast();
+    let ptr = NonNull::new(malloc_(nz_size)).unwrap_or_else(|| panic!("xmalloc: allocating {size} bytes")).cast();
 
     unsafe { ptr.as_uninit_mut() }
 }
@@ -96,9 +92,7 @@ pub unsafe extern "C" fn xrealloc(ptr: *mut c_void, size: usize) -> NonNull<c_vo
 pub unsafe fn xrealloc_<T>(ptr: *mut T, size: usize) -> NonNull<T> { unsafe { xreallocarray_old(ptr, 1, size) } }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn xreallocarray(ptr: *mut c_void, nmemb: usize, size: usize) -> NonNull<c_void> {
-    unsafe { xreallocarray_old(ptr, nmemb, size) }
-}
+pub unsafe extern "C" fn xreallocarray(ptr: *mut c_void, nmemb: usize, size: usize) -> NonNull<c_void> { unsafe { xreallocarray_old(ptr, nmemb, size) } }
 
 pub unsafe fn xreallocarray_old<T>(ptr: *mut T, nmemb: usize, size: usize) -> NonNull<T> {
     unsafe {
@@ -128,38 +122,34 @@ pub unsafe fn xreallocarray_<T>(ptr: *mut T, nmemb: usize) -> NonNull<T> {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn xrecallocarray(
-    ptr: *mut c_void,
-    oldnmemb: usize,
-    nmemb: usize,
-    size: usize,
-) -> NonNull<c_void> {
-    unsafe { xrecallocarray_(ptr, oldnmemb, nmemb, size) }
-}
+pub unsafe extern "C" fn xrecallocarray(ptr: *mut c_void, oldnmemb: usize, nmemb: usize, size: usize) -> NonNull<c_void> { unsafe { xrecallocarray_(ptr, oldnmemb, nmemb, size) } }
 
 pub unsafe fn xrecallocarray_<T>(ptr: *mut T, oldnmemb: usize, nmemb: usize, size: usize) -> NonNull<T> {
     if nmemb == 0 || size == 0 {
         panic!("xrecallocarray: zero size");
     }
 
-    NonNull::new(unsafe { recallocarray(ptr as *mut c_void, oldnmemb, nmemb, size) })
-        .unwrap_or_else(|| panic!("xrecallocarray: allocating {nmemb} * {size}"))
-        .cast()
+    NonNull::new(unsafe { recallocarray(ptr as *mut c_void, oldnmemb, nmemb, size) }).unwrap_or_else(|| panic!("xrecallocarray: allocating {nmemb} * {size}")).cast()
+}
+
+pub unsafe fn xrecallocarray__<T>(ptr: *mut T, oldnmemb: usize, nmemb: usize) -> NonNull<T> {
+    let size = size_of::<T>();
+    if nmemb == 0 || size == 0 {
+        panic!("xrecallocarray: zero size");
+    }
+
+    NonNull::new(unsafe { recallocarray(ptr as *mut c_void, oldnmemb, nmemb, size) }).unwrap_or_else(|| panic!("xrecallocarray: allocating {nmemb} * {size}")).cast()
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn xstrdup(str: *const c_char) -> NonNull<c_char> {
-    NonNull::new(unsafe { strdup(str) }).unwrap()
-}
+pub unsafe extern "C" fn xstrdup(str: *const c_char) -> NonNull<c_char> { NonNull::new(unsafe { strdup(str) }).unwrap() }
 
 pub fn xstrdup_(str: &CStr) -> NonNull<c_char> { unsafe { xstrdup(str.as_ptr()) } }
 
 pub fn xstrdup__<'a>(str: &CStr) -> &'a CStr { unsafe { CStr::from_ptr(xstrdup(str.as_ptr()).as_ptr()) } }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn xstrndup(str: *const c_char, maxlen: usize) -> NonNull<c_char> {
-    NonNull::new(unsafe { strndup(str, maxlen) }).unwrap()
-}
+pub unsafe extern "C" fn xstrndup(str: *const c_char, maxlen: usize) -> NonNull<c_char> { NonNull::new(unsafe { strndup(str, maxlen) }).unwrap() }
 
 // #[allow(improper_ctypes_definitions, reason = "must be extern C to use c variadics")]
 // pub unsafe extern "C" fn xasprintf__(args: std::fmt::Arguments<'_>) -> NonNull<c_char> {}
@@ -172,9 +162,7 @@ pub unsafe extern "C" fn xasprintf_(fmt: &CStr, mut args: ...) -> NonNull<c_char
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn xasprintf(ret: *mut *mut c_char, fmt: *const c_char, mut args: ...) -> c_int {
-    unsafe { xvasprintf(ret, fmt, args.as_va_list()) }
-}
+pub unsafe extern "C" fn xasprintf(ret: *mut *mut c_char, fmt: *const c_char, mut args: ...) -> c_int { unsafe { xvasprintf(ret, fmt, args.as_va_list()) } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn xvasprintf(ret: *mut *mut c_char, fmt: *const c_char, args: VaList) -> c_int {
@@ -190,9 +178,7 @@ pub unsafe extern "C" fn xvasprintf(ret: *mut *mut c_char, fmt: *const c_char, a
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn xsnprintf(str: *mut c_char, len: usize, fmt: *const c_char, mut args: ...) -> c_int {
-    unsafe { xvsnprintf(str, len, fmt, args.as_va_list()) }
-}
+pub unsafe extern "C" fn xsnprintf(str: *mut c_char, len: usize, fmt: *const c_char, mut args: ...) -> c_int { unsafe { xvsnprintf(str, len, fmt, args.as_va_list()) } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn xvsnprintf(str: *mut c_char, len: usize, fmt: *const c_char, args: VaList) -> c_int {
@@ -212,10 +198,6 @@ pub unsafe extern "C" fn xvsnprintf(str: *mut c_char, len: usize, fmt: *const c_
 
 pub unsafe fn free_<T>(p: *mut T) { unsafe { libc::free(p as *mut c_void) } }
 
-pub unsafe fn memcpy_<T>(dest: *mut T, src: *const T, n: usize) -> *mut T {
-    unsafe { libc::memcpy(dest as *mut c_void, src as *const c_void, n).cast() }
-}
+pub unsafe fn memcpy_<T>(dest: *mut T, src: *const T, n: usize) -> *mut T { unsafe { libc::memcpy(dest as *mut c_void, src as *const c_void, n).cast() } }
 
-pub unsafe fn memcpy__<T>(dest: *mut T, src: *const T) -> *mut T {
-    unsafe { libc::memcpy(dest as *mut c_void, src as *const c_void, size_of::<T>()).cast() }
-}
+pub unsafe fn memcpy__<T>(dest: *mut T, src: *const T) -> *mut T { unsafe { libc::memcpy(dest as *mut c_void, src as *const c_void, size_of::<T>()).cast() } }

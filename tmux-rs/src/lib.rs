@@ -30,7 +30,11 @@ pub use libc_::*;
 use xmalloc::Zeroable; // want to rexport everything from here
 
 pub mod image_;
+
+#[cfg(feature = "sixel")]
 pub mod image_sixel;
+#[cfg(feature = "sixel")]
+use image_sixel::sixel_image;
 
 #[cfg(feature = "utempter")]
 pub mod utempter;
@@ -148,30 +152,8 @@ pub struct discr_time_entry;
 pub struct discr_tree_entry;
 pub struct discr_wentry;
 
-// opaque types
-macro_rules! opaque_types {
-    ( $($ident:ident),* ) => {
-        $(
-          #[repr(C)]
-          pub struct $ident { _opaque: [u8; 0] }
-        )*
-    };
-}
-
 unsafe extern "C" {
     unsafe fn basename(_: *mut c_char) -> *mut c_char;
-}
-
-opaque_types! {
-    hyperlinks_uri,
-    screen_write_citem,
-    screen_write_cline,
-    server_acl_user
-}
-
-#[cfg(feature = "sixel")]
-opaque_types! {
-    sixel_image
 }
 
 pub const _PATH_BSHELL: *const c_char = c"/bin/sh".as_ptr();
@@ -2574,11 +2556,11 @@ pub use crate::grid_view::{
 
 mod screen_write;
 pub use crate::screen_write::{
-    screen_write_alignmenttest, screen_write_alternateoff, screen_write_alternateon, screen_write_backspace, screen_write_box, screen_write_carriagereturn, screen_write_cell, screen_write_clearcharacter, screen_write_clearendofline, screen_write_clearendofscreen, screen_write_clearhistory,
-    screen_write_clearline, screen_write_clearscreen, screen_write_clearstartofline, screen_write_clearstartofscreen, screen_write_collect_add, screen_write_collect_end, screen_write_cursordown, screen_write_cursorleft, screen_write_cursormove, screen_write_cursorright, screen_write_cursorup,
-    screen_write_deletecharacter, screen_write_deleteline, screen_write_fast_copy, screen_write_free_list, screen_write_fullredraw, screen_write_hline, screen_write_insertcharacter, screen_write_insertline, screen_write_linefeed, screen_write_make_list, screen_write_menu, screen_write_mode_clear,
-    screen_write_mode_set, screen_write_nputs, screen_write_preview, screen_write_putc, screen_write_puts, screen_write_rawstring, screen_write_reset, screen_write_reverseindex, screen_write_scrolldown, screen_write_scrollregion, screen_write_scrollup, screen_write_setselection, screen_write_start,
-    screen_write_start_callback, screen_write_start_pane, screen_write_stop, screen_write_strlen, screen_write_text, screen_write_vline, screen_write_vnputs,
+    screen_write_alignmenttest, screen_write_alternateoff, screen_write_alternateon, screen_write_backspace, screen_write_box, screen_write_carriagereturn, screen_write_cell, screen_write_citem, screen_write_clearcharacter, screen_write_clearendofline, screen_write_clearendofscreen,
+    screen_write_clearhistory, screen_write_clearline, screen_write_clearscreen, screen_write_clearstartofline, screen_write_clearstartofscreen, screen_write_cline, screen_write_collect_add, screen_write_collect_end, screen_write_cursordown, screen_write_cursorleft, screen_write_cursormove,
+    screen_write_cursorright, screen_write_cursorup, screen_write_deletecharacter, screen_write_deleteline, screen_write_fast_copy, screen_write_free_list, screen_write_fullredraw, screen_write_hline, screen_write_insertcharacter, screen_write_insertline, screen_write_linefeed,
+    screen_write_make_list, screen_write_menu, screen_write_mode_clear, screen_write_mode_set, screen_write_nputs, screen_write_preview, screen_write_putc, screen_write_puts, screen_write_rawstring, screen_write_reset, screen_write_reverseindex, screen_write_scrolldown, screen_write_scrollregion,
+    screen_write_scrollup, screen_write_setselection, screen_write_start, screen_write_start_callback, screen_write_start_pane, screen_write_stop, screen_write_strlen, screen_write_text, screen_write_vline, screen_write_vnputs,
 };
 
 mod screen_redraw;
@@ -2750,10 +2732,10 @@ unsafe extern "C" {}
 unsafe extern "C" {}
 
 mod server_acl;
-pub use crate::server_acl::{server_acl_display, server_acl_get_uid, server_acl_init, server_acl_join, server_acl_user_allow, server_acl_user_allow_write, server_acl_user_deny, server_acl_user_deny_write, server_acl_user_find};
+pub use crate::server_acl::{server_acl_display, server_acl_get_uid, server_acl_init, server_acl_join, server_acl_user, server_acl_user_allow, server_acl_user_allow_write, server_acl_user_deny, server_acl_user_deny_write, server_acl_user_find};
 
 mod hyperlinks_;
-pub use crate::hyperlinks_::{hyperlinks, hyperlinks_copy, hyperlinks_free, hyperlinks_get, hyperlinks_init, hyperlinks_put, hyperlinks_reset};
+pub use crate::hyperlinks_::{hyperlinks, hyperlinks_copy, hyperlinks_free, hyperlinks_get, hyperlinks_init, hyperlinks_put, hyperlinks_reset, hyperlinks_uri};
 
 pub mod xmalloc;
 pub use crate::xmalloc::{free_, memcpy_, memcpy__, xasprintf, xasprintf_, xcalloc, xcalloc_, xcalloc__, xcalloc1, xmalloc, xmalloc_, xrealloc, xrealloc_, xreallocarray_, xsnprintf, xstrdup, xstrdup_, xvasprintf};
