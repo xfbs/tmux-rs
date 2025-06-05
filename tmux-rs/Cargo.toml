@@ -4,16 +4,15 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bitflags     = { workspace = true }
-compat_rs    = { workspace = true }
-libc         = { workspace = true }
-paste        = { workspace = true }
+bitflags     = { version = "2.6.0"   }
 lalrpop-util = { version = "0.21.0", features = ["lexer", "unicode"] }
-num_enum = "0.7.3"
+libc         = { version = "0.2.169" }
+num_enum     = { version = "0.7.3"   }
+paste        = { version = "1.0.15"  }
 
 [build-dependencies]
-cc = { workspace = true }
-lalrpop = "0.22.1"
+cc           = { version = "1.2.16"  }
+lalrpop      = { version = "0.22.1"  }
 
 [features]
 cgroups     = []
@@ -26,7 +25,3 @@ sys_signame = []
 systemd     = []
 utempter    = []
 utf8proc    = []
-
-# [lints]
-# workspace = true
-

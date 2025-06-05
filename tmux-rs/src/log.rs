@@ -12,16 +12,16 @@ use std::{io::BufWriter, sync::Mutex};
 
 use ::libc::{free, gettimeofday, setvbuf, snprintf, strerror};
 
-use ::compat_rs::{VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB, stravis};
+use crate::compat::{VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB, stravis};
 
 use crate::xmalloc::xasprintf;
 use crate::{_s, event_::event_set_log_callback};
 use crate::{libc_::errno, vasprintf};
 
-#[macro_export]
 macro_rules! log_debug {
     ($($arg:tt)*) => {$crate::log::log_debug_rs(format_args!($($arg)*))};
 }
+pub(crate) use log_debug;
 
 // can't use File because it's open before fork which causes issues with how file works
 static log_file: Mutex<Option<LineWriter<File>>> = Mutex::new(None);
@@ -44,13 +44,7 @@ pub fn log_open(name: &CStr) {
 
     log_close();
     let pid = std::process::id();
-    let Ok(file) = std::fs::File::options()
-        .read(false)
-        .write(true)
-        .append(true)
-        .create(true)
-        .open(format!("tmux-{}-{}.log", name.to_str().unwrap(), pid))
-    else {
+    let Ok(file) = std::fs::File::options().read(false).write(true).append(true).create(true).open(format!("tmux-{}-{}.log", name.to_str().unwrap(), pid)) else {
         return;
     };
 
@@ -120,21 +114,14 @@ unsafe extern "C" fn log_vwrite(msg: &CStr, mut ap: VaList, prefix: &CStr) {
         }
         free(s as _);
 
-        let duration = std::time::SystemTime::now()
-            .duration_since(std::time::SystemTime::UNIX_EPOCH)
-            .unwrap_or_default();
+        let duration = std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH).unwrap_or_default();
         let secs = duration.as_secs();
         let micros = duration.subsec_micros();
 
         let str_prefix = prefix.to_str().expect("string prefix must be valid utf8");
         let str_out = CStr::from_ptr(out).to_str().expect("out must be valid utf8");
 
-        let _res = log_file
-            .lock()
-            .unwrap()
-            .as_mut()
-            .expect("race condition")
-            .write_fmt(format_args!("{secs}.{micros:06} {str_prefix}{str_out}\n"));
+        let _res = log_file.lock().unwrap().as_mut().expect("race condition").write_fmt(format_args!("{secs}.{micros:06} {str_prefix}{str_out}\n"));
         _res.unwrap();
         free(out as *mut c_void);
     }
@@ -212,17 +199,10 @@ fn log_vwrite_rs(args: std::fmt::Arguments, prefix: &str) {
 
         let msg = format!("{args}\0").to_string();
         let mut out: *mut c_char = null_mut();
-        if stravis(
-            &mut out,
-            msg.as_ptr().cast(),
-            (VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL) as i32,
-        ) == -1
-        {
+        if stravis(&mut out, msg.as_ptr().cast(), (VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL) as i32) == -1 {
             return;
         }
-        let duration = std::time::SystemTime::now()
-            .duration_since(std::time::SystemTime::UNIX_EPOCH)
-            .unwrap_or_default();
+        let duration = std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH).unwrap_or_default();
         let secs = duration.as_secs();
         let micros = duration.subsec_micros();
 
@@ -240,13 +220,7 @@ pub unsafe extern "C" fn fatal(msg: *const c_char, mut ap: ...) -> ! {
     unsafe {
         let mut tmp: [c_char; 256] = [0; 256];
 
-        if snprintf(
-            tmp.as_mut_ptr(),
-            size_of_val(&tmp),
-            c"fatal: %s: ".as_ptr(),
-            strerror(errno!()),
-        ) < 0
-        {
+        if snprintf(tmp.as_mut_ptr(), size_of_val(&tmp), c"fatal: %s: ".as_ptr(), strerror(errno!())) < 0 {
             std::process::exit(1);
         }
 

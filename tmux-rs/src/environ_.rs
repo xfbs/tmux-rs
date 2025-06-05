@@ -1,35 +1,16 @@
-use crate::{xmalloc::xcalloc_, *};
+use crate::*;
 
-use compat_rs::{
+use crate::compat::{
     RB_GENERATE,
     tree::{rb_find, rb_foreach, rb_init, rb_insert, rb_min, rb_next, rb_remove},
 };
-use libc::{fnmatch, setenv, strchr, strcmp, strcspn};
-
-unsafe extern "C" {
-    // pub fn environ_create() -> *mut environ;
-    // pub unsafe fn environ_free(_: *mut environ);
-    // pub fn environ_first(_: *mut environ) -> *mut environ_entry;
-    // pub fn environ_next(_: *mut environ_entry) -> *mut environ_entry;
-    // pub fn environ_copy(_: *mut environ, _: *mut environ);
-    // pub fn environ_find(_: *mut environ, _: *const c_char) -> *mut environ_entry;
-    // pub fn environ_set(_: *mut environ, _: *const c_char, _: c_int, _: *const c_char, ...);
-    // pub fn environ_clear(_: *mut environ, _: *const c_char);
-    // pub fn environ_put(_: *mut environ, _: *const c_char, _: c_int);
-    // pub fn environ_unset(_: *mut environ, _: *const c_char);
-    // pub fn environ_update(_: *mut options, _: *mut environ, _: *mut environ);
-    // pub fn environ_push(_: *mut environ);
-    // pub fn environ_log(_: *mut environ, _: *const c_char, ...);
-    // pub fn environ_for_session(_: *mut session, _: c_int) -> *mut environ;
-}
+use crate::xmalloc::xcalloc_;
 
 pub type environ = rb_head<environ_entry>;
 RB_GENERATE!(environ, environ_entry, entry, environ_cmp);
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn environ_cmp(envent1: *const environ_entry, envent2: *const environ_entry) -> c_int {
-    unsafe { strcmp(transmute_ptr((*envent1).name), transmute_ptr((*envent2).name)) }
-}
+pub unsafe extern "C" fn environ_cmp(envent1: *const environ_entry, envent2: *const environ_entry) -> c_int { unsafe { libc::strcmp(transmute_ptr((*envent1).name), transmute_ptr((*envent2).name)) } }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn environ_create() -> NonNull<environ> {
@@ -64,13 +45,7 @@ pub unsafe extern "C" fn environ_copy(srcenv: *mut environ, dstenv: *mut environ
     unsafe {
         for envent in rb_foreach(srcenv).map(NonNull::as_ptr) {
             if let Some(value) = (*envent).value {
-                environ_set(
-                    dstenv,
-                    (*envent).name.unwrap().as_ptr(),
-                    (*envent).flags,
-                    c"%s".as_ptr(),
-                    value.as_ptr(),
-                );
+                environ_set(dstenv, (*envent).name.unwrap().as_ptr(), (*envent).flags, c"%s".as_ptr(), value.as_ptr());
             } else {
                 environ_clear(dstenv, transmute_ptr((*envent).name));
             }
@@ -92,13 +67,7 @@ pub unsafe extern "C" fn environ_find(env: *mut environ, name: *const c_char) ->
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn environ_set(
-    env: *mut environ,
-    name: *const c_char,
-    flags: c_int,
-    fmt: *const c_char,
-    args: ...
-) {
+pub unsafe extern "C" fn environ_set(env: *mut environ, name: *const c_char, flags: c_int, fmt: *const c_char, args: ...) {
     unsafe {
         let mut envent = environ_find(env, name);
         if !envent.is_null() {
@@ -137,14 +106,14 @@ pub unsafe extern "C" fn environ_clear(env: *mut environ, name: *const c_char) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_put(env: *mut environ, var: *const c_char, flags: c_int) {
     unsafe {
-        let mut value = strchr(var, b'=' as c_int);
+        let mut value = libc::strchr(var, b'=' as c_int);
         if value.is_null() {
             return;
         }
         value = value.add(1);
 
         let mut name: *mut c_char = xstrdup(var).cast().as_ptr();
-        *name.add(strcspn(name, c"=".as_ptr())) = b'\0' as c_char;
+        *name.add(libc::strcspn(name, c"=".as_ptr())) = b'\0' as c_char;
 
         environ_set(env, name, flags, c"%s".as_ptr(), value);
         free_(name);
@@ -179,7 +148,7 @@ pub unsafe extern "C" fn environ_update(oo: *mut options, src: *mut environ, dst
             let ov = options_array_item_value(a);
             found = 0;
             for envent in rb_foreach(src).map(NonNull::as_ptr) {
-                if fnmatch((*ov).string, transmute_ptr((*envent).name), 0) == 0 {
+                if libc::fnmatch((*ov).string, transmute_ptr((*envent).name), 0) == 0 {
                     environ_set(dst, transmute_ptr((*envent).name), 0, c"%s".as_ptr(), (*envent).value);
                     found = 1;
                 }
@@ -199,11 +168,8 @@ pub unsafe extern "C" fn environ_push(env: *mut environ) {
 
         environ = xcalloc_::<*mut c_char>(1).as_ptr();
         for envent in rb_foreach(env).map(NonNull::as_ptr) {
-            if !(*envent).value.is_none()
-                && *(*envent).name.unwrap().as_ptr() != b'\0' as c_char
-                && !(*envent).flags & ENVIRON_HIDDEN != 0
-            {
-                setenv(transmute_ptr((*envent).name), transmute_ptr((*envent).value), 1);
+            if !(*envent).value.is_none() && *(*envent).name.unwrap().as_ptr() != b'\0' as c_char && !(*envent).flags & ENVIRON_HIDDEN != 0 {
+                libc::setenv(transmute_ptr((*envent).name), transmute_ptr((*envent).value), 1);
             }
         }
     }
@@ -218,12 +184,7 @@ pub unsafe extern "C" fn environ_log(env: *mut environ, fmt: *const c_char, mut 
 
         for envent in rb_foreach(env).map(NonNull::as_ptr) {
             if (!(*envent).value.is_none() && *(*envent).name.unwrap().as_ptr() != b'\0' as c_char) {
-                log_debug!(
-                    "{}{}={}",
-                    _s(prefix),
-                    _s(transmute_ptr((*envent).name)),
-                    _s(transmute_ptr((*envent).value))
-                );
+                log_debug!("{}{}={}", _s(prefix), _s(transmute_ptr((*envent).name)), _s(transmute_ptr((*envent).value)));
             }
         }
 
@@ -257,15 +218,7 @@ pub unsafe extern "C" fn environ_for_session(s: *mut session, no_TERM: c_int) ->
 
         let idx = if !s.is_null() { (*s).id as i32 } else { -1 };
 
-        environ_set(
-            env,
-            c"TMUX".as_ptr(),
-            0,
-            c"%s,%ld,%d".as_ptr(),
-            socket_path,
-            std::process::id() as c_long,
-            idx,
-        );
+        environ_set(env, c"TMUX".as_ptr(), 0, c"%s,%ld,%d".as_ptr(), socket_path, std::process::id() as c_long, idx);
 
         env
     }

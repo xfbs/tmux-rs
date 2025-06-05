@@ -1,37 +1,12 @@
-use crate::*;
+use super::*;
 
-use compat_rs::{
+use libc::{WEXITSTATUS, WIFEXITED, close, gettimeofday, memcpy};
+
+use crate::compat::{
     imsg::{IMSG_HEADER_SIZE, MAX_IMSGSIZE},
     queue::{tailq_empty, tailq_foreach},
     tree::rb_foreach,
 };
-use libc::{WEXITSTATUS, WIFEXITED, close, gettimeofday, memcpy};
-
-unsafe extern "C" {
-    // pub fn server_destroy_session_group(_: *mut session);
-    // pub fn server_redraw_client(_: *mut client);
-    // pub fn server_status_client(_: *mut client);
-    // pub fn server_redraw_session(_: *mut session);
-    // pub fn server_redraw_session_group(_: *mut session);
-    // pub fn server_status_session(_: *mut session);
-    // pub fn server_status_session_group(_: *mut session);
-    // pub fn server_redraw_window(_: *mut window);
-    // pub fn server_redraw_window_borders(_: *mut window);
-    // pub fn server_status_window(_: *mut window);
-    // pub fn server_lock();
-    // pub fn server_lock_session(_: *mut session);
-    // pub fn server_lock_client(_: *mut client);
-    // pub fn server_kill_pane(_: *mut window_pane);
-    // pub fn server_kill_window(_: *mut window, _: c_int);
-    // pub fn server_renumber_session(_: *mut session);
-    // pub fn server_renumber_all();
-    // pub fn server_link_window( _: *mut session, _: *mut winlink, _: *mut session, _: c_int, _: c_int, _: c_int, _: *mut *mut c_char,) -> c_int;
-    // pub fn server_unlink_window(_: *mut session, _: *mut winlink);
-    // pub fn server_destroy_pane(_: *mut window_pane, _: c_int);
-    // pub fn server_destroy_session(_: *mut session);
-    // pub fn server_check_unattached();
-    // pub fn server_unzoom_window(_: *mut window);
-}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_redraw_client(c: *mut client) {
@@ -175,18 +150,9 @@ pub unsafe extern "C" fn server_lock_client(c: *mut client) {
         }
 
         tty_stop_tty(&raw mut (*c).tty);
-        tty_raw(
-            &raw mut (*c).tty,
-            tty_term_string((*c).tty.term, tty_code_code::TTYC_SMCUP),
-        );
-        tty_raw(
-            &raw mut (*c).tty,
-            tty_term_string((*c).tty.term, tty_code_code::TTYC_CLEAR),
-        );
-        tty_raw(
-            &raw mut (*c).tty,
-            tty_term_string((*c).tty.term, tty_code_code::TTYC_E3),
-        );
+        tty_raw(&raw mut (*c).tty, tty_term_string((*c).tty.term, tty_code_code::TTYC_SMCUP));
+        tty_raw(&raw mut (*c).tty, tty_term_string((*c).tty.term, tty_code_code::TTYC_CLEAR));
+        tty_raw(&raw mut (*c).tty, tty_term_string((*c).tty.term, tty_code_code::TTYC_E3));
 
         (*c).flags |= client_flag::SUSPENDED;
         proc_send((*c).peer, msgtype::MSG_LOCK, -1, cmd.cast(), strlen(cmd) + 1);
@@ -263,15 +229,7 @@ pub unsafe extern "C" fn server_renumber_all() {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_link_window(
-    src: *mut session,
-    srcwl: *mut winlink,
-    dst: *mut session,
-    mut dstidx: i32,
-    killflag: i32,
-    mut selectflag: i32,
-    cause: *mut *mut c_char,
-) -> i32 {
+pub unsafe extern "C" fn server_link_window(src: *mut session, srcwl: *mut winlink, dst: *mut session, mut dstidx: i32, killflag: i32, mut selectflag: i32, cause: *mut *mut c_char) -> i32 {
     unsafe {
         let mut dstwl = null_mut();
 
@@ -440,10 +398,7 @@ pub unsafe extern "C" fn server_destroy_session_group(s: *mut session) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_find_session(
-    s: *mut session,
-    f: unsafe extern "C" fn(*mut session, *mut session) -> i32,
-) -> *mut session {
+pub unsafe extern "C" fn server_find_session(s: *mut session, f: unsafe extern "C" fn(*mut session, *mut session) -> i32) -> *mut session {
     unsafe {
         let mut s_out: *mut session = null_mut();
         for s_loop in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
@@ -456,9 +411,7 @@ pub unsafe extern "C" fn server_find_session(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_newer_session(s_loop: *mut session, s_out: *mut session) -> i32 {
-    unsafe { (timer::new(&raw const (*s_loop).activity_time) > timer::new(&raw const (*s_out).activity_time)) as i32 }
-}
+pub unsafe extern "C" fn server_newer_session(s_loop: *mut session, s_out: *mut session) -> i32 { unsafe { (timer::new(&raw const (*s_loop).activity_time) > timer::new(&raw const (*s_out).activity_time)) as i32 } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_newer_detached_session(s_loop: *mut session, s_out: *mut session) -> i32 {

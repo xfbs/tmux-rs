@@ -1,6 +1,6 @@
-use compat_rs::tree::rb_foreach;
-
 use crate::*;
+
+use crate::compat::tree::rb_foreach;
 
 const LIST_WINDOWS_TEMPLATE: &CStr = c"#{window_index}: #{window_name}#{window_raw_flags} (#{window_panes} panes) [#{window_width}x#{window_height}] [layout #{window_layout}] #{window_id}#{?window_active, (active),}";
 const LIST_WINDOWS_WITH_SESSION_TEMPLATE: &CStr = c"#{session_name}:#{window_index}: #{window_name}#{window_raw_flags} (#{window_panes} panes) [#{window_width}x#{window_height}] ";

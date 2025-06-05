@@ -1,7 +1,8 @@
 use crate::*;
 
-use compat_rs::VIS_GLOB;
 use libc::{EINVAL, ENOENT, ENOMEM, GLOB_NOMATCH, GLOB_NOSPACE, glob, glob_t, globfree, strcmp};
+
+use crate::compat::VIS_GLOB;
 
 #[unsafe(no_mangle)]
 static mut cmd_source_file_entry: cmd_entry = cmd_entry {
@@ -59,14 +60,7 @@ unsafe extern "C" fn cmd_source_file_complete(c: *mut client, cdata: *mut cmd_so
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn cmd_source_file_done(
-    c: *mut client,
-    path: *mut c_char,
-    error: i32,
-    closed: i32,
-    buffer: *mut evbuffer,
-    data: *mut c_void,
-) {
+unsafe extern "C" fn cmd_source_file_done(c: *mut client, path: *mut c_char, error: i32, closed: i32, buffer: *mut evbuffer, data: *mut c_void) {
     unsafe {
         let cdata = data as *mut cmd_source_file_data;
         let mut item = (*cdata).item;
@@ -82,17 +76,7 @@ unsafe extern "C" fn cmd_source_file_done(
         if (error != 0) {
             cmdq_error(item, c"%s: %s".as_ptr(), path, strerror(error));
         } else if (bsize != 0) {
-            if (load_cfg_from_buffer(
-                bdata.cast(),
-                bsize,
-                path,
-                c,
-                (*cdata).after,
-                target,
-                (*cdata).flags,
-                &raw mut new_item,
-            ) < 0)
-            {
+            if (load_cfg_from_buffer(bdata.cast(), bsize, path, c, (*cdata).after, target, (*cdata).flags, &raw mut new_item) < 0) {
                 (*cdata).retval = cmd_retval::CMD_RETURN_ERROR;
             } else if !new_item.is_null() {
                 (*cdata).after = new_item;
@@ -102,12 +86,7 @@ unsafe extern "C" fn cmd_source_file_done(
         (*cdata).current += 1;
         let n = (*cdata).current;
         if n < (*cdata).nfiles {
-            file_read(
-                c,
-                *(*cdata).files.add(n as usize),
-                Some(cmd_source_file_done),
-                cdata.cast(),
-            );
+            file_read(c, *(*cdata).files.add(n as usize), Some(cmd_source_file_done), cdata.cast());
         } else {
             cmd_source_file_complete(c, cdata);
             cmdq_continue(item);

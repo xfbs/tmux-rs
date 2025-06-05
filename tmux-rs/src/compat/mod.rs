@@ -1,9 +1,6 @@
-#![allow(non_upper_case_globals)]
-#![allow(non_camel_case_types)]
-#![allow(clippy::missing_safety_doc)]
-#![warn(clippy::shadow_reuse)]
-#![warn(clippy::shadow_same)]
-#![warn(clippy::shadow_unrelated)]
+use core::ffi::{c_char, c_int, c_longlong, c_void};
+
+use libc::{S_IRWXG, S_IRWXO, S_IRWXU, gid_t, mode_t, pid_t, uid_t};
 
 pub mod fdforkpty;
 pub mod getdtablecount;
@@ -15,12 +12,13 @@ pub mod systemd;
 pub mod tree;
 pub mod vis_;
 
-pub use crate::systemd::systemd_create_socket;
+pub use systemd::systemd_create_socket;
+
+pub(crate) use queue::{TAILQ_HEAD_INITIALIZER, impl_tailq_entry, tailq_insert_head};
+pub(crate) use tree::{RB_GENERATE, RB_GENERATE_STATIC};
 
 // pub use bsd_sys::{bsd_getopt, optarg as BSDoptarg, optind as BSDoptind};
 // bsd_getopt, closefrom, getpeereid, optarg, optind, recallocarray, setproctitle, strlcat, strlcpy, strtonum, vis,
-use ::core::ffi::{c_char, c_int, c_longlong, c_void};
-use ::libc::{S_IRWXG, S_IRWXO, S_IRWXU, gid_t, mode_t, pid_t, uid_t};
 
 pub const VIS_OCTAL: i32 = 1;
 pub const VIS_CSTYLE: i32 = 2;

@@ -2,33 +2,12 @@ use std::mem::transmute;
 
 use crate::{log::fatalx_c, xmalloc::xreallocarray, *};
 
-use compat_rs::{
+use crate::compat::{
     VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB,
     queue::{list_head_initializer, list_insert_head, list_remove},
     strnvis, strtonum, strunvis,
 };
 use libc::{fnmatch, memset, strchr, strcmp, strcspn, strncmp};
-
-unsafe extern "C" {
-    // pub static mut tty_terms: tty_terms;
-    // pub fn tty_term_ncodes() -> c_uint;
-    // pub fn tty_term_apply(_: *mut tty_term, _: *const c_char, _: c_int);
-    // pub fn tty_term_apply_overrides(_: *mut tty_term);
-    // pub fn tty_term_create( _: *mut tty, _: *mut c_char, _: *mut *mut c_char, _: c_uint, _: *mut c_int, _: *mut *mut c_char,) -> *mut tty_term;
-    // pub fn tty_term_free(_: *mut tty_term);
-    // pub fn tty_term_read_list( _: *const c_char, _: c_int, _: *mut *mut *mut c_char, _: *mut c_uint, _: *mut *mut c_char,) -> c_int;
-    // pub fn tty_term_free_list(_: *mut *mut c_char, _: c_uint);
-    // pub fn tty_term_has(_: *mut tty_term, _: tty_code_code) -> c_int;
-    // pub fn tty_term_string(_: *mut tty_term, _: tty_code_code) -> *const c_char;
-    // pub fn tty_term_string_i(_: *mut tty_term, _: tty_code_code, _: c_int) -> *const c_char;
-    // pub fn tty_term_string_ii(_: *mut tty_term, _: tty_code_code, _: c_int, _: c_int) -> *const c_char;
-    // pub fn tty_term_string_iii(_: *mut tty_term, _: tty_code_code, _: c_int, _: c_int, _: c_int) -> *const c_char;
-    // pub fn tty_term_string_s(_: *mut tty_term, _: tty_code_code, _: *const c_char) -> *const c_char;
-    // pub fn tty_term_string_ss(_: *mut tty_term, _: tty_code_code, _: *const c_char, _: *const c_char) -> *const c_char;
-    // pub fn tty_term_number(_: *mut tty_term, _: tty_code_code) -> c_int;
-    // pub fn tty_term_flag(_: *mut tty_term, _: tty_code_code) -> c_int;
-    // pub fn tty_term_describe(_: *mut tty_term, _: tty_code_code) -> *const c_char;
-}
 
 pub static mut tty_terms: tty_terms = list_head_initializer();
 
@@ -62,12 +41,7 @@ pub struct tty_term_code_entry {
 }
 
 impl tty_term_code_entry {
-    const fn new(type_: tty_code_type, name: &'static CStr) -> Self {
-        Self {
-            type_,
-            name: name.as_ptr(),
-        }
-    }
+    const fn new(type_: tty_code_type, name: &'static CStr) -> Self { Self { type_, name: name.as_ptr() } }
 }
 
 #[unsafe(no_mangle)]
@@ -517,9 +491,7 @@ pub unsafe extern "C" fn tty_term_apply_overrides(term: *mut tty_term) {
             log_debug!("SIXEL flag is {}", !!((*term).flags & TERM_SIXEL));
 
             /* Update the RGB flag if the terminal has RGB colours. */
-            if tty_term_has(term, tty_code_code::TTYC_SETRGBF) != 0
-                && tty_term_has(term, tty_code_code::TTYC_SETRGBB) != 0
-            {
+            if tty_term_has(term, tty_code_code::TTYC_SETRGBF) != 0 && tty_term_has(term, tty_code_code::TTYC_SETRGBB) != 0 {
                 (*term).flags |= TERM_RGBCOLOURS;
             } else {
                 (*term).flags &= !TERM_RGBCOLOURS;
@@ -586,14 +558,7 @@ pub unsafe extern "C" fn tty_term_apply_overrides(term: *mut tty_term) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tty_term_create(
-    tty: *mut tty,
-    name: *mut c_char,
-    caps: *mut *mut c_char,
-    ncaps: u32,
-    feat: *mut i32,
-    cause: *mut *mut c_char,
-) -> *mut tty_term {
+pub unsafe extern "C" fn tty_term_create(tty: *mut tty, name: *mut c_char, caps: *mut *mut c_char, ncaps: u32, feat: *mut i32, cause: *mut *mut c_char) -> *mut tty_term {
     unsafe {
         // struct tty_term *term;
         // const struct tty_term_code_entry *ent;
@@ -709,10 +674,7 @@ pub unsafe extern "C" fn tty_term_create(
             }
 
             /* Add RGB feature if terminal has RGB colours. */
-            if ((tty_term_flag(term, tty_code_code::TTYC_TC) != 0 || tty_term_has(term, tty_code_code::TTYC_RGB) != 0)
-                && (tty_term_has(term, tty_code_code::TTYC_SETRGBF) == 0
-                    || tty_term_has(term, tty_code_code::TTYC_SETRGBB) == 0))
-            {
+            if ((tty_term_flag(term, tty_code_code::TTYC_TC) != 0 || tty_term_has(term, tty_code_code::TTYC_RGB) != 0) && (tty_term_has(term, tty_code_code::TTYC_SETRGBF) == 0 || tty_term_has(term, tty_code_code::TTYC_SETRGBB) == 0)) {
                 tty_add_features(feat, c"RGB".as_ptr(), c",".as_ptr());
             }
 
@@ -754,13 +716,7 @@ pub unsafe extern "C" fn tty_term_free(term: *mut tty_term) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tty_term_read_list(
-    name: *const c_char,
-    fd: i32,
-    caps: *mut *mut *mut c_char,
-    ncaps: *mut u32,
-    cause: *mut *mut c_char,
-) -> i32 {
+pub unsafe extern "C" fn tty_term_read_list(name: *const c_char, fd: i32, caps: *mut *mut *mut c_char, ncaps: *mut u32, cause: *mut *mut c_char) -> i32 {
     unsafe {
         let mut ent: *mut tty_term_code_entry = null_mut();
         let mut error = 0;
@@ -813,9 +769,7 @@ pub unsafe extern "C" fn tty_term_read_list(
                 }
                 _ => fatalx(c"unknown capability type"),
             }
-            *caps = xreallocarray((*caps).cast(), (*ncaps) as usize + 1, size_of::<*mut c_char>())
-                .as_ptr()
-                .cast();
+            *caps = xreallocarray((*caps).cast(), (*ncaps) as usize + 1, size_of::<*mut c_char>()).as_ptr().cast();
             xasprintf((*caps).add(*ncaps as usize), c"%s=%s".as_ptr(), (*ent).name, s);
             (*ncaps) += 1;
         }
@@ -838,9 +792,7 @@ pub unsafe extern "C" fn tty_term_free_list(caps: *mut *mut c_char, ncaps: u32) 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tty_term_has(term: *mut tty_term, code: tty_code_code) -> i32 {
-    unsafe { ((*(*term).codes.add(code as usize)).type_ != tty_code_type::NONE) as i32 }
-}
+pub unsafe extern "C" fn tty_term_has(term: *mut tty_term, code: tty_code_code) -> i32 { unsafe { ((*(*term).codes.add(code as usize)).type_ != tty_code_type::NONE) as i32 } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_term_string(term: *mut tty_term, code: tty_code_code) -> *const c_char {
@@ -898,13 +850,7 @@ pub unsafe extern "C" fn tty_term_string_ii(term: *mut tty_term, code: tty_code_
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tty_term_string_iii(
-    term: *mut tty_term,
-    code: tty_code_code,
-    a: i32,
-    b: i32,
-    c: i32,
-) -> *const c_char {
+pub unsafe extern "C" fn tty_term_string_iii(term: *mut tty_term, code: tty_code_code, a: i32, b: i32, c: i32) -> *const c_char {
     unsafe {
         let mut x = tty_term_string(term, code);
 
@@ -947,12 +893,7 @@ pub unsafe extern "C" fn tty_term_string_s(term: *mut tty_term, code: tty_code_c
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tty_term_string_ss(
-    term: *mut tty_term,
-    code: tty_code_code,
-    a: *const c_char,
-    b: *const c_char,
-) -> *const c_char {
+pub unsafe extern "C" fn tty_term_string_ss(term: *mut tty_term, code: tty_code_code, a: *const c_char, b: *const c_char) -> *const c_char {
     unsafe {
         let mut x = tty_term_string(term, code);
         // *s;
@@ -1011,39 +952,14 @@ pub unsafe extern "C" fn tty_term_describe(term: *mut tty_term, code: tty_code_c
 
         match (*(*term).codes.add(code as usize)).type_ {
             tty_code_type::NONE => {
-                xsnprintf(
-                    &raw mut s as *mut c_char,
-                    sizeof_s,
-                    c"%4u: %s: [missing]".as_ptr(),
-                    code,
-                    tty_term_codes[code as usize].name,
-                );
+                xsnprintf(&raw mut s as *mut c_char, sizeof_s, c"%4u: %s: [missing]".as_ptr(), code, tty_term_codes[code as usize].name);
             }
             tty_code_type::STRING => {
-                strnvis(
-                    &raw mut out as *mut c_char,
-                    (*(*term).codes.add(code as usize)).value.string,
-                    sizeof_out,
-                    (VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL) as i32,
-                );
-                xsnprintf(
-                    &raw mut s as *mut c_char,
-                    sizeof_s,
-                    c"%4u: %s: (string) %s".as_ptr(),
-                    code,
-                    tty_term_codes[code as usize].name,
-                    &raw const out as *const c_char,
-                );
+                strnvis(&raw mut out as *mut c_char, (*(*term).codes.add(code as usize)).value.string, sizeof_out, (VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL) as i32);
+                xsnprintf(&raw mut s as *mut c_char, sizeof_s, c"%4u: %s: (string) %s".as_ptr(), code, tty_term_codes[code as usize].name, &raw const out as *const c_char);
             }
             tty_code_type::NUMBER => {
-                xsnprintf(
-                    &raw mut s as *mut c_char,
-                    sizeof_s,
-                    c"%4u: %s: (number) %d".as_ptr(),
-                    code,
-                    tty_term_codes[code as usize].name,
-                    (*(*term).codes.add(code as usize)).value.number,
-                );
+                xsnprintf(&raw mut s as *mut c_char, sizeof_s, c"%4u: %s: (number) %d".as_ptr(), code, tty_term_codes[code as usize].name, (*(*term).codes.add(code as usize)).value.number);
             }
             tty_code_type::FLAG => {
                 xsnprintf(
@@ -1052,11 +968,7 @@ pub unsafe extern "C" fn tty_term_describe(term: *mut tty_term, code: tty_code_c
                     c"%4u: %s: (flag) %s".as_ptr(),
                     code,
                     tty_term_codes[code as usize].name,
-                    if (*(*term).codes.add(code as usize)).value.flag != 0 {
-                        c"true".as_ptr()
-                    } else {
-                        c"false".as_ptr()
-                    },
+                    if (*(*term).codes.add(code as usize)).value.flag != 0 { c"true".as_ptr() } else { c"false".as_ptr() },
                 );
             }
         };

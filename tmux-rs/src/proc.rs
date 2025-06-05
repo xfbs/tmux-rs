@@ -1,34 +1,16 @@
-use compat_rs::{
+use crate::*;
+
+use libc::{__errno_location, AF_UNIX, EAGAIN, PF_UNSPEC, SA_RESTART, SIG_DFL, SIG_IGN, SIGCHLD, SIGCONT, SIGHUP, SIGINT, SIGPIPE, SIGQUIT, SIGTERM, SIGTSTP, SIGTTIN, SIGTTOU, SIGUSR1, SIGUSR2, SIGWINCH, close, daemon, gid_t, sigaction, sigemptyset, socketpair, uname, utsname};
+
+use crate::compat::{
     getpeereid,
     imsg::{imsg_clear, imsg_compose, imsg_flush, imsg_free, imsg_get, imsg_get_fd, imsg_init, imsg_read, imsgbuf},
     imsg_buffer::msgbuf_write,
     queue::{tailq_foreach, tailq_init, tailq_insert_tail, tailq_remove},
     setproctitle,
 };
-use libc::{
-    __errno_location, AF_UNIX, EAGAIN, PF_UNSPEC, SA_RESTART, SIG_DFL, SIG_IGN, SIGCHLD, SIGCONT, SIGHUP, SIGINT,
-    SIGPIPE, SIGQUIT, SIGTERM, SIGTSTP, SIGTTIN, SIGTTOU, SIGUSR1, SIGUSR2, SIGWINCH, close, daemon, gid_t, sigaction,
-    sigemptyset, socketpair, uname, utsname,
-};
-
 use crate::event_::{signal_add, signal_set};
-use crate::{xmalloc::Zeroable, *};
-
-unsafe extern "C" {
-    // pub unsafe fn proc_send(_: *mut tmuxpeer, _: msgtype, _: c_int, _: *const c_void, _: usize) -> c_int;
-    // pub unsafe fn proc_start(_: *const c_char) -> *mut tmuxproc;
-    // pub unsafe fn proc_loop(_: *mut tmuxproc, _: Option<unsafe extern "C" fn() -> c_int>);
-    // pub unsafe fn proc_exit(_: *mut tmuxproc);
-    // pub unsafe fn proc_set_signals(_: *mut tmuxproc, _: Option<unsafe extern "C" fn(_: c_int)>);
-    // pub unsafe fn proc_clear_signals(_: *mut tmuxproc, _: c_int);
-    // pub unsafe fn proc_add_peer( _: *mut tmuxproc, _: c_int, _: Option<unsafe extern "C" fn(_: *mut imsg, _: *mut c_void)>, _: *mut c_void,) -> *mut tmuxpeer;
-    // pub unsafe fn proc_remove_peer(_: *mut tmuxpeer);
-    // pub unsafe fn proc_kill_peer(_: *mut tmuxpeer);
-    // pub unsafe fn proc_flush_peer(_: *mut tmuxpeer);
-    // pub unsafe fn proc_toggle_log(_: *mut tmuxproc);
-    // pub unsafe fn proc_fork_and_daemon(_: *mut c_int) -> pid_t;
-    // pub unsafe fn proc_get_peer_uid(_: *mut tmuxpeer) -> uid_t;
-}
+use crate::xmalloc::Zeroable;
 
 unsafe impl Zeroable for tmuxproc {}
 #[repr(C)]
@@ -53,8 +35,7 @@ pub struct tmuxproc {
 pub const PEER_BAD: i32 = 0x1;
 
 unsafe impl Zeroable for tmuxpeer {}
-compat_rs::impl_tailq_entry!(tmuxpeer, entry, tailq_entry<tmuxpeer>);
-// #[derive(compat_rs::TailQEntry)]
+crate::compat::impl_tailq_entry!(tmuxpeer, entry, tailq_entry<tmuxpeer>);
 #[repr(C)]
 pub struct tmuxpeer {
     pub parent: *mut tmuxproc,
@@ -162,26 +143,14 @@ pub unsafe extern "C" fn proc_update_event(peer: *mut tmuxpeer) {
         if ((*peer).ibuf.w.queued > 0) {
             events |= EV_WRITE as i16;
         }
-        event_set(
-            &raw mut (*peer).event,
-            (*peer).ibuf.fd,
-            events,
-            Some(proc_event_cb),
-            peer.cast(),
-        );
+        event_set(&raw mut (*peer).event, (*peer).ibuf.fd, events, Some(proc_event_cb), peer.cast());
 
         event_add(&raw mut (*peer).event, null_mut());
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn proc_send(
-    peer: *mut tmuxpeer,
-    type_: msgtype,
-    fd: i32,
-    buf: *const c_void,
-    len: usize,
-) -> i32 {
+pub unsafe extern "C" fn proc_send(peer: *mut tmuxpeer, type_: msgtype, fd: i32, buf: *const c_void, len: usize) -> i32 {
     unsafe {
         let ibuf = &raw mut (*peer).ibuf;
         let vp = buf;
@@ -212,20 +181,8 @@ pub unsafe fn proc_start(name: &CStr) -> *mut tmuxproc {
         }
         let u = u.as_mut_ptr();
 
-        log_debug!(
-            "{} started ({}): version {}, socket {}, protocol {}",
-            _s(name),
-            std::process::id(),
-            _s(getversion()),
-            _s(socket_path),
-            PROTOCOL_VERSION,
-        );
-        log_debug!(
-            "on {} {} {}",
-            _s((*u).sysname.as_ptr()),
-            _s((*u).release.as_ptr()),
-            _s((*u).version.as_ptr()),
-        );
+        log_debug!("{} started ({}): version {}, socket {}, protocol {}", _s(name), std::process::id(), _s(getversion()), _s(socket_path), PROTOCOL_VERSION,);
+        log_debug!("on {} {} {}", _s((*u).sysname.as_ptr()), _s((*u).release.as_ptr()), _s((*u).version.as_ptr()),);
         log_debug!("using libevent {} {}", _s(event_get_version()), _s(event_get_method()));
         #[cfg(feature = "utf8proc")]
         {
@@ -354,12 +311,7 @@ pub unsafe extern "C" fn proc_clear_signals(tp: *mut tmuxproc, defaults: i32) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn proc_add_peer(
-    tp: *mut tmuxproc,
-    fd: i32,
-    dispatchcb: Option<unsafe extern "C" fn(*mut imsg, *mut c_void)>,
-    arg: *mut c_void,
-) -> *mut tmuxpeer {
+pub unsafe extern "C" fn proc_add_peer(tp: *mut tmuxproc, fd: i32, dispatchcb: Option<unsafe extern "C" fn(*mut imsg, *mut c_void)>, arg: *mut c_void) -> *mut tmuxpeer {
     unsafe {
         let mut gid: gid_t = 0;
         let mut peer = xcalloc1::<tmuxpeer>() as *mut tmuxpeer;

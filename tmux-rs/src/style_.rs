@@ -1,17 +1,8 @@
-use std::mem::MaybeUninit;
+use super::*;
 
-use compat_rs::{strlcpy, strtonum};
 use libc::{snprintf, strcasecmp, strchr, strcspn, strncasecmp, strspn};
 
-use super::*;
-unsafe extern "C" {
-    // pub unsafe fn style_parse(_: *mut style, _: *const grid_cell, _: *const c_char) -> c_int;
-    // pub unsafe fn style_tostring(_: *mut style) -> *const c_char;
-    // pub unsafe fn style_add(_: *mut grid_cell, _: *mut options, _: *const c_char, _: *mut format_tree);
-    // pub unsafe fn style_apply(_: *mut grid_cell, _: *mut options, _: *const c_char, _: *mut format_tree);
-    // pub unsafe fn style_set(_: *mut style, _: *const grid_cell);
-    // pub unsafe fn style_copy(_: *mut style, _: *mut style);
-}
+use crate::compat::{strlcpy, strtonum};
 
 // #define STYLE_ATTR_MASK (~0)
 
@@ -110,11 +101,7 @@ pub unsafe extern "C" fn style_parse(sy: *mut style, base: *const grid_cell, mut
                 } else if strcasecmp(tmp, c"norange".as_ptr()) == 0 {
                     (*sy).range_type = style_default.range_type;
                     (*sy).range_argument = style_default.range_type as u32;
-                    strlcpy(
-                        &raw mut (*sy).range_string as *mut i8,
-                        &raw const style_default.range_string as *const i8,
-                        16,
-                    );
+                    strlcpy(&raw mut (*sy).range_string as *mut i8, &raw const style_default.range_string as *const i8, 16);
                 } else if end > 6 && strncasecmp(tmp, c"range=".as_ptr(), 6) == 0 {
                     found = strchr(tmp.add(6), b'|' as i32);
                     if !found.is_null() {
@@ -292,13 +279,7 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
             } else if (*sy).list == style_list::STYLE_LIST_RIGHT_MARKER {
                 tmp = c"right-marker".as_ptr();
             }
-            off += xsnprintf(
-                s.add(off as usize),
-                size_of::<s_type>() - off as usize,
-                c"%slist=%s".as_ptr(),
-                comma,
-                tmp,
-            );
+            off += xsnprintf(s.add(off as usize), size_of::<s_type>() - off as usize, c"%slist=%s".as_ptr(), comma, tmp);
             comma = c",".as_ptr();
         }
         if ((*sy).range_type != style_range_type::STYLE_RANGE_NONE) {
@@ -307,45 +288,19 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
             } else if ((*sy).range_type == style_range_type::STYLE_RANGE_RIGHT) {
                 tmp = c"right".as_ptr();
             } else if ((*sy).range_type == style_range_type::STYLE_RANGE_PANE) {
-                snprintf(
-                    &raw mut b as _,
-                    size_of::<b_type>(),
-                    c"pane|%%%u".as_ptr(),
-                    (*sy).range_argument,
-                );
+                snprintf(&raw mut b as _, size_of::<b_type>(), c"pane|%%%u".as_ptr(), (*sy).range_argument);
                 tmp = &raw const b as _;
             } else if ((*sy).range_type == style_range_type::STYLE_RANGE_WINDOW) {
-                snprintf(
-                    &raw mut b as _,
-                    size_of::<b_type>(),
-                    c"window|%u".as_ptr(),
-                    (*sy).range_argument,
-                );
+                snprintf(&raw mut b as _, size_of::<b_type>(), c"window|%u".as_ptr(), (*sy).range_argument);
                 tmp = &raw const b as _;
             } else if ((*sy).range_type == style_range_type::STYLE_RANGE_SESSION) {
-                snprintf(
-                    &raw mut b as _,
-                    size_of::<b_type>(),
-                    c"session|$%u".as_ptr(),
-                    (*sy).range_argument,
-                );
+                snprintf(&raw mut b as _, size_of::<b_type>(), c"session|$%u".as_ptr(), (*sy).range_argument);
                 tmp = &raw const b as _;
             } else if ((*sy).range_type == style_range_type::STYLE_RANGE_USER) {
-                snprintf(
-                    &raw mut b as _,
-                    size_of::<b_type>(),
-                    c"user|%s".as_ptr(),
-                    (*sy).range_string,
-                );
+                snprintf(&raw mut b as _, size_of::<b_type>(), c"user|%s".as_ptr(), (*sy).range_string);
                 tmp = &raw const b as _;
             }
-            off += xsnprintf(
-                s.add(off as usize),
-                size_of::<s_type>() - off as usize,
-                c"%srange=%s".as_ptr(),
-                comma,
-                tmp,
-            );
+            off += xsnprintf(s.add(off as usize), size_of::<s_type>() - off as usize, c"%srange=%s".as_ptr(), comma, tmp);
             comma = c",".as_ptr();
         }
         if ((*sy).align != style_align::STYLE_ALIGN_DEFAULT) {
@@ -358,13 +313,7 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
             } else if ((*sy).align == style_align::STYLE_ALIGN_ABSOLUTE_CENTRE) {
                 tmp = c"absolute-centre".as_ptr();
             }
-            off += xsnprintf(
-                s.add(off as usize),
-                size_of::<s_type>() - off as usize,
-                c"%salign=%s".as_ptr(),
-                comma,
-                tmp,
-            );
+            off += xsnprintf(s.add(off as usize), size_of::<s_type>() - off as usize, c"%salign=%s".as_ptr(), comma, tmp);
             comma = c",".as_ptr();
         }
         if ((*sy).default_type != style_default_type::STYLE_DEFAULT_BASE) {
@@ -373,63 +322,27 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
             } else if ((*sy).default_type == style_default_type::STYLE_DEFAULT_POP) {
                 tmp = c"pop-default".as_ptr();
             }
-            off += xsnprintf(
-                s.add(off as usize),
-                size_of::<s_type>() - off as usize,
-                c"%s%s".as_ptr(),
-                comma,
-                tmp,
-            );
+            off += xsnprintf(s.add(off as usize), size_of::<s_type>() - off as usize, c"%s%s".as_ptr(), comma, tmp);
             comma = c",".as_ptr();
         }
         if ((*sy).fill != 8) {
-            off += xsnprintf(
-                s.add(off as usize),
-                size_of::<s_type>() - off as usize,
-                c"%sfill=%s".as_ptr(),
-                comma,
-                colour_tostring((*sy).fill),
-            );
+            off += xsnprintf(s.add(off as usize), size_of::<s_type>() - off as usize, c"%sfill=%s".as_ptr(), comma, colour_tostring((*sy).fill));
             comma = c",".as_ptr();
         }
         if ((*gc).fg != 8) {
-            off += xsnprintf(
-                s.add(off as usize),
-                size_of::<s_type>() - off as usize,
-                c"%sfg=%s".as_ptr(),
-                comma,
-                colour_tostring((*gc).fg),
-            );
+            off += xsnprintf(s.add(off as usize), size_of::<s_type>() - off as usize, c"%sfg=%s".as_ptr(), comma, colour_tostring((*gc).fg));
             comma = c",".as_ptr();
         }
         if ((*gc).bg != 8) {
-            off += xsnprintf(
-                s.add(off as usize),
-                size_of::<s_type>() - off as usize,
-                c"%sbg=%s".as_ptr(),
-                comma,
-                colour_tostring((*gc).bg),
-            );
+            off += xsnprintf(s.add(off as usize), size_of::<s_type>() - off as usize, c"%sbg=%s".as_ptr(), comma, colour_tostring((*gc).bg));
             comma = c",".as_ptr();
         }
         if ((*gc).us != 8) {
-            off += xsnprintf(
-                s.add(off as usize),
-                size_of::<s_type>() - off as usize,
-                c"%sus=%s".as_ptr(),
-                comma,
-                colour_tostring((*gc).us),
-            );
+            off += xsnprintf(s.add(off as usize), size_of::<s_type>() - off as usize, c"%sus=%s".as_ptr(), comma, colour_tostring((*gc).us));
             comma = c",".as_ptr();
         }
         if ((*gc).attr != 0) {
-            xsnprintf(
-                s.add(off as usize),
-                size_of::<s_type>() - off as usize,
-                c"%s%s".as_ptr(),
-                comma,
-                attributes_tostring((*gc).attr as i32),
-            );
+            xsnprintf(s.add(off as usize), size_of::<s_type>() - off as usize, c"%s%s".as_ptr(), comma, attributes_tostring((*gc).attr as i32));
             comma = c",".as_ptr();
         }
 
@@ -441,12 +354,7 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn style_add(
-    gc: *mut grid_cell,
-    oo: *mut options,
-    name: *const c_char,
-    mut ft: *mut format_tree,
-) {
+pub unsafe extern "C" fn style_add(gc: *mut grid_cell, oo: *mut options, name: *const c_char, mut ft: *mut format_tree) {
     unsafe {
         let mut sy: *mut style = null_mut();
         let mut ft0: *mut format_tree = null_mut();

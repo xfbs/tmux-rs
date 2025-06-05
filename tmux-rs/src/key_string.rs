@@ -1,12 +1,7 @@
-use compat_rs::strlcat;
-use libc::{memcpy, snprintf, sscanf, strcasecmp, tolower};
-
 use crate::*;
 
-unsafe extern "C" {
-    // pub fn key_string_lookup_string(_: *const c_char) -> key_code;
-    // pub fn key_string_lookup_key(_: key_code, _: c_int) -> *const c_char;
-}
+use crate::compat::strlcat;
+use libc::{memcpy, snprintf, sscanf, strcasecmp, tolower};
 
 unsafe impl Sync for key_string_table_entry {}
 #[repr(C)]
@@ -17,12 +12,7 @@ struct key_string_table_entry {
 }
 
 impl key_string_table_entry {
-    const fn new(string: &'static CStr, key: key_code) -> Self {
-        Self {
-            string: string.as_ptr(),
-            key,
-        }
-    }
+    const fn new(string: &'static CStr, key: key_code) -> Self { Self { string: string.as_ptr(), key } }
 }
 
 // #define KEYC_MOUSE_KEY(name)
@@ -77,7 +67,6 @@ macro_rules! concat_array {
 */
 macro_rules! KEYC_MOUSE_STRING_I {
     ($name:ident, $s:literal, $i:literal) => {
-
         ::paste::paste! {
             [
                 key_string_table_entry{string: concat!($s, $i, "Pane\0").as_ptr().cast(), key: keyc::[<KEYC_ $name $i _PANE>] as u64},
@@ -304,8 +293,7 @@ pub unsafe extern "C" fn key_string_lookup_string(mut string: *const c_char) -> 
             m[mlen as usize].write(b'\0' as c_char);
 
             let udp: *mut utf8_data = utf8_fromcstr(m.as_slice().as_ptr().cast());
-            if (udp.is_null() || (*udp).size == 0 || (*udp).size != 0 || utf8_from_data(udp, &raw mut uc) != UTF8_DONE)
-            {
+            if (udp.is_null() || (*udp).size == 0 || (*udp).size != 0 || utf8_from_data(udp, &raw mut uc) != UTF8_DONE) {
                 free_(udp);
                 return KEYC_UNKNOWN;
             }
@@ -463,12 +451,7 @@ pub unsafe extern "C" fn key_string_lookup_key(mut key: key_code, with_flags: i3
                     break 'append;
                 }
                 if (key >= KEYC_USER && key < KEYC_USER_END) {
-                    snprintf(
-                        &raw mut tmp as *mut c_char,
-                        sizeof_tmp,
-                        c"User%u".as_ptr(),
-                        (key - KEYC_USER) as u8 as u32,
-                    );
+                    snprintf(&raw mut tmp as *mut c_char, sizeof_tmp, c"User%u".as_ptr(), (key - KEYC_USER) as u8 as u32);
                     strlcat(&raw mut out as *mut c_char, &raw const tmp as *const c_char, sizeof_out);
                     break 'out;
                 }
@@ -488,11 +471,7 @@ pub unsafe extern "C" fn key_string_lookup_key(mut key: key_code, with_flags: i3
                 if (KEYC_IS_UNICODE(key)) {
                     utf8_to_data(key as u32, &raw mut ud);
                     off = strlen(&raw const out as *const c_char);
-                    memcpy(
-                        &raw mut out[off] as *mut c_void,
-                        &raw const ud.data as *const c_void,
-                        ud.size as usize,
-                    );
+                    memcpy(&raw mut out[off] as *mut c_void, &raw const ud.data as *const c_void, ud.size as usize);
                     out[off + ud.size as usize] = b'\0' as c_char;
                     break 'out;
                 }

@@ -30,14 +30,7 @@ pub struct rb_entry<T> {
 }
 
 impl<T> std::fmt::Debug for rb_entry<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("rb_entry")
-            .field("rbe_left", &self.rbe_left)
-            .field("rbe_right", &self.rbe_right)
-            .field("rbe_parent", &self.rbe_parent)
-            .field("rbe_color", &self.rbe_color)
-            .finish()
-    }
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { f.debug_struct("rb_entry").field("rbe_left", &self.rbe_left).field("rbe_right", &self.rbe_right).field("rbe_parent", &self.rbe_parent).field("rbe_color", &self.rbe_color).finish() }
 }
 
 impl<T> Default for rb_entry<T> {
@@ -216,11 +209,10 @@ where
 }
 
 // RB_GENERATE_STATIC name, type, field, cmp
-#[macro_export]
 macro_rules! RB_GENERATE {
     ($head_ty:ty, $ty:ty, $entry_field:ident, $cmp_fn:ident) => {
         ::paste::paste! {
-            impl ::compat_rs::tree::GetEntry<$ty, [<discr_ $entry_field>] > for $ty {
+            impl $crate::compat::tree::GetEntry<$ty, [<discr_ $entry_field>] > for $ty {
                 unsafe fn entry(this: *const Self) -> *const rb_entry<$ty> { unsafe { &raw const (*this).$entry_field } }
                 unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<$ty> { unsafe { &raw mut (*this).$entry_field } }
                 unsafe fn cmp(this: *const Self, other: *const Self) -> i32 { unsafe { $cmp_fn(this, other) } }
@@ -228,48 +220,47 @@ macro_rules! RB_GENERATE {
 
             #[unsafe(no_mangle)]
             pub unsafe extern "C" fn [<$head_ty _RB_MINMAX>](head: *mut rb_head<$ty>, val: i32) -> *mut $ty {
-                unsafe { $crate::tree::rb_minmax::<$ty, [<discr_ $entry_field>]>(head, val) }
+                unsafe { $crate::compat::tree::rb_minmax::<$ty, [<discr_ $entry_field>]>(head, val) }
             }
 
             #[unsafe(no_mangle)]
             pub unsafe extern "C" fn [<$head_ty _RB_NEXT>](elm: *mut $ty) -> *mut $ty {
-                unsafe { $crate::tree::rb_next::<$ty, [<discr_ $entry_field>]>(elm) }
+                unsafe { $crate::compat::tree::rb_next::<$ty, [<discr_ $entry_field>]>(elm) }
             }
 
             #[unsafe(no_mangle)]
             pub unsafe extern "C" fn [<$head_ty _RB_PREV>](elm: *mut $ty) -> *mut $ty {
-                unsafe { $crate::tree::rb_prev::<$ty, [<discr_ $entry_field>]>(elm) }
+                unsafe { $crate::compat::tree::rb_prev::<$ty, [<discr_ $entry_field>]>(elm) }
             }
         }
     };
 }
-pub use RB_GENERATE;
+pub(crate) use RB_GENERATE;
 
-#[macro_export]
 macro_rules! RB_GENERATE_STATIC {
     ($head_ty:ty, $ty:ty, $entry_field:ident, $cmp_fn:ident) => {
         ::paste::paste! {
-            impl ::compat_rs::tree::GetEntry<$ty, [<discr_ $entry_field>] > for $ty {
+            impl $crate::compat::tree::GetEntry<$ty, [<discr_ $entry_field>] > for $ty {
                 unsafe fn entry(this: *const Self) -> *const rb_entry<$ty> { unsafe { &raw const (*this).$entry_field } }
                 unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<$ty> { unsafe { &raw mut (*this).$entry_field } }
                 unsafe fn cmp(this: *const Self, other: *const Self) -> i32 { unsafe { $cmp_fn(this, other) } }
             }
 
             pub unsafe extern "C" fn [<$head_ty _RB_MINMAX>](head: *mut rb_head<$ty>, val: i32) -> *mut $ty {
-                unsafe { $crate::tree::rb_minmax::<$ty, [<discr_ $entry_field>]>(head, val) }
+                unsafe { $crate::compat::tree::rb_minmax::<$ty, [<discr_ $entry_field>]>(head, val) }
             }
 
             pub unsafe extern "C" fn [<$head_ty _RB_NEXT>](elm: *mut $ty) -> *mut $ty {
-                unsafe { $crate::tree::rb_next::<$ty, [<discr_ $entry_field>]>(elm) }
+                unsafe { $crate::compat::tree::rb_next::<$ty, [<discr_ $entry_field>]>(elm) }
             }
 
             pub unsafe extern "C" fn [<$head_ty _RB_PREV>](elm: *mut $ty) -> *mut $ty {
-                unsafe { $crate::tree::rb_prev::<$ty, [<discr_ $entry_field>]>(elm) }
+                unsafe { $crate::compat::tree::rb_prev::<$ty, [<discr_ $entry_field>]>(elm) }
             }
         }
     };
 }
-pub use RB_GENERATE_STATIC;
+pub(crate) use RB_GENERATE_STATIC;
 
 pub unsafe fn rb_minmax<T, D>(head: *mut rb_head<T>, val: i32) -> *mut T
 where
@@ -356,9 +347,7 @@ where
                     rb_rotate_left(head, parent);
                     tmp = rb_right(parent);
                 }
-                if (rb_left(tmp).is_null() || rb_color(rb_left(tmp)) == rb_color::RB_BLACK)
-                    && (rb_right(tmp).is_null() || rb_color(rb_right(tmp)) == rb_color::RB_BLACK)
-                {
+                if (rb_left(tmp).is_null() || rb_color(rb_left(tmp)) == rb_color::RB_BLACK) && (rb_right(tmp).is_null() || rb_color(rb_right(tmp)) == rb_color::RB_BLACK) {
                     rb_color!(tmp) = rb_color::RB_RED;
                     elm = parent;
                     parent = rb_parent(elm);
@@ -388,9 +377,7 @@ where
                     rb_rotate_right(head, parent);
                     tmp = rb_left(parent);
                 }
-                if (rb_left(tmp).is_null() || rb_color(rb_left(tmp)) == rb_color::RB_BLACK)
-                    && (rb_right(tmp).is_null() || rb_color(rb_right(tmp)) == rb_color::RB_BLACK)
-                {
+                if (rb_left(tmp).is_null() || rb_color(rb_left(tmp)) == rb_color::RB_BLACK) && (rb_right(tmp).is_null() || rb_color(rb_right(tmp)) == rb_color::RB_BLACK) {
                     rb_color!(tmp) = rb_color::RB_RED;
                     elm = parent;
                     parent = rb_parent(elm);

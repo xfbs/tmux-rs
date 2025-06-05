@@ -1,37 +1,12 @@
+use super::*;
+
 use std::ptr::{addr_of, addr_of_mut};
 
-use compat_rs::{
+use crate::compat::{
     VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB, impl_tailq_entry,
-    queue::{tailq_first, tailq_init, tailq_remove},
-    strlcat, tailq_insert_head,
+    queue::{tailq_first, tailq_init, tailq_insert_head, tailq_remove},
+    strlcat,
 };
-
-use crate::*;
-
-unsafe extern "C" {
-    // pub fn screen_init(_: *mut screen, _: c_uint, _: c_uint, _: c_uint);
-    // pub fn screen_reinit(_: *mut screen);
-    // pub fn screen_free(_: *mut screen);
-    // pub fn screen_reset_tabs(_: *mut screen);
-    // pub fn screen_reset_hyperlinks(_: *mut screen);
-    // pub fn screen_set_cursor_style(_: c_uint, _: *mut screen_cursor_style, _: *mut c_int);
-    // pub fn screen_set_cursor_colour(_: *mut screen, _: c_int);
-    // pub fn screen_set_title(_: *mut screen, _: *const c_char) -> c_int;
-    // pub fn screen_set_path(_: *mut screen, _: *const c_char);
-    // pub fn screen_push_title(_: *mut screen);
-    // pub fn screen_pop_title(_: *mut screen);
-    // pub fn screen_resize(_: *mut screen, _: c_uint, _: c_uint, _: c_int);
-    // pub fn screen_resize_cursor(_: *mut screen, _: c_uint, _: c_uint, _: c_int, _: c_int, _: c_int);
-    // pub fn screen_set_selection( _: *mut screen, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_int, _: *mut grid_cell,);
-    // pub fn screen_clear_selection(_: *mut screen);
-    // pub fn screen_hide_selection(_: *mut screen);
-    // pub fn screen_reflow(s: *mut screen, new_x: u32, cx: *mut u32, cy: *mut u32, cursor: i32);
-    // pub fn screen_check_selection(_: *mut screen, _: c_uint, _: c_uint) -> c_int;
-    // pub fn screen_select_cell(_: *mut screen, _: *mut grid_cell, _: *const grid_cell);
-    // pub fn screen_alternate_on(_: *mut screen, _: *mut grid_cell, _: c_int);
-    // pub fn screen_alternate_off(_: *mut screen, _: *mut grid_cell, _: c_int);
-    // pub fn screen_mode_to_string(_: c_int) -> *const c_char;
-}
 
 /// Selected area in screen.
 #[repr(C)]
@@ -316,14 +291,7 @@ pub unsafe extern "C" fn screen_pop_title(s: *mut screen) {
 
 /// Resize screen with options.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn screen_resize_cursor(
-    s: *mut screen,
-    sx: u32,
-    sy: u32,
-    mut reflow: i32,
-    eat_empty: i32,
-    cursor: i32,
-) {
+pub unsafe extern "C" fn screen_resize_cursor(s: *mut screen, sx: u32, sy: u32, mut reflow: i32, eat_empty: i32, cursor: i32) {
     let __func__ = "screen_resize_cursor";
     unsafe {
         let mut cx = (*s).cx;
@@ -333,18 +301,7 @@ pub unsafe extern "C" fn screen_resize_cursor(
             screen_write_free_list(s);
         }
 
-        log_debug!(
-            "{}: new size {}{}, now {}x{} (cursor {},{} = {},{})",
-            __func__,
-            sx,
-            sy,
-            screen_size_x(s),
-            screen_size_y(s),
-            (*s).cx,
-            (*s).cy,
-            cx,
-            cy,
-        );
+        log_debug!("{}: new size {}{}, now {}x{} (cursor {},{} = {},{})", __func__, sx, sy, screen_size_x(s), screen_size_y(s), (*s).cx, (*s).cy, cx, cy,);
 
         let sx = if sx < 1 { 1 } else { sx };
         let sy = if sy < 1 { 1 } else { sy };
@@ -375,14 +332,7 @@ pub unsafe extern "C" fn screen_resize_cursor(
             (*s).cy = 0;
         }
 
-        log_debug!(
-            "{}: cursor finished at {},{} = {},{}",
-            __func__,
-            (*s).cx,
-            (*s).cy,
-            cx,
-            cy,
-        );
+        log_debug!("{}: cursor finished at {},{} = {},{}", __func__, (*s).cx, (*s).cy, cx, cy,);
 
         if !(*s).write_list.is_null() {
             screen_write_make_list(s);
@@ -486,16 +436,7 @@ unsafe extern "C" fn screen_resize_y(s: *mut screen, sy: u32, eat_empty: i32, cy
 
 /// Set selection.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn screen_set_selection(
-    s: *mut screen,
-    sx: u32,
-    sy: u32,
-    ex: u32,
-    ey: u32,
-    rectangle: u32,
-    modekeys: i32,
-    gc: *mut grid_cell,
-) {
+pub unsafe extern "C" fn screen_set_selection(s: *mut screen, sx: u32, sy: u32, ex: u32, ey: u32, rectangle: u32, modekeys: i32, gc: *mut grid_cell) {
     unsafe {
         if (*s).sel.is_null() {
             (*s).sel = xcalloc1::<screen_sel>() as *mut screen_sel;

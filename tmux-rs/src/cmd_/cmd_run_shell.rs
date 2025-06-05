@@ -1,7 +1,9 @@
-use compat_rs::queue::tailq_first;
+use crate::*;
+
 use libc::{WEXITSTATUS, WIFEXITED, WIFSIGNALED, WTERMSIG, memcpy, strtod, toupper};
 
-use crate::{xmalloc::Zeroable, *};
+use crate::compat::queue::tailq_first;
+use crate::xmalloc::Zeroable;
 
 #[unsafe(no_mangle)]
 static mut cmd_run_shell_entry: cmd_entry = cmd_entry {
@@ -33,11 +35,7 @@ pub struct cmd_run_shell_data {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_run_shell_args_parse(
-    args: *mut args,
-    _idx: u32,
-    cause: *mut *mut c_char,
-) -> args_parse_type {
+pub unsafe extern "C" fn cmd_run_shell_args_parse(args: *mut args, _idx: u32, cause: *mut *mut c_char) -> args_parse_type {
     unsafe {
         if (args_has_(args, 'C')) {
             return args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING;
@@ -183,23 +181,7 @@ pub unsafe extern "C" fn cmd_run_shell_timer(_fd: i32, _events: i16, arg: *mut c
                 cmd_run_shell_free(cdata.cast());
                 return;
             }
-            if (job_run(
-                cmd,
-                0,
-                null_mut(),
-                null_mut(),
-                (*cdata).s,
-                (*cdata).cwd,
-                None,
-                Some(cmd_run_shell_callback),
-                Some(cmd_run_shell_free),
-                cdata.cast(),
-                (*cdata).flags,
-                -1,
-                -1,
-            )
-            .is_null())
-            {
+            if (job_run(cmd, 0, null_mut(), null_mut(), (*cdata).s, (*cdata).cwd, None, Some(cmd_run_shell_callback), Some(cmd_run_shell_free), cdata.cast(), (*cdata).flags, -1, -1).is_null()) {
                 cmd_run_shell_free(cdata.cast());
             }
             return;

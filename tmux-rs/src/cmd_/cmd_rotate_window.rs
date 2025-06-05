@@ -1,12 +1,6 @@
-use compat_rs::{
-    queue::{
-        tailq_first, tailq_foreach, tailq_foreach_reverse, tailq_insert_tail, tailq_last, tailq_next, tailq_prev,
-        tailq_remove,
-    },
-    tailq_insert_head,
-};
-
 use crate::*;
+
+use crate::compat::queue::{tailq_first, tailq_foreach, tailq_foreach_reverse, tailq_insert_head, tailq_insert_tail, tailq_last, tailq_next, tailq_prev, tailq_remove};
 
 #[unsafe(no_mangle)]
 static mut cmd_rotate_window_entry: cmd_entry = cmd_entry {

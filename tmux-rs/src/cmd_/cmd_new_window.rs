@@ -1,7 +1,6 @@
-use compat_rs::tree::rb_foreach;
-use libc::strcmp;
-
 use crate::*;
+
+use crate::compat::tree::rb_foreach;
 
 const NEW_WINDOW_TEMPLATE: &CStr = c"#{session_name}:#{window_index}.#{pane_index}";
 
@@ -17,7 +16,7 @@ static mut cmd_new_window_entry: cmd_entry = cmd_entry {
 
     flags: cmd_flag::empty(),
     exec: Some(cmd_new_window_exec),
-    ..unsafe{zeroed()}
+    ..unsafe { zeroed() }
 };
 
 #[unsafe(no_mangle)]
@@ -48,7 +47,7 @@ unsafe extern "C" fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) 
         if (args_has_(args, 'S') && !name.is_null() && (*target).idx == -1) {
             let expanded = format_single(item, name, c, s, null_mut(), null_mut());
             for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
-                if (strcmp((*(*wl).window).name, expanded) != 0) {
+                if (libc::strcmp((*(*wl).window).name, expanded) != 0) {
                     continue;
                 }
                 if (new_wl.is_null()) {

@@ -1,10 +1,7 @@
-#![allow(dead_code)]
-use core::ffi::{c_char, c_int, c_short, c_void};
+use crate::*;
 
-use super::*;
-
-use compat_rs::{
-    queue::{tailq_foreach, tailq_head, tailq_remove},
+use crate::compat::{
+    queue::{tailq_foreach, tailq_head, tailq_insert_tail, tailq_remove},
     tree::rb_foreach,
 };
 
@@ -143,7 +140,7 @@ pub unsafe extern "C" fn alerts_queue(w: NonNull<window>, flags: window_flag) {
         if alerts_enabled(w, flags) != 0 {
             if (*w).alerts_queued == 0 {
                 (*w).alerts_queued = 1;
-                compat_rs::queue::tailq_insert_tail::<_, discr_alerts_entry>(&raw mut alerts_list, w);
+                tailq_insert_tail::<_, discr_alerts_entry>(&raw mut alerts_list, w);
                 window_add_ref(w, c"alerts_queue".as_ptr());
             }
 
@@ -273,7 +270,7 @@ unsafe fn alerts_set_message(wl: *mut winlink, type_: *const c_char, option: *co
     unsafe {
         let visual: i32 = options_get_number((*(*wl).session).options, option) as i32;
 
-        for c in compat_rs::queue::tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
+        for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if (*c).session != (*wl).session || (*c).flags.intersects(client_flag::CONTROL) {
                 continue;
             }

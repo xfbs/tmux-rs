@@ -1,15 +1,11 @@
-use compat_rs::{
+use crate::*;
+
+use libc::{isdigit, sscanf};
+
+use crate::compat::{
     queue::{tailq_first, tailq_foreach, tailq_insert_tail, tailq_last, tailq_next},
     strlcat,
 };
-use libc::{isdigit, sscanf};
-
-use crate::*;
-
-unsafe extern "C" {
-    // pub fn layout_dump(_: *mut layout_cell) -> *mut c_char;
-    // pub fn layout_parse(_: *mut window, _: *const c_char, _: *mut *mut c_char) -> c_int;
-}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn layout_find_bottomright(mut lc: *mut layout_cell) -> *mut layout_cell {
@@ -49,12 +45,7 @@ pub unsafe extern "C" fn layout_dump(root: *mut layout_cell) -> *mut c_char {
             return null_mut();
         }
 
-        xasprintf(
-            &raw mut out,
-            c"%04hx,%s".as_ptr(),
-            layout_checksum(layout) as u32,
-            layout,
-        );
+        xasprintf(&raw mut out, c"%04hx,%s".as_ptr(), layout_checksum(layout) as u32, layout);
         out
     }
 }
@@ -76,26 +67,9 @@ pub unsafe extern "C" fn layout_append(lc: *mut layout_cell, buf: *mut c_char, l
         }
 
         let tmplen = if (!(*lc).wp.is_null()) {
-            xsnprintf(
-                tmp,
-                sizeof_tmp,
-                c"%ux%u,%u,%u,%u".as_ptr(),
-                (*lc).sx,
-                (*lc).sy,
-                (*lc).xoff,
-                (*lc).yoff,
-                (*(*lc).wp).id,
-            )
+            xsnprintf(tmp, sizeof_tmp, c"%ux%u,%u,%u,%u".as_ptr(), (*lc).sx, (*lc).sy, (*lc).xoff, (*lc).yoff, (*(*lc).wp).id)
         } else {
-            xsnprintf(
-                tmp,
-                sizeof_tmp,
-                c"%ux%u,%u,%u".as_ptr(),
-                (*lc).sx,
-                (*lc).sy,
-                (*lc).xoff,
-                (*lc).yoff,
-            )
+            xsnprintf(tmp, sizeof_tmp, c"%ux%u,%u,%u".as_ptr(), (*lc).sx, (*lc).sy, (*lc).xoff, (*lc).yoff)
         };
 
         if (tmplen > sizeof_tmp as i32 - 1) {
@@ -153,7 +127,7 @@ pub unsafe extern "C" fn layout_check(lc: *mut layout_cell) -> i32 {
                 }
             }
             layout_type::LAYOUT_TOPBOTTOM => {
-                for lcchild in compat_rs::queue::tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr) {
+                for lcchild in tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr) {
                     if ((*lcchild).sx != (*lc).sx) {
                         return 0;
                     }
@@ -232,14 +206,14 @@ pub unsafe extern "C" fn layout_parse(w: *mut window, mut layout: *const c_char,
             match ((*lc).type_) {
                 layout_type::LAYOUT_WINDOWPANE => (),
                 layout_type::LAYOUT_LEFTRIGHT => {
-                    for lcchild in compat_rs::queue::tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr) {
+                    for lcchild in tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr) {
                         sy = (*lcchild).sy + 1;
                         sx += (*lcchild).sx + 1;
                         continue;
                     }
                 }
                 layout_type::LAYOUT_TOPBOTTOM => {
-                    for lcchild in compat_rs::queue::tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr) {
+                    for lcchild in tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr) {
                         sx = (*lcchild).sx + 1;
                         sy += (*lcchild).sy + 1;
                         continue;
@@ -297,7 +271,7 @@ unsafe extern "C" fn layout_assign(wp: *mut *mut window_pane, lc: *mut layout_ce
                 *wp = tailq_next::<_, _, discr_entry>(*wp);
             }
             layout_type::LAYOUT_LEFTRIGHT | layout_type::LAYOUT_TOPBOTTOM => {
-                for lcchild in compat_rs::queue::tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr) {
+                for lcchild in tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr) {
                     layout_assign(wp, lcchild);
                 }
             }
@@ -322,15 +296,7 @@ unsafe extern "C" fn layout_construct(lcparent: *mut layout_cell, layout: *mut *
             if (isdigit(**layout as i32) == 0) {
                 return null_mut();
             }
-            if (sscanf(
-                *layout,
-                c"%ux%u,%u,%u".as_ptr(),
-                &raw mut sx,
-                &raw mut sy,
-                &raw mut xoff,
-                &raw mut yoff,
-            ) != 4)
-            {
+            if (sscanf(*layout, c"%ux%u,%u,%u".as_ptr(), &raw mut sx, &raw mut sy, &raw mut xoff, &raw mut yoff) != 4) {
                 return null_mut();
             }
 

@@ -1,6 +1,6 @@
-use compat_rs::{queue::tailq_empty, strtonum};
-
 use crate::*;
+
+use crate::compat::{queue::tailq_empty, strtonum};
 
 #[unsafe(no_mangle)]
 static mut cmd_resize_pane_entry: cmd_entry = cmd_entry {
@@ -167,8 +167,7 @@ unsafe extern "C" fn cmd_resize_pane_mouse_update(c: *mut client, m: *mut mouse_
         }
 
         for i in 0..cells.len() {
-            let mut lc =
-                layout_search_by_border((*w).layout_root, lx + offsets[i][0] as u32, ly + offsets[i][1] as u32);
+            let mut lc = layout_search_by_border((*w).layout_root, lx + offsets[i][0] as u32, ly + offsets[i][1] as u32);
             if lc.is_null() {
                 continue;
             }

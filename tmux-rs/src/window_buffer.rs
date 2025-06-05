@@ -1,12 +1,9 @@
-use compat_rs::{VIS_CSTYLE, VIS_OCTAL, VIS_TAB, queue::tailq_first};
+use super::*;
+
+use crate::compat::{VIS_CSTYLE, VIS_OCTAL, VIS_TAB, queue::tailq_first};
 use libc::{memmem, qsort, strcmp, strstr};
 
 use crate::xmalloc::xreallocarray;
-
-use super::*;
-unsafe extern "C" {
-    // pub static mut window_buffer_mode: window_mode;
-}
 
 const WINDOW_BUFFER_DEFAULT_COMMAND: *const i8 = c"paste-buffer -p -b '%%'".as_ptr();
 const WINDOW_BUFFER_DEFAULT_FORMAT: *const i8 = c"#{t/p:buffer_created}: #{buffer_sample}".as_ptr();

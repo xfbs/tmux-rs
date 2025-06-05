@@ -1,6 +1,6 @@
-use compat_rs::queue::tailq_foreach;
-
 use crate::*;
+
+use crate::compat::queue::tailq_foreach;
 
 #[unsafe(no_mangle)]
 static mut cmd_detach_client_entry: cmd_entry = cmd_entry {
@@ -43,11 +43,7 @@ pub unsafe extern "C" fn cmd_detach_client_exec(self_: *mut cmd, item: *mut cmdq
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        let mut msgtype = if args_has(args, b'P') != 0 {
-            msgtype::MSG_DETACHKILL
-        } else {
-            msgtype::MSG_DETACH
-        };
+        let mut msgtype = if args_has(args, b'P') != 0 { msgtype::MSG_DETACHKILL } else { msgtype::MSG_DETACH };
 
         let mut s: *mut session = null_mut();
         if args_has(args, b's') != 0 {
@@ -55,7 +51,7 @@ pub unsafe extern "C" fn cmd_detach_client_exec(self_: *mut cmd, item: *mut cmdq
             if s.is_null() {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
-            for loop_ in compat_rs::queue::tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
+            for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
                 if ((*loop_).session == s) {
                     if !cmd.is_null() {
                         server_client_exec(loop_, cmd);
@@ -68,7 +64,7 @@ pub unsafe extern "C" fn cmd_detach_client_exec(self_: *mut cmd, item: *mut cmdq
         }
 
         if args_has(args, b'a') != 0 {
-            for loop_ in compat_rs::queue::tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
+            for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
                 if !(*loop_).session.is_null() && loop_ != tc {
                     if !cmd.is_null() {
                         server_client_exec(loop_, cmd);

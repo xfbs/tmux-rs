@@ -1,23 +1,15 @@
-use compat_rs::{
+use crate::*;
+
+use crate::compat::{
     closefrom,
     fdforkpty::fdforkpty,
     queue::{tailq_first, tailq_foreach, tailq_remove},
     tailq_insert_head,
 };
-use libc::{
-    _exit, SIG_BLOCK, SIG_SETMASK, SIGCHLD, STDERR_FILENO, STDIN_FILENO, TCSANOW, VERASE, chdir, close, execl, execvp,
-    kill, sigfillset, sigprocmask, strrchr, tcgetattr, tcsetattr,
-};
+use libc::{_exit, SIG_BLOCK, SIG_SETMASK, SIGCHLD, STDERR_FILENO, STDIN_FILENO, TCSANOW, VERASE, chdir, close, execl, execvp, kill, sigfillset, sigprocmask, strrchr, tcgetattr, tcsetattr};
 
 #[cfg(feature = "utempter")]
 use crate::utempter::utempter_add_record;
-
-use crate::*;
-
-unsafe extern "C" {
-    // pub unsafe fn spawn_window(_: *mut spawn_context, _: *mut *mut c_char) -> *mut winlink;
-    // pub unsafe fn spawn_pane(_: *mut spawn_context, _: *mut *mut c_char) -> *mut window_pane;
-}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn spawn_log(from: *const c_char, sc: *mut spawn_context) {
@@ -32,50 +24,16 @@ pub unsafe extern "C" fn spawn_log(from: *const c_char, sc: *mut spawn_context) 
         log_debug!("{}: {}, flags={:#x}", _s(from), _s(name), (*sc).flags);
 
         if (!wl.is_null() && !wp0.is_null()) {
-            xsnprintf(
-                tmp.as_mut_ptr().cast(),
-                size_of::<tmp_type>(),
-                c"wl=%d wp0=%%%u".as_ptr(),
-                (*wl).idx,
-                (*wp0).id,
-            );
+            xsnprintf(tmp.as_mut_ptr().cast(), size_of::<tmp_type>(), c"wl=%d wp0=%%%u".as_ptr(), (*wl).idx, (*wp0).id);
         } else if (!wl.is_null()) {
-            xsnprintf(
-                tmp.as_mut_ptr().cast(),
-                size_of::<tmp_type>(),
-                c"wl=%d wp0=none".as_ptr(),
-                (*wl).idx,
-            );
+            xsnprintf(tmp.as_mut_ptr().cast(), size_of::<tmp_type>(), c"wl=%d wp0=none".as_ptr(), (*wl).idx);
         } else if (!wp0.is_null()) {
-            xsnprintf(
-                tmp.as_mut_ptr().cast(),
-                size_of::<tmp_type>(),
-                c"wl=none wp0=%%%u".as_ptr(),
-                (*wp0).id,
-            );
+            xsnprintf(tmp.as_mut_ptr().cast(), size_of::<tmp_type>(), c"wl=none wp0=%%%u".as_ptr(), (*wp0).id);
         } else {
-            xsnprintf(
-                tmp.as_mut_ptr().cast(),
-                size_of::<tmp_type>(),
-                c"wl=none wp0=none".as_ptr(),
-            );
+            xsnprintf(tmp.as_mut_ptr().cast(), size_of::<tmp_type>(), c"wl=none wp0=none".as_ptr());
         }
-        log_debug!(
-            "{}: s=${} {} idx={}",
-            _s(from),
-            (*s).id,
-            _s(tmp.as_ptr().cast()),
-            (*sc).idx
-        );
-        log_debug!(
-            "{}: name={}",
-            _s(from),
-            _s(if (*sc).name.is_null() {
-                c"none".as_ptr()
-            } else {
-                (*sc).name
-            }),
-        );
+        log_debug!("{}: s=${} {} idx={}", _s(from), (*s).id, _s(tmp.as_ptr().cast()), (*sc).idx);
+        log_debug!("{}: name={}", _s(from), _s(if (*sc).name.is_null() { c"none".as_ptr() } else { (*sc).name }),);
     }
 }
 
@@ -169,16 +127,7 @@ pub unsafe extern "C" fn spawn_window(sc: *mut spawn_context, cause: *mut *mut c
             let mut sy = 0u32;
             let mut xpixel = 0u32;
             let mut ypixel = 0u32;
-            default_window_size(
-                (*sc).tc,
-                s,
-                null_mut(),
-                &raw mut sx,
-                &raw mut sy,
-                &raw mut xpixel,
-                &raw mut ypixel,
-                -1,
-            );
+            default_window_size((*sc).tc, s, null_mut(), &raw mut sx, &raw mut sy, &raw mut xpixel, &raw mut ypixel, -1);
             w = window_create(sx, sy, xpixel, ypixel);
             if w.is_null() {
                 winlink_remove(&raw mut (*s).windows, (*sc).wl);
@@ -266,12 +215,7 @@ pub unsafe extern "C" fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut c_c
             if (!(*sc).cwd.is_null()) {
                 cwd = format_single(item, (*sc).cwd, c, (*target).s, null_mut(), null_mut());
                 if (*cwd != b'/' as _) {
-                    xasprintf(
-                        &raw mut new_cwd,
-                        c"%s/%s".as_ptr(),
-                        server_client_get_cwd(c, (*target).s),
-                        cwd,
-                    );
+                    xasprintf(&raw mut new_cwd, c"%s/%s".as_ptr(), server_client_get_cwd(c, (*target).s), cwd);
                     free_(cwd);
                     cwd = new_cwd;
                 }
@@ -289,13 +233,7 @@ pub unsafe extern "C" fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut c_c
             if ((*sc).flags & SPAWN_RESPAWN != 0) {
                 if ((*(*sc).wp0).fd != -1 && (!(*sc).flags & SPAWN_KILL != 0)) {
                     window_pane_index((*sc).wp0, &raw mut idx);
-                    xasprintf(
-                        cause,
-                        c"pane %s:%d.%u still active".as_ptr(),
-                        (*s).name,
-                        (*(*sc).wl).idx,
-                        idx,
-                    );
+                    xasprintf(cause, c"pane %s:%d.%u still active".as_ptr(), (*s).name, (*(*sc).wl).idx, idx);
                     free_(cwd);
                     return null_mut();
                 }
@@ -419,13 +357,7 @@ pub unsafe extern "C" fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut c_c
             }
 
             /* Fork the new process. */
-            (*new_wp).pid = fdforkpty(
-                ptm_fd,
-                &raw mut (*new_wp).fd,
-                (*new_wp).tty.as_mut_ptr(),
-                null_mut(),
-                &raw mut ws,
-            );
+            (*new_wp).pid = fdforkpty(ptm_fd, &raw mut (*new_wp).fd, (*new_wp).tty.as_mut_ptr(), null_mut(), &raw mut ws);
             if ((*new_wp).pid == -1) {
                 xasprintf(cause, c"fork failed: %s".as_ptr(), strerror(errno!()));
                 (*new_wp).fd = -1;
@@ -542,12 +474,7 @@ pub unsafe extern "C" fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut c_c
         #[cfg(feature = "utempter")]
         {
             if !(*new_wp).flags.intersects(window_pane_flags::PANE_EMPTY) {
-                xasprintf(
-                    &raw mut cp,
-                    c"tmux(%lu).%%%u".as_ptr(),
-                    std::process::id() as c_long,
-                    (*new_wp).id,
-                );
+                xasprintf(&raw mut cp, c"tmux(%lu).%%%u".as_ptr(), std::process::id() as c_long, (*new_wp).id);
                 utempter_add_record((*new_wp).fd, cp);
                 kill(std::process::id() as i32, SIGCHLD);
                 free_(cp);

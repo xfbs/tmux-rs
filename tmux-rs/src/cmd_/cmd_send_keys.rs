@@ -1,7 +1,8 @@
-use compat_rs::queue::tailq_first;
+use crate::*;
+
 use libc::strtol;
 
-use crate::*;
+use crate::compat::queue::tailq_first;
 
 #[unsafe(no_mangle)]
 static mut cmd_send_keys_entry: cmd_entry = cmd_entry {

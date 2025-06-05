@@ -1,24 +1,6 @@
 use crate::{xmalloc::xstrndup, *};
 
 unsafe extern "C" {
-    // pub unsafe static mut global_options: *mut options = null_mut();
-    // pub unsafe static mut global_s_options: *mut options = null_mut();
-    // pub unsafe static mut global_w_options: *mut options = null_mut();
-    // pub unsafe static mut global_environ: *mut environ = null_mut();
-
-    // pub unsafe static mut start_time: timeval = unsafe { zeroed() };
-    // pub unsafe static mut socket_path: *mut c_char = null_mut();
-    // pub unsafe static mut ptm_fd: c_int = -1;
-    // pub unsafe static mut shell_command: *mut c_char = null_mut();
-
-    // pub unsafe fn checkshell(_: *const c_char) -> c_int;
-    // pub unsafe fn setblocking(_: c_int, _: c_int);
-    // pub unsafe fn shell_argv0(_: *const c_char, _: c_int) -> *mut c_char;
-    // pub unsafe fn get_timer() -> u64;
-    // pub unsafe fn sig2name(_: i32) -> *mut c_char;
-    // pub unsafe fn find_cwd() -> *mut c_char;
-    // pub unsafe fn find_home() -> *mut c_char;
-    // pub unsafe fn getversion() -> *mut c_char;
 
     // TODO move/remove
     fn errx(_: c_int, _: *const c_char, ...);
@@ -27,12 +9,10 @@ unsafe extern "C" {
     fn tzset();
 }
 
-use compat_rs::{fdforkpty::getptmfd, getprogname::getprogname, optarg, optind};
+use crate::compat::{fdforkpty::getptmfd, getprogname::getprogname, optarg, optind};
 use libc::{
-    __errno_location, CLOCK_MONOTONIC, CLOCK_REALTIME, CODESET, EEXIST, F_GETFL, F_SETFL, LC_CTYPE, LC_TIME,
-    O_NONBLOCK, PATH_MAX, S_IRWXO, S_IRWXU, X_OK, access, clock_gettime, fcntl, fprintf, getcwd, getenv, getopt,
-    getpwuid, getuid, lstat, mkdir, nl_langinfo, printf, realpath, setlocale, stat, strcasecmp, strcasestr, strchr,
-    strcmp, strcspn, strerror, strncmp, strrchr, strstr, timespec,
+    __errno_location, CLOCK_MONOTONIC, CLOCK_REALTIME, CODESET, EEXIST, F_GETFL, F_SETFL, LC_CTYPE, LC_TIME, O_NONBLOCK, PATH_MAX, S_IRWXO, S_IRWXU, X_OK, access, clock_gettime, fcntl, fprintf, getcwd, getenv, getopt, getpwuid, getuid, lstat, mkdir, nl_langinfo, printf, realpath, setlocale, stat,
+    strcasecmp, strcasestr, strchr, strcmp, strcspn, strerror, strncmp, strrchr, strstr, timespec,
 };
 
 #[unsafe(no_mangle)]
@@ -123,11 +103,7 @@ pub unsafe extern "C" fn expand_path(path: *const c_char, home: *const c_char) -
 
         if *path == b'$' as c_char {
             end = strchr(path, b'/' as i32);
-            let name = if end.is_null() {
-                xstrdup(path.add(1)).cast().as_ptr()
-            } else {
-                xstrndup(path.add(1), end.addr() - path.addr() - 1).cast().as_ptr()
-            };
+            let name = if end.is_null() { xstrdup(path.add(1)).cast().as_ptr() } else { xstrndup(path.add(1), end.addr() - path.addr() - 1).cast().as_ptr() };
             let mut value = environ_find(global_environ, name);
             free_(name);
             if value.is_null() {
@@ -169,12 +145,7 @@ unsafe extern "C" fn expand_paths(s: *const c_char, paths: *mut *mut *mut c_char
                 continue;
             }
             if realpath(expanded, resolved.as_mut_ptr()).is_null() {
-                log_debug!(
-                    "{}: realpath(\"{}\") failed: {}",
-                    func,
-                    _s(expanded),
-                    _s(strerror(*__errno_location())),
-                );
+                log_debug!("{}: realpath(\"{}\") failed: {}", func, _s(expanded), _s(strerror(*__errno_location())),);
                 if ignore_errors != 0 {
                     free_(expanded);
                     continue;
@@ -234,21 +205,11 @@ unsafe extern "C" fn make_label(mut label: *const c_char, cause: *mut *mut c_cha
             xasprintf(&raw mut base, c"%s/tmux-%ld".as_ptr(), path, uid as c_long);
             free_(path);
             if mkdir(base, S_IRWXU) != 0 && *__errno_location() != EEXIST {
-                xasprintf(
-                    cause,
-                    c"couldn't create directory %s (%s)".as_ptr(),
-                    base,
-                    strerror(*__errno_location()),
-                );
+                xasprintf(cause, c"couldn't create directory %s (%s)".as_ptr(), base, strerror(*__errno_location()));
                 break 'fail;
             }
             if lstat(base, &raw mut sb) != 0 {
-                xasprintf(
-                    cause,
-                    c"couldn't read directory %s (%s)".as_ptr(),
-                    base,
-                    strerror(*__errno_location()),
-                );
+                xasprintf(cause, c"couldn't read directory %s (%s)".as_ptr(), base, strerror(*__errno_location()));
                 break 'fail;
             }
             if !S_ISDIR(sb.st_mode) {
@@ -276,11 +237,7 @@ pub unsafe extern "C" fn shell_argv0(shell: *const c_char, is_login: c_int) -> *
         let mut argv0 = null_mut();
 
         let slash = strrchr(shell, b'/' as _);
-        let name = if !slash.is_null() && *slash.add(1) != b'\0' as c_char {
-            slash.add(1)
-        } else {
-            shell
-        };
+        let name = if !slash.is_null() && *slash.add(1) != b'\0' as c_char { slash.add(1) } else { shell };
 
         if is_login != 0 {
             xasprintf(&raw mut argv0, c"-%s".as_ptr(), name);
@@ -422,8 +379,7 @@ pub extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *mut *mut
         let mut fflag: i32 = 0;
         let mut flags: client_flag = client_flag::empty();
 
-        if setlocale(LC_CTYPE, c"en_US.UTF-8".as_ptr()).is_null() && setlocale(LC_CTYPE, c"C.UTF-8".as_ptr()).is_null()
-        {
+        if setlocale(LC_CTYPE, c"en_US.UTF-8".as_ptr()).is_null() && setlocale(LC_CTYPE, c"C.UTF-8".as_ptr()).is_null() {
             if setlocale(LC_CTYPE, c"".as_ptr()).is_null() {
                 errx(1, c"invalid LC_ALL, LC_CTYPE or LANG".as_ptr());
             }
@@ -568,13 +524,7 @@ pub extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *mut *mut
         }
 
         // The default shell comes from SHELL or from the user's passwd entry if available.
-        options_set_string(
-            global_s_options,
-            c"default-shell".as_ptr(),
-            0,
-            c"%s".as_ptr(),
-            getshell(),
-        );
+        options_set_string(global_s_options, c"default-shell".as_ptr(), 0, c"%s".as_ptr(), getshell());
 
         // Override keys to vi if VISUAL or EDITOR are set.
         let mut s = getenv(c"VISUAL".as_ptr());
@@ -588,11 +538,7 @@ pub extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *mut *mut
             if !strrchr(s, b'/' as _).is_null() {
                 s = strrchr(s, b'/' as _).add(1);
             }
-            let keys = if !strstr(s, c"vi".as_ptr()).is_null() {
-                MODEKEY_VI
-            } else {
-                MODEKEY_EMACS
-            };
+            let keys = if !strstr(s, c"vi".as_ptr()).is_null() { MODEKEY_VI } else { MODEKEY_EMACS };
             options_set_number(global_s_options, c"status-keys".as_ptr(), keys as _);
             options_set_number(global_w_options, c"mode-keys".as_ptr(), keys as _);
         }

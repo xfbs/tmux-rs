@@ -1,11 +1,6 @@
-use compat_rs::{queue::tailq_first, strlcat};
-use libc::{gmtime_r, localtime, strftime, tm};
-
 use crate::*;
-unsafe extern "C" {
-    // pub static mut window_clock_mode: window_mode;
-    // pub static mut window_clock_table: [[[c_char; 5usize]; 5usize]; 14usize];
-}
+
+use crate::compat::{queue::tailq_first, strlcat};
 
 #[unsafe(no_mangle)]
 pub static mut window_clock_mode: window_mode = window_mode {
@@ -134,8 +129,8 @@ pub unsafe extern "C" fn window_clock_timer_callback(fd: i32, events: i16, arg: 
         let mut wme = arg as *mut window_mode_entry;
         let mut wp = (*wme).wp;
         let mut data = (*wme).data as *mut window_clock_mode_data;
-        let mut now: tm = zeroed();
-        let mut then: tm = zeroed();
+        let mut now: libc::tm = zeroed();
+        let mut then: libc::tm = zeroed();
         let mut t: time_t;
         let mut tv: timeval = timeval { tv_sec: 1, tv_usec: 0 };
 
@@ -147,8 +142,8 @@ pub unsafe extern "C" fn window_clock_timer_callback(fd: i32, events: i16, arg: 
         }
 
         t = libc::time(null_mut());
-        gmtime_r(&raw mut t, &raw mut now);
-        gmtime_r(&raw mut (*data).tim, &raw mut then);
+        libc::gmtime_r(&raw mut t, &raw mut now);
+        libc::gmtime_r(&raw mut (*data).tim, &raw mut then);
         if (now.tm_min == then.tm_min) {
             return;
         }
@@ -232,16 +227,16 @@ pub unsafe extern "C" fn window_clock_draw_screen(wme: NonNull<window_mode_entry
         screen_write_start(&raw mut ctx, s);
 
         let mut t = libc::time(null_mut());
-        let tm = localtime(&raw mut t);
+        let tm = libc::localtime(&raw mut t);
         if (style == 0) {
-            strftime(&raw mut tim as _, sizeof_tim, c"%l:%M ".as_ptr(), localtime(&raw mut t));
+            libc::strftime(&raw mut tim as _, sizeof_tim, c"%l:%M ".as_ptr(), libc::localtime(&raw mut t));
             if ((*tm).tm_hour >= 12) {
                 strlcat(&raw mut tim as _, c"PM".as_ptr(), sizeof_tim);
             } else {
                 strlcat(&raw mut tim as _, c"AM".as_ptr(), sizeof_tim);
             }
         } else {
-            strftime(&raw mut tim as _, sizeof_tim, c"%H:%M".as_ptr(), tm);
+            libc::strftime(&raw mut tim as _, sizeof_tim, c"%H:%M".as_ptr(), tm);
         }
 
         screen_write_clearscreen(&raw mut ctx, 8);

@@ -1,6 +1,6 @@
-use compat_rs::queue::{tailq_first, tailq_foreach, tailq_next, tailq_prev};
-
 use crate::*;
+
+use crate::compat::queue::{tailq_first, tailq_foreach, tailq_next, tailq_prev};
 
 #[unsafe(no_mangle)]
 static mut cmd_select_pane_entry: cmd_entry = cmd_entry {
@@ -41,7 +41,7 @@ pub unsafe extern "C" fn cmd_select_pane_redraw(w: *mut window) {
          * offset may change), otherwise just draw borders.
          */
 
-        for c in compat_rs::queue::tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
+        for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if ((*c).session.is_null() || ((*c).flags.intersects(client_flag::CONTROL))) {
                 continue;
             }

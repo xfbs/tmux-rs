@@ -1,6 +1,6 @@
-use compat_rs::{queue::tailq_remove, tailq_insert_head};
-
 use crate::*;
+
+use crate::compat::{queue::tailq_remove, tailq_insert_head};
 
 #[unsafe(no_mangle)]
 static mut cmd_break_pane_entry: cmd_entry = cmd_entry {
@@ -39,11 +39,7 @@ pub unsafe extern "C" fn cmd_break_pane_exec(self_: *mut cmd, item: *mut cmdq_it
 
         let before = args_has(args, b'b');
         if args_has(args, b'a') != 0 || before != 0 {
-            idx = if !(*target).wl.is_null() {
-                winlink_shuffle_up(dst_s, (*target).wl, before)
-            } else {
-                winlink_shuffle_up(dst_s, (*dst_s).curw, before)
-            };
+            idx = if !(*target).wl.is_null() { winlink_shuffle_up(dst_s, (*target).wl, before) } else { winlink_shuffle_up(dst_s, (*dst_s).curw, before) };
             if idx == -1 {
                 return cmd_retval::CMD_RETURN_ERROR;
             }

@@ -1,6 +1,6 @@
 use crate::*;
 
-use compat_rs::strtonum;
+use crate::compat::strtonum;
 
 #[unsafe(no_mangle)]
 static mut cmd_resize_window_entry: cmd_entry = cmd_entry {
@@ -76,27 +76,9 @@ unsafe extern "C" fn cmd_resize_window_exec(self_: *mut cmd, item: *mut cmdq_ite
         }
 
         if (args_has(args, b'A') != 0) {
-            default_window_size(
-                null_mut(),
-                s,
-                w,
-                &raw mut sx,
-                &raw mut sy,
-                &raw mut xpixel,
-                &raw mut ypixel,
-                WINDOW_SIZE_LARGEST,
-            );
+            default_window_size(null_mut(), s, w, &raw mut sx, &raw mut sy, &raw mut xpixel, &raw mut ypixel, WINDOW_SIZE_LARGEST);
         } else if (args_has(args, b'a') != 0) {
-            default_window_size(
-                null_mut(),
-                s,
-                w,
-                &raw mut sx,
-                &raw mut sy,
-                &raw mut xpixel,
-                &raw mut ypixel,
-                WINDOW_SIZE_SMALLEST,
-            );
+            default_window_size(null_mut(), s, w, &raw mut sx, &raw mut sy, &raw mut xpixel, &raw mut ypixel, WINDOW_SIZE_SMALLEST);
         }
 
         options_set_number((*w).options, c"window-size".as_ptr(), WINDOW_SIZE_MANUAL as i64);

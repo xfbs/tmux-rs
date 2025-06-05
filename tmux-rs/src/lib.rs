@@ -2,23 +2,27 @@
 #![warn(static_mut_refs)]
 // #![warn(clippy::shadow_reuse)]
 // #![warn(clippy::shadow_same)]
-#![warn(clippy::shadow_unrelated)]
-#![allow(clippy::upper_case_acronyms)]
-#![allow(clippy::collapsible_else_if)]
-#![allow(clippy::collapsible_if)]
-#![allow(clippy::manual_clamp)]
-#![allow(clippy::manual_range_contains)]
-#![allow(clippy::missing_safety_doc)]
-#![allow(clippy::needless_return)]
-#![allow(clippy::new_without_default)]
-#![allow(clippy::deref_addrof, reason = "many false positive, required for unsafe code")]
-#![allow(clippy::zero_ptr)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 #![allow(private_interfaces)]
 #![allow(unsafe_op_in_unsafe_fn)]
 #![allow(unused)]
+#![allow(clippy::collapsible_else_if)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::deref_addrof, reason = "many false positive, required for unsafe code")]
+#![allow(clippy::manual_clamp)]
+#![allow(clippy::manual_range_contains)]
+#![allow(clippy::missing_safety_doc)]
+#![allow(clippy::needless_return)]
+#![allow(clippy::new_without_default)]
+#![allow(clippy::upper_case_acronyms)]
+#![allow(clippy::zero_ptr)]
+#![warn(clippy::shadow_reuse)]
+#![warn(clippy::shadow_same)]
+#![warn(clippy::shadow_unrelated)]
+
+pub mod compat;
 
 pub mod ncurses_;
 pub use ncurses_::*;
@@ -53,7 +57,7 @@ pub use libc::{FILE, REG_EXTENDED, REG_ICASE, SEEK_END, SEEK_SET, SIGHUP, WEXITS
 mod event_;
 pub use event_::*;
 
-use compat_rs::{
+use crate::compat::{
     RB_GENERATE, impl_tailq_entry,
     queue::{Entry, ListEntry, list_entry, list_head, tailq_entry, tailq_first, tailq_foreach, tailq_head, tailq_next},
     tree::{GetEntry, rb_entry, rb_head},
@@ -75,7 +79,7 @@ pub fn transmute_ptr<T>(value: Option<NonNull<T>>) -> *mut T {
     }
 }
 
-pub use compat_rs::imsg::imsg; // TODO move
+pub use compat::imsg::imsg; // TODO move
 
 // #define S_ISDIR(mode)  (((mode) & S_IFMT) == S_IFDIR)
 // TODO move this to a better spot
@@ -839,8 +843,8 @@ pub enum style_range_type {
     STYLE_RANGE_USER,
 }
 
-compat_rs::impl_tailq_entry!(style_range, entry, tailq_entry<style_range>);
-// #[derive(compat_rs::TailQEntry)]
+crate::compat::impl_tailq_entry!(style_range, entry, tailq_entry<style_range>);
+// #[derive(crate::compat::TailQEntry)]
 #[repr(C)]
 pub struct style_range {
     pub type_: style_range_type,
@@ -883,9 +887,9 @@ pub struct style {
 }
 
 #[cfg(feature = "sixel")]
-compat_rs::impl_tailq_entry!(image, all_entry, tailq_entry<image>);
+crate::compat::impl_tailq_entry!(image, all_entry, tailq_entry<image>);
 #[cfg(feature = "sixel")]
-compat_rs::impl_tailq_entry!(image, entry, tailq_entry<image>);
+crate::compat::impl_tailq_entry!(image, entry, tailq_entry<image>);
 #[cfg(feature = "sixel")]
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -1106,8 +1110,8 @@ pub struct window_mode {
 }
 
 // Active window mode.
-compat_rs::impl_tailq_entry!(window_mode_entry, entry, tailq_entry<window_mode_entry>);
-// #[derive(Copy, Clone, compat_rs::TailQEntry)]
+crate::compat::impl_tailq_entry!(window_mode_entry, entry, tailq_entry<window_mode_entry>);
+// #[derive(Copy, Clone, crate::compat::TailQEntry)]
 #[repr(C)]
 pub struct window_mode_entry {
     pub wp: *mut window_pane,
@@ -1131,8 +1135,8 @@ pub struct window_pane_offset {
 }
 
 /// Queued pane resize.
-compat_rs::impl_tailq_entry!(window_pane_resize, entry, tailq_entry<window_pane_resize>);
-// #[derive(Copy, Clone, compat_rs::TailQEntry)]
+crate::compat::impl_tailq_entry!(window_pane_resize, entry, tailq_entry<window_pane_resize>);
+// #[derive(Copy, Clone, crate::compat::TailQEntry)]
 #[repr(C)]
 pub struct window_pane_resize {
     pub sx: u32,
@@ -1314,9 +1318,9 @@ pub struct window {
     pub entry: rb_entry<window>,
 }
 pub type windows = rb_head<window>;
-// compat_rs::impl_rb_tree_protos!(windows, window);
+// crate::compat::impl_rb_tree_protos!(windows, window);
 
-impl compat_rs::queue::Entry<window, discr_alerts_entry> for window {
+impl crate::compat::queue::Entry<window, discr_alerts_entry> for window {
     unsafe fn entry(this: *mut Self) -> *mut tailq_entry<window> { unsafe { &raw mut (*this).alerts_entry } }
 }
 
@@ -1341,18 +1345,18 @@ pub struct winlink {
     pub sentry: tailq_entry<winlink>,
 }
 
-impl compat_rs::queue::Entry<winlink, discr_wentry> for winlink {
+impl crate::compat::queue::Entry<winlink, discr_wentry> for winlink {
     unsafe fn entry(this: *mut Self) -> *mut tailq_entry<winlink> { unsafe { &raw mut (*this).wentry } }
 }
 
-impl compat_rs::queue::Entry<winlink, discr_sentry> for winlink {
+impl crate::compat::queue::Entry<winlink, discr_sentry> for winlink {
     unsafe fn entry(this: *mut Self) -> *mut tailq_entry<winlink> { unsafe { &raw mut (*this).sentry } }
 }
 
 pub type winlinks = rb_head<winlink>;
-// compat_rs::impl_rb_tree_protos!(winlinks, winlink);
+// crate::compat::impl_rb_tree_protos!(winlinks, winlink);
 pub type winlink_stack = tailq_head<winlink>;
-// compat_rs::impl_rb_tree_protos!(winlink_stack, winlink);
+// crate::compat::impl_rb_tree_protos!(winlink_stack, winlink);
 
 // Window size option.
 pub const WINDOW_SIZE_LARGEST: i32 = 0;
@@ -1382,8 +1386,8 @@ pub enum layout_type {
 pub type layout_cells = tailq_head<layout_cell>;
 
 /// Layout cell.
-compat_rs::impl_tailq_entry!(layout_cell, entry, tailq_entry<layout_cell>);
-// #[derive(compat_rs::TailQEntry)]
+crate::compat::impl_tailq_entry!(layout_cell, entry, tailq_entry<layout_cell>);
+// #[derive(crate::compat::TailQEntry)]
 #[repr(C)]
 pub struct layout_cell {
     pub type_: layout_type,
@@ -1464,7 +1468,7 @@ pub struct session {
     pub entry: rb_entry<session>,
 }
 pub type sessions = rb_head<session>;
-compat_rs::impl_tailq_entry!(session, gentry, tailq_entry<session>);
+crate::compat::impl_tailq_entry!(session, gentry, tailq_entry<session>);
 
 pub const MOUSE_MASK_BUTTONS: u32 = 195;
 pub const MOUSE_MASK_SHIFT: u32 = 4;
@@ -1701,8 +1705,8 @@ pub struct tty_ctx {
 }
 
 // Saved message entry.
-compat_rs::impl_tailq_entry!(message_entry, entry, tailq_entry<message_entry>);
-// #[derive(Copy, Clone, compat_rs::TailQEntry)]
+crate::compat::impl_tailq_entry!(message_entry, entry, tailq_entry<message_entry>);
+// #[derive(Copy, Clone, crate::compat::TailQEntry)]
 #[repr(C)]
 pub struct message_entry {
     pub msg: *mut c_char,
@@ -1731,8 +1735,8 @@ pub union args_value_union {
 
 unsafe impl Zeroable for args_value {}
 /// Argument value.
-compat_rs::impl_tailq_entry!(args_value, entry, tailq_entry<args_value>);
-// #[derive(compat_rs::TailQEntry)]
+crate::compat::impl_tailq_entry!(args_value, entry, tailq_entry<args_value>);
+// #[derive(crate::compat::TailQEntry)]
 #[repr(C)]
 pub struct args_value {
     pub type_: args_type,
@@ -2053,8 +2057,8 @@ pub const PROMPT_NOFORMAT: i32 = 0x8;
 pub const PROMPT_KEY: i32 = 0x8;
 
 //#[derive(Copy, Clone)]
-compat_rs::impl_tailq_entry!(client, entry, tailq_entry<client>);
-// #[derive(compat_rs::TailQEntry)]
+crate::compat::impl_tailq_entry!(client, entry, tailq_entry<client>);
+// #[derive(crate::compat::TailQEntry)]
 #[repr(C)]
 pub struct client {
     pub name: *const c_char,
@@ -2694,6 +2698,7 @@ unsafe extern "C" {
 
 #[macro_use] // log_debug
 mod log;
+use crate::log::log_debug;
 pub use crate::log::{fatal, fatalx, log_add_level, log_close, log_get_level, log_open, log_toggle};
 /*
 unsafe extern "C" {

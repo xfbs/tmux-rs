@@ -1,6 +1,3 @@
-#![allow(unused_variables)]
-#![allow(clippy::missing_safety_doc)]
-
 use ::core::{
     ffi::{CStr, VaList, c_char, c_int, c_void},
     mem::MaybeUninit,
@@ -10,9 +7,7 @@ use ::core::{
 
 use ::libc::{calloc, malloc, reallocarray, strdup, strerror, strndup};
 
-use ::compat_rs::recallocarray;
-
-use crate::{_s, errno, fatalx, vasprintf, vsnprintf};
+use crate::{_s, compat::recallocarray, errno, fatalx, vasprintf, vsnprintf};
 
 #[unsafe(no_mangle)]
 pub extern "C" fn xmalloc(size: usize) -> NonNull<c_void> {

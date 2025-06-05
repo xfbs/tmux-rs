@@ -1,6 +1,6 @@
-use compat_rs::tree::rb_foreach;
-
 use crate::*;
+
+use crate::compat::tree::rb_foreach;
 
 #[unsafe(no_mangle)]
 static mut cmd_list_sessions_entry: cmd_entry = cmd_entry {

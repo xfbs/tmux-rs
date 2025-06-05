@@ -72,8 +72,7 @@ where
     unsafe {
         (*ListEntry::field(elm)).le_next = (*ListEntry::field(listelm)).le_next;
         if !(*ListEntry::field(elm)).le_next.is_null() {
-            (*ListEntry::field((*ListEntry::field(listelm)).le_next)).le_prev =
-                &raw mut (*ListEntry::field(elm)).le_next;
+            (*ListEntry::field((*ListEntry::field(listelm)).le_next)).le_prev = &raw mut (*ListEntry::field(elm)).le_next;
         }
         (*ListEntry::field(listelm)).le_next = elm;
         (*ListEntry::field(elm)).le_prev = &raw mut (*ListEntry::field(listelm)).le_next;
@@ -148,16 +147,15 @@ pub const unsafe fn tailq_head_initializer<T>(head: *mut tailq_head<T>) {
     }
 }
 
-#[macro_export]
 macro_rules! TAILQ_HEAD_INITIALIZER {
     ($ident:ident) => {
-        compat_rs::queue::tailq_head {
+        $crate::compat::queue::tailq_head {
             tqh_first: null_mut(),
             tqh_last: unsafe { &raw mut $ident.tqh_first },
         }
     };
 }
-pub use TAILQ_HEAD_INITIALIZER;
+pub(crate) use TAILQ_HEAD_INITIALIZER;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -167,12 +165,7 @@ pub struct tailq_entry<T> {
 }
 
 impl<T> std::fmt::Debug for tailq_entry<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("tailq_entry")
-            .field("tqe_next", &self.tqe_next)
-            .field("tqe_prev", &self.tqe_prev)
-            .finish()
-    }
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { f.debug_struct("tailq_entry").field("tqe_next", &self.tqe_next).field("tqe_prev", &self.tqe_prev).finish() }
 }
 
 pub trait Entry<T, Discriminant = ()> {
@@ -200,31 +193,7 @@ where
     unsafe { (*Entry::entry(elm)).tqe_next }
 }
 
-/*
-#[macro_export]
-macro_rules! tailq_last {
-    ($head:expr, $headname:ty) => {{
-        let head: *mut $headname = (*$head).tqh_last.cast();
-        *(*head).tqh_last
-    }};
-}
-pub use tailq_last;
-*/
-
-pub unsafe fn tailq_last<T>(head: *mut tailq_head<T>) -> *mut T {
-    unsafe { *(*(*head).tqh_last.cast::<tailq_head<T>>()).tqh_last }
-}
-
-/*
-#[macro_export]
-macro_rules! tailq_prev {
-    ($elm:expr, $headname:ty, $field:ident) => {{
-        let head: *mut $headname = (*$elm).$field.tqe_prev.cast();
-        *(*head).tqh_last
-    }};
-}
-pub use tailq_prev;
-*/
+pub unsafe fn tailq_last<T>(head: *mut tailq_head<T>) -> *mut T { unsafe { *(*(*head).tqh_last.cast::<tailq_head<T>>()).tqh_last } }
 
 pub unsafe fn tailq_prev<T, Q, D>(elm: *mut T) -> *mut Q
 where
@@ -238,7 +207,6 @@ where
 
 pub unsafe fn tailq_empty<T>(head: *const tailq_head<T>) -> bool { unsafe { (*head).tqh_first.is_null() } }
 
-#[macro_export]
 macro_rules! tailq_insert_head {
     ($head:expr, $elm:expr, $field:ident) => {
         ((*$elm).$field.tqe_next = (*$head).tqh_first);
@@ -252,7 +220,7 @@ macro_rules! tailq_insert_head {
         (*$elm).$field.tqe_prev = &raw mut (*$head).tqh_first;
     };
 }
-pub use tailq_insert_head;
+pub(crate) use tailq_insert_head;
 
 pub unsafe extern "C" fn tailq_insert_tail<T, D>(head: *mut tailq_head<T>, elm: *mut T)
 where
@@ -266,7 +234,6 @@ where
     }
 }
 
-#[macro_export]
 macro_rules! tailq_insert_after {
     ($head:expr, $listelm:ident, $elm:ident, $field:ident) => {
         (*$elm).$field.tqe_next = (*$listelm).$field.tqe_next;
@@ -281,9 +248,8 @@ macro_rules! tailq_insert_after {
         (*$elm).$field.tqe_prev = &raw mut (*$listelm).$field.tqe_next;
     };
 }
-pub use tailq_insert_after;
+pub(crate) use tailq_insert_after;
 
-#[macro_export]
 macro_rules! tailq_insert_before {
     ($listelm:expr, $elm:ident, $field:ident) => {
         (*$elm).$field.tqe_prev = (*$listelm).$field.tqe_prev;
@@ -292,7 +258,7 @@ macro_rules! tailq_insert_before {
         (*$listelm).$field.tqe_prev = &raw mut (*$elm).$field.tqe_next;
     };
 }
-pub use tailq_insert_before;
+pub(crate) use tailq_insert_before;
 
 pub unsafe fn tailq_remove<T, D>(head: *mut tailq_head<T>, elm: *mut T)
 where
@@ -300,8 +266,7 @@ where
 {
     unsafe {
         if !(*Entry::<_, D>::entry(elm)).tqe_next.is_null() {
-            (*Entry::<_, D>::entry((*Entry::<_, D>::entry(elm)).tqe_next)).tqe_prev =
-                (*Entry::<_, D>::entry(elm)).tqe_prev;
+            (*Entry::<_, D>::entry((*Entry::<_, D>::entry(elm)).tqe_next)).tqe_prev = (*Entry::<_, D>::entry(elm)).tqe_prev;
         } else {
             (*head).tqh_last = (*Entry::<_, D>::entry(elm)).tqe_prev;
         }
@@ -316,8 +281,7 @@ where
     unsafe {
         (*Entry::<_, D>::entry(elm2)).tqe_next = (*Entry::<_, D>::entry(elm)).tqe_next;
         if !(*Entry::<_, D>::entry(elm2)).tqe_next.is_null() {
-            (*Entry::<_, D>::entry((*Entry::<_, D>::entry(elm2)).tqe_next)).tqe_prev =
-                &raw mut (*Entry::<_, D>::entry(elm2)).tqe_next;
+            (*Entry::<_, D>::entry((*Entry::<_, D>::entry(elm2)).tqe_next)).tqe_prev = &raw mut (*Entry::<_, D>::entry(elm2)).tqe_next;
         } else {
             (*head).tqh_last = &raw mut (*Entry::<_, D>::entry(elm2)).tqe_next;
         }
@@ -399,14 +363,11 @@ where
     }
 }
 
-#[macro_export]
 macro_rules! impl_tailq_entry {
     ($struct_name:ident, $attribute_field_name:ident, $attribute_field_ty:ty) => {
-        impl ::compat_rs::queue::Entry<$struct_name> for $struct_name {
-            unsafe fn entry(this: *mut Self) -> *mut $attribute_field_ty {
-                unsafe { &raw mut (*this).$attribute_field_name }
-            }
+        impl $crate::compat::queue::Entry<$struct_name> for $struct_name {
+            unsafe fn entry(this: *mut Self) -> *mut $attribute_field_ty { unsafe { &raw mut (*this).$attribute_field_name } }
         }
     };
 }
-pub use impl_tailq_entry;
+pub(crate) use impl_tailq_entry;

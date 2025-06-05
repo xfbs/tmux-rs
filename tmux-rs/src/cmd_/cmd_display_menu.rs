@@ -1,7 +1,9 @@
-use compat_rs::queue::tailq_foreach;
+use crate::*;
+
 use libc::{strcmp, strtol};
 
-use crate::{options_::options_find_choice, *};
+use crate::compat::queue::tailq_foreach;
+use crate::options_::options_find_choice;
 
 #[unsafe(no_mangle)]
 static mut cmd_display_menu_entry: cmd_entry = cmd_entry {
@@ -123,7 +125,7 @@ unsafe extern "C" fn cmd_display_menu_get_position(tc: *mut client, item: *mut c
             for line_ in 0..lines {
                 line = line_;
                 ranges = &raw mut (*tc).status.entries[line as usize].ranges;
-                for sr_ in compat_rs::queue::tailq_foreach(ranges) {
+                for sr_ in tailq_foreach(ranges) {
                     sr = sr_.as_ptr();
                     if ((*sr).type_ != style_range_type::STYLE_RANGE_WINDOW) {
                         continue;

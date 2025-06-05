@@ -1,6 +1,6 @@
-use compat_rs::tree::{rb_foreach, rb_next, rb_prev};
-
 use crate::*;
+
+use crate::compat::tree::{rb_foreach, rb_next, rb_prev};
 
 #[unsafe(no_mangle)]
 static mut cmd_kill_window_entry: cmd_entry = cmd_entry {

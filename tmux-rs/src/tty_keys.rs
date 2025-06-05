@@ -1,19 +1,10 @@
 use super::*;
 
-use compat_rs::{b64_pton, strlcpy};
+use crate::compat::{b64_pton, strlcpy};
 
-unsafe extern "C" {
-    // pub fn tty_keys_build(_: *mut tty);
-    // pub fn tty_keys_free(_: *mut tty);
-    // pub fn tty_keys_next(_: *mut tty) -> c_int;
-    // pub fn tty_keys_colours(_: *mut tty, _: *const c_char, _: usize, _: *mut usize, _: *mut c_int, _: *mut c_int) -> c_int;
-}
-
-//
 // Handle keys input from the outside terminal. tty_default_*_keys[] are a base
 // table of supported keys which are looked up in terminfo(5) and translated
 // into a ternary tree.
-//
 
 // A key tree entry.
 #[repr(C)]

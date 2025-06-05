@@ -1,6 +1,6 @@
-use compat_rs::{queue::tailq_remove, tailq_insert_after, tailq_insert_before};
-
 use crate::*;
+
+use crate::compat::queue::{tailq_insert_after, tailq_insert_before, tailq_remove};
 
 #[unsafe(no_mangle)]
 static mut cmd_join_pane_entry: cmd_entry = cmd_entry {

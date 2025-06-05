@@ -1,6 +1,6 @@
-use compat_rs::queue::{tailq_insert_tail, tailq_remove};
-
 use crate::*;
+
+use crate::compat::queue::{tailq_insert_tail, tailq_remove};
 
 #[unsafe(no_mangle)]
 static mut cmd_swap_window_entry: cmd_entry = cmd_entry {

@@ -1,22 +1,12 @@
-use compat_rs::{
+use crate::*;
+
+use libc::{getpwuid, getuid};
+
+use crate::compat::{
     queue::tailq_foreach,
     tree::{rb_find, rb_foreach, rb_init, rb_insert, rb_remove},
 };
-use libc::{getpwuid, getuid};
-
-use crate::{xmalloc::Zeroable, *};
-
-unsafe extern "C" {
-    // pub unsafe fn server_acl_init();
-    // pub unsafe fn server_acl_user_find(_: uid_t) -> *mut server_acl_user;
-    // pub unsafe fn server_acl_display(_: *mut cmdq_item);
-    // pub unsafe fn server_acl_user_allow(_: uid_t);
-    // pub unsafe fn server_acl_user_deny(_: uid_t);
-    // pub unsafe fn server_acl_user_allow_write(_: uid_t);
-    // pub unsafe fn server_acl_user_deny_write(_: uid_t);
-    // pub unsafe fn server_acl_join(_: *mut client) -> c_int;
-    // pub unsafe fn server_acl_get_uid(_: *mut server_acl_user) -> uid_t;
-}
+use crate::xmalloc::Zeroable;
 
 bitflags::bitflags! {
     #[repr(transparent)]
@@ -74,21 +64,13 @@ pub unsafe extern "C" fn server_acl_user_find(uid: uid_t) -> *mut server_acl_use
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_acl_display(item: *mut cmdq_item) {
     unsafe {
-        // struct server_acl_user *loop_;
-        // struct passwd *pw;
-        // const char *name;
-
         // server_acl_entries
         for loop_ in rb_foreach(&raw mut server_acl_entries).map(NonNull::as_ptr) {
             if ((*loop_).uid == 0) {
                 continue;
             }
             let pw = getpwuid((*loop_).uid);
-            let name = if (!pw.is_null()) {
-                (*pw).pw_name
-            } else {
-                c"unknown".as_ptr()
-            };
+            let name = if (!pw.is_null()) { (*pw).pw_name } else { c"unknown".as_ptr() };
             if ((*loop_).flags == server_acl_user_flags::SERVER_ACL_READONLY) {
                 cmdq_print(item, c"%s (R)".as_ptr(), name);
             } else {

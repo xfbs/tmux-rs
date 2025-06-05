@@ -1,19 +1,20 @@
-use compat_rs::strtonum;
-use libc::{sscanf, strchr, strcmp};
-
 use crate::*;
 
+use libc::{sscanf, strchr, strcmp};
+
+use crate::compat::strtonum;
+
 #[unsafe(no_mangle)]
-static mut  cmd_refresh_client_entry : cmd_entry = cmd_entry  {
-    name : c"refresh-client".as_ptr(),
-    alias : c"refresh".as_ptr(),
+static mut cmd_refresh_client_entry: cmd_entry = cmd_entry {
+    name: c"refresh-client".as_ptr(),
+    alias: c"refresh".as_ptr(),
 
-    args : args_parse::new(c"A:B:cC:Df:r:F:l::LRSt:U", 0, 1, None),
-    usage : c"[-cDlLRSU] [-A pane:state] [-B name:what:format] [-C XxY] [-f flags] [-r pane:report] [-t target-client] [adjustment]".as_ptr(),
+    args: args_parse::new(c"A:B:cC:Df:r:F:l::LRSt:U", 0, 1, None),
+    usage: c"[-cDlLRSU] [-A pane:state] [-B name:what:format] [-C XxY] [-f flags] [-r pane:report] [-t target-client] [adjustment]".as_ptr(),
 
-    flags : cmd_flag::CMD_AFTERHOOK.union( cmd_flag::CMD_CLIENT_TFLAG),
-    exec : Some(cmd_refresh_client_exec),
-    ..unsafe{zeroed()}
+    flags: cmd_flag::CMD_AFTERHOOK.union(cmd_flag::CMD_CLIENT_TFLAG),
+    exec: Some(cmd_refresh_client_exec),
+    ..unsafe { zeroed() }
 };
 
 #[unsafe(no_mangle)]
@@ -74,22 +75,11 @@ pub unsafe extern "C" fn cmd_refresh_client_control_client_size(self_: *mut cmd,
         // struct client_window *cw;
 
         if (sscanf(size, c"@%u:%ux%u".as_ptr(), &raw mut w, &raw mut x, &raw mut y) == 3) {
-            if (x < WINDOW_MINIMUM as u32
-                || x > WINDOW_MAXIMUM as u32
-                || y < WINDOW_MINIMUM as u32
-                || y > WINDOW_MAXIMUM as u32)
-            {
+            if (x < WINDOW_MINIMUM as u32 || x > WINDOW_MAXIMUM as u32 || y < WINDOW_MINIMUM as u32 || y > WINDOW_MAXIMUM as u32) {
                 cmdq_error(item, c"size too small or too big".as_ptr());
                 return cmd_retval::CMD_RETURN_ERROR;
             }
-            log_debug!(
-                "{}: client {} window @{}: size {}x{}",
-                __func__,
-                _s((*tc).name),
-                w,
-                x,
-                y
-            );
+            log_debug!("{}: client {} window @{}: size {}x{}", __func__, _s((*tc).name), w, x, y);
             let cw = server_client_add_client_window(tc, w);
             (*cw).sx = x;
             (*cw).sy = y;
@@ -112,11 +102,7 @@ pub unsafe extern "C" fn cmd_refresh_client_control_client_size(self_: *mut cmd,
             cmdq_error(item, c"bad size argument".as_ptr());
             return cmd_retval::CMD_RETURN_ERROR;
         }
-        if (x < WINDOW_MINIMUM as u32
-            || x > WINDOW_MAXIMUM as u32
-            || y < WINDOW_MINIMUM as u32
-            || y > WINDOW_MAXIMUM as u32)
-        {
+        if (x < WINDOW_MINIMUM as u32 || x > WINDOW_MAXIMUM as u32 || y < WINDOW_MINIMUM as u32 || y > WINDOW_MAXIMUM as u32) {
             cmdq_error(item, c"size too small or too big".as_ptr());
             return cmd_retval::CMD_RETURN_ERROR;
         }
@@ -233,14 +219,7 @@ pub unsafe extern "C" fn cmd_refresh_report(tty: *mut tty, value: *const c_char)
                 break 'out;
             }
 
-            tty_keys_colours(
-                tty,
-                split,
-                strlen(split),
-                &raw mut size,
-                &raw mut (*wp).control_fg,
-                &raw mut (*wp).control_bg,
-            );
+            tty_keys_colours(tty, split, strlen(split), &raw mut size, &raw mut (*wp).control_fg, &raw mut (*wp).control_bg);
         }
         // out:
         free_(copy);
@@ -257,12 +236,7 @@ pub unsafe extern "C" fn cmd_refresh_client_exec(self_: *mut cmd, item: *mut cmd
         let mut adjust: u32 = 0;
 
         'not_control_client: {
-            if (args_has_(args, 'c')
-                || args_has_(args, 'L')
-                || args_has_(args, 'R')
-                || args_has_(args, 'U')
-                || args_has_(args, 'D'))
-            {
+            if (args_has_(args, 'c') || args_has_(args, 'L') || args_has_(args, 'R') || args_has_(args, 'U') || args_has_(args, 'D')) {
                 if (args_count(args) == 0) {
                     adjust = 1;
                 } else {

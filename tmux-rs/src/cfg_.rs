@@ -1,9 +1,8 @@
-use std::mem::MaybeUninit;
+use crate::*;
 
-use compat_rs::{queue::tailq_first, tree::rb_min};
 use libc::{__errno_location, ENOENT, fclose, fopen, strerror};
 
-use crate::*;
+use crate::compat::{queue::tailq_first, tree::rb_min};
 
 #[unsafe(no_mangle)]
 pub static mut cfg_client: *mut client = null_mut();
@@ -21,13 +20,7 @@ pub static mut cfg_files: *mut *mut c_char = null_mut();
 #[unsafe(no_mangle)]
 pub static mut cfg_nfiles: c_uint = 0;
 
-unsafe extern "C" fn cfg_client_done(_item: *mut cmdq_item, _data: *mut c_void) -> cmd_retval {
-    if unsafe { cfg_finished } == 0 {
-        cmd_retval::CMD_RETURN_WAIT
-    } else {
-        cmd_retval::CMD_RETURN_NORMAL
-    }
-}
+unsafe extern "C" fn cfg_client_done(_item: *mut cmdq_item, _data: *mut c_void) -> cmd_retval { if unsafe { cfg_finished } == 0 { cmd_retval::CMD_RETURN_WAIT } else { cmd_retval::CMD_RETURN_NORMAL } }
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cfg_done(item: *mut cmdq_item, _data: *mut c_void) -> cmd_retval {
@@ -88,14 +81,7 @@ pub unsafe extern "C" fn start_cfg() {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn load_cfg(
-    path: *const c_char,
-    c: *mut client,
-    item: *mut cmdq_item,
-    current: *mut cmd_find_state,
-    flags: cmd_parse_input_flags,
-    new_item: *mut *mut cmdq_item,
-) -> c_int {
+pub unsafe extern "C" fn load_cfg(path: *const c_char, c: *mut client, item: *mut cmdq_item, current: *mut cmd_find_state, flags: cmd_parse_input_flags, new_item: *mut *mut cmdq_item) -> c_int {
     unsafe {
         if !new_item.is_null() {
             *new_item = null_mut();
@@ -130,11 +116,7 @@ pub unsafe extern "C" fn load_cfg(
             return 0;
         }
 
-        let mut state = if !item.is_null() {
-            cmdq_copy_state(cmdq_get_state(item), current)
-        } else {
-            cmdq_new_state(null_mut(), null_mut(), 0)
-        };
+        let mut state = if !item.is_null() { cmdq_copy_state(cmdq_get_state(item), current) } else { cmdq_new_state(null_mut(), null_mut(), 0) };
         cmdq_add_format(state, c"current_file".as_ptr(), c"%s".as_ptr(), pi.file);
 
         let mut new_item0 = cmdq_get_command((*pr).cmdlist, state);
@@ -155,16 +137,7 @@ pub unsafe extern "C" fn load_cfg(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn load_cfg_from_buffer(
-    buf: *mut c_void,
-    len: usize,
-    path: *const c_char,
-    c: *mut client,
-    item: *mut cmdq_item,
-    current: *mut cmd_find_state,
-    flags: cmd_parse_input_flags,
-    new_item: *mut *mut cmdq_item,
-) -> c_int {
+pub unsafe extern "C" fn load_cfg_from_buffer(buf: *mut c_void, len: usize, path: *const c_char, c: *mut client, item: *mut cmdq_item, current: *mut cmd_find_state, flags: cmd_parse_input_flags, new_item: *mut *mut cmdq_item) -> c_int {
     unsafe {
         if !new_item.is_null() {
             *new_item = null_mut();
@@ -190,11 +163,7 @@ pub unsafe extern "C" fn load_cfg_from_buffer(
             return 0;
         }
 
-        let mut state = if !item.is_null() {
-            cmdq_copy_state(cmdq_get_state(item), current)
-        } else {
-            cmdq_new_state(null_mut(), null_mut(), 0)
-        };
+        let mut state = if !item.is_null() { cmdq_copy_state(cmdq_get_state(item), current) } else { cmdq_new_state(null_mut(), null_mut(), 0) };
         cmdq_add_format(state, c"current_file".as_ptr(), c"%s".as_ptr(), pi.file);
 
         let mut new_item0 = cmdq_get_command((*pr).cmdlist, state);

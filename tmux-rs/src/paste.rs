@@ -1,30 +1,10 @@
-use compat_rs::{
+use crate::*;
+
+use crate::compat::{
     VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB, strlcpy,
     tree::{rb_find, rb_foreach_reverse, rb_initializer, rb_insert, rb_min, rb_next, rb_remove, rb_root},
 };
-use libc::strcmp;
-
-use crate::{
-    xmalloc::{xmalloc__, xreallocarray},
-    *,
-};
-
-unsafe extern "C" {
-    // pub unsafe fn paste_buffer_name(_: *mut paste_buffer) -> *const c_char;
-    // pub unsafe fn paste_buffer_order(_: *mut paste_buffer) -> c_uint;
-    // pub unsafe fn paste_buffer_created(_: *mut paste_buffer) -> time_t;
-    // pub unsafe fn paste_buffer_data(_: *mut paste_buffer, _: *mut usize) -> *const c_char;
-    // pub unsafe fn paste_walk(_: *mut paste_buffer) -> *mut paste_buffer;
-    // pub unsafe fn paste_is_empty() -> c_int;
-    // pub unsafe fn paste_get_top(_: *mut *const c_char) -> *mut paste_buffer;
-    // pub unsafe fn paste_get_name(_: *const c_char) -> *mut paste_buffer;
-    // pub unsafe fn paste_free(_: *mut paste_buffer);
-    // pub unsafe fn paste_add(_: *const c_char, _: *mut c_char, _: usize);
-    // pub unsafe fn paste_rename(_: *const c_char, _: *const c_char, _: *mut *mut c_char) -> c_int;
-    // pub unsafe fn paste_set(_: *mut c_char, _: usize, _: *const c_char, _: *mut *mut c_char) -> c_int;
-    // pub unsafe fn paste_replace(_: *mut paste_buffer, _: *mut c_char, _: usize);
-    // pub unsafe fn paste_make_sample(_: *mut paste_buffer) -> *mut c_char;
-}
+use crate::xmalloc::{xmalloc__, xreallocarray};
 
 #[repr(C)]
 pub struct paste_buffer {
@@ -51,7 +31,7 @@ static mut paste_by_name: paste_name_tree = rb_initializer();
 static mut paste_by_time: paste_time_tree = rb_initializer();
 
 RB_GENERATE!(paste_name_tree, paste_buffer, name_entry, paste_cmp_names);
-fn paste_cmp_names(a: *const paste_buffer, b: *const paste_buffer) -> i32 { unsafe { strcmp((*a).name, (*b).name) } }
+fn paste_cmp_names(a: *const paste_buffer, b: *const paste_buffer) -> i32 { unsafe { libc::strcmp((*a).name, (*b).name) } }
 
 RB_GENERATE!(paste_time_tree, paste_buffer, time_entry, paste_cmp_times);
 fn paste_cmp_times(a: *const paste_buffer, b: *const paste_buffer) -> i32 {
@@ -64,9 +44,7 @@ fn paste_cmp_times(a: *const paste_buffer, b: *const paste_buffer) -> i32 {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn paste_buffer_name(pb: NonNull<paste_buffer>) -> *const c_char {
-    unsafe { (*pb.as_ptr()).name }
-}
+pub unsafe extern "C" fn paste_buffer_name(pb: NonNull<paste_buffer>) -> *const c_char { unsafe { (*pb.as_ptr()).name } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn paste_buffer_order(pb: NonNull<paste_buffer>) -> u32 { unsafe { (*pb.as_ptr()).order } }
@@ -256,12 +234,7 @@ pub unsafe extern "C" fn paste_rename(oldname: *const c_char, newname: *const c_
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn paste_set(
-    data: *mut c_char,
-    size: usize,
-    name: *const c_char,
-    cause: *mut *mut c_char,
-) -> i32 {
+pub unsafe extern "C" fn paste_set(data: *mut c_char, size: usize, name: *const c_char, cause: *mut *mut c_char) -> i32 {
     unsafe {
         if (!cause.is_null()) {
             *cause = null_mut();

@@ -1,40 +1,12 @@
-use compat_rs::{
+use crate::*;
+
+use libc::strcmp;
+
+use crate::compat::{
     queue::{tailq_first, tailq_foreach},
     strlcat, strtonum,
     tree::{rb_foreach, rb_max, rb_min},
 };
-use libc::{fnmatch, strchr, strcmp, strncmp};
-
-use crate::*;
-
-unsafe extern "C" {
-    // pub fn cmd_find_target(
-    //     _: *mut cmd_find_state,
-    //     _: *mut cmdq_item,
-    //     _: *const c_char,
-    //     _: cmd_find_type,
-    //     _: c_int,
-    // ) -> c_int;
-    // pub fn cmd_find_best_client(_: *mut session) -> *mut client;
-    // pub fn cmd_find_client(_: *mut cmdq_item, _: *const c_char, _: c_int) -> *mut client;
-    // pub fn cmd_find_clear_state(_: *mut cmd_find_state, _: c_int);
-    // pub fn cmd_find_empty_state(_: *mut cmd_find_state) -> c_int;
-    // pub fn cmd_find_valid_state(_: *mut cmd_find_state) -> c_int;
-    // pub fn cmd_find_copy_state(_: *mut cmd_find_state, _: *mut cmd_find_state);
-    // pub fn cmd_find_from_session(_: *mut cmd_find_state, _: *mut session, _: c_int);
-    // pub fn cmd_find_from_winlink(_: *mut cmd_find_state, _: *mut winlink, _: c_int);
-    // pub fn cmd_find_from_session_window(_: *mut cmd_find_state, _: *mut session, _: *mut window, _: c_int) -> c_int;
-    // pub fn cmd_find_from_window(_: *mut cmd_find_state, _: *mut window, _: c_int) -> c_int;
-    // pub fn cmd_find_from_winlink_pane(_: *mut cmd_find_state, _: *mut winlink, _: *mut window_pane, _: c_int);
-    // pub fn cmd_find_from_pane(_: *mut cmd_find_state, _: *mut window_pane, _: c_int) -> c_int;
-    // pub fn cmd_find_from_client(_: *mut cmd_find_state, _: *mut client, _: c_int) -> c_int;
-    // pub fn cmd_find_from_mouse(_: *mut cmd_find_state, _: *mut mouse_event, _: c_int) -> c_int;
-    // pub fn cmd_find_from_nothing(_: *mut cmd_find_state, _: c_int) -> c_int;
-
-    // pub unsafe fn cmd_find_best_winlink_with_window(fs: *mut cmd_find_state) -> i32;
-    // pub unsafe fn cmd_find_get_window(fs: *mut cmd_find_state, window: *const c_char, only: i32) -> i32;
-    // pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: *const c_char) -> i32;
-}
 
 #[unsafe(no_mangle)]
 static mut cmd_find_session_table: [[*const c_char; 2]; 1] = [[null_mut(), null_mut()]];
@@ -114,7 +86,7 @@ pub unsafe extern "C" fn cmd_find_best_client(mut s: *mut session) -> *mut clien
         }
 
         let mut c = null_mut();
-        for c_loop in compat_rs::queue::tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
+        for c_loop in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if ((*c_loop).session.is_null()) {
                 continue;
             }
@@ -278,7 +250,7 @@ pub unsafe extern "C" fn cmd_find_get_session(fs: *mut cmd_find_state, session: 
 
         let mut s: *mut session = null_mut();
         for s_loop in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
-            if (strncmp(session, (*s_loop).name, strlen(session)) == 0) {
+            if (libc::strncmp(session, (*s_loop).name, strlen(session)) == 0) {
                 if (!s.is_null()) {
                     return -1;
                 }
@@ -292,7 +264,7 @@ pub unsafe extern "C" fn cmd_find_get_session(fs: *mut cmd_find_state, session: 
 
         s = null_mut();
         for s_loop in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
-            if (fnmatch(session, (*s_loop).name, 0) == 0) {
+            if (libc::fnmatch(session, (*s_loop).name, 0) == 0) {
                 if (!s.is_null()) {
                     return -1;
                 }
@@ -462,7 +434,7 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(fs: *mut cmd_find_stat
 
         (*fs).wl = null_mut();
         for wl in rb_foreach(&raw mut (*(*fs).s).windows).map(NonNull::as_ptr) {
-            if (strncmp(window, (*(*wl).window).name, strlen(window)) == 0) {
+            if (libc::strncmp(window, (*(*wl).window).name, strlen(window)) == 0) {
                 if (!(*fs).wl.is_null()) {
                     return -1;
                 }
@@ -478,7 +450,7 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(fs: *mut cmd_find_stat
 
         (*fs).wl = null_mut();
         for wl in rb_foreach(&raw mut (*(*fs).s).windows).map(NonNull::as_ptr) {
-            if (fnmatch(window, (*(*wl).window).name, 0) == 0) {
+            if (libc::fnmatch(window, (*(*wl).window).name, 0) == 0) {
                 if (!(*fs).wl.is_null()) {
                     return -1;
                 }
@@ -647,9 +619,7 @@ pub unsafe extern "C" fn cmd_find_clear_state(fs: *mut cmd_find_state, flags: i3
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_find_empty_state(fs: *mut cmd_find_state) -> i32 {
-    unsafe { ((*fs).s.is_null() && (*fs).wl.is_null() && (*fs).w.is_null() && (*fs).wp.is_null()) as i32 }
-}
+pub unsafe extern "C" fn cmd_find_empty_state(fs: *mut cmd_find_state) -> i32 { unsafe { ((*fs).s.is_null() && (*fs).wl.is_null() && (*fs).w.is_null() && (*fs).wp.is_null()) as i32 } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_valid_state(fs: *mut cmd_find_state) -> boolint {
@@ -748,12 +718,7 @@ pub unsafe extern "C" fn cmd_find_from_winlink(fs: *mut cmd_find_state, wl: *mut
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_find_from_session_window(
-    fs: *mut cmd_find_state,
-    s: *mut session,
-    w: *mut window,
-    flags: i32,
-) -> i32 {
+pub unsafe extern "C" fn cmd_find_from_session_window(fs: *mut cmd_find_state, s: *mut session, w: *mut window, flags: i32) -> i32 {
     unsafe {
         cmd_find_clear_state(fs, flags);
 
@@ -792,12 +757,7 @@ pub unsafe extern "C" fn cmd_find_from_window(fs: *mut cmd_find_state, w: *mut w
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_find_from_winlink_pane(
-    fs: *mut cmd_find_state,
-    wl: *mut winlink,
-    wp: *mut window_pane,
-    flags: i32,
-) {
+pub unsafe extern "C" fn cmd_find_from_winlink_pane(fs: *mut cmd_find_state, wl: *mut winlink, wp: *mut window_pane, flags: i32) {
     unsafe {
         cmd_find_clear_state(fs, flags);
 
@@ -916,13 +876,7 @@ pub unsafe extern "C" fn cmd_find_from_client(fs: *mut cmd_find_state, c: *mut c
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_find_target(
-    fs: *mut cmd_find_state,
-    item: *mut cmdq_item,
-    target: *const c_char,
-    type_: cmd_find_type,
-    mut flags: i32,
-) -> i32 {
+pub unsafe extern "C" fn cmd_find_target(fs: *mut cmd_find_state, item: *mut cmdq_item, target: *const c_char, type_: cmd_find_type, mut flags: i32) -> i32 {
     let __func__ = "cmd_find_target";
     unsafe {
         let mut m: *mut mouse_event = null_mut();
@@ -985,18 +939,7 @@ pub unsafe extern "C" fn cmd_find_target(
                                 } else {
                                     strlcat(tmp.as_mut_ptr(), c"NONE".as_ptr(), sizeof_tmp);
                                 }
-                                log_debug!(
-                                    "{}: target {}, type {}, item {:p}, flags {}",
-                                    __func__,
-                                    if target.is_null() {
-                                        _s(c"none".as_ptr())
-                                    } else {
-                                        _s(target)
-                                    },
-                                    _s(s),
-                                    item,
-                                    _s(tmp.as_ptr()),
-                                );
+                                log_debug!("{}: target {}, type {}, item {:p}, flags {}", __func__, if target.is_null() { _s(c"none".as_ptr()) } else { _s(target) }, _s(s), item, _s(tmp.as_ptr()),);
 
                                 cmd_find_clear_state(fs, flags);
 
@@ -1029,8 +972,7 @@ pub unsafe extern "C" fn cmd_find_target(
                                     m = &raw mut (*cmdq_get_event(item)).m;
                                     match (type_) {
                                         cmd_find_type::CMD_FIND_PANE => {
-                                            (*fs).wp =
-                                                transmute_ptr(cmd_mouse_pane(m, &raw mut (*fs).s, &raw mut (*fs).wl));
+                                            (*fs).wp = transmute_ptr(cmd_mouse_pane(m, &raw mut (*fs).s, &raw mut (*fs).wl));
                                             if (!(*fs).wp.is_null()) {
                                                 (*fs).w = (*(*fs).wl).window;
                                             } else {
@@ -1077,15 +1019,15 @@ pub unsafe extern "C" fn cmd_find_target(
                                 }
 
                                 copy = xstrdup(target).as_ptr();
-                                colon = strchr(copy, b':' as _);
+                                colon = libc::strchr(copy, b':' as _);
                                 if (!colon.is_null()) {
                                     *colon = b'\0' as _;
                                     colon = colon.add(1);
                                 }
                                 if (colon.is_null()) {
-                                    period = strchr(copy, b'.' as _);
+                                    period = libc::strchr(copy, b'.' as _);
                                 } else {
-                                    period = strchr(colon, b'.' as _);
+                                    period = libc::strchr(colon, b'.' as _);
                                 }
                                 if (!period.is_null()) {
                                     *period = b'\0' as _;
@@ -1145,8 +1087,7 @@ pub unsafe extern "C" fn cmd_find_target(
                                 }
 
                                 if (!session.is_null()) {
-                                    session =
-                                        cmd_find_map_table(&raw const cmd_find_session_table as *const _, session);
+                                    session = cmd_find_map_table(&raw const cmd_find_session_table as *const _, session);
                                 }
                                 if (!window.is_null()) {
                                     window = cmd_find_map_table(&raw const cmd_find_window_table as *const _, window);
@@ -1354,7 +1295,7 @@ pub unsafe extern "C" fn cmd_find_client(item: *mut cmdq_item, target: *const c_
 
         let mut c = null_mut();
         /* Check name and path of each client. */
-        for c_ in compat_rs::queue::tailq_foreach(&raw mut clients) {
+        for c_ in tailq_foreach(&raw mut clients) {
             c = c_.as_ptr();
             if ((*c).session.is_null()) {
                 continue;
@@ -1369,7 +1310,7 @@ pub unsafe extern "C" fn cmd_find_client(item: *mut cmdq_item, target: *const c_
             if (strcmp(copy, (*c).ttyname) == 0) {
                 break;
             }
-            if (strncmp((*c).ttyname, _PATH_DEV, SIZEOF_PATH_DEV - 1) != 0) {
+            if (libc::strncmp((*c).ttyname, _PATH_DEV, SIZEOF_PATH_DEV - 1) != 0) {
                 continue;
             }
             if (strcmp(copy, (*c).ttyname.add(SIZEOF_PATH_DEV - 1)) == 0) {

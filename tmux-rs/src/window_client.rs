@@ -1,11 +1,8 @@
-use compat_rs::queue::{tailq_first, tailq_foreach};
-use libc::{qsort, strcmp};
-
 use crate::*;
 
-unsafe extern "C" {
-    // pub static mut window_client_mode: window_mode;
-}
+use libc::{qsort, strcmp};
+
+use crate::compat::queue::{tailq_first, tailq_foreach};
 
 static WINDOW_CLIENT_DEFAULT_COMMAND: &CStr = c"detach-client -t '%%'";
 static WINDOW_CLIENT_DEFAULT_FORMAT: &CStr = c"#{t/p:client_activity}: session #{session_name}";
@@ -151,7 +148,7 @@ pub unsafe extern "C" fn window_client_build(modedata: NonNull<c_void>, sort_cri
         (*data).item_list = null_mut();
         (*data).item_size = 0;
 
-        for c in compat_rs::queue::tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
+        for c in crate::compat::queue::tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if (*c).session.is_null() || (*c).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
                 continue;
             }

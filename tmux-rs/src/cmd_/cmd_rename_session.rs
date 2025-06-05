@@ -1,7 +1,6 @@
-use compat_rs::tree::{rb_insert, rb_remove};
-use libc::strcmp;
-
 use crate::*;
+
+use crate::compat::tree::{rb_insert, rb_remove};
 
 #[unsafe(no_mangle)]
 static mut cmd_rename_session_entry: cmd_entry = cmd_entry {
@@ -33,7 +32,7 @@ unsafe extern "C" fn cmd_rename_session_exec(self_: *mut cmd, item: *mut cmdq_it
             return (cmd_retval::CMD_RETURN_ERROR);
         }
         free_(tmp);
-        if strcmp(newname, (*s).name) == 0 {
+        if libc::strcmp(newname, (*s).name) == 0 {
             free_(newname);
             return (cmd_retval::CMD_RETURN_NORMAL);
         }

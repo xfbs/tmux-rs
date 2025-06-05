@@ -1,7 +1,7 @@
 use crate::*;
 
 use crate::cmd_parse::{cmd_parse_argument_type, yystype_elif, cmd_parse_state, cmd_parse_command};
-use compat_rs::queue::{tailq_concat, tailq_init, tailq_insert_head, tailq_remove, tailq_insert_tail, tailq_empty};
+use crate::compat::queue::{tailq_concat, tailq_init, tailq_insert_head, tailq_remove, tailq_insert_tail, tailq_empty};
 
 grammar(ps: NonNull<cmd_parse_state>);
 

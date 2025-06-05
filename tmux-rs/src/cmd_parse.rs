@@ -1,23 +1,12 @@
-use compat_rs::queue::{tailq_empty, tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_last, tailq_remove};
-use libc::memset;
+use crate::*;
 
 use lalrpop_util::lalrpop_mod;
 
-use crate::{
-    xmalloc::{Zeroable, xrecallocarray, xrecallocarray__},
-    *,
-};
+use crate::compat::queue::{tailq_empty, tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_last, tailq_remove};
+use crate::xmalloc::{Zeroable, xrecallocarray, xrecallocarray__};
 
-#[rustfmt::skip]
 unsafe extern "C" {
     fn yyparse() -> i32;
-
-    // pub fn cmd_parse_from_file(_: *mut FILE, _: *mut cmd_parse_input) -> *mut cmd_parse_result;
-    // pub fn cmd_parse_from_string(_: *const c_char, _: *mut cmd_parse_input) -> *mut cmd_parse_result;
-    // pub fn cmd_parse_and_insert( _: *const c_char, _: *mut cmd_parse_input, _: *mut cmdq_item, _: *mut cmdq_state, _: *mut *mut c_char,) -> cmd_parse_status;
-    // pub fn cmd_parse_and_append( _: *const c_char, _: *mut cmd_parse_input, _: *mut client, _: *mut cmdq_state, _: *mut *mut c_char,) -> cmd_parse_status;
-    // pub fn cmd_parse_from_buffer(_: *const c_void, _: usize, _: *mut cmd_parse_input) -> *mut cmd_parse_result;
-    // pub fn cmd_parse_from_arguments(_: *mut args_value, _: c_uint, _: *mut cmd_parse_input) -> *mut cmd_parse_result;
 }
 
 lalrpop_mod!(cmd_parse);
@@ -28,8 +17,7 @@ pub struct yystype_elif {
     commands: *mut cmd_parse_commands,
 }
 
-compat_rs::impl_tailq_entry!(cmd_parse_scope, entry, tailq_entry<cmd_parse_scope>);
-// #[derive(compat_rs::TailQEntry)]
+crate::compat::impl_tailq_entry!(cmd_parse_scope, entry, tailq_entry<cmd_parse_scope>);
 #[repr(C)]
 pub struct cmd_parse_scope {
     pub flag: i32,
@@ -46,8 +34,7 @@ pub enum cmd_parse_argument_type {
 }
 
 unsafe impl Zeroable for cmd_parse_argument {}
-compat_rs::impl_tailq_entry!(cmd_parse_argument, entry, tailq_entry<cmd_parse_argument>);
-// #[derive(compat_rs::TailQEntry)]
+crate::compat::impl_tailq_entry!(cmd_parse_argument, entry, tailq_entry<cmd_parse_argument>);
 #[repr(C)]
 pub struct cmd_parse_argument {
     pub type_: cmd_parse_argument_type,
@@ -61,8 +48,7 @@ pub struct cmd_parse_argument {
 pub type cmd_parse_arguments = tailq_head<cmd_parse_argument>;
 
 unsafe impl Zeroable for cmd_parse_command {}
-compat_rs::impl_tailq_entry!(cmd_parse_command, entry, tailq_entry<cmd_parse_command>);
-// #[derive(compat_rs::TailQEntry)]
+crate::compat::impl_tailq_entry!(cmd_parse_command, entry, tailq_entry<cmd_parse_command>);
 #[repr(C)]
 pub struct cmd_parse_command {
     pub line: u32,
@@ -205,7 +191,7 @@ pub unsafe extern "C" fn cmd_parse_run_parser(cause: *mut *mut c_char) -> *mut c
 pub unsafe extern "C" fn cmd_parse_do_file(f: *mut FILE, pi: *mut cmd_parse_input, cause: *mut *mut c_char) -> *mut cmd_parse_commands {
     let mut ps = &raw mut parse_state;
     unsafe {
-        memset(ps.cast(), 0, size_of::<cmd_parse_state>());
+        libc::memset(ps.cast(), 0, size_of::<cmd_parse_state>());
         (*ps).input = pi;
         (*ps).f = f;
         cmd_parse_run_parser(cause)
@@ -217,7 +203,7 @@ pub unsafe extern "C" fn cmd_parse_do_buffer(buf: *const c_char, len: usize, pi:
     unsafe {
         let mut ps = &raw mut parse_state;
 
-        memset(ps.cast(), 0, size_of::<cmd_parse_state>());
+        libc::memset(ps.cast(), 0, size_of::<cmd_parse_state>());
         (*ps).input = pi;
         (*ps).buf = buf;
         (*ps).len = len;
@@ -229,9 +215,9 @@ pub unsafe extern "C" fn cmd_parse_do_buffer(buf: *const c_char, len: usize, pi:
 pub unsafe extern "C" fn cmd_parse_log_commands(cmds: *mut cmd_parse_commands, prefix: *const c_char) {
     unsafe {
         let mut i = 0;
-        for cmd in compat_rs::queue::tailq_foreach(cmds).map(NonNull::as_ptr) {
+        for cmd in tailq_foreach(cmds).map(NonNull::as_ptr) {
             let mut j = 0;
-            for arg in compat_rs::queue::tailq_foreach(&raw mut (*cmd).arguments).map(NonNull::as_ptr) {
+            for arg in tailq_foreach(&raw mut (*cmd).arguments).map(NonNull::as_ptr) {
                 match ((*arg).type_) {
                     cmd_parse_argument_type::CMD_PARSE_STRING => {
                         log_debug!("{} {}:{}: {}", _s(prefix), i, j, _s((*arg).string))
@@ -262,7 +248,7 @@ pub unsafe extern "C" fn cmd_parse_expand_alias(cmd: *mut cmd_parse_command, pi:
         if (*pi).flags.intersects(cmd_parse_input_flags::CMD_PARSE_NOALIAS) {
             return (0);
         }
-        memset(pr.cast(), 0, size_of::<cmd_parse_result>());
+        libc::memset(pr.cast(), 0, size_of::<cmd_parse_result>());
 
         let first = tailq_first(&raw mut (*cmd).arguments);
         if (first.is_null() || (*first).type_ != cmd_parse_argument_type::CMD_PARSE_STRING) {
@@ -321,14 +307,14 @@ pub unsafe extern "C" fn cmd_parse_build_command(cmd: *mut cmd_parse_command, pi
         // struct args_value		*values = NULL;
         let mut count: u32 = 0;
         let mut idx = 0u32;
-        memset(pr.cast(), 0, size_of::<cmd_parse_result>());
+        libc::memset(pr.cast(), 0, size_of::<cmd_parse_result>());
 
         if (cmd_parse_expand_alias(cmd, pi, pr) != 0) {
             return;
         }
 
         'out: {
-            for arg in compat_rs::queue::tailq_foreach(&raw mut (*cmd).arguments).map(NonNull::as_ptr) {
+            for arg in tailq_foreach(&raw mut (*cmd).arguments).map(NonNull::as_ptr) {
                 values = xrecallocarray__::<args_value>(values, count as usize, count as usize + 1).as_ptr();
                 match (*arg).type_ {
                     cmd_parse_argument_type::CMD_PARSE_STRING => {
@@ -398,7 +384,7 @@ pub unsafe extern "C" fn cmd_parse_build_commands(cmds: *mut cmd_parse_commands,
          * executed).
          */
         let result = cmd_list_new();
-        for cmd in compat_rs::queue::tailq_foreach(cmds).map(NonNull::as_ptr) {
+        for cmd in tailq_foreach(cmds).map(NonNull::as_ptr) {
             if !(*pi).flags.intersects(cmd_parse_input_flags::CMD_PARSE_ONEGROUP) && (*cmd).line != line {
                 if (!current.is_null()) {
                     cmd_parse_print_commands(pi, current);
@@ -638,7 +624,7 @@ mod parser {
 
 #[test]
 fn test_parse_lines() {
-    use compat_rs::queue::tailq_init;
+    use crate::compat::queue::tailq_init;
 
     unsafe {
         let lines = "set -g clock-mode-color magenta";

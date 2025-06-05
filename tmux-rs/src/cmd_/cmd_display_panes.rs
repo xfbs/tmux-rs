@@ -1,6 +1,6 @@
-use compat_rs::queue::tailq_foreach;
-
 use crate::*;
+
+use crate::compat::queue::tailq_foreach;
 
 #[unsafe(no_mangle)]
 static mut cmd_display_panes_entry: cmd_entry = cmd_entry {
@@ -22,9 +22,7 @@ pub struct cmd_display_panes_data {
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn cmd_display_panes_args_parse(_: *mut args, _: u32, _: *mut *mut c_char) -> args_parse_type {
-    args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING
-}
+unsafe extern "C" fn cmd_display_panes_args_parse(_: *mut args, _: u32, _: *mut *mut c_char) -> args_parse_type { args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING }
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_display_panes_draw_pane(ctx: *mut screen_redraw_ctx, wp: *mut window_pane) {
@@ -41,11 +39,7 @@ unsafe extern "C" fn cmd_display_panes_draw_pane(ctx: *mut screen_redraw_ctx, wp
         let bufsize = 16;
 
         'out: {
-            if ((*wp).xoff + (*wp).sx <= (*ctx).ox
-                || (*wp).xoff >= (*ctx).ox + (*ctx).sx
-                || (*wp).yoff + (*wp).sy <= (*ctx).oy
-                || (*wp).yoff >= (*ctx).oy + (*ctx).sy)
-            {
+            if ((*wp).xoff + (*wp).sx <= (*ctx).ox || (*wp).xoff >= (*ctx).ox + (*ctx).sx || (*wp).yoff + (*wp).sy <= (*ctx).oy || (*wp).yoff >= (*ctx).oy + (*ctx).sy) {
                 return;
             }
 
@@ -121,11 +115,7 @@ unsafe extern "C" fn cmd_display_panes_draw_pane(ctx: *mut screen_redraw_ctx, wp
             let mut rbuf = [0i8; 16];
             let mut lbuf = [0i8; 16];
             let rlen: usize = xsnprintf(&raw mut rbuf as _, bufsize, c"%ux%u".as_ptr(), (*wp).sx, (*wp).sy) as _;
-            let llen: usize = if (pane > 9 && pane < 35) {
-                xsnprintf(&raw mut lbuf as _, bufsize, c"%c".as_ptr(), b'a' as u32 + (pane - 10)) as _
-            } else {
-                0
-            };
+            let llen: usize = if (pane > 9 && pane < 35) { xsnprintf(&raw mut lbuf as _, bufsize, c"%c".as_ptr(), b'a' as u32 + (pane - 10)) as _ } else { 0 };
 
             if (sx as usize) < len * 6 || sy < 5 {
                 tty_attributes(tty, &raw mut fgc, &raw const grid_default_cell, null_mut(), null_mut());
@@ -301,29 +291,9 @@ unsafe extern "C" fn cmd_display_panes_exec(self_: *mut cmd, item: *mut cmdq_ite
         (*cdata).state = args_make_commands_prepare(self_, item, 0, c"select-pane -t \"%%%\"".as_ptr(), wait, 0);
 
         if (args_has_(args, 'N')) {
-            server_client_set_overlay(
-                tc,
-                delay,
-                None,
-                None,
-                Some(cmd_display_panes_draw),
-                None,
-                Some(cmd_display_panes_free),
-                None,
-                cdata as _,
-            );
+            server_client_set_overlay(tc, delay, None, None, Some(cmd_display_panes_draw), None, Some(cmd_display_panes_free), None, cdata as _);
         } else {
-            server_client_set_overlay(
-                tc,
-                delay,
-                None,
-                None,
-                Some(cmd_display_panes_draw),
-                Some(cmd_display_panes_key),
-                Some(cmd_display_panes_free),
-                None,
-                cdata as _,
-            );
+            server_client_set_overlay(tc, delay, None, None, Some(cmd_display_panes_draw), Some(cmd_display_panes_key), Some(cmd_display_panes_free), None, cdata as _);
         }
 
         if (wait == 0) {

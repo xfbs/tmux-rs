@@ -11,10 +11,10 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use super::*;
+use crate::*;
 
+use crate::compat::strtonum;
 use crate::xmalloc::xrecallocarray__;
-use compat_rs::strtonum;
 
 pub const SIXEL_COLOUR_REGISTERS: u32 = 1024;
 const SIXEL_WIDTH_LIMIT: u32 = 10000;

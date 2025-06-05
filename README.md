@@ -35,6 +35,7 @@ refactoring the Rust code to make it more idiomatic and use less unsafe.
 
 - [ ] LICENSE stuff
 - [ ] verify all uses of tailq and rbq, any structs with multiple "entry" fields we use correctly
+- [ ] use base64 crate instead of libresolv
 
 ## Tips
 

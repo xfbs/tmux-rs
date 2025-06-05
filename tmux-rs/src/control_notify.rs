@@ -1,21 +1,6 @@
 use crate::*;
-use compat_rs::queue::tailq_foreach;
-unsafe extern "C" {
-    // pub unsafe fn control_notify_pane_mode_changed(_: c_int);
-    // pub unsafe fn control_notify_window_layout_changed(_: *mut window);
-    // pub unsafe fn control_notify_window_pane_changed(_: *mut window);
-    // pub unsafe fn control_notify_window_unlinked(_: *mut session, _: *mut window);
-    // pub unsafe fn control_notify_window_linked(_: *mut session, _: *mut window);
-    // pub unsafe fn control_notify_window_renamed(_: *mut window);
-    // pub unsafe fn control_notify_client_session_changed(_: *mut client);
-    // pub unsafe fn control_notify_client_detached(_: *mut client);
-    // pub unsafe fn control_notify_session_renamed(_: *mut session);
-    // pub unsafe fn control_notify_session_created(_: *mut session);
-    // pub unsafe fn control_notify_session_closed(_: *mut session);
-    // pub unsafe fn control_notify_session_window_changed(_: *mut session);
-    // pub unsafe fn control_notify_paste_buffer_changed(_: *const c_char);
-    // pub unsafe fn control_notify_paste_buffer_deleted(_: *const c_char);
-}
+
+use crate::compat::queue::tailq_foreach;
 
 macro_rules! CONTROL_SHOULD_NOTIFY_CLIENT {
     ($c:expr) => {
@@ -40,8 +25,7 @@ pub unsafe extern "C" fn control_notify_pane_mode_changed(pane: c_int) {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_notify_window_layout_changed(w: *mut window) {
-    let template =
-        c"%layout-change #{window_id} #{window_layout} #{window_visible_layout} #{window_raw_flags}".as_ptr();
+    let template = c"%layout-change #{window_id} #{window_layout} #{window_visible_layout} #{window_raw_flags}".as_ptr();
 
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
@@ -81,12 +65,7 @@ pub unsafe extern "C" fn control_notify_window_pane_changed(w: *mut window) {
                     continue;
                 }
 
-                control_write(
-                    c,
-                    c"%%window-pane-changed @%u %%%u".as_ptr(),
-                    (*w).id,
-                    (*(*w).active).id,
-                );
+                control_write(c, c"%%window-pane-changed @%u %%%u".as_ptr(), (*w).id, (*(*w).active).id);
             }
         }
     }
@@ -169,13 +148,7 @@ pub unsafe extern "C" fn control_notify_client_session_changed(cc: *mut client) 
                 if cc == c {
                     control_write(c, c"%%session-changed $%u %s".as_ptr(), (*s).id, (*s).name);
                 } else {
-                    control_write(
-                        c,
-                        c"%%client-session-changed %s $%u %s".as_ptr(),
-                        (*cc).name,
-                        (*s).id,
-                        (*s).name,
-                    );
+                    control_write(c, c"%%client-session-changed %s $%u %s".as_ptr(), (*cc).name, (*s).id, (*s).name);
                 }
             }
         }
@@ -249,12 +222,7 @@ pub unsafe extern "C" fn control_notify_session_window_changed(s: *mut session) 
                     continue;
                 }
 
-                control_write(
-                    c,
-                    c"%%session-window-changed $%u @%u".as_ptr(),
-                    (*s).id,
-                    (*(*(*s).curw).window).id,
-                );
+                control_write(c, c"%%session-window-changed $%u @%u".as_ptr(), (*s).id, (*(*(*s).curw).window).id);
             }
         }
     }

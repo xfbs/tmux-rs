@@ -1,7 +1,7 @@
-use compat_rs::strlcat;
-use libc::strcmp;
-
 use crate::*;
+
+use crate::compat::strlcat;
+use libc::strcmp;
 
 #[unsafe(no_mangle)]
 static mut cmd_list_keys_entry: cmd_entry = cmd_entry {

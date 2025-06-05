@@ -10,13 +10,12 @@ pub unsafe fn bsearch_<T>(key: *const T, base: *const T, num: usize, size: usize
 #[inline]
 pub unsafe fn bsearch__<T>(key: *const T, base: *const T, num: usize, compar: unsafe extern "C" fn(*const c_void, *const c_void) -> i32) -> *mut T { unsafe { ::libc::bsearch(key.cast(), base.cast(), num, size_of::<T>(), Some(compar)).cast() } }
 
-#[macro_export]
 macro_rules! errno {
     () => {
         *::libc::__errno_location()
     };
 }
-pub use errno;
+pub(crate) use errno;
 
 #[inline]
 pub fn MB_CUR_MAX() -> usize {

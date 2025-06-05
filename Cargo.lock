@@ -72,14 +72,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "compat_rs"
-version = "0.1.0"
-dependencies = [
- "libc",
- "paste",
-]
-
-[[package]]
 name = "cpufeatures"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -497,7 +489,6 @@ version = "0.1.0"
 dependencies = [
  "bitflags",
  "cc",
- "compat_rs",
  "lalrpop",
  "lalrpop-util 0.21.0",
  "libc",

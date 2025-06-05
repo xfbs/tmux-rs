@@ -1,12 +1,13 @@
 use crate::*;
 
-use compat_rs::{
+use libc::{FIONREAD, FNM_CASEFOLD, TIOCSWINSZ, close, fnmatch, free, gethostname, gettimeofday, ioctl, isspace, memset, regcomp, regex_t, regexec, regfree, strcasecmp, strlen, winsize};
+
+use crate::compat::{
     HOST_NAME_MAX, RB_GENERATE, VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB,
     queue::{tailq_empty, tailq_first, tailq_foreach, tailq_init, tailq_insert_after, tailq_insert_before, tailq_insert_head, tailq_insert_tail, tailq_last, tailq_next, tailq_prev, tailq_remove},
     strtonum,
     tree::{rb_find, rb_foreach, rb_insert, rb_min, rb_next, rb_prev, rb_remove},
 };
-use libc::{FIONREAD, FNM_CASEFOLD, TIOCSWINSZ, close, fnmatch, free, gethostname, gettimeofday, ioctl, isspace, memset, regcomp, regex_t, regexec, regfree, strcasecmp, strlen, winsize};
 
 #[cfg(feature = "utempter")]
 use crate::utempter::utempter_remove_record;
@@ -449,7 +450,7 @@ pub unsafe extern "C" fn window_pane_update_focus(wp: *mut window_pane) {
             if wp != (*(*wp).window).active {
                 focused = false
             } else {
-                for c in compat_rs::queue::tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
+                for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
                     if !(*c).session.is_null() && (*(*c).session).attached != 0 && (*c).flags.intersects(client_flag::FOCUSED) && (*(*(*c).session).curw).window == (*wp).window {
                         focused = true;
                         break;
@@ -1022,7 +1023,7 @@ unsafe extern "C" fn window_pane_read_callback(_bufev: *mut bufferevent, data: *
         }
 
         log_debug!("%%{} has {} bytes", (*wp).id, size);
-        for c in compat_rs::queue::tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
+        for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if !(*c).session.is_null() && (*c).flags.intersects(client_flag::CONTROL) {
                 control_write_output(c, wp);
             }
@@ -1096,7 +1097,7 @@ pub unsafe extern "C" fn window_pane_set_mode(wp: *mut window_pane, swp: *mut wi
         }
 
         let mut wme: *mut window_mode_entry = null_mut();
-        for wme_ in compat_rs::queue::tailq_foreach(&raw mut (*wp).modes).map(NonNull::as_ptr) {
+        for wme_ in tailq_foreach(&raw mut (*wp).modes).map(NonNull::as_ptr) {
             wme = wme_;
             if (*wme).mode == mode {
                 break;

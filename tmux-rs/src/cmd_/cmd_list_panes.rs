@@ -1,6 +1,6 @@
-use compat_rs::{queue::tailq_foreach, tree::rb_foreach};
-
 use crate::*;
+
+use crate::compat::{queue::tailq_foreach, tree::rb_foreach};
 
 #[unsafe(no_mangle)]
 static mut cmd_list_panes_entry: cmd_entry = cmd_entry {

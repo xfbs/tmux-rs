@@ -1,7 +1,8 @@
 use crate::*;
 
-use compat_rs::closefrom;
 use libc::{_exit, AF_UNIX, O_WRONLY, PF_UNSPEC, SIG_BLOCK, SIG_SETMASK, STDERR_FILENO, STDIN_FILENO, STDOUT_FILENO, close, dup2, execl, open, sigfillset, sigprocmask, sigset_t, socketpair};
+
+use crate::compat::closefrom;
 
 #[unsafe(no_mangle)]
 static mut cmd_pipe_pane_entry: cmd_entry = cmd_entry {

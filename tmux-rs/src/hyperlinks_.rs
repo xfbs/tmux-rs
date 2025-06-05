@@ -1,20 +1,9 @@
-use compat_rs::{
+use crate::compat::{
     TAILQ_HEAD_INITIALIZER, VIS_CSTYLE, VIS_OCTAL,
     queue::{tailq_first, tailq_insert_tail, tailq_remove},
     tree::{rb_find, rb_foreach, rb_init, rb_insert, rb_remove},
 };
-use libc::strcmp;
-
 use crate::{xmalloc::Zeroable, *};
-
-unsafe extern "C" {
-    // pub unsafe fn hyperlinks_put(_: *mut hyperlinks, _: *const c_char, _: *const c_char) -> c_uint;
-    // pub unsafe fn hyperlinks_get( _: *mut hyperlinks, _: c_uint, _: *mut *const c_char, _: *mut *const c_char, _: *mut *const c_char,) -> c_int;
-    // pub unsafe fn hyperlinks_init() -> *mut hyperlinks;
-    // pub unsafe fn hyperlinks_copy(_: *mut hyperlinks) -> *mut hyperlinks;
-    // pub unsafe fn hyperlinks_reset(_: *mut hyperlinks);
-    // pub unsafe fn hyperlinks_free(_: *mut hyperlinks);
-}
 
 const MAX_HYPERLINKS: u32 = 5000;
 
@@ -22,9 +11,8 @@ static mut hyperlinks_next_external_id: c_longlong = 1;
 static mut global_hyperlinks_count: u32 = 0;
 
 unsafe impl Zeroable for hyperlinks_uri {}
-compat_rs::impl_tailq_entry!(hyperlinks_uri, list_entry, tailq_entry<hyperlinks_uri>);
+crate::compat::impl_tailq_entry!(hyperlinks_uri, list_entry, tailq_entry<hyperlinks_uri>);
 #[repr(C)]
-// #[derive(compat_rs::TailQEntry)]
 pub struct hyperlinks_uri {
     pub tree: *mut hyperlinks,
 
@@ -68,34 +56,22 @@ unsafe extern "C" fn hyperlinks_by_uri_cmp(left: *const hyperlinks_uri, right: *
             return ((*left).inner as i32 - (*right).inner as i32);
         }
 
-        let r = strcmp((*left).internal_id, (*right).internal_id);
+        let r = libc::strcmp((*left).internal_id, (*right).internal_id);
         if (r != 0) {
             return (r);
         }
-        strcmp((*left).uri, (*right).uri)
+        libc::strcmp((*left).uri, (*right).uri)
     }
 }
 
 // RB_PROTOTYPE_STATIC(hyperlinks_by_uri_tree, hyperlinks_uri, by_uri_entry, hyperlinks_by_uri_cmp);
-RB_GENERATE!(
-    hyperlinks_by_uri_tree,
-    hyperlinks_uri,
-    by_uri_entry,
-    hyperlinks_by_uri_cmp
-);
+RB_GENERATE!(hyperlinks_by_uri_tree, hyperlinks_uri, by_uri_entry, hyperlinks_by_uri_cmp);
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn hyperlinks_by_inner_cmp(left: *const hyperlinks_uri, right: *const hyperlinks_uri) -> i32 {
-    unsafe { (*left).inner.wrapping_sub((*right).inner) as i32 }
-}
+unsafe extern "C" fn hyperlinks_by_inner_cmp(left: *const hyperlinks_uri, right: *const hyperlinks_uri) -> i32 { unsafe { (*left).inner.wrapping_sub((*right).inner) as i32 } }
 
 // RB_PROTOTYPE_STATIC(hyperlinks_by_inner_tree, hyperlinks_uri, by_inner_entry, hyperlinks_by_inner_cmp);
-RB_GENERATE!(
-    hyperlinks_by_inner_tree,
-    hyperlinks_uri,
-    by_inner_entry,
-    hyperlinks_by_inner_cmp
-);
+RB_GENERATE!(hyperlinks_by_inner_tree, hyperlinks_uri, by_inner_entry, hyperlinks_by_inner_cmp);
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn hyperlinks_remove(hlu: *mut hyperlinks_uri) {
@@ -116,11 +92,7 @@ unsafe extern "C" fn hyperlinks_remove(hlu: *mut hyperlinks_uri) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn hyperlinks_put(
-    hl: *mut hyperlinks,
-    uri_in: *const c_char,
-    mut internal_id_in: *const c_char,
-) -> u32 {
+pub unsafe extern "C" fn hyperlinks_put(hl: *mut hyperlinks, uri_in: *const c_char, mut internal_id_in: *const c_char) -> u32 {
     unsafe {
         // struct hyperlinks_uri	 find, *hlu;
         // char			*uri, *internal_id, *external_id;
@@ -177,13 +149,7 @@ pub unsafe extern "C" fn hyperlinks_put(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn hyperlinks_get(
-    hl: *mut hyperlinks,
-    inner: u32,
-    uri_out: *mut *const c_char,
-    internal_id_out: *mut *const c_char,
-    external_id_out: *mut *const c_char,
-) -> i32 {
+pub unsafe extern "C" fn hyperlinks_get(hl: *mut hyperlinks, inner: u32, uri_out: *mut *const c_char, internal_id_out: *mut *const c_char, external_id_out: *mut *const c_char) -> i32 {
     unsafe {
         let mut find = MaybeUninit::<hyperlinks_uri>::uninit();
         let mut find = find.as_mut_ptr();

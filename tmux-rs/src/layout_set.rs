@@ -1,26 +1,13 @@
-use compat_rs::queue::{tailq_first, tailq_foreach, tailq_insert_tail, tailq_last, tailq_next};
-use libc::{strcmp, strncmp};
-
 use crate::*;
 
-unsafe extern "C" {
-    // pub fn layout_set_lookup(_: *const c_char) -> c_int;
-    // pub fn layout_set_select(_: *mut window, _: c_uint) -> c_uint;
-    // pub fn layout_set_next(_: *mut window) -> c_uint;
-    // pub fn layout_set_previous(_: *mut window) -> c_uint;
-}
+use crate::compat::queue::{tailq_first, tailq_foreach, tailq_insert_tail, tailq_last, tailq_next};
 
 struct layout_sets_entry {
     name: *const c_char,
     arrange: Option<unsafe extern "C" fn(*mut window)>,
 }
 impl layout_sets_entry {
-    const fn new(name: &'static CStr, arrange: unsafe extern "C" fn(*mut window)) -> Self {
-        Self {
-            name: name.as_ptr(),
-            arrange: Some(arrange),
-        }
-    }
+    const fn new(name: &'static CStr, arrange: unsafe extern "C" fn(*mut window)) -> Self { Self { name: name.as_ptr(), arrange: Some(arrange) } }
 }
 
 const layout_sets_len: usize = 7;
@@ -40,12 +27,12 @@ pub unsafe extern "C" fn layout_set_lookup(name: *const c_char) -> i32 {
         let mut matched: i32 = -1;
 
         for i in 0..layout_sets_len {
-            if (strcmp(layout_sets[i].name, name) == 0) {
+            if (libc::strcmp(layout_sets[i].name, name) == 0) {
                 return i as i32;
             }
         }
         for i in 0..layout_sets_len {
-            if (strncmp(layout_sets[i].name, name, strlen(name)) == 0) {
+            if (libc::strncmp(layout_sets[i].name, name, strlen(name)) == 0) {
                 if (matched != -1) {
                     /* ambiguous */
                     return -1;

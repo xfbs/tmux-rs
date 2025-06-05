@@ -1,6 +1,6 @@
-use compat_rs::{strlcat, tree::rb_empty};
-
 use super::*;
+
+use crate::compat::{strlcat, tree::rb_empty};
 
 static WINDOW_CUSTOMIZE_DEFAULT_FORMAT: &str = concat!(
     "#{?is_option,", //
@@ -11,13 +11,6 @@ static WINDOW_CUSTOMIZE_DEFAULT_FORMAT: &str = concat!(
     "#{key}",
     "}\0"
 );
-
-unsafe extern "C" {
-    // fn window_customize_init(_: NonNull<window_mode_entry>, _: *mut cmd_find_state, _: *mut args) -> *mut screen;
-    // fn window_customize_free(_: NonNull<window_mode_entry>);
-    // fn window_customize_resize(_: NonNull<window_mode_entry>, _: u32, _: u32);
-    // fn window_customize_key(_: NonNull<window_mode_entry>, _: *mut client, _: *mut session, _: *mut winlink, _: key_code, _: *mut mouse_event);
-}
 
 #[unsafe(no_mangle)]
 static window_customize_menu_items: [menu_item; 9] = [

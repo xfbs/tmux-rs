@@ -1,23 +1,24 @@
 use crate::*;
 
-use compat_rs::{strtonum, tree::rb_min};
 use libc::{sscanf, strcmp, tcgetattr};
+
+use crate::compat::{strtonum, tree::rb_min};
 
 const NEW_SESSION_TEMPLATE: &CStr = c"#{session_name}:";
 
 #[unsafe(no_mangle)]
-static mut cmd_new_session_entry : cmd_entry = cmd_entry  {
-	name : c"new-session".as_ptr(),
-	alias : c"new".as_ptr(),
+static mut cmd_new_session_entry: cmd_entry = cmd_entry {
+    name: c"new-session".as_ptr(),
+    alias: c"new".as_ptr(),
 
-	args : args_parse::new( c"Ac:dDe:EF:f:n:Ps:t:x:Xy:", 0, -1, None),
-	usage : c"[-AdDEPX] [-c start-directory] [-e environment] [-F format] [-f flags] [-n window-name] [-s session-name] [-t target-session] [-x width] [-y height] [shell-command]".as_ptr(),
+    args: args_parse::new(c"Ac:dDe:EF:f:n:Ps:t:x:Xy:", 0, -1, None),
+    usage: c"[-AdDEPX] [-c start-directory] [-e environment] [-F format] [-f flags] [-n window-name] [-s session-name] [-t target-session] [-x width] [-y height] [shell-command]".as_ptr(),
 
-	target : cmd_entry_flag::new( b't', cmd_find_type::CMD_FIND_SESSION, CMD_FIND_CANFAIL ),
+    target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_SESSION, CMD_FIND_CANFAIL),
 
-	flags : cmd_flag::CMD_STARTSERVER,
-	exec : Some(cmd_new_session_exec),
-    ..unsafe{zeroed()}
+    flags: cmd_flag::CMD_STARTSERVER,
+    exec: Some(cmd_new_session_exec),
+    ..unsafe { zeroed() }
 };
 
 #[unsafe(no_mangle)]
@@ -104,22 +105,9 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                 free_(name);
             }
             if (args_has_(args, 'A')) {
-                as_ = if (!newname.is_null()) {
-                    session_find(newname)
-                } else {
-                    (*target).s
-                };
+                as_ = if (!newname.is_null()) { session_find(newname) } else { (*target).s };
                 if (!as_.is_null()) {
-                    retval = cmd_attach_session(
-                        item,
-                        (*as_).name,
-                        args_has(args, b'D'),
-                        args_has(args, b'X'),
-                        0,
-                        null(),
-                        args_has(args, b'E'),
-                        args_get(args, b'f'),
-                    );
+                    retval = cmd_attach_session(item, (*as_).name, args_has(args, b'D'), args_has(args, b'X'), 0, null(), args_has(args, b'E'), args_get(args, b'f'));
                     free_(newname);
                     return retval;
                 }
@@ -133,11 +121,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
             group = args_get_(args, 't');
             if (!group.is_null()) {
                 groupwith = (*target).s;
-                sg = if (groupwith.is_null()) {
-                    session_group_find(group)
-                } else {
-                    session_group_contains(groupwith)
-                };
+                sg = if (groupwith.is_null()) { session_group_find(group) } else { session_group_contains(groupwith) };
                 if (!sg.is_null()) {
                     prefix = xstrdup((*sg).name).as_ptr();
                 } else if (!groupwith.is_null()) {
@@ -184,10 +168,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
              */
             if !detached && !already_attached && (*c).fd != -1 && !(*c).flags.intersects(client_flag::CONTROL) {
                 if (server_client_check_nested(cmdq_get_client(item)) != 0) {
-                    cmdq_error(
-                        item,
-                        c"sessions should be nested with care, unset $TMUX to force".as_ptr(),
-                    );
+                    cmdq_error(item, c"sessions should be nested with care, unset $TMUX to force".as_ptr());
                     break 'fail;
                 }
                 if (tcgetattr((*c).fd, &raw mut tio) != 0) {

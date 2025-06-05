@@ -1,6 +1,6 @@
 use super::*;
 
-use compat_rs::{
+use crate::compat::{
     fgetln,
     queue::{tailq_init, tailq_remove},
     tree::rb_foreach,

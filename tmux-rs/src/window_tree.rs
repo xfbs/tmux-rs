@@ -11,22 +11,10 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+use crate::*;
 
+use crate::compat::tree::rb_foreach;
 use crate::{cmd_::cmd_queue::cmdq_get_callback1, options_::options_get_number_, xmalloc::xreallocarray};
-
-use compat_rs::tree::rb_foreach;
-use libc::strstr;
-use num_enum::TryFromPrimitive;
-
-use super::*;
-unsafe extern "C" {
-    // pub static mut window_tree_mode: window_mode;
-    // fn window_tree_init(_: *mut window_mode_entry, _: *mut cmd_find_state, _: *mut args) -> *mut screen;
-    // fn window_tree_free(_: *mut window_mode_entry);
-    // fn window_tree_resize(_: *mut window_mode_entry, _: u32, _: u32);
-    // fn window_tree_update(_: *mut window_mode_entry);
-    // fn window_tree_key(_: NonNull<window_mode_entry>, _: *mut client, _: *mut session, _: *mut winlink, _: key_code, _: *mut mouse_event);
-}
 
 const WINDOW_TREE_DEFAULT_COMMAND: &CStr = c"switch-client -Zt '%%'";
 const WINDOW_TREE_DEFAULT_FORMAT: &str = concat!(
@@ -85,7 +73,7 @@ pub static mut window_tree_mode: window_mode = window_mode {
 };
 
 #[repr(i32)]
-#[derive(TryFromPrimitive)]
+#[derive(num_enum::TryFromPrimitive)]
 enum window_tree_sort_type {
     WINDOW_TREE_BY_INDEX,
     WINDOW_TREE_BY_NAME,
@@ -880,14 +868,14 @@ unsafe extern "C" fn window_tree_search(_modedata: *mut c_void, itemdata: NonNul
             window_tree_type::WINDOW_TREE_NONE => return boolint::false_(),
             window_tree_type::WINDOW_TREE_SESSION => {
                 if let Some(s) = s {
-                    return boolint::from(!strstr((*s.as_ptr()).name, ss).is_null());
+                    return boolint::from(!libc::strstr((*s.as_ptr()).name, ss).is_null());
                 }
             }
             window_tree_type::WINDOW_TREE_WINDOW => {
                 if let Some(s) = s
                     && let Some(wl) = wl
                 {
-                    return boolint::from(!strstr((*(*wl.as_ptr()).window).name, ss).is_null());
+                    return boolint::from(!libc::strstr((*(*wl.as_ptr()).window).name, ss).is_null());
                 }
             }
             window_tree_type::WINDOW_TREE_PANE => {
@@ -899,7 +887,7 @@ unsafe extern "C" fn window_tree_search(_modedata: *mut c_void, itemdata: NonNul
                     if cmd.is_null() || *cmd == b'\0' as c_char {
                         return boolint::false_();
                     } else {
-                        let retval = boolint::from(!strstr(cmd, ss).is_null());
+                        let retval = boolint::from(!libc::strstr(cmd, ss).is_null());
                         free_(cmd);
                         return retval;
                     }
