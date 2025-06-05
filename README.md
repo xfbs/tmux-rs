@@ -28,7 +28,6 @@ That's a bit to long for me.
 I'm in the home stretch of the first part of this project. After finishing translating these files I will begin
 refactoring the Rust code to make it more idiomatic and use less unsafe.
 
-- [ ] 2347 screen-write
 - [ ] 3186 tty
 - [ ] 3392 server-client
 - [ ] 5786 window-copy
@@ -56,7 +55,7 @@ more then just server exited unexpectedly.
 
 # NEXT
 - improve interface on:
-  - debug_log
+  - log_debug
   - options_get_number
   - fatalx
 

@@ -1652,14 +1652,14 @@ pub struct tty_ctx {
 
     pub redraw_cb: tty_ctx_redraw_cb,
     pub set_client_cb: tty_ctx_set_client_cb,
-    pub arg: *mut (),
+    pub arg: *mut c_void,
 
     pub cell: *const grid_cell,
     pub wrapped: i32,
 
     pub num: u32,
-    pub ptr: *mut (),
-    pub ptr2: *mut (),
+    pub ptr: *mut c_void,
+    pub ptr2: *mut c_void,
 
     pub allow_invisible_panes: i32,
 
@@ -1669,7 +1669,7 @@ pub struct tty_ctx {
      * already been updated.
      */
     pub ocx: u32,
-    pub oxy: u32,
+    pub ocy: u32,
 
     pub orupper: u32,
     pub orlower: u32,
@@ -2765,11 +2765,13 @@ impl SyncCharPtr {
     const fn new(value: &'static CStr) -> Self { Self(value.as_ptr()) }
     const fn from_ptr(value: *const c_char) -> Self { Self(value) }
     const fn null() -> Self { Self(null()) }
+    const fn is_null(&self) -> bool { self.0.is_null() }
     const fn as_ptr(&self) -> *const c_char { self.0 }
 }
 
 // TODO this will eventually swap to be bool, but for now, while there is C code should be ffi compatible with i32
 #[repr(transparent)]
+#[derive(Copy, Clone)]
 pub struct boolint(i32);
 impl boolint {
     const fn true_() -> Self { Self(1) }
