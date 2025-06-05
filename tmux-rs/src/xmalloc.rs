@@ -37,9 +37,10 @@ pub fn xmalloc__<'a, T>() -> &'a mut MaybeUninit<T> {
     debug_assert!(size != 0);
     let nz_size = NonZero::<usize>::try_from(size).unwrap();
 
-    let ptr = NonNull::new(malloc_(nz_size)).unwrap_or_else(|| panic!("xmalloc: allocating {size} bytes")).cast();
+    let ptr: NonNull<T> = NonNull::new(malloc_(nz_size)).unwrap_or_else(|| panic!("xmalloc: allocating {size} bytes")).cast();
 
-    unsafe { ptr.as_uninit_mut() }
+    // from `NonNull::as_uninit_mut`
+    unsafe { &mut *ptr.cast().as_ptr() }
 }
 
 #[inline]

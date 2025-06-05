@@ -355,7 +355,7 @@ pub unsafe extern "C" fn sixel_parse(buf: *const c_char, len: usize, xpixel: u32
     }
 }
 #[unsafe(no_mangle)]
-unsafe extern "C" fn sixel_free(si: *mut sixel_image) {
+pub unsafe extern "C" fn sixel_free(si: *mut sixel_image) {
     unsafe {
         for y in 0..(*si).y {
             free_((*(*si).lines.add(y as usize)).data);
@@ -400,7 +400,7 @@ unsafe extern "C" fn sixel_log(si: *mut sixel_image) {
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn sixel_size_in_cells(si: *mut sixel_image, x: *mut u32, y: *mut u32) {
+pub unsafe extern "C" fn sixel_size_in_cells(si: *mut sixel_image, x: *mut u32, y: *mut u32) {
     unsafe {
         if (((*si).x % (*si).xpixel) == 0) {
             *x = ((*si).x / (*si).xpixel);
@@ -416,7 +416,7 @@ unsafe extern "C" fn sixel_size_in_cells(si: *mut sixel_image, x: *mut u32, y: *
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn sixel_scale(si: *mut sixel_image, mut xpixel: u32, mut ypixel: u32, ox: u32, oy: u32, mut sx: u32, mut sy: u32, colours: i32) -> *mut sixel_image {
+pub unsafe extern "C" fn sixel_scale(si: *mut sixel_image, mut xpixel: u32, mut ypixel: u32, ox: u32, oy: u32, mut sx: u32, mut sy: u32, colours: i32) -> *mut sixel_image {
     unsafe {
         /*
          * We want to get the section of the image at ox,oy in image cells and

@@ -1,6 +1,4 @@
 #![feature(c_variadic)]
-#![feature(maybe_uninit_array_assume_init)]
-#![feature(ptr_as_uninit)]
 #![warn(static_mut_refs)]
 // #![warn(clippy::shadow_reuse)]
 // #![warn(clippy::shadow_same)]
@@ -29,8 +27,8 @@ pub mod libc_;
 pub use libc_::*;
 use xmalloc::Zeroable; // want to rexport everything from here
 
+#[cfg(feature = "sixel")]
 pub mod image_;
-
 #[cfg(feature = "sixel")]
 pub mod image_sixel;
 #[cfg(feature = "sixel")]
@@ -56,7 +54,7 @@ mod event_;
 pub use event_::*;
 
 use compat_rs::{
-    RB_GENERATE,
+    RB_GENERATE, impl_tailq_entry,
     queue::{Entry, ListEntry, list_entry, list_head, tailq_entry, tailq_first, tailq_foreach, tailq_head, tailq_next},
     tree::{GetEntry, rb_entry, rb_head},
 };
@@ -885,6 +883,10 @@ pub struct style {
 }
 
 #[cfg(feature = "sixel")]
+compat_rs::impl_tailq_entry!(image, all_entry, tailq_entry<image>);
+#[cfg(feature = "sixel")]
+compat_rs::impl_tailq_entry!(image, entry, tailq_entry<image>);
+#[cfg(feature = "sixel")]
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct image {
@@ -954,8 +956,9 @@ pub struct screen {
     pub tabs: *mut bitstr_t,
     pub sel: *mut screen_sel,
 
-    // #[cfg(feature = "sixel")]
-    // images: images,
+    #[cfg(feature = "sixel")]
+    pub images: images,
+
     pub write_list: *mut screen_write_cline,
 
     pub hyperlinks: *mut hyperlinks,
@@ -2846,5 +2849,7 @@ pub const fn concat_array<const N: usize, const M: usize, const O: usize, T: Cop
     assert!(a1.len() + a2.len() == out.len());
     assert!(i == out.len());
 
-    unsafe { MaybeUninit::array_assume_init(out) }
+    unsafe { std::mem::transmute_copy(&out) }
+    // TODO once stabilized switch to:
+    // unsafe { MaybeUninit::array_assume_init(out) }
 }

@@ -33,6 +33,9 @@ refactoring the Rust code to make it more idiomatic and use less unsafe.
 - [ ] 5786 window-copy
 - [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
 
+- [ ] LICENSE stuff
+- [ ] verify all uses of tailq and rbq, any structs with multiple "entry" fields we use correctly
+
 ## Tips
 
 - Use clang-format or other to reformat the C code quickly
