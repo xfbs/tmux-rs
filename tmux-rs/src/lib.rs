@@ -5,11 +5,9 @@
 #![allow(clippy::collapsible_else_if)]
 #![allow(clippy::collapsible_if)]
 #![allow(clippy::deref_addrof, reason = "many false positive, required for unsafe code")]
-#![allow(clippy::manual_clamp)]
 #![allow(clippy::manual_range_contains)]
-// #![allow(clippy::implicit_saturating_sub)]
 #![allow(clippy::if_same_then_else)]
-#![allow(clippy::manual_div_ceil)] // switch
+// #![allow(clippy::manual_div_ceil)] // switch
 #![allow(clippy::blocks_in_conditions, clippy::missing_safety_doc, clippy::explicit_auto_deref)] // keep, not worth fixing yet
 #![allow(clippy::overly_complex_bool_expr)] // switch
 #![allow(clippy::shadow_same)] // switch

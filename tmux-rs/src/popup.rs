@@ -592,7 +592,7 @@ pub unsafe extern "C" fn popup_key_cb(c: *mut client, data: *mut c_void, event: 
             } else {
                 menu_add_items((*pd).menu, &raw mut popup_internal_menu_items as *mut menu_item, null_mut(), c, null_mut());
             }
-            let x = if ((*m).x >= ((*(*pd).menu).width + 4) / 2) { (*m).x - ((*(*pd).menu).width + 4) / 2 } else { 0 };
+            let x = (*m).x.saturating_sub(((*(*pd).menu).width + 4) / 2);
             (*pd).md = menu_prepare((*pd).menu, 0, 0, null_mut(), x, (*m).y, c, box_lines::BOX_LINES_DEFAULT, null_mut(), null_mut(), null_mut(), null_mut(), Some(popup_menu_done), pd.cast());
             (*c).flags |= client_flag::REDRAWOVERLAY;
         }

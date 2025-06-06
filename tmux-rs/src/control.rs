@@ -645,7 +645,7 @@ pub unsafe extern "C" fn control_write_pending(c: *mut client, cp: *mut control_
             }
 
             cb = tailq_first(&raw mut (*cp).blocks);
-            let age = if ((*cb).t < t) { t - (*cb).t } else { 0 };
+            let age = t.saturating_sub((*cb).t);
             log_debug!("{}: {}: output block {} (age {}) for %%{} (used {}/{})", "control_write_pending", _s((*c).name), (*cb).size, age, (*cp).pane, used, limit,);
 
             size = (*cb).size;

@@ -1255,10 +1255,10 @@ unsafe extern "C" fn window_tree_mouse(data: *mut window_tree_modedata, key: key
             return '>' as key_code;
         }
 
-        if ((*data).left != -1) {
+        if (*data).left != -1 {
             x -= (*data).left as u32;
-        } else if (x != 0) {
-            x -= 1;
+        } else {
+            x = x.saturating_sub(1);
         }
         if (x == 0 || (*data).end == 0) {
             x = 0;

@@ -1123,10 +1123,7 @@ unsafe extern "C" fn status_prompt_replace_complete(c: *mut client, mut s: *cons
         let mut ud: *mut utf8_data = null_mut();
 
         /* Work out where the cursor currently is. */
-        let mut idx = (*c).prompt_index;
-        if (idx != 0) {
-            idx -= 1;
-        }
+        let idx = (*c).prompt_index.saturating_sub(1);
         let mut size = utf8_strlen((*c).prompt_buffer);
 
         /* Find the word we are in. */

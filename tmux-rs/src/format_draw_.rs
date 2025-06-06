@@ -108,7 +108,7 @@ unsafe extern "C" fn format_draw_put_list(octx: *mut screen_write_ctx, ocx: u32,
 
         /* The list needs to be trimmed. Try to keep the focus visible. */
         let focus_centre: u32 = (focus_start + (focus_end - focus_start) / 2) as u32;
-        let mut start: u32 = if (focus_centre < width / 2) { 0 } else { focus_centre - width / 2 };
+        let mut start: u32 = focus_centre.saturating_sub(width / 2);
         if (start + width > (*list).cx) {
             start = (*list).cx - width;
         }

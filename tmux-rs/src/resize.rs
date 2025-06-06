@@ -9,19 +9,9 @@ pub unsafe extern "C" fn resize_window(w: *mut window, mut sx: u32, mut sy: u32,
     unsafe {
         let mut zoomed = 0;
 
-        /* Check size limits. */
-        if (sx < WINDOW_MINIMUM) {
-            sx = WINDOW_MINIMUM;
-        }
-        if (sx > WINDOW_MAXIMUM) {
-            sx = WINDOW_MAXIMUM;
-        }
-        if (sy < WINDOW_MINIMUM) {
-            sy = WINDOW_MINIMUM;
-        }
-        if (sy > WINDOW_MAXIMUM) {
-            sy = WINDOW_MAXIMUM;
-        }
+        // Check size limits.
+        sx = sx.clamp(WINDOW_MINIMUM, WINDOW_MAXIMUM);
+        sy = sy.clamp(WINDOW_MINIMUM, WINDOW_MAXIMUM);
 
         /* If the window is zoomed, unzoom. */
         let zoomed = (*w).flags.intersects(window_flag::ZOOMED);
@@ -343,18 +333,8 @@ pub unsafe extern "C" fn default_window_size(mut c: *mut client, s: *mut session
         }
         // done:
         /* Make sure the limits are enforced. */
-        if (*sx < WINDOW_MINIMUM) {
-            *sx = WINDOW_MINIMUM;
-        }
-        if (*sx > WINDOW_MAXIMUM) {
-            *sx = WINDOW_MAXIMUM;
-        }
-        if (*sy < WINDOW_MINIMUM) {
-            *sy = WINDOW_MINIMUM;
-        }
-        if (*sy > WINDOW_MAXIMUM) {
-            *sy = WINDOW_MAXIMUM;
-        }
+        *sx = (*sx).clamp(WINDOW_MINIMUM, WINDOW_MAXIMUM);
+        *sy = (*sy).clamp(WINDOW_MINIMUM, WINDOW_MAXIMUM);
         log_debug!("{}: resulting size is {}x{}", __func__, *sx, *sy);
     }
 }
