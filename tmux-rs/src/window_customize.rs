@@ -473,7 +473,7 @@ unsafe extern "C" fn window_customize_build_keys(data: *mut window_customize_mod
             let tmp = cmd_list_print((*bd).cmdlist, 0);
             xasprintf(&raw mut text, c"#[ignore]%s".as_ptr(), tmp);
             free_(tmp);
-            let mut mti = mode_tree_add((*data).data, child, item.cast(), tag | ((*bd).key << 3) | (0 << 1) | 1, c"Command".as_ptr(), text, -1);
+            let mut mti = mode_tree_add((*data).data, child, item.cast(), tag | ((*bd).key << 3) | 1, c"Command".as_ptr(), text, -1);
             mode_tree_draw_as_parent(mti);
             mode_tree_no_tag(mti);
             free_(text);

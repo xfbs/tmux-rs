@@ -36,7 +36,7 @@ unsafe extern "C" fn cmd_show_messages_terminals(self_: *mut cmd, item: *mut cmd
             cmdq_print(item, c"Terminal %u: %s for %s, flags=0x%x:".as_ptr(), n, (*term).name, (*(*(*term).tty).client).name, (*term).flags);
             n += 1;
             for i in 0..tty_term_ncodes() {
-                cmdq_print(item, c"%s".as_ptr(), tty_term_describe(term, std::mem::transmute::<_, tty_code_code>(i)));
+                cmdq_print(item, c"%s".as_ptr(), tty_term_describe(term, tty_code_code::try_from(i).unwrap()));
             }
         }
         (n != 0) as i32

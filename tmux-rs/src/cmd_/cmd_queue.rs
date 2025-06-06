@@ -801,14 +801,14 @@ pub unsafe extern "C" fn cmdq_print_data(item: *mut cmdq_item, parse: i32, evb: 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmdq_print(item: *mut cmdq_item, fmt: *const c_char, mut args: ...) {
+pub unsafe extern "C" fn cmdq_print(item: *mut cmdq_item, fmt: *const c_char, mut ap: ...) {
     unsafe {
         let evb = evbuffer_new();
         if (evb.is_null()) {
             fatalx(c"out of memory");
         }
 
-        evbuffer_add_vprintf(evb, fmt, core::mem::transmute(args.as_va_list()));
+        evbuffer_add_vprintf(evb, fmt, ap.as_va_list());
 
         cmdq_print_data(item, 0, evb);
         evbuffer_free(evb);

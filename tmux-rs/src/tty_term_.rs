@@ -685,7 +685,7 @@ pub unsafe extern "C" fn tty_term_create(tty: *mut tty, name: *mut c_char, caps:
 
             /* Log the capabilities. */
             for i in 0..tty_term_ncodes() {
-                log_debug!("{}{}", _s(name), _s(tty_term_describe(term, transmute(i))));
+                log_debug!("{}{}", _s(name), _s(tty_term_describe(term, tty_code_code::try_from(i).unwrap())));
             }
 
             return term;

@@ -81,7 +81,7 @@ pub fn log_close() {
                 // TODO this is invalid, and compiler version dependent, but prevents a memory leak
                 // need a way to properly get out the file and drop the buffer
                 unsafe {
-                    let bw = std::mem::transmute::<_, BufWriter<File>>(lw);
+                    let bw = std::mem::transmute::<std::io::LineWriter<std::fs::File>, BufWriter<File>>(lw);
                     let (file, _) = bw.into_parts();
                     std::mem::forget(file);
                 }

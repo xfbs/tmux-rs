@@ -154,7 +154,7 @@ pub unsafe extern "C" fn file_print(c: *mut client, fmt: *const c_char, mut args
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn file_vprint(c: *mut client, fmt: *const c_char, mut ap: VaList) {
+pub unsafe extern "C" fn file_vprint(c: *mut client, fmt: *const c_char, ap: VaList) {
     unsafe {
         let mut cf: *mut client_file = null_mut();
         let mut find: client_file = zeroed();
@@ -171,14 +171,14 @@ pub unsafe extern "C" fn file_vprint(c: *mut client, fmt: *const c_char, mut ap:
             (*cf).path = xstrdup(c"-".as_ptr()).as_ptr();
 
             // TODO
-            evbuffer_add_vprintf((*cf).buffer, fmt, core::mem::transmute(ap.clone().as_va_list()));
+            evbuffer_add_vprintf((*cf).buffer, fmt, ap);
 
             msg.stream = 1;
             msg.fd = STDOUT_FILENO;
             msg.flags = 0;
             proc_send((*c).peer, msgtype::MSG_WRITE_OPEN, -1, &raw mut msg as _, size_of::<msg_write_open>());
         } else {
-            evbuffer_add_vprintf((*cf).buffer, fmt, core::mem::transmute(ap.as_va_list()));
+            evbuffer_add_vprintf((*cf).buffer, fmt, ap);
             file_push(cf);
         }
     }
@@ -216,7 +216,7 @@ pub unsafe extern "C" fn file_print_buffer(c: *mut client, data: *mut c_void, si
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn file_error(c: *mut client, fmt: *const c_char, mut args: ...) {
+pub unsafe extern "C" fn file_error(c: *mut client, fmt: *const c_char, mut ap: ...) {
     unsafe {
         let mut cf: *mut client_file = null_mut();
         let mut find: client_file = zeroed();
@@ -226,23 +226,20 @@ pub unsafe extern "C" fn file_error(c: *mut client, fmt: *const c_char, mut args
             return;
         }
 
-        let mut ap = args.clone();
-        let mut ap = ap.as_va_list();
-
         find.stream = 2;
         cf = rb_find(&raw mut (*c).files, &raw mut find);
         if cf.is_null() {
             cf = file_create_with_client(c, 2, None, null_mut());
             (*cf).path = xstrdup(c"-".as_ptr()).as_ptr();
 
-            evbuffer_add_vprintf((*cf).buffer, fmt, core::mem::transmute(ap));
+            evbuffer_add_vprintf((*cf).buffer, fmt, ap.as_va_list());
 
             msg.stream = 2;
             msg.fd = STDERR_FILENO;
             msg.flags = 0;
             proc_send((*c).peer, msgtype::MSG_WRITE_OPEN, -1, &raw mut msg as _, size_of::<msg_write_open>());
         } else {
-            evbuffer_add_vprintf((*cf).buffer, fmt, core::mem::transmute(args.as_va_list()));
+            evbuffer_add_vprintf((*cf).buffer, fmt, ap.as_va_list());
             file_push(cf);
         }
     }

@@ -502,7 +502,7 @@ unsafe extern "C" fn cmd_display_popup_exec(self_: *mut cmd, item: *mut cmdq_ite
         } else if (args_has_(args, 'E')) {
             flags |= POPUP_CLOSEEXIT;
         }
-        if (popup_display(flags, std::mem::transmute::<_, box_lines>(lines), item, px, py, w, h, env, shellcmd, argc, argv, cwd, title, tc, s, style, border_style, None, null_mut()) != 0) {
+        if (popup_display(flags, box_lines::try_from(lines).unwrap(), item, px, py, w, h, env, shellcmd, argc, argv, cwd, title, tc, s, style, border_style, None, null_mut()) != 0) {
             cmd_free_argv(argc, argv);
             if (!env.is_null()) {
                 environ_free(env);

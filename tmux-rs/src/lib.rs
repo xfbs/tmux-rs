@@ -15,16 +15,13 @@
 #![allow(clippy::implicit_saturating_sub)]
 #![allow(clippy::unnecessary_unwrap)]
 #![allow(clippy::if_same_then_else)]
-#![allow(clippy::missing_transmute_annotations)] // switch
 #![allow(clippy::nonminimal_bool)] // switch
 #![allow(clippy::manual_div_ceil)] // switch
-#![allow(clippy::identity_op)] // switch
 #![allow(clippy::blocks_in_conditions)] // keep, not worth fixing yet
 #![allow(
     clippy::needless_range_loop,
     clippy::needless_late_init,
     clippy::explicit_counter_loop,
-    clippy::size_of_in_element_count,
     clippy::ptr_offset_with_cast,
     clippy::manual_c_str_literals,
     clippy::manual_range_patterns,
@@ -312,8 +309,8 @@ enum mouse_keys {
 include!("keyc_mouse_key.rs");
 
 /// Termcap codes.
-#[repr(i32)]
-#[derive(Copy, Clone)]
+#[repr(u32)]
+#[derive(Copy, Clone, num_enum::TryFromPrimitive)]
 pub enum tty_code_code {
     TTYC_ACSC,
     TTYC_AM,

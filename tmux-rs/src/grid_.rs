@@ -423,7 +423,7 @@ pub unsafe extern "C" fn grid_scroll_history_region(gd: *mut grid, mut upper: c_
 
         // Move screen down to free space
         let gl_history = (*gd).linedata.add((*gd).hsize as usize);
-        std::ptr::copy(gl_history, gl_history.add(1), ((*gd).sy as usize) * std::mem::size_of::<grid_line>());
+        std::ptr::copy(gl_history, gl_history.add(1), (*gd).sy as usize);
 
         // Adjust region and find start/end
         upper += 1;
@@ -431,11 +431,11 @@ pub unsafe extern "C" fn grid_scroll_history_region(gd: *mut grid, mut upper: c_
         lower += 1;
 
         // Move line into history
-        std::ptr::copy_nonoverlapping(gl_upper, gl_history, size_of::<grid_line>());
+        std::ptr::copy_nonoverlapping(gl_upper, gl_history, 1);
         (*gl_history).time = current_time;
 
         // Move region up and clear bottom line
-        std::ptr::copy(gl_upper.add(1), gl_upper, ((lower - upper) as usize) * size_of::<grid_line>());
+        std::ptr::copy(gl_upper.add(1), gl_upper, (lower - upper) as usize);
         grid_empty_line(gd, lower, bg);
 
         // Move history offset down
