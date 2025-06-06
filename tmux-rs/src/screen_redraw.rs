@@ -1,14 +1,5 @@
 use crate::*;
 
-#[rustfmt::skip]
-unsafe extern "C" {
-    // pub fn screen_redraw_screen(_: *mut client);
-
-    // pub fn screen_redraw_pane(_: *mut client, _: *mut window_pane);
-    // pub unsafe fn screen_redraw_set_context(c: *mut client, ctx: *mut screen_redraw_ctx);
-    // pub unsafe fn screen_redraw_draw_pane(ctx: *mut screen_redraw_ctx, wp: *mut window_pane);
-}
-
 const START_ISOLATE: &CStr = c"\xe2\x81\xa6";
 const END_ISOLATE: &CStr = c"\xe2\x81\xa9";
 
