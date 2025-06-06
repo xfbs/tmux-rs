@@ -1423,7 +1423,7 @@ unsafe extern "C" fn tty_keys_device_attributes(tty: *mut tty, buf: *const c_cha
 
         /* Add terminal features. */
         match p[0] {
-            61 | 62 | 63 | 64 | 65 => {
+            61..=65 => {
                 /* level 1-5 */
                 for i in 1..n {
                     // log_debug(c"%s: DA feature: %d\0".as_ptr(), (*c).name, p[i as usize]);

@@ -1568,7 +1568,7 @@ unsafe extern "C" fn input_csi_dispatch_rm_private(ictx: *mut input_ctx) {
                     screen_write_mode_set(sctx, MODE_CURSOR_BLINKING_SET);
                 }
                 25 => screen_write_mode_clear(sctx, MODE_CURSOR), /* TCEM */
-                1000 | 1001 | 1002 | 1003 => screen_write_mode_clear(sctx, ALL_MOUSE_MODES),
+                1000..=1003 => screen_write_mode_clear(sctx, ALL_MOUSE_MODES),
                 1004 => screen_write_mode_clear(sctx, MODE_FOCUSON),
                 1005 => screen_write_mode_clear(sctx, MODE_MOUSE_UTF8),
                 1006 => screen_write_mode_clear(sctx, MODE_MOUSE_SGR),
@@ -1991,15 +1991,15 @@ unsafe extern "C" fn input_csi_dispatch_sgr(ictx: *mut input_ctx) {
                 27 => (*gc).attr &= !GRID_ATTR_REVERSE,
                 28 => (*gc).attr &= !GRID_ATTR_HIDDEN,
                 29 => (*gc).attr &= !GRID_ATTR_STRIKETHROUGH,
-                30 | 31 | 32 | 33 | 34 | 35 | 36 | 37 => (*gc).fg = n - 30,
+                30..=37 => (*gc).fg = n - 30,
                 39 => (*gc).fg = 8,
-                40 | 41 | 42 | 43 | 44 | 45 | 46 | 47 => (*gc).bg = n - 40,
+                40..=47 => (*gc).bg = n - 40,
                 49 => (*gc).bg = 8,
                 53 => (*gc).attr |= GRID_ATTR_OVERLINE,
                 55 => (*gc).attr &= !GRID_ATTR_OVERLINE,
                 59 => (*gc).us = 8,
-                90 | 91 | 92 | 93 | 94 | 95 | 96 | 97 => (*gc).fg = n,
-                100 | 101 | 102 | 103 | 104 | 105 | 106 | 107 => (*gc).bg = n - 10,
+                90..=97 => (*gc).fg = n,
+                100..=107 => (*gc).bg = n - 10,
                 _ => (),
             }
             i += 1;

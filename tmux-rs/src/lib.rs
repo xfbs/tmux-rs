@@ -19,7 +19,6 @@
 #![allow(clippy::shadow_unrelated)] // switch
 // #![warn(clippy::shadow_reuse)]
 #![allow(clippy::needless_range_loop)] // can be cleaned up with some effort
-#![warn(clippy::manual_range_patterns)]
 
 pub mod compat;
 
