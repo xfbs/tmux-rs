@@ -520,7 +520,7 @@ pub unsafe extern "C" fn session_set_current(s: *mut session, wl: *mut winlink) 
         window_update_activity(NonNull::new_unchecked((*wl).window));
         tty_update_window_offset((*wl).window);
         notify_session(c"session-window-changed".as_ptr(), s);
-        return 0;
+        0
     }
 }
 

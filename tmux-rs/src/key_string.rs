@@ -351,7 +351,7 @@ pub unsafe extern "C" fn key_string_lookup_string(mut string: *const c_char) -> 
             }
         }
 
-        return key | modifiers;
+        key | modifiers
     }
 }
 

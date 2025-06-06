@@ -42,14 +42,7 @@ unsafe extern "C" fn cmd_move_window_exec(self_: *mut cmd, item: *mut cmdq_item)
         let mut cause = null_mut();
 
         if (args_has_(args, 'r')) {
-            if (cmd_find_target(
-                &raw mut target,
-                item,
-                tflag,
-                cmd_find_type::CMD_FIND_SESSION,
-                CMD_FIND_QUIET,
-            ) != 0)
-            {
+            if (cmd_find_target(&raw mut target, item, tflag, cmd_find_type::CMD_FIND_SESSION, CMD_FIND_QUIET) != 0) {
                 return (cmd_retval::CMD_RETURN_ERROR);
             }
 
@@ -59,14 +52,7 @@ unsafe extern "C" fn cmd_move_window_exec(self_: *mut cmd, item: *mut cmdq_item)
 
             return (cmd_retval::CMD_RETURN_NORMAL);
         }
-        if (cmd_find_target(
-            &raw mut target,
-            item,
-            tflag,
-            cmd_find_type::CMD_FIND_WINDOW,
-            CMD_FIND_WINDOW_INDEX,
-        ) != 0)
-        {
+        if (cmd_find_target(&raw mut target, item, tflag, cmd_find_type::CMD_FIND_WINDOW, CMD_FIND_WINDOW_INDEX) != 0) {
             return (cmd_retval::CMD_RETURN_ERROR);
         }
         let dst = target.s;

@@ -362,7 +362,7 @@ pub unsafe extern "C" fn mode_tree_set_current(mtd: *mut mode_tree_data, tag: u6
         }
         (*mtd).current = 0;
         (*mtd).offset = 0;
-        return 0;
+        0
     }
 }
 
@@ -376,7 +376,7 @@ pub unsafe extern "C" fn mode_tree_count_tagged(mtd: *mut mode_tree_data) -> u32
                 tagged += 1;
             }
         }
-        return tagged;
+        tagged
     }
 }
 
@@ -621,7 +621,7 @@ pub unsafe extern "C" fn mode_tree_add(mtd: *mut mode_tree_data, parent: *mut mo
             tailq_insert_tail(&raw mut (*mtd).children, mti);
         }
 
-        return mti;
+        mti
     }
 }
 

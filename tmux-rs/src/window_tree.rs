@@ -166,7 +166,6 @@ unsafe extern "C" fn window_tree_pull_item(item: NonNull<window_tree_itemdata>, 
         if (*wp).is_none() {
             *sp = None;
             *wlp = None;
-            return;
         }
     }
 }
@@ -1307,7 +1306,7 @@ unsafe extern "C" fn window_tree_mouse(data: *mut window_tree_modedata, key: key
             }
             return '\r' as key_code;
         }
-        return KEYC_NONE;
+        KEYC_NONE
     }
 }
 

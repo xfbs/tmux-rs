@@ -1253,7 +1253,7 @@ pub unsafe extern "C" fn window_customize_set_command_callback(c: *mut client, i
         *error = libc::toupper(*error as u8 as i32) as i8;
         status_message_set(c, -1, 1, 0, c"%s".as_ptr(), error);
         free_(error);
-        return 0;
+        0
     }
 }
 

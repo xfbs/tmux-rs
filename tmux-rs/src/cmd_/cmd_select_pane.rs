@@ -230,6 +230,6 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
             server_redraw_window(w);
         }
 
-        return cmd_retval::CMD_RETURN_NORMAL;
+        cmd_retval::CMD_RETURN_NORMAL
     }
 }

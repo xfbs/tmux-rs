@@ -606,7 +606,7 @@ pub unsafe extern "C" fn popup_key_cb(c: *mut client, data: *mut c_void, event: 
         (*pd).lx = (*m).x;
         (*pd).ly = (*m).y;
         (*pd).lb = (*m).b;
-        return 0;
+        0
     }
 }
 

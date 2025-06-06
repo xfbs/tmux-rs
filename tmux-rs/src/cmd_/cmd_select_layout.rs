@@ -95,11 +95,7 @@ unsafe extern "C" fn cmd_select_layout_exec(self_: *mut cmd, item: *mut cmdq_ite
                 };
 
                 if (!args_has_(args, 'o')) {
-                    let layout = if (layoutname.is_null()) {
-                        (*w).lastlayout
-                    } else {
-                        layout_set_lookup(layoutname)
-                    };
+                    let layout = if (layoutname.is_null()) { (*w).lastlayout } else { layout_set_lookup(layoutname) };
                     if (layout != -1) {
                         layout_set_select(w, layout as u32);
                         break 'changed;
@@ -131,6 +127,6 @@ unsafe extern "C" fn cmd_select_layout_exec(self_: *mut cmd, item: *mut cmdq_ite
         // error:
         free_((*w).old_layout);
         (*w).old_layout = oldlayout;
-        return (cmd_retval::CMD_RETURN_ERROR);
+        (cmd_retval::CMD_RETURN_ERROR)
     }
 }

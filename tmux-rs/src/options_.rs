@@ -32,7 +32,7 @@ pub unsafe extern "C" fn options_array_cmp(a1: *const options_array_item, a2: *c
         if (*a1).index > (*a2).index {
             return 1;
         }
-        return 0;
+        0
     }
 }
 RB_GENERATE_STATIC!(options_array, options_array_item, entry, options_array_cmp);
@@ -951,7 +951,7 @@ pub unsafe extern "C" fn options_scope_from_flags(args: *mut args, window: i32, 
                 return OPTIONS_TABLE_NONE;
             }
             *oo = (*wp).options;
-            return OPTIONS_TABLE_PANE;
+            OPTIONS_TABLE_PANE
         } else if window != 0 || args_has_(args, 'w') {
             if args_has_(args, 'g') {
                 *oo = global_w_options;
@@ -966,7 +966,7 @@ pub unsafe extern "C" fn options_scope_from_flags(args: *mut args, window: i32, 
                 return OPTIONS_TABLE_NONE;
             }
             *oo = (*(*wl).window).options;
-            return OPTIONS_TABLE_WINDOW;
+            OPTIONS_TABLE_WINDOW
         } else {
             if args_has_(args, 'g') {
                 *oo = global_s_options;
@@ -981,7 +981,7 @@ pub unsafe extern "C" fn options_scope_from_flags(args: *mut args, window: i32, 
                 return OPTIONS_TABLE_NONE;
             }
             *oo = (*s).options;
-            return OPTIONS_TABLE_SESSION;
+            OPTIONS_TABLE_SESSION
         }
     }
 }
@@ -1184,7 +1184,7 @@ pub unsafe extern "C" fn options_from_string(oo: *mut options, oe: *const option
 
             _ => {}
         }
-        return -1;
+        -1
     }
 }
 

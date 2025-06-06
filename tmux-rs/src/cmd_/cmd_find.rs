@@ -175,7 +175,7 @@ pub unsafe extern "C" fn cmd_find_best_session_with_window(fs: *mut cmd_find_sta
 
         // fail:
         free_(slist);
-        return -1;
+        -1
     }
 }
 
@@ -871,7 +871,7 @@ pub unsafe extern "C" fn cmd_find_from_client(fs: *mut cmd_find_state, c: *mut c
             return 0;
         }
         // unknown_pane:
-        return cmd_find_from_nothing(fs, flags);
+        cmd_find_from_nothing(fs, flags)
     }
 }
 
@@ -1226,7 +1226,7 @@ pub unsafe extern "C" fn cmd_find_target(fs: *mut cmd_find_state, item: *mut cmd
         if (flags & CMD_FIND_CANFAIL != 0) {
             return 0;
         }
-        return -1;
+        -1
     }
 }
 

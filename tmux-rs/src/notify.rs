@@ -33,12 +33,7 @@ pub struct notify_entry {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn notify_insert_one_hook(
-    item: *mut cmdq_item,
-    ne: *mut notify_entry,
-    cmdlist: *mut cmd_list,
-    state: *mut cmdq_state,
-) -> *mut cmdq_item {
+pub unsafe extern "C" fn notify_insert_one_hook(item: *mut cmdq_item, ne: *mut notify_entry, cmdlist: *mut cmd_list, state: *mut cmdq_state) -> *mut cmdq_item {
     unsafe {
         if (cmdlist.is_null()) {
             return (item);
@@ -205,15 +200,7 @@ pub unsafe extern "C" fn notify_callback(item: *mut cmdq_item, data: *mut c_void
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn notify_add(
-    name: *const c_char,
-    fs: *mut cmd_find_state,
-    c: *mut client,
-    s: *mut session,
-    w: *mut window,
-    wp: *mut window_pane,
-    pbname: *const c_char,
-) {
+pub unsafe extern "C" fn notify_add(name: *const c_char, fs: *mut cmd_find_state, c: *mut client, s: *mut session, w: *mut window, wp: *mut window_pane, pbname: *const c_char) {
     let __func__ = c"notify_add".as_ptr();
     unsafe {
         // struct notify_entry *ne;
@@ -231,11 +218,7 @@ pub unsafe extern "C" fn notify_add(
         (*ne).session = s;
         (*ne).window = w;
         (*ne).pane = (if !wp.is_null() { (*wp).id as i32 } else { -1 });
-        (*ne).pbname = (if !pbname.is_null() {
-            xstrdup(pbname).as_ptr()
-        } else {
-            null_mut()
-        });
+        (*ne).pbname = (if !pbname.is_null() { xstrdup(pbname).as_ptr() } else { null_mut() });
 
         (*ne).formats = format_create(null_mut(), null_mut(), 0, format_flags::FORMAT_NOJOBS);
         format_add((*ne).formats, c"hook".as_ptr(), c"%s".as_ptr(), name);
@@ -288,11 +271,7 @@ pub unsafe extern "C" fn notify_hook(item: *mut cmdq_item, name: *mut c_char) {
         ne.client = cmdq_get_client(item);
         ne.session = (*target).s;
         ne.window = (*target).w;
-        ne.pane = (if !(*target).wp.is_null() {
-            (*(*target).wp).id as i32
-        } else {
-            -1
-        });
+        ne.pane = (if !(*target).wp.is_null() { (*(*target).wp).id as i32 } else { -1 });
 
         ne.formats = format_create(null_mut(), null_mut(), 0, format_flags::FORMAT_NOJOBS);
         format_add(ne.formats, c"hook".as_ptr(), c"%s".as_ptr(), name);
@@ -333,15 +312,7 @@ pub unsafe extern "C" fn notify_winlink(name: *const c_char, wl: *mut winlink) {
         let mut fs: cmd_find_state = zeroed();
 
         cmd_find_from_winlink(&raw mut fs, wl, 0);
-        notify_add(
-            name,
-            &raw mut fs,
-            null_mut(),
-            (*wl).session,
-            (*wl).window,
-            null_mut(),
-            null_mut(),
-        );
+        notify_add(name, &raw mut fs, null_mut(), (*wl).session, (*wl).window, null_mut(), null_mut());
     }
 }
 
@@ -382,25 +353,9 @@ pub unsafe extern "C" fn notify_paste_buffer(pbname: *const c_char, deleted: i32
 
         cmd_find_clear_state(&raw mut fs, 0);
         if (deleted != 0) {
-            notify_add(
-                c"paste-buffer-deleted".as_ptr(),
-                &raw mut fs,
-                null_mut(),
-                null_mut(),
-                null_mut(),
-                null_mut(),
-                pbname,
-            );
+            notify_add(c"paste-buffer-deleted".as_ptr(), &raw mut fs, null_mut(), null_mut(), null_mut(), null_mut(), pbname);
         } else {
-            notify_add(
-                c"paste-buffer-changed".as_ptr(),
-                &raw mut fs,
-                null_mut(),
-                null_mut(),
-                null_mut(),
-                null_mut(),
-                pbname,
-            );
+            notify_add(c"paste-buffer-changed".as_ptr(), &raw mut fs, null_mut(), null_mut(), null_mut(), null_mut(), pbname);
         }
     }
 }

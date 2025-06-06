@@ -145,7 +145,7 @@ pub unsafe extern "C" fn cmd_attach_session(item: *mut cmdq_item, tflag: *const 
                 cfg_show_causes(s);
             }
         }
-        return cmd_retval::CMD_RETURN_NORMAL;
+        cmd_retval::CMD_RETURN_NORMAL
     }
 }
 

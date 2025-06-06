@@ -1340,7 +1340,7 @@ pub unsafe extern "C" fn format_cb_mouse_status_range(ft: *mut format_tree) -> *
                 return xstrdup((*sr).string.as_ptr().cast()).as_ptr().cast();
             }
         }
-        return null_mut();
+        null_mut()
     }
 }
 
@@ -2065,7 +2065,7 @@ pub unsafe extern "C" fn format_cb_pane_format(ft: *mut format_tree) -> *mut c_v
         if (*ft).type_ == format_type::FORMAT_TYPE_PANE {
             return xstrdup(c"1".as_ptr()).as_ptr().cast();
         }
-        return xstrdup(c"0".as_ptr()).as_ptr().cast();
+        xstrdup(c"0".as_ptr()).as_ptr().cast()
     }
 }
 
@@ -2679,7 +2679,7 @@ pub unsafe extern "C" fn format_cb_window_format(ft: *mut format_tree) -> *mut c
         if (*ft).type_ == format_type::FORMAT_TYPE_WINDOW {
             return xstrdup(c"1".as_ptr()).as_ptr().cast();
         }
-        return xstrdup(c"0".as_ptr()).as_ptr().cast();
+        xstrdup(c"0".as_ptr()).as_ptr().cast()
     }
 }
 
@@ -3499,7 +3499,7 @@ pub unsafe extern "C" fn format_pretty_time(t: time_t, seconds: i32) -> *mut c_c
 
         // Older than that.
         strftime(s.as_mut_ptr(), sizeof_s, c"%h%y".as_ptr(), tm);
-        return xstrdup(s.as_ptr()).as_ptr();
+        xstrdup(s.as_ptr()).as_ptr()
     }
 }
 
@@ -3648,7 +3648,7 @@ fn format_find(ft: *mut format_tree, key: *const c_char, modifiers: format_modif
             found = format_quote_style(saved);
             free_(saved);
         }
-        return found;
+        found
     }
 }
 
@@ -3677,7 +3677,7 @@ pub unsafe extern "C" fn format_unescape(s: *const c_char) -> *mut c_char {
             cp = cp.add(1);
         }
         *cp = b'\0' as c_char;
-        return out;
+        out
     }
 }
 
@@ -3708,7 +3708,7 @@ pub unsafe extern "C" fn format_strip(s: *const c_char) -> *mut c_char {
             cp = cp.add(1);
         }
         *cp = b'\0' as c_char;
-        return out;
+        out
     }
 }
 
@@ -3737,7 +3737,7 @@ pub unsafe extern "C" fn format_skip(mut s: *const c_char, end: *const c_char) -
         if *s == b'\0' as c_char {
             return null_mut();
         }
-        return s;
+        s
     }
 }
 
@@ -3933,7 +3933,7 @@ pub unsafe extern "C" fn format_build_modifiers(es: *mut format_expand_state, s:
             return null_mut();
         }
         *s = cp.add(1);
-        return list;
+        list
     }
 }
 

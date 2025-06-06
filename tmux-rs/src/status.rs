@@ -254,7 +254,7 @@ pub unsafe extern "C" fn status_line_size(c: *mut client) -> u32 {
         if s.is_null() {
             return options_get_number(global_s_options, c"status".as_ptr()) as u32;
         }
-        return (*s).statuslines;
+        (*s).statuslines
     }
 }
 
@@ -1609,7 +1609,7 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
             free_(cp);
             free_(s);
         }
-        return 0;
+        0
     }
 }
 
@@ -1916,7 +1916,7 @@ unsafe extern "C" fn status_prompt_complete_list_menu(c: *mut client, list: *mut
             free_(spm);
             return 0;
         }
-        return 1;
+        1
     }
 }
 
@@ -2173,7 +2173,7 @@ unsafe extern "C" fn status_prompt_complete(c: *mut client, word: *const c_char,
             }
             free_(list);
         }
-        return out;
+        out
     }
 }
 

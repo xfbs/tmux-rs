@@ -394,12 +394,12 @@ pub unsafe extern "C" fn proc_fork_and_daemon(fd: *mut i32) -> pid_t {
                 if (daemon(1, 0) != 0) {
                     fatal(c"daemon failed".as_ptr());
                 }
-                return 0;
+                0
             }
             pid => {
                 close(pair[1]);
                 *fd = pair[0];
-                return pid;
+                pid
             }
         }
     }

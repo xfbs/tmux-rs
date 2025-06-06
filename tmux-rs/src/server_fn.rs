@@ -279,7 +279,7 @@ pub unsafe extern "C" fn server_link_window(src: *mut session, srcwl: *mut winli
         }
         server_redraw_session_group(dst);
 
-        return 0;
+        0
     }
 }
 
@@ -406,7 +406,7 @@ pub unsafe extern "C" fn server_find_session(s: *mut session, f: unsafe extern "
                 s_out = s_loop;
             }
         }
-        return s_out;
+        s_out
     }
 }
 
@@ -419,7 +419,7 @@ pub unsafe extern "C" fn server_newer_detached_session(s_loop: *mut session, s_o
         if (*s_loop).attached != 0 {
             return 0;
         }
-        return server_newer_session(s_loop, s_out);
+        server_newer_session(s_loop, s_out)
     }
 }
 

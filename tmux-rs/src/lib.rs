@@ -42,8 +42,6 @@
     clippy::non_canonical_partial_ord_impl,
     clippy::useless_conversion
 )] // switch
-#![warn(clippy::needless_return)] // switch
-
 //
 #![allow(clippy::shadow_same)] // switch
 #![allow(clippy::shadow_unrelated)] // switch

@@ -38,6 +38,6 @@ unsafe extern "C" fn cmd_kill_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
         }
 
         server_kill_pane(wp);
-        return cmd_retval::CMD_RETURN_NORMAL;
+        cmd_retval::CMD_RETURN_NORMAL
     }
 }

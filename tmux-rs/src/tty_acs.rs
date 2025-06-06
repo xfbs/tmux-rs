@@ -163,20 +163,14 @@ static tty_acs_rounded_borders_list: [utf8_data; 13] = [
 ];
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tty_acs_double_borders(cell_type: cell_type) -> *const utf8_data {
-    unsafe { &raw const tty_acs_double_borders_list[cell_type as usize] }
-}
+pub unsafe extern "C" fn tty_acs_double_borders(cell_type: cell_type) -> *const utf8_data { unsafe { &raw const tty_acs_double_borders_list[cell_type as usize] } }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tty_acs_heavy_borders(cell_type: cell_type) -> *const utf8_data {
-    unsafe { &raw const tty_acs_heavy_borders_list[cell_type as usize] }
-}
+pub unsafe extern "C" fn tty_acs_heavy_borders(cell_type: cell_type) -> *const utf8_data { unsafe { &raw const tty_acs_heavy_borders_list[cell_type as usize] } }
 
 /* Get cell border character for rounded style. */
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tty_acs_rounded_borders(cell_type: cell_type) -> *const utf8_data {
-    unsafe { &raw const tty_acs_rounded_borders_list[cell_type as usize] }
-}
+pub unsafe extern "C" fn tty_acs_rounded_borders(cell_type: cell_type) -> *const utf8_data { unsafe { &raw const tty_acs_rounded_borders_list[cell_type as usize] } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_acs_cmp(key: *const c_void, value: *const c_void) -> i32 {
@@ -206,9 +200,7 @@ pub unsafe extern "C" fn tty_acs_needed(tty: *const tty) -> i32 {
             return (0);
         }
 
-        if (tty_term_has((*tty).term, tty_code_code::TTYC_U8) != 0
-            && tty_term_number((*tty).term, tty_code_code::TTYC_U8) == 0)
-        {
+        if (tty_term_has((*tty).term, tty_code_code::TTYC_U8) != 0 && tty_term_number((*tty).term, tty_code_code::TTYC_U8) == 0) {
             return (1);
         }
 
@@ -234,14 +226,7 @@ pub unsafe extern "C" fn tty_acs_get(tty: *mut tty, ch: u8) -> *const c_char {
         }
 
         /* Otherwise look up the UTF-8 translation. */
-        let entry: *mut tty_acs_entry = libc::bsearch(
-            &raw const ch as *const c_void,
-            &raw const tty_acs_table as *const c_void,
-            tty_acs_table.len(),
-            size_of::<tty_acs_entry>(),
-            Some(tty_acs_cmp),
-        )
-        .cast();
+        let entry: *mut tty_acs_entry = libc::bsearch(&raw const ch as *const c_void, &raw const tty_acs_table as *const c_void, tty_acs_table.len(), size_of::<tty_acs_entry>(), Some(tty_acs_cmp)).cast();
         if (entry.is_null()) {
             return null_mut();
         }
@@ -264,14 +249,7 @@ pub unsafe extern "C" fn tty_acs_reverse_get(tty: *const tty, s: *const c_char, 
         } else {
             return -1;
         }
-        let entry: *const tty_acs_reverse_entry = bsearch(
-            s.cast(),
-            table.cast(),
-            items,
-            size_of::<tty_acs_reverse_entry>(),
-            Some(tty_acs_reverse_cmp),
-        )
-        .cast();
+        let entry: *const tty_acs_reverse_entry = bsearch(s.cast(), table.cast(), items, size_of::<tty_acs_reverse_entry>(), Some(tty_acs_reverse_cmp)).cast();
         if (entry.is_null()) {
             return -1;
         }

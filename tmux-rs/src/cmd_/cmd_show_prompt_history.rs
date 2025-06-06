@@ -58,12 +58,7 @@ unsafe extern "C" fn cmd_show_prompt_history_exec(self_: *mut cmd, item: *mut cm
             for tidx in 0..PROMPT_NTYPES {
                 cmdq_print(item, c"History for %s:\n".as_ptr(), status_prompt_type_string(tidx));
                 for hidx in 0u32..status_prompt_hsize[tidx as usize] {
-                    cmdq_print(
-                        item,
-                        c"%d: %s".as_ptr(),
-                        hidx + 1,
-                        *status_prompt_hlist[tidx as usize].add(hidx as usize),
-                    );
+                    cmdq_print(item, c"%d: %s".as_ptr(), hidx + 1, *status_prompt_hlist[tidx as usize].add(hidx as usize));
                 }
                 cmdq_print(item, c"%s".as_ptr(), c"".as_ptr());
             }
@@ -73,18 +68,9 @@ unsafe extern "C" fn cmd_show_prompt_history_exec(self_: *mut cmd, item: *mut cm
                 cmdq_error(item, c"invalid type: %s".as_ptr(), typestr);
                 return (cmd_retval::CMD_RETURN_ERROR);
             }
-            cmdq_print(
-                item,
-                c"History for %s:\n".as_ptr(),
-                status_prompt_type_string(type_ as u32),
-            );
+            cmdq_print(item, c"History for %s:\n".as_ptr(), status_prompt_type_string(type_ as u32));
             for hidx in 0u32..status_prompt_hsize[type_ as usize] {
-                cmdq_print(
-                    item,
-                    c"%d: %s".as_ptr(),
-                    hidx + 1,
-                    *status_prompt_hlist[type_ as usize].add(hidx as usize),
-                );
+                cmdq_print(item, c"%d: %s".as_ptr(), hidx + 1, *status_prompt_hlist[type_ as usize].add(hidx as usize));
             }
             cmdq_print(item, c"%s".as_ptr(), c"".as_ptr());
         }

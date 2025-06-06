@@ -7,13 +7,7 @@ unsafe extern "C" {
     pub fn tty_update_window_offset(_: *mut window);
     pub fn tty_update_client_offset(_: *mut client);
     pub fn tty_raw(_: *mut tty, _: *const c_char);
-    pub fn tty_attributes(
-        _: *mut tty,
-        _: *const grid_cell,
-        _: *const grid_cell,
-        _: *mut colour_palette,
-        _: *mut hyperlinks,
-    );
+    pub fn tty_attributes(_: *mut tty, _: *const grid_cell, _: *const grid_cell, _: *mut colour_palette, _: *mut hyperlinks);
     pub fn tty_reset(_: *mut tty);
     pub fn tty_region_off(_: *mut tty);
     pub fn tty_m_in_off(_: *mut tty);
@@ -39,17 +33,7 @@ unsafe extern "C" {
     pub fn tty_set_title(_: *mut tty, _: *const c_char);
     pub fn tty_set_path(_: *mut tty, _: *const c_char);
     pub fn tty_update_mode(_: *mut tty, _: c_int, _: *mut screen);
-    pub fn tty_draw_line(
-        _: *mut tty,
-        _: *mut screen,
-        _: c_uint,
-        _: c_uint,
-        _: c_uint,
-        _: c_uint,
-        _: c_uint,
-        _: *const grid_cell,
-        _: *mut colour_palette,
-    );
+    pub fn tty_draw_line(_: *mut tty, _: *mut screen, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: *const grid_cell, _: *mut colour_palette);
     pub fn tty_sync_start(_: *mut tty);
     pub fn tty_sync_end(_: *mut tty);
     pub fn tty_open(_: *mut tty, _: *mut *mut c_char) -> c_int;

@@ -340,6 +340,6 @@ pub unsafe extern "C" fn cmd_refresh_client_exec(self_: *mut cmd, item: *mut cmd
         }
         // not_control_client:
         cmdq_error(item, c"not a control client".as_ptr());
-        return cmd_retval::CMD_RETURN_ERROR;
+        cmd_retval::CMD_RETURN_ERROR
     }
 }

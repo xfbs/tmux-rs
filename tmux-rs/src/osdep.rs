@@ -47,7 +47,7 @@ pub unsafe extern "C" fn osdep_get_name(fd: i32, tty: *const c_char) -> *mut c_c
         }
 
         fclose(f);
-        return buf;
+        buf
     }
 }
 

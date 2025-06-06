@@ -13,14 +13,7 @@ unsafe fn regsub_copy(buf: *mut *mut c_char, len: *mut isize, text: *const c_cha
     }
 }
 
-pub unsafe fn regsub_expand(
-    buf: *mut *mut c_char,
-    len: *mut isize,
-    with: *const c_char,
-    text: *const c_char,
-    m: *mut regmatch_t,
-    n: c_uint,
-) {
+pub unsafe fn regsub_expand(buf: *mut *mut c_char, len: *mut isize, with: *const c_char, text: *const c_char, m: *mut regmatch_t, n: c_uint) {
     unsafe {
         let mut cp: *const c_char = null();
         let mut i: u32 = 0;
@@ -32,13 +25,7 @@ pub unsafe fn regsub_expand(
                 if *cp >= b'0' as _ && *cp <= b'9' as _ {
                     i = (*cp - b'0' as c_char) as u32;
                     if i < n && (*m.add(i as _)).rm_so != (*m.add(i as _)).rm_eo {
-                        regsub_copy(
-                            buf,
-                            len,
-                            text,
-                            (*m.add(i as _)).rm_so as usize,
-                            (*m.add(i as _)).rm_eo as usize,
-                        );
+                        regsub_copy(buf, len, text, (*m.add(i as _)).rm_so as usize, (*m.add(i as _)).rm_eo as usize);
                         continue;
                     }
                 }
@@ -82,13 +69,7 @@ pub unsafe fn regsub(pattern: *const c_char, with: *const c_char, text: *const c
              * Append any text not part of this match (from the end of the
              * last match).
              */
-            regsub_copy(
-                &raw mut buf,
-                &raw mut len,
-                text,
-                last as usize,
-                (m[0].rm_so as isize + start) as usize,
-            );
+            regsub_copy(&raw mut buf, &raw mut len, text, last as usize, (m[0].rm_so as isize + start) as usize);
 
             /*
              * If the last match was empty and this one isn't (it is either
@@ -96,14 +77,7 @@ pub unsafe fn regsub(pattern: *const c_char, with: *const c_char, text: *const c
              * empty, move on one character and try again from there.
              */
             if empty != 0 || start + m[0].rm_so as isize != last || m[0].rm_so != m[0].rm_eo {
-                regsub_expand(
-                    &raw mut buf,
-                    &raw mut len,
-                    with,
-                    text.offset(start),
-                    m.as_mut_ptr(),
-                    m.len() as u32,
-                );
+                regsub_expand(&raw mut buf, &raw mut len, with, text.offset(start), m.as_mut_ptr(), m.len() as u32);
 
                 last = start + m[0].rm_eo as isize;
                 start += m[0].rm_eo as isize;

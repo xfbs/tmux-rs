@@ -131,6 +131,6 @@ unsafe extern "C" fn cmd_select_window_exec(self_: *mut cmd, item: *mut cmdq_ite
         }
         recalculate_sizes();
 
-        return (cmd_retval::CMD_RETURN_NORMAL);
+        (cmd_retval::CMD_RETURN_NORMAL)
     }
 }

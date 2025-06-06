@@ -127,18 +127,12 @@ unsafe extern "C" fn cmd_show_options_exec(self_: *mut cmd, item: *mut cmdq_item
         // fail:
         free_(name);
         free_(argument);
-        return cmd_retval::CMD_RETURN_ERROR;
+        cmd_retval::CMD_RETURN_ERROR
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_show_options_print(
-    self_: *mut cmd,
-    item: *mut cmdq_item,
-    o: *mut options_entry,
-    mut idx: i32,
-    parent: i32,
-) {
+pub unsafe extern "C" fn cmd_show_options_print(self_: *mut cmd, item: *mut cmdq_item, o: *mut options_entry, mut idx: i32, parent: i32) {
     unsafe {
         let mut args = cmd_get_args(self_);
         let mut a: *mut options_array_item = null_mut();
@@ -193,12 +187,7 @@ pub unsafe extern "C" fn cmd_show_options_print(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_show_options_all(
-    self_: *mut cmd,
-    item: *mut cmdq_item,
-    scope: i32,
-    oo: *mut options,
-) -> cmd_retval {
+pub unsafe extern "C" fn cmd_show_options_all(self_: *mut cmd, item: *mut cmdq_item, scope: i32, oo: *mut options) -> cmd_retval {
     unsafe {
         let mut args = cmd_get_args(self_);
         let mut o: *mut options_entry = null_mut();
@@ -221,12 +210,7 @@ pub unsafe extern "C" fn cmd_show_options_all(
                 continue;
             }
 
-            if ((cmd_get_entry(self_) != &raw mut cmd_show_hooks_entry
-                && !args_has_(args, 'H')
-                && ((*oe).flags & OPTIONS_TABLE_IS_HOOK != 0))
-                || (cmd_get_entry(self_) == &raw mut cmd_show_hooks_entry
-                    && (!(*oe).flags & OPTIONS_TABLE_IS_HOOK != 0)))
-            {
+            if ((cmd_get_entry(self_) != &raw mut cmd_show_hooks_entry && !args_has_(args, 'H') && ((*oe).flags & OPTIONS_TABLE_IS_HOOK != 0)) || (cmd_get_entry(self_) == &raw mut cmd_show_hooks_entry && (!(*oe).flags & OPTIONS_TABLE_IS_HOOK != 0))) {
                 oe = oe.add(1);
                 continue;
             }

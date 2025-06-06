@@ -66,8 +66,7 @@ unsafe extern "C" fn cmd_paste_buffer_exec(self_: *mut cmd, item: *mut cmdq_item
             let mut bufend = bufdata.add(bufsize);
 
             loop {
-                let mut line: *mut c_char =
-                    libc::memchr(bufdata as _, b'\n' as i32, bufend.addr() - bufdata.addr()).cast();
+                let mut line: *mut c_char = libc::memchr(bufdata as _, b'\n' as i32, bufend.addr() - bufdata.addr()).cast();
                 if line.is_null() {
                     break;
                 }

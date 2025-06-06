@@ -225,6 +225,6 @@ pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_it
         free_(argument);
         free_(expanded);
         free_(name);
-        return cmd_retval::CMD_RETURN_ERROR;
+        cmd_retval::CMD_RETURN_ERROR
     }
 }

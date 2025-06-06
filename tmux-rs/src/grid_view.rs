@@ -3,11 +3,7 @@ use ::core::{
     ptr::null_mut,
 };
 
-use crate::{
-    GRID_HISTORY, grid, grid_cell, grid_clear, grid_collect_history, grid_get_cell, grid_get_line, grid_move_cells,
-    grid_move_lines, grid_scroll_history, grid_scroll_history_region, grid_set_cell, grid_set_cells, grid_set_padding,
-    grid_string_cells,
-};
+use crate::{GRID_HISTORY, grid, grid_cell, grid_clear, grid_collect_history, grid_get_cell, grid_get_line, grid_move_cells, grid_move_lines, grid_scroll_history, grid_scroll_history_region, grid_set_cell, grid_set_cells, grid_set_padding, grid_string_cells};
 
 unsafe extern "C" {
     // pub fn grid_view_get_cell(_: *mut grid, _: c_uint, _: c_uint, _: *mut grid_cell);
@@ -52,14 +48,7 @@ pub unsafe extern "C" fn grid_view_set_padding(gd: *mut grid, px: u32, py: u32) 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn grid_view_set_cells(
-    gd: *mut grid,
-    px: u32,
-    py: u32,
-    gc: *const grid_cell,
-    s: *const c_char,
-    slen: usize,
-) {
+pub unsafe extern "C" fn grid_view_set_cells(gd: *mut grid, px: u32, py: u32, gc: *const grid_cell, s: *const c_char, slen: usize) {
     unsafe {
         grid_set_cells(gd, grid_view_x(gd, px), grid_view_y(gd, py), gc, s, slen);
     }
@@ -168,14 +157,7 @@ pub unsafe extern "C" fn grid_view_delete_lines(gd: *mut grid, mut py: u32, ny: 
 
         // TODO does this bug exist upstream?
         grid_move_lines(gd, py, py + ny, sy.saturating_sub(py).saturating_sub(ny), bg);
-        grid_clear(
-            gd,
-            0,
-            sy.saturating_sub(ny),
-            (*gd).sx,
-            (py + ny + ny).saturating_sub(sy),
-            bg,
-        );
+        grid_clear(gd, 0, sy.saturating_sub(ny), (*gd).sx, (py + ny + ny).saturating_sub(sy), bg);
     }
 }
 

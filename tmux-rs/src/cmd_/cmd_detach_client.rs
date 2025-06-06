@@ -81,6 +81,6 @@ pub unsafe extern "C" fn cmd_detach_client_exec(self_: *mut cmd, item: *mut cmdq
         } else {
             server_client_detach(tc, msgtype);
         }
-        return cmd_retval::CMD_RETURN_STOP;
+        cmd_retval::CMD_RETURN_STOP
     }
 }

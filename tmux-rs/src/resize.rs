@@ -84,7 +84,7 @@ pub unsafe extern "C" fn ignore_client_size(c: *mut client) -> i32 {
         if (*c).flags.intersects(client_flag::CONTROL) && !(*c).flags.intersects(client_flag::SIZECHANGED) && !(*c).flags.intersects(client_flag::WINDOWSIZECHANGED) {
             return 1;
         }
-        return 0;
+        0
     }
 }
 

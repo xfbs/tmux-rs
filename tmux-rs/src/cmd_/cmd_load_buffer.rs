@@ -8,9 +8,7 @@ static mut cmd_load_buffer_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"b:t:w", 1, 1, None),
     usage: c"[-b buffer-name] [-t target-client] path".as_ptr(),
 
-    flags: cmd_flag::CMD_AFTERHOOK
-        .union(cmd_flag::CMD_CLIENT_TFLAG)
-        .union(cmd_flag::CMD_CLIENT_CANFAIL),
+    flags: cmd_flag::CMD_AFTERHOOK.union(cmd_flag::CMD_CLIENT_TFLAG).union(cmd_flag::CMD_CLIENT_CANFAIL),
     exec: Some(cmd_load_buffer_exec),
     ..unsafe { zeroed() }
 };
@@ -23,14 +21,7 @@ pub struct cmd_load_buffer_data {
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn cmd_load_buffer_done(
-    _c: *mut client,
-    path: *mut c_char,
-    error: i32,
-    closed: i32,
-    buffer: *mut evbuffer,
-    data: *mut c_void,
-) {
+unsafe extern "C" fn cmd_load_buffer_done(_c: *mut client, path: *mut c_char, error: i32, closed: i32, buffer: *mut evbuffer, data: *mut c_void) {
     unsafe {
         let mut cdata = data as *mut cmd_load_buffer_data;
         let mut tc = (*cdata).client;

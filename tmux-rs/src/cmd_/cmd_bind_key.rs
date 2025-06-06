@@ -14,9 +14,7 @@ static mut cmd_bind_key_entry: cmd_entry = cmd_entry {
 };
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn cmd_bind_key_args_parse(_args: *mut args, _idx: u32, _cause: *mut *mut c_char) -> args_parse_type {
-    args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING
-}
+unsafe extern "C" fn cmd_bind_key_args_parse(_args: *mut args, _idx: u32, _cause: *mut *mut c_char) -> args_parse_type { args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING }
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_bind_key_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {

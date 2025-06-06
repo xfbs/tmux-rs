@@ -34,7 +34,7 @@ unsafe extern "C" fn cmd_server_access_deny(item: *mut cmdq_item, pw: *mut libc:
         }
         server_acl_user_deny((*pw).pw_uid);
 
-        return (cmd_retval::CMD_RETURN_NORMAL);
+        (cmd_retval::CMD_RETURN_NORMAL)
     }
 }
 

@@ -151,6 +151,6 @@ unsafe extern "C" fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
         }
         notify_window(c"window-layout-changed".as_ptr(), dst_w);
 
-        return (cmd_retval::CMD_RETURN_NORMAL);
+        (cmd_retval::CMD_RETURN_NORMAL)
     }
 }

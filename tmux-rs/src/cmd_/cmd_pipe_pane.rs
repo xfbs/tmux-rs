@@ -104,7 +104,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
                 cmdq_error(item, c"fork error: %s".as_ptr(), strerror(errno!()));
 
                 free_(cmd);
-                return cmd_retval::CMD_RETURN_ERROR;
+                cmd_retval::CMD_RETURN_ERROR
             }
             0 => {
                 proc_clear_signals(server_proc, 1);
@@ -164,7 +164,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
                 }
 
                 free_(cmd);
-                return cmd_retval::CMD_RETURN_NORMAL;
+                cmd_retval::CMD_RETURN_NORMAL
             }
         }
     }

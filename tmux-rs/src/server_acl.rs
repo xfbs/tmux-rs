@@ -158,7 +158,7 @@ pub unsafe extern "C" fn server_acl_join(c: *mut client) -> c_int {
         if (*user).flags.contains(server_acl_user_flags::SERVER_ACL_READONLY) {
             (*c).flags |= client_flag::READONLY;
         }
-        return 1;
+        1
     }
 }
 

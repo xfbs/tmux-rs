@@ -9,12 +9,4 @@ unsafe extern "C" {
 pub extern "C" fn getptmfd() -> c_int { c_int::MAX }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn fdforkpty(
-    _ptmfd: c_int,
-    master: *mut c_int,
-    name: *mut c_char,
-    tio: *mut termios,
-    ws: *mut winsize,
-) -> pid_t {
-    unsafe { forkpty(master, name, tio, ws) }
-}
+pub unsafe extern "C" fn fdforkpty(_ptmfd: c_int, master: *mut c_int, name: *mut c_char, tio: *mut termios, ws: *mut winsize) -> pid_t { unsafe { forkpty(master, name, tio, ws) } }

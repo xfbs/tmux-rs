@@ -299,7 +299,7 @@ pub unsafe extern "C" fn args_parse(parse: *mut args_parse, values: *mut args_va
             args_free(args);
             return null_mut();
         }
-        return args;
+        args
     }
 }
 

@@ -8,8 +8,7 @@ static mut cmd_split_window_entry: cmd_entry = cmd_entry {
     alias: c"splitw".as_ptr(),
 
     args: args_parse::new(c"bc:de:fF:hIl:p:Pt:vZ", 0, -1, None),
-    usage: c"[-bdefhIPvZ] [-c start-directory] [-e environment] [-F format] [-l size] [-t target-pane][shell-command]"
-        .as_ptr(),
+    usage: c"[-bdefhIPvZ] [-c start-directory] [-e environment] [-F format] [-l size] [-t target-pane][shell-command]".as_ptr(),
 
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_PANE, 0),
 
@@ -184,6 +183,6 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
         if (input) {
             return cmd_retval::CMD_RETURN_WAIT;
         }
-        return cmd_retval::CMD_RETURN_NORMAL;
+        cmd_retval::CMD_RETURN_NORMAL
     }
 }

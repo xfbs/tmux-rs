@@ -66,13 +66,7 @@ unsafe extern "C" fn cmd_show_environment_print(self_: *mut cmd, item: *mut cmdq
 
         if (*envent).value.is_some() {
             escaped = cmd_show_environment_escape(envent);
-            cmdq_print(
-                item,
-                c"%s=\"%s\"; export %s;".as_ptr(),
-                (*envent).name,
-                escaped,
-                (*envent).name,
-            );
+            cmdq_print(item, c"%s=\"%s\"; export %s;".as_ptr(), (*envent).name, escaped, (*envent).name);
             free_(escaped);
         } else {
             cmdq_print(item, c"unset %s;".as_ptr(), (*envent).name);

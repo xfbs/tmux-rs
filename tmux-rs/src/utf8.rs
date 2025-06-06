@@ -409,7 +409,7 @@ pub unsafe extern "C" fn utf8_strvis(mut dst: *mut c_char, mut src: *const c_cha
             src = src.add(1);
         }
         *dst = b'\0' as c_char;
-        return (dst.addr() - start.addr()) as i32;
+        (dst.addr() - start.addr()) as i32
     }
 }
 

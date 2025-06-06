@@ -479,7 +479,7 @@ pub unsafe extern "C" fn input_key(s: *mut screen, bev: *mut bufferevent, mut ke
              * reported in the extended form.
              */
             {
-                return input_key_extended(bev, key);
+                input_key_extended(bev, key)
             }
             MODE_KEYS_EXTENDED => {
                 /*
@@ -489,12 +489,12 @@ pub unsafe extern "C" fn input_key(s: *mut screen, bev: *mut bufferevent, mut ke
                 if (input_key_mode1(bev, key) == -1) {
                     return input_key_extended(bev, key);
                 }
-                return 0;
+                0
             }
             _ =>
             /* The standard mode. */
             {
-                return input_key_vt10x(bev, key);
+                input_key_vt10x(bev, key)
             }
         }
     }
