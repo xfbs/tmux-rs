@@ -739,10 +739,8 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
                     // Is this not a style?
                     if *cp != b'#' as i8 || *cp.add(1) != b'[' as i8 || sy.ignore != 0 {
                         // See if this is a UTF-8 character.
-                        if ({
-                            more = utf8_open(ud, *cp as u8);
-                            more == utf8_state::UTF8_MORE
-                        }) {
+                        more = utf8_open(ud, *cp as u8);
+                        if more == utf8_state::UTF8_MORE {
                             while ({
                                 cp = cp.add(1);
                                 *cp != b'\0' as i8

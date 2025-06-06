@@ -862,11 +862,8 @@ pub unsafe extern "C" fn cmd_mouse_window(m: *mut mouse_event, sp: *mut *mut ses
         if ((*m).w == -1) {
             wl = NonNull::new((*s).curw);
         } else {
-            let mut w;
-            if ({
-                w = window_find_by_id((*m).w as u32);
-                w.is_null()
-            }) {
+            let mut w = window_find_by_id((*m).w as u32);
+            if w.is_null() {
                 return None;
             }
             wl = winlink_find_by_window(&raw mut (*s).windows, w);

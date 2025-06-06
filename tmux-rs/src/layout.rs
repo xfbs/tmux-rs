@@ -895,7 +895,7 @@ pub unsafe extern "C" fn layout_split_pane(wp: *mut window_pane, type_: layout_t
         let saved_size = if type_ == layout_type::LAYOUT_LEFTRIGHT { sx } else { sy };
 
         let mut size2 = if size < 0 {
-            ((saved_size + 1) / 2) - 1
+            saved_size.div_ceil(2) - 1
         } else if (flags & SPAWN_BEFORE) != 0 {
             saved_size - size as u32 - 1
         } else {

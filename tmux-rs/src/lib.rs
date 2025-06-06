@@ -7,13 +7,13 @@
 #![allow(clippy::deref_addrof, reason = "many false positive, required for unsafe code")]
 #![allow(clippy::manual_range_contains)]
 #![allow(clippy::if_same_then_else)]
-// #![allow(clippy::manual_div_ceil)] // switch
-#![allow(clippy::blocks_in_conditions, clippy::missing_safety_doc, clippy::explicit_auto_deref)] // keep, not worth fixing yet
+#![allow(clippy::blocks_in_conditions, clippy::missing_safety_doc)] // keep, not worth fixing yet
 #![allow(clippy::overly_complex_bool_expr)] // switch
 #![allow(clippy::shadow_same)] // switch
 #![allow(clippy::shadow_unrelated)] // switch
 // #![warn(clippy::shadow_reuse)]
 #![allow(clippy::needless_range_loop)] // can be cleaned up with some effort
+#![warn(clippy::explicit_auto_deref)] // can be cleaned up with some effort
 
 pub mod compat;
 
@@ -86,7 +86,7 @@ pub unsafe fn strchr_(cs: *const c_char, c: char) -> *mut c_char { unsafe { libc
 
 pub type bitstr_t = u8;
 
-pub unsafe fn bit_alloc(nbits: u32) -> *mut u8 { unsafe { libc::calloc(((nbits + 7) / 8) as usize, 1).cast() } }
+pub unsafe fn bit_alloc(nbits: u32) -> *mut u8 { unsafe { libc::calloc(nbits.div_ceil(8) as usize, 1).cast() } }
 pub unsafe fn bit_set(bits: *mut u8, i: u32) {
     unsafe {
         let byte_index = i / 8;

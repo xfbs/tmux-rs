@@ -179,7 +179,7 @@ pub unsafe extern "C" fn screen_reset_tabs(s: *mut screen) {
     }
 }
 
-unsafe fn bit_alloc(nbits: u32) -> *mut u8 { unsafe { libc::calloc(((nbits + 7) / 8) as usize, 1).cast() } }
+unsafe fn bit_alloc(nbits: u32) -> *mut u8 { unsafe { libc::calloc(nbits.div_ceil(8) as usize, 1).cast() } }
 unsafe fn bit_set(bits: *mut u8, i: u32) {
     unsafe {
         let byte_index = i / 8;

@@ -521,8 +521,8 @@ unsafe extern "C" fn window_tree_draw_label(ctx: *mut screen_write_ctx, px: u32,
         if sx == 0 || sy == 1 || len as u32 > sx {
             return;
         }
-        let ox = (sx - len as u32 + 1) / 2;
-        let oy = (sy + 1) / 2;
+        let ox = (sx - len as u32).div_ceil(2);
+        let oy = sy.div_ceil(2);
 
         if ox > 1 && (ox + len as u32) < sx - 1 && sy >= 3 {
             screen_write_cursormove(ctx, (px + ox - 1) as i32, (py + oy - 1) as i32, 0);

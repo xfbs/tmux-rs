@@ -860,10 +860,8 @@ pub unsafe extern "C" fn mode_tree_search_backward(mtd: *mut mode_tree_data) -> 
         let mut mti = last;
 
         loop {
-            if ({
-                prev = tailq_prev(mti);
-                !prev.is_null()
-            }) {
+            prev = tailq_prev(mti);
+            if !prev.is_null() {
                 // Point to the last child in the previous subtree.
                 while !tailq_empty(&raw mut (*prev).children) {
                     prev = tailq_last(&raw mut (*prev).children);
@@ -926,10 +924,9 @@ pub unsafe extern "C" fn mode_tree_search_forward(mtd: *mut mode_tree_data) -> *
                     if mti.is_null() {
                         break;
                     }
-                    if ({
-                        next = tailq_next(mti);
-                        !next.is_null()
-                    }) {
+
+                    next = tailq_next(mti);
+                    if !next.is_null() {
                         mti = next;
                         break;
                     }

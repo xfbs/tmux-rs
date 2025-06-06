@@ -2315,15 +2315,14 @@ unsafe extern "C" fn input_osc_4(ictx: *mut input_ctx, p: *mut c_char) {
         let mut copy = s;
         while !s.is_null() && *s != b'\0' as i8 {
             idx = strtol(s, &raw mut next, 10);
-            if ({
-                let tmp = *next;
-                next = next.add(1);
-                tmp != b';' as i8
-            }) {
+
+            let tmp = *next;
+            next = next.add(1);
+            if tmp != b';' as i8 {
                 bad = true;
                 break;
             }
-            if (idx < 0 || idx >= 256) {
+            if idx < 0 || idx >= 256 {
                 bad = true;
                 break;
             }
@@ -2336,10 +2335,8 @@ unsafe extern "C" fn input_osc_4(ictx: *mut input_ctx, p: *mut c_char) {
                 }
                 continue;
             }
-            if ({
-                c = colour_parseX11(s);
-                c == -1
-            }) {
+            c = colour_parseX11(s);
+            if c == -1 {
                 s = next;
                 continue;
             }
@@ -2517,10 +2514,8 @@ unsafe extern "C" fn input_osc_10(ictx: *mut input_ctx, p: *mut c_char) {
             return;
         }
 
-        if ({
-            c = colour_parseX11(p);
-            c == -1
-        }) {
+        c = colour_parseX11(p);
+        if c == -1 {
             log_debug!("bad OSC 10: {}", _s(p));
             return;
         }
@@ -2580,10 +2575,8 @@ unsafe extern "C" fn input_osc_11(ictx: *mut input_ctx, p: *const c_char) {
             return;
         }
 
-        if ({
-            c = colour_parseX11(p);
-            c == -1
-        }) {
+        c = colour_parseX11(p);
+        if c == -1 {
             log_debug!("bad OSC 11: {}", _s(p));
             return;
         }
@@ -2701,10 +2694,8 @@ unsafe extern "C" fn input_osc_52(ictx: *mut input_ctx, p: *const c_char) {
             return;
         }
 
-        if ({
-            end = strchr(p, b';' as i32);
-            end.is_null()
-        }) {
+        end = strchr(p, b';' as i32);
+        if end.is_null() {
             return;
         }
         end = end.add(1);
@@ -2724,10 +2715,8 @@ unsafe extern "C" fn input_osc_52(ictx: *mut input_ctx, p: *const c_char) {
         // log_debug("%s: %.*s %s", __func__, (int)(end - p - 1), p, flags);
 
         if strcmp(end, c"?".as_ptr()) == 0 {
-            if ({
-                pb = paste_get_top(null_mut());
-                !pb.is_null()
-            }) {
+            pb = paste_get_top(null_mut());
+            if !pb.is_null() {
                 buf = paste_buffer_data(pb, &raw mut len);
             }
             if (*ictx).input_end == input_end_type::INPUT_END_BEL {
@@ -2744,10 +2733,8 @@ unsafe extern "C" fn input_osc_52(ictx: *mut input_ctx, p: *const c_char) {
         }
 
         out = xmalloc(len).as_ptr().cast();
-        if ({
-            outlen = b64_pton(end, out, len);
-            outlen == -1
-        }) {
+        outlen = b64_pton(end, out, len);
+        if outlen == -1 {
             free_(out);
             return;
         }
@@ -2815,10 +2802,9 @@ pub unsafe extern "C" fn input_reply_clipboard(bev: *mut bufferevent, buf: *cons
             }
             outlen = 4 * ((len as i32 + 2) / 3) + 1;
             out = xmalloc(outlen as usize).as_ptr().cast();
-            if ({
-                outlen = b64_ntop(buf.cast(), len, out, outlen as usize);
-                outlen == -1
-            }) {
+
+            outlen = b64_ntop(buf.cast(), len, out, outlen as usize);
+            if outlen == -1 {
                 free_(out);
                 return;
             }
