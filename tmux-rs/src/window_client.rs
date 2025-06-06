@@ -226,7 +226,7 @@ pub unsafe extern "C" fn window_client_draw(modedata: *mut c_void, itemdata: Opt
 pub unsafe extern "C" fn window_client_menu(modedata: NonNull<c_void>, c: *mut client, key: key_code) {
     unsafe {
         let data: NonNull<window_client_modedata> = modedata.cast();
-        let wp = (*data.as_ptr()).wp as *mut window_pane;
+        let wp: *mut window_pane = (*data.as_ptr()).wp;
 
         if let Some(wme) = NonNull::new(tailq_first(&raw mut (*wp).modes))
             && (*wme.as_ptr()).data == modedata.as_ptr()
@@ -257,7 +257,7 @@ pub unsafe extern "C" fn window_client_get_key(modedata: NonNull<c_void>, itemda
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_client_init(wme: NonNull<window_mode_entry>, _fs: *mut cmd_find_state, args: *mut args) -> *mut screen {
     unsafe {
-        let mut wp = (*wme.as_ptr()).wp as *mut window_pane;
+        let mut wp: *mut window_pane = (*wme.as_ptr()).wp;
         let mut s: *mut screen = null_mut();
 
         let mut data: *mut window_client_modedata = xcalloc1::<window_client_modedata>() as *mut window_client_modedata;
@@ -374,7 +374,7 @@ pub unsafe extern "C" fn window_client_key(wme: NonNull<window_mode_entry>, c: *
     unsafe {
         let mut wp = (*wme.as_ptr()).wp;
         let mut data = (*wme.as_ptr()).data as *mut window_client_modedata;
-        let mut mtd = (*data).data as *mut mode_tree_data;
+        let mut mtd: *mut mode_tree_data = (*data).data;
 
         let mut finished = mode_tree_key(mtd, c, &raw mut key, m, null_mut(), null_mut()) != 0;
         match key as u8 {

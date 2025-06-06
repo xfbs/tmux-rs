@@ -10,16 +10,16 @@
 #![allow(clippy::manual_range_contains)]
 #![allow(clippy::explicit_auto_deref)]
 #![allow(clippy::implicit_saturating_sub)]
-#![allow(clippy::unnecessary_unwrap)]
 #![allow(clippy::if_same_then_else)]
 #![allow(clippy::nonminimal_bool)] // switch
 #![allow(clippy::manual_div_ceil)] // switch
 #![allow(clippy::blocks_in_conditions, clippy::missing_safety_doc)] // keep, not worth fixing yet
-#![allow(clippy::manual_range_patterns, clippy::absurd_extreme_comparisons, clippy::overly_complex_bool_expr, clippy::uninlined_format_args, clippy::single_match, clippy::non_canonical_partial_ord_impl)] // switch
+#![allow(clippy::absurd_extreme_comparisons, clippy::overly_complex_bool_expr, clippy::uninlined_format_args, clippy::single_match, clippy::non_canonical_partial_ord_impl)] // switch
 #![allow(clippy::shadow_same)] // switch
 #![allow(clippy::shadow_unrelated)] // switch
 // #![warn(clippy::shadow_reuse)]
-// #![warn(clippy::needless_range_loop)] // can be cleaned up with some effort
+#![allow(clippy::needless_range_loop)] // can be cleaned up with some effort
+#![warn(clippy::manual_range_patterns)]
 
 pub mod compat;
 
@@ -2810,7 +2810,7 @@ impl std::fmt::Display for _s {
         if self.0.is_null() {
             f.write_str("(null)")
         } else {
-            let len = unsafe { libc::strlen(self.0 as *const i8) };
+            let len = unsafe { libc::strlen(self.0) };
             let s: &[u8] = unsafe { std::slice::from_raw_parts(self.0 as *const u8, len) };
             let s = std::str::from_utf8(s).unwrap_or("%s-invalid-utf8");
             f.write_str(s)

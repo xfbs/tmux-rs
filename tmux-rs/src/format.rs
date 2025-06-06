@@ -292,7 +292,7 @@ pub unsafe extern "C" fn format_job_update(job: *mut job) {
 pub unsafe extern "C" fn format_job_complete(job: *mut job) {
     unsafe {
         let mut fj = job_get_data(job) as *mut format_job;
-        let mut evb = (*job_get_event(job)).input as *mut evbuffer;
+        let mut evb: *mut evbuffer = (*job_get_event(job)).input;
 
         (*fj).job = null_mut();
 
@@ -4782,7 +4782,7 @@ pub unsafe extern "C" fn format_replace(es: *mut format_expand_state, key: *cons
                 *buf = xreallocarray((*buf).cast(), 2, *len).as_ptr().cast();
                 *len *= 2;
             }
-            memcpy((*buf).add((*off)).cast(), value.cast(), valuelen);
+            memcpy((*buf).add(*off).cast(), value.cast(), valuelen);
             *off += valuelen;
 
             format_log1(es, __func__, c"replaced '%s' with '%s'".as_ptr(), copy0, value);

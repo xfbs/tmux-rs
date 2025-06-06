@@ -1244,8 +1244,6 @@ unsafe extern "C" fn window_tree_mouse(data: *mut window_tree_modedata, key: key
         let mut wl = None;
         let mut wp = None;
 
-        let mut loop_: u32 = 0;
-
         if key != keyc::KEYC_MOUSEDOWN1_PANE as u64 {
             return KEYC_NONE;
         }
@@ -1277,15 +1275,15 @@ unsafe extern "C" fn window_tree_mouse(data: *mut window_tree_modedata, key: key
                 return KEYC_NONE;
             };
             mode_tree_expand_current((*data).data);
-            loop_ = 0;
-            for wl in rb_foreach(&raw mut (*s.as_ptr()).windows) {
-                if (loop_ == (*data).start + x) {
+
+            for (loop_, wl_) in rb_foreach(&raw mut (*s.as_ptr()).windows).enumerate() {
+                wl = Some(wl_);
+                if (loop_ as u32 == (*data).start + x) {
                     break;
                 }
-                loop_ += 1;
             }
-            if !wl.is_none() {
-                mode_tree_set_current((*data).data, wl.unwrap().as_ptr().addr() as u64);
+            if let Some(wl) = wl {
+                mode_tree_set_current((*data).data, wl.addr().get() as u64);
             }
             return '\r' as key_code;
         }
@@ -1294,15 +1292,14 @@ unsafe extern "C" fn window_tree_mouse(data: *mut window_tree_modedata, key: key
                 return KEYC_NONE;
             };
             mode_tree_expand_current((*data).data);
-            loop_ = 0;
-            for wp in tailq_foreach::<_, discr_entry>(&raw mut (*(*wl.as_ptr()).window).panes) {
-                if loop_ == (*data).start + x {
+            for (loop_, wp_) in tailq_foreach::<_, discr_entry>(&raw mut (*(*wl.as_ptr()).window).panes).enumerate() {
+                wp = Some(wp_);
+                if loop_ as u32 == (*data).start + x {
                     break;
                 }
-                loop_ += 1;
             }
-            if !wp.is_none() {
-                mode_tree_set_current((*data).data, wp.unwrap().as_ptr().addr() as u64);
+            if let Some(wp) = wp {
+                mode_tree_set_current((*data).data, wp.addr().get() as u64);
             }
             return '\r' as key_code;
         }

@@ -157,7 +157,7 @@ pub unsafe extern "C" fn window_clock_timer_callback(fd: i32, events: i16, arg: 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_clock_init(wme: NonNull<window_mode_entry>, _fs: *mut cmd_find_state, args: *mut args) -> *mut screen {
     unsafe {
-        let mut wp = (*wme.as_ptr()).wp as *mut window_pane;
+        let mut wp: *mut window_pane = (*wme.as_ptr()).wp;
         let mut tv = timeval { tv_sec: 1, tv_usec: 0 };
 
         let data = xmalloc_::<window_clock_mode_data>().as_ptr();

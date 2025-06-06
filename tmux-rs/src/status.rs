@@ -307,7 +307,7 @@ unsafe extern "C" fn status_push_screen(c: *mut client) {
         let mut sl = &raw mut (*c).status;
 
         if ((*sl).active == &raw mut (*sl).screen) {
-            (*sl).active = xmalloc_::<screen>().as_ptr() as *mut screen;
+            (*sl).active = xmalloc_::<screen>().as_ptr();
             screen_init((*sl).active, (*c).tty.sx, status_line_size(c), 0);
         }
         (*sl).references += 1;

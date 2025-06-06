@@ -150,7 +150,7 @@ pub unsafe extern "C" fn cmd_send_keys_exec(self_: *mut cmd, item: *mut cmdq_ite
         let mut event = cmdq_get_event(item);
         let mut m = &raw mut (*event).m;
         let mut wme = tailq_first(&raw mut (*wp).modes);
-        let mut after = item as *mut cmdq_item;
+        let mut after: *mut cmdq_item = item;
         let mut key: key_code = 0;
         // u_int i, np = 1;
         let mut np: u32 = 1;

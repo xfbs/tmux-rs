@@ -400,7 +400,7 @@ pub unsafe extern "C" fn options_array_clear(o: *mut options_entry) {
 
         let mut a = rb_min(&raw mut (*o).value.array);
         while !a.is_null() {
-            let next = rb_next(a) as *mut options_array_item;
+            let next: *mut options_array_item = rb_next(a);
             options_array_free(o, a);
             a = next;
         }

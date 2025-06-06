@@ -256,7 +256,7 @@ pub unsafe extern "C" fn window_buffer_search(modedata: *mut c_void, itemdata: N
 pub unsafe extern "C" fn window_buffer_menu(modedata: NonNull<c_void>, c: *mut client, key: key_code) {
     unsafe {
         let mut data: NonNull<window_buffer_modedata> = modedata.cast();
-        let mut wp = (*data.as_ptr()).wp as *mut window_pane;
+        let mut wp: *mut window_pane = (*data.as_ptr()).wp;
 
         if let Some(wme) = NonNull::new(tailq_first(&raw mut (*wp).modes))
             && (*wme.as_ptr()).data == modedata.as_ptr()
@@ -504,7 +504,7 @@ pub unsafe extern "C" fn window_buffer_key(wme: NonNull<window_mode_entry>, c: *
     unsafe {
         let mut wp = (*wme.as_ptr()).wp;
         let mut data = (*wme.as_ptr()).data as *mut window_buffer_modedata;
-        let mut mtd = (*data).data as *mut mode_tree_data;
+        let mut mtd: *mut mode_tree_data = (*data).data;
         let mut finished = false;
 
         'out: {

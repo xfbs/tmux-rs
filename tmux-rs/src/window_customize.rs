@@ -866,7 +866,7 @@ unsafe extern "C" fn window_customize_draw(modedata: *mut c_void, itemdata: Opti
 unsafe extern "C" fn window_customize_menu(modedata: NonNull<c_void>, c: *mut client, key: key_code) {
     unsafe {
         let mut data: NonNull<window_customize_modedata> = modedata.cast();
-        let mut wp = (*data.as_ptr()).wp as *mut window_pane;
+        let mut wp: *mut window_pane = (*data.as_ptr()).wp;
 
         let Some(wme) = NonNull::new(tailq_first(&raw mut (*wp).modes)) else {
             return;
@@ -980,7 +980,7 @@ pub unsafe extern "C" fn window_customize_free_callback(modedata: NonNull<c_void
 pub unsafe extern "C" fn window_customize_free_item_callback(itemdata: NonNull<c_void>) {
     unsafe {
         let mut item: NonNull<window_customize_itemdata> = itemdata.cast();
-        let mut data = (*item.as_ptr()).data as *mut window_customize_modedata;
+        let mut data: *mut window_customize_modedata = (*item.as_ptr()).data;
 
         window_customize_free_item(item.as_ptr());
         window_customize_destroy(data);

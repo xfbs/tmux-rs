@@ -101,7 +101,7 @@ pub unsafe extern "C" fn job_run(cmd: *const c_char, argc: c_int, argv: *mut *mu
                 memset(ws.as_mut_ptr().cast(), 0, size_of::<winsize>());
                 (*ws.as_mut_ptr()).ws_col = sx as u16;
                 (*ws.as_mut_ptr()).ws_row = sy as u16;
-                pid = fdforkpty(ptm_fd, &raw mut master, tty.as_mut_ptr() as *mut i8, null_mut(), ws.as_mut_ptr());
+                pid = fdforkpty(ptm_fd, &raw mut master, (&raw mut tty) as *mut i8, null_mut(), ws.as_mut_ptr());
             } else {
                 if socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, &raw mut out as *mut c_int) != 0 {
                     break 'fail;

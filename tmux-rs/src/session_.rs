@@ -261,15 +261,7 @@ pub unsafe extern "C" fn session_update_activity(s: *mut session, from: *mut tim
             memcpy__(&raw mut (*s).activity_time, from);
         }
 
-        log_debug!(
-            "session ${} {} activity {}.{:06} (last {}.{:06})",
-            (*s).id,
-            _s((*s).name),
-            (*s).activity_time.tv_sec,
-            (*s).activity_time.tv_usec as i32,
-            (*last).tv_sec,
-            (*last).tv_usec as i32,
-        );
+        log_debug!("session ${} {} activity {}.{:06} (last {}.{:06})", (*s).id, _s((*s).name), (*s).activity_time.tv_sec, (*s).activity_time.tv_usec as i32, (*last).tv_sec, (*last).tv_usec as i32,);
 
         if evtimer_initialized(&raw mut (*s).lock_timer) != 0 {
             evtimer_del(&raw mut (*s).lock_timer);
@@ -498,7 +490,7 @@ pub unsafe extern "C" fn session_last(s: *mut session) -> i32 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_set_current(s: *mut session, wl: *mut winlink) -> i32 {
     unsafe {
-        let mut old = (*s).curw as *mut winlink;
+        let mut old: *mut winlink = (*s).curw;
 
         if (wl.is_null()) {
             return -1;

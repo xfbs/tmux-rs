@@ -952,7 +952,7 @@ pub unsafe extern "C" fn tty_term_describe(term: *mut tty_term, code: tty_code_c
                 xsnprintf(&raw mut s as *mut c_char, sizeof_s, c"%4u: %s: [missing]".as_ptr(), code, tty_term_codes[code as usize].name);
             }
             tty_code_type::String => {
-                strnvis(&raw mut out as *mut c_char, (*(*term).codes.add(code as usize)).value.string, sizeof_out, ((VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL)));
+                strnvis(&raw mut out as *mut c_char, (*(*term).codes.add(code as usize)).value.string, sizeof_out, VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL);
                 xsnprintf(&raw mut s as *mut c_char, sizeof_s, c"%4u: %s: (string) %s".as_ptr(), code, tty_term_codes[code as usize].name, &raw const out as *const c_char);
             }
             tty_code_type::Number => {
