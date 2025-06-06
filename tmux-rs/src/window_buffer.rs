@@ -305,26 +305,26 @@ pub unsafe extern "C" fn window_buffer_init(wme: NonNull<window_mode_entry>, fs:
         let mut wp = (*wme.as_ptr()).wp;
         let data = xcalloc1::<window_buffer_modedata>();
         (*wme.as_ptr()).data = data as *mut window_buffer_modedata as *mut c_void;
-        (*data).wp = wp;
-        cmd_find_copy_state(&raw mut (*data).fs, fs);
+        data.wp = wp;
+        cmd_find_copy_state(&raw mut data.fs, fs);
 
         if (args.is_null() || !args_has_(args, 'F')) {
-            (*data).format = xstrdup(WINDOW_BUFFER_DEFAULT_FORMAT).as_ptr();
+            data.format = xstrdup(WINDOW_BUFFER_DEFAULT_FORMAT).as_ptr();
         } else {
-            (*data).format = xstrdup(args_get_(args, 'F')).as_ptr();
+            data.format = xstrdup(args_get_(args, 'F')).as_ptr();
         }
         if (args.is_null() || !args_has_(args, 'K')) {
-            (*data).key_format = xstrdup(WINDOW_BUFFER_DEFAULT_KEY_FORMAT).as_ptr();
+            data.key_format = xstrdup(WINDOW_BUFFER_DEFAULT_KEY_FORMAT).as_ptr();
         } else {
-            (*data).key_format = xstrdup(args_get_(args, 'K')).as_ptr();
+            data.key_format = xstrdup(args_get_(args, 'K')).as_ptr();
         }
         if (args.is_null() || args_count(args) == 0) {
-            (*data).command = xstrdup(WINDOW_BUFFER_DEFAULT_COMMAND).as_ptr();
+            data.command = xstrdup(WINDOW_BUFFER_DEFAULT_COMMAND).as_ptr();
         } else {
-            (*data).command = xstrdup(args_string(args, 0)).as_ptr();
+            data.command = xstrdup(args_string(args, 0)).as_ptr();
         }
 
-        (*data).data = mode_tree_start(
+        data.data = mode_tree_start(
             wp,
             args,
             Some(window_buffer_build),
@@ -339,10 +339,10 @@ pub unsafe extern "C" fn window_buffer_init(wme: NonNull<window_mode_entry>, fs:
             window_buffer_sort_list_len,
             &raw mut s,
         );
-        mode_tree_zoom((*data).data, args);
+        mode_tree_zoom(data.data, args);
 
-        mode_tree_build((*data).data);
-        mode_tree_draw((*data).data);
+        mode_tree_build(data.data);
+        mode_tree_draw(data.data);
 
         s
     }

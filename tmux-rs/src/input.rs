@@ -1676,7 +1676,7 @@ unsafe extern "C" fn input_csi_dispatch_sm_graphics(ictx: *mut input_ctx) {
 unsafe extern "C" fn input_csi_dispatch_winops(ictx: *mut input_ctx) {
     unsafe {
         let mut sctx = &(*ictx).ctx;
-        let mut s = (*sctx).s;
+        let mut s = sctx.s;
         let mut wp = (*ictx).wp;
         let mut w: *mut window = null_mut();
         let mut x: u32 = screen_size_x(s);
@@ -1732,7 +1732,7 @@ unsafe extern "C" fn input_csi_dispatch_winops(ictx: *mut input_ctx) {
                     m += 1;
                     match input_get(ictx, m as u32, 0, -1) {
                         -1 => return,
-                        0 | 2 => screen_push_title((*sctx).s),
+                        0 | 2 => screen_push_title(sctx.s),
                         _ => (),
                     }
                 }
@@ -1741,7 +1741,7 @@ unsafe extern "C" fn input_csi_dispatch_winops(ictx: *mut input_ctx) {
                     match input_get(ictx, m as u32, 0, -1) {
                         -1 => return,
                         0 | 2 => {
-                            screen_pop_title((*sctx).s);
+                            screen_pop_title(sctx.s);
                             if !wp.is_null() {
                                 notify_pane(c"pane-title-changed".as_ptr(), wp);
                                 server_redraw_window_borders(w);

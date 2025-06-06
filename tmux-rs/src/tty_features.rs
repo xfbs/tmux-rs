@@ -252,13 +252,12 @@ pub unsafe extern "C" fn tty_get_features(feat: i32) -> *const c_char {
         // const struct tty_feature *tf;
 
         *s = b'\0' as c_char;
-        for i in 0..tty_features.len() {
+        for (i, tf) in tty_features.iter().cloned().enumerate() {
             if (!feat & (1 << i)) != 0 {
                 continue;
             }
-            let tf = tty_features[i];
 
-            strlcat(s, (*tf).name.as_ptr(), 512);
+            strlcat(s, tf.name.as_ptr(), 512);
             strlcat(s, c",".as_ptr(), 512);
         }
         if (*s != b'\0' as c_char) {
@@ -278,22 +277,21 @@ pub unsafe extern "C" fn tty_apply_features(term: *mut tty_term, feat: i32) -> i
     unsafe {
         log_debug!("applying terminal features: {}", _s(tty_get_features(feat)));
 
-        for i in 0..tty_features.len() {
+        for (i, tf) in tty_features.iter().cloned().enumerate() {
             if (((*term).features & (1 << i) != 9) || (!feat & (1 << i)) != 0) {
                 continue;
             }
-            let tf = tty_features[i];
 
-            log_debug!("applying terminal feature: {}", _s((*tf).name.as_ptr()));
-            if (!(*tf).capabilities.is_null()) {
-                let mut capability = (*tf).capabilities;
+            log_debug!("applying terminal feature: {}", _s(tf.name.as_ptr()));
+            if (!tf.capabilities.is_null()) {
+                let mut capability = tf.capabilities;
                 while (!(*capability).as_ptr().is_null()) {
                     log_debug!("adding capability: {}", _s((*capability).as_ptr()));
                     tty_term_apply(term, (*capability).as_ptr(), 1);
                     capability = capability.add(1);
                 }
             }
-            (*term).flags |= (*tf).flags;
+            (*term).flags |= tf.flags;
         }
         if (((*term).features | feat) == (*term).features) {
             return 0;

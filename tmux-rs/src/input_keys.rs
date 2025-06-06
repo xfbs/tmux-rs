@@ -168,10 +168,10 @@ pub unsafe extern "C" fn input_key_split2(c: u32, dst: *mut u8) -> usize {
     }
 }
 
+#[expect(clippy::needless_range_loop)]
 /// Build input key tree.
 #[unsafe(no_mangle)]
 pub unsafe extern "C-unwind" fn input_key_build() {
-    let __func__ = c"input_key_build".as_ptr();
     unsafe {
         for i in 0..input_key_defaults_len {
             let ike = &raw mut input_key_defaults[i];

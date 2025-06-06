@@ -3310,12 +3310,12 @@ pub unsafe extern "C" fn format_each(ft: *mut format_tree, cb: Option<unsafe ext
                 continue;
             }
 
-            if (*fte).type_ == format_table_type::FORMAT_TABLE_TIME {
+            if fte.type_ == format_table_type::FORMAT_TABLE_TIME {
                 let tv = value as *const timeval;
                 xsnprintf(s.as_mut_ptr(), s.len(), c"%lld".as_ptr(), (*tv).tv_sec);
-                cb.unwrap()((*fte).key.as_ptr(), s.as_ptr(), arg);
+                cb.unwrap()(fte.key.as_ptr(), s.as_ptr(), arg);
             } else {
-                cb.unwrap()((*fte).key.as_ptr(), value as *const c_char, arg);
+                cb.unwrap()(fte.key.as_ptr(), value as *const c_char, arg);
                 free(value);
             }
         }
@@ -3654,12 +3654,11 @@ fn format_find(ft: *mut format_tree, key: *const c_char, modifiers: format_modif
 
 /* Unescape escaped characters. */
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn format_unescape(s: *const c_char) -> *mut c_char {
+pub unsafe extern "C" fn format_unescape(mut s: *const c_char) -> *mut c_char {
     unsafe {
         let mut cp = xmalloc(strlen(s) + 1).as_ptr().cast();
         let mut out = cp;
         let mut brackets = 0;
-        let mut s = s;
         while *s != b'\0' as c_char {
             if (*s == b'#' as c_char && *s.add(1) == b'{' as c_char) {
                 brackets += 1;

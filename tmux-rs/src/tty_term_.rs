@@ -589,16 +589,16 @@ pub unsafe extern "C" fn tty_term_create(tty: *mut tty, name: *mut c_char, caps:
                 let value = (*caps.add(i)).add(namelen + 1);
 
                 for (j, ent) in tty_term_codes.iter().enumerate() {
-                    if strncmp((*ent).name, *caps.add(i), namelen) != 0 {
+                    if strncmp(ent.name, *caps.add(i), namelen) != 0 {
                         continue;
                     }
-                    if *(*ent).name.add(namelen) != b'\0' as c_char {
+                    if *ent.name.add(namelen) != b'\0' as c_char {
                         continue;
                     }
 
                     let code = (*term).codes.add(j);
                     (*code).type_ = tty_code_type::None;
-                    match ((*ent).type_) {
+                    match (ent.type_) {
                         tty_code_type::None => (),
                         tty_code_type::String => {
                             (*code).type_ = tty_code_type::String;
@@ -607,7 +607,7 @@ pub unsafe extern "C" fn tty_term_create(tty: *mut tty, name: *mut c_char, caps:
                         tty_code_type::Number => {
                             let n = strtonum(value, 0, i32::MAX as i64, &raw mut errstr) as i32;
                             if (!errstr.is_null()) {
-                                log_debug!("{}: {}", _s((*ent).name), _s(errstr));
+                                log_debug!("{}: {}", _s(ent.name), _s(errstr));
                             } else {
                                 (*code).type_ = tty_code_type::Number;
                                 (*code).value.number = n;
@@ -737,16 +737,16 @@ pub unsafe extern "C" fn tty_term_read_list(name: *const c_char, fd: i32, caps: 
 
         let mut s = null();
         for (i, ent) in tty_term_codes.iter().enumerate() {
-            match (*ent).type_ {
+            match ent.type_ {
                 tty_code_type::None => (),
                 tty_code_type::String => {
-                    s = tigetstr((*ent).name);
+                    s = tigetstr(ent.name);
                     if s.is_null() || s == (-1i32 as *const c_char) {
                         continue;
                     }
                 }
                 tty_code_type::Number => {
-                    let n = tigetnum((*ent).name);
+                    let n = tigetnum(ent.name);
                     if (n == -1 || n == -2) {
                         continue;
                     }
@@ -754,7 +754,7 @@ pub unsafe extern "C" fn tty_term_read_list(name: *const c_char, fd: i32, caps: 
                     s = &raw mut tmp as *mut i8;
                 }
                 tty_code_type::Flag => {
-                    let n = tigetflag((*ent).name);
+                    let n = tigetflag(ent.name);
                     if (n == -1) {
                         continue;
                     }
@@ -767,7 +767,7 @@ pub unsafe extern "C" fn tty_term_read_list(name: *const c_char, fd: i32, caps: 
                 _ => fatalx(c"unknown capability type"),
             }
             *caps = xreallocarray((*caps).cast(), (*ncaps) as usize + 1, size_of::<*mut c_char>()).as_ptr().cast();
-            xasprintf((*caps).add(*ncaps as usize), c"%s=%s".as_ptr(), (*ent).name, s);
+            xasprintf((*caps).add(*ncaps as usize), c"%s=%s".as_ptr(), ent.name, s);
             (*ncaps) += 1;
         }
 

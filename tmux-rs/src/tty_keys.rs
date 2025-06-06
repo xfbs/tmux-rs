@@ -429,54 +429,43 @@ unsafe extern "C" fn tty_keys_add1(mut tkp: *mut *mut tty_key, mut s: *const c_c
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_keys_build(tty: *mut tty) {
     unsafe {
-        let mut tdkr: *const tty_default_key_raw;
-        let mut tdkx: *const tty_default_key_xterm;
-        let mut tdkc: *const tty_default_key_code;
-        let mut s: *const c_char;
-        let mut o: *mut options_entry;
-        let mut a: *mut options_array_item;
-        let mut ov: *mut options_value;
         let mut copy: [c_char; 16] = [0; 16];
-        let mut key: key_code;
 
         if !(*tty).key_tree.is_null() {
             tty_keys_free(tty);
         }
         (*tty).key_tree = null_mut();
 
-        for i in 0..tty_default_xterm_keys.len() {
-            tdkx = &tty_default_xterm_keys[i];
-            for j in 2..tty_default_xterm_modifiers.len() {
-                strlcpy(copy.as_mut_ptr(), (*tdkx).template.as_ptr(), size_of::<[c_char; 16]>());
+        for (i, tdkx) in tty_default_xterm_keys.iter().enumerate() {
+            for (j, tty_default_xterm_modifiers_j) in tty_default_xterm_modifiers.iter().cloned().enumerate().skip(2) {
+                strlcpy(copy.as_mut_ptr(), tdkx.template.as_ptr(), size_of::<[c_char; 16]>());
                 copy[libc::strcspn(copy.as_ptr(), c"_".as_ptr()) as usize] = b'0' as c_char + j as c_char;
 
-                key = (*tdkx).key | tty_default_xterm_modifiers[j];
+                let key = tdkx.key | tty_default_xterm_modifiers_j;
                 tty_keys_add(tty, copy.as_ptr(), key);
             }
         }
 
-        for i in 0..tty_default_raw_keys.len() {
-            tdkr = &tty_default_raw_keys[i];
-            s = (*tdkr).string.as_ptr();
+        for tdkr in tty_default_raw_keys.iter() {
+            let s = tdkr.string.as_ptr();
             if *s != 0 {
-                tty_keys_add(tty, s, (*tdkr).key);
+                tty_keys_add(tty, s, tdkr.key);
             }
         }
 
-        for i in 0..tty_default_code_keys.len() {
-            tdkc = &tty_default_code_keys[i];
-            s = tty_term_string((*tty).term, (*tdkc).code);
+        for tdkc in tty_default_code_keys.iter() {
+            let s = tty_term_string((*tty).term, tdkc.code);
             if *s != 0 {
-                tty_keys_add(tty, s, (*tdkc).key);
+                tty_keys_add(tty, s, tdkc.key);
             }
         }
 
-        o = options_get(global_options, c"user-keys".as_ptr());
+        let o = options_get(global_options, c"user-keys".as_ptr());
         if !o.is_null() {
-            a = options_array_first(o);
+            let mut a = options_array_first(o);
             while !a.is_null() {
                 let i = options_array_item_index(a) as u64;
-                ov = options_array_item_value(a);
+                let ov = options_array_item_value(a);
                 tty_keys_add(tty, (*ov).string, KEYC_USER + i);
                 a = options_array_next(a);
             }

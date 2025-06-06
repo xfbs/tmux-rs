@@ -859,9 +859,9 @@ pub unsafe extern "C" fn popup_editor(c: *mut client, buf: *const c_char, len: u
         fclose(f);
 
         let pe = xcalloc1::<popup_editor>();
-        (*pe).path = xstrdup(path.as_ptr()).as_ptr();
-        (*pe).cb = cb;
-        (*pe).arg = arg;
+        pe.path = xstrdup(path.as_ptr()).as_ptr();
+        pe.cb = cb;
+        pe.arg = arg;
 
         let sx = (*c).tty.sx * 9 / 10;
         let sy = (*c).tty.sy * 9 / 10;

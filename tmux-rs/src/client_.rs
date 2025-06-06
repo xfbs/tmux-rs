@@ -221,6 +221,7 @@ unsafe extern "C" {
     fn ttyname(fd: i32) -> *mut c_char;
 }
 
+#[expect(clippy::deref_addrof)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C-unwind" fn client_main(base: *mut event_base, argc: i32, argv: *mut *mut c_char, mut flags: client_flag, feat: i32) -> i32 {
     unsafe {
@@ -494,6 +495,7 @@ unsafe extern "C" fn client_send_identify(ttynam: *const c_char, termname: *cons
     }
 }
 
+#[expect(clippy::deref_addrof)]
 #[unsafe(no_mangle)]
 unsafe extern "C" fn client_exec(shell: *mut c_char, shellcmd: *mut c_char) {
     unsafe {
@@ -629,6 +631,7 @@ unsafe extern "C" fn client_dispatch_exit_message(mut data: *const c_char, mut d
     }
 }
 
+#[expect(clippy::deref_addrof)]
 #[unsafe(no_mangle)]
 unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
     // char		*data;
@@ -710,6 +713,7 @@ unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
     }
 }
 
+#[expect(clippy::deref_addrof)]
 #[unsafe(no_mangle)]
 unsafe extern "C" fn client_dispatch_attached(imsg: *mut imsg) {
     unsafe {

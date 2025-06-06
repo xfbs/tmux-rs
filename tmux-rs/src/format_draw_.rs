@@ -1058,23 +1058,23 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
                     let sr = xcalloc1::<style_range>();
                     sr.type_ = (*fr).type_;
                     sr.argument = (*fr).argument;
-                    strlcpy((*sr).string.as_mut_ptr(), (*fr).string.as_ptr(), size_of::<[c_char; 16]>());
+                    strlcpy(sr.string.as_mut_ptr(), (*fr).string.as_ptr(), size_of::<[c_char; 16]>());
                     sr.start = (*fr).start;
                     sr.end = (*fr).end;
                     tailq_insert_tail(srs, sr);
 
-                    match (*sr).type_ {
+                    match sr.type_ {
                         style_range_type::STYLE_RANGE_NONE => (),
                         style_range_type::STYLE_RANGE_LEFT => {
-                            log_debug!("{}: range left at {}-{}", func, (*sr).start, (*sr).end)
+                            log_debug!("{}: range left at {}-{}", func, sr.start, sr.end)
                         }
                         style_range_type::STYLE_RANGE_RIGHT => {
-                            log_debug!("{}: range right at {}-{}", func, (*sr).start, (*sr).end)
+                            log_debug!("{}: range right at {}-{}", func, sr.start, sr.end)
                         }
-                        style_range_type::STYLE_RANGE_PANE => log_debug!("{}: range pane|%%{} at {}-{}", func, (*sr).argument, (*sr).start, (*sr).end),
-                        style_range_type::STYLE_RANGE_WINDOW => log_debug!("{}: range window|{} at {}-{}", func, (*sr).argument, (*sr).start, (*sr).end),
-                        style_range_type::STYLE_RANGE_SESSION => log_debug!("{}: range session|${} at {}-{}", func, (*sr).argument, (*sr).start, (*sr).end),
-                        style_range_type::STYLE_RANGE_USER => log_debug!("{}: range user|{} at {}-{}", func, (*sr).argument, (*sr).start, (*sr).end),
+                        style_range_type::STYLE_RANGE_PANE => log_debug!("{}: range pane|%%{} at {}-{}", func, sr.argument, sr.start, sr.end),
+                        style_range_type::STYLE_RANGE_WINDOW => log_debug!("{}: range window|{} at {}-{}", func, sr.argument, sr.start, sr.end),
+                        style_range_type::STYLE_RANGE_SESSION => log_debug!("{}: range session|${} at {}-{}", func, sr.argument, sr.start, sr.end),
+                        style_range_type::STYLE_RANGE_USER => log_debug!("{}: range user|{} at {}-{}", func, sr.argument, sr.start, sr.end),
                     }
                     format_free_range(&raw mut frs, fr);
                 }

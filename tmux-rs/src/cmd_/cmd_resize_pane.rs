@@ -131,6 +131,7 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
     cmd_retval::CMD_RETURN_NORMAL
 }
 
+#[expect(clippy::needless_range_loop)]
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_resize_pane_mouse_update(c: *mut client, m: *mut mouse_event) {
     unsafe {
@@ -189,13 +190,13 @@ unsafe extern "C" fn cmd_resize_pane_mouse_update(c: *mut client, m: *mut mouse_
             return;
         }
 
-        for i in 0..ncells {
-            let type_ = (*(*cells[i as usize]).parent).type_;
+        for cell in cells.iter().cloned() {
+            let type_ = (*(*cell).parent).type_;
             if (y != ly && type_ == layout_type::LAYOUT_TOPBOTTOM) {
-                layout_resize_layout(w, cells[i as usize], type_, y as i32 - ly as i32, 0);
+                layout_resize_layout(w, cell, type_, y as i32 - ly as i32, 0);
                 resizes += 1;
             } else if (x != lx && type_ == layout_type::LAYOUT_LEFTRIGHT) {
-                layout_resize_layout(w, cells[i as usize], type_, x as i32 - lx as i32, 0);
+                layout_resize_layout(w, cell, type_, x as i32 - lx as i32, 0);
                 resizes += 1;
             }
         }

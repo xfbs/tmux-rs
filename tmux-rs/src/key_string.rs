@@ -209,9 +209,9 @@ static key_string_table: [key_string_table_entry; 469] = const {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn key_string_search_table(string: *const c_char) -> key_code {
     unsafe {
-        for i in 0..key_string_table.len() {
-            if (strcasecmp(string, key_string_table[i].string) == 0) {
-                return key_string_table[i].key;
+        for key_string in key_string_table.iter() {
+            if strcasecmp(string, key_string.string) == 0 {
+                return key_string.key;
             }
         }
 
@@ -293,7 +293,7 @@ pub unsafe extern "C" fn key_string_lookup_string(mut string: *const c_char) -> 
             m[mlen as usize].write(b'\0' as c_char);
 
             let udp: *mut utf8_data = utf8_fromcstr(m.as_slice().as_ptr().cast());
-            if (udp.is_null() || (*udp).size == 0 || (*udp).size != 0 || utf8_from_data(udp, &raw mut uc) != utf8_state::UTF8_DONE) {
+            if udp.is_null() || (*udp).size == 0 || (*udp.add(1)).size != 0 || utf8_from_data(udp, &raw mut uc) != utf8_state::UTF8_DONE {
                 free_(udp);
                 return KEYC_UNKNOWN;
             }

@@ -1,19 +1,18 @@
 #![feature(c_variadic)]
 #![allow(non_camel_case_types)]
 #![allow(non_upper_case_globals)]
-#![allow(unused)]
+#![allow(unused)] // TODO 5000
+//
 #![allow(clippy::collapsible_else_if)]
 #![allow(clippy::collapsible_if)]
-#![allow(clippy::deref_addrof, reason = "many false positive, required for unsafe code")]
 #![allow(clippy::manual_range_contains)]
 #![allow(clippy::if_same_then_else)]
-#![allow(clippy::blocks_in_conditions, clippy::missing_safety_doc)] // keep, not worth fixing yet
-#![allow(clippy::overly_complex_bool_expr)] // switch
-#![allow(clippy::shadow_same)] // switch
-#![allow(clippy::shadow_unrelated)] // switch
-// #![warn(clippy::shadow_reuse)]
-#![allow(clippy::needless_range_loop)] // can be cleaned up with some effort
-#![warn(clippy::explicit_auto_deref)] // can be cleaned up with some effort
+#![allow(clippy::blocks_in_conditions)] // keep, not worth fixing yet
+#![allow(clippy::missing_safety_doc)] // 1012 keep, not worth fixing yet
+//
+#![warn(clippy::shadow_same)]
+#![allow(clippy::shadow_unrelated)] // TODO, 134 instances probably some latent bugs
+#![allow(clippy::shadow_reuse)] // 145 instances
 
 pub mod compat;
 

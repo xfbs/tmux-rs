@@ -76,38 +76,38 @@ pub unsafe extern "C" fn session_find_by_id(id: u32) -> Option<NonNull<session>>
 pub unsafe extern "C" fn session_create(prefix: *const c_char, name: *const c_char, cwd: *const c_char, env: *mut environ, oo: *mut options, tio: *mut termios) -> *mut session {
     unsafe {
         let s = xcalloc1::<session>();
-        (*s).references = 1;
-        (*s).flags = 0;
+        s.references = 1;
+        s.flags = 0;
 
-        (*s).cwd = xstrdup(cwd).as_ptr();
+        s.cwd = xstrdup(cwd).as_ptr();
 
-        tailq_init(&raw mut (*s).lastw);
-        rb_init(&raw mut (*s).windows);
+        tailq_init(&raw mut s.lastw);
+        rb_init(&raw mut s.windows);
 
-        (*s).environ = env;
-        (*s).options = oo;
+        s.environ = env;
+        s.options = oo;
 
         status_update_cache(s);
 
-        (*s).tio = null_mut();
+        s.tio = null_mut();
         if (!tio.is_null()) {
-            (*s).tio = xmalloc_::<termios>().as_ptr();
-            memcpy__((*s).tio, tio);
+            s.tio = xmalloc_::<termios>().as_ptr();
+            memcpy__(s.tio, tio);
         }
 
         if (!name.is_null()) {
-            (*s).name = xstrdup(name).as_ptr();
-            (*s).id = next_session_id;
+            s.name = xstrdup(name).as_ptr();
+            s.id = next_session_id;
             next_session_id += 1;
         } else {
             loop {
-                (*s).id = next_session_id;
+                s.id = next_session_id;
                 next_session_id += 1;
-                free_((*s).name);
+                free_(s.name);
                 if (!prefix.is_null()) {
-                    xasprintf(&raw mut (*s).name, c"%s-%u".as_ptr(), prefix, (*s).id);
+                    xasprintf(&raw mut s.name, c"%s-%u".as_ptr(), prefix, s.id);
                 } else {
-                    xasprintf(&raw mut (*s).name, c"%u".as_ptr(), (*s).id);
+                    xasprintf(&raw mut s.name, c"%u".as_ptr(), s.id);
                 }
 
                 if rb_find(&raw mut sessions, s).is_null() {
@@ -117,12 +117,12 @@ pub unsafe extern "C" fn session_create(prefix: *const c_char, name: *const c_ch
         }
         rb_insert(&raw mut sessions, s);
 
-        log_debug!("new session {} ${}", _s((*s).name), (*s).id);
+        log_debug!("new session {} ${}", _s(s.name), s.id);
 
-        if libc::gettimeofday(&raw mut (*s).creation_time, null_mut()) != 0 {
+        if libc::gettimeofday(&raw mut s.creation_time, null_mut()) != 0 {
             fatal(c"gettimeofday failed".as_ptr());
         }
-        session_update_activity(s, &raw mut (*s).creation_time);
+        session_update_activity(s, &raw mut s.creation_time);
 
         s
     }

@@ -106,13 +106,13 @@ pub unsafe extern "C" fn grid_extended_cell(gl: *mut grid_line, gce: *mut grid_c
         utf8_from_data(&raw const (*gc).data, uc);
 
         let gee = &mut *(*gl).extddata.offset((*gce).union_.offset as isize);
-        (*gee).data = *uc;
-        (*gee).attr = (*gc).attr;
-        (*gee).flags = flags.bits();
-        (*gee).fg = (*gc).fg;
-        (*gee).bg = (*gc).bg;
-        (*gee).us = (*gc).us;
-        (*gee).link = (*gc).link;
+        gee.data = *uc;
+        gee.attr = (*gc).attr;
+        gee.flags = flags.bits();
+        gee.fg = (*gc).fg;
+        gee.bg = (*gc).bg;
+        gee.us = (*gc).us;
+        gee.link = (*gc).link;
         gee
     }
 }
@@ -557,7 +557,7 @@ pub unsafe extern "C" fn grid_set_cell(gd: *mut grid, px: c_uint, py: c_uint, gc
             gl.cellused = px + 1;
         }
 
-        let gce = (*gl).celldata.add(px as usize);
+        let gce = gl.celldata.add(px as usize);
         if grid_need_extended_cell(gce, gc) != 0 {
             grid_extended_cell(gl, gce, gc);
         } else {
@@ -1161,7 +1161,6 @@ pub unsafe extern "C" fn grid_string_cells(gd: *mut grid, px: c_uint, py: c_uint
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_duplicate_lines(dst: *mut grid, mut dy: c_uint, src: *mut grid, mut sy: c_uint, mut ny: c_uint) {
     unsafe {
-        let mut ny = ny;
         if dy + ny > (*dst).hsize + (*dst).sy {
             ny = (*dst).hsize + (*dst).sy - dy;
         }
