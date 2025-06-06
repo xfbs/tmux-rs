@@ -89,11 +89,13 @@ struct window_customize_modedata {
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn window_customize_get_tag(o: *mut options_entry, idx: i32, oe: *const options_table_entry) -> u64 {
-    if let Some(oe) = NonNull::new(oe.cast_mut()) {
-        let offset = oe.offset_from_unsigned(NonNull::from_ref(&options_table[0])) as u64;
-        (2u64 << 62) | (offset << 32) | ((idx as u64 + 1) << 1) | 1
-    } else {
-        o.addr() as u64
+    unsafe {
+        if let Some(oe) = NonNull::new(oe.cast_mut()) {
+            let offset = oe.offset_from_unsigned(NonNull::from_ref(&options_table[0])) as u64;
+            (2u64 << 62) | (offset << 32) | ((idx as u64 + 1) << 1) | 1
+        } else {
+            o.addr() as u64
+        }
     }
 }
 
@@ -235,7 +237,7 @@ unsafe extern "C" fn window_customize_build_array(data: *mut window_customize_mo
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn window_customize_build_option(data: *mut window_customize_modedata, top: *mut mode_tree_item, scope: window_customize_scope, o: *mut options_entry, ft: *mut format_tree, filter: *const c_char, fs: *mut cmd_find_state) {
-    {
+    unsafe {
         let mut oe = options_table_entry(o);
         let mut oo = options_owner(o);
         let mut name: *const c_char = options_name(o);
@@ -420,7 +422,7 @@ unsafe extern "C" fn window_customize_build_options(
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_customize_build_keys(data: *mut window_customize_modedata, kt: *mut key_table, ft: *mut format_tree, filter: *const c_char, fs: *mut cmd_find_state, number: i32) {
+unsafe extern "C" fn window_customize_build_keys(data: *mut window_customize_modedata, kt: *mut key_table, mut ft: *mut format_tree, filter: *const c_char, fs: *mut cmd_find_state, number: i32) {
     unsafe {
         // struct mode_tree_item *top, *child, *mti;
         // struct window_customize_itemdata *item;
@@ -438,7 +440,7 @@ unsafe extern "C" fn window_customize_build_keys(data: *mut window_customize_mod
         mode_tree_no_tag(top);
         free_(title);
 
-        let ft = format_create_from_state(null_mut(), null_mut(), fs);
+        ft = format_create_from_state(null_mut(), null_mut(), fs);
         format_add(ft, c"is_option".as_ptr(), c"0".as_ptr());
         format_add(ft, c"is_key".as_ptr(), c"1".as_ptr());
 
@@ -1013,7 +1015,8 @@ pub unsafe extern "C" fn window_customize_set_option_callback(c: *mut client, it
 
             if !oe.is_null() && (*oe).flags & OPTIONS_TABLE_IS_ARRAY != 0 {
                 if idx == -1 {
-                    for idx in 0..i32::MAX {
+                    for idx_ in 0..i32::MAX {
+                        idx = idx_;
                         if options_array_get(o, idx as u32).is_null() {
                             break;
                         }
@@ -1038,7 +1041,7 @@ pub unsafe extern "C" fn window_customize_set_option_callback(c: *mut client, it
         *cause = libc::toupper(*cause as u8 as i32) as i8;
         status_message_set(c, -1, 1, 0, c"%s".as_ptr(), cause);
         free_(cause);
-        return 0;
+        0
     }
 }
 
@@ -1545,7 +1548,7 @@ pub unsafe extern "C" fn window_customize_key(wme: NonNull<window_mode_entry>, c
             }
             b'D' => {
                 let tagged = mode_tree_count_tagged((*data).data);
-                if !(tagged == 0) {
+                if tagged != 0 {
                     xasprintf(&raw mut prompt, c"Reset %u tagged to default? ".as_ptr(), tagged);
                     (*data).references += 1;
                     (*data).change = window_customize_change::WINDOW_CUSTOMIZE_RESET;
@@ -1589,7 +1592,7 @@ pub unsafe extern "C" fn window_customize_key(wme: NonNull<window_mode_entry>, c
             }
             b'U' => {
                 let tagged = mode_tree_count_tagged((*data).data);
-                if !(tagged == 0) {
+                if tagged != 0 {
                     xasprintf(&raw mut prompt, c"Unset %u tagged? ".as_ptr(), tagged);
                     (*data).references += 1;
                     (*data).change = window_customize_change::WINDOW_CUSTOMIZE_UNSET;

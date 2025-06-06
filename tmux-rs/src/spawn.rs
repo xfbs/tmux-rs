@@ -146,7 +146,7 @@ pub unsafe extern "C" fn spawn_window(sc: *mut spawn_context, cause: *mut *mut c
         (*sc).flags |= SPAWN_NONOTIFY;
 
         /* Spawn the pane. */
-        let wp = spawn_pane(sc, cause);
+        wp = spawn_pane(sc, cause);
         if (wp.is_null()) {
             if (!(*sc).flags & SPAWN_RESPAWN != 0) {
                 winlink_remove(&raw mut (*s).windows, (*sc).wl);

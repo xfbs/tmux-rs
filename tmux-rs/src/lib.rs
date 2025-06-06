@@ -1,26 +1,22 @@
 #![feature(c_variadic)]
-#![warn(static_mut_refs)]
-// #![warn(clippy::shadow_reuse)]
-// #![warn(clippy::shadow_same)]
 #![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 #![allow(private_interfaces)]
-#![allow(unsafe_op_in_unsafe_fn)]
 #![allow(unused)]
+#![allow(clippy::int_plus_one)]
 #![allow(clippy::collapsible_else_if)]
 #![allow(clippy::collapsible_if)]
 #![allow(clippy::deref_addrof, reason = "many false positive, required for unsafe code")]
 #![allow(clippy::manual_clamp)]
 #![allow(clippy::manual_range_contains)]
 #![allow(clippy::missing_safety_doc)]
-#![allow(clippy::needless_return)]
 #![allow(clippy::new_without_default)]
 #![allow(clippy::upper_case_acronyms)]
 #![allow(clippy::zero_ptr)]
-#![warn(clippy::shadow_reuse)]
 #![warn(clippy::shadow_same)]
 #![warn(clippy::shadow_unrelated)]
+#![warn(clippy::needless_return)]
+// #![warn(clippy::shadow_reuse)]
 
 pub mod compat;
 
@@ -70,9 +66,7 @@ unsafe extern "C" {
 }
 
 #[inline]
-pub fn transmute_ptr<T>(value: Option<NonNull<T>>) -> *mut T {
-    // unsafe { core::mem::transmute::<Option<NonNull<T>>, *mut T>(value) }
-    // unsafe { core::mem::transmute::<Option<NonNull<T>>, *mut T>(value) }
+pub const fn transmute_ptr<T>(value: Option<NonNull<T>>) -> *mut T {
     match value {
         Some(ptr) => ptr.as_ptr(),
         None => null_mut(),
@@ -80,11 +74,6 @@ pub fn transmute_ptr<T>(value: Option<NonNull<T>>) -> *mut T {
 }
 
 pub use compat::imsg::imsg; // TODO move
-
-// #define S_ISDIR(mode)  (((mode) & S_IFMT) == S_IFDIR)
-// TODO move this to a better spot
-#[inline]
-pub fn S_ISDIR(mode: u32) -> bool { mode & libc::S_IFMT == libc::S_IFDIR }
 
 pub type wchar_t = core::ffi::c_int;
 unsafe extern "C" {
@@ -223,6 +212,7 @@ pub const KEYC_MASK_KEY: c_ulonglong = 0x000fffffffffff;
 
 pub const KEYC_NUSER: c_ulonglong = 1000;
 
+#[allow(non_snake_case)]
 #[inline(always)]
 pub fn KEYC_IS_MOUSE(key: key_code) -> bool {
     const KEYC_MOUSE: c_ulonglong = keyc::KEYC_MOUSE as c_ulonglong;
@@ -231,6 +221,7 @@ pub fn KEYC_IS_MOUSE(key: key_code) -> bool {
     (key & KEYC_MASK_KEY) >= KEYC_MOUSE && (key & KEYC_MASK_KEY) < KEYC_BSPACE
 }
 
+#[allow(non_snake_case)]
 #[inline(always)]
 pub fn KEYC_IS_UNICODE(key: key_code) -> bool {
     let masked = key & KEYC_MASK_KEY;
@@ -612,7 +603,6 @@ impl utf8_data {
     }
 }
 
-pub use utf8_state::*;
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum utf8_state {
@@ -626,6 +616,7 @@ pub const COLOUR_FLAG_256: i32 = 0x01000000;
 pub const COLOUR_FLAG_RGB: i32 = 0x02000000;
 
 /// Special colours.
+#[allow(non_snake_case)]
 #[inline]
 pub fn COLOUR_DEFAULT(c: i32) -> bool { c == 8 || c == 9 }
 
@@ -1493,12 +1484,16 @@ pub const MOUSE_BUTTON_10: u32 = 130;
 pub const MOUSE_BUTTON_11: u32 = 131;
 
 // Mouse helpers.
+#[allow(non_snake_case)]
 #[inline]
 pub fn MOUSE_BUTTONS(b: u32) -> u32 { b & MOUSE_MASK_BUTTONS }
+#[allow(non_snake_case)]
 #[inline]
 pub fn MOUSE_WHEEL(b: u32) -> bool { ((b) & MOUSE_MASK_BUTTONS) == MOUSE_WHEEL_UP || ((b) & MOUSE_MASK_BUTTONS) == MOUSE_WHEEL_DOWN }
+#[allow(non_snake_case)]
 #[inline]
 pub fn MOUSE_DRAG(b: u32) -> bool { b & MOUSE_MASK_DRAG != 0 }
+#[allow(non_snake_case)]
 #[inline]
 pub fn MOUSE_RELEASE(b: u32) -> bool { b & MOUSE_MASK_BUTTONS == 3 }
 
@@ -2773,7 +2768,6 @@ impl SyncCharPtr {
     const fn new(value: &'static CStr) -> Self { Self(value.as_ptr()) }
     const fn from_ptr(value: *const c_char) -> Self { Self(value) }
     const fn null() -> Self { Self(null()) }
-    const fn is_null(&self) -> bool { self.0.is_null() }
     const fn as_ptr(&self) -> *const c_char { self.0 }
 }
 

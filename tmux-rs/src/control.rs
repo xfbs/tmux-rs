@@ -361,7 +361,7 @@ pub unsafe extern "C" fn control_vwrite(c: *mut client, fmt: *const c_char, ap: 
         bufferevent_write((*cs).write_event, s.cast(), strlen(s));
         bufferevent_write((*cs).write_event, c"\n".as_ptr().cast(), 1);
 
-        bufferevent_enable((*cs).write_event, EV_WRITE as i16);
+        bufferevent_enable((*cs).write_event, EV_WRITE);
         free_(s);
     }
 }
@@ -382,7 +382,7 @@ pub unsafe extern "C" fn control_write(c: *mut client, fmt: *const c_char, mut a
         (*cb).t = get_timer();
 
         log_debug!("{}: {}: storing line: {}", "control_write", _s((*c).name), _s((*cb).line));
-        bufferevent_enable((*cs).write_event, EV_WRITE as i16);
+        bufferevent_enable((*cs).write_event, EV_WRITE);
     }
 }
 
@@ -470,7 +470,7 @@ pub unsafe extern "C" fn control_write_output(c: *mut client, wp: *mut window_pa
                 (*cp).pending_flag = 1;
                 (*cs).pending_count += 1;
             }
-            bufferevent_enable((*cs).write_event, EV_WRITE as i16);
+            bufferevent_enable((*cs).write_event, EV_WRITE);
             return;
         }
         //ignore:
@@ -570,10 +570,10 @@ pub unsafe extern "C" fn control_flush_all_blocks(c: *mut client) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn control_append_data(c: *mut client, cp: *mut control_pane, age: u64, message: *mut evbuffer, wp: *mut window_pane, size: usize) -> *mut evbuffer {
+pub unsafe extern "C" fn control_append_data(c: *mut client, cp: *mut control_pane, age: u64, mut message: *mut evbuffer, wp: *mut window_pane, size: usize) -> *mut evbuffer {
     unsafe {
         if (message.is_null()) {
-            let message = evbuffer_new();
+            message = evbuffer_new();
             if (message.is_null()) {
                 fatalx(c"out of memory");
             }
@@ -712,7 +712,7 @@ pub unsafe extern "C" fn control_write_callback(bufev: *mut bufferevent, data: *
             }
         }
         if (EVBUFFER_LENGTH(evb) == 0) {
-            bufferevent_disable((*cs).write_event, EV_WRITE as i16);
+            bufferevent_disable((*cs).write_event, EV_WRITE);
         }
     }
 }
@@ -748,11 +748,11 @@ pub unsafe extern "C" fn control_start(c: *mut client) {
                 fatalx(c"out of memory");
             }
         }
-        bufferevent_setwatermark((*cs).write_event, EV_WRITE as i16, CONTROL_BUFFER_LOW as usize, 0);
+        bufferevent_setwatermark((*cs).write_event, EV_WRITE, CONTROL_BUFFER_LOW as usize, 0);
 
         if ((*c).flags.intersects(client_flag::CONTROLCONTROL)) {
             bufferevent_write((*cs).write_event, c"\x1bP1000p".as_ptr().cast(), 7);
-            bufferevent_enable((*cs).write_event, EV_WRITE as i16);
+            bufferevent_enable((*cs).write_event, EV_WRITE);
         }
     }
 }
@@ -760,7 +760,7 @@ pub unsafe extern "C" fn control_start(c: *mut client) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_ready(c: *mut client) {
     unsafe {
-        bufferevent_enable((*(*c).control_state).read_event, EV_READ as i16);
+        bufferevent_enable((*(*c).control_state).read_event, EV_READ);
     }
 }
 
@@ -771,7 +771,7 @@ pub unsafe extern "C" fn control_discard(c: *mut client) {
         for cp in rb_foreach(&raw mut (*cs).panes) {
             control_discard_pane(c, cp.as_ptr());
         }
-        bufferevent_disable((*cs).read_event, EV_READ as i16);
+        bufferevent_disable((*cs).read_event, EV_READ);
     }
 }
 

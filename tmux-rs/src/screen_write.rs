@@ -50,7 +50,11 @@ unsafe extern "C" fn screen_write_get_citem() -> NonNull<screen_write_citem> {
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn screen_write_free_citem(ci: *mut screen_write_citem) { tailq_insert_tail(&raw mut screen_write_citem_freelist, ci); }
+unsafe extern "C" fn screen_write_free_citem(ci: *mut screen_write_citem) {
+    unsafe {
+        tailq_insert_tail(&raw mut screen_write_citem_freelist, ci);
+    }
+}
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn screen_write_offset_timer(_fd: i32, _events: i16, data: *mut c_void) {
@@ -62,38 +66,40 @@ unsafe extern "C" fn screen_write_offset_timer(_fd: i32, _events: i16, data: *mu
 /// Set cursor position.
 #[unsafe(no_mangle)]
 unsafe extern "C" fn screen_write_set_cursor(ctx: *mut screen_write_ctx, mut cx: i32, mut cy: i32) {
-    let mut wp = (*ctx).wp;
-    let mut s = (*ctx).s;
-    let mut tv: timeval = timeval { tv_usec: 10000, tv_sec: 0 };
+    unsafe {
+        let mut wp = (*ctx).wp;
+        let mut s = (*ctx).s;
+        let mut tv: timeval = timeval { tv_usec: 10000, tv_sec: 0 };
 
-    if (cx != -1 && cx as u32 == (*s).cx && cy != -1 && cy as u32 == (*s).cy) {
-        return;
-    }
-
-    if (cx != -1) {
-        if (cx as u32 > screen_size_x(s)) {
-            // allow last column
-            cx = screen_size_x(s) as i32 - 1;
+        if (cx != -1 && cx as u32 == (*s).cx && cy != -1 && cy as u32 == (*s).cy) {
+            return;
         }
-        (*s).cx = cx as u32;
-    }
-    if (cy != -1) {
-        if (cy as u32 > screen_size_y(s) - 1) {
-            cy = screen_size_y(s) as i32 - 1;
+
+        if (cx != -1) {
+            if (cx as u32 > screen_size_x(s)) {
+                // allow last column
+                cx = screen_size_x(s) as i32 - 1;
+            }
+            (*s).cx = cx as u32;
         }
-        (*s).cy = cy as u32;
-    }
+        if (cy != -1) {
+            if (cy as u32 > screen_size_y(s) - 1) {
+                cy = screen_size_y(s) as i32 - 1;
+            }
+            (*s).cy = cy as u32;
+        }
 
-    if wp.is_null() {
-        return;
-    }
-    let mut w = (*wp).window;
+        if wp.is_null() {
+            return;
+        }
+        let mut w = (*wp).window;
 
-    if event_initialized(&raw mut (*w).offset_timer) == 0 {
-        evtimer_set(&raw mut (*w).offset_timer, Some(screen_write_offset_timer), w.cast());
-    }
-    if evtimer_pending(&raw mut (*w).offset_timer, null_mut()) == 0 {
-        evtimer_add(&raw mut (*w).offset_timer, &raw const tv);
+        if event_initialized(&raw mut (*w).offset_timer) == 0 {
+            evtimer_set(&raw mut (*w).offset_timer, Some(screen_write_offset_timer), w.cast());
+        }
+        if evtimer_pending(&raw mut (*w).offset_timer, null_mut()) == 0 {
+            evtimer_add(&raw mut (*w).offset_timer, &raw const tv);
+        }
     }
 }
 
@@ -261,14 +267,16 @@ unsafe extern "C" fn screen_write_init(ctx: *mut screen_write_ctx, s: *mut scree
 /// Initialize writing with a pane.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_start_pane(ctx: *mut screen_write_ctx, wp: *mut window_pane, mut s: *mut screen) {
-    if s.is_null() {
-        s = (*wp).screen;
-    }
-    screen_write_init(ctx, s);
-    (*ctx).wp = wp;
+    unsafe {
+        if s.is_null() {
+            s = (*wp).screen;
+        }
+        screen_write_init(ctx, s);
+        (*ctx).wp = wp;
 
-    if log_get_level() != 0 {
-        // log_debug("%s: size %ux%u, pane %%%u (at %u,%u)", __func__, screen_size_x((*ctx).s), screen_size_y((*ctx).s), (*wp).id, (*wp).xoff, (*wp).yoff);
+        if log_get_level() != 0 {
+            // log_debug("%s: size %ux%u, pane %%%u (at %u,%u)", __func__, screen_size_x((*ctx).s), screen_size_y((*ctx).s), (*wp).id, (*wp).xoff, (*wp).yoff);
+        }
     }
 }
 
@@ -290,10 +298,12 @@ pub unsafe extern "C" fn screen_write_start_callback(ctx: *mut screen_write_ctx,
 /// Initialize writing.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_start(ctx: *mut screen_write_ctx, s: *mut screen) {
-    screen_write_init(ctx, s);
+    unsafe {
+        screen_write_init(ctx, s);
 
-    if (log_get_level() != 0) {
-        // log_debug("%s: size %ux%u, no pane", __func__, screen_size_x((*ctx).s), screen_size_y((*ctx).s));
+        if (log_get_level() != 0) {
+            // log_debug("%s: size %ux%u, no pane", __func__, screen_size_x((*ctx).s), screen_size_y((*ctx).s));
+        }
     }
 }
 
@@ -371,7 +381,7 @@ pub unsafe extern "C" fn screen_write_strlen(fmt: *const c_char, mut ap: ...) ->
                 }
                 ptr = ptr.add(1);
 
-                if (more == UTF8_DONE) {
+                if (more == utf8_state::UTF8_DONE) {
                     size += ud.width;
                 }
             } else {
@@ -514,7 +524,7 @@ pub unsafe extern "C" fn screen_write_vnputs(ctx: *mut screen_write_ctx, maxlen:
 
         let mut ptr: *mut u8 = msg.cast();
         while *ptr != b'\0' {
-            if (*ptr > 0x7f && utf8_open(ud, *ptr) == UTF8_MORE) {
+            if (*ptr > 0x7f && utf8_open(ud, *ptr) == utf8_state::UTF8_MORE) {
                 ptr = ptr.add(1);
 
                 let mut left = strlen(ptr.cast());
@@ -529,7 +539,7 @@ pub unsafe extern "C" fn screen_write_vnputs(ctx: *mut screen_write_ctx, maxlen:
                 }
                 ptr = ptr.add(1);
 
-                if (more != UTF8_DONE) {
+                if (more != utf8_state::UTF8_DONE) {
                     continue;
                 }
                 if (maxlen > 0 && size + (*ud).width as usize > maxlen as usize) {
@@ -601,31 +611,33 @@ pub unsafe extern "C" fn screen_write_fast_copy(ctx: *mut screen_write_ctx, src:
 /// Select character set for drawing border lines.
 #[unsafe(no_mangle)]
 unsafe extern "C" fn screen_write_box_border_set(lines: box_lines, cell_type: cell_type, gc: *mut grid_cell) {
-    match lines {
-        box_lines::BOX_LINES_NONE => (),
-        box_lines::BOX_LINES_DOUBLE => {
-            (*gc).attr &= !GRID_ATTR_CHARSET;
-            utf8_copy(&raw mut (*gc).data, tty_acs_double_borders(cell_type));
-        }
-        box_lines::BOX_LINES_HEAVY => {
-            (*gc).attr &= !GRID_ATTR_CHARSET;
-            utf8_copy(&raw mut (*gc).data, tty_acs_heavy_borders(cell_type));
-        }
-        box_lines::BOX_LINES_ROUNDED => {
-            (*gc).attr &= !GRID_ATTR_CHARSET;
-            utf8_copy(&raw mut (*gc).data, tty_acs_rounded_borders(cell_type));
-        }
-        box_lines::BOX_LINES_SIMPLE => {
-            (*gc).attr &= !GRID_ATTR_CHARSET;
-            utf8_set(&raw mut (*gc).data, SIMPLE_BORDERS[cell_type as usize]);
-        }
-        box_lines::BOX_LINES_PADDED => {
-            (*gc).attr &= !GRID_ATTR_CHARSET;
-            utf8_set(&raw mut (*gc).data, PADDED_BORDERS[cell_type as usize]);
-        }
-        box_lines::BOX_LINES_SINGLE | box_lines::BOX_LINES_DEFAULT => {
-            (*gc).attr |= GRID_ATTR_CHARSET;
-            utf8_set(&raw mut (*gc).data, CELL_BORDERS[cell_type as usize]);
+    unsafe {
+        match lines {
+            box_lines::BOX_LINES_NONE => (),
+            box_lines::BOX_LINES_DOUBLE => {
+                (*gc).attr &= !GRID_ATTR_CHARSET;
+                utf8_copy(&raw mut (*gc).data, tty_acs_double_borders(cell_type));
+            }
+            box_lines::BOX_LINES_HEAVY => {
+                (*gc).attr &= !GRID_ATTR_CHARSET;
+                utf8_copy(&raw mut (*gc).data, tty_acs_heavy_borders(cell_type));
+            }
+            box_lines::BOX_LINES_ROUNDED => {
+                (*gc).attr &= !GRID_ATTR_CHARSET;
+                utf8_copy(&raw mut (*gc).data, tty_acs_rounded_borders(cell_type));
+            }
+            box_lines::BOX_LINES_SIMPLE => {
+                (*gc).attr &= !GRID_ATTR_CHARSET;
+                utf8_set(&raw mut (*gc).data, SIMPLE_BORDERS[cell_type as usize]);
+            }
+            box_lines::BOX_LINES_PADDED => {
+                (*gc).attr &= !GRID_ATTR_CHARSET;
+                utf8_set(&raw mut (*gc).data, PADDED_BORDERS[cell_type as usize]);
+            }
+            box_lines::BOX_LINES_SINGLE | box_lines::BOX_LINES_DEFAULT => {
+                (*gc).attr |= GRID_ATTR_CHARSET;
+                utf8_set(&raw mut (*gc).data, CELL_BORDERS[cell_type as usize]);
+            }
         }
     }
 }

@@ -37,12 +37,7 @@ pub static mut cmd_clear_history_entry: cmd_entry = cmd_entry {
 };
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn cmd_capture_pane_append(
-    mut buf: *mut c_char,
-    len: *mut usize,
-    line: *mut c_char,
-    linelen: usize,
-) -> *mut c_char {
+unsafe extern "C" fn cmd_capture_pane_append(mut buf: *mut c_char, len: *mut usize, line: *mut c_char, linelen: usize) -> *mut c_char {
     unsafe {
         buf = xrealloc_(buf, *len + linelen + 1).as_ptr();
         memcpy_(buf.add(*len), line, linelen);
@@ -71,12 +66,7 @@ unsafe extern "C" fn cmd_capture_pane_pending(args: *mut args, wp: *const window
                     tmp[0] = *line.add(i) as _;
                     tmp[1] = b'\0' as _;
                 } else {
-                    xsnprintf(
-                        &raw mut tmp as _,
-                        size_of::<[c_char; 5]>(),
-                        c"\\%03hho".as_ptr(),
-                        *line.add(i) as usize,
-                    );
+                    xsnprintf(&raw mut tmp as _, size_of::<[c_char; 5]>(), c"\\%03hho".as_ptr(), *line.add(i) as usize);
                 }
                 buf = cmd_capture_pane_append(buf, len, &raw mut tmp as _, strlen(&raw mut tmp as _));
             }
@@ -88,12 +78,7 @@ unsafe extern "C" fn cmd_capture_pane_pending(args: *mut args, wp: *const window
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn cmd_capture_pane_history(
-    args: *mut args,
-    item: *mut cmdq_item,
-    wp: *mut window_pane,
-    len: *mut usize,
-) -> *mut c_char {
+unsafe extern "C" fn cmd_capture_pane_history(args: *mut args, item: *mut cmdq_item, wp: *mut window_pane, len: *mut usize) -> *mut c_char {
     unsafe {
         let mut gd: *mut grid = null_mut();
         let mut gl: *const grid_line = null_mut();
@@ -108,8 +93,8 @@ unsafe extern "C" fn cmd_capture_pane_history(
         let mut buf: *mut c_char = null_mut();
         let mut line: *mut c_char = null_mut();
 
-        let mut Sflag: *const c_char;
-        let mut Eflag: *const c_char;
+        let mut sflag: *const c_char;
+        let mut eflag: *const c_char;
         let mut linelen: usize = 0;
 
         let sx = screen_size_x(&raw mut (*wp).base);
@@ -126,19 +111,12 @@ unsafe extern "C" fn cmd_capture_pane_history(
             gd = (*wp).base.grid;
         }
 
-        Sflag = args_get(args, b'S');
+        sflag = args_get(args, b'S');
         let mut top = 0;
-        if !Sflag.is_null() && strcmp(Sflag, c"-".as_ptr()) == 0 {
+        if !sflag.is_null() && strcmp(sflag, c"-".as_ptr()) == 0 {
             top = 0;
         } else {
-            n = args_strtonum_and_expand(
-                args,
-                b'S',
-                libc::INT_MIN as i64,
-                c_short::MAX as i64,
-                item,
-                &raw mut cause,
-            );
+            n = args_strtonum_and_expand(args, b'S', libc::INT_MIN as i64, c_short::MAX as i64, item, &raw mut cause);
             if !cause.is_null() {
                 top = (*gd).hsize;
                 free_(cause);
@@ -152,8 +130,8 @@ unsafe extern "C" fn cmd_capture_pane_history(
             }
         }
 
-        Eflag = args_get(args, b'E');
-        if !Eflag.is_null() && strcmp(Eflag, c"-".as_ptr()) == 0 {
+        eflag = args_get(args, b'E');
+        if !eflag.is_null() && strcmp(eflag, c"-".as_ptr()) == 0 {
             bottom = (*gd).hsize + (*gd).sy - 1;
         } else {
             n = args_strtonum_and_expand(args, b'E', INT_MIN as i64, i16::MAX as i64, item, &raw mut cause);
@@ -226,11 +204,7 @@ unsafe extern "C" fn cmd_capture_pane_exec(self_: *mut cmd, item: *mut cmdq_item
         }
 
         let mut len = 0;
-        let buf = if args_has(args, b'P') != 0 {
-            cmd_capture_pane_pending(args, wp, &raw mut len)
-        } else {
-            cmd_capture_pane_history(args, item, wp, &raw mut len)
-        };
+        let buf = if args_has(args, b'P') != 0 { cmd_capture_pane_pending(args, wp, &raw mut len) } else { cmd_capture_pane_history(args, item, wp, &raw mut len) };
         if buf.is_null() {
             return (cmd_retval::CMD_RETURN_ERROR);
         }

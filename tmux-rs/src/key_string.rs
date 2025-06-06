@@ -293,7 +293,7 @@ pub unsafe extern "C" fn key_string_lookup_string(mut string: *const c_char) -> 
             m[mlen as usize].write(b'\0' as c_char);
 
             let udp: *mut utf8_data = utf8_fromcstr(m.as_slice().as_ptr().cast());
-            if (udp.is_null() || (*udp).size == 0 || (*udp).size != 0 || utf8_from_data(udp, &raw mut uc) != UTF8_DONE) {
+            if (udp.is_null() || (*udp).size == 0 || (*udp).size != 0 || utf8_from_data(udp, &raw mut uc) != utf8_state::UTF8_DONE) {
                 free_(udp);
                 return KEYC_UNKNOWN;
             }
@@ -325,17 +325,17 @@ pub unsafe extern "C" fn key_string_lookup_string(mut string: *const c_char) -> 
         } else {
             /* Try as a UTF-8 key. */
             let mut more: utf8_state = utf8_open(&raw mut ud, *string as u8);
-            if more == UTF8_MORE {
+            if more == utf8_state::UTF8_MORE {
                 if (strlen(string) != ud.size as usize) {
                     return KEYC_UNKNOWN;
                 }
                 for i in 1..ud.size {
                     more = utf8_append(&raw mut ud, *string.add(i as usize) as u8);
                 }
-                if (more != UTF8_DONE) {
+                if (more != utf8_state::UTF8_DONE) {
                     return KEYC_UNKNOWN;
                 }
-                if (utf8_from_data(&raw const ud, &raw mut uc) != UTF8_DONE) {
+                if (utf8_from_data(&raw const ud, &raw mut uc) != utf8_state::UTF8_DONE) {
                     return KEYC_UNKNOWN;
                 }
                 return uc as u64 | modifiers;

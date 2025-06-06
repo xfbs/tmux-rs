@@ -428,56 +428,58 @@ unsafe extern "C" fn tty_keys_add1(mut tkp: *mut *mut tty_key, mut s: *const c_c
 /// Initialise a key tree from the table.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_keys_build(tty: *mut tty) {
-    let mut tdkr: *const tty_default_key_raw;
-    let mut tdkx: *const tty_default_key_xterm;
-    let mut tdkc: *const tty_default_key_code;
-    let mut s: *const c_char;
-    let mut o: *mut options_entry;
-    let mut a: *mut options_array_item;
-    let mut ov: *mut options_value;
-    let mut copy: [c_char; 16] = [0; 16];
-    let mut key: key_code;
+    unsafe {
+        let mut tdkr: *const tty_default_key_raw;
+        let mut tdkx: *const tty_default_key_xterm;
+        let mut tdkc: *const tty_default_key_code;
+        let mut s: *const c_char;
+        let mut o: *mut options_entry;
+        let mut a: *mut options_array_item;
+        let mut ov: *mut options_value;
+        let mut copy: [c_char; 16] = [0; 16];
+        let mut key: key_code;
 
-    if !(*tty).key_tree.is_null() {
-        tty_keys_free(tty);
-    }
-    (*tty).key_tree = null_mut();
-
-    for i in 0..tty_default_xterm_keys.len() {
-        tdkx = &tty_default_xterm_keys[i];
-        for j in 2..tty_default_xterm_modifiers.len() {
-            strlcpy(copy.as_mut_ptr(), (*tdkx).template.as_ptr(), size_of::<[c_char; 16]>());
-            copy[libc::strcspn(copy.as_ptr(), c"_".as_ptr()) as usize] = b'0' as c_char + j as c_char;
-
-            key = (*tdkx).key | tty_default_xterm_modifiers[j];
-            tty_keys_add(tty, copy.as_ptr(), key);
+        if !(*tty).key_tree.is_null() {
+            tty_keys_free(tty);
         }
-    }
+        (*tty).key_tree = null_mut();
 
-    for i in 0..tty_default_raw_keys.len() {
-        tdkr = &tty_default_raw_keys[i];
-        s = (*tdkr).string.as_ptr();
-        if *s != 0 {
-            tty_keys_add(tty, s, (*tdkr).key);
+        for i in 0..tty_default_xterm_keys.len() {
+            tdkx = &tty_default_xterm_keys[i];
+            for j in 2..tty_default_xterm_modifiers.len() {
+                strlcpy(copy.as_mut_ptr(), (*tdkx).template.as_ptr(), size_of::<[c_char; 16]>());
+                copy[libc::strcspn(copy.as_ptr(), c"_".as_ptr()) as usize] = b'0' as c_char + j as c_char;
+
+                key = (*tdkx).key | tty_default_xterm_modifiers[j];
+                tty_keys_add(tty, copy.as_ptr(), key);
+            }
         }
-    }
 
-    for i in 0..tty_default_code_keys.len() {
-        tdkc = &tty_default_code_keys[i];
-        s = tty_term_string((*tty).term, (*tdkc).code);
-        if *s != 0 {
-            tty_keys_add(tty, s, (*tdkc).key);
+        for i in 0..tty_default_raw_keys.len() {
+            tdkr = &tty_default_raw_keys[i];
+            s = (*tdkr).string.as_ptr();
+            if *s != 0 {
+                tty_keys_add(tty, s, (*tdkr).key);
+            }
         }
-    }
 
-    o = options_get(global_options, c"user-keys".as_ptr());
-    if !o.is_null() {
-        a = options_array_first(o);
-        while !a.is_null() {
-            let i = options_array_item_index(a) as u64;
-            ov = options_array_item_value(a);
-            tty_keys_add(tty, (*ov).string, KEYC_USER + i);
-            a = options_array_next(a);
+        for i in 0..tty_default_code_keys.len() {
+            tdkc = &tty_default_code_keys[i];
+            s = tty_term_string((*tty).term, (*tdkc).code);
+            if *s != 0 {
+                tty_keys_add(tty, s, (*tdkc).key);
+            }
+        }
+
+        o = options_get(global_options, c"user-keys".as_ptr());
+        if !o.is_null() {
+            a = options_array_first(o);
+            while !a.is_null() {
+                let i = options_array_item_index(a) as u64;
+                ov = options_array_item_value(a);
+                tty_keys_add(tty, (*ov).string, KEYC_USER + i);
+                a = options_array_next(a);
+            }
         }
     }
 }
@@ -518,40 +520,42 @@ pub unsafe extern "C" fn tty_keys_find(tty: *mut tty, buf: *const c_char, len: u
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn tty_keys_find1(mut tk: *mut tty_key, mut buf: *const c_char, mut len: usize, size: *mut usize) -> *mut tty_key {
-    // If no data, no match
-    if len == 0 {
-        return null_mut();
-    }
-
-    // If the node is NULL, this is the end of the tree. No match
-    if tk.is_null() {
-        return null_mut();
-    }
-
-    // Pick the next in the sequence
-    if (*tk).ch == *buf {
-        // Move forward in the string
-        buf = buf.add(1);
-        len = len - 1;
-        *size += 1;
-
-        // At the end of the string, return the current node
-        if len == 0 || ((*tk).next.is_null() && (*tk).key != KEYC_UNKNOWN) {
-            return tk;
+    unsafe {
+        // If no data, no match
+        if len == 0 {
+            return null_mut();
         }
 
-        // Move into the next tree for the following character
-        tk = (*tk).next;
-    } else {
-        if *buf < (*tk).ch {
-            tk = (*tk).left;
-        } else if *buf > (*tk).ch {
-            tk = (*tk).right;
+        // If the node is NULL, this is the end of the tree. No match
+        if tk.is_null() {
+            return null_mut();
         }
-    }
 
-    // Move to the next in the tree
-    tty_keys_find1(tk, buf, len, size)
+        // Pick the next in the sequence
+        if (*tk).ch == *buf {
+            // Move forward in the string
+            buf = buf.add(1);
+            len = len - 1;
+            *size += 1;
+
+            // At the end of the string, return the current node
+            if len == 0 || ((*tk).next.is_null() && (*tk).key != KEYC_UNKNOWN) {
+                return tk;
+            }
+
+            // Move into the next tree for the following character
+            tk = (*tk).next;
+        } else {
+            if *buf < (*tk).ch {
+                tk = (*tk).left;
+            } else if *buf > (*tk).ch {
+                tk = (*tk).right;
+            }
+        }
+
+        // Move to the next in the tree
+        tty_keys_find1(tk, buf, len, size)
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -587,7 +591,7 @@ unsafe extern "C" fn tty_keys_next1(tty: *mut tty, buf: *const c_char, len: usiz
 
         /* Is this valid UTF-8? */
         more = utf8_open(&mut ud, *buf as u8);
-        if more == UTF8_MORE {
+        if more == utf8_state::UTF8_MORE {
             *size = ud.size as usize;
             if len < ud.size as usize {
                 if expired == 0 {
@@ -598,11 +602,11 @@ unsafe extern "C" fn tty_keys_next1(tty: *mut tty, buf: *const c_char, len: usiz
             for i in 1..ud.size {
                 more = utf8_append(&mut ud, *buf.add(i as usize) as u8);
             }
-            if more != UTF8_DONE {
+            if more != utf8_state::UTF8_DONE {
                 return -1;
             }
 
-            if utf8_from_data(&raw const ud, &raw mut uc) != UTF8_DONE {
+            if utf8_from_data(&raw const ud, &raw mut uc) != utf8_state::UTF8_DONE {
                 return -1;
             }
             *key = uc as u64;
@@ -987,7 +991,7 @@ unsafe extern "C" fn tty_keys_extended_key(tty: *mut tty, buf: *const c_char, le
 
         /* Convert UTF-32 codepoint into internal representation. */
         if nkey != keyc::KEYC_BSPACE as key_code && (nkey & !0x7f) != 0 {
-            if utf8_fromwc(nkey as wchar_t, &raw mut ud) == UTF8_DONE && utf8_from_data(&raw const ud, &raw mut uc) == UTF8_DONE {
+            if utf8_fromwc(nkey as wchar_t, &raw mut ud) == utf8_state::UTF8_DONE && utf8_from_data(&raw const ud, &raw mut uc) == utf8_state::UTF8_DONE {
                 nkey = uc as key_code;
             } else {
                 return -1;

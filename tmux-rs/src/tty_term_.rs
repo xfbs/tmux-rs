@@ -720,7 +720,6 @@ pub unsafe extern "C" fn tty_term_read_list(name: *const c_char, fd: i32, caps: 
     unsafe {
         let mut ent: *mut tty_term_code_entry = null_mut();
         let mut error = 0;
-        let mut n = 0;
         let mut tmp: [c_char; 11] = [0; 11];
         let sizeof_tmp = 11;
 

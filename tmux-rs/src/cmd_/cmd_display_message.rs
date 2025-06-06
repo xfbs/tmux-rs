@@ -37,7 +37,7 @@ unsafe extern "C" fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_i
         let mut wp = (*target).wp;
         let mut cause: *mut c_char = null_mut();
         let mut delay = -1;
-        let mut Nflag = args_has(args, b'N');
+        let mut nflag = args_has(args, b'N');
         let mut count = args_count(args);
 
         if (args_has_(args, 'I')) {
@@ -117,7 +117,7 @@ unsafe extern "C" fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_i
             server_client_print(tc, 0, evb);
             evbuffer_free(evb);
         } else if (!tc.is_null()) {
-            status_message_set(tc, delay as i32, 0, Nflag, c"%s".as_ptr(), msg);
+            status_message_set(tc, delay as i32, 0, nflag, c"%s".as_ptr(), msg);
         }
         free_(msg);
 

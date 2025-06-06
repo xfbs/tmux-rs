@@ -23,11 +23,7 @@ pub unsafe extern "C" fn name_time_expired(w: *mut window, tv: *mut timeval) -> 
         timersub(tv, &raw mut (*w).name_time, offset.as_mut_ptr());
         let offset = offset.assume_init_ref();
 
-        if offset.tv_sec != 0 || offset.tv_usec > NAME_INTERVAL as i64 {
-            0
-        } else {
-            NAME_INTERVAL - offset.tv_usec as c_int
-        }
+        if offset.tv_sec != 0 || offset.tv_usec > NAME_INTERVAL as i64 { 0 } else { NAME_INTERVAL - offset.tv_usec as c_int }
     }
 }
 
@@ -36,7 +32,6 @@ pub unsafe fn check_window_name(w: *mut window) {
     unsafe {
         let mut tv: timeval = zeroed();
         let mut next: timeval = zeroed();
-        let mut left = 0;
 
         if (*w).active.is_null() {
             return;
@@ -97,11 +92,7 @@ pub unsafe extern "C" fn default_window_name(w: *mut window) -> *mut c_char {
         }
 
         let cmd = cmd_stringify_argv((*(*w).active).argc, (*(*w).active).argv);
-        let s = if !cmd.is_null() && *cmd != b'\0' as _ {
-            parse_window_name(cmd)
-        } else {
-            parse_window_name((*(*w).active).shell)
-        };
+        let s = if !cmd.is_null() && *cmd != b'\0' as _ { parse_window_name(cmd) } else { parse_window_name((*(*w).active).shell) };
         free(cmd as _);
         s
     }
@@ -109,12 +100,7 @@ pub unsafe extern "C" fn default_window_name(w: *mut window) -> *mut c_char {
 
 unsafe extern "C" fn format_window_name(w: *mut window) -> *const c_char {
     unsafe {
-        let ft = format_create(
-            null_mut(),
-            null_mut(),
-            (FORMAT_WINDOW | (*w).id) as i32,
-            format_flags::empty(),
-        );
+        let ft = format_create(null_mut(), null_mut(), (FORMAT_WINDOW | (*w).id) as i32, format_flags::empty());
         format_defaults_window(ft, w);
         format_defaults_pane(ft, (*w).active);
 

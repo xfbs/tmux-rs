@@ -1652,19 +1652,21 @@ unsafe extern "C" fn input_csi_dispatch_sm_private(ictx: *mut input_ctx) {
 /// Handle CSI graphics SM.
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_csi_dispatch_sm_graphics(ictx: *mut input_ctx) {
-    #[cfg(feature = "sixel")]
-    {
-        if (*ictx).param_list_len > 3 {
-            return;
-        }
-        let n = input_get(ictx, 0, 0, 0);
-        let m = input_get(ictx, 1, 0, 0);
-        let o = input_get(ictx, 2, 0, 0);
+    unsafe {
+        #[cfg(feature = "sixel")]
+        {
+            if (*ictx).param_list_len > 3 {
+                return;
+            }
+            let n = input_get(ictx, 0, 0, 0);
+            let m = input_get(ictx, 1, 0, 0);
+            let o = input_get(ictx, 2, 0, 0);
 
-        if n == 1 && (m == 1 || m == 2 || m == 4) {
-            input_reply(ictx, c"\x1b[?%d;0;%uS".as_ptr(), n, SIXEL_COLOUR_REGISTERS);
-        } else {
-            input_reply(ictx, c"\x1b[?%d;3;%dS".as_ptr(), n, o);
+            if n == 1 && (m == 1 || m == 2 || m == 4) {
+                input_reply(ictx, c"\x1b[?%d;0;%uS".as_ptr(), n, SIXEL_COLOUR_REGISTERS);
+            } else {
+                input_reply(ictx, c"\x1b[?%d;3;%dS".as_ptr(), n, o);
+            }
         }
     }
 }
@@ -2245,7 +2247,7 @@ unsafe extern "C" fn input_top_bit_set(ictx: *mut input_ctx) -> i32 {
         (*ictx).flags &= !input_flags::INPUT_LAST;
 
         if (*ictx).utf8started == 0 {
-            if utf8_open(ud, (*ictx).ch as u8) != UTF8_MORE {
+            if utf8_open(ud, (*ictx).ch as u8) != utf8_state::UTF8_MORE {
                 return 0;
             }
             (*ictx).utf8started = 1;
@@ -2253,12 +2255,12 @@ unsafe extern "C" fn input_top_bit_set(ictx: *mut input_ctx) -> i32 {
         }
 
         match utf8_append(ud, (*ictx).ch as u8) {
-            UTF8_MORE => return 0,
-            UTF8_ERROR => {
+            utf8_state::UTF8_MORE => return 0,
+            utf8_state::UTF8_ERROR => {
                 (*ictx).utf8started = 0;
                 return 0;
             }
-            UTF8_DONE => (),
+            utf8_state::UTF8_DONE => (),
         }
         (*ictx).utf8started = 0;
 

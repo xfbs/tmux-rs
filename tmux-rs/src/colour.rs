@@ -27,7 +27,7 @@ use xmalloc::xstrndup;
 const COLOUR_FLAG_256: i32 = 0x01000000;
 const COLOUR_FLAG_RGB: i32 = 0x02000000;
 
-fn colour_dist_sq(R: i32, G: i32, B: i32, r: i32, g: i32, b: i32) -> i32 { (R - r) * (R - r) + (G - g) * (G - g) + (B - b) * (B - b) }
+fn colour_dist_sq(r1: i32, g1: i32, b1: i32, r2: i32, g2: i32, b2: i32) -> i32 { (r1 - r2) * (r1 - r2) + (g1 - g2) * (g1 - g2) + (b1 - b2) * (b1 - b2) }
 
 fn colour_to_6cube(v: i32) -> i32 {
     if v < 48 {

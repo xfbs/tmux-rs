@@ -108,7 +108,7 @@ unsafe extern "C" fn log_vwrite(msg: &CStr, mut ap: VaList, prefix: &CStr) {
         }
 
         let mut out: *mut c_char = null_mut();
-        if stravis(&mut out, s, (VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL) as i32) == -1 {
+        if stravis(&mut out, s, VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL) == -1 {
             free(s as _);
             return;
         }
@@ -199,7 +199,7 @@ fn log_vwrite_rs(args: std::fmt::Arguments, prefix: &str) {
 
         let msg = format!("{args}\0").to_string();
         let mut out: *mut c_char = null_mut();
-        if stravis(&mut out, msg.as_ptr().cast(), (VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL) as i32) == -1 {
+        if stravis(&mut out, msg.as_ptr().cast(), VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL) == -1 {
             return;
         }
         let duration = std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH).unwrap_or_default();

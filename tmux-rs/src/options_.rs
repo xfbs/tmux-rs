@@ -54,10 +54,12 @@ pub struct options {
     pub parent: *mut options,
 }
 
+#[allow(non_snake_case)]
 #[inline]
 #[unsafe(no_mangle)]
 pub fn OPTIONS_IS_STRING(o: *const options_entry) -> bool { unsafe { (*o).tableentry.is_null() || (*(*o).tableentry).type_ == options_table_type::OPTIONS_TABLE_STRING } }
 
+#[allow(non_snake_case)]
 #[inline]
 #[unsafe(no_mangle)]
 pub fn OPTIONS_IS_NUMBER(o: *const options_entry) -> bool {
@@ -71,10 +73,12 @@ pub fn OPTIONS_IS_NUMBER(o: *const options_entry) -> bool {
     }
 }
 
+#[allow(non_snake_case)]
 #[inline]
 #[unsafe(no_mangle)]
 pub fn OPTIONS_IS_COMMAND(o: *const options_entry) -> bool { unsafe { !(*o).tableentry.is_null() && (*(*o).tableentry).type_ == options_table_type::OPTIONS_TABLE_COMMAND } }
 
+#[allow(non_snake_case)]
 #[inline]
 #[unsafe(no_mangle)]
 pub fn OPTIONS_IS_ARRAY(o: *const options_entry) -> bool { unsafe { !(*o).tableentry.is_null() && ((*(*o).tableentry).flags & OPTIONS_TABLE_IS_ARRAY) != 0 } }

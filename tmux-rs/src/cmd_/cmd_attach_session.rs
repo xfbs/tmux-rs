@@ -18,7 +18,7 @@ pub static mut cmd_attach_session_entry: cmd_entry = cmd_entry {
 };
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_attach_session(item: *mut cmdq_item, tflag: *const c_char, dflag: c_int, xflag: c_int, rflag: c_int, cflag: *const c_char, Eflag: c_int, fflag: *const c_char) -> cmd_retval {
+pub unsafe extern "C" fn cmd_attach_session(item: *mut cmdq_item, tflag: *const c_char, dflag: c_int, xflag: c_int, rflag: c_int, cflag: *const c_char, eflag: c_int, fflag: *const c_char) -> cmd_retval {
     unsafe {
         let mut current: *mut cmd_find_state = cmdq_get_current(item);
         let mut target: cmd_find_state = zeroed(); // TODO can be uninit
@@ -104,7 +104,7 @@ pub unsafe extern "C" fn cmd_attach_session(item: *mut cmdq_item, tflag: *const 
                     }
                 }
             }
-            if Eflag == 0 {
+            if eflag == 0 {
                 environ_update((*s).options, (*c).environ, (*s).environ);
             }
 
@@ -128,7 +128,7 @@ pub unsafe extern "C" fn cmd_attach_session(item: *mut cmdq_item, tflag: *const 
                     server_client_detach(c_loop, msgtype);
                 }
             }
-            if Eflag == 0 {
+            if eflag == 0 {
                 environ_update((*s).options, (*c).environ, (*s).environ);
             }
 

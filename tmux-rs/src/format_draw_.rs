@@ -585,505 +585,511 @@ unsafe extern "C" fn format_draw_absolute_centre(
 // Get width and count of any leading #s.
 #[unsafe(no_mangle)]
 unsafe extern "C" fn format_leading_hashes(cp: *const c_char, n: *mut u32, width: *mut u32) -> *const c_char {
-    *n = 0;
-    while *cp.add(*n as usize) == b'#' as i8 {
-        *n += 1;
-    }
-    if (*n == 0) {
-        *width = 0;
-        return cp;
-    }
-    if *cp.add(*n as usize) != b'[' as i8 {
-        if *n % 2 == 0 {
-            *width = *n / 2;
-        } else {
-            *width = *n / 2 + 1;
+    unsafe {
+        *n = 0;
+        while *cp.add(*n as usize) == b'#' as i8 {
+            *n += 1;
         }
-        return cp.add(*n as usize);
+        if (*n == 0) {
+            *width = 0;
+            return cp;
+        }
+        if *cp.add(*n as usize) != b'[' as i8 {
+            if *n % 2 == 0 {
+                *width = *n / 2;
+            } else {
+                *width = *n / 2 + 1;
+            }
+            return cp.add(*n as usize);
+        }
+        *width = *n / 2;
+        if *n % 2 == 0 {
+            /*
+             * An even number of #s means that all #s are escaped, so not a
+             * style. The caller should not skip this. Return pointing to
+             * the [.
+             */
+            return cp.add(*n as usize);
+        }
+        // This is a style, so return pointing to the #.
+        cp.add(*n as usize - 1)
     }
-    *width = *n / 2;
-    if *n % 2 == 0 {
-        /*
-         * An even number of #s means that all #s are escaped, so not a
-         * style. The caller should not skip this. Return pointing to
-         * the [.
-         */
-        return cp.add(*n as usize);
-    }
-    // This is a style, so return pointing to the #.
-    return cp.add(*n as usize - 1);
 }
 
 // Draw multiple characters.
 #[unsafe(no_mangle)]
 unsafe extern "C" fn format_draw_many(ctx: *mut screen_write_ctx, sy: *mut style, ch: c_char, n: u32) {
-    let mut i: u32;
+    unsafe {
+        let mut i: u32;
 
-    utf8_set(&raw mut (*sy).gc.data, ch as u8);
-    for i in 0..n {
-        screen_write_cell(ctx, &raw mut (*sy).gc);
+        utf8_set(&raw mut (*sy).gc.data, ch as u8);
+        for i in 0..n {
+            screen_write_cell(ctx, &raw mut (*sy).gc);
+        }
     }
 }
 
 /// Draw a format to a screen.
 #[unsafe(no_mangle)]
 pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, available: c_uint, expanded: *const c_char, srs: *mut style_ranges, default_colours: c_int) {
-    let func = "format_draw";
-    let mut __func__ = c"format_draw".as_ptr();
     unsafe {
-        #[derive(Copy, Clone, Eq, PartialEq)]
-        #[repr(u32)]
-        enum Current {
-            LEFT,
-            CENTRE,
-            RIGHT,
-            ABSOLUTE_CENTRE,
-            LIST,
-            LIST_LEFT,
-            LIST_RIGHT,
-            AFTER,
-        };
-        const TOTAL: usize = Current::AFTER as usize + 1;
+        let func = "format_draw";
+        let mut __func__ = c"format_draw".as_ptr();
+        unsafe {
+            #[derive(Copy, Clone, Eq, PartialEq)]
+            #[repr(u32)]
+            enum Current {
+                LEFT,
+                CENTRE,
+                RIGHT,
+                ABSOLUTE_CENTRE,
+                LIST,
+                LIST_LEFT,
+                LIST_RIGHT,
+                AFTER,
+            };
+            const TOTAL: usize = Current::AFTER as usize + 1;
 
-        let mut current = Current::LEFT;
-        let mut last = Current::LEFT;
+            let mut current = Current::LEFT;
+            let mut last = Current::LEFT;
 
-        static names: [&str; TOTAL] = ["LEFT", "CENTRE", "RIGHT", "ABSOLUTE_CENTRE", "LIST", "LIST_LEFT", "LIST_RIGHT", "AFTER"];
+            static names: [&str; TOTAL] = ["LEFT", "CENTRE", "RIGHT", "ABSOLUTE_CENTRE", "LIST", "LIST_LEFT", "LIST_RIGHT", "AFTER"];
 
-        let size = libc::strlen(expanded) as u32;
-        let mut os: *mut screen = (*octx).s;
-        let mut s: [screen; TOTAL] = zeroed();
+            let size = libc::strlen(expanded) as u32;
+            let mut os: *mut screen = (*octx).s;
+            let mut s: [screen; TOTAL] = zeroed();
 
-        let mut ctx: [screen_write_ctx; TOTAL] = zeroed();
-        let mut ocx: u32 = (*os).cx;
-        let mut ocy: u32 = (*os).cy;
-        let mut width: [u32; TOTAL] = [0; TOTAL];
+            let mut ctx: [screen_write_ctx; TOTAL] = zeroed();
+            let mut ocx: u32 = (*os).cx;
+            let mut ocy: u32 = (*os).cy;
+            let mut width: [u32; TOTAL] = [0; TOTAL];
 
-        let mut map: [Current; 5] = [Current::LEFT, Current::LEFT, Current::CENTRE, Current::RIGHT, Current::ABSOLUTE_CENTRE];
+            let mut map: [Current; 5] = [Current::LEFT, Current::LEFT, Current::CENTRE, Current::RIGHT, Current::ABSOLUTE_CENTRE];
 
-        let mut focus_start: i32 = -1;
-        let mut focus_end: i32 = -1;
-        let mut list_state: i32 = -1;
-        let mut fill = -1;
-        let mut list_align = style_align::STYLE_ALIGN_DEFAULT;
+            let mut focus_start: i32 = -1;
+            let mut focus_end: i32 = -1;
+            let mut list_state: i32 = -1;
+            let mut fill = -1;
+            let mut list_align = style_align::STYLE_ALIGN_DEFAULT;
 
-        let mut gc: grid_cell = zeroed();
-        let mut current_default: grid_cell = zeroed();
-        let mut sy: style = zeroed();
-        let mut saved_sy: style = zeroed();
+            let mut gc: grid_cell = zeroed();
+            let mut current_default: grid_cell = zeroed();
+            let mut sy: style = zeroed();
+            let mut saved_sy: style = zeroed();
 
-        let mut ud: *mut utf8_data = &raw mut sy.gc.data;
-        let mut more = utf8_state::UTF8_ERROR;
+            let mut ud: *mut utf8_data = &raw mut sy.gc.data;
+            let mut more = utf8_state::UTF8_ERROR;
 
-        // const char *cp, *end;
-        // enum utf8_state more;
-        // char *tmp;
-        let mut fr = null_mut();
-        // struct format_range *fr = NULL, *fr1;
-        // struct style_range *sr;
-        let mut frs: format_ranges = zeroed();
+            // const char *cp, *end;
+            // enum utf8_state more;
+            // char *tmp;
+            let mut fr = null_mut();
+            // struct format_range *fr = NULL, *fr1;
+            // struct style_range *sr;
+            let mut frs: format_ranges = zeroed();
 
-        memcpy__(&raw mut current_default, base);
-        style_set(&raw mut sy, &raw mut current_default);
-        tailq_init(&raw mut frs);
-        // log_debug("%s: %s", __func__, expanded);
+            memcpy__(&raw mut current_default, base);
+            style_set(&raw mut sy, &raw mut current_default);
+            tailq_init(&raw mut frs);
+            // log_debug("%s: %s", __func__, expanded);
 
-        // We build three screens for left, right, centre alignment, one for
-        // the list, one for anything after the list and two for the list left
-        // and right markers.
-        for i in 0..TOTAL {
-            screen_init(&raw mut s[i], size, 1, 0);
-            screen_write_start(&raw mut ctx[i], &raw mut s[i]);
-            screen_write_clearendofline(&raw mut ctx[i], current_default.bg as u32);
-            width[i] = 0;
-        }
+            // We build three screens for left, right, centre alignment, one for
+            // the list, one for anything after the list and two for the list left
+            // and right markers.
+            for i in 0..TOTAL {
+                screen_init(&raw mut s[i], size, 1, 0);
+                screen_write_start(&raw mut ctx[i], &raw mut s[i]);
+                screen_write_clearendofline(&raw mut ctx[i], current_default.bg as u32);
+                width[i] = 0;
+            }
 
-        'out: {
-            // Walk the string and add to the corresponding screens,
-            // parsing styles as we go.
-            let mut cp = expanded;
-            while *cp != b'\0' as i8 {
-                // Handle sequences of #.
-                if *cp == b'#' as i8 && *cp.add(1) != b'[' as i8 && *cp.add(1) != b'\0' as i8 {
-                    let mut n: u32 = 1;
-                    while *cp.add(n as usize) == b'#' as i8 {
-                        n += 1;
-                    }
-                    let even = n % 2 == 0;
-                    if *cp.add(n as usize) != b'[' as i8 {
-                        cp = cp.add(n as usize);
-                        n = n.div_ceil(2);
-                        width[current as usize] += n as u32;
-                        format_draw_many(&raw mut ctx[current as usize], &raw mut sy, b'#' as i8, n);
-                        continue;
-                    }
-                    cp = cp.add(if even { n as usize + 1 } else { n as usize - 1 });
-                    if sy.ignore != 0 {
-                        continue;
-                    }
-                    format_draw_many(&raw mut ctx[current as usize], &raw mut sy, b'#' as i8, n / 2);
-                    width[current as usize] += (n / 2);
-                    if even {
-                        utf8_set(ud, b'[');
-                        screen_write_cell(&raw mut ctx[current as usize], &raw mut sy.gc);
-                        width[current as usize] += 1;
-                    }
-                    continue;
-                }
-
-                // Is this not a style?
-                if *cp != b'#' as i8 || *cp.add(1) != b'[' as i8 || sy.ignore != 0 {
-                    // See if this is a UTF-8 character.
-                    if ({
-                        more = utf8_open(ud, *cp as u8);
-                        more == UTF8_MORE
-                    }) {
-                        while ({
-                            cp = cp.add(1);
-                            *cp != b'\0' as i8
-                        }) && more == utf8_state::UTF8_MORE
-                        {
-                            more = utf8_append(ud, *cp as u8);
+            'out: {
+                // Walk the string and add to the corresponding screens,
+                // parsing styles as we go.
+                let mut cp = expanded;
+                while *cp != b'\0' as i8 {
+                    // Handle sequences of #.
+                    if *cp == b'#' as i8 && *cp.add(1) != b'[' as i8 && *cp.add(1) != b'\0' as i8 {
+                        let mut n: u32 = 1;
+                        while *cp.add(n as usize) == b'#' as i8 {
+                            n += 1;
                         }
-                        if more != utf8_state::UTF8_DONE {
-                            cp = cp.wrapping_sub((*ud).have as usize);
-                        }
-                    }
-
-                    // Not a UTF-8 character - ASCII or not valid.
-                    if more != utf8_state::UTF8_DONE {
-                        if *cp < 0x20 || *cp > 0x7e {
-                            // Ignore nonprintable characters.
-                            cp = cp.add(1);
+                        let even = n % 2 == 0;
+                        if *cp.add(n as usize) != b'[' as i8 {
+                            cp = cp.add(n as usize);
+                            n = n.div_ceil(2);
+                            width[current as usize] += n as u32;
+                            format_draw_many(&raw mut ctx[current as usize], &raw mut sy, b'#' as i8, n);
                             continue;
                         }
-                        utf8_set(ud, *cp as u8);
-                        cp = cp.add(1);
+                        cp = cp.add(if even { n as usize + 1 } else { n as usize - 1 });
+                        if sy.ignore != 0 {
+                            continue;
+                        }
+                        format_draw_many(&raw mut ctx[current as usize], &raw mut sy, b'#' as i8, n / 2);
+                        width[current as usize] += (n / 2);
+                        if even {
+                            utf8_set(ud, b'[');
+                            screen_write_cell(&raw mut ctx[current as usize], &raw mut sy.gc);
+                            width[current as usize] += 1;
+                        }
+                        continue;
                     }
 
-                    // Draw the cell to the current screen.
-                    screen_write_cell(&raw mut ctx[current as u32 as usize], &raw mut sy.gc);
-                    width[current as usize] += (*ud).width as u32;
-                    continue;
-                }
-
-                /* This is a style. Work out where the end is and parse it. */
-                let mut end = format_skip(cp.add(2), c"]".as_ptr());
-                if end.is_null() {
-                    // log_debug("%s: no terminating ] at '%s'", __func__, cp + 2);
-                    for fr_ in tailq_foreach(&raw mut frs).map(NonNull::as_ptr) {
-                        fr = fr_;
-                        // TODO warning this seems to break the aliasing rules
-                        format_free_range(&raw mut frs, fr);
-                    }
-                    break 'out;
-                }
-                let mut tmp: *mut i8 = xstrndup(cp.add(2), end.offset_from(cp.add(2)) as usize).as_ptr().cast();
-                style_copy(&raw mut saved_sy, &raw const sy);
-                if style_parse(&raw mut sy, &raw mut current_default, tmp) != 0 {
-                    log_debug!("{}: invalid style '{}'", func, _s(tmp));
-                    free_(tmp);
-                    cp = end.add(1);
-                    continue;
-                }
-                log_debug!("{}: style '{}' -> '{}'", func, _s(tmp), _s(style_tostring(&raw const sy)));
-                free_(tmp);
-                if default_colours != 0 {
-                    sy.gc.bg = (*base).bg;
-                    sy.gc.fg = (*base).fg;
-                }
-
-                /* If this style has a fill colour, store it for later. */
-                if sy.fill != 8 {
-                    fill = sy.fill;
-                }
-
-                /* If this style pushed or popped the default, update it. */
-                if (sy.default_type == style_default_type::STYLE_DEFAULT_PUSH) {
-                    memcpy__(&raw mut current_default, &raw const saved_sy.gc);
-                    sy.default_type = style_default_type::STYLE_DEFAULT_BASE;
-                } else if (sy.default_type == style_default_type::STYLE_DEFAULT_POP) {
-                    memcpy__(&raw mut current_default, base);
-                    sy.default_type = style_default_type::STYLE_DEFAULT_BASE;
-                }
-
-                /* Check the list state. */
-                match sy.list {
-                    style_list::STYLE_LIST_ON => {
-                        /*
-                         * Entering the list, exiting a marker, or exiting the
-                         * focus.
-                         */
-                        if (list_state != 0) {
-                            if !fr.is_null() {
-                                // abort any region
-                                free_(fr);
-                                fr = null_mut()
+                    // Is this not a style?
+                    if *cp != b'#' as i8 || *cp.add(1) != b'[' as i8 || sy.ignore != 0 {
+                        // See if this is a UTF-8 character.
+                        if ({
+                            more = utf8_open(ud, *cp as u8);
+                            more == utf8_state::UTF8_MORE
+                        }) {
+                            while ({
+                                cp = cp.add(1);
+                                *cp != b'\0' as i8
+                            }) && more == utf8_state::UTF8_MORE
+                            {
+                                more = utf8_append(ud, *cp as u8);
                             }
-                            list_state = 0;
-                            list_align = sy.align;
+                            if more != utf8_state::UTF8_DONE {
+                                cp = cp.wrapping_sub((*ud).have as usize);
+                            }
                         }
 
-                        /* End the focus if started. */
-                        if (focus_start != -1 && focus_end == -1) {
-                            focus_end = s[Current::LIST as usize].cx as i32;
+                        // Not a UTF-8 character - ASCII or not valid.
+                        if more != utf8_state::UTF8_DONE {
+                            if *cp < 0x20 || *cp > 0x7e {
+                                // Ignore nonprintable characters.
+                                cp = cp.add(1);
+                                continue;
+                            }
+                            utf8_set(ud, *cp as u8);
+                            cp = cp.add(1);
                         }
 
-                        current = Current::LIST;
+                        // Draw the cell to the current screen.
+                        screen_write_cell(&raw mut ctx[current as u32 as usize], &raw mut sy.gc);
+                        width[current as usize] += (*ud).width as u32;
+                        continue;
                     }
-                    style_list::STYLE_LIST_FOCUS => {
-                        /* Entering the focus. */
-                        if (list_state != 0) {
-                            /* not inside the list */
-                            break;
+
+                    /* This is a style. Work out where the end is and parse it. */
+                    let mut end = format_skip(cp.add(2), c"]".as_ptr());
+                    if end.is_null() {
+                        // log_debug("%s: no terminating ] at '%s'", __func__, cp + 2);
+                        for fr_ in tailq_foreach(&raw mut frs).map(NonNull::as_ptr) {
+                            fr = fr_;
+                            // TODO warning this seems to break the aliasing rules
+                            format_free_range(&raw mut frs, fr);
                         }
-                        if (focus_start == -1) {
-                            /* focus already started */
-                            focus_start = s[Current::LIST as usize].cx as i32;
-                        }
+                        break 'out;
                     }
-                    style_list::STYLE_LIST_OFF => {
-                        /* Exiting or outside the list. */
-                        if (list_state == 0) {
+                    let mut tmp: *mut i8 = xstrndup(cp.add(2), end.offset_from(cp.add(2)) as usize).as_ptr().cast();
+                    style_copy(&raw mut saved_sy, &raw const sy);
+                    if style_parse(&raw mut sy, &raw mut current_default, tmp) != 0 {
+                        log_debug!("{}: invalid style '{}'", func, _s(tmp));
+                        free_(tmp);
+                        cp = end.add(1);
+                        continue;
+                    }
+                    log_debug!("{}: style '{}' -> '{}'", func, _s(tmp), _s(style_tostring(&raw const sy)));
+                    free_(tmp);
+                    if default_colours != 0 {
+                        sy.gc.bg = (*base).bg;
+                        sy.gc.fg = (*base).fg;
+                    }
+
+                    /* If this style has a fill colour, store it for later. */
+                    if sy.fill != 8 {
+                        fill = sy.fill;
+                    }
+
+                    /* If this style pushed or popped the default, update it. */
+                    if (sy.default_type == style_default_type::STYLE_DEFAULT_PUSH) {
+                        memcpy__(&raw mut current_default, &raw const saved_sy.gc);
+                        sy.default_type = style_default_type::STYLE_DEFAULT_BASE;
+                    } else if (sy.default_type == style_default_type::STYLE_DEFAULT_POP) {
+                        memcpy__(&raw mut current_default, base);
+                        sy.default_type = style_default_type::STYLE_DEFAULT_BASE;
+                    }
+
+                    /* Check the list state. */
+                    match sy.list {
+                        style_list::STYLE_LIST_ON => {
+                            /*
+                             * Entering the list, exiting a marker, or exiting the
+                             * focus.
+                             */
+                            if (list_state != 0) {
+                                if !fr.is_null() {
+                                    // abort any region
+                                    free_(fr);
+                                    fr = null_mut()
+                                }
+                                list_state = 0;
+                                list_align = sy.align;
+                            }
+
+                            /* End the focus if started. */
+                            if (focus_start != -1 && focus_end == -1) {
+                                focus_end = s[Current::LIST as usize].cx as i32;
+                            }
+
+                            current = Current::LIST;
+                        }
+                        style_list::STYLE_LIST_FOCUS => {
+                            /* Entering the focus. */
+                            if (list_state != 0) {
+                                /* not inside the list */
+                                break;
+                            }
+                            if (focus_start == -1) {
+                                /* focus already started */
+                                focus_start = s[Current::LIST as usize].cx as i32;
+                            }
+                        }
+                        style_list::STYLE_LIST_OFF => {
+                            /* Exiting or outside the list. */
+                            if (list_state == 0) {
+                                if !fr.is_null() {
+                                    /* abort any region */
+                                    free_(fr);
+                                    fr = null_mut();
+                                }
+                                if (focus_start != -1 && focus_end == -1) {
+                                    focus_end = s[Current::LIST as usize].cx as i32;
+                                }
+
+                                map[list_align as usize] = Current::AFTER;
+                                if list_align == style_align::STYLE_ALIGN_LEFT {
+                                    map[style_align::STYLE_ALIGN_DEFAULT as usize] = Current::AFTER;
+                                }
+                                list_state = 1;
+                            }
+                            current = map[sy.align as usize];
+                        }
+                        style_list::STYLE_LIST_LEFT_MARKER => {
+                            /* Entering left marker. */
+                            if (list_state != 0) {
+                                /* not inside the list */
+                                break;
+                            }
+                            if (s[Current::LIST_LEFT as usize].cx != 0) {
+                                /* already have marker */
+                                break;
+                            }
                             if !fr.is_null() {
                                 /* abort any region */
                                 free_(fr);
                                 fr = null_mut();
                             }
                             if (focus_start != -1 && focus_end == -1) {
-                                focus_end = s[Current::LIST as usize].cx as i32;
+                                focus_start = -1;
+                                focus_end = -1;
                             }
+                            current = Current::LIST_LEFT;
+                        }
+                        style_list::STYLE_LIST_RIGHT_MARKER => {
+                            // note conditions are flipped from original c source because of break
 
-                            map[list_align as usize] = Current::AFTER;
-                            if list_align == style_align::STYLE_ALIGN_LEFT {
-                                map[style_align::STYLE_ALIGN_DEFAULT as usize] = Current::AFTER;
+                            if (list_state == 0) {
+                                if (s[Current::LIST_RIGHT as usize].cx == 0) {
+                                    if !fr.is_null() {
+                                        // abort any region
+                                        free_(fr);
+                                        fr = null_mut();
+                                    }
+                                    if (focus_start != -1 && focus_end == -1) {
+                                        focus_start = -1;
+                                        focus_end = -1;
+                                    }
+                                    current = Current::LIST_RIGHT;
+                                }
                             }
-                            list_state = 1;
                         }
-                        current = map[sy.align as usize];
                     }
-                    style_list::STYLE_LIST_LEFT_MARKER => {
-                        /* Entering left marker. */
-                        if (list_state != 0) {
-                            /* not inside the list */
-                            break;
-                        }
-                        if (s[Current::LIST_LEFT as usize].cx != 0) {
-                            /* already have marker */
-                            break;
-                        }
-                        if !fr.is_null() {
-                            /* abort any region */
-                            free_(fr);
+
+                    if current != last {
+                        log_debug!("{}: change {} -> {}", func, names[last as usize], names[current as usize]);
+                        last = current;
+                    }
+
+                    /*
+                     * Check if the range style has changed and if so end the
+                     * current range and start a new one if needed.
+                     */
+                    if !srs.is_null() {
+                        if !fr.is_null() && !format_is_type(fr, &raw mut sy) {
+                            if s[current as usize].cx != (*fr).start {
+                                (*fr).end = s[current as usize].cx + 1;
+                                tailq_insert_tail(&raw mut frs, fr);
+                            } else {
+                                free_(fr);
+                            }
                             fr = null_mut();
                         }
-                        if (focus_start != -1 && focus_end == -1) {
-                            focus_start = -1;
-                            focus_end = -1;
-                        }
-                        current = Current::LIST_LEFT;
-                    }
-                    style_list::STYLE_LIST_RIGHT_MARKER => {
-                        // note conditions are flipped from original c source because of break
+                        if fr.is_null() && sy.range_type != style_range_type::STYLE_RANGE_NONE {
+                            fr = xcalloc_(1).as_ptr();
+                            (*fr).index = current as u32;
 
-                        if (list_state == 0) {
-                            if (s[Current::LIST_RIGHT as usize].cx == 0) {
-                                if !fr.is_null() {
-                                    // abort any region
-                                    free_(fr);
-                                    fr = null_mut();
-                                }
-                                if (focus_start != -1 && focus_end == -1) {
-                                    focus_start = -1;
-                                    focus_end = -1;
-                                }
-                                current = Current::LIST_RIGHT;
-                            }
+                            (*fr).s = &raw mut s[current as usize];
+                            (*fr).start = s[current as usize].cx;
+
+                            (*fr).type_ = sy.range_type;
+                            (*fr).argument = sy.range_argument;
+                            strlcpy((*fr).string.as_mut_ptr(), sy.range_string.as_ptr(), size_of::<[c_char; 16]>());
                         }
                     }
+
+                    cp = end.add(1);
+                }
+                free_(fr);
+
+                for i in 0..TOTAL {
+                    screen_write_stop(&raw mut ctx[i]);
+                    log_debug!("{}: width {} is {}", func, names[i], width[i]);
+                }
+                if (focus_start != -1 && focus_end != -1) {
+                    log_debug!("{}: focus {}-{}", func, focus_start, focus_end);
+                }
+                for fr in tailq_foreach(&raw mut frs).map(NonNull::as_ptr) {
+                    log_debug!("{}: range {}|{} is {} {}-{}", func, (*fr).type_ as u32, (*fr).argument, names[(*fr).index as usize], (*fr).start, (*fr).end);
                 }
 
-                if current != last {
-                    log_debug!("{}: change {} -> {}", func, names[last as usize], names[current as usize]);
-                    last = current;
+                // Clear the available area.
+                if (fill != -1) {
+                    memcpy__(&raw mut gc, &raw const grid_default_cell);
+                    gc.bg = fill;
+                    for i in 0..available {
+                        screen_write_putc(octx, &raw mut gc, b' ');
+                    }
                 }
 
                 /*
-                 * Check if the range style has changed and if so end the
-                 * current range and start a new one if needed.
+                 * Draw the screens. How they are arranged depends on where the list
+                 * appears.
                  */
-                if !srs.is_null() {
-                    if !fr.is_null() && !format_is_type(fr, &raw mut sy) {
-                        if s[current as usize].cx != (*fr).start {
-                            (*fr).end = s[current as usize].cx + 1;
-                            tailq_insert_tail(&raw mut frs, fr);
-                        } else {
-                            free_(fr);
+                match list_align {
+                    // No list.
+                    style_align::STYLE_ALIGN_DEFAULT => format_draw_none(
+                        octx,
+                        available,
+                        ocx,
+                        ocy,
+                        &raw mut s[Current::LEFT as usize],
+                        &raw mut s[Current::CENTRE as usize],
+                        &raw mut s[Current::RIGHT as usize],
+                        &raw mut s[Current::ABSOLUTE_CENTRE as usize],
+                        &raw mut frs,
+                    ),
+                    // List is part of the left.
+                    style_align::STYLE_ALIGN_LEFT => format_draw_left(
+                        octx,
+                        available,
+                        ocx,
+                        ocy,
+                        &raw mut s[Current::LEFT as usize],
+                        &raw mut s[Current::CENTRE as usize],
+                        &raw mut s[Current::RIGHT as usize],
+                        &raw mut s[Current::ABSOLUTE_CENTRE as usize],
+                        &raw mut s[Current::LIST as usize],
+                        &raw mut s[Current::LIST_LEFT as usize],
+                        &raw mut s[Current::LIST_RIGHT as usize],
+                        &raw mut s[Current::AFTER as usize],
+                        focus_start,
+                        focus_end,
+                        &raw mut frs,
+                    ),
+                    // List is part of the centre.
+                    style_align::STYLE_ALIGN_CENTRE => format_draw_centre(
+                        octx,
+                        available,
+                        ocx,
+                        ocy,
+                        &raw mut s[Current::LEFT as usize],
+                        &raw mut s[Current::CENTRE as usize],
+                        &raw mut s[Current::RIGHT as usize],
+                        &raw mut s[Current::ABSOLUTE_CENTRE as usize],
+                        &raw mut s[Current::LIST as usize],
+                        &raw mut s[Current::LIST_LEFT as usize],
+                        &raw mut s[Current::LIST_RIGHT as usize],
+                        &raw mut s[Current::AFTER as usize],
+                        focus_start,
+                        focus_end,
+                        &raw mut frs,
+                    ),
+                    // List is part of the right.
+                    style_align::STYLE_ALIGN_RIGHT => format_draw_right(
+                        octx,
+                        available,
+                        ocx,
+                        ocy,
+                        &raw mut s[Current::LEFT as usize],
+                        &raw mut s[Current::CENTRE as usize],
+                        &raw mut s[Current::RIGHT as usize],
+                        &raw mut s[Current::ABSOLUTE_CENTRE as usize],
+                        &raw mut s[Current::LIST as usize],
+                        &raw mut s[Current::LIST_LEFT as usize],
+                        &raw mut s[Current::LIST_RIGHT as usize],
+                        &raw mut s[Current::AFTER as usize],
+                        focus_start,
+                        focus_end,
+                        &raw mut frs,
+                    ),
+                    // List is in the centre of the entire horizontal space.
+                    style_align::STYLE_ALIGN_ABSOLUTE_CENTRE => format_draw_absolute_centre(
+                        octx,
+                        available,
+                        ocx,
+                        ocy,
+                        &raw mut s[Current::LEFT as usize],
+                        &raw mut s[Current::CENTRE as usize],
+                        &raw mut s[Current::RIGHT as usize],
+                        &raw mut s[Current::ABSOLUTE_CENTRE as usize],
+                        &raw mut s[Current::LIST as usize],
+                        &raw mut s[Current::LIST_LEFT as usize],
+                        &raw mut s[Current::LIST_RIGHT as usize],
+                        &raw mut s[Current::AFTER as usize],
+                        focus_start,
+                        focus_end,
+                        &raw mut frs,
+                    ),
+                }
+
+                // Create ranges to return.
+                for fr in tailq_foreach(&mut frs).map(NonNull::as_ptr) {
+                    let sr = xcalloc1::<style_range>();
+                    sr.type_ = (*fr).type_;
+                    sr.argument = (*fr).argument;
+                    strlcpy((*sr).string.as_mut_ptr(), (*fr).string.as_ptr(), size_of::<[c_char; 16]>());
+                    sr.start = (*fr).start;
+                    sr.end = (*fr).end;
+                    tailq_insert_tail(srs, sr);
+
+                    match (*sr).type_ {
+                        style_range_type::STYLE_RANGE_NONE => (),
+                        style_range_type::STYLE_RANGE_LEFT => {
+                            log_debug!("{}: range left at {}-{}", func, (*sr).start, (*sr).end)
                         }
-                        fr = null_mut();
+                        style_range_type::STYLE_RANGE_RIGHT => {
+                            log_debug!("{}: range right at {}-{}", func, (*sr).start, (*sr).end)
+                        }
+                        style_range_type::STYLE_RANGE_PANE => log_debug!("{}: range pane|%%{} at {}-{}", func, (*sr).argument, (*sr).start, (*sr).end),
+                        style_range_type::STYLE_RANGE_WINDOW => log_debug!("{}: range window|{} at {}-{}", func, (*sr).argument, (*sr).start, (*sr).end),
+                        style_range_type::STYLE_RANGE_SESSION => log_debug!("{}: range session|${} at {}-{}", func, (*sr).argument, (*sr).start, (*sr).end),
+                        style_range_type::STYLE_RANGE_USER => log_debug!("{}: range user|{} at {}-{}", func, (*sr).argument, (*sr).start, (*sr).end),
                     }
-                    if fr.is_null() && sy.range_type != style_range_type::STYLE_RANGE_NONE {
-                        fr = xcalloc_(1).as_ptr();
-                        (*fr).index = current as u32;
-
-                        (*fr).s = &raw mut s[current as usize];
-                        (*fr).start = s[current as usize].cx;
-
-                        (*fr).type_ = sy.range_type;
-                        (*fr).argument = sy.range_argument;
-                        strlcpy((*fr).string.as_mut_ptr(), sy.range_string.as_ptr(), size_of::<[c_char; 16]>());
-                    }
+                    format_free_range(&raw mut frs, fr);
                 }
+            } // out:
 
-                cp = end.add(1);
-            }
-            free_(fr);
-
+            // Free the screens.
             for i in 0..TOTAL {
-                screen_write_stop(&raw mut ctx[i]);
-                log_debug!("{}: width {} is {}", func, names[i], width[i]);
-            }
-            if (focus_start != -1 && focus_end != -1) {
-                log_debug!("{}: focus {}-{}", func, focus_start, focus_end);
-            }
-            for fr in tailq_foreach(&raw mut frs).map(NonNull::as_ptr) {
-                log_debug!("{}: range {}|{} is {} {}-{}", func, (*fr).type_ as u32, (*fr).argument, names[(*fr).index as usize], (*fr).start, (*fr).end);
+                screen_free(&raw mut s[i]);
             }
 
-            // Clear the available area.
-            if (fill != -1) {
-                memcpy__(&raw mut gc, &raw const grid_default_cell);
-                gc.bg = fill;
-                for i in 0..available {
-                    screen_write_putc(octx, &raw mut gc, b' ');
-                }
-            }
-
-            /*
-             * Draw the screens. How they are arranged depends on where the list
-             * appears.
-             */
-            match list_align {
-                // No list.
-                style_align::STYLE_ALIGN_DEFAULT => format_draw_none(
-                    octx,
-                    available,
-                    ocx,
-                    ocy,
-                    &raw mut s[Current::LEFT as usize],
-                    &raw mut s[Current::CENTRE as usize],
-                    &raw mut s[Current::RIGHT as usize],
-                    &raw mut s[Current::ABSOLUTE_CENTRE as usize],
-                    &raw mut frs,
-                ),
-                // List is part of the left.
-                style_align::STYLE_ALIGN_LEFT => format_draw_left(
-                    octx,
-                    available,
-                    ocx,
-                    ocy,
-                    &raw mut s[Current::LEFT as usize],
-                    &raw mut s[Current::CENTRE as usize],
-                    &raw mut s[Current::RIGHT as usize],
-                    &raw mut s[Current::ABSOLUTE_CENTRE as usize],
-                    &raw mut s[Current::LIST as usize],
-                    &raw mut s[Current::LIST_LEFT as usize],
-                    &raw mut s[Current::LIST_RIGHT as usize],
-                    &raw mut s[Current::AFTER as usize],
-                    focus_start,
-                    focus_end,
-                    &raw mut frs,
-                ),
-                // List is part of the centre.
-                style_align::STYLE_ALIGN_CENTRE => format_draw_centre(
-                    octx,
-                    available,
-                    ocx,
-                    ocy,
-                    &raw mut s[Current::LEFT as usize],
-                    &raw mut s[Current::CENTRE as usize],
-                    &raw mut s[Current::RIGHT as usize],
-                    &raw mut s[Current::ABSOLUTE_CENTRE as usize],
-                    &raw mut s[Current::LIST as usize],
-                    &raw mut s[Current::LIST_LEFT as usize],
-                    &raw mut s[Current::LIST_RIGHT as usize],
-                    &raw mut s[Current::AFTER as usize],
-                    focus_start,
-                    focus_end,
-                    &raw mut frs,
-                ),
-                // List is part of the right.
-                style_align::STYLE_ALIGN_RIGHT => format_draw_right(
-                    octx,
-                    available,
-                    ocx,
-                    ocy,
-                    &raw mut s[Current::LEFT as usize],
-                    &raw mut s[Current::CENTRE as usize],
-                    &raw mut s[Current::RIGHT as usize],
-                    &raw mut s[Current::ABSOLUTE_CENTRE as usize],
-                    &raw mut s[Current::LIST as usize],
-                    &raw mut s[Current::LIST_LEFT as usize],
-                    &raw mut s[Current::LIST_RIGHT as usize],
-                    &raw mut s[Current::AFTER as usize],
-                    focus_start,
-                    focus_end,
-                    &raw mut frs,
-                ),
-                // List is in the centre of the entire horizontal space.
-                style_align::STYLE_ALIGN_ABSOLUTE_CENTRE => format_draw_absolute_centre(
-                    octx,
-                    available,
-                    ocx,
-                    ocy,
-                    &raw mut s[Current::LEFT as usize],
-                    &raw mut s[Current::CENTRE as usize],
-                    &raw mut s[Current::RIGHT as usize],
-                    &raw mut s[Current::ABSOLUTE_CENTRE as usize],
-                    &raw mut s[Current::LIST as usize],
-                    &raw mut s[Current::LIST_LEFT as usize],
-                    &raw mut s[Current::LIST_RIGHT as usize],
-                    &raw mut s[Current::AFTER as usize],
-                    focus_start,
-                    focus_end,
-                    &raw mut frs,
-                ),
-            }
-
-            // Create ranges to return.
-            for fr in tailq_foreach(&mut frs).map(NonNull::as_ptr) {
-                let sr = xcalloc1::<style_range>();
-                sr.type_ = (*fr).type_;
-                sr.argument = (*fr).argument;
-                strlcpy((*sr).string.as_mut_ptr(), (*fr).string.as_ptr(), size_of::<[c_char; 16]>());
-                sr.start = (*fr).start;
-                sr.end = (*fr).end;
-                tailq_insert_tail(srs, sr);
-
-                match (*sr).type_ {
-                    style_range_type::STYLE_RANGE_NONE => (),
-                    style_range_type::STYLE_RANGE_LEFT => {
-                        log_debug!("{}: range left at {}-{}", func, (*sr).start, (*sr).end)
-                    }
-                    style_range_type::STYLE_RANGE_RIGHT => {
-                        log_debug!("{}: range right at {}-{}", func, (*sr).start, (*sr).end)
-                    }
-                    style_range_type::STYLE_RANGE_PANE => log_debug!("{}: range pane|%%{} at {}-{}", func, (*sr).argument, (*sr).start, (*sr).end),
-                    style_range_type::STYLE_RANGE_WINDOW => log_debug!("{}: range window|{} at {}-{}", func, (*sr).argument, (*sr).start, (*sr).end),
-                    style_range_type::STYLE_RANGE_SESSION => log_debug!("{}: range session|${} at {}-{}", func, (*sr).argument, (*sr).start, (*sr).end),
-                    style_range_type::STYLE_RANGE_USER => log_debug!("{}: range user|{} at {}-{}", func, (*sr).argument, (*sr).start, (*sr).end),
-                }
-                format_free_range(&raw mut frs, fr);
-            }
-        } // out:
-
-        // Free the screens.
-        for i in 0..TOTAL {
-            screen_free(&raw mut s[i]);
+            // Restore the original cursor position.
+            screen_write_cursormove(octx, ocx as i32, ocy as i32, 0);
         }
-
-        // Restore the original cursor position.
-        screen_write_cursormove(octx, ocx as i32, ocy as i32, 0);
     }
 }
 
@@ -1119,16 +1125,16 @@ pub unsafe extern "C" fn format_width(expanded: *const c_char) -> u32 {
                 }
             } else if ({
                 more = utf8_open(&raw mut ud, *cp as u8);
-                more == UTF8_MORE
+                more == utf8_state::UTF8_MORE
             }) {
                 while ({
                     cp = cp.add(1);
                     *cp != b'\0' as i8
-                } && more == UTF8_MORE)
+                } && more == utf8_state::UTF8_MORE)
                 {
                     more = utf8_append(&raw mut ud, *cp as u8);
                 }
-                if (more == UTF8_DONE) {
+                if (more == utf8_state::UTF8_DONE) {
                     width += ud.width as u32;
                 } else {
                     cp = cp.wrapping_sub(ud.have as usize);
@@ -1200,16 +1206,16 @@ pub unsafe extern "C" fn format_trim_left(expanded: *const c_char, limit: u32) -
                 }
             } else if ({
                 more = utf8_open(&raw mut ud, *cp as u8);
-                more == UTF8_MORE
+                more == utf8_state::UTF8_MORE
             }) {
                 while ({
                     cp = cp.add(1);
                     *cp != b'\0' as i8
-                }) && more == UTF8_MORE
+                }) && more == utf8_state::UTF8_MORE
                 {
                     more = utf8_append(&raw mut ud, *cp as u8);
                 }
-                if (more == UTF8_DONE) {
+                if (more == utf8_state::UTF8_DONE) {
                     if (width + ud.width as u32 <= limit) {
                         libc::memcpy(out.cast(), ud.data.as_ptr().cast(), ud.size as usize);
                         out = out.add(ud.size as usize);
@@ -1298,16 +1304,16 @@ pub unsafe extern "C" fn format_trim_right(expanded: *const c_char, limit: u32) 
                 }
             } else if ({
                 more = utf8_open(&raw mut ud, *cp as u8);
-                more == UTF8_MORE
+                more == utf8_state::UTF8_MORE
             }) {
                 while ({
                     cp = cp.add(1);
                     *(cp) != b'\0' as i8
-                }) && more == UTF8_MORE
+                }) && more == utf8_state::UTF8_MORE
                 {
                     more = utf8_append(&raw mut ud, *cp as u8);
                 }
-                if (more == UTF8_DONE) {
+                if (more == utf8_state::UTF8_DONE) {
                     if (width >= skip) {
                         libc::memcpy(out.cast(), ud.data.as_ptr().cast(), ud.size as usize);
                         out = out.add(ud.size as usize);

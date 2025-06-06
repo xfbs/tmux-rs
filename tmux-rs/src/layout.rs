@@ -4,21 +4,23 @@ use crate::compat::queue::{tailq_empty, tailq_init, tailq_insert_after, tailq_in
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn layout_create_cell(lcparent: *mut layout_cell) -> *mut layout_cell {
-    let lc = xmalloc_::<layout_cell>().as_ptr();
-    (*lc).type_ = layout_type::LAYOUT_WINDOWPANE;
-    (*lc).parent = lcparent;
+    unsafe {
+        let lc = xmalloc_::<layout_cell>().as_ptr();
+        (*lc).type_ = layout_type::LAYOUT_WINDOWPANE;
+        (*lc).parent = lcparent;
 
-    tailq_init(&raw mut (*lc).cells);
+        tailq_init(&raw mut (*lc).cells);
 
-    (*lc).sx = u32::MAX;
-    (*lc).sy = u32::MAX;
+        (*lc).sx = u32::MAX;
+        (*lc).sy = u32::MAX;
 
-    (*lc).xoff = u32::MAX;
-    (*lc).yoff = u32::MAX;
+        (*lc).xoff = u32::MAX;
+        (*lc).yoff = u32::MAX;
 
-    (*lc).wp = null_mut();
+        (*lc).wp = null_mut();
 
-    lc
+        lc
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -852,165 +854,167 @@ pub unsafe extern "C" fn layout_resize_child_cells(w: *mut window, lc: *mut layo
 /// split. This must be followed by layout_assign_pane before much else happens!
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn layout_split_pane(wp: *mut window_pane, type_: layout_type, size: i32, flags: i32) -> *mut layout_cell {
-    let mut lc: *mut layout_cell;
-    let mut minimum: u32;
-    let mut new_size: u32;
-    let mut saved_size: u32;
-    let mut resize_first: u32 = 0;
-    let full_size = (flags & SPAWN_FULLSIZE) != 0;
+    unsafe {
+        let mut lc: *mut layout_cell;
+        let mut minimum: u32;
+        let mut new_size: u32;
+        let mut saved_size: u32;
+        let mut resize_first: u32 = 0;
+        let full_size = (flags & SPAWN_FULLSIZE) != 0;
 
-    // If full_size is specified, add a new cell at the top of the window
-    // layout. Otherwise, split the cell for the current pane.
-    if full_size {
-        lc = (*(*wp).window).layout_root;
-    } else {
-        lc = (*wp).layout_cell;
-    }
-    let status = pane_status::try_from(options_get_number((*(*wp).window).options, c"pane-border-status".as_ptr()) as i32).unwrap();
-
-    // Copy the old cell size
-    let sx = (*lc).sx;
-    let sy = (*lc).sy;
-    let xoff = (*lc).xoff;
-    let yoff = (*lc).yoff;
-
-    // Check there is enough space for the two new panes
-    match type_ {
-        layout_type::LAYOUT_LEFTRIGHT => {
-            if sx < PANE_MINIMUM * 2 + 1 {
-                return null_mut();
-            }
+        // If full_size is specified, add a new cell at the top of the window
+        // layout. Otherwise, split the cell for the current pane.
+        if full_size {
+            lc = (*(*wp).window).layout_root;
+        } else {
+            lc = (*wp).layout_cell;
         }
-        layout_type::LAYOUT_TOPBOTTOM => {
-            if layout_add_border((*wp).window, lc, status).as_bool() {
-                minimum = PANE_MINIMUM * 2 + 2;
+        let status = pane_status::try_from(options_get_number((*(*wp).window).options, c"pane-border-status".as_ptr()) as i32).unwrap();
+
+        // Copy the old cell size
+        let sx = (*lc).sx;
+        let sy = (*lc).sy;
+        let xoff = (*lc).xoff;
+        let yoff = (*lc).yoff;
+
+        // Check there is enough space for the two new panes
+        match type_ {
+            layout_type::LAYOUT_LEFTRIGHT => {
+                if sx < PANE_MINIMUM * 2 + 1 {
+                    return null_mut();
+                }
+            }
+            layout_type::LAYOUT_TOPBOTTOM => {
+                if layout_add_border((*wp).window, lc, status).as_bool() {
+                    minimum = PANE_MINIMUM * 2 + 2;
+                } else {
+                    minimum = PANE_MINIMUM * 2 + 1;
+                }
+                if sy < minimum {
+                    return null_mut();
+                }
+            }
+            _ => fatalx(c"bad layout type"),
+        }
+
+        // Calculate new cell sizes. size is the target size or -1 for middle
+        // split, size1 is the size of the top/left and size2 the bottom/right.
+        let saved_size = if type_ == layout_type::LAYOUT_LEFTRIGHT { sx } else { sy };
+
+        let mut size2 = if size < 0 {
+            ((saved_size + 1) / 2) - 1
+        } else if (flags & SPAWN_BEFORE) != 0 {
+            saved_size - size as u32 - 1
+        } else {
+            size as u32
+        };
+
+        if size2 < PANE_MINIMUM {
+            size2 = PANE_MINIMUM;
+        } else if size2 > saved_size - 2 {
+            size2 = saved_size - 2;
+        }
+        let size1 = saved_size - 1 - size2;
+
+        // Which size are we using?
+        let new_size = if (flags & SPAWN_BEFORE) != 0 { size2 } else { size1 };
+
+        // Confirm there is enough space for full size pane.
+        if full_size && !layout_set_size_check((*wp).window, lc, type_, new_size as i32) {
+            return null_mut();
+        }
+
+        let mut lcparent: *mut layout_cell;
+        let mut lcnew: *mut layout_cell;
+
+        if !(*lc).parent.is_null() && (*(*lc).parent).type_ == type_ {
+            // If the parent exists and is of the same type as the split,
+            // create a new cell and insert it after this one.
+            lcparent = (*lc).parent;
+            lcnew = layout_create_cell(lcparent);
+            if (flags & SPAWN_BEFORE) != 0 {
+                tailq_insert_before!(lc, lcnew, entry);
             } else {
-                minimum = PANE_MINIMUM * 2 + 1;
+                tailq_insert_after!(&raw mut (*lcparent).cells, lc, lcnew, entry);
             }
-            if sy < minimum {
-                return null_mut();
+        } else if full_size && (*lc).parent.is_null() && (*lc).type_ == type_ {
+            // If the new full size pane is the same type as the root
+            // split, insert the new pane under the existing root cell
+            // instead of creating a new root cell. The existing layout
+            // must be resized before inserting the new cell.
+            if (*lc).type_ == layout_type::LAYOUT_LEFTRIGHT {
+                (*lc).sx = new_size;
+                layout_resize_child_cells((*wp).window, lc);
+                (*lc).sx = saved_size;
+            } else if (*lc).type_ == layout_type::LAYOUT_TOPBOTTOM {
+                (*lc).sy = new_size;
+                layout_resize_child_cells((*wp).window, lc);
+                (*lc).sy = saved_size;
+            }
+            resize_first = 1;
+
+            // Create the new cell.
+            lcnew = layout_create_cell(lc);
+            let size = saved_size - 1 - new_size;
+            if (*lc).type_ == layout_type::LAYOUT_LEFTRIGHT {
+                layout_set_size(lcnew, size, sy, 0, 0);
+            } else if (*lc).type_ == layout_type::LAYOUT_TOPBOTTOM {
+                layout_set_size(lcnew, sx, size, 0, 0);
+            }
+            if (flags & SPAWN_BEFORE) != 0 {
+                tailq_insert_head!(&raw mut (*lc).cells, lcnew, entry);
+            } else {
+                tailq_insert_tail(&raw mut (*lc).cells, lcnew);
+            }
+        } else {
+            // Otherwise create a new parent and insert it.
+
+            // Create and insert the replacement parent.
+            lcparent = layout_create_cell((*lc).parent);
+            layout_make_node(lcparent, type_);
+            layout_set_size(lcparent, sx, sy, xoff, yoff);
+            if (*lc).parent.is_null() {
+                (*(*wp).window).layout_root = lcparent;
+            } else {
+                tailq_replace(&raw mut (*(*lc).parent).cells, lc, lcparent);
+            }
+
+            // Insert the old cell.
+            (*lc).parent = lcparent;
+            tailq_insert_head!(&raw mut (*lcparent).cells, lc, entry);
+
+            // Create the new child cell.
+            lcnew = layout_create_cell(lcparent);
+            if (flags & SPAWN_BEFORE) != 0 {
+                tailq_insert_head!(&raw mut (*lcparent).cells, lcnew, entry);
+            } else {
+                tailq_insert_tail(&raw mut (*lcparent).cells, lcnew);
             }
         }
-        _ => fatalx(c"bad layout type"),
-    }
 
-    // Calculate new cell sizes. size is the target size or -1 for middle
-    // split, size1 is the size of the top/left and size2 the bottom/right.
-    let saved_size = if type_ == layout_type::LAYOUT_LEFTRIGHT { sx } else { sy };
+        let (lc1, lc2) = if (flags & SPAWN_BEFORE) != 0 { (lcnew, lc) } else { (lc, lcnew) };
 
-    let mut size2 = if size < 0 {
-        ((saved_size + 1) / 2) - 1
-    } else if (flags & SPAWN_BEFORE) != 0 {
-        saved_size - size as u32 - 1
-    } else {
-        size as u32
-    };
+        // Set new cell sizes. size1 is the size of the top/left and size2 the
+        // bottom/right.
+        if resize_first == 0 && type_ == layout_type::LAYOUT_LEFTRIGHT {
+            layout_set_size(lc1, size1, sy, xoff, yoff);
+            layout_set_size(lc2, size2, sy, xoff + (*lc1).sx + 1, yoff);
+        } else if resize_first == 0 && type_ == layout_type::LAYOUT_TOPBOTTOM {
+            layout_set_size(lc1, sx, size1, xoff, yoff);
+            layout_set_size(lc2, sx, size2, xoff, yoff + (*lc1).sy + 1);
+        }
 
-    if size2 < PANE_MINIMUM {
-        size2 = PANE_MINIMUM;
-    } else if size2 > saved_size - 2 {
-        size2 = saved_size - 2;
-    }
-    let size1 = saved_size - 1 - size2;
-
-    // Which size are we using?
-    let new_size = if (flags & SPAWN_BEFORE) != 0 { size2 } else { size1 };
-
-    // Confirm there is enough space for full size pane.
-    if full_size && !layout_set_size_check((*wp).window, lc, type_, new_size as i32) {
-        return null_mut();
-    }
-
-    let mut lcparent: *mut layout_cell;
-    let mut lcnew: *mut layout_cell;
-
-    if !(*lc).parent.is_null() && (*(*lc).parent).type_ == type_ {
-        // If the parent exists and is of the same type as the split,
-        // create a new cell and insert it after this one.
-        lcparent = (*lc).parent;
-        lcnew = layout_create_cell(lcparent);
-        if (flags & SPAWN_BEFORE) != 0 {
-            tailq_insert_before!(lc, lcnew, entry);
+        if full_size {
+            if resize_first == 0 {
+                layout_resize_child_cells((*wp).window, lc);
+            }
+            layout_fix_offsets((*wp).window);
         } else {
-            tailq_insert_after!(&raw mut (*lcparent).cells, lc, lcnew, entry);
-        }
-    } else if full_size && (*lc).parent.is_null() && (*lc).type_ == type_ {
-        // If the new full size pane is the same type as the root
-        // split, insert the new pane under the existing root cell
-        // instead of creating a new root cell. The existing layout
-        // must be resized before inserting the new cell.
-        if (*lc).type_ == layout_type::LAYOUT_LEFTRIGHT {
-            (*lc).sx = new_size;
-            layout_resize_child_cells((*wp).window, lc);
-            (*lc).sx = saved_size;
-        } else if (*lc).type_ == layout_type::LAYOUT_TOPBOTTOM {
-            (*lc).sy = new_size;
-            layout_resize_child_cells((*wp).window, lc);
-            (*lc).sy = saved_size;
-        }
-        resize_first = 1;
-
-        // Create the new cell.
-        lcnew = layout_create_cell(lc);
-        let size = saved_size - 1 - new_size;
-        if (*lc).type_ == layout_type::LAYOUT_LEFTRIGHT {
-            layout_set_size(lcnew, size, sy, 0, 0);
-        } else if (*lc).type_ == layout_type::LAYOUT_TOPBOTTOM {
-            layout_set_size(lcnew, sx, size, 0, 0);
-        }
-        if (flags & SPAWN_BEFORE) != 0 {
-            tailq_insert_head!(&raw mut (*lc).cells, lcnew, entry);
-        } else {
-            tailq_insert_tail(&raw mut (*lc).cells, lcnew);
-        }
-    } else {
-        // Otherwise create a new parent and insert it.
-
-        // Create and insert the replacement parent.
-        lcparent = layout_create_cell((*lc).parent);
-        layout_make_node(lcparent, type_);
-        layout_set_size(lcparent, sx, sy, xoff, yoff);
-        if (*lc).parent.is_null() {
-            (*(*wp).window).layout_root = lcparent;
-        } else {
-            tailq_replace(&raw mut (*(*lc).parent).cells, lc, lcparent);
+            layout_make_leaf(lc, wp);
         }
 
-        // Insert the old cell.
-        (*lc).parent = lcparent;
-        tailq_insert_head!(&raw mut (*lcparent).cells, lc, entry);
-
-        // Create the new child cell.
-        lcnew = layout_create_cell(lcparent);
-        if (flags & SPAWN_BEFORE) != 0 {
-            tailq_insert_head!(&raw mut (*lcparent).cells, lcnew, entry);
-        } else {
-            tailq_insert_tail(&raw mut (*lcparent).cells, lcnew);
-        }
+        lcnew
     }
-
-    let (lc1, lc2) = if (flags & SPAWN_BEFORE) != 0 { (lcnew, lc) } else { (lc, lcnew) };
-
-    // Set new cell sizes. size1 is the size of the top/left and size2 the
-    // bottom/right.
-    if resize_first == 0 && type_ == layout_type::LAYOUT_LEFTRIGHT {
-        layout_set_size(lc1, size1, sy, xoff, yoff);
-        layout_set_size(lc2, size2, sy, xoff + (*lc1).sx + 1, yoff);
-    } else if resize_first == 0 && type_ == layout_type::LAYOUT_TOPBOTTOM {
-        layout_set_size(lc1, sx, size1, xoff, yoff);
-        layout_set_size(lc2, sx, size2, xoff, yoff + (*lc1).sy + 1);
-    }
-
-    if full_size {
-        if resize_first == 0 {
-            layout_resize_child_cells((*wp).window, lc);
-        }
-        layout_fix_offsets((*wp).window);
-    } else {
-        layout_make_leaf(lc, wp);
-    }
-
-    lcnew
 }
 
 /// Destroy the cell associated with a pane.

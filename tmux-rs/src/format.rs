@@ -1,4 +1,4 @@
-use libc::{FNM_CASEFOLD, REG_NOSUB, ctime_r, fnmatch, gethostname, getpwuid, getuid, ispunct, localtime_r, memcpy, regcomp, regex_t, regexec, regfree, strchr, strcmp, strcspn, strftime, strstr, strtod, tm};
+use libc::{FNM_CASEFOLD, REG_NOSUB, ctime_r, getpwuid, getuid, ispunct, localtime_r, memcpy, regcomp, regex_t, regexec, regfree, strchr, strcmp, strcspn, strftime, strstr, strtod, tm};
 
 use crate::{
     compat::{
@@ -449,10 +449,12 @@ pub unsafe extern "C" fn format_job_tidy(jobs: *mut format_job_tree, force: i32)
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_tidy_jobs() {
-    format_job_tidy(&raw mut format_jobs, 0);
-    for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
-        if !(*c).jobs.is_null() {
-            format_job_tidy((*c).jobs, 0);
+    unsafe {
+        format_job_tidy(&raw mut format_jobs, 0);
+        for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
+            if !(*c).jobs.is_null() {
+                format_job_tidy((*c).jobs, 0);
+            }
         }
     }
 }
@@ -492,17 +494,19 @@ pub unsafe extern "C" fn format_cb_host(ft: *mut format_tree) -> *mut c_void {
 /// Callback for host_short.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_host_short(ft: *mut format_tree) -> *mut c_void {
-    let mut host = MaybeUninit::<[c_char; HOST_NAME_MAX + 1]>::uninit();
+    unsafe {
+        let mut host = MaybeUninit::<[c_char; HOST_NAME_MAX + 1]>::uninit();
 
-    if gethostname(host.as_mut_ptr().cast(), HOST_NAME_MAX + 1) != 0 {
-        return xstrdup_(c"").as_ptr().cast();
-    }
+        if libc::gethostname(host.as_mut_ptr().cast(), HOST_NAME_MAX + 1) != 0 {
+            return xstrdup_(c"").as_ptr().cast();
+        }
 
-    let mut cp = strchr(host.as_mut_ptr().cast(), b'.' as i32);
-    if (!cp.is_null()) {
-        *cp = b'\0' as c_char;
+        let mut cp = strchr(host.as_mut_ptr().cast(), b'.' as i32);
+        if (!cp.is_null()) {
+            *cp = b'\0' as c_char;
+        }
+        xstrdup(host.as_ptr().cast()).as_ptr().cast()
     }
-    xstrdup(host.as_ptr().cast()).as_ptr().cast()
 }
 
 /// Callback for pid.
@@ -3798,10 +3802,12 @@ pub unsafe extern "C" fn format_add_modifier(list: *mut *mut format_modifier, co
 /// Free modifier list.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_free_modifiers(list: *mut format_modifier, count: u32) {
-    for i in 0..count as usize {
-        cmd_free_argv((*list.add(i)).argc, (*list.add(i)).argv);
+    unsafe {
+        for i in 0..count as usize {
+            cmd_free_argv((*list.add(i)).argc, (*list.add(i)).argv);
+        }
+        free_(list);
     }
-    free_(list);
 }
 
 /// Build modifier list.
@@ -3946,7 +3952,7 @@ pub unsafe extern "C" fn format_match(fm: *mut format_modifier, pattern: *const 
             if !strchr(s, b'i' as i32).is_null() {
                 flags |= FNM_CASEFOLD;
             }
-            if fnmatch(pattern, text, flags) != 0 {
+            if libc::fnmatch(pattern, text, flags) != 0 {
                 return xstrdup(c"0".as_ptr()).as_ptr();
             }
         } else {
@@ -5018,25 +5024,29 @@ pub unsafe extern "C" fn format_expand1(es: *mut format_expand_state, mut fmt: *
 /// Expand keys in a template, passing through strftime first.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_expand_time(ft: *mut format_tree, fmt: *const c_char) -> *mut c_char {
-    let mut es = MaybeUninit::<format_expand_state>::uninit();
-    let es = es.as_mut_ptr();
+    unsafe {
+        let mut es = MaybeUninit::<format_expand_state>::uninit();
+        let es = es.as_mut_ptr();
 
-    memset0(es);
-    (*es).ft = ft;
-    (*es).flags = format_expand_flags::FORMAT_EXPAND_TIME;
-    format_expand1(es, fmt)
+        memset0(es);
+        (*es).ft = ft;
+        (*es).flags = format_expand_flags::FORMAT_EXPAND_TIME;
+        format_expand1(es, fmt)
+    }
 }
 
 /// Expand keys in a template.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_expand(ft: *mut format_tree, fmt: *const c_char) -> *mut c_char {
-    let mut es = MaybeUninit::<format_expand_state>::uninit();
-    let es = es.as_mut_ptr();
+    unsafe {
+        let mut es = MaybeUninit::<format_expand_state>::uninit();
+        let es = es.as_mut_ptr();
 
-    memset0(es);
-    (*es).ft = ft;
-    (*es).flags = format_expand_flags::empty();
-    format_expand1(es, fmt)
+        memset0(es);
+        (*es).ft = ft;
+        (*es).flags = format_expand_flags::empty();
+        format_expand1(es, fmt)
+    }
 }
 
 /// Expand a single string.

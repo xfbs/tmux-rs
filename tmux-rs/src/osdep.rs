@@ -65,13 +65,13 @@ pub unsafe extern "C" fn osdep_get_cwd(fd: i32) -> *const c_char {
 
         let mut path = null_mut();
         xasprintf(&raw mut path, c"/proc/%lld/cwd".as_ptr(), pgrp);
-        let n = libc::readlink(path, target, MAXPATHLEN);
+        let mut n = libc::readlink(path, target, MAXPATHLEN);
         free_(path);
 
         let mut sid: pid_t = 0;
         if (n == -1 && ioctl(fd, TIOCGSID, &raw mut sid) != -1) {
             xasprintf(&raw mut path, c"/proc/%lld/cwd".as_ptr(), sid as i64);
-            let n = readlink(path, target, MAXPATHLEN);
+            n = readlink(path, target, MAXPATHLEN);
             free_(path);
         }
 

@@ -70,6 +70,12 @@ pub const WAIT_ANY: pid_t = -1;
 
 pub const ACCESSPERMS: mode_t = S_IRWXU | S_IRWXG | S_IRWXO;
 
+// #define S_ISDIR(mode)  (((mode) & S_IFMT) == S_IFDIR)
+// TODO move this to a better spot
+#[allow(non_snake_case)]
+#[inline]
+pub fn S_ISDIR(mode: u32) -> bool { mode & libc::S_IFMT == libc::S_IFDIR }
+
 // extern crate compat_derive;
 // pub use compat_derive::TailQEntry;
 

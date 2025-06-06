@@ -193,7 +193,7 @@ pub unsafe extern "C" fn environ_log(env: *mut environ, fmt: *const c_char, mut 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn environ_for_session(s: *mut session, no_TERM: c_int) -> *mut environ {
+pub unsafe extern "C" fn environ_for_session(s: *mut session, no_term: c_int) -> *mut environ {
     let env: *mut environ = environ_create().as_ptr();
 
     unsafe {
@@ -202,7 +202,7 @@ pub unsafe extern "C" fn environ_for_session(s: *mut session, no_TERM: c_int) ->
             environ_copy((*s).environ, env);
         }
 
-        if no_TERM == 0 {
+        if no_term == 0 {
             let value = options_get_string(global_options, c"default-terminal".as_ptr());
             environ_set(env, c"TERM".as_ptr(), 0, c"%s".as_ptr(), value);
             environ_set(env, c"TERM_PROGRAM".as_ptr(), 0, c"%s".as_ptr(), c"tmux".as_ptr());

@@ -33,7 +33,6 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
         let mut adjust = 0u32;
         let mut x: i32 = 0;
         let mut y: i32 = 0;
-        let mut status: i32 = 0;
         let mut gd = (*wp).base.grid;
 
         if (args_has_(args, 'T')) {
@@ -99,19 +98,20 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
                 free_(cause);
                 return cmd_retval::CMD_RETURN_ERROR;
             }
-            status = options_get_number((*w).options, c"pane-border-status".as_ptr()) as i32;
-            match status {
-                PANE_STATUS_TOP => {
+
+            let status: i32 = options_get_number((*w).options, c"pane-border-status".as_ptr()) as i32;
+            match pane_status::try_from(status) {
+                Ok(pane_status::PANE_STATUS_TOP) => {
                     if (y != i32::MAX && (*wp).yoff == 1) {
                         y += 1;
                     }
                 }
-                PANE_STATUS_BOTTOM => {
+                Ok(pane_status::PANE_STATUS_BOTTOM) => {
                     if (y != i32::MAX && (*wp).yoff + (*wp).sy == (*w).sy - 1) {
                         y += 1;
                     }
                 }
-                _ => (),
+                Ok(pane_status::PANE_STATUS_OFF) | Err(_) => (),
             }
             layout_resize_pane_to(wp, layout_type::LAYOUT_TOPBOTTOM, y as u32);
         }

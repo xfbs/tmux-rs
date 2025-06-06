@@ -1066,14 +1066,14 @@ unsafe extern "C" fn status_prompt_paste(c: *mut client) -> i32 {
             let mut i: u32 = 0;
             while i as usize != bufsize {
                 let mut more = utf8_open(udp, *bufdata.add(i as usize) as u8);
-                if more == UTF8_MORE {
+                if more == utf8_state::UTF8_MORE {
                     while ({
                         i += 1;
-                        i as usize != bufsize && more == UTF8_MORE
+                        i as usize != bufsize && more == utf8_state::UTF8_MORE
                     }) {
                         more = utf8_append(udp, *bufdata.add(i as usize) as u8);
                     }
-                    if (more == UTF8_DONE) {
+                    if (more == utf8_state::UTF8_DONE) {
                         udp = udp.add(1);
                         continue;
                     }

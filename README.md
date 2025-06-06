@@ -33,10 +33,6 @@ refactoring the Rust code to make it more idiomatic and use less unsafe.
 - [ ] 5786 window-copy
 - [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
 
-- [ ] LICENSE stuff
-- [ ] verify all uses of tailq and rbq, any structs with multiple "entry" fields we use correctly
-- [ ] use base64 crate instead of libresolv
-
 ## Tips
 
 - Use clang-format or other to reformat the C code quickly
@@ -58,10 +54,45 @@ more then just server exited unexpectedly.
 - print a stacktrace on server process segfault
 
 # NEXT
-- improve interface on:
-  - log_debug
-  - options_get_number
-  - fatalx
+- [ ] verify all uses of tailq and rbq, any structs with multiple "entry" fields we use correctly
+- [ ] LICENSE stuff
+- [ ] use base64 crate instead of libresolv
+- [ ] improve interface on variadics
+    - args_print_add
+    - cfg_add_cause
+    - cmd_log_argv
+    - cmdq_add_format
+    - cmdq_error
+    - cmdq_insert_hook
+    - cmdq_print
+    - control_write
+    - environ_log
+    - environ_set
+    - fatal
+    - fatal
+    - fatalx
+    - fatalx_c
+    - file_error
+    - file_print
+    - format_add
+    - format_log1
+    - format_printf
+    - fprintf
+    - input_reply
+    - log_debug
+    - log_debug
+    - log_debug_c
+    - options_set_string
+    - screen_write_nputs
+    - screen_write_puts
+    - screen_write_strlen
+    - screen_write_text
+    - server_add_message
+    - status_message_set
+    - xasprintf
+    - xasprintf
+    - xasprintf_
+    - xsnprintf
 
 # TODO
 - review cmd_rotate_window.rs cmd_rotate_window_exec tailq_foreach calls

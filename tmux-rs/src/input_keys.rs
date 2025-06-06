@@ -251,7 +251,7 @@ pub unsafe extern "C" fn input_key_extended(bev: *mut bufferevent, mut key: key_
 
         if KEYC_IS_UNICODE(key) {
             utf8_to_data((key & KEYC_MASK_KEY) as u32, ud.as_mut_ptr());
-            if utf8_towc(ud.as_mut_ptr(), &raw mut wc) == UTF8_DONE {
+            if utf8_towc(ud.as_mut_ptr(), &raw mut wc) == utf8_state::UTF8_DONE {
                 key = wc as u64;
             } else {
                 return -1;

@@ -79,7 +79,7 @@ pub fn xcalloc1__<'a, T>() -> &'a mut MaybeUninit<T> {
         panic!("bad xcalloc1_: out of memory");
     }
 
-    unsafe { std::mem::transmute::<*mut T, &'a mut MaybeUninit<T>>(ptr) }
+    unsafe { &mut *ptr.cast::<MaybeUninit<T>>() }
 }
 
 #[unsafe(no_mangle)]

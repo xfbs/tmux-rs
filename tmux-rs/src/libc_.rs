@@ -17,6 +17,7 @@ macro_rules! errno {
 }
 pub(crate) use errno;
 
+#[allow(non_snake_case)]
 #[inline]
 pub fn MB_CUR_MAX() -> usize {
     unsafe extern "C" {

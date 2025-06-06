@@ -218,16 +218,19 @@ macro_rules! RB_GENERATE {
                 unsafe fn cmp(this: *const Self, other: *const Self) -> i32 { unsafe { $cmp_fn(this, other) } }
             }
 
+            #[allow(non_snake_case)]
             #[unsafe(no_mangle)]
             pub unsafe extern "C" fn [<$head_ty _RB_MINMAX>](head: *mut rb_head<$ty>, val: i32) -> *mut $ty {
                 unsafe { $crate::compat::tree::rb_minmax::<$ty, [<discr_ $entry_field>]>(head, val) }
             }
 
+            #[allow(non_snake_case)]
             #[unsafe(no_mangle)]
             pub unsafe extern "C" fn [<$head_ty _RB_NEXT>](elm: *mut $ty) -> *mut $ty {
                 unsafe { $crate::compat::tree::rb_next::<$ty, [<discr_ $entry_field>]>(elm) }
             }
 
+            #[allow(non_snake_case)]
             #[unsafe(no_mangle)]
             pub unsafe extern "C" fn [<$head_ty _RB_PREV>](elm: *mut $ty) -> *mut $ty {
                 unsafe { $crate::compat::tree::rb_prev::<$ty, [<discr_ $entry_field>]>(elm) }
@@ -246,14 +249,17 @@ macro_rules! RB_GENERATE_STATIC {
                 unsafe fn cmp(this: *const Self, other: *const Self) -> i32 { unsafe { $cmp_fn(this, other) } }
             }
 
+            #[allow(non_snake_case)]
             pub unsafe extern "C" fn [<$head_ty _RB_MINMAX>](head: *mut rb_head<$ty>, val: i32) -> *mut $ty {
                 unsafe { $crate::compat::tree::rb_minmax::<$ty, [<discr_ $entry_field>]>(head, val) }
             }
 
+            #[allow(non_snake_case)]
             pub unsafe extern "C" fn [<$head_ty _RB_NEXT>](elm: *mut $ty) -> *mut $ty {
                 unsafe { $crate::compat::tree::rb_next::<$ty, [<discr_ $entry_field>]>(elm) }
             }
 
+            #[allow(non_snake_case)]
             pub unsafe extern "C" fn [<$head_ty _RB_PREV>](elm: *mut $ty) -> *mut $ty {
                 unsafe { $crate::compat::tree::rb_prev::<$ty, [<discr_ $entry_field>]>(elm) }
             }

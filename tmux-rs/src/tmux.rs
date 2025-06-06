@@ -1,7 +1,8 @@
-use crate::{xmalloc::xstrndup, *};
+use crate::*;
+
+use crate::xmalloc::xstrndup;
 
 unsafe extern "C" {
-
     // TODO move/remove
     fn errx(_: c_int, _: *const c_char, ...);
     fn err(_: c_int, _: *const c_char, ...);
@@ -9,10 +10,10 @@ unsafe extern "C" {
     fn tzset();
 }
 
-use crate::compat::{fdforkpty::getptmfd, getprogname::getprogname, optarg, optind};
+use crate::compat::{S_ISDIR, fdforkpty::getptmfd, getprogname::getprogname, optarg, optind};
 use libc::{
-    __errno_location, CLOCK_MONOTONIC, CLOCK_REALTIME, CODESET, EEXIST, F_GETFL, F_SETFL, LC_CTYPE, LC_TIME, O_NONBLOCK, PATH_MAX, S_IRWXO, S_IRWXU, X_OK, access, clock_gettime, fcntl, fprintf, getcwd, getenv, getopt, getpwuid, getuid, lstat, mkdir, nl_langinfo, printf, realpath, setlocale, stat,
-    strcasecmp, strcasestr, strchr, strcmp, strcspn, strerror, strncmp, strrchr, strstr, timespec,
+    CLOCK_MONOTONIC, CLOCK_REALTIME, CODESET, EEXIST, F_GETFL, F_SETFL, LC_CTYPE, LC_TIME, O_NONBLOCK, PATH_MAX, S_IRWXO, S_IRWXU, X_OK, access, clock_gettime, fcntl, getcwd, getenv, getopt, getpwuid, getuid, lstat, mkdir, nl_langinfo, printf, realpath, setlocale, stat, strcasecmp, strcasestr,
+    strchr, strcspn, strerror, strncmp, strrchr, strstr, timespec,
 };
 
 #[unsafe(no_mangle)]
@@ -36,7 +37,7 @@ pub static mut shell_command: *mut c_char = null_mut();
 #[unsafe(no_mangle)]
 pub extern "C" fn usage() -> ! {
     unsafe {
-        fprintf(stderr, c"usage: %s [-2CDlNuVv] [-c shell-command] [-f file] [-L socket-name]\n            [-S socket-path] [-T features] [command [flags]]\n".as_ptr(), getprogname());
+        libc::fprintf(stderr, c"usage: %s [-2CDlNuVv] [-c shell-command] [-f file] [-L socket-name]\n            [-S socket-path] [-T features] [command [flags]]\n".as_ptr(), getprogname());
         std::process::exit(1)
     }
 }
@@ -83,7 +84,7 @@ pub unsafe extern "C" fn areshell(shell: *const c_char) -> c_int {
         if *progname == b'-' as c_char {
             progname = progname.wrapping_add(1);
         }
-        if strcmp(ptr, progname) == 0 { 1 } else { 0 }
+        if libc::strcmp(ptr, progname) == 0 { 1 } else { 0 }
     }
 }
 
@@ -145,7 +146,7 @@ unsafe extern "C" fn expand_paths(s: *const c_char, paths: *mut *mut *mut c_char
                 continue;
             }
             if realpath(expanded, resolved.as_mut_ptr()).is_null() {
-                log_debug!("{}: realpath(\"{}\") failed: {}", func, _s(expanded), _s(strerror(*__errno_location())),);
+                log_debug!("{}: realpath(\"{}\") failed: {}", func, _s(expanded), _s(strerror(errno!())),);
                 if ignore_errors != 0 {
                     free_(expanded);
                     continue;
@@ -158,7 +159,7 @@ unsafe extern "C" fn expand_paths(s: *const c_char, paths: *mut *mut *mut c_char
             let mut i = 0;
             for j in 0..*n {
                 i = j;
-                if strcmp(path as _, *(*paths).add(i as usize)) == 0 {
+                if libc::strcmp(path as _, *(*paths).add(i as usize)) == 0 {
                     break;
                 }
             }
@@ -204,12 +205,12 @@ unsafe extern "C" fn make_label(mut label: *const c_char, cause: *mut *mut c_cha
 
             xasprintf(&raw mut base, c"%s/tmux-%ld".as_ptr(), path, uid as c_long);
             free_(path);
-            if mkdir(base, S_IRWXU) != 0 && *__errno_location() != EEXIST {
-                xasprintf(cause, c"couldn't create directory %s (%s)".as_ptr(), base, strerror(*__errno_location()));
+            if mkdir(base, S_IRWXU) != 0 && errno!() != EEXIST {
+                xasprintf(cause, c"couldn't create directory %s (%s)".as_ptr(), base, strerror(errno!()));
                 break 'fail;
             }
             if lstat(base, &raw mut sb) != 0 {
-                xasprintf(cause, c"couldn't read directory %s (%s)".as_ptr(), base, strerror(*__errno_location()));
+                xasprintf(cause, c"couldn't read directory %s (%s)".as_ptr(), base, strerror(errno!()));
                 break 'fail;
             }
             if !S_ISDIR(sb.st_mode) {
@@ -322,7 +323,7 @@ pub unsafe extern "C" fn find_cwd() -> *mut c_char {
         if realpath(&raw mut cwd as _, &raw mut resolved2 as _).is_null() {
             return &raw mut cwd as _;
         }
-        if strcmp(&raw mut resolved1 as _, &raw mut resolved2 as _) != 0 {
+        if libc::strcmp(&raw mut resolved1 as _, &raw mut resolved2 as _) != 0 {
             return &raw mut cwd as _;
         }
         pwd
@@ -558,7 +559,7 @@ pub extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *mut *mut
             path = make_label(label.cast(), &raw mut cause);
             if path.is_null() {
                 if !cause.is_null() {
-                    fprintf(stderr, c"%s\n".as_ptr(), cause);
+                    libc::fprintf(stderr, c"%s\n".as_ptr(), cause);
                     free(cause as _);
                 }
                 std::process::exit(1);
