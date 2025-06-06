@@ -3,17 +3,12 @@ use crate::*;
 pub type popup_close_cb = Option<unsafe extern "C" fn(_: i32, _: *mut c_void)>;
 pub type popup_finish_edit_cb = Option<unsafe extern "C" fn(_: *mut c_char, _: usize, _: *mut c_void)>;
 
-unsafe extern "C" {
-    // pub unsafe fn popup_display( _: c_int, _: box_lines, _: *mut cmdq_item, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: *mut environ, _: *const c_char, _: c_int, _: *mut *mut c_char, _: *const c_char, _: *const c_char, _: *mut client, _: *mut session, _: *const c_char, _: *const c_char, _: popup_close_cb, _: *mut c_void,) -> c_int;
-    // pub unsafe fn popup_editor( _: *mut client, _: *const c_char, _: usize, _: popup_finish_edit_cb, _: *mut c_void,) -> c_int;
-}
-
 #[repr(i32)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum dragging_state {
-    OFF,
-    MOVE,
-    SIZE,
+    Off,
+    Move,
+    Size,
 }
 
 #[repr(C)]
@@ -435,8 +430,8 @@ pub unsafe extern "C" fn popup_handle_drag(c: *mut client, pd: *mut popup_data, 
         let mut py: u32;
 
         if !MOUSE_DRAG((*m).b) {
-            (*pd).dragging = dragging_state::OFF;
-        } else if ((*pd).dragging == dragging_state::MOVE) {
+            (*pd).dragging = dragging_state::Off;
+        } else if ((*pd).dragging == dragging_state::Move) {
             if ((*m).x < (*pd).dx) {
                 px = 0;
             } else if ((*m).x - (*pd).dx + (*pd).sx > (*c).tty.sx) {
@@ -458,7 +453,7 @@ pub unsafe extern "C" fn popup_handle_drag(c: *mut client, pd: *mut popup_data, 
             (*pd).ppx = px;
             (*pd).ppy = py;
             server_redraw_client(c);
-        } else if ((*pd).dragging == dragging_state::SIZE) {
+        } else if ((*pd).dragging == dragging_state::Size) {
             if ((*pd).border_lines == box_lines::BOX_LINES_NONE) {
                 if ((*m).x < (*pd).px + 1) {
                     return;
@@ -508,15 +503,14 @@ pub unsafe extern "C" fn popup_key_cb(c: *mut client, data: *mut c_void, event: 
             'out: {
                 #[repr(i32)]
                 #[derive(Copy, Clone, Eq, PartialEq)]
-                enum border {
-                    NONE,
-                    LEFT,
-                    RIGHT,
-                    TOP,
-                    BOTTOM,
+                enum Border {
+                    None,
+                    Left,
+                    Right,
+                    Top,
+                    Bottom,
                 };
-                use border::*;
-                let mut border = NONE;
+                let mut border = Border::None;
 
                 if (!(*pd).md.is_null()) {
                     if (menu_key_cb(c, (*pd).md.cast(), event) == 1) {
@@ -532,7 +526,7 @@ pub unsafe extern "C" fn popup_key_cb(c: *mut client, data: *mut c_void, event: 
                 }
 
                 if (KEYC_IS_MOUSE((*event).key)) {
-                    if ((*pd).dragging != dragging_state::OFF) {
+                    if ((*pd).dragging != dragging_state::Off) {
                         popup_handle_drag(c, pd, m);
                         break 'out;
                     }
@@ -544,26 +538,26 @@ pub unsafe extern "C" fn popup_key_cb(c: *mut client, data: *mut c_void, event: 
                     }
                     if ((*pd).border_lines != box_lines::BOX_LINES_NONE) {
                         if ((*m).x == (*pd).px) {
-                            border = LEFT;
+                            border = Border::Left;
                         } else if ((*m).x == (*pd).px + (*pd).sx - 1) {
-                            border = RIGHT;
+                            border = Border::Right;
                         } else if ((*m).y == (*pd).py) {
-                            border = TOP;
+                            border = Border::Top;
                         } else if ((*m).y == (*pd).py + (*pd).sy - 1) {
-                            border = BOTTOM;
+                            border = Border::Bottom;
                         }
                     }
-                    if (((*m).b & MOUSE_MASK_MODIFIERS) == 0 && MOUSE_BUTTONS((*m).b) == MOUSE_BUTTON_3 && (border == LEFT || border == TOP)) {
+                    if (((*m).b & MOUSE_MASK_MODIFIERS) == 0 && MOUSE_BUTTONS((*m).b) == MOUSE_BUTTON_3 && (border == Border::Left || border == Border::Top)) {
                         break 'menu;
                     }
-                    if ((((*m).b & MOUSE_MASK_MODIFIERS) == MOUSE_MASK_META) || border != NONE) {
+                    if ((((*m).b & MOUSE_MASK_MODIFIERS) == MOUSE_MASK_META) || border != Border::None) {
                         if (!MOUSE_DRAG((*m).b)) {
                             break 'out;
                         }
                         if (MOUSE_BUTTONS((*m).lb) == MOUSE_BUTTON_1) {
-                            (*pd).dragging = dragging_state::MOVE;
+                            (*pd).dragging = dragging_state::Move;
                         } else if (MOUSE_BUTTONS((*m).lb) == MOUSE_BUTTON_3) {
-                            (*pd).dragging = dragging_state::SIZE;
+                            (*pd).dragging = dragging_state::Size;
                         }
                         (*pd).dx = (*m).lx - (*pd).px;
                         (*pd).dy = (*m).ly - (*pd).py;

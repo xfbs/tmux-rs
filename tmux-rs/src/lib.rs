@@ -10,7 +10,6 @@
 #![allow(clippy::manual_clamp)]
 #![allow(clippy::manual_range_contains)]
 #![allow(clippy::missing_safety_doc)]
-#![warn(clippy::upper_case_acronyms)]
 #![allow(clippy::unnecessary_cast)]
 #![allow(clippy::explicit_auto_deref)]
 #![allow(clippy::implicit_saturating_sub)]

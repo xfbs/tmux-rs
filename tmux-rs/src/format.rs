@@ -4222,43 +4222,43 @@ pub unsafe extern "C" fn format_replace_expression(mexp: *mut format_modifier, e
             let mut result: f64 = 0.0;
 
             enum Operator {
-                ADD,
-                SUBTRACT,
-                MULTIPLY,
-                DIVIDE,
-                MODULUS,
-                EQUAL,
-                NOT_EQUAL,
-                GREATER_THAN,
-                GREATER_THAN_EQUAL,
-                LESS_THAN,
-                LESS_THAN_EQUAL,
+                Add,
+                Subtract,
+                Multiply,
+                Divide,
+                Modulus,
+                Equal,
+                NotEqual,
+                GreaterThan,
+                GreaterThanEqual,
+                LessThan,
+                LessThanEqual,
             }
 
             let mut operator;
 
             if strcmp(*(*mexp).argv, c"+".as_ptr()) == 0 {
-                operator = Operator::ADD;
+                operator = Operator::Add;
             } else if strcmp(*(*mexp).argv, c"-".as_ptr()) == 0 {
-                operator = Operator::SUBTRACT;
+                operator = Operator::Subtract;
             } else if strcmp(*(*mexp).argv, c"*".as_ptr()) == 0 {
-                operator = Operator::MULTIPLY;
+                operator = Operator::Multiply;
             } else if strcmp(*(*mexp).argv, c"/".as_ptr()) == 0 {
-                operator = Operator::DIVIDE;
+                operator = Operator::Divide;
             } else if strcmp(*(*mexp).argv, c"%".as_ptr()) == 0 || strcmp(*(*mexp).argv, c"m".as_ptr()) == 0 {
-                operator = Operator::MODULUS;
+                operator = Operator::Modulus;
             } else if strcmp(*(*mexp).argv, c"==".as_ptr()) == 0 {
-                operator = Operator::EQUAL;
+                operator = Operator::Equal;
             } else if strcmp(*(*mexp).argv, c"!=".as_ptr()) == 0 {
-                operator = Operator::NOT_EQUAL;
+                operator = Operator::NotEqual;
             } else if strcmp(*(*mexp).argv, c">".as_ptr()) == 0 {
-                operator = Operator::GREATER_THAN;
+                operator = Operator::GreaterThan;
             } else if strcmp(*(*mexp).argv, c"<".as_ptr()) == 0 {
-                operator = Operator::LESS_THAN;
+                operator = Operator::LessThan;
             } else if strcmp(*(*mexp).argv, c">=".as_ptr()) == 0 {
-                operator = Operator::GREATER_THAN_EQUAL;
+                operator = Operator::GreaterThanEqual;
             } else if strcmp(*(*mexp).argv, c"<=".as_ptr()) == 0 {
-                operator = Operator::LESS_THAN_EQUAL;
+                operator = Operator::LessThanEqual;
             } else {
                 format_log1(es, c"format_replace_expression".as_ptr(), c"expression has no valid operator: '%s'".as_ptr(), *(*mexp).argv);
                 break 'fail;
@@ -4304,17 +4304,17 @@ pub unsafe extern "C" fn format_replace_expression(mexp: *mut format_modifier, e
             format_log1(es, c"format_replace_expression".as_ptr(), (c"expression right side is: %.*f".as_ptr()), prec, mright);
 
             result = match operator {
-                Operator::ADD => mleft + mright,
-                Operator::SUBTRACT => mleft - mright,
-                Operator::MULTIPLY => mleft * mright,
-                Operator::DIVIDE => mleft / mright,
-                Operator::MODULUS => mleft % mright,
-                Operator::EQUAL => ((mleft - mright).abs() < 1e-9) as i32 as f64,
-                Operator::NOT_EQUAL => ((mleft - mright).abs() > 1e-9) as i32 as f64,
-                Operator::GREATER_THAN => (mleft > mright) as i32 as f64,
-                Operator::GREATER_THAN_EQUAL => (mleft >= mright) as i32 as f64,
-                Operator::LESS_THAN => (mleft < mright) as i32 as f64,
-                Operator::LESS_THAN_EQUAL => (mleft <= mright) as i32 as f64,
+                Operator::Add => mleft + mright,
+                Operator::Subtract => mleft - mright,
+                Operator::Multiply => mleft * mright,
+                Operator::Divide => mleft / mright,
+                Operator::Modulus => mleft % mright,
+                Operator::Equal => ((mleft - mright).abs() < 1e-9) as i32 as f64,
+                Operator::NotEqual => ((mleft - mright).abs() > 1e-9) as i32 as f64,
+                Operator::GreaterThan => (mleft > mright) as i32 as f64,
+                Operator::GreaterThanEqual => (mleft >= mright) as i32 as f64,
+                Operator::LessThan => (mleft < mright) as i32 as f64,
+                Operator::LessThanEqual => (mleft <= mright) as i32 as f64,
             };
 
             if (use_fp != 0) {

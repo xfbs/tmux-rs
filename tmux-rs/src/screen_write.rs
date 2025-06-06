@@ -9,8 +9,8 @@ use crate::options_::options_get_number_;
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum screen_write_citem_type {
-    TEXT,
-    CLEAR,
+    Text,
+    Clear,
 }
 
 impl_tailq_entry!(screen_write_citem, entry, tailq_entry<screen_write_citem>);
@@ -1361,7 +1361,7 @@ pub unsafe extern "C" fn screen_write_clearline(ctx: *mut screen_write_ctx, bg: 
         screen_write_collect_clear(ctx, (*s).cy, 1);
         (*ci).x = 0;
         (*ci).used = sx;
-        (*ci).type_ = screen_write_citem_type::CLEAR;
+        (*ci).type_ = screen_write_citem_type::Clear;
         (*ci).bg = bg;
         tailq_insert_tail(&raw mut (*(*(*ctx).s).write_list.add((*s).cy as usize)).items, ci);
         (*ctx).item = screen_write_get_citem().as_ptr();
@@ -1398,7 +1398,7 @@ pub unsafe extern "C" fn screen_write_clearendofline(ctx: *mut screen_write_ctx,
         let before = screen_write_collect_trim(ctx, (*s).cy, (*s).cx, sx - (*s).cx, null_mut());
         (*ci).x = (*s).cx;
         (*ci).used = sx - (*s).cx;
-        (*ci).type_ = screen_write_citem_type::CLEAR;
+        (*ci).type_ = screen_write_citem_type::Clear;
         (*ci).bg = bg;
         if before.is_null() {
             tailq_insert_tail(&raw mut (*(*(*ctx).s).write_list.add((*s).cy as usize)).items, ci);
@@ -1438,7 +1438,7 @@ pub unsafe extern "C" fn screen_write_clearstartofline(ctx: *mut screen_write_ct
         let mut before = screen_write_collect_trim(ctx, (*s).cy, 0, (*s).cx + 1, null_mut());
         (*ci).x = 0;
         (*ci).used = (*s).cx + 1;
-        (*ci).type_ = screen_write_citem_type::CLEAR;
+        (*ci).type_ = screen_write_citem_type::Clear;
         (*ci).bg = bg;
         if before.is_null() {
             tailq_insert_tail(&raw mut (*(*(*ctx).s).write_list.add((*s).cy as usize)).items, ci);
@@ -1884,7 +1884,7 @@ pub unsafe extern "C" fn screen_write_collect_scroll(ctx: *mut screen_write_ctx,
         let ci = screen_write_get_citem().as_ptr();
         (*ci).x = 0;
         (*ci).used = screen_size_x(s);
-        (*ci).type_ = screen_write_citem_type::CLEAR;
+        (*ci).type_ = screen_write_citem_type::Clear;
         (*ci).bg = bg;
         tailq_insert_tail(&raw mut (*(*(*ctx).s).write_list.add((*s).rlower as usize)).items, ci);
     }
@@ -1930,7 +1930,7 @@ pub unsafe extern "C" fn screen_write_collect_flush(ctx: *mut screen_write_ctx, 
                     // fatalx("collect list not in order: %u <= %u", (*ci).x, last);
                 }
                 screen_write_set_cursor(ctx, (*ci).x as i32, y as i32);
-                if ((*ci).type_ == screen_write_citem_type::CLEAR) {
+                if ((*ci).type_ == screen_write_citem_type::Clear) {
                     screen_write_initctx(ctx, &raw mut ttyctx, 1);
                     ttyctx.bg = (*ci).bg;
                     ttyctx.num = (*ci).used;

@@ -639,19 +639,19 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
             #[derive(Copy, Clone, Eq, PartialEq)]
             #[repr(u32)]
             enum Current {
-                LEFT,
-                CENTRE,
-                RIGHT,
-                ABSOLUTE_CENTRE,
-                LIST,
-                LIST_LEFT,
-                LIST_RIGHT,
-                AFTER,
+                Left,
+                Centre,
+                Right,
+                AbsoluteCentre,
+                List,
+                ListLeft,
+                ListRight,
+                After,
             };
-            const TOTAL: usize = Current::AFTER as usize + 1;
+            const TOTAL: usize = Current::After as usize + 1;
 
-            let mut current = Current::LEFT;
-            let mut last = Current::LEFT;
+            let mut current = Current::Left;
+            let mut last = Current::Left;
 
             static names: [&str; TOTAL] = ["LEFT", "CENTRE", "RIGHT", "ABSOLUTE_CENTRE", "LIST", "LIST_LEFT", "LIST_RIGHT", "AFTER"];
 
@@ -664,7 +664,7 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
             let mut ocy: u32 = (*os).cy;
             let mut width: [u32; TOTAL] = [0; TOTAL];
 
-            let mut map: [Current; 5] = [Current::LEFT, Current::LEFT, Current::CENTRE, Current::RIGHT, Current::ABSOLUTE_CENTRE];
+            let mut map: [Current; 5] = [Current::Left, Current::Left, Current::Centre, Current::Right, Current::AbsoluteCentre];
 
             let mut focus_start: i32 = -1;
             let mut focus_end: i32 = -1;
@@ -831,10 +831,10 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
 
                             /* End the focus if started. */
                             if (focus_start != -1 && focus_end == -1) {
-                                focus_end = s[Current::LIST as usize].cx as i32;
+                                focus_end = s[Current::List as usize].cx as i32;
                             }
 
-                            current = Current::LIST;
+                            current = Current::List;
                         }
                         style_list::STYLE_LIST_FOCUS => {
                             /* Entering the focus. */
@@ -844,7 +844,7 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
                             }
                             if (focus_start == -1) {
                                 /* focus already started */
-                                focus_start = s[Current::LIST as usize].cx as i32;
+                                focus_start = s[Current::List as usize].cx as i32;
                             }
                         }
                         style_list::STYLE_LIST_OFF => {
@@ -856,12 +856,12 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
                                     fr = null_mut();
                                 }
                                 if (focus_start != -1 && focus_end == -1) {
-                                    focus_end = s[Current::LIST as usize].cx as i32;
+                                    focus_end = s[Current::List as usize].cx as i32;
                                 }
 
-                                map[list_align as usize] = Current::AFTER;
+                                map[list_align as usize] = Current::After;
                                 if list_align == style_align::STYLE_ALIGN_LEFT {
-                                    map[style_align::STYLE_ALIGN_DEFAULT as usize] = Current::AFTER;
+                                    map[style_align::STYLE_ALIGN_DEFAULT as usize] = Current::After;
                                 }
                                 list_state = 1;
                             }
@@ -873,7 +873,7 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
                                 /* not inside the list */
                                 break;
                             }
-                            if (s[Current::LIST_LEFT as usize].cx != 0) {
+                            if (s[Current::ListLeft as usize].cx != 0) {
                                 /* already have marker */
                                 break;
                             }
@@ -886,13 +886,13 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
                                 focus_start = -1;
                                 focus_end = -1;
                             }
-                            current = Current::LIST_LEFT;
+                            current = Current::ListLeft;
                         }
                         style_list::STYLE_LIST_RIGHT_MARKER => {
                             // note conditions are flipped from original c source because of break
 
                             if (list_state == 0) {
-                                if (s[Current::LIST_RIGHT as usize].cx == 0) {
+                                if (s[Current::ListRight as usize].cx == 0) {
                                     if !fr.is_null() {
                                         // abort any region
                                         free_(fr);
@@ -902,7 +902,7 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
                                         focus_start = -1;
                                         focus_end = -1;
                                     }
-                                    current = Current::LIST_RIGHT;
+                                    current = Current::ListRight;
                                 }
                             }
                         }
@@ -975,10 +975,10 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
                         available,
                         ocx,
                         ocy,
-                        &raw mut s[Current::LEFT as usize],
-                        &raw mut s[Current::CENTRE as usize],
-                        &raw mut s[Current::RIGHT as usize],
-                        &raw mut s[Current::ABSOLUTE_CENTRE as usize],
+                        &raw mut s[Current::Left as usize],
+                        &raw mut s[Current::Centre as usize],
+                        &raw mut s[Current::Right as usize],
+                        &raw mut s[Current::AbsoluteCentre as usize],
                         &raw mut frs,
                     ),
                     // List is part of the left.
@@ -987,14 +987,14 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
                         available,
                         ocx,
                         ocy,
-                        &raw mut s[Current::LEFT as usize],
-                        &raw mut s[Current::CENTRE as usize],
-                        &raw mut s[Current::RIGHT as usize],
-                        &raw mut s[Current::ABSOLUTE_CENTRE as usize],
-                        &raw mut s[Current::LIST as usize],
-                        &raw mut s[Current::LIST_LEFT as usize],
-                        &raw mut s[Current::LIST_RIGHT as usize],
-                        &raw mut s[Current::AFTER as usize],
+                        &raw mut s[Current::Left as usize],
+                        &raw mut s[Current::Centre as usize],
+                        &raw mut s[Current::Right as usize],
+                        &raw mut s[Current::AbsoluteCentre as usize],
+                        &raw mut s[Current::List as usize],
+                        &raw mut s[Current::ListLeft as usize],
+                        &raw mut s[Current::ListRight as usize],
+                        &raw mut s[Current::After as usize],
                         focus_start,
                         focus_end,
                         &raw mut frs,
@@ -1005,14 +1005,14 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
                         available,
                         ocx,
                         ocy,
-                        &raw mut s[Current::LEFT as usize],
-                        &raw mut s[Current::CENTRE as usize],
-                        &raw mut s[Current::RIGHT as usize],
-                        &raw mut s[Current::ABSOLUTE_CENTRE as usize],
-                        &raw mut s[Current::LIST as usize],
-                        &raw mut s[Current::LIST_LEFT as usize],
-                        &raw mut s[Current::LIST_RIGHT as usize],
-                        &raw mut s[Current::AFTER as usize],
+                        &raw mut s[Current::Left as usize],
+                        &raw mut s[Current::Centre as usize],
+                        &raw mut s[Current::Right as usize],
+                        &raw mut s[Current::AbsoluteCentre as usize],
+                        &raw mut s[Current::List as usize],
+                        &raw mut s[Current::ListLeft as usize],
+                        &raw mut s[Current::ListRight as usize],
+                        &raw mut s[Current::After as usize],
                         focus_start,
                         focus_end,
                         &raw mut frs,
@@ -1023,14 +1023,14 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
                         available,
                         ocx,
                         ocy,
-                        &raw mut s[Current::LEFT as usize],
-                        &raw mut s[Current::CENTRE as usize],
-                        &raw mut s[Current::RIGHT as usize],
-                        &raw mut s[Current::ABSOLUTE_CENTRE as usize],
-                        &raw mut s[Current::LIST as usize],
-                        &raw mut s[Current::LIST_LEFT as usize],
-                        &raw mut s[Current::LIST_RIGHT as usize],
-                        &raw mut s[Current::AFTER as usize],
+                        &raw mut s[Current::Left as usize],
+                        &raw mut s[Current::Centre as usize],
+                        &raw mut s[Current::Right as usize],
+                        &raw mut s[Current::AbsoluteCentre as usize],
+                        &raw mut s[Current::List as usize],
+                        &raw mut s[Current::ListLeft as usize],
+                        &raw mut s[Current::ListRight as usize],
+                        &raw mut s[Current::After as usize],
                         focus_start,
                         focus_end,
                         &raw mut frs,
@@ -1041,14 +1041,14 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
                         available,
                         ocx,
                         ocy,
-                        &raw mut s[Current::LEFT as usize],
-                        &raw mut s[Current::CENTRE as usize],
-                        &raw mut s[Current::RIGHT as usize],
-                        &raw mut s[Current::ABSOLUTE_CENTRE as usize],
-                        &raw mut s[Current::LIST as usize],
-                        &raw mut s[Current::LIST_LEFT as usize],
-                        &raw mut s[Current::LIST_RIGHT as usize],
-                        &raw mut s[Current::AFTER as usize],
+                        &raw mut s[Current::Left as usize],
+                        &raw mut s[Current::Centre as usize],
+                        &raw mut s[Current::Right as usize],
+                        &raw mut s[Current::AbsoluteCentre as usize],
+                        &raw mut s[Current::List as usize],
+                        &raw mut s[Current::ListLeft as usize],
+                        &raw mut s[Current::ListRight as usize],
+                        &raw mut s[Current::After as usize],
                         focus_start,
                         focus_end,
                         &raw mut frs,
