@@ -426,9 +426,9 @@ pub unsafe extern "C" fn grid_scroll_history_region(gd: *mut grid, mut upper: c_
         std::ptr::copy(gl_history, gl_history.add(1), ((*gd).sy as usize) * std::mem::size_of::<grid_line>());
 
         // Adjust region and find start/end
-        upper = upper + 1;
+        upper += 1;
         let gl_upper = (*gd).linedata.add(upper as usize);
-        lower = lower + 1;
+        lower += 1;
 
         // Move line into history
         std::ptr::copy_nonoverlapping(gl_upper, gl_history, size_of::<grid_line>());

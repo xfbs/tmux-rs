@@ -842,7 +842,7 @@ pub unsafe extern "C" fn screen_write_preview(ctx: *mut screen_write_ctx, src: *
             if (px < nx / 3) {
                 px = 0;
             } else {
-                px = px - nx / 3;
+                px -= nx / 3;
             }
             if (px + nx > screen_size_x(src)) {
                 if (nx > screen_size_x(src)) {
@@ -855,7 +855,7 @@ pub unsafe extern "C" fn screen_write_preview(ctx: *mut screen_write_ctx, src: *
             if (py < ny / 3) {
                 py = 0;
             } else {
-                py = py - ny / 3;
+                py -= ny / 3;
             }
             if (py + ny > screen_size_y(src)) {
                 if (ny > screen_size_y(src)) {

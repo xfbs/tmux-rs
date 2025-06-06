@@ -535,7 +535,7 @@ unsafe extern "C" fn tty_keys_find1(mut tk: *mut tty_key, mut buf: *const c_char
         if (*tk).ch == *buf {
             // Move forward in the string
             buf = buf.add(1);
-            len = len - 1;
+            len -= 1;
             *size += 1;
 
             // At the end of the string, return the current node

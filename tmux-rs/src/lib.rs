@@ -19,7 +19,6 @@
 #![allow(clippy::nonminimal_bool)] // switch
 #![allow(clippy::manual_div_ceil)] // switch
 #![allow(clippy::identity_op)] // switch
-#![warn(clippy::assign_op_pattern)] // switch
 #![allow(clippy::blocks_in_conditions)] // keep, not worth fixing yet
 #![allow(
     clippy::needless_range_loop,

@@ -1265,7 +1265,7 @@ unsafe extern "C" fn window_tree_mouse(data: *mut window_tree_modedata, key: key
         if (x == 0 || (*data).end == 0) {
             x = 0;
         } else {
-            x = x / (*data).each;
+            x /= (*data).each;
             if ((*data).start + x >= (*data).end) {
                 x = (*data).end - 1;
             }

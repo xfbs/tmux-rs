@@ -612,7 +612,7 @@ pub unsafe extern "C" fn screen_select_cell(s: *mut screen, dst: *mut grid_cell,
         memcpy__(dst, &raw const (*(*s).sel).cell);
 
         utf8_copy(&mut (*dst).data, &(*src).data);
-        (*dst).attr = (*dst).attr & !GRID_ATTR_CHARSET as u16;
+        (*dst).attr &= !GRID_ATTR_CHARSET as u16;
         (*dst).attr |= (*src).attr & GRID_ATTR_CHARSET as u16;
         (*dst).flags = (*src).flags;
     }
