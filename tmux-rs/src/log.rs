@@ -29,12 +29,18 @@ static log_level: AtomicI32 = AtomicI32::new(0);
 
 const DEFAULT_ORDERING: Ordering = Ordering::SeqCst;
 
-unsafe extern "C" fn log_event_cb(_severity: c_int, msg: *const c_char) { unsafe { log_debug!("{}", _s(msg)) } }
+unsafe extern "C" fn log_event_cb(_severity: c_int, msg: *const c_char) {
+    unsafe { log_debug!("{}", _s(msg)) }
+}
 
-pub fn log_add_level() { log_level.fetch_add(1, DEFAULT_ORDERING); }
+pub fn log_add_level() {
+    log_level.fetch_add(1, DEFAULT_ORDERING);
+}
 
 #[unsafe(no_mangle)]
-pub extern "C" fn log_get_level() -> i32 { log_level.load(DEFAULT_ORDERING) }
+pub extern "C" fn log_get_level() -> i32 {
+    log_level.load(DEFAULT_ORDERING)
+}
 
 #[unsafe(no_mangle)]
 pub fn log_open(name: &CStr) {
@@ -44,7 +50,13 @@ pub fn log_open(name: &CStr) {
 
     log_close();
     let pid = std::process::id();
-    let Ok(file) = std::fs::File::options().read(false).write(true).append(true).create(true).open(format!("tmux-{}-{}.log", name.to_str().unwrap(), pid)) else {
+    let Ok(file) = std::fs::File::options()
+        .read(false)
+        .write(true)
+        .append(true)
+        .create(true)
+        .open(format!("tmux-{}-{}.log", name.to_str().unwrap(), pid))
+    else {
         return;
     };
 
@@ -81,7 +93,10 @@ pub fn log_close() {
                 // TODO this is invalid, and compiler version dependent, but prevents a memory leak
                 // need a way to properly get out the file and drop the buffer
                 unsafe {
-                    let bw = std::mem::transmute::<std::io::LineWriter<std::fs::File>, BufWriter<File>>(lw);
+                    let bw = std::mem::transmute::<
+                        std::io::LineWriter<std::fs::File>,
+                        BufWriter<File>,
+                    >(lw);
                     let (file, _) = bw.into_parts();
                     std::mem::forget(file);
                 }
@@ -114,14 +129,23 @@ unsafe extern "C" fn log_vwrite(msg: &CStr, mut ap: VaList, prefix: &CStr) {
         }
         free(s as _);
 
-        let duration = std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH).unwrap_or_default();
+        let duration = std::time::SystemTime::now()
+            .duration_since(std::time::SystemTime::UNIX_EPOCH)
+            .unwrap_or_default();
         let secs = duration.as_secs();
         let micros = duration.subsec_micros();
 
         let str_prefix = prefix.to_str().expect("string prefix must be valid utf8");
-        let str_out = CStr::from_ptr(out).to_str().expect("out must be valid utf8");
+        let str_out = CStr::from_ptr(out)
+            .to_str()
+            .expect("out must be valid utf8");
 
-        let _res = log_file.lock().unwrap().as_mut().expect("race condition").write_fmt(format_args!("{secs}.{micros:06} {str_prefix}{str_out}\n"));
+        let _res = log_file
+            .lock()
+            .unwrap()
+            .as_mut()
+            .expect("race condition")
+            .write_fmt(format_args!("{secs}.{micros:06} {str_prefix}{str_out}\n"));
         _res.unwrap();
         free(out as *mut c_void);
     }
@@ -199,10 +223,17 @@ fn log_vwrite_rs(args: std::fmt::Arguments, prefix: &str) {
 
         let msg = format!("{args}\0").to_string();
         let mut out: *mut c_char = null_mut();
-        if stravis(&mut out, msg.as_ptr().cast(), VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL) == -1 {
+        if stravis(
+            &mut out,
+            msg.as_ptr().cast(),
+            VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL,
+        ) == -1
+        {
             return;
         }
-        let duration = std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH).unwrap_or_default();
+        let duration = std::time::SystemTime::now()
+            .duration_since(std::time::SystemTime::UNIX_EPOCH)
+            .unwrap_or_default();
         let secs = duration.as_secs();
         let micros = duration.subsec_micros();
 
@@ -220,11 +251,21 @@ pub unsafe extern "C" fn fatal(msg: *const c_char, mut ap: ...) -> ! {
     unsafe {
         let mut tmp: [c_char; 256] = [0; 256];
 
-        if snprintf(tmp.as_mut_ptr(), size_of_val(&tmp), c"fatal: %s: ".as_ptr(), strerror(errno!())) < 0 {
+        if snprintf(
+            tmp.as_mut_ptr(),
+            size_of_val(&tmp),
+            c"fatal: %s: ".as_ptr(),
+            strerror(errno!()),
+        ) < 0
+        {
             std::process::exit(1);
         }
 
-        log_vwrite(CStr::from_ptr(msg), ap.as_va_list(), CStr::from_ptr(tmp.as_ptr()));
+        log_vwrite(
+            CStr::from_ptr(msg),
+            ap.as_va_list(),
+            CStr::from_ptr(tmp.as_ptr()),
+        );
 
         std::process::exit(1)
     }

@@ -59,7 +59,11 @@ unsafe extern "C" fn sixel_parse_expand_lines(si: *mut sixel_image, y: u32) -> i
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn sixel_parse_expand_line(si: *mut sixel_image, sl: *mut sixel_line, x: u32) -> i32 {
+unsafe extern "C" fn sixel_parse_expand_line(
+    si: *mut sixel_image,
+    sl: *mut sixel_line,
+    x: u32,
+) -> i32 {
     unsafe {
         if x <= (*sl).x {
             return 0;
@@ -126,7 +130,11 @@ unsafe extern "C" fn sixel_parse_write(si: *mut sixel_image, ch: u32) -> i32 {
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn sixel_parse_attributes(si: *mut sixel_image, cp: *const c_char, end: *const c_char) -> *const c_char {
+unsafe extern "C" fn sixel_parse_attributes(
+    si: *mut sixel_image,
+    cp: *const c_char,
+    end: *const c_char,
+) -> *const c_char {
     unsafe {
         let mut endptr: *mut c_char = null_mut();
 
@@ -177,7 +185,11 @@ unsafe extern "C" fn sixel_parse_attributes(si: *mut sixel_image, cp: *const c_c
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn sixel_parse_colour(si: *mut sixel_image, cp: *const c_char, end: *const c_char) -> *const c_char {
+unsafe extern "C" fn sixel_parse_colour(
+    si: *mut sixel_image,
+    cp: *const c_char,
+    end: *const c_char,
+) -> *const c_char {
     unsafe {
         let mut endptr: *mut c_char = null_mut();
 
@@ -225,7 +237,8 @@ unsafe extern "C" fn sixel_parse_colour(si: *mut sixel_image, cp: *const c_char,
             return null_mut();
         }
         if (c + 1 > (*si).ncolours) {
-            (*si).colours = xrecallocarray__((*si).colours, (*si).ncolours as usize, c as usize + 1).as_ptr();
+            (*si).colours =
+                xrecallocarray__((*si).colours, (*si).ncolours as usize, c as usize + 1).as_ptr();
             (*si).ncolours = c + 1;
         }
         *(*si).colours.add(c as usize) = (type_ << 24) | (r << 16) | (g << 8) | b;
@@ -234,7 +247,11 @@ unsafe extern "C" fn sixel_parse_colour(si: *mut sixel_image, cp: *const c_char,
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn sixel_parse_repeat(si: *mut sixel_image, cp: *const c_char, end: *const c_char) -> *const c_char {
+unsafe extern "C" fn sixel_parse_repeat(
+    si: *mut sixel_image,
+    cp: *const c_char,
+    end: *const c_char,
+) -> *const c_char {
     unsafe {
         const size_of_tmp: usize = 32;
         let mut tmp: [c_char; size_of_tmp] = [0; size_of_tmp];
@@ -262,7 +279,12 @@ unsafe extern "C" fn sixel_parse_repeat(si: *mut sixel_image, cp: *const c_char,
         }
         tmp[n as usize] = b'\0' as i8;
 
-        n = strtonum((&raw const tmp) as *const i8, 1, SIXEL_WIDTH_LIMIT as i64, &raw mut errstr) as u32;
+        n = strtonum(
+            (&raw const tmp) as *const i8,
+            1,
+            SIXEL_WIDTH_LIMIT as i64,
+            &raw mut errstr,
+        ) as u32;
         if n == 0 || !errstr.is_null() {
             // log_debug("%s: repeat too wide", __func__);
             return null_mut();
@@ -282,7 +304,12 @@ unsafe extern "C" fn sixel_parse_repeat(si: *mut sixel_image, cp: *const c_char,
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn sixel_parse(buf: *const c_char, len: usize, xpixel: u32, ypixel: u32) -> *mut sixel_image {
+pub unsafe extern "C" fn sixel_parse(
+    buf: *const c_char,
+    len: usize,
+    xpixel: u32,
+    ypixel: u32,
+) -> *mut sixel_image {
     unsafe {
         // struct sixel_image *si;
         // const char *cp = buf, *end = buf + len;
@@ -416,7 +443,16 @@ pub unsafe extern "C" fn sixel_size_in_cells(si: *mut sixel_image, x: *mut u32, 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn sixel_scale(si: *mut sixel_image, mut xpixel: u32, mut ypixel: u32, ox: u32, oy: u32, mut sx: u32, mut sy: u32, colours: i32) -> *mut sixel_image {
+pub unsafe extern "C" fn sixel_scale(
+    si: *mut sixel_image,
+    mut xpixel: u32,
+    mut ypixel: u32,
+    ox: u32,
+    oy: u32,
+    mut sx: u32,
+    mut sy: u32,
+    colours: i32,
+) -> *mut sixel_image {
     unsafe {
         /*
          * We want to get the section of the image at ox,oy in image cells and
@@ -469,7 +505,9 @@ pub unsafe extern "C" fn sixel_scale(si: *mut sixel_image, mut xpixel: u32, mut 
         }
 
         if colours != 0 {
-            (*new).colours = xmalloc((*si).ncolours as usize * size_of::<u32>()).as_ptr().cast();
+            (*new).colours = xmalloc((*si).ncolours as usize * size_of::<u32>())
+                .as_ptr()
+                .cast();
             for i in 0..(*si).ncolours {
                 *(*new).colours.add(i as usize) = *(*si).colours.add(i as usize);
             }
@@ -480,7 +518,13 @@ pub unsafe extern "C" fn sixel_scale(si: *mut sixel_image, mut xpixel: u32, mut 
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn sixel_print_add(buf: *mut *mut c_char, len: *mut usize, used: *mut usize, s: *const c_char, slen: usize) {
+unsafe extern "C" fn sixel_print_add(
+    buf: *mut *mut c_char,
+    len: *mut usize,
+    used: *mut usize,
+    s: *const c_char,
+    slen: usize,
+) {
     unsafe {
         if (*used + slen >= *len + 1) {
             (*len) *= 2;
@@ -492,7 +536,13 @@ unsafe extern "C" fn sixel_print_add(buf: *mut *mut c_char, len: *mut usize, use
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn sixel_print_repeat(buf: *mut *mut c_char, len: *mut usize, used: *mut usize, count: u32, ch: c_char) {
+unsafe extern "C" fn sixel_print_repeat(
+    buf: *mut *mut c_char,
+    len: *mut usize,
+    used: *mut usize,
+    count: u32,
+    ch: c_char,
+) {
     unsafe {
         if (count == 1) {
             sixel_print_add(buf, len, used, &raw const ch, 1);
@@ -505,14 +555,24 @@ unsafe extern "C" fn sixel_print_repeat(buf: *mut *mut c_char, len: *mut usize, 
             sixel_print_add(buf, len, used, &raw const ch, 1);
         } else if (count != 0) {
             let mut tmp: [c_char; 16] = [0; 16];
-            let tmplen = xsnprintf((&raw mut tmp) as *mut i8, 16usize, c"!%u%c".as_ptr(), count, ch as i32) as usize;
+            let tmplen = xsnprintf(
+                (&raw mut tmp) as *mut i8,
+                16usize,
+                c"!%u%c".as_ptr(),
+                count,
+                ch as i32,
+            ) as usize;
             sixel_print_add(buf, len, used, (&raw mut tmp) as *mut i8, tmplen);
         }
     }
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn sixel_print(si: *mut sixel_image, map: *mut sixel_image, size: *mut usize) -> *const c_char {
+unsafe extern "C" fn sixel_print(
+    si: *mut sixel_image,
+    map: *mut sixel_image,
+    size: *mut usize,
+) -> *const c_char {
     unsafe {
         let mut buf: *mut c_char = null_mut();
         const size_of_tmp: usize = 64;
@@ -525,7 +585,11 @@ unsafe extern "C" fn sixel_print(si: *mut sixel_image, map: *mut sixel_image, si
         let mut used: usize = 0;
         let mut tmplen: usize = 0;
 
-        let (colours, ncolours) = if !map.is_null() { ((*map).colours, (*map).ncolours) } else { ((*si).colours, (*si).ncolours) };
+        let (colours, ncolours) = if !map.is_null() {
+            ((*map).colours, (*map).ncolours)
+        } else {
+            ((*si).colours, (*si).ncolours)
+        };
 
         if ncolours == 0 {
             return null_mut();
@@ -535,15 +599,48 @@ unsafe extern "C" fn sixel_print(si: *mut sixel_image, map: *mut sixel_image, si
         len = 8192;
         buf = xmalloc(len).as_ptr().cast();
 
-        sixel_print_add(&raw mut buf, &raw mut len, &raw mut used, c"\x1bPq".as_ptr(), 3);
+        sixel_print_add(
+            &raw mut buf,
+            &raw mut len,
+            &raw mut used,
+            c"\x1bPq".as_ptr(),
+            3,
+        );
 
-        tmplen = xsnprintf((&raw mut tmp).cast(), size_of_tmp, c"\"1;1;%u;%u".as_ptr(), (*si).x, (*si).y) as usize;
-        sixel_print_add(&raw mut buf, &raw mut len, &raw mut used, (&raw mut tmp).cast(), tmplen);
+        tmplen = xsnprintf(
+            (&raw mut tmp).cast(),
+            size_of_tmp,
+            c"\"1;1;%u;%u".as_ptr(),
+            (*si).x,
+            (*si).y,
+        ) as usize;
+        sixel_print_add(
+            &raw mut buf,
+            &raw mut len,
+            &raw mut used,
+            (&raw mut tmp).cast(),
+            tmplen,
+        );
 
         for i in 0..ncolours {
             let c = *colours.add(i as usize);
-            tmplen = xsnprintf((&raw mut tmp).cast(), size_of_tmp, c"#%u;%u;%u;%u;%u".as_ptr(), i, c >> 24, (c >> 16) & 0xff, (c >> 8) & 0xff, c & 0xff) as usize;
-            sixel_print_add(&raw mut buf, &raw mut len, &raw mut used, (&raw mut tmp).cast(), tmplen);
+            tmplen = xsnprintf(
+                (&raw mut tmp).cast(),
+                size_of_tmp,
+                c"#%u;%u;%u;%u;%u".as_ptr(),
+                i,
+                c >> 24,
+                (c >> 16) & 0xff,
+                (c >> 8) & 0xff,
+                c & 0xff,
+            ) as usize;
+            sixel_print_add(
+                &raw mut buf,
+                &raw mut len,
+                &raw mut used,
+                (&raw mut tmp).cast(),
+                tmplen,
+            );
         }
 
         let mut y = 0;
@@ -566,7 +663,13 @@ unsafe extern "C" fn sixel_print(si: *mut sixel_image, map: *mut sixel_image, si
                     continue;
                 }
                 tmplen = xsnprintf((&raw mut tmp).cast(), size_of_tmp, c"#%u".as_ptr(), c) as usize;
-                sixel_print_add(&raw mut buf, &raw mut len, &raw mut used, (&raw mut tmp).cast(), tmplen);
+                sixel_print_add(
+                    &raw mut buf,
+                    &raw mut len,
+                    &raw mut used,
+                    (&raw mut tmp).cast(),
+                    tmplen,
+                );
 
                 let mut count = 0;
                 for x in 0..(*si).x {
@@ -606,7 +709,13 @@ unsafe extern "C" fn sixel_print(si: *mut sixel_image, map: *mut sixel_image, si
             used -= 1;
         }
 
-        sixel_print_add(&raw mut buf, &raw mut len, &raw mut used, c"\x1b\\".as_ptr(), 2);
+        sixel_print_add(
+            &raw mut buf,
+            &raw mut len,
+            &raw mut used,
+            c"\x1b\\".as_ptr(),
+            2,
+        );
 
         *buf.add(used) = b'\0' as i8;
         if !size.is_null() {
@@ -646,7 +755,14 @@ unsafe extern "C" fn sixel_to_screen(si: *mut sixel_image) -> *mut screen {
                 }
             }
         } else {
-            screen_write_box(&raw mut ctx, sx, sy, box_lines::BOX_LINES_DEFAULT, null(), null());
+            screen_write_box(
+                &raw mut ctx,
+                sx,
+                sy,
+                box_lines::BOX_LINES_DEFAULT,
+                null(),
+                null(),
+            );
             for y in 1..(sy - 1) {
                 for x in 1..(sx - 1) {
                     grid_view_set_cell((*s).grid, x, y, &raw const gc);

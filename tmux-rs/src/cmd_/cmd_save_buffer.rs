@@ -29,7 +29,14 @@ static mut cmd_show_buffer_entry: cmd_entry = cmd_entry {
 };
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn cmd_save_buffer_done(_c: *mut client, path: *mut c_char, error: i32, closed: i32, _buffer: *mut evbuffer, data: *mut c_void) {
+unsafe extern "C" fn cmd_save_buffer_done(
+    _c: *mut client,
+    path: *mut c_char,
+    error: i32,
+    closed: i32,
+    _buffer: *mut evbuffer,
+    data: *mut c_void,
+) {
     let mut item = data as *mut cmdq_item;
 
     if closed == 0 {
@@ -90,7 +97,15 @@ unsafe extern "C" fn cmd_save_buffer_exec(self_: *mut cmd, item: *mut cmdq_item)
         } else {
             flags = O_TRUNC;
         }
-        file_write(cmdq_get_client(item), path, flags, bufdata as _, bufsize, Some(cmd_save_buffer_done), item as _);
+        file_write(
+            cmdq_get_client(item),
+            path,
+            flags,
+            bufdata as _,
+            bufsize,
+            Some(cmd_save_buffer_done),
+            item as _,
+        );
         free_(path);
 
         cmd_retval::CMD_RETURN_WAIT

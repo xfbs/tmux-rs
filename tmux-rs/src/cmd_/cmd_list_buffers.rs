@@ -30,7 +30,12 @@ unsafe extern "C" fn cmd_list_buffers_exec(self_: *mut cmd, item: *mut cmdq_item
             pb = paste_walk(pb);
             !pb.is_null()
         }) {
-            let ft = format_create(cmdq_get_client(item), item, FORMAT_NONE, format_flags::empty());
+            let ft = format_create(
+                cmdq_get_client(item),
+                item,
+                FORMAT_NONE,
+                format_flags::empty(),
+            );
             format_defaults_paste_buffer(ft, pb);
 
             if !filter.is_null() {

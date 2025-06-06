@@ -25,7 +25,9 @@ unsafe extern "C" fn cmd_kill_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
 
         if args_has(args, b'a') != 0 {
             server_unzoom_window((*wl).window);
-            for loopwp in tailq_foreach::<_, discr_entry>(&raw mut (*(*wl).window).panes).map(NonNull::as_ptr) {
+            for loopwp in
+                tailq_foreach::<_, discr_entry>(&raw mut (*(*wl).window).panes).map(NonNull::as_ptr)
+            {
                 if (loopwp == wp) {
                     continue;
                 }

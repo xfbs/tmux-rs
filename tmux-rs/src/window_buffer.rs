@@ -59,7 +59,11 @@ enum window_buffer_sort_type {
 }
 
 const window_buffer_sort_list_len: u32 = 3;
-static mut window_buffer_sort_list: [SyncCharPtr; 3] = [SyncCharPtr::new(c"time"), SyncCharPtr::new(c"name"), SyncCharPtr::new(c"size")];
+static mut window_buffer_sort_list: [SyncCharPtr; 3] = [
+    SyncCharPtr::new(c"time"),
+    SyncCharPtr::new(c"name"),
+    SyncCharPtr::new(c"size"),
+];
 
 static mut window_buffer_sort: *mut mode_tree_sort_criteria = null_mut();
 
@@ -89,9 +93,12 @@ pub struct window_buffer_editdata {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_add_item(data: *mut window_buffer_modedata) -> *mut window_buffer_itemdata {
+pub unsafe extern "C" fn window_buffer_add_item(
+    data: *mut window_buffer_modedata,
+) -> *mut window_buffer_itemdata {
     unsafe {
-        (*data).item_list = xreallocarray_((*data).item_list, (*data).item_size as usize + 1).as_ptr();
+        (*data).item_list =
+            xreallocarray_((*data).item_list, (*data).item_size as usize + 1).as_ptr();
         let item = xcalloc1::<window_buffer_itemdata>();
         *(*data).item_list.add((*data).item_size as usize) = item;
         (*data).item_size += 1;
@@ -116,7 +123,9 @@ pub unsafe extern "C" fn window_buffer_cmp(a0: *const c_void, b0: *const c_void)
 
         if ((*window_buffer_sort).field == window_buffer_sort_type::WINDOW_BUFFER_BY_TIME as u32) {
             result = (*(*b)).order as i32 - (*(*a)).order as i32;
-        } else if ((*window_buffer_sort).field == window_buffer_sort_type::WINDOW_BUFFER_BY_SIZE as u32) {
+        } else if ((*window_buffer_sort).field
+            == window_buffer_sort_type::WINDOW_BUFFER_BY_SIZE as u32)
+        {
             result = ((*(*b)).size as isize - (*(*a)).size as isize) as i32;
         }
 
@@ -134,7 +143,12 @@ pub unsafe extern "C" fn window_buffer_cmp(a0: *const c_void, b0: *const c_void)
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_build(modedata: NonNull<c_void>, sort_crit: *mut mode_tree_sort_criteria, tag: *mut u64, filter: *const c_char) {
+pub unsafe extern "C" fn window_buffer_build(
+    modedata: NonNull<c_void>,
+    sort_crit: *mut mode_tree_sort_criteria,
+    tag: *mut u64,
+    filter: *const c_char,
+) {
     unsafe {
         let mut data: NonNull<window_buffer_modedata> = modedata.cast();
         let mut item: *mut window_buffer_itemdata = null_mut();
@@ -162,7 +176,12 @@ pub unsafe extern "C" fn window_buffer_build(modedata: NonNull<c_void>, sort_cri
         }
 
         window_buffer_sort = sort_crit;
-        qsort((*data).item_list.cast(), (*data).item_size as usize, size_of::<*const window_buffer_itemdata>(), Some(window_buffer_cmp));
+        qsort(
+            (*data).item_list.cast(),
+            (*data).item_size as usize,
+            size_of::<*const window_buffer_itemdata>(),
+            Some(window_buffer_cmp),
+        );
 
         if cmd_find_valid_state(&raw mut (*data).fs).as_bool() {
             s = NonNull::new((*data).fs.s);
@@ -192,7 +211,15 @@ pub unsafe extern "C" fn window_buffer_build(modedata: NonNull<c_void>, sort_cri
             }
 
             let text = format_expand(ft, (*data).format);
-            mode_tree_add((*data).data.cast(), null_mut(), item.cast(), (*item).order as u64, (*item).name, text, -1);
+            mode_tree_add(
+                (*data).data.cast(),
+                null_mut(),
+                item.cast(),
+                (*item).order as u64,
+                (*item).name,
+                text,
+                -1,
+            );
             free_(text);
 
             format_free(ft);
@@ -201,7 +228,13 @@ pub unsafe extern "C" fn window_buffer_build(modedata: NonNull<c_void>, sort_cri
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_draw(modedata: *mut c_void, itemdata: Option<NonNull<c_void>>, ctx: *mut screen_write_ctx, sx: u32, sy: u32) {
+pub unsafe extern "C" fn window_buffer_draw(
+    modedata: *mut c_void,
+    itemdata: Option<NonNull<c_void>>,
+    ctx: *mut screen_write_ctx,
+    sx: u32,
+    sy: u32,
+) {
     unsafe {
         let item: Option<NonNull<window_buffer_itemdata>> = itemdata.map(NonNull::cast);
         let mut cx = (*(*ctx).s).cx;
@@ -220,11 +253,24 @@ pub unsafe extern "C" fn window_buffer_draw(modedata: *mut c_void, itemdata: Opt
             while (end != pdata.add(psize) && *end != b'\n' as c_char) {
                 end = end.add(1);
             }
-            buf = xreallocarray(buf.cast(), 4, end.offset_from(start) as usize + 1).as_ptr().cast();
-            utf8_strvis(buf, start, end.offset_from(start) as usize, VIS_OCTAL | VIS_CSTYLE | VIS_TAB);
+            buf = xreallocarray(buf.cast(), 4, end.offset_from(start) as usize + 1)
+                .as_ptr()
+                .cast();
+            utf8_strvis(
+                buf,
+                start,
+                end.offset_from(start) as usize,
+                VIS_OCTAL | VIS_CSTYLE | VIS_TAB,
+            );
             if (*buf != b'\0' as c_char) {
                 screen_write_cursormove(ctx, cx as i32, (cy + i) as i32, 0);
-                screen_write_nputs(ctx, sx as isize, &raw const grid_default_cell, c"%s".as_ptr(), buf);
+                screen_write_nputs(
+                    ctx,
+                    sx as isize,
+                    &raw const grid_default_cell,
+                    c"%s".as_ptr(),
+                    buf,
+                );
             }
 
             if end == pdata.add(psize) {
@@ -237,7 +283,11 @@ pub unsafe extern "C" fn window_buffer_draw(modedata: *mut c_void, itemdata: Opt
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_search(modedata: *mut c_void, itemdata: NonNull<c_void>, ss: *const c_char) -> boolint {
+pub unsafe extern "C" fn window_buffer_search(
+    modedata: *mut c_void,
+    itemdata: NonNull<c_void>,
+    ss: *const c_char,
+) -> boolint {
     unsafe {
         let item: NonNull<window_buffer_itemdata> = itemdata.cast();
         let Some(pb) = NonNull::new(paste_get_name((*item.as_ptr()).name)) else {
@@ -253,7 +303,11 @@ pub unsafe extern "C" fn window_buffer_search(modedata: *mut c_void, itemdata: N
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_menu(modedata: NonNull<c_void>, c: *mut client, key: key_code) {
+pub unsafe extern "C" fn window_buffer_menu(
+    modedata: NonNull<c_void>,
+    c: *mut client,
+    key: key_code,
+) {
     unsafe {
         let mut data: NonNull<window_buffer_modedata> = modedata.cast();
         let mut wp: *mut window_pane = (*data.as_ptr()).wp;
@@ -267,7 +321,11 @@ pub unsafe extern "C" fn window_buffer_menu(modedata: NonNull<c_void>, c: *mut c
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_get_key(modedata: NonNull<c_void>, itemdata: NonNull<c_void>, line: u32) -> key_code {
+pub unsafe extern "C" fn window_buffer_get_key(
+    modedata: NonNull<c_void>,
+    itemdata: NonNull<c_void>,
+    line: u32,
+) -> key_code {
     unsafe {
         let mut data: NonNull<window_buffer_modedata> = modedata.cast();
         let mut item: NonNull<window_buffer_itemdata> = itemdata.cast();
@@ -299,7 +357,11 @@ pub unsafe extern "C" fn window_buffer_get_key(modedata: NonNull<c_void>, itemda
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_init(wme: NonNull<window_mode_entry>, fs: *mut cmd_find_state, args: *mut args) -> *mut screen {
+pub unsafe extern "C" fn window_buffer_init(
+    wme: NonNull<window_mode_entry>,
+    fs: *mut cmd_find_state,
+    args: *mut args,
+) -> *mut screen {
     unsafe {
         let mut s = null_mut();
         let mut wp = (*wme.as_ptr()).wp;
@@ -392,12 +454,19 @@ pub unsafe extern "C" fn window_buffer_update(wme: NonNull<window_mode_entry>) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_do_delete(modedata: NonNull<c_void>, itemdata: NonNull<c_void>, c: *mut client, key: key_code) {
+pub unsafe extern "C" fn window_buffer_do_delete(
+    modedata: NonNull<c_void>,
+    itemdata: NonNull<c_void>,
+    c: *mut client,
+    key: key_code,
+) {
     unsafe {
         let mut data: NonNull<window_buffer_modedata> = modedata.cast();
         let mut item: NonNull<window_buffer_itemdata> = itemdata.cast();
 
-        if item == mode_tree_get_current((*data.as_ptr()).data).cast() && mode_tree_down((*data.as_ptr()).data, 0) == 0 {
+        if item == mode_tree_get_current((*data.as_ptr()).data).cast()
+            && mode_tree_down((*data.as_ptr()).data, 0) == 0
+        {
             /*
              *If we were unable to select the item further down we are at
              * the end of the list. Move one element up instead, to make
@@ -414,13 +483,23 @@ pub unsafe extern "C" fn window_buffer_do_delete(modedata: NonNull<c_void>, item
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_do_paste(modedata: NonNull<c_void>, itemdata: NonNull<c_void>, c: *mut client, key: key_code) {
+pub unsafe extern "C" fn window_buffer_do_paste(
+    modedata: NonNull<c_void>,
+    itemdata: NonNull<c_void>,
+    c: *mut client,
+    key: key_code,
+) {
     unsafe {
         let data: NonNull<window_buffer_modedata> = modedata.cast();
         let item: NonNull<window_buffer_itemdata> = itemdata.cast();
 
         if !paste_get_name((*item.as_ptr()).name).is_null() {
-            mode_tree_run_command(c, null_mut(), (*data.as_ptr()).command, (*item.as_ptr()).name);
+            mode_tree_run_command(
+                c,
+                null_mut(),
+                (*data.as_ptr()).command,
+                (*item.as_ptr()).name,
+            );
         }
     }
 }
@@ -434,7 +513,11 @@ pub unsafe extern "C" fn window_buffer_finish_edit(ed: *mut window_buffer_editda
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_edit_close_cb(buf: *mut c_char, mut len: usize, arg: *mut c_void) {
+pub unsafe extern "C" fn window_buffer_edit_close_cb(
+    buf: *mut c_char,
+    mut len: usize,
+    arg: *mut c_void,
+) {
     unsafe {
         let ed = arg as *mut window_buffer_editdata;
 
@@ -452,7 +535,10 @@ pub unsafe extern "C" fn window_buffer_edit_close_cb(buf: *mut c_char, mut len: 
 
         let mut oldlen = 0;
         let oldbuf = paste_buffer_data_(pb, &mut oldlen);
-        if (oldlen != 0 && *oldbuf.add(oldlen - 1) != b'\n' as c_char && *buf.add(len - 1) == b'\n' as c_char) {
+        if (oldlen != 0
+            && *oldbuf.add(oldlen - 1) != b'\n' as c_char
+            && *buf.add(len - 1) == b'\n' as c_char)
+        {
             len -= 1;
         }
         if (len != 0) {
@@ -474,7 +560,11 @@ pub unsafe extern "C" fn window_buffer_edit_close_cb(buf: *mut c_char, mut len: 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_start_edit(data: *mut window_buffer_modedata, item: *mut window_buffer_itemdata, c: *mut client) {
+pub unsafe extern "C" fn window_buffer_start_edit(
+    data: *mut window_buffer_modedata,
+    item: *mut window_buffer_itemdata,
+    c: *mut client,
+) {
     unsafe {
         // struct paste_buffer *pb;
         // const char *buf;
@@ -500,7 +590,14 @@ pub unsafe extern "C" fn window_buffer_start_edit(data: *mut window_buffer_moded
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_buffer_key(wme: NonNull<window_mode_entry>, c: *mut client, s: *mut session, wl: *mut winlink, mut key: key_code, m: *mut mouse_event) {
+pub unsafe extern "C" fn window_buffer_key(
+    wme: NonNull<window_mode_entry>,
+    c: *mut client,
+    s: *mut session,
+    wl: *mut winlink,
+    mut key: key_code,
+    m: *mut mouse_event,
+) {
     unsafe {
         let mut wp = (*wme.as_ptr()).wp;
         let mut data = (*wme.as_ptr()).data as *mut window_buffer_modedata;

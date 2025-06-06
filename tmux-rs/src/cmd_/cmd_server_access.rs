@@ -18,7 +18,10 @@ static mut cmd_server_access_entry: cmd_entry = cmd_entry {
 };
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn cmd_server_access_deny(item: *mut cmdq_item, pw: *mut libc::passwd) -> cmd_retval {
+unsafe extern "C" fn cmd_server_access_deny(
+    item: *mut cmdq_item,
+    pw: *mut libc::passwd,
+) -> cmd_retval {
     unsafe {
         let mut user = server_acl_user_find((*pw).pw_uid);
         if user.is_null() {
@@ -53,7 +56,14 @@ unsafe extern "C" fn cmd_server_access_exec(self_: *mut cmd, item: *mut cmdq_ite
             return (cmd_retval::CMD_RETURN_ERROR);
         }
 
-        let mut name = format_single(item, args_string(args, 0), c, null_mut(), null_mut(), null_mut());
+        let mut name = format_single(
+            item,
+            args_string(args, 0),
+            c,
+            null_mut(),
+            null_mut(),
+            null_mut(),
+        );
         let mut pw = null_mut();
         if (*name != b'\0' as _) {
             pw = getpwnam(name);
@@ -65,7 +75,11 @@ unsafe extern "C" fn cmd_server_access_exec(self_: *mut cmd, item: *mut cmdq_ite
         free_(name);
 
         if ((*pw).pw_uid == 0 || (*pw).pw_uid == getuid()) {
-            cmdq_error(item, c"%s owns the server, can't change access".as_ptr(), (*pw).pw_name);
+            cmdq_error(
+                item,
+                c"%s owns the server, can't change access".as_ptr(),
+                (*pw).pw_name,
+            );
             return (cmd_retval::CMD_RETURN_ERROR);
         }
 

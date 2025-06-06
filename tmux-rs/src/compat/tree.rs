@@ -10,7 +10,11 @@ pub struct rb_head<T> {
 }
 
 impl<T> Default for rb_head<T> {
-    fn default() -> Self { Self { rbh_root: null_mut() } }
+    fn default() -> Self {
+        Self {
+            rbh_root: null_mut(),
+        }
+    }
 }
 
 #[repr(i32)]
@@ -30,7 +34,14 @@ pub struct rb_entry<T> {
 }
 
 impl<T> std::fmt::Debug for rb_entry<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { f.debug_struct("rb_entry").field("rbe_left", &self.rbe_left).field("rbe_right", &self.rbe_right).field("rbe_parent", &self.rbe_parent).field("rbe_color", &self.rbe_color).finish() }
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("rb_entry")
+            .field("rbe_left", &self.rbe_left)
+            .field("rbe_right", &self.rbe_right)
+            .field("rbe_parent", &self.rbe_parent)
+            .field("rbe_color", &self.rbe_color)
+            .finish()
+    }
 }
 
 impl<T> Default for rb_entry<T> {
@@ -46,7 +57,9 @@ impl<T> Default for rb_entry<T> {
 
 impl<T> Copy for rb_entry<T> {}
 impl<T> Clone for rb_entry<T> {
-    fn clone(&self) -> Self { *self }
+    fn clone(&self) -> Self {
+        *self
+    }
 }
 
 pub trait GetEntry<T, D = ()> {
@@ -61,7 +74,11 @@ pub const unsafe fn rb_init<T>(head: *mut rb_head<T>) {
     }
 }
 
-pub const fn rb_initializer<T>() -> rb_head<T> { rb_head { rbh_root: null_mut() } }
+pub const fn rb_initializer<T>() -> rb_head<T> {
+    rb_head {
+        rbh_root: null_mut(),
+    }
+}
 
 macro_rules! rb_left {
     ($elm:expr) => {
@@ -132,8 +149,12 @@ macro_rules! rb_root {
         (*$head).rbh_root
     };
 }
-pub unsafe fn rb_root<T>(head: *mut rb_head<T>) -> *mut T { unsafe { (*head).rbh_root } }
-pub unsafe fn rb_empty<T>(head: *const rb_head<T>) -> bool { unsafe { (*head).rbh_root.is_null() } }
+pub unsafe fn rb_root<T>(head: *mut rb_head<T>) -> *mut T {
+    unsafe { (*head).rbh_root }
+}
+pub unsafe fn rb_empty<T>(head: *const rb_head<T>) -> bool {
+    unsafe { (*head).rbh_root.is_null() }
+}
 pub unsafe fn rb_set<T, D>(elm: *mut T, parent: *mut T)
 where
     T: GetEntry<T, D>,
@@ -353,7 +374,9 @@ where
                     rb_rotate_left(head, parent);
                     tmp = rb_right(parent);
                 }
-                if (rb_left(tmp).is_null() || rb_color(rb_left(tmp)) == rb_color::RB_BLACK) && (rb_right(tmp).is_null() || rb_color(rb_right(tmp)) == rb_color::RB_BLACK) {
+                if (rb_left(tmp).is_null() || rb_color(rb_left(tmp)) == rb_color::RB_BLACK)
+                    && (rb_right(tmp).is_null() || rb_color(rb_right(tmp)) == rb_color::RB_BLACK)
+                {
                     rb_color!(tmp) = rb_color::RB_RED;
                     elm = parent;
                     parent = rb_parent(elm);
@@ -383,7 +406,9 @@ where
                     rb_rotate_right(head, parent);
                     tmp = rb_left(parent);
                 }
-                if (rb_left(tmp).is_null() || rb_color(rb_left(tmp)) == rb_color::RB_BLACK) && (rb_right(tmp).is_null() || rb_color(rb_right(tmp)) == rb_color::RB_BLACK) {
+                if (rb_left(tmp).is_null() || rb_color(rb_left(tmp)) == rb_color::RB_BLACK)
+                    && (rb_right(tmp).is_null() || rb_color(rb_right(tmp)) == rb_color::RB_BLACK)
+                {
                     rb_color!(tmp) = rb_color::RB_RED;
                     elm = parent;
                     parent = rb_parent(elm);

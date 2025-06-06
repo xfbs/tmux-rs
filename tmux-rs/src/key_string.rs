@@ -12,7 +12,12 @@ struct key_string_table_entry {
 }
 
 impl key_string_table_entry {
-    const fn new(string: &'static CStr, key: key_code) -> Self { Self { string: string.as_ptr(), key } }
+    const fn new(string: &'static CStr, key: key_code) -> Self {
+        Self {
+            string: string.as_ptr(),
+            key,
+        }
+    }
 }
 
 // #define KEYC_MOUSE_KEY(name)
@@ -166,10 +171,22 @@ static key_string_table: [key_string_table_entry; 469] = const {
         key_string_table_entry::new(c"[RS]", c0::C0_RS as u64),
         key_string_table_entry::new(c"[US]", c0::C0_US as u64),
         /* Arrow keys. */
-        key_string_table_entry::new(c"Up", keyc::KEYC_UP as u64 | KEYC_CURSOR | KEYC_IMPLIED_META),
-        key_string_table_entry::new(c"Down", keyc::KEYC_DOWN as u64 | KEYC_CURSOR | KEYC_IMPLIED_META),
-        key_string_table_entry::new(c"Left", keyc::KEYC_LEFT as u64 | KEYC_CURSOR | KEYC_IMPLIED_META),
-        key_string_table_entry::new(c"Right", keyc::KEYC_RIGHT as u64 | KEYC_CURSOR | KEYC_IMPLIED_META),
+        key_string_table_entry::new(
+            c"Up",
+            keyc::KEYC_UP as u64 | KEYC_CURSOR | KEYC_IMPLIED_META,
+        ),
+        key_string_table_entry::new(
+            c"Down",
+            keyc::KEYC_DOWN as u64 | KEYC_CURSOR | KEYC_IMPLIED_META,
+        ),
+        key_string_table_entry::new(
+            c"Left",
+            keyc::KEYC_LEFT as u64 | KEYC_CURSOR | KEYC_IMPLIED_META,
+        ),
+        key_string_table_entry::new(
+            c"Right",
+            keyc::KEYC_RIGHT as u64 | KEYC_CURSOR | KEYC_IMPLIED_META,
+        ),
         /* Numeric keypad. */
         key_string_table_entry::new(c"KP/", keyc::KEYC_KP_SLASH as u64 | KEYC_KEYPAD),
         key_string_table_entry::new(c"KP*", keyc::KEYC_KP_STAR as u64 | KEYC_KEYPAD),
@@ -293,7 +310,11 @@ pub unsafe extern "C" fn key_string_lookup_string(mut string: *const c_char) -> 
             m[mlen as usize].write(b'\0' as c_char);
 
             let udp: *mut utf8_data = utf8_fromcstr(m.as_slice().as_ptr().cast());
-            if udp.is_null() || (*udp).size == 0 || (*udp.add(1)).size != 0 || utf8_from_data(udp, &raw mut uc) != utf8_state::UTF8_DONE {
+            if udp.is_null()
+                || (*udp).size == 0
+                || (*udp.add(1)).size != 0
+                || utf8_from_data(udp, &raw mut uc) != utf8_state::UTF8_DONE
+            {
                 free_(udp);
                 return KEYC_UNKNOWN;
             }
@@ -357,7 +378,10 @@ pub unsafe extern "C" fn key_string_lookup_string(mut string: *const c_char) -> 
 
 /// Convert a key code into string format, with prefix if necessary.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn key_string_lookup_key(mut key: key_code, with_flags: i32) -> *const c_char {
+pub unsafe extern "C" fn key_string_lookup_key(
+    mut key: key_code,
+    with_flags: i32,
+) -> *const c_char {
     let sizeof_out: usize = 64;
     static mut out: [c_char; 64] = [0; 64];
     unsafe {
@@ -375,7 +399,12 @@ pub unsafe extern "C" fn key_string_lookup_key(mut key: key_code, with_flags: i3
             'append: {
                 /* Literal keys are themselves. */
                 if (key & KEYC_LITERAL != 0) {
-                    snprintf(&raw mut out as *mut i8, sizeof_out, c"%c".as_ptr(), (key & 0xff) as i32);
+                    snprintf(
+                        &raw mut out as *mut i8,
+                        sizeof_out,
+                        c"%c".as_ptr(),
+                        (key & 0xff) as i32,
+                    );
                     break 'out;
                 }
 
@@ -451,8 +480,17 @@ pub unsafe extern "C" fn key_string_lookup_key(mut key: key_code, with_flags: i3
                     break 'append;
                 }
                 if (key >= KEYC_USER && key < KEYC_USER_END) {
-                    snprintf(&raw mut tmp as *mut c_char, sizeof_tmp, c"User%u".as_ptr(), (key - KEYC_USER) as u8 as u32);
-                    strlcat(&raw mut out as *mut c_char, &raw const tmp as *const c_char, sizeof_out);
+                    snprintf(
+                        &raw mut tmp as *mut c_char,
+                        sizeof_tmp,
+                        c"User%u".as_ptr(),
+                        (key - KEYC_USER) as u8 as u32,
+                    );
+                    strlcat(
+                        &raw mut out as *mut c_char,
+                        &raw const tmp as *const c_char,
+                        sizeof_out,
+                    );
                     break 'out;
                 }
 
@@ -464,7 +502,11 @@ pub unsafe extern "C" fn key_string_lookup_key(mut key: key_code, with_flags: i3
                     }
                 }
                 if (i != key_string_table.len()) {
-                    strlcat(&raw mut out as *mut c_char, key_string_table[i].string, sizeof_out);
+                    strlcat(
+                        &raw mut out as *mut c_char,
+                        key_string_table[i].string,
+                        sizeof_out,
+                    );
                     break 'out;
                 }
 
@@ -472,14 +514,23 @@ pub unsafe extern "C" fn key_string_lookup_key(mut key: key_code, with_flags: i3
                 if (KEYC_IS_UNICODE(key)) {
                     utf8_to_data(key as u32, &raw mut ud);
                     off = strlen(&raw const out as *const c_char);
-                    memcpy(&raw mut out[off] as *mut c_void, &raw const ud.data as *const c_void, ud.size as usize);
+                    memcpy(
+                        &raw mut out[off] as *mut c_void,
+                        &raw const ud.data as *const c_void,
+                        ud.size as usize,
+                    );
                     out[off + ud.size as usize] = b'\0' as c_char;
                     break 'out;
                 }
 
                 /* Invalid keys are errors. */
                 if (key > 255) {
-                    snprintf(&raw mut out as *mut c_char, sizeof_out, c"Invalid#%llx".as_ptr(), saved);
+                    snprintf(
+                        &raw mut out as *mut c_char,
+                        sizeof_out,
+                        c"Invalid#%llx".as_ptr(),
+                        saved,
+                    );
                     break 'out;
                 }
 
@@ -490,10 +541,19 @@ pub unsafe extern "C" fn key_string_lookup_key(mut key: key_code, with_flags: i3
                 } else if (key == 127) {
                     xsnprintf(&raw mut tmp as *mut c_char, sizeof_tmp, c"C-?".as_ptr());
                 } else if (key >= 128) {
-                    xsnprintf(&raw mut tmp as *mut c_char, sizeof_tmp, c"\\%llo".as_ptr(), key);
+                    xsnprintf(
+                        &raw mut tmp as *mut c_char,
+                        sizeof_tmp,
+                        c"\\%llo".as_ptr(),
+                        key,
+                    );
                 }
 
-                strlcat(&raw mut out as *mut c_char, &raw const tmp as *const c_char, sizeof_out);
+                strlcat(
+                    &raw mut out as *mut c_char,
+                    &raw const tmp as *const c_char,
+                    sizeof_out,
+                );
                 break 'out;
             }
             // append:

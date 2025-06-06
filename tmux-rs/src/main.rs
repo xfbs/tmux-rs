@@ -6,15 +6,21 @@ struct MyAlloc;
 #[global_allocator]
 static ALLOCATOR: MyAlloc = MyAlloc;
 unsafe impl GlobalAlloc for MyAlloc {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 { unsafe { libc::malloc(layout.size()) as *mut u8 } }
-    unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) { unsafe { libc::free(ptr.cast()) } }
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        unsafe { libc::malloc(layout.size()) as *mut u8 }
+    }
+    unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
+        unsafe { libc::free(ptr.cast()) }
+    }
     unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
         let align = layout.align();
         // exploit we know align must be a non-zero power of 2 to do a faster division
         let nmemb = (layout.size() + align - 1) >> align.trailing_zeros();
         unsafe { libc::calloc(nmemb, align) as *mut u8 }
     }
-    unsafe fn realloc(&self, ptr: *mut u8, _layout: Layout, new_size: usize) -> *mut u8 { unsafe { libc::realloc(ptr.cast(), new_size) as *mut u8 } }
+    unsafe fn realloc(&self, ptr: *mut u8, _layout: Layout, new_size: usize) -> *mut u8 {
+        unsafe { libc::realloc(ptr.cast(), new_size) as *mut u8 }
+    }
 }
 
 // TODO idea:

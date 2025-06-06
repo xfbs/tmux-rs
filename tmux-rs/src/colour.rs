@@ -27,7 +27,9 @@ use xmalloc::xstrndup;
 const COLOUR_FLAG_256: i32 = 0x01000000;
 const COLOUR_FLAG_RGB: i32 = 0x02000000;
 
-fn colour_dist_sq(r1: i32, g1: i32, b1: i32, r2: i32, g2: i32, b2: i32) -> i32 { (r1 - r2) * (r1 - r2) + (g1 - g2) * (g1 - g2) + (b1 - b2) * (b1 - b2) }
+fn colour_dist_sq(r1: i32, g1: i32, b1: i32, r2: i32, g2: i32, b2: i32) -> i32 {
+    (r1 - r2) * (r1 - r2) + (g1 - g2) * (g1 - g2) + (b1 - b2) * (b1 - b2)
+}
 
 fn colour_to_6cube(v: i32) -> i32 {
     if v < 48 {
@@ -73,19 +75,29 @@ pub extern "C" fn colour_find_rgb(r: u8, g: u8, b: u8) -> i32 {
 
     // Work out the closest grey (average of RGB).
     let grey_avg = (r + g + b) / 3;
-    let grey_idx = if (grey_avg > 238) { 23 } else { (grey_avg - 3) / 10 };
+    let grey_idx = if (grey_avg > 238) {
+        23
+    } else {
+        (grey_avg - 3) / 10
+    };
     let grey = 8 + (10 * grey_idx);
 
     // Is grey or 6x6x6 colour closest?
     let d = colour_dist_sq(cr, cg, cb, r, g, b);
-    let idx = if (colour_dist_sq(grey, grey, grey, r, g, b) < d) { 232 + grey_idx } else { 16 + (36 * qr) + (6 * qg) + qb };
+    let idx = if (colour_dist_sq(grey, grey, grey, r, g, b) < d) {
+        232 + grey_idx
+    } else {
+        16 + (36 * qr) + (6 * qg) + qb
+    };
 
     idx | COLOUR_FLAG_256
 }
 
 /// Join RGB into a colour.
 #[unsafe(no_mangle)]
-pub extern "C" fn colour_join_rgb(r: c_uchar, g: c_uchar, b: c_uchar) -> i32 { (((r as i32) << 16) | ((g as i32) << 8) | (b as i32)) | COLOUR_FLAG_RGB }
+pub extern "C" fn colour_join_rgb(r: c_uchar, g: c_uchar, b: c_uchar) -> i32 {
+    (((r as i32) << 16) | ((g as i32) << 8) | (b as i32)) | COLOUR_FLAG_RGB
+}
 
 /// Split colour into RGB.
 #[unsafe(no_mangle)]
@@ -112,7 +124,10 @@ pub extern "C" fn colour_force_rgb(c: i32) -> i32 {
 }
 
 /// Convert colour to a string.
-#[allow(static_mut_refs, reason = "TODO need to find a better way to make use of the write macro without invoking ub")]
+#[allow(
+    static_mut_refs,
+    reason = "TODO need to find a better way to make use of the write macro without invoking ub"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn colour_tostring(c: i32) -> *const c_char {
     // TODO this function returns a static buffer
@@ -181,7 +196,13 @@ pub unsafe extern "C" fn colour_fromstring(s: *const c_char) -> c_int {
             let mut g: u8 = 0;
             let mut b: u8 = 0;
 
-            let n = sscanf(s.wrapping_add(1), c"%2hhx%2hhx%2hhx".as_ptr(), &raw mut r, &raw mut g, &raw mut b);
+            let n = sscanf(
+                s.wrapping_add(1),
+                c"%2hhx%2hhx%2hhx".as_ptr(),
+                &raw mut r,
+                &raw mut g,
+                &raw mut b,
+            );
             if (n != 3) {
                 return -1;
             }
@@ -226,21 +247,34 @@ pub unsafe extern "C" fn colour_fromstring(s: *const c_char) -> c_int {
             6
         } else if strcasecmp(s, c"white".as_ptr()) == 0 || libc::strcmp(s, c"7".as_ptr()) == 0 {
             7
-        } else if strcasecmp(s, c"brightblack".as_ptr()) == 0 || libc::strcmp(s, c"90".as_ptr()) == 0 {
+        } else if strcasecmp(s, c"brightblack".as_ptr()) == 0
+            || libc::strcmp(s, c"90".as_ptr()) == 0
+        {
             90
-        } else if strcasecmp(s, c"brightred".as_ptr()) == 0 || libc::strcmp(s, c"91".as_ptr()) == 0 {
+        } else if strcasecmp(s, c"brightred".as_ptr()) == 0 || libc::strcmp(s, c"91".as_ptr()) == 0
+        {
             91
-        } else if strcasecmp(s, c"brightgreen".as_ptr()) == 0 || libc::strcmp(s, c"92".as_ptr()) == 0 {
+        } else if strcasecmp(s, c"brightgreen".as_ptr()) == 0
+            || libc::strcmp(s, c"92".as_ptr()) == 0
+        {
             92
-        } else if strcasecmp(s, c"brightyellow".as_ptr()) == 0 || libc::strcmp(s, c"93".as_ptr()) == 0 {
+        } else if strcasecmp(s, c"brightyellow".as_ptr()) == 0
+            || libc::strcmp(s, c"93".as_ptr()) == 0
+        {
             93
-        } else if strcasecmp(s, c"brightblue".as_ptr()) == 0 || libc::strcmp(s, c"94".as_ptr()) == 0 {
+        } else if strcasecmp(s, c"brightblue".as_ptr()) == 0 || libc::strcmp(s, c"94".as_ptr()) == 0
+        {
             94
-        } else if strcasecmp(s, c"brightmagenta".as_ptr()) == 0 || libc::strcmp(s, c"95".as_ptr()) == 0 {
+        } else if strcasecmp(s, c"brightmagenta".as_ptr()) == 0
+            || libc::strcmp(s, c"95".as_ptr()) == 0
+        {
             95
-        } else if strcasecmp(s, c"brightcyan".as_ptr()) == 0 || libc::strcmp(s, c"96".as_ptr()) == 0 {
+        } else if strcasecmp(s, c"brightcyan".as_ptr()) == 0 || libc::strcmp(s, c"96".as_ptr()) == 0
+        {
             96
-        } else if strcasecmp(s, c"brightwhite".as_ptr()) == 0 || libc::strcmp(s, c"97".as_ptr()) == 0 {
+        } else if strcasecmp(s, c"brightwhite".as_ptr()) == 0
+            || libc::strcmp(s, c"97".as_ptr()) == 0
+        {
             97
         } else {
             colour_byname(s)
@@ -252,15 +286,35 @@ pub unsafe extern "C" fn colour_fromstring(s: *const c_char) -> c_int {
 #[unsafe(no_mangle)]
 pub extern "C" fn colour_256toRGB(c: i32) -> i32 {
     const table: [i32; 256] = [
-        0x000000, 0x800000, 0x008000, 0x808000, 0x000080, 0x800080, 0x008080, 0xc0c0c0, 0x808080, 0xff0000, 0x00ff00, 0xffff00, 0x0000ff, 0xff00ff, 0x00ffff, 0xffffff, 0x000000, 0x00005f, 0x000087, 0x0000af, 0x0000d7, 0x0000ff, 0x005f00, 0x005f5f, 0x005f87, 0x005faf, 0x005fd7, 0x005fff, 0x008700,
-        0x00875f, 0x008787, 0x0087af, 0x0087d7, 0x0087ff, 0x00af00, 0x00af5f, 0x00af87, 0x00afaf, 0x00afd7, 0x00afff, 0x00d700, 0x00d75f, 0x00d787, 0x00d7af, 0x00d7d7, 0x00d7ff, 0x00ff00, 0x00ff5f, 0x00ff87, 0x00ffaf, 0x00ffd7, 0x00ffff, 0x5f0000, 0x5f005f, 0x5f0087, 0x5f00af, 0x5f00d7, 0x5f00ff,
-        0x5f5f00, 0x5f5f5f, 0x5f5f87, 0x5f5faf, 0x5f5fd7, 0x5f5fff, 0x5f8700, 0x5f875f, 0x5f8787, 0x5f87af, 0x5f87d7, 0x5f87ff, 0x5faf00, 0x5faf5f, 0x5faf87, 0x5fafaf, 0x5fafd7, 0x5fafff, 0x5fd700, 0x5fd75f, 0x5fd787, 0x5fd7af, 0x5fd7d7, 0x5fd7ff, 0x5fff00, 0x5fff5f, 0x5fff87, 0x5fffaf, 0x5fffd7,
-        0x5fffff, 0x870000, 0x87005f, 0x870087, 0x8700af, 0x8700d7, 0x8700ff, 0x875f00, 0x875f5f, 0x875f87, 0x875faf, 0x875fd7, 0x875fff, 0x878700, 0x87875f, 0x878787, 0x8787af, 0x8787d7, 0x8787ff, 0x87af00, 0x87af5f, 0x87af87, 0x87afaf, 0x87afd7, 0x87afff, 0x87d700, 0x87d75f, 0x87d787, 0x87d7af,
-        0x87d7d7, 0x87d7ff, 0x87ff00, 0x87ff5f, 0x87ff87, 0x87ffaf, 0x87ffd7, 0x87ffff, 0xaf0000, 0xaf005f, 0xaf0087, 0xaf00af, 0xaf00d7, 0xaf00ff, 0xaf5f00, 0xaf5f5f, 0xaf5f87, 0xaf5faf, 0xaf5fd7, 0xaf5fff, 0xaf8700, 0xaf875f, 0xaf8787, 0xaf87af, 0xaf87d7, 0xaf87ff, 0xafaf00, 0xafaf5f, 0xafaf87,
-        0xafafaf, 0xafafd7, 0xafafff, 0xafd700, 0xafd75f, 0xafd787, 0xafd7af, 0xafd7d7, 0xafd7ff, 0xafff00, 0xafff5f, 0xafff87, 0xafffaf, 0xafffd7, 0xafffff, 0xd70000, 0xd7005f, 0xd70087, 0xd700af, 0xd700d7, 0xd700ff, 0xd75f00, 0xd75f5f, 0xd75f87, 0xd75faf, 0xd75fd7, 0xd75fff, 0xd78700, 0xd7875f,
-        0xd78787, 0xd787af, 0xd787d7, 0xd787ff, 0xd7af00, 0xd7af5f, 0xd7af87, 0xd7afaf, 0xd7afd7, 0xd7afff, 0xd7d700, 0xd7d75f, 0xd7d787, 0xd7d7af, 0xd7d7d7, 0xd7d7ff, 0xd7ff00, 0xd7ff5f, 0xd7ff87, 0xd7ffaf, 0xd7ffd7, 0xd7ffff, 0xff0000, 0xff005f, 0xff0087, 0xff00af, 0xff00d7, 0xff00ff, 0xff5f00,
-        0xff5f5f, 0xff5f87, 0xff5faf, 0xff5fd7, 0xff5fff, 0xff8700, 0xff875f, 0xff8787, 0xff87af, 0xff87d7, 0xff87ff, 0xffaf00, 0xffaf5f, 0xffaf87, 0xffafaf, 0xffafd7, 0xffafff, 0xffd700, 0xffd75f, 0xffd787, 0xffd7af, 0xffd7d7, 0xffd7ff, 0xffff00, 0xffff5f, 0xffff87, 0xffffaf, 0xffffd7, 0xffffff,
-        0x080808, 0x121212, 0x1c1c1c, 0x262626, 0x303030, 0x3a3a3a, 0x444444, 0x4e4e4e, 0x585858, 0x626262, 0x6c6c6c, 0x767676, 0x808080, 0x8a8a8a, 0x949494, 0x9e9e9e, 0xa8a8a8, 0xb2b2b2, 0xbcbcbc, 0xc6c6c6, 0xd0d0d0, 0xdadada, 0xe4e4e4, 0xeeeeee,
+        0x000000, 0x800000, 0x008000, 0x808000, 0x000080, 0x800080, 0x008080, 0xc0c0c0, 0x808080,
+        0xff0000, 0x00ff00, 0xffff00, 0x0000ff, 0xff00ff, 0x00ffff, 0xffffff, 0x000000, 0x00005f,
+        0x000087, 0x0000af, 0x0000d7, 0x0000ff, 0x005f00, 0x005f5f, 0x005f87, 0x005faf, 0x005fd7,
+        0x005fff, 0x008700, 0x00875f, 0x008787, 0x0087af, 0x0087d7, 0x0087ff, 0x00af00, 0x00af5f,
+        0x00af87, 0x00afaf, 0x00afd7, 0x00afff, 0x00d700, 0x00d75f, 0x00d787, 0x00d7af, 0x00d7d7,
+        0x00d7ff, 0x00ff00, 0x00ff5f, 0x00ff87, 0x00ffaf, 0x00ffd7, 0x00ffff, 0x5f0000, 0x5f005f,
+        0x5f0087, 0x5f00af, 0x5f00d7, 0x5f00ff, 0x5f5f00, 0x5f5f5f, 0x5f5f87, 0x5f5faf, 0x5f5fd7,
+        0x5f5fff, 0x5f8700, 0x5f875f, 0x5f8787, 0x5f87af, 0x5f87d7, 0x5f87ff, 0x5faf00, 0x5faf5f,
+        0x5faf87, 0x5fafaf, 0x5fafd7, 0x5fafff, 0x5fd700, 0x5fd75f, 0x5fd787, 0x5fd7af, 0x5fd7d7,
+        0x5fd7ff, 0x5fff00, 0x5fff5f, 0x5fff87, 0x5fffaf, 0x5fffd7, 0x5fffff, 0x870000, 0x87005f,
+        0x870087, 0x8700af, 0x8700d7, 0x8700ff, 0x875f00, 0x875f5f, 0x875f87, 0x875faf, 0x875fd7,
+        0x875fff, 0x878700, 0x87875f, 0x878787, 0x8787af, 0x8787d7, 0x8787ff, 0x87af00, 0x87af5f,
+        0x87af87, 0x87afaf, 0x87afd7, 0x87afff, 0x87d700, 0x87d75f, 0x87d787, 0x87d7af, 0x87d7d7,
+        0x87d7ff, 0x87ff00, 0x87ff5f, 0x87ff87, 0x87ffaf, 0x87ffd7, 0x87ffff, 0xaf0000, 0xaf005f,
+        0xaf0087, 0xaf00af, 0xaf00d7, 0xaf00ff, 0xaf5f00, 0xaf5f5f, 0xaf5f87, 0xaf5faf, 0xaf5fd7,
+        0xaf5fff, 0xaf8700, 0xaf875f, 0xaf8787, 0xaf87af, 0xaf87d7, 0xaf87ff, 0xafaf00, 0xafaf5f,
+        0xafaf87, 0xafafaf, 0xafafd7, 0xafafff, 0xafd700, 0xafd75f, 0xafd787, 0xafd7af, 0xafd7d7,
+        0xafd7ff, 0xafff00, 0xafff5f, 0xafff87, 0xafffaf, 0xafffd7, 0xafffff, 0xd70000, 0xd7005f,
+        0xd70087, 0xd700af, 0xd700d7, 0xd700ff, 0xd75f00, 0xd75f5f, 0xd75f87, 0xd75faf, 0xd75fd7,
+        0xd75fff, 0xd78700, 0xd7875f, 0xd78787, 0xd787af, 0xd787d7, 0xd787ff, 0xd7af00, 0xd7af5f,
+        0xd7af87, 0xd7afaf, 0xd7afd7, 0xd7afff, 0xd7d700, 0xd7d75f, 0xd7d787, 0xd7d7af, 0xd7d7d7,
+        0xd7d7ff, 0xd7ff00, 0xd7ff5f, 0xd7ff87, 0xd7ffaf, 0xd7ffd7, 0xd7ffff, 0xff0000, 0xff005f,
+        0xff0087, 0xff00af, 0xff00d7, 0xff00ff, 0xff5f00, 0xff5f5f, 0xff5f87, 0xff5faf, 0xff5fd7,
+        0xff5fff, 0xff8700, 0xff875f, 0xff8787, 0xff87af, 0xff87d7, 0xff87ff, 0xffaf00, 0xffaf5f,
+        0xffaf87, 0xffafaf, 0xffafd7, 0xffafff, 0xffd700, 0xffd75f, 0xffd787, 0xffd7af, 0xffd7d7,
+        0xffd7ff, 0xffff00, 0xffff5f, 0xffff87, 0xffffaf, 0xffffd7, 0xffffff, 0x080808, 0x121212,
+        0x1c1c1c, 0x262626, 0x303030, 0x3a3a3a, 0x444444, 0x4e4e4e, 0x585858, 0x626262, 0x6c6c6c,
+        0x767676, 0x808080, 0x8a8a8a, 0x949494, 0x9e9e9e, 0xa8a8a8, 0xb2b2b2, 0xbcbcbc, 0xc6c6c6,
+        0xd0d0d0, 0xdadada, 0xe4e4e4, 0xeeeeee,
     ];
 
     table[c as u8 as usize] | COLOUR_FLAG_RGB
@@ -269,10 +323,16 @@ pub extern "C" fn colour_256toRGB(c: i32) -> i32 {
 #[unsafe(no_mangle)]
 pub fn colour_256to16(c: i32) -> i32 {
     const table: [u8; 256] = [
-        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0, 4, 4, 4, 12, 12, 2, 6, 4, 4, 12, 12, 2, 2, 6, 4, 12, 12, 2, 2, 2, 6, 12, 12, 10, 10, 10, 10, 14, 12, 10, 10, 10, 10, 10, 14, 1, 5, 4, 4, 12, 12, 3, 8, 4, 4, 12, 12, 2, 2, 6, 4, 12, 12, 2, 2, 2, 6, 12, 12, 10, 10, 10, 10, 14, 12, 10,
-        10, 10, 10, 10, 14, 1, 1, 5, 4, 12, 12, 1, 1, 5, 4, 12, 12, 3, 3, 8, 4, 12, 12, 2, 2, 2, 6, 12, 12, 10, 10, 10, 10, 14, 12, 10, 10, 10, 10, 10, 14, 1, 1, 1, 5, 12, 12, 1, 1, 1, 5, 12, 12, 1, 1, 1, 5, 12, 12, 3, 3, 3, 7, 12, 12, 10, 10, 10, 10, 14, 12, 10, 10, 10, 10, 10, 14, 9, 9, 9, 9, 13,
-        12, 9, 9, 9, 9, 13, 12, 9, 9, 9, 9, 13, 12, 9, 9, 9, 9, 13, 12, 11, 11, 11, 11, 7, 12, 10, 10, 10, 10, 10, 14, 9, 9, 9, 9, 9, 13, 9, 9, 9, 9, 9, 13, 9, 9, 9, 9, 9, 13, 9, 9, 9, 9, 9, 13, 9, 9, 9, 9, 9, 13, 11, 11, 11, 11, 11, 15, 0, 0, 0, 0, 0, 0, 8, 8, 8, 8, 8, 8, 7, 7, 7, 7, 7, 7, 15, 15,
-        15, 15, 15, 15,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0, 4, 4, 4, 12, 12, 2, 6, 4, 4, 12,
+        12, 2, 2, 6, 4, 12, 12, 2, 2, 2, 6, 12, 12, 10, 10, 10, 10, 14, 12, 10, 10, 10, 10, 10, 14,
+        1, 5, 4, 4, 12, 12, 3, 8, 4, 4, 12, 12, 2, 2, 6, 4, 12, 12, 2, 2, 2, 6, 12, 12, 10, 10, 10,
+        10, 14, 12, 10, 10, 10, 10, 10, 14, 1, 1, 5, 4, 12, 12, 1, 1, 5, 4, 12, 12, 3, 3, 8, 4, 12,
+        12, 2, 2, 2, 6, 12, 12, 10, 10, 10, 10, 14, 12, 10, 10, 10, 10, 10, 14, 1, 1, 1, 5, 12, 12,
+        1, 1, 1, 5, 12, 12, 1, 1, 1, 5, 12, 12, 3, 3, 3, 7, 12, 12, 10, 10, 10, 10, 14, 12, 10, 10,
+        10, 10, 10, 14, 9, 9, 9, 9, 13, 12, 9, 9, 9, 9, 13, 12, 9, 9, 9, 9, 13, 12, 9, 9, 9, 9, 13,
+        12, 11, 11, 11, 11, 7, 12, 10, 10, 10, 10, 10, 14, 9, 9, 9, 9, 9, 13, 9, 9, 9, 9, 9, 13, 9,
+        9, 9, 9, 9, 13, 9, 9, 9, 9, 9, 13, 9, 9, 9, 9, 9, 13, 11, 11, 11, 11, 11, 15, 0, 0, 0, 0,
+        0, 0, 8, 8, 8, 8, 8, 8, 7, 7, 7, 7, 7, 7, 15, 15, 15, 15, 15, 15,
     ];
     table[c as u8 as usize] as i32
 }
@@ -1032,11 +1092,62 @@ pub unsafe extern "C" fn colour_parseX11(mut p: *const c_char) -> c_int {
         let mut len = libc::strlen(p);
         let mut colour: i32 = -1;
         let mut copy: *mut libc::c_char = null_mut();
-        if len == 12 && sscanf(p, c"rgb:%02x/%02x/%02x".as_ptr(), &raw mut r, &raw mut g, &raw mut b) == 3 || len == 7 && sscanf(p, c"#%02x%02x%02x".as_ptr(), &raw mut r, &raw mut g, &raw mut b) == 3 || sscanf(p, c"%d,%d,%d".as_ptr(), &raw mut r, &raw mut g, &raw mut b) == 3 {
+        if len == 12
+            && sscanf(
+                p,
+                c"rgb:%02x/%02x/%02x".as_ptr(),
+                &raw mut r,
+                &raw mut g,
+                &raw mut b,
+            ) == 3
+            || len == 7
+                && sscanf(
+                    p,
+                    c"#%02x%02x%02x".as_ptr(),
+                    &raw mut r,
+                    &raw mut g,
+                    &raw mut b,
+                ) == 3
+            || sscanf(p, c"%d,%d,%d".as_ptr(), &raw mut r, &raw mut g, &raw mut b) == 3
+        {
             colour = colour_join_rgb(r as u8, g as u8, b as u8);
-        } else if len == 18 && sscanf(p, c"rgb:%04x/%04x/%04x".as_ptr(), &raw mut r, &raw mut g, &raw mut b) == 3 as c_int || len == 13 && sscanf(p, c"#%04x%04x%04x".as_ptr(), &raw mut r, &raw mut g, &raw mut b) == 3 as c_int {
-            colour = colour_join_rgb((r >> 8 as c_int) as c_uchar, (g >> 8 as c_int) as c_uchar, (b >> 8 as c_int) as c_uchar);
-        } else if (sscanf(p, c"cmyk:%lf/%lf/%lf/%lf".as_ptr(), &raw mut c, &raw mut m, &raw mut y, &raw mut k) == 4 || sscanf(p, c"cmy:%lf/%lf/%lf".as_ptr(), &raw mut c, &raw mut m, &raw mut y) == 3 as c_int)
+        } else if len == 18
+            && sscanf(
+                p,
+                c"rgb:%04x/%04x/%04x".as_ptr(),
+                &raw mut r,
+                &raw mut g,
+                &raw mut b,
+            ) == 3 as c_int
+            || len == 13
+                && sscanf(
+                    p,
+                    c"#%04x%04x%04x".as_ptr(),
+                    &raw mut r,
+                    &raw mut g,
+                    &raw mut b,
+                ) == 3 as c_int
+        {
+            colour = colour_join_rgb(
+                (r >> 8 as c_int) as c_uchar,
+                (g >> 8 as c_int) as c_uchar,
+                (b >> 8 as c_int) as c_uchar,
+            );
+        } else if (sscanf(
+            p,
+            c"cmyk:%lf/%lf/%lf/%lf".as_ptr(),
+            &raw mut c,
+            &raw mut m,
+            &raw mut y,
+            &raw mut k,
+        ) == 4
+            || sscanf(
+                p,
+                c"cmy:%lf/%lf/%lf".as_ptr(),
+                &raw mut c,
+                &raw mut m,
+                &raw mut y,
+            ) == 3 as c_int)
             && c >= 0 as c_int as c_double
             && c <= 1 as c_int as c_double
             && m >= 0 as c_int as c_double
@@ -1047,9 +1158,15 @@ pub unsafe extern "C" fn colour_parseX11(mut p: *const c_char) -> c_int {
             && k <= 1 as c_int as c_double
         {
             colour = colour_join_rgb(
-                ((1 as c_int as c_double - c) * (1 as c_int as c_double - k) * 255 as c_int as c_double) as c_uchar,
-                ((1 as c_int as c_double - m) * (1 as c_int as c_double - k) * 255 as c_int as c_double) as c_uchar,
-                ((1 as c_int as c_double - y) * (1 as c_int as c_double - k) * 255 as c_int as c_double) as c_uchar,
+                ((1 as c_int as c_double - c)
+                    * (1 as c_int as c_double - k)
+                    * 255 as c_int as c_double) as c_uchar,
+                ((1 as c_int as c_double - m)
+                    * (1 as c_int as c_double - k)
+                    * 255 as c_int as c_double) as c_uchar,
+                ((1 as c_int as c_double - y)
+                    * (1 as c_int as c_double - k)
+                    * 255 as c_int as c_double) as c_uchar,
             );
         } else {
             while len != 0 && *p as c_int == ' ' as i32 {
@@ -1063,7 +1180,12 @@ pub unsafe extern "C" fn colour_parseX11(mut p: *const c_char) -> c_int {
             colour = colour_byname(copy);
             free(copy as _);
         }
-        log_debug!("{}: {} = {}", "colour_parseX11", _s(p), _s(colour_tostring(colour)));
+        log_debug!(
+            "{}: {} = {}",
+            "colour_parseX11",
+            _s(p),
+            _s(colour_tostring(colour))
+        );
         colour
     }
 }

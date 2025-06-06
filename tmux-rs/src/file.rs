@@ -4,11 +4,19 @@ use crate::compat::{
     imsg::{IMSG_HEADER_SIZE, MAX_IMSGSIZE},
     tree::{rb_find, rb_foreach, rb_insert, rb_remove},
 };
-use libc::{__errno_location, BUFSIZ, E2BIG, EBADF, EINVAL, EIO, ENOMEM, O_APPEND, O_CREAT, O_NONBLOCK, O_RDONLY, O_WRONLY, STDERR_FILENO, STDIN_FILENO, STDOUT_FILENO, close, dup, fclose, ferror, fopen, fread, fwrite, memcpy, open, strcmp};
+use libc::{
+    __errno_location, BUFSIZ, E2BIG, EBADF, EINVAL, EIO, ENOMEM, O_APPEND, O_CREAT, O_NONBLOCK,
+    O_RDONLY, O_WRONLY, STDERR_FILENO, STDIN_FILENO, STDOUT_FILENO, close, dup, fclose, ferror,
+    fopen, fread, fwrite, memcpy, open, strcmp,
+};
 
 unsafe extern "C" {
     pub fn client_files_RB_INSERT_COLOR(_: *mut client_files, _: *mut client_file);
-    pub fn client_files_RB_REMOVE_COLOR(_: *mut client_files, _: *mut client_file, _: *mut client_file);
+    pub fn client_files_RB_REMOVE_COLOR(
+        _: *mut client_files,
+        _: *mut client_file,
+        _: *mut client_file,
+    );
     pub fn client_files_RB_REMOVE(_: *mut client_files, _: *mut client_file) -> *mut client_file;
     pub fn client_files_RB_INSERT(_: *mut client_files, _: *mut client_file) -> *mut client_file;
     pub fn client_files_RB_FIND(_: *mut client_files, _: *mut client_file) -> *mut client_file;
@@ -19,7 +27,15 @@ unsafe extern "C" {
 pub static mut file_next_stream: i32 = 3;
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn file_get_path(c: *mut client, file: *const c_char) -> NonNull<c_char> { unsafe { if *file == b'/' as c_char { xstrdup(file) } else { xasprintf_(c"%s/%s", server_client_get_cwd(c, null_mut()), file) } } }
+pub unsafe extern "C" fn file_get_path(c: *mut client, file: *const c_char) -> NonNull<c_char> {
+    unsafe {
+        if *file == b'/' as c_char {
+            xstrdup(file)
+        } else {
+            xasprintf_(c"%s/%s", server_client_get_cwd(c, null_mut()), file)
+        }
+    }
+}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_cmp(cf1: *const client_file, cf2: *const client_file) -> c_int {
@@ -36,7 +52,13 @@ pub unsafe extern "C" fn file_cmp(cf1: *const client_file, cf2: *const client_fi
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn file_create_with_peer(peer: *mut tmuxpeer, files: *mut client_files, stream: c_int, cb: client_file_cb, cbdata: *mut c_void) -> *mut client_file {
+pub unsafe extern "C" fn file_create_with_peer(
+    peer: *mut tmuxpeer,
+    files: *mut client_files,
+    stream: c_int,
+    cb: client_file_cb,
+    cbdata: *mut c_void,
+) -> *mut client_file {
     unsafe {
         let mut cf = xcalloc_::<client_file>(1).as_ptr();
         (*cf).c = null_mut();
@@ -60,7 +82,12 @@ pub unsafe extern "C" fn file_create_with_peer(peer: *mut tmuxpeer, files: *mut 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn file_create_with_client(mut c: *mut client, stream: c_int, cb: client_file_cb, cbdata: *mut c_void) -> *mut client_file {
+pub unsafe extern "C" fn file_create_with_client(
+    mut c: *mut client,
+    stream: c_int,
+    cb: client_file_cb,
+    cbdata: *mut c_void,
+) -> *mut client_file {
     unsafe {
         if !c.is_null() && (*c).flags.intersects(client_flag::ATTACHED) {
             c = null_mut();
@@ -138,13 +165,31 @@ pub unsafe extern "C" fn file_fire_done(cf: *mut client_file) {
 pub unsafe extern "C" fn file_fire_read(cf: *mut client_file) {
     unsafe {
         if let Some(cb) = (*cf).cb {
-            cb((*cf).c, (*cf).path, (*cf).error, 0, (*cf).buffer, (*cf).data);
+            cb(
+                (*cf).c,
+                (*cf).path,
+                (*cf).error,
+                0,
+                (*cf).buffer,
+                (*cf).data,
+            );
         }
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn file_can_print(c: *mut client) -> c_int { unsafe { if c.is_null() || (*c).flags.intersects(client_flag::ATTACHED) || (*c).flags.intersects(client_flag::CONTROL) { 0 } else { 1 } } }
+pub unsafe extern "C" fn file_can_print(c: *mut client) -> c_int {
+    unsafe {
+        if c.is_null()
+            || (*c).flags.intersects(client_flag::ATTACHED)
+            || (*c).flags.intersects(client_flag::CONTROL)
+        {
+            0
+        } else {
+            1
+        }
+    }
+}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_print(c: *mut client, fmt: *const c_char, mut args: ...) {
@@ -176,7 +221,13 @@ pub unsafe extern "C" fn file_vprint(c: *mut client, fmt: *const c_char, ap: VaL
             msg.stream = 1;
             msg.fd = STDOUT_FILENO;
             msg.flags = 0;
-            proc_send((*c).peer, msgtype::MSG_WRITE_OPEN, -1, &raw mut msg as _, size_of::<msg_write_open>());
+            proc_send(
+                (*c).peer,
+                msgtype::MSG_WRITE_OPEN,
+                -1,
+                &raw mut msg as _,
+                size_of::<msg_write_open>(),
+            );
         } else {
             evbuffer_add_vprintf((*cf).buffer, fmt, ap);
             file_push(cf);
@@ -207,7 +258,13 @@ pub unsafe extern "C" fn file_print_buffer(c: *mut client, data: *mut c_void, si
             msg.stream = 1;
             msg.fd = STDOUT_FILENO;
             msg.flags = 0;
-            proc_send((*c).peer, msgtype::MSG_WRITE_OPEN, -1, &raw mut msg as _, size_of::<msg_write_open>());
+            proc_send(
+                (*c).peer,
+                msgtype::MSG_WRITE_OPEN,
+                -1,
+                &raw mut msg as _,
+                size_of::<msg_write_open>(),
+            );
         } else {
             evbuffer_add((*cf).buffer, data, size);
             file_push(cf);
@@ -237,7 +294,13 @@ pub unsafe extern "C" fn file_error(c: *mut client, fmt: *const c_char, mut ap: 
             msg.stream = 2;
             msg.fd = STDERR_FILENO;
             msg.flags = 0;
-            proc_send((*c).peer, msgtype::MSG_WRITE_OPEN, -1, &raw mut msg as _, size_of::<msg_write_open>());
+            proc_send(
+                (*c).peer,
+                msgtype::MSG_WRITE_OPEN,
+                -1,
+                &raw mut msg as _,
+                size_of::<msg_write_open>(),
+            );
         } else {
             evbuffer_add_vprintf((*cf).buffer, fmt, ap.as_va_list());
             file_push(cf);
@@ -246,7 +309,15 @@ pub unsafe extern "C" fn file_error(c: *mut client, fmt: *const c_char, mut ap: 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn file_write(c: *mut client, path: *const c_char, flags: c_int, bdata: *const c_void, bsize: usize, cb: client_file_cb, cbdata: *mut c_void) {
+pub unsafe extern "C" fn file_write(
+    c: *mut client,
+    path: *const c_char,
+    flags: c_int,
+    bdata: *const c_void,
+    bsize: usize,
+    cb: client_file_cb,
+    cbdata: *mut c_void,
+) {
     unsafe {
         let mut cf: *mut client_file = null_mut();
         let mut msg: *mut msg_write_open = null_mut();
@@ -264,7 +335,10 @@ pub unsafe extern "C" fn file_write(c: *mut client, path: *const c_char, flags: 
                     (*cf).path = xstrdup_(c"-").as_ptr();
 
                     fd = STDOUT_FILENO;
-                    if (c.is_null() || ((*c).flags.intersects(client_flag::ATTACHED)) || ((*c).flags.intersects(client_flag::CONTROL))) {
+                    if (c.is_null()
+                        || ((*c).flags.intersects(client_flag::ATTACHED))
+                        || ((*c).flags.intersects(client_flag::CONTROL)))
+                    {
                         (*cf).error = EBADF;
                         break 'done;
                     }
@@ -307,7 +381,11 @@ pub unsafe extern "C" fn file_write(c: *mut client, path: *const c_char, flags: 
             (*msg).stream = (*cf).stream;
             (*msg).fd = fd;
             (*msg).flags = flags;
-            memcpy(msg.add(1).cast(), (*cf).path.cast(), msglen - size_of::<msg_write_open>());
+            memcpy(
+                msg.add(1).cast(),
+                (*cf).path.cast(),
+                msglen - size_of::<msg_write_open>(),
+            );
             if (proc_send((*cf).peer, msgtype::MSG_WRITE_OPEN, -1, msg.cast(), msglen) != 0) {
                 free_(msg);
                 (*cf).error = EINVAL;
@@ -323,7 +401,12 @@ pub unsafe extern "C" fn file_write(c: *mut client, path: *const c_char, flags: 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn file_read(c: *mut client, path: *const c_char, cb: client_file_cb, cbdata: *mut c_void) -> *mut client_file {
+pub unsafe extern "C" fn file_read(
+    c: *mut client,
+    path: *const c_char,
+    cb: client_file_cb,
+    cbdata: *mut c_void,
+) -> *mut client_file {
     unsafe {
         let mut cf;
         let mut msg: *mut msg_read_open = null_mut();
@@ -341,7 +424,10 @@ pub unsafe extern "C" fn file_read(c: *mut client, path: *const c_char, cb: clie
                     (*cf).path = xstrdup_(c"-").as_ptr();
 
                     fd = STDIN_FILENO;
-                    if (c.is_null() || ((*c).flags.intersects(client_flag::ATTACHED)) || ((*c).flags.intersects(client_flag::CONTROL))) {
+                    if (c.is_null()
+                        || ((*c).flags.intersects(client_flag::ATTACHED))
+                        || ((*c).flags.intersects(client_flag::CONTROL)))
+                    {
                         (*cf).error = EBADF;
                         break 'done;
                     }
@@ -385,7 +471,11 @@ pub unsafe extern "C" fn file_read(c: *mut client, path: *const c_char, cb: clie
             msg = xmalloc(msglen).as_ptr().cast();
             (*msg).stream = (*cf).stream;
             (*msg).fd = fd;
-            memcpy(msg.add(1).cast(), (*cf).path.cast(), msglen - size_of::<msg_read_open>());
+            memcpy(
+                msg.add(1).cast(),
+                (*cf).path.cast(),
+                msglen - size_of::<msg_read_open>(),
+            );
             if proc_send((*cf).peer, msgtype::MSG_READ_OPEN, -1, msg.cast(), msglen) != 0 {
                 free_(msg);
                 (*cf).error = EINVAL;
@@ -411,8 +501,16 @@ pub unsafe extern "C" fn file_cancel(cf: *mut client_file) {
         }
         (*cf).closed = 1;
 
-        let msg: msg_read_cancel = msg_read_cancel { stream: (*cf).stream };
-        proc_send((*cf).peer, msgtype::MSG_READ_CANCEL, -1, &raw const msg as *const c_void, size_of::<msg_read_cancel>());
+        let msg: msg_read_cancel = msg_read_cancel {
+            stream: (*cf).stream,
+        };
+        proc_send(
+            (*cf).peer,
+            msgtype::MSG_READ_CANCEL,
+            -1,
+            &raw const msg as *const c_void,
+            size_of::<msg_read_cancel>(),
+        );
     }
 }
 
@@ -445,8 +543,19 @@ pub unsafe extern "C" fn file_push(cf: *mut client_file) {
             msglen = size_of::<msg_write_data>() + sent;
             msg = xrealloc_(msg.as_ptr(), msglen);
             (*msg.as_ptr()).stream = (*cf).stream;
-            memcpy(msg.as_ptr().add(1).cast(), EVBUFFER_DATA((*cf).buffer).cast(), sent);
-            if (proc_send((*cf).peer, msgtype::MSG_WRITE, -1, msg.as_ptr().cast(), msglen) != 0) {
+            memcpy(
+                msg.as_ptr().add(1).cast(),
+                EVBUFFER_DATA((*cf).buffer).cast(),
+                sent,
+            );
+            if (proc_send(
+                (*cf).peer,
+                msgtype::MSG_WRITE,
+                -1,
+                msg.as_ptr().cast(),
+                msglen,
+            ) != 0)
+            {
                 break;
             }
             evbuffer_drain((*cf).buffer, sent);
@@ -458,8 +567,16 @@ pub unsafe extern "C" fn file_push(cf: *mut client_file) {
             (*cf).references += 1;
             event_once(-1, EV_TIMEOUT, Some(file_push_cb), cf.cast(), null());
         } else if ((*cf).stream > 2) {
-            let mut close: msg_write_close = msg_write_close { stream: (*cf).stream };
-            proc_send((*cf).peer, msgtype::MSG_WRITE_CLOSE, -1, &raw const close as *const c_void, size_of::<msg_write_close>());
+            let mut close: msg_write_close = msg_write_close {
+                stream: (*cf).stream,
+            };
+            proc_send(
+                (*cf).peer,
+                msgtype::MSG_WRITE_CLOSE,
+                -1,
+                &raw const close as *const c_void,
+                size_of::<msg_write_close>(),
+            );
             file_fire_done(cf);
         }
         free_(msg.as_ptr());
@@ -488,7 +605,11 @@ pub unsafe extern "C" fn file_write_left(files: *mut client_files) -> c_int {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn file_write_error_callback(bev: *mut bufferevent, what: i16, arg: *mut c_void) {
+pub unsafe extern "C" fn file_write_error_callback(
+    bev: *mut bufferevent,
+    what: i16,
+    arg: *mut c_void,
+) {
     unsafe {
         let cf = arg as *mut client_file;
 
@@ -527,7 +648,15 @@ pub unsafe extern "C" fn file_write_callback(bev: *mut bufferevent, arg: *mut c_
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn file_write_open(files: *mut client_files, peer: *mut tmuxpeer, imsg: *mut imsg, allow_streams: i32, close_received: i32, cb: client_file_cb, cbdata: *mut c_void) {
+pub unsafe extern "C" fn file_write_open(
+    files: *mut client_files,
+    peer: *mut tmuxpeer,
+    imsg: *mut imsg,
+    allow_streams: i32,
+    close_received: i32,
+    cb: client_file_cb,
+    cbdata: *mut c_void,
+) {
     unsafe {
         let mut msg = (*imsg).data as *mut msg_write_open;
         let mut msglen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
@@ -577,7 +706,13 @@ pub unsafe extern "C" fn file_write_open(files: *mut client_files, peer: *mut tm
                 break 'reply;
             }
 
-            (*cf).event = bufferevent_new((*cf).fd, None, Some(file_write_callback), Some(file_write_error_callback), cf.cast());
+            (*cf).event = bufferevent_new(
+                (*cf).fd,
+                None,
+                Some(file_write_callback),
+                Some(file_write_error_callback),
+                cf.cast(),
+            );
             if ((*cf).event.is_null()) {
                 fatalx(c"out of memory");
             }
@@ -585,9 +720,18 @@ pub unsafe extern "C" fn file_write_open(files: *mut client_files, peer: *mut tm
             break 'reply;
         }
         // reply:
-        let reply: msg_write_ready = msg_write_ready { stream: (*msg).stream, error };
+        let reply: msg_write_ready = msg_write_ready {
+            stream: (*msg).stream,
+            error,
+        };
 
-        proc_send(peer, msgtype::MSG_WRITE_READY, -1, &raw const reply as _, size_of::<msg_write_ready>());
+        proc_send(
+            peer,
+            msgtype::MSG_WRITE_READY,
+            -1,
+            &raw const reply as _,
+            size_of::<msg_write_ready>(),
+        );
     }
 }
 
@@ -647,14 +791,27 @@ pub unsafe extern "C" fn file_write_close(files: *mut client_files, imsg: *mut i
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn file_read_error_callback(_bev: *mut bufferevent, what: i16, arg: *mut c_void) {
+pub unsafe extern "C" fn file_read_error_callback(
+    _bev: *mut bufferevent,
+    what: i16,
+    arg: *mut c_void,
+) {
     unsafe {
         let cf = arg as *mut client_file;
 
         log_debug!("read error file {}", (*cf).stream);
 
-        let msg: msg_read_done = msg_read_done { stream: (*cf).stream, error: 0 };
-        proc_send((*cf).peer, msgtype::MSG_READ_DONE, -1, &raw const msg as *const c_void, size_of::<msg_read_done>());
+        let msg: msg_read_done = msg_read_done {
+            stream: (*cf).stream,
+            error: 0,
+        };
+        proc_send(
+            (*cf).peer,
+            msgtype::MSG_READ_DONE,
+            -1,
+            &raw const msg as *const c_void,
+            size_of::<msg_read_done>(),
+        );
 
         bufferevent_free((*cf).event);
         close((*cf).fd);
@@ -685,7 +842,13 @@ pub unsafe extern "C" fn file_read_callback(bev: *mut bufferevent, arg: *mut c_v
             msg = xrealloc_(msg.as_ptr(), msglen);
             (*msg.as_ptr()).stream = (*cf).stream;
             memcpy(msg.as_ptr().add(1).cast(), bdata.cast(), bsize);
-            proc_send((*cf).peer, msgtype::MSG_READ, -1, msg.as_ptr().cast(), msglen);
+            proc_send(
+                (*cf).peer,
+                msgtype::MSG_READ,
+                -1,
+                msg.as_ptr().cast(),
+                msglen,
+            );
 
             evbuffer_drain((*(*cf).event).input, bsize);
         }
@@ -694,7 +857,15 @@ pub unsafe extern "C" fn file_read_callback(bev: *mut bufferevent, arg: *mut c_v
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn file_read_open(files: *mut client_files, peer: *mut tmuxpeer, imsg: *mut imsg, allow_streams: c_int, close_received: c_int, cb: client_file_cb, cbdata: *mut c_void) {
+pub unsafe extern "C" fn file_read_open(
+    files: *mut client_files,
+    peer: *mut tmuxpeer,
+    imsg: *mut imsg,
+    allow_streams: c_int,
+    close_received: c_int,
+    cb: client_file_cb,
+    cbdata: *mut c_void,
+) {
     unsafe {
         let msg = (*imsg).data as *mut msg_read_open;
         let msglen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
@@ -747,7 +918,13 @@ pub unsafe extern "C" fn file_read_open(files: *mut client_files, peer: *mut tmu
                 break 'reply;
             }
 
-            (*cf).event = bufferevent_new((*cf).fd, Some(file_read_callback), None, Some(file_read_error_callback), cf.cast());
+            (*cf).event = bufferevent_new(
+                (*cf).fd,
+                Some(file_read_callback),
+                None,
+                Some(file_read_error_callback),
+                cf.cast(),
+            );
             if ((*cf).event.is_null()) {
                 fatalx(c"out of memory");
             }
@@ -755,8 +932,17 @@ pub unsafe extern "C" fn file_read_open(files: *mut client_files, peer: *mut tmu
             return;
         }
         // reply:
-        let reply = msg_read_done { stream: (*msg).stream, error };
-        proc_send(peer, msgtype::MSG_READ_DONE, -1, &raw const reply as _, size_of::<msg_read_done>());
+        let reply = msg_read_done {
+            stream: (*msg).stream,
+            error,
+        };
+        proc_send(
+            peer,
+            msgtype::MSG_READ_DONE,
+            -1,
+            &raw const reply as _,
+            size_of::<msg_read_done>(),
+        );
     }
 }
 

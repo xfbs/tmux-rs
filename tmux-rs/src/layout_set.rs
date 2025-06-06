@@ -7,7 +7,12 @@ struct layout_sets_entry {
     arrange: Option<unsafe extern "C" fn(*mut window)>,
 }
 impl layout_sets_entry {
-    const fn new(name: &'static CStr, arrange: unsafe extern "C" fn(*mut window)) -> Self { Self { name: SyncCharPtr::new(name), arrange: Some(arrange) } }
+    const fn new(name: &'static CStr, arrange: unsafe extern "C" fn(*mut window)) -> Self {
+        Self {
+            name: SyncCharPtr::new(name),
+            arrange: Some(arrange),
+        }
+    }
 }
 
 const layout_sets_len: usize = 7;
@@ -413,7 +418,8 @@ pub unsafe extern "C" fn layout_set_main_v(w: *mut window) {
 
         // Get the main pane width.
         let s = options_get_string((*w).options, c"main-pane-width".as_ptr());
-        let mut mainw: u32 = args_string_percentage(s, 0, sx as i64, sx as i64, &raw mut cause) as u32;
+        let mut mainw: u32 =
+            args_string_percentage(s, 0, sx as i64, sx as i64, &raw mut cause) as u32;
         if cause.is_null() {
             mainw = 80;
             free_(cause);
@@ -695,14 +701,24 @@ pub unsafe extern "C" fn layout_set_tiled(w: *mut window) {
                 continue;
             }
             let lcchild = tailq_last(&raw mut (*lcrow).cells);
-            layout_resize_adjust(w, lcchild, layout_type::LAYOUT_LEFTRIGHT, ((*w).sx - used) as i32);
+            layout_resize_adjust(
+                w,
+                lcchild,
+                layout_type::LAYOUT_LEFTRIGHT,
+                ((*w).sx - used) as i32,
+            );
         }
 
         // Adjust the last row height to fit if necessary.
         let used = (rows * height) + rows - 1;
         if (*w).sy > used {
             let lcrow = tailq_last(&raw mut (*lc).cells);
-            layout_resize_adjust(w, lcrow, layout_type::LAYOUT_TOPBOTTOM, ((*w).sy - used) as i32);
+            layout_resize_adjust(
+                w,
+                lcrow,
+                layout_type::LAYOUT_TOPBOTTOM,
+                ((*w).sy - used) as i32,
+            );
         }
 
         // Fix cell offsets.

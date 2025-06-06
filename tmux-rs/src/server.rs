@@ -1,8 +1,12 @@
 use crate::*;
 
 use libc::{
-    AF_UNIX, ECHILD, ENAMETOOLONG, S_IRGRP, S_IROTH, S_IRUSR, S_IRWXG, S_IRWXO, S_IXGRP, S_IXOTH, S_IXUSR, SIG_BLOCK, SIG_SETMASK, SIGCONT, SIGTTIN, SIGTTOU, SOCK_STREAM, WIFEXITED, WIFSIGNALED, WIFSTOPPED, WNOHANG, WSTOPSIG, WUNTRACED, accept, bind, chmod, close, fprintf, free, gettimeofday, kill,
-    killpg, listen, malloc_trim, sigfillset, sigprocmask, sigset_t, sockaddr_storage, sockaddr_un, socket, socklen_t, stat, strerror, strsignal, umask, unlink, waitpid,
+    AF_UNIX, ECHILD, ENAMETOOLONG, S_IRGRP, S_IROTH, S_IRUSR, S_IRWXG, S_IRWXO, S_IXGRP, S_IXOTH,
+    S_IXUSR, SIG_BLOCK, SIG_SETMASK, SIGCONT, SIGTTIN, SIGTTOU, SOCK_STREAM, WIFEXITED,
+    WIFSIGNALED, WIFSTOPPED, WNOHANG, WSTOPSIG, WUNTRACED, accept, bind, chmod, close, fprintf,
+    free, gettimeofday, kill, killpg, listen, malloc_trim, sigfillset, sigprocmask, sigset_t,
+    sockaddr_storage, sockaddr_un, socket, socklen_t, stat, strerror, strsignal, umask, unlink,
+    waitpid,
 };
 
 use crate::compat::{
@@ -39,7 +43,11 @@ pub static mut message_log: message_list = unsafe { zeroed() };
 pub static mut current_time: time_t = unsafe { zeroed() };
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_set_marked(s: *mut session, wl: *mut winlink, wp: *mut window_pane) {
+pub unsafe extern "C" fn server_set_marked(
+    s: *mut session,
+    wl: *mut winlink,
+    wp: *mut window_pane,
+) {
     unsafe {
         cmd_find_clear_state(&raw mut marked_pane, 0);
         marked_pane.s = s;
@@ -57,7 +65,11 @@ pub unsafe extern "C" fn server_clear_marked() {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_is_marked(s: *mut session, wl: *mut winlink, wp: *mut window_pane) -> boolint {
+pub unsafe extern "C" fn server_is_marked(
+    s: *mut session,
+    wl: *mut winlink,
+    wp: *mut window_pane,
+) -> boolint {
     if s.is_null() || wl.is_null() || wp.is_null() {
         return boolint::false_();
     }
@@ -74,15 +86,24 @@ pub unsafe extern "C" fn server_is_marked(s: *mut session, wl: *mut winlink, wp:
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_check_marked() -> boolint { unsafe { cmd_find_valid_state(&raw mut marked_pane) } }
+pub unsafe extern "C" fn server_check_marked() -> boolint {
+    unsafe { cmd_find_valid_state(&raw mut marked_pane) }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_create_socket(flags: client_flag, cause: *mut *mut c_char) -> c_int {
+pub unsafe extern "C" fn server_create_socket(
+    flags: client_flag,
+    cause: *mut *mut c_char,
+) -> c_int {
     unsafe {
         'fail: {
             let mut sa: sockaddr_un = zeroed();
             sa.sun_family = AF_UNIX as _;
-            let size = strlcpy(sa.sun_path.as_mut_ptr(), socket_path, size_of_val(&sa.sun_path));
+            let size = strlcpy(
+                sa.sun_path.as_mut_ptr(),
+                socket_path,
+                size_of_val(&sa.sun_path),
+            );
             if size >= size_of_val(&sa.sun_path) {
                 errno!() = ENAMETOOLONG;
                 break 'fail;
@@ -94,7 +115,11 @@ pub unsafe extern "C" fn server_create_socket(flags: client_flag, cause: *mut *m
                 break 'fail;
             }
 
-            let mask = if flags.intersects(client_flag::DEFAULTSOCKET) { umask(S_IXUSR | S_IXGRP | S_IRWXO) } else { umask(S_IXUSR | S_IRWXG | S_IRWXO) };
+            let mask = if flags.intersects(client_flag::DEFAULTSOCKET) {
+                umask(S_IXUSR | S_IXGRP | S_IRWXO)
+            } else {
+                umask(S_IXUSR | S_IRWXG | S_IRWXO)
+            };
 
             let saved_errno: c_int;
             if bind(fd, &raw const sa as _, size_of::<sockaddr_un>() as _) == -1 {
@@ -118,7 +143,12 @@ pub unsafe extern "C" fn server_create_socket(flags: client_flag, cause: *mut *m
 
         // fail:
         if !cause.is_null() {
-            xmalloc::xasprintf(cause, c"error creating %s (%s)".as_ptr(), socket_path, strerror(errno!()));
+            xmalloc::xasprintf(
+                cause,
+                c"error creating %s (%s)".as_ptr(),
+                socket_path,
+                strerror(errno!()),
+            );
         }
         -1
     }
@@ -127,7 +157,10 @@ pub unsafe extern "C" fn server_create_socket(flags: client_flag, cause: *mut *m
 /// Tidy up every hour.
 #[unsafe(no_mangle)]
 unsafe extern "C" fn server_tidy_event(_fd: i32, _events: i16, _data: *mut c_void) {
-    let tv = timeval { tv_sec: 3600, tv_usec: 0 };
+    let tv = timeval {
+        tv_sec: 3600,
+        tv_usec: 0,
+    };
     unsafe {
         let t = get_timer();
 
@@ -135,13 +168,23 @@ unsafe extern "C" fn server_tidy_event(_fd: i32, _events: i16, _data: *mut c_voi
 
         malloc_trim(0);
 
-        log_debug!("{}: took {} milliseconds", "server_tidy_event", get_timer() - t);
+        log_debug!(
+            "{}: took {} milliseconds",
+            "server_tidy_event",
+            get_timer() - t
+        );
         event_add(&raw mut server_ev_tidy, &raw const tv);
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_start(client: *mut tmuxproc, flags: client_flag, base: *mut event_base, lockfd: c_int, lockfile: *mut c_char) -> c_int {
+pub unsafe extern "C" fn server_start(
+    client: *mut tmuxproc,
+    flags: client_flag,
+    base: *mut event_base,
+    lockfd: c_int,
+    lockfile: *mut c_char,
+) -> c_int {
     unsafe {
         let mut fd = 0;
         let mut set: sigset_t = zeroed();
@@ -149,7 +192,10 @@ pub unsafe extern "C" fn server_start(client: *mut tmuxproc, flags: client_flag,
 
         let mut c: *mut client = null_mut();
         let mut cause: *mut c_char = null_mut();
-        let tv: timeval = timeval { tv_sec: 3600, tv_usec: 0 };
+        let tv: timeval = timeval {
+            tv_sec: 3600,
+            tv_usec: 0,
+        };
 
         sigfillset(&raw mut set);
         sigprocmask(SIG_BLOCK, &set, &raw mut oldset);
@@ -167,7 +213,9 @@ pub unsafe extern "C" fn server_start(client: *mut tmuxproc, flags: client_flag,
             let err_str = format!("{backtrace:#?}");
             log_debug!("{err_str}");
             log_close();
-            if let Err(err) = std::fs::write(format!("server-panic-{}.txt", std::process::id()), err_str) {
+            if let Err(err) =
+                std::fs::write(format!("server-panic-{}.txt", std::process::id()), err_str)
+            {
                 eprintln!("error in panic handler! {err}")
             }
         }));
@@ -201,7 +249,8 @@ pub unsafe extern "C" fn server_start(client: *mut tmuxproc, flags: client_flag,
 
         if cfg!(feature = "systemd") {
             // TODO we could be truncating important bits
-            server_fd = crate::compat::systemd::systemd_create_socket(flags.bits() as i32, &raw mut cause);
+            server_fd =
+                crate::compat::systemd::systemd_create_socket(flags.bits() as i32, &raw mut cause);
         } else {
             server_fd = server_create_socket(flags, &raw mut cause);
         }
@@ -388,7 +437,9 @@ unsafe extern "C" fn server_accept(fd: i32, events: i16, _data: *mut c_void) {
         }
         let c = server_client_create(newfd);
         if server_acl_join(c) == 0 {
-            (*c).exit_message = xmalloc::xstrdup(c"access not allowed".as_ptr()).cast().as_ptr();
+            (*c).exit_message = xmalloc::xstrdup(c"access not allowed".as_ptr())
+                .cast()
+                .as_ptr();
             (*c).flags |= client_flag::EXIT;
         }
     }
@@ -397,7 +448,10 @@ unsafe extern "C" fn server_accept(fd: i32, events: i16, _data: *mut c_void) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_add_accept(timeout: c_int) {
     unsafe {
-        let mut tv = timeval { tv_sec: timeout as i64, tv_usec: 0 };
+        let mut tv = timeval {
+            tv_sec: timeout as i64,
+            tv_usec: 0,
+        };
 
         if server_fd == -1 {
             return;
@@ -408,10 +462,22 @@ pub unsafe extern "C" fn server_add_accept(timeout: c_int) {
         }
 
         if timeout == 0 {
-            event_set(&raw mut server_ev_accept, server_fd, EV_READ, Some(server_accept), null_mut());
+            event_set(
+                &raw mut server_ev_accept,
+                server_fd,
+                EV_READ,
+                Some(server_accept),
+                null_mut(),
+            );
             event_add(&raw mut server_ev_accept, null_mut());
         } else {
-            event_set(&raw mut server_ev_accept, server_fd, EV_TIMEOUT, Some(server_accept), null_mut());
+            event_set(
+                &raw mut server_ev_accept,
+                server_fd,
+                EV_TIMEOUT,
+                Some(server_accept),
+                null_mut(),
+            );
             event_add(&raw mut server_ev_accept, &raw mut tv);
         }
     }
@@ -452,7 +518,11 @@ unsafe extern "C" fn server_child_signal() {
     let mut status = 0i32;
     unsafe {
         loop {
-            let pid: pid_t = waitpid(crate::compat::WAIT_ANY, &raw mut status, WNOHANG | WUNTRACED);
+            let pid: pid_t = waitpid(
+                crate::compat::WAIT_ANY,
+                &raw mut status,
+                WNOHANG | WUNTRACED,
+            );
             match pid {
                 -1 => {
                     if errno!() == ECHILD {
@@ -525,7 +595,9 @@ pub unsafe extern "C" fn server_add_message(fmt: *const c_char, mut args: ...) {
 
         log_debug!("message: {}", _s(s));
 
-        let msg: *mut message_entry = xmalloc::xcalloc(1, size_of::<message_entry>()).cast().as_ptr();
+        let msg: *mut message_entry = xmalloc::xcalloc(1, size_of::<message_entry>())
+            .cast()
+            .as_ptr();
         gettimeofday(&raw mut (*msg).msg_time, null_mut());
         (*msg).msg_num = message_next + 1;
         message_next += 1;

@@ -25,7 +25,12 @@ struct tty_default_key_raw {
     key: key_code,
 }
 impl tty_default_key_raw {
-    const fn new(string: &'static CStr, key: key_code) -> Self { Self { string: SyncCharPtr::new(string), key } }
+    const fn new(string: &'static CStr, key: key_code) -> Self {
+        Self {
+            string: SyncCharPtr::new(string),
+            key,
+        }
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -67,23 +72,59 @@ static tty_default_raw_keys: [tty_default_key_raw; 100] = [
     // don't match the xterm-style meta keys in the output tree - Escape+Up
     // should stay as Escape+Up and not become M-Up.
     //
-    tty_default_key_raw::new(c"\x1b\x1bOA", keyc::KEYC_UP as u64 | KEYC_CURSOR | KEYC_META),
-    tty_default_key_raw::new(c"\x1b\x1bOB", keyc::KEYC_DOWN as u64 | KEYC_CURSOR | KEYC_META),
-    tty_default_key_raw::new(c"\x1b\x1bOC", keyc::KEYC_RIGHT as u64 | KEYC_CURSOR | KEYC_META),
-    tty_default_key_raw::new(c"\x1b\x1bOD", keyc::KEYC_LEFT as u64 | KEYC_CURSOR | KEYC_META),
-    tty_default_key_raw::new(c"\x1b\x1b[A", keyc::KEYC_UP as u64 | KEYC_CURSOR | KEYC_META),
-    tty_default_key_raw::new(c"\x1b\x1b[B", keyc::KEYC_DOWN as u64 | KEYC_CURSOR | KEYC_META),
-    tty_default_key_raw::new(c"\x1b\x1b[C", keyc::KEYC_RIGHT as u64 | KEYC_CURSOR | KEYC_META),
-    tty_default_key_raw::new(c"\x1b\x1b[D", keyc::KEYC_LEFT as u64 | KEYC_CURSOR | KEYC_META),
+    tty_default_key_raw::new(
+        c"\x1b\x1bOA",
+        keyc::KEYC_UP as u64 | KEYC_CURSOR | KEYC_META,
+    ),
+    tty_default_key_raw::new(
+        c"\x1b\x1bOB",
+        keyc::KEYC_DOWN as u64 | KEYC_CURSOR | KEYC_META,
+    ),
+    tty_default_key_raw::new(
+        c"\x1b\x1bOC",
+        keyc::KEYC_RIGHT as u64 | KEYC_CURSOR | KEYC_META,
+    ),
+    tty_default_key_raw::new(
+        c"\x1b\x1bOD",
+        keyc::KEYC_LEFT as u64 | KEYC_CURSOR | KEYC_META,
+    ),
+    tty_default_key_raw::new(
+        c"\x1b\x1b[A",
+        keyc::KEYC_UP as u64 | KEYC_CURSOR | KEYC_META,
+    ),
+    tty_default_key_raw::new(
+        c"\x1b\x1b[B",
+        keyc::KEYC_DOWN as u64 | KEYC_CURSOR | KEYC_META,
+    ),
+    tty_default_key_raw::new(
+        c"\x1b\x1b[C",
+        keyc::KEYC_RIGHT as u64 | KEYC_CURSOR | KEYC_META,
+    ),
+    tty_default_key_raw::new(
+        c"\x1b\x1b[D",
+        keyc::KEYC_LEFT as u64 | KEYC_CURSOR | KEYC_META,
+    ),
     /* Other xterm keys. */
     tty_default_key_raw::new(c"\x1bOH", keyc::KEYC_HOME as u64),
     tty_default_key_raw::new(c"\x1bOF", keyc::KEYC_END as u64),
-    tty_default_key_raw::new(c"\x1b\x1bOH", keyc::KEYC_HOME as u64 | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_raw::new(c"\x1b\x1bOF", keyc::KEYC_END as u64 | KEYC_META | KEYC_IMPLIED_META),
+    tty_default_key_raw::new(
+        c"\x1b\x1bOH",
+        keyc::KEYC_HOME as u64 | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_raw::new(
+        c"\x1b\x1bOF",
+        keyc::KEYC_END as u64 | KEYC_META | KEYC_IMPLIED_META,
+    ),
     tty_default_key_raw::new(c"\x1b[H", keyc::KEYC_HOME as u64),
     tty_default_key_raw::new(c"\x1b[F", keyc::KEYC_END as u64),
-    tty_default_key_raw::new(c"\x1b\x1b[H", keyc::KEYC_HOME as u64 | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_raw::new(c"\x1b\x1b[F", keyc::KEYC_END as u64 | KEYC_META | KEYC_IMPLIED_META),
+    tty_default_key_raw::new(
+        c"\x1b\x1b[H",
+        keyc::KEYC_HOME as u64 | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_raw::new(
+        c"\x1b\x1b[F",
+        keyc::KEYC_END as u64 | KEYC_META | KEYC_IMPLIED_META,
+    ),
     /* rxvt arrow keys. */
     tty_default_key_raw::new(c"\x1bOa", keyc::KEYC_UP as u64 | KEYC_CTRL),
     tty_default_key_raw::new(c"\x1bOb", keyc::KEYC_DOWN as u64 | KEYC_CTRL),
@@ -222,7 +263,9 @@ struct tty_default_key_code {
     key: key_code,
 }
 impl tty_default_key_code {
-    const fn new(code: tty_code_code, key: key_code) -> Self { Self { code, key } }
+    const fn new(code: tty_code_code, key: key_code) -> Self {
+        Self { code, key }
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -240,57 +283,210 @@ static tty_default_code_keys: [tty_default_key_code; 136] = [
     tty_default_key_code::new(tty_code_code::TTYC_KF10, keyc::KEYC_F10 as key_code),
     tty_default_key_code::new(tty_code_code::TTYC_KF11, keyc::KEYC_F11 as key_code),
     tty_default_key_code::new(tty_code_code::TTYC_KF12, keyc::KEYC_F12 as key_code),
-    tty_default_key_code::new(tty_code_code::TTYC_KF13, keyc::KEYC_F1 as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KF14, keyc::KEYC_F2 as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KF15, keyc::KEYC_F3 as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KF16, keyc::KEYC_F4 as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KF17, keyc::KEYC_F5 as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KF18, keyc::KEYC_F6 as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KF19, keyc::KEYC_F7 as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KF20, keyc::KEYC_F8 as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KF21, keyc::KEYC_F9 as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KF22, keyc::KEYC_F10 as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KF23, keyc::KEYC_F11 as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KF24, keyc::KEYC_F12 as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KF25, keyc::KEYC_F1 as key_code | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF26, keyc::KEYC_F2 as key_code | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF27, keyc::KEYC_F3 as key_code | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF28, keyc::KEYC_F4 as key_code | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF29, keyc::KEYC_F5 as key_code | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF30, keyc::KEYC_F6 as key_code | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF31, keyc::KEYC_F7 as key_code | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF32, keyc::KEYC_F8 as key_code | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF33, keyc::KEYC_F9 as key_code | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF34, keyc::KEYC_F10 as key_code | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF35, keyc::KEYC_F11 as key_code | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF36, keyc::KEYC_F12 as key_code | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF37, keyc::KEYC_F1 as key_code | KEYC_SHIFT | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF38, keyc::KEYC_F2 as key_code | KEYC_SHIFT | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF39, keyc::KEYC_F3 as key_code | KEYC_SHIFT | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF40, keyc::KEYC_F4 as key_code | KEYC_SHIFT | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF41, keyc::KEYC_F5 as key_code | KEYC_SHIFT | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF42, keyc::KEYC_F6 as key_code | KEYC_SHIFT | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF43, keyc::KEYC_F7 as key_code | KEYC_SHIFT | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF44, keyc::KEYC_F8 as key_code | KEYC_SHIFT | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF45, keyc::KEYC_F9 as key_code | KEYC_SHIFT | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF46, keyc::KEYC_F10 as key_code | KEYC_SHIFT | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF47, keyc::KEYC_F11 as key_code | KEYC_SHIFT | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF48, keyc::KEYC_F12 as key_code | KEYC_SHIFT | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KF49, keyc::KEYC_F1 as key_code | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KF50, keyc::KEYC_F2 as key_code | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KF51, keyc::KEYC_F3 as key_code | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KF52, keyc::KEYC_F4 as key_code | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KF53, keyc::KEYC_F5 as key_code | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KF54, keyc::KEYC_F6 as key_code | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KF55, keyc::KEYC_F7 as key_code | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KF56, keyc::KEYC_F8 as key_code | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KF57, keyc::KEYC_F9 as key_code | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KF58, keyc::KEYC_F10 as key_code | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KF59, keyc::KEYC_F11 as key_code | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KF60, keyc::KEYC_F12 as key_code | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KF61, keyc::KEYC_F1 as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KF62, keyc::KEYC_F2 as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KF63, keyc::KEYC_F3 as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_SHIFT),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF13,
+        keyc::KEYC_F1 as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF14,
+        keyc::KEYC_F2 as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF15,
+        keyc::KEYC_F3 as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF16,
+        keyc::KEYC_F4 as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF17,
+        keyc::KEYC_F5 as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF18,
+        keyc::KEYC_F6 as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF19,
+        keyc::KEYC_F7 as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF20,
+        keyc::KEYC_F8 as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF21,
+        keyc::KEYC_F9 as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF22,
+        keyc::KEYC_F10 as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF23,
+        keyc::KEYC_F11 as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF24,
+        keyc::KEYC_F12 as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF25,
+        keyc::KEYC_F1 as key_code | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF26,
+        keyc::KEYC_F2 as key_code | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF27,
+        keyc::KEYC_F3 as key_code | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF28,
+        keyc::KEYC_F4 as key_code | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF29,
+        keyc::KEYC_F5 as key_code | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF30,
+        keyc::KEYC_F6 as key_code | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF31,
+        keyc::KEYC_F7 as key_code | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF32,
+        keyc::KEYC_F8 as key_code | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF33,
+        keyc::KEYC_F9 as key_code | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF34,
+        keyc::KEYC_F10 as key_code | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF35,
+        keyc::KEYC_F11 as key_code | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF36,
+        keyc::KEYC_F12 as key_code | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF37,
+        keyc::KEYC_F1 as key_code | KEYC_SHIFT | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF38,
+        keyc::KEYC_F2 as key_code | KEYC_SHIFT | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF39,
+        keyc::KEYC_F3 as key_code | KEYC_SHIFT | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF40,
+        keyc::KEYC_F4 as key_code | KEYC_SHIFT | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF41,
+        keyc::KEYC_F5 as key_code | KEYC_SHIFT | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF42,
+        keyc::KEYC_F6 as key_code | KEYC_SHIFT | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF43,
+        keyc::KEYC_F7 as key_code | KEYC_SHIFT | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF44,
+        keyc::KEYC_F8 as key_code | KEYC_SHIFT | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF45,
+        keyc::KEYC_F9 as key_code | KEYC_SHIFT | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF46,
+        keyc::KEYC_F10 as key_code | KEYC_SHIFT | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF47,
+        keyc::KEYC_F11 as key_code | KEYC_SHIFT | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF48,
+        keyc::KEYC_F12 as key_code | KEYC_SHIFT | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF49,
+        keyc::KEYC_F1 as key_code | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF50,
+        keyc::KEYC_F2 as key_code | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF51,
+        keyc::KEYC_F3 as key_code | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF52,
+        keyc::KEYC_F4 as key_code | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF53,
+        keyc::KEYC_F5 as key_code | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF54,
+        keyc::KEYC_F6 as key_code | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF55,
+        keyc::KEYC_F7 as key_code | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF56,
+        keyc::KEYC_F8 as key_code | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF57,
+        keyc::KEYC_F9 as key_code | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF58,
+        keyc::KEYC_F10 as key_code | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF59,
+        keyc::KEYC_F11 as key_code | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF60,
+        keyc::KEYC_F12 as key_code | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF61,
+        keyc::KEYC_F1 as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF62,
+        keyc::KEYC_F2 as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KF63,
+        keyc::KEYC_F3 as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_SHIFT,
+    ),
     tty_default_key_code::new(tty_code_code::TTYC_KICH1, keyc::KEYC_IC as key_code),
     tty_default_key_code::new(tty_code_code::TTYC_KDCH1, keyc::KEYC_DC as key_code),
     tty_default_key_code::new(tty_code_code::TTYC_KHOME, keyc::KEYC_HOME as key_code),
@@ -299,73 +495,271 @@ static tty_default_code_keys: [tty_default_key_code; 136] = [
     tty_default_key_code::new(tty_code_code::TTYC_KPP, keyc::KEYC_PPAGE as key_code),
     tty_default_key_code::new(tty_code_code::TTYC_KCBT, keyc::KEYC_BTAB as key_code),
     /* Arrow keys from terminfo. */
-    tty_default_key_code::new(tty_code_code::TTYC_KCUU1, keyc::KEYC_UP as key_code | KEYC_CURSOR),
-    tty_default_key_code::new(tty_code_code::TTYC_KCUD1, keyc::KEYC_DOWN as key_code | KEYC_CURSOR),
-    tty_default_key_code::new(tty_code_code::TTYC_KCUB1, keyc::KEYC_LEFT as key_code | KEYC_CURSOR),
-    tty_default_key_code::new(tty_code_code::TTYC_KCUF1, keyc::KEYC_RIGHT as key_code | KEYC_CURSOR),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KCUU1,
+        keyc::KEYC_UP as key_code | KEYC_CURSOR,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KCUD1,
+        keyc::KEYC_DOWN as key_code | KEYC_CURSOR,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KCUB1,
+        keyc::KEYC_LEFT as key_code | KEYC_CURSOR,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KCUF1,
+        keyc::KEYC_RIGHT as key_code | KEYC_CURSOR,
+    ),
     /* Key and modifier capabilities. */
-    tty_default_key_code::new(tty_code_code::TTYC_KDC2, keyc::KEYC_DC as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KDC3, keyc::KEYC_DC as key_code | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KDC4, keyc::KEYC_DC as key_code | KEYC_SHIFT | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KDC5, keyc::KEYC_DC as key_code | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KDC6, keyc::KEYC_DC as key_code | KEYC_SHIFT | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KDC7, keyc::KEYC_DC as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KIND, keyc::KEYC_DOWN as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KDN2, keyc::KEYC_DOWN as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KDN3, keyc::KEYC_DOWN as key_code | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KDN4, keyc::KEYC_DOWN as key_code | KEYC_SHIFT | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KDN5, keyc::KEYC_DOWN as key_code | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KDN6, keyc::KEYC_DOWN as key_code | KEYC_SHIFT | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KDN7, keyc::KEYC_DOWN as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KEND2, keyc::KEYC_END as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KEND3, keyc::KEYC_END as key_code | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KEND4, keyc::KEYC_END as key_code | KEYC_SHIFT | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KEND5, keyc::KEYC_END as key_code | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KEND6, keyc::KEYC_END as key_code | KEYC_SHIFT | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KEND7, keyc::KEYC_END as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KHOM2, keyc::KEYC_HOME as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KHOM3, keyc::KEYC_HOME as key_code | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KHOM4, keyc::KEYC_HOME as key_code | KEYC_SHIFT | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KHOM5, keyc::KEYC_HOME as key_code | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KHOM6, keyc::KEYC_HOME as key_code | KEYC_SHIFT | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KHOM7, keyc::KEYC_HOME as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KIC2, keyc::KEYC_IC as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KIC3, keyc::KEYC_IC as key_code | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KIC4, keyc::KEYC_IC as key_code | KEYC_SHIFT | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KIC5, keyc::KEYC_IC as key_code | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KIC6, keyc::KEYC_IC as key_code | KEYC_SHIFT | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KIC7, keyc::KEYC_IC as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KLFT2, keyc::KEYC_LEFT as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KLFT3, keyc::KEYC_LEFT as key_code | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KLFT4, keyc::KEYC_LEFT as key_code | KEYC_SHIFT | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KLFT5, keyc::KEYC_LEFT as key_code | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KLFT6, keyc::KEYC_LEFT as key_code | KEYC_SHIFT | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KLFT7, keyc::KEYC_LEFT as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KNXT2, keyc::KEYC_NPAGE as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KNXT3, keyc::KEYC_NPAGE as key_code | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KNXT4, keyc::KEYC_NPAGE as key_code | KEYC_SHIFT | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KNXT5, keyc::KEYC_NPAGE as key_code | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KNXT6, keyc::KEYC_NPAGE as key_code | KEYC_SHIFT | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KNXT7, keyc::KEYC_NPAGE as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KPRV2, keyc::KEYC_PPAGE as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KPRV3, keyc::KEYC_PPAGE as key_code | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KPRV4, keyc::KEYC_PPAGE as key_code | KEYC_SHIFT | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KPRV5, keyc::KEYC_PPAGE as key_code | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KPRV6, keyc::KEYC_PPAGE as key_code | KEYC_SHIFT | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KPRV7, keyc::KEYC_PPAGE as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KRIT2, keyc::KEYC_RIGHT as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KRIT3, keyc::KEYC_RIGHT as key_code | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KRIT4, keyc::KEYC_RIGHT as key_code | KEYC_SHIFT | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KRIT5, keyc::KEYC_RIGHT as key_code | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KRIT6, keyc::KEYC_RIGHT as key_code | KEYC_SHIFT | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KRIT7, keyc::KEYC_RIGHT as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KRI, keyc::KEYC_UP as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KUP2, keyc::KEYC_UP as key_code | KEYC_SHIFT),
-    tty_default_key_code::new(tty_code_code::TTYC_KUP3, keyc::KEYC_UP as key_code | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KUP4, keyc::KEYC_UP as key_code | KEYC_SHIFT | KEYC_META | KEYC_IMPLIED_META),
-    tty_default_key_code::new(tty_code_code::TTYC_KUP5, keyc::KEYC_UP as key_code | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KUP6, keyc::KEYC_UP as key_code | KEYC_SHIFT | KEYC_CTRL),
-    tty_default_key_code::new(tty_code_code::TTYC_KUP7, keyc::KEYC_UP as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_CTRL),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KDC2,
+        keyc::KEYC_DC as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KDC3,
+        keyc::KEYC_DC as key_code | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KDC4,
+        keyc::KEYC_DC as key_code | KEYC_SHIFT | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KDC5,
+        keyc::KEYC_DC as key_code | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KDC6,
+        keyc::KEYC_DC as key_code | KEYC_SHIFT | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KDC7,
+        keyc::KEYC_DC as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KIND,
+        keyc::KEYC_DOWN as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KDN2,
+        keyc::KEYC_DOWN as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KDN3,
+        keyc::KEYC_DOWN as key_code | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KDN4,
+        keyc::KEYC_DOWN as key_code | KEYC_SHIFT | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KDN5,
+        keyc::KEYC_DOWN as key_code | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KDN6,
+        keyc::KEYC_DOWN as key_code | KEYC_SHIFT | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KDN7,
+        keyc::KEYC_DOWN as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KEND2,
+        keyc::KEYC_END as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KEND3,
+        keyc::KEYC_END as key_code | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KEND4,
+        keyc::KEYC_END as key_code | KEYC_SHIFT | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KEND5,
+        keyc::KEYC_END as key_code | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KEND6,
+        keyc::KEYC_END as key_code | KEYC_SHIFT | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KEND7,
+        keyc::KEYC_END as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KHOM2,
+        keyc::KEYC_HOME as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KHOM3,
+        keyc::KEYC_HOME as key_code | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KHOM4,
+        keyc::KEYC_HOME as key_code | KEYC_SHIFT | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KHOM5,
+        keyc::KEYC_HOME as key_code | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KHOM6,
+        keyc::KEYC_HOME as key_code | KEYC_SHIFT | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KHOM7,
+        keyc::KEYC_HOME as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KIC2,
+        keyc::KEYC_IC as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KIC3,
+        keyc::KEYC_IC as key_code | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KIC4,
+        keyc::KEYC_IC as key_code | KEYC_SHIFT | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KIC5,
+        keyc::KEYC_IC as key_code | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KIC6,
+        keyc::KEYC_IC as key_code | KEYC_SHIFT | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KIC7,
+        keyc::KEYC_IC as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KLFT2,
+        keyc::KEYC_LEFT as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KLFT3,
+        keyc::KEYC_LEFT as key_code | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KLFT4,
+        keyc::KEYC_LEFT as key_code | KEYC_SHIFT | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KLFT5,
+        keyc::KEYC_LEFT as key_code | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KLFT6,
+        keyc::KEYC_LEFT as key_code | KEYC_SHIFT | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KLFT7,
+        keyc::KEYC_LEFT as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KNXT2,
+        keyc::KEYC_NPAGE as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KNXT3,
+        keyc::KEYC_NPAGE as key_code | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KNXT4,
+        keyc::KEYC_NPAGE as key_code | KEYC_SHIFT | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KNXT5,
+        keyc::KEYC_NPAGE as key_code | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KNXT6,
+        keyc::KEYC_NPAGE as key_code | KEYC_SHIFT | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KNXT7,
+        keyc::KEYC_NPAGE as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KPRV2,
+        keyc::KEYC_PPAGE as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KPRV3,
+        keyc::KEYC_PPAGE as key_code | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KPRV4,
+        keyc::KEYC_PPAGE as key_code | KEYC_SHIFT | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KPRV5,
+        keyc::KEYC_PPAGE as key_code | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KPRV6,
+        keyc::KEYC_PPAGE as key_code | KEYC_SHIFT | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KPRV7,
+        keyc::KEYC_PPAGE as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KRIT2,
+        keyc::KEYC_RIGHT as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KRIT3,
+        keyc::KEYC_RIGHT as key_code | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KRIT4,
+        keyc::KEYC_RIGHT as key_code | KEYC_SHIFT | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KRIT5,
+        keyc::KEYC_RIGHT as key_code | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KRIT6,
+        keyc::KEYC_RIGHT as key_code | KEYC_SHIFT | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KRIT7,
+        keyc::KEYC_RIGHT as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KRI,
+        keyc::KEYC_UP as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KUP2,
+        keyc::KEYC_UP as key_code | KEYC_SHIFT,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KUP3,
+        keyc::KEYC_UP as key_code | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KUP4,
+        keyc::KEYC_UP as key_code | KEYC_SHIFT | KEYC_META | KEYC_IMPLIED_META,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KUP5,
+        keyc::KEYC_UP as key_code | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KUP6,
+        keyc::KEYC_UP as key_code | KEYC_SHIFT | KEYC_CTRL,
+    ),
+    tty_default_key_code::new(
+        tty_code_code::TTYC_KUP7,
+        keyc::KEYC_UP as key_code | KEYC_META | KEYC_IMPLIED_META | KEYC_CTRL,
+    ),
 ];
 
 /// Add key to tree.
@@ -388,7 +782,11 @@ unsafe extern "C" fn tty_keys_add(tty: *mut tty, s: *const c_char, key: key_code
 
 /// Add next node to the tree.
 #[unsafe(no_mangle)]
-unsafe extern "C" fn tty_keys_add1(mut tkp: *mut *mut tty_key, mut s: *const c_char, key: key_code) {
+unsafe extern "C" fn tty_keys_add1(
+    mut tkp: *mut *mut tty_key,
+    mut s: *const c_char,
+    key: key_code,
+) {
     unsafe {
         // Allocate a tree entry if there isn't one already.
         let mut tk = *tkp;
@@ -437,9 +835,19 @@ pub unsafe extern "C" fn tty_keys_build(tty: *mut tty) {
         (*tty).key_tree = null_mut();
 
         for (i, tdkx) in tty_default_xterm_keys.iter().enumerate() {
-            for (j, tty_default_xterm_modifiers_j) in tty_default_xterm_modifiers.iter().cloned().enumerate().skip(2) {
-                strlcpy(copy.as_mut_ptr(), tdkx.template.as_ptr(), size_of::<[c_char; 16]>());
-                copy[libc::strcspn(copy.as_ptr(), c"_".as_ptr()) as usize] = b'0' as c_char + j as c_char;
+            for (j, tty_default_xterm_modifiers_j) in tty_default_xterm_modifiers
+                .iter()
+                .cloned()
+                .enumerate()
+                .skip(2)
+            {
+                strlcpy(
+                    copy.as_mut_ptr(),
+                    tdkx.template.as_ptr(),
+                    size_of::<[c_char; 16]>(),
+                );
+                copy[libc::strcspn(copy.as_ptr(), c"_".as_ptr()) as usize] =
+                    b'0' as c_char + j as c_char;
 
                 let key = tdkx.key | tty_default_xterm_modifiers_j;
                 tty_keys_add(tty, copy.as_ptr(), key);
@@ -500,7 +908,12 @@ unsafe extern "C" fn tty_keys_free1(tk: *mut tty_key) {
 
 /// Lookup a key in the tree.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tty_keys_find(tty: *mut tty, buf: *const c_char, len: usize, size: *mut usize) -> *mut tty_key {
+pub unsafe extern "C" fn tty_keys_find(
+    tty: *mut tty,
+    buf: *const c_char,
+    len: usize,
+    size: *mut usize,
+) -> *mut tty_key {
     unsafe {
         *size = 0;
         tty_keys_find1((*tty).key_tree, buf, len, size)
@@ -508,7 +921,12 @@ pub unsafe extern "C" fn tty_keys_find(tty: *mut tty, buf: *const c_char, len: u
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn tty_keys_find1(mut tk: *mut tty_key, mut buf: *const c_char, mut len: usize, size: *mut usize) -> *mut tty_key {
+unsafe extern "C" fn tty_keys_find1(
+    mut tk: *mut tty_key,
+    mut buf: *const c_char,
+    mut len: usize,
+    size: *mut usize,
+) -> *mut tty_key {
     unsafe {
         // If no data, no match
         if len == 0 {
@@ -548,7 +966,14 @@ unsafe extern "C" fn tty_keys_find1(mut tk: *mut tty_key, mut buf: *const c_char
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn tty_keys_next1(tty: *mut tty, buf: *const c_char, len: usize, key: *mut key_code, size: *mut usize, expired: i32) -> i32 {
+unsafe extern "C" fn tty_keys_next1(
+    tty: *mut tty,
+    buf: *const c_char,
+    len: usize,
+    key: *mut key_code,
+    size: *mut usize,
+    expired: i32,
+) -> i32 {
     unsafe {
         let c = (*tty).client;
         let mut tk: *mut tty_key = null_mut();
@@ -675,7 +1100,12 @@ pub unsafe extern "C" fn tty_keys_next(tty: *mut tty) -> i32 {
                             }
 
                             // Is this an extended device attributes response?
-                            match tty_keys_extended_device_attributes(tty, buf.cast(), len, &raw mut size) {
+                            match tty_keys_extended_device_attributes(
+                                tty,
+                                buf.cast(),
+                                len,
+                                &raw mut size,
+                            ) {
                                 0 => {
                                     /* yes */
                                     key = KEYC_UNKNOWN;
@@ -687,7 +1117,14 @@ pub unsafe extern "C" fn tty_keys_next(tty: *mut tty) -> i32 {
                             }
 
                             // Is this a colours response?
-                            match tty_keys_colours(tty, buf.cast(), len, &raw mut size, &raw mut (*tty).fg, &raw mut (*tty).bg) {
+                            match tty_keys_colours(
+                                tty,
+                                buf.cast(),
+                                len,
+                                &raw mut size,
+                                &raw mut (*tty).fg,
+                                &raw mut (*tty).bg,
+                            ) {
                                 0 => {
                                     /* yes */
                                     key = KEYC_UNKNOWN;
@@ -716,7 +1153,13 @@ pub unsafe extern "C" fn tty_keys_next(tty: *mut tty) -> i32 {
                             }
 
                             /* Is this an extended key press? */
-                            match tty_keys_extended_key(tty, buf.cast(), len, &raw mut size, &raw mut key) {
+                            match tty_keys_extended_key(
+                                tty,
+                                buf.cast(),
+                                len,
+                                &raw mut size,
+                                &raw mut key,
+                            ) {
                                 0 => {
                                     /* yes */
                                     break 'complete_key;
@@ -729,7 +1172,14 @@ pub unsafe extern "C" fn tty_keys_next(tty: *mut tty) -> i32 {
 
                         // 'first_key:
                         /* Try to lookup complete key. */
-                        let n = tty_keys_next1(tty, buf.cast(), len, &raw mut key, &raw mut size, expired);
+                        let n = tty_keys_next1(
+                            tty,
+                            buf.cast(),
+                            len,
+                            &raw mut key,
+                            &raw mut size,
+                            expired,
+                        );
                         if n == 0 {
                             /* found */
                             break 'complete_key;
@@ -744,7 +1194,14 @@ pub unsafe extern "C" fn tty_keys_next(tty: *mut tty) -> i32 {
                          */
                         if (*buf == b'\x1b' && len > 1) {
                             /* Look for a key without the escape. */
-                            let n = tty_keys_next1(tty, buf.add(1).cast(), len - 1, &raw mut key, &raw mut size, expired);
+                            let n = tty_keys_next1(
+                                tty,
+                                buf.add(1).cast(),
+                                len - 1,
+                                &raw mut key,
+                                &raw mut size,
+                                expired,
+                            );
                             if n == 0 {
                                 /* found */
                                 if key & KEYC_IMPLIED_META != 0 {
@@ -792,7 +1249,11 @@ pub unsafe extern "C" fn tty_keys_next(tty: *mut tty) -> i32 {
                          * lowercase, so ^A becomes a|CTRL.
                          */
                         onlykey = key & KEYC_MASK_KEY;
-                        if (onlykey < 0x20 && onlykey != c0::C0_HT as u64 && onlykey != c0::C0_CR as u64 && onlykey != c0::C0_ESC as u64) {
+                        if (onlykey < 0x20
+                            && onlykey != c0::C0_HT as u64
+                            && onlykey != c0::C0_CR as u64
+                            && onlykey != c0::C0_ESC as u64)
+                        {
                             onlykey |= 0x40;
                             if onlykey >= b'A' as u64 && onlykey <= b'Z' as u64 {
                                 onlykey |= 0x20;
@@ -806,7 +1267,9 @@ pub unsafe extern "C" fn tty_keys_next(tty: *mut tty) -> i32 {
 
                     /* If timer is going, check for expiration. */
                     if (*tty).flags.intersects(tty_flags::TTY_TIMER) {
-                        if evtimer_initialized(&raw mut (*tty).key_timer) != 0 && evtimer_pending(&raw mut (*tty).key_timer, null_mut()) == 0 {
+                        if evtimer_initialized(&raw mut (*tty).key_timer) != 0
+                            && evtimer_pending(&raw mut (*tty).key_timer, null_mut()) == 0
+                        {
                             expired = 1;
                             continue 'first_key;
                         }
@@ -825,7 +1288,11 @@ pub unsafe extern "C" fn tty_keys_next(tty: *mut tty) -> i32 {
                     if event_initialized(&raw const (*tty).key_timer) != 0 {
                         evtimer_del(&raw mut (*tty).key_timer);
                     }
-                    evtimer_set(&raw mut (*tty).key_timer, Some(tty_keys_callback), tty.cast());
+                    evtimer_set(
+                        &raw mut (*tty).key_timer,
+                        Some(tty_keys_callback),
+                        tty.cast(),
+                    );
                     evtimer_add(&raw mut (*tty).key_timer, &raw const tv);
 
                     (*tty).flags |= tty_flags::TTY_TIMER;
@@ -841,7 +1308,8 @@ pub unsafe extern "C" fn tty_keys_next(tty: *mut tty) -> i32 {
                  */
 
                 let bspace: libc::cc_t = (*tty).tio.c_cc[libc::VERASE];
-                if bspace != libc::_POSIX_VDISABLE && (key & KEYC_MASK_KEY) as libc::cc_t == bspace {
+                if bspace != libc::_POSIX_VDISABLE && (key & KEYC_MASK_KEY) as libc::cc_t == bspace
+                {
                     key = (key & KEYC_MASK_MODIFIERS) | keyc::KEYC_BSPACE as u64;
                 }
 
@@ -905,7 +1373,13 @@ unsafe extern "C" fn tty_keys_callback(_fd: i32, _events: i16, data: *mut c_void
 /// where k is key as a number and m is a modifier. Returns 0 for success, -1
 /// for failure, 1 for partial;
 #[unsafe(no_mangle)]
-unsafe extern "C" fn tty_keys_extended_key(tty: *mut tty, buf: *const c_char, len: usize, size: *mut usize, key: *mut key_code) -> i32 {
+unsafe extern "C" fn tty_keys_extended_key(
+    tty: *mut tty,
+    buf: *const c_char,
+    len: usize,
+    size: *mut usize,
+    key: *mut key_code,
+) -> i32 {
     unsafe {
         let c = (*tty).client;
         let mut end: usize = 0;
@@ -959,11 +1433,23 @@ unsafe extern "C" fn tty_keys_extended_key(tty: *mut tty, buf: *const c_char, le
 
         /* Try to parse either form of key. */
         if *buf.add(end) == b'~' as i8 {
-            if libc::sscanf(tmp.as_ptr(), c"27;%u;%u".as_ptr(), &raw mut modifiers, &raw mut number) != 2 {
+            if libc::sscanf(
+                tmp.as_ptr(),
+                c"27;%u;%u".as_ptr(),
+                &raw mut modifiers,
+                &raw mut number,
+            ) != 2
+            {
                 return -1;
             }
         } else {
-            if libc::sscanf(tmp.as_ptr(), c"%u;%u".as_ptr(), &raw mut number, &raw mut modifiers) != 2 {
+            if libc::sscanf(
+                tmp.as_ptr(),
+                c"%u;%u".as_ptr(),
+                &raw mut number,
+                &raw mut modifiers,
+            ) != 2
+            {
                 return -1;
             }
         }
@@ -980,7 +1466,9 @@ unsafe extern "C" fn tty_keys_extended_key(tty: *mut tty, buf: *const c_char, le
 
         /* Convert UTF-32 codepoint into internal representation. */
         if nkey != keyc::KEYC_BSPACE as key_code && (nkey & !0x7f) != 0 {
-            if utf8_fromwc(nkey as wchar_t, &raw mut ud) == utf8_state::UTF8_DONE && utf8_from_data(&raw const ud, &raw mut uc) == utf8_state::UTF8_DONE {
+            if utf8_fromwc(nkey as wchar_t, &raw mut ud) == utf8_state::UTF8_DONE
+                && utf8_from_data(&raw const ud, &raw mut uc) == utf8_state::UTF8_DONE
+            {
                 nkey = uc as key_code;
             } else {
                 return -1;
@@ -1024,7 +1512,9 @@ unsafe extern "C" fn tty_keys_extended_key(tty: *mut tty, buf: *const c_char, le
          * OK, and applications can handle that.
          */
         onlykey = nkey & KEYC_MASK_KEY;
-        if ((onlykey > 0x20 && onlykey < 0x7f) || KEYC_IS_UNICODE(nkey)) && (nkey & KEYC_MASK_MODIFIERS) == KEYC_SHIFT {
+        if ((onlykey > 0x20 && onlykey < 0x7f) || KEYC_IS_UNICODE(nkey))
+            && (nkey & KEYC_MASK_MODIFIERS) == KEYC_SHIFT
+        {
             nkey &= !KEYC_SHIFT;
         }
 
@@ -1041,7 +1531,13 @@ unsafe extern "C" fn tty_keys_extended_key(tty: *mut tty, buf: *const c_char, le
 /// (probably a mouse sequence but need more data), -2 if an invalid mouse
 /// sequence.
 #[unsafe(no_mangle)]
-unsafe extern "C" fn tty_keys_mouse(tty: *mut tty, buf: *const c_char, len: usize, size: *mut usize, m: *mut mouse_event) -> i32 {
+unsafe extern "C" fn tty_keys_mouse(
+    tty: *mut tty,
+    buf: *const c_char,
+    len: usize,
+    size: *mut usize,
+    m: *mut mouse_event,
+) -> i32 {
     unsafe {
         let c = (*tty).client;
         let mut x: u32 = 0;
@@ -1208,7 +1704,12 @@ unsafe extern "C" fn tty_keys_mouse(tty: *mut tty, buf: *const c_char, len: usiz
  * partial.
  */
 #[unsafe(no_mangle)]
-unsafe extern "C" fn tty_keys_clipboard(tty: *mut tty, mut buf: *const c_char, len: usize, size: *mut usize) -> i32 {
+unsafe extern "C" fn tty_keys_clipboard(
+    tty: *mut tty,
+    mut buf: *const c_char,
+    len: usize,
+    size: *mut usize,
+) -> i32 {
     unsafe {
         let c = (*tty).client;
         let mut wp: *mut window_pane;
@@ -1340,7 +1841,12 @@ unsafe extern "C" fn tty_keys_clipboard(tty: *mut tty, mut buf: *const c_char, l
  * failure, 1 for partial.
  */
 #[unsafe(no_mangle)]
-unsafe extern "C" fn tty_keys_device_attributes(tty: *mut tty, buf: *const c_char, len: usize, size: *mut usize) -> i32 {
+unsafe extern "C" fn tty_keys_device_attributes(
+    tty: *mut tty,
+    buf: *const c_char,
+    len: usize,
+    size: *mut usize,
+) -> i32 {
     unsafe {
         let c = (*tty).client;
         let features = &raw mut (*c).term_features;
@@ -1440,7 +1946,12 @@ unsafe extern "C" fn tty_keys_device_attributes(tty: *mut tty, buf: *const c_cha
  * failure, 1 for partial.
  */
 #[unsafe(no_mangle)]
-unsafe extern "C" fn tty_keys_device_attributes2(tty: *mut tty, buf: *const c_char, len: usize, size: *mut usize) -> i32 {
+unsafe extern "C" fn tty_keys_device_attributes2(
+    tty: *mut tty,
+    buf: *const c_char,
+    len: usize,
+    size: *mut usize,
+) -> i32 {
     unsafe {
         let c = (*tty).client;
         let features = &raw mut (*c).term_features;
@@ -1545,7 +2056,12 @@ unsafe extern "C" fn tty_keys_device_attributes2(tty: *mut tty, buf: *const c_ch
  * failure, 1 for partial.
  */
 #[unsafe(no_mangle)]
-unsafe extern "C" fn tty_keys_extended_device_attributes(tty: *mut tty, buf: *const c_char, len: usize, size: *mut usize) -> i32 {
+unsafe extern "C" fn tty_keys_extended_device_attributes(
+    tty: *mut tty,
+    buf: *const c_char,
+    len: usize,
+    size: *mut usize,
+) -> i32 {
     unsafe {
         let c = (*tty).client;
         let features = &raw mut (*c).term_features;
@@ -1627,7 +2143,14 @@ unsafe extern "C" fn tty_keys_extended_device_attributes(tty: *mut tty, buf: *co
  * failure, 1 for partial.
  */
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tty_keys_colours(tty: *mut tty, buf: *const c_char, len: usize, size: *mut usize, fg: *mut i32, bg: *mut i32) -> i32 {
+pub unsafe extern "C" fn tty_keys_colours(
+    tty: *mut tty,
+    buf: *const c_char,
+    len: usize,
+    size: *mut usize,
+    fg: *mut i32,
+    bg: *mut i32,
+) -> i32 {
     unsafe {
         let c = (*tty).client;
         let mut tmp: [c_char; 128] = [0; 128];

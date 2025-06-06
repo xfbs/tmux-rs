@@ -35,7 +35,11 @@ pub struct cmd_run_shell_data {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_run_shell_args_parse(args: *mut args, _idx: u32, cause: *mut *mut c_char) -> args_parse_type {
+pub unsafe extern "C" fn cmd_run_shell_args_parse(
+    args: *mut args,
+    _idx: u32,
+    cause: *mut *mut c_char,
+) -> args_parse_type {
     unsafe {
         if (args_has_(args, 'C')) {
             return args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING;
@@ -73,7 +77,13 @@ pub unsafe extern "C" fn cmd_run_shell_print(job: *mut job, msg: *const c_char) 
 
         let wme = tailq_first(&raw mut (*wp).modes);
         if (wme.is_null() || (*wme).mode != &raw mut window_view_mode) {
-            window_pane_set_mode(wp, null_mut(), &raw mut window_view_mode, null_mut(), null_mut());
+            window_pane_set_mode(
+                wp,
+                null_mut(),
+                &raw mut window_view_mode,
+                null_mut(),
+                null_mut(),
+            );
         }
         window_copy_add(wp, 1, c"%s".as_ptr(), msg);
     }
@@ -143,7 +153,11 @@ pub unsafe extern "C" fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_ite
             session_add_ref(s, __func__);
         }
 
-        evtimer_set(&raw mut (*cdata).timer, Some(cmd_run_shell_timer), cdata.cast());
+        evtimer_set(
+            &raw mut (*cdata).timer,
+            Some(cmd_run_shell_timer),
+            cdata.cast(),
+        );
         if (!delay.is_null()) {
             let mut tv: timeval = timeval {
                 tv_sec: d as time_t,
@@ -181,7 +195,23 @@ pub unsafe extern "C" fn cmd_run_shell_timer(_fd: i32, _events: i16, arg: *mut c
                 cmd_run_shell_free(cdata.cast());
                 return;
             }
-            if (job_run(cmd, 0, null_mut(), null_mut(), (*cdata).s, (*cdata).cwd, None, Some(cmd_run_shell_callback), Some(cmd_run_shell_free), cdata.cast(), (*cdata).flags, -1, -1).is_null()) {
+            if (job_run(
+                cmd,
+                0,
+                null_mut(),
+                null_mut(),
+                (*cdata).s,
+                (*cdata).cwd,
+                None,
+                Some(cmd_run_shell_callback),
+                Some(cmd_run_shell_free),
+                cdata.cast(),
+                (*cdata).flags,
+                -1,
+                -1,
+            )
+            .is_null())
+            {
                 cmd_run_shell_free(cdata.cast());
             }
             return;
@@ -227,7 +257,11 @@ pub unsafe extern "C" fn cmd_run_shell_callback(job: *mut job) {
 
         let mut line = null_mut::<c_char>();
         loop {
-            line = evbuffer_readln((*event).input, null_mut(), evbuffer_eol_style_EVBUFFER_EOL_LF);
+            line = evbuffer_readln(
+                (*event).input,
+                null_mut(),
+                evbuffer_eol_style_EVBUFFER_EOL_LF,
+            );
             if (!line.is_null()) {
                 cmd_run_shell_print(job, line);
                 free_(line);
@@ -256,7 +290,12 @@ pub unsafe extern "C" fn cmd_run_shell_callback(job: *mut job) {
             }
         } else if (WIFSIGNALED(status)) {
             retcode = WTERMSIG(status);
-            xasprintf(&raw mut msg, c"'%s' terminated by signal %d".as_ptr(), cmd, retcode);
+            xasprintf(
+                &raw mut msg,
+                c"'%s' terminated by signal %d".as_ptr(),
+                cmd,
+                retcode,
+            );
             retcode += 128;
         } else {
             retcode = 0;

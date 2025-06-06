@@ -1,10 +1,17 @@
 use crate::*;
 
-use libc::{__errno_location, AF_UNIX, EAGAIN, PF_UNSPEC, SA_RESTART, SIG_DFL, SIG_IGN, SIGCHLD, SIGCONT, SIGHUP, SIGINT, SIGPIPE, SIGQUIT, SIGTERM, SIGTSTP, SIGTTIN, SIGTTOU, SIGUSR1, SIGUSR2, SIGWINCH, close, daemon, gid_t, sigaction, sigemptyset, socketpair, uname, utsname};
+use libc::{
+    __errno_location, AF_UNIX, EAGAIN, PF_UNSPEC, SA_RESTART, SIG_DFL, SIG_IGN, SIGCHLD, SIGCONT,
+    SIGHUP, SIGINT, SIGPIPE, SIGQUIT, SIGTERM, SIGTSTP, SIGTTIN, SIGTTOU, SIGUSR1, SIGUSR2,
+    SIGWINCH, close, daemon, gid_t, sigaction, sigemptyset, socketpair, uname, utsname,
+};
 
 use crate::compat::{
     getpeereid,
-    imsg::{imsg_clear, imsg_compose, imsg_flush, imsg_free, imsg_get, imsg_get_fd, imsg_init, imsg_read, imsgbuf},
+    imsg::{
+        imsg_clear, imsg_compose, imsg_flush, imsg_free, imsg_get, imsg_get_fd, imsg_init,
+        imsg_read, imsgbuf,
+    },
     imsg_buffer::msgbuf_write,
     queue::{tailq_foreach, tailq_init, tailq_insert_tail, tailq_remove},
     setproctitle,
@@ -122,7 +129,8 @@ pub unsafe extern "C" fn proc_signal_cb(signo: i32, events: i16, arg: *mut c_voi
 pub unsafe extern "C" fn peer_check_version(peer: *mut tmuxpeer, imsg: *mut imsg) -> i32 {
     unsafe {
         let version = (*imsg).hdr.peerid & 0xff;
-        if ((*imsg).hdr.type_ != msgtype::MSG_VERSION as u32 && version != PROTOCOL_VERSION as u32) {
+        if ((*imsg).hdr.type_ != msgtype::MSG_VERSION as u32 && version != PROTOCOL_VERSION as u32)
+        {
             log_debug!("peer {:p} bad version {}", peer, version);
 
             proc_send(peer, msgtype::MSG_VERSION, -1, null_mut(), 0);
@@ -143,14 +151,26 @@ pub unsafe extern "C" fn proc_update_event(peer: *mut tmuxpeer) {
         if ((*peer).ibuf.w.queued > 0) {
             events |= EV_WRITE;
         }
-        event_set(&raw mut (*peer).event, (*peer).ibuf.fd, events, Some(proc_event_cb), peer.cast());
+        event_set(
+            &raw mut (*peer).event,
+            (*peer).ibuf.fd,
+            events,
+            Some(proc_event_cb),
+            peer.cast(),
+        );
 
         event_add(&raw mut (*peer).event, null_mut());
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn proc_send(peer: *mut tmuxpeer, type_: msgtype, fd: i32, buf: *const c_void, len: usize) -> i32 {
+pub unsafe extern "C" fn proc_send(
+    peer: *mut tmuxpeer,
+    type_: msgtype,
+    fd: i32,
+    buf: *const c_void,
+    len: usize,
+) -> i32 {
     unsafe {
         let ibuf = &raw mut (*peer).ibuf;
         let vp = buf;
@@ -181,16 +201,36 @@ pub unsafe fn proc_start(name: &CStr) -> *mut tmuxproc {
         }
         let u = u.as_mut_ptr();
 
-        log_debug!("{} started ({}): version {}, socket {}, protocol {}", _s(name), std::process::id(), _s(getversion()), _s(socket_path), PROTOCOL_VERSION,);
-        log_debug!("on {} {} {}", _s((*u).sysname.as_ptr()), _s((*u).release.as_ptr()), _s((*u).version.as_ptr()),);
-        log_debug!("using libevent {} {}", _s(event_get_version()), _s(event_get_method()));
+        log_debug!(
+            "{} started ({}): version {}, socket {}, protocol {}",
+            _s(name),
+            std::process::id(),
+            _s(getversion()),
+            _s(socket_path),
+            PROTOCOL_VERSION,
+        );
+        log_debug!(
+            "on {} {} {}",
+            _s((*u).sysname.as_ptr()),
+            _s((*u).release.as_ptr()),
+            _s((*u).version.as_ptr()),
+        );
+        log_debug!(
+            "using libevent {} {}",
+            _s(event_get_version()),
+            _s(event_get_method())
+        );
         #[cfg(feature = "utf8proc")]
         {
             log_debug!("using utf8proc {}", _s(utf8proc_version()));
         }
         #[cfg(feature = "ncurses")]
         {
-            log_debug!("using ncurses {} {:06}", _s(NCURSES_VERSION), NCURSES_VERSION_PATCH);
+            log_debug!(
+                "using ncurses {} {:06}",
+                _s(NCURSES_VERSION),
+                NCURSES_VERSION_PATCH
+            );
         }
 
         let tp = xcalloc1::<tmuxproc>();
@@ -202,7 +242,10 @@ pub unsafe fn proc_start(name: &CStr) -> *mut tmuxproc {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn proc_loop(tp: *mut tmuxproc, loopcb: Option<unsafe extern "C" fn() -> i32>) {
+pub unsafe extern "C" fn proc_loop(
+    tp: *mut tmuxproc,
+    loopcb: Option<unsafe extern "C" fn() -> i32>,
+) {
     unsafe {
         log_debug!("{} loop enter", _s((*tp).name));
         match loopcb {
@@ -240,7 +283,10 @@ pub unsafe extern "C" fn proc_exit(tp: *mut tmuxproc) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn proc_set_signals(tp: *mut tmuxproc, signalcb: Option<unsafe extern "C" fn(i32)>) {
+pub unsafe extern "C" fn proc_set_signals(
+    tp: *mut tmuxproc,
+    signalcb: Option<unsafe extern "C" fn(i32)>,
+) {
     unsafe {
         let mut sa: sigaction = zeroed();
 
@@ -256,21 +302,61 @@ pub unsafe extern "C" fn proc_set_signals(tp: *mut tmuxproc, signalcb: Option<un
         sigaction(SIGTTOU, &sa, null_mut());
         sigaction(SIGQUIT, &sa, null_mut());
 
-        signal_set(&raw mut (*tp).ev_sigint, SIGINT, Some(proc_signal_cb), tp.cast());
+        signal_set(
+            &raw mut (*tp).ev_sigint,
+            SIGINT,
+            Some(proc_signal_cb),
+            tp.cast(),
+        );
         signal_add(&raw mut (*tp).ev_sigint, null_mut());
-        signal_set(&raw mut (*tp).ev_sighup, SIGHUP, Some(proc_signal_cb), tp.cast());
+        signal_set(
+            &raw mut (*tp).ev_sighup,
+            SIGHUP,
+            Some(proc_signal_cb),
+            tp.cast(),
+        );
         signal_add(&raw mut (*tp).ev_sighup, null_mut());
-        signal_set(&raw mut (*tp).ev_sigchld, SIGCHLD, Some(proc_signal_cb), tp.cast());
+        signal_set(
+            &raw mut (*tp).ev_sigchld,
+            SIGCHLD,
+            Some(proc_signal_cb),
+            tp.cast(),
+        );
         signal_add(&raw mut (*tp).ev_sigchld, null_mut());
-        signal_set(&raw mut (*tp).ev_sigcont, SIGCONT, Some(proc_signal_cb), tp.cast());
+        signal_set(
+            &raw mut (*tp).ev_sigcont,
+            SIGCONT,
+            Some(proc_signal_cb),
+            tp.cast(),
+        );
         signal_add(&raw mut (*tp).ev_sigcont, null_mut());
-        signal_set(&raw mut (*tp).ev_sigterm, SIGTERM, Some(proc_signal_cb), tp.cast());
+        signal_set(
+            &raw mut (*tp).ev_sigterm,
+            SIGTERM,
+            Some(proc_signal_cb),
+            tp.cast(),
+        );
         signal_add(&raw mut (*tp).ev_sigterm, null_mut());
-        signal_set(&raw mut (*tp).ev_sigusr1, SIGUSR1, Some(proc_signal_cb), tp.cast());
+        signal_set(
+            &raw mut (*tp).ev_sigusr1,
+            SIGUSR1,
+            Some(proc_signal_cb),
+            tp.cast(),
+        );
         signal_add(&raw mut (*tp).ev_sigusr1, null_mut());
-        signal_set(&raw mut (*tp).ev_sigusr2, SIGUSR2, Some(proc_signal_cb), tp.cast());
+        signal_set(
+            &raw mut (*tp).ev_sigusr2,
+            SIGUSR2,
+            Some(proc_signal_cb),
+            tp.cast(),
+        );
         signal_add(&raw mut (*tp).ev_sigusr2, null_mut());
-        signal_set(&raw mut (*tp).ev_sigwinch, SIGWINCH, Some(proc_signal_cb), tp.cast());
+        signal_set(
+            &raw mut (*tp).ev_sigwinch,
+            SIGWINCH,
+            Some(proc_signal_cb),
+            tp.cast(),
+        );
         signal_add(&raw mut (*tp).ev_sigwinch, null_mut());
     }
 }
@@ -311,7 +397,12 @@ pub unsafe extern "C" fn proc_clear_signals(tp: *mut tmuxproc, defaults: i32) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn proc_add_peer(tp: *mut tmuxproc, fd: i32, dispatchcb: Option<unsafe extern "C" fn(*mut imsg, *mut c_void)>, arg: *mut c_void) -> *mut tmuxpeer {
+pub unsafe extern "C" fn proc_add_peer(
+    tp: *mut tmuxproc,
+    fd: i32,
+    dispatchcb: Option<unsafe extern "C" fn(*mut imsg, *mut c_void)>,
+    arg: *mut c_void,
+) -> *mut tmuxpeer {
     unsafe {
         let mut gid: gid_t = 0;
         let mut peer = xcalloc1::<tmuxpeer>() as *mut tmuxpeer;
@@ -382,7 +473,13 @@ pub unsafe extern "C" fn proc_fork_and_daemon(fd: *mut i32) -> pid_t {
     unsafe {
         let mut pair: [c_int; 2] = [0; 2];
 
-        if socketpair(AF_UNIX, libc::SOCK_STREAM, PF_UNSPEC, &raw mut pair as *mut i32) != 0 {
+        if socketpair(
+            AF_UNIX,
+            libc::SOCK_STREAM,
+            PF_UNSPEC,
+            &raw mut pair as *mut i32,
+        ) != 0
+        {
             fatal(c"socketpair failed".as_ptr());
         }
 
@@ -406,4 +503,6 @@ pub unsafe extern "C" fn proc_fork_and_daemon(fd: *mut i32) -> pid_t {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn proc_get_peer_uid(peer: *const tmuxpeer) -> uid_t { unsafe { (*peer).uid } }
+pub unsafe extern "C" fn proc_get_peer_uid(peer: *const tmuxpeer) -> uid_t {
+    unsafe { (*peer).uid }
+}

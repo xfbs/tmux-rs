@@ -1,14 +1,19 @@
 use crate::*;
 
 use libc::{
-    AF_UNIX, O_RDWR, PF_UNSPEC, SHUT_WR, SIG_BLOCK, SIG_SETMASK, SIGCONT, SIGTERM, SIGTTIN, SIGTTOU, SOCK_STREAM, STDERR_FILENO, STDIN_FILENO, STDOUT_FILENO, TIOCSWINSZ, WIFSTOPPED, WSTOPSIG, chdir, close, dup2, execl, execvp, fork, ioctl, kill, killpg, memset, open, setenv, shutdown, sigfillset,
-    sigprocmask, sigset_t, socketpair, winsize,
+    AF_UNIX, O_RDWR, PF_UNSPEC, SHUT_WR, SIG_BLOCK, SIG_SETMASK, SIGCONT, SIGTERM, SIGTTIN,
+    SIGTTOU, SOCK_STREAM, STDERR_FILENO, STDIN_FILENO, STDOUT_FILENO, TIOCSWINSZ, WIFSTOPPED,
+    WSTOPSIG, chdir, close, dup2, execl, execvp, fork, ioctl, kill, killpg, memset, open, setenv,
+    shutdown, sigfillset, sigprocmask, sigset_t, socketpair, winsize,
 };
 
 use crate::compat::{
     closefrom,
     fdforkpty::fdforkpty,
-    queue::{ListEntry, list_entry, list_foreach, list_head, list_head_initializer, list_insert_head, list_remove},
+    queue::{
+        ListEntry, list_entry, list_foreach, list_head, list_head_initializer, list_insert_head,
+        list_remove,
+    },
     strlcpy,
 };
 
@@ -46,14 +51,30 @@ pub struct job {
     pub entry: list_entry<job>,
 }
 impl ListEntry<job, ()> for job {
-    unsafe fn field(this: *mut Self) -> *mut list_entry<job> { unsafe { &raw mut (*this).entry } }
+    unsafe fn field(this: *mut Self) -> *mut list_entry<job> {
+        unsafe { &raw mut (*this).entry }
+    }
 }
 
 type joblist = list_head<job>;
 static mut all_jobs: joblist = list_head_initializer();
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn job_run(cmd: *const c_char, argc: c_int, argv: *mut *mut c_char, e: *mut environ, s: *mut session, cwd: *const c_char, updatecb: job_update_cb, completecb: job_complete_cb, freecb: job_free_cb, data: *mut c_void, flags: c_int, sx: c_int, sy: c_int) -> *mut job {
+pub unsafe extern "C" fn job_run(
+    cmd: *const c_char,
+    argc: c_int,
+    argv: *mut *mut c_char,
+    e: *mut environ,
+    s: *mut session,
+    cwd: *const c_char,
+    updatecb: job_update_cb,
+    completecb: job_complete_cb,
+    freecb: job_free_cb,
+    data: *mut c_void,
+    flags: c_int,
+    sx: c_int,
+    sy: c_int,
+) -> *mut job {
     let __func__ = c"job_run".as_ptr();
     unsafe {
         let mut job: *mut job = null_mut();
@@ -101,7 +122,13 @@ pub unsafe extern "C" fn job_run(cmd: *const c_char, argc: c_int, argv: *mut *mu
                 memset(ws.as_mut_ptr().cast(), 0, size_of::<winsize>());
                 (*ws.as_mut_ptr()).ws_col = sx as u16;
                 (*ws.as_mut_ptr()).ws_row = sy as u16;
-                pid = fdforkpty(ptm_fd, &raw mut master, (&raw mut tty) as *mut i8, null_mut(), ws.as_mut_ptr());
+                pid = fdforkpty(
+                    ptm_fd,
+                    &raw mut master,
+                    (&raw mut tty) as *mut i8,
+                    null_mut(),
+                    ws.as_mut_ptr(),
+                );
             } else {
                 if socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, &raw mut out as *mut c_int) != 0 {
                     break 'fail;
@@ -111,9 +138,20 @@ pub unsafe extern "C" fn job_run(cmd: *const c_char, argc: c_int, argv: *mut *mu
 
             if cmd.is_null() {
                 cmd_log_argv(argc, argv, c"%s:".as_ptr(), __func__);
-                log_debug!("{} cwd={} shell={}", _s(__func__), _s(if cwd.is_null() { c"".as_ptr() } else { cwd }), _s(shell),);
+                log_debug!(
+                    "{} cwd={} shell={}",
+                    _s(__func__),
+                    _s(if cwd.is_null() { c"".as_ptr() } else { cwd }),
+                    _s(shell),
+                );
             } else {
-                log_debug!("{} cmd={} cwd={} shell={}", _s(__func__), _s(cmd), _s(if cwd.is_null() { c"".as_ptr() } else { cwd }), _s(shell),);
+                log_debug!(
+                    "{} cmd={} cwd={} shell={}",
+                    _s(__func__),
+                    _s(cmd),
+                    _s(if cwd.is_null() { c"".as_ptr() } else { cwd }),
+                    _s(shell),
+                );
             }
 
             match pid {
@@ -211,7 +249,13 @@ pub unsafe extern "C" fn job_run(cmd: *const c_char, argc: c_int, argv: *mut *mu
             }
             setblocking((*job).fd, 0);
 
-            (*job).event = bufferevent_new((*job).fd, Some(job_read_callback), Some(job_write_callback), Some(job_error_callback), job as *mut c_void);
+            (*job).event = bufferevent_new(
+                (*job).fd,
+                Some(job_read_callback),
+                Some(job_write_callback),
+                Some(job_error_callback),
+                job as *mut c_void,
+            );
             if ((*job).event.is_null()) {
                 fatalx(c"out of memory");
             }
@@ -229,7 +273,12 @@ pub unsafe extern "C" fn job_run(cmd: *const c_char, argc: c_int, argv: *mut *mu
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn job_transfer(mut job: *mut job, mut pid: *mut pid_t, mut tty: *mut c_char, mut ttylen: usize) -> c_int {
+pub unsafe extern "C" fn job_transfer(
+    mut job: *mut job,
+    mut pid: *mut pid_t,
+    mut tty: *mut c_char,
+    mut ttylen: usize,
+) -> c_int {
     unsafe {
         let mut fd = (*job).fd;
 
@@ -319,7 +368,13 @@ unsafe extern "C" fn job_write_callback(mut bufev: *mut bufferevent, mut data: *
         let job = data as *mut job;
         let len = EVBUFFER_LENGTH(EVBUFFER_OUTPUT((*job).event));
 
-        log_debug!("job write {:p}: {}, pid {}, output left {}", job, _s((*job).cmd), (*job).pid, len,);
+        log_debug!(
+            "job write {:p}: {}, pid {}, output left {}",
+            job,
+            _s((*job).cmd),
+            (*job).pid,
+            len,
+        );
 
         if len == 0 && !(*job).flags & JOB_KEEPWRITE != 0 {
             shutdown((*job).fd, SHUT_WR);
@@ -328,11 +383,20 @@ unsafe extern "C" fn job_write_callback(mut bufev: *mut bufferevent, mut data: *
     }
 }
 
-unsafe extern "C" fn job_error_callback(mut bufev: *mut bufferevent, mut events: libc::c_short, mut data: *mut libc::c_void) {
+unsafe extern "C" fn job_error_callback(
+    mut bufev: *mut bufferevent,
+    mut events: libc::c_short,
+    mut data: *mut libc::c_void,
+) {
     let job: *mut job = data.cast();
 
     unsafe {
-        log_debug!("job error {:p}: {}, pid {}", job, _s((*job).cmd), (*job).pid);
+        log_debug!(
+            "job error {:p}: {}, pid {}",
+            job,
+            _s((*job).cmd),
+            (*job).pid
+        );
         if (*job).state == job_state::JOB_DEAD {
             if let Some(completecb) = (*job).completecb {
                 completecb(job);
@@ -367,7 +431,12 @@ pub unsafe extern "C" fn job_check_died(mut pid: pid_t, mut status: i32) {
             killpg((*job).pid, SIGCONT);
             return;
         }
-        log_debug!("job died {:p}: {} pid {}", job, _s((*job).cmd), (*job).pid as c_long);
+        log_debug!(
+            "job died {:p}: {} pid {}",
+            job,
+            _s((*job).cmd),
+            (*job).pid as c_long
+        );
 
         (*job).status = status;
 
@@ -384,11 +453,17 @@ pub unsafe extern "C" fn job_check_died(mut pid: pid_t, mut status: i32) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn job_get_status(job: *mut job) -> i32 { unsafe { (*job).status } }
+pub unsafe extern "C" fn job_get_status(job: *mut job) -> i32 {
+    unsafe { (*job).status }
+}
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn job_get_data(job: *mut job) -> *mut c_void { unsafe { (*job).data } }
+pub unsafe extern "C" fn job_get_data(job: *mut job) -> *mut c_void {
+    unsafe { (*job).data }
+}
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn job_get_event(job: *mut job) -> *mut bufferevent { unsafe { (*job).event } }
+pub unsafe extern "C" fn job_get_event(job: *mut job) -> *mut bufferevent {
+    unsafe { (*job).event }
+}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn job_kill_all() {
@@ -423,7 +498,15 @@ pub unsafe extern "C" fn job_print_summary(mut item: *mut cmdq_item, mut blank: 
                 cmdq_print(item, c"%s".as_ptr(), c"".as_ptr());
                 blank = 0;
             }
-            cmdq_print(item, c"Job %u: %s [fd=%d, pid=%ld, status=%d]".as_ptr(), n, (*job).cmd, (*job).fd, (*job).pid as c_long, (*job).status);
+            cmdq_print(
+                item,
+                c"Job %u: %s [fd=%d, pid=%ld, status=%d]".as_ptr(),
+                n,
+                (*job).cmd,
+                (*job).fd,
+                (*job).pid as c_long,
+                (*job).status,
+            );
             n += 1;
         }
     }

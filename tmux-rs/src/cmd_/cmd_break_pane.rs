@@ -39,7 +39,11 @@ pub unsafe extern "C" fn cmd_break_pane_exec(self_: *mut cmd, item: *mut cmdq_it
 
         let before = args_has(args, b'b');
         if args_has(args, b'a') != 0 || before != 0 {
-            idx = if !(*target).wl.is_null() { winlink_shuffle_up(dst_s, (*target).wl, before) } else { winlink_shuffle_up(dst_s, (*dst_s).curw, before) };
+            idx = if !(*target).wl.is_null() {
+                winlink_shuffle_up(dst_s, (*target).wl, before)
+            } else {
+                winlink_shuffle_up(dst_s, (*dst_s).curw, before)
+            };
             if idx == -1 {
                 return cmd_retval::CMD_RETURN_ERROR;
             }
@@ -47,7 +51,16 @@ pub unsafe extern "C" fn cmd_break_pane_exec(self_: *mut cmd, item: *mut cmdq_it
         server_unzoom_window(w);
 
         if window_count_panes(w) == 1 {
-            if server_link_window(src_s, wl, dst_s, idx, 0, !args_has(args, b'd'), &raw mut cause) != 0 {
+            if server_link_window(
+                src_s,
+                wl,
+                dst_s,
+                idx,
+                0,
+                !args_has(args, b'd'),
+                &raw mut cause,
+            ) != 0
+            {
                 cmdq_error(item, c"%s".as_ptr(), cause);
                 free_(cause);
                 return cmd_retval::CMD_RETURN_ERROR;

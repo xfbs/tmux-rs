@@ -45,7 +45,13 @@ unsafe extern "C" fn cmd_resize_window_exec(self_: *mut cmd, item: *mut cmdq_ite
         let mut sy = (*w).sy;
 
         if (args_has(args, b'x') != 0) {
-            sx = args_strtonum(args, b'x', WINDOW_MINIMUM as _, WINDOW_MAXIMUM as _, &raw mut cause) as u32;
+            sx = args_strtonum(
+                args,
+                b'x',
+                WINDOW_MINIMUM as _,
+                WINDOW_MAXIMUM as _,
+                &raw mut cause,
+            ) as u32;
             if !cause.is_null() {
                 cmdq_error(item, c"width %s".as_ptr(), cause);
                 free_(cause);
@@ -53,7 +59,13 @@ unsafe extern "C" fn cmd_resize_window_exec(self_: *mut cmd, item: *mut cmdq_ite
             }
         }
         if (args_has(args, b'y') != 0) {
-            sy = args_strtonum(args, b'y', WINDOW_MINIMUM as _, WINDOW_MAXIMUM as _, &raw mut cause) as u32;
+            sy = args_strtonum(
+                args,
+                b'y',
+                WINDOW_MINIMUM as _,
+                WINDOW_MAXIMUM as _,
+                &raw mut cause,
+            ) as u32;
             if !cause.is_null() {
                 cmdq_error(item, c"height %s".as_ptr(), cause);
                 free_(cause);
@@ -76,12 +88,34 @@ unsafe extern "C" fn cmd_resize_window_exec(self_: *mut cmd, item: *mut cmdq_ite
         }
 
         if (args_has(args, b'A') != 0) {
-            default_window_size(null_mut(), s, w, &raw mut sx, &raw mut sy, &raw mut xpixel, &raw mut ypixel, WINDOW_SIZE_LARGEST);
+            default_window_size(
+                null_mut(),
+                s,
+                w,
+                &raw mut sx,
+                &raw mut sy,
+                &raw mut xpixel,
+                &raw mut ypixel,
+                WINDOW_SIZE_LARGEST,
+            );
         } else if (args_has(args, b'a') != 0) {
-            default_window_size(null_mut(), s, w, &raw mut sx, &raw mut sy, &raw mut xpixel, &raw mut ypixel, WINDOW_SIZE_SMALLEST);
+            default_window_size(
+                null_mut(),
+                s,
+                w,
+                &raw mut sx,
+                &raw mut sy,
+                &raw mut xpixel,
+                &raw mut ypixel,
+                WINDOW_SIZE_SMALLEST,
+            );
         }
 
-        options_set_number((*w).options, c"window-size".as_ptr(), WINDOW_SIZE_MANUAL as i64);
+        options_set_number(
+            (*w).options,
+            c"window-size".as_ptr(),
+            WINDOW_SIZE_MANUAL as i64,
+        );
         (*w).manual_sx = sx;
         (*w).manual_sy = sy;
         recalculate_size(w, 1);

@@ -16,12 +16,21 @@ pub struct input_key_entry {
 pub type input_key_tree = rb_head<input_key_entry>;
 
 impl input_key_entry {
-    const fn new(key: key_code, data: &'static CStr) -> Self { Self { key, data: data.as_ptr(), entry: unsafe { zeroed() } } }
+    const fn new(key: key_code, data: &'static CStr) -> Self {
+        Self {
+            key,
+            data: data.as_ptr(),
+            entry: unsafe { zeroed() },
+        }
+    }
 }
 
 /// Input key comparison function.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn input_key_cmp(ike1: *const input_key_entry, ike2: *const input_key_entry) -> i32 {
+pub unsafe extern "C" fn input_key_cmp(
+    ike1: *const input_key_entry,
+    ike2: *const input_key_entry,
+) -> i32 {
     unsafe {
         if ((*ike1).key < (*ike2).key) {
             -1
@@ -119,12 +128,21 @@ static mut input_key_defaults: [input_key_entry; 83] = [
     input_key_entry::new(keyc::KEYC_F12 as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[24;_~"),
     input_key_entry::new(keyc::KEYC_UP as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[1;_A"),
     input_key_entry::new(keyc::KEYC_DOWN as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[1;_B"),
-    input_key_entry::new(keyc::KEYC_RIGHT as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[1;_C"),
+    input_key_entry::new(
+        keyc::KEYC_RIGHT as u64 | KEYC_BUILD_MODIFIERS,
+        c"\xb11[1;_C",
+    ),
     input_key_entry::new(keyc::KEYC_LEFT as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[1;_D"),
     input_key_entry::new(keyc::KEYC_HOME as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[1;_H"),
     input_key_entry::new(keyc::KEYC_END as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[1;_F"),
-    input_key_entry::new(keyc::KEYC_PPAGE as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[5;_~"),
-    input_key_entry::new(keyc::KEYC_NPAGE as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[6;_~"),
+    input_key_entry::new(
+        keyc::KEYC_PPAGE as u64 | KEYC_BUILD_MODIFIERS,
+        c"\xb11[5;_~",
+    ),
+    input_key_entry::new(
+        keyc::KEYC_NPAGE as u64 | KEYC_BUILD_MODIFIERS,
+        c"\xb11[6;_~",
+    ),
     input_key_entry::new(keyc::KEYC_IC as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[2;_~"),
     input_key_entry::new(keyc::KEYC_DC as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[3;_~"),
 ];
@@ -180,7 +198,9 @@ pub unsafe extern "C-unwind" fn input_key_build() {
                 continue;
             }
 
-            for (j, input_key_modifiers_j) in input_key_modifiers.iter().cloned().enumerate().skip(2) {
+            for (j, input_key_modifiers_j) in
+                input_key_modifiers.iter().cloned().enumerate().skip(2)
+            {
                 let key = ((*ike).key & !KEYC_BUILD_MODIFIERS);
                 let data = xstrdup((*ike).data).as_ptr();
                 *data.add(libc::strcspn(data, c"_".as_ptr())) = b'0' as c_char + j as c_char;
@@ -200,7 +220,11 @@ pub unsafe extern "C-unwind" fn input_key_build() {
 
 /// Translate a key code into an output key sequence for a pane.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn input_key_pane(wp: *mut window_pane, key: key_code, m: *mut mouse_event) -> i32 {
+pub unsafe extern "C" fn input_key_pane(
+    wp: *mut window_pane,
+    key: key_code,
+    m: *mut mouse_event,
+) -> i32 {
     unsafe {
         if log_get_level() != 0 {
             // log_debug( c"writing key 0x%llx (%s) to %%%u".as_ptr(), key, key_string_lookup_key(key, 1), (*wp).id,);
@@ -217,7 +241,12 @@ pub unsafe extern "C" fn input_key_pane(wp: *mut window_pane, key: key_code, m: 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn input_key_write(from: *const c_char, bev: *mut bufferevent, data: *const c_char, size: usize) {
+pub unsafe extern "C" fn input_key_write(
+    from: *const c_char,
+    bev: *mut bufferevent,
+    data: *const c_char,
+    size: usize,
+) {
     unsafe {
         log_debug_c(c"%s: %.*s".as_ptr(), from, size as i32, data);
         bufferevent_write(bev, data.cast(), size);
@@ -261,18 +290,41 @@ pub unsafe extern "C" fn input_key_extended(bev: *mut bufferevent, mut key: key_
         }
 
         if (options_get_number(global_options, c"extended-keys-format".as_ptr()) == 1) {
-            xsnprintf(tmp.as_mut_ptr().cast(), sizeof_tmp, c"\x1b[27;%c;%llu~".as_ptr(), modifier as u32, key);
+            xsnprintf(
+                tmp.as_mut_ptr().cast(),
+                sizeof_tmp,
+                c"\x1b[27;%c;%llu~".as_ptr(),
+                modifier as u32,
+                key,
+            );
         } else {
-            xsnprintf(tmp.as_mut_ptr().cast(), sizeof_tmp, c"\x1b[%llu;%cu".as_ptr(), key, modifier as u32);
+            xsnprintf(
+                tmp.as_mut_ptr().cast(),
+                sizeof_tmp,
+                c"\x1b[%llu;%cu".as_ptr(),
+                key,
+                modifier as u32,
+            );
         }
 
-        input_key_write(__func__, bev, tmp.as_ptr().cast(), strlen(tmp.as_ptr().cast()));
+        input_key_write(
+            __func__,
+            bev,
+            tmp.as_ptr().cast(),
+            strlen(tmp.as_ptr().cast()),
+        );
         0
     }
 }
 
-#[expect(clippy::manual_c_str_literals, reason = "false positive if c string contains NUL")]
-static standard_map: [SyncCharPtr; 2] = [SyncCharPtr::from_ptr(c"1!9(0)=+;:'\",<.>/-8? 2".as_ptr()), SyncCharPtr::from_ptr(b"119900=+;;'',,..\x1f\x1f\x7f\x7f\0\0\0".as_ptr().cast())];
+#[expect(
+    clippy::manual_c_str_literals,
+    reason = "false positive if c string contains NUL"
+)]
+static standard_map: [SyncCharPtr; 2] = [
+    SyncCharPtr::from_ptr(c"1!9(0)=+;:'\",<.>/-8? 2".as_ptr()),
+    SyncCharPtr::from_ptr(b"119900=+;;'',,..\x1f\x1f\x7f\x7f\0\0\0".as_ptr().cast()),
+];
 
 /*
  * Outputs the key in the "standard" mode. This is by far the most
@@ -320,7 +372,9 @@ pub unsafe extern "C" fn input_key_vt10x(bev: *mut bufferevent, mut key: key_cod
         if (key & KEYC_CTRL != 0) {
             let p = libc::strchr(standard_map[0].as_ptr(), onlykey as i32);
             key = if (!p.is_null()) {
-                *standard_map[1].as_ptr().add(p.addr() - standard_map[0].as_ptr().addr()) as u64
+                *standard_map[1]
+                    .as_ptr()
+                    .add(p.addr() - standard_map[0].as_ptr().addr()) as u64
             } else if (onlykey >= b'3' as u64 && onlykey <= b'7' as u64) {
                 onlykey - b'\x18' as u64
             } else if (onlykey >= b'@' as u64 && onlykey <= b'~' as u64) {
@@ -347,7 +401,14 @@ pub unsafe extern "C" fn input_key_mode1(bev: *mut bufferevent, key: key_code) -
 
         // As per https://invisible-island.net/xterm/modified-keys-us-pc105.html.
         let onlykey = key & KEYC_MASK_KEY;
-        if ((key & (KEYC_META | KEYC_CTRL)) == KEYC_CTRL && (onlykey == ' ' as u64 || onlykey == '/' as u64 || onlykey == '@' as u64 || onlykey == '^' as u64 || (onlykey >= '2' as u64 && onlykey <= '8' as u64) || (onlykey >= '@' as u64 && onlykey <= '~' as u64))) {
+        if ((key & (KEYC_META | KEYC_CTRL)) == KEYC_CTRL
+            && (onlykey == ' ' as u64
+                || onlykey == '/' as u64
+                || onlykey == '@' as u64
+                || onlykey == '^' as u64
+                || (onlykey >= '2' as u64 && onlykey <= '8' as u64)
+                || (onlykey >= '@' as u64 && onlykey <= '~' as u64)))
+        {
             return input_key_vt10x(bev, key);
         }
 
@@ -362,7 +423,11 @@ pub unsafe extern "C" fn input_key_mode1(bev: *mut bufferevent, key: key_code) -
 
 /// Translate a key code into an output key sequence.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn input_key(s: *mut screen, bev: *mut bufferevent, mut key: key_code) -> i32 {
+pub unsafe extern "C" fn input_key(
+    s: *mut screen,
+    bev: *mut bufferevent,
+    mut key: key_code,
+) -> i32 {
     let __func__ = c"input_key".as_ptr();
     unsafe {
         let mut ike: *mut input_key_entry = null_mut();
@@ -406,7 +471,11 @@ pub unsafe extern "C" fn input_key(s: *mut screen, bev: *mut bufferevent, mut ke
          * key and no modifiers.
          */
         if (key & !KEYC_MASK_KEY) == 0 {
-            if (key == c0::C0_HT as u64 || key == c0::C0_CR as u64 || key == c0::C0_ESC as u64 || (key >= 0x20 && key <= 0x7f)) {
+            if (key == c0::C0_HT as u64
+                || key == c0::C0_CR as u64
+                || key == c0::C0_ESC as u64
+                || (key >= 0x20 && key <= 0x7f))
+            {
                 ud.data[0] = key as u8;
                 input_key_write(__func__, bev, ud.data.as_ptr().cast(), 1);
                 return 0;
@@ -441,8 +510,15 @@ pub unsafe extern "C" fn input_key(s: *mut screen, bev: *mut bufferevent, mut ke
             ike = input_key_get(key & !KEYC_KEYPAD);
         }
         if (!ike.is_null()) {
-            log_debug!("{}: found key 0x{}: \"{}\"", _s(__func__), key, _s((*ike).data));
-            if ((key == keyc::KEYC_PASTE_START as u64 || key == keyc::KEYC_PASTE_END as u64) && (!(*s).mode & MODE_BRACKETPASTE != 0)) {
+            log_debug!(
+                "{}: found key 0x{}: \"{}\"",
+                _s(__func__),
+                key,
+                _s((*ike).data)
+            );
+            if ((key == keyc::KEYC_PASTE_START as u64 || key == keyc::KEYC_PASTE_END as u64)
+                && (!(*s).mode & MODE_BRACKETPASTE != 0))
+            {
                 return 0;
             }
             if ((key & KEYC_META != 0) && (!key & KEYC_IMPLIED_META != 0)) {
@@ -453,7 +529,9 @@ pub unsafe extern "C" fn input_key(s: *mut screen, bev: *mut bufferevent, mut ke
         }
 
         /* Ignore internal function key codes. */
-        if ((key >= KEYC_BASE && key < keyc::KEYC_BASE_END as u64) || (key >= KEYC_USER && key < KEYC_USER_END)) {
+        if ((key >= KEYC_BASE && key < keyc::KEYC_BASE_END as u64)
+            || (key >= KEYC_USER && key < KEYC_USER_END))
+        {
             log_debug!("{}: ignoring key 0x{}", _s(__func__), key);
             return 0;
         }
@@ -497,7 +575,14 @@ pub unsafe extern "C" fn input_key(s: *mut screen, bev: *mut bufferevent, mut ke
 
 /* Get mouse event string. */
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn input_key_get_mouse(s: *mut screen, m: *mut mouse_event, x: u32, y: u32, rbuf: *mut *const c_char, rlen: *mut usize) -> i32 {
+pub unsafe extern "C" fn input_key_get_mouse(
+    s: *mut screen,
+    m: *mut mouse_event,
+    x: u32,
+    y: u32,
+    rbuf: *mut *const c_char,
+    rlen: *mut usize,
+) -> i32 {
     static mut buf: [c_char; 40] = [0; 40];
     let mut len = 0usize;
 
@@ -521,11 +606,18 @@ pub unsafe extern "C" fn input_key_get_mouse(s: *mut screen, m: *mut mouse_event
          * buttons was also a release.
          */
         if ((*m).sgr_type != b' ' as u32) {
-            if (MOUSE_DRAG((*m).sgr_b) && MOUSE_RELEASE((*m).sgr_b) && (!(*s).mode & MODE_MOUSE_ALL != 0)) {
+            if (MOUSE_DRAG((*m).sgr_b)
+                && MOUSE_RELEASE((*m).sgr_b)
+                && (!(*s).mode & MODE_MOUSE_ALL != 0))
+            {
                 return 0;
             }
         } else {
-            if (MOUSE_DRAG((*m).b) && MOUSE_RELEASE((*m).b) && MOUSE_RELEASE((*m).lb) && (!(*s).mode & MODE_MOUSE_ALL != 0)) {
+            if (MOUSE_DRAG((*m).b)
+                && MOUSE_RELEASE((*m).b)
+                && MOUSE_RELEASE((*m).lb)
+                && (!(*s).mode & MODE_MOUSE_ALL != 0))
+            {
                 return 0;
             }
         }
@@ -541,9 +633,20 @@ pub unsafe extern "C" fn input_key_get_mouse(s: *mut screen, m: *mut mouse_event
          */
         let mut len: usize = 0;
         if ((*m).sgr_type != ' ' as u32 && ((*s).mode & MODE_MOUSE_SGR) != 0) {
-            len = xsnprintf(&raw mut buf as *mut c_char, sizeof_buf, c"\x1b[<%u;%u;%u%c".as_ptr(), (*m).sgr_b, x + 1, y + 1, (*m).sgr_type) as usize;
+            len = xsnprintf(
+                &raw mut buf as *mut c_char,
+                sizeof_buf,
+                c"\x1b[<%u;%u;%u%c".as_ptr(),
+                (*m).sgr_b,
+                x + 1,
+                y + 1,
+                (*m).sgr_type,
+            ) as usize;
         } else if ((*s).mode & MODE_MOUSE_UTF8 != 0) {
-            if ((*m).b > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_BTN_OFF) || x > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_POS_OFF) || y > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_POS_OFF)) {
+            if ((*m).b > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_BTN_OFF)
+                || x > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_POS_OFF)
+                || y > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_POS_OFF))
+            {
                 return 0;
             }
             len = xsnprintf(&raw mut buf as *mut c_char, sizeof_buf, c"\x1b[M".as_ptr()) as usize;

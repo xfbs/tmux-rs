@@ -34,7 +34,13 @@ struct cmd_command_prompt_cdata {
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn cmd_command_prompt_args_parse(_args: *mut args, _idx: u32, _cause: *mut *mut c_char) -> args_parse_type { args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING }
+unsafe extern "C" fn cmd_command_prompt_args_parse(
+    _args: *mut args,
+    _idx: u32,
+    _cause: *mut *mut c_char,
+) -> args_parse_type {
+    args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING
+}
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_command_prompt_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
@@ -67,7 +73,8 @@ unsafe extern "C" fn cmd_command_prompt_exec(self_: *mut cmd, item: *mut cmdq_it
         if wait != 0 {
             (*cdata).item = item;
         }
-        (*cdata).state = args_make_commands_prepare(self_, item, 0, c"%1".as_ptr(), wait, args_has(args, b'F'));
+        (*cdata).state =
+            args_make_commands_prepare(self_, item, 0, c"%1".as_ptr(), wait, args_has(args, b'F'));
 
         let mut s = args_get(args, b'p');
         if s.is_null() {
@@ -95,7 +102,11 @@ unsafe extern "C" fn cmd_command_prompt_exec(self_: *mut cmd, item: *mut cmdq_it
             prompt = strsep(&raw mut next_prompt as _, c",".as_ptr());
             !prompt.is_null()
         }) {
-            (*cdata).prompts = xreallocarray_::<cmd_command_prompt_prompt>((*cdata).prompts, (*cdata).count as usize + 1).as_ptr();
+            (*cdata).prompts = xreallocarray_::<cmd_command_prompt_prompt>(
+                (*cdata).prompts,
+                (*cdata).count as usize + 1,
+            )
+            .as_ptr();
             if space == 0 {
                 tmp = xstrdup(prompt).as_ptr();
             } else {
@@ -160,7 +171,12 @@ unsafe extern "C" fn cmd_command_prompt_exec(self_: *mut cmd, item: *mut cmdq_it
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn cmd_command_prompt_callback(c: *mut client, data: NonNull<c_void>, s: *const c_char, done: i32) -> i32 {
+unsafe extern "C" fn cmd_command_prompt_callback(
+    c: *mut client,
+    data: NonNull<c_void>,
+    s: *const c_char,
+    done: i32,
+) -> i32 {
     unsafe {
         let mut cdata: NonNull<cmd_command_prompt_cdata> = data.cast();
         let cdata = cdata.as_ptr();

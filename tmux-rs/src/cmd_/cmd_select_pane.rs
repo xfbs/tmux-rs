@@ -135,12 +135,14 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
             markedwp = marked_pane.wp;
 
             if (!lastwp.is_null()) {
-                (*lastwp).flags |= (window_pane_flags::PANE_REDRAW | window_pane_flags::PANE_STYLECHANGED);
+                (*lastwp).flags |=
+                    (window_pane_flags::PANE_REDRAW | window_pane_flags::PANE_STYLECHANGED);
                 server_redraw_window_borders((*lastwp).window);
                 server_status_window((*lastwp).window);
             }
             if (!markedwp.is_null()) {
-                (*markedwp).flags |= (window_pane_flags::PANE_REDRAW | window_pane_flags::PANE_STYLECHANGED);
+                (*markedwp).flags |=
+                    (window_pane_flags::PANE_REDRAW | window_pane_flags::PANE_STYLECHANGED);
                 server_redraw_window_borders((*markedwp).window);
                 server_status_window((*markedwp).window);
             }
@@ -154,11 +156,21 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
                 cmdq_error(item, c"bad style: %s".as_ptr(), style);
                 return cmd_retval::CMD_RETURN_ERROR;
             }
-            options_set_string(oo, c"window-active-style".as_ptr(), 0, c"%s".as_ptr(), style);
+            options_set_string(
+                oo,
+                c"window-active-style".as_ptr(),
+                0,
+                c"%s".as_ptr(),
+                style,
+            );
             (*wp).flags |= (window_pane_flags::PANE_REDRAW | window_pane_flags::PANE_STYLECHANGED);
         }
         if (args_has_(args, 'g')) {
-            cmdq_print(item, c"%s".as_ptr(), options_get_string(oo, c"window-style".as_ptr()));
+            cmdq_print(
+                item,
+                c"%s".as_ptr(),
+                options_get_string(oo, c"window-style".as_ptr()),
+            );
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
@@ -207,7 +219,10 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        if (!c.is_null() && !(*c).session.is_null() && ((*c).flags.intersects(client_flag::ACTIVEPANE))) {
+        if (!c.is_null()
+            && !(*c).session.is_null()
+            && ((*c).flags.intersects(client_flag::ACTIVEPANE)))
+        {
             activewp = server_client_get_pane(c);
         } else {
             activewp = (*w).active;
@@ -219,7 +234,10 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
             server_redraw_window(w);
         }
         window_redraw_active_switch(w, wp);
-        if (!c.is_null() && !(*c).session.is_null() && ((*c).flags.intersects(client_flag::ACTIVEPANE))) {
+        if (!c.is_null()
+            && !(*c).session.is_null()
+            && ((*c).flags.intersects(client_flag::ACTIVEPANE)))
+        {
             server_client_set_pane(c, wp);
         } else if (window_set_active_pane(w, wp, 1) != 0) {
             cmd_find_from_winlink_pane(current, wl, wp, 0);

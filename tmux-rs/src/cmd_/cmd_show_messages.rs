@@ -18,7 +18,11 @@ static mut cmd_show_messages_entry: cmd_entry = cmd_entry {
 };
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn cmd_show_messages_terminals(self_: *mut cmd, item: *mut cmdq_item, blank: i32) -> c_int {
+unsafe extern "C" fn cmd_show_messages_terminals(
+    self_: *mut cmd,
+    item: *mut cmdq_item,
+    blank: i32,
+) -> c_int {
     unsafe {
         let mut args = cmd_get_args(self_);
         let mut tc = cmdq_get_target_client(item);
@@ -33,10 +37,21 @@ unsafe extern "C" fn cmd_show_messages_terminals(self_: *mut cmd, item: *mut cmd
                 cmdq_print(item, c"%s".as_ptr(), c"".as_ptr());
                 blank = 0;
             }
-            cmdq_print(item, c"Terminal %u: %s for %s, flags=0x%x:".as_ptr(), n, (*term).name, (*(*(*term).tty).client).name, (*term).flags);
+            cmdq_print(
+                item,
+                c"Terminal %u: %s for %s, flags=0x%x:".as_ptr(),
+                n,
+                (*term).name,
+                (*(*(*term).tty).client).name,
+                (*term).flags,
+            );
             n += 1;
             for i in 0..tty_term_ncodes() {
-                cmdq_print(item, c"%s".as_ptr(), tty_term_describe(term, tty_code_code::try_from(i).unwrap()));
+                cmdq_print(
+                    item,
+                    c"%s".as_ptr(),
+                    tty_term_describe(term, tty_code_code::try_from(i).unwrap()),
+                );
             }
         }
         (n != 0) as i32
@@ -74,7 +89,12 @@ unsafe extern "C" fn cmd_show_messages_exec(self_: *mut cmd, item: *mut cmdq_ite
 
         for msg in tailq_foreach_reverse(&raw mut message_log).map(NonNull::as_ptr) {
             format_add(ft, c"message_text".as_ptr(), c"%s".as_ptr(), (*msg).msg);
-            format_add(ft, c"message_number".as_ptr(), c"%u".as_ptr(), (*msg).msg_num);
+            format_add(
+                ft,
+                c"message_number".as_ptr(),
+                c"%u".as_ptr(),
+                (*msg).msg_num,
+            );
             format_add_tv(ft, c"message_time".as_ptr(), &raw mut (*msg).msg_time);
 
             let s = format_expand(ft, SHOW_MESSAGES_TEMPLATE.as_ptr());

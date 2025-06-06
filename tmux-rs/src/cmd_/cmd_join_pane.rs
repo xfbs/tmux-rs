@@ -86,7 +86,15 @@ unsafe extern "C" fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
 
         let mut size: i32 = -1;
         if (args_has_(args, 'l')) {
-            size = args_percentage_and_expand(args, b'l', 0, i32::MAX as i64, curval as i64, item, &raw mut cause) as _;
+            size = args_percentage_and_expand(
+                args,
+                b'l',
+                0,
+                i32::MAX as i64,
+                curval as i64,
+                item,
+                &raw mut cause,
+            ) as _;
         } else if (args_has_(args, 'p')) {
             size = args_strtonum_and_expand(args, b'l', 0, 100, item, &raw mut cause) as _;
             if (cause.is_null()) {

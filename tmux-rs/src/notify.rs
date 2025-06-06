@@ -33,14 +33,24 @@ pub struct notify_entry {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn notify_insert_one_hook(item: *mut cmdq_item, ne: *mut notify_entry, cmdlist: *mut cmd_list, state: *mut cmdq_state) -> *mut cmdq_item {
+pub unsafe extern "C" fn notify_insert_one_hook(
+    item: *mut cmdq_item,
+    ne: *mut notify_entry,
+    cmdlist: *mut cmd_list,
+    state: *mut cmdq_state,
+) -> *mut cmdq_item {
     unsafe {
         if (cmdlist.is_null()) {
             return (item);
         }
         if (log_get_level() != 0) {
             let s = cmd_list_print(cmdlist, 0);
-            log_debug!("{}: hook {}: {}", "notify_insert_one_hook", _s((*ne).name), _s(s));
+            log_debug!(
+                "{}: hook {}: {}",
+                "notify_insert_one_hook",
+                _s((*ne).name),
+                _s(s)
+            );
             free_(s);
         }
         let new_item = cmdq_get_command(cmdlist, state);
@@ -67,7 +77,8 @@ pub unsafe extern "C" fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut n
         let mut fs: cmd_find_state = zeroed();
 
         cmd_find_clear_state(&raw mut fs, 0);
-        if cmd_find_empty_state(&raw mut (*ne).fs) != 0 || !cmd_find_valid_state(&raw mut (*ne).fs) {
+        if cmd_find_empty_state(&raw mut (*ne).fs) != 0 || !cmd_find_valid_state(&raw mut (*ne).fs)
+        {
             cmd_find_from_nothing(&raw mut fs, 0);
         } else {
             cmd_find_copy_state(&raw mut fs, &raw mut (*ne).fs);
@@ -100,7 +111,12 @@ pub unsafe extern "C" fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut n
             let pr = cmd_parse_from_string(value, null_mut());
             match (*pr).status {
                 cmd_parse_status::CMD_PARSE_ERROR => {
-                    log_debug!("{}: can't parse hook {}: {}", __func__, _s((*ne).name), _s((*pr).error));
+                    log_debug!(
+                        "{}: can't parse hook {}: {}",
+                        __func__,
+                        _s((*ne).name),
+                        _s((*pr).error)
+                    );
                     free_((*pr).error);
                 }
                 cmd_parse_status::CMD_PARSE_SUCCESS => {
@@ -200,7 +216,15 @@ pub unsafe extern "C" fn notify_callback(item: *mut cmdq_item, data: *mut c_void
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn notify_add(name: *const c_char, fs: *mut cmd_find_state, c: *mut client, s: *mut session, w: *mut window, wp: *mut window_pane, pbname: *const c_char) {
+pub unsafe extern "C" fn notify_add(
+    name: *const c_char,
+    fs: *mut cmd_find_state,
+    c: *mut client,
+    s: *mut session,
+    w: *mut window,
+    wp: *mut window_pane,
+    pbname: *const c_char,
+) {
     let __func__ = c"notify_add".as_ptr();
     unsafe {
         // struct notify_entry *ne;
@@ -218,23 +242,57 @@ pub unsafe extern "C" fn notify_add(name: *const c_char, fs: *mut cmd_find_state
         (*ne).session = s;
         (*ne).window = w;
         (*ne).pane = (if !wp.is_null() { (*wp).id as i32 } else { -1 });
-        (*ne).pbname = (if !pbname.is_null() { xstrdup(pbname).as_ptr() } else { null_mut() });
+        (*ne).pbname = (if !pbname.is_null() {
+            xstrdup(pbname).as_ptr()
+        } else {
+            null_mut()
+        });
 
         (*ne).formats = format_create(null_mut(), null_mut(), 0, format_flags::FORMAT_NOJOBS);
         format_add((*ne).formats, c"hook".as_ptr(), c"%s".as_ptr(), name);
         if (!c.is_null()) {
-            format_add((*ne).formats, c"hook_client".as_ptr(), c"%s".as_ptr(), (*c).name);
+            format_add(
+                (*ne).formats,
+                c"hook_client".as_ptr(),
+                c"%s".as_ptr(),
+                (*c).name,
+            );
         }
         if (!s.is_null()) {
-            format_add((*ne).formats, c"hook_session".as_ptr(), c"$%u".as_ptr(), (*s).id);
-            format_add((*ne).formats, c"hook_session_name".as_ptr(), c"%s".as_ptr(), (*s).name);
+            format_add(
+                (*ne).formats,
+                c"hook_session".as_ptr(),
+                c"$%u".as_ptr(),
+                (*s).id,
+            );
+            format_add(
+                (*ne).formats,
+                c"hook_session_name".as_ptr(),
+                c"%s".as_ptr(),
+                (*s).name,
+            );
         }
         if (!w.is_null()) {
-            format_add((*ne).formats, c"hook_window".as_ptr(), c"@%u".as_ptr(), (*w).id);
-            format_add((*ne).formats, c"hook_window_name".as_ptr(), c"%s".as_ptr(), (*w).name);
+            format_add(
+                (*ne).formats,
+                c"hook_window".as_ptr(),
+                c"@%u".as_ptr(),
+                (*w).id,
+            );
+            format_add(
+                (*ne).formats,
+                c"hook_window_name".as_ptr(),
+                c"%s".as_ptr(),
+                (*w).name,
+            );
         }
         if (!wp.is_null()) {
-            format_add((*ne).formats, c"hook_pane".as_ptr(), c"%%%d".as_ptr(), (*wp).id);
+            format_add(
+                (*ne).formats,
+                c"hook_pane".as_ptr(),
+                c"%%%d".as_ptr(),
+                (*wp).id,
+            );
         }
         format_log_debug((*ne).formats, __func__);
 
@@ -254,7 +312,10 @@ pub unsafe extern "C" fn notify_add(name: *const c_char, fs: *mut cmd_find_state
             session_add_ref((*ne).fs.s, __func__);
         }
 
-        cmdq_append(null_mut(), cmdq_get_callback!(notify_callback, ne.cast()).as_ptr());
+        cmdq_append(
+            null_mut(),
+            cmdq_get_callback!(notify_callback, ne.cast()).as_ptr(),
+        );
     }
 }
 
@@ -271,7 +332,11 @@ pub unsafe extern "C" fn notify_hook(item: *mut cmdq_item, name: *mut c_char) {
         ne.client = cmdq_get_client(item);
         ne.session = (*target).s;
         ne.window = (*target).w;
-        ne.pane = (if !(*target).wp.is_null() { (*(*target).wp).id as i32 } else { -1 });
+        ne.pane = (if !(*target).wp.is_null() {
+            (*(*target).wp).id as i32
+        } else {
+            -1
+        });
 
         ne.formats = format_create(null_mut(), null_mut(), 0, format_flags::FORMAT_NOJOBS);
         format_add(ne.formats, c"hook".as_ptr(), c"%s".as_ptr(), name);
@@ -288,7 +353,15 @@ pub unsafe extern "C" fn notify_client(name: *const c_char, c: *mut client) {
         let mut fs: cmd_find_state = zeroed(); // TODO use uninit
 
         cmd_find_from_client(&raw mut fs, c, 0);
-        notify_add(name, &raw mut fs, c, null_mut(), null_mut(), null_mut(), null_mut());
+        notify_add(
+            name,
+            &raw mut fs,
+            c,
+            null_mut(),
+            null_mut(),
+            null_mut(),
+            null_mut(),
+        );
     }
 }
 
@@ -302,7 +375,15 @@ pub unsafe extern "C" fn notify_session(name: *const c_char, s: *mut session) {
         } else {
             cmd_find_from_nothing(&raw mut fs, 0);
         }
-        notify_add(name, &raw mut fs, null_mut(), s, null_mut(), null_mut(), null_mut());
+        notify_add(
+            name,
+            &raw mut fs,
+            null_mut(),
+            s,
+            null_mut(),
+            null_mut(),
+            null_mut(),
+        );
     }
 }
 
@@ -312,12 +393,24 @@ pub unsafe extern "C" fn notify_winlink(name: *const c_char, wl: *mut winlink) {
         let mut fs: cmd_find_state = zeroed();
 
         cmd_find_from_winlink(&raw mut fs, wl, 0);
-        notify_add(name, &raw mut fs, null_mut(), (*wl).session, (*wl).window, null_mut(), null_mut());
+        notify_add(
+            name,
+            &raw mut fs,
+            null_mut(),
+            (*wl).session,
+            (*wl).window,
+            null_mut(),
+            null_mut(),
+        );
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn notify_session_window(name: *const c_char, s: *mut session, w: *mut window) {
+pub unsafe extern "C" fn notify_session_window(
+    name: *const c_char,
+    s: *mut session,
+    w: *mut window,
+) {
     unsafe {
         let mut fs: cmd_find_state = zeroed();
 
@@ -332,7 +425,15 @@ pub unsafe extern "C" fn notify_window(name: *const c_char, w: *mut window) {
         let mut fs: cmd_find_state = zeroed();
 
         cmd_find_from_window(&raw mut fs, w, 0);
-        notify_add(name, &raw mut fs, null_mut(), null_mut(), w, null_mut(), null_mut());
+        notify_add(
+            name,
+            &raw mut fs,
+            null_mut(),
+            null_mut(),
+            w,
+            null_mut(),
+            null_mut(),
+        );
     }
 }
 
@@ -342,7 +443,15 @@ pub unsafe extern "C" fn notify_pane(name: *const c_char, wp: *mut window_pane) 
         let mut fs: cmd_find_state = zeroed();
 
         cmd_find_from_pane(&raw mut fs, wp, 0);
-        notify_add(name, &raw mut fs, null_mut(), null_mut(), null_mut(), wp, null_mut());
+        notify_add(
+            name,
+            &raw mut fs,
+            null_mut(),
+            null_mut(),
+            null_mut(),
+            wp,
+            null_mut(),
+        );
     }
 }
 
@@ -353,9 +462,25 @@ pub unsafe extern "C" fn notify_paste_buffer(pbname: *const c_char, deleted: i32
 
         cmd_find_clear_state(&raw mut fs, 0);
         if (deleted != 0) {
-            notify_add(c"paste-buffer-deleted".as_ptr(), &raw mut fs, null_mut(), null_mut(), null_mut(), null_mut(), pbname);
+            notify_add(
+                c"paste-buffer-deleted".as_ptr(),
+                &raw mut fs,
+                null_mut(),
+                null_mut(),
+                null_mut(),
+                null_mut(),
+                pbname,
+            );
         } else {
-            notify_add(c"paste-buffer-changed".as_ptr(), &raw mut fs, null_mut(), null_mut(), null_mut(), null_mut(), pbname);
+            notify_add(
+                c"paste-buffer-changed".as_ptr(),
+                &raw mut fs,
+                null_mut(),
+                null_mut(),
+                null_mut(),
+                null_mut(),
+                pbname,
+            );
         }
     }
 }

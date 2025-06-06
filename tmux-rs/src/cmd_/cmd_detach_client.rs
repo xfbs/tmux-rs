@@ -31,7 +31,10 @@ static mut cmd_suspend_client_entry: cmd_entry = cmd_entry {
 };
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_detach_client_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+pub unsafe extern "C" fn cmd_detach_client_exec(
+    self_: *mut cmd,
+    item: *mut cmdq_item,
+) -> cmd_retval {
     unsafe {
         let mut args = cmd_get_args(self_);
         let mut source = cmdq_get_source(item);
@@ -43,7 +46,11 @@ pub unsafe extern "C" fn cmd_detach_client_exec(self_: *mut cmd, item: *mut cmdq
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        let mut msgtype = if args_has(args, b'P') != 0 { msgtype::MSG_DETACHKILL } else { msgtype::MSG_DETACH };
+        let mut msgtype = if args_has(args, b'P') != 0 {
+            msgtype::MSG_DETACHKILL
+        } else {
+            msgtype::MSG_DETACH
+        };
 
         let mut s: *mut session = null_mut();
         if args_has(args, b's') != 0 {

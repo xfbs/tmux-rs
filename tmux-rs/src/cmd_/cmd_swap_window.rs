@@ -10,7 +10,11 @@ static mut cmd_swap_window_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"ds:t:", 0, 0, None),
     usage: c"[-d] [-s src-window] [-t dst-window]".as_ptr(),
 
-    source: cmd_entry_flag::new(b's', cmd_find_type::CMD_FIND_WINDOW, CMD_FIND_DEFAULT_MARKED),
+    source: cmd_entry_flag::new(
+        b's',
+        cmd_find_type::CMD_FIND_WINDOW,
+        CMD_FIND_DEFAULT_MARKED,
+    ),
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_WINDOW, 0),
 
     flags: cmd_flag::empty(),

@@ -5,7 +5,13 @@ use libc::sscanf;
 use crate::compat::{queue::tailq_foreach, tree::rb_foreach};
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn resize_window(w: *mut window, mut sx: u32, mut sy: u32, xpixel: i32, ypixel: i32) {
+pub unsafe extern "C" fn resize_window(
+    w: *mut window,
+    mut sx: u32,
+    mut sy: u32,
+    xpixel: i32,
+    ypixel: i32,
+) {
     unsafe {
         let mut zoomed = 0;
 
@@ -30,7 +36,15 @@ pub unsafe extern "C" fn resize_window(w: *mut window, mut sx: u32, mut sy: u32,
             sy = (*(*w).layout_root).sy;
         }
         window_resize(w, sx, sy, xpixel, ypixel);
-        log_debug!("{}: @{} resized to {}x{}; layout {}x{}", "resize_window", (*w).id, sx, sy, (*(*w).layout_root).sx, (*(*w).layout_root).sy,);
+        log_debug!(
+            "{}: @{} resized to {}x{}; layout {}x{}",
+            "resize_window",
+            (*w).id,
+            sx,
+            sy,
+            (*(*w).layout_root).sx,
+            (*(*w).layout_root).sy,
+        );
 
         /* Restore the window zoom state. */
         if (zoomed) {
@@ -71,7 +85,10 @@ pub unsafe extern "C" fn ignore_client_size(c: *mut client) -> i32 {
                 }
             }
         }
-        if (*c).flags.intersects(client_flag::CONTROL) && !(*c).flags.intersects(client_flag::SIZECHANGED) && !(*c).flags.intersects(client_flag::WINDOWSIZECHANGED) {
+        if (*c).flags.intersects(client_flag::CONTROL)
+            && !(*c).flags.intersects(client_flag::SIZECHANGED)
+            && !(*c).flags.intersects(client_flag::WINDOWSIZECHANGED)
+        {
             return 1;
         }
         0
@@ -96,7 +113,20 @@ pub unsafe extern "C" fn clients_with_window(w: *mut window) -> u32 {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn clients_calculate_size(type_: i32, current: i32, c: *mut client, s: *mut session, w: *mut window, skip_client: Option<unsafe extern "C" fn(*mut client, i32, i32, *mut session, *mut window) -> i32>, sx: *mut u32, sy: *mut u32, xpixel: *mut u32, ypixel: *mut u32) -> i32 {
+pub unsafe extern "C" fn clients_calculate_size(
+    type_: i32,
+    current: i32,
+    c: *mut client,
+    s: *mut session,
+    w: *mut window,
+    skip_client: Option<
+        unsafe extern "C" fn(*mut client, i32, i32, *mut session, *mut window) -> i32,
+    >,
+    sx: *mut u32,
+    sy: *mut u32,
+    xpixel: *mut u32,
+    ypixel: *mut u32,
+) -> i32 {
     let mut cx = 0u32;
     let mut cy = 0u32;
     let mut cw = null_mut();
@@ -199,7 +229,15 @@ pub unsafe extern "C" fn clients_calculate_size(type_: i32, current: i32, c: *mu
                     *xpixel = (*loop_).tty.xpixel;
                     *ypixel = (*loop_).tty.ypixel;
                 }
-                log_debug!("{}: after {} ({}x{}), size is {}x{}", __func__, _s((*loop_).name), cx, cy, *sx, *sy,);
+                log_debug!(
+                    "{}: after {} ({}x{}), size is {}x{}",
+                    __func__,
+                    _s((*loop_).name),
+                    cx,
+                    cy,
+                    *sx,
+                    *sy,
+                );
             }
             if (*sx != u32::MAX && *sy != u32::MAX) {
                 log_debug!("{}: calculated size {}x{}", __func__, *sx, *sy);
@@ -231,7 +269,14 @@ pub unsafe extern "C" fn clients_calculate_size(type_: i32, current: i32, c: *mu
                 }
 
                 /* Clamp the size. */
-                log_debug!("{}: {} size for @{} is {}x{}", __func__, _s((*loop_).name), (*w).id, (*cw).sx, (*cw).sy,);
+                log_debug!(
+                    "{}: {} size for @{} is {}x{}",
+                    __func__,
+                    _s((*loop_).name),
+                    (*w).id,
+                    (*cw).sx,
+                    (*cw).sy,
+                );
                 if ((*cw).sx != 0 && *sx > (*cw).sx) {
                     *sx = (*cw).sx;
                 }
@@ -265,7 +310,13 @@ pub unsafe extern "C" fn clients_calculate_size(type_: i32, current: i32, c: *mu
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn default_window_size_skip_client(loop_: *mut client, type_: i32, current: i32, s: *mut session, w: *mut window) -> i32 {
+pub unsafe extern "C" fn default_window_size_skip_client(
+    loop_: *mut client,
+    type_: i32,
+    current: i32,
+    s: *mut session,
+    w: *mut window,
+) -> i32 {
     unsafe {
         /*
          * Latest checks separately, so do not check here. Otherwise only
@@ -286,7 +337,16 @@ pub unsafe extern "C" fn default_window_size_skip_client(loop_: *mut client, typ
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn default_window_size(mut c: *mut client, s: *mut session, w: *mut window, sx: *mut u32, sy: *mut u32, xpixel: *mut u32, ypixel: *mut u32, mut type_: i32) {
+pub unsafe extern "C" fn default_window_size(
+    mut c: *mut client,
+    s: *mut session,
+    w: *mut window,
+    sx: *mut u32,
+    sy: *mut u32,
+    xpixel: *mut u32,
+    ypixel: *mut u32,
+    mut type_: i32,
+) {
     let __func__ = "default_window_size";
     unsafe {
         'done: {
@@ -322,7 +382,19 @@ pub unsafe extern "C" fn default_window_size(mut c: *mut client, s: *mut session
              * Look for a client to base the size on. If none exists (or the type_
              * is manual), use the default-size option.
              */
-            if (clients_calculate_size(type_, 0, c, s, w, Some(default_window_size_skip_client), sx, sy, xpixel, ypixel) == 0) {
+            if (clients_calculate_size(
+                type_,
+                0,
+                c,
+                s,
+                w,
+                Some(default_window_size_skip_client),
+                sx,
+                sy,
+                xpixel,
+                ypixel,
+            ) == 0)
+            {
                 let value = options_get_string((*s).options, c"default-size".as_ptr());
                 if (sscanf(value, c"%ux%u".as_ptr(), sx, sy) != 2) {
                     *sx = 80;
@@ -340,7 +412,13 @@ pub unsafe extern "C" fn default_window_size(mut c: *mut client, s: *mut session
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn recalculate_size_skip_client(loop_: *mut client, type_: i32, current: i32, s: *mut session, w: *mut window) -> i32 {
+pub unsafe extern "C" fn recalculate_size_skip_client(
+    loop_: *mut client,
+    type_: i32,
+    current: i32,
+    s: *mut session,
+    w: *mut window,
+) -> i32 {
     unsafe {
         /*
          * If the current flag is set, then skip any client where this window
@@ -388,7 +466,18 @@ pub unsafe extern "C" fn recalculate_size(w: *mut window, now: i32) {
         let current = options_get_number((*w).options, c"aggressive-resize".as_ptr()) as i32;
 
         /* Look for a suitable client and get the new size. */
-        let mut changed = clients_calculate_size(type_, current, null_mut(), null_mut(), w, Some(recalculate_size_skip_client), &raw mut sx, &raw mut sy, &raw mut xpixel, &raw mut ypixel);
+        let mut changed = clients_calculate_size(
+            type_,
+            current,
+            null_mut(),
+            null_mut(),
+            w,
+            Some(recalculate_size_skip_client),
+            &raw mut sx,
+            &raw mut sy,
+            &raw mut xpixel,
+            &raw mut ypixel,
+        );
 
         /*
          * Make sure the size has actually changed. If the window has already

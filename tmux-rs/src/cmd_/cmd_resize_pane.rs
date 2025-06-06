@@ -50,7 +50,8 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
         }
 
         if (args_has_(args, 'M')) {
-            if (*event).m.valid == 0 || cmd_mouse_window(&raw mut (*event).m, &raw mut s).is_none() {
+            if (*event).m.valid == 0 || cmd_mouse_window(&raw mut (*event).m, &raw mut s).is_none()
+            {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
             if (c.is_null() || (*c).session != s) {
@@ -83,7 +84,14 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
         }
 
         if (args_has_(args, 'x')) {
-            x = args_percentage(args, b'x', 0, i32::MAX as i64, (*w).sx as i64, &raw mut cause) as i32;
+            x = args_percentage(
+                args,
+                b'x',
+                0,
+                i32::MAX as i64,
+                (*w).sx as i64,
+                &raw mut cause,
+            ) as i32;
             if (!cause.is_null()) {
                 cmdq_error(item, c"width %s".as_ptr(), cause);
                 free_(cause);
@@ -92,14 +100,22 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
             layout_resize_pane_to(wp, layout_type::LAYOUT_LEFTRIGHT, x as u32);
         }
         if args_has_(args, 'y') {
-            y = args_percentage(args, b'y', 0, i32::MAX as i64, (*w).sy as i64, &raw mut cause) as i32;
+            y = args_percentage(
+                args,
+                b'y',
+                0,
+                i32::MAX as i64,
+                (*w).sy as i64,
+                &raw mut cause,
+            ) as i32;
             if (!cause.is_null()) {
                 cmdq_error(item, c"height %s".as_ptr(), cause);
                 free_(cause);
                 return cmd_retval::CMD_RETURN_ERROR;
             }
 
-            let status: i32 = options_get_number((*w).options, c"pane-border-status".as_ptr()) as i32;
+            let status: i32 =
+                options_get_number((*w).options, c"pane-border-status".as_ptr()) as i32;
             match pane_status::try_from(status) {
                 Ok(pane_status::PANE_STATUS_TOP) => {
                     if (y != i32::MAX && (*wp).yoff == 1) {
@@ -168,7 +184,11 @@ unsafe extern "C" fn cmd_resize_pane_mouse_update(c: *mut client, m: *mut mouse_
         }
 
         for i in 0..cells.len() {
-            let mut lc = layout_search_by_border((*w).layout_root, lx + offsets[i][0] as u32, ly + offsets[i][1] as u32);
+            let mut lc = layout_search_by_border(
+                (*w).layout_root,
+                lx + offsets[i][0] as u32,
+                ly + offsets[i][1] as u32,
+            );
             if lc.is_null() {
                 continue;
             }

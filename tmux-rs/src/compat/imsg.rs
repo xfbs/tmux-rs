@@ -2,12 +2,22 @@ use core::ffi::{c_int, c_uchar, c_void};
 use std::ptr::NonNull;
 use std::{mem::MaybeUninit, ptr::null_mut};
 
-use libc::{CMSG_DATA, CMSG_FIRSTHDR, CMSG_NXTHDR, CMSG_SPACE, EAGAIN, EBADMSG, EINTR, EINVAL, ERANGE, SCM_RIGHTS, SOL_SOCKET, c_char, calloc, close, cmsghdr, free, getdtablesize, iovec, memcpy, memmove, memset, msghdr, pid_t};
+use libc::{
+    CMSG_DATA, CMSG_FIRSTHDR, CMSG_NXTHDR, CMSG_SPACE, EAGAIN, EBADMSG, EINTR, EINVAL, ERANGE,
+    SCM_RIGHTS, SOL_SOCKET, c_char, calloc, close, cmsghdr, free, getdtablesize, iovec, memcpy,
+    memmove, memset, msghdr, pid_t,
+};
 
 use super::errno;
 use super::getdtablecount::getdtablecount;
-use super::imsg_buffer::{ibuf_add, ibuf_add_buf, ibuf_close, ibuf_data, ibuf_dynamic, ibuf_fd_avail, ibuf_fd_set, ibuf_free, ibuf_get, ibuf_get_ibuf, ibuf_open, ibuf_rewind, ibuf_size, msgbuf_clear, msgbuf_init, msgbuf_write};
-use super::queue::{Entry, tailq_entry, tailq_first, tailq_head, tailq_init, tailq_insert_tail, tailq_remove};
+use super::imsg_buffer::{
+    ibuf_add, ibuf_add_buf, ibuf_close, ibuf_data, ibuf_dynamic, ibuf_fd_avail, ibuf_fd_set,
+    ibuf_free, ibuf_get, ibuf_get_ibuf, ibuf_open, ibuf_rewind, ibuf_size, msgbuf_clear,
+    msgbuf_init, msgbuf_write,
+};
+use super::queue::{
+    Entry, tailq_entry, tailq_first, tailq_head, tailq_init, tailq_insert_tail, tailq_remove,
+};
 // begin imsg.h
 
 pub const IBUF_READ_SIZE: usize = 65535;
@@ -28,7 +38,9 @@ pub struct ibuf {
     pub fd: c_int,
 }
 impl Entry<ibuf> for ibuf {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<ibuf> { unsafe { &raw mut (*this).entry } }
+    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<ibuf> {
+        unsafe { &raw mut (*this).entry }
+    }
 }
 
 #[repr(C)]
@@ -84,7 +96,9 @@ pub struct imsg_fd {
     fd: i32,
 }
 impl super::queue::Entry<imsg_fd> for imsg_fd {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<imsg_fd> { unsafe { &raw mut (*this).entry } }
+    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<imsg_fd> {
+        unsafe { &raw mut (*this).entry }
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -134,7 +148,12 @@ pub unsafe extern "C" fn imsg_read(imsgbuf: *mut imsgbuf) -> isize {
         // goto again => continue 'again
         'fail: {
             'again: loop {
-                if getdtablecount() + imsg_fd_overhead + ((CMSG_SPACE(size_of::<libc::c_int>() as u32) - CMSG_SPACE(0)) as i32 / size_of::<c_int>() as i32) >= getdtablesize() {
+                if getdtablecount()
+                    + imsg_fd_overhead
+                    + ((CMSG_SPACE(size_of::<libc::c_int>() as u32) - CMSG_SPACE(0)) as i32
+                        / size_of::<c_int>() as i32)
+                    >= getdtablesize()
+                {
                     errno!() = EAGAIN;
                     free(ifd as *mut c_void);
                     return -1;
@@ -154,7 +173,9 @@ pub unsafe extern "C" fn imsg_read(imsgbuf: *mut imsgbuf) -> isize {
                 let mut cmsg: *mut cmsghdr = CMSG_FIRSTHDR(&raw const msg);
                 while !cmsg.is_null() {
                     if (*cmsg).cmsg_level == SOL_SOCKET && (*cmsg).cmsg_type == SCM_RIGHTS {
-                        let j: i32 = (((cmsg as *mut c_char).add((*cmsg).cmsg_len).addr() - CMSG_DATA(cmsg).addr()) / size_of::<c_int>()) as i32;
+                        let j: i32 = (((cmsg as *mut c_char).add((*cmsg).cmsg_len).addr()
+                            - CMSG_DATA(cmsg).addr())
+                            / size_of::<c_int>()) as i32;
                         for i in 0..j {
                             let fd = *(CMSG_DATA(cmsg) as *mut c_int).add(i as usize);
                             if !ifd.is_null() {
@@ -192,7 +213,11 @@ pub unsafe extern "C" fn imsg_get(imsgbuf: *mut imsgbuf, imsg: *mut imsg) -> isi
             return 0;
         }
 
-        memcpy(&raw mut (*m).hdr as *mut c_void, (*imsgbuf).r.buf.as_ptr() as *const c_void, size_of::<imsg_hdr>());
+        memcpy(
+            &raw mut (*m).hdr as *mut c_void,
+            (*imsgbuf).r.buf.as_ptr() as *const c_void,
+            size_of::<imsg_hdr>(),
+        );
         if ((*m).hdr.len as usize) < IMSG_HEADER_SIZE || (*m).hdr.len > MAX_IMSGSIZE as u16 {
             errno!() = ERANGE;
             return -1;
@@ -226,7 +251,11 @@ pub unsafe extern "C" fn imsg_get(imsgbuf: *mut imsgbuf, imsg: *mut imsg) -> isi
 
         if ((*m).hdr.len as usize) < av {
             let left = av - (*m).hdr.len as usize;
-            memmove(&raw mut (*imsgbuf).r.buf as *mut c_void, (*imsgbuf).r.buf.as_ptr().add((*m).hdr.len as usize) as *const c_void, left);
+            memmove(
+                &raw mut (*imsgbuf).r.buf as *mut c_void,
+                (*imsgbuf).r.buf.as_ptr().add((*m).hdr.len as usize) as *const c_void,
+                left,
+            );
             (*imsgbuf).r.wpos = left;
         } else {
             (*imsgbuf).r.wpos = 0;
@@ -265,10 +294,14 @@ pub unsafe extern "C" fn imsg_get_data(imsg: *mut imsg, data: *mut c_void, len: 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn imsg_get_fd(imsg: *mut imsg) -> i32 { unsafe { std::ptr::replace(&raw mut (*imsg).fd, -1) } }
+pub unsafe extern "C" fn imsg_get_fd(imsg: *mut imsg) -> i32 {
+    unsafe { std::ptr::replace(&raw mut (*imsg).fd, -1) }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn imsg_get_id(imsg: *const imsg) -> u32 { unsafe { (*imsg).hdr.peerid } }
+pub unsafe extern "C" fn imsg_get_id(imsg: *const imsg) -> u32 {
+    unsafe { (*imsg).hdr.peerid }
+}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn imsg_get_len(imsg: *const imsg) -> usize {
@@ -281,13 +314,25 @@ pub unsafe extern "C" fn imsg_get_len(imsg: *const imsg) -> usize {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn imsg_get_pid(imsg: *const imsg) -> pid_t { unsafe { (*imsg).hdr.pid as pid_t } }
+pub unsafe extern "C" fn imsg_get_pid(imsg: *const imsg) -> pid_t {
+    unsafe { (*imsg).hdr.pid as pid_t }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn imsg_get_type(imsg: *const imsg) -> u32 { unsafe { (*imsg).hdr.type_ } }
+pub unsafe extern "C" fn imsg_get_type(imsg: *const imsg) -> u32 {
+    unsafe { (*imsg).hdr.type_ }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn imsg_compose(imsgbuf: *mut imsgbuf, type_: u32, id: u32, pid: pid_t, fd: c_int, data: *const c_void, datalen: usize) -> i32 {
+pub unsafe extern "C" fn imsg_compose(
+    imsgbuf: *mut imsgbuf,
+    type_: u32,
+    id: u32,
+    pid: pid_t,
+    fd: c_int,
+    data: *const c_void,
+    datalen: usize,
+) -> i32 {
     unsafe {
         let wbuf = imsg_create(imsgbuf, type_, id, pid, datalen);
         if wbuf.is_null() {
@@ -306,7 +351,15 @@ pub unsafe extern "C" fn imsg_compose(imsgbuf: *mut imsgbuf, type_: u32, id: u32
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn imsg_composev(imsgbuf: *mut imsgbuf, type_: u32, id: u32, pid: pid_t, fd: c_int, iov: *const iovec, iovcnt: c_int) -> c_int {
+pub unsafe extern "C" fn imsg_composev(
+    imsgbuf: *mut imsgbuf,
+    type_: u32,
+    id: u32,
+    pid: pid_t,
+    fd: c_int,
+    iov: *const iovec,
+    iovcnt: c_int,
+) -> c_int {
     unsafe {
         let mut datalen: usize = 0;
 
@@ -320,7 +373,12 @@ pub unsafe extern "C" fn imsg_composev(imsgbuf: *mut imsgbuf, type_: u32, id: u3
         }
 
         for i in 0..iovcnt {
-            if imsg_add(wbuf, (*iov.add(i as usize)).iov_base, (*iov.add(i as usize)).iov_len) == -1 {
+            if imsg_add(
+                wbuf,
+                (*iov.add(i as usize)).iov_base,
+                (*iov.add(i as usize)).iov_len,
+            ) == -1
+            {
                 return -1;
             }
         }
@@ -333,7 +391,13 @@ pub unsafe extern "C" fn imsg_composev(imsgbuf: *mut imsgbuf, type_: u32, id: u3
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn imsg_compose_ibuf(imsgbuf: *mut imsgbuf, type_: u32, id: u32, pid: pid_t, buf: *mut ibuf) -> i32 {
+pub unsafe extern "C" fn imsg_compose_ibuf(
+    imsgbuf: *mut imsgbuf,
+    type_: u32,
+    id: u32,
+    pid: pid_t,
+    buf: *mut ibuf,
+) -> i32 {
     unsafe {
         let mut hdrbuf: *mut ibuf = null_mut();
 
@@ -348,7 +412,11 @@ pub unsafe extern "C" fn imsg_compose_ibuf(imsgbuf: *mut imsgbuf, type_: u32, id
                 len: (ibuf_size(buf) + IMSG_HEADER_SIZE) as u16,
                 flags: 0,
                 peerid: id,
-                pid: if pid != 0 { pid as u32 } else { (*imsgbuf).pid as u32 },
+                pid: if pid != 0 {
+                    pid as u32
+                } else {
+                    (*imsgbuf).pid as u32
+                },
             };
 
             hdrbuf = ibuf_open(IMSG_HEADER_SIZE);
@@ -387,7 +455,13 @@ pub unsafe extern "C" fn imsg_forward(imsgbuf: *mut imsgbuf, msg: *mut imsg) -> 
             len = ibuf_size((*msg).buf);
         }
 
-        let wbuf = imsg_create(imsgbuf, (*msg).hdr.type_, (*msg).hdr.peerid, (*msg).hdr.pid as pid_t, len);
+        let wbuf = imsg_create(
+            imsgbuf,
+            (*msg).hdr.type_,
+            (*msg).hdr.peerid,
+            (*msg).hdr.pid as pid_t,
+            len,
+        );
         if wbuf.is_null() {
             return -1;
         }
@@ -403,7 +477,13 @@ pub unsafe extern "C" fn imsg_forward(imsgbuf: *mut imsgbuf, msg: *mut imsg) -> 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn imsg_create(imsgbuf: *mut imsgbuf, type_: u32, id: u32, pid: pid_t, mut datalen: usize) -> *mut ibuf {
+pub unsafe extern "C" fn imsg_create(
+    imsgbuf: *mut imsgbuf,
+    type_: u32,
+    id: u32,
+    pid: pid_t,
+    mut datalen: usize,
+) -> *mut ibuf {
     unsafe {
         datalen += IMSG_HEADER_SIZE;
         if datalen > MAX_IMSGSIZE {
@@ -415,7 +495,11 @@ pub unsafe extern "C" fn imsg_create(imsgbuf: *mut imsgbuf, type_: u32, id: u32,
             type_,
             flags: 0,
             peerid: id,
-            pid: if pid != 0 { pid as u32 } else { (*imsgbuf).pid as u32 },
+            pid: if pid != 0 {
+                pid as u32
+            } else {
+                (*imsgbuf).pid as u32
+            },
             len: 0, // TODO can be uninit
         };
 
@@ -457,7 +541,9 @@ pub unsafe extern "C" fn imsg_close(imsgbuf: *mut imsgbuf, msg: *mut ibuf) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn imsg_free(imsg: *mut imsg) { unsafe { ibuf_free((*imsg).buf) } }
+pub unsafe extern "C" fn imsg_free(imsg: *mut imsg) {
+    unsafe { ibuf_free((*imsg).buf) }
+}
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn imsg_dequeue_fd(imsgbuf: *mut imsgbuf) -> i32 {

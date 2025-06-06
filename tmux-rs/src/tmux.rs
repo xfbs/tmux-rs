@@ -12,8 +12,10 @@ unsafe extern "C" {
 
 use crate::compat::{S_ISDIR, fdforkpty::getptmfd, getprogname::getprogname, optarg, optind};
 use libc::{
-    CLOCK_MONOTONIC, CLOCK_REALTIME, CODESET, EEXIST, F_GETFL, F_SETFL, LC_CTYPE, LC_TIME, O_NONBLOCK, PATH_MAX, S_IRWXO, S_IRWXU, X_OK, access, clock_gettime, fcntl, getcwd, getenv, getopt, getpwuid, getuid, lstat, mkdir, nl_langinfo, printf, realpath, setlocale, stat, strcasecmp, strcasestr,
-    strchr, strcspn, strerror, strncmp, strrchr, strstr, timespec,
+    CLOCK_MONOTONIC, CLOCK_REALTIME, CODESET, EEXIST, F_GETFL, F_SETFL, LC_CTYPE, LC_TIME,
+    O_NONBLOCK, PATH_MAX, S_IRWXO, S_IRWXU, X_OK, access, clock_gettime, fcntl, getcwd, getenv,
+    getopt, getpwuid, getuid, lstat, mkdir, nl_langinfo, printf, realpath, setlocale, stat,
+    strcasecmp, strcasestr, strchr, strcspn, strerror, strncmp, strrchr, strstr, timespec,
 };
 
 #[unsafe(no_mangle)]
@@ -79,12 +81,20 @@ pub unsafe extern "C" fn checkshell(shell: *const c_char) -> c_int {
 pub unsafe extern "C" fn areshell(shell: *const c_char) -> c_int {
     unsafe {
         let ptr = strrchr(shell, b'/' as c_int);
-        let ptr = if !ptr.is_null() { ptr.wrapping_add(1) } else { shell };
+        let ptr = if !ptr.is_null() {
+            ptr.wrapping_add(1)
+        } else {
+            shell
+        };
         let mut progname = getprogname();
         if *progname == b'-' as c_char {
             progname = progname.wrapping_add(1);
         }
-        if libc::strcmp(ptr, progname) == 0 { 1 } else { 0 }
+        if libc::strcmp(ptr, progname) == 0 {
+            1
+        } else {
+            0
+        }
     }
 }
 
@@ -104,7 +114,13 @@ pub unsafe extern "C" fn expand_path(path: *const c_char, home: *const c_char) -
 
         if *path == b'$' as c_char {
             end = strchr(path, b'/' as i32);
-            let name = if end.is_null() { xstrdup(path.add(1)).cast().as_ptr() } else { xstrndup(path.add(1), end.addr() - path.addr() - 1).cast().as_ptr() };
+            let name = if end.is_null() {
+                xstrdup(path.add(1)).cast().as_ptr()
+            } else {
+                xstrndup(path.add(1), end.addr() - path.addr() - 1)
+                    .cast()
+                    .as_ptr()
+            };
             let mut value = environ_find(global_environ, name);
             free_(name);
             if value.is_null() {
@@ -122,7 +138,12 @@ pub unsafe extern "C" fn expand_path(path: *const c_char, home: *const c_char) -
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn expand_paths(s: *const c_char, paths: *mut *mut *mut c_char, n: *mut u32, ignore_errors: i32) {
+unsafe extern "C" fn expand_paths(
+    s: *const c_char,
+    paths: *mut *mut *mut c_char,
+    n: *mut u32,
+    ignore_errors: i32,
+) {
     unsafe {
         let home = find_home();
         let mut next: *const c_char = null_mut();
@@ -146,7 +167,12 @@ unsafe extern "C" fn expand_paths(s: *const c_char, paths: *mut *mut *mut c_char
                 continue;
             }
             if realpath(expanded, resolved.as_mut_ptr()).is_null() {
-                log_debug!("{}: realpath(\"{}\") failed: {}", func, _s(expanded), _s(strerror(errno!())),);
+                log_debug!(
+                    "{}: realpath(\"{}\") failed: {}",
+                    func,
+                    _s(expanded),
+                    _s(strerror(errno!())),
+                );
                 if ignore_errors != 0 {
                     free_(expanded);
                     continue;
@@ -177,7 +203,10 @@ unsafe extern "C" fn expand_paths(s: *const c_char, paths: *mut *mut *mut c_char
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn make_label(mut label: *const c_char, cause: *mut *mut c_char) -> *const c_char {
+unsafe extern "C" fn make_label(
+    mut label: *const c_char,
+    cause: *mut *mut c_char,
+) -> *const c_char {
     let mut paths: *mut *mut c_char = null_mut();
     let mut path: *mut c_char = null_mut();
     let mut base: *mut c_char = null_mut();
@@ -206,11 +235,21 @@ unsafe extern "C" fn make_label(mut label: *const c_char, cause: *mut *mut c_cha
             xasprintf(&raw mut base, c"%s/tmux-%ld".as_ptr(), path, uid as c_long);
             free_(path);
             if mkdir(base, S_IRWXU) != 0 && errno!() != EEXIST {
-                xasprintf(cause, c"couldn't create directory %s (%s)".as_ptr(), base, strerror(errno!()));
+                xasprintf(
+                    cause,
+                    c"couldn't create directory %s (%s)".as_ptr(),
+                    base,
+                    strerror(errno!()),
+                );
                 break 'fail;
             }
             if lstat(base, &raw mut sb) != 0 {
-                xasprintf(cause, c"couldn't read directory %s (%s)".as_ptr(), base, strerror(errno!()));
+                xasprintf(
+                    cause,
+                    c"couldn't read directory %s (%s)".as_ptr(),
+                    base,
+                    strerror(errno!()),
+                );
                 break 'fail;
             }
             if !S_ISDIR(sb.st_mode) {
@@ -238,7 +277,11 @@ pub unsafe extern "C" fn shell_argv0(shell: *const c_char, is_login: c_int) -> *
         let mut argv0 = null_mut();
 
         let slash = strrchr(shell, b'/' as _);
-        let name = if !slash.is_null() && *slash.add(1) != b'\0' as c_char { slash.add(1) } else { shell };
+        let name = if !slash.is_null() && *slash.add(1) != b'\0' as c_char {
+            slash.add(1)
+        } else {
+            shell
+        };
 
         if is_login != 0 {
             xasprintf(&raw mut argv0, c"-%s".as_ptr(), name);
@@ -294,7 +337,12 @@ pub unsafe extern "C" fn sig2name(signo: i32) -> *mut c_char {
                     }
                 }
         */
-        xsnprintf(&raw mut s as _, size_of::<[c_char; 11]>(), c"%d".as_ptr(), signo);
+        xsnprintf(
+            &raw mut s as _,
+            size_of::<[c_char; 11]>(),
+            c"%d".as_ptr(),
+            signo,
+        );
         &raw mut s as _
     }
 }
@@ -380,7 +428,9 @@ pub unsafe extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *m
         let mut fflag: i32 = 0;
         let mut flags: client_flag = client_flag::empty();
 
-        if setlocale(LC_CTYPE, c"en_US.UTF-8".as_ptr()).is_null() && setlocale(LC_CTYPE, c"C.UTF-8".as_ptr()).is_null() {
+        if setlocale(LC_CTYPE, c"en_US.UTF-8".as_ptr()).is_null()
+            && setlocale(LC_CTYPE, c"C.UTF-8".as_ptr()).is_null()
+        {
             if setlocale(LC_CTYPE, c"".as_ptr()).is_null() {
                 errx(1, c"invalid LC_ALL, LC_CTYPE or LANG".as_ptr());
             }
@@ -409,7 +459,12 @@ pub unsafe extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *m
         if !cwd.is_null() {
             environ_set(global_environ, c"PWD".as_ptr(), 0, c"%s".as_ptr(), cwd);
         }
-        expand_paths(TMUX_CONF.as_ptr(), &raw mut cfg_files, &raw mut cfg_nfiles, 1);
+        expand_paths(
+            TMUX_CONF.as_ptr(),
+            &raw mut cfg_files,
+            &raw mut cfg_nfiles,
+            1,
+        );
 
         let mut opt;
         while ({
@@ -435,7 +490,8 @@ pub unsafe extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *m
                         }
                         cfg_nfiles = 0;
                     }
-                    cfg_files = xreallocarray_::<*mut c_char>(cfg_files, cfg_nfiles as usize + 1).as_ptr();
+                    cfg_files =
+                        xreallocarray_::<*mut c_char>(cfg_files, cfg_nfiles as usize + 1).as_ptr();
                     *cfg_files.add(cfg_nfiles as usize) = xstrdup(optarg).cast().as_ptr();
                     cfg_nfiles += 1;
                     cfg_quiet = 0;
@@ -501,7 +557,9 @@ pub unsafe extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *m
             if s.is_null() || *s == b'\0' as c_char {
                 s = c"".as_ptr();
             }
-            if !strcasestr(s, c"UTF-8".as_ptr()).is_null() || !strcasestr(s, c"UTF8".as_ptr()).is_null() {
+            if !strcasestr(s, c"UTF-8".as_ptr()).is_null()
+                || !strcasestr(s, c"UTF8".as_ptr()).is_null()
+            {
                 flags |= client_flag::UTF8;
             }
         }
@@ -525,7 +583,13 @@ pub unsafe extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *m
         }
 
         // The default shell comes from SHELL or from the user's passwd entry if available.
-        options_set_string(global_s_options, c"default-shell".as_ptr(), 0, c"%s".as_ptr(), getshell());
+        options_set_string(
+            global_s_options,
+            c"default-shell".as_ptr(),
+            0,
+            c"%s".as_ptr(),
+            getshell(),
+        );
 
         // Override keys to vi if VISUAL or EDITOR are set.
         let mut s = getenv(c"VISUAL".as_ptr());
@@ -539,7 +603,11 @@ pub unsafe extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *m
             if !strrchr(s, b'/' as _).is_null() {
                 s = strrchr(s, b'/' as _).add(1);
             }
-            let keys = if !strstr(s, c"vi".as_ptr()).is_null() { MODEKEY_VI } else { MODEKEY_EMACS };
+            let keys = if !strstr(s, c"vi".as_ptr()).is_null() {
+                MODEKEY_VI
+            } else {
+                MODEKEY_EMACS
+            };
             options_set_number(global_s_options, c"status-keys".as_ptr(), keys as _);
             options_set_number(global_w_options, c"mode-keys".as_ptr(), keys as _);
         }

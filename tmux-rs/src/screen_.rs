@@ -179,7 +179,9 @@ pub unsafe extern "C" fn screen_reset_tabs(s: *mut screen) {
     }
 }
 
-unsafe fn bit_alloc(nbits: u32) -> *mut u8 { unsafe { libc::calloc(nbits.div_ceil(8) as usize, 1).cast() } }
+unsafe fn bit_alloc(nbits: u32) -> *mut u8 {
+    unsafe { libc::calloc(nbits.div_ceil(8) as usize, 1).cast() }
+}
 unsafe fn bit_set(bits: *mut u8, i: u32) {
     unsafe {
         let byte_index = i / 8;
@@ -190,7 +192,11 @@ unsafe fn bit_set(bits: *mut u8, i: u32) {
 
 /* Set screen cursor style and mode. */
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn screen_set_cursor_style(style: u32, cstyle: *mut screen_cursor_style, mode: *mut i32) {
+pub unsafe extern "C" fn screen_set_cursor_style(
+    style: u32,
+    cstyle: *mut screen_cursor_style,
+    mode: *mut i32,
+) {
     unsafe {
         match style {
             0 => *cstyle = screen_cursor_style::SCREEN_CURSOR_DEFAULT,
@@ -249,7 +255,11 @@ pub unsafe extern "C" fn screen_set_title(s: *mut screen, title: *const c_char) 
 pub unsafe extern "C" fn screen_set_path(s: *mut screen, path: *const c_char) {
     unsafe {
         free_((*s).path);
-        utf8_stravis(&mut (*s).path, path, VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL);
+        utf8_stravis(
+            &mut (*s).path,
+            path,
+            VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL,
+        );
     }
 }
 
@@ -291,7 +301,14 @@ pub unsafe extern "C" fn screen_pop_title(s: *mut screen) {
 
 /// Resize screen with options.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn screen_resize_cursor(s: *mut screen, sx: u32, sy: u32, mut reflow: i32, eat_empty: i32, cursor: i32) {
+pub unsafe extern "C" fn screen_resize_cursor(
+    s: *mut screen,
+    sx: u32,
+    sy: u32,
+    mut reflow: i32,
+    eat_empty: i32,
+    cursor: i32,
+) {
     let __func__ = "screen_resize_cursor";
     unsafe {
         let mut cx = (*s).cx;
@@ -301,7 +318,18 @@ pub unsafe extern "C" fn screen_resize_cursor(s: *mut screen, sx: u32, sy: u32, 
             screen_write_free_list(s);
         }
 
-        log_debug!("{}: new size {}{}, now {}x{} (cursor {},{} = {},{})", __func__, sx, sy, screen_size_x(s), screen_size_y(s), (*s).cx, (*s).cy, cx, cy,);
+        log_debug!(
+            "{}: new size {}{}, now {}x{} (cursor {},{} = {},{})",
+            __func__,
+            sx,
+            sy,
+            screen_size_x(s),
+            screen_size_y(s),
+            (*s).cx,
+            (*s).cy,
+            cx,
+            cy,
+        );
 
         let sx = if sx < 1 { 1 } else { sx };
         let sy = if sy < 1 { 1 } else { sy };
@@ -332,7 +360,14 @@ pub unsafe extern "C" fn screen_resize_cursor(s: *mut screen, sx: u32, sy: u32, 
             (*s).cy = 0;
         }
 
-        log_debug!("{}: cursor finished at {},{} = {},{}", __func__, (*s).cx, (*s).cy, cx, cy,);
+        log_debug!(
+            "{}: cursor finished at {},{} = {},{}",
+            __func__,
+            (*s).cx,
+            (*s).cy,
+            cx,
+            cy,
+        );
 
         if !(*s).write_list.is_null() {
             screen_write_make_list(s);
@@ -436,7 +471,16 @@ unsafe extern "C" fn screen_resize_y(s: *mut screen, sy: u32, eat_empty: i32, cy
 
 /// Set selection.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn screen_set_selection(s: *mut screen, sx: u32, sy: u32, ex: u32, ey: u32, rectangle: u32, modekeys: i32, gc: *mut grid_cell) {
+pub unsafe extern "C" fn screen_set_selection(
+    s: *mut screen,
+    sx: u32,
+    sy: u32,
+    ex: u32,
+    ey: u32,
+    rectangle: u32,
+    modekeys: i32,
+    gc: *mut grid_cell,
+) {
     unsafe {
         if (*s).sel.is_null() {
             (*s).sel = xcalloc1::<screen_sel>() as *mut screen_sel;
@@ -603,7 +647,11 @@ pub unsafe extern "C" fn screen_check_selection(s: *mut screen, px: u32, py: u32
 
 /// Get selected grid cell.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn screen_select_cell(s: *mut screen, dst: *mut grid_cell, src: *const grid_cell) {
+pub unsafe extern "C" fn screen_select_cell(
+    s: *mut screen,
+    dst: *mut grid_cell,
+    src: *const grid_cell,
+) {
     unsafe {
         if (*s).sel.is_null() || (*(*s).sel).hidden != 0 {
             return;
@@ -620,14 +668,27 @@ pub unsafe extern "C" fn screen_select_cell(s: *mut screen, dst: *mut grid_cell,
 
 /// Reflow wrapped lines.
 #[unsafe(no_mangle)]
-unsafe extern "C" fn screen_reflow(s: *mut screen, new_x: u32, cx: *mut u32, cy: *mut u32, cursor: i32) {
+unsafe extern "C" fn screen_reflow(
+    s: *mut screen,
+    new_x: u32,
+    cx: *mut u32,
+    cy: *mut u32,
+    cursor: i32,
+) {
     unsafe {
         let mut wx: u32 = 0;
         let mut wy: u32 = 0;
 
         if cursor != 0 {
             grid_wrap_position((*s).grid, *cx, *cy, &mut wx, &mut wy);
-            log_debug!("{}: cursor {},{} is {},{}", "screen_reflow", *cx, *cy, wx, wy,);
+            log_debug!(
+                "{}: cursor {},{} is {},{}",
+                "screen_reflow",
+                *cx,
+                *cy,
+                wx,
+                wy,
+            );
         }
 
         grid_reflow((*s).grid, new_x);
@@ -703,7 +764,13 @@ pub unsafe extern "C" fn screen_alternate_off(s: *mut screen, gc: *mut grid_cell
         }
 
         // Restore the saved grid.
-        grid_duplicate_lines((*s).grid, screen_hsize(s), (*s).saved_grid, 0, (*(*s).saved_grid).sy);
+        grid_duplicate_lines(
+            (*s).grid,
+            screen_hsize(s),
+            (*s).saved_grid,
+            0,
+            (*(*s).saved_grid).sy,
+        );
 
         // Turn history back on (so resize can use it) and then resize back to
         // the current size.
@@ -756,16 +823,28 @@ pub unsafe extern "C" fn screen_mode_to_string(mode: c_int) -> *const c_char {
             strlcat(addr_of_mut!(TMP).cast(), c"WRAP,".as_ptr(), TMP_LEN);
         }
         if mode & MODE_MOUSE_STANDARD != 0 {
-            strlcat(addr_of_mut!(TMP).cast(), c"MOUSE_STANDARD,".as_ptr(), TMP_LEN);
+            strlcat(
+                addr_of_mut!(TMP).cast(),
+                c"MOUSE_STANDARD,".as_ptr(),
+                TMP_LEN,
+            );
         }
         if mode & MODE_MOUSE_BUTTON != 0 {
             strlcat(addr_of_mut!(TMP).cast(), c"MOUSE_BUTTON,".as_ptr(), TMP_LEN);
         }
         if mode & MODE_CURSOR_BLINKING != 0 {
-            strlcat(addr_of_mut!(TMP).cast(), c"CURSOR_BLINKING,".as_ptr(), TMP_LEN);
+            strlcat(
+                addr_of_mut!(TMP).cast(),
+                c"CURSOR_BLINKING,".as_ptr(),
+                TMP_LEN,
+            );
         }
         if mode & MODE_CURSOR_VERY_VISIBLE != 0 {
-            strlcat(addr_of_mut!(TMP).cast(), c"CURSOR_VERY_VISIBLE,".as_ptr(), TMP_LEN);
+            strlcat(
+                addr_of_mut!(TMP).cast(),
+                c"CURSOR_VERY_VISIBLE,".as_ptr(),
+                TMP_LEN,
+            );
         }
         if mode & MODE_MOUSE_UTF8 != 0 {
             strlcat(addr_of_mut!(TMP).cast(), c"MOUSE_UTF8,".as_ptr(), TMP_LEN);
@@ -789,10 +868,18 @@ pub unsafe extern "C" fn screen_mode_to_string(mode: c_int) -> *const c_char {
             strlcat(addr_of_mut!(TMP).cast(), c"CRLF,".as_ptr(), TMP_LEN);
         }
         if mode & MODE_KEYS_EXTENDED != 0 {
-            strlcat(addr_of_mut!(TMP).cast(), c"KEYS_EXTENDED,".as_ptr(), TMP_LEN);
+            strlcat(
+                addr_of_mut!(TMP).cast(),
+                c"KEYS_EXTENDED,".as_ptr(),
+                TMP_LEN,
+            );
         }
         if mode & MODE_KEYS_EXTENDED_2 != 0 {
-            strlcat(addr_of_mut!(TMP).cast(), c"KEYS_EXTENDED_2,".as_ptr(), TMP_LEN);
+            strlcat(
+                addr_of_mut!(TMP).cast(),
+                c"KEYS_EXTENDED_2,".as_ptr(),
+                TMP_LEN,
+            );
         }
 
         let len = strlen(addr_of!(TMP).cast());

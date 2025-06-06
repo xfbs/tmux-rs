@@ -25,7 +25,9 @@ unsafe extern "C" fn alerts_timer(_fd: i32, _events: i16, arg: *mut c_void) {
 
 pub unsafe extern "C" fn alerts_callback(_fd: c_int, _events: c_short, arg: *mut c_void) {
     unsafe {
-        for w in tailq_foreach::<_, crate::discr_alerts_entry>(&raw mut alerts_list).map(NonNull::as_ptr) {
+        for w in
+            tailq_foreach::<_, crate::discr_alerts_entry>(&raw mut alerts_list).map(NonNull::as_ptr)
+        {
             unsafe {
                 let alerts = alerts_check_all(w);
 
@@ -146,7 +148,13 @@ pub unsafe extern "C" fn alerts_queue(w: NonNull<window>, flags: window_flag) {
 
             if alerts_fired == 0 {
                 log_debug!("alerts check queued (by @{})", (*w).id);
-                event_once(-1, EV_TIMEOUT, Some(alerts_callback), null_mut(), null_mut());
+                event_once(
+                    -1,
+                    EV_TIMEOUT,
+                    Some(alerts_callback),
+                    null_mut(),
+                    null_mut(),
+                );
                 alerts_fired = 1;
             }
         }
@@ -166,7 +174,9 @@ unsafe fn alerts_check_bell(w: *mut window) -> window_flag {
             (*(*wl.as_ptr()).session).flags &= !SESSION_ALERTED;
         }
 
-        for wl in tailq_foreach::<_, crate::discr_wentry>(&raw mut (*w).winlinks).map(NonNull::as_ptr) {
+        for wl in
+            tailq_foreach::<_, crate::discr_wentry>(&raw mut (*w).winlinks).map(NonNull::as_ptr)
+        {
             /*
              * Bells are allowed even if there is an existing bell (so do
              * not check WINLINK_BELL).
@@ -201,11 +211,15 @@ unsafe fn alerts_check_activity(w: *mut window) -> window_flag {
             return window_flag::empty();
         }
 
-        for wl in tailq_foreach::<_, crate::discr_wentry>(&raw mut (*w).winlinks).map(NonNull::as_ptr) {
+        for wl in
+            tailq_foreach::<_, crate::discr_wentry>(&raw mut (*w).winlinks).map(NonNull::as_ptr)
+        {
             (*(*wl).session).flags &= !SESSION_ALERTED;
         }
 
-        for wl in tailq_foreach::<_, crate::discr_wentry>(&raw mut (*w).winlinks).map(NonNull::as_ptr) {
+        for wl in
+            tailq_foreach::<_, crate::discr_wentry>(&raw mut (*w).winlinks).map(NonNull::as_ptr)
+        {
             let s = (*wl).session;
             if (*s).curw != wl || (*s).attached == 0 {
                 (*wl).flags |= WINLINK_ACTIVITY;
@@ -236,11 +250,15 @@ unsafe fn alerts_check_silence(w: *mut window) -> window_flag {
             return window_flag::empty();
         }
 
-        for wl in tailq_foreach::<_, crate::discr_wentry>(&raw mut (*w).winlinks).map(NonNull::as_ptr) {
+        for wl in
+            tailq_foreach::<_, crate::discr_wentry>(&raw mut (*w).winlinks).map(NonNull::as_ptr)
+        {
             (*(*wl).session).flags &= !SESSION_ALERTED;
         }
 
-        for wl in tailq_foreach::<_, crate::discr_wentry>(&raw mut (*w).winlinks).map(NonNull::as_ptr) {
+        for wl in
+            tailq_foreach::<_, crate::discr_wentry>(&raw mut (*w).winlinks).map(NonNull::as_ptr)
+        {
             if (*wl).flags & WINLINK_SILENCE != 0 {
                 continue;
             }

@@ -57,11 +57,21 @@ unsafe extern "C" fn cmd_copy_mode_exec(self_: *mut cmd, item: *mut cmdq_item) -
         }
 
         if cmd_get_entry(self_) == &raw mut cmd_clock_mode_entry {
-            window_pane_set_mode(wp, null_mut(), &raw mut window_clock_mode, null_mut(), null_mut());
+            window_pane_set_mode(
+                wp,
+                null_mut(),
+                &raw mut window_clock_mode,
+                null_mut(),
+                null_mut(),
+            );
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        let swp = if args_has(args, b's') != 0 { (*source).wp } else { wp };
+        let swp = if args_has(args, b's') != 0 {
+            (*source).wp
+        } else {
+            wp
+        };
         if window_pane_set_mode(wp, swp, &raw mut window_copy_mode, null_mut(), args) == 0 {
             if args_has(args, b'M') != 0 {
                 window_copy_start_drag(c, &raw mut (*event).m);

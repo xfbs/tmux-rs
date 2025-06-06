@@ -43,7 +43,11 @@ unsafe extern "C" fn cmd_show_environment_escape(envent: *mut environ_entry) -> 
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn cmd_show_environment_print(self_: *mut cmd, item: *mut cmdq_item, envent: *mut environ_entry) {
+unsafe extern "C" fn cmd_show_environment_print(
+    self_: *mut cmd,
+    item: *mut cmdq_item,
+    envent: *mut environ_entry,
+) {
     unsafe {
         let mut args = cmd_get_args(self_);
         let mut escaped = null_mut();
@@ -66,7 +70,13 @@ unsafe extern "C" fn cmd_show_environment_print(self_: *mut cmd, item: *mut cmdq
 
         if (*envent).value.is_some() {
             escaped = cmd_show_environment_escape(envent);
-            cmdq_print(item, c"%s=\"%s\"; export %s;".as_ptr(), (*envent).name, escaped, (*envent).name);
+            cmdq_print(
+                item,
+                c"%s=\"%s\"; export %s;".as_ptr(),
+                (*envent).name,
+                escaped,
+                (*envent).name,
+            );
             free_(escaped);
         } else {
             cmdq_print(item, c"unset %s;".as_ptr(), (*envent).name);
@@ -75,7 +85,10 @@ unsafe extern "C" fn cmd_show_environment_print(self_: *mut cmd, item: *mut cmdq
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn cmd_show_environment_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe extern "C" fn cmd_show_environment_exec(
+    self_: *mut cmd,
+    item: *mut cmdq_item,
+) -> cmd_retval {
     unsafe {
         let mut args = cmd_get_args(self_);
         let mut target = cmdq_get_target(item);

@@ -24,7 +24,10 @@ pub struct options_array_item {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_array_cmp(a1: *const options_array_item, a2: *const options_array_item) -> c_int {
+pub unsafe extern "C" fn options_array_cmp(
+    a1: *const options_array_item,
+    a2: *const options_array_item,
+) -> c_int {
     unsafe {
         if (*a1).index < (*a2).index {
             return -1;
@@ -57,7 +60,12 @@ pub struct options {
 #[allow(non_snake_case)]
 #[inline]
 #[unsafe(no_mangle)]
-pub fn OPTIONS_IS_STRING(o: *const options_entry) -> bool { unsafe { (*o).tableentry.is_null() || (*(*o).tableentry).type_ == options_table_type::OPTIONS_TABLE_STRING } }
+pub fn OPTIONS_IS_STRING(o: *const options_entry) -> bool {
+    unsafe {
+        (*o).tableentry.is_null()
+            || (*(*o).tableentry).type_ == options_table_type::OPTIONS_TABLE_STRING
+    }
+}
 
 #[allow(non_snake_case)]
 #[inline]
@@ -76,17 +84,28 @@ pub fn OPTIONS_IS_NUMBER(o: *const options_entry) -> bool {
 #[allow(non_snake_case)]
 #[inline]
 #[unsafe(no_mangle)]
-pub fn OPTIONS_IS_COMMAND(o: *const options_entry) -> bool { unsafe { !(*o).tableentry.is_null() && (*(*o).tableentry).type_ == options_table_type::OPTIONS_TABLE_COMMAND } }
+pub fn OPTIONS_IS_COMMAND(o: *const options_entry) -> bool {
+    unsafe {
+        !(*o).tableentry.is_null()
+            && (*(*o).tableentry).type_ == options_table_type::OPTIONS_TABLE_COMMAND
+    }
+}
 
 #[allow(non_snake_case)]
 #[inline]
 #[unsafe(no_mangle)]
-pub fn OPTIONS_IS_ARRAY(o: *const options_entry) -> bool { unsafe { !(*o).tableentry.is_null() && ((*(*o).tableentry).flags & OPTIONS_TABLE_IS_ARRAY) != 0 } }
+pub fn OPTIONS_IS_ARRAY(o: *const options_entry) -> bool {
+    unsafe {
+        !(*o).tableentry.is_null() && ((*(*o).tableentry).flags & OPTIONS_TABLE_IS_ARRAY) != 0
+    }
+}
 
 RB_GENERATE_STATIC!(options_tree, options_entry, entry, options_cmp);
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_cmp(lhs: *const options_entry, rhs: *const options_entry) -> i32 { unsafe { libc::strcmp((*lhs).name, (*rhs).name) } }
+pub unsafe extern "C" fn options_cmp(lhs: *const options_entry, rhs: *const options_entry) -> i32 {
+    unsafe { libc::strcmp((*lhs).name, (*rhs).name) }
+}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn options_map_name(name: *const c_char) -> *const c_char {
@@ -103,7 +122,10 @@ pub unsafe extern "C" fn options_map_name(name: *const c_char) -> *const c_char 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_parent_table_entry(oo: *mut options, s: *const c_char) -> *const options_table_entry {
+pub unsafe extern "C" fn options_parent_table_entry(
+    oo: *mut options,
+    s: *const c_char,
+) -> *const options_table_entry {
     unsafe {
         if (*oo).parent.is_null() {
             fatalx_c(c"no parent options for %s".as_ptr(), s);
@@ -131,7 +153,11 @@ pub unsafe extern "C" fn options_value_free(o: *const options_entry, ov: *mut op
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_value_to_string(o: *mut options_entry, ov: *mut options_value, numeric: i32) -> *mut c_char {
+pub unsafe extern "C" fn options_value_to_string(
+    o: *mut options_entry,
+    ov: *mut options_value,
+    numeric: i32,
+) -> *mut c_char {
     unsafe {
         let mut s: *mut c_char = null_mut();
 
@@ -154,7 +180,12 @@ pub unsafe extern "C" fn options_value_to_string(o: *mut options_entry, ov: *mut
                     if numeric != 0 {
                         xasprintf(&mut s, c"%lld".as_ptr(), (*ov).number);
                     } else {
-                        s = xstrdup(if (*ov).number != 0 { c"on".as_ptr() } else { c"off".as_ptr() }).as_ptr();
+                        s = xstrdup(if (*ov).number != 0 {
+                            c"on".as_ptr()
+                        } else {
+                            c"off".as_ptr()
+                        })
+                        .as_ptr();
                     }
                 }
                 options_table_type::OPTIONS_TABLE_CHOICE => {
@@ -196,7 +227,9 @@ pub unsafe extern "C" fn options_free(oo: *mut options) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_get_parent(oo: *mut options) -> *mut options { unsafe { (*oo).parent } }
+pub unsafe extern "C" fn options_get_parent(oo: *mut options) -> *mut options {
+    unsafe { (*oo).parent }
+}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn options_set_parent(oo: *mut options, parent: *mut options) {
@@ -206,13 +239,20 @@ pub unsafe extern "C" fn options_set_parent(oo: *mut options, parent: *mut optio
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_first(oo: *mut options) -> *mut options_entry { unsafe { rb_min(&raw mut (*oo).tree) } }
+pub unsafe extern "C" fn options_first(oo: *mut options) -> *mut options_entry {
+    unsafe { rb_min(&raw mut (*oo).tree) }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_next(o: *mut options_entry) -> *mut options_entry { unsafe { rb_next(o) } }
+pub unsafe extern "C" fn options_next(o: *mut options_entry) -> *mut options_entry {
+    unsafe { rb_next(o) }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_get_only(oo: *mut options, name: *const c_char) -> *mut options_entry {
+pub unsafe extern "C" fn options_get_only(
+    oo: *mut options,
+    name: *const c_char,
+) -> *mut options_entry {
     unsafe {
         let mut o = options_entry {
             name,
@@ -230,7 +270,10 @@ pub unsafe extern "C" fn options_get_only(oo: *mut options, name: *const c_char)
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_get(mut oo: *mut options, name: *const c_char) -> *mut options_entry {
+pub unsafe extern "C" fn options_get(
+    mut oo: *mut options,
+    name: *const c_char,
+) -> *mut options_entry {
     unsafe {
         let mut o = options_get_only(oo, name);
         while o.is_null() {
@@ -261,7 +304,10 @@ pub unsafe fn options_get_(mut oo: *mut options, name: &CStr) -> *mut options_en
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_empty(oo: *mut options, oe: *const options_table_entry) -> *mut options_entry {
+pub unsafe extern "C" fn options_empty(
+    oo: *mut options,
+    oe: *const options_table_entry,
+) -> *mut options_entry {
     unsafe {
         let o = options_add(oo, (*oe).name);
         (*o).tableentry = oe;
@@ -274,7 +320,10 @@ pub unsafe extern "C" fn options_empty(oo: *mut options, oe: *const options_tabl
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_default(oo: *mut options, oe: *const options_table_entry) -> *mut options_entry {
+pub unsafe extern "C" fn options_default(
+    oo: *mut options,
+    oe: *const options_table_entry,
+) -> *mut options_entry {
     unsafe {
         let o = options_empty(oo, oe);
         let ov = &raw mut (*o).value;
@@ -305,19 +354,32 @@ pub unsafe extern "C" fn options_default(oo: *mut options, oe: *const options_ta
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_default_to_string(oe: *const options_table_entry) -> NonNull<c_char> {
+pub unsafe extern "C" fn options_default_to_string(
+    oe: *const options_table_entry,
+) -> NonNull<c_char> {
     unsafe {
         match (*oe).type_ {
-            options_table_type::OPTIONS_TABLE_STRING | options_table_type::OPTIONS_TABLE_COMMAND => xstrdup((*oe).default_str),
+            options_table_type::OPTIONS_TABLE_STRING
+            | options_table_type::OPTIONS_TABLE_COMMAND => xstrdup((*oe).default_str),
             options_table_type::OPTIONS_TABLE_NUMBER => {
                 let mut s = null_mut();
                 xasprintf(&mut s, c"%lld".as_ptr(), (*oe).default_num);
                 NonNull::new(s).unwrap()
             }
-            options_table_type::OPTIONS_TABLE_KEY => xstrdup(key_string_lookup_key((*oe).default_num as u64, 0)),
-            options_table_type::OPTIONS_TABLE_COLOUR => xstrdup(colour_tostring((*oe).default_num as i32)),
-            options_table_type::OPTIONS_TABLE_FLAG => xstrdup(if (*oe).default_num != 0 { c"on".as_ptr() } else { c"off".as_ptr() } as *const c_char),
-            options_table_type::OPTIONS_TABLE_CHOICE => xstrdup(*(*oe).choices.add((*oe).default_num as usize)),
+            options_table_type::OPTIONS_TABLE_KEY => {
+                xstrdup(key_string_lookup_key((*oe).default_num as u64, 0))
+            }
+            options_table_type::OPTIONS_TABLE_COLOUR => {
+                xstrdup(colour_tostring((*oe).default_num as i32))
+            }
+            options_table_type::OPTIONS_TABLE_FLAG => xstrdup(if (*oe).default_num != 0 {
+                c"on".as_ptr()
+            } else {
+                c"off".as_ptr()
+            } as *const c_char),
+            options_table_type::OPTIONS_TABLE_CHOICE => {
+                xstrdup(*(*oe).choices.add((*oe).default_num as usize))
+            }
         }
     }
 }
@@ -356,13 +418,19 @@ pub unsafe extern "C" fn options_remove(o: *mut options_entry) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_name(o: *mut options_entry) -> *const c_char { unsafe { (*o).name } }
+pub unsafe extern "C" fn options_name(o: *mut options_entry) -> *const c_char {
+    unsafe { (*o).name }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_owner(o: *mut options_entry) -> *mut options { unsafe { (*o).owner } }
+pub unsafe extern "C" fn options_owner(o: *mut options_entry) -> *mut options {
+    unsafe { (*o).owner }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_table_entry(o: *mut options_entry) -> *const options_table_entry { unsafe { (*o).tableentry } }
+pub unsafe extern "C" fn options_table_entry(o: *mut options_entry) -> *const options_table_entry {
+    unsafe { (*o).tableentry }
+}
 
 unsafe fn options_array_item(o: *mut options_entry, idx: c_uint) -> *mut options_array_item {
     unsafe {
@@ -422,7 +490,13 @@ pub unsafe extern "C" fn options_array_get(o: *mut options_entry, idx: u32) -> *
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_array_set(o: *mut options_entry, idx: u32, value: *const c_char, append: i32, cause: *mut *mut c_char) -> i32 {
+pub unsafe extern "C" fn options_array_set(
+    o: *mut options_entry,
+    idx: u32,
+    value: *const c_char,
+    append: i32,
+    cause: *mut *mut c_char,
+) -> i32 {
     unsafe {
         if !OPTIONS_IS_ARRAY(o) {
             if !cause.is_null() {
@@ -482,7 +556,9 @@ pub unsafe extern "C" fn options_array_set(o: *mut options_entry, idx: u32, valu
             return 0;
         }
 
-        if !(*o).tableentry.is_null() && (*(*o).tableentry).type_ == options_table_type::OPTIONS_TABLE_COLOUR {
+        if !(*o).tableentry.is_null()
+            && (*(*o).tableentry).type_ == options_table_type::OPTIONS_TABLE_COLOUR
+        {
             let number = colour_fromstring(value);
             if number == -1 {
                 xasprintf(cause, c"bad colour: %s".as_ptr(), value);
@@ -506,7 +582,11 @@ pub unsafe extern "C" fn options_array_set(o: *mut options_entry, idx: u32, valu
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_array_assign(o: *mut options_entry, s: *const c_char, cause: *mut *mut c_char) -> i32 {
+pub unsafe extern "C" fn options_array_assign(
+    o: *mut options_entry,
+    s: *const c_char,
+    cause: *mut *mut c_char,
+) -> i32 {
     unsafe {
         let mut separator = (*(*o).tableentry).separator;
         if separator.is_null() {
@@ -567,22 +647,38 @@ pub unsafe extern "C" fn options_array_first(o: *mut options_entry) -> *mut opti
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_array_next(a: *mut options_array_item) -> *mut options_array_item { unsafe { rb_next(a) } }
+pub unsafe extern "C" fn options_array_next(a: *mut options_array_item) -> *mut options_array_item {
+    unsafe { rb_next(a) }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_array_item_index(a: *mut options_array_item) -> u32 { unsafe { (*a).index } }
+pub unsafe extern "C" fn options_array_item_index(a: *mut options_array_item) -> u32 {
+    unsafe { (*a).index }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_array_item_value(a: *mut options_array_item) -> *mut options_value { unsafe { &raw mut (*a).value } }
+pub unsafe extern "C" fn options_array_item_value(
+    a: *mut options_array_item,
+) -> *mut options_value {
+    unsafe { &raw mut (*a).value }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_is_array(o: *mut options_entry) -> i32 { unsafe { OPTIONS_IS_ARRAY(o) as i32 } }
+pub unsafe extern "C" fn options_is_array(o: *mut options_entry) -> i32 {
+    unsafe { OPTIONS_IS_ARRAY(o) as i32 }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_is_string(o: *mut options_entry) -> i32 { unsafe { OPTIONS_IS_STRING(o) as i32 } }
+pub unsafe extern "C" fn options_is_string(o: *mut options_entry) -> i32 {
+    unsafe { OPTIONS_IS_STRING(o) as i32 }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_to_string(o: *mut options_entry, idx: i32, numeric: i32) -> *mut c_char {
+pub unsafe extern "C" fn options_to_string(
+    o: *mut options_entry,
+    idx: i32,
+    numeric: i32,
+) -> *mut c_char {
     unsafe {
         if OPTIONS_IS_ARRAY(o) {
             if idx == -1 {
@@ -591,7 +687,11 @@ pub unsafe extern "C" fn options_to_string(o: *mut options_entry, idx: i32, nume
 
                 let mut a = rb_min(&raw mut (*o).value.array);
                 while !a.is_null() {
-                    let next = options_value_to_string(o, &raw mut (*a.cast::<options_array_item>()).value, numeric);
+                    let next = options_value_to_string(
+                        o,
+                        &raw mut (*a.cast::<options_array_item>()).value,
+                        numeric,
+                    );
 
                     if last.is_null() {
                         result = next;
@@ -658,14 +758,23 @@ pub unsafe extern "C" fn options_parse(name: *const c_char, idx: *mut i32) -> *m
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_parse_get(oo: *mut options, s: *const c_char, idx: *mut i32, only: i32) -> *mut options_entry {
+pub unsafe extern "C" fn options_parse_get(
+    oo: *mut options,
+    s: *const c_char,
+    idx: *mut i32,
+    only: i32,
+) -> *mut options_entry {
     unsafe {
         let name = options_parse(s, idx);
         if name.is_null() {
             return null_mut();
         }
 
-        let o = if only != 0 { options_get_only(oo, name) } else { options_get(oo, name) };
+        let o = if only != 0 {
+            options_get_only(oo, name)
+        } else {
+            options_get(oo, name)
+        };
 
         free_(name);
         o
@@ -673,7 +782,11 @@ pub unsafe extern "C" fn options_parse_get(oo: *mut options, s: *const c_char, i
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_match(s: *const c_char, idx: *mut i32, ambiguous: *mut i32) -> *mut c_char {
+pub unsafe extern "C" fn options_match(
+    s: *const c_char,
+    idx: *mut i32,
+    ambiguous: *mut i32,
+) -> *mut c_char {
     unsafe {
         let parsed = options_parse(s, idx);
         if parsed.is_null() {
@@ -718,7 +831,13 @@ pub unsafe extern "C" fn options_match(s: *const c_char, idx: *mut i32, ambiguou
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_match_get(oo: *mut options, s: *const c_char, idx: *mut i32, only: i32, ambiguous: *mut i32) -> *mut options_entry {
+pub unsafe extern "C" fn options_match_get(
+    oo: *mut options,
+    s: *const c_char,
+    idx: *mut i32,
+    only: i32,
+    ambiguous: *mut i32,
+) -> *mut options_entry {
     unsafe {
         let name = options_match(s, idx, ambiguous);
         if name.is_null() {
@@ -726,7 +845,11 @@ pub unsafe extern "C" fn options_match_get(oo: *mut options, s: *const c_char, i
         }
 
         *ambiguous = 0;
-        let o = if only != 0 { options_get_only(oo, name) } else { options_get(oo, name) };
+        let o = if only != 0 {
+            options_get_only(oo, name)
+        } else {
+            options_get(oo, name)
+        };
 
         free_(name);
         o
@@ -734,7 +857,10 @@ pub unsafe extern "C" fn options_match_get(oo: *mut options, s: *const c_char, i
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_get_string(oo: *mut options, name: *const c_char) -> *const c_char {
+pub unsafe extern "C" fn options_get_string(
+    oo: *mut options,
+    name: *const c_char,
+) -> *const c_char {
     unsafe {
         let o = options_get(oo, name);
         if o.is_null() {
@@ -775,7 +901,13 @@ pub unsafe fn options_get_number_(oo: *mut options, name: &CStr) -> i64 {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_set_string(oo: *mut options, name: *const c_char, append: c_int, fmt: *const c_char, mut ap: ...) -> *mut options_entry {
+pub unsafe extern "C" fn options_set_string(
+    oo: *mut options,
+    name: *const c_char,
+    append: c_int,
+    fmt: *const c_char,
+    mut ap: ...
+) -> *mut options_entry {
     unsafe {
         let mut s: *mut c_char = null_mut();
         let mut separator = c"".as_ptr();
@@ -791,7 +923,13 @@ pub unsafe extern "C" fn options_set_string(oo: *mut options, name: *const c_cha
                     separator = c"".as_ptr();
                 }
             }
-            xasprintf(&raw mut value, c"%s%s%s".as_ptr(), (*o).value.string, separator, s);
+            xasprintf(
+                &raw mut value,
+                c"%s%s%s".as_ptr(),
+                (*o).value.string,
+                separator,
+                s,
+            );
             free_(s);
         } else {
             value = s;
@@ -817,7 +955,11 @@ pub unsafe extern "C" fn options_set_string(oo: *mut options, name: *const c_cha
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_set_number(oo: *mut options, name: *const c_char, value: i64) -> *mut options_entry {
+pub unsafe extern "C" fn options_set_number(
+    oo: *mut options,
+    name: *const c_char,
+    value: i64,
+) -> *mut options_entry {
     unsafe {
         if *name == b'@' as c_char {
             fatalx_c(c"user option %s must be a string".as_ptr(), name);
@@ -840,7 +982,14 @@ pub unsafe extern "C" fn options_set_number(oo: *mut options, name: *const c_cha
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_scope_from_name(args: *mut args, window: i32, name: *const c_char, fs: *mut cmd_find_state, oo: *mut *mut options, cause: *mut *mut c_char) -> i32 {
+pub unsafe extern "C" fn options_scope_from_name(
+    args: *mut args,
+    window: i32,
+    name: *const c_char,
+    fs: *mut cmd_find_state,
+    oo: *mut *mut options,
+    cause: *mut *mut c_char,
+) -> i32 {
     unsafe {
         let s = (*fs).s;
         let wl = (*fs).wl;
@@ -929,7 +1078,13 @@ pub unsafe extern "C" fn options_scope_from_name(args: *mut args, window: i32, n
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_scope_from_flags(args: *mut args, window: i32, fs: *mut cmd_find_state, oo: *mut *mut options, cause: *mut *mut c_char) -> i32 {
+pub unsafe extern "C" fn options_scope_from_flags(
+    args: *mut args,
+    window: i32,
+    fs: *mut cmd_find_state,
+    oo: *mut *mut options,
+    cause: *mut *mut c_char,
+) -> i32 {
     unsafe {
         let s = (*fs).s;
         let wl = (*fs).wl;
@@ -987,7 +1142,11 @@ pub unsafe extern "C" fn options_scope_from_flags(args: *mut args, window: i32, 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_string_to_style(oo: *mut options, name: *const c_char, ft: *mut format_tree) -> *mut style {
+pub unsafe extern "C" fn options_string_to_style(
+    oo: *mut options,
+    name: *const c_char,
+    ft: *mut format_tree,
+) -> *mut style {
     let __func__ = c"options_string_to_style".as_ptr();
     unsafe {
         let o = options_get(oo, name);
@@ -1002,7 +1161,11 @@ pub unsafe extern "C" fn options_string_to_style(oo: *mut options, name: *const 
         log_debug!("{}: {} is '{}'", _s(__func__), _s(name), _s(s));
 
         style_set(&mut (*o).style, &grid_default_cell);
-        (*o).cached = if strstr(s, c"#{".as_ptr()).is_null() { 1 } else { 0 };
+        (*o).cached = if strstr(s, c"#{".as_ptr()).is_null() {
+            1
+        } else {
+            0
+        };
 
         if !ft.is_null() && (*o).cached == 0 {
             let expanded = format_expand(ft, s);
@@ -1020,7 +1183,11 @@ pub unsafe extern "C" fn options_string_to_style(oo: *mut options, name: *const 
     }
 }
 
-unsafe fn options_from_string_check(oe: *const options_table_entry, value: *const c_char, cause: *mut *mut c_char) -> c_int {
+unsafe fn options_from_string_check(
+    oe: *const options_table_entry,
+    value: *const c_char,
+    cause: *mut *mut c_char,
+) -> c_int {
     unsafe {
         let mut sy: style = std::mem::zeroed();
 
@@ -1035,7 +1202,10 @@ unsafe fn options_from_string_check(oe: *const options_table_entry, value: *cons
             xasprintf(cause, c"value is invalid: %s".as_ptr(), value);
             return -1;
         }
-        if ((*oe).flags & OPTIONS_TABLE_IS_STYLE) != 0 && strstr(value, c"#{".as_ptr()).is_null() && style_parse(&mut sy, &grid_default_cell, value) != 0 {
+        if ((*oe).flags & OPTIONS_TABLE_IS_STYLE) != 0
+            && strstr(value, c"#{".as_ptr()).is_null()
+            && style_parse(&mut sy, &grid_default_cell, value) != 0
+        {
             xasprintf(cause, c"invalid style: %s".as_ptr(), value);
             return -1;
         }
@@ -1043,13 +1213,24 @@ unsafe fn options_from_string_check(oe: *const options_table_entry, value: *cons
     }
 }
 
-unsafe fn options_from_string_flag(oo: *mut options, name: *const c_char, value: *const c_char, cause: *mut *mut c_char) -> c_int {
+unsafe fn options_from_string_flag(
+    oo: *mut options,
+    name: *const c_char,
+    value: *const c_char,
+    cause: *mut *mut c_char,
+) -> c_int {
     unsafe {
         let flag = if value.is_null() || *value == 0 {
             !options_get_number(oo, name)
-        } else if strcmp(value, c"1".as_ptr()) == 0 || strcasecmp(value, c"on".as_ptr()) == 0 || strcasecmp(value, c"yes".as_ptr()) == 0 {
+        } else if strcmp(value, c"1".as_ptr()) == 0
+            || strcasecmp(value, c"on".as_ptr()) == 0
+            || strcasecmp(value, c"yes".as_ptr()) == 0
+        {
             1
-        } else if strcmp(value, c"0".as_ptr()) == 0 || strcasecmp(value, c"off".as_ptr()) == 0 || strcasecmp(value, c"no".as_ptr()) == 0 {
+        } else if strcmp(value, c"0".as_ptr()) == 0
+            || strcasecmp(value, c"off".as_ptr()) == 0
+            || strcasecmp(value, c"no".as_ptr()) == 0
+        {
             0
         } else {
             xasprintf(cause, c"bad value: %s".as_ptr(), value);
@@ -1061,7 +1242,11 @@ unsafe fn options_from_string_flag(oo: *mut options, name: *const c_char, value:
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_find_choice(oe: *const options_table_entry, value: *const c_char, cause: *mut *mut c_char) -> c_int {
+pub unsafe extern "C" fn options_find_choice(
+    oe: *const options_table_entry,
+    value: *const c_char,
+    cause: *mut *mut c_char,
+) -> c_int {
     unsafe {
         let mut n = 0;
         let mut choice = -1;
@@ -1082,7 +1267,13 @@ pub unsafe extern "C" fn options_find_choice(oe: *const options_table_entry, val
     }
 }
 
-unsafe fn options_from_string_choice(oe: *const options_table_entry, oo: *mut options, name: *const c_char, value: *const c_char, cause: *mut *mut c_char) -> c_int {
+unsafe fn options_from_string_choice(
+    oe: *const options_table_entry,
+    oo: *mut options,
+    name: *const c_char,
+    value: *const c_char,
+    cause: *mut *mut c_char,
+) -> c_int {
     unsafe {
         let choice = if value.is_null() {
             let mut choice = options_get_number(oo, name);
@@ -1103,7 +1294,14 @@ unsafe fn options_from_string_choice(oe: *const options_table_entry, oo: *mut op
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_from_string(oo: *mut options, oe: *const options_table_entry, name: *const c_char, value: *const c_char, append: c_int, cause: *mut *mut c_char) -> c_int {
+pub unsafe extern "C" fn options_from_string(
+    oo: *mut options,
+    oe: *const options_table_entry,
+    name: *const c_char,
+    value: *const c_char,
+    append: c_int,
+    cause: *mut *mut c_char,
+) -> c_int {
     unsafe {
         let mut type_: options_table_type;
         let mut number: i64;
@@ -1113,7 +1311,10 @@ pub unsafe extern "C" fn options_from_string(oo: *mut options, oe: *const option
         let mut key: key_code;
 
         if !oe.is_null() {
-            if value.is_null() && (*oe).type_ != options_table_type::OPTIONS_TABLE_FLAG && (*oe).type_ != options_table_type::OPTIONS_TABLE_CHOICE {
+            if value.is_null()
+                && (*oe).type_ != options_table_type::OPTIONS_TABLE_FLAG
+                && (*oe).type_ != options_table_type::OPTIONS_TABLE_CHOICE
+            {
                 xasprintf(cause, c"empty value".as_ptr());
                 return -1;
             }
@@ -1143,7 +1344,12 @@ pub unsafe extern "C" fn options_from_string(oo: *mut options, oe: *const option
 
             options_table_type::OPTIONS_TABLE_NUMBER => {
                 let mut errstr = null();
-                number = strtonum(value, (*oe).minimum as i64, (*oe).maximum as i64, &raw mut errstr);
+                number = strtonum(
+                    value,
+                    (*oe).minimum as i64,
+                    (*oe).maximum as i64,
+                    &raw mut errstr,
+                );
                 if !errstr.is_null() {
                     xasprintf(cause, c"value is %s: %s".as_ptr(), errstr, value);
                     return -1;
@@ -1250,7 +1456,9 @@ pub unsafe extern "C" fn options_push_changes(name: *const c_char) {
             alerts_reset_all();
         }
 
-        if strcmp(name, c"window-style".as_ptr()) == 0 || strcmp(name, c"window-active-style".as_ptr()) == 0 {
+        if strcmp(name, c"window-style".as_ptr()) == 0
+            || strcmp(name, c"window-active-style".as_ptr()) == 0
+        {
             for wp in rb_foreach(&raw mut all_window_panes) {
                 (*wp.as_ptr()).flags |= window_pane_flags::PANE_STYLECHANGED;
             }
@@ -1283,12 +1491,18 @@ pub unsafe extern "C" fn options_push_changes(name: *const c_char) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_remove_or_default(o: *mut options_entry, idx: i32, cause: *mut *mut c_char) -> i32 {
+pub unsafe extern "C" fn options_remove_or_default(
+    o: *mut options_entry,
+    idx: i32,
+    cause: *mut *mut c_char,
+) -> i32 {
     unsafe {
         let oo = (*o).owner;
 
         if idx == -1 {
-            if !(*o).tableentry.is_null() && (oo == global_options || oo == global_s_options || oo == global_w_options) {
+            if !(*o).tableentry.is_null()
+                && (oo == global_options || oo == global_s_options || oo == global_w_options)
+            {
                 options_default(oo, (*o).tableentry);
             } else {
                 options_remove(o);

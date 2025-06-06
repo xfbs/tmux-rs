@@ -1,7 +1,8 @@
 use crate::*;
 
 pub type popup_close_cb = Option<unsafe extern "C" fn(_: i32, _: *mut c_void)>;
-pub type popup_finish_edit_cb = Option<unsafe extern "C" fn(_: *mut c_char, _: usize, _: *mut c_void)>;
+pub type popup_finish_edit_cb =
+    Option<unsafe extern "C" fn(_: *mut c_char, _: usize, _: *mut c_void)>;
 
 #[repr(i32)]
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -66,7 +67,11 @@ pub struct popup_editor {
 #[unsafe(no_mangle)]
 static mut popup_menu_items: [menu_item; 9] = [
     menu_item::new(Some(c"Close"), 'q' as u64, null_mut()),
-    menu_item::new(Some(c"#{?buffer_name,Paste #[underscore]#{buffer_name},}"), 'p' as u64, null_mut()),
+    menu_item::new(
+        Some(c"#{?buffer_name,Paste #[underscore]#{buffer_name},}"),
+        'p' as u64,
+        null_mut(),
+    ),
     menu_item::new(Some(c""), KEYC_NONE, null_mut()),
     menu_item::new(Some(c"Fill Space"), 'F' as u64, null_mut()),
     menu_item::new(Some(c"Centre"), 'C' as u64, null_mut()),
@@ -145,7 +150,12 @@ pub unsafe extern "C" fn popup_init_ctx_cb(ctx: *mut screen_write_ctx, ttyctx: *
 
 // #[cfg(disabled)]
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn popup_mode_cb(c: *mut client, data: *mut c_void, cx: *mut u32, cy: *mut u32) -> *mut screen {
+pub unsafe extern "C" fn popup_mode_cb(
+    c: *mut client,
+    data: *mut c_void,
+    cx: *mut u32,
+    cy: *mut u32,
+) -> *mut screen {
     unsafe {
         let pd = data.cast::<popup_data>();
 
@@ -167,7 +177,14 @@ pub unsafe extern "C" fn popup_mode_cb(c: *mut client, data: *mut c_void, cx: *m
 /// Return parts of the input range which are not obstructed by the popup.
 // #[cfg(disabled)]
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn popup_check_cb(c: *mut client, data: *mut c_void, px: u32, py: u32, nx: u32, r: *mut overlay_ranges) {
+pub unsafe extern "C" fn popup_check_cb(
+    c: *mut client,
+    data: *mut c_void,
+    px: u32,
+    py: u32,
+    nx: u32,
+    r: *mut overlay_ranges,
+) {
     unsafe {
         let pd = data.cast::<popup_data>();
         let mut or = MaybeUninit::<[overlay_ranges; 2]>::uninit();
@@ -180,7 +197,16 @@ pub unsafe extern "C" fn popup_check_cb(c: *mut client, data: *mut c_void, px: u
             menu_check_cb(c, (*pd).md.cast(), px, py, nx, r);
 
             for i in 0..2 {
-                server_client_overlay_range((*pd).px, (*pd).py, (*pd).sx, (*pd).sy, (*r).px[i], py, (*r).nx[i], or.add(i));
+                server_client_overlay_range(
+                    (*pd).px,
+                    (*pd).py,
+                    (*pd).sx,
+                    (*pd).sy,
+                    (*r).px[i],
+                    py,
+                    (*r).nx[i],
+                    or.add(i),
+                );
             }
 
             // or has up to OVERLAY_MAX_RANGES non-overlapping ranges,
@@ -211,7 +237,11 @@ pub unsafe extern "C" fn popup_check_cb(c: *mut client, data: *mut c_void, px: u
 
 // #[cfg(disabled)]
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn popup_draw_cb(c: *mut client, data: *mut c_void, rctx: *mut screen_redraw_ctx) {
+pub unsafe extern "C" fn popup_draw_cb(
+    c: *mut client,
+    data: *mut c_void,
+    rctx: *mut screen_redraw_ctx,
+) {
     unsafe {
         let pd = data.cast::<popup_data>();
         let tty = &mut (*c).tty;
@@ -230,9 +260,23 @@ pub unsafe extern "C" fn popup_draw_cb(c: *mut client, data: *mut c_void, rctx: 
             screen_write_cursormove(ctx.as_mut_ptr(), 0, 0, 0);
             screen_write_fast_copy(ctx.as_mut_ptr(), &raw mut (*pd).s, 0, 0, (*pd).sx, (*pd).sy);
         } else if (*pd).sx > 2 && (*pd).sy > 2 {
-            screen_write_box(ctx.as_mut_ptr(), (*pd).sx, (*pd).sy, (*pd).border_lines, &(*pd).border_cell, (*pd).title);
+            screen_write_box(
+                ctx.as_mut_ptr(),
+                (*pd).sx,
+                (*pd).sy,
+                (*pd).border_lines,
+                &(*pd).border_cell,
+                (*pd).title,
+            );
             screen_write_cursormove(ctx.as_mut_ptr(), 1, 1, 0);
-            screen_write_fast_copy(ctx.as_mut_ptr(), &raw mut (*pd).s, 0, 0, (*pd).sx - 2, (*pd).sy - 2);
+            screen_write_fast_copy(
+                ctx.as_mut_ptr(),
+                &raw mut (*pd).s,
+                0,
+                0,
+                (*pd).sx - 2,
+                (*pd).sy - 2,
+            );
         }
         screen_write_stop(ctx.as_mut_ptr());
 
@@ -253,7 +297,17 @@ pub unsafe extern "C" fn popup_draw_cb(c: *mut client, data: *mut c_void, rctx: 
         }
 
         for i in 0..(*pd).sy {
-            tty_draw_line(tty, s.as_mut_ptr(), 0, i, (*pd).sx, px, py + i, defaults, palette);
+            tty_draw_line(
+                tty,
+                s.as_mut_ptr(),
+                0,
+                i,
+                (*pd).sx,
+                px,
+                py + i,
+                defaults,
+                palette,
+            );
         }
 
         screen_free(s.as_mut_ptr());
@@ -325,9 +379,17 @@ pub extern "C" fn popup_resize_cb(_c: *mut client, data: *mut c_void) {
         (*pd).sy = (*pd).psy.min((*tty).sy);
         (*pd).sx = (*pd).psx.min((*tty).sx);
 
-        (*pd).py = if (*pd).ppy + (*pd).sy > (*tty).sy { (*tty).sy - (*pd).sy } else { (*pd).ppy };
+        (*pd).py = if (*pd).ppy + (*pd).sy > (*tty).sy {
+            (*tty).sy - (*pd).sy
+        } else {
+            (*pd).ppy
+        };
 
-        (*pd).px = if (*pd).ppx + (*pd).sx > (*tty).sx { (*tty).sx - (*pd).sx } else { (*pd).ppx };
+        (*pd).px = if (*pd).ppx + (*pd).sx > (*tty).sx {
+            (*tty).sx - (*pd).sx
+        } else {
+            (*pd).ppx
+        };
 
         // Avoid zero size screens
         if (*pd).border_lines == box_lines::BOX_LINES_NONE {
@@ -360,7 +422,12 @@ pub extern "C" fn popup_make_pane(pd: *mut popup_data, type_: layout_type) {
         let new_wp = window_add_pane((*wp).window, null_mut(), hlimit, 0);
         layout_assign_pane(lc, new_wp, 0);
 
-        (*new_wp).fd = job_transfer((*pd).job, &mut (*new_wp).pid, (*new_wp).tty.as_mut_ptr(), TTY_NAME_MAX);
+        (*new_wp).fd = job_transfer(
+            (*pd).job,
+            &mut (*new_wp).pid,
+            (*new_wp).tty.as_mut_ptr(),
+            TTY_NAME_MAX,
+        );
         (*pd).job = null_mut();
 
         screen_set_title(&raw mut (*pd).s, (*new_wp).base.title);
@@ -385,7 +452,12 @@ pub extern "C" fn popup_make_pane(pd: *mut popup_data, type_: layout_type) {
 
 // #[cfg(disabled)]
 #[unsafe(no_mangle)]
-pub extern "C" fn popup_menu_done(_menu: *mut menu, _choice: u32, key: key_code, data: *mut c_void) {
+pub extern "C" fn popup_menu_done(
+    _menu: *mut menu,
+    _choice: u32,
+    key: key_code,
+    data: *mut c_void,
+) {
     unsafe {
         let pd = data as *mut popup_data;
         let c = (*pd).c;
@@ -424,7 +496,11 @@ pub extern "C" fn popup_menu_done(_menu: *mut menu, _choice: u32, key: key_code,
 
 // #[cfg(disabled)]
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn popup_handle_drag(c: *mut client, pd: *mut popup_data, m: *mut mouse_event) {
+pub unsafe extern "C" fn popup_handle_drag(
+    c: *mut client,
+    pd: *mut popup_data,
+    m: *mut mouse_event,
+) {
     unsafe {
         let mut px: u32;
         let mut py: u32;
@@ -492,7 +568,11 @@ pub unsafe extern "C" fn popup_handle_drag(c: *mut client, pd: *mut popup_data, 
 
 // #[cfg(disabled)]
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn popup_key_cb(c: *mut client, data: *mut c_void, event: *mut key_event) -> i32 {
+pub unsafe extern "C" fn popup_key_cb(
+    c: *mut client,
+    data: *mut c_void,
+    event: *mut key_event,
+) -> i32 {
     unsafe {
         let pd = data as *mut popup_data;
         let mut m = &raw mut (*event).m;
@@ -530,7 +610,11 @@ pub unsafe extern "C" fn popup_key_cb(c: *mut client, data: *mut c_void, event: 
                         popup_handle_drag(c, pd, m);
                         break 'out;
                     }
-                    if ((*m).x < (*pd).px || (*m).x > (*pd).px + (*pd).sx - 1 || (*m).y < (*pd).py || (*m).y > (*pd).py + (*pd).sy - 1) {
+                    if ((*m).x < (*pd).px
+                        || (*m).x > (*pd).px + (*pd).sx - 1
+                        || (*m).y < (*pd).py
+                        || (*m).y > (*pd).py + (*pd).sy - 1)
+                    {
                         if (MOUSE_BUTTONS((*m).b) == MOUSE_BUTTON_3) {
                             break 'menu;
                         }
@@ -547,10 +631,15 @@ pub unsafe extern "C" fn popup_key_cb(c: *mut client, data: *mut c_void, event: 
                             border = Border::Bottom;
                         }
                     }
-                    if (((*m).b & MOUSE_MASK_MODIFIERS) == 0 && MOUSE_BUTTONS((*m).b) == MOUSE_BUTTON_3 && (border == Border::Left || border == Border::Top)) {
+                    if (((*m).b & MOUSE_MASK_MODIFIERS) == 0
+                        && MOUSE_BUTTONS((*m).b) == MOUSE_BUTTON_3
+                        && (border == Border::Left || border == Border::Top))
+                    {
                         break 'menu;
                     }
-                    if ((((*m).b & MOUSE_MASK_MODIFIERS) == MOUSE_MASK_META) || border != Border::None) {
+                    if ((((*m).b & MOUSE_MASK_MODIFIERS) == MOUSE_MASK_META)
+                        || border != Border::None)
+                    {
                         if (!MOUSE_DRAG((*m).b)) {
                             break 'out;
                         }
@@ -564,7 +653,11 @@ pub unsafe extern "C" fn popup_key_cb(c: *mut client, data: *mut c_void, event: 
                         break 'out;
                     }
                 }
-                if (((((*pd).flags & (POPUP_CLOSEEXIT | POPUP_CLOSEEXITZERO)) == 0) || (*pd).job.is_null()) && ((*event).key == b'\x1b' as u64 || (*event).key == (b'c' as u64 | KEYC_CTRL))) {
+                if (((((*pd).flags & (POPUP_CLOSEEXIT | POPUP_CLOSEEXITZERO)) == 0)
+                    || (*pd).job.is_null())
+                    && ((*event).key == b'\x1b' as u64
+                        || (*event).key == (b'c' as u64 | KEYC_CTRL)))
+                {
                     return 1;
                 }
                 if (!(*pd).job.is_null()) {
@@ -575,7 +668,15 @@ pub unsafe extern "C" fn popup_key_cb(c: *mut client, data: *mut c_void, event: 
                         } else {
                             ((*m).x - (*pd).px - 1, (*m).y - (*pd).py - 1)
                         };
-                        if input_key_get_mouse(&raw mut (*pd).s, m, px, py, &raw mut buf, &raw mut len) == 0 {
+                        if input_key_get_mouse(
+                            &raw mut (*pd).s,
+                            m,
+                            px,
+                            py,
+                            &raw mut buf,
+                            &raw mut len,
+                        ) == 0
+                        {
                             return 0;
                         }
                         bufferevent_write(job_get_event((*pd).job), buf.cast(), len);
@@ -588,12 +689,39 @@ pub unsafe extern "C" fn popup_key_cb(c: *mut client, data: *mut c_void, event: 
             // menu:
             (*pd).menu = menu_create(c"".as_ptr());
             if ((*pd).flags & POPUP_INTERNAL != 0) {
-                menu_add_items((*pd).menu, &raw mut popup_internal_menu_items as *mut menu_item, null_mut(), c, null_mut());
+                menu_add_items(
+                    (*pd).menu,
+                    &raw mut popup_internal_menu_items as *mut menu_item,
+                    null_mut(),
+                    c,
+                    null_mut(),
+                );
             } else {
-                menu_add_items((*pd).menu, &raw mut popup_internal_menu_items as *mut menu_item, null_mut(), c, null_mut());
+                menu_add_items(
+                    (*pd).menu,
+                    &raw mut popup_internal_menu_items as *mut menu_item,
+                    null_mut(),
+                    c,
+                    null_mut(),
+                );
             }
             let x = (*m).x.saturating_sub(((*(*pd).menu).width + 4) / 2);
-            (*pd).md = menu_prepare((*pd).menu, 0, 0, null_mut(), x, (*m).y, c, box_lines::BOX_LINES_DEFAULT, null_mut(), null_mut(), null_mut(), null_mut(), Some(popup_menu_done), pd.cast());
+            (*pd).md = menu_prepare(
+                (*pd).menu,
+                0,
+                0,
+                null_mut(),
+                x,
+                (*m).y,
+                c,
+                box_lines::BOX_LINES_DEFAULT,
+                null_mut(),
+                null_mut(),
+                null_mut(),
+                null_mut(),
+                Some(popup_menu_done),
+                pd.cast(),
+            );
             (*c).flags |= client_flag::REDRAWOVERLAY;
         }
         // out:
@@ -626,7 +754,14 @@ pub unsafe extern "C" fn popup_job_update_cb(job: *mut job) {
             (*c).overlay_check = None;
             (*c).overlay_data = null_mut();
         }
-        input_parse_screen((*pd).ictx, s, Some(popup_init_ctx_cb), pd.cast(), data, size);
+        input_parse_screen(
+            (*pd).ictx,
+            s,
+            Some(popup_init_ctx_cb),
+            pd.cast(),
+            data,
+            size,
+        );
         (*c).overlay_check = Some(popup_check_cb);
         (*c).overlay_data = pd.cast();
 
@@ -650,7 +785,9 @@ pub unsafe extern "C" fn popup_job_complete_cb(job: *mut job) {
         }
         (*pd).job = null_mut();
 
-        if ((*pd).flags & POPUP_CLOSEEXIT) != 0 || (((*pd).flags & POPUP_CLOSEEXITZERO) != 0 && (*pd).status == 0) {
+        if ((*pd).flags & POPUP_CLOSEEXIT) != 0
+            || (((*pd).flags & POPUP_CLOSEEXITZERO) != 0 && (*pd).status == 0)
+        {
             server_client_clear_overlay((*pd).c);
         }
     }
@@ -680,10 +817,16 @@ pub unsafe extern "C" fn popup_display(
     arg: *mut c_void,
 ) -> c_int {
     unsafe {
-        let o = if !s.is_null() { (*(*(*s).curw).window).options } else { (*(*(*(*c).session).curw).window).options };
+        let o = if !s.is_null() {
+            (*(*(*s).curw).window).options
+        } else {
+            (*(*(*(*c).session).curw).window).options
+        };
 
         lines = if lines == box_lines::BOX_LINES_DEFAULT {
-            (options_get_number(o, c"popup-border-lines".as_ptr()) as i32).try_into().unwrap_or(box_lines::BOX_LINES_ROUNDED) // TODO
+            (options_get_number(o, c"popup-border-lines".as_ptr()) as i32)
+                .try_into()
+                .unwrap_or(box_lines::BOX_LINES_ROUNDED) // TODO
         } else {
             lines
         };
@@ -720,7 +863,12 @@ pub unsafe extern "C" fn popup_display(
 
         (*pd).border_lines = lines;
         memcpy__(&raw mut (*pd).border_cell, &raw const grid_default_cell);
-        style_apply(&raw mut (*pd).border_cell, o, c"popup-border-style".as_ptr(), null_mut());
+        style_apply(
+            &raw mut (*pd).border_cell,
+            o,
+            c"popup-border-style".as_ptr(),
+            null_mut(),
+        );
 
         if !border_style.is_null() {
             let mut sytmp = MaybeUninit::<style>::uninit();
@@ -737,7 +885,12 @@ pub unsafe extern "C" fn popup_display(
         colour_palette_from_option(&raw mut (*pd).palette, global_w_options);
 
         memcpy__(&raw mut (*pd).defaults, &raw const grid_default_cell);
-        style_apply(&raw mut (*pd).defaults, o, c"popup-style".as_ptr().cast(), null_mut());
+        style_apply(
+            &raw mut (*pd).defaults,
+            o,
+            c"popup-style".as_ptr().cast(),
+            null_mut(),
+        );
         if !style.is_null() {
             let mut sytmp = MaybeUninit::<style>::uninit();
             style_set(sytmp.as_mut_ptr(), &raw const grid_default_cell);
@@ -775,7 +928,17 @@ pub unsafe extern "C" fn popup_display(
         );
         (*pd).ictx = input_init(null_mut(), job_get_event((*pd).job), &raw mut (*pd).palette);
 
-        server_client_set_overlay(c, 0, Some(popup_check_cb), Some(popup_mode_cb), Some(popup_draw_cb), Some(popup_key_cb), Some(popup_free_cb), Some(popup_resize_cb), pd.cast());
+        server_client_set_overlay(
+            c,
+            0,
+            Some(popup_check_cb),
+            Some(popup_mode_cb),
+            Some(popup_draw_cb),
+            Some(popup_key_cb),
+            Some(popup_free_cb),
+            Some(popup_resize_cb),
+            pd.cast(),
+        );
         0
     }
 }
@@ -832,7 +995,13 @@ pub unsafe extern "C" fn popup_editor_close_cb(status: i32, arg: *mut c_void) {
 
 // #[cfg(disabled)]
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn popup_editor(c: *mut client, buf: *const c_char, len: usize, cb: popup_finish_edit_cb, arg: *mut c_void) -> c_int {
+pub unsafe extern "C" fn popup_editor(
+    c: *mut client,
+    buf: *const c_char,
+    len: usize,
+    cb: popup_finish_edit_cb,
+    arg: *mut c_void,
+) -> c_int {
     unsafe {
         let mut path = [0i8; 256];
         strcpy(path.as_mut_ptr(), c"/tmp/tmux.XXXXXXXX".as_ptr().cast());

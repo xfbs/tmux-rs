@@ -26,7 +26,17 @@ pub struct cmd_if_shell_data {
     pub item: *mut cmdq_item,
 }
 
-unsafe extern "C" fn cmd_if_shell_args_parse(_: *mut args, idx: u32, _: *mut *mut c_char) -> args_parse_type { if idx == 1 || idx == 2 { args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING } else { args_parse_type::ARGS_PARSE_STRING } }
+unsafe extern "C" fn cmd_if_shell_args_parse(
+    _: *mut args,
+    idx: u32,
+    _: *mut *mut c_char,
+) -> args_parse_type {
+    if idx == 1 || idx == 2 {
+        args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING
+    } else {
+        args_parse_type::ARGS_PARSE_STRING
+    }
+}
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_if_shell_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
@@ -74,7 +84,23 @@ unsafe extern "C" fn cmd_if_shell_exec(self_: *mut cmd, item: *mut cmdq_item) ->
             (*(*cdata).client).references += 1;
         }
 
-        if (job_run(shellcmd, 0, null_mut(), null_mut(), s, server_client_get_cwd(cmdq_get_client(item), s), None, Some(cmd_if_shell_callback), Some(cmd_if_shell_free), cdata as _, 0, -1, -1).is_null()) {
+        if (job_run(
+            shellcmd,
+            0,
+            null_mut(),
+            null_mut(),
+            s,
+            server_client_get_cwd(cmdq_get_client(item), s),
+            None,
+            Some(cmd_if_shell_callback),
+            Some(cmd_if_shell_free),
+            cdata as _,
+            0,
+            -1,
+            -1,
+        )
+        .is_null())
+        {
             cmdq_error(item, c"failed to run command: %s".as_ptr(), shellcmd);
             free_(shellcmd);
             free_(cdata);

@@ -58,7 +58,8 @@ pub unsafe extern "C" fn image_fallback(ret: *mut *mut c_char, sx: u32, sy: u32)
         let mut label: *mut c_char = null_mut();
 
         // Allocate first line.
-        let lsize: u32 = xasprintf(&raw mut label, c"SIXEL IMAGE (%ux%u)\r\n".as_ptr(), sx, sy) as u32 + 1;
+        let lsize: u32 =
+            xasprintf(&raw mut label, c"SIXEL IMAGE (%ux%u)\r\n".as_ptr(), sx, sy) as u32 + 1;
         let mut size: u32 = if sx < lsize - 3 { lsize - 1 } else { sx + 2 };
 
         // Remaining lines. Every placeholder line has \r\n at the end.
@@ -131,7 +132,13 @@ pub unsafe extern "C" fn image_check_line(s: *mut screen, py: u32, ny: u32) -> b
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn image_check_area(s: *mut screen, px: u32, py: u32, nx: u32, ny: u32) -> boolint {
+pub unsafe extern "C" fn image_check_area(
+    s: *mut screen,
+    px: u32,
+    py: u32,
+    nx: u32,
+    ny: u32,
+) -> boolint {
     unsafe {
         let mut redraw = false;
 
@@ -168,7 +175,8 @@ pub unsafe extern "C" fn image_scroll_up(s: *mut screen, lines: u32) -> i32 {
             let sx = (*im).sx;
             let sy = ((*im).py + (*im).sy) - lines;
 
-            let new = crate::image_sixel::sixel_scale((*im).data, 0, 0, 0, (*im).sy - sy, sx, sy, 1);
+            let new =
+                crate::image_sixel::sixel_scale((*im).data, 0, 0, 0, (*im).sy - sy, sx, sy, 1);
             crate::image_sixel::sixel_free((*im).data);
             (*im).data = new;
 

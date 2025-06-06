@@ -20,7 +20,13 @@ pub static mut cfg_files: *mut *mut c_char = null_mut();
 #[unsafe(no_mangle)]
 pub static mut cfg_nfiles: c_uint = 0;
 
-unsafe extern "C" fn cfg_client_done(_item: *mut cmdq_item, _data: *mut c_void) -> cmd_retval { if unsafe { cfg_finished } == 0 { cmd_retval::CMD_RETURN_WAIT } else { cmd_retval::CMD_RETURN_NORMAL } }
+unsafe extern "C" fn cfg_client_done(_item: *mut cmdq_item, _data: *mut c_void) -> cmd_retval {
+    if unsafe { cfg_finished } == 0 {
+        cmd_retval::CMD_RETURN_WAIT
+    } else {
+        cmd_retval::CMD_RETURN_NORMAL
+    }
+}
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cfg_done(item: *mut cmdq_item, _data: *mut c_void) -> cmd_retval {
@@ -72,16 +78,33 @@ pub unsafe extern "C" fn start_cfg() {
 
         i = 0;
         while i < cfg_nfiles {
-            load_cfg(*cfg_files.add(i as usize), c, null_mut(), null_mut(), flags, null_mut());
+            load_cfg(
+                *cfg_files.add(i as usize),
+                c,
+                null_mut(),
+                null_mut(),
+                flags,
+                null_mut(),
+            );
             i += 1;
         }
 
-        cmdq_append(null_mut(), cmdq_get_callback!(cfg_done, null_mut()).as_ptr());
+        cmdq_append(
+            null_mut(),
+            cmdq_get_callback!(cfg_done, null_mut()).as_ptr(),
+        );
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn load_cfg(path: *const c_char, c: *mut client, item: *mut cmdq_item, current: *mut cmd_find_state, flags: cmd_parse_input_flags, new_item: *mut *mut cmdq_item) -> c_int {
+pub unsafe extern "C" fn load_cfg(
+    path: *const c_char,
+    c: *mut client,
+    item: *mut cmdq_item,
+    current: *mut cmd_find_state,
+    flags: cmd_parse_input_flags,
+    new_item: *mut *mut cmdq_item,
+) -> c_int {
     unsafe {
         if !new_item.is_null() {
             *new_item = null_mut();
@@ -116,7 +139,11 @@ pub unsafe extern "C" fn load_cfg(path: *const c_char, c: *mut client, item: *mu
             return 0;
         }
 
-        let mut state = if !item.is_null() { cmdq_copy_state(cmdq_get_state(item), current) } else { cmdq_new_state(null_mut(), null_mut(), 0) };
+        let mut state = if !item.is_null() {
+            cmdq_copy_state(cmdq_get_state(item), current)
+        } else {
+            cmdq_new_state(null_mut(), null_mut(), 0)
+        };
         cmdq_add_format(state, c"current_file".as_ptr(), c"%s".as_ptr(), pi.file);
 
         let mut new_item0 = cmdq_get_command((*pr).cmdlist, state);
@@ -137,7 +164,16 @@ pub unsafe extern "C" fn load_cfg(path: *const c_char, c: *mut client, item: *mu
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn load_cfg_from_buffer(buf: *mut c_void, len: usize, path: *const c_char, c: *mut client, item: *mut cmdq_item, current: *mut cmd_find_state, flags: cmd_parse_input_flags, new_item: *mut *mut cmdq_item) -> c_int {
+pub unsafe extern "C" fn load_cfg_from_buffer(
+    buf: *mut c_void,
+    len: usize,
+    path: *const c_char,
+    c: *mut client,
+    item: *mut cmdq_item,
+    current: *mut cmd_find_state,
+    flags: cmd_parse_input_flags,
+    new_item: *mut *mut cmdq_item,
+) -> c_int {
     unsafe {
         if !new_item.is_null() {
             *new_item = null_mut();
@@ -163,7 +199,11 @@ pub unsafe extern "C" fn load_cfg_from_buffer(buf: *mut c_void, len: usize, path
             return 0;
         }
 
-        let mut state = if !item.is_null() { cmdq_copy_state(cmdq_get_state(item), current) } else { cmdq_new_state(null_mut(), null_mut(), 0) };
+        let mut state = if !item.is_null() {
+            cmdq_copy_state(cmdq_get_state(item), current)
+        } else {
+            cmdq_new_state(null_mut(), null_mut(), 0)
+        };
         cmdq_add_format(state, c"current_file".as_ptr(), c"%s".as_ptr(), pi.file);
 
         let mut new_item0 = cmdq_get_command((*pr).cmdlist, state);
@@ -221,7 +261,11 @@ pub unsafe extern "C" fn cfg_show_causes(mut s: *mut session) {
 
             if !c.is_null() && (*c).flags.intersects(client_flag::CONTROL) {
                 for i in 0..cfg_ncauses {
-                    control_write(c, c"%%config-error %s".as_ptr(), *cfg_causes.add(i as usize));
+                    control_write(
+                        c,
+                        c"%%config-error %s".as_ptr(),
+                        *cfg_causes.add(i as usize),
+                    );
                     free_(*cfg_causes.add(i as usize));
                 }
                 break 'out;
@@ -241,7 +285,13 @@ pub unsafe extern "C" fn cfg_show_causes(mut s: *mut session) {
 
             let wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
             if wme.is_null() || (*wme).mode != &raw mut window_view_mode {
-                window_pane_set_mode(wp, null_mut(), &raw mut window_view_mode, null_mut(), null_mut());
+                window_pane_set_mode(
+                    wp,
+                    null_mut(),
+                    &raw mut window_view_mode,
+                    null_mut(),
+                    null_mut(),
+                );
             }
             for i in 0..cfg_ncauses {
                 window_copy_add(wp, 0, c"%s".as_ptr(), *cfg_causes.add(i as usize));

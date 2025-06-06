@@ -47,7 +47,8 @@ pub unsafe extern "C" fn control_notify_window_layout_changed(w: *mut window) {
                 }
 
                 if let Some(wl) = winlink_find_by_window(&raw mut (*s).windows, w) {
-                    let cp = format_single(null_mut(), template, c, null_mut(), wl.as_ptr(), null_mut());
+                    let cp =
+                        format_single(null_mut(), template, c, null_mut(), wl.as_ptr(), null_mut());
                     control_write(c, c"%s".as_ptr(), cp);
                     free_(cp);
                 }
@@ -65,7 +66,12 @@ pub unsafe extern "C" fn control_notify_window_pane_changed(w: *mut window) {
                     continue;
                 }
 
-                control_write(c, c"%%window-pane-changed @%u %%%u".as_ptr(), (*w).id, (*(*w).active).id);
+                control_write(
+                    c,
+                    c"%%window-pane-changed @%u %%%u".as_ptr(),
+                    (*w).id,
+                    (*(*w).active).id,
+                );
             }
         }
     }
@@ -124,7 +130,12 @@ pub unsafe extern "C" fn control_notify_window_renamed(w: *mut window) {
                 if !winlink_find_by_window_id(&raw mut (*cs).windows, (*w).id).is_null() {
                     control_write(c, c"%%window-renamed @%u %s".as_ptr(), (*w).id, (*w).name);
                 } else {
-                    control_write(c, c"%%unlinked-window-renamed @%u %s".as_ptr(), (*w).id, (*w).name);
+                    control_write(
+                        c,
+                        c"%%unlinked-window-renamed @%u %s".as_ptr(),
+                        (*w).id,
+                        (*w).name,
+                    );
                 }
             }
         }
@@ -148,7 +159,13 @@ pub unsafe extern "C" fn control_notify_client_session_changed(cc: *mut client) 
                 if cc == c {
                     control_write(c, c"%%session-changed $%u %s".as_ptr(), (*s).id, (*s).name);
                 } else {
-                    control_write(c, c"%%client-session-changed %s $%u %s".as_ptr(), (*cc).name, (*s).id, (*s).name);
+                    control_write(
+                        c,
+                        c"%%client-session-changed %s $%u %s".as_ptr(),
+                        (*cc).name,
+                        (*s).id,
+                        (*s).name,
+                    );
                 }
             }
         }
@@ -222,7 +239,12 @@ pub unsafe extern "C" fn control_notify_session_window_changed(s: *mut session) 
                     continue;
                 }
 
-                control_write(c, c"%%session-window-changed $%u @%u".as_ptr(), (*s).id, (*(*(*s).curw).window).id);
+                control_write(
+                    c,
+                    c"%%session-window-changed $%u @%u".as_ptr(),
+                    (*s).id,
+                    (*(*(*s).curw).window).id,
+                );
             }
         }
     }

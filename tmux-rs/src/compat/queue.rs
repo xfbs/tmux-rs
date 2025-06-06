@@ -10,7 +10,11 @@ pub trait ListEntry<T, Discriminant = ()> {
 pub struct list_head<T> {
     pub lh_first: *mut T,
 }
-pub const fn list_head_initializer<T>() -> list_head<T> { list_head { lh_first: null_mut() } }
+pub const fn list_head_initializer<T>() -> list_head<T> {
+    list_head {
+        lh_first: null_mut(),
+    }
+}
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -19,11 +23,17 @@ pub struct list_entry<T> {
     pub le_prev: *mut *mut T,
 }
 
-pub unsafe fn list_first<T>(head: *mut list_head<T>) -> *mut T { unsafe { (*head).lh_first } }
+pub unsafe fn list_first<T>(head: *mut list_head<T>) -> *mut T {
+    unsafe { (*head).lh_first }
+}
 
-pub fn list_end<T>() -> *mut T { null_mut() }
+pub fn list_end<T>() -> *mut T {
+    null_mut()
+}
 
-pub unsafe fn list_empty<T>(head: *mut list_head<T>) -> bool { unsafe { list_first(head).is_null() } }
+pub unsafe fn list_empty<T>(head: *mut list_head<T>) -> bool {
+    unsafe { list_first(head).is_null() }
+}
 
 pub unsafe fn list_next<T, Discriminant>(elm: *mut T) -> *mut T
 where
@@ -72,7 +82,8 @@ where
     unsafe {
         (*ListEntry::field(elm)).le_next = (*ListEntry::field(listelm)).le_next;
         if !(*ListEntry::field(elm)).le_next.is_null() {
-            (*ListEntry::field((*ListEntry::field(listelm)).le_next)).le_prev = &raw mut (*ListEntry::field(elm)).le_next;
+            (*ListEntry::field((*ListEntry::field(listelm)).le_next)).le_prev =
+                &raw mut (*ListEntry::field(elm)).le_next;
         }
         (*ListEntry::field(listelm)).le_next = elm;
         (*ListEntry::field(elm)).le_prev = &raw mut (*ListEntry::field(listelm)).le_next;
@@ -98,7 +109,8 @@ where
     unsafe {
         (*ListEntry::field(elm)).le_next = (*head).lh_first;
         if !(*ListEntry::field(elm)).le_next.is_null() {
-            (*ListEntry::field((*head).lh_first)).le_prev = &raw mut (*ListEntry::field(elm)).le_next;
+            (*ListEntry::field((*head).lh_first)).le_prev =
+                &raw mut (*ListEntry::field(elm)).le_next;
         }
         (*head).lh_first = elm;
         (*ListEntry::field(elm)).le_prev = &raw mut (*head).lh_first;
@@ -111,7 +123,8 @@ where
 {
     unsafe {
         if !(*ListEntry::field(elm)).le_next.is_null() {
-            (*ListEntry::field((*ListEntry::field(elm)).le_next)).le_prev = (*ListEntry::field(elm)).le_prev;
+            (*ListEntry::field((*ListEntry::field(elm)).le_next)).le_prev =
+                (*ListEntry::field(elm)).le_prev;
         }
         *(*ListEntry::field(elm)).le_prev = (*ListEntry::field(elm)).le_next;
     }
@@ -124,7 +137,8 @@ where
     unsafe {
         (*ListEntry::field(elm2)).le_next = (*ListEntry::field(elm)).le_next;
         if !(*ListEntry::field(elm2)).le_next.is_null() {
-            (*ListEntry::field((*ListEntry::field(elm2)).le_next)).le_prev = &raw mut (*ListEntry::field(elm2)).le_next;
+            (*ListEntry::field((*ListEntry::field(elm2)).le_next)).le_prev =
+                &raw mut (*ListEntry::field(elm2)).le_next;
         }
         (*ListEntry::field(elm2)).le_prev = (*ListEntry::field(elm)).le_prev;
         *(*ListEntry::field(elm2)).le_prev = elm2;
@@ -165,7 +179,12 @@ pub struct tailq_entry<T> {
 }
 
 impl<T> std::fmt::Debug for tailq_entry<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { f.debug_struct("tailq_entry").field("tqe_next", &self.tqe_next).field("tqe_prev", &self.tqe_prev).finish() }
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("tailq_entry")
+            .field("tqe_next", &self.tqe_next)
+            .field("tqe_prev", &self.tqe_prev)
+            .finish()
+    }
 }
 
 pub trait Entry<T, Discriminant = ()> {
@@ -183,8 +202,12 @@ pub unsafe fn tailq_init<T>(head: *mut tailq_head<T>) {
     }
 }
 
-pub unsafe fn tailq_first<T>(head: *mut tailq_head<T>) -> *mut T { unsafe { (*head).tqh_first } }
-pub fn tailq_end<T>(_head: *mut tailq_head<T>) -> *mut T { core::ptr::null_mut() }
+pub unsafe fn tailq_first<T>(head: *mut tailq_head<T>) -> *mut T {
+    unsafe { (*head).tqh_first }
+}
+pub fn tailq_end<T>(_head: *mut tailq_head<T>) -> *mut T {
+    core::ptr::null_mut()
+}
 
 pub unsafe fn tailq_next<T, Q, D>(elm: *mut T) -> *mut Q
 where
@@ -193,7 +216,9 @@ where
     unsafe { (*Entry::entry(elm)).tqe_next }
 }
 
-pub unsafe fn tailq_last<T>(head: *mut tailq_head<T>) -> *mut T { unsafe { *(*(*head).tqh_last.cast::<tailq_head<T>>()).tqh_last } }
+pub unsafe fn tailq_last<T>(head: *mut tailq_head<T>) -> *mut T {
+    unsafe { *(*(*head).tqh_last.cast::<tailq_head<T>>()).tqh_last }
+}
 
 pub unsafe fn tailq_prev<T, Q, D>(elm: *mut T) -> *mut Q
 where
@@ -205,7 +230,9 @@ where
     }
 }
 
-pub unsafe fn tailq_empty<T>(head: *const tailq_head<T>) -> bool { unsafe { (*head).tqh_first.is_null() } }
+pub unsafe fn tailq_empty<T>(head: *const tailq_head<T>) -> bool {
+    unsafe { (*head).tqh_first.is_null() }
+}
 
 macro_rules! tailq_insert_head {
     ($head:expr, $elm:expr, $field:ident) => {
@@ -266,7 +293,8 @@ where
 {
     unsafe {
         if !(*Entry::<_, D>::entry(elm)).tqe_next.is_null() {
-            (*Entry::<_, D>::entry((*Entry::<_, D>::entry(elm)).tqe_next)).tqe_prev = (*Entry::<_, D>::entry(elm)).tqe_prev;
+            (*Entry::<_, D>::entry((*Entry::<_, D>::entry(elm)).tqe_next)).tqe_prev =
+                (*Entry::<_, D>::entry(elm)).tqe_prev;
         } else {
             (*head).tqh_last = (*Entry::<_, D>::entry(elm)).tqe_prev;
         }
@@ -281,7 +309,8 @@ where
     unsafe {
         (*Entry::<_, D>::entry(elm2)).tqe_next = (*Entry::<_, D>::entry(elm)).tqe_next;
         if !(*Entry::<_, D>::entry(elm2)).tqe_next.is_null() {
-            (*Entry::<_, D>::entry((*Entry::<_, D>::entry(elm2)).tqe_next)).tqe_prev = &raw mut (*Entry::<_, D>::entry(elm2)).tqe_next;
+            (*Entry::<_, D>::entry((*Entry::<_, D>::entry(elm2)).tqe_next)).tqe_prev =
+                &raw mut (*Entry::<_, D>::entry(elm2)).tqe_next;
         } else {
             (*head).tqh_last = &raw mut (*Entry::<_, D>::entry(elm2)).tqe_next;
         }
@@ -366,7 +395,9 @@ where
 macro_rules! impl_tailq_entry {
     ($struct_name:ident, $attribute_field_name:ident, $attribute_field_ty:ty) => {
         impl $crate::compat::queue::Entry<$struct_name> for $struct_name {
-            unsafe fn entry(this: *mut Self) -> *mut $attribute_field_ty { unsafe { &raw mut (*this).$attribute_field_name } }
+            unsafe fn entry(this: *mut Self) -> *mut $attribute_field_ty {
+                unsafe { &raw mut (*this).$attribute_field_name }
+            }
         }
     };
 }

@@ -6,7 +6,8 @@ static mut cmd_respawn_window_entry: cmd_entry = cmd_entry {
     alias: c"respawnw".as_ptr(),
 
     args: args_parse::new(c"c:e:kt:", 0, -1, None),
-    usage: c"[-k] [-c start-directory] [-e environment] [-t target-window] [shell-command]".as_ptr(),
+    usage: c"[-k] [-c start-directory] [-e environment] [-t target-window] [shell-command]"
+        .as_ptr(),
 
     target: cmd_entry_flag::new(b't', cmd_find_type::CMD_FIND_WINDOW, 0),
     source: unsafe { zeroed() },

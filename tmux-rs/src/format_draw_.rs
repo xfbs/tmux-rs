@@ -29,9 +29,19 @@ unsafe fn format_is_type(fr: *mut format_range, sy: *mut style) -> boolint {
         }
 
         match (*fr).type_ {
-            style_range_type::STYLE_RANGE_NONE | style_range_type::STYLE_RANGE_LEFT | style_range_type::STYLE_RANGE_RIGHT => boolint::true_(),
-            style_range_type::STYLE_RANGE_PANE | style_range_type::STYLE_RANGE_WINDOW | style_range_type::STYLE_RANGE_SESSION => ((*fr).argument == (*sy).range_argument).into(),
-            style_range_type::STYLE_RANGE_USER => (libc::strcmp((&raw const (*fr).string).cast(), (&raw const (*sy).range_string).cast()) == 0).into(),
+            style_range_type::STYLE_RANGE_NONE
+            | style_range_type::STYLE_RANGE_LEFT
+            | style_range_type::STYLE_RANGE_RIGHT => boolint::true_(),
+            style_range_type::STYLE_RANGE_PANE
+            | style_range_type::STYLE_RANGE_WINDOW
+            | style_range_type::STYLE_RANGE_SESSION => {
+                ((*fr).argument == (*sy).range_argument).into()
+            }
+            style_range_type::STYLE_RANGE_USER => (libc::strcmp(
+                (&raw const (*fr).string).cast(),
+                (&raw const (*sy).range_string).cast(),
+            ) == 0)
+                .into(),
             _ => boolint::true_(),
         }
     }
@@ -48,7 +58,13 @@ unsafe extern "C" fn format_free_range(frs: *mut format_ranges, fr: *mut format_
 
 /// Fix range positions.
 #[unsafe(no_mangle)]
-unsafe extern "C" fn format_update_ranges(frs: *mut format_ranges, s: *mut screen, offset: u32, start: u32, width: u32) {
+unsafe extern "C" fn format_update_ranges(
+    frs: *mut format_ranges,
+    s: *mut screen,
+    offset: u32,
+    start: u32,
+    width: u32,
+) {
     unsafe {
         if frs.is_null() {
             return;
@@ -86,7 +102,16 @@ unsafe extern "C" fn format_update_ranges(frs: *mut format_ranges, s: *mut scree
 
 /// Draw a part of the format.
 #[unsafe(no_mangle)]
-unsafe extern "C" fn format_draw_put(octx: *mut screen_write_ctx, ocx: u32, ocy: u32, s: *mut screen, frs: *mut format_ranges, offset: u32, start: u32, width: u32) {
+unsafe extern "C" fn format_draw_put(
+    octx: *mut screen_write_ctx,
+    ocx: u32,
+    ocy: u32,
+    s: *mut screen,
+    frs: *mut format_ranges,
+    offset: u32,
+    start: u32,
+    width: u32,
+) {
     unsafe {
         // The offset is how far from the cursor on the target screen; start
         // and width how much to copy from the source screen.
@@ -98,7 +123,19 @@ unsafe extern "C" fn format_draw_put(octx: *mut screen_write_ctx, ocx: u32, ocy:
 
 /// Draw list part of format.
 #[unsafe(no_mangle)]
-unsafe extern "C" fn format_draw_put_list(octx: *mut screen_write_ctx, ocx: u32, ocy: u32, mut offset: u32, mut width: u32, list: *mut screen, list_left: *mut screen, list_right: *mut screen, focus_start: i32, focus_end: i32, frs: *mut format_ranges) {
+unsafe extern "C" fn format_draw_put_list(
+    octx: *mut screen_write_ctx,
+    ocx: u32,
+    ocy: u32,
+    mut offset: u32,
+    mut width: u32,
+    list: *mut screen,
+    list_left: *mut screen,
+    list_right: *mut screen,
+    focus_start: i32,
+    focus_end: i32,
+    frs: *mut format_ranges,
+) {
     unsafe {
         /* If there is enough space for the list, draw it entirely. */
         if width >= (*list).cx {
@@ -122,7 +159,12 @@ unsafe extern "C" fn format_draw_put_list(octx: *mut screen_write_ctx, ocx: u32,
             width -= (*list_left).cx;
         }
         if (start + width < (*list).cx && width > (*list_right).cx) {
-            screen_write_cursormove(octx, (ocx + offset + width - (*list_right).cx) as c_int, ocy as c_int, 0);
+            screen_write_cursormove(
+                octx,
+                (ocx + offset + width - (*list_right).cx) as c_int,
+                ocy as c_int,
+                0,
+            );
             screen_write_fast_copy(octx, list_right, 0, 0, (*list_right).cx, 1);
             width -= (*list_right).cx;
         }
@@ -134,7 +176,17 @@ unsafe extern "C" fn format_draw_put_list(octx: *mut screen_write_ctx, ocx: u32,
 
 /// Draw format with no list.
 #[unsafe(no_mangle)]
-unsafe extern "C" fn format_draw_none(octx: *mut screen_write_ctx, available: u32, ocx: u32, ocy: u32, left: *mut screen, centre: *mut screen, right: *mut screen, abs_centre: *mut screen, frs: *mut format_ranges) {
+unsafe extern "C" fn format_draw_none(
+    octx: *mut screen_write_ctx,
+    available: u32,
+    ocx: u32,
+    ocy: u32,
+    left: *mut screen,
+    centre: *mut screen,
+    right: *mut screen,
+    abs_centre: *mut screen,
+    frs: *mut format_ranges,
+) {
     unsafe {
         let mut width_left: u32 = (*left).cx;
         let mut width_centre: u32 = (*centre).cx;
@@ -156,7 +208,16 @@ unsafe extern "C" fn format_draw_none(octx: *mut screen_write_ctx, available: u3
         format_draw_put(octx, ocx, ocy, left, frs, 0, 0, width_left);
 
         // Write right at available - width_right.
-        format_draw_put(octx, ocx, ocy, right, frs, available - width_right, (*right).cx - width_right, width_right);
+        format_draw_put(
+            octx,
+            ocx,
+            ocy,
+            right,
+            frs,
+            available - width_right,
+            (*right).cx - width_right,
+            width_right,
+        );
 
         /*
          * Write centre halfway between
@@ -164,13 +225,31 @@ unsafe extern "C" fn format_draw_none(octx: *mut screen_write_ctx, available: u3
          * and
          *     available - width_right.
          */
-        format_draw_put(octx, ocx, ocy, centre, frs, width_left + ((available - width_right) - width_left) / 2 - width_centre / 2, (*centre).cx / 2 - width_centre / 2, width_centre);
+        format_draw_put(
+            octx,
+            ocx,
+            ocy,
+            centre,
+            frs,
+            width_left + ((available - width_right) - width_left) / 2 - width_centre / 2,
+            (*centre).cx / 2 - width_centre / 2,
+            width_centre,
+        );
 
         // Write abs_centre in the perfect centre of all horizontal space.
         if (width_abs_centre > available) {
             width_abs_centre = available;
         }
-        format_draw_put(octx, ocx, ocy, abs_centre, frs, (available - width_abs_centre) / 2, 0, width_abs_centre);
+        format_draw_put(
+            octx,
+            ocx,
+            ocy,
+            abs_centre,
+            frs,
+            (available - width_abs_centre) / 2,
+            0,
+            width_abs_centre,
+        );
     }
 }
 
@@ -226,7 +305,9 @@ unsafe extern "C" fn format_draw_left(
             screen_write_fast_copy(&raw mut ctx, after, 0, 0, width_after, 1);
             screen_write_stop(&raw mut ctx);
 
-            format_draw_none(octx, available, ocx, ocy, left, centre, right, abs_centre, frs);
+            format_draw_none(
+                octx, available, ocx, ocy, left, centre, right, abs_centre, frs,
+            );
             return;
         }
 
@@ -234,10 +315,28 @@ unsafe extern "C" fn format_draw_left(
         format_draw_put(octx, ocx, ocy, left, frs, 0, 0, width_left);
 
         /* Write right at available - width_right. */
-        format_draw_put(octx, ocx, ocy, right, frs, available - width_right, (*right).cx - width_right, width_right);
+        format_draw_put(
+            octx,
+            ocx,
+            ocy,
+            right,
+            frs,
+            available - width_right,
+            (*right).cx - width_right,
+            width_right,
+        );
 
         // Write after at width_left + width_list.
-        format_draw_put(octx, ocx, ocy, after, frs, width_left + width_list, 0, width_after);
+        format_draw_put(
+            octx,
+            ocx,
+            ocy,
+            after,
+            frs,
+            width_left + width_list,
+            0,
+            width_after,
+        );
 
         /*
          * Write centre halfway between
@@ -251,7 +350,9 @@ unsafe extern "C" fn format_draw_left(
             ocy,
             centre,
             frs,
-            (width_left + width_list + width_after) + ((available - width_right) - (width_left + width_list + width_after)) / 2 - width_centre / 2,
+            (width_left + width_list + width_after)
+                + ((available - width_right) - (width_left + width_list + width_after)) / 2
+                - width_centre / 2,
             (*centre).cx / 2 - width_centre / 2,
             width_centre,
         );
@@ -267,13 +368,34 @@ unsafe extern "C" fn format_draw_left(
             focus_start = 0;
             focus_end = 0;
         }
-        format_draw_put_list(octx, ocx, ocy, width_left, width_list, list, list_left, list_right, focus_start, focus_end, frs);
+        format_draw_put_list(
+            octx,
+            ocx,
+            ocy,
+            width_left,
+            width_list,
+            list,
+            list_left,
+            list_right,
+            focus_start,
+            focus_end,
+            frs,
+        );
 
         // Write abs_centre in the perfect centre of all horizontal space.
         if (width_abs_centre > available) {
             width_abs_centre = available;
         }
-        format_draw_put(octx, ocx, ocy, abs_centre, frs, (available - width_abs_centre) / 2, 0, width_abs_centre);
+        format_draw_put(
+            octx,
+            ocx,
+            ocy,
+            abs_centre,
+            frs,
+            (available - width_abs_centre) / 2,
+            0,
+            width_abs_centre,
+        );
     }
 }
 
@@ -330,7 +452,9 @@ unsafe extern "C" fn format_draw_centre(
             screen_write_fast_copy(&raw mut ctx, after, 0, 0, width_after, 1);
             screen_write_stop(&raw mut ctx);
 
-            format_draw_none(octx, available, ocx, ocy, left, centre, right, abs_centre, frs);
+            format_draw_none(
+                octx, available, ocx, ocy, left, centre, right, abs_centre, frs,
+            );
             return;
         }
 
@@ -338,7 +462,16 @@ unsafe extern "C" fn format_draw_centre(
         format_draw_put(octx, ocx, ocy, left, frs, 0, 0, width_left);
 
         // Write right at available - width_right.
-        format_draw_put(octx, ocx, ocy, right, frs, available - width_right, (*right).cx - width_right, width_right);
+        format_draw_put(
+            octx,
+            ocx,
+            ocy,
+            right,
+            frs,
+            available - width_right,
+            (*right).cx - width_right,
+            width_right,
+        );
 
         /*
          * All three centre sections are offset from the middle of the
@@ -350,13 +483,31 @@ unsafe extern "C" fn format_draw_centre(
          * Write centre at
          *     middle - width_list / 2 - width_centre.
          */
-        format_draw_put(octx, ocx, ocy, centre, frs, middle - width_list / 2 - width_centre, 0, width_centre);
+        format_draw_put(
+            octx,
+            ocx,
+            ocy,
+            centre,
+            frs,
+            middle - width_list / 2 - width_centre,
+            0,
+            width_centre,
+        );
 
         /*
          * Write after at
          *     middle - width_list / 2 + width_list
          */
-        format_draw_put(octx, ocx, ocy, after, frs, middle - width_list / 2 + width_list, 0, width_after);
+        format_draw_put(
+            octx,
+            ocx,
+            ocy,
+            after,
+            frs,
+            middle - width_list / 2 + width_list,
+            0,
+            width_after,
+        );
 
         /*
          * The list now goes from
@@ -369,13 +520,34 @@ unsafe extern "C" fn format_draw_centre(
             focus_start = (*list).cx as i32 / 2;
             focus_end = (*list).cx as i32 / 2;
         }
-        format_draw_put_list(octx, ocx, ocy, middle - width_list / 2, width_list, list, list_left, list_right, focus_start, focus_end, frs);
+        format_draw_put_list(
+            octx,
+            ocx,
+            ocy,
+            middle - width_list / 2,
+            width_list,
+            list,
+            list_left,
+            list_right,
+            focus_start,
+            focus_end,
+            frs,
+        );
 
         // Write abs_centre in the perfect centre of all horizontal space.
         if (width_abs_centre > available) {
             width_abs_centre = available;
         }
-        format_draw_put(octx, ocx, ocy, abs_centre, frs, (available - width_abs_centre) / 2, 0, width_abs_centre);
+        format_draw_put(
+            octx,
+            ocx,
+            ocy,
+            abs_centre,
+            frs,
+            (available - width_abs_centre) / 2,
+            0,
+            width_abs_centre,
+        );
     }
 }
 
@@ -431,7 +603,9 @@ unsafe extern "C" fn format_draw_right(
             screen_write_fast_copy(&raw mut ctx, after, 0, 0, width_after, 1);
             screen_write_stop(&raw mut ctx);
 
-            format_draw_none(octx, available, ocx, ocy, left, centre, right, abs_centre, frs);
+            format_draw_none(
+                octx, available, ocx, ocy, left, centre, right, abs_centre, frs,
+            );
             return;
         }
 
@@ -439,13 +613,31 @@ unsafe extern "C" fn format_draw_right(
         format_draw_put(octx, ocx, ocy, left, frs, 0, 0, width_left);
 
         // Write after at available - width_after.
-        format_draw_put(octx, ocx, ocy, after, frs, available - width_after, (*after).cx - width_after, width_after);
+        format_draw_put(
+            octx,
+            ocx,
+            ocy,
+            after,
+            frs,
+            available - width_after,
+            (*after).cx - width_after,
+            width_after,
+        );
 
         /*
          * Write right at
          *     available - width_right - width_list - width_after.
          */
-        format_draw_put(octx, ocx, ocy, right, frs, available - width_right - width_list - width_after, 0, width_right);
+        format_draw_put(
+            octx,
+            ocx,
+            ocy,
+            right,
+            frs,
+            available - width_right - width_list - width_after,
+            0,
+            width_right,
+        );
 
         /*
          * Write centre halfway between
@@ -459,7 +651,8 @@ unsafe extern "C" fn format_draw_right(
             ocy,
             centre,
             frs,
-            width_left + ((available - width_right - width_list - width_after) - width_left) / 2 - width_centre / 2,
+            width_left + ((available - width_right - width_list - width_after) - width_left) / 2
+                - width_centre / 2,
             (*centre).cx / 2 - width_centre / 2,
             width_centre,
         );
@@ -475,13 +668,34 @@ unsafe extern "C" fn format_draw_right(
             focus_start = 0;
             focus_end = 0;
         }
-        format_draw_put_list(octx, ocx, ocy, available - width_list - width_after, width_list, list, list_left, list_right, focus_start, focus_end, frs);
+        format_draw_put_list(
+            octx,
+            ocx,
+            ocy,
+            available - width_list - width_after,
+            width_list,
+            list,
+            list_left,
+            list_right,
+            focus_start,
+            focus_end,
+            frs,
+        );
 
         // Write abs_centre in the perfect centre of all horizontal space.
         if (width_abs_centre > available) {
             width_abs_centre = available;
         }
-        format_draw_put(octx, ocx, ocy, abs_centre, frs, (available - width_abs_centre) / 2, 0, width_abs_centre);
+        format_draw_put(
+            octx,
+            ocx,
+            ocy,
+            abs_centre,
+            frs,
+            (available - width_abs_centre) / 2,
+            0,
+            width_abs_centre,
+        );
     }
 }
 
@@ -545,7 +759,16 @@ unsafe extern "C" fn format_draw_absolute_centre(
         format_draw_put(octx, ocx, ocy, left, frs, 0, 0, width_left);
 
         // Write right at available - width_right.
-        format_draw_put(octx, ocx, ocy, right, frs, available - width_right, (*right).cx - width_right, width_right);
+        format_draw_put(
+            octx,
+            ocx,
+            ocy,
+            right,
+            frs,
+            available - width_right,
+            (*right).cx - width_right,
+            width_right,
+        );
 
         /*
          * Keep writing centre at the relative centre. Only the list is written
@@ -557,7 +780,16 @@ unsafe extern "C" fn format_draw_absolute_centre(
          * Write centre at
          *     middle - width_centre.
          */
-        format_draw_put(octx, ocx, ocy, centre, frs, middle - width_centre, 0, width_centre);
+        format_draw_put(
+            octx,
+            ocx,
+            ocy,
+            centre,
+            frs,
+            middle - width_centre,
+            0,
+            width_centre,
+        );
 
         // If there is no focus given, keep the centre in focus.
         if (focus_start == -1 || focus_end == -1) {
@@ -570,21 +802,55 @@ unsafe extern "C" fn format_draw_absolute_centre(
         abs_centre_offset = (available - width_list - width_abs_centre) / 2;
 
         // Write abs_centre before the list.
-        format_draw_put(octx, ocx, ocy, abs_centre, frs, abs_centre_offset, 0, width_abs_centre);
+        format_draw_put(
+            octx,
+            ocx,
+            ocy,
+            abs_centre,
+            frs,
+            abs_centre_offset,
+            0,
+            width_abs_centre,
+        );
         abs_centre_offset += width_abs_centre;
 
         // Draw the list in the absolute centre
-        format_draw_put_list(octx, ocx, ocy, abs_centre_offset, width_list, list, list_left, list_right, focus_start, focus_end, frs);
+        format_draw_put_list(
+            octx,
+            ocx,
+            ocy,
+            abs_centre_offset,
+            width_list,
+            list,
+            list_left,
+            list_right,
+            focus_start,
+            focus_end,
+            frs,
+        );
         abs_centre_offset += width_list;
 
         // Write after at the end of the centre
-        format_draw_put(octx, ocx, ocy, after, frs, abs_centre_offset, 0, width_after);
+        format_draw_put(
+            octx,
+            ocx,
+            ocy,
+            after,
+            frs,
+            abs_centre_offset,
+            0,
+            width_after,
+        );
     }
 }
 
 // Get width and count of any leading #s.
 #[unsafe(no_mangle)]
-unsafe extern "C" fn format_leading_hashes(cp: *const c_char, n: *mut u32, width: *mut u32) -> *const c_char {
+unsafe extern "C" fn format_leading_hashes(
+    cp: *const c_char,
+    n: *mut u32,
+    width: *mut u32,
+) -> *const c_char {
     unsafe {
         *n = 0;
         while *cp.add(*n as usize) == b'#' as i8 {
@@ -618,7 +884,12 @@ unsafe extern "C" fn format_leading_hashes(cp: *const c_char, n: *mut u32, width
 
 // Draw multiple characters.
 #[unsafe(no_mangle)]
-unsafe extern "C" fn format_draw_many(ctx: *mut screen_write_ctx, sy: *mut style, ch: c_char, n: u32) {
+unsafe extern "C" fn format_draw_many(
+    ctx: *mut screen_write_ctx,
+    sy: *mut style,
+    ch: c_char,
+    n: u32,
+) {
     unsafe {
         let mut i: u32;
 
@@ -631,7 +902,14 @@ unsafe extern "C" fn format_draw_many(ctx: *mut screen_write_ctx, sy: *mut style
 
 /// Draw a format to a screen.
 #[unsafe(no_mangle)]
-pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, available: c_uint, expanded: *const c_char, srs: *mut style_ranges, default_colours: c_int) {
+pub unsafe fn format_draw(
+    octx: *mut screen_write_ctx,
+    base: *const grid_cell,
+    available: c_uint,
+    expanded: *const c_char,
+    srs: *mut style_ranges,
+    default_colours: c_int,
+) {
     unsafe {
         let func = "format_draw";
         let mut __func__ = c"format_draw".as_ptr();
@@ -653,7 +931,16 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
             let mut current = Current::Left;
             let mut last = Current::Left;
 
-            static names: [&str; TOTAL] = ["LEFT", "CENTRE", "RIGHT", "ABSOLUTE_CENTRE", "LIST", "LIST_LEFT", "LIST_RIGHT", "AFTER"];
+            static names: [&str; TOTAL] = [
+                "LEFT",
+                "CENTRE",
+                "RIGHT",
+                "ABSOLUTE_CENTRE",
+                "LIST",
+                "LIST_LEFT",
+                "LIST_RIGHT",
+                "AFTER",
+            ];
 
             let size = libc::strlen(expanded) as u32;
             let mut os: *mut screen = (*octx).s;
@@ -664,7 +951,13 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
             let mut ocy: u32 = (*os).cy;
             let mut width: [u32; TOTAL] = [0; TOTAL];
 
-            let mut map: [Current; 5] = [Current::Left, Current::Left, Current::Centre, Current::Right, Current::AbsoluteCentre];
+            let mut map: [Current; 5] = [
+                Current::Left,
+                Current::Left,
+                Current::Centre,
+                Current::Right,
+                Current::AbsoluteCentre,
+            ];
 
             let mut focus_start: i32 = -1;
             let mut focus_end: i32 = -1;
@@ -719,14 +1012,24 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
                             cp = cp.add(n as usize);
                             n = n.div_ceil(2);
                             width[current as usize] += n;
-                            format_draw_many(&raw mut ctx[current as usize], &raw mut sy, b'#' as i8, n);
+                            format_draw_many(
+                                &raw mut ctx[current as usize],
+                                &raw mut sy,
+                                b'#' as i8,
+                                n,
+                            );
                             continue;
                         }
                         cp = cp.add(if even { n as usize + 1 } else { n as usize - 1 });
                         if sy.ignore != 0 {
                             continue;
                         }
-                        format_draw_many(&raw mut ctx[current as usize], &raw mut sy, b'#' as i8, n / 2);
+                        format_draw_many(
+                            &raw mut ctx[current as usize],
+                            &raw mut sy,
+                            b'#' as i8,
+                            n / 2,
+                        );
                         width[current as usize] += (n / 2);
                         if even {
                             utf8_set(ud, b'[');
@@ -781,7 +1084,9 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
                         }
                         break 'out;
                     }
-                    let mut tmp: *mut i8 = xstrndup(cp.add(2), end.offset_from(cp.add(2)) as usize).as_ptr().cast();
+                    let mut tmp: *mut i8 = xstrndup(cp.add(2), end.offset_from(cp.add(2)) as usize)
+                        .as_ptr()
+                        .cast();
                     style_copy(&raw mut saved_sy, &raw const sy);
                     if style_parse(&raw mut sy, &raw mut current_default, tmp) != 0 {
                         log_debug!("{}: invalid style '{}'", func, _s(tmp));
@@ -789,7 +1094,12 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
                         cp = end.add(1);
                         continue;
                     }
-                    log_debug!("{}: style '{}' -> '{}'", func, _s(tmp), _s(style_tostring(&raw const sy)));
+                    log_debug!(
+                        "{}: style '{}' -> '{}'",
+                        func,
+                        _s(tmp),
+                        _s(style_tostring(&raw const sy))
+                    );
                     free_(tmp);
                     if default_colours != 0 {
                         sy.gc.bg = (*base).bg;
@@ -907,7 +1217,12 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
                     }
 
                     if current != last {
-                        log_debug!("{}: change {} -> {}", func, names[last as usize], names[current as usize]);
+                        log_debug!(
+                            "{}: change {} -> {}",
+                            func,
+                            names[last as usize],
+                            names[current as usize]
+                        );
                         last = current;
                     }
 
@@ -934,7 +1249,11 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
 
                             (*fr).type_ = sy.range_type;
                             (*fr).argument = sy.range_argument;
-                            strlcpy((*fr).string.as_mut_ptr(), sy.range_string.as_ptr(), size_of::<[c_char; 16]>());
+                            strlcpy(
+                                (*fr).string.as_mut_ptr(),
+                                sy.range_string.as_ptr(),
+                                size_of::<[c_char; 16]>(),
+                            );
                         }
                     }
 
@@ -950,7 +1269,15 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
                     log_debug!("{}: focus {}-{}", func, focus_start, focus_end);
                 }
                 for fr in tailq_foreach(&raw mut frs).map(NonNull::as_ptr) {
-                    log_debug!("{}: range {}|{} is {} {}-{}", func, (*fr).type_ as u32, (*fr).argument, names[(*fr).index as usize], (*fr).start, (*fr).end);
+                    log_debug!(
+                        "{}: range {}|{} is {} {}-{}",
+                        func,
+                        (*fr).type_ as u32,
+                        (*fr).argument,
+                        names[(*fr).index as usize],
+                        (*fr).start,
+                        (*fr).end
+                    );
                 }
 
                 // Clear the available area.
@@ -1058,7 +1385,11 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
                     let sr = xcalloc1::<style_range>();
                     sr.type_ = (*fr).type_;
                     sr.argument = (*fr).argument;
-                    strlcpy(sr.string.as_mut_ptr(), (*fr).string.as_ptr(), size_of::<[c_char; 16]>());
+                    strlcpy(
+                        sr.string.as_mut_ptr(),
+                        (*fr).string.as_ptr(),
+                        size_of::<[c_char; 16]>(),
+                    );
                     sr.start = (*fr).start;
                     sr.end = (*fr).end;
                     tailq_insert_tail(srs, sr);
@@ -1071,10 +1402,42 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
                         style_range_type::STYLE_RANGE_RIGHT => {
                             log_debug!("{}: range right at {}-{}", func, sr.start, sr.end)
                         }
-                        style_range_type::STYLE_RANGE_PANE => log_debug!("{}: range pane|%%{} at {}-{}", func, sr.argument, sr.start, sr.end),
-                        style_range_type::STYLE_RANGE_WINDOW => log_debug!("{}: range window|{} at {}-{}", func, sr.argument, sr.start, sr.end),
-                        style_range_type::STYLE_RANGE_SESSION => log_debug!("{}: range session|${} at {}-{}", func, sr.argument, sr.start, sr.end),
-                        style_range_type::STYLE_RANGE_USER => log_debug!("{}: range user|{} at {}-{}", func, sr.argument, sr.start, sr.end),
+                        style_range_type::STYLE_RANGE_PANE => {
+                            log_debug!(
+                                "{}: range pane|%%{} at {}-{}",
+                                func,
+                                sr.argument,
+                                sr.start,
+                                sr.end
+                            )
+                        }
+                        style_range_type::STYLE_RANGE_WINDOW => {
+                            log_debug!(
+                                "{}: range window|{} at {}-{}",
+                                func,
+                                sr.argument,
+                                sr.start,
+                                sr.end
+                            )
+                        }
+                        style_range_type::STYLE_RANGE_SESSION => {
+                            log_debug!(
+                                "{}: range session|${} at {}-{}",
+                                func,
+                                sr.argument,
+                                sr.start,
+                                sr.end
+                            )
+                        }
+                        style_range_type::STYLE_RANGE_USER => {
+                            log_debug!(
+                                "{}: range user|{} at {}-{}",
+                                func,
+                                sr.argument,
+                                sr.start,
+                                sr.end
+                            )
+                        }
                     }
                     format_free_range(&raw mut frs, fr);
                 }
@@ -1271,7 +1634,8 @@ pub unsafe extern "C" fn format_trim_right(expanded: *const c_char, limit: u32) 
         let mut copy: *mut i8 = out;
         while *cp != b'\0' as i8 {
             if *cp == b'#' as i8 {
-                let mut end: *const c_char = format_leading_hashes(cp, &raw mut n, &raw mut leading_width);
+                let mut end: *const c_char =
+                    format_leading_hashes(cp, &raw mut n, &raw mut leading_width);
                 copy_width = leading_width;
                 if (width <= skip) {
                     if (skip - width >= copy_width) {

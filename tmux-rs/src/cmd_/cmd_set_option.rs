@@ -48,7 +48,11 @@ static mut cmd_set_hook_entry: cmd_entry = cmd_entry {
 };
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_set_option_args_parse(_args: *mut args, idx: u32, cause: *mut *mut c_char) -> args_parse_type {
+pub unsafe extern "C" fn cmd_set_option_args_parse(
+    _args: *mut args,
+    idx: u32,
+    cause: *mut *mut c_char,
+) -> args_parse_type {
     if idx == 1 {
         return args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING;
     }
@@ -115,7 +119,14 @@ pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_it
                 }
 
                 /* Get the scope and table for the option .*/
-                scope = options_scope_from_name(args, window, name, target, &raw mut oo, &raw mut cause);
+                scope = options_scope_from_name(
+                    args,
+                    window,
+                    name,
+                    target,
+                    &raw mut oo,
+                    &raw mut cause,
+                );
                 if (scope == OPTIONS_TABLE_NONE) {
                     if (args_has_(args, 'q')) {
                         break 'out;
@@ -155,7 +166,9 @@ pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_it
 
                 /* Change the option. */
                 if (args_has_(args, 'U') && scope == OPTIONS_TABLE_WINDOW) {
-                    for loop_ in tailq_foreach::<_, discr_entry>(&raw mut (*(*target).w).panes).map(NonNull::as_ptr) {
+                    for loop_ in tailq_foreach::<_, discr_entry>(&raw mut (*(*target).w).panes)
+                        .map(NonNull::as_ptr)
+                    {
                         let po = options_get_only((*loop_).options, name);
                         if (po.is_null()) {
                             continue;
@@ -183,7 +196,14 @@ pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_it
                     }
                     options_set_string(oo, name, append, c"%s".as_ptr(), value);
                 } else if (idx == -1 && options_is_array(parent) == 0) {
-                    error = options_from_string(oo, options_table_entry(parent), (*options_table_entry(parent)).name, value, args_has(args, b'a'), &raw mut cause);
+                    error = options_from_string(
+                        oo,
+                        options_table_entry(parent),
+                        (*options_table_entry(parent)).name,
+                        value,
+                        args_has(args, b'a'),
+                        &raw mut cause,
+                    );
                     if (error != 0) {
                         cmdq_error(item, c"%s".as_ptr(), cause);
                         free_(cause);
@@ -206,7 +226,8 @@ pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_it
                             free_(cause);
                             break 'fail;
                         }
-                    } else if (options_array_set(o, idx as u32, value, append, &raw mut cause) != 0) {
+                    } else if (options_array_set(o, idx as u32, value, append, &raw mut cause) != 0)
+                    {
                         cmdq_error(item, c"%s".as_ptr(), cause);
                         free_(cause);
                         break 'fail;

@@ -150,12 +150,27 @@ pub unsafe extern "C" fn server_lock_client(c: *mut client) {
         }
 
         tty_stop_tty(&raw mut (*c).tty);
-        tty_raw(&raw mut (*c).tty, tty_term_string((*c).tty.term, tty_code_code::TTYC_SMCUP));
-        tty_raw(&raw mut (*c).tty, tty_term_string((*c).tty.term, tty_code_code::TTYC_CLEAR));
-        tty_raw(&raw mut (*c).tty, tty_term_string((*c).tty.term, tty_code_code::TTYC_E3));
+        tty_raw(
+            &raw mut (*c).tty,
+            tty_term_string((*c).tty.term, tty_code_code::TTYC_SMCUP),
+        );
+        tty_raw(
+            &raw mut (*c).tty,
+            tty_term_string((*c).tty.term, tty_code_code::TTYC_CLEAR),
+        );
+        tty_raw(
+            &raw mut (*c).tty,
+            tty_term_string((*c).tty.term, tty_code_code::TTYC_E3),
+        );
 
         (*c).flags |= client_flag::SUSPENDED;
-        proc_send((*c).peer, msgtype::MSG_LOCK, -1, cmd.cast(), strlen(cmd) + 1);
+        proc_send(
+            (*c).peer,
+            msgtype::MSG_LOCK,
+            -1,
+            cmd.cast(),
+            strlen(cmd) + 1,
+        );
     }
 }
 
@@ -229,7 +244,15 @@ pub unsafe extern "C" fn server_renumber_all() {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_link_window(src: *mut session, srcwl: *mut winlink, dst: *mut session, mut dstidx: i32, killflag: i32, mut selectflag: i32, cause: *mut *mut c_char) -> i32 {
+pub unsafe extern "C" fn server_link_window(
+    src: *mut session,
+    srcwl: *mut winlink,
+    dst: *mut session,
+    mut dstidx: i32,
+    killflag: i32,
+    mut selectflag: i32,
+    cause: *mut *mut c_char,
+) -> i32 {
     unsafe {
         let mut dstwl = null_mut();
 
@@ -341,7 +364,8 @@ pub unsafe extern "C" fn server_destroy_pane(wp: *mut window_pane, notify: i32) 
                         notify_pane(c"pane-died".as_ptr(), wp);
                     }
 
-                    let mut s = options_get_string((*wp).options, c"remain-on-exit-format".as_ptr());
+                    let mut s =
+                        options_get_string((*wp).options, c"remain-on-exit-format".as_ptr());
                     if *s != '\0' as c_char {
                         screen_write_start_pane(ctx, wp, &raw mut (*wp).base);
                         screen_write_scrollregion(ctx, 0, sy - 1);
@@ -349,7 +373,8 @@ pub unsafe extern "C" fn server_destroy_pane(wp: *mut window_pane, notify: i32) 
                         screen_write_linefeed(ctx, 1, 8);
                         memcpy_(gc, &raw const grid_default_cell, size_of::<grid_cell>());
 
-                        let expanded = format_single(null_mut(), s, null_mut(), null_mut(), null_mut(), wp);
+                        let expanded =
+                            format_single(null_mut(), s, null_mut(), null_mut(), null_mut(), wp);
                         format_draw(ctx, gc, sx, expanded, null_mut(), 0);
                         free_(expanded);
 
@@ -398,7 +423,10 @@ pub unsafe extern "C" fn server_destroy_session_group(s: *mut session) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_find_session(s: *mut session, f: unsafe extern "C" fn(*mut session, *mut session) -> i32) -> *mut session {
+pub unsafe extern "C" fn server_find_session(
+    s: *mut session,
+    f: unsafe extern "C" fn(*mut session, *mut session) -> i32,
+) -> *mut session {
     unsafe {
         let mut s_out: *mut session = null_mut();
         for s_loop in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
@@ -411,10 +439,18 @@ pub unsafe extern "C" fn server_find_session(s: *mut session, f: unsafe extern "
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_newer_session(s_loop: *mut session, s_out: *mut session) -> i32 { unsafe { (timer::new(&raw const (*s_loop).activity_time) > timer::new(&raw const (*s_out).activity_time)) as i32 } }
+pub unsafe extern "C" fn server_newer_session(s_loop: *mut session, s_out: *mut session) -> i32 {
+    unsafe {
+        (timer::new(&raw const (*s_loop).activity_time)
+            > timer::new(&raw const (*s_out).activity_time)) as i32
+    }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_newer_detached_session(s_loop: *mut session, s_out: *mut session) -> i32 {
+pub unsafe extern "C" fn server_newer_detached_session(
+    s_loop: *mut session,
+    s_out: *mut session,
+) -> i32 {
     unsafe {
         if (*s_loop).attached != 0 {
             return 0;

@@ -88,7 +88,11 @@ pub struct window_customize_modedata {
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_customize_get_tag(o: *mut options_entry, idx: i32, oe: *const options_table_entry) -> u64 {
+unsafe extern "C" fn window_customize_get_tag(
+    o: *mut options_entry,
+    idx: i32,
+    oe: *const options_table_entry,
+) -> u64 {
     unsafe {
         if let Some(oe) = NonNull::new(oe.cast_mut()) {
             let offset = oe.offset_from_unsigned(NonNull::from_ref(&options_table[0])) as u64;
@@ -100,10 +104,14 @@ unsafe extern "C" fn window_customize_get_tag(o: *mut options_entry, idx: i32, o
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_customize_get_tree(scope: window_customize_scope, fs: *mut cmd_find_state) -> *mut options {
+unsafe extern "C" fn window_customize_get_tree(
+    scope: window_customize_scope,
+    fs: *mut cmd_find_state,
+) -> *mut options {
     unsafe {
         match (scope) {
-            window_customize_scope::WINDOW_CUSTOMIZE_NONE | window_customize_scope::WINDOW_CUSTOMIZE_KEY => null_mut(),
+            window_customize_scope::WINDOW_CUSTOMIZE_NONE
+            | window_customize_scope::WINDOW_CUSTOMIZE_KEY => null_mut(),
             window_customize_scope::WINDOW_CUSTOMIZE_SERVER => global_options,
             window_customize_scope::WINDOW_CUSTOMIZE_GLOBAL_SESSION => global_s_options,
             window_customize_scope::WINDOW_CUSTOMIZE_SESSION => (*(*fs).s).options,
@@ -115,7 +123,11 @@ unsafe extern "C" fn window_customize_get_tree(scope: window_customize_scope, fs
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_customize_check_item(data: *mut window_customize_modedata, item: *mut window_customize_itemdata, mut fsp: *mut cmd_find_state) -> boolint {
+unsafe extern "C" fn window_customize_check_item(
+    data: *mut window_customize_modedata,
+    item: *mut window_customize_itemdata,
+    mut fsp: *mut cmd_find_state,
+) -> boolint {
     unsafe {
         let mut fs: cmd_find_state = zeroed();
 
@@ -134,7 +146,11 @@ unsafe extern "C" fn window_customize_check_item(data: *mut window_customize_mod
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_customize_get_key(item: *mut window_customize_itemdata, ktp: *mut *mut key_table, bdp: *mut *mut key_binding) -> i32 {
+unsafe extern "C" fn window_customize_get_key(
+    item: *mut window_customize_itemdata,
+    ktp: *mut *mut key_table,
+    bdp: *mut *mut key_binding,
+) -> i32 {
     unsafe {
         let Some(kt) = NonNull::new(key_bindings_get_table((*item).table, 0)) else {
             return 0;
@@ -155,7 +171,10 @@ unsafe extern "C" fn window_customize_get_key(item: *mut window_customize_itemda
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_customize_scope_text(scope: window_customize_scope, fs: *mut cmd_find_state) -> *mut c_char {
+unsafe extern "C" fn window_customize_scope_text(
+    scope: window_customize_scope,
+    fs: *mut cmd_find_state,
+) -> *mut c_char {
     unsafe {
         let mut s: *mut c_char = null_mut();
         let mut idx: u32 = 0;
@@ -178,11 +197,14 @@ unsafe extern "C" fn window_customize_scope_text(scope: window_customize_scope, 
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_customize_add_item(data: *mut window_customize_modedata) -> *mut window_customize_itemdata {
+unsafe extern "C" fn window_customize_add_item(
+    data: *mut window_customize_modedata,
+) -> *mut window_customize_itemdata {
     unsafe {
         let mut item: *mut window_customize_itemdata = null_mut();
 
-        (*data).item_list = xreallocarray_((*data).item_list, (*data).item_size as usize + 1).as_ptr();
+        (*data).item_list =
+            xreallocarray_((*data).item_list, (*data).item_size as usize + 1).as_ptr();
         item = xcalloc1() as *mut window_customize_itemdata;
         *(*data).item_list.add((*data).item_size as usize) = item;
         (*data).item_size += 1;
@@ -201,7 +223,13 @@ unsafe extern "C" fn window_customize_free_item(item: *mut window_customize_item
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_customize_build_array(data: *mut window_customize_modedata, top: *mut mode_tree_item, scope: window_customize_scope, o: *mut options_entry, ft: *mut format_tree) {
+unsafe extern "C" fn window_customize_build_array(
+    data: *mut window_customize_modedata,
+    top: *mut mode_tree_item,
+    scope: window_customize_scope,
+    o: *mut options_entry,
+    ft: *mut format_tree,
+) {
     unsafe {
         let mut oe = options_table_entry(o);
         let mut oo = options_owner(o);
@@ -236,7 +264,15 @@ unsafe extern "C" fn window_customize_build_array(data: *mut window_customize_mo
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_customize_build_option(data: *mut window_customize_modedata, top: *mut mode_tree_item, scope: window_customize_scope, o: *mut options_entry, ft: *mut format_tree, filter: *const c_char, fs: *mut cmd_find_state) {
+unsafe extern "C" fn window_customize_build_option(
+    data: *mut window_customize_modedata,
+    top: *mut mode_tree_item,
+    scope: window_customize_scope,
+    o: *mut options_entry,
+    ft: *mut format_tree,
+    filter: *const c_char,
+    fs: *mut cmd_find_state,
+) {
     unsafe {
         let mut oe = options_table_entry(o);
         let mut oo = options_owner(o);
@@ -252,7 +288,10 @@ unsafe extern "C" fn window_customize_build_option(data: *mut window_customize_m
             array = 1;
         }
 
-        if scope == window_customize_scope::WINDOW_CUSTOMIZE_SERVER || scope == window_customize_scope::WINDOW_CUSTOMIZE_GLOBAL_SESSION || scope == window_customize_scope::WINDOW_CUSTOMIZE_GLOBAL_WINDOW {
+        if scope == window_customize_scope::WINDOW_CUSTOMIZE_SERVER
+            || scope == window_customize_scope::WINDOW_CUSTOMIZE_GLOBAL_SESSION
+            || scope == window_customize_scope::WINDOW_CUSTOMIZE_GLOBAL_WINDOW
+        {
             global = 1;
         }
         if (*data).hide_global != 0 && global != 0 {
@@ -309,7 +348,11 @@ unsafe extern "C" fn window_customize_build_option(data: *mut window_customize_m
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_customize_find_user_options(oo: *mut options, list: *mut *mut *const c_char, size: *mut u32) {
+unsafe extern "C" fn window_customize_find_user_options(
+    oo: *mut options,
+    list: *mut *mut *const c_char,
+    size: *mut u32,
+) {
     unsafe {
         let mut o = options_first(oo);
         while !o.is_null() {
@@ -358,7 +401,15 @@ unsafe extern "C" fn window_customize_build_options(
         let mut list = null_mut();
         let mut size: u32 = 0;
 
-        let top = mode_tree_add((*data).data, null_mut(), null_mut(), tag, title, null_mut(), 0);
+        let top = mode_tree_add(
+            (*data).data,
+            null_mut(),
+            null_mut(),
+            tag,
+            title,
+            null_mut(),
+            0,
+        );
         mode_tree_no_tag(top);
 
         // We get the options from the first tree, but build it using the
@@ -422,7 +473,14 @@ unsafe extern "C" fn window_customize_build_options(
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_customize_build_keys(data: *mut window_customize_modedata, kt: *mut key_table, mut ft: *mut format_tree, filter: *const c_char, fs: *mut cmd_find_state, number: i32) {
+unsafe extern "C" fn window_customize_build_keys(
+    data: *mut window_customize_modedata,
+    kt: *mut key_table,
+    mut ft: *mut format_tree,
+    filter: *const c_char,
+    fs: *mut cmd_find_state,
+    number: i32,
+) {
     unsafe {
         // struct mode_tree_item *top, *child, *mti;
         // struct window_customize_itemdata *item;
@@ -436,7 +494,15 @@ unsafe extern "C" fn window_customize_build_keys(data: *mut window_customize_mod
         let tag: u64 = (1u64 << 62) | ((number as u64) << 54) | 1;
 
         xasprintf(&raw mut title, c"Key Table - %s".as_ptr(), (*kt).name);
-        let top = mode_tree_add((*data).data, null_mut(), null_mut(), tag, title, null_mut(), 0);
+        let top = mode_tree_add(
+            (*data).data,
+            null_mut(),
+            null_mut(),
+            tag,
+            title,
+            null_mut(),
+            0,
+        );
         mode_tree_no_tag(top);
         free_(title);
 
@@ -446,7 +512,12 @@ unsafe extern "C" fn window_customize_build_keys(data: *mut window_customize_mod
 
         let mut bd = key_bindings_first(kt);
         while !bd.is_null() {
-            format_add(ft, c"key".as_ptr(), c"%s".as_ptr(), key_string_lookup_key((*bd).key, 0));
+            format_add(
+                ft,
+                c"key".as_ptr(),
+                c"%s".as_ptr(),
+                key_string_lookup_key((*bd).key, 0),
+            );
             if !(*bd).note.is_null() {
                 format_add(ft, c"key_note".as_ptr(), c"%s".as_ptr(), (*bd).note);
             }
@@ -467,13 +538,29 @@ unsafe extern "C" fn window_customize_build_keys(data: *mut window_customize_mod
             (*item).idx = -1;
 
             let expanded = format_expand(ft, (*data).format);
-            let child = mode_tree_add((*data).data, top, item.cast(), bd as u64, expanded, null_mut(), 0);
+            let child = mode_tree_add(
+                (*data).data,
+                top,
+                item.cast(),
+                bd as u64,
+                expanded,
+                null_mut(),
+                0,
+            );
             free_(expanded);
 
             let tmp = cmd_list_print((*bd).cmdlist, 0);
             xasprintf(&raw mut text, c"#[ignore]%s".as_ptr(), tmp);
             free_(tmp);
-            let mut mti = mode_tree_add((*data).data, child, item.cast(), tag | ((*bd).key << 3) | 1, c"Command".as_ptr(), text, -1);
+            let mut mti = mode_tree_add(
+                (*data).data,
+                child,
+                item.cast(),
+                tag | ((*bd).key << 3) | 1,
+                c"Command".as_ptr(),
+                text,
+                -1,
+            );
             mode_tree_draw_as_parent(mti);
             mode_tree_no_tag(mti);
             free_(text);
@@ -483,13 +570,33 @@ unsafe extern "C" fn window_customize_build_keys(data: *mut window_customize_mod
             } else {
                 text = xstrdup(c"".as_ptr()).as_ptr();
             }
-            mti = mode_tree_add((*data).data, child, item.cast(), tag | ((*bd).key << 3) | (1 << 1) | 1, c"Note".as_ptr(), text, -1);
+            mti = mode_tree_add(
+                (*data).data,
+                child,
+                item.cast(),
+                tag | ((*bd).key << 3) | (1 << 1) | 1,
+                c"Note".as_ptr(),
+                text,
+                -1,
+            );
             mode_tree_draw_as_parent(mti);
             mode_tree_no_tag(mti);
             free_(text);
 
-            let flag = if (*bd).flags & KEY_BINDING_REPEAT != 0 { c"on".as_ptr() } else { c"off".as_ptr() };
-            mti = mode_tree_add((*data).data, child, item.cast(), tag | ((*bd).key << 3) | (2 << 1) | 1, c"Repeat".as_ptr(), flag, -1);
+            let flag = if (*bd).flags & KEY_BINDING_REPEAT != 0 {
+                c"on".as_ptr()
+            } else {
+                c"off".as_ptr()
+            };
+            mti = mode_tree_add(
+                (*data).data,
+                child,
+                item.cast(),
+                tag | ((*bd).key << 3) | (2 << 1) | 1,
+                c"Repeat".as_ptr(),
+                flag,
+                -1,
+            );
             mode_tree_draw_as_parent(mti);
             mode_tree_no_tag(mti);
 
@@ -501,7 +608,12 @@ unsafe extern "C" fn window_customize_build_keys(data: *mut window_customize_mod
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_customize_build(modedata: NonNull<c_void>, _: *mut mode_tree_sort_criteria, _: *mut u64, filter: *const c_char) {
+unsafe extern "C" fn window_customize_build(
+    modedata: NonNull<c_void>,
+    _: *mut mode_tree_sort_criteria,
+    _: *mut u64,
+    filter: *const c_char,
+) {
     unsafe {
         let mut data: NonNull<window_customize_modedata> = modedata.cast();
         let mut data = data.as_ptr();
@@ -588,7 +700,13 @@ unsafe extern "C" fn window_customize_build(modedata: NonNull<c_void>, _: *mut m
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_customize_draw_key(_: *mut window_customize_modedata, item: *mut window_customize_itemdata, ctx: *mut screen_write_ctx, sx: u32, sy: u32) {
+unsafe extern "C" fn window_customize_draw_key(
+    _: *mut window_customize_modedata,
+    item: *mut window_customize_itemdata,
+    ctx: *mut screen_write_ctx,
+    sx: u32,
+    sy: u32,
+) {
     unsafe {
         let mut s = (*ctx).s;
         let mut cx = (*s).cx;
@@ -609,7 +727,17 @@ unsafe extern "C" fn window_customize_draw_key(_: *mut window_customize_modedata
         if *note != b'\0' as i8 && *note.add(libc::strlen(note) - 1) != b'.' as i8 {
             period = c".".as_ptr();
         }
-        if !screen_write_text(ctx, cx, sx, sy, 0, &grid_default_cell, c"%s%s".as_ptr(), note, period) {
+        if !screen_write_text(
+            ctx,
+            cx,
+            sx,
+            sy,
+            0,
+            &grid_default_cell,
+            c"%s%s".as_ptr(),
+            note,
+            period,
+        ) {
             return;
         }
         screen_write_cursormove(ctx, cx as i32, (*s).cy as i32 + 1, 0); /* skip line */
@@ -617,7 +745,16 @@ unsafe extern "C" fn window_customize_draw_key(_: *mut window_customize_modedata
             return;
         }
 
-        if !screen_write_text(ctx, cx, sx, sy - ((*s).cy - cy), 0, &raw const grid_default_cell, c"This key is in the %s table.".as_ptr(), (*kt).name) {
+        if !screen_write_text(
+            ctx,
+            cx,
+            sx,
+            sy - ((*s).cy - cy),
+            0,
+            &raw const grid_default_cell,
+            c"This key is in the %s table.".as_ptr(),
+            (*kt).name,
+        ) {
             return;
         }
         if !screen_write_text(
@@ -628,7 +765,11 @@ unsafe extern "C" fn window_customize_draw_key(_: *mut window_customize_modedata
             0,
             &raw const grid_default_cell,
             c"This key %s repeat.".as_ptr(),
-            if (*bd).flags & KEY_BINDING_REPEAT != 0 { c"does".as_ptr() } else { c"does not".as_ptr() },
+            if (*bd).flags & KEY_BINDING_REPEAT != 0 {
+                c"does".as_ptr()
+            } else {
+                c"does not".as_ptr()
+            },
         ) {
             return;
         }
@@ -638,14 +779,34 @@ unsafe extern "C" fn window_customize_draw_key(_: *mut window_customize_modedata
         }
 
         let cmd = cmd_list_print((*bd).cmdlist, 0);
-        if !screen_write_text(ctx, cx, sx, sy - ((*s).cy - cy), 0, &raw const grid_default_cell, c"Command: %s".as_ptr(), cmd) {
+        if !screen_write_text(
+            ctx,
+            cx,
+            sx,
+            sy - ((*s).cy - cy),
+            0,
+            &raw const grid_default_cell,
+            c"Command: %s".as_ptr(),
+            cmd,
+        ) {
             free_(cmd);
             return;
         }
         let default_bd = key_bindings_get_default(kt, (*bd).key);
         if !default_bd.is_null() {
             let default_cmd = cmd_list_print((*default_bd).cmdlist, 0);
-            if libc::strcmp(cmd, default_cmd) != 0 && !screen_write_text(ctx, cx, sx, sy - ((*s).cy - cy), 0, &grid_default_cell, c"The default is: %s".as_ptr(), default_cmd) {
+            if libc::strcmp(cmd, default_cmd) != 0
+                && !screen_write_text(
+                    ctx,
+                    cx,
+                    sx,
+                    sy - ((*s).cy - cy),
+                    0,
+                    &grid_default_cell,
+                    c"The default is: %s".as_ptr(),
+                    default_cmd,
+                )
+            {
                 free_(default_cmd);
                 free_(cmd);
                 return;
@@ -657,7 +818,13 @@ unsafe extern "C" fn window_customize_draw_key(_: *mut window_customize_modedata
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_customize_draw_option(data: *mut window_customize_modedata, item: *mut window_customize_itemdata, ctx: *mut screen_write_ctx, sx: u32, sy: u32) {
+unsafe extern "C" fn window_customize_draw_option(
+    data: *mut window_customize_modedata,
+    item: *mut window_customize_itemdata,
+    ctx: *mut screen_write_ctx,
+    sx: u32,
+    sy: u32,
+) {
     unsafe {
         let mut s = (*ctx).s;
         let mut cx = (*s).cx;
@@ -700,7 +867,11 @@ unsafe extern "C" fn window_customize_draw_option(data: *mut window_customize_mo
             }
             let ft = format_create_from_state(null_mut(), null_mut(), &raw mut fs);
 
-            let mut text = if oe.is_null() || (*oe).text.is_null() { c"This option doesn't have a description.".as_ptr() } else { (*oe).text };
+            let mut text = if oe.is_null() || (*oe).text.is_null() {
+                c"This option doesn't have a description.".as_ptr()
+            } else {
+                (*oe).text
+            };
 
             if !screen_write_text(ctx, cx, sx, sy, 0, &grid_default_cell, c"%s".as_ptr(), text) {
                 break 'out;
@@ -712,7 +883,9 @@ unsafe extern "C" fn window_customize_draw_option(data: *mut window_customize_mo
 
             if oe.is_null() {
                 text = c"user".as_ptr();
-            } else if ((*oe).scope & (OPTIONS_TABLE_WINDOW | OPTIONS_TABLE_PANE)) == (OPTIONS_TABLE_WINDOW | OPTIONS_TABLE_PANE) {
+            } else if ((*oe).scope & (OPTIONS_TABLE_WINDOW | OPTIONS_TABLE_PANE))
+                == (OPTIONS_TABLE_WINDOW | OPTIONS_TABLE_PANE)
+            {
                 text = c"window and pane".as_ptr();
             } else if (*oe).scope & OPTIONS_TABLE_WINDOW != 0 {
                 text = c"window".as_ptr();
@@ -721,16 +894,42 @@ unsafe extern "C" fn window_customize_draw_option(data: *mut window_customize_mo
             } else {
                 text = c"server".as_ptr();
             }
-            if !screen_write_text(ctx, cx, sx, sy - ((*s).cy - cy), 0, &raw const grid_default_cell, c"This is a %s option.".as_ptr(), text) {
+            if !screen_write_text(
+                ctx,
+                cx,
+                sx,
+                sy - ((*s).cy - cy),
+                0,
+                &raw const grid_default_cell,
+                c"This is a %s option.".as_ptr(),
+                text,
+            ) {
                 break 'out;
             }
             if !oe.is_null() && (*oe).flags & OPTIONS_TABLE_IS_ARRAY != 0 {
                 if idx != -1 {
-                    if !screen_write_text(ctx, cx, sx, sy - ((*s).cy - cy), 0, &raw const grid_default_cell, c"This is an array option, index %u.".as_ptr(), idx) {
+                    if !screen_write_text(
+                        ctx,
+                        cx,
+                        sx,
+                        sy - ((*s).cy - cy),
+                        0,
+                        &raw const grid_default_cell,
+                        c"This is an array option, index %u.".as_ptr(),
+                        idx,
+                    ) {
                         break 'out;
                     }
                 } else {
-                    if !screen_write_text(ctx, cx, sx, sy - ((*s).cy - cy), 0, &raw const grid_default_cell, c"This is an array option.".as_ptr()) {
+                    if !screen_write_text(
+                        ctx,
+                        cx,
+                        sx,
+                        sy - ((*s).cy - cy),
+                        0,
+                        &raw const grid_default_cell,
+                        c"This is an array option.".as_ptr(),
+                    ) {
                         break 'out;
                     }
                 }
@@ -751,13 +950,33 @@ unsafe extern "C" fn window_customize_draw_option(data: *mut window_customize_mo
                     default_value = null_mut();
                 }
             }
-            if !screen_write_text(ctx, cx, sx, sy - ((*s).cy - cy), 0, &raw const grid_default_cell, c"Option value: %s%s%s".as_ptr(), value, space, unit) {
+            if !screen_write_text(
+                ctx,
+                cx,
+                sx,
+                sy - ((*s).cy - cy),
+                0,
+                &raw const grid_default_cell,
+                c"Option value: %s%s%s".as_ptr(),
+                value,
+                space,
+                unit,
+            ) {
                 break 'out;
             }
             if oe.is_null() || (*oe).type_ == options_table_type::OPTIONS_TABLE_STRING {
                 expanded = format_expand(ft, value);
                 if libc::strcmp(expanded, value) != 0 {
-                    if !screen_write_text(ctx, cx, sx, sy - ((*s).cy - cy), 0, &raw const grid_default_cell, c"This expands to: %s".as_ptr(), expanded) {
+                    if !screen_write_text(
+                        ctx,
+                        cx,
+                        sx,
+                        sy - ((*s).cy - cy),
+                        0,
+                        &raw const grid_default_cell,
+                        c"This expands to: %s".as_ptr(),
+                        expanded,
+                    ) {
                         break 'out;
                     }
                 }
@@ -774,31 +993,83 @@ unsafe extern "C" fn window_customize_draw_option(data: *mut window_customize_mo
                     choice = choice.add(1);
                 }
                 choices[libc::strlen(choices.as_ptr()) - 2] = b'\0' as i8;
-                if !screen_write_text(ctx, cx, sx, sy - ((*s).cy - cy), 0, &raw const grid_default_cell, c"Available values are: %s".as_ptr(), choices) {
+                if !screen_write_text(
+                    ctx,
+                    cx,
+                    sx,
+                    sy - ((*s).cy - cy),
+                    0,
+                    &raw const grid_default_cell,
+                    c"Available values are: %s".as_ptr(),
+                    choices,
+                ) {
                     break 'out;
                 }
             }
             if !oe.is_null() && (*oe).type_ == options_table_type::OPTIONS_TABLE_COLOUR {
-                if !screen_write_text(ctx, cx, sx, sy - ((*s).cy - cy), 1, &raw const grid_default_cell, c"This is a colour option: ".as_ptr()) {
+                if !screen_write_text(
+                    ctx,
+                    cx,
+                    sx,
+                    sy - ((*s).cy - cy),
+                    1,
+                    &raw const grid_default_cell,
+                    c"This is a colour option: ".as_ptr(),
+                ) {
                     break 'out;
                 }
                 memcpy__(&raw mut gc, &raw const grid_default_cell);
                 gc.fg = options_get_number((*item).oo, name) as i32;
-                if !screen_write_text(ctx, cx, sx, sy - ((*s).cy - cy), 0, &raw const gc, c"EXAMPLE".as_ptr()) {
+                if !screen_write_text(
+                    ctx,
+                    cx,
+                    sx,
+                    sy - ((*s).cy - cy),
+                    0,
+                    &raw const gc,
+                    c"EXAMPLE".as_ptr(),
+                ) {
                     break 'out;
                 }
             }
             if !oe.is_null() && (*oe).flags & OPTIONS_TABLE_IS_STYLE != 0 {
-                if !screen_write_text(ctx, cx, sx, sy - ((*s).cy - cy), 1, &raw const grid_default_cell, c"This is a style option: ".as_ptr()) {
+                if !screen_write_text(
+                    ctx,
+                    cx,
+                    sx,
+                    sy - ((*s).cy - cy),
+                    1,
+                    &raw const grid_default_cell,
+                    c"This is a style option: ".as_ptr(),
+                ) {
                     break 'out;
                 }
                 style_apply(&raw mut gc, (*item).oo, name, ft);
-                if !screen_write_text(ctx, cx, sx, sy - ((*s).cy - cy), 0, &raw mut gc, c"EXAMPLE".as_ptr()) {
+                if !screen_write_text(
+                    ctx,
+                    cx,
+                    sx,
+                    sy - ((*s).cy - cy),
+                    0,
+                    &raw mut gc,
+                    c"EXAMPLE".as_ptr(),
+                ) {
                     break 'out;
                 }
             }
             if !default_value.is_null() {
-                if !screen_write_text(ctx, cx, sx, sy - ((*s).cy - cy), 0, &raw const grid_default_cell, c"The default is: %s%s%s".as_ptr(), default_value, space, unit) {
+                if !screen_write_text(
+                    ctx,
+                    cx,
+                    sx,
+                    sy - ((*s).cy - cy),
+                    0,
+                    &raw const grid_default_cell,
+                    c"The default is: %s%s%s".as_ptr(),
+                    default_value,
+                    space,
+                    unit,
+                ) {
                     break 'out;
                 }
             }
@@ -815,7 +1086,10 @@ unsafe extern "C" fn window_customize_draw_option(data: *mut window_customize_mo
                         let wo = options_get_parent((*item).oo);
                         (wo, options_get_parent(wo))
                     }
-                    window_customize_scope::WINDOW_CUSTOMIZE_WINDOW | window_customize_scope::WINDOW_CUSTOMIZE_SESSION => (null_mut(), options_get_parent((*item).oo)),
+                    window_customize_scope::WINDOW_CUSTOMIZE_WINDOW
+                    | window_customize_scope::WINDOW_CUSTOMIZE_SESSION => {
+                        (null_mut(), options_get_parent((*item).oo))
+                    }
                     _ => (null_mut(), null_mut()),
                 }
             };
@@ -823,7 +1097,19 @@ unsafe extern "C" fn window_customize_draw_option(data: *mut window_customize_mo
                 let parent = options_get_only(wo, name);
                 if !parent.is_null() {
                     value = options_to_string(parent, -1, 0);
-                    if !screen_write_text(ctx, (*s).cx, sx, sy - ((*s).cy - cy), 0, &raw const grid_default_cell, c"Window value (from window %u): %s%s%s".as_ptr(), (*fs.wl).idx, value, space, unit) {
+                    if !screen_write_text(
+                        ctx,
+                        (*s).cx,
+                        sx,
+                        sy - ((*s).cy - cy),
+                        0,
+                        &raw const grid_default_cell,
+                        c"Window value (from window %u): %s%s%s".as_ptr(),
+                        (*fs.wl).idx,
+                        value,
+                        space,
+                        unit,
+                    ) {
                         break 'out;
                     }
                 }
@@ -832,7 +1118,18 @@ unsafe extern "C" fn window_customize_draw_option(data: *mut window_customize_mo
                 let parent = options_get_only(go, name);
                 if !parent.is_null() {
                     value = options_to_string(parent, -1, 0);
-                    if !screen_write_text(ctx, (*s).cx, sx, sy - ((*s).cy - cy), 0, &raw const grid_default_cell, c"Global value: %s%s%s".as_ptr(), value, space, unit) {
+                    if !screen_write_text(
+                        ctx,
+                        (*s).cx,
+                        sx,
+                        sy - ((*s).cy - cy),
+                        0,
+                        &raw const grid_default_cell,
+                        c"Global value: %s%s%s".as_ptr(),
+                        value,
+                        space,
+                        unit,
+                    ) {
                         break 'out;
                     }
                 }
@@ -845,7 +1142,13 @@ unsafe extern "C" fn window_customize_draw_option(data: *mut window_customize_mo
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_customize_draw(modedata: *mut c_void, itemdata: Option<NonNull<c_void>>, ctx: *mut screen_write_ctx, sx: u32, sy: u32) {
+unsafe extern "C" fn window_customize_draw(
+    modedata: *mut c_void,
+    itemdata: Option<NonNull<c_void>>,
+    ctx: *mut screen_write_ctx,
+    sx: u32,
+    sy: u32,
+) {
     unsafe {
         let mut data = modedata as *mut window_customize_modedata;
         let mut item: Option<NonNull<window_customize_itemdata>> = itemdata.map(NonNull::cast);
@@ -863,7 +1166,11 @@ unsafe extern "C" fn window_customize_draw(modedata: *mut c_void, itemdata: Opti
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_customize_menu(modedata: NonNull<c_void>, c: *mut client, key: key_code) {
+unsafe extern "C" fn window_customize_menu(
+    modedata: NonNull<c_void>,
+    c: *mut client,
+    key: key_code,
+) {
     unsafe {
         let mut data: NonNull<window_customize_modedata> = modedata.cast();
         let mut wp: *mut window_pane = (*data.as_ptr()).wp;
@@ -881,10 +1188,16 @@ unsafe extern "C" fn window_customize_menu(modedata: NonNull<c_void>, c: *mut cl
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_customize_height(_modedata: *mut c_void, _height: u32) -> u32 { 12 }
+unsafe extern "C" fn window_customize_height(_modedata: *mut c_void, _height: u32) -> u32 {
+    12
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_customize_init(wme: NonNull<window_mode_entry>, fs: *mut cmd_find_state, args: *mut args) -> *mut screen {
+pub unsafe extern "C" fn window_customize_init(
+    wme: NonNull<window_mode_entry>,
+    fs: *mut cmd_find_state,
+    args: *mut args,
+) -> *mut screen {
     unsafe {
         let mut wp = (*wme.as_ptr()).wp;
         let mut s: *mut screen = null_mut();
@@ -961,7 +1274,11 @@ pub unsafe extern "C" fn window_customize_free(wme: NonNull<window_mode_entry>) 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_customize_resize(wme: NonNull<window_mode_entry>, sx: u32, sy: u32) {
+pub unsafe extern "C" fn window_customize_resize(
+    wme: NonNull<window_mode_entry>,
+    sx: u32,
+    sy: u32,
+) {
     unsafe {
         let mut data: *mut window_customize_modedata = (*wme.as_ptr()).data.cast();
 
@@ -988,7 +1305,12 @@ pub unsafe extern "C" fn window_customize_free_item_callback(itemdata: NonNull<c
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_customize_set_option_callback(c: *mut client, itemdata: NonNull<c_void>, s: *const c_char, done: i32) -> i32 {
+pub unsafe extern "C" fn window_customize_set_option_callback(
+    c: *mut client,
+    itemdata: NonNull<c_void>,
+    s: *const c_char,
+    done: i32,
+) -> i32 {
     unsafe {
         let mut item: NonNull<window_customize_itemdata> = itemdata.cast();
         let mut item = item.as_ptr();
@@ -1046,7 +1368,13 @@ pub unsafe extern "C" fn window_customize_set_option_callback(c: *mut client, it
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_customize_set_option(c: *mut client, data: *mut window_customize_modedata, item: *mut window_customize_itemdata, global: i32, mut pane: i32) {
+pub unsafe extern "C" fn window_customize_set_option(
+    c: *mut client,
+    data: *mut window_customize_modedata,
+    item: *mut window_customize_itemdata,
+    global: i32,
+    mut pane: i32,
+) {
     unsafe {
         // struct options_entry *o;
         // const struct options_table_entry *oe;
@@ -1085,23 +1413,38 @@ pub unsafe extern "C" fn window_customize_set_option(c: *mut client, data: *mut 
         } else {
             if global != 0 {
                 match ((*item).scope) {
-                    window_customize_scope::WINDOW_CUSTOMIZE_NONE | window_customize_scope::WINDOW_CUSTOMIZE_KEY | window_customize_scope::WINDOW_CUSTOMIZE_SERVER | window_customize_scope::WINDOW_CUSTOMIZE_GLOBAL_SESSION | window_customize_scope::WINDOW_CUSTOMIZE_GLOBAL_WINDOW => {
+                    window_customize_scope::WINDOW_CUSTOMIZE_NONE
+                    | window_customize_scope::WINDOW_CUSTOMIZE_KEY
+                    | window_customize_scope::WINDOW_CUSTOMIZE_SERVER
+                    | window_customize_scope::WINDOW_CUSTOMIZE_GLOBAL_SESSION
+                    | window_customize_scope::WINDOW_CUSTOMIZE_GLOBAL_WINDOW => {
                         scope = (*item).scope
                     }
-                    window_customize_scope::WINDOW_CUSTOMIZE_SESSION => scope = window_customize_scope::WINDOW_CUSTOMIZE_GLOBAL_SESSION,
-                    window_customize_scope::WINDOW_CUSTOMIZE_WINDOW | window_customize_scope::WINDOW_CUSTOMIZE_PANE => scope = window_customize_scope::WINDOW_CUSTOMIZE_GLOBAL_WINDOW,
+                    window_customize_scope::WINDOW_CUSTOMIZE_SESSION => {
+                        scope = window_customize_scope::WINDOW_CUSTOMIZE_GLOBAL_SESSION
+                    }
+                    window_customize_scope::WINDOW_CUSTOMIZE_WINDOW
+                    | window_customize_scope::WINDOW_CUSTOMIZE_PANE => {
+                        scope = window_customize_scope::WINDOW_CUSTOMIZE_GLOBAL_WINDOW
+                    }
                 }
             } else {
                 match ((*item).scope) {
-                    window_customize_scope::WINDOW_CUSTOMIZE_NONE | window_customize_scope::WINDOW_CUSTOMIZE_KEY | window_customize_scope::WINDOW_CUSTOMIZE_SERVER | window_customize_scope::WINDOW_CUSTOMIZE_SESSION => scope = (*item).scope,
-                    window_customize_scope::WINDOW_CUSTOMIZE_WINDOW | window_customize_scope::WINDOW_CUSTOMIZE_PANE => {
+                    window_customize_scope::WINDOW_CUSTOMIZE_NONE
+                    | window_customize_scope::WINDOW_CUSTOMIZE_KEY
+                    | window_customize_scope::WINDOW_CUSTOMIZE_SERVER
+                    | window_customize_scope::WINDOW_CUSTOMIZE_SESSION => scope = (*item).scope,
+                    window_customize_scope::WINDOW_CUSTOMIZE_WINDOW
+                    | window_customize_scope::WINDOW_CUSTOMIZE_PANE => {
                         if pane != 0 {
                             scope = window_customize_scope::WINDOW_CUSTOMIZE_PANE;
                         } else {
                             scope = window_customize_scope::WINDOW_CUSTOMIZE_WINDOW;
                         }
                     }
-                    window_customize_scope::WINDOW_CUSTOMIZE_GLOBAL_SESSION => scope = window_customize_scope::WINDOW_CUSTOMIZE_SESSION,
+                    window_customize_scope::WINDOW_CUSTOMIZE_GLOBAL_SESSION => {
+                        scope = window_customize_scope::WINDOW_CUSTOMIZE_SESSION
+                    }
                     window_customize_scope::WINDOW_CUSTOMIZE_GLOBAL_WINDOW => {
                         if pane != 0 {
                             scope = window_customize_scope::WINDOW_CUSTOMIZE_PANE;
@@ -1141,7 +1484,14 @@ pub unsafe extern "C" fn window_customize_set_option(c: *mut client, data: *mut 
                 if (idx == -1) {
                     xasprintf(&raw mut prompt, c"(%s[+]%s%s) ".as_ptr(), name, space, text);
                 } else {
-                    xasprintf(&raw mut prompt, c"(%s[%d]%s%s) ".as_ptr(), name, idx, space, text);
+                    xasprintf(
+                        &raw mut prompt,
+                        c"(%s[%d]%s%s) ".as_ptr(),
+                        name,
+                        idx,
+                        space,
+                        text,
+                    );
                 }
             } else {
                 xasprintf(&raw mut prompt, c"(%s%s%s) ".as_ptr(), name, space, text);
@@ -1150,7 +1500,8 @@ pub unsafe extern "C" fn window_customize_set_option(c: *mut client, data: *mut 
 
             value = options_to_string(o, idx, 0);
 
-            let mut new_item = xcalloc1::<window_customize_itemdata>() as *mut window_customize_itemdata;
+            let mut new_item =
+                xcalloc1::<window_customize_itemdata>() as *mut window_customize_itemdata;
             (*new_item).data = data;
             (*new_item).scope = scope;
             (*new_item).oo = oo;
@@ -1177,7 +1528,10 @@ pub unsafe extern "C" fn window_customize_set_option(c: *mut client, data: *mut 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_customize_unset_option(data: *mut window_customize_modedata, item: *mut window_customize_itemdata) {
+pub unsafe extern "C" fn window_customize_unset_option(
+    data: *mut window_customize_modedata,
+    item: *mut window_customize_itemdata,
+) {
     unsafe {
         if item.is_null() || !window_customize_check_item(data, item, null_mut()) {
             return;
@@ -1195,7 +1549,10 @@ pub unsafe extern "C" fn window_customize_unset_option(data: *mut window_customi
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_customize_reset_option(data: *mut window_customize_modedata, item: *mut window_customize_itemdata) {
+pub unsafe extern "C" fn window_customize_reset_option(
+    data: *mut window_customize_modedata,
+    item: *mut window_customize_itemdata,
+) {
     unsafe {
         if item.is_null() || !window_customize_check_item(data, item, null_mut()) {
             return;
@@ -1216,7 +1573,12 @@ pub unsafe extern "C" fn window_customize_reset_option(data: *mut window_customi
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_customize_set_command_callback(c: *mut client, itemdata: NonNull<c_void>, s: *const c_char, _done: i32) -> i32 {
+pub unsafe extern "C" fn window_customize_set_command_callback(
+    c: *mut client,
+    itemdata: NonNull<c_void>,
+    s: *const c_char,
+    _done: i32,
+) -> i32 {
     unsafe {
         let mut item: NonNull<window_customize_itemdata> = itemdata.cast();
         let item = item.as_ptr();
@@ -1258,7 +1620,12 @@ pub unsafe extern "C" fn window_customize_set_command_callback(c: *mut client, i
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_customize_set_note_callback(_c: *mut client, itemdata: NonNull<c_void>, s: *const c_char, _done: i32) -> i32 {
+pub unsafe extern "C" fn window_customize_set_note_callback(
+    _c: *mut client,
+    itemdata: NonNull<c_void>,
+    s: *const c_char,
+    _done: i32,
+) -> i32 {
     unsafe {
         let mut item: NonNull<window_customize_itemdata> = itemdata.cast();
         let item = item.as_ptr();
@@ -1284,7 +1651,11 @@ pub unsafe extern "C" fn window_customize_set_note_callback(_c: *mut client, ite
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_customize_set_key(c: *mut client, data: *mut window_customize_modedata, item: *mut window_customize_itemdata) {
+pub unsafe extern "C" fn window_customize_set_key(
+    c: *mut client,
+    data: *mut window_customize_modedata,
+    item: *mut window_customize_itemdata,
+) {
     unsafe {
         let mut key = (*item).key;
 
@@ -1305,10 +1676,15 @@ pub unsafe extern "C" fn window_customize_set_key(c: *mut client, data: *mut win
         if libc::strcmp(s, c"Repeat".as_ptr()) == 0 {
             (*bd).flags ^= KEY_BINDING_REPEAT;
         } else if libc::strcmp(s, c"Command".as_ptr()) == 0 {
-            xasprintf(&raw mut prompt, c"(%s) ".as_ptr(), key_string_lookup_key(key, 0));
+            xasprintf(
+                &raw mut prompt,
+                c"(%s) ".as_ptr(),
+                key_string_lookup_key(key, 0),
+            );
             value = cmd_list_print((*bd).cmdlist, 0);
 
-            let new_item = xcalloc1::<window_customize_itemdata>() as *mut window_customize_itemdata;
+            let new_item =
+                xcalloc1::<window_customize_itemdata>() as *mut window_customize_itemdata;
             (*new_item).data = data;
             (*new_item).scope = (*item).scope;
             (*new_item).table = xstrdup((*item).table).as_ptr();
@@ -1329,9 +1705,14 @@ pub unsafe extern "C" fn window_customize_set_key(c: *mut client, data: *mut win
             free_(prompt);
             free_(value);
         } else if libc::strcmp(s, c"Note".as_ptr()) == 0 {
-            xasprintf(&raw mut prompt, c"(%s) ".as_ptr(), key_string_lookup_key(key, 0));
+            xasprintf(
+                &raw mut prompt,
+                c"(%s) ".as_ptr(),
+                key_string_lookup_key(key, 0),
+            );
 
-            let new_item = xcalloc1::<window_customize_itemdata>() as *mut window_customize_itemdata;
+            let new_item =
+                xcalloc1::<window_customize_itemdata>() as *mut window_customize_itemdata;
             (*new_item).data = data;
             (*new_item).scope = (*item).scope;
             (*new_item).table = xstrdup((*item).table).as_ptr();
@@ -1342,7 +1723,11 @@ pub unsafe extern "C" fn window_customize_set_key(c: *mut client, data: *mut win
                 c,
                 null_mut(),
                 prompt,
-                (if (*bd).note.is_null() { c"".as_ptr() } else { (*bd).note }),
+                (if (*bd).note.is_null() {
+                    c"".as_ptr()
+                } else {
+                    (*bd).note
+                }),
                 Some(window_customize_set_note_callback),
                 Some(window_customize_free_item_callback),
                 new_item.cast(),
@@ -1355,7 +1740,10 @@ pub unsafe extern "C" fn window_customize_set_key(c: *mut client, data: *mut win
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_customize_unset_key(data: *mut window_customize_modedata, item: *mut window_customize_itemdata) {
+pub unsafe extern "C" fn window_customize_unset_key(
+    data: *mut window_customize_modedata,
+    item: *mut window_customize_itemdata,
+) {
     unsafe {
         let mut kt: *mut key_table = null_mut();
         let mut bd: *mut key_binding = null_mut();
@@ -1373,7 +1761,10 @@ pub unsafe extern "C" fn window_customize_unset_key(data: *mut window_customize_
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_customize_reset_key(data: *mut window_customize_modedata, item: *mut window_customize_itemdata) {
+pub unsafe extern "C" fn window_customize_reset_key(
+    data: *mut window_customize_modedata,
+    item: *mut window_customize_itemdata,
+) {
     unsafe {
         let mut kt: *mut key_table = null_mut();
         let mut bd: *mut key_binding = null_mut();
@@ -1395,7 +1786,12 @@ pub unsafe extern "C" fn window_customize_reset_key(data: *mut window_customize_
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_customize_change_each(modedata: NonNull<c_void>, itemdata: NonNull<c_void>, _c: *mut client, _key: key_code) {
+pub unsafe extern "C" fn window_customize_change_each(
+    modedata: NonNull<c_void>,
+    itemdata: NonNull<c_void>,
+    _c: *mut client,
+    _key: key_code,
+) {
     unsafe {
         let mut data: NonNull<window_customize_modedata> = modedata.cast();
         let mut item: NonNull<window_customize_itemdata> = itemdata.cast();
@@ -1426,7 +1822,12 @@ pub unsafe extern "C" fn window_customize_change_each(modedata: NonNull<c_void>,
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_customize_change_current_callback(c: *mut client, modedata: NonNull<c_void>, s: *const c_char, _done: i32) -> i32 {
+pub unsafe extern "C" fn window_customize_change_current_callback(
+    c: *mut client,
+    modedata: NonNull<c_void>,
+    s: *const c_char,
+    _done: i32,
+) -> i32 {
     unsafe {
         let mut data: *mut window_customize_modedata = modedata.cast().as_ptr();
         let mut item: *mut window_customize_itemdata = null_mut();
@@ -1467,7 +1868,12 @@ pub unsafe extern "C" fn window_customize_change_current_callback(c: *mut client
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_customize_change_tagged_callback(c: *mut client, modedata: NonNull<c_void>, s: *const c_char, _done: i32) -> i32 {
+pub unsafe extern "C" fn window_customize_change_tagged_callback(
+    c: *mut client,
+    modedata: NonNull<c_void>,
+    s: *const c_char,
+    _done: i32,
+) -> i32 {
     unsafe {
         let mut data: *mut window_customize_modedata = modedata.cast().as_ptr();
 
@@ -1478,7 +1884,13 @@ pub unsafe extern "C" fn window_customize_change_tagged_callback(c: *mut client,
             return 0;
         }
 
-        mode_tree_each_tagged((*data).data, Some(window_customize_change_each), c, KEYC_NONE, 0);
+        mode_tree_each_tagged(
+            (*data).data,
+            Some(window_customize_change_each),
+            c,
+            KEYC_NONE,
+            0,
+        );
         mode_tree_build((*data).data);
         mode_tree_draw((*data).data);
         (*(*data).wp).flags |= window_pane_flags::PANE_REDRAW;
@@ -1488,15 +1900,24 @@ pub unsafe extern "C" fn window_customize_change_tagged_callback(c: *mut client,
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_customize_key(wme: NonNull<window_mode_entry>, c: *mut client, s: *mut session, wl: *mut winlink, mut key: key_code, m: *mut mouse_event) {
+pub unsafe extern "C" fn window_customize_key(
+    wme: NonNull<window_mode_entry>,
+    c: *mut client,
+    s: *mut session,
+    wl: *mut winlink,
+    mut key: key_code,
+    m: *mut mouse_event,
+) {
     unsafe {
         let mut wp: *mut window_pane = (*wme.as_ptr()).wp;
         let mut data: *mut window_customize_modedata = (*wme.as_ptr()).data.cast();
-        let mut item: *mut window_customize_itemdata = mode_tree_get_current((*data).data).cast().as_ptr();
+        let mut item: *mut window_customize_itemdata =
+            mode_tree_get_current((*data).data).cast().as_ptr();
         let mut prompt = null_mut();
         let finished: i32 = mode_tree_key((*data).data, c, &raw mut key, m, null_mut(), null_mut());
 
-        let mut new_item: NonNull<window_customize_itemdata> = mode_tree_get_current((*data).data).cast();
+        let mut new_item: NonNull<window_customize_itemdata> =
+            mode_tree_get_current((*data).data).cast();
         if item != new_item.as_ptr() {
             item = new_item.as_ptr();
         }
@@ -1514,14 +1935,18 @@ pub unsafe extern "C" fn window_customize_key(wme: NonNull<window_mode_entry>, c
                 }
             }
             b'w' => {
-                if !(item.is_null() || (*item).scope == window_customize_scope::WINDOW_CUSTOMIZE_KEY) {
+                if !(item.is_null()
+                    || (*item).scope == window_customize_scope::WINDOW_CUSTOMIZE_KEY)
+                {
                     window_customize_set_option(c, data, item, 0, 0);
                     options_push_changes((*item).name);
                     mode_tree_build((*data).data);
                 }
             }
             b'S' | b'W' => {
-                if !(item.is_null() || (*item).scope == window_customize_scope::WINDOW_CUSTOMIZE_KEY) {
+                if !(item.is_null()
+                    || (*item).scope == window_customize_scope::WINDOW_CUSTOMIZE_KEY)
+                {
                     window_customize_set_option(c, data, item, 1, 0);
                     options_push_changes((*item).name);
                     mode_tree_build((*data).data);
@@ -1529,7 +1954,11 @@ pub unsafe extern "C" fn window_customize_key(wme: NonNull<window_mode_entry>, c
             }
             b'd' => {
                 if !(item.is_null() || (*item).idx != -1) {
-                    xasprintf(&raw mut prompt, c"Reset %s to default? ".as_ptr(), (*item).name);
+                    xasprintf(
+                        &raw mut prompt,
+                        c"Reset %s to default? ".as_ptr(),
+                        (*item).name,
+                    );
                     (*data).references += 1;
                     (*data).change = window_customize_change::WINDOW_CUSTOMIZE_RESET;
                     status_prompt_set(
@@ -1549,7 +1978,11 @@ pub unsafe extern "C" fn window_customize_key(wme: NonNull<window_mode_entry>, c
             b'D' => {
                 let tagged = mode_tree_count_tagged((*data).data);
                 if tagged != 0 {
-                    xasprintf(&raw mut prompt, c"Reset %u tagged to default? ".as_ptr(), tagged);
+                    xasprintf(
+                        &raw mut prompt,
+                        c"Reset %u tagged to default? ".as_ptr(),
+                        tagged,
+                    );
                     (*data).references += 1;
                     (*data).change = window_customize_change::WINDOW_CUSTOMIZE_RESET;
                     status_prompt_set(
@@ -1570,7 +2003,12 @@ pub unsafe extern "C" fn window_customize_key(wme: NonNull<window_mode_entry>, c
                 if !item.is_null() {
                     let idx = (*item).idx;
                     if (idx != -1) {
-                        xasprintf(&raw mut prompt, c"Unset %s[%d]? ".as_ptr(), (*item).name, idx);
+                        xasprintf(
+                            &raw mut prompt,
+                            c"Unset %s[%d]? ".as_ptr(),
+                            (*item).name,
+                            idx,
+                        );
                     } else {
                         xasprintf(&raw mut prompt, c"Unset %s? ".as_ptr(), (*item).name);
                     }

@@ -6,7 +6,8 @@ use crate::compat::queue::{tailq_first, tailq_foreach};
 
 static WINDOW_CLIENT_DEFAULT_COMMAND: &CStr = c"detach-client -t '%%'";
 static WINDOW_CLIENT_DEFAULT_FORMAT: &CStr = c"#{t/p:client_activity}: session #{session_name}";
-static WINDOW_CLIENT_DEFAULT_KEY_FORMAT: &CStr = c"#{?#{e|<:#{line},10},#{line},#{?#{e|<:#{line},36},M-#{a:#{e|+:97,#{e|-:#{line},10}}},}}";
+static WINDOW_CLIENT_DEFAULT_KEY_FORMAT: &CStr =
+    c"#{?#{e|<:#{line},10},#{line},#{?#{e|<:#{line},36},M-#{a:#{e|+:97,#{e|-:#{line},10}}},}}";
 
 static mut window_client_menu_items: [menu_item; 9] = [
     menu_item::new(Some(c"Detach"), b'd' as _, null()),
@@ -42,7 +43,12 @@ pub enum window_client_sort_type {
     WINDOW_CLIENT_BY_ACTIVITY_TIME,
 }
 const WINDOW_CLIENT_SORT_LIST_LEN: u32 = 4;
-static mut window_client_sort_list: [*const c_char; 4] = [c"name".as_ptr(), c"size".as_ptr(), c"creation".as_ptr(), c"activity".as_ptr()];
+static mut window_client_sort_list: [*const c_char; 4] = [
+    c"name".as_ptr(),
+    c"size".as_ptr(),
+    c"creation".as_ptr(),
+    c"activity".as_ptr(),
+];
 
 static mut window_client_sort: *mut mode_tree_sort_criteria = null_mut();
 
@@ -67,9 +73,12 @@ pub struct window_client_modedata {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_client_add_item(data: *mut window_client_modedata) -> *mut window_client_itemdata {
+pub unsafe extern "C" fn window_client_add_item(
+    data: *mut window_client_modedata,
+) -> *mut window_client_itemdata {
     unsafe {
-        (*data).item_list = xreallocarray_((*data).item_list, (*data).item_size as usize + 1).as_ptr();
+        (*data).item_list =
+            xreallocarray_((*data).item_list, (*data).item_size as usize + 1).as_ptr();
         let item = xcalloc1::<window_client_itemdata>() as *mut window_client_itemdata;
         *(*data).item_list.add((*data).item_size as usize) = item;
         (*data).item_size += 1;
@@ -105,16 +114,24 @@ pub unsafe extern "C" fn window_client_cmp(a0: *const c_void, b0: *const c_void)
                 }
             }
             Ok(window_client_sort_type::WINDOW_CLIENT_BY_CREATION_TIME) => {
-                if timer::new(&raw const (*ca).creation_time) > timer::new(&raw const (*cb).creation_time) {
+                if timer::new(&raw const (*ca).creation_time)
+                    > timer::new(&raw const (*cb).creation_time)
+                {
                     result = -1;
-                } else if timer::new(&raw mut (*ca).creation_time) < timer::new(&raw mut (*cb).creation_time) {
+                } else if timer::new(&raw mut (*ca).creation_time)
+                    < timer::new(&raw mut (*cb).creation_time)
+                {
                     result = 1;
                 }
             }
             Ok(window_client_sort_type::WINDOW_CLIENT_BY_ACTIVITY_TIME) => {
-                if timer::new(&raw mut (*ca).activity_time) > timer::new(&raw mut (*cb).activity_time) {
+                if timer::new(&raw mut (*ca).activity_time)
+                    > timer::new(&raw mut (*cb).activity_time)
+                {
                     result = -1;
-                } else if timer::new(&raw mut (*ca).activity_time) < timer::new(&raw mut (*cb).activity_time) {
+                } else if timer::new(&raw mut (*ca).activity_time)
+                    < timer::new(&raw mut (*cb).activity_time)
+                {
                     result = 1;
                 }
             }
@@ -135,7 +152,12 @@ pub unsafe extern "C" fn window_client_cmp(a0: *const c_void, b0: *const c_void)
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_client_build(modedata: NonNull<c_void>, sort_crit: *mut mode_tree_sort_criteria, _tag: *mut u64, filter: *const c_char) {
+pub unsafe extern "C" fn window_client_build(
+    modedata: NonNull<c_void>,
+    sort_crit: *mut mode_tree_sort_criteria,
+    _tag: *mut u64,
+    filter: *const c_char,
+) {
     unsafe {
         let mut data: NonNull<window_client_modedata> = modedata.cast();
         let data = data.as_ptr();
@@ -160,7 +182,12 @@ pub unsafe extern "C" fn window_client_build(modedata: NonNull<c_void>, sort_cri
         }
 
         window_client_sort = sort_crit;
-        qsort((*data).item_list.cast(), (*data).item_size as usize, size_of::<window_client_itemdata>(), Some(window_client_cmp));
+        qsort(
+            (*data).item_list.cast(),
+            (*data).item_size as usize,
+            size_of::<window_client_itemdata>(),
+            Some(window_client_cmp),
+        );
 
         for i in 0..(*data).item_size {
             item = *(*data).item_list.add(i as usize);
@@ -175,15 +202,36 @@ pub unsafe extern "C" fn window_client_build(modedata: NonNull<c_void>, sort_cri
                 free_(cp);
             }
 
-            let text = format_single(null_mut(), (*data).format, c, null_mut(), null_mut(), null_mut());
-            mode_tree_add((*data).data, null_mut(), item.cast(), c as u64, (*c).name, text, -1);
+            let text = format_single(
+                null_mut(),
+                (*data).format,
+                c,
+                null_mut(),
+                null_mut(),
+                null_mut(),
+            );
+            mode_tree_add(
+                (*data).data,
+                null_mut(),
+                item.cast(),
+                c as u64,
+                (*c).name,
+                text,
+                -1,
+            );
             free_(text);
         }
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_client_draw(modedata: *mut c_void, itemdata: Option<NonNull<c_void>>, ctx: *mut screen_write_ctx, sx: u32, sy: u32) {
+pub unsafe extern "C" fn window_client_draw(
+    modedata: *mut c_void,
+    itemdata: Option<NonNull<c_void>>,
+    ctx: *mut screen_write_ctx,
+    sx: u32,
+    sy: u32,
+) {
     unsafe {
         let mut item: Option<NonNull<window_client_itemdata>> = itemdata.map(NonNull::cast);
         let mut c = (*item.unwrap().as_ptr()).c;
@@ -223,7 +271,11 @@ pub unsafe extern "C" fn window_client_draw(modedata: *mut c_void, itemdata: Opt
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_client_menu(modedata: NonNull<c_void>, c: *mut client, key: key_code) {
+pub unsafe extern "C" fn window_client_menu(
+    modedata: NonNull<c_void>,
+    c: *mut client,
+    key: key_code,
+) {
     unsafe {
         let data: NonNull<window_client_modedata> = modedata.cast();
         let wp: *mut window_pane = (*data.as_ptr()).wp;
@@ -237,7 +289,11 @@ pub unsafe extern "C" fn window_client_menu(modedata: NonNull<c_void>, c: *mut c
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_client_get_key(modedata: NonNull<c_void>, itemdata: NonNull<c_void>, line: u32) -> key_code {
+pub unsafe extern "C" fn window_client_get_key(
+    modedata: NonNull<c_void>,
+    itemdata: NonNull<c_void>,
+    line: u32,
+) -> key_code {
     unsafe {
         let data: NonNull<window_client_modedata> = modedata.cast();
         let item: NonNull<window_client_itemdata> = itemdata.cast();
@@ -255,12 +311,17 @@ pub unsafe extern "C" fn window_client_get_key(modedata: NonNull<c_void>, itemda
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_client_init(wme: NonNull<window_mode_entry>, _fs: *mut cmd_find_state, args: *mut args) -> *mut screen {
+pub unsafe extern "C" fn window_client_init(
+    wme: NonNull<window_mode_entry>,
+    _fs: *mut cmd_find_state,
+    args: *mut args,
+) -> *mut screen {
     unsafe {
         let mut wp: *mut window_pane = (*wme.as_ptr()).wp;
         let mut s: *mut screen = null_mut();
 
-        let mut data: *mut window_client_modedata = xcalloc1::<window_client_modedata>() as *mut window_client_modedata;
+        let mut data: *mut window_client_modedata =
+            xcalloc1::<window_client_modedata>() as *mut window_client_modedata;
         (*wme.as_ptr()).data = data.cast();
         (*data).wp = wp;
 
@@ -349,7 +410,12 @@ pub unsafe extern "C" fn window_client_update(wme: NonNull<window_mode_entry>) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_client_do_detach(modedata: NonNull<c_void>, itemdata: NonNull<c_void>, c: *mut client, key: key_code) {
+pub unsafe extern "C" fn window_client_do_detach(
+    modedata: NonNull<c_void>,
+    itemdata: NonNull<c_void>,
+    c: *mut client,
+    key: key_code,
+) {
     let data: NonNull<window_client_modedata> = modedata.cast();
     let item: NonNull<window_client_itemdata> = itemdata.cast();
 
@@ -370,7 +436,14 @@ pub unsafe extern "C" fn window_client_do_detach(modedata: NonNull<c_void>, item
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_client_key(wme: NonNull<window_mode_entry>, c: *mut client, _: *mut session, _wl: *mut winlink, mut key: key_code, m: *mut mouse_event) {
+pub unsafe extern "C" fn window_client_key(
+    wme: NonNull<window_mode_entry>,
+    c: *mut client,
+    _: *mut session,
+    _wl: *mut winlink,
+    mut key: key_code,
+    m: *mut mouse_event,
+) {
     unsafe {
         let mut wp = (*wme.as_ptr()).wp;
         let mut data = (*wme.as_ptr()).data as *mut window_client_modedata;
@@ -389,7 +462,12 @@ pub unsafe extern "C" fn window_client_key(wme: NonNull<window_mode_entry>, c: *
             }
             b'\r' => {
                 let item: NonNull<window_client_itemdata> = mode_tree_get_current(mtd).cast();
-                mode_tree_run_command(c, null_mut(), (*data).command, (*(*item.as_ptr()).c).ttyname);
+                mode_tree_run_command(
+                    c,
+                    null_mut(),
+                    (*data).command,
+                    (*(*item.as_ptr()).c).ttyname,
+                );
                 finished = true;
             }
             _ => (),

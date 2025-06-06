@@ -45,7 +45,12 @@ pub unsafe extern "C" fn layout_dump(root: *mut layout_cell) -> *mut c_char {
             return null_mut();
         }
 
-        xasprintf(&raw mut out, c"%04hx,%s".as_ptr(), layout_checksum(layout) as u32, layout);
+        xasprintf(
+            &raw mut out,
+            c"%04hx,%s".as_ptr(),
+            layout_checksum(layout) as u32,
+            layout,
+        );
         out
     }
 }
@@ -67,9 +72,26 @@ pub unsafe extern "C" fn layout_append(lc: *mut layout_cell, buf: *mut c_char, l
         }
 
         let tmplen = if (!(*lc).wp.is_null()) {
-            xsnprintf(tmp, sizeof_tmp, c"%ux%u,%u,%u,%u".as_ptr(), (*lc).sx, (*lc).sy, (*lc).xoff, (*lc).yoff, (*(*lc).wp).id)
+            xsnprintf(
+                tmp,
+                sizeof_tmp,
+                c"%ux%u,%u,%u,%u".as_ptr(),
+                (*lc).sx,
+                (*lc).sy,
+                (*lc).xoff,
+                (*lc).yoff,
+                (*(*lc).wp).id,
+            )
         } else {
-            xsnprintf(tmp, sizeof_tmp, c"%ux%u,%u,%u".as_ptr(), (*lc).sx, (*lc).sy, (*lc).xoff, (*lc).yoff)
+            xsnprintf(
+                tmp,
+                sizeof_tmp,
+                c"%ux%u,%u,%u".as_ptr(),
+                (*lc).sx,
+                (*lc).sy,
+                (*lc).xoff,
+                (*lc).yoff,
+            )
         };
 
         if (tmplen > sizeof_tmp as i32 - 1) {
@@ -146,7 +168,11 @@ pub unsafe extern "C" fn layout_check(lc: *mut layout_cell) -> i32 {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn layout_parse(w: *mut window, mut layout: *const c_char, cause: *mut *mut c_char) -> i32 {
+pub unsafe extern "C" fn layout_parse(
+    w: *mut window,
+    mut layout: *const c_char,
+    cause: *mut *mut c_char,
+) -> i32 {
     let __func__ = c"layout_parse".as_ptr();
     unsafe {
         let mut lc: *mut layout_cell = null_mut();
@@ -220,7 +246,8 @@ pub unsafe extern "C" fn layout_parse(w: *mut window, mut layout: *const c_char,
                     }
                 }
             }
-            if ((*lc).type_ != layout_type::LAYOUT_WINDOWPANE && ((*lc).sx != sx || (*lc).sy != sy)) {
+            if ((*lc).type_ != layout_type::LAYOUT_WINDOWPANE && ((*lc).sx != sx || (*lc).sy != sy))
+            {
                 log_debug!("fix layout {},{} to {},{}", (*lc).sx, (*lc).sy, sx, sy);
                 layout_print_cell(lc, __func__, 0);
                 (*lc).sx = sx - 1;
@@ -281,7 +308,10 @@ unsafe extern "C" fn layout_assign(wp: *mut *mut window_pane, lc: *mut layout_ce
 
 /* Construct a cell from all or part of a layout tree. */
 #[unsafe(no_mangle)]
-unsafe extern "C" fn layout_construct(lcparent: *mut layout_cell, layout: *mut *const c_char) -> *mut layout_cell {
+unsafe extern "C" fn layout_construct(
+    lcparent: *mut layout_cell,
+    layout: *mut *const c_char,
+) -> *mut layout_cell {
     unsafe {
         let mut lc = null_mut();
         // struct layout_cell *lc, *lcchild;
@@ -296,7 +326,15 @@ unsafe extern "C" fn layout_construct(lcparent: *mut layout_cell, layout: *mut *
             if (isdigit(**layout as i32) == 0) {
                 return null_mut();
             }
-            if (sscanf(*layout, c"%ux%u,%u,%u".as_ptr(), &raw mut sx, &raw mut sy, &raw mut xoff, &raw mut yoff) != 4) {
+            if (sscanf(
+                *layout,
+                c"%ux%u,%u,%u".as_ptr(),
+                &raw mut sx,
+                &raw mut sy,
+                &raw mut xoff,
+                &raw mut yoff,
+            ) != 4)
+            {
                 return null_mut();
             }
 

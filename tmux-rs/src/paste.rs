@@ -2,7 +2,9 @@ use crate::*;
 
 use crate::compat::{
     VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB, strlcpy,
-    tree::{rb_find, rb_foreach_reverse, rb_initializer, rb_insert, rb_min, rb_next, rb_remove, rb_root},
+    tree::{
+        rb_find, rb_foreach_reverse, rb_initializer, rb_insert, rb_min, rb_next, rb_remove, rb_root,
+    },
 };
 use crate::xmalloc::{xmalloc__, xreallocarray};
 
@@ -31,7 +33,9 @@ static mut paste_by_name: paste_name_tree = rb_initializer();
 static mut paste_by_time: paste_time_tree = rb_initializer();
 
 RB_GENERATE!(paste_name_tree, paste_buffer, name_entry, paste_cmp_names);
-fn paste_cmp_names(a: *const paste_buffer, b: *const paste_buffer) -> i32 { unsafe { libc::strcmp((*a).name, (*b).name) } }
+fn paste_cmp_names(a: *const paste_buffer, b: *const paste_buffer) -> i32 {
+    unsafe { libc::strcmp((*a).name, (*b).name) }
+}
 
 RB_GENERATE!(paste_time_tree, paste_buffer, time_entry, paste_cmp_times);
 fn paste_cmp_times(a: *const paste_buffer, b: *const paste_buffer) -> i32 {
@@ -44,16 +48,25 @@ fn paste_cmp_times(a: *const paste_buffer, b: *const paste_buffer) -> i32 {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn paste_buffer_name(pb: NonNull<paste_buffer>) -> *const c_char { unsafe { (*pb.as_ptr()).name } }
+pub unsafe extern "C" fn paste_buffer_name(pb: NonNull<paste_buffer>) -> *const c_char {
+    unsafe { (*pb.as_ptr()).name }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn paste_buffer_order(pb: NonNull<paste_buffer>) -> u32 { unsafe { (*pb.as_ptr()).order } }
+pub unsafe extern "C" fn paste_buffer_order(pb: NonNull<paste_buffer>) -> u32 {
+    unsafe { (*pb.as_ptr()).order }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn paste_buffer_created(pb: NonNull<paste_buffer>) -> time_t { unsafe { (*pb.as_ptr()).created } }
+pub unsafe extern "C" fn paste_buffer_created(pb: NonNull<paste_buffer>) -> time_t {
+    unsafe { (*pb.as_ptr()).created }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn paste_buffer_data(pb: *mut paste_buffer, size: *mut usize) -> *const c_char {
+pub unsafe extern "C" fn paste_buffer_data(
+    pb: *mut paste_buffer,
+    size: *mut usize,
+) -> *const c_char {
     unsafe {
         if (!size.is_null()) {
             *size = (*pb).size;
@@ -80,7 +93,9 @@ pub unsafe extern "C" fn paste_walk(pb: *mut paste_buffer) -> *mut paste_buffer 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn paste_is_empty() -> i32 { unsafe { rb_root(&raw mut paste_by_time).is_null() as i32 } }
+pub unsafe extern "C" fn paste_is_empty() -> i32 {
+    unsafe { rb_root(&raw mut paste_by_time).is_null() as i32 }
+}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn paste_get_top(name: *mut *const c_char) -> *mut paste_buffer {
@@ -159,7 +174,12 @@ pub unsafe extern "C" fn paste_add(mut prefix: *const c_char, data: *mut c_char,
         (*pb).name = null_mut();
         loop {
             free_((*pb).name);
-            xasprintf(&raw mut (*pb).name, c"%s%u".as_ptr(), prefix, paste_next_index);
+            xasprintf(
+                &raw mut (*pb).name,
+                c"%s%u".as_ptr(),
+                prefix,
+                paste_next_index,
+            );
             paste_next_index += 1;
             if (paste_get_name((*pb).name).is_null()) {
                 break;
@@ -184,7 +204,11 @@ pub unsafe extern "C" fn paste_add(mut prefix: *const c_char, data: *mut c_char,
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn paste_rename(oldname: *const c_char, newname: *const c_char, cause: *mut *mut c_char) -> i32 {
+pub unsafe extern "C" fn paste_rename(
+    oldname: *const c_char,
+    newname: *const c_char,
+    cause: *mut *mut c_char,
+) -> i32 {
     unsafe {
         if (!cause.is_null()) {
             *cause = null_mut();
@@ -234,7 +258,12 @@ pub unsafe extern "C" fn paste_rename(oldname: *const c_char, newname: *const c_
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn paste_set(data: *mut c_char, size: usize, name: *const c_char, cause: *mut *mut c_char) -> i32 {
+pub unsafe extern "C" fn paste_set(
+    data: *mut c_char,
+    size: usize,
+    name: *const c_char,
+    cause: *mut *mut c_char,
+) -> i32 {
     unsafe {
         if (!cause.is_null()) {
             *cause = null_mut();

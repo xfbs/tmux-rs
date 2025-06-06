@@ -47,7 +47,12 @@ unsafe extern "C" fn cmd_list_panes_server(self_: *mut cmd, item: *mut cmdq_item
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn cmd_list_panes_session(self_: *mut cmd, s: *mut session, item: *mut cmdq_item, type_: i32) {
+unsafe extern "C" fn cmd_list_panes_session(
+    self_: *mut cmd,
+    s: *mut session,
+    item: *mut cmdq_item,
+    type_: i32,
+) {
     unsafe {
         for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
             cmd_list_panes_window(self_, s, wl, item, type_);
@@ -55,7 +60,13 @@ unsafe extern "C" fn cmd_list_panes_session(self_: *mut cmd, s: *mut session, it
     }
 }
 
-fn cmd_list_panes_window(self_: *mut cmd, s: *mut session, wl: *mut winlink, item: *mut cmdq_item, type_: i32) {
+fn cmd_list_panes_window(
+    self_: *mut cmd,
+    s: *mut session,
+    wl: *mut winlink,
+    item: *mut cmdq_item,
+    type_: i32,
+) {
     unsafe {
         let mut args = cmd_get_args(self_);
 
@@ -101,7 +112,12 @@ fn cmd_list_panes_window(self_: *mut cmd, s: *mut session, wl: *mut winlink, ite
         let mut filter = args_get_(args, 'f');
 
         for (n, wp) in tailq_foreach::<_, discr_entry>(&raw mut (*(*wl).window).panes).enumerate() {
-            let mut ft = format_create(cmdq_get_client(item), item, FORMAT_NONE, format_flags::empty());
+            let mut ft = format_create(
+                cmdq_get_client(item),
+                item,
+                FORMAT_NONE,
+                format_flags::empty(),
+            );
             format_add(ft, c"line".as_ptr(), c"%u".as_ptr(), n as u32);
             format_defaults(ft, null_mut(), NonNull::new(s), NonNull::new(wl), Some(wp));
 

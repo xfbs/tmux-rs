@@ -14,34 +14,132 @@ unsafe extern "C" {
 //user sets an option or its value needs to be shown.
 
 // Choice option type lists.
-static mut options_table_mode_keys_list: [*const c_char; 3] = [c"emacs".as_ptr(), c"vi".as_ptr(), null()];
-static mut options_table_clock_mode_style_list: [*const c_char; 3] = [c"12".as_ptr(), c"24".as_ptr(), null()];
-static mut options_table_status_list: [*const c_char; 7] = [c"off".as_ptr(), c"on".as_ptr(), c"2".as_ptr(), c"3".as_ptr(), c"4".as_ptr(), c"5".as_ptr(), null()];
-static mut options_table_message_line_list: [*const c_char; 6] = [c"0".as_ptr(), c"1".as_ptr(), c"2".as_ptr(), c"3".as_ptr(), c"4".as_ptr(), null()];
-static mut options_table_status_keys_list: [*const c_char; 3] = [c"emacs".as_ptr(), c"vi".as_ptr(), null()];
-static mut options_table_status_justify_list: [*const c_char; 5] = [c"left".as_ptr(), c"centre".as_ptr(), c"right".as_ptr(), c"absolute-centre".as_ptr(), null()];
-static mut options_table_status_position_list: [*const c_char; 3] = [c"top".as_ptr(), c"bottom".as_ptr(), null()];
-static mut options_table_bell_action_list: [*const c_char; 5] = [c"none".as_ptr(), c"any".as_ptr(), c"current".as_ptr(), c"other".as_ptr(), null()];
-static mut options_table_visual_bell_list: [*const c_char; 4] = [c"off".as_ptr(), c"on".as_ptr(), c"both".as_ptr(), null()];
-static mut options_table_cursor_style_list: [*const c_char; 8] = [c"default".as_ptr(), c"blinking-block".as_ptr(), c"block".as_ptr(), c"blinking-underline".as_ptr(), c"underline".as_ptr(), c"blinking-bar".as_ptr(), c"bar".as_ptr(), null()];
-static mut options_table_pane_status_list: [*const c_char; 4] = [c"off".as_ptr(), c"top".as_ptr(), c"bottom".as_ptr(), null()];
-static mut options_table_pane_border_indicators_list: [*const c_char; 5] = [c"off".as_ptr(), c"colour".as_ptr(), c"arrows".as_ptr(), c"both".as_ptr(), null()];
-static mut options_table_pane_border_lines_list: [*const c_char; 6] = [c"single".as_ptr(), c"double".as_ptr(), c"heavy".as_ptr(), c"simple".as_ptr(), c"number".as_ptr(), null()];
-static mut options_table_popup_border_lines_list: [*const c_char; 8] = [c"single".as_ptr(), c"double".as_ptr(), c"heavy".as_ptr(), c"simple".as_ptr(), c"rounded".as_ptr(), c"padded".as_ptr(), c"none".as_ptr(), null()];
-static mut options_table_set_clipboard_list: [*const c_char; 4] = [c"off".as_ptr(), c"external".as_ptr(), c"on".as_ptr(), null()];
-static mut options_table_window_size_list: [*const c_char; 5] = [c"largest".as_ptr(), c"smallest".as_ptr(), c"manual".as_ptr(), c"latest".as_ptr(), null()];
-static mut options_table_remain_on_exit_list: [*const c_char; 4] = [c"off".as_ptr(), c"on".as_ptr(), c"failed".as_ptr(), null()];
-static mut options_table_destroy_unattached_list: [*const c_char; 5] = [c"off".as_ptr(), c"on".as_ptr(), c"keep-last".as_ptr(), c"keep-group".as_ptr(), null()];
-static mut options_table_detach_on_destroy_list: [*const c_char; 6] = [c"off".as_ptr(), c"on".as_ptr(), c"no-detached".as_ptr(), c"previous".as_ptr(), c"next".as_ptr(), null()];
-static mut options_table_extended_keys_list: [*const c_char; 4] = [c"off".as_ptr(), c"on".as_ptr(), c"always".as_ptr(), null()];
-static mut options_table_extended_keys_format_list: [*const c_char; 3] = [c"csi-u".as_ptr(), c"xterm".as_ptr(), null()];
-static mut options_table_allow_passthrough_list: [*const c_char; 4] = [c"off".as_ptr(), c"on".as_ptr(), c"all".as_ptr(), null()];
+static mut options_table_mode_keys_list: [*const c_char; 3] =
+    [c"emacs".as_ptr(), c"vi".as_ptr(), null()];
+static mut options_table_clock_mode_style_list: [*const c_char; 3] =
+    [c"12".as_ptr(), c"24".as_ptr(), null()];
+static mut options_table_status_list: [*const c_char; 7] = [
+    c"off".as_ptr(),
+    c"on".as_ptr(),
+    c"2".as_ptr(),
+    c"3".as_ptr(),
+    c"4".as_ptr(),
+    c"5".as_ptr(),
+    null(),
+];
+static mut options_table_message_line_list: [*const c_char; 6] = [
+    c"0".as_ptr(),
+    c"1".as_ptr(),
+    c"2".as_ptr(),
+    c"3".as_ptr(),
+    c"4".as_ptr(),
+    null(),
+];
+static mut options_table_status_keys_list: [*const c_char; 3] =
+    [c"emacs".as_ptr(), c"vi".as_ptr(), null()];
+static mut options_table_status_justify_list: [*const c_char; 5] = [
+    c"left".as_ptr(),
+    c"centre".as_ptr(),
+    c"right".as_ptr(),
+    c"absolute-centre".as_ptr(),
+    null(),
+];
+static mut options_table_status_position_list: [*const c_char; 3] =
+    [c"top".as_ptr(), c"bottom".as_ptr(), null()];
+static mut options_table_bell_action_list: [*const c_char; 5] = [
+    c"none".as_ptr(),
+    c"any".as_ptr(),
+    c"current".as_ptr(),
+    c"other".as_ptr(),
+    null(),
+];
+static mut options_table_visual_bell_list: [*const c_char; 4] =
+    [c"off".as_ptr(), c"on".as_ptr(), c"both".as_ptr(), null()];
+static mut options_table_cursor_style_list: [*const c_char; 8] = [
+    c"default".as_ptr(),
+    c"blinking-block".as_ptr(),
+    c"block".as_ptr(),
+    c"blinking-underline".as_ptr(),
+    c"underline".as_ptr(),
+    c"blinking-bar".as_ptr(),
+    c"bar".as_ptr(),
+    null(),
+];
+static mut options_table_pane_status_list: [*const c_char; 4] =
+    [c"off".as_ptr(), c"top".as_ptr(), c"bottom".as_ptr(), null()];
+static mut options_table_pane_border_indicators_list: [*const c_char; 5] = [
+    c"off".as_ptr(),
+    c"colour".as_ptr(),
+    c"arrows".as_ptr(),
+    c"both".as_ptr(),
+    null(),
+];
+static mut options_table_pane_border_lines_list: [*const c_char; 6] = [
+    c"single".as_ptr(),
+    c"double".as_ptr(),
+    c"heavy".as_ptr(),
+    c"simple".as_ptr(),
+    c"number".as_ptr(),
+    null(),
+];
+static mut options_table_popup_border_lines_list: [*const c_char; 8] = [
+    c"single".as_ptr(),
+    c"double".as_ptr(),
+    c"heavy".as_ptr(),
+    c"simple".as_ptr(),
+    c"rounded".as_ptr(),
+    c"padded".as_ptr(),
+    c"none".as_ptr(),
+    null(),
+];
+static mut options_table_set_clipboard_list: [*const c_char; 4] = [
+    c"off".as_ptr(),
+    c"external".as_ptr(),
+    c"on".as_ptr(),
+    null(),
+];
+static mut options_table_window_size_list: [*const c_char; 5] = [
+    c"largest".as_ptr(),
+    c"smallest".as_ptr(),
+    c"manual".as_ptr(),
+    c"latest".as_ptr(),
+    null(),
+];
+static mut options_table_remain_on_exit_list: [*const c_char; 4] =
+    [c"off".as_ptr(), c"on".as_ptr(), c"failed".as_ptr(), null()];
+static mut options_table_destroy_unattached_list: [*const c_char; 5] = [
+    c"off".as_ptr(),
+    c"on".as_ptr(),
+    c"keep-last".as_ptr(),
+    c"keep-group".as_ptr(),
+    null(),
+];
+static mut options_table_detach_on_destroy_list: [*const c_char; 6] = [
+    c"off".as_ptr(),
+    c"on".as_ptr(),
+    c"no-detached".as_ptr(),
+    c"previous".as_ptr(),
+    c"next".as_ptr(),
+    null(),
+];
+static mut options_table_extended_keys_list: [*const c_char; 4] =
+    [c"off".as_ptr(), c"on".as_ptr(), c"always".as_ptr(), null()];
+static mut options_table_extended_keys_format_list: [*const c_char; 3] =
+    [c"csi-u".as_ptr(), c"xterm".as_ptr(), null()];
+static mut options_table_allow_passthrough_list: [*const c_char; 4] =
+    [c"off".as_ptr(), c"on".as_ptr(), c"all".as_ptr(), null()];
 
 /// Map of name conversions.
 #[unsafe(no_mangle)]
 pub static mut options_other_names: [options_name_map; 6] = [
-    options_name_map::new(c"display-panes-color".as_ptr(), c"display-panes-colour".as_ptr()),
-    options_name_map::new(c"display-panes-active-color".as_ptr(), c"display-panes-active-colour".as_ptr()),
+    options_name_map::new(
+        c"display-panes-color".as_ptr(),
+        c"display-panes-colour".as_ptr(),
+    ),
+    options_name_map::new(
+        c"display-panes-active-color".as_ptr(),
+        c"display-panes-active-colour".as_ptr(),
+    ),
     options_name_map::new(c"clock-mode-color".as_ptr(), c"clock-mode-colour".as_ptr()),
     options_name_map::new(c"cursor-color".as_ptr(), c"cursor-colour".as_ptr()),
     options_name_map::new(c"pane-colors".as_ptr(), c"pane-colours".as_ptr()),
@@ -118,10 +216,19 @@ pub const OPTIONS_TABLE_STATUS_FORMAT1: *const c_char = concat!(
 .as_ptr()
 .cast();
 
-pub const OPTIONS_TABLE_STATUS_FORMAT2: *const c_char = concat!("#[align=centre]#{P:#{?pane_active,#[reverse],}", "#{pane_index}[#{pane_width}x#{pane_height}]#[default] }\0").as_ptr().cast();
+pub const OPTIONS_TABLE_STATUS_FORMAT2: *const c_char = concat!(
+    "#[align=centre]#{P:#{?pane_active,#[reverse],}",
+    "#{pane_index}[#{pane_width}x#{pane_height}]#[default] }\0"
+)
+.as_ptr()
+.cast();
 
 #[unsafe(no_mangle)]
-pub static mut options_table_status_format_default: [*const c_char; 3] = [OPTIONS_TABLE_STATUS_FORMAT1, OPTIONS_TABLE_STATUS_FORMAT2, null()];
+pub static mut options_table_status_format_default: [*const c_char; 3] = [
+    OPTIONS_TABLE_STATUS_FORMAT1,
+    OPTIONS_TABLE_STATUS_FORMAT2,
+    null(),
+];
 
 /* Helpers for hook options. */
 macro_rules! options_table_hook {

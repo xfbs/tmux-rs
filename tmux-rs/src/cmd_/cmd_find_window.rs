@@ -52,7 +52,8 @@ unsafe extern "C" fn cmd_find_window_exec(self_: *mut cmd, item: *mut cmdq_item)
         if c && n && t {
             xasprintf(
                 &raw mut (*filter).union_.string,
-                c"#{||:#{C%s:%s},#{||:#{m%s:%s%s%s,#{window_name}},#{m%s:%s%s%s,#{pane_title}}}}".as_ptr(),
+                c"#{||:#{C%s:%s},#{||:#{m%s:%s%s%s,#{window_name}},#{m%s:%s%s%s,#{pane_title}}}}"
+                    .as_ptr(),
                 suffix,
                 s,
                 suffix,
@@ -65,17 +66,65 @@ unsafe extern "C" fn cmd_find_window_exec(self_: *mut cmd, item: *mut cmdq_item)
                 star,
             );
         } else if c && n {
-            xasprintf(&raw mut (*filter).union_.string, c"#{||:#{C%s:%s},#{m%s:%s%s%s,#{window_name}}}".as_ptr(), suffix, s, suffix, star, s, star);
+            xasprintf(
+                &raw mut (*filter).union_.string,
+                c"#{||:#{C%s:%s},#{m%s:%s%s%s,#{window_name}}}".as_ptr(),
+                suffix,
+                s,
+                suffix,
+                star,
+                s,
+                star,
+            );
         } else if c && t {
-            xasprintf(&raw mut (*filter).union_.string, c"#{||:#{C%s:%s},#{m%s:%s%s%s,#{pane_title}}}".as_ptr(), suffix, s, suffix, star, s, star);
+            xasprintf(
+                &raw mut (*filter).union_.string,
+                c"#{||:#{C%s:%s},#{m%s:%s%s%s,#{pane_title}}}".as_ptr(),
+                suffix,
+                s,
+                suffix,
+                star,
+                s,
+                star,
+            );
         } else if n && t {
-            xasprintf(&raw mut (*filter).union_.string, c"#{||:#{m%s:%s%s%s,#{window_name}},#{m%s:%s%s%s,#{pane_title}}}".as_ptr(), suffix, star, s, star, suffix, star, s, star);
+            xasprintf(
+                &raw mut (*filter).union_.string,
+                c"#{||:#{m%s:%s%s%s,#{window_name}},#{m%s:%s%s%s,#{pane_title}}}".as_ptr(),
+                suffix,
+                star,
+                s,
+                star,
+                suffix,
+                star,
+                s,
+                star,
+            );
         } else if c {
-            xasprintf(&raw mut (*filter).union_.string, c"#{C%s:%s}".as_ptr(), suffix, s);
+            xasprintf(
+                &raw mut (*filter).union_.string,
+                c"#{C%s:%s}".as_ptr(),
+                suffix,
+                s,
+            );
         } else if n {
-            xasprintf(&raw mut (*filter).union_.string, c"#{m%s:%s%s%s,#{window_name}}".as_ptr(), suffix, star, s, star);
+            xasprintf(
+                &raw mut (*filter).union_.string,
+                c"#{m%s:%s%s%s,#{window_name}}".as_ptr(),
+                suffix,
+                star,
+                s,
+                star,
+            );
         } else {
-            xasprintf(&raw mut (*filter).union_.string, c"#{m%s:%s%s%s,#{pane_title}}".as_ptr(), suffix, star, s, star);
+            xasprintf(
+                &raw mut (*filter).union_.string,
+                c"#{m%s:%s%s%s,#{pane_title}}".as_ptr(),
+                suffix,
+                star,
+                s,
+                star,
+            );
         }
 
         let mut new_args: *mut args = args_create();

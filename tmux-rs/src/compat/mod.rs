@@ -32,14 +32,25 @@ unsafe extern "C" {
     pub fn fgetln(stream: *mut libc::FILE, len: *mut usize) -> *mut c_char;
 
     pub fn getprogname() -> *const c_char;
-    pub fn recallocarray(ptr: *mut c_void, oldnmemb: usize, nmemb: usize, size: usize) -> *mut c_void;
+    pub fn recallocarray(
+        ptr: *mut c_void,
+        oldnmemb: usize,
+        nmemb: usize,
+        size: usize,
+    ) -> *mut c_void;
     pub fn freezero(ptr: *mut c_void, size: usize);
-    pub fn strtonum(nptr: *const c_char, minval: c_longlong, maxval: c_longlong, errstr: *mut *const c_char) -> c_longlong;
+    pub fn strtonum(
+        nptr: *const c_char,
+        minval: c_longlong,
+        maxval: c_longlong,
+        errstr: *mut *const c_char,
+    ) -> c_longlong;
     pub fn strlcpy(dst: *mut c_char, src: *const c_char, siz: usize) -> usize;
     pub fn strlcat(dst: *mut c_char, src: *const c_char, siz: usize) -> usize;
     pub static mut optarg: *mut c_char;
     pub static mut optind: c_int;
-    pub fn getopt(___argc: c_int, ___argv: *const *mut c_char, __shortopts: *const c_char) -> c_int;
+    pub fn getopt(___argc: c_int, ___argv: *const *mut c_char, __shortopts: *const c_char)
+    -> c_int;
     pub fn closefrom(__lowfd: c_int);
     pub static mut optreset: c_int;
     pub fn bsd_getopt(argc: c_int, argv: *const *mut c_char, shortopts: *const c_char) -> c_int;
@@ -50,19 +61,33 @@ unsafe extern "C" {
     pub fn strnvis(arg1: *mut c_char, arg2: *const c_char, arg3: usize, arg4: c_int) -> c_int;
     pub fn strunvis(arg1: *mut c_char, arg2: *const c_char) -> c_int;
 
-    pub fn __b64_ntop(src: *const u8, srclength: usize, target: *mut c_char, targsize: usize) -> i32;
+    pub fn __b64_ntop(
+        src: *const u8,
+        srclength: usize,
+        target: *mut c_char,
+        targsize: usize,
+    ) -> i32;
     pub fn __b64_pton(src: *const c_char, target: *mut u8, targsize: usize) -> i32;
 }
 // TODO switch to using the base64 crate
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn b64_ntop(src: *const u8, srclength: usize, target: *mut c_char, targsize: usize) -> i32 { unsafe { __b64_ntop(src, srclength, target, targsize) } }
+pub unsafe extern "C" fn b64_ntop(
+    src: *const u8,
+    srclength: usize,
+    target: *mut c_char,
+    targsize: usize,
+) -> i32 {
+    unsafe { __b64_ntop(src, srclength, target, targsize) }
+}
 
 // skips all whitespace anywhere.
 // converts characters, four at a time, starting at (or after)
 // src from base - 64 numbers into three 8 bit bytes in the target area.
 // it returns the number of data bytes stored at the target, or -1 on error.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn b64_pton(src: *const c_char, target: *mut u8, targsize: usize) -> i32 { unsafe { __b64_pton(src, target, targsize) } }
+pub unsafe extern "C" fn b64_pton(src: *const c_char, target: *mut u8, targsize: usize) -> i32 {
+    unsafe { __b64_pton(src, target, targsize) }
+}
 
 pub const HOST_NAME_MAX: usize = 255;
 
@@ -74,7 +99,9 @@ pub const ACCESSPERMS: mode_t = S_IRWXU | S_IRWXG | S_IRWXO;
 // TODO move this to a better spot
 #[allow(non_snake_case)]
 #[inline]
-pub fn S_ISDIR(mode: u32) -> bool { mode & libc::S_IFMT == libc::S_IFDIR }
+pub fn S_ISDIR(mode: u32) -> bool {
+    mode & libc::S_IFMT == libc::S_IFDIR
+}
 
 // extern crate compat_derive;
 // pub use compat_derive::TailQEntry;

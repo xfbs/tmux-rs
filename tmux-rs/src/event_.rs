@@ -6,7 +6,11 @@ use ::libc::timeval;
 
 unsafe extern "C" {
     pub fn evbuffer_add_printf(buf: *mut evbuffer, fmt: *const c_char, ...) -> i32;
-    pub fn evbuffer_add_vprintf(buf: *mut evbuffer, fmt: *const c_char, ap: core::ffi::va_list::VaList) -> i32;
+    pub fn evbuffer_add_vprintf(
+        buf: *mut evbuffer,
+        fmt: *const c_char,
+        ap: core::ffi::va_list::VaList,
+    ) -> i32;
 }
 
 pub const EVLOOP_NO_EXIT_ON_EMPTY: i32 = 0x04;
@@ -25,30 +29,51 @@ pub const EV_WRITE: i16 = 0x04;
 // /usr/include/event2/event.h
 
 // #define evtimer_set(ev, cb, arg)	event_set((ev), -1, 0, (cb), (arg))
-pub unsafe extern "C" fn evtimer_set(ev: *mut event, cb: Option<unsafe extern "C" fn(_: c_int, _: c_short, _: *mut c_void)>, arg: *mut c_void) {
+pub unsafe extern "C" fn evtimer_set(
+    ev: *mut event,
+    cb: Option<unsafe extern "C" fn(_: c_int, _: c_short, _: *mut c_void)>,
+    arg: *mut c_void,
+) {
     unsafe {
         event_set(ev, -1, 0, cb, arg);
     }
 }
 
 // #define evtimer_add(ev, tv)		event_add((ev), (tv))
-pub unsafe extern "C" fn evtimer_add(ev: *mut event, tv: *const timeval) -> c_int { unsafe { event_add(ev, tv) } }
+pub unsafe extern "C" fn evtimer_add(ev: *mut event, tv: *const timeval) -> c_int {
+    unsafe { event_add(ev, tv) }
+}
 
-pub unsafe extern "C" fn evtimer_initialized(ev: *mut event) -> c_int { unsafe { event_initialized(ev) } }
+pub unsafe extern "C" fn evtimer_initialized(ev: *mut event) -> c_int {
+    unsafe { event_initialized(ev) }
+}
 
 // #define evtimer_del(ev)			event_del(ev)
-pub unsafe extern "C" fn evtimer_del(ev: *mut event) -> c_int { unsafe { event_del(ev) } }
+pub unsafe extern "C" fn evtimer_del(ev: *mut event) -> c_int {
+    unsafe { event_del(ev) }
+}
 
 // #define evtimer_pending(ev, tv)		event_pending((ev), EV_TIMEOUT, (tv))
-pub unsafe extern "C" fn evtimer_pending(ev: *const event, tv: *mut libc::timeval) -> c_int { unsafe { event_pending(ev, EV_TIMEOUT, tv) } }
+pub unsafe extern "C" fn evtimer_pending(ev: *const event, tv: *mut libc::timeval) -> c_int {
+    unsafe { event_pending(ev, EV_TIMEOUT, tv) }
+}
 
 // #define signal_add(ev, tv)		event_add((ev), (tv))
 #[inline]
-pub unsafe extern "C" fn signal_add(ev: *mut event, tv: *const timeval) -> i32 { unsafe { event_add(ev, tv) } }
+pub unsafe extern "C" fn signal_add(ev: *mut event, tv: *const timeval) -> i32 {
+    unsafe { event_add(ev, tv) }
+}
 
 // #define signal_set(ev, x, cb, arg)				 event_set((ev), (x), EV_SIGNAL|EV_PERSIST, (cb), (arg))
 #[inline]
-pub unsafe extern "C" fn signal_set(ev: *mut event, x: i32, cb: Option<unsafe extern "C" fn(c_int, c_short, *mut c_void)>, arg: *mut c_void) { unsafe { event_set(ev, x, EV_SIGNAL | EV_PERSIST, cb, arg) } }
+pub unsafe extern "C" fn signal_set(
+    ev: *mut event,
+    x: i32,
+    cb: Option<unsafe extern "C" fn(c_int, c_short, *mut c_void)>,
+    arg: *mut c_void,
+) {
+    unsafe { event_set(ev, x, EV_SIGNAL | EV_PERSIST, cb, arg) }
+}
 
 // #define signal_del(ev)			event_del(ev)
 // #define signal_pending(ev, tv)		event_pending((ev), EV_SIGNAL, (tv))
@@ -56,43 +81,63 @@ pub unsafe extern "C" fn signal_set(ev: *mut event, x: i32, cb: Option<unsafe ex
 
 #[allow(non_snake_case)]
 #[inline]
-pub unsafe fn EVBUFFER_LENGTH(x: *mut evbuffer) -> usize { unsafe { evbuffer_get_length(x) } }
+pub unsafe fn EVBUFFER_LENGTH(x: *mut evbuffer) -> usize {
+    unsafe { evbuffer_get_length(x) }
+}
 
 #[allow(non_snake_case)]
 #[inline]
-pub unsafe fn EVBUFFER_DATA(x: *mut evbuffer) -> *mut c_uchar { unsafe { evbuffer_pullup(x, -1) } }
+pub unsafe fn EVBUFFER_DATA(x: *mut evbuffer) -> *mut c_uchar {
+    unsafe { evbuffer_pullup(x, -1) }
+}
 
 #[allow(non_snake_case)]
 #[inline]
-pub unsafe fn EVBUFFER_OUTPUT(x: *mut bufferevent) -> *mut evbuffer { unsafe { bufferevent_get_output(x) } }
+pub unsafe fn EVBUFFER_OUTPUT(x: *mut bufferevent) -> *mut evbuffer {
+    unsafe { bufferevent_get_output(x) }
+}
 
 #[repr(C)]
 pub struct __BindgenUnionField<T>(::core::marker::PhantomData<T>);
 impl<T> __BindgenUnionField<T> {
     #[inline]
-    pub const fn new() -> Self { __BindgenUnionField(::core::marker::PhantomData) }
+    pub const fn new() -> Self {
+        __BindgenUnionField(::core::marker::PhantomData)
+    }
     #[inline]
-    pub unsafe fn as_ref(&self) -> &T { unsafe { ::core::mem::transmute(self) } }
+    pub unsafe fn as_ref(&self) -> &T {
+        unsafe { ::core::mem::transmute(self) }
+    }
     #[inline]
-    pub unsafe fn as_mut(&mut self) -> &mut T { unsafe { ::core::mem::transmute(self) } }
+    pub unsafe fn as_mut(&mut self) -> &mut T {
+        unsafe { ::core::mem::transmute(self) }
+    }
 }
 impl<T> ::core::default::Default for __BindgenUnionField<T> {
     #[inline]
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 impl<T> ::core::clone::Clone for __BindgenUnionField<T> {
     #[inline]
-    fn clone(&self) -> Self { *self }
+    fn clone(&self) -> Self {
+        *self
+    }
 }
 impl<T> ::core::marker::Copy for __BindgenUnionField<T> {}
 impl<T> ::core::fmt::Debug for __BindgenUnionField<T> {
-    fn fmt(&self, fmt: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result { fmt.write_str("__BindgenUnionField") }
+    fn fmt(&self, fmt: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+        fmt.write_str("__BindgenUnionField")
+    }
 }
 impl<T> ::core::hash::Hash for __BindgenUnionField<T> {
     fn hash<H: ::core::hash::Hasher>(&self, _state: &mut H) {}
 }
 impl<T> ::core::cmp::PartialEq for __BindgenUnionField<T> {
-    fn eq(&self, _other: &__BindgenUnionField<T>) -> bool { true }
+    fn eq(&self, _other: &__BindgenUnionField<T>) -> bool {
+        true
+    }
 }
 impl<T> ::core::cmp::Eq for __BindgenUnionField<T> {}
 #[repr(C)]
@@ -111,8 +156,10 @@ pub type evbuffer_eol_style = ::core::ffi::c_uint;
 pub struct event_base {
     _unused: [u8; 0],
 }
-pub type bufferevent_data_cb = Option<unsafe extern "C" fn(bev: *mut bufferevent, ctx: *mut c_void)>;
-pub type bufferevent_event_cb = Option<unsafe extern "C" fn(bev: *mut bufferevent, what: c_short, ctx: *mut c_void)>;
+pub type bufferevent_data_cb =
+    Option<unsafe extern "C" fn(bev: *mut bufferevent, ctx: *mut c_void)>;
+pub type bufferevent_event_cb =
+    Option<unsafe extern "C" fn(bev: *mut bufferevent, what: c_short, ctx: *mut c_void)>;
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct event_callback {
@@ -227,7 +274,11 @@ unsafe extern "C" {
     pub fn evbuffer_add(buf: *mut evbuffer, data: *const c_void, datlen: usize) -> c_int;
 
     pub fn evbuffer_readline(buffer: *mut evbuffer) -> *mut c_char;
-    pub fn evbuffer_readln(buffer: *mut evbuffer, n_read_out: *mut usize, eol_style: evbuffer_eol_style) -> *mut c_char;
+    pub fn evbuffer_readln(
+        buffer: *mut evbuffer,
+        n_read_out: *mut usize,
+        eol_style: evbuffer_eol_style,
+    ) -> *mut c_char;
     pub fn evbuffer_drain(buf: *mut evbuffer, len: usize) -> c_int;
     pub fn evbuffer_pullup(buf: *mut evbuffer, size: isize) -> *mut ::core::ffi::c_uchar;
     pub fn bufferevent_free(bufev: *mut bufferevent);
@@ -236,8 +287,19 @@ unsafe extern "C" {
     pub fn bufferevent_get_output(bufev: *mut bufferevent) -> *mut evbuffer;
     pub fn bufferevent_enable(bufev: *mut bufferevent, event: i16) -> c_int;
     pub fn bufferevent_disable(bufev: *mut bufferevent, event: i16) -> c_int;
-    pub fn bufferevent_setwatermark(bufev: *mut bufferevent, events: i16, lowmark: usize, highmark: usize);
-    pub fn bufferevent_new(fd: c_int, readcb: bufferevent_data_cb, writecb: bufferevent_data_cb, errorcb: bufferevent_event_cb, cbarg: *mut c_void) -> *mut bufferevent;
+    pub fn bufferevent_setwatermark(
+        bufev: *mut bufferevent,
+        events: i16,
+        lowmark: usize,
+        highmark: usize,
+    );
+    pub fn bufferevent_new(
+        fd: c_int,
+        readcb: bufferevent_data_cb,
+        writecb: bufferevent_data_cb,
+        errorcb: bufferevent_event_cb,
+        cbarg: *mut c_void,
+    ) -> *mut bufferevent;
     pub fn event_init() -> *mut event_base;
     pub fn event_reinit(base: *mut event_base) -> c_int;
     pub fn event_set_log_callback(cb: event_log_cb);
@@ -248,7 +310,19 @@ unsafe extern "C" {
     pub fn event_initialized(ev: *const event) -> c_int;
     pub fn event_get_version() -> *const c_char;
     pub fn event_loop(arg1: c_int) -> c_int;
-    pub fn event_once(arg1: c_int, arg2: c_short, arg3: Option<unsafe extern "C" fn(arg1: c_int, arg2: c_short, arg3: *mut c_void)>, arg4: *mut c_void, arg5: *const timeval) -> c_int;
+    pub fn event_once(
+        arg1: c_int,
+        arg2: c_short,
+        arg3: Option<unsafe extern "C" fn(arg1: c_int, arg2: c_short, arg3: *mut c_void)>,
+        arg4: *mut c_void,
+        arg5: *const timeval,
+    ) -> c_int;
     pub fn event_get_method() -> *const c_char;
-    pub fn event_set(arg1: *mut event, arg2: c_int, arg3: c_short, arg4: Option<unsafe extern "C" fn(arg1: c_int, arg2: c_short, arg3: *mut c_void)>, arg5: *mut c_void);
+    pub fn event_set(
+        arg1: *mut event,
+        arg2: c_int,
+        arg3: c_short,
+        arg4: Option<unsafe extern "C" fn(arg1: c_int, arg2: c_short, arg3: *mut c_void)>,
+        arg5: *mut c_void,
+    );
 }

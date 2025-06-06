@@ -1,10 +1,17 @@
 use crate::*;
 
-use libc::{FIONREAD, FNM_CASEFOLD, TIOCSWINSZ, close, fnmatch, free, gethostname, gettimeofday, ioctl, isspace, memset, regcomp, regex_t, regexec, regfree, strcasecmp, strlen, winsize};
+use libc::{
+    FIONREAD, FNM_CASEFOLD, TIOCSWINSZ, close, fnmatch, free, gethostname, gettimeofday, ioctl,
+    isspace, memset, regcomp, regex_t, regexec, regfree, strcasecmp, strlen, winsize,
+};
 
 use crate::compat::{
     HOST_NAME_MAX, RB_GENERATE, VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB,
-    queue::{tailq_empty, tailq_first, tailq_foreach, tailq_init, tailq_insert_after, tailq_insert_before, tailq_insert_head, tailq_insert_tail, tailq_last, tailq_next, tailq_prev, tailq_remove},
+    queue::{
+        tailq_empty, tailq_first, tailq_foreach, tailq_init, tailq_insert_after,
+        tailq_insert_before, tailq_insert_head, tailq_insert_tail, tailq_last, tailq_next,
+        tailq_prev, tailq_remove,
+    },
     strtonum,
     tree::{rb_find, rb_foreach, rb_insert, rb_min, rb_next, rb_prev, rb_remove},
 };
@@ -34,16 +41,25 @@ RB_GENERATE!(winlinks, winlink, entry, winlink_cmp);
 RB_GENERATE!(window_pane_tree, window_pane, tree_entry, window_pane_cmp);
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_cmp(w1: *const window, w2: *const window) -> i32 { unsafe { (*w1).id.wrapping_sub((*w2).id) as i32 } }
+pub unsafe extern "C" fn window_cmp(w1: *const window, w2: *const window) -> i32 {
+    unsafe { (*w1).id.wrapping_sub((*w2).id) as i32 }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn winlink_cmp(wl1: *const winlink, wl2: *const winlink) -> i32 { unsafe { (*wl1).idx.wrapping_sub((*wl2).idx) } }
+pub unsafe extern "C" fn winlink_cmp(wl1: *const winlink, wl2: *const winlink) -> i32 {
+    unsafe { (*wl1).idx.wrapping_sub((*wl2).idx) }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_pane_cmp(wp1: *const window_pane, wp2: *const window_pane) -> i32 { unsafe { (*wp1).id.wrapping_sub((*wp2).id) as i32 } }
+pub unsafe extern "C" fn window_pane_cmp(wp1: *const window_pane, wp2: *const window_pane) -> i32 {
+    unsafe { (*wp1).id.wrapping_sub((*wp2).id) as i32 }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn winlink_find_by_window(wwl: *mut winlinks, w: *mut window) -> Option<NonNull<winlink>> {
+pub unsafe extern "C" fn winlink_find_by_window(
+    wwl: *mut winlinks,
+    w: *mut window,
+) -> Option<NonNull<winlink>> {
     unsafe {
         for wl in rb_foreach(wwl) {
             if (*wl.as_ptr()).window == w {
@@ -104,7 +120,9 @@ unsafe extern "C" fn winlink_next_index(wwl: *mut winlinks, idx: i32) -> i32 {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn winlink_count(wwl: *mut winlinks) -> u32 { unsafe { rb_foreach(wwl).count() as u32 } }
+pub unsafe extern "C" fn winlink_count(wwl: *mut winlinks) -> u32 {
+    unsafe { rb_foreach(wwl).count() as u32 }
+}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn winlink_add(wwl: *mut winlinks, mut idx: i32) -> *mut winlink {
@@ -155,13 +173,21 @@ pub unsafe extern "C" fn winlink_remove(wwl: *mut winlinks, wl: *mut winlink) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn winlink_next(wl: *mut winlink) -> *mut winlink { unsafe { rb_next(wl) } }
+pub unsafe extern "C" fn winlink_next(wl: *mut winlink) -> *mut winlink {
+    unsafe { rb_next(wl) }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn winlink_previous(wl: *mut winlink) -> *mut winlink { unsafe { rb_prev(wl) } }
+pub unsafe extern "C" fn winlink_previous(wl: *mut winlink) -> *mut winlink {
+    unsafe { rb_prev(wl) }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn winlink_next_by_number(mut wl: *mut winlink, s: *mut session, n: i32) -> *mut winlink {
+pub unsafe extern "C" fn winlink_next_by_number(
+    mut wl: *mut winlink,
+    s: *mut session,
+    n: i32,
+) -> *mut winlink {
     unsafe {
         for _ in 0..n {
             wl = rb_next(wl);
@@ -175,7 +201,11 @@ pub unsafe extern "C" fn winlink_next_by_number(mut wl: *mut winlink, s: *mut se
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn winlink_previous_by_number(mut wl: *mut winlink, s: *mut session, n: i32) -> *mut winlink {
+pub unsafe extern "C" fn winlink_previous_by_number(
+    mut wl: *mut winlink,
+    s: *mut session,
+    n: i32,
+) -> *mut winlink {
     unsafe {
         for _ in 0..n {
             wl = rb_prev(wl);
@@ -248,7 +278,12 @@ pub unsafe extern "C" fn window_update_activity(w: NonNull<window>) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_create(sx: u32, sy: u32, mut xpixel: u32, mut ypixel: u32) -> *mut window {
+pub unsafe extern "C" fn window_create(
+    sx: u32,
+    sy: u32,
+    mut xpixel: u32,
+    mut ypixel: u32,
+) -> *mut window {
     if xpixel == 0 {
         xpixel = DEFAULT_XPIXEL;
     }
@@ -286,7 +321,15 @@ pub unsafe extern "C" fn window_create(sx: u32, sy: u32, mut xpixel: u32, mut yp
         window_set_fill_character(NonNull::new_unchecked(w));
         window_update_activity(NonNull::new_unchecked(w));
 
-        log_debug!("{}: @{} create {}x{} ({}x{})", "window_create", (*w).id, sx, sy, (*w).xpixel, (*w).ypixel,);
+        log_debug!(
+            "{}: @{} create {}x{} ({}x{})",
+            "window_create",
+            (*w).id,
+            sx,
+            sy,
+            (*w).xpixel,
+            (*w).ypixel,
+        );
         w
     }
 }
@@ -294,7 +337,11 @@ pub unsafe extern "C" fn window_create(sx: u32, sy: u32, mut xpixel: u32, mut yp
 #[unsafe(no_mangle)]
 unsafe extern "C" fn window_destroy(w: *mut window) {
     unsafe {
-        log_debug!("window @{} destroyed ({} references)", (*w).id, (*w).references);
+        log_debug!(
+            "window @{} destroyed ({} references)",
+            (*w).id,
+            (*w).references
+        );
 
         window_unzoom(w, 0);
         rb_remove(&raw mut windows, w);
@@ -353,7 +400,13 @@ pub unsafe extern "C" fn window_pane_destroy_ready(wp: *mut window_pane) -> i32 
 pub unsafe extern "C" fn window_add_ref(w: *mut window, from: *const c_char) {
     unsafe {
         (*w).references += 1;
-        log_debug!("{}: @{} {}, now {}", "window_add_ref", (*w).id, _s(from), (*w).references,);
+        log_debug!(
+            "{}: @{} {}, now {}",
+            "window_add_ref",
+            (*w).id,
+            _s(from),
+            (*w).references,
+        );
     }
 }
 
@@ -361,7 +414,13 @@ pub unsafe extern "C" fn window_add_ref(w: *mut window, from: *const c_char) {
 pub unsafe extern "C" fn window_remove_ref(w: *mut window, from: *const c_char) {
     unsafe {
         (*w).references -= 1;
-        log_debug!("{}: @{} {}, now {}", "window_remove_ref", (*w).id, _s(from), (*w).references,);
+        log_debug!(
+            "{}: @{} {}, now {}",
+            "window_remove_ref",
+            (*w).id,
+            _s(from),
+            (*w).references,
+        );
 
         if (*w).references == 0 {
             window_destroy(w);
@@ -373,13 +432,23 @@ pub unsafe extern "C" fn window_remove_ref(w: *mut window, from: *const c_char) 
 pub unsafe extern "C" fn window_set_name(w: *mut window, new_name: *const c_char) {
     unsafe {
         free_((*w).name);
-        utf8_stravis(&raw mut (*w).name, new_name, VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL);
+        utf8_stravis(
+            &raw mut (*w).name,
+            new_name,
+            VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL,
+        );
         notify_window(c"window-renamed".as_ptr(), w);
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_resize(w: *mut window, sx: u32, sy: u32, mut xpixel: i32, mut ypixel: i32) {
+pub unsafe extern "C" fn window_resize(
+    w: *mut window,
+    sx: u32,
+    sy: u32,
+    mut xpixel: i32,
+    mut ypixel: i32,
+) {
     if xpixel == 0 {
         xpixel = DEFAULT_XPIXEL as i32;
     }
@@ -388,7 +457,23 @@ pub unsafe extern "C" fn window_resize(w: *mut window, sx: u32, sy: u32, mut xpi
     }
 
     unsafe {
-        log_debug!("{}: @{} resize {}x{} ({}x{})", "window_resize", (*w).id, sx, sy, if xpixel == -1 { (*w).xpixel } else { xpixel as u32 }, if ypixel == -1 { (*w).ypixel } else { ypixel as u32 },);
+        log_debug!(
+            "{}: @{} resize {}x{} ({}x{})",
+            "window_resize",
+            (*w).id,
+            sx,
+            sy,
+            if xpixel == -1 {
+                (*w).xpixel
+            } else {
+                xpixel as u32
+            },
+            if ypixel == -1 {
+                (*w).ypixel
+            } else {
+                ypixel as u32
+            },
+        );
 
         (*w).sx = sx;
         (*w).sy = sy;
@@ -411,7 +496,13 @@ pub unsafe extern "C" fn window_pane_send_resize(wp: *mut window_pane, sx: u32, 
             return;
         }
 
-        log_debug!("{}: %%{} resize to {},{}", "window_pane_send_resize", (*wp).id, sx, sy,);
+        log_debug!(
+            "{}: %%{} resize to {},{}",
+            "window_pane_send_resize",
+            (*wp).id,
+            sx,
+            sy,
+        );
 
         memset(&raw mut ws as _, 0, size_of::<winsize>());
 
@@ -429,7 +520,14 @@ pub unsafe extern "C" fn window_pane_send_resize(wp: *mut window_pane, sx: u32, 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_has_pane(w: *mut window, wp: *mut window_pane) -> boolint { unsafe { tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).into_iter().any(|wp1| wp1.as_ptr() == wp).into() } }
+pub unsafe extern "C" fn window_has_pane(w: *mut window, wp: *mut window_pane) -> boolint {
+    unsafe {
+        tailq_foreach::<_, discr_entry>(&raw mut (*w).panes)
+            .into_iter()
+            .any(|wp1| wp1.as_ptr() == wp)
+            .into()
+    }
+}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_update_focus(w: *mut window) {
@@ -451,7 +549,11 @@ pub unsafe extern "C" fn window_pane_update_focus(wp: *mut window_pane) {
                 focused = false
             } else {
                 for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
-                    if !(*c).session.is_null() && (*(*c).session).attached != 0 && (*c).flags.intersects(client_flag::FOCUSED) && (*(*(*c).session).curw).window == (*wp).window {
+                    if !(*c).session.is_null()
+                        && (*(*c).session).attached != 0
+                        && (*c).flags.intersects(client_flag::FOCUSED)
+                        && (*(*(*c).session).curw).window == (*wp).window
+                    {
                         focused = true;
                         break;
                     }
@@ -472,14 +574,22 @@ pub unsafe extern "C" fn window_pane_update_focus(wp: *mut window_pane) {
                 notify_pane(c"pane-focus-in".as_ptr(), wp);
                 (*wp).flags |= window_pane_flags::PANE_FOCUSED;
             } else {
-                log_debug!("{}: %%{} focus unchanged", "window_pane_update_focus", (*wp).id,);
+                log_debug!(
+                    "{}: %%{} focus unchanged",
+                    "window_pane_update_focus",
+                    (*wp).id,
+                );
             }
         }
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_set_active_pane(w: *mut window, wp: *mut window_pane, notify: i32) -> i32 {
+pub unsafe extern "C" fn window_set_active_pane(
+    w: *mut window,
+    wp: *mut window_pane,
+    notify: i32,
+) -> i32 {
     let lastwp: *mut window_pane;
     unsafe {
         log_debug!("{}: pane %%{}", "window_set_active_pane", (*wp).id);
@@ -512,7 +622,13 @@ pub unsafe extern "C" fn window_set_active_pane(w: *mut window, wp: *mut window_
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_pane_get_palette(wp: *mut window_pane, c: i32) -> i32 { if wp.is_null() { -1 } else { unsafe { colour_palette_get(&raw mut (*wp).palette, c) } } }
+unsafe extern "C" fn window_pane_get_palette(wp: *mut window_pane, c: i32) -> i32 {
+    if wp.is_null() {
+        -1
+    } else {
+        unsafe { colour_palette_get(&raw mut (*wp).palette, c) }
+    }
+}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_redraw_active_switch(w: *mut window, mut wp: *mut window_pane) {
@@ -579,7 +695,8 @@ pub unsafe extern "C" fn window_find_string(w: *mut window, s: *const c_char) ->
         let mut x = (*w).sx / 2;
         let mut y = (*w).sy / 2;
 
-        let status: Result<pane_status, _> = (options_get_number((*w).options, c"pane-border-status".as_ptr()) as i32).try_into();
+        let status: Result<pane_status, _> =
+            (options_get_number((*w).options, c"pane-border-status".as_ptr()) as i32).try_into();
         match status {
             Ok(pane_status::PANE_STATUS_TOP) => top += 1,
             Ok(pane_status::PANE_STATUS_BOTTOM) => bottom -= 1,
@@ -674,7 +791,12 @@ pub unsafe extern "C" fn window_unzoom(w: *mut window, notify: i32) -> i32 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_push_zoom(w: *mut window, always: i32, flag: i32) -> i32 {
     unsafe {
-        log_debug!("{}: @{} {}", "window_push_zoom", (*w).id, (flag != 0 && (*w).flags.intersects(window_flag::ZOOMED)) as i32,);
+        log_debug!(
+            "{}: @{} {}",
+            "window_push_zoom",
+            (*w).id,
+            (flag != 0 && (*w).flags.intersects(window_flag::ZOOMED)) as i32,
+        );
         if flag != 0 && (always != 0 || (*w).flags.intersects(window_flag::ZOOMED)) {
             (*w).flags |= window_flag::WASZOOMED;
         } else {
@@ -688,7 +810,12 @@ pub unsafe extern "C" fn window_push_zoom(w: *mut window, always: i32, flag: i32
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_pop_zoom(w: *mut window) -> i32 {
     unsafe {
-        log_debug!("{}: @{} {}", "window_pop_zoom", (*w).id, (*w).flags.intersects(window_flag::WASZOOMED) as i32,);
+        log_debug!(
+            "{}: @{} {}",
+            "window_pop_zoom",
+            (*w).id,
+            (*w).flags.intersects(window_flag::WASZOOMED) as i32,
+        );
         if (*w).flags.intersects(window_flag::WASZOOMED) {
             return if window_zoom((*w).active) == 0 { 1 } else { 0 };
         }
@@ -698,7 +825,12 @@ pub unsafe extern "C" fn window_pop_zoom(w: *mut window) -> i32 {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_add_pane(w: *mut window, mut other: *mut window_pane, hlimit: u32, flags: i32) -> *mut window_pane {
+pub unsafe extern "C" fn window_add_pane(
+    w: *mut window,
+    mut other: *mut window_pane,
+    hlimit: u32,
+    flags: i32,
+) -> *mut window_pane {
     let func = "window_add_pane";
     unsafe {
         if other.is_null() {
@@ -784,7 +916,11 @@ pub unsafe extern "C" fn window_pane_at_index(w: *mut window, idx: u32) -> *mut 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_pane_next_by_number(w: *mut window, mut wp: *mut window_pane, n: u32) -> *mut window_pane {
+pub unsafe extern "C" fn window_pane_next_by_number(
+    w: *mut window,
+    mut wp: *mut window_pane,
+    n: u32,
+) -> *mut window_pane {
     unsafe {
         for _ in 0..n {
             wp = tailq_next::<_, _, discr_entry>(wp);
@@ -798,7 +934,11 @@ pub unsafe extern "C" fn window_pane_next_by_number(w: *mut window, mut wp: *mut
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_pane_previous_by_number(w: *mut window, mut wp: *mut window_pane, n: u32) -> *mut window_pane {
+pub unsafe extern "C" fn window_pane_previous_by_number(
+    w: *mut window,
+    mut wp: *mut window_pane,
+    n: u32,
+) -> *mut window_pane {
     unsafe {
         for _ in 0..n {
             wp = tailq_prev::<_, _, discr_entry>(wp);
@@ -828,7 +968,9 @@ pub unsafe extern "C" fn window_pane_index(wp: *mut window_pane, i: *mut u32) ->
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_count_panes(w: *mut window) -> u32 { unsafe { tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).count() as u32 } }
+pub unsafe extern "C" fn window_count_panes(w: *mut window) -> u32 {
+    unsafe { tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).count() as u32 }
+}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_destroy_panes(w: *mut window) {
@@ -901,7 +1043,11 @@ pub unsafe extern "C" fn window_pane_find_by_id_str(s: *const c_char) -> *mut wi
         }
 
         let id = strtonum(s.add(1), 0, u32::MAX as i64, &raw mut errstr) as u32;
-        if !errstr.is_null() { null_mut() } else { window_pane_find_by_id(id) }
+        if !errstr.is_null() {
+            null_mut()
+        } else {
+            window_pane_find_by_id(id)
+        }
     }
 }
 
@@ -915,7 +1061,12 @@ pub unsafe extern "C" fn window_pane_find_by_id(id: u32) -> *mut window_pane {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_pane_create(w: *mut window, sx: u32, sy: u32, hlimit: u32) -> *mut window_pane {
+pub unsafe extern "C" fn window_pane_create(
+    w: *mut window,
+    sx: u32,
+    sy: u32,
+    hlimit: u32,
+) -> *mut window_pane {
     unsafe {
         let mut host: [c_char; HOST_NAME_MAX + 1] = zeroed();
         let wp: *mut window_pane = xcalloc_::<window_pane>(1).as_ptr();
@@ -1034,7 +1185,11 @@ unsafe extern "C" fn window_pane_read_callback(_bufev: *mut bufferevent, data: *
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_pane_error_callback(_bufev: *mut bufferevent, _what: c_short, data: *mut c_void) {
+unsafe extern "C" fn window_pane_error_callback(
+    _bufev: *mut bufferevent,
+    _what: c_short,
+    data: *mut c_void,
+) {
     let wp: *mut window_pane = data as _;
     unsafe {
         log_debug!("%%{} error", (*wp).id);
@@ -1051,7 +1206,13 @@ pub unsafe extern "C" fn window_pane_set_event(wp: *mut window_pane) {
     unsafe {
         setblocking((*wp).fd, 0);
 
-        (*wp).event = bufferevent_new((*wp).fd, Some(window_pane_read_callback), None, Some(window_pane_error_callback), wp as _);
+        (*wp).event = bufferevent_new(
+            (*wp).fd,
+            Some(window_pane_read_callback),
+            None,
+            Some(window_pane_error_callback),
+            wp as _,
+        );
         if (*wp).event.is_null() {
             fatalx(c"out of memory");
         }
@@ -1078,8 +1239,19 @@ pub unsafe extern "C" fn window_pane_resize(wp: *mut window_pane, sx: u32, sy: u
         (*wp).sx = sx;
         (*wp).sy = sy;
 
-        log_debug!("{}: %%{} resize {}x{}", "window_pane_resize", (*wp).id, sx, sy,);
-        screen_resize(&raw mut (*wp).base, sx, sy, (*wp).base.saved_grid.is_null() as i32);
+        log_debug!(
+            "{}: %%{} resize {}x{}",
+            "window_pane_resize",
+            (*wp).id,
+            sx,
+            sy,
+        );
+        screen_resize(
+            &raw mut (*wp).base,
+            sx,
+            sy,
+            (*wp).base.saved_grid.is_null() as i32,
+        );
 
         if let Some(wme) = NonNull::new(tailq_first(&raw mut (*wp).modes))
             && let Some(resize) = (*(*wme.as_ptr()).mode).resize
@@ -1090,7 +1262,13 @@ pub unsafe extern "C" fn window_pane_resize(wp: *mut window_pane, sx: u32, sy: u
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_pane_set_mode(wp: *mut window_pane, swp: *mut window_pane, mode: *mut window_mode, fs: *mut cmd_find_state, args: *mut args) -> i32 {
+pub unsafe extern "C" fn window_pane_set_mode(
+    wp: *mut window_pane,
+    swp: *mut window_pane,
+    mode: *mut window_mode,
+    fs: *mut cmd_find_state,
+    args: *mut args,
+) -> i32 {
     unsafe {
         if !tailq_empty(&raw mut (*wp).modes) && (*tailq_first(&raw mut (*wp).modes)).mode == mode {
             return 1;
@@ -1142,7 +1320,11 @@ pub unsafe extern "C" fn window_pane_reset_mode(wp: *mut window_pane) {
         free(wme as _);
 
         if let Some(next) = NonNull::new(tailq_first(&raw mut (*wp).modes)) {
-            log_debug!("{}: next mode is {}", func, _s((*(*next.as_ptr()).mode).name.as_ptr()));
+            log_debug!(
+                "{}: next mode is {}",
+                func,
+                _s((*(*next.as_ptr()).mode).name.as_ptr())
+            );
             (*wp).screen = (*next.as_ptr()).screen;
             if let Some(resize) = (*(*next.as_ptr()).mode).resize {
                 resize(next, (*wp).sx, (*wp).sy);
@@ -1172,8 +1354,16 @@ pub unsafe extern "C" fn window_pane_reset_mode_all(wp: *mut window_pane) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn window_pane_copy_key(wp: *mut window_pane, key: key_code) {
     unsafe {
-        for loop_ in tailq_foreach::<_, discr_entry>(&raw mut (*(*wp).window).panes).map(NonNull::as_ptr) {
-            if loop_ != wp && tailq_empty(&raw mut (*loop_).modes) && (*loop_).fd != -1 && !(*loop_).flags.intersects(window_pane_flags::PANE_INPUTOFF) && window_pane_visible(loop_) != 0 && options_get_number((*loop_).options, c"synchronize-panes".as_ptr()) != 0 {
+        for loop_ in
+            tailq_foreach::<_, discr_entry>(&raw mut (*(*wp).window).panes).map(NonNull::as_ptr)
+        {
+            if loop_ != wp
+                && tailq_empty(&raw mut (*loop_).modes)
+                && (*loop_).fd != -1
+                && !(*loop_).flags.intersects(window_pane_flags::PANE_INPUTOFF)
+                && window_pane_visible(loop_) != 0
+                && options_get_number((*loop_).options, c"synchronize-panes".as_ptr()) != 0
+            {
                 input_key_pane(loop_, key, null_mut());
             }
         }
@@ -1181,7 +1371,14 @@ unsafe extern "C" fn window_pane_copy_key(wp: *mut window_pane, key: key_code) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_pane_key(wp: *mut window_pane, c: *mut client, s: *mut session, wl: *mut winlink, mut key: key_code, m: *mut mouse_event) -> i32 {
+pub unsafe extern "C" fn window_pane_key(
+    wp: *mut window_pane,
+    c: *mut client,
+    s: *mut session,
+    wl: *mut winlink,
+    mut key: key_code,
+    m: *mut mouse_event,
+) -> i32 {
     if KEYC_IS_MOUSE(key) && m.is_null() {
         return -1;
     }
@@ -1225,10 +1422,23 @@ pub unsafe extern "C" fn window_pane_visible(wp: *mut window_pane) -> i32 {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_pane_exited(wp: *mut window_pane) -> i32 { unsafe { if (*wp).fd == -1 || (*wp).flags.intersects(window_pane_flags::PANE_EXITED) { 1 } else { 0 } } }
+pub unsafe extern "C" fn window_pane_exited(wp: *mut window_pane) -> i32 {
+    unsafe {
+        if (*wp).fd == -1 || (*wp).flags.intersects(window_pane_flags::PANE_EXITED) {
+            1
+        } else {
+            0
+        }
+    }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_pane_search(wp: *mut window_pane, term: *const c_char, regex: i32, ignore: i32) -> u32 {
+pub unsafe extern "C" fn window_pane_search(
+    wp: *mut window_pane,
+    term: *const c_char,
+    regex: i32,
+    ignore: i32,
+) -> u32 {
     unsafe {
         let s: *mut screen = &raw mut (*wp).base;
         let mut r: regex_t = zeroed();
@@ -1262,7 +1472,11 @@ pub unsafe extern "C" fn window_pane_search(wp: *mut window_pane, term: *const c
             }
 
             log_debug!("{}: {}", "window_pane_search", _s(line));
-            let found = if regex == 0 { fnmatch(new, line, flags) == 0 } else { regexec(&r, line, 0, null_mut(), 0) == 0 };
+            let found = if regex == 0 {
+                fnmatch(new, line, flags) == 0
+            } else {
+                regexec(&r, line, 0, null_mut(), 0) == 0
+            };
             free(line as _);
 
             if found {
@@ -1286,7 +1500,10 @@ pub unsafe extern "C" fn window_pane_search(wp: *mut window_pane, term: *const c
 
 /* Get MRU pane from a list. */
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_pane_choose_best(list: *mut *mut window_pane, size: u32) -> *mut window_pane {
+unsafe extern "C" fn window_pane_choose_best(
+    list: *mut *mut window_pane,
+    size: u32,
+) -> *mut window_pane {
     if size == 0 {
         return null_mut();
     }
@@ -1314,7 +1531,10 @@ pub unsafe extern "C" fn window_pane_find_up(wp: *mut window_pane) -> *mut windo
             return null_mut();
         }
         let w = (*wp).window;
-        let status: pane_status = (options_get_number((*w).options, c"pane-border-status".as_ptr()) as i32).try_into().unwrap();
+        let status: pane_status = (options_get_number((*w).options, c"pane-border-status".as_ptr())
+            as i32)
+            .try_into()
+            .unwrap();
 
         let mut list: *mut *mut window_pane = null_mut();
         let mut size = 0;
@@ -1381,7 +1601,10 @@ pub unsafe extern "C" fn window_pane_find_down(wp: *mut window_pane) -> *mut win
             return null_mut();
         }
         let w = (*wp).window;
-        let status: pane_status = (options_get_number((*w).options, c"pane-border-status".as_ptr()) as i32).try_into().unwrap();
+        let status: pane_status = (options_get_number((*w).options, c"pane-border-status".as_ptr())
+            as i32)
+            .try_into()
+            .unwrap();
 
         let mut list: *mut *mut window_pane = null_mut();
         let mut size = 0;
@@ -1570,7 +1793,9 @@ pub unsafe extern "C" fn window_pane_stack_remove(stack: *mut window_panes, wp: 
 pub unsafe extern "C" fn winlink_clear_flags(wl: *mut winlink) {
     unsafe {
         (*(*wl).window).flags &= !WINDOW_ALERTFLAGS;
-        for loop_ in tailq_foreach::<_, crate::discr_wentry>(&raw mut (*(*wl).window).winlinks).map(NonNull::as_ptr) {
+        for loop_ in tailq_foreach::<_, crate::discr_wentry>(&raw mut (*(*wl).window).winlinks)
+            .map(NonNull::as_ptr)
+        {
             if ((*loop_).flags & WINLINK_ALERTFLAGS) != 0 {
                 (*loop_).flags &= !WINLINK_ALERTFLAGS;
                 server_status_session((*loop_).session);
@@ -1581,12 +1806,20 @@ pub unsafe extern "C" fn winlink_clear_flags(wl: *mut winlink) {
 
 /* Shuffle window indexes up. */
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn winlink_shuffle_up(s: *mut session, mut wl: *mut winlink, before: i32) -> i32 {
+pub unsafe extern "C" fn winlink_shuffle_up(
+    s: *mut session,
+    mut wl: *mut winlink,
+    before: i32,
+) -> i32 {
     if wl.is_null() {
         return -1;
     }
     unsafe {
-        let idx = if before != 0 { (*wl).idx } else { (*wl).idx + 1 };
+        let idx = if before != 0 {
+            (*wl).idx
+        } else {
+            (*wl).idx + 1
+        };
 
         /* Find the next free index. */
         let mut last = idx;
@@ -1614,7 +1847,14 @@ pub unsafe extern "C" fn winlink_shuffle_up(s: *mut session, mut wl: *mut winlin
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn window_pane_input_callback(c: *mut client, _path: *mut c_char, error: i32, closed: i32, buffer: *mut evbuffer, data: *mut c_void) {
+unsafe extern "C" fn window_pane_input_callback(
+    c: *mut client,
+    _path: *mut c_char,
+    error: i32,
+    closed: i32,
+    buffer: *mut evbuffer,
+    data: *mut c_void,
+) {
     unsafe {
         let cdata: *mut window_pane_input_data = data as *mut window_pane_input_data;
         let buf: *mut c_uchar = EVBUFFER_DATA(buffer);
@@ -1639,7 +1879,11 @@ unsafe extern "C" fn window_pane_input_callback(c: *mut client, _path: *mut c_ch
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_pane_start_input(wp: *mut window_pane, item: *mut cmdq_item, cause: *mut *mut c_char) -> i32 {
+pub unsafe extern "C" fn window_pane_start_input(
+    wp: *mut window_pane,
+    item: *mut cmdq_item,
+    cause: *mut *mut c_char,
+) -> i32 {
     unsafe {
         let c: *mut client = cmdq_get_client(item);
 
@@ -1647,7 +1891,10 @@ pub unsafe extern "C" fn window_pane_start_input(wp: *mut window_pane, item: *mu
             *cause = xstrdup(c"pane is not empty".as_ptr()).cast().as_ptr();
             return -1;
         }
-        if (*c).flags.intersects(client_flag::DEAD | client_flag::EXITED) {
+        if (*c)
+            .flags
+            .intersects(client_flag::DEAD | client_flag::EXITED)
+        {
             return 1;
         }
         if !(*c).session.is_null() {
@@ -1657,7 +1904,12 @@ pub unsafe extern "C" fn window_pane_start_input(wp: *mut window_pane, item: *mu
         let cdata: *mut window_pane_input_data = xmalloc_::<window_pane_input_data>().as_ptr();
         (*cdata).item = item;
         (*cdata).wp = (*wp).id;
-        (*cdata).file = file_read(c, c"-".as_ptr(), Some(window_pane_input_callback), cdata as _);
+        (*cdata).file = file_read(
+            c,
+            c"-".as_ptr(),
+            Some(window_pane_input_callback),
+            cdata as _,
+        );
         (*c).references += 1;
 
         0
@@ -1665,7 +1917,11 @@ pub unsafe extern "C" fn window_pane_start_input(wp: *mut window_pane, item: *mu
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_pane_get_new_data(wp: *mut window_pane, wpo: *mut window_pane_offset, size: *mut usize) -> *mut c_void {
+pub unsafe extern "C" fn window_pane_get_new_data(
+    wp: *mut window_pane,
+    wpo: *mut window_pane_offset,
+    size: *mut usize,
+) -> *mut c_void {
     unsafe {
         let used = (*wpo).used - (*wp).base_offset;
 
@@ -1675,7 +1931,11 @@ pub unsafe extern "C" fn window_pane_get_new_data(wp: *mut window_pane, wpo: *mu
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_pane_update_used_data(wp: *mut window_pane, wpo: *mut window_pane_offset, mut size: usize) {
+pub unsafe extern "C" fn window_pane_update_used_data(
+    wp: *mut window_pane,
+    wpo: *mut window_pane_offset,
+    mut size: usize,
+) {
     unsafe {
         let used = (*wpo).used - (*wp).base_offset;
 
@@ -1715,7 +1975,11 @@ pub unsafe extern "C" fn window_pane_default_cursor(wp: *mut window_pane) {
 
         let c: i32 = options_get_number((*wp).options, c"cursor-style".as_ptr()) as i32;
         (*s).default_mode = 0;
-        screen_set_cursor_style(c as u32, &raw mut (*s).default_cstyle, &raw mut (*s).default_mode);
+        screen_set_cursor_style(
+            c as u32,
+            &raw mut (*s).default_cstyle,
+            &raw mut (*s).default_mode,
+        );
     }
 }
 

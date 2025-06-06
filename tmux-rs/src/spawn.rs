@@ -6,7 +6,10 @@ use crate::compat::{
     queue::{tailq_first, tailq_foreach, tailq_remove},
     tailq_insert_head,
 };
-use libc::{_exit, SIG_BLOCK, SIG_SETMASK, SIGCHLD, STDERR_FILENO, STDIN_FILENO, TCSANOW, VERASE, chdir, close, execl, execvp, kill, sigfillset, sigprocmask, strrchr, tcgetattr, tcsetattr};
+use libc::{
+    _exit, SIG_BLOCK, SIG_SETMASK, SIGCHLD, STDERR_FILENO, STDIN_FILENO, TCSANOW, VERASE, chdir,
+    close, execl, execvp, kill, sigfillset, sigprocmask, strrchr, tcgetattr, tcsetattr,
+};
 
 #[cfg(feature = "utempter")]
 use crate::utempter::utempter_add_record;
@@ -24,21 +27,58 @@ pub unsafe extern "C" fn spawn_log(from: *const c_char, sc: *mut spawn_context) 
         log_debug!("{}: {}, flags={:#x}", _s(from), _s(name), (*sc).flags);
 
         if (!wl.is_null() && !wp0.is_null()) {
-            xsnprintf(tmp.as_mut_ptr().cast(), size_of::<tmp_type>(), c"wl=%d wp0=%%%u".as_ptr(), (*wl).idx, (*wp0).id);
+            xsnprintf(
+                tmp.as_mut_ptr().cast(),
+                size_of::<tmp_type>(),
+                c"wl=%d wp0=%%%u".as_ptr(),
+                (*wl).idx,
+                (*wp0).id,
+            );
         } else if (!wl.is_null()) {
-            xsnprintf(tmp.as_mut_ptr().cast(), size_of::<tmp_type>(), c"wl=%d wp0=none".as_ptr(), (*wl).idx);
+            xsnprintf(
+                tmp.as_mut_ptr().cast(),
+                size_of::<tmp_type>(),
+                c"wl=%d wp0=none".as_ptr(),
+                (*wl).idx,
+            );
         } else if (!wp0.is_null()) {
-            xsnprintf(tmp.as_mut_ptr().cast(), size_of::<tmp_type>(), c"wl=none wp0=%%%u".as_ptr(), (*wp0).id);
+            xsnprintf(
+                tmp.as_mut_ptr().cast(),
+                size_of::<tmp_type>(),
+                c"wl=none wp0=%%%u".as_ptr(),
+                (*wp0).id,
+            );
         } else {
-            xsnprintf(tmp.as_mut_ptr().cast(), size_of::<tmp_type>(), c"wl=none wp0=none".as_ptr());
+            xsnprintf(
+                tmp.as_mut_ptr().cast(),
+                size_of::<tmp_type>(),
+                c"wl=none wp0=none".as_ptr(),
+            );
         }
-        log_debug!("{}: s=${} {} idx={}", _s(from), (*s).id, _s(tmp.as_ptr().cast()), (*sc).idx);
-        log_debug!("{}: name={}", _s(from), _s(if (*sc).name.is_null() { c"none".as_ptr() } else { (*sc).name }),);
+        log_debug!(
+            "{}: s=${} {} idx={}",
+            _s(from),
+            (*s).id,
+            _s(tmp.as_ptr().cast()),
+            (*sc).idx
+        );
+        log_debug!(
+            "{}: name={}",
+            _s(from),
+            _s(if (*sc).name.is_null() {
+                c"none".as_ptr()
+            } else {
+                (*sc).name
+            }),
+        );
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn spawn_window(sc: *mut spawn_context, cause: *mut *mut c_char) -> *mut winlink {
+pub unsafe extern "C" fn spawn_window(
+    sc: *mut spawn_context,
+    cause: *mut *mut c_char,
+) -> *mut winlink {
     let __func__ = c"spawn_window".as_ptr();
     unsafe {
         let mut item = (*sc).item;
@@ -60,14 +100,20 @@ pub unsafe extern "C" fn spawn_window(sc: *mut spawn_context, cause: *mut *mut c
         if ((*sc).flags & SPAWN_RESPAWN != 0) {
             w = (*(*sc).wl).window;
             if (!(*sc).flags & SPAWN_KILL != 0) {
-                for wp_ in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+                for wp_ in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr)
+                {
                     wp = wp_;
                     if ((*wp).fd != -1) {
                         break;
                     }
                 }
                 if (!wp.is_null()) {
-                    xasprintf(cause, c"window %s:%d still active".as_ptr(), (*s).name, (*(*sc).wl).idx);
+                    xasprintf(
+                        cause,
+                        c"window %s:%d still active".as_ptr(),
+                        (*s).name,
+                        (*(*sc).wl).idx,
+                    );
                     return null_mut();
                 }
             }
@@ -127,7 +173,16 @@ pub unsafe extern "C" fn spawn_window(sc: *mut spawn_context, cause: *mut *mut c
             let mut sy = 0u32;
             let mut xpixel = 0u32;
             let mut ypixel = 0u32;
-            default_window_size((*sc).tc, s, null_mut(), &raw mut sx, &raw mut sy, &raw mut xpixel, &raw mut ypixel, -1);
+            default_window_size(
+                (*sc).tc,
+                s,
+                null_mut(),
+                &raw mut sx,
+                &raw mut sy,
+                &raw mut xpixel,
+                &raw mut ypixel,
+                -1,
+            );
             w = window_create(sx, sy, xpixel, ypixel);
             if w.is_null() {
                 winlink_remove(&raw mut (*s).windows, (*sc).wl);
@@ -181,7 +236,10 @@ pub unsafe extern "C" fn spawn_window(sc: *mut spawn_context, cause: *mut *mut c
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut c_char) -> *mut window_pane {
+pub unsafe extern "C" fn spawn_pane(
+    sc: *mut spawn_context,
+    cause: *mut *mut c_char,
+) -> *mut window_pane {
     let __func__ = c"spawn_pane".as_ptr();
     unsafe {
         let mut item = (*sc).item;
@@ -215,7 +273,12 @@ pub unsafe extern "C" fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut c_c
             if (!(*sc).cwd.is_null()) {
                 cwd = format_single(item, (*sc).cwd, c, (*target).s, null_mut(), null_mut());
                 if (*cwd != b'/' as _) {
-                    xasprintf(&raw mut new_cwd, c"%s/%s".as_ptr(), server_client_get_cwd(c, (*target).s), cwd);
+                    xasprintf(
+                        &raw mut new_cwd,
+                        c"%s/%s".as_ptr(),
+                        server_client_get_cwd(c, (*target).s),
+                        cwd,
+                    );
                     free_(cwd);
                     cwd = new_cwd;
                 }
@@ -233,7 +296,13 @@ pub unsafe extern "C" fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut c_c
             if ((*sc).flags & SPAWN_RESPAWN != 0) {
                 if ((*(*sc).wp0).fd != -1 && (!(*sc).flags & SPAWN_KILL != 0)) {
                     window_pane_index((*sc).wp0, &raw mut idx);
-                    xasprintf(cause, c"pane %s:%d.%u still active".as_ptr(), (*s).name, (*(*sc).wl).idx, idx);
+                    xasprintf(
+                        cause,
+                        c"pane %s:%d.%u still active".as_ptr(),
+                        (*s).name,
+                        (*(*sc).wl).idx,
+                        idx,
+                    );
                     free_(cwd);
                     return null_mut();
                 }
@@ -246,7 +315,8 @@ pub unsafe extern "C" fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut c_c
                 input_free((*(*sc).wp0).ictx);
                 (*(*sc).wp0).ictx = null_mut();
                 new_wp = (*sc).wp0;
-                (*new_wp).flags &= !(window_pane_flags::PANE_STATUSREADY | window_pane_flags::PANE_STATUSDRAWN);
+                (*new_wp).flags &=
+                    !(window_pane_flags::PANE_STATUSREADY | window_pane_flags::PANE_STATUSDRAWN);
             } else if ((*sc).lc.is_null()) {
                 new_wp = window_add_pane(w, null_mut(), hlimit, (*sc).flags);
                 layout_init(w, new_wp);
@@ -297,7 +367,13 @@ pub unsafe extern "C" fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut c_c
             if (!(*sc).environ.is_null()) {
                 environ_copy((*sc).environ, child);
             }
-            environ_set(child, c"TMUX_PANE".as_ptr(), 0, c"%%%u".as_ptr(), (*new_wp).id);
+            environ_set(
+                child,
+                c"TMUX_PANE".as_ptr(),
+                0,
+                c"%%%u".as_ptr(),
+                (*new_wp).id,
+            );
 
             /*
              * Then the PATH environment variable. The session one is replaced from
@@ -357,7 +433,13 @@ pub unsafe extern "C" fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut c_c
             }
 
             /* Fork the new process. */
-            (*new_wp).pid = fdforkpty(ptm_fd, &raw mut (*new_wp).fd, (*new_wp).tty.as_mut_ptr(), null_mut(), &raw mut ws);
+            (*new_wp).pid = fdforkpty(
+                ptm_fd,
+                &raw mut (*new_wp).fd,
+                (*new_wp).tty.as_mut_ptr(),
+                null_mut(),
+                &raw mut ws,
+            );
             if ((*new_wp).pid == -1) {
                 xasprintf(cause, c"fork failed: %s".as_ptr(), strerror(errno!()));
                 (*new_wp).fd = -1;
@@ -380,7 +462,11 @@ pub unsafe extern "C" fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut c_c
                      * isolation.
                      */
                     if (systemd_move_pid_to_new_cgroup((*new_wp).pid, cause) < 0) {
-                        log_debug!("{}: moving pane to new cgroup failed: {}", _s(__func__), _s(*cause));
+                        log_debug!(
+                            "{}: moving pane to new cgroup failed: {}",
+                            _s(__func__),
+                            _s(*cause)
+                        );
                         free_(*cause);
                     }
                 }
@@ -458,7 +544,13 @@ pub unsafe extern "C" fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut c_c
                 } else {
                     xasprintf(&raw mut argv0, c"%s".as_ptr(), (*new_wp).shell);
                 }
-                execl((*new_wp).shell, argv0, c"-c".as_ptr(), tmp, null_mut::<c_char>());
+                execl(
+                    (*new_wp).shell,
+                    argv0,
+                    c"-c".as_ptr(),
+                    tmp,
+                    null_mut::<c_char>(),
+                );
                 _exit(1);
             }
             if (!cp.is_null() && *cp.add(1) != b'\0' as c_char) {
@@ -474,7 +566,12 @@ pub unsafe extern "C" fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut c_c
         #[cfg(feature = "utempter")]
         {
             if !(*new_wp).flags.intersects(window_pane_flags::PANE_EMPTY) {
-                xasprintf(&raw mut cp, c"tmux(%lu).%%%u".as_ptr(), std::process::id() as c_long, (*new_wp).id);
+                xasprintf(
+                    &raw mut cp,
+                    c"tmux(%lu).%%%u".as_ptr(),
+                    std::process::id() as c_long,
+                    (*new_wp).id,
+                );
                 utempter_add_record((*new_wp).fd, cp);
                 kill(std::process::id() as i32, SIGCHLD);
                 free_(cp);

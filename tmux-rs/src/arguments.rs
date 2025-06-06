@@ -7,7 +7,10 @@ use crate::{
 
 use crate::compat::{
     VIS_CSTYLE, VIS_DQ, VIS_NL, VIS_OCTAL, VIS_TAB,
-    queue::{tailq_empty, tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_last, tailq_next, tailq_remove},
+    queue::{
+        tailq_empty, tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_last,
+        tailq_next, tailq_remove,
+    },
     strlcat, strtonum,
     tree::{rb_find, rb_foreach, rb_init, rb_insert, rb_min, rb_next, rb_remove},
 };
@@ -46,12 +49,17 @@ pub struct args_command_state {
 crate::compat::RB_GENERATE!(args_tree, args_entry, entry, args_cmp);
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn args_cmp(a1: *const args_entry, a2: *const args_entry) -> i32 { unsafe { ((*a1).flag).wrapping_sub((*a2).flag) as i32 } }
+unsafe extern "C" fn args_cmp(a1: *const args_entry, a2: *const args_entry) -> i32 {
+    unsafe { ((*a1).flag).wrapping_sub((*a2).flag) as i32 }
+}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn args_find(args: *mut args, flag: c_uchar) -> *mut args_entry {
     unsafe {
-        let mut entry: args_entry = args_entry { flag, ..unsafe { zeroed() } };
+        let mut entry: args_entry = args_entry {
+            flag,
+            ..unsafe { zeroed() }
+        };
 
         rb_find(&raw mut (*args).tree, &raw mut entry)
     }
@@ -109,7 +117,16 @@ pub unsafe extern "C" fn args_create() -> *mut args {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn args_parse_flag_argument(values: *mut args_value, count: u32, cause: *mut *mut c_char, args: *mut args, i: *mut u32, string: *mut c_char, flag: i32, optional_argument: i32) -> i32 {
+pub unsafe extern "C" fn args_parse_flag_argument(
+    values: *mut args_value,
+    count: u32,
+    cause: *mut *mut c_char,
+    args: *mut args,
+    i: *mut u32,
+    string: *mut c_char,
+    flag: i32,
+    optional_argument: i32,
+) -> i32 {
     let mut argument: *mut args_value;
     let mut new: *mut args_value;
     let mut s: *mut c_char;
@@ -162,7 +179,14 @@ pub unsafe extern "C" fn args_parse_flag_argument(values: *mut args_value, count
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn args_parse_flags(parse: *mut args_parse, values: *mut args_value, count: u32, cause: *mut *mut c_char, args: *mut args, i: *mut u32) -> i32 {
+pub unsafe extern "C" fn args_parse_flags(
+    parse: *mut args_parse,
+    values: *mut args_value,
+    count: u32,
+    cause: *mut *mut c_char,
+    args: *mut args,
+    i: *mut u32,
+) -> i32 {
     let __func__ = "args_parse_flags";
     unsafe {
         let value = values.add(*i as usize);
@@ -210,14 +234,28 @@ pub unsafe extern "C" fn args_parse_flags(parse: *mut args_parse, values: *mut a
                 continue;
             }
             let optional_argument = (*found.add(2) == b':' as c_char) as i32;
-            return args_parse_flag_argument(values, count, cause, args, i, string, flag as i32, optional_argument);
+            return args_parse_flag_argument(
+                values,
+                count,
+                cause,
+                args,
+                i,
+                string,
+                flag as i32,
+                optional_argument,
+            );
         }
     }
 }
 
 /// Parse arguments into a new argument set.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn args_parse(parse: *mut args_parse, values: *mut args_value, count: u32, cause: *mut *mut c_char) -> *mut args {
+pub unsafe extern "C" fn args_parse(
+    parse: *mut args_parse,
+    values: *mut args_value,
+    count: u32,
+    cause: *mut *mut c_char,
+) -> *mut args {
     let __func__ = "args_parse";
     unsafe {
         let mut type_: args_parse_type;
@@ -249,7 +287,13 @@ pub unsafe extern "C" fn args_parse(parse: *mut args_parse, values: *mut args_va
                 value = values.add(i as usize);
 
                 s = args_value_as_string(value);
-                log_debug!("{}: {} = {} (type {})", __func__, i, _s(s), _s(args_type_to_string((*value).type_)),);
+                log_debug!(
+                    "{}: {} = {} (type {})",
+                    __func__,
+                    i,
+                    _s(s),
+                    _s(args_type_to_string((*value).type_)),
+                );
 
                 if let Some(cb) = (*parse).cb {
                     type_ = cb(args, (*args).count, cause);
@@ -261,7 +305,14 @@ pub unsafe extern "C" fn args_parse(parse: *mut args_parse, values: *mut args_va
                     type_ = args_parse_type::ARGS_PARSE_STRING;
                 }
 
-                (*args).values = xrecallocarray((*args).values.cast(), (*args).count as usize, (*args).count as usize + 1, size_of::<args_value>()).cast().as_ptr();
+                (*args).values = xrecallocarray(
+                    (*args).values.cast(),
+                    (*args).count as usize,
+                    (*args).count as usize + 1,
+                    size_of::<args_value>(),
+                )
+                .cast()
+                .as_ptr();
                 new = (*args).values.add((*args).count as usize);
                 (*args).count += 1;
 
@@ -269,7 +320,11 @@ pub unsafe extern "C" fn args_parse(parse: *mut args_parse, values: *mut args_va
                     args_parse_type::ARGS_PARSE_INVALID => fatalx(c"unexpected argument type"),
                     args_parse_type::ARGS_PARSE_STRING => {
                         if ((*value).type_ != args_type::ARGS_STRING) {
-                            xasprintf(cause, c"argument %u must be \"string\"".as_ptr(), (*args).count);
+                            xasprintf(
+                                cause,
+                                c"argument %u must be \"string\"".as_ptr(),
+                                (*args).count,
+                            );
                             args_free(args);
                             return null_mut();
                         }
@@ -278,7 +333,11 @@ pub unsafe extern "C" fn args_parse(parse: *mut args_parse, values: *mut args_va
                     args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING => args_copy_value(new, value),
                     args_parse_type::ARGS_PARSE_COMMANDS => {
                         if ((*value).type_ != args_type::ARGS_COMMANDS) {
-                            xasprintf(cause, c"argument %u must be { commands }".as_ptr(), (*args).count);
+                            xasprintf(
+                                cause,
+                                c"argument %u must be { commands }".as_ptr(),
+                                (*args).count,
+                            );
                             args_free(args);
                             return null_mut();
                         }
@@ -290,12 +349,20 @@ pub unsafe extern "C" fn args_parse(parse: *mut args_parse, values: *mut args_va
         }
 
         if ((*parse).lower != -1 && (*args).count < (*parse).lower as u32) {
-            xasprintf(cause, c"too few arguments (need at least %u)".as_ptr(), (*parse).lower);
+            xasprintf(
+                cause,
+                c"too few arguments (need at least %u)".as_ptr(),
+                (*parse).lower,
+            );
             args_free(args);
             return null_mut();
         }
         if ((*parse).upper != -1 && (*args).count > (*parse).upper as u32) {
-            xasprintf(cause, c"too many arguments (need at most %u)".as_ptr(), (*parse).upper);
+            xasprintf(
+                cause,
+                c"too many arguments (need at most %u)".as_ptr(),
+                (*parse).upper,
+            );
             args_free(args);
             return null_mut();
         }
@@ -304,7 +371,12 @@ pub unsafe extern "C" fn args_parse(parse: *mut args_parse, values: *mut args_va
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn args_copy_copy_value(to: *mut args_value, from: *mut args_value, argc: i32, argv: *mut *mut c_char) {
+pub unsafe extern "C" fn args_copy_copy_value(
+    to: *mut args_value,
+    from: *mut args_value,
+    argc: i32,
+    argv: *mut *mut c_char,
+) {
     unsafe {
         (*to).type_ = (*from).type_;
         match ((*from).type_) {
@@ -318,14 +390,20 @@ pub unsafe extern "C" fn args_copy_copy_value(to: *mut args_value, from: *mut ar
                 }
                 (*to).union_.string = expanded;
             }
-            args_type::ARGS_COMMANDS => (*to).union_.cmdlist = cmd_list_copy((*from).union_.cmdlist, argc, argv),
+            args_type::ARGS_COMMANDS => {
+                (*to).union_.cmdlist = cmd_list_copy((*from).union_.cmdlist, argc, argv)
+            }
         }
     }
 }
 
 /// Copy an arguments set.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn args_copy(args: *mut args, argc: i32, argv: *mut *mut c_char) -> *mut args {
+pub unsafe extern "C" fn args_copy(
+    args: *mut args,
+    argc: i32,
+    argv: *mut *mut c_char,
+) -> *mut args {
     let __func__ = c"args_copy".as_ptr();
     unsafe {
         cmd_log_argv(argc, argv, c"%s".as_ptr(), __func__);
@@ -400,7 +478,11 @@ pub unsafe extern "C" fn args_free(args: *mut args) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn args_to_vector(args: *mut args, argc: *mut i32, argv: *mut *mut *mut c_char) {
+pub unsafe extern "C" fn args_to_vector(
+    args: *mut args,
+    argc: *mut i32,
+    argv: *mut *mut *mut c_char,
+) {
     unsafe {
         *argc = 0;
         *argv = null_mut();
@@ -408,7 +490,9 @@ pub unsafe extern "C" fn args_to_vector(args: *mut args, argc: *mut i32, argv: *
         for i in 0..(*args).count {
             match (*(*args).values.add(i as usize)).type_ {
                 args_type::ARGS_NONE => (),
-                args_type::ARGS_STRING => cmd_append_argv(argc, argv, (*(*args).values.add(i as usize)).union_.string),
+                args_type::ARGS_STRING => {
+                    cmd_append_argv(argc, argv, (*(*args).values.add(i as usize)).union_.string)
+                }
                 args_type::ARGS_COMMANDS => {
                     let s = cmd_list_print((*(*args).values.add(i as usize)).union_.cmdlist, 0);
                     cmd_append_argv(argc, argv, s);
@@ -432,7 +516,12 @@ pub unsafe extern "C" fn args_from_vector(argc: i32, argv: *mut *mut c_char) -> 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn args_print_add(buf: *mut *mut c_char, len: *mut usize, fmt: *const c_char, mut ap: ...) {
+pub unsafe extern "C" fn args_print_add(
+    buf: *mut *mut c_char,
+    len: *mut usize,
+    fmt: *const c_char,
+    mut ap: ...
+) {
     unsafe {
         let mut s = null_mut();
         let slen: usize = xvasprintf(&raw mut s, fmt, ap.as_va_list()) as usize;
@@ -446,7 +535,11 @@ pub unsafe extern "C" fn args_print_add(buf: *mut *mut c_char, len: *mut usize, 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn args_print_add_value(buf: *mut *mut c_char, len: *mut usize, value: *mut args_value) {
+pub unsafe extern "C" fn args_print_add_value(
+    buf: *mut *mut c_char,
+    len: *mut usize,
+    value: *mut args_value,
+) {
     unsafe {
         if (**buf != b'\0' as c_char) {
             args_print_add(buf, len, c" ".as_ptr());
@@ -493,7 +586,12 @@ pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
                 args_print_add(&raw mut buf, &raw mut len, c"-".as_ptr());
             }
             for j in 0..(*entry).count {
-                args_print_add(&raw mut buf, &raw mut len, c"%c".as_ptr(), (*entry).flag as i32);
+                args_print_add(
+                    &raw mut buf,
+                    &raw mut len,
+                    c"%c".as_ptr(),
+                    (*entry).flag as i32,
+                );
             }
         }
 
@@ -501,9 +599,19 @@ pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
         for entry in rb_foreach(&raw mut (*args).tree).map(NonNull::as_ptr) {
             if ((*entry).flags & ARGS_ENTRY_OPTIONAL_VALUE != 0) {
                 if (*buf != b'\0' as c_char) {
-                    args_print_add(&raw mut buf, &raw mut len, c" -%c".as_ptr(), (*entry).flag as i32);
+                    args_print_add(
+                        &raw mut buf,
+                        &raw mut len,
+                        c" -%c".as_ptr(),
+                        (*entry).flag as i32,
+                    );
                 } else {
-                    args_print_add(&raw mut buf, &raw mut len, c"-%c".as_ptr(), (*entry).flag as i32);
+                    args_print_add(
+                        &raw mut buf,
+                        &raw mut len,
+                        c"-%c".as_ptr(),
+                        (*entry).flag as i32,
+                    );
                 }
                 last = entry;
                 continue;
@@ -514,9 +622,19 @@ pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
             for value in tailq_foreach(&raw mut (*entry).values) {
                 {
                     if (*buf != b'\0' as c_char) {
-                        args_print_add(&raw mut buf, &raw mut len, c" -%c".as_ptr(), (*entry).flag as i32);
+                        args_print_add(
+                            &raw mut buf,
+                            &raw mut len,
+                            c" -%c".as_ptr(),
+                            (*entry).flag as i32,
+                        );
                     } else {
-                        args_print_add(&raw mut buf, &raw mut len, c"-%c".as_ptr(), (*entry).flag as i32);
+                        args_print_add(
+                            &raw mut buf,
+                            &raw mut len,
+                            c"-%c".as_ptr(),
+                            (*entry).flag as i32,
+                        );
                     }
                     args_print_add_value(&raw mut buf, &raw mut len, value.as_ptr());
                 }
@@ -603,7 +721,12 @@ pub unsafe extern "C" fn args_has(args: *mut args, flag: u8) -> i32 {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn args_set(args: *mut args, flag: c_uchar, value: *mut args_value, flags: i32) {
+pub unsafe extern "C" fn args_set(
+    args: *mut args,
+    flag: c_uchar,
+    value: *mut args_value,
+    flags: i32,
+) {
     unsafe {
         let mut entry: *mut args_entry = args_find(args, flag);
 
@@ -665,11 +788,15 @@ pub unsafe extern "C" fn args_next(entry: *mut *mut args_entry) -> u8 {
 
 /// Get argument count.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn args_count(args: *const args) -> u32 { unsafe { (*args).count } }
+pub unsafe extern "C" fn args_count(args: *const args) -> u32 {
+    unsafe { (*args).count }
+}
 
 /// Get argument values.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn args_values(args: *mut args) -> *mut args_value { unsafe { (*args).values } }
+pub unsafe extern "C" fn args_values(args: *mut args) -> *mut args_value {
+    unsafe { (*args).values }
+}
 
 /// Get argument value.
 #[unsafe(no_mangle)]
@@ -695,7 +822,12 @@ pub unsafe extern "C" fn args_string(args: *mut args, idx: u32) -> *const c_char
 
 /// Make a command now.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn args_make_commands_now(self_: *mut cmd, item: *mut cmdq_item, idx: u32, expand: i32) -> *mut cmd_list {
+pub unsafe extern "C" fn args_make_commands_now(
+    self_: *mut cmd,
+    item: *mut cmdq_item,
+    idx: u32,
+    expand: i32,
+) -> *mut cmd_list {
     unsafe {
         let mut error = null_mut();
         let state = args_make_commands_prepare(self_, item, idx, null_mut(), 0, expand);
@@ -713,7 +845,14 @@ pub unsafe extern "C" fn args_make_commands_now(self_: *mut cmd, item: *mut cmdq
 
 /// Save bits to make a command later.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn args_make_commands_prepare(self_: *mut cmd, item: *mut cmdq_item, idx: u32, default_command: *const c_char, wait: i32, expand: i32) -> *mut args_command_state {
+pub unsafe extern "C" fn args_make_commands_prepare(
+    self_: *mut cmd,
+    item: *mut cmdq_item,
+    idx: u32,
+    default_command: *const c_char,
+    wait: i32,
+    expand: i32,
+) -> *mut args_command_state {
     let __func__ = "args_make_commands_prepare";
     unsafe {
         let mut args = cmd_get_args(self_);
@@ -770,7 +909,12 @@ pub unsafe extern "C" fn args_make_commands_prepare(self_: *mut cmd, item: *mut 
 
 /// Return argument as command.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn args_make_commands(state: *mut args_command_state, argc: i32, argv: *mut *mut c_char, error: *mut *mut c_char) -> *mut cmd_list {
+pub unsafe extern "C" fn args_make_commands(
+    state: *mut args_command_state,
+    argc: i32,
+    argv: *mut *mut c_char,
+    error: *mut *mut c_char,
+) -> *mut cmd_list {
     let __func__ = "args_make_commands";
     unsafe {
         // struct cmd_parse_result *pr;
@@ -789,7 +933,13 @@ pub unsafe extern "C" fn args_make_commands(state: *mut args_command_state, argc
         cmd_log_argv(argc, argv, c"args_make_commands".as_ptr());
         for i in 0..argc {
             let new_cmd = cmd_template_replace(cmd, *argv.add(i as usize), i + 1);
-            log_debug!("{}: %%{} {}: {}", __func__, i + 1, _s(*argv.add(i as usize)), _s(new_cmd));
+            log_debug!(
+                "{}: %%{} {}: {}",
+                __func__,
+                i + 1,
+                _s(*argv.add(i as usize)),
+                _s(new_cmd)
+            );
             free_(cmd);
             cmd = new_cmd;
         }
@@ -826,7 +976,9 @@ pub unsafe extern "C" fn args_make_commands_free(state: *mut args_command_state)
 
 /// Get prepared command.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn args_make_commands_get_command(state: *mut args_command_state) -> *mut c_char {
+pub unsafe extern "C" fn args_make_commands_get_command(
+    state: *mut args_command_state,
+) -> *mut c_char {
     unsafe {
         if (!(*state).cmdlist.is_null()) {
             let first = cmd_list_first((*state).cmdlist);
@@ -856,11 +1008,19 @@ pub unsafe extern "C" fn args_first_value(args: *mut args, flag: u8) -> *mut arg
 
 /// Get next value in argument.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn args_next_value(value: *mut args_value) -> *mut args_value { unsafe { tailq_next(value) } }
+pub unsafe extern "C" fn args_next_value(value: *mut args_value) -> *mut args_value {
+    unsafe { tailq_next(value) }
+}
 
 /// Convert an argument value to a number.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn args_strtonum(args: *mut args, flag: u8, minval: c_longlong, maxval: c_longlong, cause: *mut *mut c_char) -> c_longlong {
+pub unsafe extern "C" fn args_strtonum(
+    args: *mut args,
+    flag: u8,
+    minval: c_longlong,
+    maxval: c_longlong,
+    cause: *mut *mut c_char,
+) -> c_longlong {
     unsafe {
         let mut errstr = null();
 
@@ -870,7 +1030,10 @@ pub unsafe extern "C" fn args_strtonum(args: *mut args, flag: u8, minval: c_long
             return 0;
         }
         let value = tailq_last(&raw mut (*entry).values);
-        if (value.is_null() || (*value).type_ != args_type::ARGS_STRING || (*value).union_.string.is_null()) {
+        if (value.is_null()
+            || (*value).type_ != args_type::ARGS_STRING
+            || (*value).union_.string.is_null())
+        {
             *cause = xstrdup_(c"missing").as_ptr();
             return 0;
         }
@@ -888,7 +1051,14 @@ pub unsafe extern "C" fn args_strtonum(args: *mut args, flag: u8, minval: c_long
 
 /// Convert an argument value to a number, and expand formats.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn args_strtonum_and_expand(args: *mut args, flag: u8, minval: c_longlong, maxval: c_longlong, item: *mut cmdq_item, cause: *mut *mut c_char) -> c_longlong {
+pub unsafe extern "C" fn args_strtonum_and_expand(
+    args: *mut args,
+    flag: u8,
+    minval: c_longlong,
+    maxval: c_longlong,
+    item: *mut cmdq_item,
+    cause: *mut *mut c_char,
+) -> c_longlong {
     unsafe {
         let mut errstr: *const i8 = null();
 
@@ -898,7 +1068,10 @@ pub unsafe extern "C" fn args_strtonum_and_expand(args: *mut args, flag: u8, min
             return 0;
         }
         let value = tailq_last(&raw mut (*entry).values);
-        if (value.is_null() || (*value).type_ != args_type::ARGS_STRING || (*value).union_.string.is_null()) {
+        if (value.is_null()
+            || (*value).type_ != args_type::ARGS_STRING
+            || (*value).union_.string.is_null())
+        {
             *cause = xstrdup_(c"missing").as_ptr();
             return 0;
         }
@@ -918,7 +1091,14 @@ pub unsafe extern "C" fn args_strtonum_and_expand(args: *mut args, flag: u8, min
 
 /// Convert an argument to a number which may be a percentage.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn args_percentage(args: *mut args, flag: u8, minval: i64, maxval: i64, curval: i64, cause: *mut *mut c_char) -> i64 {
+pub unsafe extern "C" fn args_percentage(
+    args: *mut args,
+    flag: u8,
+    minval: i64,
+    maxval: i64,
+    curval: i64,
+    cause: *mut *mut c_char,
+) -> i64 {
     unsafe {
         let entry = args_find(args, flag);
         if (entry.is_null()) {
@@ -936,7 +1116,13 @@ pub unsafe extern "C" fn args_percentage(args: *mut args, flag: u8, minval: i64,
 
 /// Convert a string to a number which may be a percentage.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn args_string_percentage(value: *const c_char, minval: i64, maxval: i64, curval: i64, cause: *mut *mut c_char) -> i64 {
+pub unsafe extern "C" fn args_string_percentage(
+    value: *const c_char,
+    minval: i64,
+    maxval: i64,
+    curval: i64,
+    cause: *mut *mut c_char,
+) -> i64 {
     unsafe {
         let mut errstr: *const c_char = null();
         let mut ll: i64 = 0;
@@ -981,7 +1167,15 @@ pub unsafe extern "C" fn args_string_percentage(value: *const c_char, minval: i6
 
 ///Convert an argument to a number which may be a percentage, and expand formats.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn args_percentage_and_expand(args: *mut args, flag: u8, minval: i64, maxval: i64, curval: i64, item: *mut cmdq_item, cause: *mut *mut c_char) -> i64 {
+pub unsafe extern "C" fn args_percentage_and_expand(
+    args: *mut args,
+    flag: u8,
+    minval: i64,
+    maxval: i64,
+    curval: i64,
+    item: *mut cmdq_item,
+    cause: *mut *mut c_char,
+) -> i64 {
     unsafe {
         let entry = args_find(args, flag);
         if (entry.is_null()) {
@@ -999,7 +1193,14 @@ pub unsafe extern "C" fn args_percentage_and_expand(args: *mut args, flag: u8, m
 
 /// Convert a string to a number which may be a percentage, and expand formats.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn args_string_percentage_and_expand(value: *mut c_char, minval: i64, maxval: i64, curval: i64, item: *mut cmdq_item, cause: *mut *mut c_char) -> i64 {
+pub unsafe extern "C" fn args_string_percentage_and_expand(
+    value: *mut c_char,
+    minval: i64,
+    maxval: i64,
+    curval: i64,
+    item: *mut cmdq_item,
+    cause: *mut *mut c_char,
+) -> i64 {
     unsafe {
         let mut errstr: *const c_char = null();
         let mut valuelen = strlen(value);

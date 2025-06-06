@@ -3,7 +3,10 @@ use crate::*;
 use libc::{strchr, strcmp, strlen, strncmp};
 
 use crate::compat::{
-    queue::{tailq_concat, tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_next, tailq_remove},
+    queue::{
+        tailq_concat, tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_next,
+        tailq_remove,
+    },
     strlcat, strlcpy,
 };
 use crate::xmalloc::{xrealloc_, xreallocarray_};
@@ -313,7 +316,9 @@ pub type cmds = tailq_head<cmd>;
 
 pub struct qentry;
 impl Entry<cmd, qentry> for cmd {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<cmd> { unsafe { &raw mut (*this).qentry } }
+    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<cmd> {
+        unsafe { &raw mut (*this).qentry }
+    }
 }
 
 // Next group number for new command list.
@@ -322,7 +327,12 @@ pub static mut cmd_list_next_group: u32 = 1;
 
 // Log an argument vector.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_log_argv(argc: i32, argv: *mut *mut c_char, fmt: *const c_char, mut args: ...) {
+pub unsafe extern "C" fn cmd_log_argv(
+    argc: i32,
+    argv: *mut *mut c_char,
+    fmt: *const c_char,
+    mut args: ...
+) {
     unsafe {
         let mut prefix: *mut c_char = null_mut();
         xvasprintf(&raw mut prefix, fmt, args.as_va_list());
@@ -335,9 +345,16 @@ pub unsafe extern "C" fn cmd_log_argv(argc: i32, argv: *mut *mut c_char, fmt: *c
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_prepend_argv(argc: *mut c_int, argv: *mut *mut *mut c_char, arg: *const c_char) {
+pub unsafe extern "C" fn cmd_prepend_argv(
+    argc: *mut c_int,
+    argv: *mut *mut *mut c_char,
+    arg: *const c_char,
+) {
     unsafe {
-        let new_argv: *mut *mut c_char = xreallocarray_::<*mut c_char>(null_mut(), (*argc) as usize + 1).cast().as_ptr();
+        let new_argv: *mut *mut c_char =
+            xreallocarray_::<*mut c_char>(null_mut(), (*argc) as usize + 1)
+                .cast()
+                .as_ptr();
         *new_argv = xstrdup(arg).as_ptr();
         for i in 0..*argc {
             *new_argv.add(1 + i as usize) = *(*argv).add(i as usize);
@@ -350,7 +367,11 @@ pub unsafe extern "C" fn cmd_prepend_argv(argc: *mut c_int, argv: *mut *mut *mut
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_append_argv(argc: *mut c_int, argv: *mut *mut *mut c_char, arg: *const c_char) {
+pub unsafe extern "C" fn cmd_append_argv(
+    argc: *mut c_int,
+    argv: *mut *mut *mut c_char,
+    arg: *const c_char,
+) {
     unsafe {
         *argv = xreallocarray_::<*mut c_char>(*argv, (*argc) as usize + 1).as_ptr();
         *(*argv).add((*argc) as usize) = xstrdup(arg).as_ptr();
@@ -359,7 +380,12 @@ pub unsafe extern "C" fn cmd_append_argv(argc: *mut c_int, argv: *mut *mut *mut 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_pack_argv(argc: c_int, argv: *mut *mut c_char, mut buf: *mut c_char, mut len: usize) -> c_int {
+pub unsafe extern "C" fn cmd_pack_argv(
+    argc: c_int,
+    argv: *mut *mut c_char,
+    mut buf: *mut c_char,
+    mut len: usize,
+) -> c_int {
     unsafe {
         //
         if argc == 0 {
@@ -382,7 +408,12 @@ pub unsafe extern "C" fn cmd_pack_argv(argc: c_int, argv: *mut *mut c_char, mut 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_unpack_argv(mut buf: *mut c_char, mut len: usize, argc: c_int, argv: *mut *mut *mut c_char) -> c_int {
+pub unsafe extern "C" fn cmd_unpack_argv(
+    mut buf: *mut c_char,
+    mut len: usize,
+    argc: c_int,
+    argv: *mut *mut *mut c_char,
+) -> c_int {
     unsafe {
         if argc == 0 {
             return 0;
@@ -414,7 +445,9 @@ pub unsafe extern "C" fn cmd_copy_argv(argc: c_int, argv: *mut *mut c_char) -> *
         if argc == 0 {
             return null_mut();
         }
-        let new_argv: *mut *mut c_char = xcalloc(argc as usize + 1, size_of::<*mut c_char>()).cast().as_ptr();
+        let new_argv: *mut *mut c_char = xcalloc(argc as usize + 1, size_of::<*mut c_char>())
+            .cast()
+            .as_ptr();
         for i in 0..argc {
             if !(*argv.add(i as usize)).is_null() {
                 *new_argv.add(i as usize) = xstrdup(*argv.add(i as usize)).as_ptr();
@@ -453,7 +486,13 @@ pub unsafe extern "C" fn cmd_stringify_argv(argc: c_int, argv: *mut *mut c_char)
 
         for i in 0..argc {
             let s = args_escape(*argv.add(i as usize));
-            log_debug!("{}: {} {} = {}", "cmd_stringify_argv", i, _s(*argv.add(i as usize)), _s(s));
+            log_debug!(
+                "{}: {} {} = {}",
+                "cmd_stringify_argv",
+                i,
+                _s(*argv.add(i as usize)),
+                _s(s)
+            );
 
             len += strlen(s) + 1;
             buf = xrealloc_(buf, len).as_ptr();
@@ -472,16 +511,26 @@ pub unsafe extern "C" fn cmd_stringify_argv(argc: c_int, argv: *mut *mut c_char)
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_get_entry(cmd: *mut cmd) -> *mut cmd_entry { unsafe { (*cmd).entry } }
+pub unsafe extern "C" fn cmd_get_entry(cmd: *mut cmd) -> *mut cmd_entry {
+    unsafe { (*cmd).entry }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_get_args(cmd: *mut cmd) -> *mut args { unsafe { (*cmd).args } }
+pub unsafe extern "C" fn cmd_get_args(cmd: *mut cmd) -> *mut args {
+    unsafe { (*cmd).args }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_get_group(cmd: *mut cmd) -> c_uint { unsafe { (*cmd).group } }
+pub unsafe extern "C" fn cmd_get_group(cmd: *mut cmd) -> c_uint {
+    unsafe { (*cmd).group }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_get_source(cmd: *mut cmd, file: *mut *const c_char, line: *mut c_uint) {
+pub unsafe extern "C" fn cmd_get_source(
+    cmd: *mut cmd,
+    file: *mut *const c_char,
+    line: *mut c_uint,
+) {
     unsafe {
         if !file.is_null() {
             *file = (*cmd).file;
@@ -583,14 +632,25 @@ pub unsafe extern "C" fn cmd_find(name: *const c_char, cause: *mut *mut c_char) 
             loop_ = loop_.add(1);
         }
         s[strlen(&raw mut s as _) - 2] = b'\0' as c_char;
-        xasprintf(cause, c"ambiguous command: %s, could be: %s".as_ptr(), name, s);
+        xasprintf(
+            cause,
+            c"ambiguous command: %s, could be: %s".as_ptr(),
+            name,
+            s,
+        );
 
         null_mut()
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_parse(values: *mut args_value, count: c_uint, file: *const c_char, line: c_uint, cause: *mut *mut c_char) -> *mut cmd {
+pub unsafe extern "C" fn cmd_parse(
+    values: *mut args_value,
+    count: c_uint,
+    file: *const c_char,
+    line: c_uint,
+    cause: *mut *mut c_char,
+) -> *mut cmd {
     unsafe {
         let mut error: *mut c_char = null_mut();
 
@@ -605,7 +665,12 @@ pub unsafe extern "C" fn cmd_parse(values: *mut args_value, count: c_uint, file:
 
         let args = args_parse(&raw mut (*entry).args, values, count, &raw mut error);
         if args.is_null() && error.is_null() {
-            xasprintf(cause, c"usage: %s %s".as_ptr(), (*entry).name, (*entry).usage);
+            xasprintf(
+                cause,
+                c"usage: %s %s".as_ptr(),
+                (*entry).name,
+                (*entry).usage,
+            );
             return null_mut();
         }
         if args.is_null() {
@@ -728,7 +793,11 @@ pub unsafe extern "C" fn cmd_list_free(cmdlist: *mut cmd_list) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_list_copy(cmdlist: *mut cmd_list, argc: c_int, argv: *mut *mut c_char) -> *mut cmd_list {
+pub unsafe extern "C" fn cmd_list_copy(
+    cmdlist: *mut cmd_list,
+    argc: c_int,
+    argv: *mut *mut c_char,
+) -> *mut cmd_list {
     unsafe {
         let mut group: u32 = (*cmdlist).group;
         let s = cmd_list_print(cmdlist, 0);
@@ -794,19 +863,44 @@ pub unsafe extern "C" fn cmd_list_print(cmdlist: *mut cmd_list, escaped: c_int) 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_list_first(cmdlist: *mut cmd_list) -> *mut cmd { unsafe { tailq_first((*cmdlist).list) } }
+pub unsafe extern "C" fn cmd_list_first(cmdlist: *mut cmd_list) -> *mut cmd {
+    unsafe { tailq_first((*cmdlist).list) }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_list_next(cmd: *mut cmd) -> *mut cmd { unsafe { tailq_next::<_, _, qentry>(cmd) } }
+pub unsafe extern "C" fn cmd_list_next(cmd: *mut cmd) -> *mut cmd {
+    unsafe { tailq_next::<_, _, qentry>(cmd) }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_list_all_have(cmdlist: *mut cmd_list, flag: cmd_flag) -> boolint { unsafe { boolint::from(tailq_foreach((*cmdlist).list).into_iter().all(|cmd| (*(*cmd.as_ptr()).entry).flags.intersects(flag))) } }
+pub unsafe extern "C" fn cmd_list_all_have(cmdlist: *mut cmd_list, flag: cmd_flag) -> boolint {
+    unsafe {
+        boolint::from(
+            tailq_foreach((*cmdlist).list)
+                .into_iter()
+                .all(|cmd| (*(*cmd.as_ptr()).entry).flags.intersects(flag)),
+        )
+    }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_list_any_have(cmdlist: *mut cmd_list, flag: cmd_flag) -> boolint { unsafe { tailq_foreach((*cmdlist).list).into_iter().any(|cmd| (*(*cmd.as_ptr()).entry).flags.intersects(flag)).into() } }
+pub unsafe extern "C" fn cmd_list_any_have(cmdlist: *mut cmd_list, flag: cmd_flag) -> boolint {
+    unsafe {
+        tailq_foreach((*cmdlist).list)
+            .into_iter()
+            .any(|cmd| (*(*cmd.as_ptr()).entry).flags.intersects(flag))
+            .into()
+    }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_mouse_at(wp: *mut window_pane, m: *mut mouse_event, xp: *mut c_uint, yp: *mut c_uint, last: c_int) -> c_int {
+pub unsafe extern "C" fn cmd_mouse_at(
+    wp: *mut window_pane,
+    m: *mut mouse_event,
+    xp: *mut c_uint,
+    yp: *mut c_uint,
+    last: c_int,
+) -> c_int {
     unsafe {
         let mut x: u32;
         let mut y: u32;
@@ -818,7 +912,13 @@ pub unsafe extern "C" fn cmd_mouse_at(wp: *mut window_pane, m: *mut mouse_event,
             x = (*m).x + (*m).ox;
             y = (*m).y + (*m).oy;
         }
-        log_debug!("{}: x={}, y={}{}", "cmd_mouse_at", x, y, if last != 0 { " (last)" } else { "" });
+        log_debug!(
+            "{}: x={}, y={}{}",
+            "cmd_mouse_at",
+            x,
+            y,
+            if last != 0 { " (last)" } else { "" }
+        );
 
         if (*m).statusat == 0 && y >= (*m).statuslines {
             y -= (*m).statuslines;
@@ -843,7 +943,10 @@ pub unsafe extern "C" fn cmd_mouse_at(wp: *mut window_pane, m: *mut mouse_event,
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_mouse_window(m: *mut mouse_event, sp: *mut *mut session) -> Option<NonNull<winlink>> {
+pub unsafe extern "C" fn cmd_mouse_window(
+    m: *mut mouse_event,
+    sp: *mut *mut session,
+) -> Option<NonNull<winlink>> {
     unsafe {
         let mut s: *mut session = null_mut();
         let mut wl: Option<NonNull<winlink>> = None;
@@ -876,7 +979,11 @@ pub unsafe extern "C" fn cmd_mouse_window(m: *mut mouse_event, sp: *mut *mut ses
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_mouse_pane(m: *mut mouse_event, sp: *mut *mut session, wlp: *mut *mut winlink) -> Option<NonNull<window_pane>> {
+pub unsafe extern "C" fn cmd_mouse_pane(
+    m: *mut mouse_event,
+    sp: *mut *mut session,
+    wlp: *mut *mut winlink,
+) -> Option<NonNull<window_pane>> {
     unsafe {
         let wl = cmd_mouse_window(m, sp)?;
         let mut wp = None;
@@ -898,7 +1005,11 @@ pub unsafe extern "C" fn cmd_mouse_pane(m: *mut mouse_event, sp: *mut *mut sessi
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_template_replace(template: *const c_char, s: *const c_char, idx: c_int) -> *mut c_char {
+pub unsafe extern "C" fn cmd_template_replace(
+    template: *const c_char,
+    s: *const c_char,
+    idx: c_int,
+) -> *mut c_char {
     unsafe {
         let quote = c"\"\\$;~";
 
@@ -916,7 +1027,10 @@ pub unsafe extern "C" fn cmd_template_replace(template: *const c_char, s: *const
             let ch = *ptr;
             ptr = ptr.add(1);
             if matches!(ch as c_uchar, b'%') {
-                if *ptr < b'1' as c_char || *ptr > b'9' as c_char || *ptr as i32 - b'0' as i32 != idx {
+                if *ptr < b'1' as c_char
+                    || *ptr > b'9' as c_char
+                    || *ptr as i32 - b'0' as i32 != idx
+                {
                     if *ptr != b'%' as c_char || replaced != 0 {
                         break;
                     }

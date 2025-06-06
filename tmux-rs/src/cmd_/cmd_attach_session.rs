@@ -18,7 +18,16 @@ pub static mut cmd_attach_session_entry: cmd_entry = cmd_entry {
 };
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_attach_session(item: *mut cmdq_item, tflag: *const c_char, dflag: c_int, xflag: c_int, rflag: c_int, cflag: *const c_char, eflag: c_int, fflag: *const c_char) -> cmd_retval {
+pub unsafe extern "C" fn cmd_attach_session(
+    item: *mut cmdq_item,
+    tflag: *const c_char,
+    dflag: c_int,
+    xflag: c_int,
+    rflag: c_int,
+    cflag: *const c_char,
+    eflag: c_int,
+    fflag: *const c_char,
+) -> cmd_retval {
     unsafe {
         let mut current: *mut cmd_find_state = cmdq_get_current(item);
         let mut target: cmd_find_state = zeroed(); // TODO can be uninit
@@ -45,7 +54,10 @@ pub unsafe extern "C" fn cmd_attach_session(item: *mut cmdq_item, tflag: *const 
         }
 
         if server_client_check_nested(c) != 0 {
-            cmdq_error(item, c"sessions should be nested with care, unset $TMUX to force".as_ptr());
+            cmdq_error(
+                item,
+                c"sessions should be nested with care, unset $TMUX to force".as_ptr(),
+            );
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
@@ -120,7 +132,11 @@ pub unsafe extern "C" fn cmd_attach_session(item: *mut cmdq_item, tflag: *const 
             }
 
             if dflag != 0 || xflag != 0 {
-                msgtype = if xflag != 0 { msgtype::MSG_DETACHKILL } else { msgtype::MSG_DETACH };
+                msgtype = if xflag != 0 {
+                    msgtype::MSG_DETACHKILL
+                } else {
+                    msgtype::MSG_DETACH
+                };
                 for c_loop in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
                     if ((*c_loop).session != s || c == c_loop) {
                         continue;
@@ -154,6 +170,15 @@ unsafe extern "C" fn cmd_attach_session_exec(self_: *mut cmd, item: *mut cmdq_it
     unsafe {
         let mut args = cmd_get_args(self_);
 
-        cmd_attach_session(item, args_get(args, b't'), args_has(args, b'd'), args_has(args, b'x'), args_has(args, b'r'), args_get(args, b'c'), args_has(args, b'E'), args_get(args, b'f'))
+        cmd_attach_session(
+            item,
+            args_get(args, b't'),
+            args_has(args, b'd'),
+            args_has(args, b'x'),
+            args_has(args, b'r'),
+            args_get(args, b'c'),
+            args_has(args, b'E'),
+            args_get(args, b'f'),
+        )
     }
 }

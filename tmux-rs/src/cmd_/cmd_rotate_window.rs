@@ -1,6 +1,9 @@
 use crate::*;
 
-use crate::compat::queue::{tailq_first, tailq_foreach, tailq_foreach_reverse, tailq_insert_head, tailq_insert_tail, tailq_last, tailq_next, tailq_prev, tailq_remove};
+use crate::compat::queue::{
+    tailq_first, tailq_foreach, tailq_foreach_reverse, tailq_insert_head, tailq_insert_tail,
+    tailq_last, tailq_next, tailq_prev, tailq_remove,
+};
 
 #[unsafe(no_mangle)]
 static mut cmd_rotate_window_entry: cmd_entry = cmd_entry {
@@ -83,7 +86,9 @@ unsafe extern "C" fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_ite
             yoff = (*wp).yoff;
             sx = (*wp).sx;
             sy = (*wp).sy;
-            for wp_ in tailq_foreach_reverse::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+            for wp_ in
+                tailq_foreach_reverse::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr)
+            {
                 wp = wp_;
                 let wp2 = tailq_prev::<_, _, discr_entry>(wp);
                 if wp2.is_null() {

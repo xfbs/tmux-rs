@@ -298,7 +298,19 @@ pub struct input_transition {
     state: *mut input_state,
 }
 impl input_transition {
-    const fn new(first: i32, last: i32, handler: Option<unsafe extern "C" fn(*mut input_ctx) -> i32>, state: *mut input_state) -> Self { Self { first, last, handler, state } }
+    const fn new(
+        first: i32,
+        last: i32,
+        handler: Option<unsafe extern "C" fn(*mut input_ctx) -> i32>,
+        state: *mut input_state,
+    ) -> Self {
+        Self {
+            first,
+            last,
+            handler,
+            state,
+        }
+    }
 }
 
 // Input state.
@@ -311,50 +323,157 @@ pub struct input_state {
 }
 
 impl input_state {
-    const fn new(name: &'static CStr, enter: Option<unsafe extern "C" fn(*mut input_ctx)>, exit: Option<unsafe extern "C" fn(*mut input_ctx)>, transitions: *mut input_transition) -> Self { Self { name: SyncCharPtr::new(name), enter, exit, transitions } }
+    const fn new(
+        name: &'static CStr,
+        enter: Option<unsafe extern "C" fn(*mut input_ctx)>,
+        exit: Option<unsafe extern "C" fn(*mut input_ctx)>,
+        transitions: *mut input_transition,
+    ) -> Self {
+        Self {
+            name: SyncCharPtr::new(name),
+            enter,
+            exit,
+            transitions,
+        }
+    }
 }
 
 /* State transitions available from all states. */
 const INPUT_STATE_ANYWHERE: [input_transition; 3] = [
-    input_transition::new(0x18, 0x18, Some(input_c0_dispatch), &raw mut input_state_ground),
-    input_transition::new(0x1a, 0x1a, Some(input_c0_dispatch), &raw mut input_state_ground),
+    input_transition::new(
+        0x18,
+        0x18,
+        Some(input_c0_dispatch),
+        &raw mut input_state_ground,
+    ),
+    input_transition::new(
+        0x1a,
+        0x1a,
+        Some(input_c0_dispatch),
+        &raw mut input_state_ground,
+    ),
     input_transition::new(0x1b, 0x1b, None, &raw mut input_state_esc_enter),
 ];
 
 #[unsafe(no_mangle)]
-pub static mut input_state_ground: input_state = input_state::new(c"ground", Some(input_ground), None, (&raw mut input_state_ground_table).cast());
+pub static mut input_state_ground: input_state = input_state::new(
+    c"ground",
+    Some(input_ground),
+    None,
+    (&raw mut input_state_ground_table).cast(),
+);
 #[unsafe(no_mangle)]
-pub static mut input_state_esc_enter: input_state = input_state::new(c"esc_enter", Some(input_clear), None, (&raw mut input_state_esc_enter_table).cast());
+pub static mut input_state_esc_enter: input_state = input_state::new(
+    c"esc_enter",
+    Some(input_clear),
+    None,
+    (&raw mut input_state_esc_enter_table).cast(),
+);
 #[unsafe(no_mangle)]
-pub static mut input_state_esc_intermediate: input_state = input_state::new(c"esc_intermediate", None, None, (&raw mut input_state_esc_intermediate_table).cast());
+pub static mut input_state_esc_intermediate: input_state = input_state::new(
+    c"esc_intermediate",
+    None,
+    None,
+    (&raw mut input_state_esc_intermediate_table).cast(),
+);
 #[unsafe(no_mangle)]
-pub static mut input_state_csi_enter: input_state = input_state::new(c"csi_enter", Some(input_clear), None, (&raw mut input_state_csi_enter_table).cast());
+pub static mut input_state_csi_enter: input_state = input_state::new(
+    c"csi_enter",
+    Some(input_clear),
+    None,
+    (&raw mut input_state_csi_enter_table).cast(),
+);
 #[unsafe(no_mangle)]
-pub static mut input_state_csi_parameter: input_state = input_state::new(c"csi_parameter", None, None, (&raw mut input_state_csi_parameter_table).cast());
+pub static mut input_state_csi_parameter: input_state = input_state::new(
+    c"csi_parameter",
+    None,
+    None,
+    (&raw mut input_state_csi_parameter_table).cast(),
+);
 #[unsafe(no_mangle)]
-pub static mut input_state_csi_intermediate: input_state = input_state::new(c"csi_intermediate", None, None, (&raw mut input_state_csi_intermediate_table).cast());
+pub static mut input_state_csi_intermediate: input_state = input_state::new(
+    c"csi_intermediate",
+    None,
+    None,
+    (&raw mut input_state_csi_intermediate_table).cast(),
+);
 #[unsafe(no_mangle)]
-pub static mut input_state_csi_ignore: input_state = input_state::new(c"csi_ignore", None, None, (&raw mut input_state_csi_ignore_table).cast());
+pub static mut input_state_csi_ignore: input_state = input_state::new(
+    c"csi_ignore",
+    None,
+    None,
+    (&raw mut input_state_csi_ignore_table).cast(),
+);
 #[unsafe(no_mangle)]
-pub static mut input_state_dcs_enter: input_state = input_state::new(c"dcs_enter", Some(input_enter_dcs), None, (&raw mut input_state_dcs_enter_table).cast());
+pub static mut input_state_dcs_enter: input_state = input_state::new(
+    c"dcs_enter",
+    Some(input_enter_dcs),
+    None,
+    (&raw mut input_state_dcs_enter_table).cast(),
+);
 #[unsafe(no_mangle)]
-pub static mut input_state_dcs_parameter: input_state = input_state::new(c"dcs_parameter", None, None, (&raw mut input_state_dcs_parameter_table).cast());
+pub static mut input_state_dcs_parameter: input_state = input_state::new(
+    c"dcs_parameter",
+    None,
+    None,
+    (&raw mut input_state_dcs_parameter_table).cast(),
+);
 #[unsafe(no_mangle)]
-pub static mut input_state_dcs_intermediate: input_state = input_state::new(c"dcs_intermediate", None, None, (&raw mut input_state_dcs_intermediate_table).cast());
+pub static mut input_state_dcs_intermediate: input_state = input_state::new(
+    c"dcs_intermediate",
+    None,
+    None,
+    (&raw mut input_state_dcs_intermediate_table).cast(),
+);
 #[unsafe(no_mangle)]
-pub static mut input_state_dcs_handler: input_state = input_state::new(c"dcs_handler", None, None, (&raw mut input_state_dcs_handler_table).cast());
+pub static mut input_state_dcs_handler: input_state = input_state::new(
+    c"dcs_handler",
+    None,
+    None,
+    (&raw mut input_state_dcs_handler_table).cast(),
+);
 #[unsafe(no_mangle)]
-pub static mut input_state_dcs_escape: input_state = input_state::new(c"dcs_escape", None, None, (&raw mut input_state_dcs_escape_table).cast());
+pub static mut input_state_dcs_escape: input_state = input_state::new(
+    c"dcs_escape",
+    None,
+    None,
+    (&raw mut input_state_dcs_escape_table).cast(),
+);
 #[unsafe(no_mangle)]
-pub static mut input_state_dcs_ignore: input_state = input_state::new(c"dcs_ignore", None, None, (&raw mut input_state_dcs_ignore_table).cast());
+pub static mut input_state_dcs_ignore: input_state = input_state::new(
+    c"dcs_ignore",
+    None,
+    None,
+    (&raw mut input_state_dcs_ignore_table).cast(),
+);
 #[unsafe(no_mangle)]
-pub static mut input_state_osc_string: input_state = input_state::new(c"osc_string", Some(input_enter_osc), Some(input_exit_osc), (&raw mut input_state_osc_string_table).cast());
+pub static mut input_state_osc_string: input_state = input_state::new(
+    c"osc_string",
+    Some(input_enter_osc),
+    Some(input_exit_osc),
+    (&raw mut input_state_osc_string_table).cast(),
+);
 #[unsafe(no_mangle)]
-pub static mut input_state_apc_string: input_state = input_state::new(c"apc_string", Some(input_enter_apc), Some(input_exit_apc), (&raw mut input_state_apc_string_table).cast());
+pub static mut input_state_apc_string: input_state = input_state::new(
+    c"apc_string",
+    Some(input_enter_apc),
+    Some(input_exit_apc),
+    (&raw mut input_state_apc_string_table).cast(),
+);
 #[unsafe(no_mangle)]
-pub static mut input_state_rename_string: input_state = input_state::new(c"rename_string", Some(input_enter_rename), Some(input_exit_rename), (&raw mut input_state_rename_string_table).cast());
+pub static mut input_state_rename_string: input_state = input_state::new(
+    c"rename_string",
+    Some(input_enter_rename),
+    Some(input_exit_rename),
+    (&raw mut input_state_rename_string_table).cast(),
+);
 #[unsafe(no_mangle)]
-pub static mut input_state_consume_st: input_state = input_state::new(c"consume_st", Some(input_enter_rename), None, /* rename also waits for ST */ (&raw mut input_state_consume_st_table).cast());
+pub static mut input_state_consume_st: input_state = input_state::new(
+    c"consume_st",
+    Some(input_enter_rename),
+    None,
+    /* rename also waits for ST */ (&raw mut input_state_consume_st_table).cast(),
+);
 
 #[unsafe(no_mangle)]
 static mut input_state_ground_table: [input_transition; 10] = concat_array(
@@ -377,21 +496,61 @@ static mut input_state_esc_enter_table: [input_transition; 23] = concat_array(
         input_transition::new(0x00, 0x17, Some(input_c0_dispatch), null_mut()),
         input_transition::new(0x19, 0x19, Some(input_c0_dispatch), null_mut()),
         input_transition::new(0x1c, 0x1f, Some(input_c0_dispatch), null_mut()),
-        input_transition::new(0x20, 0x2f, Some(input_intermediate), &raw mut input_state_esc_intermediate),
-        input_transition::new(0x30, 0x4f, Some(input_esc_dispatch), &raw mut input_state_ground),
+        input_transition::new(
+            0x20,
+            0x2f,
+            Some(input_intermediate),
+            &raw mut input_state_esc_intermediate,
+        ),
+        input_transition::new(
+            0x30,
+            0x4f,
+            Some(input_esc_dispatch),
+            &raw mut input_state_ground,
+        ),
         input_transition::new(0x50, 0x50, None, &raw mut input_state_dcs_enter),
-        input_transition::new(0x51, 0x57, Some(input_esc_dispatch), &raw mut input_state_ground),
+        input_transition::new(
+            0x51,
+            0x57,
+            Some(input_esc_dispatch),
+            &raw mut input_state_ground,
+        ),
         input_transition::new(0x58, 0x58, None, &raw mut input_state_consume_st),
-        input_transition::new(0x59, 0x59, Some(input_esc_dispatch), &raw mut input_state_ground),
-        input_transition::new(0x5a, 0x5a, Some(input_esc_dispatch), &raw mut input_state_ground),
+        input_transition::new(
+            0x59,
+            0x59,
+            Some(input_esc_dispatch),
+            &raw mut input_state_ground,
+        ),
+        input_transition::new(
+            0x5a,
+            0x5a,
+            Some(input_esc_dispatch),
+            &raw mut input_state_ground,
+        ),
         input_transition::new(0x5b, 0x5b, None, &raw mut input_state_csi_enter),
-        input_transition::new(0x5c, 0x5c, Some(input_esc_dispatch), &raw mut input_state_ground),
+        input_transition::new(
+            0x5c,
+            0x5c,
+            Some(input_esc_dispatch),
+            &raw mut input_state_ground,
+        ),
         input_transition::new(0x5d, 0x5d, None, &raw mut input_state_osc_string),
         input_transition::new(0x5e, 0x5e, None, &raw mut input_state_consume_st),
         input_transition::new(0x5f, 0x5f, None, &raw mut input_state_apc_string),
-        input_transition::new(0x60, 0x6a, Some(input_esc_dispatch), &raw mut input_state_ground),
+        input_transition::new(
+            0x60,
+            0x6a,
+            Some(input_esc_dispatch),
+            &raw mut input_state_ground,
+        ),
         input_transition::new(0x6b, 0x6b, None, &raw mut input_state_rename_string),
-        input_transition::new(0x6c, 0x7e, Some(input_esc_dispatch), &raw mut input_state_ground),
+        input_transition::new(
+            0x6c,
+            0x7e,
+            Some(input_esc_dispatch),
+            &raw mut input_state_ground,
+        ),
         input_transition::new(0x7f, 0xff, None, null_mut()),
         input_transition::new(-1, -1, None, null_mut()),
     ],
@@ -405,7 +564,12 @@ static mut input_state_esc_intermediate_table: [input_transition; 10] = concat_a
         input_transition::new(0x19, 0x19, Some(input_c0_dispatch), null_mut()),
         input_transition::new(0x1c, 0x1f, Some(input_c0_dispatch), null_mut()),
         input_transition::new(0x20, 0x2f, Some(input_intermediate), null_mut()),
-        input_transition::new(0x30, 0x7e, Some(input_esc_dispatch), &raw mut input_state_ground),
+        input_transition::new(
+            0x30,
+            0x7e,
+            Some(input_esc_dispatch),
+            &raw mut input_state_ground,
+        ),
         input_transition::new(0x7f, 0xff, None, null_mut()),
         input_transition::new(-1, -1, None, null_mut()),
     ],
@@ -418,12 +582,42 @@ static mut input_state_csi_enter_table: [input_transition; 14] = concat_array(
         input_transition::new(0x00, 0x17, Some(input_c0_dispatch), null_mut()),
         input_transition::new(0x19, 0x19, Some(input_c0_dispatch), null_mut()),
         input_transition::new(0x1c, 0x1f, Some(input_c0_dispatch), null_mut()),
-        input_transition::new(0x20, 0x2f, Some(input_intermediate), &raw mut input_state_csi_intermediate),
-        input_transition::new(0x30, 0x39, Some(input_parameter), &raw mut input_state_csi_parameter),
-        input_transition::new(0x3a, 0x3a, Some(input_parameter), &raw mut input_state_csi_parameter),
-        input_transition::new(0x3b, 0x3b, Some(input_parameter), &raw mut input_state_csi_parameter),
-        input_transition::new(0x3c, 0x3f, Some(input_intermediate), &raw mut input_state_csi_parameter),
-        input_transition::new(0x40, 0x7e, Some(input_csi_dispatch), &raw mut input_state_ground),
+        input_transition::new(
+            0x20,
+            0x2f,
+            Some(input_intermediate),
+            &raw mut input_state_csi_intermediate,
+        ),
+        input_transition::new(
+            0x30,
+            0x39,
+            Some(input_parameter),
+            &raw mut input_state_csi_parameter,
+        ),
+        input_transition::new(
+            0x3a,
+            0x3a,
+            Some(input_parameter),
+            &raw mut input_state_csi_parameter,
+        ),
+        input_transition::new(
+            0x3b,
+            0x3b,
+            Some(input_parameter),
+            &raw mut input_state_csi_parameter,
+        ),
+        input_transition::new(
+            0x3c,
+            0x3f,
+            Some(input_intermediate),
+            &raw mut input_state_csi_parameter,
+        ),
+        input_transition::new(
+            0x40,
+            0x7e,
+            Some(input_csi_dispatch),
+            &raw mut input_state_ground,
+        ),
         input_transition::new(0x7f, 0xff, None, null_mut()),
         input_transition::new(-1, -1, None, null_mut()),
     ],
@@ -436,12 +630,22 @@ static mut input_state_csi_parameter_table: [input_transition; 14] = concat_arra
         input_transition::new(0x00, 0x17, Some(input_c0_dispatch), null_mut()),
         input_transition::new(0x19, 0x19, Some(input_c0_dispatch), null_mut()),
         input_transition::new(0x1c, 0x1f, Some(input_c0_dispatch), null_mut()),
-        input_transition::new(0x20, 0x2f, Some(input_intermediate), &raw mut input_state_csi_intermediate),
+        input_transition::new(
+            0x20,
+            0x2f,
+            Some(input_intermediate),
+            &raw mut input_state_csi_intermediate,
+        ),
         input_transition::new(0x30, 0x39, Some(input_parameter), null_mut()),
         input_transition::new(0x3a, 0x3a, Some(input_parameter), null_mut()),
         input_transition::new(0x3b, 0x3b, Some(input_parameter), null_mut()),
         input_transition::new(0x3c, 0x3f, None, &raw mut input_state_csi_ignore),
-        input_transition::new(0x40, 0x7e, Some(input_csi_dispatch), &raw mut input_state_ground),
+        input_transition::new(
+            0x40,
+            0x7e,
+            Some(input_csi_dispatch),
+            &raw mut input_state_ground,
+        ),
         input_transition::new(0x7f, 0xff, None, null_mut()),
         input_transition::new(-1, -1, None, null_mut()),
     ],
@@ -456,7 +660,12 @@ static mut input_state_csi_intermediate_table: [input_transition; 11] = concat_a
         input_transition::new(0x1c, 0x1f, Some(input_c0_dispatch), null_mut()),
         input_transition::new(0x20, 0x2f, Some(input_intermediate), null_mut()),
         input_transition::new(0x30, 0x3f, None, &raw mut input_state_csi_ignore),
-        input_transition::new(0x40, 0x7e, Some(input_csi_dispatch), &raw mut input_state_ground),
+        input_transition::new(
+            0x40,
+            0x7e,
+            Some(input_csi_dispatch),
+            &raw mut input_state_ground,
+        ),
         input_transition::new(0x7f, 0xff, None, null_mut()),
         input_transition::new(-1, -1, None, null_mut()),
     ],
@@ -483,12 +692,37 @@ static mut input_state_dcs_enter_table: [input_transition; 14] = concat_array(
         input_transition::new(0x00, 0x17, None, null_mut()),
         input_transition::new(0x19, 0x19, None, null_mut()),
         input_transition::new(0x1c, 0x1f, None, null_mut()),
-        input_transition::new(0x20, 0x2f, Some(input_intermediate), &raw mut input_state_dcs_intermediate),
-        input_transition::new(0x30, 0x39, Some(input_parameter), &raw mut input_state_dcs_parameter),
+        input_transition::new(
+            0x20,
+            0x2f,
+            Some(input_intermediate),
+            &raw mut input_state_dcs_intermediate,
+        ),
+        input_transition::new(
+            0x30,
+            0x39,
+            Some(input_parameter),
+            &raw mut input_state_dcs_parameter,
+        ),
         input_transition::new(0x3a, 0x3a, None, &raw mut input_state_dcs_ignore),
-        input_transition::new(0x3b, 0x3b, Some(input_parameter), &raw mut input_state_dcs_parameter),
-        input_transition::new(0x3c, 0x3f, Some(input_intermediate), &raw mut input_state_dcs_parameter),
-        input_transition::new(0x40, 0x7e, Some(input_input), &raw mut input_state_dcs_handler),
+        input_transition::new(
+            0x3b,
+            0x3b,
+            Some(input_parameter),
+            &raw mut input_state_dcs_parameter,
+        ),
+        input_transition::new(
+            0x3c,
+            0x3f,
+            Some(input_intermediate),
+            &raw mut input_state_dcs_parameter,
+        ),
+        input_transition::new(
+            0x40,
+            0x7e,
+            Some(input_input),
+            &raw mut input_state_dcs_handler,
+        ),
         input_transition::new(0x7f, 0xff, None, null_mut()),
         input_transition::new(-1, -1, None, null_mut()),
     ],
@@ -501,12 +735,22 @@ static mut input_state_dcs_parameter_table: [input_transition; 14] = concat_arra
         input_transition::new(0x00, 0x17, None, null_mut()),
         input_transition::new(0x19, 0x19, None, null_mut()),
         input_transition::new(0x1c, 0x1f, None, null_mut()),
-        input_transition::new(0x20, 0x2f, Some(input_intermediate), &raw mut input_state_dcs_intermediate),
+        input_transition::new(
+            0x20,
+            0x2f,
+            Some(input_intermediate),
+            &raw mut input_state_dcs_intermediate,
+        ),
         input_transition::new(0x30, 0x39, Some(input_parameter), null_mut()),
         input_transition::new(0x3a, 0x3a, None, &raw mut input_state_dcs_ignore),
         input_transition::new(0x3b, 0x3b, Some(input_parameter), null_mut()),
         input_transition::new(0x3c, 0x3f, None, &raw mut input_state_dcs_ignore),
-        input_transition::new(0x40, 0x7e, Some(input_input), &raw mut input_state_dcs_handler),
+        input_transition::new(
+            0x40,
+            0x7e,
+            Some(input_input),
+            &raw mut input_state_dcs_handler,
+        ),
         input_transition::new(0x7f, 0xff, None, null_mut()),
         input_transition::new(-1, -1, None, null_mut()),
     ],
@@ -521,7 +765,12 @@ static mut input_state_dcs_intermediate_table: [input_transition; 11] = concat_a
         input_transition::new(0x1c, 0x1f, None, null_mut()),
         input_transition::new(0x20, 0x2f, Some(input_intermediate), null_mut()),
         input_transition::new(0x30, 0x3f, None, &raw mut input_state_dcs_ignore),
-        input_transition::new(0x40, 0x7e, Some(input_input), &raw mut input_state_dcs_handler),
+        input_transition::new(
+            0x40,
+            0x7e,
+            Some(input_input),
+            &raw mut input_state_dcs_handler,
+        ),
         input_transition::new(0x7f, 0xff, None, null_mut()),
         input_transition::new(-1, -1, None, null_mut()),
     ],
@@ -539,9 +788,24 @@ static mut input_state_dcs_handler_table: [input_transition; 4] = [
 #[unsafe(no_mangle)]
 static mut input_state_dcs_escape_table: [input_transition; 4] = [
     /* No INPUT_STATE_ANYWHERE */
-    input_transition::new(0x00, 0x5b, Some(input_input), &raw mut input_state_dcs_handler),
-    input_transition::new(0x5c, 0x5c, Some(input_dcs_dispatch), &raw mut input_state_ground),
-    input_transition::new(0x5d, 0xff, Some(input_input), &raw mut input_state_dcs_handler),
+    input_transition::new(
+        0x00,
+        0x5b,
+        Some(input_input),
+        &raw mut input_state_dcs_handler,
+    ),
+    input_transition::new(
+        0x5c,
+        0x5c,
+        Some(input_dcs_dispatch),
+        &raw mut input_state_ground,
+    ),
+    input_transition::new(
+        0x5d,
+        0xff,
+        Some(input_input),
+        &raw mut input_state_dcs_handler,
+    ),
     input_transition::new(-1, -1, None, null_mut()),
 ];
 
@@ -616,7 +880,10 @@ unsafe extern "C" fn input_table_compare(key: *const c_void, value: *const c_voi
         if (*ictx).ch != (*entry).ch {
             (*ictx).ch - (*entry).ch
         } else {
-            libc::strcmp((&raw const (*ictx).interm_buf).cast(), (*entry).interm.as_ptr().cast())
+            libc::strcmp(
+                (&raw const (*ictx).interm_buf).cast(),
+                (*entry).interm.as_ptr().cast(),
+            )
         }
     }
 }
@@ -629,7 +896,11 @@ unsafe extern "C" fn input_timer_callback(_fd: i32, events: i16, arg: *mut c_voi
     unsafe {
         let mut ictx: *mut input_ctx = arg as *mut input_ctx;
 
-        log_debug!("{}: {} expired", "input_timer_callback", _s((*(*ictx).state).name.as_ptr()));
+        log_debug!(
+            "{}: {} expired",
+            "input_timer_callback",
+            _s((*(*ictx).state).name.as_ptr())
+        );
         input_reset(ictx, 0);
     }
 }
@@ -638,7 +909,10 @@ unsafe extern "C" fn input_timer_callback(_fd: i32, events: i16, arg: *mut c_voi
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_start_timer(ictx: *mut input_ctx) {
     unsafe {
-        let mut tv: timeval = timeval { tv_sec: 5, tv_usec: 0 };
+        let mut tv: timeval = timeval {
+            tv_sec: 5,
+            tv_usec: 0,
+        };
 
         event_del(&raw mut (*ictx).timer);
         event_add(&raw mut (*ictx).timer, &raw const tv);
@@ -692,7 +966,11 @@ unsafe extern "C" fn input_restore_state(ictx: *mut input_ctx) {
 
 /// Initialise input parser.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn input_init(wp: *mut window_pane, bev: *mut bufferevent, palette: *mut colour_palette) -> *mut input_ctx {
+pub unsafe extern "C" fn input_init(
+    wp: *mut window_pane,
+    bev: *mut bufferevent,
+    palette: *mut colour_palette,
+) -> *mut input_ctx {
     unsafe {
         let mut ictx: *mut input_ctx = xcalloc1::<input_ctx>();
         (*ictx).wp = wp;
@@ -707,7 +985,11 @@ pub unsafe extern "C" fn input_init(wp: *mut window_pane, bev: *mut bufferevent,
             fatalx(c"out of memory");
         }
 
-        evtimer_set(&raw mut (*ictx).timer, Some(input_timer_callback), ictx as _);
+        evtimer_set(
+            &raw mut (*ictx).timer,
+            Some(input_timer_callback),
+            ictx as _,
+        );
 
         input_reset(ictx, 0);
         ictx
@@ -761,7 +1043,9 @@ pub unsafe extern "C" fn input_reset(ictx: *mut input_ctx, clear: i32) {
 
 /// Return pending data.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn input_pending(ictx: *mut input_ctx) -> *mut evbuffer { unsafe { (*ictx).since_ground } }
+pub unsafe extern "C" fn input_pending(ictx: *mut input_ctx) -> *mut evbuffer {
+    unsafe { (*ictx).since_ground }
+}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn input_set_state(ictx: *mut input_ctx, itr: *mut input_transition) {
@@ -792,7 +1076,11 @@ fn input_parse(ictx: *mut input_ctx, buf: *mut u8, len: usize) {
             off += 1;
 
             // Find the transition.
-            if (*ictx).state != state || itr.is_null() || (*ictx).ch < (*itr).first || (*ictx).ch > (*itr).last {
+            if (*ictx).state != state
+                || itr.is_null()
+                || (*ictx).ch < (*itr).first
+                || (*ictx).ch > (*itr).last
+            {
                 itr = (*(*ictx).state).transitions;
                 while ((*itr).first != -1 && (*itr).last != -1) {
                     if ((*ictx).ch >= (*itr).first && (*ictx).ch <= (*itr).last) {
@@ -882,7 +1170,14 @@ pub unsafe extern "C" fn input_parse_buffer(wp: *mut window_pane, buf: *mut u8, 
 
 /// Parse given input for screen.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn input_parse_screen(ictx: *mut input_ctx, s: *mut screen, cb: screen_write_init_ctx_cb, arg: *mut c_void, buf: *mut u8, len: usize) {
+pub unsafe extern "C" fn input_parse_screen(
+    ictx: *mut input_ctx,
+    s: *mut screen,
+    cb: screen_write_init_ctx_cb,
+    arg: *mut c_void,
+    buf: *mut u8,
+    len: usize,
+) {
     unsafe {
         let mut sctx: *mut screen_write_ctx = &raw mut (*ictx).ctx;
 
@@ -968,7 +1263,12 @@ unsafe extern "C" fn input_split(ictx: *mut input_ctx) -> i32 {
 
 /// Get an argument or return default value.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn input_get(ictx: *mut input_ctx, validx: u32, minval: i32, defval: i32) -> i32 {
+pub unsafe extern "C" fn input_get(
+    ictx: *mut input_ctx,
+    validx: u32,
+    minval: i32,
+    defval: i32,
+) -> i32 {
     unsafe {
         if validx >= (*ictx).param_list_len {
             return defval;
@@ -1046,7 +1346,11 @@ unsafe extern "C" fn input_print(ictx: *mut input_ctx) -> i32 {
 
         (*ictx).utf8started = 0; /* can't be valid UTF-8 */
 
-        let set = if (*ictx).cell.set == 0 { (*ictx).cell.g0set } else { (*ictx).cell.g1set };
+        let set = if (*ictx).cell.set == 0 {
+            (*ictx).cell.g0set
+        } else {
+            (*ictx).cell.g1set
+        };
         if set == 1 {
             (*ictx).cell.cell.attr |= GRID_ATTR_CHARSET;
         } else {
@@ -1191,9 +1495,21 @@ unsafe extern "C" fn input_esc_dispatch(ictx: *mut input_ctx) -> i32 {
         if (*ictx).flags.intersects(input_flags::INPUT_DISCARD) {
             return 0;
         }
-        log_debug!("{}: '{}', {}", __func__, (*ictx).ch as u8 as char, _s((*ictx).interm_buf.as_ptr().cast()));
+        log_debug!(
+            "{}: '{}', {}",
+            __func__,
+            (*ictx).ch as u8 as char,
+            _s((*ictx).interm_buf.as_ptr().cast())
+        );
 
-        let entry: *const input_table_entry = libc::bsearch(ictx.cast(), (&raw const input_esc_table).cast(), input_esc_table.len(), size_of_val(&input_esc_table[0]), Some(input_table_compare)).cast();
+        let entry: *const input_table_entry = libc::bsearch(
+            ictx.cast(),
+            (&raw const input_esc_table).cast(),
+            input_esc_table.len(),
+            size_of_val(&input_esc_table[0]),
+            Some(input_table_compare),
+        )
+        .cast();
         if entry.is_null() {
             log_debug!("{}: unknown '{}'", __func__, (*ictx).ch);
             return 0;
@@ -1206,7 +1522,9 @@ unsafe extern "C" fn input_esc_dispatch(ictx: *mut input_ctx) -> i32 {
                 screen_write_reset(sctx);
                 screen_write_fullredraw(sctx);
             }
-            Ok(input_esc_type::INPUT_ESC_IND) => screen_write_linefeed(sctx, 0, (*ictx).cell.cell.bg as u32),
+            Ok(input_esc_type::INPUT_ESC_IND) => {
+                screen_write_linefeed(sctx, 0, (*ictx).cell.cell.bg as u32)
+            }
             Ok(input_esc_type::INPUT_ESC_NEL) => {
                 screen_write_carriagereturn(sctx);
                 screen_write_linefeed(sctx, 0, (*ictx).cell.cell.bg as u32);
@@ -1216,7 +1534,9 @@ unsafe extern "C" fn input_esc_dispatch(ictx: *mut input_ctx) -> i32 {
                     bit_set((*s).tabs, (*s).cx);
                 }
             }
-            Ok(input_esc_type::INPUT_ESC_RI) => screen_write_reverseindex(sctx, (*ictx).cell.cell.bg as u32),
+            Ok(input_esc_type::INPUT_ESC_RI) => {
+                screen_write_reverseindex(sctx, (*ictx).cell.cell.bg as u32)
+            }
             Ok(input_esc_type::INPUT_ESC_DECKPAM) => screen_write_mode_set(sctx, MODE_KKEYPAD),
             Ok(input_esc_type::INPUT_ESC_DECKPNM) => screen_write_mode_clear(sctx, MODE_KKEYPAD),
             Ok(input_esc_type::INPUT_ESC_DECSC) => input_save_state(ictx),
@@ -1251,13 +1571,24 @@ unsafe extern "C" fn input_csi_dispatch(ictx: *mut input_ctx) -> i32 {
             return 0;
         }
 
-        log_debug!("{}: '{}' \"{}\" \"{}\"", __func__, (*ictx).ch as u8 as char, _s((&raw const (*ictx).interm_buf).cast()), _s((&raw const (*ictx).param_buf).cast()));
+        log_debug!(
+            "{}: '{}' \"{}\" \"{}\"",
+            __func__,
+            (*ictx).ch as u8 as char,
+            _s((&raw const (*ictx).interm_buf).cast()),
+            _s((&raw const (*ictx).param_buf).cast())
+        );
 
         if input_split(ictx) != 0 {
             return 0;
         }
 
-        let mut entry: *mut input_table_entry = bsearch__(ictx.cast(), (&raw const input_csi_table).cast(), input_csi_table.len(), input_table_compare);
+        let mut entry: *mut input_table_entry = bsearch__(
+            ictx.cast(),
+            (&raw const input_csi_table).cast(),
+            input_csi_table.len(),
+            input_table_compare,
+        );
         if entry.is_null() {
             log_debug!("{}: unknown '{}'", __func__, (*ictx).ch as u8 as char);
             return 0;
@@ -1534,7 +1865,10 @@ unsafe extern "C" fn input_csi_dispatch_rm(ictx: *mut input_ctx) {
                 -1 => (),
                 4 => screen_write_mode_clear(sctx, MODE_INSERT), // IRM
                 34 => screen_write_mode_set(sctx, MODE_CURSOR_VERY_VISIBLE),
-                _ => log_debug!("input_csi_dispatch_rm: unknown '{}'", (*ictx).ch as u8 as char),
+                _ => log_debug!(
+                    "input_csi_dispatch_rm: unknown '{}'",
+                    (*ictx).ch as u8 as char
+                ),
             }
         }
     }
@@ -1575,7 +1909,11 @@ unsafe extern "C" fn input_csi_dispatch_rm_private(ictx: *mut input_ctx) {
                 47 | 1047 => screen_write_alternateoff(sctx, gc, 0),
                 1049 => screen_write_alternateoff(sctx, gc, 1),
                 2004 => screen_write_mode_clear(sctx, MODE_BRACKETPASTE),
-                _ => log_debug!("{}: unknown '{}'", "input_csi_dispatch_rm_private", (*ictx).ch as u8 as char),
+                _ => log_debug!(
+                    "{}: unknown '{}'",
+                    "input_csi_dispatch_rm_private",
+                    (*ictx).ch as u8 as char
+                ),
             }
         }
     }
@@ -1592,7 +1930,11 @@ unsafe extern "C" fn input_csi_dispatch_sm(ictx: *mut input_ctx) {
                 -1 => (),
                 4 => screen_write_mode_set(sctx, MODE_INSERT), /* IRM */
                 34 => screen_write_mode_clear(sctx, MODE_CURSOR_VERY_VISIBLE),
-                _ => log_debug!("{}: unknown '{}'", "input_csi_dispatch_sm", (*ictx).ch as u8 as char),
+                _ => log_debug!(
+                    "{}: unknown '{}'",
+                    "input_csi_dispatch_sm",
+                    (*ictx).ch as u8 as char
+                ),
             }
         }
     }
@@ -1643,7 +1985,11 @@ unsafe extern "C" fn input_csi_dispatch_sm_private(ictx: *mut input_ctx) {
                 47 | 1047 => screen_write_alternateon(sctx, gc, 0),
                 1049 => screen_write_alternateon(sctx, gc, 1),
                 2004 => screen_write_mode_set(sctx, MODE_BRACKETPASTE),
-                _ => log_debug!("{}: unknown '{}'", "input_csi_dispatch_sm_private", (*ictx).ch as u8 as char),
+                _ => log_debug!(
+                    "{}: unknown '{}'",
+                    "input_csi_dispatch_sm_private",
+                    (*ictx).ch as u8 as char
+                ),
             }
         }
     }
@@ -1713,12 +2059,22 @@ unsafe extern "C" fn input_csi_dispatch_winops(ictx: *mut input_ctx) {
                 }
                 14 => {
                     if !w.is_null() {
-                        input_reply(ictx, c"\x1b[4;%u;%ut".as_ptr(), y * (*w).ypixel, x * (*w).xpixel);
+                        input_reply(
+                            ictx,
+                            c"\x1b[4;%u;%ut".as_ptr(),
+                            y * (*w).ypixel,
+                            x * (*w).xpixel,
+                        );
                     }
                 }
                 15 => {
                     if !w.is_null() {
-                        input_reply(ictx, c"\x1b[5;%u;%ut".as_ptr(), y * (*w).ypixel, x * (*w).xpixel);
+                        input_reply(
+                            ictx,
+                            c"\x1b[5;%u;%ut".as_ptr(),
+                            y * (*w).ypixel,
+                            x * (*w).xpixel,
+                        );
                     }
                 }
                 16 => {
@@ -1751,7 +2107,11 @@ unsafe extern "C" fn input_csi_dispatch_winops(ictx: *mut input_ctx) {
                         _ => (),
                     }
                 }
-                _ => log_debug!("{}: unknown '{}'", "input_csi_dispatch_winops", (*ictx).ch as u8 as char),
+                _ => log_debug!(
+                    "{}: unknown '{}'",
+                    "input_csi_dispatch_winops",
+                    (*ictx).ch as u8 as char
+                ),
             }
             m += 1;
         }
@@ -1796,7 +2156,13 @@ unsafe extern "C" fn input_csi_dispatch_sgr_256(ictx: *mut input_ctx, fgbg: i32,
 
 /// Helper for RGB colour SGR.
 #[unsafe(no_mangle)]
-unsafe extern "C" fn input_csi_dispatch_sgr_rgb_do(ictx: *mut input_ctx, fgbg: i32, r: i32, g: i32, b: i32) -> i32 {
+unsafe extern "C" fn input_csi_dispatch_sgr_rgb_do(
+    ictx: *mut input_ctx,
+    fgbg: i32,
+    r: i32,
+    g: i32,
+    b: i32,
+) -> i32 {
     unsafe {
         let mut gc = &raw mut (*ictx).cell.cell;
 
@@ -1914,7 +2280,13 @@ unsafe extern "C" fn input_csi_dispatch_sgr_colon(ictx: *mut input_ctx, mut i: u
                         i = 3;
                     }
                     if n >= i as usize + 3 {
-                        input_csi_dispatch_sgr_rgb_do(ictx, p[0], p[i as usize], p[i as usize + 1], p[i as usize + 2]);
+                        input_csi_dispatch_sgr_rgb_do(
+                            ictx,
+                            p[0],
+                            p[i as usize],
+                            p[i as usize + 1],
+                            p[i as usize + 2],
+                        );
                     }
                 }
             }
@@ -2072,8 +2444,15 @@ unsafe extern "C" fn input_dcs_dispatch(ictx: *mut input_ctx) -> i32 {
         }
         log_debug!("{}: \"{}\"", func, _s(buf.cast()));
 
-        if len >= prefixlen as usize && libc::strncmp(buf.cast(), prefix.as_ptr().cast(), prefixlen as usize) == 0 {
-            screen_write_rawstring(sctx, buf.add(prefixlen as usize), len as u32 - prefixlen, (allow_passthrough == 2) as i32);
+        if len >= prefixlen as usize
+            && libc::strncmp(buf.cast(), prefix.as_ptr().cast(), prefixlen as usize) == 0
+        {
+            screen_write_rawstring(
+                sctx,
+                buf.add(prefixlen as usize),
+                len as u32 - prefixlen,
+                (allow_passthrough == 2) as i32,
+            );
         }
 
         0
@@ -2107,7 +2486,16 @@ unsafe extern "C" fn input_exit_osc(ictx: *mut input_ctx) {
             return;
         }
 
-        log_debug!("{}: \"{}\" (end {})", "input_exit_osc", _s(p.cast()), if (*ictx).input_end == input_end_type::INPUT_END_ST { "ST" } else { "BEL" });
+        log_debug!(
+            "{}: \"{}\" (end {})",
+            "input_exit_osc",
+            _s(p.cast()),
+            if (*ictx).input_end == input_end_type::INPUT_END_ST {
+                "ST"
+            } else {
+                "BEL"
+            }
+        );
 
         let mut option = 0;
         while (*p >= b'0' && *p <= b'9') {
@@ -2123,7 +2511,10 @@ unsafe extern "C" fn input_exit_osc(ictx: *mut input_ctx) {
 
         match option {
             0 | 2 => {
-                if !wp.is_null() && options_get_number((*wp).options, c"allow-set-title".as_ptr()) != 0 && screen_set_title((*sctx).s, p.cast()) != 0 {
+                if !wp.is_null()
+                    && options_get_number((*wp).options, c"allow-set-title".as_ptr()) != 0
+                    && screen_set_title((*sctx).s, p.cast()) != 0
+                {
                     notify_pane(c"pane-title-changed".as_ptr(), wp);
                     server_redraw_window_borders((*wp).window);
                     server_status_window((*wp).window);
@@ -2213,7 +2604,11 @@ unsafe extern "C" fn input_exit_rename(ictx: *mut input_ctx) {
         if options_get_number((*(*ictx).wp).options, c"allow-rename".as_ptr()) == 0 {
             return;
         }
-        log_debug!("{}: \"{}\"", "input_exit_rename", _s((*ictx).input_buf.cast()));
+        log_debug!(
+            "{}: \"{}\"",
+            "input_exit_rename",
+            _s((*ictx).input_buf.cast())
+        );
 
         if !utf8_isvalid((*ictx).input_buf.cast()) {
             return;
@@ -2221,7 +2616,9 @@ unsafe extern "C" fn input_exit_rename(ictx: *mut input_ctx) {
         let mut w = (*wp).window;
 
         if (*ictx).input_len == 0 {
-            if let Some(o) = NonNull::new(options_get_only((*w).options, c"automatic-rename".as_ptr())) {
+            if let Some(o) =
+                NonNull::new(options_get_only((*w).options, c"automatic-rename".as_ptr()))
+            {
                 options_remove_or_default(o.as_ptr(), -1, null_mut());
             }
             if options_get_number((*w).options, c"automatic-rename".as_ptr()) == 0 {
@@ -2292,9 +2689,24 @@ unsafe extern "C" fn input_osc_colour_reply(ictx: *mut input_ctx, n: u32, mut c:
         }
         colour_split_rgb(c, &raw mut r, &raw mut g, &raw mut b);
 
-        let end = if (*ictx).input_end == input_end_type::INPUT_END_BEL { c"\x07".as_ptr() } else { c"\x1b\\".as_ptr() };
+        let end = if (*ictx).input_end == input_end_type::INPUT_END_BEL {
+            c"\x07".as_ptr()
+        } else {
+            c"\x1b\\".as_ptr()
+        };
 
-        input_reply(ictx, c"\x1b]%u;rgb:%02hhx%02hhx/%02hhx%02hhx/%02hhx%02hhx%s".as_ptr(), n, r as u32, r as u32, g as u32, g as u32, b as u32, b as u32, end);
+        input_reply(
+            ictx,
+            c"\x1b]%u;rgb:%02hhx%02hhx/%02hhx%02hhx/%02hhx%02hhx%s".as_ptr(),
+            n,
+            r as u32,
+            r as u32,
+            g as u32,
+            g as u32,
+            b as u32,
+            b as u32,
+            end,
+        );
     }
 }
 
@@ -2374,7 +2786,9 @@ unsafe extern "C" fn input_osc_8(ictx: *mut input_ctx, p: *mut c_char) {
                 end = strpbrk(start, c":;".as_ptr());
                 !end.is_null()
             }) {
-                if end.offset_from_unsigned(start) >= 4 && libc::strncmp(start, c"id=".as_ptr(), 3) == 0 {
+                if end.offset_from_unsigned(start) >= 4
+                    && libc::strncmp(start, c"id=".as_ptr(), 3) == 0
+                {
                     if !id.is_null() {
                         break 'bad;
                     }
@@ -2465,7 +2879,9 @@ unsafe extern "C" fn input_get_bg_control_client(wp: *mut window_pane) -> i32 {
             return -1;
         }
 
-        if tailq_foreach(&raw mut clients).any(|c| (*c.as_ptr()).flags.intersects(client_flag::CONTROL)) {
+        if tailq_foreach(&raw mut clients)
+            .any(|c| (*c.as_ptr()).flags.intersects(client_flag::CONTROL))
+        {
             return (*wp).control_bg;
         }
     }
@@ -2482,7 +2898,9 @@ unsafe extern "C" fn input_get_fg_control_client(wp: *mut window_pane) -> i32 {
             return -1;
         }
 
-        if tailq_foreach(&raw mut clients).any(|c| (*c.as_ptr()).flags.intersects(client_flag::CONTROL)) {
+        if tailq_foreach(&raw mut clients)
+            .any(|c| (*c.as_ptr()).flags.intersects(client_flag::CONTROL))
+        {
             return (*wp).control_fg;
         }
     }
@@ -2706,7 +3124,9 @@ unsafe extern "C" fn input_osc_52(ictx: *mut input_ctx, p: *const c_char) {
 
         let mut i = 0;
         while p.add(i) != end {
-            if !strchr(allow, *p.add(i) as i32).is_null() && strchr((&raw mut flags) as *const c_char, *p.add(i) as i32).is_null() {
+            if !strchr(allow, *p.add(i) as i32).is_null()
+                && strchr((&raw mut flags) as *const c_char, *p.add(i) as i32).is_null()
+            {
                 flags[j] = *p.add(i);
                 j += 1;
             }
@@ -2740,7 +3160,12 @@ unsafe extern "C" fn input_osc_52(ictx: *mut input_ctx, p: *const c_char) {
         }
 
         screen_write_start_pane(&raw mut ctx, wp, null_mut());
-        screen_write_setselection(&raw mut ctx, (&raw const flags) as *const c_char, out, outlen as u32);
+        screen_write_setselection(
+            &raw mut ctx,
+            (&raw const flags) as *const c_char,
+            out,
+            outlen as u32,
+        );
         screen_write_stop(&raw mut ctx);
         notify_pane(c"pane-set-clipboard".as_ptr(), wp);
 
@@ -2791,7 +3216,12 @@ unsafe extern "C" fn input_osc_104(ictx: *mut input_ctx, p: *const c_char) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn input_reply_clipboard(bev: *mut bufferevent, buf: *const c_char, len: usize, end: *const c_char) {
+pub unsafe extern "C" fn input_reply_clipboard(
+    bev: *mut bufferevent,
+    buf: *const c_char,
+    len: usize,
+    end: *const c_char,
+) {
     unsafe {
         let mut out: *mut c_char = null_mut();
         let mut outlen: i32 = 0;

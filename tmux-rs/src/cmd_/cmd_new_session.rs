@@ -105,9 +105,22 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                 free_(name);
             }
             if (args_has_(args, 'A')) {
-                as_ = if (!newname.is_null()) { session_find(newname) } else { (*target).s };
+                as_ = if (!newname.is_null()) {
+                    session_find(newname)
+                } else {
+                    (*target).s
+                };
                 if (!as_.is_null()) {
-                    retval = cmd_attach_session(item, (*as_).name, args_has(args, b'D'), args_has(args, b'X'), 0, null(), args_has(args, b'E'), args_get(args, b'f'));
+                    retval = cmd_attach_session(
+                        item,
+                        (*as_).name,
+                        args_has(args, b'D'),
+                        args_has(args, b'X'),
+                        0,
+                        null(),
+                        args_has(args, b'E'),
+                        args_get(args, b'f'),
+                    );
                     free_(newname);
                     return retval;
                 }
@@ -121,7 +134,11 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
             group = args_get_(args, 't');
             if (!group.is_null()) {
                 groupwith = (*target).s;
-                sg = if (groupwith.is_null()) { session_group_find(group) } else { session_group_contains(groupwith) };
+                sg = if (groupwith.is_null()) {
+                    session_group_find(group)
+                } else {
+                    session_group_contains(groupwith)
+                };
                 if (!sg.is_null()) {
                     prefix = xstrdup((*sg).name).as_ptr();
                 } else if (!groupwith.is_null()) {
@@ -166,9 +183,16 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
              * the terminal as that calls tcsetattr() to prepare for tmux taking
              * over.
              */
-            if !detached && !already_attached && (*c).fd != -1 && !(*c).flags.intersects(client_flag::CONTROL) {
+            if !detached
+                && !already_attached
+                && (*c).fd != -1
+                && !(*c).flags.intersects(client_flag::CONTROL)
+            {
                 if (server_client_check_nested(cmdq_get_client(item)) != 0) {
-                    cmdq_error(item, c"sessions should be nested with care, unset $TMUX to force".as_ptr());
+                    cmdq_error(
+                        item,
+                        c"sessions should be nested with care, unset $TMUX to force".as_ptr(),
+                    );
                     break 'fail;
                 }
                 if (tcgetattr((*c).fd, &raw mut tio) != 0) {

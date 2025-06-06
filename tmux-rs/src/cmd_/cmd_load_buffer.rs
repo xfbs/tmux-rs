@@ -8,7 +8,9 @@ static mut cmd_load_buffer_entry: cmd_entry = cmd_entry {
     args: args_parse::new(c"b:t:w", 1, 1, None),
     usage: c"[-b buffer-name] [-t target-client] path".as_ptr(),
 
-    flags: cmd_flag::CMD_AFTERHOOK.union(cmd_flag::CMD_CLIENT_TFLAG).union(cmd_flag::CMD_CLIENT_CANFAIL),
+    flags: cmd_flag::CMD_AFTERHOOK
+        .union(cmd_flag::CMD_CLIENT_TFLAG)
+        .union(cmd_flag::CMD_CLIENT_CANFAIL),
     exec: Some(cmd_load_buffer_exec),
     ..unsafe { zeroed() }
 };
@@ -21,7 +23,14 @@ pub struct cmd_load_buffer_data {
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn cmd_load_buffer_done(_c: *mut client, path: *mut c_char, error: i32, closed: i32, buffer: *mut evbuffer, data: *mut c_void) {
+unsafe extern "C" fn cmd_load_buffer_done(
+    _c: *mut client,
+    path: *mut c_char,
+    error: i32,
+    closed: i32,
+    buffer: *mut evbuffer,
+    data: *mut c_void,
+) {
     unsafe {
         let mut cdata = data as *mut cmd_load_buffer_data;
         let mut tc = (*cdata).client;
@@ -43,7 +52,10 @@ unsafe extern "C" fn cmd_load_buffer_done(_c: *mut client, path: *mut c_char, er
                 cmdq_error(item, c"%s".as_ptr(), cause);
                 free_(cause);
                 free_(copy);
-            } else if !tc.is_null() && !(*tc).session.is_null() && !(*tc).flags.intersects(client_flag::DEAD) {
+            } else if !tc.is_null()
+                && !(*tc).session.is_null()
+                && !(*tc).flags.intersects(client_flag::DEAD)
+            {
                 tty_set_selection(&raw mut (*tc).tty, c"".as_ptr(), copy as _, bsize);
             }
             if !tc.is_null() {
@@ -75,7 +87,12 @@ unsafe extern "C" fn cmd_load_buffer_exec(self_: *mut cmd, item: *mut cmdq_item)
         }
 
         let mut path = format_single_from_target(item, args_string(args, 0));
-        file_read(cmdq_get_client(item), path, Some(cmd_load_buffer_done), cdata.cast());
+        file_read(
+            cmdq_get_client(item),
+            path,
+            Some(cmd_load_buffer_done),
+            cdata.cast(),
+        );
         free_(path);
     }
 

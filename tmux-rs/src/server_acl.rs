@@ -26,7 +26,10 @@ pub struct server_acl_user {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_acl_cmp(user1: *const server_acl_user, user2: *const server_acl_user) -> i32 {
+pub unsafe extern "C" fn server_acl_cmp(
+    user1: *const server_acl_user,
+    user2: *const server_acl_user,
+) -> i32 {
     unsafe {
         if ((*user1).uid < (*user2).uid) {
             return -1;
@@ -70,7 +73,11 @@ pub unsafe extern "C" fn server_acl_display(item: *mut cmdq_item) {
                 continue;
             }
             let pw = getpwuid((*loop_).uid);
-            let name = if (!pw.is_null()) { (*pw).pw_name } else { c"unknown".as_ptr() };
+            let name = if (!pw.is_null()) {
+                (*pw).pw_name
+            } else {
+                c"unknown".as_ptr()
+            };
             if ((*loop_).flags == server_acl_user_flags::SERVER_ACL_READONLY) {
                 cmdq_print(item, c"%s (R)".as_ptr(), name);
             } else {
@@ -155,7 +162,10 @@ pub unsafe extern "C" fn server_acl_join(c: *mut client) -> c_int {
         if (user.is_null()) {
             return 0;
         }
-        if (*user).flags.contains(server_acl_user_flags::SERVER_ACL_READONLY) {
+        if (*user)
+            .flags
+            .contains(server_acl_user_flags::SERVER_ACL_READONLY)
+        {
             (*c).flags |= client_flag::READONLY;
         }
         1
@@ -163,4 +173,6 @@ pub unsafe extern "C" fn server_acl_join(c: *mut client) -> c_int {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_acl_get_uid(user: *mut server_acl_user) -> uid_t { unsafe { (*user).uid } }
+pub unsafe extern "C" fn server_acl_get_uid(user: *mut server_acl_user) -> uid_t {
+    unsafe { (*user).uid }
+}

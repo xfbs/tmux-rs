@@ -132,7 +132,10 @@ pub unsafe extern "C" fn window_clock_timer_callback(fd: i32, events: i16, arg: 
         let mut now: libc::tm = zeroed();
         let mut then: libc::tm = zeroed();
         let mut t: time_t;
-        let mut tv: timeval = timeval { tv_sec: 1, tv_usec: 0 };
+        let mut tv: timeval = timeval {
+            tv_sec: 1,
+            tv_usec: 0,
+        };
 
         evtimer_del(&raw mut (*data).timer);
         evtimer_add(&raw mut (*data).timer, &tv);
@@ -155,20 +158,36 @@ pub unsafe extern "C" fn window_clock_timer_callback(fd: i32, events: i16, arg: 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_clock_init(wme: NonNull<window_mode_entry>, _fs: *mut cmd_find_state, args: *mut args) -> *mut screen {
+pub unsafe extern "C" fn window_clock_init(
+    wme: NonNull<window_mode_entry>,
+    _fs: *mut cmd_find_state,
+    args: *mut args,
+) -> *mut screen {
     unsafe {
         let mut wp: *mut window_pane = (*wme.as_ptr()).wp;
-        let mut tv = timeval { tv_sec: 1, tv_usec: 0 };
+        let mut tv = timeval {
+            tv_sec: 1,
+            tv_usec: 0,
+        };
 
         let data = xmalloc_::<window_clock_mode_data>().as_ptr();
         (*wme.as_ptr()).data = data.cast();
         (*data).tim = libc::time(null_mut());
 
-        evtimer_set(&raw mut (*data).timer, Some(window_clock_timer_callback), wme.cast().as_ptr());
+        evtimer_set(
+            &raw mut (*data).timer,
+            Some(window_clock_timer_callback),
+            wme.cast().as_ptr(),
+        );
         evtimer_add(&raw mut (*data).timer, &raw mut tv);
 
         let mut s = &raw mut (*data).screen;
-        screen_init(s, screen_size_x(&raw mut (*wp).base), screen_size_y(&raw mut (*wp).base), 0);
+        screen_init(
+            s,
+            screen_size_x(&raw mut (*wp).base),
+            screen_size_y(&raw mut (*wp).base),
+            0,
+        );
         (*s).mode &= !MODE_CURSOR;
 
         window_clock_draw_screen(wme);
@@ -200,7 +219,14 @@ pub unsafe extern "C" fn window_clock_resize(wme: NonNull<window_mode_entry>, sx
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_clock_key(wme: NonNull<window_mode_entry>, c: *mut client, s: *mut session, wl: *mut winlink, key: key_code, m: *mut mouse_event) {
+pub unsafe extern "C" fn window_clock_key(
+    wme: NonNull<window_mode_entry>,
+    c: *mut client,
+    s: *mut session,
+    wl: *mut winlink,
+    key: key_code,
+    m: *mut mouse_event,
+) {
     unsafe {
         window_pane_reset_mode((*wme.as_ptr()).wp);
     }
@@ -229,7 +255,12 @@ pub unsafe extern "C" fn window_clock_draw_screen(wme: NonNull<window_mode_entry
         let mut t = libc::time(null_mut());
         let tm = libc::localtime(&raw mut t);
         if (style == 0) {
-            libc::strftime(&raw mut tim as _, sizeof_tim, c"%l:%M ".as_ptr(), libc::localtime(&raw mut t));
+            libc::strftime(
+                &raw mut tim as _,
+                sizeof_tim,
+                c"%l:%M ".as_ptr(),
+                libc::localtime(&raw mut t),
+            );
             if ((*tm).tm_hour >= 12) {
                 strlcat(&raw mut tim as _, c"PM".as_ptr(), sizeof_tim);
             } else {

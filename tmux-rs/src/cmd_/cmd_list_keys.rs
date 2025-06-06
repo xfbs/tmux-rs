@@ -40,7 +40,11 @@ unsafe extern "C" fn cmd_list_keys_get_width(tablename: *const c_char, only: key
         }
         let mut bd = key_bindings_first(table);
         while (!bd.is_null()) {
-            if ((only != KEYC_UNKNOWN && (*bd).key != only) || KEYC_IS_MOUSE((*bd).key) || (*bd).note.is_null() || *(*bd).note == b'\0' as _) {
+            if ((only != KEYC_UNKNOWN && (*bd).key != only)
+                || KEYC_IS_MOUSE((*bd).key)
+                || (*bd).note.is_null()
+                || *(*bd).note == b'\0' as _)
+            {
                 bd = key_bindings_next(table, bd);
                 continue;
             }
@@ -55,7 +59,14 @@ unsafe extern "C" fn cmd_list_keys_get_width(tablename: *const c_char, only: key
     }
 }
 #[unsafe(no_mangle)]
-unsafe extern "C" fn cmd_list_keys_print_notes(item: *mut cmdq_item, args: *mut args, tablename: *const c_char, keywidth: u32, only: key_code, prefix: *const c_char) -> i32 {
+unsafe extern "C" fn cmd_list_keys_print_notes(
+    item: *mut cmdq_item,
+    args: *mut args,
+    tablename: *const c_char,
+    keywidth: u32,
+    only: key_code,
+    prefix: *const c_char,
+) -> i32 {
     unsafe {
         let mut tc = cmdq_get_target_client(item);
         let mut key = null();
@@ -67,14 +78,21 @@ unsafe extern "C" fn cmd_list_keys_print_notes(item: *mut cmdq_item, args: *mut 
         }
         let mut bd = key_bindings_first(table);
         while (!bd.is_null()) {
-            if ((only != KEYC_UNKNOWN && (*bd).key != only) || KEYC_IS_MOUSE((*bd).key) || (((*bd).note.is_null() || *(*bd).note == b'\0' as _) && !args_has_(args, 'a'))) {
+            if ((only != KEYC_UNKNOWN && (*bd).key != only)
+                || KEYC_IS_MOUSE((*bd).key)
+                || (((*bd).note.is_null() || *(*bd).note == b'\0' as _) && !args_has_(args, 'a')))
+            {
                 bd = key_bindings_next(table, bd);
                 continue;
             }
             found = 1;
             key = key_string_lookup_key((*bd).key, 0);
 
-            let note = if ((*bd).note.is_null() || *(*bd).note == b'\0' as _) { cmd_list_print((*bd).cmdlist, 1) } else { xstrdup((*bd).note).as_ptr() };
+            let note = if ((*bd).note.is_null() || *(*bd).note == b'\0' as _) {
+                cmd_list_print((*bd).cmdlist, 1)
+            } else {
+                xstrdup((*bd).note).as_ptr()
+            };
 
             let tmp = utf8_padcstr(key, keywidth + 1);
             if (args_has_(args, '1') && !tc.is_null()) {
@@ -95,13 +113,20 @@ unsafe extern "C" fn cmd_list_keys_print_notes(item: *mut cmdq_item, args: *mut 
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn cmd_list_keys_get_prefix(args: *mut args, prefix: *mut key_code) -> NonNull<c_char> {
+unsafe extern "C" fn cmd_list_keys_get_prefix(
+    args: *mut args,
+    prefix: *mut key_code,
+) -> NonNull<c_char> {
     unsafe {
         *prefix = options_get_number(global_s_options, c"prefix".as_ptr()) as _;
         if (!args_has_(args, 'P')) {
             if (*prefix != KEYC_NONE) {
                 let mut s = null_mut();
-                xasprintf(&raw mut s, c"%s ".as_ptr(), key_string_lookup_key(*prefix, 0));
+                xasprintf(
+                    &raw mut s,
+                    c"%s ".as_ptr(),
+                    key_string_lookup_key(*prefix, 0),
+                );
                 NonNull::new(s).unwrap()
             } else {
                 xstrdup_(c"")
@@ -160,17 +185,43 @@ unsafe extern "C" fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -
                     }
                     let empty = utf8_padcstr(c"".as_ptr(), utf8_cstrwidth(start));
 
-                    found = cmd_list_keys_print_notes(item, args, c"root".as_ptr(), keywidth as _, only, empty);
+                    found = cmd_list_keys_print_notes(
+                        item,
+                        args,
+                        c"root".as_ptr(),
+                        keywidth as _,
+                        only,
+                        empty,
+                    );
                     if (prefix != KEYC_NONE) {
-                        if (cmd_list_keys_print_notes(item, args, c"prefix".as_ptr(), keywidth as _, only, start) != 0) {
+                        if (cmd_list_keys_print_notes(
+                            item,
+                            args,
+                            c"prefix".as_ptr(),
+                            keywidth as _,
+                            only,
+                            start,
+                        ) != 0)
+                        {
                             found = 1;
                         }
                     }
                     free_(empty);
                 } else {
-                    start = if args_has_(args, 'P') { xstrdup(args_get_(args, 'P')).as_ptr() } else { xstrdup(c"".as_ptr()).as_ptr() };
+                    start = if args_has_(args, 'P') {
+                        xstrdup(args_get_(args, 'P')).as_ptr()
+                    } else {
+                        xstrdup(c"".as_ptr()).as_ptr()
+                    };
                     keywidth = cmd_list_keys_get_width(tablename, only) as _;
-                    found = cmd_list_keys_print_notes(item, args, tablename, keywidth as _, only, start);
+                    found = cmd_list_keys_print_notes(
+                        item,
+                        args,
+                        tablename,
+                        keywidth as _,
+                        only,
+                        start,
+                    );
                 }
                 free_(start);
                 break 'out;
@@ -238,7 +289,8 @@ unsafe extern "C" fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -
                         "   "
                     }
                     .as_ptr();
-                    let mut tmpused: usize = xsnprintf(tmp.as_ptr(), tmpsize, c"%s-T ".as_ptr(), r) as _;
+                    let mut tmpused: usize =
+                        xsnprintf(tmp.as_ptr(), tmpsize, c"%s-T ".as_ptr(), r) as _;
 
                     let mut cp = utf8_padcstr((*table).name, tablewidth as _);
                     let mut cplen = strlen(cp) + 1;
@@ -307,25 +359,52 @@ unsafe extern "C" fn cmd_list_keys_commands(self_: *mut cmd, item: *mut cmdq_ite
 
         let mut template = args_get_(args, 'F');
         if (template.is_null()) {
-            template = concat!("#{command_list_name}", "#{?command_list_alias, (#{command_list_alias}),} ", "#{command_list_usage}\0").as_ptr().cast();
+            template = concat!(
+                "#{command_list_name}",
+                "#{?command_list_alias, (#{command_list_alias}),} ",
+                "#{command_list_usage}\0"
+            )
+            .as_ptr()
+            .cast();
         }
 
-        let ft = format_create(cmdq_get_client(item), item, FORMAT_NONE, format_flags::empty());
+        let ft = format_create(
+            cmdq_get_client(item),
+            item,
+            FORMAT_NONE,
+            format_flags::empty(),
+        );
         format_defaults(ft, null_mut(), None, None, None);
 
         let command = args_string(args, 0);
         let mut entryp = &raw const cmd_table as *const *const cmd_entry;
         while !(*entryp).is_null() {
             let entry = *entryp;
-            if (!command.is_null() && (strcmp((*entry).name, command) != 0 && ((*entry).alias.is_null() || strcmp((*entry).alias, command) != 0))) {
+            if (!command.is_null()
+                && (strcmp((*entry).name, command) != 0
+                    && ((*entry).alias.is_null() || strcmp((*entry).alias, command) != 0)))
+            {
                 entryp = entryp.add(1);
                 continue;
             }
 
-            format_add(ft, c"command_list_name".as_ptr(), c"%s".as_ptr(), (*entry).name);
-            let s = if (!(*entry).alias.is_null()) { (*entry).alias } else { c"".as_ptr() };
+            format_add(
+                ft,
+                c"command_list_name".as_ptr(),
+                c"%s".as_ptr(),
+                (*entry).name,
+            );
+            let s = if (!(*entry).alias.is_null()) {
+                (*entry).alias
+            } else {
+                c"".as_ptr()
+            };
             format_add(ft, c"command_list_alias".as_ptr(), c"%s".as_ptr(), s);
-            let s = if (!(*entry).usage.is_null()) { (*entry).usage } else { c"".as_ptr() };
+            let s = if (!(*entry).usage.is_null()) {
+                (*entry).usage
+            } else {
+                c"".as_ptr()
+            };
             format_add(ft, c"command_list_usage".as_ptr(), c"%s".as_ptr(), s);
 
             let line = format_expand(ft, template);

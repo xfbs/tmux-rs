@@ -18,7 +18,10 @@ static mut cmd_refresh_client_entry: cmd_entry = cmd_entry {
 };
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_refresh_client_update_subscription(tc: *mut client, value: *const c_char) {
+pub unsafe extern "C" fn cmd_refresh_client_update_subscription(
+    tc: *mut client,
+    value: *const c_char,
+) {
     unsafe {
         let mut split = null_mut::<c_char>();
         let mut subid = -1;
@@ -62,7 +65,10 @@ pub unsafe extern "C" fn cmd_refresh_client_update_subscription(tc: *mut client,
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_refresh_client_control_client_size(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+pub unsafe extern "C" fn cmd_refresh_client_control_client_size(
+    self_: *mut cmd,
+    item: *mut cmdq_item,
+) -> cmd_retval {
     let __func__ = "cmd_refresh_client_control_client_size";
     unsafe {
         let mut args = cmd_get_args(self_);
@@ -74,12 +80,30 @@ pub unsafe extern "C" fn cmd_refresh_client_control_client_size(self_: *mut cmd,
         // u_int w, x, y;
         // struct client_window *cw;
 
-        if (sscanf(size, c"@%u:%ux%u".as_ptr(), &raw mut w, &raw mut x, &raw mut y) == 3) {
-            if (x < WINDOW_MINIMUM || x > WINDOW_MAXIMUM || y < WINDOW_MINIMUM || y > WINDOW_MAXIMUM) {
+        if (sscanf(
+            size,
+            c"@%u:%ux%u".as_ptr(),
+            &raw mut w,
+            &raw mut x,
+            &raw mut y,
+        ) == 3)
+        {
+            if (x < WINDOW_MINIMUM
+                || x > WINDOW_MAXIMUM
+                || y < WINDOW_MINIMUM
+                || y > WINDOW_MAXIMUM)
+            {
                 cmdq_error(item, c"size too small or too big".as_ptr());
                 return cmd_retval::CMD_RETURN_ERROR;
             }
-            log_debug!("{}: client {} window @{}: size {}x{}", __func__, _s((*tc).name), w, x, y);
+            log_debug!(
+                "{}: client {} window @{}: size {}x{}",
+                __func__,
+                _s((*tc).name),
+                w,
+                x,
+                y
+            );
             let cw = server_client_add_client_window(tc, w);
             (*cw).sx = x;
             (*cw).sy = y;
@@ -90,7 +114,12 @@ pub unsafe extern "C" fn cmd_refresh_client_control_client_size(self_: *mut cmd,
         if (sscanf(size, c"@%u:".as_ptr(), &w) == 1) {
             let cw = server_client_get_client_window(tc, w);
             if (!cw.is_null()) {
-                log_debug!("{}: client {} window @{}: no size", __func__, _s((*tc).name), w);
+                log_debug!(
+                    "{}: client {} window @{}: no size",
+                    __func__,
+                    _s((*tc).name),
+                    w
+                );
                 (*cw).sx = 0;
                 (*cw).sy = 0;
                 recalculate_sizes_now(1);
@@ -98,7 +127,9 @@ pub unsafe extern "C" fn cmd_refresh_client_control_client_size(self_: *mut cmd,
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        if (sscanf(size, c"%u,%u".as_ptr(), &x, &y) != 2 && sscanf(size, c"%ux%u".as_ptr(), &x, &y) != 2) {
+        if (sscanf(size, c"%u,%u".as_ptr(), &x, &y) != 2
+            && sscanf(size, c"%ux%u".as_ptr(), &x, &y) != 2)
+        {
             cmdq_error(item, c"bad size argument".as_ptr());
             return cmd_retval::CMD_RETURN_ERROR;
         }
@@ -155,7 +186,10 @@ pub unsafe extern "C" fn cmd_refresh_client_update_offset(tc: *mut client, value
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_refresh_client_clipboard(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+pub unsafe extern "C" fn cmd_refresh_client_clipboard(
+    self_: *mut cmd,
+    item: *mut cmdq_item,
+) -> cmd_retval {
     unsafe {
         let mut args = cmd_get_args(self_);
         let mut tc = cmdq_get_target_client(item);
@@ -184,7 +218,8 @@ pub unsafe extern "C" fn cmd_refresh_client_clipboard(self_: *mut cmd, item: *mu
             if (i != (*tc).clipboard_npanes) {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
-            (*tc).clipboard_panes = xreallocarray_((*tc).clipboard_panes, (*tc).clipboard_npanes as usize + 1).as_ptr();
+            (*tc).clipboard_panes =
+                xreallocarray_((*tc).clipboard_panes, (*tc).clipboard_npanes as usize + 1).as_ptr();
             *(*tc).clipboard_panes.add((*tc).clipboard_npanes as usize) = (*fs.wp).id;
             (*tc).clipboard_npanes += 1;
         }
@@ -219,7 +254,14 @@ pub unsafe extern "C" fn cmd_refresh_report(tty: *mut tty, value: *const c_char)
                 break 'out;
             }
 
-            tty_keys_colours(tty, split, strlen(split), &raw mut size, &raw mut (*wp).control_fg, &raw mut (*wp).control_bg);
+            tty_keys_colours(
+                tty,
+                split,
+                strlen(split),
+                &raw mut size,
+                &raw mut (*wp).control_fg,
+                &raw mut (*wp).control_bg,
+            );
         }
         // out:
         free_(copy);
@@ -227,7 +269,10 @@ pub unsafe extern "C" fn cmd_refresh_report(tty: *mut tty, value: *const c_char)
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_refresh_client_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+pub unsafe extern "C" fn cmd_refresh_client_exec(
+    self_: *mut cmd,
+    item: *mut cmdq_item,
+) -> cmd_retval {
     unsafe {
         let mut args = cmd_get_args(self_);
         let mut tc = cmdq_get_target_client(item);
@@ -236,11 +281,17 @@ pub unsafe extern "C" fn cmd_refresh_client_exec(self_: *mut cmd, item: *mut cmd
         let mut adjust: u32 = 0;
 
         'not_control_client: {
-            if (args_has_(args, 'c') || args_has_(args, 'L') || args_has_(args, 'R') || args_has_(args, 'U') || args_has_(args, 'D')) {
+            if (args_has_(args, 'c')
+                || args_has_(args, 'L')
+                || args_has_(args, 'R')
+                || args_has_(args, 'U')
+                || args_has_(args, 'D'))
+            {
                 if (args_count(args) == 0) {
                     adjust = 1;
                 } else {
-                    adjust = strtonum(args_string(args, 0), 1, i32::MAX as i64, &raw mut errstr) as u32;
+                    adjust =
+                        strtonum(args_string(args, 0), 1, i32::MAX as i64, &raw mut errstr) as u32;
                     if (!errstr.is_null()) {
                         cmdq_error(item, c"adjustment %s".as_ptr(), errstr);
                         return cmd_retval::CMD_RETURN_ERROR;
