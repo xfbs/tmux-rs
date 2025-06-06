@@ -57,6 +57,7 @@ more then just server exited unexpectedly.
 - [ ] verify all uses of tailq and rbq, any structs with multiple "entry" fields we use correctly
 - [ ] LICENSE stuff
 - [ ] use base64 crate instead of libresolv
+- [ ] ffi compatible timeval struct with useful utilities
 - [ ] improve interface on variadics
     - args_print_add
     - cfg_add_cause

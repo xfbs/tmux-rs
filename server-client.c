@@ -51,212 +51,207 @@ static void server_client_dispatch_command(struct client *, struct imsg *);
 static void server_client_dispatch_identify(struct client *, struct imsg *);
 static void server_client_dispatch_shell(struct client *);
 
-/* Compare client windows. */
-static int server_client_window_cmp(struct client_window *cw1,
-                                    struct client_window *cw2) {
-  if (cw1->window < cw2->window) {
-    return -1;
-  }
-  if (cw1->window > cw2->window) {
-    return 1;
-  }
-  return 0;
-}
+int server_client_window_cmp(struct client_window *cw1,
+                             struct client_window *cw2);
+
 RB_GENERATE(client_windows, client_window, entry, server_client_window_cmp);
 
 /* Number of attached clients. */
-u_int server_client_how_many(void) {
-  struct client *c;
-  u_int n;
-
-  n = 0;
-  TAILQ_FOREACH(c, &clients, entry) {
-    if (c->session != NULL && (~c->flags & CLIENT_UNATTACHEDFLAGS)) {
-      n++;
-    }
-  }
-  return n;
-}
+u_int server_client_how_many(void);
+// u_int server_client_how_many(void) {
+//   struct client *c;
+//   u_int n;
+//
+//   n = 0;
+//   TAILQ_FOREACH(c, &clients, entry) {
+//     if ((*c).session != NULL && (~(*c).flags & CLIENT_UNATTACHEDFLAGS)) {
+//       n++;
+//     }
+//   }
+//   return n;
+// }
 
 /* Overlay timer callback. */
-static void server_client_overlay_timer(__unused int fd, __unused short events,
-                                        void *data) {
-  server_client_clear_overlay(data);
-}
+void server_client_overlay_timer(__unused int fd, __unused short events, void *data);
+// void server_client_overlay_timer(__unused int fd, __unused short events, void *data) {
+//   server_client_clear_overlay(data);
+// }
 
 /* Set an overlay on client. */
-void server_client_set_overlay(struct client *c, u_int delay,
-                               overlay_check_cb checkcb, overlay_mode_cb modecb,
-                               overlay_draw_cb drawcb, overlay_key_cb keycb,
-                               overlay_free_cb freecb,
-                               overlay_resize_cb resizecb, void *data) {
-  struct timeval tv;
-
-  if (c->overlay_draw != NULL) {
-    server_client_clear_overlay(c);
-  }
-
-  tv.tv_sec = delay / 1000;
-  tv.tv_usec = (delay % 1000) * 1000L;
-
-  if (event_initialized(&c->overlay_timer)) {
-    evtimer_del(&c->overlay_timer);
-  }
-  evtimer_set(&c->overlay_timer, server_client_overlay_timer, c);
-  if (delay != 0) {
-    evtimer_add(&c->overlay_timer, &tv);
-  }
-
-  c->overlay_check = checkcb;
-  c->overlay_mode = modecb;
-  c->overlay_draw = drawcb;
-  c->overlay_key = keycb;
-  c->overlay_free = freecb;
-  c->overlay_resize = resizecb;
-  c->overlay_data = data;
-
-  if (c->overlay_check == NULL) {
-    c->tty.flags |= TTY_FREEZE;
-  }
-  if (c->overlay_mode == NULL) {
-    c->tty.flags |= TTY_NOCURSOR;
-  }
-  server_redraw_client(c);
-}
+void server_client_set_overlay(struct client *c, u_int delay, overlay_check_cb checkcb, overlay_mode_cb modecb, overlay_draw_cb drawcb, overlay_key_cb keycb, overlay_free_cb freecb, overlay_resize_cb resizecb, void *data);
+// void server_client_set_overlay(struct client *c, u_int delay, overlay_check_cb checkcb, overlay_mode_cb modecb, overlay_draw_cb drawcb, overlay_key_cb keycb, overlay_free_cb freecb, overlay_resize_cb resizecb, void *data) {
+//   struct timeval tv;
+// 
+//   if ((*c).overlay_draw != NULL) {
+//     server_client_clear_overlay(c);
+//   }
+// 
+//   tv.tv_sec = delay / 1000;
+//   tv.tv_usec = (delay % 1000) * 1000L;
+// 
+//   if (event_initialized(&(*c).overlay_timer)) {
+//     evtimer_del(&(*c).overlay_timer);
+//   }
+//   evtimer_set(&(*c).overlay_timer, server_client_overlay_timer, c);
+//   if (delay != 0) {
+//     evtimer_add(&(*c).overlay_timer, &tv);
+//   }
+// 
+//   (*c).overlay_check = checkcb;
+//   (*c).overlay_mode = modecb;
+//   (*c).overlay_draw = drawcb;
+//   (*c).overlay_key = keycb;
+//   (*c).overlay_free = freecb;
+//   (*c).overlay_resize = resizecb;
+//   (*c).overlay_data = data;
+// 
+//   if ((*c).overlay_check == NULL) {
+//     (*c).tty.flags |= TTY_FREEZE;
+//   }
+//   if ((*c).overlay_mode == NULL) {
+//     (*c).tty.flags |= TTY_NOCURSOR;
+//   }
+//   server_redraw_client(c);
+// }
 
 /* Clear overlay mode on client. */
-void server_client_clear_overlay(struct client *c) {
-  if (c->overlay_draw == NULL) {
-    return;
-  }
-
-  if (event_initialized(&c->overlay_timer)) {
-    evtimer_del(&c->overlay_timer);
-  }
-
-  if (c->overlay_free != NULL) {
-    c->overlay_free(c, c->overlay_data);
-  }
-
-  c->overlay_check = NULL;
-  c->overlay_mode = NULL;
-  c->overlay_draw = NULL;
-  c->overlay_key = NULL;
-  c->overlay_free = NULL;
-  c->overlay_data = NULL;
-
-  c->tty.flags &= ~(TTY_FREEZE | TTY_NOCURSOR);
-  server_redraw_client(c);
-}
+void server_client_clear_overlay(struct client *c);
+// void server_client_clear_overlay(struct client *c) {
+//   if ((*c).overlay_draw == NULL) {
+//     return;
+//   }
+// 
+//   if (event_initialized(&(*c).overlay_timer)) {
+//     evtimer_del(&(*c).overlay_timer);
+//   }
+// 
+//   if ((*c).overlay_free != NULL) {
+//     (*c).overlay_free(c, (*c).overlay_data);
+//   }
+// 
+//   (*c).overlay_check = NULL;
+//   (*c).overlay_mode = NULL;
+//   (*c).overlay_draw = NULL;
+//   (*c).overlay_key = NULL;
+//   (*c).overlay_free = NULL;
+//   (*c).overlay_data = NULL;
+// 
+//   (*c).tty.flags &= ~(TTY_FREEZE | TTY_NOCURSOR);
+//   server_redraw_client(c);
+// }
 
 /*
  * Given overlay position and dimensions, return parts of the input range which
  * are visible.
  */
-void server_client_overlay_range(u_int x, u_int y, u_int sx, u_int sy, u_int px,
-                                 u_int py, u_int nx, struct overlay_ranges *r) {
-  u_int ox, onx;
-
-  /* Return up to 2 ranges. */
-  r->px[2] = 0;
-  r->nx[2] = 0;
-
-  /* Trivial case of no overlap in the y direction. */
-  if (py < y || py > y + sy - 1) {
-    r->px[0] = px;
-    r->nx[0] = nx;
-    r->px[1] = 0;
-    r->nx[1] = 0;
-    return;
-  }
-
-  /* Visible bit to the left of the popup. */
-  if (px < x) {
-    r->px[0] = px;
-    r->nx[0] = x - px;
-    if (r->nx[0] > nx) {
-      r->nx[0] = nx;
-    }
-  } else {
-    r->px[0] = 0;
-    r->nx[0] = 0;
-  }
-
-  /* Visible bit to the right of the popup. */
-  ox = x + sx;
-  if (px > ox) {
-    ox = px;
-  }
-  onx = px + nx;
-  if (onx > ox) {
-    r->px[1] = ox;
-    r->nx[1] = onx - ox;
-  } else {
-    r->px[1] = 0;
-    r->nx[1] = 0;
-  }
-}
+void server_client_overlay_range(u_int x, u_int y, u_int sx, u_int sy, u_int px, u_int py, u_int nx, struct overlay_ranges *r);
+// void server_client_overlay_range(u_int x, u_int y, u_int sx, u_int sy, u_int px, u_int py, u_int nx, struct overlay_ranges *r) {
+//   u_int ox, onx;
+// 
+//   /* Return up to 2 ranges. */
+//   (*r).px[2] = 0;
+//   (*r).nx[2] = 0;
+// 
+//   /* Trivial case of no overlap in the y direction. */
+//   if (py < y || py > y + sy - 1) {
+//     (*r).px[0] = px;
+//     (*r).nx[0] = nx;
+//     (*r).px[1] = 0;
+//     (*r).nx[1] = 0;
+//     return;
+//   }
+// 
+//   /* Visible bit to the left of the popup. */
+//   if (px < x) {
+//     (*r).px[0] = px;
+//     (*r).nx[0] = x - px;
+//     if ((*r).nx[0] > nx) {
+//       (*r).nx[0] = nx;
+//     }
+//   } else {
+//     (*r).px[0] = 0;
+//     (*r).nx[0] = 0;
+//   }
+// 
+//   /* Visible bit to the right of the popup. */
+//   ox = x + sx;
+//   if (px > ox) {
+//     ox = px;
+//   }
+//   onx = px + nx;
+//   if (onx > ox) {
+//     (*r).px[1] = ox;
+//     (*r).nx[1] = onx - ox;
+//   } else {
+//     (*r).px[1] = 0;
+//     (*r).nx[1] = 0;
+//   }
+// }
 
 /* Check if this client is inside this server. */
-int server_client_check_nested(struct client *c) {
-  struct environ_entry *envent;
-  struct window_pane *wp;
-
-  envent = environ_find(c->environ, "TMUX");
-  if (envent == NULL || *envent->value == '\0') {
-    return 0;
-  }
-
-  RB_FOREACH(wp, window_pane_tree, &all_window_panes) {
-    if (strcmp(wp->tty, c->ttyname) == 0) {
-      return 1;
-    }
-  }
-  return 0;
-}
+int server_client_check_nested(struct client *c);
+// int server_client_check_nested(struct client *c) {
+//   struct environ_entry *envent;
+//   struct window_pane *wp;
+// 
+//   envent = environ_find((*c).environ, "TMUX");
+//   if (envent == NULL || *(*envent).value == '\0') {
+//     return 0;
+//   }
+// 
+//   RB_FOREACH(wp, window_pane_tree, &all_window_panes) {
+//     if (strcmp((*wp).tty, (*c).ttyname) == 0) {
+//       return 1;
+//     }
+//   }
+//   return 0;
+// }
 
 /* Set client key table. */
-void server_client_set_key_table(struct client *c, const char *name) {
-  if (name == NULL) {
-    name = server_client_get_key_table(c);
-  }
+void server_client_set_key_table(struct client *c, const char *name);
+// void server_client_set_key_table(struct client *c, const char *name) {
+//   if (name == NULL) {
+//     name = server_client_get_key_table(c);
+//   }
+// 
+//   key_bindings_unref_table((*c).keytable);
+//   (*c).keytable = key_bindings_get_table(name, 1);
+//   (*(*c).keytable).references++;
+//   if (gettimeofday(&(*(*c).keytable).activity_time, NULL) != 0) {
+//     fatal("gettimeofday failed");
+//   }
+// }
 
-  key_bindings_unref_table(c->keytable);
-  c->keytable = key_bindings_get_table(name, 1);
-  c->keytable->references++;
-  if (gettimeofday(&c->keytable->activity_time, NULL) != 0) {
-    fatal("gettimeofday failed");
-  }
-}
-
-static uint64_t server_client_key_table_activity_diff(struct client *c) {
-  struct timeval diff;
-
-  timersub(&c->activity_time, &c->keytable->activity_time, &diff);
-  return (diff.tv_sec * 1000ULL) + (diff.tv_usec / 1000ULL);
-}
+uint64_t server_client_key_table_activity_diff(struct client *c);
+// uint64_t server_client_key_table_activity_diff(struct client *c) {
+//   struct timeval diff;
+// 
+//   timersub(&(*c).activity_time, &(*(*c).keytable).activity_time, &diff);
+//   return (diff.tv_sec * 1000ULL) + (diff.tv_usec / 1000ULL);
+// }
 
 /* Get default key table. */
-const char *server_client_get_key_table(struct client *c) {
-  struct session *s = c->session;
-  const char *name;
-
-  if (s == NULL) {
-    return "root";
-  }
-
-  name = options_get_string(s->options, "key-table");
-  if (*name == '\0') {
-    return "root";
-  }
-  return name;
-}
+const char *server_client_get_key_table(struct client *c);
+// const char *server_client_get_key_table(struct client *c) {
+//   struct session *s = (*c).session;
+//   const char *name;
+// 
+//   if (s == NULL) {
+//     return "root";
+//   }
+// 
+//   name = options_get_string((*s).options, "key-table");
+//   if (*name == '\0') {
+//     return "root";
+//   }
+//   return name;
+// }
 
 /* Is this table the default key table? */
-static int server_client_is_default_key_table(struct client *c,
-                                              struct key_table *table) {
-  return strcmp(table->name, server_client_get_key_table(c)) == 0;
-}
+int server_client_is_default_key_table(struct client *c, struct key_table *table);
+// static int server_client_is_default_key_table(struct client *c, struct key_table *table) {
+//   return strcmp((*table).name, server_client_get_key_table(c)) == 0;
+// }
 
 /* Create a new client. */
 struct client *server_client_create(int fd) {
@@ -265,34 +260,34 @@ struct client *server_client_create(int fd) {
   setblocking(fd, 0);
 
   c = xcalloc(1, sizeof *c);
-  c->references = 1;
-  c->peer = proc_add_peer(server_proc, fd, server_client_dispatch, c);
+  (*c).references = 1;
+  (*c).peer = proc_add_peer(server_proc, fd, server_client_dispatch, c);
 
-  if (gettimeofday(&c->creation_time, NULL) != 0) {
+  if (gettimeofday(&(*c).creation_time, NULL) != 0) {
     fatal("gettimeofday failed");
   }
-  memcpy(&c->activity_time, &c->creation_time, sizeof c->activity_time);
+  memcpy(&(*c).activity_time, &(*c).creation_time, sizeof(*c).activity_time);
 
-  c->environ = environ_create();
+  (*c).environ = environ_create();
 
-  c->fd = -1;
-  c->out_fd = -1;
+  (*c).fd = -1;
+  (*c).out_fd = -1;
 
-  c->queue = cmdq_new();
-  RB_INIT(&c->windows);
-  RB_INIT(&c->files);
+  (*c).queue = cmdq_new();
+  RB_INIT(&(*c).windows);
+  RB_INIT(&(*c).files);
 
-  c->tty.sx = 80;
-  c->tty.sy = 24;
+  (*c).tty.sx = 80;
+  (*c).tty.sy = 24;
 
   status_init(c);
-  c->flags |= CLIENT_FOCUSED;
+  (*c).flags |= CLIENT_FOCUSED;
 
-  c->keytable = key_bindings_get_table("root", 1);
-  c->keytable->references++;
+  (*c).keytable = key_bindings_get_table("root", 1);
+  (*(*c).keytable).references++;
 
-  evtimer_set(&c->repeat_timer, server_client_repeat_timer, c);
-  evtimer_set(&c->click_timer, server_client_click_timer, c);
+  evtimer_set(&(*c).repeat_timer, server_client_repeat_timer, c);
+  evtimer_set(&(*c).click_timer, server_client_click_timer, c);
 
   TAILQ_INSERT_TAIL(&clients, c, entry);
   log_debug("new client %p", c);
@@ -303,27 +298,27 @@ struct client *server_client_create(int fd) {
 int server_client_open(struct client *c, char **cause) {
   const char *ttynam = _PATH_TTY;
 
-  if (c->flags & CLIENT_CONTROL) {
+  if ((*c).flags & CLIENT_CONTROL) {
     return 0;
   }
 
-  if (strcmp(c->ttyname, ttynam) == 0 ||
+  if (strcmp((*c).ttyname, ttynam) == 0 ||
       ((isatty(STDIN_FILENO) && (ttynam = ttyname(STDIN_FILENO)) != NULL &&
-        strcmp(c->ttyname, ttynam) == 0) ||
+        strcmp((*c).ttyname, ttynam) == 0) ||
        (isatty(STDOUT_FILENO) && (ttynam = ttyname(STDOUT_FILENO)) != NULL &&
-        strcmp(c->ttyname, ttynam) == 0) ||
+        strcmp((*c).ttyname, ttynam) == 0) ||
        (isatty(STDERR_FILENO) && (ttynam = ttyname(STDERR_FILENO)) != NULL &&
-        strcmp(c->ttyname, ttynam) == 0))) {
-    xasprintf(cause, "can't use %s", c->ttyname);
+        strcmp((*c).ttyname, ttynam) == 0))) {
+    xasprintf(cause, "can't use %s", (*c).ttyname);
     return -1;
   }
 
-  if (!(c->flags & CLIENT_TERMINAL)) {
+  if (!((*c).flags & CLIENT_TERMINAL)) {
     *cause = xstrdup("not a terminal");
     return -1;
   }
 
-  if (tty_open(&c->tty, cause) != 0) {
+  if (tty_open(&(*c).tty, cause) != 0) {
     return -1;
   }
 
@@ -344,18 +339,18 @@ static void server_client_attached_lost(struct client *c) {
    * windows to find any with this client as the latest.
    */
   RB_FOREACH(w, windows, &windows) {
-    if (w->latest != c) {
+    if ((*w).latest != c) {
       continue;
     }
 
     found = NULL;
     TAILQ_FOREACH(loop, &clients, entry) {
-      s = loop->session;
-      if (loop == c || s == NULL || s->curw->window != w) {
+      s = (*loop).session;
+      if (loop == c || s == NULL || (*(*s).curw).window != w) {
         continue;
       }
       if (found == NULL ||
-          timercmp(&loop->activity_time, &found->activity_time, >)) {
+          timercmp(&(*loop).activity_time, &(*found).activity_time, >)) {
         found = loop;
       }
     }
@@ -367,26 +362,26 @@ static void server_client_attached_lost(struct client *c) {
 
 /* Set client session. */
 void server_client_set_session(struct client *c, struct session *s) {
-  struct session *old = c->session;
+  struct session *old = (*c).session;
 
-  if (s != NULL && c->session != NULL && c->session != s) {
-    c->last_session = c->session;
+  if (s != NULL && (*c).session != NULL && (*c).session != s) {
+    (*c).last_session = (*c).session;
   } else if (s == NULL) {
-    c->last_session = NULL;
+    (*c).last_session = NULL;
   }
-  c->session = s;
-  c->flags |= CLIENT_FOCUSED;
+  (*c).session = s;
+  (*c).flags |= CLIENT_FOCUSED;
 
-  if (old != NULL && old->curw != NULL) {
-    window_update_focus(old->curw->window);
+  if (old != NULL && (*old).curw != NULL) {
+    window_update_focus((*(*old).curw).window);
   }
   if (s != NULL) {
     recalculate_sizes();
-    window_update_focus(s->curw->window);
+    window_update_focus((*(*s).curw).window);
     session_update_activity(s, NULL);
-    gettimeofday(&s->last_attached_time, NULL);
-    s->curw->flags &= ~WINLINK_ALERTFLAGS;
-    s->curw->window->latest = c;
+    gettimeofday(&(*s).last_attached_time, NULL);
+    (*(*s).curw).flags &= ~WINLINK_ALERTFLAGS;
+    (*(*(*s).curw).window).latest = c;
     alerts_check_session(s);
     tty_update_client_offset(c);
     status_timer_start(c);
@@ -403,73 +398,73 @@ void server_client_lost(struct client *c) {
   struct client_file *cf, *cf1;
   struct client_window *cw, *cw1;
 
-  c->flags |= CLIENT_DEAD;
+  (*c).flags |= CLIENT_DEAD;
 
   server_client_clear_overlay(c);
   status_prompt_clear(c);
   status_message_clear(c);
 
-  RB_FOREACH_SAFE(cf, client_files, &c->files, cf1) {
-    cf->error = EINTR;
+  RB_FOREACH_SAFE(cf, client_files, &(*c).files, cf1) {
+    (*cf).error = EINTR;
     file_fire_done(cf);
   }
-  RB_FOREACH_SAFE(cw, client_windows, &c->windows, cw1) {
-    RB_REMOVE(client_windows, &c->windows, cw);
+  RB_FOREACH_SAFE(cw, client_windows, &(*c).windows, cw1) {
+    RB_REMOVE(client_windows, &(*c).windows, cw);
     free(cw);
   }
 
   TAILQ_REMOVE(&clients, c, entry);
   log_debug("lost client %p", c);
 
-  if (c->flags & CLIENT_ATTACHED) {
+  if ((*c).flags & CLIENT_ATTACHED) {
     server_client_attached_lost(c);
     notify_client("client-detached", c);
   }
 
-  if (c->flags & CLIENT_CONTROL) {
+  if ((*c).flags & CLIENT_CONTROL) {
     control_stop(c);
   }
-  if (c->flags & CLIENT_TERMINAL) {
-    tty_free(&c->tty);
+  if ((*c).flags & CLIENT_TERMINAL) {
+    tty_free(&(*c).tty);
   }
-  free(c->ttyname);
-  free(c->clipboard_panes);
+  free((*c).ttyname);
+  free((*c).clipboard_panes);
 
-  free(c->term_name);
-  free(c->term_type);
-  tty_term_free_list(c->term_caps, c->term_ncaps);
+  free((*c).term_name);
+  free((*c).term_type);
+  tty_term_free_list((*c).term_caps, (*c).term_ncaps);
 
   status_free(c);
 
-  free(c->title);
-  free((void *)c->cwd);
+  free((*c).title);
+  free((void *)(*c).cwd);
 
-  evtimer_del(&c->repeat_timer);
-  evtimer_del(&c->click_timer);
+  evtimer_del(&(*c).repeat_timer);
+  evtimer_del(&(*c).click_timer);
 
-  key_bindings_unref_table(c->keytable);
+  key_bindings_unref_table((*c).keytable);
 
-  free(c->message_string);
-  if (event_initialized(&c->message_timer)) {
-    evtimer_del(&c->message_timer);
+  free((*c).message_string);
+  if (event_initialized(&(*c).message_timer)) {
+    evtimer_del(&(*c).message_timer);
   }
 
-  free(c->prompt_saved);
-  free(c->prompt_string);
-  free(c->prompt_buffer);
+  free((*c).prompt_saved);
+  free((*c).prompt_string);
+  free((*c).prompt_buffer);
 
   format_lost_client(c);
-  environ_free(c->environ);
+  environ_free((*c).environ);
 
-  proc_remove_peer(c->peer);
-  c->peer = NULL;
+  proc_remove_peer((*c).peer);
+  (*c).peer = NULL;
 
-  if (c->out_fd != -1) {
-    close(c->out_fd);
+  if ((*c).out_fd != -1) {
+    close((*c).out_fd);
   }
-  if (c->fd != -1) {
-    close(c->fd);
-    c->fd = -1;
+  if ((*c).fd != -1) {
+    close((*c).fd);
+    (*c).fd = -1;
   }
   server_client_unref(c);
 
@@ -482,10 +477,10 @@ void server_client_lost(struct client *c) {
 
 /* Remove reference from a client. */
 void server_client_unref(struct client *c) {
-  log_debug("unref client %p (%d references)", c, c->references);
+  log_debug("unref client %p (%d references)", c, (*c).references);
 
-  c->references--;
-  if (c->references == 0) {
+  (*c).references -= 1;
+  if ((*c).references == 0) {
     event_once(-1, EV_TIMEOUT, server_client_free, c, NULL);
   }
 }
@@ -495,47 +490,47 @@ static void server_client_free(__unused int fd, __unused short events,
                                void *arg) {
   struct client *c = arg;
 
-  log_debug("free client %p (%d references)", c, c->references);
+  log_debug("free client %p (%d references)", c, (*c).references);
 
-  cmdq_free(c->queue);
+  cmdq_free((*c).queue);
 
-  if (c->references == 0) {
-    free((void *)c->name);
+  if ((*c).references == 0) {
+    free((void *)(*c).name);
     free(c);
   }
 }
 
 /* Suspend a client. */
 void server_client_suspend(struct client *c) {
-  struct session *s = c->session;
+  struct session *s = (*c).session;
 
-  if (s == NULL || (c->flags & CLIENT_UNATTACHEDFLAGS)) {
+  if (s == NULL || ((*c).flags & CLIENT_UNATTACHEDFLAGS)) {
     return;
   }
 
-  tty_stop_tty(&c->tty);
-  c->flags |= CLIENT_SUSPENDED;
-  proc_send(c->peer, MSG_SUSPEND, -1, NULL, 0);
+  tty_stop_tty(&(*c).tty);
+  (*c).flags |= CLIENT_SUSPENDED;
+  proc_send((*c).peer, MSG_SUSPEND, -1, NULL, 0);
 }
 
 /* Detach a client. */
 void server_client_detach(struct client *c, enum msgtype msgtype) {
-  struct session *s = c->session;
+  struct session *s = (*c).session;
 
-  if (s == NULL || (c->flags & CLIENT_NODETACHFLAGS)) {
+  if (s == NULL || ((*c).flags & CLIENT_NODETACHFLAGS)) {
     return;
   }
 
-  c->flags |= CLIENT_EXIT;
+  (*c).flags |= CLIENT_EXIT;
 
-  c->exit_type = CLIENT_EXIT_DETACH;
-  c->exit_msgtype = msgtype;
-  c->exit_session = xstrdup(s->name);
+  (*c).exit_type = CLIENT_EXIT_DETACH;
+  (*c).exit_msgtype = msgtype;
+  (*c).exit_session = xstrdup((*s).name);
 }
 
 /* Execute command to replace a client. */
 void server_client_exec(struct client *c, const char *cmd) {
-  struct session *s = c->session;
+  struct session *s = (*c).session;
   char *msg;
   const char *shell;
   size_t cmdsize, shellsize;
@@ -546,7 +541,7 @@ void server_client_exec(struct client *c, const char *cmd) {
   cmdsize = strlen(cmd) + 1;
 
   if (s != NULL) {
-    shell = options_get_string(s->options, "default-shell");
+    shell = options_get_string((*s).options, "default-shell");
   } else {
     shell = options_get_string(global_s_options, "default-shell");
   }
@@ -559,15 +554,15 @@ void server_client_exec(struct client *c, const char *cmd) {
   memcpy(msg, cmd, cmdsize);
   memcpy(msg + cmdsize, shell, shellsize);
 
-  proc_send(c->peer, MSG_EXEC, -1, msg, cmdsize + shellsize);
+  proc_send((*c).peer, MSG_EXEC, -1, msg, cmdsize + shellsize);
   free(msg);
 }
 
 /* Check for mouse keys. */
 static key_code server_client_check_mouse(struct client *c,
                                           struct key_event *event) {
-  struct mouse_event *m = &event->m;
-  struct session *s = c->session, *fs;
+  struct mouse_event *m = &(*event).m;
+  struct session *s = (*c).session, *fs;
   struct winlink *fwl;
   struct window_pane *wp, *fwp;
   u_int x, y, b, sx, sy, px, py;
@@ -596,61 +591,61 @@ static key_code server_client_check_mouse(struct client *c,
     BORDER
   } where = NOWHERE;
 
-  log_debug("%s mouse %02x at %u,%u (last %u,%u) (%d)", c->name, m->b, m->x,
-            m->y, m->lx, m->ly, c->tty.mouse_drag_flag);
+  log_debug("%s mouse %02x at %u,%u (last %u,%u) (%d)", (*c).name, (*m).b,
+            (*m).x, (*m).y, (*m).lx, (*m).ly, (*c).tty.mouse_drag_flag);
 
   /* What type of event is this? */
-  if (event->key == KEYC_DOUBLECLICK) {
+  if ((*event).key == KEYC_DOUBLECLICK) {
     type = DOUBLE;
-    x = m->x, y = m->y, b = m->b;
+    x = (*m).x, y = (*m).y, b = (*m).b;
     ignore = 1;
     log_debug("double-click at %u,%u", x, y);
-  } else if ((m->sgr_type != ' ' && MOUSE_DRAG(m->sgr_b) &&
-              MOUSE_RELEASE(m->sgr_b)) ||
-             (m->sgr_type == ' ' && MOUSE_DRAG(m->b) && MOUSE_RELEASE(m->b) &&
-              MOUSE_RELEASE(m->lb))) {
+  } else if (((*m).sgr_type != ' ' && MOUSE_DRAG((*m).sgr_b) &&
+              MOUSE_RELEASE((*m).sgr_b)) ||
+             ((*m).sgr_type == ' ' && MOUSE_DRAG((*m).b) &&
+              MOUSE_RELEASE((*m).b) && MOUSE_RELEASE((*m).lb))) {
     type = MOVE;
-    x = m->x, y = m->y, b = 0;
+    x = (*m).x, y = (*m).y, b = 0;
     log_debug("move at %u,%u", x, y);
-  } else if (MOUSE_DRAG(m->b)) {
+  } else if (MOUSE_DRAG((*m).b)) {
     type = DRAG;
-    if (c->tty.mouse_drag_flag) {
-      x = m->x, y = m->y, b = m->b;
-      if (x == m->lx && y == m->ly) {
+    if ((*c).tty.mouse_drag_flag) {
+      x = (*m).x, y = (*m).y, b = (*m).b;
+      if (x == (*m).lx && y == (*m).ly) {
         return KEYC_UNKNOWN;
       }
       log_debug("drag update at %u,%u", x, y);
     } else {
-      x = m->lx, y = m->ly, b = m->lb;
+      x = (*m).lx, y = (*m).ly, b = (*m).lb;
       log_debug("drag start at %u,%u", x, y);
     }
-  } else if (MOUSE_WHEEL(m->b)) {
+  } else if (MOUSE_WHEEL((*m).b)) {
     type = WHEEL;
-    x = m->x, y = m->y, b = m->b;
+    x = (*m).x, y = (*m).y, b = (*m).b;
     log_debug("wheel at %u,%u", x, y);
-  } else if (MOUSE_RELEASE(m->b)) {
+  } else if (MOUSE_RELEASE((*m).b)) {
     type = UP;
-    x = m->x, y = m->y, b = m->lb;
-    if (m->sgr_type == 'm') {
-      b = m->sgr_b;
+    x = (*m).x, y = (*m).y, b = (*m).lb;
+    if ((*m).sgr_type == 'm') {
+      b = (*m).sgr_b;
     }
     log_debug("up at %u,%u", x, y);
   } else {
-    if (c->flags & CLIENT_DOUBLECLICK) {
-      evtimer_del(&c->click_timer);
-      c->flags &= ~CLIENT_DOUBLECLICK;
-      if (m->b == c->click_button) {
+    if ((*c).flags & CLIENT_DOUBLECLICK) {
+      evtimer_del(&(*c).click_timer);
+      (*c).flags &= ~CLIENT_DOUBLECLICK;
+      if ((*m).b == (*c).click_button) {
         type = SECOND;
-        x = m->x, y = m->y, b = m->b;
+        x = (*m).x, y = (*m).y, b = (*m).b;
         log_debug("second-click at %u,%u", x, y);
-        c->flags |= CLIENT_TRIPLECLICK;
+        (*c).flags |= CLIENT_TRIPLECLICK;
       }
-    } else if (c->flags & CLIENT_TRIPLECLICK) {
-      evtimer_del(&c->click_timer);
-      c->flags &= ~CLIENT_TRIPLECLICK;
-      if (m->b == c->click_button) {
+    } else if ((*c).flags & CLIENT_TRIPLECLICK) {
+      evtimer_del(&(*c).click_timer);
+      (*c).flags &= ~CLIENT_TRIPLECLICK;
+      if ((*m).b == (*c).click_button) {
         type = TRIPLE;
-        x = m->x, y = m->y, b = m->b;
+        x = (*m).x, y = (*m).y, b = (*m).b;
         log_debug("triple-click at %u,%u", x, y);
         goto have_event;
       }
@@ -659,20 +654,20 @@ static key_code server_client_check_mouse(struct client *c,
     /* DOWN is the only remaining event type. */
     if (type == NOTYPE) {
       type = DOWN;
-      x = m->x, y = m->y, b = m->b;
+      x = (*m).x, y = (*m).y, b = (*m).b;
       log_debug("down at %u,%u", x, y);
-      c->flags |= CLIENT_DOUBLECLICK;
+      (*c).flags |= CLIENT_DOUBLECLICK;
     }
 
     if (KEYC_CLICK_TIMEOUT != 0) {
-      memcpy(&c->click_event, m, sizeof c->click_event);
-      c->click_button = m->b;
+      memcpy(&(*c).click_event, m, sizeof(*c).click_event);
+      (*c).click_button = (*m).b;
 
       log_debug("click timer started");
       tv.tv_sec = KEYC_CLICK_TIMEOUT / 1000;
       tv.tv_usec = (KEYC_CLICK_TIMEOUT % 1000) * 1000L;
-      evtimer_del(&c->click_timer);
-      evtimer_add(&c->click_timer, &tv);
+      evtimer_del(&(*c).click_timer);
+      evtimer_add(&(*c).click_timer, &tv);
     }
   }
 
@@ -682,21 +677,21 @@ have_event:
   }
 
   /* Save the session. */
-  m->s = s->id;
-  m->w = -1;
-  m->wp = -1;
-  m->ignore = ignore;
+  (*m).s = (*s).id;
+  (*m).w = -1;
+  (*m).wp = -1;
+  (*m).ignore = ignore;
 
   /* Is this on the status line? */
-  m->statusat = status_at_line(c);
-  m->statuslines = status_line_size(c);
-  if (m->statusat != -1 && y >= (u_int)m->statusat &&
-      y < m->statusat + m->statuslines) {
-    sr = status_get_range(c, x, y - m->statusat);
+  (*m).statusat = status_at_line(c);
+  (*m).statuslines = status_line_size(c);
+  if ((*m).statusat != -1 && y >= (u_int)(*m).statusat &&
+      y < (*m).statusat + (*m).statuslines) {
+    sr = status_get_range(c, x, y - (*m).statusat);
     if (sr == NULL) {
       where = STATUS_DEFAULT;
     } else {
-      switch (sr->type) {
+      switch ((*sr).type) {
       case STYLE_RANGE_NONE:
         return KEYC_UNKNOWN;
       case STYLE_RANGE_LEFT:
@@ -708,33 +703,33 @@ have_event:
         where = STATUS_RIGHT;
         break;
       case STYLE_RANGE_PANE:
-        fwp = window_pane_find_by_id(sr->argument);
+        fwp = window_pane_find_by_id((*sr).argument);
         if (fwp == NULL) {
           return KEYC_UNKNOWN;
         }
-        m->wp = sr->argument;
+        (*m).wp = (*sr).argument;
 
-        log_debug("mouse range: pane %%%u", m->wp);
+        log_debug("mouse range: pane %%%u", (*m).wp);
         where = STATUS;
         break;
       case STYLE_RANGE_WINDOW:
-        fwl = winlink_find_by_index(&s->windows, sr->argument);
+        fwl = winlink_find_by_index(&(*s).windows, (*sr).argument);
         if (fwl == NULL) {
           return KEYC_UNKNOWN;
         }
-        m->w = fwl->window->id;
+        (*m).w = (*(*fwl).window).id;
 
-        log_debug("mouse range: window @%u", m->w);
+        log_debug("mouse range: window @%u", (*m).w);
         where = STATUS;
         break;
       case STYLE_RANGE_SESSION:
-        fs = session_find_by_id(sr->argument);
+        fs = session_find_by_id((*sr).argument);
         if (fs == NULL) {
           return KEYC_UNKNOWN;
         }
-        m->s = sr->argument;
+        (*m).s = (*sr).argument;
 
-        log_debug("mouse range: session $%u", m->s);
+        log_debug("mouse range: session $%u", (*m).s);
         where = STATUS;
         break;
       case STYLE_RANGE_USER:
@@ -747,30 +742,30 @@ have_event:
   /* Not on status line. Adjust position and check for border or pane. */
   if (where == NOWHERE) {
     px = x;
-    if (m->statusat == 0 && y >= m->statuslines) {
-      py = y - m->statuslines;
-    } else if (m->statusat > 0 && y >= (u_int)m->statusat) {
-      py = m->statusat - 1;
+    if ((*m).statusat == 0 && y >= (*m).statuslines) {
+      py = y - (*m).statuslines;
+    } else if ((*m).statusat > 0 && y >= (u_int)(*m).statusat) {
+      py = (*m).statusat - 1;
     } else {
       py = y;
     }
 
-    tty_window_offset(&c->tty, &m->ox, &m->oy, &sx, &sy);
-    log_debug("mouse window @%u at %u,%u (%ux%u)", s->curw->window->id, m->ox,
-              m->oy, sx, sy);
+    tty_window_offset(&(*c).tty, &(*m).ox, &(*m).oy, &sx, &sy);
+    log_debug("mouse window @%u at %u,%u (%ux%u)", (*(*(*s).curw).window).id,
+              (*m).ox, (*m).oy, sx, sy);
     if (px > sx || py > sy) {
       return KEYC_UNKNOWN;
     }
-    px = px + m->ox;
-    py = py + m->oy;
+    px = px + (*m).ox;
+    py = py + (*m).oy;
 
     /* Try the pane borders if not zoomed. */
-    if (~s->curw->window->flags & WINDOW_ZOOMED) {
-      TAILQ_FOREACH(wp, &s->curw->window->panes, entry) {
-        if ((wp->xoff + wp->sx == px && wp->yoff <= 1 + py &&
-             wp->yoff + wp->sy >= py) ||
-            (wp->yoff + wp->sy == py && wp->xoff <= 1 + px &&
-             wp->xoff + wp->sx >= px)) {
+    if (~(*(*(*s).curw).window).flags & WINDOW_ZOOMED) {
+      TAILQ_FOREACH(wp, &(*(*(*s).curw).window).panes, entry) {
+        if (((*wp).xoff + (*wp).sx == px && (*wp).yoff <= 1 + py &&
+             (*wp).yoff + (*wp).sy >= py) ||
+            ((*wp).yoff + (*wp).sy == py && (*wp).xoff <= 1 + px &&
+             (*wp).xoff + (*wp).sx >= px)) {
           break;
         }
       }
@@ -781,7 +776,7 @@ have_event:
 
     /* Otherwise try inside the pane. */
     if (where == NOWHERE) {
-      wp = window_get_active_at(s->curw->window, px, py);
+      wp = window_get_active_at((*(*s).curw).window, px, py);
       if (wp != NULL) {
         where = PANE;
       } else {
@@ -789,28 +784,28 @@ have_event:
       }
     }
     if (where == PANE) {
-      log_debug("mouse %u,%u on pane %%%u", x, y, wp->id);
+      log_debug("mouse %u,%u on pane %%%u", x, y, (*wp).id);
     } else if (where == BORDER) {
-      log_debug("mouse on pane %%%u border", wp->id);
+      log_debug("mouse on pane %%%u border", (*wp).id);
     }
-    m->wp = wp->id;
-    m->w = wp->window->id;
+    (*m).wp = (*wp).id;
+    (*m).w = (*(*wp).window).id;
   }
 
   /* Stop dragging if needed. */
-  if (type != DRAG && type != WHEEL && c->tty.mouse_drag_flag != 0) {
-    if (c->tty.mouse_drag_release != NULL) {
-      c->tty.mouse_drag_release(c, m);
+  if (type != DRAG && type != WHEEL && (*c).tty.mouse_drag_flag != 0) {
+    if ((*c).tty.mouse_drag_release != NULL) {
+      (*c).tty.mouse_drag_release(c, m);
     }
 
-    c->tty.mouse_drag_update = NULL;
-    c->tty.mouse_drag_release = NULL;
+    (*c).tty.mouse_drag_update = NULL;
+    (*c).tty.mouse_drag_release = NULL;
 
     /*
      * End a mouse drag by passing a MouseDragEnd key corresponding
      * to the button that started the drag.
      */
-    switch (c->tty.mouse_drag_flag - 1) {
+    switch ((*c).tty.mouse_drag_flag - 1) {
     case MOUSE_BUTTON_1:
       if (where == PANE) {
         key = KEYC_MOUSEDRAGEND1_PANE;
@@ -995,7 +990,7 @@ have_event:
       key = KEYC_MOUSE;
       break;
     }
-    c->tty.mouse_drag_flag = 0;
+    (*c).tty.mouse_drag_flag = 0;
     goto out;
   }
 
@@ -1025,7 +1020,7 @@ have_event:
     }
     break;
   case DRAG:
-    if (c->tty.mouse_drag_update != NULL) {
+    if ((*c).tty.mouse_drag_update != NULL) {
       key = KEYC_DRAGGING;
     } else {
       switch (MOUSE_BUTTONS(b)) {
@@ -1216,7 +1211,7 @@ have_event:
      * Begin a drag by setting the flag to a non-zero value that
      * corresponds to the mouse button in use.
      */
-    c->tty.mouse_drag_flag = MOUSE_BUTTONS(b) + 1;
+    (*c).tty.mouse_drag_flag = MOUSE_BUTTONS(b) + 1;
     break;
   case WHEEL:
     if (MOUSE_BUTTONS(b) == MOUSE_WHEEL_UP) {
@@ -2205,18 +2200,18 @@ out:
 /* Is this a bracket paste key? */
 static int server_client_is_bracket_pasting(struct client *c, key_code key) {
   if (key == KEYC_PASTE_START) {
-    c->flags |= CLIENT_BRACKETPASTING;
-    log_debug("%s: bracket paste on", c->name);
+    (*c).flags |= CLIENT_BRACKETPASTING;
+    log_debug("%s: bracket paste on", (*c).name);
     return 1;
   }
 
   if (key == KEYC_PASTE_END) {
-    c->flags &= ~CLIENT_BRACKETPASTING;
-    log_debug("%s: bracket paste off", c->name);
+    (*c).flags &= ~CLIENT_BRACKETPASTING;
+    log_debug("%s: bracket paste off", (*c).name);
     return 1;
   }
 
-  return !!(c->flags & CLIENT_BRACKETPASTING);
+  return !!((*c).flags & CLIENT_BRACKETPASTING);
 }
 
 /* Is this fast enough to probably be a paste? */
@@ -2224,22 +2219,22 @@ static int server_client_assume_paste(struct session *s) {
   struct timeval tv;
   int t;
 
-  if ((t = options_get_number(s->options, "assume-paste-time")) == 0) {
+  if ((t = options_get_number((*s).options, "assume-paste-time")) == 0) {
     return 0;
   }
 
-  timersub(&s->activity_time, &s->last_activity_time, &tv);
+  timersub(&(*s).activity_time, &(*s).last_activity_time, &tv);
   if (tv.tv_sec == 0 && tv.tv_usec < t * 1000) {
-    log_debug("session %s pasting (flag %d)", s->name,
-              !!(s->flags & SESSION_PASTING));
-    if (s->flags & SESSION_PASTING) {
+    log_debug("session %s pasting (flag %d)", (*s).name,
+              !!((*s).flags & SESSION_PASTING));
+    if ((*s).flags & SESSION_PASTING) {
       return 1;
     }
-    s->flags |= SESSION_PASTING;
+    (*s).flags |= SESSION_PASTING;
     return 0;
   }
-  log_debug("session %s not pasting", s->name);
-  s->flags &= ~SESSION_PASTING;
+  log_debug("session %s not pasting", (*s).name);
+  (*s).flags &= ~SESSION_PASTING;
   return 0;
 }
 
@@ -2247,17 +2242,17 @@ static int server_client_assume_paste(struct session *s) {
 static void server_client_update_latest(struct client *c) {
   struct window *w;
 
-  if (c->session == NULL) {
+  if ((*c).session == NULL) {
     return;
   }
-  w = c->session->curw->window;
+  w = (*(*(*c).session).curw).window;
 
-  if (w->latest == c) {
+  if ((*w).latest == c) {
     return;
   }
-  w->latest = c;
+  (*w).latest = c;
 
-  if (options_get_number(w->options, "window-size") == WINDOW_SIZE_LATEST) {
+  if (options_get_number((*w).options, "window-size") == WINDOW_SIZE_LATEST) {
     recalculate_size(w, 0);
   }
 
@@ -2272,9 +2267,9 @@ static enum cmd_retval server_client_key_callback(struct cmdq_item *item,
                                                   void *data) {
   struct client *c = cmdq_get_client(item);
   struct key_event *event = data;
-  key_code key = event->key;
-  struct mouse_event *m = &event->m;
-  struct session *s = c->session;
+  key_code key = (*event).key;
+  struct mouse_event *m = &(*event).m;
+  struct session *s = (*c).session;
   struct winlink *wl;
   struct window_pane *wp;
   struct window_mode_entry *wme;
@@ -2287,21 +2282,21 @@ static enum cmd_retval server_client_key_callback(struct cmdq_item *item,
   key_code key0, prefix, prefix2;
 
   /* Check the client is good to accept input. */
-  if (s == NULL || (c->flags & CLIENT_UNATTACHEDFLAGS)) {
+  if (s == NULL || ((*c).flags & CLIENT_UNATTACHEDFLAGS)) {
     goto out;
   }
-  wl = s->curw;
+  wl = (*s).curw;
 
   /* Update the activity timer. */
-  if (gettimeofday(&c->activity_time, NULL) != 0) {
+  if (gettimeofday(&(*c).activity_time, NULL) != 0) {
     fatal("gettimeofday failed");
   }
-  session_update_activity(s, &c->activity_time);
+  session_update_activity(s, &(*c).activity_time);
 
   /* Check for mouse keys. */
-  m->valid = 0;
+  (*m).valid = 0;
   if (key == KEYC_MOUSE || key == KEYC_DOUBLECLICK) {
-    if (c->flags & CLIENT_READONLY) {
+    if ((*c).flags & CLIENT_READONLY) {
       goto out;
     }
     key = server_client_check_mouse(c, event);
@@ -2309,18 +2304,18 @@ static enum cmd_retval server_client_key_callback(struct cmdq_item *item,
       goto out;
     }
 
-    m->valid = 1;
-    m->key = key;
+    (*m).valid = 1;
+    (*m).key = key;
 
     /*
      * Mouse drag is in progress, so fire the callback (now that
      * the mouse event is valid).
      */
     if ((key & KEYC_MASK_KEY) == KEYC_DRAGGING) {
-      c->tty.mouse_drag_update(c, m);
+      (*c).tty.mouse_drag_update(c, m);
       goto out;
     }
-    event->key = key;
+    (*event).key = key;
   }
 
   /* Find affected pane. */
@@ -2330,7 +2325,7 @@ static enum cmd_retval server_client_key_callback(struct cmdq_item *item,
   wp = fs.wp;
 
   /* Forward mouse keys if disabled. */
-  if (KEYC_IS_MOUSE(key) && !options_get_number(s->options, "mouse")) {
+  if (KEYC_IS_MOUSE(key) && !options_get_number((*s).options, "mouse")) {
     goto forward_key;
   }
 
@@ -2349,11 +2344,12 @@ static enum cmd_retval server_client_key_callback(struct cmdq_item *item,
    * Work out the current key table. If the pane is in a mode, use
    * the mode table instead of the default key table.
    */
-  if (server_client_is_default_key_table(c, c->keytable) && wp != NULL &&
-      (wme = TAILQ_FIRST(&wp->modes)) != NULL && wme->mode->key_table != NULL) {
-    table = key_bindings_get_table(wme->mode->key_table(wme), 1);
+  if (server_client_is_default_key_table(c, (*c).keytable) && wp != NULL &&
+      (wme = TAILQ_FIRST(&(*wp).modes)) != NULL &&
+      (*(*wme).mode).key_table != NULL) {
+    table = key_bindings_get_table((*(*wme).mode).key_table(wme), 1);
   } else {
-    table = c->keytable;
+    table = (*c).keytable;
   }
   first = table;
 
@@ -2362,26 +2358,26 @@ table_changed:
    * The prefix always takes precedence and forces a switch to the prefix
    * table, unless we are already there.
    */
-  prefix = (key_code)options_get_number(s->options, "prefix");
-  prefix2 = (key_code)options_get_number(s->options, "prefix2");
+  prefix = (key_code)options_get_number((*s).options, "prefix");
+  prefix2 = (key_code)options_get_number((*s).options, "prefix2");
   key0 = (key & (KEYC_MASK_KEY | KEYC_MASK_MODIFIERS));
   if ((key0 == (prefix & (KEYC_MASK_KEY | KEYC_MASK_MODIFIERS)) ||
        key0 == (prefix2 & (KEYC_MASK_KEY | KEYC_MASK_MODIFIERS))) &&
-      strcmp(table->name, "prefix") != 0) {
+      strcmp((*table).name, "prefix") != 0) {
     server_client_set_key_table(c, "prefix");
     server_status_client(c);
     goto out;
   }
-  flags = c->flags;
+  flags = (*c).flags;
 
 try_again:
   /* Log key table. */
   if (wp == NULL) {
-    log_debug("key table %s (no pane)", table->name);
+    log_debug("key table %s (no pane)", (*table).name);
   } else {
-    log_debug("key table %s (pane %%%u)", table->name, wp->id);
+    log_debug("key table %s (pane %%%u)", (*table).name, (*wp).id);
   }
-  if (c->flags & CLIENT_REPEAT) {
+  if ((*c).flags & CLIENT_REPEAT) {
     log_debug("currently repeating");
   }
 
@@ -2392,19 +2388,19 @@ try_again:
    * the timeout has been exceeded. Revert to the root table if so.
    */
   prefix_delay = options_get_number(global_options, "prefix-timeout");
-  if (prefix_delay > 0 && strcmp(table->name, "prefix") == 0 &&
+  if (prefix_delay > 0 && strcmp((*table).name, "prefix") == 0 &&
       server_client_key_table_activity_diff(c) > prefix_delay) {
     /*
      * If repeating is active and this is a repeating binding,
      * ignore the timeout.
      */
-    if (bd != NULL && (c->flags & CLIENT_REPEAT) &&
-        (bd->flags & KEY_BINDING_REPEAT)) {
+    if (bd != NULL && ((*c).flags & CLIENT_REPEAT) &&
+        ((*bd).flags & KEY_BINDING_REPEAT)) {
       log_debug("prefix timeout ignored, repeat is active");
     } else {
       log_debug("prefix timeout exceeded");
       server_client_set_key_table(c, NULL);
-      first = table = c->keytable;
+      first = table = (*c).keytable;
       server_status_client(c);
       goto table_changed;
     }
@@ -2417,36 +2413,36 @@ try_again:
      * non-repeating binding was found, stop repeating and try
      * again in the root table.
      */
-    if ((c->flags & CLIENT_REPEAT) && (~bd->flags & KEY_BINDING_REPEAT)) {
-      log_debug("found in key table %s (not repeating)", table->name);
+    if (((*c).flags & CLIENT_REPEAT) && (~(*bd).flags & KEY_BINDING_REPEAT)) {
+      log_debug("found in key table %s (not repeating)", (*table).name);
       server_client_set_key_table(c, NULL);
-      first = table = c->keytable;
-      c->flags &= ~CLIENT_REPEAT;
+      first = table = (*c).keytable;
+      (*c).flags &= ~CLIENT_REPEAT;
       server_status_client(c);
       goto table_changed;
     }
-    log_debug("found in key table %s", table->name);
+    log_debug("found in key table %s", (*table).name);
 
     /*
      * Take a reference to this table to make sure the key binding
      * doesn't disappear.
      */
-    table->references++;
+    (*table).references++;
 
     /*
      * If this is a repeating key, start the timer. Otherwise reset
      * the client back to the root table.
      */
-    xtimeout = options_get_number(s->options, "repeat-time");
-    if (xtimeout != 0 && (bd->flags & KEY_BINDING_REPEAT)) {
-      c->flags |= CLIENT_REPEAT;
+    xtimeout = options_get_number((*s).options, "repeat-time");
+    if (xtimeout != 0 && ((*bd).flags & KEY_BINDING_REPEAT)) {
+      (*c).flags |= CLIENT_REPEAT;
 
       tv.tv_sec = xtimeout / 1000;
       tv.tv_usec = (xtimeout % 1000) * 1000L;
-      evtimer_del(&c->repeat_timer);
-      evtimer_add(&c->repeat_timer, &tv);
+      evtimer_del(&(*c).repeat_timer);
+      evtimer_add(&(*c).repeat_timer, &tv);
     } else {
-      c->flags &= ~CLIENT_REPEAT;
+      (*c).flags &= ~CLIENT_REPEAT;
       server_client_set_key_table(c, NULL);
     }
     server_status_client(c);
@@ -2479,16 +2475,16 @@ try_again:
    * No match in this table. If not in the root table or if repeating
    * switch the client back to the root table and try again.
    */
-  log_debug("not found in key table %s", table->name);
+  log_debug("not found in key table %s", (*table).name);
   if (!server_client_is_default_key_table(c, table) ||
-      (c->flags & CLIENT_REPEAT)) {
+      ((*c).flags & CLIENT_REPEAT)) {
     log_debug("trying in root table");
     server_client_set_key_table(c, NULL);
-    table = c->keytable;
-    if (c->flags & CLIENT_REPEAT) {
+    table = (*c).keytable;
+    if ((*c).flags & CLIENT_REPEAT) {
       first = table;
     }
-    c->flags &= ~CLIENT_REPEAT;
+    (*c).flags &= ~CLIENT_REPEAT;
     server_status_client(c);
     goto table_changed;
   }
@@ -2504,7 +2500,7 @@ try_again:
   }
 
 forward_key:
-  if (c->flags & CLIENT_READONLY) {
+  if ((*c).flags & CLIENT_READONLY) {
     goto out;
   }
   if (wp != NULL) {
@@ -2521,11 +2517,11 @@ out:
 
 /* Handle a key event. */
 int server_client_handle_key(struct client *c, struct key_event *event) {
-  struct session *s = c->session;
+  struct session *s = (*c).session;
   struct cmdq_item *item;
 
   /* Check the client is good to accept input. */
-  if (s == NULL || (c->flags & CLIENT_UNATTACHEDFLAGS)) {
+  if (s == NULL || ((*c).flags & CLIENT_UNATTACHEDFLAGS)) {
     return 0;
   }
 
@@ -2534,15 +2530,15 @@ int server_client_handle_key(struct client *c, struct key_event *event) {
    * case. The queue might be blocked so they need to be processed
    * immediately rather than queued.
    */
-  if (~c->flags & CLIENT_READONLY) {
-    if (c->message_string != NULL) {
-      if (c->message_ignore_keys) {
+  if (~(*c).flags & CLIENT_READONLY) {
+    if ((*c).message_string != NULL) {
+      if ((*c).message_ignore_keys) {
         return 0;
       }
       status_message_clear(c);
     }
-    if (c->overlay_key != NULL) {
-      switch (c->overlay_key(c, c->overlay_data, event)) {
+    if ((*c).overlay_key != NULL) {
+      switch ((*c).overlay_key(c, (*c).overlay_data, event)) {
       case 0:
         return 0;
       case 1:
@@ -2551,8 +2547,8 @@ int server_client_handle_key(struct client *c, struct key_event *event) {
       }
     }
     server_client_clear_overlay(c);
-    if (c->prompt_string != NULL) {
-      if (status_prompt_key(c, event->key) == 0) {
+    if ((*c).prompt_string != NULL) {
+      if (status_prompt_key(c, (*event).key) == 0) {
         return 0;
       }
     }
@@ -2580,7 +2576,7 @@ void server_client_loop(void) {
   /* Check clients. */
   TAILQ_FOREACH(c, &clients, entry) {
     server_client_check_exit(c);
-    if (c->session != NULL) {
+    if ((*c).session != NULL) {
       server_client_check_modes(c);
       server_client_check_redraw(c);
       server_client_reset_state(c);
@@ -2592,12 +2588,12 @@ void server_client_loop(void) {
    * their flags now.
    */
   RB_FOREACH(w, windows, &windows) {
-    TAILQ_FOREACH(wp, &w->panes, entry) {
-      if (wp->fd != -1) {
+    TAILQ_FOREACH(wp, &(*w).panes, entry) {
+      if ((*wp).fd != -1) {
         server_client_check_pane_resize(wp);
         server_client_check_pane_buffer(wp);
       }
-      wp->flags &= ~PANE_REDRAW;
+      (*wp).flags &= ~PANE_REDRAW;
     }
     check_window_name(w);
   }
@@ -2607,12 +2603,12 @@ void server_client_loop(void) {
 static void server_client_check_window_resize(struct window *w) {
   struct winlink *wl;
 
-  if (~w->flags & WINDOW_RESIZE) {
+  if (~(*w).flags & WINDOW_RESIZE) {
     return;
   }
 
-  TAILQ_FOREACH(wl, &w->winlinks, wentry) {
-    if (wl->session->attached != 0 && wl->session->curw == wl) {
+  TAILQ_FOREACH(wl, &(*w).winlinks, wentry) {
+    if ((*(*wl).session).attached != 0 && (*(*wl).session).curw == wl) {
       break;
     }
   }
@@ -2620,8 +2616,8 @@ static void server_client_check_window_resize(struct window *w) {
     return;
   }
 
-  log_debug("%s: resizing window @%u", __func__, w->id);
-  resize_window(w, w->new_sx, w->new_sy, w->new_xpixel, w->new_ypixel);
+  log_debug("%s: resizing window @%u", __func__, (*w).id);
+  resize_window(w, (*w).new_sx, (*w).new_sy, (*w).new_xpixel, (*w).new_ypixel);
 }
 
 /* Resize timer event. */
@@ -2629,8 +2625,8 @@ static void server_client_resize_timer(__unused int fd, __unused short events,
                                        void *data) {
   struct window_pane *wp = data;
 
-  log_debug("%s: %%%u resize timer expired", __func__, wp->id);
-  evtimer_del(&wp->resize_timer);
+  log_debug("%s: %%%u resize timer expired", __func__, (*wp).id);
+  evtimer_del(&(*wp).resize_timer);
 }
 
 /* Check if pane should be resized. */
@@ -2641,20 +2637,21 @@ static void server_client_check_pane_resize(struct window_pane *wp) {
   struct window_pane_resize *last;
   struct timeval tv = {.tv_usec = 250000};
 
-  if (TAILQ_EMPTY(&wp->resize_queue)) {
+  if (TAILQ_EMPTY(&(*wp).resize_queue)) {
     return;
   }
 
-  if (!event_initialized(&wp->resize_timer)) {
-    evtimer_set(&wp->resize_timer, server_client_resize_timer, wp);
+  if (!event_initialized(&(*wp).resize_timer)) {
+    evtimer_set(&(*wp).resize_timer, server_client_resize_timer, wp);
   }
-  if (evtimer_pending(&wp->resize_timer, NULL)) {
+  if (evtimer_pending(&(*wp).resize_timer, NULL)) {
     return;
   }
 
-  log_debug("%s: %%%u needs to be resized", __func__, wp->id);
-  TAILQ_FOREACH(r, &wp->resize_queue, entry) {
-    log_debug("queued resize: %ux%u -> %ux%u", r->osx, r->osy, r->sx, r->sy);
+  log_debug("%s: %%%u needs to be resized", __func__, (*wp).id);
+  TAILQ_FOREACH(r, &(*wp).resize_queue, entry) {
+    log_debug("queued resize: %ux%u -> %ux%u", (*r).osx, (*r).osy, (*r).sx,
+              (*r).sy);
   }
 
   /*
@@ -2670,18 +2667,18 @@ static void server_client_check_pane_resize(struct window_pane *wp) {
    *   redraw. So apply the first and leave the last on the queue for
    *   next time.
    */
-  first = TAILQ_FIRST(&wp->resize_queue);
-  last = TAILQ_LAST(&wp->resize_queue, window_pane_resizes);
+  first = TAILQ_FIRST(&(*wp).resize_queue);
+  last = TAILQ_LAST(&(*wp).resize_queue, window_pane_resizes);
   if (first == last) {
     /* Only one resize. */
-    window_pane_send_resize(wp, first->sx, first->sy);
-    TAILQ_REMOVE(&wp->resize_queue, first, entry);
+    window_pane_send_resize(wp, (*first).sx, (*first).sy);
+    TAILQ_REMOVE(&(*wp).resize_queue, first, entry);
     free(first);
-  } else if (last->sx != first->osx || last->sy != first->osy) {
+  } else if ((*last).sx != (*first).osx || (*last).sy != (*first).osy) {
     /* Multiple resizes ending up with a different size. */
-    window_pane_send_resize(wp, last->sx, last->sy);
-    TAILQ_FOREACH_SAFE(r, &wp->resize_queue, entry, r1) {
-      TAILQ_REMOVE(&wp->resize_queue, r, entry);
+    window_pane_send_resize(wp, (*last).sx, (*last).sy);
+    TAILQ_FOREACH_SAFE(r, &(*wp).resize_queue, entry, r1) {
+      TAILQ_REMOVE(&(*wp).resize_queue, r, entry);
       free(r);
     }
   } else {
@@ -2693,22 +2690,22 @@ static void server_client_check_pane_resize(struct window_pane *wp) {
      * a long delay between the resizes.
      */
     r = TAILQ_PREV(last, window_pane_resizes, entry);
-    window_pane_send_resize(wp, r->sx, r->sy);
-    TAILQ_FOREACH_SAFE(r, &wp->resize_queue, entry, r1) {
+    window_pane_send_resize(wp, (*r).sx, (*r).sy);
+    TAILQ_FOREACH_SAFE(r, &(*wp).resize_queue, entry, r1) {
       if (r == last) {
         break;
       }
-      TAILQ_REMOVE(&wp->resize_queue, r, entry);
+      TAILQ_REMOVE(&(*wp).resize_queue, r, entry);
       free(r);
     }
     tv.tv_usec = 10000;
   }
-  evtimer_add(&wp->resize_timer, &tv);
+  evtimer_add(&(*wp).resize_timer, &tv);
 }
 
 /* Check pane buffer size. */
 static void server_client_check_pane_buffer(struct window_pane *wp) {
-  struct evbuffer *evb = wp->event->input;
+  struct evbuffer *evb = (*(*wp).event).input;
   size_t minimum;
   struct client *c;
   struct window_pane_offset *wpo;
@@ -2720,17 +2717,17 @@ static void server_client_check_pane_buffer(struct window_pane *wp) {
    * Work out the minimum used size. This is the most that can be removed
    * from the buffer.
    */
-  minimum = wp->offset.used;
-  if (wp->pipe_fd != -1 && wp->pipe_offset.used < minimum) {
-    minimum = wp->pipe_offset.used;
+  minimum = (*wp).offset.used;
+  if ((*wp).pipe_fd != -1 && (*wp).pipe_offset.used < minimum) {
+    minimum = (*wp).pipe_offset.used;
   }
   TAILQ_FOREACH(c, &clients, entry) {
-    if (c->session == NULL) {
+    if ((*c).session == NULL) {
       continue;
     }
     attached_clients++;
 
-    if (~c->flags & CLIENT_CONTROL) {
+    if (~(*c).flags & CLIENT_CONTROL) {
       off = 0;
       continue;
     }
@@ -2747,21 +2744,21 @@ static void server_client_check_pane_buffer(struct window_pane *wp) {
 
     window_pane_get_new_data(wp, wpo, &new_size);
     log_debug("%s: %s has %zu bytes used and %zu left for %%%u", __func__,
-              c->name, wpo->used - wp->base_offset, new_size, wp->id);
-    if (wpo->used < minimum) {
-      minimum = wpo->used;
+              (*c).name, (*wpo).used - (*wp).base_offset, new_size, (*wp).id);
+    if ((*wpo).used < minimum) {
+      minimum = (*wpo).used;
     }
   }
   if (attached_clients == 0) {
     off = 0;
   }
-  minimum -= wp->base_offset;
+  minimum -= (*wp).base_offset;
   if (minimum == 0) {
     goto out;
   }
 
   /* Drain the buffer. */
-  log_debug("%s: %%%u has %zu minimum (of %zu) bytes used", __func__, wp->id,
+  log_debug("%s: %%%u has %zu minimum (of %zu) bytes used", __func__, (*wp).id,
             minimum, EVBUFFER_LENGTH(evb));
   evbuffer_drain(evb, minimum);
 
@@ -2769,24 +2766,24 @@ static void server_client_check_pane_buffer(struct window_pane *wp) {
    * Adjust the base offset. If it would roll over, all the offsets into
    * the buffer need to be adjusted.
    */
-  if (wp->base_offset > SIZE_MAX - minimum) {
-    log_debug("%s: %%%u base offset has wrapped", __func__, wp->id);
-    wp->offset.used -= wp->base_offset;
-    if (wp->pipe_fd != -1) {
-      wp->pipe_offset.used -= wp->base_offset;
+  if ((*wp).base_offset > SIZE_MAX - minimum) {
+    log_debug("%s: %%%u base offset has wrapped", __func__, (*wp).id);
+    (*wp).offset.used -= (*wp).base_offset;
+    if ((*wp).pipe_fd != -1) {
+      (*wp).pipe_offset.used -= (*wp).base_offset;
     }
     TAILQ_FOREACH(c, &clients, entry) {
-      if (c->session == NULL || (~c->flags & CLIENT_CONTROL)) {
+      if ((*c).session == NULL || (~(*c).flags & CLIENT_CONTROL)) {
         continue;
       }
       wpo = control_pane_offset(c, wp, &flag);
       if (wpo != NULL && !flag) {
-        wpo->used -= wp->base_offset;
+        (*wpo).used -= (*wp).base_offset;
       }
     }
-    wp->base_offset = minimum;
+    (*wp).base_offset = minimum;
   } else {
-    wp->base_offset += minimum;
+    (*wp).base_offset += minimum;
   }
 
 out:
@@ -2796,11 +2793,11 @@ out:
    * clients, all of which are control clients which are not able to
    * accept any more data.
    */
-  log_debug("%s: pane %%%u is %s", __func__, wp->id, off ? "off" : "on");
+  log_debug("%s: pane %%%u is %s", __func__, (*wp).id, off ? "off" : "on");
   if (off) {
-    bufferevent_disable(wp->event, EV_READ);
+    bufferevent_disable((*wp).event, EV_READ);
   } else {
-    bufferevent_enable(wp->event, EV_READ);
+    bufferevent_enable((*wp).event, EV_READ);
   }
 }
 
@@ -2814,35 +2811,35 @@ out:
  * things that are already in their default state.
  */
 static void server_client_reset_state(struct client *c) {
-  struct tty *tty = &c->tty;
-  struct window *w = c->session->curw->window;
+  struct tty *tty = &(*c).tty;
+  struct window *w = (*(*(*c).session).curw).window;
   struct window_pane *wp = server_client_get_pane(c), *loop;
   struct screen *s = NULL;
-  struct options *oo = c->session->options;
+  struct options *oo = (*(*c).session).options;
   int mode = 0, cursor, flags, n;
   u_int cx = 0, cy = 0, ox, oy, sx, sy;
 
-  if (c->flags & (CLIENT_CONTROL | CLIENT_SUSPENDED)) {
+  if ((*c).flags & (CLIENT_CONTROL | CLIENT_SUSPENDED)) {
     return;
   }
 
   /* Disable the block flag. */
-  flags = (tty->flags & TTY_BLOCK);
-  tty->flags &= ~TTY_BLOCK;
+  flags = ((*tty).flags & TTY_BLOCK);
+  (*tty).flags &= ~TTY_BLOCK;
 
   /* Get mode from overlay if any, else from screen. */
-  if (c->overlay_draw != NULL) {
-    if (c->overlay_mode != NULL) {
-      s = c->overlay_mode(c, c->overlay_data, &cx, &cy);
+  if ((*c).overlay_draw != NULL) {
+    if ((*c).overlay_mode != NULL) {
+      s = (*c).overlay_mode(c, (*c).overlay_data, &cx, &cy);
     }
   } else {
-    s = wp->screen;
+    s = (*wp).screen;
   }
   if (s != NULL) {
-    mode = s->mode;
+    mode = (*s).mode;
   }
   if (log_get_level() != 0) {
-    log_debug("%s: client %s mode %s", __func__, c->name,
+    log_debug("%s: client %s mode %s", __func__, (*c).name,
               screen_mode_to_string(mode));
   }
 
@@ -2851,29 +2848,29 @@ static void server_client_reset_state(struct client *c) {
   tty_margin_off(tty);
 
   /* Move cursor to pane cursor and offset. */
-  if (c->prompt_string != NULL) {
-    n = options_get_number(c->session->options, "status-position");
+  if ((*c).prompt_string != NULL) {
+    n = options_get_number((*(*c).session).options, "status-position");
     if (n == 0) {
       cy = 0;
     } else {
       n = status_line_size(c);
       if (n == 0) {
-        cy = tty->sy - 1;
+        cy = (*tty).sy - 1;
       } else {
-        cy = tty->sy - n;
+        cy = (*tty).sy - n;
       }
     }
-    cx = c->prompt_cursor;
+    cx = (*c).prompt_cursor;
     mode &= ~MODE_CURSOR;
-  } else if (c->overlay_draw == NULL) {
+  } else if ((*c).overlay_draw == NULL) {
     cursor = 0;
     tty_window_offset(tty, &ox, &oy, &sx, &sy);
-    if (wp->xoff + s->cx >= ox && wp->xoff + s->cx <= ox + sx &&
-        wp->yoff + s->cy >= oy && wp->yoff + s->cy <= oy + sy) {
+    if ((*wp).xoff + (*s).cx >= ox && (*wp).xoff + (*s).cx <= ox + sx &&
+        (*wp).yoff + (*s).cy >= oy && (*wp).yoff + (*s).cy <= oy + sy) {
       cursor = 1;
 
-      cx = wp->xoff + s->cx - ox;
-      cy = wp->yoff + s->cy - oy;
+      cx = (*wp).xoff + (*s).cx - ox;
+      cy = (*wp).yoff + (*s).cy - oy;
 
       if (status_at_line(c) == 0) {
         cy += status_line_size(c);
@@ -2891,10 +2888,10 @@ static void server_client_reset_state(struct client *c) {
    * mode.
    */
   if (options_get_number(oo, "mouse")) {
-    if (c->overlay_draw == NULL) {
+    if ((*c).overlay_draw == NULL) {
       mode &= ~ALL_MOUSE_MODES;
-      TAILQ_FOREACH(loop, &w->panes, entry) {
-        if (loop->screen->mode & MODE_MOUSE_ALL) {
+      TAILQ_FOREACH(loop, &(*w).panes, entry) {
+        if ((*(*loop).screen).mode & MODE_MOUSE_ALL) {
           mode |= MODE_MOUSE_ALL;
         }
       }
@@ -2905,7 +2902,7 @@ static void server_client_reset_state(struct client *c) {
   }
 
   /* Clear bracketed paste mode if at the prompt. */
-  if (c->overlay_draw == NULL && c->prompt_string != NULL) {
+  if ((*c).overlay_draw == NULL && (*c).prompt_string != NULL) {
     mode &= ~MODE_BRACKETPASTE;
   }
 
@@ -2915,7 +2912,7 @@ static void server_client_reset_state(struct client *c) {
 
   /* All writing must be done, send a sync end (if it was started). */
   tty_sync_end(tty);
-  tty->flags |= flags;
+  (*tty).flags |= flags;
 }
 
 /* Repeat time callback. */
@@ -2923,9 +2920,9 @@ static void server_client_repeat_timer(__unused int fd, __unused short events,
                                        void *data) {
   struct client *c = data;
 
-  if (c->flags & CLIENT_REPEAT) {
+  if ((*c).flags & CLIENT_REPEAT) {
     server_client_set_key_table(c, NULL);
-    c->flags &= ~CLIENT_REPEAT;
+    (*c).flags &= ~CLIENT_REPEAT;
     server_status_client(c);
   }
 }
@@ -2938,73 +2935,73 @@ static void server_client_click_timer(__unused int fd, __unused short events,
 
   log_debug("click timer expired");
 
-  if (c->flags & CLIENT_TRIPLECLICK) {
+  if ((*c).flags & CLIENT_TRIPLECLICK) {
     /*
      * Waiting for a third click that hasn't happened, so this must
      * have been a double click.
      */
     event = xmalloc(sizeof *event);
-    event->key = KEYC_DOUBLECLICK;
-    memcpy(&event->m, &c->click_event, sizeof event->m);
+    (*event).key = KEYC_DOUBLECLICK;
+    memcpy(&(*event).m, &(*c).click_event, sizeof(*event).m);
     if (!server_client_handle_key(c, event)) {
       free(event);
     }
   }
-  c->flags &= ~(CLIENT_DOUBLECLICK | CLIENT_TRIPLECLICK);
+  (*c).flags &= ~(CLIENT_DOUBLECLICK | CLIENT_TRIPLECLICK);
 }
 
 /* Check if client should be exited. */
 static void server_client_check_exit(struct client *c) {
   struct client_file *cf;
-  const char *name = c->exit_session;
+  const char *name = (*c).exit_session;
   char *data;
   size_t size, msize;
 
-  if (c->flags & (CLIENT_DEAD | CLIENT_EXITED)) {
+  if ((*c).flags & (CLIENT_DEAD | CLIENT_EXITED)) {
     return;
   }
-  if (~c->flags & CLIENT_EXIT) {
+  if (~(*c).flags & CLIENT_EXIT) {
     return;
   }
 
-  if (c->flags & CLIENT_CONTROL) {
+  if ((*c).flags & CLIENT_CONTROL) {
     control_discard(c);
     if (!control_all_done(c)) {
       return;
     }
   }
-  RB_FOREACH(cf, client_files, &c->files) {
-    if (EVBUFFER_LENGTH(cf->buffer) != 0) {
+  RB_FOREACH(cf, client_files, &(*c).files) {
+    if (EVBUFFER_LENGTH((*cf).buffer) != 0) {
       return;
     }
   }
-  c->flags |= CLIENT_EXITED;
+  (*c).flags |= CLIENT_EXITED;
 
-  switch (c->exit_type) {
+  switch ((*c).exit_type) {
   case CLIENT_EXIT_RETURN:
-    if (c->exit_message != NULL) {
-      msize = strlen(c->exit_message) + 1;
+    if ((*c).exit_message != NULL) {
+      msize = strlen((*c).exit_message) + 1;
     } else {
       msize = 0;
     }
-    size = (sizeof c->retval) + msize;
+    size = (sizeof(*c).retval) + msize;
     data = xmalloc(size);
-    memcpy(data, &c->retval, sizeof c->retval);
-    if (c->exit_message != NULL) {
-      memcpy(data + sizeof c->retval, c->exit_message, msize);
+    memcpy(data, &(*c).retval, sizeof(*c).retval);
+    if ((*c).exit_message != NULL) {
+      memcpy(data + sizeof(*c).retval, (*c).exit_message, msize);
     }
-    proc_send(c->peer, MSG_EXIT, -1, data, size);
+    proc_send((*c).peer, MSG_EXIT, -1, data, size);
     free(data);
     break;
   case CLIENT_EXIT_SHUTDOWN:
-    proc_send(c->peer, MSG_SHUTDOWN, -1, NULL, 0);
+    proc_send((*c).peer, MSG_SHUTDOWN, -1, NULL, 0);
     break;
   case CLIENT_EXIT_DETACH:
-    proc_send(c->peer, c->exit_msgtype, -1, name, strlen(name) + 1);
+    proc_send((*c).peer, (*c).exit_msgtype, -1, name, strlen(name) + 1);
     break;
   }
-  free(c->exit_session);
-  free(c->exit_message);
+  free((*c).exit_session);
+  free((*c).exit_message);
 }
 
 /* Redraw timer callback. */
@@ -3018,31 +3015,31 @@ static void server_client_redraw_timer(__unused int fd, __unused short events,
  * updated and it is done when the status line is redrawn.
  */
 static void server_client_check_modes(struct client *c) {
-  struct window *w = c->session->curw->window;
+  struct window *w = (*(*(*c).session).curw).window;
   struct window_pane *wp;
   struct window_mode_entry *wme;
 
-  if (c->flags & (CLIENT_CONTROL | CLIENT_SUSPENDED)) {
+  if ((*c).flags & (CLIENT_CONTROL | CLIENT_SUSPENDED)) {
     return;
   }
-  if (~c->flags & CLIENT_REDRAWSTATUS) {
+  if (~(*c).flags & CLIENT_REDRAWSTATUS) {
     return;
   }
-  TAILQ_FOREACH(wp, &w->panes, entry) {
-    wme = TAILQ_FIRST(&wp->modes);
-    if (wme != NULL && wme->mode->update != NULL) {
-      wme->mode->update(wme);
+  TAILQ_FOREACH(wp, &(*w).panes, entry) {
+    wme = TAILQ_FIRST(&(*wp).modes);
+    if (wme != NULL && (*(*wme).mode).update != NULL) {
+      (*(*wme).mode).update(wme);
     }
   }
 }
 
 /* Check for client redraws. */
 static void server_client_check_redraw(struct client *c) {
-  struct session *s = c->session;
-  struct tty *tty = &c->tty;
-  struct window *w = c->session->curw->window;
+  struct session *s = (*c).session;
+  struct tty *tty = &(*c).tty;
+  struct window *w = (*(*(*c).session).curw).window;
   struct window_pane *wp;
-  int needed, tty_flags, mode = tty->mode;
+  int needed, tty_flags, mode = (*tty).mode;
   uint64_t client_flags = 0;
   int redraw;
   u_int bit = 0;
@@ -3050,16 +3047,16 @@ static void server_client_check_redraw(struct client *c) {
   static struct event ev;
   size_t left;
 
-  if (c->flags & (CLIENT_CONTROL | CLIENT_SUSPENDED)) {
+  if ((*c).flags & (CLIENT_CONTROL | CLIENT_SUSPENDED)) {
     return;
   }
-  if (c->flags & CLIENT_ALLREDRAWFLAGS) {
-    log_debug("%s: redraw%s%s%s%s%s", c->name,
-              (c->flags & CLIENT_REDRAWWINDOW) ? " window" : "",
-              (c->flags & CLIENT_REDRAWSTATUS) ? " status" : "",
-              (c->flags & CLIENT_REDRAWBORDERS) ? " borders" : "",
-              (c->flags & CLIENT_REDRAWOVERLAY) ? " overlay" : "",
-              (c->flags & CLIENT_REDRAWPANES) ? " panes" : "");
+  if ((*c).flags & CLIENT_ALLREDRAWFLAGS) {
+    log_debug("%s: redraw%s%s%s%s%s", (*c).name,
+              ((*c).flags & CLIENT_REDRAWWINDOW) ? " window" : "",
+              ((*c).flags & CLIENT_REDRAWSTATUS) ? " status" : "",
+              ((*c).flags & CLIENT_REDRAWBORDERS) ? " borders" : "",
+              ((*c).flags & CLIENT_REDRAWOVERLAY) ? " overlay" : "",
+              ((*c).flags & CLIENT_REDRAWPANES) ? " panes" : "");
   }
 
   /*
@@ -3068,11 +3065,11 @@ static void server_client_check_redraw(struct client *c) {
    * end up back here.
    */
   needed = 0;
-  if (c->flags & CLIENT_ALLREDRAWFLAGS) {
+  if ((*c).flags & CLIENT_ALLREDRAWFLAGS) {
     needed = 1;
   } else {
-    TAILQ_FOREACH(wp, &w->panes, entry) {
-      if (wp->flags & PANE_REDRAW) {
+    TAILQ_FOREACH(wp, &(*w).panes, entry) {
+      if ((*wp).flags & PANE_REDRAW) {
         needed = 1;
         break;
       }
@@ -3081,8 +3078,8 @@ static void server_client_check_redraw(struct client *c) {
       client_flags |= CLIENT_REDRAWPANES;
     }
   }
-  if (needed && (left = EVBUFFER_LENGTH(tty->out)) != 0) {
-    log_debug("%s: redraw deferred (%zu left)", c->name, left);
+  if (needed && (left = EVBUFFER_LENGTH((*tty).out)) != 0) {
+    log_debug("%s: redraw deferred (%zu left)", (*c).name, left);
     if (!evtimer_initialized(&ev)) {
       evtimer_set(&ev, server_client_redraw_timer, NULL);
     }
@@ -3091,11 +3088,11 @@ static void server_client_check_redraw(struct client *c) {
       evtimer_add(&ev, &tv);
     }
 
-    if (~c->flags & CLIENT_REDRAWWINDOW) {
-      TAILQ_FOREACH(wp, &w->panes, entry) {
-        if (wp->flags & PANE_REDRAW) {
-          log_debug("%s: pane %%%u needs redraw", c->name, wp->id);
-          c->redraw_panes |= (1 << bit);
+    if (~(*c).flags & CLIENT_REDRAWWINDOW) {
+      TAILQ_FOREACH(wp, &(*w).panes, entry) {
+        if ((*wp).flags & PANE_REDRAW) {
+          log_debug("%s: pane %%%u needs redraw", (*c).name, (*wp).id);
+          (*c).redraw_panes |= (1 << bit);
         }
         if (++bit == 64) {
           /*
@@ -3107,56 +3104,56 @@ static void server_client_check_redraw(struct client *c) {
           break;
         }
       }
-      if (c->redraw_panes != 0) {
-        c->flags |= CLIENT_REDRAWPANES;
+      if ((*c).redraw_panes != 0) {
+        (*c).flags |= CLIENT_REDRAWPANES;
       }
     }
-    c->flags |= client_flags;
+    (*c).flags |= client_flags;
     return;
   } else if (needed) {
-    log_debug("%s: redraw needed", c->name);
+    log_debug("%s: redraw needed", (*c).name);
   }
 
-  tty_flags = tty->flags & (TTY_BLOCK | TTY_FREEZE | TTY_NOCURSOR);
-  tty->flags = (tty->flags & ~(TTY_BLOCK | TTY_FREEZE)) | TTY_NOCURSOR;
+  tty_flags = (*tty).flags & (TTY_BLOCK | TTY_FREEZE | TTY_NOCURSOR);
+  (*tty).flags = ((*tty).flags & ~(TTY_BLOCK | TTY_FREEZE)) | TTY_NOCURSOR;
 
-  if (~c->flags & CLIENT_REDRAWWINDOW) {
+  if (~(*c).flags & CLIENT_REDRAWWINDOW) {
     /*
      * If not redrawing the entire window, check whether each pane
      * needs to be redrawn.
      */
-    TAILQ_FOREACH(wp, &w->panes, entry) {
+    TAILQ_FOREACH(wp, &(*w).panes, entry) {
       redraw = 0;
-      if (wp->flags & PANE_REDRAW) {
+      if ((*wp).flags & PANE_REDRAW) {
         redraw = 1;
-      } else if (c->flags & CLIENT_REDRAWPANES) {
-        redraw = !!(c->redraw_panes & (1 << bit));
+      } else if ((*c).flags & CLIENT_REDRAWPANES) {
+        redraw = !!((*c).redraw_panes & (1 << bit));
       }
       bit++;
       if (!redraw) {
         continue;
       }
-      log_debug("%s: redrawing pane %%%u", __func__, wp->id);
+      log_debug("%s: redrawing pane %%%u", __func__, (*wp).id);
       screen_redraw_pane(c, wp);
     }
-    c->redraw_panes = 0;
-    c->flags &= ~CLIENT_REDRAWPANES;
+    (*c).redraw_panes = 0;
+    (*c).flags &= ~CLIENT_REDRAWPANES;
   }
 
-  if (c->flags & CLIENT_ALLREDRAWFLAGS) {
-    if (options_get_number(s->options, "set-titles")) {
+  if ((*c).flags & CLIENT_ALLREDRAWFLAGS) {
+    if (options_get_number((*s).options, "set-titles")) {
       server_client_set_title(c);
       server_client_set_path(c);
     }
     screen_redraw_screen(c);
   }
 
-  tty->flags = (tty->flags & ~TTY_NOCURSOR) | (tty_flags & TTY_NOCURSOR);
+  (*tty).flags = ((*tty).flags & ~TTY_NOCURSOR) | (tty_flags & TTY_NOCURSOR);
   tty_update_mode(tty, mode, NULL);
-  tty->flags =
-      (tty->flags & ~(TTY_BLOCK | TTY_FREEZE | TTY_NOCURSOR)) | tty_flags;
+  (*tty).flags =
+      ((*tty).flags & ~(TTY_BLOCK | TTY_FREEZE | TTY_NOCURSOR)) | tty_flags;
 
-  c->flags &= ~(CLIENT_ALLREDRAWFLAGS | CLIENT_STATUSFORCE);
+  (*c).flags &= ~(CLIENT_ALLREDRAWFLAGS | CLIENT_STATUSFORCE);
 
   if (needed) {
     /*
@@ -3164,28 +3161,28 @@ static void server_client_check_redraw(struct client *c) {
      * was empty, so we can record how many bytes the redraw
      * generated.
      */
-    c->redraw = EVBUFFER_LENGTH(tty->out);
-    log_debug("%s: redraw added %zu bytes", c->name, c->redraw);
+    (*c).redraw = EVBUFFER_LENGTH((*tty).out);
+    log_debug("%s: redraw added %zu bytes", (*c).name, (*c).redraw);
   }
 }
 
 /* Set client title. */
 static void server_client_set_title(struct client *c) {
-  struct session *s = c->session;
+  struct session *s = (*c).session;
   const char *template;
   char *title;
   struct format_tree *ft;
 
-  template = options_get_string(s->options, "set-titles-string");
+  template = options_get_string((*s).options, "set-titles-string");
 
   ft = format_create(c, NULL, FORMAT_NONE, 0);
   format_defaults(ft, c, NULL, NULL, NULL);
 
   title = format_expand_time(ft, template);
-  if (c->title == NULL || strcmp(title, c->title) != 0) {
-    free(c->title);
-    c->title = xstrdup(title);
-    tty_set_title(&c->tty, c->title);
+  if ((*c).title == NULL || strcmp(title, (*c).title) != 0) {
+    free((*c).title);
+    (*c).title = xstrdup(title);
+    tty_set_title(&(*c).tty, (*c).title);
   }
   free(title);
 
@@ -3194,21 +3191,21 @@ static void server_client_set_title(struct client *c) {
 
 /* Set client path. */
 static void server_client_set_path(struct client *c) {
-  struct session *s = c->session;
+  struct session *s = (*c).session;
   const char *path;
 
-  if (s->curw == NULL) {
+  if ((*s).curw == NULL) {
     return;
   }
-  if (s->curw->window->active->base.path == NULL) {
+  if ((*(*(*(*s).curw).window).active).base.path == NULL) {
     path = "";
   } else {
-    path = s->curw->window->active->base.path;
+    path = (*(*(*(*s).curw).window).active).base.path;
   }
-  if (c->path == NULL || strcmp(path, c->path) != 0) {
-    free(c->path);
-    c->path = xstrdup(path);
-    tty_set_path(&c->tty, c->path);
+  if ((*c).path == NULL || strcmp(path, (*c).path) != 0) {
+    free((*c).path);
+    (*c).path = xstrdup(path);
+    tty_set_path(&(*c).tty, (*c).path);
   }
 }
 
@@ -3218,7 +3215,7 @@ static void server_client_dispatch(struct imsg *imsg, void *arg) {
   ssize_t datalen;
   struct session *s;
 
-  if (c->flags & CLIENT_DEAD) {
+  if ((*c).flags & CLIENT_DEAD) {
     return;
   }
 
@@ -3227,9 +3224,9 @@ static void server_client_dispatch(struct imsg *imsg, void *arg) {
     return;
   }
 
-  datalen = imsg->hdr.len - IMSG_HEADER_SIZE;
+  datalen = (*imsg).hdr.len - IMSG_HEADER_SIZE;
 
-  switch (imsg->hdr.type) {
+  switch ((*imsg).hdr.type) {
   case MSG_IDENTIFY_CLIENTPID:
   case MSG_IDENTIFY_CWD:
   case MSG_IDENTIFY_ENVIRON:
@@ -3252,20 +3249,20 @@ static void server_client_dispatch(struct imsg *imsg, void *arg) {
       fatalx("bad MSG_RESIZE size");
     }
 
-    if (c->flags & CLIENT_CONTROL) {
+    if ((*c).flags & CLIENT_CONTROL) {
       break;
     }
     server_client_update_latest(c);
-    tty_resize(&c->tty);
-    tty_repeat_requests(&c->tty);
+    tty_resize(&(*c).tty);
+    tty_repeat_requests(&(*c).tty);
     recalculate_sizes();
-    if (c->overlay_resize == NULL) {
+    if ((*c).overlay_resize == NULL) {
       server_client_clear_overlay(c);
     } else {
-      c->overlay_resize(c, c->overlay_data);
+      (*c).overlay_resize(c, (*c).overlay_data);
     }
     server_redraw_client(c);
-    if (c->session != NULL) {
+    if ((*c).session != NULL) {
       notify_client("client-resized", c);
     }
     break;
@@ -3275,8 +3272,8 @@ static void server_client_dispatch(struct imsg *imsg, void *arg) {
     }
     server_client_set_session(c, NULL);
     recalculate_sizes();
-    tty_close(&c->tty);
-    proc_send(c->peer, MSG_EXITED, -1, NULL, 0);
+    tty_close(&(*c).tty);
+    proc_send((*c).peer, MSG_EXITED, -1, NULL, 0);
     break;
   case MSG_WAKEUP:
   case MSG_UNLOCK:
@@ -3284,26 +3281,26 @@ static void server_client_dispatch(struct imsg *imsg, void *arg) {
       fatalx("bad MSG_WAKEUP size");
     }
 
-    if (!(c->flags & CLIENT_SUSPENDED)) {
+    if (!((*c).flags & CLIENT_SUSPENDED)) {
       break;
     }
-    c->flags &= ~CLIENT_SUSPENDED;
+    (*c).flags &= ~CLIENT_SUSPENDED;
 
-    if (c->fd == -1 || c->session == NULL) { /* exited already */
+    if ((*c).fd == -1 || (*c).session == NULL) { /* exited already */
       break;
     }
-    s = c->session;
+    s = (*c).session;
 
-    if (gettimeofday(&c->activity_time, NULL) != 0) {
+    if (gettimeofday(&(*c).activity_time, NULL) != 0) {
       fatal("gettimeofday failed");
     }
 
-    tty_start_tty(&c->tty);
+    tty_start_tty(&(*c).tty);
     server_redraw_client(c);
     recalculate_sizes();
 
     if (s != NULL) {
-      session_update_activity(s, &c->activity_time);
+      session_update_activity(s, &(*c).activity_time);
     }
     break;
   case MSG_SHELL:
@@ -3314,13 +3311,13 @@ static void server_client_dispatch(struct imsg *imsg, void *arg) {
     server_client_dispatch_shell(c);
     break;
   case MSG_WRITE_READY:
-    file_write_ready(&c->files, imsg);
+    file_write_ready(&(*c).files, imsg);
     break;
   case MSG_READ:
-    file_read_data(&c->files, imsg);
+    file_read_data(&(*c).files, imsg);
     break;
   case MSG_READ_DONE:
-    file_read_done(&c->files, imsg);
+    file_read_done(&(*c).files, imsg);
     break;
   }
 }
@@ -3337,13 +3334,13 @@ static enum cmd_retval server_client_command_done(struct cmdq_item *item,
                                                   __unused void *data) {
   struct client *c = cmdq_get_client(item);
 
-  if (~c->flags & CLIENT_ATTACHED) {
-    c->flags |= CLIENT_EXIT;
-  } else if (~c->flags & CLIENT_EXIT) {
-    if (c->flags & CLIENT_CONTROL) {
+  if (~(*c).flags & CLIENT_ATTACHED) {
+    (*c).flags |= CLIENT_EXIT;
+  } else if (~(*c).flags & CLIENT_EXIT) {
+    if ((*c).flags & CLIENT_CONTROL) {
       control_ready(c);
     }
-    tty_send_requests(&c->tty);
+    tty_send_requests(&(*c).tty);
   }
   return CMD_RETURN_NORMAL;
 }
@@ -3360,17 +3357,17 @@ static void server_client_dispatch_command(struct client *c,
   struct args_value *values;
   struct cmdq_item *new_item;
 
-  if (c->flags & CLIENT_EXIT) {
+  if ((*c).flags & CLIENT_EXIT) {
     return;
   }
 
-  if (imsg->hdr.len - IMSG_HEADER_SIZE < sizeof data) {
+  if ((*imsg).hdr.len - IMSG_HEADER_SIZE < sizeof data) {
     fatalx("bad MSG_COMMAND size");
   }
-  memcpy(&data, imsg->data, sizeof data);
+  memcpy(&data, (*imsg).data, sizeof data);
 
-  buf = (char *)imsg->data + sizeof data;
-  len = imsg->hdr.len - IMSG_HEADER_SIZE - sizeof data;
+  buf = (char *)(*imsg).data + sizeof data;
+  len = (*imsg).hdr.len - IMSG_HEADER_SIZE - sizeof data;
   if (len > 0 && buf[len - 1] != '\0') {
     fatalx("bad MSG_COMMAND string");
   }
@@ -3389,9 +3386,9 @@ static void server_client_dispatch_command(struct client *c,
 
   values = args_from_vector(argc, argv);
   pr = cmd_parse_from_arguments(values, argc, NULL);
-  switch (pr->status) {
+  switch ((*pr).status) {
   case CMD_PARSE_ERROR:
-    cause = pr->error;
+    cause = (*pr).error;
     goto error;
   case CMD_PARSE_SUCCESS:
     break;
@@ -3400,16 +3397,16 @@ static void server_client_dispatch_command(struct client *c,
   free(values);
   cmd_free_argv(argc, argv);
 
-  if ((c->flags & CLIENT_READONLY) &&
-      !cmd_list_all_have(pr->cmdlist, CMD_READONLY)) {
+  if (((*c).flags & CLIENT_READONLY) &&
+      !cmd_list_all_have((*pr).cmdlist, CMD_READONLY)) {
     new_item = cmdq_get_callback(server_client_read_only, NULL);
   } else {
-    new_item = cmdq_get_command(pr->cmdlist, NULL);
+    new_item = cmdq_get_command((*pr).cmdlist, NULL);
   }
   cmdq_append(c, new_item);
   cmdq_append(c, cmdq_get_callback(server_client_command_done, NULL));
 
-  cmd_list_free(pr->cmdlist);
+  cmd_list_free((*pr).cmdlist);
   return;
 
 error:
@@ -3418,7 +3415,7 @@ error:
   cmdq_append(c, cmdq_get_error(cause));
   free(cause);
 
-  c->flags |= CLIENT_EXIT;
+  (*c).flags |= CLIENT_EXIT;
 }
 
 /* Handle identify message. */
@@ -3430,20 +3427,20 @@ static void server_client_dispatch_identify(struct client *c,
   uint64_t longflags;
   char *name;
 
-  if (c->flags & CLIENT_IDENTIFIED) {
+  if ((*c).flags & CLIENT_IDENTIFIED) {
     fatalx("out-of-order identify message");
   }
 
-  data = imsg->data;
-  datalen = imsg->hdr.len - IMSG_HEADER_SIZE;
+  data = (*imsg).data;
+  datalen = (*imsg).hdr.len - IMSG_HEADER_SIZE;
 
-  switch (imsg->hdr.type) {
+  switch ((*imsg).hdr.type) {
   case MSG_IDENTIFY_FEATURES:
     if (datalen != sizeof feat) {
       fatalx("bad MSG_IDENTIFY_FEATURES size");
     }
     memcpy(&feat, data, sizeof feat);
-    c->term_features |= feat;
+    (*c).term_features |= feat;
     log_debug("client %p IDENTIFY_FEATURES %s", c, tty_get_features(feat));
     break;
   case MSG_IDENTIFY_FLAGS:
@@ -3451,7 +3448,7 @@ static void server_client_dispatch_identify(struct client *c,
       fatalx("bad MSG_IDENTIFY_FLAGS size");
     }
     memcpy(&flags, data, sizeof flags);
-    c->flags |= flags;
+    (*c).flags |= flags;
     log_debug("client %p IDENTIFY_FLAGS %#x", c, flags);
     break;
   case MSG_IDENTIFY_LONGFLAGS:
@@ -3459,7 +3456,7 @@ static void server_client_dispatch_identify(struct client *c,
       fatalx("bad MSG_IDENTIFY_LONGFLAGS size");
     }
     memcpy(&longflags, data, sizeof longflags);
-    c->flags |= longflags;
+    (*c).flags |= longflags;
     log_debug("client %p IDENTIFY_LONGFLAGS %#llx", c,
               (unsigned long long)longflags);
     break;
@@ -3468,9 +3465,9 @@ static void server_client_dispatch_identify(struct client *c,
       fatalx("bad MSG_IDENTIFY_TERM string");
     }
     if (*data == '\0') {
-      c->term_name = xstrdup("unknown");
+      (*c).term_name = xstrdup("unknown");
     } else {
-      c->term_name = xstrdup(data);
+      (*c).term_name = xstrdup(data);
     }
     log_debug("client %p IDENTIFY_TERM %s", c, data);
     break;
@@ -3478,16 +3475,16 @@ static void server_client_dispatch_identify(struct client *c,
     if (datalen == 0 || data[datalen - 1] != '\0') {
       fatalx("bad MSG_IDENTIFY_TERMINFO string");
     }
-    c->term_caps =
-        xreallocarray(c->term_caps, c->term_ncaps + 1, sizeof *c->term_caps);
-    c->term_caps[c->term_ncaps++] = xstrdup(data);
+    (*c).term_caps = xreallocarray((*c).term_caps, (*c).term_ncaps + 1,
+                                   sizeof *(*c).term_caps);
+    (*c).term_caps[(*c).term_ncaps++] = xstrdup(data);
     log_debug("client %p IDENTIFY_TERMINFO %s", c, data);
     break;
   case MSG_IDENTIFY_TTYNAME:
     if (datalen == 0 || data[datalen - 1] != '\0') {
       fatalx("bad MSG_IDENTIFY_TTYNAME string");
     }
-    c->ttyname = xstrdup(data);
+    (*c).ttyname = xstrdup(data);
     log_debug("client %p IDENTIFY_TTYNAME %s", c, data);
     break;
   case MSG_IDENTIFY_CWD:
@@ -3495,11 +3492,11 @@ static void server_client_dispatch_identify(struct client *c,
       fatalx("bad MSG_IDENTIFY_CWD string");
     }
     if (access(data, X_OK) == 0) {
-      c->cwd = xstrdup(data);
+      (*c).cwd = xstrdup(data);
     } else if ((home = find_home()) != NULL) {
-      c->cwd = xstrdup(home);
+      (*c).cwd = xstrdup(home);
     } else {
-      c->cwd = xstrdup("/");
+      (*c).cwd = xstrdup("/");
     }
     log_debug("client %p IDENTIFY_CWD %s", c, data);
     break;
@@ -3507,65 +3504,65 @@ static void server_client_dispatch_identify(struct client *c,
     if (datalen != 0) {
       fatalx("bad MSG_IDENTIFY_STDIN size");
     }
-    c->fd = imsg_get_fd(imsg);
-    log_debug("client %p IDENTIFY_STDIN %d", c, c->fd);
+    (*c).fd = imsg_get_fd(imsg);
+    log_debug("client %p IDENTIFY_STDIN %d", c, (*c).fd);
     break;
   case MSG_IDENTIFY_STDOUT:
     if (datalen != 0) {
       fatalx("bad MSG_IDENTIFY_STDOUT size");
     }
-    c->out_fd = imsg_get_fd(imsg);
-    log_debug("client %p IDENTIFY_STDOUT %d", c, c->out_fd);
+    (*c).out_fd = imsg_get_fd(imsg);
+    log_debug("client %p IDENTIFY_STDOUT %d", c, (*c).out_fd);
     break;
   case MSG_IDENTIFY_ENVIRON:
     if (datalen == 0 || data[datalen - 1] != '\0') {
       fatalx("bad MSG_IDENTIFY_ENVIRON string");
     }
     if (strchr(data, '=') != NULL) {
-      environ_put(c->environ, data, 0);
+      environ_put((*c).environ, data, 0);
     }
     log_debug("client %p IDENTIFY_ENVIRON %s", c, data);
     break;
   case MSG_IDENTIFY_CLIENTPID:
-    if (datalen != sizeof c->pid) {
+    if (datalen != sizeof(*c).pid) {
       fatalx("bad MSG_IDENTIFY_CLIENTPID size");
     }
-    memcpy(&c->pid, data, sizeof c->pid);
-    log_debug("client %p IDENTIFY_CLIENTPID %ld", c, (long)c->pid);
+    memcpy(&(*c).pid, data, sizeof(*c).pid);
+    log_debug("client %p IDENTIFY_CLIENTPID %ld", c, (long)(*c).pid);
     break;
   default:
     break;
   }
 
-  if (imsg->hdr.type != MSG_IDENTIFY_DONE) {
+  if ((*imsg).hdr.type != MSG_IDENTIFY_DONE) {
     return;
   }
-  c->flags |= CLIENT_IDENTIFIED;
+  (*c).flags |= CLIENT_IDENTIFIED;
 
-  if (*c->ttyname != '\0') {
-    name = xstrdup(c->ttyname);
+  if (*(*c).ttyname != '\0') {
+    name = xstrdup((*c).ttyname);
   } else {
-    xasprintf(&name, "client-%ld", (long)c->pid);
+    xasprintf(&name, "client-%ld", (long)(*c).pid);
   }
-  c->name = name;
-  log_debug("client %p name is %s", c, c->name);
+  (*c).name = name;
+  log_debug("client %p name is %s", c, (*c).name);
 
 #ifdef __CYGWIN__
-  c->fd = open(c->ttyname, O_RDWR | O_NOCTTY);
+  (*c).fd = open((*c).ttyname, O_RDWR | O_NOCTTY);
 #endif
 
-  if (c->flags & CLIENT_CONTROL) {
+  if ((*c).flags & CLIENT_CONTROL) {
     control_start(c);
-  } else if (c->fd != -1) {
-    if (tty_init(&c->tty, c) != 0) {
-      close(c->fd);
-      c->fd = -1;
+  } else if ((*c).fd != -1) {
+    if (tty_init(&(*c).tty, c) != 0) {
+      close((*c).fd);
+      (*c).fd = -1;
     } else {
-      tty_resize(&c->tty);
-      c->flags |= CLIENT_TERMINAL;
+      tty_resize(&(*c).tty);
+      (*c).flags |= CLIENT_TERMINAL;
     }
-    close(c->out_fd);
-    c->out_fd = -1;
+    close((*c).out_fd);
+    (*c).out_fd = -1;
   }
 
   /*
@@ -3573,7 +3570,7 @@ static void server_client_dispatch_identify(struct client *c,
    * clients are allowed to continue with their command even if the
    * config has not been loaded - they might have been run from inside it
    */
-  if ((~c->flags & CLIENT_EXIT) && !cfg_finished &&
+  if ((~(*c).flags & CLIENT_EXIT) && !cfg_finished &&
       c == TAILQ_FIRST(&clients)) {
     start_cfg();
   }
@@ -3587,9 +3584,9 @@ static void server_client_dispatch_shell(struct client *c) {
   if (!checkshell(shell)) {
     shell = _PATH_BSHELL;
   }
-  proc_send(c->peer, MSG_SHELL, -1, shell, strlen(shell) + 1);
+  proc_send((*c).peer, MSG_SHELL, -1, shell, strlen(shell) + 1);
 
-  proc_kill_peer(c->peer);
+  proc_kill_peer((*c).peer);
 }
 
 /* Get client working directory. */
@@ -3597,16 +3594,16 @@ const char *server_client_get_cwd(struct client *c, struct session *s) {
   const char *home;
 
   if (!cfg_finished && cfg_client != NULL) {
-    return cfg_client->cwd;
+    return (*cfg_client).cwd;
   }
-  if (c != NULL && c->session == NULL && c->cwd != NULL) {
-    return c->cwd;
+  if (c != NULL && (*c).session == NULL && (*c).cwd != NULL) {
+    return (*c).cwd;
   }
-  if (s != NULL && s->cwd != NULL) {
-    return s->cwd;
+  if (s != NULL && (*s).cwd != NULL) {
+    return (*s).cwd;
   }
-  if (c != NULL && (s = c->session) != NULL && s->cwd != NULL) {
-    return s->cwd;
+  if (c != NULL && (s = (*c).session) != NULL && (*s).cwd != NULL) {
+    return (*s).cwd;
   }
   if ((home = find_home()) != NULL) {
     return home;
@@ -3618,11 +3615,11 @@ const char *server_client_get_cwd(struct client *c, struct session *s) {
 static uint64_t server_client_control_flags(struct client *c,
                                             const char *next) {
   if (strcmp(next, "pause-after") == 0) {
-    c->pause_age = 0;
+    (*c).pause_age = 0;
     return CLIENT_CONTROL_PAUSEAFTER;
   }
-  if (sscanf(next, "pause-after=%u", &c->pause_age) == 1) {
-    c->pause_age *= 1000;
+  if (sscanf(next, "pause-after=%u", &(*c).pause_age) == 1) {
+    (*c).pause_age *= 1000;
     return CLIENT_CONTROL_PAUSEAFTER;
   }
   if (strcmp(next, "no-output") == 0) {
@@ -3647,7 +3644,7 @@ void server_client_set_flags(struct client *c, const char *flags) {
       next++;
     }
 
-    if (c->flags & CLIENT_CONTROL) {
+    if ((*c).flags & CLIENT_CONTROL) {
       flag = server_client_control_flags(c, next);
     } else {
       flag = 0;
@@ -3663,21 +3660,21 @@ void server_client_set_flags(struct client *c, const char *flags) {
       continue;
     }
 
-    log_debug("client %s set flag %s", c->name, next);
+    log_debug("client %s set flag %s", (*c).name, next);
     if (not) {
-      if (c->flags & CLIENT_READONLY) {
+      if ((*c).flags & CLIENT_READONLY) {
         flag &= ~CLIENT_READONLY;
       }
-      c->flags &= ~flag;
+      (*c).flags &= ~flag;
     } else {
-      c->flags |= flag;
+      (*c).flags |= flag;
     }
     if (flag == CLIENT_CONTROL_NOOUTPUT) {
       control_reset_offsets(c);
     }
   }
   free(copy);
-  proc_send(c->peer, MSG_FLAGS, -1, &c->flags, sizeof c->flags);
+  proc_send((*c).peer, MSG_FLAGS, -1, &(*c).flags, sizeof(*c).flags);
 }
 
 /* Get client flags. This is only flags useful to show to users. */
@@ -3686,38 +3683,38 @@ const char *server_client_get_flags(struct client *c) {
   char tmp[32];
 
   *s = '\0';
-  if (c->flags & CLIENT_ATTACHED) {
+  if ((*c).flags & CLIENT_ATTACHED) {
     strlcat(s, "attached,", sizeof s);
   }
-  if (c->flags & CLIENT_FOCUSED) {
+  if ((*c).flags & CLIENT_FOCUSED) {
     strlcat(s, "focused,", sizeof s);
   }
-  if (c->flags & CLIENT_CONTROL) {
+  if ((*c).flags & CLIENT_CONTROL) {
     strlcat(s, "control-mode,", sizeof s);
   }
-  if (c->flags & CLIENT_IGNORESIZE) {
+  if ((*c).flags & CLIENT_IGNORESIZE) {
     strlcat(s, "ignore-size,", sizeof s);
   }
-  if (c->flags & CLIENT_CONTROL_NOOUTPUT) {
+  if ((*c).flags & CLIENT_CONTROL_NOOUTPUT) {
     strlcat(s, "no-output,", sizeof s);
   }
-  if (c->flags & CLIENT_CONTROL_WAITEXIT) {
+  if ((*c).flags & CLIENT_CONTROL_WAITEXIT) {
     strlcat(s, "wait-exit,", sizeof s);
   }
-  if (c->flags & CLIENT_CONTROL_PAUSEAFTER) {
-    xsnprintf(tmp, sizeof tmp, "pause-after=%u,", c->pause_age / 1000);
+  if ((*c).flags & CLIENT_CONTROL_PAUSEAFTER) {
+    xsnprintf(tmp, sizeof tmp, "pause-after=%u,", (*c).pause_age / 1000);
     strlcat(s, tmp, sizeof s);
   }
-  if (c->flags & CLIENT_READONLY) {
+  if ((*c).flags & CLIENT_READONLY) {
     strlcat(s, "read-only,", sizeof s);
   }
-  if (c->flags & CLIENT_ACTIVEPANE) {
+  if ((*c).flags & CLIENT_ACTIVEPANE) {
     strlcat(s, "active-pane,", sizeof s);
   }
-  if (c->flags & CLIENT_SUSPENDED) {
+  if ((*c).flags & CLIENT_SUSPENDED) {
     strlcat(s, "suspended,", sizeof s);
   }
-  if (c->flags & CLIENT_UTF8) {
+  if ((*c).flags & CLIENT_UTF8) {
     strlcat(s, "UTF-8,", sizeof s);
   }
   if (*s != '\0') {
@@ -3731,7 +3728,7 @@ struct client_window *server_client_get_client_window(struct client *c,
                                                       u_int id) {
   struct client_window cw = {.window = id};
 
-  return RB_FIND(client_windows, &c->windows, &cw);
+  return RB_FIND(client_windows, &(*c).windows, &cw);
 }
 
 /* Add client window. */
@@ -3742,55 +3739,55 @@ struct client_window *server_client_add_client_window(struct client *c,
   cw = server_client_get_client_window(c, id);
   if (cw == NULL) {
     cw = xcalloc(1, sizeof *cw);
-    cw->window = id;
-    RB_INSERT(client_windows, &c->windows, cw);
+    (*cw).window = id;
+    RB_INSERT(client_windows, &(*c).windows, cw);
   }
   return cw;
 }
 
 /* Get client active pane. */
 struct window_pane *server_client_get_pane(struct client *c) {
-  struct session *s = c->session;
+  struct session *s = (*c).session;
   struct client_window *cw;
 
   if (s == NULL) {
     return NULL;
   }
 
-  if (~c->flags & CLIENT_ACTIVEPANE) {
-    return s->curw->window->active;
+  if (~(*c).flags & CLIENT_ACTIVEPANE) {
+    return (*(*(*s).curw).window).active;
   }
-  cw = server_client_get_client_window(c, s->curw->window->id);
+  cw = server_client_get_client_window(c, (*(*(*s).curw).window).id);
   if (cw == NULL) {
-    return s->curw->window->active;
+    return (*(*(*s).curw).window).active;
   }
-  return cw->pane;
+  return (*cw).pane;
 }
 
 /* Set client active pane. */
 void server_client_set_pane(struct client *c, struct window_pane *wp) {
-  struct session *s = c->session;
+  struct session *s = (*c).session;
   struct client_window *cw;
 
   if (s == NULL) {
     return;
   }
 
-  cw = server_client_add_client_window(c, s->curw->window->id);
-  cw->pane = wp;
-  log_debug("%s pane now %%%u", c->name, wp->id);
+  cw = server_client_add_client_window(c, (*(*(*s).curw).window).id);
+  (*cw).pane = wp;
+  log_debug("%s pane now %%%u", (*c).name, (*wp).id);
 }
 
 /* Remove pane from client lists. */
 void server_client_remove_pane(struct window_pane *wp) {
   struct client *c;
-  struct window *w = wp->window;
+  struct window *w = (*wp).window;
   struct client_window *cw;
 
   TAILQ_FOREACH(c, &clients, entry) {
-    cw = server_client_get_client_window(c, w->id);
-    if (cw != NULL && cw->pane == wp) {
-      RB_REMOVE(client_windows, &c->windows, cw);
+    cw = server_client_get_client_window(c, (*w).id);
+    if (cw != NULL && (*cw).pane == wp) {
+      RB_REMOVE(client_windows, &(*c).windows, cw);
       free(cw);
     }
   }
@@ -3818,17 +3815,17 @@ void server_client_print(struct client *c, int parse, struct evbuffer *evb) {
     goto out;
   }
 
-  if (c->session == NULL || (c->flags & CLIENT_CONTROL)) {
-    if (~c->flags & CLIENT_UTF8) {
+  if ((*c).session == NULL || ((*c).flags & CLIENT_CONTROL)) {
+    if (~(*c).flags & CLIENT_UTF8) {
       sanitized = utf8_sanitize(msg);
-      if (c->flags & CLIENT_CONTROL) {
+      if ((*c).flags & CLIENT_CONTROL) {
         control_write(c, "%s", sanitized);
       } else {
         file_print(c, "%s\n", sanitized);
       }
       free(sanitized);
     } else {
-      if (c->flags & CLIENT_CONTROL) {
+      if ((*c).flags & CLIENT_CONTROL) {
         control_write(c, "%s", msg);
       } else {
         file_print(c, "%s\n", msg);
@@ -3838,8 +3835,8 @@ void server_client_print(struct client *c, int parse, struct evbuffer *evb) {
   }
 
   wp = server_client_get_pane(c);
-  wme = TAILQ_FIRST(&wp->modes);
-  if (wme == NULL || wme->mode != &window_view_mode) {
+  wme = TAILQ_FIRST(&(*wp).modes);
+  if (wme == NULL || (*wme).mode != &window_view_mode) {
     window_pane_set_mode(wp, NULL, &window_view_mode, NULL, NULL);
   }
   if (parse) {

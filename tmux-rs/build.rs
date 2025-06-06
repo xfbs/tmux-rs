@@ -128,7 +128,6 @@ fn main() {
 }
 
 static FILES: &[&str] = &[
-    // "screen-write.c",  //
     "server-client.c", //
     "tty.c",           //
     "window-copy.c",   //

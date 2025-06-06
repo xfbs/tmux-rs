@@ -2688,8 +2688,6 @@ pub use crate::server::{
 
 mod server_client;
 pub use crate::server_client::{
-    client_windows_RB_FIND, client_windows_RB_INSERT, client_windows_RB_INSERT_COLOR,
-    client_windows_RB_NFIND, client_windows_RB_REMOVE, client_windows_RB_REMOVE_COLOR,
     server_client_add_client_window, server_client_check_nested, server_client_clear_overlay,
     server_client_create, server_client_detach, server_client_exec,
     server_client_get_client_window, server_client_get_cwd, server_client_get_flags,
