@@ -1,3 +1,5 @@
+use crate::*;
+
 use libc::{FNM_CASEFOLD, REG_NOSUB, ctime_r, getpwuid, getuid, ispunct, localtime_r, memcpy, regcomp, regex_t, regexec, regfree, strchr, strcmp, strcspn, strftime, strstr, strtod, tm};
 
 use crate::{
@@ -8,7 +10,6 @@ use crate::{
         tree::{rb_find, rb_foreach, rb_init, rb_initializer, rb_insert, rb_max, rb_min, rb_remove},
     },
     xmalloc::{xreallocarray, xstrndup},
-    *,
 };
 
 bitflags::bitflags! {
@@ -3302,9 +3303,8 @@ pub unsafe extern "C" fn format_each(ft: *mut format_tree, cb: Option<unsafe ext
     unsafe {
         let mut s = [0i8; 64];
 
-        for i in 0..format_table.len() {
-            let fte = &raw const format_table[i];
-            let value = (*fte).cb.unwrap()(ft);
+        for fte in &format_table {
+            let value = fte.cb.unwrap()(ft);
 
             if value.is_null() {
                 continue;

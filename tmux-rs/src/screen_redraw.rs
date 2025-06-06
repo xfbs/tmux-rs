@@ -456,8 +456,8 @@ pub unsafe extern "C" fn screen_redraw_make_pane_status(c: *mut client, wp: NonN
                 py = (*wp).yoff + (*wp).sy;
             }
             let cell_type = screen_redraw_type_of_cell(rctx, px, py);
-            screen_redraw_border_set(w, wp, pane_lines, cell_type, &mut gc);
-            screen_write_cell(ctx.as_mut_ptr(), &mut gc);
+            screen_redraw_border_set(w, wp, pane_lines, cell_type, &raw mut gc);
+            screen_write_cell(ctx.as_mut_ptr(), &raw const gc);
         }
         gc.attr &= !GRID_ATTR_CHARSET;
 
@@ -477,8 +477,6 @@ pub unsafe extern "C" fn screen_redraw_make_pane_status(c: *mut client, wp: NonN
     }
 }
 
-// #[cfg(disabled)]
-// unsafe extern "C" { pub unsafe fn screen_redraw_draw_pane_status(ctx: *mut screen_redraw_ctx); }
 /// Draw pane status.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_redraw_draw_pane_status(ctx: *mut screen_redraw_ctx) {

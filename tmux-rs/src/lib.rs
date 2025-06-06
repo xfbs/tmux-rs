@@ -13,9 +13,41 @@
 #![allow(clippy::new_without_default)]
 #![allow(clippy::upper_case_acronyms)]
 #![allow(clippy::zero_ptr)]
-#![warn(clippy::shadow_same)]
-#![warn(clippy::shadow_unrelated)]
-#![warn(clippy::needless_return)]
+#![allow(clippy::unnecessary_cast)]
+#![allow(clippy::explicit_auto_deref)]
+#![allow(clippy::implicit_saturating_sub)]
+#![allow(clippy::unnecessary_unwrap)]
+#![allow(clippy::if_same_then_else)]
+#![allow(clippy::missing_transmute_annotations)] // switch
+#![allow(clippy::nonminimal_bool)] // switch
+#![allow(clippy::manual_div_ceil)] // switch
+#![allow(clippy::identity_op)] // switch
+#![allow(clippy::assign_op_pattern)] // switch
+#![allow(clippy::blocks_in_conditions)] // switch
+#![allow(
+    clippy::needless_range_loop,
+    clippy::needless_late_init,
+    clippy::explicit_counter_loop,
+    clippy::size_of_in_element_count,
+    clippy::ptr_offset_with_cast,
+    clippy::manual_c_str_literals,
+    clippy::manual_range_patterns,
+    clippy::absurd_extreme_comparisons,
+    clippy::overly_complex_bool_expr,
+    clippy::uninlined_format_args,
+    clippy::single_match,
+    clippy::self_assignment,
+    clippy::while_immutable_condition,
+    clippy::not_unsafe_ptr_arg_deref,
+    clippy::non_canonical_partial_ord_impl,
+    clippy::useless_conversion
+)] // switch
+#![warn(clippy::needless_return)] // switch
+
+//
+#![allow(clippy::shadow_same)] // switch
+#![allow(clippy::shadow_unrelated)] // switch
+
 // #![warn(clippy::shadow_reuse)]
 
 pub mod compat;

@@ -681,7 +681,7 @@ pub unsafe extern "C" fn session_group_synchronize1(target: *mut session, s: *mu
         }
 
         /* Fix up the current window. */
-        if ((*s).curw != null_mut()) {
+        if !(*s).curw.is_null() {
             (*s).curw = winlink_find_by_index(&raw mut (*s).windows, (*(*s).curw).idx);
         } else {
             (*s).curw = winlink_find_by_index(&raw mut (*s).windows, (*(*target).curw).idx);
