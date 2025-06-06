@@ -2,19 +2,16 @@
 #![allow(non_camel_case_types)]
 #![allow(non_upper_case_globals)]
 #![allow(unused)]
-#![allow(clippy::int_plus_one)]
 #![allow(clippy::collapsible_else_if)]
 #![allow(clippy::collapsible_if)]
 #![allow(clippy::deref_addrof, reason = "many false positive, required for unsafe code")]
 #![allow(clippy::manual_clamp)]
 #![allow(clippy::manual_range_contains)]
-#![allow(clippy::explicit_auto_deref)]
-#![allow(clippy::implicit_saturating_sub)]
+// #![allow(clippy::implicit_saturating_sub)]
 #![allow(clippy::if_same_then_else)]
-#![allow(clippy::nonminimal_bool)] // switch
 #![allow(clippy::manual_div_ceil)] // switch
-#![allow(clippy::blocks_in_conditions, clippy::missing_safety_doc)] // keep, not worth fixing yet
-#![allow(clippy::absurd_extreme_comparisons, clippy::overly_complex_bool_expr, clippy::uninlined_format_args, clippy::single_match, clippy::non_canonical_partial_ord_impl)] // switch
+#![allow(clippy::blocks_in_conditions, clippy::missing_safety_doc, clippy::explicit_auto_deref)] // keep, not worth fixing yet
+#![allow(clippy::overly_complex_bool_expr)] // switch
 #![allow(clippy::shadow_same)] // switch
 #![allow(clippy::shadow_unrelated)] // switch
 // #![warn(clippy::shadow_reuse)]

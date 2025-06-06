@@ -663,7 +663,7 @@ pub unsafe extern "C" fn control_write_pending(c: *mut client, cp: *mut control_
 
                 cb = tailq_first(&raw mut (*cs).all_blocks);
                 if (!cb.is_null() && (*cb).size == 0) {
-                    if (!wp.is_none() && !message.is_null()) {
+                    if wp.is_some() && !message.is_null() {
                         control_write_data(c, message);
                         message = null_mut();
                     }

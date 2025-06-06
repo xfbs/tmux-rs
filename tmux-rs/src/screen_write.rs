@@ -1677,7 +1677,7 @@ pub unsafe extern "C" fn screen_write_clearendofscreen(ctx: *mut screen_write_ct
         if (*s).cx == 0 && (*s).cy == 0 && ((*gd).flags & GRID_HISTORY != 0) && !(*ctx).wp.is_null() && options_get_number_((*(*ctx).wp).options, c"scroll-on-clear") != 0 {
             grid_view_clear_history(gd, bg);
         } else {
-            if (*s).cx <= sx - 1 {
+            if (*s).cx < sx {
                 grid_view_clear(gd, (*s).cx, (*s).cy, sx - (*s).cx, 1, bg);
             }
             grid_view_clear(gd, 0, (*s).cy + 1, sx, sy - ((*s).cy + 1), bg);

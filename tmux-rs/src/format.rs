@@ -3584,7 +3584,7 @@ fn format_find(ft: *mut format_tree, key: *const c_char, modifiers: format_modif
                 if envent.is_null() {
                     envent = environ_find(global_environ, key);
                 }
-                if !envent.is_null() && !(*envent).value.is_none() {
+                if !envent.is_null() && (*envent).value.is_some() {
                     found = xstrdup((*envent).value.unwrap().as_ptr()).as_ptr();
                     break 'found;
                 }

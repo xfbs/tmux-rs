@@ -269,8 +269,8 @@ unsafe extern "C" fn cmd_display_panes_exec(self_: *mut cmd, item: *mut cmdq_ite
         let mut cause = null_mut();
         let mut wait = !args_has(args, b'b');
 
-        if (!(*tc).overlay_draw.is_none()) {
-            return (cmd_retval::CMD_RETURN_NORMAL);
+        if (*tc).overlay_draw.is_some() {
+            return cmd_retval::CMD_RETURN_NORMAL;
         }
 
         if (args_has_(args, 'd')) {

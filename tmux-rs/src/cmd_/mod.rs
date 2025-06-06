@@ -918,36 +918,33 @@ pub unsafe extern "C" fn cmd_template_replace(template: *const c_char, s: *const
         while *ptr != b'\0' as c_char {
             let ch = *ptr;
             ptr = ptr.add(1);
-            match ch as c_uchar {
-                b'%' => {
-                    if *ptr < b'1' as c_char || *ptr > b'9' as c_char || *ptr as i32 - b'0' as i32 != idx {
-                        if *ptr != b'%' as c_char || replaced != 0 {
-                            break;
-                        }
-                        replaced = 1;
+            if matches!(ch as c_uchar, b'%') {
+                if *ptr < b'1' as c_char || *ptr > b'9' as c_char || *ptr as i32 - b'0' as i32 != idx {
+                    if *ptr != b'%' as c_char || replaced != 0 {
+                        break;
                     }
-                    ptr = ptr.add(1);
-
-                    let quoted = (*ptr == b'%' as c_char);
-                    if !quoted {
-                        ptr = ptr.add(1);
-                    }
-
-                    buf = xrealloc_(buf, len + (strlen(s) * 3) + 1).as_ptr();
-                    let mut cp = s;
-                    while *cp != b'\0' as c_char {
-                        if quoted && !strchr(quote.as_ptr(), *cp as i32).is_null() {
-                            *buf.add(len) = b'\\' as c_char;
-                            len += 1;
-                        }
-                        *buf.add(len) = *cp;
-                        len += 1;
-                        cp = cp.add(1);
-                    }
-                    *buf.add(len) = b'\0' as c_char;
-                    continue;
+                    replaced = 1;
                 }
-                _ => (),
+                ptr = ptr.add(1);
+
+                let quoted = (*ptr == b'%' as c_char);
+                if !quoted {
+                    ptr = ptr.add(1);
+                }
+
+                buf = xrealloc_(buf, len + (strlen(s) * 3) + 1).as_ptr();
+                let mut cp = s;
+                while *cp != b'\0' as c_char {
+                    if quoted && !strchr(quote.as_ptr(), *cp as i32).is_null() {
+                        *buf.add(len) = b'\\' as c_char;
+                        len += 1;
+                    }
+                    *buf.add(len) = *cp;
+                    len += 1;
+                    cp = cp.add(1);
+                }
+                *buf.add(len) = b'\0' as c_char;
+                continue;
             }
             buf = xrealloc_(buf, len + 2).as_ptr();
             *buf.add(len) = ch;

@@ -67,16 +67,8 @@ impl PartialEq for timer {
     fn eq(&self, other: &Self) -> bool { unsafe { (*self.0).tv_sec == (*other.0).tv_sec && (*self.0).tv_usec == (*other.0).tv_usec } }
 }
 impl Ord for timer {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering { self.partial_cmp(other).unwrap() }
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering { unsafe { if (*self.0).tv_sec == (*other.0).tv_sec { (*self.0).tv_usec.cmp(&(*other.0).tv_usec) } else { (*self.0).tv_sec.cmp(&(*other.0).tv_sec) } } }
 }
 impl PartialOrd for timer {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        unsafe {
-            if (*self.0).tv_sec == (*other.0).tv_sec {
-                (*self.0).tv_usec.partial_cmp(&(*other.0).tv_usec)
-            } else {
-                (*self.0).tv_sec.partial_cmp(&(*other.0).tv_sec)
-            }
-        }
-    }
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> { Some(self.cmp(other)) }
 }

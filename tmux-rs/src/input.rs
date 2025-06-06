@@ -1276,7 +1276,7 @@ unsafe extern "C" fn input_csi_dispatch(ictx: *mut input_ctx) -> i32 {
                         n -= 1;
                         loop {
                             cx -= 1;
-                            if !(cx > 0 && !bit_test((*s).tabs, cx)) {
+                            if cx == 0 || bit_test((*s).tabs, cx) {
                                 break;
                             }
                         }

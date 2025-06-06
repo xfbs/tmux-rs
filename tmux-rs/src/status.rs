@@ -1060,18 +1060,18 @@ unsafe extern "C" fn status_prompt_paste(c: *mut client) -> i32 {
             if pb.is_null() {
                 return 0;
             }
-            let mut bufdata = paste_buffer_data(pb, &raw mut bufsize);
+            let mut bufdata: *const u8 = paste_buffer_data(pb, &raw mut bufsize).cast();
             let mut udp = xreallocarray_::<utf8_data>(null_mut(), bufsize + 1).as_ptr();
             ud = udp;
             let mut i: u32 = 0;
             while i as usize != bufsize {
-                let mut more = utf8_open(udp, *bufdata.add(i as usize) as u8);
+                let mut more = utf8_open(udp, *bufdata.add(i as usize));
                 if more == utf8_state::UTF8_MORE {
                     while ({
                         i += 1;
                         i as usize != bufsize && more == utf8_state::UTF8_MORE
                     }) {
-                        more = utf8_append(udp, *bufdata.add(i as usize) as u8);
+                        more = utf8_append(udp, *bufdata.add(i as usize));
                     }
                     if (more == utf8_state::UTF8_DONE) {
                         udp = udp.add(1);
@@ -1082,7 +1082,7 @@ unsafe extern "C" fn status_prompt_paste(c: *mut client) -> i32 {
                 if *bufdata.add(i as usize) <= 31 || *bufdata.add(i as usize) >= 127 {
                     break;
                 }
-                utf8_set(udp, *bufdata.add(i as usize) as u8);
+                utf8_set(udp, *bufdata.add(i as usize));
                 udp = udp.add(1);
                 i += 1;
             }

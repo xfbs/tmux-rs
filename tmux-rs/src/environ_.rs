@@ -168,7 +168,7 @@ pub unsafe extern "C" fn environ_push(env: *mut environ) {
 
         environ = xcalloc_::<*mut c_char>(1).as_ptr();
         for envent in rb_foreach(env).map(NonNull::as_ptr) {
-            if !(*envent).value.is_none() && *(*envent).name.unwrap().as_ptr() != b'\0' as c_char && !(*envent).flags & ENVIRON_HIDDEN != 0 {
+            if (*envent).value.is_some() && *(*envent).name.unwrap().as_ptr() != b'\0' as c_char && !(*envent).flags & ENVIRON_HIDDEN != 0 {
                 libc::setenv(transmute_ptr((*envent).name), transmute_ptr((*envent).value), 1);
             }
         }
@@ -183,7 +183,7 @@ pub unsafe extern "C" fn environ_log(env: *mut environ, fmt: *const c_char, mut 
         vasprintf(&raw mut prefix, fmt, args.as_va_list());
 
         for envent in rb_foreach(env).map(NonNull::as_ptr) {
-            if (!(*envent).value.is_none() && *(*envent).name.unwrap().as_ptr() != b'\0' as c_char) {
+            if (*envent).value.is_some() && *(*envent).name.unwrap().as_ptr() != b'\0' as c_char {
                 log_debug!("{}{}={}", _s(prefix), _s(transmute_ptr((*envent).name)), _s(transmute_ptr((*envent).value)));
             }
         }

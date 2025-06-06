@@ -1225,7 +1225,7 @@ pub unsafe extern "C" fn format_trim_left(expanded: *const c_char, limit: u32) -
                     cp = cp.wrapping_sub(ud.have as usize).add(1);
                 }
             } else if (*cp > 0x1f && *cp < 0x7f) {
-                if width + 1 <= limit {
+                if width < limit {
                     *out = *cp;
                     out = out.add(1);
                 }

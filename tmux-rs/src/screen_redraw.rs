@@ -536,7 +536,7 @@ unsafe extern "C" fn screen_redraw_update(c: *mut client, mut flags: client_flag
             flags &= !client_flag::REDRAWSTATUS;
         }
 
-        if !(*c).overlay_draw.is_none() {
+        if (*c).overlay_draw.is_some() {
             flags |= client_flag::REDRAWOVERLAY;
         }
 

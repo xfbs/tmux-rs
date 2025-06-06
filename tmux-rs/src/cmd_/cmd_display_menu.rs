@@ -305,8 +305,8 @@ unsafe extern "C" fn cmd_display_menu_exec(self_: *mut cmd, item: *mut cmdq_item
         let mut count = args_count(args);
         let mut o = (*(*(*(*target).s).curw).window).options;
 
-        if (!(*tc).overlay_draw.is_none()) {
-            return (cmd_retval::CMD_RETURN_NORMAL);
+        if (*tc).overlay_draw.is_some() {
+            return cmd_retval::CMD_RETURN_NORMAL;
         }
 
         if (args_has_(args, 'C')) {
@@ -414,10 +414,10 @@ unsafe extern "C" fn cmd_display_popup_exec(self_: *mut cmd, item: *mut cmdq_ite
 
         if (args_has_(args, 'C')) {
             server_client_clear_overlay(tc);
-            return (cmd_retval::CMD_RETURN_NORMAL);
+            return cmd_retval::CMD_RETURN_NORMAL;
         }
-        if !(*tc).overlay_draw.is_none() {
-            return (cmd_retval::CMD_RETURN_NORMAL);
+        if (*tc).overlay_draw.is_some() {
+            return cmd_retval::CMD_RETURN_NORMAL;
         }
 
         h = (*tty).sy / 2;

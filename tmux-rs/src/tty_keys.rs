@@ -1422,23 +1422,20 @@ unsafe extern "C" fn tty_keys_device_attributes(tty: *mut tty, buf: *const c_cha
         }
 
         /* Add terminal features. */
-        match p[0] {
-            61..=65 => {
-                /* level 1-5 */
-                for i in 1..n {
-                    // log_debug(c"%s: DA feature: %d\0".as_ptr(), (*c).name, p[i as usize]);
-                    if p[i as usize] == 4 {
-                        tty_add_features(features, c"sixel".as_ptr(), c",".as_ptr());
-                    }
-                    if p[i as usize] == 21 {
-                        tty_add_features(features, c"margins".as_ptr(), c",".as_ptr());
-                    }
-                    if p[i as usize] == 28 {
-                        tty_add_features(features, c"rectfill".as_ptr(), c",".as_ptr());
-                    }
+        if matches!(p[0], 61..=65) {
+            /* level 1-5 */
+            for i in 1..n {
+                // log_debug(c"%s: DA feature: %d\0".as_ptr(), (*c).name, p[i as usize]);
+                if p[i as usize] == 4 {
+                    tty_add_features(features, c"sixel".as_ptr(), c",".as_ptr());
+                }
+                if p[i as usize] == 21 {
+                    tty_add_features(features, c"margins".as_ptr(), c",".as_ptr());
+                }
+                if p[i as usize] == 28 {
+                    tty_add_features(features, c"rectfill".as_ptr(), c",".as_ptr());
                 }
             }
-            _ => {}
         }
         // log_debug(c"%s: received primary DA %.*s\0".as_ptr(), (*c).name, *size as i32, buf);
 
