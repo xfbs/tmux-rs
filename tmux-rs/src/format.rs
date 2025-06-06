@@ -3681,15 +3681,14 @@ pub unsafe extern "C" fn format_unescape(s: *const c_char) -> *mut c_char {
     }
 }
 
-/* Remove escaped characters. */
+/// Remove escaped characters.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn format_strip(s: *const c_char) -> *mut c_char {
+pub unsafe extern "C" fn format_strip(mut s: *const c_char) -> *mut c_char {
     unsafe {
         let mut out = xmalloc(strlen(s) + 1).as_ptr().cast();
         let mut cp = out;
         let mut brackets = 0;
 
-        let mut s = s;
         while *s != b'\0' as c_char {
             if (*s == b'#' as c_char && *s.add(1) == b'{' as c_char) {
                 brackets += 1;
@@ -3699,6 +3698,7 @@ pub unsafe extern "C" fn format_strip(s: *const c_char) -> *mut c_char {
                     *cp = *s;
                     cp = cp.add(1);
                 }
+                s = s.add(1);
                 continue;
             }
             if (*s == b'}' as c_char) {
@@ -3706,6 +3706,7 @@ pub unsafe extern "C" fn format_strip(s: *const c_char) -> *mut c_char {
             }
             *cp = *s;
             cp = cp.add(1);
+            s = s.add(1);
         }
         *cp = b'\0' as c_char;
         out

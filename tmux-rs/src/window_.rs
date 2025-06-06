@@ -104,7 +104,7 @@ unsafe extern "C" fn winlink_next_index(wwl: *mut winlinks, idx: i32) -> i32 {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn winlink_count(wwl: *mut winlinks) -> u32 { unsafe { rb_foreach(wwl).into_iter().count() as u32 } }
+pub unsafe extern "C" fn winlink_count(wwl: *mut winlinks) -> u32 { unsafe { rb_foreach(wwl).count() as u32 } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn winlink_add(wwl: *mut winlinks, mut idx: i32) -> *mut winlink {
@@ -828,7 +828,7 @@ pub unsafe extern "C" fn window_pane_index(wp: *mut window_pane, i: *mut u32) ->
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_count_panes(w: *mut window) -> u32 { unsafe { tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).into_iter().count() as u32 } }
+pub unsafe extern "C" fn window_count_panes(w: *mut window) -> u32 { unsafe { tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).count() as u32 } }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_destroy_panes(w: *mut window) {

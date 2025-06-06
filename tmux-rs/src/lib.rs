@@ -19,8 +19,8 @@
 #![allow(clippy::nonminimal_bool)] // switch
 #![allow(clippy::manual_div_ceil)] // switch
 #![allow(clippy::identity_op)] // switch
-#![allow(clippy::assign_op_pattern)] // switch
-#![allow(clippy::blocks_in_conditions)] // switch
+#![warn(clippy::assign_op_pattern)] // switch
+#![allow(clippy::blocks_in_conditions)] // keep, not worth fixing yet
 #![allow(
     clippy::needless_range_loop,
     clippy::needless_late_init,
@@ -34,15 +34,11 @@
     clippy::uninlined_format_args,
     clippy::single_match,
     clippy::self_assignment,
-    clippy::while_immutable_condition,
     clippy::not_unsafe_ptr_arg_deref,
-    clippy::non_canonical_partial_ord_impl,
-    clippy::useless_conversion
+    clippy::non_canonical_partial_ord_impl
 )] // switch
-//
 #![allow(clippy::shadow_same)] // switch
 #![allow(clippy::shadow_unrelated)] // switch
-
 // #![warn(clippy::shadow_reuse)]
 
 pub mod compat;
