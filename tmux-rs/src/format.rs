@@ -99,7 +99,7 @@ const FORMAT_LOOP_LIMIT: i32 = 100;
 bitflags::bitflags! {
     #[repr(transparent)]
     #[derive(Copy, Clone)]
-    struct format_expand_flags: i32 {
+    pub struct format_expand_flags: i32 {
         const FORMAT_EXPAND_TIME = 0x1;
         const FORMAT_EXPAND_NOJOBS = 0x2;
     }
@@ -3010,14 +3010,14 @@ pub unsafe extern "C" fn format_cb_user(_ft: *mut format_tree) -> *mut c_void { 
 /// Format table type.
 #[repr(i32)]
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum format_table_type {
+pub enum format_table_type {
     FORMAT_TABLE_STRING,
     FORMAT_TABLE_TIME,
 }
 
 /// Format table entry.
 #[repr(C)]
-struct format_table_entry {
+pub struct format_table_entry {
     key: SyncCharPtr,
     type_: format_table_type,
     cb: format_cb,

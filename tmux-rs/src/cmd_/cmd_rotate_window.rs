@@ -84,7 +84,7 @@ unsafe extern "C" fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_ite
             sx = (*wp).sx;
             sy = (*wp).sy;
             for wp_ in tailq_foreach_reverse::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
-                wp = wp;
+                wp = wp_;
                 let wp2 = tailq_prev::<_, _, discr_entry>(wp);
                 if wp2.is_null() {
                     break;

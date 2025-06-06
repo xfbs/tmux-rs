@@ -364,7 +364,7 @@ unsafe extern "C" {
 }
 
 #[cfg_attr(not(test), unsafe(no_mangle))]
-pub extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *mut *mut c_char) {
+pub unsafe extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *mut *mut c_char) {
     std::panic::set_hook(Box::new(|panic_info| {
         let backtrace = std::backtrace::Backtrace::capture();
         let err_str = format!("{backtrace:#?}");

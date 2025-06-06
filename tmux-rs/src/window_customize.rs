@@ -58,7 +58,7 @@ enum window_customize_change {
 }
 
 #[repr(C)]
-struct window_customize_itemdata {
+pub struct window_customize_itemdata {
     data: *mut window_customize_modedata,
     scope: window_customize_scope,
 
@@ -71,7 +71,7 @@ struct window_customize_itemdata {
 }
 
 #[repr(C)]
-struct window_customize_modedata {
+pub struct window_customize_modedata {
     wp: *mut window_pane,
     dead: i32,
     references: i32,

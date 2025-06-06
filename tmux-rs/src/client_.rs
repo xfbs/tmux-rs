@@ -27,7 +27,7 @@ pub static mut client_suspended: i32 = 0;
 
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq)]
-enum client_exitreason {
+pub enum client_exitreason {
     CLIENT_EXIT_NONE,
     CLIENT_EXIT_DETACHED,
     CLIENT_EXIT_DETACHED_HUP,

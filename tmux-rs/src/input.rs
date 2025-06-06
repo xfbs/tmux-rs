@@ -290,7 +290,7 @@ static input_csi_table: [input_table_entry; 40] = [
 /// Input transition.
 #[repr(C)]
 #[derive(Copy, Clone)]
-struct input_transition {
+pub struct input_transition {
     first: i32,
     last: i32,
 
@@ -303,7 +303,7 @@ impl input_transition {
 
 // Input state.
 #[repr(C)]
-struct input_state {
+pub struct input_state {
     name: SyncCharPtr,
     enter: Option<unsafe extern "C" fn(*mut input_ctx)>,
     exit: Option<unsafe extern "C" fn(*mut input_ctx)>,

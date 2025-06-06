@@ -48,13 +48,13 @@ static mut window_client_sort: *mut mode_tree_sort_criteria = null_mut();
 
 unsafe impl Zeroable for window_client_itemdata {}
 #[repr(C)]
-struct window_client_itemdata {
+pub struct window_client_itemdata {
     c: *mut client,
 }
 
 unsafe impl Zeroable for window_client_modedata {}
 #[repr(C)]
-struct window_client_modedata {
+pub struct window_client_modedata {
     wp: *mut window_pane,
 
     data: *mut mode_tree_data,

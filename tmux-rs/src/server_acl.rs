@@ -11,7 +11,7 @@ use crate::xmalloc::Zeroable;
 bitflags::bitflags! {
     #[repr(transparent)]
     #[derive(Eq, PartialEq)]
-    struct server_acl_user_flags: i32 {
+    pub struct server_acl_user_flags: i32 {
         const SERVER_ACL_READONLY = 0x1;
     }
 }

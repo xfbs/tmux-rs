@@ -1,7 +1,6 @@
 #![feature(c_variadic)]
 #![allow(non_camel_case_types)]
 #![allow(non_upper_case_globals)]
-#![allow(private_interfaces)]
 #![allow(unused)]
 #![allow(clippy::int_plus_one)]
 #![allow(clippy::collapsible_else_if)]
@@ -29,8 +28,6 @@
     clippy::overly_complex_bool_expr,
     clippy::uninlined_format_args,
     clippy::single_match,
-    clippy::self_assignment,
-    clippy::not_unsafe_ptr_arg_deref,
     clippy::non_canonical_partial_ord_impl
 )] // switch
 #![allow(clippy::shadow_same)] // switch
@@ -2013,7 +2010,7 @@ pub type overlay_resize_cb = Option<unsafe extern "C" fn(*mut client, *mut c_voi
 bitflags::bitflags! {
     #[repr(transparent)]
     #[derive(Copy, Clone)]
-    struct client_flag: u64 {
+    pub struct client_flag: u64 {
         const TERMINAL           = 0x0000000001u64;
         const LOGIN              = 0x0000000002u64;
         const EXIT               = 0x0000000004u64;
@@ -2782,7 +2779,7 @@ unsafe extern "C-unwind" {
 unsafe impl Sync for SyncCharPtr {}
 #[repr(transparent)]
 #[derive(Copy, Clone)]
-struct SyncCharPtr(*const c_char);
+pub struct SyncCharPtr(*const c_char);
 impl SyncCharPtr {
     const fn new(value: &'static CStr) -> Self { Self(value.as_ptr()) }
     const fn from_ptr(value: *const c_char) -> Self { Self(value) }

@@ -18,7 +18,7 @@ pub type job_free_cb = Option<unsafe extern "C" fn(*mut c_void)>;
 
 #[derive(Eq, PartialEq)]
 #[repr(i32)]
-enum job_state {
+pub enum job_state {
     JOB_RUNNING = 0,
     JOB_DEAD = 1,
     JOB_CLOSED = 2,
