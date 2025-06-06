@@ -924,7 +924,6 @@ unsafe extern "C" fn tty_keys_extended_key(tty: *mut tty, buf: *const c_char, le
         let mut modifiers: u32 = 0;
         const size_of_tmp: usize = 64;
         let mut tmp: [c_char; 64] = [0; 64];
-        let bspace: libc::cc_t;
         let mut nkey: key_code = 0;
         let mut onlykey: key_code;
         let mut ud: utf8_data = zeroed();
@@ -982,7 +981,8 @@ unsafe extern "C" fn tty_keys_extended_key(tty: *mut tty, buf: *const c_char, le
         *size = end + 1;
 
         /* Store the key. */
-        bspace = (*tty).tio.c_cc[libc::VERASE];
+
+        let bspace: libc::cc_t = (*tty).tio.c_cc[libc::VERASE];
         if bspace != libc::_POSIX_VDISABLE && number == bspace as u32 {
             nkey = keyc::KEYC_BSPACE as key_code;
         } else {
@@ -1078,13 +1078,13 @@ unsafe extern "C" fn tty_keys_mouse(tty: *mut tty, buf: *const c_char, len: usiz
         *size = 0;
 
         /* First two bytes are always \x1b[. */
-        if *buf.offset(0) != b'\x1b' as i8 {
+        if *buf != b'\x1b' as i8 {
             return -1;
         }
         if len == 1 {
             return 1;
         }
-        if *buf.offset(1) != b'[' as i8 {
+        if *buf.add(1) != b'[' as i8 {
             return -1;
         }
         if len == 2 {
@@ -1095,14 +1095,14 @@ unsafe extern "C" fn tty_keys_mouse(tty: *mut tty, buf: *const c_char, len: usiz
          * Third byte is M in old standard (and UTF-8 extension which we do not
          * support), < in SGR extension.
          */
-        if *buf.offset(2) == b'M' as i8 {
+        if *buf.add(2) == b'M' as i8 {
             /* Read the three inputs. */
             *size = 3;
             for i in 0..3 {
                 if len <= *size {
                     return 1;
                 }
-                ch = *buf.offset(*size as isize) as u8;
+                ch = *buf.add(*size) as u8;
                 *size += 1;
                 if i == 0 {
                     b = ch as u32;
@@ -1121,14 +1121,14 @@ unsafe extern "C" fn tty_keys_mouse(tty: *mut tty, buf: *const c_char, len: usiz
             b -= MOUSE_PARAM_BTN_OFF;
             x -= MOUSE_PARAM_POS_OFF;
             y -= MOUSE_PARAM_POS_OFF;
-        } else if *buf.offset(2) == b'<' as i8 {
+        } else if *buf.add(2) == b'<' as i8 {
             /* Read the three inputs. */
             *size = 3;
             loop {
                 if len <= *size {
                     return 1;
                 }
-                ch = *buf.offset(*size as isize) as u8;
+                ch = *buf.add(*size) as u8;
                 *size += 1;
                 if ch == b';' {
                     break;
@@ -1142,7 +1142,7 @@ unsafe extern "C" fn tty_keys_mouse(tty: *mut tty, buf: *const c_char, len: usiz
                 if len <= *size {
                     return 1;
                 }
-                ch = *buf.offset(*size as isize) as u8;
+                ch = *buf.add(*size) as u8;
                 *size += 1;
                 if ch == b';' {
                     break;
@@ -1156,7 +1156,7 @@ unsafe extern "C" fn tty_keys_mouse(tty: *mut tty, buf: *const c_char, len: usiz
                 if len <= *size {
                     return 1;
                 }
-                ch = *buf.offset(*size as isize) as u8;
+                ch = *buf.add(*size) as u8;
                 *size += 1;
                 if ch == b'M' || ch == b'm' {
                     break;
@@ -1240,25 +1240,25 @@ unsafe extern "C" fn tty_keys_clipboard(tty: *mut tty, mut buf: *const c_char, l
         if len == 1 {
             return 1;
         }
-        if *buf.offset(1) != ']' as i8 {
+        if *buf.add(1) != ']' as i8 {
             return -1;
         }
         if len == 2 {
             return 1;
         }
-        if *buf.offset(2) != '5' as i8 {
+        if *buf.add(2) != '5' as i8 {
             return -1;
         }
         if len == 3 {
             return 1;
         }
-        if *buf.offset(3) != '2' as i8 {
+        if *buf.add(3) != '2' as i8 {
             return -1;
         }
         if len == 4 {
             return 1;
         }
-        if *buf.offset(4) != ';' as i8 {
+        if *buf.add(4) != ';' as i8 {
             return -1;
         }
         if len == 5 {
@@ -1268,11 +1268,11 @@ unsafe extern "C" fn tty_keys_clipboard(tty: *mut tty, mut buf: *const c_char, l
         /* Find the terminator if any. */
         end = 5;
         while end < len {
-            if *buf.offset(end as isize) == '\x07' as i8 {
+            if *buf.add(end) == '\x07' as i8 {
                 terminator = 1;
                 break;
             }
-            if end > 5 && *buf.offset((end - 1) as isize) == '\x1b' as i8 && *buf.offset(end as isize) == '\\' as i8 {
+            if end > 5 && *buf.add(end - 1) == '\x1b' as i8 && *buf.add(end) == '\\' as i8 {
                 terminator = 2;
                 break;
             }
@@ -1284,7 +1284,7 @@ unsafe extern "C" fn tty_keys_clipboard(tty: *mut tty, mut buf: *const c_char, l
         *size = end + 1;
 
         /* Skip the initial part. */
-        buf = buf.offset(5);
+        buf = buf.add(5);
         end -= 5;
 
         /* Adjust end so that it points to the start of the terminator. */
@@ -1292,13 +1292,13 @@ unsafe extern "C" fn tty_keys_clipboard(tty: *mut tty, mut buf: *const c_char, l
 
         /* Get the second argument. */
         while end != 0 && *buf != ';' as i8 {
-            buf = buf.offset(1);
+            buf = buf.add(1);
             end -= 1;
         }
         if end == 0 || end == 1 {
             return 0;
         }
-        buf = buf.offset(1);
+        buf = buf.add(1);
         end -= 1;
 
         /* If we did not request this, ignore it. */
@@ -1311,7 +1311,7 @@ unsafe extern "C" fn tty_keys_clipboard(tty: *mut tty, mut buf: *const c_char, l
         /* It has to be a string so copy it. */
         copy = xmalloc(end + 1).as_ptr().cast();
         libc::memcpy(copy.cast(), buf.cast(), end);
-        *copy.offset(end as isize) = '\0' as i8;
+        *copy.add(end) = '\0' as i8;
 
         /* Convert from base64. */
         needed = (end / 4) * 3;
@@ -1374,13 +1374,13 @@ unsafe extern "C" fn tty_keys_device_attributes(tty: *mut tty, buf: *const c_cha
         if len == 1 {
             return 1;
         }
-        if *buf.offset(1) != '[' as i8 {
+        if *buf.add(1) != '[' as i8 {
             return -1;
         }
         if len == 2 {
             return 1;
         }
-        if *buf.offset(2) != '?' as i8 {
+        if *buf.add(2) != '?' as i8 {
             return -1;
         }
         if len == 3 {
@@ -1478,13 +1478,13 @@ unsafe extern "C" fn tty_keys_device_attributes2(tty: *mut tty, buf: *const c_ch
         if len == 1 {
             return 1;
         }
-        if *buf.offset(1) != '[' as i8 {
+        if *buf.add(1) != '[' as i8 {
             return -1;
         }
         if len == 2 {
             return 1;
         }
-        if *buf.offset(2) != '>' as i8 {
+        if *buf.add(2) != '>' as i8 {
             return -1;
         }
         if len == 3 {
@@ -1578,19 +1578,19 @@ unsafe extern "C" fn tty_keys_extended_device_attributes(tty: *mut tty, buf: *co
         if len == 1 {
             return 1;
         }
-        if *buf.offset(1) != 'P' as i8 {
+        if *buf.add(1) != 'P' as i8 {
             return -1;
         }
         if len == 2 {
             return 1;
         }
-        if *buf.offset(2) != '>' as i8 {
+        if *buf.add(2) != '>' as i8 {
             return -1;
         }
         if len == 3 {
             return 1;
         }
-        if *buf.offset(3) != '|' as i8 {
+        if *buf.add(3) != '|' as i8 {
             return -1;
         }
         if len == 4 {

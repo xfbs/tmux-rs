@@ -180,13 +180,13 @@ pub unsafe extern "C-unwind" fn input_key_build() {
                 continue;
             }
 
-            for j in 2..input_key_modifiers.len() {
+            for (j, input_key_modifiers_j) in input_key_modifiers.iter().cloned().enumerate().skip(2) {
                 let key = ((*ike).key & !KEYC_BUILD_MODIFIERS);
                 let data = xstrdup((*ike).data).as_ptr();
                 *data.add(libc::strcspn(data, c"_".as_ptr())) = b'0' as c_char + j as c_char;
 
                 let new = xcalloc1::<input_key_entry>();
-                new.key = key | input_key_modifiers[j];
+                new.key = key | input_key_modifiers_j;
                 new.data = data;
                 rb_insert(&raw mut input_key_tree, new);
             }
@@ -271,6 +271,9 @@ pub unsafe extern "C" fn input_key_extended(bev: *mut bufferevent, mut key: key_
     }
 }
 
+#[expect(clippy::manual_c_str_literals, reason = "false positive if c string contains NUL")]
+static standard_map: [SyncCharPtr; 2] = [SyncCharPtr::from_ptr(c"1!9(0)=+;:'\",<.>/-8? 2".as_ptr()), SyncCharPtr::from_ptr(b"119900=+;;'',,..\x1f\x1f\x7f\x7f\0\0\0".as_ptr().cast())];
+
 /*
  * Outputs the key in the "standard" mode. This is by far the most
  * complicated output mode, with a lot of remapping in order to
@@ -282,8 +285,6 @@ pub unsafe extern "C" fn input_key_vt10x(bev: *mut bufferevent, mut key: key_cod
     unsafe {
         let mut ud: utf8_data = zeroed(); // TODO use uninit
         let mut onlykey: key_code;
-
-        static mut standard_map: [*const i8; 2] = [c"1!9(0)=+;:'\",<.>/-8? 2".as_ptr(), b"119900=+;;'',,..\x1f\x1f\x7f\x7f\0\0\0".as_ptr().cast()];
 
         log_debug!("{}: key in {}", _s(__func__), key);
 
@@ -317,9 +318,9 @@ pub unsafe extern "C" fn input_key_vt10x(bev: *mut bufferevent, mut key: key_cod
          * but only <shifted key>|SHIFT.
          */
         if (key & KEYC_CTRL != 0) {
-            let p = libc::strchr(standard_map[0], onlykey as i32);
+            let p = libc::strchr(standard_map[0].as_ptr(), onlykey as i32);
             key = if (!p.is_null()) {
-                *standard_map[1].add(p.addr() - standard_map[0].addr()) as u64
+                *standard_map[1].as_ptr().add(p.addr() - standard_map[0].as_ptr().addr()) as u64
             } else if (onlykey >= b'3' as u64 && onlykey <= b'7' as u64) {
                 onlykey - b'\x18' as u64
             } else if (onlykey >= b'@' as u64 && onlykey <= b'~' as u64) {
@@ -338,25 +339,19 @@ pub unsafe extern "C" fn input_key_vt10x(bev: *mut bufferevent, mut key: key_cod
     }
 }
 
-/* Pick keys that are reported as vt10x keys in modifyOtherKeys=1 mode. */
+/// Pick keys that are reported as vt10x keys in modifyOtherKeys=1 mode.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn input_key_mode1(bev: *mut bufferevent, key: key_code) -> i32 {
     unsafe {
         log_debug!("{}: key in {}", "input_key_mode1", key);
 
-        /*
-         * As per
-         * https://invisible-island.net/xterm/modified-keys-us-pc105.html.
-         */
+        // As per https://invisible-island.net/xterm/modified-keys-us-pc105.html.
         let onlykey = key & KEYC_MASK_KEY;
         if ((key & (KEYC_META | KEYC_CTRL)) == KEYC_CTRL && (onlykey == ' ' as u64 || onlykey == '/' as u64 || onlykey == '@' as u64 || onlykey == '^' as u64 || (onlykey >= '2' as u64 && onlykey <= '8' as u64) || (onlykey >= '@' as u64 && onlykey <= '~' as u64))) {
             return input_key_vt10x(bev, key);
         }
 
-        /*
-         * A regular key + Meta. In the absence of a standard to back this, we
-         * mimic what iTerm 2 does.
-         */
+        // A regular key + Meta. In the absence of a standard to back this, we mimic what iTerm 2 does.
         if ((key & (KEYC_CTRL | KEYC_META)) == KEYC_META) {
             return input_key_vt10x(bev, key);
         }
@@ -365,7 +360,7 @@ pub unsafe extern "C" fn input_key_mode1(bev: *mut bufferevent, key: key_code) -
     -1
 }
 
-/* Translate a key code into an output key sequence. */
+/// Translate a key code into an output key sequence.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn input_key(s: *mut screen, bev: *mut bufferevent, mut key: key_code) -> i32 {
     let __func__ = c"input_key".as_ptr();

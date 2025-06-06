@@ -457,7 +457,8 @@ pub unsafe extern "C" fn key_string_lookup_key(mut key: key_code, with_flags: i3
                 }
 
                 /* Try the key against the string table. */
-                for i in 0..key_string_table.len() {
+                for i_ in 0..key_string_table.len() {
+                    i = i_;
                     if (key == (key_string_table[i].key & KEYC_MASK_KEY)) {
                         break;
                     }

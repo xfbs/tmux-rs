@@ -588,8 +588,7 @@ pub unsafe extern "C" fn tty_term_create(tty: *mut tty, name: *mut c_char, caps:
                 }
                 let value = (*caps.add(i as usize)).add(namelen + 1);
 
-                for j in 0..tty_term_ncodes() as usize {
-                    let ent = &raw const tty_term_codes[j];
+                for (j, ent) in tty_term_codes.iter().enumerate() {
                     if strncmp((*ent).name, *caps.add(i as usize), namelen) != 0 {
                         continue;
                     }
@@ -737,8 +736,7 @@ pub unsafe extern "C" fn tty_term_read_list(name: *const c_char, fd: i32, caps: 
         *caps = null_mut();
 
         let mut s = null();
-        for i in 0..tty_term_ncodes() as usize {
-            let ent = &raw const tty_term_codes[i];
+        for (i, ent) in tty_term_codes.iter().enumerate() {
             match (*ent).type_ {
                 tty_code_type::None => (),
                 tty_code_type::String => {

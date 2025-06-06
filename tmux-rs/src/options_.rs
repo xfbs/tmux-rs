@@ -467,7 +467,7 @@ pub unsafe extern "C" fn options_array_set(o: *mut options_entry, idx: u32, valu
             let mut a = options_array_item(o, idx);
             let new = if !a.is_null() && append != 0 {
                 let mut new = null_mut();
-                xasprintf(&mut new, "%s%s\0".as_ptr() as *const c_char, (*a).value.string, value);
+                xasprintf(&mut new, c"%s%s".as_ptr(), (*a).value.string, value);
                 new
             } else {
                 xstrdup(value).as_ptr()

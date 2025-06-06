@@ -1056,7 +1056,7 @@ pub unsafe extern "C" fn colour_parseX11(mut p: *const c_char) -> c_int {
                 p = p.offset(1);
                 len = len.wrapping_sub(1);
             }
-            while len != 0 && *p.offset(len.wrapping_sub(1) as isize) as c_int == ' ' as i32 {
+            while len != 0 && *p.add(len - 1) == b' ' as i8 {
                 len = len.wrapping_sub(1);
             }
             copy = xstrndup(p, len).cast().as_ptr();

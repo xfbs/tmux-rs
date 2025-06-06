@@ -214,10 +214,8 @@ pub unsafe extern "C" fn cmd_parse_do_buffer(buf: *const c_char, len: usize, pi:
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_parse_log_commands(cmds: *mut cmd_parse_commands, prefix: *const c_char) {
     unsafe {
-        let mut i = 0;
-        for cmd in tailq_foreach(cmds).map(NonNull::as_ptr) {
-            let mut j = 0;
-            for arg in tailq_foreach(&raw mut (*cmd).arguments).map(NonNull::as_ptr) {
+        for (i, cmd) in tailq_foreach(cmds).map(NonNull::as_ptr).enumerate() {
+            for (j, arg) in tailq_foreach(&raw mut (*cmd).arguments).map(NonNull::as_ptr).enumerate() {
                 match ((*arg).type_) {
                     cmd_parse_argument_type::CMD_PARSE_STRING => {
                         log_debug!("{} {}:{}: {}", _s(prefix), i, j, _s((*arg).string))
@@ -234,9 +232,7 @@ pub unsafe extern "C" fn cmd_parse_log_commands(cmds: *mut cmd_parse_commands, p
                         free_(s);
                     }
                 }
-                j += 1;
             }
-            i += 1;
         }
     }
 }

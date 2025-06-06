@@ -3,15 +3,15 @@ use crate::*;
 use crate::compat::queue::{tailq_first, tailq_foreach, tailq_insert_tail, tailq_last, tailq_next};
 
 struct layout_sets_entry {
-    name: *const c_char,
+    name: SyncCharPtr,
     arrange: Option<unsafe extern "C" fn(*mut window)>,
 }
 impl layout_sets_entry {
-    const fn new(name: &'static CStr, arrange: unsafe extern "C" fn(*mut window)) -> Self { Self { name: name.as_ptr(), arrange: Some(arrange) } }
+    const fn new(name: &'static CStr, arrange: unsafe extern "C" fn(*mut window)) -> Self { Self { name: SyncCharPtr::new(name), arrange: Some(arrange) } }
 }
 
 const layout_sets_len: usize = 7;
-static mut layout_sets: [layout_sets_entry; layout_sets_len] = [
+static layout_sets: [layout_sets_entry; layout_sets_len] = [
     layout_sets_entry::new(c"even-horizontal", layout_set_even_h),
     layout_sets_entry::new(c"even-vertical", layout_set_even_v),
     layout_sets_entry::new(c"main-horizontal", layout_set_main_h),
@@ -26,14 +26,15 @@ pub unsafe extern "C" fn layout_set_lookup(name: *const c_char) -> i32 {
     unsafe {
         let mut matched: i32 = -1;
 
-        for i in 0..layout_sets_len {
-            if (libc::strcmp(layout_sets[i].name, name) == 0) {
+        for (i, ls) in layout_sets.iter().enumerate() {
+            if libc::strcmp(ls.name.as_ptr(), name) == 0 {
                 return i as i32;
             }
         }
-        for i in 0..layout_sets_len {
-            if (libc::strncmp(layout_sets[i].name, name, strlen(name)) == 0) {
-                if (matched != -1) {
+
+        for (i, ls) in layout_sets.iter().enumerate() {
+            if libc::strncmp(ls.name.as_ptr(), name, strlen(name)) == 0 {
+                if matched != -1 {
                     /* ambiguous */
                     return -1;
                 }

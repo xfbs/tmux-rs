@@ -1083,8 +1083,8 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
             } // out:
 
             // Free the screens.
-            for i in 0..TOTAL {
-                screen_free(&raw mut s[i]);
+            for s_i in s.iter_mut() {
+                screen_free(s_i);
             }
 
             // Restore the original cursor position.

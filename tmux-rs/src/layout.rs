@@ -691,36 +691,31 @@ pub unsafe extern "C" fn layout_assign_pane(lc: *mut layout_cell, wp: *mut windo
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn layout_new_pane_size(w: *mut window, previous: u32, lc: *mut layout_cell, type_: layout_type, size: u32, count_left: u32, size_left: u32) -> u32 {
     unsafe {
-        let mut new_size: u32;
-        let mut min: u32;
-        let mut max: u32;
-        let available: u32;
-
         // If this is the last cell, it can take all of the remaining size.
         if count_left == 1 {
             return size_left;
         }
 
         // How much is available in this parent?
-        available = layout_resize_check(w, lc, type_);
+        let available: u32 = layout_resize_check(w, lc, type_);
 
         // Work out the minimum size of this cell and the new size
         // proportionate to the previous size.
-        min = (PANE_MINIMUM + 1) * (count_left - 1);
-        if type_ == layout_type::LAYOUT_LEFTRIGHT {
+        let mut min: u32 = (PANE_MINIMUM + 1) * (count_left - 1);
+        let mut new_size: u32 = if type_ == layout_type::LAYOUT_LEFTRIGHT {
             if (*lc).sx - available > min {
                 min = (*lc).sx - available;
             }
-            new_size = ((*lc).sx * size) / previous;
+            ((*lc).sx * size) / previous
         } else {
             if (*lc).sy - available > min {
                 min = (*lc).sy - available;
             }
-            new_size = ((*lc).sy * size) / previous;
-        }
+            ((*lc).sy * size) / previous
+        };
 
         // Check against the maximum and minimum size.
-        max = size_left - min;
+        let max: u32 = size_left - min;
         if new_size > max {
             new_size = max;
         }
@@ -829,23 +824,21 @@ pub unsafe extern "C" fn layout_resize_child_cells(w: *mut window, lc: *mut layo
         }
 
         // Resize children into the new size.
-        let mut idx: u32 = 0;
-        for lcchild in tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr) {
+        for (idx, lcchild) in tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr).enumerate() {
             if (*lc).type_ == layout_type::LAYOUT_TOPBOTTOM {
                 (*lcchild).sx = (*lc).sx;
                 (*lcchild).xoff = (*lc).xoff;
             } else {
-                (*lcchild).sx = layout_new_pane_size(w, previous, lcchild, (*lc).type_, (*lc).sx, count - idx, available);
+                (*lcchild).sx = layout_new_pane_size(w, previous, lcchild, (*lc).type_, (*lc).sx, count - idx as u32, available);
                 available -= (*lcchild).sx + 1;
             }
             if (*lc).type_ == layout_type::LAYOUT_LEFTRIGHT {
                 (*lcchild).sy = (*lc).sy;
             } else {
-                (*lcchild).sy = layout_new_pane_size(w, previous, lcchild, (*lc).type_, (*lc).sy, count - idx, available);
+                (*lcchild).sy = layout_new_pane_size(w, previous, lcchild, (*lc).type_, (*lc).sy, count - idx as u32, available);
                 available -= (*lcchild).sy + 1;
             }
             layout_resize_child_cells(w, lcchild);
-            idx += 1;
         }
     }
 }

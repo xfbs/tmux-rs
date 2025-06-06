@@ -8,31 +8,19 @@
 #![allow(clippy::deref_addrof, reason = "many false positive, required for unsafe code")]
 #![allow(clippy::manual_clamp)]
 #![allow(clippy::manual_range_contains)]
-#![allow(clippy::missing_safety_doc)]
-#![allow(clippy::unnecessary_cast)]
+#![warn(clippy::unnecessary_cast)]
 #![allow(clippy::explicit_auto_deref)]
 #![allow(clippy::implicit_saturating_sub)]
 #![allow(clippy::unnecessary_unwrap)]
 #![allow(clippy::if_same_then_else)]
 #![allow(clippy::nonminimal_bool)] // switch
 #![allow(clippy::manual_div_ceil)] // switch
-#![allow(clippy::blocks_in_conditions)] // keep, not worth fixing yet
-#![allow(
-    clippy::needless_range_loop,
-    clippy::needless_late_init,
-    clippy::explicit_counter_loop,
-    clippy::ptr_offset_with_cast,
-    clippy::manual_c_str_literals,
-    clippy::manual_range_patterns,
-    clippy::absurd_extreme_comparisons,
-    clippy::overly_complex_bool_expr,
-    clippy::uninlined_format_args,
-    clippy::single_match,
-    clippy::non_canonical_partial_ord_impl
-)] // switch
+#![allow(clippy::blocks_in_conditions, clippy::missing_safety_doc)] // keep, not worth fixing yet
+#![allow(clippy::manual_range_patterns, clippy::absurd_extreme_comparisons, clippy::overly_complex_bool_expr, clippy::uninlined_format_args, clippy::single_match, clippy::non_canonical_partial_ord_impl)] // switch
 #![allow(clippy::shadow_same)] // switch
 #![allow(clippy::shadow_unrelated)] // switch
 // #![warn(clippy::shadow_reuse)]
+// #![warn(clippy::needless_range_loop)] // can be cleaned up with some effort
 
 pub mod compat;
 

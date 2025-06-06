@@ -28,10 +28,9 @@ unsafe extern "C" fn cmd_list_sessions_exec(self_: *mut cmd, item: *mut cmdq_ite
         }
         let mut filter = args_get(args, b'f');
 
-        let mut n = 0;
-        for s in rb_foreach(&raw mut sessions) {
+        for (n, s) in rb_foreach(&raw mut sessions).enumerate() {
             let mut ft = format_create(cmdq_get_client(item), item, FORMAT_NONE as i32, format_flags::empty());
-            format_add(ft, c"line".as_ptr(), c"%u".as_ptr(), n);
+            format_add(ft, c"line".as_ptr(), c"%u".as_ptr(), n as u32);
             format_defaults(ft, null_mut(), Some(s), None, None);
 
             let mut flag = 0;
@@ -49,7 +48,6 @@ unsafe extern "C" fn cmd_list_sessions_exec(self_: *mut cmd, item: *mut cmdq_ite
             }
 
             format_free(ft);
-            n += 1;
         }
 
         cmd_retval::CMD_RETURN_NORMAL
