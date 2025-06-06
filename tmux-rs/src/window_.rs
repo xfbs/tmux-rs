@@ -373,7 +373,7 @@ pub unsafe extern "C" fn window_remove_ref(w: *mut window, from: *const c_char) 
 pub unsafe extern "C" fn window_set_name(w: *mut window, new_name: *const c_char) {
     unsafe {
         free_((*w).name);
-        utf8_stravis(&raw mut (*w).name, new_name, (VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL) as i32);
+        utf8_stravis(&raw mut (*w).name, new_name, ((VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL)));
         notify_window(c"window-renamed".as_ptr(), w);
     }
 }
@@ -1029,7 +1029,7 @@ unsafe extern "C" fn window_pane_read_callback(_bufev: *mut bufferevent, data: *
             }
         }
         input_parse_pane(wp);
-        bufferevent_disable((*wp).event, EV_READ as i16);
+        bufferevent_disable((*wp).event, EV_READ);
     }
 }
 
@@ -1057,7 +1057,7 @@ pub unsafe extern "C" fn window_pane_set_event(wp: *mut window_pane) {
         }
         (*wp).ictx = input_init(wp, (*wp).event, &raw mut (*wp).palette);
 
-        bufferevent_enable((*wp).event, EV_READ as i16 | EV_WRITE as i16);
+        bufferevent_enable((*wp).event, EV_READ | EV_WRITE);
     }
 }
 

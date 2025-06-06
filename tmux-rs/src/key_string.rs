@@ -210,7 +210,7 @@ static key_string_table: [key_string_table_entry; 469] = const {
 pub unsafe extern "C" fn key_string_search_table(string: *const c_char) -> key_code {
     unsafe {
         for i in 0..key_string_table.len() {
-            if (strcasecmp(string, key_string_table[i as usize].string) == 0) {
+            if (strcasecmp(string, key_string_table[i].string) == 0) {
                 return key_string_table[i].key;
             }
         }

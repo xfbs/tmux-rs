@@ -130,7 +130,7 @@ pub unsafe extern "C" fn file_fire_done_cb(_fd: i32, _events: i16, arg: *mut c_v
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_fire_done(cf: *mut client_file) {
     unsafe {
-        event_once(-1, EV_TIMEOUT as i16, Some(file_fire_done_cb), cf as _, null_mut());
+        event_once(-1, EV_TIMEOUT, Some(file_fire_done_cb), cf as _, null_mut());
     }
 }
 
@@ -299,7 +299,7 @@ pub unsafe extern "C" fn file_write(c: *mut client, path: *const c_char, flags: 
             evbuffer_add((*cf).buffer, bdata, bsize);
 
             msglen = strlen((*cf).path) + 1 + size_of::<msg_write_open>();
-            if msglen > MAX_IMSGSIZE as usize - IMSG_HEADER_SIZE {
+            if msglen > MAX_IMSGSIZE - IMSG_HEADER_SIZE {
                 (*cf).error = E2BIG;
                 break 'done;
             }
@@ -378,7 +378,7 @@ pub unsafe extern "C" fn file_read(c: *mut client, path: *const c_char, cb: clie
 
             // skip:
             msglen = strlen((*cf).path) + 1 + size_of::<msg_read_open>();
-            if (msglen > MAX_IMSGSIZE as usize - IMSG_HEADER_SIZE) {
+            if (msglen > MAX_IMSGSIZE - IMSG_HEADER_SIZE) {
                 (*cf).error = E2BIG;
                 break 'done;
             }
@@ -456,7 +456,7 @@ pub unsafe extern "C" fn file_push(cf: *mut client_file) {
         }
         if (left != 0) {
             (*cf).references += 1;
-            event_once(-1, EV_TIMEOUT as i16, Some(file_push_cb), cf.cast(), null());
+            event_once(-1, EV_TIMEOUT, Some(file_push_cb), cf.cast(), null());
         } else if ((*cf).stream > 2) {
             let mut close: msg_write_close = msg_write_close { stream: (*cf).stream };
             proc_send((*cf).peer, msgtype::MSG_WRITE_CLOSE, -1, &raw const close as *const c_void, size_of::<msg_write_close>());
@@ -581,7 +581,7 @@ pub unsafe extern "C" fn file_write_open(files: *mut client_files, peer: *mut tm
             if ((*cf).event.is_null()) {
                 fatalx(c"out of memory");
             }
-            bufferevent_enable((*cf).event, EV_WRITE as i16);
+            bufferevent_enable((*cf).event, EV_WRITE);
             break 'reply;
         }
         // reply:
@@ -751,7 +751,7 @@ pub unsafe extern "C" fn file_read_open(files: *mut client_files, peer: *mut tmu
             if ((*cf).event.is_null()) {
                 fatalx(c"out of memory");
             }
-            bufferevent_enable((*cf).event, EV_READ as i16);
+            bufferevent_enable((*cf).event, EV_READ);
             return;
         }
         // reply:

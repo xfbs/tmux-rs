@@ -1402,8 +1402,8 @@ unsafe extern "C" fn tty_keys_device_attributes(tty: *mut tty, buf: *const c_cha
         if i == tmp.len() {
             return -1;
         }
-        tmp[i as usize] = '\0' as i8;
-        *size = 4 + i as usize;
+        tmp[i] = '\0' as i8;
+        *size = 4 + i;
 
         /* Convert all arguments to numbers. */
         cp = tmp.as_mut_ptr();
@@ -1704,7 +1704,7 @@ pub unsafe extern "C" fn tty_keys_colours(tty: *mut tty, buf: *const c_char, len
         } else {
             tmp[i] = '\0' as i8;
         }
-        *size = 6 + i as usize;
+        *size = 6 + i;
 
         n = colour_parseX11(tmp.as_ptr());
         if n != -1 && *buf.add(3) == '0' as i8 {

@@ -1471,7 +1471,7 @@ pub unsafe extern "C" fn screen_write_cursormove(ctx: *mut screen_write_ctx, mut
         }
 
         // log_debug("%s: from %u,%u to %u,%u", __func__, (*s).cx, (*s).cy, px, py);
-        screen_write_set_cursor(ctx, px as i32, py as i32);
+        screen_write_set_cursor(ctx, px, py);
     }
 }
 
@@ -2206,7 +2206,7 @@ pub unsafe extern "C" fn screen_write_cell(ctx: *mut screen_write_ctx, gc: *cons
         if ((*s).cx <= (sx as i32 - not_wrap - width as i32) as u32) {
             screen_write_set_cursor(ctx, ((*s).cx + width) as i32, -1);
         } else {
-            screen_write_set_cursor(ctx, sx as i32 - not_wrap as i32, -1);
+            screen_write_set_cursor(ctx, sx as i32 - not_wrap, -1);
         }
 
         /* Create space for character in insert mode. */

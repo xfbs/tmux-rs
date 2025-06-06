@@ -62,13 +62,13 @@ pub unsafe extern "C" fn proc_event_cb(_fd: i32, events: i16, arg: *mut c_void) 
         let imsg = imsg.as_mut_ptr();
 
         if ((*peer).flags & PEER_BAD == 0 && events & EV_READ != 0) {
-            n = imsg_read(&raw mut (*peer).ibuf) as isize;
+            n = imsg_read(&raw mut (*peer).ibuf);
             if ((n == -1 && errno!() != EAGAIN) || n == 0) {
                 ((*peer).dispatchcb.unwrap())(null_mut(), (*peer).arg);
                 return;
             }
             loop {
-                n = imsg_get(&raw mut (*peer).ibuf, imsg) as isize;
+                n = imsg_get(&raw mut (*peer).ibuf, imsg);
                 if (n == -1) {
                     ((*peer).dispatchcb.unwrap())(null_mut(), (*peer).arg);
                     return;
@@ -93,7 +93,7 @@ pub unsafe extern "C" fn proc_event_cb(_fd: i32, events: i16, arg: *mut c_void) 
             }
         }
 
-        if (events & EV_WRITE as i16 != 0) {
+        if (events & EV_WRITE != 0) {
             if msgbuf_write((&raw mut (*peer).ibuf.w).cast()) <= 0 && errno!() != EAGAIN {
                 ((*peer).dispatchcb.unwrap())(null_mut(), (*peer).arg);
                 return;
@@ -139,9 +139,9 @@ pub unsafe extern "C" fn proc_update_event(peer: *mut tmuxpeer) {
     unsafe {
         event_del(&raw mut (*peer).event);
 
-        let mut events: i16 = EV_READ as i16;
+        let mut events: i16 = EV_READ;
         if ((*peer).ibuf.w.queued > 0) {
-            events |= EV_WRITE as i16;
+            events |= EV_WRITE;
         }
         event_set(&raw mut (*peer).event, (*peer).ibuf.fd, events, Some(proc_event_cb), peer.cast());
 

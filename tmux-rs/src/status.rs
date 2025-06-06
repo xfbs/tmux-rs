@@ -826,20 +826,20 @@ pub unsafe extern "C" fn status_prompt_redraw(c: *mut client) -> i32 {
             let mut i = 0;
             while (*(*c).prompt_buffer.add(i)).size != 0 {
                 if (width < offset) {
-                    width += (*(*c).prompt_buffer.add(i as usize)).width as u32;
+                    width += (*(*c).prompt_buffer.add(i)).width as u32;
                     i += 1;
                     continue;
                 }
                 if (width >= offset + pwidth) {
                     break;
                 }
-                width += (*(*c).prompt_buffer.add(i as usize)).width as u32;
+                width += (*(*c).prompt_buffer.add(i)).width as u32;
                 if width > offset + pwidth {
                     break;
                 }
 
                 if i != (*c).prompt_index {
-                    utf8_copy(&raw mut gc.data, (*c).prompt_buffer.add(i as usize));
+                    utf8_copy(&raw mut gc.data, (*c).prompt_buffer.add(i));
                     screen_write_cell(&raw mut ctx, &raw const gc);
                 } else {
                     utf8_copy(&raw mut cursorgc.data, (*c).prompt_buffer.add(i));
@@ -971,7 +971,7 @@ unsafe extern "C" fn status_prompt_translate_key(c: *mut client, key: key_code, 
                 return 1;
             }
             code::B => {
-                *new_key = b'b' as u64 | KEYC_META as u64;
+                *new_key = b'b' as u64 | KEYC_META;
                 return 1;
             }
             code::B_UPPER => {

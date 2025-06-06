@@ -363,7 +363,7 @@ pub unsafe extern "C-unwind" fn client_main(base: *mut event_base, argc: i32, ar
             for i in 0..argc {
                 size += strlen(*argv.add(i as _)) + 1;
             }
-            if size > MAX_IMSGSIZE as usize - size_of::<msg_command>() {
+            if size > MAX_IMSGSIZE - size_of::<msg_command>() {
                 fprintf(stderr, c"command too long\n".as_ptr());
                 return 1;
             }
@@ -482,7 +482,7 @@ unsafe extern "C" fn client_send_identify(ttynam: *const c_char, termname: *cons
         let mut ss = environ;
         while !(*ss).is_null() {
             let sslen = strlen(*ss) + 1;
-            if sslen > MAX_IMSGSIZE as usize - IMSG_HEADER_SIZE {
+            if sslen > MAX_IMSGSIZE - IMSG_HEADER_SIZE {
                 ss = ss.add(1);
                 continue;
             }

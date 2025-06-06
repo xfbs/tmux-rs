@@ -75,7 +75,7 @@ pub unsafe extern "C" fn cmd_refresh_client_control_client_size(self_: *mut cmd,
         // struct client_window *cw;
 
         if (sscanf(size, c"@%u:%ux%u".as_ptr(), &raw mut w, &raw mut x, &raw mut y) == 3) {
-            if (x < WINDOW_MINIMUM as u32 || x > WINDOW_MAXIMUM as u32 || y < WINDOW_MINIMUM as u32 || y > WINDOW_MAXIMUM as u32) {
+            if (x < WINDOW_MINIMUM || x > WINDOW_MAXIMUM || y < WINDOW_MINIMUM || y > WINDOW_MAXIMUM) {
                 cmdq_error(item, c"size too small or too big".as_ptr());
                 return cmd_retval::CMD_RETURN_ERROR;
             }
@@ -102,7 +102,7 @@ pub unsafe extern "C" fn cmd_refresh_client_control_client_size(self_: *mut cmd,
             cmdq_error(item, c"bad size argument".as_ptr());
             return cmd_retval::CMD_RETURN_ERROR;
         }
-        if (x < WINDOW_MINIMUM as u32 || x > WINDOW_MAXIMUM as u32 || y < WINDOW_MINIMUM as u32 || y > WINDOW_MAXIMUM as u32) {
+        if (x < WINDOW_MINIMUM || x > WINDOW_MAXIMUM || y < WINDOW_MINIMUM || y > WINDOW_MAXIMUM) {
             cmdq_error(item, c"size too small or too big".as_ptr());
             return cmd_retval::CMD_RETURN_ERROR;
         }

@@ -66,7 +66,7 @@ unsafe extern "C" fn cmd_list_windows_session(self_: *mut cmd, s: NonNull<sessio
         let mut filter = args_get_(args, 'f');
 
         for (n, wl) in rb_foreach(&raw mut (*s.as_ptr()).windows).enumerate() {
-            let ft = format_create(cmdq_get_client(item), item, FORMAT_NONE as i32, format_flags::empty());
+            let ft = format_create(cmdq_get_client(item), item, FORMAT_NONE, format_flags::empty());
             format_add(ft, c"line".as_ptr(), c"%u".as_ptr(), n as u32);
             format_defaults(ft, null_mut(), Some(s), Some(wl), None);
 

@@ -102,7 +102,7 @@ pub unsafe extern "C" fn cmd_send_keys_inject_string(item: *mut cmdq_item, mut a
             if (*s == b'\0' as _ || n < 0 || n > 0xff || *endptr != b'\0' as _) {
                 return item;
             }
-            return cmd_send_keys_inject_key(item, after, args, KEYC_LITERAL as u64 | n as u64);
+            return cmd_send_keys_inject_key(item, after, args, KEYC_LITERAL | n as u64);
         }
 
         let mut literal = args_has_(args, 'l');

@@ -146,7 +146,7 @@ pub unsafe extern "C" fn alerts_queue(w: NonNull<window>, flags: window_flag) {
 
             if alerts_fired == 0 {
                 log_debug!("alerts check queued (by @{})", (*w).id);
-                event_once(-1, EV_TIMEOUT as i16, Some(alerts_callback), null_mut(), null_mut());
+                event_once(-1, EV_TIMEOUT, Some(alerts_callback), null_mut(), null_mut());
                 alerts_fired = 1;
             }
         }

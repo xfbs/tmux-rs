@@ -564,9 +564,9 @@ pub unsafe extern "C" fn args_escape(s: *const c_char) -> *mut c_char {
             return escaped;
         }
 
-        flags = (VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL) as i32;
+        flags = (VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL);
         if (quotes == b'"' as _) {
-            flags |= VIS_DQ as i32;
+            flags |= VIS_DQ;
         }
         utf8_stravis(&raw mut escaped, s, flags);
 

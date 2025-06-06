@@ -117,14 +117,14 @@ unsafe extern "C" fn format_draw_put_list(octx: *mut screen_write_ctx, ocx: u32,
         if (start != 0 && width > (*list_left).cx) {
             screen_write_cursormove(octx, (ocx + offset) as c_int, ocy as c_int, 0);
             screen_write_fast_copy(octx, list_left, 0, 0, (*list_left).cx, 1);
-            offset += (*list_left).cx as u32;
-            start += (*list_left).cx as u32;
-            width -= (*list_left).cx as u32;
+            offset += (*list_left).cx;
+            start += (*list_left).cx;
+            width -= (*list_left).cx;
         }
         if (start + width < (*list).cx && width > (*list_right).cx) {
             screen_write_cursormove(octx, (ocx + offset + width - (*list_right).cx) as c_int, ocy as c_int, 0);
             screen_write_fast_copy(octx, list_right, 0, 0, (*list_right).cx, 1);
-            width -= (*list_right).cx as u32;
+            width -= (*list_right).cx;
         }
 
         /* Draw the list screen itself. */
@@ -718,7 +718,7 @@ pub unsafe fn format_draw(octx: *mut screen_write_ctx, base: *const grid_cell, a
                         if *cp.add(n as usize) != b'[' as i8 {
                             cp = cp.add(n as usize);
                             n = n.div_ceil(2);
-                            width[current as usize] += n as u32;
+                            width[current as usize] += n;
                             format_draw_many(&raw mut ctx[current as usize], &raw mut sy, b'#' as i8, n);
                             continue;
                         }

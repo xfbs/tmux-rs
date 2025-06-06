@@ -241,7 +241,7 @@ pub unsafe extern "C" fn session_lock_timer(fd: i32, events: i16, arg: *mut c_vo
             return;
         }
 
-        log_debug!("session {} locked, activity time {}", _s((*s).name), (*s).activity_time.tv_sec as i64,);
+        log_debug!("session {} locked, activity time {}", _s((*s).name), (*s).activity_time.tv_sec,);
 
         server_lock_session(s);
         recalculate_sizes();
@@ -265,9 +265,9 @@ pub unsafe extern "C" fn session_update_activity(s: *mut session, from: *mut tim
             "session ${} {} activity {}.{:06} (last {}.{:06})",
             (*s).id,
             _s((*s).name),
-            (*s).activity_time.tv_sec as i64,
+            (*s).activity_time.tv_sec,
             (*s).activity_time.tv_usec as i32,
-            (*last).tv_sec as i64,
+            (*last).tv_sec,
             (*last).tv_usec as i32,
         );
 

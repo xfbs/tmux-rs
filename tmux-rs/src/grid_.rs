@@ -108,7 +108,7 @@ pub unsafe extern "C" fn grid_extended_cell(gl: *mut grid_line, gce: *mut grid_c
         let gee = &mut *(*gl).extddata.offset((*gce).union_.offset as isize);
         (*gee).data = *uc;
         (*gee).attr = (*gc).attr;
-        (*gee).flags = flags.bits() as u8;
+        (*gee).flags = flags.bits();
         (*gee).fg = (*gc).fg;
         (*gee).bg = (*gc).bg;
         (*gee).us = (*gc).us;

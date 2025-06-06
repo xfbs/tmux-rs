@@ -365,7 +365,7 @@ unsafe extern "C" fn server_accept(fd: i32, events: i16, _data: *mut c_void) {
         let mut slen: socklen_t = size_of::<sockaddr_storage>() as socklen_t;
 
         server_add_accept(0);
-        if events & EV_READ as i16 == 0 {
+        if events & EV_READ == 0 {
             return;
         }
 
@@ -408,10 +408,10 @@ pub unsafe extern "C" fn server_add_accept(timeout: c_int) {
         }
 
         if timeout == 0 {
-            event_set(&raw mut server_ev_accept, server_fd, EV_READ as i16, Some(server_accept), null_mut());
+            event_set(&raw mut server_ev_accept, server_fd, EV_READ, Some(server_accept), null_mut());
             event_add(&raw mut server_ev_accept, null_mut());
         } else {
-            event_set(&raw mut server_ev_accept, server_fd, EV_TIMEOUT as i16, Some(server_accept), null_mut());
+            event_set(&raw mut server_ev_accept, server_fd, EV_TIMEOUT, Some(server_accept), null_mut());
             event_add(&raw mut server_ev_accept, &raw mut tv);
         }
     }

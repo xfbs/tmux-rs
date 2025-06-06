@@ -189,8 +189,8 @@ pub unsafe extern "C" fn window_client_draw(modedata: *mut c_void, itemdata: Opt
         let mut c = (*item.unwrap().as_ptr()).c;
         let mut s = (*ctx).s;
 
-        let mut cx = (*s).cx as u32;
-        let mut cy = (*s).cy as u32;
+        let mut cx = (*s).cx;
+        let mut cy = (*s).cy;
 
         if ((*c).session.is_null() || (*c).flags.intersects(CLIENT_UNATTACHEDFLAGS)) {
             return;

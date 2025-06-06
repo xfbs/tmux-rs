@@ -29,7 +29,7 @@ unsafe extern "C" fn cmd_list_sessions_exec(self_: *mut cmd, item: *mut cmdq_ite
         let mut filter = args_get(args, b'f');
 
         for (n, s) in rb_foreach(&raw mut sessions).enumerate() {
-            let mut ft = format_create(cmdq_get_client(item), item, FORMAT_NONE as i32, format_flags::empty());
+            let mut ft = format_create(cmdq_get_client(item), item, FORMAT_NONE, format_flags::empty());
             format_add(ft, c"line".as_ptr(), c"%u".as_ptr(), n as u32);
             format_defaults(ft, null_mut(), Some(s), None, None);
 

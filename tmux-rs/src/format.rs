@@ -1598,7 +1598,7 @@ pub unsafe extern "C" fn format_cb_client_uid(ft: *mut format_tree) -> *mut c_vo
     unsafe {
         if !(*ft).c.is_null() {
             let uid = proc_get_peer_uid((*(*ft).c).peer);
-            if uid != (-1 as i32) as uid_t {
+            if uid != -1_i32 as uid_t {
                 return format_printf(c"%ld".as_ptr(), uid as c_long).cast();
             }
         }
@@ -1611,7 +1611,7 @@ pub unsafe extern "C" fn format_cb_client_user(ft: *mut format_tree) -> *mut c_v
     unsafe {
         if !(*ft).c.is_null() {
             let uid = proc_get_peer_uid((*(*ft).c).peer);
-            if uid != (-1 as i32) as uid_t {
+            if uid != -1_i32 as uid_t {
                 if let Some(pw) = NonNull::new(libc::getpwuid(uid)) {
                     return xstrdup((*pw.as_ptr()).pw_name).as_ptr().cast();
                 }
@@ -3312,7 +3312,7 @@ pub unsafe extern "C" fn format_each(ft: *mut format_tree, cb: Option<unsafe ext
 
             if (*fte).type_ == format_table_type::FORMAT_TABLE_TIME {
                 let tv = value as *const timeval;
-                xsnprintf(s.as_mut_ptr(), s.len(), c"%lld".as_ptr(), (*tv).tv_sec as i64);
+                xsnprintf(s.as_mut_ptr(), s.len(), c"%lld".as_ptr(), (*tv).tv_sec);
                 cb.unwrap()((*fte).key.as_ptr(), s.as_ptr(), arg);
             } else {
                 cb.unwrap()((*fte).key.as_ptr(), value as *const c_char, arg);
@@ -3322,7 +3322,7 @@ pub unsafe extern "C" fn format_each(ft: *mut format_tree, cb: Option<unsafe ext
 
         for fe in rb_foreach(&raw mut (*ft).tree).map(NonNull::as_ptr) {
             if (*fe).time != 0 {
-                xsnprintf(s.as_mut_ptr(), s.len(), c"%lld".as_ptr(), (*fe).time as i64);
+                xsnprintf(s.as_mut_ptr(), s.len(), c"%lld".as_ptr(), (*fe).time);
                 cb.unwrap()((*fe).key, s.as_ptr(), arg);
             } else {
                 if (*fe).value.is_null() && (*fe).cb.is_some() {
@@ -4782,7 +4782,7 @@ pub unsafe extern "C" fn format_replace(es: *mut format_expand_state, key: *cons
                 *buf = xreallocarray((*buf).cast(), 2, *len).as_ptr().cast();
                 *len *= 2;
             }
-            memcpy((*buf).add(*off as usize).cast(), value.cast(), valuelen);
+            memcpy((*buf).add((*off)).cast(), value.cast(), valuelen);
             *off += valuelen;
 
             format_log1(es, __func__, c"replaced '%s' with '%s'".as_ptr(), copy0, value);

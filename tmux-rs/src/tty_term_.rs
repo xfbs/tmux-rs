@@ -582,14 +582,14 @@ pub unsafe extern "C" fn tty_term_create(tty: *mut tty, name: *mut c_char, caps:
         'error: {
             // Fill in codes.
             for i in 0..ncaps as usize {
-                let namelen = strcspn(*caps.add(i as usize), c"=".as_ptr());
+                let namelen = strcspn(*caps.add(i), c"=".as_ptr());
                 if (namelen == 0) {
                     continue;
                 }
-                let value = (*caps.add(i as usize)).add(namelen + 1);
+                let value = (*caps.add(i)).add(namelen + 1);
 
                 for (j, ent) in tty_term_codes.iter().enumerate() {
-                    if strncmp((*ent).name, *caps.add(i as usize), namelen) != 0 {
+                    if strncmp((*ent).name, *caps.add(i), namelen) != 0 {
                         continue;
                     }
                     if *(*ent).name.add(namelen) != b'\0' as c_char {
@@ -952,7 +952,7 @@ pub unsafe extern "C" fn tty_term_describe(term: *mut tty_term, code: tty_code_c
                 xsnprintf(&raw mut s as *mut c_char, sizeof_s, c"%4u: %s: [missing]".as_ptr(), code, tty_term_codes[code as usize].name);
             }
             tty_code_type::String => {
-                strnvis(&raw mut out as *mut c_char, (*(*term).codes.add(code as usize)).value.string, sizeof_out, (VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL) as i32);
+                strnvis(&raw mut out as *mut c_char, (*(*term).codes.add(code as usize)).value.string, sizeof_out, ((VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL)));
                 xsnprintf(&raw mut s as *mut c_char, sizeof_s, c"%4u: %s: (string) %s".as_ptr(), code, tty_term_codes[code as usize].name, &raw const out as *const c_char);
             }
             tty_code_type::Number => {

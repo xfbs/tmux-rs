@@ -543,7 +543,7 @@ pub unsafe extern "C" fn input_key_get_mouse(s: *mut screen, m: *mut mouse_event
         if ((*m).sgr_type != ' ' as u32 && ((*s).mode & MODE_MOUSE_SGR) != 0) {
             len = xsnprintf(&raw mut buf as *mut c_char, sizeof_buf, c"\x1b[<%u;%u;%u%c".as_ptr(), (*m).sgr_b, x + 1, y + 1, (*m).sgr_type) as usize;
         } else if ((*s).mode & MODE_MOUSE_UTF8 != 0) {
-            if ((*m).b > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_BTN_OFF) as u32 || x > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_POS_OFF) as u32 || y > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_POS_OFF) as u32) {
+            if ((*m).b > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_BTN_OFF) || x > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_POS_OFF) || y > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_POS_OFF)) {
                 return 0;
             }
             len = xsnprintf(&raw mut buf as *mut c_char, sizeof_buf, c"\x1b[M".as_ptr()) as usize;

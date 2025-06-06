@@ -157,10 +157,10 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
                     fatalx(c"out of memory");
                 }
                 if (out != 0) {
-                    bufferevent_enable((*wp).pipe_event, EV_WRITE as i16);
+                    bufferevent_enable((*wp).pipe_event, EV_WRITE);
                 }
                 if (in_ != 0) {
-                    bufferevent_enable((*wp).pipe_event, EV_READ as i16);
+                    bufferevent_enable((*wp).pipe_event, EV_READ);
                 }
 
                 free_(cmd);

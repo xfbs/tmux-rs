@@ -215,7 +215,7 @@ pub unsafe extern "C" fn job_run(cmd: *const c_char, argc: c_int, argv: *mut *mu
             if ((*job).event.is_null()) {
                 fatalx(c"out of memory");
             }
-            bufferevent_enable((*job).event, EV_READ as i16 | EV_WRITE as i16);
+            bufferevent_enable((*job).event, EV_READ | EV_WRITE);
 
             log_debug!("run job {:p}: {} pid {}", job, _s((*job).cmd), (*job).pid);
             return job;
@@ -323,7 +323,7 @@ unsafe extern "C" fn job_write_callback(mut bufev: *mut bufferevent, mut data: *
 
         if len == 0 && !(*job).flags & JOB_KEEPWRITE != 0 {
             shutdown((*job).fd, SHUT_WR);
-            bufferevent_disable((*job).event, EV_WRITE as i16);
+            bufferevent_disable((*job).event, EV_WRITE);
         }
     }
 }
@@ -339,7 +339,7 @@ unsafe extern "C" fn job_error_callback(mut bufev: *mut bufferevent, mut events:
             }
             job_free(job);
         } else {
-            bufferevent_disable((*job).event, EV_READ as i16);
+            bufferevent_disable((*job).event, EV_READ);
             (*job).state = job_state::JOB_CLOSED;
         };
     }

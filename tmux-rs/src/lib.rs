@@ -8,7 +8,6 @@
 #![allow(clippy::deref_addrof, reason = "many false positive, required for unsafe code")]
 #![allow(clippy::manual_clamp)]
 #![allow(clippy::manual_range_contains)]
-#![warn(clippy::unnecessary_cast)]
 #![allow(clippy::explicit_auto_deref)]
 #![allow(clippy::implicit_saturating_sub)]
 #![allow(clippy::unnecessary_unwrap)]

@@ -294,7 +294,7 @@ pub unsafe fn paste_replace(pb: NonNull<paste_buffer>, data: *mut c_char, size: 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn paste_make_sample(pb: *mut paste_buffer) -> *mut c_char {
     unsafe {
-        const flags: i32 = (VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL) as i32;
+        const flags: i32 = (VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL);
         let width = 200;
 
         let mut len = (*pb).size;
