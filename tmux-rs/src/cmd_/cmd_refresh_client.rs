@@ -104,7 +104,7 @@ pub unsafe extern "C" fn cmd_refresh_client_control_client_size(
                 x,
                 y
             );
-            let cw = server_client_add_client_window(tc, w);
+            let cw = server_client_add_client_window(tc, w).as_ptr();
             (*cw).sx = x;
             (*cw).sy = y;
             (*tc).flags |= client_flag::WINDOWSIZECHANGED;

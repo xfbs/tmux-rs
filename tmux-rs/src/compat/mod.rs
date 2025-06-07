@@ -2,6 +2,7 @@ use core::ffi::{c_char, c_int, c_longlong, c_void};
 
 use libc::{S_IRWXG, S_IRWXO, S_IRWXU, gid_t, mode_t, pid_t, uid_t};
 
+pub mod b64;
 pub mod fdforkpty;
 pub mod getdtablecount;
 pub mod getprogname;
@@ -60,33 +61,6 @@ unsafe extern "C" {
     pub fn stravis(arg1: *mut *mut c_char, arg2: *const c_char, arg3: c_int) -> c_int;
     pub fn strnvis(arg1: *mut c_char, arg2: *const c_char, arg3: usize, arg4: c_int) -> c_int;
     pub fn strunvis(arg1: *mut c_char, arg2: *const c_char) -> c_int;
-
-    pub fn __b64_ntop(
-        src: *const u8,
-        srclength: usize,
-        target: *mut c_char,
-        targsize: usize,
-    ) -> i32;
-    pub fn __b64_pton(src: *const c_char, target: *mut u8, targsize: usize) -> i32;
-}
-// TODO switch to using the base64 crate
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn b64_ntop(
-    src: *const u8,
-    srclength: usize,
-    target: *mut c_char,
-    targsize: usize,
-) -> i32 {
-    unsafe { __b64_ntop(src, srclength, target, targsize) }
-}
-
-// skips all whitespace anywhere.
-// converts characters, four at a time, starting at (or after)
-// src from base - 64 numbers into three 8 bit bytes in the target area.
-// it returns the number of data bytes stored at the target, or -1 on error.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn b64_pton(src: *const c_char, target: *mut u8, targsize: usize) -> i32 {
-    unsafe { __b64_pton(src, target, targsize) }
 }
 
 pub const HOST_NAME_MAX: usize = 255;

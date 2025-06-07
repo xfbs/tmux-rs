@@ -37,7 +37,11 @@ use super::*;
 
 use libc::{strchr, strcmp, strpbrk, strtol};
 
-use crate::compat::{b64_ntop, b64_pton, queue::tailq_empty, strtonum};
+use crate::compat::{
+    b64::{b64_ntop, b64_pton},
+    queue::tailq_empty,
+    strtonum,
+};
 use crate::xmalloc::xstrndup;
 
 // Input parser cell.

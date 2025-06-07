@@ -95,6 +95,8 @@ unsafe extern "C" {
     pub fn tty_cmd_rawstring(_: *mut tty, _: *const tty_ctx);
     pub fn tty_cmd_syncstart(_: *mut tty, _: *const tty_ctx);
     pub fn tty_default_colours(_: *mut grid_cell, _: *mut window_pane);
+
+    pub fn tty_margin_off(tty: *mut tty);
 }
 
 /*

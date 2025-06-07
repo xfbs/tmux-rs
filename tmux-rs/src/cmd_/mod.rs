@@ -608,6 +608,7 @@ pub unsafe extern "C" fn cmd_find(name: *const c_char, cause: *mut *mut c_char) 
                 break 'ambiguous;
             }
             if found.is_null() {
+                // TODO BUG, for some reason name isn't properly NUL terminated
                 xasprintf(cause, c"unknown command: %s".as_ptr(), name);
                 return null_mut();
             }

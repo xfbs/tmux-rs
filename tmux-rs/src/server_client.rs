@@ -1,62 +1,16 @@
 use super::*;
 
-use crate::compat::{
-    queue::{tailq_insert_tail, tailq_remove},
-    tree::{RB_GENERATE, rb_foreach, rb_init, rb_remove},
+use crate::{
+    compat::{
+        VIS_CSTYLE, VIS_OCTAL,
+        imsg::{IMSG_HEADER_SIZE, imsg_get_fd},
+        queue::{tailq_empty, tailq_insert_tail, tailq_last, tailq_prev, tailq_remove},
+        strlcat,
+        tree::{RB_GENERATE, rb_find, rb_foreach, rb_init, rb_insert, rb_remove},
+        vis_::VIS_NOSLASH,
+    },
+    options_::options_get_number_,
 };
-
-#[rustfmt::skip]
-unsafe extern "C" {
-    // pub fn server_client_set_overlay( _: *mut client, _: c_uint, _: overlay_check_cb, _: overlay_mode_cb, _: overlay_draw_cb, _: overlay_key_cb, _: overlay_free_cb, _: overlay_resize_cb, _: *mut c_void,);
-    // pub fn server_client_clear_overlay(_: *mut client);
-    // pub fn server_client_overlay_range( _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: *mut overlay_ranges,);
-    // pub fn server_client_set_key_table(_: *mut client, _: *const c_char);
-    // pub fn server_client_get_key_table(_: *mut client) -> *const c_char;
-    // pub fn server_client_check_nested(_: *mut client) -> c_int;
-    pub fn server_client_handle_key(_: *mut client, _: *mut key_event) -> c_int;
-    // pub fn server_client_create(_: c_int) -> *mut client;
-    // pub fn server_client_open(_: *mut client, _: *mut *mut c_char) -> c_int;
-    // pub fn server_client_unref(_: *mut client);
-    // pub fn server_client_set_session(_: *mut client, _: *mut session);
-    // pub fn server_client_lost(_: *mut client);
-    // pub fn server_client_suspend(_: *mut client);
-    // pub fn server_client_detach(_: *mut client, _: msgtype);
-    // pub fn server_client_exec(_: *mut client, _: *const c_char);
-    pub fn server_client_loop();
-    pub fn server_client_get_cwd(_: *mut client, _: *mut session) -> *const c_char;
-    pub fn server_client_set_flags(_: *mut client, _: *const c_char);
-    pub fn server_client_get_flags(_: *mut client) -> *const c_char;
-    pub fn server_client_get_client_window(_: *mut client, _: c_uint) -> *mut client_window;
-    pub fn server_client_add_client_window(_: *mut client, _: c_uint) -> *mut client_window;
-    pub fn server_client_get_pane(_: *mut client) -> *mut window_pane;
-    pub fn server_client_set_pane(_: *mut client, _: *mut window_pane);
-    pub fn server_client_remove_pane(_: *mut window_pane);
-    pub fn server_client_print(_: *mut client, _: c_int, _: *mut evbuffer);
-}
-
-unsafe extern "C" {
-    // fn server_client_free(_: c_int, _: c_short, _: *mut c_void);
-    fn server_client_check_pane_resize(_: *mut window_pane);
-    fn server_client_check_pane_buffer(_: *mut window_pane);
-    fn server_client_check_window_resize(_: *mut window);
-    // fn server_client_check_mouse(_: *mut client, _: *mut key_event) -> key_code;
-    fn server_client_repeat_timer(_: c_int, _: c_short, _: *mut c_void);
-    fn server_client_click_timer(_: c_int, _: c_short, _: *mut c_void);
-    fn server_client_check_exit(_: *mut client);
-    fn server_client_check_redraw(_: *mut client);
-    fn server_client_check_modes(_: *mut client);
-    fn server_client_set_title(_: *mut client);
-    fn server_client_set_path(_: *mut client);
-    fn server_client_reset_state(_: *mut client);
-    // fn server_client_is_bracket_pasting(_: *mut client, _: key_code) -> i32;
-    // fn server_client_assume_paste(_: *mut session) -> i32;
-    // fn server_client_update_latest(_: *mut client);
-
-    fn server_client_dispatch(_: *mut imsg, _: *mut c_void);
-    fn server_client_dispatch_command(_: *mut client, _: *mut imsg);
-    fn server_client_dispatch_identify(_: *mut client, _: *mut imsg);
-    fn server_client_dispatch_shell(_: *mut client);
-}
 
 /// Compare client windows.
 #[unsafe(no_mangle)]
@@ -1836,799 +1790,866 @@ pub unsafe extern "C" fn server_client_update_latest(c: *mut client) {
     }
 }
 
-/*
-/*
- * Handle data key input from client. This owns and can modify the key event it
- * is given and is responsible for freeing it.
- */
+/// Handle data key input from client. This owns and can modify the key event it is given and is responsible for freeing it.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_key_callback(item: *mut cmdq_item , data: *mut c_void ) -> cmd_retval {
-unsafe {
-  struct client *c = cmdq_get_client(item);
-  struct key_event *event = data;
-  key_code key = (*event).key;
-  struct mouse_event *m = &(*event).m;
-  struct session *s = (*c).session;
-  struct winlink *wl;
-  struct window_pane *wp;
-  struct window_mode_entry *wme;
-  struct timeval tv;
-  struct key_table *table, *first;
-  struct key_binding *bd;
-  int xtimeout;
-  uint64_t flags, prefix_delay;
-  struct cmd_find_state fs;
-  key_code key0, prefix, prefix2;
+pub unsafe extern "C" fn server_client_key_callback(
+    item: *mut cmdq_item,
+    data: *mut c_void,
+) -> cmd_retval {
+    unsafe {
+        let mut c = cmdq_get_client(item);
+        let mut event = data as *mut key_event;
+        let mut key = (*event).key;
+        let mut m = &raw mut (*event).m;
+        let mut s = (*c).session;
 
-  /* Check the client is good to accept input. */
-  if (s == NULL || ((*c).flags & CLIENT_UNATTACHEDFLAGS)) {
-    goto out;
-  }
-  wl = (*s).curw;
+        let mut tv: libc::timeval = zeroed();
+        let mut bd: *mut key_binding = null_mut();
+        let mut table: *mut key_table = null_mut();
+        let mut first: *mut key_table = null_mut();
+        let mut wme: *mut window_mode_entry = null_mut();
+        let mut fs: cmd_find_state = zeroed();
+        let mut wl: *mut winlink = null_mut();
+        let mut wp: *mut window_pane = null_mut();
 
-  /* Update the activity timer. */
-  if (gettimeofday(&(*c).activity_time, NULL) != 0) {
-    fatal("gettimeofday failed");
-  }
-  session_update_activity(s, &(*c).activity_time);
+        let mut xtimeout: i32 = 0;
+        let mut flags: client_flag = client_flag::empty();
+        let mut prefix_delay: u64 = 0;
+        let mut key0: key_code = 0;
+        let mut prefix: key_code = 0;
+        let mut prefix2: key_code = 0;
 
-  /* Check for mouse keys. */
-  (*m).valid = 0;
-  if (key == KEYC_MOUSE || key == KEYC_DOUBLECLICK) {
-    if ((*c).flags & CLIENT_READONLY) {
-      goto out;
+        'out: {
+            'forward_key: {
+                /* Check the client is good to accept input. */
+                if s.is_null() || (*c).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
+                    break 'out;
+                }
+                wl = (*s).curw;
+
+                /* Update the activity timer. */
+                if (libc::gettimeofday(&raw mut (*c).activity_time, null_mut()) != 0) {
+                    fatal(c"gettimeofday failed".as_ptr());
+                }
+                session_update_activity(s, &raw mut (*c).activity_time);
+
+                // Check for mouse keys.
+                (*m).valid = 0;
+                if (key == keyc::KEYC_MOUSE as u64 || key == keyc::KEYC_DOUBLECLICK as u64) {
+                    if (*c).flags.intersects(client_flag::READONLY) {
+                        break 'out;
+                    }
+                    key = server_client_check_mouse(c, event);
+                    if (key == KEYC_UNKNOWN) {
+                        break 'out;
+                    }
+
+                    (*m).valid = 1;
+                    (*m).key = key;
+
+                    /*
+                     * Mouse drag is in progress, so fire the callback (now that
+                     * the mouse event is valid).
+                     */
+                    if ((key & KEYC_MASK_KEY) == keyc::KEYC_DRAGGING as u64) {
+                        (*c).tty.mouse_drag_update.unwrap()(c, m);
+                        break 'out;
+                    }
+                    (*event).key = key;
+                }
+
+                /* Find affected pane. */
+                if (!KEYC_IS_MOUSE(key) || cmd_find_from_mouse(&raw mut fs, m, 0) != 0) {
+                    cmd_find_from_client(&raw mut fs, c, 0);
+                }
+                wp = fs.wp;
+
+                /* Forward mouse keys if disabled. */
+                if KEYC_IS_MOUSE(key) && options_get_number((*s).options, c"mouse".as_ptr()) == 0 {
+                    break 'forward_key;
+                }
+
+                /* Forward if bracket pasting. */
+                if server_client_is_bracket_pasting(c, key) != 0 {
+                    break 'forward_key;
+                }
+
+                /* Treat everything as a regular key when pasting is detected. */
+                if !KEYC_IS_MOUSE(key)
+                    && (!key & KEYC_SENT) != 0
+                    && server_client_assume_paste(s) != 0
+                {
+                    break 'forward_key;
+                }
+
+                /*
+                 * Work out the current key table. If the pane is in a mode, use
+                 * the mode table instead of the default key table.
+                 */
+                table = if server_client_is_default_key_table(c, (*c).keytable) != 0
+                    && wp.is_null()
+                    && ({
+                        wme = tailq_first(&raw mut (*wp).modes);
+                        !wme.is_null()
+                    })
+                    && (*(*wme).mode).key_table.is_some()
+                {
+                    key_bindings_get_table((*(*wme).mode).key_table.unwrap()(wme), 1)
+                } else {
+                    (*c).keytable
+                };
+                first = table;
+
+                'table_changed: loop {
+                    /*
+                     * The prefix always takes precedence and forces a switch to the prefix
+                     * table, unless we are already there.
+                     */
+                    prefix = options_get_number((*s).options, c"prefix".as_ptr()) as key_code;
+                    prefix2 = options_get_number((*s).options, c"prefix2".as_ptr()) as key_code;
+                    key0 = (key & (KEYC_MASK_KEY | KEYC_MASK_MODIFIERS));
+                    if ((key0 == (prefix & (KEYC_MASK_KEY | KEYC_MASK_MODIFIERS))
+                        || key0 == (prefix2 & (KEYC_MASK_KEY | KEYC_MASK_MODIFIERS)))
+                        && libc::strcmp((*table).name, c"prefix".as_ptr()) != 0)
+                    {
+                        server_client_set_key_table(c, c"prefix".as_ptr());
+                        server_status_client(c);
+                        break 'out;
+                    }
+                    flags = (*c).flags;
+
+                    'try_again: loop {
+                        /* Log key table. */
+                        if wp.is_null() {
+                            log_debug!("key table {} (no pane)", _s((*table).name));
+                        } else {
+                            log_debug!("key table {} (pane %%{})", _s((*table).name), (*wp).id);
+                        }
+                        if (*c).flags.intersects(client_flag::REPEAT) {
+                            log_debug!("currently repeating");
+                        }
+
+                        bd =
+                            key_bindings_get(NonNull::new(table).expect("just dereferenced"), key0);
+
+                        /*
+                         * If prefix-timeout is enabled and we're in the prefix table, see if
+                         * the timeout has been exceeded. Revert to the root table if so.
+                         */
+                        prefix_delay =
+                            options_get_number(global_options, c"prefix-timeout".as_ptr()) as u64;
+                        if (prefix_delay > 0
+                            && libc::strcmp((*table).name, c"prefix".as_ptr()) == 0
+                            && server_client_key_table_activity_diff(c) > prefix_delay)
+                        {
+                            /*
+                             * If repeating is active and this is a repeating binding,
+                             * ignore the timeout.
+                             */
+                            if !bd.is_null()
+                                && (*c).flags.intersects(client_flag::REPEAT)
+                                && (*bd).flags & KEY_BINDING_REPEAT != 0
+                            {
+                                log_debug!("prefix timeout ignored, repeat is active");
+                            } else {
+                                log_debug!("prefix timeout exceeded");
+                                server_client_set_key_table(c, null_mut());
+                                table = (*c).keytable;
+                                first = (*c).keytable;
+                                server_status_client(c);
+                                continue 'table_changed;
+                            }
+                        }
+
+                        /* Try to see if there is a key binding in the current table. */
+                        if !bd.is_null() {
+                            /*
+                             * Key was matched in this table. If currently repeating but a
+                             * non-repeating binding was found, stop repeating and try
+                             * again in the root table.
+                             */
+                            if (*c).flags.intersects(client_flag::REPEAT)
+                                && (*bd).flags & KEY_BINDING_REPEAT == 0
+                            {
+                                log_debug!(
+                                    "found in key table {} (not repeating)",
+                                    _s((*table).name)
+                                );
+                                server_client_set_key_table(c, null_mut());
+                                table = (*c).keytable;
+                                first = (*c).keytable;
+                                (*c).flags &= !client_flag::REPEAT;
+                                server_status_client(c);
+                                continue 'table_changed;
+                            }
+                            log_debug!("found in key table {}", _s((*table).name));
+
+                            /*
+                             * Take a reference to this table to make sure the key binding
+                             * doesn't disappear.
+                             */
+                            (*table).references += 1;
+
+                            /*
+                             * If this is a repeating key, start the timer. Otherwise reset
+                             * the client back to the root table.
+                             */
+                            xtimeout =
+                                options_get_number((*s).options, c"repeat-time".as_ptr()) as i32;
+                            if xtimeout != 0 && (*bd).flags & KEY_BINDING_REPEAT != 0 {
+                                (*c).flags |= client_flag::REPEAT;
+
+                                tv.tv_sec = xtimeout as i64 / 1000;
+                                tv.tv_usec = (xtimeout as i64 % 1000) * 1000i64;
+                                evtimer_del(&raw mut (*c).repeat_timer);
+                                evtimer_add(&raw mut (*c).repeat_timer, &tv);
+                            } else {
+                                (*c).flags &= !client_flag::REPEAT;
+                                server_client_set_key_table(c, null_mut());
+                            }
+                            server_status_client(c);
+
+                            /* Execute the key binding. */
+                            key_bindings_dispatch(bd, item, c, event, &raw mut fs);
+                            key_bindings_unref_table(table);
+                            break 'out;
+                        }
+
+                        /*
+                         * No match, try the ANY key.
+                         */
+                        if key0 != keyc::KEYC_ANY as u64 {
+                            key0 = keyc::KEYC_ANY as u64;
+                            continue 'try_again;
+                        }
+
+                        /*
+                         * Binding movement keys is useless since we only turn them on when the
+                         * application requests, so don't let them exit the prefix table.
+                         */
+                        if (key == keyc::KEYC_MOUSEMOVE_PANE as u64
+                            || key == keyc::KEYC_MOUSEMOVE_STATUS as u64
+                            || key == keyc::KEYC_MOUSEMOVE_STATUS_LEFT as u64
+                            || key == keyc::KEYC_MOUSEMOVE_STATUS_RIGHT as u64
+                            || key == keyc::KEYC_MOUSEMOVE_STATUS_DEFAULT as u64
+                            || key == keyc::KEYC_MOUSEMOVE_BORDER as u64)
+                        {
+                            break 'forward_key;
+                        }
+
+                        /*
+                         * No match in this table. If not in the root table or if repeating
+                         * switch the client back to the root table and try again.
+                         */
+                        log_debug!("not found in key table {}", _s((*table).name));
+                        if server_client_is_default_key_table(c, table) == 0
+                            || (*c).flags.intersects(client_flag::REPEAT)
+                        {
+                            log_debug!("trying in root table");
+                            server_client_set_key_table(c, null_mut());
+                            table = (*c).keytable;
+                            if (*c).flags.intersects(client_flag::REPEAT) {
+                                first = table;
+                            }
+                            (*c).flags &= !client_flag::REPEAT;
+                            server_status_client(c);
+                            continue 'table_changed;
+                        }
+
+                        /*
+                         * No match in the root table either. If this wasn't the first table
+                         * tried, don't pass the key to the pane.
+                         */
+                        if first != table && !flags.intersects(client_flag::REPEAT) {
+                            server_client_set_key_table(c, null_mut());
+                            server_status_client(c);
+                            break 'out;
+                        }
+
+                        break;
+                    } // 'try_again
+                    break;
+                } // 'table_changed
+            } // forward_key:
+            if (*c).flags.intersects(client_flag::READONLY) {
+                break 'out;
+            }
+            if !wp.is_null() {
+                window_pane_key(wp, c, s, wl, key, m);
+            }
+        } // 'out:
+        if !s.is_null() && key != keyc::KEYC_FOCUS_OUT as u64 {
+            server_client_update_latest(c);
+        }
+        free_(event);
+        cmd_retval::CMD_RETURN_NORMAL
     }
-    key = server_client_check_mouse(c, event);
-    if (key == KEYC_UNKNOWN) {
-      goto out;
-    }
-
-    (*m).valid = 1;
-    (*m).key = key;
-
-    /*
-     * Mouse drag is in progress, so fire the callback (now that
-     * the mouse event is valid).
-     */
-    if ((key & KEYC_MASK_KEY) == KEYC_DRAGGING) {
-      (*c).tty.mouse_drag_update(c, m);
-      goto out;
-    }
-    (*event).key = key;
-  }
-
-  /* Find affected pane. */
-  if (!KEYC_IS_MOUSE(key) || cmd_find_from_mouse(&fs, m, 0) != 0) {
-    cmd_find_from_client(&fs, c, 0);
-  }
-  wp = fs.wp;
-
-  /* Forward mouse keys if disabled. */
-  if (KEYC_IS_MOUSE(key) && !options_get_number((*s).options, "mouse")) {
-    goto forward_key;
-  }
-
-  /* Forward if bracket pasting. */
-  if (server_client_is_bracket_pasting(c, key)) {
-    goto forward_key;
-  }
-
-  /* Treat everything as a regular key when pasting is detected. */
-  if (!KEYC_IS_MOUSE(key) && (~key & KEYC_SENT) &&
-      server_client_assume_paste(s)) {
-    goto forward_key;
-  }
-
-  /*
-   * Work out the current key table. If the pane is in a mode, use
-   * the mode table instead of the default key table.
-   */
-  if (server_client_is_default_key_table(c, (*c).keytable) && wp != NULL &&
-      (wme = TAILQ_FIRST(&(*wp).modes)) != NULL &&
-      (*(*wme).mode).key_table != NULL) {
-    table = key_bindings_get_table((*(*wme).mode).key_table(wme), 1);
-  } else {
-    table = (*c).keytable;
-  }
-  first = table;
-
-table_changed:
-  /*
-   * The prefix always takes precedence and forces a switch to the prefix
-   * table, unless we are already there.
-   */
-  prefix = (key_code)options_get_number((*s).options, "prefix");
-  prefix2 = (key_code)options_get_number((*s).options, "prefix2");
-  key0 = (key & (KEYC_MASK_KEY | KEYC_MASK_MODIFIERS));
-  if ((key0 == (prefix & (KEYC_MASK_KEY | KEYC_MASK_MODIFIERS)) ||
-       key0 == (prefix2 & (KEYC_MASK_KEY | KEYC_MASK_MODIFIERS))) &&
-      strcmp((*table).name, "prefix") != 0) {
-    server_client_set_key_table(c, "prefix");
-    server_status_client(c);
-    goto out;
-  }
-  flags = (*c).flags;
-
-try_again:
-  /* Log key table. */
-  if (wp == NULL) {
-    log_debug("key table %s (no pane)", (*table).name);
-  } else {
-    log_debug("key table %s (pane %%%u)", (*table).name, (*wp).id);
-  }
-  if ((*c).flags & CLIENT_REPEAT) {
-    log_debug("currently repeating");
-  }
-
-  bd = key_bindings_get(table, key0);
-
-  /*
-   * If prefix-timeout is enabled and we're in the prefix table, see if
-   * the timeout has been exceeded. Revert to the root table if so.
-   */
-  prefix_delay = options_get_number(global_options, "prefix-timeout");
-  if (prefix_delay > 0 && strcmp((*table).name, "prefix") == 0 &&
-      server_client_key_table_activity_diff(c) > prefix_delay) {
-    /*
-     * If repeating is active and this is a repeating binding,
-     * ignore the timeout.
-     */
-    if (bd != NULL && ((*c).flags & CLIENT_REPEAT) &&
-        ((*bd).flags & KEY_BINDING_REPEAT)) {
-      log_debug("prefix timeout ignored, repeat is active");
-    } else {
-      log_debug("prefix timeout exceeded");
-      server_client_set_key_table(c, NULL);
-      first = table = (*c).keytable;
-      server_status_client(c);
-      goto table_changed;
-    }
-  }
-
-  /* Try to see if there is a key binding in the current table. */
-  if (bd != NULL) {
-    /*
-     * Key was matched in this table. If currently repeating but a
-     * non-repeating binding was found, stop repeating and try
-     * again in the root table.
-     */
-    if (((*c).flags & CLIENT_REPEAT) && (~(*bd).flags & KEY_BINDING_REPEAT)) {
-      log_debug("found in key table %s (not repeating)", (*table).name);
-      server_client_set_key_table(c, NULL);
-      first = table = (*c).keytable;
-      (*c).flags &= ~CLIENT_REPEAT;
-      server_status_client(c);
-      goto table_changed;
-    }
-    log_debug("found in key table %s", (*table).name);
-
-    /*
-     * Take a reference to this table to make sure the key binding
-     * doesn't disappear.
-     */
-    (*table).references++;
-
-    /*
-     * If this is a repeating key, start the timer. Otherwise reset
-     * the client back to the root table.
-     */
-    xtimeout = options_get_number((*s).options, "repeat-time");
-    if (xtimeout != 0 && ((*bd).flags & KEY_BINDING_REPEAT)) {
-      (*c).flags |= CLIENT_REPEAT;
-
-      tv.tv_sec = xtimeout / 1000;
-      tv.tv_usec = (xtimeout % 1000) * 1000L;
-      evtimer_del(&(*c).repeat_timer);
-      evtimer_add(&(*c).repeat_timer, &tv);
-    } else {
-      (*c).flags &= ~CLIENT_REPEAT;
-      server_client_set_key_table(c, NULL);
-    }
-    server_status_client(c);
-
-    /* Execute the key binding. */
-    key_bindings_dispatch(bd, item, c, event, &fs);
-    key_bindings_unref_table(table);
-    goto out;
-  }
-
-  /*
-   * No match, try the ANY key.
-   */
-  if (key0 != KEYC_ANY) {
-    key0 = KEYC_ANY;
-    goto try_again;
-  }
-
-  /*
-   * Binding movement keys is useless since we only turn them on when the
-   * application requests, so don't let them exit the prefix table.
-   */
-  if (key == KEYC_MOUSEMOVE_PANE || key == KEYC_MOUSEMOVE_STATUS ||
-      key == KEYC_MOUSEMOVE_STATUS_LEFT || key == KEYC_MOUSEMOVE_STATUS_RIGHT ||
-      key == KEYC_MOUSEMOVE_STATUS_DEFAULT || key == KEYC_MOUSEMOVE_BORDER) {
-    goto forward_key;
-  }
-
-  /*
-   * No match in this table. If not in the root table or if repeating
-   * switch the client back to the root table and try again.
-   */
-  log_debug("not found in key table %s", (*table).name);
-  if (!server_client_is_default_key_table(c, table) ||
-      ((*c).flags & CLIENT_REPEAT)) {
-    log_debug("trying in root table");
-    server_client_set_key_table(c, NULL);
-    table = (*c).keytable;
-    if ((*c).flags & CLIENT_REPEAT) {
-      first = table;
-    }
-    (*c).flags &= ~CLIENT_REPEAT;
-    server_status_client(c);
-    goto table_changed;
-  }
-
-  /*
-   * No match in the root table either. If this wasn't the first table
-   * tried, don't pass the key to the pane.
-   */
-  if (first != table && (~flags & CLIENT_REPEAT)) {
-    server_client_set_key_table(c, NULL);
-    server_status_client(c);
-    goto out;
-  }
-
-forward_key:
-  if ((*c).flags & CLIENT_READONLY) {
-    goto out;
-  }
-  if (wp != NULL) {
-    window_pane_key(wp, c, s, wl, key, m);
-  }
-
-out:
-  if (s != NULL && key != KEYC_FOCUS_OUT) {
-    server_client_update_latest(c);
-  }
-  free(event);
-  return CMD_RETURN_NORMAL;
 }
-}
 
-/* Handle a key event. */
+/// Handle a key event.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_handle_key(c: *mut client , event: *mut key_event ) -> i32 {
-unsafe {
-  struct session *s = (*c).session;
-  struct cmdq_item *item;
+pub unsafe extern "C" fn server_client_handle_key(c: *mut client, event: *mut key_event) -> i32 {
+    unsafe {
+        let mut s = (*c).session;
 
-  /* Check the client is good to accept input. */
-  if (s == NULL || ((*c).flags & CLIENT_UNATTACHEDFLAGS)) {
-    return 0;
-  }
+        /* Check the client is good to accept input. */
+        if s.is_null() || (*c).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
+            return 0;
+        }
 
-  /*
-   * Key presses in overlay mode and the command prompt are a special
-   * case. The queue might be blocked so they need to be processed
-   * immediately rather than queued.
-   */
-  if (~(*c).flags & CLIENT_READONLY) {
-    if ((*c).message_string != NULL) {
-      if ((*c).message_ignore_keys) {
-        return 0;
-      }
-      status_message_clear(c);
-    }
-    if ((*c).overlay_key != NULL) {
-      switch ((*c).overlay_key(c, (*c).overlay_data, event)) {
-      case 0:
-        return 0;
-      case 1:
-        server_client_clear_overlay(c);
-        return 0;
-      }
-    }
-    server_client_clear_overlay(c);
-    if ((*c).prompt_string != NULL) {
-      if (status_prompt_key(c, (*event).key) == 0) {
-        return 0;
-      }
-    }
-  }
+        /*
+         * Key presses in overlay mode and the command prompt are a special
+         * case. The queue might be blocked so they need to be processed
+         * immediately rather than queued.
+         */
+        if !(*c).flags.intersects(client_flag::READONLY) {
+            if !(*c).message_string.is_null() {
+                if (*c).message_ignore_keys != 0 {
+                    return 0;
+                }
+                status_message_clear(c);
+            }
+            if let Some(overlay_key) = (*c).overlay_key {
+                match overlay_key(c, (*c).overlay_data, event) {
+                    0 => return 0,
+                    1 => {
+                        server_client_clear_overlay(c);
+                        return 0;
+                    }
+                    _ => (),
+                }
+            }
+            server_client_clear_overlay(c);
+            if !(*c).prompt_string.is_null() {
+                if (status_prompt_key(c, (*event).key) == 0) {
+                    return 0;
+                }
+            }
+        }
 
-  /*
-   * Add the key to the queue so it happens after any commands queued by
-   * previous keys.
-   */
-  item = cmdq_get_callback(server_client_key_callback, event);
-  cmdq_append(c, item);
-  return 1;
-}
+        // Add the key to the queue so it happens after any commands queued by previous keys.
+        let item = cmdq_get_callback!(server_client_key_callback, event.cast());
+        cmdq_append(c, item.as_ptr());
+        1
+    }
 }
 
-/* Client functions that need to happen every loop. */
+/// Client functions that need to happen every loop.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_loop() {
-unsafe {
-  struct client *c;
-  struct window *w;
-  struct window_pane *wp;
+pub unsafe extern "C" fn server_client_loop() {
+    unsafe {
+        // Check for window resize. This is done before redrawing.
+        for w in rb_foreach(&raw mut windows).map(NonNull::as_ptr) {
+            server_client_check_window_resize(w);
+        }
 
-  /* Check for window resize. This is done before redrawing. */
-  RB_FOREACH(w, windows, &windows)
-  server_client_check_window_resize(w);
+        // Check clients.
+        for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
+            server_client_check_exit(c);
+            if !(*c).session.is_null() {
+                server_client_check_modes(c);
+                server_client_check_redraw(c);
+                server_client_reset_state(c);
+            }
+        }
 
-  /* Check clients. */
-  TAILQ_FOREACH(c, &clients, entry) {
-    server_client_check_exit(c);
-    if ((*c).session != NULL) {
-      server_client_check_modes(c);
-      server_client_check_redraw(c);
-      server_client_reset_state(c);
+        // Any windows will have been redrawn as part of clients, so clear their flags now.
+        for w in rb_foreach(&raw mut windows).map(NonNull::as_ptr) {
+            for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+                if ((*wp).fd != -1) {
+                    server_client_check_pane_resize(wp);
+                    server_client_check_pane_buffer(wp);
+                }
+                (*wp).flags &= !window_pane_flags::PANE_REDRAW;
+            }
+            check_window_name(w);
+        }
     }
-  }
-
-  /*
-   * Any windows will have been redrawn as part of clients, so clear
-   * their flags now.
-   */
-  RB_FOREACH(w, windows, &windows) {
-    TAILQ_FOREACH(wp, &(*w).panes, entry) {
-      if ((*wp).fd != -1) {
-        server_client_check_pane_resize(wp);
-        server_client_check_pane_buffer(wp);
-      }
-      (*wp).flags &= ~PANE_REDRAW;
-    }
-    check_window_name(w);
-  }
-}
 }
 
-/* Check if window needs to be resized. */
+/// Check if window needs to be resized.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_check_window_resize(w: *mut window ) {
-unsafe {
-  struct winlink *wl;
+pub unsafe extern "C" fn server_client_check_window_resize(w: *mut window) {
+    unsafe {
+        if !(*w).flags.intersects(window_flag::RESIZE) {
+            return;
+        }
 
-  if (~(*w).flags & WINDOW_RESIZE) {
-    return;
-  }
+        let mut wl = null_mut();
+        for wl_ in tailq_foreach::<_, discr_wentry>(&raw mut (*w).winlinks) {
+            wl = wl_.as_ptr();
+            if ((*(*wl).session).attached != 0 && (*(*wl).session).curw == wl) {
+                break;
+            }
+        }
+        if wl.is_null() {
+            return;
+        }
 
-  TAILQ_FOREACH(wl, &(*w).winlinks, wentry) {
-    if ((*(*wl).session).attached != 0 && (*(*wl).session).curw == wl) {
-      break;
+        log_debug!(
+            "{}: resizing window @{}",
+            "server_client_check_window_resize",
+            (*w).id
+        );
+        resize_window(
+            w,
+            (*w).new_sx,
+            (*w).new_sy,
+            (*w).new_xpixel as i32,
+            (*w).new_ypixel as i32,
+        );
     }
-  }
-  if (wl == NULL) {
-    return;
-  }
-
-  log_debug("%s: resizing window @%u", __func__, (*w).id);
-  resize_window(w, (*w).new_sx, (*w).new_sy, (*w).new_xpixel, (*w).new_ypixel);
-}
 }
 
 /// Resize timer event.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_resize_timer(_fd: i32, _events: i16, data: *mut c_void) {
-unsafe {
-  struct window_pane *wp = data;
+pub unsafe extern "C" fn server_client_resize_timer(_fd: i32, _events: i16, data: *mut c_void) {
+    unsafe {
+        let mut wp: *mut window_pane = data.cast();
 
-  log_debug("%s: %%%u resize timer expired", __func__, (*wp).id);
-  evtimer_del(&(*wp).resize_timer);
-}
+        log_debug!(
+            "{}: %%{} resize timer expired",
+            "server_client_resize_timer",
+            (*wp).id
+        );
+        evtimer_del(&raw mut (*wp).resize_timer);
+    }
 }
 
-/* Check if pane should be resized. */
+/// Check if pane should be resized.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_check_pane_resize(wp: *mut window_pane ) {
-unsafe {
-  struct window_pane_resize *r;
-  struct window_pane_resize *r1;
-  struct window_pane_resize *first;
-  struct window_pane_resize *last;
-  struct timeval tv = {.tv_usec = 250000};
+pub unsafe extern "C" fn server_client_check_pane_resize(wp: *mut window_pane) {
+    unsafe {
+        let mut tv: libc::timeval = libc::timeval {
+            tv_sec: 0,
+            tv_usec: 250000,
+        };
 
-  if (TAILQ_EMPTY(&(*wp).resize_queue)) {
-    return;
-  }
+        if tailq_empty(&raw mut (*wp).resize_queue) {
+            return;
+        }
 
-  if (!event_initialized(&(*wp).resize_timer)) {
-    evtimer_set(&(*wp).resize_timer, server_client_resize_timer, wp);
-  }
-  if (evtimer_pending(&(*wp).resize_timer, NULL)) {
-    return;
-  }
+        if event_initialized(&raw mut (*wp).resize_timer) == 0 {
+            evtimer_set(
+                &raw mut (*wp).resize_timer,
+                Some(server_client_resize_timer),
+                wp.cast(),
+            );
+        }
+        if evtimer_pending(&raw mut (*wp).resize_timer, null_mut()) != 0 {
+            return;
+        }
 
-  log_debug("%s: %%%u needs to be resized", __func__, (*wp).id);
-  TAILQ_FOREACH(r, &(*wp).resize_queue, entry) {
-    log_debug("queued resize: %ux%u -> %ux%u", (*r).osx, (*r).osy, (*r).sx,
-              (*r).sy);
-  }
+        log_debug!(
+            "{}: %%{} needs to be resized",
+            "server_client_check_pane_resize",
+            (*wp).id
+        );
+        for r in tailq_foreach(&raw mut (*wp).resize_queue).map(NonNull::as_ptr) {
+            log_debug!(
+                "queued resize: {}x{} -> {}x{}",
+                (*r).osx,
+                (*r).osy,
+                (*r).sx,
+                (*r).sy
+            );
+        }
 
-  /*
-   * There are three cases that matter:
-   *
-   * - Only one resize. It can just be applied.
-   *
-   * - Multiple resizes and the ending size is different from the
-   *   starting size. We can discard all resizes except the most recent.
-   *
-   * - Multiple resizes and the ending size is the same as the starting
-   *   size. We must resize at least twice to force the application to
-   *   redraw. So apply the first and leave the last on the queue for
-   *   next time.
-   */
-  first = TAILQ_FIRST(&(*wp).resize_queue);
-  last = TAILQ_LAST(&(*wp).resize_queue, window_pane_resizes);
-  if (first == last) {
-    /* Only one resize. */
-    window_pane_send_resize(wp, (*first).sx, (*first).sy);
-    TAILQ_REMOVE(&(*wp).resize_queue, first, entry);
-    free(first);
-  } else if ((*last).sx != (*first).osx || (*last).sy != (*first).osy) {
-    /* Multiple resizes ending up with a different size. */
-    window_pane_send_resize(wp, (*last).sx, (*last).sy);
-    TAILQ_FOREACH_SAFE(r, &(*wp).resize_queue, entry, r1) {
-      TAILQ_REMOVE(&(*wp).resize_queue, r, entry);
-      free(r);
+        /*
+         * There are three cases that matter:
+         *
+         * - Only one resize. It can just be applied.
+         *
+         * - Multiple resizes and the ending size is different from the
+         *   starting size. We can discard all resizes except the most recent.
+         *
+         * - Multiple resizes and the ending size is the same as the starting
+         *   size. We must resize at least twice to force the application to
+         *   redraw. So apply the first and leave the last on the queue for
+         *   next time.
+         */
+        let first = tailq_first(&raw mut (*wp).resize_queue);
+        let last = tailq_last(&raw mut (*wp).resize_queue);
+        if first == last {
+            /* Only one resize. */
+            window_pane_send_resize(wp, (*first).sx, (*first).sy);
+            tailq_remove(&raw mut (*wp).resize_queue, first);
+            free_(first);
+        } else if (*last).sx != (*first).osx || (*last).sy != (*first).osy {
+            /* Multiple resizes ending up with a different size. */
+            window_pane_send_resize(wp, (*last).sx, (*last).sy);
+            for r in tailq_foreach(&raw mut (*wp).resize_queue).map(NonNull::as_ptr) {
+                tailq_remove(&raw mut (*wp).resize_queue, r);
+                free_(r);
+            }
+        } else {
+            /*
+             * Multiple resizes ending up with the same size. There will
+             * not be more than one to the same size in succession so we
+             * can just use the last-but-one on the list and leave the last
+             * for later. We reduce the time until the next check to avoid
+             * a long delay between the resizes.
+             */
+            let r = tailq_prev(last);
+            window_pane_send_resize(wp, (*r).sx, (*r).sy);
+            for r in tailq_foreach(&raw mut (*wp).resize_queue).map(NonNull::as_ptr) {
+                if r == last {
+                    break;
+                }
+                tailq_remove(&raw mut (*wp).resize_queue, r);
+                free_(r);
+            }
+            tv.tv_usec = 10000;
+        }
+        evtimer_add(&raw mut (*wp).resize_timer, &raw const tv);
     }
-  } else {
-    /*
-     * Multiple resizes ending up with the same size. There will
-     * not be more than one to the same size in succession so we
-     * can just use the last-but-one on the list and leave the last
-     * for later. We reduce the time until the next check to avoid
-     * a long delay between the resizes.
-     */
-    r = TAILQ_PREV(last, window_pane_resizes, entry);
-    window_pane_send_resize(wp, (*r).sx, (*r).sy);
-    TAILQ_FOREACH_SAFE(r, &(*wp).resize_queue, entry, r1) {
-      if (r == last) {
-        break;
-      }
-      TAILQ_REMOVE(&(*wp).resize_queue, r, entry);
-      free(r);
-    }
-    tv.tv_usec = 10000;
-  }
-  evtimer_add(&(*wp).resize_timer, &tv);
-}
 }
 
 /// Check pane buffer size.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_check_pane_buffer(wp: *mut window_pane) {
-unsafe {
-  struct evbuffer *evb = (*(*wp).event).input;
-  size_t minimum;
-  struct client *c;
-  struct window_pane_offset *wpo;
-  int off = 1, flag;
-  u_int attached_clients = 0;
-  size_t new_size;
+pub unsafe extern "C" fn server_client_check_pane_buffer(wp: *mut window_pane) {
+    unsafe {
+        let mut evb = (*(*wp).event).input;
+        let mut minimum: usize = 0;
+        let mut c: *mut client = null_mut();
+        let mut wpo: *mut window_pane_offset = null_mut();
+        let mut off = 1;
+        let mut flag: i32 = 0;
+        let mut attached_clients = 0;
+        let mut new_size: usize = 0;
 
-  /*
-   * Work out the minimum used size. This is the most that can be removed
-   * from the buffer.
-   */
-  minimum = (*wp).offset.used;
-  if ((*wp).pipe_fd != -1 && (*wp).pipe_offset.used < minimum) {
-    minimum = (*wp).pipe_offset.used;
-  }
-  TAILQ_FOREACH(c, &clients, entry) {
-    if ((*c).session == NULL) {
-      continue;
-    }
-    attached_clients++;
+        'out: {
+            /*
+             * Work out the minimum used size. This is the most that can be removed
+             * from the buffer.
+             */
+            minimum = (*wp).offset.used;
+            if ((*wp).pipe_fd != -1 && (*wp).pipe_offset.used < minimum) {
+                minimum = (*wp).pipe_offset.used;
+            }
+            for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
+                if (*c).session.is_null() {
+                    continue;
+                }
+                attached_clients += 1;
 
-    if (~(*c).flags & CLIENT_CONTROL) {
-      off = 0;
-      continue;
-    }
-    wpo = control_pane_offset(c, wp, &flag);
-    if (wpo == NULL) {
-      if (!flag) {
-        off = 0;
-      }
-      continue;
-    }
-    if (!flag) {
-      off = 0;
-    }
+                if !(*c).flags.intersects(client_flag::CONTROL) {
+                    off = 0;
+                    continue;
+                }
+                wpo = control_pane_offset(c, wp, &raw mut flag);
+                if wpo.is_null() {
+                    if flag == 0 {
+                        off = 0;
+                    }
+                    continue;
+                }
+                if flag == 0 {
+                    off = 0;
+                }
 
-    window_pane_get_new_data(wp, wpo, &new_size);
-    log_debug("%s: %s has %zu bytes used and %zu left for %%%u", __func__,
-              (*c).name, (*wpo).used - (*wp).base_offset, new_size, (*wp).id);
-    if ((*wpo).used < minimum) {
-      minimum = (*wpo).used;
-    }
-  }
-  if (attached_clients == 0) {
-    off = 0;
-  }
-  minimum -= (*wp).base_offset;
-  if (minimum == 0) {
-    goto out;
-  }
+                window_pane_get_new_data(wp, wpo, &raw mut new_size);
+                // log_debug("%s: %s has %zu bytes used and %zu left for %%%u", __func__, (*c).name, (*wpo).used - (*wp).base_offset, new_size, (*wp).id);
+                if ((*wpo).used < minimum) {
+                    minimum = (*wpo).used;
+                }
+            }
+            if (attached_clients == 0) {
+                off = 0;
+            }
+            minimum -= (*wp).base_offset;
+            if (minimum == 0) {
+                break 'out;
+            }
 
-  /* Drain the buffer. */
-  log_debug("%s: %%%u has %zu minimum (of %zu) bytes used", __func__, (*wp).id,
-            minimum, EVBUFFER_LENGTH(evb));
-  evbuffer_drain(evb, minimum);
+            /* Drain the buffer. */
+            log_debug!(
+                "{}: %%{} has {} minimum (of {}) bytes used",
+                "server_client_check_pane_buffer",
+                (*wp).id,
+                minimum,
+                EVBUFFER_LENGTH(evb)
+            );
+            evbuffer_drain(evb, minimum);
 
-  /*
-   * Adjust the base offset. If it would roll over, all the offsets into
-   * the buffer need to be adjusted.
-   */
-  if ((*wp).base_offset > SIZE_MAX - minimum) {
-    log_debug("%s: %%%u base offset has wrapped", __func__, (*wp).id);
-    (*wp).offset.used -= (*wp).base_offset;
-    if ((*wp).pipe_fd != -1) {
-      (*wp).pipe_offset.used -= (*wp).base_offset;
-    }
-    TAILQ_FOREACH(c, &clients, entry) {
-      if ((*c).session == NULL || (~(*c).flags & CLIENT_CONTROL)) {
-        continue;
-      }
-      wpo = control_pane_offset(c, wp, &flag);
-      if (wpo != NULL && !flag) {
-        (*wpo).used -= (*wp).base_offset;
-      }
-    }
-    (*wp).base_offset = minimum;
-  } else {
-    (*wp).base_offset += minimum;
-  }
+            /*
+             * Adjust the base offset. If it would roll over, all the offsets into
+             * the buffer need to be adjusted.
+             */
+            if (*wp).base_offset > (usize::MAX - minimum) {
+                // log_debug("%s: %%%u base offset has wrapped", __func__, (*wp).id);
+                (*wp).offset.used -= (*wp).base_offset;
+                if ((*wp).pipe_fd != -1) {
+                    (*wp).pipe_offset.used -= (*wp).base_offset;
+                }
+                for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
+                    if (*c).session.is_null() || !(*c).flags.intersects(client_flag::CONTROL) {
+                        continue;
+                    }
+                    wpo = control_pane_offset(c, wp, &raw mut flag);
+                    if !wpo.is_null() && flag == 0 {
+                        (*wpo).used -= (*wp).base_offset;
+                    }
+                }
+                (*wp).base_offset = minimum;
+            } else {
+                (*wp).base_offset += minimum;
+            }
+        } // 'out:
 
-out:
-  /*
-   * If there is data remaining, and there are no clients able to consume
-   * it, do not read any more. This is true when there are attached
-   * clients, all of which are control clients which are not able to
-   * accept any more data.
-   */
-  log_debug("%s: pane %%%u is %s", __func__, (*wp).id, off ? "off" : "on");
-  if (off) {
-    bufferevent_disable((*wp).event, EV_READ);
-  } else {
-    bufferevent_enable((*wp).event, EV_READ);
-  }
-}
-}
-
-/*
- * Update cursor position and mode settings. The scroll region and attributes
- * are cleared when idle (waiting for an event) as this is the most likely time
- * a user may interrupt tmux, for example with ~^Z in ssh(1). This is a
- * compromise between excessive resets and likelihood of an interrupt.
- *
- * tty_region/tty_reset/tty_update_mode already take care of not resetting
- * things that are already in their default state.
- */
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_reset_state(c: *mut client ) {
-unsafe {
-  struct tty *tty = &(*c).tty;
-  struct window *w = (*(*(*c).session).curw).window;
-  struct window_pane *wp = server_client_get_pane(c), *loop;
-  struct screen *s = NULL;
-  struct options *oo = (*(*c).session).options;
-  int mode = 0, cursor, flags, n;
-  u_int cx = 0, cy = 0, ox, oy, sx, sy;
-
-  if ((*c).flags & (CLIENT_CONTROL | CLIENT_SUSPENDED)) {
-    return;
-  }
-
-  /* Disable the block flag. */
-  flags = ((*tty).flags & TTY_BLOCK);
-  (*tty).flags &= ~TTY_BLOCK;
-
-  /* Get mode from overlay if any, else from screen. */
-  if ((*c).overlay_draw != NULL) {
-    if ((*c).overlay_mode != NULL) {
-      s = (*c).overlay_mode(c, (*c).overlay_data, &cx, &cy);
-    }
-  } else {
-    s = (*wp).screen;
-  }
-  if (s != NULL) {
-    mode = (*s).mode;
-  }
-  if (log_get_level() != 0) {
-    log_debug("%s: client %s mode %s", __func__, (*c).name,
-              screen_mode_to_string(mode));
-  }
-
-  /* Reset region and margin. */
-  tty_region_off(tty);
-  tty_margin_off(tty);
-
-  /* Move cursor to pane cursor and offset. */
-  if ((*c).prompt_string != NULL) {
-    n = options_get_number((*(*c).session).options, "status-position");
-    if (n == 0) {
-      cy = 0;
-    } else {
-      n = status_line_size(c);
-      if (n == 0) {
-        cy = (*tty).sy - 1;
-      } else {
-        cy = (*tty).sy - n;
-      }
-    }
-    cx = (*c).prompt_cursor;
-    mode &= ~MODE_CURSOR;
-  } else if ((*c).overlay_draw == NULL) {
-    cursor = 0;
-    tty_window_offset(tty, &ox, &oy, &sx, &sy);
-    if ((*wp).xoff + (*s).cx >= ox && (*wp).xoff + (*s).cx <= ox + sx &&
-        (*wp).yoff + (*s).cy >= oy && (*wp).yoff + (*s).cy <= oy + sy) {
-      cursor = 1;
-
-      cx = (*wp).xoff + (*s).cx - ox;
-      cy = (*wp).yoff + (*s).cy - oy;
-
-      if (status_at_line(c) == 0) {
-        cy += status_line_size(c);
-      }
-    }
-    if (!cursor) {
-      mode &= ~MODE_CURSOR;
-    }
-  }
-  log_debug("%s: cursor to %u,%u", __func__, cx, cy);
-  tty_cursor(tty, cx, cy);
-
-  /*
-   * Set mouse mode if requested. To support dragging, always use button
-   * mode.
-   */
-  if (options_get_number(oo, "mouse")) {
-    if ((*c).overlay_draw == NULL) {
-      mode &= ~ALL_MOUSE_MODES;
-      TAILQ_FOREACH(loop, &(*w).panes, entry) {
-        if ((*(*loop).screen).mode & MODE_MOUSE_ALL) {
-          mode |= MODE_MOUSE_ALL;
+        /*
+         * If there is data remaining, and there are no clients able to consume
+         * it, do not read any more. This is true when there are attached
+         * clients, all of which are control clients which are not able to
+         * accept any more data.
+         */
+        // log_debug("%s: pane %%%u is %s", __func__, (*wp).id, off ? "off" : "on");
+        if off != 0 {
+            bufferevent_disable((*wp).event, EV_READ);
+        } else {
+            bufferevent_enable((*wp).event, EV_READ);
         }
-      }
     }
-    if (~mode & MODE_MOUSE_ALL) {
-      mode |= MODE_MOUSE_BUTTON;
-    }
-  }
-
-  /* Clear bracketed paste mode if at the prompt. */
-  if ((*c).overlay_draw == NULL && (*c).prompt_string != NULL) {
-    mode &= ~MODE_BRACKETPASTE;
-  }
-
-  /* Set the terminal mode and reset attributes. */
-  tty_update_mode(tty, mode, s);
-  tty_reset(tty);
-
-  /* All writing must be done, send a sync end (if it was started). */
-  tty_sync_end(tty);
-  (*tty).flags |= flags;
 }
+
+/// Update cursor position and mode settings. The scroll region and attributes
+/// are cleared when idle (waiting for an event) as this is the most likely time
+/// a user may interrupt tmux, for example with ~^Z in ssh(1). This is a
+/// compromise between excessive resets and likelihood of an interrupt.
+///
+/// tty_region/tty_reset/tty_update_mode already take care of not resetting
+/// things that are already in their default state.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn server_client_reset_state(c: *mut client) {
+    unsafe {
+        let mut tty = &raw mut (*c).tty;
+        let mut w = (*(*(*c).session).curw).window;
+        let mut wp = server_client_get_pane(c);
+        let mut s = null_mut();
+        let mut oo = (*(*c).session).options;
+        let mut mode = 0;
+        let mut cursor = 0;
+        let mut flags = tty_flags::empty();
+        let mut n: i32 = 0;
+
+        let mut cx = 0;
+        let mut cy = 0;
+        let mut ox = 0;
+        let mut oy = 0;
+        let mut sx = 0;
+        let mut sy = 0;
+
+        if (*c)
+            .flags
+            .intersects(client_flag::CONTROL | client_flag::SUSPENDED)
+        {
+            return;
+        }
+
+        /* Disable the block flag. */
+        flags = (*tty).flags & tty_flags::TTY_BLOCK;
+        (*tty).flags &= !tty_flags::TTY_BLOCK;
+
+        /* Get mode from overlay if any, else from screen. */
+        if (*c).overlay_draw.is_some() {
+            if let Some(overlay_mode) = (*c).overlay_mode {
+                s = overlay_mode(c, (*c).overlay_data, &raw mut cx, &raw mut cy);
+            }
+        } else {
+            s = (*wp).screen;
+        }
+        if !s.is_null() {
+            mode = (*s).mode;
+        }
+        if log_get_level() != 0 {
+            // log_debug( "%s: client %s mode %s", __func__, (*c).name, screen_mode_to_string(mode),);
+        }
+
+        /* Reset region and margin. */
+        tty_region_off(tty);
+        tty_margin_off(tty);
+
+        // Move cursor to pane cursor and offset.
+        if !(*c).prompt_string.is_null() {
+            n = options_get_number((*(*c).session).options, c"status-position".as_ptr()) as i32;
+            if (n == 0) {
+                cy = 0;
+            } else {
+                n = status_line_size(c) as i32;
+                if (n == 0) {
+                    cy = (*tty).sy - 1;
+                } else {
+                    cy = (*tty).sy - n as u32;
+                }
+            }
+            cx = (*c).prompt_cursor as u32;
+            mode &= !MODE_CURSOR;
+        } else if (*c).overlay_draw.is_none() {
+            cursor = 0;
+            tty_window_offset(tty, &raw mut ox, &raw mut oy, &raw mut sx, &raw mut sy);
+            if ((*wp).xoff + (*s).cx >= ox
+                && (*wp).xoff + (*s).cx <= ox + sx
+                && (*wp).yoff + (*s).cy >= oy
+                && (*wp).yoff + (*s).cy <= oy + sy)
+            {
+                cursor = 1;
+
+                cx = (*wp).xoff + (*s).cx - ox;
+                cy = (*wp).yoff + (*s).cy - oy;
+
+                if (status_at_line(c) == 0) {
+                    cy += status_line_size(c);
+                }
+            }
+            if cursor == 0 {
+                mode &= !MODE_CURSOR;
+            }
+        }
+        // log_debug!("%s: cursor to %u,%u", __func__, cx, cy);
+        tty_cursor(tty, cx, cy);
+
+        /*
+         * Set mouse mode if requested. To support dragging, always use button
+         * mode.
+         */
+        if options_get_number(oo, c"mouse".as_ptr()) != 0 {
+            if (*c).overlay_draw.is_none() {
+                mode &= !ALL_MOUSE_MODES;
+                for loop_ in
+                    tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr)
+                {
+                    if (*(*loop_).screen).mode & MODE_MOUSE_ALL != 0 {
+                        mode |= MODE_MOUSE_ALL;
+                    }
+                }
+            }
+            if mode & MODE_MOUSE_ALL == 0 {
+                mode |= MODE_MOUSE_BUTTON;
+            }
+        }
+
+        /* Clear bracketed paste mode if at the prompt. */
+        if (*c).overlay_draw.is_none() && !(*c).prompt_string.is_null() {
+            mode &= !MODE_BRACKETPASTE;
+        }
+
+        /* Set the terminal mode and reset attributes. */
+        tty_update_mode(tty, mode, s);
+        tty_reset(tty);
+
+        /* All writing must be done, send a sync end (if it was started). */
+        tty_sync_end(tty);
+        (*tty).flags |= flags;
+    }
 }
 
 /// Repeat time callback.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_repeat_timer(_fd: i32, _events: i16, data: *mut c_void) {
-unsafe {
-  struct client *c = data;
+pub unsafe extern "C" fn server_client_repeat_timer(_fd: i32, _events: i16, data: *mut c_void) {
+    unsafe {
+        let c: *mut client = data.cast();
 
-  if ((*c).flags & CLIENT_REPEAT) {
-    server_client_set_key_table(c, NULL);
-    (*c).flags &= ~CLIENT_REPEAT;
-    server_status_client(c);
-  }
-}
+        if (*c).flags.intersects(client_flag::REPEAT) {
+            server_client_set_key_table(c, null_mut());
+            (*c).flags &= !client_flag::REPEAT;
+            server_status_client(c);
+        }
+    }
 }
 
 /// Double-click callback.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_click_timer(_fd: i32, _events: i16, data: *mut c_void) {
-unsafe {
-  struct client *c = data;
-  struct key_event *event;
+pub unsafe extern "C" fn server_client_click_timer(_fd: i32, _events: i16, data: *mut c_void) {
+    unsafe {
+        let mut c: *mut client = data.cast();
+        log_debug!("click timer expired");
 
-  log_debug("click timer expired");
-
-  if ((*c).flags & CLIENT_TRIPLECLICK) {
-    /*
-     * Waiting for a third click that hasn't happened, so this must
-     * have been a double click.
-     */
-    event = xmalloc(sizeof *event);
-    (*event).key = KEYC_DOUBLECLICK;
-    memcpy(&(*event).m, &(*c).click_event, sizeof(*event).m);
-    if (!server_client_handle_key(c, event)) {
-      free(event);
+        if (*c).flags.intersects(client_flag::TRIPLECLICK) {
+            // Waiting for a third click that hasn't happened, so this must have been a double click.
+            let event = xmalloc_::<key_event>().as_ptr();
+            (*event).key = keyc::KEYC_DOUBLECLICK as u64;
+            memcpy__(&raw mut (*event).m, &raw const (*c).click_event);
+            if server_client_handle_key(c, event) == 0 {
+                free_(event);
+            }
+        }
+        (*c).flags &= !(client_flag::DOUBLECLICK | client_flag::TRIPLECLICK);
     }
-  }
-  (*c).flags &= ~(CLIENT_DOUBLECLICK | CLIENT_TRIPLECLICK);
-}
 }
 
 /// Check if client should be exited.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void server_client_check_exit(c: *mut client ) {
-unsafe {
-  struct client_file *cf;
-  const char *name = (*c).exit_session;
-  char *data;
-  size_t size, msize;
+pub unsafe extern "C" fn server_client_check_exit(c: *mut client) {
+    unsafe {
+        let mut name = (*c).exit_session;
 
-  if ((*c).flags & (CLIENT_DEAD | CLIENT_EXITED)) {
-    return;
-  }
-  if (~(*c).flags & CLIENT_EXIT) {
-    return;
-  }
+        if (*c)
+            .flags
+            .intersects(client_flag::DEAD | client_flag::EXITED)
+        {
+            return;
+        }
+        if !(*c).flags.intersects(client_flag::EXIT) {
+            return;
+        }
 
-  if ((*c).flags & CLIENT_CONTROL) {
-    control_discard(c);
-    if (!control_all_done(c)) {
-      return;
-    }
-  }
-  RB_FOREACH(cf, client_files, &(*c).files) {
-    if (EVBUFFER_LENGTH((*cf).buffer) != 0) {
-      return;
-    }
-  }
-  (*c).flags |= CLIENT_EXITED;
+        if (*c).flags.intersects(client_flag::CONTROL) {
+            control_discard(c);
+            if control_all_done(c) == 0 {
+                return;
+            }
+        }
+        for cf in rb_foreach(&raw mut (*c).files).map(NonNull::as_ptr) {
+            if EVBUFFER_LENGTH((*cf).buffer) != 0 {
+                return;
+            }
+        }
+        (*c).flags |= client_flag::EXITED;
 
-  switch ((*c).exit_type) {
-  case CLIENT_EXIT_RETURN:
-    if ((*c).exit_message != NULL) {
-      msize = strlen((*c).exit_message) + 1;
-    } else {
-      msize = 0;
+        match ((*c).exit_type) {
+            exit_type::CLIENT_EXIT_RETURN => {
+                let msize = if !(*c).exit_message.is_null() {
+                    strlen((*c).exit_message) + 1
+                } else {
+                    0
+                };
+                let size = size_of::<i32>() + msize;
+                let data = xmalloc(size).as_ptr();
+                libc::memcpy(data, (&raw mut (*c).retval).cast(), size_of::<i32>());
+                if !(*c).exit_message.is_null() {
+                    libc::memcpy(
+                        data.add(size_of::<i32>()).cast(),
+                        (*c).exit_message.cast(),
+                        msize,
+                    );
+                }
+                proc_send((*c).peer, msgtype::MSG_EXIT, -1, data, size);
+                free_(data);
+            }
+            exit_type::CLIENT_EXIT_SHUTDOWN => {
+                proc_send((*c).peer, msgtype::MSG_SHUTDOWN, -1, null(), 0);
+            }
+            exit_type::CLIENT_EXIT_DETACH => {
+                proc_send(
+                    (*c).peer,
+                    (*c).exit_msgtype,
+                    -1,
+                    name.cast(),
+                    libc::strlen(name) + 1,
+                );
+            }
+        }
+        free_((*c).exit_session);
+        free_((*c).exit_message);
     }
-    size = (sizeof(*c).retval) + msize;
-    data = xmalloc(size);
-    memcpy(data, &(*c).retval, sizeof(*c).retval);
-    if ((*c).exit_message != NULL) {
-      memcpy(data + sizeof(*c).retval, (*c).exit_message, msize);
-    }
-    proc_send((*c).peer, MSG_EXIT, -1, data, size);
-    free(data);
-    break;
-  case CLIENT_EXIT_SHUTDOWN:
-    proc_send((*c).peer, MSG_SHUTDOWN, -1, NULL, 0);
-    break;
-  case CLIENT_EXIT_DETACH:
-    proc_send((*c).peer, (*c).exit_msgtype, -1, name, strlen(name) + 1);
-    break;
-  }
-  free((*c).exit_session);
-  free((*c).exit_message);
 }
-}
 
-/* Redraw timer callback. */
+/// Redraw timer callback.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_redraw_timer(_fd: i32, _events: i16, data: *mut c_void) {
-unsafe {
-  log_debug("redraw timer fired");
-}
+pub unsafe extern "C" fn server_client_redraw_timer(_fd: i32, _events: i16, data: *mut c_void) {
+    unsafe {
+        log_debug!("redraw timer fired");
+    }
 }
 
 /*
@@ -2636,925 +2657,977 @@ unsafe {
  * updated and it is done when the status line is redrawn.
  */
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_check_modes(c: *mut client ) {
-unsafe {
-  struct window *w = (*(*(*c).session).curw).window;
-  struct window_pane *wp;
-  struct window_mode_entry *wme;
+pub unsafe extern "C" fn server_client_check_modes(c: *mut client) {
+    unsafe {
+        let mut w = (*(*(*c).session).curw).window;
 
-  if ((*c).flags & (CLIENT_CONTROL | CLIENT_SUSPENDED)) {
-    return;
-  }
-  if (~(*c).flags & CLIENT_REDRAWSTATUS) {
-    return;
-  }
-  TAILQ_FOREACH(wp, &(*w).panes, entry) {
-    wme = TAILQ_FIRST(&(*wp).modes);
-    if (wme != NULL && (*(*wme).mode).update != NULL) {
-      (*(*wme).mode).update(wme);
+        if (*c)
+            .flags
+            .intersects(client_flag::CONTROL | client_flag::SUSPENDED)
+        {
+            return;
+        }
+        if !(*c).flags.intersects(client_flag::REDRAWSTATUS) {
+            return;
+        }
+        for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+            if let Some(wme) = NonNull::new(tailq_first(&raw mut (*wp).modes))
+                && let Some(update) = (*(*wme.as_ptr()).mode).update
+            {
+                update(wme);
+            }
+        }
     }
-  }
-}
 }
 
-/* Check for client redraws. */
+/// Check for client redraws.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_check_redraw(c: *mut client ) {
-unsafe {
-  struct session *s = (*c).session;
-  struct tty *tty = &(*c).tty;
-  struct window *w = (*(*(*c).session).curw).window;
-  struct window_pane *wp;
-  int needed, tty_flags, mode = (*tty).mode;
-  uint64_t client_flags = 0;
-  int redraw;
-  u_int bit = 0;
-  struct timeval tv = {.tv_usec = 1000};
-  static struct event ev;
-  size_t left;
+pub unsafe extern "C" fn server_client_check_redraw(c: *mut client) {
+    static mut ev: event = unsafe { zeroed() };
+    unsafe {
+        let mut s = (*c).session;
+        let mut tty = &raw mut (*c).tty;
+        let mut w = (*(*(*c).session).curw).window;
+        let mut tty_flags_ = tty_flags::empty();
+        let mut mode = (*tty).mode;
+        let mut client_flags: client_flag = client_flag::empty();
+        let mut redraw = false;
+        let mut bit: u32 = 0;
+        let mut tv = libc::timeval {
+            tv_sec: 0,
+            tv_usec: 1000,
+        };
+        let mut left: usize = 0;
 
-  if ((*c).flags & (CLIENT_CONTROL | CLIENT_SUSPENDED)) {
-    return;
-  }
-  if ((*c).flags & CLIENT_ALLREDRAWFLAGS) {
-    log_debug("%s: redraw%s%s%s%s%s", (*c).name,
-              ((*c).flags & CLIENT_REDRAWWINDOW) ? " window" : "",
-              ((*c).flags & CLIENT_REDRAWSTATUS) ? " status" : "",
-              ((*c).flags & CLIENT_REDRAWBORDERS) ? " borders" : "",
-              ((*c).flags & CLIENT_REDRAWOVERLAY) ? " overlay" : "",
-              ((*c).flags & CLIENT_REDRAWPANES) ? " panes" : "");
-  }
-
-  /*
-   * If there is outstanding data, defer the redraw until it has been
-   * consumed. We can just add a timer to get out of the event loop and
-   * end up back here.
-   */
-  needed = 0;
-  if ((*c).flags & CLIENT_ALLREDRAWFLAGS) {
-    needed = 1;
-  } else {
-    TAILQ_FOREACH(wp, &(*w).panes, entry) {
-      if ((*wp).flags & PANE_REDRAW) {
-        needed = 1;
-        break;
-      }
-    }
-    if (needed) {
-      client_flags |= CLIENT_REDRAWPANES;
-    }
-  }
-  if (needed && (left = EVBUFFER_LENGTH((*tty).out)) != 0) {
-    log_debug("%s: redraw deferred (%zu left)", (*c).name, left);
-    if (!evtimer_initialized(&ev)) {
-      evtimer_set(&ev, server_client_redraw_timer, NULL);
-    }
-    if (!evtimer_pending(&ev, NULL)) {
-      log_debug("redraw timer started");
-      evtimer_add(&ev, &tv);
-    }
-
-    if (~(*c).flags & CLIENT_REDRAWWINDOW) {
-      TAILQ_FOREACH(wp, &(*w).panes, entry) {
-        if ((*wp).flags & PANE_REDRAW) {
-          log_debug("%s: pane %%%u needs redraw", (*c).name, (*wp).id);
-          (*c).redraw_panes |= (1 << bit);
+        if (*c)
+            .flags
+            .intersects(client_flag::CONTROL | client_flag::SUSPENDED)
+        {
+            return;
         }
-        if (++bit == 64) {
-          /*
-           * If more that 64 panes, give up and
-           * just redraw the window.
-           */
-          client_flags &= CLIENT_REDRAWPANES;
-          client_flags |= CLIENT_REDRAWWINDOW;
-          break;
+        if (*c).flags.intersects(CLIENT_ALLREDRAWFLAGS) {
+            // log_debug("%s: redraw%s%s%s%s%s", (*c).name,
+            //           ((*c).flags & CLIENT_REDRAWWINDOW) ? " window" : "",
+            //           ((*c).flags & CLIENT_REDRAWSTATUS) ? " status" : "",
+            //           ((*c).flags & CLIENT_REDRAWBORDERS) ? " borders" : "",
+            //           ((*c).flags & CLIENT_REDRAWOVERLAY) ? " overlay" : "",
+            //           ((*c).flags & CLIENT_REDRAWPANES) ? " panes" : "");
         }
-      }
-      if ((*c).redraw_panes != 0) {
-        (*c).flags |= CLIENT_REDRAWPANES;
-      }
+
+        /*
+         * If there is outstanding data, defer the redraw until it has been
+         * consumed. We can just add a timer to get out of the event loop and
+         * end up back here.
+         */
+        let mut needed = boolint::FALSE;
+        if (*c).flags.intersects(CLIENT_ALLREDRAWFLAGS) {
+            needed = boolint::TRUE;
+        } else {
+            for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+                if (*wp).flags.intersects(window_pane_flags::PANE_REDRAW) {
+                    needed = boolint::TRUE;
+                    break;
+                }
+            }
+            if needed.as_bool() {
+                client_flags |= client_flag::REDRAWPANES;
+            }
+        }
+        if needed.as_bool()
+            && ({
+                left = EVBUFFER_LENGTH((*tty).out);
+                left != 0
+            })
+        {
+            // log_debug("%s: redraw deferred (%zu left)", (*c).name, left);
+            if evtimer_initialized(&raw mut ev) == 0 {
+                evtimer_set(&raw mut ev, Some(server_client_redraw_timer), null_mut());
+            }
+            if evtimer_pending(&raw mut ev, null_mut()) == 0 {
+                log_debug!("redraw timer started");
+                evtimer_add(&raw mut ev, &raw const tv);
+            }
+
+            if !(*c).flags.intersects(client_flag::REDRAWWINDOW) {
+                for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr)
+                {
+                    if (*wp).flags.intersects(window_pane_flags::PANE_REDRAW) {
+                        // log_debug("%s: pane %%%u needs redraw", (*c).name, (*wp).id);
+                        (*c).redraw_panes |= (1 << bit);
+                    }
+                    bit += 1;
+                    if (bit == 64) {
+                        /*
+                         * If more that 64 panes, give up and
+                         * just redraw the window.
+                         */
+                        client_flags &= client_flag::REDRAWPANES;
+                        client_flags |= client_flag::REDRAWWINDOW;
+                        break;
+                    }
+                }
+                if ((*c).redraw_panes != 0) {
+                    (*c).flags |= client_flag::REDRAWPANES;
+                }
+            }
+            (*c).flags |= client_flags;
+            return;
+        } else if needed.as_bool() {
+            // log_debug("%s: redraw needed", (*c).name);
+        }
+
+        tty_flags_ =
+            (*tty).flags & (tty_flags::TTY_BLOCK | tty_flags::TTY_FREEZE | tty_flags::TTY_NOCURSOR);
+        (*tty).flags = ((*tty).flags & !(tty_flags::TTY_BLOCK | tty_flags::TTY_FREEZE))
+            | tty_flags::TTY_NOCURSOR;
+
+        if !(*c).flags.intersects(client_flag::REDRAWWINDOW) {
+            /*
+             * If not redrawing the entire window, check whether each pane
+             * needs to be redrawn.
+             */
+            for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+                redraw = false;
+                if (*wp).flags.intersects(window_pane_flags::PANE_REDRAW) {
+                    redraw = true;
+                } else if (*c).flags.intersects(client_flag::REDRAWPANES) {
+                    redraw = ((*c).redraw_panes & (1 << bit)) != 0;
+                }
+                bit += 1;
+                if !redraw {
+                    continue;
+                }
+                // log_debug("%s: redrawing pane %%%u", __func__, (*wp).id);
+                screen_redraw_pane(c, wp);
+            }
+            (*c).redraw_panes = 0;
+            (*c).flags &= !client_flag::REDRAWPANES;
+        }
+
+        if (*c).flags.intersects(CLIENT_ALLREDRAWFLAGS) {
+            if options_get_number_((*s).options, c"set-titles") != 0 {
+                server_client_set_title(c);
+                server_client_set_path(c);
+            }
+            screen_redraw_screen(c);
+        }
+
+        (*tty).flags =
+            ((*tty).flags & !tty_flags::TTY_NOCURSOR) | (tty_flags_ & tty_flags::TTY_NOCURSOR);
+        tty_update_mode(tty, mode, null_mut());
+        (*tty).flags = ((*tty).flags
+            & !(tty_flags::TTY_BLOCK | tty_flags::TTY_FREEZE | tty_flags::TTY_NOCURSOR))
+            | tty_flags_;
+
+        (*c).flags &= !(CLIENT_ALLREDRAWFLAGS | client_flag::STATUSFORCE);
+
+        if needed.as_bool() {
+            /*
+             * We would have deferred the redraw unless the output buffer
+             * was empty, so we can record how many bytes the redraw
+             * generated.
+             */
+            (*c).redraw = EVBUFFER_LENGTH((*tty).out);
+            // log_debug("%s: redraw added %zu bytes", (*c).name, (*c).redraw);
+        }
     }
-    (*c).flags |= client_flags;
-    return;
-  } else if (needed) {
-    log_debug("%s: redraw needed", (*c).name);
-  }
-
-  tty_flags = (*tty).flags & (TTY_BLOCK | TTY_FREEZE | TTY_NOCURSOR);
-  (*tty).flags = ((*tty).flags & ~(TTY_BLOCK | TTY_FREEZE)) | TTY_NOCURSOR;
-
-  if (~(*c).flags & CLIENT_REDRAWWINDOW) {
-    /*
-     * If not redrawing the entire window, check whether each pane
-     * needs to be redrawn.
-     */
-    TAILQ_FOREACH(wp, &(*w).panes, entry) {
-      redraw = 0;
-      if ((*wp).flags & PANE_REDRAW) {
-        redraw = 1;
-      } else if ((*c).flags & CLIENT_REDRAWPANES) {
-        redraw = !!((*c).redraw_panes & (1 << bit));
-      }
-      bit++;
-      if (!redraw) {
-        continue;
-      }
-      log_debug("%s: redrawing pane %%%u", __func__, (*wp).id);
-      screen_redraw_pane(c, wp);
-    }
-    (*c).redraw_panes = 0;
-    (*c).flags &= ~CLIENT_REDRAWPANES;
-  }
-
-  if ((*c).flags & CLIENT_ALLREDRAWFLAGS) {
-    if (options_get_number((*s).options, "set-titles")) {
-      server_client_set_title(c);
-      server_client_set_path(c);
-    }
-    screen_redraw_screen(c);
-  }
-
-  (*tty).flags = ((*tty).flags & ~TTY_NOCURSOR) | (tty_flags & TTY_NOCURSOR);
-  tty_update_mode(tty, mode, NULL);
-  (*tty).flags =
-      ((*tty).flags & ~(TTY_BLOCK | TTY_FREEZE | TTY_NOCURSOR)) | tty_flags;
-
-  (*c).flags &= ~(CLIENT_ALLREDRAWFLAGS | CLIENT_STATUSFORCE);
-
-  if (needed) {
-    /*
-     * We would have deferred the redraw unless the output buffer
-     * was empty, so we can record how many bytes the redraw
-     * generated.
-     */
-    (*c).redraw = EVBUFFER_LENGTH((*tty).out);
-    log_debug("%s: redraw added %zu bytes", (*c).name, (*c).redraw);
-  }
-}
 }
 
 /* Set client title. */
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_set_title(c: *mut client ) {
-unsafe {
-  struct session *s = (*c).session;
-  const char *template;
-  char *title;
-  struct format_tree *ft;
+pub unsafe extern "C" fn server_client_set_title(c: *mut client) {
+    unsafe {
+        let mut s = (*c).session;
 
-  template = options_get_string((*s).options, "set-titles-string");
+        let template = options_get_string((*s).options, c"set-titles-string".as_ptr());
 
-  ft = format_create(c, NULL, FORMAT_NONE, 0);
-  format_defaults(ft, c, NULL, NULL, NULL);
+        let ft = format_create(c, null_mut(), FORMAT_NONE, format_flags::empty());
+        format_defaults(ft, c, None, None, None);
 
-  title = format_expand_time(ft, template);
-  if ((*c).title == NULL || strcmp(title, (*c).title) != 0) {
-    free((*c).title);
-    (*c).title = xstrdup(title);
-    tty_set_title(&(*c).tty, (*c).title);
-  }
-  free(title);
+        let title = format_expand_time(ft, template);
+        if ((*c).title.is_null() || libc::strcmp(title, (*c).title) != 0) {
+            free_((*c).title);
+            (*c).title = xstrdup(title).as_ptr();
+            tty_set_title(&raw mut (*c).tty, (*c).title);
+        }
+        free_(title);
 
-  format_free(ft);
-}
+        format_free(ft);
+    }
 }
 
-/* Set client path. */
+/// Set client path.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_set_path(c: *mut client ) {
-unsafe {
-  struct session *s = (*c).session;
-  const char *path;
+pub unsafe extern "C" fn server_client_set_path(c: *mut client) {
+    unsafe {
+        let mut s = (*c).session;
 
-  if ((*s).curw == NULL) {
-    return;
-  }
-  if ((*(*(*(*s).curw).window).active).base.path == NULL) {
-    path = "";
-  } else {
-    path = (*(*(*(*s).curw).window).active).base.path;
-  }
-  if ((*c).path == NULL || strcmp(path, (*c).path) != 0) {
-    free((*c).path);
-    (*c).path = xstrdup(path);
-    tty_set_path(&(*c).tty, (*c).path);
-  }
-}
+        if (*s).curw.is_null() {
+            return;
+        }
+        let path = if (*(*(*(*s).curw).window).active).base.path.is_null() {
+            c"".as_ptr()
+        } else {
+            (*(*(*(*s).curw).window).active).base.path
+        };
+        if ((*c).path.is_null() || libc::strcmp(path, (*c).path) != 0) {
+            free_((*c).path);
+            (*c).path = xstrdup(path).as_ptr();
+            tty_set_path(&raw mut (*c).tty, (*c).path);
+        }
+    }
 }
 
-/* Dispatch message from client. */
+/// Dispatch message from client.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_dispatch(imsg: *mut imsg, arg: *mut c_void) {
-unsafe {
-  struct client *c = arg;
-  ssize_t datalen;
-  struct session *s;
+pub unsafe extern "C" fn server_client_dispatch(imsg: *mut imsg, arg: *mut c_void) {
+    unsafe {
+        let mut c: *mut client = arg.cast();
 
-  if ((*c).flags & CLIENT_DEAD) {
-    return;
-  }
+        if (*c).flags.intersects(client_flag::DEAD) {
+            return;
+        }
 
-  if (imsg == NULL) {
-    server_client_lost(c);
-    return;
-  }
+        if imsg.is_null() {
+            server_client_lost(c);
+            return;
+        }
 
-  datalen = (*imsg).hdr.len - IMSG_HEADER_SIZE;
+        let datalen = (*imsg).hdr.len - IMSG_HEADER_SIZE as u16;
 
-  switch ((*imsg).hdr.type) {
-  case MSG_IDENTIFY_CLIENTPID:
-  case MSG_IDENTIFY_CWD:
-  case MSG_IDENTIFY_ENVIRON:
-  case MSG_IDENTIFY_FEATURES:
-  case MSG_IDENTIFY_FLAGS:
-  case MSG_IDENTIFY_LONGFLAGS:
-  case MSG_IDENTIFY_STDIN:
-  case MSG_IDENTIFY_STDOUT:
-  case MSG_IDENTIFY_TERM:
-  case MSG_IDENTIFY_TERMINFO:
-  case MSG_IDENTIFY_TTYNAME:
-  case MSG_IDENTIFY_DONE:
-    server_client_dispatch_identify(c, imsg);
-    break;
-  case MSG_COMMAND:
-    server_client_dispatch_command(c, imsg);
-    break;
-  case MSG_RESIZE:
-    if (datalen != 0) {
-      fatalx("bad MSG_RESIZE size");
-    }
+        match msgtype::try_from((*imsg).hdr.type_).expect("unexpected msgtype") {
+            msgtype::MSG_IDENTIFY_CLIENTPID
+            | msgtype::MSG_IDENTIFY_CWD
+            | msgtype::MSG_IDENTIFY_ENVIRON
+            | msgtype::MSG_IDENTIFY_FEATURES
+            | msgtype::MSG_IDENTIFY_FLAGS
+            | msgtype::MSG_IDENTIFY_LONGFLAGS
+            | msgtype::MSG_IDENTIFY_STDIN
+            | msgtype::MSG_IDENTIFY_STDOUT
+            | msgtype::MSG_IDENTIFY_TERM
+            | msgtype::MSG_IDENTIFY_TERMINFO
+            | msgtype::MSG_IDENTIFY_TTYNAME
+            | msgtype::MSG_IDENTIFY_DONE => server_client_dispatch_identify(c, imsg),
+            msgtype::MSG_COMMAND => server_client_dispatch_command(c, imsg),
+            msgtype::MSG_RESIZE => {
+                if (datalen != 0) {
+                    fatalx(c"bad MSG_RESIZE size");
+                }
 
-    if ((*c).flags & CLIENT_CONTROL) {
-      break;
-    }
-    server_client_update_latest(c);
-    tty_resize(&(*c).tty);
-    tty_repeat_requests(&(*c).tty);
-    recalculate_sizes();
-    if ((*c).overlay_resize == NULL) {
-      server_client_clear_overlay(c);
-    } else {
-      (*c).overlay_resize(c, (*c).overlay_data);
-    }
-    server_redraw_client(c);
-    if ((*c).session != NULL) {
-      notify_client("client-resized", c);
-    }
-    break;
-  case MSG_EXITING:
-    if (datalen != 0) {
-      fatalx("bad MSG_EXITING size");
-    }
-    server_client_set_session(c, NULL);
-    recalculate_sizes();
-    tty_close(&(*c).tty);
-    proc_send((*c).peer, MSG_EXITED, -1, NULL, 0);
-    break;
-  case MSG_WAKEUP:
-  case MSG_UNLOCK:
-    if (datalen != 0) {
-      fatalx("bad MSG_WAKEUP size");
-    }
+                if !(*c).flags.intersects(client_flag::CONTROL) {
+                    server_client_update_latest(c);
+                    tty_resize(&raw mut (*c).tty);
+                    tty_repeat_requests(&raw mut (*c).tty);
+                    recalculate_sizes();
+                    if let Some(overlay_resize) = (*c).overlay_resize {
+                        overlay_resize(c, (*c).overlay_data);
+                    } else {
+                        server_client_clear_overlay(c);
+                    }
+                    server_redraw_client(c);
+                    if !(*c).session.is_null() {
+                        notify_client(c"client-resized".as_ptr(), c);
+                    }
+                }
+            }
+            msgtype::MSG_EXITING => {
+                if (datalen != 0) {
+                    fatalx(c"bad MSG_EXITING size");
+                }
+                server_client_set_session(c, null_mut());
+                recalculate_sizes();
+                tty_close(&raw mut (*c).tty);
+                proc_send((*c).peer, msgtype::MSG_EXITED, -1, null_mut(), 0);
+            }
+            msgtype::MSG_WAKEUP | msgtype::MSG_UNLOCK => {
+                if (datalen != 0) {
+                    fatalx(c"bad MSG_WAKEUP size");
+                }
 
-    if (!((*c).flags & CLIENT_SUSPENDED)) {
-      break;
-    }
-    (*c).flags &= ~CLIENT_SUSPENDED;
+                if !(*c).flags.intersects(client_flag::SUSPENDED) {
+                    return;
+                }
+                (*c).flags &= !client_flag::SUSPENDED;
 
-    if ((*c).fd == -1 || (*c).session == NULL) { /* exited already */
-      break;
-    }
-    s = (*c).session;
+                if ((*c).fd == -1 || (*c).session.is_null()) {
+                    /* exited already */
+                    return;
+                }
+                let s = (*c).session;
 
-    if (gettimeofday(&(*c).activity_time, NULL) != 0) {
-      fatal("gettimeofday failed");
-    }
+                if (libc::gettimeofday(&raw mut (*c).activity_time, null_mut()) != 0) {
+                    fatal(c"gettimeofday failed".as_ptr());
+                }
 
-    tty_start_tty(&(*c).tty);
-    server_redraw_client(c);
-    recalculate_sizes();
+                tty_start_tty(&raw mut (*c).tty);
+                server_redraw_client(c);
+                recalculate_sizes();
 
-    if (s != NULL) {
-      session_update_activity(s, &(*c).activity_time);
-    }
-    break;
-  case MSG_SHELL:
-    if (datalen != 0) {
-      fatalx("bad MSG_SHELL size");
-    }
+                if (!s.is_null()) {
+                    session_update_activity(s, &raw mut (*c).activity_time);
+                }
+            }
+            msgtype::MSG_SHELL => {
+                if (datalen != 0) {
+                    fatalx(c"bad MSG_SHELL size");
+                }
 
-    server_client_dispatch_shell(c);
-    break;
-  case MSG_WRITE_READY:
-    file_write_ready(&(*c).files, imsg);
-    break;
-  case MSG_READ:
-    file_read_data(&(*c).files, imsg);
-    break;
-  case MSG_READ_DONE:
-    file_read_done(&(*c).files, imsg);
-    break;
-  }
-}
+                server_client_dispatch_shell(c);
+            }
+            msgtype::MSG_WRITE_READY => file_write_ready(&raw mut (*c).files, imsg),
+            msgtype::MSG_READ => file_read_data(&raw mut (*c).files, imsg),
+            msgtype::MSG_READ_DONE => file_read_done(&raw mut (*c).files, imsg),
+            _ => (),
+        };
+    }
 }
 
-/* Callback when command is not allowed. */
+/// Callback when command is not allowed.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_read_only(item: *mut cmdq_item , data: *mut c_void ) -> cmd_retval {
-unsafe {
-  cmdq_error(item, "client is read-only");
-  return CMD_RETURN_ERROR;
-}
+pub unsafe extern "C" fn server_client_read_only(
+    item: *mut cmdq_item,
+    _data: *mut c_void,
+) -> cmd_retval {
+    unsafe {
+        cmdq_error(item, c"client is read-only".as_ptr());
+        cmd_retval::CMD_RETURN_ERROR
+    }
 }
 
-/* Callback when command is done. */
+/// Callback when command is done.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_command_done(item: *mut cmdq_item , data: *mut c_void ) -> cmd_retval {
-unsafe {
-  struct client *c = cmdq_get_client(item);
+pub unsafe extern "C" fn server_client_command_done(
+    item: *mut cmdq_item,
+    _data: *mut c_void,
+) -> cmd_retval {
+    unsafe {
+        let mut c = cmdq_get_client(item);
 
-  if (~(*c).flags & CLIENT_ATTACHED) {
-    (*c).flags |= CLIENT_EXIT;
-  } else if (~(*c).flags & CLIENT_EXIT) {
-    if ((*c).flags & CLIENT_CONTROL) {
-      control_ready(c);
+        if !(*c).flags.intersects(client_flag::ATTACHED) {
+            (*c).flags |= client_flag::EXIT;
+        } else if !(*c).flags.intersects(client_flag::EXIT) {
+            if (*c).flags.intersects(client_flag::CONTROL) {
+                control_ready(c);
+            }
+            tty_send_requests(&raw mut (*c).tty);
+        }
+        cmd_retval::CMD_RETURN_NORMAL
     }
-    tty_send_requests(&(*c).tty);
-  }
-  return CMD_RETURN_NORMAL;
-}
 }
 
-/* Handle command message. */
+/// Handle command message.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_dispatch_command(c: *mut client , imsg: *mut imsg ) {
-unsafe {
-  struct msg_command data;
-  char *buf;
-  size_t len;
-  int argc;
-  char **argv, *cause;
-  struct cmd_parse_result *pr;
-  struct args_value *values;
-  struct cmdq_item *new_item;
+pub unsafe extern "C" fn server_client_dispatch_command(c: *mut client, imsg: *mut imsg) {
+    unsafe {
+        let mut data: msg_command = zeroed();
+        let mut buf = null_mut();
+        let mut len: usize = 0;
+        let mut argc = 0;
+        let mut argv: *mut *mut c_char = null_mut();
+        let mut cause: *mut c_char = null_mut();
+        let mut pr = null_mut();
+        let mut values = null_mut();
+        let mut new_item = null_mut();
 
-  if ((*c).flags & CLIENT_EXIT) {
-    return;
-  }
+        'error: {
+            if (*c).flags.intersects(client_flag::EXIT) {
+                return;
+            }
 
-  if ((*imsg).hdr.len - IMSG_HEADER_SIZE < sizeof data) {
-    fatalx("bad MSG_COMMAND size");
-  }
-  memcpy(&data, (*imsg).data, sizeof data);
+            if (*imsg).hdr.len as usize - IMSG_HEADER_SIZE < size_of::<msg_command>() {
+                fatalx(c"bad MSG_COMMAND size");
+            }
+            memcpy__(&raw mut data, (*imsg).data.cast());
 
-  buf = (char *)(*imsg).data + sizeof data;
-  len = (*imsg).hdr.len - IMSG_HEADER_SIZE - sizeof data;
-  if (len > 0 && buf[len - 1] != '\0') {
-    fatalx("bad MSG_COMMAND string");
-  }
+            buf = (*imsg).data.cast::<c_char>().add(size_of::<msg_command>());
+            len = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE - size_of::<msg_command>();
+            if (len > 0 && *buf.add(len - 1) != b'\0' as i8) {
+                fatalx(c"bad MSG_COMMAND string");
+            }
 
-  argc = data.argc;
-  if (cmd_unpack_argv(buf, len, argc, &argv) != 0) {
-    cause = xstrdup("command too long");
-    goto error;
-  }
+            argc = data.argc;
+            if (cmd_unpack_argv(buf, len, argc, &raw mut argv) != 0) {
+                cause = xstrdup(c"command too long".as_ptr()).as_ptr();
+                break 'error;
+            }
 
-  if (argc == 0) {
-    argc = 1;
-    argv = xcalloc(1, sizeof *argv);
-    *argv = xstrdup("new-session");
-  }
+            if argc == 0 {
+                argc = 1;
+                argv = xcalloc1();
+                *argv = xstrdup(c"new-session".as_ptr()).as_ptr();
+            }
 
-  values = args_from_vector(argc, argv);
-  pr = cmd_parse_from_arguments(values, argc, NULL);
-  switch ((*pr).status) {
-  case CMD_PARSE_ERROR:
-    cause = (*pr).error;
-    goto error;
-  case CMD_PARSE_SUCCESS:
-    break;
-  }
-  args_free_values(values, argc);
-  free(values);
-  cmd_free_argv(argc, argv);
+            values = args_from_vector(argc, argv);
+            pr = cmd_parse_from_arguments(values, argc as u32, null_mut());
+            match (*pr).status {
+                cmd_parse_status::CMD_PARSE_ERROR => {
+                    cause = (*pr).error;
+                    break 'error;
+                }
+                cmd_parse_status::CMD_PARSE_SUCCESS => (),
+            }
+            args_free_values(values, argc as u32);
+            free_(values);
+            cmd_free_argv(argc, argv);
 
-  if (((*c).flags & CLIENT_READONLY) &&
-      !cmd_list_all_have((*pr).cmdlist, CMD_READONLY)) {
-    new_item = cmdq_get_callback(server_client_read_only, NULL);
-  } else {
-    new_item = cmdq_get_command((*pr).cmdlist, NULL);
-  }
-  cmdq_append(c, new_item);
-  cmdq_append(c, cmdq_get_callback(server_client_command_done, NULL));
+            if (*c).flags.intersects(client_flag::READONLY)
+                && !cmd_list_all_have((*pr).cmdlist, cmd_flag::CMD_READONLY)
+            {
+                new_item = cmdq_get_callback!(server_client_read_only, null_mut()).as_ptr();
+            } else {
+                new_item = cmdq_get_command((*pr).cmdlist, null_mut());
+            }
+            cmdq_append(c, new_item);
+            cmdq_append(
+                c,
+                cmdq_get_callback!(server_client_command_done, null_mut()).as_ptr(),
+            );
 
-  cmd_list_free((*pr).cmdlist);
-  return;
+            cmd_list_free((*pr).cmdlist);
+            return;
+        }
+        // error:
+        cmd_free_argv(argc, argv);
 
-error:
-  cmd_free_argv(argc, argv);
+        cmdq_append(c, cmdq_get_error(cause).as_ptr());
+        free_(cause);
 
-  cmdq_append(c, cmdq_get_error(cause));
-  free(cause);
-
-  (*c).flags |= CLIENT_EXIT;
+        (*c).flags |= client_flag::EXIT;
+    }
 }
-}
 
-/* Handle identify message. */
+/// Handle identify message.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_dispatch_identify(c: *mut client , imsg: *mut imsg ) {
-unsafe {
-  const char *data, *home;
-  size_t datalen;
-  int flags, feat;
-  uint64_t longflags;
-  char *name;
+pub unsafe extern "C" fn server_client_dispatch_identify(c: *mut client, imsg: *mut imsg) {
+    unsafe {
+        let mut home: *mut c_char = null_mut();
+        let mut feat: i32 = 0;
+        let mut flags: i32 = 0;
+        let mut longflags: u64 = 0;
 
-  if ((*c).flags & CLIENT_IDENTIFIED) {
-    fatalx("out-of-order identify message");
-  }
+        if (*c).flags.intersects(client_flag::IDENTIFIED) {
+            fatalx(c"out-of-order identify message");
+        }
 
-  data = (*imsg).data;
-  datalen = (*imsg).hdr.len - IMSG_HEADER_SIZE;
+        let data = (*imsg).data;
+        let datalen = (*imsg).hdr.len - IMSG_HEADER_SIZE as u16;
 
-  switch ((*imsg).hdr.type) {
-  case MSG_IDENTIFY_FEATURES:
-    if (datalen != sizeof feat) {
-      fatalx("bad MSG_IDENTIFY_FEATURES size");
-    }
-    memcpy(&feat, data, sizeof feat);
-    (*c).term_features |= feat;
-    log_debug("client %p IDENTIFY_FEATURES %s", c, tty_get_features(feat));
-    break;
-  case MSG_IDENTIFY_FLAGS:
-    if (datalen != sizeof flags) {
-      fatalx("bad MSG_IDENTIFY_FLAGS size");
-    }
-    memcpy(&flags, data, sizeof flags);
-    (*c).flags |= flags;
-    log_debug("client %p IDENTIFY_FLAGS %#x", c, flags);
-    break;
-  case MSG_IDENTIFY_LONGFLAGS:
-    if (datalen != sizeof longflags) {
-      fatalx("bad MSG_IDENTIFY_LONGFLAGS size");
-    }
-    memcpy(&longflags, data, sizeof longflags);
-    (*c).flags |= longflags;
-    log_debug("client %p IDENTIFY_LONGFLAGS %#llx", c,
-              (unsigned long long)longflags);
-    break;
-  case MSG_IDENTIFY_TERM:
-    if (datalen == 0 || data[datalen - 1] != '\0') {
-      fatalx("bad MSG_IDENTIFY_TERM string");
-    }
-    if (*data == '\0') {
-      (*c).term_name = xstrdup("unknown");
-    } else {
-      (*c).term_name = xstrdup(data);
-    }
-    log_debug("client %p IDENTIFY_TERM %s", c, data);
-    break;
-  case MSG_IDENTIFY_TERMINFO:
-    if (datalen == 0 || data[datalen - 1] != '\0') {
-      fatalx("bad MSG_IDENTIFY_TERMINFO string");
-    }
-    (*c).term_caps = xreallocarray((*c).term_caps, (*c).term_ncaps + 1,
-                                   sizeof *(*c).term_caps);
-    (*c).term_caps[(*c).term_ncaps++] = xstrdup(data);
-    log_debug("client %p IDENTIFY_TERMINFO %s", c, data);
-    break;
-  case MSG_IDENTIFY_TTYNAME:
-    if (datalen == 0 || data[datalen - 1] != '\0') {
-      fatalx("bad MSG_IDENTIFY_TTYNAME string");
-    }
-    (*c).ttyname = xstrdup(data);
-    log_debug("client %p IDENTIFY_TTYNAME %s", c, data);
-    break;
-  case MSG_IDENTIFY_CWD:
-    if (datalen == 0 || data[datalen - 1] != '\0') {
-      fatalx("bad MSG_IDENTIFY_CWD string");
-    }
-    if (access(data, X_OK) == 0) {
-      (*c).cwd = xstrdup(data);
-    } else if ((home = find_home()) != NULL) {
-      (*c).cwd = xstrdup(home);
-    } else {
-      (*c).cwd = xstrdup("/");
-    }
-    log_debug("client %p IDENTIFY_CWD %s", c, data);
-    break;
-  case MSG_IDENTIFY_STDIN:
-    if (datalen != 0) {
-      fatalx("bad MSG_IDENTIFY_STDIN size");
-    }
-    (*c).fd = imsg_get_fd(imsg);
-    log_debug("client %p IDENTIFY_STDIN %d", c, (*c).fd);
-    break;
-  case MSG_IDENTIFY_STDOUT:
-    if (datalen != 0) {
-      fatalx("bad MSG_IDENTIFY_STDOUT size");
-    }
-    (*c).out_fd = imsg_get_fd(imsg);
-    log_debug("client %p IDENTIFY_STDOUT %d", c, (*c).out_fd);
-    break;
-  case MSG_IDENTIFY_ENVIRON:
-    if (datalen == 0 || data[datalen - 1] != '\0') {
-      fatalx("bad MSG_IDENTIFY_ENVIRON string");
-    }
-    if (strchr(data, '=') != NULL) {
-      environ_put((*c).environ, data, 0);
-    }
-    log_debug("client %p IDENTIFY_ENVIRON %s", c, data);
-    break;
-  case MSG_IDENTIFY_CLIENTPID:
-    if (datalen != sizeof(*c).pid) {
-      fatalx("bad MSG_IDENTIFY_CLIENTPID size");
-    }
-    memcpy(&(*c).pid, data, sizeof(*c).pid);
-    log_debug("client %p IDENTIFY_CLIENTPID %ld", c, (long)(*c).pid);
-    break;
-  default:
-    break;
-  }
+        match msgtype::try_from((*imsg).hdr.type_).expect("unexpectd msgtype") {
+            msgtype::MSG_IDENTIFY_FEATURES => {
+                if (datalen != size_of::<i32>() as u16) {
+                    fatalx(c"bad MSG_IDENTIFY_FEATURES size");
+                }
+                memcpy__(&raw mut feat, data.cast());
+                (*c).term_features |= feat;
+                // log_debug("client %p IDENTIFY_FEATURES %s", c, tty_get_features(feat));
+            }
+            msgtype::MSG_IDENTIFY_FLAGS => {
+                if (datalen != size_of::<i32>() as u16) {
+                    fatalx(c"bad MSG_IDENTIFY_FLAGS size");
+                }
+                memcpy__(&raw mut flags, data.cast());
+                (*c).flags |= client_flag::from_bits(flags as u64).expect("invalid identify flags");
+                // log_debug("client %p IDENTIFY_FLAGS %#x", c, flags);
+            }
+            msgtype::MSG_IDENTIFY_LONGFLAGS => {
+                if (datalen != size_of::<u64>() as u16) {
+                    fatalx(c"bad MSG_IDENTIFY_LONGFLAGS size");
+                }
+                memcpy__(&raw mut longflags, data.cast());
+                (*c).flags |=
+                    client_flag::from_bits(longflags).expect("invalid identify longflags");
+                // log_debug("client %p IDENTIFY_LONGFLAGS %#llx", c, (unsigned long long)longflags);
+            }
+            msgtype::MSG_IDENTIFY_TERM => {
+                if datalen == 0
+                    || *data.cast::<c_char>().add((datalen - 1) as usize) != b'\0' as c_char
+                {
+                    fatalx(c"bad MSG_IDENTIFY_TERM string");
+                }
+                if (*data.cast::<c_char>() == b'\0' as c_char) {
+                    (*c).term_name = xstrdup(c"unknown".as_ptr()).as_ptr();
+                } else {
+                    (*c).term_name = xstrdup(data.cast()).as_ptr();
+                }
+                // log_debug("client %p IDENTIFY_TERM %s", c, data);
+            }
+            msgtype::MSG_IDENTIFY_TERMINFO => {
+                if datalen == 0
+                    || *data.cast::<c_char>().add((datalen - 1) as usize) != b'\0' as c_char
+                {
+                    fatalx(c"bad MSG_IDENTIFY_TERMINFO string");
+                }
+                (*c).term_caps =
+                    xreallocarray_((*c).term_caps, (*c).term_ncaps as usize + 1).as_ptr();
+                *(*c).term_caps.add((*c).term_ncaps as usize) = xstrdup(data.cast()).as_ptr();
+                (*c).term_ncaps += 1;
+                // log_debug("client %p IDENTIFY_TERMINFO %s", c, data);
+            }
+            msgtype::MSG_IDENTIFY_TTYNAME => {
+                if datalen == 0
+                    || *data.cast::<c_char>().add((datalen - 1) as usize) != b'\0' as c_char
+                {
+                    fatalx(c"bad MSG_IDENTIFY_TTYNAME string");
+                }
+                (*c).ttyname = xstrdup(data.cast()).as_ptr();
+                // log_debug("client %p IDENTIFY_TTYNAME %s", c, data);
+            }
+            msgtype::MSG_IDENTIFY_CWD => {
+                if datalen == 0
+                    || *data.cast::<c_char>().add((datalen - 1) as usize) != b'\0' as c_char
+                {
+                    // fatalx("bad MSG_IDENTIFY_CWD string");
+                }
+                if (libc::access(data.cast(), libc::X_OK) == 0) {
+                    (*c).cwd = xstrdup(data.cast()).as_ptr();
+                } else if ({
+                    home = find_home();
+                    !home.is_null()
+                }) {
+                    (*c).cwd = xstrdup(home).as_ptr();
+                } else {
+                    (*c).cwd = xstrdup(c"/".as_ptr()).as_ptr();
+                }
+                // log_debug("client %p IDENTIFY_CWD %s", c, data);
+            }
+            msgtype::MSG_IDENTIFY_STDIN => {
+                if (datalen != 0) {
+                    fatalx(c"bad MSG_IDENTIFY_STDIN size");
+                }
+                (*c).fd = imsg_get_fd(imsg);
+                // log_debug("client %p IDENTIFY_STDIN %d", c, (*c).fd);
+            }
+            msgtype::MSG_IDENTIFY_STDOUT => {
+                if (datalen != 0) {
+                    fatalx(c"bad MSG_IDENTIFY_STDOUT size");
+                }
+                (*c).out_fd = imsg_get_fd(imsg);
+                // log_debug("client %p IDENTIFY_STDOUT %d", c, (*c).out_fd);
+            }
+            msgtype::MSG_IDENTIFY_ENVIRON => {
+                if (datalen == 0
+                    || *data.cast::<c_char>().add((datalen - 1) as usize) != b'\0' as i8)
+                {
+                    fatalx(c"bad MSG_IDENTIFY_ENVIRON string");
+                }
+                if !libc::strchr(data.cast(), b'=' as i32).is_null() {
+                    environ_put((*c).environ, data.cast(), 0);
+                }
+                // log_debug("client %p IDENTIFY_ENVIRON %s", c, data);
+            }
+            msgtype::MSG_IDENTIFY_CLIENTPID => {
+                if datalen != size_of::<i32>() as u16 {
+                    fatalx(c"bad MSG_IDENTIFY_CLIENTPID size");
+                }
+                memcpy__(&raw mut (*c).pid, data.cast());
+                // log_debug("client %p IDENTIFY_CLIENTPID %ld", c, (long)(*c).pid);
+            }
+            _ => (),
+        }
 
-  if ((*imsg).hdr.type != MSG_IDENTIFY_DONE) {
-    return;
-  }
-  (*c).flags |= CLIENT_IDENTIFIED;
+        if ((*imsg).hdr.type_ != msgtype::MSG_IDENTIFY_DONE as u32) {
+            return;
+        }
+        (*c).flags |= client_flag::IDENTIFIED;
 
-  if (*(*c).ttyname != '\0') {
-    name = xstrdup((*c).ttyname);
-  } else {
-    xasprintf(&name, "client-%ld", (long)(*c).pid);
-  }
-  (*c).name = name;
-  log_debug("client %p name is %s", c, (*c).name);
+        let mut name = null_mut();
+        if (*(*c).ttyname != b'\0' as i8) {
+            name = xstrdup((*c).ttyname).as_ptr();
+        } else {
+            xasprintf(&raw mut name, c"client-%ld".as_ptr(), (*c).pid as i64);
+        }
+        (*c).name = name;
+        // log_debug("client %p name is %s", c, (*c).name);
 
-#ifdef __CYGWIN__
-  (*c).fd = open((*c).ttyname, O_RDWR | O_NOCTTY);
-#endif
+        // #[cfg(feature = "cygwin")] // I don't think rust even works on cygwin
+        // {
+        //     (*c).fd = open((*c).ttyname, O_RDWR | O_NOCTTY);
+        // }
 
-  if ((*c).flags & CLIENT_CONTROL) {
-    control_start(c);
-  } else if ((*c).fd != -1) {
-    if (tty_init(&(*c).tty, c) != 0) {
-      close((*c).fd);
-      (*c).fd = -1;
-    } else {
-      tty_resize(&(*c).tty);
-      (*c).flags |= CLIENT_TERMINAL;
+        if (*c).flags.intersects(client_flag::CONTROL) {
+            control_start(c);
+        } else if ((*c).fd != -1) {
+            if (tty_init(&raw mut (*c).tty, c) != 0) {
+                libc::close((*c).fd);
+                (*c).fd = -1;
+            } else {
+                tty_resize(&raw mut (*c).tty);
+                (*c).flags |= client_flag::TERMINAL;
+            }
+            libc::close((*c).out_fd);
+            (*c).out_fd = -1;
+        }
+
+        /*
+         * If this is the first client, load configuration files. Any later
+         * clients are allowed to continue with their command even if the
+         * config has not been loaded - they might have been run from inside it
+         */
+        if !(*c).flags.intersects(client_flag::EXIT)
+            && cfg_finished == 0
+            && c == tailq_first(&raw mut clients)
+        {
+            start_cfg();
+        }
     }
-    close((*c).out_fd);
-    (*c).out_fd = -1;
-  }
-
-  /*
-   * If this is the first client, load configuration files. Any later
-   * clients are allowed to continue with their command even if the
-   * config has not been loaded - they might have been run from inside it
-   */
-  if ((~(*c).flags & CLIENT_EXIT) && !cfg_finished &&
-      c == TAILQ_FIRST(&clients)) {
-    start_cfg();
-  }
 }
-}
 
-/* Handle shell message. */
+/// Handle shell message.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_dispatch_shell(c: *mut client) {
-unsafe {
-  const char *shell;
+pub unsafe extern "C" fn server_client_dispatch_shell(c: *mut client) {
+    unsafe {
+        let mut shell = options_get_string(global_s_options, c"default-shell".as_ptr());
+        if (!checkshell(shell)) {
+            shell = _PATH_BSHELL;
+        }
+        proc_send(
+            (*c).peer,
+            msgtype::MSG_SHELL,
+            -1,
+            shell.cast(),
+            strlen(shell) + 1,
+        );
 
-  shell = options_get_string(global_s_options, "default-shell");
-  if (!checkshell(shell)) {
-    shell = _PATH_BSHELL;
-  }
-  proc_send((*c).peer, MSG_SHELL, -1, shell, strlen(shell) + 1);
-
-  proc_kill_peer((*c).peer);
+        proc_kill_peer((*c).peer);
+    }
 }
-}
 
-/* Get client working directory. */
+/// Get client working directory.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_get_cwd(c: *mut client , s: *mut session ) -> *const c_char {
-unsafe {
-  const char *home;
-
-  if (!cfg_finished && cfg_client != NULL) {
-    return (*cfg_client).cwd;
-  }
-  if (c != NULL && (*c).session == NULL && (*c).cwd != NULL) {
-    return (*c).cwd;
-  }
-  if (s != NULL && (*s).cwd != NULL) {
-    return (*s).cwd;
-  }
-  if (c != NULL && (s = (*c).session) != NULL && (*s).cwd != NULL) {
-    return (*s).cwd;
-  }
-  if ((home = find_home()) != NULL) {
-    return home;
-  }
-  return "/";
+pub unsafe extern "C" fn server_client_get_cwd(
+    c: *mut client,
+    mut s: *mut session,
+) -> *const c_char {
+    unsafe {
+        if cfg_finished == 0 && !cfg_client.is_null() {
+            (*cfg_client).cwd
+        } else if !c.is_null() && (*c).session.is_null() && !(*c).cwd.is_null() {
+            (*c).cwd
+        } else if !s.is_null() && !(*s).cwd.is_null() {
+            (*s).cwd
+        } else if !c.is_null()
+            && ({
+                s = (*c).session;
+                !s.is_null()
+            })
+            && !(*s).cwd.is_null()
+        {
+            (*s).cwd
+        } else if let Some(home) = NonNull::new(find_home()) {
+            home.as_ptr()
+        } else {
+            c"/".as_ptr()
+        }
+    }
 }
-}
 
-/* Get control client flags. */
+/// Get control client flags.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_control_flags(c: *mut client , next: *const c_char) -> u64 {
-unsafe {
-  if (strcmp(next, "pause-after") == 0) {
-    (*c).pause_age = 0;
-    return CLIENT_CONTROL_PAUSEAFTER;
-  }
-  if (sscanf(next, "pause-after=%u", &(*c).pause_age) == 1) {
-    (*c).pause_age *= 1000;
-    return CLIENT_CONTROL_PAUSEAFTER;
-  }
-  if (strcmp(next, "no-output") == 0) {
-    return CLIENT_CONTROL_NOOUTPUT;
-  }
-  if (strcmp(next, "wait-exit") == 0) {
-    return CLIENT_CONTROL_WAITEXIT;
-  }
-  return 0;
-}
+pub unsafe extern "C" fn server_client_control_flags(
+    c: *mut client,
+    next: *const c_char,
+) -> client_flag {
+    unsafe {
+        if libc::strcmp(next, c"pause-after".as_ptr()) == 0 {
+            (*c).pause_age = 0;
+            client_flag::CONTROL_PAUSEAFTER
+        } else if libc::sscanf(next, c"pause-after=%u".as_ptr(), &raw mut (*c).pause_age) == 1 {
+            (*c).pause_age *= 1000;
+            client_flag::CONTROL_PAUSEAFTER
+        } else if libc::strcmp(next, c"no-output".as_ptr()) == 0 {
+            client_flag::CONTROL_NOOUTPUT
+        } else if libc::strcmp(next, c"wait-exit".as_ptr()) == 0 {
+            client_flag::CONTROL_WAITEXIT
+        } else {
+            client_flag::empty()
+        }
+    }
 }
 
 /// Set client flags.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_set_flags(c: *mut client , flags: *const c_char) {
-unsafe {
-  char *s, *copy, *next;
-  uint64_t flag;
-  int not;
+pub unsafe extern "C" fn server_client_set_flags(c: *mut client, flags: *const c_char) {
+    unsafe {
+        let mut next = null_mut();
+        let mut flag: client_flag = client_flag::empty();
+        let mut not = false;
 
-  s = copy = xstrdup(flags);
-  while ((next = strsep(&s, ",")) != NULL) {
-    not = (*next == '!');
-    if (not) {
-      next++;
-    }
+        let copy = xstrdup(flags).as_ptr();
+        let mut s = copy;
+        while ({
+            next = strsep(&raw mut s, c",".as_ptr());
+            next.is_null()
+        }) {
+            not = (*next == b'!' as i8);
+            if not {
+                next = next.add(1);
+            }
 
-    if ((*c).flags & CLIENT_CONTROL) {
-      flag = server_client_control_flags(c, next);
-    } else {
-      flag = 0;
-    }
-    if (strcmp(next, "read-only") == 0) {
-      flag = CLIENT_READONLY;
-    } else if (strcmp(next, "ignore-size") == 0) {
-      flag = CLIENT_IGNORESIZE;
-    } else if (strcmp(next, "active-pane") == 0) {
-      flag = CLIENT_ACTIVEPANE;
-    }
-    if (flag == 0) {
-      continue;
-    }
+            if (*c).flags.intersects(client_flag::CONTROL) {
+                flag = server_client_control_flags(c, next);
+            } else {
+                flag = client_flag::empty();
+            }
+            if (libc::strcmp(next, c"read-only".as_ptr()) == 0) {
+                flag = client_flag::READONLY;
+            } else if (libc::strcmp(next, c"ignore-size".as_ptr()) == 0) {
+                flag = client_flag::IGNORESIZE;
+            } else if (libc::strcmp(next, c"active-pane".as_ptr()) == 0) {
+                flag = client_flag::ACTIVEPANE;
+            }
+            if (flag == client_flag::empty()) {
+                continue;
+            }
 
-    log_debug("client %s set flag %s", (*c).name, next);
-    if (not) {
-      if ((*c).flags & CLIENT_READONLY) {
-        flag &= ~CLIENT_READONLY;
-      }
-      (*c).flags &= ~flag;
-    } else {
-      (*c).flags |= flag;
+            // log_debug("client %s set flag %s", (*c).name, next);
+            if (not) {
+                if (*c).flags.intersects(client_flag::READONLY) {
+                    flag &= !client_flag::READONLY;
+                }
+                (*c).flags &= !flag;
+            } else {
+                (*c).flags |= flag;
+            }
+            if (flag == client_flag::CONTROL_NOOUTPUT) {
+                control_reset_offsets(c);
+            }
+        }
+        free_(copy);
+        proc_send(
+            (*c).peer,
+            msgtype::MSG_FLAGS,
+            -1,
+            (&raw mut (*c).flags).cast(),
+            size_of::<client_flag>(),
+        );
     }
-    if (flag == CLIENT_CONTROL_NOOUTPUT) {
-      control_reset_offsets(c);
-    }
-  }
-  free(copy);
-  proc_send((*c).peer, MSG_FLAGS, -1, &(*c).flags, sizeof(*c).flags);
 }
-}
 
-/* Get client flags. This is only flags useful to show to users. */
+/// Get client flags. This is only flags useful to show to users.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_get_flags(c: *mut client) -> *const c_char {
-unsafe {
-  static char s[256];
-  char tmp[32];
+pub unsafe extern "C" fn server_client_get_flags(c: *mut client) -> *const c_char {
+    unsafe {
+        const sizeof_s: usize = 256;
+        const sizeof_tmp: usize = 32;
+        static mut s: [c_char; sizeof_s] = [0; sizeof_s];
+        static mut tmp: [c_char; sizeof_tmp] = [0; sizeof_tmp];
 
-  *s = '\0';
-  if ((*c).flags & CLIENT_ATTACHED) {
-    strlcat(s, "attached,", sizeof s);
-  }
-  if ((*c).flags & CLIENT_FOCUSED) {
-    strlcat(s, "focused,", sizeof s);
-  }
-  if ((*c).flags & CLIENT_CONTROL) {
-    strlcat(s, "control-mode,", sizeof s);
-  }
-  if ((*c).flags & CLIENT_IGNORESIZE) {
-    strlcat(s, "ignore-size,", sizeof s);
-  }
-  if ((*c).flags & CLIENT_CONTROL_NOOUTPUT) {
-    strlcat(s, "no-output,", sizeof s);
-  }
-  if ((*c).flags & CLIENT_CONTROL_WAITEXIT) {
-    strlcat(s, "wait-exit,", sizeof s);
-  }
-  if ((*c).flags & CLIENT_CONTROL_PAUSEAFTER) {
-    xsnprintf(tmp, sizeof tmp, "pause-after=%u,", (*c).pause_age / 1000);
-    strlcat(s, tmp, sizeof s);
-  }
-  if ((*c).flags & CLIENT_READONLY) {
-    strlcat(s, "read-only,", sizeof s);
-  }
-  if ((*c).flags & CLIENT_ACTIVEPANE) {
-    strlcat(s, "active-pane,", sizeof s);
-  }
-  if ((*c).flags & CLIENT_SUSPENDED) {
-    strlcat(s, "suspended,", sizeof s);
-  }
-  if ((*c).flags & CLIENT_UTF8) {
-    strlcat(s, "UTF-8,", sizeof s);
-  }
-  if (*s != '\0') {
-    s[strlen(s) - 1] = '\0';
-  }
-  return s;
-}
+        s[0] = b'\0' as i8;
+        if (*c).flags.intersects(client_flag::ATTACHED) {
+            strlcat((&raw mut s).cast(), c"attached,".as_ptr(), sizeof_s);
+        }
+        if (*c).flags.intersects(client_flag::FOCUSED) {
+            strlcat((&raw mut s).cast(), c"focused,".as_ptr(), sizeof_s);
+        }
+        if (*c).flags.intersects(client_flag::CONTROL) {
+            strlcat((&raw mut s).cast(), c"control-mode,".as_ptr(), sizeof_s);
+        }
+        if (*c).flags.intersects(client_flag::IGNORESIZE) {
+            strlcat((&raw mut s).cast(), c"ignore-size,".as_ptr(), sizeof_s);
+        }
+        if (*c).flags.intersects(client_flag::CONTROL_NOOUTPUT) {
+            strlcat((&raw mut s).cast(), c"no-output,".as_ptr(), sizeof_s);
+        }
+        if (*c).flags.intersects(client_flag::CONTROL_WAITEXIT) {
+            strlcat((&raw mut s).cast(), c"wait-exit,".as_ptr(), sizeof_s);
+        }
+        if (*c).flags.intersects(client_flag::CONTROL_PAUSEAFTER) {
+            xsnprintf(
+                (&raw mut tmp).cast(),
+                sizeof_tmp,
+                c"pause-after=%u,".as_ptr(),
+                (*c).pause_age / 1000,
+            );
+            strlcat((&raw mut s).cast(), (&raw mut tmp).cast(), sizeof_s);
+        }
+        if (*c).flags.intersects(client_flag::READONLY) {
+            strlcat((&raw mut s).cast(), c"read-only,".as_ptr(), sizeof_s);
+        }
+        if (*c).flags.intersects(client_flag::ACTIVEPANE) {
+            strlcat((&raw mut s).cast(), c"active-pane,".as_ptr(), sizeof_s);
+        }
+        if (*c).flags.intersects(client_flag::SUSPENDED) {
+            strlcat((&raw mut s).cast(), c"suspended,".as_ptr(), sizeof_s);
+        }
+        if (*c).flags.intersects(client_flag::UTF8) {
+            strlcat((&raw mut s).cast(), c"UTF-8,".as_ptr(), sizeof_s);
+        }
+        if (s[0] != b'\0' as i8) {
+            s[strlen((&raw const s).cast()) - 1] = b'\0' as i8;
+        }
+        (&raw const s) as *const i8
+    }
 }
 
 /// Get client window.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_get_client_window(c: *mut client , id: u32) -> *mut client_window {
-unsafe {
-  struct client_window cw = {.window = id};
+pub unsafe extern "C" fn server_client_get_client_window(
+    c: *mut client,
+    id: u32,
+) -> *mut client_window {
+    unsafe {
+        let mut cw: client_window = client_window {
+            window: id,
+            ..zeroed()
+        };
 
-  return RB_FIND(client_windows, &(*c).windows, &cw);
-}
+        rb_find(&raw mut (*c).windows, &raw mut cw)
+    }
 }
 
 /// Add client window.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_add_client_window(c: *mut client , id: u32) -> *mut client_window {
-unsafe {
-  struct client_window *cw;
-
-  cw = server_client_get_client_window(c, id);
-  if (cw == NULL) {
-    cw = xcalloc(1, sizeof *cw);
-    (*cw).window = id;
-    RB_INSERT(client_windows, &(*c).windows, cw);
-  }
-  return cw;
-}
+pub unsafe extern "C" fn server_client_add_client_window(
+    c: *mut client,
+    id: u32,
+) -> NonNull<client_window> {
+    unsafe {
+        if let Some(cw) = NonNull::new(server_client_get_client_window(c, id)) {
+            cw
+        } else {
+            let cw: &mut client_window = xcalloc1();
+            cw.window = id;
+            rb_insert(&raw mut (*c).windows, cw);
+            NonNull::from_mut(cw)
+        }
+    }
 }
 
 /// Get client active pane.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_get_pane(c: *mut client ) -> *mut window_pane {
-unsafe {
-  struct session *s = (*c).session;
-  struct client_window *cw;
+pub unsafe extern "C" fn server_client_get_pane(c: *mut client) -> *mut window_pane {
+    unsafe {
+        let mut s = (*c).session;
 
-  if (s == NULL) {
-    return NULL;
-  }
+        if (s.is_null()) {
+            return null_mut();
+        }
 
-  if (~(*c).flags & CLIENT_ACTIVEPANE) {
-    return (*(*(*s).curw).window).active;
-  }
-  cw = server_client_get_client_window(c, (*(*(*s).curw).window).id);
-  if (cw == NULL) {
-    return (*(*(*s).curw).window).active;
-  }
-  return (*cw).pane;
-}
+        if !(*c).flags.intersects(client_flag::ACTIVEPANE) {
+            return (*(*(*s).curw).window).active;
+        }
+        let cw = server_client_get_client_window(c, (*(*(*s).curw).window).id);
+        if cw.is_null() {
+            return (*(*(*s).curw).window).active;
+        }
+        (*cw).pane
+    }
 }
 
 // Set client active pane.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_set_pane(c: *mut client , wp: *mut window_pane ) {
-unsafe {
-  struct session *s = (*c).session;
-  struct client_window *cw;
+pub unsafe extern "C" fn server_client_set_pane(c: *mut client, wp: *mut window_pane) {
+    unsafe {
+        let mut s = (*c).session;
 
-  if (s == NULL) {
-    return;
-  }
+        if (s.is_null()) {
+            return;
+        }
 
-  cw = server_client_add_client_window(c, (*(*(*s).curw).window).id);
-  (*cw).pane = wp;
-  log_debug("%s pane now %%%u", (*c).name, (*wp).id);
-}
+        let cw = server_client_add_client_window(c, (*(*(*s).curw).window).id).as_ptr();
+        (*cw).pane = wp;
+        // log_debug("%s pane now %%%u", (*c).name, (*wp).id);
+    }
 }
 
 /// Remove pane from client lists.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_remove_pane(wp: *mut window_pane) {
-unsafe {
-  struct client *c;
-  struct window *w = (*wp).window;
-  struct client_window *cw;
+pub unsafe extern "C" fn server_client_remove_pane(wp: *mut window_pane) {
+    unsafe {
+        let mut w = (*wp).window;
 
-  TAILQ_FOREACH(c, &clients, entry) {
-    cw = server_client_get_client_window(c, (*w).id);
-    if (cw != NULL && (*cw).pane == wp) {
-      RB_REMOVE(client_windows, &(*c).windows, cw);
-      free(cw);
+        for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
+            let cw = server_client_get_client_window(c, (*w).id);
+            if (!cw.is_null() && (*cw).pane == wp) {
+                rb_remove(&raw mut (*c).windows, cw);
+                free_(cw);
+            }
+        }
     }
-  }
-}
 }
 
 /// Print to a client.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_print(c: *mut client , parse: i32, evb: *mut evbuffer) {
-unsafe {
-  void *data = EVBUFFER_DATA(evb);
-  size_t size = EVBUFFER_LENGTH(evb);
-  struct window_pane *wp;
-  struct window_mode_entry *wme;
-  char *sanitized, *msg, *line;
+pub unsafe extern "C" fn server_client_print(c: *mut client, parse: i32, evb: *mut evbuffer) {
+    unsafe {
+        let mut data = EVBUFFER_DATA(evb);
+        let mut size = EVBUFFER_LENGTH(evb);
+        let mut msg = null_mut();
+        let mut line = null_mut();
 
-  if (!parse) {
-    utf8_stravisx(&msg, data, size, VIS_OCTAL | VIS_CSTYLE | VIS_NOSLASH);
-    log_debug("%s: %s", __func__, msg);
-  } else {
-    msg = EVBUFFER_DATA(evb);
-    if (msg[size - 1] != '\0') {
-      evbuffer_add(evb, "", 1);
+        'out: {
+            if parse == 0 {
+                utf8_stravisx(
+                    &raw mut msg,
+                    data.cast(),
+                    size,
+                    VIS_OCTAL | VIS_CSTYLE | VIS_NOSLASH,
+                );
+                // log_debug("%s: %s", __func__, msg);
+            } else {
+                msg = EVBUFFER_DATA(evb).cast();
+                if *msg.add(size - 1) != b'\0' as i8 {
+                    evbuffer_add(evb, c"".as_ptr().cast(), 1);
+                }
+            }
+
+            if c.is_null() {
+                break 'out;
+            }
+
+            if (*c).session.is_null() || (*c).flags.intersects(client_flag::CONTROL) {
+                if !(*c).flags.intersects(client_flag::UTF8) {
+                    let sanitized = utf8_sanitize(msg);
+                    if (*c).flags.intersects(client_flag::CONTROL) {
+                        control_write(c, c"%s".as_ptr(), sanitized);
+                    } else {
+                        file_print(c, c"%s\n".as_ptr(), sanitized);
+                    }
+                    free_(sanitized);
+                } else {
+                    if (*c).flags.intersects(client_flag::CONTROL) {
+                        control_write(c, c"%s".as_ptr(), msg);
+                    } else {
+                        file_print(c, c"%s\n".as_ptr(), msg);
+                    }
+                }
+                break 'out;
+            }
+
+            let wp = server_client_get_pane(c);
+            let wme = tailq_first(&raw mut (*wp).modes);
+            if (wme.is_null() || (*wme).mode != &raw mut window_view_mode) {
+                window_pane_set_mode(
+                    wp,
+                    null_mut(),
+                    &raw mut window_view_mode,
+                    null_mut(),
+                    null_mut(),
+                );
+            }
+            if (parse != 0) {
+                loop {
+                    line = evbuffer_readln(evb, null_mut(), evbuffer_eol_style_EVBUFFER_EOL_LF);
+                    if !line.is_null() {
+                        window_copy_add(wp, 1, c"%s".as_ptr(), line);
+                        free_(line);
+                    }
+                    if line.is_null() {
+                        break;
+                    }
+                }
+
+                size = EVBUFFER_LENGTH(evb);
+                if (size != 0) {
+                    line = EVBUFFER_DATA(evb).cast();
+                    window_copy_add(wp, 1, c"%.*s".as_ptr(), size as i32, line);
+                }
+            } else {
+                window_copy_add(wp, 0, c"%s".as_ptr(), msg);
+            }
+        } // out:
+        if (parse == 0) {
+            free_(msg);
+        }
     }
-  }
-
-  if (c == NULL) {
-    goto out;
-  }
-
-  if ((*c).session == NULL || ((*c).flags & CLIENT_CONTROL)) {
-    if (~(*c).flags & CLIENT_UTF8) {
-      sanitized = utf8_sanitize(msg);
-      if ((*c).flags & CLIENT_CONTROL) {
-        control_write(c, "%s", sanitized);
-      } else {
-        file_print(c, "%s\n", sanitized);
-      }
-      free(sanitized);
-    } else {
-      if ((*c).flags & CLIENT_CONTROL) {
-        control_write(c, "%s", msg);
-      } else {
-        file_print(c, "%s\n", msg);
-      }
-    }
-    goto out;
-  }
-
-  wp = server_client_get_pane(c);
-  wme = TAILQ_FIRST(&(*wp).modes);
-  if (wme == NULL || (*wme).mode != &window_view_mode) {
-    window_pane_set_mode(wp, NULL, &window_view_mode, NULL, NULL);
-  }
-  if (parse) {
-    do {
-      line = evbuffer_readln(evb, NULL, EVBUFFER_EOL_LF);
-      if (line != NULL) {
-        window_copy_add(wp, 1, "%s", line);
-        free(line);
-      }
-    } while (line != NULL);
-
-    size = EVBUFFER_LENGTH(evb);
-    if (size != 0) {
-      line = EVBUFFER_DATA(evb);
-      window_copy_add(wp, 1, "%.*s", (int)size, line);
-    }
-  } else {
-    window_copy_add(wp, 0, "%s", msg);
-  }
-
-out:
-  if (!parse) {
-    free(msg);
-  }
 }
-}
-
-*/

@@ -155,7 +155,6 @@ fn main() {
 }
 
 static FILES: &[&str] = &[
-    "server-client.c", //
-    "tty.c",           //
-    "window-copy.c",   //
+    "tty.c",         //
+    "window-copy.c", //
 ];

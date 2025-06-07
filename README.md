@@ -29,7 +29,6 @@ I'm in the home stretch of the first part of this project. After finishing trans
 refactoring the Rust code to make it more idiomatic and use less unsafe.
 
 - [ ] 3186 tty
-- [ ] 3392 server-client
 - [ ] 5786 window-copy
 - [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
 
@@ -58,42 +57,7 @@ more then just server exited unexpectedly.
 - [ ] LICENSE stuff
 - [ ] use base64 crate instead of libresolv
 - [ ] ffi compatible timeval struct with useful utilities
-- [ ] improve interface on variadics
-    - args_print_add
-    - cfg_add_cause
-    - cmd_log_argv
-    - cmdq_add_format
-    - cmdq_error
-    - cmdq_insert_hook
-    - cmdq_print
-    - control_write
-    - environ_log
-    - environ_set
-    - fatal
-    - fatal
-    - fatalx
-    - fatalx_c
-    - file_error
-    - file_print
-    - format_add
-    - format_log1
-    - format_printf
-    - fprintf
-    - input_reply
-    - log_debug
-    - log_debug
-    - log_debug_c
-    - options_set_string
-    - screen_write_nputs
-    - screen_write_puts
-    - screen_write_strlen
-    - screen_write_text
-    - server_add_message
-    - status_message_set
-    - xasprintf
-    - xasprintf
-    - xasprintf_
-    - xsnprintf
+- [ ] reduce usage of NUL terminated C strings and use rust strings
 
 # TODO
 - review cmd_rotate_window.rs cmd_rotate_window_exec tailq_foreach calls
@@ -115,10 +79,9 @@ more then just server exited unexpectedly.
 - consider enum usage
 - fix commented out debug lines because I was too lazy to translate properly
 
+
 ## After 100% Rust
 
-- migrate to stable rust
-  - remove usages of c_variadics or help stabilize
 - coverage
 - convert to references instead of pointers
   - requirements to convert pointer to reference <https://doc.rust-lang.org/core/ptr/index.html#pointer-to-reference-conversion>
@@ -137,7 +100,7 @@ more then just server exited unexpectedly.
 - eliminate libbsd and other libc functions (use rust equivalent)
 - write compatibility tests to validate structs with existing C structs
 - misc rust refactoring:
-  - keyc should just be u64
+  - keyc should just be u64, not an enum
 - refactor to get rid of:
   - xasprintf ?
   - any function which accepts *mut c_void pointers to use generics
@@ -199,7 +162,8 @@ see tty-keys.c tty_key_next
 - sendmsg in client to server causes SIGPIPE to be handled and exit control loop
 - TODO, noticed I flipped translation order of fields of args_parse struct. need to double check that all translations which use the initialization is correct
 - Window borders are incorrect
-- status command; junk after completed text; probably improperly terminated string
+- status command; junk after completed text; probably improperly terminated string improper command: statusB
+- prefix s causes a crash
 
 - redraw is broken with vim
 

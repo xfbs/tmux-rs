@@ -1,6 +1,7 @@
 use super::*;
 
-use crate::compat::{b64_pton, strlcpy};
+use crate::compat::b64::b64_pton;
+use crate::compat::strlcpy;
 
 // Handle keys input from the outside terminal. tty_default_*_keys[] are a base
 // table of supported keys which are looked up in terminfo(5) and translated

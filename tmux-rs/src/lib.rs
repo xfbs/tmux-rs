@@ -1673,6 +1673,7 @@ impl ListEntry<tty_term, discr_entry> for tty_term {
 
 bitflags::bitflags! {
     #[repr(transparent)]
+    #[derive(Copy, Clone)]
     pub struct tty_flags: i32 {
         const TTY_NOCURSOR = 0x1;
         const TTY_FREEZE = 0x2;
@@ -2128,7 +2129,7 @@ pub type overlay_resize_cb = Option<unsafe extern "C" fn(*mut client, *mut c_voi
 
 bitflags::bitflags! {
     #[repr(transparent)]
-    #[derive(Copy, Clone)]
+    #[derive(Copy, Clone, Eq, PartialEq)]
     pub struct client_flag: u64 {
         const TERMINAL           = 0x0000000001u64;
         const LOGIN              = 0x0000000002u64;
@@ -2568,12 +2569,13 @@ pub use crate::tty_::{
     tty_cmd_deletecharacter, tty_cmd_deleteline, tty_cmd_insertcharacter, tty_cmd_insertline,
     tty_cmd_linefeed, tty_cmd_rawstring, tty_cmd_reverseindex, tty_cmd_scrolldown,
     tty_cmd_scrollup, tty_cmd_setselection, tty_cmd_syncstart, tty_create_log, tty_cursor,
-    tty_default_colours, tty_draw_line, tty_free, tty_init, tty_m_in_off, tty_open, tty_putc,
-    tty_putcode, tty_putcode_i, tty_putcode_ii, tty_putcode_iii, tty_putcode_s, tty_putcode_ss,
-    tty_putn, tty_puts, tty_raw, tty_region_off, tty_repeat_requests, tty_reset, tty_resize,
-    tty_send_requests, tty_set_path, tty_set_selection, tty_set_size, tty_set_title, tty_start_tty,
-    tty_stop_tty, tty_sync_end, tty_sync_start, tty_update_client_offset, tty_update_features,
-    tty_update_mode, tty_update_window_offset, tty_window_bigger, tty_window_offset, tty_write,
+    tty_default_colours, tty_draw_line, tty_free, tty_init, tty_m_in_off, tty_margin_off, tty_open,
+    tty_putc, tty_putcode, tty_putcode_i, tty_putcode_ii, tty_putcode_iii, tty_putcode_s,
+    tty_putcode_ss, tty_putn, tty_puts, tty_raw, tty_region_off, tty_repeat_requests, tty_reset,
+    tty_resize, tty_send_requests, tty_set_path, tty_set_selection, tty_set_size, tty_set_title,
+    tty_start_tty, tty_stop_tty, tty_sync_end, tty_sync_start, tty_update_client_offset,
+    tty_update_features, tty_update_mode, tty_update_window_offset, tty_window_bigger,
+    tty_window_offset, tty_write,
 };
 
 mod tty_term_;
@@ -3041,9 +3043,11 @@ impl boolint {
     const FALSE: boolint = Self(0);
     const TRUE: boolint = Self(1);
 
+    #[inline]
     const fn as_bool(&self) -> bool {
         self.0 != 0
     }
+
     const fn as_int(&self) -> i32 {
         self.0
     }
