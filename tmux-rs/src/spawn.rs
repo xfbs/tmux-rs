@@ -394,7 +394,7 @@ pub unsafe extern "C" fn spawn_pane(
             /* Then the shell. If respawning, use the old one. */
             if (!(*sc).flags & SPAWN_RESPAWN != 0) {
                 tmp = options_get_string((*s).options, c"default-shell".as_ptr());
-                if (checkshell(tmp) == 0) {
+                if !checkshell(tmp) {
                     tmp = _PATH_BSHELL;
                 }
                 free_((*new_wp).shell);

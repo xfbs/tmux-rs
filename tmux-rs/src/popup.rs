@@ -437,7 +437,7 @@ pub extern "C" fn popup_make_pane(pd: *mut popup_data, type_: layout_type) {
         screen_init(&raw mut (*pd).s, 1, 1, 0);
 
         let mut shell: *const i8 = options_get_string((*s).options, c"default-shell".as_ptr());
-        if checkshell(shell) == 0 {
+        if !checkshell(shell) {
             shell = _PATH_BSHELL;
         }
         (*new_wp).shell = xstrdup(shell).as_ptr();

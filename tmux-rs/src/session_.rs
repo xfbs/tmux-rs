@@ -40,12 +40,12 @@ pub unsafe extern "C" fn session_alive(s: *mut session) -> boolint {
     unsafe {
         for s_loop in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
             if s_loop == s {
-                return boolint::true_();
+                return boolint::TRUE;
             }
         }
     }
 
-    boolint::false_()
+    boolint::FALSE
 }
 
 /// Find session by name.

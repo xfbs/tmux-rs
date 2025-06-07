@@ -1194,7 +1194,7 @@ unsafe fn options_from_string_check(
         if oe.is_null() {
             return 0;
         }
-        if strcmp((*oe).name, c"default-shell".as_ptr()) == 0 && checkshell(value) == 0 {
+        if strcmp((*oe).name, c"default-shell".as_ptr()) == 0 && !checkshell(value) {
             xasprintf(cause, c"not a suitable shell: %s".as_ptr(), value);
             return -1;
         }

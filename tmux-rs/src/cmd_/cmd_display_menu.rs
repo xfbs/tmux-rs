@@ -613,7 +613,7 @@ unsafe extern "C" fn cmd_display_popup_exec(self_: *mut cmd, item: *mut cmdq_ite
         if (count <= 1 && (shellcmd.is_null() || *shellcmd == b'\0' as _)) {
             shellcmd = null_mut();
             shell = options_get_string((*s).options, c"default-shell".as_ptr());
-            if (checkshell(shell) == 0) {
+            if !checkshell(shell) {
                 shell = _PATH_BSHELL;
             }
             cmd_append_argv(&raw mut argc, &raw mut argv, shell);

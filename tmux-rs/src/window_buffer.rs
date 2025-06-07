@@ -291,10 +291,10 @@ pub unsafe extern "C" fn window_buffer_search(
     unsafe {
         let item: NonNull<window_buffer_itemdata> = itemdata.cast();
         let Some(pb) = NonNull::new(paste_get_name((*item.as_ptr()).name)) else {
-            return boolint::false_();
+            return boolint::FALSE;
         };
         if !strstr((*item.as_ptr()).name, ss).is_null() {
-            return boolint::true_();
+            return boolint::TRUE;
         }
         let mut bufsize = 0;
         let bufdata = paste_buffer_data_(pb, &mut bufsize);

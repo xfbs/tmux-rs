@@ -3,10 +3,37 @@ fn main() {
     lalrpop::process_root().unwrap();
 
     println!("cargo::rerun-if-changed=build.rs");
+
     println!("cargo::rustc-link-lib=bsd");
+    // symbols used by libbsd:
+    // - setproctitle
+    // - strlcpy
+    // - setproctitle_init
+    // - strunvis
+    // - recallocarray
+    // - strtonum
+    // - freezero
+    // - strnvis
+    // - vis
+    // - fgetln
+    // - stravis
+
     println!("cargo::rustc-link-lib=tinfo");
+    // symbols used from tinfo:
+    // - cur_term
+    // - del_curterm
+    // - setupterm
+    // - tigetflag
+    // - tigetnum
+    // - tigetstr
+    // - tparm
+
     println!("cargo::rustc-link-lib=event_core");
     println!("cargo::rustc-link-lib=resolv");
+    // symbols from libresolv
+    // - __b64_ntop
+    // - __b64_pton
+
     // -ltmux_rs -ltinfo  -levent_core  -lm  -lresolv
     //
 

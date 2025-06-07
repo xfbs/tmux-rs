@@ -1059,7 +1059,7 @@ unsafe extern "C" fn window_tree_search(
         window_tree_pull_item(item, &raw mut s, &raw mut wl, &raw mut wp);
 
         match (*item.as_ptr()).type_ {
-            window_tree_type::WINDOW_TREE_NONE => return boolint::false_(),
+            window_tree_type::WINDOW_TREE_NONE => return boolint::FALSE,
             window_tree_type::WINDOW_TREE_SESSION => {
                 if let Some(s) = s {
                     return boolint::from(!libc::strstr((*s.as_ptr()).name, ss).is_null());
@@ -1082,7 +1082,7 @@ unsafe extern "C" fn window_tree_search(
                     let cmd: *mut c_char =
                         osdep_get_name((*wp.as_ptr()).fd, (&raw const (*wp.as_ptr()).tty).cast());
                     if cmd.is_null() || *cmd == b'\0' as c_char {
-                        return boolint::false_();
+                        return boolint::FALSE;
                     } else {
                         let retval = boolint::from(!libc::strstr(cmd, ss).is_null());
                         free_(cmd);
@@ -1092,7 +1092,7 @@ unsafe extern "C" fn window_tree_search(
             }
         }
 
-        boolint::false_()
+        boolint::FALSE
     }
 }
 

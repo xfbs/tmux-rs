@@ -155,6 +155,8 @@ unsafe extern "C" {
     unsafe fn basename(_: *mut c_char) -> *mut c_char;
 }
 
+// /usr/include/paths.h
+pub const _PATH_TTY: *const c_char = c"/dev/tty".as_ptr();
 pub const _PATH_BSHELL: *const c_char = c"/bin/sh".as_ptr();
 pub const _PATH_DEFPATH: *const c_char = c"/usr/bin:/bin".as_ptr();
 pub const _PATH_DEV: *const c_char = c"/dev/".as_ptr();
@@ -2095,6 +2097,12 @@ pub struct client_window {
     pub entry: rb_entry<client_window>,
 }
 pub type client_windows = rb_head<client_window>;
+RB_GENERATE!(
+    client_windows,
+    client_window,
+    entry,
+    server_client_window_cmp
+);
 
 /* Visible areas not obstructed by overlays. */
 pub const OVERLAY_MAX_RANGES: usize = 3;
@@ -2696,6 +2704,7 @@ pub use crate::server_client::{
     server_client_overlay_range, server_client_print, server_client_remove_pane,
     server_client_set_flags, server_client_set_key_table, server_client_set_overlay,
     server_client_set_pane, server_client_set_session, server_client_suspend, server_client_unref,
+    server_client_window_cmp,
 };
 
 mod server_fn;
@@ -3029,12 +3038,9 @@ impl SyncCharPtr {
 #[derive(Copy, Clone)]
 pub struct boolint(i32);
 impl boolint {
-    const fn true_() -> Self {
-        Self(1)
-    }
-    const fn false_() -> Self {
-        Self(0)
-    }
+    const FALSE: boolint = Self(0);
+    const TRUE: boolint = Self(1);
+
     const fn as_bool(&self) -> bool {
         self.0 != 0
     }

@@ -1,6 +1,9 @@
 use super::*;
 
-use crate::compat::tree::{RB_GENERATE, rb_foreach};
+use crate::compat::{
+    queue::{tailq_insert_tail, tailq_remove},
+    tree::{RB_GENERATE, rb_foreach, rb_init, rb_remove},
+};
 
 #[rustfmt::skip]
 unsafe extern "C" {
@@ -11,14 +14,14 @@ unsafe extern "C" {
     // pub fn server_client_get_key_table(_: *mut client) -> *const c_char;
     // pub fn server_client_check_nested(_: *mut client) -> c_int;
     pub fn server_client_handle_key(_: *mut client, _: *mut key_event) -> c_int;
-    pub fn server_client_create(_: c_int) -> *mut client;
-    pub fn server_client_open(_: *mut client, _: *mut *mut c_char) -> c_int;
-    pub fn server_client_unref(_: *mut client);
-    pub fn server_client_set_session(_: *mut client, _: *mut session);
-    pub fn server_client_lost(_: *mut client);
-    pub fn server_client_suspend(_: *mut client);
-    pub fn server_client_detach(_: *mut client, _: msgtype);
-    pub fn server_client_exec(_: *mut client, _: *const c_char);
+    // pub fn server_client_create(_: c_int) -> *mut client;
+    // pub fn server_client_open(_: *mut client, _: *mut *mut c_char) -> c_int;
+    // pub fn server_client_unref(_: *mut client);
+    // pub fn server_client_set_session(_: *mut client, _: *mut session);
+    // pub fn server_client_lost(_: *mut client);
+    // pub fn server_client_suspend(_: *mut client);
+    // pub fn server_client_detach(_: *mut client, _: msgtype);
+    // pub fn server_client_exec(_: *mut client, _: *const c_char);
     pub fn server_client_loop();
     pub fn server_client_get_cwd(_: *mut client, _: *mut session) -> *const c_char;
     pub fn server_client_set_flags(_: *mut client, _: *const c_char);
@@ -32,11 +35,11 @@ unsafe extern "C" {
 }
 
 unsafe extern "C" {
-    fn server_client_free(_: c_int, _: c_short, _: *mut c_void);
+    // fn server_client_free(_: c_int, _: c_short, _: *mut c_void);
     fn server_client_check_pane_resize(_: *mut window_pane);
     fn server_client_check_pane_buffer(_: *mut window_pane);
     fn server_client_check_window_resize(_: *mut window);
-    fn server_client_check_mouse(_: *mut client, _: *mut key_event) -> key_code;
+    // fn server_client_check_mouse(_: *mut client, _: *mut key_event) -> key_code;
     fn server_client_repeat_timer(_: c_int, _: c_short, _: *mut c_void);
     fn server_client_click_timer(_: c_int, _: c_short, _: *mut c_void);
     fn server_client_check_exit(_: *mut client);
@@ -45,9 +48,9 @@ unsafe extern "C" {
     fn server_client_set_title(_: *mut client);
     fn server_client_set_path(_: *mut client);
     fn server_client_reset_state(_: *mut client);
-    fn server_client_is_bracket_pasting(_: *mut client, _: key_code) -> i32;
-    fn server_client_assume_paste(_: *mut session) -> i32;
-    fn server_client_update_latest(_: *mut client);
+    // fn server_client_is_bracket_pasting(_: *mut client, _: key_code) -> i32;
+    // fn server_client_assume_paste(_: *mut session) -> i32;
+    // fn server_client_update_latest(_: *mut client);
 
     fn server_client_dispatch(_: *mut imsg, _: *mut c_void);
     fn server_client_dispatch_command(_: *mut client, _: *mut imsg);
@@ -57,7 +60,7 @@ unsafe extern "C" {
 
 /// Compare client windows.
 #[unsafe(no_mangle)]
-unsafe extern "C" fn server_client_window_cmp(
+pub unsafe extern "C" fn server_client_window_cmp(
     cw1: *const client_window,
     cw2: *const client_window,
 ) -> i32 {
@@ -304,2067 +307,1536 @@ pub unsafe extern "C" fn server_client_is_default_key_table(
     unsafe { (libc::strcmp((*table).name, server_client_get_key_table(c)) == 0) as i32 }
 }
 
-/*
-/* Create a new client. */
+/// Create a new client.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_create(fd: i32) -> *mut client {
-unsafe {
-  struct client *c;
+pub unsafe extern "C" fn server_client_create(fd: i32) -> *mut client {
+    unsafe {
+        setblocking(fd, 0);
 
-  setblocking(fd, 0);
+        let mut c: *mut client = xcalloc1();
+        (*c).references = 1;
+        (*c).peer = proc_add_peer(server_proc, fd, Some(server_client_dispatch), c.cast());
 
-  c = xcalloc(1, sizeof *c);
-  (*c).references = 1;
-  (*c).peer = proc_add_peer(server_proc, fd, server_client_dispatch, c);
+        if libc::gettimeofday(&raw mut (*c).creation_time, null_mut()) != 0 {
+            fatal(c"gettimeofday failed".as_ptr());
+        }
+        memcpy__(&raw mut (*c).activity_time, &raw mut (*c).creation_time);
 
-  if (gettimeofday(&(*c).creation_time, NULL) != 0) {
-    fatal("gettimeofday failed");
-  }
-  memcpy(&(*c).activity_time, &(*c).creation_time, sizeof(*c).activity_time);
+        (*c).environ = environ_create().as_ptr();
 
-  (*c).environ = environ_create();
+        (*c).fd = -1;
+        (*c).out_fd = -1;
 
-  (*c).fd = -1;
-  (*c).out_fd = -1;
+        (*c).queue = cmdq_new().as_ptr();
+        rb_init(&raw mut (*c).windows);
+        rb_init(&raw mut (*c).files);
 
-  (*c).queue = cmdq_new();
-  RB_INIT(&(*c).windows);
-  RB_INIT(&(*c).files);
+        (*c).tty.sx = 80;
+        (*c).tty.sy = 24;
 
-  (*c).tty.sx = 80;
-  (*c).tty.sy = 24;
+        status_init(c);
+        (*c).flags |= client_flag::FOCUSED;
 
-  status_init(c);
-  (*c).flags |= CLIENT_FOCUSED;
+        (*c).keytable = key_bindings_get_table(c"root".as_ptr(), 1);
+        (*(*c).keytable).references += 1;
 
-  (*c).keytable = key_bindings_get_table("root", 1);
-  (*(*c).keytable).references++;
+        evtimer_set(
+            &raw mut (*c).repeat_timer,
+            Some(server_client_repeat_timer),
+            c.cast(),
+        );
+        evtimer_set(
+            &raw mut (*c).click_timer,
+            Some(server_client_click_timer),
+            c.cast(),
+        );
 
-  evtimer_set(&(*c).repeat_timer, server_client_repeat_timer, c);
-  evtimer_set(&(*c).click_timer, server_client_click_timer, c);
-
-  TAILQ_INSERT_TAIL(&clients, c, entry);
-  log_debug("new client %p", c);
-  return c;
-}
-}
-
-/* Open client terminal if needed. */
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_open(c: *mut client , cause: *mut *mut c_char) -> i32 {
-unsafe {
-  const char *ttynam = _PATH_TTY;
-
-  if ((*c).flags & CLIENT_CONTROL) {
-    return 0;
-  }
-
-  if (strcmp((*c).ttyname, ttynam) == 0 ||
-      ((isatty(STDIN_FILENO) && (ttynam = ttyname(STDIN_FILENO)) != NULL &&
-        strcmp((*c).ttyname, ttynam) == 0) ||
-       (isatty(STDOUT_FILENO) && (ttynam = ttyname(STDOUT_FILENO)) != NULL &&
-        strcmp((*c).ttyname, ttynam) == 0) ||
-       (isatty(STDERR_FILENO) && (ttynam = ttyname(STDERR_FILENO)) != NULL &&
-        strcmp((*c).ttyname, ttynam) == 0))) {
-    xasprintf(cause, "can't use %s", (*c).ttyname);
-    return -1;
-  }
-
-  if (!((*c).flags & CLIENT_TERMINAL)) {
-    *cause = xstrdup("not a terminal");
-    return -1;
-  }
-
-  if (tty_open(&(*c).tty, cause) != 0) {
-    return -1;
-  }
-
-  return 0;
-}
-}
-
-/* Lost an attached client. */
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_attached_lost(c: *mut client ) {
-unsafe {
-  struct session *s;
-  struct window *w;
-  struct client *loop;
-  struct client *found;
-
-  log_debug("lost attached client %p", c);
-
-  /*
-   * By this point the session in the client has been cleared so walk all
-   * windows to find any with this client as the latest.
-   */
-  RB_FOREACH(w, windows, &windows) {
-    if ((*w).latest != c) {
-      continue;
+        tailq_insert_tail(&raw mut clients, c);
+        log_debug!("new client {:p}", c);
+        c
     }
+}
 
-    found = NULL;
-    TAILQ_FOREACH(loop, &clients, entry) {
-      s = (*loop).session;
-      if (loop == c || s == NULL || (*(*s).curw).window != w) {
-        continue;
-      }
-      if (found == NULL ||
-          timercmp(&(*loop).activity_time, &(*found).activity_time, >)) {
-        found = loop;
-      }
+/// Open client terminal if needed.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn server_client_open(c: *mut client, cause: *mut *mut c_char) -> i32 {
+    unsafe {
+        let mut ttynam = _PATH_TTY;
+
+        if (*c).flags.intersects(client_flag::CONTROL) {
+            return 0;
+        }
+
+        if libc::strcmp((*c).ttyname, ttynam) == 0
+            || ((libc::isatty(libc::STDIN_FILENO) != 0
+                && ({
+                    ttynam = libc::ttyname(libc::STDIN_FILENO);
+                    !ttynam.is_null()
+                })
+                && libc::strcmp((*c).ttyname, ttynam) == 0)
+                || (libc::isatty(libc::STDOUT_FILENO) != 0
+                    && ({
+                        ttynam = libc::ttyname(libc::STDOUT_FILENO);
+                        !ttynam.is_null()
+                    })
+                    && libc::strcmp((*c).ttyname, ttynam) == 0)
+                || (libc::isatty(libc::STDERR_FILENO) != 0
+                    && ({
+                        ttynam = libc::ttyname(libc::STDERR_FILENO);
+                        !ttynam.is_null()
+                    })
+                    && libc::strcmp((*c).ttyname, ttynam) == 0))
+        {
+            xasprintf(cause, c"can't use %s".as_ptr(), (*c).ttyname);
+            return -1;
+        }
+
+        if !(*c).flags.intersects(client_flag::TERMINAL) {
+            *cause = xstrdup(c"not a terminal".as_ptr()).as_ptr();
+            return -1;
+        }
+
+        if tty_open(&raw mut (*c).tty, cause) != 0 {
+            return -1;
+        }
+
+        0
     }
-    if (found != NULL) {
-      server_client_update_latest(found);
+}
+
+/// Lost an attached client.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn server_client_attached_lost(c: *mut client) {
+    unsafe {
+        log_debug!("lost attached client {:p}", c);
+
+        // By this point the session in the client has been cleared so walk all
+        // windows to find any with this client as the latest.
+        for w in rb_foreach(&raw mut windows).map(NonNull::as_ptr) {
+            if ((*w).latest.cast() != c) {
+                continue;
+            }
+
+            let mut found: *mut client = null_mut();
+            for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
+                let s = (*loop_).session;
+                if (loop_ == c || s.is_null() || (*(*s).curw).window != w) {
+                    continue;
+                }
+                if found.is_null()
+                    || timer::new(&raw const (*loop_).activity_time)
+                        > timer::new(&raw const (*found).activity_time)
+                {
+                    found = loop_;
+                }
+            }
+            if !found.is_null() {
+                server_client_update_latest(found);
+            }
+        }
     }
-  }
-}
 }
 
-/* Set client session. */
+/// Set client session.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_set_session(c: *mut client , s: *mut session ) {
-unsafe {
-  struct session *old = (*c).session;
+pub unsafe extern "C" fn server_client_set_session(c: *mut client, s: *mut session) {
+    unsafe {
+        let mut old = (*c).session;
 
-  if (s != NULL && (*c).session != NULL && (*c).session != s) {
-    (*c).last_session = (*c).session;
-  } else if (s == NULL) {
-    (*c).last_session = NULL;
-  }
-  (*c).session = s;
-  (*c).flags |= CLIENT_FOCUSED;
+        if !s.is_null() && !(*c).session.is_null() && (*c).session != s {
+            (*c).last_session = (*c).session;
+        } else if s.is_null() {
+            (*c).last_session = null_mut();
+        }
+        (*c).session = s;
+        (*c).flags |= client_flag::FOCUSED;
 
-  if (old != NULL && (*old).curw != NULL) {
-    window_update_focus((*(*old).curw).window);
-  }
-  if (s != NULL) {
-    recalculate_sizes();
-    window_update_focus((*(*s).curw).window);
-    session_update_activity(s, NULL);
-    gettimeofday(&(*s).last_attached_time, NULL);
-    (*(*s).curw).flags &= ~WINLINK_ALERTFLAGS;
-    (*(*(*s).curw).window).latest = c;
-    alerts_check_session(s);
-    tty_update_client_offset(c);
-    status_timer_start(c);
-    notify_client("client-session-changed", c);
-    server_redraw_client(c);
-  }
+        if !old.is_null() && !(*old).curw.is_null() {
+            window_update_focus((*(*old).curw).window);
+        }
+        if !s.is_null() {
+            recalculate_sizes();
+            window_update_focus((*(*s).curw).window);
+            session_update_activity(s, null_mut());
+            libc::gettimeofday(&raw mut (*s).last_attached_time, null_mut());
+            (*(*s).curw).flags &= !WINLINK_ALERTFLAGS;
+            (*(*(*s).curw).window).latest = c.cast();
+            alerts_check_session(s);
+            tty_update_client_offset(c);
+            status_timer_start(c);
+            notify_client(c"client-session-changed".as_ptr(), c);
+            server_redraw_client(c);
+        }
 
-  server_check_unattached();
-  server_update_socket();
+        server_check_unattached();
+        server_update_socket();
+    }
 }
-}
 
-/* Lost a client. */
+/// Lost a client.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_lost(c: *mut client ) {
-unsafe {
-  struct client_file *cf, *cf1;
-  struct client_window *cw, *cw1;
+pub unsafe extern "C" fn server_client_lost(c: *mut client) {
+    unsafe {
+        (*c).flags |= client_flag::DEAD;
 
-  (*c).flags |= CLIENT_DEAD;
+        server_client_clear_overlay(c);
+        status_prompt_clear(c);
+        status_message_clear(c);
 
-  server_client_clear_overlay(c);
-  status_prompt_clear(c);
-  status_message_clear(c);
+        for cf in rb_foreach(&raw mut (*c).files).map(NonNull::as_ptr) {
+            (*cf).error = libc::EINTR;
+            file_fire_done(cf);
+        }
+        for cw in rb_foreach(&raw mut (*c).windows).map(NonNull::as_ptr) {
+            rb_remove(&raw mut (*c).windows, cw);
+            free_(cw);
+        }
 
-  RB_FOREACH_SAFE(cf, client_files, &(*c).files, cf1) {
-    (*cf).error = EINTR;
-    file_fire_done(cf);
-  }
-  RB_FOREACH_SAFE(cw, client_windows, &(*c).windows, cw1) {
-    RB_REMOVE(client_windows, &(*c).windows, cw);
-    free(cw);
-  }
+        tailq_remove(&raw mut clients, c);
+        log_debug!("lost client {:p}", c);
 
-  TAILQ_REMOVE(&clients, c, entry);
-  log_debug("lost client %p", c);
+        if (*c).flags.intersects(client_flag::ATTACHED) {
+            server_client_attached_lost(c);
+            notify_client(c"client-detached".as_ptr(), c);
+        }
 
-  if ((*c).flags & CLIENT_ATTACHED) {
-    server_client_attached_lost(c);
-    notify_client("client-detached", c);
-  }
+        if (*c).flags.intersects(client_flag::CONTROL) {
+            control_stop(c);
+        }
+        if (*c).flags.intersects(client_flag::TERMINAL) {
+            tty_free(&raw mut (*c).tty);
+        }
+        free_((*c).ttyname);
+        free_((*c).clipboard_panes);
 
-  if ((*c).flags & CLIENT_CONTROL) {
-    control_stop(c);
-  }
-  if ((*c).flags & CLIENT_TERMINAL) {
-    tty_free(&(*c).tty);
-  }
-  free((*c).ttyname);
-  free((*c).clipboard_panes);
+        free_((*c).term_name);
+        free_((*c).term_type);
+        tty_term_free_list((*c).term_caps, (*c).term_ncaps);
 
-  free((*c).term_name);
-  free((*c).term_type);
-  tty_term_free_list((*c).term_caps, (*c).term_ncaps);
+        status_free(c);
 
-  status_free(c);
+        free_((*c).title);
+        free_((*c).cwd.cast_mut()); // TODO cast away const
 
-  free((*c).title);
-  free((void *)(*c).cwd);
+        evtimer_del(&raw mut (*c).repeat_timer);
+        evtimer_del(&raw mut (*c).click_timer);
 
-  evtimer_del(&(*c).repeat_timer);
-  evtimer_del(&(*c).click_timer);
+        key_bindings_unref_table((*c).keytable);
 
-  key_bindings_unref_table((*c).keytable);
+        free_((*c).message_string);
+        if event_initialized(&raw mut (*c).message_timer) != 0 {
+            evtimer_del(&raw mut (*c).message_timer);
+        }
 
-  free((*c).message_string);
-  if (event_initialized(&(*c).message_timer)) {
-    evtimer_del(&(*c).message_timer);
-  }
+        free_((*c).prompt_saved);
+        free_((*c).prompt_string);
+        free_((*c).prompt_buffer);
 
-  free((*c).prompt_saved);
-  free((*c).prompt_string);
-  free((*c).prompt_buffer);
+        format_lost_client(c);
+        environ_free((*c).environ);
 
-  format_lost_client(c);
-  environ_free((*c).environ);
+        proc_remove_peer((*c).peer);
+        (*c).peer = null_mut();
 
-  proc_remove_peer((*c).peer);
-  (*c).peer = NULL;
+        if ((*c).out_fd != -1) {
+            libc::close((*c).out_fd);
+        }
+        if ((*c).fd != -1) {
+            libc::close((*c).fd);
+            (*c).fd = -1;
+        }
+        server_client_unref(c);
 
-  if ((*c).out_fd != -1) {
-    close((*c).out_fd);
-  }
-  if ((*c).fd != -1) {
-    close((*c).fd);
-    (*c).fd = -1;
-  }
-  server_client_unref(c);
+        server_add_accept(0); /* may be more file descriptors now */
 
-  server_add_accept(0); /* may be more file descriptors now */
-
-  recalculate_sizes();
-  server_check_unattached();
-  server_update_socket();
-}
+        recalculate_sizes();
+        server_check_unattached();
+        server_update_socket();
+    }
 }
 
-/* Remove reference from a client. */
+/// Remove reference from a client.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_unref(c: *mut client ) {
-unsafe {
-  log_debug("unref client %p (%d references)", c, (*c).references);
+pub unsafe extern "C" fn server_client_unref(c: *mut client) {
+    unsafe {
+        log_debug!("unref client {:p} ({} references)", c, (*c).references);
 
-  (*c).references -= 1;
-  if ((*c).references == 0) {
-    event_once(-1, EV_TIMEOUT, server_client_free, c, NULL);
-  }
-}
+        (*c).references -= 1;
+        if ((*c).references == 0) {
+            event_once(
+                -1,
+                EV_TIMEOUT,
+                Some(server_client_free),
+                c.cast(),
+                null_mut(),
+            );
+        }
+    }
 }
 
-/* Free dead client. */
+/// Free dead client.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_free(_fd: i32, _events: i16, arg: *mut c_void) {
-unsafe {
-  struct client *c = arg;
+pub unsafe extern "C" fn server_client_free(_fd: i32, _events: i16, arg: *mut c_void) {
+    unsafe {
+        let mut c: *mut client = arg.cast();
+        log_debug!("free client {:p} ({} references)", c, (*c).references);
 
-  log_debug("free client %p (%d references)", c, (*c).references);
+        cmdq_free((*c).queue);
 
-  cmdq_free((*c).queue);
-
-  if ((*c).references == 0) {
-    free((void *)(*c).name);
-    free(c);
-  }
-}
+        if ((*c).references == 0) {
+            free_((*c).name.cast_mut());
+            free_(c);
+        }
+    }
 }
 
 /// Suspend a client.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_suspend(c: *mut client ) {
-unsafe {
-  struct session *s = (*c).session;
+pub unsafe extern "C" fn server_client_suspend(c: *mut client) {
+    unsafe {
+        let mut s: *mut session = (*c).session;
 
-  if (s == NULL || ((*c).flags & CLIENT_UNATTACHEDFLAGS)) {
-    return;
-  }
+        if s.is_null() || (*c).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
+            return;
+        }
 
-  tty_stop_tty(&(*c).tty);
-  (*c).flags |= CLIENT_SUSPENDED;
-  proc_send((*c).peer, MSG_SUSPEND, -1, NULL, 0);
+        tty_stop_tty(&raw mut (*c).tty);
+        (*c).flags |= client_flag::SUSPENDED;
+        proc_send((*c).peer, msgtype::MSG_SUSPEND, -1, null_mut(), 0);
+    }
 }
-}
 
-/* Detach a client. */
+/// Detach a client.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_detach(c: *mut client , msgtype: msgtype) {
-unsafe {
-  struct session *s = (*c).session;
+pub unsafe extern "C" fn server_client_detach(c: *mut client, msgtype: msgtype) {
+    unsafe {
+        let mut s = (*c).session;
 
-  if (s == NULL || ((*c).flags & CLIENT_NODETACHFLAGS)) {
-    return;
-  }
+        if s.is_null() || (*c).flags.intersects(CLIENT_NODETACHFLAGS) {
+            return;
+        }
 
-  (*c).flags |= CLIENT_EXIT;
+        (*c).flags |= client_flag::EXIT;
 
-  (*c).exit_type = CLIENT_EXIT_DETACH;
-  (*c).exit_msgtype = msgtype;
-  (*c).exit_session = xstrdup((*s).name);
-}
+        (*c).exit_type = exit_type::CLIENT_EXIT_DETACH;
+        (*c).exit_msgtype = msgtype;
+        (*c).exit_session = xstrdup((*s).name).as_ptr();
+    }
 }
 
 /// Execute command to replace a client.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_exec(c: *mut client , cmd: *const c_char) {
-unsafe {
-  struct session *s = (*c).session;
-  char *msg;
-  const char *shell;
-  size_t cmdsize, shellsize;
+pub unsafe extern "C" fn server_client_exec(c: *mut client, cmd: *const c_char) {
+    unsafe {
+        let mut s = (*c).session;
+        if *cmd == b'\0' as i8 {
+            return;
+        }
+        let cmdsize = strlen(cmd) + 1;
 
-  if (*cmd == '\0') {
-    return;
-  }
-  cmdsize = strlen(cmd) + 1;
+        let mut shell = if !s.is_null() {
+            options_get_string((*s).options, c"default-shell".as_ptr())
+        } else {
+            options_get_string(global_s_options, c"default-shell".as_ptr())
+        };
+        if !checkshell(shell) {
+            shell = _PATH_BSHELL;
+        }
+        let shellsize = strlen(shell) + 1;
 
-  if (s != NULL) {
-    shell = options_get_string((*s).options, "default-shell");
-  } else {
-    shell = options_get_string(global_s_options, "default-shell");
-  }
-  if (!checkshell(shell)) {
-    shell = _PATH_BSHELL;
-  }
-  shellsize = strlen(shell) + 1;
+        let msg: *mut c_char = xmalloc(cmdsize + shellsize).as_ptr().cast();
+        libc::memcpy(msg.cast(), cmd.cast(), cmdsize);
+        libc::memcpy(msg.add(cmdsize).cast(), shell.cast(), shellsize);
 
-  msg = xmalloc(cmdsize + shellsize);
-  memcpy(msg, cmd, cmdsize);
-  memcpy(msg + cmdsize, shell, shellsize);
-
-  proc_send((*c).peer, MSG_EXEC, -1, msg, cmdsize + shellsize);
-  free(msg);
-}
+        proc_send(
+            (*c).peer,
+            msgtype::MSG_EXEC,
+            -1,
+            msg.cast(),
+            cmdsize + shellsize,
+        );
+        free_(msg);
+    }
 }
 
 /// Check for mouse keys.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_check_mouse(c: *mut client , event: *mut key_event ) -> key_code {
-unsafe {
-  struct mouse_event *m = &(*event).m;
-  struct session *s = (*c).session, *fs;
-  struct winlink *fwl;
-  struct window_pane *wp, *fwp;
-  u_int x, y, b, sx, sy, px, py;
-  int ignore = 0;
-  key_code key;
-  struct timeval tv;
-  struct style_range *sr;
-  enum {
-    NOTYPE,
-    MOVE,
-    DOWN,
-    UP,
-    DRAG,
-    WHEEL,
-    SECOND,
-    DOUBLE,
-    TRIPLE
-  } type = NOTYPE;
-  enum {
-    NOWHERE,
-    PANE,
-    STATUS,
-    STATUS_LEFT,
-    STATUS_RIGHT,
-    STATUS_DEFAULT,
-    BORDER
-  } where = NOWHERE;
+pub unsafe extern "C" fn server_client_check_mouse(
+    c: *mut client,
+    event: *mut key_event,
+) -> key_code {
+    unsafe {
+        let mut m = &raw mut (*event).m;
+        let mut s = (*c).session;
+        let mut fs: *mut session = null_mut();
 
-  log_debug("%s mouse %02x at %u,%u (last %u,%u) (%d)", (*c).name, (*m).b,
-            (*m).x, (*m).y, (*m).lx, (*m).ly, (*c).tty.mouse_drag_flag);
+        let mut fwl: *mut winlink = null_mut();
+        let mut wp: *mut window_pane = null_mut();
+        let mut fwp: *mut window_pane = null_mut();
 
-  /* What type of event is this? */
-  if ((*event).key == KEYC_DOUBLECLICK) {
-    type = DOUBLE;
-    x = (*m).x, y = (*m).y, b = (*m).b;
-    ignore = 1;
-    log_debug("double-click at %u,%u", x, y);
-  } else if (((*m).sgr_type != ' ' && MOUSE_DRAG((*m).sgr_b) &&
-              MOUSE_RELEASE((*m).sgr_b)) ||
-             ((*m).sgr_type == ' ' && MOUSE_DRAG((*m).b) &&
-              MOUSE_RELEASE((*m).b) && MOUSE_RELEASE((*m).lb))) {
-    type = MOVE;
-    x = (*m).x, y = (*m).y, b = 0;
-    log_debug("move at %u,%u", x, y);
-  } else if (MOUSE_DRAG((*m).b)) {
-    type = DRAG;
-    if ((*c).tty.mouse_drag_flag) {
-      x = (*m).x, y = (*m).y, b = (*m).b;
-      if (x == (*m).lx && y == (*m).ly) {
-        return KEYC_UNKNOWN;
-      }
-      log_debug("drag update at %u,%u", x, y);
-    } else {
-      x = (*m).lx, y = (*m).ly, b = (*m).lb;
-      log_debug("drag start at %u,%u", x, y);
-    }
-  } else if (MOUSE_WHEEL((*m).b)) {
-    type = WHEEL;
-    x = (*m).x, y = (*m).y, b = (*m).b;
-    log_debug("wheel at %u,%u", x, y);
-  } else if (MOUSE_RELEASE((*m).b)) {
-    type = UP;
-    x = (*m).x, y = (*m).y, b = (*m).lb;
-    if ((*m).sgr_type == 'm') {
-      b = (*m).sgr_b;
-    }
-    log_debug("up at %u,%u", x, y);
-  } else {
-    if ((*c).flags & CLIENT_DOUBLECLICK) {
-      evtimer_del(&(*c).click_timer);
-      (*c).flags &= ~CLIENT_DOUBLECLICK;
-      if ((*m).b == (*c).click_button) {
-        type = SECOND;
-        x = (*m).x, y = (*m).y, b = (*m).b;
-        log_debug("second-click at %u,%u", x, y);
-        (*c).flags |= CLIENT_TRIPLECLICK;
-      }
-    } else if ((*c).flags & CLIENT_TRIPLECLICK) {
-      evtimer_del(&(*c).click_timer);
-      (*c).flags &= ~CLIENT_TRIPLECLICK;
-      if ((*m).b == (*c).click_button) {
-        type = TRIPLE;
-        x = (*m).x, y = (*m).y, b = (*m).b;
-        log_debug("triple-click at %u,%u", x, y);
-        goto have_event;
-      }
-    }
+        // u_int x, y, b, sx, sy, px, py;
+        let mut x: u32 = 0;
+        let mut y: u32 = 0;
+        let mut b: u32 = 0;
+        let mut sx: u32 = 0;
+        let mut sy: u32 = 0;
+        let mut px: u32 = 0;
+        let mut py: u32 = 0;
 
-    /* DOWN is the only remaining event type. */
-    if (type == NOTYPE) {
-      type = DOWN;
-      x = (*m).x, y = (*m).y, b = (*m).b;
-      log_debug("down at %u,%u", x, y);
-      (*c).flags |= CLIENT_DOUBLECLICK;
-    }
+        let mut ignore = 0;
 
-    if (KEYC_CLICK_TIMEOUT != 0) {
-      memcpy(&(*c).click_event, m, sizeof(*c).click_event);
-      (*c).click_button = (*m).b;
+        let mut key: key_code = 0;
+        let mut tv: libc::timeval = zeroed();
+        let mut sr: *mut style_range = null_mut();
 
-      log_debug("click timer started");
-      tv.tv_sec = KEYC_CLICK_TIMEOUT / 1000;
-      tv.tv_usec = (KEYC_CLICK_TIMEOUT % 1000) * 1000L;
-      evtimer_del(&(*c).click_timer);
-      evtimer_add(&(*c).click_timer, &tv);
-    }
-  }
+        #[derive(Copy, Clone, Eq, PartialEq)]
+        enum type_ {
+            NOTYPE,
+            MOVE,
+            DOWN,
+            UP,
+            DRAG,
+            WHEEL,
+            SECOND,
+            DOUBLE,
+            TRIPLE,
+        }
+        use type_::*;
+        let mut type_ = type_::NOTYPE;
 
-have_event:
-  if (type == NOTYPE) {
-    return KEYC_UNKNOWN;
-  }
+        #[derive(Copy, Clone, Eq, PartialEq)]
+        enum where_ {
+            NOWHERE,
+            PANE,
+            STATUS,
+            STATUS_LEFT,
+            STATUS_RIGHT,
+            STATUS_DEFAULT,
+            BORDER,
+        }
+        use where_::*;
+        let mut where_ = where_::NOWHERE;
 
-  /* Save the session. */
-  (*m).s = (*s).id;
-  (*m).w = -1;
-  (*m).wp = -1;
-  (*m).ignore = ignore;
+        'out: {
+            'have_event: {
+                // log_debug("%s mouse %02x at %u,%u (last %u,%u) (%d)", (*c).name, (*m).b, (*m).x, (*m).y, (*m).lx, (*m).ly, (*c).tty.mouse_drag_flag);
 
-  /* Is this on the status line? */
-  (*m).statusat = status_at_line(c);
-  (*m).statuslines = status_line_size(c);
-  if ((*m).statusat != -1 && y >= (u_int)(*m).statusat &&
-      y < (*m).statusat + (*m).statuslines) {
-    sr = status_get_range(c, x, y - (*m).statusat);
-    if (sr == NULL) {
-      where = STATUS_DEFAULT;
-    } else {
-      switch ((*sr).type) {
-      case STYLE_RANGE_NONE:
-        return KEYC_UNKNOWN;
-      case STYLE_RANGE_LEFT:
-        log_debug("mouse range: left");
-        where = STATUS_LEFT;
-        break;
-      case STYLE_RANGE_RIGHT:
-        log_debug("mouse range: right");
-        where = STATUS_RIGHT;
-        break;
-      case STYLE_RANGE_PANE:
-        fwp = window_pane_find_by_id((*sr).argument);
-        if (fwp == NULL) {
-          return KEYC_UNKNOWN;
-        }
-        (*m).wp = (*sr).argument;
+                /* What type of event is this? */
+                if ((*event).key == keyc::KEYC_DOUBLECLICK as u64) {
+                    type_ = DOUBLE;
+                    x = (*m).x;
+                    y = (*m).y;
+                    b = (*m).b;
+                    ignore = 1;
+                    // log_debug("double-click at %u,%u", x, y);
+                } else if (((*m).sgr_type != b' ' as u32
+                    && MOUSE_DRAG((*m).sgr_b)
+                    && MOUSE_RELEASE((*m).sgr_b))
+                    || ((*m).sgr_type == b' ' as u32
+                        && MOUSE_DRAG((*m).b)
+                        && MOUSE_RELEASE((*m).b)
+                        && MOUSE_RELEASE((*m).lb)))
+                {
+                    type_ = MOVE;
+                    x = (*m).x;
+                    y = (*m).y;
+                    b = 0;
+                    log_debug!("move at {x},{y}");
+                } else if (MOUSE_DRAG((*m).b)) {
+                    type_ = DRAG;
+                    if (*c).tty.mouse_drag_flag != 0 {
+                        x = (*m).x;
+                        y = (*m).y;
+                        b = (*m).b;
+                        if (x == (*m).lx && y == (*m).ly) {
+                            return KEYC_UNKNOWN;
+                        }
+                        log_debug!("drag update at {x},{y}");
+                    } else {
+                        x = (*m).lx;
+                        y = (*m).ly;
+                        b = (*m).lb;
+                        log_debug!("drag start at {x},{y}");
+                    }
+                } else if MOUSE_WHEEL((*m).b) {
+                    type_ = WHEEL;
+                    x = (*m).x;
+                    y = (*m).y;
+                    b = (*m).b;
+                    log_debug!("wheel at {},{}", x, y);
+                } else if MOUSE_RELEASE((*m).b) {
+                    type_ = UP;
+                    x = (*m).x;
+                    y = (*m).y;
+                    b = (*m).lb;
+                    if ((*m).sgr_type == b'm' as u32) {
+                        b = (*m).sgr_b;
+                    }
+                    log_debug!("up at {},{}", x, y);
+                } else {
+                    if (*c).flags.intersects(client_flag::DOUBLECLICK) {
+                        evtimer_del(&raw mut (*c).click_timer);
+                        (*c).flags &= !client_flag::DOUBLECLICK;
+                        if ((*m).b == (*c).click_button) {
+                            type_ = SECOND;
+                            x = (*m).x;
+                            y = (*m).y;
+                            b = (*m).b;
+                            log_debug!("second-click at {},{}", x, y);
+                            (*c).flags |= client_flag::TRIPLECLICK;
+                        }
+                    } else if (*c).flags.intersects(client_flag::TRIPLECLICK) {
+                        evtimer_del(&raw mut (*c).click_timer);
+                        (*c).flags &= !client_flag::TRIPLECLICK;
+                        if (*m).b == (*c).click_button {
+                            type_ = TRIPLE;
+                            x = (*m).x;
+                            y = (*m).y;
+                            b = (*m).b;
+                            log_debug!("triple-click at {},{}", x, y);
+                            break 'have_event;
+                        }
+                    }
 
-        log_debug("mouse range: pane %%%u", (*m).wp);
-        where = STATUS;
-        break;
-      case STYLE_RANGE_WINDOW:
-        fwl = winlink_find_by_index(&(*s).windows, (*sr).argument);
-        if (fwl == NULL) {
-          return KEYC_UNKNOWN;
-        }
-        (*m).w = (*(*fwl).window).id;
+                    /* DOWN is the only remaining event type. */
+                    if type_ == NOTYPE {
+                        type_ = DOWN;
+                        x = (*m).x;
+                        y = (*m).y;
+                        b = (*m).b;
+                        log_debug!("down at {},{}", x, y);
+                        (*c).flags |= client_flag::DOUBLECLICK;
+                    }
 
-        log_debug("mouse range: window @%u", (*m).w);
-        where = STATUS;
-        break;
-      case STYLE_RANGE_SESSION:
-        fs = session_find_by_id((*sr).argument);
-        if (fs == NULL) {
-          return KEYC_UNKNOWN;
-        }
-        (*m).s = (*sr).argument;
+                    if (KEYC_CLICK_TIMEOUT != 0) {
+                        memcpy__(&raw mut (*c).click_event, m);
+                        (*c).click_button = (*m).b;
 
-        log_debug("mouse range: session $%u", (*m).s);
-        where = STATUS;
-        break;
-      case STYLE_RANGE_USER:
-        where = STATUS;
-        break;
-      }
-    }
-  }
+                        log_debug!("click timer started");
+                        tv.tv_sec = KEYC_CLICK_TIMEOUT as i64 / 1000;
+                        tv.tv_usec = (KEYC_CLICK_TIMEOUT as i64 % 1000) * 1000i64;
+                        evtimer_del(&raw mut (*c).click_timer);
+                        evtimer_add(&raw mut (*c).click_timer, &raw const tv);
+                    }
+                }
+            } // have_event:
+            if type_ == NOTYPE {
+                return KEYC_UNKNOWN;
+            }
 
-  /* Not on status line. Adjust position and check for border or pane. */
-  if (where == NOWHERE) {
-    px = x;
-    if ((*m).statusat == 0 && y >= (*m).statuslines) {
-      py = y - (*m).statuslines;
-    } else if ((*m).statusat > 0 && y >= (u_int)(*m).statusat) {
-      py = (*m).statusat - 1;
-    } else {
-      py = y;
-    }
+            /* Save the session. */
+            (*m).s = (*s).id as i32;
+            (*m).w = -1;
+            (*m).wp = -1;
+            (*m).ignore = ignore;
 
-    tty_window_offset(&(*c).tty, &(*m).ox, &(*m).oy, &sx, &sy);
-    log_debug("mouse window @%u at %u,%u (%ux%u)", (*(*(*s).curw).window).id,
-              (*m).ox, (*m).oy, sx, sy);
-    if (px > sx || py > sy) {
-      return KEYC_UNKNOWN;
-    }
-    px = px + (*m).ox;
-    py = py + (*m).oy;
+            /* Is this on the status line? */
+            (*m).statusat = status_at_line(c);
+            (*m).statuslines = status_line_size(c);
+            if (*m).statusat != -1
+                && y >= (*m).statusat as u32
+                && y < (*m).statusat as u32 + (*m).statuslines
+            {
+                sr = status_get_range(c, x, y - (*m).statusat as u32);
+                if sr.is_null() {
+                    where_ = STATUS_DEFAULT;
+                } else {
+                    match (*sr).type_ {
+                        style_range_type::STYLE_RANGE_NONE => return KEYC_UNKNOWN,
+                        style_range_type::STYLE_RANGE_LEFT => {
+                            log_debug!("mouse range: left");
+                            where_ = STATUS_LEFT;
+                        }
+                        style_range_type::STYLE_RANGE_RIGHT => {
+                            log_debug!("mouse range: right");
+                            where_ = STATUS_RIGHT;
+                        }
+                        style_range_type::STYLE_RANGE_PANE => {
+                            fwp = window_pane_find_by_id((*sr).argument);
+                            if fwp.is_null() {
+                                return KEYC_UNKNOWN;
+                            }
+                            (*m).wp = (*sr).argument as i32;
 
-    /* Try the pane borders if not zoomed. */
-    if (~(*(*(*s).curw).window).flags & WINDOW_ZOOMED) {
-      TAILQ_FOREACH(wp, &(*(*(*s).curw).window).panes, entry) {
-        if (((*wp).xoff + (*wp).sx == px && (*wp).yoff <= 1 + py &&
-             (*wp).yoff + (*wp).sy >= py) ||
-            ((*wp).yoff + (*wp).sy == py && (*wp).xoff <= 1 + px &&
-             (*wp).xoff + (*wp).sx >= px)) {
-          break;
-        }
-      }
-      if (wp != NULL) {
-        where = BORDER;
-      }
-    }
+                            log_debug!("mouse range: pane %%{}", (*m).wp);
+                            where_ = STATUS;
+                        }
+                        style_range_type::STYLE_RANGE_WINDOW => {
+                            fwl =
+                                winlink_find_by_index(&raw mut (*s).windows, (*sr).argument as i32);
+                            if fwl.is_null() {
+                                return KEYC_UNKNOWN;
+                            }
+                            (*m).w = (*(*fwl).window).id as i32;
 
-    /* Otherwise try inside the pane. */
-    if (where == NOWHERE) {
-      wp = window_get_active_at((*(*s).curw).window, px, py);
-      if (wp != NULL) {
-        where = PANE;
-      } else {
-        return KEYC_UNKNOWN;
-      }
-    }
-    if (where == PANE) {
-      log_debug("mouse %u,%u on pane %%%u", x, y, (*wp).id);
-    } else if (where == BORDER) {
-      log_debug("mouse on pane %%%u border", (*wp).id);
-    }
-    (*m).wp = (*wp).id;
-    (*m).w = (*(*wp).window).id;
-  }
+                            log_debug!("mouse range: window @{}", (*m).w);
+                            where_ = STATUS;
+                        }
+                        style_range_type::STYLE_RANGE_SESSION => {
+                            fs = transmute_ptr(session_find_by_id((*sr).argument));
+                            if fs.is_null() {
+                                return KEYC_UNKNOWN;
+                            }
+                            (*m).s = (*sr).argument as i32;
 
-  /* Stop dragging if needed. */
-  if (type != DRAG && type != WHEEL && (*c).tty.mouse_drag_flag != 0) {
-    if ((*c).tty.mouse_drag_release != NULL) {
-      (*c).tty.mouse_drag_release(c, m);
-    }
+                            log_debug!("mouse range: session ${}", (*m).s);
+                            where_ = STATUS;
+                        }
+                        style_range_type::STYLE_RANGE_USER => where_ = STATUS,
+                    }
+                }
+            }
 
-    (*c).tty.mouse_drag_update = NULL;
-    (*c).tty.mouse_drag_release = NULL;
+            /* Not on status line. Adjust position and check for border or pane. */
+            if where_ == NOWHERE {
+                px = x;
+                if ((*m).statusat == 0 && y >= (*m).statuslines) {
+                    py = y - (*m).statuslines;
+                } else if ((*m).statusat > 0 && y >= (*m).statusat as u32) {
+                    py = (*m).statusat as u32 - 1;
+                } else {
+                    py = y;
+                }
 
-    /*
-     * End a mouse drag by passing a MouseDragEnd key corresponding
-     * to the button that started the drag.
-     */
-    switch ((*c).tty.mouse_drag_flag - 1) {
-    case MOUSE_BUTTON_1:
-      if (where == PANE) {
-        key = KEYC_MOUSEDRAGEND1_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDRAGEND1_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDRAGEND1_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDRAGEND1_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDRAGEND1_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDRAGEND1_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_2:
-      if (where == PANE) {
-        key = KEYC_MOUSEDRAGEND2_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDRAGEND2_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDRAGEND2_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDRAGEND2_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDRAGEND2_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDRAGEND2_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_3:
-      if (where == PANE) {
-        key = KEYC_MOUSEDRAGEND3_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDRAGEND3_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDRAGEND3_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDRAGEND3_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDRAGEND3_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDRAGEND3_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_6:
-      if (where == PANE) {
-        key = KEYC_MOUSEDRAGEND6_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDRAGEND6_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDRAGEND6_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDRAGEND6_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDRAGEND6_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDRAGEND6_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_7:
-      if (where == PANE) {
-        key = KEYC_MOUSEDRAGEND7_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDRAGEND7_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDRAGEND7_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDRAGEND7_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDRAGEND7_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDRAGEND7_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_8:
-      if (where == PANE) {
-        key = KEYC_MOUSEDRAGEND8_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDRAGEND8_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDRAGEND8_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDRAGEND8_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDRAGEND8_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDRAGEND8_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_9:
-      if (where == PANE) {
-        key = KEYC_MOUSEDRAGEND9_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDRAGEND9_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDRAGEND9_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDRAGEND9_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDRAGEND9_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDRAGEND9_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_10:
-      if (where == PANE) {
-        key = KEYC_MOUSEDRAGEND10_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDRAGEND10_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDRAGEND10_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDRAGEND10_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDRAGEND10_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDRAGEND10_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_11:
-      if (where == PANE) {
-        key = KEYC_MOUSEDRAGEND11_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDRAGEND11_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDRAGEND11_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDRAGEND11_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDRAGEND11_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDRAGEND11_BORDER;
-      }
-      break;
-    default:
-      key = KEYC_MOUSE;
-      break;
-    }
-    (*c).tty.mouse_drag_flag = 0;
-    goto out;
-  }
+                tty_window_offset(
+                    &raw mut (*c).tty,
+                    &raw mut (*m).ox,
+                    &raw mut (*m).oy,
+                    &raw mut sx,
+                    &raw mut sy,
+                );
+                // log_debug!("mouse window @%u at %u,%u (%ux%u)", (*(*(*s).curw).window).id, (*m).ox, (*m).oy, sx, sy);
+                if (px > sx || py > sy) {
+                    return KEYC_UNKNOWN;
+                }
+                px = px + (*m).ox;
+                py = py + (*m).oy;
 
-  /* Convert to a key binding. */
-  key = KEYC_UNKNOWN;
-  switch (type) {
-  case NOTYPE:
-    break;
-  case MOVE:
-    if (where == PANE) {
-      key = KEYC_MOUSEMOVE_PANE;
-    }
-    if (where == STATUS) {
-      key = KEYC_MOUSEMOVE_STATUS;
-    }
-    if (where == STATUS_LEFT) {
-      key = KEYC_MOUSEMOVE_STATUS_LEFT;
-    }
-    if (where == STATUS_RIGHT) {
-      key = KEYC_MOUSEMOVE_STATUS_RIGHT;
-    }
-    if (where == STATUS_DEFAULT) {
-      key = KEYC_MOUSEMOVE_STATUS_DEFAULT;
-    }
-    if (where == BORDER) {
-      key = KEYC_MOUSEMOVE_BORDER;
-    }
-    break;
-  case DRAG:
-    if ((*c).tty.mouse_drag_update != NULL) {
-      key = KEYC_DRAGGING;
-    } else {
-      switch (MOUSE_BUTTONS(b)) {
-      case MOUSE_BUTTON_1:
-        if (where == PANE) {
-          key = KEYC_MOUSEDRAG1_PANE;
-        }
-        if (where == STATUS) {
-          key = KEYC_MOUSEDRAG1_STATUS;
-        }
-        if (where == STATUS_LEFT) {
-          key = KEYC_MOUSEDRAG1_STATUS_LEFT;
-        }
-        if (where == STATUS_RIGHT) {
-          key = KEYC_MOUSEDRAG1_STATUS_RIGHT;
-        }
-        if (where == STATUS_DEFAULT) {
-          key = KEYC_MOUSEDRAG1_STATUS_DEFAULT;
-        }
-        if (where == BORDER) {
-          key = KEYC_MOUSEDRAG1_BORDER;
-        }
-        break;
-      case MOUSE_BUTTON_2:
-        if (where == PANE) {
-          key = KEYC_MOUSEDRAG2_PANE;
-        }
-        if (where == STATUS) {
-          key = KEYC_MOUSEDRAG2_STATUS;
-        }
-        if (where == STATUS_LEFT) {
-          key = KEYC_MOUSEDRAG2_STATUS_LEFT;
-        }
-        if (where == STATUS_RIGHT) {
-          key = KEYC_MOUSEDRAG2_STATUS_RIGHT;
-        }
-        if (where == STATUS_DEFAULT) {
-          key = KEYC_MOUSEDRAG2_STATUS_DEFAULT;
-        }
-        if (where == BORDER) {
-          key = KEYC_MOUSEDRAG2_BORDER;
-        }
-        break;
-      case MOUSE_BUTTON_3:
-        if (where == PANE) {
-          key = KEYC_MOUSEDRAG3_PANE;
-        }
-        if (where == STATUS) {
-          key = KEYC_MOUSEDRAG3_STATUS;
-        }
-        if (where == STATUS_LEFT) {
-          key = KEYC_MOUSEDRAG3_STATUS_LEFT;
-        }
-        if (where == STATUS_RIGHT) {
-          key = KEYC_MOUSEDRAG3_STATUS_RIGHT;
-        }
-        if (where == STATUS_DEFAULT) {
-          key = KEYC_MOUSEDRAG3_STATUS_DEFAULT;
-        }
-        if (where == BORDER) {
-          key = KEYC_MOUSEDRAG3_BORDER;
-        }
-        break;
-      case MOUSE_BUTTON_6:
-        if (where == PANE) {
-          key = KEYC_MOUSEDRAG6_PANE;
-        }
-        if (where == STATUS) {
-          key = KEYC_MOUSEDRAG6_STATUS;
-        }
-        if (where == STATUS_LEFT) {
-          key = KEYC_MOUSEDRAG6_STATUS_LEFT;
-        }
-        if (where == STATUS_RIGHT) {
-          key = KEYC_MOUSEDRAG6_STATUS_RIGHT;
-        }
-        if (where == STATUS_DEFAULT) {
-          key = KEYC_MOUSEDRAG6_STATUS_DEFAULT;
-        }
-        if (where == BORDER) {
-          key = KEYC_MOUSEDRAG6_BORDER;
-        }
-        break;
-      case MOUSE_BUTTON_7:
-        if (where == PANE) {
-          key = KEYC_MOUSEDRAG7_PANE;
-        }
-        if (where == STATUS) {
-          key = KEYC_MOUSEDRAG7_STATUS;
-        }
-        if (where == STATUS_LEFT) {
-          key = KEYC_MOUSEDRAG7_STATUS_LEFT;
-        }
-        if (where == STATUS_RIGHT) {
-          key = KEYC_MOUSEDRAG7_STATUS_RIGHT;
-        }
-        if (where == STATUS_DEFAULT) {
-          key = KEYC_MOUSEDRAG7_STATUS_DEFAULT;
-        }
-        if (where == BORDER) {
-          key = KEYC_MOUSEDRAG7_BORDER;
-        }
-        break;
-      case MOUSE_BUTTON_8:
-        if (where == PANE) {
-          key = KEYC_MOUSEDRAG8_PANE;
-        }
-        if (where == STATUS) {
-          key = KEYC_MOUSEDRAG8_STATUS;
-        }
-        if (where == STATUS_LEFT) {
-          key = KEYC_MOUSEDRAG8_STATUS_LEFT;
-        }
-        if (where == STATUS_RIGHT) {
-          key = KEYC_MOUSEDRAG8_STATUS_RIGHT;
-        }
-        if (where == STATUS_DEFAULT) {
-          key = KEYC_MOUSEDRAG8_STATUS_DEFAULT;
-        }
-        if (where == BORDER) {
-          key = KEYC_MOUSEDRAG8_BORDER;
-        }
-        break;
-      case MOUSE_BUTTON_9:
-        if (where == PANE) {
-          key = KEYC_MOUSEDRAG9_PANE;
-        }
-        if (where == STATUS) {
-          key = KEYC_MOUSEDRAG9_STATUS;
-        }
-        if (where == STATUS_LEFT) {
-          key = KEYC_MOUSEDRAG9_STATUS_LEFT;
-        }
-        if (where == STATUS_RIGHT) {
-          key = KEYC_MOUSEDRAG9_STATUS_RIGHT;
-        }
-        if (where == STATUS_DEFAULT) {
-          key = KEYC_MOUSEDRAG9_STATUS_DEFAULT;
-        }
-        if (where == BORDER) {
-          key = KEYC_MOUSEDRAG9_BORDER;
-        }
-        break;
-      case MOUSE_BUTTON_10:
-        if (where == PANE) {
-          key = KEYC_MOUSEDRAG10_PANE;
-        }
-        if (where == STATUS) {
-          key = KEYC_MOUSEDRAG10_STATUS;
-        }
-        if (where == STATUS_LEFT) {
-          key = KEYC_MOUSEDRAG10_STATUS_LEFT;
-        }
-        if (where == STATUS_RIGHT) {
-          key = KEYC_MOUSEDRAG10_STATUS_RIGHT;
-        }
-        if (where == STATUS_DEFAULT) {
-          key = KEYC_MOUSEDRAG10_STATUS_DEFAULT;
-        }
-        if (where == BORDER) {
-          key = KEYC_MOUSEDRAG10_BORDER;
-        }
-        break;
-      case MOUSE_BUTTON_11:
-        if (where == PANE) {
-          key = KEYC_MOUSEDRAG11_PANE;
-        }
-        if (where == STATUS) {
-          key = KEYC_MOUSEDRAG11_STATUS;
-        }
-        if (where == STATUS_LEFT) {
-          key = KEYC_MOUSEDRAG11_STATUS_LEFT;
-        }
-        if (where == STATUS_RIGHT) {
-          key = KEYC_MOUSEDRAG11_STATUS_RIGHT;
-        }
-        if (where == STATUS_DEFAULT) {
-          key = KEYC_MOUSEDRAG11_STATUS_DEFAULT;
-        }
-        if (where == BORDER) {
-          key = KEYC_MOUSEDRAG11_BORDER;
-        }
-        break;
-      }
-    }
+                /* Try the pane borders if not zoomed. */
+                if !(*(*(*s).curw).window).flags.intersects(window_flag::ZOOMED) {
+                    for wp_ in
+                        tailq_foreach::<_, discr_entry>(&raw mut (*(*(*s).curw).window).panes)
+                            .map(NonNull::as_ptr)
+                    {
+                        wp = wp_;
+                        if (((*wp).xoff + (*wp).sx == px
+                            && (*wp).yoff <= 1 + py
+                            && (*wp).yoff + (*wp).sy >= py)
+                            || ((*wp).yoff + (*wp).sy == py
+                                && (*wp).xoff <= 1 + px
+                                && (*wp).xoff + (*wp).sx >= px))
+                        {
+                            break;
+                        }
+                    }
+                    if !wp.is_null() {
+                        where_ = BORDER;
+                    }
+                }
 
-    /*
-     * Begin a drag by setting the flag to a non-zero value that
-     * corresponds to the mouse button in use.
-     */
-    (*c).tty.mouse_drag_flag = MOUSE_BUTTONS(b) + 1;
-    break;
-  case WHEEL:
-    if (MOUSE_BUTTONS(b) == MOUSE_WHEEL_UP) {
-      if (where == PANE) {
-        key = KEYC_WHEELUP_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_WHEELUP_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_WHEELUP_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_WHEELUP_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_WHEELUP_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_WHEELUP_BORDER;
-      }
-    } else {
-      if (where == PANE) {
-        key = KEYC_WHEELDOWN_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_WHEELDOWN_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_WHEELDOWN_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_WHEELDOWN_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_WHEELDOWN_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_WHEELDOWN_BORDER;
-      }
-    }
-    break;
-  case UP:
-    switch (MOUSE_BUTTONS(b)) {
-    case MOUSE_BUTTON_1:
-      if (where == PANE) {
-        key = KEYC_MOUSEUP1_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEUP1_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEUP1_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEUP1_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEUP1_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEUP1_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_2:
-      if (where == PANE) {
-        key = KEYC_MOUSEUP2_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEUP2_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEUP2_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEUP2_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEUP2_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEUP2_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_3:
-      if (where == PANE) {
-        key = KEYC_MOUSEUP3_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEUP3_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEUP3_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEUP3_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEUP3_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEUP3_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_6:
-      if (where == PANE) {
-        key = KEYC_MOUSEUP6_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEUP6_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEUP6_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEUP6_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEUP6_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEUP6_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_7:
-      if (where == PANE) {
-        key = KEYC_MOUSEUP7_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEUP7_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEUP7_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEUP7_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEUP7_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEUP7_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_8:
-      if (where == PANE) {
-        key = KEYC_MOUSEUP8_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEUP8_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEUP8_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEUP8_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEUP8_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEUP8_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_9:
-      if (where == PANE) {
-        key = KEYC_MOUSEUP9_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEUP9_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEUP9_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEUP9_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEUP9_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEUP9_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_10:
-      if (where == PANE) {
-        key = KEYC_MOUSEUP1_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEUP1_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEUP1_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEUP1_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEUP1_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEUP1_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_11:
-      if (where == PANE) {
-        key = KEYC_MOUSEUP11_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEUP11_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEUP11_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEUP11_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEUP11_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEUP11_BORDER;
-      }
-      break;
-    }
-    break;
-  case DOWN:
-    switch (MOUSE_BUTTONS(b)) {
-    case MOUSE_BUTTON_1:
-      if (where == PANE) {
-        key = KEYC_MOUSEDOWN1_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDOWN1_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDOWN1_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDOWN1_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDOWN1_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDOWN1_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_2:
-      if (where == PANE) {
-        key = KEYC_MOUSEDOWN2_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDOWN2_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDOWN2_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDOWN2_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDOWN2_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDOWN2_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_3:
-      if (where == PANE) {
-        key = KEYC_MOUSEDOWN3_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDOWN3_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDOWN3_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDOWN3_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDOWN3_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDOWN3_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_6:
-      if (where == PANE) {
-        key = KEYC_MOUSEDOWN6_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDOWN6_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDOWN6_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDOWN6_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDOWN6_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDOWN6_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_7:
-      if (where == PANE) {
-        key = KEYC_MOUSEDOWN7_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDOWN7_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDOWN7_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDOWN7_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDOWN7_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDOWN7_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_8:
-      if (where == PANE) {
-        key = KEYC_MOUSEDOWN8_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDOWN8_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDOWN8_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDOWN8_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDOWN8_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDOWN8_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_9:
-      if (where == PANE) {
-        key = KEYC_MOUSEDOWN9_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDOWN9_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDOWN9_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDOWN9_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDOWN9_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDOWN9_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_10:
-      if (where == PANE) {
-        key = KEYC_MOUSEDOWN10_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDOWN10_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDOWN10_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDOWN10_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDOWN10_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDOWN10_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_11:
-      if (where == PANE) {
-        key = KEYC_MOUSEDOWN11_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDOWN11_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDOWN11_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDOWN11_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDOWN11_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDOWN11_BORDER;
-      }
-      break;
-    }
-    break;
-  case SECOND:
-    switch (MOUSE_BUTTONS(b)) {
-    case MOUSE_BUTTON_1:
-      if (where == PANE) {
-        key = KEYC_SECONDCLICK1_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_SECONDCLICK1_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_SECONDCLICK1_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_SECONDCLICK1_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_SECONDCLICK1_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_SECONDCLICK1_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_2:
-      if (where == PANE) {
-        key = KEYC_SECONDCLICK2_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_SECONDCLICK2_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_SECONDCLICK2_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_SECONDCLICK2_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_SECONDCLICK2_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_SECONDCLICK2_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_3:
-      if (where == PANE) {
-        key = KEYC_SECONDCLICK3_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_SECONDCLICK3_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_SECONDCLICK3_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_SECONDCLICK3_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_SECONDCLICK3_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_SECONDCLICK3_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_6:
-      if (where == PANE) {
-        key = KEYC_SECONDCLICK6_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_SECONDCLICK6_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_SECONDCLICK6_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_SECONDCLICK6_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_SECONDCLICK6_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_SECONDCLICK6_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_7:
-      if (where == PANE) {
-        key = KEYC_SECONDCLICK7_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_SECONDCLICK7_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_SECONDCLICK7_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_SECONDCLICK7_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_SECONDCLICK7_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_SECONDCLICK7_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_8:
-      if (where == PANE) {
-        key = KEYC_SECONDCLICK8_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_SECONDCLICK8_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_SECONDCLICK8_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_SECONDCLICK8_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_SECONDCLICK8_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_SECONDCLICK8_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_9:
-      if (where == PANE) {
-        key = KEYC_SECONDCLICK9_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_SECONDCLICK9_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_SECONDCLICK9_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_SECONDCLICK9_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_SECONDCLICK9_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_SECONDCLICK9_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_10:
-      if (where == PANE) {
-        key = KEYC_SECONDCLICK10_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_SECONDCLICK10_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_SECONDCLICK10_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_SECONDCLICK10_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_SECONDCLICK10_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_SECONDCLICK10_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_11:
-      if (where == PANE) {
-        key = KEYC_SECONDCLICK11_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_SECONDCLICK11_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_SECONDCLICK11_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_SECONDCLICK11_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_SECONDCLICK11_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_SECONDCLICK11_BORDER;
-      }
-      break;
-    }
-    break;
-  case DOUBLE:
-    switch (MOUSE_BUTTONS(b)) {
-    case MOUSE_BUTTON_1:
-      if (where == PANE) {
-        key = KEYC_DOUBLECLICK1_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_DOUBLECLICK1_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_DOUBLECLICK1_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_DOUBLECLICK1_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_DOUBLECLICK1_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_DOUBLECLICK1_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_2:
-      if (where == PANE) {
-        key = KEYC_DOUBLECLICK2_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_DOUBLECLICK2_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_DOUBLECLICK2_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_DOUBLECLICK2_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_DOUBLECLICK2_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_DOUBLECLICK2_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_3:
-      if (where == PANE) {
-        key = KEYC_DOUBLECLICK3_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_DOUBLECLICK3_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_DOUBLECLICK3_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_DOUBLECLICK3_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_DOUBLECLICK3_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_DOUBLECLICK3_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_6:
-      if (where == PANE) {
-        key = KEYC_DOUBLECLICK6_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_DOUBLECLICK6_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_DOUBLECLICK6_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_DOUBLECLICK6_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_DOUBLECLICK6_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_DOUBLECLICK6_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_7:
-      if (where == PANE) {
-        key = KEYC_DOUBLECLICK7_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_DOUBLECLICK7_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_DOUBLECLICK7_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_DOUBLECLICK7_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_DOUBLECLICK7_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_DOUBLECLICK7_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_8:
-      if (where == PANE) {
-        key = KEYC_DOUBLECLICK8_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_DOUBLECLICK8_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_DOUBLECLICK8_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_DOUBLECLICK8_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_DOUBLECLICK8_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_DOUBLECLICK8_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_9:
-      if (where == PANE) {
-        key = KEYC_DOUBLECLICK9_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_DOUBLECLICK9_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_DOUBLECLICK9_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_DOUBLECLICK9_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_DOUBLECLICK9_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_DOUBLECLICK9_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_10:
-      if (where == PANE) {
-        key = KEYC_DOUBLECLICK10_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_DOUBLECLICK10_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_DOUBLECLICK10_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_DOUBLECLICK10_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_DOUBLECLICK10_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_DOUBLECLICK10_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_11:
-      if (where == PANE) {
-        key = KEYC_DOUBLECLICK11_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_DOUBLECLICK11_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_DOUBLECLICK11_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_DOUBLECLICK11_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_DOUBLECLICK11_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_DOUBLECLICK11_BORDER;
-      }
-      break;
-    }
-    break;
-  case TRIPLE:
-    switch (MOUSE_BUTTONS(b)) {
-    case MOUSE_BUTTON_1:
-      if (where == PANE) {
-        key = KEYC_TRIPLECLICK1_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_TRIPLECLICK1_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_TRIPLECLICK1_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_TRIPLECLICK1_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_TRIPLECLICK1_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_TRIPLECLICK1_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_2:
-      if (where == PANE) {
-        key = KEYC_TRIPLECLICK2_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_TRIPLECLICK2_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_TRIPLECLICK2_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_TRIPLECLICK2_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_TRIPLECLICK2_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_TRIPLECLICK2_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_3:
-      if (where == PANE) {
-        key = KEYC_TRIPLECLICK3_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_TRIPLECLICK3_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_TRIPLECLICK3_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_TRIPLECLICK3_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_TRIPLECLICK3_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_TRIPLECLICK3_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_6:
-      if (where == PANE) {
-        key = KEYC_TRIPLECLICK6_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_TRIPLECLICK6_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_TRIPLECLICK6_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_TRIPLECLICK6_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_TRIPLECLICK6_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_TRIPLECLICK6_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_7:
-      if (where == PANE) {
-        key = KEYC_TRIPLECLICK7_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_TRIPLECLICK7_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_TRIPLECLICK7_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_TRIPLECLICK7_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_TRIPLECLICK7_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_TRIPLECLICK7_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_8:
-      if (where == PANE) {
-        key = KEYC_TRIPLECLICK8_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_TRIPLECLICK8_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_TRIPLECLICK8_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_TRIPLECLICK8_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_TRIPLECLICK8_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_TRIPLECLICK8_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_9:
-      if (where == PANE) {
-        key = KEYC_TRIPLECLICK9_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_TRIPLECLICK9_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_TRIPLECLICK9_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_TRIPLECLICK9_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_TRIPLECLICK9_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_TRIPLECLICK9_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_10:
-      if (where == PANE) {
-        key = KEYC_TRIPLECLICK10_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_TRIPLECLICK10_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_TRIPLECLICK10_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_TRIPLECLICK10_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_TRIPLECLICK10_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_TRIPLECLICK10_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_11:
-      if (where == PANE) {
-        key = KEYC_TRIPLECLICK11_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_TRIPLECLICK11_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_TRIPLECLICK11_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_TRIPLECLICK11_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_TRIPLECLICK11_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_TRIPLECLICK11_BORDER;
-      }
-      break;
-    }
-    break;
-  }
-  if (key == KEYC_UNKNOWN) {
-    return KEYC_UNKNOWN;
-  }
+                /* Otherwise try inside the pane. */
+                if (where_ == NOWHERE) {
+                    wp = window_get_active_at((*(*s).curw).window, px, py);
+                    if !wp.is_null() {
+                        where_ = PANE;
+                    } else {
+                        return KEYC_UNKNOWN;
+                    }
+                }
+                if where_ == PANE {
+                    log_debug!("mouse {},{} on pane %%{}", x, y, (*wp).id);
+                } else if (where_ == BORDER) {
+                    log_debug!("mouse on pane %%{} border", (*wp).id);
+                }
+                (*m).wp = (*wp).id as i32;
+                (*m).w = (*(*wp).window).id as i32;
+            }
 
-out:
-  /* Apply modifiers if any. */
-  if (b & MOUSE_MASK_META) {
-    key |= KEYC_META;
-  }
-  if (b & MOUSE_MASK_CTRL) {
-    key |= KEYC_CTRL;
-  }
-  if (b & MOUSE_MASK_SHIFT) {
-    key |= KEYC_SHIFT;
-  }
+            /* Stop dragging if needed. */
+            if (type_ != DRAG && type_ != WHEEL && (*c).tty.mouse_drag_flag != 0) {
+                if let Some(mouse_drag_release) = (*c).tty.mouse_drag_release {
+                    mouse_drag_release(c, m);
+                }
 
-  if (log_get_level() != 0) {
-    log_debug("mouse key is %s", key_string_lookup_key(key, 1));
-  }
-  return key;
-}
+                (*c).tty.mouse_drag_update = None;
+                (*c).tty.mouse_drag_release = None;
+
+                // End a mouse drag by passing a MouseDragEnd key corresponding to the button that started the drag.
+                match ((*c).tty.mouse_drag_flag - 1) as u32 {
+                    crate::MOUSE_BUTTON_1 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_MOUSEDRAGEND1_PANE as u64,
+                            STATUS => keyc::KEYC_MOUSEDRAGEND1_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_MOUSEDRAGEND1_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_MOUSEDRAGEND1_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_MOUSEDRAGEND1_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_MOUSEDRAGEND1_BORDER as u64,
+                            NOWHERE => key,
+                        }
+                    }
+                    crate::MOUSE_BUTTON_2 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_MOUSEDRAGEND2_PANE as u64,
+                            STATUS => keyc::KEYC_MOUSEDRAGEND2_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_MOUSEDRAGEND2_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_MOUSEDRAGEND2_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_MOUSEDRAGEND2_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_MOUSEDRAGEND2_BORDER as u64,
+                            NOWHERE => key,
+                        }
+                    }
+                    crate::MOUSE_BUTTON_3 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_MOUSEDRAGEND3_PANE as u64,
+                            STATUS => keyc::KEYC_MOUSEDRAGEND3_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_MOUSEDRAGEND3_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_MOUSEDRAGEND3_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_MOUSEDRAGEND3_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_MOUSEDRAGEND3_BORDER as u64,
+                            NOWHERE => key,
+                        }
+                    }
+                    crate::MOUSE_BUTTON_6 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_MOUSEDRAGEND6_PANE as u64,
+                            STATUS => keyc::KEYC_MOUSEDRAGEND6_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_MOUSEDRAGEND6_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_MOUSEDRAGEND6_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_MOUSEDRAGEND6_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_MOUSEDRAGEND6_BORDER as u64,
+                            NOWHERE => key,
+                        }
+                    }
+                    crate::MOUSE_BUTTON_7 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_MOUSEDRAGEND7_PANE as u64,
+                            STATUS => keyc::KEYC_MOUSEDRAGEND7_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_MOUSEDRAGEND7_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_MOUSEDRAGEND7_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_MOUSEDRAGEND7_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_MOUSEDRAGEND7_BORDER as u64,
+                            NOWHERE => key,
+                        }
+                    }
+                    crate::MOUSE_BUTTON_8 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_MOUSEDRAGEND8_PANE as u64,
+                            STATUS => keyc::KEYC_MOUSEDRAGEND8_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_MOUSEDRAGEND8_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_MOUSEDRAGEND8_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_MOUSEDRAGEND8_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_MOUSEDRAGEND8_BORDER as u64,
+                            NOWHERE => key,
+                        }
+                    }
+                    crate::MOUSE_BUTTON_9 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_MOUSEDRAGEND9_PANE as u64,
+                            STATUS => keyc::KEYC_MOUSEDRAGEND9_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_MOUSEDRAGEND9_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_MOUSEDRAGEND9_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_MOUSEDRAGEND9_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_MOUSEDRAGEND9_BORDER as u64,
+                            NOWHERE => key,
+                        }
+                    }
+                    crate::MOUSE_BUTTON_10 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_MOUSEDRAGEND10_PANE as u64,
+                            STATUS => keyc::KEYC_MOUSEDRAGEND10_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_MOUSEDRAGEND10_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_MOUSEDRAGEND10_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_MOUSEDRAGEND10_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_MOUSEDRAGEND10_BORDER as u64,
+                            NOWHERE => key,
+                        }
+                    }
+                    crate::MOUSE_BUTTON_11 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_MOUSEDRAGEND11_PANE as u64,
+                            STATUS => keyc::KEYC_MOUSEDRAGEND11_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_MOUSEDRAGEND11_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_MOUSEDRAGEND11_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_MOUSEDRAGEND11_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_MOUSEDRAGEND11_BORDER as u64,
+                            NOWHERE => key,
+                        }
+                    }
+                    _ => key = keyc::KEYC_MOUSE as u64,
+                }
+                (*c).tty.mouse_drag_flag = 0;
+                break 'out;
+            }
+
+            // Convert to a key binding.
+            key = KEYC_UNKNOWN;
+            match type_ {
+                type_::NOTYPE => (),
+                type_::MOVE => {
+                    key = match where_ {
+                        PANE => keyc::KEYC_MOUSEMOVE_PANE as u64,
+                        STATUS => keyc::KEYC_MOUSEMOVE_STATUS as u64,
+                        STATUS_LEFT => keyc::KEYC_MOUSEMOVE_STATUS_LEFT as u64,
+                        STATUS_RIGHT => keyc::KEYC_MOUSEMOVE_STATUS_RIGHT as u64,
+                        STATUS_DEFAULT => keyc::KEYC_MOUSEMOVE_STATUS_DEFAULT as u64,
+                        BORDER => keyc::KEYC_MOUSEMOVE_BORDER as u64,
+                        NOWHERE => key,
+                    };
+                }
+                type_::DRAG => {
+                    if (*c).tty.mouse_drag_update.is_some() {
+                        key = keyc::KEYC_DRAGGING as u64;
+                    } else {
+                        match MOUSE_BUTTONS(b) {
+                            crate::MOUSE_BUTTON_1 => {
+                                key = match where_ {
+                                    PANE => keyc::KEYC_MOUSEDRAG1_PANE as u64,
+                                    STATUS => keyc::KEYC_MOUSEDRAG1_STATUS as u64,
+                                    STATUS_LEFT => keyc::KEYC_MOUSEDRAG1_STATUS_LEFT as u64,
+                                    STATUS_RIGHT => keyc::KEYC_MOUSEDRAG1_STATUS_RIGHT as u64,
+                                    STATUS_DEFAULT => keyc::KEYC_MOUSEDRAG1_STATUS_DEFAULT as u64,
+                                    BORDER => keyc::KEYC_MOUSEDRAG1_BORDER as u64,
+                                    NOWHERE => key,
+                                };
+                            }
+                            crate::MOUSE_BUTTON_2 => {
+                                key = match where_ {
+                                    PANE => keyc::KEYC_MOUSEDRAG2_PANE as u64,
+                                    STATUS => keyc::KEYC_MOUSEDRAG2_STATUS as u64,
+                                    STATUS_LEFT => keyc::KEYC_MOUSEDRAG2_STATUS_LEFT as u64,
+                                    STATUS_RIGHT => keyc::KEYC_MOUSEDRAG2_STATUS_RIGHT as u64,
+                                    STATUS_DEFAULT => keyc::KEYC_MOUSEDRAG2_STATUS_DEFAULT as u64,
+                                    BORDER => keyc::KEYC_MOUSEDRAG2_BORDER as u64,
+                                    NOWHERE => key,
+                                };
+                            }
+                            crate::MOUSE_BUTTON_3 => {
+                                key = match where_ {
+                                    PANE => keyc::KEYC_MOUSEDRAG3_PANE as u64,
+                                    STATUS => keyc::KEYC_MOUSEDRAG3_STATUS as u64,
+                                    STATUS_LEFT => keyc::KEYC_MOUSEDRAG3_STATUS_LEFT as u64,
+                                    STATUS_RIGHT => keyc::KEYC_MOUSEDRAG3_STATUS_RIGHT as u64,
+                                    STATUS_DEFAULT => keyc::KEYC_MOUSEDRAG3_STATUS_DEFAULT as u64,
+                                    BORDER => keyc::KEYC_MOUSEDRAG3_BORDER as u64,
+                                    NOWHERE => key,
+                                };
+                            }
+                            crate::MOUSE_BUTTON_6 => {
+                                key = match where_ {
+                                    PANE => keyc::KEYC_MOUSEDRAG6_PANE as u64,
+                                    STATUS => keyc::KEYC_MOUSEDRAG6_STATUS as u64,
+                                    STATUS_LEFT => keyc::KEYC_MOUSEDRAG6_STATUS_LEFT as u64,
+                                    STATUS_RIGHT => keyc::KEYC_MOUSEDRAG6_STATUS_RIGHT as u64,
+                                    STATUS_DEFAULT => keyc::KEYC_MOUSEDRAG6_STATUS_DEFAULT as u64,
+                                    BORDER => keyc::KEYC_MOUSEDRAG6_BORDER as u64,
+                                    NOWHERE => key,
+                                };
+                            }
+                            crate::MOUSE_BUTTON_7 => {
+                                key = match where_ {
+                                    PANE => keyc::KEYC_MOUSEDRAG7_PANE as u64,
+                                    STATUS => keyc::KEYC_MOUSEDRAG7_STATUS as u64,
+                                    STATUS_LEFT => keyc::KEYC_MOUSEDRAG7_STATUS_LEFT as u64,
+                                    STATUS_RIGHT => keyc::KEYC_MOUSEDRAG7_STATUS_RIGHT as u64,
+                                    STATUS_DEFAULT => keyc::KEYC_MOUSEDRAG7_STATUS_DEFAULT as u64,
+                                    BORDER => keyc::KEYC_MOUSEDRAG7_BORDER as u64,
+                                    NOWHERE => key,
+                                };
+                            }
+                            crate::MOUSE_BUTTON_8 => {
+                                key = match where_ {
+                                    PANE => keyc::KEYC_MOUSEDRAG8_PANE as u64,
+                                    STATUS => keyc::KEYC_MOUSEDRAG8_STATUS as u64,
+                                    STATUS_LEFT => keyc::KEYC_MOUSEDRAG8_STATUS_LEFT as u64,
+                                    STATUS_RIGHT => keyc::KEYC_MOUSEDRAG8_STATUS_RIGHT as u64,
+                                    STATUS_DEFAULT => keyc::KEYC_MOUSEDRAG8_STATUS_DEFAULT as u64,
+                                    BORDER => keyc::KEYC_MOUSEDRAG8_BORDER as u64,
+                                    NOWHERE => key,
+                                };
+                            }
+                            crate::MOUSE_BUTTON_9 => {
+                                key = match where_ {
+                                    PANE => keyc::KEYC_MOUSEDRAG9_PANE as u64,
+                                    STATUS => keyc::KEYC_MOUSEDRAG9_STATUS as u64,
+                                    STATUS_LEFT => keyc::KEYC_MOUSEDRAG9_STATUS_LEFT as u64,
+                                    STATUS_RIGHT => keyc::KEYC_MOUSEDRAG9_STATUS_RIGHT as u64,
+                                    STATUS_DEFAULT => keyc::KEYC_MOUSEDRAG9_STATUS_DEFAULT as u64,
+                                    BORDER => keyc::KEYC_MOUSEDRAG9_BORDER as u64,
+                                    NOWHERE => key,
+                                };
+                            }
+                            crate::MOUSE_BUTTON_10 => {
+                                key = match where_ {
+                                    PANE => keyc::KEYC_MOUSEDRAG10_PANE as u64,
+                                    STATUS => keyc::KEYC_MOUSEDRAG10_STATUS as u64,
+                                    STATUS_LEFT => keyc::KEYC_MOUSEDRAG10_STATUS_LEFT as u64,
+                                    STATUS_RIGHT => keyc::KEYC_MOUSEDRAG10_STATUS_RIGHT as u64,
+                                    STATUS_DEFAULT => keyc::KEYC_MOUSEDRAG10_STATUS_DEFAULT as u64,
+                                    BORDER => keyc::KEYC_MOUSEDRAG10_BORDER as u64,
+                                    NOWHERE => key,
+                                };
+                            }
+                            crate::MOUSE_BUTTON_11 => {
+                                key = match where_ {
+                                    PANE => keyc::KEYC_MOUSEDRAG11_PANE as u64,
+                                    STATUS => keyc::KEYC_MOUSEDRAG11_STATUS as u64,
+                                    STATUS_LEFT => keyc::KEYC_MOUSEDRAG11_STATUS_LEFT as u64,
+                                    STATUS_RIGHT => keyc::KEYC_MOUSEDRAG11_STATUS_RIGHT as u64,
+                                    STATUS_DEFAULT => keyc::KEYC_MOUSEDRAG11_STATUS_DEFAULT as u64,
+                                    BORDER => keyc::KEYC_MOUSEDRAG11_BORDER as u64,
+                                    NOWHERE => key,
+                                };
+                            }
+                            _ => (),
+                        }
+                    }
+
+                    /*
+                     * Begin a drag by setting the flag to a non-zero value that
+                     * corresponds to the mouse button in use.
+                     */
+                    (*c).tty.mouse_drag_flag = MOUSE_BUTTONS(b) as i32 + 1;
+                }
+                type_::WHEEL => {
+                    if MOUSE_BUTTONS(b) == MOUSE_WHEEL_UP {
+                        key = match where_ {
+                            PANE => keyc::KEYC_WHEELUP_PANE as u64,
+                            STATUS => keyc::KEYC_WHEELUP_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_WHEELUP_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_WHEELUP_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_WHEELUP_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_WHEELUP_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    } else {
+                        key = match where_ {
+                            PANE => keyc::KEYC_WHEELDOWN_PANE as u64,
+                            STATUS => keyc::KEYC_WHEELDOWN_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_WHEELDOWN_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_WHEELDOWN_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_WHEELDOWN_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_WHEELDOWN_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                }
+                type_::UP => {
+                    match MOUSE_BUTTONS(b) {
+                        crate::MOUSE_BUTTON_1 => {
+                            key = match where_ {
+                                PANE => keyc::KEYC_MOUSEUP1_PANE as u64,
+                                STATUS => keyc::KEYC_MOUSEUP1_STATUS as u64,
+                                STATUS_LEFT => keyc::KEYC_MOUSEUP1_STATUS_LEFT as u64,
+                                STATUS_RIGHT => keyc::KEYC_MOUSEUP1_STATUS_RIGHT as u64,
+                                STATUS_DEFAULT => keyc::KEYC_MOUSEUP1_STATUS_DEFAULT as u64,
+                                BORDER => keyc::KEYC_MOUSEUP1_BORDER as u64,
+                                NOWHERE => key,
+                            };
+                        }
+                        crate::MOUSE_BUTTON_2 => {
+                            key = match where_ {
+                                PANE => keyc::KEYC_MOUSEUP2_PANE as u64,
+                                STATUS => keyc::KEYC_MOUSEUP2_STATUS as u64,
+                                STATUS_LEFT => keyc::KEYC_MOUSEUP2_STATUS_LEFT as u64,
+                                STATUS_RIGHT => keyc::KEYC_MOUSEUP2_STATUS_RIGHT as u64,
+                                STATUS_DEFAULT => keyc::KEYC_MOUSEUP2_STATUS_DEFAULT as u64,
+                                BORDER => keyc::KEYC_MOUSEUP2_BORDER as u64,
+                                NOWHERE => key,
+                            };
+                        }
+                        crate::MOUSE_BUTTON_3 => {
+                            key = match where_ {
+                                PANE => keyc::KEYC_MOUSEUP3_PANE as u64,
+                                STATUS => keyc::KEYC_MOUSEUP3_STATUS as u64,
+                                STATUS_LEFT => keyc::KEYC_MOUSEUP3_STATUS_LEFT as u64,
+                                STATUS_RIGHT => keyc::KEYC_MOUSEUP3_STATUS_RIGHT as u64,
+                                STATUS_DEFAULT => keyc::KEYC_MOUSEUP3_STATUS_DEFAULT as u64,
+                                BORDER => keyc::KEYC_MOUSEUP3_BORDER as u64,
+                                NOWHERE => key,
+                            };
+                        }
+                        crate::MOUSE_BUTTON_6 => {
+                            key = match where_ {
+                                PANE => keyc::KEYC_MOUSEUP6_PANE as u64,
+                                STATUS => keyc::KEYC_MOUSEUP6_STATUS as u64,
+                                STATUS_LEFT => keyc::KEYC_MOUSEUP6_STATUS_LEFT as u64,
+                                STATUS_RIGHT => keyc::KEYC_MOUSEUP6_STATUS_RIGHT as u64,
+                                STATUS_DEFAULT => keyc::KEYC_MOUSEUP6_STATUS_DEFAULT as u64,
+                                BORDER => keyc::KEYC_MOUSEUP6_BORDER as u64,
+                                NOWHERE => key,
+                            };
+                        }
+                        crate::MOUSE_BUTTON_7 => {
+                            key = match where_ {
+                                PANE => keyc::KEYC_MOUSEUP7_PANE as u64,
+                                STATUS => keyc::KEYC_MOUSEUP7_STATUS as u64,
+                                STATUS_LEFT => keyc::KEYC_MOUSEUP7_STATUS_LEFT as u64,
+                                STATUS_RIGHT => keyc::KEYC_MOUSEUP7_STATUS_RIGHT as u64,
+                                STATUS_DEFAULT => keyc::KEYC_MOUSEUP7_STATUS_DEFAULT as u64,
+                                BORDER => keyc::KEYC_MOUSEUP7_BORDER as u64,
+                                NOWHERE => key,
+                            };
+                        }
+                        crate::MOUSE_BUTTON_8 => {
+                            key = match where_ {
+                                PANE => keyc::KEYC_MOUSEUP8_PANE as u64,
+                                STATUS => keyc::KEYC_MOUSEUP8_STATUS as u64,
+                                STATUS_LEFT => keyc::KEYC_MOUSEUP8_STATUS_LEFT as u64,
+                                STATUS_RIGHT => keyc::KEYC_MOUSEUP8_STATUS_RIGHT as u64,
+                                STATUS_DEFAULT => keyc::KEYC_MOUSEUP8_STATUS_DEFAULT as u64,
+                                BORDER => keyc::KEYC_MOUSEUP8_BORDER as u64,
+                                NOWHERE => key,
+                            };
+                        }
+                        crate::MOUSE_BUTTON_9 => {
+                            key = match where_ {
+                                PANE => keyc::KEYC_MOUSEUP9_PANE as u64,
+                                STATUS => keyc::KEYC_MOUSEUP9_STATUS as u64,
+                                STATUS_LEFT => keyc::KEYC_MOUSEUP9_STATUS_LEFT as u64,
+                                STATUS_RIGHT => keyc::KEYC_MOUSEUP9_STATUS_RIGHT as u64,
+                                STATUS_DEFAULT => keyc::KEYC_MOUSEUP9_STATUS_DEFAULT as u64,
+                                BORDER => keyc::KEYC_MOUSEUP9_BORDER as u64,
+                                NOWHERE => key,
+                            };
+                        }
+                        crate::MOUSE_BUTTON_10 => {
+                            // TODO why is this mouseup1 and not mouse up 10, is that a typo?
+                            key = match where_ {
+                                PANE => keyc::KEYC_MOUSEUP1_PANE as u64,
+                                STATUS => keyc::KEYC_MOUSEUP1_STATUS as u64,
+                                STATUS_LEFT => keyc::KEYC_MOUSEUP1_STATUS_LEFT as u64,
+                                STATUS_RIGHT => keyc::KEYC_MOUSEUP1_STATUS_RIGHT as u64,
+                                STATUS_DEFAULT => keyc::KEYC_MOUSEUP1_STATUS_DEFAULT as u64,
+                                BORDER => keyc::KEYC_MOUSEUP1_BORDER as u64,
+                                NOWHERE => key,
+                            };
+                        }
+                        crate::MOUSE_BUTTON_11 => {
+                            key = match where_ {
+                                PANE => keyc::KEYC_MOUSEUP11_PANE as u64,
+                                STATUS => keyc::KEYC_MOUSEUP11_STATUS as u64,
+                                STATUS_LEFT => keyc::KEYC_MOUSEUP11_STATUS_LEFT as u64,
+                                STATUS_RIGHT => keyc::KEYC_MOUSEUP11_STATUS_RIGHT as u64,
+                                STATUS_DEFAULT => keyc::KEYC_MOUSEUP11_STATUS_DEFAULT as u64,
+                                BORDER => keyc::KEYC_MOUSEUP11_BORDER as u64,
+                                NOWHERE => key,
+                            };
+                        }
+                        _ => (),
+                    }
+                }
+                type_::DOWN => match MOUSE_BUTTONS(b) {
+                    crate::MOUSE_BUTTON_1 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_MOUSEDOWN1_PANE as u64,
+                            STATUS => keyc::KEYC_MOUSEDOWN1_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_MOUSEDOWN1_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_MOUSEDOWN1_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_MOUSEDOWN1_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_MOUSEDOWN1_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_2 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_MOUSEDOWN2_PANE as u64,
+                            STATUS => keyc::KEYC_MOUSEDOWN2_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_MOUSEDOWN2_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_MOUSEDOWN2_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_MOUSEDOWN2_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_MOUSEDOWN2_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_3 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_MOUSEDOWN3_PANE as u64,
+                            STATUS => keyc::KEYC_MOUSEDOWN3_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_MOUSEDOWN3_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_MOUSEDOWN3_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_MOUSEDOWN3_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_MOUSEDOWN3_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_6 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_MOUSEDOWN6_PANE as u64,
+                            STATUS => keyc::KEYC_MOUSEDOWN6_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_MOUSEDOWN6_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_MOUSEDOWN6_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_MOUSEDOWN6_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_MOUSEDOWN6_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_7 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_MOUSEDOWN7_PANE as u64,
+                            STATUS => keyc::KEYC_MOUSEDOWN7_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_MOUSEDOWN7_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_MOUSEDOWN7_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_MOUSEDOWN7_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_MOUSEDOWN7_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_8 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_MOUSEDOWN8_PANE as u64,
+                            STATUS => keyc::KEYC_MOUSEDOWN8_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_MOUSEDOWN8_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_MOUSEDOWN8_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_MOUSEDOWN8_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_MOUSEDOWN8_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_9 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_MOUSEDOWN9_PANE as u64,
+                            STATUS => keyc::KEYC_MOUSEDOWN9_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_MOUSEDOWN9_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_MOUSEDOWN9_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_MOUSEDOWN9_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_MOUSEDOWN9_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_10 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_MOUSEDOWN10_PANE as u64,
+                            STATUS => keyc::KEYC_MOUSEDOWN10_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_MOUSEDOWN10_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_MOUSEDOWN10_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_MOUSEDOWN10_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_MOUSEDOWN10_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_11 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_MOUSEDOWN11_PANE as u64,
+                            STATUS => keyc::KEYC_MOUSEDOWN11_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_MOUSEDOWN11_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_MOUSEDOWN11_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_MOUSEDOWN11_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_MOUSEDOWN11_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    _ => (),
+                },
+                type_::SECOND => match MOUSE_BUTTONS(b) {
+                    crate::MOUSE_BUTTON_1 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_SECONDCLICK1_PANE as u64,
+                            STATUS => keyc::KEYC_SECONDCLICK1_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_SECONDCLICK1_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_SECONDCLICK1_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_SECONDCLICK1_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_SECONDCLICK1_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_2 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_SECONDCLICK2_PANE as u64,
+                            STATUS => keyc::KEYC_SECONDCLICK2_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_SECONDCLICK2_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_SECONDCLICK2_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_SECONDCLICK2_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_SECONDCLICK2_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_3 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_SECONDCLICK3_PANE as u64,
+                            STATUS => keyc::KEYC_SECONDCLICK3_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_SECONDCLICK3_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_SECONDCLICK3_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_SECONDCLICK3_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_SECONDCLICK3_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_6 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_SECONDCLICK6_PANE as u64,
+                            STATUS => keyc::KEYC_SECONDCLICK6_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_SECONDCLICK6_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_SECONDCLICK6_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_SECONDCLICK6_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_SECONDCLICK6_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_7 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_SECONDCLICK7_PANE as u64,
+                            STATUS => keyc::KEYC_SECONDCLICK7_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_SECONDCLICK7_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_SECONDCLICK7_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_SECONDCLICK7_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_SECONDCLICK7_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_8 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_SECONDCLICK8_PANE as u64,
+                            STATUS => keyc::KEYC_SECONDCLICK8_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_SECONDCLICK8_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_SECONDCLICK8_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_SECONDCLICK8_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_SECONDCLICK8_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_9 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_SECONDCLICK9_PANE as u64,
+                            STATUS => keyc::KEYC_SECONDCLICK9_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_SECONDCLICK9_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_SECONDCLICK9_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_SECONDCLICK9_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_SECONDCLICK9_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_10 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_SECONDCLICK10_PANE as u64,
+                            STATUS => keyc::KEYC_SECONDCLICK10_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_SECONDCLICK10_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_SECONDCLICK10_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_SECONDCLICK10_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_SECONDCLICK10_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_11 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_SECONDCLICK11_PANE as u64,
+                            STATUS => keyc::KEYC_SECONDCLICK11_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_SECONDCLICK11_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_SECONDCLICK11_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_SECONDCLICK11_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_SECONDCLICK11_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    _ => (),
+                },
+                type_::DOUBLE => match MOUSE_BUTTONS(b) {
+                    crate::MOUSE_BUTTON_1 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_DOUBLECLICK1_PANE as u64,
+                            STATUS => keyc::KEYC_DOUBLECLICK1_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_DOUBLECLICK1_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_DOUBLECLICK1_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_DOUBLECLICK1_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_DOUBLECLICK1_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_2 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_DOUBLECLICK2_PANE as u64,
+                            STATUS => keyc::KEYC_DOUBLECLICK2_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_DOUBLECLICK2_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_DOUBLECLICK2_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_DOUBLECLICK2_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_DOUBLECLICK2_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_3 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_DOUBLECLICK3_PANE as u64,
+                            STATUS => keyc::KEYC_DOUBLECLICK3_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_DOUBLECLICK3_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_DOUBLECLICK3_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_DOUBLECLICK3_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_DOUBLECLICK3_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_6 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_DOUBLECLICK6_PANE as u64,
+                            STATUS => keyc::KEYC_DOUBLECLICK6_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_DOUBLECLICK6_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_DOUBLECLICK6_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_DOUBLECLICK6_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_DOUBLECLICK6_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_7 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_DOUBLECLICK7_PANE as u64,
+                            STATUS => keyc::KEYC_DOUBLECLICK7_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_DOUBLECLICK7_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_DOUBLECLICK7_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_DOUBLECLICK7_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_DOUBLECLICK7_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_8 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_DOUBLECLICK8_PANE as u64,
+                            STATUS => keyc::KEYC_DOUBLECLICK8_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_DOUBLECLICK8_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_DOUBLECLICK8_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_DOUBLECLICK8_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_DOUBLECLICK8_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_9 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_DOUBLECLICK9_PANE as u64,
+                            STATUS => keyc::KEYC_DOUBLECLICK9_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_DOUBLECLICK9_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_DOUBLECLICK9_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_DOUBLECLICK9_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_DOUBLECLICK9_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_10 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_DOUBLECLICK10_PANE as u64,
+                            STATUS => keyc::KEYC_DOUBLECLICK10_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_DOUBLECLICK10_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_DOUBLECLICK10_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_DOUBLECLICK10_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_DOUBLECLICK10_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_11 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_DOUBLECLICK11_PANE as u64,
+                            STATUS => keyc::KEYC_DOUBLECLICK11_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_DOUBLECLICK11_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_DOUBLECLICK11_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_DOUBLECLICK11_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_DOUBLECLICK11_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    _ => (),
+                },
+                type_::TRIPLE => match MOUSE_BUTTONS(b) {
+                    crate::MOUSE_BUTTON_1 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_TRIPLECLICK1_PANE as u64,
+                            STATUS => keyc::KEYC_TRIPLECLICK1_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_TRIPLECLICK1_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_TRIPLECLICK1_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_TRIPLECLICK1_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_TRIPLECLICK1_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_2 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_TRIPLECLICK2_PANE as u64,
+                            STATUS => keyc::KEYC_TRIPLECLICK2_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_TRIPLECLICK2_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_TRIPLECLICK2_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_TRIPLECLICK2_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_TRIPLECLICK2_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_3 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_TRIPLECLICK3_PANE as u64,
+                            STATUS => keyc::KEYC_TRIPLECLICK3_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_TRIPLECLICK3_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_TRIPLECLICK3_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_TRIPLECLICK3_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_TRIPLECLICK3_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_6 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_TRIPLECLICK6_PANE as u64,
+                            STATUS => keyc::KEYC_TRIPLECLICK6_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_TRIPLECLICK6_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_TRIPLECLICK6_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_TRIPLECLICK6_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_TRIPLECLICK6_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_7 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_TRIPLECLICK7_PANE as u64,
+                            STATUS => keyc::KEYC_TRIPLECLICK7_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_TRIPLECLICK7_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_TRIPLECLICK7_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_TRIPLECLICK7_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_TRIPLECLICK7_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_8 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_TRIPLECLICK8_PANE as u64,
+                            STATUS => keyc::KEYC_TRIPLECLICK8_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_TRIPLECLICK8_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_TRIPLECLICK8_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_TRIPLECLICK8_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_TRIPLECLICK8_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_9 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_TRIPLECLICK9_PANE as u64,
+                            STATUS => keyc::KEYC_TRIPLECLICK9_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_TRIPLECLICK9_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_TRIPLECLICK9_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_TRIPLECLICK9_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_TRIPLECLICK9_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_10 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_TRIPLECLICK10_PANE as u64,
+                            STATUS => keyc::KEYC_TRIPLECLICK10_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_TRIPLECLICK10_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_TRIPLECLICK10_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_TRIPLECLICK10_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_TRIPLECLICK10_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    crate::MOUSE_BUTTON_11 => {
+                        key = match where_ {
+                            PANE => keyc::KEYC_TRIPLECLICK11_PANE as u64,
+                            STATUS => keyc::KEYC_TRIPLECLICK11_STATUS as u64,
+                            STATUS_LEFT => keyc::KEYC_TRIPLECLICK11_STATUS_LEFT as u64,
+                            STATUS_RIGHT => keyc::KEYC_TRIPLECLICK11_STATUS_RIGHT as u64,
+                            STATUS_DEFAULT => keyc::KEYC_TRIPLECLICK11_STATUS_DEFAULT as u64,
+                            BORDER => keyc::KEYC_TRIPLECLICK11_BORDER as u64,
+                            NOWHERE => key,
+                        };
+                    }
+                    _ => (),
+                },
+            }
+
+            if key == KEYC_UNKNOWN {
+                return KEYC_UNKNOWN;
+            }
+        } // out:
+
+        // Apply modifiers if any.
+        if b & MOUSE_MASK_META != 0 {
+            key |= KEYC_META;
+        }
+        if b & MOUSE_MASK_CTRL != 0 {
+            key |= KEYC_CTRL;
+        }
+        if b & MOUSE_MASK_SHIFT != 0 {
+            key |= KEYC_SHIFT;
+        }
+
+        if (log_get_level() != 0) {
+            log_debug!("mouse key is {}", _s(key_string_lookup_key(key, 1)));
+        }
+
+        key
+    }
 }
 
-/* Is this a bracket paste key? */
+/// Is this a bracket paste key?
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_is_bracket_pasting(c: *mut client , key: key_code ) -> i32 {
-unsafe {
-  if (key == KEYC_PASTE_START) {
-    (*c).flags |= CLIENT_BRACKETPASTING;
-    log_debug("%s: bracket paste on", (*c).name);
-    return 1;
-  }
+pub unsafe extern "C" fn server_client_is_bracket_pasting(c: *mut client, key: key_code) -> i32 {
+    unsafe {
+        if (key == keyc::KEYC_PASTE_START as u64) {
+            (*c).flags |= client_flag::BRACKETPASTING;
+            log_debug!("{}: bracket paste on", _s((*c).name));
+            return 1;
+        }
 
-  if (key == KEYC_PASTE_END) {
-    (*c).flags &= ~CLIENT_BRACKETPASTING;
-    log_debug("%s: bracket paste off", (*c).name);
-    return 1;
-  }
+        if (key == keyc::KEYC_PASTE_END as u64) {
+            (*c).flags &= !client_flag::BRACKETPASTING;
+            log_debug!("{}: bracket paste off", _s((*c).name));
+            return 1;
+        }
 
-  return !!((*c).flags & CLIENT_BRACKETPASTING);
-}
+        (*c).flags.intersects(client_flag::BRACKETPASTING) as i32
+    }
 }
 
 /// Is this fast enough to probably be a paste?
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_assume_paste(s: *mut session) -> i32 {
-unsafe {
-  struct timeval tv;
-  int t;
+pub unsafe extern "C" fn server_client_assume_paste(s: *mut session) -> i32 {
+    unsafe {
+        let mut tv: timeval = zeroed();
+        let mut t: i32 = options_get_number((*s).options, c"assume-paste-time".as_ptr()) as i32;
 
-  if ((t = options_get_number((*s).options, "assume-paste-time")) == 0) {
-    return 0;
-  }
+        if t == 0 {
+            return 0;
+        }
 
-  timersub(&(*s).activity_time, &(*s).last_activity_time, &tv);
-  if (tv.tv_sec == 0 && tv.tv_usec < t * 1000) {
-    log_debug("session %s pasting (flag %d)", (*s).name,
-              !!((*s).flags & SESSION_PASTING));
-    if ((*s).flags & SESSION_PASTING) {
-      return 1;
+        timersub(
+            &raw const (*s).activity_time,
+            &raw const (*s).last_activity_time,
+            &raw mut tv,
+        );
+        if (tv.tv_sec == 0 && tv.tv_usec < t as i64 * 1000) {
+            log_debug!(
+                "session {} pasting (flag {})",
+                _s((*s).name),
+                ((*s).flags & SESSION_PASTING != 0) as i32
+            );
+            if (*s).flags & SESSION_PASTING != 0 {
+                return 1;
+            }
+            (*s).flags |= SESSION_PASTING;
+            return 0;
+        }
+        log_debug!("session {} not pasting", _s((*s).name));
+        (*s).flags &= !SESSION_PASTING;
+
+        0
     }
-    (*s).flags |= SESSION_PASTING;
-    return 0;
-  }
-  log_debug("session %s not pasting", (*s).name);
-  (*s).flags &= ~SESSION_PASTING;
-  return 0;
-}
 }
 
-/* Has the latest client changed? */
+/// Has the latest client changed?
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-server_client_update_latest(c: *mut client ) {
-unsafe {
-  struct window *w;
+pub unsafe extern "C" fn server_client_update_latest(c: *mut client) {
+    unsafe {
+        if (*c).session.is_null() {
+            return;
+        }
+        let w = (*(*(*c).session).curw).window;
 
-  if ((*c).session == NULL) {
-    return;
-  }
-  w = (*(*(*c).session).curw).window;
+        if ((*w).latest == c.cast()) {
+            return;
+        }
+        (*w).latest = c.cast();
 
-  if ((*w).latest == c) {
-    return;
-  }
-  (*w).latest = c;
+        if options_get_number((*w).options, c"window-size".as_ptr()) == WINDOW_SIZE_LATEST as i64 {
+            recalculate_size(w, 0);
+        }
 
-  if (options_get_number((*w).options, "window-size") == WINDOW_SIZE_LATEST) {
-    recalculate_size(w, 0);
-  }
-
-  notify_client("client-active", c);
-}
+        notify_client(c"client-active".as_ptr(), c);
+    }
 }
 
+/*
 /*
  * Handle data key input from client. This owns and can modify the key event it
  * is given and is responsible for freeing it.

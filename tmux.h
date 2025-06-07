@@ -2705,7 +2705,7 @@ void printflike(1, 2) server_add_message(const char *, ...);
 int server_create_socket(uint64_t, char **);
 
 /* server-client.c */
-RB_PROTOTYPE(client_windows, client_window, entry, server_client_window_cmp);
+// RB_PROTOTYPE(client_windows, client_window, entry, server_client_window_cmp);
 u_int server_client_how_many(void);
 void server_client_set_overlay(struct client *, u_int, overlay_check_cb,
                                overlay_mode_cb, overlay_draw_cb, overlay_key_cb,

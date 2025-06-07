@@ -109,7 +109,7 @@ pub unsafe extern "C" fn job_run(
                     oo = global_s_options;
                 }
                 shell = options_get_string(oo, c"default-shell".as_ptr());
-                if checkshell(shell) == 0 {
+                if !checkshell(shell) {
                     shell = _PATH_BSHELL;
                 }
             }

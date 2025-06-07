@@ -48,12 +48,12 @@ pub extern "C" fn usage() -> ! {
 pub unsafe extern "C" fn getshell() -> *const c_char {
     unsafe {
         let shell = getenv(c"SHELL".as_ptr());
-        if checkshell(shell) != 0 {
+        if checkshell(shell).as_bool() {
             return shell;
         }
 
         let pw = getpwuid(getuid());
-        if !pw.is_null() && checkshell((*pw).pw_shell) != 0 {
+        if !pw.is_null() && checkshell((*pw).pw_shell).as_bool() {
             return (*pw).pw_shell;
         }
 
@@ -62,19 +62,19 @@ pub unsafe extern "C" fn getshell() -> *const c_char {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn checkshell(shell: *const c_char) -> c_int {
+pub unsafe extern "C" fn checkshell(shell: *const c_char) -> boolint {
     unsafe {
         if shell.is_null() || *shell != b'/' as c_char {
-            return 0;
+            return boolint::FALSE;
         }
         if areshell(shell) != 0 {
-            return 0;
+            return boolint::FALSE;
         }
         if access(shell, X_OK) != 0 {
-            return 0;
+            return boolint::FALSE;
         }
     }
-    1
+    boolint::TRUE
 }
 
 #[unsafe(no_mangle)]

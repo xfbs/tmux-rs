@@ -29,13 +29,13 @@
 
 #include "tmux.h"
 
-static void server_client_free(int, short, void *);
+void server_client_free(int, short, void *);
 static void server_client_check_pane_resize(struct window_pane *);
 static void server_client_check_pane_buffer(struct window_pane *);
 static void server_client_check_window_resize(struct window *);
 static key_code server_client_check_mouse(struct client *, struct key_event *);
-static void server_client_repeat_timer(int, short, void *);
-static void server_client_click_timer(int, short, void *);
+void server_client_repeat_timer(int, short, void *);
+void server_client_click_timer(int, short, void *);
 static void server_client_check_exit(struct client *);
 static void server_client_check_redraw(struct client *);
 static void server_client_check_modes(struct client *);
@@ -44,9 +44,9 @@ static void server_client_set_path(struct client *);
 static void server_client_reset_state(struct client *);
 static int server_client_is_bracket_pasting(struct client *, key_code);
 static int server_client_assume_paste(struct session *);
-static void server_client_update_latest(struct client *);
+void server_client_update_latest(struct client *);
 
-static void server_client_dispatch(struct imsg *, void *);
+// static void server_client_dispatch(struct imsg *, void *);
 static void server_client_dispatch_command(struct client *, struct imsg *);
 static void server_client_dispatch_identify(struct client *, struct imsg *);
 static void server_client_dispatch_shell(struct client *);
@@ -54,7 +54,21 @@ static void server_client_dispatch_shell(struct client *);
 int server_client_window_cmp(struct client_window *cw1,
                              struct client_window *cw2);
 
-RB_GENERATE(client_windows, client_window, entry, server_client_window_cmp);
+RB_GENERATE_STATIC(client_windows, client_window, entry,
+                   server_client_window_cmp);
+// void client_windows_RB_INSERT_COLOR(struct client_windows *head, struct
+// client_window *elm); void client_windows_RB_REMOVE_COLOR(struct
+// client_windows *head, struct client_window *parent, struct client_window
+// *elm); struct client_window *client_windows_RB_REMOVE(struct client_windows
+// *head, struct client_window *elm); struct client_window
+// *client_windows_RB_INSERT(struct client_windows *head, struct client_window
+// *elm); struct client_window *client_windows_RB_FIND(struct client_windows
+// *head, struct client_window *elm); struct client_window
+// *client_windows_RB_NFIND(struct client_windows *head, struct client_window
+// *elm); struct client_window *client_windows_RB_NEXT(struct client_window
+// *elm); struct client_window *client_windows_RB_PREV(struct client_window
+// *elm); struct client_window *client_windows_RB_MINMAX(struct client_windows
+// *head, int val);
 
 /* Number of attached clients. */
 u_int server_client_how_many(void);
@@ -72,23 +86,32 @@ u_int server_client_how_many(void);
 // }
 
 /* Overlay timer callback. */
-void server_client_overlay_timer(__unused int fd, __unused short events, void *data);
-// void server_client_overlay_timer(__unused int fd, __unused short events, void *data) {
+void server_client_overlay_timer(__unused int fd, __unused short events,
+                                 void *data);
+// void server_client_overlay_timer(__unused int fd, __unused short events, void
+// *data) {
 //   server_client_clear_overlay(data);
 // }
 
 /* Set an overlay on client. */
-void server_client_set_overlay(struct client *c, u_int delay, overlay_check_cb checkcb, overlay_mode_cb modecb, overlay_draw_cb drawcb, overlay_key_cb keycb, overlay_free_cb freecb, overlay_resize_cb resizecb, void *data);
-// void server_client_set_overlay(struct client *c, u_int delay, overlay_check_cb checkcb, overlay_mode_cb modecb, overlay_draw_cb drawcb, overlay_key_cb keycb, overlay_free_cb freecb, overlay_resize_cb resizecb, void *data) {
+void server_client_set_overlay(struct client *c, u_int delay,
+                               overlay_check_cb checkcb, overlay_mode_cb modecb,
+                               overlay_draw_cb drawcb, overlay_key_cb keycb,
+                               overlay_free_cb freecb,
+                               overlay_resize_cb resizecb, void *data);
+// void server_client_set_overlay(struct client *c, u_int delay,
+// overlay_check_cb checkcb, overlay_mode_cb modecb, overlay_draw_cb drawcb,
+// overlay_key_cb keycb, overlay_free_cb freecb, overlay_resize_cb resizecb,
+// void *data) {
 //   struct timeval tv;
-// 
+//
 //   if ((*c).overlay_draw != NULL) {
 //     server_client_clear_overlay(c);
 //   }
-// 
+//
 //   tv.tv_sec = delay / 1000;
 //   tv.tv_usec = (delay % 1000) * 1000L;
-// 
+//
 //   if (event_initialized(&(*c).overlay_timer)) {
 //     evtimer_del(&(*c).overlay_timer);
 //   }
@@ -96,7 +119,7 @@ void server_client_set_overlay(struct client *c, u_int delay, overlay_check_cb c
 //   if (delay != 0) {
 //     evtimer_add(&(*c).overlay_timer, &tv);
 //   }
-// 
+//
 //   (*c).overlay_check = checkcb;
 //   (*c).overlay_mode = modecb;
 //   (*c).overlay_draw = drawcb;
@@ -104,7 +127,7 @@ void server_client_set_overlay(struct client *c, u_int delay, overlay_check_cb c
 //   (*c).overlay_free = freecb;
 //   (*c).overlay_resize = resizecb;
 //   (*c).overlay_data = data;
-// 
+//
 //   if ((*c).overlay_check == NULL) {
 //     (*c).tty.flags |= TTY_FREEZE;
 //   }
@@ -120,22 +143,22 @@ void server_client_clear_overlay(struct client *c);
 //   if ((*c).overlay_draw == NULL) {
 //     return;
 //   }
-// 
+//
 //   if (event_initialized(&(*c).overlay_timer)) {
 //     evtimer_del(&(*c).overlay_timer);
 //   }
-// 
+//
 //   if ((*c).overlay_free != NULL) {
 //     (*c).overlay_free(c, (*c).overlay_data);
 //   }
-// 
+//
 //   (*c).overlay_check = NULL;
 //   (*c).overlay_mode = NULL;
 //   (*c).overlay_draw = NULL;
 //   (*c).overlay_key = NULL;
 //   (*c).overlay_free = NULL;
 //   (*c).overlay_data = NULL;
-// 
+//
 //   (*c).tty.flags &= ~(TTY_FREEZE | TTY_NOCURSOR);
 //   server_redraw_client(c);
 // }
@@ -144,14 +167,16 @@ void server_client_clear_overlay(struct client *c);
  * Given overlay position and dimensions, return parts of the input range which
  * are visible.
  */
-void server_client_overlay_range(u_int x, u_int y, u_int sx, u_int sy, u_int px, u_int py, u_int nx, struct overlay_ranges *r);
-// void server_client_overlay_range(u_int x, u_int y, u_int sx, u_int sy, u_int px, u_int py, u_int nx, struct overlay_ranges *r) {
+void server_client_overlay_range(u_int x, u_int y, u_int sx, u_int sy, u_int px,
+                                 u_int py, u_int nx, struct overlay_ranges *r);
+// void server_client_overlay_range(u_int x, u_int y, u_int sx, u_int sy, u_int
+// px, u_int py, u_int nx, struct overlay_ranges *r) {
 //   u_int ox, onx;
-// 
+//
 //   /* Return up to 2 ranges. */
 //   (*r).px[2] = 0;
 //   (*r).nx[2] = 0;
-// 
+//
 //   /* Trivial case of no overlap in the y direction. */
 //   if (py < y || py > y + sy - 1) {
 //     (*r).px[0] = px;
@@ -160,7 +185,7 @@ void server_client_overlay_range(u_int x, u_int y, u_int sx, u_int sy, u_int px,
 //     (*r).nx[1] = 0;
 //     return;
 //   }
-// 
+//
 //   /* Visible bit to the left of the popup. */
 //   if (px < x) {
 //     (*r).px[0] = px;
@@ -172,7 +197,7 @@ void server_client_overlay_range(u_int x, u_int y, u_int sx, u_int sy, u_int px,
 //     (*r).px[0] = 0;
 //     (*r).nx[0] = 0;
 //   }
-// 
+//
 //   /* Visible bit to the right of the popup. */
 //   ox = x + sx;
 //   if (px > ox) {
@@ -193,12 +218,12 @@ int server_client_check_nested(struct client *c);
 // int server_client_check_nested(struct client *c) {
 //   struct environ_entry *envent;
 //   struct window_pane *wp;
-// 
+//
 //   envent = environ_find((*c).environ, "TMUX");
 //   if (envent == NULL || *(*envent).value == '\0') {
 //     return 0;
 //   }
-// 
+//
 //   RB_FOREACH(wp, window_pane_tree, &all_window_panes) {
 //     if (strcmp((*wp).tty, (*c).ttyname) == 0) {
 //       return 1;
@@ -213,7 +238,7 @@ void server_client_set_key_table(struct client *c, const char *name);
 //   if (name == NULL) {
 //     name = server_client_get_key_table(c);
 //   }
-// 
+//
 //   key_bindings_unref_table((*c).keytable);
 //   (*c).keytable = key_bindings_get_table(name, 1);
 //   (*(*c).keytable).references++;
@@ -225,7 +250,7 @@ void server_client_set_key_table(struct client *c, const char *name);
 uint64_t server_client_key_table_activity_diff(struct client *c);
 // uint64_t server_client_key_table_activity_diff(struct client *c) {
 //   struct timeval diff;
-// 
+//
 //   timersub(&(*c).activity_time, &(*(*c).keytable).activity_time, &diff);
 //   return (diff.tv_sec * 1000ULL) + (diff.tv_usec / 1000ULL);
 // }
@@ -235,11 +260,11 @@ const char *server_client_get_key_table(struct client *c);
 // const char *server_client_get_key_table(struct client *c) {
 //   struct session *s = (*c).session;
 //   const char *name;
-// 
+//
 //   if (s == NULL) {
 //     return "root";
 //   }
-// 
+//
 //   name = options_get_string((*s).options, "key-table");
 //   if (*name == '\0') {
 //     return "root";
@@ -248,2016 +273,2030 @@ const char *server_client_get_key_table(struct client *c);
 // }
 
 /* Is this table the default key table? */
-int server_client_is_default_key_table(struct client *c, struct key_table *table);
-// static int server_client_is_default_key_table(struct client *c, struct key_table *table) {
+int server_client_is_default_key_table(struct client *c,
+                                       struct key_table *table);
+// static int server_client_is_default_key_table(struct client *c, struct
+// key_table *table) {
 //   return strcmp((*table).name, server_client_get_key_table(c)) == 0;
 // }
 
 /* Create a new client. */
-struct client *server_client_create(int fd) {
-  struct client *c;
-
-  setblocking(fd, 0);
-
-  c = xcalloc(1, sizeof *c);
-  (*c).references = 1;
-  (*c).peer = proc_add_peer(server_proc, fd, server_client_dispatch, c);
-
-  if (gettimeofday(&(*c).creation_time, NULL) != 0) {
-    fatal("gettimeofday failed");
-  }
-  memcpy(&(*c).activity_time, &(*c).creation_time, sizeof(*c).activity_time);
-
-  (*c).environ = environ_create();
-
-  (*c).fd = -1;
-  (*c).out_fd = -1;
-
-  (*c).queue = cmdq_new();
-  RB_INIT(&(*c).windows);
-  RB_INIT(&(*c).files);
-
-  (*c).tty.sx = 80;
-  (*c).tty.sy = 24;
-
-  status_init(c);
-  (*c).flags |= CLIENT_FOCUSED;
-
-  (*c).keytable = key_bindings_get_table("root", 1);
-  (*(*c).keytable).references++;
-
-  evtimer_set(&(*c).repeat_timer, server_client_repeat_timer, c);
-  evtimer_set(&(*c).click_timer, server_client_click_timer, c);
-
-  TAILQ_INSERT_TAIL(&clients, c, entry);
-  log_debug("new client %p", c);
-  return c;
-}
+struct client *server_client_create(int fd);
+// struct client *server_client_create(int fd) {
+//   struct client *c;
+//
+//   setblocking(fd, 0);
+//
+//   c = xcalloc(1, sizeof *c);
+//   (*c).references = 1;
+//   (*c).peer = proc_add_peer(server_proc, fd, server_client_dispatch, c);
+//
+//   if (gettimeofday(&(*c).creation_time, NULL) != 0) {
+//     fatal("gettimeofday failed");
+//   }
+//   memcpy(&(*c).activity_time, &(*c).creation_time, sizeof(*c).activity_time);
+//
+//   (*c).environ = environ_create();
+//
+//   (*c).fd = -1;
+//   (*c).out_fd = -1;
+//
+//   (*c).queue = cmdq_new();
+//   RB_INIT(&(*c).windows);
+//   RB_INIT(&(*c).files);
+//
+//   (*c).tty.sx = 80;
+//   (*c).tty.sy = 24;
+//
+//   status_init(c);
+//   (*c).flags |= CLIENT_FOCUSED;
+//
+//   (*c).keytable = key_bindings_get_table("root", 1);
+//   (*(*c).keytable).references++;
+//
+//   evtimer_set(&(*c).repeat_timer, server_client_repeat_timer, c);
+//   evtimer_set(&(*c).click_timer, server_client_click_timer, c);
+//
+//   TAILQ_INSERT_TAIL(&clients, c, entry);
+//   log_debug("new client %p", c);
+//   return c;
+// }
 
 /* Open client terminal if needed. */
-int server_client_open(struct client *c, char **cause) {
-  const char *ttynam = _PATH_TTY;
-
-  if ((*c).flags & CLIENT_CONTROL) {
-    return 0;
-  }
-
-  if (strcmp((*c).ttyname, ttynam) == 0 ||
-      ((isatty(STDIN_FILENO) && (ttynam = ttyname(STDIN_FILENO)) != NULL &&
-        strcmp((*c).ttyname, ttynam) == 0) ||
-       (isatty(STDOUT_FILENO) && (ttynam = ttyname(STDOUT_FILENO)) != NULL &&
-        strcmp((*c).ttyname, ttynam) == 0) ||
-       (isatty(STDERR_FILENO) && (ttynam = ttyname(STDERR_FILENO)) != NULL &&
-        strcmp((*c).ttyname, ttynam) == 0))) {
-    xasprintf(cause, "can't use %s", (*c).ttyname);
-    return -1;
-  }
-
-  if (!((*c).flags & CLIENT_TERMINAL)) {
-    *cause = xstrdup("not a terminal");
-    return -1;
-  }
-
-  if (tty_open(&(*c).tty, cause) != 0) {
-    return -1;
-  }
-
-  return 0;
-}
+int server_client_open(struct client *c, char **cause);
+// int server_client_open(struct client *c, char **cause) {
+//   const char *ttynam = _PATH_TTY;
+//
+//   if ((*c).flags & CLIENT_CONTROL) {
+//     return 0;
+//   }
+//
+//   if (strcmp((*c).ttyname, ttynam) == 0 ||
+//       ((isatty(STDIN_FILENO) && (ttynam = ttyname(STDIN_FILENO)) != NULL &&
+//         strcmp((*c).ttyname, ttynam) == 0) ||
+//        (isatty(STDOUT_FILENO) && (ttynam = ttyname(STDOUT_FILENO)) != NULL &&
+//         strcmp((*c).ttyname, ttynam) == 0) ||
+//        (isatty(STDERR_FILENO) && (ttynam = ttyname(STDERR_FILENO)) != NULL &&
+//         strcmp((*c).ttyname, ttynam) == 0))) {
+//     xasprintf(cause, "can't use %s", (*c).ttyname);
+//     return -1;
+//   }
+//
+//   if (!((*c).flags & CLIENT_TERMINAL)) {
+//     *cause = xstrdup("not a terminal");
+//     return -1;
+//   }
+//
+//   if (tty_open(&(*c).tty, cause) != 0) {
+//     return -1;
+//   }
+//
+//   return 0;
+// }
 
 /* Lost an attached client. */
-static void server_client_attached_lost(struct client *c) {
-  struct session *s;
-  struct window *w;
-  struct client *loop;
-  struct client *found;
-
-  log_debug("lost attached client %p", c);
-
-  /*
-   * By this point the session in the client has been cleared so walk all
-   * windows to find any with this client as the latest.
-   */
-  RB_FOREACH(w, windows, &windows) {
-    if ((*w).latest != c) {
-      continue;
-    }
-
-    found = NULL;
-    TAILQ_FOREACH(loop, &clients, entry) {
-      s = (*loop).session;
-      if (loop == c || s == NULL || (*(*s).curw).window != w) {
-        continue;
-      }
-      if (found == NULL ||
-          timercmp(&(*loop).activity_time, &(*found).activity_time, >)) {
-        found = loop;
-      }
-    }
-    if (found != NULL) {
-      server_client_update_latest(found);
-    }
-  }
-}
+void server_client_attached_lost(struct client *c);
+// server_client_attached_lost(struct client *c) {
+//   struct session *s;
+//   struct window *w;
+//   struct client *loop;
+//   struct client *found;
+//
+//   log_debug("lost attached client %p", c);
+//
+//   /*
+//    * By this point the session in the client has been cleared so walk all
+//    * windows to find any with this client as the latest.
+//    */
+//   RB_FOREACH(w, windows, &windows) {
+//     if ((*w).latest != c) {
+//       continue;
+//     }
+//
+//     found = NULL;
+//     TAILQ_FOREACH(loop, &clients, entry) {
+//       s = (*loop).session;
+//       if (loop == c || s == NULL || (*(*s).curw).window != w) {
+//         continue;
+//       }
+//       if (found == NULL ||
+//           timercmp(&(*loop).activity_time, &(*found).activity_time, >)) {
+//         found = loop;
+//       }
+//     }
+//     if (found != NULL) {
+//       server_client_update_latest(found);
+//     }
+//   }
+// }
 
 /* Set client session. */
-void server_client_set_session(struct client *c, struct session *s) {
-  struct session *old = (*c).session;
-
-  if (s != NULL && (*c).session != NULL && (*c).session != s) {
-    (*c).last_session = (*c).session;
-  } else if (s == NULL) {
-    (*c).last_session = NULL;
-  }
-  (*c).session = s;
-  (*c).flags |= CLIENT_FOCUSED;
-
-  if (old != NULL && (*old).curw != NULL) {
-    window_update_focus((*(*old).curw).window);
-  }
-  if (s != NULL) {
-    recalculate_sizes();
-    window_update_focus((*(*s).curw).window);
-    session_update_activity(s, NULL);
-    gettimeofday(&(*s).last_attached_time, NULL);
-    (*(*s).curw).flags &= ~WINLINK_ALERTFLAGS;
-    (*(*(*s).curw).window).latest = c;
-    alerts_check_session(s);
-    tty_update_client_offset(c);
-    status_timer_start(c);
-    notify_client("client-session-changed", c);
-    server_redraw_client(c);
-  }
-
-  server_check_unattached();
-  server_update_socket();
-}
+void server_client_set_session(struct client *c, struct session *s);
+// void server_client_set_session(struct client *c, struct session *s) {
+//   struct session *old = (*c).session;
+//
+//   if (s != NULL && (*c).session != NULL && (*c).session != s) {
+//     (*c).last_session = (*c).session;
+//   } else if (s == NULL) {
+//     (*c).last_session = NULL;
+//   }
+//   (*c).session = s;
+//   (*c).flags |= CLIENT_FOCUSED;
+//
+//   if (old != NULL && (*old).curw != NULL) {
+//     window_update_focus((*(*old).curw).window);
+//   }
+//   if (s != NULL) {
+//     recalculate_sizes();
+//     window_update_focus((*(*s).curw).window);
+//     session_update_activity(s, NULL);
+//     gettimeofday(&(*s).last_attached_time, NULL);
+//     (*(*s).curw).flags &= ~WINLINK_ALERTFLAGS;
+//     (*(*(*s).curw).window).latest = c;
+//     alerts_check_session(s);
+//     tty_update_client_offset(c);
+//     status_timer_start(c);
+//     notify_client("client-session-changed", c);
+//     server_redraw_client(c);
+//   }
+//
+//   server_check_unattached();
+//   server_update_socket();
+// }
 
 /* Lost a client. */
-void server_client_lost(struct client *c) {
-  struct client_file *cf, *cf1;
-  struct client_window *cw, *cw1;
-
-  (*c).flags |= CLIENT_DEAD;
-
-  server_client_clear_overlay(c);
-  status_prompt_clear(c);
-  status_message_clear(c);
-
-  RB_FOREACH_SAFE(cf, client_files, &(*c).files, cf1) {
-    (*cf).error = EINTR;
-    file_fire_done(cf);
-  }
-  RB_FOREACH_SAFE(cw, client_windows, &(*c).windows, cw1) {
-    RB_REMOVE(client_windows, &(*c).windows, cw);
-    free(cw);
-  }
-
-  TAILQ_REMOVE(&clients, c, entry);
-  log_debug("lost client %p", c);
-
-  if ((*c).flags & CLIENT_ATTACHED) {
-    server_client_attached_lost(c);
-    notify_client("client-detached", c);
-  }
-
-  if ((*c).flags & CLIENT_CONTROL) {
-    control_stop(c);
-  }
-  if ((*c).flags & CLIENT_TERMINAL) {
-    tty_free(&(*c).tty);
-  }
-  free((*c).ttyname);
-  free((*c).clipboard_panes);
-
-  free((*c).term_name);
-  free((*c).term_type);
-  tty_term_free_list((*c).term_caps, (*c).term_ncaps);
-
-  status_free(c);
-
-  free((*c).title);
-  free((void *)(*c).cwd);
-
-  evtimer_del(&(*c).repeat_timer);
-  evtimer_del(&(*c).click_timer);
-
-  key_bindings_unref_table((*c).keytable);
-
-  free((*c).message_string);
-  if (event_initialized(&(*c).message_timer)) {
-    evtimer_del(&(*c).message_timer);
-  }
-
-  free((*c).prompt_saved);
-  free((*c).prompt_string);
-  free((*c).prompt_buffer);
-
-  format_lost_client(c);
-  environ_free((*c).environ);
-
-  proc_remove_peer((*c).peer);
-  (*c).peer = NULL;
-
-  if ((*c).out_fd != -1) {
-    close((*c).out_fd);
-  }
-  if ((*c).fd != -1) {
-    close((*c).fd);
-    (*c).fd = -1;
-  }
-  server_client_unref(c);
-
-  server_add_accept(0); /* may be more file descriptors now */
-
-  recalculate_sizes();
-  server_check_unattached();
-  server_update_socket();
-}
+void server_client_lost(struct client *c);
+// void server_client_lost(struct client *c) {
+//   struct client_file *cf, *cf1;
+//   struct client_window *cw, *cw1;
+//
+//   (*c).flags |= CLIENT_DEAD;
+//
+//   server_client_clear_overlay(c);
+//   status_prompt_clear(c);
+//   status_message_clear(c);
+//
+//   RB_FOREACH_SAFE(cf, client_files, &(*c).files, cf1) {
+//     (*cf).error = EINTR;
+//     file_fire_done(cf);
+//   }
+//   RB_FOREACH_SAFE(cw, client_windows, &(*c).windows, cw1) {
+//     RB_REMOVE(client_windows, &(*c).windows, cw);
+//     free(cw);
+//   }
+//
+//   TAILQ_REMOVE(&clients, c, entry);
+//   log_debug("lost client %p", c);
+//
+//   if ((*c).flags & CLIENT_ATTACHED) {
+//     server_client_attached_lost(c);
+//     notify_client("client-detached", c);
+//   }
+//
+//   if ((*c).flags & CLIENT_CONTROL) {
+//     control_stop(c);
+//   }
+//   if ((*c).flags & CLIENT_TERMINAL) {
+//     tty_free(&(*c).tty);
+//   }
+//   free((*c).ttyname);
+//   free((*c).clipboard_panes);
+//
+//   free((*c).term_name);
+//   free((*c).term_type);
+//   tty_term_free_list((*c).term_caps, (*c).term_ncaps);
+//
+//   status_free(c);
+//
+//   free((*c).title);
+//   free((void *)(*c).cwd);
+//
+//   evtimer_del(&(*c).repeat_timer);
+//   evtimer_del(&(*c).click_timer);
+//
+//   key_bindings_unref_table((*c).keytable);
+//
+//   free((*c).message_string);
+//   if (event_initialized(&(*c).message_timer)) {
+//     evtimer_del(&(*c).message_timer);
+//   }
+//
+//   free((*c).prompt_saved);
+//   free((*c).prompt_string);
+//   free((*c).prompt_buffer);
+//
+//   format_lost_client(c);
+//   environ_free((*c).environ);
+//
+//   proc_remove_peer((*c).peer);
+//   (*c).peer = NULL;
+//
+//   if ((*c).out_fd != -1) {
+//     close((*c).out_fd);
+//   }
+//   if ((*c).fd != -1) {
+//     close((*c).fd);
+//     (*c).fd = -1;
+//   }
+//   server_client_unref(c);
+//
+//   server_add_accept(0); /* may be more file descriptors now */
+//
+//   recalculate_sizes();
+//   server_check_unattached();
+//   server_update_socket();
+// }
 
 /* Remove reference from a client. */
-void server_client_unref(struct client *c) {
-  log_debug("unref client %p (%d references)", c, (*c).references);
-
-  (*c).references -= 1;
-  if ((*c).references == 0) {
-    event_once(-1, EV_TIMEOUT, server_client_free, c, NULL);
-  }
-}
+void server_client_unref(struct client *c);
+// void server_client_unref(struct client *c) {
+//   log_debug("unref client %p (%d references)", c, (*c).references);
+//
+//   (*c).references -= 1;
+//   if ((*c).references == 0) {
+//     event_once(-1, EV_TIMEOUT, server_client_free, c, NULL);
+//   }
+// }
 
 /* Free dead client. */
-static void server_client_free(__unused int fd, __unused short events,
-                               void *arg) {
-  struct client *c = arg;
-
-  log_debug("free client %p (%d references)", c, (*c).references);
-
-  cmdq_free((*c).queue);
-
-  if ((*c).references == 0) {
-    free((void *)(*c).name);
-    free(c);
-  }
-}
+void server_client_free(__unused int fd, __unused short events, void *arg);
+// void server_client_free(__unused int fd, __unused short events, void *arg) {
+//   struct client *c = arg;
+//
+//   log_debug("free client %p (%d references)", c, (*c).references);
+//
+//   cmdq_free((*c).queue);
+//
+//   if ((*c).references == 0) {
+//     free((void *)(*c).name);
+//     free(c);
+//   }
+// }
 
 /* Suspend a client. */
-void server_client_suspend(struct client *c) {
-  struct session *s = (*c).session;
-
-  if (s == NULL || ((*c).flags & CLIENT_UNATTACHEDFLAGS)) {
-    return;
-  }
-
-  tty_stop_tty(&(*c).tty);
-  (*c).flags |= CLIENT_SUSPENDED;
-  proc_send((*c).peer, MSG_SUSPEND, -1, NULL, 0);
-}
+void server_client_suspend(struct client *c);
+// void server_client_suspend(struct client *c) {
+//   struct session *s = (*c).session;
+//
+//   if (s == NULL || ((*c).flags & CLIENT_UNATTACHEDFLAGS)) {
+//     return;
+//   }
+//
+//   tty_stop_tty(&(*c).tty);
+//   (*c).flags |= CLIENT_SUSPENDED;
+//   proc_send((*c).peer, MSG_SUSPEND, -1, NULL, 0);
+// }
 
 /* Detach a client. */
-void server_client_detach(struct client *c, enum msgtype msgtype) {
-  struct session *s = (*c).session;
-
-  if (s == NULL || ((*c).flags & CLIENT_NODETACHFLAGS)) {
-    return;
-  }
-
-  (*c).flags |= CLIENT_EXIT;
-
-  (*c).exit_type = CLIENT_EXIT_DETACH;
-  (*c).exit_msgtype = msgtype;
-  (*c).exit_session = xstrdup((*s).name);
-}
+void server_client_detach(struct client *c, enum msgtype msgtype);
+// void server_client_detach(struct client *c, enum msgtype msgtype) {
+//   struct session *s = (*c).session;
+// 
+//   if (s == NULL || ((*c).flags & CLIENT_NODETACHFLAGS)) {
+//     return;
+//   }
+// 
+//   (*c).flags |= CLIENT_EXIT;
+// 
+//   (*c).exit_type = CLIENT_EXIT_DETACH;
+//   (*c).exit_msgtype = msgtype;
+//   (*c).exit_session = xstrdup((*s).name);
+// }
 
 /* Execute command to replace a client. */
-void server_client_exec(struct client *c, const char *cmd) {
-  struct session *s = (*c).session;
-  char *msg;
-  const char *shell;
-  size_t cmdsize, shellsize;
-
-  if (*cmd == '\0') {
-    return;
-  }
-  cmdsize = strlen(cmd) + 1;
-
-  if (s != NULL) {
-    shell = options_get_string((*s).options, "default-shell");
-  } else {
-    shell = options_get_string(global_s_options, "default-shell");
-  }
-  if (!checkshell(shell)) {
-    shell = _PATH_BSHELL;
-  }
-  shellsize = strlen(shell) + 1;
-
-  msg = xmalloc(cmdsize + shellsize);
-  memcpy(msg, cmd, cmdsize);
-  memcpy(msg + cmdsize, shell, shellsize);
-
-  proc_send((*c).peer, MSG_EXEC, -1, msg, cmdsize + shellsize);
-  free(msg);
-}
+void server_client_exec(struct client *c, const char *cmd);
+// void server_client_exec(struct client *c, const char *cmd) {
+//   struct session *s = (*c).session;
+//   char *msg;
+//   const char *shell;
+//   size_t cmdsize, shellsize;
+// 
+//   if (*cmd == '\0') {
+//     return;
+//   }
+//   cmdsize = strlen(cmd) + 1;
+// 
+//   if (s != NULL) {
+//     shell = options_get_string((*s).options, "default-shell");
+//   } else {
+//     shell = options_get_string(global_s_options, "default-shell");
+//   }
+//   if (!checkshell(shell)) {
+//     shell = _PATH_BSHELL;
+//   }
+//   shellsize = strlen(shell) + 1;
+// 
+//   msg = xmalloc(cmdsize + shellsize);
+//   memcpy(msg, cmd, cmdsize);
+//   memcpy(msg + cmdsize, shell, shellsize);
+// 
+//   proc_send((*c).peer, MSG_EXEC, -1, msg, cmdsize + shellsize);
+//   free(msg);
+// }
 
 /* Check for mouse keys. */
-static key_code server_client_check_mouse(struct client *c,
-                                          struct key_event *event) {
-  struct mouse_event *m = &(*event).m;
-  struct session *s = (*c).session, *fs;
-  struct winlink *fwl;
-  struct window_pane *wp, *fwp;
-  u_int x, y, b, sx, sy, px, py;
-  int ignore = 0;
-  key_code key;
-  struct timeval tv;
-  struct style_range *sr;
-  enum {
-    NOTYPE,
-    MOVE,
-    DOWN,
-    UP,
-    DRAG,
-    WHEEL,
-    SECOND,
-    DOUBLE,
-    TRIPLE
-  } type = NOTYPE;
-  enum {
-    NOWHERE,
-    PANE,
-    STATUS,
-    STATUS_LEFT,
-    STATUS_RIGHT,
-    STATUS_DEFAULT,
-    BORDER
-  } where = NOWHERE;
-
-  log_debug("%s mouse %02x at %u,%u (last %u,%u) (%d)", (*c).name, (*m).b,
-            (*m).x, (*m).y, (*m).lx, (*m).ly, (*c).tty.mouse_drag_flag);
-
-  /* What type of event is this? */
-  if ((*event).key == KEYC_DOUBLECLICK) {
-    type = DOUBLE;
-    x = (*m).x, y = (*m).y, b = (*m).b;
-    ignore = 1;
-    log_debug("double-click at %u,%u", x, y);
-  } else if (((*m).sgr_type != ' ' && MOUSE_DRAG((*m).sgr_b) &&
-              MOUSE_RELEASE((*m).sgr_b)) ||
-             ((*m).sgr_type == ' ' && MOUSE_DRAG((*m).b) &&
-              MOUSE_RELEASE((*m).b) && MOUSE_RELEASE((*m).lb))) {
-    type = MOVE;
-    x = (*m).x, y = (*m).y, b = 0;
-    log_debug("move at %u,%u", x, y);
-  } else if (MOUSE_DRAG((*m).b)) {
-    type = DRAG;
-    if ((*c).tty.mouse_drag_flag) {
-      x = (*m).x, y = (*m).y, b = (*m).b;
-      if (x == (*m).lx && y == (*m).ly) {
-        return KEYC_UNKNOWN;
-      }
-      log_debug("drag update at %u,%u", x, y);
-    } else {
-      x = (*m).lx, y = (*m).ly, b = (*m).lb;
-      log_debug("drag start at %u,%u", x, y);
-    }
-  } else if (MOUSE_WHEEL((*m).b)) {
-    type = WHEEL;
-    x = (*m).x, y = (*m).y, b = (*m).b;
-    log_debug("wheel at %u,%u", x, y);
-  } else if (MOUSE_RELEASE((*m).b)) {
-    type = UP;
-    x = (*m).x, y = (*m).y, b = (*m).lb;
-    if ((*m).sgr_type == 'm') {
-      b = (*m).sgr_b;
-    }
-    log_debug("up at %u,%u", x, y);
-  } else {
-    if ((*c).flags & CLIENT_DOUBLECLICK) {
-      evtimer_del(&(*c).click_timer);
-      (*c).flags &= ~CLIENT_DOUBLECLICK;
-      if ((*m).b == (*c).click_button) {
-        type = SECOND;
-        x = (*m).x, y = (*m).y, b = (*m).b;
-        log_debug("second-click at %u,%u", x, y);
-        (*c).flags |= CLIENT_TRIPLECLICK;
-      }
-    } else if ((*c).flags & CLIENT_TRIPLECLICK) {
-      evtimer_del(&(*c).click_timer);
-      (*c).flags &= ~CLIENT_TRIPLECLICK;
-      if ((*m).b == (*c).click_button) {
-        type = TRIPLE;
-        x = (*m).x, y = (*m).y, b = (*m).b;
-        log_debug("triple-click at %u,%u", x, y);
-        goto have_event;
-      }
-    }
-
-    /* DOWN is the only remaining event type. */
-    if (type == NOTYPE) {
-      type = DOWN;
-      x = (*m).x, y = (*m).y, b = (*m).b;
-      log_debug("down at %u,%u", x, y);
-      (*c).flags |= CLIENT_DOUBLECLICK;
-    }
-
-    if (KEYC_CLICK_TIMEOUT != 0) {
-      memcpy(&(*c).click_event, m, sizeof(*c).click_event);
-      (*c).click_button = (*m).b;
-
-      log_debug("click timer started");
-      tv.tv_sec = KEYC_CLICK_TIMEOUT / 1000;
-      tv.tv_usec = (KEYC_CLICK_TIMEOUT % 1000) * 1000L;
-      evtimer_del(&(*c).click_timer);
-      evtimer_add(&(*c).click_timer, &tv);
-    }
-  }
-
-have_event:
-  if (type == NOTYPE) {
-    return KEYC_UNKNOWN;
-  }
-
-  /* Save the session. */
-  (*m).s = (*s).id;
-  (*m).w = -1;
-  (*m).wp = -1;
-  (*m).ignore = ignore;
-
-  /* Is this on the status line? */
-  (*m).statusat = status_at_line(c);
-  (*m).statuslines = status_line_size(c);
-  if ((*m).statusat != -1 && y >= (u_int)(*m).statusat &&
-      y < (*m).statusat + (*m).statuslines) {
-    sr = status_get_range(c, x, y - (*m).statusat);
-    if (sr == NULL) {
-      where = STATUS_DEFAULT;
-    } else {
-      switch ((*sr).type) {
-      case STYLE_RANGE_NONE:
-        return KEYC_UNKNOWN;
-      case STYLE_RANGE_LEFT:
-        log_debug("mouse range: left");
-        where = STATUS_LEFT;
-        break;
-      case STYLE_RANGE_RIGHT:
-        log_debug("mouse range: right");
-        where = STATUS_RIGHT;
-        break;
-      case STYLE_RANGE_PANE:
-        fwp = window_pane_find_by_id((*sr).argument);
-        if (fwp == NULL) {
-          return KEYC_UNKNOWN;
-        }
-        (*m).wp = (*sr).argument;
-
-        log_debug("mouse range: pane %%%u", (*m).wp);
-        where = STATUS;
-        break;
-      case STYLE_RANGE_WINDOW:
-        fwl = winlink_find_by_index(&(*s).windows, (*sr).argument);
-        if (fwl == NULL) {
-          return KEYC_UNKNOWN;
-        }
-        (*m).w = (*(*fwl).window).id;
-
-        log_debug("mouse range: window @%u", (*m).w);
-        where = STATUS;
-        break;
-      case STYLE_RANGE_SESSION:
-        fs = session_find_by_id((*sr).argument);
-        if (fs == NULL) {
-          return KEYC_UNKNOWN;
-        }
-        (*m).s = (*sr).argument;
-
-        log_debug("mouse range: session $%u", (*m).s);
-        where = STATUS;
-        break;
-      case STYLE_RANGE_USER:
-        where = STATUS;
-        break;
-      }
-    }
-  }
-
-  /* Not on status line. Adjust position and check for border or pane. */
-  if (where == NOWHERE) {
-    px = x;
-    if ((*m).statusat == 0 && y >= (*m).statuslines) {
-      py = y - (*m).statuslines;
-    } else if ((*m).statusat > 0 && y >= (u_int)(*m).statusat) {
-      py = (*m).statusat - 1;
-    } else {
-      py = y;
-    }
-
-    tty_window_offset(&(*c).tty, &(*m).ox, &(*m).oy, &sx, &sy);
-    log_debug("mouse window @%u at %u,%u (%ux%u)", (*(*(*s).curw).window).id,
-              (*m).ox, (*m).oy, sx, sy);
-    if (px > sx || py > sy) {
-      return KEYC_UNKNOWN;
-    }
-    px = px + (*m).ox;
-    py = py + (*m).oy;
-
-    /* Try the pane borders if not zoomed. */
-    if (~(*(*(*s).curw).window).flags & WINDOW_ZOOMED) {
-      TAILQ_FOREACH(wp, &(*(*(*s).curw).window).panes, entry) {
-        if (((*wp).xoff + (*wp).sx == px && (*wp).yoff <= 1 + py &&
-             (*wp).yoff + (*wp).sy >= py) ||
-            ((*wp).yoff + (*wp).sy == py && (*wp).xoff <= 1 + px &&
-             (*wp).xoff + (*wp).sx >= px)) {
-          break;
-        }
-      }
-      if (wp != NULL) {
-        where = BORDER;
-      }
-    }
-
-    /* Otherwise try inside the pane. */
-    if (where == NOWHERE) {
-      wp = window_get_active_at((*(*s).curw).window, px, py);
-      if (wp != NULL) {
-        where = PANE;
-      } else {
-        return KEYC_UNKNOWN;
-      }
-    }
-    if (where == PANE) {
-      log_debug("mouse %u,%u on pane %%%u", x, y, (*wp).id);
-    } else if (where == BORDER) {
-      log_debug("mouse on pane %%%u border", (*wp).id);
-    }
-    (*m).wp = (*wp).id;
-    (*m).w = (*(*wp).window).id;
-  }
-
-  /* Stop dragging if needed. */
-  if (type != DRAG && type != WHEEL && (*c).tty.mouse_drag_flag != 0) {
-    if ((*c).tty.mouse_drag_release != NULL) {
-      (*c).tty.mouse_drag_release(c, m);
-    }
-
-    (*c).tty.mouse_drag_update = NULL;
-    (*c).tty.mouse_drag_release = NULL;
-
-    /*
-     * End a mouse drag by passing a MouseDragEnd key corresponding
-     * to the button that started the drag.
-     */
-    switch ((*c).tty.mouse_drag_flag - 1) {
-    case MOUSE_BUTTON_1:
-      if (where == PANE) {
-        key = KEYC_MOUSEDRAGEND1_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDRAGEND1_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDRAGEND1_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDRAGEND1_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDRAGEND1_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDRAGEND1_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_2:
-      if (where == PANE) {
-        key = KEYC_MOUSEDRAGEND2_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDRAGEND2_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDRAGEND2_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDRAGEND2_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDRAGEND2_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDRAGEND2_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_3:
-      if (where == PANE) {
-        key = KEYC_MOUSEDRAGEND3_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDRAGEND3_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDRAGEND3_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDRAGEND3_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDRAGEND3_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDRAGEND3_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_6:
-      if (where == PANE) {
-        key = KEYC_MOUSEDRAGEND6_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDRAGEND6_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDRAGEND6_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDRAGEND6_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDRAGEND6_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDRAGEND6_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_7:
-      if (where == PANE) {
-        key = KEYC_MOUSEDRAGEND7_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDRAGEND7_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDRAGEND7_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDRAGEND7_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDRAGEND7_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDRAGEND7_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_8:
-      if (where == PANE) {
-        key = KEYC_MOUSEDRAGEND8_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDRAGEND8_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDRAGEND8_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDRAGEND8_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDRAGEND8_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDRAGEND8_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_9:
-      if (where == PANE) {
-        key = KEYC_MOUSEDRAGEND9_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDRAGEND9_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDRAGEND9_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDRAGEND9_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDRAGEND9_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDRAGEND9_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_10:
-      if (where == PANE) {
-        key = KEYC_MOUSEDRAGEND10_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDRAGEND10_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDRAGEND10_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDRAGEND10_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDRAGEND10_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDRAGEND10_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_11:
-      if (where == PANE) {
-        key = KEYC_MOUSEDRAGEND11_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDRAGEND11_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDRAGEND11_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDRAGEND11_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDRAGEND11_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDRAGEND11_BORDER;
-      }
-      break;
-    default:
-      key = KEYC_MOUSE;
-      break;
-    }
-    (*c).tty.mouse_drag_flag = 0;
-    goto out;
-  }
-
-  /* Convert to a key binding. */
-  key = KEYC_UNKNOWN;
-  switch (type) {
-  case NOTYPE:
-    break;
-  case MOVE:
-    if (where == PANE) {
-      key = KEYC_MOUSEMOVE_PANE;
-    }
-    if (where == STATUS) {
-      key = KEYC_MOUSEMOVE_STATUS;
-    }
-    if (where == STATUS_LEFT) {
-      key = KEYC_MOUSEMOVE_STATUS_LEFT;
-    }
-    if (where == STATUS_RIGHT) {
-      key = KEYC_MOUSEMOVE_STATUS_RIGHT;
-    }
-    if (where == STATUS_DEFAULT) {
-      key = KEYC_MOUSEMOVE_STATUS_DEFAULT;
-    }
-    if (where == BORDER) {
-      key = KEYC_MOUSEMOVE_BORDER;
-    }
-    break;
-  case DRAG:
-    if ((*c).tty.mouse_drag_update != NULL) {
-      key = KEYC_DRAGGING;
-    } else {
-      switch (MOUSE_BUTTONS(b)) {
-      case MOUSE_BUTTON_1:
-        if (where == PANE) {
-          key = KEYC_MOUSEDRAG1_PANE;
-        }
-        if (where == STATUS) {
-          key = KEYC_MOUSEDRAG1_STATUS;
-        }
-        if (where == STATUS_LEFT) {
-          key = KEYC_MOUSEDRAG1_STATUS_LEFT;
-        }
-        if (where == STATUS_RIGHT) {
-          key = KEYC_MOUSEDRAG1_STATUS_RIGHT;
-        }
-        if (where == STATUS_DEFAULT) {
-          key = KEYC_MOUSEDRAG1_STATUS_DEFAULT;
-        }
-        if (where == BORDER) {
-          key = KEYC_MOUSEDRAG1_BORDER;
-        }
-        break;
-      case MOUSE_BUTTON_2:
-        if (where == PANE) {
-          key = KEYC_MOUSEDRAG2_PANE;
-        }
-        if (where == STATUS) {
-          key = KEYC_MOUSEDRAG2_STATUS;
-        }
-        if (where == STATUS_LEFT) {
-          key = KEYC_MOUSEDRAG2_STATUS_LEFT;
-        }
-        if (where == STATUS_RIGHT) {
-          key = KEYC_MOUSEDRAG2_STATUS_RIGHT;
-        }
-        if (where == STATUS_DEFAULT) {
-          key = KEYC_MOUSEDRAG2_STATUS_DEFAULT;
-        }
-        if (where == BORDER) {
-          key = KEYC_MOUSEDRAG2_BORDER;
-        }
-        break;
-      case MOUSE_BUTTON_3:
-        if (where == PANE) {
-          key = KEYC_MOUSEDRAG3_PANE;
-        }
-        if (where == STATUS) {
-          key = KEYC_MOUSEDRAG3_STATUS;
-        }
-        if (where == STATUS_LEFT) {
-          key = KEYC_MOUSEDRAG3_STATUS_LEFT;
-        }
-        if (where == STATUS_RIGHT) {
-          key = KEYC_MOUSEDRAG3_STATUS_RIGHT;
-        }
-        if (where == STATUS_DEFAULT) {
-          key = KEYC_MOUSEDRAG3_STATUS_DEFAULT;
-        }
-        if (where == BORDER) {
-          key = KEYC_MOUSEDRAG3_BORDER;
-        }
-        break;
-      case MOUSE_BUTTON_6:
-        if (where == PANE) {
-          key = KEYC_MOUSEDRAG6_PANE;
-        }
-        if (where == STATUS) {
-          key = KEYC_MOUSEDRAG6_STATUS;
-        }
-        if (where == STATUS_LEFT) {
-          key = KEYC_MOUSEDRAG6_STATUS_LEFT;
-        }
-        if (where == STATUS_RIGHT) {
-          key = KEYC_MOUSEDRAG6_STATUS_RIGHT;
-        }
-        if (where == STATUS_DEFAULT) {
-          key = KEYC_MOUSEDRAG6_STATUS_DEFAULT;
-        }
-        if (where == BORDER) {
-          key = KEYC_MOUSEDRAG6_BORDER;
-        }
-        break;
-      case MOUSE_BUTTON_7:
-        if (where == PANE) {
-          key = KEYC_MOUSEDRAG7_PANE;
-        }
-        if (where == STATUS) {
-          key = KEYC_MOUSEDRAG7_STATUS;
-        }
-        if (where == STATUS_LEFT) {
-          key = KEYC_MOUSEDRAG7_STATUS_LEFT;
-        }
-        if (where == STATUS_RIGHT) {
-          key = KEYC_MOUSEDRAG7_STATUS_RIGHT;
-        }
-        if (where == STATUS_DEFAULT) {
-          key = KEYC_MOUSEDRAG7_STATUS_DEFAULT;
-        }
-        if (where == BORDER) {
-          key = KEYC_MOUSEDRAG7_BORDER;
-        }
-        break;
-      case MOUSE_BUTTON_8:
-        if (where == PANE) {
-          key = KEYC_MOUSEDRAG8_PANE;
-        }
-        if (where == STATUS) {
-          key = KEYC_MOUSEDRAG8_STATUS;
-        }
-        if (where == STATUS_LEFT) {
-          key = KEYC_MOUSEDRAG8_STATUS_LEFT;
-        }
-        if (where == STATUS_RIGHT) {
-          key = KEYC_MOUSEDRAG8_STATUS_RIGHT;
-        }
-        if (where == STATUS_DEFAULT) {
-          key = KEYC_MOUSEDRAG8_STATUS_DEFAULT;
-        }
-        if (where == BORDER) {
-          key = KEYC_MOUSEDRAG8_BORDER;
-        }
-        break;
-      case MOUSE_BUTTON_9:
-        if (where == PANE) {
-          key = KEYC_MOUSEDRAG9_PANE;
-        }
-        if (where == STATUS) {
-          key = KEYC_MOUSEDRAG9_STATUS;
-        }
-        if (where == STATUS_LEFT) {
-          key = KEYC_MOUSEDRAG9_STATUS_LEFT;
-        }
-        if (where == STATUS_RIGHT) {
-          key = KEYC_MOUSEDRAG9_STATUS_RIGHT;
-        }
-        if (where == STATUS_DEFAULT) {
-          key = KEYC_MOUSEDRAG9_STATUS_DEFAULT;
-        }
-        if (where == BORDER) {
-          key = KEYC_MOUSEDRAG9_BORDER;
-        }
-        break;
-      case MOUSE_BUTTON_10:
-        if (where == PANE) {
-          key = KEYC_MOUSEDRAG10_PANE;
-        }
-        if (where == STATUS) {
-          key = KEYC_MOUSEDRAG10_STATUS;
-        }
-        if (where == STATUS_LEFT) {
-          key = KEYC_MOUSEDRAG10_STATUS_LEFT;
-        }
-        if (where == STATUS_RIGHT) {
-          key = KEYC_MOUSEDRAG10_STATUS_RIGHT;
-        }
-        if (where == STATUS_DEFAULT) {
-          key = KEYC_MOUSEDRAG10_STATUS_DEFAULT;
-        }
-        if (where == BORDER) {
-          key = KEYC_MOUSEDRAG10_BORDER;
-        }
-        break;
-      case MOUSE_BUTTON_11:
-        if (where == PANE) {
-          key = KEYC_MOUSEDRAG11_PANE;
-        }
-        if (where == STATUS) {
-          key = KEYC_MOUSEDRAG11_STATUS;
-        }
-        if (where == STATUS_LEFT) {
-          key = KEYC_MOUSEDRAG11_STATUS_LEFT;
-        }
-        if (where == STATUS_RIGHT) {
-          key = KEYC_MOUSEDRAG11_STATUS_RIGHT;
-        }
-        if (where == STATUS_DEFAULT) {
-          key = KEYC_MOUSEDRAG11_STATUS_DEFAULT;
-        }
-        if (where == BORDER) {
-          key = KEYC_MOUSEDRAG11_BORDER;
-        }
-        break;
-      }
-    }
-
-    /*
-     * Begin a drag by setting the flag to a non-zero value that
-     * corresponds to the mouse button in use.
-     */
-    (*c).tty.mouse_drag_flag = MOUSE_BUTTONS(b) + 1;
-    break;
-  case WHEEL:
-    if (MOUSE_BUTTONS(b) == MOUSE_WHEEL_UP) {
-      if (where == PANE) {
-        key = KEYC_WHEELUP_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_WHEELUP_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_WHEELUP_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_WHEELUP_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_WHEELUP_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_WHEELUP_BORDER;
-      }
-    } else {
-      if (where == PANE) {
-        key = KEYC_WHEELDOWN_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_WHEELDOWN_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_WHEELDOWN_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_WHEELDOWN_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_WHEELDOWN_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_WHEELDOWN_BORDER;
-      }
-    }
-    break;
-  case UP:
-    switch (MOUSE_BUTTONS(b)) {
-    case MOUSE_BUTTON_1:
-      if (where == PANE) {
-        key = KEYC_MOUSEUP1_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEUP1_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEUP1_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEUP1_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEUP1_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEUP1_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_2:
-      if (where == PANE) {
-        key = KEYC_MOUSEUP2_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEUP2_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEUP2_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEUP2_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEUP2_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEUP2_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_3:
-      if (where == PANE) {
-        key = KEYC_MOUSEUP3_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEUP3_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEUP3_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEUP3_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEUP3_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEUP3_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_6:
-      if (where == PANE) {
-        key = KEYC_MOUSEUP6_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEUP6_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEUP6_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEUP6_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEUP6_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEUP6_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_7:
-      if (where == PANE) {
-        key = KEYC_MOUSEUP7_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEUP7_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEUP7_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEUP7_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEUP7_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEUP7_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_8:
-      if (where == PANE) {
-        key = KEYC_MOUSEUP8_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEUP8_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEUP8_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEUP8_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEUP8_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEUP8_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_9:
-      if (where == PANE) {
-        key = KEYC_MOUSEUP9_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEUP9_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEUP9_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEUP9_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEUP9_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEUP9_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_10:
-      if (where == PANE) {
-        key = KEYC_MOUSEUP1_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEUP1_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEUP1_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEUP1_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEUP1_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEUP1_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_11:
-      if (where == PANE) {
-        key = KEYC_MOUSEUP11_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEUP11_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEUP11_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEUP11_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEUP11_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEUP11_BORDER;
-      }
-      break;
-    }
-    break;
-  case DOWN:
-    switch (MOUSE_BUTTONS(b)) {
-    case MOUSE_BUTTON_1:
-      if (where == PANE) {
-        key = KEYC_MOUSEDOWN1_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDOWN1_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDOWN1_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDOWN1_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDOWN1_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDOWN1_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_2:
-      if (where == PANE) {
-        key = KEYC_MOUSEDOWN2_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDOWN2_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDOWN2_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDOWN2_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDOWN2_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDOWN2_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_3:
-      if (where == PANE) {
-        key = KEYC_MOUSEDOWN3_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDOWN3_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDOWN3_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDOWN3_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDOWN3_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDOWN3_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_6:
-      if (where == PANE) {
-        key = KEYC_MOUSEDOWN6_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDOWN6_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDOWN6_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDOWN6_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDOWN6_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDOWN6_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_7:
-      if (where == PANE) {
-        key = KEYC_MOUSEDOWN7_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDOWN7_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDOWN7_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDOWN7_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDOWN7_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDOWN7_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_8:
-      if (where == PANE) {
-        key = KEYC_MOUSEDOWN8_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDOWN8_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDOWN8_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDOWN8_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDOWN8_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDOWN8_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_9:
-      if (where == PANE) {
-        key = KEYC_MOUSEDOWN9_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDOWN9_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDOWN9_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDOWN9_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDOWN9_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDOWN9_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_10:
-      if (where == PANE) {
-        key = KEYC_MOUSEDOWN10_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDOWN10_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDOWN10_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDOWN10_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDOWN10_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDOWN10_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_11:
-      if (where == PANE) {
-        key = KEYC_MOUSEDOWN11_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_MOUSEDOWN11_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_MOUSEDOWN11_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_MOUSEDOWN11_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_MOUSEDOWN11_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_MOUSEDOWN11_BORDER;
-      }
-      break;
-    }
-    break;
-  case SECOND:
-    switch (MOUSE_BUTTONS(b)) {
-    case MOUSE_BUTTON_1:
-      if (where == PANE) {
-        key = KEYC_SECONDCLICK1_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_SECONDCLICK1_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_SECONDCLICK1_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_SECONDCLICK1_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_SECONDCLICK1_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_SECONDCLICK1_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_2:
-      if (where == PANE) {
-        key = KEYC_SECONDCLICK2_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_SECONDCLICK2_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_SECONDCLICK2_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_SECONDCLICK2_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_SECONDCLICK2_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_SECONDCLICK2_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_3:
-      if (where == PANE) {
-        key = KEYC_SECONDCLICK3_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_SECONDCLICK3_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_SECONDCLICK3_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_SECONDCLICK3_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_SECONDCLICK3_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_SECONDCLICK3_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_6:
-      if (where == PANE) {
-        key = KEYC_SECONDCLICK6_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_SECONDCLICK6_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_SECONDCLICK6_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_SECONDCLICK6_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_SECONDCLICK6_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_SECONDCLICK6_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_7:
-      if (where == PANE) {
-        key = KEYC_SECONDCLICK7_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_SECONDCLICK7_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_SECONDCLICK7_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_SECONDCLICK7_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_SECONDCLICK7_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_SECONDCLICK7_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_8:
-      if (where == PANE) {
-        key = KEYC_SECONDCLICK8_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_SECONDCLICK8_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_SECONDCLICK8_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_SECONDCLICK8_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_SECONDCLICK8_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_SECONDCLICK8_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_9:
-      if (where == PANE) {
-        key = KEYC_SECONDCLICK9_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_SECONDCLICK9_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_SECONDCLICK9_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_SECONDCLICK9_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_SECONDCLICK9_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_SECONDCLICK9_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_10:
-      if (where == PANE) {
-        key = KEYC_SECONDCLICK10_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_SECONDCLICK10_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_SECONDCLICK10_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_SECONDCLICK10_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_SECONDCLICK10_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_SECONDCLICK10_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_11:
-      if (where == PANE) {
-        key = KEYC_SECONDCLICK11_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_SECONDCLICK11_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_SECONDCLICK11_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_SECONDCLICK11_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_SECONDCLICK11_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_SECONDCLICK11_BORDER;
-      }
-      break;
-    }
-    break;
-  case DOUBLE:
-    switch (MOUSE_BUTTONS(b)) {
-    case MOUSE_BUTTON_1:
-      if (where == PANE) {
-        key = KEYC_DOUBLECLICK1_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_DOUBLECLICK1_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_DOUBLECLICK1_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_DOUBLECLICK1_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_DOUBLECLICK1_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_DOUBLECLICK1_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_2:
-      if (where == PANE) {
-        key = KEYC_DOUBLECLICK2_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_DOUBLECLICK2_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_DOUBLECLICK2_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_DOUBLECLICK2_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_DOUBLECLICK2_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_DOUBLECLICK2_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_3:
-      if (where == PANE) {
-        key = KEYC_DOUBLECLICK3_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_DOUBLECLICK3_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_DOUBLECLICK3_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_DOUBLECLICK3_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_DOUBLECLICK3_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_DOUBLECLICK3_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_6:
-      if (where == PANE) {
-        key = KEYC_DOUBLECLICK6_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_DOUBLECLICK6_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_DOUBLECLICK6_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_DOUBLECLICK6_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_DOUBLECLICK6_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_DOUBLECLICK6_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_7:
-      if (where == PANE) {
-        key = KEYC_DOUBLECLICK7_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_DOUBLECLICK7_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_DOUBLECLICK7_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_DOUBLECLICK7_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_DOUBLECLICK7_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_DOUBLECLICK7_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_8:
-      if (where == PANE) {
-        key = KEYC_DOUBLECLICK8_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_DOUBLECLICK8_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_DOUBLECLICK8_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_DOUBLECLICK8_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_DOUBLECLICK8_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_DOUBLECLICK8_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_9:
-      if (where == PANE) {
-        key = KEYC_DOUBLECLICK9_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_DOUBLECLICK9_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_DOUBLECLICK9_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_DOUBLECLICK9_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_DOUBLECLICK9_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_DOUBLECLICK9_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_10:
-      if (where == PANE) {
-        key = KEYC_DOUBLECLICK10_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_DOUBLECLICK10_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_DOUBLECLICK10_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_DOUBLECLICK10_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_DOUBLECLICK10_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_DOUBLECLICK10_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_11:
-      if (where == PANE) {
-        key = KEYC_DOUBLECLICK11_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_DOUBLECLICK11_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_DOUBLECLICK11_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_DOUBLECLICK11_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_DOUBLECLICK11_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_DOUBLECLICK11_BORDER;
-      }
-      break;
-    }
-    break;
-  case TRIPLE:
-    switch (MOUSE_BUTTONS(b)) {
-    case MOUSE_BUTTON_1:
-      if (where == PANE) {
-        key = KEYC_TRIPLECLICK1_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_TRIPLECLICK1_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_TRIPLECLICK1_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_TRIPLECLICK1_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_TRIPLECLICK1_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_TRIPLECLICK1_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_2:
-      if (where == PANE) {
-        key = KEYC_TRIPLECLICK2_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_TRIPLECLICK2_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_TRIPLECLICK2_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_TRIPLECLICK2_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_TRIPLECLICK2_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_TRIPLECLICK2_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_3:
-      if (where == PANE) {
-        key = KEYC_TRIPLECLICK3_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_TRIPLECLICK3_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_TRIPLECLICK3_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_TRIPLECLICK3_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_TRIPLECLICK3_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_TRIPLECLICK3_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_6:
-      if (where == PANE) {
-        key = KEYC_TRIPLECLICK6_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_TRIPLECLICK6_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_TRIPLECLICK6_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_TRIPLECLICK6_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_TRIPLECLICK6_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_TRIPLECLICK6_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_7:
-      if (where == PANE) {
-        key = KEYC_TRIPLECLICK7_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_TRIPLECLICK7_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_TRIPLECLICK7_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_TRIPLECLICK7_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_TRIPLECLICK7_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_TRIPLECLICK7_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_8:
-      if (where == PANE) {
-        key = KEYC_TRIPLECLICK8_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_TRIPLECLICK8_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_TRIPLECLICK8_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_TRIPLECLICK8_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_TRIPLECLICK8_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_TRIPLECLICK8_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_9:
-      if (where == PANE) {
-        key = KEYC_TRIPLECLICK9_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_TRIPLECLICK9_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_TRIPLECLICK9_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_TRIPLECLICK9_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_TRIPLECLICK9_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_TRIPLECLICK9_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_10:
-      if (where == PANE) {
-        key = KEYC_TRIPLECLICK10_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_TRIPLECLICK10_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_TRIPLECLICK10_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_TRIPLECLICK10_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_TRIPLECLICK10_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_TRIPLECLICK10_BORDER;
-      }
-      break;
-    case MOUSE_BUTTON_11:
-      if (where == PANE) {
-        key = KEYC_TRIPLECLICK11_PANE;
-      }
-      if (where == STATUS) {
-        key = KEYC_TRIPLECLICK11_STATUS;
-      }
-      if (where == STATUS_LEFT) {
-        key = KEYC_TRIPLECLICK11_STATUS_LEFT;
-      }
-      if (where == STATUS_RIGHT) {
-        key = KEYC_TRIPLECLICK11_STATUS_RIGHT;
-      }
-      if (where == STATUS_DEFAULT) {
-        key = KEYC_TRIPLECLICK11_STATUS_DEFAULT;
-      }
-      if (where == BORDER) {
-        key = KEYC_TRIPLECLICK11_BORDER;
-      }
-      break;
-    }
-    break;
-  }
-  if (key == KEYC_UNKNOWN) {
-    return KEYC_UNKNOWN;
-  }
-
-out:
-  /* Apply modifiers if any. */
-  if (b & MOUSE_MASK_META) {
-    key |= KEYC_META;
-  }
-  if (b & MOUSE_MASK_CTRL) {
-    key |= KEYC_CTRL;
-  }
-  if (b & MOUSE_MASK_SHIFT) {
-    key |= KEYC_SHIFT;
-  }
-
-  if (log_get_level() != 0) {
-    log_debug("mouse key is %s", key_string_lookup_key(key, 1));
-  }
-  return key;
-}
+key_code server_client_check_mouse(struct client *c, struct key_event *event);
+// static key_code server_client_check_mouse(struct client *c, struct key_event *event) {
+//   struct mouse_event *m = &(*event).m;
+//   struct session *s = (*c).session, *fs;
+//   struct winlink *fwl;
+//   struct window_pane *wp, *fwp;
+//   u_int x, y, b, sx, sy, px, py;
+//   int ignore = 0;
+//   key_code key;
+//   struct timeval tv;
+//   struct style_range *sr;
+//   enum {
+//     NOTYPE,
+//     MOVE,
+//     DOWN,
+//     UP,
+//     DRAG,
+//     WHEEL,
+//     SECOND,
+//     DOUBLE,
+//     TRIPLE
+//   } type = NOTYPE;
+//   enum {
+//     NOWHERE,
+//     PANE,
+//     STATUS,
+//     STATUS_LEFT,
+//     STATUS_RIGHT,
+//     STATUS_DEFAULT,
+//     BORDER
+//   } where = NOWHERE;
+// 
+//   log_debug("%s mouse %02x at %u,%u (last %u,%u) (%d)", (*c).name, (*m).b,
+//             (*m).x, (*m).y, (*m).lx, (*m).ly, (*c).tty.mouse_drag_flag);
+// 
+//   /* What type of event is this? */
+//   if ((*event).key == KEYC_DOUBLECLICK) {
+//     type = DOUBLE;
+//     x = (*m).x, y = (*m).y, b = (*m).b;
+//     ignore = 1;
+//     log_debug("double-click at %u,%u", x, y);
+//   } else if (((*m).sgr_type != ' ' && MOUSE_DRAG((*m).sgr_b) &&
+//               MOUSE_RELEASE((*m).sgr_b)) ||
+//              ((*m).sgr_type == ' ' && MOUSE_DRAG((*m).b) &&
+//               MOUSE_RELEASE((*m).b) && MOUSE_RELEASE((*m).lb))) {
+//     type = MOVE;
+//     x = (*m).x, y = (*m).y, b = 0;
+//     log_debug("move at %u,%u", x, y);
+//   } else if (MOUSE_DRAG((*m).b)) {
+//     type = DRAG;
+//     if ((*c).tty.mouse_drag_flag) {
+//       x = (*m).x, y = (*m).y, b = (*m).b;
+//       if (x == (*m).lx && y == (*m).ly) {
+//         return KEYC_UNKNOWN;
+//       }
+//       log_debug("drag update at %u,%u", x, y);
+//     } else {
+//       x = (*m).lx, y = (*m).ly, b = (*m).lb;
+//       log_debug("drag start at %u,%u", x, y);
+//     }
+//   } else if (MOUSE_WHEEL((*m).b)) {
+//     type = WHEEL;
+//     x = (*m).x, y = (*m).y, b = (*m).b;
+//     log_debug("wheel at %u,%u", x, y);
+//   } else if (MOUSE_RELEASE((*m).b)) {
+//     type = UP;
+//     x = (*m).x, y = (*m).y, b = (*m).lb;
+//     if ((*m).sgr_type == 'm') {
+//       b = (*m).sgr_b;
+//     }
+//     log_debug("up at %u,%u", x, y);
+//   } else {
+//     if ((*c).flags & CLIENT_DOUBLECLICK) {
+//       evtimer_del(&(*c).click_timer);
+//       (*c).flags &= ~CLIENT_DOUBLECLICK;
+//       if ((*m).b == (*c).click_button) {
+//         type = SECOND;
+//         x = (*m).x, y = (*m).y, b = (*m).b;
+//         log_debug("second-click at %u,%u", x, y);
+//         (*c).flags |= CLIENT_TRIPLECLICK;
+//       }
+//     } else if ((*c).flags & CLIENT_TRIPLECLICK) {
+//       evtimer_del(&(*c).click_timer);
+//       (*c).flags &= ~CLIENT_TRIPLECLICK;
+//       if ((*m).b == (*c).click_button) {
+//         type = TRIPLE;
+//         x = (*m).x, y = (*m).y, b = (*m).b;
+//         log_debug("triple-click at %u,%u", x, y);
+//         goto have_event;
+//       }
+//     }
+// 
+//     /* DOWN is the only remaining event type. */
+//     if (type == NOTYPE) {
+//       type = DOWN;
+//       x = (*m).x, y = (*m).y, b = (*m).b;
+//       log_debug("down at %u,%u", x, y);
+//       (*c).flags |= CLIENT_DOUBLECLICK;
+//     }
+// 
+//     if (KEYC_CLICK_TIMEOUT != 0) {
+//       memcpy(&(*c).click_event, m, sizeof(*c).click_event);
+//       (*c).click_button = (*m).b;
+// 
+//       log_debug("click timer started");
+//       tv.tv_sec = KEYC_CLICK_TIMEOUT / 1000;
+//       tv.tv_usec = (KEYC_CLICK_TIMEOUT % 1000) * 1000L;
+//       evtimer_del(&(*c).click_timer);
+//       evtimer_add(&(*c).click_timer, &tv);
+//     }
+//   }
+// 
+// have_event:
+//   if (type == NOTYPE) {
+//     return KEYC_UNKNOWN;
+//   }
+// 
+//   /* Save the session. */
+//   (*m).s = (*s).id;
+//   (*m).w = -1;
+//   (*m).wp = -1;
+//   (*m).ignore = ignore;
+// 
+//   /* Is this on the status line? */
+//   (*m).statusat = status_at_line(c);
+//   (*m).statuslines = status_line_size(c);
+//   if ((*m).statusat != -1 && y >= (u_int)(*m).statusat &&
+//       y < (*m).statusat + (*m).statuslines) {
+//     sr = status_get_range(c, x, y - (*m).statusat);
+//     if (sr == NULL) {
+//       where = STATUS_DEFAULT;
+//     } else {
+//       switch ((*sr).type) {
+//       case STYLE_RANGE_NONE:
+//         return KEYC_UNKNOWN;
+//       case STYLE_RANGE_LEFT:
+//         log_debug("mouse range: left");
+//         where = STATUS_LEFT;
+//         break;
+//       case STYLE_RANGE_RIGHT:
+//         log_debug("mouse range: right");
+//         where = STATUS_RIGHT;
+//         break;
+//       case STYLE_RANGE_PANE:
+//         fwp = window_pane_find_by_id((*sr).argument);
+//         if (fwp == NULL) {
+//           return KEYC_UNKNOWN;
+//         }
+//         (*m).wp = (*sr).argument;
+// 
+//         log_debug("mouse range: pane %%%u", (*m).wp);
+//         where = STATUS;
+//         break;
+//       case STYLE_RANGE_WINDOW:
+//         fwl = winlink_find_by_index(&(*s).windows, (*sr).argument);
+//         if (fwl == NULL) {
+//           return KEYC_UNKNOWN;
+//         }
+//         (*m).w = (*(*fwl).window).id;
+// 
+//         log_debug("mouse range: window @%u", (*m).w);
+//         where = STATUS;
+//         break;
+//       case STYLE_RANGE_SESSION:
+//         fs = session_find_by_id((*sr).argument);
+//         if (fs == NULL) {
+//           return KEYC_UNKNOWN;
+//         }
+//         (*m).s = (*sr).argument;
+// 
+//         log_debug("mouse range: session $%u", (*m).s);
+//         where = STATUS;
+//         break;
+//       case STYLE_RANGE_USER:
+//         where = STATUS;
+//         break;
+//       }
+//     }
+//   }
+// 
+//   /* Not on status line. Adjust position and check for border or pane. */
+//   if (where == NOWHERE) {
+//     px = x;
+//     if ((*m).statusat == 0 && y >= (*m).statuslines) {
+//       py = y - (*m).statuslines;
+//     } else if ((*m).statusat > 0 && y >= (u_int)(*m).statusat) {
+//       py = (*m).statusat - 1;
+//     } else {
+//       py = y;
+//     }
+// 
+//     tty_window_offset(&(*c).tty, &(*m).ox, &(*m).oy, &sx, &sy);
+//     log_debug("mouse window @%u at %u,%u (%ux%u)", (*(*(*s).curw).window).id,
+//               (*m).ox, (*m).oy, sx, sy);
+//     if (px > sx || py > sy) {
+//       return KEYC_UNKNOWN;
+//     }
+//     px = px + (*m).ox;
+//     py = py + (*m).oy;
+// 
+//     /* Try the pane borders if not zoomed. */
+//     if (~(*(*(*s).curw).window).flags & WINDOW_ZOOMED) {
+//       TAILQ_FOREACH(wp, &(*(*(*s).curw).window).panes, entry) {
+//         if (((*wp).xoff + (*wp).sx == px && (*wp).yoff <= 1 + py &&
+//              (*wp).yoff + (*wp).sy >= py) ||
+//             ((*wp).yoff + (*wp).sy == py && (*wp).xoff <= 1 + px &&
+//              (*wp).xoff + (*wp).sx >= px)) {
+//           break;
+//         }
+//       }
+//       if (wp != NULL) {
+//         where = BORDER;
+//       }
+//     }
+// 
+//     /* Otherwise try inside the pane. */
+//     if (where == NOWHERE) {
+//       wp = window_get_active_at((*(*s).curw).window, px, py);
+//       if (wp != NULL) {
+//         where = PANE;
+//       } else {
+//         return KEYC_UNKNOWN;
+//       }
+//     }
+//     if (where == PANE) {
+//       log_debug("mouse %u,%u on pane %%%u", x, y, (*wp).id);
+//     } else if (where == BORDER) {
+//       log_debug("mouse on pane %%%u border", (*wp).id);
+//     }
+//     (*m).wp = (*wp).id;
+//     (*m).w = (*(*wp).window).id;
+//   }
+// 
+//   /* Stop dragging if needed. */
+//   if (type != DRAG && type != WHEEL && (*c).tty.mouse_drag_flag != 0) {
+//     if ((*c).tty.mouse_drag_release != NULL) {
+//       (*c).tty.mouse_drag_release(c, m);
+//     }
+// 
+//     (*c).tty.mouse_drag_update = NULL;
+//     (*c).tty.mouse_drag_release = NULL;
+// 
+//     /*
+//      * End a mouse drag by passing a MouseDragEnd key corresponding
+//      * to the button that started the drag.
+//      */
+//     switch ((*c).tty.mouse_drag_flag - 1) {
+//     case MOUSE_BUTTON_1:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEDRAGEND1_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEDRAGEND1_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEDRAGEND1_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEDRAGEND1_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEDRAGEND1_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEDRAGEND1_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_2:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEDRAGEND2_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEDRAGEND2_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEDRAGEND2_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEDRAGEND2_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEDRAGEND2_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEDRAGEND2_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_3:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEDRAGEND3_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEDRAGEND3_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEDRAGEND3_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEDRAGEND3_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEDRAGEND3_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEDRAGEND3_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_6:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEDRAGEND6_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEDRAGEND6_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEDRAGEND6_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEDRAGEND6_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEDRAGEND6_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEDRAGEND6_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_7:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEDRAGEND7_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEDRAGEND7_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEDRAGEND7_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEDRAGEND7_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEDRAGEND7_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEDRAGEND7_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_8:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEDRAGEND8_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEDRAGEND8_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEDRAGEND8_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEDRAGEND8_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEDRAGEND8_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEDRAGEND8_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_9:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEDRAGEND9_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEDRAGEND9_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEDRAGEND9_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEDRAGEND9_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEDRAGEND9_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEDRAGEND9_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_10:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEDRAGEND10_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEDRAGEND10_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEDRAGEND10_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEDRAGEND10_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEDRAGEND10_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEDRAGEND10_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_11:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEDRAGEND11_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEDRAGEND11_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEDRAGEND11_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEDRAGEND11_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEDRAGEND11_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEDRAGEND11_BORDER;
+//       }
+//       break;
+//     default:
+//       key = KEYC_MOUSE;
+//       break;
+//     }
+//     (*c).tty.mouse_drag_flag = 0;
+//     goto out;
+//   }
+// 
+//   /* Convert to a key binding. */
+//   key = KEYC_UNKNOWN;
+//   switch (type) {
+//   case NOTYPE:
+//     break;
+//   case MOVE:
+//     if (where == PANE) {
+//       key = KEYC_MOUSEMOVE_PANE;
+//     }
+//     if (where == STATUS) {
+//       key = KEYC_MOUSEMOVE_STATUS;
+//     }
+//     if (where == STATUS_LEFT) {
+//       key = KEYC_MOUSEMOVE_STATUS_LEFT;
+//     }
+//     if (where == STATUS_RIGHT) {
+//       key = KEYC_MOUSEMOVE_STATUS_RIGHT;
+//     }
+//     if (where == STATUS_DEFAULT) {
+//       key = KEYC_MOUSEMOVE_STATUS_DEFAULT;
+//     }
+//     if (where == BORDER) {
+//       key = KEYC_MOUSEMOVE_BORDER;
+//     }
+//     break;
+//   case DRAG:
+//     if ((*c).tty.mouse_drag_update != NULL) {
+//       key = KEYC_DRAGGING;
+//     } else {
+//       switch (MOUSE_BUTTONS(b)) {
+//       case MOUSE_BUTTON_1:
+//         if (where == PANE) {
+//           key = KEYC_MOUSEDRAG1_PANE;
+//         }
+//         if (where == STATUS) {
+//           key = KEYC_MOUSEDRAG1_STATUS;
+//         }
+//         if (where == STATUS_LEFT) {
+//           key = KEYC_MOUSEDRAG1_STATUS_LEFT;
+//         }
+//         if (where == STATUS_RIGHT) {
+//           key = KEYC_MOUSEDRAG1_STATUS_RIGHT;
+//         }
+//         if (where == STATUS_DEFAULT) {
+//           key = KEYC_MOUSEDRAG1_STATUS_DEFAULT;
+//         }
+//         if (where == BORDER) {
+//           key = KEYC_MOUSEDRAG1_BORDER;
+//         }
+//         break;
+//       case MOUSE_BUTTON_2:
+//         if (where == PANE) {
+//           key = KEYC_MOUSEDRAG2_PANE;
+//         }
+//         if (where == STATUS) {
+//           key = KEYC_MOUSEDRAG2_STATUS;
+//         }
+//         if (where == STATUS_LEFT) {
+//           key = KEYC_MOUSEDRAG2_STATUS_LEFT;
+//         }
+//         if (where == STATUS_RIGHT) {
+//           key = KEYC_MOUSEDRAG2_STATUS_RIGHT;
+//         }
+//         if (where == STATUS_DEFAULT) {
+//           key = KEYC_MOUSEDRAG2_STATUS_DEFAULT;
+//         }
+//         if (where == BORDER) {
+//           key = KEYC_MOUSEDRAG2_BORDER;
+//         }
+//         break;
+//       case MOUSE_BUTTON_3:
+//         if (where == PANE) {
+//           key = KEYC_MOUSEDRAG3_PANE;
+//         }
+//         if (where == STATUS) {
+//           key = KEYC_MOUSEDRAG3_STATUS;
+//         }
+//         if (where == STATUS_LEFT) {
+//           key = KEYC_MOUSEDRAG3_STATUS_LEFT;
+//         }
+//         if (where == STATUS_RIGHT) {
+//           key = KEYC_MOUSEDRAG3_STATUS_RIGHT;
+//         }
+//         if (where == STATUS_DEFAULT) {
+//           key = KEYC_MOUSEDRAG3_STATUS_DEFAULT;
+//         }
+//         if (where == BORDER) {
+//           key = KEYC_MOUSEDRAG3_BORDER;
+//         }
+//         break;
+//       case MOUSE_BUTTON_6:
+//         if (where == PANE) {
+//           key = KEYC_MOUSEDRAG6_PANE;
+//         }
+//         if (where == STATUS) {
+//           key = KEYC_MOUSEDRAG6_STATUS;
+//         }
+//         if (where == STATUS_LEFT) {
+//           key = KEYC_MOUSEDRAG6_STATUS_LEFT;
+//         }
+//         if (where == STATUS_RIGHT) {
+//           key = KEYC_MOUSEDRAG6_STATUS_RIGHT;
+//         }
+//         if (where == STATUS_DEFAULT) {
+//           key = KEYC_MOUSEDRAG6_STATUS_DEFAULT;
+//         }
+//         if (where == BORDER) {
+//           key = KEYC_MOUSEDRAG6_BORDER;
+//         }
+//         break;
+//       case MOUSE_BUTTON_7:
+//         if (where == PANE) {
+//           key = KEYC_MOUSEDRAG7_PANE;
+//         }
+//         if (where == STATUS) {
+//           key = KEYC_MOUSEDRAG7_STATUS;
+//         }
+//         if (where == STATUS_LEFT) {
+//           key = KEYC_MOUSEDRAG7_STATUS_LEFT;
+//         }
+//         if (where == STATUS_RIGHT) {
+//           key = KEYC_MOUSEDRAG7_STATUS_RIGHT;
+//         }
+//         if (where == STATUS_DEFAULT) {
+//           key = KEYC_MOUSEDRAG7_STATUS_DEFAULT;
+//         }
+//         if (where == BORDER) {
+//           key = KEYC_MOUSEDRAG7_BORDER;
+//         }
+//         break;
+//       case MOUSE_BUTTON_8:
+//         if (where == PANE) {
+//           key = KEYC_MOUSEDRAG8_PANE;
+//         }
+//         if (where == STATUS) {
+//           key = KEYC_MOUSEDRAG8_STATUS;
+//         }
+//         if (where == STATUS_LEFT) {
+//           key = KEYC_MOUSEDRAG8_STATUS_LEFT;
+//         }
+//         if (where == STATUS_RIGHT) {
+//           key = KEYC_MOUSEDRAG8_STATUS_RIGHT;
+//         }
+//         if (where == STATUS_DEFAULT) {
+//           key = KEYC_MOUSEDRAG8_STATUS_DEFAULT;
+//         }
+//         if (where == BORDER) {
+//           key = KEYC_MOUSEDRAG8_BORDER;
+//         }
+//         break;
+//       case MOUSE_BUTTON_9:
+//         if (where == PANE) {
+//           key = KEYC_MOUSEDRAG9_PANE;
+//         }
+//         if (where == STATUS) {
+//           key = KEYC_MOUSEDRAG9_STATUS;
+//         }
+//         if (where == STATUS_LEFT) {
+//           key = KEYC_MOUSEDRAG9_STATUS_LEFT;
+//         }
+//         if (where == STATUS_RIGHT) {
+//           key = KEYC_MOUSEDRAG9_STATUS_RIGHT;
+//         }
+//         if (where == STATUS_DEFAULT) {
+//           key = KEYC_MOUSEDRAG9_STATUS_DEFAULT;
+//         }
+//         if (where == BORDER) {
+//           key = KEYC_MOUSEDRAG9_BORDER;
+//         }
+//         break;
+//       case MOUSE_BUTTON_10:
+//         if (where == PANE) {
+//           key = KEYC_MOUSEDRAG10_PANE;
+//         }
+//         if (where == STATUS) {
+//           key = KEYC_MOUSEDRAG10_STATUS;
+//         }
+//         if (where == STATUS_LEFT) {
+//           key = KEYC_MOUSEDRAG10_STATUS_LEFT;
+//         }
+//         if (where == STATUS_RIGHT) {
+//           key = KEYC_MOUSEDRAG10_STATUS_RIGHT;
+//         }
+//         if (where == STATUS_DEFAULT) {
+//           key = KEYC_MOUSEDRAG10_STATUS_DEFAULT;
+//         }
+//         if (where == BORDER) {
+//           key = KEYC_MOUSEDRAG10_BORDER;
+//         }
+//         break;
+//       case MOUSE_BUTTON_11:
+//         if (where == PANE) {
+//           key = KEYC_MOUSEDRAG11_PANE;
+//         }
+//         if (where == STATUS) {
+//           key = KEYC_MOUSEDRAG11_STATUS;
+//         }
+//         if (where == STATUS_LEFT) {
+//           key = KEYC_MOUSEDRAG11_STATUS_LEFT;
+//         }
+//         if (where == STATUS_RIGHT) {
+//           key = KEYC_MOUSEDRAG11_STATUS_RIGHT;
+//         }
+//         if (where == STATUS_DEFAULT) {
+//           key = KEYC_MOUSEDRAG11_STATUS_DEFAULT;
+//         }
+//         if (where == BORDER) {
+//           key = KEYC_MOUSEDRAG11_BORDER;
+//         }
+//         break;
+//       }
+//     }
+// 
+//     /*
+//      * Begin a drag by setting the flag to a non-zero value that
+//      * corresponds to the mouse button in use.
+//      */
+//     (*c).tty.mouse_drag_flag = MOUSE_BUTTONS(b) + 1;
+//     break;
+//   case WHEEL:
+//     if (MOUSE_BUTTONS(b) == MOUSE_WHEEL_UP) {
+//       if (where == PANE) {
+//         key = KEYC_WHEELUP_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_WHEELUP_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_WHEELUP_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_WHEELUP_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_WHEELUP_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_WHEELUP_BORDER;
+//       }
+//     } else {
+//       if (where == PANE) {
+//         key = KEYC_WHEELDOWN_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_WHEELDOWN_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_WHEELDOWN_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_WHEELDOWN_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_WHEELDOWN_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_WHEELDOWN_BORDER;
+//       }
+//     }
+//     break;
+//   case UP:
+//     switch (MOUSE_BUTTONS(b)) {
+//     case MOUSE_BUTTON_1:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEUP1_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEUP1_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEUP1_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEUP1_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEUP1_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEUP1_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_2:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEUP2_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEUP2_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEUP2_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEUP2_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEUP2_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEUP2_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_3:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEUP3_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEUP3_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEUP3_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEUP3_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEUP3_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEUP3_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_6:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEUP6_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEUP6_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEUP6_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEUP6_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEUP6_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEUP6_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_7:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEUP7_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEUP7_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEUP7_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEUP7_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEUP7_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEUP7_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_8:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEUP8_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEUP8_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEUP8_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEUP8_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEUP8_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEUP8_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_9:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEUP9_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEUP9_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEUP9_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEUP9_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEUP9_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEUP9_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_10:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEUP1_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEUP1_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEUP1_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEUP1_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEUP1_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEUP1_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_11:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEUP11_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEUP11_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEUP11_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEUP11_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEUP11_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEUP11_BORDER;
+//       }
+//       break;
+//     }
+//     break;
+//   case DOWN:
+//     switch (MOUSE_BUTTONS(b)) {
+//     case MOUSE_BUTTON_1:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEDOWN1_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEDOWN1_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEDOWN1_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEDOWN1_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEDOWN1_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEDOWN1_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_2:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEDOWN2_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEDOWN2_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEDOWN2_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEDOWN2_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEDOWN2_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEDOWN2_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_3:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEDOWN3_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEDOWN3_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEDOWN3_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEDOWN3_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEDOWN3_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEDOWN3_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_6:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEDOWN6_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEDOWN6_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEDOWN6_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEDOWN6_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEDOWN6_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEDOWN6_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_7:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEDOWN7_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEDOWN7_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEDOWN7_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEDOWN7_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEDOWN7_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEDOWN7_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_8:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEDOWN8_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEDOWN8_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEDOWN8_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEDOWN8_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEDOWN8_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEDOWN8_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_9:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEDOWN9_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEDOWN9_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEDOWN9_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEDOWN9_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEDOWN9_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEDOWN9_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_10:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEDOWN10_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEDOWN10_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEDOWN10_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEDOWN10_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEDOWN10_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEDOWN10_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_11:
+//       if (where == PANE) {
+//         key = KEYC_MOUSEDOWN11_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_MOUSEDOWN11_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_MOUSEDOWN11_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_MOUSEDOWN11_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_MOUSEDOWN11_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_MOUSEDOWN11_BORDER;
+//       }
+//       break;
+//     }
+//     break;
+//   case SECOND:
+//     switch (MOUSE_BUTTONS(b)) {
+//     case MOUSE_BUTTON_1:
+//       if (where == PANE) {
+//         key = KEYC_SECONDCLICK1_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_SECONDCLICK1_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_SECONDCLICK1_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_SECONDCLICK1_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_SECONDCLICK1_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_SECONDCLICK1_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_2:
+//       if (where == PANE) {
+//         key = KEYC_SECONDCLICK2_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_SECONDCLICK2_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_SECONDCLICK2_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_SECONDCLICK2_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_SECONDCLICK2_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_SECONDCLICK2_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_3:
+//       if (where == PANE) {
+//         key = KEYC_SECONDCLICK3_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_SECONDCLICK3_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_SECONDCLICK3_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_SECONDCLICK3_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_SECONDCLICK3_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_SECONDCLICK3_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_6:
+//       if (where == PANE) {
+//         key = KEYC_SECONDCLICK6_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_SECONDCLICK6_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_SECONDCLICK6_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_SECONDCLICK6_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_SECONDCLICK6_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_SECONDCLICK6_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_7:
+//       if (where == PANE) {
+//         key = KEYC_SECONDCLICK7_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_SECONDCLICK7_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_SECONDCLICK7_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_SECONDCLICK7_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_SECONDCLICK7_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_SECONDCLICK7_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_8:
+//       if (where == PANE) {
+//         key = KEYC_SECONDCLICK8_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_SECONDCLICK8_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_SECONDCLICK8_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_SECONDCLICK8_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_SECONDCLICK8_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_SECONDCLICK8_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_9:
+//       if (where == PANE) {
+//         key = KEYC_SECONDCLICK9_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_SECONDCLICK9_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_SECONDCLICK9_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_SECONDCLICK9_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_SECONDCLICK9_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_SECONDCLICK9_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_10:
+//       if (where == PANE) {
+//         key = KEYC_SECONDCLICK10_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_SECONDCLICK10_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_SECONDCLICK10_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_SECONDCLICK10_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_SECONDCLICK10_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_SECONDCLICK10_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_11:
+//       if (where == PANE) {
+//         key = KEYC_SECONDCLICK11_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_SECONDCLICK11_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_SECONDCLICK11_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_SECONDCLICK11_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_SECONDCLICK11_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_SECONDCLICK11_BORDER;
+//       }
+//       break;
+//     }
+//     break;
+//   case DOUBLE:
+//     switch (MOUSE_BUTTONS(b)) {
+//     case MOUSE_BUTTON_1:
+//       if (where == PANE) {
+//         key = KEYC_DOUBLECLICK1_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_DOUBLECLICK1_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_DOUBLECLICK1_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_DOUBLECLICK1_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_DOUBLECLICK1_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_DOUBLECLICK1_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_2:
+//       if (where == PANE) {
+//         key = KEYC_DOUBLECLICK2_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_DOUBLECLICK2_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_DOUBLECLICK2_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_DOUBLECLICK2_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_DOUBLECLICK2_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_DOUBLECLICK2_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_3:
+//       if (where == PANE) {
+//         key = KEYC_DOUBLECLICK3_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_DOUBLECLICK3_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_DOUBLECLICK3_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_DOUBLECLICK3_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_DOUBLECLICK3_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_DOUBLECLICK3_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_6:
+//       if (where == PANE) {
+//         key = KEYC_DOUBLECLICK6_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_DOUBLECLICK6_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_DOUBLECLICK6_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_DOUBLECLICK6_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_DOUBLECLICK6_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_DOUBLECLICK6_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_7:
+//       if (where == PANE) {
+//         key = KEYC_DOUBLECLICK7_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_DOUBLECLICK7_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_DOUBLECLICK7_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_DOUBLECLICK7_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_DOUBLECLICK7_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_DOUBLECLICK7_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_8:
+//       if (where == PANE) {
+//         key = KEYC_DOUBLECLICK8_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_DOUBLECLICK8_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_DOUBLECLICK8_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_DOUBLECLICK8_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_DOUBLECLICK8_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_DOUBLECLICK8_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_9:
+//       if (where == PANE) {
+//         key = KEYC_DOUBLECLICK9_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_DOUBLECLICK9_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_DOUBLECLICK9_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_DOUBLECLICK9_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_DOUBLECLICK9_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_DOUBLECLICK9_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_10:
+//       if (where == PANE) {
+//         key = KEYC_DOUBLECLICK10_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_DOUBLECLICK10_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_DOUBLECLICK10_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_DOUBLECLICK10_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_DOUBLECLICK10_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_DOUBLECLICK10_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_11:
+//       if (where == PANE) {
+//         key = KEYC_DOUBLECLICK11_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_DOUBLECLICK11_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_DOUBLECLICK11_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_DOUBLECLICK11_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_DOUBLECLICK11_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_DOUBLECLICK11_BORDER;
+//       }
+//       break;
+//     }
+//     break;
+//   case TRIPLE:
+//     switch (MOUSE_BUTTONS(b)) {
+//     case MOUSE_BUTTON_1:
+//       if (where == PANE) {
+//         key = KEYC_TRIPLECLICK1_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_TRIPLECLICK1_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_TRIPLECLICK1_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_TRIPLECLICK1_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_TRIPLECLICK1_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_TRIPLECLICK1_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_2:
+//       if (where == PANE) {
+//         key = KEYC_TRIPLECLICK2_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_TRIPLECLICK2_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_TRIPLECLICK2_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_TRIPLECLICK2_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_TRIPLECLICK2_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_TRIPLECLICK2_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_3:
+//       if (where == PANE) {
+//         key = KEYC_TRIPLECLICK3_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_TRIPLECLICK3_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_TRIPLECLICK3_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_TRIPLECLICK3_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_TRIPLECLICK3_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_TRIPLECLICK3_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_6:
+//       if (where == PANE) {
+//         key = KEYC_TRIPLECLICK6_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_TRIPLECLICK6_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_TRIPLECLICK6_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_TRIPLECLICK6_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_TRIPLECLICK6_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_TRIPLECLICK6_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_7:
+//       if (where == PANE) {
+//         key = KEYC_TRIPLECLICK7_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_TRIPLECLICK7_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_TRIPLECLICK7_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_TRIPLECLICK7_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_TRIPLECLICK7_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_TRIPLECLICK7_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_8:
+//       if (where == PANE) {
+//         key = KEYC_TRIPLECLICK8_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_TRIPLECLICK8_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_TRIPLECLICK8_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_TRIPLECLICK8_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_TRIPLECLICK8_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_TRIPLECLICK8_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_9:
+//       if (where == PANE) {
+//         key = KEYC_TRIPLECLICK9_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_TRIPLECLICK9_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_TRIPLECLICK9_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_TRIPLECLICK9_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_TRIPLECLICK9_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_TRIPLECLICK9_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_10:
+//       if (where == PANE) {
+//         key = KEYC_TRIPLECLICK10_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_TRIPLECLICK10_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_TRIPLECLICK10_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_TRIPLECLICK10_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_TRIPLECLICK10_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_TRIPLECLICK10_BORDER;
+//       }
+//       break;
+//     case MOUSE_BUTTON_11:
+//       if (where == PANE) {
+//         key = KEYC_TRIPLECLICK11_PANE;
+//       }
+//       if (where == STATUS) {
+//         key = KEYC_TRIPLECLICK11_STATUS;
+//       }
+//       if (where == STATUS_LEFT) {
+//         key = KEYC_TRIPLECLICK11_STATUS_LEFT;
+//       }
+//       if (where == STATUS_RIGHT) {
+//         key = KEYC_TRIPLECLICK11_STATUS_RIGHT;
+//       }
+//       if (where == STATUS_DEFAULT) {
+//         key = KEYC_TRIPLECLICK11_STATUS_DEFAULT;
+//       }
+//       if (where == BORDER) {
+//         key = KEYC_TRIPLECLICK11_BORDER;
+//       }
+//       break;
+//     }
+//     break;
+//   }
+//   if (key == KEYC_UNKNOWN) {
+//     return KEYC_UNKNOWN;
+//   }
+// 
+// out:
+//   /* Apply modifiers if any. */
+//   if (b & MOUSE_MASK_META) {
+//     key |= KEYC_META;
+//   }
+//   if (b & MOUSE_MASK_CTRL) {
+//     key |= KEYC_CTRL;
+//   }
+//   if (b & MOUSE_MASK_SHIFT) {
+//     key |= KEYC_SHIFT;
+//   }
+// 
+//   if (log_get_level() != 0) {
+//     log_debug("mouse key is %s", key_string_lookup_key(key, 1));
+//   }
+//   return key;
+// }
 
 /* Is this a bracket paste key? */
-static int server_client_is_bracket_pasting(struct client *c, key_code key) {
-  if (key == KEYC_PASTE_START) {
-    (*c).flags |= CLIENT_BRACKETPASTING;
-    log_debug("%s: bracket paste on", (*c).name);
-    return 1;
-  }
-
-  if (key == KEYC_PASTE_END) {
-    (*c).flags &= ~CLIENT_BRACKETPASTING;
-    log_debug("%s: bracket paste off", (*c).name);
-    return 1;
-  }
-
-  return !!((*c).flags & CLIENT_BRACKETPASTING);
-}
+int server_client_is_bracket_pasting(struct client *c, key_code key);
+// static int server_client_is_bracket_pasting(struct client *c, key_code key) {
+//   if (key == KEYC_PASTE_START) {
+//     (*c).flags |= CLIENT_BRACKETPASTING;
+//     log_debug("%s: bracket paste on", (*c).name);
+//     return 1;
+//   }
+// 
+//   if (key == KEYC_PASTE_END) {
+//     (*c).flags &= ~CLIENT_BRACKETPASTING;
+//     log_debug("%s: bracket paste off", (*c).name);
+//     return 1;
+//   }
+// 
+//   return !!((*c).flags & CLIENT_BRACKETPASTING);
+// }
 
 /* Is this fast enough to probably be a paste? */
-static int server_client_assume_paste(struct session *s) {
-  struct timeval tv;
-  int t;
-
-  if ((t = options_get_number((*s).options, "assume-paste-time")) == 0) {
-    return 0;
-  }
-
-  timersub(&(*s).activity_time, &(*s).last_activity_time, &tv);
-  if (tv.tv_sec == 0 && tv.tv_usec < t * 1000) {
-    log_debug("session %s pasting (flag %d)", (*s).name,
-              !!((*s).flags & SESSION_PASTING));
-    if ((*s).flags & SESSION_PASTING) {
-      return 1;
-    }
-    (*s).flags |= SESSION_PASTING;
-    return 0;
-  }
-  log_debug("session %s not pasting", (*s).name);
-  (*s).flags &= ~SESSION_PASTING;
-  return 0;
-}
+int server_client_assume_paste(struct session *s);
+// int server_client_assume_paste(struct session *s) {
+//   struct timeval tv;
+//   int t;
+// 
+//   if ((t = options_get_number((*s).options, "assume-paste-time")) == 0) {
+//     return 0;
+//   }
+// 
+//   timersub(&(*s).activity_time, &(*s).last_activity_time, &tv);
+//   if (tv.tv_sec == 0 && tv.tv_usec < t * 1000) {
+//     log_debug("session %s pasting (flag %d)", (*s).name,
+//               !!((*s).flags & SESSION_PASTING));
+//     if ((*s).flags & SESSION_PASTING) {
+//       return 1;
+//     }
+//     (*s).flags |= SESSION_PASTING;
+//     return 0;
+//   }
+//   log_debug("session %s not pasting", (*s).name);
+//   (*s).flags &= ~SESSION_PASTING;
+//   return 0;
+// }
 
 /* Has the latest client changed? */
-static void server_client_update_latest(struct client *c) {
-  struct window *w;
-
-  if ((*c).session == NULL) {
-    return;
-  }
-  w = (*(*(*c).session).curw).window;
-
-  if ((*w).latest == c) {
-    return;
-  }
-  (*w).latest = c;
-
-  if (options_get_number((*w).options, "window-size") == WINDOW_SIZE_LATEST) {
-    recalculate_size(w, 0);
-  }
-
-  notify_client("client-active", c);
-}
+void server_client_update_latest(struct client *c);
+// void server_client_update_latest(struct client *c) {
+//   struct window *w;
+// 
+//   if ((*c).session == NULL) {
+//     return;
+//   }
+//   w = (*(*(*c).session).curw).window;
+// 
+//   if ((*w).latest == c) {
+//     return;
+//   }
+//   (*w).latest = c;
+// 
+//   if (options_get_number((*w).options, "window-size") == WINDOW_SIZE_LATEST) {
+//     recalculate_size(w, 0);
+//   }
+// 
+//   notify_client("client-active", c);
+// }
 
 /*
  * Handle data key input from client. This owns and can modify the key event it
@@ -2916,8 +2955,8 @@ static void server_client_reset_state(struct client *c) {
 }
 
 /* Repeat time callback. */
-static void server_client_repeat_timer(__unused int fd, __unused short events,
-                                       void *data) {
+void server_client_repeat_timer(__unused int fd, __unused short events,
+                                void *data) {
   struct client *c = data;
 
   if ((*c).flags & CLIENT_REPEAT) {
@@ -2928,8 +2967,8 @@ static void server_client_repeat_timer(__unused int fd, __unused short events,
 }
 
 /* Double-click callback. */
-static void server_client_click_timer(__unused int fd, __unused short events,
-                                      void *data) {
+void server_client_click_timer(__unused int fd, __unused short events,
+                               void *data) {
   struct client *c = data;
   struct key_event *event;
 
@@ -3210,7 +3249,7 @@ static void server_client_set_path(struct client *c) {
 }
 
 /* Dispatch message from client. */
-static void server_client_dispatch(struct imsg *imsg, void *arg) {
+void server_client_dispatch(struct imsg *imsg, void *arg) {
   struct client *c = arg;
   ssize_t datalen;
   struct session *s;

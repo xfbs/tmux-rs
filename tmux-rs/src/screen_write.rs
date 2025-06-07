@@ -527,7 +527,7 @@ pub unsafe extern "C" fn screen_write_text(
             || (*text.add(idx)).size != 0)
         {
             free_(text);
-            return boolint::false_();
+            return boolint::FALSE;
         }
         free_(text);
 
@@ -538,7 +538,7 @@ pub unsafe extern "C" fn screen_write_text(
         if (!more || (*s).cx == cx + width) {
             screen_write_cursormove(ctx, cx as i32, (*s).cy as i32 + 1, 0);
         }
-        boolint::true_()
+        boolint::TRUE
     }
 }
 

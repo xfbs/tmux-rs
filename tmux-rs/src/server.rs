@@ -71,15 +71,15 @@ pub unsafe extern "C" fn server_is_marked(
     wp: *mut window_pane,
 ) -> boolint {
     if s.is_null() || wl.is_null() || wp.is_null() {
-        return boolint::false_();
+        return boolint::FALSE;
     }
 
     unsafe {
         if marked_pane.s != s || marked_pane.wl != wl {
-            return boolint::false_();
+            return boolint::FALSE;
         }
         if marked_pane.wp != wp {
-            return boolint::false_();
+            return boolint::FALSE;
         }
         server_check_marked()
     }

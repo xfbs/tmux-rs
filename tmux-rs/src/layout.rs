@@ -258,7 +258,7 @@ unsafe fn layout_add_border(w: *mut window, lc: *mut layout_cell, status: pane_s
         if status == pane_status::PANE_STATUS_BOTTOM {
             return boolint::from(layout_cell_is_bottom(w, lc) != 0);
         }
-        boolint::false_()
+        boolint::FALSE
     }
 }
 
@@ -841,7 +841,7 @@ pub unsafe extern "C" fn layout_set_size_check(
         // Check new size will work for each child
         if (*lc).type_ == type_ {
             if available < (count * 2) - 1 {
-                return boolint::false_();
+                return boolint::FALSE;
             }
 
             if type_ == layout_type::LAYOUT_LEFTRIGHT {
@@ -863,17 +863,17 @@ pub unsafe extern "C" fn layout_set_size_check(
                 );
                 if idx == count - 1 {
                     if new_size > available {
-                        return boolint::false_();
+                        return boolint::FALSE;
                     }
                     available -= new_size;
                 } else {
                     if new_size + 1 > available {
-                        return boolint::false_();
+                        return boolint::FALSE;
                     }
                     available -= new_size + 1;
                 }
                 if !layout_set_size_check(w, lcchild, type_, new_size as i32) {
-                    return boolint::false_();
+                    return boolint::FALSE;
                 }
                 idx += 1;
             }
@@ -883,12 +883,12 @@ pub unsafe extern "C" fn layout_set_size_check(
                     continue;
                 }
                 if !layout_set_size_check(w, lcchild, type_, size) {
-                    return boolint::false_();
+                    return boolint::FALSE;
                 }
             }
         }
 
-        boolint::true_()
+        boolint::TRUE
     }
 }
 

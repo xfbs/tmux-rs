@@ -571,15 +571,15 @@ pub unsafe extern "C" fn utf8_isvalid(mut s: *const c_char) -> boolint {
                 if (more == utf8_state::UTF8_DONE) {
                     continue;
                 }
-                return boolint::false_();
+                return boolint::FALSE;
             }
             if (*s < 0x20 || *s > 0x7e) {
-                return boolint::false_();
+                return boolint::FALSE;
             }
             s = s.add(1);
         }
     }
-    boolint::true_()
+    boolint::TRUE
 }
 
 #[unsafe(no_mangle)]

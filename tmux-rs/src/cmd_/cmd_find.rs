@@ -669,11 +669,11 @@ pub unsafe extern "C" fn cmd_find_empty_state(fs: *mut cmd_find_state) -> i32 {
 pub unsafe extern "C" fn cmd_find_valid_state(fs: *mut cmd_find_state) -> boolint {
     unsafe {
         if (*fs).s.is_null() || (*fs).wl.is_null() || (*fs).w.is_null() || (*fs).wp.is_null() {
-            return boolint::false_();
+            return boolint::FALSE;
         }
 
         if !session_alive((*fs).s) {
-            return boolint::false_();
+            return boolint::FALSE;
         }
 
         let mut wl = null_mut();
@@ -685,11 +685,11 @@ pub unsafe extern "C" fn cmd_find_valid_state(fs: *mut cmd_find_state) -> boolin
         }
 
         if (wl.is_null()) {
-            return boolint::false_();
+            return boolint::FALSE;
         }
 
         if ((*fs).w != (*(*fs).wl).window) {
-            return boolint::false_();
+            return boolint::FALSE;
         }
 
         window_has_pane((*fs).w, (*fs).wp)
