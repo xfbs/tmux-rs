@@ -223,7 +223,7 @@ pub unsafe extern "C" fn session_destroy(s: *mut session, notify: i32, from: *co
 
         free_((*s).tio);
 
-        if (event_initialized(&raw mut (*s).lock_timer) != 0) {
+        if event_initialized(&raw mut (*s).lock_timer).as_bool() {
             event_del(&raw mut (*s).lock_timer);
         }
 
@@ -314,7 +314,7 @@ pub unsafe extern "C" fn session_update_activity(s: *mut session, from: *mut tim
             (*last).tv_usec as i32,
         );
 
-        if evtimer_initialized(&raw mut (*s).lock_timer) != 0 {
+        if evtimer_initialized(&raw mut (*s).lock_timer).as_bool() {
             evtimer_del(&raw mut (*s).lock_timer);
         } else {
             evtimer_set(&raw mut (*s).lock_timer, Some(session_lock_timer), s.cast());

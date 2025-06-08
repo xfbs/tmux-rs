@@ -873,9 +873,6 @@ pub unsafe extern "C" fn grid_move_cells(
 pub unsafe extern "C" fn grid_string_cells_fg(gc: *const grid_cell, values: *mut c_int) -> usize {
     unsafe {
         let mut n: usize = 0;
-        let mut r: u8 = 0; // TODO use uninit
-        let mut g: u8 = 0; // TODO use uninit
-        let mut b: u8 = 0; // TODO use uninit
 
         if (*gc).fg & COLOUR_FLAG_256 != 0 {
             *values.add(n) = 38;
@@ -889,7 +886,7 @@ pub unsafe extern "C" fn grid_string_cells_fg(gc: *const grid_cell, values: *mut
             n += 1;
             *values.add(n) = 2;
             n += 1;
-            colour_split_rgb((*gc).fg, &raw mut r, &raw mut g, &raw mut b);
+            let (r, g, b) = colour_split_rgb_((*gc).fg);
             *values.add(n) = r as c_int;
             n += 1;
             *values.add(n) = g as c_int;
@@ -922,9 +919,6 @@ pub unsafe extern "C" fn grid_string_cells_fg(gc: *const grid_cell, values: *mut
 pub unsafe extern "C" fn grid_string_cells_bg(gc: *const grid_cell, values: *mut c_int) -> usize {
     unsafe {
         let mut n: usize = 0;
-        let mut r: u8 = 0; // TODO use uninit
-        let mut g: u8 = 0; // TODO use uninit
-        let mut b: u8 = 0; // TODO use uninit
 
         if (*gc).bg & COLOUR_FLAG_256 != 0 {
             *values.add(n) = 48;
@@ -938,7 +932,7 @@ pub unsafe extern "C" fn grid_string_cells_bg(gc: *const grid_cell, values: *mut
             n += 1;
             *values.add(n) = 2;
             n += 1;
-            colour_split_rgb((*gc).bg, &mut r, &mut g, &mut b);
+            let (r, g, b) = colour_split_rgb_((*gc).bg);
             *values.add(n) = r as c_int;
             n += 1;
             *values.add(n) = g as c_int;
@@ -971,10 +965,6 @@ pub unsafe extern "C" fn grid_string_cells_bg(gc: *const grid_cell, values: *mut
 pub unsafe extern "C" fn grid_string_cells_us(gc: *const grid_cell, values: *mut c_int) -> usize {
     unsafe {
         let mut n: usize = 0;
-        let mut r: u8 = 0; // TODO use uninit
-        let mut g: u8 = 0; // TODO use uninit
-        let mut b: u8 = 0; // TODO use uninit
-
         if (*gc).us & COLOUR_FLAG_256 != 0 {
             *values.add(n) = 58;
             n += 1;
@@ -987,7 +977,7 @@ pub unsafe extern "C" fn grid_string_cells_us(gc: *const grid_cell, values: *mut
             n += 1;
             *values.add(n) = 2;
             n += 1;
-            colour_split_rgb((*gc).us, &mut r, &mut g, &mut b);
+            let (r, g, b) = colour_split_rgb_((*gc).us);
             *values.add(n) = r as c_int;
             n += 1;
             *values.add(n) = g as c_int;

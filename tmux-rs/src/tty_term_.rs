@@ -678,41 +678,53 @@ pub unsafe extern "C" fn tty_term_apply_overrides(term: *mut tty_term) {
             }
 
             /* Log the SIXEL flag. */
-            log_debug!("SIXEL flag is {}", !!((*term).flags & TERM_SIXEL));
+            log_debug!(
+                "SIXEL flag is {}",
+                ((*term).flags & term_flags::TERM_SIXEL).bits()
+            );
 
             /* Update the RGB flag if the terminal has RGB colours. */
-            if tty_term_has(term, tty_code_code::TTYC_SETRGBF) != 0
-                && tty_term_has(term, tty_code_code::TTYC_SETRGBB) != 0
+            if tty_term_has(term, tty_code_code::TTYC_SETRGBF).as_bool()
+                && tty_term_has(term, tty_code_code::TTYC_SETRGBB).as_bool()
             {
-                (*term).flags |= TERM_RGBCOLOURS;
+                (*term).flags |= term_flags::TERM_RGBCOLOURS;
             } else {
-                (*term).flags &= !TERM_RGBCOLOURS;
+                (*term).flags &= !term_flags::TERM_RGBCOLOURS;
             }
-            log_debug!("RGBCOLOURS flag is {}", !!((*term).flags & TERM_RGBCOLOURS));
+            log_debug!(
+                "RGBCOLOURS flag is {}",
+                ((*term).flags & term_flags::TERM_RGBCOLOURS).bits()
+            );
 
             /*
              * Set or clear the DECSLRM flag if the terminal has the margin
              * capabilities.
              */
-            if tty_term_has(term, tty_code_code::TTYC_CMG) != 0
-                && tty_term_has(term, tty_code_code::TTYC_CLMG) != 0
+            if tty_term_has(term, tty_code_code::TTYC_CMG).as_bool()
+                && tty_term_has(term, tty_code_code::TTYC_CLMG).as_bool()
             {
-                (*term).flags |= TERM_DECSLRM;
+                (*term).flags |= term_flags::TERM_DECSLRM;
             } else {
-                (*term).flags &= !TERM_DECSLRM;
+                (*term).flags &= !term_flags::TERM_DECSLRM;
             }
-            log_debug!("DECSLRM flag is {}", !!((*term).flags & TERM_DECSLRM));
+            log_debug!(
+                "DECSLRM flag is {}",
+                ((*term).flags & term_flags::TERM_DECSLRM).bits()
+            );
 
             /*
              * Set or clear the DECFRA flag if the terminal has the rectangle
              * capability.
              */
-            if (tty_term_has(term, tty_code_code::TTYC_RECT) != 0) {
-                (*term).flags |= TERM_DECFRA;
+            if tty_term_has(term, tty_code_code::TTYC_RECT).as_bool() {
+                (*term).flags |= term_flags::TERM_DECFRA;
             } else {
-                (*term).flags &= !TERM_DECFRA;
+                (*term).flags &= !term_flags::TERM_DECFRA;
             }
-            log_debug!("DECFRA flag is {}", !!((*term).flags & TERM_DECFRA));
+            log_debug!(
+                "DECFRA flag is {}",
+                ((*term).flags & term_flags::TERM_DECFRA).bits()
+            );
 
             /*
              * Terminals without am (auto right margin) wrap at at $COLUMNS - 1
@@ -730,11 +742,14 @@ pub unsafe extern "C" fn tty_term_apply_overrides(term: *mut tty_term) {
              * do the best possible.
              */
             if tty_term_flag(term, tty_code_code::TTYC_AM) == 0 {
-                (*term).flags |= TERM_NOAM;
+                (*term).flags |= term_flags::TERM_NOAM;
             } else {
-                (*term).flags &= !TERM_NOAM;
+                (*term).flags &= !term_flags::TERM_NOAM;
             }
-            log_debug!("NOAM flag is {}", !!((*term).flags & TERM_NOAM));
+            log_debug!(
+                "NOAM flag is {}",
+                ((*term).flags & term_flags::TERM_NOAM).bits()
+            );
 
             /* Generate ACS table. If none is present, use nearest ASCII. */
             memset(
@@ -742,7 +757,7 @@ pub unsafe extern "C" fn tty_term_apply_overrides(term: *mut tty_term) {
                 0,
                 size_of::<[[i8; 2]; 256]>(),
             );
-            if (tty_term_has(term, tty_code_code::TTYC_ACSC) != 0) {
+            if tty_term_has(term, tty_code_code::TTYC_ACSC).as_bool() {
                 acs = tty_term_string(term, tty_code_code::TTYC_ACSC);
             } else {
                 acs = c"a#j+k+l+m+n+o-p-q-r-s-t+u+v+w+x|y<z>~.".as_ptr();
@@ -850,11 +865,11 @@ pub unsafe extern "C" fn tty_term_create(
             tty_term_apply_overrides(term);
 
             /* These are always required. */
-            if tty_term_has(term, tty_code_code::TTYC_CLEAR) == 0 {
+            if !tty_term_has(term, tty_code_code::TTYC_CLEAR) {
                 xasprintf(cause, c"terminal does not support clear".as_ptr());
                 break 'error;
             }
-            if tty_term_has(term, tty_code_code::TTYC_CUP) == 0 {
+            if !tty_term_has(term, tty_code_code::TTYC_CUP) {
                 xasprintf(cause, c"terminal does not support cup".as_ptr());
                 break 'error;
             }
@@ -875,21 +890,21 @@ pub unsafe extern "C" fn tty_term_create(
             if (tty_term_flag(term, tty_code_code::TTYC_XT) != 0
                 || strncmp(s, c"\x1b[".as_ptr(), 2) == 0)
             {
-                (*term).flags |= TERM_VT100LIKE;
+                (*term).flags |= term_flags::TERM_VT100LIKE;
                 tty_add_features(feat, c"bpaste,focus,title".as_ptr(), c",".as_ptr());
             }
 
             /* Add RGB feature if terminal has RGB colours. */
             if ((tty_term_flag(term, tty_code_code::TTYC_TC) != 0
-                || tty_term_has(term, tty_code_code::TTYC_RGB) != 0)
-                && (tty_term_has(term, tty_code_code::TTYC_SETRGBF) == 0
-                    || tty_term_has(term, tty_code_code::TTYC_SETRGBB) == 0))
+                || tty_term_has(term, tty_code_code::TTYC_RGB).as_bool())
+                && (!tty_term_has(term, tty_code_code::TTYC_SETRGBF).as_bool()
+                    || !tty_term_has(term, tty_code_code::TTYC_SETRGBB).as_bool()))
             {
                 tty_add_features(feat, c"RGB".as_ptr(), c",".as_ptr());
             }
 
             /* Apply the features and overrides again. */
-            if (tty_apply_features(term, *feat) != 0) {
+            if tty_apply_features(term, *feat).as_bool() {
                 tty_term_apply_overrides(term);
             }
 
@@ -1016,8 +1031,8 @@ pub unsafe extern "C" fn tty_term_free_list(caps: *mut *mut c_char, ncaps: u32) 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tty_term_has(term: *mut tty_term, code: tty_code_code) -> i32 {
-    unsafe { ((*(*term).codes.add(code as usize)).type_ != tty_code_type::None) as i32 }
+pub unsafe extern "C" fn tty_term_has(term: *mut tty_term, code: tty_code_code) -> boolint {
+    unsafe { boolint::from(((*(*term).codes.add(code as usize)).type_ != tty_code_type::None)) }
 }
 
 #[unsafe(no_mangle)]
@@ -1026,7 +1041,7 @@ pub unsafe extern "C" fn tty_term_string(
     code: tty_code_code,
 ) -> *const c_char {
     unsafe {
-        if tty_term_has(term, code) == 0 {
+        if !tty_term_has(term, code) {
             return c"".as_ptr();
         }
         if ((*(*term).codes.add(code as usize)).type_ != tty_code_type::String) {
@@ -1186,7 +1201,7 @@ pub unsafe extern "C" fn tty_term_string_ss(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_term_number(term: *mut tty_term, code: tty_code_code) -> i32 {
     unsafe {
-        if tty_term_has(term, code) == 0 {
+        if !tty_term_has(term, code) {
             return 0;
         }
         if (*(*term).codes.add(code as usize)).type_ != tty_code_type::Number {
@@ -1199,7 +1214,7 @@ pub unsafe extern "C" fn tty_term_number(term: *mut tty_term, code: tty_code_cod
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_term_flag(term: *mut tty_term, code: tty_code_code) -> i32 {
     unsafe {
-        if tty_term_has(term, code) == 0 {
+        if !tty_term_has(term, code) {
             return 0;
         }
         if (*(*term).codes.add(code as usize)).type_ != tty_code_type::Flag {

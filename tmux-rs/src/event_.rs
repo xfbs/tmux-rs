@@ -4,6 +4,8 @@ use ::core::{
 };
 use ::libc::timeval;
 
+use crate::boolint;
+
 unsafe extern "C" {
     pub fn evbuffer_add_printf(buf: *mut evbuffer, fmt: *const c_char, ...) -> i32;
     pub fn evbuffer_add_vprintf(
@@ -44,7 +46,7 @@ pub unsafe extern "C" fn evtimer_add(ev: *mut event, tv: *const timeval) -> c_in
     unsafe { event_add(ev, tv) }
 }
 
-pub unsafe extern "C" fn evtimer_initialized(ev: *mut event) -> c_int {
+pub unsafe extern "C" fn evtimer_initialized(ev: *mut event) -> boolint {
     unsafe { event_initialized(ev) }
 }
 
@@ -273,6 +275,8 @@ unsafe extern "C" {
     pub fn evbuffer_get_length(buf: *const evbuffer) -> usize;
     pub fn evbuffer_add(buf: *mut evbuffer, data: *const c_void, datlen: usize) -> c_int;
 
+    pub fn evbuffer_write(buffer: *mut evbuffer, fd: i32) -> i32;
+    pub fn evbuffer_read(buffer: *mut evbuffer, fd: i32, howmuch: i32) -> i32;
     pub fn evbuffer_readline(buffer: *mut evbuffer) -> *mut c_char;
     pub fn evbuffer_readln(
         buffer: *mut evbuffer,
@@ -307,7 +311,7 @@ unsafe extern "C" {
     pub fn event_del(arg1: *mut event) -> c_int;
     pub fn event_active(ev: *mut event, res: c_int, ncalls: c_short);
     pub fn event_pending(ev: *const event, events: c_short, tv: *mut timeval) -> c_int;
-    pub fn event_initialized(ev: *const event) -> c_int;
+    pub fn event_initialized(ev: *const event) -> boolint;
     pub fn event_get_version() -> *const c_char;
     pub fn event_loop(arg1: c_int) -> c_int;
     pub fn event_once(
@@ -325,4 +329,28 @@ unsafe extern "C" {
         arg4: Option<unsafe extern "C" fn(arg1: c_int, arg2: c_short, arg3: *mut c_void)>,
         arg5: *mut c_void,
     );
+}
+
+#[inline]
+pub unsafe fn event_set_<T>(
+    arg1: *mut event,
+    arg2: c_int,
+    arg3: c_short,
+    arg4: Option<unsafe extern "C" fn(arg1: c_int, arg2: c_short, arg3: *mut T)>,
+    arg5: *mut T,
+) {
+    // with this we can start changing the interface of all the event set calls and modify
+    // the callbacks to be more typesafe instead of using void pointers.
+    unsafe {
+        event_set(
+            arg1,
+            arg2,
+            arg3,
+            std::mem::transmute::<
+                Option<unsafe extern "C" fn(arg1: c_int, arg2: c_short, arg3: *mut T)>,
+                Option<unsafe extern "C" fn(arg1: c_int, arg2: c_short, arg3: *mut c_void)>,
+            >(arg4),
+            arg5.cast(),
+        )
+    }
 }

@@ -952,7 +952,7 @@ pub type images = tailq_head<image>;
 
 /// Cursor style.
 #[repr(i32)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub enum screen_cursor_style {
     SCREEN_CURSOR_DEFAULT,
     SCREEN_CURSOR_BLOCK,
@@ -1640,13 +1640,19 @@ pub struct key_event {
     pub m: mouse_event,
 }
 
-pub const TERM_256COLOURS: i32 = 0x1;
-pub const TERM_NOAM: i32 = 0x2;
-pub const TERM_DECSLRM: i32 = 0x4;
-pub const TERM_DECFRA: i32 = 0x8;
-pub const TERM_RGBCOLOURS: i32 = 0x10;
-pub const TERM_VT100LIKE: i32 = 0x20;
-pub const TERM_SIXEL: i32 = 0x40;
+bitflags::bitflags! {
+    #[repr(transparent)]
+    #[derive(Copy, Clone)]
+    pub struct term_flags: i32 {
+        const TERM_256COLOURS = 0x1;
+        const TERM_NOAM = 0x2;
+        const TERM_DECSLRM = 0x4;
+        const TERM_DECFRA = 0x8;
+        const TERM_RGBCOLOURS = 0x10;
+        const TERM_VT100LIKE = 0x20;
+        const TERM_SIXEL = 0x40;
+    }
+}
 
 unsafe impl Zeroable for tty_term {}
 /// Terminal definition.
@@ -1660,7 +1666,7 @@ pub struct tty_term {
 
     pub codes: *mut tty_code,
 
-    pub flags: i32,
+    pub flags: term_flags,
 
     pub entry: list_entry<tty_term>,
 }
@@ -2745,10 +2751,23 @@ pub use crate::input_keys::{input_key, input_key_build, input_key_get_mouse, inp
 
 mod colour;
 pub use crate::colour::{
-    colour_256to16, colour_256toRGB, colour_byname, colour_find_rgb, colour_force_rgb,
-    colour_fromstring, colour_join_rgb, colour_palette_clear, colour_palette_free,
-    colour_palette_from_option, colour_palette_get, colour_palette_init, colour_palette_set,
-    colour_parseX11, colour_split_rgb, colour_tostring,
+    colour_256to16,
+    colour_256toRGB,
+    colour_byname,
+    colour_find_rgb,
+    colour_force_rgb,
+    colour_fromstring,
+    colour_join_rgb,
+    colour_palette_clear,
+    colour_palette_free,
+    colour_palette_from_option,
+    colour_palette_get,
+    colour_palette_init,
+    colour_palette_set,
+    colour_parseX11,
+    colour_split_rgb_,
+    //colour_split_rgb
+    colour_tostring,
 };
 
 mod attributes;

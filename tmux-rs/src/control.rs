@@ -930,7 +930,7 @@ pub unsafe extern "C" fn control_stop(c: *mut client) {
         for csub in rb_foreach(&raw mut (*cs).subs).map(NonNull::as_ptr) {
             control_free_sub(cs, csub);
         }
-        if evtimer_initialized(&raw mut (*cs).subs_timer) != 0 {
+        if evtimer_initialized(&raw mut (*cs).subs_timer).as_bool() {
             evtimer_del(&raw mut (*cs).subs_timer);
         }
 
@@ -1222,7 +1222,7 @@ pub unsafe extern "C" fn control_add_sub(
         rb_init(&raw mut (*csub).panes);
         rb_init(&raw mut (*csub).windows);
 
-        if (evtimer_initialized(&raw mut (*cs).subs_timer) == 0) {
+        if !evtimer_initialized(&raw mut (*cs).subs_timer) {
             evtimer_set(
                 &raw mut (*cs).subs_timer,
                 Some(control_check_subs_timer),

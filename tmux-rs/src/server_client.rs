@@ -75,7 +75,7 @@ pub unsafe extern "C" fn server_client_set_overlay(
             tv_usec: (delay as i64 % 1000) * 1000,
         };
 
-        if event_initialized(&raw mut (*c).overlay_timer) != 0 {
+        if event_initialized(&raw mut (*c).overlay_timer).as_bool() {
             evtimer_del(&raw mut (*c).overlay_timer);
         }
         evtimer_set(
@@ -113,7 +113,7 @@ pub unsafe extern "C" fn server_client_clear_overlay(c: *mut client) {
             return;
         }
 
-        if event_initialized(&raw mut (*c).overlay_timer) != 0 {
+        if event_initialized(&raw mut (*c).overlay_timer).as_bool() {
             evtimer_del(&raw mut (*c).overlay_timer);
         }
 
@@ -478,7 +478,7 @@ pub unsafe extern "C" fn server_client_lost(c: *mut client) {
         key_bindings_unref_table((*c).keytable);
 
         free_((*c).message_string);
-        if event_initialized(&raw mut (*c).message_timer) != 0 {
+        if event_initialized(&raw mut (*c).message_timer).as_bool() {
             evtimer_del(&raw mut (*c).message_timer);
         }
 
@@ -2229,7 +2229,7 @@ pub unsafe extern "C" fn server_client_check_pane_resize(wp: *mut window_pane) {
             return;
         }
 
-        if event_initialized(&raw mut (*wp).resize_timer) == 0 {
+        if !event_initialized(&raw mut (*wp).resize_timer) {
             evtimer_set(
                 &raw mut (*wp).resize_timer,
                 Some(server_client_resize_timer),
@@ -2740,7 +2740,7 @@ pub unsafe extern "C" fn server_client_check_redraw(c: *mut client) {
             })
         {
             // log_debug("%s: redraw deferred (%zu left)", (*c).name, left);
-            if evtimer_initialized(&raw mut ev) == 0 {
+            if !evtimer_initialized(&raw mut ev) {
                 evtimer_set(&raw mut ev, Some(server_client_redraw_timer), null_mut());
             }
             if evtimer_pending(&raw mut ev, null_mut()) == 0 {

@@ -101,7 +101,7 @@ unsafe extern "C" fn screen_write_set_cursor(ctx: *mut screen_write_ctx, mut cx:
         }
         let mut w = (*wp).window;
 
-        if event_initialized(&raw mut (*w).offset_timer) == 0 {
+        if !event_initialized(&raw mut (*w).offset_timer) {
             evtimer_set(
                 &raw mut (*w).offset_timer,
                 Some(screen_write_offset_timer),

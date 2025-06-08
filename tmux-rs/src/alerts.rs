@@ -109,7 +109,7 @@ pub unsafe extern "C" fn alerts_reset_all() {
 unsafe fn alerts_reset(w: NonNull<window>) {
     let w = w.as_ptr();
     unsafe {
-        if event_initialized(&raw const (*w).alerts_timer) == 0 {
+        if !event_initialized(&raw const (*w).alerts_timer) {
             evtimer_set(&raw mut (*w).alerts_timer, Some(alerts_timer), w as _);
         }
 

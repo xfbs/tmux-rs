@@ -99,14 +99,25 @@ pub extern "C" fn colour_join_rgb(r: c_uchar, g: c_uchar, b: c_uchar) -> i32 {
     (((r as i32) << 16) | ((g as i32) << 8) | (b as i32)) | COLOUR_FLAG_RGB
 }
 
+// TODO remove this version
 /// Split colour into RGB.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn colour_split_rgb(c: i32, r: *mut u8, g: *mut u8, b: *mut u8) {
+unsafe extern "C" fn colour_split_rgb(c: i32, r: *mut u8, g: *mut u8, b: *mut u8) {
     unsafe {
         *r = ((c >> 16) & 0xff) as c_uchar;
         *g = ((c >> 8) & 0xff) as c_uchar;
         *b = (c & 0xff) as c_uchar;
     }
+}
+
+/// Split colour into RGB.
+#[inline]
+pub fn colour_split_rgb_(c: i32) -> (u8 /* red */, u8 /* green */, u8 /* blue */) {
+    (
+        ((c >> 16) & 0xff) as u8,
+        ((c >> 8) & 0xff) as u8,
+        (c & 0xff) as u8,
+    )
 }
 
 /// Force colour to RGB if not already.

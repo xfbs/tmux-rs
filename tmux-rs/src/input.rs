@@ -2681,17 +2681,13 @@ unsafe extern "C" fn input_top_bit_set(ictx: *mut input_ctx) -> i32 {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_osc_colour_reply(ictx: *mut input_ctx, n: u32, mut c: i32) {
     unsafe {
-        let mut r: u8 = 0;
-        let mut g: u8 = 0;
-        let mut b: u8 = 0;
-
         if c != -1 {
             c = colour_force_rgb(c);
         }
         if c == -1 {
             return;
         }
-        colour_split_rgb(c, &raw mut r, &raw mut g, &raw mut b);
+        let (r, g, b) = colour_split_rgb_(c);
 
         let end = if (*ictx).input_end == input_end_type::INPUT_END_BEL {
             c"\x07".as_ptr()

@@ -457,7 +457,7 @@ pub unsafe extern "C" fn server_add_accept(timeout: c_int) {
             return;
         }
 
-        if event_initialized(&raw mut server_ev_accept) != 0 {
+        if event_initialized(&raw mut server_ev_accept).as_bool() {
             event_del(&raw mut server_ev_accept);
         }
 

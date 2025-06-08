@@ -213,7 +213,7 @@ pub unsafe extern "C" fn tty_acs_needed(tty: *const tty) -> i32 {
             return (0);
         }
 
-        if (tty_term_has((*tty).term, tty_code_code::TTYC_U8) != 0
+        if (tty_term_has((*tty).term, tty_code_code::TTYC_U8).as_bool()
             && tty_term_number((*tty).term, tty_code_code::TTYC_U8) == 0)
         {
             return (1);

@@ -356,14 +356,14 @@ unsafe extern "C" fn window_destroy(w: *mut window) {
 
         window_destroy_panes(w);
 
-        if event_initialized(&raw mut (*w).name_event) != 0 {
+        if event_initialized(&raw mut (*w).name_event).as_bool() {
             event_del(&raw mut (*w).name_event);
         }
 
-        if event_initialized(&raw mut (*w).alerts_timer) != 0 {
+        if event_initialized(&raw mut (*w).alerts_timer).as_bool() {
             event_del(&raw mut (*w).alerts_timer);
         }
-        if event_initialized(&raw mut (*w).offset_timer) != 0 {
+        if event_initialized(&raw mut (*w).offset_timer).as_bool() {
             event_del(&raw mut (*w).offset_timer);
         }
 
@@ -1137,7 +1137,7 @@ unsafe extern "C" fn window_pane_destroy(wp: *mut window_pane) {
             close((*wp).pipe_fd);
         }
 
-        if event_initialized(&raw mut (*wp).resize_timer) != 0 {
+        if event_initialized(&raw mut (*wp).resize_timer).as_bool() {
             event_del(&raw mut (*wp).resize_timer);
         }
         for r in tailq_foreach(&raw mut (*wp).resize_queue).map(NonNull::as_ptr) {

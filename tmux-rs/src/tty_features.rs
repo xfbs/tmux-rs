@@ -7,10 +7,14 @@ unsafe impl Sync for tty_feature {}
 struct tty_feature {
     name: SyncCharPtr,
     capabilities: *const SyncCharPtr,
-    flags: i32,
+    flags: term_flags,
 }
 impl tty_feature {
-    const fn new(name: SyncCharPtr, capabilities: &'static [SyncCharPtr], flags: i32) -> Self {
+    const fn new(
+        name: SyncCharPtr,
+        capabilities: &'static [SyncCharPtr],
+        flags: term_flags,
+    ) -> Self {
         Self {
             name,
             capabilities: capabilities.as_ptr(),
@@ -27,7 +31,7 @@ static tty_feature_title_capabilities: &[SyncCharPtr] = &[
 static tty_feature_title: tty_feature = tty_feature::new(
     SyncCharPtr::new(c"title"),
     tty_feature_title_capabilities,
-    0,
+    term_flags::empty(),
 );
 
 /// Terminal has OSC 7 working directory.
@@ -36,8 +40,11 @@ static tty_feature_osc7_capabilities: &[SyncCharPtr] = &[
     SyncCharPtr::new(c"fsl=\\a"),
     SyncCharPtr::null(),
 ];
-static tty_feature_osc7: tty_feature =
-    tty_feature::new(SyncCharPtr::new(c"osc7"), tty_feature_osc7_capabilities, 0);
+static tty_feature_osc7: tty_feature = tty_feature::new(
+    SyncCharPtr::new(c"osc7"),
+    tty_feature_osc7_capabilities,
+    term_flags::empty(),
+);
 
 /// Terminal has mouse support.
 static tty_feature_mouse_capabilities: &[SyncCharPtr] =
@@ -45,7 +52,7 @@ static tty_feature_mouse_capabilities: &[SyncCharPtr] =
 static tty_feature_mouse: tty_feature = tty_feature::new(
     SyncCharPtr::new(c"mouse"),
     tty_feature_mouse_capabilities,
-    0,
+    term_flags::empty(),
 );
 
 /// Terminal can set the clipboard with OSC 52.
@@ -56,7 +63,7 @@ static tty_feature_clipboard_capabilities: &[SyncCharPtr] = &[
 static tty_feature_clipboard: tty_feature = tty_feature::new(
     SyncCharPtr::new(c"clipboard"),
     tty_feature_clipboard_capabilities,
-    0,
+    term_flags::empty(),
 );
 
 // #if defined (__OpenBSD__) || (defined(NCURSES_VERSION_MAJOR) && (NCURSES_VERSION_MAJOR > 5 ||  (NCURSES_VERSION_MAJOR == 5 && NCURSES_VERSION_MINOR > 8)))
@@ -72,7 +79,7 @@ static tty_feature_hyperlinks_capabilities: &[SyncCharPtr] = &[SyncCharPtr::null
 static tty_feature_hyperlinks: tty_feature = tty_feature::new(
     SyncCharPtr::new(c"hyperlinks"),
     tty_feature_hyperlinks_capabilities,
-    0,
+    term_flags::empty(),
 );
 
 /// Terminal supports RGB colour. This replaces setab and setaf also since
@@ -89,7 +96,7 @@ static tty_feature_rgb_capabilities: &[SyncCharPtr] = &[
 static tty_feature_rgb: tty_feature = tty_feature::new(
     SyncCharPtr::new(c"RGB"),
     tty_feature_rgb_capabilities,
-    TERM_256COLOURS | TERM_RGBCOLOURS,
+    term_flags::TERM_256COLOURS.union(term_flags::TERM_RGBCOLOURS),
 );
 
 /// Terminal supports 256 colours.
@@ -102,7 +109,7 @@ static tty_feature_256_capabilities: &[SyncCharPtr] = &[
 static tty_feature_256: tty_feature = tty_feature::new(
     SyncCharPtr::new(c"256"),
     tty_feature_256_capabilities,
-    TERM_256COLOURS,
+    term_flags::TERM_256COLOURS,
 );
 
 /// Terminal supports overline.
@@ -111,7 +118,7 @@ static tty_feature_overline_capabilities: &[SyncCharPtr] =
 static tty_feature_overline: tty_feature = tty_feature::new(
     SyncCharPtr::new(c"overline"),
     tty_feature_overline_capabilities,
-    0,
+    term_flags::empty(),
 );
 
 /// Terminal supports underscore styles.
@@ -125,7 +132,7 @@ static tty_feature_usstyle_capabilities: &[SyncCharPtr] = &[
 static tty_feature_usstyle: tty_feature = tty_feature::new(
     SyncCharPtr::new(c"usstyle"),
     tty_feature_usstyle_capabilities,
-    0,
+    term_flags::empty(),
 );
 
 /// Terminal supports bracketed paste.
@@ -137,7 +144,7 @@ static tty_feature_bpaste_capabilities: &[SyncCharPtr] = &[
 static tty_feature_bpaste: tty_feature = tty_feature::new(
     SyncCharPtr::new(c"bpaste"),
     tty_feature_bpaste_capabilities,
-    0,
+    term_flags::empty(),
 );
 
 /// Terminal supports focus reporting.
@@ -149,7 +156,7 @@ static tty_feature_focus_capabilities: &[SyncCharPtr] = &[
 static tty_feature_focus: tty_feature = tty_feature::new(
     SyncCharPtr::new(c"focus"),
     tty_feature_focus_capabilities,
-    0,
+    term_flags::empty(),
 );
 
 /// Terminal supports cursor styles.
@@ -161,7 +168,7 @@ static tty_feature_cstyle_capabilities: &[SyncCharPtr] = &[
 static tty_feature_cstyle: tty_feature = tty_feature::new(
     SyncCharPtr::new(c"cstyle"),
     tty_feature_cstyle_capabilities,
-    0,
+    term_flags::empty(),
 );
 
 /// Terminal supports cursor colours.
@@ -173,7 +180,7 @@ static tty_feature_ccolour_capabilities: &[SyncCharPtr] = &[
 static tty_feature_ccolour: tty_feature = tty_feature::new(
     SyncCharPtr::new(c"ccolour"),
     tty_feature_ccolour_capabilities,
-    0,
+    term_flags::empty(),
 );
 
 /// Terminal supports strikethrough.
@@ -182,7 +189,7 @@ static tty_feature_strikethrough_capabilities: &[SyncCharPtr] =
 static tty_feature_strikethrough: tty_feature = tty_feature::new(
     SyncCharPtr::new(c"strikethrough"),
     tty_feature_strikethrough_capabilities,
-    0,
+    term_flags::empty(),
 );
 
 /// Terminal supports synchronized updates.
@@ -190,8 +197,11 @@ static tty_feature_sync_capabilities: &[SyncCharPtr] = &[
     SyncCharPtr::new(c"Sync=\\E[?2026%?%p1%{1}%-%tl%eh%;"),
     SyncCharPtr::null(),
 ];
-static tty_feature_sync: tty_feature =
-    tty_feature::new(SyncCharPtr::new(c"sync"), tty_feature_sync_capabilities, 0);
+static tty_feature_sync: tty_feature = tty_feature::new(
+    SyncCharPtr::new(c"sync"),
+    tty_feature_sync_capabilities,
+    term_flags::empty(),
+);
 
 /// Terminal supports extended keys.
 static tty_feature_extkeys_capabilities: &[SyncCharPtr] = &[
@@ -202,7 +212,7 @@ static tty_feature_extkeys_capabilities: &[SyncCharPtr] = &[
 static tty_feature_extkeys: tty_feature = tty_feature::new(
     SyncCharPtr::new(c"extkeys"),
     tty_feature_extkeys_capabilities,
-    0,
+    term_flags::empty(),
 );
 
 /// Terminal supports DECSLRM margins.
@@ -216,7 +226,7 @@ static tty_feature_margins_capabilities: &[SyncCharPtr] = &[
 static tty_feature_margins: tty_feature = tty_feature::new(
     SyncCharPtr::new(c"margins"),
     tty_feature_margins_capabilities,
-    TERM_DECSLRM,
+    term_flags::TERM_DECSLRM,
 );
 
 /// Terminal supports DECFRA rectangle fill.
@@ -225,7 +235,7 @@ static tty_feature_rectfill_capabilities: &[SyncCharPtr] =
 static tty_feature_rectfill: tty_feature = tty_feature::new(
     SyncCharPtr::new(c"rectfill"),
     tty_feature_rectfill_capabilities,
-    TERM_DECFRA,
+    term_flags::TERM_DECFRA,
 );
 
 /// Use builtin function keys only.
@@ -300,7 +310,7 @@ static tty_feature_ignorefkeys_capabilities: &[SyncCharPtr] = &[
 static tty_feature_ignorefkeys: tty_feature = tty_feature::new(
     SyncCharPtr::new(c"ignorefkeys"),
     tty_feature_ignorefkeys_capabilities,
-    0,
+    term_flags::empty(),
 );
 
 /// Terminal has sixel capability.
@@ -309,7 +319,7 @@ static tty_feature_sixel_capabilities: &[SyncCharPtr] =
 static tty_feature_sixel: tty_feature = tty_feature::new(
     SyncCharPtr::new(c"sixel"),
     tty_feature_sixel_capabilities,
-    TERM_SIXEL,
+    term_flags::TERM_SIXEL,
 );
 
 /// Available terminal features.
@@ -401,9 +411,9 @@ pub unsafe extern "C" fn tty_get_features(feat: i32) -> *const c_char {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tty_apply_features(term: *mut tty_term, feat: i32) -> i32 {
+pub unsafe extern "C" fn tty_apply_features(term: *mut tty_term, feat: i32) -> boolint {
     if (feat == 0) {
-        return 0;
+        return boolint::FALSE;
     }
 
     unsafe {
@@ -426,12 +436,12 @@ pub unsafe extern "C" fn tty_apply_features(term: *mut tty_term, feat: i32) -> i
             (*term).flags |= tf.flags;
         }
         if (((*term).features | feat) == (*term).features) {
-            return 0;
+            return boolint::FALSE;
         }
         (*term).features |= feat;
     }
 
-    1
+    boolint::TRUE
 }
 
 #[unsafe(no_mangle)]

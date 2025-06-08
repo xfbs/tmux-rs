@@ -889,7 +889,7 @@ pub unsafe extern "C" fn screen_redraw_draw_borders_cell(
 
         if cell_type == CELL_TOPBOTTOM
             && (*c).flags.intersects(client_flag::UTF8)
-            && tty_term_has((*tty).term, tty_code_code::TTYC_BIDI) != 0
+            && tty_term_has((*tty).term, tty_code_code::TTYC_BIDI).as_bool()
         {
             isolates = 1;
         } else {

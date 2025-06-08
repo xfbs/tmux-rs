@@ -197,7 +197,7 @@ pub unsafe extern "C" fn status_timer_start(c: *mut client) {
     unsafe {
         let mut s: *mut session = (*c).session;
 
-        if event_initialized(&raw mut (*c).status.timer) != 0 {
+        if event_initialized(&raw mut (*c).status.timer).as_bool() {
             evtimer_del(&raw mut (*c).status.timer);
         } else {
             evtimer_set(
@@ -376,7 +376,7 @@ pub unsafe extern "C" fn status_free(c: *mut client) {
             free_((*sl).entries[i].expanded);
         }
 
-        if event_initialized(&raw mut (*sl).timer) != 0 {
+        if event_initialized(&raw mut (*sl).timer).as_bool() {
             evtimer_del(&raw mut (*sl).timer);
         }
 
@@ -560,7 +560,7 @@ pub unsafe extern "C" fn status_message_set(
             tv.tv_sec = (delay / 1000) as i64;
             tv.tv_usec = (delay as i64 % 1000) * 1000i64;
 
-            if event_initialized(&raw mut (*c).message_timer) != 0 {
+            if event_initialized(&raw mut (*c).message_timer).as_bool() {
                 evtimer_del(&raw mut (*c).message_timer);
             }
             evtimer_set(
