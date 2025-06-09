@@ -863,8 +863,8 @@ pub unsafe extern "C" fn server_client_check_mouse(
                 if px > sx || py > sy {
                     return KEYC_UNKNOWN;
                 }
-                px = px + (*m).ox;
-                py = py + (*m).oy;
+                px += (*m).ox;
+                py += (*m).oy;
 
                 /* Try the pane borders if not zoomed. */
                 if !(*(*(*s).curw).window).flags.intersects(window_flag::ZOOMED) {
