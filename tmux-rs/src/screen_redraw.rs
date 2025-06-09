@@ -488,7 +488,7 @@ pub unsafe extern "C" fn screen_redraw_make_pane_status(
 
         memcpy__(old.as_mut_ptr(), &raw const (*wp).status_screen);
         screen_init(&raw mut (*wp).status_screen, width, 1, 0);
-        (*wp).status_screen.mode = 0;
+        (*wp).status_screen.mode = mode_flag::empty();
 
         screen_write_start(ctx.as_mut_ptr(), &raw mut (*wp).status_screen);
 

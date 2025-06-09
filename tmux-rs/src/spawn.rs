@@ -427,8 +427,8 @@ pub unsafe extern "C" fn spawn_pane(
             /* If the command is empty, don't fork a child process. */
             if ((*sc).flags & SPAWN_EMPTY != 0) {
                 (*new_wp).flags |= window_pane_flags::PANE_EMPTY;
-                (*new_wp).base.mode &= !MODE_CURSOR;
-                (*new_wp).base.mode |= MODE_CRLF;
+                (*new_wp).base.mode &= !mode_flag::MODE_CURSOR;
+                (*new_wp).base.mode |= mode_flag::MODE_CRLF;
                 break 'complete;
             }
 

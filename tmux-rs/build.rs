@@ -155,6 +155,5 @@ fn main() {
 }
 
 static FILES: &[&str] = &[
-    "tty.c",         //
     "window-copy.c", //
 ];

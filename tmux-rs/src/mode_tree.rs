@@ -522,7 +522,7 @@ pub unsafe extern "C" fn mode_tree_start(
             screen_size_y(&raw mut (*wp).base),
             0,
         );
-        (*(*s)).mode &= !MODE_CURSOR;
+        (*(*s)).mode &= !mode_flag::MODE_CURSOR;
 
         mtd
     }

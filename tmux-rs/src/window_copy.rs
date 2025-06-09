@@ -16,18 +16,12 @@ unsafe extern "C" {
 struct window_copy_mode_data;
 
 static const char *window_copy_key_table(struct window_mode_entry *);
-static void window_copy_command(struct window_mode_entry *, struct client *,
-                                struct session *, struct winlink *,
-                                struct args *, struct mouse_event *);
-static struct screen *window_copy_init(struct window_mode_entry *,
-                                       struct cmd_find_state *, struct args *);
-static struct screen *window_copy_view_init(struct window_mode_entry *,
-                                            struct cmd_find_state *,
-                                            struct args *);
+static void window_copy_command(struct window_mode_entry *, struct client *, struct session *, struct winlink *, struct args *, struct mouse_event *);
+static struct screen *window_copy_init(struct window_mode_entry *, struct cmd_find_state *, struct args *);
+static struct screen *window_copy_view_init(struct window_mode_entry *, struct cmd_find_state *, struct args *);
 static void window_copy_free(struct window_mode_entry *);
 static void window_copy_resize(struct window_mode_entry *, u_int, u_int);
-static void window_copy_formats(struct window_mode_entry *,
-                                struct format_tree *);
+static void window_copy_formats(struct window_mode_entry *, struct format_tree *);
 static void window_copy_pageup1(struct window_mode_entry *, int);
 static int window_copy_pagedown1(struct window_mode_entry *, int, int);
 static void window_copy_next_paragraph(struct window_mode_entry *);
@@ -35,63 +29,41 @@ static void window_copy_previous_paragraph(struct window_mode_entry *);
 static void window_copy_redraw_selection(struct window_mode_entry *, u_int);
 static void window_copy_redraw_lines(struct window_mode_entry *, u_int, u_int);
 static void window_copy_redraw_screen(struct window_mode_entry *);
-static void window_copy_write_line(struct window_mode_entry *,
-                                   struct screen_write_ctx *, u_int);
-static void window_copy_write_lines(struct window_mode_entry *,
-                                    struct screen_write_ctx *, u_int, u_int);
+static void window_copy_write_line(struct window_mode_entry *, struct screen_write_ctx *, u_int);
+static void window_copy_write_lines(struct window_mode_entry *, struct screen_write_ctx *, u_int, u_int);
 static char *window_copy_match_at_cursor(struct window_copy_mode_data *);
-static void window_copy_scroll_to(struct window_mode_entry *, u_int, u_int,
-                                  int);
-static int window_copy_search_compare(struct grid *, u_int, u_int,
-                                      struct grid *, u_int, int);
-static int window_copy_search_lr(struct grid *, struct grid *, u_int *, u_int,
-                                 u_int, u_int, int);
-static int window_copy_search_rl(struct grid *, struct grid *, u_int *, u_int,
-                                 u_int, u_int, int);
-static int window_copy_last_regex(struct grid *, u_int, u_int, u_int, u_int,
-                                  u_int *, u_int *, const char *,
-                                  const regex_t *, int);
-static int window_copy_search_mark_at(struct window_copy_mode_data *, u_int,
-                                      u_int, u_int *);
-static char *window_copy_stringify(struct grid *, u_int, u_int, u_int, char *,
-                                   u_int *);
-static void window_copy_cstrtocellpos(struct grid *, u_int, u_int *, u_int *,
-                                      const char *);
-static int window_copy_search_marks(struct window_mode_entry *, struct screen *,
-                                    int, int);
+static void window_copy_scroll_to(struct window_mode_entry *, u_int, u_int, int);
+static int window_copy_search_compare(struct grid *, u_int, u_int, struct grid *, u_int, int);
+static int window_copy_search_lr(struct grid *, struct grid *, u_int *, u_int, u_int, u_int, int);
+static int window_copy_search_rl(struct grid *, struct grid *, u_int *, u_int, u_int, u_int, int);
+static int window_copy_last_regex(struct grid *, u_int, u_int, u_int, u_int, u_int *, u_int *, const char *, const regex_t *, int);
+static int window_copy_search_mark_at(struct window_copy_mode_data *, u_int, u_int, u_int *);
+static char *window_copy_stringify(struct grid *, u_int, u_int, u_int, char *, u_int *);
+static void window_copy_cstrtocellpos(struct grid *, u_int, u_int *, u_int *, const char *);
+static int window_copy_search_marks(struct window_mode_entry *, struct screen *, int, int);
 static void window_copy_clear_marks(struct window_mode_entry *);
 static int window_copy_is_lowercase(const char *);
-static void window_copy_search_back_overlap(struct grid *, regex_t *, u_int *,
-                                            u_int *, u_int *, u_int);
-static int window_copy_search_jump(struct window_mode_entry *, struct grid *,
-                                   struct grid *, u_int, u_int, u_int, int, int,
-                                   int, int);
+static void window_copy_search_back_overlap(struct grid *, regex_t *, u_int *, u_int *, u_int *, u_int);
+static int window_copy_search_jump(struct window_mode_entry *, struct grid *, struct grid *, u_int, u_int, u_int, int, int, int, int);
 static int window_copy_search(struct window_mode_entry *, int, int);
 static int window_copy_search_up(struct window_mode_entry *, int);
 static int window_copy_search_down(struct window_mode_entry *, int);
 static void window_copy_goto_line(struct window_mode_entry *, const char *);
 static void window_copy_update_cursor(struct window_mode_entry *, u_int, u_int);
 static void window_copy_start_selection(struct window_mode_entry *);
-static int window_copy_adjust_selection(struct window_mode_entry *, u_int *,
-                                        u_int *);
+static int window_copy_adjust_selection(struct window_mode_entry *, u_int *, u_int *);
 static int window_copy_set_selection(struct window_mode_entry *, int, int);
 static int window_copy_update_selection(struct window_mode_entry *, int, int);
 static void window_copy_synchronize_cursor(struct window_mode_entry *, int);
 static void *window_copy_get_selection(struct window_mode_entry *, size_t *);
-static void window_copy_copy_buffer(struct window_mode_entry *, const char *,
-                                    void *, size_t);
-static void window_copy_pipe(struct window_mode_entry *, struct session *,
-                             const char *);
-static void window_copy_copy_pipe(struct window_mode_entry *, struct session *,
-                                  const char *, const char *);
-static void window_copy_copy_selection(struct window_mode_entry *,
-                                       const char *);
+static void window_copy_copy_buffer(struct window_mode_entry *, const char *, void *, size_t);
+static void window_copy_pipe(struct window_mode_entry *, struct session *, const char *);
+static void window_copy_copy_pipe(struct window_mode_entry *, struct session *, const char *, const char *);
+static void window_copy_copy_selection(struct window_mode_entry *, const char *);
 static void window_copy_append_selection(struct window_mode_entry *);
 static void window_copy_clear_selection(struct window_mode_entry *);
-static void window_copy_copy_line(struct window_mode_entry *, char **, size_t *,
-                                  u_int, u_int, u_int);
-static int window_copy_in_set(struct window_mode_entry *, u_int, u_int,
-                              const char *);
+static void window_copy_copy_line(struct window_mode_entry *, char **, size_t *, u_int, u_int, u_int);
+static int window_copy_in_set(struct window_mode_entry *, u_int, u_int, const char *);
 static u_int window_copy_find_length(struct window_mode_entry *, u_int);
 static void window_copy_cursor_start_of_line(struct window_mode_entry *);
 static void window_copy_cursor_back_to_indentation(struct window_mode_entry *);
@@ -105,20 +77,12 @@ static void window_copy_cursor_jump(struct window_mode_entry *);
 static void window_copy_cursor_jump_back(struct window_mode_entry *);
 static void window_copy_cursor_jump_to(struct window_mode_entry *);
 static void window_copy_cursor_jump_to_back(struct window_mode_entry *);
-static void window_copy_cursor_next_word(struct window_mode_entry *,
-                                         const char *);
-static void window_copy_cursor_next_word_end_pos(struct window_mode_entry *,
-                                                 const char *, u_int *,
-                                                 u_int *);
-static void window_copy_cursor_next_word_end(struct window_mode_entry *,
-                                             const char *, int);
-static void window_copy_cursor_previous_word_pos(struct window_mode_entry *,
-                                                 const char *, u_int *,
-                                                 u_int *);
-static void window_copy_cursor_previous_word(struct window_mode_entry *,
-                                             const char *, int);
-static void window_copy_cursor_prompt(struct window_mode_entry *, int,
-                                      const char *);
+static void window_copy_cursor_next_word(struct window_mode_entry *, const char *);
+static void window_copy_cursor_next_word_end_pos(struct window_mode_entry *, const char *, u_int *, u_int *);
+static void window_copy_cursor_next_word_end(struct window_mode_entry *, const char *, int);
+static void window_copy_cursor_previous_word_pos(struct window_mode_entry *, const char *, u_int *, u_int *);
+static void window_copy_cursor_previous_word(struct window_mode_entry *, const char *, int);
+static void window_copy_cursor_prompt(struct window_mode_entry *, int, const char *);
 static void window_copy_scroll_up(struct window_mode_entry *, u_int);
 static void window_copy_scroll_down(struct window_mode_entry *, u_int);
 static void window_copy_rectangle_set(struct window_mode_entry *, int);
@@ -126,11 +90,8 @@ static void window_copy_move_mouse(struct mouse_event *);
 static void window_copy_drag_update(struct client *, struct mouse_event *);
 static void window_copy_drag_release(struct client *, struct mouse_event *);
 static void window_copy_jump_to_mark(struct window_mode_entry *);
-static void window_copy_acquire_cursor_up(struct window_mode_entry *, u_int,
-                                          u_int, u_int, u_int, u_int);
-static void window_copy_acquire_cursor_down(struct window_mode_entry *, u_int,
-                                            u_int, u_int, u_int, u_int, u_int,
-                                            int);
+static void window_copy_acquire_cursor_up(struct window_mode_entry *, u_int, u_int, u_int, u_int, u_int);
+static void window_copy_acquire_cursor_down(struct window_mode_entry *, u_int, u_int, u_int, u_int, u_int, u_int, int);
 
 const struct window_mode window_copy_mode = {
     .name = "copy-mode",
@@ -291,8 +252,10 @@ struct window_copy_mode_data {
 #define WINDOW_COPY_DRAG_REPEAT_TIME 50000
 };
 
-static void window_copy_scroll_timer(__unused int fd, __unused short events,
-                                     void *arg) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_scroll_timer(__unused int fd, __unused short events, void *arg) {
+unsafe {
   struct window_mode_entry *wme = arg;
   struct window_pane *wp = (*wme).wp;
   struct window_copy_mode_data *data = (*wme).data;
@@ -312,10 +275,12 @@ static void window_copy_scroll_timer(__unused int fd, __unused short events,
     window_copy_cursor_down(wme, 1);
   }
 }
+}
 
-static struct screen *window_copy_clone_screen(struct screen *src,
-                                               struct screen *hint, u_int *cx,
-                                               u_int *cy, int trim) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static struct screen *window_copy_clone_screen(struct screen *src, struct screen *hint, u_int *cx, u_int *cy, int trim) {
+unsafe {
   struct screen *dst;
   const struct grid_line *gl;
   u_int sy, wx, wy;
@@ -373,9 +338,12 @@ static struct screen *window_copy_clone_screen(struct screen *src,
 
   return dst;
 }
+}
 
-static struct window_copy_mode_data *
-window_copy_common_init(struct window_mode_entry *wme) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static struct window_copy_mode_data * window_copy_common_init(struct window_mode_entry *wme) {
+unsafe {
   struct window_pane *wp = (*wme).wp;
   struct window_copy_mode_data *data;
   struct screen *base = &(*wp).base;
@@ -408,10 +376,12 @@ window_copy_common_init(struct window_mode_entry *wme) {
 
   return data;
 }
+}
 
-static struct screen *window_copy_init(struct window_mode_entry *wme,
-                                       __unused struct cmd_find_state *fs,
-                                       struct args *args) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static struct screen *window_copy_init(struct window_mode_entry *wme, __unused struct cmd_find_state *fs, struct args *args) {
+unsafe {
   struct window_pane *wp = (*wme).swp;
   struct window_copy_mode_data *data;
   struct screen *base = &(*wp).base;
@@ -452,10 +422,12 @@ static struct screen *window_copy_init(struct window_mode_entry *wme,
 
   return &(*data).screen;
 }
+}
 
-static struct screen *window_copy_view_init(struct window_mode_entry *wme,
-                                            __unused struct cmd_find_state *fs,
-                                            __unused struct args *args) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static struct screen *window_copy_view_init(struct window_mode_entry *wme, __unused struct cmd_find_state *fs, __unused struct args *args) {
+unsafe {
   struct window_pane *wp = (*wme).wp;
   struct window_copy_mode_data *data;
   struct screen *base = &(*wp).base;
@@ -475,8 +447,12 @@ static struct screen *window_copy_view_init(struct window_mode_entry *wme,
 
   return &(*data).screen;
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_free(struct window_mode_entry *wme) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
 
   evtimer_del(&(*data).dragtimer);
@@ -498,26 +474,36 @@ static void window_copy_free(struct window_mode_entry *wme) {
   screen_free(&(*data).screen);
   free(data);
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 void window_copy_add(struct window_pane *wp, int parse, const char *fmt, ...) {
+unsafe {
   va_list ap;
 
   va_start(ap, fmt);
   window_copy_vadd(wp, parse, fmt, ap);
   va_end(ap);
 }
+}
 
-static void window_copy_init_ctx_cb(__unused struct screen_write_ctx *ctx,
-                                    struct tty_ctx *ttyctx) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_init_ctx_cb(__unused struct screen_write_ctx *ctx, struct tty_ctx *ttyctx) {
+unsafe {
   memcpy(&(*ttyctx).defaults, &grid_default_cell, sizeof (*ttyctx).defaults);
   (*ttyctx).palette = NULL;
   (*ttyctx).redraw_cb = NULL;
   (*ttyctx).set_client_cb = NULL;
   (*ttyctx).arg = NULL;
 }
+}
 
-void window_copy_vadd(struct window_pane *wp, int parse, const char *fmt,
-                      va_list ap) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+void window_copy_vadd(struct window_pane *wp, int parse, const char *fmt, va_list ap) {
+unsafe {
   struct window_mode_entry *wme = TAILQ_FIRST(&(*wp).modes);
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *backing = (*data).backing;
@@ -575,12 +561,20 @@ void window_copy_vadd(struct window_pane *wp, int parse, const char *fmt,
 
   screen_write_stop(&ctx);
 }
-
-void window_copy_pageup(struct window_pane *wp, int half_page) {
-  window_copy_pageup1(TAILQ_FIRST(&(*wp).modes), half_page);
 }
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+void window_copy_pageup(struct window_pane *wp, int half_page) {
+unsafe {
+  window_copy_pageup1(TAILQ_FIRST(&(*wp).modes), half_page);
+}
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_pageup1(struct window_mode_entry *wme, int half_page) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
   u_int n, ox, oy, px, py;
@@ -628,17 +622,23 @@ static void window_copy_pageup1(struct window_mode_entry *wme, int half_page) {
   window_copy_update_selection(wme, 1, 0);
   window_copy_redraw_screen(wme);
 }
+}
 
-void window_copy_pagedown(struct window_pane *wp, int half_page,
-                          int scroll_exit) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+void window_copy_pagedown(struct window_pane *wp, int half_page, int scroll_exit) {
+unsafe {
   if (window_copy_pagedown1(TAILQ_FIRST(&(*wp).modes), half_page, scroll_exit)) {
     window_pane_reset_mode(wp);
     return;
   }
 }
+}
 
-static int window_copy_pagedown1(struct window_mode_entry *wme, int half_page,
-                                 int scroll_exit) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static int window_copy_pagedown1(struct window_mode_entry *wme, int half_page, int scroll_exit) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
   u_int n, ox, oy, px, py;
@@ -690,8 +690,12 @@ static int window_copy_pagedown1(struct window_mode_entry *wme, int half_page,
   window_copy_redraw_screen(wme);
   return 0;
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_previous_paragraph(struct window_mode_entry *wme) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   u_int oy;
 
@@ -707,8 +711,12 @@ static void window_copy_previous_paragraph(struct window_mode_entry *wme) {
 
   window_copy_scroll_to(wme, 0, oy, 0);
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_next_paragraph(struct window_mode_entry *wme) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
   u_int maxy, ox, oy;
@@ -727,24 +735,36 @@ static void window_copy_next_paragraph(struct window_mode_entry *wme) {
   ox = window_copy_find_length(wme, oy);
   window_copy_scroll_to(wme, ox, oy, 0);
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 char *window_copy_get_word(struct window_pane *wp, u_int x, u_int y) {
+unsafe {
   struct window_mode_entry *wme = TAILQ_FIRST(&(*wp).modes);
   struct window_copy_mode_data *data = (*wme).data;
   struct grid *gd = (*data).screen.grid;
 
   return format_grid_word(gd, x, (*gd).hsize + y);
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 char *window_copy_get_line(struct window_pane *wp, u_int y) {
+unsafe {
   struct window_mode_entry *wme = TAILQ_FIRST(&(*wp).modes);
   struct window_copy_mode_data *data = (*wme).data;
   struct grid *gd = (*data).screen.grid;
 
   return format_grid_line(gd, (*gd).hsize + y);
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void *window_copy_cursor_hyperlink_cb(struct format_tree *ft) {
+unsafe {
   struct window_pane *wp = format_get_pane(ft);
   struct window_mode_entry *wme = TAILQ_FIRST(&(*wp).modes);
   struct window_copy_mode_data *data = (*wme).data;
@@ -753,33 +773,48 @@ static void *window_copy_cursor_hyperlink_cb(struct format_tree *ft) {
   return format_grid_hyperlink(gd, (*data).cx, (*gd).hsize + (*data).cy,
                                &(*data).screen);
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void *window_copy_cursor_word_cb(struct format_tree *ft) {
+unsafe {
   struct window_pane *wp = format_get_pane(ft);
   struct window_mode_entry *wme = TAILQ_FIRST(&(*wp).modes);
   struct window_copy_mode_data *data = (*wme).data;
 
   return window_copy_get_word(wp, (*data).cx, (*data).cy);
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void *window_copy_cursor_line_cb(struct format_tree *ft) {
+unsafe {
   struct window_pane *wp = format_get_pane(ft);
   struct window_mode_entry *wme = TAILQ_FIRST(&(*wp).modes);
   struct window_copy_mode_data *data = (*wme).data;
 
   return window_copy_get_line(wp, (*data).cy);
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void *window_copy_search_match_cb(struct format_tree *ft) {
+unsafe {
   struct window_pane *wp = format_get_pane(ft);
   struct window_mode_entry *wme = TAILQ_FIRST(&(*wp).modes);
   struct window_copy_mode_data *data = (*wme).data;
 
   return window_copy_match_at_cursor(data);
 }
+}
 
-static void window_copy_formats(struct window_mode_entry *wme,
-                                struct format_tree *ft) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_formats(struct window_mode_entry *wme, struct format_tree *ft) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
 
   format_add(ft, "scroll_position", "%d", (*data).oy);
@@ -820,8 +855,12 @@ static void window_copy_formats(struct window_mode_entry *wme,
   format_add_cb(ft, "copy_cursor_line", window_copy_cursor_line_cb);
   format_add_cb(ft, "copy_cursor_hyperlink", window_copy_cursor_hyperlink_cb);
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_size_changed(struct window_mode_entry *wme) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
   struct screen_write_ctx ctx;
@@ -841,9 +880,12 @@ static void window_copy_size_changed(struct window_mode_entry *wme) {
   (*data).searchy = (*data).cy;
   (*data).searcho = (*data).oy;
 }
+}
 
-static void window_copy_resize(struct window_mode_entry *wme, u_int sx,
-                               u_int sy) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_resize(struct window_mode_entry *wme, u_int sx, u_int sy) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
   struct grid *gd = (*(*data).backing).grid;
@@ -874,8 +916,12 @@ static void window_copy_resize(struct window_mode_entry *wme, u_int sx,
   window_copy_size_changed(wme);
   window_copy_redraw_screen(wme);
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static const char *window_copy_key_table(struct window_mode_entry *wme) {
+unsafe {
   struct window_pane *wp = (*wme).wp;
 
   if (options_get_number((*(*wp).window).options, "mode-keys") == MODEKEY_VI) {
@@ -883,8 +929,12 @@ static const char *window_copy_key_table(struct window_mode_entry *wme) {
   }
   return "copy-mode";
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static int window_copy_expand_search_string(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   const char *ss = args_string((*cs).args, 1);
@@ -908,9 +958,12 @@ static int window_copy_expand_search_string(struct window_copy_cmd_state *cs) {
   }
   return 1;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_append_selection(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_append_selection(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct session *s = (*cs).s;
 
@@ -920,9 +973,12 @@ window_copy_cmd_append_selection(struct window_copy_cmd_state *cs) {
   window_copy_clear_selection(wme);
   return WINDOW_COPY_CMD_REDRAW;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_append_selection_and_cancel(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_append_selection_and_cancel(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct session *s = (*cs).s;
 
@@ -932,17 +988,23 @@ window_copy_cmd_append_selection_and_cancel(struct window_copy_cmd_state *cs) {
   window_copy_clear_selection(wme);
   return WINDOW_COPY_CMD_CANCEL;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_back_to_indentation(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_back_to_indentation(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
 
   window_copy_cursor_back_to_indentation(wme);
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_begin_selection(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_begin_selection(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct client *c = (*cs).c;
   struct mouse_event *m = (*cs).m;
@@ -958,9 +1020,12 @@ window_copy_cmd_begin_selection(struct window_copy_cmd_state *cs) {
   window_copy_start_selection(wme);
   return WINDOW_COPY_CMD_REDRAW;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_stop_selection(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_stop_selection(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
 
@@ -969,9 +1034,12 @@ window_copy_cmd_stop_selection(struct window_copy_cmd_state *cs) {
   (*data).selflag = SEL_CHAR;
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_bottom_line(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_bottom_line(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
 
@@ -981,23 +1049,31 @@ window_copy_cmd_bottom_line(struct window_copy_cmd_state *cs) {
   window_copy_update_selection(wme, 1, 0);
   return WINDOW_COPY_CMD_REDRAW;
 }
-
-static enum window_copy_cmd_action
-window_copy_cmd_cancel(__unused struct window_copy_cmd_state *cs) {
-  return WINDOW_COPY_CMD_CANCEL;
 }
 
-static enum window_copy_cmd_action
-window_copy_cmd_clear_selection(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_cancel(__unused struct window_copy_cmd_state *cs) {
+unsafe {
+  return WINDOW_COPY_CMD_CANCEL;
+}
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_clear_selection(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
 
   window_copy_clear_selection(wme);
   return WINDOW_COPY_CMD_REDRAW;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_do_copy_end_of_line(struct window_copy_cmd_state *cs, int pipe,
-                                int cancel) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_do_copy_end_of_line(struct window_copy_cmd_state *cs, int pipe, int cancel) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct client *c = (*cs).c;
   struct session *s = (*cs).s;
@@ -1056,31 +1132,44 @@ window_copy_do_copy_end_of_line(struct window_copy_cmd_state *cs, int pipe,
   free(command);
   return WINDOW_COPY_CMD_REDRAW;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_copy_end_of_line(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_copy_end_of_line(struct window_copy_cmd_state *cs) {
+unsafe {
   return window_copy_do_copy_end_of_line(cs, 0, 0);
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_copy_end_of_line_and_cancel(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_copy_end_of_line_and_cancel(struct window_copy_cmd_state *cs) {
+unsafe {
   return window_copy_do_copy_end_of_line(cs, 0, 1);
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_copy_pipe_end_of_line(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_copy_pipe_end_of_line(struct window_copy_cmd_state *cs) {
+unsafe {
   return window_copy_do_copy_end_of_line(cs, 1, 0);
 }
-
-static enum window_copy_cmd_action
-window_copy_cmd_copy_pipe_end_of_line_and_cancel(
-    struct window_copy_cmd_state *cs) {
-  return window_copy_do_copy_end_of_line(cs, 1, 1);
 }
 
-static enum window_copy_cmd_action
-window_copy_do_copy_line(struct window_copy_cmd_state *cs, int pipe,
-                         int cancel) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_copy_pipe_end_of_line_and_cancel( struct window_copy_cmd_state *cs) {
+unsafe {
+  return window_copy_do_copy_end_of_line(cs, 1, 1);
+}
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_do_copy_line(struct window_copy_cmd_state *cs, int pipe, int cancel) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct client *c = (*cs).c;
   struct session *s = (*cs).s;
@@ -1141,29 +1230,44 @@ window_copy_do_copy_line(struct window_copy_cmd_state *cs, int pipe,
   free(command);
   return WINDOW_COPY_CMD_REDRAW;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_copy_line(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_copy_line(struct window_copy_cmd_state *cs) {
+unsafe {
   return window_copy_do_copy_line(cs, 0, 0);
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_copy_line_and_cancel(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_copy_line_and_cancel(struct window_copy_cmd_state *cs) {
+unsafe {
   return window_copy_do_copy_line(cs, 0, 1);
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_copy_pipe_line(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_copy_pipe_line(struct window_copy_cmd_state *cs) {
+unsafe {
   return window_copy_do_copy_line(cs, 1, 0);
 }
-
-static enum window_copy_cmd_action
-window_copy_cmd_copy_pipe_line_and_cancel(struct window_copy_cmd_state *cs) {
-  return window_copy_do_copy_line(cs, 1, 1);
 }
 
-static enum window_copy_cmd_action
-window_copy_cmd_copy_selection_no_clear(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_copy_pipe_line_and_cancel(struct window_copy_cmd_state *cs) {
+unsafe {
+  return window_copy_do_copy_line(cs, 1, 1);
+}
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_copy_selection_no_clear(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct client *c = (*cs).c;
   struct session *s = (*cs).s;
@@ -1183,27 +1287,36 @@ window_copy_cmd_copy_selection_no_clear(struct window_copy_cmd_state *cs) {
   free(prefix);
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_copy_selection(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_copy_selection(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
 
   window_copy_cmd_copy_selection_no_clear(cs);
   window_copy_clear_selection(wme);
   return WINDOW_COPY_CMD_REDRAW;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_copy_selection_and_cancel(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_copy_selection_and_cancel(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
 
   window_copy_cmd_copy_selection_no_clear(cs);
   window_copy_clear_selection(wme);
   return WINDOW_COPY_CMD_CANCEL;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_cursor_down(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_cursor_down(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   u_int np = (*wme).prefix;
 
@@ -1212,9 +1325,12 @@ window_copy_cmd_cursor_down(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_cursor_down_and_cancel(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_cursor_down_and_cancel(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   u_int np = (*wme).prefix, cy;
@@ -1228,9 +1344,12 @@ window_copy_cmd_cursor_down_and_cancel(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_cursor_left(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_cursor_left(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   u_int np = (*wme).prefix;
 
@@ -1239,9 +1358,12 @@ window_copy_cmd_cursor_left(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_cursor_right(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_cursor_right(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   u_int np = (*wme).prefix;
@@ -1251,10 +1373,13 @@ window_copy_cmd_cursor_right(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
 /* Scroll line containing the cursor to the given position. */
-static enum window_copy_cmd_action
-window_copy_cmd_scroll_to(struct window_copy_cmd_state *cs, u_int to) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_scroll_to(struct window_copy_cmd_state *cs, u_int to) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   u_int oy, delta;
@@ -1279,35 +1404,48 @@ window_copy_cmd_scroll_to(struct window_copy_cmd_state *cs, u_int to) {
   window_copy_update_selection(wme, 0, 0);
   return WINDOW_COPY_CMD_REDRAW;
 }
+}
 
 /* Scroll line containing the cursor to the bottom. */
-static enum window_copy_cmd_action
-window_copy_cmd_scroll_bottom(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_scroll_bottom(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_copy_mode_data *data = (*(*cs).wme).data;
   u_int bottom;
 
   bottom = screen_size_y(&(*data).screen) - 1;
   return window_copy_cmd_scroll_to(cs, bottom);
 }
+}
 
 /* Scroll line containing the cursor to the middle. */
-static enum window_copy_cmd_action
-window_copy_cmd_scroll_middle(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_scroll_middle(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_copy_mode_data *data = (*(*cs).wme).data;
   u_int mid_value;
 
   mid_value = (screen_size_y(&(*data).screen) - 1) / 2;
   return window_copy_cmd_scroll_to(cs, mid_value);
 }
+}
 
 /* Scroll line containing the cursor to the top. */
-static enum window_copy_cmd_action
-window_copy_cmd_scroll_top(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_scroll_top(struct window_copy_cmd_state *cs) {
+unsafe {
   return window_copy_cmd_scroll_to(cs, 0);
+}
 }
 
 static enum window_copy_cmd_action
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 window_copy_cmd_cursor_up(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   u_int np = (*wme).prefix;
 
@@ -1316,17 +1454,23 @@ window_copy_cmd_cursor_up(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_end_of_line(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_end_of_line(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
 
   window_copy_cursor_end_of_line(wme);
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_halfpage_down(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_halfpage_down(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   u_int np = (*wme).prefix;
@@ -1338,9 +1482,12 @@ window_copy_cmd_halfpage_down(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_halfpage_down_and_cancel(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_halfpage_down_and_cancel(struct window_copy_cmd_state *cs) {
+unsafe {
 
   struct window_mode_entry *wme = (*cs).wme;
   u_int np = (*wme).prefix;
@@ -1352,9 +1499,12 @@ window_copy_cmd_halfpage_down_and_cancel(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_halfpage_up(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_halfpage_up(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   u_int np = (*wme).prefix;
 
@@ -1363,18 +1513,24 @@ window_copy_cmd_halfpage_up(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_toggle_position(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_toggle_position(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
 
   (*data).hide_position = !(*data).hide_position;
   return WINDOW_COPY_CMD_REDRAW;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_history_bottom(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_history_bottom(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = (*data).backing;
@@ -1395,9 +1551,12 @@ window_copy_cmd_history_bottom(struct window_copy_cmd_state *cs) {
   window_copy_update_selection(wme, 1, 0);
   return WINDOW_COPY_CMD_REDRAW;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_history_top(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_history_top(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   u_int oy;
@@ -1417,9 +1576,12 @@ window_copy_cmd_history_top(struct window_copy_cmd_state *cs) {
   window_copy_update_selection(wme, 1, 0);
   return WINDOW_COPY_CMD_REDRAW;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_jump_again(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_jump_again(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   u_int np = (*wme).prefix;
@@ -1448,9 +1610,12 @@ window_copy_cmd_jump_again(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_jump_reverse(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_jump_reverse(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   u_int np = (*wme).prefix;
@@ -1479,9 +1644,12 @@ window_copy_cmd_jump_reverse(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_middle_line(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_middle_line(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
 
@@ -1491,9 +1659,12 @@ window_copy_cmd_middle_line(struct window_copy_cmd_state *cs) {
   window_copy_update_selection(wme, 1, 0);
   return WINDOW_COPY_CMD_REDRAW;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_previous_matching_bracket(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_previous_matching_bracket(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   u_int np = (*wme).prefix;
   struct window_copy_mode_data *data = (*wme).data;
@@ -1579,9 +1750,12 @@ window_copy_cmd_previous_matching_bracket(struct window_copy_cmd_state *cs) {
 
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_next_matching_bracket(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_next_matching_bracket(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   u_int np = (*wme).prefix;
   struct window_copy_mode_data *data = (*wme).data;
@@ -1706,9 +1880,12 @@ window_copy_cmd_next_matching_bracket(struct window_copy_cmd_state *cs) {
 
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_next_paragraph(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_next_paragraph(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   u_int np = (*wme).prefix;
 
@@ -1717,9 +1894,12 @@ window_copy_cmd_next_paragraph(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_next_space(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_next_space(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   u_int np = (*wme).prefix;
 
@@ -1728,9 +1908,12 @@ window_copy_cmd_next_space(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_next_space_end(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_next_space_end(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   u_int np = (*wme).prefix;
 
@@ -1739,9 +1922,12 @@ window_copy_cmd_next_space_end(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_next_word(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_next_word(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   u_int np = (*wme).prefix;
   const char *separators;
@@ -1753,9 +1939,12 @@ window_copy_cmd_next_word(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_next_word_end(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_next_word_end(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   u_int np = (*wme).prefix;
   const char *separators;
@@ -1767,9 +1956,12 @@ window_copy_cmd_next_word_end(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_other_end(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_other_end(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   u_int np = (*wme).prefix;
   struct window_copy_mode_data *data = (*wme).data;
@@ -1780,9 +1972,12 @@ window_copy_cmd_other_end(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_page_down(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_page_down(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   u_int np = (*wme).prefix;
@@ -1794,9 +1989,12 @@ window_copy_cmd_page_down(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_page_down_and_cancel(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_page_down_and_cancel(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   u_int np = (*wme).prefix;
 
@@ -1807,9 +2005,12 @@ window_copy_cmd_page_down_and_cancel(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_page_up(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_page_up(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   u_int np = (*wme).prefix;
 
@@ -1818,9 +2019,12 @@ window_copy_cmd_page_up(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_previous_paragraph(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_previous_paragraph(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   u_int np = (*wme).prefix;
 
@@ -1829,9 +2033,12 @@ window_copy_cmd_previous_paragraph(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_previous_space(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_previous_space(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   u_int np = (*wme).prefix;
 
@@ -1840,9 +2047,12 @@ window_copy_cmd_previous_space(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_previous_word(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_previous_word(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   u_int np = (*wme).prefix;
   const char *separators;
@@ -1854,9 +2064,12 @@ window_copy_cmd_previous_word(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_rectangle_on(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_rectangle_on(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
 
@@ -1865,9 +2078,12 @@ window_copy_cmd_rectangle_on(struct window_copy_cmd_state *cs) {
 
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_rectangle_off(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_rectangle_off(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
 
@@ -1876,9 +2092,12 @@ window_copy_cmd_rectangle_off(struct window_copy_cmd_state *cs) {
 
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_rectangle_toggle(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_rectangle_toggle(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
 
@@ -1887,9 +2106,12 @@ window_copy_cmd_rectangle_toggle(struct window_copy_cmd_state *cs) {
 
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_scroll_down(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_scroll_down(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   u_int np = (*wme).prefix;
@@ -1902,9 +2124,12 @@ window_copy_cmd_scroll_down(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_scroll_down_and_cancel(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_scroll_down_and_cancel(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   u_int np = (*wme).prefix;
@@ -1917,9 +2142,12 @@ window_copy_cmd_scroll_down_and_cancel(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_scroll_up(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_scroll_up(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   u_int np = (*wme).prefix;
 
@@ -1928,9 +2156,12 @@ window_copy_cmd_scroll_up(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_search_again(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_search_again(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   u_int np = (*wme).prefix;
@@ -1946,9 +2177,12 @@ window_copy_cmd_search_again(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_search_reverse(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_search_reverse(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   u_int np = (*wme).prefix;
@@ -1964,9 +2198,12 @@ window_copy_cmd_search_reverse(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_select_line(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_select_line(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   u_int np = (*wme).prefix;
@@ -1992,9 +2229,12 @@ window_copy_cmd_select_line(struct window_copy_cmd_state *cs) {
 
   return WINDOW_COPY_CMD_REDRAW;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_select_word(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_select_word(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct options *session_options = (*(*cs).s).options;
   struct window_copy_mode_data *data = (*wme).data;
@@ -2043,9 +2283,12 @@ window_copy_cmd_select_word(struct window_copy_cmd_state *cs) {
 
   return WINDOW_COPY_CMD_REDRAW;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_set_mark(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_set_mark(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_copy_mode_data *data = (*(*cs).wme).data;
 
   (*data).mx = (*data).cx;
@@ -2053,17 +2296,23 @@ window_copy_cmd_set_mark(struct window_copy_cmd_state *cs) {
   (*data).showmark = 1;
   return WINDOW_COPY_CMD_REDRAW;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_start_of_line(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_start_of_line(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
 
   window_copy_cursor_start_of_line(wme);
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_top_line(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_top_line(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
 
@@ -2073,9 +2322,12 @@ window_copy_cmd_top_line(struct window_copy_cmd_state *cs) {
   window_copy_update_selection(wme, 1, 0);
   return WINDOW_COPY_CMD_REDRAW;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_copy_pipe_no_clear(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_copy_pipe_no_clear(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct client *c = (*cs).c;
   struct session *s = (*cs).s;
@@ -2098,27 +2350,36 @@ window_copy_cmd_copy_pipe_no_clear(struct window_copy_cmd_state *cs) {
   free(prefix);
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_copy_pipe(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_copy_pipe(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
 
   window_copy_cmd_copy_pipe_no_clear(cs);
   window_copy_clear_selection(wme);
   return WINDOW_COPY_CMD_REDRAW;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_copy_pipe_and_cancel(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_copy_pipe_and_cancel(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
 
   window_copy_cmd_copy_pipe_no_clear(cs);
   window_copy_clear_selection(wme);
   return WINDOW_COPY_CMD_CANCEL;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_pipe_no_clear(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_pipe_no_clear(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct client *c = (*cs).c;
   struct session *s = (*cs).s;
@@ -2135,27 +2396,36 @@ window_copy_cmd_pipe_no_clear(struct window_copy_cmd_state *cs) {
 
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_pipe(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_pipe(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
 
   window_copy_cmd_pipe_no_clear(cs);
   window_copy_clear_selection(wme);
   return WINDOW_COPY_CMD_REDRAW;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_pipe_and_cancel(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_pipe_and_cancel(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
 
   window_copy_cmd_pipe_no_clear(cs);
   window_copy_clear_selection(wme);
   return WINDOW_COPY_CMD_CANCEL;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_goto_line(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_goto_line(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   const char *arg1 = args_string((*cs).args, 1);
 
@@ -2164,9 +2434,12 @@ window_copy_cmd_goto_line(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_jump_backward(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_jump_backward(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   u_int np = (*wme).prefix;
@@ -2182,9 +2455,12 @@ window_copy_cmd_jump_backward(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_jump_forward(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_jump_forward(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   u_int np = (*wme).prefix;
@@ -2200,9 +2476,12 @@ window_copy_cmd_jump_forward(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_jump_to_backward(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_jump_to_backward(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   u_int np = (*wme).prefix;
@@ -2218,9 +2497,12 @@ window_copy_cmd_jump_to_backward(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_jump_to_forward(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_jump_to_forward(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   u_int np = (*wme).prefix;
@@ -2236,35 +2518,47 @@ window_copy_cmd_jump_to_forward(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_jump_to_mark(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_jump_to_mark(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
 
   window_copy_jump_to_mark(wme);
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_next_prompt(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_next_prompt(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   const char *arg1 = args_string((*cs).args, 1);
 
   window_copy_cursor_prompt(wme, 1, arg1);
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_previous_prompt(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_previous_prompt(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   const char *arg1 = args_string((*cs).args, 1);
 
   window_copy_cursor_prompt(wme, 0, arg1);
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_search_backward(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_search_backward(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   u_int np = (*wme).prefix;
@@ -2283,9 +2577,12 @@ window_copy_cmd_search_backward(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_search_backward_text(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_search_backward_text(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   u_int np = (*wme).prefix;
@@ -2304,9 +2601,12 @@ window_copy_cmd_search_backward_text(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_search_forward(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_search_forward(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   u_int np = (*wme).prefix;
@@ -2325,9 +2625,12 @@ window_copy_cmd_search_forward(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_search_forward_text(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_search_forward_text(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   u_int np = (*wme).prefix;
@@ -2346,9 +2649,12 @@ window_copy_cmd_search_forward_text(struct window_copy_cmd_state *cs) {
   }
   return WINDOW_COPY_CMD_NOTHING;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_search_backward_incremental(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_search_backward_incremental(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   const char *arg1 = args_string((*cs).args, 1);
@@ -2400,9 +2706,12 @@ window_copy_cmd_search_backward_incremental(struct window_copy_cmd_state *cs) {
   }
   return action;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_search_forward_incremental(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_search_forward_incremental(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   const char *arg1 = args_string((*cs).args, 1);
@@ -2453,9 +2762,12 @@ window_copy_cmd_search_forward_incremental(struct window_copy_cmd_state *cs) {
   }
   return action;
 }
+}
 
-static enum window_copy_cmd_action
-window_copy_cmd_refresh_from_pane(struct window_copy_cmd_state *cs) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static enum window_copy_cmd_action window_copy_cmd_refresh_from_pane(struct window_copy_cmd_state *cs) {
+unsafe {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_pane *wp = (*wme).swp;
   struct window_copy_mode_data *data = (*wme).data;
@@ -2471,6 +2783,7 @@ window_copy_cmd_refresh_from_pane(struct window_copy_cmd_state *cs) {
 
   window_copy_size_changed(wme);
   return WINDOW_COPY_CMD_REDRAW;
+}
 }
 
 static const struct {
@@ -2906,9 +3219,10 @@ static const struct {
      .clear = WINDOW_COPY_CMD_CLEAR_EMACS_ONLY,
      .f = window_copy_cmd_top_line}};
 
-static void window_copy_command(struct window_mode_entry *wme, struct client *c,
-                                struct session *s, struct winlink *wl,
-                                struct args *args, struct mouse_event *m) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_command(struct window_mode_entry *wme, struct client *c, struct session *s, struct winlink *wl, struct args *args, struct mouse_event *m) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct window_copy_cmd_state cs;
   enum window_copy_cmd_action action;
@@ -2968,9 +3282,12 @@ static void window_copy_command(struct window_mode_entry *wme, struct client *c,
     window_copy_redraw_screen(wme);
   }
 }
+}
 
-static void window_copy_scroll_to(struct window_mode_entry *wme, u_int px,
-                                  u_int py, int no_redraw) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_scroll_to(struct window_mode_entry *wme, u_int px, u_int py, int no_redraw) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct grid *gd = (*(*data).backing).grid;
   u_int offset, gap;
@@ -3002,9 +3319,12 @@ static void window_copy_scroll_to(struct window_mode_entry *wme, u_int px,
     window_copy_redraw_screen(wme);
   }
 }
+}
 
-static int window_copy_search_compare(struct grid *gd, u_int px, u_int py,
-                                      struct grid *sgd, u_int spx, int cis) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static int window_copy_search_compare(struct grid *gd, u_int px, u_int py, struct grid *sgd, u_int spx, int cis) {
+unsafe {
   struct grid_cell gc, sgc;
   const struct utf8_data *ud, *sud;
 
@@ -3023,9 +3343,12 @@ static int window_copy_search_compare(struct grid *gd, u_int px, u_int py,
 
   return memcmp((*ud).data, (*sud).data, (*ud).size) == 0;
 }
+}
 
-static int window_copy_search_lr(struct grid *gd, struct grid *sgd, u_int *ppx,
-                                 u_int py, u_int first, u_int last, int cis) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static int window_copy_search_lr(struct grid *gd, struct grid *sgd, u_int *ppx, u_int py, u_int first, u_int last, int cis) {
+unsafe {
   u_int ax, bx, px, pywrap, endline;
   int matched;
   struct grid_line *gl;
@@ -3060,9 +3383,12 @@ static int window_copy_search_lr(struct grid *gd, struct grid *sgd, u_int *ppx,
   }
   return 0;
 }
+}
 
-static int window_copy_search_rl(struct grid *gd, struct grid *sgd, u_int *ppx,
-                                 u_int py, u_int first, u_int last, int cis) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static int window_copy_search_rl(struct grid *gd, struct grid *sgd, u_int *ppx, u_int py, u_int first, u_int last, int cis) {
+unsafe {
   u_int ax, bx, px, pywrap, endline;
   int matched;
   struct grid_line *gl;
@@ -3097,10 +3423,12 @@ static int window_copy_search_rl(struct grid *gd, struct grid *sgd, u_int *ppx,
   }
   return 0;
 }
+}
 
-static int window_copy_search_lr_regex(struct grid *gd, u_int *ppx, u_int *psx,
-                                       u_int py, u_int first, u_int last,
-                                       regex_t *reg) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static int window_copy_search_lr_regex(struct grid *gd, u_int *ppx, u_int *psx, u_int py, u_int first, u_int last, regex_t *reg) {
+unsafe {
   int eflags = 0;
   u_int endline, foundx, foundy, len, pywrap, size = 1;
   char *buf;
@@ -3164,10 +3492,12 @@ static int window_copy_search_lr_regex(struct grid *gd, u_int *ppx, u_int *psx,
   *psx = 0;
   return 0;
 }
+}
 
-static int window_copy_search_rl_regex(struct grid *gd, u_int *ppx, u_int *psx,
-                                       u_int py, u_int first, u_int last,
-                                       regex_t *reg) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static int window_copy_search_rl_regex(struct grid *gd, u_int *ppx, u_int *psx, u_int py, u_int first, u_int last, regex_t *reg) {
+unsafe {
   int eflags = 0;
   u_int endline, len, pywrap, size = 1;
   char *buf;
@@ -3207,9 +3537,12 @@ static int window_copy_search_rl_regex(struct grid *gd, u_int *ppx, u_int *psx,
   *psx = 0;
   return 0;
 }
+}
 
-static const char *window_copy_cellstring(const struct grid_line *gl, u_int px,
-                                          size_t *size, int *allocated) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static const char *window_copy_cellstring(const struct grid_line *gl, u_int px, size_t *size, int *allocated) {
+unsafe {
   static struct utf8_data ud;
   struct grid_cell_entry *gce;
   char *copy;
@@ -3245,12 +3578,13 @@ static const char *window_copy_cellstring(const struct grid_line *gl, u_int px,
   memcpy(copy, ud.data, ud.size);
   return copy;
 }
+}
 
 /* Find last match in given range. */
-static int window_copy_last_regex(struct grid *gd, u_int py, u_int first,
-                                  u_int last, u_int len, u_int *ppx, u_int *psx,
-                                  const char *buf, const regex_t *preg,
-                                  int eflags) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static int window_copy_last_regex(struct grid *gd, u_int py, u_int first, u_int last, u_int len, u_int *ppx, u_int *psx, const char *buf, const regex_t *preg, int eflags) {
+unsafe {
   u_int foundx, foundy, oldx, px = 0, savepx, savesx = 0;
   regmatch_t regmatch;
 
@@ -3297,10 +3631,13 @@ static int window_copy_last_regex(struct grid *gd, u_int py, u_int first,
     return 0;
   }
 }
+}
 
 /* Stringify line and append to input buffer. Caller frees. */
-static char *window_copy_stringify(struct grid *gd, u_int py, u_int first,
-                                   u_int last, char *buf, u_int *size) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static char *window_copy_stringify(struct grid *gd, u_int py, u_int first, u_int last, char *buf, u_int *size) {
+unsafe {
   u_int ax, bx, newsize = *size;
   const struct grid_line *gl;
   const char *d;
@@ -3336,10 +3673,13 @@ static char *window_copy_stringify(struct grid *gd, u_int py, u_int first,
   *size = newsize;
   return buf;
 }
+}
 
 /* Map start of C string containing UTF-8 data to grid cell position. */
-static void window_copy_cstrtocellpos(struct grid *gd, u_int ncells, u_int *ppx,
-                                      u_int *ppy, const char *str) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_cstrtocellpos(struct grid *gd, u_int ncells, u_int *ppx, u_int *ppy, const char *str) {
+unsafe {
   u_int cell, ccell, px, pywrap, pos, len;
   int match;
   const struct grid_line *gl;
@@ -3426,9 +3766,12 @@ static void window_copy_cstrtocellpos(struct grid *gd, u_int ncells, u_int *ppx,
   }
   free(cells);
 }
+}
 
-static void window_copy_move_left(struct screen *s, u_int *fx, u_int *fy,
-                                  int wrapflag) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_move_left(struct screen *s, u_int *fx, u_int *fy, int wrapflag) {
+unsafe {
   if (*fx == 0) {   /* left */
     if (*fy == 0) { /* top */
       if (wrapflag) {
@@ -3443,9 +3786,12 @@ static void window_copy_move_left(struct screen *s, u_int *fx, u_int *fy,
     *fx = *fx - 1;
   }
 }
+}
 
-static void window_copy_move_right(struct screen *s, u_int *fx, u_int *fy,
-                                   int wrapflag) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_move_right(struct screen *s, u_int *fx, u_int *fy, int wrapflag) {
+unsafe {
   if (*fx == screen_size_x(s) - 1) {                     /* right */
     if (*fy == screen_hsize(s) + screen_size_y(s) - 1) { /* bottom */
       if (wrapflag) {
@@ -3460,8 +3806,12 @@ static void window_copy_move_right(struct screen *s, u_int *fx, u_int *fy,
     *fx = *fx + 1;
   }
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static int window_copy_is_lowercase(const char *ptr) {
+unsafe {
   while (*ptr != '\0') {
     if (*ptr != tolower((u_char)*ptr)) {
       return 0;
@@ -3470,14 +3820,16 @@ static int window_copy_is_lowercase(const char *ptr) {
   }
   return 1;
 }
+}
 
 /*
  * Handle backward wrapped regex searches with overlapping matches. In this case
  * find the longest overlapping match from previous wrapped lines.
  */
-static void window_copy_search_back_overlap(struct grid *gd, regex_t *preg,
-                                            u_int *ppx, u_int *psx, u_int *ppy,
-                                            u_int endline) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_search_back_overlap(struct grid *gd, regex_t *preg, u_int *ppx, u_int *psx, u_int *ppy, u_int endline) {
+unsafe {
   u_int endx, endy, oldendx, oldendy, px, py, sx;
   int found = 1;
 
@@ -3510,6 +3862,7 @@ static void window_copy_search_back_overlap(struct grid *gd, regex_t *preg,
     }
   }
 }
+}
 
 /*
  * Search for text stored in sgd starting from position fx,fy up to endline. If
@@ -3517,10 +3870,10 @@ static void window_copy_search_back_overlap(struct grid *gd, regex_t *preg,
  * up, down otherwise. If wrap then go to begin/end of grid and try again if
  * not found.
  */
-static int window_copy_search_jump(struct window_mode_entry *wme,
-                                   struct grid *gd, struct grid *sgd, u_int fx,
-                                   u_int fy, u_int endline, int cis, int wrap,
-                                   int direction, int regex) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static int window_copy_search_jump(struct window_mode_entry *wme, struct grid *gd, struct grid *sgd, u_int fx, u_int fy, u_int endline, int cis, int wrap, int direction, int regex) {
+unsafe {
   u_int i, px, sx, ssize = 1;
   int found = 0, cflags = REG_EXTENDED;
   char *sbuf;
@@ -3585,10 +3938,12 @@ static int window_copy_search_jump(struct window_mode_entry *wme,
   }
   return 0;
 }
+}
 
-static void
-window_copy_move_after_search_mark(struct window_copy_mode_data *data,
-                                   u_int *fx, u_int *fy, int wrapflag) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_move_after_search_mark(struct window_copy_mode_data *data, u_int *fx, u_int *fy, int wrapflag) {
+unsafe {
   struct screen *s = (*data).backing;
   u_int at, start;
 
@@ -3608,13 +3963,16 @@ window_copy_move_after_search_mark(struct window_copy_mode_data *data,
     }
   }
 }
+}
 
 /*
  * Search in for text searchstr. If direction is 0 then search up, otherwise
  * down.
  */
-static int window_copy_search(struct window_mode_entry *wme, int direction,
-                              int regex) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static int window_copy_search(struct window_mode_entry *wme, int direction, int regex) {
+unsafe {
   struct window_pane *wp = (*wme).wp;
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = (*data).backing, ss;
@@ -3743,9 +4101,12 @@ static int window_copy_search(struct window_mode_entry *wme, int direction,
   screen_free(&ss);
   return found;
 }
+}
 
-static void window_copy_visible_lines(struct window_copy_mode_data *data,
-                                      u_int *start, u_int *end) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_visible_lines(struct window_copy_mode_data *data, u_int *start, u_int *end) {
+unsafe {
   struct grid *gd = (*(*data).backing).grid;
   const struct grid_line *gl;
 
@@ -3757,9 +4118,12 @@ static void window_copy_visible_lines(struct window_copy_mode_data *data,
   }
   *end = (*gd).hsize - (*data).oy + (*gd).sy;
 }
+}
 
-static int window_copy_search_mark_at(struct window_copy_mode_data *data,
-                                      u_int px, u_int py, u_int *at) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static int window_copy_search_mark_at(struct window_copy_mode_data *data, u_int px, u_int py, u_int *at) {
+unsafe {
   struct screen *s = (*data).backing;
   struct grid *gd = (*s).grid;
 
@@ -3772,10 +4136,12 @@ static int window_copy_search_mark_at(struct window_copy_mode_data *data,
   *at = ((py - ((*gd).hsize - (*data).oy)) * (*gd).sx) + px;
   return 0;
 }
+}
 
-static int window_copy_search_marks(struct window_mode_entry *wme,
-                                    struct screen *ssp, int regex,
-                                    int visible_only) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static int window_copy_search_marks(struct window_mode_entry *wme, struct screen *ssp, int regex, int visible_only) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = (*data).backing, ss;
   struct screen_write_ctx ctx;
@@ -3915,24 +4281,39 @@ out:
   }
   return 1;
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_clear_marks(struct window_mode_entry *wme) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
 
   free((*data).searchmark);
   (*data).searchmark = NULL;
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static int window_copy_search_up(struct window_mode_entry *wme, int regex) {
+unsafe {
   return window_copy_search(wme, 0, regex);
 }
-
-static int window_copy_search_down(struct window_mode_entry *wme, int regex) {
-  return window_copy_search(wme, 1, regex);
 }
 
-static void window_copy_goto_line(struct window_mode_entry *wme,
-                                  const char *linestr) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static int window_copy_search_down(struct window_mode_entry *wme, int regex) {
+unsafe {
+  return window_copy_search(wme, 1, regex);
+}
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_goto_line(struct window_mode_entry *wme, const char *linestr) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   const char *errstr;
   int lineno;
@@ -3949,9 +4330,12 @@ static void window_copy_goto_line(struct window_mode_entry *wme,
   window_copy_update_selection(wme, 1, 0);
   window_copy_redraw_screen(wme);
 }
+}
 
-static void window_copy_match_start_end(struct window_copy_mode_data *data,
-                                        u_int at, u_int *start, u_int *end) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_match_start_end(struct window_copy_mode_data *data, u_int at, u_int *start, u_int *end) {
+unsafe {
   struct grid *gd = (*(*data).backing).grid;
   u_int last = ((*gd).sy * (*gd).sx) - 1;
   u_char mark = (*data).searchmark[at];
@@ -3970,8 +4354,12 @@ static void window_copy_match_start_end(struct window_copy_mode_data *data,
     (*end)--;
   }
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static char *window_copy_match_at_cursor(struct window_copy_mode_data *data) {
+unsafe {
   struct grid *gd = (*(*data).backing).grid;
   struct grid_cell gc;
   u_int at, start, end, cy, px, py;
@@ -4013,12 +4401,12 @@ static char *window_copy_match_at_cursor(struct window_copy_mode_data *data) {
   }
   return buf;
 }
+}
 
-static void window_copy_update_style(struct window_mode_entry *wme, u_int fx,
-                                     u_int fy, struct grid_cell *gc,
-                                     const struct grid_cell *mgc,
-                                     const struct grid_cell *cgc,
-                                     const struct grid_cell *mkgc) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_update_style(struct window_mode_entry *wme, u_int fx, u_int fy, struct grid_cell *gc, const struct grid_cell *mgc, const struct grid_cell *cgc, const struct grid_cell *mkgc) {
+unsafe {
   struct window_pane *wp = (*wme).wp;
   struct window_copy_mode_data *data = (*wme).data;
   u_int mark, start, end, cy, cursor, current;
@@ -4087,13 +4475,12 @@ static void window_copy_update_style(struct window_mode_entry *wme, u_int fx,
     (*gc).bg = (*mgc).bg;
   }
 }
+}
 
-static void window_copy_write_one(struct window_mode_entry *wme,
-                                  struct screen_write_ctx *ctx, u_int py,
-                                  u_int fy, u_int nx,
-                                  const struct grid_cell *mgc,
-                                  const struct grid_cell *cgc,
-                                  const struct grid_cell *mkgc) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_write_one(struct window_mode_entry *wme, struct screen_write_ctx *ctx, u_int py, u_int fy, u_int nx, const struct grid_cell *mgc, const struct grid_cell *cgc, const struct grid_cell *mkgc) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct grid *gd = (*(*data).backing).grid;
   struct grid_cell gc;
@@ -4108,9 +4495,12 @@ static void window_copy_write_one(struct window_mode_entry *wme,
     }
   }
 }
+}
 
-static void window_copy_write_line(struct window_mode_entry *wme,
-                                   struct screen_write_ctx *ctx, u_int py) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_write_line(struct window_mode_entry *wme, struct screen_write_ctx *ctx, u_int py) {
+unsafe {
   struct window_pane *wp = (*wme).wp;
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
@@ -4173,19 +4563,24 @@ static void window_copy_write_line(struct window_mode_entry *wme,
     screen_write_putc(ctx, &grid_default_cell, '$');
   }
 }
+}
 
-static void window_copy_write_lines(struct window_mode_entry *wme,
-                                    struct screen_write_ctx *ctx, u_int py,
-                                    u_int ny) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_write_lines(struct window_mode_entry *wme, struct screen_write_ctx *ctx, u_int py, u_int ny) {
+unsafe {
   u_int yy;
 
   for (yy = py; yy < py + ny; yy++) {
     window_copy_write_line(wme, ctx, py);
   }
 }
+}
 
-static void window_copy_redraw_selection(struct window_mode_entry *wme,
-                                         u_int old_y) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_redraw_selection(struct window_mode_entry *wme, u_int old_y) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct grid *gd = (*(*data).backing).grid;
   u_int new_y, start, end;
@@ -4211,9 +4606,12 @@ static void window_copy_redraw_selection(struct window_mode_entry *wme,
   }
   window_copy_redraw_lines(wme, start, end - start + 1);
 }
+}
 
-static void window_copy_redraw_lines(struct window_mode_entry *wme, u_int py,
-                                     u_int ny) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_redraw_lines(struct window_mode_entry *wme, u_int py, u_int ny) {
+unsafe {
   struct window_pane *wp = (*wme).wp;
   struct window_copy_mode_data *data = (*wme).data;
   struct screen_write_ctx ctx;
@@ -4226,15 +4624,22 @@ static void window_copy_redraw_lines(struct window_mode_entry *wme, u_int py,
   screen_write_cursormove(&ctx, (*data).cx, (*data).cy, 0);
   screen_write_stop(&ctx);
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_redraw_screen(struct window_mode_entry *wme) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
 
   window_copy_redraw_lines(wme, 0, screen_size_y(&(*data).screen));
 }
+}
 
-static void window_copy_synchronize_cursor_end(struct window_mode_entry *wme,
-                                               int begin, int no_reset) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_synchronize_cursor_end(struct window_mode_entry *wme, int begin, int no_reset) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   u_int xx, yy;
 
@@ -4302,9 +4707,12 @@ static void window_copy_synchronize_cursor_end(struct window_mode_entry *wme,
     (*data).endsely = yy;
   }
 }
+}
 
-static void window_copy_synchronize_cursor(struct window_mode_entry *wme,
-                                           int no_reset) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_synchronize_cursor(struct window_mode_entry *wme, int no_reset) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
 
   switch ((*data).cursordrag) {
@@ -4318,9 +4726,12 @@ static void window_copy_synchronize_cursor(struct window_mode_entry *wme,
     break;
   }
 }
+}
 
-static void window_copy_update_cursor(struct window_mode_entry *wme, u_int cx,
-                                      u_int cy) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_update_cursor(struct window_mode_entry *wme, u_int cx, u_int cy) {
+unsafe {
   struct window_pane *wp = (*wme).wp;
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
@@ -4342,8 +4753,12 @@ static void window_copy_update_cursor(struct window_mode_entry *wme, u_int cx,
     screen_write_stop(&ctx);
   }
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_start_selection(struct window_mode_entry *wme) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
 
   (*data).selx = (*data).cx;
@@ -4356,9 +4771,12 @@ static void window_copy_start_selection(struct window_mode_entry *wme) {
 
   window_copy_set_selection(wme, 1, 0);
 }
+}
 
-static int window_copy_adjust_selection(struct window_mode_entry *wme,
-                                        u_int *selx, u_int *sely) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static int window_copy_adjust_selection(struct window_mode_entry *wme, u_int *selx, u_int *sely) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
   u_int sx, sy, ty;
@@ -4389,9 +4807,12 @@ static int window_copy_adjust_selection(struct window_mode_entry *wme,
   *sely = sy;
   return relpos;
 }
+}
 
-static int window_copy_update_selection(struct window_mode_entry *wme,
-                                        int may_redraw, int no_reset) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static int window_copy_update_selection(struct window_mode_entry *wme, int may_redraw, int no_reset) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
 
@@ -4400,9 +4821,12 @@ static int window_copy_update_selection(struct window_mode_entry *wme,
   }
   return window_copy_set_selection(wme, may_redraw, no_reset);
 }
+}
 
-static int window_copy_set_selection(struct window_mode_entry *wme,
-                                     int may_redraw, int no_reset) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static int window_copy_set_selection(struct window_mode_entry *wme, int may_redraw, int no_reset) {
+unsafe {
   struct window_pane *wp = (*wme).wp;
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
@@ -4460,9 +4884,12 @@ static int window_copy_set_selection(struct window_mode_entry *wme,
 
   return 1;
 }
+}
 
-static void *window_copy_get_selection(struct window_mode_entry *wme,
-                                       size_t *len) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void *window_copy_get_selection(struct window_mode_entry *wme, size_t *len) {
+unsafe {
   struct window_pane *wp = (*wme).wp;
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
@@ -4589,9 +5016,12 @@ static void *window_copy_get_selection(struct window_mode_entry *wme,
   *len = off;
   return buf;
 }
+}
 
-static void window_copy_copy_buffer(struct window_mode_entry *wme,
-                                    const char *prefix, void *buf, size_t len) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_copy_buffer(struct window_mode_entry *wme, const char *prefix, void *buf, size_t len) {
+unsafe {
   struct window_pane *wp = (*wme).wp;
   struct screen_write_ctx ctx;
 
@@ -4604,10 +5034,12 @@ static void window_copy_copy_buffer(struct window_mode_entry *wme,
 
   paste_add(prefix, buf, len);
 }
+}
 
-static void *window_copy_pipe_run(struct window_mode_entry *wme,
-                                  struct session *s, const char *cmd,
-                                  size_t *len) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void *window_copy_pipe_run(struct window_mode_entry *wme, struct session *s, const char *cmd, size_t *len) {
+unsafe {
   void *buf;
   struct job *job;
 
@@ -4622,17 +5054,22 @@ static void *window_copy_pipe_run(struct window_mode_entry *wme,
   }
   return buf;
 }
+}
 
-static void window_copy_pipe(struct window_mode_entry *wme, struct session *s,
-                             const char *cmd) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_pipe(struct window_mode_entry *wme, struct session *s, const char *cmd) {
+unsafe {
   size_t len;
 
   window_copy_pipe_run(wme, s, cmd, &len);
 }
+}
 
-static void window_copy_copy_pipe(struct window_mode_entry *wme,
-                                  struct session *s, const char *prefix,
-                                  const char *cmd) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_copy_pipe(struct window_mode_entry *wme, struct session *s, const char *prefix, const char *cmd) {
+unsafe {
   void *buf;
   size_t len;
 
@@ -4641,9 +5078,12 @@ static void window_copy_copy_pipe(struct window_mode_entry *wme,
     window_copy_copy_buffer(wme, prefix, buf, len);
   }
 }
+}
 
-static void window_copy_copy_selection(struct window_mode_entry *wme,
-                                       const char *prefix) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_copy_selection(struct window_mode_entry *wme, const char *prefix) {
+unsafe {
   char *buf;
   size_t len;
 
@@ -4652,8 +5092,12 @@ static void window_copy_copy_selection(struct window_mode_entry *wme,
     window_copy_copy_buffer(wme, prefix, buf, len);
   }
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_append_selection(struct window_mode_entry *wme) {
+unsafe {
   struct window_pane *wp = (*wme).wp;
   char *buf;
   struct paste_buffer *pb;
@@ -4685,9 +5129,12 @@ static void window_copy_append_selection(struct window_mode_entry *wme) {
     free(buf);
   }
 }
+}
 
-static void window_copy_copy_line(struct window_mode_entry *wme, char **buf,
-                                  size_t *off, u_int sy, u_int sx, u_int ex) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_copy_line(struct window_mode_entry *wme, char **buf, size_t *off, u_int sy, u_int sx, u_int ex) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct grid *gd = (*(*data).backing).grid;
   struct grid_cell gc;
@@ -4749,8 +5196,12 @@ static void window_copy_copy_line(struct window_mode_entry *wme, char **buf,
     (*buf)[(*off)++] = '\n';
   }
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_clear_selection(struct window_mode_entry *wme) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   u_int px, py;
 
@@ -4766,9 +5217,12 @@ static void window_copy_clear_selection(struct window_mode_entry *wme) {
     window_copy_update_cursor(wme, px, (*data).cy);
   }
 }
+}
 
-static int window_copy_in_set(struct window_mode_entry *wme, u_int px, u_int py,
-                              const char *set) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static int window_copy_in_set(struct window_mode_entry *wme, u_int px, u_int py, const char *set) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct grid_cell gc;
 
@@ -4778,14 +5232,22 @@ static int window_copy_in_set(struct window_mode_entry *wme, u_int px, u_int py,
   }
   return utf8_cstrhas(set, &gc.data);
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static u_int window_copy_find_length(struct window_mode_entry *wme, u_int py) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
 
   return grid_line_length((*(*data).backing).grid, py);
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_cursor_start_of_line(struct window_mode_entry *wme) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *back_s = (*data).backing;
   struct grid_reader gr;
@@ -4801,9 +5263,12 @@ static void window_copy_cursor_start_of_line(struct window_mode_entry *wme) {
   grid_reader_get_cursor(&gr, &px, &py);
   window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
 }
+}
 
-static void
-window_copy_cursor_back_to_indentation(struct window_mode_entry *wme) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_cursor_back_to_indentation(struct window_mode_entry *wme) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *back_s = (*data).backing;
   struct grid_reader gr;
@@ -4819,8 +5284,12 @@ window_copy_cursor_back_to_indentation(struct window_mode_entry *wme) {
   grid_reader_get_cursor(&gr, &px, &py);
   window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_cursor_end_of_line(struct window_mode_entry *wme) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *back_s = (*data).backing;
   struct grid_reader gr;
@@ -4841,8 +5310,12 @@ static void window_copy_cursor_end_of_line(struct window_mode_entry *wme) {
   window_copy_acquire_cursor_down(wme, hsize, screen_size_y(back_s), (*data).oy,
                                   oldy, px, py, 0);
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_other_end(struct window_mode_entry *wme) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
   u_int selx, sely, cy, yy, hsize;
@@ -4893,8 +5366,12 @@ static void window_copy_other_end(struct window_mode_entry *wme) {
   window_copy_update_selection(wme, 1, 1);
   window_copy_redraw_screen(wme);
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_cursor_left(struct window_mode_entry *wme) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *back_s = (*data).backing;
   struct grid_reader gr;
@@ -4910,8 +5387,12 @@ static void window_copy_cursor_left(struct window_mode_entry *wme) {
   grid_reader_get_cursor(&gr, &px, &py);
   window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_cursor_right(struct window_mode_entry *wme, int all) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *back_s = (*data).backing;
   struct grid_reader gr;
@@ -4928,9 +5409,12 @@ static void window_copy_cursor_right(struct window_mode_entry *wme, int all) {
   window_copy_acquire_cursor_down(wme, hsize, screen_size_y(back_s), (*data).oy,
                                   oldy, px, py, 0);
 }
+}
 
-static void window_copy_cursor_up(struct window_mode_entry *wme,
-                                  int scroll_only) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_cursor_up(struct window_mode_entry *wme, int scroll_only) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
   u_int ox, oy, px, py;
@@ -5004,9 +5488,12 @@ static void window_copy_cursor_up(struct window_mode_entry *wme,
     }
   }
 }
+}
 
-static void window_copy_cursor_down(struct window_mode_entry *wme,
-                                    int scroll_only) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_cursor_down(struct window_mode_entry *wme, int scroll_only) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
   u_int ox, oy, px, py;
@@ -5072,8 +5559,12 @@ static void window_copy_cursor_down(struct window_mode_entry *wme,
     }
   }
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_cursor_jump(struct window_mode_entry *wme) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *back_s = (*data).backing;
   struct grid_reader gr;
@@ -5091,8 +5582,12 @@ static void window_copy_cursor_jump(struct window_mode_entry *wme) {
                                     oldy, px, py, 0);
   }
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_cursor_jump_back(struct window_mode_entry *wme) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *back_s = (*data).backing;
   struct grid_reader gr;
@@ -5110,8 +5605,12 @@ static void window_copy_cursor_jump_back(struct window_mode_entry *wme) {
     window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
   }
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_cursor_jump_to(struct window_mode_entry *wme) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *back_s = (*data).backing;
   struct grid_reader gr;
@@ -5130,8 +5629,12 @@ static void window_copy_cursor_jump_to(struct window_mode_entry *wme) {
                                     oldy, px, py, 0);
   }
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_cursor_jump_to_back(struct window_mode_entry *wme) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *back_s = (*data).backing;
   struct grid_reader gr;
@@ -5151,9 +5654,12 @@ static void window_copy_cursor_jump_to_back(struct window_mode_entry *wme) {
     window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
   }
 }
+}
 
-static void window_copy_cursor_next_word(struct window_mode_entry *wme,
-                                         const char *separators) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_cursor_next_word(struct window_mode_entry *wme, const char *separators) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *back_s = (*data).backing;
   struct grid_reader gr;
@@ -5170,11 +5676,13 @@ static void window_copy_cursor_next_word(struct window_mode_entry *wme,
   window_copy_acquire_cursor_down(wme, hsize, screen_size_y(back_s), (*data).oy,
                                   oldy, px, py, 0);
 }
+}
 
 /* Compute the next place where a word ends. */
-static void window_copy_cursor_next_word_end_pos(struct window_mode_entry *wme,
-                                                 const char *separators,
-                                                 u_int *ppx, u_int *ppy) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_cursor_next_word_end_pos(struct window_mode_entry *wme, const char *separators, u_int *ppx, u_int *ppy) {
+unsafe {
   struct window_pane *wp = (*wme).wp;
   struct window_copy_mode_data *data = (*wme).data;
   struct options *oo = (*(*wp).window).options;
@@ -5200,11 +5708,13 @@ static void window_copy_cursor_next_word_end_pos(struct window_mode_entry *wme,
   *ppx = px;
   *ppy = py;
 }
+}
 
 /* Move to the next place where a word ends. */
-static void window_copy_cursor_next_word_end(struct window_mode_entry *wme,
-                                             const char *separators,
-                                             int no_reset) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_cursor_next_word_end(struct window_mode_entry *wme, const char *separators, int no_reset) {
+unsafe {
   struct window_pane *wp = (*wme).wp;
   struct window_copy_mode_data *data = (*wme).data;
   struct options *oo = (*(*wp).window).options;
@@ -5231,11 +5741,13 @@ static void window_copy_cursor_next_word_end(struct window_mode_entry *wme,
   window_copy_acquire_cursor_down(wme, hsize, screen_size_y(back_s), (*data).oy,
                                   oldy, px, py, no_reset);
 }
+}
 
 /* Compute the previous place where a word begins. */
-static void window_copy_cursor_previous_word_pos(struct window_mode_entry *wme,
-                                                 const char *separators,
-                                                 u_int *ppx, u_int *ppy) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_cursor_previous_word_pos(struct window_mode_entry *wme, const char *separators, u_int *ppx, u_int *ppy) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *back_s = (*data).backing;
   struct grid_reader gr;
@@ -5252,11 +5764,13 @@ static void window_copy_cursor_previous_word_pos(struct window_mode_entry *wme,
   *ppx = px;
   *ppy = py;
 }
+}
 
 /* Move to the previous place where a word begins. */
-static void window_copy_cursor_previous_word(struct window_mode_entry *wme,
-                                             const char *separators,
-                                             int already) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_cursor_previous_word(struct window_mode_entry *wme, const char *separators, int already) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct window *w = (*(*wme).wp).window;
   struct screen *back_s = (*data).backing;
@@ -5280,9 +5794,12 @@ static void window_copy_cursor_previous_word(struct window_mode_entry *wme,
   grid_reader_get_cursor(&gr, &px, &py);
   window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
 }
+}
 
-static void window_copy_cursor_prompt(struct window_mode_entry *wme,
-                                      int direction, const char *args) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_cursor_prompt(struct window_mode_entry *wme, int direction, const char *args) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = (*data).backing;
   struct grid *gd = (*s).grid;
@@ -5330,8 +5847,12 @@ static void window_copy_cursor_prompt(struct window_mode_entry *wme,
   window_copy_update_selection(wme, 1, 0);
   window_copy_redraw_screen(wme);
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_scroll_up(struct window_mode_entry *wme, u_int ny) {
+unsafe {
   struct window_pane *wp = (*wme).wp;
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
@@ -5367,8 +5888,12 @@ static void window_copy_scroll_up(struct window_mode_entry *wme, u_int ny) {
   screen_write_cursormove(&ctx, (*data).cx, (*data).cy, 0);
   screen_write_stop(&ctx);
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_scroll_down(struct window_mode_entry *wme, u_int ny) {
+unsafe {
   struct window_pane *wp = (*wme).wp;
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
@@ -5403,9 +5928,12 @@ static void window_copy_scroll_down(struct window_mode_entry *wme, u_int ny) {
   screen_write_cursormove(&ctx, (*data).cx, (*data).cy, 0);
   screen_write_stop(&ctx);
 }
+}
 
-static void window_copy_rectangle_set(struct window_mode_entry *wme,
-                                      int rectflag) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_rectangle_set(struct window_mode_entry *wme, int rectflag) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   u_int px, py;
 
@@ -5420,8 +5948,12 @@ static void window_copy_rectangle_set(struct window_mode_entry *wme,
   window_copy_update_selection(wme, 1, 0);
   window_copy_redraw_screen(wme);
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_move_mouse(struct mouse_event *m) {
+unsafe {
   struct window_pane *wp;
   struct window_mode_entry *wme;
   u_int x, y;
@@ -5444,8 +5976,12 @@ static void window_copy_move_mouse(struct mouse_event *m) {
 
   window_copy_update_cursor(wme, x, y);
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 void window_copy_start_drag(struct client *c, struct mouse_event *m) {
+unsafe {
   struct window_pane *wp;
   struct window_mode_entry *wme;
   struct window_copy_mode_data *data;
@@ -5500,8 +6036,12 @@ void window_copy_start_drag(struct client *c, struct mouse_event *m) {
   window_copy_redraw_screen(wme);
   window_copy_drag_update(c, m);
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_drag_update(struct client *c, struct mouse_event *m) {
+unsafe {
   struct window_pane *wp;
   struct window_mode_entry *wme;
   struct window_copy_mode_data *data;
@@ -5547,8 +6087,12 @@ static void window_copy_drag_update(struct client *c, struct mouse_event *m) {
     }
   }
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_drag_release(struct client *c, struct mouse_event *m) {
+unsafe {
   struct window_pane *wp;
   struct window_mode_entry *wme;
   struct window_copy_mode_data *data;
@@ -5572,8 +6116,12 @@ static void window_copy_drag_release(struct client *c, struct mouse_event *m) {
   data = (*wme).data;
   evtimer_del(&(*data).dragtimer);
 }
+}
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
 static void window_copy_jump_to_mark(struct window_mode_entry *wme) {
+unsafe {
   struct window_copy_mode_data *data = (*wme).data;
   u_int tmx, tmy;
 
@@ -5593,11 +6141,13 @@ static void window_copy_jump_to_mark(struct window_mode_entry *wme) {
   window_copy_update_selection(wme, 0, 0);
   window_copy_redraw_screen(wme);
 }
+}
 
 /* Scroll up if the cursor went off the visible screen. */
-static void window_copy_acquire_cursor_up(struct window_mode_entry *wme,
-                                          u_int hsize, u_int oy, u_int oldy,
-                                          u_int px, u_int py) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_acquire_cursor_up(struct window_mode_entry *wme, u_int hsize, u_int oy, u_int oldy, u_int px, u_int py) {
+unsafe {
   u_int cy, yy, ny, nd;
 
   yy = hsize - oy;
@@ -5619,12 +6169,13 @@ static void window_copy_acquire_cursor_up(struct window_mode_entry *wme,
     window_copy_redraw_lines(wme, cy, nd);
   }
 }
+}
 
 /* Scroll down if the cursor went off the visible screen. */
-static void window_copy_acquire_cursor_down(struct window_mode_entry *wme,
-                                            u_int hsize, u_int sy, u_int oy,
-                                            u_int oldy, u_int px, u_int py,
-                                            int no_reset) {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn
+static void window_copy_acquire_cursor_down(struct window_mode_entry *wme, u_int hsize, u_int sy, u_int oy, u_int oldy, u_int px, u_int py, int no_reset) {
+unsafe {
   u_int cy, yy, ny, nd;
 
   cy = py - hsize + oy;
@@ -5649,6 +6200,7 @@ static void window_copy_acquire_cursor_down(struct window_mode_entry *wme,
   if (window_copy_update_selection(wme, 1, no_reset)) {
     window_copy_redraw_lines(wme, oldy, nd);
   }
+}
 }
 
 */

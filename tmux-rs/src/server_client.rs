@@ -2427,7 +2427,7 @@ pub unsafe extern "C" fn server_client_reset_state(c: *mut client) {
         let mut wp = server_client_get_pane(c);
         let mut s = null_mut();
         let mut oo = (*(*c).session).options;
-        let mut mode = 0;
+        let mut mode = mode_flag::empty();
         let mut cursor = 0;
         let mut flags = tty_flags::empty();
         let mut n: i32 = 0;
@@ -2483,7 +2483,7 @@ pub unsafe extern "C" fn server_client_reset_state(c: *mut client) {
                 }
             }
             cx = (*c).prompt_cursor as u32;
-            mode &= !MODE_CURSOR;
+            mode &= !mode_flag::MODE_CURSOR;
         } else if (*c).overlay_draw.is_none() {
             cursor = 0;
             tty_window_offset(tty, &raw mut ox, &raw mut oy, &raw mut sx, &raw mut sy);
@@ -2502,7 +2502,7 @@ pub unsafe extern "C" fn server_client_reset_state(c: *mut client) {
                 }
             }
             if cursor == 0 {
-                mode &= !MODE_CURSOR;
+                mode &= !mode_flag::MODE_CURSOR;
             }
         }
         // log_debug!("%s: cursor to %u,%u", __func__, cx, cy);
@@ -2518,19 +2518,22 @@ pub unsafe extern "C" fn server_client_reset_state(c: *mut client) {
                 for loop_ in
                     tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr)
                 {
-                    if (*(*loop_).screen).mode & MODE_MOUSE_ALL != 0 {
-                        mode |= MODE_MOUSE_ALL;
+                    if (*(*loop_).screen)
+                        .mode
+                        .intersects(mode_flag::MODE_MOUSE_ALL)
+                    {
+                        mode |= mode_flag::MODE_MOUSE_ALL;
                     }
                 }
             }
-            if mode & MODE_MOUSE_ALL == 0 {
-                mode |= MODE_MOUSE_BUTTON;
+            if !mode.intersects(mode_flag::MODE_MOUSE_ALL) {
+                mode |= mode_flag::MODE_MOUSE_BUTTON;
             }
         }
 
         /* Clear bracketed paste mode if at the prompt. */
         if (*c).overlay_draw.is_none() && !(*c).prompt_string.is_null() {
-            mode &= !MODE_BRACKETPASTE;
+            mode &= !mode_flag::MODE_BRACKETPASTE;
         }
 
         /* Set the terminal mode and reset attributes. */

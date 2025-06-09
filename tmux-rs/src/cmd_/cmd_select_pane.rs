@@ -45,7 +45,9 @@ pub unsafe extern "C" fn cmd_select_pane_redraw(w: *mut window) {
             if ((*c).session.is_null() || ((*c).flags.intersects(client_flag::CONTROL))) {
                 continue;
             }
-            if ((*(*(*c).session).curw).window == w && tty_window_bigger(&raw mut (*c).tty) != 0) {
+            if ((*(*(*c).session).curw).window == w
+                && tty_window_bigger(&raw mut (*c).tty).as_bool())
+            {
                 server_redraw_client(c);
             } else {
                 if ((*(*(*c).session).curw).window == w) {

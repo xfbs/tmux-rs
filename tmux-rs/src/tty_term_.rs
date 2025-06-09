@@ -1032,7 +1032,7 @@ pub unsafe extern "C" fn tty_term_free_list(caps: *mut *mut c_char, ncaps: u32) 
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_term_has(term: *mut tty_term, code: tty_code_code) -> boolint {
-    unsafe { boolint::from(((*(*term).codes.add(code as usize)).type_ != tty_code_type::None)) }
+    unsafe { boolint::from((*(*term).codes.add(code as usize)).type_ != tty_code_type::None) }
 }
 
 #[unsafe(no_mangle)]

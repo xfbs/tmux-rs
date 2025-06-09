@@ -561,14 +561,14 @@ pub unsafe extern "C" fn window_pane_update_focus(wp: *mut window_pane) {
             }
             if !focused && (*wp).flags.intersects(window_pane_flags::PANE_FOCUSED) {
                 log_debug!("{}: %%{} focus out", "window_pane_update_focus", (*wp).id);
-                if (*wp).base.mode & MODE_FOCUSON != 0 {
+                if (*wp).base.mode.intersects(mode_flag::MODE_FOCUSON) {
                     bufferevent_write((*wp).event, c"\x1b[O".as_ptr() as _, 3);
                 }
                 notify_pane(c"pane-focus-out".as_ptr(), wp);
                 (*wp).flags &= !window_pane_flags::PANE_FOCUSED;
             } else if focused && !(*wp).flags.intersects(window_pane_flags::PANE_FOCUSED) {
                 log_debug!("{}: %%{} focus in", "window_pane_update_focus", (*wp).id);
-                if (*wp).base.mode & MODE_FOCUSON != 0 {
+                if (*wp).base.mode.intersects(mode_flag::MODE_FOCUSON) {
                     bufferevent_write((*wp).event, c"\x1b[I".as_ptr() as _, 3);
                 }
                 notify_pane(c"pane-focus-in".as_ptr(), wp);
@@ -1974,7 +1974,7 @@ pub unsafe extern "C" fn window_pane_default_cursor(wp: *mut window_pane) {
         (*s).default_ccolour = c;
 
         let c: i32 = options_get_number((*wp).options, c"cursor-style".as_ptr()) as i32;
-        (*s).default_mode = 0;
+        (*s).default_mode = mode_flag::empty();
         screen_set_cursor_style(
             c as u32,
             &raw mut (*s).default_cstyle,

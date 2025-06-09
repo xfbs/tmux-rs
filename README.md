@@ -28,9 +28,7 @@ That's a bit to long for me.
 I'm in the home stretch of the first part of this project. After finishing translating these files I will begin
 refactoring the Rust code to make it more idiomatic and use less unsafe.
 
-- [ ] 3186 tty
 - [ ] 5786 window-copy
-- [ ]  159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
 
 ## Tips
 
@@ -53,6 +51,8 @@ more then just server exited unexpectedly.
 - print a stacktrace on server process segfault
 
 # NEXT
+- [ ] 159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
+    - figure out how to write equivalence tests for the lalrpop parser and the yacc one
 - [ ] verify all uses of tailq and rbq, any structs with multiple "entry" fields we use correctly
 - [ ] LICENSE stuff
 - [ ] use base64 crate instead of libresolv

@@ -188,7 +188,7 @@ pub unsafe extern "C" fn window_clock_init(
             screen_size_y(&raw mut (*wp).base),
             0,
         );
-        (*s).mode &= !MODE_CURSOR;
+        (*s).mode &= !mode_flag::MODE_CURSOR;
 
         window_clock_draw_screen(wme);
 

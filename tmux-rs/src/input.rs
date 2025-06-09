@@ -104,7 +104,7 @@ pub struct input_ctx {
     old_cell: input_cell,
     old_cx: u32,
     old_cy: u32,
-    old_mode: i32,
+    old_mode: mode_flag,
 
     interm_buf: [u8; 4],
     interm_len: usize,
@@ -959,10 +959,10 @@ unsafe extern "C" fn input_restore_state(ictx: *mut input_ctx) {
         let mut sctx: *mut screen_write_ctx = &raw mut (*ictx).ctx;
 
         memcpy__(&raw mut (*ictx).cell, &raw const (*ictx).old_cell);
-        if (*ictx).old_mode & MODE_ORIGIN != 0 {
-            screen_write_mode_set(sctx, MODE_ORIGIN);
+        if (*ictx).old_mode.intersects(mode_flag::MODE_ORIGIN) {
+            screen_write_mode_set(sctx, mode_flag::MODE_ORIGIN);
         } else {
-            screen_write_mode_clear(sctx, MODE_ORIGIN);
+            screen_write_mode_clear(sctx, mode_flag::MODE_ORIGIN);
         }
         screen_write_cursormove(sctx, (*ictx).old_cx as i32, (*ictx).old_cy as i32, 0);
     }
@@ -1473,7 +1473,7 @@ unsafe extern "C" fn input_c0_dispatch(ictx: *mut input_ctx) -> i32 {
 
             LF | VT | FF => {
                 screen_write_linefeed(sctx, 0, (*ictx).cell.cell.bg as u32);
-                if (*s).mode & MODE_CRLF != 0 {
+                if (*s).mode.intersects(mode_flag::MODE_CRLF) {
                     screen_write_carriagereturn(sctx);
                 }
             }
@@ -1541,8 +1541,12 @@ unsafe extern "C" fn input_esc_dispatch(ictx: *mut input_ctx) -> i32 {
             Ok(input_esc_type::INPUT_ESC_RI) => {
                 screen_write_reverseindex(sctx, (*ictx).cell.cell.bg as u32)
             }
-            Ok(input_esc_type::INPUT_ESC_DECKPAM) => screen_write_mode_set(sctx, MODE_KKEYPAD),
-            Ok(input_esc_type::INPUT_ESC_DECKPNM) => screen_write_mode_clear(sctx, MODE_KKEYPAD),
+            Ok(input_esc_type::INPUT_ESC_DECKPAM) => {
+                screen_write_mode_set(sctx, mode_flag::MODE_KKEYPAD)
+            }
+            Ok(input_esc_type::INPUT_ESC_DECKPNM) => {
+                screen_write_mode_clear(sctx, mode_flag::MODE_KKEYPAD)
+            }
             Ok(input_esc_type::INPUT_ESC_DECSC) => input_save_state(ictx),
             Ok(input_esc_type::INPUT_ESC_DECRC) => input_restore_state(ictx),
             Ok(input_esc_type::INPUT_ESC_DECALN) => screen_write_alignmenttest(sctx),
@@ -1655,9 +1659,9 @@ unsafe extern "C" fn input_csi_dispatch(ictx: *mut input_ctx) -> i32 {
                     if ek != 0 {
                         screen_write_mode_clear(sctx, EXTENDED_KEY_MODES);
                         if m == 2 {
-                            screen_write_mode_set(sctx, MODE_KEYS_EXTENDED_2);
+                            screen_write_mode_set(sctx, mode_flag::MODE_KEYS_EXTENDED_2);
                         } else if m == 1 || ek == 2 {
-                            screen_write_mode_set(sctx, MODE_KEYS_EXTENDED);
+                            screen_write_mode_set(sctx, mode_flag::MODE_KEYS_EXTENDED);
                         }
                     }
                 }
@@ -1667,9 +1671,12 @@ unsafe extern "C" fn input_csi_dispatch(ictx: *mut input_ctx) -> i32 {
                 if n == 4 {
                     // Clear the extended key reporting mode as per the client
                     // request, unless "extended-keys always" forces into mode 1.
-                    screen_write_mode_clear(sctx, MODE_KEYS_EXTENDED | MODE_KEYS_EXTENDED_2);
+                    screen_write_mode_clear(
+                        sctx,
+                        mode_flag::MODE_KEYS_EXTENDED | mode_flag::MODE_KEYS_EXTENDED_2,
+                    );
                     if options_get_number(global_options, c"extended-keys".as_ptr()) == 2 {
-                        screen_write_mode_set(sctx, MODE_KEYS_EXTENDED);
+                        screen_write_mode_set(sctx, mode_flag::MODE_KEYS_EXTENDED);
                     }
                 }
             }
@@ -1867,8 +1874,8 @@ unsafe extern "C" fn input_csi_dispatch_rm(ictx: *mut input_ctx) {
         for i in 0..(*ictx).param_list_len {
             match input_get(ictx, i, 0, -1) {
                 -1 => (),
-                4 => screen_write_mode_clear(sctx, MODE_INSERT), // IRM
-                34 => screen_write_mode_set(sctx, MODE_CURSOR_VERY_VISIBLE),
+                4 => screen_write_mode_clear(sctx, mode_flag::MODE_INSERT), // IRM
+                34 => screen_write_mode_set(sctx, mode_flag::MODE_CURSOR_VERY_VISIBLE),
                 _ => log_debug!(
                     "input_csi_dispatch_rm: unknown '{}'",
                     (*ictx).ch as u8 as char
@@ -1889,7 +1896,7 @@ unsafe extern "C" fn input_csi_dispatch_rm_private(ictx: *mut input_ctx) {
             match input_get(ictx, i, 0, -1) {
                 -1 => (),
 
-                1 => screen_write_mode_clear(sctx, MODE_KCURSOR), /* DECCKM */
+                1 => screen_write_mode_clear(sctx, mode_flag::MODE_KCURSOR), /* DECCKM */
                 3 => {
                     /* DECCOLM */
                     screen_write_cursormove(sctx, 0, 0, 1);
@@ -1897,22 +1904,22 @@ unsafe extern "C" fn input_csi_dispatch_rm_private(ictx: *mut input_ctx) {
                 }
                 6 => {
                     /* DECOM */
-                    screen_write_mode_clear(sctx, MODE_ORIGIN);
+                    screen_write_mode_clear(sctx, mode_flag::MODE_ORIGIN);
                     screen_write_cursormove(sctx, 0, 0, 1);
                 }
-                7 => screen_write_mode_clear(sctx, MODE_WRAP), /* DECAWM */
+                7 => screen_write_mode_clear(sctx, mode_flag::MODE_WRAP), /* DECAWM */
                 12 => {
-                    screen_write_mode_clear(sctx, MODE_CURSOR_BLINKING);
-                    screen_write_mode_set(sctx, MODE_CURSOR_BLINKING_SET);
+                    screen_write_mode_clear(sctx, mode_flag::MODE_CURSOR_BLINKING);
+                    screen_write_mode_set(sctx, mode_flag::MODE_CURSOR_BLINKING_SET);
                 }
-                25 => screen_write_mode_clear(sctx, MODE_CURSOR), /* TCEM */
+                25 => screen_write_mode_clear(sctx, mode_flag::MODE_CURSOR), /* TCEM */
                 1000..=1003 => screen_write_mode_clear(sctx, ALL_MOUSE_MODES),
-                1004 => screen_write_mode_clear(sctx, MODE_FOCUSON),
-                1005 => screen_write_mode_clear(sctx, MODE_MOUSE_UTF8),
-                1006 => screen_write_mode_clear(sctx, MODE_MOUSE_SGR),
+                1004 => screen_write_mode_clear(sctx, mode_flag::MODE_FOCUSON),
+                1005 => screen_write_mode_clear(sctx, mode_flag::MODE_MOUSE_UTF8),
+                1006 => screen_write_mode_clear(sctx, mode_flag::MODE_MOUSE_SGR),
                 47 | 1047 => screen_write_alternateoff(sctx, gc, 0),
                 1049 => screen_write_alternateoff(sctx, gc, 1),
-                2004 => screen_write_mode_clear(sctx, MODE_BRACKETPASTE),
+                2004 => screen_write_mode_clear(sctx, mode_flag::MODE_BRACKETPASTE),
                 _ => log_debug!(
                     "{}: unknown '{}'",
                     "input_csi_dispatch_rm_private",
@@ -1932,8 +1939,8 @@ unsafe extern "C" fn input_csi_dispatch_sm(ictx: *mut input_ctx) {
         for i in 0..(*ictx).param_list_len {
             match input_get(ictx, i, 0, -1) {
                 -1 => (),
-                4 => screen_write_mode_set(sctx, MODE_INSERT), /* IRM */
-                34 => screen_write_mode_clear(sctx, MODE_CURSOR_VERY_VISIBLE),
+                4 => screen_write_mode_set(sctx, mode_flag::MODE_INSERT), /* IRM */
+                34 => screen_write_mode_clear(sctx, mode_flag::MODE_CURSOR_VERY_VISIBLE),
                 _ => log_debug!(
                     "{}: unknown '{}'",
                     "input_csi_dispatch_sm",
@@ -1954,7 +1961,7 @@ unsafe extern "C" fn input_csi_dispatch_sm_private(ictx: *mut input_ctx) {
         for i in 0..(*ictx).param_list_len {
             match input_get(ictx, i, 0, -1) {
                 -1 => (),
-                1 => screen_write_mode_set(sctx, MODE_KCURSOR), /* DECCKM */
+                1 => screen_write_mode_set(sctx, mode_flag::MODE_KCURSOR), /* DECCKM */
                 3 => {
                     /* DECCOLM */
                     screen_write_cursormove(sctx, 0, 0, 1);
@@ -1962,33 +1969,33 @@ unsafe extern "C" fn input_csi_dispatch_sm_private(ictx: *mut input_ctx) {
                 }
                 6 => {
                     /* DECOM */
-                    screen_write_mode_set(sctx, MODE_ORIGIN);
+                    screen_write_mode_set(sctx, mode_flag::MODE_ORIGIN);
                     screen_write_cursormove(sctx, 0, 0, 1);
                 }
-                7 => screen_write_mode_set(sctx, MODE_WRAP), /* DECAWM */
+                7 => screen_write_mode_set(sctx, mode_flag::MODE_WRAP), /* DECAWM */
                 12 => {
-                    screen_write_mode_set(sctx, MODE_CURSOR_BLINKING);
-                    screen_write_mode_set(sctx, MODE_CURSOR_BLINKING_SET);
+                    screen_write_mode_set(sctx, mode_flag::MODE_CURSOR_BLINKING);
+                    screen_write_mode_set(sctx, mode_flag::MODE_CURSOR_BLINKING_SET);
                 }
-                25 => screen_write_mode_set(sctx, MODE_CURSOR), /* TCEM */
+                25 => screen_write_mode_set(sctx, mode_flag::MODE_CURSOR), /* TCEM */
                 1000 => {
                     screen_write_mode_clear(sctx, ALL_MOUSE_MODES);
-                    screen_write_mode_set(sctx, MODE_MOUSE_STANDARD);
+                    screen_write_mode_set(sctx, mode_flag::MODE_MOUSE_STANDARD);
                 }
                 1002 => {
                     screen_write_mode_clear(sctx, ALL_MOUSE_MODES);
-                    screen_write_mode_set(sctx, MODE_MOUSE_BUTTON);
+                    screen_write_mode_set(sctx, mode_flag::MODE_MOUSE_BUTTON);
                 }
                 1003 => {
                     screen_write_mode_clear(sctx, ALL_MOUSE_MODES);
-                    screen_write_mode_set(sctx, MODE_MOUSE_ALL);
+                    screen_write_mode_set(sctx, mode_flag::MODE_MOUSE_ALL);
                 }
-                1004 => screen_write_mode_set(sctx, MODE_FOCUSON),
-                1005 => screen_write_mode_set(sctx, MODE_MOUSE_UTF8),
-                1006 => screen_write_mode_set(sctx, MODE_MOUSE_SGR),
+                1004 => screen_write_mode_set(sctx, mode_flag::MODE_FOCUSON),
+                1005 => screen_write_mode_set(sctx, mode_flag::MODE_MOUSE_UTF8),
+                1006 => screen_write_mode_set(sctx, mode_flag::MODE_MOUSE_SGR),
                 47 | 1047 => screen_write_alternateon(sctx, gc, 0),
                 1049 => screen_write_alternateon(sctx, gc, 1),
-                2004 => screen_write_mode_set(sctx, MODE_BRACKETPASTE),
+                2004 => screen_write_mode_set(sctx, mode_flag::MODE_BRACKETPASTE),
                 _ => log_debug!(
                     "{}: unknown '{}'",
                     "input_csi_dispatch_sm_private",

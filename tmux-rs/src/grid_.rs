@@ -1257,7 +1257,8 @@ pub unsafe extern "C" fn grid_string_cells_code(
                 &raw mut uri,
                 &raw mut id,
                 null_mut(),
-            ) != 0
+            )
+            .as_bool()
             {
                 *has_link = grid_string_cells_add_hyperlink(buf, len, id, uri, flags);
             } else if *has_link != 0 {

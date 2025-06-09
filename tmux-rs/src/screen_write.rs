@@ -360,10 +360,10 @@ pub unsafe extern "C" fn screen_write_reset(ctx: *mut screen_write_ctx) {
         screen_reset_tabs(s);
         screen_write_scrollregion(ctx, 0, screen_size_y(s) - 1);
 
-        (*s).mode = MODE_CURSOR | MODE_WRAP;
+        (*s).mode = mode_flag::MODE_CURSOR | mode_flag::MODE_WRAP;
 
         if options_get_number_(global_options, c"extended-keys") == 2 {
-            (*s).mode = ((*s).mode & !EXTENDED_KEY_MODES) | MODE_KEYS_EXTENDED;
+            (*s).mode = ((*s).mode & !EXTENDED_KEY_MODES) | mode_flag::MODE_KEYS_EXTENDED;
         }
 
         screen_write_clearscreen(ctx, 8);
@@ -952,7 +952,7 @@ pub unsafe extern "C" fn screen_write_preview(
          */
         let mut px: u32;
         let mut py: u32;
-        if (*src).mode & MODE_CURSOR != 0 {
+        if (*src).mode.intersects(mode_flag::MODE_CURSOR) {
             px = (*src).cx;
             if (px < nx / 3) {
                 px = 0;
@@ -986,7 +986,7 @@ pub unsafe extern "C" fn screen_write_preview(
 
         screen_write_fast_copy(ctx, src, px, (*(*src).grid).hsize + py, nx, ny);
 
-        if (*src).mode & MODE_CURSOR != 0 {
+        if (*src).mode.intersects(mode_flag::MODE_CURSOR) {
             grid_view_get_cell((*src).grid, (*src).cx, (*src).cy, &raw mut gc);
             gc.attr |= GRID_ATTR_REVERSE;
             screen_write_set_cursor(
@@ -1001,7 +1001,7 @@ pub unsafe extern "C" fn screen_write_preview(
 
 /// Set a mode.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn screen_write_mode_set(ctx: *mut screen_write_ctx, mode: i32) {
+pub unsafe extern "C" fn screen_write_mode_set(ctx: *mut screen_write_ctx, mode: mode_flag) {
     unsafe {
         let mut s = (*ctx).s;
 
@@ -1015,7 +1015,7 @@ pub unsafe extern "C" fn screen_write_mode_set(ctx: *mut screen_write_ctx, mode:
 
 /// Clear a mode.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn screen_write_mode_clear(ctx: *mut screen_write_ctx, mode: i32) {
+pub unsafe extern "C" fn screen_write_mode_clear(ctx: *mut screen_write_ctx, mode: mode_flag) {
     unsafe {
         let mut s = (*ctx).s;
 
@@ -1600,7 +1600,7 @@ pub unsafe extern "C" fn screen_write_cursormove(
     unsafe {
         let mut s = (*ctx).s;
 
-        if origin != 0 && py != -1 && (*s).mode & MODE_ORIGIN != 0 {
+        if origin != 0 && py != -1 && (*s).mode.intersects(mode_flag::MODE_ORIGIN) {
             if (py as u32 > (*s).rlower - (*s).rupper) {
                 py = (*s).rlower as i32;
             } else {
@@ -2229,9 +2229,9 @@ pub unsafe extern "C" fn screen_write_collect_add(
             collect = 0;
         } else if ((*gc).attr & GRID_ATTR_CHARSET != 0) {
             collect = 0;
-        } else if (!(*s).mode & MODE_WRAP != 0) {
+        } else if (!(*s).mode.intersects(mode_flag::MODE_WRAP)) {
             collect = 0;
-        } else if ((*s).mode & MODE_INSERT != 0) {
+        } else if ((*s).mode.intersects(mode_flag::MODE_INSERT)) {
             collect = 0;
         } else if !(*s).sel.is_null() {
             collect = 0;
@@ -2309,7 +2309,7 @@ pub unsafe extern "C" fn screen_write_cell(ctx: *mut screen_write_ctx, gc: *cons
         screen_write_collect_flush(ctx, 1, c"screen_write_cell".as_ptr());
 
         /* If this character doesn't fit, ignore it. */
-        if ((*s).mode & MODE_WRAP) == 0
+        if !(*s).mode.intersects(mode_flag::MODE_WRAP)
             && width > 1
             && (width > sx || ((*s).cx != sx && (*s).cx > sx - width))
         {
@@ -2317,13 +2317,13 @@ pub unsafe extern "C" fn screen_write_cell(ctx: *mut screen_write_ctx, gc: *cons
         }
 
         /* If in insert mode, make space for the cells. */
-        if ((*s).mode & MODE_INSERT) != 0 {
+        if (*s).mode.intersects(mode_flag::MODE_INSERT) {
             grid_view_insert_cells((*s).grid, (*s).cx, (*s).cy, width, 8);
             skip = 0;
         }
 
         /* Check this will fit on the current line and wrap if not. */
-        if (((*s).mode & MODE_WRAP != 0) && (*s).cx > sx - width) {
+        if ((*s).mode.intersects(mode_flag::MODE_WRAP) && (*s).cx > sx - width) {
             // log_debug("%s: wrapped at %u,%u", __func__, (*s).cx, (*s).cy);
             screen_write_linefeed(ctx, 1, 8);
             screen_write_set_cursor(ctx, 0, -1);
@@ -2402,7 +2402,7 @@ pub unsafe extern "C" fn screen_write_cell(ctx: *mut screen_write_ctx, gc: *cons
          * Move the cursor. If not wrapping, stick at the last character and
          * replace it.
          */
-        let not_wrap = !((*s).mode & MODE_WRAP);
+        let not_wrap = !((*s).mode.intersects(mode_flag::MODE_WRAP)) as i32;
         if ((*s).cx <= (sx as i32 - not_wrap - width as i32) as u32) {
             screen_write_set_cursor(ctx, ((*s).cx + width) as i32, -1);
         } else {
@@ -2410,7 +2410,7 @@ pub unsafe extern "C" fn screen_write_cell(ctx: *mut screen_write_ctx, gc: *cons
         }
 
         /* Create space for character in insert mode. */
-        if ((*s).mode & MODE_INSERT != 0) {
+        if ((*s).mode.intersects(mode_flag::MODE_INSERT)) {
             screen_write_collect_flush(ctx, 0, c"screen_write_cell".as_ptr());
             ttyctx.num = width;
             tty_write(Some(tty_cmd_insertcharacter), &raw mut ttyctx);
@@ -2672,9 +2672,15 @@ unsafe extern "C" fn screen_write_sixelimage(
         let mut ttyctx: tty_ctx = zeroed();
 
         // u_int x, y, sx, sy, cx = (*s).cx, cy = (*s).cy, i, lines;
+        let mut x: u32 = 0;
+        let mut y: u32 = 0;
+        let mut sx: u32 = 0;
+        let mut sy: u32 = 0;
+        let mut cx: u32 = (*s).cx;
+        let mut cy: u32 = (*s).cy;
         let mut new: *mut sixel_image = null_mut();
 
-        sixel_size_in_cells(si, &x, &y);
+        sixel_size_in_cells(si, &raw mut x, &raw mut y);
         if (x > screen_size_x(s) || y > screen_size_y(s)) {
             if (x > screen_size_x(s) - cx) {
                 sx = screen_size_x(s) - cx;

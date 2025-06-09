@@ -3,6 +3,8 @@
 #![allow(non_upper_case_globals)]
 #![allow(unused)] // TODO 5000
 //
+#![allow(clippy::upper_case_acronyms)]
+#![allow(clippy::uninlined_format_args)] // mainly for lalrpop generated code
 #![allow(clippy::collapsible_else_if)]
 #![allow(clippy::collapsible_if)]
 #![allow(clippy::manual_range_contains)]
@@ -545,32 +547,44 @@ pub const WHITESPACE: &CStr = c" ";
 pub const MODEKEY_EMACS: i32 = 0;
 pub const MODEKEY_VI: i32 = 1;
 
-// Modes.
-pub const MODE_CURSOR: i32 = 0x1;
-pub const MODE_INSERT: i32 = 0x2;
-pub const MODE_KCURSOR: i32 = 0x4;
-pub const MODE_KKEYPAD: i32 = 0x8;
-pub const MODE_WRAP: i32 = 0x10;
-pub const MODE_MOUSE_STANDARD: i32 = 0x20;
-pub const MODE_MOUSE_BUTTON: i32 = 0x40;
-pub const MODE_CURSOR_BLINKING: i32 = 0x80;
-pub const MODE_MOUSE_UTF8: i32 = 0x100;
-pub const MODE_MOUSE_SGR: i32 = 0x200;
-pub const MODE_BRACKETPASTE: i32 = 0x400;
-pub const MODE_FOCUSON: i32 = 0x800;
-pub const MODE_MOUSE_ALL: i32 = 0x1000;
-pub const MODE_ORIGIN: i32 = 0x2000;
-pub const MODE_CRLF: i32 = 0x4000;
-pub const MODE_KEYS_EXTENDED: i32 = 0x8000;
-pub const MODE_CURSOR_VERY_VISIBLE: i32 = 0x10000;
-pub const MODE_CURSOR_BLINKING_SET: i32 = 0x20000;
-pub const MODE_KEYS_EXTENDED_2: i32 = 0x40000;
+bitflags::bitflags! {
+    /// Grid flags.
+    #[repr(transparent)]
+    #[derive(Copy, Clone, Eq, PartialEq)]
+    pub struct mode_flag : i32 {
+        const MODE_CURSOR = 0x1;
+        const MODE_INSERT = 0x2;
+        const MODE_KCURSOR = 0x4;
+        const MODE_KKEYPAD = 0x8;
+        const MODE_WRAP = 0x10;
+        const MODE_MOUSE_STANDARD = 0x20;
+        const MODE_MOUSE_BUTTON = 0x40;
+        const MODE_CURSOR_BLINKING = 0x80;
+        const MODE_MOUSE_UTF8 = 0x100;
+        const MODE_MOUSE_SGR = 0x200;
+        const MODE_BRACKETPASTE = 0x400;
+        const MODE_FOCUSON = 0x800;
+        const MODE_MOUSE_ALL = 0x1000;
+        const MODE_ORIGIN = 0x2000;
+        const MODE_CRLF = 0x4000;
+        const MODE_KEYS_EXTENDED = 0x8000;
+        const MODE_CURSOR_VERY_VISIBLE = 0x10000;
+        const MODE_CURSOR_BLINKING_SET = 0x20000;
+        const MODE_KEYS_EXTENDED_2 = 0x40000;
+    }
+}
 
 pub const ALL_MODES: i32 = 0xffffff;
-pub const ALL_MOUSE_MODES: i32 = MODE_MOUSE_STANDARD | MODE_MOUSE_BUTTON | MODE_MOUSE_ALL;
-pub const MOTION_MOUSE_MODES: i32 = MODE_MOUSE_BUTTON | MODE_MOUSE_ALL;
-pub const CURSOR_MODES: i32 = MODE_CURSOR | MODE_CURSOR_BLINKING | MODE_CURSOR_VERY_VISIBLE;
-pub const EXTENDED_KEY_MODES: i32 = MODE_KEYS_EXTENDED | MODE_KEYS_EXTENDED_2;
+pub const ALL_MOUSE_MODES: mode_flag = mode_flag::MODE_MOUSE_STANDARD
+    .union(mode_flag::MODE_MOUSE_BUTTON)
+    .union(mode_flag::MODE_MOUSE_ALL);
+pub const MOTION_MOUSE_MODES: mode_flag =
+    mode_flag::MODE_MOUSE_BUTTON.union(mode_flag::MODE_MOUSE_ALL);
+pub const CURSOR_MODES: mode_flag = mode_flag::MODE_CURSOR
+    .union(mode_flag::MODE_CURSOR_BLINKING)
+    .union(mode_flag::MODE_CURSOR_VERY_VISIBLE);
+pub const EXTENDED_KEY_MODES: mode_flag =
+    mode_flag::MODE_KEYS_EXTENDED.union(mode_flag::MODE_KEYS_EXTENDED_2);
 
 // Mouse protocol constants.
 pub const MOUSE_PARAM_MAX: u32 = 0xff;
@@ -989,8 +1003,8 @@ pub struct screen {
     /// scroll region bottom
     pub rlower: u32,
 
-    pub mode: i32,
-    pub default_mode: i32,
+    pub mode: mode_flag,
+    pub default_mode: mode_flag,
 
     pub saved_cx: u32,
     pub saved_cy: u32,
@@ -1724,7 +1738,7 @@ pub struct tty {
     pub osx: u32,
     pub osy: u32,
 
-    pub mode: i32,
+    pub mode: mode_flag,
     pub fg: i32,
     pub bg: i32,
 
@@ -2575,13 +2589,12 @@ pub use crate::tty_::{
     tty_cmd_deletecharacter, tty_cmd_deleteline, tty_cmd_insertcharacter, tty_cmd_insertline,
     tty_cmd_linefeed, tty_cmd_rawstring, tty_cmd_reverseindex, tty_cmd_scrolldown,
     tty_cmd_scrollup, tty_cmd_setselection, tty_cmd_syncstart, tty_create_log, tty_cursor,
-    tty_default_colours, tty_draw_line, tty_free, tty_init, tty_m_in_off, tty_margin_off, tty_open,
-    tty_putc, tty_putcode, tty_putcode_i, tty_putcode_ii, tty_putcode_iii, tty_putcode_s,
-    tty_putcode_ss, tty_putn, tty_puts, tty_raw, tty_region_off, tty_repeat_requests, tty_reset,
-    tty_resize, tty_send_requests, tty_set_path, tty_set_selection, tty_set_size, tty_set_title,
-    tty_start_tty, tty_stop_tty, tty_sync_end, tty_sync_start, tty_update_client_offset,
-    tty_update_features, tty_update_mode, tty_update_window_offset, tty_window_bigger,
-    tty_window_offset, tty_write,
+    tty_default_colours, tty_draw_line, tty_free, tty_init, tty_margin_off, tty_open, tty_putc,
+    tty_putcode, tty_putcode_i, tty_putcode_ii, tty_putcode_iii, tty_putcode_s, tty_putcode_ss,
+    tty_putn, tty_puts, tty_raw, tty_region_off, tty_repeat_requests, tty_reset, tty_resize,
+    tty_send_requests, tty_set_path, tty_set_selection, tty_set_size, tty_set_title, tty_start_tty,
+    tty_stop_tty, tty_sync_end, tty_sync_start, tty_update_client_offset, tty_update_features,
+    tty_update_mode, tty_update_window_offset, tty_window_bigger, tty_window_offset, tty_write,
 };
 
 mod tty_term_;

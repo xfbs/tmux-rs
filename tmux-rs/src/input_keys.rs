@@ -456,7 +456,7 @@ pub unsafe extern "C" fn input_key(
 
         /* Is this backtab? */
         if ((key & KEYC_MASK_KEY) == keyc::KEYC_BTAB as u64) {
-            if (((*s).mode & EXTENDED_KEY_MODES) != 0) {
+            if (*s).mode.intersects(EXTENDED_KEY_MODES) {
                 /* When in xterm extended mode, remap into S-Tab. */
                 key = '\x09' as u64 | (key & !KEYC_MASK_KEY) | KEYC_SHIFT;
             } else {
@@ -491,10 +491,10 @@ pub unsafe extern "C" fn input_key(
          * Look up the standard VT10x keys in the tree. If not in application
          * keypad or cursor mode, remove the respective flags from the key.
          */
-        if (!(*s).mode & MODE_KKEYPAD != 0) {
+        if !(*s).mode.intersects(mode_flag::MODE_KKEYPAD) {
             key &= !KEYC_KEYPAD;
         }
-        if (!(*s).mode & MODE_KCURSOR != 0) {
+        if !(*s).mode.intersects(mode_flag::MODE_KCURSOR) {
             key &= !KEYC_CURSOR;
         }
         if (ike.is_null()) {
@@ -517,7 +517,7 @@ pub unsafe extern "C" fn input_key(
                 _s((*ike).data)
             );
             if ((key == keyc::KEYC_PASTE_START as u64 || key == keyc::KEYC_PASTE_END as u64)
-                && (!(*s).mode & MODE_BRACKETPASTE != 0))
+                && !(*s).mode.intersects(mode_flag::MODE_BRACKETPASTE))
             {
                 return 0;
             }
@@ -545,8 +545,8 @@ pub unsafe extern "C" fn input_key(
          * no way to enter it). The correct form is Ctrl-Shift-@, at
          * least in US English keyboard layout.
          */
-        match ((*s).mode & EXTENDED_KEY_MODES) {
-            MODE_KEYS_EXTENDED_2 =>
+        match (*s).mode & EXTENDED_KEY_MODES {
+            mode_flag::MODE_KEYS_EXTENDED_2 =>
             /*
              * The simplest mode to handle - *all* modified keys are
              * reported in the extended form.
@@ -554,7 +554,7 @@ pub unsafe extern "C" fn input_key(
             {
                 input_key_extended(bev, key)
             }
-            MODE_KEYS_EXTENDED => {
+            mode_flag::MODE_KEYS_EXTENDED => {
                 /*
                  * Some keys are still reported in standard mode, to maintain
                  * compatibility with applications unaware of extended keys.
@@ -592,10 +592,10 @@ pub unsafe extern "C" fn input_key_get_mouse(
         *rlen = 0;
 
         /* If this pane is not in button or all mode, discard motion events. */
-        if (MOUSE_DRAG((*m).b) && ((*s).mode & MOTION_MOUSE_MODES) == 0) {
+        if MOUSE_DRAG((*m).b) && !(*s).mode.intersects(MOTION_MOUSE_MODES) {
             return 0;
         }
-        if (((*s).mode & ALL_MOUSE_MODES) == 0) {
+        if !(*s).mode.intersects(ALL_MOUSE_MODES) {
             return 0;
         }
 
@@ -608,7 +608,7 @@ pub unsafe extern "C" fn input_key_get_mouse(
         if ((*m).sgr_type != b' ' as u32) {
             if (MOUSE_DRAG((*m).sgr_b)
                 && MOUSE_RELEASE((*m).sgr_b)
-                && (!(*s).mode & MODE_MOUSE_ALL != 0))
+                && !(*s).mode.intersects(mode_flag::MODE_MOUSE_ALL))
             {
                 return 0;
             }
@@ -616,7 +616,7 @@ pub unsafe extern "C" fn input_key_get_mouse(
             if (MOUSE_DRAG((*m).b)
                 && MOUSE_RELEASE((*m).b)
                 && MOUSE_RELEASE((*m).lb)
-                && (!(*s).mode & MODE_MOUSE_ALL != 0))
+                && !(*s).mode.intersects(mode_flag::MODE_MOUSE_ALL))
             {
                 return 0;
             }
@@ -632,7 +632,7 @@ pub unsafe extern "C" fn input_key_get_mouse(
          * legacy format.
          */
         let mut len: usize = 0;
-        if ((*m).sgr_type != ' ' as u32 && ((*s).mode & MODE_MOUSE_SGR) != 0) {
+        if (*m).sgr_type != ' ' as u32 && (*s).mode.intersects(mode_flag::MODE_MOUSE_SGR) {
             len = xsnprintf(
                 &raw mut buf as *mut c_char,
                 sizeof_buf,
@@ -642,7 +642,7 @@ pub unsafe extern "C" fn input_key_get_mouse(
                 y + 1,
                 (*m).sgr_type,
             ) as usize;
-        } else if ((*s).mode & MODE_MOUSE_UTF8 != 0) {
+        } else if (*s).mode.intersects(mode_flag::MODE_MOUSE_UTF8) {
             if ((*m).b > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_BTN_OFF)
                 || x > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_POS_OFF)
                 || y > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_POS_OFF))
@@ -701,7 +701,7 @@ pub unsafe extern "C" fn input_key_mouse(wp: *mut window_pane, m: *mut mouse_eve
         let mut len: usize = 0;
 
         /* Ignore events if no mouse mode or the pane is not visible. */
-        if ((*m).ignore != 0 || ((*s).mode & ALL_MOUSE_MODES == 0)) {
+        if (*m).ignore != 0 || !(*s).mode.intersects(ALL_MOUSE_MODES) {
             return;
         }
         if (cmd_mouse_at(wp, m, &raw mut x, &raw mut y, 0) != 0) {

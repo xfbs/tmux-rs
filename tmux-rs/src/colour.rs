@@ -1001,7 +1001,7 @@ pub unsafe extern "C" fn colour_palette_free(p: *mut colour_palette) {
 
 /// Get a colour from a palette.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn colour_palette_get(p: *mut colour_palette, mut c: i32) -> i32 {
+pub unsafe extern "C" fn colour_palette_get(p: *const colour_palette, mut c: i32) -> i32 {
     unsafe {
         if p.is_null() {
             return -1;

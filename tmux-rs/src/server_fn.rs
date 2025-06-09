@@ -380,7 +380,7 @@ pub unsafe extern "C" fn server_destroy_pane(wp: *mut window_pane, notify: i32) 
 
                         screen_write_stop(ctx);
                     }
-                    (*wp).base.mode &= !MODE_CURSOR;
+                    (*wp).base.mode &= !mode_flag::MODE_CURSOR;
 
                     (*wp).flags |= window_pane_flags::PANE_REDRAW;
                     return;

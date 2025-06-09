@@ -1787,7 +1787,7 @@ pub unsafe extern "C" fn format_cb_config_files(_ft: *mut format_tree) -> *mut c
 pub unsafe extern "C" fn format_cb_cursor_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            if (*(*ft).wp).base.mode & MODE_CURSOR != 0 {
+            if (*(*ft).wp).base.mode.intersects(mode_flag::MODE_CURSOR) {
                 return xstrdup(c"1".as_ptr()).as_ptr().cast();
             }
             return xstrdup(c"0".as_ptr()).as_ptr().cast();
@@ -1845,7 +1845,7 @@ pub unsafe extern "C" fn format_cb_history_size(ft: *mut format_tree) -> *mut c_
 pub unsafe extern "C" fn format_cb_insert_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            if (*(*ft).wp).base.mode & MODE_INSERT != 0 {
+            if (*(*ft).wp).base.mode.intersects(mode_flag::MODE_INSERT) {
                 return xstrdup(c"1".as_ptr()).as_ptr().cast();
             }
             return xstrdup(c"0".as_ptr()).as_ptr().cast();
@@ -1859,7 +1859,7 @@ pub unsafe extern "C" fn format_cb_insert_flag(ft: *mut format_tree) -> *mut c_v
 pub unsafe extern "C" fn format_cb_keypad_cursor_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            if (*(*ft).wp).base.mode & MODE_KCURSOR != 0 {
+            if (*(*ft).wp).base.mode.intersects(mode_flag::MODE_KCURSOR) {
                 return xstrdup(c"1".as_ptr()).as_ptr().cast();
             }
             return xstrdup(c"0".as_ptr()).as_ptr().cast();
@@ -1873,7 +1873,7 @@ pub unsafe extern "C" fn format_cb_keypad_cursor_flag(ft: *mut format_tree) -> *
 pub unsafe extern "C" fn format_cb_keypad_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            if (*(*ft).wp).base.mode & MODE_KKEYPAD != 0 {
+            if (*(*ft).wp).base.mode.intersects(mode_flag::MODE_KKEYPAD) {
                 return xstrdup(c"1".as_ptr()).as_ptr().cast();
             }
             return xstrdup(c"0".as_ptr()).as_ptr().cast();
@@ -1887,7 +1887,7 @@ pub unsafe extern "C" fn format_cb_keypad_flag(ft: *mut format_tree) -> *mut c_v
 pub unsafe extern "C" fn format_cb_mouse_all_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            if (*(*ft).wp).base.mode & MODE_MOUSE_ALL != 0 {
+            if (*(*ft).wp).base.mode.intersects(mode_flag::MODE_MOUSE_ALL) {
                 return xstrdup(c"1".as_ptr()).as_ptr().cast();
             }
             return xstrdup(c"0".as_ptr()).as_ptr().cast();
@@ -1901,7 +1901,7 @@ pub unsafe extern "C" fn format_cb_mouse_all_flag(ft: *mut format_tree) -> *mut 
 pub unsafe extern "C" fn format_cb_mouse_any_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            if (*(*ft).wp).base.mode & ALL_MOUSE_MODES != 0 {
+            if (*(*ft).wp).base.mode.intersects(ALL_MOUSE_MODES) {
                 return xstrdup(c"1".as_ptr()).as_ptr().cast();
             }
             return xstrdup(c"0".as_ptr()).as_ptr().cast();
@@ -1915,7 +1915,11 @@ pub unsafe extern "C" fn format_cb_mouse_any_flag(ft: *mut format_tree) -> *mut 
 pub unsafe extern "C" fn format_cb_mouse_button_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            if (*(*ft).wp).base.mode & MODE_MOUSE_BUTTON != 0 {
+            if (*(*ft).wp)
+                .base
+                .mode
+                .intersects(mode_flag::MODE_MOUSE_BUTTON)
+            {
                 return xstrdup(c"1".as_ptr()).as_ptr().cast();
             }
             return xstrdup(c"0".as_ptr()).as_ptr().cast();
@@ -1943,7 +1947,7 @@ pub unsafe extern "C" fn format_cb_mouse_pane(ft: *mut format_tree) -> *mut c_vo
 pub unsafe extern "C" fn format_cb_mouse_sgr_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            if (*(*ft).wp).base.mode & MODE_MOUSE_SGR != 0 {
+            if (*(*ft).wp).base.mode.intersects(mode_flag::MODE_MOUSE_SGR) {
                 return xstrdup(c"1".as_ptr()).as_ptr().cast();
             }
             return xstrdup(c"0".as_ptr()).as_ptr().cast();
@@ -1957,7 +1961,11 @@ pub unsafe extern "C" fn format_cb_mouse_sgr_flag(ft: *mut format_tree) -> *mut 
 pub unsafe extern "C" fn format_cb_mouse_standard_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            if (*(*ft).wp).base.mode & MODE_MOUSE_STANDARD != 0 {
+            if (*(*ft).wp)
+                .base
+                .mode
+                .intersects(mode_flag::MODE_MOUSE_STANDARD)
+            {
                 return xstrdup(c"1".as_ptr()).as_ptr().cast();
             }
             return xstrdup(c"0".as_ptr()).as_ptr().cast();
@@ -1971,7 +1979,7 @@ pub unsafe extern "C" fn format_cb_mouse_standard_flag(ft: *mut format_tree) -> 
 pub unsafe extern "C" fn format_cb_mouse_utf8_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            if (*(*ft).wp).base.mode & MODE_MOUSE_UTF8 != 0 {
+            if (*(*ft).wp).base.mode.intersects(mode_flag::MODE_MOUSE_UTF8) {
                 return xstrdup(c"1".as_ptr()).as_ptr().cast();
             }
             return xstrdup(c"0".as_ptr()).as_ptr().cast();
@@ -2045,7 +2053,7 @@ pub unsafe extern "C" fn format_cb_next_session_id(_ft: *mut format_tree) -> *mu
 pub unsafe extern "C" fn format_cb_origin_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            if (*(*ft).wp).base.mode & MODE_ORIGIN != 0 {
+            if (*(*ft).wp).base.mode.intersects(mode_flag::MODE_ORIGIN) {
                 return xstrdup(c"1".as_ptr()).as_ptr().cast();
             }
             return xstrdup(c"0".as_ptr()).as_ptr().cast();
@@ -2256,8 +2264,10 @@ pub unsafe extern "C" fn format_cb_pane_key_mode(ft: *mut format_tree) -> *mut c
     unsafe {
         if !(*ft).wp.is_null() && !(*(*ft).wp).screen.is_null() {
             match (*(*(*ft).wp).screen).mode & EXTENDED_KEY_MODES {
-                MODE_KEYS_EXTENDED => return xstrdup(c"Ext 1".as_ptr()).as_ptr().cast(),
-                MODE_KEYS_EXTENDED_2 => return xstrdup(c"Ext 2".as_ptr()).as_ptr().cast(),
+                mode_flag::MODE_KEYS_EXTENDED => return xstrdup(c"Ext 1".as_ptr()).as_ptr().cast(),
+                mode_flag::MODE_KEYS_EXTENDED_2 => {
+                    return xstrdup(c"Ext 2".as_ptr()).as_ptr().cast();
+                }
                 _ => return xstrdup(c"VT10x".as_ptr()).as_ptr().cast(),
             }
         }
@@ -3020,7 +3030,7 @@ pub unsafe extern "C" fn format_cb_window_zoomed_flag(ft: *mut format_tree) -> *
 pub unsafe extern "C" fn format_cb_wrap_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            if ((*(*ft).wp).base.mode & MODE_WRAP) != 0 {
+            if (*(*ft).wp).base.mode.intersects(mode_flag::MODE_WRAP) {
                 return xstrdup(c"1".as_ptr()).as_ptr().cast();
             }
             return xstrdup(c"0".as_ptr()).as_ptr().cast();
@@ -5983,14 +5993,13 @@ pub unsafe extern "C" fn format_grid_hyperlink(
         if ((*s).hyperlinks.is_null() || (*gc).link == 0) {
             return null_mut();
         }
-        if hyperlinks_get(
+        if !hyperlinks_get(
             (*s).hyperlinks,
             (*gc).link,
             &mut uri,
             null_mut(),
             null_mut(),
-        ) == 0
-        {
+        ) {
             return null_mut();
         }
         xstrdup(uri).as_ptr()

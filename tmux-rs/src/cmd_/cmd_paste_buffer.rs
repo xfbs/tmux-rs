@@ -57,7 +57,11 @@ unsafe extern "C" fn cmd_paste_buffer_exec(self_: *mut cmd, item: *mut cmdq_item
             }
             let seplen = strlen(sepstr);
 
-            if (bracket && (*(*wp).screen).mode & MODE_BRACKETPASTE != 0) {
+            if bracket
+                && (*(*wp).screen)
+                    .mode
+                    .intersects(mode_flag::MODE_BRACKETPASTE)
+            {
                 bufferevent_write((*wp).event, c"\x1b[200~".as_ptr().cast(), 6);
             }
 
@@ -81,7 +85,11 @@ unsafe extern "C" fn cmd_paste_buffer_exec(self_: *mut cmd, item: *mut cmdq_item
                 bufferevent_write((*wp).event, bufdata.cast(), bufend.addr() - bufdata.addr());
             }
 
-            if bracket && (*(*wp).screen).mode & MODE_BRACKETPASTE != 0 {
+            if bracket
+                && (*(*wp).screen)
+                    .mode
+                    .intersects(mode_flag::MODE_BRACKETPASTE)
+            {
                 bufferevent_write((*wp).event, c"\x1b[201~".as_ptr().cast(), 6);
             }
         }
