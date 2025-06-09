@@ -10,7 +10,7 @@ use crate::compat::{
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn layout_find_bottomright(mut lc: *mut layout_cell) -> *mut layout_cell {
     unsafe {
-        if ((*lc).type_ == layout_type::LAYOUT_WINDOWPANE) {
+        if (*lc).type_ == layout_type::LAYOUT_WINDOWPANE {
             return lc;
         }
         lc = tailq_last(&raw mut (*lc).cells);
@@ -41,7 +41,7 @@ pub unsafe extern "C" fn layout_dump(root: *mut layout_cell) -> *mut c_char {
         let mut out: *mut c_char = null_mut();
 
         *layout = b'\0' as _;
-        if (layout_append(root, layout, 8192) != 0) {
+        if layout_append(root, layout, 8192) != 0 {
             return null_mut();
         }
 
@@ -67,7 +67,7 @@ pub unsafe extern "C" fn layout_append(lc: *mut layout_cell, buf: *mut c_char, l
 
         let mut brackets = c"][".as_ptr();
 
-        if (len == 0) {
+        if len == 0 {
             return -1;
         }
 
@@ -94,10 +94,10 @@ pub unsafe extern "C" fn layout_append(lc: *mut layout_cell, buf: *mut c_char, l
             )
         };
 
-        if (tmplen > sizeof_tmp as i32 - 1) {
+        if tmplen > sizeof_tmp as i32 - 1 {
             return -1;
         }
-        if (strlcat(buf, tmp, len) >= len) {
+        if strlcat(buf, tmp, len) >= len {
             return -1;
         }
 
@@ -107,14 +107,14 @@ pub unsafe extern "C" fn layout_append(lc: *mut layout_cell, buf: *mut c_char, l
 
         match ((*lc).type_) {
             layout_type::LAYOUT_LEFTRIGHT | layout_type::LAYOUT_TOPBOTTOM => {
-                if (strlcat(buf, brackets.add(1), len) >= len) {
+                if strlcat(buf, brackets.add(1), len) >= len {
                     return -1;
                 }
                 for lcchild in tailq_foreach(&raw mut (*lc).cells) {
-                    if (layout_append(lcchild.as_ptr(), buf, len) != 0) {
+                    if layout_append(lcchild.as_ptr(), buf, len) != 0 {
                         return -1;
                     }
-                    if (strlcat(buf, c",".as_ptr(), len) >= len) {
+                    if strlcat(buf, c",".as_ptr(), len) >= len {
                         return -1;
                     }
                 }
@@ -136,29 +136,29 @@ pub unsafe extern "C" fn layout_check(lc: *mut layout_cell) -> i32 {
             layout_type::LAYOUT_WINDOWPANE => (),
             layout_type::LAYOUT_LEFTRIGHT => {
                 for lcchild in tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr) {
-                    if ((*lcchild).sy != (*lc).sy) {
+                    if (*lcchild).sy != (*lc).sy {
                         return 0;
                     }
-                    if (layout_check(lcchild) == 0) {
+                    if layout_check(lcchild) == 0 {
                         return 0;
                     }
                     n += (*lcchild).sx + 1;
                 }
-                if (n - 1 != (*lc).sx) {
+                if n - 1 != (*lc).sx {
                     return 0;
                 }
             }
             layout_type::LAYOUT_TOPBOTTOM => {
                 for lcchild in tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr) {
-                    if ((*lcchild).sx != (*lc).sx) {
+                    if (*lcchild).sx != (*lc).sx {
                         return 0;
                     }
-                    if (layout_check(lcchild) == 0) {
+                    if layout_check(lcchild) == 0 {
                         return 0;
                     }
                     n += (*lcchild).sy + 1;
                 }
-                if (n - 1 != (*lc).sy) {
+                if n - 1 != (*lc).sy {
                     return 0;
                 }
             }
@@ -213,7 +213,7 @@ pub unsafe extern "C" fn layout_parse(
                     xasprintf(cause, c"have %u panes but need %u".as_ptr(), npanes, ncells);
                     break 'fail;
                 }
-                if (npanes == ncells) {
+                if npanes == ncells {
                     break;
                 }
 
@@ -323,17 +323,17 @@ unsafe extern "C" fn layout_construct(
         let mut yoff = 0u32;
 
         'fail: {
-            if (isdigit(**layout as i32) == 0) {
+            if isdigit(**layout as i32) == 0 {
                 return null_mut();
             }
-            if (sscanf(
+            if sscanf(
                 *layout,
                 c"%ux%u,%u,%u".as_ptr(),
                 &raw mut sx,
                 &raw mut sy,
                 &raw mut xoff,
                 &raw mut yoff,
-            ) != 4)
+            ) != 4
             {
                 return null_mut();
             }
@@ -341,21 +341,21 @@ unsafe extern "C" fn layout_construct(
             while (isdigit(**layout as i32) != 0) {
                 (*layout) = (*layout).add(1);
             }
-            if (**layout != b'x' as _) {
+            if **layout != b'x' as _ {
                 return null_mut();
             }
             (*layout) = (*layout).add(1);
             while (isdigit(**layout as i32) != 0) {
                 (*layout) = (*layout).add(1);
             }
-            if (**layout != b',' as _) {
+            if **layout != b',' as _ {
                 return null_mut();
             }
             (*layout) = (*layout).add(1);
             while (isdigit(**layout as i32) != 0) {
                 (*layout) = (*layout).add(1);
             }
-            if (**layout != b',' as _) {
+            if **layout != b',' as _ {
                 return null_mut();
             }
             (*layout) = (*layout).add(1);
@@ -368,7 +368,7 @@ unsafe extern "C" fn layout_construct(
                 while (isdigit(**layout as i32) != 0) {
                     (*layout) = (*layout).add(1);
                 }
-                if (**layout == b'x' as _) {
+                if **layout == b'x' as _ {
                     *layout = saved;
                 }
             }
@@ -389,23 +389,23 @@ unsafe extern "C" fn layout_construct(
             loop {
                 (*layout) = (*layout).add(1);
                 let lcchild = layout_construct(lc, layout);
-                if (lcchild.is_null()) {
+                if lcchild.is_null() {
                     break 'fail;
                 }
                 tailq_insert_tail(&raw mut (*lc).cells, lcchild);
-                if (**layout != b',' as _) {
+                if **layout != b',' as _ {
                     break;
                 }
             }
 
             match ((*lc).type_) {
                 layout_type::LAYOUT_LEFTRIGHT => {
-                    if (**layout != b'}' as _) {
+                    if **layout != b'}' as _ {
                         break 'fail;
                     }
                 }
                 layout_type::LAYOUT_TOPBOTTOM => {
-                    if (**layout != b']' as _) {
+                    if **layout != b']' as _ {
                         break 'fail;
                     }
                 }

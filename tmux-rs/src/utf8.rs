@@ -53,10 +53,10 @@ pub struct utf8_item {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn utf8_data_cmp(ui1: *const utf8_item, ui2: *const utf8_item) -> i32 {
     unsafe {
-        if ((*ui1).size < (*ui2).size) {
+        if (*ui1).size < (*ui2).size {
             return -1;
         }
-        if ((*ui1).size > (*ui2).size) {
+        if (*ui1).size > (*ui2).size {
             return 1;
         }
         memcmp(
@@ -73,10 +73,10 @@ static mut utf8_data_tree: utf8_data_tree = rb_initializer();
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn utf8_index_cmp(ui1: *const utf8_item, ui2: *const utf8_item) -> i32 {
     unsafe {
-        if ((*ui1).index < (*ui2).index) {
+        if (*ui1).index < (*ui2).index {
             return -1;
         }
-        if ((*ui1).index > (*ui2).index) {
+        if (*ui1).index > (*ui2).index {
             return 1;
         }
     }
@@ -154,7 +154,7 @@ pub unsafe extern "C" fn utf8_put_item(
             return 0;
         }
 
-        if (utf8_next_index == 0xffffff + 1) {
+        if utf8_next_index == 0xffffff + 1 {
             return -1;
         }
 
@@ -206,22 +206,22 @@ pub unsafe extern "C" fn utf8_from_data(ud: *const utf8_data, uc: *mut utf8_char
     unsafe {
         let mut index: u32 = 0;
         'fail: {
-            if ((*ud).width > 2) {
+            if (*ud).width > 2 {
                 fatalx_c(c"invalid UTF-8 width: %u".as_ptr(), (*ud).width as u32);
             }
 
-            if ((*ud).size > UTF8_SIZE as u8) {
+            if (*ud).size > UTF8_SIZE as u8 {
                 break 'fail;
             }
             if ((*ud).size <= 3) {
                 index = (((*ud).data[2] as u32) << 16)
                     | (((*ud).data[1] as u32) << 8)
                     | ((*ud).data[0] as u32);
-            } else if (utf8_put_item(
+            } else if utf8_put_item(
                 (&raw const (*ud).data).cast(),
                 (*ud).size as usize,
                 &raw mut index,
-            ) != 0)
+            ) != 0
             {
                 break 'fail;
             }
@@ -329,7 +329,7 @@ pub unsafe extern "C" fn utf8_width(ud: *mut utf8_data, width: *mut i32) -> utf8
     unsafe {
         let mut wc: wchar_t = 0;
 
-        if (utf8_towc(ud, &raw mut wc) != utf8_state::UTF8_DONE) {
+        if utf8_towc(ud, &raw mut wc) != utf8_state::UTF8_DONE {
             return utf8_state::UTF8_ERROR;
         }
         if (utf8_in_table(wc, utf8_force_wide.as_ptr(), utf8_force_wide.len() as u32) != 0) {
@@ -349,11 +349,11 @@ pub unsafe extern "C" fn utf8_width(ud: *mut utf8_data, width: *mut i32) -> utf8
         } else {
             *width = wcwidth(wc);
             log_debug_c(c"wcwidth(%05X) returned %d".as_ptr(), wc as u32, *width);
-            if (*width < 0) {
+            if *width < 0 {
                 *width = if (wc >= 0x80 && wc <= 0x9f) { 0 } else { 1 };
             }
         }
-        if (*width >= 0 && *width <= 0xff) {
+        if *width >= 0 && *width <= 0xff {
             return utf8_state::UTF8_DONE;
         }
         utf8_state::UTF8_ERROR
@@ -408,7 +408,7 @@ pub unsafe extern "C" fn utf8_fromwc(wc: wchar_t, ud: *mut utf8_data) -> utf8_st
             wctomb(null_mut(), 0);
             return utf8_state::UTF8_ERROR;
         }
-        if (size == 0) {
+        if size == 0 {
             return utf8_state::UTF8_ERROR;
         }
         (*ud).have = size as u8;
@@ -444,27 +444,27 @@ pub unsafe extern "C" fn utf8_append(ud: *mut utf8_data, ch: c_uchar) -> utf8_st
     unsafe {
         let mut width: i32 = 0;
 
-        if ((*ud).have >= (*ud).size) {
+        if (*ud).have >= (*ud).size {
             fatalx(c"UTF-8 character overflow");
         }
-        if ((*ud).size > UTF8_SIZE as u8) {
+        if (*ud).size > UTF8_SIZE as u8 {
             fatalx(c"UTF-8 character size too large");
         }
 
-        if ((*ud).have != 0 && (ch & 0xc0) != 0x80) {
+        if (*ud).have != 0 && (ch & 0xc0) != 0x80 {
             (*ud).width = 0xff;
         }
 
         (*ud).data[(*ud).have as usize] = ch;
         (*ud).have += 1;
-        if ((*ud).have != (*ud).size) {
+        if (*ud).have != (*ud).size {
             return utf8_state::UTF8_MORE;
         }
 
-        if ((*ud).width == 0xff) {
+        if (*ud).width == 0xff {
             return utf8_state::UTF8_ERROR;
         }
-        if (utf8_width(ud, &raw mut width) != utf8_state::UTF8_DONE) {
+        if utf8_width(ud, &raw mut width) != utf8_state::UTF8_DONE {
             return utf8_state::UTF8_ERROR;
         }
         (*ud).width = width as u8;
@@ -515,7 +515,7 @@ pub unsafe extern "C" fn utf8_strvis(
                 dst = dst.add(1);
             } else if (src < end.sub(1)) {
                 dst = vis(dst, *src as i32, flag, *src.add(1) as i32);
-            } else if (src < end) {
+            } else if src < end {
                 dst = vis(dst, *src as i32, flag, b'\0' as i32);
             }
             src = src.add(1);
@@ -568,12 +568,12 @@ pub unsafe extern "C" fn utf8_isvalid(mut s: *const c_char) -> boolint {
                 }) {
                     more = utf8_append(&raw mut ud, *s as u8);
                 }
-                if (more == utf8_state::UTF8_DONE) {
+                if more == utf8_state::UTF8_DONE {
                     continue;
                 }
                 return boolint::FALSE;
             }
-            if (*s < 0x20 || *s > 0x7e) {
+            if *s < 0x20 || *s > 0x7e {
                 return boolint::FALSE;
             }
             s = s.add(1);
@@ -644,7 +644,7 @@ pub unsafe extern "C" fn utf8_strwidth(s: *const utf8_data, n: isize) -> u32 {
 
         let mut i: isize = 0;
         while (*s.add(i as usize)).size != 0 {
-            if (n != -1 && n == i) {
+            if n != -1 && n == i {
                 break;
             }
             width += (*s.add(i as usize)).width as u32;
@@ -731,7 +731,7 @@ pub unsafe extern "C" fn utf8_cstrwidth(mut s: *const c_char) -> u32 {
                 }
                 s = s.sub(tmp.have as usize);
             }
-            if (*s > 0x1f && *s != 0x7f) {
+            if *s > 0x1f && *s != 0x7f {
                 width += 1;
             }
             s = s.add(1);
@@ -744,7 +744,7 @@ pub unsafe extern "C" fn utf8_cstrwidth(mut s: *const c_char) -> u32 {
 pub unsafe extern "C" fn utf8_padcstr(s: *const c_char, width: u32) -> *mut c_char {
     unsafe {
         let n = utf8_cstrwidth(s);
-        if (n >= width) {
+        if n >= width {
             return xstrdup(s).as_ptr();
         }
 
@@ -766,7 +766,7 @@ pub unsafe extern "C" fn utf8_padcstr(s: *const c_char, width: u32) -> *mut c_ch
 pub unsafe extern "C" fn utf8_rpadcstr(s: *const c_char, width: u32) -> *mut c_char {
     unsafe {
         let n = utf8_cstrwidth(s);
-        if (n >= width) {
+        if n >= width {
             return xstrdup(s).as_ptr();
         }
 

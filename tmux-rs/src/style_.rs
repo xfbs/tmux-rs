@@ -123,7 +123,7 @@ pub unsafe extern "C" fn style_parse(
                     if !found.is_null() {
                         *found = b'\0' as _;
                         *found += 1;
-                        if (*found == b'\0' as _) {
+                        if *found == b'\0' as _ {
                             break 'error;
                         }
                     }
@@ -145,7 +145,7 @@ pub unsafe extern "C" fn style_parse(
                         if found.is_null() {
                             break 'error;
                         }
-                        if (*found != b'%' as _ || *found.add(1) == b'\0' as _) {
+                        if *found != b'%' as _ || *found.add(1) == b'\0' as _ {
                             break 'error;
                         }
                         n = strtonum(found.add(1), 0, u32::MAX as i64, &raw mut errstr as _) as u32;
@@ -170,7 +170,7 @@ pub unsafe extern "C" fn style_parse(
                         if found.is_null() {
                             break 'error;
                         }
-                        if (*found != b'$' as _ || *found.add(1) == b'\0' as _) {
+                        if *found != b'$' as _ || *found.add(1) == b'\0' as _ {
                             break 'error;
                         }
                         n = strtonum(found.add(1), 0, u32::MAX as i64, &raw mut errstr as _) as u32;
@@ -181,7 +181,7 @@ pub unsafe extern "C" fn style_parse(
                         (*sy).range_argument = n;
                         style_set_range_string(sy, c"".as_ptr());
                     } else if (strcasecmp(tmp.add(6), c"user".as_ptr()) == 0) {
-                        if (found.is_null()) {
+                        if found.is_null() {
                             break 'error;
                         }
                         (*sy).range_type = style_range_type::STYLE_RANGE_USER;
@@ -255,7 +255,7 @@ pub unsafe extern "C" fn style_parse(
                 }
 
                 in_ = in_.add(end + strspn(in_.add(end), delimiters));
-                if (*in_ == b'\0' as _) {
+                if *in_ == b'\0' as _ {
                     break;
                 }
             }
@@ -358,7 +358,7 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
                 tmp = c"centre".as_ptr();
             } else if ((*sy).align == style_align::STYLE_ALIGN_RIGHT) {
                 tmp = c"right".as_ptr();
-            } else if ((*sy).align == style_align::STYLE_ALIGN_ABSOLUTE_CENTRE) {
+            } else if (*sy).align == style_align::STYLE_ALIGN_ABSOLUTE_CENTRE {
                 tmp = c"absolute-centre".as_ptr();
             }
             off += xsnprintf(
@@ -373,7 +373,7 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
         if ((*sy).default_type != style_default_type::STYLE_DEFAULT_BASE) {
             if ((*sy).default_type == style_default_type::STYLE_DEFAULT_PUSH) {
                 tmp = c"push-default".as_ptr();
-            } else if ((*sy).default_type == style_default_type::STYLE_DEFAULT_POP) {
+            } else if (*sy).default_type == style_default_type::STYLE_DEFAULT_POP {
                 tmp = c"pop-default".as_ptr();
             }
             off += xsnprintf(
@@ -463,13 +463,13 @@ pub unsafe extern "C" fn style_add(
         if sy.is_null() {
             sy = &raw mut style_default;
         }
-        if ((*sy).gc.fg != 8) {
+        if (*sy).gc.fg != 8 {
             (*gc).fg = (*sy).gc.fg;
         }
-        if ((*sy).gc.bg != 8) {
+        if (*sy).gc.bg != 8 {
             (*gc).bg = (*sy).gc.bg;
         }
-        if ((*sy).gc.us != 8) {
+        if (*sy).gc.us != 8 {
             (*gc).us = (*sy).gc.us;
         }
         (*gc).attr |= (*sy).gc.attr;

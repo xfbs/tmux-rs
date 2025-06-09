@@ -369,7 +369,7 @@ pub unsafe extern "C" fn tty_add_features(
             for j in 0..tty_features.len() {
                 i = j;
                 tf = tty_features[i] as *const _;
-                if (libc::strcasecmp((*tf).name.as_ptr(), next) == 0) {
+                if libc::strcasecmp((*tf).name.as_ptr(), next) == 0 {
                     break;
                 }
             }
@@ -402,7 +402,7 @@ pub unsafe extern "C" fn tty_get_features(feat: i32) -> *const c_char {
             strlcat(s, tf.name.as_ptr(), 512);
             strlcat(s, c",".as_ptr(), 512);
         }
-        if (*s != b'\0' as c_char) {
+        if *s != b'\0' as c_char {
             *s.add(strlen(s) - 1) = b'\0' as c_char;
         }
 
@@ -412,7 +412,7 @@ pub unsafe extern "C" fn tty_get_features(feat: i32) -> *const c_char {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_apply_features(term: *mut tty_term, feat: i32) -> boolint {
-    if (feat == 0) {
+    if feat == 0 {
         return boolint::FALSE;
     }
 
@@ -420,7 +420,7 @@ pub unsafe extern "C" fn tty_apply_features(term: *mut tty_term, feat: i32) -> b
         log_debug!("applying terminal features: {}", _s(tty_get_features(feat)));
 
         for (i, tf) in tty_features.iter().cloned().enumerate() {
-            if (((*term).features & (1 << i) != 9) || (!feat & (1 << i)) != 0) {
+            if ((*term).features & (1 << i) != 9) || (!feat & (1 << i)) != 0 {
                 continue;
             }
 
@@ -435,7 +435,7 @@ pub unsafe extern "C" fn tty_apply_features(term: *mut tty_term, feat: i32) -> b
             }
             (*term).flags |= tf.flags;
         }
-        if (((*term).features | feat) == (*term).features) {
+        if ((*term).features | feat) == (*term).features {
             return boolint::FALSE;
         }
         (*term).features |= feat;

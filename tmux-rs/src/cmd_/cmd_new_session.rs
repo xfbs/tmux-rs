@@ -156,13 +156,13 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
             detached = args_has_(args, 'd');
             if (c.is_null()) {
                 detached = true;
-            } else if ((*c).flags.intersects(client_flag::CONTROL)) {
+            } else if (*c).flags.intersects(client_flag::CONTROL) {
                 is_control = true;
             }
 
             /* Is this client already attached? */
             already_attached = false;
-            if (!c.is_null() && !(*c).session.is_null()) {
+            if !c.is_null() && !(*c).session.is_null() {
                 already_attached = true;
             }
 
@@ -195,7 +195,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                     );
                     break 'fail;
                 }
-                if (tcgetattr((*c).fd, &raw mut tio) != 0) {
+                if tcgetattr((*c).fd, &raw mut tio) != 0 {
                     fatal(c"tcgetattr failed".as_ptr());
                 }
                 tiop = &raw mut tio;
@@ -204,7 +204,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
             }
 
             /* Open the terminal if necessary. */
-            if (!detached && !already_attached) {
+            if !detached && !already_attached {
                 if (server_client_open(c, &raw mut cause) != 0) {
                     cmdq_error(item, c"open terminal failed: %s".as_ptr(), cause);
                     free_(cause);
@@ -251,7 +251,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
             if (!detached && !is_control) {
                 sx = (*c).tty.sx;
                 sy = (*c).tty.sy;
-                if (sy > 0 && options_get_number(global_s_options, c"status".as_ptr()) != 0) {
+                if sy > 0 && options_get_number(global_s_options, c"status".as_ptr()) != 0 {
                     sy -= 1;
                 }
             } else {
@@ -260,34 +260,34 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                     sx = dsx;
                     sy = dsy;
                 } else {
-                    if (args_has_(args, 'x')) {
+                    if args_has_(args, 'x') {
                         sx = dsx;
                     }
-                    if (args_has_(args, 'y')) {
+                    if args_has_(args, 'y') {
                         sy = dsy;
                     }
                 }
             }
-            if (sx == 0) {
+            if sx == 0 {
                 sx = 1;
             }
-            if (sy == 0) {
+            if sy == 0 {
                 sy = 1;
             }
 
             /* Create the new session. */
             oo = options_create(global_s_options);
             if (args_has_(args, 'x') || args_has_(args, 'y')) {
-                if (!args_has_(args, 'x')) {
+                if !args_has_(args, 'x') {
                     dsx = sx;
                 }
-                if (!args_has_(args, 'y')) {
+                if !args_has_(args, 'y') {
                     dsy = sy;
                 }
                 options_set_string(oo, c"default-size".as_ptr(), 0, c"%ux%u".as_ptr(), dsx, dsy);
             }
             env = environ_create().as_ptr();
-            if (!c.is_null() && !args_has_(args, 'E')) {
+            if !c.is_null() && !args_has_(args, 'E') {
                 environ_update(global_s_options, (*c).environ, env);
             }
             av = args_first_value(args, b'e');
@@ -300,7 +300,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
             /* Spawn the initial window. */
             sc.item = item;
             sc.s = s;
-            if (!detached) {
+            if !detached {
                 sc.tc = c;
             }
 
@@ -324,7 +324,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
              * so add it to the group and synchronize.
              */
             if (!group.is_null()) {
-                if (sg.is_null()) {
+                if sg.is_null() {
                     if (!groupwith.is_null()) {
                         sg = session_group_new((*groupwith).name);
                         session_group_add(sg, groupwith);
@@ -343,18 +343,18 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
              * taking this session and needs to get MSG_READY and stay around.
              */
             if (!detached) {
-                if (args_has_(args, 'f')) {
+                if args_has_(args, 'f') {
                     server_client_set_flags(c, args_get_(args, 'f'));
                 }
                 if (!already_attached) {
                     if !(*c).flags.intersects(client_flag::CONTROL) {
                         proc_send((*c).peer, msgtype::MSG_READY, -1, null(), 0);
                     }
-                } else if (!(*c).session.is_null()) {
+                } else if !(*c).session.is_null() {
                     (*c).last_session = (*c).session;
                 }
                 server_client_set_session(c, s);
-                if (!cmdq_get_flags(item) & CMDQ_STATE_REPEAT != 0) {
+                if !cmdq_get_flags(item) & CMDQ_STATE_REPEAT != 0 {
                     server_client_set_key_table(c, null_mut());
                 }
             }
@@ -362,7 +362,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
             /* Print if requested. */
             if (args_has_(args, 'P')) {
                 let mut template: *const c_char = args_get_(args, 'F');
-                if (template.is_null()) {
+                if template.is_null() {
                     template = NEW_SESSION_TEMPLATE.as_ptr();
                 }
                 cp = format_single(item, template, c, s, (*s).curw, null_mut());
@@ -370,10 +370,10 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                 free_(cp);
             }
 
-            if (!detached) {
+            if !detached {
                 (*c).flags |= client_flag::ATTACHED;
             }
-            if (!args_has_(args, 'd')) {
+            if !args_has_(args, 'd') {
                 cmd_find_from_session(current, s, 0);
             }
 
@@ -381,11 +381,11 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
             cmd_find_from_session(fs.as_mut_ptr(), s, 0);
             cmdq_insert_hook(s, item, fs.as_mut_ptr(), c"after-new-session".as_ptr());
 
-            if (cfg_finished != 0) {
+            if cfg_finished != 0 {
                 cfg_show_causes(s);
             }
 
-            if (!sc.argv.is_null()) {
+            if !sc.argv.is_null() {
                 cmd_free_argv(sc.argc, sc.argv);
             }
             free_(cwd);
@@ -395,7 +395,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
         }
 
         //fail:
-        if (!sc.argv.is_null()) {
+        if !sc.argv.is_null() {
             cmd_free_argv(sc.argc, sc.argv);
         }
 

@@ -42,13 +42,13 @@ unsafe extern "C" fn cmd_move_window_exec(self_: *mut cmd, item: *mut cmdq_item)
         let mut cause = null_mut();
 
         if (args_has_(args, 'r')) {
-            if (cmd_find_target(
+            if cmd_find_target(
                 &raw mut target,
                 item,
                 tflag,
                 cmd_find_type::CMD_FIND_SESSION,
                 CMD_FIND_QUIET,
-            ) != 0)
+            ) != 0
             {
                 return (cmd_retval::CMD_RETURN_ERROR);
             }
@@ -59,13 +59,13 @@ unsafe extern "C" fn cmd_move_window_exec(self_: *mut cmd, item: *mut cmdq_item)
 
             return (cmd_retval::CMD_RETURN_NORMAL);
         }
-        if (cmd_find_target(
+        if cmd_find_target(
             &raw mut target,
             item,
             tflag,
             cmd_find_type::CMD_FIND_WINDOW,
             CMD_FIND_WINDOW_INDEX,
-        ) != 0)
+        ) != 0
         {
             return (cmd_retval::CMD_RETURN_ERROR);
         }
@@ -83,7 +83,7 @@ unsafe extern "C" fn cmd_move_window_exec(self_: *mut cmd, item: *mut cmdq_item)
             } else {
                 idx = winlink_shuffle_up(dst, (*dst).curw, before);
             }
-            if (idx == -1) {
+            if idx == -1 {
                 return (cmd_retval::CMD_RETURN_ERROR);
             }
         }
@@ -93,7 +93,7 @@ unsafe extern "C" fn cmd_move_window_exec(self_: *mut cmd, item: *mut cmdq_item)
             free_(cause);
             return (cmd_retval::CMD_RETURN_ERROR);
         }
-        if (cmd_get_entry(self_) == &raw mut cmd_move_window_entry) {
+        if cmd_get_entry(self_) == &raw mut cmd_move_window_entry {
             server_unlink_window(src, wl);
         }
 

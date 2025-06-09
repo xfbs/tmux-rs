@@ -14,7 +14,7 @@ unsafe extern "C" {
 pub unsafe extern "C" fn osdep_get_name(fd: i32, tty: *const c_char) -> *mut c_char {
     unsafe {
         let mut pgrp = tcgetpgrp(fd);
-        if (pgrp == -1) {
+        if pgrp == -1 {
             return null_mut();
         }
 
@@ -35,14 +35,14 @@ pub unsafe extern "C" fn osdep_get_name(fd: i32, tty: *const c_char) -> *mut c_c
             if ch == EOF {
                 break;
             }
-            if (ch == b'\0' as i32) {
+            if ch == b'\0' as i32 {
                 break;
             }
             buf = xrealloc_(buf, len + 2).as_ptr();
             *buf.add(len) = ch as c_char;
             len += 1;
         }
-        if (!buf.is_null()) {
+        if !buf.is_null() {
             *buf.add(len) = b'\0' as c_char;
         }
 
@@ -59,7 +59,7 @@ pub unsafe extern "C" fn osdep_get_cwd(fd: i32) -> *const c_char {
         let mut target = &raw mut target_buffer as *mut c_char;
 
         let mut pgrp = tcgetpgrp(fd);
-        if (pgrp == -1) {
+        if pgrp == -1 {
             return null_mut();
         }
 

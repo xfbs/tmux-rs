@@ -71,7 +71,7 @@ fn cmd_list_panes_window(
         let mut args = cmd_get_args(self_);
 
         let mut template = args_get_(args, 'F');
-        if (template.is_null()) {
+        if template.is_null() {
             match (type_) {
                 0 => {
                     template = concat!(

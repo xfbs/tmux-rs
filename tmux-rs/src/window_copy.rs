@@ -92,18 +92,23 @@ static void window_copy_drag_release(struct client *, struct mouse_event *);
 static void window_copy_jump_to_mark(struct window_mode_entry *);
 static void window_copy_acquire_cursor_up(struct window_mode_entry *, u_int, u_int, u_int, u_int, u_int);
 static void window_copy_acquire_cursor_down(struct window_mode_entry *, u_int, u_int, u_int, u_int, u_int, u_int, int);
+*/
 
-const struct window_mode window_copy_mode = {
-    .name = "copy-mode",
+// #[unsafe(no_mangle)]
+// static window_copy_mode: window_mode = window_mode::new(
+//     c"copy-mode",
+//     c"",
+//     window_copy_init,
+//     window_copy_free,
+//     window_copy_resize,
+//     None,
+//     None,
+//     window_copy_key_table,
+//     window_copy_command,
+//     window_copy_formats,
+// );
 
-    .init = window_copy_init,
-    .free = window_copy_free,
-    .resize = window_copy_resize,
-    .key_table = window_copy_key_table,
-    .command = window_copy_command,
-    .formats = window_copy_formats,
-};
-
+/*
 const struct window_mode window_view_mode = {
     .name = "view-mode",
 
@@ -114,45 +119,56 @@ const struct window_mode window_view_mode = {
     .command = window_copy_command,
     .formats = window_copy_formats,
 };
+*/
 
-enum {
-  WINDOW_COPY_OFF,
-  WINDOW_COPY_SEARCHUP,
-  WINDOW_COPY_SEARCHDOWN,
-  WINDOW_COPY_JUMPFORWARD,
-  WINDOW_COPY_JUMPBACKWARD,
-  WINDOW_COPY_JUMPTOFORWARD,
-  WINDOW_COPY_JUMPTOBACKWARD,
-};
+#[repr(i32)]
+#[derive(Copy, Clone)]
+pub enum window_copy {
+    WINDOW_COPY_OFF,
+    WINDOW_COPY_SEARCHUP,
+    WINDOW_COPY_SEARCHDOWN,
+    WINDOW_COPY_JUMPFORWARD,
+    WINDOW_COPY_JUMPBACKWARD,
+    WINDOW_COPY_JUMPTOFORWARD,
+    WINDOW_COPY_JUMPTOBACKWARD,
+}
 
-enum {
-  WINDOW_COPY_REL_POS_ABOVE,
-  WINDOW_COPY_REL_POS_ON_SCREEN,
-  WINDOW_COPY_REL_POS_BELOW,
-};
+#[repr(i32)]
+#[derive(Copy, Clone)]
+pub enum window_copy_rel_pos {
+    WINDOW_COPY_REL_POS_ABOVE,
+    WINDOW_COPY_REL_POS_ON_SCREEN,
+    WINDOW_COPY_REL_POS_BELOW,
+}
 
-enum window_copy_cmd_action {
-  WINDOW_COPY_CMD_NOTHING,
-  WINDOW_COPY_CMD_REDRAW,
-  WINDOW_COPY_CMD_CANCEL,
-};
+#[repr(i32)]
+#[derive(Copy, Clone)]
+pub enum window_copy_cmd_action {
+    WINDOW_COPY_CMD_NOTHING,
+    WINDOW_COPY_CMD_REDRAW,
+    WINDOW_COPY_CMD_CANCEL,
+}
 
-enum window_copy_cmd_clear {
-  WINDOW_COPY_CMD_CLEAR_ALWAYS,
-  WINDOW_COPY_CMD_CLEAR_NEVER,
-  WINDOW_COPY_CMD_CLEAR_EMACS_ONLY,
-};
+#[repr(i32)]
+#[derive(Copy, Clone)]
+pub enum window_copy_cmd_clear {
+    WINDOW_COPY_CMD_CLEAR_ALWAYS,
+    WINDOW_COPY_CMD_CLEAR_NEVER,
+    WINDOW_COPY_CMD_CLEAR_EMACS_ONLY,
+}
 
-struct window_copy_cmd_state {
-  struct window_mode_entry *wme;
-  struct args *args;
-  struct mouse_event *m;
+#[repr(C)]
+pub struct window_copy_cmd_state {
+    wme: *mut window_mode_entry,
+    args: *mut args,
+    m: *mut mouse_event,
 
-  struct client *c;
-  struct session *s;
-  struct winlink *wl;
-};
+    c: *mut client,
+    s: *mut session,
+    wl: *mut winlink,
+}
 
+/*
 /*
  * Copy mode's visible screen (the "screen" field) is filled from one of two
  * sources: the original contents of the pane (used when we actually enter via

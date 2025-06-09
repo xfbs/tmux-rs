@@ -45,25 +45,25 @@ static mut cmd_find_pane_table: [[*const c_char; 2]; 16] = [
 pub unsafe extern "C" fn cmd_find_inside_pane(c: *mut client) -> *mut window_pane {
     let __func__ = "cmd_find_inside_pane";
     unsafe {
-        if (c.is_null()) {
+        if c.is_null() {
             return null_mut();
         }
 
         let mut wp: *mut window_pane = null_mut();
         for wp_ in rb_foreach(&raw mut all_window_panes) {
             wp = wp_.as_ptr();
-            if ((*wp).fd != -1 && strcmp((*wp).tty.as_ptr(), (*c).ttyname) == 0) {
+            if (*wp).fd != -1 && strcmp((*wp).tty.as_ptr(), (*c).ttyname) == 0 {
                 break;
             }
         }
 
         if (wp.is_null()) {
             let envent = environ_find((*c).environ, c"TMUX_PANE".as_ptr());
-            if (!envent.is_null()) {
+            if !envent.is_null() {
                 wp = window_pane_find_by_id_str(transmute_ptr((*envent).value));
             }
         }
-        if (!wp.is_null()) {
+        if !wp.is_null() {
             log_debug!(
                 "{}: got pane %{} ({})",
                 __func__,
@@ -77,7 +77,7 @@ pub unsafe extern "C" fn cmd_find_inside_pane(c: *mut client) -> *mut window_pan
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_client_better(c: *mut client, than: *mut client) -> i32 {
-    if (than.is_null()) {
+    if than.is_null() {
         return 1;
     }
     unsafe {
@@ -89,19 +89,19 @@ pub unsafe extern "C" fn cmd_find_client_better(c: *mut client, than: *mut clien
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_best_client(mut s: *mut session) -> *mut client {
     unsafe {
-        if ((*s).attached == 0) {
+        if (*s).attached == 0 {
             s = null_mut();
         }
 
         let mut c = null_mut();
         for c_loop in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
-            if ((*c_loop).session.is_null()) {
+            if (*c_loop).session.is_null() {
                 continue;
             }
-            if (!s.is_null() && (*c_loop).session != s) {
+            if !s.is_null() && (*c_loop).session != s {
                 continue;
             }
-            if (cmd_find_client_better(c_loop, c) != 0) {
+            if cmd_find_client_better(c_loop, c) != 0 {
                 c = c_loop;
             }
         }
@@ -116,7 +116,7 @@ pub unsafe extern "C" fn cmd_find_session_better(
     than: *mut session,
     flags: i32,
 ) -> i32 {
-    if (than.is_null()) {
+    if than.is_null() {
         return 1;
     }
 
@@ -125,7 +125,7 @@ pub unsafe extern "C" fn cmd_find_session_better(
             let attached = ((*than).attached != 0);
             if (attached && (*s).attached == 0) {
                 return 1;
-            } else if (!attached && (*s).attached != 0) {
+            } else if !attached && (*s).attached != 0 {
                 return 0;
             }
         }
@@ -146,13 +146,13 @@ pub unsafe extern "C" fn cmd_find_best_session(
         let mut s = null_mut();
         if (!slist.is_null()) {
             for i in 0..ssize {
-                if (cmd_find_session_better(*slist.add(i as usize), s, flags) != 0) {
+                if cmd_find_session_better(*slist.add(i as usize), s, flags) != 0 {
                     s = *slist.add(i as usize);
                 }
             }
         } else {
             for s_loop in rb_foreach(&raw mut sessions).map(|e| e.as_ptr()) {
-                if (cmd_find_session_better(s_loop, s, flags) != 0) {
+                if cmd_find_session_better(s_loop, s, flags) != 0 {
                     s = s_loop;
                 }
             }
@@ -172,18 +172,18 @@ pub unsafe extern "C" fn cmd_find_best_session_with_window(fs: *mut cmd_find_sta
         'fail: {
             let mut ssize: u32 = 0;
             for s in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
-                if (session_has(s, (*fs).w) == 0) {
+                if session_has(s, (*fs).w) == 0 {
                     continue;
                 }
                 slist = xreallocarray_(slist, ssize as usize + 1).as_ptr();
                 *slist.add(ssize as usize) = s;
                 ssize += 1;
             }
-            if (ssize == 0) {
+            if ssize == 0 {
                 break 'fail;
             }
             (*fs).s = cmd_find_best_session(slist, ssize, (*fs).flags);
-            if ((*fs).s.is_null()) {
+            if (*fs).s.is_null() {
                 break 'fail;
             }
             free_(slist);
@@ -213,7 +213,7 @@ pub unsafe extern "C" fn cmd_find_best_winlink_with_window(fs: *mut cmd_find_sta
                 }
             }
         }
-        if (wl.is_null()) {
+        if wl.is_null() {
             return -1;
         }
         (*fs).wl = wl;
@@ -250,14 +250,14 @@ pub unsafe extern "C" fn cmd_find_get_session(
 
         if (*session == b'$' as _) {
             (*fs).s = session_find_by_id_str(session);
-            if ((*fs).s.is_null()) {
+            if (*fs).s.is_null() {
                 return -1;
             }
             return 0;
         }
 
         (*fs).s = session_find(session.cast_mut()); // TODO this is invalid casting away const
-        if (!(*fs).s.is_null()) {
+        if !(*fs).s.is_null() {
             return 0;
         }
 
@@ -267,14 +267,14 @@ pub unsafe extern "C" fn cmd_find_get_session(
             return 0;
         }
 
-        if ((*fs).flags & CMD_FIND_EXACT_SESSION != 0) {
+        if (*fs).flags & CMD_FIND_EXACT_SESSION != 0 {
             return -1;
         }
 
         let mut s: *mut session = null_mut();
         for s_loop in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
             if (libc::strncmp(session, (*s_loop).name, strlen(session)) == 0) {
-                if (!s.is_null()) {
+                if !s.is_null() {
                     return -1;
                 }
                 s = s_loop;
@@ -288,7 +288,7 @@ pub unsafe extern "C" fn cmd_find_get_session(
         s = null_mut();
         for s_loop in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
             if (libc::fnmatch(session, (*s_loop).name, 0) == 0) {
-                if (!s.is_null()) {
+                if !s.is_null() {
                     return -1;
                 }
                 s = s_loop;
@@ -314,7 +314,7 @@ pub unsafe extern "C" fn cmd_find_get_window(
 
         if (*window == b'@' as c_char) {
             (*fs).w = window_find_by_id_str(window);
-            if ((*fs).w.is_null()) {
+            if (*fs).w.is_null() {
                 return -1;
             }
             return cmd_find_best_session_with_window(fs);
@@ -322,14 +322,14 @@ pub unsafe extern "C" fn cmd_find_get_window(
 
         (*fs).s = (*(*fs).current).s;
 
-        if (cmd_find_get_window_with_session(fs, window) == 0) {
+        if cmd_find_get_window_with_session(fs, window) == 0 {
             return 0;
         }
 
         if (only == 0 && cmd_find_get_session(fs, window) == 0) {
             (*fs).wl = (*(*fs).s).curw;
             (*fs).w = (*(*fs).wl).window;
-            if (!(*fs).flags & CMD_FIND_WINDOW_INDEX != 0) {
+            if !(*fs).flags & CMD_FIND_WINDOW_INDEX != 0 {
                 (*fs).idx = (*(*fs).wl).idx;
             }
             return 0;
@@ -359,7 +359,7 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(
 
         if (*window == b'@' as _) {
             (*fs).w = window_find_by_id_str(window);
-            if ((*fs).w.is_null() || session_has((*fs).s, (*fs).w) == 0) {
+            if (*fs).w.is_null() || session_has((*fs).s, (*fs).w) == 0 {
                 return -1;
             }
             return cmd_find_best_winlink_with_window(fs);
@@ -374,12 +374,12 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(
             s = (*fs).s;
             if ((*fs).flags & CMD_FIND_WINDOW_INDEX != 0) {
                 if (*window == b'+' as _) {
-                    if (i32::MAX - (*(*s).curw).idx < n) {
+                    if i32::MAX - (*(*s).curw).idx < n {
                         return -1;
                     }
                     (*fs).idx = (*(*s).curw).idx + n;
                 } else {
-                    if (n > (*(*s).curw).idx) {
+                    if n > (*(*s).curw).idx {
                         return -1;
                     }
                     (*fs).idx = (*(*s).curw).idx - n;
@@ -398,10 +398,10 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(
             }
         }
 
-        if (exact == 0) {
+        if exact == 0 {
             if (strcmp(window, c"!".as_ptr()) == 0) {
                 (*fs).wl = tailq_first(&raw mut (*(*fs).s).lastw);
-                if ((*fs).wl.is_null()) {
+                if (*fs).wl.is_null() {
                     return -1;
                 }
                 (*fs).idx = (*(*fs).wl).idx;
@@ -409,7 +409,7 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(
                 return 0;
             } else if (strcmp(window, c"^".as_ptr()) == 0) {
                 (*fs).wl = rb_min(&raw mut (*(*fs).s).windows);
-                if ((*fs).wl.is_null()) {
+                if (*fs).wl.is_null() {
                     return -1;
                 }
                 (*fs).idx = (*(*fs).wl).idx;
@@ -417,7 +417,7 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(
                 return 0;
             } else if (strcmp(window, c"$".as_ptr()) == 0) {
                 (*fs).wl = rb_max(&raw mut (*(*fs).s).windows);
-                if ((*fs).wl.is_null()) {
+                if (*fs).wl.is_null() {
                     return -1;
                 }
                 (*fs).idx = (*(*fs).wl).idx;
@@ -445,7 +445,7 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(
         (*fs).wl = null_mut();
         for wl in rb_foreach(&raw mut (*(*fs).s).windows).map(NonNull::as_ptr) {
             if (strcmp(window, (*(*wl).window).name) == 0) {
-                if (!(*fs).wl.is_null()) {
+                if !(*fs).wl.is_null() {
                     return -1;
                 }
                 (*fs).wl = wl;
@@ -458,14 +458,14 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(
             return 0;
         }
 
-        if (exact != 0) {
+        if exact != 0 {
             return -1;
         }
 
         (*fs).wl = null_mut();
         for wl in rb_foreach(&raw mut (*(*fs).s).windows).map(NonNull::as_ptr) {
             if (libc::strncmp(window, (*(*wl).window).name, strlen(window)) == 0) {
-                if (!(*fs).wl.is_null()) {
+                if !(*fs).wl.is_null() {
                     return -1;
                 }
                 (*fs).wl = wl;
@@ -481,7 +481,7 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(
         (*fs).wl = null_mut();
         for wl in rb_foreach(&raw mut (*(*fs).s).windows).map(NonNull::as_ptr) {
             if (libc::fnmatch(window, (*(*wl).window).name, 0) == 0) {
-                if (!(*fs).wl.is_null()) {
+                if !(*fs).wl.is_null() {
                     return -1;
                 }
                 (*fs).wl = wl;
@@ -509,7 +509,7 @@ pub unsafe extern "C" fn cmd_find_get_pane(
 
         if (*pane == b'%' as _) {
             (*fs).wp = window_pane_find_by_id_str(pane);
-            if ((*fs).wp.is_null()) {
+            if (*fs).wp.is_null() {
                 return -1;
             }
             (*fs).w = (*(*fs).wp).window;
@@ -521,7 +521,7 @@ pub unsafe extern "C" fn cmd_find_get_pane(
         (*fs).idx = (*(*fs).current).idx;
         (*fs).w = (*(*fs).current).w;
 
-        if (cmd_find_get_pane_with_window(fs, pane) == 0) {
+        if cmd_find_get_pane_with_window(fs, pane) == 0 {
             return 0;
         }
 
@@ -544,7 +544,7 @@ pub unsafe extern "C" fn cmd_find_get_pane_with_session(
 
         if (*pane == b'%' as _) {
             (*fs).wp = window_pane_find_by_id_str(pane);
-            if ((*fs).wp.is_null()) {
+            if (*fs).wp.is_null() {
                 return -1;
             }
             (*fs).w = (*(*fs).wp).window;
@@ -573,10 +573,10 @@ pub unsafe extern "C" fn cmd_find_get_pane_with_window(
 
         if (*pane == b'%' as _) {
             (*fs).wp = window_pane_find_by_id_str(pane);
-            if ((*fs).wp.is_null()) {
+            if (*fs).wp.is_null() {
                 return -1;
             }
-            if ((*(*fs).wp).window != (*fs).w) {
+            if (*(*fs).wp).window != (*fs).w {
                 return -1;
             }
             return 0;
@@ -584,31 +584,31 @@ pub unsafe extern "C" fn cmd_find_get_pane_with_window(
 
         if (strcmp(pane, c"!".as_ptr()) == 0) {
             (*fs).wp = tailq_first(&raw mut (*(*fs).w).last_panes);
-            if ((*fs).wp.is_null()) {
+            if (*fs).wp.is_null() {
                 return -1;
             }
             return 0;
         } else if (strcmp(pane, c"{up-of}".as_ptr()) == 0) {
             (*fs).wp = window_pane_find_up((*(*fs).w).active);
-            if ((*fs).wp.is_null()) {
+            if (*fs).wp.is_null() {
                 return -1;
             }
             return 0;
         } else if (strcmp(pane, c"{down-of}".as_ptr()) == 0) {
             (*fs).wp = window_pane_find_down((*(*fs).w).active);
-            if ((*fs).wp.is_null()) {
+            if (*fs).wp.is_null() {
                 return -1;
             }
             return 0;
         } else if (strcmp(pane, c"{left-of}".as_ptr()) == 0) {
             (*fs).wp = window_pane_find_left((*(*fs).w).active);
-            if ((*fs).wp.is_null()) {
+            if (*fs).wp.is_null() {
                 return -1;
             }
             return 0;
         } else if (strcmp(pane, c"{right-of}".as_ptr()) == 0) {
             (*fs).wp = window_pane_find_right((*(*fs).w).active);
-            if ((*fs).wp.is_null()) {
+            if (*fs).wp.is_null() {
                 return -1;
             }
             return 0;
@@ -626,7 +626,7 @@ pub unsafe extern "C" fn cmd_find_get_pane_with_window(
             } else {
                 (*fs).wp = window_pane_previous_by_number((*fs).w, wp, n);
             }
-            if (!(*fs).wp.is_null()) {
+            if !(*fs).wp.is_null() {
                 return 0;
             }
         }
@@ -634,13 +634,13 @@ pub unsafe extern "C" fn cmd_find_get_pane_with_window(
         let idx = strtonum(pane, 0, i32::MAX as i64, &raw mut errstr) as i32;
         if (errstr.is_null()) {
             (*fs).wp = window_pane_at_index((*fs).w, idx as u32);
-            if (!(*fs).wp.is_null()) {
+            if !(*fs).wp.is_null() {
                 return 0;
             }
         }
 
         (*fs).wp = window_find_string((*fs).w, pane);
-        if (!(*fs).wp.is_null()) {
+        if !(*fs).wp.is_null() {
             return 0;
         }
     }
@@ -679,16 +679,16 @@ pub unsafe extern "C" fn cmd_find_valid_state(fs: *mut cmd_find_state) -> boolin
         let mut wl = null_mut();
         for wl_ in rb_foreach(&raw mut (*(*fs).s).windows) {
             wl = wl_.as_ptr();
-            if ((*wl).window == (*fs).w && wl == (*fs).wl) {
+            if (*wl).window == (*fs).w && wl == (*fs).wl {
                 break;
             }
         }
 
-        if (wl.is_null()) {
+        if wl.is_null() {
             return boolint::FALSE;
         }
 
-        if ((*fs).w != (*(*fs).wl).window) {
+        if (*fs).w != (*(*fs).wl).window {
             return boolint::FALSE;
         }
 
@@ -849,7 +849,7 @@ pub unsafe extern "C" fn cmd_find_from_pane(
     flags: i32,
 ) -> i32 {
     unsafe {
-        if (cmd_find_from_window(fs, (*wp).window, flags) != 0) {
+        if cmd_find_from_window(fs, (*wp).window, flags) != 0 {
             return -1;
         }
         (*fs).wp = wp;
@@ -916,7 +916,7 @@ pub unsafe extern "C" fn cmd_find_from_client(
         // struct window_pane *wp;
 
         'unknown_pane: {
-            if (c.is_null()) {
+            if c.is_null() {
                 return cmd_find_from_nothing(fs, flags);
             }
 
@@ -938,12 +938,12 @@ pub unsafe extern "C" fn cmd_find_from_client(
             cmd_find_clear_state(fs, flags);
 
             let wp = cmd_find_inside_pane(c);
-            if (wp.is_null()) {
+            if wp.is_null() {
                 break 'unknown_pane;
             }
 
             (*fs).w = (*wp).window;
-            if (cmd_find_best_session_with_window(fs) != 0) {
+            if cmd_find_best_session_with_window(fs) != 0 {
                 break 'unknown_pane;
             }
             (*fs).wl = (*(*fs).s).curw;
@@ -991,7 +991,7 @@ pub unsafe extern "C" fn cmd_find_target(
                     'no_session: {
                         'found: {
                             'current: {
-                                if (flags & CMD_FIND_CANFAIL != 0) {
+                                if flags & CMD_FIND_CANFAIL != 0 {
                                     flags |= CMD_FIND_QUIET;
                                 }
 
@@ -1002,45 +1002,45 @@ pub unsafe extern "C" fn cmd_find_target(
                                 };
 
                                 tmp[0] = b'\0' as c_char;
-                                if (flags & CMD_FIND_PREFER_UNATTACHED != 0) {
+                                if flags & CMD_FIND_PREFER_UNATTACHED != 0 {
                                     strlcat(
                                         tmp.as_mut_ptr(),
                                         c"PREFER_UNATTACHED,".as_ptr(),
                                         sizeof_tmp,
                                     );
                                 }
-                                if (flags & CMD_FIND_QUIET != 0) {
+                                if flags & CMD_FIND_QUIET != 0 {
                                     strlcat(tmp.as_mut_ptr(), c"QUIET,".as_ptr(), sizeof_tmp);
                                 }
-                                if (flags & CMD_FIND_WINDOW_INDEX != 0) {
+                                if flags & CMD_FIND_WINDOW_INDEX != 0 {
                                     strlcat(
                                         tmp.as_mut_ptr(),
                                         c"WINDOW_INDEX,".as_ptr(),
                                         sizeof_tmp,
                                     );
                                 }
-                                if (flags & CMD_FIND_DEFAULT_MARKED != 0) {
+                                if flags & CMD_FIND_DEFAULT_MARKED != 0 {
                                     strlcat(
                                         tmp.as_mut_ptr(),
                                         c"DEFAULT_MARKED,".as_ptr(),
                                         sizeof_tmp,
                                     );
                                 }
-                                if (flags & CMD_FIND_EXACT_SESSION != 0) {
+                                if flags & CMD_FIND_EXACT_SESSION != 0 {
                                     strlcat(
                                         tmp.as_mut_ptr(),
                                         c"EXACT_SESSION,".as_ptr(),
                                         sizeof_tmp,
                                     );
                                 }
-                                if (flags & CMD_FIND_EXACT_WINDOW != 0) {
+                                if flags & CMD_FIND_EXACT_WINDOW != 0 {
                                     strlcat(
                                         tmp.as_mut_ptr(),
                                         c"EXACT_WINDOW,".as_ptr(),
                                         sizeof_tmp,
                                     );
                                 }
-                                if (flags & CMD_FIND_CANFAIL != 0) {
+                                if flags & CMD_FIND_CANFAIL != 0 {
                                     strlcat(tmp.as_mut_ptr(), c"CANFAIL,".as_ptr(), sizeof_tmp);
                                 }
                                 if (tmp[0] != b'\0' as c_char) {
@@ -1080,7 +1080,7 @@ pub unsafe extern "C" fn cmd_find_target(
                                     (*fs).current = &raw mut current;
                                     log_debug!("{}: current is from client", __func__);
                                 } else {
-                                    if (!flags & CMD_FIND_QUIET != 0) {
+                                    if !flags & CMD_FIND_QUIET != 0 {
                                         cmdq_error(item, c"no current target".as_ptr());
                                     }
                                     break 'error;
@@ -1090,7 +1090,7 @@ pub unsafe extern "C" fn cmd_find_target(
                                 }
 
                                 /* An empty or NULL target is the current. */
-                                if (target.is_null() || *target == b'\0' as _) {
+                                if target.is_null() || *target == b'\0' as _ {
                                     break 'current;
                                 }
 
@@ -1114,7 +1114,7 @@ pub unsafe extern "C" fn cmd_find_target(
                                                     m,
                                                     &raw mut (*fs).s,
                                                 ));
-                                                if ((*fs).wl.is_null() && !(*fs).s.is_null()) {
+                                                if (*fs).wl.is_null() && !(*fs).s.is_null() {
                                                     (*fs).wl = (*(*fs).s).curw;
                                                 }
                                                 if (!(*fs).wl.is_null()) {
@@ -1129,7 +1129,7 @@ pub unsafe extern "C" fn cmd_find_target(
                                                 m,
                                                 &raw mut (*fs).s,
                                             ));
-                                            if ((*fs).wl.is_null() && !(*fs).s.is_null()) {
+                                            if (*fs).wl.is_null() && !(*fs).s.is_null() {
                                                 (*fs).wl = (*(*fs).s).curw;
                                             }
                                             if (!(*fs).wl.is_null()) {
@@ -1139,7 +1139,7 @@ pub unsafe extern "C" fn cmd_find_target(
                                         }
                                     }
                                     if ((*fs).wp.is_null()) {
-                                        if (!flags & CMD_FIND_QUIET != 0) {
+                                        if !flags & CMD_FIND_QUIET != 0 {
                                             cmdq_error(item, c"no mouse target".as_ptr());
                                         }
                                         break 'error;
@@ -1151,7 +1151,7 @@ pub unsafe extern "C" fn cmd_find_target(
                                     || strcmp(target, c"{marked}".as_ptr()) == 0)
                                 {
                                     if !server_check_marked() {
-                                        if (!flags & CMD_FIND_QUIET != 0) {
+                                        if !flags & CMD_FIND_QUIET != 0 {
                                             cmdq_error(item, c"no marked target".as_ptr());
                                         }
                                         break 'error;
@@ -1218,36 +1218,36 @@ pub unsafe extern "C" fn cmd_find_target(
                                     (*fs).flags |= CMD_FIND_EXACT_WINDOW;
                                 }
 
-                                if (!session.is_null() && *session == b'\0' as _) {
+                                if !session.is_null() && *session == b'\0' as _ {
                                     session = null_mut();
                                 }
-                                if (!window.is_null() && *window == b'\0' as _) {
+                                if !window.is_null() && *window == b'\0' as _ {
                                     window = null_mut();
                                 }
-                                if (!pane.is_null() && *pane == b'\0' as _) {
+                                if !pane.is_null() && *pane == b'\0' as _ {
                                     pane = null_mut();
                                 }
 
-                                if (!session.is_null()) {
+                                if !session.is_null() {
                                     session = cmd_find_map_table(
                                         &raw const cmd_find_session_table as *const _,
                                         session,
                                     );
                                 }
-                                if (!window.is_null()) {
+                                if !window.is_null() {
                                     window = cmd_find_map_table(
                                         &raw const cmd_find_window_table as *const _,
                                         window,
                                     );
                                 }
-                                if (!pane.is_null()) {
+                                if !pane.is_null() {
                                     pane = cmd_find_map_table(
                                         &raw const cmd_find_pane_table as *const _,
                                         pane,
                                     );
                                 }
 
-                                if (!session.is_null() || !window.is_null() || !pane.is_null()) {
+                                if !session.is_null() || !window.is_null() || !pane.is_null() {
                                     log_debug!(
                                         "{}: target {} is {}{}{}{}{}{}",
                                         __func__,
@@ -1270,14 +1270,14 @@ pub unsafe extern "C" fn cmd_find_target(
                                 }
 
                                 if (!pane.is_null() && (flags & CMD_FIND_WINDOW_INDEX != 0)) {
-                                    if (!flags & CMD_FIND_QUIET != 0) {
+                                    if !flags & CMD_FIND_QUIET != 0 {
                                         cmdq_error(item, c"can't specify pane here".as_ptr());
                                     }
                                     break 'error;
                                 }
 
                                 if (!session.is_null()) {
-                                    if (cmd_find_get_session(fs, session) != 0) {
+                                    if cmd_find_get_session(fs, session) != 0 {
                                         break 'no_session;
                                     }
 
@@ -1290,53 +1290,53 @@ pub unsafe extern "C" fn cmd_find_target(
                                     }
 
                                     if (!window.is_null() && pane.is_null()) {
-                                        if (cmd_find_get_window_with_session(fs, window) != 0) {
+                                        if cmd_find_get_window_with_session(fs, window) != 0 {
                                             break 'no_window;
                                         }
-                                        if (!(*fs).wl.is_null()) {
+                                        if !(*fs).wl.is_null() {
                                             (*fs).wp = (*(*(*fs).wl).window).active;
                                         }
                                         break 'found;
                                     }
 
                                     if (window.is_null() && !pane.is_null()) {
-                                        if (cmd_find_get_pane_with_session(fs, pane) != 0) {
+                                        if cmd_find_get_pane_with_session(fs, pane) != 0 {
                                             break 'no_pane;
                                         }
                                         break 'found;
                                     }
 
-                                    if (cmd_find_get_window_with_session(fs, window) != 0) {
+                                    if cmd_find_get_window_with_session(fs, window) != 0 {
                                         break 'no_window;
                                     }
-                                    if (cmd_find_get_pane_with_window(fs, pane) != 0) {
+                                    if cmd_find_get_pane_with_window(fs, pane) != 0 {
                                         break 'no_pane;
                                     }
                                     break 'found;
                                 }
 
                                 if (!window.is_null() && !pane.is_null()) {
-                                    if (cmd_find_get_window(fs, window, window_only) != 0) {
+                                    if cmd_find_get_window(fs, window, window_only) != 0 {
                                         break 'no_window;
                                     }
-                                    if (cmd_find_get_pane_with_window(fs, pane) != 0) {
+                                    if cmd_find_get_pane_with_window(fs, pane) != 0 {
                                         break 'no_pane;
                                     }
                                     break 'found;
                                 }
 
                                 if (!window.is_null() && pane.is_null()) {
-                                    if (cmd_find_get_window(fs, window, window_only) != 0) {
+                                    if cmd_find_get_window(fs, window, window_only) != 0 {
                                         break 'no_window;
                                     }
-                                    if (!(*fs).wl.is_null()) {
+                                    if !(*fs).wl.is_null() {
                                         (*fs).wp = (*(*(*fs).wl).window).active;
                                     }
                                     break 'found;
                                 }
 
                                 if (window.is_null() && !pane.is_null()) {
-                                    if (cmd_find_get_pane(fs, pane, pane_only) != 0) {
+                                    if cmd_find_get_pane(fs, pane, pane_only) != 0 {
                                         break 'no_pane;
                                     }
                                     break 'found;
@@ -1346,7 +1346,7 @@ pub unsafe extern "C" fn cmd_find_target(
                             }
                             // current:
                             cmd_find_copy_state(fs, (*fs).current);
-                            if (flags & CMD_FIND_WINDOW_INDEX != 0) {
+                            if flags & CMD_FIND_WINDOW_INDEX != 0 {
                                 (*fs).idx = -1;
                             }
                             break 'found;
@@ -1359,19 +1359,19 @@ pub unsafe extern "C" fn cmd_find_target(
                         return 0;
                     }
                     // no_session:
-                    if (!flags & CMD_FIND_QUIET != 0) {
+                    if !flags & CMD_FIND_QUIET != 0 {
                         cmdq_error(item, c"can't find session: %s".as_ptr(), session);
                     }
                     break 'error;
                 }
                 // no_window:
-                if (!flags & CMD_FIND_QUIET != 0) {
+                if !flags & CMD_FIND_QUIET != 0 {
                     cmdq_error(item, c"can't find window: %s".as_ptr(), window);
                 }
                 break 'error;
             }
             // no_pane:
-            if (!flags & CMD_FIND_QUIET != 0) {
+            if !flags & CMD_FIND_QUIET != 0 {
                 cmdq_error(item, c"can't find pane: %s".as_ptr(), pane);
             }
             break 'error;
@@ -1382,7 +1382,7 @@ pub unsafe extern "C" fn cmd_find_target(
         log_debug!("{}: error", __func__);
 
         free_(copy);
-        if (flags & CMD_FIND_CANFAIL != 0) {
+        if flags & CMD_FIND_CANFAIL != 0 {
             return 0;
         }
         -1
@@ -1399,10 +1399,10 @@ pub unsafe extern "C" fn cmd_find_current_client(item: *mut cmdq_item, quiet: i3
         let mut wp = null_mut();
         let mut fs: cmd_find_state = zeroed();
 
-        if (!item.is_null()) {
+        if !item.is_null() {
             c = cmdq_get_client(item);
         }
-        if (!c.is_null() && !(*c).session.is_null()) {
+        if !c.is_null() && !(*c).session.is_null() {
             return c;
         }
 
@@ -1415,12 +1415,12 @@ pub unsafe extern "C" fn cmd_find_current_client(item: *mut cmdq_item, quiet: i3
         {
             cmd_find_clear_state(&raw mut fs, CMD_FIND_QUIET);
             fs.w = (*wp).window;
-            if (cmd_find_best_session_with_window(&raw mut fs) == 0) {
+            if cmd_find_best_session_with_window(&raw mut fs) == 0 {
                 found = cmd_find_best_client(fs.s);
             }
         } else {
             s = cmd_find_best_session(null_mut(), 0, CMD_FIND_QUIET);
-            if (!s.is_null()) {
+            if !s.is_null() {
                 found = cmd_find_best_client(s);
             }
         }
@@ -1445,14 +1445,14 @@ pub unsafe extern "C" fn cmd_find_client(
         // size_t size;
 
         /* A NULL argument means the current client. */
-        if (target.is_null()) {
+        if target.is_null() {
             return cmd_find_current_client(item, quiet);
         }
         let copy = xstrdup(target).as_ptr();
 
         /* Trim a single trailing colon if any. */
         let size = strlen(copy);
-        if (size != 0 && *copy.add(size - 1) == b':' as _) {
+        if size != 0 && *copy.add(size - 1) == b':' as _ {
             *copy.add(size - 1) = b'\0' as _;
         }
 
@@ -1460,30 +1460,30 @@ pub unsafe extern "C" fn cmd_find_client(
         /* Check name and path of each client. */
         for c_ in tailq_foreach(&raw mut clients) {
             c = c_.as_ptr();
-            if ((*c).session.is_null()) {
+            if (*c).session.is_null() {
                 continue;
             }
-            if (strcmp(copy, (*c).name) == 0) {
+            if strcmp(copy, (*c).name) == 0 {
                 break;
             }
 
-            if (*(*c).ttyname == b'\0' as _) {
+            if *(*c).ttyname == b'\0' as _ {
                 continue;
             }
-            if (strcmp(copy, (*c).ttyname) == 0) {
+            if strcmp(copy, (*c).ttyname) == 0 {
                 break;
             }
-            if (libc::strncmp((*c).ttyname, _PATH_DEV, SIZEOF_PATH_DEV - 1) != 0) {
+            if libc::strncmp((*c).ttyname, _PATH_DEV, SIZEOF_PATH_DEV - 1) != 0 {
                 continue;
             }
-            if (strcmp(copy, (*c).ttyname.add(SIZEOF_PATH_DEV - 1)) == 0) {
+            if strcmp(copy, (*c).ttyname.add(SIZEOF_PATH_DEV - 1)) == 0 {
                 break;
             }
 
             continue;
         }
 
-        if (c.is_null() && quiet == 0) {
+        if c.is_null() && quiet == 0 {
             cmdq_error(item, c"can't find client: %s".as_ptr(), copy);
         }
 

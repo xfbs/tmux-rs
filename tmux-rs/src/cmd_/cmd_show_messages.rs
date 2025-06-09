@@ -30,7 +30,7 @@ unsafe extern "C" fn cmd_show_messages_terminals(
 
         let mut n = 0u32;
         for term in list_foreach::<_, discr_entry>(&raw mut tty_terms).map(NonNull::as_ptr) {
-            if (args_has(args, b't') != 0 && term != (*tc).tty.term) {
+            if args_has(args, b't') != 0 && term != (*tc).tty.term {
                 continue;
             }
             if (blank != 0) {
@@ -77,7 +77,7 @@ unsafe extern "C" fn cmd_show_messages_exec(self_: *mut cmd, item: *mut cmdq_ite
             job_print_summary(item, blank);
             done = 1;
         }
-        if (done != 0) {
+        if done != 0 {
             return (cmd_retval::CMD_RETURN_NORMAL);
         }
 

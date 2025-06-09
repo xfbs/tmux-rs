@@ -44,7 +44,7 @@ unsafe extern "C" fn cmd_display_menu_args_parse(
 
     loop {
         type_ = args_parse_type::ARGS_PARSE_STRING;
-        if (i == idx) {
+        if i == idx {
             break;
         }
 
@@ -57,13 +57,13 @@ unsafe extern "C" fn cmd_display_menu_args_parse(
         }
 
         type_ = args_parse_type::ARGS_PARSE_STRING;
-        if (i == idx) {
+        if i == idx {
             break;
         }
         i += 1;
 
         type_ = args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING;
-        if (i == idx) {
+        if i == idx {
             break;
         }
         i += 1;
@@ -109,7 +109,7 @@ unsafe extern "C" fn cmd_display_menu_get_position(
          */
 
         /* If the popup is too big, stop now. */
-        if (w > (*tty).sx || h > (*tty).sy) {
+        if w > (*tty).sx || h > (*tty).sy {
             return (0);
         }
 
@@ -139,15 +139,15 @@ unsafe extern "C" fn cmd_display_menu_get_position(
                 ranges = &raw mut (*tc).status.entries[line as usize].ranges;
                 for sr_ in tailq_foreach(ranges) {
                     sr = sr_.as_ptr();
-                    if ((*sr).type_ != style_range_type::STYLE_RANGE_WINDOW) {
+                    if (*sr).type_ != style_range_type::STYLE_RANGE_WINDOW {
                         continue;
                     }
-                    if ((*sr).argument == (*wl).idx as u32) {
+                    if (*sr).argument == (*wl).idx as u32 {
                         break;
                     }
                     continue;
                 }
-                if (!sr.is_null()) {
+                if !sr.is_null() {
                     break;
                 }
             }
@@ -304,14 +304,14 @@ unsafe extern "C" fn cmd_display_menu_get_position(
             xp = c"#{popup_pane_left}".as_ptr();
         } else if (strcmp(xp, c"M".as_ptr()) == 0) {
             xp = c"#{popup_mouse_centre_x}".as_ptr();
-        } else if (strcmp(xp, c"W".as_ptr()) == 0) {
+        } else if strcmp(xp, c"W".as_ptr()) == 0 {
             xp = c"#{popup_window_status_line_x}".as_ptr();
         }
         let p = format_expand(ft, xp);
         n = strtol(p, null_mut(), 10);
         if (n + w as i64 >= (*tty).sx as i64) {
             n = (*tty).sx as i64 - w as i64;
-        } else if (n < 0) {
+        } else if n < 0 {
             n = 0;
         }
         *px = n as u32;
@@ -335,7 +335,7 @@ unsafe extern "C" fn cmd_display_menu_get_position(
             yp = c"#{popup_mouse_top}".as_ptr();
         } else if (strcmp(yp, c"S".as_ptr()) == 0) {
             yp = c"#{popup_status_line_y}".as_ptr();
-        } else if (strcmp(yp, c"W".as_ptr()) == 0) {
+        } else if strcmp(yp, c"W".as_ptr()) == 0 {
             yp = c"#{popup_window_status_line_y}".as_ptr();
         }
         let mut p = format_expand(ft, yp);
@@ -347,7 +347,7 @@ unsafe extern "C" fn cmd_display_menu_get_position(
         }
         if (n + h as i64 >= (*tty).sy as i64) {
             n = (*tty).sy as i64 - h as i64;
-        } else if (n < 0) {
+        } else if n < 0 {
             n = 0;
         }
         *py = n as u32;
@@ -396,7 +396,7 @@ unsafe extern "C" fn cmd_display_menu_exec(self_: *mut cmd, item: *mut cmdq_item
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        if (args_has_(args, 'C')) {
+        if args_has_(args, 'C') {
             if (strcmp(args_get(args, b'C'), c"-".as_ptr()) == 0) {
                 starting_choice = -1;
             } else {
@@ -475,13 +475,13 @@ unsafe extern "C" fn cmd_display_menu_exec(self_: *mut cmd, item: *mut cmdq_item
             }
         }
 
-        if (args_has_(args, 'O')) {
+        if args_has_(args, 'O') {
             flags |= MENU_STAYOPEN;
         }
-        if (!(*event).m.valid != 0 && !args_has_(args, 'M')) {
+        if !(*event).m.valid != 0 && !args_has_(args, 'M') {
             flags |= MENU_NOMOUSE;
         }
-        if (menu_display(
+        if menu_display(
             menu,
             flags,
             starting_choice,
@@ -496,7 +496,7 @@ unsafe extern "C" fn cmd_display_menu_exec(self_: *mut cmd, item: *mut cmdq_item
             target,
             None,
             null_mut(),
-        ) != 0)
+        ) != 0
         {
             return (cmd_retval::CMD_RETURN_NORMAL);
         }
@@ -571,13 +571,13 @@ unsafe extern "C" fn cmd_display_popup_exec(self_: *mut cmd, item: *mut cmdq_ite
             }
         }
 
-        if (w > (*tty).sx) {
+        if w > (*tty).sx {
             w = (*tty).sx;
         }
-        if (h > (*tty).sy) {
+        if h > (*tty).sy {
             h = (*tty).sy;
         }
-        if (cmd_display_menu_get_position(tc, item, args, &raw mut px, &raw mut py, w, h) == 0) {
+        if cmd_display_menu_get_position(tc, item, args, &raw mut px, &raw mut py, w, h) == 0 {
             return (cmd_retval::CMD_RETURN_NORMAL);
         }
 
@@ -603,7 +603,7 @@ unsafe extern "C" fn cmd_display_popup_exec(self_: *mut cmd, item: *mut cmdq_ite
         let mut shellcmd = null();
         if (count == 0) {
             shellcmd = options_get_string((*s).options, c"default-command".as_ptr());
-        } else if (count == 1) {
+        } else if count == 1 {
             shellcmd = args_string(args, 0);
         }
 
@@ -638,7 +638,7 @@ unsafe extern "C" fn cmd_display_popup_exec(self_: *mut cmd, item: *mut cmdq_ite
         let mut flags = 0;
         if (args_has(args, b'E') > 1) {
             flags |= POPUP_CLOSEEXITZERO;
-        } else if (args_has_(args, 'E')) {
+        } else if args_has_(args, 'E') {
             flags |= POPUP_CLOSEEXIT;
         }
         if (popup_display(
@@ -664,14 +664,14 @@ unsafe extern "C" fn cmd_display_popup_exec(self_: *mut cmd, item: *mut cmdq_ite
         ) != 0)
         {
             cmd_free_argv(argc, argv);
-            if (!env.is_null()) {
+            if !env.is_null() {
                 environ_free(env);
             }
             free_(cwd);
             free_(title);
             return (cmd_retval::CMD_RETURN_NORMAL);
         }
-        if (!env.is_null()) {
+        if !env.is_null() {
             environ_free(env);
         }
         free_(cwd);

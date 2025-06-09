@@ -61,11 +61,11 @@ unsafe extern "C" fn cmd_select_layout_exec(self_: *mut cmd, item: *mut cmdq_ite
         'error: {
             'changed: {
                 let mut next = (cmd_get_entry(self_) == &raw mut cmd_next_layout_entry);
-                if (args_has_(args, 'n')) {
+                if args_has_(args, 'n') {
                     next = true;
                 }
                 let mut previous = (cmd_get_entry(self_) == &raw mut cmd_previous_layout_entry);
-                if (args_has_(args, 'p')) {
+                if args_has_(args, 'p') {
                     previous = true;
                 }
 

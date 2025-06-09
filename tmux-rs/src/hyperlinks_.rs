@@ -50,17 +50,17 @@ unsafe extern "C" fn hyperlinks_by_uri_cmp(
 ) -> i32 {
     unsafe {
         if (*(*left).internal_id == b'\0' as _ || *(*right).internal_id == b'\0' as _) {
-            if (*(*left).internal_id != b'\0' as _) {
+            if *(*left).internal_id != b'\0' as _ {
                 return (-1);
             }
-            if (*(*right).internal_id != b'\0' as _) {
+            if *(*right).internal_id != b'\0' as _ {
                 return (1);
             }
             return ((*left).inner as i32 - (*right).inner as i32);
         }
 
         let r = libc::strcmp((*left).internal_id, (*right).internal_id);
-        if (r != 0) {
+        if r != 0 {
             return (r);
         }
         libc::strcmp((*left).uri, (*right).uri)
@@ -127,7 +127,7 @@ pub unsafe extern "C" fn hyperlinks_put(
          * comparator will make sure they never match each other (so each
          * anonymous URI is unique).
          */
-        if (internal_id_in.is_null()) {
+        if internal_id_in.is_null() {
             internal_id_in = c"".as_ptr();
         }
 
@@ -166,7 +166,7 @@ pub unsafe extern "C" fn hyperlinks_put(
 
         tailq_insert_tail(&raw mut global_hyperlinks, hlu);
         global_hyperlinks_count += 1;
-        if (global_hyperlinks_count == MAX_HYPERLINKS) {
+        if global_hyperlinks_count == MAX_HYPERLINKS {
             hyperlinks_remove(tailq_first(&raw mut global_hyperlinks));
         }
 
@@ -188,13 +188,13 @@ pub unsafe extern "C" fn hyperlinks_get(
         (*find).inner = inner;
 
         let hlu = rb_find::<_, discr_by_inner_entry>(&raw mut (*hl).by_inner, find);
-        if (hlu.is_null()) {
+        if hlu.is_null() {
             return boolint::FALSE;
         }
-        if (!internal_id_out.is_null()) {
+        if !internal_id_out.is_null() {
             *internal_id_out = (*hlu).internal_id;
         }
-        if (!external_id_out.is_null()) {
+        if !external_id_out.is_null() {
             *external_id_out = (*hlu).external_id;
         }
         *uri_out = (*hlu).uri as _;

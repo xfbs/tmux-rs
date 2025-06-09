@@ -115,8 +115,8 @@ unsafe extern "C" fn cmd_confirm_before_callback(
             if s.is_null() {
                 break 'out;
             }
-            if (*s != (*cdata.as_ptr()).confirm_key as _
-                && (*s != b'\0' as _ || (*cdata.as_ptr()).default_yes == 0))
+            if *s != (*cdata.as_ptr()).confirm_key as _
+                && (*s != b'\0' as _ || (*cdata.as_ptr()).default_yes == 0)
             {
                 break 'out;
             }

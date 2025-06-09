@@ -194,7 +194,7 @@ pub unsafe extern "C" fn cmd_parse_run_parser(cause: *mut *mut c_char) -> *mut c
             return null_mut();
         }
 
-        if ((*ps).commands.is_null()) {
+        if (*ps).commands.is_null() {
             return cmd_parse_new_commands().as_ptr();
         }
         (*ps).commands
@@ -291,7 +291,7 @@ pub unsafe extern "C" fn cmd_parse_expand_alias(
         let mut name = (*first).string;
 
         let mut alias = cmd_get_alias(name);
-        if (alias.is_null()) {
+        if alias.is_null() {
             return (0);
         }
         log_debug!(
@@ -351,7 +351,7 @@ pub unsafe extern "C" fn cmd_parse_build_command(
         let mut idx = 0u32;
         libc::memset(pr.cast(), 0, size_of::<cmd_parse_result>());
 
-        if (cmd_parse_expand_alias(cmd, pi, pr) != 0) {
+        if cmd_parse_expand_alias(cmd, pi, pr) != 0 {
             return;
         }
 
@@ -367,7 +367,7 @@ pub unsafe extern "C" fn cmd_parse_build_command(
                     }
                     cmd_parse_argument_type::CMD_PARSE_COMMANDS => {
                         cmd_parse_build_commands((*arg).commands, pi, pr);
-                        if ((*pr).status != cmd_parse_status::CMD_PARSE_SUCCESS) {
+                        if (*pr).status != cmd_parse_status::CMD_PARSE_SUCCESS {
                             break 'out;
                         }
                         (*values.add(count as _)).type_ = args_type::ARGS_COMMANDS;
@@ -445,7 +445,7 @@ pub unsafe extern "C" fn cmd_parse_build_commands(
                 }
                 current = cmd_list_new();
             }
-            if (current.is_null()) {
+            if current.is_null() {
                 current = cmd_list_new();
             }
             line = (*cmd).line;

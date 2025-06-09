@@ -63,7 +63,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
         }
 
         /* If no pipe command, that is enough. */
-        if (args_count(args) == 0 || *args_string(args, 0) == b'\0' as _) {
+        if args_count(args) == 0 || *args_string(args, 0) == b'\0' as _ {
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
@@ -73,7 +73,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
          *
          *	bind ^p pipep -o 'cat >>~/output'
          */
-        if (args_has_(args, 'o') && old_fd != -1) {
+        if args_has_(args, 'o') && old_fd != -1 {
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
@@ -121,7 +121,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
 
                 let null_fd = open(_PATH_DEVNULL, O_WRONLY);
                 if (out != 0) {
-                    if (dup2(pipe_fd[1], STDIN_FILENO) == -1) {
+                    if dup2(pipe_fd[1], STDIN_FILENO) == -1 {
                         _exit(1);
                     }
                 } else {
@@ -131,10 +131,10 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
                     }
                 }
                 if (in_ != 0) {
-                    if (dup2(pipe_fd[1], STDOUT_FILENO) == -1) {
+                    if dup2(pipe_fd[1], STDOUT_FILENO) == -1 {
                         _exit(1);
                     }
-                    if (pipe_fd[1] != STDOUT_FILENO) {
+                    if pipe_fd[1] != STDOUT_FILENO {
                         close(pipe_fd[1]);
                     }
                 } else {
@@ -143,7 +143,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
                         _exit(1);
                     }
                 }
-                if (dup2(null_fd, STDERR_FILENO) == -1) {
+                if dup2(null_fd, STDERR_FILENO) == -1 {
                     _exit(1);
                 }
                 closefrom(STDERR_FILENO + 1);
@@ -173,13 +173,13 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
                     Some(cmd_pipe_pane_error_callback),
                     wp.cast(),
                 );
-                if ((*wp).pipe_event.is_null()) {
+                if (*wp).pipe_event.is_null() {
                     fatalx(c"out of memory");
                 }
-                if (out != 0) {
+                if out != 0 {
                     bufferevent_enable((*wp).pipe_event, EV_WRITE);
                 }
-                if (in_ != 0) {
+                if in_ != 0 {
                     bufferevent_enable((*wp).pipe_event, EV_READ);
                 }
 
@@ -202,7 +202,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_read_callback(_bufev: *mut bufferevent, d
         bufferevent_write((*wp).event, EVBUFFER_DATA(evb).cast(), available);
         evbuffer_drain(evb, available);
 
-        if (window_pane_destroy_ready(wp) != 0) {
+        if window_pane_destroy_ready(wp) != 0 {
             server_destroy_pane(wp, 1);
         }
     }
@@ -215,7 +215,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_write_callback(_bufev: *mut bufferevent, 
 
         log_debug!("%%{} pipe empty", (*wp).id);
 
-        if (window_pane_destroy_ready(wp) != 0) {
+        if window_pane_destroy_ready(wp) != 0 {
             server_destroy_pane(wp, 1);
         }
     }
@@ -236,7 +236,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_error_callback(
         close((*wp).pipe_fd);
         (*wp).pipe_fd = -1;
 
-        if (window_pane_destroy_ready(wp) != 0) {
+        if window_pane_destroy_ready(wp) != 0 {
             server_destroy_pane(wp, 1);
         }
     }

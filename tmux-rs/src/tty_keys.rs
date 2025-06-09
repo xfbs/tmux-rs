@@ -814,7 +814,7 @@ unsafe extern "C" fn tty_keys_add1(
         } else {
             if *s < (*tk).ch {
                 tkp = &raw mut (*tk).left;
-            } else if (*s > (*tk).ch) {
+            } else if *s > (*tk).ch {
                 tkp = &raw mut (*tk).right;
             }
         }

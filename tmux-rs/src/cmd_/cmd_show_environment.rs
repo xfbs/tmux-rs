@@ -52,10 +52,10 @@ unsafe extern "C" fn cmd_show_environment_print(
         let mut args = cmd_get_args(self_);
         let mut escaped = null_mut();
 
-        if (!args_has_(args, 'h') && ((*envent).flags & ENVIRON_HIDDEN != 0)) {
+        if !args_has_(args, 'h') && ((*envent).flags & ENVIRON_HIDDEN != 0) {
             return;
         }
-        if (args_has_(args, 'h') && (!(*envent).flags & ENVIRON_HIDDEN != 0)) {
+        if args_has_(args, 'h') && (!(*envent).flags & ENVIRON_HIDDEN != 0) {
             return;
         }
 

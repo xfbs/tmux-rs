@@ -59,7 +59,7 @@ unsafe extern "C" fn cmd_if_shell_exec(self_: *mut cmd, item: *mut cmdq_item) ->
                 return (cmd_retval::CMD_RETURN_NORMAL);
             };
             free_(shellcmd);
-            if (cmdlist.is_null()) {
+            if cmdlist.is_null() {
                 return (cmd_retval::CMD_RETURN_ERROR);
             }
             let new_item = cmdq_get_command(cmdlist, cmdq_get_state(item));
@@ -70,7 +70,7 @@ unsafe extern "C" fn cmd_if_shell_exec(self_: *mut cmd, item: *mut cmdq_item) ->
         let cdata = xcalloc_::<cmd_if_shell_data>(1).as_ptr();
 
         (*cdata).cmd_if = args_make_commands_prepare(self_, item, 1, null_mut(), wait, 0);
-        if (count == 3) {
+        if count == 3 {
             (*cdata).cmd_else = args_make_commands_prepare(self_, item, 2, null_mut(), wait, 0);
         }
 
@@ -80,7 +80,7 @@ unsafe extern "C" fn cmd_if_shell_exec(self_: *mut cmd, item: *mut cmdq_item) ->
         } else {
             (*cdata).client = tc;
         }
-        if (!(*cdata).client.is_null()) {
+        if !(*cdata).client.is_null() {
             (*(*cdata).client).references += 1;
         }
 
@@ -108,7 +108,7 @@ unsafe extern "C" fn cmd_if_shell_exec(self_: *mut cmd, item: *mut cmdq_item) ->
         }
         free_(shellcmd);
 
-        if (wait == 0) {
+        if wait == 0 {
             return (cmd_retval::CMD_RETURN_NORMAL);
         }
         (cmd_retval::CMD_RETURN_WAIT)
@@ -132,7 +132,7 @@ unsafe extern "C" fn cmd_if_shell_callback(job: *mut job) {
             } else {
                 state = (*cdata).cmd_if;
             }
-            if (state.is_null()) {
+            if state.is_null() {
                 break 'out;
             }
 
@@ -155,7 +155,7 @@ unsafe extern "C" fn cmd_if_shell_callback(job: *mut job) {
         }
 
         // out:
-        if (!(*cdata).item.is_null()) {
+        if !(*cdata).item.is_null() {
             cmdq_continue((*cdata).item);
         }
     }

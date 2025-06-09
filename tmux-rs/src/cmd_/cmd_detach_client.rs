@@ -59,7 +59,7 @@ pub unsafe extern "C" fn cmd_detach_client_exec(
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
             for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
-                if ((*loop_).session == s) {
+                if (*loop_).session == s {
                     if !cmd.is_null() {
                         server_client_exec(loop_, cmd);
                     } else {

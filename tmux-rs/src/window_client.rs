@@ -109,7 +109,7 @@ pub unsafe extern "C" fn window_client_cmp(a0: *const c_void, b0: *const c_void)
         match window_client_sort_type::try_from((*window_client_sort).field) {
             Ok(window_client_sort_type::WINDOW_CLIENT_BY_SIZE) => {
                 result = (*ca).tty.sx.wrapping_sub((*cb).tty.sx) as i32;
-                if (result == 0) {
+                if result == 0 {
                     result = (*ca).tty.sy.wrapping_sub((*cb).tty.sy) as i32;
                 }
             }
@@ -139,11 +139,11 @@ pub unsafe extern "C" fn window_client_cmp(a0: *const c_void, b0: *const c_void)
         }
 
         /* Use WINDOW_CLIENT_BY_NAME as default order and tie breaker. */
-        if (result == 0) {
+        if result == 0 {
             result = strcmp((*ca).name, (*cb).name);
         }
 
-        if ((*window_client_sort).reversed != 0) {
+        if (*window_client_sort).reversed != 0 {
             result = -result;
         }
 
@@ -240,13 +240,13 @@ pub unsafe extern "C" fn window_client_draw(
         let mut cx = (*s).cx;
         let mut cy = (*s).cy;
 
-        if ((*c).session.is_null() || (*c).flags.intersects(CLIENT_UNATTACHEDFLAGS)) {
+        if (*c).session.is_null() || (*c).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
             return;
         }
         let mut wp = (*(*(*(*c).session).curw).window).active;
 
         let mut lines = status_line_size(c);
-        if (lines >= sy) {
+        if lines >= sy {
             lines = 0;
         }
         let at = if (status_at_line(c) == 0) { lines } else { 0 };
@@ -370,7 +370,7 @@ pub unsafe extern "C" fn window_client_free(wme: NonNull<window_mode_entry>) {
     unsafe {
         let data: *mut window_client_modedata = (*wme.as_ptr()).data as *mut window_client_modedata;
 
-        if (data.is_null()) {
+        if data.is_null() {
             return;
         }
 
@@ -429,7 +429,7 @@ pub unsafe extern "C" fn window_client_do_detach(
             server_client_detach((*item.as_ptr()).c, msgtype::MSG_DETACH);
         } else if (key == 'x' as _ || key == 'X' as _) {
             server_client_detach((*item.as_ptr()).c, msgtype::MSG_DETACHKILL);
-        } else if (key == 'z' as _ || key == 'Z' as _) {
+        } else if key == 'z' as _ || key == 'Z' as _ {
             server_client_suspend((*item.as_ptr()).c);
         }
     }

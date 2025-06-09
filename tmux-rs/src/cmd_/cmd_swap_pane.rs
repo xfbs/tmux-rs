@@ -32,7 +32,7 @@ unsafe extern "C" fn cmd_swap_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
         let mut src_w = (*(*source).wl).window;
         let mut src_wp = (*source).wp;
 
-        if (window_push_zoom(dst_w, 0, args_has(args, b'Z')) != 0) {
+        if window_push_zoom(dst_w, 0, args_has(args, b'Z')) != 0 {
             server_redraw_window(dst_w);
         }
 
@@ -40,22 +40,22 @@ unsafe extern "C" fn cmd_swap_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
             if (args_has_(args, 'D')) {
                 src_w = dst_w;
                 src_wp = tailq_next::<_, _, discr_entry>(dst_wp);
-                if (src_wp.is_null()) {
+                if src_wp.is_null() {
                     src_wp = tailq_first(&raw mut (*dst_w).panes);
                 }
             } else if (args_has_(args, 'U')) {
                 src_w = dst_w;
                 src_wp = tailq_prev::<_, _, discr_entry>(dst_wp);
-                if (src_wp.is_null()) {
+                if src_wp.is_null() {
                     src_wp = tailq_last(&raw mut (*dst_w).panes);
                 }
             }
 
-            if (src_w != dst_w && window_push_zoom(src_w, 0, args_has(args, b'Z')) != 0) {
+            if src_w != dst_w && window_push_zoom(src_w, 0, args_has(args, b'Z')) != 0 {
                 server_redraw_window(src_w);
             }
 
-            if (src_wp == dst_wp) {
+            if src_wp == dst_wp {
                 break 'out;
             }
 
@@ -65,7 +65,7 @@ unsafe extern "C" fn cmd_swap_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
             let mut tmp_wp = tailq_prev::<_, _, discr_entry>(dst_wp);
             tailq_remove::<_, discr_entry>(&raw mut (*dst_w).panes, dst_wp);
             tailq_replace::<_, discr_entry>(&raw mut (*src_w).panes, src_wp, dst_wp);
-            if (tmp_wp == src_wp) {
+            if tmp_wp == src_wp {
                 tmp_wp = dst_wp;
             }
             if (tmp_wp.is_null()) {
@@ -108,10 +108,10 @@ unsafe extern "C" fn cmd_swap_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
                     window_set_active_pane(src_w, tmp_wp, 1);
                 }
             } else {
-                if ((*src_w).active == src_wp) {
+                if (*src_w).active == src_wp {
                     window_set_active_pane(src_w, dst_wp, 1);
                 }
-                if ((*dst_w).active == dst_wp) {
+                if (*dst_w).active == dst_wp {
                     window_set_active_pane(dst_w, src_wp, 1);
                 }
             }
@@ -124,15 +124,15 @@ unsafe extern "C" fn cmd_swap_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
             server_redraw_window(src_w);
             server_redraw_window(dst_w);
             notify_window(c"window-layout-changed".as_ptr(), src_w);
-            if (src_w != dst_w) {
+            if src_w != dst_w {
                 notify_window(c"window-layout-changed".as_ptr(), dst_w);
             }
         }
 
-        if (window_pop_zoom(src_w) != 0) {
+        if window_pop_zoom(src_w) != 0 {
             server_redraw_window(src_w);
         }
-        if (src_w != dst_w && window_pop_zoom(dst_w) != 0) {
+        if src_w != dst_w && window_pop_zoom(dst_w) != 0 {
             server_redraw_window(dst_w);
         }
 

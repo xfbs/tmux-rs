@@ -29,7 +29,7 @@ unsafe extern "C" fn cmd_paste_buffer_exec(self_: *mut cmd, item: *mut cmdq_item
         }
 
         let mut bufname = null();
-        if (args_has(args, b'b') != 0) {
+        if args_has(args, b'b') != 0 {
             bufname = args_get(args, b'b');
         }
 
@@ -48,7 +48,7 @@ unsafe extern "C" fn cmd_paste_buffer_exec(self_: *mut cmd, item: *mut cmdq_item
             && !(*wp).flags.intersects(window_pane_flags::PANE_INPUTOFF)
         {
             let mut sepstr = args_get(args, b's');
-            if (sepstr.is_null()) {
+            if sepstr.is_null() {
                 if (args_has(args, b'r') != 0) {
                     sepstr = c"\n".as_ptr();
                 } else {
@@ -81,7 +81,7 @@ unsafe extern "C" fn cmd_paste_buffer_exec(self_: *mut cmd, item: *mut cmdq_item
 
                 bufdata = line.add(1);
             }
-            if (bufdata != bufend) {
+            if bufdata != bufend {
                 bufferevent_write((*wp).event, bufdata.cast(), bufend.addr() - bufdata.addr());
             }
 

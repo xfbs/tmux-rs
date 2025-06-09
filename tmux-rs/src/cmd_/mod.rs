@@ -598,7 +598,7 @@ pub unsafe extern "C" fn cmd_find(name: *const c_char, cause: *mut *mut c_char) 
                 }
                 found = entry;
 
-                if (strcmp((*entry).name, name) == 0) {
+                if strcmp((*entry).name, name) == 0 {
                     break;
                 }
 

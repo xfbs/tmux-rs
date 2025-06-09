@@ -877,7 +877,7 @@ unsafe extern "C" fn window_customize_draw_option(
                 break 'out;
             }
             screen_write_cursormove(ctx, cx as i32, (*s).cy as i32 + 1, 0); /* skip line */
-            if ((*s).cy >= cy + sy - 1) {
+            if (*s).cy >= cy + sy - 1 {
                 break 'out;
             }
 
@@ -1075,7 +1075,7 @@ unsafe extern "C" fn window_customize_draw_option(
             }
 
             screen_write_cursormove(ctx, cx as i32, (*s).cy as i32 + 1, 0); /* skip line */
-            if ((*s).cy > cy + sy - 1) {
+            if (*s).cy > cy + sy - 1 {
                 break 'out;
             }
             let (wo, go) = if !oe.is_null() && (*oe).flags & OPTIONS_TABLE_IS_ARRAY != 0 {
@@ -1557,7 +1557,7 @@ pub unsafe extern "C" fn window_customize_reset_option(
         if item.is_null() || !window_customize_check_item(data, item, null_mut()) {
             return;
         }
-        if ((*item).idx != -1) {
+        if (*item).idx != -1 {
             return;
         }
 
@@ -1815,7 +1815,7 @@ pub unsafe extern "C" fn window_customize_change_each(
                 }
             }
         }
-        if ((*item).scope != window_customize_scope::WINDOW_CUSTOMIZE_KEY) {
+        if (*item).scope != window_customize_scope::WINDOW_CUSTOMIZE_KEY {
             options_push_changes((*item).name);
         }
     }
@@ -1856,7 +1856,7 @@ pub unsafe extern "C" fn window_customize_change_current_callback(
                 }
             }
         }
-        if ((*item).scope != window_customize_scope::WINDOW_CUSTOMIZE_KEY) {
+        if (*item).scope != window_customize_scope::WINDOW_CUSTOMIZE_KEY {
             options_push_changes((*item).name);
         }
         mode_tree_build((*data).data);

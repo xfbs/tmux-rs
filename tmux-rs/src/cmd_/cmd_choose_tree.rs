@@ -82,7 +82,7 @@ unsafe extern "C" fn cmd_choose_tree_exec(self_: *mut cmd, item: *mut cmdq_item)
             }
             &raw mut window_buffer_mode
         } else if cmd_get_entry(self_) == &raw mut cmd_choose_client_entry {
-            if (server_client_how_many() == 0) {
+            if server_client_how_many() == 0 {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
             &raw mut window_client_mode

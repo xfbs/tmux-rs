@@ -36,7 +36,7 @@ unsafe extern "C" fn cmd_find_window_exec(self_: *mut cmd, item: *mut cmdq_item)
             suffix = c"/ri".as_ptr();
         } else if (args_has(args, b'r') != 0) {
             suffix = c"/r".as_ptr();
-        } else if (args_has(args, b'i') != 0) {
+        } else if args_has(args, b'i') != 0 {
             suffix = c"/i".as_ptr();
         }
 

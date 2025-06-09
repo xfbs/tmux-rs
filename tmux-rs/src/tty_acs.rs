@@ -209,12 +209,12 @@ pub unsafe extern "C" fn tty_acs_reverse_cmp(key: *const c_void, value: *const c
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_acs_needed(tty: *const tty) -> i32 {
     unsafe {
-        if (tty.is_null()) {
+        if tty.is_null() {
             return (0);
         }
 
-        if (tty_term_has((*tty).term, tty_code_code::TTYC_U8).as_bool()
-            && tty_term_number((*tty).term, tty_code_code::TTYC_U8) == 0)
+        if tty_term_has((*tty).term, tty_code_code::TTYC_U8).as_bool()
+            && tty_term_number((*tty).term, tty_code_code::TTYC_U8) == 0
         {
             return (1);
         }
@@ -234,7 +234,7 @@ pub unsafe extern "C" fn tty_acs_get(tty: *mut tty, ch: u8) -> *const c_char {
 
         /* Use the ACS set instead of UTF-8 if needed. */
         if tty_acs_needed(tty) != 0 {
-            if ((*(*tty).term).acs[ch as usize][0] == b'\0' as _) {
+            if (*(*tty).term).acs[ch as usize][0] == b'\0' as _ {
                 return null();
             }
             return &raw const (*(*tty).term).acs[ch as usize][0];
@@ -249,7 +249,7 @@ pub unsafe extern "C" fn tty_acs_get(tty: *mut tty, ch: u8) -> *const c_char {
             Some(tty_acs_cmp),
         )
         .cast();
-        if (entry.is_null()) {
+        if entry.is_null() {
             return null_mut();
         }
         (*entry).string.as_ptr().cast()
@@ -283,7 +283,7 @@ pub unsafe extern "C" fn tty_acs_reverse_get(
             Some(tty_acs_reverse_cmp),
         )
         .cast();
-        if (entry.is_null()) {
+        if entry.is_null() {
             return -1;
         }
         (*entry).key as _

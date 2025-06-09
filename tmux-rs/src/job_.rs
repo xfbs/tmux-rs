@@ -166,12 +166,12 @@ pub unsafe extern "C" fn job_run(
                     proc_clear_signals(server_proc, 1);
                     sigprocmask(SIG_SETMASK, oldset.as_mut_ptr(), null_mut());
 
-                    if ((cwd.is_null() || chdir(cwd) != 0)
+                    if (cwd.is_null() || chdir(cwd) != 0)
                         && (({
                             home = find_home();
                             home.is_null()
                         }) || chdir(home) != 0)
-                        && chdir(c"/".as_ptr()) != 0)
+                        && chdir(c"/".as_ptr()) != 0
                     {
                         fatal(c"chdir failed".as_ptr());
                     }
@@ -180,25 +180,25 @@ pub unsafe extern "C" fn job_run(
                     environ_free(env);
 
                     if (!flags & JOB_PTY != 0) {
-                        if (dup2(out[1], STDIN_FILENO) == -1) {
+                        if dup2(out[1], STDIN_FILENO) == -1 {
                             fatal(c"dup2 failed".as_ptr());
                         }
-                        if (dup2(out[1], STDOUT_FILENO) == -1) {
+                        if dup2(out[1], STDOUT_FILENO) == -1 {
                             fatal(c"dup2 failed".as_ptr());
                         }
-                        if (out[1] != STDIN_FILENO && out[1] != STDOUT_FILENO) {
+                        if out[1] != STDIN_FILENO && out[1] != STDOUT_FILENO {
                             close(out[1]);
                         }
                         close(out[0]);
 
                         nullfd = open(_PATH_DEVNULL, O_RDWR);
-                        if (nullfd == -1) {
+                        if nullfd == -1 {
                             fatal(c"open failed".as_ptr());
                         }
                         if dup2(nullfd, STDERR_FILENO) == -1 {
                             fatal(c"dup2 failed".as_ptr());
                         }
-                        if (nullfd != STDERR_FILENO) {
+                        if nullfd != STDERR_FILENO {
                             close(nullfd);
                         }
                     }
@@ -256,7 +256,7 @@ pub unsafe extern "C" fn job_run(
                 Some(job_error_callback),
                 job as *mut c_void,
             );
-            if ((*job).event.is_null()) {
+            if (*job).event.is_null() {
                 fatalx(c"out of memory");
             }
             bufferevent_enable((*job).event, EV_READ | EV_WRITE);
@@ -416,16 +416,16 @@ pub unsafe extern "C" fn job_check_died(mut pid: pid_t, mut status: i32) {
 
         for job_ in list_foreach(&raw mut all_jobs).map(NonNull::as_ptr) {
             job = job_;
-            if (pid == (*job).pid) {
+            if pid == (*job).pid {
                 break;
             }
         }
 
-        if (job.is_null()) {
+        if job.is_null() {
             return;
         }
         if (WIFSTOPPED(status)) {
-            if (WSTOPSIG(status) == SIGTTIN || WSTOPSIG(status) == SIGTTOU) {
+            if WSTOPSIG(status) == SIGTTIN || WSTOPSIG(status) == SIGTTOU {
                 return;
             }
             killpg((*job).pid, SIGCONT);

@@ -98,7 +98,7 @@ pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_it
                 /* Parse option name and index. */
                 name = options_match(argument, &raw mut idx, &raw mut ambiguous);
                 if (name.is_null()) {
-                    if (args_has_(args, 'q')) {
+                    if args_has_(args, 'q') {
                         break 'out;
                     }
                     if (ambiguous != 0) {
@@ -128,7 +128,7 @@ pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_it
                     &raw mut cause,
                 );
                 if (scope == OPTIONS_TABLE_NONE) {
-                    if (args_has_(args, 'q')) {
+                    if args_has_(args, 'q') {
                         break 'out;
                     }
                     cmdq_error(item, c"%s".as_ptr(), cause);
@@ -156,7 +156,7 @@ pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_it
                         }
                     }
                     if (already != 0) {
-                        if (args_has_(args, 'q')) {
+                        if args_has_(args, 'q') {
                             break 'out;
                         }
                         cmdq_error(item, c"already set: %s".as_ptr(), argument);
@@ -165,12 +165,12 @@ pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_it
                 }
 
                 /* Change the option. */
-                if (args_has_(args, 'U') && scope == OPTIONS_TABLE_WINDOW) {
+                if args_has_(args, 'U') && scope == OPTIONS_TABLE_WINDOW {
                     for loop_ in tailq_foreach::<_, discr_entry>(&raw mut (*(*target).w).panes)
                         .map(NonNull::as_ptr)
                     {
                         let po = options_get_only((*loop_).options, name);
-                        if (po.is_null()) {
+                        if po.is_null() {
                             continue;
                         }
                         if (options_remove_or_default(po, idx, &raw mut cause) != 0) {
@@ -181,7 +181,7 @@ pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_it
                     }
                 }
                 if (args_has_(args, 'u') || args_has_(args, 'U')) {
-                    if (o.is_null()) {
+                    if o.is_null() {
                         break 'out;
                     }
                     if (options_remove_or_default(o, idx, &raw mut cause) != 0) {
@@ -214,11 +214,11 @@ pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_it
                         cmdq_error(item, c"empty value".as_ptr());
                         break 'fail;
                     }
-                    if (o.is_null()) {
+                    if o.is_null() {
                         o = options_empty(oo, options_table_entry(parent));
                     }
                     if (idx == -1) {
-                        if (append == 0) {
+                        if append == 0 {
                             options_array_clear(o);
                         }
                         if (options_array_assign(o, value, &raw mut cause) != 0) {

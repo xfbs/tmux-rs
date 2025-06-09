@@ -231,7 +231,7 @@ pub unsafe extern "C" fn input_key_pane(
         }
 
         if (KEYC_IS_MOUSE(key)) {
-            if (!m.is_null() && (*m).wp != -1 && (*m).wp as u32 == (*wp).id) {
+            if !m.is_null() && (*m).wp != -1 && (*m).wp as u32 == (*wp).id {
                 input_key_mouse(wp, m);
             }
             return 0;
@@ -340,7 +340,7 @@ pub unsafe extern "C" fn input_key_vt10x(bev: *mut bufferevent, mut key: key_cod
 
         log_debug!("{}: key in {}", _s(__func__), key);
 
-        if (key & KEYC_META != 0) {
+        if key & KEYC_META != 0 {
             input_key_write(__func__, bev, c"\x1b".as_ptr(), 1);
         }
 
@@ -356,7 +356,7 @@ pub unsafe extern "C" fn input_key_vt10x(bev: *mut bufferevent, mut key: key_cod
 
         /* Prevent TAB and RET from being swallowed by C0 remapping logic. */
         onlykey = key & KEYC_MASK_KEY;
-        if (onlykey == b'\r' as u64 || onlykey == b'\t' as u64) {
+        if onlykey == b'\r' as u64 || onlykey == b'\t' as u64 {
             key &= !KEYC_CTRL;
         }
 
@@ -401,19 +401,19 @@ pub unsafe extern "C" fn input_key_mode1(bev: *mut bufferevent, key: key_code) -
 
         // As per https://invisible-island.net/xterm/modified-keys-us-pc105.html.
         let onlykey = key & KEYC_MASK_KEY;
-        if ((key & (KEYC_META | KEYC_CTRL)) == KEYC_CTRL
+        if (key & (KEYC_META | KEYC_CTRL)) == KEYC_CTRL
             && (onlykey == ' ' as u64
                 || onlykey == '/' as u64
                 || onlykey == '@' as u64
                 || onlykey == '^' as u64
                 || (onlykey >= '2' as u64 && onlykey <= '8' as u64)
-                || (onlykey >= '@' as u64 && onlykey <= '~' as u64)))
+                || (onlykey >= '@' as u64 && onlykey <= '~' as u64))
         {
             return input_key_vt10x(bev, key);
         }
 
         // A regular key + Meta. In the absence of a standard to back this, we mimic what iTerm 2 does.
-        if ((key & (KEYC_CTRL | KEYC_META)) == KEYC_META) {
+        if (key & (KEYC_CTRL | KEYC_META)) == KEYC_META {
             return input_key_vt10x(bev, key);
         }
     }
@@ -434,7 +434,7 @@ pub unsafe extern "C" fn input_key(
         let mut ud: utf8_data = zeroed();
 
         /* Mouse keys need a pane. */
-        if (KEYC_IS_MOUSE(key)) {
+        if KEYC_IS_MOUSE(key) {
             return 0;
         }
 
@@ -448,14 +448,14 @@ pub unsafe extern "C" fn input_key(
         /* Is this backspace? */
         if ((key & KEYC_MASK_KEY) == keyc::KEYC_BSPACE as u64) {
             let mut newkey = options_get_number(global_options, c"backspace".as_ptr()) as key_code;
-            if (newkey >= 0x7f) {
+            if newkey >= 0x7f {
                 newkey = '\x7f' as u64;
             }
             key = newkey | (key & (KEYC_MASK_MODIFIERS | KEYC_MASK_FLAGS));
         }
 
         /* Is this backtab? */
-        if ((key & KEYC_MASK_KEY) == keyc::KEYC_BTAB as u64) {
+        if (key & KEYC_MASK_KEY) == keyc::KEYC_BTAB as u64 {
             if (*s).mode.intersects(EXTENDED_KEY_MODES) {
                 /* When in xterm extended mode, remap into S-Tab. */
                 key = '\x09' as u64 | (key & !KEYC_MASK_KEY) | KEYC_SHIFT;
@@ -497,16 +497,16 @@ pub unsafe extern "C" fn input_key(
         if !(*s).mode.intersects(mode_flag::MODE_KCURSOR) {
             key &= !KEYC_CURSOR;
         }
-        if (ike.is_null()) {
+        if ike.is_null() {
             ike = input_key_get(key);
         }
-        if (ike.is_null() && (key & KEYC_META != 0) && (!key & KEYC_IMPLIED_META != 0)) {
+        if ike.is_null() && (key & KEYC_META != 0) && (!key & KEYC_IMPLIED_META != 0) {
             ike = input_key_get(key & !KEYC_META);
         }
-        if (ike.is_null() && (key & KEYC_CURSOR != 0)) {
+        if ike.is_null() && (key & KEYC_CURSOR != 0) {
             ike = input_key_get(key & !KEYC_CURSOR);
         }
-        if (ike.is_null() && (key & KEYC_KEYPAD != 0)) {
+        if ike.is_null() && (key & KEYC_KEYPAD != 0) {
             ike = input_key_get(key & !KEYC_KEYPAD);
         }
         if (!ike.is_null()) {
@@ -516,12 +516,12 @@ pub unsafe extern "C" fn input_key(
                 key,
                 _s((*ike).data)
             );
-            if ((key == keyc::KEYC_PASTE_START as u64 || key == keyc::KEYC_PASTE_END as u64)
-                && !(*s).mode.intersects(mode_flag::MODE_BRACKETPASTE))
+            if (key == keyc::KEYC_PASTE_START as u64 || key == keyc::KEYC_PASTE_END as u64)
+                && !(*s).mode.intersects(mode_flag::MODE_BRACKETPASTE)
             {
                 return 0;
             }
-            if ((key & KEYC_META != 0) && (!key & KEYC_IMPLIED_META != 0)) {
+            if (key & KEYC_META != 0) && (!key & KEYC_IMPLIED_META != 0) {
                 input_key_write(__func__, bev, c"\x1b".as_ptr(), 1);
             }
             input_key_write(__func__, bev, (*ike).data, strlen((*ike).data));
@@ -559,7 +559,7 @@ pub unsafe extern "C" fn input_key(
                  * Some keys are still reported in standard mode, to maintain
                  * compatibility with applications unaware of extended keys.
                  */
-                if (input_key_mode1(bev, key) == -1) {
+                if input_key_mode1(bev, key) == -1 {
                     return input_key_extended(bev, key);
                 }
                 0
@@ -606,17 +606,17 @@ pub unsafe extern "C" fn input_key_get_mouse(
          * buttons was also a release.
          */
         if ((*m).sgr_type != b' ' as u32) {
-            if (MOUSE_DRAG((*m).sgr_b)
+            if MOUSE_DRAG((*m).sgr_b)
                 && MOUSE_RELEASE((*m).sgr_b)
-                && !(*s).mode.intersects(mode_flag::MODE_MOUSE_ALL))
+                && !(*s).mode.intersects(mode_flag::MODE_MOUSE_ALL)
             {
                 return 0;
             }
         } else {
-            if (MOUSE_DRAG((*m).b)
+            if MOUSE_DRAG((*m).b)
                 && MOUSE_RELEASE((*m).b)
                 && MOUSE_RELEASE((*m).lb)
-                && !(*s).mode.intersects(mode_flag::MODE_MOUSE_ALL))
+                && !(*s).mode.intersects(mode_flag::MODE_MOUSE_ALL)
             {
                 return 0;
             }
@@ -643,9 +643,9 @@ pub unsafe extern "C" fn input_key_get_mouse(
                 (*m).sgr_type,
             ) as usize;
         } else if (*s).mode.intersects(mode_flag::MODE_MOUSE_UTF8) {
-            if ((*m).b > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_BTN_OFF)
+            if (*m).b > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_BTN_OFF)
                 || x > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_POS_OFF)
-                || y > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_POS_OFF))
+                || y > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_POS_OFF)
             {
                 return 0;
             }
@@ -654,7 +654,7 @@ pub unsafe extern "C" fn input_key_get_mouse(
             len += input_key_split2(x + MOUSE_PARAM_POS_OFF, &raw mut buf[len] as _);
             len += input_key_split2(y + MOUSE_PARAM_POS_OFF, &raw mut buf[len] as _);
         } else {
-            if ((*m).b + MOUSE_PARAM_BTN_OFF > MOUSE_PARAM_MAX) {
+            if (*m).b + MOUSE_PARAM_BTN_OFF > MOUSE_PARAM_MAX {
                 return 0;
             }
 
@@ -704,13 +704,13 @@ pub unsafe extern "C" fn input_key_mouse(wp: *mut window_pane, m: *mut mouse_eve
         if (*m).ignore != 0 || !(*s).mode.intersects(ALL_MOUSE_MODES) {
             return;
         }
-        if (cmd_mouse_at(wp, m, &raw mut x, &raw mut y, 0) != 0) {
+        if cmd_mouse_at(wp, m, &raw mut x, &raw mut y, 0) != 0 {
             return;
         }
-        if (window_pane_visible(wp) == 0) {
+        if window_pane_visible(wp) == 0 {
             return;
         }
-        if (input_key_get_mouse(s, m, x, y, &raw mut buf, &raw mut len) == 0) {
+        if input_key_get_mouse(s, m, x, y, &raw mut buf, &raw mut len) == 0 {
             return;
         }
         log_debug_c(c"writing mouse %.*s to %%%u".as_ptr(), len, buf, (*wp).id);

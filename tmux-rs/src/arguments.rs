@@ -190,7 +190,7 @@ pub unsafe extern "C" fn args_parse_flags(
     let __func__ = "args_parse_flags";
     unsafe {
         let value = values.add(*i as usize);
-        if ((*value).type_ != args_type::ARGS_STRING) {
+        if (*value).type_ != args_type::ARGS_STRING {
             return 1;
         }
 
@@ -205,17 +205,17 @@ pub unsafe extern "C" fn args_parse_flags(
             return 1;
         }
         (*i) += 1;
-        if (*string == b'-' as _ && *string.add(1) == b'\0' as _) {
+        if *string == b'-' as _ && *string.add(1) == b'\0' as _ {
             return 1;
         }
 
         loop {
             let flag = *string as c_uchar;
             string = string.add(1);
-            if (flag == b'\0') {
+            if flag == b'\0' {
                 return 0;
             }
-            if (flag == b'?') {
+            if flag == b'?' {
                 return -1;
             }
             if (isalnum(flag as i32) == 0) {
@@ -264,7 +264,7 @@ pub unsafe extern "C" fn args_parse(
         let mut s: *const c_char = null();
         let mut stop: i32 = 0;
 
-        if (count == 0) {
+        if count == 0 {
             return args_create();
         }
 
@@ -277,7 +277,7 @@ pub unsafe extern "C" fn args_parse(
                 args_free(args);
                 return null_mut();
             }
-            if (stop == 1) {
+            if stop == 1 {
                 break;
             }
         }
@@ -422,7 +422,7 @@ pub unsafe extern "C" fn args_copy(
                 args_set(new_args, (*entry).flag, new_value, 0);
             }
         }
-        if ((*args).count == 0) {
+        if (*args).count == 0 {
             return new_args;
         }
         (*new_args).count = (*args).count;
@@ -541,7 +541,7 @@ pub unsafe extern "C" fn args_print_add_value(
     value: *mut args_value,
 ) {
     unsafe {
-        if (**buf != b'\0' as c_char) {
+        if **buf != b'\0' as c_char {
             args_print_add(buf, len, c" ".as_ptr());
         }
 
@@ -575,14 +575,14 @@ pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
 
         /* Process the flags first. */
         for entry in rb_foreach(&raw mut (*args).tree).map(NonNull::as_ptr) {
-            if ((*entry).flags & ARGS_ENTRY_OPTIONAL_VALUE != 0) {
+            if (*entry).flags & ARGS_ENTRY_OPTIONAL_VALUE != 0 {
                 continue;
             }
-            if (!tailq_empty(&raw mut (*entry).values)) {
+            if !tailq_empty(&raw mut (*entry).values) {
                 continue;
             }
 
-            if (*buf == b'\0' as c_char) {
+            if *buf == b'\0' as c_char {
                 args_print_add(&raw mut buf, &raw mut len, c"-".as_ptr());
             }
             for j in 0..(*entry).count {
@@ -616,7 +616,7 @@ pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
                 last = entry;
                 continue;
             }
-            if (tailq_empty(&raw mut (*entry).values)) {
+            if tailq_empty(&raw mut (*entry).values) {
                 continue;
             }
             for value in tailq_foreach(&raw mut (*entry).values) {
@@ -641,7 +641,7 @@ pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
             }
             last = entry;
         }
-        if (!last.is_null() && ((*last).flags & ARGS_ENTRY_OPTIONAL_VALUE != 0)) {
+        if !last.is_null() && ((*last).flags & ARGS_ENTRY_OPTIONAL_VALUE != 0) {
             args_print_add(&raw mut buf, &raw mut len, c" --".as_ptr());
         }
 
@@ -673,7 +673,7 @@ pub unsafe extern "C" fn args_escape(s: *const c_char) -> *mut c_char {
         }
         if (*s.add(strcspn(s, dquoted)) != b'\0' as _) {
             quotes = b'"' as _;
-        } else if (*s.add(strcspn(s, squoted)) != b'\0' as _) {
+        } else if *s.add(strcspn(s, squoted)) != b'\0' as _ {
             quotes = b'\'' as _;
         }
 
@@ -683,7 +683,7 @@ pub unsafe extern "C" fn args_escape(s: *const c_char) -> *mut c_char {
         }
 
         flags = (VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL);
-        if (quotes == b'"' as _) {
+        if quotes == b'"' as _ {
             flags |= VIS_DQ;
         }
         utf8_stravis(&raw mut escaped, s, flags);
@@ -713,7 +713,7 @@ pub unsafe extern "C" fn args_escape(s: *const c_char) -> *mut c_char {
 pub unsafe extern "C" fn args_has(args: *mut args, flag: u8) -> i32 {
     unsafe {
         let entry = args_find(args, flag);
-        if (entry.is_null()) {
+        if entry.is_null() {
             return 0;
         }
         (*entry).count as i32
@@ -753,10 +753,10 @@ pub unsafe extern "C" fn args_get(args: *mut args, flag: u8) -> *const c_char {
     unsafe {
         let mut entry = args_find(args, flag);
 
-        if (entry.is_null()) {
+        if entry.is_null() {
             return null_mut();
         }
-        if (tailq_empty(&raw mut (*entry).values)) {
+        if tailq_empty(&raw mut (*entry).values) {
             return null_mut();
         }
         (*tailq_last(&raw mut (*entry).values)).union_.string
@@ -767,7 +767,7 @@ pub unsafe extern "C" fn args_get(args: *mut args, flag: u8) -> *const c_char {
 pub unsafe extern "C" fn args_first(args: *mut args, entry: *mut *mut args_entry) -> u8 {
     unsafe {
         *entry = rb_min(&raw mut (*args).tree);
-        if ((*entry).is_null()) {
+        if (*entry).is_null() {
             return 0;
         }
         (*(*entry)).flag
@@ -779,7 +779,7 @@ pub unsafe extern "C" fn args_first(args: *mut args, entry: *mut *mut args_entry
 pub unsafe extern "C" fn args_next(entry: *mut *mut args_entry) -> u8 {
     unsafe {
         *entry = rb_next(*entry);
-        if ((*entry).is_null()) {
+        if (*entry).is_null() {
             return 0;
         }
         (*(*entry)).flag
@@ -802,7 +802,7 @@ pub unsafe extern "C" fn args_values(args: *mut args) -> *mut args_value {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn args_value(args: *mut args, idx: u32) -> *mut args_value {
     unsafe {
-        if (idx >= (*args).count) {
+        if idx >= (*args).count {
             return null_mut();
         }
         (*args).values.add(idx as usize)
@@ -813,7 +813,7 @@ pub unsafe extern "C" fn args_value(args: *mut args, idx: u32) -> *mut args_valu
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn args_string(args: *mut args, idx: u32) -> *const c_char {
     unsafe {
-        if (idx >= (*args).count) {
+        if idx >= (*args).count {
             return null();
         }
         args_value_as_string((*args).values.add(idx as usize))
@@ -877,7 +877,7 @@ pub unsafe extern "C" fn args_make_commands_prepare(
             }
             cmd = (*value).union_.string;
         } else {
-            if (default_command.is_null()) {
+            if default_command.is_null() {
                 fatalx(c"argument out of range");
             }
             cmd = default_command;
@@ -890,15 +890,15 @@ pub unsafe extern "C" fn args_make_commands_prepare(
         }
         log_debug!("{}: {}", __func__, _s((*state).cmd));
 
-        if (wait != 0) {
+        if wait != 0 {
             (*state).pi.item = item;
         }
         cmd_get_source(self_, &raw mut file, &raw mut (*state).pi.line);
-        if (!file.is_null()) {
+        if !file.is_null() {
             (*state).pi.file = xstrdup(file).as_ptr();
         }
         (*state).pi.c = tc;
-        if (!(*state).pi.c.is_null()) {
+        if !(*state).pi.c.is_null() {
             (*(*state).pi.c).references += 1;
         }
         cmd_find_copy_state(&raw mut (*state).pi.fs, target);
@@ -922,7 +922,7 @@ pub unsafe extern "C" fn args_make_commands(
         // int i;
 
         if (!(*state).cmdlist.is_null()) {
-            if (argc == 0) {
+            if argc == 0 {
                 return (*state).cmdlist;
             }
             return cmd_list_copy((*state).cmdlist, argc, argv);
@@ -962,10 +962,10 @@ pub unsafe extern "C" fn args_make_commands(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn args_make_commands_free(state: *mut args_command_state) {
     unsafe {
-        if (!(*state).cmdlist.is_null()) {
+        if !(*state).cmdlist.is_null() {
             cmd_list_free((*state).cmdlist);
         }
-        if (!(*state).pi.c.is_null()) {
+        if !(*state).pi.c.is_null() {
             server_client_unref((*state).pi.c);
         }
         free((*state).pi.file as *mut c_void); // TODO casting away const
@@ -982,7 +982,7 @@ pub unsafe extern "C" fn args_make_commands_get_command(
     unsafe {
         if (!(*state).cmdlist.is_null()) {
             let first = cmd_list_first((*state).cmdlist);
-            if (first.is_null()) {
+            if first.is_null() {
                 return xstrdup_(c"").as_ptr();
             }
             return xstrdup((*cmd_get_entry(first)).name).as_ptr();
@@ -999,7 +999,7 @@ pub unsafe extern "C" fn args_make_commands_get_command(
 pub unsafe extern "C" fn args_first_value(args: *mut args, flag: u8) -> *mut args_value {
     unsafe {
         let entry = args_find(args, flag);
-        if (entry.is_null()) {
+        if entry.is_null() {
             return null_mut();
         }
         tailq_first(&raw mut (*entry).values)

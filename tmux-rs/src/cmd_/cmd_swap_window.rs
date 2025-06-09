@@ -40,7 +40,7 @@ unsafe extern "C" fn cmd_swap_window_exec(self_: *mut cmd, item: *mut cmdq_item)
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
-        if ((*wl_dst).window == (*wl_src).window) {
+        if (*wl_dst).window == (*wl_src).window {
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
@@ -56,7 +56,7 @@ unsafe extern "C" fn cmd_swap_window_exec(self_: *mut cmd, item: *mut cmdq_item)
 
         if args_has(args, b'd') != 0 {
             session_select(dst, (*wl_dst).idx);
-            if (src != dst) {
+            if src != dst {
                 session_select(src, (*wl_src).idx);
             }
         }

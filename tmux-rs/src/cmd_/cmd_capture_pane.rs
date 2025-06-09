@@ -152,7 +152,7 @@ unsafe extern "C" fn cmd_capture_pane_history(
             } else {
                 top = (*gd).hsize + n as u32;
             }
-            if (top > (*gd).hsize + (*gd).sy - 1) {
+            if top > (*gd).hsize + (*gd).sy - 1 {
                 top = (*gd).hsize + (*gd).sy - 1;
             }
         }

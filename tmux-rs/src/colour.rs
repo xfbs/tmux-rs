@@ -214,7 +214,7 @@ pub unsafe extern "C" fn colour_fromstring(s: *const c_char) -> c_int {
                 &raw mut g,
                 &raw mut b,
             );
-            if (n != 3) {
+            if n != 3 {
                 return -1;
             }
             return colour_join_rgb(r, g, b);

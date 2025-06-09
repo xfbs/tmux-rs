@@ -74,16 +74,16 @@ unsafe extern "C" fn cmd_resize_window_exec(self_: *mut cmd, item: *mut cmdq_ite
         }
 
         if (args_has(args, b'L') != 0) {
-            if (sx >= adjust) {
+            if sx >= adjust {
                 sx -= adjust;
             }
         } else if (args_has(args, b'R') != 0) {
             sx += adjust;
         } else if (args_has(args, b'U') != 0) {
-            if (sy >= adjust) {
+            if sy >= adjust {
                 sy -= adjust;
             }
-        } else if (args_has(args, b'D') != 0) {
+        } else if args_has(args, b'D') != 0 {
             sy += adjust;
         }
 
@@ -98,7 +98,7 @@ unsafe extern "C" fn cmd_resize_window_exec(self_: *mut cmd, item: *mut cmdq_ite
                 &raw mut ypixel,
                 WINDOW_SIZE_LARGEST,
             );
-        } else if (args_has(args, b'a') != 0) {
+        } else if args_has(args, b'a') != 0 {
             default_window_size(
                 null_mut(),
                 s,

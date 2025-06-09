@@ -103,7 +103,7 @@ pub unsafe extern "C" fn spawn_window(
                 for wp_ in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr)
                 {
                     wp = wp_;
-                    if ((*wp).fd != -1) {
+                    if (*wp).fd != -1 {
                         break;
                     }
                 }
@@ -161,7 +161,7 @@ pub unsafe extern "C" fn spawn_window(
 
         /* Then create a window if needed. */
         if (!(*sc).flags & SPAWN_RESPAWN != 0) {
-            if (idx == -1) {
+            if idx == -1 {
                 idx = -1 - options_get_number((*s).options, c"base-index".as_ptr()) as i32;
             }
             (*sc).wl = winlink_add(&raw mut (*s).windows, idx);
@@ -189,7 +189,7 @@ pub unsafe extern "C" fn spawn_window(
                 xasprintf(cause, c"couldn't create window %d".as_ptr(), idx);
                 return null_mut();
             }
-            if ((*s).curw.is_null()) {
+            if (*s).curw.is_null() {
                 (*s).curw = (*sc).wl;
             }
             (*(*sc).wl).session = s;
@@ -203,7 +203,7 @@ pub unsafe extern "C" fn spawn_window(
         /* Spawn the pane. */
         wp = spawn_pane(sc, cause);
         if (wp.is_null()) {
-            if (!(*sc).flags & SPAWN_RESPAWN != 0) {
+            if !(*sc).flags & SPAWN_RESPAWN != 0 {
                 winlink_remove(&raw mut (*s).windows, (*sc).wl);
             }
             return null_mut();
@@ -221,12 +221,12 @@ pub unsafe extern "C" fn spawn_window(
         }
 
         /* Switch to the new window if required. */
-        if (!(*sc).flags & SPAWN_DETACHED != 0) {
+        if !(*sc).flags & SPAWN_DETACHED != 0 {
             session_select(s, (*(*sc).wl).idx);
         }
 
         /* Fire notification if new window. */
-        if (!(*sc).flags & SPAWN_RESPAWN != 0) {
+        if !(*sc).flags & SPAWN_RESPAWN != 0 {
             notify_session_window(c"window-linked".as_ptr(), s, w);
         }
 
@@ -364,7 +364,7 @@ pub unsafe extern "C" fn spawn_pane(
 
             /* Create an environment for this pane. */
             child = environ_for_session(s, 0);
-            if (!(*sc).environ.is_null()) {
+            if !(*sc).environ.is_null() {
                 environ_copy((*sc).environ, child);
             }
             environ_set(
@@ -383,11 +383,11 @@ pub unsafe extern "C" fn spawn_pane(
             if (!c.is_null() && (*c).session.is_null()) {
                 /* only unattached clients */
                 ee = environ_find((*c).environ, c"PATH".as_ptr());
-                if (!ee.is_null()) {
+                if !ee.is_null() {
                     environ_set(child, c"PATH".as_ptr(), 0, c"%s".as_ptr(), (*ee).value);
                 }
             }
-            if (environ_find(child, c"PATH".as_ptr()).is_null()) {
+            if environ_find(child, c"PATH".as_ptr()).is_null() {
                 environ_set(child, c"PATH".as_ptr(), 0, c"%s".as_ptr(), _PATH_DEFPATH);
             }
 
@@ -495,10 +495,10 @@ pub unsafe extern "C" fn spawn_pane(
              * Update terminal escape characters from the session if available and
              * force VERASE to tmux's backspace.
              */
-            if (tcgetattr(STDIN_FILENO, &raw mut now) != 0) {
+            if tcgetattr(STDIN_FILENO, &raw mut now) != 0 {
                 _exit(1);
             }
-            if (!(*s).tio.is_null()) {
+            if !(*s).tio.is_null() {
                 memcpy__(now.c_cc.as_mut_ptr(), (*(*s).tio).c_cc.as_ptr());
             }
             key = options_get_number(global_options, c"backspace".as_ptr()) as u64;
@@ -511,7 +511,7 @@ pub unsafe extern "C" fn spawn_pane(
             {
                 now.c_iflag |= IUTF8;
             }
-            if (tcsetattr(STDIN_FILENO, TCSANOW, &now) != 0) {
+            if tcsetattr(STDIN_FILENO, TCSANOW, &now) != 0 {
                 _exit(1);
             }
 
@@ -585,17 +585,17 @@ pub unsafe extern "C" fn spawn_pane(
 
         environ_free(child);
 
-        if ((*sc).flags & SPAWN_RESPAWN != 0) {
+        if (*sc).flags & SPAWN_RESPAWN != 0 {
             return new_wp;
         }
-        if ((!(*sc).flags & SPAWN_DETACHED != 0) || (*w).active.is_null()) {
+        if (!(*sc).flags & SPAWN_DETACHED != 0) || (*w).active.is_null() {
             if ((*sc).flags & SPAWN_NONOTIFY != 0) {
                 window_set_active_pane(w, new_wp, 0);
             } else {
                 window_set_active_pane(w, new_wp, 1);
             }
         }
-        if (!(*sc).flags & SPAWN_NONOTIFY != 0) {
+        if !(*sc).flags & SPAWN_NONOTIFY != 0 {
             notify_window(c"window-layout-changed".as_ptr(), w);
         }
 

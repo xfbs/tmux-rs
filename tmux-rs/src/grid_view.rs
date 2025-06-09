@@ -76,7 +76,7 @@ pub unsafe extern "C" fn grid_view_clear_history(gd: *mut grid, bg: u32) {
 
         for yy in 0..(*gd).sy {
             let gl = grid_get_line(gd, grid_view_y(gd, yy));
-            if ((*gl).cellused != 0) {
+            if (*gl).cellused != 0 {
                 last = yy + 1;
             }
         }
@@ -89,7 +89,7 @@ pub unsafe extern "C" fn grid_view_clear_history(gd: *mut grid, bg: u32) {
             grid_collect_history(gd);
             grid_scroll_history(gd, bg);
         }
-        if (last < (*gd).sy) {
+        if last < (*gd).sy {
             grid_view_clear(gd, 0, 0, (*gd).sx, (*gd).sy - last, bg);
         }
         (*gd).hscrolled = 0;

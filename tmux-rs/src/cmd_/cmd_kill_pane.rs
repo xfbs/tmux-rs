@@ -28,7 +28,7 @@ unsafe extern "C" fn cmd_kill_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
             for loopwp in
                 tailq_foreach::<_, discr_entry>(&raw mut (*(*wl).window).panes).map(NonNull::as_ptr)
             {
-                if (loopwp == wp) {
+                if loopwp == wp {
                     continue;
                 }
                 server_client_remove_pane(loopwp);

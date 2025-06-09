@@ -191,7 +191,7 @@ unsafe extern "C" fn mode_tree_check_selected(mtd: *mut mode_tree_data) {
          * If the current line would now be off screen reset the offset to the
          * last visible line.
          */
-        if ((*mtd).current > (*mtd).height - 1) {
+        if (*mtd).current > (*mtd).height - 1 {
             (*mtd).offset = (*mtd).current - (*mtd).height + 1;
         }
     }
@@ -243,7 +243,7 @@ unsafe extern "C" fn mode_tree_build_lines(
                     NonNull::new((*mti).itemdata).unwrap(),
                     (*mti).line,
                 );
-                if ((*mti).key == KEYC_UNKNOWN) {
+                if (*mti).key == KEYC_UNKNOWN {
                     (*mti).key = KEYC_NONE;
                 }
             } else if ((*mti).line < 10) {
@@ -264,7 +264,7 @@ unsafe extern "C" fn mode_tree_build_lines(
         for mti in tailq_foreach(mtl).map(NonNull::as_ptr) {
             for i in 0..(*mtd).line_size {
                 line = (*mtd).line_list.add(i as usize);
-                if ((*line).item == mti) {
+                if (*line).item == mti {
                     (*line).flat = flat;
                 }
             }
@@ -288,13 +288,13 @@ pub unsafe extern "C" fn mode_tree_up(mtd: *mut mode_tree_data, wrap: i32) {
         if ((*mtd).current == 0) {
             if wrap != 0 {
                 (*mtd).current = (*mtd).line_size - 1;
-                if ((*mtd).line_size >= (*mtd).height) {
+                if (*mtd).line_size >= (*mtd).height {
                     (*mtd).offset = (*mtd).line_size - (*mtd).height;
                 }
             }
         } else {
             (*mtd).current -= 1;
-            if ((*mtd).current < (*mtd).offset) {
+            if (*mtd).current < (*mtd).offset {
                 (*mtd).offset -= 1;
             }
         }
@@ -313,7 +313,7 @@ pub unsafe extern "C" fn mode_tree_down(mtd: *mut mode_tree_data, wrap: i32) -> 
             }
         } else {
             (*mtd).current += 1;
-            if ((*mtd).current > (*mtd).offset + (*mtd).height - 1) {
+            if (*mtd).current > (*mtd).offset + (*mtd).height - 1 {
                 (*mtd).offset += 1;
             }
         }
@@ -535,7 +535,7 @@ pub unsafe extern "C" fn mode_tree_zoom(mtd: *mut mode_tree_data, args: *mut arg
 
         if args_has_(args, 'Z') {
             (*mtd).zoomed = ((*(*wp).window).flags & window_flag::ZOOMED).bits();
-            if ((*mtd).zoomed == 0 && window_zoom(wp) == 0) {
+            if (*mtd).zoomed == 0 && window_zoom(wp) == 0 {
                 server_redraw_window((*wp).window);
             }
         } else {
@@ -551,16 +551,16 @@ pub unsafe extern "C" fn mode_tree_set_height(mtd: *mut mode_tree_data) {
 
         if let Some(heightcb) = (*mtd).heightcb {
             let height = heightcb(mtd.cast(), screen_size_y(s));
-            if (height < screen_size_y(s)) {
+            if height < screen_size_y(s) {
                 (*mtd).height = screen_size_y(s) - height;
             }
         } else {
             (*mtd).height = (screen_size_y(s) / 3) * 2;
-            if ((*mtd).height > (*mtd).line_size) {
+            if (*mtd).height > (*mtd).line_size {
                 (*mtd).height = screen_size_y(s) / 2;
             }
         }
-        if ((*mtd).height < 10) {
+        if (*mtd).height < 10 {
             (*mtd).height = screen_size_y(s);
         }
         if screen_size_y(s) - (*mtd).height < 2 {
@@ -764,7 +764,7 @@ pub unsafe extern "C" fn mode_tree_draw(mtd: *mut mode_tree_data) {
         // int keylen, pad;
 
         'done: {
-            if ((*mtd).line_size == 0) {
+            if (*mtd).line_size == 0 {
                 return;
             }
 
@@ -781,19 +781,19 @@ pub unsafe extern "C" fn mode_tree_draw(mtd: *mut mode_tree_data) {
             let mut keylen: i32 = 0;
             for i in 0..(*mtd).line_size {
                 mti = (*(*mtd).line_list.add(i as usize)).item;
-                if ((*mti).key == KEYC_NONE) {
+                if (*mti).key == KEYC_NONE {
                     continue;
                 }
-                if ((*mti).keylen as i32 + 3 > keylen) {
+                if (*mti).keylen as i32 + 3 > keylen {
                     keylen = (*mti).keylen as i32 + 3;
                 }
             }
 
             for i in 0..(*mtd).line_size {
-                if (i < (*mtd).offset) {
+                if i < (*mtd).offset {
                     continue;
                 }
-                if (i > (*mtd).offset + h - 1) {
+                if i > (*mtd).offset + h - 1 {
                     break;
                 }
                 line = (*mtd).line_list.add(i as usize);
@@ -867,7 +867,7 @@ pub unsafe extern "C" fn mode_tree_draw(mtd: *mut mode_tree_data) {
                     },
                 );
                 width = utf8_cstrwidth(text);
-                if (width > w) {
+                if width > w {
                     width = w;
                 }
                 free_(start);
@@ -1040,7 +1040,7 @@ pub unsafe extern "C" fn mode_tree_search_backward(
                 }
                 mti = prev;
             }
-            if (mti == last) {
+            if mti == last {
                 break;
             }
 
@@ -1101,7 +1101,7 @@ pub unsafe extern "C" fn mode_tree_search_forward(mtd: *mut mode_tree_data) -> *
             if mti.is_null() {
                 mti = tailq_first(&raw mut (*mtd).children);
             }
-            if (mti == last) {
+            if mti == last {
                 break;
             }
 
@@ -1238,7 +1238,7 @@ pub unsafe extern "C" fn mode_tree_menu_callback(
                 break 'out;
             }
 
-            if ((*mtm).line >= (*mtd).line_size) {
+            if (*mtm).line >= (*mtd).line_size {
                 break 'out;
             }
             (*mtd).current = (*mtm).line;
@@ -1350,7 +1350,7 @@ pub unsafe extern "C" fn mode_tree_key(
                 *yp = y;
             }
             if (x > (*mtd).width || y > (*mtd).height) {
-                if (*key == keyc::KEYC_MOUSEDOWN3_PANE as u64) {
+                if *key == keyc::KEYC_MOUSEDOWN3_PANE as u64 {
                     mode_tree_display_menu(mtd, c, x, y, 1);
                 }
                 if (*mtd).preview == 0 {
@@ -1359,22 +1359,22 @@ pub unsafe extern "C" fn mode_tree_key(
                 return 0;
             }
             if ((*mtd).offset + y < (*mtd).line_size) {
-                if (*key == keyc::KEYC_MOUSEDOWN1_PANE as u64
+                if *key == keyc::KEYC_MOUSEDOWN1_PANE as u64
                     || *key == keyc::KEYC_MOUSEDOWN3_PANE as u64
-                    || *key == keyc::KEYC_DOUBLECLICK1_PANE as u64)
+                    || *key == keyc::KEYC_DOUBLECLICK1_PANE as u64
                 {
                     (*mtd).current = (*mtd).offset + y;
                 }
                 if (*key == keyc::KEYC_DOUBLECLICK1_PANE as u64) {
                     *key = b'\r' as u64;
                 } else {
-                    if (*key == keyc::KEYC_MOUSEDOWN3_PANE as u64) {
+                    if *key == keyc::KEYC_MOUSEDOWN3_PANE as u64 {
                         mode_tree_display_menu(mtd, c, x, y, 0);
                     }
                     *key = KEYC_NONE;
                 }
             } else {
-                if (*key == keyc::KEYC_MOUSEDOWN3_PANE as u64) {
+                if *key == keyc::KEYC_MOUSEDOWN3_PANE as u64 {
                     mode_tree_display_menu(mtd, c, x, y, 0);
                 }
                 *key = KEYC_NONE;
@@ -1483,7 +1483,7 @@ pub unsafe extern "C" fn mode_tree_key(
             }
             code::KEYC_NPAGE | code::F_CTRL => {
                 for i in 0..(*mtd).height {
-                    if ((*mtd).current == (*mtd).line_size - 1) {
+                    if (*mtd).current == (*mtd).line_size - 1 {
                         break;
                     }
                     mode_tree_down(mtd, 1);
@@ -1543,7 +1543,7 @@ pub unsafe extern "C" fn mode_tree_key(
             }
             code::O_UPPER => {
                 (*mtd).sort_crit.field += 1;
-                if ((*mtd).sort_crit.field >= (*mtd).sort_size) {
+                if (*mtd).sort_crit.field >= (*mtd).sort_size {
                     (*mtd).sort_crit.field = 0;
                 }
                 mode_tree_build(mtd);
@@ -1553,7 +1553,7 @@ pub unsafe extern "C" fn mode_tree_key(
                 mode_tree_build(mtd);
             }
             code::KEYC_LEFT | code::H | code::MINUS => {
-                if ((*line).flat != 0 || !(*current).expanded != 0) {
+                if (*line).flat != 0 || !(*current).expanded != 0 {
                     current = (*current).parent;
                 }
                 if current.is_null() {
@@ -1623,7 +1623,7 @@ pub unsafe extern "C" fn mode_tree_key(
             code::V => {
                 (*mtd).preview = !(*mtd).preview;
                 mode_tree_build(mtd);
-                if ((*mtd).preview != 0) {
+                if (*mtd).preview != 0 {
                     mode_tree_check_selected(mtd);
                 }
             }

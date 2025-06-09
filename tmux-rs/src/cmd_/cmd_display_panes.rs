@@ -48,10 +48,10 @@ unsafe extern "C" fn cmd_display_panes_draw_pane(
         let bufsize = 16;
 
         'out: {
-            if ((*wp).xoff + (*wp).sx <= (*ctx).ox
+            if (*wp).xoff + (*wp).sx <= (*ctx).ox
                 || (*wp).xoff >= (*ctx).ox + (*ctx).sx
                 || (*wp).yoff + (*wp).sy <= (*ctx).oy
-                || (*wp).yoff >= (*ctx).oy + (*ctx).sy)
+                || (*wp).yoff >= (*ctx).oy + (*ctx).sy
             {
                 return;
             }
@@ -95,14 +95,14 @@ unsafe extern "C" fn cmd_display_panes_draw_pane(
                 sy = (*wp).sy - yoff;
             }
 
-            if ((*ctx).statustop != 0) {
+            if (*ctx).statustop != 0 {
                 yoff += (*ctx).statuslines;
             }
             let mut px = sx / 2;
             let mut py = sy / 2;
 
             let mut pane = 0;
-            if (window_pane_index(wp, &raw mut pane) != 0) {
+            if window_pane_index(wp, &raw mut pane) != 0 {
                 fatalx(c"index not found");
             }
             let mut buf = [0i8; 16];
@@ -200,7 +200,7 @@ unsafe extern "C" fn cmd_display_panes_draw_pane(
                 ptr = ptr.add(1);
             }
 
-            if (sy <= 6) {
+            if sy <= 6 {
                 break 'out;
             }
             tty_attributes(
@@ -258,7 +258,7 @@ unsafe extern "C" fn cmd_display_panes_free(c: *mut client, data: *mut c_void) {
     unsafe {
         let mut cdata = data as *mut cmd_display_panes_data;
 
-        if (!(*cdata).item.is_null()) {
+        if !(*cdata).item.is_null() {
             cmdq_continue((*cdata).item);
         }
         args_make_commands_free((*cdata).state);
@@ -297,7 +297,7 @@ unsafe extern "C" fn cmd_display_panes_key(
         }
 
         let wp = window_pane_at_index(w, index);
-        if (wp.is_null()) {
+        if wp.is_null() {
             return (1);
         }
         window_unzoom(w, 1);
@@ -349,7 +349,7 @@ unsafe extern "C" fn cmd_display_panes_exec(self_: *mut cmd, item: *mut cmdq_ite
         }
 
         let mut cdata = xcalloc_::<cmd_display_panes_data>(1).as_ptr();
-        if (wait != 0) {
+        if wait != 0 {
             (*cdata).item = item;
         }
         (*cdata).state =
@@ -381,7 +381,7 @@ unsafe extern "C" fn cmd_display_panes_exec(self_: *mut cmd, item: *mut cmdq_ite
             );
         }
 
-        if (wait == 0) {
+        if wait == 0 {
             return (cmd_retval::CMD_RETURN_NORMAL);
         }
         cmd_retval::CMD_RETURN_WAIT

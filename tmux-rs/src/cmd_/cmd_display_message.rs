@@ -48,7 +48,7 @@ unsafe extern "C" fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_i
         let mut count = args_count(args);
 
         if (args_has_(args, 'I')) {
-            if (wp.is_null()) {
+            if wp.is_null() {
                 return (cmd_retval::CMD_RETURN_NORMAL);
             }
             match (window_pane_start_input(wp, item, &raw mut cause)) {
@@ -86,7 +86,7 @@ unsafe extern "C" fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_i
         } else {
             args_get_(args, 'F')
         };
-        if (template.is_null()) {
+        if template.is_null() {
             template = DISPLAY_MESSAGE_TEMPLATE.as_ptr();
         }
 
@@ -129,13 +129,13 @@ unsafe extern "C" fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_i
             cmdq_print(item, c"%s".as_ptr(), msg);
         } else if (!tc.is_null() && (*tc).flags.intersects(client_flag::CONTROL)) {
             let evb = evbuffer_new();
-            if (evb.is_null()) {
+            if evb.is_null() {
                 fatalx(c"out of memory");
             }
             evbuffer_add_printf(evb, c"%%message %s".as_ptr(), msg);
             server_client_print(tc, 0, evb);
             evbuffer_free(evb);
-        } else if (!tc.is_null()) {
+        } else if !tc.is_null() {
             status_message_set(tc, delay as i32, 0, nflag, c"%s".as_ptr(), msg);
         }
         free_(msg);

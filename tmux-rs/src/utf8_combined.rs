@@ -34,7 +34,7 @@ pub unsafe extern "C" fn utf8_has_zwj(ud: *const utf8_data) -> i32 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn utf8_is_zwj(ud: *const utf8_data) -> i32 {
     unsafe {
-        if ((*ud).size != 3) {
+        if (*ud).size != 3 {
             return 0;
         }
         (memcmp(
@@ -48,7 +48,7 @@ pub unsafe extern "C" fn utf8_is_zwj(ud: *const utf8_data) -> i32 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn utf8_is_vs(ud: *const utf8_data) -> i32 {
     unsafe {
-        if ((*ud).size != 3) {
+        if (*ud).size != 3 {
             return 0;
         }
         (memcmp(

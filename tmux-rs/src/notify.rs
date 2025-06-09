@@ -40,7 +40,7 @@ pub unsafe extern "C" fn notify_insert_one_hook(
     state: *mut cmdq_state,
 ) -> *mut cmdq_item {
     unsafe {
-        if (cmdlist.is_null()) {
+        if cmdlist.is_null() {
             return (item);
         }
         if (log_get_level() != 0) {
@@ -147,62 +147,62 @@ pub unsafe extern "C" fn notify_callback(item: *mut cmdq_item, data: *mut c_void
 
         log_debug!("{}: {}", _s(__func__), _s((*ne).name));
 
-        if (strcmp((*ne).name, c"pane-mode-changed".as_ptr()) == 0) {
+        if strcmp((*ne).name, c"pane-mode-changed".as_ptr()) == 0 {
             control_notify_pane_mode_changed((*ne).pane);
         }
-        if (strcmp((*ne).name, c"window-layout-changed".as_ptr()) == 0) {
+        if strcmp((*ne).name, c"window-layout-changed".as_ptr()) == 0 {
             control_notify_window_layout_changed((*ne).window);
         }
-        if (strcmp((*ne).name, c"window-pane-changed".as_ptr()) == 0) {
+        if strcmp((*ne).name, c"window-pane-changed".as_ptr()) == 0 {
             control_notify_window_pane_changed((*ne).window);
         }
-        if (strcmp((*ne).name, c"window-unlinked".as_ptr()) == 0) {
+        if strcmp((*ne).name, c"window-unlinked".as_ptr()) == 0 {
             control_notify_window_unlinked((*ne).session, (*ne).window);
         }
-        if (strcmp((*ne).name, c"window-linked".as_ptr()) == 0) {
+        if strcmp((*ne).name, c"window-linked".as_ptr()) == 0 {
             control_notify_window_linked((*ne).session, (*ne).window);
         }
-        if (strcmp((*ne).name, c"window-renamed".as_ptr()) == 0) {
+        if strcmp((*ne).name, c"window-renamed".as_ptr()) == 0 {
             control_notify_window_renamed((*ne).window);
         }
-        if (strcmp((*ne).name, c"client-session-changed".as_ptr()) == 0) {
+        if strcmp((*ne).name, c"client-session-changed".as_ptr()) == 0 {
             control_notify_client_session_changed((*ne).client);
         }
-        if (strcmp((*ne).name, c"client-detached".as_ptr()) == 0) {
+        if strcmp((*ne).name, c"client-detached".as_ptr()) == 0 {
             control_notify_client_detached((*ne).client);
         }
-        if (strcmp((*ne).name, c"session-renamed".as_ptr()) == 0) {
+        if strcmp((*ne).name, c"session-renamed".as_ptr()) == 0 {
             control_notify_session_renamed((*ne).session);
         }
-        if (strcmp((*ne).name, c"session-created".as_ptr()) == 0) {
+        if strcmp((*ne).name, c"session-created".as_ptr()) == 0 {
             control_notify_session_created((*ne).session);
         }
-        if (strcmp((*ne).name, c"session-closed".as_ptr()) == 0) {
+        if strcmp((*ne).name, c"session-closed".as_ptr()) == 0 {
             control_notify_session_closed((*ne).session);
         }
-        if (strcmp((*ne).name, c"session-window-changed".as_ptr()) == 0) {
+        if strcmp((*ne).name, c"session-window-changed".as_ptr()) == 0 {
             control_notify_session_window_changed((*ne).session);
         }
-        if (strcmp((*ne).name, c"paste-buffer-changed".as_ptr()) == 0) {
+        if strcmp((*ne).name, c"paste-buffer-changed".as_ptr()) == 0 {
             control_notify_paste_buffer_changed((*ne).pbname);
         }
-        if (strcmp((*ne).name, c"paste-buffer-deleted".as_ptr()) == 0) {
+        if strcmp((*ne).name, c"paste-buffer-deleted".as_ptr()) == 0 {
             control_notify_paste_buffer_deleted((*ne).pbname);
         }
 
         notify_insert_hook(item, ne);
 
-        if (!(*ne).client.is_null()) {
+        if !(*ne).client.is_null() {
             server_client_unref((*ne).client);
         }
-        if (!(*ne).session.is_null()) {
+        if !(*ne).session.is_null() {
             session_remove_ref((*ne).session, __func__);
         }
-        if (!(*ne).window.is_null()) {
+        if !(*ne).window.is_null() {
             window_remove_ref((*ne).window, __func__);
         }
 
-        if (!(*ne).fs.s.is_null()) {
+        if !(*ne).fs.s.is_null() {
             session_remove_ref((*ne).fs.s, __func__);
         }
 
@@ -231,7 +231,7 @@ pub unsafe extern "C" fn notify_add(
         // struct cmdq_item *item;
 
         let item = cmdq_running(null_mut());
-        if (!item.is_null() && cmdq_get_flags(item) & CMDQ_STATE_NOHOOKS != 0) {
+        if !item.is_null() && cmdq_get_flags(item) & CMDQ_STATE_NOHOOKS != 0 {
             return;
         }
 
@@ -250,7 +250,7 @@ pub unsafe extern "C" fn notify_add(
 
         (*ne).formats = format_create(null_mut(), null_mut(), 0, format_flags::FORMAT_NOJOBS);
         format_add((*ne).formats, c"hook".as_ptr(), c"%s".as_ptr(), name);
-        if (!c.is_null()) {
+        if !c.is_null() {
             format_add(
                 (*ne).formats,
                 c"hook_client".as_ptr(),
@@ -286,7 +286,7 @@ pub unsafe extern "C" fn notify_add(
                 (*w).name,
             );
         }
-        if (!wp.is_null()) {
+        if !wp.is_null() {
             format_add(
                 (*ne).formats,
                 c"hook_pane".as_ptr(),
@@ -296,21 +296,20 @@ pub unsafe extern "C" fn notify_add(
         }
         format_log_debug((*ne).formats, __func__);
 
-        if (!c.is_null()) {
+        if !c.is_null() {
             (*c).references += 1;
         }
-        if (!s.is_null()) {
+        if !s.is_null() {
             session_add_ref(s, __func__);
         }
-        if (!w.is_null()) {
+        if !w.is_null() {
             window_add_ref(w, __func__);
         }
 
         cmd_find_copy_state(&raw mut (*ne).fs, fs);
-        if (!(*ne).fs.s.is_null()) {
-            /* cmd_find_valid_state needs session */
+        if !(*ne).fs.s.is_null() {
             session_add_ref((*ne).fs.s, __func__);
-        }
+        } /* cmd_find_valid_state needs session */
 
         cmdq_append(
             null_mut(),

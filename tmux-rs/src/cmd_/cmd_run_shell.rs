@@ -41,7 +41,7 @@ pub unsafe extern "C" fn cmd_run_shell_args_parse(
     cause: *mut *mut c_char,
 ) -> args_parse_type {
     unsafe {
-        if (args_has_(args, 'C')) {
+        if args_has_(args, 'C') {
             return args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING;
         }
     }
@@ -56,7 +56,7 @@ pub unsafe extern "C" fn cmd_run_shell_print(job: *mut job, msg: *const c_char) 
         let mut wp = null_mut();
         let mut fs: cmd_find_state = zeroed();
 
-        if ((*cdata).wp_id != -1) {
+        if (*cdata).wp_id != -1 {
             wp = window_pane_find_by_id((*cdata).wp_id as u32);
         }
         if (wp.is_null()) {
@@ -64,19 +64,19 @@ pub unsafe extern "C" fn cmd_run_shell_print(job: *mut job, msg: *const c_char) 
                 cmdq_print((*cdata).item, c"%s".as_ptr(), msg);
                 return;
             }
-            if (!(*cdata).item.is_null() && !(*cdata).client.is_null()) {
+            if !(*cdata).item.is_null() && !(*cdata).client.is_null() {
                 wp = server_client_get_pane((*cdata).client);
             }
-            if (wp.is_null() && cmd_find_from_nothing(&raw mut fs, 0) == 0) {
+            if wp.is_null() && cmd_find_from_nothing(&raw mut fs, 0) == 0 {
                 wp = fs.wp;
             }
-            if (wp.is_null()) {
+            if wp.is_null() {
                 return;
             }
         }
 
         let wme = tailq_first(&raw mut (*wp).modes);
-        if (wme.is_null() || (*wme).mode != &raw mut window_view_mode) {
+        if wme.is_null() || (*wme).mode != &raw mut window_view_mode {
             window_pane_set_mode(
                 wp,
                 null_mut(),
@@ -112,14 +112,14 @@ pub unsafe extern "C" fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_ite
                 cmdq_error(item, c"invalid delay time: %s".as_ptr(), delay);
                 return cmd_retval::CMD_RETURN_ERROR;
             }
-        } else if (args_count(args) == 0) {
+        } else if args_count(args) == 0 {
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
         let mut cdata = xcalloc1::<cmd_run_shell_data>() as *mut cmd_run_shell_data;
         if (!args_has_(args, 'C')) {
             let cmd = args_string(args, 0);
-            if (!cmd.is_null()) {
+            if !cmd.is_null() {
                 (*cdata).cmd = format_single_from_target(item, cmd);
             }
         } else {
@@ -139,7 +139,7 @@ pub unsafe extern "C" fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_ite
             (*cdata).client = tc;
             (*cdata).flags |= JOB_NOWAIT;
         }
-        if (!(*cdata).client.is_null()) {
+        if !(*cdata).client.is_null() {
             (*(*cdata).client).references += 1;
         }
         if (args_has_(args, 'c')) {
@@ -149,7 +149,7 @@ pub unsafe extern "C" fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_ite
         }
 
         (*cdata).s = s;
-        if (!s.is_null()) {
+        if !s.is_null() {
             session_add_ref(s, __func__);
         }
 
@@ -168,7 +168,7 @@ pub unsafe extern "C" fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_ite
             event_active(&raw mut (*cdata).timer, EV_TIMEOUT as i32, 1);
         }
 
-        if (wait == 0) {
+        if wait == 0 {
             return cmd_retval::CMD_RETURN_NORMAL;
         }
     }
@@ -189,13 +189,13 @@ pub unsafe extern "C" fn cmd_run_shell_timer(_fd: i32, _events: i16, arg: *mut c
 
         if ((*cdata).state.is_null()) {
             if (cmd.is_null()) {
-                if (!(*cdata).item.is_null()) {
+                if !(*cdata).item.is_null() {
                     cmdq_continue((*cdata).item);
                 }
                 cmd_run_shell_free(cdata.cast());
                 return;
             }
-            if (job_run(
+            if job_run(
                 cmd,
                 0,
                 null_mut(),
@@ -210,7 +210,7 @@ pub unsafe extern "C" fn cmd_run_shell_timer(_fd: i32, _events: i16, arg: *mut c
                 -1,
                 -1,
             )
-            .is_null())
+            .is_null()
             {
                 cmd_run_shell_free(cdata.cast());
             }
@@ -234,7 +234,7 @@ pub unsafe extern "C" fn cmd_run_shell_timer(_fd: i32, _events: i16, arg: *mut c
             cmdq_insert_after(item, new_item);
         }
 
-        if (!(*cdata).item.is_null()) {
+        if !(*cdata).item.is_null() {
             cmdq_continue((*cdata).item);
         }
         cmd_run_shell_free(cdata.cast());
@@ -266,7 +266,7 @@ pub unsafe extern "C" fn cmd_run_shell_callback(job: *mut job) {
                 cmd_run_shell_print(job, line);
                 free_(line);
             }
-            if (line.is_null()) {
+            if line.is_null() {
                 break;
             }
         }
@@ -285,7 +285,7 @@ pub unsafe extern "C" fn cmd_run_shell_callback(job: *mut job) {
         let status = job_get_status(job);
         if (WIFEXITED(status)) {
             retcode = WEXITSTATUS(status);
-            if (retcode != 0) {
+            if retcode != 0 {
                 xasprintf(&raw mut msg, c"'%s' returned %d".as_ptr(), cmd, retcode);
             }
         } else if (WIFSIGNALED(status)) {
@@ -300,13 +300,13 @@ pub unsafe extern "C" fn cmd_run_shell_callback(job: *mut job) {
         } else {
             retcode = 0;
         }
-        if (!msg.is_null()) {
+        if !msg.is_null() {
             cmd_run_shell_print(job, msg);
         }
         free_(msg);
 
         if (!item.is_null()) {
-            if (!cmdq_get_client(item).is_null() && (*cmdq_get_client(item)).session.is_null()) {
+            if !cmdq_get_client(item).is_null() && (*cmdq_get_client(item)).session.is_null() {
                 (*cmdq_get_client(item)).retval = retcode;
             }
             cmdq_continue(item);
@@ -321,13 +321,13 @@ pub unsafe extern "C" fn cmd_run_shell_free(data: *mut c_void) {
         let mut cdata = data as *mut cmd_run_shell_data;
 
         evtimer_del(&raw mut (*cdata).timer);
-        if (!(*cdata).s.is_null()) {
+        if !(*cdata).s.is_null() {
             session_remove_ref((*cdata).s, __func__);
         }
-        if (!(*cdata).client.is_null()) {
+        if !(*cdata).client.is_null() {
             server_client_unref((*cdata).client);
         }
-        if (!(*cdata).state.is_null()) {
+        if !(*cdata).state.is_null() {
             args_make_commands_free((*cdata).state);
         }
         free_((*cdata).cwd);

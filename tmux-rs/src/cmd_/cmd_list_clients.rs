@@ -32,14 +32,14 @@ unsafe extern "C" fn cmd_list_clients_exec(self_: *mut cmd, item: *mut cmdq_item
         };
 
         let mut template = args_get(args, b'F');
-        if (template.is_null()) {
+        if template.is_null() {
             template = LIST_CLIENTS_TEMPLATE.as_ptr();
         }
         let mut filter = args_get(args, b'f');
 
         let mut idx = 0;
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
-            if ((*c).session.is_null() || (!s.is_null() && s != (*c).session)) {
+            if (*c).session.is_null() || (!s.is_null() && s != (*c).session) {
                 continue;
             }
 

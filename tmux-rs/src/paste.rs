@@ -68,7 +68,7 @@ pub unsafe extern "C" fn paste_buffer_data(
     size: *mut usize,
 ) -> *const c_char {
     unsafe {
-        if (!size.is_null()) {
+        if !size.is_null() {
             *size = (*pb).size;
         }
         (*pb).data
@@ -85,7 +85,7 @@ pub unsafe fn paste_buffer_data_(pb: NonNull<paste_buffer>, size: &mut usize) ->
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn paste_walk(pb: *mut paste_buffer) -> *mut paste_buffer {
     unsafe {
-        if (pb.is_null()) {
+        if pb.is_null() {
             return rb_min::<_, discr_time_entry>(&raw mut paste_by_time);
         }
         rb_next::<_, discr_time_entry>(pb)
@@ -104,7 +104,7 @@ pub unsafe extern "C" fn paste_get_top(name: *mut *const c_char) -> *mut paste_b
         while (!pb.is_null() && (*pb).automatic == 0) {
             pb = rb_next::<_, discr_time_entry>(pb);
         }
-        if (pb.is_null()) {
+        if pb.is_null() {
             return null_mut();
         }
         if !name.is_null() {
@@ -120,7 +120,7 @@ pub unsafe extern "C" fn paste_get_name(name: *const c_char) -> *mut paste_buffe
     unsafe {
         let mut pbfind = MaybeUninit::<paste_buffer>::uninit();
 
-        if (name.is_null() || *name == b'\0' as c_char) {
+        if name.is_null() || *name == b'\0' as c_char {
             return null_mut();
         }
 
@@ -137,7 +137,7 @@ pub unsafe extern "C" fn paste_free(pb: NonNull<paste_buffer>) {
 
         rb_remove::<_, discr_name_entry>(&raw mut paste_by_name, pb);
         rb_remove::<_, discr_time_entry>(&raw mut paste_by_time, pb);
-        if ((*pb).automatic != 0) {
+        if (*pb).automatic != 0 {
             paste_num_automatic -= 1;
         }
 
@@ -150,7 +150,7 @@ pub unsafe extern "C" fn paste_free(pb: NonNull<paste_buffer>) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn paste_add(mut prefix: *const c_char, data: *mut c_char, size: usize) {
     unsafe {
-        if (prefix.is_null()) {
+        if prefix.is_null() {
             prefix = c"buffer".as_ptr();
         }
 
@@ -164,7 +164,7 @@ pub unsafe extern "C" fn paste_add(mut prefix: *const c_char, data: *mut c_char,
             if (paste_num_automatic as i64) < limit {
                 break;
             }
-            if ((*pb.as_ptr()).automatic != 0) {
+            if (*pb.as_ptr()).automatic != 0 {
                 paste_free(pb);
             }
         }
@@ -181,7 +181,7 @@ pub unsafe extern "C" fn paste_add(mut prefix: *const c_char, data: *mut c_char,
                 paste_next_index,
             );
             paste_next_index += 1;
-            if (paste_get_name((*pb).name).is_null()) {
+            if paste_get_name((*pb).name).is_null() {
                 break;
             }
         }
@@ -210,18 +210,18 @@ pub unsafe extern "C" fn paste_rename(
     cause: *mut *mut c_char,
 ) -> i32 {
     unsafe {
-        if (!cause.is_null()) {
+        if !cause.is_null() {
             *cause = null_mut();
         }
 
         if (oldname.is_null() || *oldname == b'\0' as c_char) {
-            if (!cause.is_null()) {
+            if !cause.is_null() {
                 *cause = xstrdup_(c"no buffer").as_ptr();
             }
             return -1;
         }
         if (newname.is_null() || *newname == b'\0' as c_char) {
-            if (!cause.is_null()) {
+            if !cause.is_null() {
                 *cause = xstrdup_(c"new name is empty").as_ptr();
             }
             return -1;
@@ -229,7 +229,7 @@ pub unsafe extern "C" fn paste_rename(
 
         let pb = paste_get_name(oldname);
         if (pb.is_null()) {
-            if (!cause.is_null()) {
+            if !cause.is_null() {
                 xasprintf(cause, c"no buffer %s".as_ptr(), oldname);
             }
             return -1;
@@ -244,7 +244,7 @@ pub unsafe extern "C" fn paste_rename(
         free_((*pb).name);
         (*pb).name = xstrdup(newname).as_ptr();
 
-        if ((*pb).automatic != 0) {
+        if (*pb).automatic != 0 {
             paste_num_automatic -= 1;
         }
         (*pb).automatic = 0;
@@ -265,7 +265,7 @@ pub unsafe extern "C" fn paste_set(
     cause: *mut *mut c_char,
 ) -> i32 {
     unsafe {
-        if (!cause.is_null()) {
+        if !cause.is_null() {
             *cause = null_mut();
         }
 
@@ -279,7 +279,7 @@ pub unsafe extern "C" fn paste_set(
         }
 
         if (*name == b'\0' as _) {
-            if (!cause.is_null()) {
+            if !cause.is_null() {
                 *cause = xstrdup_(c"empty buffer name").as_ptr();
             }
             return -1;
@@ -327,13 +327,13 @@ pub unsafe extern "C" fn paste_make_sample(pb: *mut paste_buffer) -> *mut c_char
         let width = 200;
 
         let mut len = (*pb).size;
-        if (len > width) {
+        if len > width {
             len = width;
         }
         let buf: *mut c_char = xreallocarray(null_mut(), len, 4 + 4).cast().as_ptr();
 
         let used = utf8_strvis(buf, (*pb).data, len, flags);
-        if ((*pb).size > width || used > width as i32) {
+        if (*pb).size > width || used > width as i32 {
             strlcpy(buf.add(width), c"...".as_ptr(), 4);
         }
         buf

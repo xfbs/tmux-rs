@@ -55,13 +55,13 @@ pub unsafe extern "C" fn cmd_send_keys_inject_key(
         // struct *event;
 
         if (args_has_(args, 'K')) {
-            if (tc.is_null()) {
+            if tc.is_null() {
                 return item;
             }
             let event = xmalloc_::<key_event>().as_ptr();
             (*event).key = key | KEYC_SENT;
             memset0(&raw mut (*event).m);
-            if (server_client_handle_key(tc, event) == 0) {
+            if server_client_handle_key(tc, event) == 0 {
                 free_(event);
             }
             return item;
@@ -69,7 +69,7 @@ pub unsafe extern "C" fn cmd_send_keys_inject_key(
 
         let wme = tailq_first(&raw mut (*wp).modes);
         if (wme.is_null() || (*(*wme).mode).key_table.is_none()) {
-            if (window_pane_key(wp, tc, s, wl, key, null_mut()) != 0) {
+            if window_pane_key(wp, tc, s, wl, key, null_mut()) != 0 {
                 return null_mut();
             }
             return item;
@@ -111,7 +111,7 @@ pub unsafe extern "C" fn cmd_send_keys_inject_string(
 
         if (args_has_(args, 'H')) {
             let n = strtol(s, &raw mut endptr, 16);
-            if (*s == b'\0' as _ || n < 0 || n > 0xff || *endptr != b'\0' as _) {
+            if *s == b'\0' as _ || n < 0 || n > 0xff || *endptr != b'\0' as _ {
                 return item;
             }
             return cmd_send_keys_inject_key(item, after, args, KEYC_LITERAL | n as u64);
@@ -122,7 +122,7 @@ pub unsafe extern "C" fn cmd_send_keys_inject_string(
             key = key_string_lookup_string(s);
             if (key != KEYC_NONE && key != KEYC_UNKNOWN) {
                 after = cmd_send_keys_inject_key(item, after, args, key);
-                if (!after.is_null()) {
+                if !after.is_null() {
                     return after;
                 }
             }
@@ -191,7 +191,7 @@ pub unsafe extern "C" fn cmd_send_keys_exec(self_: *mut cmd, item: *mut cmdq_ite
                 cmdq_error(item, c"not in a mode".as_ptr());
                 return cmd_retval::CMD_RETURN_ERROR;
             }
-            if ((*m).valid == 0) {
+            if (*m).valid == 0 {
                 m = null_mut();
             }
             (*(*wme).mode).command.unwrap()(NonNull::new_unchecked(wme), tc, s, wl, args, m);
@@ -225,7 +225,7 @@ pub unsafe extern "C" fn cmd_send_keys_exec(self_: *mut cmd, item: *mut cmdq_ite
         }
 
         if (count == 0) {
-            if (args_has_(args, 'N') || args_has_(args, 'R')) {
+            if args_has_(args, 'N') || args_has_(args, 'R') {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
             while np != 0 {

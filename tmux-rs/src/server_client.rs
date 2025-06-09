@@ -19,10 +19,10 @@ pub unsafe extern "C" fn server_client_window_cmp(
     cw2: *const client_window,
 ) -> i32 {
     unsafe {
-        if ((*cw1).window < (*cw2).window) {
+        if (*cw1).window < (*cw2).window {
             return -1;
         }
-        if ((*cw1).window > (*cw2).window) {
+        if (*cw1).window > (*cw2).window {
             return 1;
         }
         0
@@ -83,7 +83,7 @@ pub unsafe extern "C" fn server_client_set_overlay(
             Some(server_client_overlay_timer),
             c.cast(),
         );
-        if (delay != 0) {
+        if delay != 0 {
             evtimer_add(&raw mut (*c).overlay_timer, &tv);
         }
 
@@ -163,7 +163,7 @@ pub unsafe extern "C" fn server_client_overlay_range(
         if (px < x) {
             (*r).px[0] = px;
             (*r).nx[0] = x - px;
-            if ((*r).nx[0] > nx) {
+            if (*r).nx[0] > nx {
                 (*r).nx[0] = nx;
             }
         } else {
@@ -173,7 +173,7 @@ pub unsafe extern "C" fn server_client_overlay_range(
 
         // Visible bit to the right of the popup.
         let mut ox = x + sx;
-        if (px > ox) {
+        if px > ox {
             ox = px;
         }
         let onx = px + nx;
@@ -367,14 +367,14 @@ pub unsafe extern "C" fn server_client_attached_lost(c: *mut client) {
         // By this point the session in the client has been cleared so walk all
         // windows to find any with this client as the latest.
         for w in rb_foreach(&raw mut windows).map(NonNull::as_ptr) {
-            if ((*w).latest.cast() != c) {
+            if (*w).latest.cast() != c {
                 continue;
             }
 
             let mut found: *mut client = null_mut();
             for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
                 let s = (*loop_).session;
-                if (loop_ == c || s.is_null() || (*(*s).curw).window != w) {
+                if loop_ == c || s.is_null() || (*(*s).curw).window != w {
                     continue;
                 }
                 if found.is_null()
@@ -492,7 +492,7 @@ pub unsafe extern "C" fn server_client_lost(c: *mut client) {
         proc_remove_peer((*c).peer);
         (*c).peer = null_mut();
 
-        if ((*c).out_fd != -1) {
+        if (*c).out_fd != -1 {
             libc::close((*c).out_fd);
         }
         if ((*c).fd != -1) {
@@ -516,7 +516,7 @@ pub unsafe extern "C" fn server_client_unref(c: *mut client) {
         log_debug!("unref client {:p} ({} references)", c, (*c).references);
 
         (*c).references -= 1;
-        if ((*c).references == 0) {
+        if (*c).references == 0 {
             event_once(
                 -1,
                 EV_TIMEOUT,
@@ -702,7 +702,7 @@ pub unsafe extern "C" fn server_client_check_mouse(
                         x = (*m).x;
                         y = (*m).y;
                         b = (*m).b;
-                        if (x == (*m).lx && y == (*m).ly) {
+                        if x == (*m).lx && y == (*m).ly {
                             return KEYC_UNKNOWN;
                         }
                         log_debug!("drag update at {x},{y}");
@@ -723,7 +723,7 @@ pub unsafe extern "C" fn server_client_check_mouse(
                     x = (*m).x;
                     y = (*m).y;
                     b = (*m).lb;
-                    if ((*m).sgr_type == b'm' as u32) {
+                    if (*m).sgr_type == b'm' as u32 {
                         b = (*m).sgr_b;
                     }
                     log_debug!("up at {},{}", x, y);
@@ -860,7 +860,7 @@ pub unsafe extern "C" fn server_client_check_mouse(
                     &raw mut sy,
                 );
                 // log_debug!("mouse window @%u at %u,%u (%ux%u)", (*(*(*s).curw).window).id, (*m).ox, (*m).oy, sx, sy);
-                if (px > sx || py > sy) {
+                if px > sx || py > sy {
                     return KEYC_UNKNOWN;
                 }
                 px = px + (*m).ox;
@@ -873,12 +873,12 @@ pub unsafe extern "C" fn server_client_check_mouse(
                             .map(NonNull::as_ptr)
                     {
                         wp = wp_;
-                        if (((*wp).xoff + (*wp).sx == px
+                        if ((*wp).xoff + (*wp).sx == px
                             && (*wp).yoff <= 1 + py
                             && (*wp).yoff + (*wp).sy >= py)
                             || ((*wp).yoff + (*wp).sy == py
                                 && (*wp).xoff <= 1 + px
-                                && (*wp).xoff + (*wp).sx >= px))
+                                && (*wp).xoff + (*wp).sx >= px)
                         {
                             break;
                         }
@@ -899,7 +899,7 @@ pub unsafe extern "C" fn server_client_check_mouse(
                 }
                 if where_ == PANE {
                     log_debug!("mouse {},{} on pane %%{}", x, y, (*wp).id);
-                } else if (where_ == BORDER) {
+                } else if where_ == BORDER {
                     log_debug!("mouse on pane %%{} border", (*wp).id);
                 }
                 (*m).wp = (*wp).id as i32;
@@ -1705,7 +1705,7 @@ pub unsafe extern "C" fn server_client_check_mouse(
             key |= KEYC_SHIFT;
         }
 
-        if (log_get_level() != 0) {
+        if log_get_level() != 0 {
             log_debug!("mouse key is {}", _s(key_string_lookup_key(key, 1)));
         }
 
@@ -1777,7 +1777,7 @@ pub unsafe extern "C" fn server_client_update_latest(c: *mut client) {
         }
         let w = (*(*(*c).session).curw).window;
 
-        if ((*w).latest == c.cast()) {
+        if (*w).latest == c.cast() {
             return;
         }
         (*w).latest = c.cast();
@@ -1828,7 +1828,7 @@ pub unsafe extern "C" fn server_client_key_callback(
                 wl = (*s).curw;
 
                 /* Update the activity timer. */
-                if (libc::gettimeofday(&raw mut (*c).activity_time, null_mut()) != 0) {
+                if libc::gettimeofday(&raw mut (*c).activity_time, null_mut()) != 0 {
                     fatal(c"gettimeofday failed".as_ptr());
                 }
                 session_update_activity(s, &raw mut (*c).activity_time);
@@ -1840,7 +1840,7 @@ pub unsafe extern "C" fn server_client_key_callback(
                         break 'out;
                     }
                     key = server_client_check_mouse(c, event);
-                    if (key == KEYC_UNKNOWN) {
+                    if key == KEYC_UNKNOWN {
                         break 'out;
                     }
 
@@ -1859,7 +1859,7 @@ pub unsafe extern "C" fn server_client_key_callback(
                 }
 
                 /* Find affected pane. */
-                if (!KEYC_IS_MOUSE(key) || cmd_find_from_mouse(&raw mut fs, m, 0) != 0) {
+                if !KEYC_IS_MOUSE(key) || cmd_find_from_mouse(&raw mut fs, m, 0) != 0 {
                     cmd_find_from_client(&raw mut fs, c, 0);
                 }
                 wp = fs.wp;
@@ -1938,14 +1938,10 @@ pub unsafe extern "C" fn server_client_key_callback(
                          */
                         prefix_delay =
                             options_get_number(global_options, c"prefix-timeout".as_ptr()) as u64;
-                        if (prefix_delay > 0
+                        if prefix_delay > 0
                             && libc::strcmp((*table).name, c"prefix".as_ptr()) == 0
-                            && server_client_key_table_activity_diff(c) > prefix_delay)
+                            && server_client_key_table_activity_diff(c) > prefix_delay
                         {
-                            /*
-                             * If repeating is active and this is a repeating binding,
-                             * ignore the timeout.
-                             */
                             if !bd.is_null()
                                 && (*c).flags.intersects(client_flag::REPEAT)
                                 && (*bd).flags & KEY_BINDING_REPEAT != 0
@@ -1959,7 +1955,10 @@ pub unsafe extern "C" fn server_client_key_callback(
                                 server_status_client(c);
                                 continue 'table_changed;
                             }
-                        }
+                        } /*
+                         * If repeating is active and this is a repeating binding,
+                         * ignore the timeout.
+                         */
 
                         /* Try to see if there is a key binding in the current table. */
                         if !bd.is_null() {
@@ -2027,12 +2026,12 @@ pub unsafe extern "C" fn server_client_key_callback(
                          * Binding movement keys is useless since we only turn them on when the
                          * application requests, so don't let them exit the prefix table.
                          */
-                        if (key == keyc::KEYC_MOUSEMOVE_PANE as u64
+                        if key == keyc::KEYC_MOUSEMOVE_PANE as u64
                             || key == keyc::KEYC_MOUSEMOVE_STATUS as u64
                             || key == keyc::KEYC_MOUSEMOVE_STATUS_LEFT as u64
                             || key == keyc::KEYC_MOUSEMOVE_STATUS_RIGHT as u64
                             || key == keyc::KEYC_MOUSEMOVE_STATUS_DEFAULT as u64
-                            || key == keyc::KEYC_MOUSEMOVE_BORDER as u64)
+                            || key == keyc::KEYC_MOUSEMOVE_BORDER as u64
                         {
                             break 'forward_key;
                         }
@@ -2121,7 +2120,7 @@ pub unsafe extern "C" fn server_client_handle_key(c: *mut client, event: *mut ke
             }
             server_client_clear_overlay(c);
             if !(*c).prompt_string.is_null() {
-                if (status_prompt_key(c, (*event).key) == 0) {
+                if status_prompt_key(c, (*event).key) == 0 {
                     return 0;
                 }
             }
@@ -2178,7 +2177,7 @@ pub unsafe extern "C" fn server_client_check_window_resize(w: *mut window) {
         let mut wl = null_mut();
         for wl_ in tailq_foreach::<_, discr_wentry>(&raw mut (*w).winlinks) {
             wl = wl_.as_ptr();
-            if ((*(*wl).session).attached != 0 && (*(*wl).session).curw == wl) {
+            if (*(*wl).session).attached != 0 && (*(*wl).session).curw == wl {
                 break;
             }
         }
@@ -2324,7 +2323,7 @@ pub unsafe extern "C" fn server_client_check_pane_buffer(wp: *mut window_pane) {
              * from the buffer.
              */
             minimum = (*wp).offset.used;
-            if ((*wp).pipe_fd != -1 && (*wp).pipe_offset.used < minimum) {
+            if (*wp).pipe_fd != -1 && (*wp).pipe_offset.used < minimum {
                 minimum = (*wp).pipe_offset.used;
             }
             for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
@@ -2350,15 +2349,15 @@ pub unsafe extern "C" fn server_client_check_pane_buffer(wp: *mut window_pane) {
 
                 window_pane_get_new_data(wp, wpo, &raw mut new_size);
                 // log_debug("%s: %s has %zu bytes used and %zu left for %%%u", __func__, (*c).name, (*wpo).used - (*wp).base_offset, new_size, (*wp).id);
-                if ((*wpo).used < minimum) {
+                if (*wpo).used < minimum {
                     minimum = (*wpo).used;
                 }
             }
-            if (attached_clients == 0) {
+            if attached_clients == 0 {
                 off = 0;
             }
             minimum -= (*wp).base_offset;
-            if (minimum == 0) {
+            if minimum == 0 {
                 break 'out;
             }
 
@@ -2379,7 +2378,7 @@ pub unsafe extern "C" fn server_client_check_pane_buffer(wp: *mut window_pane) {
             if (*wp).base_offset > (usize::MAX - minimum) {
                 // log_debug("%s: %%%u base offset has wrapped", __func__, (*wp).id);
                 (*wp).offset.used -= (*wp).base_offset;
-                if ((*wp).pipe_fd != -1) {
+                if (*wp).pipe_fd != -1 {
                     (*wp).pipe_offset.used -= (*wp).base_offset;
                 }
                 for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
@@ -2497,7 +2496,7 @@ pub unsafe extern "C" fn server_client_reset_state(c: *mut client) {
                 cx = (*wp).xoff + (*s).cx - ox;
                 cy = (*wp).yoff + (*s).cy - oy;
 
-                if (status_at_line(c) == 0) {
+                if status_at_line(c) == 0 {
                     cy += status_line_size(c);
                 }
             }
@@ -2769,7 +2768,7 @@ pub unsafe extern "C" fn server_client_check_redraw(c: *mut client) {
                         break;
                     }
                 }
-                if ((*c).redraw_panes != 0) {
+                if (*c).redraw_panes != 0 {
                     (*c).flags |= client_flag::REDRAWPANES;
                 }
             }
@@ -2913,7 +2912,7 @@ pub unsafe extern "C" fn server_client_dispatch(imsg: *mut imsg, arg: *mut c_voi
             | msgtype::MSG_IDENTIFY_DONE => server_client_dispatch_identify(c, imsg),
             msgtype::MSG_COMMAND => server_client_dispatch_command(c, imsg),
             msgtype::MSG_RESIZE => {
-                if (datalen != 0) {
+                if datalen != 0 {
                     fatalx(c"bad MSG_RESIZE size");
                 }
 
@@ -2934,7 +2933,7 @@ pub unsafe extern "C" fn server_client_dispatch(imsg: *mut imsg, arg: *mut c_voi
                 }
             }
             msgtype::MSG_EXITING => {
-                if (datalen != 0) {
+                if datalen != 0 {
                     fatalx(c"bad MSG_EXITING size");
                 }
                 server_client_set_session(c, null_mut());
@@ -2943,7 +2942,7 @@ pub unsafe extern "C" fn server_client_dispatch(imsg: *mut imsg, arg: *mut c_voi
                 proc_send((*c).peer, msgtype::MSG_EXITED, -1, null_mut(), 0);
             }
             msgtype::MSG_WAKEUP | msgtype::MSG_UNLOCK => {
-                if (datalen != 0) {
+                if datalen != 0 {
                     fatalx(c"bad MSG_WAKEUP size");
                 }
 
@@ -2952,13 +2951,12 @@ pub unsafe extern "C" fn server_client_dispatch(imsg: *mut imsg, arg: *mut c_voi
                 }
                 (*c).flags &= !client_flag::SUSPENDED;
 
-                if ((*c).fd == -1 || (*c).session.is_null()) {
-                    /* exited already */
+                if (*c).fd == -1 || (*c).session.is_null() {
                     return;
-                }
+                } /* exited already */
                 let s = (*c).session;
 
-                if (libc::gettimeofday(&raw mut (*c).activity_time, null_mut()) != 0) {
+                if libc::gettimeofday(&raw mut (*c).activity_time, null_mut()) != 0 {
                     fatal(c"gettimeofday failed".as_ptr());
                 }
 
@@ -2966,12 +2964,12 @@ pub unsafe extern "C" fn server_client_dispatch(imsg: *mut imsg, arg: *mut c_voi
                 server_redraw_client(c);
                 recalculate_sizes();
 
-                if (!s.is_null()) {
+                if !s.is_null() {
                     session_update_activity(s, &raw mut (*c).activity_time);
                 }
             }
             msgtype::MSG_SHELL => {
-                if (datalen != 0) {
+                if datalen != 0 {
                     fatalx(c"bad MSG_SHELL size");
                 }
 
@@ -3044,7 +3042,7 @@ pub unsafe extern "C" fn server_client_dispatch_command(c: *mut client, imsg: *m
 
             buf = (*imsg).data.cast::<c_char>().add(size_of::<msg_command>());
             len = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE - size_of::<msg_command>();
-            if (len > 0 && *buf.add(len - 1) != b'\0' as i8) {
+            if len > 0 && *buf.add(len - 1) != b'\0' as i8 {
                 fatalx(c"bad MSG_COMMAND string");
             }
 
@@ -3117,7 +3115,7 @@ pub unsafe extern "C" fn server_client_dispatch_identify(c: *mut client, imsg: *
 
         match msgtype::try_from((*imsg).hdr.type_).expect("unexpectd msgtype") {
             msgtype::MSG_IDENTIFY_FEATURES => {
-                if (datalen != size_of::<i32>() as u16) {
+                if datalen != size_of::<i32>() as u16 {
                     fatalx(c"bad MSG_IDENTIFY_FEATURES size");
                 }
                 memcpy__(&raw mut feat, data.cast());
@@ -3125,7 +3123,7 @@ pub unsafe extern "C" fn server_client_dispatch_identify(c: *mut client, imsg: *
                 // log_debug("client %p IDENTIFY_FEATURES %s", c, tty_get_features(feat));
             }
             msgtype::MSG_IDENTIFY_FLAGS => {
-                if (datalen != size_of::<i32>() as u16) {
+                if datalen != size_of::<i32>() as u16 {
                     fatalx(c"bad MSG_IDENTIFY_FLAGS size");
                 }
                 memcpy__(&raw mut flags, data.cast());
@@ -3133,7 +3131,7 @@ pub unsafe extern "C" fn server_client_dispatch_identify(c: *mut client, imsg: *
                 // log_debug("client %p IDENTIFY_FLAGS %#x", c, flags);
             }
             msgtype::MSG_IDENTIFY_LONGFLAGS => {
-                if (datalen != size_of::<u64>() as u16) {
+                if datalen != size_of::<u64>() as u16 {
                     fatalx(c"bad MSG_IDENTIFY_LONGFLAGS size");
                 }
                 memcpy__(&raw mut longflags, data.cast());
@@ -3194,22 +3192,21 @@ pub unsafe extern "C" fn server_client_dispatch_identify(c: *mut client, imsg: *
                 // log_debug("client %p IDENTIFY_CWD %s", c, data);
             }
             msgtype::MSG_IDENTIFY_STDIN => {
-                if (datalen != 0) {
+                if datalen != 0 {
                     fatalx(c"bad MSG_IDENTIFY_STDIN size");
                 }
                 (*c).fd = imsg_get_fd(imsg);
                 // log_debug("client %p IDENTIFY_STDIN %d", c, (*c).fd);
             }
             msgtype::MSG_IDENTIFY_STDOUT => {
-                if (datalen != 0) {
+                if datalen != 0 {
                     fatalx(c"bad MSG_IDENTIFY_STDOUT size");
                 }
                 (*c).out_fd = imsg_get_fd(imsg);
                 // log_debug("client %p IDENTIFY_STDOUT %d", c, (*c).out_fd);
             }
             msgtype::MSG_IDENTIFY_ENVIRON => {
-                if (datalen == 0
-                    || *data.cast::<c_char>().add((datalen - 1) as usize) != b'\0' as i8)
+                if datalen == 0 || *data.cast::<c_char>().add((datalen - 1) as usize) != b'\0' as i8
                 {
                     fatalx(c"bad MSG_IDENTIFY_ENVIRON string");
                 }
@@ -3228,7 +3225,7 @@ pub unsafe extern "C" fn server_client_dispatch_identify(c: *mut client, imsg: *
             _ => (),
         }
 
-        if ((*imsg).hdr.type_ != msgtype::MSG_IDENTIFY_DONE as u32) {
+        if (*imsg).hdr.type_ != msgtype::MSG_IDENTIFY_DONE as u32 {
             return;
         }
         (*c).flags |= client_flag::IDENTIFIED;
@@ -3280,7 +3277,7 @@ pub unsafe extern "C" fn server_client_dispatch_identify(c: *mut client, imsg: *
 pub unsafe extern "C" fn server_client_dispatch_shell(c: *mut client) {
     unsafe {
         let mut shell = options_get_string(global_s_options, c"default-shell".as_ptr());
-        if (!checkshell(shell)) {
+        if !checkshell(shell) {
             shell = _PATH_BSHELL;
         }
         proc_send(
@@ -3375,10 +3372,10 @@ pub unsafe extern "C" fn server_client_set_flags(c: *mut client, flags: *const c
                 flag = client_flag::READONLY;
             } else if (libc::strcmp(next, c"ignore-size".as_ptr()) == 0) {
                 flag = client_flag::IGNORESIZE;
-            } else if (libc::strcmp(next, c"active-pane".as_ptr()) == 0) {
+            } else if libc::strcmp(next, c"active-pane".as_ptr()) == 0 {
                 flag = client_flag::ACTIVEPANE;
             }
-            if (flag == client_flag::empty()) {
+            if flag == client_flag::empty() {
                 continue;
             }
 
@@ -3391,7 +3388,7 @@ pub unsafe extern "C" fn server_client_set_flags(c: *mut client, flags: *const c
             } else {
                 (*c).flags |= flag;
             }
-            if (flag == client_flag::CONTROL_NOOUTPUT) {
+            if flag == client_flag::CONTROL_NOOUTPUT {
                 control_reset_offsets(c);
             }
         }
@@ -3455,7 +3452,7 @@ pub unsafe extern "C" fn server_client_get_flags(c: *mut client) -> *const c_cha
         if (*c).flags.intersects(client_flag::UTF8) {
             strlcat((&raw mut s).cast(), c"UTF-8,".as_ptr(), sizeof_s);
         }
-        if (s[0] != b'\0' as i8) {
+        if s[0] != b'\0' as i8 {
             s[strlen((&raw const s).cast()) - 1] = b'\0' as i8;
         }
         (&raw const s) as *const i8
@@ -3502,7 +3499,7 @@ pub unsafe extern "C" fn server_client_get_pane(c: *mut client) -> *mut window_p
     unsafe {
         let mut s = (*c).session;
 
-        if (s.is_null()) {
+        if s.is_null() {
             return null_mut();
         }
 
@@ -3523,7 +3520,7 @@ pub unsafe extern "C" fn server_client_set_pane(c: *mut client, wp: *mut window_
     unsafe {
         let mut s = (*c).session;
 
-        if (s.is_null()) {
+        if s.is_null() {
             return;
         }
 
@@ -3599,7 +3596,7 @@ pub unsafe extern "C" fn server_client_print(c: *mut client, parse: i32, evb: *m
 
             let wp = server_client_get_pane(c);
             let wme = tailq_first(&raw mut (*wp).modes);
-            if (wme.is_null() || (*wme).mode != &raw mut window_view_mode) {
+            if wme.is_null() || (*wme).mode != &raw mut window_view_mode {
                 window_pane_set_mode(
                     wp,
                     null_mut(),
@@ -3629,7 +3626,7 @@ pub unsafe extern "C" fn server_client_print(c: *mut client, parse: i32, evb: *m
                 window_copy_add(wp, 0, c"%s".as_ptr(), msg);
             }
         } // out:
-        if (parse == 0) {
+        if parse == 0 {
             free_(msg);
         }
     }

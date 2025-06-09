@@ -1005,7 +1005,7 @@ pub unsafe extern "C" fn input_init(
 pub unsafe extern "C" fn input_free(ictx: *mut input_ctx) {
     unsafe {
         for i in 0..(*ictx).param_list_len {
-            if ((*ictx).param_list[i as usize].type_ == input_param_type::INPUT_STRING) {
+            if (*ictx).param_list[i as usize].type_ == input_param_type::INPUT_STRING {
                 free_((*ictx).param_list[i as usize].union_.str);
             }
         }
@@ -1087,15 +1087,14 @@ fn input_parse(ictx: *mut input_ctx, buf: *mut u8, len: usize) {
             {
                 itr = (*(*ictx).state).transitions;
                 while ((*itr).first != -1 && (*itr).last != -1) {
-                    if ((*ictx).ch >= (*itr).first && (*ictx).ch <= (*itr).last) {
+                    if (*ictx).ch >= (*itr).first && (*ictx).ch <= (*itr).last {
                         break;
                     }
                     itr = itr.add(1);
                 }
-                if ((*itr).first == -1 || (*itr).last == -1) {
-                    /* No transition? Eh? */
+                if (*itr).first == -1 || (*itr).last == -1 {
                     fatalx(c"no transition from state");
-                }
+                } /* No transition? Eh? */
             }
             state = (*ictx).state;
 
@@ -1465,7 +1464,7 @@ unsafe extern "C" fn input_c0_dispatch(ictx: *mut input_ctx) -> i32 {
                     /* Don't tab beyond the end of the line. */
                     /* Find the next tab point, or use the last column if none. */
                     (*s).cx += 1;
-                    if (bit_test((*s).tabs, (*s).cx)) {
+                    if bit_test((*s).tabs, (*s).cx) {
                         break;
                     }
                 }
@@ -1534,7 +1533,7 @@ unsafe extern "C" fn input_esc_dispatch(ictx: *mut input_ctx) -> i32 {
                 screen_write_linefeed(sctx, 0, (*ictx).cell.cell.bg as u32);
             }
             Ok(input_esc_type::INPUT_ESC_HTS) => {
-                if ((*s).cx < screen_size_x(s)) {
+                if (*s).cx < screen_size_x(s) {
                     bit_set((*s).tabs, (*s).cx);
                 }
             }
@@ -1606,7 +1605,7 @@ unsafe extern "C" fn input_csi_dispatch(ictx: *mut input_ctx) -> i32 {
             Ok(input_csi_type::INPUT_CSI_CBT) => {
                 // Find the previous tab point, n times.
                 cx = (*s).cx;
-                if (cx > screen_size_x(s) - 1) {
+                if cx > screen_size_x(s) - 1 {
                     cx = screen_size_x(s) - 1;
                 }
                 let mut n = input_get(ictx, 0, 1, 1);
@@ -1644,7 +1643,7 @@ unsafe extern "C" fn input_csi_dispatch(ictx: *mut input_ctx) -> i32 {
             Ok(input_csi_type::INPUT_CSI_CUP) => {
                 let n = input_get(ictx, 0, 1, 1);
                 let m = input_get(ictx, 1, 1, 1);
-                if (n != -1 && m != -1) {
+                if n != -1 && m != -1 {
                     screen_write_cursormove(sctx, m - 1, n - 1, 1);
                 }
             }
@@ -1833,7 +1832,7 @@ unsafe extern "C" fn input_csi_dispatch(ictx: *mut input_ctx) -> i32 {
             Ok(input_csi_type::INPUT_CSI_TBC) => match input_get(ictx, 0, 0, 0) {
                 -1 => (),
                 0 => {
-                    if ((*s).cx < screen_size_x(s)) {
+                    if (*s).cx < screen_size_x(s) {
                         bit_clear((*s).tabs, (*s).cx);
                     }
                 }
@@ -2058,7 +2057,7 @@ unsafe extern "C" fn input_csi_dispatch_winops(ictx: *mut input_ctx) {
                     }
                     /* FALLTHROUGH */
                     m += 1;
-                    if (input_get(ictx, m as u32, 0, -1) == -1) {
+                    if input_get(ictx, m as u32, 0, -1) == -1 {
                         return;
                     }
                 }
@@ -2246,11 +2245,11 @@ unsafe extern "C" fn input_csi_dispatch_sgr_colon(ictx: *mut input_ctx, mut i: u
         }
         free_(copy);
 
-        if (n == 0) {
+        if n == 0 {
             return;
         }
         if (p[0] == 4) {
-            if (n != 2) {
+            if n != 2 {
                 return;
             }
             match p[1] {
@@ -2279,7 +2278,7 @@ unsafe extern "C" fn input_csi_dispatch_sgr_colon(ictx: *mut input_ctx, mut i: u
             }
             return;
         }
-        if (n < 2 || (p[0] != 38 && p[0] != 48 && p[0] != 58)) {
+        if n < 2 || (p[0] != 38 && p[0] != 48 && p[0] != 58) {
             return;
         }
         match p[1] {
@@ -2302,7 +2301,7 @@ unsafe extern "C" fn input_csi_dispatch_sgr_colon(ictx: *mut input_ctx, mut i: u
                 }
             }
             5 => {
-                if (n >= 3) {
+                if n >= 3 {
                     input_csi_dispatch_sgr_256_do(ictx, p[0], p[2]);
                 }
             }
@@ -2513,10 +2512,10 @@ unsafe extern "C" fn input_exit_osc(ictx: *mut input_ctx) {
             option = option * 10 + *p - b'0';
             p = p.add(1);
         }
-        if (*p != b';' && *p != b'\0') {
+        if *p != b';' && *p != b'\0' {
             return;
         }
-        if (*p == b';') {
+        if *p == b';' {
             p = p.add(1);
         }
 
@@ -2749,7 +2748,7 @@ unsafe extern "C" fn input_osc_4(ictx: *mut input_ctx, p: *mut c_char) {
             s = strsep(&raw mut next, c";".as_ptr());
             if strcmp(s, c"?".as_ptr()) == 0 {
                 c = colour_palette_get((*ictx).palette, idx as i32);
-                if (c != -1) {
+                if c != -1 {
                     input_osc_colour_reply(ictx, 4, c);
                 }
                 continue;
@@ -2868,7 +2867,7 @@ unsafe extern "C" fn input_get_bg_client(wp: *mut window_pane) -> i32 {
             if (*loop_).session.is_null() || session_has((*loop_).session, w) == 0 {
                 continue;
             }
-            if ((*loop_).tty.bg == -1) {
+            if (*loop_).tty.bg == -1 {
                 continue;
             }
             return (*loop_).tty.bg;
@@ -3079,7 +3078,7 @@ unsafe extern "C" fn input_osc_133(ictx: *mut input_ctx, p: *const c_char) {
         let gd = (*(*ictx).ctx.s).grid;
         let line = (*(*ictx).ctx.s).cy + (*gd).hsize;
 
-        if (line > (*gd).hsize + (*gd).sy - 1) {
+        if line > (*gd).hsize + (*gd).sy - 1 {
             return;
         }
         let gl = grid_get_line(gd, line);
@@ -3155,7 +3154,7 @@ unsafe extern "C" fn input_osc_52(ictx: *mut input_ctx, p: *const c_char) {
         }
 
         len = (strlen(end) / 4) * 3;
-        if (len == 0) {
+        if len == 0 {
             return;
         }
 

@@ -47,7 +47,7 @@ unsafe extern "C" fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) 
         if (args_has_(args, 'S') && !name.is_null() && (*target).idx == -1) {
             let expanded = format_single(item, name, c, s, null_mut(), null_mut());
             for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
-                if (libc::strcmp((*(*wl).window).name, expanded) != 0) {
+                if libc::strcmp((*(*wl).window).name, expanded) != 0 {
                     continue;
                 }
                 if (new_wl.is_null()) {
@@ -61,13 +61,13 @@ unsafe extern "C" fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) 
 
             free_(expanded);
             if (!new_wl.is_null()) {
-                if (args_has_(args, 'd')) {
+                if args_has_(args, 'd') {
                     return (cmd_retval::CMD_RETURN_NORMAL);
                 }
-                if (session_set_current(s, new_wl) == 0) {
+                if session_set_current(s, new_wl) == 0 {
                     server_redraw_session(s);
                 }
-                if (!c.is_null() && !(*c).session.is_null()) {
+                if !c.is_null() && !(*c).session.is_null() {
                     (*(*(*s).curw).window).latest = c as _;
                 }
                 recalculate_sizes();
@@ -78,7 +78,7 @@ unsafe extern "C" fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) 
         let before = args_has(args, b'b');
         if (args_has_(args, 'a') || before != 0) {
             idx = winlink_shuffle_up(s, wl, before);
-            if (idx == -1) {
+            if idx == -1 {
                 idx = (*target).idx;
             }
         }
@@ -101,10 +101,10 @@ unsafe extern "C" fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) 
         sc.cwd = args_get_(args, 'c');
 
         sc.flags = 0;
-        if (args_has_(args, 'd')) {
+        if args_has_(args, 'd') {
             sc.flags |= SPAWN_DETACHED;
         }
-        if (args_has_(args, 'k')) {
+        if args_has_(args, 'k') {
             sc.flags |= SPAWN_KILL;
         }
 
@@ -112,7 +112,7 @@ unsafe extern "C" fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) 
         if (new_wl.is_null()) {
             cmdq_error(item, c"create window failed: %s".as_ptr(), cause);
             free_(cause);
-            if (!sc.argv.is_null()) {
+            if !sc.argv.is_null() {
                 cmd_free_argv(sc.argc, sc.argv);
             }
             environ_free(sc.environ);
@@ -127,7 +127,7 @@ unsafe extern "C" fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) 
 
         if (args_has_(args, 'P')) {
             let mut template = args_get_(args, 'F');
-            if (template.is_null()) {
+            if template.is_null() {
                 template = NEW_WINDOW_TEMPLATE.as_ptr();
             }
             let cp = format_single(item, template, tc, s, new_wl, (*(*new_wl).window).active);
@@ -139,7 +139,7 @@ unsafe extern "C" fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) 
         cmd_find_from_winlink(&raw mut fs, new_wl, 0);
         cmdq_insert_hook(s, item, &raw mut fs, c"after-new-window".as_ptr());
 
-        if (!sc.argv.is_null()) {
+        if !sc.argv.is_null() {
             cmd_free_argv(sc.argc, sc.argv);
         }
         environ_free(sc.environ);

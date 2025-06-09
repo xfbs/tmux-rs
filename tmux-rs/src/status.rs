@@ -184,7 +184,7 @@ unsafe extern "C" fn status_timer_callback(_fd: i32, _events: i16, arg: *mut c_v
         timerclear(&raw mut tv);
         tv.tv_sec = options_get_number((*s).options, c"status-interval".as_ptr());
 
-        if (tv.tv_sec != 0) {
+        if tv.tv_sec != 0 {
             evtimer_add(&raw mut (*c).status.timer, &raw const tv);
         }
         log_debug!("client {:p}, status interval {}", c, tv.tv_sec);
@@ -250,7 +250,7 @@ pub unsafe extern "C" fn status_at_line(c: *mut client) -> i32 {
         {
             return -1;
         }
-        if ((*s).statusat != 1) {
+        if (*s).statusat != 1 {
             return (*s).statusat;
         }
         (*c).tty.sy as i32 - status_line_size(c) as i32
@@ -302,7 +302,7 @@ pub unsafe extern "C" fn status_get_range(c: *mut client, x: u32, y: u32) -> *mu
             return null_mut();
         }
         for sr in tailq_foreach(&raw mut (*sl).entries[y as usize].ranges).map(NonNull::as_ptr) {
-            if (x >= (*sr).start && x < (*sr).end) {
+            if x >= (*sr).start && x < (*sr).end {
                 return sr;
             }
         }
@@ -415,13 +415,13 @@ pub unsafe extern "C" fn status_redraw(c: *mut client) -> i32 {
         log_debug!("status_redraw enter");
 
         // Shouldn't get here if not the active screen.
-        if ((*sl).active != &raw mut (*sl).screen) {
+        if (*sl).active != &raw mut (*sl).screen {
             fatalx(c"not the active screen");
         }
 
         // No status line?
         let lines = status_line_size(c);
-        if ((*c).tty.sy == 0 || lines == 0) {
+        if (*c).tty.sy == 0 || lines == 0 {
             return 1;
         }
 
@@ -440,7 +440,7 @@ pub unsafe extern "C" fn status_redraw(c: *mut client) -> i32 {
             gc.fg = fg;
         }
         let bg = options_get_number((*s).options, c"status-bg".as_ptr()) as i32;
-        if (!COLOUR_DEFAULT(bg)) {
+        if !COLOUR_DEFAULT(bg) {
             gc.bg = bg;
         }
         if grid_cells_equal(&raw const gc, &raw const (*sl).style) == 0 {
@@ -553,7 +553,7 @@ pub unsafe extern "C" fn status_message_set(
          * With delay -1, the display-time option is used; zero means wait for
          * key press; more than zero is the actual delay time in milliseconds.
          */
-        if (delay == -1) {
+        if delay == -1 {
             delay = options_get_number((*(*c).session).options, c"display-time".as_ptr()) as i32;
         }
         if (delay > 0) {
@@ -572,7 +572,7 @@ pub unsafe extern "C" fn status_message_set(
             evtimer_add(&raw mut (*c).message_timer, &raw mut tv);
         }
 
-        if (delay != 0) {
+        if delay != 0 {
             (*c).message_ignore_keys = ignore_keys;
         }
         (*c).message_ignore_styles = ignore_styles;
@@ -624,24 +624,24 @@ pub unsafe extern "C" fn status_message_redraw(c: *mut client) -> i32 {
         let mut gc: grid_cell = zeroed();
         // struct format_tree *ft;
 
-        if ((*c).tty.sx == 0 || (*c).tty.sy == 0) {
+        if (*c).tty.sx == 0 || (*c).tty.sy == 0 {
             return 0;
         }
         memcpy__(&raw mut old_screen, (*sl).active);
 
         let mut lines = status_line_size(c);
-        if (lines <= 1) {
+        if lines <= 1 {
             lines = 1;
         }
         screen_init((*sl).active, (*c).tty.sx, lines, 0);
 
         let mut messageline = status_prompt_line_at(c);
-        if (messageline > lines - 1) {
+        if messageline > lines - 1 {
             messageline = lines - 1;
         }
 
         let mut len = screen_write_strlen(c"%s".as_ptr(), (*c).message_string);
-        if (len > (*c).tty.sx as usize) {
+        if len > (*c).tty.sx as usize {
             len = (*c).tty.sx as usize;
         }
 
@@ -857,19 +857,19 @@ pub unsafe extern "C" fn status_prompt_redraw(c: *mut client) -> i32 {
         let mut cursorgc: grid_cell = zeroed();
 
         'finished: {
-            if ((*c).tty.sx == 0 || (*c).tty.sy == 0) {
+            if (*c).tty.sx == 0 || (*c).tty.sy == 0 {
                 return 0;
             }
             memcpy__(&raw mut old_screen, (*sl).active);
 
             let mut lines = status_line_size(c);
-            if (lines <= 1) {
+            if lines <= 1 {
                 lines = 1;
             }
             screen_init((*sl).active, (*c).tty.sx, lines, 0);
 
             let mut promptline = status_prompt_line_at(c);
-            if (promptline > lines - 1) {
+            if promptline > lines - 1 {
                 promptline = lines - 1;
             }
 
@@ -890,7 +890,7 @@ pub unsafe extern "C" fn status_prompt_redraw(c: *mut client) -> i32 {
             cursorgc.attr ^= GRID_ATTR_REVERSE;
 
             let mut start = format_width((*c).prompt_string);
-            if (start > (*c).tty.sx) {
+            if start > (*c).tty.sx {
                 start = (*c).tty.sx;
             }
 
@@ -919,7 +919,7 @@ pub unsafe extern "C" fn status_prompt_redraw(c: *mut client) -> i32 {
             screen_write_cursormove(&raw mut ctx, start as i32, promptline as i32, 0);
 
             let mut left = (*c).tty.sx - start;
-            if (left == 0) {
+            if left == 0 {
                 break 'finished;
             }
 
@@ -935,7 +935,7 @@ pub unsafe extern "C" fn status_prompt_redraw(c: *mut client) -> i32 {
             } else {
                 offset = 0;
             }
-            if (pwidth > left) {
+            if pwidth > left {
                 pwidth = left;
             }
             (*c).prompt_cursor =
@@ -949,7 +949,7 @@ pub unsafe extern "C" fn status_prompt_redraw(c: *mut client) -> i32 {
                     i += 1;
                     continue;
                 }
-                if (width >= offset + pwidth) {
+                if width >= offset + pwidth {
                     break;
                 }
                 width += (*(*c).prompt_buffer.add(i)).width as u32;
@@ -966,7 +966,7 @@ pub unsafe extern "C" fn status_prompt_redraw(c: *mut client) -> i32 {
                 }
                 i += 1;
             }
-            if ((*(*sl).active).cx < screen_size_x((*sl).active) && (*c).prompt_index >= i) {
+            if (*(*sl).active).cx < screen_size_x((*sl).active) && (*c).prompt_index >= i {
                 screen_write_putc(&raw mut ctx, &raw const cursorgc, b' ');
             }
         }
@@ -997,7 +997,7 @@ unsafe extern "C" fn status_prompt_in_list(ws: *const c_char, ud: *const utf8_da
 #[unsafe(no_mangle)]
 unsafe extern "C" fn status_prompt_space(ud: *const utf8_data) -> i32 {
     unsafe {
-        if ((*ud).size != 1 || (*ud).width != 1) {
+        if (*ud).size != 1 || (*ud).width != 1 {
             return 0;
         }
         ((*ud).data[0] == b' ') as i32
@@ -1277,10 +1277,10 @@ unsafe extern "C" fn status_prompt_replace_complete(c: *mut client, mut s: *cons
         while last > (*c).prompt_buffer && status_prompt_space(last) != 0 {
             last = last.sub(1);
         }
-        if ((*last).size != 0) {
+        if (*last).size != 0 {
             last = last.add(1);
         }
-        if (last < first) {
+        if last < first {
             return 0;
         }
         if s.is_null() {
@@ -1298,7 +1298,7 @@ unsafe extern "C" fn status_prompt_replace_complete(c: *mut client, mut s: *cons
                 used += (*ud).size as usize;
                 ud = ud.add(1);
             }
-            if (ud != last) {
+            if ud != last {
                 return 0;
             }
             word[used] = b'\0' as i8;
@@ -1408,7 +1408,7 @@ unsafe extern "C" fn status_prompt_end_word(
         // int word_is_separators;
 
         /* Can't move forward if we're already at the end. */
-        if (idx == size) {
+        if idx == size {
             return;
         }
 
@@ -1430,7 +1430,7 @@ unsafe extern "C" fn status_prompt_end_word(
         /* Skip ahead until the next space or opposite character class. */
         loop {
             idx += 1;
-            if (idx == size) {
+            if idx == size {
                 break;
             }
             if !(status_prompt_space((*c).prompt_buffer.add(idx)) == 0
@@ -1509,7 +1509,7 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
             'append_key: {
                 'process_key: {
                     if ((*c).prompt_flags & PROMPT_NUMERIC != 0) {
-                        if (key >= b'0' as u64 && key <= b'9' as u64) {
+                        if key >= b'0' as u64 && key <= b'9' as u64 {
                             break 'append_key;
                         }
                         s = utf8_tocstr((*c).prompt_buffer);
@@ -1538,22 +1538,22 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
 
                 match key {
                     code::KEYC_LEFT | code::B_CTRL => {
-                        if ((*c).prompt_index > 0) {
+                        if (*c).prompt_index > 0 {
                             (*c).prompt_index -= 1;
                         }
                     }
                     code::KEYC_RIGHT | code::F_CTRL => {
-                        if ((*c).prompt_index < size) {
+                        if (*c).prompt_index < size {
                             (*c).prompt_index += 1;
                         }
                     }
                     code::KEYC_HOME | code::A_CTRL => {
-                        if ((*c).prompt_index != 0) {
+                        if (*c).prompt_index != 0 {
                             (*c).prompt_index = 0;
                         }
                     }
                     code::KEYC_END | code::E_CTRL => {
-                        if ((*c).prompt_index != size) {
+                        if (*c).prompt_index != size {
                             (*c).prompt_index = size;
                         }
                     }
@@ -1718,7 +1718,7 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
                     }
                     code::T_CTRL => {
                         idx = (*c).prompt_index;
-                        if (idx < size) {
+                        if idx < size {
                             idx += 1;
                         }
                         if (idx >= 2) {
@@ -1734,27 +1734,27 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
                     }
                     code::CR | code::LF => {
                         s = utf8_tocstr((*c).prompt_buffer);
-                        if (*s != b'\0' as i8) {
+                        if *s != b'\0' as i8 {
                             status_prompt_add_history(s, (*c).prompt_type as u32);
                         }
-                        if ((*c).prompt_inputcb.unwrap()(
+                        if (*c).prompt_inputcb.unwrap()(
                             c,
                             NonNull::new((*c).prompt_data).unwrap(),
                             s,
                             1,
-                        ) == 0)
+                        ) == 0
                         {
                             status_prompt_clear(c);
                         }
                         free_(s);
                     }
                     code::ESC | code::C_CTRL | code::G_CTRL => {
-                        if ((*c).prompt_inputcb.unwrap()(
+                        if (*c).prompt_inputcb.unwrap()(
                             c,
                             NonNull::new((*c).prompt_data).unwrap(),
                             null_mut(),
                             1,
-                        ) == 0)
+                        ) == 0
                         {
                             status_prompt_clear(c);
                         }
@@ -1820,12 +1820,12 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
                     status_prompt_clear(c);
                 } else {
                     s = utf8_tocstr((*c).prompt_buffer);
-                    if ((*c).prompt_inputcb.unwrap()(
+                    if (*c).prompt_inputcb.unwrap()(
                         c,
                         NonNull::new((*c).prompt_data).unwrap(),
                         s,
                         1,
-                    ) == 0)
+                    ) == 0
                     {
                         status_prompt_clear(c);
                     }
@@ -1892,11 +1892,11 @@ unsafe extern "C" fn status_prompt_add_history(line: *const c_char, type_: u32) 
         let mut movesize: usize = 0;
 
         let oldsize = status_prompt_hsize[type_ as usize];
-        if (oldsize > 0
+        if oldsize > 0
             && libc::strcmp(
                 *status_prompt_hlist[type_ as usize].add(oldsize as usize - 1),
                 line,
-            ) == 0)
+            ) == 0
         {
             new = 0;
         }
@@ -1904,24 +1904,24 @@ unsafe extern "C" fn status_prompt_add_history(line: *const c_char, type_: u32) 
         let mut hlimit =
             options_get_number(global_options, c"prompt-history-limit".as_ptr()) as u32;
         if (hlimit > oldsize) {
-            if (new == 0) {
+            if new == 0 {
                 return;
             }
             newsize = oldsize + new;
         } else {
             newsize = hlimit;
             freecount = oldsize + new - newsize;
-            if (freecount > oldsize) {
+            if freecount > oldsize {
                 freecount = oldsize;
             }
-            if (freecount == 0) {
+            if freecount == 0 {
                 return;
             }
             for i in 0..freecount {
                 free_(*status_prompt_hlist[type_ as usize].add(i as usize));
             }
             movesize = (oldsize as isize - freecount as isize) as usize * size_of::<*mut c_char>();
-            if (movesize > 0) {
+            if movesize > 0 {
                 libc::memmove(
                     status_prompt_hlist[type_ as usize].cast(),
                     status_prompt_hlist[type_ as usize]
@@ -1935,12 +1935,12 @@ unsafe extern "C" fn status_prompt_add_history(line: *const c_char, type_: u32) 
         if (newsize == 0) {
             free_(status_prompt_hlist[type_ as usize]);
             status_prompt_hlist[type_ as usize] = null_mut();
-        } else if (newsize != oldsize) {
+        } else if newsize != oldsize {
             status_prompt_hlist[type_ as usize] =
                 xreallocarray_(status_prompt_hlist[type_ as usize], newsize as usize).as_ptr();
         }
 
-        if (new == 1 && newsize > 0) {
+        if new == 1 && newsize > 0 {
             *status_prompt_hlist[type_ as usize].add(newsize as usize - 1) = xstrdup(line).as_ptr();
         }
         status_prompt_hsize[type_ as usize] = newsize;
@@ -1992,7 +1992,7 @@ unsafe extern "C" fn status_prompt_complete_list(
         *size = 0;
         let mut cmdent: *const *const cmd_entry = (&raw const cmd_table) as *const *const cmd_entry;
         while !(*cmdent).is_null() {
-            if (strncmp((*(*cmdent)).name, s, slen) == 0) {
+            if strncmp((*(*cmdent)).name, s, slen) == 0 {
                 status_prompt_add_list(&raw mut list, size, (*(*cmdent)).name);
             }
             if !(*(*cmdent)).alias.is_null() && strncmp((*(*cmdent)).alias, s, slen) == 0 {
@@ -2012,7 +2012,7 @@ unsafe extern "C" fn status_prompt_complete_list(
                         break 'next;
                     }
                     let valuelen = cp.offset_from_unsigned(value);
-                    if (slen > valuelen || strncmp(value, s, slen) != 0) {
+                    if slen > valuelen || strncmp(value, s, slen) != 0 {
                         break 'next;
                     }
 
@@ -2028,7 +2028,7 @@ unsafe extern "C" fn status_prompt_complete_list(
         }
         let mut oe = (&raw mut options_table) as *mut options_table_entry;
         while !(*oe).name.is_null() {
-            if (strncmp((*oe).name, s, slen) == 0) {
+            if strncmp((*oe).name, s, slen) == 0 {
                 status_prompt_add_list(&raw mut list, size, (*oe).name);
             }
             oe = oe.add(1);
@@ -2147,10 +2147,10 @@ unsafe extern "C" fn status_prompt_complete_list_menu(
         (*spm).flag = flag;
 
         let mut height = (*c).tty.sy - lines - 2;
-        if (height > 10) {
+        if height > 10 {
             height = 10;
         }
-        if (height > size) {
+        if height > size {
             height = size;
         }
         (*spm).start = size - height;
@@ -2223,7 +2223,7 @@ unsafe extern "C" fn status_prompt_complete_window_menu(
         // u_int py;
         let mut size = 0;
 
-        if ((*c).tty.sy - lines < 3) {
+        if (*c).tty.sy - lines < 3 {
             return null_mut();
         }
 
@@ -2275,7 +2275,7 @@ unsafe extern "C" fn status_prompt_complete_window_menu(
             menu_add_item(menu, &raw mut item, null_mut(), c, null_mut());
             free_(tmp);
 
-            if (size == height as usize) {
+            if size == height as usize {
                 break;
             }
         }
@@ -2296,7 +2296,7 @@ unsafe extern "C" fn status_prompt_complete_window_menu(
             free_(spm);
             return tmp;
         }
-        if (height as usize > size) {
+        if height as usize > size {
             height = size as u32;
         }
 
@@ -2469,7 +2469,7 @@ unsafe extern "C" fn status_prompt_complete(
                     *libc::strchr(copy, b':' as i32) = b'\0' as i8;
                     session = session_find(copy);
                     free_(copy);
-                    if (session.is_null()) {
+                    if session.is_null() {
                         break 'found;
                     }
                 }

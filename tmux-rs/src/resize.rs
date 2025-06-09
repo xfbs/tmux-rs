@@ -21,7 +21,7 @@ pub unsafe extern "C" fn resize_window(
 
         /* If the window is zoomed, unzoom. */
         let zoomed = (*w).flags.intersects(window_flag::ZOOMED);
-        if (zoomed) {
+        if zoomed {
             window_unzoom(w, 1);
         }
 
@@ -29,10 +29,10 @@ pub unsafe extern "C" fn resize_window(
         layout_resize(w, sx, sy);
 
         /* Resize the window, it can be no smaller than the layout. */
-        if (sx < (*(*w).layout_root).sx) {
+        if sx < (*(*w).layout_root).sx {
             sx = (*(*w).layout_root).sx;
         }
-        if (sy < (*(*w).layout_root).sy) {
+        if sy < (*(*w).layout_root).sy {
             sy = (*(*w).layout_root).sy;
         }
         window_resize(w, sx, sy, xpixel, ypixel);
@@ -47,7 +47,7 @@ pub unsafe extern "C" fn resize_window(
         );
 
         /* Restore the window zoom state. */
-        if (zoomed) {
+        if zoomed {
             window_zoom((*w).active);
         }
 
@@ -62,7 +62,7 @@ pub unsafe extern "C" fn resize_window(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ignore_client_size(c: *mut client) -> i32 {
     unsafe {
-        if ((*c).session.is_null()) {
+        if (*c).session.is_null() {
             return 1;
         }
         if (*c).flags.intersects(CLIENT_NOSIZEFLAGS) {
@@ -74,13 +74,13 @@ pub unsafe extern "C" fn ignore_client_size(c: *mut client) -> i32 {
              * that aren't flagged.
              */
             for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
-                if ((*loop_).session.is_null()) {
+                if (*loop_).session.is_null() {
                     continue;
                 }
                 if (*loop_).flags.intersects(CLIENT_NOSIZEFLAGS) {
                     continue;
                 }
-                if (!(*loop_).flags.intersects(client_flag::IGNORESIZE)) {
+                if !(*loop_).flags.intersects(client_flag::IGNORESIZE) {
                     return 1;
                 }
             }
@@ -100,11 +100,11 @@ pub unsafe extern "C" fn clients_with_window(w: *mut window) -> u32 {
     let mut n = 0u32;
     unsafe {
         for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
-            if (ignore_client_size(loop_) != 0 || session_has((*loop_).session, w) == 0) {
+            if ignore_client_size(loop_) != 0 || session_has((*loop_).session, w) == 0 {
                 continue;
             }
             n += 1;
-            if (n > 1) {
+            if n > 1 {
                 break;
             }
         }
@@ -157,12 +157,12 @@ pub unsafe extern "C" fn clients_calculate_size(
              * For latest, count the number of clients with this window. We only
              * care if there is more than one.
              */
-            if (type_ == WINDOW_SIZE_LATEST && !w.is_null()) {
+            if type_ == WINDOW_SIZE_LATEST && !w.is_null() {
                 n = clients_with_window(w);
             }
 
             /* Skip setting the size if manual */
-            if (type_ == WINDOW_SIZE_MANUAL) {
+            if type_ == WINDOW_SIZE_MANUAL {
                 break 'skip;
             }
 
@@ -211,17 +211,17 @@ pub unsafe extern "C" fn clients_calculate_size(
                  * new size.
                  */
                 if (type_ == WINDOW_SIZE_LARGEST) {
-                    if (cx > *sx) {
+                    if cx > *sx {
                         *sx = cx;
                     }
-                    if (cy > *sy) {
+                    if cy > *sy {
                         *sy = cy;
                     }
                 } else {
-                    if (cx < *sx) {
+                    if cx < *sx {
                         *sx = cx;
                     }
-                    if (cy < *sy) {
+                    if cy < *sy {
                         *sy = cy;
                     }
                 }
@@ -250,21 +250,21 @@ pub unsafe extern "C" fn clients_calculate_size(
          * Do not allow any size to be larger than the per-client window size
          * if one exists.
          */
-        if (w.is_null()) {
+        if w.is_null() {
             for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
-                if (loop_ != c && ignore_client_size(loop_) != 0) {
+                if loop_ != c && ignore_client_size(loop_) != 0 {
                     continue;
                 }
-                if (loop_ != c && skip_client.unwrap()(loop_, type_, current, s, w) != 0) {
+                if loop_ != c && skip_client.unwrap()(loop_, type_, current, s, w) != 0 {
                     continue;
                 }
 
                 /* Look up per-window size if any. */
-                if (!(*loop_).flags.intersects(client_flag::WINDOWSIZECHANGED)) {
+                if !(*loop_).flags.intersects(client_flag::WINDOWSIZECHANGED) {
                     continue;
                 }
                 cw = server_client_get_client_window(loop_, (*w).id);
-                if (cw.is_null()) {
+                if cw.is_null() {
                     continue;
                 }
 
@@ -277,10 +277,10 @@ pub unsafe extern "C" fn clients_calculate_size(
                     (*cw).sx,
                     (*cw).sy,
                 );
-                if ((*cw).sx != 0 && *sx > (*cw).sx) {
+                if (*cw).sx != 0 && *sx > (*cw).sx {
                     *sx = (*cw).sx;
                 }
-                if ((*cw).sy != 0 && *sy > (*cw).sy) {
+                if (*cw).sy != 0 && *sy > (*cw).sy {
                     *sy = (*cw).sy;
                 }
             }
@@ -323,13 +323,13 @@ pub unsafe extern "C" fn default_window_size_skip_client(
          * include clients where the session contains the window or where the
          * session is the given session.
          */
-        if (type_ == WINDOW_SIZE_LATEST) {
+        if type_ == WINDOW_SIZE_LATEST {
             return 0;
         }
-        if (!w.is_null() && session_has((*loop_).session, w) == 0) {
+        if !w.is_null() && session_has((*loop_).session, w) == 0 {
             return 1;
         }
-        if (w.is_null() && (*loop_).session != s) {
+        if w.is_null() && (*loop_).session != s {
             return 1;
         }
     }
@@ -353,7 +353,7 @@ pub unsafe extern "C" fn default_window_size(
             // const char *value;
 
             /* Get type_ if not provided. */
-            if (type_ == -1) {
+            if type_ == -1 {
                 type_ = options_get_number(global_w_options, c"window-size".as_ptr()) as i32;
             }
 
@@ -374,7 +374,7 @@ pub unsafe extern "C" fn default_window_size(
              * Ignore the given client if it is a control client - the creating
              * client should only affect the size if it is not a control client.
              */
-            if (!c.is_null() && ((*c).flags.intersects(client_flag::CONTROL))) {
+            if !c.is_null() && ((*c).flags.intersects(client_flag::CONTROL)) {
                 c = null_mut();
             }
 
@@ -452,7 +452,7 @@ pub unsafe extern "C" fn recalculate_size(w: *mut window, now: i32) {
          * Do not attempt to resize windows which have no pane, they must be on
          * the way to destruction.
          */
-        if ((*w).active.is_null()) {
+        if (*w).active.is_null() {
             return;
         }
         log_debug!("{}: @{} is {}x{}", __func__, (*w).id, (*w).sx, (*w).sy);
@@ -484,11 +484,11 @@ pub unsafe extern "C" fn recalculate_size(w: *mut window, now: i32) {
          * got a resize scheduled, then use the new size; otherwise the old.
          */
         if ((*w).flags.intersects(window_flag::RESIZE)) {
-            if (now == 0 && changed != 0 && (*w).new_sx == sx && (*w).new_sy == sy) {
+            if now == 0 && changed != 0 && (*w).new_sx == sx && (*w).new_sy == sy {
                 changed = 0;
             }
         } else {
-            if (now == 0 && changed != 0 && (*w).sx == sx && (*w).sy == sy) {
+            if now == 0 && changed != 0 && (*w).sx == sx && (*w).sy == sy {
                 changed = 0;
             }
         }
@@ -552,10 +552,10 @@ pub unsafe extern "C" fn recalculate_sizes_now(now: i32) {
          */
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             let s = (*c).session;
-            if (!s.is_null() && !((*c).flags.intersects(CLIENT_UNATTACHEDFLAGS))) {
+            if !s.is_null() && !((*c).flags.intersects(CLIENT_UNATTACHEDFLAGS)) {
                 (*s).attached += 1;
             }
-            if (ignore_client_size(c) != 0) {
+            if ignore_client_size(c) != 0 {
                 continue;
             }
             if ((*c).tty.sy <= (*s).statuslines || ((*c).flags.intersects(client_flag::CONTROL))) {

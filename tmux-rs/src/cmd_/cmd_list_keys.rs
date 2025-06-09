@@ -35,7 +35,7 @@ unsafe extern "C" fn cmd_list_keys_get_width(tablename: *const c_char, only: key
         let mut keywidth = 0u32;
 
         let table = key_bindings_get_table(tablename, 0);
-        if (table.is_null()) {
+        if table.is_null() {
             return 0;
         }
         let mut bd = key_bindings_first(table);
@@ -49,7 +49,7 @@ unsafe extern "C" fn cmd_list_keys_get_width(tablename: *const c_char, only: key
                 continue;
             }
             let width = utf8_cstrwidth(key_string_lookup_key((*bd).key, 0));
-            if (width > keywidth) {
+            if width > keywidth {
                 keywidth = width;
             }
 
@@ -73,7 +73,7 @@ unsafe extern "C" fn cmd_list_keys_print_notes(
         let mut found = 0;
 
         let table = key_bindings_get_table(tablename, 0);
-        if (table.is_null()) {
+        if table.is_null() {
             return 0;
         }
         let mut bd = key_bindings_first(table);
@@ -103,7 +103,7 @@ unsafe extern "C" fn cmd_list_keys_print_notes(
             free_(tmp);
             free_(note);
 
-            if (args_has_(args, '1')) {
+            if args_has_(args, '1') {
                 break;
             }
             bd = key_bindings_next(table, bd);
@@ -149,7 +149,7 @@ unsafe extern "C" fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -
         let mut found = 0;
         let mut only: key_code = KEYC_UNKNOWN;
 
-        if (cmd_get_entry(self_) == &raw mut cmd_list_commands_entry) {
+        if cmd_get_entry(self_) == &raw mut cmd_list_commands_entry {
             return cmd_list_keys_commands(self_, item);
         }
 
@@ -179,7 +179,7 @@ unsafe extern "C" fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -
                         width = cmd_list_keys_get_width(c"prefix".as_ptr(), only) as _;
                         if (width == 0) {
                             prefix = KEYC_NONE;
-                        } else if (width > keywidth) {
+                        } else if width > keywidth {
                             keywidth = width;
                         }
                     }
@@ -193,15 +193,15 @@ unsafe extern "C" fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -
                         only,
                         empty,
                     );
-                    if (prefix != KEYC_NONE) {
-                        if (cmd_list_keys_print_notes(
+                    if prefix != KEYC_NONE {
+                        if cmd_list_keys_print_notes(
                             item,
                             args,
                             c"prefix".as_ptr(),
                             keywidth as _,
                             only,
                             start,
-                        ) != 0)
+                        ) != 0
                         {
                             found = 1;
                         }
@@ -244,16 +244,16 @@ unsafe extern "C" fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -
                     }
                     let key = args_escape(key_string_lookup_key((*bd).key, 0));
 
-                    if ((*bd).flags & KEY_BINDING_REPEAT != 0) {
+                    if (*bd).flags & KEY_BINDING_REPEAT != 0 {
                         repeat = 1;
                     }
 
                     width = utf8_cstrwidth((*table).name) as _;
-                    if (width > tablewidth) {
+                    if width > tablewidth {
                         tablewidth = width;
                     }
                     width = utf8_cstrwidth(key) as _;
-                    if (width > keywidth) {
+                    if width > keywidth {
                         keywidth = width;
                     }
 
@@ -328,7 +328,7 @@ unsafe extern "C" fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -
                     }
                     free_(key);
 
-                    if (args_has_(args, '1')) {
+                    if args_has_(args, '1') {
                         break;
                     }
                     bd = key_bindings_next(table, bd);
@@ -358,7 +358,7 @@ unsafe extern "C" fn cmd_list_keys_commands(self_: *mut cmd, item: *mut cmdq_ite
         //char *line;
 
         let mut template = args_get_(args, 'F');
-        if (template.is_null()) {
+        if template.is_null() {
             template = concat!(
                 "#{command_list_name}",
                 "#{?command_list_alias, (#{command_list_alias}),} ",
@@ -408,7 +408,7 @@ unsafe extern "C" fn cmd_list_keys_commands(self_: *mut cmd, item: *mut cmdq_ite
             format_add(ft, c"command_list_usage".as_ptr(), c"%s".as_ptr(), s);
 
             let line = format_expand(ft, template);
-            if (*line != b'\0' as _) {
+            if *line != b'\0' as _ {
                 cmdq_print(item, c"%s".as_ptr(), line);
             }
             free_(line);

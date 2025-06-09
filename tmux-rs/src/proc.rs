@@ -80,7 +80,7 @@ pub unsafe extern "C" fn proc_event_cb(_fd: i32, events: i16, arg: *mut c_void) 
                     ((*peer).dispatchcb.unwrap())(null_mut(), (*peer).arg);
                     return;
                 }
-                if (n == 0) {
+                if n == 0 {
                     break;
                 }
                 let msgtype = msgtype::try_from((*imsg).hdr.type_);
@@ -88,7 +88,7 @@ pub unsafe extern "C" fn proc_event_cb(_fd: i32, events: i16, arg: *mut c_void) 
 
                 if (peer_check_version(peer, imsg) != 0) {
                     let fd = imsg_get_fd(imsg);
-                    if (fd != -1) {
+                    if fd != -1 {
                         close(fd);
                     }
                     imsg_free(imsg);
@@ -100,7 +100,7 @@ pub unsafe extern "C" fn proc_event_cb(_fd: i32, events: i16, arg: *mut c_void) 
             }
         }
 
-        if (events & EV_WRITE != 0) {
+        if events & EV_WRITE != 0 {
             if msgbuf_write((&raw mut (*peer).ibuf.w).cast()) <= 0 && errno!() != EAGAIN {
                 ((*peer).dispatchcb.unwrap())(null_mut(), (*peer).arg);
                 return;
@@ -148,7 +148,7 @@ pub unsafe extern "C" fn proc_update_event(peer: *mut tmuxpeer) {
         event_del(&raw mut (*peer).event);
 
         let mut events: i16 = EV_READ;
-        if ((*peer).ibuf.w.queued > 0) {
+        if (*peer).ibuf.w.queued > 0 {
             events |= EV_WRITE;
         }
         event_set(
@@ -175,13 +175,13 @@ pub unsafe extern "C" fn proc_send(
         let ibuf = &raw mut (*peer).ibuf;
         let vp = buf;
 
-        if ((*peer).flags & PEER_BAD != 0) {
+        if (*peer).flags & PEER_BAD != 0 {
             return -1;
         }
         // log_debug_!("sending message {type_:?} to peer {peer:p} ({len} bytes)");
 
         let retval = imsg_compose(ibuf, type_ as u32, PROTOCOL_VERSION as u32, -1, fd, vp, len);
-        if (retval != 1) {
+        if retval != 1 {
             return -1;
         }
         proc_update_event(peer);
@@ -488,7 +488,7 @@ pub unsafe extern "C" fn proc_fork_and_daemon(fd: *mut i32) -> pid_t {
             0 => {
                 close(pair[0]);
                 *fd = pair[1];
-                if (daemon(1, 0) != 0) {
+                if daemon(1, 0) != 0 {
                     fatal(c"daemon failed".as_ptr());
                 }
                 0

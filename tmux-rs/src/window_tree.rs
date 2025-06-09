@@ -615,8 +615,8 @@ unsafe extern "C" fn window_tree_build(
                     !sg.is_null()
                 })
             {
-                if ((sg == current && s != (*data).fs.s)
-                    || (sg != current && s != tailq_first(&raw mut (*sg).sessions)))
+                if (sg == current && s != (*data).fs.s)
+                    || (sg != current && s != tailq_first(&raw mut (*sg).sessions))
                 {
                     continue;
                 }
@@ -724,7 +724,7 @@ unsafe extern "C" fn window_tree_draw_session(
 
         if (sx / total < 24) {
             visible = sx / 24;
-            if (visible == 0) {
+            if visible == 0 {
                 visible = 1;
             }
         } else {
@@ -733,7 +733,7 @@ unsafe extern "C" fn window_tree_draw_session(
 
         let mut current: u32 = 0;
         for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
-            if (wl == (*s).curw) {
+            if wl == (*s).curw {
                 break;
             }
             current += 1;
@@ -753,7 +753,7 @@ unsafe extern "C" fn window_tree_draw_session(
         if (*data).offset < -(start as i32) {
             (*data).offset = -(start as i32);
         }
-        if ((*data).offset > (total - end) as i32) {
+        if (*data).offset > (total - end) as i32 {
             (*data).offset = (total - end) as i32;
         }
         start += (*data).offset as u32;
@@ -775,7 +775,7 @@ unsafe extern "C" fn window_tree_draw_session(
             each = sx / visible;
             remaining = sx - (visible * each);
         }
-        if (each == 0) {
+        if each == 0 {
             return;
         }
 
@@ -905,7 +905,7 @@ unsafe extern "C" fn window_tree_draw_window(
         if (*data).offset < -(start as i32) {
             (*data).offset = -(start as i32);
         }
-        if ((*data).offset > (total - end) as i32) {
+        if (*data).offset > (total - end) as i32 {
             (*data).offset = (total - end) as i32;
         }
         start += (*data).offset as u32;
@@ -1522,10 +1522,10 @@ unsafe extern "C" fn window_tree_mouse(
             return KEYC_NONE;
         }
 
-        if ((*data).left != -1 && x <= (*data).left as u32) {
+        if (*data).left != -1 && x <= (*data).left as u32 {
             return '<' as key_code;
         }
-        if ((*data).right != -1 && x >= (*data).right as u32) {
+        if (*data).right != -1 && x >= (*data).right as u32 {
             return '>' as key_code;
         }
 
@@ -1538,7 +1538,7 @@ unsafe extern "C" fn window_tree_mouse(
             x = 0;
         } else {
             x /= (*data).each;
-            if ((*data).start + x >= (*data).end) {
+            if (*data).start + x >= (*data).end {
                 x = (*data).end - 1;
             }
         }
@@ -1552,7 +1552,7 @@ unsafe extern "C" fn window_tree_mouse(
 
             for (loop_, wl_) in rb_foreach(&raw mut (*s.as_ptr()).windows).enumerate() {
                 wl = Some(wl_);
-                if (loop_ as u32 == (*data).start + x) {
+                if loop_ as u32 == (*data).start + x {
                     break;
                 }
             }
@@ -1697,7 +1697,7 @@ unsafe extern "C" fn window_tree_key(
                 }
                 b'X' => {
                     tagged = mode_tree_count_tagged((*data).data);
-                    if (tagged == 0) {
+                    if tagged == 0 {
                         break;
                     }
                     xasprintf(&raw mut prompt, c"Kill %u tagged? ".as_ptr(), tagged);

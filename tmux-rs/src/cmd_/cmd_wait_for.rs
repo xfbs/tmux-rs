@@ -76,10 +76,10 @@ pub unsafe extern "C" fn cmd_wait_for_add(name: *const c_char) -> *mut wait_chan
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_wait_for_remove(wc: *mut wait_channel) {
     unsafe {
-        if ((*wc).locked != 0) {
+        if (*wc).locked != 0 {
             return;
         }
-        if (!tailq_empty(&raw mut (*wc).waiters) || (*wc).woken == 0) {
+        if !tailq_empty(&raw mut (*wc).waiters) || (*wc).woken == 0 {
             return;
         }
 
@@ -103,13 +103,13 @@ pub unsafe extern "C" fn cmd_wait_for_exec(self_: *mut cmd, item: *mut cmdq_item
         find.name = name as *mut c_char; // TODO casting away const
         let mut wc = rb_find(&raw mut wait_channels, &raw mut find);
 
-        if (args_has_(args, 'S')) {
+        if args_has_(args, 'S') {
             return cmd_wait_for_signal(item, name, wc);
         }
-        if (args_has_(args, 'L')) {
+        if args_has_(args, 'L') {
             return cmd_wait_for_lock(item, name, wc);
         }
-        if (args_has_(args, 'U')) {
+        if args_has_(args, 'U') {
             return cmd_wait_for_unlock(item, name, wc);
         }
 
@@ -124,7 +124,7 @@ pub unsafe extern "C" fn cmd_wait_for_signal(
     mut wc: *mut wait_channel,
 ) -> cmd_retval {
     unsafe {
-        if (wc.is_null()) {
+        if wc.is_null() {
             wc = cmd_wait_for_add(name);
         }
 
@@ -162,7 +162,7 @@ pub unsafe extern "C" fn cmd_wait_for_wait(
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
-        if (wc.is_null()) {
+        if wc.is_null() {
             wc = cmd_wait_for_add(name);
         }
 
@@ -192,7 +192,7 @@ pub unsafe extern "C" fn cmd_wait_for_lock(
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
-        if (wc.is_null()) {
+        if wc.is_null() {
             wc = cmd_wait_for_add(name);
         }
 

@@ -70,7 +70,7 @@ pub unsafe extern "C" fn session_find_by_id_str(s: *const c_char) -> *mut sessio
 
         let mut errstr: *const c_char = null();
         let id = strtonum(s.add(1), 0, u32::MAX as i64, &raw mut errstr) as u32;
-        if (!errstr.is_null()) {
+        if !errstr.is_null() {
             return null_mut();
         }
         transmute_ptr(session_find_by_id(id))
@@ -177,7 +177,7 @@ pub unsafe extern "C" fn session_remove_ref(s: *mut session, from: *const c_char
             (*s).references
         );
 
-        if ((*s).references == 0) {
+        if (*s).references == 0 {
             event_once(-1, EV_TIMEOUT, Some(session_free), s.cast(), null_mut());
         }
     }
@@ -211,13 +211,13 @@ pub unsafe extern "C" fn session_destroy(s: *mut session, notify: i32, from: *co
     unsafe {
         log_debug!("session {} destroyed ({})", _s((*s).name), _s(from));
 
-        if ((*s).curw.is_null()) {
+        if (*s).curw.is_null() {
             return;
         }
         (*s).curw = null_mut();
 
         rb_remove(&raw mut sessions, s);
-        if (notify != 0) {
+        if notify != 0 {
             notify_session(c"session-closed".as_ptr(), s);
         }
 
@@ -249,7 +249,7 @@ pub unsafe extern "C" fn session_destroy(s: *mut session, notify: i32, from: *co
 pub unsafe extern "C" fn session_check_name(name: *const c_char) -> *mut c_char {
     unsafe {
         let mut new_name = null_mut();
-        if (*name == b'\0' as c_char) {
+        if *name == b'\0' as c_char {
             return null_mut();
         }
         let copy = xstrdup(name).as_ptr();
@@ -276,7 +276,7 @@ pub unsafe extern "C" fn session_lock_timer(fd: i32, events: i16, arg: *mut c_vo
     unsafe {
         let s = arg as *mut session;
 
-        if ((*s).attached == 0) {
+        if (*s).attached == 0 {
             return;
         }
 
@@ -325,7 +325,7 @@ pub unsafe extern "C" fn session_update_activity(s: *mut session, from: *mut tim
         if ((*s).attached != 0) {
             timerclear(tv);
             (*tv).tv_sec = options_get_number((*s).options, c"lock-after-time".as_ptr());
-            if ((*tv).tv_sec != 0) {
+            if (*tv).tv_sec != 0 {
                 evtimer_add(&raw mut (*s).lock_timer, tv);
             }
         }
@@ -336,15 +336,15 @@ pub unsafe extern "C" fn session_update_activity(s: *mut session, from: *mut tim
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_next_session(s: *mut session) -> *mut session {
     unsafe {
-        if (rb_empty(&raw mut sessions) || !session_alive(s)) {
+        if rb_empty(&raw mut sessions) || !session_alive(s) {
             return null_mut();
         }
 
         let mut s2 = rb_next(s);
-        if (s2.is_null()) {
+        if s2.is_null() {
             s2 = rb_min(&raw mut sessions);
         }
-        if (s2 == s) {
+        if s2 == s {
             return null_mut();
         }
 
@@ -356,15 +356,15 @@ pub unsafe extern "C" fn session_next_session(s: *mut session) -> *mut session {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_previous_session(s: *mut session) -> *mut session {
     unsafe {
-        if (rb_empty(&raw mut sessions) || !session_alive(s)) {
+        if rb_empty(&raw mut sessions) || !session_alive(s) {
             return null_mut();
         }
 
         let mut s2 = rb_prev(s);
-        if (s2.is_null()) {
+        if s2.is_null() {
             s2 = rb_max(&raw mut sessions);
         }
-        if (s2 == s) {
+        if s2 == s {
             return null_mut();
         }
         s2
@@ -399,7 +399,7 @@ pub unsafe extern "C" fn session_attach(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_detach(s: *mut session, wl: *mut winlink) -> i32 {
     unsafe {
-        if ((*s).curw == wl && session_last(s) != 0 && session_previous(s, 0) != 0) {
+        if (*s).curw == wl && session_last(s) != 0 && session_previous(s, 0) != 0 {
             session_next(s, 0);
         }
 
@@ -410,7 +410,7 @@ pub unsafe extern "C" fn session_detach(s: *mut session, wl: *mut winlink) -> i3
 
         session_group_synchronize_from(s);
 
-        if (rb_empty(&raw mut (*s).windows)) {
+        if rb_empty(&raw mut (*s).windows) {
             return 1;
         }
         0
@@ -445,7 +445,7 @@ pub unsafe extern "C" fn session_is_linked(s: *mut session, w: *mut window) -> i
 pub unsafe extern "C" fn session_next_alert(mut wl: *mut winlink) -> *mut winlink {
     unsafe {
         while (!wl.is_null()) {
-            if ((*wl).flags & WINLINK_ALERTFLAGS != 0) {
+            if (*wl).flags & WINLINK_ALERTFLAGS != 0 {
                 break;
             }
             wl = winlink_next(wl);
@@ -459,21 +459,21 @@ pub unsafe extern "C" fn session_next_alert(mut wl: *mut winlink) -> *mut winlin
 pub unsafe extern "C" fn session_next(s: *mut session, alert: i32) -> i32 {
     // struct winlink *wl;
     unsafe {
-        if ((*s).curw.is_null()) {
+        if (*s).curw.is_null() {
             return -1;
         }
 
         let mut wl = winlink_next((*s).curw);
-        if (alert != 0) {
+        if alert != 0 {
             wl = session_next_alert(wl);
         }
         if (wl.is_null()) {
             wl = rb_min(&raw mut (*s).windows);
-            if (alert != 0
+            if alert != 0
                 && ({
                     (wl = session_next_alert(wl));
                     wl.is_null()
-                }))
+                })
             {
                 return -1;
             }
@@ -486,7 +486,7 @@ pub unsafe extern "C" fn session_next(s: *mut session, alert: i32) -> i32 {
 pub unsafe extern "C" fn session_previous_alert(mut wl: *mut winlink) -> *mut winlink {
     unsafe {
         while (!wl.is_null()) {
-            if ((*wl).flags & WINLINK_ALERTFLAGS != 0) {
+            if (*wl).flags & WINLINK_ALERTFLAGS != 0 {
                 break;
             }
             wl = winlink_previous(wl);
@@ -499,21 +499,21 @@ pub unsafe extern "C" fn session_previous_alert(mut wl: *mut winlink) -> *mut wi
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_previous(s: *mut session, alert: i32) -> i32 {
     unsafe {
-        if ((*s).curw.is_null()) {
+        if (*s).curw.is_null() {
             return -1;
         }
 
         let mut wl = winlink_previous((*s).curw);
-        if (alert != 0) {
+        if alert != 0 {
             wl = session_previous_alert(wl);
         }
         if (wl.is_null()) {
             wl = rb_max(&raw mut (*s).windows);
-            if (alert != 0
+            if alert != 0
                 && ({
                     (wl = session_previous_alert(wl));
                     wl.is_null()
-                }))
+                })
             {
                 return -1;
             }
@@ -536,10 +536,10 @@ pub unsafe extern "C" fn session_select(s: *mut session, idx: i32) -> i32 {
 pub unsafe extern "C" fn session_last(s: *mut session) -> i32 {
     unsafe {
         let mut wl = tailq_first(&raw mut (*s).lastw);
-        if (wl.is_null()) {
+        if wl.is_null() {
             return -1;
         }
-        if (wl == (*s).curw) {
+        if wl == (*s).curw {
             return 1;
         }
 
@@ -553,10 +553,10 @@ pub unsafe extern "C" fn session_set_current(s: *mut session, wl: *mut winlink) 
     unsafe {
         let mut old: *mut winlink = (*s).curw;
 
-        if (wl.is_null()) {
+        if wl.is_null() {
             return -1;
         }
-        if (wl == (*s).curw) {
+        if wl == (*s).curw {
             return 1;
         }
 
@@ -564,7 +564,7 @@ pub unsafe extern "C" fn session_set_current(s: *mut session, wl: *mut winlink) 
         winlink_stack_push(&raw mut (*s).lastw, (*s).curw);
         (*s).curw = wl;
         if (options_get_number(global_options, c"focus-events".as_ptr()) != 0) {
-            if (!old.is_null()) {
+            if !old.is_null() {
                 window_update_focus((*old).window);
             }
             window_update_focus((*wl).window);
@@ -583,7 +583,7 @@ pub unsafe extern "C" fn session_group_contains(target: *mut session) -> *mut se
     unsafe {
         for sg in rb_foreach(&raw mut session_groups) {
             for s in tailq_foreach(&raw mut (*sg.as_ptr()).sessions) {
-                if (s.as_ptr() == target) {
+                if s.as_ptr() == target {
                     return sg.as_ptr();
                 }
             }
@@ -610,7 +610,7 @@ pub unsafe extern "C" fn session_group_find(name: *const c_char) -> *mut session
 pub unsafe extern "C" fn session_group_new(name: *const c_char) -> *mut session_group {
     unsafe {
         let mut sg = session_group_find(name);
-        if (!sg.is_null()) {
+        if !sg.is_null() {
             return sg;
         }
 
@@ -627,7 +627,7 @@ pub unsafe extern "C" fn session_group_new(name: *const c_char) -> *mut session_
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_group_add(sg: *mut session_group, s: *mut session) {
     unsafe {
-        if (session_group_contains(s).is_null()) {
+        if session_group_contains(s).is_null() {
             tailq_insert_tail(&raw mut (*sg).sessions, s);
         }
     }
@@ -639,7 +639,7 @@ pub unsafe extern "C" fn session_group_remove(s: *mut session) {
     unsafe {
         let mut sg = session_group_contains(s);
 
-        if (sg.is_null()) {
+        if sg.is_null() {
             return;
         }
         tailq_remove(&raw mut (*sg).sessions, s);
@@ -679,11 +679,11 @@ pub unsafe extern "C" fn session_group_synchronize_to(s: *mut session) {
         let mut target = null_mut();
         for target_ in tailq_foreach(&raw mut (*sg).sessions).map(|e| e.as_ptr()) {
             target = target_;
-            if (target != s) {
+            if target != s {
                 break;
             }
         }
-        if (!target.is_null()) {
+        if !target.is_null() {
             session_group_synchronize1(target, s);
         }
     }
@@ -699,7 +699,7 @@ pub unsafe extern "C" fn session_group_synchronize_from(target: *mut session) {
         }
 
         for s in tailq_foreach(&raw mut (*sg).sessions).map(|e| e.as_ptr()) {
-            if (s != target) {
+            if s != target {
                 session_group_synchronize1(target, s);
             }
         }
@@ -719,15 +719,15 @@ pub unsafe extern "C" fn session_group_synchronize1(target: *mut session, s: *mu
     unsafe {
         /* Don't do anything if the session is empty (it'll be destroyed). */
         let mut ww: *mut winlinks = &raw mut (*target).windows;
-        if (rb_empty(ww)) {
+        if rb_empty(ww) {
             return;
         }
 
         /* If the current window has vanished, move to the next now. */
-        if (!(*s).curw.is_null()
+        if !(*s).curw.is_null()
             && winlink_find_by_index(ww, (*(*s).curw).idx).is_null()
             && session_last(s) != 0
-            && session_previous(s, 0) != 0)
+            && session_previous(s, 0) != 0
         {
             session_next(s, 0);
         }
@@ -768,7 +768,7 @@ pub unsafe extern "C" fn session_group_synchronize1(target: *mut session, s: *mu
         while !rb_empty(old_windows.as_mut_ptr()) {
             let wl = rb_root(old_windows.as_mut_ptr());
             let wl2 = winlink_find_by_window_id(&raw mut (*s).windows, (*(*wl).window).id);
-            if (wl2.is_null()) {
+            if wl2.is_null() {
                 notify_session_window(c"window-unlinked".as_ptr(), s, (*wl).window);
             }
             winlink_remove(old_windows.as_mut_ptr(), wl);
@@ -803,10 +803,10 @@ pub unsafe extern "C" fn session_renumber_windows(s: *mut session) {
             winlink_set_window(wl_new, (*wl).window);
             (*wl_new).flags |= (*wl).flags & WINLINK_ALERTFLAGS;
 
-            if (wl == marked_pane.wl) {
+            if wl == marked_pane.wl {
                 marked_idx = (*wl_new).idx;
             }
-            if (wl == (*s).curw) {
+            if wl == (*s).curw {
                 new_curw_idx = (*wl_new).idx;
             }
 
@@ -828,7 +828,7 @@ pub unsafe extern "C" fn session_renumber_windows(s: *mut session) {
         /* Set the current window. */
         if (marked_idx != -1) {
             marked_pane.wl = winlink_find_by_index(&raw mut (*s).windows, marked_idx);
-            if (marked_pane.wl.is_null()) {
+            if marked_pane.wl.is_null() {
                 server_clear_marked();
             }
         }

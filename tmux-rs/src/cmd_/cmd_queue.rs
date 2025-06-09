@@ -274,7 +274,7 @@ pub unsafe extern "C" fn cmdq_add_format(
     unsafe {
         xvasprintf(&raw mut value, fmt, args.as_va_list());
 
-        if ((*state).formats.is_null()) {
+        if (*state).formats.is_null() {
             (*state).formats =
                 format_create(null_mut(), null_mut(), FORMAT_NONE, format_flags::empty());
         }
@@ -287,7 +287,7 @@ pub unsafe extern "C" fn cmdq_add_format(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmdq_add_formats(state: *mut cmdq_state, ft: *mut format_tree) {
     unsafe {
-        if ((*state).formats.is_null()) {
+        if (*state).formats.is_null() {
             (*state).formats =
                 format_create(null_mut(), null_mut(), FORMAT_NONE, format_flags::empty());
         }
@@ -354,7 +354,7 @@ pub unsafe extern "C" fn cmdq_insert_after(
             (*item).next = (*after).next;
             (*after).next = item;
 
-            if (!c.is_null()) {
+            if !c.is_null() {
                 (*c).references += 1;
             }
             (*item).client = c;
@@ -506,13 +506,13 @@ pub unsafe extern "C" fn cmdq_remove(item: *mut cmdq_item) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmdq_remove_group(item: *mut cmdq_item) {
     unsafe {
-        if ((*item).group == 0) {
+        if (*item).group == 0 {
             return;
         }
         let mut this = tailq_next(item);
         while !this.is_null() {
             let next = tailq_next(this);
-            if ((*this).group == (*item).group) {
+            if (*this).group == (*item).group {
                 cmdq_remove(this);
             }
             this = next;
@@ -671,7 +671,7 @@ pub unsafe extern "C" fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
             flags = !!((*state).flags & CMDQ_STATE_CONTROL);
             cmdq_guard(item, c"begin".as_ptr(), flags);
 
-            if ((*item).client.is_null()) {
+            if (*item).client.is_null() {
                 (*item).client = cmd_find_client(item, null_mut(), 1);
             }
 
@@ -696,18 +696,18 @@ pub unsafe extern "C" fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
             (*item).target_client = tc;
 
             retval = cmdq_find_flag(item, &raw mut (*item).source, &raw mut (*entry).source);
-            if (retval == cmd_retval::CMD_RETURN_ERROR) {
+            if retval == cmd_retval::CMD_RETURN_ERROR {
                 break 'out;
             }
             retval = cmdq_find_flag(item, &raw mut (*item).target, &raw mut (*entry).target);
-            if (retval == cmd_retval::CMD_RETURN_ERROR) {
+            if retval == cmd_retval::CMD_RETURN_ERROR {
                 break 'out;
             }
 
             // log_debug_!("entry_name: {}", PercentS((*entry).name));
 
             retval = ((*entry).exec.unwrap())(cmd, item);
-            if (retval == cmd_retval::CMD_RETURN_ERROR) {
+            if retval == cmd_retval::CMD_RETURN_ERROR {
                 break 'out;
             }
 
@@ -732,7 +732,7 @@ pub unsafe extern "C" fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
                 fsp = &raw mut (*item).target;
             } else if cmd_find_valid_state(&raw mut (*(*item).state).current).as_bool() {
                 fsp = &raw mut (*(*item).state).current;
-            } else if (cmd_find_from_client(&raw mut fs, (*item).client, 0) == 0) {
+            } else if cmd_find_from_client(&raw mut fs, (*item).client, 0) == 0 {
                 fsp = &raw mut fs;
             }
             cmdq_insert_hook(
@@ -833,7 +833,7 @@ pub unsafe extern "C" fn cmdq_next(c: *mut client) -> u32 {
                     (*item).flags
                 );
 
-                if ((*item).flags & CMDQ_WAITING != 0) {
+                if (*item).flags & CMDQ_WAITING != 0 {
                     break 'waiting;
                 }
 
@@ -846,7 +846,7 @@ pub unsafe extern "C" fn cmdq_next(c: *mut client) -> u32 {
                         cmdq_type::CMDQ_COMMAND => {
                             retval = cmdq_fire_command(item);
 
-                            if (retval == cmd_retval::CMD_RETURN_ERROR) {
+                            if retval == cmd_retval::CMD_RETURN_ERROR {
                                 cmdq_remove_group(item);
                             }
                         }
@@ -913,7 +913,7 @@ pub unsafe extern "C" fn cmdq_print_data(item: *mut cmdq_item, parse: i32, evb: 
 pub unsafe extern "C" fn cmdq_print(item: *mut cmdq_item, fmt: *const c_char, mut ap: ...) {
     unsafe {
         let evb = evbuffer_new();
-        if (evb.is_null()) {
+        if evb.is_null() {
             fatalx(c"out of memory");
         }
 

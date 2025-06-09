@@ -26,7 +26,7 @@ pub unsafe extern "C" fn server_status_client(c: *mut client) {
 pub unsafe extern "C" fn server_redraw_session(s: *mut session) {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
-            if ((*c).session == s) {
+            if (*c).session == s {
                 server_redraw_client(c);
             }
         }
@@ -51,7 +51,7 @@ pub unsafe extern "C" fn server_redraw_session_group(s: *mut session) {
 pub unsafe extern "C" fn server_status_session(s: *mut session) {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
-            if ((*c).session == s) {
+            if (*c).session == s {
                 server_status_client(c);
             }
         }
@@ -76,7 +76,7 @@ pub unsafe extern "C" fn server_status_session_group(s: *mut session) {
 pub unsafe extern "C" fn server_redraw_window(w: *mut window) {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
-            if (!(*c).session.is_null() && (*(*(*c).session).curw).window == w) {
+            if !(*c).session.is_null() && (*(*(*c).session).curw).window == w {
                 server_redraw_client(c);
             }
         }
@@ -87,7 +87,7 @@ pub unsafe extern "C" fn server_redraw_window(w: *mut window) {
 pub unsafe extern "C" fn server_redraw_window_borders(w: *mut window) {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
-            if (!(*c).session.is_null() && (*(*(*c).session).curw).window == w) {
+            if !(*c).session.is_null() && (*(*(*c).session).curw).window == w {
                 (*c).flags |= client_flag::REDRAWBORDERS;
             }
         }
@@ -115,7 +115,7 @@ pub unsafe extern "C" fn server_status_window(w: *mut window) {
 pub unsafe extern "C" fn server_lock() {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
-            if (!(*c).session.is_null()) {
+            if !(*c).session.is_null() {
                 server_lock_client(c);
             }
         }
@@ -126,7 +126,7 @@ pub unsafe extern "C" fn server_lock() {
 pub unsafe extern "C" fn server_lock_session(s: *mut session) {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
-            if ((*c).session == s) {
+            if (*c).session == s {
                 server_lock_client(c);
             }
         }
@@ -145,7 +145,7 @@ pub unsafe extern "C" fn server_lock_client(c: *mut client) {
         }
 
         let cmd = options_get_string((*(*c).session).options, c"lock-command".as_ptr());
-        if (*cmd == b'\0' as c_char || strlen(cmd) + 1 > MAX_IMSGSIZE - IMSG_HEADER_SIZE) {
+        if *cmd == b'\0' as c_char || strlen(cmd) + 1 > MAX_IMSGSIZE - IMSG_HEADER_SIZE {
             return;
         }
 
@@ -209,7 +209,7 @@ pub unsafe extern "C" fn server_kill_window(w: *mut window, renumber: i32) {
                 server_redraw_session_group(s);
             }
 
-            if (renumber != 0) {
+            if renumber != 0 {
                 server_renumber_session(s);
             }
         }
@@ -263,7 +263,7 @@ pub unsafe extern "C" fn server_link_window(
             return -1;
         }
 
-        if (dstidx != -1) {
+        if dstidx != -1 {
             dstwl = winlink_find_by_index(&raw mut (*dst).windows, dstidx);
         }
         if !dstwl.is_null() {
@@ -289,11 +289,11 @@ pub unsafe extern "C" fn server_link_window(
             }
         }
 
-        if (dstidx == -1) {
+        if dstidx == -1 {
             dstidx = -1 - options_get_number((*dst).options, c"base-index".as_ptr()) as i32;
         }
         dstwl = session_attach(dst, (*srcwl).window, dstidx, cause);
-        if (dstwl.is_null()) {
+        if dstwl.is_null() {
             return -1;
         }
 
@@ -342,7 +342,7 @@ pub unsafe extern "C" fn server_destroy_pane(wp: *mut window_pane, notify: i32) 
         }
 
         let mut remain_on_exit = options_get_number((*wp).options, c"remain-on-exit".as_ptr());
-        if (remain_on_exit != 0 && !(*wp).flags.intersects(window_pane_flags::PANE_STATUSREADY)) {
+        if remain_on_exit != 0 && !(*wp).flags.intersects(window_pane_flags::PANE_STATUSREADY) {
             return;
         }
         'out: {
@@ -350,7 +350,7 @@ pub unsafe extern "C" fn server_destroy_pane(wp: *mut window_pane, notify: i32) 
                 0 => (),
                 1 | 2 => {
                     if remain_on_exit == 2 {
-                        if (WIFEXITED((*wp).status) && WEXITSTATUS((*wp).status) == 0) {
+                        if WIFEXITED((*wp).status) && WEXITSTATUS((*wp).status) == 0 {
                             break 'out;
                         }
                     }
@@ -360,7 +360,7 @@ pub unsafe extern "C" fn server_destroy_pane(wp: *mut window_pane, notify: i32) 
                     (*wp).flags |= window_pane_flags::PANE_STATUSDRAWN;
 
                     gettimeofday(&raw mut (*wp).dead_time, null_mut());
-                    if (notify != 0) {
+                    if notify != 0 {
                         notify_pane(c"pane-died".as_ptr(), wp);
                     }
 
@@ -389,7 +389,7 @@ pub unsafe extern "C" fn server_destroy_pane(wp: *mut window_pane, notify: i32) 
             }
         }
 
-        if (notify != 0) {
+        if notify != 0 {
             notify_pane(c"pane-exited".as_ptr(), wp);
         }
 
@@ -430,7 +430,7 @@ pub unsafe extern "C" fn server_find_session(
     unsafe {
         let mut s_out: *mut session = null_mut();
         for s_loop in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
-            if (s_loop != s && (s_out.is_null() || f(s_loop, s_out) != 0)) {
+            if s_loop != s && (s_out.is_null() || f(s_loop, s_out) != 0) {
                 s_out = s_loop;
             }
         }
@@ -476,17 +476,17 @@ pub unsafe extern "C" fn server_destroy_session(s: *mut session) {
             null_mut()
         };
 
-        if (s_new == s) {
+        if s_new == s {
             s_new = null_mut()
         }
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
-            if ((*c).session != s) {
+            if (*c).session != s {
                 continue;
             }
             (*c).session = null_mut();
             (*c).last_session = null_mut();
             server_client_set_session(c, s_new);
-            if (s_new.is_null()) {
+            if s_new.is_null() {
                 (*c).flags |= client_flag::EXIT;
             }
         }
@@ -498,7 +498,7 @@ pub unsafe extern "C" fn server_destroy_session(s: *mut session) {
 pub unsafe extern "C" fn server_check_unattached() {
     unsafe {
         for s in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
-            if ((*s).attached != 0) {
+            if (*s).attached != 0 {
                 continue;
             }
             match options_get_number((*s).options, c"destroy-unattached".as_ptr()) {
@@ -507,14 +507,14 @@ pub unsafe extern "C" fn server_check_unattached() {
                 2 => {
                     /* keep-last */
                     let sg = session_group_contains(s);
-                    if (sg.is_null() || session_group_count(sg) <= 1) {
+                    if sg.is_null() || session_group_count(sg) <= 1 {
                         continue;
                     }
                 }
                 3 => {
                     /* keep-group */
                     let sg = session_group_contains(s);
-                    if (!sg.is_null() && session_group_count(sg) == 1) {
+                    if !sg.is_null() && session_group_count(sg) == 1 {
                         continue;
                     }
                 }
@@ -528,7 +528,7 @@ pub unsafe extern "C" fn server_check_unattached() {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_unzoom_window(w: *mut window) {
     unsafe {
-        if (window_unzoom(w, 1) == 0) {
+        if window_unzoom(w, 1) == 0 {
             server_redraw_window(w);
         }
     }

@@ -111,7 +111,7 @@ unsafe extern "C" fn cmd_set_buffer_exec(self_: *mut cmd, item: *mut cmdq_item) 
             free_(cause);
             return (cmd_retval::CMD_RETURN_ERROR);
         }
-        if (args_has_(args, 'w') && !tc.is_null()) {
+        if args_has_(args, 'w') && !tc.is_null() {
             tty_set_selection(&raw mut (*tc).tty, c"".as_ptr(), bufdata, bufsize);
         }
 

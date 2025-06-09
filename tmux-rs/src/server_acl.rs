@@ -31,7 +31,7 @@ pub unsafe extern "C" fn server_acl_cmp(
     user2: *const server_acl_user,
 ) -> i32 {
     unsafe {
-        if ((*user1).uid < (*user2).uid) {
+        if (*user1).uid < (*user2).uid {
             return -1;
         }
         ((*user1).uid > (*user2).uid) as i32
@@ -48,7 +48,7 @@ pub unsafe extern "C" fn server_acl_init() {
     unsafe {
         rb_init(&raw mut server_acl_entries);
 
-        if (getuid() != 0) {
+        if getuid() != 0 {
             server_acl_user_allow(0);
         }
         server_acl_user_allow(getuid());
@@ -69,7 +69,7 @@ pub unsafe extern "C" fn server_acl_display(item: *mut cmdq_item) {
     unsafe {
         // server_acl_entries
         for loop_ in rb_foreach(&raw mut server_acl_entries).map(NonNull::as_ptr) {
-            if ((*loop_).uid == 0) {
+            if (*loop_).uid == 0 {
                 continue;
             }
             let pw = getpwuid((*loop_).uid);
@@ -116,14 +116,14 @@ pub unsafe extern "C" fn server_acl_user_deny(uid: uid_t) {
 pub unsafe extern "C" fn server_acl_user_allow_write(mut uid: uid_t) {
     unsafe {
         let user = server_acl_user_find(uid);
-        if (user.is_null()) {
+        if user.is_null() {
             return;
         }
         (*user).flags &= !server_acl_user_flags::SERVER_ACL_READONLY;
 
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             uid = proc_get_peer_uid((*c).peer);
-            if (uid != -1i32 as uid_t && uid == (*user).uid) {
+            if uid != -1i32 as uid_t && uid == (*user).uid {
                 (*c).flags &= !client_flag::READONLY;
             }
         }
@@ -135,14 +135,14 @@ pub unsafe extern "C" fn server_acl_user_deny_write(mut uid: uid_t) {
     unsafe {
         unsafe {
             let user = server_acl_user_find(uid);
-            if (user.is_null()) {
+            if user.is_null() {
                 return;
             }
             (*user).flags |= server_acl_user_flags::SERVER_ACL_READONLY;
 
             for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
                 uid = proc_get_peer_uid((*c).peer);
-                if (uid != -1i32 as uid_t && uid == (*user).uid) {
+                if uid != -1i32 as uid_t && uid == (*user).uid {
                     (*c).flags &= !client_flag::READONLY;
                 }
             }
@@ -154,12 +154,12 @@ pub unsafe extern "C" fn server_acl_user_deny_write(mut uid: uid_t) {
 pub unsafe extern "C" fn server_acl_join(c: *mut client) -> c_int {
     unsafe {
         let uid = proc_get_peer_uid((*c).peer);
-        if (uid == -1i32 as uid_t) {
+        if uid == -1i32 as uid_t {
             return 0;
         }
 
         let user = server_acl_user_find(uid);
-        if (user.is_null()) {
+        if user.is_null() {
             return 0;
         }
         if (*user)

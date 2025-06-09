@@ -40,7 +40,7 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
             adjust = screen_size_y(&raw mut (*wp).base) - 1 - (*wp).base.cy;
-            if (adjust > (*gd).hsize) {
+            if adjust > (*gd).hsize {
                 adjust = (*gd).hsize;
             }
             grid_remove_history(gd, adjust);
@@ -54,7 +54,7 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
             {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
-            if (c.is_null() || (*c).session != s) {
+            if c.is_null() || (*c).session != s {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
             (*c).tty.mouse_drag_update = Some(cmd_resize_pane_mouse_update);
@@ -118,12 +118,12 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
                 options_get_number((*w).options, c"pane-border-status".as_ptr()) as i32;
             match pane_status::try_from(status) {
                 Ok(pane_status::PANE_STATUS_TOP) => {
-                    if (y != i32::MAX && (*wp).yoff == 1) {
+                    if y != i32::MAX && (*wp).yoff == 1 {
                         y += 1;
                     }
                 }
                 Ok(pane_status::PANE_STATUS_BOTTOM) => {
-                    if (y != i32::MAX && (*wp).yoff + (*wp).sy == (*w).sy - 1) {
+                    if y != i32::MAX && (*wp).yoff + (*wp).sy == (*w).sy - 1 {
                         y += 1;
                     }
                 }
@@ -138,7 +138,7 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
             layout_resize_pane(wp, layout_type::LAYOUT_LEFTRIGHT, adjust as i32, 1);
         } else if (args_has_(args, 'U')) {
             layout_resize_pane(wp, layout_type::LAYOUT_TOPBOTTOM, -(adjust as i32), 1);
-        } else if (args_has_(args, 'D')) {
+        } else if args_has_(args, 'D') {
             layout_resize_pane(wp, layout_type::LAYOUT_TOPBOTTOM, adjust as i32, 1);
         }
         server_redraw_window((*wl).window);
@@ -172,14 +172,14 @@ unsafe extern "C" fn cmd_resize_pane_mouse_update(c: *mut client, m: *mut mouse_
         x = (*m).x + (*m).ox;
         if ((*m).statusat == 0 && y >= (*m).statuslines) {
             y -= (*m).statuslines;
-        } else if ((*m).statusat > 0 && y >= (*m).statusat as u32) {
+        } else if (*m).statusat > 0 && y >= (*m).statusat as u32 {
             y = ((*m).statusat - 1) as u32;
         }
         ly = (*m).ly + (*m).oy;
         lx = (*m).lx + (*m).ox;
         if ((*m).statusat == 0 && ly >= (*m).statuslines) {
             ly -= (*m).statuslines;
-        } else if ((*m).statusat > 0 && ly >= (*m).statusat as u32) {
+        } else if (*m).statusat > 0 && ly >= (*m).statusat as u32 {
             ly = ((*m).statusat - 1) as u32;
         }
 
@@ -206,7 +206,7 @@ unsafe extern "C" fn cmd_resize_pane_mouse_update(c: *mut client, m: *mut mouse_
             cells[ncells as usize] = lc;
             ncells += 1;
         }
-        if (ncells == 0) {
+        if ncells == 0 {
             return;
         }
 
@@ -220,7 +220,7 @@ unsafe extern "C" fn cmd_resize_pane_mouse_update(c: *mut client, m: *mut mouse_
                 resizes += 1;
             }
         }
-        if (resizes != 0) {
+        if resizes != 0 {
             server_redraw_window(w);
         }
     }

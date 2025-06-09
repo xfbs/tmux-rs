@@ -72,15 +72,15 @@ unsafe extern "C" fn cmd_select_window_exec(self_: *mut cmd, item: *mut cmdq_ite
         //int			 next, previous, last, activity;
 
         let mut next = (cmd_get_entry(self_) == &raw mut cmd_next_window_entry);
-        if (args_has_(args, 'n')) {
+        if args_has_(args, 'n') {
             next = true;
         }
         let mut previous = (cmd_get_entry(self_) == &raw mut cmd_previous_window_entry);
-        if (args_has_(args, 'p')) {
+        if args_has_(args, 'p') {
             previous = true;
         }
         let mut last = (cmd_get_entry(self_) == &raw mut cmd_last_window_entry);
-        if (args_has_(args, 'l')) {
+        if args_has_(args, 'l') {
             last = true;
         }
 
@@ -116,7 +116,7 @@ unsafe extern "C" fn cmd_select_window_exec(self_: *mut cmd, item: *mut cmdq_ite
                     cmdq_error(item, c"no last window".as_ptr());
                     return cmd_retval::CMD_RETURN_ERROR;
                 }
-                if ((*current).s == s) {
+                if (*current).s == s {
                     cmd_find_from_session(current, s, 0);
                 }
                 server_redraw_session(s);
@@ -126,7 +126,7 @@ unsafe extern "C" fn cmd_select_window_exec(self_: *mut cmd, item: *mut cmdq_ite
             }
             cmdq_insert_hook(s, item, current, c"after-select-window".as_ptr());
         }
-        if (!c.is_null() && !(*c).session.is_null()) {
+        if !c.is_null() && !(*c).session.is_null() {
             (*(*(*s).curw).window).latest = c as _;
         }
         recalculate_sizes();

@@ -33,14 +33,14 @@ unsafe extern "C" fn cmd_switch_client_exec(self_: *mut cmd, item: *mut cmdq_ite
             type_ = cmd_find_type::CMD_FIND_SESSION;
             flags = CMD_FIND_PREFER_UNATTACHED;
         }
-        if (cmd_find_target(&raw mut target, item, tflag, type_, flags) != 0) {
+        if cmd_find_target(&raw mut target, item, tflag, type_, flags) != 0 {
             return (cmd_retval::CMD_RETURN_ERROR);
         }
         let mut s = target.s;
         let mut wl = target.wl;
         let mut wp = target.wp;
 
-        if (args_has_(args, 'r')) {
+        if args_has_(args, 'r') {
             if ((*tc).flags.intersects(client_flag::READONLY)) {
                 (*tc).flags &= !(client_flag::READONLY | client_flag::IGNORESIZE);
             } else {
@@ -84,17 +84,17 @@ unsafe extern "C" fn cmd_switch_client_exec(self_: *mut cmd, item: *mut cmdq_ite
                 return (cmd_retval::CMD_RETURN_ERROR);
             }
         } else {
-            if (cmdq_get_client(item).is_null()) {
+            if cmdq_get_client(item).is_null() {
                 return (cmd_retval::CMD_RETURN_NORMAL);
             }
             if (!wl.is_null() && !wp.is_null() && wp != (*(*wl).window).active) {
                 let w = (*wl).window;
-                if (window_push_zoom(w, 0, args_has(args, b'Z')) != 0) {
+                if window_push_zoom(w, 0, args_has(args, b'Z')) != 0 {
                     server_redraw_window(w);
                 }
                 window_redraw_active_switch(w, wp);
                 window_set_active_pane(w, wp, 1);
-                if (window_pop_zoom(w) != 0) {
+                if window_pop_zoom(w) != 0 {
                     server_redraw_window(w);
                 }
             }

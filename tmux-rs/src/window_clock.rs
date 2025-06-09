@@ -140,14 +140,14 @@ pub unsafe extern "C" fn window_clock_timer_callback(fd: i32, events: i16, arg: 
         evtimer_del(&raw mut (*data).timer);
         evtimer_add(&raw mut (*data).timer, &tv);
 
-        if (tailq_first(&raw mut (*wp).modes) != wme) {
+        if tailq_first(&raw mut (*wp).modes) != wme {
             return;
         }
 
         t = libc::time(null_mut());
         libc::gmtime_r(&raw mut t, &raw mut now);
         libc::gmtime_r(&raw mut (*data).tim, &raw mut then);
-        if (now.tm_min == then.tm_min) {
+        if now.tm_min == then.tm_min {
             return;
         }
         (*data).tim = t;
@@ -317,7 +317,7 @@ pub unsafe extern "C" fn window_clock_draw_screen(wme: NonNull<window_mode_entry
             for j in 0..5 {
                 for i in 0..5 {
                     screen_write_cursormove(&raw mut ctx, (x + i) as i32, (y + j) as i32, 0);
-                    if (window_clock_table[idx as usize][j as usize][i as usize] != 0) {
+                    if window_clock_table[idx as usize][j as usize][i as usize] != 0 {
                         screen_write_putc(&raw mut ctx, gc.as_ptr(), b' ');
                     }
                 }

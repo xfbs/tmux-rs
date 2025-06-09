@@ -62,7 +62,7 @@ pub unsafe extern "C" fn control_notify_window_pane_changed(w: *mut window) {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             {
-                if (!CONTROL_SHOULD_NOTIFY_CLIENT!(c)) {
+                if !CONTROL_SHOULD_NOTIFY_CLIENT!(c) {
                     continue;
                 }
 
@@ -205,7 +205,7 @@ pub unsafe extern "C" fn control_notify_session_created(_: *mut session) {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             {
-                if (!CONTROL_SHOULD_NOTIFY_CLIENT!(c)) {
+                if !CONTROL_SHOULD_NOTIFY_CLIENT!(c) {
                     continue;
                 }
 

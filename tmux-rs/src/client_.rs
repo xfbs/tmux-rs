@@ -129,7 +129,7 @@ pub unsafe extern "C" fn client_connect(
                 ) == -1
                 {
                     log_debug!("connect failed: {}", _s(strerror(errno!())));
-                    if (errno!() != ECONNREFUSED && errno!() != ENOENT) {
+                    if errno!() != ECONNREFUSED && errno!() != ENOENT {
                         break 'failed;
                     }
                     if flags.intersects(client_flag::NOSTARTSERVER) {
@@ -782,7 +782,7 @@ unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
                 client_exit();
             }
             msgtype::MSG_READY => {
-                if (datalen != 0) {
+                if datalen != 0 {
                     fatalx(c"bad MSG_READY size");
                 }
 
@@ -790,7 +790,7 @@ unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
                 proc_send(client_peer, msgtype::MSG_RESIZE, -1, null_mut(), 0);
             }
             msgtype::MSG_VERSION => {
-                if (datalen != 0) {
+                if datalen != 0 {
                     fatalx(c"bad MSG_VERSION size");
                 }
 
@@ -804,7 +804,7 @@ unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
                 proc_exit(client_proc);
             }
             msgtype::MSG_FLAGS => {
-                if (datalen != size_of::<u64>()) {
+                if datalen != size_of::<u64>() {
                     fatalx(c"bad MSG_FLAGS string");
                 }
 
@@ -819,7 +819,7 @@ unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
                 );
             }
             msgtype::MSG_SHELL => {
-                if (datalen == 0 || *data.add(datalen - 1) != b'\0' as c_char) {
+                if datalen == 0 || *data.add(datalen - 1) != b'\0' as c_char {
                     fatalx(c"bad MSG_SHELL string");
                 }
 
@@ -931,7 +931,7 @@ unsafe extern "C" fn client_dispatch_attached(imsg: *mut imsg) {
                 proc_exit(client_proc);
             }
             msgtype::MSG_SHUTDOWN => {
-                if (datalen != 0) {
+                if datalen != 0 {
                     fatalx(c"bad MSG_SHUTDOWN size");
                 }
 
@@ -940,7 +940,7 @@ unsafe extern "C" fn client_dispatch_attached(imsg: *mut imsg) {
                 client_exitval = 1;
             }
             msgtype::MSG_SUSPEND => {
-                if (datalen != 0) {
+                if datalen != 0 {
                     fatalx(c"bad MSG_SUSPEND size");
                 }
 
@@ -955,7 +955,7 @@ unsafe extern "C" fn client_dispatch_attached(imsg: *mut imsg) {
                 kill(std::process::id() as i32, SIGTSTP);
             }
             msgtype::MSG_LOCK => {
-                if (datalen == 0 || *data.add(datalen - 1) != b'\0' as c_char) {
+                if datalen == 0 || *data.add(datalen - 1) != b'\0' as c_char {
                     fatalx(c"bad MSG_LOCK string");
                 }
 

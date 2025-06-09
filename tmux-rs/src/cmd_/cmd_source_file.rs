@@ -47,9 +47,9 @@ unsafe extern "C" fn cmd_source_file_complete_cb(
 unsafe extern "C" fn cmd_source_file_complete(c: *mut client, cdata: *mut cmd_source_file_data) {
     unsafe {
         if cfg_finished != 0 {
-            if ((*cdata).retval == cmd_retval::CMD_RETURN_ERROR
+            if (*cdata).retval == cmd_retval::CMD_RETURN_ERROR
                 && !c.is_null()
-                && (*c).session.is_null())
+                && (*c).session.is_null()
             {
                 (*c).retval = 1;
             }
@@ -88,7 +88,7 @@ unsafe extern "C" fn cmd_source_file_done(
 
         if (error != 0) {
             cmdq_error(item, c"%s: %s".as_ptr(), path, strerror(error));
-        } else if (bsize != 0) {
+        } else if bsize != 0 {
             if (load_cfg_from_buffer(
                 bdata.cast(),
                 bsize,
@@ -152,13 +152,13 @@ unsafe extern "C" fn cmd_source_file_exec(self_: *mut cmd, item: *mut cmdq_item)
         let cdata = xcalloc_::<cmd_source_file_data>(1).as_ptr();
         (*cdata).item = item;
 
-        if (args_has_(args, 'q')) {
+        if args_has_(args, 'q') {
             (*cdata).flags |= cmd_parse_input_flags::CMD_PARSE_QUIET;
         }
-        if (args_has_(args, 'n')) {
+        if args_has_(args, 'n') {
             (*cdata).flags |= cmd_parse_input_flags::CMD_PARSE_PARSEONLY;
         }
-        if (args_has_(args, 'v')) {
+        if args_has_(args, 'v') {
             (*cdata).flags |= cmd_parse_input_flags::CMD_PARSE_VERBOSE;
         }
 

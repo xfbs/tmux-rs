@@ -531,17 +531,17 @@ pub unsafe extern "C" fn popup_handle_drag(
             server_redraw_client(c);
         } else if ((*pd).dragging == dragging_state::Size) {
             if ((*pd).border_lines == box_lines::BOX_LINES_NONE) {
-                if ((*m).x < (*pd).px + 1) {
+                if (*m).x < (*pd).px + 1 {
                     return;
                 }
-                if ((*m).y < (*pd).py + 1) {
+                if (*m).y < (*pd).py + 1 {
                     return;
                 }
             } else {
-                if ((*m).x < (*pd).px + 3) {
+                if (*m).x < (*pd).px + 3 {
                     return;
                 }
-                if ((*m).y < (*pd).py + 3) {
+                if (*m).y < (*pd).py + 3 {
                     return;
                 }
             }
@@ -552,12 +552,12 @@ pub unsafe extern "C" fn popup_handle_drag(
 
             if ((*pd).border_lines == box_lines::BOX_LINES_NONE) {
                 screen_resize(&raw mut (*pd).s, (*pd).sx, (*pd).sy, 0);
-                if (!(*pd).job.is_null()) {
+                if !(*pd).job.is_null() {
                     job_resize((*pd).job, (*pd).sx, (*pd).sy);
                 }
             } else {
                 screen_resize(&raw mut (*pd).s, (*pd).sx - 2, (*pd).sy - 2, 0);
-                if (!(*pd).job.is_null()) {
+                if !(*pd).job.is_null() {
                     job_resize((*pd).job, (*pd).sx - 2, (*pd).sy - 2);
                 }
             }
@@ -615,37 +615,37 @@ pub unsafe extern "C" fn popup_key_cb(
                         || (*m).y < (*pd).py
                         || (*m).y > (*pd).py + (*pd).sy - 1)
                     {
-                        if (MOUSE_BUTTONS((*m).b) == MOUSE_BUTTON_3) {
+                        if MOUSE_BUTTONS((*m).b) == MOUSE_BUTTON_3 {
                             break 'menu;
                         }
                         return 0;
                     }
-                    if ((*pd).border_lines != box_lines::BOX_LINES_NONE) {
+                    if (*pd).border_lines != box_lines::BOX_LINES_NONE {
                         if ((*m).x == (*pd).px) {
                             border = Border::Left;
                         } else if ((*m).x == (*pd).px + (*pd).sx - 1) {
                             border = Border::Right;
                         } else if ((*m).y == (*pd).py) {
                             border = Border::Top;
-                        } else if ((*m).y == (*pd).py + (*pd).sy - 1) {
+                        } else if (*m).y == (*pd).py + (*pd).sy - 1 {
                             border = Border::Bottom;
                         }
                     }
-                    if (((*m).b & MOUSE_MASK_MODIFIERS) == 0
+                    if ((*m).b & MOUSE_MASK_MODIFIERS) == 0
                         && MOUSE_BUTTONS((*m).b) == MOUSE_BUTTON_3
-                        && (border == Border::Left || border == Border::Top))
+                        && (border == Border::Left || border == Border::Top)
                     {
                         break 'menu;
                     }
                     if ((((*m).b & MOUSE_MASK_MODIFIERS) == MOUSE_MASK_META)
                         || border != Border::None)
                     {
-                        if (!MOUSE_DRAG((*m).b)) {
+                        if !MOUSE_DRAG((*m).b) {
                             break 'out;
                         }
                         if (MOUSE_BUTTONS((*m).lb) == MOUSE_BUTTON_1) {
                             (*pd).dragging = dragging_state::Move;
-                        } else if (MOUSE_BUTTONS((*m).lb) == MOUSE_BUTTON_3) {
+                        } else if MOUSE_BUTTONS((*m).lb) == MOUSE_BUTTON_3 {
                             (*pd).dragging = dragging_state::Size;
                         }
                         (*pd).dx = (*m).lx - (*pd).px;
@@ -653,10 +653,9 @@ pub unsafe extern "C" fn popup_key_cb(
                         break 'out;
                     }
                 }
-                if (((((*pd).flags & (POPUP_CLOSEEXIT | POPUP_CLOSEEXITZERO)) == 0)
+                if ((((*pd).flags & (POPUP_CLOSEEXIT | POPUP_CLOSEEXITZERO)) == 0)
                     || (*pd).job.is_null())
-                    && ((*event).key == b'\x1b' as u64
-                        || (*event).key == (b'c' as u64 | KEYC_CTRL)))
+                    && ((*event).key == b'\x1b' as u64 || (*event).key == (b'c' as u64 | KEYC_CTRL))
                 {
                     return 1;
                 }

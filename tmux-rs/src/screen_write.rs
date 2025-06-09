@@ -78,19 +78,18 @@ unsafe extern "C" fn screen_write_set_cursor(ctx: *mut screen_write_ctx, mut cx:
             tv_sec: 0,
         };
 
-        if (cx != -1 && cx as u32 == (*s).cx && cy != -1 && cy as u32 == (*s).cy) {
+        if cx != -1 && cx as u32 == (*s).cx && cy != -1 && cy as u32 == (*s).cy {
             return;
         }
 
         if (cx != -1) {
-            if (cx as u32 > screen_size_x(s)) {
-                // allow last column
+            if cx as u32 > screen_size_x(s) {
                 cx = screen_size_x(s) as i32 - 1;
-            }
+            } // allow last column
             (*s).cx = cx as u32;
         }
         if (cy != -1) {
-            if (cy as u32 > screen_size_y(s) - 1) {
+            if cy as u32 > screen_size_y(s) - 1 {
                 cy = screen_size_y(s) as i32 - 1;
             }
             (*s).cy = cy as u32;
@@ -139,7 +138,7 @@ unsafe extern "C" fn screen_write_set_client_cb(ttyctx: *mut tty_ctx, c: *mut cl
             return 0;
         }
 
-        if ((*(*(*c).session).curw).window != (*wp).window) {
+        if (*(*(*c).session).curw).window != (*wp).window {
             return 0;
         }
         if (*wp).layout_cell.is_null() {
@@ -209,10 +208,10 @@ unsafe extern "C" fn screen_write_initctx(
         if let Some(init_ctx_cb) = (*ctx).init_ctx_cb {
             init_ctx_cb(ctx, ttyctx);
             if !(*ttyctx).palette.is_null() {
-                if ((*ttyctx).defaults.fg == 8) {
+                if (*ttyctx).defaults.fg == 8 {
                     (*ttyctx).defaults.fg = (*(*ttyctx).palette).fg;
                 }
-                if ((*ttyctx).defaults.bg == 8) {
+                if (*ttyctx).defaults.bg == 8 {
                     (*ttyctx).defaults.bg = (*(*ttyctx).palette).bg;
                 }
             }
@@ -407,7 +406,7 @@ pub unsafe extern "C" fn screen_write_strlen(fmt: *const c_char, mut ap: ...) ->
                 ptr = ptr.add(1);
 
                 left = strlen(ptr.cast());
-                if (left < ud.size as usize - 1) {
+                if left < ud.size as usize - 1 {
                     break;
                 }
                 while ({
@@ -418,11 +417,11 @@ pub unsafe extern "C" fn screen_write_strlen(fmt: *const c_char, mut ap: ...) ->
                 }
                 ptr = ptr.add(1);
 
-                if (more == utf8_state::UTF8_DONE) {
+                if more == utf8_state::UTF8_DONE {
                     size += ud.width;
                 }
             } else {
-                if (*ptr > 0x1f && *ptr < 0x7f) {
+                if *ptr > 0x1f && *ptr < 0x7f {
                     size += 1;
                 }
                 ptr = ptr.add(1);
@@ -470,7 +469,7 @@ pub unsafe extern "C" fn screen_write_text(
                 if (*text.add(end)).size == 1 && (*text.add(end)).data[0] == b'\n' {
                     break;
                 }
-                if (at + (*text.add(end)).width as u32 > left) {
+                if at + (*text.add(end)).width as u32 > left {
                     break;
                 }
                 at += (*text.add(end)).width as u32;
@@ -511,7 +510,7 @@ pub unsafe extern "C" fn screen_write_text(
 
             // If at the bottom, stop.
             idx = next;
-            if ((*s).cy == cy + lines - 1 || (*text.add(idx)).size == 0) {
+            if (*s).cy == cy + lines - 1 || (*text.add(idx)).size == 0 {
                 break;
             }
 
@@ -535,7 +534,7 @@ pub unsafe extern "C" fn screen_write_text(
          * If no more to come, move to the next line. Otherwise, leave on
          * the same line (except if at the end).
          */
-        if (!more || (*s).cx == cx + width) {
+        if !more || (*s).cx == cx + width {
             screen_write_cursormove(ctx, cx as i32, (*s).cy as i32 + 1, 0);
         }
         boolint::TRUE
@@ -604,7 +603,7 @@ pub unsafe extern "C" fn screen_write_vnputs(
                 }
                 ptr = ptr.add(1);
 
-                if (more != utf8_state::UTF8_DONE) {
+                if more != utf8_state::UTF8_DONE {
                     continue;
                 }
                 if (maxlen > 0 && size + (*ud).width as usize > maxlen as usize) {
@@ -617,7 +616,7 @@ pub unsafe extern "C" fn screen_write_vnputs(
                 size += (*ud).width as usize;
                 screen_write_cell(ctx, &raw const gc);
             } else {
-                if (maxlen > 0 && size + 1 > maxlen as usize) {
+                if maxlen > 0 && size + 1 > maxlen as usize {
                     break;
                 }
 
@@ -654,18 +653,18 @@ pub unsafe extern "C" fn screen_write_fast_copy(
         let mut gd = (*src).grid;
         let mut gc: grid_cell = zeroed();
 
-        if (nx == 0 || ny == 0) {
+        if nx == 0 || ny == 0 {
             return;
         }
 
         let mut cy = (*s).cy;
         for yy in py..(py + ny) {
-            if (yy >= (*gd).hsize + (*gd).sy) {
+            if yy >= (*gd).hsize + (*gd).sy {
                 break;
             }
             let mut cx = (*s).cx;
             for xx in px..(px + nx) {
-                if (xx >= (*grid_get_line(gd, yy)).cellsize) {
+                if xx >= (*grid_get_line(gd, yy)).cellsize {
                     break;
                 }
                 grid_get_cell(gd, xx, yy, &raw mut gc);
@@ -959,7 +958,7 @@ pub unsafe extern "C" fn screen_write_preview(
             } else {
                 px -= nx / 3;
             }
-            if (px + nx > screen_size_x(src)) {
+            if px + nx > screen_size_x(src) {
                 if (nx > screen_size_x(src)) {
                     px = 0;
                 } else {
@@ -972,7 +971,7 @@ pub unsafe extern "C" fn screen_write_preview(
             } else {
                 py -= ny / 3;
             }
-            if (py + ny > screen_size_y(src)) {
+            if py + ny > screen_size_y(src) {
                 if (ny > screen_size_y(src)) {
                     py = 0;
                 } else {
@@ -1035,22 +1034,22 @@ pub unsafe extern "C" fn screen_write_cursorup(ctx: *mut screen_write_ctx, mut n
         let mut cx: u32 = (*s).cx;
         let mut cy: u32 = (*s).cy;
 
-        if (ny == 0) {
+        if ny == 0 {
             ny = 1;
         }
 
         if (cy < (*s).rupper) {
             /* Above region. */
-            if (ny > cy) {
+            if ny > cy {
                 ny = cy;
             }
         } else {
             /* Below region. */
-            if (ny > cy - (*s).rupper) {
+            if ny > cy - (*s).rupper {
                 ny = cy - (*s).rupper;
             }
         }
-        if (cx == screen_size_x(s)) {
+        if cx == screen_size_x(s) {
             cx -= 1;
         }
 
@@ -1074,18 +1073,18 @@ pub unsafe extern "C" fn screen_write_cursordown(ctx: *mut screen_write_ctx, mut
 
         if (cy > (*s).rlower) {
             /* Below region. */
-            if (ny > screen_size_y(s) - 1 - cy) {
+            if ny > screen_size_y(s) - 1 - cy {
                 ny = screen_size_y(s) - 1 - cy;
             }
         } else {
             /* Above region. */
-            if (ny > (*s).rlower - cy) {
+            if ny > (*s).rlower - cy {
                 ny = (*s).rlower - cy;
             }
         }
         if (cx == screen_size_x(s)) {
             cx -= 1;
-        } else if (ny == 0) {
+        } else if ny == 0 {
             return;
         }
 
@@ -1103,14 +1102,14 @@ pub unsafe extern "C" fn screen_write_cursorright(ctx: *mut screen_write_ctx, mu
         let mut cx: u32 = (*s).cx;
         let mut cy: u32 = (*s).cy;
 
-        if (nx == 0) {
+        if nx == 0 {
             nx = 1;
         }
 
-        if (nx > screen_size_x(s) - 1 - cx) {
+        if nx > screen_size_x(s) - 1 - cx {
             nx = screen_size_x(s) - 1 - cx;
         }
-        if (nx == 0) {
+        if nx == 0 {
             return;
         }
 
@@ -1128,14 +1127,14 @@ pub unsafe extern "C" fn screen_write_cursorleft(ctx: *mut screen_write_ctx, mut
         let mut cx: u32 = (*s).cx;
         let mut cy: u32 = (*s).cy;
 
-        if (nx == 0) {
+        if nx == 0 {
             nx = 1;
         }
 
-        if (nx > cx) {
+        if nx > cx {
             nx = cx;
         }
-        if (nx == 0) {
+        if nx == 0 {
             return;
         }
 
@@ -1154,7 +1153,7 @@ pub unsafe extern "C" fn screen_write_backspace(ctx: *mut screen_write_ctx) {
         let mut cy = (*s).cy;
 
         if (cx == 0) {
-            if (cy == 0) {
+            if cy == 0 {
                 return;
             }
             let gl = grid_get_line((*s).grid, (*(*s).grid).hsize + cy - 1);
@@ -1221,14 +1220,14 @@ pub unsafe extern "C" fn screen_write_insertcharacter(
             nx = 1;
         }
 
-        if (nx > screen_size_x(s) - (*s).cx) {
+        if nx > screen_size_x(s) - (*s).cx {
             nx = screen_size_x(s) - (*s).cx;
         }
         if nx == 0 {
             return;
         }
 
-        if ((*s).cx > screen_size_x(s) - 1) {
+        if (*s).cx > screen_size_x(s) - 1 {
             return;
         }
 
@@ -1265,20 +1264,20 @@ pub unsafe extern "C" fn screen_write_deletecharacter(
             nx = 1;
         }
 
-        if (nx > screen_size_x(s) - (*s).cx) {
+        if nx > screen_size_x(s) - (*s).cx {
             nx = screen_size_x(s) - (*s).cx;
         }
         if nx == 0 {
             return;
         }
 
-        if ((*s).cx > screen_size_x(s) - 1) {
+        if (*s).cx > screen_size_x(s) - 1 {
             return;
         }
 
         #[cfg(feature = "sixel")]
         {
-            if (image_check_line(s, (*s).cy, 1) && !(*ctx).wp.is_null()) {
+            if image_check_line(s, (*s).cy, 1) && !(*ctx).wp.is_null() {
                 (*(*ctx).wp).flags |= window_pane_flags::PANE_REDRAW;
             }
         }
@@ -1305,18 +1304,18 @@ pub unsafe extern "C" fn screen_write_clearcharacter(
         let mut s = (*ctx).s;
         let mut ttyctx: tty_ctx = zeroed();
 
-        if (nx == 0) {
+        if nx == 0 {
             nx = 1;
         }
 
-        if (nx > screen_size_x(s) - (*s).cx) {
+        if nx > screen_size_x(s) - (*s).cx {
             nx = screen_size_x(s) - (*s).cx;
         }
-        if (nx == 0) {
+        if nx == 0 {
             return;
         }
 
-        if ((*s).cx > screen_size_x(s) - 1) {
+        if (*s).cx > screen_size_x(s) - 1 {
             return;
         }
 
@@ -1353,7 +1352,7 @@ pub unsafe extern "C" fn screen_write_insertline(ctx: *mut screen_write_ctx, mut
             sy = screen_size_y(s);
         }
 
-        if (ny == 0) {
+        if ny == 0 {
             ny = 1;
         }
 
@@ -1365,10 +1364,10 @@ pub unsafe extern "C" fn screen_write_insertline(ctx: *mut screen_write_ctx, mut
         }
 
         if ((*s).cy < (*s).rupper || (*s).cy > (*s).rlower) {
-            if (ny > screen_size_y(s) - (*s).cy) {
+            if ny > screen_size_y(s) - (*s).cy {
                 ny = screen_size_y(s) - (*s).cy;
             }
-            if (ny == 0) {
+            if ny == 0 {
                 return;
             }
 
@@ -1383,10 +1382,10 @@ pub unsafe extern "C" fn screen_write_insertline(ctx: *mut screen_write_ctx, mut
             return;
         }
 
-        if (ny > (*s).rlower + 1 - (*s).cy) {
+        if ny > (*s).rlower + 1 - (*s).cy {
             ny = (*s).rlower + 1 - (*s).cy;
         }
-        if (ny == 0) {
+        if ny == 0 {
             return;
         }
 
@@ -1415,7 +1414,7 @@ pub unsafe extern "C" fn screen_write_deleteline(ctx: *mut screen_write_ctx, mut
         let mut ttyctx: tty_ctx = zeroed();
         let mut sy = screen_size_y(s);
 
-        if (ny == 0) {
+        if ny == 0 {
             ny = 1;
         }
 
@@ -1427,10 +1426,10 @@ pub unsafe extern "C" fn screen_write_deleteline(ctx: *mut screen_write_ctx, mut
         }
 
         if ((*s).cy < (*s).rupper || (*s).cy > (*s).rlower) {
-            if (ny > sy - (*s).cy) {
+            if ny > sy - (*s).cy {
                 ny = sy - (*s).cy;
             }
-            if (ny == 0) {
+            if ny == 0 {
                 return;
             }
 
@@ -1445,10 +1444,10 @@ pub unsafe extern "C" fn screen_write_deleteline(ctx: *mut screen_write_ctx, mut
             return;
         }
 
-        if (ny > (*s).rlower + 1 - (*s).cy) {
+        if ny > (*s).rlower + 1 - (*s).cy {
             ny = (*s).rlower + 1 - (*s).cy;
         }
-        if (ny == 0) {
+        if ny == 0 {
             return;
         }
 
@@ -1476,7 +1475,7 @@ pub unsafe extern "C" fn screen_write_clearline(ctx: *mut screen_write_ctx, bg: 
         let mut ci = (*ctx).item;
 
         let gl = grid_get_line((*s).grid, (*(*s).grid).hsize + (*s).cy);
-        if ((*gl).cellsize == 0 && COLOUR_DEFAULT(bg as i32)) {
+        if (*gl).cellsize == 0 && COLOUR_DEFAULT(bg as i32) {
             return;
         }
 
@@ -1516,13 +1515,13 @@ pub unsafe extern "C" fn screen_write_clearendofline(ctx: *mut screen_write_ctx,
         }
 
         let gl = grid_get_line((*s).grid, (*(*s).grid).hsize + (*s).cy);
-        if ((*s).cx > sx - 1 || ((*s).cx >= (*gl).cellsize && COLOUR_DEFAULT(bg as i32))) {
+        if (*s).cx > sx - 1 || ((*s).cx >= (*gl).cellsize && COLOUR_DEFAULT(bg as i32)) {
             return;
         }
 
         #[cfg(feature = "sixel")]
         {
-            if (image_check_line(s, (*s).cy, 1) && !(*ctx).wp.is_null()) {
+            if image_check_line(s, (*s).cy, 1) && !(*ctx).wp.is_null() {
                 (*(*ctx).wp).flags |= window_pane_flags::PANE_REDRAW;
             }
         }
@@ -1561,7 +1560,7 @@ pub unsafe extern "C" fn screen_write_clearstartofline(ctx: *mut screen_write_ct
 
         #[cfg(feature = "sixel")]
         {
-            if (image_check_line(s, (*s).cy, 1) && !(*ctx).wp.is_null()) {
+            if image_check_line(s, (*s).cy, 1) && !(*ctx).wp.is_null() {
                 (*(*ctx).wp).flags |= window_pane_flags::PANE_REDRAW;
             }
         }
@@ -1608,10 +1607,10 @@ pub unsafe extern "C" fn screen_write_cursormove(
             }
         }
 
-        if (px != -1 && px as u32 > screen_size_x(s) - 1) {
+        if px != -1 && px as u32 > screen_size_x(s) - 1 {
             px = screen_size_x(s) as i32 - 1;
         }
-        if (py != -1 && py as u32 > screen_size_y(s) - 1) {
+        if py != -1 && py as u32 > screen_size_y(s) - 1 {
             py = screen_size_y(s) as i32 - 1;
         }
 
@@ -1630,7 +1629,7 @@ pub unsafe extern "C" fn screen_write_reverseindex(ctx: *mut screen_write_ctx, b
         if ((*s).cy == (*s).rupper) {
             #[cfg(feature = "sixel")]
             {
-                if (image_free_all(s) && !(*ctx).wp.is_null()) {
+                if image_free_all(s) && !(*ctx).wp.is_null() {
                     (*(*ctx).wp).flags |= window_pane_flags::PANE_REDRAW;
                 }
             }
@@ -1642,7 +1641,7 @@ pub unsafe extern "C" fn screen_write_reverseindex(ctx: *mut screen_write_ctx, b
             ttyctx.bg = bg;
 
             tty_write(Some(tty_cmd_reverseindex), &raw mut ttyctx);
-        } else if ((*s).cy > 0) {
+        } else if (*s).cy > 0 {
             screen_write_set_cursor(ctx, -1, (*s).cy as i32 - 1);
         }
     }
@@ -1658,16 +1657,15 @@ pub unsafe extern "C" fn screen_write_scrollregion(
     unsafe {
         let mut s = (*ctx).s;
 
-        if (rupper > screen_size_y(s) - 1) {
+        if rupper > screen_size_y(s) - 1 {
             rupper = screen_size_y(s) - 1;
         }
-        if (rlower > screen_size_y(s) - 1) {
+        if rlower > screen_size_y(s) - 1 {
             rlower = screen_size_y(s) - 1;
         }
-        if (rupper >= rlower) {
-            /* cannot be one line */
+        if rupper >= rlower {
             return;
-        }
+        } /* cannot be one line */
 
         screen_write_collect_flush(ctx, 0, c"screen_write_scrollregion".as_ptr());
 
@@ -1714,14 +1712,14 @@ pub unsafe extern "C" fn screen_write_linefeed(ctx: *mut screen_write_ctx, wrapp
                 } else {
                     redraw = image_check_line(s, rupper, rlower - rupper);
                 }
-                if (redraw != 0 && !(*ctx).wp.is_null()) {
+                if redraw != 0 && !(*ctx).wp.is_null() {
                     (*(*ctx).wp).flags |= window_pane_flags::PANE_REDRAW;
                 }
             }
             grid_view_scroll_region_up(gd, (*s).rupper, (*s).rlower, bg);
             screen_write_collect_scroll(ctx, bg);
             (*ctx).scrolled += 1;
-        } else if ((*s).cy < screen_size_y(s) - 1) {
+        } else if (*s).cy < screen_size_y(s) - 1 {
             screen_write_set_cursor(ctx, -1, (*s).cy as i32 + 1);
         }
     }
@@ -1740,7 +1738,7 @@ pub unsafe extern "C" fn screen_write_scrollup(
 
         if (lines == 0) {
             lines = 1;
-        } else if (lines > (*s).rlower - (*s).rupper + 1) {
+        } else if lines > (*s).rlower - (*s).rupper + 1 {
             lines = (*s).rlower - (*s).rupper + 1;
         }
 
@@ -1751,7 +1749,7 @@ pub unsafe extern "C" fn screen_write_scrollup(
 
         #[cfg(feature = "sixel")]
         {
-            if (image_scroll_up(s, lines) && !(*ctx).wp.is_null()) {
+            if image_scroll_up(s, lines) && !(*ctx).wp.is_null() {
                 (*(*ctx).wp).flags |= window_pane_flag::PANE_REDRAW;
             }
         }
@@ -1781,13 +1779,13 @@ pub unsafe extern "C" fn screen_write_scrolldown(
 
         if (lines == 0) {
             lines = 1;
-        } else if (lines > (*s).rlower - (*s).rupper + 1) {
+        } else if lines > (*s).rlower - (*s).rupper + 1 {
             lines = (*s).rlower - (*s).rupper + 1;
         }
 
         #[cfg(feature = "sixel")]
         {
-            if (image_free_all(s) && !(*ctx).wp.is_null()) {
+            if image_free_all(s) && !(*ctx).wp.is_null() {
                 (*(*ctx).wp).flags |= window_pane_flags::PANE_REDRAW;
             }
         }
@@ -1822,7 +1820,7 @@ pub unsafe extern "C" fn screen_write_clearendofscreen(ctx: *mut screen_write_ct
 
         #[cfg(feature = "sixel")]
         {
-            if (image_check_line(s, (*s).cy, sy - (*s).cy) && !(*ctx).wp.is_null()) {
+            if image_check_line(s, (*s).cy, sy - (*s).cy) && !(*ctx).wp.is_null() {
                 (*(*ctx).wp).flags |= window_pane_flags::PANE_REDRAW;
             }
         }
@@ -1869,7 +1867,7 @@ pub unsafe extern "C" fn screen_write_clearstartofscreen(ctx: *mut screen_write_
         screen_write_initctx(ctx, &raw mut ttyctx, 1);
         ttyctx.bg = bg;
 
-        if ((*s).cy > 0) {
+        if (*s).cy > 0 {
             grid_view_clear((*s).grid, 0, 0, sx, (*s).cy, bg);
         }
         if ((*s).cx > sx - 1) {
@@ -1895,7 +1893,7 @@ pub unsafe extern "C" fn screen_write_clearscreen(ctx: *mut screen_write_ctx, bg
 
         #[cfg(feature = "sixel")]
         {
-            if (image_free_all(s) && !(*ctx).wp.is_null()) {
+            if image_free_all(s) && !(*ctx).wp.is_null() {
                 (*(*ctx).wp).flags |= window_pane_flag::PANE_REDRAW;
             }
         }
@@ -1964,10 +1962,9 @@ pub unsafe extern "C" fn screen_write_collect_trim(
             let cex = (*ci).x + (*ci).used - 1;
 
             /* Item is entirely before. */
-            if (cex < sx) {
-                // log_debug("%s: %p %u-%u before %u-%u", __func__, ci, csx, cex, sx, ex);
+            if cex < sx {
                 continue;
-            }
+            } // log_debug("%s: %p %u-%u before %u-%u", __func__, ci, csx, cex, sx, ex);
 
             /* Item is entirely after. */
             if (csx > ex) {
@@ -1981,7 +1978,7 @@ pub unsafe extern "C" fn screen_write_collect_trim(
                 // log_debug("%s: %p %u-%u inside %u-%u", __func__, ci, csx, cex, sx, ex);
                 tailq_remove(&raw mut (*cl).items, ci);
                 screen_write_free_citem(ci);
-                if (csx == 0 && (*ci).wrapped != 0 && !wrapped.is_null()) {
+                if csx == 0 && (*ci).wrapped != 0 && !wrapped.is_null() {
                     *wrapped = 1;
                 }
                 continue;
@@ -2084,7 +2081,7 @@ pub unsafe extern "C" fn screen_write_collect_flush(
 
         if ((*ctx).scrolled != 0) {
             // log_debug("%s: scrolled %u (region %u-%u)", __func__, (*ctx).scrolled, (*s).rupper, (*s).rlower);
-            if ((*ctx).scrolled > (*s).rlower - (*s).rupper + 1) {
+            if (*ctx).scrolled > (*s).rlower - (*s).rupper + 1 {
                 (*ctx).scrolled = (*s).rlower - (*s).rupper + 1;
             }
 
@@ -2096,7 +2093,7 @@ pub unsafe extern "C" fn screen_write_collect_flush(
         (*ctx).scrolled = 0;
         (*ctx).bg = 8;
 
-        if (scroll_only != 0) {
+        if scroll_only != 0 {
             return;
         }
 
@@ -2106,10 +2103,9 @@ pub unsafe extern "C" fn screen_write_collect_flush(
             let cl = (*(*ctx).s).write_list.add(y as usize);
             let mut last = u32::MAX;
             for ci in tailq_foreach(&raw mut (*cl).items).map(NonNull::as_ptr) {
-                if (last != u32::MAX && (*ci).x <= last) {
+                if last != u32::MAX && (*ci).x <= last {
                     panic!("collect list not in order: {} <= {}", (*ci).x, last);
-                    // fatalx("collect list not in order: %u <= %u", (*ci).x, last);
-                }
+                } // fatalx("collect list not in order: %u <= %u", (*ci).x, last);
                 screen_write_set_cursor(ctx, (*ci).x as i32, y as i32);
                 if ((*ci).type_ == screen_write_citem_type::Clear) {
                     screen_write_initctx(ctx, &raw mut ttyctx, 1);
@@ -2148,7 +2144,7 @@ pub unsafe extern "C" fn screen_write_collect_end(ctx: *mut screen_write_ctx) {
         let mut gc: grid_cell = zeroed();
         let mut wrapped = (*ci).wrapped;
 
-        if ((*ci).used == 0) {
+        if (*ci).used == 0 {
             return;
         }
 
@@ -2174,7 +2170,7 @@ pub unsafe extern "C" fn screen_write_collect_end(ctx: *mut screen_write_ctx) {
                 grid_view_set_cell((*s).grid, xx, (*s).cy, &grid_default_cell);
                 xx -= 1;
             }
-            if (gc.data.width > 1) {
+            if gc.data.width > 1 {
                 grid_view_set_cell((*s).grid, xx, (*s).cy, &grid_default_cell);
             }
         }
@@ -2243,7 +2239,7 @@ pub unsafe extern "C" fn screen_write_collect_add(
             return;
         }
 
-        if ((*s).cx > sx - 1 || (*(*ctx).item).used > sx - 1 - (*s).cx) {
+        if (*s).cx > sx - 1 || (*(*ctx).item).used > sx - 1 - (*s).cx {
             screen_write_collect_end(ctx);
         }
         ci = (*ctx).item; /* may have changed */
@@ -2255,12 +2251,12 @@ pub unsafe extern "C" fn screen_write_collect_add(
             screen_write_set_cursor(ctx, 0, -1);
         }
 
-        if ((*ci).used == 0) {
+        if (*ci).used == 0 {
             memcpy__(&raw mut (*ci).gc, gc);
         }
-        if ((*(*(*ctx).s).write_list.add((*s).cy as usize))
+        if (*(*(*ctx).s).write_list.add((*s).cy as usize))
             .data
-            .is_null())
+            .is_null()
         {
             (*(*(*ctx).s).write_list.add((*s).cy as usize)).data =
                 xmalloc(screen_size_x((*ctx).s) as usize).as_ptr().cast();
@@ -2301,7 +2297,7 @@ pub unsafe extern "C" fn screen_write_cell(ctx: *mut screen_write_ctx, gc: *cons
         }
 
         /* Get the previous cell to check for combining. */
-        if (screen_write_combine(ctx, gc) != 0) {
+        if screen_write_combine(ctx, gc) != 0 {
             return;
         }
 
@@ -2331,7 +2327,7 @@ pub unsafe extern "C" fn screen_write_cell(ctx: *mut screen_write_ctx, gc: *cons
         }
 
         /* Sanity check cursor position. */
-        if ((*s).cx > sx - width || (*s).cy > sy - 1) {
+        if (*s).cx > sx - width || (*s).cy > sy - 1 {
             return;
         }
         screen_write_initctx(ctx, &raw mut ttyctx, 0);
@@ -2356,7 +2352,7 @@ pub unsafe extern "C" fn screen_write_cell(ctx: *mut screen_write_ctx, gc: *cons
         }
 
         /* If no change, do not draw. */
-        if (skip != 0) {
+        if skip != 0 {
             if ((*s).cx >= (*gl).cellsize) {
                 skip = grid_cells_equal(gc, &grid_default_cell);
             } else {
@@ -2375,7 +2371,7 @@ pub unsafe extern "C" fn screen_write_cell(ctx: *mut screen_write_ctx, gc: *cons
                     skip = 0;
                 } else if ((*gc).data.size != 1) {
                     skip = 0;
-                } else if ((*gce).union_.data.data != (*gc).data.data[0]) {
+                } else if (*gce).union_.data.data != (*gc).data.data[0] {
                     skip = 0;
                 }
             }
@@ -2394,7 +2390,7 @@ pub unsafe extern "C" fn screen_write_cell(ctx: *mut screen_write_ctx, gc: *cons
         } else if skip == 0 {
             grid_view_set_cell(gd, (*s).cx, (*s).cy, gc);
         }
-        if (selected) {
+        if selected {
             skip = 0;
         }
 
@@ -2458,12 +2454,12 @@ pub unsafe extern "C" fn screen_write_combine(
         } else if (utf8_is_vs(ud) != 0) {
             zero_width = 1;
             force_wide = 1;
-        } else if ((*ud).width == 0) {
+        } else if (*ud).width == 0 {
             zero_width = 1;
         }
 
         /* Cannot combine empty character or at left. */
-        if ((*ud).size < 2 || cx == 0) {
+        if (*ud).size < 2 || cx == 0 {
             return zero_width;
         }
         // log_debug("%s: character %.*s at %u,%u (width %u)", __func__, (int)(*ud).size, (*ud).data, cx, cy, (*ud).width);
@@ -2475,7 +2471,7 @@ pub unsafe extern "C" fn screen_write_combine(
             n = 2;
             grid_view_get_cell(gd, cx - n, cy, &raw mut last);
         }
-        if (n != last.data.width as u32 || last.flags.intersects(grid_flag::PADDING)) {
+        if n != last.data.width as u32 || last.flags.intersects(grid_flag::PADDING) {
             return zero_width;
         }
 
@@ -2484,9 +2480,9 @@ pub unsafe extern "C" fn screen_write_combine(
          * (set above), a modifier character (with an existing Unicode
          * character) or a previous ZWJ.
          */
-        if (zero_width == 0) {
+        if zero_width == 0 {
             if (utf8_is_modifier(ud) != 0) {
-                if (last.data.size < 2) {
+                if last.data.size < 2 {
                     return 0;
                 }
                 force_wide = 1;
@@ -2496,7 +2492,7 @@ pub unsafe extern "C" fn screen_write_combine(
         }
 
         /* Check if this combined character would be too long. */
-        if (last.data.size + (*ud).size > UTF8_SIZE as u8) {
+        if last.data.size + (*ud).size > UTF8_SIZE as u8 {
             return 0;
         }
 
@@ -2524,7 +2520,7 @@ pub unsafe extern "C" fn screen_write_combine(
 
         /* Set the new cell. */
         grid_view_set_cell(gd, cx - n, cy, &last);
-        if (force_wide != 0) {
+        if force_wide != 0 {
             grid_view_set_padding(gd, cx - 1, cy);
         }
 
@@ -2706,7 +2702,7 @@ unsafe extern "C" fn screen_write_sixelimage(
         sy = screen_size_y(s) - cy;
         if (sy < y) {
             lines = y - sy + 1;
-            if (image_scroll_up(s, lines) && (*ctx).wp != NULL) {
+            if image_scroll_up(s, lines) && (*ctx).wp != NULL {
                 (*(*ctx).wp).flags |= PANE_REDRAW;
             }
             for i in 0..lines {
@@ -2767,7 +2763,7 @@ pub unsafe extern "C" fn screen_write_alternateoff(
         let mut ttyctx: tty_ctx = zeroed();
         let mut wp = (*ctx).wp;
 
-        if (!wp.is_null() && !options_get_number_((*wp).options, c"alternate-screen") != 0) {
+        if !wp.is_null() && !options_get_number_((*wp).options, c"alternate-screen") != 0 {
             return;
         }
 

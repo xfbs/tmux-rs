@@ -71,7 +71,7 @@ unsafe extern "C" fn cmd_show_options_exec(self_: *mut cmd, item: *mut cmdq_item
                     let scope =
                         options_scope_from_flags(args, window, target, &raw mut oo, &raw mut cause);
                     if (scope == OPTIONS_TABLE_NONE) {
-                        if (args_has_(args, 'q')) {
+                        if args_has_(args, 'q') {
                             return cmd_retval::CMD_RETURN_NORMAL;
                         }
                         cmdq_error(item, c"%s".as_ptr(), cause);
@@ -84,7 +84,7 @@ unsafe extern "C" fn cmd_show_options_exec(self_: *mut cmd, item: *mut cmdq_item
 
                 name = options_match(argument, &raw mut idx, &raw mut ambiguous);
                 if (name.is_null()) {
-                    if (args_has_(args, 'q')) {
+                    if args_has_(args, 'q') {
                         break 'out;
                     }
                     if (ambiguous != 0) {
@@ -103,7 +103,7 @@ unsafe extern "C" fn cmd_show_options_exec(self_: *mut cmd, item: *mut cmdq_item
                     &raw mut cause,
                 );
                 if (scope == OPTIONS_TABLE_NONE) {
-                    if (args_has_(args, 'q')) {
+                    if args_has_(args, 'q') {
                         break 'out;
                     }
                     cmdq_error(item, c"%s".as_ptr(), cause);
@@ -120,7 +120,7 @@ unsafe extern "C" fn cmd_show_options_exec(self_: *mut cmd, item: *mut cmdq_item
                 if (!o.is_null()) {
                     cmd_show_options_print(self_, item, o, idx, parent);
                 } else if (*name == b'@' as _) {
-                    if (args_has_(args, 'q')) {
+                    if args_has_(args, 'q') {
                         break 'out;
                     }
                     cmdq_error(item, c"invalid option: %s".as_ptr(), argument);
@@ -162,7 +162,7 @@ pub unsafe extern "C" fn cmd_show_options_print(
             if (options_is_array(o) != 0) {
                 a = options_array_first(o);
                 if (a.is_null()) {
-                    if (!args_has_(args, 'v')) {
+                    if !args_has_(args, 'v') {
                         cmdq_print(item, c"%s".as_ptr(), name);
                     }
                     return;
@@ -216,7 +216,7 @@ pub unsafe extern "C" fn cmd_show_options_all(
         if (cmd_get_entry(self_) != &raw mut cmd_show_hooks_entry) {
             o = options_first(oo);
             while (!o.is_null()) {
-                if (options_table_entry(o).is_null()) {
+                if options_table_entry(o).is_null() {
                     cmd_show_options_print(self_, item, o, -1, 0);
                 }
                 o = options_next(o);

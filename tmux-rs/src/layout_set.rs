@@ -54,7 +54,7 @@ pub unsafe extern "C" fn layout_set_lookup(name: *const c_char) -> i32 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn layout_set_select(w: *mut window, mut layout: u32) -> u32 {
     unsafe {
-        if (layout > layout_sets_len as u32 - 1) {
+        if layout > layout_sets_len as u32 - 1 {
             layout = layout_sets_len as u32 - 1;
         }
 
@@ -76,7 +76,7 @@ pub unsafe extern "C" fn layout_set_next(w: *mut window) -> u32 {
             layout = 0;
         } else {
             layout = ((*w).lastlayout + 1) as u32;
-            if (layout > layout_sets_len as u32 - 1) {
+            if layout > layout_sets_len as u32 - 1 {
                 layout = 0;
             }
         }
@@ -127,7 +127,7 @@ pub unsafe extern "C" fn layout_set_even(w: *mut window, type_: layout_type) {
 
         /* Get number of panes. */
         let n = window_count_panes(w);
-        if (n <= 1) {
+        if n <= 1 {
             return;
         }
 
@@ -137,13 +137,13 @@ pub unsafe extern "C" fn layout_set_even(w: *mut window, type_: layout_type) {
         (*w).layout_root = lc;
         if (type_ == layout_type::LAYOUT_LEFTRIGHT) {
             sx = (n * (PANE_MINIMUM + 1)) - 1;
-            if (sx < (*w).sx) {
+            if sx < (*w).sx {
                 sx = (*w).sx;
             }
             sy = (*w).sy;
         } else {
             sy = (n * (PANE_MINIMUM + 1)) - 1;
-            if (sy < (*w).sy) {
+            if sy < (*w).sy {
                 sy = (*w).sy;
             }
             sx = (*w).sx;
@@ -242,7 +242,7 @@ pub unsafe extern "C" fn layout_set_main_h(w: *mut window) {
 
         /* Work out what width is needed. */
         let mut sx = (n * (PANE_MINIMUM + 1)) - 1;
-        if (sx < (*w).sx) {
+        if sx < (*w).sx {
             sx = (*w).sx;
         }
 
@@ -272,7 +272,7 @@ pub unsafe extern "C" fn layout_set_main_h(w: *mut window) {
 
             /* Add the remaining panes as children. */
             for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
-                if (wp == tailq_first(&raw mut (*w).panes)) {
+                if wp == tailq_first(&raw mut (*w).panes) {
                     continue;
                 }
                 let lcchild = layout_create_cell(lcother);

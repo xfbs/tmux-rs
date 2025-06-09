@@ -42,7 +42,7 @@ pub unsafe extern "C" fn cmd_select_pane_redraw(w: *mut window) {
          */
 
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
-            if ((*c).session.is_null() || ((*c).flags.intersects(client_flag::CONTROL))) {
+            if (*c).session.is_null() || ((*c).flags.intersects(client_flag::CONTROL)) {
                 continue;
             }
             if ((*(*(*c).session).curw).window == w
@@ -50,10 +50,10 @@ pub unsafe extern "C" fn cmd_select_pane_redraw(w: *mut window) {
             {
                 server_redraw_client(c);
             } else {
-                if ((*(*(*c).session).curw).window == w) {
+                if (*(*(*c).session).curw).window == w {
                     (*c).flags |= client_flag::REDRAWBORDERS;
                 }
-                if (session_has((*c).session, w) != 0) {
+                if session_has((*c).session, w) != 0 {
                     (*c).flags |= client_flag::REDRAWSTATUS;
                 }
             }
@@ -87,7 +87,7 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
             lastwp = tailq_first(&raw mut (*w).last_panes);
             if (lastwp.is_null() && window_count_panes(w) == 2) {
                 lastwp = tailq_prev::<_, _, discr_entry>((*w).active);
-                if (lastwp.is_null()) {
+                if lastwp.is_null() {
                     lastwp = tailq_next::<_, _, discr_entry>((*w).active);
                 }
             }
@@ -104,7 +104,7 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
                 server_redraw_window_borders((*lastwp).window);
                 server_status_window((*lastwp).window);
             } else {
-                if (window_push_zoom(w, 0, args_has(args, b'Z')) != 0) {
+                if window_push_zoom(w, 0, args_has(args, b'Z')) != 0 {
                     server_redraw_window(w);
                 }
                 window_redraw_active_switch(w, lastwp);
@@ -112,7 +112,7 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
                     cmd_find_from_winlink(current, wl, 0);
                     cmd_select_pane_redraw(w);
                 }
-                if (window_pop_zoom(w) != 0) {
+                if window_pop_zoom(w) != 0 {
                     server_redraw_window(w);
                 }
             }
@@ -120,7 +120,7 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
         }
 
         if (args_has_(args, 'm') || args_has_(args, 'M')) {
-            if (args_has_(args, 'm') && window_pane_visible(wp) == 0) {
+            if args_has_(args, 'm') && window_pane_visible(wp) == 0 {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
             if (server_check_marked().as_bool()) {
@@ -193,7 +193,7 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
             wp = window_pane_find_down(wp);
             window_pop_zoom(w);
         }
-        if (wp.is_null()) {
+        if wp.is_null() {
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
@@ -229,10 +229,10 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
         } else {
             activewp = (*w).active;
         }
-        if (wp == activewp) {
+        if wp == activewp {
             return cmd_retval::CMD_RETURN_NORMAL;
         }
-        if (window_push_zoom(w, 0, args_has(args, b'Z')) != 0) {
+        if window_push_zoom(w, 0, args_has(args, b'Z')) != 0 {
             server_redraw_window(w);
         }
         window_redraw_active_switch(w, wp);
@@ -241,12 +241,12 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
             && ((*c).flags.intersects(client_flag::ACTIVEPANE)))
         {
             server_client_set_pane(c, wp);
-        } else if (window_set_active_pane(w, wp, 1) != 0) {
+        } else if window_set_active_pane(w, wp, 1) != 0 {
             cmd_find_from_winlink_pane(current, wl, wp, 0);
         }
         cmdq_insert_hook(s, item, current, c"after-select-pane".as_ptr());
         cmd_select_pane_redraw(w);
-        if (window_pop_zoom(w) != 0) {
+        if window_pop_zoom(w) != 0 {
             server_redraw_window(w);
         }
 

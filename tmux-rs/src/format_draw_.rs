@@ -71,7 +71,7 @@ unsafe extern "C" fn format_update_ranges(
         }
 
         for fr in tailq_foreach(frs).map(NonNull::as_ptr) {
-            if ((*fr).s != s) {
+            if (*fr).s != s {
                 continue;
             }
 
@@ -80,10 +80,10 @@ unsafe extern "C" fn format_update_ranges(
                 continue;
             }
 
-            if ((*fr).start < start) {
+            if (*fr).start < start {
                 (*fr).start = start;
             }
-            if ((*fr).end > start + width) {
+            if (*fr).end > start + width {
                 (*fr).end = start + width;
             }
             if ((*fr).start == (*fr).end) {
@@ -146,7 +146,7 @@ unsafe extern "C" fn format_draw_put_list(
         /* The list needs to be trimmed. Try to keep the focus visible. */
         let focus_centre: u32 = (focus_start + (focus_end - focus_start) / 2) as u32;
         let mut start: u32 = focus_centre.saturating_sub(width / 2);
-        if (start + width > (*list).cx) {
+        if start + width > (*list).cx {
             start = (*list).cx - width;
         }
 
@@ -237,7 +237,7 @@ unsafe extern "C" fn format_draw_none(
         );
 
         // Write abs_centre in the perfect centre of all horizontal space.
-        if (width_abs_centre > available) {
+        if width_abs_centre > available {
             width_abs_centre = available;
         }
         format_draw_put(
@@ -383,7 +383,7 @@ unsafe extern "C" fn format_draw_left(
         );
 
         // Write abs_centre in the perfect centre of all horizontal space.
-        if (width_abs_centre > available) {
+        if width_abs_centre > available {
             width_abs_centre = available;
         }
         format_draw_put(
@@ -535,7 +535,7 @@ unsafe extern "C" fn format_draw_centre(
         );
 
         // Write abs_centre in the perfect centre of all horizontal space.
-        if (width_abs_centre > available) {
+        if width_abs_centre > available {
             width_abs_centre = available;
         }
         format_draw_put(
@@ -683,7 +683,7 @@ unsafe extern "C" fn format_draw_right(
         );
 
         // Write abs_centre in the perfect centre of all horizontal space.
-        if (width_abs_centre > available) {
+        if width_abs_centre > available {
             width_abs_centre = available;
         }
         format_draw_put(
@@ -1138,7 +1138,7 @@ pub unsafe fn format_draw(
                             }
 
                             /* End the focus if started. */
-                            if (focus_start != -1 && focus_end == -1) {
+                            if focus_start != -1 && focus_end == -1 {
                                 focus_end = s[Current::List as usize].cx as i32;
                             }
 
@@ -1146,14 +1146,12 @@ pub unsafe fn format_draw(
                         }
                         style_list::STYLE_LIST_FOCUS => {
                             /* Entering the focus. */
-                            if (list_state != 0) {
-                                /* not inside the list */
+                            if list_state != 0 {
                                 break;
-                            }
-                            if (focus_start == -1) {
-                                /* focus already started */
+                            } /* not inside the list */
+                            if focus_start == -1 {
                                 focus_start = s[Current::List as usize].cx as i32;
-                            }
+                            } /* focus already started */
                         }
                         style_list::STYLE_LIST_OFF => {
                             /* Exiting or outside the list. */
@@ -1163,7 +1161,7 @@ pub unsafe fn format_draw(
                                     free_(fr);
                                     fr = null_mut();
                                 }
-                                if (focus_start != -1 && focus_end == -1) {
+                                if focus_start != -1 && focus_end == -1 {
                                     focus_end = s[Current::List as usize].cx as i32;
                                 }
 
@@ -1177,14 +1175,12 @@ pub unsafe fn format_draw(
                         }
                         style_list::STYLE_LIST_LEFT_MARKER => {
                             /* Entering left marker. */
-                            if (list_state != 0) {
-                                /* not inside the list */
+                            if list_state != 0 {
                                 break;
-                            }
-                            if (s[Current::ListLeft as usize].cx != 0) {
-                                /* already have marker */
+                            } /* not inside the list */
+                            if s[Current::ListLeft as usize].cx != 0 {
                                 break;
-                            }
+                            } /* already have marker */
                             if !fr.is_null() {
                                 /* abort any region */
                                 free_(fr);
@@ -1199,7 +1195,7 @@ pub unsafe fn format_draw(
                         style_list::STYLE_LIST_RIGHT_MARKER => {
                             // note conditions are flipped from original c source because of break
 
-                            if (list_state == 0) {
+                            if list_state == 0 {
                                 if (s[Current::ListRight as usize].cx == 0) {
                                     if !fr.is_null() {
                                         // abort any region
@@ -1265,7 +1261,7 @@ pub unsafe fn format_draw(
                     screen_write_stop(&raw mut ctx[i]);
                     log_debug!("{}: width {} is {}", func, names[i], width[i]);
                 }
-                if (focus_start != -1 && focus_end != -1) {
+                if focus_start != -1 && focus_end != -1 {
                     log_debug!("{}: focus {}-{}", func, focus_start, focus_end);
                 }
                 for fr in tailq_foreach(&raw mut frs).map(NonNull::as_ptr) {
@@ -1542,7 +1538,7 @@ pub unsafe extern "C" fn format_trim_left(expanded: *const c_char, limit: u32) -
             }
             if *cp == b'#' as i8 {
                 let mut end = format_leading_hashes(cp, &raw mut n, &raw mut leading_width);
-                if (leading_width > limit - width) {
+                if leading_width > limit - width {
                     leading_width = limit - width;
                 }
                 if (leading_width != 0) {
@@ -1637,14 +1633,14 @@ pub unsafe extern "C" fn format_trim_right(expanded: *const c_char, limit: u32) 
                 let mut end: *const c_char =
                     format_leading_hashes(cp, &raw mut n, &raw mut leading_width);
                 copy_width = leading_width;
-                if (width <= skip) {
+                if width <= skip {
                     if (skip - width >= copy_width) {
                         copy_width = 0;
                     } else {
                         copy_width -= (skip - width);
                     }
                 }
-                if (copy_width != 0) {
+                if copy_width != 0 {
                     if (n == 1) {
                         *out = b'#' as i8;
                         out = out.add(1);

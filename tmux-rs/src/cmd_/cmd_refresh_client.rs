@@ -39,7 +39,7 @@ pub unsafe extern "C" fn cmd_refresh_client_update_subscription(
 
             let what = split;
             split = strchr(what, ':' as i32);
-            if (split.is_null()) {
+            if split.is_null() {
                 break 'out;
             }
             *split = b'\0' as c_char;
@@ -149,7 +149,7 @@ pub unsafe extern "C" fn cmd_refresh_client_update_offset(tc: *mut client, value
     unsafe {
         let mut pane: u32 = 0;
 
-        if (*value != b'%' as c_char) {
+        if *value != b'%' as c_char {
             return;
         }
         let mut copy = xstrdup(value).as_ptr();
@@ -161,11 +161,11 @@ pub unsafe extern "C" fn cmd_refresh_client_update_offset(tc: *mut client, value
             *split = b'\0' as c_char;
             split = split.add(1);
 
-            if (sscanf(copy, c"%%%u".as_ptr(), &raw mut pane) != 1) {
+            if sscanf(copy, c"%%%u".as_ptr(), &raw mut pane) != 1 {
                 break 'out;
             }
             let wp = window_pane_find_by_id(pane);
-            if (wp.is_null()) {
+            if wp.is_null() {
                 break 'out;
             }
 
@@ -175,7 +175,7 @@ pub unsafe extern "C" fn cmd_refresh_client_update_offset(tc: *mut client, value
                 control_set_pane_off(tc, wp);
             } else if (strcmp(split, c"continue".as_ptr()) == 0) {
                 control_continue_pane(tc, wp);
-            } else if (strcmp(split, c"pause".as_ptr()) == 0) {
+            } else if strcmp(split, c"pause".as_ptr()) == 0 {
                 control_pause_pane(tc, wp);
             }
         }
@@ -200,12 +200,12 @@ pub unsafe extern "C" fn cmd_refresh_client_clipboard(
 
         let p = args_get_(args, 'l');
         if (p.is_null()) {
-            if ((*tc).flags.intersects(client_flag::CLIPBOARDBUFFER)) {
+            if (*tc).flags.intersects(client_flag::CLIPBOARDBUFFER) {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
             (*tc).flags |= client_flag::CLIPBOARDBUFFER;
         } else {
-            if (cmd_find_target(&raw mut fs, item, p, cmd_find_type::CMD_FIND_PANE, 0) != 0) {
+            if cmd_find_target(&raw mut fs, item, p, cmd_find_type::CMD_FIND_PANE, 0) != 0 {
                 return cmd_retval::CMD_RETURN_ERROR;
             }
             let mut i = 0;
@@ -215,7 +215,7 @@ pub unsafe extern "C" fn cmd_refresh_client_clipboard(
                     break;
                 }
             }
-            if (i != (*tc).clipboard_npanes) {
+            if i != (*tc).clipboard_npanes {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
             (*tc).clipboard_panes =
@@ -234,23 +234,23 @@ pub unsafe extern "C" fn cmd_refresh_report(tty: *mut tty, value: *const c_char)
         let mut pane: u32 = 0;
         let mut size: usize = 0;
 
-        if (*value != b'%' as _) {
+        if *value != b'%' as _ {
             return;
         }
         let mut copy = xstrdup(value).as_ptr();
         'out: {
             let mut split = strchr(copy, ':' as i32);
-            if (split.is_null()) {
+            if split.is_null() {
                 break 'out;
             }
             *split = b'\0' as _;
             split = split.add(1);
 
-            if (sscanf(copy, c"%%%u".as_ptr(), &pane) != 1) {
+            if sscanf(copy, c"%%%u".as_ptr(), &pane) != 1 {
                 break 'out;
             }
             let wp = window_pane_find_by_id(pane);
-            if (wp.is_null()) {
+            if wp.is_null() {
                 break 'out;
             }
 
@@ -315,7 +315,7 @@ pub unsafe extern "C" fn cmd_refresh_client_exec(
                         }
                     } else if (args_has_(args, 'R')) {
                         (*tc).pan_ox += adjust;
-                        if ((*tc).pan_ox > (*w).sx - (*tty).osx) {
+                        if (*tc).pan_ox > (*w).sx - (*tty).osx {
                             (*tc).pan_ox = (*w).sx - (*tty).osx;
                         }
                     } else if (args_has_(args, 'U')) {
@@ -326,7 +326,7 @@ pub unsafe extern "C" fn cmd_refresh_client_exec(
                         }
                     } else if (args_has_(args, 'D')) {
                         (*tc).pan_oy += adjust;
-                        if ((*tc).pan_oy > (*w).sy - (*tty).osy) {
+                        if (*tc).pan_oy > (*w).sy - (*tty).osy {
                             (*tc).pan_oy = (*w).sy - (*tty).osy;
                         }
                     }
@@ -336,23 +336,22 @@ pub unsafe extern "C" fn cmd_refresh_client_exec(
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
 
-            if (args_has_(args, 'l')) {
+            if args_has_(args, 'l') {
                 return cmd_refresh_client_clipboard(self_, item);
             }
 
-            if (args_has_(args, 'F')) {
-                /* -F is an alias for -f */
+            if args_has_(args, 'F') {
                 server_client_set_flags(tc, args_get(args, b'F'));
-            }
-            if (args_has_(args, 'f')) {
+            } /* -F is an alias for -f */
+            if args_has_(args, 'f') {
                 server_client_set_flags(tc, args_get(args, b'f'));
             }
-            if (args_has_(args, 'r')) {
+            if args_has_(args, 'r') {
                 cmd_refresh_report(tty, args_get(args, b'r'));
             }
 
             if (args_has_(args, 'A')) {
-                if (!(*tc).flags.intersects(client_flag::CONTROL)) {
+                if !(*tc).flags.intersects(client_flag::CONTROL) {
                     break 'not_control_client;
                 }
                 let mut av = args_first_value(args, b'A');
@@ -363,7 +362,7 @@ pub unsafe extern "C" fn cmd_refresh_client_exec(
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
             if (args_has_(args, 'B')) {
-                if (!(*tc).flags.intersects(client_flag::CONTROL)) {
+                if !(*tc).flags.intersects(client_flag::CONTROL) {
                     break 'not_control_client;
                 }
                 let mut av = args_first_value(args, b'B');
@@ -374,7 +373,7 @@ pub unsafe extern "C" fn cmd_refresh_client_exec(
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
             if (args_has_(args, 'C')) {
-                if (!(*tc).flags.intersects(client_flag::CONTROL)) {
+                if !(*tc).flags.intersects(client_flag::CONTROL) {
                     break 'not_control_client;
                 }
                 return cmd_refresh_client_control_client_size(self_, item);

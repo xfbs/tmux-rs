@@ -62,12 +62,12 @@ unsafe extern "C" fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
         }
 
         type_ = layout_type::LAYOUT_TOPBOTTOM;
-        if (args_has_(args, 'h')) {
+        if args_has_(args, 'h') {
             type_ = layout_type::LAYOUT_LEFTRIGHT;
         }
 
         /* If the 'p' flag is dropped then this bit can be moved into 'l'. */
-        if (args_has_(args, 'l') || args_has_(args, 'p')) {
+        if args_has_(args, 'l') || args_has_(args, 'p') {
             if (args_has_(args, 'f')) {
                 if (type_ == layout_type::LAYOUT_TOPBOTTOM) {
                     curval = (*dst_w).sy;
@@ -97,7 +97,7 @@ unsafe extern "C" fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
             ) as _;
         } else if (args_has_(args, 'p')) {
             size = args_strtonum_and_expand(args, b'l', 0, 100, item, &raw mut cause) as _;
-            if (cause.is_null()) {
+            if cause.is_null() {
                 size = curval as i32 * size / 100;
             }
         }
@@ -108,10 +108,10 @@ unsafe extern "C" fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
         }
 
         let mut flags: i32 = 0;
-        if (args_has_(args, 'b')) {
+        if args_has_(args, 'b') {
             flags |= SPAWN_BEFORE;
         }
-        if (args_has_(args, 'f')) {
+        if args_has_(args, 'f') {
             flags |= SPAWN_FULLSIZE;
         }
 

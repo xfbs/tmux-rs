@@ -89,7 +89,7 @@ pub unsafe extern "C" fn grid_reader_cursor_left(gr: *mut grid_reader, wrap: i32
         {
             grid_reader_cursor_up(gr);
             grid_reader_cursor_end_of_line(gr, 0, 0);
-        } else if ((*gr).cx > 0) {
+        } else if (*gr).cx > 0 {
             (*gr).cx -= 1;
         }
     }
@@ -101,7 +101,7 @@ pub unsafe extern "C" fn grid_reader_cursor_down(gr: *mut grid_reader) {
         let mut gc = MaybeUninit::<grid_cell>::uninit();
         let gc = gc.as_mut_ptr();
 
-        if ((*gr).cy < (*(*gr).gd).hsize + (*(*gr).gd).sy - 1) {
+        if (*gr).cy < (*(*gr).gd).hsize + (*(*gr).gd).sy - 1 {
             (*gr).cy += 1;
         }
         while ((*gr).cx > 0) {
@@ -120,7 +120,7 @@ pub unsafe extern "C" fn grid_reader_cursor_up(gr: *mut grid_reader) {
         let mut gc = MaybeUninit::<grid_cell>::uninit();
         let gc = gc.as_mut_ptr();
 
-        if ((*gr).cy > 0) {
+        if (*gr).cy > 0 {
             (*gr).cy -= 1;
         }
         while ((*gr).cx > 0) {
@@ -136,7 +136,7 @@ pub unsafe extern "C" fn grid_reader_cursor_up(gr: *mut grid_reader) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_reader_cursor_start_of_line(gr: *mut grid_reader, wrap: i32) {
     unsafe {
-        if (wrap != 0) {
+        if wrap != 0 {
             while (*gr).cy > 0
                 && (*grid_get_line((*gr).gd, (*gr).cy - 1))
                     .flags
@@ -178,7 +178,7 @@ pub unsafe extern "C" fn grid_reader_handle_wrap(
 ) -> i32 {
     unsafe {
         while ((*gr).cx > *xx) {
-            if ((*gr).cy == *yy) {
+            if (*gr).cy == *yy {
                 return 0;
             }
             grid_reader_cursor_start_of_line(gr, 0);
@@ -204,7 +204,7 @@ pub unsafe extern "C" fn grid_reader_in_set(gr: *mut grid_reader, set: *const c_
         let gc = gc.as_mut_ptr();
 
         grid_get_cell((*gr).gd, (*gr).cx, (*gr).cy, gc);
-        if ((*gc).flags.intersects(grid_flag::PADDING)) {
+        if (*gc).flags.intersects(grid_flag::PADDING) {
             return 0;
         }
         utf8_cstrhas(set, &raw mut (*gc).data)
@@ -228,10 +228,10 @@ pub unsafe extern "C" fn grid_reader_cursor_next_word(
         };
         let mut yy = (*(*gr).gd).hsize + (*(*gr).gd).sy - 1;
 
-        if (grid_reader_handle_wrap(gr, &raw mut xx, &raw mut yy) == 0) {
+        if grid_reader_handle_wrap(gr, &raw mut xx, &raw mut yy) == 0 {
             return;
         }
-        if (grid_reader_in_set(gr, WHITESPACE.as_ptr()) == 0) {
+        if grid_reader_in_set(gr, WHITESPACE.as_ptr()) == 0 {
             if (grid_reader_in_set(gr, separators) != 0) {
                 loop {
                     (*gr).cx += 1;
@@ -335,7 +335,7 @@ pub unsafe extern "C" fn grid_reader_cursor_previous_word(
                         break;
                     }
                 } else {
-                    if ((*gr).cy == 0) {
+                    if (*gr).cy == 0 {
                         return;
                     }
                     grid_reader_cursor_up(gr);
@@ -363,17 +363,17 @@ pub unsafe extern "C" fn grid_reader_cursor_previous_word(
             oldx = (*gr).cx;
             oldy = (*gr).cy;
             if ((*gr).cx == 0) {
-                if ((*gr).cy == 0
+                if (*gr).cy == 0
                     || (!(*grid_get_line((*gr).gd, (*gr).cy - 1))
                         .flags
-                        .intersects(grid_line_flag::WRAPPED)))
+                        .intersects(grid_line_flag::WRAPPED))
                 {
                     break;
                 }
                 grid_reader_cursor_up(gr);
                 grid_reader_cursor_end_of_line(gr, 0, 1);
             }
-            if ((*gr).cx > 0) {
+            if (*gr).cx > 0 {
                 (*gr).cx -= 1;
             }
 

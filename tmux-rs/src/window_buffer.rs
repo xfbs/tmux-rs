@@ -123,18 +123,18 @@ pub unsafe extern "C" fn window_buffer_cmp(a0: *const c_void, b0: *const c_void)
 
         if ((*window_buffer_sort).field == window_buffer_sort_type::WINDOW_BUFFER_BY_TIME as u32) {
             result = (*(*b)).order as i32 - (*(*a)).order as i32;
-        } else if ((*window_buffer_sort).field
-            == window_buffer_sort_type::WINDOW_BUFFER_BY_SIZE as u32)
+        } else if (*window_buffer_sort).field
+            == window_buffer_sort_type::WINDOW_BUFFER_BY_SIZE as u32
         {
             result = ((*(*b)).size as isize - (*(*a)).size as isize) as i32;
         }
 
         /* Use WINDOW_BUFFER_BY_NAME as default order and tie breaker. */
-        if (result == 0) {
+        if result == 0 {
             result = strcmp((*(*a)).name, (*(*b)).name);
         }
 
-        if ((*window_buffer_sort).reversed != 0) {
+        if (*window_buffer_sort).reversed != 0 {
             result = -result;
         }
 
@@ -193,7 +193,7 @@ pub unsafe extern "C" fn window_buffer_build(
             item = *(*data).item_list.add(i as usize);
 
             pb = paste_get_name((*item).name);
-            if (pb.is_null()) {
+            if pb.is_null() {
                 continue;
             }
             let ft = format_create(null_mut(), null_mut(), FORMAT_NONE, format_flags::empty());
@@ -535,13 +535,13 @@ pub unsafe extern "C" fn window_buffer_edit_close_cb(
 
         let mut oldlen = 0;
         let oldbuf = paste_buffer_data_(pb, &mut oldlen);
-        if (oldlen != 0
+        if oldlen != 0
             && *oldbuf.add(oldlen - 1) != b'\n' as c_char
-            && *buf.add(len - 1) == b'\n' as c_char)
+            && *buf.add(len - 1) == b'\n' as c_char
         {
             len -= 1;
         }
-        if (len != 0) {
+        if len != 0 {
             paste_replace(pb, buf, len);
         }
 

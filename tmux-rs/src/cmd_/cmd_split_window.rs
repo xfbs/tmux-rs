@@ -40,12 +40,12 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
         let mut curval = 0;
 
         let mut type_ = layout_type::LAYOUT_TOPBOTTOM;
-        if (args_has_(args, 'h')) {
+        if args_has_(args, 'h') {
             type_ = layout_type::LAYOUT_LEFTRIGHT;
         }
 
         /* If the 'p' flag is dropped then this bit can be moved into 'l'. */
-        if (args_has_(args, 'l') || args_has_(args, 'p')) {
+        if args_has_(args, 'l') || args_has_(args, 'p') {
             if (args_has_(args, 'f')) {
                 if (type_ == layout_type::LAYOUT_TOPBOTTOM) {
                     curval = (*w).sy;
@@ -75,7 +75,7 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
             ) as _;
         } else if (args_has_(args, 'p')) {
             size = args_strtonum_and_expand(args, b'p', 0, 100, item, &raw mut cause) as _;
-            if (cause.is_null()) {
+            if cause.is_null() {
                 size = curval as i32 * size / 100;
             }
         }
@@ -89,13 +89,13 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
         let mut input = (args_has_(args, 'I') && count == 0);
 
         let mut flags = 0;
-        if (args_has_(args, 'b')) {
+        if args_has_(args, 'b') {
             flags |= SPAWN_BEFORE;
         }
-        if (args_has_(args, 'f')) {
+        if args_has_(args, 'f') {
             flags |= SPAWN_FULLSIZE;
         }
-        if (input || (count == 1 && *args_string(args, 0) == b'\0' as _)) {
+        if input || (count == 1 && *args_string(args, 0) == b'\0' as _) {
             flags |= SPAWN_EMPTY;
         }
 
@@ -126,10 +126,10 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
         sc.cwd = args_get_(args, 'c');
 
         sc.flags = flags;
-        if (args_has_(args, 'd')) {
+        if args_has_(args, 'd') {
             sc.flags |= SPAWN_DETACHED;
         }
-        if (args_has_(args, 'Z')) {
+        if args_has_(args, 'Z') {
             sc.flags |= SPAWN_ZOOM;
         }
 
@@ -137,13 +137,13 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
         if (new_wp.is_null()) {
             cmdq_error(item, c"create pane failed: %s".as_ptr(), cause);
             free_(cause);
-            if (!sc.argv.is_null()) {
+            if !sc.argv.is_null() {
                 cmd_free_argv(sc.argc, sc.argv);
             }
             environ_free(sc.environ);
             return cmd_retval::CMD_RETURN_ERROR;
         }
-        if (input) {
+        if input {
             match (window_pane_start_input(new_wp, item, &raw mut cause)) {
                 -1 => {
                     server_client_remove_pane(new_wp);
@@ -151,7 +151,7 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
                     window_remove_pane((*wp).window, new_wp);
                     cmdq_error(item, c"%s".as_ptr(), cause);
                     free_(cause);
-                    if (!sc.argv.is_null()) {
+                    if !sc.argv.is_null() {
                         cmd_free_argv(sc.argc, sc.argv);
                     }
                     environ_free(sc.environ);
@@ -163,7 +163,7 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
                 _ => (),
             }
         }
-        if (!args_has_(args, 'd')) {
+        if !args_has_(args, 'd') {
             cmd_find_from_winlink_pane(current, wl, new_wp, 0);
         }
         window_pop_zoom((*wp).window);
@@ -184,11 +184,11 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
         cmd_find_from_winlink_pane(&raw mut fs, wl, new_wp, 0);
         cmdq_insert_hook(s, item, &raw mut fs, c"after-split-window".as_ptr());
 
-        if (!sc.argv.is_null()) {
+        if !sc.argv.is_null() {
             cmd_free_argv(sc.argc, sc.argv);
         }
         environ_free(sc.environ);
-        if (input) {
+        if input {
             return cmd_retval::CMD_RETURN_WAIT;
         }
         cmd_retval::CMD_RETURN_NORMAL

@@ -109,7 +109,7 @@ pub unsafe extern "C" fn cmd_attach_session(
                 }
                 for c_loop in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
                     {
-                        if ((*c_loop).session != s || c == c_loop) {
+                        if (*c_loop).session != s || c == c_loop {
                             continue;
                         }
                         server_client_detach(c_loop, msgtype);
@@ -138,7 +138,7 @@ pub unsafe extern "C" fn cmd_attach_session(
                     msgtype::MSG_DETACH
                 };
                 for c_loop in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
-                    if ((*c_loop).session != s || c == c_loop) {
+                    if (*c_loop).session != s || c == c_loop {
                         continue;
                     }
                     server_client_detach(c_loop, msgtype);
