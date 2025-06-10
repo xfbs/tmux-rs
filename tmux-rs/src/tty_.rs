@@ -3286,7 +3286,10 @@ pub unsafe extern "C" fn tty_cursor(tty: *mut tty, mut cx: u32, cy: u32) {
                     }
 
                     /* One to the left. */
-                    if cx == thisx - 1 && tty_term_has(term, tty_code_code::TTYC_CUB1).as_bool() {
+                    // TODO underflows on debug rust
+                    if cx == thisx.wrapping_sub(1)
+                        && tty_term_has(term, tty_code_code::TTYC_CUB1).as_bool()
+                    {
                         tty_putcode(tty, tty_code_code::TTYC_CUB1);
                         break 'out;
                     }

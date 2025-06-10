@@ -26,7 +26,7 @@ static window_customize_menu_items: [menu_item; 9] = [
 ];
 
 #[unsafe(no_mangle)]
-pub static mut window_customize_mode: window_mode = window_mode {
+pub static window_customize_mode: window_mode = window_mode {
     name: SyncCharPtr::new(c"options-mode"),
     default_format: SyncCharPtr::from_ptr(WINDOW_CUSTOMIZE_DEFAULT_FORMAT.as_ptr().cast()),
 

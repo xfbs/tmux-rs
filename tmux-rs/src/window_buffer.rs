@@ -39,7 +39,7 @@ static mut window_buffer_menu_items: [menu_item; 12] = [
 ];
 
 #[unsafe(no_mangle)]
-pub static mut window_buffer_mode: window_mode = window_mode {
+pub static window_buffer_mode: window_mode = window_mode {
     name: SyncCharPtr::new(c"buffer-mode"),
     default_format: SyncCharPtr::from_ptr(WINDOW_BUFFER_DEFAULT_FORMAT),
 
@@ -548,7 +548,7 @@ pub unsafe extern "C" fn window_buffer_edit_close_cb(
         let wp = window_pane_find_by_id((*ed).wp_id);
         if !wp.is_null() {
             let wme = tailq_first(&raw mut (*wp).modes);
-            if ((*wme).mode.addr() == (&raw const window_buffer_mode).addr()) {
+            if ((*wme).mode == &raw const window_buffer_mode) {
                 let data = (*wme).data as *mut window_buffer_modedata;
                 mode_tree_build((*data).data);
                 mode_tree_draw((*data).data);

@@ -133,7 +133,13 @@ unsafe extern "C" fn cmd_find_window_exec(self_: *mut cmd, item: *mut cmdq_item)
         }
         args_set(new_args, b'f', filter, 0);
 
-        window_pane_set_mode(wp, null_mut(), &raw mut window_tree_mode, target, new_args);
+        window_pane_set_mode(
+            wp,
+            null_mut(),
+            &raw const window_tree_mode,
+            target,
+            new_args,
+        );
         args_free(new_args);
 
         cmd_retval::CMD_RETURN_NORMAL

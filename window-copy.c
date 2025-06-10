@@ -28,144 +28,86 @@
 
 struct window_copy_mode_data;
 
-static const char *window_copy_key_table(struct window_mode_entry *);
-static void window_copy_command(struct window_mode_entry *, struct client *,
-                                struct session *, struct winlink *,
-                                struct args *, struct mouse_event *);
-static struct screen *window_copy_init(struct window_mode_entry *,
-                                       struct cmd_find_state *, struct args *);
-static struct screen *window_copy_view_init(struct window_mode_entry *,
-                                            struct cmd_find_state *,
-                                            struct args *);
-static void window_copy_free(struct window_mode_entry *);
-static void window_copy_resize(struct window_mode_entry *, u_int, u_int);
-static void window_copy_formats(struct window_mode_entry *,
-                                struct format_tree *);
-static void window_copy_pageup1(struct window_mode_entry *, int);
-static int window_copy_pagedown1(struct window_mode_entry *, int, int);
-static void window_copy_next_paragraph(struct window_mode_entry *);
-static void window_copy_previous_paragraph(struct window_mode_entry *);
-static void window_copy_redraw_selection(struct window_mode_entry *, u_int);
-static void window_copy_redraw_lines(struct window_mode_entry *, u_int, u_int);
-static void window_copy_redraw_screen(struct window_mode_entry *);
-static void window_copy_write_line(struct window_mode_entry *,
-                                   struct screen_write_ctx *, u_int);
-static void window_copy_write_lines(struct window_mode_entry *,
-                                    struct screen_write_ctx *, u_int, u_int);
-static char *window_copy_match_at_cursor(struct window_copy_mode_data *);
-static void window_copy_scroll_to(struct window_mode_entry *, u_int, u_int,
-                                  int);
-static int window_copy_search_compare(struct grid *, u_int, u_int,
-                                      struct grid *, u_int, int);
-static int window_copy_search_lr(struct grid *, struct grid *, u_int *, u_int,
-                                 u_int, u_int, int);
-static int window_copy_search_rl(struct grid *, struct grid *, u_int *, u_int,
-                                 u_int, u_int, int);
-static int window_copy_last_regex(struct grid *, u_int, u_int, u_int, u_int,
-                                  u_int *, u_int *, const char *,
-                                  const regex_t *, int);
-static int window_copy_search_mark_at(struct window_copy_mode_data *, u_int,
-                                      u_int, u_int *);
-static char *window_copy_stringify(struct grid *, u_int, u_int, u_int, char *,
-                                   u_int *);
-static void window_copy_cstrtocellpos(struct grid *, u_int, u_int *, u_int *,
-                                      const char *);
-static int window_copy_search_marks(struct window_mode_entry *, struct screen *,
-                                    int, int);
-static void window_copy_clear_marks(struct window_mode_entry *);
-static int window_copy_is_lowercase(const char *);
-static void window_copy_search_back_overlap(struct grid *, regex_t *, u_int *,
-                                            u_int *, u_int *, u_int);
-static int window_copy_search_jump(struct window_mode_entry *, struct grid *,
-                                   struct grid *, u_int, u_int, u_int, int, int,
-                                   int, int);
-static int window_copy_search(struct window_mode_entry *, int, int);
-static int window_copy_search_up(struct window_mode_entry *, int);
-static int window_copy_search_down(struct window_mode_entry *, int);
-static void window_copy_goto_line(struct window_mode_entry *, const char *);
-static void window_copy_update_cursor(struct window_mode_entry *, u_int, u_int);
-static void window_copy_start_selection(struct window_mode_entry *);
-static int window_copy_adjust_selection(struct window_mode_entry *, u_int *,
-                                        u_int *);
-static int window_copy_set_selection(struct window_mode_entry *, int, int);
-static int window_copy_update_selection(struct window_mode_entry *, int, int);
-static void window_copy_synchronize_cursor(struct window_mode_entry *, int);
-static void *window_copy_get_selection(struct window_mode_entry *, size_t *);
-static void window_copy_copy_buffer(struct window_mode_entry *, const char *,
-                                    void *, size_t);
-static void window_copy_pipe(struct window_mode_entry *, struct session *,
-                             const char *);
-static void window_copy_copy_pipe(struct window_mode_entry *, struct session *,
-                                  const char *, const char *);
-static void window_copy_copy_selection(struct window_mode_entry *,
-                                       const char *);
-static void window_copy_append_selection(struct window_mode_entry *);
-static void window_copy_clear_selection(struct window_mode_entry *);
-static void window_copy_copy_line(struct window_mode_entry *, char **, size_t *,
-                                  u_int, u_int, u_int);
-static int window_copy_in_set(struct window_mode_entry *, u_int, u_int,
-                              const char *);
-static u_int window_copy_find_length(struct window_mode_entry *, u_int);
-static void window_copy_cursor_start_of_line(struct window_mode_entry *);
-static void window_copy_cursor_back_to_indentation(struct window_mode_entry *);
-static void window_copy_cursor_end_of_line(struct window_mode_entry *);
-static void window_copy_other_end(struct window_mode_entry *);
-static void window_copy_cursor_left(struct window_mode_entry *);
-static void window_copy_cursor_right(struct window_mode_entry *, int);
-static void window_copy_cursor_up(struct window_mode_entry *, int);
-static void window_copy_cursor_down(struct window_mode_entry *, int);
-static void window_copy_cursor_jump(struct window_mode_entry *);
-static void window_copy_cursor_jump_back(struct window_mode_entry *);
-static void window_copy_cursor_jump_to(struct window_mode_entry *);
-static void window_copy_cursor_jump_to_back(struct window_mode_entry *);
-static void window_copy_cursor_next_word(struct window_mode_entry *,
-                                         const char *);
-static void window_copy_cursor_next_word_end_pos(struct window_mode_entry *,
-                                                 const char *, u_int *,
-                                                 u_int *);
-static void window_copy_cursor_next_word_end(struct window_mode_entry *,
-                                             const char *, int);
-static void window_copy_cursor_previous_word_pos(struct window_mode_entry *,
-                                                 const char *, u_int *,
-                                                 u_int *);
-static void window_copy_cursor_previous_word(struct window_mode_entry *,
-                                             const char *, int);
-static void window_copy_cursor_prompt(struct window_mode_entry *, int,
-                                      const char *);
-static void window_copy_scroll_up(struct window_mode_entry *, u_int);
-static void window_copy_scroll_down(struct window_mode_entry *, u_int);
-static void window_copy_rectangle_set(struct window_mode_entry *, int);
-static void window_copy_move_mouse(struct mouse_event *);
-static void window_copy_drag_update(struct client *, struct mouse_event *);
-static void window_copy_drag_release(struct client *, struct mouse_event *);
-static void window_copy_jump_to_mark(struct window_mode_entry *);
-static void window_copy_acquire_cursor_up(struct window_mode_entry *, u_int,
-                                          u_int, u_int, u_int, u_int);
-static void window_copy_acquire_cursor_down(struct window_mode_entry *, u_int,
-                                            u_int, u_int, u_int, u_int, u_int,
-                                            int);
+const char *window_copy_key_table(struct window_mode_entry *);
+void window_copy_command(struct window_mode_entry *, struct client *, struct session *, struct winlink *, struct args *, struct mouse_event *);
+struct screen *window_copy_init(struct window_mode_entry *, struct cmd_find_state *, struct args *);
+struct screen *window_copy_view_init(struct window_mode_entry *, struct cmd_find_state *, struct args *);
+void window_copy_free(struct window_mode_entry *);
+void window_copy_resize(struct window_mode_entry *, u_int, u_int);
+void window_copy_formats(struct window_mode_entry *, struct format_tree *);
+void window_copy_pageup1(struct window_mode_entry *, int);
+int window_copy_pagedown1(struct window_mode_entry *, int, int);
+void window_copy_next_paragraph(struct window_mode_entry *);
+void window_copy_previous_paragraph(struct window_mode_entry *);
+void window_copy_redraw_selection(struct window_mode_entry *, u_int);
+void window_copy_redraw_lines(struct window_mode_entry *, u_int, u_int);
+void window_copy_redraw_screen(struct window_mode_entry *);
+void window_copy_write_line(struct window_mode_entry *, struct screen_write_ctx *, u_int);
+void window_copy_write_lines(struct window_mode_entry *, struct screen_write_ctx *, u_int, u_int);
+char *window_copy_match_at_cursor(struct window_copy_mode_data *);
+void window_copy_scroll_to(struct window_mode_entry *, u_int, u_int, int);
+int window_copy_search_compare(struct grid *, u_int, u_int, struct grid *, u_int, int);
+int window_copy_search_lr(struct grid *, struct grid *, u_int *, u_int, u_int, u_int, int);
+int window_copy_search_rl(struct grid *, struct grid *, u_int *, u_int, u_int, u_int, int);
+int window_copy_last_regex(struct grid *, u_int, u_int, u_int, u_int, u_int *, u_int *, const char *, const regex_t *, int);
+int window_copy_search_mark_at(struct window_copy_mode_data *, u_int, u_int, u_int *);
+char *window_copy_stringify(struct grid *, u_int, u_int, u_int, char *, u_int *);
+void window_copy_cstrtocellpos(struct grid *, u_int, u_int *, u_int *, const char *);
+int window_copy_search_marks(struct window_mode_entry *, struct screen *, int, int);
+void window_copy_clear_marks(struct window_mode_entry *);
+int window_copy_is_lowercase(const char *);
+void window_copy_search_back_overlap(struct grid *, regex_t *, u_int *, u_int *, u_int *, u_int);
+int window_copy_search_jump(struct window_mode_entry *, struct grid *, struct grid *, u_int, u_int, u_int, int, int, int, int);
+int window_copy_search(struct window_mode_entry *, int, int);
+int window_copy_search_up(struct window_mode_entry *, int);
+int window_copy_search_down(struct window_mode_entry *, int);
+void window_copy_goto_line(struct window_mode_entry *, const char *);
+void window_copy_update_cursor(struct window_mode_entry *, u_int, u_int);
+void window_copy_start_selection(struct window_mode_entry *);
+int window_copy_adjust_selection(struct window_mode_entry *, u_int *, u_int *);
+int window_copy_set_selection(struct window_mode_entry *, int, int);
+int window_copy_update_selection(struct window_mode_entry *, int, int);
+void window_copy_synchronize_cursor(struct window_mode_entry *, int);
+void *window_copy_get_selection(struct window_mode_entry *, size_t *);
+void window_copy_copy_buffer(struct window_mode_entry *, const char *, void *, size_t);
+void window_copy_pipe(struct window_mode_entry *, struct session *, const char *);
+void window_copy_copy_pipe(struct window_mode_entry *, struct session *, const char *, const char *);
+void window_copy_copy_selection(struct window_mode_entry *, const char *);
+void window_copy_append_selection(struct window_mode_entry *);
+void window_copy_clear_selection(struct window_mode_entry *);
+void window_copy_copy_line(struct window_mode_entry *, char **, size_t *, u_int, u_int, u_int);
+int window_copy_in_set(struct window_mode_entry *, u_int, u_int, const char *);
+u_int window_copy_find_length(struct window_mode_entry *, u_int);
+void window_copy_cursor_start_of_line(struct window_mode_entry *);
+void window_copy_cursor_back_to_indentation(struct window_mode_entry *);
+void window_copy_cursor_end_of_line(struct window_mode_entry *);
+void window_copy_other_end(struct window_mode_entry *);
+void window_copy_cursor_left(struct window_mode_entry *);
+void window_copy_cursor_right(struct window_mode_entry *, int);
+void window_copy_cursor_up(struct window_mode_entry *, int);
+void window_copy_cursor_down(struct window_mode_entry *, int);
+void window_copy_cursor_jump(struct window_mode_entry *);
+void window_copy_cursor_jump_back(struct window_mode_entry *);
+void window_copy_cursor_jump_to(struct window_mode_entry *);
+void window_copy_cursor_jump_to_back(struct window_mode_entry *);
+void window_copy_cursor_next_word(struct window_mode_entry *, const char *);
+void window_copy_cursor_next_word_end_pos(struct window_mode_entry *, const char *, u_int *, u_int *);
+void window_copy_cursor_next_word_end(struct window_mode_entry *, const char *, int);
+void window_copy_cursor_previous_word_pos(struct window_mode_entry *, const char *, u_int *, u_int *);
+void window_copy_cursor_previous_word(struct window_mode_entry *, const char *, int);
+void window_copy_cursor_prompt(struct window_mode_entry *, int, const char *);
+void window_copy_scroll_up(struct window_mode_entry *, u_int);
+void window_copy_scroll_down(struct window_mode_entry *, u_int);
+void window_copy_rectangle_set(struct window_mode_entry *, int);
+void window_copy_move_mouse(struct mouse_event *);
+void window_copy_drag_update(struct client *, struct mouse_event *);
+void window_copy_drag_release(struct client *, struct mouse_event *);
+void window_copy_jump_to_mark(struct window_mode_entry *);
+void window_copy_acquire_cursor_up(struct window_mode_entry *, u_int, u_int, u_int, u_int, u_int);
+void window_copy_acquire_cursor_down(struct window_mode_entry *, u_int, u_int, u_int, u_int, u_int, u_int, int);
 
-const struct window_mode window_copy_mode = {
-    .name = "copy-mode",
-
-    .init = window_copy_init,
-    .free = window_copy_free,
-    .resize = window_copy_resize,
-    .key_table = window_copy_key_table,
-    .command = window_copy_command,
-    .formats = window_copy_formats,
-};
-
-const struct window_mode window_view_mode = {
-    .name = "view-mode",
-
-    .init = window_copy_view_init,
-    .free = window_copy_free,
-    .resize = window_copy_resize,
-    .key_table = window_copy_key_table,
-    .command = window_copy_command,
-    .formats = window_copy_formats,
-};
+extern const struct window_mode window_copy_mode;
+extern const struct window_mode window_view_mode;
 
 enum {
   WINDOW_COPY_OFF,
@@ -304,125 +246,124 @@ struct window_copy_mode_data {
 #define WINDOW_COPY_DRAG_REPEAT_TIME 50000
 };
 
-static void window_copy_scroll_timer(__unused int fd, __unused short events,
-                                     void *arg) {
-  struct window_mode_entry *wme = arg;
-  struct window_pane *wp = (*wme).wp;
-  struct window_copy_mode_data *data = (*wme).data;
-  struct timeval tv = {.tv_usec = WINDOW_COPY_DRAG_REPEAT_TIME};
+void window_copy_scroll_timer(__unused int fd, __unused short events, void *arg);
+// void window_copy_scroll_timer(__unused int fd, __unused short events, void *arg) {
+//   struct window_mode_entry *wme = arg;
+//   struct window_pane *wp = (*wme).wp;
+//   struct window_copy_mode_data *data = (*wme).data;
+//   struct timeval tv = {.tv_usec = WINDOW_COPY_DRAG_REPEAT_TIME};
+// 
+//   evtimer_del(&(*data).dragtimer);
+// 
+//   if (TAILQ_FIRST(&(*wp).modes) != wme) {
+//     return;
+//   }
+// 
+//   if ((*data).cy == 0) {
+//     evtimer_add(&(*data).dragtimer, &tv);
+//     window_copy_cursor_up(wme, 1);
+//   } else if ((*data).cy == screen_size_y(&(*data).screen) - 1) {
+//     evtimer_add(&(*data).dragtimer, &tv);
+//     window_copy_cursor_down(wme, 1);
+//   }
+// }
 
-  evtimer_del(&(*data).dragtimer);
+struct screen *window_copy_clone_screen(struct screen *src, struct screen *hint, u_int *cx, u_int *cy, int trim);
+// struct screen *window_copy_clone_screen(struct screen *src, struct screen *hint, u_int *cx, u_int *cy, int trim) {
+//   struct screen *dst;
+//   const struct grid_line *gl;
+//   u_int sy, wx, wy;
+//   int reflow;
+// 
+//   dst = xcalloc(1, sizeof *dst);
+// 
+//   sy = screen_hsize(src) + screen_size_y(src);
+//   if (trim) {
+//     while (sy > screen_hsize(src)) {
+//       gl = grid_peek_line((*src).grid, sy - 1);
+//       if ((*gl).cellused != 0) {
+//         break;
+//       }
+//       sy--;
+//     }
+//   }
+//   log_debug("%s: target screen is %ux%u, source %ux%u", __func__,
+//             screen_size_x(src), sy, screen_size_x(hint),
+//             screen_hsize(src) + screen_size_y(src));
+//   screen_init(dst, screen_size_x(src), sy, screen_hlimit(src));
+// 
+//   /*
+//    * Ensure history is on for the backing grid so lines are not deleted
+//    * during resizing.
+//    */
+//   (*(*dst).grid).flags |= GRID_HISTORY;
+//   grid_duplicate_lines((*dst).grid, 0, (*src).grid, 0, sy);
+// 
+//   (*(*dst).grid).sy = sy - screen_hsize(src);
+//   (*(*dst).grid).hsize = screen_hsize(src);
+//   (*(*dst).grid).hscrolled = (*(*src).grid).hscrolled;
+//   if ((*src).cy > (*(*dst).grid).sy - 1) {
+//     (*dst).cx = 0;
+//     (*dst).cy = (*(*dst).grid).sy - 1;
+//   } else {
+//     (*dst).cx = (*src).cx;
+//     (*dst).cy = (*src).cy;
+//   }
+// 
+//   if (cx != NULL && cy != NULL) {
+//     *cx = (*dst).cx;
+//     *cy = screen_hsize(dst) + (*dst).cy;
+//     reflow = (screen_size_x(hint) != screen_size_x(dst));
+//   } else {
+//     reflow = 0;
+//   }
+//   if (reflow) {
+//     grid_wrap_position((*dst).grid, *cx, *cy, &wx, &wy);
+//   }
+//   screen_resize_cursor(dst, screen_size_x(hint), screen_size_y(hint), 1, 0, 0);
+//   if (reflow) {
+//     grid_unwrap_position((*dst).grid, cx, cy, wx, wy);
+//   }
+// 
+//   return dst;
+// }
 
-  if (TAILQ_FIRST(&(*wp).modes) != wme) {
-    return;
-  }
+struct window_copy_mode_data * window_copy_common_init(struct window_mode_entry *wme);
+// struct window_copy_mode_data * window_copy_common_init(struct window_mode_entry *wme) {
+//   struct window_pane *wp = (*wme).wp;
+//   struct window_copy_mode_data *data;
+//   struct screen *base = &(*wp).base;
+// 
+//   (*wme).data = data = xcalloc(1, sizeof *data);
+// 
+//   (*data).cursordrag = CURSORDRAG_NONE;
+//   (*data).lineflag = LINE_SEL_NONE;
+//   (*data).selflag = SEL_CHAR;
+// 
+//   if ((*wp).searchstr != NULL) {
+//     (*data).searchtype = WINDOW_COPY_SEARCHUP;
+//     (*data).searchregex = (*wp).searchregex;
+//     (*data).searchstr = xstrdup((*wp).searchstr);
+//   } else {
+//     (*data).searchtype = WINDOW_COPY_OFF;
+//     (*data).searchregex = 0;
+//     (*data).searchstr = NULL;
+//   }
+//   (*data).searchx = (*data).searchy = (*data).searcho = -1;
+//   (*data).searchall = 1;
+// 
+//   (*data).jumptype = WINDOW_COPY_OFF;
+//   (*data).jumpchar = NULL;
+// 
+//   screen_init(&(*data).screen, screen_size_x(base), screen_size_y(base), 0);
+//   (*data).modekeys = options_get_number((*(*wp).window).options, "mode-keys");
+// 
+//   evtimer_set(&(*data).dragtimer, window_copy_scroll_timer, wme);
+// 
+//   return data;
+// }
 
-  if ((*data).cy == 0) {
-    evtimer_add(&(*data).dragtimer, &tv);
-    window_copy_cursor_up(wme, 1);
-  } else if ((*data).cy == screen_size_y(&(*data).screen) - 1) {
-    evtimer_add(&(*data).dragtimer, &tv);
-    window_copy_cursor_down(wme, 1);
-  }
-}
-
-static struct screen *window_copy_clone_screen(struct screen *src,
-                                               struct screen *hint, u_int *cx,
-                                               u_int *cy, int trim) {
-  struct screen *dst;
-  const struct grid_line *gl;
-  u_int sy, wx, wy;
-  int reflow;
-
-  dst = xcalloc(1, sizeof *dst);
-
-  sy = screen_hsize(src) + screen_size_y(src);
-  if (trim) {
-    while (sy > screen_hsize(src)) {
-      gl = grid_peek_line((*src).grid, sy - 1);
-      if ((*gl).cellused != 0) {
-        break;
-      }
-      sy--;
-    }
-  }
-  log_debug("%s: target screen is %ux%u, source %ux%u", __func__,
-            screen_size_x(src), sy, screen_size_x(hint),
-            screen_hsize(src) + screen_size_y(src));
-  screen_init(dst, screen_size_x(src), sy, screen_hlimit(src));
-
-  /*
-   * Ensure history is on for the backing grid so lines are not deleted
-   * during resizing.
-   */
-  (*(*dst).grid).flags |= GRID_HISTORY;
-  grid_duplicate_lines((*dst).grid, 0, (*src).grid, 0, sy);
-
-  (*(*dst).grid).sy = sy - screen_hsize(src);
-  (*(*dst).grid).hsize = screen_hsize(src);
-  (*(*dst).grid).hscrolled = (*(*src).grid).hscrolled;
-  if ((*src).cy > (*(*dst).grid).sy - 1) {
-    (*dst).cx = 0;
-    (*dst).cy = (*(*dst).grid).sy - 1;
-  } else {
-    (*dst).cx = (*src).cx;
-    (*dst).cy = (*src).cy;
-  }
-
-  if (cx != NULL && cy != NULL) {
-    *cx = (*dst).cx;
-    *cy = screen_hsize(dst) + (*dst).cy;
-    reflow = (screen_size_x(hint) != screen_size_x(dst));
-  } else {
-    reflow = 0;
-  }
-  if (reflow) {
-    grid_wrap_position((*dst).grid, *cx, *cy, &wx, &wy);
-  }
-  screen_resize_cursor(dst, screen_size_x(hint), screen_size_y(hint), 1, 0, 0);
-  if (reflow) {
-    grid_unwrap_position((*dst).grid, cx, cy, wx, wy);
-  }
-
-  return dst;
-}
-
-static struct window_copy_mode_data *
-window_copy_common_init(struct window_mode_entry *wme) {
-  struct window_pane *wp = (*wme).wp;
-  struct window_copy_mode_data *data;
-  struct screen *base = &(*wp).base;
-
-  (*wme).data = data = xcalloc(1, sizeof *data);
-
-  (*data).cursordrag = CURSORDRAG_NONE;
-  (*data).lineflag = LINE_SEL_NONE;
-  (*data).selflag = SEL_CHAR;
-
-  if ((*wp).searchstr != NULL) {
-    (*data).searchtype = WINDOW_COPY_SEARCHUP;
-    (*data).searchregex = (*wp).searchregex;
-    (*data).searchstr = xstrdup((*wp).searchstr);
-  } else {
-    (*data).searchtype = WINDOW_COPY_OFF;
-    (*data).searchregex = 0;
-    (*data).searchstr = NULL;
-  }
-  (*data).searchx = (*data).searchy = (*data).searcho = -1;
-  (*data).searchall = 1;
-
-  (*data).jumptype = WINDOW_COPY_OFF;
-  (*data).jumpchar = NULL;
-
-  screen_init(&(*data).screen, screen_size_x(base), screen_size_y(base), 0);
-  (*data).modekeys = options_get_number((*(*wp).window).options, "mode-keys");
-
-  evtimer_set(&(*data).dragtimer, window_copy_scroll_timer, wme);
-
-  return data;
-}
-
-static struct screen *window_copy_init(struct window_mode_entry *wme,
+struct screen *window_copy_init(struct window_mode_entry *wme,
                                        __unused struct cmd_find_state *fs,
                                        struct args *args) {
   struct window_pane *wp = (*wme).swp;
@@ -466,7 +407,7 @@ static struct screen *window_copy_init(struct window_mode_entry *wme,
   return &(*data).screen;
 }
 
-static struct screen *window_copy_view_init(struct window_mode_entry *wme,
+struct screen *window_copy_view_init(struct window_mode_entry *wme,
                                             __unused struct cmd_find_state *fs,
                                             __unused struct args *args) {
   struct window_pane *wp = (*wme).wp;
@@ -489,7 +430,7 @@ static struct screen *window_copy_view_init(struct window_mode_entry *wme,
   return &(*data).screen;
 }
 
-static void window_copy_free(struct window_mode_entry *wme) {
+void window_copy_free(struct window_mode_entry *wme) {
   struct window_copy_mode_data *data = (*wme).data;
 
   evtimer_del(&(*data).dragtimer);
@@ -520,7 +461,7 @@ void window_copy_add(struct window_pane *wp, int parse, const char *fmt, ...) {
   va_end(ap);
 }
 
-static void window_copy_init_ctx_cb(__unused struct screen_write_ctx *ctx,
+void window_copy_init_ctx_cb(__unused struct screen_write_ctx *ctx,
                                     struct tty_ctx *ttyctx) {
   memcpy(&(*ttyctx).defaults, &grid_default_cell, sizeof (*ttyctx).defaults);
   (*ttyctx).palette = NULL;
@@ -593,7 +534,7 @@ void window_copy_pageup(struct window_pane *wp, int half_page) {
   window_copy_pageup1(TAILQ_FIRST(&(*wp).modes), half_page);
 }
 
-static void window_copy_pageup1(struct window_mode_entry *wme, int half_page) {
+void window_copy_pageup1(struct window_mode_entry *wme, int half_page) {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
   u_int n, ox, oy, px, py;
@@ -650,7 +591,7 @@ void window_copy_pagedown(struct window_pane *wp, int half_page,
   }
 }
 
-static int window_copy_pagedown1(struct window_mode_entry *wme, int half_page,
+int window_copy_pagedown1(struct window_mode_entry *wme, int half_page,
                                  int scroll_exit) {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
@@ -704,7 +645,7 @@ static int window_copy_pagedown1(struct window_mode_entry *wme, int half_page,
   return 0;
 }
 
-static void window_copy_previous_paragraph(struct window_mode_entry *wme) {
+void window_copy_previous_paragraph(struct window_mode_entry *wme) {
   struct window_copy_mode_data *data = (*wme).data;
   u_int oy;
 
@@ -721,7 +662,7 @@ static void window_copy_previous_paragraph(struct window_mode_entry *wme) {
   window_copy_scroll_to(wme, 0, oy, 0);
 }
 
-static void window_copy_next_paragraph(struct window_mode_entry *wme) {
+void window_copy_next_paragraph(struct window_mode_entry *wme) {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
   u_int maxy, ox, oy;
@@ -757,7 +698,7 @@ char *window_copy_get_line(struct window_pane *wp, u_int y) {
   return format_grid_line(gd, (*gd).hsize + y);
 }
 
-static void *window_copy_cursor_hyperlink_cb(struct format_tree *ft) {
+void *window_copy_cursor_hyperlink_cb(struct format_tree *ft) {
   struct window_pane *wp = format_get_pane(ft);
   struct window_mode_entry *wme = TAILQ_FIRST(&(*wp).modes);
   struct window_copy_mode_data *data = (*wme).data;
@@ -767,7 +708,7 @@ static void *window_copy_cursor_hyperlink_cb(struct format_tree *ft) {
                                &(*data).screen);
 }
 
-static void *window_copy_cursor_word_cb(struct format_tree *ft) {
+void *window_copy_cursor_word_cb(struct format_tree *ft) {
   struct window_pane *wp = format_get_pane(ft);
   struct window_mode_entry *wme = TAILQ_FIRST(&(*wp).modes);
   struct window_copy_mode_data *data = (*wme).data;
@@ -775,7 +716,7 @@ static void *window_copy_cursor_word_cb(struct format_tree *ft) {
   return window_copy_get_word(wp, (*data).cx, (*data).cy);
 }
 
-static void *window_copy_cursor_line_cb(struct format_tree *ft) {
+void *window_copy_cursor_line_cb(struct format_tree *ft) {
   struct window_pane *wp = format_get_pane(ft);
   struct window_mode_entry *wme = TAILQ_FIRST(&(*wp).modes);
   struct window_copy_mode_data *data = (*wme).data;
@@ -783,7 +724,7 @@ static void *window_copy_cursor_line_cb(struct format_tree *ft) {
   return window_copy_get_line(wp, (*data).cy);
 }
 
-static void *window_copy_search_match_cb(struct format_tree *ft) {
+void *window_copy_search_match_cb(struct format_tree *ft) {
   struct window_pane *wp = format_get_pane(ft);
   struct window_mode_entry *wme = TAILQ_FIRST(&(*wp).modes);
   struct window_copy_mode_data *data = (*wme).data;
@@ -791,7 +732,7 @@ static void *window_copy_search_match_cb(struct format_tree *ft) {
   return window_copy_match_at_cursor(data);
 }
 
-static void window_copy_formats(struct window_mode_entry *wme,
+void window_copy_formats(struct window_mode_entry *wme,
                                 struct format_tree *ft) {
   struct window_copy_mode_data *data = (*wme).data;
 
@@ -834,7 +775,7 @@ static void window_copy_formats(struct window_mode_entry *wme,
   format_add_cb(ft, "copy_cursor_hyperlink", window_copy_cursor_hyperlink_cb);
 }
 
-static void window_copy_size_changed(struct window_mode_entry *wme) {
+void window_copy_size_changed(struct window_mode_entry *wme) {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
   struct screen_write_ctx ctx;
@@ -855,7 +796,7 @@ static void window_copy_size_changed(struct window_mode_entry *wme) {
   (*data).searcho = (*data).oy;
 }
 
-static void window_copy_resize(struct window_mode_entry *wme, u_int sx,
+void window_copy_resize(struct window_mode_entry *wme, u_int sx,
                                u_int sy) {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
@@ -888,7 +829,7 @@ static void window_copy_resize(struct window_mode_entry *wme, u_int sx,
   window_copy_redraw_screen(wme);
 }
 
-static const char *window_copy_key_table(struct window_mode_entry *wme) {
+const char *window_copy_key_table(struct window_mode_entry *wme) {
   struct window_pane *wp = (*wme).wp;
 
   if (options_get_number((*(*wp).window).options, "mode-keys") == MODEKEY_VI) {
@@ -897,7 +838,7 @@ static const char *window_copy_key_table(struct window_mode_entry *wme) {
   return "copy-mode";
 }
 
-static int window_copy_expand_search_string(struct window_copy_cmd_state *cs) {
+int window_copy_expand_search_string(struct window_copy_cmd_state *cs) {
   struct window_mode_entry *wme = (*cs).wme;
   struct window_copy_mode_data *data = (*wme).data;
   const char *ss = args_string((*cs).args, 1);
@@ -2919,7 +2860,7 @@ static const struct {
      .clear = WINDOW_COPY_CMD_CLEAR_EMACS_ONLY,
      .f = window_copy_cmd_top_line}};
 
-static void window_copy_command(struct window_mode_entry *wme, struct client *c,
+void window_copy_command(struct window_mode_entry *wme, struct client *c,
                                 struct session *s, struct winlink *wl,
                                 struct args *args, struct mouse_event *m) {
   struct window_copy_mode_data *data = (*wme).data;
@@ -2982,7 +2923,7 @@ static void window_copy_command(struct window_mode_entry *wme, struct client *c,
   }
 }
 
-static void window_copy_scroll_to(struct window_mode_entry *wme, u_int px,
+void window_copy_scroll_to(struct window_mode_entry *wme, u_int px,
                                   u_int py, int no_redraw) {
   struct window_copy_mode_data *data = (*wme).data;
   struct grid *gd = (*(*data).backing).grid;
@@ -3016,7 +2957,7 @@ static void window_copy_scroll_to(struct window_mode_entry *wme, u_int px,
   }
 }
 
-static int window_copy_search_compare(struct grid *gd, u_int px, u_int py,
+int window_copy_search_compare(struct grid *gd, u_int px, u_int py,
                                       struct grid *sgd, u_int spx, int cis) {
   struct grid_cell gc, sgc;
   const struct utf8_data *ud, *sud;
@@ -3037,7 +2978,7 @@ static int window_copy_search_compare(struct grid *gd, u_int px, u_int py,
   return memcmp((*ud).data, (*sud).data, (*ud).size) == 0;
 }
 
-static int window_copy_search_lr(struct grid *gd, struct grid *sgd, u_int *ppx,
+int window_copy_search_lr(struct grid *gd, struct grid *sgd, u_int *ppx,
                                  u_int py, u_int first, u_int last, int cis) {
   u_int ax, bx, px, pywrap, endline;
   int matched;
@@ -3074,7 +3015,7 @@ static int window_copy_search_lr(struct grid *gd, struct grid *sgd, u_int *ppx,
   return 0;
 }
 
-static int window_copy_search_rl(struct grid *gd, struct grid *sgd, u_int *ppx,
+int window_copy_search_rl(struct grid *gd, struct grid *sgd, u_int *ppx,
                                  u_int py, u_int first, u_int last, int cis) {
   u_int ax, bx, px, pywrap, endline;
   int matched;
@@ -3111,7 +3052,7 @@ static int window_copy_search_rl(struct grid *gd, struct grid *sgd, u_int *ppx,
   return 0;
 }
 
-static int window_copy_search_lr_regex(struct grid *gd, u_int *ppx, u_int *psx,
+int window_copy_search_lr_regex(struct grid *gd, u_int *ppx, u_int *psx,
                                        u_int py, u_int first, u_int last,
                                        regex_t *reg) {
   int eflags = 0;
@@ -3178,7 +3119,7 @@ static int window_copy_search_lr_regex(struct grid *gd, u_int *ppx, u_int *psx,
   return 0;
 }
 
-static int window_copy_search_rl_regex(struct grid *gd, u_int *ppx, u_int *psx,
+int window_copy_search_rl_regex(struct grid *gd, u_int *ppx, u_int *psx,
                                        u_int py, u_int first, u_int last,
                                        regex_t *reg) {
   int eflags = 0;
@@ -3221,7 +3162,7 @@ static int window_copy_search_rl_regex(struct grid *gd, u_int *ppx, u_int *psx,
   return 0;
 }
 
-static const char *window_copy_cellstring(const struct grid_line *gl, u_int px,
+const char *window_copy_cellstring(const struct grid_line *gl, u_int px,
                                           size_t *size, int *allocated) {
   static struct utf8_data ud;
   struct grid_cell_entry *gce;
@@ -3260,7 +3201,7 @@ static const char *window_copy_cellstring(const struct grid_line *gl, u_int px,
 }
 
 /* Find last match in given range. */
-static int window_copy_last_regex(struct grid *gd, u_int py, u_int first,
+int window_copy_last_regex(struct grid *gd, u_int py, u_int first,
                                   u_int last, u_int len, u_int *ppx, u_int *psx,
                                   const char *buf, const regex_t *preg,
                                   int eflags) {
@@ -3312,7 +3253,7 @@ static int window_copy_last_regex(struct grid *gd, u_int py, u_int first,
 }
 
 /* Stringify line and append to input buffer. Caller frees. */
-static char *window_copy_stringify(struct grid *gd, u_int py, u_int first,
+char *window_copy_stringify(struct grid *gd, u_int py, u_int first,
                                    u_int last, char *buf, u_int *size) {
   u_int ax, bx, newsize = *size;
   const struct grid_line *gl;
@@ -3351,7 +3292,7 @@ static char *window_copy_stringify(struct grid *gd, u_int py, u_int first,
 }
 
 /* Map start of C string containing UTF-8 data to grid cell position. */
-static void window_copy_cstrtocellpos(struct grid *gd, u_int ncells, u_int *ppx,
+void window_copy_cstrtocellpos(struct grid *gd, u_int ncells, u_int *ppx,
                                       u_int *ppy, const char *str) {
   u_int cell, ccell, px, pywrap, pos, len;
   int match;
@@ -3440,7 +3381,7 @@ static void window_copy_cstrtocellpos(struct grid *gd, u_int ncells, u_int *ppx,
   free(cells);
 }
 
-static void window_copy_move_left(struct screen *s, u_int *fx, u_int *fy,
+void window_copy_move_left(struct screen *s, u_int *fx, u_int *fy,
                                   int wrapflag) {
   if (*fx == 0) {   /* left */
     if (*fy == 0) { /* top */
@@ -3457,7 +3398,7 @@ static void window_copy_move_left(struct screen *s, u_int *fx, u_int *fy,
   }
 }
 
-static void window_copy_move_right(struct screen *s, u_int *fx, u_int *fy,
+void window_copy_move_right(struct screen *s, u_int *fx, u_int *fy,
                                    int wrapflag) {
   if (*fx == screen_size_x(s) - 1) {                     /* right */
     if (*fy == screen_hsize(s) + screen_size_y(s) - 1) { /* bottom */
@@ -3474,7 +3415,7 @@ static void window_copy_move_right(struct screen *s, u_int *fx, u_int *fy,
   }
 }
 
-static int window_copy_is_lowercase(const char *ptr) {
+int window_copy_is_lowercase(const char *ptr) {
   while (*ptr != '\0') {
     if (*ptr != tolower((u_char)*ptr)) {
       return 0;
@@ -3488,7 +3429,7 @@ static int window_copy_is_lowercase(const char *ptr) {
  * Handle backward wrapped regex searches with overlapping matches. In this case
  * find the longest overlapping match from previous wrapped lines.
  */
-static void window_copy_search_back_overlap(struct grid *gd, regex_t *preg,
+void window_copy_search_back_overlap(struct grid *gd, regex_t *preg,
                                             u_int *ppx, u_int *psx, u_int *ppy,
                                             u_int endline) {
   u_int endx, endy, oldendx, oldendy, px, py, sx;
@@ -3530,7 +3471,7 @@ static void window_copy_search_back_overlap(struct grid *gd, regex_t *preg,
  * up, down otherwise. If wrap then go to begin/end of grid and try again if
  * not found.
  */
-static int window_copy_search_jump(struct window_mode_entry *wme,
+int window_copy_search_jump(struct window_mode_entry *wme,
                                    struct grid *gd, struct grid *sgd, u_int fx,
                                    u_int fy, u_int endline, int cis, int wrap,
                                    int direction, int regex) {
@@ -3599,7 +3540,7 @@ static int window_copy_search_jump(struct window_mode_entry *wme,
   return 0;
 }
 
-static void
+void
 window_copy_move_after_search_mark(struct window_copy_mode_data *data,
                                    u_int *fx, u_int *fy, int wrapflag) {
   struct screen *s = (*data).backing;
@@ -3626,7 +3567,7 @@ window_copy_move_after_search_mark(struct window_copy_mode_data *data,
  * Search in for text searchstr. If direction is 0 then search up, otherwise
  * down.
  */
-static int window_copy_search(struct window_mode_entry *wme, int direction,
+int window_copy_search(struct window_mode_entry *wme, int direction,
                               int regex) {
   struct window_pane *wp = (*wme).wp;
   struct window_copy_mode_data *data = (*wme).data;
@@ -3757,7 +3698,7 @@ static int window_copy_search(struct window_mode_entry *wme, int direction,
   return found;
 }
 
-static void window_copy_visible_lines(struct window_copy_mode_data *data,
+void window_copy_visible_lines(struct window_copy_mode_data *data,
                                       u_int *start, u_int *end) {
   struct grid *gd = (*(*data).backing).grid;
   const struct grid_line *gl;
@@ -3771,7 +3712,7 @@ static void window_copy_visible_lines(struct window_copy_mode_data *data,
   *end = (*gd).hsize - (*data).oy + (*gd).sy;
 }
 
-static int window_copy_search_mark_at(struct window_copy_mode_data *data,
+int window_copy_search_mark_at(struct window_copy_mode_data *data,
                                       u_int px, u_int py, u_int *at) {
   struct screen *s = (*data).backing;
   struct grid *gd = (*s).grid;
@@ -3786,7 +3727,7 @@ static int window_copy_search_mark_at(struct window_copy_mode_data *data,
   return 0;
 }
 
-static int window_copy_search_marks(struct window_mode_entry *wme,
+int window_copy_search_marks(struct window_mode_entry *wme,
                                     struct screen *ssp, int regex,
                                     int visible_only) {
   struct window_copy_mode_data *data = (*wme).data;
@@ -3929,22 +3870,22 @@ out:
   return 1;
 }
 
-static void window_copy_clear_marks(struct window_mode_entry *wme) {
+void window_copy_clear_marks(struct window_mode_entry *wme) {
   struct window_copy_mode_data *data = (*wme).data;
 
   free((*data).searchmark);
   (*data).searchmark = NULL;
 }
 
-static int window_copy_search_up(struct window_mode_entry *wme, int regex) {
+int window_copy_search_up(struct window_mode_entry *wme, int regex) {
   return window_copy_search(wme, 0, regex);
 }
 
-static int window_copy_search_down(struct window_mode_entry *wme, int regex) {
+int window_copy_search_down(struct window_mode_entry *wme, int regex) {
   return window_copy_search(wme, 1, regex);
 }
 
-static void window_copy_goto_line(struct window_mode_entry *wme,
+void window_copy_goto_line(struct window_mode_entry *wme,
                                   const char *linestr) {
   struct window_copy_mode_data *data = (*wme).data;
   const char *errstr;
@@ -3963,7 +3904,7 @@ static void window_copy_goto_line(struct window_mode_entry *wme,
   window_copy_redraw_screen(wme);
 }
 
-static void window_copy_match_start_end(struct window_copy_mode_data *data,
+void window_copy_match_start_end(struct window_copy_mode_data *data,
                                         u_int at, u_int *start, u_int *end) {
   struct grid *gd = (*(*data).backing).grid;
   u_int last = ((*gd).sy * (*gd).sx) - 1;
@@ -3984,7 +3925,7 @@ static void window_copy_match_start_end(struct window_copy_mode_data *data,
   }
 }
 
-static char *window_copy_match_at_cursor(struct window_copy_mode_data *data) {
+char *window_copy_match_at_cursor(struct window_copy_mode_data *data) {
   struct grid *gd = (*(*data).backing).grid;
   struct grid_cell gc;
   u_int at, start, end, cy, px, py;
@@ -4027,7 +3968,7 @@ static char *window_copy_match_at_cursor(struct window_copy_mode_data *data) {
   return buf;
 }
 
-static void window_copy_update_style(struct window_mode_entry *wme, u_int fx,
+void window_copy_update_style(struct window_mode_entry *wme, u_int fx,
                                      u_int fy, struct grid_cell *gc,
                                      const struct grid_cell *mgc,
                                      const struct grid_cell *cgc,
@@ -4101,7 +4042,7 @@ static void window_copy_update_style(struct window_mode_entry *wme, u_int fx,
   }
 }
 
-static void window_copy_write_one(struct window_mode_entry *wme,
+void window_copy_write_one(struct window_mode_entry *wme,
                                   struct screen_write_ctx *ctx, u_int py,
                                   u_int fy, u_int nx,
                                   const struct grid_cell *mgc,
@@ -4122,7 +4063,7 @@ static void window_copy_write_one(struct window_mode_entry *wme,
   }
 }
 
-static void window_copy_write_line(struct window_mode_entry *wme,
+void window_copy_write_line(struct window_mode_entry *wme,
                                    struct screen_write_ctx *ctx, u_int py) {
   struct window_pane *wp = (*wme).wp;
   struct window_copy_mode_data *data = (*wme).data;
@@ -4187,7 +4128,7 @@ static void window_copy_write_line(struct window_mode_entry *wme,
   }
 }
 
-static void window_copy_write_lines(struct window_mode_entry *wme,
+void window_copy_write_lines(struct window_mode_entry *wme,
                                     struct screen_write_ctx *ctx, u_int py,
                                     u_int ny) {
   u_int yy;
@@ -4197,7 +4138,7 @@ static void window_copy_write_lines(struct window_mode_entry *wme,
   }
 }
 
-static void window_copy_redraw_selection(struct window_mode_entry *wme,
+void window_copy_redraw_selection(struct window_mode_entry *wme,
                                          u_int old_y) {
   struct window_copy_mode_data *data = (*wme).data;
   struct grid *gd = (*(*data).backing).grid;
@@ -4225,7 +4166,7 @@ static void window_copy_redraw_selection(struct window_mode_entry *wme,
   window_copy_redraw_lines(wme, start, end - start + 1);
 }
 
-static void window_copy_redraw_lines(struct window_mode_entry *wme, u_int py,
+void window_copy_redraw_lines(struct window_mode_entry *wme, u_int py,
                                      u_int ny) {
   struct window_pane *wp = (*wme).wp;
   struct window_copy_mode_data *data = (*wme).data;
@@ -4240,13 +4181,13 @@ static void window_copy_redraw_lines(struct window_mode_entry *wme, u_int py,
   screen_write_stop(&ctx);
 }
 
-static void window_copy_redraw_screen(struct window_mode_entry *wme) {
+void window_copy_redraw_screen(struct window_mode_entry *wme) {
   struct window_copy_mode_data *data = (*wme).data;
 
   window_copy_redraw_lines(wme, 0, screen_size_y(&(*data).screen));
 }
 
-static void window_copy_synchronize_cursor_end(struct window_mode_entry *wme,
+void window_copy_synchronize_cursor_end(struct window_mode_entry *wme,
                                                int begin, int no_reset) {
   struct window_copy_mode_data *data = (*wme).data;
   u_int xx, yy;
@@ -4316,7 +4257,7 @@ static void window_copy_synchronize_cursor_end(struct window_mode_entry *wme,
   }
 }
 
-static void window_copy_synchronize_cursor(struct window_mode_entry *wme,
+void window_copy_synchronize_cursor(struct window_mode_entry *wme,
                                            int no_reset) {
   struct window_copy_mode_data *data = (*wme).data;
 
@@ -4332,7 +4273,7 @@ static void window_copy_synchronize_cursor(struct window_mode_entry *wme,
   }
 }
 
-static void window_copy_update_cursor(struct window_mode_entry *wme, u_int cx,
+void window_copy_update_cursor(struct window_mode_entry *wme, u_int cx,
                                       u_int cy) {
   struct window_pane *wp = (*wme).wp;
   struct window_copy_mode_data *data = (*wme).data;
@@ -4356,7 +4297,7 @@ static void window_copy_update_cursor(struct window_mode_entry *wme, u_int cx,
   }
 }
 
-static void window_copy_start_selection(struct window_mode_entry *wme) {
+void window_copy_start_selection(struct window_mode_entry *wme) {
   struct window_copy_mode_data *data = (*wme).data;
 
   (*data).selx = (*data).cx;
@@ -4370,7 +4311,7 @@ static void window_copy_start_selection(struct window_mode_entry *wme) {
   window_copy_set_selection(wme, 1, 0);
 }
 
-static int window_copy_adjust_selection(struct window_mode_entry *wme,
+int window_copy_adjust_selection(struct window_mode_entry *wme,
                                         u_int *selx, u_int *sely) {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
@@ -4403,7 +4344,7 @@ static int window_copy_adjust_selection(struct window_mode_entry *wme,
   return relpos;
 }
 
-static int window_copy_update_selection(struct window_mode_entry *wme,
+int window_copy_update_selection(struct window_mode_entry *wme,
                                         int may_redraw, int no_reset) {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
@@ -4414,7 +4355,7 @@ static int window_copy_update_selection(struct window_mode_entry *wme,
   return window_copy_set_selection(wme, may_redraw, no_reset);
 }
 
-static int window_copy_set_selection(struct window_mode_entry *wme,
+int window_copy_set_selection(struct window_mode_entry *wme,
                                      int may_redraw, int no_reset) {
   struct window_pane *wp = (*wme).wp;
   struct window_copy_mode_data *data = (*wme).data;
@@ -4474,7 +4415,7 @@ static int window_copy_set_selection(struct window_mode_entry *wme,
   return 1;
 }
 
-static void *window_copy_get_selection(struct window_mode_entry *wme,
+void *window_copy_get_selection(struct window_mode_entry *wme,
                                        size_t *len) {
   struct window_pane *wp = (*wme).wp;
   struct window_copy_mode_data *data = (*wme).data;
@@ -4603,7 +4544,7 @@ static void *window_copy_get_selection(struct window_mode_entry *wme,
   return buf;
 }
 
-static void window_copy_copy_buffer(struct window_mode_entry *wme,
+void window_copy_copy_buffer(struct window_mode_entry *wme,
                                     const char *prefix, void *buf, size_t len) {
   struct window_pane *wp = (*wme).wp;
   struct screen_write_ctx ctx;
@@ -4618,7 +4559,7 @@ static void window_copy_copy_buffer(struct window_mode_entry *wme,
   paste_add(prefix, buf, len);
 }
 
-static void *window_copy_pipe_run(struct window_mode_entry *wme,
+void *window_copy_pipe_run(struct window_mode_entry *wme,
                                   struct session *s, const char *cmd,
                                   size_t *len) {
   void *buf;
@@ -4636,14 +4577,14 @@ static void *window_copy_pipe_run(struct window_mode_entry *wme,
   return buf;
 }
 
-static void window_copy_pipe(struct window_mode_entry *wme, struct session *s,
+void window_copy_pipe(struct window_mode_entry *wme, struct session *s,
                              const char *cmd) {
   size_t len;
 
   window_copy_pipe_run(wme, s, cmd, &len);
 }
 
-static void window_copy_copy_pipe(struct window_mode_entry *wme,
+void window_copy_copy_pipe(struct window_mode_entry *wme,
                                   struct session *s, const char *prefix,
                                   const char *cmd) {
   void *buf;
@@ -4655,7 +4596,7 @@ static void window_copy_copy_pipe(struct window_mode_entry *wme,
   }
 }
 
-static void window_copy_copy_selection(struct window_mode_entry *wme,
+void window_copy_copy_selection(struct window_mode_entry *wme,
                                        const char *prefix) {
   char *buf;
   size_t len;
@@ -4666,7 +4607,7 @@ static void window_copy_copy_selection(struct window_mode_entry *wme,
   }
 }
 
-static void window_copy_append_selection(struct window_mode_entry *wme) {
+void window_copy_append_selection(struct window_mode_entry *wme) {
   struct window_pane *wp = (*wme).wp;
   char *buf;
   struct paste_buffer *pb;
@@ -4699,7 +4640,7 @@ static void window_copy_append_selection(struct window_mode_entry *wme) {
   }
 }
 
-static void window_copy_copy_line(struct window_mode_entry *wme, char **buf,
+void window_copy_copy_line(struct window_mode_entry *wme, char **buf,
                                   size_t *off, u_int sy, u_int sx, u_int ex) {
   struct window_copy_mode_data *data = (*wme).data;
   struct grid *gd = (*(*data).backing).grid;
@@ -4763,7 +4704,7 @@ static void window_copy_copy_line(struct window_mode_entry *wme, char **buf,
   }
 }
 
-static void window_copy_clear_selection(struct window_mode_entry *wme) {
+void window_copy_clear_selection(struct window_mode_entry *wme) {
   struct window_copy_mode_data *data = (*wme).data;
   u_int px, py;
 
@@ -4780,7 +4721,7 @@ static void window_copy_clear_selection(struct window_mode_entry *wme) {
   }
 }
 
-static int window_copy_in_set(struct window_mode_entry *wme, u_int px, u_int py,
+int window_copy_in_set(struct window_mode_entry *wme, u_int px, u_int py,
                               const char *set) {
   struct window_copy_mode_data *data = (*wme).data;
   struct grid_cell gc;
@@ -4792,13 +4733,13 @@ static int window_copy_in_set(struct window_mode_entry *wme, u_int px, u_int py,
   return utf8_cstrhas(set, &gc.data);
 }
 
-static u_int window_copy_find_length(struct window_mode_entry *wme, u_int py) {
+u_int window_copy_find_length(struct window_mode_entry *wme, u_int py) {
   struct window_copy_mode_data *data = (*wme).data;
 
   return grid_line_length((*(*data).backing).grid, py);
 }
 
-static void window_copy_cursor_start_of_line(struct window_mode_entry *wme) {
+void window_copy_cursor_start_of_line(struct window_mode_entry *wme) {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *back_s = (*data).backing;
   struct grid_reader gr;
@@ -4815,7 +4756,7 @@ static void window_copy_cursor_start_of_line(struct window_mode_entry *wme) {
   window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
 }
 
-static void
+void
 window_copy_cursor_back_to_indentation(struct window_mode_entry *wme) {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *back_s = (*data).backing;
@@ -4833,7 +4774,7 @@ window_copy_cursor_back_to_indentation(struct window_mode_entry *wme) {
   window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
 }
 
-static void window_copy_cursor_end_of_line(struct window_mode_entry *wme) {
+void window_copy_cursor_end_of_line(struct window_mode_entry *wme) {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *back_s = (*data).backing;
   struct grid_reader gr;
@@ -4855,7 +4796,7 @@ static void window_copy_cursor_end_of_line(struct window_mode_entry *wme) {
                                   oldy, px, py, 0);
 }
 
-static void window_copy_other_end(struct window_mode_entry *wme) {
+void window_copy_other_end(struct window_mode_entry *wme) {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
   u_int selx, sely, cy, yy, hsize;
@@ -4907,7 +4848,7 @@ static void window_copy_other_end(struct window_mode_entry *wme) {
   window_copy_redraw_screen(wme);
 }
 
-static void window_copy_cursor_left(struct window_mode_entry *wme) {
+void window_copy_cursor_left(struct window_mode_entry *wme) {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *back_s = (*data).backing;
   struct grid_reader gr;
@@ -4924,7 +4865,7 @@ static void window_copy_cursor_left(struct window_mode_entry *wme) {
   window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
 }
 
-static void window_copy_cursor_right(struct window_mode_entry *wme, int all) {
+void window_copy_cursor_right(struct window_mode_entry *wme, int all) {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *back_s = (*data).backing;
   struct grid_reader gr;
@@ -4942,7 +4883,7 @@ static void window_copy_cursor_right(struct window_mode_entry *wme, int all) {
                                   oldy, px, py, 0);
 }
 
-static void window_copy_cursor_up(struct window_mode_entry *wme,
+void window_copy_cursor_up(struct window_mode_entry *wme,
                                   int scroll_only) {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
@@ -5018,7 +4959,7 @@ static void window_copy_cursor_up(struct window_mode_entry *wme,
   }
 }
 
-static void window_copy_cursor_down(struct window_mode_entry *wme,
+void window_copy_cursor_down(struct window_mode_entry *wme,
                                     int scroll_only) {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
@@ -5086,7 +5027,7 @@ static void window_copy_cursor_down(struct window_mode_entry *wme,
   }
 }
 
-static void window_copy_cursor_jump(struct window_mode_entry *wme) {
+void window_copy_cursor_jump(struct window_mode_entry *wme) {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *back_s = (*data).backing;
   struct grid_reader gr;
@@ -5105,7 +5046,7 @@ static void window_copy_cursor_jump(struct window_mode_entry *wme) {
   }
 }
 
-static void window_copy_cursor_jump_back(struct window_mode_entry *wme) {
+void window_copy_cursor_jump_back(struct window_mode_entry *wme) {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *back_s = (*data).backing;
   struct grid_reader gr;
@@ -5124,7 +5065,7 @@ static void window_copy_cursor_jump_back(struct window_mode_entry *wme) {
   }
 }
 
-static void window_copy_cursor_jump_to(struct window_mode_entry *wme) {
+void window_copy_cursor_jump_to(struct window_mode_entry *wme) {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *back_s = (*data).backing;
   struct grid_reader gr;
@@ -5144,7 +5085,7 @@ static void window_copy_cursor_jump_to(struct window_mode_entry *wme) {
   }
 }
 
-static void window_copy_cursor_jump_to_back(struct window_mode_entry *wme) {
+void window_copy_cursor_jump_to_back(struct window_mode_entry *wme) {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *back_s = (*data).backing;
   struct grid_reader gr;
@@ -5165,7 +5106,7 @@ static void window_copy_cursor_jump_to_back(struct window_mode_entry *wme) {
   }
 }
 
-static void window_copy_cursor_next_word(struct window_mode_entry *wme,
+void window_copy_cursor_next_word(struct window_mode_entry *wme,
                                          const char *separators) {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *back_s = (*data).backing;
@@ -5185,7 +5126,7 @@ static void window_copy_cursor_next_word(struct window_mode_entry *wme,
 }
 
 /* Compute the next place where a word ends. */
-static void window_copy_cursor_next_word_end_pos(struct window_mode_entry *wme,
+void window_copy_cursor_next_word_end_pos(struct window_mode_entry *wme,
                                                  const char *separators,
                                                  u_int *ppx, u_int *ppy) {
   struct window_pane *wp = (*wme).wp;
@@ -5215,7 +5156,7 @@ static void window_copy_cursor_next_word_end_pos(struct window_mode_entry *wme,
 }
 
 /* Move to the next place where a word ends. */
-static void window_copy_cursor_next_word_end(struct window_mode_entry *wme,
+void window_copy_cursor_next_word_end(struct window_mode_entry *wme,
                                              const char *separators,
                                              int no_reset) {
   struct window_pane *wp = (*wme).wp;
@@ -5246,7 +5187,7 @@ static void window_copy_cursor_next_word_end(struct window_mode_entry *wme,
 }
 
 /* Compute the previous place where a word begins. */
-static void window_copy_cursor_previous_word_pos(struct window_mode_entry *wme,
+void window_copy_cursor_previous_word_pos(struct window_mode_entry *wme,
                                                  const char *separators,
                                                  u_int *ppx, u_int *ppy) {
   struct window_copy_mode_data *data = (*wme).data;
@@ -5267,7 +5208,7 @@ static void window_copy_cursor_previous_word_pos(struct window_mode_entry *wme,
 }
 
 /* Move to the previous place where a word begins. */
-static void window_copy_cursor_previous_word(struct window_mode_entry *wme,
+void window_copy_cursor_previous_word(struct window_mode_entry *wme,
                                              const char *separators,
                                              int already) {
   struct window_copy_mode_data *data = (*wme).data;
@@ -5294,7 +5235,7 @@ static void window_copy_cursor_previous_word(struct window_mode_entry *wme,
   window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
 }
 
-static void window_copy_cursor_prompt(struct window_mode_entry *wme,
+void window_copy_cursor_prompt(struct window_mode_entry *wme,
                                       int direction, const char *args) {
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = (*data).backing;
@@ -5344,7 +5285,7 @@ static void window_copy_cursor_prompt(struct window_mode_entry *wme,
   window_copy_redraw_screen(wme);
 }
 
-static void window_copy_scroll_up(struct window_mode_entry *wme, u_int ny) {
+void window_copy_scroll_up(struct window_mode_entry *wme, u_int ny) {
   struct window_pane *wp = (*wme).wp;
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
@@ -5381,7 +5322,7 @@ static void window_copy_scroll_up(struct window_mode_entry *wme, u_int ny) {
   screen_write_stop(&ctx);
 }
 
-static void window_copy_scroll_down(struct window_mode_entry *wme, u_int ny) {
+void window_copy_scroll_down(struct window_mode_entry *wme, u_int ny) {
   struct window_pane *wp = (*wme).wp;
   struct window_copy_mode_data *data = (*wme).data;
   struct screen *s = &(*data).screen;
@@ -5417,7 +5358,7 @@ static void window_copy_scroll_down(struct window_mode_entry *wme, u_int ny) {
   screen_write_stop(&ctx);
 }
 
-static void window_copy_rectangle_set(struct window_mode_entry *wme,
+void window_copy_rectangle_set(struct window_mode_entry *wme,
                                       int rectflag) {
   struct window_copy_mode_data *data = (*wme).data;
   u_int px, py;
@@ -5434,7 +5375,7 @@ static void window_copy_rectangle_set(struct window_mode_entry *wme,
   window_copy_redraw_screen(wme);
 }
 
-static void window_copy_move_mouse(struct mouse_event *m) {
+void window_copy_move_mouse(struct mouse_event *m) {
   struct window_pane *wp;
   struct window_mode_entry *wme;
   u_int x, y;
@@ -5514,7 +5455,7 @@ void window_copy_start_drag(struct client *c, struct mouse_event *m) {
   window_copy_drag_update(c, m);
 }
 
-static void window_copy_drag_update(struct client *c, struct mouse_event *m) {
+void window_copy_drag_update(struct client *c, struct mouse_event *m) {
   struct window_pane *wp;
   struct window_mode_entry *wme;
   struct window_copy_mode_data *data;
@@ -5561,7 +5502,7 @@ static void window_copy_drag_update(struct client *c, struct mouse_event *m) {
   }
 }
 
-static void window_copy_drag_release(struct client *c, struct mouse_event *m) {
+void window_copy_drag_release(struct client *c, struct mouse_event *m) {
   struct window_pane *wp;
   struct window_mode_entry *wme;
   struct window_copy_mode_data *data;
@@ -5586,7 +5527,7 @@ static void window_copy_drag_release(struct client *c, struct mouse_event *m) {
   evtimer_del(&(*data).dragtimer);
 }
 
-static void window_copy_jump_to_mark(struct window_mode_entry *wme) {
+void window_copy_jump_to_mark(struct window_mode_entry *wme) {
   struct window_copy_mode_data *data = (*wme).data;
   u_int tmx, tmy;
 
@@ -5608,7 +5549,7 @@ static void window_copy_jump_to_mark(struct window_mode_entry *wme) {
 }
 
 /* Scroll up if the cursor went off the visible screen. */
-static void window_copy_acquire_cursor_up(struct window_mode_entry *wme,
+void window_copy_acquire_cursor_up(struct window_mode_entry *wme,
                                           u_int hsize, u_int oy, u_int oldy,
                                           u_int px, u_int py) {
   u_int cy, yy, ny, nd;
@@ -5634,7 +5575,7 @@ static void window_copy_acquire_cursor_up(struct window_mode_entry *wme,
 }
 
 /* Scroll down if the cursor went off the visible screen. */
-static void window_copy_acquire_cursor_down(struct window_mode_entry *wme,
+void window_copy_acquire_cursor_down(struct window_mode_entry *wme,
                                             u_int hsize, u_int sy, u_int oy,
                                             u_int oldy, u_int px, u_int py,
                                             int no_reset) {

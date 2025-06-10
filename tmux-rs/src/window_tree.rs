@@ -72,7 +72,7 @@ static window_tree_menu_items: [menu_item; 13] = [
 ];
 
 #[unsafe(no_mangle)]
-pub static mut window_tree_mode: window_mode = window_mode {
+pub static window_tree_mode: window_mode = window_mode {
     name: SyncCharPtr::new(c"tree-mode"),
     default_format: SyncCharPtr::from_ptr(WINDOW_TREE_DEFAULT_FORMAT.as_ptr().cast()),
 

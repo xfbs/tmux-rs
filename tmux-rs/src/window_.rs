@@ -1265,7 +1265,7 @@ pub unsafe extern "C" fn window_pane_resize(wp: *mut window_pane, sx: u32, sy: u
 pub unsafe extern "C" fn window_pane_set_mode(
     wp: *mut window_pane,
     swp: *mut window_pane,
-    mode: *mut window_mode,
+    mode: *const window_mode,
     fs: *mut cmd_find_state,
     args: *mut args,
 ) -> i32 {
@@ -1987,10 +1987,14 @@ pub unsafe extern "C" fn window_pane_default_cursor(wp: *mut window_pane) {
 pub unsafe extern "C" fn window_pane_mode(wp: *mut window_pane) -> i32 {
     unsafe {
         if !tailq_first(&raw mut (*wp).modes).is_null() {
-            if (*tailq_first(&raw mut (*wp).modes)).mode == &raw mut window_copy_mode {
+            if (*tailq_first(&raw mut (*wp).modes)).mode.addr()
+                == (&raw const window_copy_mode).addr()
+            {
                 return WINDOW_PANE_COPY_MODE;
             }
-            if (*tailq_first(&raw mut (*wp).modes)).mode == &raw mut window_view_mode {
+            if (*tailq_first(&raw mut (*wp).modes)).mode.addr()
+                == (&raw const window_view_mode).addr()
+            {
                 return WINDOW_PANE_VIEW_MODE;
             }
         }

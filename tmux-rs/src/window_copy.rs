@@ -1,8 +1,6 @@
 use super::*;
 
 unsafe extern "C" {
-    pub static mut window_copy_mode: window_mode;
-    pub static mut window_view_mode: window_mode;
     pub fn window_copy_add(_: *mut window_pane, _: c_int, _: *const c_char, ...);
     pub fn window_copy_vadd(_: *mut window_pane, _: c_int, _: *const c_char, _: *mut VaList);
     pub fn window_copy_pageup(_: *mut window_pane, _: c_int);
@@ -12,114 +10,110 @@ unsafe extern "C" {
     pub fn window_copy_get_line(_: *mut window_pane, _: c_uint) -> *mut c_char;
 }
 
-/*
-struct window_copy_mode_data;
+#[rustfmt::skip]
+unsafe extern "C" {
+    fn window_copy_key_table(_: *mut window_mode_entry) -> *const c_char;
+    fn window_copy_command( _: NonNull<window_mode_entry>, _: *mut client, _: *mut session, _: *mut winlink, _: *mut args, _: *mut mouse_event,);
+    fn window_copy_init( _: NonNull<window_mode_entry>, _: *mut cmd_find_state, _: *mut args,) -> *mut screen;
+    fn window_copy_view_init( _: NonNull<window_mode_entry>, _: *mut cmd_find_state, _: *mut args,) -> *mut screen;
+    fn window_copy_free(_: NonNull<window_mode_entry>);
+    fn window_copy_resize(_: NonNull<window_mode_entry>, _: u32, _: u32);
+    fn window_copy_formats(_: *mut window_mode_entry, _: *mut format_tree);
+    fn window_copy_pageup1(_: *mut window_mode_entry, _: i32);
+    fn window_copy_pagedown1(_: *mut window_mode_entry, _: i32, _: i32) -> i32;
+    fn window_copy_next_paragraph(_: *mut window_mode_entry);
+    fn window_copy_previous_paragraph(_: *mut window_mode_entry);
+    fn window_copy_redraw_selection(_: *mut window_mode_entry, _: u32);
+    fn window_copy_redraw_lines(_: *mut window_mode_entry, _: u32, _: u32);
+    fn window_copy_redraw_screen(_: *mut window_mode_entry);
+    fn window_copy_write_line(_: *mut window_mode_entry, _: *mut screen_write_ctx, _: u32);
+    fn window_copy_write_lines( __: *mut window_mode_entry, _: *mut screen_write_ctx, _: u32, _: u32,);
+    fn window_copy_match_at_cursor(_: *mut window_copy_mode_data) -> *mut c_char;
+    fn window_copy_scroll_to(_: *mut window_mode_entry, _: u32, _: u32, _: i32);
+    fn window_copy_search_compare( _: *mut grid, _: u32, _: u32, _: *mut grid, _: u32, _: i32,) -> i32;
+    fn window_copy_search_lr( _: *mut grid, _: *mut grid, _: *mut u32, _: u32, _: u32, _: u32, _: i32,) -> i32;
+    fn window_copy_search_rl( _: *mut grid, _: *mut grid, _: *mut u32, _: u32, _: u32, _: u32, _: i32,) -> i32;
+    fn window_copy_last_regex( _: *mut grid, _: u32, _: u32, _: u32, _: u32, _: *mut u32, _: *mut u32, _: *const c_char, _: *const libc::regex_t, _: i32,) -> i32;
+    fn window_copy_search_mark_at( _: *mut window_copy_mode_data, _: u32, _: u32, _: *mut u32,) -> i32;
+    fn window_copy_stringify( _: *mut grid, _: u32, _: u32, _: u32, _: *mut c_char, _: *mut u32,) -> *mut c_char;
+    fn window_copy_cstrtocellpos(_: *mut grid, _: u32, _: *mut u32, _: *mut u32, _: *const c_char);
+    fn window_copy_search_marks(_: *mut window_mode_entry, _: *mut screen, _: i32, _: i32) -> i32;
+    fn window_copy_clear_marks(_: *mut window_mode_entry);
+    fn window_copy_is_lowercase(_: *const c_char) -> i32;
+    fn window_copy_search_back_overlap( _: *mut grid, _: *mut libc::regex_t, _: *mut u32, _: *mut u32, _: *mut u32, _: u32,);
+    fn window_copy_search_jump( _: *mut window_mode_entry, _: *mut grid, _: *mut grid, _: u32, _: u32, _: u32, _: i32, _: i32, _: i32, _: i32,) -> i32;
+    fn window_copy_search(_: *mut window_mode_entry, _: i32, _: i32) -> i32;
+    fn window_copy_search_up(_: *mut window_mode_entry, _: i32) -> i32;
+    fn window_copy_search_down(_: *mut window_mode_entry, _: i32) -> i32;
+    fn window_copy_goto_line(_: *mut window_mode_entry, _: *const c_char);
+    fn window_copy_update_cursor(_: *mut window_mode_entry, _: u32, _: u32);
+    fn window_copy_start_selection(_: *mut window_mode_entry);
+    fn window_copy_adjust_selection(_: *mut window_mode_entry, _: *mut u32, _: *mut u32) -> i32;
+    fn window_copy_set_selection(_: *mut window_mode_entry, _: i32, _: i32) -> i32;
+    fn window_copy_update_selection(_: *mut window_mode_entry, _: i32, _: i32) -> i32;
+    fn window_copy_synchronize_cursor(_: *mut window_mode_entry, _: i32);
+    fn window_copy_get_selection(_: *mut window_mode_entry, _: *mut usize);
+    fn window_copy_copy_buffer(_: *mut window_mode_entry, _: *const c_char, _: usize);
+    fn window_copy_pipe(_: *mut window_mode_entry, _: *mut session, _: *const c_char);
+    fn window_copy_copy_pipe( _: *mut window_mode_entry, _: *mut session, _: *const c_char, _: *const c_char,);
+    fn window_copy_copy_selection(_: *mut window_mode_entry, _: *const c_char);
+    fn window_copy_append_selection(_: *mut window_mode_entry);
+    fn window_copy_clear_selection(_: *mut window_mode_entry);
+    fn window_copy_copy_line( _: *mut window_mode_entry, _: *mut *mut c_char, _: *mut usize, _: u32, _: u32, _: u32,);
+    fn window_copy_in_set(_: *mut window_mode_entry, _: u32, _: u32, _: *const c_char) -> i32;
+    fn window_copy_find_length(_: *mut window_mode_entry, _: u32) -> u32;
+    fn window_copy_cursor_start_of_line(_: *mut window_mode_entry);
+    fn window_copy_cursor_back_to_indentation(_: *mut window_mode_entry);
+    fn window_copy_cursor_end_of_line(_: *mut window_mode_entry);
+    fn window_copy_other_end(_: *mut window_mode_entry);
+    fn window_copy_cursor_left(_: *mut window_mode_entry);
+    fn window_copy_cursor_right(_: *mut window_mode_entry, _: i32);
+    fn window_copy_cursor_up(_: *mut window_mode_entry, _: i32);
+    fn window_copy_cursor_down(_: *mut window_mode_entry, _: i32);
+    fn window_copy_cursor_jump(_: *mut window_mode_entry);
+    fn window_copy_cursor_jump_back(_: *mut window_mode_entry);
+    fn window_copy_cursor_jump_to(_: *mut window_mode_entry);
+    fn window_copy_cursor_jump_to_back(_: *mut window_mode_entry);
+    fn window_copy_cursor_next_word(_: *mut window_mode_entry, _: *const c_char);
+    fn window_copy_cursor_next_word_end_pos( _: *mut window_mode_entry, _: *const c_char, _: *mut u32, _: *mut u32,);
+    fn window_copy_cursor_next_word_end(_: *mut window_mode_entry, _: *const c_char, _: i32);
+    fn window_copy_cursor_previous_word_pos( _: *mut window_mode_entry, _: *const c_char, _: *mut u32, _: *mut u32,);
+    fn window_copy_cursor_previous_word(_: *mut window_mode_entry, _: *const c_char, _: i32);
+    fn window_copy_cursor_prompt(_: *mut window_mode_entry, _: i32, _: *const c_char);
+    fn window_copy_scroll_up(_: *mut window_mode_entry, _: u32);
+    fn window_copy_scroll_down(_: *mut window_mode_entry, _: u32);
+    fn window_copy_rectangle_set(_: *mut window_mode_entry, _: u32);
+    fn window_copy_move_mouse(_: *mut mouse_event);
+    fn window_copy_drag_update(_: *mut client, _: *mut mouse_event);
+    fn window_copy_drag_release(_: *mut client, _: *mut mouse_event);
+    fn window_copy_jump_to_mark(_: *mut window_mode_entry);
+    fn window_copy_acquire_cursor_up( _: *mut window_mode_entry, _: u32, _: u32, _: u32, _: u32, _: u32,);
+    fn window_copy_acquire_cursor_down( _: *mut window_mode_entry, _: u32, _: u32, _: u32, _: u32, _: u32, _: u32, _: u32,);
+}
 
-static const char *window_copy_key_table(struct window_mode_entry *);
-static void window_copy_command(struct window_mode_entry *, struct client *, struct session *, struct winlink *, struct args *, struct mouse_event *);
-static struct screen *window_copy_init(struct window_mode_entry *, struct cmd_find_state *, struct args *);
-static struct screen *window_copy_view_init(struct window_mode_entry *, struct cmd_find_state *, struct args *);
-static void window_copy_free(struct window_mode_entry *);
-static void window_copy_resize(struct window_mode_entry *, u_int, u_int);
-static void window_copy_formats(struct window_mode_entry *, struct format_tree *);
-static void window_copy_pageup1(struct window_mode_entry *, int);
-static int window_copy_pagedown1(struct window_mode_entry *, int, int);
-static void window_copy_next_paragraph(struct window_mode_entry *);
-static void window_copy_previous_paragraph(struct window_mode_entry *);
-static void window_copy_redraw_selection(struct window_mode_entry *, u_int);
-static void window_copy_redraw_lines(struct window_mode_entry *, u_int, u_int);
-static void window_copy_redraw_screen(struct window_mode_entry *);
-static void window_copy_write_line(struct window_mode_entry *, struct screen_write_ctx *, u_int);
-static void window_copy_write_lines(struct window_mode_entry *, struct screen_write_ctx *, u_int, u_int);
-static char *window_copy_match_at_cursor(struct window_copy_mode_data *);
-static void window_copy_scroll_to(struct window_mode_entry *, u_int, u_int, int);
-static int window_copy_search_compare(struct grid *, u_int, u_int, struct grid *, u_int, int);
-static int window_copy_search_lr(struct grid *, struct grid *, u_int *, u_int, u_int, u_int, int);
-static int window_copy_search_rl(struct grid *, struct grid *, u_int *, u_int, u_int, u_int, int);
-static int window_copy_last_regex(struct grid *, u_int, u_int, u_int, u_int, u_int *, u_int *, const char *, const regex_t *, int);
-static int window_copy_search_mark_at(struct window_copy_mode_data *, u_int, u_int, u_int *);
-static char *window_copy_stringify(struct grid *, u_int, u_int, u_int, char *, u_int *);
-static void window_copy_cstrtocellpos(struct grid *, u_int, u_int *, u_int *, const char *);
-static int window_copy_search_marks(struct window_mode_entry *, struct screen *, int, int);
-static void window_copy_clear_marks(struct window_mode_entry *);
-static int window_copy_is_lowercase(const char *);
-static void window_copy_search_back_overlap(struct grid *, regex_t *, u_int *, u_int *, u_int *, u_int);
-static int window_copy_search_jump(struct window_mode_entry *, struct grid *, struct grid *, u_int, u_int, u_int, int, int, int, int);
-static int window_copy_search(struct window_mode_entry *, int, int);
-static int window_copy_search_up(struct window_mode_entry *, int);
-static int window_copy_search_down(struct window_mode_entry *, int);
-static void window_copy_goto_line(struct window_mode_entry *, const char *);
-static void window_copy_update_cursor(struct window_mode_entry *, u_int, u_int);
-static void window_copy_start_selection(struct window_mode_entry *);
-static int window_copy_adjust_selection(struct window_mode_entry *, u_int *, u_int *);
-static int window_copy_set_selection(struct window_mode_entry *, int, int);
-static int window_copy_update_selection(struct window_mode_entry *, int, int);
-static void window_copy_synchronize_cursor(struct window_mode_entry *, int);
-static void *window_copy_get_selection(struct window_mode_entry *, size_t *);
-static void window_copy_copy_buffer(struct window_mode_entry *, const char *, void *, size_t);
-static void window_copy_pipe(struct window_mode_entry *, struct session *, const char *);
-static void window_copy_copy_pipe(struct window_mode_entry *, struct session *, const char *, const char *);
-static void window_copy_copy_selection(struct window_mode_entry *, const char *);
-static void window_copy_append_selection(struct window_mode_entry *);
-static void window_copy_clear_selection(struct window_mode_entry *);
-static void window_copy_copy_line(struct window_mode_entry *, char **, size_t *, u_int, u_int, u_int);
-static int window_copy_in_set(struct window_mode_entry *, u_int, u_int, const char *);
-static u_int window_copy_find_length(struct window_mode_entry *, u_int);
-static void window_copy_cursor_start_of_line(struct window_mode_entry *);
-static void window_copy_cursor_back_to_indentation(struct window_mode_entry *);
-static void window_copy_cursor_end_of_line(struct window_mode_entry *);
-static void window_copy_other_end(struct window_mode_entry *);
-static void window_copy_cursor_left(struct window_mode_entry *);
-static void window_copy_cursor_right(struct window_mode_entry *, int);
-static void window_copy_cursor_up(struct window_mode_entry *, int);
-static void window_copy_cursor_down(struct window_mode_entry *, int);
-static void window_copy_cursor_jump(struct window_mode_entry *);
-static void window_copy_cursor_jump_back(struct window_mode_entry *);
-static void window_copy_cursor_jump_to(struct window_mode_entry *);
-static void window_copy_cursor_jump_to_back(struct window_mode_entry *);
-static void window_copy_cursor_next_word(struct window_mode_entry *, const char *);
-static void window_copy_cursor_next_word_end_pos(struct window_mode_entry *, const char *, u_int *, u_int *);
-static void window_copy_cursor_next_word_end(struct window_mode_entry *, const char *, int);
-static void window_copy_cursor_previous_word_pos(struct window_mode_entry *, const char *, u_int *, u_int *);
-static void window_copy_cursor_previous_word(struct window_mode_entry *, const char *, int);
-static void window_copy_cursor_prompt(struct window_mode_entry *, int, const char *);
-static void window_copy_scroll_up(struct window_mode_entry *, u_int);
-static void window_copy_scroll_down(struct window_mode_entry *, u_int);
-static void window_copy_rectangle_set(struct window_mode_entry *, int);
-static void window_copy_move_mouse(struct mouse_event *);
-static void window_copy_drag_update(struct client *, struct mouse_event *);
-static void window_copy_drag_release(struct client *, struct mouse_event *);
-static void window_copy_jump_to_mark(struct window_mode_entry *);
-static void window_copy_acquire_cursor_up(struct window_mode_entry *, u_int, u_int, u_int, u_int, u_int);
-static void window_copy_acquire_cursor_down(struct window_mode_entry *, u_int, u_int, u_int, u_int, u_int, u_int, int);
-*/
-
-// #[unsafe(no_mangle)]
-// static window_copy_mode: window_mode = window_mode::new(
-//     c"copy-mode",
-//     c"",
-//     window_copy_init,
-//     window_copy_free,
-//     window_copy_resize,
-//     None,
-//     None,
-//     window_copy_key_table,
-//     window_copy_command,
-//     window_copy_formats,
-// );
-
-/*
-const struct window_mode window_view_mode = {
-    .name = "view-mode",
-
-    .init = window_copy_view_init,
-    .free = window_copy_free,
-    .resize = window_copy_resize,
-    .key_table = window_copy_key_table,
-    .command = window_copy_command,
-    .formats = window_copy_formats,
+#[unsafe(no_mangle)]
+pub static window_copy_mode: window_mode = window_mode {
+    name: SyncCharPtr::new(c"copy-mode"),
+    init: Some(window_copy_init),
+    free: Some(window_copy_free),
+    resize: Some(window_copy_resize),
+    key_table: Some(window_copy_key_table),
+    command: Some(window_copy_command),
+    formats: Some(window_copy_formats),
+    ..window_mode::default()
 };
-*/
+
+#[unsafe(no_mangle)]
+pub static window_view_mode: window_mode = window_mode {
+    name: SyncCharPtr::new(c"view-mode"),
+    init: Some(window_copy_view_init),
+    free: Some(window_copy_free),
+    resize: Some(window_copy_resize),
+    key_table: Some(window_copy_key_table),
+    command: Some(window_copy_command),
+    formats: Some(window_copy_formats),
+    ..window_mode::default()
+};
 
 #[repr(i32)]
 #[derive(Copy, Clone)]
@@ -168,7 +162,40 @@ pub struct window_copy_cmd_state {
     wl: *mut winlink,
 }
 
-/*
+#[repr(i32)]
+#[derive(Copy, Clone)]
+enum selflag {
+    /// select one char at a time
+    SEL_CHAR,
+    /// select one word at a time
+    SEL_WORD,
+    /// select one line at a time
+    SEL_LINE,
+}
+
+#[repr(i32)]
+enum cursordrag {
+    /// selection is independent of cursor
+    CURSORDRAG_NONE,
+    /// end is synchronized with cursor
+    CURSORDRAG_ENDSEL,
+    /// start is synchronized with cursor
+    CURSORDRAG_SEL,
+}
+
+#[repr(i32)]
+enum line_sel {
+    LINE_SEL_NONE,
+    LINE_SEL_LEFT_RIGHT,
+    LINE_SEL_RIGHT_LEFT,
+}
+
+const WINDOW_COPY_SEARCH_TIMEOUT: i32 = 10000;
+const WINDOW_COPY_SEARCH_ALL_TIMEOUT: i32 = 200;
+const WINDOW_COPY_SEARCH_MAX_LINE: i32 = 2000;
+
+const WINDOW_COPY_DRAG_REPEAT_TIME: i64 = 50000;
+
 /*
  * Copy mode's visible screen (the "screen" field) is filled from one of two
  * sources: the original contents of the pane (used when we actually enter via
@@ -183,217 +210,229 @@ pub struct window_copy_cmd_state {
  * of output-lines from a command, it points at a newly-allocated screen
  * structure (which is deallocated when the mode ends).
  */
-struct window_copy_mode_data {
-  struct screen screen;
+#[repr(C)]
+pub struct window_copy_mode_data {
+    screen: screen,
 
-  struct screen *backing;
-  int backing_written; /* backing display started */
-  struct screen *writing;
-  struct input_ctx *ictx;
+    backing: *mut screen,
+    backing_written: i32, /* backing display started */
+    writing: *mut screen,
+    ictx: *mut input_ctx,
 
-  int viewmode; /* view mode entered */
+    viewmode: i32, /* view mode entered */
 
-  u_int oy; /* number of lines scrolled up */
+    oy: u32, /* number of lines scrolled up */
 
-  u_int selx; /* beginning of selection */
-  u_int sely;
+    selx: u32, /* beginning of selection */
+    sely: u32,
 
-  u_int endselx; /* end of selection */
-  u_int endsely;
+    endselx: u32, /* end of selection */
+    endsely: u32,
 
-  enum {
-    CURSORDRAG_NONE,   /* selection is independent of cursor */
-    CURSORDRAG_ENDSEL, /* end is synchronized with cursor */
-    CURSORDRAG_SEL,    /* start is synchronized with cursor */
-  } cursordrag;
+    cursordrag: cursordrag,
 
-  int modekeys;
-  enum {
-    LINE_SEL_NONE,
-    LINE_SEL_LEFT_RIGHT,
-    LINE_SEL_RIGHT_LEFT,
-  } lineflag;        /* line selection mode */
-  int rectflag;      /* in rectangle copy mode? */
-  int scroll_exit;   /* exit on scroll to end? */
-  int hide_position; /* hide position marker */
+    modekeys: i32,
+    lineflag: line_sel, /* line selection mode */
+    rectflag: i32,      /* in rectangle copy mode? */
+    scroll_exit: i32,   /* exit on scroll to end? */
+    hide_position: i32, /* hide position marker */
 
-  enum {
-    SEL_CHAR, /* select one char at a time */
-    SEL_WORD, /* select one word at a time */
-    SEL_LINE, /* select one line at a time */
-  } selflag;
+    selflag: selflag,
 
-  const char *separators; /* word separators */
+    /// word separators
+    separators: *const c_char,
 
-  u_int dx; /* drag start position */
-  u_int dy;
+    /// drag start position x
+    dx: u32,
+    /// drag start position y
+    dy: u32,
 
-  u_int selrx; /* selection reset positions */
-  u_int selry;
-  u_int endselrx;
-  u_int endselry;
+    // selection reset positions
+    selrx: u32,
+    selry: u32,
+    endselrx: u32,
+    endselry: u32,
 
-  u_int cx;
-  u_int cy;
+    cx: u32,
+    cy: u32,
 
-  u_int lastcx; /* position in last line w/ content */
-  u_int lastsx; /* size of last line w/ content */
+    /* position in last line w/ content */
+    lastcx: u32,
+    /* size of last line w/ content */
+    lastsx: u32,
 
-  u_int mx; /* mark position */
-  u_int my;
-  int showmark;
+    /* mark position */
+    mx: u32,
+    my: u32,
+    showmark: i32,
 
-  int searchtype;
-  int searchdirection;
-  int searchregex;
-  char *searchstr;
-  u_char *searchmark;
-  int searchcount;
-  int searchmore;
-  int searchall;
-  int searchx;
-  int searchy;
-  int searcho;
-  u_char searchgen;
+    searchtype: window_copy,
+    searchdirection: i32,
+    searchregex: i32,
+    searchstr: *mut c_char,
+    searchmark: *mut u8,
+    searchcount: i32,
+    searchmore: i32,
+    searchall: i32,
+    searchx: i32,
+    searchy: i32,
+    searcho: i32,
+    searchgen: u8,
 
-  int timeout; /* search has timed out */
-#define WINDOW_COPY_SEARCH_TIMEOUT 10000
-#define WINDOW_COPY_SEARCH_ALL_TIMEOUT 200
-#define WINDOW_COPY_SEARCH_MAX_LINE 2000
+    /// search has timed out
+    timeout: i32,
 
-  int jumptype;
-  struct utf8_data *jumpchar;
+    jumptype: window_copy,
+    jumpchar: *mut utf8_data,
 
-  struct event dragtimer;
-#define WINDOW_COPY_DRAG_REPEAT_TIME 50000
-};
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_scroll_timer(__unused int fd, __unused short events, void *arg) {
-unsafe {
-  struct window_mode_entry *wme = arg;
-  struct window_pane *wp = (*wme).wp;
-  struct window_copy_mode_data *data = (*wme).data;
-  struct timeval tv = {.tv_usec = WINDOW_COPY_DRAG_REPEAT_TIME};
-
-  evtimer_del(&(*data).dragtimer);
-
-  if (TAILQ_FIRST(&(*wp).modes) != wme) {
-    return;
-  }
-
-  if ((*data).cy == 0) {
-    evtimer_add(&(*data).dragtimer, &tv);
-    window_copy_cursor_up(wme, 1);
-  } else if ((*data).cy == screen_size_y(&(*data).screen) - 1) {
-    evtimer_add(&(*data).dragtimer, &tv);
-    window_copy_cursor_down(wme, 1);
-  }
-}
+    dragtimer: event,
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static struct screen *window_copy_clone_screen(struct screen *src, struct screen *hint, u_int *cx, u_int *cy, int trim) {
-unsafe {
-  struct screen *dst;
-  const struct grid_line *gl;
-  u_int sy, wx, wy;
-  int reflow;
+pub unsafe extern "C" fn window_copy_scroll_timer(_fd: i32, _events: i16, arg: *mut c_void) {
+    unsafe {
+        let mut wme: *mut window_mode_entry = arg.cast();
+        let mut wp: *mut window_pane = (*wme).wp;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut tv = libc::timeval {
+            tv_sec: 0,
+            tv_usec: WINDOW_COPY_DRAG_REPEAT_TIME,
+        };
 
-  dst = xcalloc(1, sizeof *dst);
+        evtimer_del(&raw mut (*data).dragtimer);
 
-  sy = screen_hsize(src) + screen_size_y(src);
-  if (trim) {
-    while (sy > screen_hsize(src)) {
-      gl = grid_peek_line((*src).grid, sy - 1);
-      if ((*gl).cellused != 0) {
-        break;
-      }
-      sy--;
+        if (tailq_first(&raw mut (*wp).modes) != wme) {
+            return;
+        }
+
+        if ((*data).cy == 0) {
+            evtimer_add(&raw mut (*data).dragtimer, &raw mut tv);
+            window_copy_cursor_up(wme, 1);
+        } else if ((*data).cy == screen_size_y(&raw mut (*data).screen) - 1) {
+            evtimer_add(&raw mut (*data).dragtimer, &raw mut tv);
+            window_copy_cursor_down(wme, 1);
+        }
     }
-  }
-  log_debug("%s: target screen is %ux%u, source %ux%u", __func__,
-            screen_size_x(src), sy, screen_size_x(hint),
-            screen_hsize(src) + screen_size_y(src));
-  screen_init(dst, screen_size_x(src), sy, screen_hlimit(src));
-
-  /*
-   * Ensure history is on for the backing grid so lines are not deleted
-   * during resizing.
-   */
-  (*(*dst).grid).flags |= GRID_HISTORY;
-  grid_duplicate_lines((*dst).grid, 0, (*src).grid, 0, sy);
-
-  (*(*dst).grid).sy = sy - screen_hsize(src);
-  (*(*dst).grid).hsize = screen_hsize(src);
-  (*(*dst).grid).hscrolled = (*(*src).grid).hscrolled;
-  if ((*src).cy > (*(*dst).grid).sy - 1) {
-    (*dst).cx = 0;
-    (*dst).cy = (*(*dst).grid).sy - 1;
-  } else {
-    (*dst).cx = (*src).cx;
-    (*dst).cy = (*src).cy;
-  }
-
-  if (cx != NULL && cy != NULL) {
-    *cx = (*dst).cx;
-    *cy = screen_hsize(dst) + (*dst).cy;
-    reflow = (screen_size_x(hint) != screen_size_x(dst));
-  } else {
-    reflow = 0;
-  }
-  if (reflow) {
-    grid_wrap_position((*dst).grid, *cx, *cy, &wx, &wy);
-  }
-  screen_resize_cursor(dst, screen_size_x(hint), screen_size_y(hint), 1, 0, 0);
-  if (reflow) {
-    grid_unwrap_position((*dst).grid, cx, cy, wx, wy);
-  }
-
-  return dst;
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static struct window_copy_mode_data * window_copy_common_init(struct window_mode_entry *wme) {
-unsafe {
-  struct window_pane *wp = (*wme).wp;
-  struct window_copy_mode_data *data;
-  struct screen *base = &(*wp).base;
+pub unsafe extern "C" fn window_copy_clone_screen(
+    src: *mut screen,
+    hint: *mut screen,
+    cx: *mut u32,
+    cy: *mut u32,
+    trim: i32,
+) -> *mut screen {
+    unsafe {
+        let mut gl: *const grid_line = null();
+        let mut wx: u32 = 0;
+        let mut wy: u32 = 0;
 
-  (*wme).data = data = xcalloc(1, sizeof *data);
+        let mut reflow = false;
 
-  (*data).cursordrag = CURSORDRAG_NONE;
-  (*data).lineflag = LINE_SEL_NONE;
-  (*data).selflag = SEL_CHAR;
+        let mut dst: *mut screen = xcalloc1();
 
-  if ((*wp).searchstr != NULL) {
-    (*data).searchtype = WINDOW_COPY_SEARCHUP;
-    (*data).searchregex = (*wp).searchregex;
-    (*data).searchstr = xstrdup((*wp).searchstr);
-  } else {
-    (*data).searchtype = WINDOW_COPY_OFF;
-    (*data).searchregex = 0;
-    (*data).searchstr = NULL;
-  }
-  (*data).searchx = (*data).searchy = (*data).searcho = -1;
-  (*data).searchall = 1;
+        let mut sy = screen_hsize(src) + screen_size_y(src);
+        if (trim != 0) {
+            while (sy > screen_hsize(src)) {
+                gl = grid_peek_line((*src).grid, sy - 1);
+                if ((*gl).cellused != 0) {
+                    break;
+                }
+                sy -= 1;
+            }
+        }
+        // log_debug( "%s: target screen is %ux%u, source %ux%u", __func__, screen_size_x(src), sy, screen_size_x(hint), screen_hsize(src) + screen_size_y(src),);
+        screen_init(dst, screen_size_x(src), sy, screen_hlimit(src));
 
-  (*data).jumptype = WINDOW_COPY_OFF;
-  (*data).jumpchar = NULL;
+        /*
+         * Ensure history is on for the backing grid so lines are not deleted
+         * during resizing.
+         */
+        (*(*dst).grid).flags |= GRID_HISTORY;
+        grid_duplicate_lines((*dst).grid, 0, (*src).grid, 0, sy);
 
-  screen_init(&(*data).screen, screen_size_x(base), screen_size_y(base), 0);
-  (*data).modekeys = options_get_number((*(*wp).window).options, "mode-keys");
+        (*(*dst).grid).sy = sy - screen_hsize(src);
+        (*(*dst).grid).hsize = screen_hsize(src);
+        (*(*dst).grid).hscrolled = (*(*src).grid).hscrolled;
+        if ((*src).cy > (*(*dst).grid).sy - 1) {
+            (*dst).cx = 0;
+            (*dst).cy = (*(*dst).grid).sy - 1;
+        } else {
+            (*dst).cx = (*src).cx;
+            (*dst).cy = (*src).cy;
+        }
 
-  evtimer_set(&(*data).dragtimer, window_copy_scroll_timer, wme);
+        if (!cx.is_null() && !cy.is_null()) {
+            *cx = (*dst).cx;
+            *cy = screen_hsize(dst) + (*dst).cy;
+            reflow = (screen_size_x(hint) != screen_size_x(dst));
+        } else {
+            reflow = false;
+        }
+        if (reflow) {
+            grid_wrap_position((*dst).grid, *cx, *cy, &raw mut wx, &raw mut wy);
+        }
+        screen_resize_cursor(dst, screen_size_x(hint), screen_size_y(hint), 1, 0, 0);
+        if (reflow) {
+            grid_unwrap_position((*dst).grid, cx, cy, wx, wy);
+        }
 
-  return data;
+        dst
+    }
 }
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_common_init(
+    wme: *mut window_mode_entry,
+) -> *mut window_copy_mode_data {
+    unsafe {
+        let mut wp = (*wme).wp;
+        let mut base = &raw mut (*wp).base;
+
+        let mut data: *mut window_copy_mode_data = xcalloc1::<window_copy_mode_data>();
+        (*wme).data = data.cast();
+
+        (*data).cursordrag = cursordrag::CURSORDRAG_NONE;
+        (*data).lineflag = line_sel::LINE_SEL_NONE;
+        (*data).selflag = selflag::SEL_CHAR;
+
+        if (!(*wp).searchstr.is_null()) {
+            (*data).searchtype = window_copy::WINDOW_COPY_SEARCHUP;
+            (*data).searchregex = (*wp).searchregex;
+            (*data).searchstr = xstrdup((*wp).searchstr).as_ptr();
+        } else {
+            (*data).searchtype = window_copy::WINDOW_COPY_OFF;
+            (*data).searchregex = 0;
+            (*data).searchstr = null_mut();
+        }
+        (*data).searcho = -1;
+        (*data).searchx = -1;
+        (*data).searchy = -1;
+        (*data).searchall = 1;
+
+        (*data).jumptype = window_copy::WINDOW_COPY_OFF;
+        (*data).jumpchar = null_mut();
+
+        screen_init(
+            &raw mut (*data).screen,
+            screen_size_x(base),
+            screen_size_y(base),
+            0,
+        );
+        (*data).modekeys =
+            options_get_number((*(*wp).window).options, c"mode-keys".as_ptr()) as i32;
+
+        evtimer_set(
+            &raw mut (*data).dragtimer,
+            Some(window_copy_scroll_timer),
+            wme.cast(),
+        );
+
+        data
+    }
 }
 
+/*
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn
 static struct screen *window_copy_init(struct window_mode_entry *wme, __unused struct cmd_find_state *fs, struct args *args) {

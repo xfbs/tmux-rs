@@ -3,7 +3,7 @@ use crate::*;
 use crate::compat::{queue::tailq_first, strlcat};
 
 #[unsafe(no_mangle)]
-pub static mut window_clock_mode: window_mode = window_mode {
+pub static window_clock_mode: window_mode = window_mode {
     name: SyncCharPtr::new(c"clock-mode"),
 
     init: Some(window_clock_init),

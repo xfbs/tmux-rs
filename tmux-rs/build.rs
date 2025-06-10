@@ -43,10 +43,10 @@ fn main() {
     // let command = format!( "/bin/bash ./etc/ylwrap cmd-parse.y y.tab.c {out_dir}/cmd-parse.c y.tab.h `echo {out_dir}/cmd-parse.c | sed -e s/cc$/hh/ -e s/cpp$/hpp/ -e s/cxx$/hxx/ -e s/c++$/h++/ -e s/c$/h/` y.output cmd-parse.output -- byacc",);
     // builder = builder.file(std::path::PathBuf::from(out_dir).join("cmd-parse.c"));
 
-    for f in FILES {
-        println!("cargo::rerun-if-changed=../{f}");
-        builder = builder.file(std::path::PathBuf::from("..").join(f))
-    }
+    println!("cargo::rerun-if-changed=../window-copy.c");
+    println!("cargo::rerun-if-changed=../cmd-parse.c");
+
+    builder = builder.file("../window-copy.c");
     builder = builder.file("../cmd-parse.c");
 
     // clang -DPACKAGE_NAME=\"tmux\" -DPACKAGE_TARNAME=\"tmux\" -DPACKAGE_VERSION=\"3.5a\" -DPACKAGE_STRING=\"tmux\ 3.5a\" -DPACKAGE_BUGREPORT=\"\" -DPACKAGE_URL=\"\" -DPACKAGE=\"tmux\" -DVERSION=\"3.5a\"
@@ -153,7 +153,3 @@ fn main() {
         .flag("-fexceptions")
         .compile("foo");
 }
-
-static FILES: &[&str] = &[
-    "window-copy.c", //
-];

@@ -76,20 +76,20 @@ unsafe extern "C" fn cmd_choose_tree_exec(self_: *mut cmd, item: *mut cmdq_item)
         let mut target = cmdq_get_target(item);
         let mut wp = (*target).wp;
 
-        let mut mode = if cmd_get_entry(self_) == &raw mut cmd_choose_buffer_entry {
+        let mode = if cmd_get_entry(self_) == &raw mut cmd_choose_buffer_entry {
             if paste_is_empty() != 0 {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
-            &raw mut window_buffer_mode
+            &raw const window_buffer_mode
         } else if cmd_get_entry(self_) == &raw mut cmd_choose_client_entry {
             if server_client_how_many() == 0 {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
-            &raw mut window_client_mode
+            &raw const window_client_mode
         } else if cmd_get_entry(self_) == &raw mut cmd_customize_mode_entry {
-            &raw mut window_customize_mode
+            &raw const window_customize_mode
         } else {
-            &raw mut window_tree_mode
+            &raw const window_tree_mode
         };
 
         window_pane_set_mode(wp, null_mut(), mode, target, args);

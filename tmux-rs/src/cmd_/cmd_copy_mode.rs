@@ -60,7 +60,7 @@ unsafe extern "C" fn cmd_copy_mode_exec(self_: *mut cmd, item: *mut cmdq_item) -
             window_pane_set_mode(
                 wp,
                 null_mut(),
-                &raw mut window_clock_mode,
+                &raw const window_clock_mode,
                 null_mut(),
                 null_mut(),
             );
@@ -72,7 +72,7 @@ unsafe extern "C" fn cmd_copy_mode_exec(self_: *mut cmd, item: *mut cmdq_item) -
         } else {
             wp
         };
-        if window_pane_set_mode(wp, swp, &raw mut window_copy_mode, null_mut(), args) == 0 {
+        if window_pane_set_mode(wp, swp, &raw const window_copy_mode, null_mut(), args) == 0 {
             if args_has(args, b'M') != 0 {
                 window_copy_start_drag(c, &raw mut (*event).m);
             }

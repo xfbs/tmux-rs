@@ -284,11 +284,11 @@ pub unsafe extern "C" fn cfg_show_causes(mut s: *mut session) {
             let wp = (*(*(*s).curw).window).active;
 
             let wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
-            if wme.is_null() || (*wme).mode != &raw mut window_view_mode {
+            if wme.is_null() || (*wme).mode != &raw const window_view_mode {
                 window_pane_set_mode(
                     wp,
                     null_mut(),
-                    &raw mut window_view_mode,
+                    &raw const window_view_mode,
                     null_mut(),
                     null_mut(),
                 );

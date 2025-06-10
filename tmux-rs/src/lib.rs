@@ -1198,52 +1198,20 @@ pub struct window_mode {
     >,
     pub formats: Option<unsafe extern "C" fn(*mut window_mode_entry, *mut format_tree)>,
 }
+
 impl window_mode {
-    #[inline]
-    #[allow(clippy::too_many_arguments)]
-    const fn new(
-        name: &'static CStr,
-        default_format: &'static CStr,
-        init: unsafe extern "C" fn(
-            NonNull<window_mode_entry>,
-            *mut cmd_find_state,
-            *mut args,
-        ) -> *mut screen,
-        free: unsafe extern "C" fn(NonNull<window_mode_entry>),
-        resize: unsafe extern "C" fn(NonNull<window_mode_entry>, u32, u32),
-        update: Option<unsafe extern "C" fn(NonNull<window_mode_entry>)>,
-        key: Option<
-            unsafe extern "C" fn(
-                NonNull<window_mode_entry>,
-                *mut client,
-                *mut session,
-                *mut winlink,
-                key_code,
-                *mut mouse_event,
-            ),
-        >,
-        key_table: unsafe extern "C" fn(*mut window_mode_entry) -> *const c_char,
-        command: unsafe extern "C" fn(
-            NonNull<window_mode_entry>,
-            *mut client,
-            *mut session,
-            *mut winlink,
-            *mut args,
-            *mut mouse_event,
-        ),
-        formats: unsafe extern "C" fn(*mut window_mode_entry, *mut format_tree),
-    ) -> Self {
+    const fn default() -> Self {
         Self {
-            name: SyncCharPtr::new(name),
-            default_format: SyncCharPtr::new(default_format),
-            init: Some(init),
-            free: Some(free),
-            resize: Some(resize),
-            update,
-            key,
-            key_table: Some(key_table),
-            command: Some(command),
-            formats: Some(formats),
+            name: SyncCharPtr::null(),
+            default_format: SyncCharPtr::null(),
+            init: None,
+            free: None,
+            resize: None,
+            update: None,
+            key: None,
+            key_table: None,
+            command: None,
+            formats: None,
         }
     }
 }
@@ -1256,7 +1224,7 @@ pub struct window_mode_entry {
     pub wp: *mut window_pane,
     pub swp: *mut window_pane,
 
-    pub mode: *mut window_mode,
+    pub mode: *const window_mode,
     pub data: *mut c_void,
 
     pub screen: *mut screen,

@@ -22,7 +22,7 @@ static mut window_client_menu_items: [menu_item; 9] = [
 ];
 
 #[unsafe(no_mangle)]
-pub static mut window_client_mode: window_mode = window_mode {
+pub static window_client_mode: window_mode = window_mode {
     name: SyncCharPtr::new(c"client-mode"),
     default_format: SyncCharPtr::new(WINDOW_CLIENT_DEFAULT_FORMAT),
 

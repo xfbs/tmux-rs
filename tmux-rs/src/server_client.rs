@@ -3596,11 +3596,11 @@ pub unsafe extern "C" fn server_client_print(c: *mut client, parse: i32, evb: *m
 
             let wp = server_client_get_pane(c);
             let wme = tailq_first(&raw mut (*wp).modes);
-            if wme.is_null() || (*wme).mode != &raw mut window_view_mode {
+            if wme.is_null() || !std::ptr::eq((*wme).mode, &raw const window_view_mode) {
                 window_pane_set_mode(
                     wp,
                     null_mut(),
-                    &raw mut window_view_mode,
+                    &raw const window_view_mode,
                     null_mut(),
                     null_mut(),
                 );
