@@ -1,28 +1,28 @@
 use super::*;
 
 unsafe extern "C" {
-    pub fn window_copy_add(_: *mut window_pane, _: c_int, _: *const c_char, ...);
-    pub fn window_copy_vadd(_: *mut window_pane, _: c_int, _: *const c_char, _: *mut VaList);
-    pub fn window_copy_pageup(_: *mut window_pane, _: c_int);
-    pub fn window_copy_pagedown(_: *mut window_pane, _: c_int, _: c_int);
+    // pub fn window_copy_add(_: *mut window_pane, _: c_int, _: *const c_char, ...);
+    // pub fn window_copy_vadd(_: *mut window_pane, _: c_int, _: *const c_char, _: *mut VaList);
+    // pub fn window_copy_pageup(_: *mut window_pane, _: c_int);
+    // pub fn window_copy_pagedown(_: *mut window_pane, _: c_int, _: c_int);
     pub fn window_copy_start_drag(_: *mut client, _: *mut mouse_event);
-    pub fn window_copy_get_word(_: *mut window_pane, _: c_uint, _: c_uint) -> *mut c_char;
-    pub fn window_copy_get_line(_: *mut window_pane, _: c_uint) -> *mut c_char;
+    // pub fn window_copy_get_word(_: *mut window_pane, _: c_uint, _: c_uint) -> *mut c_char;
+    // pub fn window_copy_get_line(_: *mut window_pane, _: c_uint) -> *mut c_char;
 }
 
 #[rustfmt::skip]
 unsafe extern "C" {
-    fn window_copy_key_table(_: *mut window_mode_entry) -> *const c_char;
+    // fn window_copy_key_table(_: *mut window_mode_entry) -> *const c_char;
     fn window_copy_command( _: NonNull<window_mode_entry>, _: *mut client, _: *mut session, _: *mut winlink, _: *mut args, _: *mut mouse_event,);
-    fn window_copy_init( _: NonNull<window_mode_entry>, _: *mut cmd_find_state, _: *mut args,) -> *mut screen;
-    fn window_copy_view_init( _: NonNull<window_mode_entry>, _: *mut cmd_find_state, _: *mut args,) -> *mut screen;
-    fn window_copy_free(_: NonNull<window_mode_entry>);
-    fn window_copy_resize(_: NonNull<window_mode_entry>, _: u32, _: u32);
-    fn window_copy_formats(_: *mut window_mode_entry, _: *mut format_tree);
-    fn window_copy_pageup1(_: *mut window_mode_entry, _: i32);
-    fn window_copy_pagedown1(_: *mut window_mode_entry, _: i32, _: i32) -> i32;
-    fn window_copy_next_paragraph(_: *mut window_mode_entry);
-    fn window_copy_previous_paragraph(_: *mut window_mode_entry);
+    // fn window_copy_init( _: NonNull<window_mode_entry>, _: *mut cmd_find_state, _: *mut args,) -> *mut screen;
+    // fn window_copy_view_init( _: NonNull<window_mode_entry>, _: *mut cmd_find_state, _: *mut args,) -> *mut screen;
+    // fn window_copy_free(_: NonNull<window_mode_entry>);
+    // fn window_copy_resize(_: NonNull<window_mode_entry>, _: u32, _: u32);
+    // fn window_copy_formats(_: *mut window_mode_entry, _: *mut format_tree);
+    // fn window_copy_pageup1(_: *mut window_mode_entry, _: i32);
+    // fn window_copy_pagedown1(_: *mut window_mode_entry, _: i32, _: i32) -> i32;
+    // fn window_copy_next_paragraph(_: *mut window_mode_entry);
+    // fn window_copy_previous_paragraph(_: *mut window_mode_entry);
     fn window_copy_redraw_selection(_: *mut window_mode_entry, _: u32);
     fn window_copy_redraw_lines(_: *mut window_mode_entry, _: u32, _: u32);
     fn window_copy_redraw_screen(_: *mut window_mode_entry);
@@ -116,7 +116,7 @@ pub static window_view_mode: window_mode = window_mode {
 };
 
 #[repr(i32)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub enum window_copy {
     WINDOW_COPY_OFF,
     WINDOW_COPY_SEARCHUP,
@@ -174,6 +174,7 @@ enum selflag {
 }
 
 #[repr(i32)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 enum cursordrag {
     /// selection is independent of cursor
     CURSORDRAG_NONE,
@@ -184,6 +185,7 @@ enum cursordrag {
 }
 
 #[repr(i32)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 enum line_sel {
     LINE_SEL_NONE,
     LINE_SEL_LEFT_RIGHT,
@@ -396,7 +398,7 @@ pub unsafe extern "C" fn window_copy_common_init(
         (*data).lineflag = line_sel::LINE_SEL_NONE;
         (*data).selflag = selflag::SEL_CHAR;
 
-        if (!(*wp).searchstr.is_null()) {
+        if !(*wp).searchstr.is_null() {
             (*data).searchtype = window_copy::WINDOW_COPY_SEARCHUP;
             (*data).searchregex = (*wp).searchregex;
             (*data).searchstr = xstrdup((*wp).searchstr).as_ptr();
@@ -432,2414 +434,2659 @@ pub unsafe extern "C" fn window_copy_common_init(
     }
 }
 
-/*
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static struct screen *window_copy_init(struct window_mode_entry *wme, __unused struct cmd_find_state *fs, struct args *args) {
-unsafe {
-  struct window_pane *wp = (*wme).swp;
-  struct window_copy_mode_data *data;
-  struct screen *base = &(*wp).base;
-  struct screen_write_ctx ctx;
-  u_int i, cx, cy;
+pub unsafe extern "C" fn window_copy_init(
+    wme: NonNull<window_mode_entry>,
+    _fs: *mut cmd_find_state,
+    args: *mut args,
+) -> *mut screen {
+    let wme = wme.as_ptr();
+    unsafe {
+        let mut wp = (*wme).swp;
+        let mut data: *mut window_copy_mode_data = null_mut();
+        let mut base = &raw mut (*wp).base;
+        let mut ctx: screen_write_ctx = zeroed();
+        let mut cx = 0;
+        let mut cy = 0;
 
-  data = window_copy_common_init(wme);
-  (*data).backing = window_copy_clone_screen(base, &(*data).screen, &cx, &cy,
-                                           (*wme).swp != (*wme).wp);
+        data = window_copy_common_init(wme);
+        (*data).backing = window_copy_clone_screen(
+            base,
+            &raw mut (*data).screen,
+            &raw mut cx,
+            &raw mut cy,
+            ((*wme).swp != (*wme).wp) as i32,
+        );
 
-  (*data).cx = cx;
-  if (cy < screen_hsize((*data).backing)) {
-    (*data).cy = 0;
-    (*data).oy = screen_hsize((*data).backing) - cy;
-  } else {
-    (*data).cy = cy - screen_hsize((*data).backing);
-    (*data).oy = 0;
-  }
+        (*data).cx = cx;
+        if (cy < screen_hsize((*data).backing)) {
+            (*data).cy = 0;
+            (*data).oy = screen_hsize((*data).backing) - cy;
+        } else {
+            (*data).cy = cy - screen_hsize((*data).backing);
+            (*data).oy = 0;
+        }
 
-  (*data).scroll_exit = args_has(args, 'e');
-  (*data).hide_position = args_has(args, 'H');
+        (*data).scroll_exit = args_has(args, b'e');
+        (*data).hide_position = args_has(args, b'H');
 
-  if ((*base).hyperlinks != NULL) {
-    (*data).screen.hyperlinks = hyperlinks_copy((*base).hyperlinks);
-  }
-  (*data).screen.cx = (*data).cx;
-  (*data).screen.cy = (*data).cy;
-  (*data).mx = (*data).cx;
-  (*data).my = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-  (*data).showmark = 0;
+        if (!(*base).hyperlinks.is_null()) {
+            (*data).screen.hyperlinks = hyperlinks_copy((*base).hyperlinks);
+        }
+        (*data).screen.cx = (*data).cx;
+        (*data).screen.cy = (*data).cy;
+        (*data).mx = (*data).cx;
+        (*data).my = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+        (*data).showmark = 0;
 
-  screen_write_start(&ctx, &(*data).screen);
-  for (i = 0; i < screen_size_y(&(*data).screen); i++) {
-    window_copy_write_line(wme, &ctx, i);
-  }
-  screen_write_cursormove(&ctx, (*data).cx, (*data).cy, 0);
-  screen_write_stop(&ctx);
+        screen_write_start(&raw mut ctx, &raw mut (*data).screen);
+        for i in 0..screen_size_y(&raw mut (*data).screen) {
+            window_copy_write_line(wme, &raw mut ctx, i);
+        }
+        screen_write_cursormove(&raw mut ctx, (*data).cx as i32, (*data).cy as i32, 0);
+        screen_write_stop(&raw mut ctx);
 
-  return &(*data).screen;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static struct screen *window_copy_view_init(struct window_mode_entry *wme, __unused struct cmd_find_state *fs, __unused struct args *args) {
-unsafe {
-  struct window_pane *wp = (*wme).wp;
-  struct window_copy_mode_data *data;
-  struct screen *base = &(*wp).base;
-  u_int sx = screen_size_x(base);
-
-  data = window_copy_common_init(wme);
-  (*data).viewmode = 1;
-
-  (*data).backing = xmalloc(sizeof *(*data).backing);
-  screen_init((*data).backing, sx, screen_size_y(base), UINT_MAX);
-  (*data).writing = xmalloc(sizeof *(*data).writing);
-  screen_init((*data).writing, sx, screen_size_y(base), 0);
-  (*data).ictx = input_init(NULL, NULL, NULL);
-  (*data).mx = (*data).cx;
-  (*data).my = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-  (*data).showmark = 0;
-
-  return &(*data).screen;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_free(struct window_mode_entry *wme) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-
-  evtimer_del(&(*data).dragtimer);
-
-  free((*data).searchmark);
-  free((*data).searchstr);
-  free((*data).jumpchar);
-
-  if ((*data).writing != NULL) {
-    screen_free((*data).writing);
-    free((*data).writing);
-  }
-  if ((*data).ictx != NULL) {
-    input_free((*data).ictx);
-  }
-  screen_free((*data).backing);
-  free((*data).backing);
-
-  screen_free(&(*data).screen);
-  free(data);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-void window_copy_add(struct window_pane *wp, int parse, const char *fmt, ...) {
-unsafe {
-  va_list ap;
-
-  va_start(ap, fmt);
-  window_copy_vadd(wp, parse, fmt, ap);
-  va_end(ap);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_init_ctx_cb(__unused struct screen_write_ctx *ctx, struct tty_ctx *ttyctx) {
-unsafe {
-  memcpy(&(*ttyctx).defaults, &grid_default_cell, sizeof (*ttyctx).defaults);
-  (*ttyctx).palette = NULL;
-  (*ttyctx).redraw_cb = NULL;
-  (*ttyctx).set_client_cb = NULL;
-  (*ttyctx).arg = NULL;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-void window_copy_vadd(struct window_pane *wp, int parse, const char *fmt, va_list ap) {
-unsafe {
-  struct window_mode_entry *wme = TAILQ_FIRST(&(*wp).modes);
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *backing = (*data).backing;
-  struct screen *writing = (*data).writing;
-  struct screen_write_ctx writing_ctx, backing_ctx, ctx;
-  struct grid_cell gc;
-  u_int old_hsize, old_cy;
-  u_int sx = screen_size_x(backing);
-  char *text;
-
-  if (parse) {
-    vasprintf(&text, fmt, ap);
-    screen_write_start(&writing_ctx, writing);
-    screen_write_reset(&writing_ctx);
-    input_parse_screen((*data).ictx, writing, window_copy_init_ctx_cb, data, text,
-                       strlen(text));
-    free(text);
-  }
-
-  old_hsize = screen_hsize((*data).backing);
-  screen_write_start(&backing_ctx, backing);
-  if ((*data).backing_written) {
-    /*
-     * On the second or later line, do a CRLF before writing
-     * (so it's on a new line).
-     */
-    screen_write_carriagereturn(&backing_ctx);
-    screen_write_linefeed(&backing_ctx, 0, 8);
-  } else {
-    (*data).backing_written = 1;
-  }
-  old_cy = (*backing).cy;
-  if (parse) {
-    screen_write_fast_copy(&backing_ctx, writing, 0, 0, sx, 1);
-  } else {
-    memcpy(&gc, &grid_default_cell, sizeof gc);
-    screen_write_vnputs(&backing_ctx, 0, &gc, fmt, ap);
-  }
-  screen_write_stop(&backing_ctx);
-
-  (*data).oy += screen_hsize((*data).backing) - old_hsize;
-
-  screen_write_start_pane(&ctx, wp, &(*data).screen);
-
-  /*
-   * If the history has changed, draw the top line.
-   * (If there's any history at all, it has changed.)
-   */
-  if (screen_hsize((*data).backing)) {
-    window_copy_redraw_lines(wme, 0, 1);
-  }
-
-  /* Write the new lines. */
-  window_copy_redraw_lines(wme, old_cy, (*backing).cy - old_cy + 1);
-
-  screen_write_stop(&ctx);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-void window_copy_pageup(struct window_pane *wp, int half_page) {
-unsafe {
-  window_copy_pageup1(TAILQ_FIRST(&(*wp).modes), half_page);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_pageup1(struct window_mode_entry *wme, int half_page) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *s = &(*data).screen;
-  u_int n, ox, oy, px, py;
-
-  oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-  ox = window_copy_find_length(wme, oy);
-
-  if ((*data).cx != ox) {
-    (*data).lastcx = (*data).cx;
-    (*data).lastsx = ox;
-  }
-  (*data).cx = (*data).lastcx;
-
-  n = 1;
-  if (screen_size_y(s) > 2) {
-    if (half_page) {
-      n = screen_size_y(s) / 2;
-    } else {
-      n = screen_size_y(s) - 2;
+        &raw mut (*data).screen
     }
-  }
+}
 
-  if ((*data).oy + n > screen_hsize((*data).backing)) {
-    (*data).oy = screen_hsize((*data).backing);
-    if ((*data).cy < n) {
-      (*data).cy = 0;
-    } else {
-      (*data).cy -= n;
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_view_init(
+    wme: NonNull<window_mode_entry>,
+    fs: *mut cmd_find_state,
+    args: *mut args,
+) -> *mut screen {
+    let wme = wme.as_ptr();
+    unsafe {
+        let mut wp = (*wme).wp;
+        // struct window_copy_mode_data *data;
+        let mut base: *mut screen = &raw mut (*wp).base;
+        let mut sx = screen_size_x(base);
+
+        let mut data = window_copy_common_init(wme);
+        (*data).viewmode = 1;
+
+        (*data).backing = xmalloc_::<screen>().as_ptr();
+        screen_init((*data).backing, sx, screen_size_y(base), u32::MAX);
+        (*data).writing = xmalloc_::<screen>().as_ptr();
+        screen_init((*data).writing, sx, screen_size_y(base), 0);
+        (*data).ictx = input_init(null_mut(), null_mut(), null_mut());
+        (*data).mx = (*data).cx;
+        (*data).my = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+        (*data).showmark = 0;
+
+        &raw mut (*data).screen
     }
-  } else {
-    (*data).oy += n;
-  }
+}
 
-  if ((*data).screen.sel == NULL || !(*data).rectflag) {
-    py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-    px = window_copy_find_length(wme, py);
-    if (((*data).cx >= (*data).lastsx && (*data).cx != px) || (*data).cx > px) {
-      window_copy_cursor_end_of_line(wme);
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_free(wme: NonNull<window_mode_entry>) {
+    unsafe {
+        let wme = wme.as_ptr();
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+
+        evtimer_del(&raw mut (*data).dragtimer);
+
+        free_((*data).searchmark);
+        free_((*data).searchstr);
+        free_((*data).jumpchar);
+
+        if (!(*data).writing.is_null()) {
+            screen_free((*data).writing);
+            free_((*data).writing);
+        }
+        if (!(*data).ictx.is_null()) {
+            input_free((*data).ictx);
+        }
+        screen_free((*data).backing);
+        free_((*data).backing);
+
+        screen_free(&raw mut (*data).screen);
+        free_(data);
     }
-  }
-
-  if ((*data).searchmark != NULL && !(*data).timeout) {
-    window_copy_search_marks(wme, NULL, (*data).searchregex, 1);
-  }
-  window_copy_update_selection(wme, 1, 0);
-  window_copy_redraw_screen(wme);
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-void window_copy_pagedown(struct window_pane *wp, int half_page, int scroll_exit) {
-unsafe {
-  if (window_copy_pagedown1(TAILQ_FIRST(&(*wp).modes), half_page, scroll_exit)) {
-    window_pane_reset_mode(wp);
-    return;
-  }
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static int window_copy_pagedown1(struct window_mode_entry *wme, int half_page, int scroll_exit) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *s = &(*data).screen;
-  u_int n, ox, oy, px, py;
-
-  oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-  ox = window_copy_find_length(wme, oy);
-
-  if ((*data).cx != ox) {
-    (*data).lastcx = (*data).cx;
-    (*data).lastsx = ox;
-  }
-  (*data).cx = (*data).lastcx;
-
-  n = 1;
-  if (screen_size_y(s) > 2) {
-    if (half_page) {
-      n = screen_size_y(s) / 2;
-    } else {
-      n = screen_size_y(s) - 2;
+pub unsafe extern "C" fn window_copy_add(
+    wp: *mut window_pane,
+    parse: i32,
+    fmt: *const c_char,
+    mut ap: ...
+) {
+    unsafe {
+        window_copy_vadd(wp, parse, fmt, ap.as_va_list());
     }
-  }
+}
 
-  if ((*data).oy < n) {
-    (*data).oy = 0;
-    if ((*data).cy + (n - (*data).oy) >= screen_size_y((*data).backing)) {
-      (*data).cy = screen_size_y((*data).backing) - 1;
-    } else {
-      (*data).cy += n - (*data).oy;
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_init_ctx_cb(ctx: *mut screen_write_ctx, ttyctx: *mut tty_ctx) {
+    unsafe {
+        memcpy__(&raw mut (*ttyctx).defaults, &raw const grid_default_cell);
+        (*ttyctx).palette = null_mut();
+        (*ttyctx).redraw_cb = None;
+        (*ttyctx).set_client_cb = None;
+        (*ttyctx).arg = null_mut();
     }
-  } else {
-    (*data).oy -= n;
-  }
+}
 
-  if ((*data).screen.sel == NULL || !(*data).rectflag) {
-    py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-    px = window_copy_find_length(wme, py);
-    if (((*data).cx >= (*data).lastsx && (*data).cx != px) || (*data).cx > px) {
-      window_copy_cursor_end_of_line(wme);
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_vadd(
+    wp: *mut window_pane,
+    parse: i32,
+    fmt: *const c_char,
+    mut ap: VaList,
+) {
+    unsafe {
+        let mut wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut backing: *mut screen = (*data).backing;
+        let mut writing: *mut screen = (*data).writing;
+
+        let mut writing_ctx: screen_write_ctx = zeroed();
+        let mut backing_ctx: screen_write_ctx = zeroed();
+        let mut ctx: screen_write_ctx = zeroed();
+
+        let mut gc: grid_cell = zeroed();
+        let mut old_hsize: u32 = 0;
+        let mut old_cy: u32 = 0;
+        let mut sx = screen_size_x(backing);
+        let mut text: *mut c_char = null_mut();
+
+        if (parse != 0) {
+            vasprintf(&raw mut text, fmt, ap.as_va_list());
+            screen_write_start(&raw mut writing_ctx, writing);
+            screen_write_reset(&raw mut writing_ctx);
+            input_parse_screen(
+                (*data).ictx,
+                writing,
+                Some(window_copy_init_ctx_cb),
+                data.cast(),
+                text.cast(),
+                strlen(text),
+            );
+            free_(text);
+        }
+
+        old_hsize = screen_hsize((*data).backing);
+        screen_write_start(&raw mut backing_ctx, backing);
+        if ((*data).backing_written != 0) {
+            /*
+             * On the second or later line, do a CRLF before writing
+             * (so it's on a new line).
+             */
+            screen_write_carriagereturn(&raw mut backing_ctx);
+            screen_write_linefeed(&raw mut backing_ctx, 0, 8);
+        } else {
+            (*data).backing_written = 1;
+        }
+        old_cy = (*backing).cy;
+        if (parse != 0) {
+            screen_write_fast_copy(&raw mut backing_ctx, writing, 0, 0, sx, 1);
+        } else {
+            memcpy__(&raw mut gc, &raw const grid_default_cell);
+            screen_write_vnputs(&raw mut backing_ctx, 0, &raw const gc, fmt, ap.as_va_list());
+        }
+        screen_write_stop(&raw mut backing_ctx);
+
+        (*data).oy += screen_hsize((*data).backing) - old_hsize;
+
+        screen_write_start_pane(&raw mut ctx, wp, &raw mut (*data).screen);
+
+        /*
+         * If the history has changed, draw the top line.
+         * (If there's any history at all, it has changed.)
+         */
+        if (screen_hsize((*data).backing) != 0) {
+            window_copy_redraw_lines(wme, 0, 1);
+        }
+
+        /* Write the new lines. */
+        window_copy_redraw_lines(wme, old_cy, (*backing).cy - old_cy + 1);
+
+        screen_write_stop(&raw mut ctx);
     }
-  }
-
-  if (scroll_exit && (*data).oy == 0) {
-    return 1;
-  }
-  if ((*data).searchmark != NULL && !(*data).timeout) {
-    window_copy_search_marks(wme, NULL, (*data).searchregex, 1);
-  }
-  window_copy_update_selection(wme, 1, 0);
-  window_copy_redraw_screen(wme);
-  return 0;
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_previous_paragraph(struct window_mode_entry *wme) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int oy;
-
-  oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-
-  while (oy > 0 && window_copy_find_length(wme, oy) == 0) {
-    oy--;
-  }
-
-  while (oy > 0 && window_copy_find_length(wme, oy) > 0) {
-    oy--;
-  }
-
-  window_copy_scroll_to(wme, 0, oy, 0);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_next_paragraph(struct window_mode_entry *wme) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *s = &(*data).screen;
-  u_int maxy, ox, oy;
-
-  oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-  maxy = screen_hsize((*data).backing) + screen_size_y(s) - 1;
-
-  while (oy < maxy && window_copy_find_length(wme, oy) == 0) {
-    oy++;
-  }
-
-  while (oy < maxy && window_copy_find_length(wme, oy) > 0) {
-    oy++;
-  }
-
-  ox = window_copy_find_length(wme, oy);
-  window_copy_scroll_to(wme, ox, oy, 0);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-char *window_copy_get_word(struct window_pane *wp, u_int x, u_int y) {
-unsafe {
-  struct window_mode_entry *wme = TAILQ_FIRST(&(*wp).modes);
-  struct window_copy_mode_data *data = (*wme).data;
-  struct grid *gd = (*data).screen.grid;
-
-  return format_grid_word(gd, x, (*gd).hsize + y);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-char *window_copy_get_line(struct window_pane *wp, u_int y) {
-unsafe {
-  struct window_mode_entry *wme = TAILQ_FIRST(&(*wp).modes);
-  struct window_copy_mode_data *data = (*wme).data;
-  struct grid *gd = (*data).screen.grid;
-
-  return format_grid_line(gd, (*gd).hsize + y);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void *window_copy_cursor_hyperlink_cb(struct format_tree *ft) {
-unsafe {
-  struct window_pane *wp = format_get_pane(ft);
-  struct window_mode_entry *wme = TAILQ_FIRST(&(*wp).modes);
-  struct window_copy_mode_data *data = (*wme).data;
-  struct grid *gd = (*data).screen.grid;
-
-  return format_grid_hyperlink(gd, (*data).cx, (*gd).hsize + (*data).cy,
-                               &(*data).screen);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void *window_copy_cursor_word_cb(struct format_tree *ft) {
-unsafe {
-  struct window_pane *wp = format_get_pane(ft);
-  struct window_mode_entry *wme = TAILQ_FIRST(&(*wp).modes);
-  struct window_copy_mode_data *data = (*wme).data;
-
-  return window_copy_get_word(wp, (*data).cx, (*data).cy);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void *window_copy_cursor_line_cb(struct format_tree *ft) {
-unsafe {
-  struct window_pane *wp = format_get_pane(ft);
-  struct window_mode_entry *wme = TAILQ_FIRST(&(*wp).modes);
-  struct window_copy_mode_data *data = (*wme).data;
-
-  return window_copy_get_line(wp, (*data).cy);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void *window_copy_search_match_cb(struct format_tree *ft) {
-unsafe {
-  struct window_pane *wp = format_get_pane(ft);
-  struct window_mode_entry *wme = TAILQ_FIRST(&(*wp).modes);
-  struct window_copy_mode_data *data = (*wme).data;
-
-  return window_copy_match_at_cursor(data);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_formats(struct window_mode_entry *wme, struct format_tree *ft) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-
-  format_add(ft, "scroll_position", "%d", (*data).oy);
-  format_add(ft, "rectangle_toggle", "%d", (*data).rectflag);
-
-  format_add(ft, "copy_cursor_x", "%d", (*data).cx);
-  format_add(ft, "copy_cursor_y", "%d", (*data).cy);
-
-  if ((*data).screen.sel != NULL) {
-    format_add(ft, "selection_start_x", "%d", (*data).selx);
-    format_add(ft, "selection_start_y", "%d", (*data).sely);
-    format_add(ft, "selection_end_x", "%d", (*data).endselx);
-    format_add(ft, "selection_end_y", "%d", (*data).endsely);
-
-    if ((*data).cursordrag != CURSORDRAG_NONE) {
-      format_add(ft, "selection_active", "1");
-    } else {
-      format_add(ft, "selection_active", "0");
+pub unsafe extern "C" fn window_copy_pageup(wp: *mut window_pane, half_page: i32) {
+    unsafe {
+        window_copy_pageup1(tailq_first(&raw mut (*wp).modes), half_page);
     }
-    if ((*data).endselx != (*data).selx || (*data).endsely != (*data).sely) {
-      format_add(ft, "selection_present", "1");
-    } else {
-      format_add(ft, "selection_present", "0");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_pageup1(wme: *mut window_mode_entry, half_page: i32) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut s: *mut screen = &raw mut (*data).screen;
+        // u_int n, ox, oy, px, py;
+
+        let oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+        let ox = window_copy_find_length(wme, oy);
+
+        if ((*data).cx != ox) {
+            (*data).lastcx = (*data).cx;
+            (*data).lastsx = ox;
+        }
+        (*data).cx = (*data).lastcx;
+
+        let mut n = 1;
+        if (screen_size_y(s) > 2) {
+            if (half_page != 0) {
+                n = screen_size_y(s) / 2;
+            } else {
+                n = screen_size_y(s) - 2;
+            }
+        }
+
+        if ((*data).oy + n > screen_hsize((*data).backing)) {
+            (*data).oy = screen_hsize((*data).backing);
+            if ((*data).cy < n) {
+                (*data).cy = 0;
+            } else {
+                (*data).cy -= n;
+            }
+        } else {
+            (*data).oy += n;
+        }
+
+        if ((*data).screen.sel.is_null() || (*data).rectflag == 0) {
+            let py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+            let px = window_copy_find_length(wme, py);
+            if (((*data).cx >= (*data).lastsx && (*data).cx != px) || (*data).cx > px) {
+                window_copy_cursor_end_of_line(wme);
+            }
+        }
+
+        if (!(*data).searchmark.is_null() && (*data).timeout == 0) {
+            window_copy_search_marks(wme, null_mut(), (*data).searchregex, 1);
+        }
+        window_copy_update_selection(wme, 1, 0);
+        window_copy_redraw_screen(wme);
     }
-  } else {
-    format_add(ft, "selection_active", "0");
-    format_add(ft, "selection_present", "0");
-  }
-
-  format_add(ft, "search_present", "%d", (*data).searchmark != NULL);
-  if ((*data).searchcount != -1) {
-    format_add(ft, "search_count", "%d", (*data).searchcount);
-    format_add(ft, "search_count_partial", "%d", (*data).searchmore);
-  }
-  format_add_cb(ft, "search_match", window_copy_search_match_cb);
-
-  format_add_cb(ft, "copy_cursor_word", window_copy_cursor_word_cb);
-  format_add_cb(ft, "copy_cursor_line", window_copy_cursor_line_cb);
-  format_add_cb(ft, "copy_cursor_hyperlink", window_copy_cursor_hyperlink_cb);
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_size_changed(struct window_mode_entry *wme) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *s = &(*data).screen;
-  struct screen_write_ctx ctx;
-  int search = ((*data).searchmark != NULL);
-
-  window_copy_clear_selection(wme);
-  window_copy_clear_marks(wme);
-
-  screen_write_start(&ctx, s);
-  window_copy_write_lines(wme, &ctx, 0, screen_size_y(s));
-  screen_write_stop(&ctx);
-
-  if (search && !(*data).timeout) {
-    window_copy_search_marks(wme, NULL, (*data).searchregex, 0);
-  }
-  (*data).searchx = (*data).cx;
-  (*data).searchy = (*data).cy;
-  (*data).searcho = (*data).oy;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_resize(struct window_mode_entry *wme, u_int sx, u_int sy) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *s = &(*data).screen;
-  struct grid *gd = (*(*data).backing).grid;
-  u_int cx, cy, wx, wy;
-  int reflow;
-
-  screen_resize(s, sx, sy, 0);
-  cx = (*data).cx;
-  cy = (*gd).hsize + (*data).cy - (*data).oy;
-  reflow = ((*gd).sx != sx);
-  if (reflow) {
-    grid_wrap_position(gd, cx, cy, &wx, &wy);
-  }
-  screen_resize_cursor((*data).backing, sx, sy, 1, 0, 0);
-  if (reflow) {
-    grid_unwrap_position(gd, &cx, &cy, wx, wy);
-  }
-
-  (*data).cx = cx;
-  if (cy < (*gd).hsize) {
-    (*data).cy = 0;
-    (*data).oy = (*gd).hsize - cy;
-  } else {
-    (*data).cy = cy - (*gd).hsize;
-    (*data).oy = 0;
-  }
-
-  window_copy_size_changed(wme);
-  window_copy_redraw_screen(wme);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static const char *window_copy_key_table(struct window_mode_entry *wme) {
-unsafe {
-  struct window_pane *wp = (*wme).wp;
-
-  if (options_get_number((*(*wp).window).options, "mode-keys") == MODEKEY_VI) {
-    return "copy-mode-vi";
-  }
-  return "copy-mode";
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static int window_copy_expand_search_string(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  const char *ss = args_string((*cs).args, 1);
-  char *expanded;
-
-  if (ss == NULL || *ss == '\0') {
-    return 0;
-  }
-
-  if (args_has((*cs).args, 'F')) {
-    expanded = format_single(NULL, ss, NULL, NULL, NULL, (*wme).wp);
-    if (*expanded == '\0') {
-      free(expanded);
-      return 0;
+pub unsafe extern "C" fn window_copy_pagedown(
+    wp: *mut window_pane,
+    half_page: i32,
+    scroll_exit: i32,
+) {
+    unsafe {
+        if (window_copy_pagedown1(tailq_first(&raw mut (*wp).modes), half_page, scroll_exit) != 0) {
+            window_pane_reset_mode(wp);
+        }
     }
-    free((*data).searchstr);
-    (*data).searchstr = expanded;
-  } else {
-    free((*data).searchstr);
-    (*data).searchstr = xstrdup(ss);
-  }
-  return 1;
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_append_selection(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct session *s = (*cs).s;
+pub unsafe extern "C" fn window_copy_pagedown1(
+    wme: *mut window_mode_entry,
+    half_page: i32,
+    scroll_exit: i32,
+) -> i32 {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut s: *mut screen = &raw mut (*data).screen;
 
-  if (s != NULL) {
-    window_copy_append_selection(wme);
-  }
-  window_copy_clear_selection(wme);
-  return WINDOW_COPY_CMD_REDRAW;
-}
-}
+        let oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+        let ox = window_copy_find_length(wme, oy);
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_append_selection_and_cancel(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct session *s = (*cs).s;
+        if ((*data).cx != ox) {
+            (*data).lastcx = (*data).cx;
+            (*data).lastsx = ox;
+        }
+        (*data).cx = (*data).lastcx;
 
-  if (s != NULL) {
-    window_copy_append_selection(wme);
-  }
-  window_copy_clear_selection(wme);
-  return WINDOW_COPY_CMD_CANCEL;
-}
-}
+        let mut n = 1;
+        if (screen_size_y(s) > 2) {
+            if (half_page != 0) {
+                n = screen_size_y(s) / 2;
+            } else {
+                n = screen_size_y(s) - 2;
+            }
+        }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_back_to_indentation(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
+        if ((*data).oy < n) {
+            (*data).oy = 0;
+            if ((*data).cy + (n - (*data).oy) >= screen_size_y((*data).backing)) {
+                (*data).cy = screen_size_y((*data).backing) - 1;
+            } else {
+                (*data).cy += n - (*data).oy;
+            }
+        } else {
+            (*data).oy -= n;
+        }
 
-  window_copy_cursor_back_to_indentation(wme);
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
+        if ((*data).screen.sel.is_null() || (*data).rectflag == 0) {
+            let mut py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+            let mut px = window_copy_find_length(wme, py);
+            if (((*data).cx >= (*data).lastsx && (*data).cx != px) || (*data).cx > px) {
+                window_copy_cursor_end_of_line(wme);
+            }
+        }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_begin_selection(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct client *c = (*cs).c;
-  struct mouse_event *m = (*cs).m;
-  struct window_copy_mode_data *data = (*wme).data;
+        if (scroll_exit != 0 && (*data).oy == 0) {
+            return 1;
+        }
+        if (!(*data).searchmark.is_null() && (*data).timeout == 0) {
+            window_copy_search_marks(wme, null_mut(), (*data).searchregex, 1);
+        }
+        window_copy_update_selection(wme, 1, 0);
+        window_copy_redraw_screen(wme);
 
-  if (m != NULL) {
-    window_copy_start_drag(c, m);
-    return WINDOW_COPY_CMD_NOTHING;
-  }
-
-  (*data).lineflag = LINE_SEL_NONE;
-  (*data).selflag = SEL_CHAR;
-  window_copy_start_selection(wme);
-  return WINDOW_COPY_CMD_REDRAW;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_stop_selection(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-
-  (*data).cursordrag = CURSORDRAG_NONE;
-  (*data).lineflag = LINE_SEL_NONE;
-  (*data).selflag = SEL_CHAR;
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_bottom_line(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-
-  (*data).cx = 0;
-  (*data).cy = screen_size_y(&(*data).screen) - 1;
-
-  window_copy_update_selection(wme, 1, 0);
-  return WINDOW_COPY_CMD_REDRAW;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_cancel(__unused struct window_copy_cmd_state *cs) {
-unsafe {
-  return WINDOW_COPY_CMD_CANCEL;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_clear_selection(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-
-  window_copy_clear_selection(wme);
-  return WINDOW_COPY_CMD_REDRAW;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_do_copy_end_of_line(struct window_copy_cmd_state *cs, int pipe, int cancel) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct client *c = (*cs).c;
-  struct session *s = (*cs).s;
-  struct winlink *wl = (*cs).wl;
-  struct window_pane *wp = (*wme).wp;
-  u_int count = args_count((*cs).args);
-  u_int np = (*wme).prefix, ocx, ocy, ooy;
-  struct window_copy_mode_data *data = (*wme).data;
-  char *prefix = NULL, *command = NULL;
-  const char *arg1 = args_string((*cs).args, 1);
-  const char *arg2 = args_string((*cs).args, 2);
-
-  if (pipe) {
-    if (count == 3) {
-      prefix = format_single(NULL, arg2, c, s, wl, wp);
+        0
     }
-    if (s != NULL && count > 1 && *arg1 != '\0') {
-      command = format_single(NULL, arg1, c, s, wl, wp);
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_previous_paragraph(wme: *mut window_mode_entry) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+
+        let mut oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+
+        while (oy > 0 && window_copy_find_length(wme, oy) == 0) {
+            oy -= 1;
+        }
+
+        while (oy > 0 && window_copy_find_length(wme, oy) > 0) {
+            oy -= 1;
+        }
+
+        window_copy_scroll_to(wme, 0, oy, 0);
     }
-  } else {
-    if (count == 2) {
-      prefix = format_single(NULL, arg1, c, s, wl, wp);
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_next_paragraph(wme: *mut window_mode_entry) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut s: *mut screen = &raw mut (*data).screen;
+
+        let mut oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+        let maxy = screen_hsize((*data).backing) + screen_size_y(s) - 1;
+
+        while (oy < maxy && window_copy_find_length(wme, oy) == 0) {
+            oy += 1;
+        }
+
+        while (oy < maxy && window_copy_find_length(wme, oy) > 0) {
+            oy += 1;
+        }
+
+        let ox = window_copy_find_length(wme, oy);
+        window_copy_scroll_to(wme, ox, oy, 0);
     }
-  }
+}
 
-  ocx = (*data).cx;
-  ocy = (*data).cy;
-  ooy = (*data).oy;
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_get_word(wp: *mut window_pane, x: u32, y: u32) -> *mut c_char {
+    unsafe {
+        let mut wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut gd = (*data).screen.grid;
 
-  window_copy_start_selection(wme);
-  for (; np > 1; np--) {
-    window_copy_cursor_down(wme, 0);
-  }
-  window_copy_cursor_end_of_line(wme);
-
-  if (s != NULL) {
-    if (pipe) {
-      window_copy_copy_pipe(wme, s, prefix, command);
-    } else {
-      window_copy_copy_selection(wme, prefix);
+        format_grid_word(gd, x, (*gd).hsize + y)
     }
+}
 
-    if (cancel) {
-      free(prefix);
-      free(command);
-      return WINDOW_COPY_CMD_CANCEL;
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_get_line(wp: *mut window_pane, y: u32) -> *mut c_char {
+    unsafe {
+        let mut wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut gd = (*data).screen.grid;
+
+        format_grid_line(gd, (*gd).hsize + y)
     }
-  }
-  window_copy_clear_selection(wme);
-
-  (*data).cx = ocx;
-  (*data).cy = ocy;
-  (*data).oy = ooy;
-
-  free(prefix);
-  free(command);
-  return WINDOW_COPY_CMD_REDRAW;
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_copy_end_of_line(struct window_copy_cmd_state *cs) {
-unsafe {
-  return window_copy_do_copy_end_of_line(cs, 0, 0);
-}
-}
+pub unsafe extern "C" fn window_copy_cursor_hyperlink_cb(ft: *mut format_tree) -> *mut c_void {
+    unsafe {
+        let mut wp = format_get_pane(ft);
+        let mut wme = tailq_first(&raw mut (*wp).modes);
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut gd = (*data).screen.grid;
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_copy_end_of_line_and_cancel(struct window_copy_cmd_state *cs) {
-unsafe {
-  return window_copy_do_copy_end_of_line(cs, 0, 1);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_copy_pipe_end_of_line(struct window_copy_cmd_state *cs) {
-unsafe {
-  return window_copy_do_copy_end_of_line(cs, 1, 0);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_copy_pipe_end_of_line_and_cancel( struct window_copy_cmd_state *cs) {
-unsafe {
-  return window_copy_do_copy_end_of_line(cs, 1, 1);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_do_copy_line(struct window_copy_cmd_state *cs, int pipe, int cancel) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct client *c = (*cs).c;
-  struct session *s = (*cs).s;
-  struct winlink *wl = (*cs).wl;
-  struct window_pane *wp = (*wme).wp;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int count = args_count((*cs).args);
-  u_int np = (*wme).prefix, ocx, ocy, ooy;
-  char *prefix = NULL, *command = NULL;
-  const char *arg1 = args_string((*cs).args, 1);
-  const char *arg2 = args_string((*cs).args, 2);
-
-  if (pipe) {
-    if (count == 3) {
-      prefix = format_single(NULL, arg2, c, s, wl, wp);
+        format_grid_hyperlink(
+            gd,
+            (*data).cx,
+            (*gd).hsize + (*data).cy,
+            &raw mut (*data).screen,
+        )
+        .cast()
     }
-    if (s != NULL && count > 1 && *arg1 != '\0') {
-      command = format_single(NULL, arg1, c, s, wl, wp);
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cursor_word_cb(ft: *mut format_tree) -> *mut c_void {
+    unsafe {
+        let mut wp: *mut window_pane = format_get_pane(ft);
+        let mut wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+
+        window_copy_get_word(wp, (*data).cx, (*data).cy).cast()
     }
-  } else {
-    if (count == 2) {
-      prefix = format_single(NULL, arg1, c, s, wl, wp);
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cursor_line_cb(ft: *mut format_tree) -> *mut c_void {
+    unsafe {
+        let mut wp: *mut window_pane = format_get_pane(ft);
+        let mut wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+
+        window_copy_get_line(wp, (*data).cy).cast()
     }
-  }
+}
 
-  ocx = (*data).cx;
-  ocy = (*data).cy;
-  ooy = (*data).oy;
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_search_match_cb(ft: *mut format_tree) -> *mut c_void {
+    unsafe {
+        let mut wp: *mut window_pane = format_get_pane(ft);
+        let mut wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
 
-  (*data).selflag = SEL_CHAR;
-  window_copy_cursor_start_of_line(wme);
-  window_copy_start_selection(wme);
-  for (; np > 1; np--) {
-    window_copy_cursor_down(wme, 0);
-  }
-  window_copy_cursor_end_of_line(wme);
-
-  if (s != NULL) {
-    if (pipe) {
-      window_copy_copy_pipe(wme, s, prefix, command);
-    } else {
-      window_copy_copy_selection(wme, prefix);
+        window_copy_match_at_cursor(data).cast()
     }
+}
 
-    if (cancel) {
-      free(prefix);
-      free(command);
-      return WINDOW_COPY_CMD_CANCEL;
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_formats(wme: *mut window_mode_entry, ft: *mut format_tree) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+
+        format_add(ft, c"scroll_position".as_ptr(), c"%d".as_ptr(), (*data).oy);
+        format_add(
+            ft,
+            c"rectangle_toggle".as_ptr(),
+            c"%d".as_ptr(),
+            (*data).rectflag,
+        );
+
+        format_add(ft, c"copy_cursor_x".as_ptr(), c"%d".as_ptr(), (*data).cx);
+        format_add(ft, c"copy_cursor_y".as_ptr(), c"%d".as_ptr(), (*data).cy);
+
+        if (!(*data).screen.sel.is_null()) {
+            format_add(
+                ft,
+                c"selection_start_x".as_ptr(),
+                c"%d".as_ptr(),
+                (*data).selx,
+            );
+            format_add(
+                ft,
+                c"selection_start_y".as_ptr(),
+                c"%d".as_ptr(),
+                (*data).sely,
+            );
+            format_add(
+                ft,
+                c"selection_end_x".as_ptr(),
+                c"%d".as_ptr(),
+                (*data).endselx,
+            );
+            format_add(
+                ft,
+                c"selection_end_y".as_ptr(),
+                c"%d".as_ptr(),
+                (*data).endsely,
+            );
+
+            if ((*data).cursordrag != cursordrag::CURSORDRAG_NONE) {
+                format_add(ft, c"selection_active".as_ptr(), c"1".as_ptr());
+            } else {
+                format_add(ft, c"selection_active".as_ptr(), c"0".as_ptr());
+            }
+            if ((*data).endselx != (*data).selx || (*data).endsely != (*data).sely) {
+                format_add(ft, c"selection_present".as_ptr(), c"1".as_ptr());
+            } else {
+                format_add(ft, c"selection_present".as_ptr(), c"0".as_ptr());
+            }
+        } else {
+            format_add(ft, c"selection_active".as_ptr(), c"0".as_ptr());
+            format_add(ft, c"selection_present".as_ptr(), c"0".as_ptr());
+        }
+
+        format_add(
+            ft,
+            c"search_present".as_ptr(),
+            c"%d".as_ptr(),
+            !(*data).searchmark.is_null() as i32,
+        );
+        if ((*data).searchcount != -1) {
+            format_add(
+                ft,
+                c"search_count".as_ptr(),
+                c"%d".as_ptr(),
+                (*data).searchcount,
+            );
+            format_add(
+                ft,
+                c"search_count_partial".as_ptr(),
+                c"%d".as_ptr(),
+                (*data).searchmore,
+            );
+        }
+        format_add_cb(
+            ft,
+            c"search_match".as_ptr(),
+            Some(window_copy_search_match_cb),
+        );
+
+        format_add_cb(
+            ft,
+            c"copy_cursor_word".as_ptr(),
+            Some(window_copy_cursor_word_cb),
+        );
+        format_add_cb(
+            ft,
+            c"copy_cursor_line".as_ptr(),
+            Some(window_copy_cursor_line_cb),
+        );
+        format_add_cb(
+            ft,
+            c"copy_cursor_hyperlink".as_ptr(),
+            Some(window_copy_cursor_hyperlink_cb),
+        );
     }
-  }
-  window_copy_clear_selection(wme);
-
-  (*data).cx = ocx;
-  (*data).cy = ocy;
-  (*data).oy = ooy;
-
-  free(prefix);
-  free(command);
-  return WINDOW_COPY_CMD_REDRAW;
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_copy_line(struct window_copy_cmd_state *cs) {
-unsafe {
-  return window_copy_do_copy_line(cs, 0, 0);
-}
+pub unsafe extern "C" fn window_copy_size_changed(wme: *mut window_mode_entry) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut s: *mut screen = &raw mut (*data).screen;
+        let mut ctx: screen_write_ctx = zeroed();
+        let mut search = (!(*data).searchmark.is_null());
+
+        window_copy_clear_selection(wme);
+        window_copy_clear_marks(wme);
+
+        screen_write_start(&raw mut ctx, s);
+        window_copy_write_lines(wme, &raw mut ctx, 0, screen_size_y(s));
+        screen_write_stop(&raw mut ctx);
+
+        if (search && (*data).timeout == 0) {
+            window_copy_search_marks(wme, null_mut(), (*data).searchregex, 0);
+        }
+        (*data).searchx = (*data).cx as i32;
+        (*data).searchy = (*data).cy as i32;
+        (*data).searcho = (*data).oy as i32;
+    }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_copy_line_and_cancel(struct window_copy_cmd_state *cs) {
-unsafe {
-  return window_copy_do_copy_line(cs, 0, 1);
-}
+pub unsafe extern "C" fn window_copy_resize(wme: NonNull<window_mode_entry>, sx: u32, sy: u32) {
+    unsafe {
+        let wme = wme.as_ptr();
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut s: *mut screen = &raw mut (*data).screen;
+        let mut gd: *mut grid = (*(*data).backing).grid;
+        let mut wx = 0;
+        let mut wy = 0;
+        // int reflow;
+
+        screen_resize(s, sx, sy, 0);
+        let mut cx = (*data).cx;
+        let mut cy = (*gd).hsize + (*data).cy - (*data).oy;
+        let reflow = ((*gd).sx != sx);
+        if (reflow) {
+            grid_wrap_position(gd, cx, cy, &raw mut wx, &raw mut wy);
+        }
+        screen_resize_cursor((*data).backing, sx, sy, 1, 0, 0);
+        if (reflow) {
+            grid_unwrap_position(gd, &raw mut cx, &raw mut cy, wx, wy);
+        }
+
+        (*data).cx = cx;
+        if (cy < (*gd).hsize) {
+            (*data).cy = 0;
+            (*data).oy = (*gd).hsize - cy;
+        } else {
+            (*data).cy = cy - (*gd).hsize;
+            (*data).oy = 0;
+        }
+
+        window_copy_size_changed(wme);
+        window_copy_redraw_screen(wme);
+    }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_copy_pipe_line(struct window_copy_cmd_state *cs) {
-unsafe {
-  return window_copy_do_copy_line(cs, 1, 0);
-}
-}
+pub unsafe extern "C" fn window_copy_key_table(wme: *mut window_mode_entry) -> *const c_char {
+    unsafe {
+        let mut wp = (*wme).wp;
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_copy_pipe_line_and_cancel(struct window_copy_cmd_state *cs) {
-unsafe {
-  return window_copy_do_copy_line(cs, 1, 1);
-}
+        if (options_get_number((*(*wp).window).options, c"mode-keys".as_ptr()) == MODEKEY_VI as i64)
+        {
+            c"copy-mode-vi".as_ptr()
+        } else {
+            c"copy-mode".as_ptr()
+        }
+    }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_copy_selection_no_clear(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct client *c = (*cs).c;
-  struct session *s = (*cs).s;
-  struct winlink *wl = (*cs).wl;
-  struct window_pane *wp = (*wme).wp;
-  char *prefix = NULL;
-  const char *arg1 = args_string((*cs).args, 1);
+pub unsafe extern "C" fn window_copy_expand_search_string(cs: *mut window_copy_cmd_state) -> i32 {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut ss = args_string((*cs).args, 1);
 
-  if (arg1 != NULL) {
-    prefix = format_single(NULL, arg1, c, s, wl, wp);
-  }
+        if (ss.is_null() || *ss == b'\0' as i8) {
+            return 0;
+        }
 
-  if (s != NULL) {
-    window_copy_copy_selection(wme, prefix);
-  }
-
-  free(prefix);
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_copy_selection(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-
-  window_copy_cmd_copy_selection_no_clear(cs);
-  window_copy_clear_selection(wme);
-  return WINDOW_COPY_CMD_REDRAW;
-}
+        if (args_has_((*cs).args, 'F')) {
+            let expanded = format_single(
+                null_mut(),
+                ss,
+                null_mut(),
+                null_mut(),
+                null_mut(),
+                (*wme).wp,
+            );
+            if (*expanded == b'\0' as i8) {
+                free_(expanded);
+                return 0;
+            }
+            free_((*data).searchstr);
+            (*data).searchstr = expanded;
+        } else {
+            free_((*data).searchstr);
+            (*data).searchstr = xstrdup(ss).as_ptr();
+        }
+        1
+    }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_copy_selection_and_cancel(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
+pub unsafe extern "C" fn window_copy_cmd_append_selection(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut s = (*cs).s;
 
-  window_copy_cmd_copy_selection_no_clear(cs);
-  window_copy_clear_selection(wme);
-  return WINDOW_COPY_CMD_CANCEL;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_cursor_down(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  u_int np = (*wme).prefix;
-
-  for (; np != 0; np--) {
-    window_copy_cursor_down(wme, 0);
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
+        if (!s.is_null()) {
+            window_copy_append_selection(wme);
+        }
+        window_copy_clear_selection(wme);
+        window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
+    }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_cursor_down_and_cancel(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int np = (*wme).prefix, cy;
+pub unsafe extern "C" fn window_copy_cmd_append_selection_and_cancel(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme = (*cs).wme;
+        let mut s = (*cs).s;
 
-  cy = (*data).cy;
-  for (; np != 0; np--) {
-    window_copy_cursor_down(wme, 0);
-  }
-  if (cy == (*data).cy && (*data).oy == 0) {
-    return WINDOW_COPY_CMD_CANCEL;
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
+        if (!s.is_null()) {
+            window_copy_append_selection(wme);
+        }
+        window_copy_clear_selection(wme);
+        window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL
+    }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_cursor_left(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  u_int np = (*wme).prefix;
-
-  for (; np != 0; np--) {
-    window_copy_cursor_left(wme);
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
+pub unsafe extern "C" fn window_copy_cmd_back_to_indentation(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        window_copy_cursor_back_to_indentation((*cs).wme);
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_cursor_right(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int np = (*wme).prefix;
+pub unsafe extern "C" fn window_copy_cmd_begin_selection(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme.cast();
+        let mut c: *mut client = (*cs).c;
+        let mut m = (*cs).m;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
 
-  for (; np != 0; np--) {
-    window_copy_cursor_right(wme, (*data).screen.sel != NULL && (*data).rectflag);
-  }
-  return WINDOW_COPY_CMD_NOTHING;
+        if (!m.is_null()) {
+            window_copy_start_drag(c, m);
+            return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;
+        }
+
+        (*data).lineflag = line_sel::LINE_SEL_NONE;
+        (*data).selflag = selflag::SEL_CHAR;
+        window_copy_start_selection(wme);
+        window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
+    }
 }
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_stop_selection(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+
+        (*data).cursordrag = cursordrag::CURSORDRAG_NONE;
+        (*data).lineflag = line_sel::LINE_SEL_NONE;
+        (*data).selflag = selflag::SEL_CHAR;
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_bottom_line(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+
+        (*data).cx = 0;
+        (*data).cy = screen_size_y(&raw mut (*data).screen) - 1;
+
+        window_copy_update_selection(wme, 1, 0);
+        window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_cancel(
+    _cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe { window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_clear_selection(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+
+        window_copy_clear_selection(wme);
+        window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_do_copy_end_of_line(
+    cs: *mut window_copy_cmd_state,
+    pipe: i32,
+    cancel: i32,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme = (*cs).wme;
+        let mut c = (*cs).c;
+        let mut s = (*cs).s;
+        let mut wl = (*cs).wl;
+        let mut wp = (*wme).wp;
+        let count = args_count((*cs).args);
+        let mut np = (*wme).prefix;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut prefix = null_mut();
+        let mut command = null_mut();
+        let mut arg1 = args_string((*cs).args, 1);
+        let mut arg2 = args_string((*cs).args, 2);
+
+        if (pipe != 0) {
+            if (count == 3) {
+                prefix = format_single(null_mut(), arg2, c, s, wl, wp);
+            }
+            if (!s.is_null() && count > 1 && *arg1 != b'\0' as i8) {
+                command = format_single(null_mut(), arg1, c, s, wl, wp);
+            }
+        } else {
+            if (count == 2) {
+                prefix = format_single(null_mut(), arg1, c, s, wl, wp);
+            }
+        }
+
+        let ocx = (*data).cx;
+        let ocy = (*data).cy;
+        let ooy = (*data).oy;
+
+        window_copy_start_selection(wme);
+        while np > 1 {
+            window_copy_cursor_down(wme, 0);
+            np -= 1;
+        }
+        window_copy_cursor_end_of_line(wme);
+
+        if (!s.is_null()) {
+            if (pipe != 0) {
+                window_copy_copy_pipe(wme, s, prefix, command);
+            } else {
+                window_copy_copy_selection(wme, prefix);
+            }
+
+            if (cancel != 0) {
+                free_(prefix);
+                free_(command);
+                return window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL;
+            }
+        }
+        window_copy_clear_selection(wme);
+
+        (*data).cx = ocx;
+        (*data).cy = ocy;
+        (*data).oy = ooy;
+
+        free_(prefix);
+        free_(command);
+        window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_copy_end_of_line(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe { window_copy_do_copy_end_of_line(cs, 0, 0) }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_copy_end_of_line_and_cancel(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe { window_copy_do_copy_end_of_line(cs, 0, 1) }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_copy_pipe_end_of_line(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe { window_copy_do_copy_end_of_line(cs, 1, 0) }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_copy_pipe_end_of_line_and_cancel(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe { window_copy_do_copy_end_of_line(cs, 1, 1) }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_do_copy_line(
+    cs: *mut window_copy_cmd_state,
+    pipe: i32,
+    cancel: i32,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut c = (*cs).c;
+        let mut s = (*cs).s;
+        let mut wl = (*cs).wl;
+        let mut wp = (*wme).wp;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut count = args_count((*cs).args);
+        let mut np = (*wme).prefix;
+        // ocx, ocy, ooy;
+        let mut prefix = null_mut();
+        let mut command = null_mut();
+
+        let mut arg1 = args_string((*cs).args, 1);
+        let mut arg2 = args_string((*cs).args, 2);
+
+        if (pipe != 0) {
+            if (count == 3) {
+                prefix = format_single(null_mut(), arg2, c, s, wl, wp);
+            }
+            if (!s.is_null() && count > 1 && *arg1 != b'\0' as i8) {
+                command = format_single(null_mut(), arg1, c, s, wl, wp);
+            }
+        } else {
+            if (count == 2) {
+                prefix = format_single(null_mut(), arg1, c, s, wl, wp);
+            }
+        }
+
+        let ocx = (*data).cx;
+        let ocy = (*data).cy;
+        let ooy = (*data).oy;
+
+        (*data).selflag = selflag::SEL_CHAR;
+        window_copy_cursor_start_of_line(wme);
+        window_copy_start_selection(wme);
+        while np > 1 {
+            window_copy_cursor_down(wme, 0);
+            np -= 1;
+        }
+        window_copy_cursor_end_of_line(wme);
+
+        if (!s.is_null()) {
+            if (pipe != 0) {
+                window_copy_copy_pipe(wme, s, prefix, command);
+            } else {
+                window_copy_copy_selection(wme, prefix);
+            }
+
+            if (cancel != 0) {
+                free_(prefix);
+                free_(command);
+                return window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL;
+            }
+        }
+        window_copy_clear_selection(wme);
+
+        (*data).cx = ocx;
+        (*data).cy = ocy;
+        (*data).oy = ooy;
+
+        free_(prefix);
+        free_(command);
+        window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_copy_line(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe { window_copy_do_copy_line(cs, 0, 0) }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_copy_line_and_cancel(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe { window_copy_do_copy_line(cs, 0, 1) }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_copy_pipe_line(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe { window_copy_do_copy_line(cs, 1, 0) }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_copy_pipe_line_and_cancel(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe { window_copy_do_copy_line(cs, 1, 1) }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_copy_selection_no_clear(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut c: *mut client = (*cs).c;
+        let mut s: *mut session = (*cs).s;
+        let mut wl: *mut winlink = (*cs).wl;
+        let mut wp: *mut window_pane = (*wme).wp;
+        let mut prefix = null_mut();
+        let arg1 = args_string((*cs).args, 1);
+
+        if (!arg1.is_null()) {
+            prefix = format_single(null_mut(), arg1, c, s, wl, wp);
+        }
+
+        if (!s.is_null()) {
+            window_copy_copy_selection(wme, prefix);
+        }
+
+        free_(prefix);
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_copy_selection(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme = (*cs).wme;
+
+        window_copy_cmd_copy_selection_no_clear(cs);
+        window_copy_clear_selection(wme);
+        window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_copy_selection_and_cancel(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme = (*cs).wme;
+
+        window_copy_cmd_copy_selection_no_clear(cs);
+        window_copy_clear_selection(wme);
+        window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_cursor_down(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme = (*cs).wme;
+        let mut np = (*wme).prefix;
+
+        while np != 0 {
+            window_copy_cursor_down(wme, 0);
+            np -= 1;
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_cursor_down_and_cancel(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut np = (*wme).prefix;
+
+        let cy = (*data).cy;
+        while np != 0 {
+            window_copy_cursor_down(wme, 0);
+            np -= 1;
+        }
+
+        if (cy == (*data).cy && (*data).oy == 0) {
+            window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL
+        } else {
+            window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_cursor_left(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let mut np = (*wme).prefix;
+
+        while np != 0 {
+            window_copy_cursor_left(wme);
+            np -= 1;
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_cursor_right(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut np = (*wme).prefix;
+
+        while np != 0 {
+            window_copy_cursor_right(
+                wme,
+                (!(*data).screen.sel.is_null() && (*data).rectflag != 0) as i32,
+            );
+            np -= 1;
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
 }
 
 /* Scroll line containing the cursor to the given position. */
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_scroll_to(struct window_copy_cmd_state *cs, u_int to) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int oy, delta;
-  int scroll_up; /* >0 up, <0 down */
+pub unsafe extern "C" fn window_copy_cmd_scroll_to(
+    cs: *mut window_copy_cmd_state,
+    to: u32,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let scroll_up: i32 = (*data).cy as i32 - to as i32;
+        let delta: u32 = scroll_up.unsigned_abs();
+        let oy = screen_hsize((*data).backing) - (*data).oy;
 
-  scroll_up = (*data).cy - to;
-  delta = abs(scroll_up);
-  oy = screen_hsize((*data).backing) - (*data).oy;
+        /*
+         * oy is the maximum scroll down amount, while (*data).oy is the maximum
+         * scroll up amount.
+         */
+        if (scroll_up > 0 && (*data).oy >= delta) {
+            window_copy_scroll_up(wme, delta);
+            (*data).cy -= delta;
+        } else if (scroll_up < 0 && oy >= delta) {
+            window_copy_scroll_down(wme, delta);
+            (*data).cy += delta;
+        }
 
-  /*
-   * oy is the maximum scroll down amount, while (*data).oy is the maximum
-   * scroll up amount.
-   */
-  if (scroll_up > 0 && (*data).oy >= delta) {
-    window_copy_scroll_up(wme, delta);
-    (*data).cy -= delta;
-  } else if (scroll_up < 0 && oy >= delta) {
-    window_copy_scroll_down(wme, delta);
-    (*data).cy += delta;
-  }
-
-  window_copy_update_selection(wme, 0, 0);
-  return WINDOW_COPY_CMD_REDRAW;
-}
+        window_copy_update_selection(wme, 0, 0);
+        window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
+    }
 }
 
 /* Scroll line containing the cursor to the bottom. */
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_scroll_bottom(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_copy_mode_data *data = (*(*cs).wme).data;
-  u_int bottom;
+pub unsafe extern "C" fn window_copy_cmd_scroll_bottom(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*(*cs).wme).data.cast();
 
-  bottom = screen_size_y(&(*data).screen) - 1;
-  return window_copy_cmd_scroll_to(cs, bottom);
-}
+        let bottom = screen_size_y(&raw mut (*data).screen) - 1;
+        window_copy_cmd_scroll_to(cs, bottom)
+    }
 }
 
 /* Scroll line containing the cursor to the middle. */
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_scroll_middle(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_copy_mode_data *data = (*(*cs).wme).data;
-  u_int mid_value;
-
-  mid_value = (screen_size_y(&(*data).screen) - 1) / 2;
-  return window_copy_cmd_scroll_to(cs, mid_value);
-}
+pub unsafe extern "C" fn window_copy_cmd_scroll_middle(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*(*cs).wme).data.cast();
+        let mid_value = (screen_size_y(&raw mut (*data).screen) - 1) / 2;
+        window_copy_cmd_scroll_to(cs, mid_value)
+    }
 }
 
 /* Scroll line containing the cursor to the top. */
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_scroll_top(struct window_copy_cmd_state *cs) {
-unsafe {
-  return window_copy_cmd_scroll_to(cs, 0);
-}
-}
-
-static enum window_copy_cmd_action
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-window_copy_cmd_cursor_up(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  u_int np = (*wme).prefix;
-
-  for (; np != 0; np--) {
-    window_copy_cursor_up(wme, 0);
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
+pub unsafe extern "C" fn window_copy_cmd_scroll_top(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe { window_copy_cmd_scroll_to(cs, 0) }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_end_of_line(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
+pub unsafe extern "C" fn window_copy_cmd_cursor_up(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut np = (*wme).prefix;
 
-  window_copy_cursor_end_of_line(wme);
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_halfpage_down(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int np = (*wme).prefix;
-
-  for (; np != 0; np--) {
-    if (window_copy_pagedown1(wme, 1, (*data).scroll_exit)) {
-      return WINDOW_COPY_CMD_CANCEL;
-    }
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_halfpage_down_and_cancel(struct window_copy_cmd_state *cs) {
-unsafe {
-
-  struct window_mode_entry *wme = (*cs).wme;
-  u_int np = (*wme).prefix;
-
-  for (; np != 0; np--) {
-    if (window_copy_pagedown1(wme, 1, 1)) {
-      return WINDOW_COPY_CMD_CANCEL;
-    }
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_halfpage_up(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  u_int np = (*wme).prefix;
-
-  for (; np != 0; np--) {
-    window_copy_pageup1(wme, 1);
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_toggle_position(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-
-  (*data).hide_position = !(*data).hide_position;
-  return WINDOW_COPY_CMD_REDRAW;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_history_bottom(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *s = (*data).backing;
-  u_int oy;
-
-  oy = screen_hsize(s) + (*data).cy - (*data).oy;
-  if ((*data).lineflag == LINE_SEL_RIGHT_LEFT && oy == (*data).endsely) {
-    window_copy_other_end(wme);
-  }
-
-  (*data).cy = screen_size_y(&(*data).screen) - 1;
-  (*data).cx = window_copy_find_length(wme, screen_hsize(s) + (*data).cy);
-  (*data).oy = 0;
-
-  if ((*data).searchmark != NULL && !(*data).timeout) {
-    window_copy_search_marks(wme, NULL, (*data).searchregex, 1);
-  }
-  window_copy_update_selection(wme, 1, 0);
-  return WINDOW_COPY_CMD_REDRAW;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_history_top(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int oy;
-
-  oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-  if ((*data).lineflag == LINE_SEL_LEFT_RIGHT && oy == (*data).sely) {
-    window_copy_other_end(wme);
-  }
-
-  (*data).cy = 0;
-  (*data).cx = 0;
-  (*data).oy = screen_hsize((*data).backing);
-
-  if ((*data).searchmark != NULL && !(*data).timeout) {
-    window_copy_search_marks(wme, NULL, (*data).searchregex, 1);
-  }
-  window_copy_update_selection(wme, 1, 0);
-  return WINDOW_COPY_CMD_REDRAW;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_jump_again(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int np = (*wme).prefix;
-
-  switch ((*data).jumptype) {
-  case WINDOW_COPY_JUMPFORWARD:
-    for (; np != 0; np--) {
-      window_copy_cursor_jump(wme);
-    }
-    break;
-  case WINDOW_COPY_JUMPBACKWARD:
-    for (; np != 0; np--) {
-      window_copy_cursor_jump_back(wme);
-    }
-    break;
-  case WINDOW_COPY_JUMPTOFORWARD:
-    for (; np != 0; np--) {
-      window_copy_cursor_jump_to(wme);
-    }
-    break;
-  case WINDOW_COPY_JUMPTOBACKWARD:
-    for (; np != 0; np--) {
-      window_copy_cursor_jump_to_back(wme);
-    }
-    break;
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_jump_reverse(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int np = (*wme).prefix;
-
-  switch ((*data).jumptype) {
-  case WINDOW_COPY_JUMPFORWARD:
-    for (; np != 0; np--) {
-      window_copy_cursor_jump_back(wme);
-    }
-    break;
-  case WINDOW_COPY_JUMPBACKWARD:
-    for (; np != 0; np--) {
-      window_copy_cursor_jump(wme);
-    }
-    break;
-  case WINDOW_COPY_JUMPTOFORWARD:
-    for (; np != 0; np--) {
-      window_copy_cursor_jump_to_back(wme);
-    }
-    break;
-  case WINDOW_COPY_JUMPTOBACKWARD:
-    for (; np != 0; np--) {
-      window_copy_cursor_jump_to(wme);
-    }
-    break;
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_middle_line(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-
-  (*data).cx = 0;
-  (*data).cy = (screen_size_y(&(*data).screen) - 1) / 2;
-
-  window_copy_update_selection(wme, 1, 0);
-  return WINDOW_COPY_CMD_REDRAW;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_previous_matching_bracket(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  u_int np = (*wme).prefix;
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *s = (*data).backing;
-  char open[] = "{[(", close[] = "}])";
-  char tried, found, start, *cp;
-  u_int px, py, xx, n;
-  struct grid_cell gc;
-  int failed;
-
-  for (; np != 0; np--) {
-    /* Get cursor position and line length. */
-    px = (*data).cx;
-    py = screen_hsize(s) + (*data).cy - (*data).oy;
-    xx = window_copy_find_length(wme, py);
-    if (xx == 0) {
-      break;
-    }
-
-    /*
-     * Get the current character. If not on a bracket, try the
-     * previous. If still not, then behave like previous-word.
-     */
-    tried = 0;
-  retry:
-    grid_get_cell((*s).grid, px, py, &gc);
-    if (gc.data.size != 1 || (gc.flags & GRID_FLAG_PADDING)) {
-      cp = NULL;
-    } else {
-      found = *gc.data.data;
-      cp = strchr(close, found);
-    }
-    if (cp == NULL) {
-      if ((*data).modekeys == MODEKEY_EMACS) {
-        if (!tried && px > 0) {
-          px--;
-          tried = 1;
-          goto retry;
+        while np != 0 {
+            window_copy_cursor_up(wme, 0);
+            np -= 1;
         }
-        window_copy_cursor_previous_word(wme, close, 1);
-      }
-      continue;
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
-    start = open[cp - close];
+}
 
-    /* Walk backward until the matching bracket is reached. */
-    n = 1;
-    failed = 0;
-    do {
-      if (px == 0) {
-        if (py == 0) {
-          failed = 1;
-          break;
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_end_of_line(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let wme = (*cs).wme;
+
+        window_copy_cursor_end_of_line(wme);
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_halfpage_down(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut np = (*wme).prefix;
+
+        while np != 0 {
+            if (window_copy_pagedown1(wme, 1, (*data).scroll_exit) != 0) {
+                return window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL;
+            }
+            np -= 1;
         }
-        do {
-          py--;
-          xx = window_copy_find_length(wme, py);
-        } while (xx == 0 && py > 0);
-        if (xx == 0 && py == 0) {
-          failed = 1;
-          break;
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_halfpage_down_and_cancel(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme = (*cs).wme;
+        let mut np = (*wme).prefix;
+
+        while np != 0 {
+            if (window_copy_pagedown1(wme, 1, 1) != 0) {
+                return window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL;
+            }
+            np -= 1;
         }
-        px = xx - 1;
-      } else {
-        px--;
-      }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
 
-      grid_get_cell((*s).grid, px, py, &gc);
-      if (gc.data.size == 1 && (~gc.flags & GRID_FLAG_PADDING)) {
-        if (*gc.data.data == found) {
-          n++;
-        } else if (*gc.data.data == start) {
-          n--;
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_halfpage_up(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut np = (*wme).prefix;
+
+        while np != 0 {
+            window_copy_pageup1(wme, 1);
+            np -= 1;
         }
-      }
-    } while (n != 0);
-
-    /* Move the cursor to the found location if any. */
-    if (!failed) {
-      window_copy_scroll_to(wme, px, py, 0);
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
-  }
-
-  return WINDOW_COPY_CMD_NOTHING;
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_next_matching_bracket(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  u_int np = (*wme).prefix;
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *s = (*data).backing;
-  char open[] = "{[(", close[] = "}])";
-  char tried, found, end, *cp;
-  u_int px, py, xx, yy, sx, sy, n;
-  struct grid_cell gc;
-  int failed;
-  struct grid_line *gl;
+pub unsafe extern "C" fn window_copy_cmd_toggle_position(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
 
-  for (; np != 0; np--) {
-    /* Get cursor position and line length. */
-    px = (*data).cx;
-    py = screen_hsize(s) + (*data).cy - (*data).oy;
-    xx = window_copy_find_length(wme, py);
-    yy = screen_hsize(s) + screen_size_y(s) - 1;
-    if (xx == 0) {
-      break;
+        (*data).hide_position = !(*data).hide_position;
+        window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
     }
+}
 
-    /*
-     * Get the current character. If not on a bracket, try the
-     * next. If still not, then behave like next-word.
-     */
-    tried = 0;
-  retry:
-    grid_get_cell((*s).grid, px, py, &gc);
-    if (gc.data.size != 1 || (gc.flags & GRID_FLAG_PADDING)) {
-      cp = NULL;
-    } else {
-      found = *gc.data.data;
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_history_bottom(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut s: *mut screen = (*data).backing;
 
-      /*
-       * In vi mode, attempt to move to previous bracket if a
-       * closing bracket is found first. If this fails,
-       * return to the original cursor position.
-       */
-      cp = strchr(close, found);
-      if (cp != NULL && (*data).modekeys == MODEKEY_VI) {
-        sx = (*data).cx;
-        sy = screen_hsize(s) + (*data).cy - (*data).oy;
-
-        window_copy_scroll_to(wme, px, py, 0);
-        window_copy_cmd_previous_matching_bracket(cs);
-
-        px = (*data).cx;
-        py = screen_hsize(s) + (*data).cy - (*data).oy;
-        grid_get_cell((*s).grid, px, py, &gc);
-        if (gc.data.size == 1 && (~gc.flags & GRID_FLAG_PADDING) &&
-            strchr(close, *gc.data.data) != NULL) {
-          window_copy_scroll_to(wme, sx, sy, 0);
+        let oy = screen_hsize(s) + (*data).cy - (*data).oy;
+        if ((*data).lineflag == line_sel::LINE_SEL_RIGHT_LEFT && oy == (*data).endsely) {
+            window_copy_other_end(wme);
         }
-        break;
-      }
 
-      cp = strchr(open, found);
-    }
-    if (cp == NULL) {
-      if ((*data).modekeys == MODEKEY_EMACS) {
-        if (!tried && px <= xx) {
-          px++;
-          tried = 1;
-          goto retry;
+        (*data).cy = screen_size_y(&(*data).screen) - 1;
+        (*data).cx = window_copy_find_length(wme, screen_hsize(s) + (*data).cy);
+        (*data).oy = 0;
+
+        if (!(*data).searchmark.is_null() && (*data).timeout == 0) {
+            window_copy_search_marks(wme, null_mut(), (*data).searchregex, 1);
         }
-        window_copy_cursor_next_word_end(wme, open, 0);
-        continue;
-      }
-      /* For vi, continue searching for bracket until EOL. */
-      if (px > xx) {
-        if (py == yy) {
-          continue;
+        window_copy_update_selection(wme, 1, 0);
+        window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_history_top(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+
+        let oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+        if ((*data).lineflag == line_sel::LINE_SEL_LEFT_RIGHT && oy == (*data).sely) {
+            window_copy_other_end(wme);
         }
-        gl = grid_get_line((*s).grid, py);
-        if (~(*gl).flags & GRID_LINE_WRAPPED) {
-          continue;
+
+        (*data).cy = 0;
+        (*data).cx = 0;
+        (*data).oy = screen_hsize((*data).backing);
+
+        if (!(*data).searchmark.is_null() && (*data).timeout == 0) {
+            window_copy_search_marks(wme, null_mut(), (*data).searchregex, 1);
         }
-        if ((*gl).cellsize > (*(*s).grid).sx) {
-          continue;
+        window_copy_update_selection(wme, 1, 0);
+        window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_jump_again(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut np = (*wme).prefix;
+
+        match (*data).jumptype {
+            window_copy::WINDOW_COPY_JUMPFORWARD => {
+                while np != 0 {
+                    window_copy_cursor_jump(wme);
+                    np -= 1;
+                }
+            }
+            window_copy::WINDOW_COPY_JUMPBACKWARD => {
+                while np != 0 {
+                    window_copy_cursor_jump_back(wme);
+                    np -= 1;
+                }
+            }
+            window_copy::WINDOW_COPY_JUMPTOFORWARD => {
+                while np != 0 {
+                    window_copy_cursor_jump_to(wme);
+                    np -= 1;
+                }
+            }
+            window_copy::WINDOW_COPY_JUMPTOBACKWARD => {
+                while np != 0 {
+                    window_copy_cursor_jump_to_back(wme);
+                    np -= 1;
+                }
+            }
+            _ => (),
         }
-        px = 0;
-        py++;
-        xx = window_copy_find_length(wme, py);
-      } else {
-        px++;
-      }
-      goto retry;
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
-    end = close[cp - open];
+}
 
-    /* Walk forward until the matching bracket is reached. */
-    n = 1;
-    failed = 0;
-    do {
-      if (px > xx) {
-        if (py == yy) {
-          failed = 1;
-          break;
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_jump_reverse(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut np = (*wme).prefix;
+
+        match (*data).jumptype {
+            window_copy::WINDOW_COPY_JUMPFORWARD => {
+                while np != 0 {
+                    window_copy_cursor_jump_back(wme);
+                    np -= 1;
+                }
+            }
+            window_copy::WINDOW_COPY_JUMPBACKWARD => {
+                while np != 0 {
+                    window_copy_cursor_jump(wme);
+                    np -= 1;
+                }
+            }
+            window_copy::WINDOW_COPY_JUMPTOFORWARD => {
+                while np != 0 {
+                    window_copy_cursor_jump_to_back(wme);
+                    np -= 1;
+                }
+            }
+            window_copy::WINDOW_COPY_JUMPTOBACKWARD => {
+                while np != 0 {
+                    window_copy_cursor_jump_to(wme);
+                    np -= 1;
+                }
+            }
+            _ => (),
         }
-        px = 0;
-        py++;
-        xx = window_copy_find_length(wme, py);
-      } else {
-        px++;
-      }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
 
-      grid_get_cell((*s).grid, px, py, &gc);
-      if (gc.data.size == 1 && (~gc.flags & GRID_FLAG_PADDING)) {
-        if (*gc.data.data == found) {
-          n++;
-        } else if (*gc.data.data == end) {
-          n--;
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_middle_line(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+
+        (*data).cx = 0;
+        (*data).cy = (screen_size_y(&raw mut (*data).screen) - 1) / 2;
+
+        window_copy_update_selection(wme, 1, 0);
+        window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_previous_matching_bracket(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut np = (*wme).prefix;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut s: *mut screen = (*data).backing;
+        let open: [c_char; 4] = [b'{' as i8, b'[' as i8, b'(' as i8, b'\0' as i8];
+        let close: [c_char; 4] = [b'}' as i8, b']' as i8, b')' as i8, b'\0' as i8];
+
+        let mut found: c_char = b'\0' as i8;
+        // char tried, found, start, *cp;
+        // u_int px, py, xx, n;
+        // struct grid_cell gc;
+        let mut cp: *mut c_char = null_mut();
+        let mut gc: grid_cell = zeroed();
+        let mut failed = false;
+
+        'outer: while np != 0 {
+            /* Get cursor position and line length. */
+            let mut px = (*data).cx;
+            let mut py = screen_hsize(s) + (*data).cy - (*data).oy;
+            let mut xx = window_copy_find_length(wme, py);
+            if (xx == 0) {
+                break;
+            }
+
+            /*
+             * Get the current character. If not on a bracket, try the
+             * previous. If still not, then behave like previous-word.
+             */
+            let mut tried = false;
+            'retry: loop {
+                grid_get_cell((*s).grid, px, py, &raw mut gc);
+                if (gc.data.size != 1 || gc.flags.intersects(grid_flag::PADDING)) {
+                    cp = null_mut();
+                } else {
+                    found = gc.data.data[0] as i8;
+                    cp = libc::strchr((&raw const close).cast(), found as i32);
+                }
+                if (cp.is_null()) {
+                    if ((*data).modekeys == MODEKEY_EMACS) {
+                        if (!tried && px > 0) {
+                            px -= 1;
+                            tried = true;
+                            continue 'retry;
+                        }
+                        window_copy_cursor_previous_word(wme, (&raw const close).cast(), 1);
+                    }
+
+                    np -= 1;
+                    continue 'outer;
+                }
+                let start = open[cp.offset_from_unsigned((&raw const close).cast())];
+
+                /* Walk backward until the matching bracket is reached. */
+                let mut n: u32 = 1;
+                let mut failed = 0;
+                loop {
+                    if (px == 0) {
+                        if (py == 0) {
+                            failed = 1;
+                            break;
+                        }
+                        loop {
+                            py -= 1;
+                            xx = window_copy_find_length(wme, py);
+                            if !(xx == 0 && py > 0) {
+                                break;
+                            }
+                        }
+                        if (xx == 0 && py == 0) {
+                            failed = 1;
+                            break;
+                        }
+                        px = xx - 1;
+                    } else {
+                        px -= 1;
+                    }
+
+                    grid_get_cell((*s).grid, px, py, &raw mut gc);
+                    if (gc.data.size == 1 && !gc.flags.intersects(grid_flag::PADDING)) {
+                        if (gc.data.data[0] == found as u8) {
+                            n += 1;
+                        } else if (gc.data.data[0] == start as u8) {
+                            n -= 1;
+                        }
+                    }
+                    if n == 0 {
+                        break;
+                    }
+                }
+
+                // Move the cursor to the found location if any.
+                if failed == 0 {
+                    window_copy_scroll_to(wme, px, py, 0);
+                }
+                break;
+            } // retry
+            np -= 1;
         }
-      }
-    } while (n != 0);
 
-    /* Move the cursor to the found location if any. */
-    if (!failed) {
-      window_copy_scroll_to(wme, px, py, 0);
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
-  }
-
-  return WINDOW_COPY_CMD_NOTHING;
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_next_paragraph(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  u_int np = (*wme).prefix;
+pub unsafe extern "C" fn window_copy_cmd_next_matching_bracket(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut np = (*wme).prefix;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut s: *mut screen = (*data).backing;
+        let open: [c_char; 4] = [b'{' as i8, b'[' as i8, b'(' as i8, b'\0' as i8];
+        let close: [c_char; 4] = [b'}' as i8, b']' as i8, b')' as i8, b'\0' as i8];
 
-  for (; np != 0; np--) {
-    window_copy_next_paragraph(wme);
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
+        // char tried, found, end, *cp;
+        // u_int px, py, xx, yy, sx, sy, n;
+        // struct grid_cell gc;
+        // int failed;
+        // struct grid_line *gl;
+        let mut found = b'\0';
+        let mut gc: grid_cell = zeroed();
+        let mut cp = null_mut();
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_next_space(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  u_int np = (*wme).prefix;
+        'outer: while np != 0 {
+            /* Get cursor position and line length. */
+            let mut px = (*data).cx;
+            let mut py = screen_hsize(s) + (*data).cy - (*data).oy;
+            let mut xx = window_copy_find_length(wme, py);
+            let yy = screen_hsize(s) + screen_size_y(s) - 1;
+            if (xx == 0) {
+                break;
+            }
 
-  for (; np != 0; np--) {
-    window_copy_cursor_next_word(wme, "");
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
+            /*
+             * Get the current character. If not on a bracket, try the
+             * next. If still not, then behave like next-word.
+             */
+            let mut tried = false;
+            'retry: loop {
+                grid_get_cell((*s).grid, px, py, &raw mut gc);
+                if (gc.data.size != 1 || gc.flags.intersects(grid_flag::PADDING)) {
+                    cp = null_mut();
+                } else {
+                    found = gc.data.data[0];
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_next_space_end(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  u_int np = (*wme).prefix;
+                    /*
+                     * In vi mode, attempt to move to previous bracket if a
+                     * closing bracket is found first. If this fails,
+                     * return to the original cursor position.
+                     */
+                    cp = libc::strchr((&raw const close).cast(), found as i32);
+                    if (!cp.is_null() && (*data).modekeys == MODEKEY_VI) {
+                        let sx = (*data).cx;
+                        let sy = screen_hsize(s) + (*data).cy - (*data).oy;
 
-  for (; np != 0; np--) {
-    window_copy_cursor_next_word_end(wme, "", 0);
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
+                        window_copy_scroll_to(wme, px, py, 0);
+                        window_copy_cmd_previous_matching_bracket(cs);
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_next_word(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  u_int np = (*wme).prefix;
-  const char *separators;
+                        px = (*data).cx;
+                        py = screen_hsize(s) + (*data).cy - (*data).oy;
+                        grid_get_cell((*s).grid, px, py, &raw mut gc);
+                        if (gc.data.size == 1
+                            && !gc.flags.intersects(grid_flag::PADDING)
+                            && !libc::strchr((&raw const close).cast(), gc.data.data[0] as i32)
+                                .is_null())
+                        {
+                            window_copy_scroll_to(wme, sx, sy, 0);
+                        }
+                        break;
+                    }
 
-  separators = options_get_string((*(*cs).s).options, "word-separators");
+                    cp = libc::strchr((&raw const open).cast(), found as i32);
+                }
+                if (cp.is_null()) {
+                    if ((*data).modekeys == MODEKEY_EMACS) {
+                        if (!tried && px <= xx) {
+                            px += 1;
+                            tried = true;
+                            continue 'retry;
+                        }
+                        window_copy_cursor_next_word_end(wme, (&raw const open).cast(), 0);
+                        np -= 1;
+                        continue 'outer;
+                    }
+                    /* For vi, continue searching for bracket until EOL. */
+                    if (px > xx) {
+                        if (py == yy) {
+                            np -= 1;
+                            continue 'outer;
+                        }
+                        let gl = grid_get_line((*s).grid, py);
+                        if !(*gl).flags.intersects(grid_line_flag::WRAPPED) {
+                            np -= 1;
+                            continue 'outer;
+                        }
+                        if ((*gl).cellsize > (*(*s).grid).sx) {
+                            np -= 1;
+                            continue 'outer;
+                        }
+                        px = 0;
+                        py += 1;
+                        xx = window_copy_find_length(wme, py);
+                    } else {
+                        px += 1;
+                    }
+                    continue 'retry;
+                }
+                let end = close[cp.offset_from_unsigned((&raw const open).cast())];
 
-  for (; np != 0; np--) {
-    window_copy_cursor_next_word(wme, separators);
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
+                /* Walk forward until the matching bracket is reached. */
+                let mut n = 1;
+                let mut failed = false;
+                loop {
+                    if (px > xx) {
+                        if (py == yy) {
+                            failed = true;
+                            break;
+                        }
+                        px = 0;
+                        py += 1;
+                        xx = window_copy_find_length(wme, py);
+                    } else {
+                        px += 1;
+                    }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_next_word_end(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  u_int np = (*wme).prefix;
-  const char *separators;
+                    grid_get_cell((*s).grid, px, py, &raw mut gc);
+                    if (gc.data.size == 1 && !gc.flags.intersects(grid_flag::PADDING)) {
+                        if (gc.data.data[0] == found) {
+                            n += 1;
+                        } else if (gc.data.data[0] == end as u8) {
+                            n -= 1;
+                        }
+                    }
+                    if (n == 0) {
+                        break;
+                    }
+                }
 
-  separators = options_get_string((*(*cs).s).options, "word-separators");
+                /* Move the cursor to the found location if any. */
+                if (!failed) {
+                    window_copy_scroll_to(wme, px, py, 0);
+                }
+                break;
+            }
+            np -= 1;
+        }
 
-  for (; np != 0; np--) {
-    window_copy_cursor_next_word_end(wme, separators, 0);
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_other_end(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  u_int np = (*wme).prefix;
-  struct window_copy_mode_data *data = (*wme).data;
-
-  (*data).selflag = SEL_CHAR;
-  if ((np % 2) != 0) {
-    window_copy_other_end(wme);
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_page_down(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int np = (*wme).prefix;
-
-  for (; np != 0; np--) {
-    if (window_copy_pagedown1(wme, 0, (*data).scroll_exit)) {
-      return WINDOW_COPY_CMD_CANCEL;
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_page_down_and_cancel(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  u_int np = (*wme).prefix;
+pub unsafe extern "C" fn window_copy_cmd_next_paragraph(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut np = (*wme).prefix;
 
-  for (; np != 0; np--) {
-    if (window_copy_pagedown1(wme, 0, 1)) {
-      return WINDOW_COPY_CMD_CANCEL;
+        while np != 0 {
+            window_copy_next_paragraph(wme);
+            np -= 1;
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_page_up(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  u_int np = (*wme).prefix;
+pub unsafe extern "C" fn window_copy_cmd_next_space(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut np = (*wme).prefix;
 
-  for (; np != 0; np--) {
-    window_copy_pageup1(wme, 0);
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_previous_paragraph(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  u_int np = (*wme).prefix;
-
-  for (; np != 0; np--) {
-    window_copy_previous_paragraph(wme);
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_previous_space(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  u_int np = (*wme).prefix;
-
-  for (; np != 0; np--) {
-    window_copy_cursor_previous_word(wme, "", 1);
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_previous_word(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  u_int np = (*wme).prefix;
-  const char *separators;
-
-  separators = options_get_string((*(*cs).s).options, "word-separators");
-
-  for (; np != 0; np--) {
-    window_copy_cursor_previous_word(wme, separators, 1);
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_rectangle_on(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-
-  (*data).lineflag = LINE_SEL_NONE;
-  window_copy_rectangle_set(wme, 1);
-
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_rectangle_off(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-
-  (*data).lineflag = LINE_SEL_NONE;
-  window_copy_rectangle_set(wme, 0);
-
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_rectangle_toggle(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-
-  (*data).lineflag = LINE_SEL_NONE;
-  window_copy_rectangle_set(wme, !(*data).rectflag);
-
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_scroll_down(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int np = (*wme).prefix;
-
-  for (; np != 0; np--) {
-    window_copy_cursor_down(wme, 1);
-  }
-  if ((*data).scroll_exit && (*data).oy == 0) {
-    return WINDOW_COPY_CMD_CANCEL;
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_scroll_down_and_cancel(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int np = (*wme).prefix;
-
-  for (; np != 0; np--) {
-    window_copy_cursor_down(wme, 1);
-  }
-  if ((*data).oy == 0) {
-    return WINDOW_COPY_CMD_CANCEL;
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_scroll_up(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  u_int np = (*wme).prefix;
-
-  for (; np != 0; np--) {
-    window_copy_cursor_up(wme, 1);
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_search_again(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int np = (*wme).prefix;
-
-  if ((*data).searchtype == WINDOW_COPY_SEARCHUP) {
-    for (; np != 0; np--) {
-      window_copy_search_up(wme, (*data).searchregex);
+        while np != 0 {
+            window_copy_cursor_next_word(wme, c"".as_ptr());
+            np -= 1;
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
-  } else if ((*data).searchtype == WINDOW_COPY_SEARCHDOWN) {
-    for (; np != 0; np--) {
-      window_copy_search_down(wme, (*data).searchregex);
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_next_space_end(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut np: u32 = (*wme).prefix;
+
+        while np != 0 {
+            window_copy_cursor_next_word_end(wme, c"".as_ptr(), 0);
+            np -= 1;
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_search_reverse(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int np = (*wme).prefix;
+pub unsafe extern "C" fn window_copy_cmd_next_word(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut np = (*wme).prefix;
 
-  if ((*data).searchtype == WINDOW_COPY_SEARCHUP) {
-    for (; np != 0; np--) {
-      window_copy_search_down(wme, (*data).searchregex);
+        let separators = options_get_string((*(*cs).s).options, c"word-separators".as_ptr());
+
+        while np != 0 {
+            window_copy_cursor_next_word(wme, separators);
+            np -= 1;
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
-  } else if ((*data).searchtype == WINDOW_COPY_SEARCHDOWN) {
-    for (; np != 0; np--) {
-      window_copy_search_up(wme, (*data).searchregex);
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_next_word_end(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut np = (*wme).prefix;
+
+        let separators = options_get_string((*(*cs).s).options, c"word-separators".as_ptr());
+
+        while np != 0 {
+            window_copy_cursor_next_word_end(wme, separators, 0);
+            np -= 1;
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_select_line(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int np = (*wme).prefix;
+pub unsafe extern "C" fn window_copy_cmd_other_end(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut np = (*wme).prefix;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
 
-  (*data).lineflag = LINE_SEL_LEFT_RIGHT;
-  (*data).rectflag = 0;
-  (*data).selflag = SEL_LINE;
-  (*data).dx = (*data).cx;
-  (*data).dy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-
-  window_copy_cursor_start_of_line(wme);
-  (*data).selrx = (*data).cx;
-  (*data).selry = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-  (*data).endselry = (*data).selry;
-  window_copy_start_selection(wme);
-  window_copy_cursor_end_of_line(wme);
-  (*data).endselry = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-  (*data).endselrx = window_copy_find_length(wme, (*data).endselry);
-  for (; np > 1; np--) {
-    window_copy_cursor_down(wme, 0);
-    window_copy_cursor_end_of_line(wme);
-  }
-
-  return WINDOW_COPY_CMD_REDRAW;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_select_word(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct options *session_options = (*(*cs).s).options;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int px, py, nextx, nexty;
-
-  (*data).lineflag = LINE_SEL_LEFT_RIGHT;
-  (*data).rectflag = 0;
-  (*data).selflag = SEL_WORD;
-  (*data).dx = (*data).cx;
-  (*data).dy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-
-  (*data).separators = options_get_string(session_options, "word-separators");
-  window_copy_cursor_previous_word(wme, (*data).separators, 0);
-  px = (*data).cx;
-  py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-  (*data).selrx = px;
-  (*data).selry = py;
-  window_copy_start_selection(wme);
-
-  /* Handle single character words. */
-  nextx = px + 1;
-  nexty = py;
-  if ((*grid_get_line((*(*data).backing).grid, nexty)).flags &
-          GRID_LINE_WRAPPED &&
-      nextx > screen_size_x((*data).backing) - 1) {
-    nextx = 0;
-    nexty++;
-  }
-  if (px >= window_copy_find_length(wme, py) ||
-      !window_copy_in_set(wme, nextx, nexty, WHITESPACE)) {
-    window_copy_cursor_next_word_end(wme, (*data).separators, 1);
-  } else {
-    window_copy_update_cursor(wme, px, (*data).cy);
-    if (window_copy_update_selection(wme, 1, 1)) {
-      window_copy_redraw_lines(wme, (*data).cy, 1);
+        (*data).selflag = selflag::SEL_CHAR;
+        if ((np % 2) != 0) {
+            window_copy_other_end(wme);
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
-  }
-  (*data).endselrx = (*data).cx;
-  (*data).endselry = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-  if ((*data).dy > (*data).endselry) {
-    (*data).dy = (*data).endselry;
-    (*data).dx = (*data).endselrx;
-  } else if ((*data).dx > (*data).endselrx) {
-    (*data).dx = (*data).endselrx;
-  }
-
-  return WINDOW_COPY_CMD_REDRAW;
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_set_mark(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_copy_mode_data *data = (*(*cs).wme).data;
+pub unsafe extern "C" fn window_copy_cmd_page_down(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut np = (*wme).prefix;
 
-  (*data).mx = (*data).cx;
-  (*data).my = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-  (*data).showmark = 1;
-  return WINDOW_COPY_CMD_REDRAW;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_start_of_line(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-
-  window_copy_cursor_start_of_line(wme);
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_top_line(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-
-  (*data).cx = 0;
-  (*data).cy = 0;
-
-  window_copy_update_selection(wme, 1, 0);
-  return WINDOW_COPY_CMD_REDRAW;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_copy_pipe_no_clear(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct client *c = (*cs).c;
-  struct session *s = (*cs).s;
-  struct winlink *wl = (*cs).wl;
-  struct window_pane *wp = (*wme).wp;
-  char *command = NULL, *prefix = NULL;
-  const char *arg1 = args_string((*cs).args, 1);
-  const char *arg2 = args_string((*cs).args, 2);
-
-  if (arg2 != NULL) {
-    prefix = format_single(NULL, arg2, c, s, wl, wp);
-  }
-
-  if (s != NULL && arg1 != NULL && *arg1 != '\0') {
-    command = format_single(NULL, arg1, c, s, wl, wp);
-  }
-  window_copy_copy_pipe(wme, s, prefix, command);
-  free(command);
-
-  free(prefix);
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_copy_pipe(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-
-  window_copy_cmd_copy_pipe_no_clear(cs);
-  window_copy_clear_selection(wme);
-  return WINDOW_COPY_CMD_REDRAW;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_copy_pipe_and_cancel(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-
-  window_copy_cmd_copy_pipe_no_clear(cs);
-  window_copy_clear_selection(wme);
-  return WINDOW_COPY_CMD_CANCEL;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_pipe_no_clear(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct client *c = (*cs).c;
-  struct session *s = (*cs).s;
-  struct winlink *wl = (*cs).wl;
-  struct window_pane *wp = (*wme).wp;
-  char *command = NULL;
-  const char *arg1 = args_string((*cs).args, 1);
-
-  if (s != NULL && arg1 != NULL && *arg1 != '\0') {
-    command = format_single(NULL, arg1, c, s, wl, wp);
-  }
-  window_copy_pipe(wme, s, command);
-  free(command);
-
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_pipe(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-
-  window_copy_cmd_pipe_no_clear(cs);
-  window_copy_clear_selection(wme);
-  return WINDOW_COPY_CMD_REDRAW;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_pipe_and_cancel(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-
-  window_copy_cmd_pipe_no_clear(cs);
-  window_copy_clear_selection(wme);
-  return WINDOW_COPY_CMD_CANCEL;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_goto_line(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  const char *arg1 = args_string((*cs).args, 1);
-
-  if (*arg1 != '\0') {
-    window_copy_goto_line(wme, arg1);
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_jump_backward(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int np = (*wme).prefix;
-  const char *arg1 = args_string((*cs).args, 1);
-
-  if (*arg1 != '\0') {
-    (*data).jumptype = WINDOW_COPY_JUMPBACKWARD;
-    free((*data).jumpchar);
-    (*data).jumpchar = utf8_fromcstr(arg1);
-    for (; np != 0; np--) {
-      window_copy_cursor_jump_back(wme);
+        while np != 0 {
+            if (window_copy_pagedown1(wme, 0, (*data).scroll_exit) != 0) {
+                return window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL;
+            }
+            np -= 1;
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_jump_forward(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int np = (*wme).prefix;
-  const char *arg1 = args_string((*cs).args, 1);
+pub unsafe extern "C" fn window_copy_cmd_page_down_and_cancel(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut np = (*wme).prefix;
 
-  if (*arg1 != '\0') {
-    (*data).jumptype = WINDOW_COPY_JUMPFORWARD;
-    free((*data).jumpchar);
-    (*data).jumpchar = utf8_fromcstr(arg1);
-    for (; np != 0; np--) {
-      window_copy_cursor_jump(wme);
+        while np != 0 {
+            if (window_copy_pagedown1(wme, 0, 1) != 0) {
+                return window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL;
+            }
+            np -= 1;
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_jump_to_backward(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int np = (*wme).prefix;
-  const char *arg1 = args_string((*cs).args, 1);
+pub unsafe extern "C" fn window_copy_cmd_page_up(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut np = (*wme).prefix;
 
-  if (*arg1 != '\0') {
-    (*data).jumptype = WINDOW_COPY_JUMPTOBACKWARD;
-    free((*data).jumpchar);
-    (*data).jumpchar = utf8_fromcstr(arg1);
-    for (; np != 0; np--) {
-      window_copy_cursor_jump_to_back(wme);
+        while np != 0 {
+            window_copy_pageup1(wme, 0);
+            np -= 1;
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_jump_to_forward(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int np = (*wme).prefix;
-  const char *arg1 = args_string((*cs).args, 1);
+pub unsafe extern "C" fn window_copy_cmd_previous_paragraph(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut np = (*wme).prefix;
 
-  if (*arg1 != '\0') {
-    (*data).jumptype = WINDOW_COPY_JUMPTOFORWARD;
-    free((*data).jumpchar);
-    (*data).jumpchar = utf8_fromcstr(arg1);
-    for (; np != 0; np--) {
-      window_copy_cursor_jump_to(wme);
+        while np != 0 {
+            window_copy_previous_paragraph(wme);
+            np -= 1;
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_jump_to_mark(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
+pub unsafe extern "C" fn window_copy_cmd_previous_space(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut np = (*wme).prefix;
 
-  window_copy_jump_to_mark(wme);
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_next_prompt(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  const char *arg1 = args_string((*cs).args, 1);
-
-  window_copy_cursor_prompt(wme, 1, arg1);
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_previous_prompt(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  const char *arg1 = args_string((*cs).args, 1);
-
-  window_copy_cursor_prompt(wme, 0, arg1);
-  return WINDOW_COPY_CMD_NOTHING;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_search_backward(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int np = (*wme).prefix;
-
-  if (!window_copy_expand_search_string(cs)) {
-    return WINDOW_COPY_CMD_NOTHING;
-  }
-
-  if ((*data).searchstr != NULL) {
-    (*data).searchtype = WINDOW_COPY_SEARCHUP;
-    (*data).searchregex = 1;
-    (*data).timeout = 0;
-    for (; np != 0; np--) {
-      window_copy_search_up(wme, 1);
+        while np != 0 {
+            window_copy_cursor_previous_word(wme, c"".as_ptr(), 1);
+            np -= 1;
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_search_backward_text(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int np = (*wme).prefix;
+pub unsafe extern "C" fn window_copy_cmd_previous_word(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut np = (*wme).prefix;
 
-  if (!window_copy_expand_search_string(cs)) {
-    return WINDOW_COPY_CMD_NOTHING;
-  }
+        let separators = options_get_string((*(*cs).s).options, c"word-separators".as_ptr());
 
-  if ((*data).searchstr != NULL) {
-    (*data).searchtype = WINDOW_COPY_SEARCHUP;
-    (*data).searchregex = 0;
-    (*data).timeout = 0;
-    for (; np != 0; np--) {
-      window_copy_search_up(wme, 0);
+        while np != 0 {
+            window_copy_cursor_previous_word(wme, separators, 1);
+            np -= 1;
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_search_forward(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int np = (*wme).prefix;
+pub unsafe extern "C" fn window_copy_cmd_rectangle_on(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
 
-  if (!window_copy_expand_search_string(cs)) {
-    return WINDOW_COPY_CMD_NOTHING;
-  }
+        (*data).lineflag = line_sel::LINE_SEL_NONE;
+        window_copy_rectangle_set(wme, 1);
 
-  if ((*data).searchstr != NULL) {
-    (*data).searchtype = WINDOW_COPY_SEARCHDOWN;
-    (*data).searchregex = 1;
-    (*data).timeout = 0;
-    for (; np != 0; np--) {
-      window_copy_search_down(wme, 1);
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_search_forward_text(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int np = (*wme).prefix;
+pub unsafe extern "C" fn window_copy_cmd_rectangle_off(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
 
-  if (!window_copy_expand_search_string(cs)) {
-    return WINDOW_COPY_CMD_NOTHING;
-  }
+        (*data).lineflag = line_sel::LINE_SEL_NONE;
+        window_copy_rectangle_set(wme, 0);
 
-  if ((*data).searchstr != NULL) {
-    (*data).searchtype = WINDOW_COPY_SEARCHDOWN;
-    (*data).searchregex = 0;
-    (*data).timeout = 0;
-    for (; np != 0; np--) {
-      window_copy_search_down(wme, 0);
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
-  }
-  return WINDOW_COPY_CMD_NOTHING;
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_search_backward_incremental(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  const char *arg1 = args_string((*cs).args, 1);
-  const char *ss = (*data).searchstr;
-  char prefix;
-  enum window_copy_cmd_action action = WINDOW_COPY_CMD_NOTHING;
+pub unsafe extern "C" fn window_copy_cmd_rectangle_toggle(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
 
-  (*data).timeout = 0;
+        (*data).lineflag = line_sel::LINE_SEL_NONE;
+        window_copy_rectangle_set(wme, (!(*data).rectflag) as u32);
 
-  log_debug("%s: %s", __func__, arg1);
-
-  prefix = *arg1++;
-  if ((*data).searchx == -1 || (*data).searchy == -1) {
-    (*data).searchx = (*data).cx;
-    (*data).searchy = (*data).cy;
-    (*data).searcho = (*data).oy;
-  } else if (ss != NULL && strcmp(arg1, ss) != 0) {
-    (*data).cx = (*data).searchx;
-    (*data).cy = (*data).searchy;
-    (*data).oy = (*data).searcho;
-    action = WINDOW_COPY_CMD_REDRAW;
-  }
-  if (*arg1 == '\0') {
-    window_copy_clear_marks(wme);
-    return WINDOW_COPY_CMD_REDRAW;
-  }
-  switch (prefix) {
-  case '=':
-  case '-':
-    (*data).searchtype = WINDOW_COPY_SEARCHUP;
-    (*data).searchregex = 0;
-    free((*data).searchstr);
-    (*data).searchstr = xstrdup(arg1);
-    if (!window_copy_search_up(wme, 0)) {
-      window_copy_clear_marks(wme);
-      return WINDOW_COPY_CMD_REDRAW;
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
-    break;
-  case '+':
-    (*data).searchtype = WINDOW_COPY_SEARCHDOWN;
-    (*data).searchregex = 0;
-    free((*data).searchstr);
-    (*data).searchstr = xstrdup(arg1);
-    if (!window_copy_search_down(wme, 0)) {
-      window_copy_clear_marks(wme);
-      return WINDOW_COPY_CMD_REDRAW;
-    }
-    break;
-  }
-  return action;
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_search_forward_incremental(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_copy_mode_data *data = (*wme).data;
-  const char *arg1 = args_string((*cs).args, 1);
-  const char *ss = (*data).searchstr;
-  char prefix;
-  enum window_copy_cmd_action action = WINDOW_COPY_CMD_NOTHING;
+pub unsafe extern "C" fn window_copy_cmd_scroll_down(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut np = (*wme).prefix;
 
-  (*data).timeout = 0;
-
-  log_debug("%s: %s", __func__, arg1);
-
-  prefix = *arg1++;
-  if ((*data).searchx == -1 || (*data).searchy == -1) {
-    (*data).searchx = (*data).cx;
-    (*data).searchy = (*data).cy;
-    (*data).searcho = (*data).oy;
-  } else if (ss != NULL && strcmp(arg1, ss) != 0) {
-    (*data).cx = (*data).searchx;
-    (*data).cy = (*data).searchy;
-    (*data).oy = (*data).searcho;
-    action = WINDOW_COPY_CMD_REDRAW;
-  }
-  if (*arg1 == '\0') {
-    window_copy_clear_marks(wme);
-    return WINDOW_COPY_CMD_REDRAW;
-  }
-  switch (prefix) {
-  case '=':
-  case '+':
-    (*data).searchtype = WINDOW_COPY_SEARCHDOWN;
-    (*data).searchregex = 0;
-    free((*data).searchstr);
-    (*data).searchstr = xstrdup(arg1);
-    if (!window_copy_search_down(wme, 0)) {
-      window_copy_clear_marks(wme);
-      return WINDOW_COPY_CMD_REDRAW;
+        while np != 0 {
+            window_copy_cursor_down(wme, 1);
+            np -= 1;
+        }
+        if ((*data).scroll_exit != 0 && (*data).oy == 0) {
+            window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL
+        } else {
+            window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+        }
     }
-    break;
-  case '-':
-    (*data).searchtype = WINDOW_COPY_SEARCHUP;
-    (*data).searchregex = 0;
-    free((*data).searchstr);
-    (*data).searchstr = xstrdup(arg1);
-    if (!window_copy_search_up(wme, 0)) {
-      window_copy_clear_marks(wme);
-      return WINDOW_COPY_CMD_REDRAW;
-    }
-  }
-  return action;
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static enum window_copy_cmd_action window_copy_cmd_refresh_from_pane(struct window_copy_cmd_state *cs) {
-unsafe {
-  struct window_mode_entry *wme = (*cs).wme;
-  struct window_pane *wp = (*wme).swp;
-  struct window_copy_mode_data *data = (*wme).data;
+pub unsafe extern "C" fn window_copy_cmd_scroll_down_and_cancel(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut np = (*wme).prefix;
 
-  if ((*data).viewmode) {
-    return WINDOW_COPY_CMD_NOTHING;
-  }
-
-  screen_free((*data).backing);
-  free((*data).backing);
-  (*data).backing = window_copy_clone_screen(&(*wp).base, &(*data).screen, NULL, NULL,
-                                           (*wme).swp != (*wme).wp);
-
-  window_copy_size_changed(wme);
-  return WINDOW_COPY_CMD_REDRAW;
+        while np != 0 {
+            window_copy_cursor_down(wme, 1);
+            np -= 1;
+        }
+        if ((*data).oy == 0) {
+            window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL
+        } else {
+            window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+        }
+    }
 }
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_scroll_up(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut np = (*wme).prefix;
+
+        while np != 0 {
+            window_copy_cursor_up(wme, 1);
+            np -= 1;
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
 }
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_search_again(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut np = (*wme).prefix;
+
+        if ((*data).searchtype == window_copy::WINDOW_COPY_SEARCHUP) {
+            while np != 0 {
+                window_copy_search_up(wme, (*data).searchregex);
+                np -= 1;
+            }
+        } else if ((*data).searchtype == window_copy::WINDOW_COPY_SEARCHDOWN) {
+            while np != 0 {
+                window_copy_search_down(wme, (*data).searchregex);
+                np -= 1;
+            }
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_search_reverse(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut np = (*wme).prefix;
+
+        if ((*data).searchtype == window_copy::WINDOW_COPY_SEARCHUP) {
+            while np != 0 {
+                window_copy_search_down(wme, (*data).searchregex);
+                np -= 1;
+            }
+        } else if ((*data).searchtype == window_copy::WINDOW_COPY_SEARCHDOWN) {
+            while np != 0 {
+                window_copy_search_up(wme, (*data).searchregex);
+                np -= 1;
+            }
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_select_line(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut np = (*wme).prefix;
+
+        (*data).lineflag = line_sel::LINE_SEL_LEFT_RIGHT;
+        (*data).rectflag = 0;
+        (*data).selflag = selflag::SEL_LINE;
+        (*data).dx = (*data).cx;
+        (*data).dy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+
+        window_copy_cursor_start_of_line(wme);
+        (*data).selrx = (*data).cx;
+        (*data).selry = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+        (*data).endselry = (*data).selry;
+        window_copy_start_selection(wme);
+        window_copy_cursor_end_of_line(wme);
+        (*data).endselry = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+        (*data).endselrx = window_copy_find_length(wme, (*data).endselry);
+        while np != 0 {
+            window_copy_cursor_down(wme, 0);
+            window_copy_cursor_end_of_line(wme);
+            np -= 1;
+        }
+
+        window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_select_word(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut session_options: *mut options = (*(*cs).s).options;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        // u_int px, py, nextx, nexty;
+
+        (*data).lineflag = line_sel::LINE_SEL_LEFT_RIGHT;
+        (*data).rectflag = 0;
+        (*data).selflag = selflag::SEL_WORD;
+        (*data).dx = (*data).cx;
+        (*data).dy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+
+        (*data).separators = options_get_string(session_options, c"word-separators".as_ptr());
+        window_copy_cursor_previous_word(wme, (*data).separators, 0);
+        let px = (*data).cx;
+        let py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+        (*data).selrx = px;
+        (*data).selry = py;
+        window_copy_start_selection(wme);
+
+        /* Handle single character words. */
+        let mut nextx = px + 1;
+        let mut nexty = py;
+        if ((*grid_get_line((*(*data).backing).grid, nexty))
+            .flags
+            .intersects(grid_line_flag::WRAPPED)
+            && nextx > screen_size_x((*data).backing) - 1)
+        {
+            nextx = 0;
+            nexty += 1;
+        }
+        if (px >= window_copy_find_length(wme, py)
+            || window_copy_in_set(wme, nextx, nexty, WHITESPACE.as_ptr()) == 0)
+        {
+            window_copy_cursor_next_word_end(wme, (*data).separators, 1);
+        } else {
+            window_copy_update_cursor(wme, px, (*data).cy);
+            if (window_copy_update_selection(wme, 1, 1) != 0) {
+                window_copy_redraw_lines(wme, (*data).cy, 1);
+            }
+        }
+        (*data).endselrx = (*data).cx;
+        (*data).endselry = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+        if ((*data).dy > (*data).endselry) {
+            (*data).dy = (*data).endselry;
+            (*data).dx = (*data).endselrx;
+        } else if ((*data).dx > (*data).endselrx) {
+            (*data).dx = (*data).endselrx;
+        }
+
+        window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_set_mark(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*(*cs).wme).data.cast();
+
+        (*data).mx = (*data).cx;
+        (*data).my = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+        (*data).showmark = 1;
+        window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_start_of_line(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        window_copy_cursor_start_of_line((*cs).wme);
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_top_line(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+
+        (*data).cx = 0;
+        (*data).cy = 0;
+
+        window_copy_update_selection(wme, 1, 0);
+        window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_copy_pipe_no_clear(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut c: *mut client = (*cs).c;
+        let mut s: *mut session = (*cs).s;
+        let mut wl: *mut winlink = (*cs).wl;
+        let mut wp: *mut window_pane = (*wme).wp;
+        let mut command = null_mut();
+        let mut prefix = null_mut();
+        let mut arg1 = args_string((*cs).args, 1);
+        let mut arg2 = args_string((*cs).args, 2);
+
+        if (!arg2.is_null()) {
+            prefix = format_single(null_mut(), arg2, c, s, wl, wp);
+        }
+
+        if (!s.is_null() && !arg1.is_null() && *arg1 != b'\0' as i8) {
+            command = format_single(null_mut(), arg1, c, s, wl, wp);
+        }
+        window_copy_copy_pipe(wme, s, prefix, command);
+        free_(command);
+
+        free_(prefix);
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_copy_pipe(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+
+        window_copy_cmd_copy_pipe_no_clear(cs);
+        window_copy_clear_selection(wme);
+        window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_copy_pipe_and_cancel(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+
+        window_copy_cmd_copy_pipe_no_clear(cs);
+        window_copy_clear_selection(wme);
+        window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_pipe_no_clear(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut c: *mut client = (*cs).c;
+        let mut s: *mut session = (*cs).s;
+        let mut wl: *mut winlink = (*cs).wl;
+        let mut wp: *mut window_pane = (*wme).wp;
+        let mut command = null_mut();
+        let arg1 = args_string((*cs).args, 1);
+
+        if (!s.is_null() && !arg1.is_null() && *arg1 != b'\0' as i8) {
+            command = format_single(null_mut(), arg1, c, s, wl, wp);
+        }
+        window_copy_pipe(wme, s, command);
+        free_(command);
+
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_pipe(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+
+        window_copy_cmd_pipe_no_clear(cs);
+        window_copy_clear_selection(wme);
+        window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_pipe_and_cancel(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+
+        window_copy_cmd_pipe_no_clear(cs);
+        window_copy_clear_selection(wme);
+        window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_goto_line(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let arg1 = args_string((*cs).args, 1);
+
+        if (*arg1 != b'\0' as i8) {
+            window_copy_goto_line(wme, arg1);
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_jump_backward(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut np = (*wme).prefix;
+        let arg1 = args_string((*cs).args, 1);
+
+        if (*arg1 != b'\0' as i8) {
+            (*data).jumptype = window_copy::WINDOW_COPY_JUMPBACKWARD;
+            free_((*data).jumpchar);
+            (*data).jumpchar = utf8_fromcstr(arg1);
+            while np != 0 {
+                window_copy_cursor_jump_back(wme);
+                np -= 1;
+            }
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_jump_forward(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut np = (*wme).prefix;
+        let arg1 = args_string((*cs).args, 1);
+
+        if (*arg1 != b'\0' as i8) {
+            (*data).jumptype = window_copy::WINDOW_COPY_JUMPFORWARD;
+            free_((*data).jumpchar);
+            (*data).jumpchar = utf8_fromcstr(arg1);
+            while np != 0 {
+                window_copy_cursor_jump(wme);
+                np -= 1;
+            }
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_jump_to_backward(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut np = (*wme).prefix;
+        let arg1 = args_string((*cs).args, 1);
+
+        if (*arg1 != b'\0' as i8) {
+            (*data).jumptype = window_copy::WINDOW_COPY_JUMPTOBACKWARD;
+            free_((*data).jumpchar);
+            (*data).jumpchar = utf8_fromcstr(arg1);
+            while np != 0 {
+                window_copy_cursor_jump_to_back(wme);
+                np -= 1;
+            }
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_jump_to_forward(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut np = (*wme).prefix;
+        let arg1 = args_string((*cs).args, 1);
+
+        if (*arg1 != b'\0' as i8) {
+            (*data).jumptype = window_copy::WINDOW_COPY_JUMPTOFORWARD;
+            free_((*data).jumpchar);
+            (*data).jumpchar = utf8_fromcstr(arg1);
+            while np != 0 {
+                window_copy_cursor_jump_to(wme);
+                np -= 1;
+            }
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_jump_to_mark(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+
+        window_copy_jump_to_mark(wme);
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_next_prompt(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let arg1 = args_string((*cs).args, 1);
+
+        window_copy_cursor_prompt(wme, 1, arg1);
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_previous_prompt(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let arg1 = args_string((*cs).args, 1);
+
+        window_copy_cursor_prompt(wme, 0, arg1);
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_search_backward(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut np = (*wme).prefix;
+
+        if (window_copy_expand_search_string(cs) == 0) {
+            return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;
+        }
+
+        if (!(*data).searchstr.is_null()) {
+            (*data).searchtype = window_copy::WINDOW_COPY_SEARCHUP;
+            (*data).searchregex = 1;
+            (*data).timeout = 0;
+            while np != 0 {
+                window_copy_search_up(wme, 1);
+                np -= 1;
+            }
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_search_backward_text(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut np = (*wme).prefix;
+
+        if (window_copy_expand_search_string(cs) == 0) {
+            return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;
+        }
+
+        if (!(*data).searchstr.is_null()) {
+            (*data).searchtype = window_copy::WINDOW_COPY_SEARCHUP;
+            (*data).searchregex = 0;
+            (*data).timeout = 0;
+            while np != 0 {
+                window_copy_search_up(wme, 0);
+                np -= 1;
+            }
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_search_forward(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut np = (*wme).prefix;
+
+        if (window_copy_expand_search_string(cs) == 0) {
+            return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;
+        }
+
+        if (!(*data).searchstr.is_null()) {
+            (*data).searchtype = window_copy::WINDOW_COPY_SEARCHDOWN;
+            (*data).searchregex = 1;
+            (*data).timeout = 0;
+            while np != 0 {
+                window_copy_search_down(wme, 1);
+                np -= 1;
+            }
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_search_forward_text(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut np = (*wme).prefix;
+
+        if (window_copy_expand_search_string(cs) == 0) {
+            return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;
+        }
+
+        if (!(*data).searchstr.is_null()) {
+            (*data).searchtype = window_copy::WINDOW_COPY_SEARCHDOWN;
+            (*data).searchregex = 0;
+            (*data).timeout = 0;
+            while np != 0 {
+                window_copy_search_down(wme, 0);
+                np -= 1;
+            }
+        }
+        window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_search_backward_incremental(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut arg1 = args_string((*cs).args, 1);
+        let ss = (*data).searchstr;
+        let mut action = window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;
+
+        (*data).timeout = 0;
+
+        // log_debug("%s: %s", __func__, arg1);
+
+        let prefix = *arg1;
+        arg1 = arg1.add(1);
+        if ((*data).searchx == -1 || (*data).searchy == -1) {
+            (*data).searchx = (*data).cx as i32;
+            (*data).searchy = (*data).cy as i32;
+            (*data).searcho = (*data).oy as i32;
+        } else if (!ss.is_null() && libc::strcmp(arg1, ss) != 0) {
+            (*data).cx = (*data).searchx as u32;
+            (*data).cy = (*data).searchy as u32;
+            (*data).oy = (*data).searcho as u32;
+            action = window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW;
+        }
+        if (*arg1 == b'\0' as i8) {
+            window_copy_clear_marks(wme);
+            return window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW;
+        }
+        match prefix as u8 {
+            b'=' | b'-' => {
+                (*data).searchtype = window_copy::WINDOW_COPY_SEARCHUP;
+                (*data).searchregex = 0;
+                free_((*data).searchstr);
+                (*data).searchstr = xstrdup(arg1).as_ptr();
+                if (window_copy_search_up(wme, 0) == 0) {
+                    window_copy_clear_marks(wme);
+                    return window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW;
+                }
+            }
+            b'+' => {
+                (*data).searchtype = window_copy::WINDOW_COPY_SEARCHDOWN;
+                (*data).searchregex = 0;
+                free_((*data).searchstr);
+                (*data).searchstr = xstrdup(arg1).as_ptr();
+                if window_copy_search_down(wme, 0) == 0 {
+                    window_copy_clear_marks(wme);
+                    return window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW;
+                }
+            }
+            _ => (),
+        }
+        action
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_search_forward_incremental(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut arg1 = args_string((*cs).args, 1);
+        let ss = (*data).searchstr;
+        let mut action = window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;
+
+        (*data).timeout = 0;
+
+        // log_debug("%s: %s", __func__, arg1);
+
+        let prefix = *arg1;
+        arg1 = arg1.add(1);
+        if ((*data).searchx == -1 || (*data).searchy == -1) {
+            (*data).searchx = (*data).cx as i32;
+            (*data).searchy = (*data).cy as i32;
+            (*data).searcho = (*data).oy as i32;
+        } else if (!ss.is_null() && libc::strcmp(arg1, ss) != 0) {
+            (*data).cx = (*data).searchx as u32;
+            (*data).cy = (*data).searchy as u32;
+            (*data).oy = (*data).searcho as u32;
+            action = window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW;
+        }
+        if (*arg1 == b'\0' as i8) {
+            window_copy_clear_marks(wme);
+            return window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW;
+        }
+        match prefix as u8 {
+            b'=' | b'+' => {
+                (*data).searchtype = window_copy::WINDOW_COPY_SEARCHDOWN;
+                (*data).searchregex = 0;
+                free_((*data).searchstr);
+                (*data).searchstr = xstrdup(arg1).as_ptr();
+                if (window_copy_search_down(wme, 0) == 0) {
+                    window_copy_clear_marks(wme);
+                    return window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW;
+                }
+            }
+            b'-' => {
+                (*data).searchtype = window_copy::WINDOW_COPY_SEARCHUP;
+                (*data).searchregex = 0;
+                free_((*data).searchstr);
+                (*data).searchstr = xstrdup(arg1).as_ptr();
+                if (window_copy_search_up(wme, 0) == 0) {
+                    window_copy_clear_marks(wme);
+                    return window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW;
+                }
+            }
+            _ => (),
+        }
+        action
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cmd_refresh_from_pane(
+    cs: *mut window_copy_cmd_state,
+) -> window_copy_cmd_action {
+    unsafe {
+        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let mut wp: *mut window_pane = (*wme).swp;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+
+        if ((*data).viewmode != 0) {
+            return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;
+        }
+
+        screen_free((*data).backing);
+        free_((*data).backing);
+        (*data).backing = window_copy_clone_screen(
+            &raw mut (*wp).base,
+            &raw mut (*data).screen,
+            null_mut(),
+            null_mut(),
+            ((*wme).swp != (*wme).wp) as i32,
+        );
+
+        window_copy_size_changed(wme);
+        window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
+    }
+}
+/*
 
 static const struct {
   const char *command;
