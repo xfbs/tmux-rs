@@ -563,10 +563,10 @@ pub unsafe extern "C" fn grid_empty_line(gd: *mut grid, py: c_uint, bg: c_uint) 
 
 /// Peek at grid line.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn grid_peek_line(gd: *mut grid, py: c_uint) -> *const grid_line {
+pub unsafe extern "C" fn grid_peek_line(gd: *mut grid, py: c_uint) -> *mut grid_line {
     unsafe {
         if grid_check_y(gd, c"grid_peek_line".as_ptr(), py) != 0 {
-            return null();
+            return null_mut();
         }
         (*gd).linedata.add(py as usize)
     }
