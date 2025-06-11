@@ -1,97 +1,6 @@
-use crate::compat::strtonum;
-
 use super::*;
 
-unsafe extern "C" {
-    // pub fn window_copy_add(_: *mut window_pane, _: c_int, _: *const c_char, ...);
-    // pub fn window_copy_vadd(_: *mut window_pane, _: c_int, _: *const c_char, _: *mut VaList);
-    // pub fn window_copy_pageup(_: *mut window_pane, _: c_int);
-    // pub fn window_copy_pagedown(_: *mut window_pane, _: c_int, _: c_int);
-    pub fn window_copy_start_drag(_: *mut client, _: *mut mouse_event);
-    // pub fn window_copy_get_word(_: *mut window_pane, _: c_uint, _: c_uint) -> *mut c_char;
-    // pub fn window_copy_get_line(_: *mut window_pane, _: c_uint) -> *mut c_char;
-}
-
-#[rustfmt::skip]
-unsafe extern "C" {
-    // fn window_copy_key_table(_: *mut window_mode_entry) -> *const c_char;
-    // fn window_copy_command( _: NonNull<window_mode_entry>, _: *mut client, _: *mut session, _: *mut winlink, _: *mut args, _: *mut mouse_event,);
-    // fn window_copy_init( _: NonNull<window_mode_entry>, _: *mut cmd_find_state, _: *mut args,) -> *mut screen;
-    // fn window_copy_view_init( _: NonNull<window_mode_entry>, _: *mut cmd_find_state, _: *mut args,) -> *mut screen;
-    // fn window_copy_free(_: NonNull<window_mode_entry>);
-    // fn window_copy_resize(_: NonNull<window_mode_entry>, _: u32, _: u32);
-    // fn window_copy_formats(_: *mut window_mode_entry, _: *mut format_tree);
-    // fn window_copy_pageup1(_: *mut window_mode_entry, _: i32);
-    // fn window_copy_pagedown1(_: *mut window_mode_entry, _: i32, _: i32) -> i32;
-    // fn window_copy_next_paragraph(_: *mut window_mode_entry);
-    // fn window_copy_previous_paragraph(_: *mut window_mode_entry);
-    fn window_copy_redraw_selection(_: *mut window_mode_entry, _: u32);
-    fn window_copy_redraw_lines(_: *mut window_mode_entry, _: u32, _: u32);
-    fn window_copy_redraw_screen(_: *mut window_mode_entry);
-    fn window_copy_write_line(_: *mut window_mode_entry, _: *mut screen_write_ctx, _: u32);
-    fn window_copy_write_lines( __: *mut window_mode_entry, _: *mut screen_write_ctx, _: u32, _: u32,);
-    // fn window_copy_match_at_cursor(_: *mut window_copy_mode_data) -> *mut c_char;
-    // fn window_copy_scroll_to(_: *mut window_mode_entry, _: u32, _: u32, _: i32);
-    // fn window_copy_search_compare( _: *mut grid, _: u32, _: u32, _: *mut grid, _: u32, _: i32,) -> i32;
-    // fn window_copy_search_lr( _: *mut grid, _: *mut grid, _: *mut u32, _: u32, _: u32, _: u32, _: i32,) -> i32;
-    // fn window_copy_search_rl( _: *mut grid, _: *mut grid, _: *mut u32, _: u32, _: u32, _: u32, _: i32,) -> i32;
-    // fn window_copy_last_regex( _: *mut grid, _: u32, _: u32, _: u32, _: u32, _: *mut u32, _: *mut u32, _: *const c_char, _: *const libc::regex_t, _: i32,) -> i32;
-    // fn window_copy_search_mark_at( _: *mut window_copy_mode_data, _: u32, _: u32, _: *mut u32,) -> i32;
-    // fn window_copy_stringify( _: *mut grid, _: u32, _: u32, _: u32, _: *mut c_char, _: *mut u32,) -> *mut c_char;
-    // fn window_copy_cstrtocellpos(_: *mut grid, _: u32, _: *mut u32, _: *mut u32, _: *const c_char);
-    // fn window_copy_search_marks(_: *mut window_mode_entry, _: *mut screen, _: i32, _: i32) -> i32;
-    // fn window_copy_clear_marks(_: *mut window_mode_entry);
-    // fn window_copy_is_lowercase(_: *const c_char) -> i32;
-    // fn window_copy_search_back_overlap( _: *mut grid, _: *mut libc::regex_t, _: *mut u32, _: *mut u32, _: *mut u32, _: u32,);
-    // fn window_copy_search_jump( _: *mut window_mode_entry, _: *mut grid, _: *mut grid, _: u32, _: u32, _: u32, _: i32, _: i32, _: i32, _: i32,) -> i32;
-    // fn window_copy_search(_: *mut window_mode_entry, _: i32, _: i32) -> i32;
-    // fn window_copy_search_up(_: *mut window_mode_entry, _: i32) -> i32;
-    // fn window_copy_search_down(_: *mut window_mode_entry, _: i32) -> i32;
-    // fn window_copy_goto_line(_: *mut window_mode_entry, _: *const c_char);
-    fn window_copy_update_cursor(_: *mut window_mode_entry, _: u32, _: u32);
-    fn window_copy_start_selection(_: *mut window_mode_entry);
-    fn window_copy_adjust_selection(_: *mut window_mode_entry, _: *mut u32, _: *mut u32) -> i32;
-    fn window_copy_set_selection(_: *mut window_mode_entry, _: i32, _: i32) -> i32;
-    fn window_copy_update_selection(_: *mut window_mode_entry, _: i32, _: i32) -> i32;
-    fn window_copy_synchronize_cursor(_: *mut window_mode_entry, _: i32);
-    fn window_copy_get_selection(_: *mut window_mode_entry, _: *mut usize);
-    fn window_copy_copy_buffer(_: *mut window_mode_entry, _: *const c_char, _: usize);
-    fn window_copy_pipe(_: *mut window_mode_entry, _: *mut session, _: *const c_char);
-    fn window_copy_copy_pipe( _: *mut window_mode_entry, _: *mut session, _: *const c_char, _: *const c_char,);
-    fn window_copy_copy_selection(_: *mut window_mode_entry, _: *const c_char);
-    fn window_copy_append_selection(_: *mut window_mode_entry);
-    fn window_copy_clear_selection(_: *mut window_mode_entry);
-    fn window_copy_copy_line( _: *mut window_mode_entry, _: *mut *mut c_char, _: *mut usize, _: u32, _: u32, _: u32,);
-    fn window_copy_in_set(_: *mut window_mode_entry, _: u32, _: u32, _: *const c_char) -> i32;
-    fn window_copy_find_length(_: *mut window_mode_entry, _: u32) -> u32;
-    fn window_copy_cursor_start_of_line(_: *mut window_mode_entry);
-    fn window_copy_cursor_back_to_indentation(_: *mut window_mode_entry);
-    fn window_copy_cursor_end_of_line(_: *mut window_mode_entry);
-    fn window_copy_other_end(_: *mut window_mode_entry);
-    fn window_copy_cursor_left(_: *mut window_mode_entry);
-    fn window_copy_cursor_right(_: *mut window_mode_entry, _: i32);
-    fn window_copy_cursor_up(_: *mut window_mode_entry, _: i32);
-    fn window_copy_cursor_down(_: *mut window_mode_entry, _: i32);
-    fn window_copy_cursor_jump(_: *mut window_mode_entry);
-    fn window_copy_cursor_jump_back(_: *mut window_mode_entry);
-    fn window_copy_cursor_jump_to(_: *mut window_mode_entry);
-    fn window_copy_cursor_jump_to_back(_: *mut window_mode_entry);
-    fn window_copy_cursor_next_word(_: *mut window_mode_entry, _: *const c_char);
-    fn window_copy_cursor_next_word_end_pos( _: *mut window_mode_entry, _: *const c_char, _: *mut u32, _: *mut u32,);
-    fn window_copy_cursor_next_word_end(_: *mut window_mode_entry, _: *const c_char, _: i32);
-    fn window_copy_cursor_previous_word_pos( _: *mut window_mode_entry, _: *const c_char, _: *mut u32, _: *mut u32,);
-    fn window_copy_cursor_previous_word(_: *mut window_mode_entry, _: *const c_char, _: i32);
-    fn window_copy_cursor_prompt(_: *mut window_mode_entry, _: i32, _: *const c_char);
-    fn window_copy_scroll_up(_: *mut window_mode_entry, _: u32);
-    fn window_copy_scroll_down(_: *mut window_mode_entry, _: u32);
-    fn window_copy_rectangle_set(_: *mut window_mode_entry, _: u32);
-    fn window_copy_move_mouse(_: *mut mouse_event);
-    fn window_copy_drag_update(_: *mut client, _: *mut mouse_event);
-    fn window_copy_drag_release(_: *mut client, _: *mut mouse_event);
-    fn window_copy_jump_to_mark(_: *mut window_mode_entry);
-    fn window_copy_acquire_cursor_up( _: *mut window_mode_entry, _: u32, _: u32, _: u32, _: u32, _: u32,);
-    fn window_copy_acquire_cursor_down( _: *mut window_mode_entry, _: u32, _: u32, _: u32, _: u32, _: u32, _: u32, _: u32,);
-}
+use crate::compat::strtonum;
 
 #[unsafe(no_mangle)]
 pub static window_copy_mode: window_mode = window_mode {
@@ -130,7 +39,7 @@ pub enum window_copy {
 }
 
 #[repr(i32)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub enum window_copy_rel_pos {
     WINDOW_COPY_REL_POS_ABOVE,
     WINDOW_COPY_REL_POS_ON_SCREEN,
@@ -165,7 +74,7 @@ pub struct window_copy_cmd_state {
 }
 
 #[repr(i32)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 enum selflag {
     /// select one char at a time
     SEL_CHAR,
@@ -2348,7 +2257,7 @@ pub unsafe extern "C" fn window_copy_cmd_rectangle_toggle(
         let mut data: *mut window_copy_mode_data = (*wme).data.cast();
 
         (*data).lineflag = line_sel::LINE_SEL_NONE;
-        window_copy_rectangle_set(wme, (!(*data).rectflag) as u32);
+        window_copy_rectangle_set(wme, (!(*data).rectflag) as i32);
 
         window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
@@ -5215,1805 +5124,1997 @@ pub unsafe extern "C" fn window_copy_match_at_cursor(
     }
 }
 
-/*
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_update_style(struct window_mode_entry *wme, u_int fx, u_int fy, struct grid_cell *gc, const struct grid_cell *mgc, const struct grid_cell *cgc, const struct grid_cell *mkgc) {
-unsafe {
-  struct window_pane *wp = (*wme).wp;
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int mark, start, end, cy, cursor, current;
-  int inv = 0, found = 0;
-  int keys;
+pub unsafe extern "C" fn window_copy_update_style(
+    wme: *mut window_mode_entry,
+    fx: u32,
+    fy: u32,
+    gc: *mut grid_cell,
+    mgc: *const grid_cell,
+    cgc: *const grid_cell,
+    mkgc: *const grid_cell,
+) {
+    unsafe {
+        let mut wp: *mut window_pane = (*wme).wp;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut mark: u32 = 0;
+        let mut start: u32 = 0;
+        let mut end: u32 = 0;
+        let mut cy: u32 = 0;
+        let mut cursor: u32 = 0;
+        let mut current: u32 = 0;
+        let mut inv = 0;
+        let mut found = 0;
+        let mut keys = 0;
 
-  if ((*data).showmark && fy == (*data).my) {
-    (*gc).attr = (*mkgc).attr;
-    if (fx == (*data).mx) {
-      inv = 1;
-    }
-    if (inv) {
-      (*gc).fg = (*mkgc).bg;
-      (*gc).bg = (*mkgc).fg;
-    } else {
-      (*gc).fg = (*mkgc).fg;
-      (*gc).bg = (*mkgc).bg;
-    }
-  }
+        if ((*data).showmark != 0 && fy == (*data).my) {
+            (*gc).attr = (*mkgc).attr;
+            if (fx == (*data).mx) {
+                inv = 1;
+            }
+            if (inv != 0) {
+                (*gc).fg = (*mkgc).bg;
+                (*gc).bg = (*mkgc).fg;
+            } else {
+                (*gc).fg = (*mkgc).fg;
+                (*gc).bg = (*mkgc).bg;
+            }
+        }
 
-  if ((*data).searchmark == NULL) {
-    return;
-  }
+        if ((*data).searchmark.is_null()) {
+            return;
+        }
 
-  if (window_copy_search_mark_at(data, fx, fy, &current) != 0) {
-    return;
-  }
-  mark = (*data).searchmark[current];
-  if (mark == 0) {
-    return;
-  }
+        if (window_copy_search_mark_at(data, fx, fy, &raw mut current) != 0) {
+            return;
+        }
+        mark = *(*data).searchmark.add(current as usize) as u32;
+        if (mark == 0) {
+            return;
+        }
 
-  cy = screen_hsize((*data).backing) - (*data).oy + (*data).cy;
-  if (window_copy_search_mark_at(data, (*data).cx, cy, &cursor) == 0) {
-    keys = options_get_number((*(*wp).window).options, "mode-keys");
-    if (cursor != 0 && keys == MODEKEY_EMACS && (*data).searchdirection) {
-      if ((*data).searchmark[cursor - 1] == mark) {
-        cursor--;
-        found = 1;
-      }
-    } else if ((*data).searchmark[cursor] == mark) {
-      found = 1;
-    }
-    if (found) {
-      window_copy_match_start_end(data, cursor, &start, &end);
-      if (current >= start && current <= end) {
-        (*gc).attr = (*cgc).attr;
-        if (inv) {
-          (*gc).fg = (*cgc).bg;
-          (*gc).bg = (*cgc).fg;
+        cy = screen_hsize((*data).backing) - (*data).oy + (*data).cy;
+        if (window_copy_search_mark_at(data, (*data).cx, cy, &raw mut cursor) == 0) {
+            keys = options_get_number((*(*wp).window).options, c"mode-keys".as_ptr());
+            if (cursor != 0 && keys == MODEKEY_EMACS as i64 && (*data).searchdirection != 0) {
+                if (*(*data).searchmark.add(cursor as usize - 1) as u32 == mark) {
+                    cursor -= 1;
+                    found = 1;
+                }
+            } else if (*(*data).searchmark.add(cursor as usize) as u32 == mark) {
+                found = 1;
+            }
+            if (found != 0) {
+                window_copy_match_start_end(data, cursor, &raw mut start, &raw mut end);
+                if (current >= start && current <= end) {
+                    (*gc).attr = (*cgc).attr;
+                    if (inv != 0) {
+                        (*gc).fg = (*cgc).bg;
+                        (*gc).bg = (*cgc).fg;
+                    } else {
+                        (*gc).fg = (*cgc).fg;
+                        (*gc).bg = (*cgc).bg;
+                    }
+                    return;
+                }
+            }
+        }
+
+        (*gc).attr = (*mgc).attr;
+        if (inv != 0) {
+            (*gc).fg = (*mgc).bg;
+            (*gc).bg = (*mgc).fg;
         } else {
-          (*gc).fg = (*cgc).fg;
-          (*gc).bg = (*cgc).bg;
+            (*gc).fg = (*mgc).fg;
+            (*gc).bg = (*mgc).bg;
         }
-        return;
-      }
     }
-  }
-
-  (*gc).attr = (*mgc).attr;
-  if (inv) {
-    (*gc).fg = (*mgc).bg;
-    (*gc).bg = (*mgc).fg;
-  } else {
-    (*gc).fg = (*mgc).fg;
-    (*gc).bg = (*mgc).bg;
-  }
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_write_one(struct window_mode_entry *wme, struct screen_write_ctx *ctx, u_int py, u_int fy, u_int nx, const struct grid_cell *mgc, const struct grid_cell *cgc, const struct grid_cell *mkgc) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct grid *gd = (*(*data).backing).grid;
-  struct grid_cell gc;
-  u_int fx;
-
-  screen_write_cursormove(ctx, 0, py, 0);
-  for (fx = 0; fx < nx; fx++) {
-    grid_get_cell(gd, fx, fy, &gc);
-    if (fx + gc.data.width <= nx) {
-      window_copy_update_style(wme, fx, fy, &gc, mgc, cgc, mkgc);
-      screen_write_cell(ctx, &gc);
-    }
-  }
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_write_line(struct window_mode_entry *wme, struct screen_write_ctx *ctx, u_int py) {
-unsafe {
-  struct window_pane *wp = (*wme).wp;
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *s = &(*data).screen;
-  struct options *oo = (*(*wp).window).options;
-  struct grid_line *gl;
-  struct grid_cell gc, mgc, cgc, mkgc;
-  char hdr[512], tmp[256], *t;
-  size_t size = 0;
-  u_int hsize = screen_hsize((*data).backing);
-
-  style_apply(&gc, oo, "mode-style", NULL);
-  gc.flags |= GRID_FLAG_NOPALETTE;
-  style_apply(&mgc, oo, "copy-mode-match-style", NULL);
-  mgc.flags |= GRID_FLAG_NOPALETTE;
-  style_apply(&cgc, oo, "copy-mode-current-match-style", NULL);
-  cgc.flags |= GRID_FLAG_NOPALETTE;
-  style_apply(&mkgc, oo, "copy-mode-mark-style", NULL);
-  mkgc.flags |= GRID_FLAG_NOPALETTE;
-
-  if (py == 0 && (*s).rupper < (*s).rlower && !(*data).hide_position) {
-    gl = grid_get_line((*(*data).backing).grid, hsize - (*data).oy);
-    if ((*gl).time == 0) {
-      xsnprintf(tmp, sizeof tmp, "[%u/%u]", (*data).oy, hsize);
-    } else {
-      t = format_pretty_time((*gl).time, 1);
-      xsnprintf(tmp, sizeof tmp, "%s [%u/%u]", t, (*data).oy, hsize);
-      free(t);
-    }
-
-    if ((*data).searchmark == NULL) {
-      if ((*data).timeout) {
-        size = xsnprintf(hdr, sizeof hdr, "(timed out) %s", tmp);
-      } else {
-        size = xsnprintf(hdr, sizeof hdr, "%s", tmp);
-      }
-    } else {
-      if ((*data).searchcount == -1) {
-        size = xsnprintf(hdr, sizeof hdr, "%s", tmp);
-      } else {
-        size = xsnprintf(hdr, sizeof hdr, "(%d%s results) %s",
-                         (*data).searchcount, (*data).searchmore ? "+" : "", tmp);
-      }
-    }
-    if (size > screen_size_x(s)) {
-      size = screen_size_x(s);
-    }
-    screen_write_cursormove(ctx, screen_size_x(s) - size, 0, 0);
-    screen_write_puts(ctx, &gc, "%s", hdr);
-  } else {
-    size = 0;
-  }
-
-  if (size < screen_size_x(s)) {
-    window_copy_write_one(wme, ctx, py, hsize - (*data).oy + py,
-                          screen_size_x(s) - size, &mgc, &cgc, &mkgc);
-  }
-
-  if (py == (*data).cy && (*data).cx == screen_size_x(s)) {
-    screen_write_cursormove(ctx, screen_size_x(s) - 1, py, 0);
-    screen_write_putc(ctx, &grid_default_cell, '$');
-  }
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_write_lines(struct window_mode_entry *wme, struct screen_write_ctx *ctx, u_int py, u_int ny) {
-unsafe {
-  u_int yy;
-
-  for (yy = py; yy < py + ny; yy++) {
-    window_copy_write_line(wme, ctx, py);
-  }
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_redraw_selection(struct window_mode_entry *wme, u_int old_y) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct grid *gd = (*(*data).backing).grid;
-  u_int new_y, start, end;
-
-  new_y = (*data).cy;
-  if (old_y <= new_y) {
-    start = old_y;
-    end = new_y;
-  } else {
-    start = new_y;
-    end = old_y;
-  }
-
-  /*
-   * In word selection mode the first word on the line below the cursor
-   * might be selected, so add this line to the redraw area.
-   */
-  if ((*data).selflag == SEL_WORD) {
-    /* Last grid line in data coordinates. */
-    if (end < (*gd).sy + (*data).oy - 1) {
-      end++;
-    }
-  }
-  window_copy_redraw_lines(wme, start, end - start + 1);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_redraw_lines(struct window_mode_entry *wme, u_int py, u_int ny) {
-unsafe {
-  struct window_pane *wp = (*wme).wp;
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen_write_ctx ctx;
-  u_int i;
-
-  screen_write_start_pane(&ctx, wp, NULL);
-  for (i = py; i < py + ny; i++) {
-    window_copy_write_line(wme, &ctx, i);
-  }
-  screen_write_cursormove(&ctx, (*data).cx, (*data).cy, 0);
-  screen_write_stop(&ctx);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_redraw_screen(struct window_mode_entry *wme) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-
-  window_copy_redraw_lines(wme, 0, screen_size_y(&(*data).screen));
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_synchronize_cursor_end(struct window_mode_entry *wme, int begin, int no_reset) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int xx, yy;
-
-  xx = (*data).cx;
-  yy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-  switch ((*data).selflag) {
-  case SEL_WORD:
-    if (no_reset) {
-      break;
-    }
-    begin = 0;
-    if ((*data).dy > yy || ((*data).dy == yy && (*data).dx > xx)) {
-      /* Right to left selection. */
-      window_copy_cursor_previous_word_pos(wme, (*data).separators, &xx, &yy);
-      begin = 1;
-
-      /* Reset the end. */
-      (*data).endselx = (*data).endselrx;
-      (*data).endsely = (*data).endselry;
-    } else {
-      /* Left to right selection. */
-      if (xx >= window_copy_find_length(wme, yy) ||
-          !window_copy_in_set(wme, xx + 1, yy, WHITESPACE)) {
-        window_copy_cursor_next_word_end_pos(wme, (*data).separators, &xx, &yy);
-      }
-
-      /* Reset the start. */
-      (*data).selx = (*data).selrx;
-      (*data).sely = (*data).selry;
-    }
-    break;
-  case SEL_LINE:
-    if (no_reset) {
-      break;
-    }
-    begin = 0;
-    if ((*data).dy > yy) {
-      /* Right to left selection. */
-      xx = 0;
-      begin = 1;
-
-      /* Reset the end. */
-      (*data).endselx = (*data).endselrx;
-      (*data).endsely = (*data).endselry;
-    } else {
-      /* Left to right selection. */
-      if (yy < (*data).endselry) {
-        yy = (*data).endselry;
-      }
-      xx = window_copy_find_length(wme, yy);
-
-      /* Reset the start. */
-      (*data).selx = (*data).selrx;
-      (*data).sely = (*data).selry;
-    }
-    break;
-  case SEL_CHAR:
-    break;
-  }
-  if (begin) {
-    (*data).selx = xx;
-    (*data).sely = yy;
-  } else {
-    (*data).endselx = xx;
-    (*data).endsely = yy;
-  }
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_synchronize_cursor(struct window_mode_entry *wme, int no_reset) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-
-  switch ((*data).cursordrag) {
-  case CURSORDRAG_ENDSEL:
-    window_copy_synchronize_cursor_end(wme, 0, no_reset);
-    break;
-  case CURSORDRAG_SEL:
-    window_copy_synchronize_cursor_end(wme, 1, no_reset);
-    break;
-  case CURSORDRAG_NONE:
-    break;
-  }
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_update_cursor(struct window_mode_entry *wme, u_int cx, u_int cy) {
-unsafe {
-  struct window_pane *wp = (*wme).wp;
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *s = &(*data).screen;
-  struct screen_write_ctx ctx;
-  u_int old_cx, old_cy;
-
-  old_cx = (*data).cx;
-  old_cy = (*data).cy;
-  (*data).cx = cx;
-  (*data).cy = cy;
-  if (old_cx == screen_size_x(s)) {
-    window_copy_redraw_lines(wme, old_cy, 1);
-  }
-  if ((*data).cx == screen_size_x(s)) {
-    window_copy_redraw_lines(wme, (*data).cy, 1);
-  } else {
-    screen_write_start_pane(&ctx, wp, NULL);
-    screen_write_cursormove(&ctx, (*data).cx, (*data).cy, 0);
-    screen_write_stop(&ctx);
-  }
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_start_selection(struct window_mode_entry *wme) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-
-  (*data).selx = (*data).cx;
-  (*data).sely = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-
-  (*data).endselx = (*data).selx;
-  (*data).endsely = (*data).sely;
-
-  (*data).cursordrag = CURSORDRAG_ENDSEL;
-
-  window_copy_set_selection(wme, 1, 0);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static int window_copy_adjust_selection(struct window_mode_entry *wme, u_int *selx, u_int *sely) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *s = &(*data).screen;
-  u_int sx, sy, ty;
-  int relpos;
-
-  sx = *selx;
-  sy = *sely;
-
-  ty = screen_hsize((*data).backing) - (*data).oy;
-  if (sy < ty) {
-    relpos = WINDOW_COPY_REL_POS_ABOVE;
-    if (!(*data).rectflag) {
-      sx = 0;
-    }
-    sy = 0;
-  } else if (sy > ty + screen_size_y(s) - 1) {
-    relpos = WINDOW_COPY_REL_POS_BELOW;
-    if (!(*data).rectflag) {
-      sx = screen_size_x(s) - 1;
-    }
-    sy = screen_size_y(s) - 1;
-  } else {
-    relpos = WINDOW_COPY_REL_POS_ON_SCREEN;
-    sy -= ty;
-  }
-
-  *selx = sx;
-  *sely = sy;
-  return relpos;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static int window_copy_update_selection(struct window_mode_entry *wme, int may_redraw, int no_reset) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *s = &(*data).screen;
-
-  if ((*s).sel == NULL && (*data).lineflag == LINE_SEL_NONE) {
-    return 0;
-  }
-  return window_copy_set_selection(wme, may_redraw, no_reset);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static int window_copy_set_selection(struct window_mode_entry *wme, int may_redraw, int no_reset) {
-unsafe {
-  struct window_pane *wp = (*wme).wp;
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *s = &(*data).screen;
-  struct options *oo = (*(*wp).window).options;
-  struct grid_cell gc;
-  u_int sx, sy, cy, endsx, endsy;
-  int startrelpos, endrelpos;
-
-  window_copy_synchronize_cursor(wme, no_reset);
-
-  /* Adjust the selection. */
-  sx = (*data).selx;
-  sy = (*data).sely;
-  startrelpos = window_copy_adjust_selection(wme, &sx, &sy);
-
-  /* Adjust the end of selection. */
-  endsx = (*data).endselx;
-  endsy = (*data).endsely;
-  endrelpos = window_copy_adjust_selection(wme, &endsx, &endsy);
-
-  /* Selection is outside of the current screen */
-  if (startrelpos == endrelpos &&
-      startrelpos != WINDOW_COPY_REL_POS_ON_SCREEN) {
-    screen_hide_selection(s);
-    return 0;
-  }
-
-  /* Set colours and selection. */
-  style_apply(&gc, oo, "mode-style", NULL);
-  gc.flags |= GRID_FLAG_NOPALETTE;
-  screen_set_selection(s, sx, sy, endsx, endsy, (*data).rectflag, (*data).modekeys,
-                       &gc);
-
-  if ((*data).rectflag && may_redraw) {
-    /*
-     * Can't rely on the caller to redraw the right lines for
-     * rectangle selection - find the highest line and the number
-     * of lines, and redraw just past that in both directions
-     */
-    cy = (*data).cy;
-    if ((*data).cursordrag == CURSORDRAG_ENDSEL) {
-      if (sy < cy) {
-        window_copy_redraw_lines(wme, sy, cy - sy + 1);
-      } else {
-        window_copy_redraw_lines(wme, cy, sy - cy + 1);
-      }
-    } else {
-      if (endsy < cy) {
-        window_copy_redraw_lines(wme, endsy, cy - endsy + 1);
-      } else {
-        window_copy_redraw_lines(wme, cy, endsy - cy + 1);
-      }
-    }
-  }
-
-  return 1;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void *window_copy_get_selection(struct window_mode_entry *wme, size_t *len) {
-unsafe {
-  struct window_pane *wp = (*wme).wp;
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *s = &(*data).screen;
-  char *buf;
-  size_t off;
-  u_int i, xx, yy, sx, sy, ex, ey, ey_last;
-  u_int firstsx, lastex, restex, restsx, selx;
-  int keys;
-
-  if ((*data).screen.sel == NULL && (*data).lineflag == LINE_SEL_NONE) {
-    buf = window_copy_match_at_cursor(data);
-    if (buf != NULL) {
-      *len = strlen(buf);
-    } else {
-      *len = 0;
-    }
-    return buf;
-  }
-
-  buf = xmalloc(1);
-  off = 0;
-
-  *buf = '\0';
-
-  /*
-   * The selection extends from selx,sely to (adjusted) cx,cy on
-   * the base screen.
-   */
-
-  /* Find start and end. */
-  xx = (*data).endselx;
-  yy = (*data).endsely;
-  if (yy < (*data).sely || (yy == (*data).sely && xx < (*data).selx)) {
-    sx = xx;
-    sy = yy;
-    ex = (*data).selx;
-    ey = (*data).sely;
-  } else {
-    sx = (*data).selx;
-    sy = (*data).sely;
-    ex = xx;
-    ey = yy;
-  }
-
-  /* Trim ex to end of line. */
-  ey_last = window_copy_find_length(wme, ey);
-  if (ex > ey_last) {
-    ex = ey_last;
-  }
-
-  /*
-   * Deal with rectangle-copy if necessary; four situations: start of
-   * first line (firstsx), end of last line (lastex), start (restsx) and
-   * end (restex) of all other lines.
-   */
-  xx = screen_size_x(s);
-
-  /*
-   * Behave according to mode-keys. If it is emacs, copy like emacs,
-   * keeping the top-left-most character, and dropping the
-   * bottom-right-most, regardless of copy direction. If it is vi, also
-   * keep bottom-right-most character.
-   */
-  keys = options_get_number((*(*wp).window).options, "mode-keys");
-  if ((*data).rectflag) {
-    /*
-     * Need to ignore the column with the cursor in it, which for
-     * rectangular copy means knowing which side the cursor is on.
-     */
-    if ((*data).cursordrag == CURSORDRAG_ENDSEL) {
-      selx = (*data).selx;
-    } else {
-      selx = (*data).endselx;
-    }
-    if (selx < (*data).cx) {
-      /* Selection start is on the left. */
-      if (keys == MODEKEY_EMACS) {
-        lastex = (*data).cx;
-        restex = (*data).cx;
-      } else {
-        lastex = (*data).cx + 1;
-        restex = (*data).cx + 1;
-      }
-      firstsx = selx;
-      restsx = selx;
-    } else {
-      /* Cursor is on the left. */
-      lastex = selx + 1;
-      restex = selx + 1;
-      firstsx = (*data).cx;
-      restsx = (*data).cx;
-    }
-  } else {
-    if (keys == MODEKEY_EMACS) {
-      lastex = ex;
-    } else {
-      lastex = ex + 1;
-    }
-    restex = xx;
-    firstsx = sx;
-    restsx = 0;
-  }
-
-  /* Copy the lines. */
-  for (i = sy; i <= ey; i++) {
-    window_copy_copy_line(wme, &buf, &off, i, (i == sy ? firstsx : restsx),
-                          (i == ey ? lastex : restex));
-  }
-
-  /* Don't bother if no data. */
-  if (off == 0) {
-    free(buf);
-    *len = 0;
-    return NULL;
-  }
-  /* Remove final \n (unless at end in vi mode). */
-  if (keys == MODEKEY_EMACS || lastex <= ey_last) {
-    if (~(*grid_get_line((*(*data).backing).grid, ey)).flags &
-            GRID_LINE_WRAPPED ||
-        lastex != ey_last) {
-      off -= 1;
-    }
-  }
-  *len = off;
-  return buf;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_copy_buffer(struct window_mode_entry *wme, const char *prefix, void *buf, size_t len) {
-unsafe {
-  struct window_pane *wp = (*wme).wp;
-  struct screen_write_ctx ctx;
-
-  if (options_get_number(global_options, "set-clipboard") != 0) {
-    screen_write_start_pane(&ctx, wp, NULL);
-    screen_write_setselection(&ctx, "", buf, len);
-    screen_write_stop(&ctx);
-    notify_pane("pane-set-clipboard", wp);
-  }
-
-  paste_add(prefix, buf, len);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void *window_copy_pipe_run(struct window_mode_entry *wme, struct session *s, const char *cmd, size_t *len) {
-unsafe {
-  void *buf;
-  struct job *job;
-
-  buf = window_copy_get_selection(wme, len);
-  if (cmd == NULL || *cmd == '\0') {
-    cmd = options_get_string(global_options, "copy-command");
-  }
-  if (cmd != NULL && *cmd != '\0') {
-    job = job_run(cmd, 0, NULL, NULL, s, NULL, NULL, NULL, NULL, NULL,
-                  JOB_NOWAIT, -1, -1);
-    bufferevent_write(job_get_event(job), buf, *len);
-  }
-  return buf;
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_pipe(struct window_mode_entry *wme, struct session *s, const char *cmd) {
-unsafe {
-  size_t len;
-
-  window_copy_pipe_run(wme, s, cmd, &len);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_copy_pipe(struct window_mode_entry *wme, struct session *s, const char *prefix, const char *cmd) {
-unsafe {
-  void *buf;
-  size_t len;
-
-  buf = window_copy_pipe_run(wme, s, cmd, &len);
-  if (buf != NULL) {
-    window_copy_copy_buffer(wme, prefix, buf, len);
-  }
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_copy_selection(struct window_mode_entry *wme, const char *prefix) {
-unsafe {
-  char *buf;
-  size_t len;
-
-  buf = window_copy_get_selection(wme, &len);
-  if (buf != NULL) {
-    window_copy_copy_buffer(wme, prefix, buf, len);
-  }
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_append_selection(struct window_mode_entry *wme) {
-unsafe {
-  struct window_pane *wp = (*wme).wp;
-  char *buf;
-  struct paste_buffer *pb;
-  const char *bufdata, *bufname = NULL;
-  size_t len, bufsize;
-  struct screen_write_ctx ctx;
-
-  buf = window_copy_get_selection(wme, &len);
-  if (buf == NULL) {
-    return;
-  }
-
-  if (options_get_number(global_options, "set-clipboard") != 0) {
-    screen_write_start_pane(&ctx, wp, NULL);
-    screen_write_setselection(&ctx, "", buf, len);
-    screen_write_stop(&ctx);
-    notify_pane("pane-set-clipboard", wp);
-  }
-
-  pb = paste_get_top(&bufname);
-  if (pb != NULL) {
-    bufdata = paste_buffer_data(pb, &bufsize);
-    buf = xrealloc(buf, len + bufsize);
-    memmove(buf + bufsize, buf, len);
-    memcpy(buf, bufdata, bufsize);
-    len += bufsize;
-  }
-  if (paste_set(buf, len, bufname, NULL) != 0) {
-    free(buf);
-  }
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_copy_line(struct window_mode_entry *wme, char **buf, size_t *off, u_int sy, u_int sx, u_int ex) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct grid *gd = (*(*data).backing).grid;
-  struct grid_cell gc;
-  struct grid_line *gl;
-  struct utf8_data ud;
-  u_int i, xx, wrapped = 0;
-  const char *s;
-
-  if (sx > ex) {
-    return;
-  }
-
-  /*
-   * Work out if the line was wrapped at the screen edge and all of it is
-   * on screen.
-   */
-  gl = grid_get_line(gd, sy);
-  if ((*gl).flags & GRID_LINE_WRAPPED && (*gl).cellsize <= (*gd).sx) {
-    wrapped = 1;
-  }
-
-  /* If the line was wrapped, don't strip spaces (use the full length). */
-  if (wrapped) {
-    xx = (*gl).cellsize;
-  } else {
-    xx = window_copy_find_length(wme, sy);
-  }
-  if (ex > xx) {
-    ex = xx;
-  }
-  if (sx > xx) {
-    sx = xx;
-  }
-
-  if (sx < ex) {
-    for (i = sx; i < ex; i++) {
-      grid_get_cell(gd, i, sy, &gc);
-      if (gc.flags & GRID_FLAG_PADDING) {
-        continue;
-      }
-      utf8_copy(&ud, &gc.data);
-      if (ud.size == 1 && (gc.attr & GRID_ATTR_CHARSET)) {
-        s = tty_acs_get(NULL, ud.data[0]);
-        if (s != NULL && strlen(s) <= sizeof ud.data) {
-          ud.size = strlen(s);
-          memcpy(ud.data, s, ud.size);
+pub unsafe extern "C" fn window_copy_write_one(
+    wme: *mut window_mode_entry,
+    ctx: *mut screen_write_ctx,
+    py: u32,
+    fy: u32,
+    nx: u32,
+    mgc: *const grid_cell,
+    cgc: *const grid_cell,
+    mkgc: *const grid_cell,
+) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut gd: *mut grid = (*(*data).backing).grid;
+        let mut gc: grid_cell = zeroed();
+
+        screen_write_cursormove(ctx, 0, py as i32, 0);
+        for fx in 0..nx {
+            grid_get_cell(gd, fx, fy, &raw mut gc);
+            if (fx + gc.data.width as u32 <= nx) {
+                window_copy_update_style(wme, fx, fy, &raw mut gc, mgc, cgc, mkgc);
+                screen_write_cell(ctx, &raw mut gc);
+            }
         }
-      }
-
-      *buf = xrealloc(*buf, (*off) + ud.size);
-      memcpy(*buf + *off, ud.data, ud.size);
-      *off += ud.size;
     }
-  }
-
-  /* Only add a newline if the line wasn't wrapped. */
-  if (!wrapped || ex != xx) {
-    *buf = xrealloc(*buf, (*off) + 1);
-    (*buf)[(*off)++] = '\n';
-  }
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_clear_selection(struct window_mode_entry *wme) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int px, py;
+pub unsafe extern "C" fn window_copy_write_line(
+    wme: *mut window_mode_entry,
+    ctx: *mut screen_write_ctx,
+    py: u32,
+) {
+    unsafe {
+        let mut wp: *mut window_pane = (*wme).wp;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut s: *mut screen = &raw mut (*data).screen;
+        let mut oo: *mut options = (*(*wp).window).options;
+        let mut gl: *mut grid_line;
+        let mut gc: grid_cell = zeroed();
+        let mut mgc: grid_cell = zeroed();
+        let mut cgc: grid_cell = zeroed();
+        let mut mkgc: grid_cell = zeroed();
+        let mut hdr: [c_char; 512] = zeroed();
+        let mut tmp: [c_char; 512] = zeroed();
+        let mut t: *mut i8 = null_mut();
+        let mut size: usize = 0;
+        let mut hsize = screen_hsize((*data).backing);
 
-  screen_clear_selection(&(*data).screen);
+        style_apply(&raw mut gc, oo, c"mode-style".as_ptr(), null_mut());
+        gc.flags |= grid_flag::NOPALETTE;
+        style_apply(
+            &raw mut mgc,
+            oo,
+            c"copy-mode-match-style".as_ptr(),
+            null_mut(),
+        );
+        mgc.flags |= grid_flag::NOPALETTE;
+        style_apply(
+            &raw mut cgc,
+            oo,
+            c"copy-mode-current-match-style".as_ptr(),
+            null_mut(),
+        );
+        cgc.flags |= grid_flag::NOPALETTE;
+        style_apply(
+            &raw mut mkgc,
+            oo,
+            c"copy-mode-mark-style".as_ptr(),
+            null_mut(),
+        );
+        mkgc.flags |= grid_flag::NOPALETTE;
 
-  (*data).cursordrag = CURSORDRAG_NONE;
-  (*data).lineflag = LINE_SEL_NONE;
-  (*data).selflag = SEL_CHAR;
+        if (py == 0 && (*s).rupper < (*s).rlower && (*data).hide_position == 0) {
+            gl = grid_get_line((*(*data).backing).grid, hsize - (*data).oy);
+            if ((*gl).time == 0) {
+                xsnprintf(
+                    (&raw mut tmp).cast(),
+                    512,
+                    c"[%u/%u]".as_ptr(),
+                    (*data).oy,
+                    hsize,
+                );
+            } else {
+                t = format_pretty_time((*gl).time, 1);
+                xsnprintf(
+                    (&raw mut tmp).cast(),
+                    512,
+                    c"%s [%u/%u]".as_ptr(),
+                    t,
+                    (*data).oy,
+                    hsize,
+                );
+                free_(t);
+            }
 
-  py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-  px = window_copy_find_length(wme, py);
-  if ((*data).cx > px) {
-    window_copy_update_cursor(wme, px, (*data).cy);
-  }
-}
+            if ((*data).searchmark.is_null()) {
+                if ((*data).timeout != 0) {
+                    size = xsnprintf(
+                        (&raw mut hdr).cast(),
+                        512,
+                        c"(timed out) %s".as_ptr(),
+                        &raw const tmp,
+                    ) as usize;
+                } else {
+                    size = xsnprintf((&raw mut hdr).cast(), 512, c"%s".as_ptr(), &raw const tmp)
+                        as usize;
+                }
+            } else {
+                if ((*data).searchcount == -1) {
+                    size = xsnprintf((&raw mut hdr).cast(), 512, c"%s".as_ptr(), &raw const tmp)
+                        as usize;
+                } else {
+                    size = xsnprintf(
+                        (&raw mut hdr).cast(),
+                        512,
+                        c"(%d%s results) %s".as_ptr(),
+                        (*data).searchcount,
+                        if (*data).searchmore != 0 {
+                            c"+".as_ptr()
+                        } else {
+                            c"".as_ptr()
+                        },
+                        &raw const tmp,
+                    ) as usize;
+                }
+            }
+            if (size > screen_size_x(s) as usize) {
+                size = screen_size_x(s) as usize;
+            }
+            screen_write_cursormove(ctx, screen_size_x(s) as i32 - size as i32, 0, 0);
+            screen_write_puts(ctx, &raw mut gc, c"%s".as_ptr(), hdr);
+        } else {
+            size = 0;
+        }
+
+        if (size < screen_size_x(s) as usize) {
+            window_copy_write_one(
+                wme,
+                ctx,
+                py,
+                hsize - (*data).oy + py,
+                screen_size_x(s) - size as u32,
+                &raw mut mgc,
+                &raw mut cgc,
+                &raw mut mkgc,
+            );
+        }
+
+        if (py == (*data).cy && (*data).cx == screen_size_x(s)) {
+            screen_write_cursormove(ctx, screen_size_x(s) as i32 - 1, py as i32, 0);
+            screen_write_putc(ctx, &raw const grid_default_cell, b'$');
+        }
+    }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static int window_copy_in_set(struct window_mode_entry *wme, u_int px, u_int py, const char *set) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct grid_cell gc;
-
-  grid_get_cell((*(*data).backing).grid, px, py, &gc);
-  if (gc.flags & GRID_FLAG_PADDING) {
-    return 0;
-  }
-  return utf8_cstrhas(set, &gc.data);
-}
+pub unsafe extern "C" fn window_copy_write_lines(
+    wme: *mut window_mode_entry,
+    ctx: *mut screen_write_ctx,
+    py: u32,
+    ny: u32,
+) {
+    unsafe {
+        for yy in py..(py + ny) {
+            window_copy_write_line(wme, ctx, py);
+        }
+    }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static u_int window_copy_find_length(struct window_mode_entry *wme, u_int py) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
+pub unsafe extern "C" fn window_copy_redraw_selection(wme: *mut window_mode_entry, old_y: u32) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut gd: *mut grid = (*(*data).backing).grid;
 
-  return grid_line_length((*(*data).backing).grid, py);
-}
+        let new_y = (*data).cy;
+        let (start, mut end) = if (old_y <= new_y) {
+            (old_y, new_y)
+        } else {
+            (new_y, old_y)
+        };
+
+        /*
+         * In word selection mode the first word on the line below the cursor
+         * might be selected, so add this line to the redraw area.
+         */
+        if ((*data).selflag == selflag::SEL_WORD) {
+            /* Last grid line in data coordinates. */
+            if (end < (*gd).sy + (*data).oy - 1) {
+                end += 1;
+            }
+        }
+        window_copy_redraw_lines(wme, start, end - start + 1);
+    }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_cursor_start_of_line(struct window_mode_entry *wme) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *back_s = (*data).backing;
-  struct grid_reader gr;
-  u_int px, py, oldy, hsize;
+pub unsafe extern "C" fn window_copy_redraw_lines(wme: *mut window_mode_entry, py: u32, ny: u32) {
+    unsafe {
+        let mut wp: *mut window_pane = (*wme).wp;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut ctx: screen_write_ctx = zeroed();
 
-  px = (*data).cx;
-  hsize = screen_hsize(back_s);
-  py = hsize + (*data).cy - (*data).oy;
-  oldy = (*data).cy;
-
-  grid_reader_start(&gr, (*back_s).grid, px, py);
-  grid_reader_cursor_start_of_line(&gr, 1);
-  grid_reader_get_cursor(&gr, &px, &py);
-  window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
-}
+        screen_write_start_pane(&raw mut ctx, wp, null_mut());
+        for i in py..(py + ny) {
+            window_copy_write_line(wme, &raw mut ctx, i);
+        }
+        screen_write_cursormove(&raw mut ctx, (*data).cx as i32, (*data).cy as i32, 0);
+        screen_write_stop(&raw mut ctx);
+    }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_cursor_back_to_indentation(struct window_mode_entry *wme) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *back_s = (*data).backing;
-  struct grid_reader gr;
-  u_int px, py, oldy, hsize;
+pub unsafe extern "C" fn window_copy_redraw_screen(wme: *mut window_mode_entry) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
 
-  px = (*data).cx;
-  hsize = screen_hsize(back_s);
-  py = hsize + (*data).cy - (*data).oy;
-  oldy = (*data).cy;
-
-  grid_reader_start(&gr, (*back_s).grid, px, py);
-  grid_reader_cursor_back_to_indentation(&gr);
-  grid_reader_get_cursor(&gr, &px, &py);
-  window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
-}
+        window_copy_redraw_lines(wme, 0, screen_size_y(&raw mut (*data).screen));
+    }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_cursor_end_of_line(struct window_mode_entry *wme) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *back_s = (*data).backing;
-  struct grid_reader gr;
-  u_int px, py, oldy, hsize;
+pub unsafe extern "C" fn window_copy_synchronize_cursor_end(
+    wme: *mut window_mode_entry,
+    mut begin: i32,
+    no_reset: i32,
+) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
 
-  px = (*data).cx;
-  hsize = screen_hsize(back_s);
-  py = hsize + (*data).cy - (*data).oy;
-  oldy = (*data).cy;
+        let mut xx = (*data).cx;
+        let mut yy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+        match ((*data).selflag) {
+            selflag::SEL_WORD => {
+                if (no_reset == 0) {
+                    begin = 0;
+                    if ((*data).dy > yy || ((*data).dy == yy && (*data).dx > xx)) {
+                        /* Right to left selection. */
+                        window_copy_cursor_previous_word_pos(
+                            wme,
+                            (*data).separators,
+                            &raw mut xx,
+                            &raw mut yy,
+                        );
+                        begin = 1;
 
-  grid_reader_start(&gr, (*back_s).grid, px, py);
-  if ((*data).screen.sel != NULL && (*data).rectflag) {
-    grid_reader_cursor_end_of_line(&gr, 1, 1);
-  } else {
-    grid_reader_cursor_end_of_line(&gr, 1, 0);
-  }
-  grid_reader_get_cursor(&gr, &px, &py);
-  window_copy_acquire_cursor_down(wme, hsize, screen_size_y(back_s), (*data).oy,
-                                  oldy, px, py, 0);
-}
+                        /* Reset the end. */
+                        (*data).endselx = (*data).endselrx;
+                        (*data).endsely = (*data).endselry;
+                    } else {
+                        /* Left to right selection. */
+                        if (xx >= window_copy_find_length(wme, yy)
+                            || window_copy_in_set(wme, xx + 1, yy, WHITESPACE.as_ptr()) == 0)
+                        {
+                            window_copy_cursor_next_word_end_pos(
+                                wme,
+                                (*data).separators,
+                                &raw mut xx,
+                                &raw mut yy,
+                            );
+                        }
+
+                        /* Reset the start. */
+                        (*data).selx = (*data).selrx;
+                        (*data).sely = (*data).selry;
+                    }
+                }
+            }
+            selflag::SEL_LINE => {
+                if (no_reset == 0) {
+                    begin = 0;
+                    if ((*data).dy > yy) {
+                        /* Right to left selection. */
+                        xx = 0;
+                        begin = 1;
+
+                        /* Reset the end. */
+                        (*data).endselx = (*data).endselrx;
+                        (*data).endsely = (*data).endselry;
+                    } else {
+                        /* Left to right selection. */
+                        if (yy < (*data).endselry) {
+                            yy = (*data).endselry;
+                        }
+                        xx = window_copy_find_length(wme, yy);
+
+                        /* Reset the start. */
+                        (*data).selx = (*data).selrx;
+                        (*data).sely = (*data).selry;
+                    }
+                }
+            }
+            selflag::SEL_CHAR => (),
+        }
+        if (begin != 0) {
+            (*data).selx = xx;
+            (*data).sely = yy;
+        } else {
+            (*data).endselx = xx;
+            (*data).endsely = yy;
+        }
+    }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_other_end(struct window_mode_entry *wme) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *s = &(*data).screen;
-  u_int selx, sely, cy, yy, hsize;
+pub unsafe extern "C" fn window_copy_synchronize_cursor(
+    wme: *mut window_mode_entry,
+    no_reset: i32,
+) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
 
-  if ((*s).sel == NULL && (*data).lineflag == LINE_SEL_NONE) {
-    return;
-  }
-
-  if ((*data).lineflag == LINE_SEL_LEFT_RIGHT) {
-    (*data).lineflag = LINE_SEL_RIGHT_LEFT;
-  } else if ((*data).lineflag == LINE_SEL_RIGHT_LEFT) {
-    (*data).lineflag = LINE_SEL_LEFT_RIGHT;
-  }
-
-  switch ((*data).cursordrag) {
-  case CURSORDRAG_NONE:
-  case CURSORDRAG_SEL:
-    (*data).cursordrag = CURSORDRAG_ENDSEL;
-    break;
-  case CURSORDRAG_ENDSEL:
-    (*data).cursordrag = CURSORDRAG_SEL;
-    break;
-  }
-
-  selx = (*data).endselx;
-  sely = (*data).endsely;
-  if ((*data).cursordrag == CURSORDRAG_SEL) {
-    selx = (*data).selx;
-    sely = (*data).sely;
-  }
-
-  cy = (*data).cy;
-  yy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-
-  (*data).cx = selx;
-
-  hsize = screen_hsize((*data).backing);
-  if (sely < hsize - (*data).oy) { /* above */
-    (*data).oy = hsize - sely;
-    (*data).cy = 0;
-  } else if (sely > hsize - (*data).oy + screen_size_y(s)) { /* below */
-    (*data).oy = hsize - sely + screen_size_y(s) - 1;
-    (*data).cy = screen_size_y(s) - 1;
-  } else {
-    (*data).cy = cy + sely - yy;
-  }
-
-  window_copy_update_selection(wme, 1, 1);
-  window_copy_redraw_screen(wme);
-}
+        match ((*data).cursordrag) {
+            cursordrag::CURSORDRAG_ENDSEL => window_copy_synchronize_cursor_end(wme, 0, no_reset),
+            cursordrag::CURSORDRAG_SEL => window_copy_synchronize_cursor_end(wme, 1, no_reset),
+            cursordrag::CURSORDRAG_NONE => (),
+        }
+    }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_cursor_left(struct window_mode_entry *wme) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *back_s = (*data).backing;
-  struct grid_reader gr;
-  u_int px, py, oldy, hsize;
+pub unsafe extern "C" fn window_copy_update_cursor(wme: *mut window_mode_entry, cx: u32, cy: u32) {
+    unsafe {
+        let mut wp: *mut window_pane = (*wme).wp;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut s: *mut screen = &raw mut (*data).screen;
+        let mut ctx: screen_write_ctx = zeroed();
 
-  px = (*data).cx;
-  hsize = screen_hsize(back_s);
-  py = hsize + (*data).cy - (*data).oy;
-  oldy = (*data).cy;
-
-  grid_reader_start(&gr, (*back_s).grid, px, py);
-  grid_reader_cursor_left(&gr, 1);
-  grid_reader_get_cursor(&gr, &px, &py);
-  window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
-}
+        let old_cx = (*data).cx;
+        let old_cy = (*data).cy;
+        (*data).cx = cx;
+        (*data).cy = cy;
+        if (old_cx == screen_size_x(s)) {
+            window_copy_redraw_lines(wme, old_cy, 1);
+        }
+        if ((*data).cx == screen_size_x(s)) {
+            window_copy_redraw_lines(wme, (*data).cy, 1);
+        } else {
+            screen_write_start_pane(&raw mut ctx, wp, null_mut());
+            screen_write_cursormove(&raw mut ctx, (*data).cx as i32, (*data).cy as i32, 0);
+            screen_write_stop(&raw mut ctx);
+        }
+    }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_cursor_right(struct window_mode_entry *wme, int all) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *back_s = (*data).backing;
-  struct grid_reader gr;
-  u_int px, py, oldy, hsize;
+pub unsafe extern "C" fn window_copy_start_selection(wme: *mut window_mode_entry) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
 
-  px = (*data).cx;
-  hsize = screen_hsize(back_s);
-  py = hsize + (*data).cy - (*data).oy;
-  oldy = (*data).cy;
+        (*data).selx = (*data).cx;
+        (*data).sely = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
 
-  grid_reader_start(&gr, (*back_s).grid, px, py);
-  grid_reader_cursor_right(&gr, 1, all);
-  grid_reader_get_cursor(&gr, &px, &py);
-  window_copy_acquire_cursor_down(wme, hsize, screen_size_y(back_s), (*data).oy,
-                                  oldy, px, py, 0);
-}
+        (*data).endselx = (*data).selx;
+        (*data).endsely = (*data).sely;
+
+        (*data).cursordrag = cursordrag::CURSORDRAG_ENDSEL;
+
+        window_copy_set_selection(wme, 1, 0);
+    }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_cursor_up(struct window_mode_entry *wme, int scroll_only) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *s = &(*data).screen;
-  u_int ox, oy, px, py;
-  int norectsel;
+pub unsafe extern "C" fn window_copy_adjust_selection(
+    wme: *mut window_mode_entry,
+    selx: *mut u32,
+    sely: *mut u32,
+) -> window_copy_rel_pos {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut s: *mut screen = &raw mut (*data).screen;
 
-  norectsel = (*data).screen.sel == NULL || !(*data).rectflag;
-  oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-  ox = window_copy_find_length(wme, oy);
-  if (norectsel && (*data).cx != ox) {
-    (*data).lastcx = (*data).cx;
-    (*data).lastsx = ox;
-  }
+        let mut sx = *selx;
+        let mut sy = *sely;
+        let mut relpos = window_copy_rel_pos::WINDOW_COPY_REL_POS_ABOVE;
 
-  if ((*data).lineflag == LINE_SEL_LEFT_RIGHT && oy == (*data).sely) {
-    window_copy_other_end(wme);
-  }
+        let ty = screen_hsize((*data).backing) - (*data).oy;
+        if (sy < ty) {
+            relpos = window_copy_rel_pos::WINDOW_COPY_REL_POS_ABOVE;
+            if (*data).rectflag == 0 {
+                sx = 0;
+            }
+            sy = 0;
+        } else if (sy > ty + screen_size_y(s) - 1) {
+            relpos = window_copy_rel_pos::WINDOW_COPY_REL_POS_BELOW;
+            if (*data).rectflag == 0 {
+                sx = screen_size_x(s) - 1;
+            }
+            sy = screen_size_y(s) - 1;
+        } else {
+            relpos = window_copy_rel_pos::WINDOW_COPY_REL_POS_ON_SCREEN;
+            sy -= ty;
+        }
 
-  if (scroll_only || (*data).cy == 0) {
-    if (norectsel) {
-      (*data).cx = (*data).lastcx;
+        *selx = sx;
+        *sely = sy;
+        relpos
     }
-    window_copy_scroll_down(wme, 1);
-    if (scroll_only) {
-      if ((*data).cy == screen_size_y(s) - 1) {
-        window_copy_redraw_lines(wme, (*data).cy, 1);
-      } else {
-        window_copy_redraw_lines(wme, (*data).cy, 2);
-      }
-    }
-  } else {
-    if (norectsel) {
-      window_copy_update_cursor(wme, (*data).lastcx, (*data).cy - 1);
-    } else {
-      window_copy_update_cursor(wme, (*data).cx, (*data).cy - 1);
-    }
-    if (window_copy_update_selection(wme, 1, 0)) {
-      if ((*data).cy == screen_size_y(s) - 1) {
-        window_copy_redraw_lines(wme, (*data).cy, 1);
-      } else {
-        window_copy_redraw_lines(wme, (*data).cy, 2);
-      }
-    }
-  }
-
-  if (norectsel) {
-    py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-    px = window_copy_find_length(wme, py);
-    if (((*data).cx >= (*data).lastsx && (*data).cx != px) || (*data).cx > px) {
-      window_copy_update_cursor(wme, px, (*data).cy);
-      if (window_copy_update_selection(wme, 1, 0)) {
-        window_copy_redraw_lines(wme, (*data).cy, 1);
-      }
-    }
-  }
-
-  if ((*data).lineflag == LINE_SEL_LEFT_RIGHT) {
-    py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-    if ((*data).rectflag) {
-      px = screen_size_x((*data).backing);
-    } else {
-      px = window_copy_find_length(wme, py);
-    }
-    window_copy_update_cursor(wme, px, (*data).cy);
-    if (window_copy_update_selection(wme, 1, 0)) {
-      window_copy_redraw_lines(wme, (*data).cy, 1);
-    }
-  } else if ((*data).lineflag == LINE_SEL_RIGHT_LEFT) {
-    window_copy_update_cursor(wme, 0, (*data).cy);
-    if (window_copy_update_selection(wme, 1, 0)) {
-      window_copy_redraw_lines(wme, (*data).cy, 1);
-    }
-  }
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_cursor_down(struct window_mode_entry *wme, int scroll_only) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *s = &(*data).screen;
-  u_int ox, oy, px, py;
-  int norectsel;
+pub unsafe extern "C" fn window_copy_update_selection(
+    wme: *mut window_mode_entry,
+    may_redraw: i32,
+    no_reset: i32,
+) -> i32 {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut s: *mut screen = &raw mut (*data).screen;
 
-  norectsel = (*data).screen.sel == NULL || !(*data).rectflag;
-  oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-  ox = window_copy_find_length(wme, oy);
-  if (norectsel && (*data).cx != ox) {
-    (*data).lastcx = (*data).cx;
-    (*data).lastsx = ox;
-  }
-
-  if ((*data).lineflag == LINE_SEL_RIGHT_LEFT && oy == (*data).endsely) {
-    window_copy_other_end(wme);
-  }
-
-  if (scroll_only || (*data).cy == screen_size_y(s) - 1) {
-    if (norectsel) {
-      (*data).cx = (*data).lastcx;
+        if ((*s).sel.is_null() && (*data).lineflag == line_sel::LINE_SEL_NONE) {
+            return 0;
+        }
+        window_copy_set_selection(wme, may_redraw, no_reset)
     }
-    window_copy_scroll_up(wme, 1);
-    if (scroll_only && (*data).cy > 0) {
-      window_copy_redraw_lines(wme, (*data).cy - 1, 2);
-    }
-  } else {
-    if (norectsel) {
-      window_copy_update_cursor(wme, (*data).lastcx, (*data).cy + 1);
-    } else {
-      window_copy_update_cursor(wme, (*data).cx, (*data).cy + 1);
-    }
-    if (window_copy_update_selection(wme, 1, 0)) {
-      window_copy_redraw_lines(wme, (*data).cy - 1, 2);
-    }
-  }
-
-  if (norectsel) {
-    py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-    px = window_copy_find_length(wme, py);
-    if (((*data).cx >= (*data).lastsx && (*data).cx != px) || (*data).cx > px) {
-      window_copy_update_cursor(wme, px, (*data).cy);
-      if (window_copy_update_selection(wme, 1, 0)) {
-        window_copy_redraw_lines(wme, (*data).cy, 1);
-      }
-    }
-  }
-
-  if ((*data).lineflag == LINE_SEL_LEFT_RIGHT) {
-    py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-    if ((*data).rectflag) {
-      px = screen_size_x((*data).backing);
-    } else {
-      px = window_copy_find_length(wme, py);
-    }
-    window_copy_update_cursor(wme, px, (*data).cy);
-    if (window_copy_update_selection(wme, 1, 0)) {
-      window_copy_redraw_lines(wme, (*data).cy, 1);
-    }
-  } else if ((*data).lineflag == LINE_SEL_RIGHT_LEFT) {
-    window_copy_update_cursor(wme, 0, (*data).cy);
-    if (window_copy_update_selection(wme, 1, 0)) {
-      window_copy_redraw_lines(wme, (*data).cy, 1);
-    }
-  }
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_cursor_jump(struct window_mode_entry *wme) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *back_s = (*data).backing;
-  struct grid_reader gr;
-  u_int px, py, oldy, hsize;
+pub unsafe extern "C" fn window_copy_set_selection(
+    wme: *mut window_mode_entry,
+    may_redraw: i32,
+    no_reset: i32,
+) -> i32 {
+    unsafe {
+        let mut wp: *mut window_pane = (*wme).wp;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut s: *mut screen = &raw mut (*data).screen;
+        let mut oo: *mut options = (*(*wp).window).options;
+        let mut gc: grid_cell = zeroed();
+        // u_int sx, sy, cy, endsx, endsy;
+        // int startrelpos, endrelpos;
 
-  px = (*data).cx + 1;
-  hsize = screen_hsize(back_s);
-  py = hsize + (*data).cy - (*data).oy;
-  oldy = (*data).cy;
+        window_copy_synchronize_cursor(wme, no_reset);
 
-  grid_reader_start(&gr, (*back_s).grid, px, py);
-  if (grid_reader_cursor_jump(&gr, (*data).jumpchar)) {
-    grid_reader_get_cursor(&gr, &px, &py);
-    window_copy_acquire_cursor_down(wme, hsize, screen_size_y(back_s), (*data).oy,
-                                    oldy, px, py, 0);
-  }
-}
-}
+        /* Adjust the selection. */
+        let mut sx = (*data).selx;
+        let mut sy = (*data).sely;
+        let startrelpos = window_copy_adjust_selection(wme, &raw mut sx, &raw mut sy);
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_cursor_jump_back(struct window_mode_entry *wme) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *back_s = (*data).backing;
-  struct grid_reader gr;
-  u_int px, py, oldy, hsize;
+        /* Adjust the end of selection. */
+        let mut endsx = (*data).endselx;
+        let mut endsy = (*data).endsely;
+        let endrelpos = window_copy_adjust_selection(wme, &raw mut endsx, &raw mut endsy);
 
-  px = (*data).cx;
-  hsize = screen_hsize(back_s);
-  py = hsize + (*data).cy - (*data).oy;
-  oldy = (*data).cy;
+        /* Selection is outside of the current screen */
+        if (startrelpos == endrelpos
+            && startrelpos != window_copy_rel_pos::WINDOW_COPY_REL_POS_ON_SCREEN)
+        {
+            screen_hide_selection(s);
+            return 0;
+        }
 
-  grid_reader_start(&gr, (*back_s).grid, px, py);
-  grid_reader_cursor_left(&gr, 0);
-  if (grid_reader_cursor_jump_back(&gr, (*data).jumpchar)) {
-    grid_reader_get_cursor(&gr, &px, &py);
-    window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
-  }
-}
-}
+        /* Set colours and selection. */
+        style_apply(&raw mut gc, oo, c"mode-style".as_ptr(), null_mut());
+        gc.flags |= grid_flag::NOPALETTE;
+        screen_set_selection(
+            s,
+            sx,
+            sy,
+            endsx,
+            endsy,
+            (*data).rectflag as u32,
+            (*data).modekeys,
+            &raw mut gc,
+        );
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_cursor_jump_to(struct window_mode_entry *wme) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *back_s = (*data).backing;
-  struct grid_reader gr;
-  u_int px, py, oldy, hsize;
+        if ((*data).rectflag != 0 && may_redraw != 0) {
+            /*
+             * Can't rely on the caller to redraw the right lines for
+             * rectangle selection - find the highest line and the number
+             * of lines, and redraw just past that in both directions
+             */
+            let cy = (*data).cy;
+            if ((*data).cursordrag == cursordrag::CURSORDRAG_ENDSEL) {
+                if (sy < cy) {
+                    window_copy_redraw_lines(wme, sy, cy - sy + 1);
+                } else {
+                    window_copy_redraw_lines(wme, cy, sy - cy + 1);
+                }
+            } else {
+                if (endsy < cy) {
+                    window_copy_redraw_lines(wme, endsy, cy - endsy + 1);
+                } else {
+                    window_copy_redraw_lines(wme, cy, endsy - cy + 1);
+                }
+            }
+        }
 
-  px = (*data).cx + 2;
-  hsize = screen_hsize(back_s);
-  py = hsize + (*data).cy - (*data).oy;
-  oldy = (*data).cy;
-
-  grid_reader_start(&gr, (*back_s).grid, px, py);
-  if (grid_reader_cursor_jump(&gr, (*data).jumpchar)) {
-    grid_reader_cursor_left(&gr, 1);
-    grid_reader_get_cursor(&gr, &px, &py);
-    window_copy_acquire_cursor_down(wme, hsize, screen_size_y(back_s), (*data).oy,
-                                    oldy, px, py, 0);
-  }
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_cursor_jump_to_back(struct window_mode_entry *wme) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *back_s = (*data).backing;
-  struct grid_reader gr;
-  u_int px, py, oldy, hsize;
-
-  px = (*data).cx;
-  hsize = screen_hsize(back_s);
-  py = hsize + (*data).cy - (*data).oy;
-  oldy = (*data).cy;
-
-  grid_reader_start(&gr, (*back_s).grid, px, py);
-  grid_reader_cursor_left(&gr, 0);
-  grid_reader_cursor_left(&gr, 0);
-  if (grid_reader_cursor_jump_back(&gr, (*data).jumpchar)) {
-    grid_reader_cursor_right(&gr, 1, 0);
-    grid_reader_get_cursor(&gr, &px, &py);
-    window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
-  }
-}
+        1
+    }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_cursor_next_word(struct window_mode_entry *wme, const char *separators) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *back_s = (*data).backing;
-  struct grid_reader gr;
-  u_int px, py, oldy, hsize;
+pub unsafe extern "C" fn window_copy_get_selection(
+    wme: *mut window_mode_entry,
+    len: *mut usize,
+) -> *mut c_char {
+    unsafe {
+        let mut wp: *mut window_pane = (*wme).wp;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut s: *mut screen = &raw mut (*data).screen;
 
-  px = (*data).cx;
-  hsize = screen_hsize(back_s);
-  py = hsize + (*data).cy - (*data).oy;
-  oldy = (*data).cy;
+        let mut buf: *mut c_char = null_mut();
+        let mut off: usize = 0;
 
-  grid_reader_start(&gr, (*back_s).grid, px, py);
-  grid_reader_cursor_next_word(&gr, separators);
-  grid_reader_get_cursor(&gr, &px, &py);
-  window_copy_acquire_cursor_down(wme, hsize, screen_size_y(back_s), (*data).oy,
-                                  oldy, px, py, 0);
+        // u_int i, xx, yy, sx, sy, ex, ey, ey_last;
+        // u_int firstsx, lastex, restex, restsx, selx;
+
+        let mut lastex = 0;
+        let mut restex = 0;
+        let mut firstsx = 0;
+        let mut restsx = 0;
+
+        if ((*data).screen.sel.is_null() && (*data).lineflag == line_sel::LINE_SEL_NONE) {
+            buf = window_copy_match_at_cursor(data);
+            if (!buf.is_null()) {
+                *len = strlen(buf);
+            } else {
+                *len = 0;
+            }
+            return buf;
+        }
+
+        buf = xmalloc(1).as_ptr().cast();
+        off = 0;
+
+        *buf = b'\0' as i8;
+
+        /*
+         * The selection extends from selx,sely to (adjusted) cx,cy on
+         * the base screen.
+         */
+
+        /* Find start and end. */
+        let mut xx = (*data).endselx;
+        let mut yy = (*data).endsely;
+        let (sx, sy, mut ex, ey) =
+            if (yy < (*data).sely || (yy == (*data).sely && xx < (*data).selx)) {
+                (xx, yy, (*data).selx, (*data).sely)
+            } else {
+                ((*data).selx, (*data).sely, xx, yy)
+            };
+
+        /* Trim ex to end of line. */
+        let mut ey_last = window_copy_find_length(wme, ey);
+        if (ex > ey_last) {
+            ex = ey_last;
+        }
+
+        /*
+         * Deal with rectangle-copy if necessary; four situations: start of
+         * first line (firstsx), end of last line (lastex), start (restsx) and
+         * end (restex) of all other lines.
+         */
+        xx = screen_size_x(s);
+
+        /*
+         * Behave according to mode-keys. If it is emacs, copy like emacs,
+         * keeping the top-left-most character, and dropping the
+         * bottom-right-most, regardless of copy direction. If it is vi, also
+         * keep bottom-right-most character.
+         */
+        let mut keys: i32 =
+            options_get_number((*(*wp).window).options, c"mode-keys".as_ptr()) as i32;
+        if ((*data).rectflag != 0) {
+            /*
+             * Need to ignore the column with the cursor in it, which for
+             * rectangular copy means knowing which side the cursor is on.
+             */
+            let mut selx = if ((*data).cursordrag == cursordrag::CURSORDRAG_ENDSEL) {
+                (*data).selx
+            } else {
+                (*data).endselx
+            };
+
+            if (selx < (*data).cx) {
+                /* Selection start is on the left. */
+                if (keys == MODEKEY_EMACS) {
+                    lastex = (*data).cx;
+                    restex = (*data).cx;
+                } else {
+                    lastex = (*data).cx + 1;
+                    restex = (*data).cx + 1;
+                }
+                firstsx = selx;
+                restsx = selx;
+            } else {
+                /* Cursor is on the left. */
+                lastex = selx + 1;
+                restex = selx + 1;
+                firstsx = (*data).cx;
+                restsx = (*data).cx;
+            }
+        } else {
+            if (keys == MODEKEY_EMACS) {
+                lastex = ex;
+            } else {
+                lastex = ex + 1;
+            }
+            restex = xx;
+            firstsx = sx;
+            restsx = 0;
+        }
+
+        /* Copy the lines. */
+        for i in sy..=ey {
+            window_copy_copy_line(
+                wme,
+                &raw mut buf,
+                &raw mut off,
+                i,
+                if (i == sy) { firstsx } else { restsx },
+                if (i == ey) { lastex } else { restex },
+            );
+        }
+
+        /* Don't bother if no data. */
+        if (off == 0) {
+            free_(buf);
+            *len = 0;
+            return null_mut();
+        }
+        /* Remove final \n (unless at end in vi mode). */
+        if (keys == MODEKEY_EMACS || lastex <= ey_last) {
+            if !(*grid_get_line((*(*data).backing).grid, ey))
+                .flags
+                .intersects(grid_line_flag::WRAPPED)
+                || lastex != ey_last
+            {
+                off -= 1;
+            }
+        }
+        *len = off;
+        buf
+    }
 }
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_copy_buffer(
+    wme: *mut window_mode_entry,
+    prefix: *const c_char,
+    buf: *mut c_void,
+    len: usize,
+) {
+    unsafe {
+        let mut wp: *mut window_pane = (*wme).wp;
+        let mut ctx: screen_write_ctx = zeroed();
+
+        if (options_get_number(global_options, c"set-clipboard".as_ptr()) != 0) {
+            screen_write_start_pane(&raw mut ctx, wp, null_mut());
+            screen_write_setselection(&raw mut ctx, c"".as_ptr(), buf.cast(), len as u32);
+            screen_write_stop(&raw mut ctx);
+            notify_pane(c"pane-set-clipboard".as_ptr(), wp);
+        }
+
+        paste_add(prefix, buf.cast(), len);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_pipe_run(
+    wme: *mut window_mode_entry,
+    s: *mut session,
+    mut cmd: *const c_char,
+    len: *mut usize,
+) -> *mut c_void {
+    unsafe {
+        let buf = window_copy_get_selection(wme, len);
+        if (cmd.is_null() || *cmd == b'\0' as i8) {
+            cmd = options_get_string(global_options, c"copy-command".as_ptr());
+        }
+        if (!cmd.is_null() && *cmd != b'\0' as i8) {
+            let job = job_run(
+                cmd,
+                0,
+                null_mut(),
+                null_mut(),
+                s,
+                null_mut(),
+                None,
+                None,
+                None,
+                null_mut(),
+                JOB_NOWAIT,
+                -1,
+                -1,
+            );
+            bufferevent_write(job_get_event(job), buf.cast(), *len);
+        }
+        buf.cast()
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_pipe(
+    wme: *mut window_mode_entry,
+    s: *mut session,
+    cmd: *const c_char,
+) {
+    unsafe {
+        let mut len: usize = 0;
+
+        window_copy_pipe_run(wme, s, cmd, &raw mut len);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_copy_pipe(
+    wme: *mut window_mode_entry,
+    s: *mut session,
+    prefix: *const c_char,
+    cmd: *const c_char,
+) {
+    unsafe {
+        let mut len: usize = 0;
+        let buf = window_copy_pipe_run(wme, s, cmd, &raw mut len);
+        if (!buf.is_null()) {
+            window_copy_copy_buffer(wme, prefix, buf, len);
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_copy_selection(
+    wme: *mut window_mode_entry,
+    prefix: *const c_char,
+) {
+    unsafe {
+        let mut len: usize = 0;
+        let buf = window_copy_get_selection(wme, &raw mut len);
+        if (!buf.is_null()) {
+            window_copy_copy_buffer(wme, prefix, buf.cast(), len);
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_append_selection(wme: *mut window_mode_entry) {
+    unsafe {
+        let mut wp: *mut window_pane = (*wme).wp;
+        let mut pb: *mut paste_buffer = null_mut();
+        let mut bufdata: *const c_char = null_mut();
+        let mut bufname: *const c_char = null();
+        let mut ctx: screen_write_ctx = zeroed();
+        let mut bufsize = 0;
+        let mut len: usize = 0;
+        let mut buf = window_copy_get_selection(wme, &raw mut len);
+        if (buf.is_null()) {
+            return;
+        }
+
+        if (options_get_number(global_options, c"set-clipboard".as_ptr()) != 0) {
+            screen_write_start_pane(&raw mut ctx, wp, null_mut());
+            screen_write_setselection(&raw mut ctx, c"".as_ptr(), buf.cast(), len as u32);
+            screen_write_stop(&raw mut ctx);
+            notify_pane(c"pane-set-clipboard".as_ptr(), wp);
+        }
+
+        pb = paste_get_top(&raw mut bufname);
+        if (!pb.is_null()) {
+            bufdata = paste_buffer_data(pb, &raw mut bufsize);
+            buf = xrealloc(buf.cast(), len + bufsize).as_ptr().cast();
+            libc::memmove(buf.add(bufsize).cast(), buf.cast(), len);
+            libc::memcpy(buf.cast(), bufdata.cast(), bufsize);
+            len += bufsize;
+        }
+        if (paste_set(buf, len, bufname, null_mut()) != 0) {
+            free_(buf);
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_copy_line(
+    wme: *mut window_mode_entry,
+    buf: *mut *mut c_char,
+    off: *mut usize,
+    sy: u32,
+    mut sx: u32,
+    mut ex: u32,
+) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut gd: *mut grid = (*(*data).backing).grid;
+        let mut gc: grid_cell = zeroed();
+        let mut ud: utf8_data = zeroed();
+        // const char *s;
+        let mut wrapped: u32 = 0;
+
+        if (sx > ex) {
+            return;
+        }
+
+        /*
+         * Work out if the line was wrapped at the screen edge and all of it is
+         * on screen.
+         */
+        let gl = grid_get_line(gd, sy);
+        if ((*gl).flags.intersects(grid_line_flag::WRAPPED) && (*gl).cellsize <= (*gd).sx) {
+            wrapped = 1;
+        }
+
+        /* If the line was wrapped, don't strip spaces (use the full length). */
+        let xx = if (wrapped != 0) {
+            (*gl).cellsize
+        } else {
+            window_copy_find_length(wme, sy)
+        };
+
+        if (ex > xx) {
+            ex = xx;
+        }
+        if (sx > xx) {
+            sx = xx;
+        }
+
+        if (sx < ex) {
+            for i in sx..ex {
+                grid_get_cell(gd, i, sy, &raw mut gc);
+                if gc.flags.intersects(grid_flag::PADDING) {
+                    continue;
+                }
+                utf8_copy(&raw mut ud, &raw mut gc.data);
+                if (ud.size == 1 && (gc.attr & GRID_ATTR_CHARSET != 0)) {
+                    let s = tty_acs_get(null_mut(), ud.data[0]);
+                    if (!s.is_null() && strlen(s) <= UTF8_SIZE) {
+                        ud.size = strlen(s) as u8;
+                        libc::memcpy((&raw mut ud.data).cast(), s.cast(), ud.size as usize);
+                    }
+                }
+
+                *buf = xrealloc((*buf).cast(), (*off) + ud.size as usize)
+                    .as_ptr()
+                    .cast();
+                libc::memcpy(
+                    (*buf).add(*off).cast(),
+                    (&raw const ud.data).cast(),
+                    ud.size as usize,
+                );
+                *off += ud.size as usize;
+            }
+        }
+
+        /* Only add a newline if the line wasn't wrapped. */
+        if (wrapped == 0 || ex != xx) {
+            *buf = xrealloc((*buf).cast(), (*off) + 1).as_ptr().cast();
+            *(*buf).add((*off)) = b'\n' as i8;
+            (*off) += 1;
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_clear_selection(wme: *mut window_mode_entry) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+
+        screen_clear_selection(&raw mut (*data).screen);
+
+        (*data).cursordrag = cursordrag::CURSORDRAG_NONE;
+        (*data).lineflag = line_sel::LINE_SEL_NONE;
+        (*data).selflag = selflag::SEL_CHAR;
+
+        let py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+        let px = window_copy_find_length(wme, py);
+        if ((*data).cx > px) {
+            window_copy_update_cursor(wme, px, (*data).cy);
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_in_set(
+    wme: *mut window_mode_entry,
+    px: u32,
+    py: u32,
+    set: *const c_char,
+) -> i32 {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut gc: grid_cell = zeroed();
+
+        grid_get_cell((*(*data).backing).grid, px, py, &raw mut gc);
+        if gc.flags.intersects(grid_flag::PADDING) {
+            return 0;
+        }
+        utf8_cstrhas(set, &raw mut gc.data)
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_find_length(wme: *mut window_mode_entry, py: u32) -> u32 {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+
+        grid_line_length((*(*data).backing).grid, py)
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cursor_start_of_line(wme: *mut window_mode_entry) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut back_s: *mut screen = (*data).backing;
+        let mut gr: grid_reader = zeroed();
+
+        let mut px = (*data).cx;
+        let hsize = screen_hsize(back_s);
+        let mut py = hsize + (*data).cy - (*data).oy;
+        let oldy = (*data).cy;
+
+        grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
+        grid_reader_cursor_start_of_line(&raw mut gr, 1);
+        grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cursor_back_to_indentation(wme: *mut window_mode_entry) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut back_s: *mut screen = (*data).backing;
+        let mut gr: grid_reader = zeroed();
+
+        let mut px = (*data).cx;
+        let mut hsize = screen_hsize(back_s);
+        let mut py = hsize + (*data).cy - (*data).oy;
+        let mut oldy = (*data).cy;
+
+        grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
+        grid_reader_cursor_back_to_indentation(&raw mut gr);
+        grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cursor_end_of_line(wme: *mut window_mode_entry) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut back_s: *mut screen = (*data).backing;
+        let mut gr: grid_reader = zeroed();
+
+        let mut px = (*data).cx;
+        let mut hsize = screen_hsize(back_s);
+        let mut py = hsize + (*data).cy - (*data).oy;
+        let mut oldy = (*data).cy;
+
+        grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
+        if (!(*data).screen.sel.is_null() && (*data).rectflag != 0) {
+            grid_reader_cursor_end_of_line(&raw mut gr, 1, 1);
+        } else {
+            grid_reader_cursor_end_of_line(&raw mut gr, 1, 0);
+        }
+        grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        window_copy_acquire_cursor_down(
+            wme,
+            hsize,
+            screen_size_y(back_s),
+            (*data).oy,
+            oldy,
+            px,
+            py,
+            0,
+        );
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_other_end(wme: *mut window_mode_entry) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut s: *mut screen = &raw mut (*data).screen;
+        // u_int selx, sely, cy, yy, hsize;
+
+        if ((*s).sel.is_null() && (*data).lineflag == line_sel::LINE_SEL_NONE) {
+            return;
+        }
+
+        if ((*data).lineflag == line_sel::LINE_SEL_LEFT_RIGHT) {
+            (*data).lineflag = line_sel::LINE_SEL_RIGHT_LEFT;
+        } else if ((*data).lineflag == line_sel::LINE_SEL_RIGHT_LEFT) {
+            (*data).lineflag = line_sel::LINE_SEL_LEFT_RIGHT;
+        }
+
+        match ((*data).cursordrag) {
+            cursordrag::CURSORDRAG_NONE | cursordrag::CURSORDRAG_SEL => {
+                (*data).cursordrag = cursordrag::CURSORDRAG_ENDSEL
+            }
+            cursordrag::CURSORDRAG_ENDSEL => (*data).cursordrag = cursordrag::CURSORDRAG_SEL,
+        }
+
+        let mut selx = (*data).endselx;
+        let mut sely = (*data).endsely;
+        if ((*data).cursordrag == cursordrag::CURSORDRAG_SEL) {
+            selx = (*data).selx;
+            sely = (*data).sely;
+        }
+
+        let mut cy = (*data).cy;
+        let mut yy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+
+        (*data).cx = selx;
+
+        let mut hsize = screen_hsize((*data).backing);
+        if (sely < hsize - (*data).oy) {
+            /* above */
+            (*data).oy = hsize - sely;
+            (*data).cy = 0;
+        } else if (sely > hsize - (*data).oy + screen_size_y(s)) {
+            /* below */
+            (*data).oy = hsize - sely + screen_size_y(s) - 1;
+            (*data).cy = screen_size_y(s) - 1;
+        } else {
+            (*data).cy = cy + sely - yy;
+        }
+
+        window_copy_update_selection(wme, 1, 1);
+        window_copy_redraw_screen(wme);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cursor_left(wme: *mut window_mode_entry) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut back_s: *mut screen = (*data).backing;
+        let mut gr: grid_reader = zeroed();
+
+        let mut px = (*data).cx;
+        let mut hsize = screen_hsize(back_s);
+        let mut py = hsize + (*data).cy - (*data).oy;
+        let mut oldy = (*data).cy;
+
+        grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
+        grid_reader_cursor_left(&raw mut gr, 1);
+        grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cursor_right(wme: *mut window_mode_entry, all: i32) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut back_s: *mut screen = (*data).backing;
+        let mut gr: grid_reader = zeroed();
+
+        let mut px = (*data).cx;
+        let mut hsize = screen_hsize(back_s);
+        let mut py = hsize + (*data).cy - (*data).oy;
+        let mut oldy = (*data).cy;
+
+        grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
+        grid_reader_cursor_right(&raw mut gr, 1, all);
+        grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        window_copy_acquire_cursor_down(
+            wme,
+            hsize,
+            screen_size_y(back_s),
+            (*data).oy,
+            oldy,
+            px,
+            py,
+            0,
+        );
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cursor_up(wme: *mut window_mode_entry, scroll_only: i32) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut s: *mut screen = &raw mut (*data).screen;
+        let mut px = 0;
+        let mut py = 0;
+
+        let mut norectsel = (*data).screen.sel.is_null() || (*data).rectflag == 0;
+        let mut oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+        let mut ox = window_copy_find_length(wme, oy);
+        if (norectsel && (*data).cx != ox) {
+            (*data).lastcx = (*data).cx;
+            (*data).lastsx = ox;
+        }
+
+        if ((*data).lineflag == line_sel::LINE_SEL_LEFT_RIGHT && oy == (*data).sely) {
+            window_copy_other_end(wme);
+        }
+
+        if (scroll_only != 0 || (*data).cy == 0) {
+            if (norectsel) {
+                (*data).cx = (*data).lastcx;
+            }
+            window_copy_scroll_down(wme, 1);
+            if (scroll_only != 0) {
+                if ((*data).cy == screen_size_y(s) - 1) {
+                    window_copy_redraw_lines(wme, (*data).cy, 1);
+                } else {
+                    window_copy_redraw_lines(wme, (*data).cy, 2);
+                }
+            }
+        } else {
+            if (norectsel) {
+                window_copy_update_cursor(wme, (*data).lastcx, (*data).cy - 1);
+            } else {
+                window_copy_update_cursor(wme, (*data).cx, (*data).cy - 1);
+            }
+            if (window_copy_update_selection(wme, 1, 0) != 0) {
+                if ((*data).cy == screen_size_y(s) - 1) {
+                    window_copy_redraw_lines(wme, (*data).cy, 1);
+                } else {
+                    window_copy_redraw_lines(wme, (*data).cy, 2);
+                }
+            }
+        }
+
+        if (norectsel) {
+            py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+            px = window_copy_find_length(wme, py);
+            if (((*data).cx >= (*data).lastsx && (*data).cx != px) || (*data).cx > px) {
+                window_copy_update_cursor(wme, px, (*data).cy);
+                if (window_copy_update_selection(wme, 1, 0) != 0) {
+                    window_copy_redraw_lines(wme, (*data).cy, 1);
+                }
+            }
+        }
+
+        if ((*data).lineflag == line_sel::LINE_SEL_LEFT_RIGHT) {
+            py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+            if ((*data).rectflag != 0) {
+                px = screen_size_x((*data).backing);
+            } else {
+                px = window_copy_find_length(wme, py);
+            }
+            window_copy_update_cursor(wme, px, (*data).cy);
+            if (window_copy_update_selection(wme, 1, 0) != 0) {
+                window_copy_redraw_lines(wme, (*data).cy, 1);
+            }
+        } else if ((*data).lineflag == line_sel::LINE_SEL_RIGHT_LEFT) {
+            window_copy_update_cursor(wme, 0, (*data).cy);
+            if (window_copy_update_selection(wme, 1, 0) != 0) {
+                window_copy_redraw_lines(wme, (*data).cy, 1);
+            }
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cursor_down(wme: *mut window_mode_entry, scroll_only: i32) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut s: *mut screen = &raw mut (*data).screen;
+        let mut px = 0;
+        let mut py = 0;
+
+        let mut norectsel = (*data).screen.sel.is_null() || (*data).rectflag == 0;
+        let mut oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+        let mut ox = window_copy_find_length(wme, oy);
+        if (norectsel && (*data).cx != ox) {
+            (*data).lastcx = (*data).cx;
+            (*data).lastsx = ox;
+        }
+
+        if ((*data).lineflag == line_sel::LINE_SEL_RIGHT_LEFT && oy == (*data).endsely) {
+            window_copy_other_end(wme);
+        }
+
+        if (scroll_only != 0 || (*data).cy == screen_size_y(s) - 1) {
+            if (norectsel) {
+                (*data).cx = (*data).lastcx;
+            }
+            window_copy_scroll_up(wme, 1);
+            if (scroll_only != 0 && (*data).cy > 0) {
+                window_copy_redraw_lines(wme, (*data).cy - 1, 2);
+            }
+        } else {
+            if (norectsel) {
+                window_copy_update_cursor(wme, (*data).lastcx, (*data).cy + 1);
+            } else {
+                window_copy_update_cursor(wme, (*data).cx, (*data).cy + 1);
+            }
+            if (window_copy_update_selection(wme, 1, 0) != 0) {
+                window_copy_redraw_lines(wme, (*data).cy - 1, 2);
+            }
+        }
+
+        if (norectsel) {
+            py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+            px = window_copy_find_length(wme, py);
+            if (((*data).cx >= (*data).lastsx && (*data).cx != px) || (*data).cx > px) {
+                window_copy_update_cursor(wme, px, (*data).cy);
+                if (window_copy_update_selection(wme, 1, 0) != 0) {
+                    window_copy_redraw_lines(wme, (*data).cy, 1);
+                }
+            }
+        }
+
+        if ((*data).lineflag == line_sel::LINE_SEL_LEFT_RIGHT) {
+            py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+            if ((*data).rectflag != 0) {
+                px = screen_size_x((*data).backing);
+            } else {
+                px = window_copy_find_length(wme, py);
+            }
+            window_copy_update_cursor(wme, px, (*data).cy);
+            if (window_copy_update_selection(wme, 1, 0) != 0) {
+                window_copy_redraw_lines(wme, (*data).cy, 1);
+            }
+        } else if ((*data).lineflag == line_sel::LINE_SEL_RIGHT_LEFT) {
+            window_copy_update_cursor(wme, 0, (*data).cy);
+            if (window_copy_update_selection(wme, 1, 0) != 0) {
+                window_copy_redraw_lines(wme, (*data).cy, 1);
+            }
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cursor_jump(wme: *mut window_mode_entry) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut back_s: *mut screen = (*data).backing;
+        let mut gr: grid_reader = zeroed();
+
+        let mut px = (*data).cx + 1;
+        let mut hsize = screen_hsize(back_s);
+        let mut py = hsize + (*data).cy - (*data).oy;
+        let mut oldy = (*data).cy;
+
+        grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
+        if (grid_reader_cursor_jump(&raw mut gr, (*data).jumpchar) != 0) {
+            grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+            window_copy_acquire_cursor_down(
+                wme,
+                hsize,
+                screen_size_y(back_s),
+                (*data).oy,
+                oldy,
+                px,
+                py,
+                0,
+            );
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cursor_jump_back(wme: *mut window_mode_entry) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut back_s: *mut screen = (*data).backing;
+        let mut gr: grid_reader = zeroed();
+
+        let mut px = (*data).cx;
+        let mut hsize = screen_hsize(back_s);
+        let mut py = hsize + (*data).cy - (*data).oy;
+        let mut oldy = (*data).cy;
+
+        grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
+        grid_reader_cursor_left(&raw mut gr, 0);
+        if (grid_reader_cursor_jump_back(&raw mut gr, (*data).jumpchar) != 0) {
+            grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+            window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cursor_jump_to(wme: *mut window_mode_entry) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut back_s: *mut screen = (*data).backing;
+        let mut gr: grid_reader = zeroed();
+
+        let mut px = (*data).cx + 2;
+        let mut hsize = screen_hsize(back_s);
+        let mut py = hsize + (*data).cy - (*data).oy;
+        let mut oldy = (*data).cy;
+
+        grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
+        if (grid_reader_cursor_jump(&raw mut gr, (*data).jumpchar) != 0) {
+            grid_reader_cursor_left(&raw mut gr, 1);
+            grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+            window_copy_acquire_cursor_down(
+                wme,
+                hsize,
+                screen_size_y(back_s),
+                (*data).oy,
+                oldy,
+                px,
+                py,
+                0,
+            );
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cursor_jump_to_back(wme: *mut window_mode_entry) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut back_s: *mut screen = (*data).backing;
+        let mut gr: grid_reader = zeroed();
+
+        let mut px = (*data).cx;
+        let mut hsize = screen_hsize(back_s);
+        let mut py = hsize + (*data).cy - (*data).oy;
+        let mut oldy = (*data).cy;
+
+        grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
+        grid_reader_cursor_left(&raw mut gr, 0);
+        grid_reader_cursor_left(&raw mut gr, 0);
+        if (grid_reader_cursor_jump_back(&raw mut gr, (*data).jumpchar) != 0) {
+            grid_reader_cursor_right(&raw mut gr, 1, 0);
+            grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+            window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cursor_next_word(
+    wme: *mut window_mode_entry,
+    separators: *const c_char,
+) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut back_s: *mut screen = (*data).backing;
+        let mut gr: grid_reader = zeroed();
+
+        let mut px = (*data).cx;
+        let mut hsize = screen_hsize(back_s);
+        let mut py = hsize + (*data).cy - (*data).oy;
+        let mut oldy = (*data).cy;
+
+        grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
+        grid_reader_cursor_next_word(&raw mut gr, separators);
+        grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        window_copy_acquire_cursor_down(
+            wme,
+            hsize,
+            screen_size_y(back_s),
+            (*data).oy,
+            oldy,
+            px,
+            py,
+            0,
+        );
+    }
 }
 
 /* Compute the next place where a word ends. */
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_cursor_next_word_end_pos(struct window_mode_entry *wme, const char *separators, u_int *ppx, u_int *ppy) {
-unsafe {
-  struct window_pane *wp = (*wme).wp;
-  struct window_copy_mode_data *data = (*wme).data;
-  struct options *oo = (*(*wp).window).options;
-  struct screen *back_s = (*data).backing;
-  struct grid_reader gr;
-  u_int px, py, hsize;
+pub unsafe extern "C" fn window_copy_cursor_next_word_end_pos(
+    wme: *mut window_mode_entry,
+    separators: *const c_char,
+    ppx: *mut u32,
+    ppy: *mut u32,
+) {
+    unsafe {
+        let mut wp: *mut window_pane = (*wme).wp;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut oo: *mut options = (*(*wp).window).options;
+        let mut back_s: *mut screen = (*data).backing;
+        let mut gr: grid_reader = zeroed();
 
-  px = (*data).cx;
-  hsize = screen_hsize(back_s);
-  py = hsize + (*data).cy - (*data).oy;
+        let mut px = (*data).cx;
+        let mut hsize = screen_hsize(back_s);
+        let mut py = hsize + (*data).cy - (*data).oy;
 
-  grid_reader_start(&gr, (*back_s).grid, px, py);
-  if (options_get_number(oo, "mode-keys") == MODEKEY_VI) {
-    if (!grid_reader_in_set(&gr, WHITESPACE)) {
-      grid_reader_cursor_right(&gr, 0, 0);
+        grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
+        if (options_get_number(oo, c"mode-keys".as_ptr()) == MODEKEY_VI as i64) {
+            if (grid_reader_in_set(&raw mut gr, WHITESPACE.as_ptr()) == 0) {
+                grid_reader_cursor_right(&raw mut gr, 0, 0);
+            }
+            grid_reader_cursor_next_word_end(&raw mut gr, separators);
+            grid_reader_cursor_left(&raw mut gr, 1);
+        } else {
+            grid_reader_cursor_next_word_end(&raw mut gr, separators);
+        }
+        grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        *ppx = px;
+        *ppy = py;
     }
-    grid_reader_cursor_next_word_end(&gr, separators);
-    grid_reader_cursor_left(&gr, 1);
-  } else {
-    grid_reader_cursor_next_word_end(&gr, separators);
-  }
-  grid_reader_get_cursor(&gr, &px, &py);
-  *ppx = px;
-  *ppy = py;
-}
 }
 
 /* Move to the next place where a word ends. */
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_cursor_next_word_end(struct window_mode_entry *wme, const char *separators, int no_reset) {
-unsafe {
-  struct window_pane *wp = (*wme).wp;
-  struct window_copy_mode_data *data = (*wme).data;
-  struct options *oo = (*(*wp).window).options;
-  struct screen *back_s = (*data).backing;
-  struct grid_reader gr;
-  u_int px, py, oldy, hsize;
+pub unsafe extern "C" fn window_copy_cursor_next_word_end(
+    wme: *mut window_mode_entry,
+    separators: *const c_char,
+    no_reset: i32,
+) {
+    unsafe {
+        let mut wp: *mut window_pane = (*wme).wp;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut oo: *mut options = (*(*wp).window).options;
+        let mut back_s: *mut screen = (*data).backing;
+        let mut gr: grid_reader = zeroed();
 
-  px = (*data).cx;
-  hsize = screen_hsize(back_s);
-  py = hsize + (*data).cy - (*data).oy;
-  oldy = (*data).cy;
+        let mut px = (*data).cx;
+        let mut hsize = screen_hsize(back_s);
+        let mut py = hsize + (*data).cy - (*data).oy;
+        let mut oldy = (*data).cy;
 
-  grid_reader_start(&gr, (*back_s).grid, px, py);
-  if (options_get_number(oo, "mode-keys") == MODEKEY_VI) {
-    if (!grid_reader_in_set(&gr, WHITESPACE)) {
-      grid_reader_cursor_right(&gr, 0, 0);
+        grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
+        if (options_get_number(oo, c"mode-keys".as_ptr()) == MODEKEY_VI as i64) {
+            if (grid_reader_in_set(&raw mut gr, WHITESPACE.as_ptr()) == 0) {
+                grid_reader_cursor_right(&raw mut gr, 0, 0);
+            }
+            grid_reader_cursor_next_word_end(&raw mut gr, separators);
+            grid_reader_cursor_left(&raw mut gr, 1);
+        } else {
+            grid_reader_cursor_next_word_end(&raw mut gr, separators);
+        }
+        grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        window_copy_acquire_cursor_down(
+            wme,
+            hsize,
+            screen_size_y(back_s),
+            (*data).oy,
+            oldy,
+            px,
+            py,
+            no_reset,
+        );
     }
-    grid_reader_cursor_next_word_end(&gr, separators);
-    grid_reader_cursor_left(&gr, 1);
-  } else {
-    grid_reader_cursor_next_word_end(&gr, separators);
-  }
-  grid_reader_get_cursor(&gr, &px, &py);
-  window_copy_acquire_cursor_down(wme, hsize, screen_size_y(back_s), (*data).oy,
-                                  oldy, px, py, no_reset);
-}
 }
 
 /* Compute the previous place where a word begins. */
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_cursor_previous_word_pos(struct window_mode_entry *wme, const char *separators, u_int *ppx, u_int *ppy) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *back_s = (*data).backing;
-  struct grid_reader gr;
-  u_int px, py, hsize;
+pub unsafe extern "C" fn window_copy_cursor_previous_word_pos(
+    wme: *mut window_mode_entry,
+    separators: *const c_char,
+    ppx: *mut u32,
+    ppy: *mut u32,
+) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut back_s: *mut screen = (*data).backing;
+        let mut gr: grid_reader = zeroed();
 
-  px = (*data).cx;
-  hsize = screen_hsize(back_s);
-  py = hsize + (*data).cy - (*data).oy;
+        let mut px = (*data).cx;
+        let mut hsize = screen_hsize(back_s);
+        let mut py = hsize + (*data).cy - (*data).oy;
 
-  grid_reader_start(&gr, (*back_s).grid, px, py);
-  grid_reader_cursor_previous_word(&gr, separators, /* already= */ 0,
-                                   /* stop_at_eol= */ 1);
-  grid_reader_get_cursor(&gr, &px, &py);
-  *ppx = px;
-  *ppy = py;
-}
+        grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
+        grid_reader_cursor_previous_word(
+            &raw mut gr,
+            separators,
+            /* already= */ 0,
+            /* stop_at_eol= */ 1,
+        );
+        grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        *ppx = px;
+        *ppy = py;
+    }
 }
 
 /* Move to the previous place where a word begins. */
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_cursor_previous_word(struct window_mode_entry *wme, const char *separators, int already) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct window *w = (*(*wme).wp).window;
-  struct screen *back_s = (*data).backing;
-  struct grid_reader gr;
-  u_int px, py, oldy, hsize;
-  int stop_at_eol;
+pub unsafe extern "C" fn window_copy_cursor_previous_word(
+    wme: *mut window_mode_entry,
+    separators: *const c_char,
+    already: i32,
+) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut w: *mut window = (*(*wme).wp).window;
+        let mut back_s: *mut screen = (*data).backing;
+        let mut gr: grid_reader = zeroed();
 
-  if (options_get_number((*w).options, "mode-keys") == MODEKEY_EMACS) {
-    stop_at_eol = 1;
-  } else {
-    stop_at_eol = 0;
-  }
+        let stop_at_eol =
+            if (options_get_number((*w).options, c"mode-keys".as_ptr()) == MODEKEY_EMACS as i64) {
+                1
+            } else {
+                0
+            };
 
-  px = (*data).cx;
-  hsize = screen_hsize(back_s);
-  py = hsize + (*data).cy - (*data).oy;
-  oldy = (*data).cy;
+        let mut px = (*data).cx;
+        let mut hsize = screen_hsize(back_s);
+        let mut py = hsize + (*data).cy - (*data).oy;
+        let mut oldy = (*data).cy;
 
-  grid_reader_start(&gr, (*back_s).grid, px, py);
-  grid_reader_cursor_previous_word(&gr, separators, already, stop_at_eol);
-  grid_reader_get_cursor(&gr, &px, &py);
-  window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_cursor_prompt(struct window_mode_entry *wme, int direction, const char *args) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *s = (*data).backing;
-  struct grid *gd = (*s).grid;
-  u_int end_line;
-  u_int line = (*gd).hsize - (*data).oy + (*data).cy;
-  int add, line_flag;
-
-  if (args != NULL && strcmp(args, "-o") == 0) {
-    line_flag = GRID_LINE_START_OUTPUT;
-  } else {
-    line_flag = GRID_LINE_START_PROMPT;
-  }
-
-  if (direction == 0) { /* up */
-    add = -1;
-    end_line = 0;
-  } else { /* down */
-    add = 1;
-    end_line = (*gd).hsize + (*gd).sy - 1;
-  }
-
-  if (line == end_line) {
-    return;
-  }
-  for (;;) {
-    if (line == end_line) {
-      return;
+        grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
+        grid_reader_cursor_previous_word(&raw mut gr, separators, already, stop_at_eol);
+        grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
     }
-    line += add;
+}
 
-    if ((*grid_get_line(gd, line)).flags & line_flag) {
-      break;
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_cursor_prompt(
+    wme: *mut window_mode_entry,
+    direction: i32,
+    args: *const c_char,
+) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut s: *mut screen = (*data).backing;
+        let mut gd: *mut grid = (*s).grid;
+        let mut line = (*gd).hsize - (*data).oy + (*data).cy;
+        let mut end_line: u32 = 0;
+        let mut add: i32 = 0;
+
+        let line_flag = if (!args.is_null() && libc::strcmp(args, c"-o".as_ptr()) == 0) {
+            grid_line_flag::START_OUTPUT
+        } else {
+            grid_line_flag::START_PROMPT
+        };
+
+        if (direction == 0) {
+            /* up */
+            add = -1;
+            end_line = 0;
+        } else {
+            /* down */
+            add = 1;
+            end_line = (*gd).hsize + (*gd).sy - 1;
+        }
+
+        if (line == end_line) {
+            return;
+        }
+        loop {
+            if (line == end_line) {
+                return;
+            }
+            line += add as u32;
+
+            if (*grid_get_line(gd, line)).flags.intersects(line_flag) {
+                break;
+            }
+        }
+
+        (*data).cx = 0;
+        if (line > (*gd).hsize) {
+            (*data).cy = line - (*gd).hsize;
+            (*data).oy = 0;
+        } else {
+            (*data).cy = 0;
+            (*data).oy = (*gd).hsize - line;
+        }
+
+        window_copy_update_selection(wme, 1, 0);
+        window_copy_redraw_screen(wme);
     }
-  }
-
-  (*data).cx = 0;
-  if (line > (*gd).hsize) {
-    (*data).cy = line - (*gd).hsize;
-    (*data).oy = 0;
-  } else {
-    (*data).cy = 0;
-    (*data).oy = (*gd).hsize - line;
-  }
-
-  window_copy_update_selection(wme, 1, 0);
-  window_copy_redraw_screen(wme);
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_scroll_up(struct window_mode_entry *wme, u_int ny) {
-unsafe {
-  struct window_pane *wp = (*wme).wp;
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *s = &(*data).screen;
-  struct screen_write_ctx ctx;
+pub unsafe extern "C" fn window_copy_scroll_up(wme: *mut window_mode_entry, mut ny: u32) {
+    unsafe {
+        let mut wp: *mut window_pane = (*wme).wp;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut s: *mut screen = &raw mut (*data).screen;
+        let mut ctx: screen_write_ctx = zeroed();
 
-  if ((*data).oy < ny) {
-    ny = (*data).oy;
-  }
-  if (ny == 0) {
-    return;
-  }
-  (*data).oy -= ny;
+        if ((*data).oy < ny) {
+            ny = (*data).oy;
+        }
+        if (ny == 0) {
+            return;
+        }
+        (*data).oy -= ny;
 
-  if ((*data).searchmark != NULL && !(*data).timeout) {
-    window_copy_search_marks(wme, NULL, (*data).searchregex, 1);
-  }
-  window_copy_update_selection(wme, 0, 0);
+        if ((*data).searchmark.is_null() && (*data).timeout == 0) {
+            window_copy_search_marks(wme, null_mut(), (*data).searchregex, 1);
+        }
+        window_copy_update_selection(wme, 0, 0);
 
-  screen_write_start_pane(&ctx, wp, NULL);
-  screen_write_cursormove(&ctx, 0, 0, 0);
-  screen_write_deleteline(&ctx, ny, 8);
-  window_copy_write_lines(wme, &ctx, screen_size_y(s) - ny, ny);
-  window_copy_write_line(wme, &ctx, 0);
-  if (screen_size_y(s) > 1) {
-    window_copy_write_line(wme, &ctx, 1);
-  }
-  if (screen_size_y(s) > 3) {
-    window_copy_write_line(wme, &ctx, screen_size_y(s) - 2);
-  }
-  if ((*s).sel != NULL && screen_size_y(s) > ny) {
-    window_copy_write_line(wme, &ctx, screen_size_y(s) - ny - 1);
-  }
-  screen_write_cursormove(&ctx, (*data).cx, (*data).cy, 0);
-  screen_write_stop(&ctx);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_scroll_down(struct window_mode_entry *wme, u_int ny) {
-unsafe {
-  struct window_pane *wp = (*wme).wp;
-  struct window_copy_mode_data *data = (*wme).data;
-  struct screen *s = &(*data).screen;
-  struct screen_write_ctx ctx;
-
-  if (ny > screen_hsize((*data).backing)) {
-    return;
-  }
-
-  if ((*data).oy > screen_hsize((*data).backing) - ny) {
-    ny = screen_hsize((*data).backing) - (*data).oy;
-  }
-  if (ny == 0) {
-    return;
-  }
-  (*data).oy += ny;
-
-  if ((*data).searchmark != NULL && !(*data).timeout) {
-    window_copy_search_marks(wme, NULL, (*data).searchregex, 1);
-  }
-  window_copy_update_selection(wme, 0, 0);
-
-  screen_write_start_pane(&ctx, wp, NULL);
-  screen_write_cursormove(&ctx, 0, 0, 0);
-  screen_write_insertline(&ctx, ny, 8);
-  window_copy_write_lines(wme, &ctx, 0, ny);
-  if ((*s).sel != NULL && screen_size_y(s) > ny) {
-    window_copy_write_line(wme, &ctx, ny);
-  } else if (ny == 1) { /* nuke position */
-    window_copy_write_line(wme, &ctx, 1);
-  }
-  screen_write_cursormove(&ctx, (*data).cx, (*data).cy, 0);
-  screen_write_stop(&ctx);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_rectangle_set(struct window_mode_entry *wme, int rectflag) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int px, py;
-
-  (*data).rectflag = rectflag;
-
-  py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-  px = window_copy_find_length(wme, py);
-  if ((*data).cx > px) {
-    window_copy_update_cursor(wme, px, (*data).cy);
-  }
-
-  window_copy_update_selection(wme, 1, 0);
-  window_copy_redraw_screen(wme);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_move_mouse(struct mouse_event *m) {
-unsafe {
-  struct window_pane *wp;
-  struct window_mode_entry *wme;
-  u_int x, y;
-
-  wp = cmd_mouse_pane(m, NULL, NULL);
-  if (wp == NULL) {
-    return;
-  }
-  wme = TAILQ_FIRST(&(*wp).modes);
-  if (wme == NULL) {
-    return;
-  }
-  if ((*wme).mode != &window_copy_mode && (*wme).mode != &window_view_mode) {
-    return;
-  }
-
-  if (cmd_mouse_at(wp, m, &x, &y, 0) != 0) {
-    return;
-  }
-
-  window_copy_update_cursor(wme, x, y);
-}
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-void window_copy_start_drag(struct client *c, struct mouse_event *m) {
-unsafe {
-  struct window_pane *wp;
-  struct window_mode_entry *wme;
-  struct window_copy_mode_data *data;
-  u_int x, y, yg;
-
-  if (c == NULL) {
-    return;
-  }
-
-  wp = cmd_mouse_pane(m, NULL, NULL);
-  if (wp == NULL) {
-    return;
-  }
-  wme = TAILQ_FIRST(&(*wp).modes);
-  if (wme == NULL) {
-    return;
-  }
-  if ((*wme).mode != &window_copy_mode && (*wme).mode != &window_view_mode) {
-    return;
-  }
-
-  if (cmd_mouse_at(wp, m, &x, &y, 1) != 0) {
-    return;
-  }
-
-  (*c).tty.mouse_drag_update = window_copy_drag_update;
-  (*c).tty.mouse_drag_release = window_copy_drag_release;
-
-  data = (*wme).data;
-  yg = screen_hsize((*data).backing) + y - (*data).oy;
-  if (x < (*data).selrx || x > (*data).endselrx || yg != (*data).selry) {
-    (*data).selflag = SEL_CHAR;
-  }
-  switch ((*data).selflag) {
-  case SEL_WORD:
-    if ((*data).separators != NULL) {
-      window_copy_update_cursor(wme, x, y);
-      window_copy_cursor_previous_word_pos(wme, (*data).separators, &x, &y);
-      y -= screen_hsize((*data).backing) - (*data).oy;
+        screen_write_start_pane(&raw mut ctx, wp, null_mut());
+        screen_write_cursormove(&raw mut ctx, 0, 0, 0);
+        screen_write_deleteline(&raw mut ctx, ny, 8);
+        window_copy_write_lines(wme, &raw mut ctx, screen_size_y(s) - ny, ny);
+        window_copy_write_line(wme, &raw mut ctx, 0);
+        if (screen_size_y(s) > 1) {
+            window_copy_write_line(wme, &raw mut ctx, 1);
+        }
+        if (screen_size_y(s) > 3) {
+            window_copy_write_line(wme, &raw mut ctx, screen_size_y(s) - 2);
+        }
+        if (!(*s).sel.is_null() && screen_size_y(s) > ny) {
+            window_copy_write_line(wme, &raw mut ctx, screen_size_y(s) - ny - 1);
+        }
+        screen_write_cursormove(&raw mut ctx, (*data).cx as i32, (*data).cy as i32, 0);
+        screen_write_stop(&raw mut ctx);
     }
-    window_copy_update_cursor(wme, x, y);
-    break;
-  case SEL_LINE:
-    window_copy_update_cursor(wme, 0, y);
-    break;
-  case SEL_CHAR:
-    window_copy_update_cursor(wme, x, y);
-    window_copy_start_selection(wme);
-    break;
-  }
-
-  window_copy_redraw_screen(wme);
-  window_copy_drag_update(c, m);
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_drag_update(struct client *c, struct mouse_event *m) {
-unsafe {
-  struct window_pane *wp;
-  struct window_mode_entry *wme;
-  struct window_copy_mode_data *data;
-  u_int x, y, old_cx, old_cy;
-  struct timeval tv = {.tv_usec = WINDOW_COPY_DRAG_REPEAT_TIME};
+pub unsafe extern "C" fn window_copy_scroll_down(wme: *mut window_mode_entry, mut ny: u32) {
+    unsafe {
+        let mut wp: *mut window_pane = (*wme).wp;
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let mut s: *mut screen = &raw mut (*data).screen;
+        let mut ctx: screen_write_ctx = zeroed();
 
-  if (c == NULL) {
-    return;
-  }
+        if (ny > screen_hsize((*data).backing)) {
+            return;
+        }
 
-  wp = cmd_mouse_pane(m, NULL, NULL);
-  if (wp == NULL) {
-    return;
-  }
-  wme = TAILQ_FIRST(&(*wp).modes);
-  if (wme == NULL) {
-    return;
-  }
-  if ((*wme).mode != &window_copy_mode && (*wme).mode != &window_view_mode) {
-    return;
-  }
+        if ((*data).oy > screen_hsize((*data).backing) - ny) {
+            ny = screen_hsize((*data).backing) - (*data).oy;
+        }
+        if (ny == 0) {
+            return;
+        }
+        (*data).oy += ny;
 
-  data = (*wme).data;
-  evtimer_del(&(*data).dragtimer);
+        if (!(*data).searchmark.is_null() && (*data).timeout == 0) {
+            window_copy_search_marks(wme, null_mut(), (*data).searchregex, 1);
+        }
+        window_copy_update_selection(wme, 0, 0);
 
-  if (cmd_mouse_at(wp, m, &x, &y, 0) != 0) {
-    return;
-  }
-  old_cx = (*data).cx;
-  old_cy = (*data).cy;
-
-  window_copy_update_cursor(wme, x, y);
-  if (window_copy_update_selection(wme, 1, 0)) {
-    window_copy_redraw_selection(wme, old_cy);
-  }
-  if (old_cy != (*data).cy || old_cx == (*data).cx) {
-    if (y == 0) {
-      evtimer_add(&(*data).dragtimer, &tv);
-      window_copy_cursor_up(wme, 1);
-    } else if (y == screen_size_y(&(*data).screen) - 1) {
-      evtimer_add(&(*data).dragtimer, &tv);
-      window_copy_cursor_down(wme, 1);
+        screen_write_start_pane(&raw mut ctx, wp, null_mut());
+        screen_write_cursormove(&raw mut ctx, 0, 0, 0);
+        screen_write_insertline(&raw mut ctx, ny, 8);
+        window_copy_write_lines(wme, &raw mut ctx, 0, ny);
+        if (!(*s).sel.is_null() && screen_size_y(s) > ny) {
+            window_copy_write_line(wme, &raw mut ctx, ny);
+        } else if (ny == 1) {
+            /* nuke position */
+            window_copy_write_line(wme, &raw mut ctx, 1);
+        }
+        screen_write_cursormove(&raw mut ctx, (*data).cx as i32, (*data).cy as i32, 0);
+        screen_write_stop(&raw mut ctx);
     }
-  }
-}
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_drag_release(struct client *c, struct mouse_event *m) {
-unsafe {
-  struct window_pane *wp;
-  struct window_mode_entry *wme;
-  struct window_copy_mode_data *data;
+pub unsafe extern "C" fn window_copy_rectangle_set(wme: *mut window_mode_entry, rectflag: i32) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
 
-  if (c == NULL) {
-    return;
-  }
+        (*data).rectflag = rectflag;
 
-  wp = cmd_mouse_pane(m, NULL, NULL);
-  if (wp == NULL) {
-    return;
-  }
-  wme = TAILQ_FIRST(&(*wp).modes);
-  if (wme == NULL) {
-    return;
-  }
-  if ((*wme).mode != &window_copy_mode && (*wme).mode != &window_view_mode) {
-    return;
-  }
+        let py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+        let px = window_copy_find_length(wme, py);
+        if ((*data).cx > px) {
+            window_copy_update_cursor(wme, px, (*data).cy);
+        }
 
-  data = (*wme).data;
-  evtimer_del(&(*data).dragtimer);
-}
+        window_copy_update_selection(wme, 1, 0);
+        window_copy_redraw_screen(wme);
+    }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_jump_to_mark(struct window_mode_entry *wme) {
-unsafe {
-  struct window_copy_mode_data *data = (*wme).data;
-  u_int tmx, tmy;
+pub unsafe extern "C" fn window_copy_move_mouse(m: *mut mouse_event) {
+    unsafe {
+        let Some(wp) = cmd_mouse_pane(m, null_mut(), null_mut()) else {
+            return;
+        };
+        let wme = tailq_first(&raw mut (*wp.as_ptr()).modes);
+        if (wme.is_null()) {
+            return;
+        }
+        if ((*wme).mode != &window_copy_mode && (*wme).mode != &window_view_mode) {
+            return;
+        }
 
-  tmx = (*data).cx;
-  tmy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-  (*data).cx = (*data).mx;
-  if ((*data).my < screen_hsize((*data).backing)) {
-    (*data).cy = 0;
-    (*data).oy = screen_hsize((*data).backing) - (*data).my;
-  } else {
-    (*data).cy = (*data).my - screen_hsize((*data).backing);
-    (*data).oy = 0;
-  }
-  (*data).mx = tmx;
-  (*data).my = tmy;
-  (*data).showmark = 1;
-  window_copy_update_selection(wme, 0, 0);
-  window_copy_redraw_screen(wme);
+        let mut x = 0;
+        let mut y = 0;
+        if (cmd_mouse_at(wp.as_ptr(), m, &raw mut x, &raw mut y, 0) != 0) {
+            return;
+        }
+
+        window_copy_update_cursor(wme, x, y);
+    }
 }
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_start_drag(c: *mut client, m: *mut mouse_event) {
+    unsafe {
+        let mut wp: *mut window_pane;
+        let mut wme: *mut window_mode_entry;
+
+        if (c.is_null()) {
+            return;
+        }
+
+        let Some(wp) = cmd_mouse_pane(m, null_mut(), null_mut()) else {
+            return;
+        };
+        let wme = tailq_first(&raw mut (*wp.as_ptr()).modes);
+        if (wme.is_null()) {
+            return;
+        }
+        if ((*wme).mode != &window_copy_mode && (*wme).mode != &window_view_mode) {
+            return;
+        }
+
+        let mut x = 0;
+        let mut y = 0;
+        if (cmd_mouse_at(wp.as_ptr(), m, &raw mut x, &raw mut y, 1) != 0) {
+            return;
+        }
+
+        (*c).tty.mouse_drag_update = Some(window_copy_drag_update);
+        (*c).tty.mouse_drag_release = Some(window_copy_drag_release);
+
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let yg = screen_hsize((*data).backing) + y - (*data).oy;
+        if (x < (*data).selrx || x > (*data).endselrx || yg != (*data).selry) {
+            (*data).selflag = selflag::SEL_CHAR;
+        }
+        match ((*data).selflag) {
+            selflag::SEL_WORD => {
+                if (!(*data).separators.is_null()) {
+                    window_copy_update_cursor(wme, x, y);
+                    window_copy_cursor_previous_word_pos(
+                        wme,
+                        (*data).separators,
+                        &raw mut x,
+                        &raw mut y,
+                    );
+                    y -= screen_hsize((*data).backing) - (*data).oy;
+                }
+                window_copy_update_cursor(wme, x, y);
+            }
+            selflag::SEL_LINE => window_copy_update_cursor(wme, 0, y),
+            selflag::SEL_CHAR => {
+                window_copy_update_cursor(wme, x, y);
+                window_copy_start_selection(wme);
+            }
+        }
+
+        window_copy_redraw_screen(wme);
+        window_copy_drag_update(c, m);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_drag_update(c: *mut client, m: *mut mouse_event) {
+    unsafe {
+        let mut wp: *mut window_pane;
+        let mut x: u32 = 0;
+        let mut y: u32 = 0;
+
+        let mut tv: libc::timeval = libc::timeval {
+            tv_sec: 0,
+            tv_usec: WINDOW_COPY_DRAG_REPEAT_TIME,
+        };
+
+        if (c.is_null()) {
+            return;
+        }
+
+        let Some(wp) = cmd_mouse_pane(m, null_mut(), null_mut()) else {
+            return;
+        };
+        let mut wme: *mut window_mode_entry = tailq_first(&raw mut (*wp.as_ptr()).modes);
+        if (wme.is_null()) {
+            return;
+        }
+        if ((*wme).mode != &window_copy_mode && (*wme).mode != &window_view_mode) {
+            return;
+        }
+
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        evtimer_del(&raw mut (*data).dragtimer);
+
+        if (cmd_mouse_at(wp.as_ptr(), m, &raw mut x, &raw mut y, 0) != 0) {
+            return;
+        }
+        let old_cx = (*data).cx;
+        let old_cy = (*data).cy;
+
+        window_copy_update_cursor(wme, x, y);
+        if (window_copy_update_selection(wme, 1, 0) != 0) {
+            window_copy_redraw_selection(wme, old_cy);
+        }
+        if (old_cy != (*data).cy || old_cx == (*data).cx) {
+            if (y == 0) {
+                evtimer_add(&raw mut (*data).dragtimer, &raw mut tv);
+                window_copy_cursor_up(wme, 1);
+            } else if (y == screen_size_y(&(*data).screen) - 1) {
+                evtimer_add(&raw mut (*data).dragtimer, &raw mut tv);
+                window_copy_cursor_down(wme, 1);
+            }
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_drag_release(c: *mut client, m: *mut mouse_event) {
+    unsafe {
+        if (c.is_null()) {
+            return;
+        }
+
+        let Some(wp) = cmd_mouse_pane(m, null_mut(), null_mut()) else {
+            return;
+        };
+        let wme = tailq_first(&raw mut (*wp.as_ptr()).modes);
+        if (wme.is_null()) {
+            return;
+        }
+        if ((*wme).mode != &raw const window_copy_mode
+            && (*wme).mode != &raw const window_view_mode)
+        {
+            return;
+        }
+
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        evtimer_del(&raw mut (*data).dragtimer);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn window_copy_jump_to_mark(wme: *mut window_mode_entry) {
+    unsafe {
+        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+
+        let tmx = (*data).cx;
+        let tmy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+        (*data).cx = (*data).mx;
+        if ((*data).my < screen_hsize((*data).backing)) {
+            (*data).cy = 0;
+            (*data).oy = screen_hsize((*data).backing) - (*data).my;
+        } else {
+            (*data).cy = (*data).my - screen_hsize((*data).backing);
+            (*data).oy = 0;
+        }
+        (*data).mx = tmx;
+        (*data).my = tmy;
+        (*data).showmark = 1;
+        window_copy_update_selection(wme, 0, 0);
+        window_copy_redraw_screen(wme);
+    }
 }
 
 /* Scroll up if the cursor went off the visible screen. */
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_acquire_cursor_up(struct window_mode_entry *wme, u_int hsize, u_int oy, u_int oldy, u_int px, u_int py) {
-unsafe {
-  u_int cy, yy, ny, nd;
-
-  yy = hsize - oy;
-  if (py < yy) {
-    ny = yy - py;
-    cy = 0;
-    nd = 1;
-  } else {
-    ny = 0;
-    cy = py - yy;
-    nd = oldy - cy + 1;
-  }
-  while (ny > 0) {
-    window_copy_cursor_up(wme, 1);
-    ny--;
-  }
-  window_copy_update_cursor(wme, px, cy);
-  if (window_copy_update_selection(wme, 1, 0)) {
-    window_copy_redraw_lines(wme, cy, nd);
-  }
-}
+pub unsafe extern "C" fn window_copy_acquire_cursor_up(
+    wme: *mut window_mode_entry,
+    hsize: u32,
+    oy: u32,
+    oldy: u32,
+    px: u32,
+    py: u32,
+) {
+    unsafe {
+        let yy = hsize - oy;
+        let mut ny;
+        let mut nd;
+        let mut cy;
+        if (py < yy) {
+            ny = yy - py;
+            cy = 0;
+            nd = 1;
+        } else {
+            ny = 0;
+            cy = py - yy;
+            nd = oldy - cy + 1;
+        }
+        while (ny > 0) {
+            window_copy_cursor_up(wme, 1);
+            ny -= 1;
+        }
+        window_copy_update_cursor(wme, px, cy);
+        if (window_copy_update_selection(wme, 1, 0) != 0) {
+            window_copy_redraw_lines(wme, cy, nd);
+        }
+    }
 }
 
 /* Scroll down if the cursor went off the visible screen. */
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn
-static void window_copy_acquire_cursor_down(struct window_mode_entry *wme, u_int hsize, u_int sy, u_int oy, u_int oldy, u_int px, u_int py, int no_reset) {
-unsafe {
-  u_int cy, yy, ny, nd;
-
-  cy = py - hsize + oy;
-  yy = sy - 1;
-  if (cy > yy) {
-    ny = cy - yy;
-    oldy = yy;
-    nd = 1;
-  } else {
-    ny = 0;
-    nd = cy - oldy + 1;
-  }
-  while (ny > 0) {
-    window_copy_cursor_down(wme, 1);
-    ny--;
-  }
-  if (cy > yy) {
-    window_copy_update_cursor(wme, px, yy);
-  } else {
-    window_copy_update_cursor(wme, px, cy);
-  }
-  if (window_copy_update_selection(wme, 1, no_reset)) {
-    window_copy_redraw_lines(wme, oldy, nd);
-  }
+pub unsafe extern "C" fn window_copy_acquire_cursor_down(
+    wme: *mut window_mode_entry,
+    hsize: u32,
+    sy: u32,
+    oy: u32,
+    mut oldy: u32,
+    px: u32,
+    py: u32,
+    no_reset: i32,
+) {
+    unsafe {
+        let cy = py - hsize + oy;
+        let yy = sy - 1;
+        let mut ny;
+        let mut nd;
+        if (cy > yy) {
+            ny = cy - yy;
+            oldy = yy;
+            nd = 1;
+        } else {
+            ny = 0;
+            nd = cy - oldy + 1;
+        }
+        while (ny > 0) {
+            window_copy_cursor_down(wme, 1);
+            ny -= 1;
+        }
+        if (cy > yy) {
+            window_copy_update_cursor(wme, px, yy);
+        } else {
+            window_copy_update_cursor(wme, px, cy);
+        }
+        if (window_copy_update_selection(wme, 1, no_reset) != 0) {
+            window_copy_redraw_lines(wme, oldy, nd);
+        }
+    }
 }
-}
-
-*/

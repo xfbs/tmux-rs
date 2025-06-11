@@ -23,13 +23,6 @@ Cursor into my workflow for porting some files.
 I like tmux. I want tmux, not something else. Also I tried out using it before and the compilation time was 8 minutes on my machine.
 That's a bit to long for me.
 
-### Files Remaining
-
-I'm in the home stretch of the first part of this project. After finishing translating these files I will begin
-refactoring the Rust code to make it more idiomatic and use less unsafe.
-
-- [ ] 5786 window-copy
-
 ## Tips
 
 - Use clang-format or other to reformat the C code quickly
@@ -164,6 +157,7 @@ see tty-keys.c tty_key_next
 - Window borders are incorrect
 - status command; junk after completed text; probably improperly terminated string improper command: statusB
 - prefix s causes a crash
+- going into copy mode causes a crash/hang
 
 - redraw is broken with vim
 
