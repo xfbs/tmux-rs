@@ -700,6 +700,28 @@ mod parser {
     // unsafe extern "C" fn yyparse_() -> i32 {}
 }
 
+unsafe fn dummy_cmd_parse_state_init() -> cmd_parse_state {
+    unsafe {
+        let f = libc::fopen(c"test.tmuxconf".as_ptr(), c"r".as_ptr());
+
+        cmd_parse_state {
+            f,
+            buf: todo!(),
+            len: todo!(),
+            off: todo!(),
+            condition: todo!(),
+            eol: todo!(),
+            eof: todo!(),
+            input: todo!(),
+            escapes: todo!(),
+            error: todo!(),
+            commands: todo!(),
+            scope: todo!(),
+            stack: todo!(),
+        }
+    }
+}
+
 #[test]
 fn test_parse_lines() {
     use crate::compat::queue::tailq_init;

@@ -400,11 +400,11 @@ pub Elif1: yystype_elif  = {
 }
 
 pub Arguments: NonNull<cmd_parse_arguments> = {
-    <Argument> => unsafe {
+    <arg1:Argument> => unsafe {
       let mut value = NonNull::new_unchecked(xcalloc1::<cmd_parse_arguments>());
       tailq_init(value.as_ptr());
 
-      tailq_insert_head!(value.as_ptr(), (<>).as_ptr(), entry);
+      tailq_insert_head!(value.as_ptr(), (arg1).as_ptr(), entry);
 
       value
     },
@@ -415,28 +415,28 @@ pub Arguments: NonNull<cmd_parse_arguments> = {
 };
 
 pub Argument: NonNull<cmd_parse_argument> = {
-    TOKEN => unsafe {
+    <token:TOKEN> => unsafe {
       let value = NonNull::new_unchecked(xcalloc1::<cmd_parse_argument>());
       (*value.as_ptr()).type_ = cmd_parse_argument_type::CMD_PARSE_STRING;
-      (*value.as_ptr()).string = (<>).as_ptr();
+      (*value.as_ptr()).string = (token).as_ptr();
       value
     },
-    EQUALS => unsafe {
+    <equals:EQUALS> => unsafe {
       let value = NonNull::new_unchecked(xcalloc1::<cmd_parse_argument>());
       (*value.as_ptr()).type_ = cmd_parse_argument_type::CMD_PARSE_STRING;
-      (*value.as_ptr()).string = (<>).as_ptr();
+      (*value.as_ptr()).string = (equals).as_ptr();
       value
     },
-    "{" <ArgumentStatements> => unsafe {
+    "{" <statements:ArgumentStatements> => unsafe {
       let value = NonNull::new_unchecked(xcalloc1::<cmd_parse_argument>());
       (*value.as_ptr()).type_ = cmd_parse_argument_type::CMD_PARSE_COMMANDS;
-      (*value.as_ptr()).commands = (<>).as_ptr();
+      (*value.as_ptr()).commands = (statements).as_ptr();
       value
     }
 };
 
 pub ArgumentStatements: NonNull<cmd_parse_commands> = {
-    <Statement> "}" => (<>),
+    <statement:Statement> "}" => (statement),
     <arg1:Statements> <arg2:Statement> "}" => unsafe {
         let mut value = arg1;
         tailq_concat(value.as_ptr(), arg2.as_ptr());
