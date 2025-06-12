@@ -1114,11 +1114,14 @@ macro_rules! define_error_unit {
     };
 }
 
-// Pane border indicator option.
-pub const PANE_BORDER_OFF: i32 = 0;
-pub const PANE_BORDER_COLOUR: i32 = 1;
-pub const PANE_BORDER_ARROWS: i32 = 2;
-pub const PANE_BORDER_BOTH: i32 = 3;
+#[repr(i32)]
+#[derive(Copy, Clone, num_enum::TryFromPrimitive)]
+pub enum pane_border_indicator {
+    PANE_BORDER_OFF,
+    PANE_BORDER_COLOUR,
+    PANE_BORDER_ARROWS,
+    PANE_BORDER_BOTH,
+}
 
 // Mode returned by window_pane_mode function.
 pub const WINDOW_PANE_NO_MODE: i32 = 0;

@@ -1183,7 +1183,7 @@ pub static mut options_table: [options_table_entry; 191] = [
         type_: options_table_type::OPTIONS_TABLE_CHOICE,
         scope: OPTIONS_TABLE_WINDOW,
         choices: &raw const options_table_pane_border_indicators_list as *const *const c_char,
-        default_num: PANE_BORDER_COLOUR as i64,
+        default_num: pane_border_indicator::PANE_BORDER_COLOUR as i64,
         text: c"Whether to indicate the active pane by colouring border or displaying arrow markers.".as_ptr(),
         ..unsafe { zeroed() }
     },

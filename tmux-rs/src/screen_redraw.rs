@@ -129,11 +129,16 @@ pub unsafe extern "C" fn screen_redraw_pane_border(
         }
 
         // Get pane indicator
-        match options_get_number(oo, c"pane-border-indicators".as_ptr()) as i32 {
-            PANE_BORDER_COLOUR | PANE_BORDER_BOTH => {
+        match pane_border_indicator::try_from(options_get_number(
+            oo,
+            c"pane-border-indicators".as_ptr(),
+        ) as i32)
+        {
+            Ok(pane_border_indicator::PANE_BORDER_COLOUR)
+            | Ok(pane_border_indicator::PANE_BORDER_BOTH) => {
                 split = 1;
             }
-            _ => {}
+            _ => (),
         }
 
         // Left/right borders
@@ -918,8 +923,13 @@ pub unsafe extern "C" fn screen_redraw_draw_borders_cell(
             tty_puts(tty, END_ISOLATE.as_ptr());
         }
 
-        match options_get_number(oo, c"pane-border-indicators".as_ptr()) as i32 {
-            PANE_BORDER_ARROWS | PANE_BORDER_BOTH => arrows = 1,
+        match pane_border_indicator::try_from(options_get_number(
+            oo,
+            c"pane-border-indicators".as_ptr(),
+        ) as i32)
+        {
+            Ok(pane_border_indicator::PANE_BORDER_ARROWS)
+            | Ok(pane_border_indicator::PANE_BORDER_BOTH) => arrows = 1,
             _ => {}
         }
 
