@@ -858,7 +858,6 @@ pub unsafe extern "C" fn screen_redraw_draw_borders_cell(
         let mut gc: grid_cell = zeroed();
         let mut arrows = 0;
         let border;
-        let isolates;
         let x = (*ctx).ox + i;
         let y = (*ctx).oy + j;
 
@@ -905,21 +904,16 @@ pub unsafe extern "C" fn screen_redraw_draw_borders_cell(
         }
         screen_redraw_border_set(w, wp, (*ctx).pane_lines, cell_type, &raw mut gc);
 
-        if cell_type == CELL_TOPBOTTOM
+        let isolates = cell_type == CELL_TOPBOTTOM
             && (*c).flags.intersects(client_flag::UTF8)
-            && tty_term_has((*tty).term, tty_code_code::TTYC_BIDI).as_bool()
-        {
-            isolates = 1;
-        } else {
-            isolates = 0;
-        }
+            && tty_term_has((*tty).term, tty_code_code::TTYC_BIDI).as_bool();
 
         if (*ctx).statustop != 0 {
             tty_cursor(tty, i, (*ctx).statuslines + j);
         } else {
             tty_cursor(tty, i, j);
         }
-        if isolates != 0 {
+        if isolates {
             tty_puts(tty, END_ISOLATE.as_ptr());
         }
 
@@ -955,7 +949,7 @@ pub unsafe extern "C" fn screen_redraw_draw_borders_cell(
         }
 
         tty_cell(tty, &raw mut gc, &grid_default_cell, null_mut(), null_mut());
-        if isolates != 0 {
+        if isolates {
             tty_puts(tty, START_ISOLATE.as_ptr());
         }
     }

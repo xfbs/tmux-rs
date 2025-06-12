@@ -395,7 +395,7 @@ unsafe extern "C" fn cmd_display_menu_exec(self_: *mut cmd, item: *mut cmdq_item
         let border_style = args_get_(args, 'S');
         let selected_style = args_get_(args, 'H');
         let lines = box_lines::BOX_LINES_DEFAULT;
-        let title;
+
         let mut cause = null_mut();
         let mut flags = 0;
         let mut starting_choice: i32 = 0;
@@ -423,7 +423,7 @@ unsafe extern "C" fn cmd_display_menu_exec(self_: *mut cmd, item: *mut cmdq_item
             }
         }
 
-        title = if args_has_(args, 'T') {
+        let title = if args_has_(args, 'T') {
             format_single_from_target(item, args_get(args, b'T'))
         } else {
             xstrdup_(c"").as_ptr()

@@ -3605,11 +3605,10 @@ pub unsafe extern "C" fn format_add_tv(
 pub unsafe extern "C" fn format_add_cb(ft: *mut format_tree, key: *const c_char, cb: format_cb) {
     unsafe {
         let mut fe = xmalloc_::<format_entry>().as_ptr();
-        let fe_now;
 
         (*fe).key = xstrdup(key).as_ptr();
 
-        fe_now = rb_insert(&raw mut (*ft).tree, fe);
+        let fe_now = rb_insert(&raw mut (*ft).tree, fe);
         if !fe_now.is_null() {
             free_((*fe).key);
             free_(fe);

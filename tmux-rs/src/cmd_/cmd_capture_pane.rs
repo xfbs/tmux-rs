@@ -127,8 +127,6 @@ unsafe extern "C" fn cmd_capture_pane_history(
         let buf: *mut c_char = null_mut();
         let mut line: *mut c_char = null_mut();
 
-        let sflag: *const c_char;
-        let eflag: *const c_char;
         let mut linelen: usize = 0;
 
         let sx = screen_size_x(&raw mut (*wp).base);
@@ -145,7 +143,7 @@ unsafe extern "C" fn cmd_capture_pane_history(
             gd = (*wp).base.grid;
         }
 
-        sflag = args_get(args, b'S');
+        let sflag: *const c_char = args_get(args, b'S');
         let mut top = 0;
         if !sflag.is_null() && strcmp(sflag, c"-".as_ptr()) == 0 {
             top = 0;
@@ -171,7 +169,7 @@ unsafe extern "C" fn cmd_capture_pane_history(
             }
         }
 
-        eflag = args_get(args, b'E');
+        let eflag: *const c_char = args_get(args, b'E');
         if !eflag.is_null() && strcmp(eflag, c"-".as_ptr()) == 0 {
             bottom = (*gd).hsize + (*gd).sy - 1;
         } else {

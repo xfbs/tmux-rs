@@ -439,7 +439,6 @@ pub unsafe extern "C" fn layout_destroy_cell(
     lcroot: *mut *mut layout_cell,
 ) {
     unsafe {
-        let lcother: *mut layout_cell;
         let lcparent = (*lc).parent;
 
         // If no parent, this is the last pane so window close is imminent and
@@ -451,11 +450,11 @@ pub unsafe extern "C" fn layout_destroy_cell(
         }
 
         // Merge the space into the previous or next cell
-        if lc == tailq_first(&raw mut (*lcparent).cells) {
-            lcother = tailq_next(lc);
+        let lcother: *mut layout_cell = if lc == tailq_first(&raw mut (*lcparent).cells) {
+            tailq_next(lc)
         } else {
-            lcother = tailq_prev(lc);
-        }
+            tailq_prev(lc)
+        };
 
         if !lcother.is_null() {
             if (*lcparent).type_ == layout_type::LAYOUT_LEFTRIGHT {
@@ -985,7 +984,6 @@ pub unsafe extern "C" fn layout_split_pane(
     flags: i32,
 ) -> *mut layout_cell {
     unsafe {
-        let lc: *mut layout_cell;
         let minimum: u32;
         let mut new_size: u32;
         let mut saved_size: u32;
@@ -994,11 +992,11 @@ pub unsafe extern "C" fn layout_split_pane(
 
         // If full_size is specified, add a new cell at the top of the window
         // layout. Otherwise, split the cell for the current pane.
-        if full_size {
-            lc = (*(*wp).window).layout_root;
+        let lc: *mut layout_cell = if full_size {
+            (*(*wp).window).layout_root
         } else {
-            lc = (*wp).layout_cell;
-        }
+            (*wp).layout_cell
+        };
         let status = pane_status::try_from(options_get_number(
             (*(*wp).window).options,
             c"pane-border-status".as_ptr(),

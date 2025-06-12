@@ -56,7 +56,7 @@ unsafe extern "C" fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
         let source = cmdq_get_source(item);
         let mut cause = null_mut();
         let mut type_: layout_type;
-        let lc: *mut layout_cell;
+
         let mut curval: u32 = 0;
 
         let dst_s = (*target).s;
@@ -130,7 +130,7 @@ unsafe extern "C" fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
             flags |= SPAWN_FULLSIZE;
         }
 
-        lc = layout_split_pane(dst_wp, type_, size, flags);
+        let lc: *mut layout_cell = layout_split_pane(dst_wp, type_, size, flags);
         if lc.is_null() {
             cmdq_error(item, c"create pane failed: pane too small".as_ptr());
             return cmd_retval::CMD_RETURN_ERROR;

@@ -1402,7 +1402,7 @@ unsafe extern "C" fn tty_keys_extended_key(
         const size_of_tmp: usize = 64;
         let mut tmp: [c_char; 64] = [0; 64];
         let mut nkey: key_code = 0;
-        let onlykey: key_code;
+
         let mut ud: utf8_data = zeroed();
         let mut uc: utf8_char = zeroed();
 
@@ -1525,7 +1525,7 @@ unsafe extern "C" fn tty_keys_extended_key(
          * That still leaves some ambiguity, such as C-S-A vs. C-A, but that's
          * OK, and applications can handle that.
          */
-        onlykey = nkey & KEYC_MASK_KEY;
+        let onlykey: key_code = nkey & KEYC_MASK_KEY;
         if ((onlykey > 0x20 && onlykey < 0x7f) || KEYC_IS_UNICODE(nkey))
             && (nkey & KEYC_MASK_MODIFIERS) == KEYC_SHIFT
         {
@@ -1729,10 +1729,7 @@ unsafe extern "C" fn tty_keys_clipboard(
         let mut wp: *mut window_pane;
         let mut end: usize;
         let mut terminator: usize = 0;
-        let needed: usize;
-        let copy: *mut c_char;
-        let out: *mut c_char;
-        let outlen: i32;
+
         let mut i: u32 = 0;
 
         *size = 0;
@@ -1813,14 +1810,14 @@ unsafe extern "C" fn tty_keys_clipboard(
         evtimer_del(&raw mut (*tty).clipboard_timer);
 
         /* It has to be a string so copy it. */
-        copy = xmalloc(end + 1).as_ptr().cast();
+        let copy: *mut c_char = xmalloc(end + 1).as_ptr().cast();
         libc::memcpy(copy.cast(), buf.cast(), end);
         *copy.add(end) = '\0' as i8;
 
         /* Convert from base64. */
-        needed = (end / 4) * 3;
-        out = xmalloc(needed).as_ptr().cast();
-        outlen = b64_pton(copy, out.cast(), len);
+        let needed: usize = (end / 4) * 3;
+        let out: *mut c_char = xmalloc(needed).as_ptr().cast();
+        let outlen: i32 = b64_pton(copy, out.cast(), len);
         if outlen == -1 {
             free_(out);
             free_(copy);
@@ -2168,7 +2165,6 @@ pub unsafe extern "C" fn tty_keys_colours(
     unsafe {
         let c = (*tty).client;
         let mut tmp: [c_char; 128] = [0; 128];
-        let n: i32;
 
         *size = 0;
 
@@ -2229,7 +2225,7 @@ pub unsafe extern "C" fn tty_keys_colours(
         }
         *size = 6 + i;
 
-        n = colour_parseX11(tmp.as_ptr());
+        let n: i32 = colour_parseX11(tmp.as_ptr());
         if n != -1 && *buf.add(3) == '0' as i8 {
             if !c.is_null() {
                 // log_debug(c"%s fg is %s\0".as_ptr(), (*c).name, colour_tostring(n));

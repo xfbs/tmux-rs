@@ -96,7 +96,7 @@ pub unsafe fn attributes_fromstring(mut str: *const c_char) -> Result<grid_attr,
             let mut i = 0;
             for j in 0..TABLE.len() {
                 i = j;
-                if end != libc::strlen(TABLE[i].name.as_ptr()) {
+                if end != TABLE[i].name.to_bytes().len() {
                     continue;
                 }
                 if libc::strncasecmp(str, TABLE[i].name.as_ptr(), end) == 0 {

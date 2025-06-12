@@ -59,7 +59,7 @@ fn pton<'out>(src: &'_ [u8], dst: &'out mut [MaybeUninit<u8>]) -> Result<&'out m
     // TODO length check
 
     for chunk in &mut it {
-        for g in chunk.clone() {
+        for g in chunk {
             if !matches!(g, b'A'..=b'Z' | b'a'..=b'z' | b'+' | b'/') {
                 return Err(());
             }

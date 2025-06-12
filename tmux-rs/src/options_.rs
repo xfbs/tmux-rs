@@ -1316,14 +1316,13 @@ pub unsafe extern "C" fn options_from_string(
     cause: *mut *mut c_char,
 ) -> c_int {
     unsafe {
-        let type_: options_table_type;
         let number: i64;
         let mut errstr: *const c_char;
         let new: *const c_char;
         let old: *mut c_char;
         let key: key_code;
 
-        if !oe.is_null() {
+        let type_: options_table_type = if !oe.is_null() {
             if value.is_null()
                 && (*oe).type_ != options_table_type::OPTIONS_TABLE_FLAG
                 && (*oe).type_ != options_table_type::OPTIONS_TABLE_CHOICE
@@ -1331,14 +1330,14 @@ pub unsafe extern "C" fn options_from_string(
                 xasprintf(cause, c"empty value".as_ptr());
                 return -1;
             }
-            type_ = (*oe).type_;
+            (*oe).type_
         } else {
             if *name != b'@' as c_char {
                 xasprintf(cause, c"bad option name".as_ptr());
                 return -1;
             }
-            type_ = options_table_type::OPTIONS_TABLE_STRING;
-        }
+            options_table_type::OPTIONS_TABLE_STRING
+        };
 
         match type_ {
             options_table_type::OPTIONS_TABLE_STRING => {

@@ -26,6 +26,7 @@
 #![allow(clippy::blocks_in_conditions)] // keep, not worth fixing yet
 #![allow(clippy::missing_safety_doc)] // 1012 keep, not worth fixing yet
 //
+#![warn(clippy::multiple_crate_versions)]
 #![warn(clippy::shadow_same)]
 #![allow(clippy::shadow_unrelated)] // TODO, 134 instances probably some latent bugs
 #![allow(clippy::shadow_reuse)] // 145 instances

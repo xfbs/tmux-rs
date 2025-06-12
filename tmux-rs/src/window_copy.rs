@@ -2275,7 +2275,7 @@ pub unsafe extern "C" fn window_copy_cmd_rectangle_toggle(
         let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         (*data).lineflag = line_sel::LINE_SEL_NONE;
-        window_copy_rectangle_set(wme, (!(*data).rectflag) as i32);
+        window_copy_rectangle_set(wme, (!(*data).rectflag));
 
         window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
@@ -3916,7 +3916,7 @@ pub unsafe extern "C" fn window_copy_search_lr_regex(
         let mut len = (*gd).sx - first;
         let endline = (*gd).hsize + (*gd).sy - 1;
         let mut pywrap = py;
-        while !buf.is_null() && pywrap <= endline && len < WINDOW_COPY_SEARCH_MAX_LINE as u32 {
+        while !buf.is_null() && pywrap <= endline && len < WINDOW_COPY_SEARCH_MAX_LINE {
             let gl = grid_get_line(gd, pywrap);
             if !(*gl).flags.intersects(grid_line_flag::WRAPPED) {
                 break;
@@ -3995,7 +3995,7 @@ pub unsafe extern "C" fn window_copy_search_rl_regex(
         let mut len = (*gd).sx - first;
         let endline = (*gd).hsize + (*gd).sy - 1;
         let mut pywrap = py;
-        while !buf.is_null() && pywrap <= endline && len < WINDOW_COPY_SEARCH_MAX_LINE as u32 {
+        while !buf.is_null() && pywrap <= endline && len < WINDOW_COPY_SEARCH_MAX_LINE {
             let gl = grid_get_line(gd, pywrap);
             if !(*gl).flags.intersects(grid_line_flag::WRAPPED) {
                 break;
@@ -4132,11 +4132,11 @@ pub unsafe extern "C" fn window_copy_last_regex(
         if savesx > 0 {
             *ppx = savepx;
             *psx = savesx;
-            return 1;
+            1
         } else {
             *ppx = 0;
             *psx = 0;
-            return 0;
+            0
         }
     }
 }
@@ -4265,7 +4265,7 @@ pub unsafe extern "C" fn window_copy_cstrtocellpos(
                     pos += 1;
                 } else {
                     if dlen > len as usize - pos {
-                        dlen = len as usize - pos as usize;
+                        dlen = len as usize - pos;
                     }
                     if memcmp(str.add(pos).cast(), d.cast(), dlen) != 0 {
                         match_ = 0;
@@ -4321,9 +4321,9 @@ pub unsafe extern "C" fn window_copy_move_left(
                 return;
             }
             *fx = screen_size_x(s) - 1;
-            *fy = *fy - 1;
+            *fy -= 1;
         } else {
-            *fx = *fx - 1;
+            *fx -= 1;
         }
     }
 }
@@ -4347,9 +4347,9 @@ pub unsafe extern "C" fn window_copy_move_right(
                 return;
             }
             *fx = 0;
-            *fy = *fy + 1;
+            *fy += 1;
         } else {
-            *fx = *fx + 1;
+            *fx += 1;
         }
     }
 }
@@ -4768,7 +4768,7 @@ pub unsafe extern "C" fn window_copy_search(
         window_copy_redraw_screen(wme);
 
         screen_free(&raw mut ss);
-        return found;
+        found
     }
 }
 

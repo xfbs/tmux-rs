@@ -350,7 +350,6 @@ pub unsafe extern "C" fn input_key_vt10x(bev: *mut bufferevent, mut key: key_cod
     let __func__ = c"input_key_vt10x".as_ptr();
     unsafe {
         let mut ud: utf8_data = zeroed(); // TODO use uninit
-        let onlykey: key_code;
 
         log_debug!("{}: key in {}", _s(__func__), key);
 
@@ -369,7 +368,7 @@ pub unsafe extern "C" fn input_key_vt10x(bev: *mut bufferevent, mut key: key_cod
         }
 
         /* Prevent TAB and RET from being swallowed by C0 remapping logic. */
-        onlykey = key & KEYC_MASK_KEY;
+        let onlykey: key_code = key & KEYC_MASK_KEY;
         if onlykey == b'\r' as u64 || onlykey == b'\t' as u64 {
             key &= !KEYC_CTRL;
         }
