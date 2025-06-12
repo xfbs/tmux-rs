@@ -47,7 +47,6 @@ more then just server exited unexpectedly.
 - [ ] 159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
     - figure out how to write equivalence tests for the lalrpop parser and the yacc one
 - [ ] verify all uses of tailq and rbq, any structs with multiple "entry" fields we use correctly
-- [ ] use base64 crate instead of libresolv
 - [ ] ffi compatible timeval struct with useful utilities
 - [ ] reduce usage of NUL terminated C strings and use rust strings
 

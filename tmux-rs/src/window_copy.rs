@@ -157,7 +157,7 @@ pub struct window_copy_mode_data {
 
     cursordrag: cursordrag,
 
-    modekeys: i32,
+    modekeys: modekey,
     lineflag: line_sel, /* line selection mode */
     rectflag: i32,      /* in rectangle copy mode? */
     scroll_exit: i32,   /* exit on scroll to end? */
@@ -345,8 +345,11 @@ pub unsafe extern "C" fn window_copy_common_init(
             screen_size_y(base),
             0,
         );
-        (*data).modekeys =
-            options_get_number((*(*wp).window).options, c"mode-keys".as_ptr()) as i32;
+        (*data).modekeys = modekey::try_from(options_get_number(
+            (*(*wp).window).options,
+            c"mode-keys".as_ptr(),
+        ) as i32)
+        .expect("invalid modekey");
 
         evtimer_set(
             &raw mut (*data).dragtimer,
@@ -984,7 +987,9 @@ pub unsafe extern "C" fn window_copy_key_table(wme: *mut window_mode_entry) -> *
     unsafe {
         let mut wp = (*wme).wp;
 
-        if (options_get_number((*(*wp).window).options, c"mode-keys".as_ptr()) == MODEKEY_VI as i64)
+        if modekey::try_from(
+            options_get_number((*(*wp).window).options, c"mode-keys".as_ptr()) as i32,
+        ) == Ok(modekey::MODEKEY_VI)
         {
             c"copy-mode-vi".as_ptr()
         } else {
@@ -1813,7 +1818,7 @@ pub unsafe extern "C" fn window_copy_cmd_previous_matching_bracket(
                     cp = libc::strchr((&raw const close).cast(), found as i32);
                 }
                 if (cp.is_null()) {
-                    if ((*data).modekeys == MODEKEY_EMACS) {
+                    if ((*data).modekeys == modekey::MODEKEY_EMACS) {
                         if (!tried && px > 0) {
                             px -= 1;
                             tried = true;
@@ -1927,7 +1932,7 @@ pub unsafe extern "C" fn window_copy_cmd_next_matching_bracket(
                      * return to the original cursor position.
                      */
                     cp = libc::strchr((&raw const close).cast(), found as i32);
-                    if (!cp.is_null() && (*data).modekeys == MODEKEY_VI) {
+                    if (!cp.is_null() && (*data).modekeys == modekey::MODEKEY_VI) {
                         let sx = (*data).cx;
                         let sy = screen_hsize(s) + (*data).cy - (*data).oy;
 
@@ -1950,7 +1955,7 @@ pub unsafe extern "C" fn window_copy_cmd_next_matching_bracket(
                     cp = libc::strchr((&raw const open).cast(), found as i32);
                 }
                 if (cp.is_null()) {
-                    if ((*data).modekeys == MODEKEY_EMACS) {
+                    if ((*data).modekeys == modekey::MODEKEY_EMACS) {
                         if (!tried && px <= xx) {
                             px += 1;
                             tried = true;
@@ -3667,10 +3672,12 @@ pub unsafe extern "C" fn window_copy_command(
         }
 
         if (libc::strncmp(command, c"search-".as_ptr(), 7) != 0 && !(*data).searchmark.is_null()) {
-            let keys =
-                options_get_number((*(*(*wme).wp).window).options, c"mode-keys".as_ptr()) as i32;
+            let keys = modekey::try_from(options_get_number(
+                (*(*(*wme).wp).window).options,
+                c"mode-keys".as_ptr(),
+            ) as i32);
             if (clear == window_copy_cmd_clear::WINDOW_COPY_CMD_CLEAR_EMACS_ONLY
-                && keys == MODEKEY_VI)
+                && keys == Ok(modekey::MODEKEY_VI))
             {
                 clear = window_copy_cmd_clear::WINDOW_COPY_CMD_CLEAR_NEVER;
             }
@@ -4621,7 +4628,6 @@ pub unsafe extern "C" fn window_copy_search(
         let mut start: u32 = 0;
         let mut cis: i32 = 0;
         let mut found: i32 = 0;
-        let mut keys: i32 = 0;
         let mut visible_only: i32 = 0;
         let mut wrapflag: i32 = 0;
 
@@ -4670,7 +4676,10 @@ pub unsafe extern "C" fn window_copy_search(
         wrapflag = options_get_number((*(*wp).window).options, c"wrap-search".as_ptr()) as i32;
         cis = window_copy_is_lowercase(str).as_int();
 
-        keys = options_get_number((*(*wp).window).options, c"mode-keys".as_ptr()) as i32;
+        let mut keys = modekey::try_from(options_get_number(
+            (*(*wp).window).options,
+            c"mode-keys".as_ptr(),
+        ) as i32);
 
         if (direction != 0) {
             /*
@@ -4681,7 +4690,7 @@ pub unsafe extern "C" fn window_copy_search(
              * after the term the cursor is currently on when searching
              * forward.
              */
-            if (keys == MODEKEY_VI) {
+            if keys == Ok(modekey::MODEKEY_VI) {
                 if (!(*data).searchmark.is_null()) {
                     window_copy_move_after_search_mark(data, &raw mut fx, &raw mut fy, wrapflag);
                 } else {
@@ -4729,7 +4738,7 @@ pub unsafe extern "C" fn window_copy_search(
                  * When in Emacs mode, position the cursor just after
                  * the mark.
                  */
-                if (keys == MODEKEY_EMACS) {
+                if keys == Ok(modekey::MODEKEY_EMACS) {
                     window_copy_move_after_search_mark(data, &raw mut fx, &raw mut fy, wrapflag);
                     (*data).cx = fx;
                     (*data).cy = fy - screen_hsize((*data).backing) + (*data).oy;
@@ -5158,7 +5167,6 @@ pub unsafe extern "C" fn window_copy_update_style(
         let mut current: u32 = 0;
         let mut inv = 0;
         let mut found = 0;
-        let mut keys = 0;
 
         if ((*data).showmark != 0 && fy == (*data).my) {
             (*gc).attr = (*mkgc).attr;
@@ -5188,8 +5196,11 @@ pub unsafe extern "C" fn window_copy_update_style(
 
         cy = screen_hsize((*data).backing) - (*data).oy + (*data).cy;
         if (window_copy_search_mark_at(data, (*data).cx, cy, &raw mut cursor) == 0) {
-            keys = options_get_number((*(*wp).window).options, c"mode-keys".as_ptr());
-            if (cursor != 0 && keys == MODEKEY_EMACS as i64 && (*data).searchdirection != 0) {
+            let keys = modekey::try_from(options_get_number(
+                (*(*wp).window).options,
+                c"mode-keys".as_ptr(),
+            ) as i32);
+            if (cursor != 0 && keys == Ok(modekey::MODEKEY_EMACS) && (*data).searchdirection != 0) {
                 if (*(*data).searchmark.add(cursor as usize - 1) as u32 == mark) {
                     cursor -= 1;
                     found = 1;
@@ -5787,8 +5798,10 @@ pub unsafe extern "C" fn window_copy_get_selection(
          * bottom-right-most, regardless of copy direction. If it is vi, also
          * keep bottom-right-most character.
          */
-        let mut keys: i32 =
-            options_get_number((*(*wp).window).options, c"mode-keys".as_ptr()) as i32;
+        let mut keys = modekey::try_from(options_get_number(
+            (*(*wp).window).options,
+            c"mode-keys".as_ptr(),
+        ) as i32);
         if ((*data).rectflag != 0) {
             /*
              * Need to ignore the column with the cursor in it, which for
@@ -5802,7 +5815,7 @@ pub unsafe extern "C" fn window_copy_get_selection(
 
             if (selx < (*data).cx) {
                 /* Selection start is on the left. */
-                if (keys == MODEKEY_EMACS) {
+                if keys == Ok(modekey::MODEKEY_EMACS) {
                     lastex = (*data).cx;
                     restex = (*data).cx;
                 } else {
@@ -5819,7 +5832,7 @@ pub unsafe extern "C" fn window_copy_get_selection(
                 restsx = (*data).cx;
             }
         } else {
-            if (keys == MODEKEY_EMACS) {
+            if keys == Ok(modekey::MODEKEY_EMACS) {
                 lastex = ex;
             } else {
                 lastex = ex + 1;
@@ -5848,7 +5861,7 @@ pub unsafe extern "C" fn window_copy_get_selection(
             return null_mut();
         }
         /* Remove final \n (unless at end in vi mode). */
-        if (keys == MODEKEY_EMACS || lastex <= ey_last) {
+        if (keys == Ok(modekey::MODEKEY_EMACS) || lastex <= ey_last) {
             if !(*grid_get_line((*(*data).backing).grid, ey))
                 .flags
                 .intersects(grid_line_flag::WRAPPED)
@@ -6597,7 +6610,9 @@ pub unsafe extern "C" fn window_copy_cursor_next_word_end_pos(
         let mut py = hsize + (*data).cy - (*data).oy;
 
         grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
-        if (options_get_number(oo, c"mode-keys".as_ptr()) == MODEKEY_VI as i64) {
+        if modekey::try_from(options_get_number(oo, c"mode-keys".as_ptr()) as i32)
+            == Ok(modekey::MODEKEY_VI)
+        {
             if (grid_reader_in_set(&raw mut gr, WHITESPACE.as_ptr()) == 0) {
                 grid_reader_cursor_right(&raw mut gr, 0, 0);
             }
@@ -6632,7 +6647,9 @@ pub unsafe extern "C" fn window_copy_cursor_next_word_end(
         let mut oldy = (*data).cy;
 
         grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
-        if (options_get_number(oo, c"mode-keys".as_ptr()) == MODEKEY_VI as i64) {
+        if modekey::try_from(options_get_number(oo, c"mode-keys".as_ptr()) as i32)
+            == Ok(modekey::MODEKEY_VI)
+        {
             if (grid_reader_in_set(&raw mut gr, WHITESPACE.as_ptr()) == 0) {
                 grid_reader_cursor_right(&raw mut gr, 0, 0);
             }
@@ -6699,7 +6716,9 @@ pub unsafe extern "C" fn window_copy_cursor_previous_word(
         let mut gr: grid_reader = zeroed();
 
         let stop_at_eol =
-            if (options_get_number((*w).options, c"mode-keys".as_ptr()) == MODEKEY_EMACS as i64) {
+            if modekey::try_from(options_get_number((*w).options, c"mode-keys".as_ptr()) as i32)
+                == Ok(modekey::MODEKEY_EMACS)
+            {
                 1
             } else {
                 0

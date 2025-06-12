@@ -618,9 +618,9 @@ pub unsafe extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *m
                 s = strrchr(s, b'/' as _).add(1);
             }
             let keys = if !strstr(s, c"vi".as_ptr()).is_null() {
-                MODEKEY_VI
+                modekey::MODEKEY_VI
             } else {
-                MODEKEY_EMACS
+                modekey::MODEKEY_EMACS
             };
             options_set_number(global_s_options, c"status-keys".as_ptr(), keys as _);
             options_set_number(global_w_options, c"mode-keys".as_ptr(), keys as _);

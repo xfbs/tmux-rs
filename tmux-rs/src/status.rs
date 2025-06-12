@@ -1539,9 +1539,11 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
                     }
                     key &= !KEYC_MASK_FLAGS;
 
-                    let mut keys: i32 =
-                        options_get_number((*(*c).session).options, c"status-keys".as_ptr()) as i32;
-                    if keys == MODEKEY_VI {
+                    let mut keys = modekey::try_from(options_get_number(
+                        (*(*c).session).options,
+                        c"status-keys".as_ptr(),
+                    ) as i32);
+                    if keys == Ok(modekey::MODEKEY_VI) {
                         match status_prompt_translate_key(c, key, &raw mut key) {
                             1 => break 'process_key,
                             2 => break 'append_key,

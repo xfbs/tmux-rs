@@ -26,7 +26,7 @@ use crate::compat::{
 pub struct screen_sel {
     pub hidden: i32,
     pub rectangle: i32,
-    pub modekeys: i32,
+    pub modekeys: modekey,
 
     pub sx: u32,
     pub sy: u32,
@@ -492,7 +492,7 @@ pub unsafe extern "C" fn screen_set_selection(
     ex: u32,
     ey: u32,
     rectangle: u32,
-    modekeys: i32,
+    modekeys: modekey,
     gc: *mut grid_cell,
 ) {
     unsafe {
@@ -599,7 +599,7 @@ pub unsafe extern "C" fn screen_check_selection(s: *mut screen, px: u32, py: u32
                     return 0;
                 }
 
-                if (*sel).modekeys == MODEKEY_EMACS {
+                if (*sel).modekeys == modekey::MODEKEY_EMACS {
                     xx = if (*sel).ex == 0 { 0 } else { (*sel).ex - 1 };
                 } else {
                     xx = (*sel).ex;
@@ -617,7 +617,7 @@ pub unsafe extern "C" fn screen_check_selection(s: *mut screen, px: u32, py: u32
                     return 0;
                 }
 
-                if (*sel).modekeys == MODEKEY_EMACS {
+                if (*sel).modekeys == modekey::MODEKEY_EMACS {
                     xx = (*sel).sx - 1;
                 } else {
                     xx = (*sel).sx;
@@ -633,7 +633,7 @@ pub unsafe extern "C" fn screen_check_selection(s: *mut screen, px: u32, py: u32
 
                 if (*sel).ex < (*sel).sx {
                     // cursor (ex) is on the left
-                    if (*sel).modekeys == MODEKEY_EMACS {
+                    if (*sel).modekeys == modekey::MODEKEY_EMACS {
                         xx = (*sel).sx - 1;
                     } else {
                         xx = (*sel).sx;
@@ -643,7 +643,7 @@ pub unsafe extern "C" fn screen_check_selection(s: *mut screen, px: u32, py: u32
                     }
                 } else {
                     // selection start (sx) is on the left
-                    if (*sel).modekeys == MODEKEY_EMACS {
+                    if (*sel).modekeys == modekey::MODEKEY_EMACS {
                         xx = if (*sel).ex == 0 { 0 } else { (*sel).ex - 1 };
                     } else {
                         xx = (*sel).ex;

@@ -211,7 +211,7 @@ pub unsafe extern "C" fn server_start(
         };
 
         sigfillset(&raw mut set);
-        sigprocmask(SIG_BLOCK, &set, &raw mut oldset);
+        sigprocmask(SIG_BLOCK, &raw const set, &raw mut oldset);
 
         if !flags.intersects(client_flag::NOFORK) {
             if proc_fork_and_daemon(&raw mut fd) != 0 {

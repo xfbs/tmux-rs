@@ -557,9 +557,12 @@ pub enum tty_code_code {
 
 pub const WHITESPACE: &CStr = c" ";
 
-// Mode Keys. TODO convert to enum
-pub const MODEKEY_EMACS: i32 = 0;
-pub const MODEKEY_VI: i32 = 1;
+#[repr(i32)]
+#[derive(Copy, Clone, Eq, PartialEq, num_enum::TryFromPrimitive)]
+pub enum modekey {
+    MODEKEY_EMACS = 0,
+    MODEKEY_VI = 1,
+}
 
 bitflags::bitflags! {
     /// Grid flags.

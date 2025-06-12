@@ -837,7 +837,7 @@ pub static mut options_table: [options_table_entry; 191] = [
         type_: options_table_type::OPTIONS_TABLE_CHOICE,
         scope: OPTIONS_TABLE_SESSION,
         choices: &raw const options_table_status_keys_list as *const *const c_char,
-        default_num: MODEKEY_EMACS as i64,
+        default_num: modekey::MODEKEY_EMACS as i64,
         text: c"Key set to use at the command prompt.".as_ptr(),
         ..unsafe { zeroed() }
     },
@@ -1094,7 +1094,7 @@ pub static mut options_table: [options_table_entry; 191] = [
         type_: options_table_type::OPTIONS_TABLE_CHOICE,
         scope: OPTIONS_TABLE_WINDOW,
         choices: &raw const options_table_mode_keys_list as *const *const c_char,
-        default_num: MODEKEY_EMACS as i64,
+        default_num: modekey::MODEKEY_EMACS as i64,
         text: c"Key set used in copy mode.".as_ptr(),
         ..unsafe { zeroed() }
     },
