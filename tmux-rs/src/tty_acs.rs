@@ -1,15 +1,17 @@
-use libc::{bsearch, strcmp};
-
+// Copyright (c) 2010 Nicholas Marriott <nicholas.marriott@gmail.com>
+//
+// Permission to use, copy, modify, and distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+// ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
+// IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
+// OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use crate::*;
-
-unsafe extern "C" {
-    // pub fn tty_acs_needed(_: *mut tty) -> c_int;
-    // pub fn tty_acs_get(_: *mut tty, _: c_uchar) -> *const c_char;
-    // pub fn tty_acs_reverse_get(_: *mut tty, _: *const c_char, _: usize) -> c_int;
-    // pub fn tty_acs_double_borders(_: c_int) -> *const utf8_data;
-    // pub fn tty_acs_heavy_borders(_: c_int) -> *const utf8_data;
-    // pub fn tty_acs_rounded_borders(_: c_int) -> *const utf8_data;
-}
 
 #[repr(C)]
 pub struct tty_acs_entry {
@@ -201,7 +203,7 @@ pub unsafe extern "C" fn tty_acs_reverse_cmp(key: *const c_void, value: *const c
         let entry = value as *const tty_acs_reverse_entry;
         let test = key as *const c_char;
 
-        strcmp(test, (*entry).string.as_ptr().cast())
+        libc::strcmp(test, (*entry).string.as_ptr().cast())
     }
 }
 
@@ -275,7 +277,7 @@ pub unsafe extern "C" fn tty_acs_reverse_get(
         } else {
             return -1;
         }
-        let entry: *const tty_acs_reverse_entry = bsearch(
+        let entry: *const tty_acs_reverse_entry = libc::bsearch(
             s.cast(),
             table.cast(),
             items,

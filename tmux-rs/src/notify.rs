@@ -1,22 +1,19 @@
+// Copyright (c) 2012 George Nachman <tmux@georgester.com>
+//
+// Permission to use, copy, modify, and distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+// ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
+// IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
+// OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use libc::strcmp;
 
 use crate::*;
-
-unsafe extern "C" {
-    // pub fn notify_hook(_: *mut cmdq_item, _: *const c_char);
-    // pub fn notify_client(_: *const c_char, _: *mut client);
-    // pub fn notify_session(_: *const c_char, _: *mut session);
-    // pub fn notify_winlink(_: *const c_char, _: *mut winlink);
-    // pub fn notify_session_window(_: *const c_char, _: *mut session, _: *mut window);
-    // pub fn notify_window(_: *const c_char, _: *mut window);
-    // pub fn notify_pane(_: *const c_char, _: *mut window_pane);
-    // pub fn notify_paste_buffer(_: *const c_char, _: c_int);
-
-    // pub unsafe fn notify_insert_hook(item: *mut cmdq_item, ne: *mut notify_entry);
-    // pub unsafe fn notify_insert_one_hook( item: *mut cmdq_item, ne: *mut notify_entry, cmdlist: *mut cmd_list, state: *mut cmdq_state,) -> *mut cmdq_item;
-    // pub unsafe fn notify_callback(item: *mut cmdq_item, data: *mut c_void) -> cmd_retval;
-    // pub unsafe fn notify_add( name: *const c_char, fs: *mut cmd_find_state, c: *mut client, s: *mut session, w: *mut window, wp: *mut window_pane, pbname: *const c_char,);
-}
 
 unsafe impl Zeroable for notify_entry {}
 #[repr(C)]

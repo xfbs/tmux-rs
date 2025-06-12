@@ -688,6 +688,42 @@ pub unsafe extern "C" fn cmd_parse_from_arguments(
     }
 }
 
+pub struct Lexer<'input> {
+    chars: std::str::CharIndices<'input>,
+}
+impl<'input> Lexer<'input> {
+    pub fn new(input: &'input str) -> Self {
+        Lexer {
+            chars: input.char_indices(),
+        }
+    }
+}
+pub enum Tok {
+    Space,
+    Tab,
+    Linefeed,
+}
+pub enum LexicalError {
+    // Not possible
+}
+type Loc = usize;
+impl<'input> Iterator for Lexer<'input> {
+    type Item = Result<(Loc, Tok, Loc), LexicalError>;
+
+    fn next(&mut self) -> Option<Result<(Loc, Tok, Loc), LexicalError>> {
+        loop {
+            match self.chars.next() {
+                Some((i, ' ')) => return Some(Ok((i, Tok::Space, i + 1))),
+                Some((i, '\t')) => return Some(Ok((i, Tok::Tab, i + 1))),
+                Some((i, '\n')) => return Some(Ok((i, Tok::Linefeed, i + 1))),
+
+                None => return None, // End of file
+                _ => continue,       // Comment; skip this character
+            }
+        }
+    }
+}
+
 // ===================================
 
 mod parser {
@@ -700,25 +736,31 @@ mod parser {
     // unsafe extern "C" fn yyparse_() -> i32 {}
 }
 
-unsafe fn dummy_cmd_parse_state_init() -> cmd_parse_state {
+unsafe fn dummy_cmd_parse_state_init(this: *mut cmd_parse_state) -> NonNull<cmd_parse_state> {
     unsafe {
         let f = libc::fopen(c"test.tmuxconf".as_ptr(), c"r".as_ptr());
 
-        cmd_parse_state {
+        *this = cmd_parse_state {
             f,
-            buf: todo!(),
-            len: todo!(),
-            off: todo!(),
-            condition: todo!(),
-            eol: todo!(),
-            eof: todo!(),
-            input: todo!(),
-            escapes: todo!(),
-            error: todo!(),
-            commands: todo!(),
-            scope: todo!(),
-            stack: todo!(),
-        }
+            buf: null(),
+            len: 0,
+            off: 0,
+            condition: 0,
+            eol: 0,
+            eof: 0,
+            input: null_mut(),
+            escapes: 0,
+            error: null_mut(),
+            commands: null_mut(),
+            scope: null_mut(),
+            stack: tailq_head {
+                tqh_first: null_mut(),
+                tqh_last: null_mut(),
+            },
+        };
+        tailq_init(&raw mut (*this).stack);
+
+        NonNull::new(this).unwrap()
     }
 }
 
@@ -740,13 +782,92 @@ fn test_parse_lines() {
         // stack
         // scope
 
-        let mut state: cmd_parse_state = unsafe { zeroed() };
-        state.commands = null_mut();
-        tailq_init(&raw mut state.stack);
-        let ps = NonNull::new(&raw mut state).unwrap();
+        // pi = tmux_rs::cmd_parse_input {flags: tmux_rs::cmd_parse_input_flags (tmux_rs::_::InternalBitFlags (16)), file: 0x0, line: 0, item: 0x0, c: 0x0, fs: tmux_rs::cmd_find_state {flags: 0, current: 0x0, s: 0x0, wl: 0x0, w: 0x0, wp: 0x0, idx: 0}}
+        //
+        // parser_state:
+        // input = pi
+        // buf = "bind -N 'Send the prefix key' C-b { send-prefix }"
+        // len = 47
+        //
+        // cmd_parse_run_parser
+        // init commands and stack
+        // then call yyparse
+        //
+        //
+        //
+        //(gdb) p *ps
+
+        // let input = cmd_parse_input {
+        //     flags: cmd_parse_input_flags::CMD_PARSE_ONEGROUP,
+        //     file: null_mut(),
+        //     line: 0,
+        //     item: null_mut(),
+        //     c: null_mut(),
+        //     fs: cmd_find_state {
+        //         flags: 0,
+        //         current: null_mut(),
+        //         s: null_mut(),
+        //         wl: null_mut(),
+        //         w: null_mut(),
+        //         wp: null_mut(),
+        //         idx: 0,
+        //     },
+        // };
+
+        // let commands = compat::queue::tailq_head::<crate::cmd_parse::cmd_parse_command> {
+        //     tqh_first: cmd_parse::cmd_parse_command { // 0x555555a22410
+        //         line: 0,
+        //         arguments: compat::queue::tailq_head::<cmd_parse::cmd_parse_argument> {
+        //             tqh_first:
+        // cmd_parse_argument { // 0x555555a22440,
+        //                 type_: cmd_parse::cmd_parse_argument_type::CMD_PARSE_STRING,
+        //                 string: 0x555555a221c0,
+        //                 commands: 0x0,
+        //                 cmdlist: 0x0,
+        //                 entry: compat::queue::tailq_entry::<cmd_parse::cmd_parse_argument> {
+        //                     tqe_next: 0x555555a22200, tqe_prev: 0x555555a22418
+        //                 }
+        //             },
+        //             tqh_last: // 0x555555a223d0, -> null_mut(),
+        //         },
+        //         entry: compat::queue::tailq_entry::<cmd_parse::cmd_parse_command> {
+        //             tqe_next: null_mut(),
+        //             tqe_prev: 0x555555a223f0,
+        //         },
+        //     },
+
+        //     tqh_last: // 0x555555a22428 -> null_mut()
+        // };
+
+        // let test_parse_state = cmd_parse_state {
+        //     f: null_mut(),
+        //     buf: c"bind -N 'Send the prefix key' C-b { send-prefix }".as_ptr(),
+        //     len: 49,
+        //     off: 49,
+        //     condition: 0,
+        //     eol: 0,
+        //     eof: 1,
+        //     input: &raw mut input,
+        //     escapes: 0,
+        //     error: null_mut(),
+        //     commands: 0x555555a223f0,
+        //     scope: null_mut(),
+        //     stack: crate::compat::queue::tailq_head {
+        //         tqh_first: null_mut(),
+        //         tqh_last: 0x5555559fec70,
+        //     },
+        // };
+
+        let mut state: MaybeUninit<cmd_parse_state> = MaybeUninit::uninit();
+        let state = dummy_cmd_parse_state_init(state.as_mut_ptr());
 
         let mut parser = cmd_parse::StatementParser::new();
-        let parsed = parser.parse(ps, lines).unwrap();
+        let parsed = parser.parse(state, lines).unwrap();
         println!("{parsed:?}");
     }
 }
+
+// # Notes:
+//
+// <https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html>
+// <https://github.com/lalrpop/lalrpop/blob/master/README.md>

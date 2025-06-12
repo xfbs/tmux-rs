@@ -1,14 +1,21 @@
+// Copyright (c) 2023 Nicholas Marriott <nicholas.marriott@gmail.com>
+//
+// Permission to use, copy, modify, and distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+// ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
+// IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
+// OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
 use crate::{utf8_data, utf8_in_table, utf8_state, utf8_towc, wchar_t};
 
 use core::ffi::c_void;
 use libc::memcmp;
-
-unsafe extern "C" {
-    // pub unsafe fn utf8_has_zwj(_: *const utf8_data) -> c_int;
-    // pub unsafe fn utf8_is_zwj(_: *const utf8_data) -> c_int;
-    // pub unsafe fn utf8_is_vs(_: *const utf8_data) -> c_int;
-    // pub unsafe fn utf8_is_modifier(_: *const utf8_data) -> c_int;
-}
 
 static utf8_modifier_table: [wchar_t; 31] = [
     0x1F1E6, 0x1F1E7, 0x1F1E8, 0x1F1E9, 0x1F1EA, 0x1F1EB, 0x1F1EC, 0x1F1ED, 0x1F1EE, 0x1F1EF,

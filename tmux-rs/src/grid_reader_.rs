@@ -1,23 +1,17 @@
+// Copyright (c) 2020 Anindya Mukherjee <anindya49@hotmail.com>
+//
+// Permission to use, copy, modify, and distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+// ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
+// IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
+// OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use crate::*;
-
-unsafe extern "C" {
-    // pub fn grid_reader_start(_: *mut grid_reader, _: *mut grid, _: c_uint, _: c_uint);
-    // pub fn grid_reader_get_cursor(_: *mut grid_reader, _: *mut c_uint, _: *mut c_uint);
-    // pub fn grid_reader_line_length(_: *mut grid_reader) -> c_uint;
-    // pub fn grid_reader_in_set(_: *mut grid_reader, _: *const c_char) -> c_int;
-    // pub fn grid_reader_cursor_right(_: *mut grid_reader, _: c_int, _: c_int);
-    // pub fn grid_reader_cursor_left(_: *mut grid_reader, _: c_int);
-    // pub fn grid_reader_cursor_down(_: *mut grid_reader);
-    // pub fn grid_reader_cursor_up(_: *mut grid_reader);
-    // pub fn grid_reader_cursor_start_of_line(_: *mut grid_reader, _: c_int);
-    // pub fn grid_reader_cursor_end_of_line(_: *mut grid_reader, _: c_int, _: c_int);
-    // pub fn grid_reader_cursor_next_word(_: *mut grid_reader, _: *const c_char);
-    // pub fn grid_reader_cursor_next_word_end(_: *mut grid_reader, _: *const c_char);
-    // pub fn grid_reader_cursor_previous_word(_: *mut grid_reader, _: *const c_char, _: c_int, _: c_int);
-    // pub fn grid_reader_cursor_jump(_: *mut grid_reader, _: *const utf8_data) -> c_int;
-    // pub fn grid_reader_cursor_jump_back(_: *mut grid_reader, _: *const utf8_data) -> c_int;
-    // pub fn grid_reader_cursor_back_to_indentation(_: *mut grid_reader);
-}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_reader_start(gr: *mut grid_reader, gd: *mut grid, cx: u32, cy: u32) {
