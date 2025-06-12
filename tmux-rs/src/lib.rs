@@ -686,6 +686,7 @@ pub struct colour_palette {
     pub default_palette: *mut i32,
 }
 
+// Grid attributes. Anything above 0xff is stored in an extended cell.
 bitflags::bitflags! {
     /// Grid flags.
     #[repr(transparent)]
@@ -707,22 +708,6 @@ bitflags::bitflags! {
         const GRID_ATTR_OVERLINE = 0x2000;
     }
 }
-
-// Grid attributes. Anything above 0xff is stored in an extended cell.
-// pub const GRID_ATTR_BRIGHT: u16 = 0x1;
-// pub const GRID_ATTR_DIM: u16 = 0x2;
-// pub const GRID_ATTR_UNDERSCORE: u16 = 0x4;
-// pub const GRID_ATTR_BLINK: u16 = 0x8;
-// pub const GRID_ATTR_REVERSE: u16 = 0x10;
-// pub const GRID_ATTR_HIDDEN: u16 = 0x20;
-// pub const GRID_ATTR_ITALICS: u16 = 0x40;
-// pub const GRID_ATTR_CHARSET: u16 = 0x80; // alternative character set
-// pub const GRID_ATTR_STRIKETHROUGH: u16 = 0x100;
-// pub const GRID_ATTR_UNDERSCORE_2: u16 = 0x200;
-// pub const GRID_ATTR_UNDERSCORE_3: u16 = 0x400;
-// pub const GRID_ATTR_UNDERSCORE_4: u16 = 0x800;
-// pub const GRID_ATTR_UNDERSCORE_5: u16 = 0x1000;
-// pub const GRID_ATTR_OVERLINE: u16 = 0x2000;
 
 /// All underscore attributes.
 pub const GRID_ATTR_ALL_UNDERSCORE: grid_attr = grid_attr::GRID_ATTR_UNDERSCORE
@@ -759,12 +744,18 @@ bitflags::bitflags! {
     }
 }
 
-// Grid string flags.
-pub const GRID_STRING_WITH_SEQUENCES: i32 = 0x1;
-pub const GRID_STRING_ESCAPE_SEQUENCES: i32 = 0x2;
-pub const GRID_STRING_TRIM_SPACES: i32 = 0x4;
-pub const GRID_STRING_USED_ONLY: i32 = 0x8;
-pub const GRID_STRING_EMPTY_CELLS: i32 = 0x10;
+/// Grid string flags.
+bitflags::bitflags! {
+    #[repr(transparent)]
+    #[derive(Copy, Clone, Eq, PartialEq)]
+    pub struct grid_string_flags: i32 {
+        const GRID_STRING_WITH_SEQUENCES = 0x1;
+        const GRID_STRING_ESCAPE_SEQUENCES = 0x2;
+        const GRID_STRING_TRIM_SPACES = 0x4;
+        const GRID_STRING_USED_ONLY = 0x8;
+        const GRID_STRING_EMPTY_CELLS = 0x10;
+    }
+}
 
 /// Cell positions.
 #[repr(i32)]

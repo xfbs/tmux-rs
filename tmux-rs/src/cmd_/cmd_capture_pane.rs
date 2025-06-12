@@ -119,7 +119,7 @@ unsafe extern "C" fn cmd_capture_pane_history(
         let mut gc: *mut grid_cell = null_mut();
         let mut n = 0;
         let mut join_lines = 0;
-        let mut flags = 0;
+        let mut flags = grid_string_flags::empty();
 
         let mut tmp: u32 = 0;
         let mut bottom: u32 = 0;
@@ -204,16 +204,16 @@ unsafe extern "C" fn cmd_capture_pane_history(
 
         join_lines = args_has(args, b'J');
         if args_has(args, b'e') != 0 {
-            flags |= GRID_STRING_WITH_SEQUENCES;
+            flags |= grid_string_flags::GRID_STRING_WITH_SEQUENCES;
         }
         if args_has(args, b'C') != 0 {
-            flags |= GRID_STRING_ESCAPE_SEQUENCES;
+            flags |= grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES;
         }
         if join_lines == 0 && args_has(args, b'T') == 0 {
-            flags |= GRID_STRING_EMPTY_CELLS;
+            flags |= grid_string_flags::GRID_STRING_EMPTY_CELLS;
         }
         if join_lines == 0 && args_has(args, b'N') == 0 {
-            flags |= GRID_STRING_TRIM_SPACES;
+            flags |= grid_string_flags::GRID_STRING_TRIM_SPACES;
         }
 
         let mut buf = null_mut();

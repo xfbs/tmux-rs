@@ -1014,7 +1014,7 @@ pub unsafe extern "C" fn grid_string_cells_add_code(
     oldc: *mut c_int,
     nnewc: usize,
     noldc: usize,
-    flags: c_int,
+    flags: grid_string_flags,
 ) {
     unsafe {
         let mut tmp: [c_char; 64] = [0; 64];
@@ -1037,7 +1037,7 @@ pub unsafe extern "C" fn grid_string_cells_add_code(
             return; // reset and colour default
         }
 
-        if flags & GRID_STRING_ESCAPE_SEQUENCES != 0 {
+        if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES) {
             strlcat(buf, c"\\033[".as_ptr() as *const c_char, len);
         } else {
             strlcat(buf, c"\x1b[".as_ptr() as *const c_char, len);
@@ -1071,7 +1071,7 @@ pub unsafe extern "C" fn grid_string_cells_add_hyperlink(
     len: usize,
     id: *const c_char,
     uri: *const c_char,
-    flags: c_int,
+    flags: grid_string_flags,
 ) -> c_int {
     unsafe {
         let mut tmp: *mut c_char = null_mut();
@@ -1080,7 +1080,7 @@ pub unsafe extern "C" fn grid_string_cells_add_hyperlink(
             return 0;
         }
 
-        if flags & GRID_STRING_ESCAPE_SEQUENCES != 0 {
+        if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES) {
             strlcat(buf, c"\\033]8;".as_ptr() as *const c_char, len);
         } else {
             strlcat(buf, c"\x1b]8;".as_ptr() as *const c_char, len);
@@ -1096,7 +1096,7 @@ pub unsafe extern "C" fn grid_string_cells_add_hyperlink(
 
         strlcat(buf, uri, len);
 
-        if flags & GRID_STRING_ESCAPE_SEQUENCES != 0 {
+        if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES) {
             strlcat(buf, c"\\033\\\\".as_ptr() as *const c_char, len);
         } else {
             strlcat(buf, c"\x1b\\".as_ptr() as *const c_char, len);
@@ -1114,7 +1114,7 @@ pub unsafe extern "C" fn grid_string_cells_code(
     gc: *const grid_cell,
     buf: *mut c_char,
     len: usize,
-    flags: c_int,
+    flags: grid_string_flags,
     sc: *mut screen,
     has_link: *mut c_int,
 ) {
@@ -1171,7 +1171,7 @@ pub unsafe extern "C" fn grid_string_cells_code(
         // Write the attributes
         *buf = 0;
         if n > 0 {
-            if flags & GRID_STRING_ESCAPE_SEQUENCES != 0 {
+            if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES) {
                 strlcat(buf, c"\\033[".as_ptr() as *const c_char, len);
             } else {
                 strlcat(buf, c"\x1b[".as_ptr() as *const c_char, len);
@@ -1251,7 +1251,7 @@ pub unsafe extern "C" fn grid_string_cells_code(
         if attr.intersects(grid_attr::GRID_ATTR_CHARSET)
             && !lastattr.intersects(grid_attr::GRID_ATTR_CHARSET)
         {
-            if flags & GRID_STRING_ESCAPE_SEQUENCES != 0 {
+            if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES) {
                 strlcat(buf, c"\\016".as_ptr() as *const c_char, len); // SO
             } else {
                 strlcat(buf, c"\x0e".as_ptr() as *const c_char, len); // SO
@@ -1260,7 +1260,7 @@ pub unsafe extern "C" fn grid_string_cells_code(
         if !attr.intersects(grid_attr::GRID_ATTR_CHARSET)
             && lastattr.intersects(grid_attr::GRID_ATTR_CHARSET)
         {
-            if flags & GRID_STRING_ESCAPE_SEQUENCES != 0 {
+            if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES) {
                 strlcat(buf, c"\\017".as_ptr() as *const c_char, len); // SI
             } else {
                 strlcat(buf, c"\x0f".as_ptr() as *const c_char, len); // SI
@@ -1301,7 +1301,7 @@ pub unsafe extern "C" fn grid_string_cells(
     py: c_uint,
     nx: c_uint,
     lastgc: *mut *mut grid_cell,
-    flags: c_int,
+    flags: grid_string_flags,
     s: *mut screen,
 ) -> *mut c_char {
     static mut lastgc1: grid_cell = unsafe { zeroed() };
@@ -1323,7 +1323,7 @@ pub unsafe extern "C" fn grid_string_cells(
         let mut buf: *mut c_char = xmalloc(len).as_ptr() as *mut c_char;
 
         let gl = grid_peek_line(gd, py);
-        let end = if flags & GRID_STRING_EMPTY_CELLS != 0 {
+        let end = if flags.intersects(grid_string_flags::GRID_STRING_EMPTY_CELLS) {
             (*gl).cellsize
         } else {
             (*gl).cellused
@@ -1338,7 +1338,7 @@ pub unsafe extern "C" fn grid_string_cells(
                 continue;
             }
 
-            if flags & GRID_STRING_WITH_SEQUENCES != 0 {
+            if flags.intersects(grid_string_flags::GRID_STRING_WITH_SEQUENCES) {
                 grid_string_cells_code(
                     *lastgc,
                     &gc,
@@ -1356,7 +1356,10 @@ pub unsafe extern "C" fn grid_string_cells(
 
             data = &raw const gc.data.data as *const c_char;
             size = gc.data.size as usize;
-            if flags & GRID_STRING_ESCAPE_SEQUENCES != 0 && size == 1 && *data as u8 == b'\\' {
+            if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES)
+                && size == 1
+                && *data as u8 == b'\\'
+            {
                 data = c"\\\\".as_ptr() as *const c_char;
                 size = 2;
             }
@@ -1391,7 +1394,7 @@ pub unsafe extern "C" fn grid_string_cells(
             off += codelen;
         }
 
-        if flags & GRID_STRING_TRIM_SPACES != 0 {
+        if flags.intersects(grid_string_flags::GRID_STRING_TRIM_SPACES) {
             while off > 0 && *buf.add(off - 1) as u8 == b' ' {
                 off -= 1;
             }

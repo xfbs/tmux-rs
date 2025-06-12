@@ -20,7 +20,7 @@ use ::core::{
 use crate::{
     GRID_HISTORY, grid, grid_cell, grid_clear, grid_collect_history, grid_get_cell, grid_get_line,
     grid_move_cells, grid_move_lines, grid_scroll_history, grid_scroll_history_region,
-    grid_set_cell, grid_set_cells, grid_set_padding, grid_string_cells,
+    grid_set_cell, grid_set_cells, grid_set_padding, grid_string_cells, grid_string_flags,
 };
 
 fn grid_view_x(gd: *mut grid, x: u32) -> u32 {
@@ -284,6 +284,14 @@ pub unsafe extern "C" fn grid_view_string_cells(
         px = grid_view_x(gd, px);
         py = grid_view_y(gd, py);
 
-        grid_string_cells(gd, px, py, nx, null_mut(), 0, null_mut())
+        grid_string_cells(
+            gd,
+            px,
+            py,
+            nx,
+            null_mut(),
+            grid_string_flags::empty(),
+            null_mut(),
+        )
     }
 }
