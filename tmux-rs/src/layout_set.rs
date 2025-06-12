@@ -325,7 +325,7 @@ pub unsafe extern "C" fn layout_set_main_h_mirrored(w: *mut window) {
         n -= 1; // take off main pane
 
         // Find available height - take off one line for the border.
-        let mut sy = (*w).sy - 1;
+        let sy = (*w).sy - 1;
 
         // Get the main pane height.
         let s = options_get_string((*w).options, c"main-pane-height".as_ptr());

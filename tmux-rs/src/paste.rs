@@ -183,7 +183,7 @@ pub unsafe extern "C" fn paste_add(mut prefix: *const c_char, data: *mut c_char,
             }
         }
 
-        let mut pb = xmalloc_::<paste_buffer>().as_ptr();
+        let pb = xmalloc_::<paste_buffer>().as_ptr();
 
         (*pb).name = null_mut();
         loop {

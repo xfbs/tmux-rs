@@ -77,12 +77,12 @@ static mut cmd_last_window_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_select_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut c = cmdq_get_client(item);
-        let mut current = cmdq_get_current(item);
-        let mut target = cmdq_get_target(item);
-        let mut wl = (*target).wl;
-        let mut s = (*target).s;
+        let args = cmd_get_args(self_);
+        let c = cmdq_get_client(item);
+        let current = cmdq_get_current(item);
+        let target = cmdq_get_target(item);
+        let wl = (*target).wl;
+        let s = (*target).s;
         //int			 next, previous, last, activity;
 
         let mut next = cmd_get_entry(self_) == &raw mut cmd_next_window_entry;

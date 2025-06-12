@@ -490,7 +490,7 @@ pub unsafe extern "C" fn cmd_stringify_argv(argc: c_int, argv: *mut *mut c_char)
         //char	*buf = NULL, *s;
         //size_t	 len = 0;
         //int	 i;
-        let mut s: *mut c_char = null_mut();
+        let s: *mut c_char = null_mut();
         let mut buf: *mut c_char = null_mut();
         let mut len: usize = 0;
 
@@ -753,7 +753,7 @@ pub unsafe extern "C" fn cmd_print(cmd: *mut cmd) -> *mut c_char {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_list_new() -> *mut cmd_list {
     unsafe {
-        let mut cmdlist: *mut cmd_list = xcalloc(1, size_of::<cmd_list>()).cast().as_ptr();
+        let cmdlist: *mut cmd_list = xcalloc(1, size_of::<cmd_list>()).cast().as_ptr();
         (*cmdlist).references = 1;
         (*cmdlist).group = cmd_list_next_group;
         cmd_list_next_group += 1;
@@ -845,7 +845,7 @@ pub unsafe extern "C" fn cmd_list_print(cmdlist: *mut cmd_list, escaped: c_int) 
         let mut buf: *mut c_char = xcalloc(1, len).cast().as_ptr();
 
         for cmd in tailq_foreach::<_, qentry>((*cmdlist).list).map(NonNull::as_ptr) {
-            let mut this = cmd_print(cmd);
+            let this = cmd_print(cmd);
 
             len += strlen(this) + 6;
             buf = xrealloc_(buf, len).as_ptr();
@@ -917,7 +917,7 @@ pub unsafe extern "C" fn cmd_mouse_at(
     last: c_int,
 ) -> c_int {
     unsafe {
-        let mut x: u32;
+        let x: u32;
         let mut y: u32;
 
         if last != 0 {
@@ -980,7 +980,7 @@ pub unsafe extern "C" fn cmd_mouse_window(
         if (*m).w == -1 {
             wl = NonNull::new((*s).curw);
         } else {
-            let mut w = window_find_by_id((*m).w as u32);
+            let w = window_find_by_id((*m).w as u32);
             if w.is_null() {
                 return None;
             }

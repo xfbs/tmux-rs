@@ -36,8 +36,8 @@ static mut cmd_list_windows_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_list_windows_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
 
         if args_has_(args, 'a') {
             cmd_list_windows_server(self_, item);
@@ -66,7 +66,7 @@ unsafe extern "C" fn cmd_list_windows_session(
     type_: i32,
 ) {
     unsafe {
-        let mut args = cmd_get_args(self_);
+        let args = cmd_get_args(self_);
         let mut flag = 0;
 
         let mut template = args_get_(args, 'F');
@@ -81,7 +81,7 @@ unsafe extern "C" fn cmd_list_windows_session(
                 _ => (),
             }
         }
-        let mut filter = args_get_(args, 'f');
+        let filter = args_get_(args, 'f');
 
         for (n, wl) in rb_foreach(&raw mut (*s.as_ptr()).windows).enumerate() {
             let ft = format_create(

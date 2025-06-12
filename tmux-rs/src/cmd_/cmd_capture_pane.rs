@@ -74,7 +74,7 @@ unsafe extern "C" fn cmd_capture_pane_pending(
     let mut tmp: [c_char; 5] = [0; 5];
 
     unsafe {
-        let mut pending = input_pending((*wp).ictx);
+        let pending = input_pending((*wp).ictx);
         if pending.is_null() {
             return xstrdup(c"".as_ptr()).as_ptr();
         }
@@ -124,11 +124,11 @@ unsafe extern "C" fn cmd_capture_pane_history(
         let mut tmp: u32 = 0;
         let mut bottom: u32 = 0;
         let mut cause: *mut c_char = null_mut();
-        let mut buf: *mut c_char = null_mut();
+        let buf: *mut c_char = null_mut();
         let mut line: *mut c_char = null_mut();
 
-        let mut sflag: *const c_char;
-        let mut eflag: *const c_char;
+        let sflag: *const c_char;
+        let eflag: *const c_char;
         let mut linelen: usize = 0;
 
         let sx = screen_size_x(&raw mut (*wp).base);
@@ -238,9 +238,9 @@ unsafe extern "C" fn cmd_capture_pane_history(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_capture_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut c = cmdq_get_client(item);
-        let mut wp = (*cmdq_get_target(item)).wp;
+        let args = cmd_get_args(self_);
+        let c = cmdq_get_client(item);
+        let wp = (*cmdq_get_target(item)).wp;
 
         if cmd_get_entry(self_) == &raw mut cmd_clear_history_entry {
             window_pane_reset_mode_all(wp);

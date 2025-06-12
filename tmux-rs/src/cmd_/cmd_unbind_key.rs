@@ -30,10 +30,10 @@ static mut cmd_unbind_key_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_unbind_key_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
+        let args = cmd_get_args(self_);
         let mut tablename: *const c_char = null_mut();
-        let mut keystr = args_string(args, 0);
-        let mut quiet = args_has(args, b'q');
+        let keystr = args_string(args, 0);
+        let quiet = args_has(args, b'q');
 
         if args_has(args, b'a') != 0 {
             if !keystr.is_null() {

@@ -31,10 +31,10 @@ static mut cmd_paste_buffer_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_paste_buffer_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
-        let mut wp = (*target).wp;
-        let mut bracket = args_has(args, b'p') != 0;
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
+        let wp = (*target).wp;
+        let bracket = args_has(args, b'p') != 0;
 
         if window_pane_exited(wp) != 0 {
             cmdq_error(item, c"target pane has exited".as_ptr());
@@ -80,10 +80,10 @@ unsafe extern "C" fn cmd_paste_buffer_exec(self_: *mut cmd, item: *mut cmdq_item
 
             let mut bufsize: usize = 0;
             let mut bufdata = paste_buffer_data_(pb, &mut bufsize);
-            let mut bufend = bufdata.add(bufsize);
+            let bufend = bufdata.add(bufsize);
 
             loop {
-                let mut line: *mut c_char =
+                let line: *mut c_char =
                     libc::memchr(bufdata as _, b'\n' as i32, bufend.addr() - bufdata.addr()).cast();
                 if line.is_null() {
                     break;

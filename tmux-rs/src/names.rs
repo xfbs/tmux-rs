@@ -22,7 +22,7 @@ unsafe extern "C" {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn name_time_callback(_fd: c_int, _events: c_short, arg: *mut c_void) {
-    let mut w = arg as *mut window;
+    let w = arg as *mut window;
     unsafe {
         log_debug!("@{} timer expired", (*w).id);
     }

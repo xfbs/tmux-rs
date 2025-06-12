@@ -39,20 +39,20 @@ unsafe extern "C" fn cmd_bind_key_args_parse(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_bind_key_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args: *mut args = cmd_get_args(self_);
-        let mut note = args_get(args, b'N');
+        let args: *mut args = cmd_get_args(self_);
+        let note = args_get(args, b'N');
         let mut repeat = 0;
 
         let mut value: *mut args_value = null_mut();
-        let mut count: u32 = args_count(args);
+        let count: u32 = args_count(args);
 
-        let mut key: key_code = key_string_lookup_string(args_string(args, 0));
+        let key: key_code = key_string_lookup_string(args_string(args, 0));
         if key == KEYC_NONE || key == KEYC_UNKNOWN {
             cmdq_error(item, c"unknown key bind: %s".as_ptr(), args_string(args, 0));
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
-        let mut tablename: *const c_char = if args_has(args, b'T') != 0 {
+        let tablename: *const c_char = if args_has(args, b'T') != 0 {
             args_get(args, b'T')
         } else if args_has(args, b'n') != 0 {
             c"root".as_ptr()

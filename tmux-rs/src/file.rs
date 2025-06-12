@@ -73,7 +73,7 @@ pub unsafe extern "C" fn file_create_with_peer(
     cbdata: *mut c_void,
 ) -> *mut client_file {
     unsafe {
-        let mut cf = xcalloc_::<client_file>(1).as_ptr();
+        let cf = xcalloc_::<client_file>(1).as_ptr();
         (*cf).c = null_mut();
         (*cf).references = 1;
         (*cf).stream = stream;
@@ -106,7 +106,7 @@ pub unsafe extern "C" fn file_create_with_client(
             c = null_mut();
         }
 
-        let mut cf: *mut client_file = xcalloc_::<client_file>(1).as_ptr();
+        let cf: *mut client_file = xcalloc_::<client_file>(1).as_ptr();
         (*cf).c = c;
         (*cf).references = 1;
         (*cf).stream = stream;
@@ -155,8 +155,8 @@ pub unsafe extern "C" fn file_free(cf: *mut client_file) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_fire_done_cb(_fd: i32, _events: i16, arg: *mut c_void) {
     unsafe {
-        let mut cf: *mut client_file = arg as _;
-        let mut c: *mut client = (*cf).c;
+        let cf: *mut client_file = arg as _;
+        let c: *mut client = (*cf).c;
 
         if let Some(cb) = (*cf).cb {
             if (*cf).closed != 0 || c.is_null() || !(*c).flags.intersects(client_flag::DEAD) {
@@ -214,7 +214,7 @@ pub unsafe extern "C" fn file_print(c: *mut client, fmt: *const c_char, mut args
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_vprint(c: *mut client, fmt: *const c_char, ap: VaList) {
     unsafe {
-        let mut cf: *mut client_file = null_mut();
+        let cf: *mut client_file = null_mut();
         let mut find: client_file = zeroed();
         let mut msg: msg_write_open = zeroed();
 
@@ -251,7 +251,7 @@ pub unsafe extern "C" fn file_vprint(c: *mut client, fmt: *const c_char, ap: VaL
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_print_buffer(c: *mut client, data: *mut c_void, size: usize) {
     unsafe {
-        let mut cf: *mut client_file = null_mut();
+        let cf: *mut client_file = null_mut();
         let mut find: client_file = zeroed();
         let mut msg: msg_write_open = zeroed();
 
@@ -336,7 +336,7 @@ pub unsafe extern "C" fn file_write(
         let mut msg: *mut msg_write_open = null_mut();
         let mut msglen: usize = 0;
         let mut fd = -1;
-        let mut stream: u32 = file_next_stream as u32;
+        let stream: u32 = file_next_stream as u32;
         file_next_stream += 1;
         let mut f: *mut FILE = null_mut();
         let mut mode: *const c_char = null();
@@ -421,11 +421,11 @@ pub unsafe extern "C" fn file_read(
     cbdata: *mut c_void,
 ) -> *mut client_file {
     unsafe {
-        let mut cf;
+        let cf;
         let mut msg: *mut msg_read_open = null_mut();
         let mut msglen: usize = 0;
         let mut fd: i32 = -1;
-        let mut stream: u32 = file_next_stream as u32;
+        let stream: u32 = file_next_stream as u32;
         file_next_stream += 1;
         let mut f: *mut FILE = null_mut();
         let mut size: usize = 0;
@@ -529,7 +529,7 @@ pub unsafe extern "C" fn file_cancel(cf: *mut client_file) {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_push_cb(_fd: i32, _events: i16, arg: *mut c_void) {
-    let mut cf = arg as *mut client_file;
+    let cf = arg as *mut client_file;
 
     unsafe {
         if (*cf).c.is_null() || !(*(*cf).c).flags.intersects(client_flag::DEAD) {
@@ -580,7 +580,7 @@ pub unsafe extern "C" fn file_push(cf: *mut client_file) {
             (*cf).references += 1;
             event_once(-1, EV_TIMEOUT, Some(file_push_cb), cf.cast(), null());
         } else if (*cf).stream > 2 {
-            let mut close: msg_write_close = msg_write_close {
+            let close: msg_write_close = msg_write_close {
                 stream: (*cf).stream,
             };
             proc_send(
@@ -671,8 +671,8 @@ pub unsafe extern "C" fn file_write_open(
     cbdata: *mut c_void,
 ) {
     unsafe {
-        let mut msg = (*imsg).data as *mut msg_write_open;
-        let mut msglen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
+        let msg = (*imsg).data as *mut msg_write_open;
+        let msglen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
         let mut path: *const c_char = null();
         let mut find: client_file = zeroed();
         let flags = O_NONBLOCK | O_WRONLY | O_CREAT;
@@ -775,8 +775,8 @@ pub unsafe extern "C" fn file_write_data(files: *mut client_files, imsg: *mut im
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_write_close(files: *mut client_files, imsg: *mut imsg) {
     unsafe {
-        let mut msg = (*imsg).data as *mut msg_write_close;
-        let mut msglen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
+        let msg = (*imsg).data as *mut msg_write_close;
+        let msglen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
         let mut find: client_file = zeroed(); // TODO uninit
         // struct client_file find, *cf;
 
@@ -835,12 +835,12 @@ pub unsafe extern "C" fn file_read_error_callback(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_read_callback(bev: *mut bufferevent, arg: *mut c_void) {
-    let mut cf = arg as *mut client_file;
+    let cf = arg as *mut client_file;
     unsafe {
         let mut msg = xmalloc_::<msg_read_data>();
 
         loop {
-            let mut bdata = EVBUFFER_DATA((*(*cf).event).input);
+            let bdata = EVBUFFER_DATA((*(*cf).event).input);
             let mut bsize = EVBUFFER_LENGTH((*(*cf).event).input);
 
             if bsize == 0 {
@@ -962,8 +962,8 @@ pub unsafe extern "C" fn file_read_open(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_read_cancel(files: *mut client_files, imsg: *mut imsg) {
     unsafe {
-        let mut msg = (*imsg).data as *mut msg_read_cancel;
-        let mut msglen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
+        let msg = (*imsg).data as *mut msg_read_cancel;
+        let msglen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
         let mut find = MaybeUninit::<client_file>::uninit();
 
         if msglen != size_of::<msg_read_cancel>() {

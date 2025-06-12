@@ -328,7 +328,7 @@ pub unsafe extern "C" fn cmdq_append(c: *mut client, mut item: *mut cmdq_item) -
     let __func__ = "cmdq_append";
 
     unsafe {
-        let mut queue = cmdq_get(c);
+        let queue = cmdq_get(c);
         let mut next = null_mut();
 
         loop {
@@ -364,7 +364,7 @@ pub unsafe extern "C" fn cmdq_insert_after(
         let queue = (*after).queue;
 
         loop {
-            let mut next = (*item).next;
+            let next = (*item).next;
             (*item).next = (*after).next;
             (*after).next = item;
 
@@ -402,9 +402,9 @@ pub unsafe extern "C" fn cmdq_insert_hook(
     mut ap: ...
 ) {
     unsafe {
-        let mut state = (*item).state;
-        let mut cmd = (*item).cmd;
-        let mut args = cmd_get_args(cmd);
+        let state = (*item).state;
+        let cmd = (*item).cmd;
+        let args = cmd_get_args(cmd);
         let mut ae: *mut args_entry = null_mut();
         let mut flag: c_uchar = 0;
         let mut name: *mut c_char = null_mut();
@@ -562,7 +562,7 @@ pub unsafe extern "C" fn cmdq_get_command(
         while !cmd.is_null() {
             let entry = cmd_get_entry(cmd);
 
-            let mut item = xcalloc1::<cmdq_item>() as *mut cmdq_item;
+            let item = xcalloc1::<cmdq_item>() as *mut cmdq_item;
             xasprintf(
                 &raw mut (*item).name,
                 c"[%s/%p]".as_ptr(),
@@ -623,8 +623,8 @@ pub unsafe extern "C" fn cmdq_find_flag(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmdq_add_message(item: *mut cmdq_item) {
     unsafe {
-        let mut c = (*item).client;
-        let mut state = (*item).state;
+        let c = (*item).client;
+        let state = (*item).state;
         let mut user = null_mut();
 
         let tmp = cmd_print((*item).cmd);
@@ -659,13 +659,13 @@ pub unsafe extern "C" fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
     let __func__ = "cmdq_fire_command";
 
     unsafe {
-        let mut name = cmdq_name((*item).client);
-        let mut state = (*item).state;
-        let mut cmd = (*item).cmd;
-        let mut args = cmd_get_args(cmd);
-        let mut entry = cmd_get_entry(cmd);
+        let name = cmdq_name((*item).client);
+        let state = (*item).state;
+        let cmd = (*item).cmd;
+        let args = cmd_get_args(cmd);
+        let entry = cmd_get_entry(cmd);
         let mut tc = null_mut();
-        let mut saved = (*item).client;
+        let saved = (*item).client;
         let mut retval;
         let mut fs: cmd_find_state = zeroed();
         let mut fsp: *mut cmd_find_state = null_mut();
@@ -818,8 +818,8 @@ pub unsafe extern "C" fn cmdq_next(c: *mut client) -> u32 {
     let mut retval: cmd_retval = cmd_retval::CMD_RETURN_NORMAL;
 
     unsafe {
-        let mut queue = cmdq_get(c);
-        let mut name = cmdq_name(c);
+        let queue = cmdq_get(c);
+        let name = cmdq_name(c);
 
         'waiting: {
             if tailq_empty(&raw mut (*queue).list) {
@@ -906,7 +906,7 @@ pub unsafe extern "C" fn cmdq_running(c: *mut client) -> *mut cmdq_item {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmdq_guard(item: *mut cmdq_item, guard: *const c_char, flags: i32) {
     unsafe {
-        let mut c = (*item).client;
+        let c = (*item).client;
         let t = (*item).time;
         let number = (*item).number;
 
@@ -942,8 +942,8 @@ pub unsafe extern "C" fn cmdq_print(item: *mut cmdq_item, fmt: *const c_char, mu
 pub unsafe extern "C" fn cmdq_error(item: *mut cmdq_item, fmt: *const c_char, mut args: ...) {
     let __func__ = "cmdq_error";
     unsafe {
-        let mut c = (*item).client;
-        let mut cmd = (*item).cmd;
+        let c = (*item).client;
+        let cmd = (*item).cmd;
         let mut msg = null_mut();
         let mut tmp = null_mut();
         let mut file = null();

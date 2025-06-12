@@ -77,16 +77,16 @@ pub unsafe extern "C" fn cmd_select_pane_redraw(w: *mut window) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut entry = cmd_get_entry(self_);
-        let mut current = cmdq_get_current(item);
-        let mut target = cmdq_get_target(item);
-        let mut c = cmdq_get_client(item);
-        let mut wl = (*target).wl;
-        let mut w = (*wl).window;
-        let mut s = (*target).s;
+        let args = cmd_get_args(self_);
+        let entry = cmd_get_entry(self_);
+        let current = cmdq_get_current(item);
+        let target = cmdq_get_target(item);
+        let c = cmdq_get_client(item);
+        let wl = (*target).wl;
+        let w = (*wl).window;
+        let s = (*target).s;
         let mut wp = (*target).wp;
-        let mut oo = (*wp).options;
+        let oo = (*wp).options;
 
         let mut activewp = null_mut();
         let mut lastwp: *mut window_pane = null_mut();

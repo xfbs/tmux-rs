@@ -88,7 +88,7 @@ pub unsafe extern "C" fn screen_redraw_border_set(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_redraw_two_panes(w: *mut window, direction: i32) -> i32 {
     unsafe {
-        let mut wp: *mut window_pane =
+        let wp: *mut window_pane =
             tailq_next::<_, _, discr_entry>(tailq_first(&raw mut (*w).panes));
         if wp.is_null() {
             return 0; /* one pane */
@@ -461,7 +461,7 @@ pub unsafe extern "C" fn screen_redraw_make_pane_status(
     unsafe {
         let w = (*wp.as_ptr()).window;
         let mut gc: grid_cell = std::mem::zeroed();
-        let mut width: u32;
+        let width: u32;
         let mut px: u32;
         let mut py: u32;
         let mut ctx: MaybeUninit<screen_write_ctx> = MaybeUninit::uninit();
@@ -572,7 +572,7 @@ pub unsafe extern "C" fn screen_redraw_draw_pane_status(ctx: *mut screen_redraw_
             } else {
                 (*wp).yoff + (*wp).sy
             };
-            let mut xoff = (*wp).xoff + 2;
+            let xoff = (*wp).xoff + 2;
 
             if xoff + size <= (*ctx).ox
                 || xoff >= (*ctx).ox + (*ctx).sx
@@ -857,8 +857,8 @@ pub unsafe extern "C" fn screen_redraw_draw_borders_cell(
         let active = server_client_get_pane(c);
         let mut gc: grid_cell = zeroed();
         let mut arrows = 0;
-        let mut border;
-        let mut isolates;
+        let border;
+        let isolates;
         let x = (*ctx).ox + i;
         let y = (*ctx).oy + j;
 

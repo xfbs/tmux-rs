@@ -56,12 +56,12 @@ unsafe extern "C" fn cmd_if_shell_args_parse(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_if_shell_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
-        let mut tc = cmdq_get_target_client(item);
-        let mut s = (*target).s;
-        let mut count = args_count(args);
-        let mut wait = !args_has(args, b'b');
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
+        let tc = cmdq_get_target_client(item);
+        let s = (*target).s;
+        let count = args_count(args);
+        let wait = !args_has(args, b'b');
 
         let shellcmd = format_single_from_target(item, args_string(args, 0));
         if args_has_(args, 'F') {
@@ -133,9 +133,9 @@ unsafe extern "C" fn cmd_if_shell_exec(self_: *mut cmd, item: *mut cmdq_item) ->
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_if_shell_callback(job: *mut job) {
     unsafe {
-        let mut cdata = job_get_data(job) as *mut cmd_if_shell_data;
-        let mut c = (*cdata).client;
-        let mut item = (*cdata).item;
+        let cdata = job_get_data(job) as *mut cmd_if_shell_data;
+        let c = (*cdata).client;
+        let item = (*cdata).item;
         let mut error: *mut c_char = null_mut();
 
         let mut state: *mut args_command_state = null_mut();
@@ -179,7 +179,7 @@ unsafe extern "C" fn cmd_if_shell_callback(job: *mut job) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_if_shell_free(data: *mut c_void) {
     unsafe {
-        let mut cdata = data as *mut cmd_if_shell_data;
+        let cdata = data as *mut cmd_if_shell_data;
 
         if !(*cdata).client.is_null() {
             server_client_unref((*cdata).client);

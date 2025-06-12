@@ -957,12 +957,12 @@ pub unsafe fn format_draw(
             ];
 
             let size = libc::strlen(expanded) as u32;
-            let mut os: *mut screen = (*octx).s;
+            let os: *mut screen = (*octx).s;
             let mut s: [screen; TOTAL] = zeroed();
 
             let mut ctx: [screen_write_ctx; TOTAL] = zeroed();
-            let mut ocx: u32 = (*os).cx;
-            let mut ocy: u32 = (*os).cy;
+            let ocx: u32 = (*os).cx;
+            let ocy: u32 = (*os).cy;
             let mut width: [u32; TOTAL] = [0; TOTAL];
 
             let mut map: [Current; 5] = [
@@ -984,7 +984,7 @@ pub unsafe fn format_draw(
             let mut sy: style = zeroed();
             let mut saved_sy: style = zeroed();
 
-            let mut ud: *mut utf8_data = &raw mut sy.gc.data;
+            let ud: *mut utf8_data = &raw mut sy.gc.data;
             let mut more = utf8_state::UTF8_ERROR;
 
             // const char *cp, *end;
@@ -1088,7 +1088,7 @@ pub unsafe fn format_draw(
                     }
 
                     /* This is a style. Work out where the end is and parse it. */
-                    let mut end = format_skip(cp.add(2), c"]".as_ptr());
+                    let end = format_skip(cp.add(2), c"]".as_ptr());
                     if end.is_null() {
                         // log_debug("%s: no terminating ] at '%s'", __func__, cp + 2);
                         for fr_ in tailq_foreach(&raw mut frs).map(NonNull::as_ptr) {
@@ -1098,7 +1098,7 @@ pub unsafe fn format_draw(
                         }
                         break 'out;
                     }
-                    let mut tmp: *mut i8 = xstrndup(cp.add(2), end.offset_from(cp.add(2)) as usize)
+                    let tmp: *mut i8 = xstrndup(cp.add(2), end.offset_from(cp.add(2)) as usize)
                         .as_ptr()
                         .cast();
                     style_copy(&raw mut saved_sy, &raw const sy);
@@ -1534,7 +1534,7 @@ pub unsafe extern "C" fn format_trim_left(expanded: *const c_char, limit: u32) -
         // enum utf8_state more;
 
         let mut cp = expanded;
-        let mut end: *const i8 = null_mut();
+        let end: *const i8 = null_mut();
 
         let mut n: u32 = 0;
         let mut width: u32 = 0;
@@ -1544,7 +1544,7 @@ pub unsafe extern "C" fn format_trim_left(expanded: *const c_char, limit: u32) -
         let mut more = utf8_state::UTF8_ERROR;
 
         let mut out: *mut i8 = xcalloc(2, strlen(expanded) + 1).as_ptr().cast();
-        let mut copy = out;
+        let copy = out;
 
         while *cp != b'\0' as i8 {
             if width >= limit {
@@ -1626,7 +1626,7 @@ pub unsafe extern "C" fn format_trim_right(expanded: *const c_char, limit: u32) 
         let mut more: utf8_state = utf8_state::UTF8_ERROR;
 
         let mut width: u32 = 0;
-        let mut skip: u32 = 0;
+        let skip: u32 = 0;
         let mut n: u32 = 0;
 
         let mut leading_width: u32 = 0;
@@ -1641,7 +1641,7 @@ pub unsafe extern "C" fn format_trim_right(expanded: *const c_char, limit: u32) 
         let skip: u32 = total_width - limit;
 
         let mut out: *mut i8 = xcalloc(2, strlen(expanded) + 1).as_ptr().cast();
-        let mut copy: *mut i8 = out;
+        let copy: *mut i8 = out;
         while *cp != b'\0' as i8 {
             if *cp == b'#' as i8 {
                 let mut end: *const c_char =

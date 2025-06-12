@@ -84,9 +84,9 @@ unsafe extern "C" fn screen_write_offset_timer(_fd: i32, _events: i16, data: *mu
 #[unsafe(no_mangle)]
 unsafe extern "C" fn screen_write_set_cursor(ctx: *mut screen_write_ctx, mut cx: i32, mut cy: i32) {
     unsafe {
-        let mut wp = (*ctx).wp;
-        let mut s = (*ctx).s;
-        let mut tv: timeval = timeval {
+        let wp = (*ctx).wp;
+        let s = (*ctx).s;
+        let tv: timeval = timeval {
             tv_usec: 10000,
             tv_sec: 0,
         };
@@ -111,7 +111,7 @@ unsafe extern "C" fn screen_write_set_cursor(ctx: *mut screen_write_ctx, mut cx:
         if wp.is_null() {
             return;
         }
-        let mut w = (*wp).window;
+        let w = (*wp).window;
 
         if !event_initialized(&raw mut (*w).offset_timer) {
             evtimer_set(
@@ -142,7 +142,7 @@ unsafe extern "C" fn screen_write_redraw_cb(ttyctx: *const tty_ctx) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn screen_write_set_client_cb(ttyctx: *mut tty_ctx, c: *mut client) -> i32 {
     unsafe {
-        let mut wp: *mut window_pane = (*ttyctx).arg.cast();
+        let wp: *mut window_pane = (*ttyctx).arg.cast();
 
         if (*ttyctx).allow_invisible_panes != 0 {
             if session_has((*c).session, (*wp).window) != 0 {
@@ -204,7 +204,7 @@ unsafe extern "C" fn screen_write_initctx(
     sync: i32,
 ) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
 
         memset0(ttyctx);
 
@@ -367,7 +367,7 @@ pub unsafe extern "C" fn screen_write_stop(ctx: *mut screen_write_ctx) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_reset(ctx: *mut screen_write_ctx) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
 
         screen_reset_tabs(s);
         screen_write_scrollregion(ctx, 0, screen_size_y(s) - 1);
@@ -460,9 +460,9 @@ pub unsafe extern "C" fn screen_write_text(
 ) -> boolint {
     unsafe {
         let more = boolint(more);
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
         let mut tmp = null_mut();
-        let mut cy = (*s).cy;
+        let cy = (*s).cy;
         let mut idx = 0;
 
         let mut gc: grid_cell = zeroed();
@@ -470,7 +470,7 @@ pub unsafe extern "C" fn screen_write_text(
 
         xvasprintf(&raw mut tmp, fmt, ap.as_va_list());
 
-        let mut text = utf8_fromcstr(tmp);
+        let text = utf8_fromcstr(tmp);
         free_(tmp);
 
         let mut left = (cx + width) - (*s).cx;
@@ -591,7 +591,7 @@ pub unsafe extern "C" fn screen_write_vnputs(
 ) {
     unsafe {
         let mut gc: grid_cell = zeroed();
-        let mut ud: *mut utf8_data = &raw mut gc.data;
+        let ud: *mut utf8_data = &raw mut gc.data;
         let mut msg = null_mut();
         let mut size: usize = 0;
         let mut more: utf8_state = utf8_state::UTF8_DONE;
@@ -604,7 +604,7 @@ pub unsafe extern "C" fn screen_write_vnputs(
             if *ptr > 0x7f && utf8_open(ud, *ptr) == utf8_state::UTF8_MORE {
                 ptr = ptr.add(1);
 
-                let mut left = strlen(ptr.cast());
+                let left = strlen(ptr.cast());
                 if left < (*ud).size as usize - 1 {
                     break;
                 }
@@ -662,8 +662,8 @@ pub unsafe extern "C" fn screen_write_fast_copy(
     ny: u32,
 ) {
     unsafe {
-        let mut s = (*ctx).s;
-        let mut gd = (*src).grid;
+        let s = (*ctx).s;
+        let gd = (*src).grid;
         let mut gc: grid_cell = zeroed();
 
         if nx == 0 || ny == 0 {
@@ -787,7 +787,7 @@ pub unsafe extern "C" fn screen_write_vline(
     bottom: i32,
 ) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
         let mut gc: grid_cell = zeroed();
 
         let cx = (*s).cx;
@@ -821,12 +821,12 @@ pub unsafe extern "C" fn screen_write_menu(
     choice_gc: *const grid_cell,
 ) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
         let mut default_gc: grid_cell = zeroed();
         let mut gc = &raw const default_gc;
 
         // u_int cx, cy, i, j;
-        let mut width = (*menu).width;
+        let width = (*menu).width;
 
         let cx = (*s).cx;
         let cy = (*s).cy;
@@ -886,7 +886,7 @@ pub unsafe extern "C" fn screen_write_box(
     title: *const c_char,
 ) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
         let mut gc: grid_cell = zeroed();
 
         let cx = (*s).cx;
@@ -952,7 +952,7 @@ pub unsafe extern "C" fn screen_write_preview(
     ny: u32,
 ) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
         let mut gc: grid_cell = zeroed();
 
         let cx = (*s).cx;
@@ -1015,7 +1015,7 @@ pub unsafe extern "C" fn screen_write_preview(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_mode_set(ctx: *mut screen_write_ctx, mode: mode_flag) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
 
         (*s).mode |= mode;
 
@@ -1029,7 +1029,7 @@ pub unsafe extern "C" fn screen_write_mode_set(ctx: *mut screen_write_ctx, mode:
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_mode_clear(ctx: *mut screen_write_ctx, mode: mode_flag) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
 
         (*s).mode &= !mode;
 
@@ -1043,7 +1043,7 @@ pub unsafe extern "C" fn screen_write_mode_clear(ctx: *mut screen_write_ctx, mod
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_cursorup(ctx: *mut screen_write_ctx, mut ny: u32) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
         let mut cx: u32 = (*s).cx;
         let mut cy: u32 = (*s).cy;
 
@@ -1076,7 +1076,7 @@ pub unsafe extern "C" fn screen_write_cursorup(ctx: *mut screen_write_ctx, mut n
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_cursordown(ctx: *mut screen_write_ctx, mut ny: u32) {
     unsafe {
-        let mut s: *mut screen = (*ctx).s;
+        let s: *mut screen = (*ctx).s;
         let mut cx: u32 = (*s).cx;
         let mut cy: u32 = (*s).cy;
 
@@ -1111,9 +1111,9 @@ pub unsafe extern "C" fn screen_write_cursordown(ctx: *mut screen_write_ctx, mut
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_cursorright(ctx: *mut screen_write_ctx, mut nx: u32) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
         let mut cx: u32 = (*s).cx;
-        let mut cy: u32 = (*s).cy;
+        let cy: u32 = (*s).cy;
 
         if nx == 0 {
             nx = 1;
@@ -1136,9 +1136,9 @@ pub unsafe extern "C" fn screen_write_cursorright(ctx: *mut screen_write_ctx, mu
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_cursorleft(ctx: *mut screen_write_ctx, mut nx: u32) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
         let mut cx: u32 = (*s).cx;
-        let mut cy: u32 = (*s).cy;
+        let cy: u32 = (*s).cy;
 
         if nx == 0 {
             nx = 1;
@@ -1161,7 +1161,7 @@ pub unsafe extern "C" fn screen_write_cursorleft(ctx: *mut screen_write_ctx, mut
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_backspace(ctx: *mut screen_write_ctx) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
         let mut cx = (*s).cx;
         let mut cy = (*s).cy;
 
@@ -1186,7 +1186,7 @@ pub unsafe extern "C" fn screen_write_backspace(ctx: *mut screen_write_ctx) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_alignmenttest(ctx: *mut screen_write_ctx) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
         let mut ttyctx: tty_ctx = zeroed();
         let mut gc: grid_cell = zeroed();
 
@@ -1226,7 +1226,7 @@ pub unsafe extern "C" fn screen_write_insertcharacter(
     bg: u32,
 ) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
         let mut ttyctx: tty_ctx = zeroed();
 
         if nx == 0 {
@@ -1270,7 +1270,7 @@ pub unsafe extern "C" fn screen_write_deletecharacter(
     bg: u32,
 ) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
         let mut ttyctx: tty_ctx = zeroed();
 
         if nx == 0 {
@@ -1314,7 +1314,7 @@ pub unsafe extern "C" fn screen_write_clearcharacter(
     bg: u32,
 ) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
         let mut ttyctx: tty_ctx = zeroed();
 
         if nx == 0 {
@@ -1354,8 +1354,8 @@ pub unsafe extern "C" fn screen_write_clearcharacter(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_insertline(ctx: *mut screen_write_ctx, mut ny: u32, bg: u32) {
     unsafe {
-        let mut s = (*ctx).s;
-        let mut gd = (*s).grid;
+        let s = (*ctx).s;
+        let gd = (*s).grid;
         let mut ttyctx: tty_ctx = zeroed();
 
         let mut sy: u32;
@@ -1422,10 +1422,10 @@ pub unsafe extern "C" fn screen_write_insertline(ctx: *mut screen_write_ctx, mut
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_deleteline(ctx: *mut screen_write_ctx, mut ny: u32, bg: u32) {
     unsafe {
-        let mut s = (*ctx).s;
-        let mut gd = (*s).grid;
+        let s = (*ctx).s;
+        let gd = (*s).grid;
         let mut ttyctx: tty_ctx = zeroed();
-        let mut sy = screen_size_y(s);
+        let sy = screen_size_y(s);
 
         if ny == 0 {
             ny = 1;
@@ -1483,9 +1483,9 @@ pub unsafe extern "C" fn screen_write_deleteline(ctx: *mut screen_write_ctx, mut
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_clearline(ctx: *mut screen_write_ctx, bg: u32) {
     unsafe {
-        let mut s = (*ctx).s;
-        let mut sx = screen_size_x(s);
-        let mut ci = (*ctx).item;
+        let s = (*ctx).s;
+        let sx = screen_size_x(s);
+        let ci = (*ctx).item;
 
         let gl = grid_get_line((*s).grid, (*(*s).grid).hsize + (*s).cy);
         if (*gl).cellsize == 0 && COLOUR_DEFAULT(bg as i32) {
@@ -1518,9 +1518,9 @@ pub unsafe extern "C" fn screen_write_clearline(ctx: *mut screen_write_ctx, bg: 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_clearendofline(ctx: *mut screen_write_ctx, bg: u32) {
     unsafe {
-        let mut s = (*ctx).s;
-        let mut sx = screen_size_x(s);
-        let mut ci = (*ctx).item;
+        let s = (*ctx).s;
+        let sx = screen_size_x(s);
+        let ci = (*ctx).item;
 
         if (*s).cx == 0 {
             screen_write_clearline(ctx, bg);
@@ -1562,9 +1562,9 @@ pub unsafe extern "C" fn screen_write_clearendofline(ctx: *mut screen_write_ctx,
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_clearstartofline(ctx: *mut screen_write_ctx, bg: u32) {
     unsafe {
-        let mut s = (*ctx).s;
-        let mut sx = screen_size_x(s);
-        let mut ci = (*ctx).item;
+        let s = (*ctx).s;
+        let sx = screen_size_x(s);
+        let ci = (*ctx).item;
 
         if (*s).cx >= sx - 1 {
             screen_write_clearline(ctx, bg);
@@ -1584,7 +1584,7 @@ pub unsafe extern "C" fn screen_write_clearstartofline(ctx: *mut screen_write_ct
             grid_view_clear((*s).grid, 0, (*s).cy, (*s).cx + 1, 1, bg);
         }
 
-        let mut before = screen_write_collect_trim(ctx, (*s).cy, 0, (*s).cx + 1, null_mut());
+        let before = screen_write_collect_trim(ctx, (*s).cy, 0, (*s).cx + 1, null_mut());
         (*ci).x = 0;
         (*ci).used = (*s).cx + 1;
         (*ci).type_ = screen_write_citem_type::Clear;
@@ -1610,7 +1610,7 @@ pub unsafe extern "C" fn screen_write_cursormove(
     origin: i32,
 ) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
 
         if origin != 0 && py != -1 && (*s).mode.intersects(mode_flag::MODE_ORIGIN) {
             if py as u32 > (*s).rlower - (*s).rupper {
@@ -1636,7 +1636,7 @@ pub unsafe extern "C" fn screen_write_cursormove(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_reverseindex(ctx: *mut screen_write_ctx, bg: u32) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
         let mut ttyctx: tty_ctx = zeroed();
 
         if (*s).cy == (*s).rupper {
@@ -1668,7 +1668,7 @@ pub unsafe extern "C" fn screen_write_scrollregion(
     mut rlower: u32,
 ) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
 
         if rupper > screen_size_y(s) - 1 {
             rupper = screen_size_y(s) - 1;
@@ -1694,8 +1694,8 @@ pub unsafe extern "C" fn screen_write_scrollregion(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_linefeed(ctx: *mut screen_write_ctx, wrapped: i32, bg: u32) {
     unsafe {
-        let mut s = (*ctx).s;
-        let mut gd = (*s).grid;
+        let s = (*ctx).s;
+        let gd = (*s).grid;
         let mut redraw: i32;
         #[cfg(feature = "sixel")]
         {
@@ -1746,8 +1746,8 @@ pub unsafe extern "C" fn screen_write_scrollup(
     bg: u32,
 ) {
     unsafe {
-        let mut s = (*ctx).s;
-        let mut gd = (*s).grid;
+        let s = (*ctx).s;
+        let gd = (*s).grid;
 
         if lines == 0 {
             lines = 1;
@@ -1783,8 +1783,8 @@ pub unsafe extern "C" fn screen_write_scrolldown(
     bg: u32,
 ) {
     unsafe {
-        let mut s = (*ctx).s;
-        let mut gd = (*s).grid;
+        let s = (*ctx).s;
+        let gd = (*s).grid;
         let mut ttyctx: tty_ctx = zeroed();
 
         screen_write_initctx(ctx, &raw mut ttyctx, 1);
@@ -1825,11 +1825,11 @@ pub unsafe extern "C" fn screen_write_carriagereturn(ctx: *mut screen_write_ctx)
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_clearendofscreen(ctx: *mut screen_write_ctx, bg: u32) {
     unsafe {
-        let mut s = (*ctx).s;
-        let mut gd = (*s).grid;
+        let s = (*ctx).s;
+        let gd = (*s).grid;
         let mut ttyctx: tty_ctx = zeroed();
-        let mut sx = screen_size_x(s);
-        let mut sy = screen_size_y(s);
+        let sx = screen_size_x(s);
+        let sy = screen_size_y(s);
 
         #[cfg(feature = "sixel")]
         {
@@ -1866,9 +1866,9 @@ pub unsafe extern "C" fn screen_write_clearendofscreen(ctx: *mut screen_write_ct
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_clearstartofscreen(ctx: *mut screen_write_ctx, bg: u32) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
         let mut ttyctx: tty_ctx = zeroed();
-        let mut sx = screen_size_x(s);
+        let sx = screen_size_x(s);
 
         #[cfg(feature = "sixel")]
         {
@@ -1899,10 +1899,10 @@ pub unsafe extern "C" fn screen_write_clearstartofscreen(ctx: *mut screen_write_
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_clearscreen(ctx: *mut screen_write_ctx, bg: u32) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
         let mut ttyctx: tty_ctx = zeroed();
-        let mut sx = screen_size_x(s);
-        let mut sy = screen_size_y(s);
+        let sx = screen_size_x(s);
+        let sy = screen_size_y(s);
 
         #[cfg(feature = "sixel")]
         {
@@ -1962,10 +1962,10 @@ pub unsafe extern "C" fn screen_write_collect_trim(
     wrapped: *mut i32,
 ) -> *mut screen_write_citem {
     unsafe {
-        let mut cl = (*(*ctx).s).write_list.add(y as usize);
+        let cl = (*(*ctx).s).write_list.add(y as usize);
         let mut before = null_mut();
-        let mut sx = x;
-        let mut ex = x + used - 1;
+        let sx = x;
+        let ex = x + used - 1;
 
         if tailq_empty(&raw const (*cl).items) {
             return null_mut();
@@ -2050,7 +2050,7 @@ pub unsafe extern "C" fn screen_write_collect_clear(ctx: *mut screen_write_ctx, 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_collect_scroll(ctx: *mut screen_write_ctx, bg: u32) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
         // log_debug("%s: at %u,%u (region %u-%u)", __func__, (*s).cx, (*s).cy, (*s).rupper, (*s).rlower);
 
         screen_write_collect_clear(ctx, (*s).rupper, 1);
@@ -2085,7 +2085,7 @@ pub unsafe extern "C" fn screen_write_collect_flush(
     from: *const c_char,
 ) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
         // struct screen_write_citem *ci, *tmp;
         // struct screen_write_cline *cl;
         // u_int y, cx, cy, last, items = 0;
@@ -2151,9 +2151,9 @@ pub unsafe extern "C" fn screen_write_collect_flush(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_collect_end(ctx: *mut screen_write_ctx) {
     unsafe {
-        let mut s = (*ctx).s;
-        let mut ci = (*ctx).item;
-        let mut cl = (*s).write_list.add((*s).cy as usize);
+        let s = (*ctx).s;
+        let ci = (*ctx).item;
+        let cl = (*s).write_list.add((*s).cy as usize);
         let mut gc: grid_cell = zeroed();
         let mut wrapped = (*ci).wrapped;
 
@@ -2222,9 +2222,9 @@ pub unsafe extern "C" fn screen_write_collect_add(
     gc: *const grid_cell,
 ) {
     unsafe {
-        let mut s = (*ctx).s;
+        let s = (*ctx).s;
         let mut ci: *mut screen_write_citem = null_mut();
-        let mut sx = screen_size_x(s);
+        let sx = screen_size_x(s);
         let mut collect: i32 = 0;
 
         /*
@@ -2285,9 +2285,9 @@ pub unsafe extern "C" fn screen_write_collect_add(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_write_cell(ctx: *mut screen_write_ctx, gc: *const grid_cell) {
     unsafe {
-        let mut s = (*ctx).s;
-        let mut gd = (*s).grid;
-        let mut ud = &raw const (*gc).data;
+        let s = (*ctx).s;
+        let gd = (*s).grid;
+        let ud = &raw const (*gc).data;
 
         let mut gl: *mut grid_line = null_mut();
         let mut gce: *mut grid_cell_entry = null_mut();
@@ -2297,10 +2297,10 @@ pub unsafe extern "C" fn screen_write_cell(ctx: *mut screen_write_ctx, gc: *cons
         let mut now_gc: grid_cell = zeroed();
         let mut ttyctx: tty_ctx = zeroed();
 
-        let mut sx = screen_size_x(s);
-        let mut sy = screen_size_y(s);
+        let sx = screen_size_x(s);
+        let sy = screen_size_y(s);
 
-        let mut width = (*ud).width as u32;
+        let width = (*ud).width as u32;
         // xx, not_wrap;
         let mut skip = 1;
 
@@ -2445,11 +2445,11 @@ pub unsafe extern "C" fn screen_write_combine(
     gc: *const grid_cell,
 ) -> i32 {
     unsafe {
-        let mut s = (*ctx).s;
-        let mut gd = (*s).grid;
-        let mut ud: *const utf8_data = &raw const (*gc).data;
+        let s = (*ctx).s;
+        let gd = (*s).grid;
+        let ud: *const utf8_data = &raw const (*gc).data;
         let mut cx = (*s).cx;
-        let mut cy = (*s).cy;
+        let cy = (*s).cy;
 
         let mut last: grid_cell = zeroed();
         let mut ttyctx: tty_ctx = zeroed();
@@ -2570,8 +2570,8 @@ pub unsafe extern "C" fn screen_write_overwrite(
     width: u32,
 ) -> i32 {
     unsafe {
-        let mut s = (*ctx).s;
-        let mut gd = (*s).grid;
+        let s = (*ctx).s;
+        let gd = (*s).grid;
 
         let mut tmp_gc: grid_cell = zeroed();
         let mut xx: u32 = 0;
@@ -2749,7 +2749,7 @@ pub unsafe extern "C" fn screen_write_alternateon(
 ) {
     unsafe {
         let mut ttyctx: tty_ctx = zeroed();
-        let mut wp = (*ctx).wp;
+        let wp = (*ctx).wp;
 
         if !wp.is_null() && options_get_number_((*wp).options, c"alternate-screen") == 0 {
             return;
@@ -2774,7 +2774,7 @@ pub unsafe extern "C" fn screen_write_alternateoff(
 ) {
     unsafe {
         let mut ttyctx: tty_ctx = zeroed();
-        let mut wp = (*ctx).wp;
+        let wp = (*ctx).wp;
 
         if !wp.is_null() && !options_get_number_((*wp).options, c"alternate-screen") != 0 {
             return;

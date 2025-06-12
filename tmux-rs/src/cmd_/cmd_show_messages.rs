@@ -37,8 +37,8 @@ unsafe extern "C" fn cmd_show_messages_terminals(
     blank: i32,
 ) -> c_int {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut tc = cmdq_get_target_client(item);
+        let args = cmd_get_args(self_);
+        let tc = cmdq_get_target_client(item);
         let mut blank = 0;
 
         let mut n = 0u32;
@@ -74,7 +74,7 @@ unsafe extern "C" fn cmd_show_messages_terminals(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_show_messages_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
+        let args = cmd_get_args(self_);
         //struct message_entry	*msg;
         //char			*s;
         //int			 done, blank;
@@ -94,7 +94,7 @@ unsafe extern "C" fn cmd_show_messages_exec(self_: *mut cmd, item: *mut cmdq_ite
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        let mut ft = format_create_from_target(item);
+        let ft = format_create_from_target(item);
 
         unsafe extern "C" {
             pub static mut message_log: message_list; // TODO remove

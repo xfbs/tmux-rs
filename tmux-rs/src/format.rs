@@ -332,14 +332,14 @@ pub unsafe extern "C" fn format_job_update(job: *mut job) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_job_complete(job: *mut job) {
     unsafe {
-        let mut fj = job_get_data(job) as *mut format_job;
-        let mut evb: *mut evbuffer = (*job_get_event(job)).input;
+        let fj = job_get_data(job) as *mut format_job;
+        let evb: *mut evbuffer = (*job_get_event(job)).input;
 
         (*fj).job = null_mut();
 
         let mut buf: *mut c_char = null_mut();
 
-        let mut line = evbuffer_readline(evb);
+        let line = evbuffer_readline(evb);
         if line.is_null() {
             let len = EVBUFFER_LENGTH(evb);
             buf = xmalloc(len + 1).as_ptr().cast();
@@ -381,13 +381,13 @@ pub unsafe extern "C" fn format_job_get(
     cmd: *mut c_char,
 ) -> *mut c_char {
     unsafe {
-        let mut ft: *mut format_tree = (*es).ft;
+        let ft: *mut format_tree = (*es).ft;
         // format_job_tree *jobs;
         // format_job fj0, *fj;
         let mut fj0 = MaybeUninit::<format_job>::uninit();
         let mut fj1 = MaybeUninit::<format_job>::uninit();
-        let mut fj0 = fj0.as_mut_ptr();
-        let mut fj1 = fj1.as_mut_ptr();
+        let fj0 = fj0.as_mut_ptr();
+        let fj1 = fj1.as_mut_ptr();
 
         // time_t t;
         // char *expanded;
@@ -422,7 +422,7 @@ pub unsafe extern "C" fn format_job_get(
 
         let expanded = format_expand1(next, cmd);
 
-        let mut force = if (*fj).expanded.is_null() || strcmp(expanded, (*fj).expanded) != 0 {
+        let force = if (*fj).expanded.is_null() || strcmp(expanded, (*fj).expanded) != 0 {
             free((*fj).expanded.cast());
             (*fj).expanded = xstrdup(expanded).as_ptr();
             true
@@ -556,7 +556,7 @@ pub unsafe extern "C" fn format_cb_host_short(ft: *mut format_tree) -> *mut c_vo
             return xstrdup_(c"").as_ptr().cast();
         }
 
-        let mut cp = strchr(host.as_mut_ptr().cast(), b'.' as i32);
+        let cp = strchr(host.as_mut_ptr().cast(), b'.' as i32);
         if !cp.is_null() {
             *cp = b'\0' as c_char;
         }
@@ -578,7 +578,7 @@ pub unsafe extern "C" fn format_cb_pid(ft: *mut format_tree) -> *mut c_void {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_session_attached_list(ft: *mut format_tree) -> *mut c_void {
     unsafe {
-        let mut s = (*ft).s;
+        let s = (*ft).s;
         let mut value: *mut c_char = null_mut();
 
         if s.is_null() {
@@ -617,13 +617,13 @@ pub unsafe extern "C" fn format_cb_session_attached_list(ft: *mut format_tree) -
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_session_alerts(ft: *mut format_tree) -> *mut c_void {
     unsafe {
-        let mut s: *mut session = (*ft).s;
+        let s: *mut session = (*ft).s;
         const sizeof_alerts: usize = 1024;
         const sizeof_tmp: usize = 16;
         let mut alerts = MaybeUninit::<[c_char; 1024]>::uninit();
-        let mut alerts: *mut c_char = alerts.as_mut_ptr().cast();
+        let alerts: *mut c_char = alerts.as_mut_ptr().cast();
         let mut tmp = MaybeUninit::<[c_char; 16]>::uninit();
-        let mut tmp: *mut c_char = tmp.as_mut_ptr().cast();
+        let tmp: *mut c_char = tmp.as_mut_ptr().cast();
 
         if s.is_null() {
             return null_mut();
@@ -656,14 +656,14 @@ pub unsafe extern "C" fn format_cb_session_alerts(ft: *mut format_tree) -> *mut 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_session_stack(ft: *mut format_tree) -> *mut c_void {
     unsafe {
-        let mut s = (*ft).s;
+        let s = (*ft).s;
         const sizeof_result: usize = 1024;
         const sizeof_tmp: usize = 16;
 
         let mut result = MaybeUninit::<[c_char; 1024]>::uninit();
-        let mut result: *mut c_char = result.as_mut_ptr().cast();
+        let result: *mut c_char = result.as_mut_ptr().cast();
         let mut tmp = MaybeUninit::<[c_char; 16]>::uninit();
-        let mut tmp: *mut c_char = tmp.as_mut_ptr().cast();
+        let tmp: *mut c_char = tmp.as_mut_ptr().cast();
 
         if s.is_null() {
             return null_mut();
@@ -691,7 +691,7 @@ pub unsafe extern "C" fn format_cb_window_stack_index(ft: *mut format_tree) -> *
         if (*ft).wl.is_null() {
             return null_mut();
         }
-        let mut s = (*(*ft).wl).session;
+        let s = (*(*ft).wl).session;
 
         let mut idx: u32 = 0;
         let mut wl = null_mut();
@@ -721,7 +721,7 @@ pub unsafe extern "C" fn format_cb_window_linked_sessions_list(
         if (*ft).wl.is_null() {
             return null_mut();
         }
-        let mut w = (*(*ft).wl).window;
+        let w = (*(*ft).wl).window;
 
         let buffer = evbuffer_new();
         if buffer.is_null() {
@@ -819,7 +819,7 @@ pub unsafe extern "C" fn format_cb_window_active_clients(ft: *mut format_tree) -
 
         let mut n = 0u32;
         for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
-            let mut client_session = (*loop_).session;
+            let client_session = (*loop_).session;
             if client_session.is_null() {
                 continue;
             }
@@ -864,7 +864,7 @@ pub unsafe extern "C" fn format_cb_window_active_clients_list(ft: *mut format_tr
         }
 
         let mut value = null_mut();
-        let mut size = EVBUFFER_LENGTH(buffer);
+        let size = EVBUFFER_LENGTH(buffer);
         if size != 0 {
             xasprintf(
                 &raw mut value,
@@ -882,7 +882,7 @@ pub unsafe extern "C" fn format_cb_window_active_clients_list(ft: *mut format_tr
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_window_layout(ft: *mut format_tree) -> *mut c_void {
     unsafe {
-        let mut w = (*ft).w;
+        let w = (*ft).w;
 
         if w.is_null() {
             return null_mut();
@@ -1181,7 +1181,7 @@ pub unsafe extern "C" fn format_cb_session_group_attached_list(
             fatalx(c"out of memory");
         }
 
-        let mut first = true;
+        let first = true;
         for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             let client_session = (*loop_).session;
             if client_session.is_null() {
@@ -1222,7 +1222,7 @@ pub unsafe extern "C" fn format_cb_pane_in_mode(ft: *mut format_tree) -> *mut c_
             return null_mut();
         }
 
-        let mut n = tailq_foreach(&raw mut (*wp).modes).count() as u32;
+        let n = tailq_foreach(&raw mut (*wp).modes).count() as u32;
 
         let mut value = null_mut();
         xasprintf(&raw mut value, c"%u".as_ptr(), n);
@@ -1778,7 +1778,7 @@ pub unsafe extern "C" fn format_cb_config_files(_ft: *mut format_tree) -> *mut c
     unsafe {
         let mut s: *mut c_char = null_mut();
         let mut slen: usize = 0;
-        let mut n: usize = 0;
+        let n: usize = 0;
 
         for i in 0..(cfg_nfiles as usize) {
             let n = strlen(*cfg_files.add(i)) + 1;
@@ -2502,7 +2502,7 @@ pub unsafe extern "C" fn format_cb_scroll_region_upper(ft: *mut format_tree) -> 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_server_sessions(_ft: *mut format_tree) -> *mut c_void {
     unsafe {
-        let mut n: u32 = rb_foreach(&raw mut sessions).count() as u32;
+        let n: u32 = rb_foreach(&raw mut sessions).count() as u32;
         format_printf(c"%u".as_ptr(), n).cast()
     }
 }
@@ -3596,7 +3596,7 @@ pub unsafe extern "C" fn format_add_tv(
 pub unsafe extern "C" fn format_add_cb(ft: *mut format_tree, key: *const c_char, cb: format_cb) {
     unsafe {
         let mut fe = xmalloc_::<format_entry>().as_ptr();
-        let mut fe_now;
+        let fe_now;
 
         (*fe).key = xstrdup(key).as_ptr();
 
@@ -3619,7 +3619,7 @@ pub unsafe extern "C" fn format_add_cb(ft: *mut format_tree, key: *const c_char,
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_quote_shell(s: *const c_char) -> *mut c_char {
     unsafe {
-        let mut out: *mut c_char = xmalloc(strlen(s) * 2 + 1).as_ptr().cast();
+        let out: *mut c_char = xmalloc(strlen(s) * 2 + 1).as_ptr().cast();
         let mut at = out;
         let mut cp = s;
         while *cp != b'\0' as c_char {
@@ -3640,7 +3640,7 @@ pub unsafe extern "C" fn format_quote_shell(s: *const c_char) -> *mut c_char {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_quote_style(s: *const c_char) -> *mut c_char {
     unsafe {
-        let mut out: *mut c_char = xmalloc(strlen(s) * 2 + 1).as_ptr().cast();
+        let out: *mut c_char = xmalloc(strlen(s) * 2 + 1).as_ptr().cast();
         let mut at = out;
 
         let mut cp = s;
@@ -3671,12 +3671,12 @@ pub unsafe extern "C" fn format_pretty_time(t: time_t, seconds: i32) -> *mut c_c
         if now < t {
             now = t;
         }
-        let mut age = now - t;
+        let age = now - t;
 
         let mut now_tm = MaybeUninit::<tm>::uninit();
-        let mut now_tm = now_tm.as_mut_ptr();
+        let now_tm = now_tm.as_mut_ptr();
         let mut tm = MaybeUninit::<tm>::uninit();
-        let mut tm = tm.as_mut_ptr();
+        let tm = tm.as_mut_ptr();
 
         localtime_r(&raw const now, now_tm);
         localtime_r(&raw const t, tm);
@@ -3735,7 +3735,7 @@ fn format_find(
         // time_t t = 0;
         // struct tm tm;
         let mut s = MaybeUninit::<[i8; 512]>::uninit();
-        let mut s = s.as_mut_ptr() as *mut i8;
+        let s = s.as_mut_ptr() as *mut i8;
         let mut errstr: *const c_char = null();
         let mut fe_find = MaybeUninit::<format_entry>::uninit();
 
@@ -3766,7 +3766,7 @@ fn format_find(
                 break 'found;
             }
 
-            let mut fte = format_table_get(key);
+            let fte = format_table_get(key);
             if !fte.is_null() {
                 let value = (*fte).cb.unwrap()(ft);
                 if (*fte).type_ == format_table_type::FORMAT_TABLE_TIME && !value.is_null() {
@@ -3777,7 +3777,7 @@ fn format_find(
                 break 'found;
             }
             (*fe_find.as_mut_ptr()).key = key.cast_mut(); // TODO: check if this is correct casting away const
-            let mut fe = rb_find(&raw mut (*ft).tree, fe_find.as_mut_ptr());
+            let fe = rb_find(&raw mut (*ft).tree, fe_find.as_mut_ptr());
             if !fe.is_null() {
                 if (*fe).time != 0 {
                     t = (*fe).time;
@@ -3826,7 +3826,7 @@ fn format_find(
             } else {
                 if !time_format.is_null() {
                     let mut tm = MaybeUninit::<tm>::uninit();
-                    let mut tm = tm.as_mut_ptr();
+                    let tm = tm.as_mut_ptr();
 
                     localtime_r(&raw const t, tm);
                     strftime(s, sizeof_s, time_format, tm);
@@ -3874,7 +3874,7 @@ fn format_find(
 pub unsafe extern "C" fn format_unescape(mut s: *const c_char) -> *mut c_char {
     unsafe {
         let mut cp = xmalloc(strlen(s) + 1).as_ptr().cast();
-        let mut out = cp;
+        let out = cp;
         let mut brackets = 0;
         while *s != b'\0' as c_char {
             if *s == b'#' as c_char && *s.add(1) == b'{' as c_char {
@@ -3904,7 +3904,7 @@ pub unsafe extern "C" fn format_unescape(mut s: *const c_char) -> *mut c_char {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_strip(mut s: *const c_char) -> *mut c_char {
     unsafe {
-        let mut out = xmalloc(strlen(s) + 1).as_ptr().cast();
+        let out = xmalloc(strlen(s) + 1).as_ptr().cast();
         let mut cp = out;
         let mut brackets = 0;
 
@@ -3974,7 +3974,7 @@ pub unsafe extern "C" fn format_choose(
     expand: c_int,
 ) -> c_int {
     unsafe {
-        let mut cp: *const c_char = format_skip(s, c",".as_ptr());
+        let cp: *const c_char = format_skip(s, c",".as_ptr());
         if cp.is_null() {
             return -1;
         }
@@ -4064,7 +4064,7 @@ pub unsafe extern "C" fn format_build_modifiers(
         let mut list: *mut format_modifier = null_mut();
 
         let mut last: [c_char; 3] = [b'X' as c_char, b';' as c_char, b':' as c_char];
-        let mut last: *mut c_char = last.as_mut_ptr();
+        let last: *mut c_char = last.as_mut_ptr();
 
         // char c, last[] = "X;:", **argv, *value;
         // int argc;
@@ -4193,7 +4193,7 @@ pub unsafe extern "C" fn format_match(
     unsafe {
         let mut s = c"".as_ptr() as *const c_char;
         let mut r = MaybeUninit::<regex_t>::uninit();
-        let mut r = r.as_mut_ptr();
+        let r = r.as_mut_ptr();
         let mut flags: i32 = 0;
 
         if (*fm).argc >= 1 {
@@ -4281,7 +4281,7 @@ pub unsafe extern "C" fn format_session_name(
 ) -> *mut c_char {
     unsafe {
         let name = format_expand1(es, fmt);
-        let mut s: *mut session = null_mut();
+        let s: *mut session = null_mut();
 
         for s in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
             if strcmp((*s).name, name) == 0 {
@@ -4430,9 +4430,9 @@ pub unsafe extern "C" fn format_loop_panes(
     fmt: *const c_char,
 ) -> *mut c_char {
     unsafe {
-        let mut ft = (*es).ft;
-        let mut c = (*ft).client;
-        let mut item = (*ft).item;
+        let ft = (*es).ft;
+        let c = (*ft).client;
+        let item = (*ft).item;
 
         if (*ft).w.is_null() {
             format_log1(
@@ -4454,7 +4454,7 @@ pub unsafe extern "C" fn format_loop_panes(
         let mut valuelen = 1;
 
         let mut next = MaybeUninit::<format_expand_state>::uninit();
-        let mut next = next.as_mut_ptr();
+        let next = next.as_mut_ptr();
         for wp in tailq_foreach::<_, discr_entry>(&raw mut (*(*ft).w).panes).map(NonNull::as_ptr) {
             format_log1(
                 es,
@@ -4501,8 +4501,8 @@ pub unsafe extern "C" fn format_loop_clients(
     fmt: *const c_char,
 ) -> *mut c_char {
     unsafe {
-        let mut ft = (*es).ft;
-        let mut item = (*ft).item;
+        let ft = (*es).ft;
+        let item = (*ft).item;
         let mut next = MaybeUninit::<format_expand_state>::uninit();
         let next = next.as_mut_ptr();
 
@@ -4578,7 +4578,7 @@ pub unsafe extern "C" fn format_replace_expression(
                 LessThanEqual,
             }
 
-            let mut operator;
+            let operator;
 
             if strcmp(*(*mexp).argv, c"+".as_ptr()) == 0 {
                 operator = Operator::Add;
@@ -4746,8 +4746,8 @@ pub unsafe extern "C" fn format_replace(
     let __func__: *const c_char = c"format_replace".as_ptr();
 
     unsafe {
-        let mut ft = (*es).ft;
-        let mut wp = (*ft).wp;
+        let ft = (*es).ft;
+        let wp = (*ft).wp;
         let mut errstr: *const c_char = null();
         let mut copy: *const c_char = null();
         let mut cp: *const c_char = null();
@@ -5331,21 +5331,21 @@ pub unsafe extern "C" fn format_expand1(
     mut fmt: *const c_char,
 ) -> *mut c_char {
     unsafe {
-        let mut ft = (*es).ft;
+        let ft = (*es).ft;
         // char *buf, *out, *name;
         // const char *ptr, *s, *style_end = NULL;
         // size_t off, len, n, outlen;
         // int ch, brackets;
-        let mut buf: *mut c_char = null_mut();
+        let buf: *mut c_char = null_mut();
         let mut out: *mut c_char = null_mut();
 
-        let mut ptr: *const c_char = null();
+        let ptr: *const c_char = null();
         let mut s: *const c_char = null();
         let mut style_end: *const c_char = null();
 
         const sizeof_expanded: usize = 8192;
         let mut expanded = MaybeUninit::<[c_char; sizeof_expanded]>::uninit();
-        let mut expanded = expanded.as_mut_ptr() as *mut c_char;
+        let expanded = expanded.as_mut_ptr() as *mut c_char;
 
         if fmt.is_null() || *fmt == b'\0' as c_char {
             return xstrdup(c"".as_ptr()).as_ptr();
@@ -5875,7 +5875,7 @@ pub unsafe extern "C" fn format_grid_word(gd: *mut grid, mut x: u32, mut y: u32)
         let mut size = 0;
         let mut ud: *mut utf8_data = null_mut();
         let mut gc = MaybeUninit::<grid_cell>::uninit();
-        let mut gc = gc.as_mut_ptr();
+        let gc = gc.as_mut_ptr();
         let mut found = false;
         let mut s: *mut c_char = null_mut();
 
@@ -5957,7 +5957,7 @@ pub unsafe extern "C" fn format_grid_line(gd: *mut grid, y: u32) -> *mut c_char 
     unsafe {
         let mut ud: *mut utf8_data = null_mut();
         let mut gc = MaybeUninit::<grid_cell>::uninit();
-        let mut gc = gc.as_mut_ptr();
+        let gc = gc.as_mut_ptr();
         let mut size = 0;
         let mut s: *mut c_char = null_mut();
         for x in 0..grid_line_length(gd, y) {
@@ -5990,7 +5990,7 @@ pub unsafe extern "C" fn format_grid_hyperlink(
     unsafe {
         let mut uri: *const c_char = null();
         let mut gc = MaybeUninit::<grid_cell>::uninit();
-        let mut gc = gc.as_mut_ptr();
+        let gc = gc.as_mut_ptr();
 
         grid_get_cell(gd, x, y, gc);
         if (*gc).flags.intersects(grid_flag::PADDING) {

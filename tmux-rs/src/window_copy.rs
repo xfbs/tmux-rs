@@ -217,8 +217,8 @@ pub struct window_copy_mode_data {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_scroll_timer(_fd: i32, _events: i16, arg: *mut c_void) {
     unsafe {
-        let mut wme: *mut window_mode_entry = arg.cast();
-        let mut wp: *mut window_pane = (*wme).wp;
+        let wme: *mut window_mode_entry = arg.cast();
+        let wp: *mut window_pane = (*wme).wp;
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut tv = libc::timeval {
             tv_sec: 0,
@@ -254,7 +254,7 @@ pub unsafe extern "C" fn window_copy_clone_screen(
 
         let mut reflow = false;
 
-        let mut dst: *mut screen = xcalloc1();
+        let dst: *mut screen = xcalloc1();
 
         let mut sy = screen_hsize(src) + screen_size_y(src);
         if trim != 0 {while sy > screen_hsize(src) {
@@ -302,10 +302,10 @@ pub unsafe extern "C" fn window_copy_common_init(
     wme: *mut window_mode_entry,
 ) -> *mut window_copy_mode_data {
     unsafe {
-        let mut wp = (*wme).wp;
-        let mut base = &raw mut (*wp).base;
+        let wp = (*wme).wp;
+        let base = &raw mut (*wp).base;
 
-        let mut data: *mut window_copy_mode_data = xcalloc1::<window_copy_mode_data>();
+        let data: *mut window_copy_mode_data = xcalloc1::<window_copy_mode_data>();
         (*wme).data = data.cast();
 
         (*data).cursordrag = cursordrag::CURSORDRAG_NONE;
@@ -359,9 +359,9 @@ pub unsafe extern "C" fn window_copy_init(
 ) -> *mut screen {
     let wme = wme.as_ptr();
     unsafe {
-        let mut wp = (*wme).swp;
+        let wp = (*wme).swp;
         let mut data: *mut window_copy_mode_data = null_mut();
-        let mut base = &raw mut (*wp).base;
+        let base = &raw mut (*wp).base;
         let mut ctx: screen_write_ctx = zeroed();
         let mut cx = 0;
         let mut cy = 0;
@@ -413,12 +413,12 @@ pub unsafe extern "C" fn window_copy_view_init(
 ) -> *mut screen {
     let wme = wme.as_ptr();
     unsafe {
-        let mut wp = (*wme).wp;
+        let wp = (*wme).wp;
         // struct window_copy_mode_data *data;
-        let mut base: *mut screen = &raw mut (*wp).base;
-        let mut sx = screen_size_x(base);
+        let base: *mut screen = &raw mut (*wp).base;
+        let sx = screen_size_x(base);
 
-        let mut data = window_copy_common_init(wme);
+        let data = window_copy_common_init(wme);
         (*data).viewmode = 1;
 
         (*data).backing = xmalloc_::<screen>().as_ptr();
@@ -438,7 +438,7 @@ pub unsafe extern "C" fn window_copy_view_init(
 pub unsafe extern "C" fn window_copy_free(wme: NonNull<window_mode_entry>) {
     unsafe {
         let wme = wme.as_ptr();
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         evtimer_del(&raw mut (*data).dragtimer);
 
@@ -490,10 +490,10 @@ pub unsafe extern "C" fn window_copy_vadd(
     mut ap: VaList,
 ) {
     unsafe {
-        let mut wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut backing: *mut screen = (*data).backing;
-        let mut writing: *mut screen = (*data).writing;
+        let wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let backing: *mut screen = (*data).backing;
+        let writing: *mut screen = (*data).writing;
 
         let mut writing_ctx: screen_write_ctx = zeroed();
         let mut backing_ctx: screen_write_ctx = zeroed();
@@ -502,7 +502,7 @@ pub unsafe extern "C" fn window_copy_vadd(
         let mut gc: grid_cell = zeroed();
         let mut old_hsize: u32 = 0;
         let mut old_cy: u32 = 0;
-        let mut sx = screen_size_x(backing);
+        let sx = screen_size_x(backing);
         let mut text: *mut c_char = null_mut();
 
         if parse != 0 {
@@ -568,8 +568,8 @@ pub unsafe extern "C" fn window_copy_pageup(wp: *mut window_pane, half_page: i32
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_pageup1(wme: *mut window_mode_entry, half_page: i32) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut s: *mut screen = &raw mut (*data).screen;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let s: *mut screen = &raw mut (*data).screen;
         // u_int n, ox, oy, px, py;
 
         let oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
@@ -629,8 +629,8 @@ pub unsafe extern "C" fn window_copy_pagedown1(
     scroll_exit: i32,
 ) -> i32 {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut s: *mut screen = &raw mut (*data).screen;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let s: *mut screen = &raw mut (*data).screen;
 
         let oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
         let ox = window_copy_find_length(wme, oy);
@@ -660,8 +660,8 @@ pub unsafe extern "C" fn window_copy_pagedown1(
         }
 
         if (*data).screen.sel.is_null() || (*data).rectflag == 0 {
-            let mut py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-            let mut px = window_copy_find_length(wme, py);
+            let py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+            let px = window_copy_find_length(wme, py);
             if ((*data).cx >= (*data).lastsx && (*data).cx != px) || (*data).cx > px {window_copy_cursor_end_of_line(wme);}
         }
 
@@ -677,7 +677,7 @@ pub unsafe extern "C" fn window_copy_pagedown1(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_previous_paragraph(wme: *mut window_mode_entry) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         let mut oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
 
@@ -696,8 +696,8 @@ pub unsafe extern "C" fn window_copy_previous_paragraph(wme: *mut window_mode_en
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_next_paragraph(wme: *mut window_mode_entry) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut s: *mut screen = &raw mut (*data).screen;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let s: *mut screen = &raw mut (*data).screen;
 
         let mut oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
         let maxy = screen_hsize((*data).backing) + screen_size_y(s) - 1;
@@ -718,9 +718,9 @@ pub unsafe extern "C" fn window_copy_next_paragraph(wme: *mut window_mode_entry)
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_get_word(wp: *mut window_pane, x: u32, y: u32) -> *mut c_char {
     unsafe {
-        let mut wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut gd = (*data).screen.grid;
+        let wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let gd = (*data).screen.grid;
 
         format_grid_word(gd, x, (*gd).hsize + y)
     }
@@ -729,9 +729,9 @@ pub unsafe extern "C" fn window_copy_get_word(wp: *mut window_pane, x: u32, y: u
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_get_line(wp: *mut window_pane, y: u32) -> *mut c_char {
     unsafe {
-        let mut wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut gd = (*data).screen.grid;
+        let wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let gd = (*data).screen.grid;
 
         format_grid_line(gd, (*gd).hsize + y)
     }
@@ -740,10 +740,10 @@ pub unsafe extern "C" fn window_copy_get_line(wp: *mut window_pane, y: u32) -> *
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_hyperlink_cb(ft: *mut format_tree) -> *mut c_void {
     unsafe {
-        let mut wp = format_get_pane(ft);
-        let mut wme = tailq_first(&raw mut (*wp).modes);
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut gd = (*data).screen.grid;
+        let wp = format_get_pane(ft);
+        let wme = tailq_first(&raw mut (*wp).modes);
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let gd = (*data).screen.grid;
 
         format_grid_hyperlink(
             gd,
@@ -758,9 +758,9 @@ pub unsafe extern "C" fn window_copy_cursor_hyperlink_cb(ft: *mut format_tree) -
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_word_cb(ft: *mut format_tree) -> *mut c_void {
     unsafe {
-        let mut wp: *mut window_pane = format_get_pane(ft);
-        let mut wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wp: *mut window_pane = format_get_pane(ft);
+        let wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         window_copy_get_word(wp, (*data).cx, (*data).cy).cast()
     }
@@ -769,9 +769,9 @@ pub unsafe extern "C" fn window_copy_cursor_word_cb(ft: *mut format_tree) -> *mu
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_line_cb(ft: *mut format_tree) -> *mut c_void {
     unsafe {
-        let mut wp: *mut window_pane = format_get_pane(ft);
-        let mut wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wp: *mut window_pane = format_get_pane(ft);
+        let wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         window_copy_get_line(wp, (*data).cy).cast()
     }
@@ -780,9 +780,9 @@ pub unsafe extern "C" fn window_copy_cursor_line_cb(ft: *mut format_tree) -> *mu
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_search_match_cb(ft: *mut format_tree) -> *mut c_void {
     unsafe {
-        let mut wp: *mut window_pane = format_get_pane(ft);
-        let mut wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wp: *mut window_pane = format_get_pane(ft);
+        let wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         window_copy_match_at_cursor(data).cast()
     }
@@ -791,7 +791,7 @@ pub unsafe extern "C" fn window_copy_search_match_cb(ft: *mut format_tree) -> *m
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_formats(wme: *mut window_mode_entry, ft: *mut format_tree) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         format_add(ft, c"scroll_position".as_ptr(), c"%d".as_ptr(), (*data).oy);
         format_add(
@@ -892,10 +892,10 @@ pub unsafe extern "C" fn window_copy_formats(wme: *mut window_mode_entry, ft: *m
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_size_changed(wme: *mut window_mode_entry) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut s: *mut screen = &raw mut (*data).screen;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let s: *mut screen = &raw mut (*data).screen;
         let mut ctx: screen_write_ctx = zeroed();
-        let mut search = !(*data).searchmark.is_null();
+        let search = !(*data).searchmark.is_null();
 
         window_copy_clear_selection(wme);
         window_copy_clear_marks(wme);
@@ -915,9 +915,9 @@ pub unsafe extern "C" fn window_copy_size_changed(wme: *mut window_mode_entry) {
 pub unsafe extern "C" fn window_copy_resize(wme: NonNull<window_mode_entry>, sx: u32, sy: u32) {
     unsafe {
         let wme = wme.as_ptr();
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut s: *mut screen = &raw mut (*data).screen;
-        let mut gd: *mut grid = (*(*data).backing).grid;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let s: *mut screen = &raw mut (*data).screen;
+        let gd: *mut grid = (*(*data).backing).grid;
         let mut wx = 0;
         let mut wy = 0;
         // int reflow;
@@ -947,7 +947,7 @@ pub unsafe extern "C" fn window_copy_resize(wme: NonNull<window_mode_entry>, sx:
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_key_table(wme: *mut window_mode_entry) -> *const c_char {
     unsafe {
-        let mut wp = (*wme).wp;
+        let wp = (*wme).wp;
 
         if modekey::try_from(
             options_get_number((*(*wp).window).options, c"mode-keys".as_ptr()) as i32,
@@ -963,9 +963,9 @@ pub unsafe extern "C" fn window_copy_key_table(wme: *mut window_mode_entry) -> *
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_expand_search_string(cs: *mut window_copy_cmd_state) -> i32 {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut ss = args_string((*cs).args, 1);
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let ss = args_string((*cs).args, 1);
 
         if ss.is_null() || *ss == b'\0' as i8 {return 0;}
 
@@ -997,8 +997,8 @@ pub unsafe extern "C" fn window_copy_cmd_append_selection(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut s = (*cs).s;
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let s = (*cs).s;
 
         if !s.is_null() {window_copy_append_selection(wme);}
         window_copy_clear_selection(wme);
@@ -1011,8 +1011,8 @@ pub unsafe extern "C" fn window_copy_cmd_append_selection_and_cancel(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme = (*cs).wme;
-        let mut s = (*cs).s;
+        let wme = (*cs).wme;
+        let s = (*cs).s;
 
         if !s.is_null() {window_copy_append_selection(wme);}
         window_copy_clear_selection(wme);
@@ -1035,10 +1035,10 @@ pub unsafe extern "C" fn window_copy_cmd_begin_selection(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme.cast();
-        let mut c: *mut client = (*cs).c;
-        let mut m = (*cs).m;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme.cast();
+        let c: *mut client = (*cs).c;
+        let m = (*cs).m;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         if !m.is_null() {
             window_copy_start_drag(c, m);
@@ -1057,8 +1057,8 @@ pub unsafe extern "C" fn window_copy_cmd_stop_selection(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         (*data).cursordrag = cursordrag::CURSORDRAG_NONE;
         (*data).lineflag = line_sel::LINE_SEL_NONE;
@@ -1072,8 +1072,8 @@ pub unsafe extern "C" fn window_copy_cmd_bottom_line(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         (*data).cx = 0;
         (*data).cy = screen_size_y(&raw mut (*data).screen) - 1;
@@ -1095,7 +1095,7 @@ pub unsafe extern "C" fn window_copy_cmd_clear_selection(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
 
         window_copy_clear_selection(wme);
         window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
@@ -1109,18 +1109,18 @@ pub unsafe extern "C" fn window_copy_do_copy_end_of_line(
     cancel: i32,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme = (*cs).wme;
-        let mut c = (*cs).c;
-        let mut s = (*cs).s;
-        let mut wl = (*cs).wl;
-        let mut wp = (*wme).wp;
+        let wme = (*cs).wme;
+        let c = (*cs).c;
+        let s = (*cs).s;
+        let wl = (*cs).wl;
+        let wp = (*wme).wp;
         let count = args_count((*cs).args);
         let mut np = (*wme).prefix;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut prefix = null_mut();
         let mut command = null_mut();
-        let mut arg1 = args_string((*cs).args, 1);
-        let mut arg2 = args_string((*cs).args, 2);
+        let arg1 = args_string((*cs).args, 1);
+        let arg2 = args_string((*cs).args, 2);
 
         if pipe != 0 {
             if count == 3 {prefix = format_single(null_mut(), arg2, c, s, wl, wp);}
@@ -1200,20 +1200,20 @@ pub unsafe extern "C" fn window_copy_do_copy_line(
     cancel: i32,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut c = (*cs).c;
-        let mut s = (*cs).s;
-        let mut wl = (*cs).wl;
-        let mut wp = (*wme).wp;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut count = args_count((*cs).args);
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let c = (*cs).c;
+        let s = (*cs).s;
+        let wl = (*cs).wl;
+        let wp = (*wme).wp;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let count = args_count((*cs).args);
         let mut np = (*wme).prefix;
         // ocx, ocy, ooy;
         let mut prefix = null_mut();
         let mut command = null_mut();
 
-        let mut arg1 = args_string((*cs).args, 1);
-        let mut arg2 = args_string((*cs).args, 2);
+        let arg1 = args_string((*cs).args, 1);
+        let arg2 = args_string((*cs).args, 2);
 
         if pipe != 0 {
             if count == 3 {prefix = format_single(null_mut(), arg2, c, s, wl, wp);}
@@ -1293,11 +1293,11 @@ pub unsafe extern "C" fn window_copy_cmd_copy_selection_no_clear(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut c: *mut client = (*cs).c;
-        let mut s: *mut session = (*cs).s;
-        let mut wl: *mut winlink = (*cs).wl;
-        let mut wp: *mut window_pane = (*wme).wp;
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let c: *mut client = (*cs).c;
+        let s: *mut session = (*cs).s;
+        let wl: *mut winlink = (*cs).wl;
+        let wp: *mut window_pane = (*wme).wp;
         let mut prefix = null_mut();
         let arg1 = args_string((*cs).args, 1);
 
@@ -1315,7 +1315,7 @@ pub unsafe extern "C" fn window_copy_cmd_copy_selection(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme = (*cs).wme;
+        let wme = (*cs).wme;
 
         window_copy_cmd_copy_selection_no_clear(cs);
         window_copy_clear_selection(wme);
@@ -1328,7 +1328,7 @@ pub unsafe extern "C" fn window_copy_cmd_copy_selection_and_cancel(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme = (*cs).wme;
+        let wme = (*cs).wme;
 
         window_copy_cmd_copy_selection_no_clear(cs);
         window_copy_clear_selection(wme);
@@ -1341,7 +1341,7 @@ pub unsafe extern "C" fn window_copy_cmd_cursor_down(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme = (*cs).wme;
+        let wme = (*cs).wme;
         let mut np = (*wme).prefix;
 
         while np != 0 {
@@ -1357,8 +1357,8 @@ pub unsafe extern "C" fn window_copy_cmd_cursor_down_and_cancel(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut np = (*wme).prefix;
 
         let cy = (*data).cy;
@@ -1396,8 +1396,8 @@ pub unsafe extern "C" fn window_copy_cmd_cursor_right(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut np = (*wme).prefix;
 
         while np != 0 {
@@ -1418,8 +1418,8 @@ pub unsafe extern "C" fn window_copy_cmd_scroll_to(
     to: u32,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let scroll_up: i32 = (*data).cy as i32 - to as i32;
         let delta: u32 = scroll_up.unsigned_abs();
         let oy = screen_hsize((*data).backing) - (*data).oy;
@@ -1447,7 +1447,7 @@ pub unsafe extern "C" fn window_copy_cmd_scroll_bottom(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*(*cs).wme).data.cast();
+        let data: *mut window_copy_mode_data = (*(*cs).wme).data.cast();
 
         let bottom = screen_size_y(&raw mut (*data).screen) - 1;
         window_copy_cmd_scroll_to(cs, bottom)
@@ -1460,7 +1460,7 @@ pub unsafe extern "C" fn window_copy_cmd_scroll_middle(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*(*cs).wme).data.cast();
+        let data: *mut window_copy_mode_data = (*(*cs).wme).data.cast();
         let mid_value = (screen_size_y(&raw mut (*data).screen) - 1) / 2;
         window_copy_cmd_scroll_to(cs, mid_value)
     }
@@ -1479,7 +1479,7 @@ pub unsafe extern "C" fn window_copy_cmd_cursor_up(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
         let mut np = (*wme).prefix;
 
         while np != 0 {
@@ -1507,8 +1507,8 @@ pub unsafe extern "C" fn window_copy_cmd_halfpage_down(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut np = (*wme).prefix;
 
         while np != 0 {
@@ -1524,7 +1524,7 @@ pub unsafe extern "C" fn window_copy_cmd_halfpage_down_and_cancel(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme = (*cs).wme;
+        let wme = (*cs).wme;
         let mut np = (*wme).prefix;
 
         while np != 0 {
@@ -1540,7 +1540,7 @@ pub unsafe extern "C" fn window_copy_cmd_halfpage_up(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
         let mut np = (*wme).prefix;
 
         while np != 0 {
@@ -1556,8 +1556,8 @@ pub unsafe extern "C" fn window_copy_cmd_toggle_position(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         (*data).hide_position = !(*data).hide_position;
         window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
@@ -1569,9 +1569,9 @@ pub unsafe extern "C" fn window_copy_cmd_history_bottom(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut s: *mut screen = (*data).backing;
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let s: *mut screen = (*data).backing;
 
         let oy = screen_hsize(s) + (*data).cy - (*data).oy;
         if (*data).lineflag == line_sel::LINE_SEL_RIGHT_LEFT && oy == (*data).endsely {window_copy_other_end(wme);}
@@ -1591,8 +1591,8 @@ pub unsafe extern "C" fn window_copy_cmd_history_top(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         let oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
         if (*data).lineflag == line_sel::LINE_SEL_LEFT_RIGHT && oy == (*data).sely {window_copy_other_end(wme);}
@@ -1612,8 +1612,8 @@ pub unsafe extern "C" fn window_copy_cmd_jump_again(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut np = (*wme).prefix;
 
         match (*data).jumptype {
@@ -1652,8 +1652,8 @@ pub unsafe extern "C" fn window_copy_cmd_jump_reverse(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut np = (*wme).prefix;
 
         match (*data).jumptype {
@@ -1692,8 +1692,8 @@ pub unsafe extern "C" fn window_copy_cmd_middle_line(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         (*data).cx = 0;
         (*data).cy = (screen_size_y(&raw mut (*data).screen) - 1) / 2;
@@ -1708,10 +1708,10 @@ pub unsafe extern "C" fn window_copy_cmd_previous_matching_bracket(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
         let mut np = (*wme).prefix;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut s: *mut screen = (*data).backing;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let s: *mut screen = (*data).backing;
         let open: [c_char; 4] = [b'{' as i8, b'[' as i8, b'(' as i8, b'\0' as i8];
         let close: [c_char; 4] = [b'}' as i8, b']' as i8, b')' as i8, b'\0' as i8];
 
@@ -1721,7 +1721,7 @@ pub unsafe extern "C" fn window_copy_cmd_previous_matching_bracket(
         // struct grid_cell gc;
         let mut cp: *mut c_char = null_mut();
         let mut gc: grid_cell = zeroed();
-        let mut failed = false;
+        let failed = false;
 
         'outer: while np != 0 {
             /* Get cursor position and line length. */
@@ -1810,10 +1810,10 @@ pub unsafe extern "C" fn window_copy_cmd_next_matching_bracket(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
         let mut np = (*wme).prefix;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut s: *mut screen = (*data).backing;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let s: *mut screen = (*data).backing;
         let open: [c_char; 4] = [b'{' as i8, b'[' as i8, b'(' as i8, b'\0' as i8];
         let close: [c_char; 4] = [b'}' as i8, b']' as i8, b')' as i8, b'\0' as i8];
 
@@ -1946,7 +1946,7 @@ pub unsafe extern "C" fn window_copy_cmd_next_paragraph(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
         let mut np = (*wme).prefix;
 
         while np != 0 {
@@ -1962,7 +1962,7 @@ pub unsafe extern "C" fn window_copy_cmd_next_space(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
         let mut np = (*wme).prefix;
 
         while np != 0 {
@@ -1978,7 +1978,7 @@ pub unsafe extern "C" fn window_copy_cmd_next_space_end(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
         let mut np: u32 = (*wme).prefix;
 
         while np != 0 {
@@ -1994,7 +1994,7 @@ pub unsafe extern "C" fn window_copy_cmd_next_word(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
         let mut np = (*wme).prefix;
 
         let separators = options_get_string((*(*cs).s).options, c"word-separators".as_ptr());
@@ -2012,7 +2012,7 @@ pub unsafe extern "C" fn window_copy_cmd_next_word_end(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
         let mut np = (*wme).prefix;
 
         let separators = options_get_string((*(*cs).s).options, c"word-separators".as_ptr());
@@ -2030,9 +2030,9 @@ pub unsafe extern "C" fn window_copy_cmd_other_end(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut np = (*wme).prefix;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let np = (*wme).prefix;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         (*data).selflag = selflag::SEL_CHAR;
         if (np % 2) != 0 {window_copy_other_end(wme);}
@@ -2045,8 +2045,8 @@ pub unsafe extern "C" fn window_copy_cmd_page_down(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut np = (*wme).prefix;
 
         while np != 0 {
@@ -2062,7 +2062,7 @@ pub unsafe extern "C" fn window_copy_cmd_page_down_and_cancel(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
         let mut np = (*wme).prefix;
 
         while np != 0 {
@@ -2078,7 +2078,7 @@ pub unsafe extern "C" fn window_copy_cmd_page_up(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
         let mut np = (*wme).prefix;
 
         while np != 0 {
@@ -2094,7 +2094,7 @@ pub unsafe extern "C" fn window_copy_cmd_previous_paragraph(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
         let mut np = (*wme).prefix;
 
         while np != 0 {
@@ -2110,7 +2110,7 @@ pub unsafe extern "C" fn window_copy_cmd_previous_space(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
         let mut np = (*wme).prefix;
 
         while np != 0 {
@@ -2126,7 +2126,7 @@ pub unsafe extern "C" fn window_copy_cmd_previous_word(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
         let mut np = (*wme).prefix;
 
         let separators = options_get_string((*(*cs).s).options, c"word-separators".as_ptr());
@@ -2144,8 +2144,8 @@ pub unsafe extern "C" fn window_copy_cmd_rectangle_on(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         (*data).lineflag = line_sel::LINE_SEL_NONE;
         window_copy_rectangle_set(wme, 1);
@@ -2159,8 +2159,8 @@ pub unsafe extern "C" fn window_copy_cmd_rectangle_off(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         (*data).lineflag = line_sel::LINE_SEL_NONE;
         window_copy_rectangle_set(wme, 0);
@@ -2174,8 +2174,8 @@ pub unsafe extern "C" fn window_copy_cmd_rectangle_toggle(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         (*data).lineflag = line_sel::LINE_SEL_NONE;
         window_copy_rectangle_set(wme, (!(*data).rectflag) as i32);
@@ -2189,8 +2189,8 @@ pub unsafe extern "C" fn window_copy_cmd_scroll_down(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut np = (*wme).prefix;
 
         while np != 0 {
@@ -2210,8 +2210,8 @@ pub unsafe extern "C" fn window_copy_cmd_scroll_down_and_cancel(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut np = (*wme).prefix;
 
         while np != 0 {
@@ -2231,7 +2231,7 @@ pub unsafe extern "C" fn window_copy_cmd_scroll_up(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
         let mut np = (*wme).prefix;
 
         while np != 0 {
@@ -2247,8 +2247,8 @@ pub unsafe extern "C" fn window_copy_cmd_search_again(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut np = (*wme).prefix;
 
         if (*data).searchtype == window_copy::WINDOW_COPY_SEARCHUP {
@@ -2269,8 +2269,8 @@ pub unsafe extern "C" fn window_copy_cmd_search_reverse(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut np = (*wme).prefix;
 
         if (*data).searchtype == window_copy::WINDOW_COPY_SEARCHUP {
@@ -2291,8 +2291,8 @@ pub unsafe extern "C" fn window_copy_cmd_select_line(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut np = (*wme).prefix;
 
         (*data).lineflag = line_sel::LINE_SEL_LEFT_RIGHT;
@@ -2324,9 +2324,9 @@ pub unsafe extern "C" fn window_copy_cmd_select_word(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut session_options: *mut options = (*(*cs).s).options;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let session_options: *mut options = (*(*cs).s).options;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         // u_int px, py, nextx, nexty;
 
         (*data).lineflag = line_sel::LINE_SEL_LEFT_RIGHT;
@@ -2378,7 +2378,7 @@ pub unsafe extern "C" fn window_copy_cmd_set_mark(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*(*cs).wme).data.cast();
+        let data: *mut window_copy_mode_data = (*(*cs).wme).data.cast();
 
         (*data).mx = (*data).cx;
         (*data).my = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
@@ -2402,8 +2402,8 @@ pub unsafe extern "C" fn window_copy_cmd_top_line(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         (*data).cx = 0;
         (*data).cy = 0;
@@ -2418,15 +2418,15 @@ pub unsafe extern "C" fn window_copy_cmd_copy_pipe_no_clear(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut c: *mut client = (*cs).c;
-        let mut s: *mut session = (*cs).s;
-        let mut wl: *mut winlink = (*cs).wl;
-        let mut wp: *mut window_pane = (*wme).wp;
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let c: *mut client = (*cs).c;
+        let s: *mut session = (*cs).s;
+        let wl: *mut winlink = (*cs).wl;
+        let wp: *mut window_pane = (*wme).wp;
         let mut command = null_mut();
         let mut prefix = null_mut();
-        let mut arg1 = args_string((*cs).args, 1);
-        let mut arg2 = args_string((*cs).args, 2);
+        let arg1 = args_string((*cs).args, 1);
+        let arg2 = args_string((*cs).args, 2);
 
         if !arg2.is_null() {prefix = format_single(null_mut(), arg2, c, s, wl, wp);}
 
@@ -2444,7 +2444,7 @@ pub unsafe extern "C" fn window_copy_cmd_copy_pipe(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
 
         window_copy_cmd_copy_pipe_no_clear(cs);
         window_copy_clear_selection(wme);
@@ -2457,7 +2457,7 @@ pub unsafe extern "C" fn window_copy_cmd_copy_pipe_and_cancel(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
 
         window_copy_cmd_copy_pipe_no_clear(cs);
         window_copy_clear_selection(wme);
@@ -2470,11 +2470,11 @@ pub unsafe extern "C" fn window_copy_cmd_pipe_no_clear(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut c: *mut client = (*cs).c;
-        let mut s: *mut session = (*cs).s;
-        let mut wl: *mut winlink = (*cs).wl;
-        let mut wp: *mut window_pane = (*wme).wp;
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let c: *mut client = (*cs).c;
+        let s: *mut session = (*cs).s;
+        let wl: *mut winlink = (*cs).wl;
+        let wp: *mut window_pane = (*wme).wp;
         let mut command = null_mut();
         let arg1 = args_string((*cs).args, 1);
 
@@ -2491,7 +2491,7 @@ pub unsafe extern "C" fn window_copy_cmd_pipe(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
 
         window_copy_cmd_pipe_no_clear(cs);
         window_copy_clear_selection(wme);
@@ -2504,7 +2504,7 @@ pub unsafe extern "C" fn window_copy_cmd_pipe_and_cancel(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
 
         window_copy_cmd_pipe_no_clear(cs);
         window_copy_clear_selection(wme);
@@ -2517,7 +2517,7 @@ pub unsafe extern "C" fn window_copy_cmd_goto_line(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
         let arg1 = args_string((*cs).args, 1);
 
         if *arg1 != b'\0' as i8 {window_copy_goto_line(wme, arg1);}
@@ -2530,8 +2530,8 @@ pub unsafe extern "C" fn window_copy_cmd_jump_backward(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut np = (*wme).prefix;
         let arg1 = args_string((*cs).args, 1);
 
@@ -2553,8 +2553,8 @@ pub unsafe extern "C" fn window_copy_cmd_jump_forward(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut np = (*wme).prefix;
         let arg1 = args_string((*cs).args, 1);
 
@@ -2576,8 +2576,8 @@ pub unsafe extern "C" fn window_copy_cmd_jump_to_backward(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut np = (*wme).prefix;
         let arg1 = args_string((*cs).args, 1);
 
@@ -2599,8 +2599,8 @@ pub unsafe extern "C" fn window_copy_cmd_jump_to_forward(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut np = (*wme).prefix;
         let arg1 = args_string((*cs).args, 1);
 
@@ -2622,7 +2622,7 @@ pub unsafe extern "C" fn window_copy_cmd_jump_to_mark(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
 
         window_copy_jump_to_mark(wme);
         window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
@@ -2634,7 +2634,7 @@ pub unsafe extern "C" fn window_copy_cmd_next_prompt(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
         let arg1 = args_string((*cs).args, 1);
 
         window_copy_cursor_prompt(wme, 1, arg1);
@@ -2647,7 +2647,7 @@ pub unsafe extern "C" fn window_copy_cmd_previous_prompt(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
+        let wme: *mut window_mode_entry = (*cs).wme;
         let arg1 = args_string((*cs).args, 1);
 
         window_copy_cursor_prompt(wme, 0, arg1);
@@ -2660,8 +2660,8 @@ pub unsafe extern "C" fn window_copy_cmd_search_backward(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut np = (*wme).prefix;
 
         if window_copy_expand_search_string(cs) == 0 {return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;}
@@ -2684,8 +2684,8 @@ pub unsafe extern "C" fn window_copy_cmd_search_backward_text(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut np = (*wme).prefix;
 
         if window_copy_expand_search_string(cs) == 0 {return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;}
@@ -2708,8 +2708,8 @@ pub unsafe extern "C" fn window_copy_cmd_search_forward(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut np = (*wme).prefix;
 
         if window_copy_expand_search_string(cs) == 0 {return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;}
@@ -2732,8 +2732,8 @@ pub unsafe extern "C" fn window_copy_cmd_search_forward_text(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut np = (*wme).prefix;
 
         if window_copy_expand_search_string(cs) == 0 {return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;}
@@ -2756,8 +2756,8 @@ pub unsafe extern "C" fn window_copy_cmd_search_backward_incremental(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut arg1 = args_string((*cs).args, 1);
         let ss = (*data).searchstr;
         let mut action = window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;
@@ -2814,8 +2814,8 @@ pub unsafe extern "C" fn window_copy_cmd_search_forward_incremental(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut arg1 = args_string((*cs).args, 1);
         let ss = (*data).searchstr;
         let mut action = window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;
@@ -2872,9 +2872,9 @@ pub unsafe extern "C" fn window_copy_cmd_refresh_from_pane(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe {
-        let mut wme: *mut window_mode_entry = (*cs).wme;
-        let mut wp: *mut window_pane = (*wme).swp;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wme: *mut window_mode_entry = (*cs).wme;
+        let wp: *mut window_pane = (*wme).swp;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         if (*data).viewmode != 0 {return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;}
 
@@ -3511,14 +3511,14 @@ pub unsafe extern "C" fn window_copy_command(
 ) {
     unsafe {
         let wme = wme.as_ptr();
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut cs: window_copy_cmd_state = zeroed();
         let mut clear = window_copy_cmd_clear::WINDOW_COPY_CMD_CLEAR_NEVER;
-        let mut count = args_count(args);
-        let mut keys: i32 = 0;
+        let count = args_count(args);
+        let keys: i32 = 0;
 
         if count == 0 {return;}
-        let mut command = args_string(args, 0);
+        let command = args_string(args, 0);
 
         if !m.is_null() && (*m).valid != 0 && !MOUSE_WHEEL((*m).b) {
             window_copy_move_mouse(m);
@@ -3573,8 +3573,8 @@ pub unsafe extern "C" fn window_copy_scroll_to(
     no_redraw: boolint,
 ) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut gd: *mut grid = (*(*data).backing).grid;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let gd: *mut grid = (*(*data).backing).grid;
 
         (*data).cx = px;
 
@@ -3582,7 +3582,7 @@ pub unsafe extern "C" fn window_copy_scroll_to(
             (*data).cy = py - ((*gd).hsize - (*data).oy);
         } else {
             let gap = (*gd).sy / 4;
-            let mut offset;
+            let offset;
             if py < (*gd).sy {
                 offset = 0;
                 (*data).cy = py;
@@ -3615,7 +3615,7 @@ pub unsafe extern "C" fn window_copy_search_compare(
         let mut gc: grid_cell = zeroed();
         let mut sgc: grid_cell = zeroed();
         grid_get_cell(gd, px, py, &raw mut gc);
-        let mut ud = &raw const gc.data;
+        let ud = &raw const gc.data;
         grid_get_cell(sgd, spx, 0, &raw mut sgc);
         let sud = &raw const sgc.data;
 
@@ -3690,9 +3690,9 @@ pub unsafe extern "C" fn window_copy_search_rl(
 ) -> i32 {
     unsafe {
         // u_int ax, bx, px, pywrap, endline;
-        let mut matched = 0;
+        let matched = 0;
         let mut gl: *mut grid_line = null_mut();
-        let mut endline = (*gd).hsize + (*gd).sy - 1;
+        let endline = (*gd).hsize + (*gd).sy - 1;
 
         // for (ax = last; ax > first; ax--) {
         let mut ax = last;
@@ -3759,10 +3759,10 @@ pub unsafe extern "C" fn window_copy_search_lr_regex(
         *buf = b'\0' as i8;
         buf = window_copy_stringify(gd, py, first, (*gd).sx, buf, &raw mut size);
         let mut len = (*gd).sx - first;
-        let mut endline = (*gd).hsize + (*gd).sy - 1;
+        let endline = (*gd).hsize + (*gd).sy - 1;
         let mut pywrap = py;
         while !buf.is_null() && pywrap <= endline && len < WINDOW_COPY_SEARCH_MAX_LINE as u32 {
-            let mut gl = grid_get_line(gd, pywrap);
+            let gl = grid_get_line(gd, pywrap);
             if !(*gl).flags.intersects(grid_line_flag::WRAPPED) {
                 break;
             }
@@ -3878,7 +3878,7 @@ pub unsafe extern "C" fn window_copy_cellstring(
             return c" ".as_ptr() as *mut c_char; // TODO think of a better type-safe way to represent returning a MaybeAllocated type
         }
 
-        let mut gce = (*gl).celldata.add(px as usize);
+        let gce = (*gl).celldata.add(px as usize);
         if (*gce).flags.intersects(grid_flag::PADDING) {
             *size = 0;
             *allocated = 0;
@@ -3923,7 +3923,7 @@ pub unsafe extern "C" fn window_copy_last_regex(
     eflags: i32,
 ) -> i32 {
     unsafe {
-        let mut oldx = 0;
+        let oldx = 0;
         let mut px = 0;
         let mut savepx = 0;
         let mut savesx = 0;
@@ -3991,7 +3991,7 @@ pub unsafe extern "C" fn window_copy_stringify(
     size: *mut u32,
 ) -> *mut c_char {
     unsafe {
-        let mut ax = 0;
+        let ax = 0;
         let mut bx = 0;
 
         let mut newsize = *size;
@@ -4043,7 +4043,7 @@ pub unsafe extern "C" fn window_copy_cstrtocellpos(
         let mut ccell: u32 = 0;
         let mut px: u32 = 0;
         let mut pywrap: u32 = 0;
-        let mut pos: u32 = 0;
+        let pos: u32 = 0;
         let mut len: u32 = 0;
 
         let mut match_: i32 = 0;
@@ -4059,7 +4059,7 @@ pub unsafe extern "C" fn window_copy_cstrtocellpos(
         };
 
         /* Populate the array of cell data. */
-        let mut cells: *mut cell = xreallocarray_::<cell>(null_mut(), ncells as usize).as_ptr();
+        let cells: *mut cell = xreallocarray_::<cell>(null_mut(), ncells as usize).as_ptr();
         let mut cell = 0;
         px = *ppx;
         pywrap = *ppy;
@@ -4092,7 +4092,7 @@ pub unsafe extern "C" fn window_copy_cstrtocellpos(
                     match_ = 0;
                     break;
                 }
-                let mut d = (*cells.add(ccell as usize)).d;
+                let d = (*cells.add(ccell as usize)).d;
                 let mut dlen = (*cells.add(ccell as usize)).dlen;
                 if dlen == 1 {
                     if *str.add(pos) != *d {
@@ -4397,7 +4397,7 @@ pub unsafe extern "C" fn window_copy_move_after_search_mark(
     wrapflag: i32,
 ) {
     unsafe {
-        let mut s = (*data).backing;
+        let s = (*data).backing;
         let mut start = 0;
         let mut at = 0;
 
@@ -4425,13 +4425,13 @@ pub unsafe extern "C" fn window_copy_search(
     mut regex: i32,
 ) -> i32 {
     unsafe {
-        let mut wp: *mut window_pane = (*wme).wp;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut s: *mut screen = (*data).backing;
+        let wp: *mut window_pane = (*wme).wp;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let s: *mut screen = (*data).backing;
         let mut ss: screen = zeroed();
         let mut ctx: screen_write_ctx = zeroed();
-        let mut gd: *mut grid = (*s).grid;
-        let mut str: *mut c_char = (*data).searchstr;
+        let gd: *mut grid = (*s).grid;
+        let str: *mut c_char = (*data).searchstr;
         let mut at: u32 = 0;
         let mut endline: u32 = 0;
         let mut fx: u32 = 0;
@@ -4481,7 +4481,7 @@ pub unsafe extern "C" fn window_copy_search(
         wrapflag = options_get_number((*(*wp).window).options, c"wrap-search".as_ptr()) as i32;
         cis = window_copy_is_lowercase(str).as_int();
 
-        let mut keys = modekey::try_from(options_get_number(
+        let keys = modekey::try_from(options_get_number(
             (*(*wp).window).options,
             c"mode-keys".as_ptr(),
         ) as i32);
@@ -4580,7 +4580,7 @@ pub unsafe extern "C" fn window_copy_visible_lines(
     end: *mut u32,
 ) {
     unsafe {
-        let mut gd = (*(*data).backing).grid;
+        let gd = (*(*data).backing).grid;
 
         *start = (*gd).hsize - (*data).oy;
 
@@ -4603,8 +4603,8 @@ pub unsafe extern "C" fn window_copy_search_mark_at(
     at: *mut u32,
 ) -> i32 {
     unsafe {
-        let mut s: *mut screen = (*data).backing;
-        let mut gd: *mut grid = (*s).grid;
+        let s: *mut screen = (*data).backing;
+        let gd: *mut grid = (*s).grid;
 
         if py < (*gd).hsize - (*data).oy {return -1;}
         if py > (*gd).hsize - (*data).oy + (*gd).sy - 1 {return -1;}
@@ -4621,11 +4621,11 @@ pub unsafe extern "C" fn window_copy_search_marks(
     visible_only: i32,
 ) -> i32 {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut s: *mut screen = (*data).backing;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let s: *mut screen = (*data).backing;
         let mut ss: screen = zeroed();
         let mut ctx: screen_write_ctx = zeroed();
-        let mut gd: *mut grid = (*s).grid;
+        let gd: *mut grid = (*s).grid;
         let mut found: i32;
         let mut cis: i32 = 0;
         let mut stopped: i32 = 0;
@@ -4796,7 +4796,7 @@ pub unsafe extern "C" fn window_copy_search_marks(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_clear_marks(wme: *mut window_mode_entry) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         free_((*data).searchmark);
         (*data).searchmark = null_mut();
@@ -4819,7 +4819,7 @@ pub unsafe extern "C" fn window_copy_goto_line(
     linestr: *const c_char,
 ) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut errstr: *const c_char = null();
 
         let mut lineno = strtonum(linestr, -1, i32::MAX as i64, &raw mut errstr) as i32;
@@ -4840,8 +4840,8 @@ pub unsafe extern "C" fn window_copy_match_start_end(
     end: *mut u32,
 ) {
     unsafe {
-        let mut gd: *mut grid = (*(*data).backing).grid;
-        let mut last = ((*gd).sy * (*gd).sx) - 1;
+        let gd: *mut grid = (*(*data).backing).grid;
+        let last = ((*gd).sy * (*gd).sx) - 1;
         let mark = *(*data).searchmark.add(at as usize);
 
         *start = at;
@@ -4862,15 +4862,15 @@ pub unsafe extern "C" fn window_copy_match_at_cursor(
     data: *mut window_copy_mode_data,
 ) -> *mut c_char {
     unsafe {
-        let mut gd: *mut grid = (*(*data).backing).grid;
+        let gd: *mut grid = (*(*data).backing).grid;
         let mut gc: grid_cell = zeroed();
         let mut at: u32 = 0;
         let mut start: u32 = 0;
         let mut end: u32 = 0;
-        let mut cy: u32 = 0;
+        let cy: u32 = 0;
         let mut px: u32 = 0;
         let mut py: u32 = 0;
-        let mut sx = screen_size_x((*data).backing);
+        let sx = screen_size_x((*data).backing);
         let mut buf: *mut c_char = null_mut();
         let mut len: usize = 0;
 
@@ -4923,8 +4923,8 @@ pub unsafe extern "C" fn window_copy_update_style(
     mkgc: *const grid_cell,
 ) {
     unsafe {
-        let mut wp: *mut window_pane = (*wme).wp;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wp: *mut window_pane = (*wme).wp;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut mark: u32 = 0;
         let mut start: u32 = 0;
         let mut end: u32 = 0;
@@ -5003,8 +5003,8 @@ pub unsafe extern "C" fn window_copy_write_one(
     mkgc: *const grid_cell,
 ) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut gd: *mut grid = (*(*data).backing).grid;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let gd: *mut grid = (*(*data).backing).grid;
         let mut gc: grid_cell = zeroed();
 
         screen_write_cursormove(ctx, 0, py as i32, 0);
@@ -5025,11 +5025,11 @@ pub unsafe extern "C" fn window_copy_write_line(
     py: u32,
 ) {
     unsafe {
-        let mut wp: *mut window_pane = (*wme).wp;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut s: *mut screen = &raw mut (*data).screen;
-        let mut oo: *mut options = (*(*wp).window).options;
-        let mut gl: *mut grid_line;
+        let wp: *mut window_pane = (*wme).wp;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let s: *mut screen = &raw mut (*data).screen;
+        let oo: *mut options = (*(*wp).window).options;
+        let gl: *mut grid_line;
         let mut gc: grid_cell = zeroed();
         let mut mgc: grid_cell = zeroed();
         let mut cgc: grid_cell = zeroed();
@@ -5038,7 +5038,7 @@ pub unsafe extern "C" fn window_copy_write_line(
         let mut tmp: [c_char; 512] = zeroed();
         let mut t: *mut i8 = null_mut();
         let mut size: usize = 0;
-        let mut hsize = screen_hsize((*data).backing);
+        let hsize = screen_hsize((*data).backing);
 
         style_apply(&raw mut gc, oo, c"mode-style".as_ptr(), null_mut());
         gc.flags |= grid_flag::NOPALETTE;
@@ -5160,8 +5160,8 @@ pub unsafe extern "C" fn window_copy_write_lines(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_redraw_selection(wme: *mut window_mode_entry, old_y: u32) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut gd: *mut grid = (*(*data).backing).grid;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let gd: *mut grid = (*(*data).backing).grid;
 
         let new_y = (*data).cy;
         let (start, mut end) = if old_y <= new_y {
@@ -5182,8 +5182,8 @@ pub unsafe extern "C" fn window_copy_redraw_selection(wme: *mut window_mode_entr
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_redraw_lines(wme: *mut window_mode_entry, py: u32, ny: u32) {
     unsafe {
-        let mut wp: *mut window_pane = (*wme).wp;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let wp: *mut window_pane = (*wme).wp;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut ctx: screen_write_ctx = zeroed();
 
         screen_write_start_pane(&raw mut ctx, wp, null_mut());
@@ -5198,7 +5198,7 @@ pub unsafe extern "C" fn window_copy_redraw_lines(wme: *mut window_mode_entry, p
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_redraw_screen(wme: *mut window_mode_entry) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         window_copy_redraw_lines(wme, 0, screen_size_y(&raw mut (*data).screen));
     }
@@ -5211,7 +5211,7 @@ pub unsafe extern "C" fn window_copy_synchronize_cursor_end(
     no_reset: i32,
 ) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         let mut xx = (*data).cx;
         let mut yy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
@@ -5288,7 +5288,7 @@ pub unsafe extern "C" fn window_copy_synchronize_cursor(
     no_reset: i32,
 ) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         match (*data).cursordrag {
             cursordrag::CURSORDRAG_ENDSEL => window_copy_synchronize_cursor_end(wme, 0, no_reset),
@@ -5301,9 +5301,9 @@ pub unsafe extern "C" fn window_copy_synchronize_cursor(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_update_cursor(wme: *mut window_mode_entry, cx: u32, cy: u32) {
     unsafe {
-        let mut wp: *mut window_pane = (*wme).wp;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut s: *mut screen = &raw mut (*data).screen;
+        let wp: *mut window_pane = (*wme).wp;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let s: *mut screen = &raw mut (*data).screen;
         let mut ctx: screen_write_ctx = zeroed();
 
         let old_cx = (*data).cx;
@@ -5324,7 +5324,7 @@ pub unsafe extern "C" fn window_copy_update_cursor(wme: *mut window_mode_entry, 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_start_selection(wme: *mut window_mode_entry) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         (*data).selx = (*data).cx;
         (*data).sely = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
@@ -5345,8 +5345,8 @@ pub unsafe extern "C" fn window_copy_adjust_selection(
     sely: *mut u32,
 ) -> window_copy_rel_pos {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut s: *mut screen = &raw mut (*data).screen;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let s: *mut screen = &raw mut (*data).screen;
 
         let mut sx = *selx;
         let mut sy = *sely;
@@ -5383,8 +5383,8 @@ pub unsafe extern "C" fn window_copy_update_selection(
     no_reset: i32,
 ) -> i32 {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut s: *mut screen = &raw mut (*data).screen;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let s: *mut screen = &raw mut (*data).screen;
 
         if (*s).sel.is_null() && (*data).lineflag == line_sel::LINE_SEL_NONE {return 0;}
         window_copy_set_selection(wme, may_redraw, no_reset)
@@ -5398,10 +5398,10 @@ pub unsafe extern "C" fn window_copy_set_selection(
     no_reset: i32,
 ) -> i32 {
     unsafe {
-        let mut wp: *mut window_pane = (*wme).wp;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut s: *mut screen = &raw mut (*data).screen;
-        let mut oo: *mut options = (*(*wp).window).options;
+        let wp: *mut window_pane = (*wme).wp;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let s: *mut screen = &raw mut (*data).screen;
+        let oo: *mut options = (*(*wp).window).options;
         let mut gc: grid_cell = zeroed();
         // u_int sx, sy, cy, endsx, endsy;
         // int startrelpos, endrelpos;
@@ -5472,9 +5472,9 @@ pub unsafe extern "C" fn window_copy_get_selection(
     len: *mut usize,
 ) -> *mut c_char {
     unsafe {
-        let mut wp: *mut window_pane = (*wme).wp;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut s: *mut screen = &raw mut (*data).screen;
+        let wp: *mut window_pane = (*wme).wp;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let s: *mut screen = &raw mut (*data).screen;
 
         let mut buf: *mut c_char = null_mut();
         let mut off: usize = 0;
@@ -5509,7 +5509,7 @@ pub unsafe extern "C" fn window_copy_get_selection(
 
         /* Find start and end. */
         let mut xx = (*data).endselx;
-        let mut yy = (*data).endsely;
+        let yy = (*data).endsely;
         let (sx, sy, mut ex, ey) =
             if yy < (*data).sely || (yy == (*data).sely && xx < (*data).selx) {
                 (xx, yy, (*data).selx, (*data).sely)
@@ -5518,7 +5518,7 @@ pub unsafe extern "C" fn window_copy_get_selection(
             };
 
         /* Trim ex to end of line. */
-        let mut ey_last = window_copy_find_length(wme, ey);
+        let ey_last = window_copy_find_length(wme, ey);
         if ex > ey_last {ex = ey_last;}
 
         /*
@@ -5534,7 +5534,7 @@ pub unsafe extern "C" fn window_copy_get_selection(
          * bottom-right-most, regardless of copy direction. If it is vi, also
          * keep bottom-right-most character.
          */
-        let mut keys = modekey::try_from(options_get_number(
+        let keys = modekey::try_from(options_get_number(
             (*(*wp).window).options,
             c"mode-keys".as_ptr(),
         ) as i32);
@@ -5543,7 +5543,7 @@ pub unsafe extern "C" fn window_copy_get_selection(
              * Need to ignore the column with the cursor in it, which for
              * rectangular copy means knowing which side the cursor is on.
              */
-            let mut selx = if (*data).cursordrag == cursordrag::CURSORDRAG_ENDSEL {
+            let selx = if (*data).cursordrag == cursordrag::CURSORDRAG_ENDSEL {
                 (*data).selx
             } else {
                 (*data).endselx
@@ -5617,7 +5617,7 @@ pub unsafe extern "C" fn window_copy_copy_buffer(
     len: usize,
 ) {
     unsafe {
-        let mut wp: *mut window_pane = (*wme).wp;
+        let wp: *mut window_pane = (*wme).wp;
         let mut ctx: screen_write_ctx = zeroed();
 
         if options_get_number(global_options, c"set-clipboard".as_ptr()) != 0 {
@@ -5705,7 +5705,7 @@ pub unsafe extern "C" fn window_copy_copy_selection(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_append_selection(wme: *mut window_mode_entry) {
     unsafe {
-        let mut wp: *mut window_pane = (*wme).wp;
+        let wp: *mut window_pane = (*wme).wp;
         let mut pb: *mut paste_buffer = null_mut();
         let mut bufdata: *const c_char = null_mut();
         let mut bufname: *const c_char = null();
@@ -5744,8 +5744,8 @@ pub unsafe extern "C" fn window_copy_copy_line(
     mut ex: u32,
 ) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut gd: *mut grid = (*(*data).backing).grid;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let gd: *mut grid = (*(*data).backing).grid;
         let mut gc: grid_cell = zeroed();
         let mut ud: utf8_data = zeroed();
         // const char *s;
@@ -5807,7 +5807,7 @@ pub unsafe extern "C" fn window_copy_copy_line(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_clear_selection(wme: *mut window_mode_entry) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         screen_clear_selection(&raw mut (*data).screen);
 
@@ -5829,7 +5829,7 @@ pub unsafe extern "C" fn window_copy_in_set(
     set: *const c_char,
 ) -> i32 {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut gc: grid_cell = zeroed();
 
         grid_get_cell((*(*data).backing).grid, px, py, &raw mut gc);
@@ -5843,7 +5843,7 @@ pub unsafe extern "C" fn window_copy_in_set(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_find_length(wme: *mut window_mode_entry, py: u32) -> u32 {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         grid_line_length((*(*data).backing).grid, py)
     }
@@ -5852,8 +5852,8 @@ pub unsafe extern "C" fn window_copy_find_length(wme: *mut window_mode_entry, py
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_start_of_line(wme: *mut window_mode_entry) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut back_s: *mut screen = (*data).backing;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let back_s: *mut screen = (*data).backing;
         let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx;
@@ -5871,14 +5871,14 @@ pub unsafe extern "C" fn window_copy_cursor_start_of_line(wme: *mut window_mode_
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_back_to_indentation(wme: *mut window_mode_entry) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut back_s: *mut screen = (*data).backing;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let back_s: *mut screen = (*data).backing;
         let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx;
-        let mut hsize = screen_hsize(back_s);
+        let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
-        let mut oldy = (*data).cy;
+        let oldy = (*data).cy;
 
         grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
         grid_reader_cursor_back_to_indentation(&raw mut gr);
@@ -5890,14 +5890,14 @@ pub unsafe extern "C" fn window_copy_cursor_back_to_indentation(wme: *mut window
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_end_of_line(wme: *mut window_mode_entry) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut back_s: *mut screen = (*data).backing;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let back_s: *mut screen = (*data).backing;
         let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx;
-        let mut hsize = screen_hsize(back_s);
+        let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
-        let mut oldy = (*data).cy;
+        let oldy = (*data).cy;
 
         grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
         if !(*data).screen.sel.is_null() && (*data).rectflag != 0 {
@@ -5922,8 +5922,8 @@ pub unsafe extern "C" fn window_copy_cursor_end_of_line(wme: *mut window_mode_en
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_other_end(wme: *mut window_mode_entry) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut s: *mut screen = &raw mut (*data).screen;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let s: *mut screen = &raw mut (*data).screen;
         // u_int selx, sely, cy, yy, hsize;
 
         if (*s).sel.is_null() && (*data).lineflag == line_sel::LINE_SEL_NONE {return;}
@@ -5946,12 +5946,12 @@ pub unsafe extern "C" fn window_copy_other_end(wme: *mut window_mode_entry) {
             sely = (*data).sely;
         }
 
-        let mut cy = (*data).cy;
-        let mut yy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+        let cy = (*data).cy;
+        let yy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
 
         (*data).cx = selx;
 
-        let mut hsize = screen_hsize((*data).backing);
+        let hsize = screen_hsize((*data).backing);
         if sely < hsize - (*data).oy {
             /* above */
             (*data).oy = hsize - sely;
@@ -5972,14 +5972,14 @@ pub unsafe extern "C" fn window_copy_other_end(wme: *mut window_mode_entry) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_left(wme: *mut window_mode_entry) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut back_s: *mut screen = (*data).backing;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let back_s: *mut screen = (*data).backing;
         let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx;
-        let mut hsize = screen_hsize(back_s);
+        let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
-        let mut oldy = (*data).cy;
+        let oldy = (*data).cy;
 
         grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
         grid_reader_cursor_left(&raw mut gr, 1);
@@ -5991,14 +5991,14 @@ pub unsafe extern "C" fn window_copy_cursor_left(wme: *mut window_mode_entry) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_right(wme: *mut window_mode_entry, all: i32) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut back_s: *mut screen = (*data).backing;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let back_s: *mut screen = (*data).backing;
         let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx;
-        let mut hsize = screen_hsize(back_s);
+        let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
-        let mut oldy = (*data).cy;
+        let oldy = (*data).cy;
 
         grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
         grid_reader_cursor_right(&raw mut gr, 1, all);
@@ -6019,14 +6019,14 @@ pub unsafe extern "C" fn window_copy_cursor_right(wme: *mut window_mode_entry, a
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_up(wme: *mut window_mode_entry, scroll_only: i32) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut s: *mut screen = &raw mut (*data).screen;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let s: *mut screen = &raw mut (*data).screen;
         let mut px = 0;
         let mut py = 0;
 
-        let mut norectsel = (*data).screen.sel.is_null() || (*data).rectflag == 0;
-        let mut oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-        let mut ox = window_copy_find_length(wme, oy);
+        let norectsel = (*data).screen.sel.is_null() || (*data).rectflag == 0;
+        let oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+        let ox = window_copy_find_length(wme, oy);
         if norectsel && (*data).cx != ox {
             (*data).lastcx = (*data).cx;
             (*data).lastsx = ox;
@@ -6083,14 +6083,14 @@ pub unsafe extern "C" fn window_copy_cursor_up(wme: *mut window_mode_entry, scro
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_down(wme: *mut window_mode_entry, scroll_only: i32) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut s: *mut screen = &raw mut (*data).screen;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let s: *mut screen = &raw mut (*data).screen;
         let mut px = 0;
         let mut py = 0;
 
-        let mut norectsel = (*data).screen.sel.is_null() || (*data).rectflag == 0;
-        let mut oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-        let mut ox = window_copy_find_length(wme, oy);
+        let norectsel = (*data).screen.sel.is_null() || (*data).rectflag == 0;
+        let oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
+        let ox = window_copy_find_length(wme, oy);
         if norectsel && (*data).cx != ox {
             (*data).lastcx = (*data).cx;
             (*data).lastsx = ox;
@@ -6139,14 +6139,14 @@ pub unsafe extern "C" fn window_copy_cursor_down(wme: *mut window_mode_entry, sc
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_jump(wme: *mut window_mode_entry) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut back_s: *mut screen = (*data).backing;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let back_s: *mut screen = (*data).backing;
         let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx + 1;
-        let mut hsize = screen_hsize(back_s);
+        let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
-        let mut oldy = (*data).cy;
+        let oldy = (*data).cy;
 
         grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
         if grid_reader_cursor_jump(&raw mut gr, (*data).jumpchar) != 0 {
@@ -6168,14 +6168,14 @@ pub unsafe extern "C" fn window_copy_cursor_jump(wme: *mut window_mode_entry) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_jump_back(wme: *mut window_mode_entry) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut back_s: *mut screen = (*data).backing;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let back_s: *mut screen = (*data).backing;
         let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx;
-        let mut hsize = screen_hsize(back_s);
+        let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
-        let mut oldy = (*data).cy;
+        let oldy = (*data).cy;
 
         grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
         grid_reader_cursor_left(&raw mut gr, 0);
@@ -6189,14 +6189,14 @@ pub unsafe extern "C" fn window_copy_cursor_jump_back(wme: *mut window_mode_entr
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_jump_to(wme: *mut window_mode_entry) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut back_s: *mut screen = (*data).backing;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let back_s: *mut screen = (*data).backing;
         let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx + 2;
-        let mut hsize = screen_hsize(back_s);
+        let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
-        let mut oldy = (*data).cy;
+        let oldy = (*data).cy;
 
         grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
         if grid_reader_cursor_jump(&raw mut gr, (*data).jumpchar) != 0 {
@@ -6219,14 +6219,14 @@ pub unsafe extern "C" fn window_copy_cursor_jump_to(wme: *mut window_mode_entry)
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_jump_to_back(wme: *mut window_mode_entry) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut back_s: *mut screen = (*data).backing;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let back_s: *mut screen = (*data).backing;
         let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx;
-        let mut hsize = screen_hsize(back_s);
+        let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
-        let mut oldy = (*data).cy;
+        let oldy = (*data).cy;
 
         grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
         grid_reader_cursor_left(&raw mut gr, 0);
@@ -6245,14 +6245,14 @@ pub unsafe extern "C" fn window_copy_cursor_next_word(
     separators: *const c_char,
 ) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut back_s: *mut screen = (*data).backing;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let back_s: *mut screen = (*data).backing;
         let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx;
-        let mut hsize = screen_hsize(back_s);
+        let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
-        let mut oldy = (*data).cy;
+        let oldy = (*data).cy;
 
         grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
         grid_reader_cursor_next_word(&raw mut gr, separators);
@@ -6279,14 +6279,14 @@ pub unsafe extern "C" fn window_copy_cursor_next_word_end_pos(
     ppy: *mut u32,
 ) {
     unsafe {
-        let mut wp: *mut window_pane = (*wme).wp;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut oo: *mut options = (*(*wp).window).options;
-        let mut back_s: *mut screen = (*data).backing;
+        let wp: *mut window_pane = (*wme).wp;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let oo: *mut options = (*(*wp).window).options;
+        let back_s: *mut screen = (*data).backing;
         let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx;
-        let mut hsize = screen_hsize(back_s);
+        let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
 
         grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
@@ -6313,16 +6313,16 @@ pub unsafe extern "C" fn window_copy_cursor_next_word_end(
     no_reset: i32,
 ) {
     unsafe {
-        let mut wp: *mut window_pane = (*wme).wp;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut oo: *mut options = (*(*wp).window).options;
-        let mut back_s: *mut screen = (*data).backing;
+        let wp: *mut window_pane = (*wme).wp;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let oo: *mut options = (*(*wp).window).options;
+        let back_s: *mut screen = (*data).backing;
         let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx;
-        let mut hsize = screen_hsize(back_s);
+        let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
-        let mut oldy = (*data).cy;
+        let oldy = (*data).cy;
 
         grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
         if modekey::try_from(options_get_number(oo, c"mode-keys".as_ptr()) as i32)
@@ -6357,12 +6357,12 @@ pub unsafe extern "C" fn window_copy_cursor_previous_word_pos(
     ppy: *mut u32,
 ) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut back_s: *mut screen = (*data).backing;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let back_s: *mut screen = (*data).backing;
         let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx;
-        let mut hsize = screen_hsize(back_s);
+        let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
 
         grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
@@ -6386,9 +6386,9 @@ pub unsafe extern "C" fn window_copy_cursor_previous_word(
     already: i32,
 ) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut w: *mut window = (*(*wme).wp).window;
-        let mut back_s: *mut screen = (*data).backing;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let w: *mut window = (*(*wme).wp).window;
+        let back_s: *mut screen = (*data).backing;
         let mut gr: grid_reader = zeroed();
 
         let stop_at_eol =
@@ -6401,9 +6401,9 @@ pub unsafe extern "C" fn window_copy_cursor_previous_word(
             };
 
         let mut px = (*data).cx;
-        let mut hsize = screen_hsize(back_s);
+        let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
-        let mut oldy = (*data).cy;
+        let oldy = (*data).cy;
 
         grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
         grid_reader_cursor_previous_word(&raw mut gr, separators, already, stop_at_eol);
@@ -6419,9 +6419,9 @@ pub unsafe extern "C" fn window_copy_cursor_prompt(
     args: *const c_char,
 ) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut s: *mut screen = (*data).backing;
-        let mut gd: *mut grid = (*s).grid;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let s: *mut screen = (*data).backing;
+        let gd: *mut grid = (*s).grid;
         let mut line = (*gd).hsize - (*data).oy + (*data).cy;
         let mut end_line: u32 = 0;
         let mut add: i32 = 0;
@@ -6469,9 +6469,9 @@ pub unsafe extern "C" fn window_copy_cursor_prompt(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_scroll_up(wme: *mut window_mode_entry, mut ny: u32) {
     unsafe {
-        let mut wp: *mut window_pane = (*wme).wp;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut s: *mut screen = &raw mut (*data).screen;
+        let wp: *mut window_pane = (*wme).wp;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let s: *mut screen = &raw mut (*data).screen;
         let mut ctx: screen_write_ctx = zeroed();
 
         if (*data).oy < ny {ny = (*data).oy;}
@@ -6497,9 +6497,9 @@ pub unsafe extern "C" fn window_copy_scroll_up(wme: *mut window_mode_entry, mut 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_scroll_down(wme: *mut window_mode_entry, mut ny: u32) {
     unsafe {
-        let mut wp: *mut window_pane = (*wme).wp;
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
-        let mut s: *mut screen = &raw mut (*data).screen;
+        let wp: *mut window_pane = (*wme).wp;
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+        let s: *mut screen = &raw mut (*data).screen;
         let mut ctx: screen_write_ctx = zeroed();
 
         if ny > screen_hsize((*data).backing) {return;}
@@ -6526,7 +6526,7 @@ pub unsafe extern "C" fn window_copy_scroll_down(wme: *mut window_mode_entry, mu
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_rectangle_set(wme: *mut window_mode_entry, rectflag: i32) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         (*data).rectflag = rectflag;
 
@@ -6578,7 +6578,7 @@ pub unsafe extern "C" fn window_copy_start_drag(c: *mut client, m: *mut mouse_ev
         (*c).tty.mouse_drag_update = Some(window_copy_drag_update);
         (*c).tty.mouse_drag_release = Some(window_copy_drag_release);
 
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         let yg = screen_hsize((*data).backing) + y - (*data).oy;
         if x < (*data).selrx || x > (*data).endselrx || yg != (*data).selry {(*data).selflag = selflag::SEL_CHAR;}
         match (*data).selflag {
@@ -6624,11 +6624,11 @@ pub unsafe extern "C" fn window_copy_drag_update(c: *mut client, m: *mut mouse_e
         let Some(wp) = cmd_mouse_pane(m, null_mut(), null_mut()) else {
             return;
         };
-        let mut wme: *mut window_mode_entry = tailq_first(&raw mut (*wp.as_ptr()).modes);
+        let wme: *mut window_mode_entry = tailq_first(&raw mut (*wp.as_ptr()).modes);
         if wme.is_null() {return;}
         if (*wme).mode != &window_copy_mode && (*wme).mode != &window_view_mode {return;}
 
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
         evtimer_del(&raw mut (*data).dragtimer);
 
         if cmd_mouse_at(wp.as_ptr(), m, &raw mut x, &raw mut y, 0) != 0 {return;}
@@ -6668,7 +6668,7 @@ pub unsafe extern "C" fn window_copy_drag_release(c: *mut client, m: *mut mouse_
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_jump_to_mark(wme: *mut window_mode_entry) {
     unsafe {
-        let mut data: *mut window_copy_mode_data = (*wme).data.cast();
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         let tmx = (*data).cx;
         let tmy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
@@ -6701,8 +6701,8 @@ pub unsafe extern "C" fn window_copy_acquire_cursor_up(
     unsafe {
         let yy = hsize - oy;
         let mut ny;
-        let mut nd;
-        let mut cy;
+        let nd;
+        let cy;
         if py < yy {
             ny = yy - py;
             cy = 0;
@@ -6737,7 +6737,7 @@ pub unsafe extern "C" fn window_copy_acquire_cursor_down(
         let cy = py - hsize + oy;
         let yy = sy - 1;
         let mut ny;
-        let mut nd;
+        let nd;
         if cy > yy {
             ny = cy - yy;
             oldy = yy;

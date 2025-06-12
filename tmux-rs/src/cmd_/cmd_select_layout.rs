@@ -61,11 +61,11 @@ static mut cmd_previous_layout_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_select_layout_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
-        let mut wl = (*target).wl;
-        let mut w = (*wl).window;
-        let mut wp = (*target).wp;
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
+        let wl = (*target).wl;
+        let w = (*wl).window;
+        let wp = (*target).wp;
 
         server_unzoom_window(w);
 

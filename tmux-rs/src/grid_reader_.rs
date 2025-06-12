@@ -318,7 +318,7 @@ pub unsafe extern "C" fn grid_reader_cursor_previous_word(
         let mut oldx: i32;
         let mut oldy: i32;
         let mut at_eol: i32 = 0;
-        let mut word_is_letters;
+        let word_is_letters;
 
         if already != 0 || grid_reader_in_set(gr, WHITESPACE.as_ptr()) != 0 {
             loop {
@@ -392,11 +392,11 @@ pub unsafe extern "C" fn grid_reader_cursor_jump(
         let gc = gc.as_mut_ptr();
 
         let mut px = (*gr).cx;
-        let mut yy = (*(*gr).gd).hsize + (*(*gr).gd).sy - 1;
+        let yy = (*(*gr).gd).hsize + (*(*gr).gd).sy - 1;
 
         let mut py = (*gr).cy;
         while py <= yy {
-            let mut xx = grid_line_length((*gr).gd, py);
+            let xx = grid_line_length((*gr).gd, py);
             while px < xx {
                 grid_get_cell((*gr).gd, px, py, gc);
                 if !(*gc).flags.intersects(grid_flag::PADDING)
@@ -481,7 +481,7 @@ pub unsafe extern "C" fn grid_reader_cursor_back_to_indentation(gr: *mut grid_re
         let gc = gc.as_mut_ptr();
         // u_int px, py, xx, yy, oldx, oldy;
 
-        let mut yy = (*(*gr).gd).hsize + (*(*gr).gd).sy - 1;
+        let yy = (*(*gr).gd).hsize + (*(*gr).gd).sy - 1;
         let oldx = (*gr).cx;
         let oldy = (*gr).cy;
         grid_reader_cursor_start_of_line(gr, 1);

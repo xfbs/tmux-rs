@@ -44,13 +44,13 @@ unsafe extern "C" fn cmd_confirm_before_args_parse(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_confirm_before_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut tc = cmdq_get_target_client(item);
-        let mut target = cmdq_get_target(item);
+        let args = cmd_get_args(self_);
+        let tc = cmdq_get_target_client(item);
+        let target = cmdq_get_target(item);
         let mut new_prompt = null_mut();
-        let mut wait = !args_has(args, b'b');
+        let wait = !args_has(args, b'b');
 
-        let mut cdata = xcalloc_::<cmd_confirm_before_data>(1).as_ptr();
+        let cdata = xcalloc_::<cmd_confirm_before_data>(1).as_ptr();
         (*cdata).cmdlist = args_make_commands_now(self_, item, 0, 1);
         if (*cdata).cmdlist.is_null() {
             free_(cdata);
@@ -62,7 +62,7 @@ unsafe extern "C" fn cmd_confirm_before_exec(self_: *mut cmd, item: *mut cmdq_it
         }
 
         (*cdata).default_yes = args_has(args, b'y');
-        let mut confirm_key = args_get(args, b'c');
+        let confirm_key = args_get(args, b'c');
         if !confirm_key.is_null() {
             if *confirm_key.add(1) == b'\0' as _ && *confirm_key > 31 && *confirm_key < 127 {
                 (*cdata).confirm_key = *confirm_key as _;
@@ -75,7 +75,7 @@ unsafe extern "C" fn cmd_confirm_before_exec(self_: *mut cmd, item: *mut cmdq_it
             (*cdata).confirm_key = b'y';
         }
 
-        let mut prompt = args_get(args, b'p');
+        let prompt = args_get(args, b'p');
         if !prompt.is_null() {
             xasprintf(&raw mut new_prompt, c"%s ".as_ptr(), prompt);
         } else {
@@ -116,8 +116,8 @@ unsafe extern "C" fn cmd_confirm_before_callback(
     _done: i32,
 ) -> i32 {
     unsafe {
-        let mut cdata: NonNull<cmd_confirm_before_data> = data.cast();
-        let mut item = (*cdata.as_ptr()).item;
+        let cdata: NonNull<cmd_confirm_before_data> = data.cast();
+        let item = (*cdata.as_ptr()).item;
         let mut retcode: i32 = 1;
 
         'out: {
@@ -159,7 +159,7 @@ unsafe extern "C" fn cmd_confirm_before_callback(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_confirm_before_free(data: NonNull<c_void>) {
     unsafe {
-        let mut cdata: NonNull<cmd_confirm_before_data> = data.cast();
+        let cdata: NonNull<cmd_confirm_before_data> = data.cast();
         cmd_list_free((*cdata.as_ptr()).cmdlist);
         free_(cdata.as_ptr());
     }

@@ -45,11 +45,11 @@ unsafe extern "C" fn cmd_load_buffer_done(
     data: *mut c_void,
 ) {
     unsafe {
-        let mut cdata = data as *mut cmd_load_buffer_data;
-        let mut tc = (*cdata).client;
-        let mut item = (*cdata).item;
-        let mut bdata = EVBUFFER_DATA(buffer);
-        let mut bsize = EVBUFFER_LENGTH(buffer);
+        let cdata = data as *mut cmd_load_buffer_data;
+        let tc = (*cdata).client;
+        let item = (*cdata).item;
+        let bdata = EVBUFFER_DATA(buffer);
+        let bsize = EVBUFFER_LENGTH(buffer);
 
         if closed == 0 {
             return;
@@ -58,7 +58,7 @@ unsafe extern "C" fn cmd_load_buffer_done(
         if error != 0 {
             cmdq_error(item, c"%s: %s".as_ptr(), path, strerror(error));
         } else if bsize != 0 {
-            let mut copy = xmalloc(bsize).as_ptr();
+            let copy = xmalloc(bsize).as_ptr();
             memcpy_(copy, bdata as _, bsize);
             let mut cause = null_mut();
             if paste_set(copy as _, bsize, (*cdata).name, &raw mut cause) != 0 {
@@ -85,11 +85,11 @@ unsafe extern "C" fn cmd_load_buffer_done(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_load_buffer_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut tc = cmdq_get_target_client(item);
-        let mut bufname = args_get(args, b'b');
+        let args = cmd_get_args(self_);
+        let tc = cmdq_get_target_client(item);
+        let bufname = args_get(args, b'b');
 
-        let mut cdata = xcalloc_::<cmd_load_buffer_data>(1).as_ptr();
+        let cdata = xcalloc_::<cmd_load_buffer_data>(1).as_ptr();
         (*cdata).item = item;
         if !bufname.is_null() {
             (*cdata).name = xstrdup(bufname).as_ptr();
@@ -99,7 +99,7 @@ unsafe extern "C" fn cmd_load_buffer_exec(self_: *mut cmd, item: *mut cmdq_item)
             (*(*cdata).client).references += 1;
         }
 
-        let mut path = format_single_from_target(item, args_string(args, 0));
+        let path = format_single_from_target(item, args_string(args, 0));
         file_read(
             cmdq_get_client(item),
             path,

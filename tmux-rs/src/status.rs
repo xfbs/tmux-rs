@@ -181,8 +181,8 @@ pub unsafe extern "C" fn status_prompt_save_history() {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn status_timer_callback(_fd: i32, _events: i16, arg: *mut c_void) {
     unsafe {
-        let mut c: *mut client = arg.cast();
-        let mut s: *mut session = (*c).session;
+        let c: *mut client = arg.cast();
+        let s: *mut session = (*c).session;
 
         evtimer_del(&raw mut (*c).status.timer);
 
@@ -209,7 +209,7 @@ unsafe extern "C" fn status_timer_callback(_fd: i32, _events: i16, arg: *mut c_v
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn status_timer_start(c: *mut client) {
     unsafe {
-        let mut s: *mut session = (*c).session;
+        let s: *mut session = (*c).session;
 
         if event_initialized(&raw mut (*c).status.timer).as_bool() {
             evtimer_del(&raw mut (*c).status.timer);
@@ -256,7 +256,7 @@ pub unsafe extern "C" fn status_update_cache(s: *mut session) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn status_at_line(c: *mut client) -> i32 {
     unsafe {
-        let mut s: *mut session = (*c).session;
+        let s: *mut session = (*c).session;
 
         if (*c)
             .flags
@@ -310,7 +310,7 @@ unsafe extern "C" fn status_prompt_line_at(c: *mut client) -> u32 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn status_get_range(c: *mut client, x: u32, y: u32) -> *mut style_range {
     unsafe {
-        let mut sl = &raw mut (*c).status;
+        let sl = &raw mut (*c).status;
 
         if y >= (*sl).entries.len() as u32 {
             return null_mut();
@@ -339,7 +339,7 @@ unsafe extern "C" fn status_free_ranges(srs: *mut style_ranges) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn status_push_screen(c: *mut client) {
     unsafe {
-        let mut sl = &raw mut (*c).status;
+        let sl = &raw mut (*c).status;
 
         if (*sl).active == &raw mut (*sl).screen {
             (*sl).active = xmalloc_::<screen>().as_ptr();
@@ -353,7 +353,7 @@ unsafe extern "C" fn status_push_screen(c: *mut client) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn status_pop_screen(c: *mut client) {
     unsafe {
-        let mut sl = &raw mut (*c).status;
+        let sl = &raw mut (*c).status;
 
         (*sl).references -= 1;
         if (*sl).references == 0 {
@@ -368,7 +368,7 @@ unsafe extern "C" fn status_pop_screen(c: *mut client) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn status_init(c: *mut client) {
     unsafe {
-        let mut sl = &raw mut (*c).status;
+        let sl = &raw mut (*c).status;
 
         for i in 0..(*sl).entries.len() {
             tailq_init(&raw mut (*sl).entries[i].ranges);
@@ -383,7 +383,7 @@ pub unsafe extern "C" fn status_init(c: *mut client) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn status_free(c: *mut client) {
     unsafe {
-        let mut sl = &raw mut (*c).status;
+        let sl = &raw mut (*c).status;
 
         for i in 0..(*sl).entries.len() {
             status_free_ranges(&raw mut (*sl).entries[i].ranges);
@@ -406,15 +406,15 @@ pub unsafe extern "C" fn status_free(c: *mut client) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn status_redraw(c: *mut client) -> i32 {
     unsafe {
-        let mut sl = &raw mut (*c).status;
+        let sl = &raw mut (*c).status;
         // status_line_entry *sle;
-        let mut s = (*c).session;
+        let s = (*c).session;
         let mut ctx: screen_write_ctx = zeroed();
         let mut gc: grid_cell = zeroed();
 
         //u_int lines, i, n;
 
-        let mut width = (*c).tty.sx;
+        let width = (*c).tty.sx;
 
         let mut force = false;
         let mut changed = false;
@@ -444,7 +444,7 @@ pub unsafe extern "C" fn status_redraw(c: *mut client) -> i32 {
         if (*c).flags.intersects(client_flag::STATUSFORCE) {
             flags |= format_flags::FORMAT_FORCE;
         }
-        let mut ft = format_create(c, null_mut(), FORMAT_NONE, flags);
+        let ft = format_create(c, null_mut(), FORMAT_NONE, flags);
         format_defaults(ft, c, None, None, None);
 
         /* Set up default colour. */
@@ -628,9 +628,9 @@ unsafe extern "C" fn status_message_callback(_fd: i32, _event: i16, data: *mut c
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn status_message_redraw(c: *mut client) -> i32 {
     unsafe {
-        let mut sl = &raw mut (*c).status;
+        let sl = &raw mut (*c).status;
         let mut ctx: screen_write_ctx = zeroed();
-        let mut s = (*c).session;
+        let s = (*c).session;
         let mut old_screen: screen = zeroed();
 
         // size_t len;
@@ -722,7 +722,7 @@ pub unsafe extern "C" fn status_prompt_set(
     unsafe {
         server_client_clear_overlay(c);
 
-        let mut ft = if !fs.is_null() {
+        let ft = if !fs.is_null() {
             format_create_from_state(null_mut(), c, fs)
         } else {
             format_create_defaults(null_mut(), c, null_mut(), null_mut(), null_mut())
@@ -855,10 +855,10 @@ pub unsafe extern "C" fn status_prompt_update(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn status_prompt_redraw(c: *mut client) -> i32 {
     unsafe {
-        let mut sl = &raw mut (*c).status;
+        let sl = &raw mut (*c).status;
         let mut ctx: screen_write_ctx = zeroed();
 
-        let mut s = (*c).session;
+        let s = (*c).session;
         let mut old_screen: screen = zeroed();
 
         let mut offset: u32 = 0;
@@ -883,7 +883,7 @@ pub unsafe extern "C" fn status_prompt_redraw(c: *mut client) -> i32 {
                 promptline = lines - 1;
             }
 
-            let mut ft = format_create_defaults(null_mut(), c, null_mut(), null_mut(), null_mut());
+            let ft = format_create_defaults(null_mut(), c, null_mut(), null_mut(), null_mut());
             if (*c).prompt_mode == prompt_mode::PROMPT_COMMAND {
                 style_apply(
                     &raw mut gc,
@@ -928,12 +928,12 @@ pub unsafe extern "C" fn status_prompt_redraw(c: *mut client) -> i32 {
             );
             screen_write_cursormove(&raw mut ctx, start as i32, promptline as i32, 0);
 
-            let mut left = (*c).tty.sx - start;
+            let left = (*c).tty.sx - start;
             if left == 0 {
                 break 'finished;
             }
 
-            let mut pcursor = utf8_strwidth((*c).prompt_buffer, (*c).prompt_index as isize);
+            let pcursor = utf8_strwidth((*c).prompt_buffer, (*c).prompt_index as isize);
             let mut pwidth = utf8_strwidth((*c).prompt_buffer, -1);
             if pcursor >= left {
                 /*
@@ -1193,7 +1193,7 @@ unsafe extern "C" fn status_prompt_paste(c: *mut client) -> i32 {
             if pb.is_null() {
                 return 0;
             }
-            let mut bufdata: *const u8 = paste_buffer_data(pb, &raw mut bufsize).cast();
+            let bufdata: *const u8 = paste_buffer_data(pb, &raw mut bufsize).cast();
             let mut udp = xreallocarray_::<utf8_data>(null_mut(), bufsize + 1).as_ptr();
             ud = udp;
             let mut i: u32 = 0;
@@ -1491,7 +1491,7 @@ unsafe extern "C" fn status_prompt_backward_word(c: *mut client, separators: *co
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) -> i32 {
     unsafe {
-        let mut oo = (*(*c).session).options;
+        let oo = (*(*c).session).options;
         let mut s = null_mut();
         let mut cp = null_mut();
         let mut prefix = b'=';
@@ -1513,7 +1513,7 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
             return 0;
         }
 
-        let mut size: usize = utf8_strlen((*c).prompt_buffer);
+        let size: usize = utf8_strlen((*c).prompt_buffer);
 
         'changed: {
             'append_key: {
@@ -1535,7 +1535,7 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
                     }
                     key &= !KEYC_MASK_FLAGS;
 
-                    let mut keys = modekey::try_from(options_get_number(
+                    let keys = modekey::try_from(options_get_number(
                         (*(*c).session).options,
                         c"status-keys".as_ptr(),
                     ) as i32);
@@ -1913,7 +1913,7 @@ unsafe extern "C" fn status_prompt_add_history(line: *const c_char, type_: u32) 
             new = 0;
         }
 
-        let mut hlimit =
+        let hlimit =
             options_get_number(global_options, c"prompt-history-limit".as_ptr()) as u32;
         if hlimit > oldsize {
             if new == 0 {
@@ -1990,7 +1990,7 @@ unsafe extern "C" fn status_prompt_complete_list(
         let mut list: *mut *mut c_char = null_mut();
         let slen = strlen(s);
 
-        let mut layouts: [*const c_char; 8] = [
+        let layouts: [*const c_char; 8] = [
             c"even-horizontal".as_ptr(),
             c"even-vertical".as_ptr(),
             c"main-horizontal".as_ptr(),
@@ -2092,8 +2092,8 @@ unsafe extern "C" fn status_prompt_menu_callback(
     data: *mut c_void,
 ) {
     unsafe {
-        let mut spm: *mut status_prompt_menu = data.cast();
-        let mut c = (*spm).c;
+        let spm: *mut status_prompt_menu = data.cast();
+        let c = (*spm).c;
         let mut s: *mut c_char = null_mut();
 
         if key != KEYC_NONE {
@@ -2140,7 +2140,7 @@ unsafe extern "C" fn status_prompt_complete_list_menu(
         // struct menu_item item;
         let mut item: menu_item = zeroed();
         // struct status_prompt_menu *spm;
-        let mut lines = status_line_size(c);
+        let lines = status_line_size(c);
 
         // height, i;
         // u_int py;
@@ -2152,7 +2152,7 @@ unsafe extern "C" fn status_prompt_complete_list_menu(
             return 0;
         }
 
-        let mut spm: *mut status_prompt_menu = xmalloc_::<status_prompt_menu>().as_ptr();
+        let spm: *mut status_prompt_menu = xmalloc_::<status_prompt_menu>().as_ptr();
         (*spm).c = c;
         (*spm).size = size;
         (*spm).list = list;
@@ -2230,7 +2230,7 @@ unsafe extern "C" fn status_prompt_complete_window_menu(
         let mut item: menu_item = zeroed();
         let mut tmp: *mut c_char = null_mut();
         let mut list: *mut *mut c_char = null_mut();
-        let mut lines = status_line_size(c);
+        let lines = status_line_size(c);
 
         // u_int py;
         let mut size = 0;
@@ -2249,7 +2249,7 @@ unsafe extern "C" fn status_prompt_complete_window_menu(
         }
         (*spm).start = 0;
 
-        let mut menu = menu_create(c"".as_ptr());
+        let menu = menu_create(c"".as_ptr());
         for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
             if !word.is_null() && *word != b'\0' as i8 {
                 xasprintf(&raw mut tmp, c"%d".as_ptr(), (*wl).idx);

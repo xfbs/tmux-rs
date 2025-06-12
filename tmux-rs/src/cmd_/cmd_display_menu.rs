@@ -95,12 +95,12 @@ unsafe extern "C" fn cmd_display_menu_get_position(
     h: u32,
 ) -> i32 {
     unsafe {
-        let mut tty = &raw mut (*tc).tty;
-        let mut target = cmdq_get_target(item);
-        let mut event = cmdq_get_event(item);
-        let mut s = (*tc).session;
-        let mut wl = (*target).wl;
-        let mut wp = (*target).wp;
+        let tty = &raw mut (*tc).tty;
+        let target = cmdq_get_target(item);
+        let event = cmdq_get_event(item);
+        let s = (*tc).session;
+        let wl = (*target).wl;
+        let wp = (*target).wp;
         let mut ranges = null_mut();
         let mut sr = null_mut();
         //const char		*xp, *yp;
@@ -139,13 +139,13 @@ unsafe extern "C" fn cmd_display_menu_get_position(
          */
         let mut top = status_at_line(tc);
         if top != -1 {
-            let mut lines = status_line_size(tc);
+            let lines = status_line_size(tc);
             if top == 0 {
                 top = lines as i32;
             } else {
                 top = 0;
             }
-            let mut position = options_get_number((*s).options, c"status-position".as_ptr());
+            let position = options_get_number((*s).options, c"status-position".as_ptr());
 
             for line_ in 0..lines {
                 line = line_;
@@ -351,7 +351,7 @@ unsafe extern "C" fn cmd_display_menu_get_position(
         } else if strcmp(yp, c"W".as_ptr()) == 0 {
             yp = c"#{popup_window_status_line_y}".as_ptr();
         }
-        let mut p = format_expand(ft, yp);
+        let p = format_expand(ft, yp);
         n = strtol(p, null_mut(), 10);
         if n < h as i64 {
             n = 0;
@@ -382,28 +382,28 @@ unsafe extern "C" fn cmd_display_menu_get_position(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_display_menu_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
-        let mut event = cmdq_get_event(item);
-        let mut tc = cmdq_get_target_client(item);
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
+        let event = cmdq_get_event(item);
+        let tc = cmdq_get_target_client(item);
         let mut menu = null_mut();
         let mut menu_item: menu_item = zeroed();
         let mut key = null();
         let mut name = null();
 
-        let mut style = args_get_(args, 's');
-        let mut border_style = args_get_(args, 'S');
-        let mut selected_style = args_get_(args, 'H');
-        let mut lines = box_lines::BOX_LINES_DEFAULT;
-        let mut title;
+        let style = args_get_(args, 's');
+        let border_style = args_get_(args, 'S');
+        let selected_style = args_get_(args, 'H');
+        let lines = box_lines::BOX_LINES_DEFAULT;
+        let title;
         let mut cause = null_mut();
         let mut flags = 0;
         let mut starting_choice: i32 = 0;
         let mut px: u32 = 0;
         let mut py: u32 = 0;
         let mut i: u32 = 0;
-        let mut count = args_count(args);
-        let mut o = (*(*(*(*target).s).curw).window).options;
+        let count = args_count(args);
+        let o = (*(*(*(*target).s).curw).window).options;
 
         if (*tc).overlay_draw.is_some() {
             return cmd_retval::CMD_RETURN_NORMAL;
@@ -520,26 +520,26 @@ unsafe extern "C" fn cmd_display_menu_exec(self_: *mut cmd, item: *mut cmdq_item
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_display_popup_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
-        let mut s = (*target).s;
-        let mut tc = cmdq_get_target_client(item);
-        let mut tty = &raw mut (*tc).tty;
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
+        let s = (*target).s;
+        let tc = cmdq_get_target_client(item);
+        let tty = &raw mut (*tc).tty;
         //const char		*value, *shell, *shellcmd = NULL;
-        let mut style = args_get(args, b's');
-        let mut border_style = args_get(args, b'S');
+        let style = args_get(args, b's');
+        let border_style = args_get(args, b'S');
         let mut cause: *mut c_char = null_mut();
         //char			*cwd, *cause = NULL, **argv = NULL, *title;
         let mut argc = 0;
         let mut lines = box_lines::BOX_LINES_DEFAULT as i32;
         let mut px = 0;
         let mut py = 0;
-        let mut w: i32 = 0;
+        let w: i32 = 0;
         let mut h: u32 = 0;
-        let mut count = args_count(args);
+        let count = args_count(args);
         //struct args_value	*av;
         let mut env = null_mut();
-        let mut o = (*(*(*s).curw).window).options;
+        let o = (*(*(*s).curw).window).options;
         // struct options_entry	*oe;
 
         if args_has_(args, 'C') {
@@ -608,7 +608,7 @@ unsafe extern "C" fn cmd_display_popup_exec(self_: *mut cmd, item: *mut cmdq_ite
         }
 
         value = args_get(args, b'd');
-        let mut cwd = if !value.is_null() {
+        let cwd = if !value.is_null() {
             format_single_from_target(item, value)
         } else {
             xstrdup(server_client_get_cwd(tc, s)).as_ptr()
@@ -643,7 +643,7 @@ unsafe extern "C" fn cmd_display_popup_exec(self_: *mut cmd, item: *mut cmdq_ite
             }
         }
 
-        let mut title = if args_has_(args, 'T') {
+        let title = if args_has_(args, 'T') {
             format_single_from_target(item, args_get(args, b'T'))
         } else {
             xstrdup_(c"").as_ptr()

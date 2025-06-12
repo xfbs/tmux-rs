@@ -135,7 +135,7 @@ pub unsafe extern "C" fn expand_path(path: *const c_char, home: *const c_char) -
                     .cast()
                     .as_ptr()
             };
-            let mut value = environ_find(global_environ, name);
+            let value = environ_find(global_environ, name);
             free_(name);
             if value.is_null() {
                 return null_mut();
@@ -170,7 +170,7 @@ unsafe extern "C" fn expand_paths(
         *n = 0;
 
         let mut tmp: *mut c_char = xstrdup(s).cast().as_ptr();
-        let mut copy = tmp;
+        let copy = tmp;
         while {
             next = strsep(&raw mut tmp as _, c":".as_ptr().cast());
             !next.is_null()
@@ -632,7 +632,7 @@ pub unsafe extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *m
         if path.is_null() && label.is_null() {
             s = getenv(c"TMUX".as_ptr());
             if !s.is_null() && *s != b'\0' as c_char && *s != b',' as c_char {
-                let mut tmp: *mut c_char = xstrdup(s).cast().as_ptr();
+                let tmp: *mut c_char = xstrdup(s).cast().as_ptr();
                 *tmp.add(strcspn(tmp, c",".as_ptr())) = b'\0' as c_char;
                 path = tmp;
             }

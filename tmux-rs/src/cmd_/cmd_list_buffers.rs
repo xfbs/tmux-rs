@@ -30,14 +30,14 @@ static mut cmd_list_buffers_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_list_buffers_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
+        let args = cmd_get_args(self_);
         let mut flag = 0;
 
         let mut template: *const c_char = args_get(args, b'F');
         if template.is_null() {
             template = c"#{buffer_name}: #{buffer_size} bytes: \"#{buffer_sample}\"".as_ptr();
         }
-        let mut filter = args_get(args, b'f');
+        let filter = args_get(args, b'f');
 
         let mut pb = null_mut();
         while {

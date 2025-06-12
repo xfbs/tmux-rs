@@ -89,11 +89,11 @@ unsafe extern "C" fn cmd_source_file_done(
 ) {
     unsafe {
         let cdata = data as *mut cmd_source_file_data;
-        let mut item = (*cdata).item;
-        let mut bdata = EVBUFFER_DATA(buffer);
+        let item = (*cdata).item;
+        let bdata = EVBUFFER_DATA(buffer);
         let bsize = EVBUFFER_LENGTH(buffer);
         let mut new_item: *mut cmdq_item = null_mut();
-        let mut target = cmdq_get_target(item);
+        let target = cmdq_get_target(item);
 
         if closed == 0 {
             return;
@@ -151,13 +151,13 @@ unsafe extern "C" fn cmd_source_file_exec(self_: *mut cmd, item: *mut cmdq_item)
     let __func__ = "cmd_source_file_exec";
 
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut c = cmdq_get_client(item);
+        let args = cmd_get_args(self_);
+        let c = cmdq_get_client(item);
         let mut retval = cmd_retval::CMD_RETURN_NORMAL;
         let mut pattern: *mut c_char = null_mut();
         let mut cwd = null_mut();
         let mut expanded: *mut c_char = null_mut();
-        let mut path: *mut c_char = null_mut();
+        let path: *mut c_char = null_mut();
         let mut error: *mut c_char = null_mut();
         let mut g = MaybeUninit::<glob_t>::uninit();
         let mut result = 0i32;

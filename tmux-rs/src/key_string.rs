@@ -294,10 +294,10 @@ pub unsafe extern "C" fn key_string_lookup_string(mut string: *const c_char) -> 
         let mut key: key_code = 0;
         let mut modifiers: key_code = 0;
         let mut u: u32 = 0;
-        let mut i: u32 = 0;
+        let i: u32 = 0;
         let mut ud: utf8_data = zeroed();
         let mut uc: utf8_char = 0;
-        let mut mlen = 0i32;
+        let mlen = 0i32;
 
         let mut m = [MaybeUninit::<c_char>::uninit(); MB_LEN_MAX + 1];
 
@@ -399,7 +399,7 @@ pub unsafe extern "C" fn key_string_lookup_key(
     let sizeof_out: usize = 64;
     static mut out: [c_char; 64] = [0; 64];
     unsafe {
-        let mut saved = key;
+        let saved = key;
         let sizeof_tmp: usize = 8;
         let mut tmp: [c_char; 8] = [0; 8];
         let mut s = null();

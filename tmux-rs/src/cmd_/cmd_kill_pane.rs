@@ -32,10 +32,10 @@ static mut cmd_kill_pane_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_kill_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
-        let mut wl = (*target).wl;
-        let mut wp = (*target).wp;
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
+        let wl = (*target).wl;
+        let wp = (*target).wp;
 
         if args_has(args, b'a') != 0 {
             server_unzoom_window((*wl).window);

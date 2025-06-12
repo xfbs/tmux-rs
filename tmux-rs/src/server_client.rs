@@ -84,7 +84,7 @@ pub unsafe extern "C" fn server_client_set_overlay(
             server_client_clear_overlay(c);
         }
 
-        let mut tv: libc::timeval = libc::timeval {
+        let tv: libc::timeval = libc::timeval {
             tv_sec: delay as i64 / 1000,
             tv_usec: (delay as i64 % 1000) * 1000,
         };
@@ -281,7 +281,7 @@ pub unsafe extern "C" fn server_client_create(fd: i32) -> *mut client {
     unsafe {
         setblocking(fd, 0);
 
-        let mut c: *mut client = xcalloc1();
+        let c: *mut client = xcalloc1();
         (*c).references = 1;
         (*c).peer = proc_add_peer(server_proc, fd, Some(server_client_dispatch), c.cast());
 
@@ -409,7 +409,7 @@ pub unsafe extern "C" fn server_client_attached_lost(c: *mut client) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_client_set_session(c: *mut client, s: *mut session) {
     unsafe {
-        let mut old = (*c).session;
+        let old = (*c).session;
 
         if !s.is_null() && !(*c).session.is_null() && (*c).session != s {
             (*c).last_session = (*c).session;
@@ -546,7 +546,7 @@ pub unsafe extern "C" fn server_client_unref(c: *mut client) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_client_free(_fd: i32, _events: i16, arg: *mut c_void) {
     unsafe {
-        let mut c: *mut client = arg.cast();
+        let c: *mut client = arg.cast();
         log_debug!("free client {:p} ({} references)", c, (*c).references);
 
         cmdq_free((*c).queue);
@@ -562,7 +562,7 @@ pub unsafe extern "C" fn server_client_free(_fd: i32, _events: i16, arg: *mut c_
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_client_suspend(c: *mut client) {
     unsafe {
-        let mut s: *mut session = (*c).session;
+        let s: *mut session = (*c).session;
 
         if s.is_null() || (*c).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
             return;
@@ -578,7 +578,7 @@ pub unsafe extern "C" fn server_client_suspend(c: *mut client) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_client_detach(c: *mut client, msgtype: msgtype) {
     unsafe {
-        let mut s = (*c).session;
+        let s = (*c).session;
 
         if s.is_null() || (*c).flags.intersects(CLIENT_NODETACHFLAGS) {
             return;
@@ -596,7 +596,7 @@ pub unsafe extern "C" fn server_client_detach(c: *mut client, msgtype: msgtype) 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_client_exec(c: *mut client, cmd: *const c_char) {
     unsafe {
-        let mut s = (*c).session;
+        let s = (*c).session;
         if *cmd == b'\0' as i8 {
             return;
         }
@@ -634,8 +634,8 @@ pub unsafe extern "C" fn server_client_check_mouse(
     event: *mut key_event,
 ) -> key_code {
     unsafe {
-        let mut m = &raw mut (*event).m;
-        let mut s = (*c).session;
+        let m = &raw mut (*event).m;
+        let s = (*c).session;
         let mut fs: *mut session = null_mut();
 
         let mut fwl: *mut winlink = null_mut();
@@ -1752,7 +1752,7 @@ pub unsafe extern "C" fn server_client_is_bracket_pasting(c: *mut client, key: k
 pub unsafe extern "C" fn server_client_assume_paste(s: *mut session) -> i32 {
     unsafe {
         let mut tv: timeval = zeroed();
-        let mut t: i32 = options_get_number((*s).options, c"assume-paste-time".as_ptr()) as i32;
+        let t: i32 = options_get_number((*s).options, c"assume-paste-time".as_ptr()) as i32;
 
         if t == 0 {
             return 0;
@@ -1814,11 +1814,11 @@ pub unsafe extern "C" fn server_client_key_callback(
     data: *mut c_void,
 ) -> cmd_retval {
     unsafe {
-        let mut c = cmdq_get_client(item);
-        let mut event = data as *mut key_event;
+        let c = cmdq_get_client(item);
+        let event = data as *mut key_event;
         let mut key = (*event).key;
-        let mut m = &raw mut (*event).m;
-        let mut s = (*c).session;
+        let m = &raw mut (*event).m;
+        let s = (*c).session;
 
         let mut tv: libc::timeval = zeroed();
         let mut bd: *mut key_binding = null_mut();
@@ -2106,7 +2106,7 @@ pub unsafe extern "C" fn server_client_key_callback(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_client_handle_key(c: *mut client, event: *mut key_event) -> i32 {
     unsafe {
-        let mut s = (*c).session;
+        let s = (*c).session;
 
         /* Check the client is good to accept input. */
         if s.is_null() || (*c).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
@@ -2221,7 +2221,7 @@ pub unsafe extern "C" fn server_client_check_window_resize(w: *mut window) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_client_resize_timer(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
-        let mut wp: *mut window_pane = data.cast();
+        let wp: *mut window_pane = data.cast();
 
         log_debug!(
             "{}: %%{} resize timer expired",
@@ -2325,9 +2325,9 @@ pub unsafe extern "C" fn server_client_check_pane_resize(wp: *mut window_pane) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_client_check_pane_buffer(wp: *mut window_pane) {
     unsafe {
-        let mut evb = (*(*wp).event).input;
+        let evb = (*(*wp).event).input;
         let mut minimum: usize = 0;
-        let mut c: *mut client = null_mut();
+        let c: *mut client = null_mut();
         let mut wpo: *mut window_pane_offset = null_mut();
         let mut off = 1;
         let mut flag: i32 = 0;
@@ -2438,11 +2438,11 @@ pub unsafe extern "C" fn server_client_check_pane_buffer(wp: *mut window_pane) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_client_reset_state(c: *mut client) {
     unsafe {
-        let mut tty = &raw mut (*c).tty;
-        let mut w = (*(*(*c).session).curw).window;
-        let mut wp = server_client_get_pane(c);
+        let tty = &raw mut (*c).tty;
+        let w = (*(*(*c).session).curw).window;
+        let wp = server_client_get_pane(c);
         let mut s = null_mut();
-        let mut oo = (*(*c).session).options;
+        let oo = (*(*c).session).options;
         let mut mode = mode_flag::empty();
         let mut cursor = 0;
         let mut flags = tty_flags::empty();
@@ -2580,7 +2580,7 @@ pub unsafe extern "C" fn server_client_repeat_timer(_fd: i32, _events: i16, data
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_client_click_timer(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
-        let mut c: *mut client = data.cast();
+        let c: *mut client = data.cast();
         log_debug!("click timer expired");
 
         if (*c).flags.intersects(client_flag::TRIPLECLICK) {
@@ -2600,7 +2600,7 @@ pub unsafe extern "C" fn server_client_click_timer(_fd: i32, _events: i16, data:
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_client_check_exit(c: *mut client) {
     unsafe {
-        let mut name = (*c).exit_session;
+        let name = (*c).exit_session;
 
         if (*c)
             .flags
@@ -2678,7 +2678,7 @@ pub unsafe extern "C" fn server_client_redraw_timer(_fd: i32, _events: i16, data
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_client_check_modes(c: *mut client) {
     unsafe {
-        let mut w = (*(*(*c).session).curw).window;
+        let w = (*(*(*c).session).curw).window;
 
         if (*c)
             .flags
@@ -2704,15 +2704,15 @@ pub unsafe extern "C" fn server_client_check_modes(c: *mut client) {
 pub unsafe extern "C" fn server_client_check_redraw(c: *mut client) {
     static mut ev: event = unsafe { zeroed() };
     unsafe {
-        let mut s = (*c).session;
-        let mut tty = &raw mut (*c).tty;
-        let mut w = (*(*(*c).session).curw).window;
+        let s = (*c).session;
+        let tty = &raw mut (*c).tty;
+        let w = (*(*(*c).session).curw).window;
         let mut tty_flags_ = tty_flags::empty();
-        let mut mode = (*tty).mode;
+        let mode = (*tty).mode;
         let mut client_flags: client_flag = client_flag::empty();
         let mut redraw = false;
         let mut bit: u32 = 0;
-        let mut tv = libc::timeval {
+        let tv = libc::timeval {
             tv_sec: 0,
             tv_usec: 1000,
         };
@@ -2856,7 +2856,7 @@ pub unsafe extern "C" fn server_client_check_redraw(c: *mut client) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_client_set_title(c: *mut client) {
     unsafe {
-        let mut s = (*c).session;
+        let s = (*c).session;
 
         let template = options_get_string((*s).options, c"set-titles-string".as_ptr());
 
@@ -2879,7 +2879,7 @@ pub unsafe extern "C" fn server_client_set_title(c: *mut client) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_client_set_path(c: *mut client) {
     unsafe {
-        let mut s = (*c).session;
+        let s = (*c).session;
 
         if (*s).curw.is_null() {
             return;
@@ -2901,7 +2901,7 @@ pub unsafe extern "C" fn server_client_set_path(c: *mut client) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_client_dispatch(imsg: *mut imsg, arg: *mut c_void) {
     unsafe {
-        let mut c: *mut client = arg.cast();
+        let c: *mut client = arg.cast();
 
         if (*c).flags.intersects(client_flag::DEAD) {
             return;
@@ -3019,7 +3019,7 @@ pub unsafe extern "C" fn server_client_command_done(
     _data: *mut c_void,
 ) -> cmd_retval {
     unsafe {
-        let mut c = cmdq_get_client(item);
+        let c = cmdq_get_client(item);
 
         if !(*c).flags.intersects(client_flag::ATTACHED) {
             (*c).flags |= client_flag::EXIT;
@@ -3514,7 +3514,7 @@ pub unsafe extern "C" fn server_client_add_client_window(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_client_get_pane(c: *mut client) -> *mut window_pane {
     unsafe {
-        let mut s = (*c).session;
+        let s = (*c).session;
 
         if s.is_null() {
             return null_mut();
@@ -3535,7 +3535,7 @@ pub unsafe extern "C" fn server_client_get_pane(c: *mut client) -> *mut window_p
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_client_set_pane(c: *mut client, wp: *mut window_pane) {
     unsafe {
-        let mut s = (*c).session;
+        let s = (*c).session;
 
         if s.is_null() {
             return;
@@ -3551,7 +3551,7 @@ pub unsafe extern "C" fn server_client_set_pane(c: *mut client, wp: *mut window_
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_client_remove_pane(wp: *mut window_pane) {
     unsafe {
-        let mut w = (*wp).window;
+        let w = (*wp).window;
 
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             let cw = server_client_get_client_window(c, (*w).id);
@@ -3567,7 +3567,7 @@ pub unsafe extern "C" fn server_client_remove_pane(wp: *mut window_pane) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_client_print(c: *mut client, parse: i32, evb: *mut evbuffer) {
     unsafe {
-        let mut data = EVBUFFER_DATA(evb);
+        let data = EVBUFFER_DATA(evb);
         let mut size = EVBUFFER_LENGTH(evb);
         let mut msg = null_mut();
         let mut line = null_mut();

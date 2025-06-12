@@ -46,12 +46,12 @@ static mut cmd_link_window_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_move_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut source = cmdq_get_source(item);
+        let args = cmd_get_args(self_);
+        let source = cmdq_get_source(item);
         let mut target = zeroed();
-        let mut tflag = args_get(args, b't');
-        let mut src = (*source).s;
-        let mut wl = (*source).wl;
+        let tflag = args_get(args, b't');
+        let src = (*source).s;
+        let wl = (*source).wl;
         let mut cause = null_mut();
 
         if args_has_(args, 'r') {

@@ -49,12 +49,12 @@ static mut cmd_unlink_window_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_kill_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
-        let mut wl = (*target).wl;
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
+        let wl = (*target).wl;
         //*loop;
-        let mut w = (*wl).window;
-        let mut s = (*target).s;
+        let w = (*wl).window;
+        let s = (*target).s;
         let mut found = 0u32;
 
         if cmd_get_entry(self_) == &raw mut cmd_unlink_window_entry {

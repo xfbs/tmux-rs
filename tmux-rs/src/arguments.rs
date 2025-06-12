@@ -123,7 +123,7 @@ pub unsafe extern "C" fn args_value_as_string(value: *mut args_value) -> *const 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn args_create() -> *mut args {
     unsafe {
-        let mut args: *mut args = xcalloc1();
+        let args: *mut args = xcalloc1();
         rb_init(&raw mut (*args).tree);
         args
     }
@@ -140,8 +140,8 @@ pub unsafe extern "C" fn args_parse_flag_argument(
     flag: i32,
     optional_argument: i32,
 ) -> i32 {
-    let mut argument: *mut args_value;
-    let mut new: *mut args_value;
+    let argument: *mut args_value;
+    let new: *mut args_value;
     let mut s: *mut c_char;
     unsafe {
         'out: {
@@ -281,7 +281,7 @@ pub unsafe extern "C" fn args_parse(
             return args_create();
         }
 
-        let mut args = args_create();
+        let args = args_create();
 
         let mut i: u32 = 1;
         while i < count {
@@ -577,11 +577,11 @@ pub unsafe extern "C" fn args_print_add_value(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
     unsafe {
-        let mut i: u32 = 0;
-        let mut j: u32 = 0;
-        let mut entry: *mut args_entry = null_mut();
+        let i: u32 = 0;
+        let j: u32 = 0;
+        let entry: *mut args_entry = null_mut();
         let mut last: *mut args_entry = null_mut();
-        let mut value: *mut args_entry = null_mut();
+        let value: *mut args_entry = null_mut();
 
         let mut len: usize = 1;
         let mut buf: *mut c_char = xcalloc(1, len).cast().as_ptr();
@@ -764,7 +764,7 @@ pub unsafe extern "C" fn args_set(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn args_get(args: *mut args, flag: u8) -> *const c_char {
     unsafe {
-        let mut entry = args_find(args, flag);
+        let entry = args_find(args, flag);
 
         if entry.is_null() {
             return null_mut();
@@ -868,9 +868,9 @@ pub unsafe extern "C" fn args_make_commands_prepare(
 ) -> *mut args_command_state {
     let __func__ = "args_make_commands_prepare";
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
-        let mut tc = cmdq_get_target_client(item);
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
+        let tc = cmdq_get_target_client(item);
 
         let mut file = null();
         let mut value: *mut args_value = null_mut();
@@ -1067,7 +1067,7 @@ pub unsafe extern "C" fn args_strtonum_and_expand(
     unsafe {
         let mut errstr: *const i8 = null();
 
-        let mut entry = args_find(args, flag);
+        let entry = args_find(args, flag);
         if entry.is_null() {
             *cause = xstrdup_(c"missing").as_ptr();
             return 0;
@@ -1131,7 +1131,7 @@ pub unsafe extern "C" fn args_string_percentage(
     unsafe {
         let mut errstr: *const c_char = null();
         let mut ll: i64 = 0;
-        let mut valuelen: usize = strlen(value);
+        let valuelen: usize = strlen(value);
         let mut copy = null_mut();
 
         if valuelen == 0 {
@@ -1208,12 +1208,12 @@ pub unsafe extern "C" fn args_string_percentage_and_expand(
 ) -> i64 {
     unsafe {
         let mut errstr: *const c_char = null();
-        let mut valuelen = strlen(value);
+        let valuelen = strlen(value);
         let mut ll: i64 = 0;
         let mut f: *mut c_char = null_mut();
 
         if *value.add(valuelen - 1) == b'%' as _ {
-            let mut copy = xstrdup(value).as_ptr();
+            let copy = xstrdup(value).as_ptr();
             *copy.add(valuelen - 1) = b'\0' as c_char;
 
             f = format_single_from_target(item, copy);

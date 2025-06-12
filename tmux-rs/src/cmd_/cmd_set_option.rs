@@ -75,14 +75,14 @@ pub unsafe extern "C" fn cmd_set_option_args_parse(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut append = args_has(args, b'a');
-        let mut target = cmdq_get_target(item);
-        let mut loop_: *mut window_pane = null_mut();
+        let args = cmd_get_args(self_);
+        let append = args_has(args, b'a');
+        let target = cmdq_get_target(item);
+        let loop_: *mut window_pane = null_mut();
         let mut oo: *mut options = null_mut();
         let mut parent: *mut options_entry = null_mut();
         let mut o: *mut options_entry = null_mut();
-        let mut po: *mut options_entry = null_mut();
+        let po: *mut options_entry = null_mut();
         let mut name: *mut c_char = null_mut();
         let mut argument: *mut c_char = null_mut();
         let mut expanded: *mut c_char = null_mut();
@@ -90,9 +90,9 @@ pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_it
         let mut value: *const c_char = null();
         let mut idx: i32 = 0;
         let mut already: i32 = 0;
-        let mut error: i32;
+        let error: i32;
         let mut ambiguous: i32 = 0;
-        let mut scope: i32;
+        let scope: i32;
 
         'fail: {
             'out: {

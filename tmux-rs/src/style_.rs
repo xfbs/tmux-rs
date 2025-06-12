@@ -59,12 +59,12 @@ pub unsafe extern "C" fn style_parse(
     mut in_: *const c_char,
 ) -> i32 {
     unsafe {
-        let mut delimiters = c" ,\n".as_ptr();
+        let delimiters = c" ,\n".as_ptr();
         let mut errstr: *mut c_char = null_mut();
 
         type tmp_type = [c_char; 256];
         let mut tmp_bak: tmp_type = [0; 256];
-        let mut tmp = tmp_bak.as_mut_ptr();
+        let tmp = tmp_bak.as_mut_ptr();
 
         let mut found: *mut c_char = null_mut();
         let mut end: usize = 0;
@@ -76,7 +76,7 @@ pub unsafe extern "C" fn style_parse(
 
         let mut saved = MaybeUninit::<style>::uninit();
         style_copy(saved.as_mut_ptr(), sy);
-        let mut saved = unsafe { saved.assume_init() };
+        let saved = unsafe { saved.assume_init() };
 
         'error: {
             log_debug!("{}: {}", "style_parse", _s(in_));
@@ -287,14 +287,14 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
     static mut s_buf: MaybeUninit<s_type> = MaybeUninit::<s_type>::uninit();
 
     unsafe {
-        let mut gc = &raw const (*sy).gc;
+        let gc = &raw const (*sy).gc;
         let mut off: i32 = 0;
         let mut comma = c"".as_ptr();
         let mut tmp = c"".as_ptr();
         type b_type = [i8; 21];
         let mut b: b_type = [0; 21];
 
-        let mut s = &raw mut s_buf as *mut c_char;
+        let s = &raw mut s_buf as *mut c_char;
         *s = b'\0' as c_char;
 
         if (*sy).list != style_list::STYLE_LIST_OFF {

@@ -1316,12 +1316,12 @@ pub unsafe extern "C" fn options_from_string(
     cause: *mut *mut c_char,
 ) -> c_int {
     unsafe {
-        let mut type_: options_table_type;
-        let mut number: i64;
+        let type_: options_table_type;
+        let number: i64;
         let mut errstr: *const c_char;
-        let mut new: *const c_char;
-        let mut old: *mut c_char;
-        let mut key: key_code;
+        let new: *const c_char;
+        let old: *mut c_char;
+        let key: key_code;
 
         if !oe.is_null() {
             if value.is_null()

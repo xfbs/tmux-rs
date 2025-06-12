@@ -93,8 +93,8 @@ pub unsafe extern "C" fn job_run(
     unsafe {
         let mut job: *mut job = null_mut();
         let mut env: *mut environ = null_mut();
-        let mut pid: pid_t;
-        let mut nullfd: i32;
+        let pid: pid_t;
+        let nullfd: i32;
         let mut out: [i32; 2] = [0; 2];
         let mut master: i32 = 0;
         let mut home: *mut c_char = null_mut();
@@ -288,13 +288,13 @@ pub unsafe extern "C" fn job_run(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn job_transfer(
-    mut job: *mut job,
-    mut pid: *mut pid_t,
-    mut tty: *mut c_char,
-    mut ttylen: usize,
+    job: *mut job,
+    pid: *mut pid_t,
+    tty: *mut c_char,
+    ttylen: usize,
 ) -> c_int {
     unsafe {
-        let mut fd = (*job).fd;
+        let fd = (*job).fd;
 
         log_debug!("transfer job {:p}: {}", job, _s((*job).cmd));
 
@@ -324,7 +324,7 @@ pub unsafe extern "C" fn job_transfer(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn job_free(mut job: *mut job) {
+pub unsafe extern "C" fn job_free(job: *mut job) {
     unsafe {
         log_debug!("free job {:p}: {}", job, _s((*job).cmd));
 
@@ -350,7 +350,7 @@ pub unsafe extern "C" fn job_free(mut job: *mut job) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn job_resize(mut job: *mut job, mut sx: c_uint, mut sy: c_uint) {
+pub unsafe extern "C" fn job_resize(job: *mut job, sx: c_uint, sy: c_uint) {
     let mut ws = MaybeUninit::<winsize>::uninit();
 
     unsafe {
@@ -368,8 +368,8 @@ pub unsafe extern "C" fn job_resize(mut job: *mut job, mut sx: c_uint, mut sy: c
     }
 }
 
-unsafe extern "C" fn job_read_callback(mut bufev: *mut bufferevent, mut data: *mut libc::c_void) {
-    let mut job = data as *mut job;
+unsafe extern "C" fn job_read_callback(bufev: *mut bufferevent, data: *mut libc::c_void) {
+    let job = data as *mut job;
 
     unsafe {
         if let Some(updatecb) = (*job).updatecb {
@@ -377,7 +377,7 @@ unsafe extern "C" fn job_read_callback(mut bufev: *mut bufferevent, mut data: *m
         }
     }
 }
-unsafe extern "C" fn job_write_callback(mut bufev: *mut bufferevent, mut data: *mut libc::c_void) {
+unsafe extern "C" fn job_write_callback(bufev: *mut bufferevent, data: *mut libc::c_void) {
     unsafe {
         let job = data as *mut job;
         let len = EVBUFFER_LENGTH(EVBUFFER_OUTPUT((*job).event));
@@ -398,9 +398,9 @@ unsafe extern "C" fn job_write_callback(mut bufev: *mut bufferevent, mut data: *
 }
 
 unsafe extern "C" fn job_error_callback(
-    mut bufev: *mut bufferevent,
-    mut events: libc::c_short,
-    mut data: *mut libc::c_void,
+    bufev: *mut bufferevent,
+    events: libc::c_short,
+    data: *mut libc::c_void,
 ) {
     let job: *mut job = data.cast();
 
@@ -424,7 +424,7 @@ unsafe extern "C" fn job_error_callback(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn job_check_died(mut pid: pid_t, mut status: i32) {
+pub unsafe extern "C" fn job_check_died(pid: pid_t, status: i32) {
     unsafe {
         let mut job: *mut job = null_mut();
 
@@ -504,7 +504,7 @@ pub unsafe extern "C" fn job_still_running() -> i32 {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn job_print_summary(mut item: *mut cmdq_item, mut blank: i32) {
+pub unsafe extern "C" fn job_print_summary(item: *mut cmdq_item, mut blank: i32) {
     let mut n = 0u32;
     unsafe {
         for job in list_foreach(&raw mut all_jobs).map(NonNull::as_ptr) {

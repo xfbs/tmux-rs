@@ -34,15 +34,15 @@ static mut cmd_break_pane_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_break_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut current = cmdq_get_current(item);
-        let mut target = cmdq_get_target(item);
-        let mut source = cmdq_get_source(item);
-        let mut tc = cmdq_get_target_client(item);
+        let args = cmd_get_args(self_);
+        let current = cmdq_get_current(item);
+        let target = cmdq_get_target(item);
+        let source = cmdq_get_source(item);
+        let tc = cmdq_get_target_client(item);
         let mut wl = (*source).wl;
-        let mut src_s = (*source).s;
-        let mut dst_s = (*target).s;
-        let mut wp = (*source).wp;
+        let src_s = (*source).s;
+        let dst_s = (*target).s;
+        let wp = (*source).wp;
         let mut w = (*wl).window;
 
         let mut name: *mut c_char = null_mut();

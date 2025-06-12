@@ -110,13 +110,13 @@ pub unsafe extern "C" fn cmd_wait_for_remove(wc: *mut wait_channel) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_wait_for_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut name = args_string(args, 0);
+        let args = cmd_get_args(self_);
+        let name = args_string(args, 0);
         // struct wait_channel *wc, find;
 
         let mut find: wait_channel = zeroed();
         find.name = name as *mut c_char; // TODO casting away const
-        let mut wc = rb_find(&raw mut wait_channels, &raw mut find);
+        let wc = rb_find(&raw mut wait_channels, &raw mut find);
 
         if args_has_(args, 'S') {
             return cmd_wait_for_signal(item, name, wc);
@@ -170,7 +170,7 @@ pub unsafe extern "C" fn cmd_wait_for_wait(
     mut wc: *mut wait_channel,
 ) -> cmd_retval {
     unsafe {
-        let mut c = cmdq_get_client(item);
+        let c = cmdq_get_client(item);
 
         if c.is_null() {
             cmdq_error(item, c"not able to wait".as_ptr());
@@ -188,7 +188,7 @@ pub unsafe extern "C" fn cmd_wait_for_wait(
         }
         log_debug!("wait channel {} not woken ({:p})", _s((*wc).name), c);
 
-        let mut wi: *mut wait_item = xcalloc1();
+        let wi: *mut wait_item = xcalloc1();
         (*wi).item = item;
         tailq_insert_tail(&raw mut (*wc).waiters, wi);
     }
@@ -212,7 +212,7 @@ pub unsafe extern "C" fn cmd_wait_for_lock(
         }
 
         if (*wc).locked != 0 {
-            let mut wi = xcalloc1::<wait_item>();
+            let wi = xcalloc1::<wait_item>();
             wi.item = item;
             tailq_insert_tail(&raw mut (*wc).lockers, wi);
             return cmd_retval::CMD_RETURN_WAIT;
@@ -234,7 +234,7 @@ pub unsafe extern "C" fn cmd_wait_for_unlock(
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
-        let mut wi = tailq_first(&raw mut (*wc).lockers);
+        let wi = tailq_first(&raw mut (*wc).lockers);
         if !wi.is_null() {
             cmdq_continue((*wi).item);
             tailq_remove(&raw mut (*wc).lockers, wi);

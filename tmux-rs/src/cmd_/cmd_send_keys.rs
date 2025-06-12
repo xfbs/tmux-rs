@@ -59,11 +59,11 @@ pub unsafe extern "C" fn cmd_send_keys_inject_key(
     key: key_code,
 ) -> *mut cmdq_item {
     unsafe {
-        let mut target = cmdq_get_target(item);
-        let mut tc = cmdq_get_target_client(item);
-        let mut s = (*target).s;
-        let mut wl = (*target).wl;
-        let mut wp = (*target).wp;
+        let target = cmdq_get_target(item);
+        let tc = cmdq_get_target_client(item);
+        let s = (*target).s;
+        let wl = (*target).wl;
+        let wp = (*target).wp;
         //struct window_mode_entry *wme;
         // struct key_binding *bd;
         // struct *event;
@@ -89,7 +89,7 @@ pub unsafe extern "C" fn cmd_send_keys_inject_key(
             return item;
         }
 
-        let mut table = key_bindings_get_table((*(*wme).mode).key_table.unwrap()(wme), 1);
+        let table = key_bindings_get_table((*(*wme).mode).key_table.unwrap()(wme), 1);
 
         let bd = key_bindings_get(NonNull::new(table).unwrap(), key & !KEYC_MASK_FLAGS);
         if !bd.is_null() {
@@ -109,13 +109,13 @@ pub unsafe extern "C" fn cmd_send_keys_inject_string(
     i: i32,
 ) -> *mut cmdq_item {
     unsafe {
-        let mut s = args_string(args, i as u32);
-        let mut ud: *mut utf8_data;
+        let s = args_string(args, i as u32);
+        let ud: *mut utf8_data;
         let mut loop_: *mut utf8_data;
         let mut uc: utf8_char = 0;
         let mut key: key_code;
         let mut endptr: *mut c_char = null_mut();
-        let mut n: c_long = 0;
+        let n: c_long = 0;
         // struct utf8_data *ud, *loop_;
         // utf8_char uc;
         // key_code key;
@@ -167,15 +167,15 @@ pub unsafe extern "C" fn cmd_send_keys_inject_string(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_send_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
-        let mut tc = cmdq_get_target_client(item);
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
+        let tc = cmdq_get_target_client(item);
         let mut s = (*target).s;
-        let mut wl = (*target).wl;
+        let wl = (*target).wl;
         let mut wp = (*target).wp;
-        let mut event = cmdq_get_event(item);
+        let event = cmdq_get_event(item);
         let mut m = &raw mut (*event).m;
-        let mut wme = tailq_first(&raw mut (*wp).modes);
+        let wme = tailq_first(&raw mut (*wp).modes);
         let mut after: *mut cmdq_item = item;
         let mut key: key_code = 0;
         // u_int i, np = 1;

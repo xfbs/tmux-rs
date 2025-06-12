@@ -67,7 +67,7 @@ pub unsafe extern "C" fn cmd_run_shell_args_parse(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_run_shell_print(job: *mut job, msg: *const c_char) {
     unsafe {
-        let mut cdata: *mut cmd_run_shell_data = job_get_data(job) as *mut cmd_run_shell_data;
+        let cdata: *mut cmd_run_shell_data = job_get_data(job) as *mut cmd_run_shell_data;
         let mut wp = null_mut();
         let mut fs: cmd_find_state = zeroed();
 
@@ -108,17 +108,17 @@ pub unsafe extern "C" fn cmd_run_shell_print(job: *mut job, msg: *const c_char) 
 pub unsafe extern "C" fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     let __func__ = c"cmd_run_shell_exec".as_ptr();
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
-        let mut c = cmdq_get_client(item);
-        let mut tc = cmdq_get_target_client(item);
-        let mut s = (*target).s;
-        let mut wp = (*target).wp;
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
+        let c = cmdq_get_client(item);
+        let tc = cmdq_get_target_client(item);
+        let s = (*target).s;
+        let wp = (*target).wp;
         // const char *delay, *cmd;
         let mut d: f64 = 0.0;
         let mut end: *mut c_char = null_mut();
         // char *end;
-        let mut wait = !args_has(args, b'b') as i32;
+        let wait = !args_has(args, b'b') as i32;
 
         let delay = args_get(args, b'd');
         if !delay.is_null() {
@@ -131,7 +131,7 @@ pub unsafe extern "C" fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_ite
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        let mut cdata = xcalloc1::<cmd_run_shell_data>() as *mut cmd_run_shell_data;
+        let cdata = xcalloc1::<cmd_run_shell_data>() as *mut cmd_run_shell_data;
         if !args_has_(args, 'C') {
             let cmd = args_string(args, 0);
             if !cmd.is_null() {
@@ -193,10 +193,10 @@ pub unsafe extern "C" fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_ite
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_run_shell_timer(_fd: i32, _events: i16, arg: *mut c_void) {
     unsafe {
-        let mut cdata = arg as *mut cmd_run_shell_data;
-        let mut c = (*cdata).client;
-        let mut cmd = (*cdata).cmd;
-        let mut item = (*cdata).item;
+        let cdata = arg as *mut cmd_run_shell_data;
+        let c = (*cdata).client;
+        let cmd = (*cdata).cmd;
+        let item = (*cdata).item;
         let mut error = null_mut::<c_char>();
         // *new_item;
         // struct cmd_list *cmdlist;
@@ -259,15 +259,15 @@ pub unsafe extern "C" fn cmd_run_shell_timer(_fd: i32, _events: i16, arg: *mut c
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_run_shell_callback(job: *mut job) {
     unsafe {
-        let mut cdata = job_get_data(job) as *mut cmd_run_shell_data;
-        let mut event = job_get_event(job);
-        let mut item = (*cdata).item;
-        let mut cmd = (*cdata).cmd;
+        let cdata = job_get_data(job) as *mut cmd_run_shell_data;
+        let event = job_get_event(job);
+        let item = (*cdata).item;
+        let cmd = (*cdata).cmd;
         let mut msg = null_mut();
         // *line;
         // size_t size;
         let mut retcode: i32 = 0;
-        let mut status: i32 = 0;
+        let status: i32 = 0;
         // int retcode, status;
 
         let mut line = null_mut::<c_char>();
@@ -333,7 +333,7 @@ pub unsafe extern "C" fn cmd_run_shell_callback(job: *mut job) {
 pub unsafe extern "C" fn cmd_run_shell_free(data: *mut c_void) {
     unsafe {
         let __func__ = c"cmd_run_shell_free".as_ptr();
-        let mut cdata = data as *mut cmd_run_shell_data;
+        let cdata = data as *mut cmd_run_shell_data;
 
         evtimer_del(&raw mut (*cdata).timer);
         if !(*cdata).s.is_null() {

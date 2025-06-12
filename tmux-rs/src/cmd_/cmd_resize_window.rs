@@ -34,11 +34,11 @@ static mut cmd_resize_window_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_resize_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
-        let mut wl = (*target).wl;
-        let mut w = (*wl).window;
-        let mut s = (*target).s;
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
+        let wl = (*target).wl;
+        let w = (*wl).window;
+        let s = (*target).s;
         let mut errstr: *const c_char = null();
         let mut cause = null_mut();
         let mut adjust: u32 = 0;

@@ -49,7 +49,7 @@ pub unsafe extern "C" fn layout_checksum(mut layout: *const c_char) -> u16 {
 pub unsafe extern "C" fn layout_dump(root: *mut layout_cell) -> *mut c_char {
     unsafe {
         let mut layout: MaybeUninit<[c_char; 8192]> = MaybeUninit::<[c_char; 8192]>::uninit();
-        let mut layout = layout.as_mut_ptr() as *mut i8;
+        let layout = layout.as_mut_ptr() as *mut i8;
 
         let mut out: *mut c_char = null_mut();
 
@@ -220,8 +220,8 @@ pub unsafe extern "C" fn layout_parse(
 
             /* Check this window will fit into the layout. */
             loop {
-                let mut npanes = window_count_panes(w);
-                let mut ncells = layout_count_cells(lc);
+                let npanes = window_count_panes(w);
+                let ncells = layout_count_cells(lc);
                 if npanes > ncells {
                     xasprintf(cause, c"have %u panes but need %u".as_ptr(), npanes, ncells);
                     break 'fail;

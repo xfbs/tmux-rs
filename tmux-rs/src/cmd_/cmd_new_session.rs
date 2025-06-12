@@ -59,10 +59,10 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
     let __func__ = c"cmd_new_session_exec".as_ptr();
 
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut current = cmdq_get_current(item);
-        let mut target = cmdq_get_target(item);
-        let mut c = cmdq_get_client(item);
+        let args = cmd_get_args(self_);
+        let current = cmdq_get_current(item);
+        let target = cmdq_get_target(item);
+        let c = cmdq_get_client(item);
         let mut s = null_mut();
         let mut as_ = null_mut();
         let mut groupwith = null_mut();
@@ -87,7 +87,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
         let mut sy = 0u32;
         let mut dsx = 0u32;
         let mut dsy = 0u32;
-        let mut count = args_count(args);
+        let count = args_count(args);
         let mut sc: spawn_context = zeroed();
         let mut retval = cmd_retval::CMD_RETURN_NORMAL;
         let mut av: *mut args_value;

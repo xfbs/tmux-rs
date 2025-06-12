@@ -31,12 +31,12 @@ static mut cmd_set_environment_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_set_environment_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
-        let mut env: *mut environ;
-        let mut name = args_string(args, 0);
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
+        let env: *mut environ;
+        let name = args_string(args, 0);
         let mut value = null();
-        let mut tflag;
+        let tflag;
         let mut expanded = null_mut();
         let mut retval = cmd_retval::CMD_RETURN_NORMAL;
 

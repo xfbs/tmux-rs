@@ -81,7 +81,7 @@ pub unsafe extern "C" fn menu_add_item(
         }
 
         (*menu).items = xreallocarray_((*menu).items, (*menu).count as usize + 1).as_ptr();
-        let mut new_item = (*menu).items.add((*menu).count as usize);
+        let new_item = (*menu).items.add((*menu).count as usize);
         (*menu).count += 1;
         memset0(new_item);
 
@@ -202,7 +202,7 @@ pub unsafe extern "C" fn menu_mode_cb(
     cy: *mut u32,
 ) -> *mut screen {
     unsafe {
-        let mut md = data as *mut menu_data;
+        let md = data as *mut menu_data;
 
         *cx = (*md).px + 2;
         if (*md).choice == -1 {
@@ -626,7 +626,7 @@ pub unsafe fn menu_set_style(
     option: *const c_char,
 ) {
     unsafe {
-        let mut o = (*(*(*(*c).session).curw).window).options;
+        let o = (*(*(*(*c).session).curw).window).options;
 
         memcpy__(gc, &raw const grid_default_cell);
         style_apply(gc, o, option, null_mut());
@@ -684,7 +684,7 @@ pub unsafe extern "C" fn menu_prepare(
             ) as i32);
         } // TODO implement box_lines from
 
-        let mut md = xcalloc1::<menu_data>() as *mut menu_data;
+        let md = xcalloc1::<menu_data>() as *mut menu_data;
         (*md).item = item;
         (*md).flags = flags;
         (*md).border_lines = lines;

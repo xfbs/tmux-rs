@@ -334,15 +334,15 @@ pub unsafe extern "C" fn server_unlink_window(s: *mut session, wl: *mut winlink)
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_destroy_pane(wp: *mut window_pane, notify: i32) {
     unsafe {
-        let mut w = (*wp).window;
+        let w = (*wp).window;
         let mut ctx: MaybeUninit<screen_write_ctx> = MaybeUninit::<screen_write_ctx>::uninit();
         let ctx = ctx.as_mut_ptr();
 
         let mut gc: MaybeUninit<grid_cell> = MaybeUninit::<grid_cell>::uninit();
         let gc = gc.as_mut_ptr();
 
-        let mut sx = screen_size_x(&raw mut (*wp).base);
-        let mut sy = screen_size_y(&raw mut (*wp).base);
+        let sx = screen_size_x(&raw mut (*wp).base);
+        let sy = screen_size_y(&raw mut (*wp).base);
 
         if (*wp).fd != -1 {
             #[cfg(feature = "utempter")]
@@ -355,7 +355,7 @@ pub unsafe extern "C" fn server_destroy_pane(wp: *mut window_pane, notify: i32) 
             (*wp).fd = -1;
         }
 
-        let mut remain_on_exit = options_get_number((*wp).options, c"remain-on-exit".as_ptr());
+        let remain_on_exit = options_get_number((*wp).options, c"remain-on-exit".as_ptr());
         if remain_on_exit != 0 && !(*wp).flags.intersects(window_pane_flags::PANE_STATUSREADY) {
             return;
         }
@@ -378,7 +378,7 @@ pub unsafe extern "C" fn server_destroy_pane(wp: *mut window_pane, notify: i32) 
                         notify_pane(c"pane-died".as_ptr(), wp);
                     }
 
-                    let mut s =
+                    let s =
                         options_get_string((*wp).options, c"remain-on-exit-format".as_ptr());
                     if *s != '\0' as c_char {
                         screen_write_start_pane(ctx, wp, &raw mut (*wp).base);
@@ -423,7 +423,7 @@ pub unsafe extern "C" fn server_destroy_pane(wp: *mut window_pane, notify: i32) 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_destroy_session_group(s: *mut session) {
     unsafe {
-        let mut sg = session_group_contains(s);
+        let sg = session_group_contains(s);
         if sg.is_null() {
             server_destroy_session(s);
             session_destroy(s, 1, c"server_destroy_session_group".as_ptr());

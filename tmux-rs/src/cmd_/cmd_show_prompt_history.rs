@@ -45,9 +45,9 @@ unsafe extern "C" fn cmd_show_prompt_history_exec(
     item: *mut cmdq_item,
 ) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut typestr = args_get(args, b'T');
-        let mut type_: prompt_type;
+        let args = cmd_get_args(self_);
+        let typestr = args_get(args, b'T');
+        let type_: prompt_type;
 
         if cmd_get_entry(self_) == &raw mut cmd_clear_prompt_history_entry {
             if typestr.is_null() {

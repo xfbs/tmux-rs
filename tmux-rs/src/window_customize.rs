@@ -245,8 +245,8 @@ unsafe extern "C" fn window_customize_build_array(
     ft: *mut format_tree,
 ) {
     unsafe {
-        let mut oe = options_table_entry(o);
-        let mut oo = options_owner(o);
+        let oe = options_table_entry(o);
+        let oo = options_owner(o);
 
         let mut ai = options_array_first(o);
         while !ai.is_null() {
@@ -288,9 +288,9 @@ unsafe extern "C" fn window_customize_build_option(
     fs: *mut cmd_find_state,
 ) {
     unsafe {
-        let mut oe = options_table_entry(o);
-        let mut oo = options_owner(o);
-        let mut name: *const c_char = options_name(o);
+        let oe = options_table_entry(o);
+        let oo = options_owner(o);
+        let name: *const c_char = options_name(o);
 
         let mut global: i32 = 0;
         let mut array: i32 = 0;
@@ -629,8 +629,8 @@ unsafe extern "C" fn window_customize_build(
     filter: *const c_char,
 ) {
     unsafe {
-        let mut data: NonNull<window_customize_modedata> = modedata.cast();
-        let mut data = data.as_ptr();
+        let data: NonNull<window_customize_modedata> = modedata.cast();
+        let data = data.as_ptr();
         let mut fs: cmd_find_state = zeroed();
 
         for i in 0..(*data).item_size {
@@ -722,9 +722,9 @@ unsafe extern "C" fn window_customize_draw_key(
     sy: u32,
 ) {
     unsafe {
-        let mut s = (*ctx).s;
-        let mut cx = (*s).cx;
-        let mut cy = (*s).cy;
+        let s = (*ctx).s;
+        let cx = (*s).cx;
+        let cy = (*s).cy;
 
         let mut kt: *mut key_table = null_mut();
         let mut bd: *mut key_binding = null_mut();
@@ -840,9 +840,9 @@ unsafe extern "C" fn window_customize_draw_option(
     sy: u32,
 ) {
     unsafe {
-        let mut s = (*ctx).s;
-        let mut cx = (*s).cx;
-        let mut cy = (*s).cy;
+        let s = (*ctx).s;
+        let cx = (*s).cx;
+        let cy = (*s).cy;
 
         // int idx;
         // struct options_entry *o, *parent;
@@ -860,14 +860,14 @@ unsafe extern "C" fn window_customize_draw_option(
         // char choices[256] = "";
 
         let mut fs: cmd_find_state = zeroed();
-        let mut ft = null_mut();
+        let ft = null_mut();
 
         'out: {
             if !window_customize_check_item(data, item, &raw mut fs) {
                 return;
             }
-            let mut name: *mut c_char = (*item).name;
-            let mut idx = (*item).idx;
+            let name: *mut c_char = (*item).name;
+            let idx = (*item).idx;
 
             let o = options_get((*item).oo, name);
             if o.is_null() {
@@ -1164,8 +1164,8 @@ unsafe extern "C" fn window_customize_draw(
     sy: u32,
 ) {
     unsafe {
-        let mut data = modedata as *mut window_customize_modedata;
-        let mut item: Option<NonNull<window_customize_itemdata>> = itemdata.map(NonNull::cast);
+        let data = modedata as *mut window_customize_modedata;
+        let item: Option<NonNull<window_customize_itemdata>> = itemdata.map(NonNull::cast);
 
         let Some(item) = item else {
             return;
@@ -1186,8 +1186,8 @@ unsafe extern "C" fn window_customize_menu(
     key: key_code,
 ) {
     unsafe {
-        let mut data: NonNull<window_customize_modedata> = modedata.cast();
-        let mut wp: *mut window_pane = (*data.as_ptr()).wp;
+        let data: NonNull<window_customize_modedata> = modedata.cast();
+        let wp: *mut window_pane = (*data.as_ptr()).wp;
 
         let Some(wme) = NonNull::new(tailq_first(&raw mut (*wp).modes)) else {
             return;
@@ -1213,7 +1213,7 @@ pub unsafe extern "C" fn window_customize_init(
     args: *mut args,
 ) -> *mut screen {
     unsafe {
-        let mut wp = (*wme.as_ptr()).wp;
+        let wp = (*wme.as_ptr()).wp;
         let mut s: *mut screen = null_mut();
 
         let data: *mut window_customize_modedata = xcalloc1() as *mut window_customize_modedata;
@@ -1275,7 +1275,7 @@ pub unsafe extern "C" fn window_customize_destroy(data: *mut window_customize_mo
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_customize_free(wme: NonNull<window_mode_entry>) {
     unsafe {
-        let mut data: *mut window_customize_modedata = (*wme.as_ptr()).data.cast();
+        let data: *mut window_customize_modedata = (*wme.as_ptr()).data.cast();
 
         if data.is_null() {
             return;
@@ -1294,7 +1294,7 @@ pub unsafe extern "C" fn window_customize_resize(
     sy: u32,
 ) {
     unsafe {
-        let mut data: *mut window_customize_modedata = (*wme.as_ptr()).data.cast();
+        let data: *mut window_customize_modedata = (*wme.as_ptr()).data.cast();
 
         mode_tree_resize((*data).data, sx, sy);
     }
@@ -1310,8 +1310,8 @@ pub unsafe extern "C" fn window_customize_free_callback(modedata: NonNull<c_void
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_customize_free_item_callback(itemdata: NonNull<c_void>) {
     unsafe {
-        let mut item: NonNull<window_customize_itemdata> = itemdata.cast();
-        let mut data: *mut window_customize_modedata = (*item.as_ptr()).data;
+        let item: NonNull<window_customize_itemdata> = itemdata.cast();
+        let data: *mut window_customize_modedata = (*item.as_ptr()).data;
 
         window_customize_free_item(item.as_ptr());
         window_customize_destroy(data);
@@ -1326,12 +1326,12 @@ pub unsafe extern "C" fn window_customize_set_option_callback(
     done: i32,
 ) -> i32 {
     unsafe {
-        let mut item: NonNull<window_customize_itemdata> = itemdata.cast();
-        let mut item = item.as_ptr();
-        let mut data: *mut window_customize_modedata = (*item).data.cast();
+        let item: NonNull<window_customize_itemdata> = itemdata.cast();
+        let item = item.as_ptr();
+        let data: *mut window_customize_modedata = (*item).data.cast();
 
-        let mut oo: *mut options = (*item).oo;
-        let mut name: *mut c_char = (*item).name;
+        let oo: *mut options = (*item).oo;
+        let name: *mut c_char = (*item).name;
 
         let mut cause: *mut c_char = null_mut();
         let mut idx: i32 = (*item).idx;
@@ -1395,11 +1395,11 @@ pub unsafe extern "C" fn window_customize_set_option(
         // struct options *oo;
         // struct window_customize_itemdata *new_item;
         let mut flag: i32 = 0;
-        let mut idx = (*item).idx;
+        let idx = (*item).idx;
         let mut scope = window_customize_scope::WINDOW_CUSTOMIZE_NONE;
 
         let mut choice: u32;
-        let mut name = (*item).name;
+        let name = (*item).name;
         let mut space = c"".as_ptr();
         let mut oo: *mut options = null_mut();
 
@@ -1514,7 +1514,7 @@ pub unsafe extern "C" fn window_customize_set_option(
 
             value = options_to_string(o, idx, 0);
 
-            let mut new_item =
+            let new_item =
                 xcalloc1::<window_customize_itemdata>() as *mut window_customize_itemdata;
             (*new_item).data = data;
             (*new_item).scope = scope;
@@ -1594,9 +1594,9 @@ pub unsafe extern "C" fn window_customize_set_command_callback(
     _done: i32,
 ) -> i32 {
     unsafe {
-        let mut item: NonNull<window_customize_itemdata> = itemdata.cast();
+        let item: NonNull<window_customize_itemdata> = itemdata.cast();
         let item = item.as_ptr();
-        let mut data: *mut window_customize_modedata = (*item).data;
+        let data: *mut window_customize_modedata = (*item).data;
         let mut bd: *mut key_binding = null_mut();
         let mut error: *mut c_char = null_mut();
 
@@ -1641,9 +1641,9 @@ pub unsafe extern "C" fn window_customize_set_note_callback(
     _done: i32,
 ) -> i32 {
     unsafe {
-        let mut item: NonNull<window_customize_itemdata> = itemdata.cast();
+        let item: NonNull<window_customize_itemdata> = itemdata.cast();
         let item = item.as_ptr();
-        let mut data: *mut window_customize_modedata = (*item).data;
+        let data: *mut window_customize_modedata = (*item).data;
         let mut bd = null_mut();
 
         if s.is_null() || *s == b'\0' as i8 || (*data).dead != 0 {
@@ -1671,7 +1671,7 @@ pub unsafe extern "C" fn window_customize_set_key(
     item: *mut window_customize_itemdata,
 ) {
     unsafe {
-        let mut key = (*item).key;
+        let key = (*item).key;
 
         // struct key_binding *bd;
         // const char *s;
@@ -1686,7 +1686,7 @@ pub unsafe extern "C" fn window_customize_set_key(
             return;
         }
 
-        let mut s = mode_tree_get_current_name((*data).data);
+        let s = mode_tree_get_current_name((*data).data);
         if libc::strcmp(s, c"Repeat".as_ptr()) == 0 {
             (*bd).flags ^= KEY_BINDING_REPEAT;
         } else if libc::strcmp(s, c"Command".as_ptr()) == 0 {
@@ -1787,7 +1787,7 @@ pub unsafe extern "C" fn window_customize_reset_key(
             return;
         }
 
-        let mut dd: *mut key_binding = key_bindings_get_default(kt, (*bd).key);
+        let dd: *mut key_binding = key_bindings_get_default(kt, (*bd).key);
         if !dd.is_null() && (*bd).cmdlist == (*dd).cmdlist {
             return;
         }
@@ -1807,8 +1807,8 @@ pub unsafe extern "C" fn window_customize_change_each(
     _key: key_code,
 ) {
     unsafe {
-        let mut data: NonNull<window_customize_modedata> = modedata.cast();
-        let mut item: NonNull<window_customize_itemdata> = itemdata.cast();
+        let data: NonNull<window_customize_modedata> = modedata.cast();
+        let item: NonNull<window_customize_itemdata> = itemdata.cast();
 
         let data = data.as_ptr();
         let item = item.as_ptr();
@@ -1843,7 +1843,7 @@ pub unsafe extern "C" fn window_customize_change_current_callback(
     _done: i32,
 ) -> i32 {
     unsafe {
-        let mut data: *mut window_customize_modedata = modedata.cast().as_ptr();
+        let data: *mut window_customize_modedata = modedata.cast().as_ptr();
         let mut item: *mut window_customize_itemdata = null_mut();
 
         if s.is_null() || *s == b'\0' as i8 || (*data).dead != 0 {
@@ -1889,7 +1889,7 @@ pub unsafe extern "C" fn window_customize_change_tagged_callback(
     _done: i32,
 ) -> i32 {
     unsafe {
-        let mut data: *mut window_customize_modedata = modedata.cast().as_ptr();
+        let data: *mut window_customize_modedata = modedata.cast().as_ptr();
 
         if s.is_null() || *s == b'\0' as i8 || (*data).dead != 0 {
             return 0;
@@ -1923,14 +1923,14 @@ pub unsafe extern "C" fn window_customize_key(
     m: *mut mouse_event,
 ) {
     unsafe {
-        let mut wp: *mut window_pane = (*wme.as_ptr()).wp;
-        let mut data: *mut window_customize_modedata = (*wme.as_ptr()).data.cast();
+        let wp: *mut window_pane = (*wme.as_ptr()).wp;
+        let data: *mut window_customize_modedata = (*wme.as_ptr()).data.cast();
         let mut item: *mut window_customize_itemdata =
             mode_tree_get_current((*data).data).cast().as_ptr();
         let mut prompt = null_mut();
         let finished: i32 = mode_tree_key((*data).data, c, &raw mut key, m, null_mut(), null_mut());
 
-        let mut new_item: NonNull<window_customize_itemdata> =
+        let new_item: NonNull<window_customize_itemdata> =
             mode_tree_get_current((*data).data).cast();
         if item != new_item.as_ptr() {
             item = new_item.as_ptr();

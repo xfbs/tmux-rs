@@ -51,7 +51,7 @@ unsafe extern "C" fn cmd_save_buffer_done(
     _buffer: *mut evbuffer,
     data: *mut c_void,
 ) {
-    let mut item = data as *mut cmdq_item;
+    let item = data as *mut cmdq_item;
 
     if closed == 0 {
         return;
@@ -68,10 +68,10 @@ unsafe extern "C" fn cmd_save_buffer_done(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_save_buffer_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut c = cmdq_get_client(item);
+        let args = cmd_get_args(self_);
+        let c = cmdq_get_client(item);
         let mut flags = 0;
-        let mut bufname = args_get_(args, 'b');
+        let bufname = args_get_(args, 'b');
         let mut path = null_mut();
         let mut evb = null_mut();
 
@@ -89,7 +89,7 @@ unsafe extern "C" fn cmd_save_buffer_exec(self_: *mut cmd, item: *mut cmdq_item)
             pb
         };
         let mut bufsize: usize = 0;
-        let mut bufdata = paste_buffer_data_(pb, &mut bufsize);
+        let bufdata = paste_buffer_data_(pb, &mut bufsize);
 
         if cmd_get_entry(self_) == &raw mut cmd_show_buffer_entry {
             if !(*c).session.is_null() || (*c).flags.intersects(client_flag::CONTROL) {

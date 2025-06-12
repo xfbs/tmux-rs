@@ -32,10 +32,10 @@ static mut cmd_find_window_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_find_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
-        let mut wp = (*target).wp;
-        let mut s = args_string(args, 0);
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
+        let wp = (*target).wp;
+        let s = args_string(args, 0);
         let mut suffix = c"".as_ptr();
         let mut star = c"*".as_ptr();
 
@@ -60,7 +60,7 @@ unsafe extern "C" fn cmd_find_window_exec(self_: *mut cmd, item: *mut cmdq_item)
             t = true;
         }
 
-        let mut filter = xcalloc_::<args_value>(1).as_ptr();
+        let filter = xcalloc_::<args_value>(1).as_ptr();
         (*filter).type_ = args_type::ARGS_STRING;
 
         if c && n && t {
@@ -141,7 +141,7 @@ unsafe extern "C" fn cmd_find_window_exec(self_: *mut cmd, item: *mut cmdq_item)
             );
         }
 
-        let mut new_args: *mut args = args_create();
+        let new_args: *mut args = args_create();
         if args_has_(args, 'Z') {
             args_set(new_args, b'Z', null_mut(), 0);
         }

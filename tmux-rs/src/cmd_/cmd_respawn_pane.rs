@@ -32,12 +32,12 @@ static mut cmd_respawn_pane_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_respawn_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
         let mut sc: spawn_context = unsafe { zeroed() };
-        let mut s = (*target).s;
-        let mut wl = (*target).wl;
-        let mut wp = (*target).wp;
+        let s = (*target).s;
+        let wl = (*target).wl;
+        let wp = (*target).wp;
         let mut cause = null_mut();
 
         sc.item = item;

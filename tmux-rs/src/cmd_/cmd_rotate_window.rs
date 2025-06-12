@@ -36,18 +36,18 @@ static mut cmd_rotate_window_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut current = cmdq_get_current(item);
-        let mut target = cmdq_get_target(item);
-        let mut wl = (*target).wl;
-        let mut w = (*wl).window;
+        let args = cmd_get_args(self_);
+        let current = cmdq_get_current(item);
+        let target = cmdq_get_target(item);
+        let wl = (*target).wl;
+        let w = (*wl).window;
         let mut wp: *mut window_pane;
         let mut wp2: *mut window_pane;
-        let mut lc: *mut layout_cell;
-        let mut sx: u32;
-        let mut sy: u32;
-        let mut xoff: u32;
-        let mut yoff: u32;
+        let lc: *mut layout_cell;
+        let sx: u32;
+        let sy: u32;
+        let xoff: u32;
+        let yoff: u32;
 
         window_push_zoom(w, 0, args_has(args, b'Z'));
 

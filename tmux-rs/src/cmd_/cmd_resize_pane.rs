@@ -33,20 +33,20 @@ static mut cmd_resize_pane_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
-        let mut event = cmdq_get_event(item);
-        let mut wp = (*target).wp;
-        let mut wl = (*target).wl;
-        let mut w = (*wl).window;
-        let mut c = cmdq_get_client(item);
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
+        let event = cmdq_get_event(item);
+        let wp = (*target).wp;
+        let wl = (*target).wl;
+        let w = (*wl).window;
+        let c = cmdq_get_client(item);
         let mut s = (*target).s;
         let mut cause: *mut c_char = null_mut();
         let mut errstr: *const c_char = null();
         let mut adjust = 0u32;
         let mut x: i32 = 0;
         let mut y: i32 = 0;
-        let mut gd = (*wp).base.grid;
+        let gd = (*wp).base.grid;
 
         if args_has_(args, 'T') {
             if !tailq_empty(&raw mut (*wp).modes) {

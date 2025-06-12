@@ -36,7 +36,7 @@ unsafe extern "C" fn cmd_server_access_deny(
     pw: *mut libc::passwd,
 ) -> cmd_retval {
     unsafe {
-        let mut user = server_acl_user_find((*pw).pw_uid);
+        let user = server_acl_user_find((*pw).pw_uid);
         if user.is_null() {
             cmdq_error(item, c"user %s not found".as_ptr(), (*pw).pw_name);
             return cmd_retval::CMD_RETURN_ERROR;
@@ -57,8 +57,8 @@ unsafe extern "C" fn cmd_server_access_deny(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_server_access_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut c = cmdq_get_target_client(item);
+        let args = cmd_get_args(self_);
+        let c = cmdq_get_target_client(item);
 
         if args_has_(args, 'l') {
             server_acl_display(item);
@@ -69,7 +69,7 @@ unsafe extern "C" fn cmd_server_access_exec(self_: *mut cmd, item: *mut cmdq_ite
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
-        let mut name = format_single(
+        let name = format_single(
             item,
             args_string(args, 0),
             c,

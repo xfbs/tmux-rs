@@ -31,11 +31,11 @@ static mut cmd_rename_window_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_rename_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
-        let mut wl = (*target).wl;
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
+        let wl = (*target).wl;
 
-        let mut newname = format_single_from_target(item, args_string(args, 0));
+        let newname = format_single_from_target(item, args_string(args, 0));
         window_set_name((*wl).window, newname);
         options_set_number((*(*wl).window).options, c"automatic-rename".as_ptr(), 0);
 

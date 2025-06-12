@@ -63,7 +63,7 @@ unsafe extern "C" fn cfg_done(item: *mut cmdq_item, _data: *mut c_void) -> cmd_r
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn start_cfg() {
-    let mut c: *mut client;
+    let c: *mut client;
     let mut i: u32;
     let mut flags: cmd_parse_input_flags = cmd_parse_input_flags::empty();
 
@@ -124,7 +124,7 @@ pub unsafe extern "C" fn load_cfg(
         }
 
         log_debug!("loading {}", _s(path));
-        let mut f = fopen(path, c"rb".as_ptr());
+        let f = fopen(path, c"rb".as_ptr());
         if f.is_null() {
             if errno!() == ENOENT && flags.intersects(cmd_parse_input_flags::CMD_PARSE_QUIET) {
                 return 0;
@@ -140,7 +140,7 @@ pub unsafe extern "C" fn load_cfg(
         pi.item = item;
         pi.c = c;
 
-        let mut pr = cmd_parse_from_file(f, &raw mut pi);
+        let pr = cmd_parse_from_file(f, &raw mut pi);
         fclose(f);
         if (*pr).status == cmd_parse_status::CMD_PARSE_ERROR {
             cfg_add_cause(c"%s".as_ptr(), (*pr).error);
@@ -152,7 +152,7 @@ pub unsafe extern "C" fn load_cfg(
             return 0;
         }
 
-        let mut state = if !item.is_null() {
+        let state = if !item.is_null() {
             cmdq_copy_state(cmdq_get_state(item), current)
         } else {
             cmdq_new_state(null_mut(), null_mut(), 0)
@@ -201,7 +201,7 @@ pub unsafe extern "C" fn load_cfg_from_buffer(
         pi.item = item;
         pi.c = c;
 
-        let mut pr = cmd_parse_from_buffer(buf, len, &raw mut pi);
+        let pr = cmd_parse_from_buffer(buf, len, &raw mut pi);
         if (*pr).status == cmd_parse_status::CMD_PARSE_ERROR {
             cfg_add_cause(c"%s".as_ptr(), (*pr).error);
             free((*pr).error as _);
@@ -212,7 +212,7 @@ pub unsafe extern "C" fn load_cfg_from_buffer(
             return 0;
         }
 
-        let mut state = if !item.is_null() {
+        let state = if !item.is_null() {
             cmdq_copy_state(cmdq_get_state(item), current)
         } else {
             cmdq_new_state(null_mut(), null_mut(), 0)
@@ -266,7 +266,7 @@ pub unsafe extern "C" fn cfg_print_causes(item: *mut cmdq_item) {
 pub unsafe extern "C" fn cfg_show_causes(mut s: *mut session) {
     unsafe {
         'out: {
-            let mut c = tailq_first(&raw mut clients);
+            let c = tailq_first(&raw mut clients);
 
             if cfg_ncauses == 0 {
                 return;

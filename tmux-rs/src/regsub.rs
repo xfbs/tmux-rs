@@ -95,7 +95,7 @@ pub unsafe fn regsub(
 
         let mut start: isize = 0;
         let mut last: isize = 0;
-        let mut end: isize = strlen(text) as _;
+        let end: isize = strlen(text) as _;
 
         while start <= end {
             if regexec(

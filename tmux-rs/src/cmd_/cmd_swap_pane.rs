@@ -37,12 +37,12 @@ static mut cmd_swap_pane_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_swap_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut source = cmdq_get_source(item);
-        let mut target = cmdq_get_target(item);
+        let args = cmd_get_args(self_);
+        let source = cmdq_get_source(item);
+        let target = cmdq_get_target(item);
 
-        let mut dst_w = (*(*target).wl).window;
-        let mut dst_wp = (*target).wp;
+        let dst_w = (*(*target).wl).window;
+        let dst_wp = (*target).wp;
         let mut src_w = (*(*source).wl).window;
         let mut src_wp = (*source).wp;
 

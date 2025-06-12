@@ -586,7 +586,7 @@ pub unsafe extern "C" fn tty_term_apply(
         let mut s = null_mut();
 
         let mut errstr = null();
-        let mut name = (*term).name;
+        let name = (*term).name;
         // u_int i;
         // int n, remove;
 
@@ -676,7 +676,7 @@ pub unsafe extern "C" fn tty_term_apply_overrides(term: *mut tty_term) {
 
     unsafe {
         /* Update capabilities from the option. */
-        let mut o = options_get_only(global_options, c"terminal-overrides".as_ptr());
+        let o = options_get_only(global_options, c"terminal-overrides".as_ptr());
         let mut a = options_array_first(o);
         unsafe {
             while !a.is_null() {
@@ -900,7 +900,7 @@ pub unsafe extern "C" fn tty_term_create(
              * Also add few features that VT100-like terminals should either
              * support or safely ignore.
              */
-            let mut s = tty_term_string(term, tty_code_code::TTYC_CLEAR);
+            let s = tty_term_string(term, tty_code_code::TTYC_CLEAR);
             if tty_term_flag(term, tty_code_code::TTYC_XT) != 0
                 || strncmp(s, c"\x1b[".as_ptr(), 2) == 0
             {
@@ -967,7 +967,7 @@ pub unsafe extern "C" fn tty_term_read_list(
     cause: *mut *mut c_char,
 ) -> i32 {
     unsafe {
-        let mut ent: *mut tty_term_code_entry = null_mut();
+        let ent: *mut tty_term_code_entry = null_mut();
         let mut error = 0;
         let mut tmp: [c_char; 11] = [0; 11];
         let sizeof_tmp = 11;
@@ -1072,7 +1072,7 @@ pub unsafe extern "C" fn tty_term_string_i(
     a: i32,
 ) -> *const c_char {
     unsafe {
-        let mut x = tty_term_string(term, code);
+        let x = tty_term_string(term, code);
 
         // #if defined(HAVE_TIPARM_S)
         // s = tiparm_s(1, 0, x, a);
@@ -1100,7 +1100,7 @@ pub unsafe extern "C" fn tty_term_string_ii(
     b: i32,
 ) -> *const c_char {
     unsafe {
-        let mut x = tty_term_string(term, code);
+        let x = tty_term_string(term, code);
 
         // TODO
         // #if defined(HAVE_TIPARM_S)
@@ -1131,7 +1131,7 @@ pub unsafe extern "C" fn tty_term_string_iii(
     c: i32,
 ) -> *const c_char {
     unsafe {
-        let mut x = tty_term_string(term, code);
+        let x = tty_term_string(term, code);
 
         // TODO
         // #if defined(HAVE_TIPARM_S)
@@ -1159,7 +1159,7 @@ pub unsafe extern "C" fn tty_term_string_s(
     a: *const c_char,
 ) -> *const i8 {
     unsafe {
-        let mut x = tty_term_string(term, code);
+        let x = tty_term_string(term, code);
 
         // TODO
         // #if defined(HAVE_TIPARM_S)
@@ -1189,7 +1189,7 @@ pub unsafe extern "C" fn tty_term_string_ss(
     b: *const c_char,
 ) -> *const c_char {
     unsafe {
-        let mut x = tty_term_string(term, code);
+        let x = tty_term_string(term, code);
         // *s;
 
         // #if defined(HAVE_TIPARM_S)

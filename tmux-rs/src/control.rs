@@ -294,7 +294,7 @@ pub unsafe extern "C" fn control_add_pane(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_discard_pane(c: *mut client, cp: *mut control_pane) {
     unsafe {
-        let mut cs = (*c).control_state;
+        let cs = (*c).control_state;
 
         for cb in tailq_foreach::<_, discr_entry>(&raw mut (*cp).blocks).map(NonNull::as_ptr) {
             tailq_remove::<_, discr_entry>(&raw mut (*cp).blocks, cb);
@@ -341,7 +341,7 @@ pub unsafe extern "C" fn control_pane_offset(
     off: *mut i32,
 ) -> *mut window_pane_offset {
     unsafe {
-        let mut cs = (*c).control_state;
+        let cs = (*c).control_state;
 
         if (*c).flags.intersects(client_flag::CONTROL_NOOUTPUT) {
             *off = 0;
@@ -577,7 +577,7 @@ pub unsafe extern "C" fn control_write_output(c: *mut client, wp: *mut window_pa
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_error(item: *mut cmdq_item, data: *mut c_void) -> cmd_retval {
     unsafe {
-        let mut c = cmdq_get_client(item);
+        let c = cmdq_get_client(item);
         let error = data as *mut c_char;
 
         cmdq_guard(item, c"begin".as_ptr(), 1);
@@ -595,7 +595,7 @@ pub unsafe extern "C" fn control_error_callback(
     what: i16,
     data: *mut c_void,
 ) {
-    let mut c: *mut client = data.cast();
+    let c: *mut client = data.cast();
 
     unsafe {
         (*c).flags |= client_flag::EXIT;
@@ -605,11 +605,11 @@ pub unsafe extern "C" fn control_error_callback(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_read_callback(bufev: *mut bufferevent, data: *mut c_void) {
     let __func__ = "control_read_callback";
-    let mut c: *mut client = data.cast();
+    let c: *mut client = data.cast();
 
     unsafe {
-        let mut cs = (*c).control_state;
-        let mut buffer = (*(*cs).read_event).input;
+        let cs = (*c).control_state;
+        let buffer = (*(*cs).read_event).input;
         let mut error = null_mut();
 
         loop {
@@ -652,7 +652,7 @@ pub unsafe extern "C" fn control_all_done(c: *mut client) -> i32 {
 pub unsafe extern "C" fn control_flush_all_blocks(c: *mut client) {
     let __func__ = "control_flush_all_blocks";
     unsafe {
-        let mut cs = (*c).control_state;
+        let cs = (*c).control_state;
 
         for cb in
             tailq_foreach::<_, discr_all_entry>(&raw mut (*cs).all_blocks).map(NonNull::as_ptr)
@@ -745,12 +745,12 @@ pub unsafe extern "C" fn control_write_pending(
     limit: usize,
 ) -> i32 {
     unsafe {
-        let mut cs = (*c).control_state;
+        let cs = (*c).control_state;
         let mut message: *mut evbuffer = null_mut();
         let mut used = 0;
         let mut size;
         let mut cb = null_mut();
-        let mut t = get_timer();
+        let t = get_timer();
 
         let wp = control_window_pane(c, (*cp).pane);
         if wp.is_none() || (*wp.unwrap().as_ptr()).fd == -1 {
@@ -818,9 +818,9 @@ pub unsafe extern "C" fn control_write_pending(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_write_callback(bufev: *mut bufferevent, data: *mut c_void) {
     unsafe {
-        let mut c: *mut client = data.cast();
-        let mut cs = (*c).control_state;
-        let mut evb = (*(*cs).write_event).output;
+        let c: *mut client = data.cast();
+        let cs = (*c).control_state;
+        let evb = (*(*cs).write_event).output;
 
         control_flush_all_blocks(c);
 
@@ -924,7 +924,7 @@ pub unsafe extern "C" fn control_ready(c: *mut client) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_discard(c: *mut client) {
     unsafe {
-        let mut cs = (*c).control_state;
+        let cs = (*c).control_state;
         for cp in rb_foreach(&raw mut (*cs).panes) {
             control_discard_pane(c, cp.as_ptr());
         }
@@ -935,7 +935,7 @@ pub unsafe extern "C" fn control_discard(c: *mut client) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_stop(c: *mut client) {
     unsafe {
-        let mut cs = (*c).control_state;
+        let cs = (*c).control_state;
         if !(*c).flags.intersects(client_flag::CONTROLCONTROL) {
             bufferevent_free((*cs).write_event);
         }
@@ -962,7 +962,7 @@ pub unsafe extern "C" fn control_stop(c: *mut client) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_check_subs_session(c: *mut client, csub: *mut control_sub) {
     unsafe {
-        let mut s = (*c).session;
+        let s = (*c).session;
 
         let ft = format_create_defaults(null_mut(), c, s, null_mut(), null_mut());
         let value = format_expand(ft, (*csub).format);
@@ -1039,7 +1039,7 @@ pub unsafe extern "C" fn control_check_subs_pane(c: *mut client, csub: *mut cont
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_check_subs_all_panes(c: *mut client, csub: *mut control_sub) {
     unsafe {
-        let mut s = (*c).session;
+        let s = (*c).session;
         let mut find: control_sub_pane = zeroed();
 
         for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
@@ -1084,10 +1084,10 @@ pub unsafe extern "C" fn control_check_subs_all_panes(c: *mut client, csub: *mut
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_check_subs_window(c: *mut client, csub: *mut control_sub) {
     unsafe {
-        let mut s = (*c).session;
+        let s = (*c).session;
         let mut find: control_sub_window = zeroed(); // TODO uninit
 
-        let mut w = window_find_by_id((*csub).id);
+        let w = window_find_by_id((*csub).id);
         if w.is_null() {
             return;
         }
@@ -1136,7 +1136,7 @@ pub unsafe extern "C" fn control_check_subs_window(c: *mut client, csub: *mut co
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_check_subs_all_windows(c: *mut client, csub: *mut control_sub) {
     unsafe {
-        let mut s = (*c).session;
+        let s = (*c).session;
         let mut find: control_sub_window = zeroed();
 
         for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
@@ -1179,8 +1179,8 @@ pub unsafe extern "C" fn control_check_subs_all_windows(c: *mut client, csub: *m
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_check_subs_timer(fd: i32, events: i16, data: *mut c_void) {
     unsafe {
-        let mut c: *mut client = data.cast();
-        let mut cs = (*c).control_state;
+        let c: *mut client = data.cast();
+        let cs = (*c).control_state;
         let mut tv = timeval {
             tv_sec: 1,
             tv_usec: 0,
@@ -1212,8 +1212,8 @@ pub unsafe extern "C" fn control_add_sub(
     format: *const c_char,
 ) {
     unsafe {
-        let mut cs = (*c).control_state;
-        let mut tv = timeval {
+        let cs = (*c).control_state;
+        let tv = timeval {
             tv_sec: 1,
             tv_usec: 0,
         };
@@ -1252,7 +1252,7 @@ pub unsafe extern "C" fn control_add_sub(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_remove_sub(c: *mut client, name: *mut c_char) {
     unsafe {
-        let mut cs = (*c).control_state;
+        let cs = (*c).control_state;
 
         let mut find: control_sub = zeroed();
         find.name = name.cast();

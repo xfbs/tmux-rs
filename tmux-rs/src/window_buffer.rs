@@ -130,8 +130,8 @@ pub unsafe extern "C" fn window_buffer_free_item(item: *mut window_buffer_itemda
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_buffer_cmp(a0: *const c_void, b0: *const c_void) -> i32 {
     unsafe {
-        let mut a = a0 as *const *const window_buffer_itemdata;
-        let mut b = b0 as *const *const window_buffer_itemdata;
+        let a = a0 as *const *const window_buffer_itemdata;
+        let b = b0 as *const *const window_buffer_itemdata;
         let mut result = 0i32;
 
         if (*window_buffer_sort).field == window_buffer_sort_type::WINDOW_BUFFER_BY_TIME as u32 {
@@ -163,7 +163,7 @@ pub unsafe extern "C" fn window_buffer_build(
     filter: *const c_char,
 ) {
     unsafe {
-        let mut data: NonNull<window_buffer_modedata> = modedata.cast();
+        let data: NonNull<window_buffer_modedata> = modedata.cast();
         let mut item: *mut window_buffer_itemdata = null_mut();
         let data = data.as_ptr();
         // char *text, *cp;
@@ -181,7 +181,7 @@ pub unsafe extern "C" fn window_buffer_build(
 
         let mut pb = paste_walk(null_mut());
         while let Some(pb_non_null) = NonNull::new(pb) {
-            let mut item = window_buffer_add_item(data);
+            let item = window_buffer_add_item(data);
             (*item).name = xstrdup(paste_buffer_name(pb_non_null)).as_ptr();
             paste_buffer_data(pb, &raw mut (*item).size); // I'm sure if we follow alias rules on item.size here, so keep using older function
             (*item).order = paste_buffer_order(pb_non_null);
@@ -250,8 +250,8 @@ pub unsafe extern "C" fn window_buffer_draw(
 ) {
     unsafe {
         let item: Option<NonNull<window_buffer_itemdata>> = itemdata.map(NonNull::cast);
-        let mut cx = (*(*ctx).s).cx;
-        let mut cy = (*(*ctx).s).cy;
+        let cx = (*(*ctx).s).cx;
+        let cy = (*(*ctx).s).cy;
 
         let Some(pb) = NonNull::new(paste_get_name((*item.unwrap().as_ptr()).name)) else {
             return;
@@ -322,8 +322,8 @@ pub unsafe extern "C" fn window_buffer_menu(
     key: key_code,
 ) {
     unsafe {
-        let mut data: NonNull<window_buffer_modedata> = modedata.cast();
-        let mut wp: *mut window_pane = (*data.as_ptr()).wp;
+        let data: NonNull<window_buffer_modedata> = modedata.cast();
+        let wp: *mut window_pane = (*data.as_ptr()).wp;
 
         if let Some(wme) = NonNull::new(tailq_first(&raw mut (*wp).modes))
             && (*wme.as_ptr()).data == modedata.as_ptr()
@@ -340,8 +340,8 @@ pub unsafe extern "C" fn window_buffer_get_key(
     line: u32,
 ) -> key_code {
     unsafe {
-        let mut data: NonNull<window_buffer_modedata> = modedata.cast();
-        let mut item: NonNull<window_buffer_itemdata> = itemdata.cast();
+        let data: NonNull<window_buffer_modedata> = modedata.cast();
+        let item: NonNull<window_buffer_itemdata> = itemdata.cast();
         let mut s = None;
         let mut wl = None;
         let mut wp = None;
@@ -377,7 +377,7 @@ pub unsafe extern "C" fn window_buffer_init(
 ) -> *mut screen {
     unsafe {
         let mut s = null_mut();
-        let mut wp = (*wme.as_ptr()).wp;
+        let wp = (*wme.as_ptr()).wp;
         let data = xcalloc1::<window_buffer_modedata>();
         (*wme.as_ptr()).data = data as *mut window_buffer_modedata as *mut c_void;
         data.wp = wp;
@@ -426,7 +426,7 @@ pub unsafe extern "C" fn window_buffer_init(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_buffer_free(wme: NonNull<window_mode_entry>) {
     unsafe {
-        let mut data = (*wme.as_ptr()).data as *mut window_buffer_modedata;
+        let data = (*wme.as_ptr()).data as *mut window_buffer_modedata;
 
         if data.is_null() {
             return;
@@ -450,7 +450,7 @@ pub unsafe extern "C" fn window_buffer_free(wme: NonNull<window_mode_entry>) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_buffer_resize(wme: NonNull<window_mode_entry>, sx: u32, sy: u32) {
     unsafe {
-        let mut data = (*wme.as_ptr()).data as *mut window_buffer_modedata;
+        let data = (*wme.as_ptr()).data as *mut window_buffer_modedata;
         mode_tree_resize((*data).data, sx, sy);
     }
 }
@@ -458,7 +458,7 @@ pub unsafe extern "C" fn window_buffer_resize(wme: NonNull<window_mode_entry>, s
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_buffer_update(wme: NonNull<window_mode_entry>) {
     unsafe {
-        let mut data = (*wme.as_ptr()).data as *mut window_buffer_modedata;
+        let data = (*wme.as_ptr()).data as *mut window_buffer_modedata;
 
         mode_tree_build((*data).data);
         mode_tree_draw((*data).data);
@@ -474,8 +474,8 @@ pub unsafe extern "C" fn window_buffer_do_delete(
     key: key_code,
 ) {
     unsafe {
-        let mut data: NonNull<window_buffer_modedata> = modedata.cast();
-        let mut item: NonNull<window_buffer_itemdata> = itemdata.cast();
+        let data: NonNull<window_buffer_modedata> = modedata.cast();
+        let item: NonNull<window_buffer_itemdata> = itemdata.cast();
 
         if item == mode_tree_get_current((*data.as_ptr()).data).cast()
             && mode_tree_down((*data.as_ptr()).data, 0) == 0
@@ -612,9 +612,9 @@ pub unsafe extern "C" fn window_buffer_key(
     m: *mut mouse_event,
 ) {
     unsafe {
-        let mut wp = (*wme.as_ptr()).wp;
-        let mut data = (*wme.as_ptr()).data as *mut window_buffer_modedata;
-        let mut mtd: *mut mode_tree_data = (*data).data;
+        let wp = (*wme.as_ptr()).wp;
+        let data = (*wme.as_ptr()).data as *mut window_buffer_modedata;
+        let mtd: *mut mode_tree_data = (*data).data;
         let mut finished = false;
 
         'out: {

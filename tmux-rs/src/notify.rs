@@ -140,7 +140,7 @@ pub unsafe extern "C" fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut n
 pub unsafe extern "C" fn notify_callback(item: *mut cmdq_item, data: *mut c_void) -> cmd_retval {
     let __func__ = c"notify_callback".as_ptr();
     unsafe {
-        let mut ne = data as *mut notify_entry;
+        let ne = data as *mut notify_entry;
 
         log_debug!("{}: {}", _s(__func__), _s((*ne).name));
 
@@ -319,7 +319,7 @@ pub unsafe extern "C" fn notify_add(
 pub unsafe extern "C" fn notify_hook(item: *mut cmdq_item, name: *mut c_char) {
     let __func__ = c"notify_hook".as_ptr();
     unsafe {
-        let mut target = cmdq_get_target(item);
+        let target = cmdq_get_target(item);
         let mut ne: notify_entry = zeroed();
 
         ne.name = name;

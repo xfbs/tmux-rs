@@ -49,17 +49,17 @@ pub unsafe extern "C" fn cmd_detach_client_exec(
     item: *mut cmdq_item,
 ) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut source = cmdq_get_source(item);
-        let mut tc = cmdq_get_target_client(item);
-        let mut cmd = args_get(args, b'E');
+        let args = cmd_get_args(self_);
+        let source = cmdq_get_source(item);
+        let tc = cmdq_get_target_client(item);
+        let cmd = args_get(args, b'E');
 
         if cmd_get_entry(self_) == &raw mut cmd_suspend_client_entry {
             server_client_suspend(tc);
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        let mut msgtype = if args_has(args, b'P') != 0 {
+        let msgtype = if args_has(args, b'P') != 0 {
             msgtype::MSG_DETACHKILL
         } else {
             msgtype::MSG_DETACH

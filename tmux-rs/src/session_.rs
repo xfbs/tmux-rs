@@ -201,7 +201,7 @@ pub unsafe extern "C" fn session_remove_ref(s: *mut session, from: *const c_char
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_free(_fd: i32, _events: i16, arg: *mut c_void) {
     unsafe {
-        let mut s = arg as *mut session;
+        let s = arg as *mut session;
 
         log_debug!(
             "session {} freed ({} references)",
@@ -309,7 +309,7 @@ pub unsafe extern "C" fn session_lock_timer(fd: i32, events: i16, arg: *mut c_vo
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_update_activity(s: *mut session, from: *mut timeval) {
     unsafe {
-        let mut last = &raw mut (*s).last_activity_time;
+        let last = &raw mut (*s).last_activity_time;
 
         memcpy__(last, &raw mut (*s).activity_time);
         if from.is_null() {
@@ -394,7 +394,7 @@ pub unsafe extern "C" fn session_attach(
     cause: *mut *mut c_char,
 ) -> *mut winlink {
     unsafe {
-        let mut wl = winlink_add(&raw mut (*s).windows, idx);
+        let wl = winlink_add(&raw mut (*s).windows, idx);
 
         if wl.is_null() {
             xasprintf(cause, c"index in use: %d".as_ptr(), idx);
@@ -540,7 +540,7 @@ pub unsafe extern "C" fn session_previous(s: *mut session, alert: i32) -> i32 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_select(s: *mut session, idx: i32) -> i32 {
     unsafe {
-        let mut wl = winlink_find_by_index(&raw mut (*s).windows, idx);
+        let wl = winlink_find_by_index(&raw mut (*s).windows, idx);
         session_set_current(s, wl)
     }
 }
@@ -549,7 +549,7 @@ pub unsafe extern "C" fn session_select(s: *mut session, idx: i32) -> i32 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_last(s: *mut session) -> i32 {
     unsafe {
-        let mut wl = tailq_first(&raw mut (*s).lastw);
+        let wl = tailq_first(&raw mut (*s).lastw);
         if wl.is_null() {
             return -1;
         }
@@ -565,7 +565,7 @@ pub unsafe extern "C" fn session_last(s: *mut session) -> i32 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_set_current(s: *mut session, wl: *mut winlink) -> i32 {
     unsafe {
-        let mut old: *mut winlink = (*s).curw;
+        let old: *mut winlink = (*s).curw;
 
         if wl.is_null() {
             return -1;
@@ -651,7 +651,7 @@ pub unsafe extern "C" fn session_group_add(sg: *mut session_group, s: *mut sessi
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_group_remove(s: *mut session) {
     unsafe {
-        let mut sg = session_group_contains(s);
+        let sg = session_group_contains(s);
 
         if sg.is_null() {
             return;
@@ -685,7 +685,7 @@ pub unsafe extern "C" fn session_group_attached_count(sg: *mut session_group) ->
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_group_synchronize_to(s: *mut session) {
     unsafe {
-        let mut sg = session_group_contains(s);
+        let sg = session_group_contains(s);
         if sg.is_null() {
             return;
         }
@@ -707,7 +707,7 @@ pub unsafe extern "C" fn session_group_synchronize_to(s: *mut session) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_group_synchronize_from(target: *mut session) {
     unsafe {
-        let mut sg = session_group_contains(target);
+        let sg = session_group_contains(target);
         if sg.is_null() {
             return;
         }
@@ -732,7 +732,7 @@ pub unsafe extern "C" fn session_group_synchronize1(target: *mut session, s: *mu
 
     unsafe {
         /* Don't do anything if the session is empty (it'll be destroyed). */
-        let mut ww: *mut winlinks = &raw mut (*target).windows;
+        let ww: *mut winlinks = &raw mut (*target).windows;
         if rb_empty(ww) {
             return;
         }

@@ -275,7 +275,7 @@ pub unsafe extern "C-unwind" fn client_main(
         let mut cwd: *const c_char = null_mut();
         let mut ttynam: *const c_char = null_mut();
         let mut termname: *const c_char = null_mut();
-        let mut msg: msgtype;
+        let msg: msgtype;
         let mut tio: termios = zeroed();
         let mut saved_tio: termios = zeroed();
         let mut linesize = 0;
@@ -518,7 +518,7 @@ unsafe extern "C" fn client_send_identify(
 ) {
     unsafe {
         // char	**ss;
-        let mut sslen: usize = 0;
+        let sslen: usize = 0;
         // int	  fd;
         let mut flags: client_flag = client_flags;
         // pid_t	  pid;
@@ -882,8 +882,8 @@ unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
 unsafe extern "C" fn client_dispatch_attached(imsg: *mut imsg) {
     unsafe {
         let mut sigact: sigaction = zeroed();
-        let mut data: *mut c_char = (*imsg).data as _;
-        let mut datalen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
+        let data: *mut c_char = (*imsg).data as _;
+        let datalen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
 
         let mht: msgtype = (*imsg).hdr.type_.try_into().expect("invalid enum variant"); // TODO
         match mht {

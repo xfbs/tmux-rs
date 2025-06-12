@@ -58,9 +58,9 @@ unsafe extern "C" fn cmd_command_prompt_args_parse(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_command_prompt_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut tc = cmdq_get_target_client(item);
-        let mut target = cmdq_get_target(item);
+        let args = cmd_get_args(self_);
+        let tc = cmdq_get_target_client(item);
+        let target = cmdq_get_target(item);
         // const char			*type, *s, *input;
         // struct cmd_command_prompt_cdata	*cdata;
         let mut prompts = null_mut();
@@ -71,7 +71,7 @@ unsafe extern "C" fn cmd_command_prompt_exec(self_: *mut cmd, item: *mut cmdq_it
         // char				*inputs = NULL, *next_input;
         let mut inputs = null_mut();
         let mut next_input = null_mut();
-        let mut count = args_count(args);
+        let count = args_count(args);
         let mut wait = !args_has(args, b'b');
         let mut space = 1;
 
@@ -82,7 +82,7 @@ unsafe extern "C" fn cmd_command_prompt_exec(self_: *mut cmd, item: *mut cmdq_it
             wait = 0;
         }
 
-        let mut cdata = xcalloc_::<cmd_command_prompt_cdata>(1).as_ptr();
+        let cdata = xcalloc_::<cmd_command_prompt_cdata>(1).as_ptr();
         if wait != 0 {
             (*cdata).item = item;
         }
@@ -143,7 +143,7 @@ unsafe extern "C" fn cmd_command_prompt_exec(self_: *mut cmd, item: *mut cmdq_it
         free_(inputs);
         free_(prompts);
 
-        let mut type_ = args_get(args, b'T');
+        let type_ = args_get(args, b'T');
         if !type_.is_null() {
             (*cdata).prompt_type = status_prompt_type(type_);
             if (*cdata).prompt_type == prompt_type::PROMPT_TYPE_INVALID {
@@ -191,11 +191,11 @@ unsafe extern "C" fn cmd_command_prompt_callback(
     done: i32,
 ) -> i32 {
     unsafe {
-        let mut cdata: NonNull<cmd_command_prompt_cdata> = data.cast();
+        let cdata: NonNull<cmd_command_prompt_cdata> = data.cast();
         let cdata = cdata.as_ptr();
         let mut error: *mut c_char = null_mut();
 
-        let mut item: *mut cmdq_item = (*cdata).item;
+        let item: *mut cmdq_item = (*cdata).item;
         //struct cmdq_item			 *item = cdata->item, *new_item;
         //struct cmd_list				 *cmdlist;
         //struct cmd_command_prompt_prompt	 *prompt;
@@ -214,7 +214,7 @@ unsafe extern "C" fn cmd_command_prompt_callback(
                 cmd_append_argv(&raw mut (*cdata).argc, &raw mut (*cdata).argv, s);
                 (*cdata).current += 1;
                 if (*cdata).current != (*cdata).count {
-                    let mut prompt = (*cdata).prompts.add((*cdata).current as usize);
+                    let prompt = (*cdata).prompts.add((*cdata).current as usize);
                     status_prompt_update(c, (*prompt).prompt, (*prompt).input);
                     return 1;
                 }
@@ -232,7 +232,7 @@ unsafe extern "C" fn cmd_command_prompt_callback(
                 (*cdata).argv = cmd_copy_argv(argc, argv);
             }
 
-            let mut cmdlist = args_make_commands((*cdata).state, argc, argv, &raw mut error);
+            let cmdlist = args_make_commands((*cdata).state, argc, argv, &raw mut error);
             if cmdlist.is_null() {
                 cmdq_append(c, cmdq_get_error(error).as_ptr());
                 free_(error);
@@ -264,7 +264,7 @@ unsafe extern "C" fn cmd_command_prompt_callback(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_command_prompt_free(data: NonNull<c_void>) {
     unsafe {
-        let mut cdata: NonNull<cmd_command_prompt_cdata> = data.cast();
+        let cdata: NonNull<cmd_command_prompt_cdata> = data.cast();
 
         for i in 0u32..(*cdata.as_ptr()).count {
             free_((*(*cdata.as_ptr()).prompts.add(i as usize)).prompt);

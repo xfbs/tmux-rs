@@ -33,9 +33,9 @@ static mut cmd_kill_session_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_kill_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
-        let mut s = (*target).s;
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
+        let s = (*target).s;
 
         if args_has(args, b'C') != 0 {
             for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {

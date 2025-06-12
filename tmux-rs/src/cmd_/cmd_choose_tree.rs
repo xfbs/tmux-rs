@@ -86,9 +86,9 @@ unsafe extern "C" fn cmd_choose_tree_args_parse(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_choose_tree_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
-        let mut wp = (*target).wp;
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
+        let wp = (*target).wp;
 
         let mode = if cmd_get_entry(self_) == &raw mut cmd_choose_buffer_entry {
             if paste_is_empty() != 0 {

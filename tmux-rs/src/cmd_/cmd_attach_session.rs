@@ -42,12 +42,12 @@ pub unsafe extern "C" fn cmd_attach_session(
     fflag: *const c_char,
 ) -> cmd_retval {
     unsafe {
-        let mut current: *mut cmd_find_state = cmdq_get_current(item);
+        let current: *mut cmd_find_state = cmdq_get_current(item);
         let mut target: cmd_find_state = zeroed(); // TODO can be uninit
-        let mut type_: cmd_find_type;
+        let type_: cmd_find_type;
         let mut flags: i32 = 0;
-        let mut c: *mut client = cmdq_get_client(item);
-        let mut c_loop: *mut client = null_mut();
+        let c: *mut client = cmdq_get_client(item);
+        let c_loop: *mut client = null_mut();
         let mut s: *mut session = null_mut();
         let mut wl: *mut winlink = null_mut();
         let mut wp: *mut window_pane = null_mut();
@@ -55,7 +55,7 @@ pub unsafe extern "C" fn cmd_attach_session(
         let mut cwd: *mut c_char = null_mut();
         let mut cause: *mut c_char = null_mut();
 
-        let mut msgtype: msgtype;
+        let msgtype: msgtype;
 
         if rb_empty(&raw mut sessions) {
             cmdq_error(item, c"no sessions".as_ptr());
@@ -181,7 +181,7 @@ pub unsafe extern "C" fn cmd_attach_session(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_attach_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
+        let args = cmd_get_args(self_);
 
         cmd_attach_session(
             item,

@@ -39,16 +39,16 @@ static mut cmd_pipe_pane_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
-        let mut tc = cmdq_get_target_client(item);
-        let mut wp = (*target).wp;
-        let mut s = (*target).s;
-        let mut wl = (*target).wl;
-        let mut wpo = &raw mut (*wp).pipe_offset;
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
+        let tc = cmdq_get_target_client(item);
+        let wp = (*target).wp;
+        let s = (*target).s;
+        let wl = (*target).wl;
+        let wpo = &raw mut (*wp).pipe_offset;
         // char *cmd;
         // int old_fd, pipe_fd[2], null_fd, in, out;
-        let mut old_fd = 0;
+        let old_fd = 0;
         let mut pipe_fd: [i32; 2] = [0; 2];
         let mut in_: i32 = 0;
         let mut out: i32 = 0;
@@ -208,7 +208,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
 pub unsafe extern "C" fn cmd_pipe_pane_read_callback(_bufev: *mut bufferevent, data: *mut c_void) {
     unsafe {
         let wp: *mut window_pane = data as *mut window_pane;
-        let mut evb = (*(*wp).pipe_event).input;
+        let evb = (*(*wp).pipe_event).input;
 
         let available = EVBUFFER_LENGTH(evb);
         log_debug!("%%{} pipe read {}", (*wp).id, available);

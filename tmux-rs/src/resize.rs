@@ -27,7 +27,7 @@ pub unsafe extern "C" fn resize_window(
     ypixel: i32,
 ) {
     unsafe {
-        let mut zoomed = 0;
+        let zoomed = 0;
 
         // Check size limits.
         sx = sx.clamp(WINDOW_MINIMUM, WINDOW_MAXIMUM);

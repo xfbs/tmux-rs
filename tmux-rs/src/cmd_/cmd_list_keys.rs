@@ -81,7 +81,7 @@ unsafe extern "C" fn cmd_list_keys_print_notes(
     prefix: *const c_char,
 ) -> i32 {
     unsafe {
-        let mut tc = cmdq_get_target_client(item);
+        let tc = cmdq_get_target_client(item);
         let mut key = null();
         let mut found = 0;
 
@@ -153,8 +153,8 @@ unsafe extern "C" fn cmd_list_keys_get_prefix(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut tc = cmdq_get_target_client(item);
+        let args = cmd_get_args(self_);
+        let tc = cmdq_get_target_client(item);
         let mut table: *mut key_table = null_mut();
         let mut width: i32 = 0;
         let mut prefix: key_code = 0;
@@ -177,7 +177,7 @@ unsafe extern "C" fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -
                 only &= KEYC_MASK_KEY | KEYC_MASK_MODIFIERS;
             }
 
-            let mut tablename = args_get(args, b'T');
+            let tablename = args_get(args, b'T');
             if !tablename.is_null() && key_bindings_get_table(tablename, 0).is_null() {
                 cmdq_error(item, c"table %s doesn't exist".as_ptr(), tablename);
                 return cmd_retval::CMD_RETURN_ERROR;
@@ -363,7 +363,7 @@ unsafe extern "C" fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_list_keys_commands(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
+        let args = cmd_get_args(self_);
         //const struct cmd_entry **entryp;
         //const struct cmd_entry *entry;
         //struct format_tree *ft;

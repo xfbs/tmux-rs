@@ -439,7 +439,7 @@ pub unsafe extern "C" fn layout_destroy_cell(
     lcroot: *mut *mut layout_cell,
 ) {
     unsafe {
-        let mut lcother: *mut layout_cell;
+        let lcother: *mut layout_cell;
         let lcparent = (*lc).parent;
 
         // If no parent, this is the last pane so window close is imminent and
@@ -525,7 +525,7 @@ pub unsafe extern "C" fn layout_resize(w: *mut window, sx: c_uint, sy: c_uint) {
         // out proportionately - this should leave the layout fitting the new
         // window size.
         let mut xchange = sx as c_int - (*lc).sx as c_int;
-        let mut xlimit = layout_resize_check(w, lc, layout_type::LAYOUT_LEFTRIGHT) as i32;
+        let xlimit = layout_resize_check(w, lc, layout_type::LAYOUT_LEFTRIGHT) as i32;
         if xchange < 0 && xchange < -xlimit {
             xchange = -xlimit;
         }
@@ -543,7 +543,7 @@ pub unsafe extern "C" fn layout_resize(w: *mut window, sx: c_uint, sy: c_uint) {
 
         // Adjust vertically in a similar fashion.
         let mut ychange = sy as c_int - (*lc).sy as c_int;
-        let mut ylimit = layout_resize_check(w, lc, layout_type::LAYOUT_TOPBOTTOM) as i32;
+        let ylimit = layout_resize_check(w, lc, layout_type::LAYOUT_TOPBOTTOM) as i32;
         if ychange < 0 && ychange < -ylimit {
             ychange = -ylimit;
         }
@@ -840,7 +840,7 @@ pub unsafe extern "C" fn layout_set_size_check(
         let mut lcchild: *mut layout_cell;
         let mut new_size: u32;
         let mut available: u32;
-        let mut previous: u32;
+        let previous: u32;
         let mut idx: u32;
 
         // Cells with no children must just be bigger than minimum
@@ -985,8 +985,8 @@ pub unsafe extern "C" fn layout_split_pane(
     flags: i32,
 ) -> *mut layout_cell {
     unsafe {
-        let mut lc: *mut layout_cell;
-        let mut minimum: u32;
+        let lc: *mut layout_cell;
+        let minimum: u32;
         let mut new_size: u32;
         let mut saved_size: u32;
         let mut resize_first: u32 = 0;
@@ -1066,8 +1066,8 @@ pub unsafe extern "C" fn layout_split_pane(
             return null_mut();
         }
 
-        let mut lcparent: *mut layout_cell;
-        let mut lcnew: *mut layout_cell;
+        let lcparent: *mut layout_cell;
+        let lcnew: *mut layout_cell;
 
         if !(*lc).parent.is_null() && (*(*lc).parent).type_ == type_ {
             // If the parent exists and is of the same type as the split,

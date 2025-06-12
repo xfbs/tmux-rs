@@ -50,13 +50,13 @@ static mut cmd_move_pane_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut current = cmdq_get_current(item);
-        let mut target = cmdq_get_target(item);
-        let mut source = cmdq_get_source(item);
+        let args = cmd_get_args(self_);
+        let current = cmdq_get_current(item);
+        let target = cmdq_get_target(item);
+        let source = cmdq_get_source(item);
         let mut cause = null_mut();
         let mut type_: layout_type;
-        let mut lc: *mut layout_cell;
+        let lc: *mut layout_cell;
         let mut curval: u32 = 0;
 
         let dst_s = (*target).s;

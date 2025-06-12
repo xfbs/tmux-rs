@@ -50,16 +50,16 @@ unsafe extern "C" fn cmd_display_message_each(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
-        let mut tc = cmdq_get_target_client(item);
-        let mut s = (*target).s;
-        let mut wl = (*target).wl;
-        let mut wp = (*target).wp;
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
+        let tc = cmdq_get_target_client(item);
+        let s = (*target).s;
+        let wl = (*target).wl;
+        let wp = (*target).wp;
         let mut cause: *mut c_char = null_mut();
         let mut delay = -1;
-        let mut nflag = args_has(args, b'N');
-        let mut count = args_count(args);
+        let nflag = args_has(args, b'N');
+        let count = args_count(args);
 
         if args_has_(args, 'I') {
             if wp.is_null() {
@@ -110,7 +110,7 @@ unsafe extern "C" fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_i
          * formats too, assuming it matches the session. If it doesn't, use the
          * best client for the session.
          */
-        let mut c = if !tc.is_null() && (*tc).session == s {
+        let c = if !tc.is_null() && (*tc).session == s {
             tc
         } else if !s.is_null() {
             cmd_find_best_client(s)
@@ -123,7 +123,7 @@ unsafe extern "C" fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_i
         } else {
             format_flags::empty()
         };
-        let mut ft = format_create(cmdq_get_client(item), item, FORMAT_NONE, flags);
+        let ft = format_create(cmdq_get_client(item), item, FORMAT_NONE, flags);
         format_defaults(ft, c, NonNull::new(s), NonNull::new(wl), NonNull::new(wp));
 
         if args_has_(args, 'a') {

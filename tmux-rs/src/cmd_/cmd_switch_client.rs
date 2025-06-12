@@ -32,13 +32,13 @@ static mut cmd_switch_client_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_switch_client_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut current = cmdq_get_current(item);
+        let args = cmd_get_args(self_);
+        let current = cmdq_get_current(item);
         let mut target: cmd_find_state = zeroed(); // TODO use uninit
-        let mut tflag = args_get_(args, 't');
-        let mut type_: cmd_find_type;
+        let tflag = args_get_(args, 't');
+        let type_: cmd_find_type;
         let mut flags: i32 = 0;
-        let mut tc = cmdq_get_target_client(item);
+        let tc = cmdq_get_target_client(item);
 
         if !tflag.is_null() && *tflag.add(strcspn(tflag, c":.%".as_ptr())) != b'\0' as c_char {
             type_ = cmd_find_type::CMD_FIND_PANE;
@@ -51,8 +51,8 @@ unsafe extern "C" fn cmd_switch_client_exec(self_: *mut cmd, item: *mut cmdq_ite
             return cmd_retval::CMD_RETURN_ERROR;
         }
         let mut s = target.s;
-        let mut wl = target.wl;
-        let mut wp = target.wp;
+        let wl = target.wl;
+        let wp = target.wp;
 
         if args_has_(args, 'r') {
             if (*tc).flags.intersects(client_flag::READONLY) {
@@ -62,9 +62,9 @@ unsafe extern "C" fn cmd_switch_client_exec(self_: *mut cmd, item: *mut cmdq_ite
             }
         }
 
-        let mut tablename = args_get_(args, 'T');
+        let tablename = args_get_(args, 'T');
         if !tablename.is_null() {
-            let mut table = key_bindings_get_table(tablename, 0);
+            let table = key_bindings_get_table(tablename, 0);
             if table.is_null() {
                 cmdq_error(item, c"table %s doesn't exist".as_ptr(), tablename);
                 return cmd_retval::CMD_RETURN_ERROR;

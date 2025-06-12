@@ -31,10 +31,10 @@ use crate::utempter::utempter_add_record;
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn spawn_log(from: *const c_char, sc: *mut spawn_context) {
     unsafe {
-        let mut s = (*sc).s;
-        let mut wl = (*sc).wl;
-        let mut wp0 = (*sc).wp0;
-        let mut name = cmdq_get_name((*sc).item);
+        let s = (*sc).s;
+        let wl = (*sc).wl;
+        let wp0 = (*sc).wp0;
+        let name = cmdq_get_name((*sc).item);
         type tmp_type = [c_char; 128];
         let mut tmp = MaybeUninit::<tmp_type>::uninit();
 
@@ -95,9 +95,9 @@ pub unsafe extern "C" fn spawn_window(
 ) -> *mut winlink {
     let __func__ = c"spawn_window".as_ptr();
     unsafe {
-        let mut item = (*sc).item;
-        let mut c = cmdq_get_client(item);
-        let mut s = (*sc).s;
+        let item = (*sc).item;
+        let c = cmdq_get_client(item);
+        let s = (*sc).s;
         let mut idx = (*sc).idx;
         let mut w: *mut window = null_mut();
         // struct window *w;
@@ -256,11 +256,11 @@ pub unsafe extern "C" fn spawn_pane(
 ) -> *mut window_pane {
     let __func__ = c"spawn_pane".as_ptr();
     unsafe {
-        let mut item = (*sc).item;
-        let mut target = cmdq_get_target(item);
-        let mut c = cmdq_get_client(item);
-        let mut s = (*sc).s;
-        let mut w = (*(*sc).wl).window;
+        let item = (*sc).item;
+        let target = cmdq_get_target(item);
+        let c = cmdq_get_client(item);
+        let s = (*sc).s;
+        let w = (*(*sc).wl).window;
         let mut new_wp: *mut window_pane = null_mut();
         let mut child: *mut environ = null_mut();
         let mut ee: *mut environ_entry = null_mut();

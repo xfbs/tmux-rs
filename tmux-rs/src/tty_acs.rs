@@ -266,8 +266,8 @@ pub unsafe extern "C" fn tty_acs_reverse_get(
     slen: usize,
 ) -> i32 {
     unsafe {
-        let mut table;
-        let mut items;
+        let table;
+        let items;
         if slen == 2 {
             table = &raw const tty_acs_reverse2 as *const *const tty_acs_reverse_entry;
             items = tty_acs_reverse2.len();

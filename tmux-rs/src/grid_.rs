@@ -244,7 +244,7 @@ pub unsafe extern "C" fn grid_clear_cell(gd: *mut grid, px: c_uint, py: c_uint, 
         if bg != 8 {
             if (bg & COLOUR_FLAG_RGB as u32) != 0 {
                 grid_get_extended_cell(gl, gce, (*gce).flags);
-                let mut gee = grid_extended_cell(gl, gce, &raw const grid_cleared_cell);
+                let gee = grid_extended_cell(gl, gce, &raw const grid_cleared_cell);
                 (*gee).bg = bg as i32;
             } else {
                 if (bg & COLOUR_FLAG_256 as u32) != 0 {
@@ -510,7 +510,7 @@ pub unsafe extern "C" fn grid_scroll_history_region(
     bg: c_uint,
 ) {
     unsafe {
-        let mut yy = (*gd).hsize + (*gd).sy;
+        let yy = (*gd).hsize + (*gd).sy;
 
         // Create space for new line
         (*gd).linedata = xreallocarray_((*gd).linedata, (yy + 1) as usize).as_ptr();
@@ -1626,7 +1626,7 @@ pub unsafe extern "C" fn grid_reflow_split(
         let flags = (*gl).flags;
 
         // How many lines do we need to insert? We know we need at least two.
-        let mut lines = if !(*gl).flags.intersects(grid_line_flag::EXTENDED) {
+        let lines = if !(*gl).flags.intersects(grid_line_flag::EXTENDED) {
             1 + ((*gl).cellused - 1) / sx
         } else {
             let mut lines = 2;

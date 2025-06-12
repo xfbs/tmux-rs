@@ -112,10 +112,10 @@ pub unsafe extern "C" fn window_client_free_item(item: *mut window_client_itemda
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_client_cmp(a0: *const c_void, b0: *const c_void) -> i32 {
     unsafe {
-        let mut a: *const *const window_client_itemdata = a0 as _;
-        let mut b: *const *const window_client_itemdata = b0 as _;
-        let mut itema: *const window_client_itemdata = *a;
-        let mut itemb: *const window_client_itemdata = *b;
+        let a: *const *const window_client_itemdata = a0 as _;
+        let b: *const *const window_client_itemdata = b0 as _;
+        let itema: *const window_client_itemdata = *a;
+        let itemb: *const window_client_itemdata = *b;
         let ca = (*itema).c;
         let cb = (*itemb).c;
         let mut result: i32 = 0;
@@ -173,7 +173,7 @@ pub unsafe extern "C" fn window_client_build(
     filter: *const c_char,
 ) {
     unsafe {
-        let mut data: NonNull<window_client_modedata> = modedata.cast();
+        let data: NonNull<window_client_modedata> = modedata.cast();
         let data = data.as_ptr();
         let mut item: *mut window_client_itemdata = null_mut();
 
@@ -247,17 +247,17 @@ pub unsafe extern "C" fn window_client_draw(
     sy: u32,
 ) {
     unsafe {
-        let mut item: Option<NonNull<window_client_itemdata>> = itemdata.map(NonNull::cast);
-        let mut c = (*item.unwrap().as_ptr()).c;
-        let mut s = (*ctx).s;
+        let item: Option<NonNull<window_client_itemdata>> = itemdata.map(NonNull::cast);
+        let c = (*item.unwrap().as_ptr()).c;
+        let s = (*ctx).s;
 
-        let mut cx = (*s).cx;
-        let mut cy = (*s).cy;
+        let cx = (*s).cx;
+        let cy = (*s).cy;
 
         if (*c).session.is_null() || (*c).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
             return;
         }
-        let mut wp = (*(*(*(*c).session).curw).window).active;
+        let wp = (*(*(*(*c).session).curw).window).active;
 
         let mut lines = status_line_size(c);
         if lines >= sy {
@@ -331,10 +331,10 @@ pub unsafe extern "C" fn window_client_init(
     args: *mut args,
 ) -> *mut screen {
     unsafe {
-        let mut wp: *mut window_pane = (*wme.as_ptr()).wp;
+        let wp: *mut window_pane = (*wme.as_ptr()).wp;
         let mut s: *mut screen = null_mut();
 
-        let mut data: *mut window_client_modedata =
+        let data: *mut window_client_modedata =
             xcalloc1::<window_client_modedata>() as *mut window_client_modedata;
         (*wme.as_ptr()).data = data.cast();
         (*data).wp = wp;
@@ -406,7 +406,7 @@ pub unsafe extern "C" fn window_client_free(wme: NonNull<window_mode_entry>) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_client_resize(wme: NonNull<window_mode_entry>, sx: u32, sy: u32) {
     unsafe {
-        let mut data = (*wme.as_ptr()).data as *mut window_client_modedata;
+        let data = (*wme.as_ptr()).data as *mut window_client_modedata;
 
         mode_tree_resize((*data).data, sx, sy);
     }
@@ -459,9 +459,9 @@ pub unsafe extern "C" fn window_client_key(
     m: *mut mouse_event,
 ) {
     unsafe {
-        let mut wp = (*wme.as_ptr()).wp;
-        let mut data = (*wme.as_ptr()).data as *mut window_client_modedata;
-        let mut mtd: *mut mode_tree_data = (*data).data;
+        let wp = (*wme.as_ptr()).wp;
+        let data = (*wme.as_ptr()).data as *mut window_client_modedata;
+        let mtd: *mut mode_tree_data = (*data).data;
 
         let mut finished = mode_tree_key(mtd, c, &raw mut key, m, null_mut(), null_mut()) != 0;
         match key as u8 {

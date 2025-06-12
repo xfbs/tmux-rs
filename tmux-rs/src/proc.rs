@@ -77,7 +77,7 @@ pub struct tmuxpeer {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn proc_event_cb(_fd: i32, events: i16, arg: *mut c_void) {
     unsafe {
-        let mut peer = arg as *mut tmuxpeer;
+        let peer = arg as *mut tmuxpeer;
         let mut n = 0isize;
         let mut imsg: MaybeUninit<imsg> = MaybeUninit::<imsg>::uninit();
         let imsg = imsg.as_mut_ptr();
@@ -133,7 +133,7 @@ pub unsafe extern "C" fn proc_event_cb(_fd: i32, events: i16, arg: *mut c_void) 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn proc_signal_cb(signo: i32, events: i16, arg: *mut c_void) {
     unsafe {
-        let mut tp = arg as *mut tmuxproc;
+        let tp = arg as *mut tmuxproc;
 
         ((*tp).signalcb.unwrap())(signo);
     }
@@ -419,7 +419,7 @@ pub unsafe extern "C" fn proc_add_peer(
 ) -> *mut tmuxpeer {
     unsafe {
         let mut gid: gid_t = 0;
-        let mut peer = xcalloc1::<tmuxpeer>() as *mut tmuxpeer;
+        let peer = xcalloc1::<tmuxpeer>() as *mut tmuxpeer;
         (*peer).parent = tp;
 
         (*peer).dispatchcb = dispatchcb;

@@ -33,10 +33,10 @@ static mut cmd_list_panes_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_list_panes_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
-        let mut s = (*target).s;
-        let mut wl = (*target).wl;
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
+        let s = (*target).s;
+        let wl = (*target).wl;
 
         if args_has_(args, 'a') {
             cmd_list_panes_server(self_, item);
@@ -81,7 +81,7 @@ fn cmd_list_panes_window(
     type_: i32,
 ) {
     unsafe {
-        let mut args = cmd_get_args(self_);
+        let args = cmd_get_args(self_);
 
         let mut template = args_get_(args, 'F');
         if template.is_null() {
@@ -122,10 +122,10 @@ fn cmd_list_panes_window(
                 _ => (),
             }
         }
-        let mut filter = args_get_(args, 'f');
+        let filter = args_get_(args, 'f');
 
         for (n, wp) in tailq_foreach::<_, discr_entry>(&raw mut (*(*wl).window).panes).enumerate() {
-            let mut ft = format_create(
+            let ft = format_create(
                 cmdq_get_client(item),
                 item,
                 FORMAT_NONE,

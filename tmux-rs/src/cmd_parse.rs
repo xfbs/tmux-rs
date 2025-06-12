@@ -193,7 +193,7 @@ pub unsafe extern "C" fn cmd_parse_free_commands(cmds: *mut cmd_parse_commands) 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_parse_run_parser(cause: *mut *mut c_char) -> *mut cmd_parse_commands {
     unsafe {
-        let mut ps = &raw mut parse_state;
+        let ps = &raw mut parse_state;
 
         (*ps).commands = null_mut();
         tailq_init(&raw mut (*ps).stack);
@@ -221,7 +221,7 @@ pub unsafe extern "C" fn cmd_parse_do_file(
     pi: *mut cmd_parse_input,
     cause: *mut *mut c_char,
 ) -> *mut cmd_parse_commands {
-    let mut ps = &raw mut parse_state;
+    let ps = &raw mut parse_state;
     unsafe {
         libc::memset(ps.cast(), 0, size_of::<cmd_parse_state>());
         (*ps).input = pi;
@@ -238,7 +238,7 @@ pub unsafe extern "C" fn cmd_parse_do_buffer(
     cause: *mut *mut c_char,
 ) -> *mut cmd_parse_commands {
     unsafe {
-        let mut ps = &raw mut parse_state;
+        let ps = &raw mut parse_state;
 
         libc::memset(ps.cast(), 0, size_of::<cmd_parse_state>());
         (*ps).input = pi;
@@ -302,9 +302,9 @@ pub unsafe extern "C" fn cmd_parse_expand_alias(
             (*pr).cmdlist = cmd_list_new();
             return 1;
         }
-        let mut name = (*first).string;
+        let name = (*first).string;
 
-        let mut alias = cmd_get_alias(name);
+        let alias = cmd_get_alias(name);
         if alias.is_null() {
             return 0;
         }
@@ -362,7 +362,7 @@ pub unsafe extern "C" fn cmd_parse_build_command(
         // char				*cause;
         // struct args_value		*values = NULL;
         let mut count: u32 = 0;
-        let mut idx = 0u32;
+        let idx = 0u32;
         libc::memset(pr.cast(), 0, size_of::<cmd_parse_result>());
 
         if cmd_parse_expand_alias(cmd, pi, pr) != 0 {

@@ -16,6 +16,7 @@
 #![allow(non_camel_case_types)]
 #![allow(non_upper_case_globals)]
 #![allow(unused)] // TODO 5000
+#![warn(unused_mut)]
 #![warn(unused_parens)]
 //
 #![allow(clippy::upper_case_acronyms)]

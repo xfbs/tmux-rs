@@ -155,7 +155,7 @@ pub unsafe extern "C" fn environ_put(env: *mut environ, var: *const c_char, flag
         }
         value = value.add(1);
 
-        let mut name: *mut c_char = xstrdup(var).cast().as_ptr();
+        let name: *mut c_char = xstrdup(var).cast().as_ptr();
         *name.add(libc::strcspn(name, c"=".as_ptr())) = b'\0' as c_char;
 
         environ_set(env, name, flags, c"%s".as_ptr(), value);
@@ -166,7 +166,7 @@ pub unsafe extern "C" fn environ_put(env: *mut environ, var: *const c_char, flag
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_unset(env: *mut environ, name: *const c_char) {
     unsafe {
-        let mut envent = environ_find(env, name);
+        let envent = environ_find(env, name);
         if envent.is_null() {
             return;
         }

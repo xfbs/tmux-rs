@@ -35,14 +35,14 @@ static mut cmd_new_window_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut c = cmdq_get_client(item);
-        let mut current = cmdq_get_current(item);
-        let mut target = cmdq_get_target(item);
+        let args = cmd_get_args(self_);
+        let c = cmdq_get_client(item);
+        let current = cmdq_get_current(item);
+        let target = cmdq_get_target(item);
         let mut sc: spawn_context = zeroed();
-        let mut tc = cmdq_get_target_client(item);
-        let mut s = (*target).s;
-        let mut wl = (*target).wl;
+        let tc = cmdq_get_target_client(item);
+        let s = (*target).s;
+        let wl = (*target).wl;
         let mut new_wl: *mut winlink = null_mut();
         let mut idx = (*target).idx;
         // before;
@@ -56,7 +56,7 @@ unsafe extern "C" fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) 
          * If -S and -n are given and -t is not and a single window with this
          * name already exists, select it.
          */
-        let mut name = args_get(args, b'n');
+        let name = args_get(args, b'n');
         if args_has_(args, 'S') && !name.is_null() && (*target).idx == -1 {
             let expanded = format_single(item, name, c, s, null_mut(), null_mut());
             for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {

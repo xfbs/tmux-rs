@@ -63,20 +63,20 @@ static mut cmd_show_hooks_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_show_options_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
         let mut oo: *mut options = null_mut();
         let mut argument: *mut c_char = null_mut();
         let mut name: *mut c_char = null_mut();
         let mut cause: *mut c_char = null_mut();
 
-        let mut window = 0;
+        let window = 0;
         let mut idx = 0;
         let mut ambiguous = 0;
         let mut parent = 0;
         let mut o: *mut options_entry = null_mut();
 
-        let mut window = (cmd_get_entry(self_) == &raw mut cmd_show_window_options_entry) as i32;
+        let window = (cmd_get_entry(self_) == &raw mut cmd_show_window_options_entry) as i32;
 
         'fail: {
             'out: {
@@ -161,7 +161,7 @@ pub unsafe extern "C" fn cmd_show_options_print(
     parent: i32,
 ) {
     unsafe {
-        let mut args = cmd_get_args(self_);
+        let args = cmd_get_args(self_);
         let mut a: *mut options_array_item = null_mut();
         let mut name = options_name(o);
         let mut value = null_mut();
@@ -221,7 +221,7 @@ pub unsafe extern "C" fn cmd_show_options_all(
     oo: *mut options,
 ) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
+        let args = cmd_get_args(self_);
         let mut o: *mut options_entry = null_mut();
         let mut a: *mut options_array_item = null_mut();
         let mut parent = 0;

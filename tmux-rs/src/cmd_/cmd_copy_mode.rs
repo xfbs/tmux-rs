@@ -47,13 +47,13 @@ static mut cmd_clock_mode_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_copy_mode_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut event = cmdq_get_event(item);
-        let mut source = cmdq_get_source(item);
-        let mut target = cmdq_get_target(item);
-        let mut c = cmdq_get_client(item);
+        let args = cmd_get_args(self_);
+        let event = cmdq_get_event(item);
+        let source = cmdq_get_source(item);
+        let target = cmdq_get_target(item);
+        let c = cmdq_get_client(item);
         let mut s = null_mut();
-        let mut wp = (*target).wp;
+        let wp = (*target).wp;
 
         if args_has(args, b'q') != 0 {
             window_pane_reset_mode_all(wp);

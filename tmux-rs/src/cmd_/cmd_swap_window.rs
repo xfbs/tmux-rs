@@ -38,16 +38,16 @@ static mut cmd_swap_window_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_swap_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut source = cmdq_get_source(item);
-        let mut target = cmdq_get_target(item);
-        let mut src = (*source).s;
-        let mut dst = (*target).s;
-        let mut wl_src = (*source).wl;
-        let mut wl_dst = (*target).wl;
+        let args = cmd_get_args(self_);
+        let source = cmdq_get_source(item);
+        let target = cmdq_get_target(item);
+        let src = (*source).s;
+        let dst = (*target).s;
+        let wl_src = (*source).wl;
+        let wl_dst = (*target).wl;
 
-        let mut sg_src = session_group_contains(src);
-        let mut sg_dst = session_group_contains(dst);
+        let sg_src = session_group_contains(src);
+        let sg_dst = session_group_contains(dst);
 
         if src != dst && !sg_src.is_null() && !sg_dst.is_null() && sg_src == sg_dst {
             cmdq_error(item, c"can't move window, sessions are grouped".as_ptr());
@@ -58,9 +58,9 @@ unsafe extern "C" fn cmd_swap_window_exec(self_: *mut cmd, item: *mut cmdq_item)
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        let mut w_dst = (*wl_dst).window;
+        let w_dst = (*wl_dst).window;
         tailq_remove::<_, discr_wentry>(&raw mut (*w_dst).winlinks, wl_dst);
-        let mut w_src = (*wl_src).window;
+        let w_src = (*wl_src).window;
         tailq_remove::<_, discr_wentry>(&raw mut (*w_src).winlinks, wl_src);
 
         (*wl_dst).window = w_src;

@@ -938,7 +938,7 @@ pub unsafe extern "C" fn colour_byname(name: *const c_char) -> i32 {
             }
 
             let mut errstr: *const c_char = null();
-            let mut c = strtonum(name.add(4), 0, 100, &raw mut errstr);
+            let c = strtonum(name.add(4), 0, 100, &raw mut errstr);
             if !errstr.is_null() {
                 return -1;
             }

@@ -898,7 +898,7 @@ unsafe extern "C" fn input_table_compare(key: *const c_void, value: *const c_voi
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_timer_callback(_fd: i32, events: i16, arg: *mut c_void) {
     unsafe {
-        let mut ictx: *mut input_ctx = arg as *mut input_ctx;
+        let ictx: *mut input_ctx = arg as *mut input_ctx;
 
         log_debug!(
             "{}: {} expired",
@@ -913,7 +913,7 @@ unsafe extern "C" fn input_timer_callback(_fd: i32, events: i16, arg: *mut c_voi
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_start_timer(ictx: *mut input_ctx) {
     unsafe {
-        let mut tv: timeval = timeval {
+        let tv: timeval = timeval {
             tv_sec: 5,
             tv_usec: 0,
         };
@@ -942,8 +942,8 @@ unsafe extern "C" fn input_reset_cell(ictx: *mut input_ctx) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_save_state(ictx: *mut input_ctx) {
     unsafe {
-        let mut sctx: *mut screen_write_ctx = &raw mut (*ictx).ctx;
-        let mut s: *mut screen = (*sctx).s;
+        let sctx: *mut screen_write_ctx = &raw mut (*ictx).ctx;
+        let s: *mut screen = (*sctx).s;
 
         memcpy__(&raw mut (*ictx).old_cell, &raw const (*ictx).cell);
         (*ictx).old_cx = (*s).cx;
@@ -956,7 +956,7 @@ unsafe extern "C" fn input_save_state(ictx: *mut input_ctx) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_restore_state(ictx: *mut input_ctx) {
     unsafe {
-        let mut sctx: *mut screen_write_ctx = &raw mut (*ictx).ctx;
+        let sctx: *mut screen_write_ctx = &raw mut (*ictx).ctx;
 
         memcpy__(&raw mut (*ictx).cell, &raw const (*ictx).old_cell);
         if (*ictx).old_mode.intersects(mode_flag::MODE_ORIGIN) {
@@ -976,7 +976,7 @@ pub unsafe extern "C" fn input_init(
     palette: *mut colour_palette,
 ) -> *mut input_ctx {
     unsafe {
-        let mut ictx: *mut input_ctx = xcalloc1::<input_ctx>();
+        let ictx: *mut input_ctx = xcalloc1::<input_ctx>();
         (*ictx).wp = wp;
         (*ictx).event = bev;
         (*ictx).palette = palette;
@@ -1023,8 +1023,8 @@ pub unsafe extern "C" fn input_free(ictx: *mut input_ctx) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn input_reset(ictx: *mut input_ctx, clear: i32) {
     unsafe {
-        let mut sctx = &raw mut (*ictx).ctx;
-        let mut wp = (*ictx).wp;
+        let sctx = &raw mut (*ictx).ctx;
+        let wp = (*ictx).wp;
 
         input_reset_cell(ictx);
 
@@ -1069,7 +1069,7 @@ pub unsafe extern "C" fn input_set_state(ictx: *mut input_ctx, itr: *mut input_t
 /// Parse data.
 fn input_parse(ictx: *mut input_ctx, buf: *mut u8, len: usize) {
     unsafe {
-        let mut sctx = &raw mut (*ictx).ctx;
+        let sctx = &raw mut (*ictx).ctx;
         let mut state: *mut input_state = null_mut();
         let mut itr: *mut input_transition = null_mut();
         let mut off = 0usize;
@@ -1143,8 +1143,8 @@ pub unsafe extern "C" fn input_parse_pane(wp: *mut window_pane) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn input_parse_buffer(wp: *mut window_pane, buf: *mut u8, len: usize) {
     unsafe {
-        let mut ictx = (*wp).ictx;
-        let mut sctx = &raw mut (*ictx).ctx;
+        let ictx = (*wp).ictx;
+        let sctx = &raw mut (*ictx).ctx;
         if len == 0 {
             return;
         }
@@ -1182,7 +1182,7 @@ pub unsafe extern "C" fn input_parse_screen(
     len: usize,
 ) {
     unsafe {
-        let mut sctx: *mut screen_write_ctx = &raw mut (*ictx).ctx;
+        let sctx: *mut screen_write_ctx = &raw mut (*ictx).ctx;
 
         if len == 0 {
             return;
@@ -1291,7 +1291,7 @@ pub unsafe extern "C" fn input_get(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_reply(ictx: *mut input_ctx, fmt: *const c_char, mut args: ...) {
     unsafe {
-        let mut bev = (*ictx).event;
+        let bev = (*ictx).event;
         let mut reply: *mut c_char = null_mut();
 
         if bev.is_null() {
@@ -1345,7 +1345,7 @@ unsafe extern "C" fn input_ground(ictx: *mut input_ctx) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_print(ictx: *mut input_ctx) -> i32 {
     unsafe {
-        let mut sctx = &raw mut (*ictx).ctx;
+        let sctx = &raw mut (*ictx).ctx;
 
         (*ictx).utf8started = 0; /* can't be valid UTF-8 */
 
@@ -1431,9 +1431,9 @@ unsafe extern "C" fn input_input(ictx: *mut input_ctx) -> i32 {
 unsafe extern "C" fn input_c0_dispatch(ictx: *mut input_ctx) -> i32 {
     let func = "input_c0_dispatch";
     unsafe {
-        let mut sctx = &raw mut (*ictx).ctx;
-        let mut wp = (*ictx).wp;
-        let mut s = (*sctx).s;
+        let sctx = &raw mut (*ictx).ctx;
+        let wp = (*ictx).wp;
+        let s = (*sctx).s;
 
         (*ictx).utf8started = 0; /* can't be valid UTF-8 */
 
@@ -1492,8 +1492,8 @@ unsafe extern "C" fn input_c0_dispatch(ictx: *mut input_ctx) -> i32 {
 unsafe extern "C" fn input_esc_dispatch(ictx: *mut input_ctx) -> i32 {
     let __func__ = "input_esc_dispatch";
     unsafe {
-        let mut sctx = &raw mut (*ictx).ctx;
-        let mut s = (*sctx).s;
+        let sctx = &raw mut (*ictx).ctx;
+        let s = (*sctx).s;
 
         if (*ictx).flags.intersects(input_flags::INPUT_DISCARD) {
             return 0;
@@ -1568,11 +1568,11 @@ unsafe extern "C" fn input_esc_dispatch(ictx: *mut input_ctx) -> i32 {
 unsafe extern "C" fn input_csi_dispatch(ictx: *mut input_ctx) -> i32 {
     let __func__ = "input_csi_dispatch";
     unsafe {
-        let mut sctx = &raw mut (*ictx).ctx;
-        let mut s = (*sctx).s;
+        let sctx = &raw mut (*ictx).ctx;
+        let s = (*sctx).s;
         // int i, n, m, ek;
         let mut cx: u32 = 0;
-        let mut bg: u32 = (*ictx).cell.cell.bg as u32;
+        let bg: u32 = (*ictx).cell.cell.bg as u32;
 
         if (*ictx).flags.intersects(input_flags::INPUT_DISCARD) {
             return 0;
@@ -1590,7 +1590,7 @@ unsafe extern "C" fn input_csi_dispatch(ictx: *mut input_ctx) -> i32 {
             return 0;
         }
 
-        let mut entry: *mut input_table_entry = bsearch__(
+        let entry: *mut input_table_entry = bsearch__(
             ictx.cast(),
             (&raw const input_csi_table).cast(),
             input_csi_table.len(),
@@ -1868,7 +1868,7 @@ unsafe extern "C" fn input_csi_dispatch(ictx: *mut input_ctx) -> i32 {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_csi_dispatch_rm(ictx: *mut input_ctx) {
     unsafe {
-        let mut sctx = &raw mut (*ictx).ctx;
+        let sctx = &raw mut (*ictx).ctx;
 
         for i in 0..(*ictx).param_list_len {
             match input_get(ictx, i, 0, -1) {
@@ -1888,8 +1888,8 @@ unsafe extern "C" fn input_csi_dispatch_rm(ictx: *mut input_ctx) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_csi_dispatch_rm_private(ictx: *mut input_ctx) {
     unsafe {
-        let mut sctx = &raw mut (*ictx).ctx;
-        let mut gc = &raw mut (*ictx).cell.cell;
+        let sctx = &raw mut (*ictx).ctx;
+        let gc = &raw mut (*ictx).cell.cell;
 
         for i in 0..(*ictx).param_list_len {
             match input_get(ictx, i, 0, -1) {
@@ -1933,7 +1933,7 @@ unsafe extern "C" fn input_csi_dispatch_rm_private(ictx: *mut input_ctx) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_csi_dispatch_sm(ictx: *mut input_ctx) {
     unsafe {
-        let mut sctx = &raw mut (*ictx).ctx;
+        let sctx = &raw mut (*ictx).ctx;
 
         for i in 0..(*ictx).param_list_len {
             match input_get(ictx, i, 0, -1) {
@@ -1954,8 +1954,8 @@ unsafe extern "C" fn input_csi_dispatch_sm(ictx: *mut input_ctx) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_csi_dispatch_sm_private(ictx: *mut input_ctx) {
     unsafe {
-        let mut sctx = &raw mut (*ictx).ctx;
-        let mut gc = &raw mut (*ictx).cell.cell;
+        let sctx = &raw mut (*ictx).ctx;
+        let gc = &raw mut (*ictx).cell.cell;
 
         for i in 0..(*ictx).param_list_len {
             match input_get(ictx, i, 0, -1) {
@@ -2031,12 +2031,12 @@ unsafe extern "C" fn input_csi_dispatch_sm_graphics(ictx: *mut input_ctx) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_csi_dispatch_winops(ictx: *mut input_ctx) {
     unsafe {
-        let mut sctx = &(*ictx).ctx;
-        let mut s = sctx.s;
-        let mut wp = (*ictx).wp;
+        let sctx = &(*ictx).ctx;
+        let s = sctx.s;
+        let wp = (*ictx).wp;
         let mut w: *mut window = null_mut();
-        let mut x: u32 = screen_size_x(s);
-        let mut y: u32 = screen_size_y(s);
+        let x: u32 = screen_size_x(s);
+        let y: u32 = screen_size_y(s);
 
         if !wp.is_null() {
             w = (*wp).window;
@@ -2132,7 +2132,7 @@ unsafe extern "C" fn input_csi_dispatch_winops(ictx: *mut input_ctx) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_csi_dispatch_sgr_256_do(ictx: *mut input_ctx, fgbg: i32, c: i32) -> i32 {
     unsafe {
-        let mut gc = &raw mut (*ictx).cell.cell;
+        let gc = &raw mut (*ictx).cell.cell;
 
         if c == -1 || c > 255 {
             match fgbg {
@@ -2174,7 +2174,7 @@ unsafe extern "C" fn input_csi_dispatch_sgr_rgb_do(
     b: i32,
 ) -> i32 {
     unsafe {
-        let mut gc = &raw mut (*ictx).cell.cell;
+        let gc = &raw mut (*ictx).cell.cell;
 
         if r == -1 || r > 255 || g == -1 || g > 255 || b == -1 || b > 255 {
             return 0;
@@ -2209,8 +2209,8 @@ unsafe extern "C" fn input_csi_dispatch_sgr_rgb(ictx: *mut input_ctx, fgbg: i32,
 unsafe extern "C" fn input_csi_dispatch_sgr_colon(ictx: *mut input_ctx, mut i: u32) {
     let __func__ = "input_csi_dispatch_sgr_colon";
     unsafe {
-        let mut gc = &raw mut (*ictx).cell.cell;
-        let mut s = (*ictx).param_list[i as usize].union_.str;
+        let gc = &raw mut (*ictx).cell.cell;
+        let s = (*ictx).param_list[i as usize].union_.str;
         // *copy, *ptr, *out;
         // int p[8];
         // u_int n;
@@ -2221,7 +2221,7 @@ unsafe extern "C" fn input_csi_dispatch_sgr_colon(ictx: *mut input_ctx, mut i: u
 
         let mut errstr: *const c_char = null();
         let mut ptr = xstrdup(s).as_ptr();
-        let mut copy = ptr;
+        let copy = ptr;
         let mut out: *mut c_char = null_mut();
         while {
             out = strsep(&raw mut ptr, c":".as_ptr());
@@ -2314,7 +2314,7 @@ unsafe extern "C" fn input_csi_dispatch_sgr_colon(ictx: *mut input_ctx, mut i: u
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_csi_dispatch_sgr(ictx: *mut input_ctx) {
     unsafe {
-        let mut gc = &raw mut (*ictx).cell.cell;
+        let gc = &raw mut (*ictx).cell.cell;
 
         if (*ictx).param_list_len == 0 {
             memcpy__(gc, &raw const grid_default_cell);
@@ -2419,15 +2419,15 @@ unsafe extern "C" fn input_dcs_dispatch(ictx: *mut input_ctx) -> i32 {
     unsafe {
         let func = "input_dcs_dispatch";
 
-        let mut wp = (*ictx).wp;
-        let mut sctx = &raw mut (*ictx).ctx;
-        let mut buf = (*ictx).input_buf;
-        let mut len = (*ictx).input_len;
+        let wp = (*ictx).wp;
+        let sctx = &raw mut (*ictx).ctx;
+        let buf = (*ictx).input_buf;
+        let len = (*ictx).input_len;
 
         let prefix = c"tmux;";
         let prefixlen: u32 = 5;
 
-        let mut allow_passthrough: i64 = 0;
+        let allow_passthrough: i64 = 0;
 
         if wp.is_null() {
             return 0;
@@ -2485,8 +2485,8 @@ unsafe extern "C" fn input_enter_osc(ictx: *mut input_ctx) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_exit_osc(ictx: *mut input_ctx) {
     unsafe {
-        let mut sctx = &raw mut (*ictx).ctx;
-        let mut wp = (*ictx).wp;
+        let sctx = &raw mut (*ictx).ctx;
+        let wp = (*ictx).wp;
         let mut p = (*ictx).input_buf;
 
         if (*ictx).flags.intersects(input_flags::INPUT_DISCARD) {
@@ -2571,8 +2571,8 @@ unsafe extern "C" fn input_enter_apc(ictx: *mut input_ctx) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_exit_apc(ictx: *mut input_ctx) {
     unsafe {
-        let mut sctx = &raw mut (*ictx).ctx;
-        let mut wp = (*ictx).wp;
+        let sctx = &raw mut (*ictx).ctx;
+        let wp = (*ictx).wp;
 
         if (*ictx).flags.intersects(input_flags::INPUT_DISCARD) {
             return;
@@ -2603,7 +2603,7 @@ unsafe extern "C" fn input_enter_rename(ictx: *mut input_ctx) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_exit_rename(ictx: *mut input_ctx) {
     unsafe {
-        let mut wp = (*ictx).wp;
+        let wp = (*ictx).wp;
 
         if wp.is_null() {
             return;
@@ -2623,7 +2623,7 @@ unsafe extern "C" fn input_exit_rename(ictx: *mut input_ctx) {
         if !utf8_isvalid((*ictx).input_buf.cast()) {
             return;
         }
-        let mut w = (*wp).window;
+        let w = (*wp).window;
 
         if (*ictx).input_len == 0 {
             if let Some(o) =
@@ -2648,8 +2648,8 @@ unsafe extern "C" fn input_exit_rename(ictx: *mut input_ctx) {
 unsafe extern "C" fn input_top_bit_set(ictx: *mut input_ctx) -> i32 {
     let __func__ = "input_top_bit_set";
     unsafe {
-        let mut sctx = &raw mut (*ictx).ctx;
-        let mut ud = &raw mut (*ictx).utf8data;
+        let sctx = &raw mut (*ictx).ctx;
+        let ud = &raw mut (*ictx).utf8data;
 
         (*ictx).flags &= !input_flags::INPUT_LAST;
 
@@ -2730,7 +2730,7 @@ unsafe extern "C" fn input_osc_4(ictx: *mut input_ctx, p: *mut c_char) {
         let mut redraw = false;
 
         let mut s: *mut c_char = xstrdup(p).as_ptr();
-        let mut copy = s;
+        let copy = s;
         while !s.is_null() && *s != b'\0' as i8 {
             idx = strtol(s, &raw mut next, 10);
 
@@ -2778,9 +2778,9 @@ unsafe extern "C" fn input_osc_4(ictx: *mut input_ctx, p: *mut c_char) {
 unsafe extern "C" fn input_osc_8(ictx: *mut input_ctx, p: *mut c_char) {
     unsafe {
         let hl: *mut hyperlinks = (*(*ictx).ctx.s).hyperlinks;
-        let mut gc = &raw mut (*ictx).cell.cell;
+        let gc = &raw mut (*ictx).cell.cell;
 
-        let mut start: *const c_char = null();
+        let start: *const c_char = null();
         let mut end: *mut c_char = null_mut();
         let mut uri: *const c_char = null();
 
@@ -2836,7 +2836,7 @@ unsafe extern "C" fn input_osc_8(ictx: *mut input_ctx, p: *mut c_char) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_get_fg_client(wp: *mut window_pane) -> i32 {
     unsafe {
-        let mut w = (*wp).window;
+        let w = (*wp).window;
         for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if (*loop_).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
                 continue;
@@ -2858,7 +2858,7 @@ unsafe extern "C" fn input_get_fg_client(wp: *mut window_pane) -> i32 {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_get_bg_client(wp: *mut window_pane) -> i32 {
     unsafe {
-        let mut w = (*wp).window;
+        let w = (*wp).window;
 
         for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if (*loop_).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
@@ -2917,7 +2917,7 @@ unsafe extern "C" fn input_get_fg_control_client(wp: *mut window_pane) -> i32 {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_osc_10(ictx: *mut input_ctx, p: *mut c_char) {
     unsafe {
-        let mut wp = (*ictx).wp;
+        let wp = (*ictx).wp;
         let mut defaults: grid_cell = zeroed();
         let mut c = 0;
 
@@ -2957,7 +2957,7 @@ unsafe extern "C" fn input_osc_10(ictx: *mut input_ctx, p: *mut c_char) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_osc_110(ictx: *mut input_ctx, p: *const c_char) {
     unsafe {
-        let mut wp = (*ictx).wp;
+        let wp = (*ictx).wp;
 
         if *p != b'\0' as i8 {
             return;
@@ -2977,7 +2977,7 @@ unsafe extern "C" fn input_osc_110(ictx: *mut input_ctx, p: *const c_char) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_osc_11(ictx: *mut input_ctx, p: *const c_char) {
     unsafe {
-        let mut wp = (*ictx).wp;
+        let wp = (*ictx).wp;
         let mut defaults: grid_cell = zeroed();
 
         let mut c = 0;
@@ -3018,7 +3018,7 @@ unsafe extern "C" fn input_osc_11(ictx: *mut input_ctx, p: *const c_char) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_osc_111(ictx: *mut input_ctx, p: *mut c_char) {
     unsafe {
-        let mut wp = (*ictx).wp;
+        let wp = (*ictx).wp;
 
         if *p != b'\0' as i8 {
             return;
@@ -3037,7 +3037,7 @@ unsafe extern "C" fn input_osc_111(ictx: *mut input_ctx, p: *mut c_char) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn input_osc_12(ictx: *mut input_ctx, p: *const c_char) {
     unsafe {
-        let mut wp = (*ictx).wp;
+        let wp = (*ictx).wp;
         let mut c = 0;
 
         if libc::strcmp(p, c"?".as_ptr()) == 0 {
@@ -3097,7 +3097,7 @@ unsafe extern "C" fn input_osc_52(ictx: *mut input_ctx, p: *const c_char) {
     let __func__ = "input_osc_52";
 
     unsafe {
-        let mut wp = (*ictx).wp;
+        let wp = (*ictx).wp;
         let mut end: *const c_char = null();
         let mut buf: *const c_char = null_mut();
         let mut len: usize = 0;
@@ -3192,7 +3192,7 @@ unsafe extern "C" fn input_osc_104(ictx: *mut input_ctx, p: *const c_char) {
             return;
         }
 
-        let mut copy: *mut c_char = xstrdup(p).as_ptr();
+        let copy: *mut c_char = xstrdup(p).as_ptr();
         let mut s: *mut c_char = copy;
         while *s != b'\0' as i8 {
             let idx = strtol(s, &raw mut s, 10);

@@ -33,16 +33,16 @@ const LIST_SESSIONS_TEMPLATE: *const i8 = c"#{session_name}: #{session_windows} 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_list_sessions_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
+        let args = cmd_get_args(self_);
 
         let mut template = args_get(args, b'F');
         if template.is_null() {
             template = LIST_SESSIONS_TEMPLATE;
         }
-        let mut filter = args_get(args, b'f');
+        let filter = args_get(args, b'f');
 
         for (n, s) in rb_foreach(&raw mut sessions).enumerate() {
-            let mut ft = format_create(
+            let ft = format_create(
                 cmdq_get_client(item),
                 item,
                 FORMAT_NONE,

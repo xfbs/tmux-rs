@@ -782,7 +782,7 @@ unsafe extern "C" fn tty_keys_add(tty: *mut tty, s: *const c_char, key: key_code
     unsafe {
         let mut size: usize = 0;
 
-        let mut keystr = key_string_lookup_key(key, 1);
+        let keystr = key_string_lookup_key(key, 1);
         let tk = tty_keys_find(tty, s, strlen(s), &raw mut size);
         if tk.is_null() {
             log_debug!("new key {}: 0x{:x} ({})", _s(s), key, _s(keystr));
@@ -1061,8 +1061,8 @@ pub unsafe extern "C" fn tty_keys_next(tty: *mut tty) -> i32 {
         let mut event: *mut key_event = null_mut();
 
         // Get key buffer.
-        let mut buf = EVBUFFER_DATA((*tty).in_);
-        let mut len = EVBUFFER_LENGTH((*tty).in_);
+        let buf = EVBUFFER_DATA((*tty).in_);
+        let len = EVBUFFER_LENGTH((*tty).in_);
         if len == 0 {
             return 0;
         }
@@ -1374,7 +1374,7 @@ pub unsafe extern "C" fn tty_keys_next(tty: *mut tty) -> i32 {
 /// Key timer callback.
 #[unsafe(no_mangle)]
 unsafe extern "C" fn tty_keys_callback(_fd: i32, _events: i16, data: *mut c_void) {
-    let mut tty: *mut tty = data.cast();
+    let tty: *mut tty = data.cast();
 
     unsafe {
         if (*tty).flags.intersects(tty_flags::TTY_TIMER) {
@@ -1396,13 +1396,13 @@ unsafe extern "C" fn tty_keys_extended_key(
 ) -> i32 {
     unsafe {
         let c = (*tty).client;
-        let mut end: usize = 0;
+        let end: usize = 0;
         let mut number: u32 = 0;
         let mut modifiers: u32 = 0;
         const size_of_tmp: usize = 64;
         let mut tmp: [c_char; 64] = [0; 64];
         let mut nkey: key_code = 0;
-        let mut onlykey: key_code;
+        let onlykey: key_code;
         let mut ud: utf8_data = zeroed();
         let mut uc: utf8_char = zeroed();
 
@@ -1729,10 +1729,10 @@ unsafe extern "C" fn tty_keys_clipboard(
         let mut wp: *mut window_pane;
         let mut end: usize;
         let mut terminator: usize = 0;
-        let mut needed: usize;
-        let mut copy: *mut c_char;
-        let mut out: *mut c_char;
-        let mut outlen: i32;
+        let needed: usize;
+        let copy: *mut c_char;
+        let out: *mut c_char;
+        let outlen: i32;
         let mut i: u32 = 0;
 
         *size = 0;
@@ -1969,7 +1969,7 @@ unsafe extern "C" fn tty_keys_device_attributes2(
     unsafe {
         let c = (*tty).client;
         let features = &raw mut (*c).term_features;
-        let mut i: u32 = 0;
+        let i: u32 = 0;
         let mut n: u32 = 0;
         let mut tmp: [c_char; 128] = [0; 128];
         let mut endptr: *mut c_char = null_mut();
@@ -2168,7 +2168,7 @@ pub unsafe extern "C" fn tty_keys_colours(
     unsafe {
         let c = (*tty).client;
         let mut tmp: [c_char; 128] = [0; 128];
-        let mut n: i32;
+        let n: i32;
 
         *size = 0;
 

@@ -49,11 +49,11 @@ unsafe extern "C" fn cmd_display_panes_draw_pane(
     wp: *mut window_pane,
 ) {
     unsafe {
-        let mut c = (*ctx).c;
-        let mut tty = &raw mut (*c).tty;
-        let mut s = (*c).session;
-        let mut oo = (*s).options;
-        let mut w = (*wp).window;
+        let c = (*ctx).c;
+        let tty = &raw mut (*c).tty;
+        let s = (*c).session;
+        let oo = (*s).options;
+        let w = (*wp).window;
         // u_int			 pane, idx, px, py, i, j, xoff, yoff, sx, sy;
         // int			 colour, active_colour;
         // char			 buf[16], lbuf[16], rbuf[16], *ptr;
@@ -69,7 +69,7 @@ unsafe extern "C" fn cmd_display_panes_draw_pane(
                 return;
             }
 
-            let mut xoff;
+            let xoff;
             let mut yoff;
             let mut sx = 0;
             let mut sy = 0;
@@ -249,7 +249,7 @@ unsafe extern "C" fn cmd_display_panes_draw(
     ctx: *mut screen_redraw_ctx,
 ) {
     unsafe {
-        let mut w: *mut window = (*(*(*c).session).curw).window;
+        let w: *mut window = (*(*(*c).session).curw).window;
 
         log_debug!(
             "{}: {} @{}",
@@ -269,7 +269,7 @@ unsafe extern "C" fn cmd_display_panes_draw(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_display_panes_free(c: *mut client, data: *mut c_void) {
     unsafe {
-        let mut cdata = data as *mut cmd_display_panes_data;
+        let cdata = data as *mut cmd_display_panes_data;
 
         if !(*cdata).item.is_null() {
             cmdq_continue((*cdata).item);
@@ -286,12 +286,12 @@ unsafe extern "C" fn cmd_display_panes_key(
     event: *mut key_event,
 ) -> i32 {
     unsafe {
-        let mut cdata = data as *mut cmd_display_panes_data;
+        let cdata = data as *mut cmd_display_panes_data;
         //char				*expanded, *error;
-        let mut item = (*cdata).item;
+        let item = (*cdata).item;
         // *new_item;
         //struct cmd_list			*cmdlist;
-        let mut w = (*(*(*c).session).curw).window;
+        let w = (*(*(*c).session).curw).window;
         // struct window_pane		*wp;
         let mut index: u32 = 0;
         let mut key: key_code = 0;
@@ -339,12 +339,12 @@ unsafe extern "C" fn cmd_display_panes_key(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_display_panes_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut tc = cmdq_get_target_client(item);
-        let mut s = (*tc).session;
-        let mut delay: u32;
+        let args = cmd_get_args(self_);
+        let tc = cmdq_get_target_client(item);
+        let s = (*tc).session;
+        let delay: u32;
         let mut cause = null_mut();
-        let mut wait = !args_has(args, b'b');
+        let wait = !args_has(args, b'b');
 
         if (*tc).overlay_draw.is_some() {
             return cmd_retval::CMD_RETURN_NORMAL;
@@ -361,7 +361,7 @@ unsafe extern "C" fn cmd_display_panes_exec(self_: *mut cmd, item: *mut cmdq_ite
             delay = options_get_number((*s).options, c"display-panes-time".as_ptr()) as u32;
         }
 
-        let mut cdata = xcalloc_::<cmd_display_panes_data>(1).as_ptr();
+        let cdata = xcalloc_::<cmd_display_panes_data>(1).as_ptr();
         if wait != 0 {
             (*cdata).item = item;
         }

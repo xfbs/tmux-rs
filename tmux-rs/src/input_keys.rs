@@ -350,7 +350,7 @@ pub unsafe extern "C" fn input_key_vt10x(bev: *mut bufferevent, mut key: key_cod
     let __func__ = c"input_key_vt10x".as_ptr();
     unsafe {
         let mut ud: utf8_data = zeroed(); // TODO use uninit
-        let mut onlykey: key_code;
+        let onlykey: key_code;
 
         log_debug!("{}: key in {}", _s(__func__), key);
 
@@ -598,7 +598,7 @@ pub unsafe extern "C" fn input_key_get_mouse(
     rlen: *mut usize,
 ) -> i32 {
     static mut buf: [c_char; 40] = [0; 40];
-    let mut len = 0usize;
+    let len = 0usize;
 
     unsafe {
         let sizeof_buf = 40;
@@ -708,7 +708,7 @@ pub unsafe extern "C" fn input_key_get_mouse(
 pub unsafe extern "C" fn input_key_mouse(wp: *mut window_pane, m: *mut mouse_event) {
     let __func__ = c"input_key_mouse".as_ptr();
     unsafe {
-        let mut s = (*wp).screen;
+        let s = (*wp).screen;
         let mut x = 0;
         let mut y = 0;
         let mut buf = null();

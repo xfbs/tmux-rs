@@ -34,12 +34,12 @@ static mut cmd_rename_session_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_rename_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
-        let mut s = (*target).s;
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
+        let s = (*target).s;
 
-        let mut tmp = format_single_from_target(item, args_string(args, 0));
-        let mut newname = session_check_name(tmp);
+        let tmp = format_single_from_target(item, args_string(args, 0));
+        let newname = session_check_name(tmp);
         if newname.is_null() {
             cmdq_error(item, c"invalid session: %s".as_ptr(), tmp);
             free_(tmp);

@@ -33,7 +33,7 @@ static mut cmd_show_environment_entry: cmd_entry = cmd_entry {
 unsafe extern "C" fn cmd_show_environment_escape(envent: *mut environ_entry) -> *mut c_char {
     unsafe {
         let mut value = transmute_ptr((*envent).value);
-        let mut ret: *mut i8 = xmalloc(strlen(value) * 2 + 1).as_ptr().cast(); /* at most twice the size */
+        let ret: *mut i8 = xmalloc(strlen(value) * 2 + 1).as_ptr().cast(); /* at most twice the size */
         let mut out = ret;
 
         let mut c = 0;
@@ -63,7 +63,7 @@ unsafe extern "C" fn cmd_show_environment_print(
     envent: *mut environ_entry,
 ) {
     unsafe {
-        let mut args = cmd_get_args(self_);
+        let args = cmd_get_args(self_);
         let mut escaped = null_mut();
 
         if !args_has_(args, 'h') && ((*envent).flags & ENVIRON_HIDDEN != 0) {
@@ -104,10 +104,10 @@ unsafe extern "C" fn cmd_show_environment_exec(
     item: *mut cmdq_item,
 ) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut target = cmdq_get_target(item);
+        let args = cmd_get_args(self_);
+        let target = cmdq_get_target(item);
         let mut env: *mut environ = null_mut();
-        let mut name = args_string(args, 0);
+        let name = args_string(args, 0);
 
         let mut tflag = args_get_(args, 't');
         if !tflag.is_null() {

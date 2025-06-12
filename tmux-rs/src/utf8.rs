@@ -195,8 +195,8 @@ pub unsafe extern "C" fn utf8_put_item(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn utf8_table_cmp(vp1: *const c_void, vp2: *const c_void) -> i32 {
-    let mut wc1 = vp1 as *const wchar_t;
-    let mut wc2 = vp2 as *const wchar_t;
+    let wc1 = vp1 as *const wchar_t;
+    let wc2 = vp2 as *const wchar_t;
     unsafe { wchar_t::cmp(&*wc1, &*wc2) as i8 as i32 }
 }
 
@@ -495,8 +495,8 @@ pub unsafe extern "C" fn utf8_strvis(
 ) -> i32 {
     unsafe {
         let mut ud: utf8_data = zeroed();
-        let mut start = dst;
-        let mut end = src.add(len);
+        let start = dst;
+        let end = src.add(len);
         let mut more: utf8_state;
 
         while src < end {
@@ -572,7 +572,7 @@ pub unsafe extern "C" fn utf8_isvalid(mut s: *const c_char) -> boolint {
         let mut ud: utf8_data = zeroed();
         let mut more: utf8_state = zeroed();
 
-        let mut end = s.add(strlen(s));
+        let end = s.add(strlen(s));
         while s < end {
             more = utf8_open(&raw mut ud, *s as u8);
             if more == utf8_state::UTF8_MORE {
@@ -802,7 +802,7 @@ pub unsafe extern "C" fn utf8_cstrhas(s: *const c_char, ud: *const utf8_data) ->
     let mut found: i32 = 0;
 
     unsafe {
-        let mut copy = utf8_fromcstr(s);
+        let copy = utf8_fromcstr(s);
         let mut loop_ = copy;
         while (*loop_).size != 0 {
             if (*loop_).size != (*ud).size {

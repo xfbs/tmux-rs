@@ -536,7 +536,7 @@ pub unsafe extern "C" fn screen_hide_selection(s: *mut screen) {
 pub unsafe extern "C" fn screen_check_selection(s: *mut screen, px: u32, py: u32) -> c_int {
     unsafe {
         let sel = (*s).sel;
-        let mut xx: u32;
+        let xx: u32;
 
         if sel.is_null() || (*sel).hidden != 0 {
             return 0;
@@ -725,8 +725,8 @@ pub unsafe extern "C" fn screen_alternate_on(s: *mut screen, gc: *mut grid_cell,
         if !(*s).saved_grid.is_null() {
             return;
         }
-        let mut sx = screen_size_x(s);
-        let mut sy = screen_size_y(s);
+        let sx = screen_size_x(s);
+        let sy = screen_size_y(s);
 
         (*s).saved_grid = grid_create(sx, sy, 0);
         grid_duplicate_lines((*s).saved_grid, 0, (*s).grid, screen_hsize(s), sy);

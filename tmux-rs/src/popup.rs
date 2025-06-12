@@ -515,8 +515,8 @@ pub unsafe extern "C" fn popup_handle_drag(
     m: *mut mouse_event,
 ) {
     unsafe {
-        let mut px: u32;
-        let mut py: u32;
+        let px: u32;
+        let py: u32;
 
         if !MOUSE_DRAG((*m).b) {
             (*pd).dragging = dragging_state::Off;
@@ -588,7 +588,7 @@ pub unsafe extern "C" fn popup_key_cb(
 ) -> i32 {
     unsafe {
         let pd = data as *mut popup_data;
-        let mut m = &raw mut (*event).m;
+        let m = &raw mut (*event).m;
         let mut buf = null();
         let mut len = 0;
 

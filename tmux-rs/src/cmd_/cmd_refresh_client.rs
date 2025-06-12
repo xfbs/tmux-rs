@@ -38,10 +38,10 @@ pub unsafe extern "C" fn cmd_refresh_client_update_subscription(
 ) {
     unsafe {
         let mut split = null_mut::<c_char>();
-        let mut subid = -1;
+        let subid = -1;
         let mut copy = null_mut();
         'out: {
-            let mut name = xstrdup(value).as_ptr();
+            let name = xstrdup(value).as_ptr();
             copy = name;
             split = strchr(copy, ':' as i32);
             if split.is_null() {
@@ -85,9 +85,9 @@ pub unsafe extern "C" fn cmd_refresh_client_control_client_size(
 ) -> cmd_retval {
     let __func__ = "cmd_refresh_client_control_client_size";
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut tc = cmdq_get_target_client(item);
-        let mut size = args_get(args, b'C');
+        let args = cmd_get_args(self_);
+        let tc = cmdq_get_target_client(item);
+        let size = args_get(args, b'C');
         let mut w: u32 = 0;
         let mut x: u32 = 0;
         let mut y: u32 = 0;
@@ -166,7 +166,7 @@ pub unsafe extern "C" fn cmd_refresh_client_update_offset(tc: *mut client, value
         if *value != b'%' as c_char {
             return;
         }
-        let mut copy = xstrdup(value).as_ptr();
+        let copy = xstrdup(value).as_ptr();
         'out: {
             let mut split = strchr(copy, ':' as i32);
             if split.is_null() {
@@ -205,8 +205,8 @@ pub unsafe extern "C" fn cmd_refresh_client_clipboard(
     item: *mut cmdq_item,
 ) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut tc = cmdq_get_target_client(item);
+        let args = cmd_get_args(self_);
+        let tc = cmdq_get_target_client(item);
         let mut fs: cmd_find_state = zeroed();
         // const char *p;
         // u_int i;
@@ -245,13 +245,13 @@ pub unsafe extern "C" fn cmd_refresh_client_clipboard(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_refresh_report(tty: *mut tty, value: *const c_char) {
     unsafe {
-        let mut pane: u32 = 0;
+        let pane: u32 = 0;
         let mut size: usize = 0;
 
         if *value != b'%' as _ {
             return;
         }
-        let mut copy = xstrdup(value).as_ptr();
+        let copy = xstrdup(value).as_ptr();
         'out: {
             let mut split = strchr(copy, ':' as i32);
             if split.is_null() {
@@ -288,9 +288,9 @@ pub unsafe extern "C" fn cmd_refresh_client_exec(
     item: *mut cmdq_item,
 ) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut tc = cmdq_get_target_client(item);
-        let mut tty = &raw mut (*tc).tty;
+        let args = cmd_get_args(self_);
+        let tc = cmdq_get_target_client(item);
+        let tty = &raw mut (*tc).tty;
         let mut errstr: *const c_char = null();
         let mut adjust: u32 = 0;
 

@@ -33,14 +33,14 @@ static mut cmd_split_window_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut current = cmdq_get_current(item);
-        let mut target = cmdq_get_target(item);
-        let mut tc = cmdq_get_target_client(item);
-        let mut s = (*target).s;
-        let mut wl = (*target).wl;
-        let mut w = (*wl).window;
-        let mut wp = (*target).wp;
+        let args = cmd_get_args(self_);
+        let current = cmdq_get_current(item);
+        let target = cmdq_get_target(item);
+        let tc = cmdq_get_target_client(item);
+        let s = (*target).s;
+        let wl = (*target).wl;
+        let w = (*wl).window;
+        let wp = (*target).wp;
         //*new_wp;
         //enum layout_type type;
         //struct layout_cell *lc;
@@ -49,7 +49,7 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
         //char *cause = NULL, *cp;
         let mut cause = null_mut();
         //struct args_value *av;
-        let mut count = args_count(args);
+        let count = args_count(args);
         let mut curval = 0;
 
         let mut type_ = layout_type::LAYOUT_TOPBOTTOM;

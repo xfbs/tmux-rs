@@ -44,11 +44,11 @@ static mut cmd_delete_buffer_entry: cmd_entry = cmd_entry {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_set_buffer_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
-        let mut args = cmd_get_args(self_);
-        let mut tc = cmdq_get_target_client(item);
+        let args = cmd_get_args(self_);
+        let tc = cmdq_get_target_client(item);
         let mut pb;
         let mut cause = null_mut();
-        let mut olddata;
+        let olddata;
         let mut newsize: usize;
 
         let mut bufname = args_get_(args, 'b');

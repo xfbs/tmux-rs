@@ -492,7 +492,7 @@ pub unsafe extern "C" fn mode_tree_start(
         // const char *sort;
         // u_int i;
 
-        let mut mtd: *mut mode_tree_data = xcalloc1::<mode_tree_data>() as *mut mode_tree_data;
+        let mtd: *mut mode_tree_data = xcalloc1::<mode_tree_data>() as *mut mode_tree_data;
         (*mtd).references = 1;
 
         (*mtd).wp = wp;
@@ -545,7 +545,7 @@ pub unsafe extern "C" fn mode_tree_start(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_zoom(mtd: *mut mode_tree_data, args: *mut args) {
     unsafe {
-        let mut wp: *mut window_pane = (*mtd).wp;
+        let wp: *mut window_pane = (*mtd).wp;
 
         if args_has_(args, 'Z') {
             (*mtd).zoomed = ((*(*wp).window).flags & window_flag::ZOOMED).bits();
@@ -561,7 +561,7 @@ pub unsafe extern "C" fn mode_tree_zoom(mtd: *mut mode_tree_data, args: *mut arg
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_set_height(mtd: *mut mode_tree_data) {
     unsafe {
-        let mut s: *mut screen = &raw mut (*mtd).screen;
+        let s: *mut screen = &raw mut (*mtd).screen;
 
         if let Some(heightcb) = (*mtd).heightcb {
             let height = heightcb(mtd.cast(), screen_size_y(s));
@@ -586,7 +586,7 @@ pub unsafe extern "C" fn mode_tree_set_height(mtd: *mut mode_tree_data) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_build(mtd: *mut mode_tree_data) {
     unsafe {
-        let mut s = &raw mut (*mtd).screen;
+        let s = &raw mut (*mtd).screen;
 
         let mut tag = if !(*mtd).line_list.is_null() {
             (*(*(*mtd).line_list.add((*mtd).current as usize)).item).tag
@@ -647,7 +647,7 @@ pub unsafe extern "C" fn mode_tree_remove_ref(mtd: *mut mode_tree_data) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_free(mtd: *mut mode_tree_data) {
     unsafe {
-        let mut wp = (*mtd).wp;
+        let wp = (*mtd).wp;
 
         if (*mtd).zoomed == 0 {
             server_unzoom_window((*wp).window);
@@ -668,7 +668,7 @@ pub unsafe extern "C" fn mode_tree_free(mtd: *mut mode_tree_data) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_resize(mtd: *mut mode_tree_data, sx: u32, sy: u32) {
     unsafe {
-        let mut s: *mut screen = &raw mut (*mtd).screen;
+        let s: *mut screen = &raw mut (*mtd).screen;
 
         screen_resize(s, sx, sy, 0);
 
@@ -743,7 +743,7 @@ pub unsafe extern "C" fn mode_tree_no_tag(mti: *mut mode_tree_item) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_remove(mtd: *mut mode_tree_data, mti: *mut mode_tree_item) {
     unsafe {
-        let mut parent: *mut mode_tree_item = (*mti).parent;
+        let parent: *mut mode_tree_item = (*mti).parent;
 
         if !parent.is_null() {
             tailq_remove(&raw mut (*parent).children, mti);
@@ -756,11 +756,11 @@ pub unsafe extern "C" fn mode_tree_remove(mtd: *mut mode_tree_data, mti: *mut mo
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_draw(mtd: *mut mode_tree_data) {
     unsafe {
-        let mut wp = (*mtd).wp;
-        let mut s = &raw mut (*mtd).screen;
+        let wp = (*mtd).wp;
+        let s = &raw mut (*mtd).screen;
         let mut line: *mut mode_tree_line = null_mut();
         let mut mti: *mut mode_tree_item = null_mut();
-        let mut oo = (*(*wp).window).options;
+        let oo = (*(*wp).window).options;
         let mut ctx: screen_write_ctx = zeroed();
 
         let mut gc0: grid_cell = zeroed();
@@ -828,7 +828,7 @@ pub unsafe extern "C" fn mode_tree_draw(mtd: *mut mode_tree_data) {
                     key = xstrdup_(c"").as_ptr();
                 }
 
-                let mut symbol = if (*line).flat != 0 {
+                let symbol = if (*line).flat != 0 {
                     c"".as_ptr()
                 } else if tailq_empty(&raw const (*mti).children) {
                     c"  ".as_ptr()
@@ -1088,7 +1088,7 @@ pub unsafe extern "C" fn mode_tree_search_forward(mtd: *mut mode_tree_data) -> *
             return null_mut();
         }
 
-        let mut last = (*(*mtd).line_list.add((*mtd).current as usize)).item;
+        let last = (*(*mtd).line_list.add((*mtd).current as usize)).item;
         let mut mti = last;
         loop {
             if !tailq_empty(&raw mut (*mti).children) {
@@ -1173,7 +1173,7 @@ pub unsafe extern "C" fn mode_tree_search_callback(
     _done: i32,
 ) -> i32 {
     unsafe {
-        let mut mtd: *mut mode_tree_data = data.cast().as_ptr();
+        let mtd: *mut mode_tree_data = data.cast().as_ptr();
 
         if (*mtd).dead != 0 {
             return 0;
@@ -1206,7 +1206,7 @@ pub unsafe extern "C" fn mode_tree_filter_callback(
     _done: i32,
 ) -> i32 {
     unsafe {
-        let mut mtd: *mut mode_tree_data = data.cast().as_ptr();
+        let mtd: *mut mode_tree_data = data.cast().as_ptr();
 
         if (*mtd).dead != 0 {
             return 0;
@@ -1244,8 +1244,8 @@ pub unsafe extern "C" fn mode_tree_menu_callback(
     data: *mut c_void,
 ) {
     unsafe {
-        let mut mtm: *mut mode_tree_menu = data.cast();
-        let mut mtd: *mut mode_tree_data = (*mtm).data.cast();
+        let mtm: *mut mode_tree_menu = data.cast();
+        let mtd: *mut mode_tree_data = (*mtm).data.cast();
 
         'out: {
             if (*mtd).dead != 0 || key == KEYC_NONE {
@@ -1280,12 +1280,12 @@ pub unsafe extern "C" fn mode_tree_display_menu(
         // char *title;
         // u_int line;
 
-        let mut line = if (*mtd).offset + y > (*mtd).line_size - 1 {
+        let line = if (*mtd).offset + y > (*mtd).line_size - 1 {
             (*mtd).current
         } else {
             (*mtd).offset + y
         };
-        let mut mti = (*(*mtd).line_list.add(line as usize)).item;
+        let mti = (*(*mtd).line_list.add(line as usize)).item;
 
         let mut title = null_mut();
         let mut items = null();
@@ -1347,7 +1347,7 @@ pub unsafe extern "C" fn mode_tree_key(
         // mode_tree_item *current, *parent, *mti;
         let mut parent: *mut mode_tree_item = null_mut();
         //
-        let mut i: u32 = 0;
+        let i: u32 = 0;
         let mut x: u32 = 0;
         let mut y: u32 = 0;
         let mut choice = 0i32;
@@ -1396,7 +1396,7 @@ pub unsafe extern "C" fn mode_tree_key(
             return 0;
         }
 
-        let mut line = (*mtd).line_list.add((*mtd).current as usize);
+        let line = (*mtd).line_list.add((*mtd).current as usize);
         let mut current = (*line).item;
 
         choice = -1;

@@ -599,7 +599,7 @@ unsafe extern "C" fn server_child_stopped(pid: pid_t, status: i32) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_add_message(fmt: *const c_char, mut args: ...) {
+pub unsafe extern "C" fn server_add_message(fmt: *const c_char, args: ...) {
     unsafe {
         let mut s: *mut c_char = null_mut();
 

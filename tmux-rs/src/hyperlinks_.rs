@@ -94,7 +94,7 @@ RB_GENERATE!(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn hyperlinks_remove(hlu: *mut hyperlinks_uri) {
     unsafe {
-        let mut hl = (*hlu).tree;
+        let hl = (*hlu).tree;
 
         tailq_remove::<_, _>(&raw mut global_hyperlinks, hlu);
         global_hyperlinks_count -= 1;
@@ -136,7 +136,7 @@ pub unsafe extern "C" fn hyperlinks_put(
 
         if *internal_id_in != b'\0' as _ {
             let mut find = MaybeUninit::<hyperlinks_uri>::uninit();
-            let mut find = find.as_mut_ptr();
+            let find = find.as_mut_ptr();
             (*find).uri = uri;
             (*find).internal_id = internal_id;
 
@@ -184,7 +184,7 @@ pub unsafe extern "C" fn hyperlinks_get(
 ) -> boolint {
     unsafe {
         let mut find = MaybeUninit::<hyperlinks_uri>::uninit();
-        let mut find = find.as_mut_ptr();
+        let find = find.as_mut_ptr();
         (*find).inner = inner;
 
         let hlu = rb_find::<_, discr_by_inner_entry>(&raw mut (*hl).by_inner, find);
@@ -205,7 +205,7 @@ pub unsafe extern "C" fn hyperlinks_get(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn hyperlinks_init() -> *mut hyperlinks {
     unsafe {
-        let mut hl = xcalloc_::<hyperlinks>(1).as_ptr();
+        let hl = xcalloc_::<hyperlinks>(1).as_ptr();
         (*hl).next_inner = 1;
         rb_init(&raw mut (*hl).by_uri);
         rb_init(&raw mut (*hl).by_inner);

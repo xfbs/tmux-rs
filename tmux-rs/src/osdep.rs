@@ -27,7 +27,7 @@ unsafe extern "C" {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn osdep_get_name(fd: i32, tty: *const c_char) -> *mut c_char {
     unsafe {
-        let mut pgrp = tcgetpgrp(fd);
+        let pgrp = tcgetpgrp(fd);
         if pgrp == -1 {
             return null_mut();
         }
@@ -70,9 +70,9 @@ pub unsafe extern "C" fn osdep_get_cwd(fd: i32) -> *const c_char {
     const MAXPATHLEN: usize = libc::PATH_MAX as usize;
     static mut target_buffer: [c_char; MAXPATHLEN + 1] = [0; MAXPATHLEN + 1];
     unsafe {
-        let mut target = &raw mut target_buffer as *mut c_char;
+        let target = &raw mut target_buffer as *mut c_char;
 
-        let mut pgrp = tcgetpgrp(fd);
+        let pgrp = tcgetpgrp(fd);
         if pgrp == -1 {
             return null_mut();
         }
