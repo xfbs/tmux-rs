@@ -29,11 +29,6 @@ fn main() {
     // - tparm
 
     println!("cargo::rustc-link-lib=event_core");
-    println!("cargo::rustc-link-lib=resolv");
-    // symbols from libresolv
-    // - __b64_ntop
-    // - __b64_pton
-
     // -ltmux_rs -ltinfo  -levent_core  -lm  -lresolv
     //
 
