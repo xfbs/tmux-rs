@@ -1301,7 +1301,7 @@ pub static mut options_table: [options_table_entry; 191] = [
         type_: options_table_type::OPTIONS_TABLE_CHOICE,
         scope: OPTIONS_TABLE_WINDOW,
         choices: &raw const options_table_window_size_list as *const *const c_char,
-        default_num: WINDOW_SIZE_LATEST as i64,
+        default_num: window_size_option::WINDOW_SIZE_LATEST as i64,
         text: c"How window size is calculated. 'latest' uses the size of the most recently used client, 'largest' the largest client, 'smallest' the smallest client and 'manual' a size set by the 'resize-window' command.".as_ptr(),
         ..unsafe { zeroed() }
     },

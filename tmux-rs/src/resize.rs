@@ -128,13 +128,19 @@ pub unsafe extern "C" fn clients_with_window(w: *mut window) -> u32 {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn clients_calculate_size(
-    type_: i32,
+    type_: window_size_option,
     current: i32,
     c: *mut client,
     s: *mut session,
     w: *mut window,
     skip_client: Option<
-        unsafe extern "C" fn(*mut client, i32, i32, *mut session, *mut window) -> i32,
+        unsafe extern "C" fn(
+            *mut client,
+            window_size_option,
+            i32,
+            *mut session,
+            *mut window,
+        ) -> i32,
     >,
     sx: *mut u32,
     sy: *mut u32,
@@ -153,10 +159,10 @@ pub unsafe extern "C" fn clients_calculate_size(
              * Start comparing with 0 for largest and UINT_MAX for smallest or
              * latest.
              */
-            if (type_ == WINDOW_SIZE_LARGEST) {
+            if (type_ == window_size_option::WINDOW_SIZE_LARGEST) {
                 *sx = 0;
                 *sy = 0;
-            } else if (type_ == WINDOW_SIZE_MANUAL) {
+            } else if (type_ == window_size_option::WINDOW_SIZE_MANUAL) {
                 *sx = (*w).manual_sx;
                 *sy = (*w).manual_sy;
                 log_debug!("{}: manual size {}x{}", __func__, *sx, *sy);
@@ -171,12 +177,12 @@ pub unsafe extern "C" fn clients_calculate_size(
              * For latest, count the number of clients with this window. We only
              * care if there is more than one.
              */
-            if type_ == WINDOW_SIZE_LATEST && !w.is_null() {
+            if type_ == window_size_option::WINDOW_SIZE_LATEST && !w.is_null() {
                 n = clients_with_window(w);
             }
 
             /* Skip setting the size if manual */
-            if type_ == WINDOW_SIZE_MANUAL {
+            if type_ == window_size_option::WINDOW_SIZE_MANUAL {
                 break 'skip;
             }
 
@@ -196,7 +202,10 @@ pub unsafe extern "C" fn clients_calculate_size(
                  * latest client; otherwise let the only client be chosen as
                  * for smallest.
                  */
-                if (type_ == WINDOW_SIZE_LATEST && n > 1 && loop_ != (*w).latest.cast()) {
+                if (type_ == window_size_option::WINDOW_SIZE_LATEST
+                    && n > 1
+                    && loop_ != (*w).latest.cast())
+                {
                     log_debug!("{}: {} is not latest", __func__, _s((*loop_).name));
                     continue;
                 }
@@ -224,7 +233,7 @@ pub unsafe extern "C" fn clients_calculate_size(
                  * If it is larger or smaller than the best so far, update the
                  * new size.
                  */
-                if (type_ == WINDOW_SIZE_LARGEST) {
+                if (type_ == window_size_option::WINDOW_SIZE_LARGEST) {
                     if cx > *sx {
                         *sx = cx;
                     }
@@ -306,15 +315,15 @@ pub unsafe extern "C" fn clients_calculate_size(
         }
 
         /* Return whether a suitable size was found. */
-        if (type_ == WINDOW_SIZE_MANUAL) {
+        if (type_ == window_size_option::WINDOW_SIZE_MANUAL) {
             log_debug!("{}: type_ is manual", __func__);
             return 1;
         }
-        if (type_ == WINDOW_SIZE_LARGEST) {
+        if (type_ == window_size_option::WINDOW_SIZE_LARGEST) {
             log_debug!("{}: type_ is largest", __func__);
             return (*sx != 0 && *sy != 0) as i32;
         }
-        if (type_ == WINDOW_SIZE_LATEST) {
+        if (type_ == window_size_option::WINDOW_SIZE_LATEST) {
             log_debug!("{}: type_ is latest", __func__);
         } else {
             log_debug!("{}: type_ is smallest", __func__);
@@ -326,7 +335,7 @@ pub unsafe extern "C" fn clients_calculate_size(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn default_window_size_skip_client(
     loop_: *mut client,
-    type_: i32,
+    type_: window_size_option,
     current: i32,
     s: *mut session,
     w: *mut window,
@@ -337,7 +346,7 @@ pub unsafe extern "C" fn default_window_size_skip_client(
          * include clients where the session contains the window or where the
          * session is the given session.
          */
-        if type_ == WINDOW_SIZE_LATEST {
+        if type_ == window_size_option::WINDOW_SIZE_LATEST {
             return 0;
         }
         if !w.is_null() && session_has((*loop_).session, w) == 0 {
@@ -350,8 +359,7 @@ pub unsafe extern "C" fn default_window_size_skip_client(
     0
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn default_window_size(
+pub unsafe fn default_window_size(
     mut c: *mut client,
     s: *mut session,
     w: *mut window,
@@ -359,7 +367,7 @@ pub unsafe extern "C" fn default_window_size(
     sy: *mut u32,
     xpixel: *mut u32,
     ypixel: *mut u32,
-    mut type_: i32,
+    type_: Option<window_size_option>,
 ) {
     let __func__ = "default_window_size";
     unsafe {
@@ -367,15 +375,22 @@ pub unsafe extern "C" fn default_window_size(
             // const char *value;
 
             /* Get type_ if not provided. */
-            if type_ == -1 {
-                type_ = options_get_number(global_w_options, c"window-size".as_ptr()) as i32;
-            }
+            let type_ = type_.unwrap_or_else(|| {
+                window_size_option::try_from(options_get_number(
+                    global_w_options,
+                    c"window-size".as_ptr(),
+                ) as i32)
+                .unwrap()
+            });
 
             /*
              * Latest clients can use the given client if suitable. If there is no
              * client and no window, use the default size as for manual type_.
              */
-            if (type_ == WINDOW_SIZE_LATEST && !c.is_null() && ignore_client_size(c) == 0) {
+            if (type_ == window_size_option::WINDOW_SIZE_LATEST
+                && !c.is_null()
+                && ignore_client_size(c) == 0)
+            {
                 *sx = (*c).tty.sx;
                 *sy = (*c).tty.sy - status_line_size(c);
                 *xpixel = (*c).tty.xpixel;
@@ -428,7 +443,7 @@ pub unsafe extern "C" fn default_window_size(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn recalculate_size_skip_client(
     loop_: *mut client,
-    type_: i32,
+    type_: window_size_option,
     current: i32,
     s: *mut session,
     w: *mut window,
@@ -476,7 +491,11 @@ pub unsafe extern "C" fn recalculate_size(w: *mut window, now: i32) {
          * aggressive-resize option (do not resize based on clients where the
          * window is not the current window).
          */
-        let type_ = options_get_number((*w).options, c"window-size".as_ptr()) as i32;
+        let type_ = window_size_option::try_from(options_get_number(
+            (*w).options,
+            c"window-size".as_ptr(),
+        ) as i32)
+        .unwrap();
         let current = options_get_number((*w).options, c"aggressive-resize".as_ptr()) as i32;
 
         /* Look for a suitable client and get the new size. */
@@ -523,7 +542,7 @@ pub unsafe extern "C" fn recalculate_size(w: *mut window, now: i32) {
          * later.
          */
         log_debug!("{}: @{} new size {}x{}", __func__, (*w).id, sx, sy);
-        if (now != 0 || type_ == WINDOW_SIZE_MANUAL) {
+        if (now != 0 || type_ == window_size_option::WINDOW_SIZE_MANUAL) {
             resize_window(w, sx, sy, xpixel as i32, ypixel as i32);
         } else {
             (*w).new_sx = sx;

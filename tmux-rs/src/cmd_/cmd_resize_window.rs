@@ -110,7 +110,7 @@ unsafe extern "C" fn cmd_resize_window_exec(self_: *mut cmd, item: *mut cmdq_ite
                 &raw mut sy,
                 &raw mut xpixel,
                 &raw mut ypixel,
-                WINDOW_SIZE_LARGEST,
+                Some(window_size_option::WINDOW_SIZE_LARGEST),
             );
         } else if args_has(args, b'a') != 0 {
             default_window_size(
@@ -121,14 +121,14 @@ unsafe extern "C" fn cmd_resize_window_exec(self_: *mut cmd, item: *mut cmdq_ite
                 &raw mut sy,
                 &raw mut xpixel,
                 &raw mut ypixel,
-                WINDOW_SIZE_SMALLEST,
+                Some(window_size_option::WINDOW_SIZE_SMALLEST),
             );
         }
 
         options_set_number(
             (*w).options,
             c"window-size".as_ptr(),
-            WINDOW_SIZE_MANUAL as i64,
+            window_size_option::WINDOW_SIZE_MANUAL as i64,
         );
         (*w).manual_sx = sx;
         (*w).manual_sy = sy;

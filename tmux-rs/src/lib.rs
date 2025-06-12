@@ -1518,11 +1518,15 @@ pub type winlinks = rb_head<winlink>;
 pub type winlink_stack = tailq_head<winlink>;
 // crate::compat::impl_rb_tree_protos!(winlink_stack, winlink);
 
-// Window size option.
-pub const WINDOW_SIZE_LARGEST: i32 = 0;
-pub const WINDOW_SIZE_SMALLEST: i32 = 1;
-pub const WINDOW_SIZE_MANUAL: i32 = 2;
-pub const WINDOW_SIZE_LATEST: i32 = 3;
+/// Window size option.
+#[repr(i32)]
+#[derive(Copy, Clone, Eq, PartialEq, num_enum::TryFromPrimitive)]
+pub enum window_size_option {
+    WINDOW_SIZE_LARGEST,
+    WINDOW_SIZE_SMALLEST,
+    WINDOW_SIZE_MANUAL,
+    WINDOW_SIZE_LATEST,
+}
 
 /// Pane border status option.
 #[repr(i32)]

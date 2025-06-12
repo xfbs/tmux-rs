@@ -1796,7 +1796,10 @@ pub unsafe extern "C" fn server_client_update_latest(c: *mut client) {
         }
         (*w).latest = c.cast();
 
-        if options_get_number((*w).options, c"window-size".as_ptr()) == WINDOW_SIZE_LATEST as i64 {
+        if window_size_option::try_from(
+            options_get_number((*w).options, c"window-size".as_ptr()) as i32
+        ) == Ok(window_size_option::WINDOW_SIZE_LATEST)
+        {
             recalculate_size(w, 0);
         }
 

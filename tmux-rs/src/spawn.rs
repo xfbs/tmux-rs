@@ -195,7 +195,7 @@ pub unsafe extern "C" fn spawn_window(
                 &raw mut sy,
                 &raw mut xpixel,
                 &raw mut ypixel,
-                -1,
+                None,
             );
             w = window_create(sx, sy, xpixel, ypixel);
             if w.is_null() {
