@@ -712,11 +712,19 @@ impl<'input> Lexer<'input> {
         }
     }
 }
+
 pub enum Tok {
-    Space,
-    Tab,
-    Linefeed,
+    Error,
+    Hidden,
+    If,
+    Else,
+    Elif,
+    Endif,
+    Format(*const c_char),
+    Token(*const c_char),
+    Equals(*const c_char),
 }
+
 pub enum LexicalError {
     // Not possible
 }
@@ -727,9 +735,9 @@ impl<'input> Iterator for Lexer<'input> {
     fn next(&mut self) -> Option<Result<(Loc, Tok, Loc), LexicalError>> {
         loop {
             match self.chars.next() {
-                Some((i, ' ')) => return Some(Ok((i, Tok::Space, i + 1))),
-                Some((i, '\t')) => return Some(Ok((i, Tok::Tab, i + 1))),
-                Some((i, '\n')) => return Some(Ok((i, Tok::Linefeed, i + 1))),
+                Some((i, ' ')) => return todo!(),
+                Some((i, '\t')) => return todo!(),
+                Some((i, '\n')) => return todo!(),
 
                 None => return None, // End of file
                 _ => continue,       // Comment; skip this character
