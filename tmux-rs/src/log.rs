@@ -13,7 +13,7 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use ::core::{
-    ffi::{CStr, VaList, c_char, c_int, c_long, c_longlong, c_void},
+    ffi::{CStr, VaList, c_char, c_int, c_void},
     ptr::null_mut,
 };
 use ::std::{
@@ -24,11 +24,10 @@ use ::std::{
 };
 use std::{io::BufWriter, sync::Mutex};
 
-use ::libc::{free, gettimeofday, setvbuf, snprintf, strerror};
+use ::libc::{free, snprintf, strerror};
 
 use crate::compat::{VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB, stravis};
 
-use crate::xmalloc::xasprintf;
 use crate::{_s, event_::event_set_log_callback};
 use crate::{libc_::errno, vasprintf};
 

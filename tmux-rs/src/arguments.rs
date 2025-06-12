@@ -14,7 +14,7 @@
 use libc::{strchr, strcspn};
 
 use crate::{
-    xmalloc::{Zeroable, xrecallocarray, xrecallocarray_},
+    xmalloc::{Zeroable, xrecallocarray},
     *,
 };
 

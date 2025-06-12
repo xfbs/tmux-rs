@@ -15,9 +15,9 @@
 use crate::*;
 
 use libc::{
-    __errno_location, AF_UNIX, EAGAIN, PF_UNSPEC, SA_RESTART, SIG_DFL, SIG_IGN, SIGCHLD, SIGCONT,
-    SIGHUP, SIGINT, SIGPIPE, SIGQUIT, SIGTERM, SIGTSTP, SIGTTIN, SIGTTOU, SIGUSR1, SIGUSR2,
-    SIGWINCH, close, daemon, gid_t, sigaction, sigemptyset, socketpair, uname, utsname,
+    AF_UNIX, EAGAIN, PF_UNSPEC, SA_RESTART, SIG_DFL, SIG_IGN, SIGCHLD, SIGCONT, SIGHUP, SIGINT,
+    SIGPIPE, SIGQUIT, SIGTERM, SIGTSTP, SIGTTIN, SIGTTOU, SIGUSR1, SIGUSR2, SIGWINCH, close,
+    daemon, gid_t, sigaction, sigemptyset, socketpair, uname, utsname,
 };
 
 use crate::compat::{
@@ -143,8 +143,7 @@ pub unsafe extern "C" fn proc_signal_cb(signo: i32, events: i16, arg: *mut c_voi
 pub unsafe extern "C" fn peer_check_version(peer: *mut tmuxpeer, imsg: *mut imsg) -> i32 {
     unsafe {
         let version = (*imsg).hdr.peerid & 0xff;
-        if (*imsg).hdr.type_ != msgtype::MSG_VERSION as u32 && version != PROTOCOL_VERSION as u32
-        {
+        if (*imsg).hdr.type_ != msgtype::MSG_VERSION as u32 && version != PROTOCOL_VERSION as u32 {
             log_debug!("peer {:p} bad version {}", peer, version);
 
             proc_send(peer, msgtype::MSG_VERSION, -1, null_mut(), 0);

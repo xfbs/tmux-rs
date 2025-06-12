@@ -27,7 +27,7 @@ use libc::{
 
 use crate::compat::{
     WAIT_ANY, closefrom,
-    imsg::{IMSG_HEADER_SIZE, MAX_IMSGSIZE, imsg, imsg_hdr},
+    imsg::{IMSG_HEADER_SIZE, MAX_IMSGSIZE, imsg},
     strlcpy,
     tree::rb_initializer,
 };

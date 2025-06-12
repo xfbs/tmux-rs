@@ -12,10 +12,7 @@
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use ::core::{
-    ffi::{c_char, c_uint},
-    ptr::null_mut,
-};
+use ::core::{ffi::c_char, ptr::null_mut};
 
 use crate::{
     GRID_HISTORY, grid, grid_cell, grid_clear, grid_collect_history, grid_get_cell, grid_get_line,

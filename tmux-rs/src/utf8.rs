@@ -14,7 +14,7 @@
 
 use crate::*;
 
-use libc::{bsearch, isalpha, memcpy, memset};
+use libc::{isalpha, memcpy, memset};
 
 use crate::compat::{
     tree::{rb_find, rb_initializer, rb_insert},

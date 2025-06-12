@@ -17,7 +17,7 @@ use libc::{
     AF_UNIX, ECHILD, ENAMETOOLONG, S_IRGRP, S_IROTH, S_IRUSR, S_IRWXG, S_IRWXO, S_IXGRP, S_IXOTH,
     S_IXUSR, SIG_BLOCK, SIG_SETMASK, SIGCONT, SIGTTIN, SIGTTOU, SOCK_STREAM, WIFEXITED,
     WIFSIGNALED, WIFSTOPPED, WNOHANG, WSTOPSIG, WUNTRACED, accept, bind, chmod, close, fprintf,
-    free, gettimeofday, kill, killpg, listen, malloc_trim, sigfillset, sigprocmask, sigset_t,
+    gettimeofday, kill, killpg, listen, malloc_trim, sigfillset, sigprocmask, sigset_t,
     sockaddr_storage, sockaddr_un, socket, socklen_t, stat, strerror, strsignal, umask, unlink,
     waitpid,
 };

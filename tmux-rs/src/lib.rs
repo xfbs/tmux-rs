@@ -16,8 +16,6 @@
 #![allow(non_camel_case_types)]
 #![allow(non_upper_case_globals)]
 #![allow(unused)] // TODO 5000
-#![warn(unused_mut)]
-#![warn(unused_parens)]
 //
 #![allow(clippy::upper_case_acronyms)]
 #![allow(clippy::uninlined_format_args)] // mainly for lalrpop generated code
@@ -73,7 +71,7 @@ mod event_;
 pub use event_::*;
 
 use crate::compat::{
-    RB_GENERATE, impl_tailq_entry,
+    RB_GENERATE,
     queue::{
         Entry, ListEntry, list_entry, list_head, tailq_entry, tailq_first, tailq_foreach,
         tailq_head, tailq_next,

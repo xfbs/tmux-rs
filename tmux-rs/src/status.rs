@@ -21,8 +21,6 @@ use crate::compat::{
 };
 use libc::strncmp;
 
-use crate::xmalloc::xreallocarray;
-
 #[repr(C)]
 struct status_prompt_menu {
     c: *mut client,
@@ -1913,8 +1911,7 @@ unsafe extern "C" fn status_prompt_add_history(line: *const c_char, type_: u32) 
             new = 0;
         }
 
-        let hlimit =
-            options_get_number(global_options, c"prompt-history-limit".as_ptr()) as u32;
+        let hlimit = options_get_number(global_options, c"prompt-history-limit".as_ptr()) as u32;
         if hlimit > oldsize {
             if new == 0 {
                 return;
@@ -2175,8 +2172,7 @@ unsafe extern "C" fn status_prompt_complete_list_menu(
             menu_add_item(menu, &raw mut item, null_mut(), c, null_mut());
         }
 
-        let py = if options_get_number((*(*c).session).options, c"status-position".as_ptr()) == 0
-        {
+        let py = if options_get_number((*(*c).session).options, c"status-position".as_ptr()) == 0 {
             lines
         } else {
             (*c).tty.sy - 3 - height
@@ -2315,8 +2311,7 @@ unsafe extern "C" fn status_prompt_complete_window_menu(
         (*spm).size = size as u32;
         (*spm).list = list;
 
-        let py = if options_get_number((*(*c).session).options, c"status-position".as_ptr()) == 0
-        {
+        let py = if options_get_number((*(*c).session).options, c"status-position".as_ptr()) == 0 {
             lines
         } else {
             (*c).tty.sy - 3 - height

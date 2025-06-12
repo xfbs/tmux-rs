@@ -17,9 +17,9 @@ use ::core::{
     ptr::NonNull,
 };
 
-use ::libc::{calloc, malloc, reallocarray, strdup, strerror, strndup};
+use ::libc::{calloc, malloc, reallocarray, strdup, strndup};
 
-use crate::{_s, compat::recallocarray, errno, fatalx, vasprintf, vsnprintf};
+use crate::{compat::recallocarray, fatalx, vasprintf, vsnprintf};
 
 #[unsafe(no_mangle)]
 pub extern "C" fn xmalloc(size: usize) -> NonNull<c_void> {

@@ -16,8 +16,8 @@ use crate::*;
 use crate::compat::{
     TAILQ_HEAD_INITIALIZER, impl_tailq_entry,
     queue::{
-        tailq_concat, tailq_empty, tailq_head_initializer, tailq_init, tailq_insert_after,
-        tailq_insert_before, tailq_insert_tail, tailq_remove,
+        tailq_concat, tailq_empty, tailq_init, tailq_insert_after, tailq_insert_before,
+        tailq_insert_tail, tailq_remove,
     },
 };
 use crate::options_::options_get_number_;

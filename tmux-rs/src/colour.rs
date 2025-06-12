@@ -14,7 +14,7 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use crate::*;
-use core::ffi::{CStr, c_char, c_double, c_int, c_longlong, c_uchar, c_uint, c_void};
+use core::ffi::{CStr, c_char, c_double, c_int, c_uchar};
 use std::{
     io::Write as _,
     ptr::{null, null_mut},

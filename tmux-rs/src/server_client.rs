@@ -20,7 +20,7 @@ use crate::{
         imsg::{IMSG_HEADER_SIZE, imsg_get_fd},
         queue::{tailq_empty, tailq_insert_tail, tailq_last, tailq_prev, tailq_remove},
         strlcat,
-        tree::{RB_GENERATE, rb_find, rb_foreach, rb_init, rb_insert, rb_remove},
+        tree::{rb_find, rb_foreach, rb_init, rb_insert, rb_remove},
         vis_::VIS_NOSLASH,
     },
     options_::options_get_number_,

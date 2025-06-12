@@ -259,8 +259,7 @@ pub unsafe extern "C" fn layout_parse(
                     }
                 }
             }
-            if (*lc).type_ != layout_type::LAYOUT_WINDOWPANE && ((*lc).sx != sx || (*lc).sy != sy)
-            {
+            if (*lc).type_ != layout_type::LAYOUT_WINDOWPANE && ((*lc).sx != sx || (*lc).sy != sy) {
                 log_debug!("fix layout {},{} to {},{}", (*lc).sx, (*lc).sy, sx, sy);
                 layout_print_cell(lc, __func__, 0);
                 (*lc).sx = sx - 1;

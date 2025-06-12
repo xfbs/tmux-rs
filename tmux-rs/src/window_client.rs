@@ -16,7 +16,7 @@ use crate::*;
 
 use libc::{qsort, strcmp};
 
-use crate::compat::queue::{tailq_first, tailq_foreach};
+use crate::compat::queue::tailq_first;
 
 static WINDOW_CLIENT_DEFAULT_COMMAND: &CStr = c"detach-client -t '%%'";
 static WINDOW_CLIENT_DEFAULT_FORMAT: &CStr = c"#{t/p:client_activity}: session #{session_name}";

@@ -18,7 +18,6 @@ use libc::strcmp;
 
 use crate::compat::{
     RB_GENERATE_STATIC,
-    queue::tailq_foreach,
     tree::{
         rb_empty, rb_find, rb_foreach, rb_init, rb_initializer, rb_insert, rb_min, rb_next,
         rb_remove,

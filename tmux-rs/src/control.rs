@@ -14,8 +14,6 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use crate::*;
 
-use std::mem::transmute;
-
 use libc::{close, strcmp};
 
 use crate::compat::{
@@ -505,7 +503,7 @@ pub unsafe extern "C" fn control_write_output(c: *mut client, wp: *mut window_pa
     let __func__ = "control_write_output";
     unsafe {
         let cs = (*c).control_state;
-        let mut cp = null_mut::<control_pane>();
+        let cp: *mut control_pane;
         let mut new_size = 0usize;
 
         'ignore: {

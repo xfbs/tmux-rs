@@ -15,7 +15,7 @@
 use crate::*;
 
 use crate::compat::{
-    RB_GENERATE, RB_GENERATE_STATIC, VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB,
+    RB_GENERATE, VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB,
     queue::{tailq_empty, tailq_foreach, tailq_init, tailq_insert_tail, tailq_remove},
     strtonum,
     tree::{

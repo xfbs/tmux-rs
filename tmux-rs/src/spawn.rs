@@ -21,8 +21,8 @@ use crate::compat::{
     tailq_insert_head,
 };
 use libc::{
-    _exit, SIG_BLOCK, SIG_SETMASK, SIGCHLD, STDERR_FILENO, STDIN_FILENO, TCSANOW, VERASE, chdir,
-    close, execl, execvp, kill, sigfillset, sigprocmask, strrchr, tcgetattr, tcsetattr,
+    _exit, SIG_BLOCK, SIG_SETMASK, STDERR_FILENO, STDIN_FILENO, TCSANOW, VERASE, chdir, close,
+    execl, execvp, sigfillset, sigprocmask, strrchr, tcgetattr, tcsetattr,
 };
 
 #[cfg(feature = "utempter")]

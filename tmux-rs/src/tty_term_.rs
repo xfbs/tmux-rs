@@ -12,8 +12,6 @@
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use std::mem::transmute;
-
 use crate::{log::fatalx_c, xmalloc::xreallocarray, *};
 
 use crate::compat::{

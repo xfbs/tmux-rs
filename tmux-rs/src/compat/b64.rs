@@ -1,4 +1,4 @@
-use core::ffi::{c_char, c_void};
+use core::ffi::c_char;
 use core::mem::MaybeUninit;
 
 // https://www.rfc-editor.org/rfc/rfc4648

@@ -24,7 +24,6 @@ use crate::compat::{
     },
     strlcat,
 };
-use crate::xmalloc::xreallocarray;
 
 pub type mode_tree_build_cb = Option<
     unsafe extern "C" fn(

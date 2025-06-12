@@ -14,8 +14,6 @@
 
 use super::*;
 
-use crate::xmalloc::xreallocarray;
-
 #[repr(C)]
 pub struct menu_data {
     pub item: *mut cmdq_item,

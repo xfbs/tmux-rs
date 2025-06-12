@@ -102,10 +102,7 @@ pub unsafe extern "C" fn cmd_refresh_client_control_client_size(
             &raw mut y,
         ) == 3
         {
-            if x < WINDOW_MINIMUM
-                || x > WINDOW_MAXIMUM
-                || y < WINDOW_MINIMUM
-                || y > WINDOW_MAXIMUM
+            if x < WINDOW_MINIMUM || x > WINDOW_MAXIMUM || y < WINDOW_MINIMUM || y > WINDOW_MAXIMUM
             {
                 cmdq_error(item, c"size too small or too big".as_ptr());
                 return cmd_retval::CMD_RETURN_ERROR;

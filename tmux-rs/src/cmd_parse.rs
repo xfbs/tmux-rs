@@ -20,7 +20,7 @@ use crate::compat::queue::{
     tailq_empty, tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_last,
     tailq_remove,
 };
-use crate::xmalloc::{Zeroable, xrecallocarray, xrecallocarray__};
+use crate::xmalloc::{Zeroable, xrecallocarray__};
 
 unsafe extern "C" {
     fn yyparse() -> i32;
@@ -749,7 +749,6 @@ impl<'input> Iterator for Lexer<'input> {
 // ===================================
 
 mod parser {
-    use super::*;
 
     // yyparse modifies global state
     // see YYPARSE_DECL()

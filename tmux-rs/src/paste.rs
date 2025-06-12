@@ -20,7 +20,7 @@ use crate::compat::{
         rb_find, rb_foreach_reverse, rb_initializer, rb_insert, rb_min, rb_next, rb_remove, rb_root,
     },
 };
-use crate::xmalloc::{xmalloc__, xreallocarray};
+use crate::xmalloc::xreallocarray;
 
 #[repr(C)]
 pub struct paste_buffer {

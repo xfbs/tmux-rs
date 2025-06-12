@@ -14,9 +14,7 @@
 use crate::*;
 
 use crate::compat::tree::rb_foreach;
-use crate::{
-    cmd_::cmd_queue::cmdq_get_callback1, options_::options_get_number_, xmalloc::xreallocarray,
-};
+use crate::{cmd_::cmd_queue::cmdq_get_callback1, options_::options_get_number_};
 
 const WINDOW_TREE_DEFAULT_COMMAND: &CStr = c"switch-client -Zt '%%'";
 const WINDOW_TREE_DEFAULT_FORMAT: &str = concat!(

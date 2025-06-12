@@ -239,8 +239,7 @@ pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_it
                             free_(cause);
                             break 'fail;
                         }
-                    } else if options_array_set(o, idx as u32, value, append, &raw mut cause) != 0
-                    {
+                    } else if options_array_set(o, idx as u32, value, append, &raw mut cause) != 0 {
                         cmdq_error(item, c"%s".as_ptr(), cause);
                         free_(cause);
                         break 'fail;

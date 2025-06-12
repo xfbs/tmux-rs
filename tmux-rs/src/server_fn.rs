@@ -14,7 +14,7 @@
 
 use super::*;
 
-use libc::{WEXITSTATUS, WIFEXITED, close, gettimeofday, memcpy};
+use libc::{WEXITSTATUS, WIFEXITED, close, gettimeofday};
 
 use crate::compat::{
     imsg::{IMSG_HEADER_SIZE, MAX_IMSGSIZE},
@@ -378,8 +378,7 @@ pub unsafe extern "C" fn server_destroy_pane(wp: *mut window_pane, notify: i32) 
                         notify_pane(c"pane-died".as_ptr(), wp);
                     }
 
-                    let s =
-                        options_get_string((*wp).options, c"remain-on-exit-format".as_ptr());
+                    let s = options_get_string((*wp).options, c"remain-on-exit-format".as_ptr());
                     if *s != '\0' as c_char {
                         screen_write_start_pane(ctx, wp, &raw mut (*wp).base);
                         screen_write_scrollregion(ctx, 0, sy - 1);
