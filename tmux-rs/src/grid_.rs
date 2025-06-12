@@ -1257,7 +1257,8 @@ pub unsafe extern "C" fn grid_string_cells_code(
                 strlcat(buf, c"\x0e".as_ptr() as *const c_char, len); // SO
             }
         }
-        if !attr.intersects(grid_attr::GRID_ATTR_CHARSET) && lastattr.intersects(GRID_ATTR_CHARSET)
+        if !attr.intersects(grid_attr::GRID_ATTR_CHARSET)
+            && lastattr.intersects(grid_attr::GRID_ATTR_CHARSET)
         {
             if flags & GRID_STRING_ESCAPE_SEQUENCES != 0 {
                 strlcat(buf, c"\\017".as_ptr() as *const c_char, len); // SI

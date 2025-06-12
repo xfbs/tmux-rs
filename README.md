@@ -156,6 +156,7 @@ see tty-keys.c tty_key_next
 - status command; junk after completed text; probably improperly terminated string improper command: statusB
 - prefix s causes a crash
 - going into copy mode causes a crash/hang
+- crashes when running git diff
 
 - redraw is broken with vim
 

@@ -674,8 +674,8 @@ pub unsafe extern "C" fn screen_select_cell(
         memcpy__(dst, &raw const (*(*s).sel).cell);
 
         utf8_copy(&mut (*dst).data, &(*src).data);
-        (*dst).attr &= !GRID_ATTR_CHARSET;
-        (*dst).attr |= (*src).attr & GRID_ATTR_CHARSET;
+        (*dst).attr &= !grid_attr::GRID_ATTR_CHARSET;
+        (*dst).attr |= (*src).attr & grid_attr::GRID_ATTR_CHARSET;
         (*dst).flags = (*src).flags;
     }
 }

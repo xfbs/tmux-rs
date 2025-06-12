@@ -51,11 +51,11 @@ pub unsafe extern "C" fn screen_redraw_border_set(
         match pane_lines {
             pane_lines::PANE_LINES_NUMBER => {
                 if cell_type == CELL_OUTSIDE {
-                    (*gc).attr |= GRID_ATTR_CHARSET;
+                    (*gc).attr |= grid_attr::GRID_ATTR_CHARSET;
                     utf8_set(&mut (*gc).data, CELL_BORDERS[CELL_OUTSIDE as usize]);
                     return;
                 }
-                (*gc).attr &= !GRID_ATTR_CHARSET;
+                (*gc).attr &= !grid_attr::GRID_ATTR_CHARSET;
                 if !wp.is_null() && window_pane_index(wp, &raw mut idx) == 0 {
                     utf8_set(&mut (*gc).data, b'0' + ((idx % 10) as u8));
                 } else {
@@ -63,19 +63,19 @@ pub unsafe extern "C" fn screen_redraw_border_set(
                 }
             }
             pane_lines::PANE_LINES_DOUBLE => {
-                (*gc).attr &= !GRID_ATTR_CHARSET;
+                (*gc).attr &= !grid_attr::GRID_ATTR_CHARSET;
                 utf8_copy(&mut (*gc).data, tty_acs_double_borders(cell_type));
             }
             pane_lines::PANE_LINES_HEAVY => {
-                (*gc).attr &= !GRID_ATTR_CHARSET;
+                (*gc).attr &= !grid_attr::GRID_ATTR_CHARSET;
                 utf8_copy(&mut (*gc).data, tty_acs_heavy_borders(cell_type));
             }
             pane_lines::PANE_LINES_SIMPLE => {
-                (*gc).attr &= !GRID_ATTR_CHARSET;
+                (*gc).attr &= !grid_attr::GRID_ATTR_CHARSET;
                 utf8_set(&mut (*gc).data, SIMPLE_BORDERS[cell_type as usize]);
             }
             _ => {
-                (*gc).attr |= GRID_ATTR_CHARSET;
+                (*gc).attr |= grid_attr::GRID_ATTR_CHARSET;
                 utf8_set(&mut (*gc).data, CELL_BORDERS[cell_type as usize]);
             }
         }
@@ -516,7 +516,7 @@ pub unsafe extern "C" fn screen_redraw_make_pane_status(
             screen_redraw_border_set(w, wp, pane_lines, cell_type, &raw mut gc);
             screen_write_cell(ctx.as_mut_ptr(), &raw const gc);
         }
-        gc.attr &= !GRID_ATTR_CHARSET;
+        gc.attr &= !grid_attr::GRID_ATTR_CHARSET;
 
         screen_write_cursormove(ctx.as_mut_ptr(), 0, 0, 0);
         format_draw(
@@ -895,7 +895,7 @@ pub unsafe extern "C" fn screen_redraw_draw_borders_cell(
             if server_is_marked(s, (*s).curw, marked_pane.wp).as_bool()
                 && screen_redraw_check_is(ctx, x, y, marked_pane.wp) != 0
             {
-                gc.attr ^= GRID_ATTR_REVERSE;
+                gc.attr ^= grid_attr::GRID_ATTR_REVERSE;
             }
         }
         screen_redraw_border_set(w, wp, (*ctx).pane_lines, cell_type, &raw mut gc);
@@ -939,7 +939,7 @@ pub unsafe extern "C" fn screen_redraw_draw_borders_cell(
                             && border == screen_redraw_border_type::SCREEN_REDRAW_BORDER_LEFT))))
                 && screen_redraw_check_is(ctx, x, y, active) != 0
             {
-                gc.attr |= GRID_ATTR_CHARSET;
+                gc.attr |= grid_attr::GRID_ATTR_CHARSET;
                 utf8_set(&raw mut gc.data, BORDER_MARKERS[border as usize]);
             }
         }

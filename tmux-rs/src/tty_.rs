@@ -1764,7 +1764,7 @@ pub unsafe extern "C" fn tty_check_codeset(
         );
         if (c != -1) {
             utf8_set(&raw mut new.data, c as u8);
-            new.attr |= GRID_ATTR_CHARSET;
+            new.attr |= grid_attr::GRID_ATTR_CHARSET;
             return &raw const new;
         }
 
@@ -3465,11 +3465,11 @@ pub unsafe extern "C" fn tty_attributes(
         if !tty_term_has((*tty).term, tty_code_code::TTYC_SETAB) {
             if (gc2.attr.intersects(grid_attr::GRID_ATTR_REVERSE)) {
                 if gc2.fg != 7 && !COLOUR_DEFAULT(gc2.fg) {
-                    gc2.attr &= !GRID_ATTR_REVERSE;
+                    gc2.attr &= !grid_attr::GRID_ATTR_REVERSE;
                 }
             } else {
                 if gc2.bg != 0 && !COLOUR_DEFAULT(gc2.bg) {
-                    gc2.attr |= GRID_ATTR_REVERSE;
+                    gc2.attr |= grid_attr::GRID_ATTR_REVERSE;
                 }
             }
         }
@@ -3670,7 +3670,7 @@ pub unsafe extern "C" fn tty_check_fg(
         /* Is this an aixterm colour? */
         if ((*gc).fg >= 90 && (*gc).fg <= 97 && colours < 16) {
             (*gc).fg -= 90;
-            (*gc).attr |= GRID_ATTR_BRIGHT;
+            (*gc).attr |= grid_attr::GRID_ATTR_BRIGHT;
         }
     }
 }

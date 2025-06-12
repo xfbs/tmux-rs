@@ -634,7 +634,7 @@ pub unsafe extern "C" fn screen_write_vnputs(
                 }
 
                 if (*ptr == b'\x01') {
-                    gc.attr ^= GRID_ATTR_CHARSET;
+                    gc.attr ^= grid_attr::GRID_ATTR_CHARSET;
                 } else if *ptr == b'\n' {
                     screen_write_linefeed(ctx, 0, 8);
                     screen_write_carriagereturn(ctx);
@@ -703,27 +703,27 @@ unsafe extern "C" fn screen_write_box_border_set(
         match lines {
             box_lines::BOX_LINES_NONE => (),
             box_lines::BOX_LINES_DOUBLE => {
-                (*gc).attr &= !GRID_ATTR_CHARSET;
+                (*gc).attr &= !grid_attr::GRID_ATTR_CHARSET;
                 utf8_copy(&raw mut (*gc).data, tty_acs_double_borders(cell_type));
             }
             box_lines::BOX_LINES_HEAVY => {
-                (*gc).attr &= !GRID_ATTR_CHARSET;
+                (*gc).attr &= !grid_attr::GRID_ATTR_CHARSET;
                 utf8_copy(&raw mut (*gc).data, tty_acs_heavy_borders(cell_type));
             }
             box_lines::BOX_LINES_ROUNDED => {
-                (*gc).attr &= !GRID_ATTR_CHARSET;
+                (*gc).attr &= !grid_attr::GRID_ATTR_CHARSET;
                 utf8_copy(&raw mut (*gc).data, tty_acs_rounded_borders(cell_type));
             }
             box_lines::BOX_LINES_SIMPLE => {
-                (*gc).attr &= !GRID_ATTR_CHARSET;
+                (*gc).attr &= !grid_attr::GRID_ATTR_CHARSET;
                 utf8_set(&raw mut (*gc).data, SIMPLE_BORDERS[cell_type as usize]);
             }
             box_lines::BOX_LINES_PADDED => {
-                (*gc).attr &= !GRID_ATTR_CHARSET;
+                (*gc).attr &= !grid_attr::GRID_ATTR_CHARSET;
                 utf8_set(&raw mut (*gc).data, PADDED_BORDERS[cell_type as usize]);
             }
             box_lines::BOX_LINES_SINGLE | box_lines::BOX_LINES_DEFAULT => {
-                (*gc).attr |= GRID_ATTR_CHARSET;
+                (*gc).attr |= grid_attr::GRID_ATTR_CHARSET;
                 utf8_set(&raw mut (*gc).data, CELL_BORDERS[cell_type as usize]);
             }
         }
@@ -753,7 +753,7 @@ pub unsafe extern "C" fn screen_write_hline(
         } else {
             memcpy__(&raw mut gc, &raw const grid_default_cell);
         }
-        gc.attr |= GRID_ATTR_CHARSET;
+        gc.attr |= grid_attr::GRID_ATTR_CHARSET;
 
         if left != 0 {
             screen_write_box_border_set(lines, CELL_LEFTJOIN, &raw mut gc);
@@ -794,7 +794,7 @@ pub unsafe extern "C" fn screen_write_vline(
         let cy = (*s).cy;
 
         memcpy__(&raw mut gc, &raw const grid_default_cell);
-        gc.attr |= GRID_ATTR_CHARSET;
+        gc.attr |= grid_attr::GRID_ATTR_CHARSET;
 
         screen_write_putc(ctx, &raw const gc, if top != 0 { b'w' } else { b'x' });
 
@@ -861,9 +861,9 @@ pub unsafe extern "C" fn screen_write_menu(
 
             screen_write_cursormove(ctx, cx as i32 + 2, (cy + 1 + i) as i32, 0);
             if (*name == b'-' as i8) {
-                default_gc.attr |= GRID_ATTR_DIM;
+                default_gc.attr |= grid_attr::GRID_ATTR_DIM;
                 format_draw(ctx, gc, width, name.add(1), null_mut(), 0);
-                default_gc.attr &= !GRID_ATTR_DIM;
+                default_gc.attr &= !grid_attr::GRID_ATTR_DIM;
                 continue;
             }
 
@@ -898,7 +898,7 @@ pub unsafe extern "C" fn screen_write_box(
             memcpy__(&raw mut gc, &raw const grid_default_cell);
         }
 
-        gc.attr |= GRID_ATTR_CHARSET;
+        gc.attr |= grid_attr::GRID_ATTR_CHARSET;
         gc.flags |= grid_flag::NOPALETTE;
 
         /* Draw top border */
@@ -934,7 +934,7 @@ pub unsafe extern "C" fn screen_write_box(
         }
 
         if !title.is_null() {
-            gc.attr &= !GRID_ATTR_CHARSET;
+            gc.attr &= !grid_attr::GRID_ATTR_CHARSET;
             screen_write_cursormove(ctx, (cx + 2) as i32, cy as i32, 0);
             format_draw(ctx, &raw const gc, nx - 4, title, null_mut(), 0);
         }
@@ -1000,7 +1000,7 @@ pub unsafe extern "C" fn screen_write_preview(
 
         if (*src).mode.intersects(mode_flag::MODE_CURSOR) {
             grid_view_get_cell((*src).grid, (*src).cx, (*src).cy, &raw mut gc);
-            gc.attr |= GRID_ATTR_REVERSE;
+            gc.attr |= grid_attr::GRID_ATTR_REVERSE;
             screen_write_set_cursor(
                 ctx,
                 cx as i32 + ((*src).cx - px) as i32,

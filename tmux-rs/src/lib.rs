@@ -686,22 +686,6 @@ pub struct colour_palette {
     pub default_palette: *mut i32,
 }
 
-// TODO remove these constants
-const GRID_ATTR_BRIGHT: grid_attr = grid_attr::GRID_ATTR_BRIGHT;
-const GRID_ATTR_DIM: grid_attr = grid_attr::GRID_ATTR_DIM;
-const GRID_ATTR_UNDERSCORE: grid_attr = grid_attr::GRID_ATTR_UNDERSCORE;
-const GRID_ATTR_BLINK: grid_attr = grid_attr::GRID_ATTR_BLINK;
-const GRID_ATTR_REVERSE: grid_attr = grid_attr::GRID_ATTR_REVERSE;
-const GRID_ATTR_HIDDEN: grid_attr = grid_attr::GRID_ATTR_HIDDEN;
-const GRID_ATTR_ITALICS: grid_attr = grid_attr::GRID_ATTR_ITALICS;
-const GRID_ATTR_CHARSET: grid_attr = grid_attr::GRID_ATTR_CHARSET;
-const GRID_ATTR_STRIKETHROUGH: grid_attr = grid_attr::GRID_ATTR_STRIKETHROUGH;
-const GRID_ATTR_UNDERSCORE_2: grid_attr = grid_attr::GRID_ATTR_UNDERSCORE_2;
-const GRID_ATTR_UNDERSCORE_3: grid_attr = grid_attr::GRID_ATTR_UNDERSCORE_3;
-const GRID_ATTR_UNDERSCORE_4: grid_attr = grid_attr::GRID_ATTR_UNDERSCORE_4;
-const GRID_ATTR_UNDERSCORE_5: grid_attr = grid_attr::GRID_ATTR_UNDERSCORE_5;
-const GRID_ATTR_OVERLINE: grid_attr = grid_attr::GRID_ATTR_OVERLINE;
-
 bitflags::bitflags! {
     /// Grid flags.
     #[repr(transparent)]

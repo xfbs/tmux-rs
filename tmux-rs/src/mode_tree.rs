@@ -887,8 +887,8 @@ pub unsafe extern "C" fn mode_tree_draw(mtd: *mut mode_tree_data) {
                 free_(start);
 
                 if (*mti).tagged != 0 {
-                    gc.attr ^= GRID_ATTR_BRIGHT;
-                    gc0.attr ^= GRID_ATTR_BRIGHT;
+                    gc.attr ^= grid_attr::GRID_ATTR_BRIGHT;
+                    gc0.attr ^= grid_attr::GRID_ATTR_BRIGHT;
                 }
 
                 if (i != (*mtd).current) {
@@ -928,8 +928,8 @@ pub unsafe extern "C" fn mode_tree_draw(mtd: *mut mode_tree_data) {
                 free_(key);
 
                 if (*mti).tagged != 0 {
-                    gc.attr ^= GRID_ATTR_BRIGHT;
-                    gc0.attr ^= GRID_ATTR_BRIGHT;
+                    gc.attr ^= grid_attr::GRID_ATTR_BRIGHT;
+                    gc0.attr ^= grid_attr::GRID_ATTR_BRIGHT;
                 }
             }
 
