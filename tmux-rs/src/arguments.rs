@@ -11,7 +11,7 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use libc::{isalnum, strchr, strcspn};
+use libc::{strchr, strcspn};
 
 use crate::{
     xmalloc::{Zeroable, xrecallocarray, xrecallocarray_},
@@ -231,7 +231,7 @@ pub unsafe extern "C" fn args_parse_flags(
             if flag == b'?' {
                 return -1;
             }
-            if (isalnum(flag as i32) == 0) {
+            if !flag.is_ascii_alphanumeric() {
                 xasprintf(cause, c"invalid flag -%c".as_ptr(), flag as i32);
                 return -1;
             }
@@ -787,7 +787,7 @@ pub unsafe extern "C" fn args_first(args: *mut args, entry: *mut *mut args_entry
     }
 }
 
-/* Get next argument. */
+/// Get next argument.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn args_next(entry: *mut *mut args_entry) -> u8 {
     unsafe {
@@ -871,10 +871,6 @@ pub unsafe extern "C" fn args_make_commands_prepare(
         let mut args = cmd_get_args(self_);
         let mut target = cmdq_get_target(item);
         let mut tc = cmdq_get_target_client(item);
-        // struct args_value *value;
-        // struct args_command_state *state;
-        // const char *cmd;
-        // const char *file;
 
         let mut file = null();
         let mut value: *mut args_value = null_mut();
@@ -930,10 +926,6 @@ pub unsafe extern "C" fn args_make_commands(
 ) -> *mut cmd_list {
     let __func__ = "args_make_commands";
     unsafe {
-        // struct cmd_parse_result *pr;
-        // char *cmd, *new_cmd;
-        // int i;
-
         if (!(*state).cmdlist.is_null()) {
             if argc == 0 {
                 return (*state).cmdlist;

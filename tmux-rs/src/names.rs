@@ -11,7 +11,7 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use ::libc::{gettimeofday, isalnum, ispunct, memcpy, strchr, strcmp, strcspn, strlen, strncmp};
+use ::libc::{gettimeofday, memcpy, strchr, strcmp, strcspn, strlen, strncmp};
 
 use crate::event_::{event_add, event_initialized};
 use crate::*;
@@ -171,7 +171,10 @@ pub unsafe fn parse_window_name(in_: *const c_char) -> *mut c_char {
 
         if *name != b'\0' as c_char {
             ptr = name.add(strlen(name) - 1);
-            while ptr > name && isalnum(*ptr as _) == 0 && ispunct(*ptr as _) == 0 {
+            while ptr > name
+                && !(*ptr as u8).is_ascii_alphanumeric()
+                && !(*ptr as u8).is_ascii_punctuation()
+            {
                 *ptr = b'\0' as c_char;
                 *ptr -= 1;
             }
