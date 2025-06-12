@@ -101,10 +101,10 @@ pub unsafe extern "C" fn key_table_cmp(table1: *const key_table, table2: *const 
 pub unsafe extern "C" fn key_bindings_cmp(bd1: *const key_binding, bd2: *const key_binding) -> i32 {
     unsafe {
         if (*bd1).key < (*bd2).key {
-            return (-1);
+            return -1;
         }
         if (*bd1).key > (*bd2).key {
-            return (1);
+            return 1;
         }
     }
     0
@@ -232,10 +232,10 @@ pub unsafe extern "C" fn key_bindings_add(
         let table = key_bindings_get_table(name, 1);
 
         let mut bd = key_bindings_get(NonNull::new(table).unwrap(), key & !KEYC_MASK_FLAGS);
-        if (cmdlist.is_null()) {
-            if (!bd.is_null()) {
+        if cmdlist.is_null() {
+            if !bd.is_null() {
                 free_((*bd).note);
-                if (!note.is_null()) {
+                if !note.is_null() {
                     (*bd).note = xstrdup(note).as_ptr();
                 } else {
                     (*bd).note = null_mut();
@@ -243,13 +243,13 @@ pub unsafe extern "C" fn key_bindings_add(
             }
             return;
         }
-        if (!bd.is_null()) {
+        if !bd.is_null() {
             rb_remove(&raw mut (*table).key_bindings, bd);
             key_bindings_free(bd);
         }
 
         bd = xcalloc1::<key_binding>();
-        (*bd).key = (key & !KEYC_MASK_FLAGS);
+        (*bd).key = key & !KEYC_MASK_FLAGS;
         if !note.is_null() {
             (*bd).note = xstrdup(note).as_ptr();
         }
@@ -294,8 +294,8 @@ pub unsafe extern "C" fn key_bindings_remove(name: *const c_char, key: key_code)
         rb_remove(&raw mut (*table.as_ptr()).key_bindings, bd);
         key_bindings_free(bd);
 
-        if (rb_empty(&raw mut (*table.as_ptr()).key_bindings)
-            && rb_empty(&raw mut (*table.as_ptr()).default_key_bindings))
+        if rb_empty(&raw mut (*table.as_ptr()).key_bindings)
+            && rb_empty(&raw mut (*table.as_ptr()).default_key_bindings)
         {
             rb_remove(&raw mut key_tables, table.as_ptr());
             key_bindings_unref_table(table.as_ptr());
@@ -316,7 +316,7 @@ pub unsafe extern "C" fn key_bindings_reset(name: *const c_char, key: key_code) 
         }
 
         let dd = key_bindings_get_default(table.as_ptr(), (*bd).key);
-        if (dd.is_null()) {
+        if dd.is_null() {
             key_bindings_remove(name, (*bd).key);
             return;
         }
@@ -339,7 +339,7 @@ pub unsafe extern "C" fn key_bindings_reset(name: *const c_char, key: key_code) 
 pub unsafe extern "C" fn key_bindings_remove_table(name: *const c_char) {
     unsafe {
         let table = key_bindings_get_table(name, 0);
-        if (!table.is_null()) {
+        if !table.is_null() {
             rb_remove(&raw mut key_tables, table);
             key_bindings_unref_table(table);
         }
@@ -358,7 +358,7 @@ pub unsafe extern "C" fn key_bindings_reset_table(name: *const c_char) {
         if table.is_null() {
             return;
         }
-        if (rb_empty(&raw mut (*table).default_key_bindings)) {
+        if rb_empty(&raw mut (*table).default_key_bindings) {
             key_bindings_remove_table(name);
             return;
         }
@@ -733,7 +733,7 @@ pub unsafe extern "C" fn key_bindings_dispatch(
             new_item = cmdq_get_command((*bd).cmdlist, new_state);
             cmdq_free_state(new_state);
         }
-        if (!item.is_null()) {
+        if !item.is_null() {
             new_item = cmdq_insert_after(item, new_item);
         } else {
             new_item = cmdq_append(c, new_item);

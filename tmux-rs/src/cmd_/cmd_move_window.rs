@@ -54,7 +54,7 @@ unsafe extern "C" fn cmd_move_window_exec(self_: *mut cmd, item: *mut cmdq_item)
         let mut wl = (*source).wl;
         let mut cause = null_mut();
 
-        if (args_has_(args, 'r')) {
+        if args_has_(args, 'r') {
             if cmd_find_target(
                 &raw mut target,
                 item,
@@ -63,14 +63,14 @@ unsafe extern "C" fn cmd_move_window_exec(self_: *mut cmd, item: *mut cmdq_item)
                 CMD_FIND_QUIET,
             ) != 0
             {
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
 
             session_renumber_windows(target.s);
             recalculate_sizes();
             server_status_session(target.s);
 
-            return (cmd_retval::CMD_RETURN_NORMAL);
+            return cmd_retval::CMD_RETURN_NORMAL;
         }
         if cmd_find_target(
             &raw mut target,
@@ -80,7 +80,7 @@ unsafe extern "C" fn cmd_move_window_exec(self_: *mut cmd, item: *mut cmdq_item)
             CMD_FIND_WINDOW_INDEX,
         ) != 0
         {
-            return (cmd_retval::CMD_RETURN_ERROR);
+            return cmd_retval::CMD_RETURN_ERROR;
         }
         let dst = target.s;
         let mut idx = target.idx;
@@ -90,21 +90,21 @@ unsafe extern "C" fn cmd_move_window_exec(self_: *mut cmd, item: *mut cmdq_item)
         let sflag = args_has_(args, 's');
 
         let before = args_has(args, b'b');
-        if (args_has_(args, 'a') || before != 0) {
+        if args_has_(args, 'a') || before != 0 {
             if !target.wl.is_null() {
                 idx = winlink_shuffle_up(dst, target.wl, before);
             } else {
                 idx = winlink_shuffle_up(dst, (*dst).curw, before);
             }
             if idx == -1 {
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
         }
 
-        if (server_link_window(src, wl, dst, idx, kflag, !dflag, &raw mut cause) != 0) {
+        if server_link_window(src, wl, dst, idx, kflag, !dflag, &raw mut cause) != 0 {
             cmdq_error(item, c"%s".as_ptr(), cause);
             free_(cause);
-            return (cmd_retval::CMD_RETURN_ERROR);
+            return cmd_retval::CMD_RETURN_ERROR;
         }
         if cmd_get_entry(self_) == &raw mut cmd_move_window_entry {
             server_unlink_window(src, wl);

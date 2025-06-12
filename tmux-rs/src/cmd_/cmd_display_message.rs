@@ -61,41 +61,41 @@ unsafe extern "C" fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_i
         let mut nflag = args_has(args, b'N');
         let mut count = args_count(args);
 
-        if (args_has_(args, 'I')) {
+        if args_has_(args, 'I') {
             if wp.is_null() {
-                return (cmd_retval::CMD_RETURN_NORMAL);
+                return cmd_retval::CMD_RETURN_NORMAL;
             }
-            match (window_pane_start_input(wp, item, &raw mut cause)) {
+            match window_pane_start_input(wp, item, &raw mut cause) {
                 -1 => {
                     cmdq_error(item, c"%s".as_ptr(), cause);
                     free_(cause);
-                    return (cmd_retval::CMD_RETURN_ERROR);
+                    return cmd_retval::CMD_RETURN_ERROR;
                 }
                 1 => {
-                    return (cmd_retval::CMD_RETURN_NORMAL);
+                    return cmd_retval::CMD_RETURN_NORMAL;
                 }
                 0 => {
-                    return (cmd_retval::CMD_RETURN_WAIT);
+                    return cmd_retval::CMD_RETURN_WAIT;
                 }
                 _ => (),
             }
         }
 
-        if (args_has_(args, 'F') && count != 0) {
+        if args_has_(args, 'F') && count != 0 {
             cmdq_error(item, c"only one of -F or argument must be given".as_ptr());
-            return (cmd_retval::CMD_RETURN_ERROR);
+            return cmd_retval::CMD_RETURN_ERROR;
         }
 
-        if (args_has_(args, 'd')) {
+        if args_has_(args, 'd') {
             delay = args_strtonum(args, b'd', 0, u32::MAX as i64, &raw mut cause);
-            if (!cause.is_null()) {
+            if !cause.is_null() {
                 cmdq_error(item, c"delay %s".as_ptr(), cause);
                 free_(cause);
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
         }
 
-        let mut template = if (count != 0) {
+        let mut template = if count != 0 {
             args_string(args, 0)
         } else {
             args_get_(args, 'F')
@@ -110,15 +110,15 @@ unsafe extern "C" fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_i
          * formats too, assuming it matches the session. If it doesn't, use the
          * best client for the session.
          */
-        let mut c = if (!tc.is_null() && (*tc).session == s) {
+        let mut c = if !tc.is_null() && (*tc).session == s {
             tc
-        } else if (!s.is_null()) {
+        } else if !s.is_null() {
             cmd_find_best_client(s)
         } else {
             null_mut()
         };
 
-        let flags = if (args_has_(args, 'v')) {
+        let flags = if args_has_(args, 'v') {
             format_flags::FORMAT_VERBOSE
         } else {
             format_flags::empty()
@@ -126,22 +126,22 @@ unsafe extern "C" fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_i
         let mut ft = format_create(cmdq_get_client(item), item, FORMAT_NONE, flags);
         format_defaults(ft, c, NonNull::new(s), NonNull::new(wl), NonNull::new(wp));
 
-        if (args_has_(args, 'a')) {
+        if args_has_(args, 'a') {
             format_each(ft, Some(cmd_display_message_each), item as _);
-            return (cmd_retval::CMD_RETURN_NORMAL);
+            return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        let msg = if (args_has_(args, 'l')) {
+        let msg = if args_has_(args, 'l') {
             xstrdup(template).as_ptr()
         } else {
             format_expand_time(ft, template)
         };
 
-        if (cmdq_get_client(item).is_null()) {
+        if cmdq_get_client(item).is_null() {
             cmdq_error(item, c"%s".as_ptr(), msg);
-        } else if (args_has_(args, 'p')) {
+        } else if args_has_(args, 'p') {
             cmdq_print(item, c"%s".as_ptr(), msg);
-        } else if (!tc.is_null() && (*tc).flags.intersects(client_flag::CONTROL)) {
+        } else if !tc.is_null() && (*tc).flags.intersects(client_flag::CONTROL) {
             let evb = evbuffer_new();
             if evb.is_null() {
                 fatalx(c"out of memory");

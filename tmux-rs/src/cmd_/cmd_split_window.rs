@@ -59,15 +59,15 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
 
         /* If the 'p' flag is dropped then this bit can be moved into 'l'. */
         if args_has_(args, 'l') || args_has_(args, 'p') {
-            if (args_has_(args, 'f')) {
-                if (type_ == layout_type::LAYOUT_TOPBOTTOM) {
+            if args_has_(args, 'f') {
+                if type_ == layout_type::LAYOUT_TOPBOTTOM {
                     curval = (*w).sy;
                 } else {
                     curval = (*w).sx;
                 }
             } else {
                 #[allow(clippy::collapsible_else_if)]
-                if (type_ == layout_type::LAYOUT_TOPBOTTOM) {
+                if type_ == layout_type::LAYOUT_TOPBOTTOM {
                     curval = (*wp).sy;
                 } else {
                     curval = (*wp).sx;
@@ -76,7 +76,7 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
         }
 
         let mut size: i32 = -1;
-        if (args_has_(args, 'l')) {
+        if args_has_(args, 'l') {
             size = args_percentage_and_expand(
                 args,
                 b'l',
@@ -86,20 +86,20 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
                 item,
                 &raw mut cause,
             ) as _;
-        } else if (args_has_(args, 'p')) {
+        } else if args_has_(args, 'p') {
             size = args_strtonum_and_expand(args, b'p', 0, 100, item, &raw mut cause) as _;
             if cause.is_null() {
                 size = curval as i32 * size / 100;
             }
         }
-        if (!cause.is_null()) {
+        if !cause.is_null() {
             cmdq_error(item, c"size %s".as_ptr(), cause);
             free_(cause);
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
         window_push_zoom((*wp).window, 1, args_has(args, b'Z'));
-        let mut input = (args_has_(args, 'I') && count == 0);
+        let mut input = args_has_(args, 'I') && count == 0;
 
         let mut flags = 0;
         if args_has_(args, 'b') {
@@ -113,7 +113,7 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
         }
 
         let lc = layout_split_pane(wp, type_, size, flags);
-        if (lc.is_null()) {
+        if lc.is_null() {
             cmdq_error(item, c"no space for new pane".as_ptr());
             return cmd_retval::CMD_RETURN_ERROR;
         }
@@ -130,7 +130,7 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
         sc.environ = environ_create().as_ptr();
 
         let mut av = args_first_value(args, b'e');
-        while (!av.is_null()) {
+        while !av.is_null() {
             environ_put(sc.environ, (*av).union_.string, 0);
             av = args_next_value(av);
         }
@@ -147,7 +147,7 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
         }
 
         let new_wp = spawn_pane(&raw mut sc, &raw mut cause);
-        if (new_wp.is_null()) {
+        if new_wp.is_null() {
             cmdq_error(item, c"create pane failed: %s".as_ptr(), cause);
             free_(cause);
             if !sc.argv.is_null() {
@@ -157,7 +157,7 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
             return cmd_retval::CMD_RETURN_ERROR;
         }
         if input {
-            match (window_pane_start_input(new_wp, item, &raw mut cause)) {
+            match window_pane_start_input(new_wp, item, &raw mut cause) {
                 -1 => {
                     server_client_remove_pane(new_wp);
                     layout_close_pane(new_wp);
@@ -183,7 +183,7 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
         server_redraw_window((*wp).window);
         server_status_session(s);
 
-        if (args_has_(args, 'P')) {
+        if args_has_(args, 'P') {
             let mut template = args_get_(args, 'F');
             if template.is_null() {
                 template = SPLIT_WINDOW_TEMPLATE.as_ptr();

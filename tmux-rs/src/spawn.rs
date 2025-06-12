@@ -40,7 +40,7 @@ pub unsafe extern "C" fn spawn_log(from: *const c_char, sc: *mut spawn_context) 
 
         log_debug!("{}: {}, flags={:#x}", _s(from), _s(name), (*sc).flags);
 
-        if (!wl.is_null() && !wp0.is_null()) {
+        if !wl.is_null() && !wp0.is_null() {
             xsnprintf(
                 tmp.as_mut_ptr().cast(),
                 size_of::<tmp_type>(),
@@ -48,14 +48,14 @@ pub unsafe extern "C" fn spawn_log(from: *const c_char, sc: *mut spawn_context) 
                 (*wl).idx,
                 (*wp0).id,
             );
-        } else if (!wl.is_null()) {
+        } else if !wl.is_null() {
             xsnprintf(
                 tmp.as_mut_ptr().cast(),
                 size_of::<tmp_type>(),
                 c"wl=%d wp0=none".as_ptr(),
                 (*wl).idx,
             );
-        } else if (!wp0.is_null()) {
+        } else if !wp0.is_null() {
             xsnprintf(
                 tmp.as_mut_ptr().cast(),
                 size_of::<tmp_type>(),
@@ -111,9 +111,9 @@ pub unsafe extern "C" fn spawn_window(
          * If the window already exists, we are respawning, so destroy all the
          * panes except one.
          */
-        if ((*sc).flags & SPAWN_RESPAWN != 0) {
+        if (*sc).flags & SPAWN_RESPAWN != 0 {
             w = (*(*sc).wl).window;
-            if (!(*sc).flags & SPAWN_KILL != 0) {
+            if !(*sc).flags & SPAWN_KILL != 0 {
                 for wp_ in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr)
                 {
                     wp = wp_;
@@ -121,7 +121,7 @@ pub unsafe extern "C" fn spawn_window(
                         break;
                     }
                 }
-                if (!wp.is_null()) {
+                if !wp.is_null() {
                     xasprintf(
                         cause,
                         c"window %s:%d still active".as_ptr(),
@@ -150,13 +150,13 @@ pub unsafe extern "C" fn spawn_window(
          * Otherwise we have no window so we will need to create one. First
          * check if the given index already exists and destroy it if so.
          */
-        if ((!(*sc).flags & SPAWN_RESPAWN != 0) && idx != -1) {
+        if (!(*sc).flags & SPAWN_RESPAWN != 0) && idx != -1 {
             let wl = winlink_find_by_index(&raw mut (*s).windows, idx);
-            if (!wl.is_null() && (!(*sc).flags & SPAWN_KILL != 0)) {
+            if !wl.is_null() && (!(*sc).flags & SPAWN_KILL != 0) {
                 xasprintf(cause, c"index %d in use".as_ptr(), idx);
                 return null_mut();
             }
-            if (!wl.is_null()) {
+            if !wl.is_null() {
                 /*
                  * Can't use session_detach as it will destroy session
                  * if this makes it empty.
@@ -166,7 +166,7 @@ pub unsafe extern "C" fn spawn_window(
                 winlink_stack_remove(&raw mut (*s).lastw, wl);
                 winlink_remove(&raw mut (*s).windows, wl);
 
-                if ((*s).curw == wl) {
+                if (*s).curw == wl {
                     (*s).curw = null_mut();
                     (*sc).flags &= !SPAWN_DETACHED;
                 }
@@ -174,7 +174,7 @@ pub unsafe extern "C" fn spawn_window(
         }
 
         /* Then create a window if needed. */
-        if (!(*sc).flags & SPAWN_RESPAWN != 0) {
+        if !(*sc).flags & SPAWN_RESPAWN != 0 {
             if idx == -1 {
                 idx = -1 - options_get_number((*s).options, c"base-index".as_ptr()) as i32;
             }
@@ -216,7 +216,7 @@ pub unsafe extern "C" fn spawn_window(
 
         /* Spawn the pane. */
         wp = spawn_pane(sc, cause);
-        if (wp.is_null()) {
+        if wp.is_null() {
             if !(*sc).flags & SPAWN_RESPAWN != 0 {
                 winlink_remove(&raw mut (*s).windows, (*sc).wl);
             }
@@ -224,9 +224,9 @@ pub unsafe extern "C" fn spawn_window(
         }
 
         /* Set the name of the new window. */
-        if (!(*sc).flags & SPAWN_RESPAWN != 0) {
+        if !(*sc).flags & SPAWN_RESPAWN != 0 {
             free_((*w).name);
-            if (!(*sc).name.is_null()) {
+            if !(*sc).name.is_null() {
                 (*w).name = format_single(item, (*sc).name, c, s, null_mut(), null_mut());
                 options_set_number((*w).options, c"automatic-rename".as_ptr(), 0);
             } else {
@@ -284,9 +284,9 @@ pub unsafe extern "C" fn spawn_pane(
         'complete: {
             spawn_log(__func__, sc);
 
-            if (!(*sc).cwd.is_null()) {
+            if !(*sc).cwd.is_null() {
                 cwd = format_single(item, (*sc).cwd, c, (*target).s, null_mut(), null_mut());
-                if (*cwd != b'/' as _) {
+                if *cwd != b'/' as _ {
                     xasprintf(
                         &raw mut new_cwd,
                         c"%s/%s".as_ptr(),
@@ -296,7 +296,7 @@ pub unsafe extern "C" fn spawn_pane(
                     free_(cwd);
                     cwd = new_cwd;
                 }
-            } else if (!(*sc).flags & SPAWN_RESPAWN != 0) {
+            } else if !(*sc).flags & SPAWN_RESPAWN != 0 {
                 cwd = xstrdup(server_client_get_cwd(c, (*target).s)).as_ptr();
             } else {
                 cwd = null_mut();
@@ -307,8 +307,8 @@ pub unsafe extern "C" fn spawn_pane(
              * either create a new cell or assign to the one we are given.
              */
             hlimit = options_get_number((*s).options, c"history-limit".as_ptr()) as u32;
-            if ((*sc).flags & SPAWN_RESPAWN != 0) {
-                if ((*(*sc).wp0).fd != -1 && (!(*sc).flags & SPAWN_KILL != 0)) {
+            if (*sc).flags & SPAWN_RESPAWN != 0 {
+                if (*(*sc).wp0).fd != -1 && (!(*sc).flags & SPAWN_KILL != 0) {
                     window_pane_index((*sc).wp0, &raw mut idx);
                     xasprintf(
                         cause,
@@ -331,12 +331,12 @@ pub unsafe extern "C" fn spawn_pane(
                 new_wp = (*sc).wp0;
                 (*new_wp).flags &=
                     !(window_pane_flags::PANE_STATUSREADY | window_pane_flags::PANE_STATUSDRAWN);
-            } else if ((*sc).lc.is_null()) {
+            } else if (*sc).lc.is_null() {
                 new_wp = window_add_pane(w, null_mut(), hlimit, (*sc).flags);
                 layout_init(w, new_wp);
             } else {
                 new_wp = window_add_pane(w, (*sc).wp0, hlimit, (*sc).flags);
-                if ((*sc).flags & SPAWN_ZOOM != 0) {
+                if (*sc).flags & SPAWN_ZOOM != 0 {
                     layout_assign_pane((*sc).lc, new_wp, 1);
                 } else {
                     layout_assign_pane((*sc).lc, new_wp, 0);
@@ -348,9 +348,9 @@ pub unsafe extern "C" fn spawn_pane(
              * process. Work out the command and arguments and store the working
              * directory.
              */
-            if ((*sc).argc == 0 && (!(*sc).flags & SPAWN_RESPAWN != 0)) {
+            if (*sc).argc == 0 && (!(*sc).flags & SPAWN_RESPAWN != 0) {
                 cmd = options_get_string((*s).options, c"default-command".as_ptr());
-                if (!cmd.is_null() && *cmd != b'\0' as c_char) {
+                if !cmd.is_null() && *cmd != b'\0' as c_char {
                     argc = 1;
                     argv = &raw mut cmd as *mut *mut c_char;
                 } else {
@@ -361,7 +361,7 @@ pub unsafe extern "C" fn spawn_pane(
                 argc = (*sc).argc;
                 argv = (*sc).argv;
             }
-            if (!cwd.is_null()) {
+            if !cwd.is_null() {
                 free_((*new_wp).cwd);
                 (*new_wp).cwd = cwd;
             }
@@ -370,7 +370,7 @@ pub unsafe extern "C" fn spawn_pane(
              * Replace the stored arguments if there are new ones. If not, the
              * existing ones will be used (they will only exist for respawn).
              */
-            if (argc > 0) {
+            if argc > 0 {
                 cmd_free_argv((*new_wp).argc, (*new_wp).argv);
                 (*new_wp).argc = argc;
                 (*new_wp).argv = cmd_copy_argv(argc, argv);
@@ -394,7 +394,7 @@ pub unsafe extern "C" fn spawn_pane(
              * the client if there is one because otherwise running "tmux new
              * myprogram" wouldn't work if myprogram isn't in the session's path.
              */
-            if (!c.is_null() && (*c).session.is_null()) {
+            if !c.is_null() && (*c).session.is_null() {
                 /* only unattached clients */
                 ee = environ_find((*c).environ, c"PATH".as_ptr());
                 if !ee.is_null() {
@@ -406,7 +406,7 @@ pub unsafe extern "C" fn spawn_pane(
             }
 
             /* Then the shell. If respawning, use the old one. */
-            if (!(*sc).flags & SPAWN_RESPAWN != 0) {
+            if !(*sc).flags & SPAWN_RESPAWN != 0 {
                 tmp = options_get_string((*s).options, c"default-shell".as_ptr());
                 if !checkshell(tmp) {
                     tmp = _PATH_BSHELL;
@@ -418,7 +418,7 @@ pub unsafe extern "C" fn spawn_pane(
 
             /* Log the arguments we are going to use. */
             log_debug!("{}: shell={}", _s(__func__), _s((*new_wp).shell));
-            if ((*new_wp).argc != 0) {
+            if (*new_wp).argc != 0 {
                 cp = cmd_stringify_argv((*new_wp).argc, (*new_wp).argv);
                 log_debug!("{}: cmd={}", _s(__func__), _s(cp));
                 free_(cp);
@@ -439,7 +439,7 @@ pub unsafe extern "C" fn spawn_pane(
             sigprocmask(SIG_BLOCK, &raw mut set, &raw mut oldset);
 
             /* If the command is empty, don't fork a child process. */
-            if ((*sc).flags & SPAWN_EMPTY != 0) {
+            if (*sc).flags & SPAWN_EMPTY != 0 {
                 (*new_wp).flags |= window_pane_flags::PANE_EMPTY;
                 (*new_wp).base.mode &= !mode_flag::MODE_CURSOR;
                 (*new_wp).base.mode |= mode_flag::MODE_CRLF;
@@ -454,10 +454,10 @@ pub unsafe extern "C" fn spawn_pane(
                 null_mut(),
                 &raw mut ws,
             );
-            if ((*new_wp).pid == -1) {
+            if (*new_wp).pid == -1 {
                 xasprintf(cause, c"fork failed: %s".as_ptr(), strerror(errno!()));
                 (*new_wp).fd = -1;
-                if (!(*sc).flags & SPAWN_RESPAWN != 0) {
+                if !(*sc).flags & SPAWN_RESPAWN != 0 {
                     server_client_remove_pane(new_wp);
                     layout_close_pane(new_wp);
                     window_remove_pane(w, new_wp);
@@ -468,7 +468,7 @@ pub unsafe extern "C" fn spawn_pane(
             }
 
             /* In the parent process, everything is done now. */
-            if ((*new_wp).pid != 0) {
+            if (*new_wp).pid != 0 {
                 #[cfg(all(feature = "systemd", feature = "cgroups"))]
                 {
                     /*
@@ -491,15 +491,15 @@ pub unsafe extern "C" fn spawn_pane(
              * Child process. Change to the working directory or home if that
              * fails.
              */
-            if (chdir((*new_wp).cwd) == 0) {
+            if chdir((*new_wp).cwd) == 0 {
                 environ_set(child, c"PWD".as_ptr(), 0, c"%s".as_ptr(), (*new_wp).cwd);
-            } else if (({
+            } else if ({
                 tmp = find_home();
                 !tmp.is_null()
-            }) && chdir(tmp) == 0)
+            }) && chdir(tmp) == 0
             {
                 environ_set(child, c"PWD".as_ptr(), 0, c"%s".as_ptr(), tmp);
-            } else if (chdir(c"/".as_ptr()) == 0) {
+            } else if chdir(c"/".as_ptr()) == 0 {
                 environ_set(child, c"PWD".as_ptr(), 0, c"/".as_ptr());
             } else {
                 fatal(c"chdir failed".as_ptr());
@@ -516,7 +516,7 @@ pub unsafe extern "C" fn spawn_pane(
                 memcpy__(now.c_cc.as_mut_ptr(), (*(*s).tio).c_cc.as_ptr());
             }
             key = options_get_number(global_options, c"backspace".as_ptr()) as u64;
-            if (key >= 0x7f) {
+            if key >= 0x7f {
                 now.c_cc[VERASE] = b'\x7f';
             } else {
                 now.c_cc[VERASE] = key as u8;
@@ -540,7 +540,7 @@ pub unsafe extern "C" fn spawn_pane(
              * If given multiple arguments, use execvp(). Copy the arguments to
              * ensure they end in a NULL.
              */
-            if ((*new_wp).argc != 0 && (*new_wp).argc != 1) {
+            if (*new_wp).argc != 0 && (*new_wp).argc != 1 {
                 argvp = cmd_copy_argv((*new_wp).argc, (*new_wp).argv);
                 execvp(*argvp, argvp.cast());
                 _exit(1);
@@ -551,9 +551,9 @@ pub unsafe extern "C" fn spawn_pane(
              * shell.
              */
             cp = strrchr((*new_wp).shell, b'/' as i32);
-            if ((*new_wp).argc == 1) {
+            if (*new_wp).argc == 1 {
                 tmp = *(*new_wp).argv;
-                if (!cp.is_null() && *cp.add(1) != b'\0' as c_char) {
+                if !cp.is_null() && *cp.add(1) != b'\0' as c_char {
                     xasprintf(&raw mut argv0, c"%s".as_ptr(), cp.add(1));
                 } else {
                     xasprintf(&raw mut argv0, c"%s".as_ptr(), (*new_wp).shell);
@@ -567,7 +567,7 @@ pub unsafe extern "C" fn spawn_pane(
                 );
                 _exit(1);
             }
-            if (!cp.is_null() && *cp.add(1) != b'\0' as c_char) {
+            if !cp.is_null() && *cp.add(1) != b'\0' as c_char {
                 xasprintf(&raw mut argv0, c"-%s".as_ptr(), cp.add(1));
             } else {
                 xasprintf(&raw mut argv0, c"-%s".as_ptr(), (*new_wp).shell);
@@ -603,7 +603,7 @@ pub unsafe extern "C" fn spawn_pane(
             return new_wp;
         }
         if (!(*sc).flags & SPAWN_DETACHED != 0) || (*w).active.is_null() {
-            if ((*sc).flags & SPAWN_NONOTIFY != 0) {
+            if (*sc).flags & SPAWN_NONOTIFY != 0 {
                 window_set_active_pane(w, new_wp, 0);
             } else {
                 window_set_active_pane(w, new_wp, 1);

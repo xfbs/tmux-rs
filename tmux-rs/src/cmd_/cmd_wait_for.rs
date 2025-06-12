@@ -143,7 +143,7 @@ pub unsafe extern "C" fn cmd_wait_for_signal(
             wc = cmd_wait_for_add(name);
         }
 
-        if (tailq_empty(&raw mut (*wc).waiters) && (*wc).woken == 0) {
+        if tailq_empty(&raw mut (*wc).waiters) && (*wc).woken == 0 {
             log_debug!("signal wait channel {}, no waiters", _s((*wc).name));
             (*wc).woken = 1;
             return cmd_retval::CMD_RETURN_NORMAL;
@@ -172,7 +172,7 @@ pub unsafe extern "C" fn cmd_wait_for_wait(
     unsafe {
         let mut c = cmdq_get_client(item);
 
-        if (c.is_null()) {
+        if c.is_null() {
             cmdq_error(item, c"not able to wait".as_ptr());
             return cmd_retval::CMD_RETURN_ERROR;
         }
@@ -181,7 +181,7 @@ pub unsafe extern "C" fn cmd_wait_for_wait(
             wc = cmd_wait_for_add(name);
         }
 
-        if ((*wc).woken != 0) {
+        if (*wc).woken != 0 {
             log_debug!("wait channel {} already woken ({:p})", _s((*wc).name), c);
             cmd_wait_for_remove(wc);
             return cmd_retval::CMD_RETURN_NORMAL;
@@ -202,7 +202,7 @@ pub unsafe extern "C" fn cmd_wait_for_lock(
     mut wc: *mut wait_channel,
 ) -> cmd_retval {
     unsafe {
-        if (cmdq_get_client(item).is_null()) {
+        if cmdq_get_client(item).is_null() {
             cmdq_error(item, c"not able to lock".as_ptr());
             return cmd_retval::CMD_RETURN_ERROR;
         }
@@ -211,7 +211,7 @@ pub unsafe extern "C" fn cmd_wait_for_lock(
             wc = cmd_wait_for_add(name);
         }
 
-        if ((*wc).locked != 0) {
+        if (*wc).locked != 0 {
             let mut wi = xcalloc1::<wait_item>();
             wi.item = item;
             tailq_insert_tail(&raw mut (*wc).lockers, wi);
@@ -229,13 +229,13 @@ pub unsafe extern "C" fn cmd_wait_for_unlock(
     wc: *mut wait_channel,
 ) -> cmd_retval {
     unsafe {
-        if (wc.is_null() || (*wc).locked == 0) {
+        if wc.is_null() || (*wc).locked == 0 {
             cmdq_error(item, c"channel %s not locked".as_ptr(), name);
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
         let mut wi = tailq_first(&raw mut (*wc).lockers);
-        if (!wi.is_null()) {
+        if !wi.is_null() {
             cmdq_continue((*wi).item);
             tailq_remove(&raw mut (*wc).lockers, wi);
             free_(wi);

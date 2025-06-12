@@ -73,15 +73,15 @@ unsafe extern "C" fn cmd_display_panes_draw_pane(
             let mut yoff;
             let mut sx = 0;
             let mut sy = 0;
-            if ((*wp).xoff >= (*ctx).ox && (*wp).xoff + (*wp).sx <= (*ctx).ox + (*ctx).sx) {
+            if (*wp).xoff >= (*ctx).ox && (*wp).xoff + (*wp).sx <= (*ctx).ox + (*ctx).sx {
                 /* All visible. */
                 xoff = (*wp).xoff - (*ctx).ox;
                 sx = (*wp).sx;
-            } else if ((*wp).xoff < (*ctx).ox && (*wp).xoff + (*wp).sx > (*ctx).ox + (*ctx).sx) {
+            } else if (*wp).xoff < (*ctx).ox && (*wp).xoff + (*wp).sx > (*ctx).ox + (*ctx).sx {
                 /* Both left and right not visible. */
                 xoff = 0;
                 sx = (*ctx).sx;
-            } else if ((*wp).xoff < (*ctx).ox) {
+            } else if (*wp).xoff < (*ctx).ox {
                 /* Left not visible. */
                 xoff = 0;
                 sx = (*wp).sx - ((*ctx).ox - (*wp).xoff);
@@ -90,15 +90,15 @@ unsafe extern "C" fn cmd_display_panes_draw_pane(
                 xoff = (*wp).xoff - (*ctx).ox;
                 sx = (*wp).sx - xoff;
             }
-            if ((*wp).yoff >= (*ctx).oy && (*wp).yoff + (*wp).sy <= (*ctx).oy + (*ctx).sy) {
+            if (*wp).yoff >= (*ctx).oy && (*wp).yoff + (*wp).sy <= (*ctx).oy + (*ctx).sy {
                 /* All visible. */
                 yoff = (*wp).yoff - (*ctx).oy;
                 sy = (*wp).sy;
-            } else if ((*wp).yoff < (*ctx).oy && (*wp).yoff + (*wp).sy > (*ctx).oy + (*ctx).sy) {
+            } else if (*wp).yoff < (*ctx).oy && (*wp).yoff + (*wp).sy > (*ctx).oy + (*ctx).sy {
                 /* Both top and bottom not visible. */
                 yoff = 0;
                 sy = (*ctx).sy;
-            } else if ((*wp).yoff < (*ctx).oy) {
+            } else if (*wp).yoff < (*ctx).oy {
                 /* Top not visible. */
                 yoff = 0;
                 sy = (*wp).sy - ((*ctx).oy - (*wp).yoff);
@@ -131,7 +131,7 @@ unsafe extern "C" fn cmd_display_panes_draw_pane(
 
             let mut fgc = grid_default_cell;
             let mut bgc = grid_default_cell;
-            if ((*w).active == wp) {
+            if (*w).active == wp {
                 fgc.fg = active_colour;
                 bgc.bg = active_colour;
             } else {
@@ -148,7 +148,7 @@ unsafe extern "C" fn cmd_display_panes_draw_pane(
                 (*wp).sx,
                 (*wp).sy,
             ) as _;
-            let llen: usize = if (pane > 9 && pane < 35) {
+            let llen: usize = if pane > 9 && pane < 35 {
                 xsnprintf(
                     &raw mut lbuf as _,
                     bufsize,
@@ -193,7 +193,7 @@ unsafe extern "C" fn cmd_display_panes_draw_pane(
             );
             let mut ptr = &raw mut buf as *mut u8;
             while *ptr != b'\0' {
-                if (*ptr < b'0' || *ptr > b'9') {
+                if *ptr < b'0' || *ptr > b'9' {
                     ptr = ptr.add(1);
                     continue;
                 }
@@ -223,11 +223,11 @@ unsafe extern "C" fn cmd_display_panes_draw_pane(
                 null_mut(),
                 null_mut(),
             );
-            if (rlen != 0 && sx as usize >= rlen) {
+            if rlen != 0 && sx as usize >= rlen {
                 tty_cursor(tty, xoff + sx - rlen as u32, yoff);
                 tty_putn(tty, &raw mut rbuf as _, rlen, rlen as _);
             }
-            if (llen != 0) {
+            if llen != 0 {
                 tty_cursor(
                     tty,
                     xoff + sx / 2 + len as u32 * 3 - llen as u32 - 1,
@@ -296,22 +296,22 @@ unsafe extern "C" fn cmd_display_panes_key(
         let mut index: u32 = 0;
         let mut key: key_code = 0;
 
-        if ((*event).key >= b'0' as _ && (*event).key <= b'9' as _) {
+        if (*event).key >= b'0' as _ && (*event).key <= b'9' as _ {
             index = ((*event).key - b'0' as u64) as u32;
-        } else if (((*event).key & KEYC_MASK_MODIFIERS) == 0) {
-            key = ((*event).key & KEYC_MASK_KEY);
-            if (key >= b'a' as _ && key <= b'z' as _) {
+        } else if ((*event).key & KEYC_MASK_MODIFIERS) == 0 {
+            key = (*event).key & KEYC_MASK_KEY;
+            if key >= b'a' as _ && key <= b'z' as _ {
                 index = 10 + (key as u32 - b'a' as u32);
             } else {
-                return (-1);
+                return -1;
             }
         } else {
-            return (-1);
+            return -1;
         }
 
         let wp = window_pane_at_index(w, index);
         if wp.is_null() {
-            return (1);
+            return 1;
         }
         window_unzoom(w, 1);
 
@@ -320,10 +320,10 @@ unsafe extern "C" fn cmd_display_panes_key(
 
         let mut error = null_mut();
         let cmdlist = args_make_commands((*cdata).state, 1, &raw mut expanded, &raw mut error);
-        if (cmdlist.is_null()) {
+        if cmdlist.is_null() {
             cmdq_append(c, cmdq_get_error(error).as_ptr());
             free_(error);
-        } else if (item.is_null()) {
+        } else if item.is_null() {
             let new_item = cmdq_get_command(cmdlist, null_mut());
             cmdq_append(c, new_item);
         } else {
@@ -350,12 +350,12 @@ unsafe extern "C" fn cmd_display_panes_exec(self_: *mut cmd, item: *mut cmdq_ite
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        if (args_has_(args, 'd')) {
+        if args_has_(args, 'd') {
             delay = args_strtonum(args, b'd', 0, u32::MAX as i64, &raw mut cause) as u32;
-            if (!cause.is_null()) {
+            if !cause.is_null() {
                 cmdq_error(item, c"delay %s".as_ptr(), cause);
                 free_(cause);
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
         } else {
             delay = options_get_number((*s).options, c"display-panes-time".as_ptr()) as u32;
@@ -368,7 +368,7 @@ unsafe extern "C" fn cmd_display_panes_exec(self_: *mut cmd, item: *mut cmdq_ite
         (*cdata).state =
             args_make_commands_prepare(self_, item, 0, c"select-pane -t \"%%%\"".as_ptr(), wait, 0);
 
-        if (args_has_(args, 'N')) {
+        if args_has_(args, 'N') {
             server_client_set_overlay(
                 tc,
                 delay,
@@ -395,7 +395,7 @@ unsafe extern "C" fn cmd_display_panes_exec(self_: *mut cmd, item: *mut cmdq_ite
         }
 
         if wait == 0 {
-            return (cmd_retval::CMD_RETURN_NORMAL);
+            return cmd_retval::CMD_RETURN_NORMAL;
         }
         cmd_retval::CMD_RETURN_WAIT
     }

@@ -45,7 +45,7 @@ unsafe extern "C" fn cmd_resize_window_exec(self_: *mut cmd, item: *mut cmdq_ite
         let mut xpixel = 0u32;
         let mut ypixel = 0u32;
 
-        if (args_count(args) == 0) {
+        if args_count(args) == 0 {
             adjust = 1;
         } else {
             adjust = strtonum(args_string(args, 0), 1, i32::MAX as i64, &raw mut errstr) as u32;
@@ -58,7 +58,7 @@ unsafe extern "C" fn cmd_resize_window_exec(self_: *mut cmd, item: *mut cmdq_ite
         let mut sx = (*w).sx;
         let mut sy = (*w).sy;
 
-        if (args_has(args, b'x') != 0) {
+        if args_has(args, b'x') != 0 {
             sx = args_strtonum(
                 args,
                 b'x',
@@ -69,10 +69,10 @@ unsafe extern "C" fn cmd_resize_window_exec(self_: *mut cmd, item: *mut cmdq_ite
             if !cause.is_null() {
                 cmdq_error(item, c"width %s".as_ptr(), cause);
                 free_(cause);
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
         }
-        if (args_has(args, b'y') != 0) {
+        if args_has(args, b'y') != 0 {
             sy = args_strtonum(
                 args,
                 b'y',
@@ -83,17 +83,17 @@ unsafe extern "C" fn cmd_resize_window_exec(self_: *mut cmd, item: *mut cmdq_ite
             if !cause.is_null() {
                 cmdq_error(item, c"height %s".as_ptr(), cause);
                 free_(cause);
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
         }
 
-        if (args_has(args, b'L') != 0) {
+        if args_has(args, b'L') != 0 {
             if sx >= adjust {
                 sx -= adjust;
             }
-        } else if (args_has(args, b'R') != 0) {
+        } else if args_has(args, b'R') != 0 {
             sx += adjust;
-        } else if (args_has(args, b'U') != 0) {
+        } else if args_has(args, b'U') != 0 {
             if sy >= adjust {
                 sy -= adjust;
             }
@@ -101,7 +101,7 @@ unsafe extern "C" fn cmd_resize_window_exec(self_: *mut cmd, item: *mut cmdq_ite
             sy += adjust;
         }
 
-        if (args_has(args, b'A') != 0) {
+        if args_has(args, b'A') != 0 {
             default_window_size(
                 null_mut(),
                 s,

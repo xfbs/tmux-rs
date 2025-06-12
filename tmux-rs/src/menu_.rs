@@ -65,9 +65,9 @@ pub unsafe extern "C" fn menu_add_item(
     fs: *mut cmd_find_state,
 ) {
     unsafe {
-        let line = (item.is_null()
+        let line = item.is_null()
             || (*item).name.as_ptr().is_null()
-            || *(*item).name.as_ptr() == b'\0' as c_char);
+            || *(*item).name.as_ptr() == b'\0' as c_char;
         if line && (*menu).count == 0 {
             return;
         }
@@ -89,7 +89,7 @@ pub unsafe extern "C" fn menu_add_item(
             return;
         }
 
-        let s = if (!fs.is_null()) {
+        let s = if !fs.is_null() {
             format_single_from_state(qitem, (*item).name.as_ptr(), c, fs)
         } else {
             format_single(
@@ -102,7 +102,7 @@ pub unsafe extern "C" fn menu_add_item(
             )
         };
 
-        if (*s == b'\0' as c_char) {
+        if *s == b'\0' as c_char {
             (*menu).count -= 1;
             return;
         }
@@ -110,18 +110,18 @@ pub unsafe extern "C" fn menu_add_item(
 
         let mut key = null();
         let slen: usize = strlen(s);
-        if (*s != b'-' as c_char && (*item).key != KEYC_UNKNOWN && (*item).key != KEYC_NONE) {
+        if *s != b'-' as c_char && (*item).key != KEYC_UNKNOWN && (*item).key != KEYC_NONE {
             key = key_string_lookup_key((*item).key, 0);
             let keylen: usize = strlen(key) + 3;
 
-            if (keylen <= max_width as usize / 4) {
+            if keylen <= max_width as usize / 4 {
                 max_width -= keylen as u32;
             } else if keylen >= max_width as usize || slen >= max_width as usize - keylen {
                 key = null_mut();
             }
         }
 
-        let suffix = if (slen > max_width as usize) {
+        let suffix = if slen > max_width as usize {
             max_width -= 1;
             c">".as_ptr()
         } else {
@@ -129,7 +129,7 @@ pub unsafe extern "C" fn menu_add_item(
         };
         let trimmed = format_trim_right(s, max_width);
         let mut name: *mut c_char = null_mut();
-        if (!key.is_null()) {
+        if !key.is_null() {
             xasprintf(
                 &raw mut name,
                 c"%s%s#[default] #[align=right](%s)".as_ptr(),
@@ -147,7 +147,7 @@ pub unsafe extern "C" fn menu_add_item(
 
         let cmd: *const c_char = (*item).command.as_ptr();
         let s: *mut c_char = if !cmd.is_null() {
-            if (!fs.is_null()) {
+            if !fs.is_null() {
                 format_single_from_state(qitem, cmd, c, fs)
             } else {
                 format_single(qitem, cmd, c, null_mut(), null_mut(), null_mut())
@@ -205,7 +205,7 @@ pub unsafe extern "C" fn menu_mode_cb(
         let mut md = data as *mut menu_data;
 
         *cx = (*md).px + 2;
-        if ((*md).choice == -1) {
+        if (*md).choice == -1 {
             *cy = (*md).py;
         } else {
             *cy = (*md).py + 1 + (*md).choice as u32;
@@ -338,19 +338,19 @@ pub unsafe extern "C" fn menu_key_cb(
         let mut error = null_mut();
 
         'chosen: {
-            if (KEYC_IS_MOUSE((*event).key)) {
-                if ((*md).flags & MENU_NOMOUSE != 0) {
+            if KEYC_IS_MOUSE((*event).key) {
+                if (*md).flags & MENU_NOMOUSE != 0 {
                     if MOUSE_BUTTONS((*m).b) != MOUSE_BUTTON_1 {
                         return 1;
                     }
                     return 0;
                 }
-                if ((*m).x < (*md).px
+                if (*m).x < (*md).px
                     || (*m).x > (*md).px + 4 + (*menu).width
                     || (*m).y < (*md).py + 1
-                    || (*m).y > (*md).py + 1 + count - 1)
+                    || (*m).y > (*md).py + 1 + count - 1
                 {
-                    if (!(*md).flags & MENU_STAYOPEN != 0) {
+                    if !(*md).flags & MENU_STAYOPEN != 0 {
                         if MOUSE_RELEASE((*m).b) {
                             return 1;
                         }
@@ -359,13 +359,13 @@ pub unsafe extern "C" fn menu_key_cb(
                             return 1;
                         }
                     }
-                    if ((*md).choice != -1) {
+                    if (*md).choice != -1 {
                         (*md).choice = -1;
                         (*c).flags |= client_flag::REDRAWOVERLAY;
                     }
                     return 0;
                 }
-                if (!(*md).flags & MENU_STAYOPEN != 0) {
+                if !(*md).flags & MENU_STAYOPEN != 0 {
                     if MOUSE_RELEASE((*m).b) {
                         break 'chosen;
                     }
@@ -385,7 +385,7 @@ pub unsafe extern "C" fn menu_key_cb(
                 if name.is_null() || *name == b'-' as c_char {
                     continue;
                 }
-                if ((*event).key == (*(*menu).items.add(i as usize)).key) {
+                if (*event).key == (*(*menu).items.add(i as usize)).key {
                     (*md).choice = i as i32;
                     break 'chosen;
                 }
@@ -425,7 +425,7 @@ pub unsafe extern "C" fn menu_key_cb(
                                     'tab: {
                                         'backspace: {
                                             'up: {
-                                                match ((*event).key & !KEYC_MASK_FLAGS) {
+                                                match (*event).key & !KEYC_MASK_FLAGS {
                                                     K | UP => break 'up,
                                                     BSPACE => break 'backspace,
                                                     TAB => break 'tab, // this will fallthrough after
@@ -445,7 +445,7 @@ pub unsafe extern "C" fn menu_key_cb(
                                                 old = 0;
                                             }
                                             loop {
-                                                if ((*md).choice == -1 || (*md).choice == 0) {
+                                                if (*md).choice == -1 || (*md).choice == 0 {
                                                     (*md).choice = count as i32 - 1;
                                                 } else {
                                                     (*md).choice -= 1;
@@ -487,7 +487,7 @@ pub unsafe extern "C" fn menu_key_cb(
                                     old = 0;
                                 }
                                 loop {
-                                    if ((*md).choice == -1 || (*md).choice == count as i32 - 1) {
+                                    if (*md).choice == -1 || (*md).choice == count as i32 - 1 {
                                         (*md).choice = 0;
                                     } else {
                                         (*md).choice += 1;
@@ -505,16 +505,16 @@ pub unsafe extern "C" fn menu_key_cb(
                             }
                             // 'previous:
 
-                            if ((*md).choice < 6) {
+                            if (*md).choice < 6 {
                                 (*md).choice = 0;
                             } else {
                                 let mut i = 5;
-                                while (i > 0) {
+                                while i > 0 {
                                     (*md).choice -= 1;
                                     name =
                                         (*(*menu).items.add((*md).choice as usize)).name.as_ptr();
-                                    if ((*md).choice != 0
-                                        && (!name.is_null() && *name != b'-' as c_char))
+                                    if (*md).choice != 0
+                                        && (!name.is_null() && *name != b'-' as c_char)
                                     {
                                         i -= 1;
                                     } else if (*md).choice == 0 {
@@ -532,11 +532,11 @@ pub unsafe extern "C" fn menu_key_cb(
                             name = (*(*menu).items.add((*md).choice as usize)).name.as_ptr();
                         } else {
                             let mut i = 5;
-                            while (i > 0) {
+                            while i > 0 {
                                 (*md).choice += 1;
                                 name = (*(*menu).items.add((*md).choice as usize)).name.as_ptr();
-                                if ((*md).choice != count as i32 - 1
-                                    && (!name.is_null() && *name != b'-' as c_char))
+                                if (*md).choice != count as i32 - 1
+                                    && (!name.is_null() && *name != b'-' as c_char)
                                 {
                                     i += 1;
                                 } else if (*md).choice == count as i32 - 1 {
@@ -544,7 +544,7 @@ pub unsafe extern "C" fn menu_key_cb(
                                 }
                             }
                         }
-                        while (name.is_null() || *name == b'-' as c_char) {
+                        while name.is_null() || *name == b'-' as c_char {
                             (*md).choice -= 1;
                             name = (*(*menu).items.add((*md).choice as usize)).name.as_ptr();
                         }
@@ -555,7 +555,7 @@ pub unsafe extern "C" fn menu_key_cb(
 
                     (*md).choice = 0;
                     name = (*(*menu).items.add((*md).choice as usize)).name.as_ptr();
-                    while (name.is_null() || *name == b'-' as c_char) {
+                    while name.is_null() || *name == b'-' as c_char {
                         (*md).choice += 1;
                         name = (*(*menu).items.add((*md).choice as usize)).name.as_ptr();
                     }
@@ -566,7 +566,7 @@ pub unsafe extern "C" fn menu_key_cb(
 
                 (*md).choice = count as i32 - 1;
                 name = (*(*menu).items.add((*md).choice as usize)).name.as_ptr();
-                while (name.is_null() || *name == b'-' as c_char) {
+                while name.is_null() || *name == b'-' as c_char {
                     (*md).choice -= 1;
                     name = (*(*menu).items.add((*md).choice as usize)).name.as_ptr();
                 }
@@ -581,7 +581,7 @@ pub unsafe extern "C" fn menu_key_cb(
             return 1;
         }
         item = (*menu).items.add((*md).choice as usize);
-        if ((*item).name.as_ptr().is_null() || *(*item).name.as_ptr() == b'-' as c_char) {
+        if (*item).name.as_ptr().is_null() || *(*item).name.as_ptr() == b'-' as c_char {
             if (*md).flags & MENU_STAYOPEN != 0 {
                 return 0;
             }
@@ -593,7 +593,7 @@ pub unsafe extern "C" fn menu_key_cb(
             return 1;
         }
 
-        if (!(*md).item.is_null()) {
+        if !(*md).item.is_null() {
             event = cmdq_get_event((*md).item);
         } else {
             event = null_mut();
@@ -608,7 +608,7 @@ pub unsafe extern "C" fn menu_key_cb(
             state,
             &raw mut error,
         );
-        if (status == cmd_parse_status::CMD_PARSE_ERROR) {
+        if status == cmd_parse_status::CMD_PARSE_ERROR {
             cmdq_append(c, cmdq_get_error(error).as_ptr());
             free_(error);
         }
@@ -630,12 +630,12 @@ pub unsafe fn menu_set_style(
 
         memcpy__(gc, &raw const grid_default_cell);
         style_apply(gc, o, option, null_mut());
-        if (!style.is_null()) {
+        if !style.is_null() {
             let mut sytmp = MaybeUninit::<style>::uninit();
             let sytmp = sytmp.as_mut_ptr();
 
             style_set(sytmp, &raw const grid_default_cell);
-            if (style_parse(sytmp, gc, style) == 0) {
+            if style_parse(sytmp, gc, style) == 0 {
                 (*gc).fg = (*sytmp).gc.fg;
                 (*gc).bg = (*sytmp).gc.bg;
             }
@@ -708,7 +708,7 @@ pub unsafe extern "C" fn menu_prepare(
         }
         screen_init(&raw mut (*md).s, (*menu).width + 4, (*menu).count + 2, 0);
         if !(*md).flags & MENU_NOMOUSE != 0 {
-            (*md).s.mode |= (mode_flag::MODE_MOUSE_ALL | mode_flag::MODE_MOUSE_BUTTON);
+            (*md).s.mode |= mode_flag::MODE_MOUSE_ALL | mode_flag::MODE_MOUSE_BUTTON;
         }
         (*md).s.mode &= !mode_flag::MODE_CURSOR;
 
@@ -719,12 +719,12 @@ pub unsafe extern "C" fn menu_prepare(
         (*md).choice = -1;
 
         if (*md).flags & MENU_NOMOUSE != 0 {
-            if (starting_choice >= (*menu).count as i32) {
+            if starting_choice >= (*menu).count as i32 {
                 starting_choice = (*menu).count as i32 - 1;
                 choice = starting_choice + 1;
                 loop {
                     name = (*(*menu).items.add(choice as usize - 1)).name.as_ptr();
-                    if (!name.is_null() && *name != b'-' as c_char) {
+                    if !name.is_null() && *name != b'-' as c_char {
                         (*md).choice = choice - 1;
                         break;
                     }
@@ -736,11 +736,11 @@ pub unsafe extern "C" fn menu_prepare(
                         break;
                     }
                 }
-            } else if (starting_choice >= 0) {
+            } else if starting_choice >= 0 {
                 choice = starting_choice;
                 loop {
                     name = (*(*menu).items.add(choice as usize)).name.as_ptr();
-                    if (!name.is_null() && *name != b'-' as c_char) {
+                    if !name.is_null() && *name != b'-' as c_char {
                         (*md).choice = choice;
                         break;
                     }

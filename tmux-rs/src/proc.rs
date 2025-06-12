@@ -82,15 +82,15 @@ pub unsafe extern "C" fn proc_event_cb(_fd: i32, events: i16, arg: *mut c_void) 
         let mut imsg: MaybeUninit<imsg> = MaybeUninit::<imsg>::uninit();
         let imsg = imsg.as_mut_ptr();
 
-        if ((*peer).flags & PEER_BAD == 0 && events & EV_READ != 0) {
+        if (*peer).flags & PEER_BAD == 0 && events & EV_READ != 0 {
             n = imsg_read(&raw mut (*peer).ibuf);
-            if ((n == -1 && errno!() != EAGAIN) || n == 0) {
+            if (n == -1 && errno!() != EAGAIN) || n == 0 {
                 ((*peer).dispatchcb.unwrap())(null_mut(), (*peer).arg);
                 return;
             }
             loop {
                 n = imsg_get(&raw mut (*peer).ibuf, imsg);
-                if (n == -1) {
+                if n == -1 {
                     ((*peer).dispatchcb.unwrap())(null_mut(), (*peer).arg);
                     return;
                 }
@@ -100,7 +100,7 @@ pub unsafe extern "C" fn proc_event_cb(_fd: i32, events: i16, arg: *mut c_void) 
                 let msgtype = msgtype::try_from((*imsg).hdr.type_);
                 log_debug!("peer {:p} message {:?}", peer, msgtype);
 
-                if (peer_check_version(peer, imsg) != 0) {
+                if peer_check_version(peer, imsg) != 0 {
                     let fd = imsg_get_fd(imsg);
                     if fd != -1 {
                         close(fd);
@@ -121,7 +121,7 @@ pub unsafe extern "C" fn proc_event_cb(_fd: i32, events: i16, arg: *mut c_void) 
             }
         }
 
-        if (((*peer).flags & PEER_BAD != 0) && (*peer).ibuf.w.queued == 0) {
+        if ((*peer).flags & PEER_BAD != 0) && (*peer).ibuf.w.queued == 0 {
             ((*peer).dispatchcb.unwrap())(null_mut(), (*peer).arg);
             return;
         }
@@ -143,7 +143,7 @@ pub unsafe extern "C" fn proc_signal_cb(signo: i32, events: i16, arg: *mut c_voi
 pub unsafe extern "C" fn peer_check_version(peer: *mut tmuxpeer, imsg: *mut imsg) -> i32 {
     unsafe {
         let version = (*imsg).hdr.peerid & 0xff;
-        if ((*imsg).hdr.type_ != msgtype::MSG_VERSION as u32 && version != PROTOCOL_VERSION as u32)
+        if (*imsg).hdr.type_ != msgtype::MSG_VERSION as u32 && version != PROTOCOL_VERSION as u32
         {
             log_debug!("peer {:p} bad version {}", peer, version);
 

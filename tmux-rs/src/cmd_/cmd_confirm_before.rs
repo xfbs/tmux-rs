@@ -52,9 +52,9 @@ unsafe extern "C" fn cmd_confirm_before_exec(self_: *mut cmd, item: *mut cmdq_it
 
         let mut cdata = xcalloc_::<cmd_confirm_before_data>(1).as_ptr();
         (*cdata).cmdlist = args_make_commands_now(self_, item, 0, 1);
-        if ((*cdata).cmdlist.is_null()) {
+        if (*cdata).cmdlist.is_null() {
             free_(cdata);
-            return (cmd_retval::CMD_RETURN_ERROR);
+            return cmd_retval::CMD_RETURN_ERROR;
         }
 
         if wait != 0 {
@@ -64,12 +64,12 @@ unsafe extern "C" fn cmd_confirm_before_exec(self_: *mut cmd, item: *mut cmdq_it
         (*cdata).default_yes = args_has(args, b'y');
         let mut confirm_key = args_get(args, b'c');
         if !confirm_key.is_null() {
-            if (*confirm_key.add(1) == b'\0' as _ && *confirm_key > 31 && *confirm_key < 127) {
+            if *confirm_key.add(1) == b'\0' as _ && *confirm_key > 31 && *confirm_key < 127 {
                 (*cdata).confirm_key = *confirm_key as _;
             } else {
                 cmdq_error(item, c"invalid confirm key".as_ptr());
                 free_(cdata);
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
         } else {
             (*cdata).confirm_key = b'y';

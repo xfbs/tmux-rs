@@ -268,14 +268,14 @@ pub unsafe extern "C" fn window_clock_draw_screen(wme: NonNull<window_mode_entry
 
         let mut t = libc::time(null_mut());
         let tm = libc::localtime(&raw mut t);
-        if (style == 0) {
+        if style == 0 {
             libc::strftime(
                 &raw mut tim as _,
                 sizeof_tim,
                 c"%l:%M ".as_ptr(),
                 libc::localtime(&raw mut t),
             );
-            if ((*tm).tm_hour >= 12) {
+            if (*tm).tm_hour >= 12 {
                 strlcat(&raw mut tim as _, c"PM".as_ptr(), sizeof_tim);
             } else {
                 strlcat(&raw mut tim as _, c"AM".as_ptr(), sizeof_tim);
@@ -288,8 +288,8 @@ pub unsafe extern "C" fn window_clock_draw_screen(wme: NonNull<window_mode_entry
 
         let mut gc = MaybeUninit::<grid_cell>::uninit();
         let tim_len = strlen(&raw const tim as _) as u32;
-        if (screen_size_x(s) < 6 * tim_len || screen_size_y(s) < 6) {
-            if (screen_size_x(s) >= tim_len && screen_size_y(s) != 0) {
+        if screen_size_x(s) < 6 * tim_len || screen_size_y(s) < 6 {
+            if screen_size_x(s) >= tim_len && screen_size_y(s) != 0 {
                 x = (screen_size_x(s) / 2) - (tim_len / 2) as u32;
                 y = screen_size_y(s) / 2;
                 screen_write_cursormove(&raw mut ctx, x as i32, y as i32, 0);
@@ -312,15 +312,15 @@ pub unsafe extern "C" fn window_clock_draw_screen(wme: NonNull<window_mode_entry
         (*gc.as_mut_ptr()).bg = colour as i32;
         let mut ptr = &raw mut tim as *mut i8;
         while *ptr != b'\0' as c_char {
-            if (*ptr >= b'0' as c_char && *ptr <= b'9' as c_char) {
+            if *ptr >= b'0' as c_char && *ptr <= b'9' as c_char {
                 idx = (*ptr - b'0' as i8) as u32;
-            } else if (*ptr == b':' as c_char) {
+            } else if *ptr == b':' as c_char {
                 idx = 10;
-            } else if (*ptr == b'A' as c_char) {
+            } else if *ptr == b'A' as c_char {
                 idx = 11;
-            } else if (*ptr == b'P' as c_char) {
+            } else if *ptr == b'P' as c_char {
                 idx = 12;
-            } else if (*ptr == b'M' as c_char) {
+            } else if *ptr == b'M' as c_char {
                 idx = 13;
             } else {
                 x += 6;

@@ -258,7 +258,7 @@ unsafe extern "C" fn cmd_capture_pane_exec(self_: *mut cmd, item: *mut cmdq_item
             cmd_capture_pane_history(args, item, wp, &raw mut len)
         };
         if buf.is_null() {
-            return (cmd_retval::CMD_RETURN_ERROR);
+            return cmd_retval::CMD_RETURN_ERROR;
         }
 
         if args_has(args, b'p') != 0 {

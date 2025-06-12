@@ -46,9 +46,9 @@ pub unsafe extern "C" fn input_key_cmp(
     ike2: *const input_key_entry,
 ) -> i32 {
     unsafe {
-        if ((*ike1).key < (*ike2).key) {
+        if (*ike1).key < (*ike2).key {
             -1
-        } else if ((*ike1).key > (*ike2).key) {
+        } else if (*ike1).key > (*ike2).key {
             1
         } else {
             0
@@ -187,7 +187,7 @@ pub unsafe extern "C" fn input_key_get(key: key_code) -> *mut input_key_entry {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn input_key_split2(c: u32, dst: *mut u8) -> usize {
     unsafe {
-        if (c > 0x7f) {
+        if c > 0x7f {
             *dst = (c >> 6) as u8 | 0xc0;
             *dst.add(1) = (c as u8 & 0x3f) | 0x80;
 
@@ -207,7 +207,7 @@ pub unsafe extern "C-unwind" fn input_key_build() {
     unsafe {
         for i in 0..input_key_defaults_len {
             let ike = &raw mut input_key_defaults[i];
-            if (!(*ike).key & KEYC_BUILD_MODIFIERS != 0) {
+            if !(*ike).key & KEYC_BUILD_MODIFIERS != 0 {
                 rb_insert(&raw mut input_key_tree, ike);
                 continue;
             }
@@ -215,7 +215,7 @@ pub unsafe extern "C-unwind" fn input_key_build() {
             for (j, input_key_modifiers_j) in
                 input_key_modifiers.iter().cloned().enumerate().skip(2)
             {
-                let key = ((*ike).key & !KEYC_BUILD_MODIFIERS);
+                let key = (*ike).key & !KEYC_BUILD_MODIFIERS;
                 let data = xstrdup((*ike).data).as_ptr();
                 *data.add(libc::strcspn(data, c"_".as_ptr())) = b'0' as c_char + j as c_char;
 
@@ -244,7 +244,7 @@ pub unsafe extern "C" fn input_key_pane(
             // log_debug( c"writing key 0x%llx (%s) to %%%u".as_ptr(), key, key_string_lookup_key(key, 1), (*wp).id,);
         }
 
-        if (KEYC_IS_MOUSE(key)) {
+        if KEYC_IS_MOUSE(key) {
             if !m.is_null() && (*m).wp != -1 && (*m).wp as u32 == (*wp).id {
                 input_key_mouse(wp, m);
             }
@@ -303,7 +303,7 @@ pub unsafe extern "C" fn input_key_extended(bev: *mut bufferevent, mut key: key_
             key &= KEYC_MASK_KEY;
         }
 
-        if (options_get_number(global_options, c"extended-keys-format".as_ptr()) == 1) {
+        if options_get_number(global_options, c"extended-keys-format".as_ptr()) == 1 {
             xsnprintf(
                 tmp.as_mut_ptr().cast(),
                 sizeof_tmp,
@@ -362,7 +362,7 @@ pub unsafe extern "C" fn input_key_vt10x(bev: *mut bufferevent, mut key: key_cod
          * There's no way to report modifiers for unicode keys in standard mode
          * so lose the modifiers.
          */
-        if (KEYC_IS_UNICODE(key)) {
+        if KEYC_IS_UNICODE(key) {
             utf8_to_data(key as u32, &raw mut ud);
             input_key_write(__func__, bev, ud.data.as_ptr().cast(), ud.size as usize);
             return 0;
@@ -383,15 +383,15 @@ pub unsafe extern "C" fn input_key_vt10x(bev: *mut bufferevent, mut key: key_cod
          * much redundant anyway, as no terminal will send <base key>|SHIFT,
          * but only <shifted key>|SHIFT.
          */
-        if (key & KEYC_CTRL != 0) {
+        if key & KEYC_CTRL != 0 {
             let p = libc::strchr(standard_map[0].as_ptr(), onlykey as i32);
-            key = if (!p.is_null()) {
+            key = if !p.is_null() {
                 *standard_map[1]
                     .as_ptr()
                     .add(p.addr() - standard_map[0].as_ptr().addr()) as u64
-            } else if (onlykey >= b'3' as u64 && onlykey <= b'7' as u64) {
+            } else if onlykey >= b'3' as u64 && onlykey <= b'7' as u64 {
                 onlykey - b'\x18' as u64
-            } else if (onlykey >= b'@' as u64 && onlykey <= b'~' as u64) {
+            } else if onlykey >= b'@' as u64 && onlykey <= b'~' as u64 {
                 onlykey & 0x1f
             } else {
                 return -1;
@@ -453,14 +453,14 @@ pub unsafe extern "C" fn input_key(
         }
 
         /* Literal keys go as themselves (can't be more than eight bits). */
-        if (key & KEYC_LITERAL != 0) {
+        if key & KEYC_LITERAL != 0 {
             ud.data[0] = key as u8;
             input_key_write(__func__, bev, ud.data.as_ptr().cast(), 1);
             return 0;
         }
 
         /* Is this backspace? */
-        if ((key & KEYC_MASK_KEY) == keyc::KEYC_BSPACE as u64) {
+        if (key & KEYC_MASK_KEY) == keyc::KEYC_BSPACE as u64 {
             let mut newkey = options_get_number(global_options, c"backspace".as_ptr()) as key_code;
             if newkey >= 0x7f {
                 newkey = '\x7f' as u64;
@@ -485,16 +485,16 @@ pub unsafe extern "C" fn input_key(
          * key and no modifiers.
          */
         if (key & !KEYC_MASK_KEY) == 0 {
-            if (key == c0::C0_HT as u64
+            if key == c0::C0_HT as u64
                 || key == c0::C0_CR as u64
                 || key == c0::C0_ESC as u64
-                || (key >= 0x20 && key <= 0x7f))
+                || (key >= 0x20 && key <= 0x7f)
             {
                 ud.data[0] = key as u8;
                 input_key_write(__func__, bev, ud.data.as_ptr().cast(), 1);
                 return 0;
             }
-            if (KEYC_IS_UNICODE(key)) {
+            if KEYC_IS_UNICODE(key) {
                 utf8_to_data(key as u32, &raw mut ud);
                 input_key_write(__func__, bev, ud.data.as_ptr().cast(), ud.size as usize);
                 return 0;
@@ -523,7 +523,7 @@ pub unsafe extern "C" fn input_key(
         if ike.is_null() && (key & KEYC_KEYPAD != 0) {
             ike = input_key_get(key & !KEYC_KEYPAD);
         }
-        if (!ike.is_null()) {
+        if !ike.is_null() {
             log_debug!(
                 "{}: found key 0x{}: \"{}\"",
                 _s(__func__),
@@ -543,8 +543,8 @@ pub unsafe extern "C" fn input_key(
         }
 
         /* Ignore internal function key codes. */
-        if ((key >= KEYC_BASE && key < keyc::KEYC_BASE_END as u64)
-            || (key >= KEYC_USER && key < KEYC_USER_END))
+        if (key >= KEYC_BASE && key < keyc::KEYC_BASE_END as u64)
+            || (key >= KEYC_USER && key < KEYC_USER_END)
         {
             log_debug!("{}: ignoring key 0x{}", _s(__func__), key);
             return 0;
@@ -619,7 +619,7 @@ pub unsafe extern "C" fn input_key_get_mouse(
          * shown by the last character. Without SGR, we check if the last
          * buttons was also a release.
          */
-        if ((*m).sgr_type != b' ' as u32) {
+        if (*m).sgr_type != b' ' as u32 {
             if MOUSE_DRAG((*m).sgr_b)
                 && MOUSE_RELEASE((*m).sgr_b)
                 && !(*s).mode.intersects(mode_flag::MODE_MOUSE_ALL)
@@ -681,14 +681,14 @@ pub unsafe extern "C" fn input_key_get_mouse(
              * supported by the "normal" mouse protocol. Clamp the
              * coordinates to the supported range.
              */
-            if (x + MOUSE_PARAM_POS_OFF > MOUSE_PARAM_MAX) {
+            if x + MOUSE_PARAM_POS_OFF > MOUSE_PARAM_MAX {
                 buf[len] = MOUSE_PARAM_MAX as c_char;
                 len += 1;
             } else {
                 buf[len] = x as c_char + MOUSE_PARAM_POS_OFF as c_char;
                 len += 1;
             }
-            if (y + MOUSE_PARAM_POS_OFF > MOUSE_PARAM_MAX) {
+            if y + MOUSE_PARAM_POS_OFF > MOUSE_PARAM_MAX {
                 buf[len] = MOUSE_PARAM_MAX as c_char;
                 len += 1;
             } else {

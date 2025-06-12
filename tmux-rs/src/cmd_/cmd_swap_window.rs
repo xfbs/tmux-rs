@@ -49,7 +49,7 @@ unsafe extern "C" fn cmd_swap_window_exec(self_: *mut cmd, item: *mut cmdq_item)
         let mut sg_src = session_group_contains(src);
         let mut sg_dst = session_group_contains(dst);
 
-        if (src != dst && !sg_src.is_null() && !sg_dst.is_null() && sg_src == sg_dst) {
+        if src != dst && !sg_src.is_null() && !sg_dst.is_null() && sg_src == sg_dst {
             cmdq_error(item, c"can't move window, sessions are grouped".as_ptr());
             return cmd_retval::CMD_RETURN_ERROR;
         }
@@ -76,7 +76,7 @@ unsafe extern "C" fn cmd_swap_window_exec(self_: *mut cmd, item: *mut cmdq_item)
         }
         session_group_synchronize_from(src);
         server_redraw_session_group(src);
-        if (src != dst) {
+        if src != dst {
             session_group_synchronize_from(dst);
             server_redraw_session_group(dst);
         }

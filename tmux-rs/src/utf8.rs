@@ -156,7 +156,7 @@ pub unsafe extern "C" fn utf8_put_item(
     let __func__ = c"utf8_put_item".as_ptr();
     unsafe {
         let ui = utf8_item_by_data(data, size);
-        if (!ui.is_null()) {
+        if !ui.is_null() {
             *index = (*ui).index;
             log_debug_c(
                 c"%s: found %.*s = %u".as_ptr(),
@@ -227,7 +227,7 @@ pub unsafe extern "C" fn utf8_from_data(ud: *const utf8_data, uc: *mut utf8_char
             if (*ud).size > UTF8_SIZE as u8 {
                 break 'fail;
             }
-            if ((*ud).size <= 3) {
+            if (*ud).size <= 3 {
                 index = (((*ud).data[2] as u32) << 16)
                     | (((*ud).data[1] as u32) << 8)
                     | ((*ud).data[0] as u32);
@@ -253,9 +253,9 @@ pub unsafe extern "C" fn utf8_from_data(ud: *const utf8_data, uc: *mut utf8_char
         }
 
         // fail:
-        *uc = if ((*ud).width == 0) {
+        *uc = if (*ud).width == 0 {
             utf8_set_size(0) | utf8_set_width(0)
-        } else if ((*ud).width == 1) {
+        } else if (*ud).width == 1 {
             utf8_set_size(1) | utf8_set_width(1) | 0x20
         } else {
             utf8_set_size(1) | utf8_set_width(1) | 0x2020
@@ -273,14 +273,14 @@ pub unsafe extern "C" fn utf8_to_data(uc: utf8_char, ud: *mut utf8_data) {
         (*ud).have = utf8_get_size(uc);
         (*ud).width = utf8_get_width(uc);
 
-        if ((*ud).size <= 3) {
+        if (*ud).size <= 3 {
             (*ud).data[2] = (uc >> 16) as u8;
             (*ud).data[1] = ((uc >> 8) & 0xff) as u8;
             (*ud).data[0] = (uc & 0xff) as u8;
         } else {
-            let index = (uc & 0xffffff);
+            let index = uc & 0xffffff;
             let ui = utf8_item_by_index(index);
-            if (ui.is_null()) {
+            if ui.is_null() {
                 memset(
                     (*ud).data.as_mut_ptr().cast(),
                     b' ' as i32,
@@ -346,7 +346,7 @@ pub unsafe extern "C" fn utf8_width(ud: *mut utf8_data, width: *mut i32) -> utf8
         if utf8_towc(ud, &raw mut wc) != utf8_state::UTF8_DONE {
             return utf8_state::UTF8_ERROR;
         }
-        if (utf8_in_table(wc, utf8_force_wide.as_ptr(), utf8_force_wide.len() as u32) != 0) {
+        if utf8_in_table(wc, utf8_force_wide.as_ptr(), utf8_force_wide.len() as u32) != 0 {
             *width = 2;
             return utf8_state::UTF8_DONE;
         }
@@ -364,7 +364,7 @@ pub unsafe extern "C" fn utf8_width(ud: *mut utf8_data, width: *mut i32) -> utf8
             *width = wcwidth(wc);
             log_debug_c(c"wcwidth(%05X) returned %d".as_ptr(), wc as u32, *width);
             if *width < 0 {
-                *width = if (wc >= 0x80 && wc <= 0x9f) { 0 } else { 1 };
+                *width = if wc >= 0x80 && wc <= 0x9f { 0 } else { 1 };
             }
         }
         if *width >= 0 && *width <= 0xff {
@@ -417,7 +417,7 @@ pub unsafe extern "C" fn utf8_fromwc(wc: wchar_t, ud: *mut utf8_data) -> utf8_st
         #[cfg(not(feature = "utf8proc"))]
         let size = wctomb((*ud).data.as_mut_ptr().cast(), wc);
 
-        if (size < 0) {
+        if size < 0 {
             log_debug!("UTF-8 {}, wctomb() {}", wc, errno!());
             wctomb(null_mut(), 0);
             return utf8_state::UTF8_ERROR;
@@ -427,7 +427,7 @@ pub unsafe extern "C" fn utf8_fromwc(wc: wchar_t, ud: *mut utf8_data) -> utf8_st
         }
         (*ud).have = size as u8;
         (*ud).size = size as u8;
-        if (utf8_width(ud, &raw mut width) == utf8_state::UTF8_DONE) {
+        if utf8_width(ud, &raw mut width) == utf8_state::UTF8_DONE {
             (*ud).width = width as u8;
             return utf8_state::UTF8_DONE;
         }
@@ -499,14 +499,14 @@ pub unsafe extern "C" fn utf8_strvis(
         let mut end = src.add(len);
         let mut more: utf8_state;
 
-        while (src < end) {
+        while src < end {
             more = utf8_open(&raw mut ud, *src as u8);
-            if (more == utf8_state::UTF8_MORE) {
+            if more == utf8_state::UTF8_MORE {
                 src = src.add(1);
-                while (src < end && more == utf8_state::UTF8_MORE) {
+                while src < end && more == utf8_state::UTF8_MORE {
                     more = utf8_append(&raw mut ud, *src as u8);
                 }
-                if (more == utf8_state::UTF8_DONE) {
+                if more == utf8_state::UTF8_DONE {
                     /* UTF-8 character finished. */
                     for i in 0..ud.size {
                         *dst = ud.data[i as usize] as i8;
@@ -517,7 +517,7 @@ pub unsafe extern "C" fn utf8_strvis(
                 /* Not a complete, valid UTF-8 character. */
                 src = src.sub(ud.have as usize);
             }
-            if ((flag & VIS_DQ != 0) && *src == b'$' as c_char && src < end.sub(1)) {
+            if (flag & VIS_DQ != 0) && *src == b'$' as c_char && src < end.sub(1) {
                 if isalpha(*src.add(1) as i32) != 0
                     || *src.add(1) == b'_' as c_char
                     || *src.add(1) == b'{' as c_char
@@ -527,7 +527,7 @@ pub unsafe extern "C" fn utf8_strvis(
                 }
                 *dst = b'$' as c_char;
                 dst = dst.add(1);
-            } else if (src < end.sub(1)) {
+            } else if src < end.sub(1) {
                 dst = vis(dst, *src as i32, flag, *src.add(1) as i32);
             } else if src < end {
                 dst = vis(dst, *src as i32, flag, b'\0' as i32);
@@ -573,13 +573,13 @@ pub unsafe extern "C" fn utf8_isvalid(mut s: *const c_char) -> boolint {
         let mut more: utf8_state = zeroed();
 
         let mut end = s.add(strlen(s));
-        while (s < end) {
+        while s < end {
             more = utf8_open(&raw mut ud, *s as u8);
-            if (more == utf8_state::UTF8_MORE) {
-                while ({
+            if more == utf8_state::UTF8_MORE {
+                while {
                     s = s.add(1);
                     s < end && more == utf8_state::UTF8_MORE
-                }) {
+                } {
                     more = utf8_append(&raw mut ud, *s as u8);
                 }
                 if more == utf8_state::UTF8_DONE {
@@ -606,14 +606,14 @@ pub unsafe extern "C" fn utf8_sanitize(mut src: *const c_char) -> *mut c_char {
         while *src != b'\0' as c_char {
             dst = xreallocarray_(dst, n + 1).as_ptr();
             let mut more = utf8_open(&raw mut ud, *src as u8);
-            if (more == utf8_state::UTF8_MORE) {
-                while ({
+            if more == utf8_state::UTF8_MORE {
+                while {
                     src = src.add(1);
                     *src != b'\0' as c_char && more == utf8_state::UTF8_MORE
-                }) {
+                } {
                     more = utf8_append(&raw mut ud, *src as u8);
                 }
-                if (more == utf8_state::UTF8_DONE) {
+                if more == utf8_state::UTF8_DONE {
                     dst = xreallocarray_(dst, n + ud.width as usize).as_ptr();
                     for i in 0..ud.width {
                         *dst.add(n) = b'_' as c_char;
@@ -623,7 +623,7 @@ pub unsafe extern "C" fn utf8_sanitize(mut src: *const c_char) -> *mut c_char {
                 }
                 src = src.sub(ud.have as usize);
             }
-            if (*src > 0x1f && *src < 0x7f) {
+            if *src > 0x1f && *src < 0x7f {
                 *dst.add(n) = *src;
                 n += 1;
             } else {
@@ -679,13 +679,13 @@ pub unsafe extern "C" fn utf8_fromcstr(mut src: *const c_char) -> *mut utf8_data
             dst = xreallocarray_(dst, n + 1).as_ptr();
             let mut more = utf8_open(dst.add(n), *src as u8);
             if more == utf8_state::UTF8_MORE {
-                while ({
+                while {
                     src = src.add(1);
                     *src != b'\0' as c_char && more == utf8_state::UTF8_MORE
-                }) {
+                } {
                     more = utf8_append(dst.add(n), *src as u8);
                 }
-                if (more == utf8_state::UTF8_DONE) {
+                if more == utf8_state::UTF8_DONE {
                     n += 1;
                     continue;
                 }
@@ -730,16 +730,16 @@ pub unsafe extern "C" fn utf8_cstrwidth(mut s: *const c_char) -> u32 {
         let mut tmp: utf8_data = zeroed();
 
         let mut width: u32 = 0;
-        while (*s != b'\0' as c_char) {
+        while *s != b'\0' as c_char {
             let mut more = utf8_open(&raw mut tmp, *s as u8);
-            if (more == utf8_state::UTF8_MORE) {
-                while ({
+            if more == utf8_state::UTF8_MORE {
+                while {
                     s = s.add(1);
                     *s != b'\0' as c_char && more == utf8_state::UTF8_MORE
-                }) {
+                } {
                     more = utf8_append(&raw mut tmp, *s as u8);
                 }
-                if (more == utf8_state::UTF8_DONE) {
+                if more == utf8_state::UTF8_DONE {
                     width += tmp.width as u32;
                     continue;
                 }
@@ -805,7 +805,7 @@ pub unsafe extern "C" fn utf8_cstrhas(s: *const c_char, ud: *const utf8_data) ->
         let mut copy = utf8_fromcstr(s);
         let mut loop_ = copy;
         while (*loop_).size != 0 {
-            if ((*loop_).size != (*ud).size) {
+            if (*loop_).size != (*ud).size {
                 loop_ = loop_.add(1);
                 continue;
             }

@@ -319,7 +319,7 @@ pub unsafe extern "C" fn format_job_update(job: *mut job) {
         );
 
         let t = libc::time(null_mut());
-        if ((*fj).status != 0 && (*fj).last != t) {
+        if (*fj).status != 0 && (*fj).last != t {
             if !(*fj).client.is_null() {
                 server_status_client((*fj).client);
             }
@@ -393,7 +393,7 @@ pub unsafe extern "C" fn format_job_get(
         // char *expanded;
         // int force;
 
-        let jobs = if ((*ft).client.is_null()) {
+        let jobs = if (*ft).client.is_null() {
             &raw mut format_jobs
         } else if !(*(*ft).client).jobs.is_null() {
             (*(*ft).client).jobs
@@ -422,7 +422,7 @@ pub unsafe extern "C" fn format_job_get(
 
         let expanded = format_expand1(next, cmd);
 
-        let mut force = if ((*fj).expanded.is_null() || strcmp(expanded, (*fj).expanded) != 0) {
+        let mut force = if (*fj).expanded.is_null() || strcmp(expanded, (*fj).expanded) != 0 {
             free((*fj).expanded.cast());
             (*fj).expanded = xstrdup(expanded).as_ptr();
             true
@@ -434,7 +434,7 @@ pub unsafe extern "C" fn format_job_get(
         if force && !(*fj).job.is_null() {
             job_free((*fj).job);
         }
-        if (force || ((*fj).job.is_null() && (*fj).last != t)) {
+        if force || ((*fj).job.is_null() && (*fj).last != t) {
             (*fj).job = job_run(
                 expanded,
                 0,
@@ -450,7 +450,7 @@ pub unsafe extern "C" fn format_job_get(
                 -1,
                 -1,
             );
-            if ((*fj).job.is_null()) {
+            if (*fj).job.is_null() {
                 free((*fj).out.cast());
                 xasprintf(
                     &raw mut (*fj).out,
@@ -538,7 +538,7 @@ pub unsafe extern "C" fn format_cb_host(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let mut host = MaybeUninit::<[c_char; HOST_NAME_MAX + 1]>::uninit();
 
-        if (libc::gethostname(host.as_mut_ptr().cast(), HOST_NAME_MAX + 1) != 0) {
+        if libc::gethostname(host.as_mut_ptr().cast(), HOST_NAME_MAX + 1) != 0 {
             xstrdup_(c"").as_ptr().cast()
         } else {
             xstrdup(host.as_ptr().cast()).as_ptr().cast()
@@ -591,7 +591,7 @@ pub unsafe extern "C" fn format_cb_session_attached_list(ft: *mut format_tree) -
         }
 
         for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
-            if ((*loop_).session == s) {
+            if (*loop_).session == s {
                 if EVBUFFER_LENGTH(buffer) > 0 {
                     evbuffer_add(buffer, c",".as_ptr().cast(), 1);
                 }
@@ -785,7 +785,7 @@ pub unsafe extern "C" fn format_cb_window_active_sessions_list(
         }
 
         for wl in tailq_foreach::<_, discr_wentry>(&raw mut (*w).winlinks).map(NonNull::as_ptr) {
-            if ((*(*wl).session).curw == wl) {
+            if (*(*wl).session).curw == wl {
                 if EVBUFFER_LENGTH(buffer) > 0 {
                     evbuffer_add(buffer, c",".as_ptr().cast(), 1);
                 }
@@ -855,7 +855,7 @@ pub unsafe extern "C" fn format_cb_window_active_clients_list(ft: *mut format_tr
                 continue;
             }
 
-            if (w == (*(*client_session).curw).window) {
+            if w == (*(*client_session).curw).window {
                 if EVBUFFER_LENGTH(buffer) > 0 {
                     evbuffer_add(buffer, c",".as_ptr().cast(), 1);
                 }
@@ -3684,8 +3684,8 @@ pub unsafe extern "C" fn format_pretty_time(t: time_t, seconds: i32) -> *mut c_c
         // Last 24 hours.
         const sizeof_s: usize = 9;
         let mut s = [0i8; 9];
-        if (age < 24 * 3600) {
-            if (seconds != 0) {
+        if age < 24 * 3600 {
+            if seconds != 0 {
                 strftime(s.as_mut_ptr(), sizeof_s, c"%H:%M:%S".as_ptr(), tm);
             } else {
                 strftime(s.as_mut_ptr(), sizeof_s, c"%H:%M".as_ptr(), tm);
@@ -3694,16 +3694,16 @@ pub unsafe extern "C" fn format_pretty_time(t: time_t, seconds: i32) -> *mut c_c
         }
 
         // This month or last 28 days.
-        if (((*tm).tm_year == (*now_tm).tm_year && (*tm).tm_mon == (*now_tm).tm_mon)
-            || age < 28 * 24 * 3600)
+        if ((*tm).tm_year == (*now_tm).tm_year && (*tm).tm_mon == (*now_tm).tm_mon)
+            || age < 28 * 24 * 3600
         {
             strftime(s.as_mut_ptr(), sizeof_s, c"%a%d".as_ptr(), tm);
             return xstrdup(s.as_ptr()).as_ptr();
         }
 
         // Last 12 months.
-        if (((*tm).tm_year == (*now_tm).tm_year && (*tm).tm_mon < (*now_tm).tm_mon)
-            || ((*tm).tm_year == (*now_tm).tm_year - 1 && (*tm).tm_mon > (*now_tm).tm_mon))
+        if ((*tm).tm_year == (*now_tm).tm_year && (*tm).tm_mon < (*now_tm).tm_mon)
+            || ((*tm).tm_year == (*now_tm).tm_year - 1 && (*tm).tm_mon > (*now_tm).tm_mon)
         {
             strftime(s.as_mut_ptr(), sizeof_s, c"%d%b".as_ptr(), tm);
             return xstrdup(s.as_ptr()).as_ptr();
@@ -3880,9 +3880,9 @@ pub unsafe extern "C" fn format_unescape(mut s: *const c_char) -> *mut c_char {
             if *s == b'#' as c_char && *s.add(1) == b'{' as c_char {
                 brackets += 1;
             }
-            if (brackets == 0
+            if brackets == 0
                 && *s == b'#' as c_char
-                && !strchr(c",#{}:".as_ptr(), *s.add(1) as i32).is_null())
+                && !strchr(c",#{}:".as_ptr(), *s.add(1) as i32).is_null()
             {
                 s = s.add(1);
                 *cp = *s;
@@ -3912,8 +3912,8 @@ pub unsafe extern "C" fn format_strip(mut s: *const c_char) -> *mut c_char {
             if *s == b'#' as c_char && *s.add(1) == b'{' as c_char {
                 brackets += 1;
             }
-            if (*s == b'#' as c_char && !strchr(c",#{}:".as_ptr(), *s.add(1) as i32).is_null()) {
-                if (brackets != 0) {
+            if *s == b'#' as c_char && !strchr(c",#{}:".as_ptr(), *s.add(1) as i32).is_null() {
+                if brackets != 0 {
                     *cp = *s;
                     cp = cp.add(1);
                 }
@@ -3981,7 +3981,7 @@ pub unsafe extern "C" fn format_choose(
         let left0 = xstrndup(s, cp.offset_from(s) as usize).as_ptr();
         let right0 = xstrdup(cp.add(1)).as_ptr();
 
-        if (expand != 0) {
+        if expand != 0 {
             *left = format_expand1(es, left0);
             free_(left0);
             *right = format_expand1(es, right0);
@@ -4085,7 +4085,7 @@ pub unsafe extern "C" fn format_build_modifiers(
 
         *count = 0;
 
-        while (*cp != b'\0' as c_char && *cp != b':' as c_char) {
+        while *cp != b'\0' as c_char && *cp != b':' as c_char {
             /* Skip any separator character. */
             if *cp == b';' as c_char {
                 cp = cp.add(1);
@@ -4101,13 +4101,13 @@ pub unsafe extern "C" fn format_build_modifiers(
             }
 
             /* Then try double character with no arguments. */
-            if ((memcmp(c"||".as_ptr().cast(), cp.cast(), 2) == 0
+            if (memcmp(c"||".as_ptr().cast(), cp.cast(), 2) == 0
                 || memcmp(c"&&".as_ptr().cast(), cp.cast(), 2) == 0
                 || memcmp(c"!=".as_ptr().cast(), cp.cast(), 2) == 0
                 || memcmp(c"==".as_ptr().cast(), cp.cast(), 2) == 0
                 || memcmp(c"<=".as_ptr().cast(), cp.cast(), 2) == 0
                 || memcmp(c">=".as_ptr().cast(), cp.cast(), 2) == 0)
-                && format_is_end(*cp.add(2)).as_bool())
+                && format_is_end(*cp.add(2)).as_bool()
             {
                 format_add_modifier(&raw mut list, count, cp, 2, null_mut(), 0);
                 cp = cp.add(2);
@@ -4121,7 +4121,7 @@ pub unsafe extern "C" fn format_build_modifiers(
             c = *cp;
 
             /* No arguments provided. */
-            if (format_is_end(*cp.add(1)).as_bool()) {
+            if format_is_end(*cp.add(1)).as_bool() {
                 format_add_modifier(&raw mut list, count, cp, 1, null_mut(), 0);
                 cp = cp.add(1);
                 continue;
@@ -4130,7 +4130,7 @@ pub unsafe extern "C" fn format_build_modifiers(
             argc = 0;
 
             /* Single argument with no wrapper character. */
-            if (ispunct(*cp.add(1) as i32) == 0 || *cp.add(1) == b'-' as c_char) {
+            if ispunct(*cp.add(1) as i32) == 0 || *cp.add(1) == b'-' as c_char {
                 let end: *const c_char = format_skip(cp.add(1), c":;".as_ptr());
                 if end.is_null() {
                     break;
@@ -4151,7 +4151,7 @@ pub unsafe extern "C" fn format_build_modifiers(
             *last = *cp.add(1);
             cp = cp.add(1);
             loop {
-                if (*cp == *last && format_is_end(*cp.add(1)).as_bool()) {
+                if *cp == *last && format_is_end(*cp.add(1)).as_bool() {
                     cp = cp.add(1);
                     break;
                 }
@@ -4174,7 +4174,7 @@ pub unsafe extern "C" fn format_build_modifiers(
             }
             format_add_modifier(&raw mut list, count, &raw mut c, 1, argv, argc);
         }
-        if (*cp != b':' as c_char) {
+        if *cp != b':' as c_char {
             format_free_modifiers(list, *count);
             *count = 0;
             return null_mut();
@@ -4311,8 +4311,8 @@ pub unsafe extern "C" fn format_loop_sessions(
             format_log1(
                 es,
                 c"format_loop_sessions".as_ptr(),
-                (c"session loop: $%u".as_ptr()),
-                ((*s).id),
+                c"session loop: $%u".as_ptr(),
+                (*s).id,
             );
             let nft = format_create(c, item, FORMAT_NONE, (*ft).flags);
             format_defaults(nft, (*ft).c, NonNull::new(s), None, None);
@@ -4343,7 +4343,7 @@ pub unsafe extern "C" fn format_window_name(
             format_log1(
                 es,
                 c"format_window_name".as_ptr(),
-                (c"window name but no session".as_ptr()),
+                c"window name but no session".as_ptr(),
             );
             return null_mut();
         }
@@ -4378,7 +4378,7 @@ pub unsafe extern "C" fn format_loop_windows(
             format_log1(
                 es,
                 c"format_loop_windows".as_ptr(),
-                (c"window loop but no session".as_ptr()),
+                c"window loop but no session".as_ptr(),
             );
             return null_mut();
         }
@@ -4393,9 +4393,9 @@ pub unsafe extern "C" fn format_loop_windows(
             format_log1(
                 es,
                 c"format_loop_windows".as_ptr(),
-                (c"window loop: %u @%u".as_ptr()),
-                ((*wl).idx),
-                ((*w).id),
+                c"window loop: %u @%u".as_ptr(),
+                (*wl).idx,
+                (*w).id,
             );
             let use_ = if !active.is_null() && wl == (*(*ft).s).curw {
                 active
@@ -4434,7 +4434,7 @@ pub unsafe extern "C" fn format_loop_panes(
         let mut c = (*ft).client;
         let mut item = (*ft).item;
 
-        if ((*ft).w.is_null()) {
+        if (*ft).w.is_null() {
             format_log1(
                 es,
                 c"format_loop_panes".as_ptr(),
@@ -4445,7 +4445,7 @@ pub unsafe extern "C" fn format_loop_panes(
 
         let mut all: *mut c_char = null_mut();
         let mut active: *mut c_char = null_mut();
-        if (format_choose(es, fmt, &raw mut all, &raw mut active, 0) != 0) {
+        if format_choose(es, fmt, &raw mut all, &raw mut active, 0) != 0 {
             all = xstrdup(fmt).as_ptr();
             active = null_mut();
         }
@@ -4462,7 +4462,7 @@ pub unsafe extern "C" fn format_loop_panes(
                 c"pane loop: %%%u".as_ptr(),
                 (*wp).id,
             );
-            let use_ = if (!active.is_null() && wp == (*(*ft).w).active) {
+            let use_ = if !active.is_null() && wp == (*(*ft).w).active {
                 active
             } else {
                 all
@@ -4615,20 +4615,20 @@ pub unsafe extern "C" fn format_replace_expression(
             }
 
             /* The second argument may be flags. */
-            if (argc >= 2 && !strchr(*(*mexp).argv.add(1), b'f' as i32).is_null()) {
+            if argc >= 2 && !strchr(*(*mexp).argv.add(1), b'f' as i32).is_null() {
                 use_fp = 1;
                 prec = 2;
             }
 
             /* The third argument may be precision. */
-            if (argc >= 3) {
+            if argc >= 3 {
                 prec = strtonum(
                     *(*mexp).argv.add(2),
                     i32::MIN as i64,
                     i32::MAX as i64,
                     &raw mut errstr,
                 ) as u32;
-                if (!errstr.is_null()) {
+                if !errstr.is_null() {
                     format_log1(
                         es,
                         c"format_replace_expression".as_ptr(),
@@ -4640,7 +4640,7 @@ pub unsafe extern "C" fn format_replace_expression(
                 }
             }
 
-            if (format_choose(es, copy, &raw mut left, &raw mut right, 1) != 0) {
+            if format_choose(es, copy, &raw mut left, &raw mut right, 1) != 0 {
                 format_log1(
                     es,
                     c"format_replace_expression".as_ptr(),
@@ -4650,7 +4650,7 @@ pub unsafe extern "C" fn format_replace_expression(
             }
 
             mleft = strtod(left, &raw mut endch);
-            if (*endch != b'\0' as c_char) {
+            if *endch != b'\0' as c_char {
                 format_log1(
                     es,
                     c"format_replace_expression".as_ptr(),
@@ -4661,7 +4661,7 @@ pub unsafe extern "C" fn format_replace_expression(
             }
 
             mright = strtod(right, &raw mut endch);
-            if (*endch != b'\0' as c_char) {
+            if *endch != b'\0' as c_char {
                 format_log1(
                     es,
                     c"format_replace_expression".as_ptr(),
@@ -4678,14 +4678,14 @@ pub unsafe extern "C" fn format_replace_expression(
             format_log1(
                 es,
                 c"format_replace_expression".as_ptr(),
-                (c"expression left side is: %.*f".as_ptr()),
+                c"expression left side is: %.*f".as_ptr(),
                 prec,
                 mleft,
             );
             format_log1(
                 es,
                 c"format_replace_expression".as_ptr(),
-                (c"expression right side is: %.*f".as_ptr()),
+                c"expression right side is: %.*f".as_ptr(),
                 prec,
                 mright,
             );
@@ -4704,7 +4704,7 @@ pub unsafe extern "C" fn format_replace_expression(
                 Operator::LessThanEqual => (mleft <= mright) as i32 as f64,
             };
 
-            if (use_fp != 0) {
+            if use_fp != 0 {
                 xasprintf(&raw mut value, c"%.*f".as_ptr(), prec, result);
             } else {
                 xasprintf(
@@ -4816,7 +4816,7 @@ pub unsafe extern "C" fn format_replace(
                             );
                         }
                     }
-                    if ((*fm).size == 1) {
+                    if (*fm).size == 1 {
                         match (*fm).modifier[0] as u8 {
                             b'm' | b'<' | b'>' => cmp = fm,
                             b'C' => search = fm,
@@ -4846,7 +4846,7 @@ pub unsafe extern "C" fn format_replace(
                                 }
                             }
                             b'p' => {
-                                if ((*fm).argc < 1) {
+                                if (*fm).argc < 1 {
                                     break;
                                 } else {
                                     width = strtonum(
@@ -4862,7 +4862,7 @@ pub unsafe extern "C" fn format_replace(
                             }
                             b'w' => modifiers |= format_modifiers::FORMAT_WIDTH,
                             b'e' => {
-                                if ((*fm).argc < 1 || (*fm).argc > 3) {
+                                if (*fm).argc < 1 || (*fm).argc > 3 {
                                 } else {
                                     mexp = fm;
                                 }
@@ -4875,9 +4875,9 @@ pub unsafe extern "C" fn format_replace(
                             b'n' => modifiers |= format_modifiers::FORMAT_LENGTH,
                             b't' => {
                                 modifiers |= format_modifiers::FORMAT_TIMESTRING;
-                                if ((*fm).argc < 1) {
+                                if (*fm).argc < 1 {
                                 } else {
-                                    if (!strchr(*(*fm).argv, b'p' as i32).is_null()) {
+                                    if !strchr(*(*fm).argv, b'p' as i32).is_null() {
                                         modifiers |= format_modifiers::FORMAT_PRETTY;
                                     } else if (*fm).argc >= 2
                                         && !strchr(*(*fm).argv, b'f' as i32).is_null()
@@ -4887,7 +4887,7 @@ pub unsafe extern "C" fn format_replace(
                                 }
                             }
                             b'q' => {
-                                if ((*fm).argc < 1) {
+                                if (*fm).argc < 1 {
                                     modifiers |= format_modifiers::FORMAT_QUOTE_SHELL;
                                 } else if !strchr(*(*fm).argv, b'e' as i32).is_null()
                                     || !strchr(*(*fm).argv, b'h' as i32).is_null()
@@ -4898,7 +4898,7 @@ pub unsafe extern "C" fn format_replace(
                             b'E' => modifiers |= format_modifiers::FORMAT_EXPAND,
                             b'T' => modifiers |= format_modifiers::FORMAT_EXPANDTIME,
                             b'N' => {
-                                if ((*fm).argc < 1 || !strchr(*(*fm).argv, b'w' as i32).is_null()) {
+                                if (*fm).argc < 1 || !strchr(*(*fm).argv, b'w' as i32).is_null() {
                                     modifiers |= format_modifiers::FORMAT_WINDOW_NAME;
                                 } else if !strchr(*(*fm).argv, b's' as i32).is_null() {
                                     modifiers |= format_modifiers::FORMAT_SESSION_NAME;
@@ -4924,17 +4924,17 @@ pub unsafe extern "C" fn format_replace(
                 }
 
                 /* Is this a literal string? */
-                if (modifiers.intersects(format_modifiers::FORMAT_LITERAL)) {
+                if modifiers.intersects(format_modifiers::FORMAT_LITERAL) {
                     format_log1(es, __func__, c"literal string is '%s'".as_ptr(), copy);
                     value = format_unescape(copy);
                     break 'done;
                 }
 
                 /* Is this a character? */
-                if (modifiers.intersects(format_modifiers::FORMAT_CHARACTER)) {
+                if modifiers.intersects(format_modifiers::FORMAT_CHARACTER) {
                     new = format_expand1(es, copy);
                     c = strtonum(new, 32, 126, &raw mut errstr) as i32;
-                    if (!errstr.is_null()) {
+                    if !errstr.is_null() {
                         value = xstrdup(c"".as_ptr()).as_ptr();
                     } else {
                         xasprintf(&raw mut value, c"%c".as_ptr(), c);
@@ -4944,7 +4944,7 @@ pub unsafe extern "C" fn format_replace(
                 }
 
                 // Is this a colour?
-                if (modifiers.intersects(format_modifiers::FORMAT_COLOUR)) {
+                if modifiers.intersects(format_modifiers::FORMAT_COLOUR) {
                     new = format_expand1(es, copy);
                     c = colour_fromstring(new);
                     if c == -1
@@ -4962,40 +4962,40 @@ pub unsafe extern "C" fn format_replace(
                 }
 
                 /* Is this a loop, comparison or condition? */
-                if (modifiers.intersects(format_modifiers::FORMAT_SESSIONS)) {
+                if modifiers.intersects(format_modifiers::FORMAT_SESSIONS) {
                     value = format_loop_sessions(es, copy);
                     if value.is_null() {
                         break 'fail;
                     }
-                } else if (modifiers.intersects(format_modifiers::FORMAT_WINDOWS)) {
+                } else if modifiers.intersects(format_modifiers::FORMAT_WINDOWS) {
                     value = format_loop_windows(es, copy);
                     if value.is_null() {
                         break 'fail;
                     }
-                } else if (modifiers.intersects(format_modifiers::FORMAT_PANES)) {
+                } else if modifiers.intersects(format_modifiers::FORMAT_PANES) {
                     value = format_loop_panes(es, copy);
                     if value.is_null() {
                         break 'fail;
                     }
-                } else if (modifiers.intersects(format_modifiers::FORMAT_CLIENTS)) {
+                } else if modifiers.intersects(format_modifiers::FORMAT_CLIENTS) {
                     value = format_loop_clients(es, copy);
                     if value.is_null() {
                         break 'fail;
                     }
-                } else if (modifiers.intersects(format_modifiers::FORMAT_WINDOW_NAME)) {
+                } else if modifiers.intersects(format_modifiers::FORMAT_WINDOW_NAME) {
                     value = format_window_name(es, copy);
                     if value.is_null() {
                         break 'fail;
                     }
-                } else if (modifiers.intersects(format_modifiers::FORMAT_SESSION_NAME)) {
+                } else if modifiers.intersects(format_modifiers::FORMAT_SESSION_NAME) {
                     value = format_session_name(es, copy);
                     if value.is_null() {
                         break 'fail;
                     }
-                } else if (!search.is_null()) {
+                } else if !search.is_null() {
                     /* Search in pane. */
                     new = format_expand1(es, copy);
-                    if (wp.is_null()) {
+                    if wp.is_null() {
                         format_log1(es, __func__, c"search '%s' but no pane".as_ptr(), new);
                         value = xstrdup(c"0".as_ptr()).as_ptr();
                     } else {
@@ -5009,9 +5009,9 @@ pub unsafe extern "C" fn format_replace(
                         value = format_search(search, wp, new);
                     }
                     free_(new);
-                } else if (!cmp.is_null()) {
+                } else if !cmp.is_null() {
                     /* Comparison of left and right. */
-                    if (format_choose(es, copy, &raw mut left, &raw mut right, 1) != 0) {
+                    if format_choose(es, copy, &raw mut left, &raw mut right, 1) != 0 {
                         format_log1(
                             es,
                             __func__,
@@ -5036,50 +5036,50 @@ pub unsafe extern "C" fn format_replace(
                         right,
                     );
 
-                    if (strcmp((*cmp).modifier.as_ptr(), c"||".as_ptr()) == 0) {
-                        if (format_true(left) != 0 || format_true(right) != 0) {
+                    if strcmp((*cmp).modifier.as_ptr(), c"||".as_ptr()) == 0 {
+                        if format_true(left) != 0 || format_true(right) != 0 {
                             value = xstrdup(c"1".as_ptr()).as_ptr();
                         } else {
                             value = xstrdup(c"0".as_ptr()).as_ptr();
                         }
-                    } else if (strcmp((*cmp).modifier.as_ptr(), c"&&".as_ptr()) == 0) {
-                        if (format_true(left) != 0 && format_true(right) != 0) {
+                    } else if strcmp((*cmp).modifier.as_ptr(), c"&&".as_ptr()) == 0 {
+                        if format_true(left) != 0 && format_true(right) != 0 {
                             value = xstrdup(c"1".as_ptr()).as_ptr();
                         } else {
                             value = xstrdup(c"0".as_ptr()).as_ptr();
                         }
-                    } else if (strcmp((*cmp).modifier.as_ptr(), c"==".as_ptr()) == 0) {
-                        if (strcmp(left, right) == 0) {
+                    } else if strcmp((*cmp).modifier.as_ptr(), c"==".as_ptr()) == 0 {
+                        if strcmp(left, right) == 0 {
                             value = xstrdup(c"1".as_ptr()).as_ptr();
                         } else {
                             value = xstrdup(c"0".as_ptr()).as_ptr();
                         }
-                    } else if (strcmp((*cmp).modifier.as_ptr(), c"!=".as_ptr()) == 0) {
-                        if (strcmp(left, right) != 0) {
+                    } else if strcmp((*cmp).modifier.as_ptr(), c"!=".as_ptr()) == 0 {
+                        if strcmp(left, right) != 0 {
                             value = xstrdup(c"1".as_ptr()).as_ptr();
                         } else {
                             value = xstrdup(c"0".as_ptr()).as_ptr();
                         }
-                    } else if (strcmp((*cmp).modifier.as_ptr(), c"<".as_ptr()) == 0) {
-                        if (strcmp(left, right) < 0) {
+                    } else if strcmp((*cmp).modifier.as_ptr(), c"<".as_ptr()) == 0 {
+                        if strcmp(left, right) < 0 {
                             value = xstrdup(c"1".as_ptr()).as_ptr();
                         } else {
                             value = xstrdup(c"0".as_ptr()).as_ptr();
                         }
-                    } else if (strcmp((*cmp).modifier.as_ptr(), c">".as_ptr()) == 0) {
-                        if (strcmp(left, right) > 0) {
+                    } else if strcmp((*cmp).modifier.as_ptr(), c">".as_ptr()) == 0 {
+                        if strcmp(left, right) > 0 {
                             value = xstrdup(c"1".as_ptr()).as_ptr();
                         } else {
                             value = xstrdup(c"0".as_ptr()).as_ptr();
                         }
-                    } else if (strcmp((*cmp).modifier.as_ptr(), c"<=".as_ptr()) == 0) {
-                        if (strcmp(left, right) <= 0) {
+                    } else if strcmp((*cmp).modifier.as_ptr(), c"<=".as_ptr()) == 0 {
+                        if strcmp(left, right) <= 0 {
                             value = xstrdup(c"1".as_ptr()).as_ptr();
                         } else {
                             value = xstrdup(c"0".as_ptr()).as_ptr();
                         }
-                    } else if (strcmp((*cmp).modifier.as_ptr(), c">=".as_ptr()) == 0) {
-                        if (strcmp(left, right) >= 0) {
+                    } else if strcmp((*cmp).modifier.as_ptr(), c">=".as_ptr()) == 0 {
+                        if strcmp(left, right) >= 0 {
                             value = xstrdup(c"1".as_ptr()).as_ptr();
                         } else {
                             value = xstrdup(c"0".as_ptr()).as_ptr();
@@ -5090,10 +5090,10 @@ pub unsafe extern "C" fn format_replace(
 
                     free_(right);
                     free_(left);
-                } else if (*copy == b'?' as c_char) {
+                } else if *copy == b'?' as c_char {
                     /* Conditional: check first and choose second or third. */
                     cp = format_skip(copy.add(1), c",".as_ptr());
-                    if (cp.is_null()) {
+                    if cp.is_null() {
                         format_log1(
                             es,
                             __func__,
@@ -5107,14 +5107,14 @@ pub unsafe extern "C" fn format_replace(
                     format_log1(es, __func__, c"condition is: %s".as_ptr(), condition);
 
                     found = format_find(ft, condition, modifiers, time_format);
-                    if (found.is_null()) {
+                    if found.is_null() {
                         /*
                          * If the condition not found, try to expand it. If
                          * the expansion doesn't have any effect, then assume
                          * false.
                          */
                         found = format_expand1(es, condition);
-                        if (strcmp(found, condition) == 0) {
+                        if strcmp(found, condition) == 0 {
                             free_(found);
                             found = xstrdup(c"".as_ptr()).as_ptr();
                             format_log1(
@@ -5134,7 +5134,7 @@ pub unsafe extern "C" fn format_replace(
                         );
                     }
 
-                    if (format_choose(es, cp.add(1), &raw mut left, &raw mut right, 0) != 0) {
+                    if format_choose(es, cp.add(1), &raw mut left, &raw mut right, 0) != 0 {
                         format_log1(
                             es,
                             __func__,
@@ -5145,7 +5145,7 @@ pub unsafe extern "C" fn format_replace(
                         free_(found);
                         break 'fail;
                     }
-                    if (format_true(found) != 0) {
+                    if format_true(found) != 0 {
                         format_log1(es, __func__, c"condition '%s' is true".as_ptr(), condition);
                         value = format_expand1(es, left);
                     } else {
@@ -5157,18 +5157,18 @@ pub unsafe extern "C" fn format_replace(
 
                     free_(condition);
                     free_(found);
-                } else if (!mexp.is_null()) {
+                } else if !mexp.is_null() {
                     value = format_replace_expression(mexp, es, copy);
                     if value.is_null() {
                         value = xstrdup(c"".as_ptr()).as_ptr();
                     }
                 } else {
-                    if (!strstr(copy, c"#{".as_ptr()).is_null()) {
+                    if !strstr(copy, c"#{".as_ptr()).is_null() {
                         format_log1(es, __func__, c"expanding inner format '%s'".as_ptr(), copy);
                         value = format_expand1(es, copy);
                     } else {
                         value = format_find(ft, copy, modifiers, time_format);
-                        if (value.is_null()) {
+                        if value.is_null() {
                             format_log1(es, __func__, c"format '%s' not found".as_ptr(), copy);
                             value = xstrdup(c"".as_ptr()).as_ptr();
                         } else {
@@ -5186,11 +5186,11 @@ pub unsafe extern "C" fn format_replace(
             // done:
 
             // Expand again if required.
-            if (modifiers.intersects(format_modifiers::FORMAT_EXPAND)) {
+            if modifiers.intersects(format_modifiers::FORMAT_EXPAND) {
                 new = format_expand1(es, value);
                 free_(value);
                 value = new;
-            } else if (modifiers.intersects(format_modifiers::FORMAT_EXPANDTIME)) {
+            } else if modifiers.intersects(format_modifiers::FORMAT_EXPANDTIME) {
                 format_copy_state(next, es, format_expand_flags::FORMAT_EXPAND_TIME);
                 new = format_expand1(next, value);
                 free_(value);
@@ -5217,9 +5217,9 @@ pub unsafe extern "C" fn format_replace(
             }
 
             // Truncate the value if needed.
-            if (limit > 0) {
+            if limit > 0 {
                 new = format_trim_left(value, limit as u32);
-                if (!marker.is_null() && strcmp(new, value) != 0) {
+                if !marker.is_null() && strcmp(new, value) != 0 {
                     free_(value);
                     xasprintf(&raw mut value, c"%s%s".as_ptr(), new, marker);
                 } else {
@@ -5233,9 +5233,9 @@ pub unsafe extern "C" fn format_replace(
                     limit,
                     value,
                 );
-            } else if (limit < 0) {
+            } else if limit < 0 {
                 new = format_trim_right(value, (-limit) as u32);
-                if (!marker.is_null() && strcmp(new, value) != 0) {
+                if !marker.is_null() && strcmp(new, value) != 0 {
                     free_(value);
                     xasprintf(&raw mut value, c"%s%s".as_ptr(), marker, new);
                 } else {
@@ -5252,7 +5252,7 @@ pub unsafe extern "C" fn format_replace(
             }
 
             /* Pad the value if needed. */
-            if (width > 0) {
+            if width > 0 {
                 new = utf8_padcstr(value, width as u32);
                 free_(value);
                 value = new;
@@ -5263,7 +5263,7 @@ pub unsafe extern "C" fn format_replace(
                     width,
                     value,
                 );
-            } else if (width < 0) {
+            } else if width < 0 {
                 new = utf8_rpadcstr(value, (-width) as u32);
                 free_(value);
                 value = new;
@@ -5277,13 +5277,13 @@ pub unsafe extern "C" fn format_replace(
             }
 
             /* Replace with the length or width if needed. */
-            if (modifiers.intersects(format_modifiers::FORMAT_LENGTH)) {
+            if modifiers.intersects(format_modifiers::FORMAT_LENGTH) {
                 xasprintf(&raw mut new, c"%zu".as_ptr(), strlen(value));
                 free_(value);
                 value = new;
                 format_log1(es, __func__, c"replacing with length: %s".as_ptr(), new);
             }
-            if (modifiers.intersects(format_modifiers::FORMAT_WIDTH)) {
+            if modifiers.intersects(format_modifiers::FORMAT_WIDTH) {
                 xasprintf(&raw mut new, c"%u".as_ptr(), format_width(value));
                 free_(value);
                 value = new;
@@ -5292,7 +5292,7 @@ pub unsafe extern "C" fn format_replace(
 
             // Expand the buffer and copy in the value.
             valuelen = strlen(value);
-            while (*len - *off < valuelen + 1) {
+            while *len - *off < valuelen + 1 {
                 *buf = xreallocarray((*buf).cast(), 2, *len).as_ptr().cast();
                 *len *= 2;
             }
@@ -5351,7 +5351,7 @@ pub unsafe extern "C" fn format_expand1(
             return xstrdup(c"".as_ptr()).as_ptr();
         }
 
-        if ((*es).loop_ == FORMAT_LOOP_LIMIT as u32) {
+        if (*es).loop_ == FORMAT_LOOP_LIMIT as u32 {
             format_log1(
                 es,
                 c"format_expand1".as_ptr(),
@@ -5369,16 +5369,16 @@ pub unsafe extern "C" fn format_expand1(
             fmt,
         );
 
-        if (((*es)
+        if ((*es)
             .flags
             .intersects(format_expand_flags::FORMAT_EXPAND_TIME))
-            && !strchr(fmt, b'%' as i32).is_null())
+            && !strchr(fmt, b'%' as i32).is_null()
         {
-            if ((*es).time == 0) {
+            if (*es).time == 0 {
                 (*es).time = libc::time(null_mut());
                 localtime_r(&raw mut (*es).time, &raw mut (*es).tm);
             }
-            if (strftime(expanded, sizeof_expanded, fmt, &raw mut (*es).tm) == 0) {
+            if strftime(expanded, sizeof_expanded, fmt, &raw mut (*es).tm) == 0 {
                 format_log1(
                     es,
                     c"format_expand1".as_ptr(),
@@ -5402,9 +5402,9 @@ pub unsafe extern "C" fn format_expand1(
         let mut off = 0;
         let mut n = 0;
 
-        while (*fmt != b'\0' as c_char) {
-            if (*fmt != b'#' as c_char) {
-                while (len - off < 2) {
+        while *fmt != b'\0' as c_char {
+            if *fmt != b'#' as c_char {
+                while len - off < 2 {
                     buf = xreallocarray(buf.cast(), 2, len).as_ptr().cast();
                     len *= 2;
                 }
@@ -5451,10 +5451,10 @@ pub unsafe extern "C" fn format_expand1(
                         name,
                     );
 
-                    if (((*ft).flags.intersects(format_flags::FORMAT_NOJOBS))
+                    if ((*ft).flags.intersects(format_flags::FORMAT_NOJOBS))
                         || ((*es)
                             .flags
-                            .intersects(format_expand_flags::FORMAT_EXPAND_NOJOBS)))
+                            .intersects(format_expand_flags::FORMAT_EXPAND_NOJOBS))
                     {
                         out = xstrdup(c"".as_ptr()).as_ptr();
                         format_log1(es, c"format_expand1".as_ptr(), c"#() is disabled".as_ptr());
@@ -5470,7 +5470,7 @@ pub unsafe extern "C" fn format_expand1(
                     free_(name);
 
                     let outlen = strlen(out);
-                    while (len - off < outlen + 1) {
+                    while len - off < outlen + 1 {
                         buf = xreallocarray(buf.cast(), 2, len).as_ptr().cast();
                         len *= 2;
                     }
@@ -5509,14 +5509,14 @@ pub unsafe extern "C" fn format_expand1(
                      */
                     ptr = fmt.sub((ch == b'[') as usize);
                     n = 2 - (ch == b'[') as usize;
-                    while (*ptr == b'#' as c_char) {
+                    while *ptr == b'#' as c_char {
                         ptr = ptr.add(1);
                         n += 1;
                     }
-                    if (*ptr == b'[' as c_char) {
+                    if *ptr == b'[' as c_char {
                         style_end = format_skip(fmt.offset(-2), c"]".as_ptr());
                         format_log1(es, c"format_expand1".as_ptr(), c"found #*%zu[".as_ptr(), n);
-                        while (len - off < n + 2) {
+                        while len - off < n + 2 {
                             buf = xreallocarray(buf.cast(), 2, len).as_ptr().cast();
                             len *= 2;
                         }
@@ -5529,10 +5529,10 @@ pub unsafe extern "C" fn format_expand1(
                     format_log1(
                         es,
                         c"format_expand1".as_ptr(),
-                        (c"found #%c".as_ptr()),
+                        c"found #%c".as_ptr(),
                         ch as u32,
                     );
-                    while (len - off < 2) {
+                    while len - off < 2 {
                         buf = xreallocarray(buf.cast(), 2, len).as_ptr().cast();
                         len *= 2;
                     }
@@ -5545,10 +5545,10 @@ pub unsafe extern "C" fn format_expand1(
                     format_log1(
                         es,
                         c"format_expand1".as_ptr(),
-                        (c"found #%c".as_ptr()),
+                        c"found #%c".as_ptr(),
                         ch as u32,
                     );
-                    while (len - off < 2) {
+                    while len - off < 2 {
                         buf = xreallocarray(buf.cast(), 2, len).as_ptr().cast();
                         len *= 2;
                     }
@@ -5559,14 +5559,14 @@ pub unsafe extern "C" fn format_expand1(
                 _ => {
                     s = null_mut();
                     if fmt > style_end {
-                        if (ch >= b'A' && ch <= b'Z') {
+                        if ch >= b'A' && ch <= b'Z' {
                             s = format_upper[(ch - b'A') as usize].as_ptr();
                         } else if ch >= b'a' && ch <= b'z' {
                             s = format_lower[(ch - b'a') as usize].as_ptr();
                         }
                     } /* skip inside #[] */
-                    if (s.is_null()) {
-                        while (len - off < 3) {
+                    if s.is_null() {
+                        while len - off < 3 {
                             buf = xreallocarray(buf.cast(), 2, len).as_ptr().cast();
                             len *= 2;
                         }
@@ -5740,22 +5740,22 @@ pub unsafe extern "C" fn format_defaults(
         let mut wl = transmute_ptr(wl);
         let mut wp = transmute_ptr(wp);
 
-        if (!c.is_null() && !(*c).name.is_null()) {
+        if !c.is_null() && !(*c).name.is_null() {
             log_debug!("{}: c={}", function_name!(), _s((*c).name));
         } else {
             log_debug!("{}: c=none", function_name!());
         }
-        if (!s.is_null()) {
+        if !s.is_null() {
             log_debug!("{}: s=${}", function_name!(), (*s).id);
         } else {
             log_debug!("{}: s=none", function_name!());
         }
-        if (!wl.is_null()) {
+        if !wl.is_null() {
             log_debug!("{}: wl={}", function_name!(), (*wl).idx);
         } else {
             log_debug!("{}: wl=none", function_name!());
         }
-        if (!wp.is_null()) {
+        if !wp.is_null() {
             log_debug!("{}: wp=%%{}", function_name!(), (*wp).id);
         } else {
             log_debug!("{}: wp=none", function_name!());
@@ -5765,11 +5765,11 @@ pub unsafe extern "C" fn format_defaults(
             log_debug!("{}: session does not match", function_name!());
         }
 
-        (*ft).type_ = if (!wp.is_null()) {
+        (*ft).type_ = if !wp.is_null() {
             format_type::FORMAT_TYPE_PANE
-        } else if (!wl.is_null()) {
+        } else if !wl.is_null() {
             format_type::FORMAT_TYPE_WINDOW
-        } else if (!s.is_null()) {
+        } else if !s.is_null() {
             format_type::FORMAT_TYPE_SESSION
         } else {
             format_type::FORMAT_TYPE_UNKNOWN
@@ -5893,7 +5893,7 @@ pub unsafe extern "C" fn format_grid_word(gd: *mut grid, mut x: u32, mut y: u32)
                 break;
             }
 
-            if (x == 0) {
+            if x == 0 {
                 if y == 0 {
                     break;
                 }
@@ -5910,9 +5910,9 @@ pub unsafe extern "C" fn format_grid_word(gd: *mut grid, mut x: u32, mut y: u32)
             x -= 1;
         }
         loop {
-            if (found) {
+            if found {
                 let end = grid_line_length(gd, y);
-                if (end == 0 || x == end - 1) {
+                if end == 0 || x == end - 1 {
                     if y == (*gd).hsize + (*gd).sy - 1 {
                         break;
                     }
@@ -5942,7 +5942,7 @@ pub unsafe extern "C" fn format_grid_word(gd: *mut grid, mut x: u32, mut y: u32)
             memcpy__(ud.add(size), &raw mut (*gc).data);
             size += 1;
         }
-        if (size != 0) {
+        if size != 0 {
             (*ud.add(size)).size = 0;
             s = utf8_tocstr(ud);
             free_(ud);
@@ -5970,7 +5970,7 @@ pub unsafe extern "C" fn format_grid_line(gd: *mut grid, y: u32) -> *mut c_char 
             memcpy__(ud.add(size), &raw mut (*gc).data);
             size += 1;
         }
-        if (size != 0) {
+        if size != 0 {
             (*ud.add(size)).size = 0;
             s = utf8_tocstr(ud);
             free_(ud);

@@ -49,19 +49,19 @@ unsafe extern "C" fn hyperlinks_by_uri_cmp(
     right: *const hyperlinks_uri,
 ) -> i32 {
     unsafe {
-        if (*(*left).internal_id == b'\0' as _ || *(*right).internal_id == b'\0' as _) {
+        if *(*left).internal_id == b'\0' as _ || *(*right).internal_id == b'\0' as _ {
             if *(*left).internal_id != b'\0' as _ {
-                return (-1);
+                return -1;
             }
             if *(*right).internal_id != b'\0' as _ {
-                return (1);
+                return 1;
             }
-            return ((*left).inner as i32 - (*right).inner as i32);
+            return (*left).inner as i32 - (*right).inner as i32;
         }
 
         let r = libc::strcmp((*left).internal_id, (*right).internal_id);
         if r != 0 {
-            return (r);
+            return r;
         }
         libc::strcmp((*left).uri, (*right).uri)
     }
@@ -134,17 +134,17 @@ pub unsafe extern "C" fn hyperlinks_put(
         utf8_stravis(&raw mut uri, uri_in, VIS_OCTAL | VIS_CSTYLE);
         utf8_stravis(&raw mut internal_id, internal_id_in, VIS_OCTAL | VIS_CSTYLE);
 
-        if (*internal_id_in != b'\0' as _) {
+        if *internal_id_in != b'\0' as _ {
             let mut find = MaybeUninit::<hyperlinks_uri>::uninit();
             let mut find = find.as_mut_ptr();
             (*find).uri = uri;
             (*find).internal_id = internal_id;
 
             let hlu = rb_find::<_, discr_by_uri_entry>(&raw mut (*hl).by_uri, find);
-            if (!hlu.is_null()) {
+            if !hlu.is_null() {
                 free_(uri);
                 free_(internal_id);
-                return ((*hlu).inner);
+                return (*hlu).inner;
             }
         }
         xasprintf(
@@ -235,7 +235,7 @@ pub unsafe extern "C" fn hyperlinks_reset(hl: *mut hyperlinks) {
 pub unsafe extern "C" fn hyperlinks_free(hl: *mut hyperlinks) {
     unsafe {
         (*hl).references -= 1;
-        if ((*hl).references == 0) {
+        if (*hl).references == 0 {
             hyperlinks_reset(hl);
             free_(hl);
         }

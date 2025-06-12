@@ -68,7 +68,7 @@ pub unsafe extern "C" fn cmd_send_keys_inject_key(
         // struct key_binding *bd;
         // struct *event;
 
-        if (args_has_(args, 'K')) {
+        if args_has_(args, 'K') {
             if tc.is_null() {
                 return item;
             }
@@ -82,7 +82,7 @@ pub unsafe extern "C" fn cmd_send_keys_inject_key(
         }
 
         let wme = tailq_first(&raw mut (*wp).modes);
-        if (wme.is_null() || (*(*wme).mode).key_table.is_none()) {
+        if wme.is_null() || (*(*wme).mode).key_table.is_none() {
             if window_pane_key(wp, tc, s, wl, key, null_mut()) != 0 {
                 return null_mut();
             }
@@ -92,7 +92,7 @@ pub unsafe extern "C" fn cmd_send_keys_inject_key(
         let mut table = key_bindings_get_table((*(*wme).mode).key_table.unwrap()(wme), 1);
 
         let bd = key_bindings_get(NonNull::new(table).unwrap(), key & !KEYC_MASK_FLAGS);
-        if (!bd.is_null()) {
+        if !bd.is_null() {
             (*table).references += 1;
             after = key_bindings_dispatch(bd, after, tc, null_mut(), target);
             key_bindings_unref_table(table);
@@ -123,7 +123,7 @@ pub unsafe extern "C" fn cmd_send_keys_inject_string(
         // long n;
         // int literal;
 
-        if (args_has_(args, 'H')) {
+        if args_has_(args, 'H') {
             let n = strtol(s, &raw mut endptr, 16);
             if *s == b'\0' as _ || n < 0 || n > 0xff || *endptr != b'\0' as _ {
                 return item;
@@ -132,9 +132,9 @@ pub unsafe extern "C" fn cmd_send_keys_inject_string(
         }
 
         let mut literal = args_has_(args, 'l');
-        if (!literal) {
+        if !literal {
             key = key_string_lookup_string(s);
-            if (key != KEYC_NONE && key != KEYC_UNKNOWN) {
+            if key != KEYC_NONE && key != KEYC_UNKNOWN {
                 after = cmd_send_keys_inject_key(item, after, args, key);
                 if !after.is_null() {
                     return after;
@@ -142,14 +142,14 @@ pub unsafe extern "C" fn cmd_send_keys_inject_string(
             }
             literal = true;
         }
-        if (literal) {
+        if literal {
             ud = utf8_fromcstr(s);
             loop_ = ud;
             while (*loop_).size != 0 {
-                if ((*loop_).size == 1 && (*loop_).data[0] <= 0x7f) {
+                if (*loop_).size == 1 && (*loop_).data[0] <= 0x7f {
                     key = (*loop_).data[0] as _;
                 } else {
-                    if (utf8_from_data(loop_, &raw mut uc) != utf8_state::UTF8_DONE) {
+                    if utf8_from_data(loop_, &raw mut uc) != utf8_state::UTF8_DONE {
                         loop_ = loop_.add(1);
                         continue;
                     }
@@ -183,16 +183,16 @@ pub unsafe extern "C" fn cmd_send_keys_exec(self_: *mut cmd, item: *mut cmdq_ite
         let count = args_count(args);
         let mut cause: *mut c_char = null_mut();
 
-        if (args_has_(args, 'N')) {
+        if args_has_(args, 'N') {
             np = args_strtonum_and_expand(args, b'N', 1, u32::MAX as i64, item, &raw mut cause)
                 as u32;
-            if (!cause.is_null()) {
+            if !cause.is_null() {
                 cmdq_error(item, c"repeat count %s".as_ptr(), cause);
                 free_(cause);
                 return cmd_retval::CMD_RETURN_ERROR;
             }
-            if (!wme.is_null() && (args_has_(args, 'X') || count == 0)) {
-                if ((*(*wme).mode).command.is_none()) {
+            if !wme.is_null() && (args_has_(args, 'X') || count == 0) {
+                if (*(*wme).mode).command.is_none() {
                     cmdq_error(item, c"not in a mode".as_ptr());
                     return cmd_retval::CMD_RETURN_ERROR;
                 }
@@ -200,8 +200,8 @@ pub unsafe extern "C" fn cmd_send_keys_exec(self_: *mut cmd, item: *mut cmdq_ite
             }
         }
 
-        if (args_has_(args, 'X')) {
-            if (wme.is_null() || (*(*wme).mode).command.is_none()) {
+        if args_has_(args, 'X') {
+            if wme.is_null() || (*(*wme).mode).command.is_none() {
                 cmdq_error(item, c"not in a mode".as_ptr());
                 return cmd_retval::CMD_RETURN_ERROR;
             }
@@ -212,9 +212,9 @@ pub unsafe extern "C" fn cmd_send_keys_exec(self_: *mut cmd, item: *mut cmdq_ite
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        if (args_has_(args, 'M')) {
+        if args_has_(args, 'M') {
             wp = transmute_ptr(cmd_mouse_pane(m, &raw mut s, null_mut()));
-            if (wp.is_null()) {
+            if wp.is_null() {
                 cmdq_error(item, c"no mouse target".as_ptr());
                 return cmd_retval::CMD_RETURN_ERROR;
             }
@@ -222,8 +222,8 @@ pub unsafe extern "C" fn cmd_send_keys_exec(self_: *mut cmd, item: *mut cmdq_ite
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        if (cmd_get_entry(self_) == &raw mut cmd_send_prefix_entry) {
-            key = if (args_has_(args, '2')) {
+        if cmd_get_entry(self_) == &raw mut cmd_send_prefix_entry {
+            key = if args_has_(args, '2') {
                 options_get_number((*s).options, c"prefix2".as_ptr()) as u64
             } else {
                 options_get_number((*s).options, c"prefix".as_ptr()) as u64
@@ -232,13 +232,13 @@ pub unsafe extern "C" fn cmd_send_keys_exec(self_: *mut cmd, item: *mut cmdq_ite
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        if (args_has_(args, 'R')) {
+        if args_has_(args, 'R') {
             colour_palette_clear(&raw mut (*wp).palette);
             input_reset((*wp).ictx, 1);
-            (*wp).flags |= (window_pane_flags::PANE_STYLECHANGED | window_pane_flags::PANE_REDRAW);
+            (*wp).flags |= window_pane_flags::PANE_STYLECHANGED | window_pane_flags::PANE_REDRAW;
         }
 
-        if (count == 0) {
+        if count == 0 {
             if args_has_(args, 'N') || args_has_(args, 'R') {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }

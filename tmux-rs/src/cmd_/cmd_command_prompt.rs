@@ -111,10 +111,10 @@ unsafe extern "C" fn cmd_command_prompt_exec(self_: *mut cmd, item: *mut cmdq_it
         } else {
             next_input = null_mut();
         }
-        while ({
+        while {
             prompt = strsep(&raw mut next_prompt as _, c",".as_ptr());
             !prompt.is_null()
-        }) {
+        } {
             (*cdata).prompts = xreallocarray_::<cmd_command_prompt_prompt>(
                 (*cdata).prompts,
                 (*cdata).count as usize + 1,

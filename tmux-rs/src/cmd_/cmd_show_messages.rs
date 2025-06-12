@@ -46,7 +46,7 @@ unsafe extern "C" fn cmd_show_messages_terminals(
             if args_has(args, b't') != 0 && term != (*tc).tty.term {
                 continue;
             }
-            if (blank != 0) {
+            if blank != 0 {
                 cmdq_print(item, c"%s".as_ptr(), c"".as_ptr());
                 blank = 0;
             }
@@ -82,16 +82,16 @@ unsafe extern "C" fn cmd_show_messages_exec(self_: *mut cmd, item: *mut cmdq_ite
 
         let mut done = 0;
         let mut blank = 0;
-        if (args_has(args, b'T') != 0) {
+        if args_has(args, b'T') != 0 {
             blank = cmd_show_messages_terminals(self_, item, blank);
             done = 1;
         }
-        if (args_has(args, b'J') != 0) {
+        if args_has(args, b'J') != 0 {
             job_print_summary(item, blank);
             done = 1;
         }
         if done != 0 {
-            return (cmd_retval::CMD_RETURN_NORMAL);
+            return cmd_retval::CMD_RETURN_NORMAL;
         }
 
         let mut ft = format_create_from_target(item);

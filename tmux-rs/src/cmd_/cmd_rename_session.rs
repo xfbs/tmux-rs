@@ -43,17 +43,17 @@ unsafe extern "C" fn cmd_rename_session_exec(self_: *mut cmd, item: *mut cmdq_it
         if newname.is_null() {
             cmdq_error(item, c"invalid session: %s".as_ptr(), tmp);
             free_(tmp);
-            return (cmd_retval::CMD_RETURN_ERROR);
+            return cmd_retval::CMD_RETURN_ERROR;
         }
         free_(tmp);
         if libc::strcmp(newname, (*s).name) == 0 {
             free_(newname);
-            return (cmd_retval::CMD_RETURN_NORMAL);
+            return cmd_retval::CMD_RETURN_NORMAL;
         }
         if !session_find(newname).is_null() {
             cmdq_error(item, c"duplicate session: %s".as_ptr(), newname);
             free_(newname);
-            return (cmd_retval::CMD_RETURN_ERROR);
+            return cmd_retval::CMD_RETURN_ERROR;
         }
 
         rb_remove(&raw mut sessions, s);

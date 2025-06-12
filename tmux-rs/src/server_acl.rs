@@ -88,12 +88,12 @@ pub unsafe extern "C" fn server_acl_display(item: *mut cmdq_item) {
                 continue;
             }
             let pw = getpwuid((*loop_).uid);
-            let name = if (!pw.is_null()) {
+            let name = if !pw.is_null() {
                 (*pw).pw_name
             } else {
                 c"unknown".as_ptr()
             };
-            if ((*loop_).flags == server_acl_user_flags::SERVER_ACL_READONLY) {
+            if (*loop_).flags == server_acl_user_flags::SERVER_ACL_READONLY {
                 cmdq_print(item, c"%s (R)".as_ptr(), name);
             } else {
                 cmdq_print(item, c"%s (W)".as_ptr(), name);
@@ -106,7 +106,7 @@ pub unsafe extern "C" fn server_acl_display(item: *mut cmdq_item) {
 pub unsafe extern "C" fn server_acl_user_allow(uid: uid_t) {
     unsafe {
         let mut user = server_acl_user_find(uid);
-        if (user.is_null()) {
+        if user.is_null() {
             user = xcalloc1();
             (*user).uid = uid;
             // server_acl_entries
@@ -119,7 +119,7 @@ pub unsafe extern "C" fn server_acl_user_allow(uid: uid_t) {
 pub unsafe extern "C" fn server_acl_user_deny(uid: uid_t) {
     unsafe {
         let user = server_acl_user_find(uid);
-        if (!user.is_null()) {
+        if !user.is_null() {
             // server_acl_entries
             rb_remove(&raw mut server_acl_entries, user);
             free_(user);

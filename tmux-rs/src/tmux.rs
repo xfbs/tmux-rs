@@ -144,7 +144,7 @@ pub unsafe extern "C" fn expand_path(path: *const c_char, home: *const c_char) -
                 end = c"".as_ptr();
             }
             xasprintf(&raw mut expanded, c"%s%s".as_ptr(), (*value).value, end);
-            return (expanded);
+            return expanded;
         }
 
         xstrdup(path).cast().as_ptr()
@@ -171,10 +171,10 @@ unsafe extern "C" fn expand_paths(
 
         let mut tmp: *mut c_char = xstrdup(s).cast().as_ptr();
         let mut copy = tmp;
-        while ({
+        while {
             next = strsep(&raw mut tmp as _, c":".as_ptr().cast());
             !next.is_null()
-        }) {
+        } {
             let expanded = expand_path(next, home);
             if expanded.is_null() {
                 log_debug!("{}: invalid path: {}", func, _s(next));
@@ -203,7 +203,7 @@ unsafe extern "C" fn expand_paths(
                     break;
                 }
             }
-            if (i != *n) {
+            if i != *n {
                 log_debug!("{}: duplicate path: {}", func, _s(path));
                 free_(path);
                 continue;
@@ -481,10 +481,10 @@ pub unsafe extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *m
         );
 
         let mut opt;
-        while ({
+        while {
             opt = getopt(argc, argv, c"2c:CDdf:lL:NqS:T:uUvV".as_ptr());
             opt != -1
-        }) {
+        } {
             match opt as u8 {
                 b'2' => tty_add_features(&raw mut feat, c"256".as_ptr(), c":,".as_ptr()),
                 b'c' => shell_command = optarg,

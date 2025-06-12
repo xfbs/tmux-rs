@@ -170,7 +170,7 @@ pub unsafe extern "C" fn job_run(
 
             match pid {
                 -1 => {
-                    if (!flags & JOB_PTY != 0) {
+                    if !flags & JOB_PTY != 0 {
                         close(out[0]);
                         close(out[1]);
                     }
@@ -193,7 +193,7 @@ pub unsafe extern "C" fn job_run(
                     environ_push(env);
                     environ_free(env);
 
-                    if (!flags & JOB_PTY != 0) {
+                    if !flags & JOB_PTY != 0 {
                         if dup2(out[1], STDIN_FILENO) == -1 {
                             fatal(c"dup2 failed".as_ptr());
                         }
@@ -218,7 +218,7 @@ pub unsafe extern "C" fn job_run(
                     }
                     closefrom(STDERR_FILENO + 1);
 
-                    if (!cmd.is_null()) {
+                    if !cmd.is_null() {
                         setenv(c"SHELL".as_ptr(), shell, 1);
                         execl(shell, argv0, c"-c".as_ptr(), cmd, null_mut::<c_void>());
                         fatal(c"execl failed".as_ptr());
@@ -239,7 +239,7 @@ pub unsafe extern "C" fn job_run(
             (*job).state = job_state::JOB_RUNNING;
             (*job).flags = flags;
 
-            if (!cmd.is_null()) {
+            if !cmd.is_null() {
                 (*job).cmd = xstrdup(cmd).as_ptr();
             } else {
                 (*job).cmd = cmd_stringify_argv(argc, argv);
@@ -255,7 +255,7 @@ pub unsafe extern "C" fn job_run(
             (*job).freecb = freecb;
             (*job).data = data;
 
-            if (!flags & JOB_PTY != 0) {
+            if !flags & JOB_PTY != 0 {
                 close(out[1]);
                 (*job).fd = out[0];
             } else {
@@ -438,7 +438,7 @@ pub unsafe extern "C" fn job_check_died(mut pid: pid_t, mut status: i32) {
         if job.is_null() {
             return;
         }
-        if (WIFSTOPPED(status)) {
+        if WIFSTOPPED(status) {
             if WSTOPSIG(status) == SIGTTIN || WSTOPSIG(status) == SIGTTOU {
                 return;
             }
@@ -454,7 +454,7 @@ pub unsafe extern "C" fn job_check_died(mut pid: pid_t, mut status: i32) {
 
         (*job).status = status;
 
-        if ((*job).state == job_state::JOB_CLOSED) {
+        if (*job).state == job_state::JOB_CLOSED {
             if let Some(completecb) = (*job).completecb {
                 completecb(job);
             }

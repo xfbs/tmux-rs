@@ -1206,7 +1206,7 @@ pub unsafe extern "C" fn tty_keys_next(tty: *mut tty) -> i32 {
                          * If not a complete key, look for key with an escape prefix (meta
                          * modifier).
                          */
-                        if (*buf == b'\x1b' && len > 1) {
+                        if *buf == b'\x1b' && len > 1 {
                             /* Look for a key without the escape. */
                             let n = tty_keys_next1(
                                 tty,
@@ -1244,7 +1244,7 @@ pub unsafe extern "C" fn tty_keys_next(tty: *mut tty) -> i32 {
                          * At this point, we know the key is not partial (with or without
                          * escape). So pass it through even if the timer has not expired.
                          */
-                        if (*buf == b'\x1b' && len >= 2) {
+                        if *buf == b'\x1b' && len >= 2 {
                             key = *buf.add(1) as u64 | KEYC_META;
                             size = 2;
                         } else {
@@ -1263,10 +1263,10 @@ pub unsafe extern "C" fn tty_keys_next(tty: *mut tty) -> i32 {
                          * lowercase, so ^A becomes a|CTRL.
                          */
                         onlykey = key & KEYC_MASK_KEY;
-                        if (onlykey < 0x20
+                        if onlykey < 0x20
                             && onlykey != c0::C0_HT as u64
                             && onlykey != c0::C0_CR as u64
-                            && onlykey != c0::C0_ESC as u64)
+                            && onlykey != c0::C0_ESC as u64
                         {
                             onlykey |= 0x40;
                             if onlykey >= b'A' as u64 && onlykey <= b'Z' as u64 {
@@ -1337,7 +1337,7 @@ pub unsafe extern "C" fn tty_keys_next(tty: *mut tty) -> i32 {
                 (*tty).flags &= !tty_flags::TTY_TIMER;
 
                 /* Check for focus events. */
-                if (key == keyc::KEYC_FOCUS_OUT as u64) {
+                if key == keyc::KEYC_FOCUS_OUT as u64 {
                     (*c).flags &= !client_flag::FOCUSED;
                     window_update_focus((*(*(*c).session).curw).window);
                     notify_client(c"client-focus-out".as_ptr(), c);
@@ -1348,7 +1348,7 @@ pub unsafe extern "C" fn tty_keys_next(tty: *mut tty) -> i32 {
                 }
 
                 /* Fire the key. */
-                if (key != KEYC_UNKNOWN) {
+                if key != KEYC_UNKNOWN {
                     event = xmalloc_::<key_event>().as_ptr();
                     (*event).key = key;
                     memcpy__(&raw mut (*event).m, &raw const m);

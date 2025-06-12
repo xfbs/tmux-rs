@@ -37,13 +37,13 @@ unsafe extern "C" fn cmd_show_environment_escape(envent: *mut environ_entry) -> 
         let mut out = ret;
 
         let mut c = 0;
-        while ({
+        while {
             c = *value;
             value = value.add(1);
             c != b'\0' as c_char
-        }) {
+        } {
             /* POSIX interprets $ ` " and \ in double quotes. */
-            if (c == b'$' as _ || c == b'`' as _ || c == b'"' as _ || c == b'\\' as _) {
+            if c == b'$' as _ || c == b'`' as _ || c == b'"' as _ || c == b'\\' as _ {
                 *out = b'\\' as _;
                 out = out.add(1);
             }
@@ -73,7 +73,7 @@ unsafe extern "C" fn cmd_show_environment_print(
             return;
         }
 
-        if (!args_has_(args, 's')) {
+        if !args_has_(args, 's') {
             if let Some(value) = (*envent).value {
                 cmdq_print(item, c"%s=%s".as_ptr(), (*envent).name, value);
             } else {
@@ -111,40 +111,40 @@ unsafe extern "C" fn cmd_show_environment_exec(
 
         let mut tflag = args_get_(args, 't');
         if !tflag.is_null() {
-            if ((*target).s.is_null()) {
+            if (*target).s.is_null() {
                 cmdq_error(item, c"no such session: %s".as_ptr(), tflag);
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
         }
 
-        if (args_has_(args, 'g')) {
+        if args_has_(args, 'g') {
             env = global_environ;
         } else {
-            if ((*target).s.is_null()) {
+            if (*target).s.is_null() {
                 tflag = args_get_(args, 't');
-                if (!tflag.is_null()) {
+                if !tflag.is_null() {
                     cmdq_error(item, c"no such session: %s".as_ptr(), tflag);
                 } else {
                     cmdq_error(item, c"no current session".as_ptr());
                 }
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
             env = (*(*target).s).environ;
         }
 
         let mut envent;
-        if (!name.is_null()) {
+        if !name.is_null() {
             envent = environ_find(env, name);
-            if (envent.is_null()) {
+            if envent.is_null() {
                 cmdq_error(item, c"unknown variable: %s".as_ptr(), name);
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
             cmd_show_environment_print(self_, item, envent);
-            return (cmd_retval::CMD_RETURN_NORMAL);
+            return cmd_retval::CMD_RETURN_NORMAL;
         }
 
         envent = environ_first(env);
-        while (!envent.is_null()) {
+        while !envent.is_null() {
             cmd_show_environment_print(self_, item, envent);
             envent = environ_next(envent);
         }

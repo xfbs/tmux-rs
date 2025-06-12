@@ -102,7 +102,7 @@ pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_it
                 argument = format_single_from_target(item, args_string(args, 0));
 
                 /* If set-hook -R, fire the hook straight away. */
-                if (cmd_get_entry(self_) == &raw mut cmd_set_hook_entry && args_has_(args, 'R')) {
+                if cmd_get_entry(self_) == &raw mut cmd_set_hook_entry && args_has_(args, 'R') {
                     notify_hook(item, argument);
                     free_(argument);
                     return cmd_retval::CMD_RETURN_NORMAL;
@@ -110,23 +110,23 @@ pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_it
 
                 /* Parse option name and index. */
                 name = options_match(argument, &raw mut idx, &raw mut ambiguous);
-                if (name.is_null()) {
+                if name.is_null() {
                     if args_has_(args, 'q') {
                         break 'out;
                     }
-                    if (ambiguous != 0) {
+                    if ambiguous != 0 {
                         cmdq_error(item, c"ambiguous option: %s".as_ptr(), argument);
                     } else {
                         cmdq_error(item, c"invalid option: %s".as_ptr(), argument);
                     }
                     break 'fail;
                 }
-                if (args_count(args) < 2) {
+                if args_count(args) < 2 {
                     value = null_mut();
                 } else {
                     value = args_string(args, 1);
                 }
-                if (!value.is_null() && args_has_(args, 'F')) {
+                if !value.is_null() && args_has_(args, 'F') {
                     expanded = format_single_from_target(item, value);
                     value = expanded;
                 }
@@ -140,7 +140,7 @@ pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_it
                     &raw mut oo,
                     &raw mut cause,
                 );
-                if (scope == OPTIONS_TABLE_NONE) {
+                if scope == OPTIONS_TABLE_NONE {
                     if args_has_(args, 'q') {
                         break 'out;
                     }
@@ -152,23 +152,23 @@ pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_it
                 parent = options_get(oo, name);
 
                 /* Check that array options and indexes match up. */
-                if (idx != -1 && (*name == b'@' as _ || options_is_array(parent) == 0)) {
+                if idx != -1 && (*name == b'@' as _ || options_is_array(parent) == 0) {
                     cmdq_error(item, c"not an array: %s".as_ptr(), argument);
                     break 'fail;
                 }
 
                 /* With -o, check this option is not already set. */
-                if (!args_has_(args, 'u') && args_has_(args, 'o')) {
-                    if (idx == -1) {
+                if !args_has_(args, 'u') && args_has_(args, 'o') {
+                    if idx == -1 {
                         already = !o.is_null() as i32;
                     } else {
-                        if (o.is_null()) {
+                        if o.is_null() {
                             already = 0;
                         } else {
                             already = (!options_array_get(o, idx as u32).is_null()) as i32;
                         }
                     }
-                    if (already != 0) {
+                    if already != 0 {
                         if args_has_(args, 'q') {
                             break 'out;
                         }
@@ -186,29 +186,29 @@ pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_it
                         if po.is_null() {
                             continue;
                         }
-                        if (options_remove_or_default(po, idx, &raw mut cause) != 0) {
+                        if options_remove_or_default(po, idx, &raw mut cause) != 0 {
                             cmdq_error(item, c"%s".as_ptr(), cause);
                             free_(cause);
                             break 'fail;
                         }
                     }
                 }
-                if (args_has_(args, 'u') || args_has_(args, 'U')) {
+                if args_has_(args, 'u') || args_has_(args, 'U') {
                     if o.is_null() {
                         break 'out;
                     }
-                    if (options_remove_or_default(o, idx, &raw mut cause) != 0) {
+                    if options_remove_or_default(o, idx, &raw mut cause) != 0 {
                         cmdq_error(item, c"%s".as_ptr(), cause);
                         free_(cause);
                         break 'fail;
                     }
-                } else if (*name == b'@' as c_char) {
-                    if (value.is_null()) {
+                } else if *name == b'@' as c_char {
+                    if value.is_null() {
                         cmdq_error(item, c"empty value".as_ptr());
                         break 'fail;
                     }
                     options_set_string(oo, name, append, c"%s".as_ptr(), value);
-                } else if (idx == -1 && options_is_array(parent) == 0) {
+                } else if idx == -1 && options_is_array(parent) == 0 {
                     error = options_from_string(
                         oo,
                         options_table_entry(parent),
@@ -217,29 +217,29 @@ pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_it
                         args_has(args, b'a'),
                         &raw mut cause,
                     );
-                    if (error != 0) {
+                    if error != 0 {
                         cmdq_error(item, c"%s".as_ptr(), cause);
                         free_(cause);
                         break 'fail;
                     }
                 } else {
-                    if (value.is_null()) {
+                    if value.is_null() {
                         cmdq_error(item, c"empty value".as_ptr());
                         break 'fail;
                     }
                     if o.is_null() {
                         o = options_empty(oo, options_table_entry(parent));
                     }
-                    if (idx == -1) {
+                    if idx == -1 {
                         if append == 0 {
                             options_array_clear(o);
                         }
-                        if (options_array_assign(o, value, &raw mut cause) != 0) {
+                        if options_array_assign(o, value, &raw mut cause) != 0 {
                             cmdq_error(item, c"%s".as_ptr(), cause);
                             free_(cause);
                             break 'fail;
                         }
-                    } else if (options_array_set(o, idx as u32, value, append, &raw mut cause) != 0)
+                    } else if options_array_set(o, idx as u32, value, append, &raw mut cause) != 0
                     {
                         cmdq_error(item, c"%s".as_ptr(), cause);
                         free_(cause);

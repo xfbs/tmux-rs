@@ -130,7 +130,7 @@ pub unsafe extern "C" fn load_cfg(
                 return 0;
             }
             cfg_add_cause(c"%s: %s".as_ptr(), path, strerror(*__errno_location()));
-            return (-1);
+            return -1;
         }
 
         let mut pi: cmd_parse_input = zeroed();

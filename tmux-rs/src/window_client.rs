@@ -207,9 +207,9 @@ pub unsafe extern "C" fn window_client_build(
             item = *(*data).item_list.add(i as usize);
             let c = (*item).c;
 
-            if (!filter.is_null()) {
+            if !filter.is_null() {
                 let cp = format_single(null_mut(), filter, c, null_mut(), null_mut(), null_mut());
-                if (format_true(cp) == 0) {
+                if format_true(cp) == 0 {
                     free_(cp);
                     continue;
                 }
@@ -263,19 +263,19 @@ pub unsafe extern "C" fn window_client_draw(
         if lines >= sy {
             lines = 0;
         }
-        let at = if (status_at_line(c) == 0) { lines } else { 0 };
+        let at = if status_at_line(c) == 0 { lines } else { 0 };
 
         screen_write_cursormove(ctx, cx as i32, (cy + at) as i32, 0);
         screen_write_preview(ctx, &raw mut (*wp).base, sx, sy - 2 - lines);
 
-        if (at != 0) {
+        if at != 0 {
             screen_write_cursormove(ctx, cx as i32, (cy + 2) as i32, 0);
         } else {
             screen_write_cursormove(ctx, cx as i32, (cy + sy - 1 - lines) as i32, 0);
         }
         screen_write_hline(ctx, sx, 0, 0, box_lines::BOX_LINES_DEFAULT, null());
 
-        if (at != 0) {
+        if at != 0 {
             screen_write_cursormove(ctx, cx as i32, cy as i32, 0);
         } else {
             screen_write_cursormove(ctx, cx as i32, (cy + sy - lines) as i32, 0);
@@ -339,17 +339,17 @@ pub unsafe extern "C" fn window_client_init(
         (*wme.as_ptr()).data = data.cast();
         (*data).wp = wp;
 
-        if (args.is_null() || !args_has_(args, 'F')) {
+        if args.is_null() || !args_has_(args, 'F') {
             (*data).format = xstrdup_(WINDOW_CLIENT_DEFAULT_FORMAT).as_ptr();
         } else {
             (*data).format = xstrdup(args_get_(args, 'F')).as_ptr();
         }
-        if (args.is_null() || !args_has_(args, 'K')) {
+        if args.is_null() || !args_has_(args, 'K') {
             (*data).key_format = xstrdup_(WINDOW_CLIENT_DEFAULT_KEY_FORMAT).as_ptr();
         } else {
             (*data).key_format = xstrdup(args_get_(args, 'K')).as_ptr();
         }
-        if (args.is_null() || args_count(args) == 0) {
+        if args.is_null() || args_count(args) == 0 {
             (*data).command = xstrdup_(WINDOW_CLIENT_DEFAULT_COMMAND).as_ptr();
         } else {
             (*data).command = xstrdup(args_string(args, 0)).as_ptr();
@@ -439,9 +439,9 @@ pub unsafe extern "C" fn window_client_do_detach(
         if item == mode_tree_get_current((*data.as_ptr()).data).cast() {
             mode_tree_down((*data.as_ptr()).data, 0);
         }
-        if (key == 'd' as _ || key == 'D' as _) {
+        if key == 'd' as _ || key == 'D' as _ {
             server_client_detach((*item.as_ptr()).c, msgtype::MSG_DETACH);
-        } else if (key == 'x' as _ || key == 'X' as _) {
+        } else if key == 'x' as _ || key == 'X' as _ {
             server_client_detach((*item.as_ptr()).c, msgtype::MSG_DETACHKILL);
         } else if key == 'z' as _ || key == 'Z' as _ {
             server_client_suspend((*item.as_ptr()).c);
@@ -487,7 +487,7 @@ pub unsafe extern "C" fn window_client_key(
             _ => (),
         }
 
-        if (finished || server_client_how_many() == 0) {
+        if finished || server_client_how_many() == 0 {
             window_pane_reset_mode(wp);
         } else {
             mode_tree_draw(mtd);

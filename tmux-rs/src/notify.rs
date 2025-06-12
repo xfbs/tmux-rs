@@ -38,9 +38,9 @@ pub unsafe extern "C" fn notify_insert_one_hook(
 ) -> *mut cmdq_item {
     unsafe {
         if cmdlist.is_null() {
-            return (item);
+            return item;
         }
-        if (log_get_level() != 0) {
+        if log_get_level() != 0 {
             let s = cmd_list_print(cmdlist, 0);
             log_debug!(
                 "{}: hook {}: {}",
@@ -81,21 +81,21 @@ pub unsafe extern "C" fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut n
             cmd_find_copy_state(&raw mut fs, &raw mut (*ne).fs);
         }
 
-        if (fs.s.is_null()) {
+        if fs.s.is_null() {
             oo = global_s_options;
         } else {
             oo = (*fs.s).options;
         }
         o = options_get(oo, (*ne).name);
-        if (o.is_null() && !fs.wp.is_null()) {
+        if o.is_null() && !fs.wp.is_null() {
             oo = (*fs.wp).options;
             o = options_get(oo, (*ne).name);
         }
-        if (o.is_null() && !fs.wl.is_null()) {
+        if o.is_null() && !fs.wl.is_null() {
             oo = (*(*fs.wl).window).options;
             o = options_get(oo, (*ne).name);
         }
-        if (o.is_null()) {
+        if o.is_null() {
             log_debug!("{}: hook {} not found", __func__, _s((*ne).name));
             return;
         }
@@ -103,7 +103,7 @@ pub unsafe extern "C" fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut n
         let state = cmdq_new_state(&raw mut fs, null_mut(), CMDQ_STATE_NOHOOKS);
         cmdq_add_formats(state, (*ne).formats);
 
-        if (*(*ne).name == b'@' as c_char) {
+        if *(*ne).name == b'@' as c_char {
             let value = options_get_string(oo, (*ne).name);
             let pr = cmd_parse_from_string(value, null_mut());
             match (*pr).status {
@@ -122,7 +122,7 @@ pub unsafe extern "C" fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut n
             }
         } else {
             let mut a = options_array_first(o);
-            while (!a.is_null()) {
+            while !a.is_null() {
                 let cmdlist = (*options_array_item_value(a)).cmdlist;
                 item = notify_insert_one_hook(item, ne, cmdlist, state);
                 a = options_array_next(a);
@@ -238,12 +238,12 @@ pub unsafe extern "C" fn notify_add(
         (*ne).client = c;
         (*ne).session = s;
         (*ne).window = w;
-        (*ne).pane = (if !wp.is_null() { (*wp).id as i32 } else { -1 });
-        (*ne).pbname = (if !pbname.is_null() {
+        (*ne).pane = if !wp.is_null() { (*wp).id as i32 } else { -1 };
+        (*ne).pbname = if !pbname.is_null() {
             xstrdup(pbname).as_ptr()
         } else {
             null_mut()
-        });
+        };
 
         (*ne).formats = format_create(null_mut(), null_mut(), 0, format_flags::FORMAT_NOJOBS);
         format_add((*ne).formats, c"hook".as_ptr(), c"%s".as_ptr(), name);
@@ -255,7 +255,7 @@ pub unsafe extern "C" fn notify_add(
                 (*c).name,
             );
         }
-        if (!s.is_null()) {
+        if !s.is_null() {
             format_add(
                 (*ne).formats,
                 c"hook_session".as_ptr(),
@@ -269,7 +269,7 @@ pub unsafe extern "C" fn notify_add(
                 (*s).name,
             );
         }
-        if (!w.is_null()) {
+        if !w.is_null() {
             format_add(
                 (*ne).formats,
                 c"hook_window".as_ptr(),
@@ -328,11 +328,11 @@ pub unsafe extern "C" fn notify_hook(item: *mut cmdq_item, name: *mut c_char) {
         ne.client = cmdq_get_client(item);
         ne.session = (*target).s;
         ne.window = (*target).w;
-        ne.pane = (if !(*target).wp.is_null() {
+        ne.pane = if !(*target).wp.is_null() {
             (*(*target).wp).id as i32
         } else {
             -1
-        });
+        };
 
         ne.formats = format_create(null_mut(), null_mut(), 0, format_flags::FORMAT_NOJOBS);
         format_add(ne.formats, c"hook".as_ptr(), c"%s".as_ptr(), name);
@@ -457,7 +457,7 @@ pub unsafe extern "C" fn notify_paste_buffer(pbname: *const c_char, deleted: i32
         let mut fs: cmd_find_state = zeroed();
 
         cmd_find_clear_state(&raw mut fs, 0);
-        if (deleted != 0) {
+        if deleted != 0 {
             notify_add(
                 c"paste-buffer-deleted".as_ptr(),
                 &raw mut fs,

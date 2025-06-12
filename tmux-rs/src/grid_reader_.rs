@@ -40,18 +40,18 @@ pub unsafe extern "C" fn grid_reader_cursor_right(gr: *mut grid_reader, wrap: u3
     unsafe {
         let mut gc = MaybeUninit::<grid_cell>::uninit();
 
-        let px = if (all != 0) {
+        let px = if all != 0 {
             (*(*gr).gd).sx
         } else {
             grid_reader_line_length(gr)
         };
 
-        if (wrap != 0 && (*gr).cx >= px && (*gr).cy < (*(*gr).gd).hsize + (*(*gr).gd).sy - 1) {
+        if wrap != 0 && (*gr).cx >= px && (*gr).cy < (*(*gr).gd).hsize + (*(*gr).gd).sy - 1 {
             grid_reader_cursor_start_of_line(gr, 0);
             grid_reader_cursor_down(gr);
-        } else if ((*gr).cx < px) {
+        } else if (*gr).cx < px {
             (*gr).cx += 1;
-            while ((*gr).cx < px) {
+            while (*gr).cx < px {
                 grid_get_cell((*gr).gd, (*gr).cx, (*gr).cy, gc.as_mut_ptr());
                 if !(*gc.as_ptr()).flags.intersects(grid_flag::PADDING) {
                     break;
@@ -67,7 +67,7 @@ pub unsafe extern "C" fn grid_reader_cursor_left(gr: *mut grid_reader, wrap: i32
     unsafe {
         let mut gc = MaybeUninit::<grid_cell>::uninit();
 
-        while ((*gr).cx > 0) {
+        while (*gr).cx > 0 {
             grid_get_cell((*gr).gd, (*gr).cx, (*gr).cy, gc.as_mut_ptr());
             if !(*gc.as_ptr()).flags.intersects(grid_flag::PADDING) {
                 break;
@@ -98,7 +98,7 @@ pub unsafe extern "C" fn grid_reader_cursor_down(gr: *mut grid_reader) {
         if (*gr).cy < (*(*gr).gd).hsize + (*(*gr).gd).sy - 1 {
             (*gr).cy += 1;
         }
-        while ((*gr).cx > 0) {
+        while (*gr).cx > 0 {
             grid_get_cell((*gr).gd, (*gr).cx, (*gr).cy, gc);
             if !(*gc).flags.intersects(grid_flag::PADDING) {
                 break;
@@ -117,7 +117,7 @@ pub unsafe extern "C" fn grid_reader_cursor_up(gr: *mut grid_reader) {
         if (*gr).cy > 0 {
             (*gr).cy -= 1;
         }
-        while ((*gr).cx > 0) {
+        while (*gr).cx > 0 {
             grid_get_cell((*gr).gd, (*gr).cx, (*gr).cy, gc);
             if !(*gc).flags.intersects(grid_flag::PADDING) {
                 break;
@@ -146,17 +146,17 @@ pub unsafe extern "C" fn grid_reader_cursor_start_of_line(gr: *mut grid_reader, 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_reader_cursor_end_of_line(gr: *mut grid_reader, wrap: i32, all: i32) {
     unsafe {
-        if (wrap != 0) {
+        if wrap != 0 {
             let yy = (*(*gr).gd).hsize + (*(*gr).gd).sy - 1;
-            while ((*gr).cy < yy
+            while (*gr).cy < yy
                 && (*grid_get_line((*gr).gd, (*gr).cy))
                     .flags
-                    .intersects(grid_line_flag::WRAPPED))
+                    .intersects(grid_line_flag::WRAPPED)
             {
                 (*gr).cy += 1;
             }
         }
-        if (all != 0) {
+        if all != 0 {
             (*gr).cx = (*(*gr).gd).sx;
         } else {
             (*gr).cx = grid_reader_line_length(gr);
@@ -171,16 +171,16 @@ pub unsafe extern "C" fn grid_reader_handle_wrap(
     yy: *mut u32,
 ) -> i32 {
     unsafe {
-        while ((*gr).cx > *xx) {
+        while (*gr).cx > *xx {
             if (*gr).cy == *yy {
                 return 0;
             }
             grid_reader_cursor_start_of_line(gr, 0);
             grid_reader_cursor_down(gr);
 
-            if ((*grid_get_line((*gr).gd, (*gr).cy))
+            if (*grid_get_line((*gr).gd, (*gr).cy))
                 .flags
-                .intersects(grid_line_flag::WRAPPED))
+                .intersects(grid_line_flag::WRAPPED)
             {
                 *xx = (*(*gr).gd).sx - 1;
             } else {
@@ -226,7 +226,7 @@ pub unsafe extern "C" fn grid_reader_cursor_next_word(
             return;
         }
         if grid_reader_in_set(gr, WHITESPACE.as_ptr()) == 0 {
-            if (grid_reader_in_set(gr, separators) != 0) {
+            if grid_reader_in_set(gr, separators) != 0 {
                 loop {
                     (*gr).cx += 1;
 
@@ -249,8 +249,8 @@ pub unsafe extern "C" fn grid_reader_cursor_next_word(
                 }
             }
         }
-        while (grid_reader_handle_wrap(gr, &raw mut xx, &raw mut yy) != 0
-            && grid_reader_in_set(gr, WHITESPACE.as_ptr()) != 0)
+        while grid_reader_handle_wrap(gr, &raw mut xx, &raw mut yy) != 0
+            && grid_reader_in_set(gr, WHITESPACE.as_ptr()) != 0
         {
             (*gr).cx += 1;
         }
@@ -274,10 +274,10 @@ pub unsafe extern "C" fn grid_reader_cursor_next_word_end(
         };
         let mut yy = (*(*gr).gd).hsize + (*(*gr).gd).sy - 1;
 
-        while (grid_reader_handle_wrap(gr, &raw mut xx, &raw mut yy) != 0) {
-            if (grid_reader_in_set(gr, WHITESPACE.as_ptr()) != 0) {
+        while grid_reader_handle_wrap(gr, &raw mut xx, &raw mut yy) != 0 {
+            if grid_reader_in_set(gr, WHITESPACE.as_ptr()) != 0 {
                 (*gr).cx += 1;
-            } else if (grid_reader_in_set(gr, separators) != 0) {
+            } else if grid_reader_in_set(gr, separators) != 0 {
                 loop {
                     (*gr).cx += 1;
 
@@ -320,11 +320,11 @@ pub unsafe extern "C" fn grid_reader_cursor_previous_word(
         let mut at_eol: i32 = 0;
         let mut word_is_letters;
 
-        if (already != 0 || grid_reader_in_set(gr, WHITESPACE.as_ptr()) != 0) {
+        if already != 0 || grid_reader_in_set(gr, WHITESPACE.as_ptr()) != 0 {
             loop {
-                if ((*gr).cx > 0) {
+                if (*gr).cx > 0 {
                     (*gr).cx -= 1;
-                    if (grid_reader_in_set(gr, WHITESPACE.as_ptr()) == 0) {
+                    if grid_reader_in_set(gr, WHITESPACE.as_ptr()) == 0 {
                         word_is_letters = !grid_reader_in_set(gr, separators);
                         break;
                     }
@@ -335,12 +335,12 @@ pub unsafe extern "C" fn grid_reader_cursor_previous_word(
                     grid_reader_cursor_up(gr);
                     grid_reader_cursor_end_of_line(gr, 0, 0);
 
-                    if (stop_at_eol != 0 && (*gr).cx > 0) {
+                    if stop_at_eol != 0 && (*gr).cx > 0 {
                         oldx = (*gr).cx as i32;
                         (*gr).cx -= 1;
                         at_eol = grid_reader_in_set(gr, WHITESPACE.as_ptr());
                         (*gr).cx = oldx as u32;
-                        if (at_eol != 0) {
+                        if at_eol != 0 {
                             word_is_letters = 0;
                             break;
                         }
@@ -356,7 +356,7 @@ pub unsafe extern "C" fn grid_reader_cursor_previous_word(
         loop {
             oldx = (*gr).cx;
             oldy = (*gr).cy;
-            if ((*gr).cx == 0) {
+            if (*gr).cx == 0 {
                 if (*gr).cy == 0
                     || (!(*grid_get_line((*gr).gd, (*gr).cy - 1))
                         .flags
@@ -397,7 +397,7 @@ pub unsafe extern "C" fn grid_reader_cursor_jump(
         let mut py = (*gr).cy;
         while py <= yy {
             let mut xx = grid_line_length((*gr).gd, py);
-            while (px < xx) {
+            while px < xx {
                 grid_get_cell((*gr).gd, px, py, gc);
                 if !(*gc).flags.intersects(grid_flag::PADDING)
                     && (*gc).data.size == (*jc).size
@@ -490,7 +490,7 @@ pub unsafe extern "C" fn grid_reader_cursor_back_to_indentation(gr: *mut grid_re
             let xx = grid_line_length((*gr).gd, py);
             for px in 0..xx {
                 grid_get_cell((*gr).gd, px, py, gc);
-                if ((*gc).data.size != 1 || (*gc).data.data[0] != b' ') {
+                if (*gc).data.size != 1 || (*gc).data.data[0] != b' ' {
                     (*gr).cx = px;
                     (*gr).cy = py;
                     return;

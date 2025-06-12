@@ -107,7 +107,7 @@ pub unsafe extern "C" fn cmd_parse_get_error(
     error: *const c_char,
 ) -> NonNull<c_char> {
     unsafe {
-        if (file.is_null()) {
+        if file.is_null() {
             xstrdup(error)
         } else {
             let mut s = null_mut();
@@ -131,7 +131,7 @@ pub unsafe extern "C" fn cmd_parse_print_commands(
             return;
         }
         let s = cmd_list_print(cmdlist, 0);
-        if (!(*pi).file.is_null()) {
+        if !(*pi).file.is_null() {
             cmdq_print((*pi).item, c"%s:%u: %s".as_ptr(), (*pi).file, (*pi).line, s);
         } else {
             cmdq_print((*pi).item, c"%u: %s".as_ptr(), (*pi).line, s);
@@ -143,7 +143,7 @@ pub unsafe extern "C" fn cmd_parse_print_commands(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_parse_free_argument(arg: *mut cmd_parse_argument) {
     unsafe {
-        match ((*arg).type_) {
+        match (*arg).type_ {
             cmd_parse_argument_type::CMD_PARSE_STRING => free_((*arg).string),
             cmd_parse_argument_type::CMD_PARSE_COMMANDS => cmd_parse_free_commands((*arg).commands),
             cmd_parse_argument_type::CMD_PARSE_PARSED_COMMANDS => cmd_list_free((*arg).cmdlist),
@@ -203,7 +203,7 @@ pub unsafe extern "C" fn cmd_parse_run_parser(cause: *mut *mut c_char) -> *mut c
             tailq_remove(&raw mut (*ps).stack, scope);
             free_(scope);
         }
-        if (retval != 0) {
+        if retval != 0 {
             *cause = (*ps).error;
             return null_mut();
         }
@@ -259,7 +259,7 @@ pub unsafe extern "C" fn cmd_parse_log_commands(
                 .map(NonNull::as_ptr)
                 .enumerate()
             {
-                match ((*arg).type_) {
+                match (*arg).type_ {
                     cmd_parse_argument_type::CMD_PARSE_STRING => {
                         log_debug!("{} {}:{}: {}", _s(prefix), i, j, _s((*arg).string))
                     }
@@ -292,12 +292,12 @@ pub unsafe extern "C" fn cmd_parse_expand_alias(
             .flags
             .intersects(cmd_parse_input_flags::CMD_PARSE_NOALIAS)
         {
-            return (0);
+            return 0;
         }
         libc::memset(pr.cast(), 0, size_of::<cmd_parse_result>());
 
         let first = tailq_first(&raw mut (*cmd).arguments);
-        if (first.is_null() || (*first).type_ != cmd_parse_argument_type::CMD_PARSE_STRING) {
+        if first.is_null() || (*first).type_ != cmd_parse_argument_type::CMD_PARSE_STRING {
             (*pr).status = cmd_parse_status::CMD_PARSE_SUCCESS;
             (*pr).cmdlist = cmd_list_new();
             return 1;
@@ -306,7 +306,7 @@ pub unsafe extern "C" fn cmd_parse_expand_alias(
 
         let mut alias = cmd_get_alias(name);
         if alias.is_null() {
-            return (0);
+            return 0;
         }
         log_debug!(
             "{}: {} alias {} = {}",
@@ -319,17 +319,17 @@ pub unsafe extern "C" fn cmd_parse_expand_alias(
         let mut cause = null_mut();
         let cmds = cmd_parse_do_buffer(alias, strlen(alias), pi, &raw mut cause);
         free_(alias);
-        if (cmds.is_null()) {
+        if cmds.is_null() {
             (*pr).status = cmd_parse_status::CMD_PARSE_ERROR;
             (*pr).error = cause;
-            return (1);
+            return 1;
         }
 
         let last = tailq_last(cmds);
-        if (last.is_null()) {
+        if last.is_null() {
             (*pr).status = cmd_parse_status::CMD_PARSE_SUCCESS;
             (*pr).cmdlist = cmd_list_new();
-            return (1);
+            return 1;
         }
 
         tailq_remove(&raw mut (*cmd).arguments, first);
@@ -397,7 +397,7 @@ pub unsafe extern "C" fn cmd_parse_build_command(
             }
 
             let add = cmd_parse(values, count, (*pi).file, (*pi).line, &raw mut cause);
-            if (add.is_null()) {
+            if add.is_null() {
                 (*pr).status = cmd_parse_status::CMD_PARSE_ERROR;
                 (*pr).error = cmd_parse_get_error((*pi).file, (*pi).line, cause).as_ptr();
                 free_(cause);
@@ -432,7 +432,7 @@ pub unsafe extern "C" fn cmd_parse_build_commands(
         *pr = zeroed();
 
         /* Check for an empty list. */
-        if (tailq_empty(cmds)) {
+        if tailq_empty(cmds) {
             (*pr).status = cmd_parse_status::CMD_PARSE_SUCCESS;
             (*pr).cmdlist = cmd_list_new();
             return;
@@ -452,7 +452,7 @@ pub unsafe extern "C" fn cmd_parse_build_commands(
                 .intersects(cmd_parse_input_flags::CMD_PARSE_ONEGROUP)
                 && (*cmd).line != line
             {
-                if (!current.is_null()) {
+                if !current.is_null() {
                     cmd_parse_print_commands(pi, current);
                     cmd_list_move(result, current);
                     cmd_list_free(current);
@@ -466,7 +466,7 @@ pub unsafe extern "C" fn cmd_parse_build_commands(
             line = (*pi).line;
 
             cmd_parse_build_command(cmd, pi, pr);
-            if ((*pr).status != cmd_parse_status::CMD_PARSE_SUCCESS) {
+            if (*pr).status != cmd_parse_status::CMD_PARSE_SUCCESS {
                 cmd_list_free(result);
                 cmd_list_free(current);
                 return;
@@ -475,7 +475,7 @@ pub unsafe extern "C" fn cmd_parse_build_commands(
             cmd_list_free((*pr).cmdlist);
         }
 
-        if (!current.is_null()) {
+        if !current.is_null() {
             cmd_parse_print_commands(pi, current);
             cmd_list_move(result, current);
             cmd_list_free(current);
@@ -500,14 +500,14 @@ pub unsafe extern "C" fn cmd_parse_from_file(
         let mut input: cmd_parse_input = zeroed();
         let mut cause = null_mut();
 
-        if (pi.is_null()) {
+        if pi.is_null() {
             input = zeroed();
             pi = &raw mut input;
         }
         pr = zeroed();
 
         let cmds = cmd_parse_do_file(f, pi, &raw mut cause);
-        if (cmds.is_null()) {
+        if cmds.is_null() {
             pr.status = cmd_parse_status::CMD_PARSE_ERROR;
             pr.error = cause;
             return (&raw mut pr);
@@ -527,7 +527,7 @@ pub unsafe extern "C" fn cmd_parse_from_string(
         let mut input = MaybeUninit::<cmd_parse_input>::uninit();
         let input = input.as_mut_ptr();
 
-        if (pi.is_null()) {
+        if pi.is_null() {
             memset0(input);
             pi = input;
         }
@@ -547,9 +547,9 @@ pub unsafe extern "C" fn cmd_parse_and_insert(
 ) -> cmd_parse_status {
     unsafe {
         let pr = cmd_parse_from_string(s, pi);
-        match ((*pr).status) {
+        match (*pr).status {
             cmd_parse_status::CMD_PARSE_ERROR => {
-                if (!error.is_null()) {
+                if !error.is_null() {
                     *error = (*pr).error;
                 } else {
                     free_((*pr).error);
@@ -575,9 +575,9 @@ pub unsafe extern "C" fn cmd_parse_and_append(
 ) -> cmd_parse_status {
     unsafe {
         let pr = cmd_parse_from_string(s, pi);
-        match ((*pr).status) {
+        match (*pr).status {
             cmd_parse_status::CMD_PARSE_ERROR => {
-                if (!error.is_null()) {
+                if !error.is_null() {
                     *error = (*pr).error;
                 } else {
                     free_((*pr).error);
@@ -606,20 +606,20 @@ pub unsafe extern "C" fn cmd_parse_from_buffer(
         // struct cmd_parse_commands	*cmds;
         // char				*cause;
 
-        if (pi.is_null()) {
+        if pi.is_null() {
             input = unsafe { zeroed() };
             pi = &raw mut input;
         }
         pr = unsafe { zeroed() };
 
-        if (len == 0) {
+        if len == 0 {
             pr.status = cmd_parse_status::CMD_PARSE_SUCCESS;
             pr.cmdlist = cmd_list_new();
             return (&raw mut pr);
         }
 
         let cmds = cmd_parse_do_buffer(buf.cast(), len, pi, &raw mut cause);
-        if (cmds.is_null()) {
+        if cmds.is_null() {
             pr.status = cmd_parse_status::CMD_PARSE_ERROR;
             pr.error = cause;
             return (&raw mut pr);
@@ -640,7 +640,7 @@ pub unsafe extern "C" fn cmd_parse_from_arguments(
         static mut pr: cmd_parse_result = unsafe { zeroed() };
         let mut input: cmd_parse_input;
 
-        if (pi.is_null()) {
+        if pi.is_null() {
             input = zeroed();
             pi = &raw mut input;
         }
@@ -654,19 +654,19 @@ pub unsafe extern "C" fn cmd_parse_from_arguments(
 
         for i in 0..count {
             let mut end = 0;
-            if ((*values.add(i as usize)).type_ == args_type::ARGS_STRING) {
+            if (*values.add(i as usize)).type_ == args_type::ARGS_STRING {
                 let copy = xstrdup((*values.add(i as usize)).union_.string).as_ptr();
                 let mut size = strlen(copy);
-                if (size != 0 && *copy.add(size - 1) == b';' as _) {
+                if size != 0 && *copy.add(size - 1) == b';' as _ {
                     size -= 1;
                     *copy.add(size) = b'\0' as _;
-                    if (size > 0 && *copy.add(size - 1) == b'\\' as _) {
+                    if size > 0 && *copy.add(size - 1) == b'\\' as _ {
                         *copy.add(size - 1) = b';' as _;
                     } else {
                         end = 1;
                     }
                 }
-                if (end == 0 || size != 0) {
+                if end == 0 || size != 0 {
                     let arg = xcalloc1::<cmd_parse_argument>() as *mut cmd_parse_argument;
                     (*arg).type_ = cmd_parse_argument_type::CMD_PARSE_STRING;
                     (*arg).string = copy;
@@ -674,7 +674,7 @@ pub unsafe extern "C" fn cmd_parse_from_arguments(
                 } else {
                     free_(copy);
                 }
-            } else if ((*values.add(i as usize)).type_ == args_type::ARGS_COMMANDS) {
+            } else if (*values.add(i as usize)).type_ == args_type::ARGS_COMMANDS {
                 let arg = xcalloc1::<cmd_parse_argument>() as *mut cmd_parse_argument;
                 (*arg).type_ = cmd_parse_argument_type::CMD_PARSE_PARSED_COMMANDS;
                 (*arg).cmdlist = (*values.add(i as usize)).union_.cmdlist;
@@ -683,14 +683,14 @@ pub unsafe extern "C" fn cmd_parse_from_arguments(
             } else {
                 fatalx(c"unknown argument type");
             }
-            if (end != 0) {
+            if end != 0 {
                 tailq_insert_tail(cmds, cmd);
                 cmd = xcalloc1::<cmd_parse_command>();
                 (*cmd).line = (*pi).line;
                 tailq_init(&raw mut (*cmd).arguments);
             }
         }
-        if (!tailq_empty(&raw mut (*cmd).arguments)) {
+        if !tailq_empty(&raw mut (*cmd).arguments) {
             tailq_insert_tail(cmds, cmd);
         } else {
             free_(cmd);

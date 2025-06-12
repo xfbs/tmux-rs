@@ -76,7 +76,7 @@ pub unsafe extern "C" fn grid_view_clear_history(gd: *mut grid, bg: u32) {
                 last = yy + 1;
             }
         }
-        if (last == 0) {
+        if last == 0 {
             grid_view_clear(gd, 0, 0, (*gd).sx, (*gd).sy, bg);
             return;
         }
@@ -117,9 +117,9 @@ pub unsafe extern "C" fn grid_view_scroll_region_up(
     bg: u32,
 ) {
     unsafe {
-        if ((*gd).flags & GRID_HISTORY != 0) {
+        if (*gd).flags & GRID_HISTORY != 0 {
             grid_collect_history(gd);
-            if (rupper == 0 && rlower == (*gd).sy - 1) {
+            if rupper == 0 && rlower == (*gd).sy - 1 {
                 grid_scroll_history(gd, bg);
             } else {
                 rupper = grid_view_y(gd, rupper);
@@ -244,7 +244,7 @@ pub unsafe extern "C" fn grid_view_insert_cells(
 
         let sx = grid_view_x(gd, (*gd).sx);
 
-        if (px >= sx - 1) {
+        if px >= sx - 1 {
             grid_clear(gd, px, py, 1, 1, bg);
         } else {
             grid_move_cells(gd, px + nx, px, py, sx - px - nx, bg);

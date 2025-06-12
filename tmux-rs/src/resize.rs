@@ -159,10 +159,10 @@ pub unsafe extern "C" fn clients_calculate_size(
              * Start comparing with 0 for largest and UINT_MAX for smallest or
              * latest.
              */
-            if (type_ == window_size_option::WINDOW_SIZE_LARGEST) {
+            if type_ == window_size_option::WINDOW_SIZE_LARGEST {
                 *sx = 0;
                 *sy = 0;
-            } else if (type_ == window_size_option::WINDOW_SIZE_MANUAL) {
+            } else if type_ == window_size_option::WINDOW_SIZE_MANUAL {
                 *sx = (*w).manual_sx;
                 *sy = (*w).manual_sy;
                 log_debug!("{}: manual size {}x{}", __func__, *sx, *sy);
@@ -188,11 +188,11 @@ pub unsafe extern "C" fn clients_calculate_size(
 
             /* loop_ over the clients and work out the size. */
             for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
-                if (loop_ != c && ignore_client_size(loop_) != 0) {
+                if loop_ != c && ignore_client_size(loop_) != 0 {
                     log_debug!("{}: ignoring {} (1)", __func__, _s((*loop_).name));
                     continue;
                 }
-                if (loop_ != c && skip_client.unwrap()(loop_, type_, current, s, w) != 0) {
+                if loop_ != c && skip_client.unwrap()(loop_, type_, current, s, w) != 0 {
                     log_debug!("{}: skipping {} (1)", __func__, _s((*loop_).name));
                     continue;
                 }
@@ -202,9 +202,9 @@ pub unsafe extern "C" fn clients_calculate_size(
                  * latest client; otherwise let the only client be chosen as
                  * for smallest.
                  */
-                if (type_ == window_size_option::WINDOW_SIZE_LATEST
+                if type_ == window_size_option::WINDOW_SIZE_LATEST
                     && n > 1
-                    && loop_ != (*w).latest.cast())
+                    && loop_ != (*w).latest.cast()
                 {
                     log_debug!("{}: {} is not latest", __func__, _s((*loop_).name));
                     continue;
@@ -214,14 +214,14 @@ pub unsafe extern "C" fn clients_calculate_size(
                  * If the client has a per-window size, use this instead if it is
                  * smaller.
                  */
-                if (!w.is_null()) {
+                if !w.is_null() {
                     cw = server_client_get_client_window(loop_, (*w).id);
                 } else {
                     cw = null_mut();
                 }
 
                 /* Work out this client's size. */
-                if (!cw.is_null() && (*cw).sx != 0 && (*cw).sy != 0) {
+                if !cw.is_null() && (*cw).sx != 0 && (*cw).sy != 0 {
                     cx = (*cw).sx;
                     cy = (*cw).sy;
                 } else {
@@ -233,7 +233,7 @@ pub unsafe extern "C" fn clients_calculate_size(
                  * If it is larger or smaller than the best so far, update the
                  * new size.
                  */
-                if (type_ == window_size_option::WINDOW_SIZE_LARGEST) {
+                if type_ == window_size_option::WINDOW_SIZE_LARGEST {
                     if cx > *sx {
                         *sx = cx;
                     }
@@ -248,7 +248,7 @@ pub unsafe extern "C" fn clients_calculate_size(
                         *sy = cy;
                     }
                 }
-                if ((*loop_).tty.xpixel > *xpixel && (*loop_).tty.ypixel > *ypixel) {
+                if (*loop_).tty.xpixel > *xpixel && (*loop_).tty.ypixel > *ypixel {
                     *xpixel = (*loop_).tty.xpixel;
                     *ypixel = (*loop_).tty.ypixel;
                 }
@@ -262,7 +262,7 @@ pub unsafe extern "C" fn clients_calculate_size(
                     *sy,
                 );
             }
-            if (*sx != u32::MAX && *sy != u32::MAX) {
+            if *sx != u32::MAX && *sy != u32::MAX {
                 log_debug!("{}: calculated size {}x{}", __func__, *sx, *sy);
             } else {
                 log_debug!("{}: no calculated size", __func__);
@@ -308,22 +308,22 @@ pub unsafe extern "C" fn clients_calculate_size(
                 }
             }
         }
-        if (*sx != u32::MAX && *sy != u32::MAX) {
+        if *sx != u32::MAX && *sy != u32::MAX {
             log_debug!("{}: calculated size {}x{}", __func__, *sx, *sy);
         } else {
             log_debug!("{}: no calculated size", __func__);
         }
 
         /* Return whether a suitable size was found. */
-        if (type_ == window_size_option::WINDOW_SIZE_MANUAL) {
+        if type_ == window_size_option::WINDOW_SIZE_MANUAL {
             log_debug!("{}: type_ is manual", __func__);
             return 1;
         }
-        if (type_ == window_size_option::WINDOW_SIZE_LARGEST) {
+        if type_ == window_size_option::WINDOW_SIZE_LARGEST {
             log_debug!("{}: type_ is largest", __func__);
             return (*sx != 0 && *sy != 0) as i32;
         }
-        if (type_ == window_size_option::WINDOW_SIZE_LATEST) {
+        if type_ == window_size_option::WINDOW_SIZE_LATEST {
             log_debug!("{}: type_ is latest", __func__);
         } else {
             log_debug!("{}: type_ is smallest", __func__);
@@ -387,9 +387,9 @@ pub unsafe fn default_window_size(
              * Latest clients can use the given client if suitable. If there is no
              * client and no window, use the default size as for manual type_.
              */
-            if (type_ == window_size_option::WINDOW_SIZE_LATEST
+            if type_ == window_size_option::WINDOW_SIZE_LATEST
                 && !c.is_null()
-                && ignore_client_size(c) == 0)
+                && ignore_client_size(c) == 0
             {
                 *sx = (*c).tty.sx;
                 *sy = (*c).tty.sy - status_line_size(c);
@@ -411,7 +411,7 @@ pub unsafe fn default_window_size(
              * Look for a client to base the size on. If none exists (or the type_
              * is manual), use the default-size option.
              */
-            if (clients_calculate_size(
+            if clients_calculate_size(
                 type_,
                 0,
                 c,
@@ -422,10 +422,10 @@ pub unsafe fn default_window_size(
                 sy,
                 xpixel,
                 ypixel,
-            ) == 0)
+            ) == 0
             {
                 let value = options_get_string((*s).options, c"default-size".as_ptr());
-                if (sscanf(value, c"%ux%u".as_ptr(), sx, sy) != 2) {
+                if sscanf(value, c"%ux%u".as_ptr(), sx, sy) != 2 {
                     *sx = 80;
                     *sy = 24;
                 }
@@ -516,7 +516,7 @@ pub unsafe extern "C" fn recalculate_size(w: *mut window, now: i32) {
          * Make sure the size has actually changed. If the window has already
          * got a resize scheduled, then use the new size; otherwise the old.
          */
-        if ((*w).flags.intersects(window_flag::RESIZE)) {
+        if (*w).flags.intersects(window_flag::RESIZE) {
             if now == 0 && changed != 0 && (*w).new_sx == sx && (*w).new_sy == sy {
                 changed = 0;
             }
@@ -530,7 +530,7 @@ pub unsafe extern "C" fn recalculate_size(w: *mut window, now: i32) {
          * If the size hasn't changed, update the window offset but not the
          * size.
          */
-        if (changed == 0) {
+        if changed == 0 {
             log_debug!("{}: @{} no size change", __func__, (*w).id);
             tty_update_window_offset(w);
             return;
@@ -542,7 +542,7 @@ pub unsafe extern "C" fn recalculate_size(w: *mut window, now: i32) {
          * later.
          */
         log_debug!("{}: @{} new size {}x{}", __func__, (*w).id, sx, sy);
-        if (now != 0 || type_ == window_size_option::WINDOW_SIZE_MANUAL) {
+        if now != 0 || type_ == window_size_option::WINDOW_SIZE_MANUAL {
             resize_window(w, sx, sy, xpixel as i32, ypixel as i32);
         } else {
             (*w).new_sx = sx;
@@ -591,7 +591,7 @@ pub unsafe extern "C" fn recalculate_sizes_now(now: i32) {
             if ignore_client_size(c) != 0 {
                 continue;
             }
-            if ((*c).tty.sy <= (*s).statuslines || ((*c).flags.intersects(client_flag::CONTROL))) {
+            if (*c).tty.sy <= (*s).statuslines || ((*c).flags.intersects(client_flag::CONTROL)) {
                 (*c).flags |= client_flag::STATUSOFF;
             } else {
                 (*c).flags &= !client_flag::STATUSOFF;

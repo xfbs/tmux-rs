@@ -57,26 +57,26 @@ unsafe extern "C" fn cmd_kill_window_exec(self_: *mut cmd, item: *mut cmdq_item)
         let mut s = (*target).s;
         let mut found = 0u32;
 
-        if (cmd_get_entry(self_) == &raw mut cmd_unlink_window_entry) {
-            if (!args_has(args, b'k') != 0 && session_is_linked(s, w) == 0) {
+        if cmd_get_entry(self_) == &raw mut cmd_unlink_window_entry {
+            if !args_has(args, b'k') != 0 && session_is_linked(s, w) == 0 {
                 cmdq_error(item, c"window only linked to one session".as_ptr());
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
             server_unlink_window(s, wl);
             recalculate_sizes();
-            return (cmd_retval::CMD_RETURN_NORMAL);
+            return cmd_retval::CMD_RETURN_NORMAL;
         }
 
         if args_has(args, b'a') != 0 {
             if rb_prev(wl).is_null() && rb_next(wl).is_null() {
-                return (cmd_retval::CMD_RETURN_NORMAL);
+                return cmd_retval::CMD_RETURN_NORMAL;
             }
 
             /* Kill all windows except the current one. */
             loop {
                 found = 0;
                 for loop_ in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
-                    if ((*loop_).window != (*wl).window) {
+                    if (*loop_).window != (*wl).window {
                         server_kill_window((*loop_).window, 0);
                         found += 1;
                         break;

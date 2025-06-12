@@ -134,7 +134,7 @@ pub unsafe extern "C" fn window_buffer_cmp(a0: *const c_void, b0: *const c_void)
         let mut b = b0 as *const *const window_buffer_itemdata;
         let mut result = 0i32;
 
-        if ((*window_buffer_sort).field == window_buffer_sort_type::WINDOW_BUFFER_BY_TIME as u32) {
+        if (*window_buffer_sort).field == window_buffer_sort_type::WINDOW_BUFFER_BY_TIME as u32 {
             result = (*(*b)).order as i32 - (*(*a)).order as i32;
         } else if (*window_buffer_sort).field
             == window_buffer_sort_type::WINDOW_BUFFER_BY_SIZE as u32
@@ -213,9 +213,9 @@ pub unsafe extern "C" fn window_buffer_build(
             format_defaults(ft, null_mut(), s, wl, wp);
             format_defaults_paste_buffer(ft, pb);
 
-            if (!filter.is_null()) {
+            if !filter.is_null() {
                 let cp = format_expand(ft, filter);
-                if (format_true(cp) == 0) {
+                if format_true(cp) == 0 {
                     free_(cp);
                     format_free(ft);
                     continue;
@@ -263,7 +263,7 @@ pub unsafe extern "C" fn window_buffer_draw(
         let pdata = end;
         for i in 0..sy {
             let start = end;
-            while (end != pdata.add(psize) && *end != b'\n' as c_char) {
+            while end != pdata.add(psize) && *end != b'\n' as c_char {
                 end = end.add(1);
             }
             buf = xreallocarray(buf.cast(), 4, end.offset_from(start) as usize + 1)
@@ -275,7 +275,7 @@ pub unsafe extern "C" fn window_buffer_draw(
                 end.offset_from(start) as usize,
                 VIS_OCTAL | VIS_CSTYLE | VIS_TAB,
             );
-            if (*buf != b'\0' as c_char) {
+            if *buf != b'\0' as c_char {
                 screen_write_cursormove(ctx, cx as i32, (cy + i) as i32, 0);
                 screen_write_nputs(
                     ctx,
@@ -383,17 +383,17 @@ pub unsafe extern "C" fn window_buffer_init(
         data.wp = wp;
         cmd_find_copy_state(&raw mut data.fs, fs);
 
-        if (args.is_null() || !args_has_(args, 'F')) {
+        if args.is_null() || !args_has_(args, 'F') {
             data.format = xstrdup(WINDOW_BUFFER_DEFAULT_FORMAT).as_ptr();
         } else {
             data.format = xstrdup(args_get_(args, 'F')).as_ptr();
         }
-        if (args.is_null() || !args_has_(args, 'K')) {
+        if args.is_null() || !args_has_(args, 'K') {
             data.key_format = xstrdup(WINDOW_BUFFER_DEFAULT_KEY_FORMAT).as_ptr();
         } else {
             data.key_format = xstrdup(args_get_(args, 'K')).as_ptr();
         }
-        if (args.is_null() || args_count(args) == 0) {
+        if args.is_null() || args_count(args) == 0 {
             data.command = xstrdup(WINDOW_BUFFER_DEFAULT_COMMAND).as_ptr();
         } else {
             data.command = xstrdup(args_string(args, 0)).as_ptr();
@@ -534,13 +534,13 @@ pub unsafe extern "C" fn window_buffer_edit_close_cb(
     unsafe {
         let ed = arg as *mut window_buffer_editdata;
 
-        if (buf.is_null() || len == 0) {
+        if buf.is_null() || len == 0 {
             window_buffer_finish_edit(ed);
             return;
         }
 
         let pb = paste_get_name((*ed).name);
-        if (pb.is_null() || pb != (*ed).pb) {
+        if pb.is_null() || pb != (*ed).pb {
             window_buffer_finish_edit(ed);
             return;
         }
@@ -561,7 +561,7 @@ pub unsafe extern "C" fn window_buffer_edit_close_cb(
         let wp = window_pane_find_by_id((*ed).wp_id);
         if !wp.is_null() {
             let wme = tailq_first(&raw mut (*wp).modes);
-            if ((*wme).mode == &raw const window_buffer_mode) {
+            if (*wme).mode == &raw const window_buffer_mode {
                 let data = (*wme).data as *mut window_buffer_modedata;
                 mode_tree_build((*data).data);
                 mode_tree_draw((*data).data);
@@ -651,7 +651,7 @@ pub unsafe extern "C" fn window_buffer_key(
             }
         }
         // out:
-        if (finished || paste_is_empty() != 0) {
+        if finished || paste_is_empty() != 0 {
             window_pane_reset_mode(wp);
         } else {
             mode_tree_draw(mtd);

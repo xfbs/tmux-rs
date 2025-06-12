@@ -59,9 +59,9 @@ pub unsafe extern "C" fn cmd_refresh_client_update_subscription(
             *split = b'\0' as c_char;
             split = split.add(1);
 
-            let subtype = if (strcmp(what, c"%*".as_ptr()) == 0) {
+            let subtype = if strcmp(what, c"%*".as_ptr()) == 0 {
                 control_sub_type::CONTROL_SUB_ALL_PANES
-            } else if (sscanf(what, c"%%%d".as_ptr(), &subid) == 1 && subid >= 0) {
+            } else if sscanf(what, c"%%%d".as_ptr(), &subid) == 1 && subid >= 0 {
                 control_sub_type::CONTROL_SUB_PANE
             } else if strcmp(what, c"@*".as_ptr()) == 0 {
                 control_sub_type::CONTROL_SUB_ALL_WINDOWS
@@ -94,18 +94,18 @@ pub unsafe extern "C" fn cmd_refresh_client_control_client_size(
         // u_int w, x, y;
         // struct client_window *cw;
 
-        if (sscanf(
+        if sscanf(
             size,
             c"@%u:%ux%u".as_ptr(),
             &raw mut w,
             &raw mut x,
             &raw mut y,
-        ) == 3)
+        ) == 3
         {
-            if (x < WINDOW_MINIMUM
+            if x < WINDOW_MINIMUM
                 || x > WINDOW_MAXIMUM
                 || y < WINDOW_MINIMUM
-                || y > WINDOW_MAXIMUM)
+                || y > WINDOW_MAXIMUM
             {
                 cmdq_error(item, c"size too small or too big".as_ptr());
                 return cmd_retval::CMD_RETURN_ERROR;
@@ -125,9 +125,9 @@ pub unsafe extern "C" fn cmd_refresh_client_control_client_size(
             recalculate_sizes_now(1);
             return cmd_retval::CMD_RETURN_NORMAL;
         }
-        if (sscanf(size, c"@%u:".as_ptr(), &w) == 1) {
+        if sscanf(size, c"@%u:".as_ptr(), &w) == 1 {
             let cw = server_client_get_client_window(tc, w);
-            if (!cw.is_null()) {
+            if !cw.is_null() {
                 log_debug!(
                     "{}: client {} window @{}: no size",
                     __func__,
@@ -141,13 +141,13 @@ pub unsafe extern "C" fn cmd_refresh_client_control_client_size(
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        if (sscanf(size, c"%u,%u".as_ptr(), &x, &y) != 2
-            && sscanf(size, c"%ux%u".as_ptr(), &x, &y) != 2)
+        if sscanf(size, c"%u,%u".as_ptr(), &x, &y) != 2
+            && sscanf(size, c"%ux%u".as_ptr(), &x, &y) != 2
         {
             cmdq_error(item, c"bad size argument".as_ptr());
             return cmd_retval::CMD_RETURN_ERROR;
         }
-        if (x < WINDOW_MINIMUM || x > WINDOW_MAXIMUM || y < WINDOW_MINIMUM || y > WINDOW_MAXIMUM) {
+        if x < WINDOW_MINIMUM || x > WINDOW_MAXIMUM || y < WINDOW_MINIMUM || y > WINDOW_MAXIMUM {
             cmdq_error(item, c"size too small or too big".as_ptr());
             return cmd_retval::CMD_RETURN_ERROR;
         }
@@ -183,11 +183,11 @@ pub unsafe extern "C" fn cmd_refresh_client_update_offset(tc: *mut client, value
                 break 'out;
             }
 
-            if (strcmp(split, c"on".as_ptr()) == 0) {
+            if strcmp(split, c"on".as_ptr()) == 0 {
                 control_set_pane_on(tc, wp);
-            } else if (strcmp(split, c"off".as_ptr()) == 0) {
+            } else if strcmp(split, c"off".as_ptr()) == 0 {
                 control_set_pane_off(tc, wp);
-            } else if (strcmp(split, c"continue".as_ptr()) == 0) {
+            } else if strcmp(split, c"continue".as_ptr()) == 0 {
                 control_continue_pane(tc, wp);
             } else if strcmp(split, c"pause".as_ptr()) == 0 {
                 control_pause_pane(tc, wp);
@@ -213,7 +213,7 @@ pub unsafe extern "C" fn cmd_refresh_client_clipboard(
         // struct cmd_find_state fs;
 
         let p = args_get_(args, 'l');
-        if (p.is_null()) {
+        if p.is_null() {
             if (*tc).flags.intersects(client_flag::CLIPBOARDBUFFER) {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
@@ -295,50 +295,50 @@ pub unsafe extern "C" fn cmd_refresh_client_exec(
         let mut adjust: u32 = 0;
 
         'not_control_client: {
-            if (args_has_(args, 'c')
+            if args_has_(args, 'c')
                 || args_has_(args, 'L')
                 || args_has_(args, 'R')
                 || args_has_(args, 'U')
-                || args_has_(args, 'D'))
+                || args_has_(args, 'D')
             {
-                if (args_count(args) == 0) {
+                if args_count(args) == 0 {
                     adjust = 1;
                 } else {
                     adjust =
                         strtonum(args_string(args, 0), 1, i32::MAX as i64, &raw mut errstr) as u32;
-                    if (!errstr.is_null()) {
+                    if !errstr.is_null() {
                         cmdq_error(item, c"adjustment %s".as_ptr(), errstr);
                         return cmd_retval::CMD_RETURN_ERROR;
                     }
                 }
 
-                if (args_has_(args, 'c')) {
+                if args_has_(args, 'c') {
                     (*tc).pan_window = null_mut();
                 } else {
                     let w = (*(*(*tc).session).curw).window;
-                    if ((*tc).pan_window != w.cast()) {
+                    if (*tc).pan_window != w.cast() {
                         (*tc).pan_window = w.cast();
                         (*tc).pan_ox = (*tty).oox;
                         (*tc).pan_oy = (*tty).ooy;
                     }
-                    if (args_has_(args, 'L')) {
-                        if ((*tc).pan_ox > adjust) {
+                    if args_has_(args, 'L') {
+                        if (*tc).pan_ox > adjust {
                             (*tc).pan_ox -= adjust;
                         } else {
                             (*tc).pan_ox = 0;
                         }
-                    } else if (args_has_(args, 'R')) {
+                    } else if args_has_(args, 'R') {
                         (*tc).pan_ox += adjust;
                         if (*tc).pan_ox > (*w).sx - (*tty).osx {
                             (*tc).pan_ox = (*w).sx - (*tty).osx;
                         }
-                    } else if (args_has_(args, 'U')) {
-                        if ((*tc).pan_oy > adjust) {
+                    } else if args_has_(args, 'U') {
+                        if (*tc).pan_oy > adjust {
                             (*tc).pan_oy -= adjust;
                         } else {
                             (*tc).pan_oy = 0;
                         }
-                    } else if (args_has_(args, 'D')) {
+                    } else if args_has_(args, 'D') {
                         (*tc).pan_oy += adjust;
                         if (*tc).pan_oy > (*w).sy - (*tty).osy {
                             (*tc).pan_oy = (*w).sy - (*tty).osy;
@@ -364,36 +364,36 @@ pub unsafe extern "C" fn cmd_refresh_client_exec(
                 cmd_refresh_report(tty, args_get(args, b'r'));
             }
 
-            if (args_has_(args, 'A')) {
+            if args_has_(args, 'A') {
                 if !(*tc).flags.intersects(client_flag::CONTROL) {
                     break 'not_control_client;
                 }
                 let mut av = args_first_value(args, b'A');
-                while (!av.is_null()) {
+                while !av.is_null() {
                     cmd_refresh_client_update_offset(tc, (*av).union_.string);
                     av = args_next_value(av);
                 }
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
-            if (args_has_(args, 'B')) {
+            if args_has_(args, 'B') {
                 if !(*tc).flags.intersects(client_flag::CONTROL) {
                     break 'not_control_client;
                 }
                 let mut av = args_first_value(args, b'B');
-                while (!av.is_null()) {
+                while !av.is_null() {
                     cmd_refresh_client_update_subscription(tc, (*av).union_.string);
                     av = args_next_value(av);
                 }
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
-            if (args_has_(args, 'C')) {
+            if args_has_(args, 'C') {
                 if !(*tc).flags.intersects(client_flag::CONTROL) {
                     break 'not_control_client;
                 }
                 return cmd_refresh_client_control_client_size(self_, item);
             }
 
-            if (args_has_(args, 'S')) {
+            if args_has_(args, 'S') {
                 (*tc).flags |= client_flag::STATUSFORCE;
                 server_status_client(tc);
             } else {

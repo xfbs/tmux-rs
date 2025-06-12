@@ -109,7 +109,7 @@ pub unsafe extern "C" fn cmd_attach_session(
             server_client_set_flags(c, fflag);
         }
         if rflag != 0 {
-            (*c).flags |= (client_flag::READONLY | client_flag::IGNORESIZE);
+            (*c).flags |= client_flag::READONLY | client_flag::IGNORESIZE;
         }
 
         (*c).last_session = (*c).session;
@@ -138,7 +138,7 @@ pub unsafe extern "C" fn cmd_attach_session(
                 server_client_set_key_table(c, null_mut());
             }
         } else {
-            if (server_client_open(c, &raw mut cause) != 0) {
+            if server_client_open(c, &raw mut cause) != 0 {
                 cmdq_error(item, c"open terminal failed: %s".as_ptr(), cause);
                 free_(cause);
                 return cmd_retval::CMD_RETURN_ERROR;

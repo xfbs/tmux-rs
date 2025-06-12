@@ -84,7 +84,7 @@ pub unsafe extern "C" fn layout_append(lc: *mut layout_cell, buf: *mut c_char, l
             return -1;
         }
 
-        let tmplen = if (!(*lc).wp.is_null()) {
+        let tmplen = if !(*lc).wp.is_null() {
             xsnprintf(
                 tmp,
                 sizeof_tmp,
@@ -118,7 +118,7 @@ pub unsafe extern "C" fn layout_append(lc: *mut layout_cell, buf: *mut c_char, l
             brackets = c"}{".as_ptr();
         }
 
-        match ((*lc).type_) {
+        match (*lc).type_ {
             layout_type::LAYOUT_LEFTRIGHT | layout_type::LAYOUT_TOPBOTTOM => {
                 if strlcat(buf, brackets.add(1), len) >= len {
                     return -1;
@@ -145,7 +145,7 @@ pub unsafe extern "C" fn layout_check(lc: *mut layout_cell) -> i32 {
     unsafe {
         let mut n = 0u32;
 
-        match ((*lc).type_) {
+        match (*lc).type_ {
             layout_type::LAYOUT_WINDOWPANE => (),
             layout_type::LAYOUT_LEFTRIGHT => {
                 for lcchild in tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr) {
@@ -197,23 +197,23 @@ pub unsafe extern "C" fn layout_parse(
 
         'fail: {
             /* Check validity. */
-            if (sscanf(layout, c"%hx,".as_ptr(), &raw mut csum) != 1) {
+            if sscanf(layout, c"%hx,".as_ptr(), &raw mut csum) != 1 {
                 *cause = xstrdup_(c"invalid layout").as_ptr();
                 return -1;
             }
             layout = layout.add(5);
-            if (csum != layout_checksum(layout)) {
+            if csum != layout_checksum(layout) {
                 *cause = xstrdup_(c"invalid layout").as_ptr();
                 return -1;
             }
 
             /* Build the layout. */
             lc = layout_construct(null_mut(), &raw mut layout);
-            if (lc.is_null()) {
+            if lc.is_null() {
                 *cause = xstrdup_(c"invalid layout").as_ptr();
                 return -1;
             }
-            if (*layout != b'\0' as _) {
+            if *layout != b'\0' as _ {
                 *cause = xstrdup_(c"invalid layout").as_ptr();
                 break 'fail;
             }
@@ -222,7 +222,7 @@ pub unsafe extern "C" fn layout_parse(
             loop {
                 let mut npanes = window_count_panes(w);
                 let mut ncells = layout_count_cells(lc);
-                if (npanes > ncells) {
+                if npanes > ncells {
                     xasprintf(cause, c"have %u panes but need %u".as_ptr(), npanes, ncells);
                     break 'fail;
                 }
@@ -242,7 +242,7 @@ pub unsafe extern "C" fn layout_parse(
              */
             let mut sy = 0;
             let mut sx = 0;
-            match ((*lc).type_) {
+            match (*lc).type_ {
                 layout_type::LAYOUT_WINDOWPANE => (),
                 layout_type::LAYOUT_LEFTRIGHT => {
                     for lcchild in tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr) {
@@ -259,7 +259,7 @@ pub unsafe extern "C" fn layout_parse(
                     }
                 }
             }
-            if ((*lc).type_ != layout_type::LAYOUT_WINDOWPANE && ((*lc).sx != sx || (*lc).sy != sy))
+            if (*lc).type_ != layout_type::LAYOUT_WINDOWPANE && ((*lc).sx != sx || (*lc).sy != sy)
             {
                 log_debug!("fix layout {},{} to {},{}", (*lc).sx, (*lc).sy, sx, sy);
                 layout_print_cell(lc, __func__, 0);
@@ -268,7 +268,7 @@ pub unsafe extern "C" fn layout_parse(
             }
 
             /* Check the new layout. */
-            if (layout_check(lc) == 0) {
+            if layout_check(lc) == 0 {
                 *cause = xstrdup_(c"size mismatch after applying layout").as_ptr();
                 break 'fail;
             }
@@ -305,7 +305,7 @@ pub unsafe extern "C" fn layout_parse(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn layout_assign(wp: *mut *mut window_pane, lc: *mut layout_cell) {
     unsafe {
-        match ((*lc).type_) {
+        match (*lc).type_ {
             layout_type::LAYOUT_WINDOWPANE => {
                 layout_make_leaf(lc, *wp);
                 *wp = tailq_next::<_, _, discr_entry>(*wp);
@@ -351,34 +351,34 @@ unsafe extern "C" fn layout_construct(
                 return null_mut();
             }
 
-            while (isdigit(**layout as i32) != 0) {
+            while isdigit(**layout as i32) != 0 {
                 (*layout) = (*layout).add(1);
             }
             if **layout != b'x' as _ {
                 return null_mut();
             }
             (*layout) = (*layout).add(1);
-            while (isdigit(**layout as i32) != 0) {
+            while isdigit(**layout as i32) != 0 {
                 (*layout) = (*layout).add(1);
             }
             if **layout != b',' as _ {
                 return null_mut();
             }
             (*layout) = (*layout).add(1);
-            while (isdigit(**layout as i32) != 0) {
+            while isdigit(**layout as i32) != 0 {
                 (*layout) = (*layout).add(1);
             }
             if **layout != b',' as _ {
                 return null_mut();
             }
             (*layout) = (*layout).add(1);
-            while (isdigit(**layout as i32) != 0) {
+            while isdigit(**layout as i32) != 0 {
                 (*layout) = (*layout).add(1);
             }
-            if (**layout == b',' as _) {
+            if **layout == b',' as _ {
                 let saved = *layout;
                 (*layout) = (*layout).add(1);
-                while (isdigit(**layout as i32) != 0) {
+                while isdigit(**layout as i32) != 0 {
                     (*layout) = (*layout).add(1);
                 }
                 if **layout == b'x' as _ {
@@ -392,7 +392,7 @@ unsafe extern "C" fn layout_construct(
             (*lc).xoff = xoff;
             (*lc).yoff = yoff;
 
-            match (**layout as u8) {
+            match **layout as u8 {
                 b',' | b'}' | b']' | b'\0' => return lc,
                 b'{' => (*lc).type_ = layout_type::LAYOUT_LEFTRIGHT,
                 b'[' => (*lc).type_ = layout_type::LAYOUT_TOPBOTTOM,
@@ -411,7 +411,7 @@ unsafe extern "C" fn layout_construct(
                 }
             }
 
-            match ((*lc).type_) {
+            match (*lc).type_ {
                 layout_type::LAYOUT_LEFTRIGHT => {
                     if **layout != b'}' as _ {
                         break 'fail;

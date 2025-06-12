@@ -85,7 +85,7 @@ pub unsafe extern "C" fn layout_set_next(w: *mut window) -> u32 {
     unsafe {
         let mut layout: u32 = 0;
 
-        if ((*w).lastlayout == -1) {
+        if (*w).lastlayout == -1 {
             layout = 0;
         } else {
             layout = ((*w).lastlayout + 1) as u32;
@@ -107,11 +107,11 @@ pub unsafe extern "C" fn layout_set_previous(w: *mut window) -> u32 {
     unsafe {
         let mut layout: u32 = 0;
 
-        if ((*w).lastlayout == -1) {
+        if (*w).lastlayout == -1 {
             layout = (layout_sets_len - 1) as u32;
         } else {
             layout = (*w).lastlayout as u32;
-            if (layout == 0) {
+            if layout == 0 {
                 layout = (layout_sets_len - 1) as u32;
             } else {
                 layout -= 1;
@@ -148,7 +148,7 @@ pub unsafe extern "C" fn layout_set_even(w: *mut window, type_: layout_type) {
         layout_free(w);
         let lc = layout_create_cell(null_mut());
         (*w).layout_root = lc;
-        if (type_ == layout_type::LAYOUT_LEFTRIGHT) {
+        if type_ == layout_type::LAYOUT_LEFTRIGHT {
             sx = (n * (PANE_MINIMUM + 1)) - 1;
             if sx < (*w).sx {
                 sx = (*w).sx;
@@ -226,15 +226,15 @@ pub unsafe extern "C" fn layout_set_main_h(w: *mut window) {
         /* Get the main pane height. */
         let mut s = options_get_string((*w).options, c"main-pane-height".as_ptr());
         let mut mainh = args_string_percentage(s, 0, sy as i64, sy as i64, &raw mut cause) as u32;
-        if (!cause.is_null()) {
+        if !cause.is_null() {
             mainh = 24;
             free_(cause);
         }
 
         let mut otherh: u32 = 0;
         /* Work out the other pane height. */
-        if (mainh + PANE_MINIMUM >= sy) {
-            if (sy <= PANE_MINIMUM + PANE_MINIMUM) {
+        if mainh + PANE_MINIMUM >= sy {
+            if sy <= PANE_MINIMUM + PANE_MINIMUM {
                 mainh = PANE_MINIMUM;
             } else {
                 mainh = sy - PANE_MINIMUM;
@@ -243,10 +243,10 @@ pub unsafe extern "C" fn layout_set_main_h(w: *mut window) {
         } else {
             s = options_get_string((*w).options, c"other-pane-height".as_ptr());
             otherh = args_string_percentage(s, 0, sy as i64, sy as i64, &raw mut cause) as u32;
-            if (!cause.is_null() || otherh == 0) {
+            if !cause.is_null() || otherh == 0 {
                 otherh = sy - mainh;
                 free_(cause);
-            } else if (otherh > sy || sy - otherh < mainh) {
+            } else if otherh > sy || sy - otherh < mainh {
                 otherh = sy - mainh;
             } else {
                 mainh = sy - otherh;
@@ -275,7 +275,7 @@ pub unsafe extern "C" fn layout_set_main_h(w: *mut window) {
         /* Create the other pane. */
         let lcother = layout_create_cell(lc);
         layout_set_size(lcother, sx, otherh, 0, 0);
-        if (n == 1) {
+        if n == 1 {
             let wp = tailq_next::<_, _, discr_entry>(tailq_first(&raw mut (*w).panes));
             layout_make_leaf(lcother, wp);
             tailq_insert_tail(&raw mut (*lc).cells, lcother);

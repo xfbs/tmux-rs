@@ -40,10 +40,10 @@ unsafe extern "C" fn cmd_list_buffers_exec(self_: *mut cmd, item: *mut cmdq_item
         let mut filter = args_get(args, b'f');
 
         let mut pb = null_mut();
-        while ({
+        while {
             pb = paste_walk(pb);
             !pb.is_null()
-        }) {
+        } {
             let ft = format_create(
                 cmdq_get_client(item),
                 item,

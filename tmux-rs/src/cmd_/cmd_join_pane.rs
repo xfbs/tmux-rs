@@ -71,9 +71,9 @@ unsafe extern "C" fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
         let src_w = (*src_wl).window;
         server_unzoom_window(src_w);
 
-        if (src_wp == dst_wp) {
+        if src_wp == dst_wp {
             cmdq_error(item, c"source and target panes must be different".as_ptr());
-            return (cmd_retval::CMD_RETURN_ERROR);
+            return cmd_retval::CMD_RETURN_ERROR;
         }
 
         type_ = layout_type::LAYOUT_TOPBOTTOM;
@@ -83,15 +83,15 @@ unsafe extern "C" fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
 
         /* If the 'p' flag is dropped then this bit can be moved into 'l'. */
         if args_has_(args, 'l') || args_has_(args, 'p') {
-            if (args_has_(args, 'f')) {
-                if (type_ == layout_type::LAYOUT_TOPBOTTOM) {
+            if args_has_(args, 'f') {
+                if type_ == layout_type::LAYOUT_TOPBOTTOM {
                     curval = (*dst_w).sy;
                 } else {
                     curval = (*dst_w).sx;
                 }
             } else {
                 #[allow(clippy::collapsible_else_if)]
-                if (type_ == layout_type::LAYOUT_TOPBOTTOM) {
+                if type_ == layout_type::LAYOUT_TOPBOTTOM {
                     curval = (*dst_wp).sy;
                 } else {
                     curval = (*dst_wp).sx;
@@ -100,7 +100,7 @@ unsafe extern "C" fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
         }
 
         let mut size: i32 = -1;
-        if (args_has_(args, 'l')) {
+        if args_has_(args, 'l') {
             size = args_percentage_and_expand(
                 args,
                 b'l',
@@ -110,16 +110,16 @@ unsafe extern "C" fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
                 item,
                 &raw mut cause,
             ) as _;
-        } else if (args_has_(args, 'p')) {
+        } else if args_has_(args, 'p') {
             size = args_strtonum_and_expand(args, b'l', 0, 100, item, &raw mut cause) as _;
             if cause.is_null() {
                 size = curval as i32 * size / 100;
             }
         }
-        if (!cause.is_null()) {
+        if !cause.is_null() {
             cmdq_error(item, c"size %s".as_ptr(), cause);
             free_(cause);
-            return (cmd_retval::CMD_RETURN_ERROR);
+            return cmd_retval::CMD_RETURN_ERROR;
         }
 
         let mut flags: i32 = 0;
@@ -131,9 +131,9 @@ unsafe extern "C" fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
         }
 
         lc = layout_split_pane(dst_wp, type_, size, flags);
-        if (lc.is_null()) {
+        if lc.is_null() {
             cmdq_error(item, c"create pane failed: pane too small".as_ptr());
-            return (cmd_retval::CMD_RETURN_ERROR);
+            return cmd_retval::CMD_RETURN_ERROR;
         }
 
         layout_close_pane(src_wp);
@@ -145,7 +145,7 @@ unsafe extern "C" fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
         (*src_wp).window = dst_w;
         options_set_parent((*src_wp).options, (*dst_w).options);
         (*src_wp).flags |= window_pane_flags::PANE_STYLECHANGED;
-        if (flags & SPAWN_BEFORE != 0) {
+        if flags & SPAWN_BEFORE != 0 {
             tailq_insert_before!(dst_wp, src_wp, entry);
         } else {
             tailq_insert_after!(&raw mut (*dst_w).panes, dst_wp, src_wp, entry);
@@ -158,7 +158,7 @@ unsafe extern "C" fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
         server_redraw_window(src_w);
         server_redraw_window(dst_w);
 
-        if (!args_has_(args, 'd')) {
+        if !args_has_(args, 'd') {
             window_set_active_pane(dst_w, src_wp, 1);
             session_select(dst_s, dst_idx);
             cmd_find_from_session(current, dst_s, 0);
@@ -167,13 +167,13 @@ unsafe extern "C" fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
             server_status_session(dst_s);
         }
 
-        if (window_count_panes(src_w) == 0) {
+        if window_count_panes(src_w) == 0 {
             server_kill_window(src_w, 1);
         } else {
             notify_window(c"window-layout-changed".as_ptr(), src_w);
         }
         notify_window(c"window-layout-changed".as_ptr(), dst_w);
 
-        (cmd_retval::CMD_RETURN_NORMAL)
+        cmd_retval::CMD_RETURN_NORMAL
     }
 }

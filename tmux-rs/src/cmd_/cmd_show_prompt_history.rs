@@ -49,8 +49,8 @@ unsafe extern "C" fn cmd_show_prompt_history_exec(
         let mut typestr = args_get(args, b'T');
         let mut type_: prompt_type;
 
-        if (cmd_get_entry(self_) == &raw mut cmd_clear_prompt_history_entry) {
-            if (typestr.is_null()) {
+        if cmd_get_entry(self_) == &raw mut cmd_clear_prompt_history_entry {
+            if typestr.is_null() {
                 for tidx in 0..PROMPT_NTYPES {
                     free_(status_prompt_hlist[tidx as usize]);
                     status_prompt_hlist[tidx as usize] = null_mut();
@@ -58,19 +58,19 @@ unsafe extern "C" fn cmd_show_prompt_history_exec(
                 }
             } else {
                 type_ = status_prompt_type(typestr);
-                if (type_ == prompt_type::PROMPT_TYPE_INVALID) {
+                if type_ == prompt_type::PROMPT_TYPE_INVALID {
                     cmdq_error(item, c"invalid type: %s".as_ptr(), typestr);
-                    return (cmd_retval::CMD_RETURN_ERROR);
+                    return cmd_retval::CMD_RETURN_ERROR;
                 }
                 free_(status_prompt_hlist[type_ as usize]);
                 status_prompt_hlist[type_ as usize] = null_mut();
                 status_prompt_hsize[type_ as usize] = 0;
             }
 
-            return (cmd_retval::CMD_RETURN_NORMAL);
+            return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        if (typestr.is_null()) {
+        if typestr.is_null() {
             for tidx in 0..PROMPT_NTYPES {
                 cmdq_print(
                     item,
@@ -89,9 +89,9 @@ unsafe extern "C" fn cmd_show_prompt_history_exec(
             }
         } else {
             type_ = status_prompt_type(typestr);
-            if (type_ == prompt_type::PROMPT_TYPE_INVALID) {
+            if type_ == prompt_type::PROMPT_TYPE_INVALID {
                 cmdq_error(item, c"invalid type: %s".as_ptr(), typestr);
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
             cmdq_print(
                 item,

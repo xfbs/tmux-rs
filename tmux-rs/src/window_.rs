@@ -1810,7 +1810,7 @@ pub unsafe extern "C" fn winlink_clear_flags(wl: *mut winlink) {
         for loop_ in tailq_foreach::<_, crate::discr_wentry>(&raw mut (*(*wl).window).winlinks)
             .map(NonNull::as_ptr)
         {
-            if ((*loop_).flags.intersects(WINLINK_ALERTFLAGS)) {
+            if (*loop_).flags.intersects(WINLINK_ALERTFLAGS) {
                 (*loop_).flags &= !WINLINK_ALERTFLAGS;
                 server_status_session((*loop_).session);
             }

@@ -123,12 +123,12 @@ pub unsafe extern "C" fn session_create(
         status_update_cache(s);
 
         s.tio = null_mut();
-        if (!tio.is_null()) {
+        if !tio.is_null() {
             s.tio = xmalloc_::<termios>().as_ptr();
             memcpy__(s.tio, tio);
         }
 
-        if (!name.is_null()) {
+        if !name.is_null() {
             s.name = xstrdup(name).as_ptr();
             s.id = next_session_id;
             next_session_id += 1;
@@ -137,7 +137,7 @@ pub unsafe extern "C" fn session_create(
                 s.id = next_session_id;
                 next_session_id += 1;
                 free_(s.name);
-                if (!prefix.is_null()) {
+                if !prefix.is_null() {
                     xasprintf(&raw mut s.name, c"%s-%u".as_ptr(), prefix, s.id);
                 } else {
                     xasprintf(&raw mut s.name, c"%u".as_ptr(), s.id);
@@ -209,7 +209,7 @@ pub unsafe extern "C" fn session_free(_fd: i32, _events: i16, arg: *mut c_void) 
             (*s).references
         );
 
-        if ((*s).references == 0) {
+        if (*s).references == 0 {
             environ_free((*s).environ);
             options_free((*s).options);
             free_((*s).name);
@@ -246,7 +246,7 @@ pub unsafe extern "C" fn session_destroy(s: *mut session, notify: i32, from: *co
         while !tailq_empty(&raw mut (*s).lastw) {
             winlink_stack_remove(&raw mut (*s).lastw, tailq_first(&raw mut (*s).lastw));
         }
-        while (!rb_empty(&raw mut (*s).windows)) {
+        while !rb_empty(&raw mut (*s).windows) {
             let wl = rb_root(&raw mut (*s).windows);
             notify_session_window(c"window-unlinked".as_ptr(), s, (*wl).window);
             winlink_remove(&raw mut (*s).windows, wl);
@@ -312,7 +312,7 @@ pub unsafe extern "C" fn session_update_activity(s: *mut session, from: *mut tim
         let mut last = &raw mut (*s).last_activity_time;
 
         memcpy__(last, &raw mut (*s).activity_time);
-        if (from.is_null()) {
+        if from.is_null() {
             libc::gettimeofday(&raw mut (*s).activity_time, null_mut());
         } else {
             memcpy__(&raw mut (*s).activity_time, from);
@@ -336,7 +336,7 @@ pub unsafe extern "C" fn session_update_activity(s: *mut session, from: *mut tim
 
         let mut tv = MaybeUninit::<timeval>::uninit();
         let tv = tv.as_mut_ptr();
-        if ((*s).attached != 0) {
+        if (*s).attached != 0 {
             timerclear(tv);
             (*tv).tv_sec = options_get_number((*s).options, c"lock-after-time".as_ptr());
             if (*tv).tv_sec != 0 {
@@ -458,7 +458,7 @@ pub unsafe extern "C" fn session_is_linked(s: *mut session, w: *mut window) -> i
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_next_alert(mut wl: *mut winlink) -> *mut winlink {
     unsafe {
-        while (!wl.is_null()) {
+        while !wl.is_null() {
             if (*wl).flags.intersects(WINLINK_ALERTFLAGS) {
                 break;
             }
@@ -481,7 +481,7 @@ pub unsafe extern "C" fn session_next(s: *mut session, alert: i32) -> i32 {
         if alert != 0 {
             wl = session_next_alert(wl);
         }
-        if (wl.is_null()) {
+        if wl.is_null() {
             wl = rb_min(&raw mut (*s).windows);
             if alert != 0
                 && ({
@@ -499,7 +499,7 @@ pub unsafe extern "C" fn session_next(s: *mut session, alert: i32) -> i32 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_previous_alert(mut wl: *mut winlink) -> *mut winlink {
     unsafe {
-        while (!wl.is_null()) {
+        while !wl.is_null() {
             if (*wl).flags.intersects(WINLINK_ALERTFLAGS) {
                 break;
             }
@@ -521,7 +521,7 @@ pub unsafe extern "C" fn session_previous(s: *mut session, alert: i32) -> i32 {
         if alert != 0 {
             wl = session_previous_alert(wl);
         }
-        if (wl.is_null()) {
+        if wl.is_null() {
             wl = rb_max(&raw mut (*s).windows);
             if alert != 0
                 && ({
@@ -577,7 +577,7 @@ pub unsafe extern "C" fn session_set_current(s: *mut session, wl: *mut winlink) 
         winlink_stack_remove(&raw mut (*s).lastw, wl);
         winlink_stack_push(&raw mut (*s).lastw, (*s).curw);
         (*s).curw = wl;
-        if (options_get_number(global_options, c"focus-events".as_ptr()) != 0) {
+        if options_get_number(global_options, c"focus-events".as_ptr()) != 0 {
             if !old.is_null() {
                 window_update_focus((*old).window);
             }
@@ -657,7 +657,7 @@ pub unsafe extern "C" fn session_group_remove(s: *mut session) {
             return;
         }
         tailq_remove(&raw mut (*sg).sessions, s);
-        if (tailq_empty(&raw mut (*sg).sessions)) {
+        if tailq_empty(&raw mut (*sg).sessions) {
             rb_remove(&raw mut session_groups, sg);
             free_((*sg).name.cast_mut());
             free_(sg);
@@ -840,7 +840,7 @@ pub unsafe extern "C" fn session_renumber_windows(s: *mut session) {
         }
 
         /* Set the current window. */
-        if (marked_idx != -1) {
+        if marked_idx != -1 {
             marked_pane.wl = winlink_find_by_index(&raw mut (*s).windows, marked_idx);
             if marked_pane.wl.is_null() {
                 server_clear_marked();

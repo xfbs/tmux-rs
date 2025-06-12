@@ -375,10 +375,10 @@ pub unsafe extern "C" fn tty_add_features(
         let mut tf: *const tty_feature = null();
         let mut loop_ = null_mut();
 
-        while ({
+        while {
             next = strsep(&raw mut loop_, separators);
             !next.is_null()
-        }) {
+        } {
             let mut i = 0;
             for j in 0..tty_features.len() {
                 i = j;
@@ -387,13 +387,13 @@ pub unsafe extern "C" fn tty_add_features(
                     break;
                 }
             }
-            if (i == tty_features.len()) {
+            if i == tty_features.len() {
                 log_debug!("unknown terminal feature: {}", _s(next));
                 break;
             }
             if !(*feat) & (1 << i) != 0 {
                 log_debug!("adding terminal feature: {}", _s((*tf).name.as_ptr()));
-                (*feat) |= (1 << i);
+                (*feat) |= 1 << i;
             }
         }
         free_(copy);
@@ -439,9 +439,9 @@ pub unsafe extern "C" fn tty_apply_features(term: *mut tty_term, feat: i32) -> b
             }
 
             log_debug!("applying terminal feature: {}", _s(tf.name.as_ptr()));
-            if (!tf.capabilities.is_null()) {
+            if !tf.capabilities.is_null() {
                 let mut capability = tf.capabilities;
-                while (!(*capability).as_ptr().is_null()) {
+                while !(*capability).as_ptr().is_null() {
                     log_debug!("adding capability: {}", _s((*capability).as_ptr()));
                     tty_term_apply(term, (*capability).as_ptr(), 1);
                     capability = capability.add(1);

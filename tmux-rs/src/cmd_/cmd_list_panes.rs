@@ -38,9 +38,9 @@ unsafe extern "C" fn cmd_list_panes_exec(self_: *mut cmd, item: *mut cmdq_item) 
         let mut s = (*target).s;
         let mut wl = (*target).wl;
 
-        if (args_has_(args, 'a')) {
+        if args_has_(args, 'a') {
             cmd_list_panes_server(self_, item);
-        } else if (args_has_(args, 's')) {
+        } else if args_has_(args, 's') {
             cmd_list_panes_session(self_, s, item, 1);
         } else {
             cmd_list_panes_window(self_, s, wl, item, 0);
@@ -85,7 +85,7 @@ fn cmd_list_panes_window(
 
         let mut template = args_get_(args, 'F');
         if template.is_null() {
-            match (type_) {
+            match type_ {
                 0 => {
                     template = concat!(
                         "#{pane_index}: ",
@@ -142,7 +142,7 @@ fn cmd_list_panes_window(
             } else {
                 flag = 1;
             }
-            if (flag != 0) {
+            if flag != 0 {
                 let line = format_expand(ft, template);
                 cmdq_print(item, c"%s".as_ptr(), line);
                 free_(line);

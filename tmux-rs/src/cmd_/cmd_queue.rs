@@ -135,7 +135,7 @@ pub unsafe extern "C" fn cmdq_get(c: *mut client) -> *mut cmdq_list {
     static mut global_queue: *mut cmdq_list = null_mut();
 
     unsafe {
-        if (c.is_null()) {
+        if c.is_null() {
             if global_queue.is_null() {
                 global_queue = cmdq_new().as_ptr();
             }
@@ -221,7 +221,7 @@ pub unsafe extern "C" fn cmdq_new_state(
         (*state).references = 1;
         (*state).flags = flags;
 
-        if (!event.is_null()) {
+        if !event.is_null() {
             memcpy__(&raw mut (*state).event, event);
         } else {
             (*state).event.key = KEYC_NONE;
@@ -453,7 +453,7 @@ pub unsafe extern "C" fn cmdq_insert_hook(
         flag = args_first(args, &raw mut ae);
         while flag != 0 {
             let value = args_get(args, flag);
-            if (value.is_null()) {
+            if value.is_null() {
                 xsnprintf(tmp, sizeof_tmp, c"hook_flag_%c".as_ptr(), flag as u32);
                 cmdq_add_format(new_state, tmp, c"1".as_ptr());
             } else {
@@ -476,9 +476,9 @@ pub unsafe extern "C" fn cmdq_insert_hook(
         let mut a = options_array_first(o);
         while !a.is_null() {
             let cmdlist = (*options_array_item_value(a)).cmdlist;
-            if (!cmdlist.is_null()) {
+            if !cmdlist.is_null() {
                 let new_item = cmdq_get_command(cmdlist, new_state);
-                if (!item.is_null()) {
+                if !item.is_null() {
                     item = cmdq_insert_after(item, new_item);
                 } else {
                     item = cmdq_append(null_mut(), new_item);
@@ -554,7 +554,7 @@ pub unsafe extern "C" fn cmdq_get_command(
             return cmdq_get_callback!(cmdq_empty_command, null_mut()).as_ptr();
         }
 
-        if (state.is_null()) {
+        if state.is_null() {
             state = cmdq_new_state(null_mut(), null_mut(), 0);
             created = true;
         }
@@ -605,13 +605,13 @@ pub unsafe extern "C" fn cmdq_find_flag(
     flag: *mut cmd_entry_flag,
 ) -> cmd_retval {
     unsafe {
-        if ((*flag).flag == 0) {
+        if (*flag).flag == 0 {
             cmd_find_from_client(fs, (*item).target_client, 0);
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
         let value = args_get(cmd_get_args((*item).cmd), (*flag).flag as u8);
-        if (cmd_find_target(fs, item, value, (*flag).type_, (*flag).flags) != 0) {
+        if cmd_find_target(fs, item, value, (*flag).type_, (*flag).flags) != 0 {
             cmd_find_clear_state(fs, 0);
             return cmd_retval::CMD_RETURN_ERROR;
         }
@@ -694,13 +694,13 @@ pub unsafe extern "C" fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
             }
             if (*entry).flags.intersects(cmd_flag::CMD_CLIENT_CFLAG) {
                 tc = cmd_find_client(item, args_get_(args, 'c'), quiet);
-                if (tc.is_null() && quiet == 0) {
+                if tc.is_null() && quiet == 0 {
                     retval = cmd_retval::CMD_RETURN_ERROR;
                     break 'out;
                 }
             } else if (*entry).flags.intersects(cmd_flag::CMD_CLIENT_TFLAG) {
                 tc = cmd_find_client(item, args_get_(args, 't'), quiet);
-                if (tc.is_null() && quiet == 0) {
+                if tc.is_null() && quiet == 0 {
                     retval = cmd_retval::CMD_RETURN_ERROR;
                     break 'out;
                 }
@@ -740,7 +740,7 @@ pub unsafe extern "C" fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
         }
 
         (*item).client = saved;
-        if (retval == cmd_retval::CMD_RETURN_ERROR) {
+        if retval == cmd_retval::CMD_RETURN_ERROR {
             fsp = null_mut();
             if cmd_find_valid_state(&raw mut (*item).target).as_bool() {
                 fsp = &raw mut (*item).target;
@@ -851,7 +851,7 @@ pub unsafe extern "C" fn cmdq_next(c: *mut client) -> u32 {
                     break 'waiting;
                 }
 
-                if (!(*item).flags & CMDQ_FIRED != 0) {
+                if !(*item).flags & CMDQ_FIRED != 0 {
                     (*item).time = libc::time(null_mut());
                     number += 1;
                     (*item).number = number;
@@ -869,7 +869,7 @@ pub unsafe extern "C" fn cmdq_next(c: *mut client) -> u32 {
                     }
                     (*item).flags |= CMDQ_FIRED;
 
-                    if (retval == cmd_retval::CMD_RETURN_WAIT) {
+                    if retval == cmd_retval::CMD_RETURN_WAIT {
                         (*item).flags |= CMDQ_WAITING;
                         break 'waiting;
                     }
@@ -956,14 +956,14 @@ pub unsafe extern "C" fn cmdq_error(item: *mut cmdq_item, fmt: *const c_char, mu
         if c.is_null() {
             cmd_get_source(cmd, &raw mut file, &raw mut line);
             cfg_add_cause(c"%s:%u: %s".as_ptr(), file, line, msg);
-        } else if ((*c).session.is_null() || (*c).flags.intersects(client_flag::CONTROL)) {
+        } else if (*c).session.is_null() || (*c).flags.intersects(client_flag::CONTROL) {
             server_add_message(c"%s message: %s".as_ptr(), (*c).name, msg);
-            if (!(*c).flags.intersects(client_flag::UTF8)) {
+            if !(*c).flags.intersects(client_flag::UTF8) {
                 tmp = msg;
                 msg = utf8_sanitize(tmp);
                 free_(tmp);
             }
-            if ((*c).flags.intersects(client_flag::CONTROL)) {
+            if (*c).flags.intersects(client_flag::CONTROL) {
                 control_write(c, c"%s".as_ptr(), msg);
             } else {
                 file_error(c, c"%s\n".as_ptr(), msg);

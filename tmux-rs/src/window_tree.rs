@@ -163,7 +163,7 @@ unsafe extern "C" fn window_tree_pull_item(
             return;
         }
 
-        if ((*item.as_ptr()).type_ == window_tree_type::WINDOW_TREE_SESSION) {
+        if (*item.as_ptr()).type_ == window_tree_type::WINDOW_TREE_SESSION {
             *wlp = std::mem::transmute::<*mut winlink, Option<NonNull<winlink>>>(
                 (*(*sp).unwrap().as_ptr()).curw,
             );
@@ -313,7 +313,7 @@ unsafe extern "C" fn window_tree_cmp_pane(a0: *const c_void, b0: *const c_void) 
         let mut ai: u32 = 0;
         let mut bi: u32 = 0;
 
-        if ((*window_tree_sort).field == window_tree_sort_type::WINDOW_TREE_BY_TIME as u32) {
+        if (*window_tree_sort).field == window_tree_sort_type::WINDOW_TREE_BY_TIME as u32 {
             result = ((**a).active_point as i32).wrapping_sub((**b).active_point as i32);
         } else {
             // Panes don't have names, so use number order for any other sort field.
@@ -643,7 +643,7 @@ unsafe extern "C" fn window_tree_build(
             window_tree_type::WINDOW_TREE_SESSION => *tag = (*data).fs.s as u64,
             window_tree_type::WINDOW_TREE_WINDOW => *tag = (*data).fs.wl as u64,
             window_tree_type::WINDOW_TREE_PANE => {
-                if (window_count_panes((*(*data).fs.wl).window) == 1) {
+                if window_count_panes((*(*data).fs.wl).window) == 1 {
                     *tag = (*data).fs.wl as u64;
                 } else {
                     *tag = (*data).fs.wp as u64;
@@ -722,7 +722,7 @@ unsafe extern "C" fn window_tree_draw_session(
         let colour = options_get_number_(oo, c"display-panes-colour");
         let active_colour = options_get_number_(oo, c"display-panes-active-colour");
 
-        if (sx / total < 24) {
+        if sx / total < 24 {
             visible = sx / 24;
             if visible == 0 {
                 visible = 1;
@@ -739,10 +739,10 @@ unsafe extern "C" fn window_tree_draw_session(
             current += 1;
         }
 
-        if (current < visible) {
+        if current < visible {
             start = 0;
             end = visible;
-        } else if (current >= total - visible) {
+        } else if current >= total - visible {
             start = total - visible;
             end = total;
         } else {
@@ -765,10 +765,10 @@ unsafe extern "C" fn window_tree_draw_session(
             left = false;
             right = false;
         }
-        if (left && right) {
+        if left && right {
             each = (sx - 6) / visible;
             remaining = (sx - 6) - (visible * each);
-        } else if (left || right) {
+        } else if left || right {
             each = (sx - 3) / visible;
             remaining = (sx - 3) - (visible * each);
         } else {
@@ -814,16 +814,16 @@ unsafe extern "C" fn window_tree_draw_session(
             }
             let w = (*wl).window;
 
-            if (wl == (*s).curw) {
+            if wl == (*s).curw {
                 gc.fg = active_colour as i32;
             } else {
                 gc.fg = colour as i32;
             }
 
-            if (left) {
+            if left {
                 offset = 3 + (i * each);
             } else {
-                offset = (i * each);
+                offset = i * each;
             }
             if loop_ == end - 1 {
                 width = each + remaining;
@@ -841,7 +841,7 @@ unsafe extern "C" fn window_tree_draw_session(
             window_tree_draw_label(ctx, cx + offset, cy, width, sy, &raw mut gc, label);
             free_(label);
 
-            if (loop_ != end - 1) {
+            if loop_ != end - 1 {
                 screen_write_cursormove(ctx, (cx + offset + width) as i32, cy as i32, 0);
                 screen_write_vline(ctx, sy, 0, 0);
             }
@@ -895,7 +895,7 @@ unsafe extern "C" fn window_tree_draw_window(
 
         let (mut start, mut end) = if current < visible {
             (0, visible)
-        } else if (current >= total - visible) {
+        } else if current >= total - visible {
             (total - visible, total)
         } else {
             let start = current - (visible / 2);
@@ -923,7 +923,7 @@ unsafe extern "C" fn window_tree_draw_window(
         if left && right {
             each = (sx - 6) / visible;
             remaining = (sx - 6) - (visible * each);
-        } else if (left || right) {
+        } else if left || right {
             each = (sx - 3) / visible;
             remaining = (sx - 3) - (visible * each);
         } else {
@@ -935,7 +935,7 @@ unsafe extern "C" fn window_tree_draw_window(
             return;
         }
 
-        if (left) {
+        if left {
             (*data).left = (cx + 2) as i32;
             screen_write_cursormove(ctx, (cx + 2) as i32, cy as i32, 0);
             screen_write_vline(ctx, sy, 0, 0);
@@ -944,7 +944,7 @@ unsafe extern "C" fn window_tree_draw_window(
         } else {
             (*data).left = -1;
         }
-        if (right) {
+        if right {
             (*data).right = (cx + sx - 3) as i32;
             screen_write_cursormove(ctx, (cx + sx - 3) as i32, cy as i32, 0);
             screen_write_vline(ctx, sy, 0, 0);
@@ -975,7 +975,7 @@ unsafe extern "C" fn window_tree_draw_window(
                 gc.fg = colour;
             }
 
-            let offset = if left { 3 + (i * each) } else { (i * each) };
+            let offset = if left { 3 + (i * each) } else { i * each };
             let width = if loop_ == end - 1 {
                 each + remaining
             } else {
@@ -1179,7 +1179,7 @@ unsafe extern "C" fn window_tree_init(
         } else {
             (*data).key_format = xstrdup(args_get_(args, 'K')).as_ptr();
         }
-        if (args.is_null() || args_count(args) == 0) {
+        if args.is_null() || args_count(args) == 0 {
             (*data).command = xstrdup(WINDOW_TREE_DEFAULT_COMMAND.as_ptr().cast()).as_ptr();
         } else {
             (*data).command = xstrdup(args_string(args, 0)).as_ptr();
@@ -1534,7 +1534,7 @@ unsafe extern "C" fn window_tree_mouse(
         } else {
             x = x.saturating_sub(1);
         }
-        if (x == 0 || (*data).end == 0) {
+        if x == 0 || (*data).end == 0 {
             x = 0;
         } else {
             x /= (*data).each;
@@ -1544,7 +1544,7 @@ unsafe extern "C" fn window_tree_mouse(
         }
 
         window_tree_pull_item(item, &raw mut s, &raw mut wl, &raw mut wp);
-        if ((*item.as_ptr()).type_ == window_tree_type::WINDOW_TREE_SESSION) {
+        if (*item.as_ptr()).type_ == window_tree_type::WINDOW_TREE_SESSION {
             let Some(s) = s else {
                 return KEYC_NONE;
             };
@@ -1561,7 +1561,7 @@ unsafe extern "C" fn window_tree_mouse(
             }
             return '\r' as key_code;
         }
-        if ((*item.as_ptr()).type_ == window_tree_type::WINDOW_TREE_WINDOW) {
+        if (*item.as_ptr()).type_ == window_tree_type::WINDOW_TREE_WINDOW {
             let Some(wl) = wl else {
                 return KEYC_NONE;
             };
@@ -1650,7 +1650,7 @@ unsafe extern "C" fn window_tree_key(
                 b'x' => {
                     window_tree_pull_item(item, &raw mut ns, &raw mut nwl, &raw mut nwp);
                     // TODO there were breaks here which would have broken out
-                    match ((*item.as_ptr()).type_) {
+                    match (*item.as_ptr()).type_ {
                         window_tree_type::WINDOW_TREE_NONE => (),
                         window_tree_type::WINDOW_TREE_SESSION => {
                             if let Some(ns) = ns {
@@ -1717,7 +1717,7 @@ unsafe extern "C" fn window_tree_key(
                 }
                 b':' => {
                     tagged = mode_tree_count_tagged((*data).data);
-                    if (tagged != 0) {
+                    if tagged != 0 {
                         xasprintf(&raw mut prompt, c"(%u tagged) ".as_ptr(), tagged);
                     } else {
                         xasprintf(&raw mut prompt, c"(current) ".as_ptr());

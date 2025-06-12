@@ -82,7 +82,7 @@ pub unsafe extern "C" fn args_find(args: *mut args, flag: c_uchar) -> *mut args_
 pub unsafe extern "C" fn args_copy_value(to: *mut args_value, from: *const args_value) {
     unsafe {
         (*to).type_ = (*from).type_;
-        match ((*from).type_) {
+        match (*from).type_ {
             args_type::ARGS_NONE => (),
             args_type::ARGS_COMMANDS => {
                 (*to).union_.cmdlist = (*from).union_.cmdlist;
@@ -237,11 +237,11 @@ pub unsafe extern "C" fn args_parse_flags(
             }
 
             let found = strchr((*parse).template, flag as i32);
-            if (found.is_null()) {
+            if found.is_null() {
                 xasprintf(cause, c"unknown flag -%c".as_ptr(), flag as i32);
                 return -1;
             }
-            if (*found.add(1) != b':' as c_char) {
+            if *found.add(1) != b':' as c_char {
                 log_debug!("{}: -{}", __func__, flag as i32);
                 args_set(args, flag, null_mut(), 0);
                 continue;
@@ -286,7 +286,7 @@ pub unsafe extern "C" fn args_parse(
         let mut i: u32 = 1;
         while i < count {
             stop = args_parse_flags(parse, values, count, cause, args, &raw mut i);
-            if (stop == -1) {
+            if stop == -1 {
                 args_free(args);
                 return null_mut();
             }
@@ -310,7 +310,7 @@ pub unsafe extern "C" fn args_parse(
 
                 if let Some(cb) = (*parse).cb {
                     type_ = cb(args, (*args).count, cause);
-                    if (type_ == args_parse_type::ARGS_PARSE_INVALID) {
+                    if type_ == args_parse_type::ARGS_PARSE_INVALID {
                         args_free(args);
                         return null_mut();
                     }
@@ -329,10 +329,10 @@ pub unsafe extern "C" fn args_parse(
                 new = (*args).values.add((*args).count as usize);
                 (*args).count += 1;
 
-                match (type_) {
+                match type_ {
                     args_parse_type::ARGS_PARSE_INVALID => fatalx(c"unexpected argument type"),
                     args_parse_type::ARGS_PARSE_STRING => {
-                        if ((*value).type_ != args_type::ARGS_STRING) {
+                        if (*value).type_ != args_type::ARGS_STRING {
                             xasprintf(
                                 cause,
                                 c"argument %u must be \"string\"".as_ptr(),
@@ -345,7 +345,7 @@ pub unsafe extern "C" fn args_parse(
                     }
                     args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING => args_copy_value(new, value),
                     args_parse_type::ARGS_PARSE_COMMANDS => {
-                        if ((*value).type_ != args_type::ARGS_COMMANDS) {
+                        if (*value).type_ != args_type::ARGS_COMMANDS {
                             xasprintf(
                                 cause,
                                 c"argument %u must be { commands }".as_ptr(),
@@ -361,7 +361,7 @@ pub unsafe extern "C" fn args_parse(
             }
         }
 
-        if ((*parse).lower != -1 && (*args).count < (*parse).lower as u32) {
+        if (*parse).lower != -1 && (*args).count < (*parse).lower as u32 {
             xasprintf(
                 cause,
                 c"too few arguments (need at least %u)".as_ptr(),
@@ -370,7 +370,7 @@ pub unsafe extern "C" fn args_parse(
             args_free(args);
             return null_mut();
         }
-        if ((*parse).upper != -1 && (*args).count > (*parse).upper as u32) {
+        if (*parse).upper != -1 && (*args).count > (*parse).upper as u32 {
             xasprintf(
                 cause,
                 c"too many arguments (need at most %u)".as_ptr(),
@@ -392,7 +392,7 @@ pub unsafe extern "C" fn args_copy_copy_value(
 ) {
     unsafe {
         (*to).type_ = (*from).type_;
-        match ((*from).type_) {
+        match (*from).type_ {
             args_type::ARGS_NONE => (),
             args_type::ARGS_STRING => {
                 let mut expanded = xstrdup((*from).union_.string).as_ptr();
@@ -423,7 +423,7 @@ pub unsafe extern "C" fn args_copy(
 
         let new_args = args_create();
         for entry in rb_foreach(&raw mut (*args).tree).map(NonNull::as_ptr) {
-            if (tailq_empty(&raw mut (*entry).values)) {
+            if tailq_empty(&raw mut (*entry).values) {
                 for i in 0..(*entry).count {
                     args_set(new_args, (*entry).flag, null_mut(), 0);
                 }
@@ -558,7 +558,7 @@ pub unsafe extern "C" fn args_print_add_value(
             args_print_add(buf, len, c" ".as_ptr());
         }
 
-        match ((*value).type_) {
+        match (*value).type_ {
             args_type::ARGS_NONE => (),
             args_type::ARGS_COMMANDS => {
                 let expanded = cmd_list_print((*value).union_.cmdlist, 0);
@@ -610,8 +610,8 @@ pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
 
         /* Then the flags with arguments. */
         for entry in rb_foreach(&raw mut (*args).tree).map(NonNull::as_ptr) {
-            if ((*entry).flags & ARGS_ENTRY_OPTIONAL_VALUE != 0) {
-                if (*buf != b'\0' as c_char) {
+            if (*entry).flags & ARGS_ENTRY_OPTIONAL_VALUE != 0 {
+                if *buf != b'\0' as c_char {
                     args_print_add(
                         &raw mut buf,
                         &raw mut len,
@@ -634,7 +634,7 @@ pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
             }
             for value in tailq_foreach(&raw mut (*entry).values) {
                 {
-                    if (*buf != b'\0' as c_char) {
+                    if *buf != b'\0' as c_char {
                         args_print_add(
                             &raw mut buf,
                             &raw mut len,
@@ -680,37 +680,37 @@ pub unsafe extern "C" fn args_escape(s: *const c_char) -> *mut c_char {
         let mut flags: i32 = 0;
         let mut quotes: i32 = 0;
 
-        if (*s == b'\0' as c_char) {
+        if *s == b'\0' as c_char {
             xasprintf(&raw mut result, c"''".as_ptr());
             return result;
         }
-        if (*s.add(strcspn(s, dquoted)) != b'\0' as _) {
+        if *s.add(strcspn(s, dquoted)) != b'\0' as _ {
             quotes = b'"' as _;
         } else if *s.add(strcspn(s, squoted)) != b'\0' as _ {
             quotes = b'\'' as _;
         }
 
-        if (*s != b' ' as _ && *s.add(1) == b'\0' as _ && (quotes != 0 || *s == b'~' as _)) {
+        if *s != b' ' as _ && *s.add(1) == b'\0' as _ && (quotes != 0 || *s == b'~' as _) {
             xasprintf(&raw mut escaped, c"\\%c".as_ptr(), *s as i32);
             return escaped;
         }
 
-        flags = (VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL);
+        flags = VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL;
         if quotes == b'"' as _ {
             flags |= VIS_DQ;
         }
         utf8_stravis(&raw mut escaped, s, flags);
 
-        if (quotes == b'\'' as i32) {
+        if quotes == b'\'' as i32 {
             xasprintf(&raw mut result, c"'%s'".as_ptr(), escaped);
-        } else if (quotes == b'"' as i32) {
-            if (*escaped == b'~' as i8) {
+        } else if quotes == b'"' as i32 {
+            if *escaped == b'~' as i8 {
                 xasprintf(&raw mut result, c"\"\\%s\"".as_ptr(), escaped);
             } else {
                 xasprintf(&raw mut result, c"\"%s\"".as_ptr(), escaped);
             }
         } else {
-            if (*escaped == b'~' as i8) {
+            if *escaped == b'~' as i8 {
                 xasprintf(&raw mut result, c"\\%s".as_ptr(), escaped);
             } else {
                 result = xstrdup(escaped).as_ptr();
@@ -845,7 +845,7 @@ pub unsafe extern "C" fn args_make_commands_now(
         let mut error = null_mut();
         let state = args_make_commands_prepare(self_, item, idx, null_mut(), 0, expand);
         let cmdlist = args_make_commands(state, 0, null_mut(), &raw mut error);
-        if (cmdlist.is_null()) {
+        if cmdlist.is_null() {
             cmdq_error(item, c"%s".as_ptr(), error);
             free_(error);
         } else {
@@ -877,9 +877,9 @@ pub unsafe extern "C" fn args_make_commands_prepare(
         let mut cmd = null();
         let state = xcalloc1::<args_command_state>() as *mut args_command_state;
 
-        if (idx < (*args).count) {
+        if idx < (*args).count {
             value = (*args).values.add(idx as usize);
-            if ((*value).type_ == args_type::ARGS_COMMANDS) {
+            if (*value).type_ == args_type::ARGS_COMMANDS {
                 (*state).cmdlist = (*value).union_.cmdlist;
                 (*(*state).cmdlist).references += 1;
                 return state;
@@ -892,7 +892,7 @@ pub unsafe extern "C" fn args_make_commands_prepare(
             cmd = default_command;
         }
 
-        if (expand != 0) {
+        if expand != 0 {
             (*state).cmd = format_single_from_target(item, cmd);
         } else {
             (*state).cmd = xstrdup(cmd).as_ptr();
@@ -926,7 +926,7 @@ pub unsafe extern "C" fn args_make_commands(
 ) -> *mut cmd_list {
     let __func__ = "args_make_commands";
     unsafe {
-        if (!(*state).cmdlist.is_null()) {
+        if !(*state).cmdlist.is_null() {
             if argc == 0 {
                 return (*state).cmdlist;
             }
@@ -952,7 +952,7 @@ pub unsafe extern "C" fn args_make_commands(
 
         let pr = cmd_parse_from_string(cmd, &raw mut (*state).pi);
         free_(cmd);
-        match ((*pr).status) {
+        match (*pr).status {
             cmd_parse_status::CMD_PARSE_ERROR => {
                 *error = (*pr).error;
                 return null_mut();
@@ -985,7 +985,7 @@ pub unsafe extern "C" fn args_make_commands_get_command(
     state: *mut args_command_state,
 ) -> *mut c_char {
     unsafe {
-        if (!(*state).cmdlist.is_null()) {
+        if !(*state).cmdlist.is_null() {
             let first = cmd_list_first((*state).cmdlist);
             if first.is_null() {
                 return xstrdup_(c"").as_ptr();
@@ -1030,21 +1030,21 @@ pub unsafe extern "C" fn args_strtonum(
         let mut errstr = null();
 
         let entry = args_find(args, flag);
-        if (entry.is_null()) {
+        if entry.is_null() {
             *cause = xstrdup_(c"missing").as_ptr();
             return 0;
         }
         let value = tailq_last(&raw mut (*entry).values);
-        if (value.is_null()
+        if value.is_null()
             || (*value).type_ != args_type::ARGS_STRING
-            || (*value).union_.string.is_null())
+            || (*value).union_.string.is_null()
         {
             *cause = xstrdup_(c"missing").as_ptr();
             return 0;
         }
 
         let ll = strtonum((*value).union_.string, minval, maxval, &raw mut errstr);
-        if (!errstr.is_null()) {
+        if !errstr.is_null() {
             *cause = xstrdup(errstr).as_ptr();
             return 0;
         }
@@ -1068,14 +1068,14 @@ pub unsafe extern "C" fn args_strtonum_and_expand(
         let mut errstr: *const i8 = null();
 
         let mut entry = args_find(args, flag);
-        if (entry.is_null()) {
+        if entry.is_null() {
             *cause = xstrdup_(c"missing").as_ptr();
             return 0;
         }
         let value = tailq_last(&raw mut (*entry).values);
-        if (value.is_null()
+        if value.is_null()
             || (*value).type_ != args_type::ARGS_STRING
-            || (*value).union_.string.is_null())
+            || (*value).union_.string.is_null()
         {
             *cause = xstrdup_(c"missing").as_ptr();
             return 0;
@@ -1084,7 +1084,7 @@ pub unsafe extern "C" fn args_strtonum_and_expand(
         let formatted = format_single_from_target(item, (*value).union_.string);
         let ll = strtonum(formatted, minval, maxval, &raw mut errstr);
         free_(formatted);
-        if (!errstr.is_null()) {
+        if !errstr.is_null() {
             *cause = xstrdup(errstr).as_ptr();
             return 0;
         }
@@ -1106,11 +1106,11 @@ pub unsafe extern "C" fn args_percentage(
 ) -> i64 {
     unsafe {
         let entry = args_find(args, flag);
-        if (entry.is_null()) {
+        if entry.is_null() {
             *cause = xstrdup_(c"missing").as_ptr();
             return 0;
         }
-        if (tailq_empty(&raw mut (*entry).values)) {
+        if tailq_empty(&raw mut (*entry).values) {
             *cause = xstrdup_(c"empty").as_ptr();
             return 0;
         }
@@ -1134,32 +1134,32 @@ pub unsafe extern "C" fn args_string_percentage(
         let mut valuelen: usize = strlen(value);
         let mut copy = null_mut();
 
-        if (valuelen == 0) {
+        if valuelen == 0 {
             *cause = xstrdup_(c"empty").as_ptr();
             return 0;
         }
-        if (*value.add(valuelen - 1) == b'%' as _) {
+        if *value.add(valuelen - 1) == b'%' as _ {
             copy = xstrdup(value).as_ptr();
             *copy.add(valuelen - 1) = b'\0' as _;
 
             ll = strtonum(copy, 0, 100, &raw mut errstr);
             free_(copy);
-            if (!errstr.is_null()) {
+            if !errstr.is_null() {
                 *cause = xstrdup(errstr).as_ptr();
                 return 0;
             }
             ll = (curval * ll) / 100;
-            if (ll < minval) {
+            if ll < minval {
                 *cause = xstrdup_(c"too small").as_ptr();
                 return 0;
             }
-            if (ll > maxval) {
+            if ll > maxval {
                 *cause = xstrdup_(c"too large").as_ptr();
                 return 0;
             }
         } else {
             ll = strtonum(value, minval, maxval, &raw mut errstr);
-            if (!errstr.is_null()) {
+            if !errstr.is_null() {
                 *cause = xstrdup(errstr).as_ptr();
                 return 0;
             }
@@ -1183,11 +1183,11 @@ pub unsafe extern "C" fn args_percentage_and_expand(
 ) -> i64 {
     unsafe {
         let entry = args_find(args, flag);
-        if (entry.is_null()) {
+        if entry.is_null() {
             *cause = xstrdup_(c"missing").as_ptr();
             return 0;
         }
-        if (tailq_empty(&raw mut (*entry).values)) {
+        if tailq_empty(&raw mut (*entry).values) {
             *cause = xstrdup_(c"empty").as_ptr();
             return 0;
         }
@@ -1212,7 +1212,7 @@ pub unsafe extern "C" fn args_string_percentage_and_expand(
         let mut ll: i64 = 0;
         let mut f: *mut c_char = null_mut();
 
-        if (*value.add(valuelen - 1) == b'%' as _) {
+        if *value.add(valuelen - 1) == b'%' as _ {
             let mut copy = xstrdup(value).as_ptr();
             *copy.add(valuelen - 1) = b'\0' as c_char;
 
@@ -1220,16 +1220,16 @@ pub unsafe extern "C" fn args_string_percentage_and_expand(
             ll = strtonum(f, 0, 100, &raw mut errstr);
             free_(f);
             free_(copy);
-            if (!errstr.is_null()) {
+            if !errstr.is_null() {
                 *cause = xstrdup(errstr).as_ptr();
                 return 0;
             }
             ll = (curval * ll) / 100;
-            if (ll < minval) {
+            if ll < minval {
                 *cause = xstrdup_(c"too small").as_ptr();
                 return 0;
             }
-            if (ll > maxval) {
+            if ll > maxval {
                 *cause = xstrdup_(c"too large").as_ptr();
                 return 0;
             }
@@ -1237,7 +1237,7 @@ pub unsafe extern "C" fn args_string_percentage_and_expand(
             f = format_single_from_target(item, value);
             ll = strtonum(f, minval, maxval, &raw mut errstr);
             free_(f);
-            if (!errstr.is_null()) {
+            if !errstr.is_null() {
                 *cause = xstrdup(errstr).as_ptr();
                 return 0;
             }

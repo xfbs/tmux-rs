@@ -89,7 +89,7 @@ unsafe extern "C" fn format_update_ranges(
                 continue;
             }
 
-            if ((*fr).end <= start || (*fr).start >= start + width) {
+            if (*fr).end <= start || (*fr).start >= start + width {
                 format_free_range(frs, fr);
                 continue;
             }
@@ -100,7 +100,7 @@ unsafe extern "C" fn format_update_ranges(
             if (*fr).end > start + width {
                 (*fr).end = start + width;
             }
-            if ((*fr).start == (*fr).end) {
+            if (*fr).start == (*fr).end {
                 format_free_range(frs, fr);
                 continue;
             }
@@ -165,14 +165,14 @@ unsafe extern "C" fn format_draw_put_list(
         }
 
         // Draw <> markers at either side if needed.
-        if (start != 0 && width > (*list_left).cx) {
+        if start != 0 && width > (*list_left).cx {
             screen_write_cursormove(octx, (ocx + offset) as c_int, ocy as c_int, 0);
             screen_write_fast_copy(octx, list_left, 0, 0, (*list_left).cx, 1);
             offset += (*list_left).cx;
             start += (*list_left).cx;
             width -= (*list_left).cx;
         }
-        if (start + width < (*list).cx && width > (*list_right).cx) {
+        if start + width < (*list).cx && width > (*list_right).cx {
             screen_write_cursormove(
                 octx,
                 (ocx + offset + width - (*list_right).cx) as c_int,
@@ -299,14 +299,14 @@ unsafe extern "C" fn format_draw_left(
          * Trim first the centre, then the list, then the right, then after the
          * list, then the left.
          */
-        while (width_left + width_centre + width_right + width_list + width_after > available) {
-            if (width_centre > 0) {
+        while width_left + width_centre + width_right + width_list + width_after > available {
+            if width_centre > 0 {
                 width_centre -= 1;
-            } else if (width_list > 0) {
+            } else if width_list > 0 {
                 width_list -= 1;
-            } else if (width_right > 0) {
+            } else if width_right > 0 {
                 width_right -= 1;
-            } else if (width_after > 0) {
+            } else if width_after > 0 {
                 width_after -= 1;
             } else {
                 width_left -= 1;
@@ -314,7 +314,7 @@ unsafe extern "C" fn format_draw_left(
         }
 
         /* If there is no list left, pass off to the no list function. */
-        if (width_list == 0) {
+        if width_list == 0 {
             screen_write_start(&raw mut ctx, left);
             screen_write_fast_copy(&raw mut ctx, after, 0, 0, width_after, 1);
             screen_write_stop(&raw mut ctx);
@@ -378,7 +378,7 @@ unsafe extern "C" fn format_draw_left(
          *     width_left + width_list.
          * If there is no focus given, keep the left in focus.
          */
-        if (focus_start == -1 || focus_end == -1) {
+        if focus_start == -1 || focus_end == -1 {
             focus_start = 0;
             focus_end = 0;
         }
@@ -446,14 +446,14 @@ unsafe extern "C" fn format_draw_centre(
          * Trim first the list, then after the list, then the centre, then the
          * right, then the left.
          */
-        while (width_left + width_centre + width_right + width_list + width_after > available) {
-            if (width_list > 0) {
+        while width_left + width_centre + width_right + width_list + width_after > available {
+            if width_list > 0 {
                 width_list -= 1;
-            } else if (width_after > 0) {
+            } else if width_after > 0 {
                 width_after -= 1;
-            } else if (width_centre > 0) {
+            } else if width_centre > 0 {
                 width_centre -= 1;
-            } else if (width_right > 0) {
+            } else if width_right > 0 {
                 width_right -= 1;
             } else {
                 width_left -= 1;
@@ -461,7 +461,7 @@ unsafe extern "C" fn format_draw_centre(
         }
 
         /* If there is no list left, pass off to the no list function. */
-        if (width_list == 0) {
+        if width_list == 0 {
             screen_write_start(&raw mut ctx, centre);
             screen_write_fast_copy(&raw mut ctx, after, 0, 0, width_after, 1);
             screen_write_stop(&raw mut ctx);
@@ -491,7 +491,7 @@ unsafe extern "C" fn format_draw_centre(
          * All three centre sections are offset from the middle of the
          * available space.
          */
-        middle = (width_left + ((available - width_right) - width_left) / 2);
+        middle = width_left + ((available - width_right) - width_left) / 2;
 
         /*
          * Write centre at
@@ -530,7 +530,7 @@ unsafe extern "C" fn format_draw_centre(
          *     middle + width_list / 2
          * If there is no focus given, keep the centre in focus.
          */
-        if (focus_start == -1 || focus_end == -1) {
+        if focus_start == -1 || focus_end == -1 {
             focus_start = (*list).cx as i32 / 2;
             focus_end = (*list).cx as i32 / 2;
         }
@@ -597,14 +597,14 @@ unsafe extern "C" fn format_draw_right(
          * Trim first the centre, then the list, then the right, then
          * after the list, then the left.
          */
-        while (width_left + width_centre + width_right + width_list + width_after > available) {
-            if (width_centre > 0) {
+        while width_left + width_centre + width_right + width_list + width_after > available {
+            if width_centre > 0 {
                 width_centre -= 1;
-            } else if (width_list > 0) {
+            } else if width_list > 0 {
                 width_list -= 1;
-            } else if (width_right > 0) {
+            } else if width_right > 0 {
                 width_right -= 1;
-            } else if (width_after > 0) {
+            } else if width_after > 0 {
                 width_after -= 1;
             } else {
                 width_left -= 1;
@@ -612,7 +612,7 @@ unsafe extern "C" fn format_draw_right(
         }
 
         /* If there is no list left, pass off to the no list function. */
-        if (width_list == 0) {
+        if width_list == 0 {
             screen_write_start(&raw mut ctx, right);
             screen_write_fast_copy(&raw mut ctx, after, 0, 0, width_after, 1);
             screen_write_stop(&raw mut ctx);
@@ -678,7 +678,7 @@ unsafe extern "C" fn format_draw_right(
          *     available - width_after
          * If there is no focus given, keep the right in focus.
          */
-        if (focus_start == -1 || focus_end == -1) {
+        if focus_start == -1 || focus_end == -1 {
             focus_start = 0;
             focus_end = 0;
         }
@@ -744,10 +744,10 @@ unsafe extern "C" fn format_draw_absolute_centre(
         /*
          * Trim first centre, then the right, then the left.
          */
-        while (width_left + width_centre + width_right > available) {
-            if (width_centre > 0) {
+        while width_left + width_centre + width_right > available {
+            if width_centre > 0 {
                 width_centre -= 1;
-            } else if (width_right > 0) {
+            } else if width_right > 0 {
                 width_right -= 1;
             } else {
                 width_left -= 1;
@@ -759,10 +759,10 @@ unsafe extern "C" fn format_draw_absolute_centre(
          * them over the rest. Trim first the list, then after the list, then
          * abs_centre.
          */
-        while (width_list + width_after + width_abs_centre > available) {
-            if (width_list > 0) {
+        while width_list + width_after + width_abs_centre > available {
+            if width_list > 0 {
                 width_list -= 1;
-            } else if (width_after > 0) {
+            } else if width_after > 0 {
                 width_after -= 1;
             } else {
                 width_abs_centre -= 1;
@@ -788,7 +788,7 @@ unsafe extern "C" fn format_draw_absolute_centre(
          * Keep writing centre at the relative centre. Only the list is written
          * in the absolute centre of the horizontal space.
          */
-        middle = (width_left + ((available - width_right) - width_left) / 2);
+        middle = width_left + ((available - width_right) - width_left) / 2;
 
         /*
          * Write centre at
@@ -806,7 +806,7 @@ unsafe extern "C" fn format_draw_absolute_centre(
         );
 
         // If there is no focus given, keep the centre in focus.
-        if (focus_start == -1 || focus_end == -1) {
+        if focus_start == -1 || focus_end == -1 {
             focus_start = (*list).cx as i32 / 2;
             focus_end = (*list).cx as i32 / 2;
         }
@@ -870,7 +870,7 @@ unsafe extern "C" fn format_leading_hashes(
         while *cp.add(*n as usize) == b'#' as i8 {
             *n += 1;
         }
-        if (*n == 0) {
+        if *n == 0 {
             *width = 0;
             return cp;
         }
@@ -1044,7 +1044,7 @@ pub unsafe fn format_draw(
                             b'#' as i8,
                             n / 2,
                         );
-                        width[current as usize] += (n / 2);
+                        width[current as usize] += n / 2;
                         if even {
                             utf8_set(ud, b'[');
                             screen_write_cell(&raw mut ctx[current as usize], &raw mut sy.gc);
@@ -1126,10 +1126,10 @@ pub unsafe fn format_draw(
                     }
 
                     /* If this style pushed or popped the default, update it. */
-                    if (sy.default_type == style_default_type::STYLE_DEFAULT_PUSH) {
+                    if sy.default_type == style_default_type::STYLE_DEFAULT_PUSH {
                         memcpy__(&raw mut current_default, &raw const saved_sy.gc);
                         sy.default_type = style_default_type::STYLE_DEFAULT_BASE;
-                    } else if (sy.default_type == style_default_type::STYLE_DEFAULT_POP) {
+                    } else if sy.default_type == style_default_type::STYLE_DEFAULT_POP {
                         memcpy__(&raw mut current_default, base);
                         sy.default_type = style_default_type::STYLE_DEFAULT_BASE;
                     }
@@ -1141,7 +1141,7 @@ pub unsafe fn format_draw(
                              * Entering the list, exiting a marker, or exiting the
                              * focus.
                              */
-                            if (list_state != 0) {
+                            if list_state != 0 {
                                 if !fr.is_null() {
                                     // abort any region
                                     free_(fr);
@@ -1169,7 +1169,7 @@ pub unsafe fn format_draw(
                         }
                         style_list::STYLE_LIST_OFF => {
                             /* Exiting or outside the list. */
-                            if (list_state == 0) {
+                            if list_state == 0 {
                                 if !fr.is_null() {
                                     /* abort any region */
                                     free_(fr);
@@ -1200,7 +1200,7 @@ pub unsafe fn format_draw(
                                 free_(fr);
                                 fr = null_mut();
                             }
-                            if (focus_start != -1 && focus_end == -1) {
+                            if focus_start != -1 && focus_end == -1 {
                                 focus_start = -1;
                                 focus_end = -1;
                             }
@@ -1210,13 +1210,13 @@ pub unsafe fn format_draw(
                             // note conditions are flipped from original c source because of break
 
                             if list_state == 0 {
-                                if (s[Current::ListRight as usize].cx == 0) {
+                                if s[Current::ListRight as usize].cx == 0 {
                                     if !fr.is_null() {
                                         // abort any region
                                         free_(fr);
                                         fr = null_mut();
                                     }
-                                    if (focus_start != -1 && focus_end == -1) {
+                                    if focus_start != -1 && focus_end == -1 {
                                         focus_start = -1;
                                         focus_end = -1;
                                     }
@@ -1291,7 +1291,7 @@ pub unsafe fn format_draw(
                 }
 
                 // Clear the available area.
-                if (fill != -1) {
+                if fill != -1 {
                     memcpy__(&raw mut gc, &raw const grid_default_cell);
                     gc.bg = fill;
                     for i in 0..available {
@@ -1494,10 +1494,10 @@ pub unsafe extern "C" fn format_width(expanded: *const c_char) -> u32 {
                     }
                     cp = end.add(1);
                 }
-            } else if ({
+            } else if {
                 more = utf8_open(&raw mut ud, *cp as u8);
                 more == utf8_state::UTF8_MORE
-            }) {
+            } {
                 while ({
                     cp = cp.add(1);
                     *cp != b'\0' as i8
@@ -1505,7 +1505,7 @@ pub unsafe extern "C" fn format_width(expanded: *const c_char) -> u32 {
                 {
                     more = utf8_append(&raw mut ud, *cp as u8);
                 }
-                if (more == utf8_state::UTF8_DONE) {
+                if more == utf8_state::UTF8_DONE {
                     width += ud.width as u32;
                 } else {
                     cp = cp.wrapping_sub(ud.have as usize);
@@ -1555,8 +1555,8 @@ pub unsafe extern "C" fn format_trim_left(expanded: *const c_char, limit: u32) -
                 if leading_width > limit - width {
                     leading_width = limit - width;
                 }
-                if (leading_width != 0) {
-                    if (n == 1) {
+                if leading_width != 0 {
+                    if n == 1 {
                         *out = b'#' as i8;
                         out = out.add(1);
                     } else {
@@ -1566,7 +1566,7 @@ pub unsafe extern "C" fn format_trim_left(expanded: *const c_char, limit: u32) -
                     width += leading_width;
                 }
                 cp = end;
-                if (*cp == b'#' as i8) {
+                if *cp == b'#' as i8 {
                     end = format_skip(cp.add(2), c"]".as_ptr());
                     if end.is_null() {
                         break;
@@ -1575,10 +1575,10 @@ pub unsafe extern "C" fn format_trim_left(expanded: *const c_char, limit: u32) -
                     out = out.offset(end.add(1).offset_from(cp));
                     cp = end.add(1);
                 }
-            } else if ({
+            } else if {
                 more = utf8_open(&raw mut ud, *cp as u8);
                 more == utf8_state::UTF8_MORE
-            }) {
+            } {
                 while ({
                     cp = cp.add(1);
                     *cp != b'\0' as i8
@@ -1586,8 +1586,8 @@ pub unsafe extern "C" fn format_trim_left(expanded: *const c_char, limit: u32) -
                 {
                     more = utf8_append(&raw mut ud, *cp as u8);
                 }
-                if (more == utf8_state::UTF8_DONE) {
-                    if (width + ud.width as u32 <= limit) {
+                if more == utf8_state::UTF8_DONE {
+                    if width + ud.width as u32 <= limit {
                         libc::memcpy(out.cast(), ud.data.as_ptr().cast(), ud.size as usize);
                         out = out.add(ud.size as usize);
                     }
@@ -1595,7 +1595,7 @@ pub unsafe extern "C" fn format_trim_left(expanded: *const c_char, limit: u32) -
                 } else {
                     cp = cp.wrapping_sub(ud.have as usize).add(1);
                 }
-            } else if (*cp > 0x1f && *cp < 0x7f) {
+            } else if *cp > 0x1f && *cp < 0x7f {
                 if width < limit {
                     *out = *cp;
                     out = out.add(1);
@@ -1648,14 +1648,14 @@ pub unsafe extern "C" fn format_trim_right(expanded: *const c_char, limit: u32) 
                     format_leading_hashes(cp, &raw mut n, &raw mut leading_width);
                 copy_width = leading_width;
                 if width <= skip {
-                    if (skip - width >= copy_width) {
+                    if skip - width >= copy_width {
                         copy_width = 0;
                     } else {
-                        copy_width -= (skip - width);
+                        copy_width -= skip - width;
                     }
                 }
                 if copy_width != 0 {
-                    if (n == 1) {
+                    if n == 1 {
                         *out = b'#' as i8;
                         out = out.add(1);
                     } else {
@@ -1674,10 +1674,10 @@ pub unsafe extern "C" fn format_trim_right(expanded: *const c_char, limit: u32) 
                     out = out.offset(end.add(1).offset_from(cp));
                     cp = end.add(1);
                 }
-            } else if ({
+            } else if {
                 more = utf8_open(&raw mut ud, *cp as u8);
                 more == utf8_state::UTF8_MORE
-            }) {
+            } {
                 while ({
                     cp = cp.add(1);
                     *(cp) != b'\0' as i8
@@ -1685,8 +1685,8 @@ pub unsafe extern "C" fn format_trim_right(expanded: *const c_char, limit: u32) 
                 {
                     more = utf8_append(&raw mut ud, *cp as u8);
                 }
-                if (more == utf8_state::UTF8_DONE) {
-                    if (width >= skip) {
+                if more == utf8_state::UTF8_DONE {
+                    if width >= skip {
                         libc::memcpy(out.cast(), ud.data.as_ptr().cast(), ud.size as usize);
                         out = out.add(ud.size as usize);
                     }
@@ -1694,8 +1694,8 @@ pub unsafe extern "C" fn format_trim_right(expanded: *const c_char, limit: u32) 
                 } else {
                     cp = cp.wrapping_sub(ud.have as usize).add(1);
                 }
-            } else if (*cp > 0x1f && *cp < 0x7f) {
-                if (width >= skip) {
+            } else if *cp > 0x1f && *cp < 0x7f {
+                if width >= skip {
                     *out = *cp;
                     out = out.add(1);
                 }

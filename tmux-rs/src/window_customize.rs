@@ -123,7 +123,7 @@ unsafe extern "C" fn window_customize_get_tree(
     fs: *mut cmd_find_state,
 ) -> *mut options {
     unsafe {
-        match (scope) {
+        match scope {
             window_customize_scope::WINDOW_CUSTOMIZE_NONE
             | window_customize_scope::WINDOW_CUSTOMIZE_KEY => null_mut(),
             window_customize_scope::WINDOW_CUSTOMIZE_SERVER => global_options,
@@ -1095,7 +1095,7 @@ unsafe extern "C" fn window_customize_draw_option(
             let (wo, go) = if !oe.is_null() && (*oe).flags & OPTIONS_TABLE_IS_ARRAY != 0 {
                 (null_mut(), null_mut())
             } else {
-                match ((*item).scope) {
+                match (*item).scope {
                     window_customize_scope::WINDOW_CUSTOMIZE_PANE => {
                         let wo = options_get_parent((*item).oo);
                         (wo, options_get_parent(wo))
@@ -1426,7 +1426,7 @@ pub unsafe extern "C" fn window_customize_set_option(
             oo = (*item).oo;
         } else {
             if global != 0 {
-                match ((*item).scope) {
+                match (*item).scope {
                     window_customize_scope::WINDOW_CUSTOMIZE_NONE
                     | window_customize_scope::WINDOW_CUSTOMIZE_KEY
                     | window_customize_scope::WINDOW_CUSTOMIZE_SERVER
@@ -1443,7 +1443,7 @@ pub unsafe extern "C" fn window_customize_set_option(
                     }
                 }
             } else {
-                match ((*item).scope) {
+                match (*item).scope {
                     window_customize_scope::WINDOW_CUSTOMIZE_NONE
                     | window_customize_scope::WINDOW_CUSTOMIZE_KEY
                     | window_customize_scope::WINDOW_CUSTOMIZE_SERVER
@@ -1495,7 +1495,7 @@ pub unsafe extern "C" fn window_customize_set_option(
                 space = c", global".as_ptr();
             }
             if !oe.is_null() && (*oe).flags & OPTIONS_TABLE_IS_ARRAY != 0 {
-                if (idx == -1) {
+                if idx == -1 {
                     xasprintf(&raw mut prompt, c"(%s[+]%s%s) ".as_ptr(), name, space, text);
                 } else {
                     xasprintf(
@@ -1737,11 +1737,11 @@ pub unsafe extern "C" fn window_customize_set_key(
                 c,
                 null_mut(),
                 prompt,
-                (if (*bd).note.is_null() {
+                if (*bd).note.is_null() {
                     c"".as_ptr()
                 } else {
                     (*bd).note
-                }),
+                },
                 Some(window_customize_set_note_callback),
                 Some(window_customize_free_item_callback),
                 new_item.cast(),
@@ -1815,7 +1815,7 @@ pub unsafe extern "C" fn window_customize_change_each(
 
         match (*data).change {
             window_customize_change::WINDOW_CUSTOMIZE_UNSET => {
-                if ((*item).scope == window_customize_scope::WINDOW_CUSTOMIZE_KEY) {
+                if (*item).scope == window_customize_scope::WINDOW_CUSTOMIZE_KEY {
                     window_customize_unset_key(data, item);
                 } else {
                     window_customize_unset_option(data, item);
@@ -1854,16 +1854,16 @@ pub unsafe extern "C" fn window_customize_change_current_callback(
         }
 
         item = mode_tree_get_current((*data).data).as_ptr().cast();
-        match ((*data).change) {
+        match (*data).change {
             window_customize_change::WINDOW_CUSTOMIZE_UNSET => {
-                if ((*item).scope == window_customize_scope::WINDOW_CUSTOMIZE_KEY) {
+                if (*item).scope == window_customize_scope::WINDOW_CUSTOMIZE_KEY {
                     window_customize_unset_key(data, item);
                 } else {
                     window_customize_unset_option(data, item);
                 }
             }
             window_customize_change::WINDOW_CUSTOMIZE_RESET => {
-                if ((*item).scope == window_customize_scope::WINDOW_CUSTOMIZE_KEY) {
+                if (*item).scope == window_customize_scope::WINDOW_CUSTOMIZE_KEY {
                     window_customize_reset_key(data, item);
                 } else {
                     window_customize_reset_option(data, item);
@@ -1939,7 +1939,7 @@ pub unsafe extern "C" fn window_customize_key(
         match key as u8 {
             b'\r' | b's' => {
                 if !item.is_null() {
-                    if ((*item).scope == window_customize_scope::WINDOW_CUSTOMIZE_KEY) {
+                    if (*item).scope == window_customize_scope::WINDOW_CUSTOMIZE_KEY {
                         window_customize_set_key(c, data, item);
                     } else {
                         window_customize_set_option(c, data, item, 0, 1);
@@ -2016,7 +2016,7 @@ pub unsafe extern "C" fn window_customize_key(
             b'u' => {
                 if !item.is_null() {
                     let idx = (*item).idx;
-                    if (idx != -1) {
+                    if idx != -1 {
                         xasprintf(
                             &raw mut prompt,
                             c"Unset %s[%d]? ".as_ptr(),

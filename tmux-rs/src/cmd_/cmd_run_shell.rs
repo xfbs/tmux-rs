@@ -74,8 +74,8 @@ pub unsafe extern "C" fn cmd_run_shell_print(job: *mut job, msg: *const c_char) 
         if (*cdata).wp_id != -1 {
             wp = window_pane_find_by_id((*cdata).wp_id as u32);
         }
-        if (wp.is_null()) {
-            if (!(*cdata).item.is_null()) {
+        if wp.is_null() {
+            if !(*cdata).item.is_null() {
                 cmdq_print((*cdata).item, c"%s".as_ptr(), msg);
                 return;
             }
@@ -121,9 +121,9 @@ pub unsafe extern "C" fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_ite
         let mut wait = !args_has(args, b'b') as i32;
 
         let delay = args_get(args, b'd');
-        if (!delay.is_null()) {
+        if !delay.is_null() {
             d = strtod(delay, &raw mut end);
-            if (*end != b'\0' as _) {
+            if *end != b'\0' as _ {
                 cmdq_error(item, c"invalid delay time: %s".as_ptr(), delay);
                 return cmd_retval::CMD_RETURN_ERROR;
             }
@@ -132,7 +132,7 @@ pub unsafe extern "C" fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_ite
         }
 
         let mut cdata = xcalloc1::<cmd_run_shell_data>() as *mut cmd_run_shell_data;
-        if (!args_has_(args, 'C')) {
+        if !args_has_(args, 'C') {
             let cmd = args_string(args, 0);
             if !cmd.is_null() {
                 (*cdata).cmd = format_single_from_target(item, cmd);
@@ -141,13 +141,13 @@ pub unsafe extern "C" fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_ite
             (*cdata).state = args_make_commands_prepare(self_, item, 0, null_mut(), wait, 1);
         }
 
-        if (args_has_(args, 't') && !wp.is_null()) {
+        if args_has_(args, 't') && !wp.is_null() {
             (*cdata).wp_id = (*wp).id as i32;
         } else {
             (*cdata).wp_id = -1;
         }
 
-        if (wait != 0) {
+        if wait != 0 {
             (*cdata).client = c;
             (*cdata).item = item;
         } else {
@@ -157,7 +157,7 @@ pub unsafe extern "C" fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_ite
         if !(*cdata).client.is_null() {
             (*(*cdata).client).references += 1;
         }
-        if (args_has_(args, 'c')) {
+        if args_has_(args, 'c') {
             (*cdata).cwd = xstrdup(args_get_(args, 'c')).as_ptr();
         } else {
             (*cdata).cwd = xstrdup(server_client_get_cwd(c, s)).as_ptr();
@@ -173,7 +173,7 @@ pub unsafe extern "C" fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_ite
             Some(cmd_run_shell_timer),
             cdata.cast(),
         );
-        if (!delay.is_null()) {
+        if !delay.is_null() {
             let mut tv: timeval = timeval {
                 tv_sec: d as time_t,
                 tv_usec: (d - (d as time_t as f64)) as i64 * 1000000i64,
@@ -202,8 +202,8 @@ pub unsafe extern "C" fn cmd_run_shell_timer(_fd: i32, _events: i16, arg: *mut c
         // struct cmd_list *cmdlist;
         // char *error;
 
-        if ((*cdata).state.is_null()) {
-            if (cmd.is_null()) {
+        if (*cdata).state.is_null() {
+            if cmd.is_null() {
                 if !(*cdata).item.is_null() {
                     cmdq_continue((*cdata).item);
                 }
@@ -233,15 +233,15 @@ pub unsafe extern "C" fn cmd_run_shell_timer(_fd: i32, _events: i16, arg: *mut c
         }
 
         let cmdlist = args_make_commands((*cdata).state, 0, null_mut(), &raw mut error);
-        if (cmdlist.is_null()) {
-            if ((*cdata).item.is_null()) {
+        if cmdlist.is_null() {
+            if (*cdata).item.is_null() {
                 *error = toupper(*error as i32) as i8;
                 status_message_set(c, -1, 1, 0, c"%s".as_ptr(), error);
             } else {
                 cmdq_error((*cdata).item, c"%s".as_ptr(), error);
             }
             free_(error);
-        } else if (item.is_null()) {
+        } else if item.is_null() {
             let new_item = cmdq_get_command(cmdlist, null_mut());
             cmdq_append(c, new_item);
         } else {
@@ -277,7 +277,7 @@ pub unsafe extern "C" fn cmd_run_shell_callback(job: *mut job) {
                 null_mut(),
                 evbuffer_eol_style_EVBUFFER_EOL_LF,
             );
-            if (!line.is_null()) {
+            if !line.is_null() {
                 cmd_run_shell_print(job, line);
                 free_(line);
             }
@@ -287,7 +287,7 @@ pub unsafe extern "C" fn cmd_run_shell_callback(job: *mut job) {
         }
 
         let size = EVBUFFER_LENGTH((*event).input);
-        if (size != 0) {
+        if size != 0 {
             line = xmalloc(size + 1).cast().as_ptr();
             memcpy(line.cast(), EVBUFFER_DATA((*event).input).cast(), size);
             *line.add(size) = b'\0' as c_char;
@@ -298,12 +298,12 @@ pub unsafe extern "C" fn cmd_run_shell_callback(job: *mut job) {
         }
 
         let status = job_get_status(job);
-        if (WIFEXITED(status)) {
+        if WIFEXITED(status) {
             retcode = WEXITSTATUS(status);
             if retcode != 0 {
                 xasprintf(&raw mut msg, c"'%s' returned %d".as_ptr(), cmd, retcode);
             }
-        } else if (WIFSIGNALED(status)) {
+        } else if WIFSIGNALED(status) {
             retcode = WTERMSIG(status);
             xasprintf(
                 &raw mut msg,
@@ -320,7 +320,7 @@ pub unsafe extern "C" fn cmd_run_shell_callback(job: *mut job) {
         }
         free_(msg);
 
-        if (!item.is_null()) {
+        if !item.is_null() {
             if !cmdq_get_client(item).is_null() && (*cmdq_get_client(item)).session.is_null() {
                 (*cmdq_get_client(item)).retval = retcode;
             }

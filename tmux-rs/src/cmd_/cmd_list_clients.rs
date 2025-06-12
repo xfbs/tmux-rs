@@ -39,7 +39,7 @@ unsafe extern "C" fn cmd_list_clients_exec(self_: *mut cmd, item: *mut cmdq_item
         let mut args = cmd_get_args(self_);
         let mut target = cmdq_get_target(item);
 
-        let mut s = if (args_has(args, b't') != 0) {
+        let mut s = if args_has(args, b't') != 0 {
             (*target).s
         } else {
             null_mut()
@@ -74,7 +74,7 @@ unsafe extern "C" fn cmd_list_clients_exec(self_: *mut cmd, item: *mut cmdq_item
             } else {
                 flag = 1;
             }
-            if (flag != 0) {
+            if flag != 0 {
                 let line = format_expand(ft, template);
                 cmdq_print(item, c"%s".as_ptr(), line);
                 free_(line);

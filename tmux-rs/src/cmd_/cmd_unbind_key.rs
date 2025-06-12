@@ -35,57 +35,57 @@ unsafe extern "C" fn cmd_unbind_key_exec(self_: *mut cmd, item: *mut cmdq_item) 
         let mut keystr = args_string(args, 0);
         let mut quiet = args_has(args, b'q');
 
-        if (args_has(args, b'a') != 0) {
-            if (!keystr.is_null()) {
+        if args_has(args, b'a') != 0 {
+            if !keystr.is_null() {
                 if quiet == 0 {
                     cmdq_error(item, c"key given with -a".as_ptr());
                 }
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
 
             tablename = args_get(args, b'T');
             if tablename.is_null() {
-                if (args_has(args, b'n') != 0) {
+                if args_has(args, b'n') != 0 {
                     tablename = c"root".as_ptr();
                 } else {
                     tablename = c"prefix".as_ptr();
                 }
             }
-            if (key_bindings_get_table(tablename, 0).is_null()) {
+            if key_bindings_get_table(tablename, 0).is_null() {
                 if quiet == 0 {
                     cmdq_error(item, c"table %s doesn't exist".as_ptr(), tablename);
                 }
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
 
             key_bindings_remove_table(tablename);
-            return (cmd_retval::CMD_RETURN_NORMAL);
+            return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        if (keystr.is_null()) {
+        if keystr.is_null() {
             if quiet == 0 {
                 cmdq_error(item, c"missing key".as_ptr());
             }
-            return (cmd_retval::CMD_RETURN_ERROR);
+            return cmd_retval::CMD_RETURN_ERROR;
         }
 
         let key = key_string_lookup_string(keystr);
-        if (key == KEYC_NONE || key == KEYC_UNKNOWN) {
+        if key == KEYC_NONE || key == KEYC_UNKNOWN {
             if quiet == 0 {
                 cmdq_error(item, c"unknown key unbind: %s".as_ptr(), keystr);
             }
-            return (cmd_retval::CMD_RETURN_ERROR);
+            return cmd_retval::CMD_RETURN_ERROR;
         }
 
-        if (args_has(args, b'T') != 0) {
+        if args_has(args, b'T') != 0 {
             tablename = args_get(args, b'T');
-            if (key_bindings_get_table(tablename, 0).is_null()) {
+            if key_bindings_get_table(tablename, 0).is_null() {
                 if quiet == 0 {
                     cmdq_error(item, c"table %s doesn't exist".as_ptr(), tablename);
                 }
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
-        } else if (args_has(args, b'n') != 0) {
+        } else if args_has(args, b'n') != 0 {
             tablename = c"root".as_ptr();
         } else {
             tablename = c"prefix".as_ptr();

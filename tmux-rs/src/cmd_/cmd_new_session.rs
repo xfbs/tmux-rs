@@ -101,29 +101,29 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
 
-            if (args_has_(args, 't') && (count != 0 || args_has_(args, 'n'))) {
+            if args_has_(args, 't') && (count != 0 || args_has_(args, 'n')) {
                 cmdq_error(item, c"command or window name given with target".as_ptr());
                 return cmd_retval::CMD_RETURN_ERROR;
             }
 
             tmp = args_get_(args, 's');
-            if (!tmp.is_null()) {
+            if !tmp.is_null() {
                 name = format_single(item, tmp, c, null_mut(), null_mut(), null_mut());
                 newname = session_check_name(name);
-                if (newname.is_null()) {
+                if newname.is_null() {
                     cmdq_error(item, c"invalid session: %s".as_ptr(), name);
                     free_(name);
                     return cmd_retval::CMD_RETURN_ERROR;
                 }
                 free_(name);
             }
-            if (args_has_(args, 'A')) {
-                as_ = if (!newname.is_null()) {
+            if args_has_(args, 'A') {
+                as_ = if !newname.is_null() {
                     session_find(newname)
                 } else {
                     (*target).s
                 };
-                if (!as_.is_null()) {
+                if !as_.is_null() {
                     retval = cmd_attach_session(
                         item,
                         (*as_).name,
@@ -138,27 +138,27 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                     return retval;
                 }
             }
-            if (!newname.is_null() && !session_find(newname).is_null()) {
+            if !newname.is_null() && !session_find(newname).is_null() {
                 cmdq_error(item, c"duplicate session: %s".as_ptr(), newname);
                 break 'fail;
             }
 
             /* Is this going to be part of a session group? */
             group = args_get_(args, 't');
-            if (!group.is_null()) {
+            if !group.is_null() {
                 groupwith = (*target).s;
-                sg = if (groupwith.is_null()) {
+                sg = if groupwith.is_null() {
                     session_group_find(group)
                 } else {
                     session_group_contains(groupwith)
                 };
-                if (!sg.is_null()) {
+                if !sg.is_null() {
                     prefix = xstrdup((*sg).name).as_ptr();
-                } else if (!groupwith.is_null()) {
+                } else if !groupwith.is_null() {
                     prefix = xstrdup((*groupwith).name).as_ptr();
                 } else {
                     prefix = session_check_name(group);
-                    if (prefix.is_null()) {
+                    if prefix.is_null() {
                         cmdq_error(item, c"invalid session group: %s".as_ptr(), group);
                         break 'fail;
                     }
@@ -167,7 +167,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
 
             /* Set -d if no client. */
             detached = args_has_(args, 'd');
-            if (c.is_null()) {
+            if c.is_null() {
                 detached = true;
             } else if (*c).flags.intersects(client_flag::CONTROL) {
                 is_control = true;
@@ -181,7 +181,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
 
             /* Get the new session working directory. */
             tmp = args_get_(args, 'c');
-            cwd = if (!tmp.is_null()) {
+            cwd = if !tmp.is_null() {
                 format_single(item, tmp, c, null_mut(), null_mut(), null_mut())
             } else {
                 xstrdup(server_client_get_cwd(c, null_mut())).as_ptr()
@@ -201,7 +201,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                 && (*c).fd != -1
                 && !(*c).flags.intersects(client_flag::CONTROL)
             {
-                if (server_client_check_nested(cmdq_get_client(item)) != 0) {
+                if server_client_check_nested(cmdq_get_client(item)) != 0 {
                     cmdq_error(
                         item,
                         c"sessions should be nested with care, unset $TMUX to force".as_ptr(),
@@ -218,7 +218,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
 
             /* Open the terminal if necessary. */
             if !detached && !already_attached {
-                if (server_client_open(c, &raw mut cause) != 0) {
+                if server_client_open(c, &raw mut cause) != 0 {
                     cmdq_error(item, c"open terminal failed: %s".as_ptr(), cause);
                     free_(cause);
                     break 'fail;
@@ -226,13 +226,13 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
             }
 
             /* Get default session size. */
-            dsx = if (args_has_(args, 'x')) {
+            dsx = if args_has_(args, 'x') {
                 tmp = args_get_(args, 'x');
-                if (strcmp(tmp, c"-".as_ptr()) == 0) {
+                if strcmp(tmp, c"-".as_ptr()) == 0 {
                     if !c.is_null() { (*c).tty.sx } else { 80 }
                 } else {
                     let dsx_ = strtonum(tmp, 1, u16::MAX as i64, &raw mut errstr) as u32;
-                    if (!errstr.is_null()) {
+                    if !errstr.is_null() {
                         cmdq_error(item, c"width %s".as_ptr(), errstr);
                         break 'fail;
                     }
@@ -242,13 +242,13 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                 80
             };
 
-            dsy = if (args_has_(args, 'y')) {
+            dsy = if args_has_(args, 'y') {
                 tmp = args_get_(args, 'y');
-                if (strcmp(tmp, c"-".as_ptr()) == 0) {
-                    if (!c.is_null()) { (*c).tty.sy } else { 24 }
+                if strcmp(tmp, c"-".as_ptr()) == 0 {
+                    if !c.is_null() { (*c).tty.sy } else { 24 }
                 } else {
                     let dsy_ = strtonum(tmp, 1, u16::MAX as i64, &raw mut errstr) as u32;
-                    if (!errstr.is_null()) {
+                    if !errstr.is_null() {
                         cmdq_error(item, c"height %s".as_ptr(), errstr);
                         break 'fail;
                     }
@@ -261,7 +261,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
             // sx = 0;
             // sy = 0;
             /* Find new session size. */
-            if (!detached && !is_control) {
+            if !detached && !is_control {
                 sx = (*c).tty.sx;
                 sy = (*c).tty.sy;
                 if sy > 0 && options_get_number(global_s_options, c"status".as_ptr()) != 0 {
@@ -269,7 +269,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                 }
             } else {
                 tmp = options_get_string(global_s_options, c"default-size".as_ptr());
-                if (sscanf(tmp, c"%ux%u".as_ptr(), &sx, &sy) != 2) {
+                if sscanf(tmp, c"%ux%u".as_ptr(), &sx, &sy) != 2 {
                     sx = dsx;
                     sy = dsy;
                 } else {
@@ -290,7 +290,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
 
             /* Create the new session. */
             oo = options_create(global_s_options);
-            if (args_has_(args, 'x') || args_has_(args, 'y')) {
+            if args_has_(args, 'x') || args_has_(args, 'y') {
                 if !args_has_(args, 'x') {
                     dsx = sx;
                 }
@@ -304,7 +304,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                 environ_update(global_s_options, (*c).environ, env);
             }
             av = args_first_value(args, b'e');
-            while (!av.is_null()) {
+            while !av.is_null() {
                 environ_put(env, (*av).union_.string, 0);
                 av = args_next_value(av);
             }
@@ -325,7 +325,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
 
             sc.flags = 0;
 
-            if (spawn_window(&raw mut sc, &raw mut cause).is_null()) {
+            if spawn_window(&raw mut sc, &raw mut cause).is_null() {
                 session_destroy(s, 0, __func__);
                 cmdq_error(item, c"create window failed: %s".as_ptr(), cause);
                 free_(cause);
@@ -336,9 +336,9 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
              * If a target session is given, this is to be part of a session group,
              * so add it to the group and synchronize.
              */
-            if (!group.is_null()) {
+            if !group.is_null() {
                 if sg.is_null() {
-                    if (!groupwith.is_null()) {
+                    if !groupwith.is_null() {
                         sg = session_group_new((*groupwith).name);
                         session_group_add(sg, groupwith);
                     } else {
@@ -355,11 +355,11 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
              * Set the client to the new session. If a command client exists, it is
              * taking this session and needs to get MSG_READY and stay around.
              */
-            if (!detached) {
+            if !detached {
                 if args_has_(args, 'f') {
                     server_client_set_flags(c, args_get_(args, 'f'));
                 }
-                if (!already_attached) {
+                if !already_attached {
                     if !(*c).flags.intersects(client_flag::CONTROL) {
                         proc_send((*c).peer, msgtype::MSG_READY, -1, null(), 0);
                     }
@@ -373,7 +373,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
             }
 
             /* Print if requested. */
-            if (args_has_(args, 'P')) {
+            if args_has_(args, 'P') {
                 let mut template: *const c_char = args_get_(args, 'F');
                 if template.is_null() {
                     template = NEW_SESSION_TEMPLATE.as_ptr();

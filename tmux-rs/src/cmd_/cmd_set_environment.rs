@@ -43,11 +43,11 @@ unsafe extern "C" fn cmd_set_environment_exec(self_: *mut cmd, item: *mut cmdq_i
         'out: {
             if *name == b'\0' as _ {
                 cmdq_error(item, c"empty variable name".as_ptr());
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
             if !strchr_(name, '=').is_null() {
                 cmdq_error(item, c"variable name contains =".as_ptr());
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
 
             if args_count(args) < 2 {
@@ -55,14 +55,14 @@ unsafe extern "C" fn cmd_set_environment_exec(self_: *mut cmd, item: *mut cmdq_i
             } else {
                 value = args_string(args, 1);
             }
-            if (!value.is_null() && args_has_(args, 'F')) {
+            if !value.is_null() && args_has_(args, 'F') {
                 expanded = format_single_from_target(item, value);
                 value = expanded;
             }
             if args_has_(args, 'g') {
                 env = global_environ;
             } else {
-                if ((*target).s.is_null()) {
+                if (*target).s.is_null() {
                     tflag = args_get_(args, 't');
                     if !tflag.is_null() {
                         cmdq_error(item, c"no such session: %s".as_ptr(), tflag);
@@ -75,14 +75,14 @@ unsafe extern "C" fn cmd_set_environment_exec(self_: *mut cmd, item: *mut cmdq_i
                 env = (*(*target).s).environ;
             }
 
-            if (args_has_(args, 'u')) {
+            if args_has_(args, 'u') {
                 if !value.is_null() {
                     cmdq_error(item, c"can't specify a value with -u".as_ptr());
                     retval = cmd_retval::CMD_RETURN_ERROR;
                     break 'out;
                 }
                 environ_unset(env, name);
-            } else if (args_has_(args, 'r')) {
+            } else if args_has_(args, 'r') {
                 if !value.is_null() {
                     cmdq_error(item, c"can't specify a value with -r".as_ptr());
                     retval = cmd_retval::CMD_RETURN_ERROR;
@@ -96,7 +96,7 @@ unsafe extern "C" fn cmd_set_environment_exec(self_: *mut cmd, item: *mut cmdq_i
                     break 'out;
                 }
 
-                if (args_has_(args, 'h')) {
+                if args_has_(args, 'h') {
                     environ_set(env, name, ENVIRON_HIDDEN, c"%s".as_ptr(), value);
                 } else {
                     environ_set(env, name, 0, c"%s".as_ptr(), value);

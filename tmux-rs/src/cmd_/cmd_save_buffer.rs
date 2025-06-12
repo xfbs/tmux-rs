@@ -78,20 +78,20 @@ unsafe extern "C" fn cmd_save_buffer_exec(self_: *mut cmd, item: *mut cmdq_item)
         let pb = if bufname.is_null() {
             let Some(pb) = NonNull::new(paste_get_top(null_mut())) else {
                 cmdq_error(item, c"no buffers".as_ptr());
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             };
             pb
         } else {
             let Some(pb) = NonNull::new(paste_get_name(bufname)) else {
                 cmdq_error(item, c"no buffer %s".as_ptr(), bufname);
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             };
             pb
         };
         let mut bufsize: usize = 0;
         let mut bufdata = paste_buffer_data_(pb, &mut bufsize);
 
-        if (cmd_get_entry(self_) == &raw mut cmd_show_buffer_entry) {
+        if cmd_get_entry(self_) == &raw mut cmd_show_buffer_entry {
             if !(*c).session.is_null() || (*c).flags.intersects(client_flag::CONTROL) {
                 evb = evbuffer_new();
                 if evb.is_null() {
@@ -100,13 +100,13 @@ unsafe extern "C" fn cmd_save_buffer_exec(self_: *mut cmd, item: *mut cmdq_item)
                 evbuffer_add(evb, bufdata as _, bufsize);
                 cmdq_print_data(item, 1, evb);
                 evbuffer_free(evb);
-                return (cmd_retval::CMD_RETURN_NORMAL);
+                return cmd_retval::CMD_RETURN_NORMAL;
             }
             path = xstrdup_(c"-").as_ptr();
         } else {
             path = format_single_from_target(item, args_string(args, 0));
         }
-        if (args_has_(args, 'a')) {
+        if args_has_(args, 'a') {
             flags = O_APPEND;
         } else {
             flags = O_TRUNC;

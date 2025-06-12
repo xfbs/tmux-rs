@@ -348,9 +348,9 @@ pub unsafe extern "C" fn file_write(
                     (*cf).path = xstrdup_(c"-").as_ptr();
 
                     fd = STDOUT_FILENO;
-                    if (c.is_null()
+                    if c.is_null()
                         || ((*c).flags.intersects(client_flag::ATTACHED))
-                        || ((*c).flags.intersects(client_flag::CONTROL)))
+                        || ((*c).flags.intersects(client_flag::CONTROL))
                     {
                         (*cf).error = EBADF;
                         break 'done;
@@ -362,17 +362,17 @@ pub unsafe extern "C" fn file_write(
                 (*cf).path = file_get_path(c, path).as_ptr();
 
                 if c.is_null() || (*c).flags.intersects(client_flag::ATTACHED) {
-                    if (flags & O_APPEND != 0) {
+                    if flags & O_APPEND != 0 {
                         mode = c"ab".as_ptr();
                     } else {
                         mode = c"wb".as_ptr();
                     }
                     f = fopen((*cf).path, mode);
-                    if (f.is_null()) {
+                    if f.is_null() {
                         (*cf).error = *__errno_location();
                         break 'done;
                     }
-                    if (fwrite(bdata, 1, bsize, f) != bsize) {
+                    if fwrite(bdata, 1, bsize, f) != bsize {
                         fclose(f);
                         (*cf).error = EIO;
                         break 'done;
@@ -399,7 +399,7 @@ pub unsafe extern "C" fn file_write(
                 (*cf).path.cast(),
                 msglen - size_of::<msg_write_open>(),
             );
-            if (proc_send((*cf).peer, msgtype::MSG_WRITE_OPEN, -1, msg.cast(), msglen) != 0) {
+            if proc_send((*cf).peer, msgtype::MSG_WRITE_OPEN, -1, msg.cast(), msglen) != 0 {
                 free_(msg);
                 (*cf).error = EINVAL;
                 break 'done;
@@ -432,14 +432,14 @@ pub unsafe extern "C" fn file_read(
         let mut buffer = MaybeUninit::<[c_char; BUFSIZ as usize]>::uninit();
         'done: {
             'skip: {
-                if (strcmp(path, c"-".as_ptr()) == 0) {
+                if strcmp(path, c"-".as_ptr()) == 0 {
                     cf = file_create_with_client(c, stream as i32, cb, cbdata);
                     (*cf).path = xstrdup_(c"-").as_ptr();
 
                     fd = STDIN_FILENO;
-                    if (c.is_null()
+                    if c.is_null()
                         || ((*c).flags.intersects(client_flag::ATTACHED))
-                        || ((*c).flags.intersects(client_flag::CONTROL)))
+                        || ((*c).flags.intersects(client_flag::CONTROL))
                     {
                         (*cf).error = EBADF;
                         break 'done;
@@ -450,15 +450,15 @@ pub unsafe extern "C" fn file_read(
                 cf = file_create_with_client(c, stream as i32, cb, cbdata);
                 (*cf).path = file_get_path(c, path).as_ptr();
 
-                if (c.is_null() || (*c).flags.intersects(client_flag::ATTACHED)) {
+                if c.is_null() || (*c).flags.intersects(client_flag::ATTACHED) {
                     f = fopen((*cf).path, c"rb".as_ptr());
-                    if (f.is_null()) {
+                    if f.is_null() {
                         (*cf).error = *__errno_location();
                         break 'done;
                     }
                     loop {
                         size = fread(buffer.as_mut_ptr().cast(), 1, BUFSIZ as usize, f);
-                        if (evbuffer_add((*cf).buffer, buffer.as_ptr().cast(), size) != 0) {
+                        if evbuffer_add((*cf).buffer, buffer.as_ptr().cast(), size) != 0 {
                             (*cf).error = ENOMEM;
                             break 'done;
                         }
@@ -477,7 +477,7 @@ pub unsafe extern "C" fn file_read(
 
             // skip:
             msglen = strlen((*cf).path) + 1 + size_of::<msg_read_open>();
-            if (msglen > MAX_IMSGSIZE - IMSG_HEADER_SIZE) {
+            if msglen > MAX_IMSGSIZE - IMSG_HEADER_SIZE {
                 (*cf).error = E2BIG;
                 break 'done;
             }
@@ -547,7 +547,7 @@ pub unsafe extern "C" fn file_push(cf: *mut client_file) {
 
         let mut msg = xmalloc_::<msg_write_data>();
         let mut left = EVBUFFER_LENGTH((*cf).buffer);
-        while (left != 0) {
+        while left != 0 {
             sent = left;
             if sent > MAX_IMSGSIZE - IMSG_HEADER_SIZE - size_of::<msg_write_data>() {
                 sent = MAX_IMSGSIZE - IMSG_HEADER_SIZE - size_of::<msg_write_data>();
@@ -576,10 +576,10 @@ pub unsafe extern "C" fn file_push(cf: *mut client_file) {
             left = EVBUFFER_LENGTH((*cf).buffer);
             log_debug!("file {} sent {}, left {}", (*cf).stream, sent, left);
         }
-        if (left != 0) {
+        if left != 0 {
             (*cf).references += 1;
             event_once(-1, EV_TIMEOUT, Some(file_push_cb), cf.cast(), null());
-        } else if ((*cf).stream > 2) {
+        } else if (*cf).stream > 2 {
             let mut close: msg_write_close = msg_write_close {
                 stream: (*cf).stream,
             };
@@ -607,7 +607,7 @@ pub unsafe extern "C" fn file_write_left(files: *mut client_files) -> c_int {
                 continue;
             }
             left = EVBUFFER_LENGTH((*(*cf).event).output);
-            if (left != 0) {
+            if left != 0 {
                 waiting += 1;
                 log_debug!("file {} {} bytes left", (*cf).stream, left);
             }
@@ -651,7 +651,7 @@ pub unsafe extern "C" fn file_write_callback(bev: *mut bufferevent, arg: *mut c_
             cb(null_mut(), null_mut(), 0, -1, null_mut(), (*cf).data);
         }
 
-        if ((*cf).closed != 0 && EVBUFFER_LENGTH((*(*cf).event).output) == 0) {
+        if (*cf).closed != 0 && EVBUFFER_LENGTH((*(*cf).event).output) == 0 {
             bufferevent_free((*cf).event);
             close((*cf).fd);
             rb_remove((*cf).tree, cf);
@@ -694,16 +694,16 @@ pub unsafe extern "C" fn file_write_open(
                 break 'reply;
             }
             let cf = file_create_with_peer(peer, files, (*msg).stream, cb, cbdata);
-            if ((*cf).closed != 0) {
+            if (*cf).closed != 0 {
                 error = EBADF;
                 break 'reply;
             }
 
             (*cf).fd = -1;
-            if ((*msg).fd == -1) {
+            if (*msg).fd == -1 {
                 (*cf).fd = open(path, (*msg).flags | flags, 0o644);
-            } else if (allow_streams != 0) {
-                if ((*msg).fd != STDOUT_FILENO && (*msg).fd != STDERR_FILENO) {
+            } else if allow_streams != 0 {
+                if (*msg).fd != STDOUT_FILENO && (*msg).fd != STDERR_FILENO {
                     *__errno_location() = EBADF;
                 } else {
                     (*cf).fd = dup((*msg).fd);
@@ -714,7 +714,7 @@ pub unsafe extern "C" fn file_write_open(
             } else {
                 *__errno_location() = EBADF;
             }
-            if ((*cf).fd == -1) {
+            if (*cf).fd == -1 {
                 error = *__errno_location();
                 break 'reply;
             }
@@ -790,7 +790,7 @@ pub unsafe extern "C" fn file_write_close(files: *mut client_files, imsg: *mut i
         }
         log_debug!("close file {}", (*cf).stream);
 
-        if ((*cf).event.is_null() || EVBUFFER_LENGTH((*(*cf).event).output) == 0) {
+        if (*cf).event.is_null() || EVBUFFER_LENGTH((*(*cf).event).output) == 0 {
             if !(*cf).event.is_null() {
                 bufferevent_free((*cf).event);
             }
@@ -906,16 +906,16 @@ pub unsafe extern "C" fn file_read_open(
                 break 'reply;
             }
             cf = file_create_with_peer(peer, files, (*msg).stream, cb, cbdata);
-            if ((*cf).closed != 0) {
+            if (*cf).closed != 0 {
                 error = EBADF;
                 break 'reply;
             }
 
             (*cf).fd = -1;
-            if ((*msg).fd == -1) {
+            if (*msg).fd == -1 {
                 (*cf).fd = open(path, flags);
-            } else if (allow_streams != 0) {
-                if ((*msg).fd != STDIN_FILENO) {
+            } else if allow_streams != 0 {
+                if (*msg).fd != STDIN_FILENO {
                     *__errno_location() = EBADF;
                 } else {
                     (*cf).fd = dup((*msg).fd);
@@ -926,7 +926,7 @@ pub unsafe extern "C" fn file_read_open(
             } else {
                 *__errno_location() = EBADF;
             }
-            if ((*cf).fd == -1) {
+            if (*cf).fd == -1 {
                 error = *__errno_location();
                 break 'reply;
             }
@@ -995,7 +995,7 @@ pub unsafe extern "C" fn file_write_ready(files: *mut client_files, imsg: *mut i
         if cf.is_null() {
             return;
         }
-        if ((*msg).error != 0) {
+        if (*msg).error != 0 {
             (*cf).error = (*msg).error;
             file_fire_done(cf);
         } else {
@@ -1024,7 +1024,7 @@ pub unsafe extern "C" fn file_read_data(files: *mut client_files, imsg: *mut ims
 
         log_debug!("file {} read {} bytes", (*cf).stream, bsize);
         if (*cf).error == 0 && (*cf).closed == 0 {
-            if (evbuffer_add((*cf).buffer, bdata, bsize) != 0) {
+            if evbuffer_add((*cf).buffer, bdata, bsize) != 0 {
                 (*cf).error = ENOMEM;
                 file_fire_done(cf);
             } else {

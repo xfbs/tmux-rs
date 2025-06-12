@@ -520,17 +520,17 @@ pub unsafe extern "C" fn popup_handle_drag(
 
         if !MOUSE_DRAG((*m).b) {
             (*pd).dragging = dragging_state::Off;
-        } else if ((*pd).dragging == dragging_state::Move) {
-            if ((*m).x < (*pd).dx) {
+        } else if (*pd).dragging == dragging_state::Move {
+            if (*m).x < (*pd).dx {
                 px = 0;
-            } else if ((*m).x - (*pd).dx + (*pd).sx > (*c).tty.sx) {
+            } else if (*m).x - (*pd).dx + (*pd).sx > (*c).tty.sx {
                 px = (*c).tty.sx - (*pd).sx;
             } else {
                 px = (*m).x - (*pd).dx;
             }
-            if ((*m).y < (*pd).dy) {
+            if (*m).y < (*pd).dy {
                 py = 0;
-            } else if ((*m).y - (*pd).dy + (*pd).sy > (*c).tty.sy) {
+            } else if (*m).y - (*pd).dy + (*pd).sy > (*c).tty.sy {
                 py = (*c).tty.sy - (*pd).sy;
             } else {
                 py = (*m).y - (*pd).dy;
@@ -542,8 +542,8 @@ pub unsafe extern "C" fn popup_handle_drag(
             (*pd).ppx = px;
             (*pd).ppy = py;
             server_redraw_client(c);
-        } else if ((*pd).dragging == dragging_state::Size) {
-            if ((*pd).border_lines == box_lines::BOX_LINES_NONE) {
+        } else if (*pd).dragging == dragging_state::Size {
+            if (*pd).border_lines == box_lines::BOX_LINES_NONE {
                 if (*m).x < (*pd).px + 1 {
                     return;
                 }
@@ -563,7 +563,7 @@ pub unsafe extern "C" fn popup_handle_drag(
             (*pd).psx = (*pd).sx;
             (*pd).psy = (*pd).sy;
 
-            if ((*pd).border_lines == box_lines::BOX_LINES_NONE) {
+            if (*pd).border_lines == box_lines::BOX_LINES_NONE {
                 screen_resize(&raw mut (*pd).s, (*pd).sx, (*pd).sy, 0);
                 if !(*pd).job.is_null() {
                     job_resize((*pd).job, (*pd).sx, (*pd).sy);
@@ -605,11 +605,11 @@ pub unsafe extern "C" fn popup_key_cb(
                 };
                 let mut border = Border::None;
 
-                if (!(*pd).md.is_null()) {
-                    if (menu_key_cb(c, (*pd).md.cast(), event) == 1) {
+                if !(*pd).md.is_null() {
+                    if menu_key_cb(c, (*pd).md.cast(), event) == 1 {
                         (*pd).md = null_mut();
                         (*pd).menu = null_mut();
-                        if ((*pd).close != 0) {
+                        if (*pd).close != 0 {
                             server_client_clear_overlay(c);
                         } else {
                             server_redraw_client(c);
@@ -618,15 +618,15 @@ pub unsafe extern "C" fn popup_key_cb(
                     return 0;
                 }
 
-                if (KEYC_IS_MOUSE((*event).key)) {
-                    if ((*pd).dragging != dragging_state::Off) {
+                if KEYC_IS_MOUSE((*event).key) {
+                    if (*pd).dragging != dragging_state::Off {
                         popup_handle_drag(c, pd, m);
                         break 'out;
                     }
-                    if ((*m).x < (*pd).px
+                    if (*m).x < (*pd).px
                         || (*m).x > (*pd).px + (*pd).sx - 1
                         || (*m).y < (*pd).py
-                        || (*m).y > (*pd).py + (*pd).sy - 1)
+                        || (*m).y > (*pd).py + (*pd).sy - 1
                     {
                         if MOUSE_BUTTONS((*m).b) == MOUSE_BUTTON_3 {
                             break 'menu;
@@ -634,11 +634,11 @@ pub unsafe extern "C" fn popup_key_cb(
                         return 0;
                     }
                     if (*pd).border_lines != box_lines::BOX_LINES_NONE {
-                        if ((*m).x == (*pd).px) {
+                        if (*m).x == (*pd).px {
                             border = Border::Left;
-                        } else if ((*m).x == (*pd).px + (*pd).sx - 1) {
+                        } else if (*m).x == (*pd).px + (*pd).sx - 1 {
                             border = Border::Right;
-                        } else if ((*m).y == (*pd).py) {
+                        } else if (*m).y == (*pd).py {
                             border = Border::Top;
                         } else if (*m).y == (*pd).py + (*pd).sy - 1 {
                             border = Border::Bottom;
@@ -650,13 +650,13 @@ pub unsafe extern "C" fn popup_key_cb(
                     {
                         break 'menu;
                     }
-                    if ((((*m).b & MOUSE_MASK_MODIFIERS) == MOUSE_MASK_META)
-                        || border != Border::None)
+                    if (((*m).b & MOUSE_MASK_MODIFIERS) == MOUSE_MASK_META)
+                        || border != Border::None
                     {
                         if !MOUSE_DRAG((*m).b) {
                             break 'out;
                         }
-                        if (MOUSE_BUTTONS((*m).lb) == MOUSE_BUTTON_1) {
+                        if MOUSE_BUTTONS((*m).lb) == MOUSE_BUTTON_1 {
                             (*pd).dragging = dragging_state::Move;
                         } else if MOUSE_BUTTONS((*m).lb) == MOUSE_BUTTON_3 {
                             (*pd).dragging = dragging_state::Size;
@@ -672,10 +672,10 @@ pub unsafe extern "C" fn popup_key_cb(
                 {
                     return 1;
                 }
-                if (!(*pd).job.is_null()) {
-                    if (KEYC_IS_MOUSE((*event).key)) {
+                if !(*pd).job.is_null() {
+                    if KEYC_IS_MOUSE((*event).key) {
                         /* Must be inside, checked already. */
-                        let (px, py) = if ((*pd).border_lines == box_lines::BOX_LINES_NONE) {
+                        let (px, py) = if (*pd).border_lines == box_lines::BOX_LINES_NONE {
                             ((*m).x - (*pd).px, (*m).y - (*pd).py)
                         } else {
                             ((*m).x - (*pd).px - 1, (*m).y - (*pd).py - 1)
@@ -700,7 +700,7 @@ pub unsafe extern "C" fn popup_key_cb(
             }
             // menu:
             (*pd).menu = menu_create(c"".as_ptr());
-            if ((*pd).flags & POPUP_INTERNAL != 0) {
+            if (*pd).flags & POPUP_INTERNAL != 0 {
                 menu_add_items(
                     (*pd).menu,
                     &raw mut popup_internal_menu_items as *mut menu_item,

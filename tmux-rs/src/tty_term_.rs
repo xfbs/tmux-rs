@@ -502,8 +502,8 @@ pub unsafe extern "C" fn tty_term_strip(s: *const c_char) -> *mut c_char {
         let mut len = 0;
         let mut ptr = s as *const u8;
         while *ptr != b'\0' {
-            if (*ptr == b'$' && *(ptr.add(1)) == b'<') {
-                while (*ptr != b'\0' && *ptr != b'>') {
+            if *ptr == b'$' && *(ptr.add(1)) == b'<' {
+                while *ptr != b'\0' && *ptr != b'>' {
                     ptr = ptr.add(1);
                 }
                 if *ptr == b'>' {
@@ -542,9 +542,9 @@ pub unsafe extern "C" fn tty_term_override_next(
             return null_mut();
         }
 
-        while (*s.add(at) != b'\0' as c_char) {
-            if (*s.add(at) == b':' as c_char) {
-                if (*s.add(at + 1) == b':' as c_char) {
+        while *s.add(at) != b'\0' as c_char {
+            if *s.add(at) == b':' as c_char {
+                if *s.add(at + 1) == b':' as c_char {
                     value[n] = b':' as c_char;
                     n += 1;
                     at += 2;
@@ -560,7 +560,7 @@ pub unsafe extern "C" fn tty_term_override_next(
                 return null_mut();
             }
         }
-        if (*s.add(at) != b'\0' as c_char) {
+        if *s.add(at) != b'\0' as c_char {
             *offset = at + 1;
         } else {
             *offset = at;
@@ -590,10 +590,10 @@ pub unsafe extern "C" fn tty_term_apply(
         // u_int i;
         // int n, remove;
 
-        while ({
+        while {
             s = tty_term_override_next(capabilities, &raw mut offset);
             !s.is_null()
-        }) {
+        } {
             if *s == b'\0' as c_char {
                 continue;
             }
@@ -605,11 +605,11 @@ pub unsafe extern "C" fn tty_term_apply(
                 *cp = b'\0' as c_char;
                 cp = cp.add(1);
                 value = xstrdup(cp).as_ptr();
-                if (strunvis(value, cp) == -1) {
+                if strunvis(value, cp) == -1 {
                     free_(value);
                     value = xstrdup(cp).as_ptr();
                 }
-            } else if (*s.add(strlen(s) - 1) == b'@' as c_char) {
+            } else if *s.add(strlen(s) - 1) == b'@' as c_char {
                 *s.add(strlen(s) - 1) = b'\0' as c_char;
                 remove = 1;
             } else {
@@ -617,9 +617,9 @@ pub unsafe extern "C" fn tty_term_apply(
             }
 
             if quiet == 0 {
-                if (remove != 0) {
+                if remove != 0 {
                     log_debug!("{} override: {}@", _s(name), _s(s));
-                } else if (*value == b'\0' as c_char) {
+                } else if *value == b'\0' as c_char {
                     log_debug!("{} override: {}", _s(name), _s(s));
                 } else {
                     log_debug!("{} override: {}={}", _s(name), _s(s), _s(value));
@@ -633,7 +633,7 @@ pub unsafe extern "C" fn tty_term_apply(
                 }
                 code = (*term).codes.add(i as usize);
 
-                if (remove != 0) {
+                if remove != 0 {
                     (*code).type_ = tty_code_type::None;
                     continue;
                 }
@@ -777,7 +777,7 @@ pub unsafe extern "C" fn tty_term_apply_overrides(term: *mut tty_term) {
                 acs = c"a#j+k+l+m+n+o-p-q-r-s-t+u+v+w+x|y<z>~.".as_ptr();
             }
             while *acs != b'\0' as c_char && *acs.add(1) != b'\0' as c_char {
-                (*term).acs[*acs as u8 as usize][0] = (*acs.add(1));
+                (*term).acs[*acs as u8 as usize][0] = *acs.add(1);
                 acs = acs.add(2);
             }
         }
@@ -832,7 +832,7 @@ pub unsafe extern "C" fn tty_term_create(
 
                     let code = (*term).codes.add(j);
                     (*code).type_ = tty_code_type::None;
-                    match (ent.type_) {
+                    match ent.type_ {
                         tty_code_type::None => (),
                         tty_code_type::String => {
                             (*code).type_ = tty_code_type::String;
@@ -840,7 +840,7 @@ pub unsafe extern "C" fn tty_term_create(
                         }
                         tty_code_type::Number => {
                             let n = strtonum(value, 0, i32::MAX as i64, &raw mut errstr) as i32;
-                            if (!errstr.is_null()) {
+                            if !errstr.is_null() {
                                 log_debug!("{}: {}", _s(ent.name), _s(errstr));
                             } else {
                                 (*code).type_ = tty_code_type::Number;
@@ -858,7 +858,7 @@ pub unsafe extern "C" fn tty_term_create(
             /* Apply terminal features. */
             let o = options_get_only(global_options, c"terminal-features".as_ptr());
             let mut a = options_array_first(o);
-            while (!a.is_null()) {
+            while !a.is_null() {
                 let ov = options_array_item_value(a);
                 let s = (*ov).string;
 
@@ -901,8 +901,8 @@ pub unsafe extern "C" fn tty_term_create(
              * support or safely ignore.
              */
             let mut s = tty_term_string(term, tty_code_code::TTYC_CLEAR);
-            if (tty_term_flag(term, tty_code_code::TTYC_XT) != 0
-                || strncmp(s, c"\x1b[".as_ptr(), 2) == 0)
+            if tty_term_flag(term, tty_code_code::TTYC_XT) != 0
+                || strncmp(s, c"\x1b[".as_ptr(), 2) == 0
             {
                 (*term).flags |= term_flags::TERM_VT100LIKE;
                 tty_add_features(feat, c"bpaste,focus,title".as_ptr(), c",".as_ptr());
@@ -973,7 +973,7 @@ pub unsafe extern "C" fn tty_term_read_list(
         let sizeof_tmp = 11;
 
         if setupterm(name, fd, &raw mut error) != OK {
-            match (error) {
+            match error {
                 1 => xasprintf(cause, c"can't use hardcopy terminal: %s".as_ptr(), name),
                 0 => xasprintf(cause, c"missing or unsuitable terminal: %s".as_ptr(), name),
                 -1 => xasprintf(cause, c"can't find terminfo database".as_ptr()),
@@ -1008,7 +1008,7 @@ pub unsafe extern "C" fn tty_term_read_list(
                     if n == -1 {
                         continue;
                     }
-                    if (n != 0) {
+                    if n != 0 {
                         s = c"1".as_ptr();
                     } else {
                         s = c"0".as_ptr();
@@ -1081,7 +1081,7 @@ pub unsafe extern "C" fn tty_term_string_i(
         // #else
         let s = tparm(x as *const c_char, a, 0, 0, 0, 0, 0, 0, 0, 0);
         // #endif
-        if (s.is_null()) {
+        if s.is_null() {
             log_debug!(
                 "could not expand {}",
                 _s(tty_term_codes[code as usize].name)
@@ -1110,7 +1110,7 @@ pub unsafe extern "C" fn tty_term_string_ii(
         // #else
         let s = tparm(x as *const c_char, a, b, 0, 0, 0, 0, 0, 0, 0);
         // #endif
-        if (s.is_null()) {
+        if s.is_null() {
             log_debug!(
                 "could not expand {}",
                 _s(tty_term_codes[code as usize].name)
@@ -1141,7 +1141,7 @@ pub unsafe extern "C" fn tty_term_string_iii(
         // #else
         let s = tparm(x as *const c_char, a, b, c, 0, 0, 0, 0, 0, 0);
         // #endif
-        if (s.is_null()) {
+        if s.is_null() {
             log_debug!(
                 "could not expand {}",
                 _s(tty_term_codes[code as usize].name)
@@ -1169,7 +1169,7 @@ pub unsafe extern "C" fn tty_term_string_s(
         // #else
         let s = tparm(x as *const c_char, a as c_long, 0, 0, 0, 0, 0, 0, 0, 0);
         // #endif
-        if (s.is_null()) {
+        if s.is_null() {
             log_debug!(
                 "could not expand {}",
                 _s(tty_term_codes[code as usize].name)

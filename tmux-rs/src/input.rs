@@ -1086,7 +1086,7 @@ fn input_parse(ictx: *mut input_ctx, buf: *mut u8, len: usize) {
                 || (*ictx).ch > (*itr).last
             {
                 itr = (*(*ictx).state).transitions;
-                while ((*itr).first != -1 && (*itr).last != -1) {
+                while (*itr).first != -1 && (*itr).last != -1 {
                     if (*ictx).ch >= (*itr).first && (*ictx).ch <= (*itr).last {
                         break;
                     }
@@ -1220,10 +1220,10 @@ unsafe extern "C" fn input_split(ictx: *mut input_ctx) -> i32 {
         let mut errstr: *const c_char = null();
 
         let mut ptr: *mut c_char = (&raw mut (*ictx).param_buf).cast();
-        while ({
+        while {
             out = strsep(&raw mut ptr, c";".as_ptr());
             !out.is_null()
-        }) {
+        } {
             if *out == b'\0' as i8 {
                 (*ip).type_ = input_param_type::INPUT_MISSING;
             } else {
@@ -1334,7 +1334,7 @@ unsafe extern "C" fn input_ground(ictx: *mut input_ctx) {
         event_del(&raw mut (*ictx).timer);
         evbuffer_drain((*ictx).since_ground, EVBUFFER_LENGTH((*ictx).since_ground));
 
-        if ((*ictx).input_space > INPUT_BUF_START) {
+        if (*ictx).input_space > INPUT_BUF_START {
             (*ictx).input_space = INPUT_BUF_START;
             (*ictx).input_buf = xrealloc_((*ictx).input_buf, INPUT_BUF_START).as_ptr();
         }
@@ -2044,10 +2044,10 @@ unsafe extern "C" fn input_csi_dispatch_winops(ictx: *mut input_ctx) {
 
         let mut n: i32 = 0;
         let mut m: i32 = 0;
-        while ({
+        while {
             n = input_get(ictx, m as u32, 0, -1);
             n != -1
-        }) {
+        } {
             match n {
                 1 | 2 | 5 | 6 | 7 | 11 | 13 | 20 | 21 | 24 => (),
                 3 | 4 | 8 => {
@@ -2223,10 +2223,10 @@ unsafe extern "C" fn input_csi_dispatch_sgr_colon(ictx: *mut input_ctx, mut i: u
         let mut ptr = xstrdup(s).as_ptr();
         let mut copy = ptr;
         let mut out: *mut c_char = null_mut();
-        while ({
+        while {
             out = strsep(&raw mut ptr, c":".as_ptr());
             !out.is_null()
-        }) {
+        } {
             if *out != b'\0' as c_char {
                 p[n] = strtonum(out, 0, i32::MAX as i64, &raw mut errstr) as i32;
                 n += 1;
@@ -2248,7 +2248,7 @@ unsafe extern "C" fn input_csi_dispatch_sgr_colon(ictx: *mut input_ctx, mut i: u
         if n == 0 {
             return;
         }
-        if (p[0] == 4) {
+        if p[0] == 4 {
             if n != 2 {
                 return;
             }
@@ -2283,8 +2283,8 @@ unsafe extern "C" fn input_csi_dispatch_sgr_colon(ictx: *mut input_ctx, mut i: u
         }
         match p[1] {
             2 => {
-                if (n >= 3) {
-                    if (n == 5) {
+                if n >= 3 {
+                    if n == 5 {
                         i = 2;
                     } else {
                         i = 3;
@@ -2329,7 +2329,7 @@ unsafe extern "C" fn input_csi_dispatch_sgr(ictx: *mut input_ctx) {
                 continue;
             }
             let n = input_get(ictx, i, 0, 0);
-            if (n == -1) {
+            if n == -1 {
                 i += 1;
                 continue;
             }
@@ -2508,7 +2508,7 @@ unsafe extern "C" fn input_exit_osc(ictx: *mut input_ctx) {
         );
 
         let mut option = 0;
-        while (*p >= b'0' && *p <= b'9') {
+        while *p >= b'0' && *p <= b'9' {
             option = option * 10 + *p - b'0';
             p = p.add(1);
         }
@@ -2788,10 +2788,10 @@ unsafe extern "C" fn input_osc_8(ictx: *mut input_ctx, p: *mut c_char) {
 
         'bad: {
             let mut start = p;
-            while ({
+            while {
                 end = strpbrk(start, c":;".as_ptr());
                 !end.is_null()
-            }) {
+            } {
                 if end.offset_from_unsigned(start) >= 4
                     && libc::strncmp(start, c"id=".as_ptr(), 3) == 0
                 {
@@ -2928,7 +2928,7 @@ unsafe extern "C" fn input_osc_10(ictx: *mut input_ctx, p: *mut c_char) {
             c = input_get_fg_control_client(wp);
             if c == -1 {
                 tty_default_colours(&raw mut defaults, wp);
-                if (COLOUR_DEFAULT(defaults.fg)) {
+                if COLOUR_DEFAULT(defaults.fg) {
                     c = input_get_fg_client(wp);
                 } else {
                     c = defaults.fg;
@@ -2989,7 +2989,7 @@ unsafe extern "C" fn input_osc_11(ictx: *mut input_ctx, p: *const c_char) {
             c = input_get_bg_control_client(wp);
             if c == -1 {
                 tty_default_colours(&raw mut defaults, wp);
-                if (COLOUR_DEFAULT(defaults.bg)) {
+                if COLOUR_DEFAULT(defaults.bg) {
                     c = input_get_bg_client(wp);
                 } else {
                     c = defaults.bg;

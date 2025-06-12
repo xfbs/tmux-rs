@@ -58,49 +58,49 @@ unsafe extern "C" fn cmd_set_buffer_exec(self_: *mut cmd, item: *mut cmdq_item) 
             pb = paste_get_name(bufname);
         }
 
-        if (cmd_get_entry(self_) == &raw mut cmd_delete_buffer_entry) {
-            if (pb.is_null()) {
+        if cmd_get_entry(self_) == &raw mut cmd_delete_buffer_entry {
+            if pb.is_null() {
                 if !bufname.is_null() {
                     cmdq_error(item, c"unknown buffer: %s".as_ptr(), bufname);
-                    return (cmd_retval::CMD_RETURN_ERROR);
-                }
-                pb = paste_get_top(&raw mut bufname);
-            }
-            if (pb.is_null()) {
-                cmdq_error(item, c"no buffer".as_ptr());
-                return (cmd_retval::CMD_RETURN_ERROR);
-            }
-            paste_free(NonNull::new_unchecked(pb));
-            return (cmd_retval::CMD_RETURN_NORMAL);
-        }
-
-        if (args_has_(args, 'n')) {
-            if (pb.is_null()) {
-                if (!bufname.is_null()) {
-                    cmdq_error(item, c"unknown buffer: %s".as_ptr(), bufname);
-                    return (cmd_retval::CMD_RETURN_ERROR);
+                    return cmd_retval::CMD_RETURN_ERROR;
                 }
                 pb = paste_get_top(&raw mut bufname);
             }
             if pb.is_null() {
                 cmdq_error(item, c"no buffer".as_ptr());
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
-            if (paste_rename(bufname, args_get_(args, 'n'), &raw mut cause) != 0) {
-                cmdq_error(item, c"%s".as_ptr(), cause);
-                free_(cause);
-                return (cmd_retval::CMD_RETURN_ERROR);
-            }
-            return (cmd_retval::CMD_RETURN_NORMAL);
+            paste_free(NonNull::new_unchecked(pb));
+            return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        if (args_count(args) != 1) {
+        if args_has_(args, 'n') {
+            if pb.is_null() {
+                if !bufname.is_null() {
+                    cmdq_error(item, c"unknown buffer: %s".as_ptr(), bufname);
+                    return cmd_retval::CMD_RETURN_ERROR;
+                }
+                pb = paste_get_top(&raw mut bufname);
+            }
+            if pb.is_null() {
+                cmdq_error(item, c"no buffer".as_ptr());
+                return cmd_retval::CMD_RETURN_ERROR;
+            }
+            if paste_rename(bufname, args_get_(args, 'n'), &raw mut cause) != 0 {
+                cmdq_error(item, c"%s".as_ptr(), cause);
+                free_(cause);
+                return cmd_retval::CMD_RETURN_ERROR;
+            }
+            return cmd_retval::CMD_RETURN_NORMAL;
+        }
+
+        if args_count(args) != 1 {
             cmdq_error(item, c"no data specified".as_ptr());
-            return (cmd_retval::CMD_RETURN_ERROR);
+            return cmd_retval::CMD_RETURN_ERROR;
         }
         let newsize = strlen(args_string(args, 0));
         if newsize == 0 {
-            return (cmd_retval::CMD_RETURN_NORMAL);
+            return cmd_retval::CMD_RETURN_NORMAL;
         }
 
         let mut bufsize = 0;
@@ -118,11 +118,11 @@ unsafe extern "C" fn cmd_set_buffer_exec(self_: *mut cmd, item: *mut cmdq_item) 
         memcpy_(bufdata.add(bufsize), args_string(args, 0), newsize);
         bufsize += newsize;
 
-        if (paste_set(bufdata, bufsize, bufname, &raw mut cause) != 0) {
+        if paste_set(bufdata, bufsize, bufname, &raw mut cause) != 0 {
             cmdq_error(item, c"%s".as_ptr(), cause);
             free_(bufdata);
             free_(cause);
-            return (cmd_retval::CMD_RETURN_ERROR);
+            return cmd_retval::CMD_RETURN_ERROR;
         }
         if args_has_(args, 'w') && !tc.is_null() {
             tty_set_selection(&raw mut (*tc).tty, c"".as_ptr(), bufdata, bufsize);

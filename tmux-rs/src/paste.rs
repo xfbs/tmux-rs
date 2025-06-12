@@ -115,7 +115,7 @@ pub unsafe extern "C" fn paste_is_empty() -> i32 {
 pub unsafe extern "C" fn paste_get_top(name: *mut *const c_char) -> *mut paste_buffer {
     unsafe {
         let mut pb = rb_min::<_, discr_time_entry>(&raw mut paste_by_time);
-        while (!pb.is_null() && (*pb).automatic == 0) {
+        while !pb.is_null() && (*pb).automatic == 0 {
             pb = rb_next::<_, discr_time_entry>(pb);
         }
         if pb.is_null() {
@@ -168,7 +168,7 @@ pub unsafe extern "C" fn paste_add(mut prefix: *const c_char, data: *mut c_char,
             prefix = c"buffer".as_ptr();
         }
 
-        if (size == 0) {
+        if size == 0 {
             free_(data);
             return;
         }
@@ -228,13 +228,13 @@ pub unsafe extern "C" fn paste_rename(
             *cause = null_mut();
         }
 
-        if (oldname.is_null() || *oldname == b'\0' as c_char) {
+        if oldname.is_null() || *oldname == b'\0' as c_char {
             if !cause.is_null() {
                 *cause = xstrdup_(c"no buffer").as_ptr();
             }
             return -1;
         }
-        if (newname.is_null() || *newname == b'\0' as c_char) {
+        if newname.is_null() || *newname == b'\0' as c_char {
             if !cause.is_null() {
                 *cause = xstrdup_(c"new name is empty").as_ptr();
             }
@@ -242,7 +242,7 @@ pub unsafe extern "C" fn paste_rename(
         }
 
         let pb = paste_get_name(oldname);
-        if (pb.is_null()) {
+        if pb.is_null() {
             if !cause.is_null() {
                 xasprintf(cause, c"no buffer %s".as_ptr(), oldname);
             }
@@ -283,16 +283,16 @@ pub unsafe extern "C" fn paste_set(
             *cause = null_mut();
         }
 
-        if (size == 0) {
+        if size == 0 {
             free_(data);
             return 0;
         }
-        if (name.is_null()) {
+        if name.is_null() {
             paste_add(null_mut(), data, size);
             return 0;
         }
 
-        if (*name == b'\0' as _) {
+        if *name == b'\0' as _ {
             if !cause.is_null() {
                 *cause = xstrdup_(c"empty buffer name").as_ptr();
             }
@@ -337,7 +337,7 @@ pub unsafe fn paste_replace(pb: NonNull<paste_buffer>, data: *mut c_char, size: 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn paste_make_sample(pb: *mut paste_buffer) -> *mut c_char {
     unsafe {
-        const flags: i32 = (VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL);
+        const flags: i32 = VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL;
         let width = 200;
 
         let mut len = (*pb).size;

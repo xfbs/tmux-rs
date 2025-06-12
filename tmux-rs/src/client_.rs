@@ -447,7 +447,7 @@ pub unsafe extern "C-unwind" fn client_main(
             if proc_send(client_peer, msg, -1, data as _, size) != 0 {
                 fprintf(stderr, c"failed to send command\n".as_ptr());
                 free_(data);
-                return (1);
+                return 1;
             }
             free_(data);
         } else if msg == msgtype::MSG_SHELL {
@@ -652,13 +652,13 @@ unsafe extern "C" fn client_signal(sig: i32) {
         let mut pid: pid_t = 0;
 
         log_debug!("{}: {}", "client_signal", _s(strsignal(sig)));
-        if (sig == SIGCHLD) {
+        if sig == SIGCHLD {
             loop {
                 pid = waitpid(WAIT_ANY, &raw mut status, WNOHANG);
                 if pid == 0 {
                     break;
                 }
-                if (pid == -1) {
+                if pid == -1 {
                     if errno!() == ECHILD {
                         break;
                     }
@@ -749,12 +749,12 @@ unsafe extern "C" fn client_dispatch_exit_message(mut data: *const c_char, mut d
             fatalx(c"bad MSG_EXIT size");
         }
 
-        if (datalen >= size_of_retval) {
+        if datalen >= size_of_retval {
             memcpy(&raw mut retval as _, data as _, size_of_retval);
             client_exitval = retval;
         }
 
-        if (datalen > size_of_retval) {
+        if datalen > size_of_retval {
             datalen -= size_of_retval;
             data = data.add(size_of_retval);
 
@@ -910,7 +910,7 @@ unsafe extern "C" fn client_dispatch_attached(imsg: *mut imsg) {
 
                 client_exitsession = xstrdup(data).as_ptr();
                 client_exittype = mht;
-                if ((*imsg).hdr.type_ == msgtype::MSG_DETACHKILL as u32) {
+                if (*imsg).hdr.type_ == msgtype::MSG_DETACHKILL as u32 {
                     client_exitreason = client_exitreason::CLIENT_EXIT_DETACHED_HUP;
                 } else {
                     client_exitreason = client_exitreason::CLIENT_EXIT_DETACHED;

@@ -61,13 +61,13 @@ unsafe extern "C" fn cmd_bind_key_exec(self_: *mut cmd, item: *mut cmdq_item) ->
         };
         repeat = args_has(args, b'r');
 
-        if (count == 1) {
+        if count == 1 {
             key_bindings_add(tablename, key, note, repeat, null_mut());
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
         value = args_value(args, 1);
-        if (count == 2 && (*value).type_ == args_type::ARGS_COMMANDS) {
+        if count == 2 && (*value).type_ == args_type::ARGS_COMMANDS {
             key_bindings_add(tablename, key, note, repeat, (*value).union_.cmdlist);
             (*(*value).union_.cmdlist).references += 1;
             return cmd_retval::CMD_RETURN_NORMAL;

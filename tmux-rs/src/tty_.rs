@@ -26,7 +26,7 @@ unsafe fn tty_use_margin(tty: *const tty) -> bool {
 
 #[inline]
 unsafe fn tty_full_width(tty: *const tty, ctx: *const tty_ctx) -> bool {
-    unsafe { ((*ctx).xoff == 0 && (*ctx).sx >= (*tty).sx) }
+    unsafe { (*ctx).xoff == 0 && (*ctx).sx >= (*tty).sx }
 }
 
 const TTY_BLOCK_INTERVAL: usize = 100_000; // 100 millis
@@ -36,13 +36,13 @@ const TTY_REQUEST_LIMIT: i32 = 30;
 #[allow(non_snake_case)]
 #[inline]
 unsafe fn TTY_BLOCK_START(tty: *const tty) -> u32 {
-    unsafe { (1 + ((*tty).sx * (*tty).sy) * 8) }
+    unsafe { 1 + ((*tty).sx * (*tty).sy) * 8 }
 }
 
 #[allow(non_snake_case)]
 #[inline]
 unsafe fn TTY_BLOCK_STOP(tty: *const tty) -> u32 {
-    unsafe { (1 + ((*tty).sx * (*tty).sy) / 8) }
+    unsafe { 1 + ((*tty).sx * (*tty).sy) / 8 }
 }
 
 #[unsafe(no_mangle)]
@@ -103,14 +103,14 @@ pub unsafe extern "C" fn tty_resize(tty: *mut tty) {
 
         if libc::ioctl((*c).fd, libc::TIOCGWINSZ, &raw mut ws) != -1 {
             sx = ws.ws_col as u32;
-            if (sx == 0) {
+            if sx == 0 {
                 sx = 80;
                 xpixel = 0;
             } else {
                 xpixel = ws.ws_xpixel as u32 / sx;
             }
             sy = ws.ws_row as u32;
-            if (sy == 0) {
+            if sy == 0 {
                 sy = 24;
                 ypixel = 0;
             } else {
@@ -147,8 +147,8 @@ pub unsafe extern "C" fn tty_read_callback(_fd: i32, _events: i16, data: *mut c_
         let size = EVBUFFER_LENGTH((*tty).in_);
 
         let nread = evbuffer_read((*tty).in_, (*c).fd, -1);
-        if (nread == 0 || nread == -1) {
-            if (nread == 0) {
+        if nread == 0 || nread == -1 {
+            if nread == 0 {
                 // log_debug!("%s: read closed", name);
             } else {
                 // log_debug!("%s: read error: %s", name, strerror(errno!()));
@@ -159,7 +159,7 @@ pub unsafe extern "C" fn tty_read_callback(_fd: i32, _events: i16, data: *mut c_
         }
         // log_debug("%s: read %d bytes (already %zu)", name, nread, size);
 
-        while (tty_keys_next(tty) != 0) {}
+        while tty_keys_next(tty) != 0 {}
     }
 }
 
@@ -237,7 +237,7 @@ pub unsafe extern "C" fn tty_write_callback(_fd: i32, _events: i16, data: *mut c
         }
         // log_debug("%s: wrote %d bytes (of %zu)", (*c).name, nwrite, size);
 
-        if ((*c).redraw > 0) {
+        if (*c).redraw > 0 {
             if nwrite as usize >= (*c).redraw {
                 (*c).redraw = 0;
             } else {
@@ -371,7 +371,7 @@ pub unsafe extern "C" fn tty_start_tty(tty: *mut tty) {
         tty_putcode(tty, tty_code_code::TTYC_SMKX);
         tty_putcode(tty, tty_code_code::TTYC_CLEAR);
 
-        if (tty_acs_needed(tty) != 0) {
+        if tty_acs_needed(tty) != 0 {
             // log_debug("%s: using capabilities for ACS", (*c).name);
             tty_putcode(tty, tty_code_code::TTYC_ENACS);
         } else {
@@ -516,7 +516,7 @@ pub unsafe extern "C" fn tty_stop_tty(tty: *mut tty) {
         }
 
         tty_raw(tty, tty_term_string((*tty).term, tty_code_code::TTYC_CNORM));
-        if (tty_term_has((*tty).term, tty_code_code::TTYC_KMOUS).as_bool()) {
+        if tty_term_has((*tty).term, tty_code_code::TTYC_KMOUS).as_bool() {
             tty_raw(tty, c"\x1b[?1000l\x1b[?1002l\x1b[?1003l".as_ptr());
             tty_raw(tty, c"\x1b[?1006l\x1b[?1005l".as_ptr());
         }
@@ -608,7 +608,7 @@ pub unsafe extern "C" fn tty_raw(tty: *mut tty, mut s: *const c_char) {
         let mut slen = strlen(s);
         for i in 0..5 {
             let n = libc::write((*c).fd, s.cast(), slen);
-            if (n >= 0) {
+            if n >= 0 {
                 s = s.add(n as usize);
                 slen -= n as usize;
                 if slen == 0 {
@@ -744,7 +744,7 @@ pub unsafe extern "C" fn tty_putc(tty: *mut tty, ch: u8) {
         }
 
         if ch >= 0x20 && ch != 0x7f {
-            if ((*tty).cx >= (*tty).sx) {
+            if (*tty).cx >= (*tty).sx {
                 (*tty).cx = 1;
                 if (*tty).cy != (*tty).rlower {
                     (*tty).cy += 1;
@@ -781,9 +781,9 @@ pub unsafe extern "C" fn tty_putn(tty: *mut tty, buf: *const c_void, mut len: us
         }
 
         tty_add(tty, buf.cast(), len);
-        if ((*tty).cx + width > (*tty).sx) {
+        if (*tty).cx + width > (*tty).sx {
             (*tty).cx = ((*tty).cx + width) - (*tty).sx;
-            if ((*tty).cx <= (*tty).sx) {
+            if (*tty).cx <= (*tty).sx {
                 (*tty).cy += 1;
             } else {
                 (*tty).cx = u32::MAX;
@@ -800,8 +800,8 @@ pub unsafe extern "C" fn tty_set_italics(tty: *mut tty) {
     unsafe {
         if tty_term_has((*tty).term, tty_code_code::TTYC_SITM).as_bool() {
             let s = options_get_string(global_options, c"default-terminal".as_ptr());
-            if (libc::strcmp(s, c"screen".as_ptr()) != 0
-                && libc::strncmp(s, c"screen-".as_ptr(), 7) != 0)
+            if libc::strcmp(s, c"screen".as_ptr()) != 0
+                && libc::strncmp(s, c"screen-".as_ptr(), 7) != 0
             {
                 tty_putcode(tty, tty_code_code::TTYC_SITM);
                 return;
@@ -852,7 +852,7 @@ pub unsafe extern "C" fn tty_force_cursor_colour(tty: *mut tty, mut c: i32) {
         if c == (*tty).ccolour {
             return;
         }
-        if (c == -1) {
+        if c == -1 {
             tty_putcode(tty, tty_code_code::TTYC_CR);
         } else {
             let (r, g, b) = colour_split_rgb_(c);
@@ -903,7 +903,7 @@ pub unsafe extern "C" fn tty_update_cursor(
             cstyle = (*tty).cstyle;
         } else {
             cstyle = (*s).cstyle;
-            if (cstyle == screen_cursor_style::SCREEN_CURSOR_DEFAULT) {
+            if cstyle == screen_cursor_style::SCREEN_CURSOR_DEFAULT {
                 if !cmode.intersects(mode_flag::MODE_CURSOR_BLINKING_SET) {
                     if (*s)
                         .default_mode
@@ -932,7 +932,7 @@ pub unsafe extern "C" fn tty_update_cursor(
          * if either the blinking or very visible flags are set.
          */
         tty_putcode(tty, tty_code_code::TTYC_CNORM);
-        match (cstyle) {
+        match cstyle {
             screen_cursor_style::SCREEN_CURSOR_DEFAULT => {
                 if (*tty).cstyle != screen_cursor_style::SCREEN_CURSOR_DEFAULT {
                     if tty_term_has((*tty).term, tty_code_code::TTYC_SE).as_bool() {
@@ -1046,10 +1046,10 @@ pub unsafe extern "C" fn tty_emulate_repeat(
         if tty_term_has((*tty).term, code).as_bool() {
             tty_putcode_i(tty, code, n as i32);
         } else {
-            while ({
+            while {
                 n -= 1;
                 n > 0
-            }) {
+            } {
                 tty_putcode(tty, code1);
             }
         }
@@ -1066,7 +1066,7 @@ pub unsafe extern "C" fn tty_repeat_space(tty: *mut tty, mut n: u32) {
             libc::memset((&raw mut s).cast(), ' ' as i32, sizeof_s);
         }
 
-        while (n > sizeof_s as u32) {
+        while n > sizeof_s as u32 {
             tty_putn(tty, (&raw mut s).cast(), sizeof_s, sizeof_s as u32);
             n -= sizeof_s as u32;
         }
@@ -1125,7 +1125,7 @@ pub unsafe extern "C" fn tty_window_offset1(
 
         let lines: u32 = status_line_size(c);
 
-        if ((*tty).sx >= (*w).sx && (*tty).sy - lines >= (*w).sy) {
+        if (*tty).sx >= (*w).sx && (*tty).sy - lines >= (*w).sy {
             *ox = 0;
             *oy = 0;
             *sx = (*w).sx;
@@ -1138,14 +1138,14 @@ pub unsafe extern "C" fn tty_window_offset1(
         *sx = (*tty).sx;
         *sy = (*tty).sy - lines;
 
-        if ((*c).pan_window.cast() == w) {
-            if (*sx >= (*w).sx) {
+        if (*c).pan_window.cast() == w {
+            if *sx >= (*w).sx {
                 (*c).pan_ox = 0;
             } else if (*c).pan_ox + *sx > (*w).sx {
                 (*c).pan_ox = (*w).sx - *sx;
             }
             *ox = (*c).pan_ox;
-            if (*sy >= (*w).sy) {
+            if *sy >= (*w).sy {
                 (*c).pan_oy = 0;
             } else if (*c).pan_oy + *sy > (*w).sy {
                 (*c).pan_oy = (*w).sy - *sy;
@@ -1161,17 +1161,17 @@ pub unsafe extern "C" fn tty_window_offset1(
             cx = (*wp).xoff + (*(*wp).screen).cx;
             cy = (*wp).yoff + (*(*wp).screen).cy;
 
-            if (cx < *sx) {
+            if cx < *sx {
                 *ox = 0;
-            } else if (cx > (*w).sx - *sx) {
+            } else if cx > (*w).sx - *sx {
                 *ox = (*w).sx - *sx;
             } else {
                 *ox = cx - *sx / 2;
             }
 
-            if (cy < *sy) {
+            if cy < *sy {
                 *oy = 0;
-            } else if (cy > (*w).sy - *sy) {
+            } else if cy > (*w).sy - *sy {
                 *oy = (*w).sy - *sy;
             } else {
                 *oy = cy - *sy / 2;
@@ -1241,7 +1241,7 @@ pub unsafe extern "C" fn tty_update_client_offset(c: *mut client) {
         (*c).tty.osx = sx;
         (*c).tty.osy = sy;
 
-        (*c).flags |= (client_flag::REDRAWWINDOW | client_flag::REDRAWSTATUS);
+        (*c).flags |= client_flag::REDRAWWINDOW | client_flag::REDRAWSTATUS;
     }
 }
 
@@ -1259,7 +1259,7 @@ pub unsafe extern "C" fn tty_fake_bce(tty: *const tty, gc: *const grid_cell, bg:
     unsafe {
         if tty_term_flag((*tty).term, tty_code_code::TTYC_BCE) != 0 {
             boolint::FALSE
-        } else if (!COLOUR_DEFAULT(bg as i32) || !COLOUR_DEFAULT((*gc).bg)) {
+        } else if !COLOUR_DEFAULT(bg as i32) || !COLOUR_DEFAULT((*gc).bg) {
             boolint::TRUE
         } else {
             boolint::FALSE
@@ -1309,10 +1309,10 @@ pub unsafe extern "C" fn tty_is_visible(
 
         if (*ctx).bigger == 0 {
             boolint::TRUE
-        } else if (xoff + nx <= (*ctx).wox
+        } else if xoff + nx <= (*ctx).wox
             || xoff >= (*ctx).wox + (*ctx).wsx
             || yoff + ny <= (*ctx).woy
-            || yoff >= (*ctx).woy + (*ctx).wsy)
+            || yoff >= (*ctx).woy + (*ctx).wsy
         {
             boolint::FALSE
         } else {
@@ -1342,17 +1342,17 @@ pub unsafe extern "C" fn tty_clamp_line(
         }
         *ry = (*ctx).yoff + py - (*ctx).woy;
 
-        if (xoff >= (*ctx).wox && xoff + nx <= (*ctx).wox + (*ctx).wsx) {
+        if xoff >= (*ctx).wox && xoff + nx <= (*ctx).wox + (*ctx).wsx {
             /* All visible. */
             *i = 0;
             *x = (*ctx).xoff + px - (*ctx).wox;
             *rx = nx;
-        } else if (xoff < (*ctx).wox && xoff + nx > (*ctx).wox + (*ctx).wsx) {
+        } else if xoff < (*ctx).wox && xoff + nx > (*ctx).wox + (*ctx).wsx {
             /* Both left and right not visible. */
             *i = (*ctx).wox;
             *x = 0;
             *rx = (*ctx).wsx;
-        } else if (xoff < (*ctx).wox) {
+        } else if xoff < (*ctx).wox {
             /* Left not visible. */
             *i = (*ctx).wox - ((*ctx).xoff + px);
             *x = 0;
@@ -1395,7 +1395,7 @@ pub unsafe extern "C" fn tty_clear_line(
         }
 
         /* If genuine BCE is available, can try escape sequences. */
-        if ((*c).overlay_check.is_none() && !tty_fake_bce(tty, defaults, bg)) {
+        if (*c).overlay_check.is_none() && !tty_fake_bce(tty, defaults, bg) {
             /* Off the end of the line, use EL if available. */
             if px + nx >= (*tty).sx && tty_term_has((*tty).term, tty_code_code::TTYC_EL).as_bool() {
                 tty_cursor(tty, px, py);
@@ -1495,17 +1495,17 @@ pub unsafe extern "C" fn tty_clamp_area(
             return boolint::FALSE;
         }
 
-        if (xoff >= (*ctx).wox && xoff + nx <= (*ctx).wox + (*ctx).wsx) {
+        if xoff >= (*ctx).wox && xoff + nx <= (*ctx).wox + (*ctx).wsx {
             /* All visible. */
             *i = 0;
             *x = (*ctx).xoff + px - (*ctx).wox;
             *rx = nx;
-        } else if (xoff < (*ctx).wox && xoff + nx > (*ctx).wox + (*ctx).wsx) {
+        } else if xoff < (*ctx).wox && xoff + nx > (*ctx).wox + (*ctx).wsx {
             /* Both left and right not visible. */
             *i = (*ctx).wox;
             *x = 0;
             *rx = (*ctx).wsx;
-        } else if (xoff < (*ctx).wox) {
+        } else if xoff < (*ctx).wox {
             /* Left not visible. */
             *i = (*ctx).wox - ((*ctx).xoff + px);
             *x = 0;
@@ -1520,17 +1520,17 @@ pub unsafe extern "C" fn tty_clamp_area(
             panic!("tty_clamp_area: x too big, {} > {}", *rx, nx);
         }
 
-        if (yoff >= (*ctx).woy && yoff + ny <= (*ctx).woy + (*ctx).wsy) {
+        if yoff >= (*ctx).woy && yoff + ny <= (*ctx).woy + (*ctx).wsy {
             /* All visible. */
             *j = 0;
             *y = (*ctx).yoff + py - (*ctx).woy;
             *ry = ny;
-        } else if (yoff < (*ctx).woy && yoff + ny > (*ctx).woy + (*ctx).wsy) {
+        } else if yoff < (*ctx).woy && yoff + ny > (*ctx).woy + (*ctx).wsy {
             /* Both top and bottom not visible. */
             *j = (*ctx).woy;
             *y = 0;
             *ry = (*ctx).wsy;
-        } else if (yoff < (*ctx).woy) {
+        } else if yoff < (*ctx).woy {
             /* Top not visible. */
             *j = (*ctx).woy - ((*ctx).yoff + py);
             *y = 0;
@@ -1574,7 +1574,7 @@ pub unsafe extern "C" fn tty_clear_area(
         }
 
         /* If genuine BCE is available, can try escape sequences. */
-        if ((*c).overlay_check.is_none() && !tty_fake_bce(tty, defaults, bg)) {
+        if (*c).overlay_check.is_none() && !tty_fake_bce(tty, defaults, bg) {
             /* Use ED if clearing off the bottom of the terminal. */
             if px == 0
                 && px + nx >= (*tty).sx
@@ -1608,11 +1608,11 @@ pub unsafe extern "C" fn tty_clear_area(
             }
 
             /* Full lines can be scrolled away to clear them. */
-            if (px == 0
+            if px == 0
                 && px + nx >= (*tty).sx
                 && ny > 2
                 && tty_term_has((*tty).term, tty_code_code::TTYC_CSR).as_bool()
-                && tty_term_has((*tty).term, tty_code_code::TTYC_INDN).as_bool())
+                && tty_term_has((*tty).term, tty_code_code::TTYC_INDN).as_bool()
             {
                 tty_region(tty, py, py + ny - 1);
                 tty_margin_off(tty);
@@ -1624,11 +1624,11 @@ pub unsafe extern "C" fn tty_clear_area(
              * If margins are supported, can just scroll the area off to
              * clear it.
              */
-            if (nx > 2
+            if nx > 2
                 && ny > 2
                 && tty_term_has((*tty).term, tty_code_code::TTYC_CSR).as_bool()
                 && tty_use_margin(tty)
-                && tty_term_has((*tty).term, tty_code_code::TTYC_INDN).as_bool())
+                && tty_term_has((*tty).term, tty_code_code::TTYC_INDN).as_bool()
             {
                 tty_region(tty, py, py + ny - 1);
                 tty_margin(tty, px, px + nx - 1);
@@ -1762,7 +1762,7 @@ pub unsafe extern "C" fn tty_check_codeset(
             (&raw const (*gc).data.data).cast(),
             (*gc).data.size as usize,
         );
-        if (c != -1) {
+        if c != -1 {
             utf8_set(&raw mut new.data, c as u8);
             new.attr |= grid_attr::GRID_ATTR_CHARSET;
             return &raw const new;
@@ -1794,7 +1794,7 @@ pub unsafe extern "C" fn tty_check_overlay(tty: *mut tty, px: u32, py: u32) -> b
          * two entries.
          */
         tty_check_overlay_range(tty, px, py, 1, &raw mut r);
-        if (r.nx[0] + r.nx[1] == 0) {
+        if r.nx[0] + r.nx[1] == 0 {
             boolint::FALSE
         } else {
             boolint::TRUE
@@ -1896,16 +1896,16 @@ pub unsafe extern "C" fn tty_draw_line(
         }
         let mut ux = 0;
 
-        let mut gl = if (py == 0) {
+        let mut gl = if py == 0 {
             null_mut()
         } else {
             grid_get_line(gd, (*gd).hsize + py - 1)
         };
-        if (gl.is_null()
+        if gl.is_null()
             || !(*gl).flags.intersects(grid_line_flag::WRAPPED)
             || atx != 0
             || (*tty).cx < (*tty).sx
-            || nx < (*tty).sx)
+            || nx < (*tty).sx
         {
             if nx < (*tty).sx
                 && atx == 0
@@ -1972,11 +1972,11 @@ pub unsafe extern "C" fn tty_draw_line(
                 hidden += r.nx[j];
             }
             hidden = (*gcp).data.width as u32 - hidden;
-            if (hidden != 0 && hidden == (*gcp).data.width as u32) {
+            if hidden != 0 && hidden == (*gcp).data.width as u32 {
                 if !(*gcp).flags.intersects(grid_flag::PADDING) {
                     ux += (*gcp).data.width as u32;
                 }
-            } else if (hidden != 0 || ux + (*gcp).data.width as u32 > nx) {
+            } else if hidden != 0 || ux + (*gcp).data.width as u32 > nx {
                 if !(*gcp).flags.intersects(grid_flag::PADDING) {
                     tty_attributes(tty, &raw mut last, defaults, palette, (*s).hyperlinks);
                     for j in 0..OVERLAY_MAX_RANGES {
@@ -1985,7 +1985,7 @@ pub unsafe extern "C" fn tty_draw_line(
                         }
                         /* Effective width drawn so far. */
                         let eux = r.px[j] - atx;
-                        if (eux < nx) {
+                        if eux < nx {
                             tty_cursor(tty, r.px[j], aty);
                             let nxx = nx - eux;
                             if r.nx[j] > nxx {
@@ -2013,7 +2013,7 @@ pub unsafe extern "C" fn tty_draw_line(
                 width += (*gcp).data.width as u32;
             }
         }
-        if (len != 0 && ((!last.flags.intersects(grid_flag::CLEARED)) || last.bg != 8)) {
+        if len != 0 && ((!last.flags.intersects(grid_flag::CLEARED)) || last.bg != 8) {
             tty_attributes(tty, &raw mut last, defaults, palette, (*s).hyperlinks);
             if last.flags.intersects(grid_flag::CLEARED) {
                 // log_debug("%s: %zu cleared (end)", __func__, len);
@@ -2027,7 +2027,7 @@ pub unsafe extern "C" fn tty_draw_line(
             ux += width;
         }
 
-        if (cleared == 0 && ux < nx) {
+        if cleared == 0 && ux < nx {
             // log_debug( "%s: %u to end of line (%zu cleared)", __func__, nx - ux, len,);
             tty_default_attributes(tty, defaults, palette, 8, (*s).hyperlinks);
             tty_clear_line(tty, defaults, aty, atx + ux, nx - ux, 8);
@@ -2210,12 +2210,12 @@ pub unsafe extern "C" fn tty_cmd_insertcharacter(tty: *mut tty, ctx: *const tty_
     unsafe {
         let c = (*tty).client;
 
-        if ((*ctx).bigger != 0
+        if (*ctx).bigger != 0
             || !tty_full_width(tty, ctx)
             || tty_fake_bce(tty, &(*ctx).defaults, (*ctx).bg).as_bool()
             || (!tty_term_has((*tty).term, tty_code_code::TTYC_ICH)
                 && !tty_term_has((*tty).term, tty_code_code::TTYC_ICH1))
-            || (*c).overlay_check.is_some())
+            || (*c).overlay_check.is_some()
         {
             tty_draw_pane(tty, ctx, (*ctx).ocy);
             return;
@@ -2245,12 +2245,12 @@ pub unsafe extern "C" fn tty_cmd_deletecharacter(tty: *mut tty, ctx: *const tty_
     unsafe {
         let mut c = (*tty).client;
 
-        if ((*ctx).bigger != 0
+        if (*ctx).bigger != 0
             || !tty_full_width(tty, ctx)
             || tty_fake_bce(tty, &raw const (*ctx).defaults, (*ctx).bg).as_bool()
             || (!tty_term_has((*tty).term, tty_code_code::TTYC_DCH)
                 && !tty_term_has((*tty).term, tty_code_code::TTYC_DCH1))
-            || (*c).overlay_check.is_some())
+            || (*c).overlay_check.is_some()
         {
             tty_draw_pane(tty, ctx, (*ctx).ocy);
             return;
@@ -2295,14 +2295,14 @@ pub unsafe extern "C" fn tty_cmd_insertline(tty: *mut tty, ctx: *const tty_ctx) 
     unsafe {
         let c = (*tty).client;
 
-        if ((*ctx).bigger != 0
+        if (*ctx).bigger != 0
             || !tty_full_width(tty, ctx)
             || tty_fake_bce(tty, &raw const (*ctx).defaults, (*ctx).bg).as_bool()
             || !tty_term_has((*tty).term, tty_code_code::TTYC_CSR)
             || !tty_term_has((*tty).term, tty_code_code::TTYC_IL1)
             || (*ctx).sx == 1
             || (*ctx).sy == 1
-            || (*c).overlay_check.is_some())
+            || (*c).overlay_check.is_some()
         {
             tty_redraw_region(tty, ctx);
             return;
@@ -2336,14 +2336,14 @@ pub unsafe extern "C" fn tty_cmd_deleteline(tty: *mut tty, ctx: *const tty_ctx) 
     unsafe {
         let c = (*tty).client;
 
-        if ((*ctx).bigger != 0
+        if (*ctx).bigger != 0
             || !tty_full_width(tty, ctx)
             || tty_fake_bce(tty, &raw const (*ctx).defaults, (*ctx).bg).as_bool()
             || !tty_term_has((*tty).term, tty_code_code::TTYC_CSR)
             || !tty_term_has((*tty).term, tty_code_code::TTYC_DL1)
             || (*ctx).sx == 1
             || (*ctx).sy == 1
-            || (*c).overlay_check.is_some())
+            || (*c).overlay_check.is_some()
         {
             tty_redraw_region(tty, ctx);
             return;
@@ -2428,7 +2428,7 @@ pub unsafe extern "C" fn tty_cmd_reverseindex(tty: *mut tty, ctx: *const tty_ctx
             return;
         }
 
-        if ((*ctx).bigger != 0
+        if (*ctx).bigger != 0
             || (!tty_full_width(tty, ctx) && !tty_use_margin(tty))
             || tty_fake_bce(tty, &raw const (*ctx).defaults, 8).as_bool()
             || !tty_term_has((*tty).term, tty_code_code::TTYC_CSR)
@@ -2436,7 +2436,7 @@ pub unsafe extern "C" fn tty_cmd_reverseindex(tty: *mut tty, ctx: *const tty_ctx
                 && !tty_term_has((*tty).term, tty_code_code::TTYC_RIN))
             || (*ctx).sx == 1
             || (*ctx).sy == 1
-            || (*c).overlay_check.is_some())
+            || (*c).overlay_check.is_some()
         {
             tty_redraw_region(tty, ctx);
             return;
@@ -2454,7 +2454,7 @@ pub unsafe extern "C" fn tty_cmd_reverseindex(tty: *mut tty, ctx: *const tty_ctx
         tty_margin_pane(tty, ctx);
         tty_cursor_pane(tty, ctx, (*ctx).ocx, (*ctx).orupper);
 
-        if (tty_term_has((*tty).term, tty_code_code::TTYC_RI).as_bool()) {
+        if tty_term_has((*tty).term, tty_code_code::TTYC_RI).as_bool() {
             tty_putcode(tty, tty_code_code::TTYC_RI);
         } else {
             tty_putcode_i(tty, tty_code_code::TTYC_RIN, 1);
@@ -2471,13 +2471,13 @@ pub unsafe extern "C" fn tty_cmd_linefeed(tty: *mut tty, ctx: *const tty_ctx) {
             return;
         }
 
-        if ((*ctx).bigger != 0
+        if (*ctx).bigger != 0
             || (!tty_full_width(tty, ctx) && !tty_use_margin(tty))
             || tty_fake_bce(tty, &raw const (*ctx).defaults, 8).as_bool()
             || !tty_term_has((*tty).term, tty_code_code::TTYC_CSR)
             || (*ctx).sx == 1
             || (*ctx).sy == 1
-            || (*c).overlay_check.is_some())
+            || (*c).overlay_check.is_some()
         {
             tty_redraw_region(tty, ctx);
             return;
@@ -2501,8 +2501,8 @@ pub unsafe extern "C" fn tty_cmd_linefeed(tty: *mut tty, ctx: *const tty_ctx) {
          * this and insert extra spaces, so only use the right if margins are
          * enabled.
          */
-        if ((*ctx).xoff + (*ctx).ocx > (*tty).rright) {
-            if (!tty_use_margin(tty)) {
+        if (*ctx).xoff + (*ctx).ocx > (*tty).rright {
+            if !tty_use_margin(tty) {
                 tty_cursor(tty, 0, (*ctx).yoff + (*ctx).ocy);
             } else {
                 tty_cursor(tty, (*tty).rright, (*ctx).yoff + (*ctx).ocy);
@@ -2520,13 +2520,13 @@ pub unsafe extern "C" fn tty_cmd_scrollup(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         let mut c = (*tty).client;
 
-        if ((*ctx).bigger != 0
+        if (*ctx).bigger != 0
             || (!tty_full_width(tty, ctx) && !tty_use_margin(tty))
             || tty_fake_bce(tty, &raw const (*ctx).defaults, 8).as_bool()
             || !tty_term_has((*tty).term, tty_code_code::TTYC_CSR)
             || (*ctx).sx == 1
             || (*ctx).sy == 1
-            || (*c).overlay_check.is_some())
+            || (*c).overlay_check.is_some()
         {
             tty_redraw_region(tty, ctx);
             return;
@@ -2543,8 +2543,8 @@ pub unsafe extern "C" fn tty_cmd_scrollup(tty: *mut tty, ctx: *const tty_ctx) {
         tty_region_pane(tty, ctx, (*ctx).orupper, (*ctx).orlower);
         tty_margin_pane(tty, ctx);
 
-        if ((*ctx).num == 1 || !tty_term_has((*tty).term, tty_code_code::TTYC_INDN)) {
-            if (!tty_use_margin(tty)) {
+        if (*ctx).num == 1 || !tty_term_has((*tty).term, tty_code_code::TTYC_INDN) {
+            if !tty_use_margin(tty) {
                 tty_cursor(tty, 0, (*tty).rlower);
             } else {
                 tty_cursor(tty, (*tty).rright, (*tty).rlower);
@@ -2553,7 +2553,7 @@ pub unsafe extern "C" fn tty_cmd_scrollup(tty: *mut tty, ctx: *const tty_ctx) {
                 tty_putc(tty, b'\n');
             }
         } else {
-            if ((*tty).cy == u32::MAX) {
+            if (*tty).cy == u32::MAX {
                 tty_cursor(tty, 0, 0);
             } else {
                 tty_cursor(tty, 0, (*tty).cy);
@@ -2568,7 +2568,7 @@ pub unsafe extern "C" fn tty_cmd_scrolldown(tty: *mut tty, ctx: *const tty_ctx) 
     unsafe {
         let c = (*tty).client;
 
-        if ((*ctx).bigger != 0
+        if (*ctx).bigger != 0
             || (!tty_full_width(tty, ctx) && !tty_use_margin(tty))
             || tty_fake_bce(tty, &raw const (*ctx).defaults, 8).as_bool()
             || !tty_term_has((*tty).term, tty_code_code::TTYC_CSR)
@@ -2576,7 +2576,7 @@ pub unsafe extern "C" fn tty_cmd_scrolldown(tty: *mut tty, ctx: *const tty_ctx) 
                 && !tty_term_has((*tty).term, tty_code_code::TTYC_RIN))
             || (*ctx).sx == 1
             || (*ctx).sy == 1
-            || (*c).overlay_check.is_some())
+            || (*c).overlay_check.is_some()
         {
             tty_redraw_region(tty, ctx);
             return;
@@ -2688,7 +2688,7 @@ pub unsafe extern "C" fn tty_cmd_clearscreen(tty: *mut tty, ctx: *const tty_ctx)
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cmd_alignmenttest(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
-        if ((*ctx).bigger != 0) {
+        if (*ctx).bigger != 0 {
             (*ctx).redraw_cb.unwrap()(ctx);
             return;
         }
@@ -2730,12 +2730,12 @@ pub unsafe extern "C" fn tty_cmd_cell(tty: *mut tty, ctx: *const tty_ctx) {
         }
 
         /* Handle partially obstructed wide characters. */
-        if ((*gcp).data.width > 1) {
+        if (*gcp).data.width > 1 {
             tty_check_overlay_range(tty, px, py, (*gcp).data.width as u32, &raw mut r);
             for i in 0..OVERLAY_MAX_RANGES {
                 vis += r.nx[i];
             }
-            if (vis < (*gcp).data.width as u32) {
+            if vis < (*gcp).data.width as u32 {
                 tty_draw_line(
                     tty,
                     s,
@@ -2785,17 +2785,17 @@ pub unsafe extern "C" fn tty_cmd_cells(tty: *mut tty, ctx: *const tty_ctx) {
             return;
         }
 
-        if ((*ctx).bigger != 0
+        if (*ctx).bigger != 0
             && ((*ctx).xoff + (*ctx).ocx < (*ctx).wox
-                || (*ctx).xoff + (*ctx).ocx + (*ctx).num > (*ctx).wox + (*ctx).wsx))
+                || (*ctx).xoff + (*ctx).ocx + (*ctx).num > (*ctx).wox + (*ctx).wsx)
         {
-            if (!(*ctx).wrapped != 0
+            if !(*ctx).wrapped != 0
                 || !tty_full_width(tty, ctx)
                 || ((*(*tty).term).flags.intersects(term_flags::TERM_NOAM))
                 || (*ctx).xoff + (*ctx).ocx != 0
                 || (*ctx).yoff + (*ctx).ocy != (*tty).cy + 1
                 || (*tty).cx < (*tty).sx
-                || (*tty).cy == (*tty).rlower)
+                || (*tty).cy == (*tty).rlower
             {
                 tty_draw_pane(tty, ctx, (*ctx).ocy);
             } else {
@@ -2967,7 +2967,7 @@ pub unsafe extern "C" fn tty_cmd_sixelimage(tty: *mut tty, ctx: *const tty_ctx) 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cmd_syncstart(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
-        if ((*ctx).num == 0x11) {
+        if (*ctx).num == 0x11 {
             /*
              * This is an overlay and a command that moves the cursor so
              * start synchronized updates.
@@ -3011,7 +3011,7 @@ pub unsafe extern "C" fn tty_cell(
         tty_attributes(tty, gcp, defaults, palette, hl);
 
         /* If it is a single character, write with putc to handle ACS. */
-        if ((*gcp).data.size == 1) {
+        if (*gcp).data.size == 1 {
             tty_attributes(tty, gcp, defaults, palette, hl);
             if (*gcp).data.data[0] < 0x20 || (*gcp).data.data[0] == 0x7f {
                 return;
@@ -3062,7 +3062,7 @@ pub unsafe extern "C" fn tty_invalidate(tty: *mut tty) {
         (*tty).rright = u32::MAX;
         (*tty).rleft = u32::MAX;
 
-        if ((*tty).flags.intersects(tty_flags::TTY_STARTED)) {
+        if (*tty).flags.intersects(tty_flags::TTY_STARTED) {
             if tty_use_margin(tty) {
                 tty_putcode(tty, tty_code_code::TTYC_ENMG);
             }
@@ -3126,7 +3126,7 @@ pub unsafe extern "C" fn tty_region(tty: *mut tty, rupper: u32, rlower: u32) {
          * explicit move to 0 first.
          */
         if (*tty).cx >= (*tty).sx {
-            if ((*tty).cy == u32::MAX) {
+            if (*tty).cy == u32::MAX {
                 tty_cursor(tty, 0, 0);
             } else {
                 tty_cursor(tty, 0, (*tty).cy);
@@ -3185,7 +3185,7 @@ pub unsafe extern "C" fn tty_margin(tty: *mut tty, rleft: u32, rright: u32) {
         (*tty).rleft = rleft;
         (*tty).rright = rright;
 
-        if (rleft == 0 && rright == (*tty).sx - 1) {
+        if rleft == 0 && rright == (*tty).sx - 1 {
             tty_putcode(tty, tty_code_code::TTYC_CLMG);
         } else {
             tty_putcode_ii(tty, tty_code_code::TTYC_CMG, rleft as i32, rright as i32);
@@ -3207,13 +3207,13 @@ pub unsafe extern "C" fn tty_cursor_pane_unless_wrap(
     cy: u32,
 ) {
     unsafe {
-        if (!(*ctx).wrapped != 0
+        if !(*ctx).wrapped != 0
             || !tty_full_width(tty, ctx)
             || (*(*tty).term).flags.intersects(term_flags::TERM_NOAM)
             || (*ctx).xoff + cx != 0
             || (*ctx).yoff + cy != (*tty).cy + 1
             || (*tty).cx < (*tty).sx
-            || (*tty).cy == (*tty).rlower)
+            || (*tty).cy == (*tty).rlower
         {
             tty_cursor_pane(tty, ctx, cx, cy);
         } else {
@@ -3277,10 +3277,10 @@ pub unsafe extern "C" fn tty_cursor(tty: *mut tty, mut cx: u32, cy: u32) {
                 }
 
                 // Zero on the next line.
-                if (cx == 0
+                if cx == 0
                     && cy == thisy + 1
                     && thisy != (*tty).rlower
-                    && (!tty_use_margin(tty) || (*tty).rleft == 0))
+                    && (!tty_use_margin(tty) || (*tty).rleft == 0)
                 {
                     tty_putc(tty, b'\r');
                     tty_putc(tty, b'\n');
@@ -3288,13 +3288,13 @@ pub unsafe extern "C" fn tty_cursor(tty: *mut tty, mut cx: u32, cy: u32) {
                 }
 
                 /* Moving column or row. */
-                if (cy == thisy) {
+                if cy == thisy {
                     /*
                      * Moving column only, row staying the same.
                      */
 
                     /* To left edge. */
-                    if (cx == 0 && (!tty_use_margin(tty) || (*tty).rleft == 0)) {
+                    if cx == 0 && (!tty_use_margin(tty) || (*tty).rleft == 0) {
                         tty_putc(tty, b'\r');
                         break 'out;
                     }
@@ -3326,9 +3326,9 @@ pub unsafe extern "C" fn tty_cursor(tty: *mut tty, mut cx: u32, cy: u32) {
                     {
                         tty_putcode_i(tty, tty_code_code::TTYC_HPA, cx as i32);
                         break 'out;
-                    } else if (change > 0
+                    } else if change > 0
                         && tty_term_has(term, tty_code_code::TTYC_CUB).as_bool()
-                        && !tty_use_margin(tty))
+                        && !tty_use_margin(tty)
                     {
                         if change == 2 && tty_term_has(term, tty_code_code::TTYC_CUB1).as_bool() {
                             tty_putcode(tty, tty_code_code::TTYC_CUB1);
@@ -3344,7 +3344,7 @@ pub unsafe extern "C" fn tty_cursor(tty: *mut tty, mut cx: u32, cy: u32) {
                         tty_putcode_i(tty, tty_code_code::TTYC_CUF, -change);
                         break 'out;
                     }
-                } else if (cx == thisx) {
+                } else if cx == thisx {
                     /*
                      * Moving row only, column staying the same.
                      */
@@ -3438,7 +3438,7 @@ pub unsafe extern "C" fn tty_attributes(
 
         /* Copy cell and update default colours. */
         memcpy__(&raw mut gc2, gc);
-        if (!(*gc).flags.intersects(grid_flag::NOPALETTE)) {
+        if !(*gc).flags.intersects(grid_flag::NOPALETTE) {
             if gc2.fg == 8 {
                 gc2.fg = (*defaults).fg;
             }
@@ -3463,7 +3463,7 @@ pub unsafe extern "C" fn tty_attributes(
          * any serious harm and makes a couple of applications happier.
          */
         if !tty_term_has((*tty).term, tty_code_code::TTYC_SETAB) {
-            if (gc2.attr.intersects(grid_attr::GRID_ATTR_REVERSE)) {
+            if gc2.attr.intersects(grid_attr::GRID_ATTR_REVERSE) {
                 if gc2.fg != 7 && !COLOUR_DEFAULT(gc2.fg) {
                     gc2.attr &= !grid_attr::GRID_ATTR_REVERSE;
                 }
@@ -3494,7 +3494,7 @@ pub unsafe extern "C" fn tty_attributes(
         tty_colours(tty, &raw mut gc2);
 
         /* Filter out attribute bits already set. */
-        changed = (gc2.attr & !(*tc).attr);
+        changed = gc2.attr & !(*tc).attr;
         (*tc).attr = gc2.attr;
 
         /* Set the attributes. */
@@ -3508,15 +3508,15 @@ pub unsafe extern "C" fn tty_attributes(
             tty_set_italics(tty);
         }
         if changed.intersects(GRID_ATTR_ALL_UNDERSCORE) {
-            if ((changed.intersects(grid_attr::GRID_ATTR_UNDERSCORE))
-                || !tty_term_has((*tty).term, tty_code_code::TTYC_SMULX))
+            if (changed.intersects(grid_attr::GRID_ATTR_UNDERSCORE))
+                || !tty_term_has((*tty).term, tty_code_code::TTYC_SMULX)
             {
                 tty_putcode(tty, tty_code_code::TTYC_SMUL);
-            } else if (changed.intersects(grid_attr::GRID_ATTR_UNDERSCORE_2)) {
+            } else if changed.intersects(grid_attr::GRID_ATTR_UNDERSCORE_2) {
                 tty_putcode_i(tty, tty_code_code::TTYC_SMULX, 2);
-            } else if (changed.intersects(grid_attr::GRID_ATTR_UNDERSCORE_3)) {
+            } else if changed.intersects(grid_attr::GRID_ATTR_UNDERSCORE_3) {
                 tty_putcode_i(tty, tty_code_code::TTYC_SMULX, 3);
-            } else if (changed.intersects(grid_attr::GRID_ATTR_UNDERSCORE_4)) {
+            } else if changed.intersects(grid_attr::GRID_ATTR_UNDERSCORE_4) {
                 tty_putcode_i(tty, tty_code_code::TTYC_SMULX, 4);
             } else if changed.intersects(grid_attr::GRID_ATTR_UNDERSCORE_5) {
                 tty_putcode_i(tty, tty_code_code::TTYC_SMULX, 5);
@@ -3572,11 +3572,11 @@ pub unsafe extern "C" fn tty_colours(tty: *mut tty, gc: *const grid_cell) {
             if tty_term_flag((*tty).term, tty_code_code::TTYC_AX) == 0 {
                 tty_reset(tty);
             } else {
-                if (COLOUR_DEFAULT((*gc).fg) && !COLOUR_DEFAULT((*tc).fg)) {
+                if COLOUR_DEFAULT((*gc).fg) && !COLOUR_DEFAULT((*tc).fg) {
                     tty_puts(tty, c"\x1b[39m".as_ptr());
                     (*tc).fg = (*gc).fg;
                 }
-                if (COLOUR_DEFAULT((*gc).bg) && !COLOUR_DEFAULT((*tc).bg)) {
+                if COLOUR_DEFAULT((*gc).bg) && !COLOUR_DEFAULT((*tc).bg) {
                     tty_puts(tty, c"\x1b[49m".as_ptr());
                     (*tc).bg = (*gc).bg;
                 }
@@ -3646,16 +3646,16 @@ pub unsafe extern "C" fn tty_check_fg(
         }
 
         /* How many colours does this terminal have? */
-        if ((*(*tty).term).flags.intersects(term_flags::TERM_256COLOURS)) {
+        if (*(*tty).term).flags.intersects(term_flags::TERM_256COLOURS) {
             colours = 256;
         } else {
             colours = tty_term_number((*tty).term, tty_code_code::TTYC_COLORS) as u32;
         }
 
         /* Is this a 256-colour colour? */
-        if ((*gc).fg & COLOUR_FLAG_256 != 0) {
+        if (*gc).fg & COLOUR_FLAG_256 != 0 {
             /* And not a 256 colour mode? */
-            if (colours < 256) {
+            if colours < 256 {
                 (*gc).fg = colour_256to16((*gc).fg);
                 if ((*gc).fg & 8) != 0 {
                     (*gc).fg &= 7;
@@ -3668,7 +3668,7 @@ pub unsafe extern "C" fn tty_check_fg(
         }
 
         /* Is this an aixterm colour? */
-        if ((*gc).fg >= 90 && (*gc).fg <= 97 && colours < 16) {
+        if (*gc).fg >= 90 && (*gc).fg <= 97 && colours < 16 {
             (*gc).fg -= 90;
             (*gc).attr |= grid_attr::GRID_ATTR_BRIGHT;
         }
@@ -3686,7 +3686,7 @@ pub unsafe extern "C" fn tty_check_bg(
         let mut c: i32 = 0;
 
         /* Perform substitution if this pane has a palette. */
-        if (!(*gc).flags.intersects(grid_flag::NOPALETTE)) {
+        if !(*gc).flags.intersects(grid_flag::NOPALETTE) {
             c = colour_palette_get(palette, (*gc).bg);
             if c != -1 {
                 (*gc).bg = c;
@@ -3694,7 +3694,7 @@ pub unsafe extern "C" fn tty_check_bg(
         }
 
         /* Is this a 24-bit colour? */
-        if ((*gc).bg & COLOUR_FLAG_RGB != 0) {
+        if (*gc).bg & COLOUR_FLAG_RGB != 0 {
             /* Not a 24-bit terminal? Translate to 256-colour palette. */
             if (*(*tty).term).flags.intersects(term_flags::TERM_RGBCOLOURS) {
                 return;
@@ -3704,22 +3704,22 @@ pub unsafe extern "C" fn tty_check_bg(
         }
 
         /* How many colours does this terminal have? */
-        if ((*(*tty).term).flags.intersects(term_flags::TERM_256COLOURS)) {
+        if (*(*tty).term).flags.intersects(term_flags::TERM_256COLOURS) {
             colours = 256;
         } else {
             colours = tty_term_number((*tty).term, tty_code_code::TTYC_COLORS) as u32;
         }
 
         /* Is this a 256-colour colour? */
-        if ((*gc).bg & COLOUR_FLAG_256 != 0) {
+        if (*gc).bg & COLOUR_FLAG_256 != 0 {
             /*
              * And not a 256 colour mode? Translate to 16-colour
              * palette. Bold background doesn't exist portably, so just
              * discard the bold bit if set.
              */
-            if (colours < 256) {
+            if colours < 256 {
                 (*gc).bg = colour_256to16((*gc).bg);
-                if ((*gc).bg & 8 != 0) {
+                if (*gc).bg & 8 != 0 {
                     (*gc).bg &= 7;
                     if colours >= 16 {
                         (*gc).bg += 90;
@@ -3746,7 +3746,7 @@ pub unsafe extern "C" fn tty_check_us(
         let mut c = 0;
 
         /* Perform substitution if this pane has a palette. */
-        if (!(*gc).flags.intersects(grid_flag::NOPALETTE)) {
+        if !(*gc).flags.intersects(grid_flag::NOPALETTE) {
             c = colour_palette_get(palette, (*gc).us);
             if c != -1 {
                 (*gc).us = c;
@@ -3756,7 +3756,7 @@ pub unsafe extern "C" fn tty_check_us(
         /* Convert underscore colour if only RGB can be supported. */
         if !tty_term_has((*tty).term, tty_code_code::TTYC_SETULC1) {
             c = colour_force_rgb((*gc).us);
-            if (c == -1) {
+            if c == -1 {
                 (*gc).us = 8;
             } else {
                 (*gc).us = c;
@@ -3782,7 +3782,7 @@ pub unsafe extern "C" fn tty_colours_fg(tty: *mut tty, gc: *const grid_cell) {
             }
 
             /* Is this a 24-bit or 256-colour colour? */
-            if ((*gc).fg & COLOUR_FLAG_RGB != 0 || (*gc).fg & COLOUR_FLAG_256 != 0) {
+            if (*gc).fg & COLOUR_FLAG_RGB != 0 || (*gc).fg & COLOUR_FLAG_256 != 0 {
                 if tty_try_colour(tty, (*gc).fg, c"38".as_ptr()) == 0 {
                     break 'save;
                 }
@@ -3791,8 +3791,8 @@ pub unsafe extern "C" fn tty_colours_fg(tty: *mut tty, gc: *const grid_cell) {
             }
 
             /* Is this an aixterm bright colour? */
-            if ((*gc).fg >= 90 && (*gc).fg <= 97) {
-                if ((*(*tty).term).flags.intersects(term_flags::TERM_256COLOURS)) {
+            if (*gc).fg >= 90 && (*gc).fg <= 97 {
+                if (*(*tty).term).flags.intersects(term_flags::TERM_256COLOURS) {
                     xsnprintf(
                         (&raw mut s).cast(),
                         sizeof_s,
@@ -3824,7 +3824,7 @@ pub unsafe extern "C" fn tty_colours_bg(tty: *mut tty, gc: *const grid_cell) {
 
         'save: {
             /* Is this a 24-bit or 256-colour colour? */
-            if ((*gc).bg & COLOUR_FLAG_RGB != 0 || (*gc).bg & COLOUR_FLAG_256 != 0) {
+            if (*gc).bg & COLOUR_FLAG_RGB != 0 || (*gc).bg & COLOUR_FLAG_256 != 0 {
                 if tty_try_colour(tty, (*gc).bg, c"48".as_ptr()) == 0 {
                     break 'save;
                 }
@@ -3833,8 +3833,8 @@ pub unsafe extern "C" fn tty_colours_bg(tty: *mut tty, gc: *const grid_cell) {
             }
 
             /* Is this an aixterm bright colour? */
-            if ((*gc).bg >= 90 && (*gc).bg <= 97) {
-                if ((*(*tty).term).flags.intersects(term_flags::TERM_256COLOURS)) {
+            if (*gc).bg >= 90 && (*gc).bg <= 97 {
+                if (*(*tty).term).flags.intersects(term_flags::TERM_256COLOURS) {
                     xsnprintf(
                         (&raw mut s).cast(),
                         sizeof_s,
@@ -3865,7 +3865,7 @@ pub unsafe extern "C" fn tty_colours_us(tty: *mut tty, gc: *const grid_cell) {
 
         'save: {
             /* Clear underline colour. */
-            if (COLOUR_DEFAULT((*gc).us)) {
+            if COLOUR_DEFAULT((*gc).us) {
                 tty_putcode(tty, tty_code_code::TTYC_OL);
                 break 'save;
             }
@@ -3874,7 +3874,7 @@ pub unsafe extern "C" fn tty_colours_us(tty: *mut tty, gc: *const grid_cell) {
              * If this is not an RGB colour, use Setulc1 if it exists, otherwise
              * convert.
              */
-            if (!(*gc).us & COLOUR_FLAG_RGB != 0) {
+            if !(*gc).us & COLOUR_FLAG_RGB != 0 {
                 c = (*gc).us as u32;
                 if (!c & COLOUR_FLAG_256 as u32 != 0) && (c >= 90 && c <= 97) {
                     c -= 82;
@@ -3898,7 +3898,7 @@ pub unsafe extern "C" fn tty_colours_us(tty: *mut tty, gc: *const grid_cell) {
              * Write the colour. Only use setal if the RGB flag is set because the
              * non-RGB version may be wrong.
              */
-            if (tty_term_has((*tty).term, tty_code_code::TTYC_SETULC).as_bool()) {
+            if tty_term_has((*tty).term, tty_code_code::TTYC_SETULC).as_bool() {
                 tty_putcode_i(tty, tty_code_code::TTYC_SETULC, c as i32);
             } else if tty_term_has((*tty).term, tty_code_code::TTYC_SETAL).as_bool()
                 && tty_term_has((*tty).term, tty_code_code::TTYC_RGB).as_bool()
@@ -3915,9 +3915,9 @@ pub unsafe extern "C" fn tty_colours_us(tty: *mut tty, gc: *const grid_cell) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_try_colour(tty: *mut tty, colour: i32, type_: *const c_char) -> i32 {
     unsafe {
-        if (colour & COLOUR_FLAG_256 != 0) {
-            if (*type_ == b'3' as i8
-                && tty_term_has((*tty).term, tty_code_code::TTYC_SETAF).as_bool())
+        if colour & COLOUR_FLAG_256 != 0 {
+            if *type_ == b'3' as i8
+                && tty_term_has((*tty).term, tty_code_code::TTYC_SETAF).as_bool()
             {
                 tty_putcode_i(tty, tty_code_code::TTYC_SETAF, colour & 0xff);
             } else if tty_term_has((*tty).term, tty_code_code::TTYC_SETAB).as_bool() {
@@ -3926,10 +3926,10 @@ pub unsafe extern "C" fn tty_try_colour(tty: *mut tty, colour: i32, type_: *cons
             return 0;
         }
 
-        if (colour & COLOUR_FLAG_RGB != 0) {
+        if colour & COLOUR_FLAG_RGB != 0 {
             let (r, g, b) = colour_split_rgb_(colour & 0xffffff);
-            if (*type_ == b'3' as i8
-                && tty_term_has((*tty).term, tty_code_code::TTYC_SETRGBF).as_bool())
+            if *type_ == b'3' as i8
+                && tty_term_has((*tty).term, tty_code_code::TTYC_SETRGBF).as_bool()
             {
                 tty_putcode_iii(
                     tty,
@@ -3994,7 +3994,7 @@ pub unsafe extern "C" fn tty_default_colours(gc: *mut grid_cell, wp: *mut window
         }
 
         if (*gc).fg == 8 {
-            if (wp == (*(*wp).window).active && (*wp).cached_active_gc.fg != 8) {
+            if wp == (*(*wp).window).active && (*wp).cached_active_gc.fg != 8 {
                 (*gc).fg = (*wp).cached_active_gc.fg;
             } else {
                 (*gc).fg = (*wp).cached_gc.fg;
@@ -4002,7 +4002,7 @@ pub unsafe extern "C" fn tty_default_colours(gc: *mut grid_cell, wp: *mut window
         }
 
         if (*gc).bg == 8 {
-            if (wp == (*(*wp).window).active && (*wp).cached_active_gc.bg != 8) {
+            if wp == (*(*wp).window).active && (*wp).cached_active_gc.bg != 8 {
                 (*gc).bg = (*wp).cached_active_gc.bg;
             } else {
                 (*gc).bg = (*wp).cached_gc.bg;

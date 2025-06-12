@@ -212,17 +212,17 @@ pub unsafe extern "C" fn tty_acs_reverse_cmp(key: *const c_void, value: *const c
 pub unsafe extern "C" fn tty_acs_needed(tty: *const tty) -> i32 {
     unsafe {
         if tty.is_null() {
-            return (0);
+            return 0;
         }
 
         if tty_term_has((*tty).term, tty_code_code::TTYC_U8).as_bool()
             && tty_term_number((*tty).term, tty_code_code::TTYC_U8) == 0
         {
-            return (1);
+            return 1;
         }
 
         if (*(*tty).client).flags.intersects(client_flag::UTF8) {
-            return (0);
+            return 0;
         }
         1
     }
@@ -268,10 +268,10 @@ pub unsafe extern "C" fn tty_acs_reverse_get(
     unsafe {
         let mut table;
         let mut items;
-        if (slen == 2) {
+        if slen == 2 {
             table = &raw const tty_acs_reverse2 as *const *const tty_acs_reverse_entry;
             items = tty_acs_reverse2.len();
-        } else if (slen == 3) {
+        } else if slen == 3 {
             table = &raw const tty_acs_reverse3 as *const *const tty_acs_reverse_entry;
             items = tty_acs_reverse3.len();
         } else {

@@ -48,17 +48,17 @@ unsafe extern "C" fn cmd_switch_client_exec(self_: *mut cmd, item: *mut cmdq_ite
             flags = CMD_FIND_PREFER_UNATTACHED;
         }
         if cmd_find_target(&raw mut target, item, tflag, type_, flags) != 0 {
-            return (cmd_retval::CMD_RETURN_ERROR);
+            return cmd_retval::CMD_RETURN_ERROR;
         }
         let mut s = target.s;
         let mut wl = target.wl;
         let mut wp = target.wp;
 
         if args_has_(args, 'r') {
-            if ((*tc).flags.intersects(client_flag::READONLY)) {
+            if (*tc).flags.intersects(client_flag::READONLY) {
                 (*tc).flags &= !(client_flag::READONLY | client_flag::IGNORESIZE);
             } else {
-                (*tc).flags |= (client_flag::READONLY | client_flag::IGNORESIZE);
+                (*tc).flags |= client_flag::READONLY | client_flag::IGNORESIZE;
             }
         }
 
@@ -67,41 +67,41 @@ unsafe extern "C" fn cmd_switch_client_exec(self_: *mut cmd, item: *mut cmdq_ite
             let mut table = key_bindings_get_table(tablename, 0);
             if table.is_null() {
                 cmdq_error(item, c"table %s doesn't exist".as_ptr(), tablename);
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
             (*table).references += 1;
             key_bindings_unref_table((*tc).keytable);
             (*tc).keytable = table;
-            return (cmd_retval::CMD_RETURN_NORMAL);
+            return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        if (args_has_(args, 'n')) {
+        if args_has_(args, 'n') {
             s = session_next_session((*tc).session);
-            if (s.is_null()) {
+            if s.is_null() {
                 cmdq_error(item, c"can't find next session".as_ptr());
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
-        } else if (args_has_(args, 'p')) {
+        } else if args_has_(args, 'p') {
             s = session_previous_session((*tc).session);
             if s.is_null() {
                 cmdq_error(item, c"can't find previous session".as_ptr());
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
-        } else if (args_has_(args, 'l')) {
+        } else if args_has_(args, 'l') {
             if !(*tc).last_session.is_null() && session_alive((*tc).last_session).as_bool() {
                 s = (*tc).last_session;
             } else {
                 s = null_mut();
             }
-            if (s.is_null()) {
+            if s.is_null() {
                 cmdq_error(item, c"can't find last session".as_ptr());
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
         } else {
             if cmdq_get_client(item).is_null() {
-                return (cmd_retval::CMD_RETURN_NORMAL);
+                return cmd_retval::CMD_RETURN_NORMAL;
             }
-            if (!wl.is_null() && !wp.is_null() && wp != (*(*wl).window).active) {
+            if !wl.is_null() && !wp.is_null() && wp != (*(*wl).window).active {
                 let w = (*wl).window;
                 if window_push_zoom(w, 0, args_has(args, b'Z')) != 0 {
                     server_redraw_window(w);
@@ -112,7 +112,7 @@ unsafe extern "C" fn cmd_switch_client_exec(self_: *mut cmd, item: *mut cmdq_ite
                     server_redraw_window(w);
                 }
             }
-            if (!wl.is_null()) {
+            if !wl.is_null() {
                 session_set_current(s, wl);
                 cmd_find_from_session(current, s, 0);
             }

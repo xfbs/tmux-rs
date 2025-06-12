@@ -51,13 +51,13 @@ unsafe extern "C" fn cmd_swap_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
         }
 
         'out: {
-            if (args_has_(args, 'D')) {
+            if args_has_(args, 'D') {
                 src_w = dst_w;
                 src_wp = tailq_next::<_, _, discr_entry>(dst_wp);
                 if src_wp.is_null() {
                     src_wp = tailq_first(&raw mut (*dst_w).panes);
                 }
-            } else if (args_has_(args, 'U')) {
+            } else if args_has_(args, 'U') {
                 src_w = dst_w;
                 src_wp = tailq_prev::<_, _, discr_entry>(dst_wp);
                 if src_wp.is_null() {
@@ -82,7 +82,7 @@ unsafe extern "C" fn cmd_swap_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
             if tmp_wp == src_wp {
                 tmp_wp = dst_wp;
             }
-            if (tmp_wp.is_null()) {
+            if tmp_wp.is_null() {
                 tailq_insert_head!(&raw mut (*dst_w).panes, src_wp, entry);
             } else {
                 tailq_insert_after!(&raw mut (*dst_w).panes, tmp_wp, src_wp, entry);
@@ -113,8 +113,8 @@ unsafe extern "C" fn cmd_swap_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
             (*dst_wp).yoff = yoff;
             window_pane_resize(dst_wp, sx, sy);
 
-            if (!args_has_(args, 'd')) {
-                if (src_w != dst_w) {
+            if !args_has_(args, 'd') {
+                if src_w != dst_w {
                     window_set_active_pane(src_w, dst_wp, 1);
                     window_set_active_pane(dst_w, src_wp, 1);
                 } else {
@@ -129,7 +129,7 @@ unsafe extern "C" fn cmd_swap_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
                     window_set_active_pane(dst_w, src_wp, 1);
                 }
             }
-            if (src_w != dst_w) {
+            if src_w != dst_w {
                 window_pane_stack_remove(&raw mut (*src_w).last_panes, src_wp);
                 window_pane_stack_remove(&raw mut (*dst_w).last_panes, dst_wp);
                 colour_palette_from_option(&raw mut (*src_wp).palette, (*src_wp).options);

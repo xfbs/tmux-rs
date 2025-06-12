@@ -27,7 +27,7 @@ unsafe fn regsub_copy(
 ) {
     let add: usize = end - start;
     unsafe {
-        *buf = xrealloc_((*buf), (*len) as usize + add + 1).as_ptr();
+        *buf = xrealloc_(*buf, (*len) as usize + add + 1).as_ptr();
         memcpy((*buf).add(*len as usize) as _, text.add(start) as _, add);
         (*len) += add as isize;
     }
@@ -153,7 +153,7 @@ pub unsafe fn regsub(
             }
 
             // Stop now if anchored to start.
-            if (*pattern == b'^' as _) {
+            if *pattern == b'^' as _ {
                 regsub_copy(
                     &raw mut buf,
                     &raw mut len,

@@ -243,7 +243,7 @@ unsafe extern "C" fn mode_tree_build_lines(
             (*line).depth = depth;
             (*line).last = (mti == tailq_last(mtl)) as i32;
 
-            (*mti).line = ((*mtd).line_size - 1);
+            (*mti).line = (*mtd).line_size - 1;
             if !tailq_empty(&raw const (*mti).children) {
                 flat = 0;
             }
@@ -260,14 +260,14 @@ unsafe extern "C" fn mode_tree_build_lines(
                 if (*mti).key == KEYC_UNKNOWN {
                     (*mti).key = KEYC_NONE;
                 }
-            } else if ((*mti).line < 10) {
+            } else if (*mti).line < 10 {
                 (*mti).key = (b'0' as u32 + (*mti).line) as u64;
-            } else if ((*mti).line < 36) {
+            } else if (*mti).line < 36 {
                 (*mti).key = KEYC_META | (b'a' as u32 + (*mti).line - 10) as u64;
             } else {
                 (*mti).key = KEYC_NONE;
             }
-            if ((*mti).key != KEYC_NONE) {
+            if (*mti).key != KEYC_NONE {
                 (*mti).keystr = xstrdup(key_string_lookup_key((*mti).key, 0)).as_ptr();
                 (*mti).keylen = strlen((*mti).keystr);
             } else {
@@ -299,7 +299,7 @@ unsafe extern "C" fn mode_tree_clear_tagged(mtl: *mut mode_tree_list) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_up(mtd: *mut mode_tree_data, wrap: i32) {
     unsafe {
-        if ((*mtd).current == 0) {
+        if (*mtd).current == 0 {
             if wrap != 0 {
                 (*mtd).current = (*mtd).line_size - 1;
                 if (*mtd).line_size >= (*mtd).height {
@@ -318,7 +318,7 @@ pub unsafe extern "C" fn mode_tree_up(mtd: *mut mode_tree_data, wrap: i32) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_down(mtd: *mut mode_tree_data, wrap: i32) -> i32 {
     unsafe {
-        if ((*mtd).current == (*mtd).line_size - 1) {
+        if (*mtd).current == (*mtd).line_size - 1 {
             if wrap != 0 {
                 (*mtd).current = 0;
                 (*mtd).offset = 0;
@@ -411,7 +411,7 @@ pub unsafe extern "C" fn mode_tree_set_current(mtd: *mut mode_tree_data, tag: u6
 
         if mode_tree_get_tag(mtd, tag, &raw mut found) != 0 {
             (*mtd).current = found;
-            if ((*mtd).current > (*mtd).height - 1) {
+            if (*mtd).current > (*mtd).height - 1 {
                 (*mtd).offset = (*mtd).current - (*mtd).height + 1;
             } else {
                 (*mtd).offset = 0;
@@ -708,7 +708,7 @@ pub unsafe extern "C" fn mode_tree_add(
                 (*mti).tagged = (*saved).tagged;
             }
             (*mti).expanded = (*saved).expanded;
-        } else if (expanded == -1) {
+        } else if expanded == -1 {
             (*mti).expanded = 1;
         } else {
             (*mti).expanded = expanded;
@@ -816,7 +816,7 @@ pub unsafe extern "C" fn mode_tree_draw(mtd: *mut mode_tree_data) {
                 screen_write_cursormove(&raw mut ctx, 0, i as i32 - (*mtd).offset as i32, 0);
 
                 let pad = keylen - 2 - (*mti).keylen as i32;
-                if ((*mti).key != KEYC_NONE) {
+                if (*mti).key != KEYC_NONE {
                     xasprintf(
                         &raw mut key,
                         c"(%s)%*s".as_ptr(),
@@ -838,7 +838,7 @@ pub unsafe extern "C" fn mode_tree_draw(mtd: *mut mode_tree_data) {
                     c"+ ".as_ptr()
                 };
 
-                if ((*line).depth == 0) {
+                if (*line).depth == 0 {
                     start = xstrdup(symbol).as_ptr();
                 } else {
                     size = (4 * (*line).depth as usize) + 32;
@@ -891,7 +891,7 @@ pub unsafe extern "C" fn mode_tree_draw(mtd: *mut mode_tree_data) {
                     gc0.attr ^= grid_attr::GRID_ATTR_BRIGHT;
                 }
 
-                if (i != (*mtd).current) {
+                if i != (*mtd).current {
                     screen_write_clearendofline(&raw mut ctx, 8);
                     screen_write_nputs(
                         &raw mut ctx,
@@ -979,7 +979,7 @@ pub unsafe extern "C" fn mode_tree_draw(mtd: *mut mode_tree_data) {
                     "active".len()
                 };
 
-                if (!(*mtd).filter.is_null() && w as usize - 2 >= strlen(text) + 10 + n + 2) {
+                if !(*mtd).filter.is_null() && w as usize - 2 >= strlen(text) + 10 + n + 2 {
                     screen_write_puts(&raw mut ctx, &raw mut gc0, c" (filter: ".as_ptr());
                     if (*mtd).no_matches != 0 {
                         screen_write_puts(&raw mut ctx, &raw mut gc, c"no matches".as_ptr());
@@ -996,7 +996,7 @@ pub unsafe extern "C" fn mode_tree_draw(mtd: *mut mode_tree_data) {
             let box_x = w - 4;
             let box_y = sy - h - 2;
 
-            if (box_x != 0 && box_y != 0) {
+            if box_x != 0 && box_y != 0 {
                 screen_write_cursormove(&raw mut ctx, 2, h as i32 + 1, 0);
                 (*mtd).drawcb.unwrap()(
                     (*mtd).modedata,
@@ -1093,10 +1093,10 @@ pub unsafe extern "C" fn mode_tree_search_forward(mtd: *mut mode_tree_data) -> *
         loop {
             if !tailq_empty(&raw mut (*mti).children) {
                 mti = tailq_first(&raw mut (*mti).children);
-            } else if ({
+            } else if {
                 next = tailq_next(mti);
                 !next.is_null()
-            }) {
+            } {
                 mti = next;
             } else {
                 loop {
@@ -1280,7 +1280,7 @@ pub unsafe extern "C" fn mode_tree_display_menu(
         // char *title;
         // u_int line;
 
-        let mut line = if ((*mtd).offset + y > (*mtd).line_size - 1) {
+        let mut line = if (*mtd).offset + y > (*mtd).line_size - 1 {
             (*mtd).current
         } else {
             (*mtd).offset + y
@@ -1306,7 +1306,7 @@ pub unsafe extern "C" fn mode_tree_display_menu(
         (*mtm).line = line;
         (*mtd).references += 1;
 
-        if (x >= ((*menu).width + 4) / 2) {
+        if x >= ((*menu).width + 4) / 2 {
             x -= ((*menu).width + 4) / 2;
         } else {
             x = 0;
@@ -1363,7 +1363,7 @@ pub unsafe extern "C" fn mode_tree_key(
             if !yp.is_null() {
                 *yp = y;
             }
-            if (x > (*mtd).width || y > (*mtd).height) {
+            if x > (*mtd).width || y > (*mtd).height {
                 if *key == keyc::KEYC_MOUSEDOWN3_PANE as u64 {
                     mode_tree_display_menu(mtd, c, x, y, 1);
                 }
@@ -1372,14 +1372,14 @@ pub unsafe extern "C" fn mode_tree_key(
                 }
                 return 0;
             }
-            if ((*mtd).offset + y < (*mtd).line_size) {
+            if (*mtd).offset + y < (*mtd).line_size {
                 if *key == keyc::KEYC_MOUSEDOWN1_PANE as u64
                     || *key == keyc::KEYC_MOUSEDOWN3_PANE as u64
                     || *key == keyc::KEYC_DOUBLECLICK1_PANE as u64
                 {
                     (*mtd).current = (*mtd).offset + y;
                 }
-                if (*key == keyc::KEYC_DOUBLECLICK1_PANE as u64) {
+                if *key == keyc::KEYC_DOUBLECLICK1_PANE as u64 {
                     *key = b'\r' as u64;
                 } else {
                     if *key == keyc::KEYC_MOUSEDOWN3_PANE as u64 {
@@ -1509,7 +1509,7 @@ pub unsafe extern "C" fn mode_tree_key(
             }
             code::G_UPPER | code::KEYC_END => {
                 (*mtd).current = (*mtd).line_size - 1;
-                if ((*mtd).current > (*mtd).height - 1) {
+                if (*mtd).current > (*mtd).height - 1 {
                     (*mtd).offset = (*mtd).current - (*mtd).height + 1;
                 } else {
                     (*mtd).offset = 0;
@@ -1579,7 +1579,7 @@ pub unsafe extern "C" fn mode_tree_key(
                 }
             }
             code::KEYC_RIGHT | code::L | code::PLUS => {
-                if ((*line).flat != 0 || (*current).expanded != 0) {
+                if (*line).flat != 0 || (*current).expanded != 0 {
                     mode_tree_down(mtd, 0);
                 } else if (*line).flat == 0 {
                     (*current).expanded = 1;

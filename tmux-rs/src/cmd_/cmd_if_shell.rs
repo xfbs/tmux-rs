@@ -64,22 +64,22 @@ unsafe extern "C" fn cmd_if_shell_exec(self_: *mut cmd, item: *mut cmdq_item) ->
         let mut wait = !args_has(args, b'b');
 
         let shellcmd = format_single_from_target(item, args_string(args, 0));
-        if (args_has_(args, 'F')) {
-            let cmdlist = if (*shellcmd != b'0' as _ && *shellcmd != b'\0' as _) {
+        if args_has_(args, 'F') {
+            let cmdlist = if *shellcmd != b'0' as _ && *shellcmd != b'\0' as _ {
                 args_make_commands_now(self_, item, 1, 0)
-            } else if (count == 3) {
+            } else if count == 3 {
                 args_make_commands_now(self_, item, 2, 0)
             } else {
                 free_(shellcmd);
-                return (cmd_retval::CMD_RETURN_NORMAL);
+                return cmd_retval::CMD_RETURN_NORMAL;
             };
             free_(shellcmd);
             if cmdlist.is_null() {
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
             let new_item = cmdq_get_command(cmdlist, cmdq_get_state(item));
             cmdq_insert_after(item, new_item);
-            return (cmd_retval::CMD_RETURN_NORMAL);
+            return cmd_retval::CMD_RETURN_NORMAL;
         }
 
         let cdata = xcalloc_::<cmd_if_shell_data>(1).as_ptr();
@@ -89,7 +89,7 @@ unsafe extern "C" fn cmd_if_shell_exec(self_: *mut cmd, item: *mut cmdq_item) ->
             (*cdata).cmd_else = args_make_commands_prepare(self_, item, 2, null_mut(), wait, 0);
         }
 
-        if (wait != 0) {
+        if wait != 0 {
             (*cdata).client = cmdq_get_client(item);
             (*cdata).item = item;
         } else {
@@ -99,7 +99,7 @@ unsafe extern "C" fn cmd_if_shell_exec(self_: *mut cmd, item: *mut cmdq_item) ->
             (*(*cdata).client).references += 1;
         }
 
-        if (job_run(
+        if job_run(
             shellcmd,
             0,
             null_mut(),
@@ -114,19 +114,19 @@ unsafe extern "C" fn cmd_if_shell_exec(self_: *mut cmd, item: *mut cmdq_item) ->
             -1,
             -1,
         )
-        .is_null())
+        .is_null()
         {
             cmdq_error(item, c"failed to run command: %s".as_ptr(), shellcmd);
             free_(shellcmd);
             free_(cdata);
-            return (cmd_retval::CMD_RETURN_ERROR);
+            return cmd_retval::CMD_RETURN_ERROR;
         }
         free_(shellcmd);
 
         if wait == 0 {
-            return (cmd_retval::CMD_RETURN_NORMAL);
+            return cmd_retval::CMD_RETURN_NORMAL;
         }
-        (cmd_retval::CMD_RETURN_WAIT)
+        cmd_retval::CMD_RETURN_WAIT
     }
 }
 
@@ -142,7 +142,7 @@ unsafe extern "C" fn cmd_if_shell_callback(job: *mut job) {
         let status = job_get_status(job);
 
         'out: {
-            if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+            if !WIFEXITED(status) || WEXITSTATUS(status) != 0 {
                 state = (*cdata).cmd_else;
             } else {
                 state = (*cdata).cmd_if;
@@ -152,15 +152,15 @@ unsafe extern "C" fn cmd_if_shell_callback(job: *mut job) {
             }
 
             let cmdlist = args_make_commands(state, 0, null_mut(), &raw mut error);
-            if (cmdlist.is_null()) {
-                if ((*cdata).item.is_null()) {
+            if cmdlist.is_null() {
+                if (*cdata).item.is_null() {
                     *error = toupper(*error as i32) as i8;
                     status_message_set(c, -1, 1, 0, c"%s".as_ptr(), error);
                 } else {
                     cmdq_error((*cdata).item, c"%s".as_ptr(), error);
                 }
                 free_(error);
-            } else if (item.is_null()) {
+            } else if item.is_null() {
                 let new_item = cmdq_get_command(cmdlist, null_mut());
                 cmdq_append(c, new_item);
             } else {

@@ -58,19 +58,19 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
         let mut oldset: sigset_t = zeroed(); // TODO uninit
 
         /* Do nothing if pane is dead. */
-        if (window_pane_exited(wp) != 0) {
+        if window_pane_exited(wp) != 0 {
             cmdq_error(item, c"target pane has exited".as_ptr());
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
         /* Destroy the old pipe. */
         let old_fd = (*wp).pipe_fd;
-        if ((*wp).pipe_fd != -1) {
+        if (*wp).pipe_fd != -1 {
             bufferevent_free((*wp).pipe_event);
             close((*wp).pipe_fd);
             (*wp).pipe_fd = -1;
 
-            if (window_pane_destroy_ready(wp) != 0) {
+            if window_pane_destroy_ready(wp) != 0 {
                 server_destroy_pane(wp, 1);
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
@@ -92,7 +92,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
         }
 
         /* What do we want to do? Neither -I or -O is -O. */
-        if (args_has_(args, 'I')) {
+        if args_has_(args, 'I') {
             in_ = 1;
             out = args_has(args, b'O');
         } else {
@@ -101,7 +101,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
         }
 
         /* Open the new pipe. */
-        if (socketpair(AF_UNIX, libc::SOCK_STREAM, PF_UNSPEC, pipe_fd.as_mut_ptr()) != 0) {
+        if socketpair(AF_UNIX, libc::SOCK_STREAM, PF_UNSPEC, pipe_fd.as_mut_ptr()) != 0 {
             cmdq_error(item, c"socketpair error: %s".as_ptr(), strerror(errno!()));
             return cmd_retval::CMD_RETURN_ERROR;
         }
@@ -120,7 +120,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
         /* Fork the child. */
         sigfillset(&raw mut set);
         sigprocmask(SIG_BLOCK, &raw const set, &raw mut oldset);
-        match (libc::fork()) {
+        match libc::fork() {
             -1 => {
                 sigprocmask(SIG_SETMASK, &raw const oldset, null_mut());
                 cmdq_error(item, c"fork error: %s".as_ptr(), strerror(errno!()));
@@ -134,17 +134,17 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
                 close(pipe_fd[0]);
 
                 let null_fd = open(_PATH_DEVNULL, O_WRONLY);
-                if (out != 0) {
+                if out != 0 {
                     if dup2(pipe_fd[1], STDIN_FILENO) == -1 {
                         _exit(1);
                     }
                 } else {
                     #[allow(clippy::collapsible_else_if)]
-                    if (dup2(null_fd, STDIN_FILENO) == -1) {
+                    if dup2(null_fd, STDIN_FILENO) == -1 {
                         _exit(1);
                     }
                 }
-                if (in_ != 0) {
+                if in_ != 0 {
                     if dup2(pipe_fd[1], STDOUT_FILENO) == -1 {
                         _exit(1);
                     }
@@ -153,7 +153,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
                     }
                 } else {
                     #[allow(clippy::collapsible_else_if)]
-                    if (dup2(null_fd, STDOUT_FILENO) == -1) {
+                    if dup2(null_fd, STDOUT_FILENO) == -1 {
                         _exit(1);
                     }
                 }

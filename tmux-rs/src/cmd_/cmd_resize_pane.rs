@@ -48,7 +48,7 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
         let mut y: i32 = 0;
         let mut gd = (*wp).base.grid;
 
-        if (args_has_(args, 'T')) {
+        if args_has_(args, 'T') {
             if !tailq_empty(&raw mut (*wp).modes) {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
@@ -62,7 +62,7 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        if (args_has_(args, 'M')) {
+        if args_has_(args, 'M') {
             if (*event).m.valid == 0 || cmd_mouse_window(&raw mut (*event).m, &raw mut s).is_none()
             {
                 return cmd_retval::CMD_RETURN_NORMAL;
@@ -75,7 +75,7 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        if (args_has_(args, 'Z')) {
+        if args_has_(args, 'Z') {
             if (*w).flags.intersects(window_flag::ZOOMED) {
                 window_unzoom(w, 1);
             } else {
@@ -86,17 +86,17 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
         }
         server_unzoom_window(w);
 
-        if (args_count(args) == 0) {
+        if args_count(args) == 0 {
             adjust = 1;
         } else {
             adjust = strtonum(args_string(args, 0), 1, i32::MAX as i64, &raw mut errstr) as u32;
-            if (!errstr.is_null()) {
+            if !errstr.is_null() {
                 cmdq_error(item, c"adjustment %s".as_ptr(), errstr);
                 return cmd_retval::CMD_RETURN_ERROR;
             }
         }
 
-        if (args_has_(args, 'x')) {
+        if args_has_(args, 'x') {
             x = args_percentage(
                 args,
                 b'x',
@@ -105,7 +105,7 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
                 (*w).sx as i64,
                 &raw mut cause,
             ) as i32;
-            if (!cause.is_null()) {
+            if !cause.is_null() {
                 cmdq_error(item, c"width %s".as_ptr(), cause);
                 free_(cause);
                 return cmd_retval::CMD_RETURN_ERROR;
@@ -121,7 +121,7 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
                 (*w).sy as i64,
                 &raw mut cause,
             ) as i32;
-            if (!cause.is_null()) {
+            if !cause.is_null() {
                 cmdq_error(item, c"height %s".as_ptr(), cause);
                 free_(cause);
                 return cmd_retval::CMD_RETURN_ERROR;
@@ -145,11 +145,11 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
             layout_resize_pane_to(wp, layout_type::LAYOUT_TOPBOTTOM, y as u32);
         }
 
-        if (args_has_(args, 'L')) {
+        if args_has_(args, 'L') {
             layout_resize_pane(wp, layout_type::LAYOUT_LEFTRIGHT, -(adjust as i32), 1);
-        } else if (args_has_(args, 'R')) {
+        } else if args_has_(args, 'R') {
             layout_resize_pane(wp, layout_type::LAYOUT_LEFTRIGHT, adjust as i32, 1);
-        } else if (args_has_(args, 'U')) {
+        } else if args_has_(args, 'U') {
             layout_resize_pane(wp, layout_type::LAYOUT_TOPBOTTOM, -(adjust as i32), 1);
         } else if args_has_(args, 'D') {
             layout_resize_pane(wp, layout_type::LAYOUT_TOPBOTTOM, adjust as i32, 1);
@@ -183,14 +183,14 @@ unsafe extern "C" fn cmd_resize_pane_mouse_update(c: *mut client, m: *mut mouse_
 
         y = (*m).y + (*m).oy;
         x = (*m).x + (*m).ox;
-        if ((*m).statusat == 0 && y >= (*m).statuslines) {
+        if (*m).statusat == 0 && y >= (*m).statuslines {
             y -= (*m).statuslines;
         } else if (*m).statusat > 0 && y >= (*m).statusat as u32 {
             y = ((*m).statusat - 1) as u32;
         }
         ly = (*m).ly + (*m).oy;
         lx = (*m).lx + (*m).ox;
-        if ((*m).statusat == 0 && ly >= (*m).statuslines) {
+        if (*m).statusat == 0 && ly >= (*m).statuslines {
             ly -= (*m).statuslines;
         } else if (*m).statusat > 0 && ly >= (*m).statusat as u32 {
             ly = ((*m).statusat - 1) as u32;
@@ -225,10 +225,10 @@ unsafe extern "C" fn cmd_resize_pane_mouse_update(c: *mut client, m: *mut mouse_
 
         for cell in cells.iter().cloned() {
             let type_ = (*(*cell).parent).type_;
-            if (y != ly && type_ == layout_type::LAYOUT_TOPBOTTOM) {
+            if y != ly && type_ == layout_type::LAYOUT_TOPBOTTOM {
                 layout_resize_layout(w, cell, type_, y as i32 - ly as i32, 0);
                 resizes += 1;
-            } else if (x != lx && type_ == layout_type::LAYOUT_LEFTRIGHT) {
+            } else if x != lx && type_ == layout_type::LAYOUT_LEFTRIGHT {
                 layout_resize_layout(w, cell, type_, x as i32 - lx as i32, 0);
                 resizes += 1;
             }

@@ -149,9 +149,9 @@ pub unsafe extern "C" fn control_pane_cmp(
     cp2: *const control_pane,
 ) -> i32 {
     unsafe {
-        if ((*cp1).pane < (*cp2).pane) {
+        if (*cp1).pane < (*cp2).pane {
             -1
-        } else if ((*cp1).pane > (*cp2).pane) {
+        } else if (*cp1).pane > (*cp2).pane {
             1
         } else {
             0
@@ -343,17 +343,17 @@ pub unsafe extern "C" fn control_pane_offset(
     unsafe {
         let mut cs = (*c).control_state;
 
-        if ((*c).flags.intersects(client_flag::CONTROL_NOOUTPUT)) {
+        if (*c).flags.intersects(client_flag::CONTROL_NOOUTPUT) {
             *off = 0;
             return null_mut();
         }
 
         let cp = control_get_pane(c, wp);
-        if (cp.is_null() || ((*cp).flags & CONTROL_PANE_PAUSED != 0)) {
+        if cp.is_null() || ((*cp).flags & CONTROL_PANE_PAUSED != 0) {
             *off = 0;
             return null_mut();
         }
-        if ((*cp).flags & CONTROL_PANE_OFF != 0) {
+        if (*cp).flags & CONTROL_PANE_OFF != 0 {
             *off = 1;
             return null_mut();
         }
@@ -386,7 +386,7 @@ pub unsafe extern "C" fn control_set_pane_off(c: *mut client, wp: *mut window_pa
 pub unsafe extern "C" fn control_continue_pane(c: *mut client, wp: *mut window_pane) {
     unsafe {
         let cp = control_get_pane(c, wp);
-        if (!cp.is_null() && ((*cp).flags & CONTROL_PANE_PAUSED) != 0) {
+        if !cp.is_null() && ((*cp).flags & CONTROL_PANE_PAUSED) != 0 {
             (*cp).flags &= !CONTROL_PANE_PAUSED;
             memcpy__(&raw mut (*cp).offset, &raw const (*wp).offset);
             memcpy__(&raw mut (*cp).queued, &raw const (*wp).offset);
@@ -399,7 +399,7 @@ pub unsafe extern "C" fn control_continue_pane(c: *mut client, wp: *mut window_p
 pub unsafe extern "C" fn control_pause_pane(c: *mut client, wp: *mut window_pane) {
     unsafe {
         let cp = control_add_pane(c, wp).as_ptr();
-        if (!(*cp).flags & CONTROL_PANE_PAUSED != 0) {
+        if !(*cp).flags & CONTROL_PANE_PAUSED != 0 {
             (*cp).flags |= CONTROL_PANE_PAUSED;
             control_discard_pane(c, cp);
             control_write(c, c"%%pause %%%u".as_ptr(), (*wp).id);
@@ -480,7 +480,7 @@ pub unsafe extern "C" fn control_check_age(
             age as c_ulonglong,
         );
 
-        if ((*c).flags.intersects(client_flag::CONTROL_PAUSEAFTER)) {
+        if (*c).flags.intersects(client_flag::CONTROL_PAUSEAFTER) {
             if age < (*c).pause_age as u64 {
                 return 0;
             }
@@ -513,7 +513,7 @@ pub unsafe extern "C" fn control_write_output(c: *mut client, wp: *mut window_pa
                 return;
             }
 
-            if ((*c).flags.intersects(CONTROL_IGNORE_FLAGS)) {
+            if (*c).flags.intersects(CONTROL_IGNORE_FLAGS) {
                 cp = control_get_pane(c, wp);
                 if !cp.is_null() {
                     break 'ignore;
@@ -684,12 +684,12 @@ pub unsafe extern "C" fn control_append_data(
     size: usize,
 ) -> *mut evbuffer {
     unsafe {
-        if (message.is_null()) {
+        if message.is_null() {
             message = evbuffer_new();
             if message.is_null() {
                 fatalx(c"out of memory");
             }
-            if ((*c).flags.intersects(client_flag::CONTROL_PAUSEAFTER)) {
+            if (*c).flags.intersects(client_flag::CONTROL_PAUSEAFTER) {
                 evbuffer_add_printf(
                     message,
                     c"%%extended-output %%%u %llu : ".as_ptr(),
@@ -708,7 +708,7 @@ pub unsafe extern "C" fn control_append_data(
             fatalx_c(c"not enough data: %zu < %zu".as_ptr(), new_size, size);
         }
         for i in 0..size {
-            if (*new_data.add(i) < b' ' || *new_data.add(i) == b'\\') {
+            if *new_data.add(i) < b' ' || *new_data.add(i) == b'\\' {
                 evbuffer_add_printf(message, c"\\%03o".as_ptr(), *new_data.add(i) as i32);
             } else {
                 evbuffer_add_printf(message, c"%c".as_ptr(), *new_data.add(i) as i32);
@@ -753,7 +753,7 @@ pub unsafe extern "C" fn control_write_pending(
         let mut t = get_timer();
 
         let wp = control_window_pane(c, (*cp).pane);
-        if (wp.is_none() || (*wp.unwrap().as_ptr()).fd == -1) {
+        if wp.is_none() || (*wp.unwrap().as_ptr()).fd == -1 {
             for cb_ in tailq_foreach::<_, discr_entry>(&raw mut (*cp).blocks).map(NonNull::as_ptr) {
                 cb = cb_;
                 tailq_remove::<_, discr_entry>(&raw mut (*cp).blocks, cb);
@@ -763,7 +763,7 @@ pub unsafe extern "C" fn control_write_pending(
             return 0;
         }
 
-        while (used != limit && !tailq_empty(&raw mut (*cp).blocks)) {
+        while used != limit && !tailq_empty(&raw mut (*cp).blocks) {
             if control_check_age(c, transmute_ptr(wp), cp) != 0 {
                 if !message.is_null() {
                     evbuffer_free(message);
@@ -794,12 +794,12 @@ pub unsafe extern "C" fn control_write_pending(
             message = control_append_data(c, cp, age, message, transmute_ptr(wp), size);
 
             (*cb).size -= size;
-            if ((*cb).size == 0) {
+            if (*cb).size == 0 {
                 tailq_remove::<_, discr_entry>(&raw mut (*cp).blocks, cb);
                 control_free_block(cs, cb);
 
                 cb = tailq_first(&raw mut (*cs).all_blocks);
-                if (!cb.is_null() && (*cb).size == 0) {
+                if !cb.is_null() && (*cb).size == 0 {
                     if wp.is_some() && !message.is_null() {
                         control_write_data(c, message);
                         message = null_mut();
@@ -824,7 +824,7 @@ pub unsafe extern "C" fn control_write_callback(bufev: *mut bufferevent, data: *
 
         control_flush_all_blocks(c);
 
-        while (EVBUFFER_LENGTH(evb) < CONTROL_BUFFER_HIGH as usize) {
+        while EVBUFFER_LENGTH(evb) < CONTROL_BUFFER_HIGH as usize {
             if (*cs).pending_count == 0 {
                 break;
             }
@@ -837,7 +837,7 @@ pub unsafe extern "C" fn control_write_callback(bufev: *mut bufferevent, data: *
                 (*cs).pending_count,
             );
 
-            let mut limit: usize = (space / (*cs).pending_count as usize / 3);
+            let mut limit: usize = space / (*cs).pending_count as usize / 3;
             if limit < CONTROL_WRITE_MINIMUM as usize {
                 limit = CONTROL_WRITE_MINIMUM as usize;
             }
@@ -865,7 +865,7 @@ pub unsafe extern "C" fn control_write_callback(bufev: *mut bufferevent, data: *
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_start(c: *mut client) {
     unsafe {
-        if ((*c).flags.intersects(client_flag::CONTROLCONTROL)) {
+        if (*c).flags.intersects(client_flag::CONTROLCONTROL) {
             close((*c).out_fd);
             (*c).out_fd = -1;
         } else {
@@ -891,7 +891,7 @@ pub unsafe extern "C" fn control_start(c: *mut client) {
             fatalx(c"out of memory");
         }
 
-        if ((*c).flags.intersects(client_flag::CONTROLCONTROL)) {
+        if (*c).flags.intersects(client_flag::CONTROLCONTROL) {
             (*cs).write_event = (*cs).read_event;
         } else {
             (*cs).write_event = bufferevent_new(
@@ -907,7 +907,7 @@ pub unsafe extern "C" fn control_start(c: *mut client) {
         }
         bufferevent_setwatermark((*cs).write_event, EV_WRITE, CONTROL_BUFFER_LOW as usize, 0);
 
-        if ((*c).flags.intersects(client_flag::CONTROLCONTROL)) {
+        if (*c).flags.intersects(client_flag::CONTROLCONTROL) {
             bufferevent_write((*cs).write_event, c"\x1bP1000p".as_ptr().cast(), 7);
             bufferevent_enable((*cs).write_event, EV_WRITE);
         }
@@ -968,7 +968,7 @@ pub unsafe extern "C" fn control_check_subs_session(c: *mut client, csub: *mut c
         let value = format_expand(ft, (*csub).format);
         format_free(ft);
 
-        if (!(*csub).last.is_null() && strcmp(value, (*csub).last) == 0) {
+        if !(*csub).last.is_null() && strcmp(value, (*csub).last) == 0 {
             free_(value);
             return;
         }
@@ -1009,14 +1009,14 @@ pub unsafe extern "C" fn control_check_subs_pane(c: *mut client, csub: *mut cont
             find.idx = (*wl).idx as u32;
 
             let mut csp = rb_find(&raw mut (*csub).panes, &raw mut find);
-            if (csp.is_null()) {
+            if csp.is_null() {
                 csp = xcalloc_::<control_sub_pane>(1).as_ptr();
                 (*csp).pane = (*wp).id;
                 (*csp).idx = (*wl).idx as u32;
                 rb_insert(&raw mut (*csub).panes, csp);
             }
 
-            if (!(*csp).last.is_null() && strcmp(value, (*csp).last) == 0) {
+            if !(*csp).last.is_null() && strcmp(value, (*csp).last) == 0 {
                 free_(value);
                 continue;
             }
@@ -1053,14 +1053,14 @@ pub unsafe extern "C" fn control_check_subs_all_panes(c: *mut client, csub: *mut
                 find.idx = (*wl).idx as u32;
 
                 let mut csp = rb_find(&raw mut (*csub).panes, &raw mut find);
-                if (csp.is_null()) {
+                if csp.is_null() {
                     csp = xcalloc_::<control_sub_pane>(1).as_ptr();
                     (*csp).pane = (*wp).id;
                     (*csp).idx = (*wl).idx as u32;
                     rb_insert(&raw mut (*csub).panes, csp);
                 }
 
-                if (!(*csp).last.is_null() && strcmp(value, (*csp).last) == 0) {
+                if !(*csp).last.is_null() && strcmp(value, (*csp).last) == 0 {
                     free_(value);
                     continue;
                 }
@@ -1107,14 +1107,14 @@ pub unsafe extern "C" fn control_check_subs_window(c: *mut client, csub: *mut co
             find.idx = (*wl).idx as u32;
 
             let mut csw = rb_find(&raw mut (*csub).windows, &raw mut find);
-            if (csw.is_null()) {
+            if csw.is_null() {
                 csw = xcalloc_::<control_sub_window>(1).as_ptr();
                 (*csw).window = (*w).id;
                 (*csw).idx = (*wl).idx as u32;
                 rb_insert(&raw mut (*csub).windows, csw);
             }
 
-            if (!(*csw).last.is_null() && strcmp(value, (*csw).last) == 0) {
+            if !(*csw).last.is_null() && strcmp(value, (*csw).last) == 0 {
                 free_(value);
                 continue;
             }
@@ -1150,14 +1150,14 @@ pub unsafe extern "C" fn control_check_subs_all_windows(c: *mut client, csub: *m
             find.idx = (*wl).idx as u32;
 
             let mut csw = rb_find(&raw mut (*csub).windows, &raw mut find);
-            if (csw.is_null()) {
+            if csw.is_null() {
                 csw = xcalloc_::<control_sub_window>(1).as_ptr();
                 (*csw).window = (*w).id;
                 (*csw).idx = (*wl).idx as u32;
                 rb_insert(&raw mut (*csub).windows, csw);
             }
 
-            if (!(*csw).last.is_null() && strcmp(value, (*csw).last) == 0) {
+            if !(*csw).last.is_null() && strcmp(value, (*csw).last) == 0 {
                 free_(value);
                 continue;
             }
@@ -1190,7 +1190,7 @@ pub unsafe extern "C" fn control_check_subs_timer(fd: i32, events: i16, data: *m
         evtimer_add(&raw mut (*cs).subs_timer, &raw mut tv);
 
         for csub in rb_foreach(&raw mut (*cs).subs).map(NonNull::as_ptr) {
-            match ((*csub).type_) {
+            match (*csub).type_ {
                 control_sub_type::CONTROL_SUB_SESSION => control_check_subs_session(c, csub),
                 control_sub_type::CONTROL_SUB_PANE => control_check_subs_pane(c, csub),
                 control_sub_type::CONTROL_SUB_ALL_PANES => control_check_subs_all_panes(c, csub),

@@ -70,12 +70,12 @@ pub extern "C" fn colour_find_rgb(r: u8, g: u8, b: u8) -> i32 {
 
     // If we have hit the colour exactly, return early.
     if cr == r && cg == g && cb == b {
-        return ((16 + (36 * qr) + (6 * qg) + qb) | COLOUR_FLAG_256);
+        return (16 + (36 * qr) + (6 * qg) + qb) | COLOUR_FLAG_256;
     }
 
     // Work out the closest grey (average of RGB).
     let grey_avg = (r + g + b) / 3;
-    let grey_idx = if (grey_avg > 238) {
+    let grey_idx = if grey_avg > 238 {
         23
     } else {
         (grey_avg - 3) / 10
@@ -84,7 +84,7 @@ pub extern "C" fn colour_find_rgb(r: u8, g: u8, b: u8) -> i32 {
 
     // Is grey or 6x6x6 colour closest?
     let d = colour_dist_sq(cr, cg, cb, r, g, b);
-    let idx = if (colour_dist_sq(grey, grey, grey, r, g, b) < d) {
+    let idx = if colour_dist_sq(grey, grey, grey, r, g, b) < d {
         232 + grey_idx
     } else {
         16 + (36 * qr) + (6 * qg) + qb
@@ -1075,9 +1075,9 @@ pub unsafe extern "C" fn colour_palette_from_option(p: *mut colour_palette, oo: 
             *(*p).default_palette.add(i) = -1;
         }
 
-        while (!a.is_null()) {
+        while !a.is_null() {
             let n = options_array_item_index(a);
-            if (n < 256) {
+            if n < 256 {
                 let c = (*options_array_item_value(a)).number as i32;
                 *(*p).default_palette.add(n as usize) = c;
             }

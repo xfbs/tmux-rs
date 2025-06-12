@@ -83,13 +83,13 @@ pub unsafe extern "C" fn osdep_get_cwd(fd: i32) -> *const c_char {
         free_(path);
 
         let mut sid: pid_t = 0;
-        if (n == -1 && ioctl(fd, TIOCGSID, &raw mut sid) != -1) {
+        if n == -1 && ioctl(fd, TIOCGSID, &raw mut sid) != -1 {
             xasprintf(&raw mut path, c"/proc/%lld/cwd".as_ptr(), sid as i64);
             n = readlink(path, target, MAXPATHLEN);
             free_(path);
         }
 
-        if (n > 0) {
+        if n > 0 {
             *target.add(n as usize) = b'\0' as c_char;
             return target;
         }

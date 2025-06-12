@@ -511,7 +511,7 @@ pub unsafe extern "C" fn cmd_stringify_argv(argc: c_int, argv: *mut *mut c_char)
             len += strlen(s) + 1;
             buf = xrealloc_(buf, len).as_ptr();
 
-            if (i == 0) {
+            if i == 0 {
                 *buf = b'\0' as c_char;
             } else {
                 strlcat(buf, c" ".as_ptr(), len);
@@ -821,7 +821,7 @@ pub unsafe extern "C" fn cmd_list_copy(
 
         let new_cmdlist = cmd_list_new();
         for cmd in tailq_foreach((*cmdlist).list).map(NonNull::as_ptr) {
-            if ((*cmd).group != group) {
+            if (*cmd).group != group {
                 (*new_cmdlist).group = cmd_list_next_group;
                 cmd_list_next_group += 1;
                 group = (*cmd).group;
@@ -854,7 +854,7 @@ pub unsafe extern "C" fn cmd_list_print(cmdlist: *mut cmd_list, escaped: c_int) 
 
             let next = tailq_next::<_, _, qentry>(cmd);
             if !next.is_null() {
-                if ((*cmd).group != (*next).group) {
+                if (*cmd).group != (*next).group {
                     if escaped != 0 {
                         strlcat(buf, c" \\;\\; ".as_ptr(), len);
                     } else {
@@ -977,7 +977,7 @@ pub unsafe extern "C" fn cmd_mouse_window(
         {
             return None;
         }
-        if ((*m).w == -1) {
+        if (*m).w == -1 {
             wl = NonNull::new((*s).curw);
         } else {
             let mut w = window_find_by_id((*m).w as u32);
@@ -1053,7 +1053,7 @@ pub unsafe extern "C" fn cmd_template_replace(
                 }
                 ptr = ptr.add(1);
 
-                let quoted = (*ptr == b'%' as c_char);
+                let quoted = *ptr == b'%' as c_char;
                 if !quoted {
                     ptr = ptr.add(1);
                 }

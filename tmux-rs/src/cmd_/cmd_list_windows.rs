@@ -100,7 +100,7 @@ unsafe extern "C" fn cmd_list_windows_session(
             } else {
                 flag = 1;
             }
-            if (flag != 0) {
+            if flag != 0 {
                 let line = format_expand(ft, template);
                 cmdq_print(item, c"%s".as_ptr(), line);
                 free_(line);

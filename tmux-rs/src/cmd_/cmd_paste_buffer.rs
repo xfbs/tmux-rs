@@ -36,9 +36,9 @@ unsafe extern "C" fn cmd_paste_buffer_exec(self_: *mut cmd, item: *mut cmdq_item
         let mut wp = (*target).wp;
         let mut bracket = args_has(args, b'p') != 0;
 
-        if (window_pane_exited(wp) != 0) {
+        if window_pane_exited(wp) != 0 {
             cmdq_error(item, c"target pane has exited".as_ptr());
-            return (cmd_retval::CMD_RETURN_ERROR);
+            return cmd_retval::CMD_RETURN_ERROR;
         }
 
         let mut bufname = null();
@@ -47,13 +47,13 @@ unsafe extern "C" fn cmd_paste_buffer_exec(self_: *mut cmd, item: *mut cmdq_item
         }
 
         let mut pb = null_mut();
-        if (bufname.is_null()) {
+        if bufname.is_null() {
             pb = paste_get_top(null_mut());
         } else {
             pb = paste_get_name(bufname);
-            if (pb.is_null()) {
+            if pb.is_null() {
                 cmdq_error(item, c"no buffer %s".as_ptr(), bufname);
-                return (cmd_retval::CMD_RETURN_ERROR);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
         }
 
@@ -62,7 +62,7 @@ unsafe extern "C" fn cmd_paste_buffer_exec(self_: *mut cmd, item: *mut cmdq_item
         {
             let mut sepstr = args_get(args, b's');
             if sepstr.is_null() {
-                if (args_has(args, b'r') != 0) {
+                if args_has(args, b'r') != 0 {
                     sepstr = c"\n".as_ptr();
                 } else {
                     sepstr = c"\r".as_ptr();

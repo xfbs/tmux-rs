@@ -242,9 +242,9 @@ pub unsafe extern "C" fn status_timer_start_all() {
 pub unsafe extern "C" fn status_update_cache(s: *mut session) {
     unsafe {
         (*s).statuslines = options_get_number((*s).options, c"status".as_ptr()) as u32;
-        if ((*s).statuslines == 0) {
+        if (*s).statuslines == 0 {
             (*s).statusat = -1;
-        } else if (options_get_number((*s).options, c"status-position".as_ptr()) == 0) {
+        } else if options_get_number((*s).options, c"status-position".as_ptr()) == 0 {
             (*s).statusat = 0;
         } else {
             (*s).statusat = 1;
@@ -341,7 +341,7 @@ unsafe extern "C" fn status_push_screen(c: *mut client) {
     unsafe {
         let mut sl = &raw mut (*c).status;
 
-        if ((*sl).active == &raw mut (*sl).screen) {
+        if (*sl).active == &raw mut (*sl).screen {
             (*sl).active = xmalloc_::<screen>().as_ptr();
             screen_init((*sl).active, (*c).tty.sx, status_line_size(c), 0);
         }
@@ -394,7 +394,7 @@ pub unsafe extern "C" fn status_free(c: *mut client) {
             evtimer_del(&raw mut (*sl).timer);
         }
 
-        if ((*sl).active != &raw mut (*sl).screen) {
+        if (*sl).active != &raw mut (*sl).screen {
             screen_free((*sl).active);
             free_((*sl).active);
         }
@@ -463,8 +463,8 @@ pub unsafe extern "C" fn status_redraw(c: *mut client) -> i32 {
         }
 
         // Resize the target screen.
-        if (screen_size_x(&raw mut (*sl).screen) != width
-            || screen_size_y(&raw mut (*sl).screen) != lines)
+        if screen_size_x(&raw mut (*sl).screen) != width
+            || screen_size_y(&raw mut (*sl).screen) != lines
         {
             screen_resize(&raw mut (*sl).screen, width, lines, 0);
             changed = true;
@@ -570,7 +570,7 @@ pub unsafe extern "C" fn status_message_set(
         if delay == -1 {
             delay = options_get_number((*(*c).session).options, c"display-time".as_ptr()) as i32;
         }
-        if (delay > 0) {
+        if delay > 0 {
             tv.tv_sec = (delay / 1000) as i64;
             tv.tv_usec = (delay as i64 % 1000) * 1000i64;
 
@@ -591,7 +591,7 @@ pub unsafe extern "C" fn status_message_set(
         }
         (*c).message_ignore_styles = ignore_styles;
 
-        (*c).tty.flags |= (tty_flags::TTY_NOCURSOR | tty_flags::TTY_FREEZE);
+        (*c).tty.flags |= tty_flags::TTY_NOCURSOR | tty_flags::TTY_FREEZE;
         (*c).flags |= client_flag::REDRAWSTATUS;
     }
 }
@@ -677,7 +677,7 @@ pub unsafe extern "C" fn status_message_redraw(c: *mut client) -> i32 {
             screen_write_putc(&raw mut ctx, &raw const gc, b' ');
         }
         screen_write_cursormove(&raw mut ctx, 0, messageline as i32, 0);
-        if ((*c).message_ignore_styles != 0) {
+        if (*c).message_ignore_styles != 0 {
             screen_write_nputs(
                 &raw mut ctx,
                 len as isize,
@@ -697,7 +697,7 @@ pub unsafe extern "C" fn status_message_redraw(c: *mut client) -> i32 {
         }
         screen_write_stop(&raw mut ctx);
 
-        if (grid_compare((*(*sl).active).grid, old_screen.grid) == 0) {
+        if grid_compare((*(*sl).active).grid, old_screen.grid) == 0 {
             screen_free(&raw mut old_screen);
             return 0;
         }
@@ -731,7 +731,7 @@ pub unsafe extern "C" fn status_prompt_set(
         if input.is_null() {
             input = c"".as_ptr();
         }
-        let tmp = if (flags & PROMPT_NOFORMAT != 0) {
+        let tmp = if flags & PROMPT_NOFORMAT != 0 {
             xstrdup(input).as_ptr()
         } else {
             format_expand_time(ft, input)
@@ -767,7 +767,7 @@ pub unsafe extern "C" fn status_prompt_set(
         (*c).prompt_mode = prompt_mode::PROMPT_ENTRY;
 
         if (!flags & PROMPT_INCREMENTAL) != 0 {
-            (*c).tty.flags |= (tty_flags::TTY_NOCURSOR | tty_flags::TTY_FREEZE);
+            (*c).tty.flags |= tty_flags::TTY_NOCURSOR | tty_flags::TTY_FREEZE;
         }
         (*c).flags |= client_flag::REDRAWSTATUS;
 
@@ -884,7 +884,7 @@ pub unsafe extern "C" fn status_prompt_redraw(c: *mut client) -> i32 {
             }
 
             let mut ft = format_create_defaults(null_mut(), c, null_mut(), null_mut(), null_mut());
-            if ((*c).prompt_mode == prompt_mode::PROMPT_COMMAND) {
+            if (*c).prompt_mode == prompt_mode::PROMPT_COMMAND {
                 style_apply(
                     &raw mut gc,
                     (*s).options,
@@ -954,7 +954,7 @@ pub unsafe extern "C" fn status_prompt_redraw(c: *mut client) -> i32 {
             let mut width = 0;
             let mut i = 0;
             while (*(*c).prompt_buffer.add(i)).size != 0 {
-                if (width < offset) {
+                if width < offset {
                     width += (*(*c).prompt_buffer.add(i)).width as u32;
                     i += 1;
                     continue;
@@ -983,7 +983,7 @@ pub unsafe extern "C" fn status_prompt_redraw(c: *mut client) -> i32 {
         // finished:
         screen_write_stop(&raw mut ctx);
 
-        if (grid_compare((*(*sl).active).grid, old_screen.grid) == 0) {
+        if grid_compare((*(*sl).active).grid, old_screen.grid) == 0 {
             screen_free(&raw mut old_screen);
             return 0;
         }
@@ -1023,7 +1023,7 @@ unsafe extern "C" fn status_prompt_translate_key(
     new_key: *mut key_code,
 ) -> i32 {
     unsafe {
-        if ((*c).prompt_mode == prompt_mode::PROMPT_ENTRY) {
+        if (*c).prompt_mode == prompt_mode::PROMPT_ENTRY {
             match key {
                 code::A_CTRL
                 | code::C_CTRL
@@ -1200,13 +1200,13 @@ unsafe extern "C" fn status_prompt_paste(c: *mut client) -> i32 {
             while i as usize != bufsize {
                 let mut more = utf8_open(udp, *bufdata.add(i as usize));
                 if more == utf8_state::UTF8_MORE {
-                    while ({
+                    while {
                         i += 1;
                         i as usize != bufsize && more == utf8_state::UTF8_MORE
-                    }) {
+                    } {
                         more = utf8_append(udp, *bufdata.add(i as usize));
                     }
-                    if (more == utf8_state::UTF8_DONE) {
+                    if more == utf8_state::UTF8_DONE {
                         udp = udp.add(1);
                         continue;
                     }
@@ -1225,7 +1225,7 @@ unsafe extern "C" fn status_prompt_paste(c: *mut client) -> i32 {
         if n != 0 {
             (*c).prompt_buffer =
                 xreallocarray_::<utf8_data>((*c).prompt_buffer, size + n + 1).as_ptr();
-            if ((*c).prompt_index == size) {
+            if (*c).prompt_index == size {
                 libc::memcpy(
                     (*c).prompt_buffer.add((*c).prompt_index).cast(),
                     ud.cast(),
@@ -1371,7 +1371,7 @@ unsafe extern "C" fn status_prompt_forward_word(
         }
 
         /* Can't move forward if we're already at the end. */
-        if (idx == size) {
+        if idx == size {
             (*c).prompt_index = idx;
             return;
         }
@@ -1425,7 +1425,7 @@ unsafe extern "C" fn status_prompt_end_word(
         /* Find the next word. */
         loop {
             idx += 1;
-            if (idx == size) {
+            if idx == size {
                 (*c).prompt_index = idx;
                 return;
             }
@@ -1463,7 +1463,7 @@ unsafe extern "C" fn status_prompt_backward_word(c: *mut client, separators: *co
         let mut idx = (*c).prompt_index;
 
         /* Find non-whitespace. */
-        while (idx != 0) {
+        while idx != 0 {
             idx -= 1;
             if status_prompt_space((*c).prompt_buffer.add(idx)) == 0 {
                 break;
@@ -1472,7 +1472,7 @@ unsafe extern "C" fn status_prompt_backward_word(c: *mut client, separators: *co
         let word_is_separators = status_prompt_in_list(separators, (*c).prompt_buffer.add(idx));
 
         /* Find the character before the beginning of the word. */
-        while (idx != 0) {
+        while idx != 0 {
             idx -= 1;
             if status_prompt_space((*c).prompt_buffer.add(idx)) != 0
                 || word_is_separators
@@ -1518,7 +1518,7 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
         'changed: {
             'append_key: {
                 'process_key: {
-                    if ((*c).prompt_flags & PROMPT_NUMERIC != 0) {
+                    if (*c).prompt_flags & PROMPT_NUMERIC != 0 {
                         if key >= b'0' as u64 && key <= b'9' as u64 {
                             break 'append_key;
                         }
@@ -1575,8 +1575,8 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
                         }
                     }
                     code::KEYC_BSPACE | code::H_CTRL => {
-                        if ((*c).prompt_index != 0) {
-                            if ((*c).prompt_index == size) {
+                        if (*c).prompt_index != 0 {
+                            if (*c).prompt_index == size {
                                 (*c).prompt_index -= 1;
                                 (*(*c).prompt_buffer.add((*c).prompt_index)).size = 0;
                             } else {
@@ -1591,7 +1591,7 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
                         }
                     }
                     code::KEYC_DC | code::D_CTRL => {
-                        if ((*c).prompt_index != size) {
+                        if (*c).prompt_index != size {
                             libc::memmove(
                                 (*c).prompt_buffer.add((*c).prompt_index).cast(),
                                 (*c).prompt_buffer.add((*c).prompt_index + 1).cast(),
@@ -1607,7 +1607,7 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
                     }
 
                     code::K_CTRL => {
-                        if ((*c).prompt_index < size) {
+                        if (*c).prompt_index < size {
                             (*(*c).prompt_buffer.add((*c).prompt_index)).size = 0;
                             break 'changed;
                         }
@@ -1617,7 +1617,7 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
                         idx = (*c).prompt_index;
 
                         /* Find non-whitespace. */
-                        while (idx != 0) {
+                        while idx != 0 {
                             idx -= 1;
                             if status_prompt_space((*c).prompt_buffer.add(idx)) == 0 {
                                 break;
@@ -1627,7 +1627,7 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
                             status_prompt_in_list(separators, (*c).prompt_buffer.add(idx));
 
                         /* Find the character before the beginning of the word. */
-                        while (idx != 0) {
+                        while idx != 0 {
                             idx -= 1;
                             if status_prompt_space((*c).prompt_buffer.add(idx)) != 0
                                 || word_is_separators
@@ -1733,7 +1733,7 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
                         if idx < size {
                             idx += 1;
                         }
-                        if (idx >= 2) {
+                        if idx >= 2 {
                             utf8_copy(&raw mut tmp, (*c).prompt_buffer.add(idx - 2));
                             utf8_copy(
                                 (*c).prompt_buffer.add(idx - 2),
@@ -1803,7 +1803,7 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
                 (*c).flags |= client_flag::REDRAWSTATUS;
                 return 0;
             } // append_key:
-            if (key <= 0x7f) {
+            if key <= 0x7f {
                 utf8_set(&raw mut tmp, key as u8);
             } else if KEYC_IS_UNICODE(key) {
                 utf8_to_data(key as u32, &raw mut tmp);
@@ -1813,7 +1813,7 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
 
             (*c).prompt_buffer = xreallocarray_((*c).prompt_buffer, size + 2).as_ptr();
 
-            if ((*c).prompt_index == size) {
+            if (*c).prompt_index == size {
                 utf8_copy((*c).prompt_buffer.add((*c).prompt_index), &raw const tmp);
                 (*c).prompt_index += 1;
                 (*(*c).prompt_buffer.add((*c).prompt_index)).size = 0;
@@ -1828,7 +1828,7 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
             }
 
             if (*c).prompt_flags & PROMPT_SINGLE != 0 {
-                if (utf8_strlen((*c).prompt_buffer) != 1) {
+                if utf8_strlen((*c).prompt_buffer) != 1 {
                     status_prompt_clear(c);
                 } else {
                     s = utf8_tocstr((*c).prompt_buffer);
@@ -1915,7 +1915,7 @@ unsafe extern "C" fn status_prompt_add_history(line: *const c_char, type_: u32) 
 
         let mut hlimit =
             options_get_number(global_options, c"prompt-history-limit".as_ptr()) as u32;
-        if (hlimit > oldsize) {
+        if hlimit > oldsize {
             if new == 0 {
                 return;
             }
@@ -1944,7 +1944,7 @@ unsafe extern "C" fn status_prompt_add_history(line: *const c_char, type_: u32) 
             }
         }
 
-        if (newsize == 0) {
+        if newsize == 0 {
             free_(status_prompt_hlist[type_ as usize]);
             status_prompt_hlist[type_ as usize] = null_mut();
         } else if newsize != oldsize {
@@ -2096,19 +2096,19 @@ unsafe extern "C" fn status_prompt_menu_callback(
         let mut c = (*spm).c;
         let mut s: *mut c_char = null_mut();
 
-        if (key != KEYC_NONE) {
+        if key != KEYC_NONE {
             idx += (*spm).start;
-            if ((*spm).flag == b'\0' as i8) {
+            if (*spm).flag == b'\0' as i8 {
                 s = xstrdup(*(*spm).list.add(idx as usize)).as_ptr();
             } else {
                 xasprintf(
                     &raw mut s,
                     c"-%c%s".as_ptr(),
                     (*spm).flag as i32,
-                    (*(*spm).list.add(idx as usize)),
+                    *(*spm).list.add(idx as usize),
                 );
             }
-            if ((*c).prompt_type == prompt_type::PROMPT_TYPE_WINDOW_TARGET) {
+            if (*c).prompt_type == prompt_type::PROMPT_TYPE_WINDOW_TARGET {
                 free_((*c).prompt_buffer);
                 (*c).prompt_buffer = utf8_fromcstr(s);
                 (*c).prompt_index = utf8_strlen((*c).prompt_buffer);
@@ -2175,20 +2175,20 @@ unsafe extern "C" fn status_prompt_complete_list_menu(
             menu_add_item(menu, &raw mut item, null_mut(), c, null_mut());
         }
 
-        let py = if (options_get_number((*(*c).session).options, c"status-position".as_ptr()) == 0)
+        let py = if options_get_number((*(*c).session).options, c"status-position".as_ptr()) == 0
         {
             lines
         } else {
             (*c).tty.sy - 3 - height
         };
         offset += utf8_cstrwidth((*c).prompt_string);
-        if (offset > 2) {
+        if offset > 2 {
             offset -= 2;
         } else {
             offset = 0;
         }
 
-        if (menu_display(
+        if menu_display(
             menu,
             MENU_NOMOUSE | MENU_TAB,
             0,
@@ -2203,7 +2203,7 @@ unsafe extern "C" fn status_prompt_complete_list_menu(
             null_mut(),
             Some(status_prompt_menu_callback),
             spm.cast(),
-        ) != 0)
+        ) != 0
         {
             menu_free(menu);
             free_(spm);
@@ -2251,9 +2251,9 @@ unsafe extern "C" fn status_prompt_complete_window_menu(
 
         let mut menu = menu_create(c"".as_ptr());
         for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
-            if (!word.is_null() && *word != b'\0' as i8) {
+            if !word.is_null() && *word != b'\0' as i8 {
                 xasprintf(&raw mut tmp, c"%d".as_ptr(), (*wl).idx);
-                if (strncmp(tmp, word, strlen(word)) != 0) {
+                if strncmp(tmp, word, strlen(word)) != 0 {
                     free_(tmp);
                     continue;
                 }
@@ -2261,7 +2261,7 @@ unsafe extern "C" fn status_prompt_complete_window_menu(
             }
 
             list = xreallocarray_(list, size + 1).as_ptr();
-            if ((*c).prompt_type == prompt_type::PROMPT_TYPE_WINDOW_TARGET) {
+            if (*c).prompt_type == prompt_type::PROMPT_TYPE_WINDOW_TARGET {
                 xasprintf(
                     &raw mut tmp,
                     c"%d (%s)".as_ptr(),
@@ -2291,14 +2291,14 @@ unsafe extern "C" fn status_prompt_complete_window_menu(
                 break;
             }
         }
-        if (size == 0) {
+        if size == 0 {
             menu_free(menu);
             free_(spm);
             return null_mut();
         }
-        if (size == 1) {
+        if size == 1 {
             menu_free(menu);
-            if (flag != b'\0' as i8) {
+            if flag != b'\0' as i8 {
                 xasprintf(&raw mut tmp, c"-%c%s".as_ptr(), flag as i32, *list);
                 free_(*list);
             } else {
@@ -2315,20 +2315,20 @@ unsafe extern "C" fn status_prompt_complete_window_menu(
         (*spm).size = size as u32;
         (*spm).list = list;
 
-        let py = if (options_get_number((*(*c).session).options, c"status-position".as_ptr()) == 0)
+        let py = if options_get_number((*(*c).session).options, c"status-position".as_ptr()) == 0
         {
             lines
         } else {
             (*c).tty.sy - 3 - height
         };
         offset += utf8_cstrwidth((*c).prompt_string);
-        if (offset > 2) {
+        if offset > 2 {
             offset -= 2;
         } else {
             offset = 0;
         }
 
-        if (menu_display(
+        if menu_display(
             menu,
             MENU_NOMOUSE | MENU_TAB,
             0,
@@ -2343,7 +2343,7 @@ unsafe extern "C" fn status_prompt_complete_window_menu(
             null_mut(),
             Some(status_prompt_menu_callback),
             spm.cast(),
-        ) != 0)
+        ) != 0
         {
             menu_free(menu);
             free_(spm);
@@ -2379,14 +2379,14 @@ unsafe extern "C" fn status_prompt_complete_session(
         let mut n: [c_char; 11] = [0; 11];
 
         for loop_ in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
-            if (*s == b'\0' as i8 || strncmp((*loop_).name, s, strlen(s)) == 0) {
+            if *s == b'\0' as i8 || strncmp((*loop_).name, s, strlen(s)) == 0 {
                 *list = xreallocarray_(*list, (*size) as usize + 2).as_ptr();
                 xasprintf((*list).add(*size as usize), c"%s:".as_ptr(), (*loop_).name);
                 (*size) += 1;
-            } else if (*s == b'$' as i8) {
+            } else if *s == b'$' as i8 {
                 xsnprintf((&raw mut n).cast(), n.len(), c"%u".as_ptr(), (*loop_).id);
-                if (*s.add(1) == b'\0' as i8
-                    || strncmp((&raw mut n).cast(), s.add(1), strlen(s) - 1) == 0)
+                if *s.add(1) == b'\0' as i8
+                    || strncmp((&raw mut n).cast(), s.add(1), strlen(s) - 1) == 0
                 {
                     *list = xreallocarray_(*list, (*size) as usize + 2).as_ptr();
                     xasprintf((*list).add(*size as usize), c"$%s:".as_ptr(), n);
@@ -2432,15 +2432,15 @@ unsafe extern "C" fn status_prompt_complete(
         }
 
         'found: {
-            if ((*c).prompt_type != prompt_type::PROMPT_TYPE_TARGET
+            if (*c).prompt_type != prompt_type::PROMPT_TYPE_TARGET
                 && (*c).prompt_type != prompt_type::PROMPT_TYPE_WINDOW_TARGET
                 && strncmp(word, c"-t".as_ptr(), 2) != 0
-                && strncmp(word, c"-s".as_ptr(), 2) != 0)
+                && strncmp(word, c"-s".as_ptr(), 2) != 0
             {
                 list = status_prompt_complete_list(&raw mut size, word, (offset == 0) as i32);
-                if (size == 0) {
+                if size == 0 {
                     out = null_mut();
-                } else if (size == 1) {
+                } else if size == 1 {
                     xasprintf(&raw mut out, c"%s ".as_ptr(), *list);
                 } else {
                     out = status_prompt_complete_prefix(list, size);
@@ -2448,8 +2448,8 @@ unsafe extern "C" fn status_prompt_complete(
                 break 'found;
             }
 
-            if ((*c).prompt_type == prompt_type::PROMPT_TYPE_TARGET
-                || (*c).prompt_type == prompt_type::PROMPT_TYPE_WINDOW_TARGET)
+            if (*c).prompt_type == prompt_type::PROMPT_TYPE_TARGET
+                || (*c).prompt_type == prompt_type::PROMPT_TYPE_WINDOW_TARGET
             {
                 s = word;
                 flag = b'\0' as i8;
@@ -2460,7 +2460,7 @@ unsafe extern "C" fn status_prompt_complete(
             }
 
             /* If this is a window completion, open the window menu. */
-            if ((*c).prompt_type == prompt_type::PROMPT_TYPE_WINDOW_TARGET) {
+            if (*c).prompt_type == prompt_type::PROMPT_TYPE_WINDOW_TARGET {
                 out = status_prompt_complete_window_menu(c, (*c).session, s, offset, b'\0' as i8);
                 break 'found;
             }
@@ -2473,8 +2473,8 @@ unsafe extern "C" fn status_prompt_complete(
             }
 
             /* If there is a colon but no period, find session and show a menu. */
-            if (libc::strchr(colon.add(1), b'.' as i32).is_null()) {
-                if (*s == b':' as i8) {
+            if libc::strchr(colon.add(1), b'.' as i32).is_null() {
+                if *s == b':' as i8 {
                     session = (*c).session;
                 } else {
                     copy = xstrdup(s).as_ptr();
@@ -2491,7 +2491,7 @@ unsafe extern "C" fn status_prompt_complete(
                 }
             }
         } // found:
-        if (size != 0) {
+        if size != 0 {
             libc::qsort(
                 list.cast(),
                 size as usize,
@@ -2503,11 +2503,11 @@ unsafe extern "C" fn status_prompt_complete(
             }
         }
 
-        if (!out.is_null() && libc::strcmp(word, out) == 0) {
+        if !out.is_null() && libc::strcmp(word, out) == 0 {
             free_(out);
             out = null_mut();
         }
-        if (!out.is_null() || status_prompt_complete_list_menu(c, list, size, offset, flag) == 0) {
+        if !out.is_null() || status_prompt_complete_list_menu(c, list, size, offset, flag) == 0 {
             for i in 0..size {
                 free_(*list.add(i as usize));
             }

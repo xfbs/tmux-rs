@@ -193,7 +193,7 @@ pub unsafe extern "C" fn server_kill_pane(wp: *mut window_pane) {
     unsafe {
         let w = (*wp).window;
 
-        if (window_count_panes(w) == 1) {
+        if window_count_panes(w) == 1 {
             server_kill_window(w, 1);
             recalculate_sizes();
         } else {
@@ -237,7 +237,7 @@ pub unsafe extern "C" fn server_renumber_session(s: *mut session) {
     unsafe {
         if options_get_number((*s).options, c"renumber-windows".as_ptr()) != 0 {
             let sg = session_group_contains(s);
-            if (!sg.is_null()) {
+            if !sg.is_null() {
                 for s in tailq_foreach(&raw mut (*sg).sessions) {
                     session_renumber_windows(s.as_ptr());
                 }
@@ -272,7 +272,7 @@ pub unsafe extern "C" fn server_link_window(
 
         let srcsg = session_group_contains(src);
         let dstsg = session_group_contains(dst);
-        if (src != dst && !srcsg.is_null() && !dstsg.is_null() && srcsg == dstsg) {
+        if src != dst && !srcsg.is_null() && !dstsg.is_null() && srcsg == dstsg {
             xasprintf(cause, c"sessions are grouped".as_ptr());
             return -1;
         }
@@ -281,11 +281,11 @@ pub unsafe extern "C" fn server_link_window(
             dstwl = winlink_find_by_index(&raw mut (*dst).windows, dstidx);
         }
         if !dstwl.is_null() {
-            if ((*dstwl).window == (*srcwl).window) {
+            if (*dstwl).window == (*srcwl).window {
                 xasprintf(cause, c"same index: %d".as_ptr(), dstidx);
                 return -1;
             }
-            if (killflag != 0) {
+            if killflag != 0 {
                 /*
                  * Can't use session_detach as it will destroy session
                  * if this makes it empty.
@@ -296,7 +296,7 @@ pub unsafe extern "C" fn server_link_window(
                 winlink_remove(&raw mut (*dst).windows, dstwl);
 
                 /* Force select/redraw if current. */
-                if (dstwl == (*dst).curw) {
+                if dstwl == (*dst).curw {
                     selectflag = 1;
                     (*dst).curw = null_mut();
                 }
@@ -344,7 +344,7 @@ pub unsafe extern "C" fn server_destroy_pane(wp: *mut window_pane, notify: i32) 
         let mut sx = screen_size_x(&raw mut (*wp).base);
         let mut sy = screen_size_y(&raw mut (*wp).base);
 
-        if ((*wp).fd != -1) {
+        if (*wp).fd != -1 {
             #[cfg(feature = "utempter")]
             {
                 utempter_remove_record((*wp).fd);
@@ -360,7 +360,7 @@ pub unsafe extern "C" fn server_destroy_pane(wp: *mut window_pane, notify: i32) 
             return;
         }
         'out: {
-            match (remain_on_exit) {
+            match remain_on_exit {
                 0 => (),
                 1 | 2 => {
                     if remain_on_exit == 2 {
@@ -424,7 +424,7 @@ pub unsafe extern "C" fn server_destroy_pane(wp: *mut window_pane, notify: i32) 
 pub unsafe extern "C" fn server_destroy_session_group(s: *mut session) {
     unsafe {
         let mut sg = session_group_contains(s);
-        if (sg.is_null()) {
+        if sg.is_null() {
             server_destroy_session(s);
             session_destroy(s, 1, c"server_destroy_session_group".as_ptr());
         } else {
@@ -478,13 +478,13 @@ pub unsafe extern "C" fn server_destroy_session(s: *mut session) {
     unsafe {
         let detach_on_destroy = options_get_number((*s).options, c"detach-on-destroy".as_ptr());
 
-        let mut s_new: *mut session = if (detach_on_destroy == 0) {
+        let mut s_new: *mut session = if detach_on_destroy == 0 {
             server_find_session(s, server_newer_session)
-        } else if (detach_on_destroy == 2) {
+        } else if detach_on_destroy == 2 {
             server_find_session(s, server_newer_detached_session)
-        } else if (detach_on_destroy == 3) {
+        } else if detach_on_destroy == 3 {
             session_previous_session(s)
-        } else if (detach_on_destroy == 4) {
+        } else if detach_on_destroy == 4 {
             session_next_session(s)
         } else {
             null_mut()

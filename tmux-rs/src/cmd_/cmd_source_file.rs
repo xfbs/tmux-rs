@@ -99,10 +99,10 @@ unsafe extern "C" fn cmd_source_file_done(
             return;
         }
 
-        if (error != 0) {
+        if error != 0 {
             cmdq_error(item, c"%s: %s".as_ptr(), path, strerror(error));
         } else if bsize != 0 {
-            if (load_cfg_from_buffer(
+            if load_cfg_from_buffer(
                 bdata.cast(),
                 bsize,
                 path,
@@ -111,7 +111,7 @@ unsafe extern "C" fn cmd_source_file_done(
                 target,
                 (*cdata).flags,
                 &raw mut new_item,
-            ) < 0)
+            ) < 0
             {
                 (*cdata).retval = cmd_retval::CMD_RETURN_ERROR;
             } else if !new_item.is_null() {
@@ -189,7 +189,7 @@ unsafe extern "C" fn cmd_source_file_exec(self_: *mut cmd, item: *mut cmdq_item)
                 continue;
             }
 
-            if (*path == b'/' as c_char) {
+            if *path == b'/' as c_char {
                 pattern = xstrdup(path).as_ptr();
             } else {
                 xasprintf(&raw mut pattern, c"%s/%s".as_ptr(), cwd, path);
@@ -203,7 +203,7 @@ unsafe extern "C" fn cmd_source_file_exec(self_: *mut cmd, item: *mut cmdq_item)
                         .flags
                         .intersects(cmd_parse_input_flags::CMD_PARSE_QUIET)
                 {
-                    if (result == GLOB_NOMATCH) {
+                    if result == GLOB_NOMATCH {
                         error = strerror(ENOENT);
                     } else if result == GLOB_NOSPACE {
                         error = strerror(ENOMEM);
@@ -229,7 +229,7 @@ unsafe extern "C" fn cmd_source_file_exec(self_: *mut cmd, item: *mut cmdq_item)
         (*cdata).after = item;
         (*cdata).retval = retval;
 
-        if ((*cdata).nfiles != 0) {
+        if (*cdata).nfiles != 0 {
             file_read(c, *(*cdata).files, Some(cmd_source_file_done), cdata as _);
             retval = cmd_retval::CMD_RETURN_WAIT;
         } else {

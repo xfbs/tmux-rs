@@ -310,7 +310,7 @@ pub unsafe extern "C" fn key_string_lookup_string(mut string: *const c_char) -> 
         }
 
         /* Is this a hexadecimal value? */
-        if (*string == b'0' as c_char && *string.add(1) == b'x' as i8) {
+        if *string == b'0' as c_char && *string.add(1) == b'x' as i8 {
             if sscanf(string.add(2), c"%x".as_ptr(), &raw mut u) != 1 {
                 return KEYC_UNKNOWN;
             }
@@ -337,7 +337,7 @@ pub unsafe extern "C" fn key_string_lookup_string(mut string: *const c_char) -> 
         }
 
         /* Check for short Ctrl key. */
-        if (*string == b'^' as c_char && *string.add(1) != b'\0' as i8) {
+        if *string == b'^' as c_char && *string.add(1) != b'\0' as i8 {
             if *string.add(2) == b'\0' as i8 {
                 return tolower(*string.add(1) as _) as u64 | KEYC_CTRL;
             }
@@ -352,7 +352,7 @@ pub unsafe extern "C" fn key_string_lookup_string(mut string: *const c_char) -> 
         }
 
         /* Is this a standard ASCII key? */
-        if (*string.add(1) == b'\0' as c_char && *string as u8 <= 127) {
+        if *string.add(1) == b'\0' as c_char && *string as u8 <= 127 {
             key = *string as u8 as u64;
             if key < 32 {
                 return KEYC_UNKNOWN;
@@ -412,7 +412,7 @@ pub unsafe extern "C" fn key_string_lookup_key(
         'out: {
             'append: {
                 /* Literal keys are themselves. */
-                if (key & KEYC_LITERAL != 0) {
+                if key & KEYC_LITERAL != 0 {
                     snprintf(
                         &raw mut out as *mut i8,
                         sizeof_out,
@@ -435,65 +435,65 @@ pub unsafe extern "C" fn key_string_lookup_key(
                 key &= KEYC_MASK_KEY;
 
                 /* Handle no key. */
-                if (key == KEYC_NONE) {
+                if key == KEYC_NONE {
                     s = c"None".as_ptr();
                     break 'append;
                 }
 
                 /* Handle special keys. */
-                if (key == KEYC_UNKNOWN) {
+                if key == KEYC_UNKNOWN {
                     s = c"Unknown".as_ptr();
                     break 'append;
                 }
-                if (key == keyc::KEYC_ANY as u64) {
+                if key == keyc::KEYC_ANY as u64 {
                     s = c"Any".as_ptr();
                     break 'append;
                 }
-                if (key == keyc::KEYC_FOCUS_IN as u64) {
+                if key == keyc::KEYC_FOCUS_IN as u64 {
                     s = c"FocusIn".as_ptr();
                     break 'append;
                 }
-                if (key == keyc::KEYC_FOCUS_OUT as u64) {
+                if key == keyc::KEYC_FOCUS_OUT as u64 {
                     s = c"FocusOut".as_ptr();
                     break 'append;
                 }
-                if (key == keyc::KEYC_PASTE_START as u64) {
+                if key == keyc::KEYC_PASTE_START as u64 {
                     s = c"PasteStart".as_ptr();
                     break 'append;
                 }
-                if (key == keyc::KEYC_PASTE_END as u64) {
+                if key == keyc::KEYC_PASTE_END as u64 {
                     s = c"PasteEnd".as_ptr();
                     break 'append;
                 }
-                if (key == keyc::KEYC_MOUSE as u64) {
+                if key == keyc::KEYC_MOUSE as u64 {
                     s = c"Mouse".as_ptr();
                     break 'append;
                 }
-                if (key == keyc::KEYC_DRAGGING as u64) {
+                if key == keyc::KEYC_DRAGGING as u64 {
                     s = c"Dragging".as_ptr();
                     break 'append;
                 }
-                if (key == keyc::KEYC_MOUSEMOVE_PANE as u64) {
+                if key == keyc::KEYC_MOUSEMOVE_PANE as u64 {
                     s = c"MouseMovePane".as_ptr();
                     break 'append;
                 }
-                if (key == keyc::KEYC_MOUSEMOVE_STATUS as u64) {
+                if key == keyc::KEYC_MOUSEMOVE_STATUS as u64 {
                     s = c"MouseMoveStatus".as_ptr();
                     break 'append;
                 }
-                if (key == keyc::KEYC_MOUSEMOVE_STATUS_LEFT as u64) {
+                if key == keyc::KEYC_MOUSEMOVE_STATUS_LEFT as u64 {
                     s = c"MouseMoveStatusLeft".as_ptr();
                     break 'append;
                 }
-                if (key == keyc::KEYC_MOUSEMOVE_STATUS_RIGHT as u64) {
+                if key == keyc::KEYC_MOUSEMOVE_STATUS_RIGHT as u64 {
                     s = c"MouseMoveStatusRight".as_ptr();
                     break 'append;
                 }
-                if (key == keyc::KEYC_MOUSEMOVE_BORDER as u64) {
+                if key == keyc::KEYC_MOUSEMOVE_BORDER as u64 {
                     s = c"MouseMoveBorder".as_ptr();
                     break 'append;
                 }
-                if (key >= KEYC_USER && key < KEYC_USER_END) {
+                if key >= KEYC_USER && key < KEYC_USER_END {
                     snprintf(
                         &raw mut tmp as *mut c_char,
                         sizeof_tmp,
@@ -515,7 +515,7 @@ pub unsafe extern "C" fn key_string_lookup_key(
                         break;
                     }
                 }
-                if (i != key_string_table.len()) {
+                if i != key_string_table.len() {
                     strlcat(
                         &raw mut out as *mut c_char,
                         key_string_table[i].string,
@@ -525,7 +525,7 @@ pub unsafe extern "C" fn key_string_lookup_key(
                 }
 
                 /* Is this a Unicode key? */
-                if (KEYC_IS_UNICODE(key)) {
+                if KEYC_IS_UNICODE(key) {
                     utf8_to_data(key as u32, &raw mut ud);
                     off = strlen(&raw const out as *const c_char);
                     memcpy(
@@ -538,7 +538,7 @@ pub unsafe extern "C" fn key_string_lookup_key(
                 }
 
                 /* Invalid keys are errors. */
-                if (key > 255) {
+                if key > 255 {
                     snprintf(
                         &raw mut out as *mut c_char,
                         sizeof_out,
@@ -549,10 +549,10 @@ pub unsafe extern "C" fn key_string_lookup_key(
                 }
 
                 /* Printable ASCII keys. */
-                if (key > 32 && key <= 126) {
+                if key > 32 && key <= 126 {
                     tmp[0] = key as c_char;
                     tmp[1] = b'\0' as c_char;
-                } else if (key == 127) {
+                } else if key == 127 {
                     xsnprintf(&raw mut tmp as *mut c_char, sizeof_tmp, c"C-?".as_ptr());
                 } else if key >= 128 {
                     xsnprintf(
@@ -574,7 +574,7 @@ pub unsafe extern "C" fn key_string_lookup_key(
             strlcat(&raw mut out as *mut c_char, s, sizeof_out);
         }
         // out:
-        if (with_flags != 0 && (saved & KEYC_MASK_FLAGS) != 0) {
+        if with_flags != 0 && (saved & KEYC_MASK_FLAGS) != 0 {
             strlcat(&raw mut out as *mut c_char, c"[".as_ptr(), sizeof_out);
             if saved & KEYC_LITERAL != 0 {
                 strlcat(&raw mut out as *mut c_char, c"L".as_ptr(), sizeof_out);

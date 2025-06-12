@@ -63,14 +63,14 @@ unsafe extern "C" fn cmd_respawn_pane_exec(self_: *mut cmd, item: *mut cmdq_item
             sc.flags |= SPAWN_KILL;
         }
 
-        if (spawn_pane(&raw mut sc, &raw mut cause).is_null()) {
+        if spawn_pane(&raw mut sc, &raw mut cause).is_null() {
             cmdq_error(item, c"respawn pane failed: %s".as_ptr(), cause);
             free_(cause);
             if !sc.argv.is_null() {
                 cmd_free_argv(sc.argc, sc.argv);
             }
             environ_free(sc.environ);
-            return (cmd_retval::CMD_RETURN_ERROR);
+            return cmd_retval::CMD_RETURN_ERROR;
         }
 
         (*wp).flags |= window_pane_flags::PANE_REDRAW;

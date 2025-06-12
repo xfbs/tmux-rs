@@ -55,9 +55,9 @@ unsafe extern "C" fn cmd_load_buffer_done(
             return;
         }
 
-        if (error != 0) {
+        if error != 0 {
             cmdq_error(item, c"%s: %s".as_ptr(), path, strerror(error));
-        } else if (bsize != 0) {
+        } else if bsize != 0 {
             let mut copy = xmalloc(bsize).as_ptr();
             memcpy_(copy, bdata as _, bsize);
             let mut cause = null_mut();
@@ -94,7 +94,7 @@ unsafe extern "C" fn cmd_load_buffer_exec(self_: *mut cmd, item: *mut cmdq_item)
         if !bufname.is_null() {
             (*cdata).name = xstrdup(bufname).as_ptr();
         }
-        if (args_has(args, b'w') != 0 && !tc.is_null()) {
+        if args_has(args, b'w') != 0 && !tc.is_null() {
             (*cdata).client = tc;
             (*(*cdata).client).references += 1;
         }

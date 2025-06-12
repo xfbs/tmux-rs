@@ -80,10 +80,10 @@ unsafe extern "C" fn cmd_show_options_exec(self_: *mut cmd, item: *mut cmdq_item
 
         'fail: {
             'out: {
-                if (args_count(args) == 0) {
+                if args_count(args) == 0 {
                     let scope =
                         options_scope_from_flags(args, window, target, &raw mut oo, &raw mut cause);
-                    if (scope == OPTIONS_TABLE_NONE) {
+                    if scope == OPTIONS_TABLE_NONE {
                         if args_has_(args, 'q') {
                             return cmd_retval::CMD_RETURN_NORMAL;
                         }
@@ -96,11 +96,11 @@ unsafe extern "C" fn cmd_show_options_exec(self_: *mut cmd, item: *mut cmdq_item
                 argument = format_single_from_target(item, args_string(args, 0));
 
                 name = options_match(argument, &raw mut idx, &raw mut ambiguous);
-                if (name.is_null()) {
+                if name.is_null() {
                     if args_has_(args, 'q') {
                         break 'out;
                     }
-                    if (ambiguous != 0) {
+                    if ambiguous != 0 {
                         cmdq_error(item, c"ambiguous option: %s".as_ptr(), argument);
                     } else {
                         cmdq_error(item, c"invalid option: %s".as_ptr(), argument);
@@ -115,7 +115,7 @@ unsafe extern "C" fn cmd_show_options_exec(self_: *mut cmd, item: *mut cmdq_item
                     &raw mut oo,
                     &raw mut cause,
                 );
-                if (scope == OPTIONS_TABLE_NONE) {
+                if scope == OPTIONS_TABLE_NONE {
                     if args_has_(args, 'q') {
                         break 'out;
                     }
@@ -124,15 +124,15 @@ unsafe extern "C" fn cmd_show_options_exec(self_: *mut cmd, item: *mut cmdq_item
                     break 'fail;
                 }
                 o = options_get_only(oo, name);
-                if (args_has_(args, 'A') && o.is_null()) {
+                if args_has_(args, 'A') && o.is_null() {
                     o = options_get(oo, name);
                     parent = 1;
                 } else {
                     parent = 0;
                 }
-                if (!o.is_null()) {
+                if !o.is_null() {
                     cmd_show_options_print(self_, item, o, idx, parent);
-                } else if (*name == b'@' as _) {
+                } else if *name == b'@' as _ {
                     if args_has_(args, 'q') {
                         break 'out;
                     }
@@ -168,19 +168,19 @@ pub unsafe extern "C" fn cmd_show_options_print(
         let mut tmp = null_mut();
         let mut escaped = null_mut();
 
-        if (idx != -1) {
+        if idx != -1 {
             xasprintf(&raw mut tmp, c"%s[%d]".as_ptr(), name, idx);
             name = tmp;
         } else {
-            if (options_is_array(o) != 0) {
+            if options_is_array(o) != 0 {
                 a = options_array_first(o);
-                if (a.is_null()) {
+                if a.is_null() {
                     if !args_has_(args, 'v') {
                         cmdq_print(item, c"%s".as_ptr(), name);
                     }
                     return;
                 }
-                while (!a.is_null()) {
+                while !a.is_null() {
                     idx = options_array_item_index(a) as i32;
                     cmd_show_options_print(self_, item, o, idx, parent);
                     a = options_array_next(a);
@@ -190,18 +190,18 @@ pub unsafe extern "C" fn cmd_show_options_print(
         }
 
         value = options_to_string(o, idx, 0);
-        if (args_has_(args, 'v')) {
+        if args_has_(args, 'v') {
             cmdq_print(item, c"%s".as_ptr(), value);
-        } else if (options_is_string(o) != 0) {
+        } else if options_is_string(o) != 0 {
             escaped = args_escape(value);
-            if (parent != 0) {
+            if parent != 0 {
                 cmdq_print(item, c"%s* %s".as_ptr(), name, escaped);
             } else {
                 cmdq_print(item, c"%s %s".as_ptr(), name, escaped);
             }
             free_(escaped);
         } else {
-            if (parent != 0) {
+            if parent != 0 {
                 cmdq_print(item, c"%s* %s".as_ptr(), name, value);
             } else {
                 cmdq_print(item, c"%s %s".as_ptr(), name, value);
@@ -226,9 +226,9 @@ pub unsafe extern "C" fn cmd_show_options_all(
         let mut a: *mut options_array_item = null_mut();
         let mut parent = 0;
 
-        if (cmd_get_entry(self_) != &raw mut cmd_show_hooks_entry) {
+        if cmd_get_entry(self_) != &raw mut cmd_show_hooks_entry {
             o = options_first(oo);
-            while (!o.is_null()) {
+            while !o.is_null() {
                 if options_table_entry(o).is_null() {
                     cmd_show_options_print(self_, item, o, -1, 0);
                 }
@@ -237,29 +237,29 @@ pub unsafe extern "C" fn cmd_show_options_all(
         }
         let mut oe = &raw const options_table as *const options_table_entry;
         while !(*oe).name.is_null() {
-            if (!(*oe).scope & scope != 0) {
+            if !(*oe).scope & scope != 0 {
                 oe = oe.add(1);
                 continue;
             }
 
-            if ((cmd_get_entry(self_) != &raw mut cmd_show_hooks_entry
+            if (cmd_get_entry(self_) != &raw mut cmd_show_hooks_entry
                 && !args_has_(args, 'H')
                 && ((*oe).flags & OPTIONS_TABLE_IS_HOOK != 0))
                 || (cmd_get_entry(self_) == &raw mut cmd_show_hooks_entry
-                    && (!(*oe).flags & OPTIONS_TABLE_IS_HOOK != 0)))
+                    && (!(*oe).flags & OPTIONS_TABLE_IS_HOOK != 0))
             {
                 oe = oe.add(1);
                 continue;
             }
 
             o = options_get_only(oo, (*oe).name);
-            if (o.is_null()) {
-                if (!args_has_(args, 'A')) {
+            if o.is_null() {
+                if !args_has_(args, 'A') {
                     oe = oe.add(1);
                     continue;
                 }
                 o = options_get(oo, (*oe).name);
-                if (o.is_null()) {
+                if o.is_null() {
                     oe = oe.add(1);
                     continue;
                 }
@@ -268,22 +268,22 @@ pub unsafe extern "C" fn cmd_show_options_all(
                 parent = 0;
             }
 
-            if (options_is_array(o) == 0) {
+            if options_is_array(o) == 0 {
                 cmd_show_options_print(self_, item, o, -1, parent);
-            } else if ({
+            } else if {
                 (a = options_array_first(o));
                 a.is_null()
-            }) {
-                if (!args_has_(args, 'v')) {
+            } {
+                if !args_has_(args, 'v') {
                     let name = options_name(o);
-                    if (parent != 0) {
+                    if parent != 0 {
                         cmdq_print(item, c"%s*".as_ptr(), name);
                     } else {
                         cmdq_print(item, c"%s".as_ptr(), name);
                     }
                 }
             } else {
-                while (!a.is_null()) {
+                while !a.is_null() {
                     let idx = options_array_item_index(a);
                     cmd_show_options_print(self_, item, o, idx as i32, parent);
                     a = options_array_next(a);
