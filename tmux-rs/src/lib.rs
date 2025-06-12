@@ -686,6 +686,7 @@ pub struct colour_palette {
     pub default_palette: *mut i32,
 }
 
+// TODO remove these constants
 const GRID_ATTR_BRIGHT: grid_attr = grid_attr::GRID_ATTR_BRIGHT;
 const GRID_ATTR_DIM: grid_attr = grid_attr::GRID_ATTR_DIM;
 const GRID_ATTR_UNDERSCORE: grid_attr = grid_attr::GRID_ATTR_UNDERSCORE;
@@ -1493,11 +1494,19 @@ impl crate::compat::queue::Entry<window, discr_alerts_entry> for window {
     }
 }
 
-pub const WINLINK_BELL: i32 = 0x1;
-pub const WINLINK_ACTIVITY: i32 = 0x2;
-pub const WINLINK_SILENCE: i32 = 0x4;
-pub const WINLINK_ALERTFLAGS: i32 = WINLINK_BELL | WINLINK_ACTIVITY | WINLINK_SILENCE;
-pub const WINLINK_VISITED: i32 = 0x8;
+bitflags::bitflags! {
+    #[repr(transparent)]
+    #[derive(Copy, Clone, Eq, PartialEq)]
+    pub struct winlink_flags: i32 {
+        const WINLINK_BELL = 0x1;
+        const WINLINK_ACTIVITY = 0x2;
+        const WINLINK_SILENCE = 0x4;
+        const WINLINK_VISITED = 0x8;
+    }
+}
+pub const WINLINK_ALERTFLAGS: winlink_flags = winlink_flags::WINLINK_BELL
+    .union(winlink_flags::WINLINK_ACTIVITY)
+    .union(winlink_flags::WINLINK_SILENCE);
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -1506,7 +1515,7 @@ pub struct winlink {
     pub session: *mut session,
     pub window: *mut window,
 
-    pub flags: i32,
+    pub flags: winlink_flags,
 
     pub entry: rb_entry<winlink>,
 

@@ -241,16 +241,16 @@ pub unsafe extern "C" fn winlink_stack_push(stack: *mut winlink_stack, wl: *mut 
     unsafe {
         winlink_stack_remove(stack, wl);
         tailq_insert_head!(stack, wl, sentry);
-        (*wl).flags |= WINLINK_VISITED;
+        (*wl).flags |= winlink_flags::WINLINK_VISITED;
     }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn winlink_stack_remove(stack: *mut winlink_stack, wl: *mut winlink) {
     unsafe {
-        if !wl.is_null() && (*wl).flags & WINLINK_VISITED != 0 {
+        if !wl.is_null() && (*wl).flags.intersects(winlink_flags::WINLINK_VISITED) {
             tailq_remove::<_, discr_sentry>(stack, wl);
-            (*wl).flags &= !WINLINK_VISITED;
+            (*wl).flags &= !winlink_flags::WINLINK_VISITED;
         }
     }
 }
@@ -1011,7 +1011,7 @@ pub unsafe extern "C" fn window_printable_flags(wl: *mut winlink, escape: i32) -
         let s = (*wl).session;
 
         let mut pos = 0;
-        if (*wl).flags & WINLINK_ACTIVITY != 0 {
+        if (*wl).flags.intersects(winlink_flags::WINLINK_ACTIVITY) {
             flags[pos] = b'#' as c_char;
             pos += 1;
             if escape != 0 {
@@ -1019,11 +1019,11 @@ pub unsafe extern "C" fn window_printable_flags(wl: *mut winlink, escape: i32) -
                 pos += 1;
             }
         }
-        if (*wl).flags & WINLINK_BELL != 0 {
+        if (*wl).flags.intersects(winlink_flags::WINLINK_BELL) {
             flags[pos] = b'!' as c_char;
             pos += 1;
         }
-        if (*wl).flags & WINLINK_SILENCE != 0 {
+        if (*wl).flags.intersects(winlink_flags::WINLINK_SILENCE) {
             flags[pos] = b'~' as c_char;
             pos += 1;
         }
@@ -1810,7 +1810,7 @@ pub unsafe extern "C" fn winlink_clear_flags(wl: *mut winlink) {
         for loop_ in tailq_foreach::<_, crate::discr_wentry>(&raw mut (*(*wl).window).winlinks)
             .map(NonNull::as_ptr)
         {
-            if ((*loop_).flags & WINLINK_ALERTFLAGS) != 0 {
+            if ((*loop_).flags.intersects(WINLINK_ALERTFLAGS)) {
                 (*loop_).flags &= !WINLINK_ALERTFLAGS;
                 server_status_session((*loop_).session);
             }

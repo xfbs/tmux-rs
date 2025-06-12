@@ -197,7 +197,7 @@ unsafe fn alerts_check_bell(w: *mut window) -> window_flag {
              */
             let s = (*wl).session;
             if (*s).curw != wl || (*s).attached == 0 {
-                (*wl).flags |= WINLINK_BELL;
+                (*wl).flags |= winlink_flags::WINLINK_BELL;
                 server_status_session(s);
             }
             if alerts_action_applies(wl, c"bell-action".as_ptr()) == 0 {
@@ -236,7 +236,7 @@ unsafe fn alerts_check_activity(w: *mut window) -> window_flag {
         {
             let s = (*wl).session;
             if (*s).curw != wl || (*s).attached == 0 {
-                (*wl).flags |= WINLINK_ACTIVITY;
+                (*wl).flags |= winlink_flags::WINLINK_ACTIVITY;
                 server_status_session(s);
             }
             if alerts_action_applies(wl, c"activity-action".as_ptr()) == 0 {
@@ -273,12 +273,12 @@ unsafe fn alerts_check_silence(w: *mut window) -> window_flag {
         for wl in
             tailq_foreach::<_, crate::discr_wentry>(&raw mut (*w).winlinks).map(NonNull::as_ptr)
         {
-            if (*wl).flags & WINLINK_SILENCE != 0 {
+            if (*wl).flags.intersects(winlink_flags::WINLINK_SILENCE) {
                 continue;
             }
             let s = (*wl).session;
             if (*s).curw != wl || (*s).attached == 0 {
-                (*wl).flags |= WINLINK_SILENCE;
+                (*wl).flags |= winlink_flags::WINLINK_SILENCE;
                 server_status_session(s);
             }
             if alerts_action_applies(wl, c"silence-action".as_ptr()) == 0 {

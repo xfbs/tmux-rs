@@ -459,7 +459,7 @@ pub unsafe extern "C" fn session_is_linked(s: *mut session, w: *mut window) -> i
 pub unsafe extern "C" fn session_next_alert(mut wl: *mut winlink) -> *mut winlink {
     unsafe {
         while (!wl.is_null()) {
-            if (*wl).flags & WINLINK_ALERTFLAGS != 0 {
+            if (*wl).flags.intersects(WINLINK_ALERTFLAGS) {
                 break;
             }
             wl = winlink_next(wl);
@@ -500,7 +500,7 @@ pub unsafe extern "C" fn session_next(s: *mut session, alert: i32) -> i32 {
 pub unsafe extern "C" fn session_previous_alert(mut wl: *mut winlink) -> *mut winlink {
     unsafe {
         while (!wl.is_null()) {
-            if (*wl).flags & WINLINK_ALERTFLAGS != 0 {
+            if (*wl).flags.intersects(WINLINK_ALERTFLAGS) {
                 break;
             }
             wl = winlink_previous(wl);
@@ -774,7 +774,7 @@ pub unsafe extern "C" fn session_group_synchronize1(target: *mut session, s: *mu
             if let Some(wl2) = NonNull::new(winlink_find_by_index(&raw mut (*s).windows, (*wl).idx))
             {
                 tailq_insert_tail::<_, discr_sentry>(&raw mut (*s).lastw, wl2.as_ptr());
-                (*wl2.as_ptr()).flags |= WINLINK_VISITED;
+                (*wl2.as_ptr()).flags |= winlink_flags::WINLINK_VISITED;
             }
         }
 
@@ -831,11 +831,11 @@ pub unsafe extern "C" fn session_renumber_windows(s: *mut session) {
         memcpy__(old_lastw.as_mut_ptr(), &raw mut (*s).lastw);
         tailq_init(&raw mut (*s).lastw);
         for wl in tailq_foreach::<_, discr_sentry>(old_lastw.as_mut_ptr()).map(|e| e.as_ptr()) {
-            (*wl).flags &= !WINLINK_VISITED;
+            (*wl).flags &= !winlink_flags::WINLINK_VISITED;
 
             if let Some(wl_new) = winlink_find_by_window(&raw mut (*s).windows, (*wl).window) {
                 tailq_insert_tail::<_, discr_sentry>(&raw mut (*s).lastw, wl_new.as_ptr());
-                (*wl_new.as_ptr()).flags |= WINLINK_VISITED;
+                (*wl_new.as_ptr()).flags |= winlink_flags::WINLINK_VISITED;
             }
         }
 

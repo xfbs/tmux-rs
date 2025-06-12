@@ -631,7 +631,7 @@ pub unsafe extern "C" fn format_cb_session_alerts(ft: *mut format_tree) -> *mut 
 
         *alerts = b'\0' as c_char;
         for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
-            if ((*wl).flags & WINLINK_ALERTFLAGS) == 0 {
+            if (!(*wl).flags.intersects(WINLINK_ALERTFLAGS)) {
                 continue;
             }
             xsnprintf(tmp, sizeof_tmp, c"%u".as_ptr(), (*wl).idx);
@@ -640,13 +640,13 @@ pub unsafe extern "C" fn format_cb_session_alerts(ft: *mut format_tree) -> *mut 
                 strlcat(alerts, c",".as_ptr(), sizeof_alerts);
             }
             strlcat(alerts, tmp, sizeof_alerts);
-            if (*wl).flags & WINLINK_ACTIVITY != 0 {
+            if (*wl).flags.intersects(winlink_flags::WINLINK_ACTIVITY) {
                 strlcat(alerts, c"#".as_ptr(), sizeof_alerts);
             }
-            if (*wl).flags & WINLINK_BELL != 0 {
+            if (*wl).flags.intersects(winlink_flags::WINLINK_BELL) {
                 strlcat(alerts, c"!".as_ptr(), sizeof_alerts);
             }
-            if (*wl).flags & WINLINK_SILENCE != 0 {
+            if (*wl).flags.intersects(winlink_flags::WINLINK_SILENCE) {
                 strlcat(alerts, c"~".as_ptr(), sizeof_alerts);
             }
         }
@@ -2733,7 +2733,10 @@ pub unsafe extern "C" fn format_cb_window_active(ft: *mut format_tree) -> *mut c
 pub unsafe extern "C" fn format_cb_window_activity_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wl.is_null() {
-            if ((*(*ft).wl).flags & WINLINK_ACTIVITY) != 0 {
+            if ((*(*ft).wl)
+                .flags
+                .intersects(winlink_flags::WINLINK_ACTIVITY))
+            {
                 return xstrdup(c"1".as_ptr()).as_ptr().cast();
             }
             return xstrdup(c"0".as_ptr()).as_ptr().cast();
@@ -2747,7 +2750,7 @@ pub unsafe extern "C" fn format_cb_window_activity_flag(ft: *mut format_tree) ->
 pub unsafe extern "C" fn format_cb_window_bell_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wl.is_null() {
-            if ((*(*ft).wl).flags & WINLINK_BELL) != 0 {
+            if ((*(*ft).wl).flags.intersects(winlink_flags::WINLINK_BELL)) {
                 return xstrdup(c"1".as_ptr()).as_ptr().cast();
             }
             return xstrdup(c"0".as_ptr()).as_ptr().cast();
@@ -2990,7 +2993,7 @@ pub unsafe extern "C" fn format_cb_window_raw_flags(ft: *mut format_tree) -> *mu
 pub unsafe extern "C" fn format_cb_window_silence_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wl.is_null() {
-            if ((*(*ft).wl).flags & WINLINK_SILENCE) != 0 {
+            if ((*(*ft).wl).flags.intersects(winlink_flags::WINLINK_SILENCE)) {
                 return xstrdup(c"1".as_ptr()).as_ptr().cast();
             }
             return xstrdup(c"0".as_ptr()).as_ptr().cast();
