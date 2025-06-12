@@ -227,9 +227,7 @@ pub unsafe extern "C" fn window_copy_scroll_timer(_fd: i32, _events: i16, arg: *
 
         evtimer_del(&raw mut (*data).dragtimer);
 
-        if (tailq_first(&raw mut (*wp).modes) != wme) {
-            return;
-        }
+        if tailq_first(&raw mut (*wp).modes) != wme {return;}
 
         if ((*data).cy == 0) {
             evtimer_add(&raw mut (*data).dragtimer, &raw mut tv);
@@ -259,15 +257,11 @@ pub unsafe extern "C" fn window_copy_clone_screen(
         let mut dst: *mut screen = xcalloc1();
 
         let mut sy = screen_hsize(src) + screen_size_y(src);
-        if (trim != 0) {
-            while (sy > screen_hsize(src)) {
+        if trim != 0 {while (sy > screen_hsize(src)) {
                 gl = grid_peek_line((*src).grid, sy - 1);
-                if ((*gl).cellused != 0) {
-                    break;
-                }
+                if (*gl).cellused != 0 {break;}
                 sy -= 1;
-            }
-        }
+            }}
         // log_debug( "%s: target screen is %ux%u, source %ux%u", __func__, screen_size_x(src), sy, screen_size_x(hint), screen_hsize(src) + screen_size_y(src),);
         screen_init(dst, screen_size_x(src), sy, screen_hlimit(src));
 
@@ -296,13 +290,9 @@ pub unsafe extern "C" fn window_copy_clone_screen(
         } else {
             reflow = false;
         }
-        if (reflow) {
-            grid_wrap_position((*dst).grid, *cx, *cy, &raw mut wx, &raw mut wy);
-        }
+        if reflow {grid_wrap_position((*dst).grid, *cx, *cy, &raw mut wx, &raw mut wy);}
         screen_resize_cursor(dst, screen_size_x(hint), screen_size_y(hint), 1, 0, 0);
-        if (reflow) {
-            grid_unwrap_position((*dst).grid, cx, cy, wx, wy);
-        }
+        if reflow {grid_unwrap_position((*dst).grid, cx, cy, wx, wy);}
 
         dst
     }
@@ -397,9 +387,7 @@ pub unsafe extern "C" fn window_copy_init(
         (*data).scroll_exit = args_has(args, b'e');
         (*data).hide_position = args_has(args, b'H');
 
-        if (!(*base).hyperlinks.is_null()) {
-            (*data).screen.hyperlinks = hyperlinks_copy((*base).hyperlinks);
-        }
+        if !(*base).hyperlinks.is_null() {(*data).screen.hyperlinks = hyperlinks_copy((*base).hyperlinks);}
         (*data).screen.cx = (*data).cx;
         (*data).screen.cy = (*data).cy;
         (*data).mx = (*data).cx;
@@ -462,9 +450,7 @@ pub unsafe extern "C" fn window_copy_free(wme: NonNull<window_mode_entry>) {
             screen_free((*data).writing);
             free_((*data).writing);
         }
-        if (!(*data).ictx.is_null()) {
-            input_free((*data).ictx);
-        }
+        if !(*data).ictx.is_null() {input_free((*data).ictx);}
         screen_free((*data).backing);
         free_((*data).backing);
 
@@ -563,9 +549,7 @@ pub unsafe extern "C" fn window_copy_vadd(
          * If the history has changed, draw the top line.
          * (If there's any history at all, it has changed.)
          */
-        if (screen_hsize((*data).backing) != 0) {
-            window_copy_redraw_lines(wme, 0, 1);
-        }
+        if screen_hsize((*data).backing) != 0 {window_copy_redraw_lines(wme, 0, 1);}
 
         /* Write the new lines. */
         window_copy_redraw_lines(wme, old_cy, (*backing).cy - old_cy + 1);
@@ -598,13 +582,11 @@ pub unsafe extern "C" fn window_copy_pageup1(wme: *mut window_mode_entry, half_p
         (*data).cx = (*data).lastcx;
 
         let mut n = 1;
-        if (screen_size_y(s) > 2) {
-            if (half_page != 0) {
+        if screen_size_y(s) > 2 {if (half_page != 0) {
                 n = screen_size_y(s) / 2;
             } else {
                 n = screen_size_y(s) - 2;
-            }
-        }
+            }}
 
         if ((*data).oy + n > screen_hsize((*data).backing)) {
             (*data).oy = screen_hsize((*data).backing);
@@ -620,14 +602,10 @@ pub unsafe extern "C" fn window_copy_pageup1(wme: *mut window_mode_entry, half_p
         if ((*data).screen.sel.is_null() || (*data).rectflag == 0) {
             let py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
             let px = window_copy_find_length(wme, py);
-            if (((*data).cx >= (*data).lastsx && (*data).cx != px) || (*data).cx > px) {
-                window_copy_cursor_end_of_line(wme);
-            }
+            if ((*data).cx >= (*data).lastsx && (*data).cx != px) || (*data).cx > px {window_copy_cursor_end_of_line(wme);}
         }
 
-        if (!(*data).searchmark.is_null() && (*data).timeout == 0) {
-            window_copy_search_marks(wme, null_mut(), (*data).searchregex, 1);
-        }
+        if !(*data).searchmark.is_null() && (*data).timeout == 0 {window_copy_search_marks(wme, null_mut(), (*data).searchregex, 1);}
         window_copy_update_selection(wme, 1, 0);
         window_copy_redraw_screen(wme);
     }
@@ -640,9 +618,7 @@ pub unsafe extern "C" fn window_copy_pagedown(
     scroll_exit: i32,
 ) {
     unsafe {
-        if (window_copy_pagedown1(tailq_first(&raw mut (*wp).modes), half_page, scroll_exit) != 0) {
-            window_pane_reset_mode(wp);
-        }
+        if window_copy_pagedown1(tailq_first(&raw mut (*wp).modes), half_page, scroll_exit) != 0 {window_pane_reset_mode(wp);}
     }
 }
 
@@ -666,13 +642,11 @@ pub unsafe extern "C" fn window_copy_pagedown1(
         (*data).cx = (*data).lastcx;
 
         let mut n = 1;
-        if (screen_size_y(s) > 2) {
-            if (half_page != 0) {
+        if screen_size_y(s) > 2 {if (half_page != 0) {
                 n = screen_size_y(s) / 2;
             } else {
                 n = screen_size_y(s) - 2;
-            }
-        }
+            }}
 
         if ((*data).oy < n) {
             (*data).oy = 0;
@@ -688,17 +662,11 @@ pub unsafe extern "C" fn window_copy_pagedown1(
         if ((*data).screen.sel.is_null() || (*data).rectflag == 0) {
             let mut py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
             let mut px = window_copy_find_length(wme, py);
-            if (((*data).cx >= (*data).lastsx && (*data).cx != px) || (*data).cx > px) {
-                window_copy_cursor_end_of_line(wme);
-            }
+            if ((*data).cx >= (*data).lastsx && (*data).cx != px) || (*data).cx > px {window_copy_cursor_end_of_line(wme);}
         }
 
-        if (scroll_exit != 0 && (*data).oy == 0) {
-            return 1;
-        }
-        if (!(*data).searchmark.is_null() && (*data).timeout == 0) {
-            window_copy_search_marks(wme, null_mut(), (*data).searchregex, 1);
-        }
+        if scroll_exit != 0 && (*data).oy == 0 {return 1;}
+        if !(*data).searchmark.is_null() && (*data).timeout == 0 {window_copy_search_marks(wme, null_mut(), (*data).searchregex, 1);}
         window_copy_update_selection(wme, 1, 0);
         window_copy_redraw_screen(wme);
 
@@ -936,9 +904,7 @@ pub unsafe extern "C" fn window_copy_size_changed(wme: *mut window_mode_entry) {
         window_copy_write_lines(wme, &raw mut ctx, 0, screen_size_y(s));
         screen_write_stop(&raw mut ctx);
 
-        if (search && (*data).timeout == 0) {
-            window_copy_search_marks(wme, null_mut(), (*data).searchregex, 0);
-        }
+        if search && (*data).timeout == 0 {window_copy_search_marks(wme, null_mut(), (*data).searchregex, 0);}
         (*data).searchx = (*data).cx as i32;
         (*data).searchy = (*data).cy as i32;
         (*data).searcho = (*data).oy as i32;
@@ -960,13 +926,9 @@ pub unsafe extern "C" fn window_copy_resize(wme: NonNull<window_mode_entry>, sx:
         let mut cx = (*data).cx;
         let mut cy = (*gd).hsize + (*data).cy - (*data).oy;
         let reflow = ((*gd).sx != sx);
-        if (reflow) {
-            grid_wrap_position(gd, cx, cy, &raw mut wx, &raw mut wy);
-        }
+        if reflow {grid_wrap_position(gd, cx, cy, &raw mut wx, &raw mut wy);}
         screen_resize_cursor((*data).backing, sx, sy, 1, 0, 0);
-        if (reflow) {
-            grid_unwrap_position(gd, &raw mut cx, &raw mut cy, wx, wy);
-        }
+        if reflow {grid_unwrap_position(gd, &raw mut cx, &raw mut cy, wx, wy);}
 
         (*data).cx = cx;
         if (cy < (*gd).hsize) {
@@ -1005,9 +967,7 @@ pub unsafe extern "C" fn window_copy_expand_search_string(cs: *mut window_copy_c
         let mut data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut ss = args_string((*cs).args, 1);
 
-        if (ss.is_null() || *ss == b'\0' as i8) {
-            return 0;
-        }
+        if ss.is_null() || *ss == b'\0' as i8 {return 0;}
 
         if (args_has_((*cs).args, 'F')) {
             let expanded = format_single(
@@ -1040,9 +1000,7 @@ pub unsafe extern "C" fn window_copy_cmd_append_selection(
         let mut wme: *mut window_mode_entry = (*cs).wme;
         let mut s = (*cs).s;
 
-        if (!s.is_null()) {
-            window_copy_append_selection(wme);
-        }
+        if !s.is_null() {window_copy_append_selection(wme);}
         window_copy_clear_selection(wme);
         window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
     }
@@ -1056,9 +1014,7 @@ pub unsafe extern "C" fn window_copy_cmd_append_selection_and_cancel(
         let mut wme = (*cs).wme;
         let mut s = (*cs).s;
 
-        if (!s.is_null()) {
-            window_copy_append_selection(wme);
-        }
+        if !s.is_null() {window_copy_append_selection(wme);}
         window_copy_clear_selection(wme);
         window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL
     }
@@ -1167,16 +1123,10 @@ pub unsafe extern "C" fn window_copy_do_copy_end_of_line(
         let mut arg2 = args_string((*cs).args, 2);
 
         if (pipe != 0) {
-            if (count == 3) {
-                prefix = format_single(null_mut(), arg2, c, s, wl, wp);
-            }
-            if (!s.is_null() && count > 1 && *arg1 != b'\0' as i8) {
-                command = format_single(null_mut(), arg1, c, s, wl, wp);
-            }
+            if count == 3 {prefix = format_single(null_mut(), arg2, c, s, wl, wp);}
+            if !s.is_null() && count > 1 && *arg1 != b'\0' as i8 {command = format_single(null_mut(), arg1, c, s, wl, wp);}
         } else {
-            if (count == 2) {
-                prefix = format_single(null_mut(), arg1, c, s, wl, wp);
-            }
+            if count == 2 {prefix = format_single(null_mut(), arg1, c, s, wl, wp);}
         }
 
         let ocx = (*data).cx;
@@ -1266,16 +1216,10 @@ pub unsafe extern "C" fn window_copy_do_copy_line(
         let mut arg2 = args_string((*cs).args, 2);
 
         if (pipe != 0) {
-            if (count == 3) {
-                prefix = format_single(null_mut(), arg2, c, s, wl, wp);
-            }
-            if (!s.is_null() && count > 1 && *arg1 != b'\0' as i8) {
-                command = format_single(null_mut(), arg1, c, s, wl, wp);
-            }
+            if count == 3 {prefix = format_single(null_mut(), arg2, c, s, wl, wp);}
+            if !s.is_null() && count > 1 && *arg1 != b'\0' as i8 {command = format_single(null_mut(), arg1, c, s, wl, wp);}
         } else {
-            if (count == 2) {
-                prefix = format_single(null_mut(), arg1, c, s, wl, wp);
-            }
+            if count == 2 {prefix = format_single(null_mut(), arg1, c, s, wl, wp);}
         }
 
         let ocx = (*data).cx;
@@ -1357,13 +1301,9 @@ pub unsafe extern "C" fn window_copy_cmd_copy_selection_no_clear(
         let mut prefix = null_mut();
         let arg1 = args_string((*cs).args, 1);
 
-        if (!arg1.is_null()) {
-            prefix = format_single(null_mut(), arg1, c, s, wl, wp);
-        }
+        if !arg1.is_null() {prefix = format_single(null_mut(), arg1, c, s, wl, wp);}
 
-        if (!s.is_null()) {
-            window_copy_copy_selection(wme, prefix);
-        }
+        if !s.is_null() {window_copy_copy_selection(wme, prefix);}
 
         free_(prefix);
         window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
@@ -1572,9 +1512,7 @@ pub unsafe extern "C" fn window_copy_cmd_halfpage_down(
         let mut np = (*wme).prefix;
 
         while np != 0 {
-            if (window_copy_pagedown1(wme, 1, (*data).scroll_exit) != 0) {
-                return window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL;
-            }
+            if window_copy_pagedown1(wme, 1, (*data).scroll_exit) != 0 {return window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL;}
             np -= 1;
         }
         window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
@@ -1590,9 +1528,7 @@ pub unsafe extern "C" fn window_copy_cmd_halfpage_down_and_cancel(
         let mut np = (*wme).prefix;
 
         while np != 0 {
-            if (window_copy_pagedown1(wme, 1, 1) != 0) {
-                return window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL;
-            }
+            if window_copy_pagedown1(wme, 1, 1) != 0 {return window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL;}
             np -= 1;
         }
         window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
@@ -1638,17 +1574,13 @@ pub unsafe extern "C" fn window_copy_cmd_history_bottom(
         let mut s: *mut screen = (*data).backing;
 
         let oy = screen_hsize(s) + (*data).cy - (*data).oy;
-        if ((*data).lineflag == line_sel::LINE_SEL_RIGHT_LEFT && oy == (*data).endsely) {
-            window_copy_other_end(wme);
-        }
+        if (*data).lineflag == line_sel::LINE_SEL_RIGHT_LEFT && oy == (*data).endsely {window_copy_other_end(wme);}
 
         (*data).cy = screen_size_y(&(*data).screen) - 1;
         (*data).cx = window_copy_find_length(wme, screen_hsize(s) + (*data).cy);
         (*data).oy = 0;
 
-        if (!(*data).searchmark.is_null() && (*data).timeout == 0) {
-            window_copy_search_marks(wme, null_mut(), (*data).searchregex, 1);
-        }
+        if !(*data).searchmark.is_null() && (*data).timeout == 0 {window_copy_search_marks(wme, null_mut(), (*data).searchregex, 1);}
         window_copy_update_selection(wme, 1, 0);
         window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
     }
@@ -1663,17 +1595,13 @@ pub unsafe extern "C" fn window_copy_cmd_history_top(
         let mut data: *mut window_copy_mode_data = (*wme).data.cast();
 
         let oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
-        if ((*data).lineflag == line_sel::LINE_SEL_LEFT_RIGHT && oy == (*data).sely) {
-            window_copy_other_end(wme);
-        }
+        if (*data).lineflag == line_sel::LINE_SEL_LEFT_RIGHT && oy == (*data).sely {window_copy_other_end(wme);}
 
         (*data).cy = 0;
         (*data).cx = 0;
         (*data).oy = screen_hsize((*data).backing);
 
-        if (!(*data).searchmark.is_null() && (*data).timeout == 0) {
-            window_copy_search_marks(wme, null_mut(), (*data).searchregex, 1);
-        }
+        if !(*data).searchmark.is_null() && (*data).timeout == 0 {window_copy_search_marks(wme, null_mut(), (*data).searchregex, 1);}
         window_copy_update_selection(wme, 1, 0);
         window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
     }
@@ -1800,9 +1728,7 @@ pub unsafe extern "C" fn window_copy_cmd_previous_matching_bracket(
             let mut px = (*data).cx;
             let mut py = screen_hsize(s) + (*data).cy - (*data).oy;
             let mut xx = window_copy_find_length(wme, py);
-            if (xx == 0) {
-                break;
-            }
+            if xx == 0 {break;}
 
             /*
              * Get the current character. If not on a bracket, try the
@@ -1858,13 +1784,9 @@ pub unsafe extern "C" fn window_copy_cmd_previous_matching_bracket(
                     }
 
                     grid_get_cell((*s).grid, px, py, &raw mut gc);
-                    if (gc.data.size == 1 && !gc.flags.intersects(grid_flag::PADDING)) {
-                        if (gc.data.data[0] == found as u8) {
+                    if gc.data.size == 1 && !gc.flags.intersects(grid_flag::PADDING) {if (gc.data.data[0] == found as u8) {
                             n += 1;
-                        } else if (gc.data.data[0] == start as u8) {
-                            n -= 1;
-                        }
-                    }
+                        } else if gc.data.data[0] == start as u8 {n -= 1;}}
                     if n == 0 {
                         break;
                     }
@@ -1910,9 +1832,7 @@ pub unsafe extern "C" fn window_copy_cmd_next_matching_bracket(
             let mut py = screen_hsize(s) + (*data).cy - (*data).oy;
             let mut xx = window_copy_find_length(wme, py);
             let yy = screen_hsize(s) + screen_size_y(s) - 1;
-            if (xx == 0) {
-                break;
-            }
+            if xx == 0 {break;}
 
             /*
              * Get the current character. If not on a bracket, try the
@@ -1942,13 +1862,10 @@ pub unsafe extern "C" fn window_copy_cmd_next_matching_bracket(
                         px = (*data).cx;
                         py = screen_hsize(s) + (*data).cy - (*data).oy;
                         grid_get_cell((*s).grid, px, py, &raw mut gc);
-                        if (gc.data.size == 1
+                        if gc.data.size == 1
                             && !gc.flags.intersects(grid_flag::PADDING)
                             && !libc::strchr((&raw const close).cast(), gc.data.data[0] as i32)
-                                .is_null())
-                        {
-                            window_copy_scroll_to(wme, sx, sy, boolint::FALSE);
-                        }
+                                .is_null() {window_copy_scroll_to(wme, sx, sy, boolint::FALSE);}
                         break;
                     }
 
@@ -2007,22 +1924,14 @@ pub unsafe extern "C" fn window_copy_cmd_next_matching_bracket(
                     }
 
                     grid_get_cell((*s).grid, px, py, &raw mut gc);
-                    if (gc.data.size == 1 && !gc.flags.intersects(grid_flag::PADDING)) {
-                        if (gc.data.data[0] == found) {
+                    if gc.data.size == 1 && !gc.flags.intersects(grid_flag::PADDING) {if (gc.data.data[0] == found) {
                             n += 1;
-                        } else if (gc.data.data[0] == end as u8) {
-                            n -= 1;
-                        }
-                    }
-                    if (n == 0) {
-                        break;
-                    }
+                        } else if gc.data.data[0] == end as u8 {n -= 1;}}
+                    if n == 0 {break;}
                 }
 
                 /* Move the cursor to the found location if any. */
-                if (!failed) {
-                    window_copy_scroll_to(wme, px, py, boolint::FALSE);
-                }
+                if !failed {window_copy_scroll_to(wme, px, py, boolint::FALSE);}
                 break;
             }
             np -= 1;
@@ -2126,9 +2035,7 @@ pub unsafe extern "C" fn window_copy_cmd_other_end(
         let mut data: *mut window_copy_mode_data = (*wme).data.cast();
 
         (*data).selflag = selflag::SEL_CHAR;
-        if ((np % 2) != 0) {
-            window_copy_other_end(wme);
-        }
+        if (np % 2) != 0 {window_copy_other_end(wme);}
         window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
 }
@@ -2143,9 +2050,7 @@ pub unsafe extern "C" fn window_copy_cmd_page_down(
         let mut np = (*wme).prefix;
 
         while np != 0 {
-            if (window_copy_pagedown1(wme, 0, (*data).scroll_exit) != 0) {
-                return window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL;
-            }
+            if window_copy_pagedown1(wme, 0, (*data).scroll_exit) != 0 {return window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL;}
             np -= 1;
         }
         window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
@@ -2161,9 +2066,7 @@ pub unsafe extern "C" fn window_copy_cmd_page_down_and_cancel(
         let mut np = (*wme).prefix;
 
         while np != 0 {
-            if (window_copy_pagedown1(wme, 0, 1) != 0) {
-                return window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL;
-            }
+            if window_copy_pagedown1(wme, 0, 1) != 0 {return window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL;}
             np -= 1;
         }
         window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
@@ -2353,12 +2256,10 @@ pub unsafe extern "C" fn window_copy_cmd_search_again(
                 window_copy_search_up(wme, (*data).searchregex);
                 np -= 1;
             }
-        } else if ((*data).searchtype == window_copy::WINDOW_COPY_SEARCHDOWN) {
-            while np != 0 {
+        } else if (*data).searchtype == window_copy::WINDOW_COPY_SEARCHDOWN {while np != 0 {
                 window_copy_search_down(wme, (*data).searchregex);
                 np -= 1;
-            }
-        }
+            }}
         window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
 }
@@ -2377,12 +2278,10 @@ pub unsafe extern "C" fn window_copy_cmd_search_reverse(
                 window_copy_search_down(wme, (*data).searchregex);
                 np -= 1;
             }
-        } else if ((*data).searchtype == window_copy::WINDOW_COPY_SEARCHDOWN) {
-            while np != 0 {
+        } else if (*data).searchtype == window_copy::WINDOW_COPY_SEARCHDOWN {while np != 0 {
                 window_copy_search_up(wme, (*data).searchregex);
                 np -= 1;
-            }
-        }
+            }}
         window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
 }
@@ -2461,18 +2360,14 @@ pub unsafe extern "C" fn window_copy_cmd_select_word(
             window_copy_cursor_next_word_end(wme, (*data).separators, 1);
         } else {
             window_copy_update_cursor(wme, px, (*data).cy);
-            if (window_copy_update_selection(wme, 1, 1) != 0) {
-                window_copy_redraw_lines(wme, (*data).cy, 1);
-            }
+            if window_copy_update_selection(wme, 1, 1) != 0 {window_copy_redraw_lines(wme, (*data).cy, 1);}
         }
         (*data).endselrx = (*data).cx;
         (*data).endselry = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
         if ((*data).dy > (*data).endselry) {
             (*data).dy = (*data).endselry;
             (*data).dx = (*data).endselrx;
-        } else if ((*data).dx > (*data).endselrx) {
-            (*data).dx = (*data).endselrx;
-        }
+        } else if (*data).dx > (*data).endselrx {(*data).dx = (*data).endselrx;}
 
         window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW
     }
@@ -2533,13 +2428,9 @@ pub unsafe extern "C" fn window_copy_cmd_copy_pipe_no_clear(
         let mut arg1 = args_string((*cs).args, 1);
         let mut arg2 = args_string((*cs).args, 2);
 
-        if (!arg2.is_null()) {
-            prefix = format_single(null_mut(), arg2, c, s, wl, wp);
-        }
+        if !arg2.is_null() {prefix = format_single(null_mut(), arg2, c, s, wl, wp);}
 
-        if (!s.is_null() && !arg1.is_null() && *arg1 != b'\0' as i8) {
-            command = format_single(null_mut(), arg1, c, s, wl, wp);
-        }
+        if !s.is_null() && !arg1.is_null() && *arg1 != b'\0' as i8 {command = format_single(null_mut(), arg1, c, s, wl, wp);}
         window_copy_copy_pipe(wme, s, prefix, command);
         free_(command);
 
@@ -2587,9 +2478,7 @@ pub unsafe extern "C" fn window_copy_cmd_pipe_no_clear(
         let mut command = null_mut();
         let arg1 = args_string((*cs).args, 1);
 
-        if (!s.is_null() && !arg1.is_null() && *arg1 != b'\0' as i8) {
-            command = format_single(null_mut(), arg1, c, s, wl, wp);
-        }
+        if !s.is_null() && !arg1.is_null() && *arg1 != b'\0' as i8 {command = format_single(null_mut(), arg1, c, s, wl, wp);}
         window_copy_pipe(wme, s, command);
         free_(command);
 
@@ -2631,9 +2520,7 @@ pub unsafe extern "C" fn window_copy_cmd_goto_line(
         let mut wme: *mut window_mode_entry = (*cs).wme;
         let arg1 = args_string((*cs).args, 1);
 
-        if (*arg1 != b'\0' as i8) {
-            window_copy_goto_line(wme, arg1);
-        }
+        if *arg1 != b'\0' as i8 {window_copy_goto_line(wme, arg1);}
         window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
     }
 }
@@ -2777,9 +2664,7 @@ pub unsafe extern "C" fn window_copy_cmd_search_backward(
         let mut data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut np = (*wme).prefix;
 
-        if (window_copy_expand_search_string(cs) == 0) {
-            return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;
-        }
+        if window_copy_expand_search_string(cs) == 0 {return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;}
 
         if (!(*data).searchstr.is_null()) {
             (*data).searchtype = window_copy::WINDOW_COPY_SEARCHUP;
@@ -2803,9 +2688,7 @@ pub unsafe extern "C" fn window_copy_cmd_search_backward_text(
         let mut data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut np = (*wme).prefix;
 
-        if (window_copy_expand_search_string(cs) == 0) {
-            return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;
-        }
+        if window_copy_expand_search_string(cs) == 0 {return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;}
 
         if (!(*data).searchstr.is_null()) {
             (*data).searchtype = window_copy::WINDOW_COPY_SEARCHUP;
@@ -2829,9 +2712,7 @@ pub unsafe extern "C" fn window_copy_cmd_search_forward(
         let mut data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut np = (*wme).prefix;
 
-        if (window_copy_expand_search_string(cs) == 0) {
-            return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;
-        }
+        if window_copy_expand_search_string(cs) == 0 {return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;}
 
         if (!(*data).searchstr.is_null()) {
             (*data).searchtype = window_copy::WINDOW_COPY_SEARCHDOWN;
@@ -2855,9 +2736,7 @@ pub unsafe extern "C" fn window_copy_cmd_search_forward_text(
         let mut data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut np = (*wme).prefix;
 
-        if (window_copy_expand_search_string(cs) == 0) {
-            return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;
-        }
+        if window_copy_expand_search_string(cs) == 0 {return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;}
 
         if (!(*data).searchstr.is_null()) {
             (*data).searchtype = window_copy::WINDOW_COPY_SEARCHDOWN;
@@ -2997,9 +2876,7 @@ pub unsafe extern "C" fn window_copy_cmd_refresh_from_pane(
         let mut wp: *mut window_pane = (*wme).swp;
         let mut data: *mut window_copy_mode_data = (*wme).data.cast();
 
-        if ((*data).viewmode != 0) {
-            return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;
-        }
+        if (*data).viewmode != 0 {return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;}
 
         screen_free((*data).backing);
         free_((*data).backing);
@@ -3640,9 +3517,7 @@ pub unsafe extern "C" fn window_copy_command(
         let mut count = args_count(args);
         let mut keys: i32 = 0;
 
-        if (count == 0) {
-            return;
-        }
+        if count == 0 {return;}
         let mut command = args_string(args, 0);
 
         if !m.is_null() && (*m).valid != 0 && !MOUSE_WHEEL((*m).b) {
@@ -3660,11 +3535,8 @@ pub unsafe extern "C" fn window_copy_command(
         let mut action = window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;
         for window_copy_cmd_table_i in &window_copy_cmd_table {
             if (libc::strcmp(window_copy_cmd_table_i.command.as_ptr(), command) == 0) {
-                if (count - 1 < window_copy_cmd_table_i.minargs
-                    || count - 1 > window_copy_cmd_table_i.maxargs)
-                {
-                    break;
-                }
+                if count - 1 < window_copy_cmd_table_i.minargs
+                    || count - 1 > window_copy_cmd_table_i.maxargs {break;}
                 clear = window_copy_cmd_table_i.clear;
                 action = (window_copy_cmd_table_i.f)(&raw mut cs);
                 break;
@@ -3676,27 +3548,20 @@ pub unsafe extern "C" fn window_copy_command(
                 (*(*(*wme).wp).window).options,
                 c"mode-keys".as_ptr(),
             ) as i32);
-            if (clear == window_copy_cmd_clear::WINDOW_COPY_CMD_CLEAR_EMACS_ONLY
-                && keys == Ok(modekey::MODEKEY_VI))
-            {
-                clear = window_copy_cmd_clear::WINDOW_COPY_CMD_CLEAR_NEVER;
-            }
+            if clear == window_copy_cmd_clear::WINDOW_COPY_CMD_CLEAR_EMACS_ONLY
+                && keys == Ok(modekey::MODEKEY_VI) {clear = window_copy_cmd_clear::WINDOW_COPY_CMD_CLEAR_NEVER;}
             if (clear != window_copy_cmd_clear::WINDOW_COPY_CMD_CLEAR_NEVER) {
                 window_copy_clear_marks(wme);
                 (*data).searchx = -1;
                 (*data).searchy = -1;
             }
-            if (action == window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING) {
-                action = window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW;
-            }
+            if action == window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING {action = window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW;}
         }
         (*wme).prefix = 1;
 
         if (action == window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL) {
             window_pane_reset_mode((*wme).wp);
-        } else if (action == window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW) {
-            window_copy_redraw_screen(wme);
-        }
+        } else if action == window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW {window_copy_redraw_screen(wme);}
     }
 }
 
@@ -3731,13 +3596,9 @@ pub unsafe extern "C" fn window_copy_scroll_to(
             (*data).oy = (*gd).hsize - offset;
         }
 
-        if (!no_redraw && !(*data).searchmark.is_null() && (*data).timeout == 0) {
-            window_copy_search_marks(wme, null_mut(), (*data).searchregex, 1);
-        }
+        if !no_redraw && !(*data).searchmark.is_null() && (*data).timeout == 0 {window_copy_search_marks(wme, null_mut(), (*data).searchregex, 1);}
         window_copy_update_selection(wme, 1, 0);
-        if (!no_redraw) {
-            window_copy_redraw_screen(wme);
-        }
+        if !no_redraw {window_copy_redraw_screen(wme);}
     }
 }
 
@@ -3758,13 +3619,9 @@ pub unsafe extern "C" fn window_copy_search_compare(
         grid_get_cell(sgd, spx, 0, &raw mut sgc);
         let sud = &raw const sgc.data;
 
-        if ((*ud).size != (*sud).size || (*ud).width != (*sud).width) {
-            return boolint::FALSE;
-        }
+        if (*ud).size != (*sud).size || (*ud).width != (*sud).width {return boolint::FALSE;}
 
-        if (cis != 0 && (*ud).size == 1) {
-            return boolint::from((*ud).data[0].to_ascii_lowercase() == (*sud).data[0]);
-        }
+        if cis != 0 && (*ud).size == 1 {return boolint::from((*ud).data[0].to_ascii_lowercase() == (*sud).data[0]);}
 
         boolint::from(
             libc::memcmp(
@@ -3808,13 +3665,9 @@ pub unsafe extern "C" fn window_copy_search_lr(
                     pywrap += 1;
                 }
                 /* We have run off the end of the grid. */
-                if (px >= (*gd).sx) {
-                    break;
-                }
+                if px >= (*gd).sx {break;}
                 let matched = window_copy_search_compare(gd, px, pywrap, sgd, bx, cis);
-                if (!matched) {
-                    break;
-                }
+                if !matched {break;}
             }
             if (bx == (*sgd).sx) {
                 *ppx = ax;
@@ -3859,13 +3712,9 @@ pub unsafe extern "C" fn window_copy_search_rl(
                     pywrap += 1;
                 }
                 /* We have run off the end of the grid. */
-                if (px >= (*gd).sx) {
-                    break;
-                }
+                if px >= (*gd).sx {break;}
                 let matched = window_copy_search_compare(gd, px, pywrap, sgd, bx, cis);
-                if (!matched) {
-                    break;
-                }
+                if !matched {break;}
             }
             if (bx == (*sgd).sx) {
                 *ppx = ax - 1;
@@ -3900,14 +3749,10 @@ pub unsafe extern "C" fn window_copy_search_lr_regex(
          * This can happen during search if the last match was the last
          * character on a line.
          */
-        if (first >= last) {
-            return 0;
-        }
+        if first >= last {return 0;}
 
         /* Set flags for regex search. */
-        if (first != 0) {
-            eflags |= libc::REG_NOTBOL;
-        }
+        if first != 0 {eflags |= libc::REG_NOTBOL;}
 
         /* Need to look at the entire string. */
         let mut buf = xmalloc(size as usize).cast::<i8>().as_ptr();
@@ -3984,9 +3829,7 @@ pub unsafe extern "C" fn window_copy_search_rl_regex(
         // struct grid_line *gl;
 
         /* Set flags for regex search. */
-        if (first != 0) {
-            eflags |= libc::REG_NOTBOL;
-        }
+        if first != 0 {eflags |= libc::REG_NOTBOL;}
 
         /* Need to look at the entire string. */
         let mut buf = xmalloc(size as usize).cast::<i8>().as_ptr();
@@ -4090,9 +3933,7 @@ pub unsafe extern "C" fn window_copy_last_regex(
         let mut foundy = py;
         let mut oldx = first;
         while (libc::regexec(preg, buf.add(px), 1, &raw mut regmatch, eflags) == 0) {
-            if (regmatch.rm_so == regmatch.rm_eo) {
-                break;
-            }
+            if regmatch.rm_so == regmatch.rm_eo {break;}
             window_copy_cstrtocellpos(
                 gd,
                 len,
@@ -4100,9 +3941,7 @@ pub unsafe extern "C" fn window_copy_last_regex(
                 &raw mut foundy,
                 buf.add(px + regmatch.rm_so as usize),
             );
-            if (foundy > py || foundx >= last) {
-                break;
-            }
+            if foundy > py || foundx >= last {break;}
             len -= foundx - oldx;
             savepx = foundx;
             window_copy_cstrtocellpos(
@@ -4182,9 +4021,7 @@ pub unsafe extern "C" fn window_copy_stringify(
                 libc::memcpy(buf.add(bx as usize).cast(), d.cast(), dlen);
                 bx += dlen as u32;
             }
-            if (allocated != 0) {
-                free_(d);
-            }
+            if allocated != 0 {free_(d);}
         }
         *buf.add(newsize as usize - 1) = b'\0' as i8;
 
@@ -4264,9 +4101,7 @@ pub unsafe extern "C" fn window_copy_cstrtocellpos(
                     }
                     pos += 1;
                 } else {
-                    if (dlen > len as usize - pos) {
-                        dlen = len as usize - pos as usize;
-                    }
+                    if dlen > len as usize - pos {dlen = len as usize - pos as usize;}
                     if (memcmp(str.add(pos).cast(), d.cast(), dlen) != 0) {
                         match_ = 0;
                         break;
@@ -4275,9 +4110,7 @@ pub unsafe extern "C" fn window_copy_cstrtocellpos(
                 }
                 ccell += 1;
             }
-            if (match_ != 0) {
-                break;
-            }
+            if match_ != 0 {break;}
             cell += 1;
         }
 
@@ -4294,9 +4127,7 @@ pub unsafe extern "C" fn window_copy_cstrtocellpos(
 
         /* Free cell data. */
         for cell in 0..ncells {
-            if ((*cells.add(cell as usize)).allocated != 0) {
-                free_((*cells.add(cell as usize)).d as *mut c_void); // TODO cast away const
-            }
+            if (*cells.add(cell as usize)).allocated != 0 {free_((*cells.add(cell as usize)).d as *mut c_void);}// TODO cast away const
         }
         free_(cells);
     }
@@ -4358,9 +4189,7 @@ pub unsafe extern "C" fn window_copy_move_right(
 pub unsafe extern "C" fn window_copy_is_lowercase(mut ptr: *const c_char) -> boolint {
     unsafe {
         while (*ptr != b'\0' as i8) {
-            if (*ptr as u8 != (*ptr as u8).to_ascii_lowercase()) {
-                return boolint::FALSE;
-            }
+            if *ptr as u8 != (*ptr as u8).to_ascii_lowercase() {return boolint::FALSE;}
             ptr = ptr.add(1);
         }
         boolint::TRUE
@@ -4473,9 +4302,7 @@ pub unsafe extern "C" fn window_copy_search_jump(
             sbuf = xmalloc(ssize as usize).as_ptr().cast();
             *sbuf = b'\0' as i8;
             sbuf = window_copy_stringify(sgd, 0, 0, (*sgd).sx, sbuf, &raw mut ssize);
-            if (cis != 0) {
-                cflags |= REG_ICASE;
-            }
+            if cis != 0 {cflags |= REG_ICASE;}
             if (libc::regcomp(&raw mut reg, sbuf, cflags) != 0) {
                 free_(sbuf);
                 return 0;
@@ -4501,9 +4328,7 @@ pub unsafe extern "C" fn window_copy_search_jump(
                 } else {
                     found = window_copy_search_lr(gd, sgd, &raw mut px, i, fx, (*gd).sx, cis);
                 }
-                if (found != 0) {
-                    break;
-                }
+                if found != 0 {break;}
                 fx = 0;
             }
         } else {
@@ -4519,16 +4344,14 @@ pub unsafe extern "C" fn window_copy_search_jump(
                         fx + 1,
                         &raw mut reg,
                     );
-                    if (found != 0) {
-                        window_copy_search_back_overlap(
+                    if found != 0 {window_copy_search_back_overlap(
                             gd,
                             &raw mut reg,
                             &raw mut px,
                             &raw mut sx,
                             &raw mut i,
                             endline,
-                        );
-                    }
+                        );}
                 } else {
                     found = window_copy_search_rl(gd, sgd, &raw mut px, i - 1, 0, fx + 1, cis);
                 }
@@ -4540,16 +4363,13 @@ pub unsafe extern "C" fn window_copy_search_jump(
                 i -= 1;
             }
         }
-        if (regex != 0) {
-            libc::regfree(&raw mut reg);
-        }
+        if regex != 0 {libc::regfree(&raw mut reg);}
 
         if (found != 0) {
             window_copy_scroll_to(wme, px, i, boolint::TRUE);
             return 1;
         }
-        if (wrap != 0) {
-            return window_copy_search_jump(
+        if wrap != 0 {return window_copy_search_jump(
                 wme,
                 gd,
                 sgd,
@@ -4564,8 +4384,7 @@ pub unsafe extern "C" fn window_copy_search_jump(
                 0,
                 direction,
                 regex,
-            );
-        }
+            );}
         0
     }
 }
@@ -4582,24 +4401,16 @@ pub unsafe extern "C" fn window_copy_move_after_search_mark(
         let mut start = 0;
         let mut at = 0;
 
-        if (window_copy_search_mark_at(data, *fx, *fy, &raw mut start) == 0
-            && *(*data).searchmark.add(start as usize) != 0)
-        {
-            while (window_copy_search_mark_at(data, *fx, *fy, &raw mut at) == 0) {
-                if ((*data).searchmark.add(at as usize) != (*data).searchmark.add(start as usize)) {
-                    break;
-                }
+        if window_copy_search_mark_at(data, *fx, *fy, &raw mut start) == 0
+            && *(*data).searchmark.add(start as usize) != 0 {while (window_copy_search_mark_at(data, *fx, *fy, &raw mut at) == 0) {
+                if (*data).searchmark.add(at as usize) != (*data).searchmark.add(start as usize) {break;}
                 /* Stop if not wrapping and at the end of the grid. */
-                if (wrapflag == 0
+                if wrapflag == 0
                     && *fx == screen_size_x(s) - 1
-                    && *fy == screen_hsize(s) + screen_size_y(s) - 1)
-                {
-                    break;
-                }
+                    && *fy == screen_hsize(s) + screen_size_y(s) - 1 {break;}
 
                 window_copy_move_right(s, fx, fy, wrapflag);
-            }
-        }
+            }}
     }
 }
 
@@ -4631,15 +4442,11 @@ pub unsafe extern "C" fn window_copy_search(
         let mut visible_only: i32 = 0;
         let mut wrapflag: i32 = 0;
 
-        if (regex != 0 && *str.add(libc::strcspn(str, c"^$*+()?[].\\".as_ptr())) == b'\0' as i8) {
-            regex = 0;
-        }
+        if regex != 0 && *str.add(libc::strcspn(str, c"^$*+()?[].\\".as_ptr())) == b'\0' as i8 {regex = 0;}
 
         (*data).searchdirection = direction;
 
-        if ((*data).timeout != 0) {
-            return 0;
-        }
+        if (*data).timeout != 0 {return 0;}
 
         if ((*data).searchall != 0 || (*wp).searchstr.is_null() || (*wp).searchregex != regex) {
             visible_only = 0;
@@ -4647,9 +4454,7 @@ pub unsafe extern "C" fn window_copy_search(
         } else {
             visible_only = (libc::strcmp((*wp).searchstr, str) == 0) as i32;
         }
-        if (visible_only == 0 && !(*data).searchmark.is_null()) {
-            window_copy_clear_marks(wme);
-        }
+        if visible_only == 0 && !(*data).searchmark.is_null() {window_copy_clear_marks(wme);}
         free_((*wp).searchstr);
         (*wp).searchstr = xstrdup(str).as_ptr();
         (*wp).searchregex = regex;
@@ -4748,21 +4553,17 @@ pub unsafe extern "C" fn window_copy_search(
                  * When searching backward, position the cursor at the
                  * beginning of the mark.
                  */
-                if (window_copy_search_mark_at(data, fx, fy, &raw mut start) == 0) {
-                    while (window_copy_search_mark_at(data, fx, fy, &raw mut at) == 0
+                if window_copy_search_mark_at(data, fx, fy, &raw mut start) == 0 {while (window_copy_search_mark_at(data, fx, fy, &raw mut at) == 0
                         && !(*data).searchmark.is_null()
                         && *(*data).searchmark.add(at as usize)
                             == *(*data).searchmark.add(start as usize))
                     {
                         (*data).cx = fx;
                         (*data).cy = fy - screen_hsize((*data).backing) + (*data).oy;
-                        if (at == 0) {
-                            break;
-                        }
+                        if at == 0 {break;}
 
                         window_copy_move_left(s, &raw mut fx, &raw mut fy, 0);
-                    }
-                }
+                    }}
             }
         }
         window_copy_redraw_screen(wme);
@@ -4805,12 +4606,8 @@ pub unsafe extern "C" fn window_copy_search_mark_at(
         let mut s: *mut screen = (*data).backing;
         let mut gd: *mut grid = (*s).grid;
 
-        if (py < (*gd).hsize - (*data).oy) {
-            return -1;
-        }
-        if (py > (*gd).hsize - (*data).oy + (*gd).sy - 1) {
-            return -1;
-        }
+        if py < (*gd).hsize - (*data).oy {return -1;}
+        if py > (*gd).hsize - (*data).oy + (*gd).sy - 1 {return -1;}
         *at = ((py - ((*gd).hsize - (*data).oy)) * (*gd).sx) + px;
         0
     }
@@ -4880,9 +4677,7 @@ pub unsafe extern "C" fn window_copy_search_marks(
                     sbuf,
                     &raw mut ssize,
                 );
-                if (cis != 0) {
-                    cflags |= REG_ICASE;
-                }
+                if cis != 0 {cflags |= REG_ICASE;}
                 if (libc::regcomp(&raw mut reg, sbuf, cflags) != 0) {
                     free_(sbuf);
                     return 0;
@@ -4932,20 +4727,14 @@ pub unsafe extern "C" fn window_copy_search_marks(
                                 (*gd).sx,
                                 cis,
                             );
-                            if (found == 0) {
-                                break;
-                            }
+                            if found == 0 {break;}
                         }
                         nfound += 1;
 
                         if (window_copy_search_mark_at(data, px, py, &raw mut b) == 0) {
-                            if (b + width > (*gd).sx * (*gd).sy) {
-                                width = ((*gd).sx * (*gd).sy) - b;
-                            }
+                            if b + width > (*gd).sx * (*gd).sy {width = ((*gd).sx * (*gd).sy) - b;}
                             for i in b..(b + width) {
-                                if (*(*data).searchmark.add(i as usize) != 0) {
-                                    continue;
-                                }
+                                if *(*data).searchmark.add(i as usize) != 0 {continue;}
                                 *(*data).searchmark.add(i as usize) = (*data).searchgen;
                             }
                             if ((*data).searchgen == u8::MAX) {
@@ -4979,8 +4768,7 @@ pub unsafe extern "C" fn window_copy_search_marks(
                     continue 'again;
                 }
 
-                if (visible_only == 0) {
-                    if (stopped != 0) {
+                if visible_only == 0 {if (stopped != 0) {
                         if (nfound > 1000) {
                             (*data).searchcount = 1000;
                         } else if (nfound > 100) {
@@ -4994,18 +4782,13 @@ pub unsafe extern "C" fn window_copy_search_marks(
                     } else {
                         (*data).searchcount = nfound as i32;
                         (*data).searchmore = 0;
-                    }
-                }
+                    }}
 
                 break;
             }
         } // out:
-        if (ssp == &raw mut ss) {
-            screen_free(&raw mut ss);
-        }
-        if (regex != 0) {
-            libc::regfree(&raw mut reg);
-        }
+        if ssp == &raw mut ss {screen_free(&raw mut ss);}
+        if regex != 0 {libc::regfree(&raw mut reg);}
         1
     }
 }
@@ -5040,12 +4823,8 @@ pub unsafe extern "C" fn window_copy_goto_line(
         let mut errstr: *const c_char = null();
 
         let mut lineno = strtonum(linestr, -1, i32::MAX as i64, &raw mut errstr) as i32;
-        if (!errstr.is_null()) {
-            return;
-        }
-        if (lineno < 0 || lineno as u32 > screen_hsize((*data).backing)) {
-            lineno = screen_hsize((*data).backing) as i32;
-        }
+        if !errstr.is_null() {return;}
+        if lineno < 0 || lineno as u32 > screen_hsize((*data).backing) {lineno = screen_hsize((*data).backing) as i32;}
 
         (*data).oy = lineno as u32;
         window_copy_update_selection(wme, 1, 0);
@@ -5070,15 +4849,11 @@ pub unsafe extern "C" fn window_copy_match_start_end(
         while (*start != 0 && *(*data).searchmark.add(*start as usize) == mark) {
             (*start) -= 1;
         }
-        if (*(*data).searchmark.add(*start as usize) != mark) {
-            (*start) += 1;
-        }
+        if *(*data).searchmark.add(*start as usize) != mark {(*start) += 1;}
         while (*end != last && *(*data).searchmark.add(*end as usize) == mark) {
             (*end) += 1;
         }
-        if (*(*data).searchmark.add(*end as usize) != mark) {
-            (*end) -= 1;
-        }
+        if *(*data).searchmark.add(*end as usize) != mark {(*end) -= 1;}
     }
 }
 
@@ -5099,25 +4874,18 @@ pub unsafe extern "C" fn window_copy_match_at_cursor(
         let mut buf: *mut c_char = null_mut();
         let mut len: usize = 0;
 
-        if ((*data).searchmark.is_null()) {
-            return null_mut();
-        }
+        if (*data).searchmark.is_null() {return null_mut();}
 
         let cy = screen_hsize((*data).backing) - (*data).oy + (*data).cy;
-        if (window_copy_search_mark_at(data, (*data).cx, cy, &raw mut at) != 0) {
-            return null_mut();
-        }
-        if (*(*data).searchmark.add(at as usize) == 0) {
-            /* Allow one position after the match. */
-            if at == 0
+        if window_copy_search_mark_at(data, (*data).cx, cy, &raw mut at) != 0 {return null_mut();}
+        if *(*data).searchmark.add(at as usize) == 0 {if at == 0
                 || ({
                     at -= 1;
                     *(*data).searchmark.add(at as usize) == 0
                 })
             {
                 return null_mut();
-            }
-        }
+            }}/* Allow one position after the match. */
         window_copy_match_start_end(data, at, &raw mut start, &raw mut end);
 
         /*
@@ -5139,9 +4907,7 @@ pub unsafe extern "C" fn window_copy_match_at_cursor(
             );
             len += gc.data.size as usize;
         }
-        if (len != 0) {
-            *buf.add(len) = b'\0' as i8;
-        }
+        if len != 0 {*buf.add(len) = b'\0' as i8;}
         buf
     }
 }
@@ -5170,9 +4936,7 @@ pub unsafe extern "C" fn window_copy_update_style(
 
         if ((*data).showmark != 0 && fy == (*data).my) {
             (*gc).attr = (*mkgc).attr;
-            if (fx == (*data).mx) {
-                inv = 1;
-            }
+            if fx == (*data).mx {inv = 1;}
             if (inv != 0) {
                 (*gc).fg = (*mkgc).bg;
                 (*gc).bg = (*mkgc).fg;
@@ -5182,17 +4946,11 @@ pub unsafe extern "C" fn window_copy_update_style(
             }
         }
 
-        if ((*data).searchmark.is_null()) {
-            return;
-        }
+        if (*data).searchmark.is_null() {return;}
 
-        if (window_copy_search_mark_at(data, fx, fy, &raw mut current) != 0) {
-            return;
-        }
+        if window_copy_search_mark_at(data, fx, fy, &raw mut current) != 0 {return;}
         mark = *(*data).searchmark.add(current as usize) as u32;
-        if (mark == 0) {
-            return;
-        }
+        if mark == 0 {return;}
 
         cy = screen_hsize((*data).backing) - (*data).oy + (*data).cy;
         if (window_copy_search_mark_at(data, (*data).cx, cy, &raw mut cursor) == 0) {
@@ -5205,9 +4963,7 @@ pub unsafe extern "C" fn window_copy_update_style(
                     cursor -= 1;
                     found = 1;
                 }
-            } else if (*(*data).searchmark.add(cursor as usize) as u32 == mark) {
-                found = 1;
-            }
+            } else if *(*data).searchmark.add(cursor as usize) as u32 == mark {found = 1;}
             if (found != 0) {
                 window_copy_match_start_end(data, cursor, &raw mut start, &raw mut end);
                 if (current >= start && current <= end) {
@@ -5362,17 +5118,14 @@ pub unsafe extern "C" fn window_copy_write_line(
                     ) as usize;
                 }
             }
-            if (size > screen_size_x(s) as usize) {
-                size = screen_size_x(s) as usize;
-            }
+            if size > screen_size_x(s) as usize {size = screen_size_x(s) as usize;}
             screen_write_cursormove(ctx, screen_size_x(s) as i32 - size as i32, 0, 0);
             screen_write_puts(ctx, &raw mut gc, c"%s".as_ptr(), hdr);
         } else {
             size = 0;
         }
 
-        if (size < screen_size_x(s) as usize) {
-            window_copy_write_one(
+        if size < screen_size_x(s) as usize {window_copy_write_one(
                 wme,
                 ctx,
                 py,
@@ -5381,8 +5134,7 @@ pub unsafe extern "C" fn window_copy_write_line(
                 &raw mut mgc,
                 &raw mut cgc,
                 &raw mut mkgc,
-            );
-        }
+            );}
 
         if (py == (*data).cy && (*data).cx == screen_size_x(s)) {
             screen_write_cursormove(ctx, screen_size_x(s) as i32 - 1, py as i32, 0);
@@ -5422,12 +5174,7 @@ pub unsafe extern "C" fn window_copy_redraw_selection(wme: *mut window_mode_entr
          * In word selection mode the first word on the line below the cursor
          * might be selected, so add this line to the redraw area.
          */
-        if ((*data).selflag == selflag::SEL_WORD) {
-            /* Last grid line in data coordinates. */
-            if (end < (*gd).sy + (*data).oy - 1) {
-                end += 1;
-            }
-        }
+        if (*data).selflag == selflag::SEL_WORD {if end < (*gd).sy + (*data).oy - 1 {end += 1;}}/* Last grid line in data coordinates. */
         window_copy_redraw_lines(wme, start, end - start + 1);
     }
 }
@@ -5487,16 +5234,13 @@ pub unsafe extern "C" fn window_copy_synchronize_cursor_end(
                         (*data).endsely = (*data).endselry;
                     } else {
                         /* Left to right selection. */
-                        if (xx >= window_copy_find_length(wme, yy)
-                            || window_copy_in_set(wme, xx + 1, yy, WHITESPACE.as_ptr()) == 0)
-                        {
-                            window_copy_cursor_next_word_end_pos(
+                        if xx >= window_copy_find_length(wme, yy)
+                            || window_copy_in_set(wme, xx + 1, yy, WHITESPACE.as_ptr()) == 0 {window_copy_cursor_next_word_end_pos(
                                 wme,
                                 (*data).separators,
                                 &raw mut xx,
                                 &raw mut yy,
-                            );
-                        }
+                            );}
 
                         /* Reset the start. */
                         (*data).selx = (*data).selrx;
@@ -5517,9 +5261,7 @@ pub unsafe extern "C" fn window_copy_synchronize_cursor_end(
                         (*data).endsely = (*data).endselry;
                     } else {
                         /* Left to right selection. */
-                        if (yy < (*data).endselry) {
-                            yy = (*data).endselry;
-                        }
+                        if yy < (*data).endselry {yy = (*data).endselry;}
                         xx = window_copy_find_length(wme, yy);
 
                         /* Reset the start. */
@@ -5568,9 +5310,7 @@ pub unsafe extern "C" fn window_copy_update_cursor(wme: *mut window_mode_entry, 
         let old_cy = (*data).cy;
         (*data).cx = cx;
         (*data).cy = cy;
-        if (old_cx == screen_size_x(s)) {
-            window_copy_redraw_lines(wme, old_cy, 1);
-        }
+        if old_cx == screen_size_x(s) {window_copy_redraw_lines(wme, old_cy, 1);}
         if ((*data).cx == screen_size_x(s)) {
             window_copy_redraw_lines(wme, (*data).cy, 1);
         } else {
@@ -5646,9 +5386,7 @@ pub unsafe extern "C" fn window_copy_update_selection(
         let mut data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut s: *mut screen = &raw mut (*data).screen;
 
-        if ((*s).sel.is_null() && (*data).lineflag == line_sel::LINE_SEL_NONE) {
-            return 0;
-        }
+        if (*s).sel.is_null() && (*data).lineflag == line_sel::LINE_SEL_NONE {return 0;}
         window_copy_set_selection(wme, may_redraw, no_reset)
     }
 }
@@ -5781,9 +5519,7 @@ pub unsafe extern "C" fn window_copy_get_selection(
 
         /* Trim ex to end of line. */
         let mut ey_last = window_copy_find_length(wme, ey);
-        if (ex > ey_last) {
-            ex = ey_last;
-        }
+        if ex > ey_last {ex = ey_last;}
 
         /*
          * Deal with rectangle-copy if necessary; four situations: start of
@@ -5861,15 +5597,13 @@ pub unsafe extern "C" fn window_copy_get_selection(
             return null_mut();
         }
         /* Remove final \n (unless at end in vi mode). */
-        if (keys == Ok(modekey::MODEKEY_EMACS) || lastex <= ey_last) {
-            if !(*grid_get_line((*(*data).backing).grid, ey))
+        if keys == Ok(modekey::MODEKEY_EMACS) || lastex <= ey_last {if !(*grid_get_line((*(*data).backing).grid, ey))
                 .flags
                 .intersects(grid_line_flag::WRAPPED)
                 || lastex != ey_last
             {
                 off -= 1;
-            }
-        }
+            }}
         *len = off;
         buf
     }
@@ -5906,9 +5640,7 @@ pub unsafe extern "C" fn window_copy_pipe_run(
 ) -> *mut c_void {
     unsafe {
         let buf = window_copy_get_selection(wme, len);
-        if (cmd.is_null() || *cmd == b'\0' as i8) {
-            cmd = options_get_string(global_options, c"copy-command".as_ptr());
-        }
+        if cmd.is_null() || *cmd == b'\0' as i8 {cmd = options_get_string(global_options, c"copy-command".as_ptr());}
         if (!cmd.is_null() && *cmd != b'\0' as i8) {
             let job = job_run(
                 cmd,
@@ -5954,9 +5686,7 @@ pub unsafe extern "C" fn window_copy_copy_pipe(
     unsafe {
         let mut len: usize = 0;
         let buf = window_copy_pipe_run(wme, s, cmd, &raw mut len);
-        if (!buf.is_null()) {
-            window_copy_copy_buffer(wme, prefix, buf, len);
-        }
+        if !buf.is_null() {window_copy_copy_buffer(wme, prefix, buf, len);}
     }
 }
 
@@ -5968,9 +5698,7 @@ pub unsafe extern "C" fn window_copy_copy_selection(
     unsafe {
         let mut len: usize = 0;
         let buf = window_copy_get_selection(wme, &raw mut len);
-        if (!buf.is_null()) {
-            window_copy_copy_buffer(wme, prefix, buf.cast(), len);
-        }
+        if !buf.is_null() {window_copy_copy_buffer(wme, prefix, buf.cast(), len);}
     }
 }
 
@@ -5985,9 +5713,7 @@ pub unsafe extern "C" fn window_copy_append_selection(wme: *mut window_mode_entr
         let mut bufsize = 0;
         let mut len: usize = 0;
         let mut buf = window_copy_get_selection(wme, &raw mut len);
-        if (buf.is_null()) {
-            return;
-        }
+        if buf.is_null() {return;}
 
         if (options_get_number(global_options, c"set-clipboard".as_ptr()) != 0) {
             screen_write_start_pane(&raw mut ctx, wp, null_mut());
@@ -6004,9 +5730,7 @@ pub unsafe extern "C" fn window_copy_append_selection(wme: *mut window_mode_entr
             libc::memcpy(buf.cast(), bufdata.cast(), bufsize);
             len += bufsize;
         }
-        if (paste_set(buf, len, bufname, null_mut()) != 0) {
-            free_(buf);
-        }
+        if paste_set(buf, len, bufname, null_mut()) != 0 {free_(buf);}
     }
 }
 
@@ -6027,18 +5751,14 @@ pub unsafe extern "C" fn window_copy_copy_line(
         // const char *s;
         let mut wrapped: u32 = 0;
 
-        if (sx > ex) {
-            return;
-        }
+        if sx > ex {return;}
 
         /*
          * Work out if the line was wrapped at the screen edge and all of it is
          * on screen.
          */
         let gl = grid_get_line(gd, sy);
-        if ((*gl).flags.intersects(grid_line_flag::WRAPPED) && (*gl).cellsize <= (*gd).sx) {
-            wrapped = 1;
-        }
+        if (*gl).flags.intersects(grid_line_flag::WRAPPED) && (*gl).cellsize <= (*gd).sx {wrapped = 1;}
 
         /* If the line was wrapped, don't strip spaces (use the full length). */
         let xx = if (wrapped != 0) {
@@ -6047,15 +5767,10 @@ pub unsafe extern "C" fn window_copy_copy_line(
             window_copy_find_length(wme, sy)
         };
 
-        if (ex > xx) {
-            ex = xx;
-        }
-        if (sx > xx) {
-            sx = xx;
-        }
+        if ex > xx {ex = xx;}
+        if sx > xx {sx = xx;}
 
-        if (sx < ex) {
-            for i in sx..ex {
+        if sx < ex {for i in sx..ex {
                 grid_get_cell(gd, i, sy, &raw mut gc);
                 if gc.flags.intersects(grid_flag::PADDING) {
                     continue;
@@ -6078,8 +5793,7 @@ pub unsafe extern "C" fn window_copy_copy_line(
                     ud.size as usize,
                 );
                 *off += ud.size as usize;
-            }
-        }
+            }}
 
         /* Only add a newline if the line wasn't wrapped. */
         if (wrapped == 0 || ex != xx) {
@@ -6103,9 +5817,7 @@ pub unsafe extern "C" fn window_copy_clear_selection(wme: *mut window_mode_entry
 
         let py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
         let px = window_copy_find_length(wme, py);
-        if ((*data).cx > px) {
-            window_copy_update_cursor(wme, px, (*data).cy);
-        }
+        if (*data).cx > px {window_copy_update_cursor(wme, px, (*data).cy);}
     }
 }
 
@@ -6214,15 +5926,11 @@ pub unsafe extern "C" fn window_copy_other_end(wme: *mut window_mode_entry) {
         let mut s: *mut screen = &raw mut (*data).screen;
         // u_int selx, sely, cy, yy, hsize;
 
-        if ((*s).sel.is_null() && (*data).lineflag == line_sel::LINE_SEL_NONE) {
-            return;
-        }
+        if (*s).sel.is_null() && (*data).lineflag == line_sel::LINE_SEL_NONE {return;}
 
         if ((*data).lineflag == line_sel::LINE_SEL_LEFT_RIGHT) {
             (*data).lineflag = line_sel::LINE_SEL_RIGHT_LEFT;
-        } else if ((*data).lineflag == line_sel::LINE_SEL_RIGHT_LEFT) {
-            (*data).lineflag = line_sel::LINE_SEL_LEFT_RIGHT;
-        }
+        } else if (*data).lineflag == line_sel::LINE_SEL_RIGHT_LEFT {(*data).lineflag = line_sel::LINE_SEL_LEFT_RIGHT;}
 
         match ((*data).cursordrag) {
             cursordrag::CURSORDRAG_NONE | cursordrag::CURSORDRAG_SEL => {
@@ -6324,35 +6032,27 @@ pub unsafe extern "C" fn window_copy_cursor_up(wme: *mut window_mode_entry, scro
             (*data).lastsx = ox;
         }
 
-        if ((*data).lineflag == line_sel::LINE_SEL_LEFT_RIGHT && oy == (*data).sely) {
-            window_copy_other_end(wme);
-        }
+        if (*data).lineflag == line_sel::LINE_SEL_LEFT_RIGHT && oy == (*data).sely {window_copy_other_end(wme);}
 
         if (scroll_only != 0 || (*data).cy == 0) {
-            if (norectsel) {
-                (*data).cx = (*data).lastcx;
-            }
+            if norectsel {(*data).cx = (*data).lastcx;}
             window_copy_scroll_down(wme, 1);
-            if (scroll_only != 0) {
-                if ((*data).cy == screen_size_y(s) - 1) {
+            if scroll_only != 0 {if ((*data).cy == screen_size_y(s) - 1) {
                     window_copy_redraw_lines(wme, (*data).cy, 1);
                 } else {
                     window_copy_redraw_lines(wme, (*data).cy, 2);
-                }
-            }
+                }}
         } else {
             if (norectsel) {
                 window_copy_update_cursor(wme, (*data).lastcx, (*data).cy - 1);
             } else {
                 window_copy_update_cursor(wme, (*data).cx, (*data).cy - 1);
             }
-            if (window_copy_update_selection(wme, 1, 0) != 0) {
-                if ((*data).cy == screen_size_y(s) - 1) {
+            if window_copy_update_selection(wme, 1, 0) != 0 {if ((*data).cy == screen_size_y(s) - 1) {
                     window_copy_redraw_lines(wme, (*data).cy, 1);
                 } else {
                     window_copy_redraw_lines(wme, (*data).cy, 2);
-                }
-            }
+                }}
         }
 
         if (norectsel) {
@@ -6360,9 +6060,7 @@ pub unsafe extern "C" fn window_copy_cursor_up(wme: *mut window_mode_entry, scro
             px = window_copy_find_length(wme, py);
             if (((*data).cx >= (*data).lastsx && (*data).cx != px) || (*data).cx > px) {
                 window_copy_update_cursor(wme, px, (*data).cy);
-                if (window_copy_update_selection(wme, 1, 0) != 0) {
-                    window_copy_redraw_lines(wme, (*data).cy, 1);
-                }
+                if window_copy_update_selection(wme, 1, 0) != 0 {window_copy_redraw_lines(wme, (*data).cy, 1);}
             }
         }
 
@@ -6374,14 +6072,10 @@ pub unsafe extern "C" fn window_copy_cursor_up(wme: *mut window_mode_entry, scro
                 px = window_copy_find_length(wme, py);
             }
             window_copy_update_cursor(wme, px, (*data).cy);
-            if (window_copy_update_selection(wme, 1, 0) != 0) {
-                window_copy_redraw_lines(wme, (*data).cy, 1);
-            }
+            if window_copy_update_selection(wme, 1, 0) != 0 {window_copy_redraw_lines(wme, (*data).cy, 1);}
         } else if ((*data).lineflag == line_sel::LINE_SEL_RIGHT_LEFT) {
             window_copy_update_cursor(wme, 0, (*data).cy);
-            if (window_copy_update_selection(wme, 1, 0) != 0) {
-                window_copy_redraw_lines(wme, (*data).cy, 1);
-            }
+            if window_copy_update_selection(wme, 1, 0) != 0 {window_copy_redraw_lines(wme, (*data).cy, 1);}
         }
     }
 }
@@ -6402,27 +6096,19 @@ pub unsafe extern "C" fn window_copy_cursor_down(wme: *mut window_mode_entry, sc
             (*data).lastsx = ox;
         }
 
-        if ((*data).lineflag == line_sel::LINE_SEL_RIGHT_LEFT && oy == (*data).endsely) {
-            window_copy_other_end(wme);
-        }
+        if (*data).lineflag == line_sel::LINE_SEL_RIGHT_LEFT && oy == (*data).endsely {window_copy_other_end(wme);}
 
         if (scroll_only != 0 || (*data).cy == screen_size_y(s) - 1) {
-            if (norectsel) {
-                (*data).cx = (*data).lastcx;
-            }
+            if norectsel {(*data).cx = (*data).lastcx;}
             window_copy_scroll_up(wme, 1);
-            if (scroll_only != 0 && (*data).cy > 0) {
-                window_copy_redraw_lines(wme, (*data).cy - 1, 2);
-            }
+            if scroll_only != 0 && (*data).cy > 0 {window_copy_redraw_lines(wme, (*data).cy - 1, 2);}
         } else {
             if (norectsel) {
                 window_copy_update_cursor(wme, (*data).lastcx, (*data).cy + 1);
             } else {
                 window_copy_update_cursor(wme, (*data).cx, (*data).cy + 1);
             }
-            if (window_copy_update_selection(wme, 1, 0) != 0) {
-                window_copy_redraw_lines(wme, (*data).cy - 1, 2);
-            }
+            if window_copy_update_selection(wme, 1, 0) != 0 {window_copy_redraw_lines(wme, (*data).cy - 1, 2);}
         }
 
         if (norectsel) {
@@ -6430,9 +6116,7 @@ pub unsafe extern "C" fn window_copy_cursor_down(wme: *mut window_mode_entry, sc
             px = window_copy_find_length(wme, py);
             if (((*data).cx >= (*data).lastsx && (*data).cx != px) || (*data).cx > px) {
                 window_copy_update_cursor(wme, px, (*data).cy);
-                if (window_copy_update_selection(wme, 1, 0) != 0) {
-                    window_copy_redraw_lines(wme, (*data).cy, 1);
-                }
+                if window_copy_update_selection(wme, 1, 0) != 0 {window_copy_redraw_lines(wme, (*data).cy, 1);}
             }
         }
 
@@ -6444,14 +6128,10 @@ pub unsafe extern "C" fn window_copy_cursor_down(wme: *mut window_mode_entry, sc
                 px = window_copy_find_length(wme, py);
             }
             window_copy_update_cursor(wme, px, (*data).cy);
-            if (window_copy_update_selection(wme, 1, 0) != 0) {
-                window_copy_redraw_lines(wme, (*data).cy, 1);
-            }
+            if window_copy_update_selection(wme, 1, 0) != 0 {window_copy_redraw_lines(wme, (*data).cy, 1);}
         } else if ((*data).lineflag == line_sel::LINE_SEL_RIGHT_LEFT) {
             window_copy_update_cursor(wme, 0, (*data).cy);
-            if (window_copy_update_selection(wme, 1, 0) != 0) {
-                window_copy_redraw_lines(wme, (*data).cy, 1);
-            }
+            if window_copy_update_selection(wme, 1, 0) != 0 {window_copy_redraw_lines(wme, (*data).cy, 1);}
         }
     }
 }
@@ -6613,9 +6293,7 @@ pub unsafe extern "C" fn window_copy_cursor_next_word_end_pos(
         if modekey::try_from(options_get_number(oo, c"mode-keys".as_ptr()) as i32)
             == Ok(modekey::MODEKEY_VI)
         {
-            if (grid_reader_in_set(&raw mut gr, WHITESPACE.as_ptr()) == 0) {
-                grid_reader_cursor_right(&raw mut gr, 0, 0);
-            }
+            if grid_reader_in_set(&raw mut gr, WHITESPACE.as_ptr()) == 0 {grid_reader_cursor_right(&raw mut gr, 0, 0);}
             grid_reader_cursor_next_word_end(&raw mut gr, separators);
             grid_reader_cursor_left(&raw mut gr, 1);
         } else {
@@ -6650,9 +6328,7 @@ pub unsafe extern "C" fn window_copy_cursor_next_word_end(
         if modekey::try_from(options_get_number(oo, c"mode-keys".as_ptr()) as i32)
             == Ok(modekey::MODEKEY_VI)
         {
-            if (grid_reader_in_set(&raw mut gr, WHITESPACE.as_ptr()) == 0) {
-                grid_reader_cursor_right(&raw mut gr, 0, 0);
-            }
+            if grid_reader_in_set(&raw mut gr, WHITESPACE.as_ptr()) == 0 {grid_reader_cursor_right(&raw mut gr, 0, 0);}
             grid_reader_cursor_next_word_end(&raw mut gr, separators);
             grid_reader_cursor_left(&raw mut gr, 1);
         } else {
@@ -6766,13 +6442,9 @@ pub unsafe extern "C" fn window_copy_cursor_prompt(
             end_line = (*gd).hsize + (*gd).sy - 1;
         }
 
-        if (line == end_line) {
-            return;
-        }
+        if line == end_line {return;}
         loop {
-            if (line == end_line) {
-                return;
-            }
+            if line == end_line {return;}
             line += add as u32;
 
             if (*grid_get_line(gd, line)).flags.intersects(line_flag) {
@@ -6802,17 +6474,11 @@ pub unsafe extern "C" fn window_copy_scroll_up(wme: *mut window_mode_entry, mut 
         let mut s: *mut screen = &raw mut (*data).screen;
         let mut ctx: screen_write_ctx = zeroed();
 
-        if ((*data).oy < ny) {
-            ny = (*data).oy;
-        }
-        if (ny == 0) {
-            return;
-        }
+        if (*data).oy < ny {ny = (*data).oy;}
+        if ny == 0 {return;}
         (*data).oy -= ny;
 
-        if ((*data).searchmark.is_null() && (*data).timeout == 0) {
-            window_copy_search_marks(wme, null_mut(), (*data).searchregex, 1);
-        }
+        if (*data).searchmark.is_null() && (*data).timeout == 0 {window_copy_search_marks(wme, null_mut(), (*data).searchregex, 1);}
         window_copy_update_selection(wme, 0, 0);
 
         screen_write_start_pane(&raw mut ctx, wp, null_mut());
@@ -6820,15 +6486,9 @@ pub unsafe extern "C" fn window_copy_scroll_up(wme: *mut window_mode_entry, mut 
         screen_write_deleteline(&raw mut ctx, ny, 8);
         window_copy_write_lines(wme, &raw mut ctx, screen_size_y(s) - ny, ny);
         window_copy_write_line(wme, &raw mut ctx, 0);
-        if (screen_size_y(s) > 1) {
-            window_copy_write_line(wme, &raw mut ctx, 1);
-        }
-        if (screen_size_y(s) > 3) {
-            window_copy_write_line(wme, &raw mut ctx, screen_size_y(s) - 2);
-        }
-        if (!(*s).sel.is_null() && screen_size_y(s) > ny) {
-            window_copy_write_line(wme, &raw mut ctx, screen_size_y(s) - ny - 1);
-        }
+        if screen_size_y(s) > 1 {window_copy_write_line(wme, &raw mut ctx, 1);}
+        if screen_size_y(s) > 3 {window_copy_write_line(wme, &raw mut ctx, screen_size_y(s) - 2);}
+        if !(*s).sel.is_null() && screen_size_y(s) > ny {window_copy_write_line(wme, &raw mut ctx, screen_size_y(s) - ny - 1);}
         screen_write_cursormove(&raw mut ctx, (*data).cx as i32, (*data).cy as i32, 0);
         screen_write_stop(&raw mut ctx);
     }
@@ -6842,21 +6502,13 @@ pub unsafe extern "C" fn window_copy_scroll_down(wme: *mut window_mode_entry, mu
         let mut s: *mut screen = &raw mut (*data).screen;
         let mut ctx: screen_write_ctx = zeroed();
 
-        if (ny > screen_hsize((*data).backing)) {
-            return;
-        }
+        if ny > screen_hsize((*data).backing) {return;}
 
-        if ((*data).oy > screen_hsize((*data).backing) - ny) {
-            ny = screen_hsize((*data).backing) - (*data).oy;
-        }
-        if (ny == 0) {
-            return;
-        }
+        if (*data).oy > screen_hsize((*data).backing) - ny {ny = screen_hsize((*data).backing) - (*data).oy;}
+        if ny == 0 {return;}
         (*data).oy += ny;
 
-        if (!(*data).searchmark.is_null() && (*data).timeout == 0) {
-            window_copy_search_marks(wme, null_mut(), (*data).searchregex, 1);
-        }
+        if !(*data).searchmark.is_null() && (*data).timeout == 0 {window_copy_search_marks(wme, null_mut(), (*data).searchregex, 1);}
         window_copy_update_selection(wme, 0, 0);
 
         screen_write_start_pane(&raw mut ctx, wp, null_mut());
@@ -6865,10 +6517,7 @@ pub unsafe extern "C" fn window_copy_scroll_down(wme: *mut window_mode_entry, mu
         window_copy_write_lines(wme, &raw mut ctx, 0, ny);
         if (!(*s).sel.is_null() && screen_size_y(s) > ny) {
             window_copy_write_line(wme, &raw mut ctx, ny);
-        } else if (ny == 1) {
-            /* nuke position */
-            window_copy_write_line(wme, &raw mut ctx, 1);
-        }
+        } else if ny == 1 {window_copy_write_line(wme, &raw mut ctx, 1);}/* nuke position */
         screen_write_cursormove(&raw mut ctx, (*data).cx as i32, (*data).cy as i32, 0);
         screen_write_stop(&raw mut ctx);
     }
@@ -6883,9 +6532,7 @@ pub unsafe extern "C" fn window_copy_rectangle_set(wme: *mut window_mode_entry, 
 
         let py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
         let px = window_copy_find_length(wme, py);
-        if ((*data).cx > px) {
-            window_copy_update_cursor(wme, px, (*data).cy);
-        }
+        if (*data).cx > px {window_copy_update_cursor(wme, px, (*data).cy);}
 
         window_copy_update_selection(wme, 1, 0);
         window_copy_redraw_screen(wme);
@@ -6899,18 +6546,12 @@ pub unsafe extern "C" fn window_copy_move_mouse(m: *mut mouse_event) {
             return;
         };
         let wme = tailq_first(&raw mut (*wp.as_ptr()).modes);
-        if (wme.is_null()) {
-            return;
-        }
-        if ((*wme).mode != &window_copy_mode && (*wme).mode != &window_view_mode) {
-            return;
-        }
+        if wme.is_null() {return;}
+        if (*wme).mode != &window_copy_mode && (*wme).mode != &window_view_mode {return;}
 
         let mut x = 0;
         let mut y = 0;
-        if (cmd_mouse_at(wp.as_ptr(), m, &raw mut x, &raw mut y, 0) != 0) {
-            return;
-        }
+        if cmd_mouse_at(wp.as_ptr(), m, &raw mut x, &raw mut y, 0) != 0 {return;}
 
         window_copy_update_cursor(wme, x, y);
     }
@@ -6921,35 +6562,25 @@ pub unsafe extern "C" fn window_copy_start_drag(c: *mut client, m: *mut mouse_ev
         let mut wp: *mut window_pane;
         let mut wme: *mut window_mode_entry;
 
-        if (c.is_null()) {
-            return;
-        }
+        if c.is_null() {return;}
 
         let Some(wp) = cmd_mouse_pane(m, null_mut(), null_mut()) else {
             return;
         };
         let wme = tailq_first(&raw mut (*wp.as_ptr()).modes);
-        if (wme.is_null()) {
-            return;
-        }
-        if ((*wme).mode != &window_copy_mode && (*wme).mode != &window_view_mode) {
-            return;
-        }
+        if wme.is_null() {return;}
+        if (*wme).mode != &window_copy_mode && (*wme).mode != &window_view_mode {return;}
 
         let mut x = 0;
         let mut y = 0;
-        if (cmd_mouse_at(wp.as_ptr(), m, &raw mut x, &raw mut y, 1) != 0) {
-            return;
-        }
+        if cmd_mouse_at(wp.as_ptr(), m, &raw mut x, &raw mut y, 1) != 0 {return;}
 
         (*c).tty.mouse_drag_update = Some(window_copy_drag_update);
         (*c).tty.mouse_drag_release = Some(window_copy_drag_release);
 
         let mut data: *mut window_copy_mode_data = (*wme).data.cast();
         let yg = screen_hsize((*data).backing) + y - (*data).oy;
-        if (x < (*data).selrx || x > (*data).endselrx || yg != (*data).selry) {
-            (*data).selflag = selflag::SEL_CHAR;
-        }
+        if x < (*data).selrx || x > (*data).endselrx || yg != (*data).selry {(*data).selflag = selflag::SEL_CHAR;}
         match ((*data).selflag) {
             selflag::SEL_WORD => {
                 if (!(*data).separators.is_null()) {
@@ -6988,65 +6619,46 @@ pub unsafe extern "C" fn window_copy_drag_update(c: *mut client, m: *mut mouse_e
             tv_usec: WINDOW_COPY_DRAG_REPEAT_TIME,
         };
 
-        if (c.is_null()) {
-            return;
-        }
+        if c.is_null() {return;}
 
         let Some(wp) = cmd_mouse_pane(m, null_mut(), null_mut()) else {
             return;
         };
         let mut wme: *mut window_mode_entry = tailq_first(&raw mut (*wp.as_ptr()).modes);
-        if (wme.is_null()) {
-            return;
-        }
-        if ((*wme).mode != &window_copy_mode && (*wme).mode != &window_view_mode) {
-            return;
-        }
+        if wme.is_null() {return;}
+        if (*wme).mode != &window_copy_mode && (*wme).mode != &window_view_mode {return;}
 
         let mut data: *mut window_copy_mode_data = (*wme).data.cast();
         evtimer_del(&raw mut (*data).dragtimer);
 
-        if (cmd_mouse_at(wp.as_ptr(), m, &raw mut x, &raw mut y, 0) != 0) {
-            return;
-        }
+        if cmd_mouse_at(wp.as_ptr(), m, &raw mut x, &raw mut y, 0) != 0 {return;}
         let old_cx = (*data).cx;
         let old_cy = (*data).cy;
 
         window_copy_update_cursor(wme, x, y);
-        if (window_copy_update_selection(wme, 1, 0) != 0) {
-            window_copy_redraw_selection(wme, old_cy);
-        }
-        if (old_cy != (*data).cy || old_cx == (*data).cx) {
-            if (y == 0) {
+        if window_copy_update_selection(wme, 1, 0) != 0 {window_copy_redraw_selection(wme, old_cy);}
+        if old_cy != (*data).cy || old_cx == (*data).cx {if (y == 0) {
                 evtimer_add(&raw mut (*data).dragtimer, &raw mut tv);
                 window_copy_cursor_up(wme, 1);
             } else if (y == screen_size_y(&(*data).screen) - 1) {
                 evtimer_add(&raw mut (*data).dragtimer, &raw mut tv);
                 window_copy_cursor_down(wme, 1);
-            }
-        }
+            }}
     }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_drag_release(c: *mut client, m: *mut mouse_event) {
     unsafe {
-        if (c.is_null()) {
-            return;
-        }
+        if c.is_null() {return;}
 
         let Some(wp) = cmd_mouse_pane(m, null_mut(), null_mut()) else {
             return;
         };
         let wme = tailq_first(&raw mut (*wp.as_ptr()).modes);
-        if (wme.is_null()) {
-            return;
-        }
-        if ((*wme).mode != &raw const window_copy_mode
-            && (*wme).mode != &raw const window_view_mode)
-        {
-            return;
-        }
+        if wme.is_null() {return;}
+        if (*wme).mode != &raw const window_copy_mode
+            && (*wme).mode != &raw const window_view_mode {return;}
 
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         evtimer_del(&raw mut (*data).dragtimer);
@@ -7105,9 +6717,7 @@ pub unsafe extern "C" fn window_copy_acquire_cursor_up(
             ny -= 1;
         }
         window_copy_update_cursor(wme, px, cy);
-        if (window_copy_update_selection(wme, 1, 0) != 0) {
-            window_copy_redraw_lines(wme, cy, nd);
-        }
+        if window_copy_update_selection(wme, 1, 0) != 0 {window_copy_redraw_lines(wme, cy, nd);}
     }
 }
 
@@ -7145,8 +6755,6 @@ pub unsafe extern "C" fn window_copy_acquire_cursor_down(
         } else {
             window_copy_update_cursor(wme, px, cy);
         }
-        if (window_copy_update_selection(wme, 1, no_reset) != 0) {
-            window_copy_redraw_lines(wme, oldy, nd);
-        }
+        if window_copy_update_selection(wme, 1, no_reset) != 0 {window_copy_redraw_lines(wme, oldy, nd);}
     }
 }

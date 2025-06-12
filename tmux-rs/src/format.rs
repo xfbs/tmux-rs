@@ -631,9 +631,7 @@ pub unsafe extern "C" fn format_cb_session_alerts(ft: *mut format_tree) -> *mut 
 
         *alerts = b'\0' as c_char;
         for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
-            if (!(*wl).flags.intersects(WINLINK_ALERTFLAGS)) {
-                continue;
-            }
+            if !(*wl).flags.intersects(WINLINK_ALERTFLAGS) {continue;}
             xsnprintf(tmp, sizeof_tmp, c"%u".as_ptr(), (*wl).idx);
 
             if *alerts != b'\0' as c_char {
@@ -2733,12 +2731,9 @@ pub unsafe extern "C" fn format_cb_window_active(ft: *mut format_tree) -> *mut c
 pub unsafe extern "C" fn format_cb_window_activity_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wl.is_null() {
-            if ((*(*ft).wl)
+            if (*(*ft).wl)
                 .flags
-                .intersects(winlink_flags::WINLINK_ACTIVITY))
-            {
-                return xstrdup(c"1".as_ptr()).as_ptr().cast();
-            }
+                .intersects(winlink_flags::WINLINK_ACTIVITY) {return xstrdup(c"1".as_ptr()).as_ptr().cast();}
             return xstrdup(c"0".as_ptr()).as_ptr().cast();
         }
         null_mut()
@@ -2750,9 +2745,7 @@ pub unsafe extern "C" fn format_cb_window_activity_flag(ft: *mut format_tree) ->
 pub unsafe extern "C" fn format_cb_window_bell_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wl.is_null() {
-            if ((*(*ft).wl).flags.intersects(winlink_flags::WINLINK_BELL)) {
-                return xstrdup(c"1".as_ptr()).as_ptr().cast();
-            }
+            if (*(*ft).wl).flags.intersects(winlink_flags::WINLINK_BELL) {return xstrdup(c"1".as_ptr()).as_ptr().cast();}
             return xstrdup(c"0".as_ptr()).as_ptr().cast();
         }
         null_mut()
@@ -2993,9 +2986,7 @@ pub unsafe extern "C" fn format_cb_window_raw_flags(ft: *mut format_tree) -> *mu
 pub unsafe extern "C" fn format_cb_window_silence_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wl.is_null() {
-            if ((*(*ft).wl).flags.intersects(winlink_flags::WINLINK_SILENCE)) {
-                return xstrdup(c"1".as_ptr()).as_ptr().cast();
-            }
+            if (*(*ft).wl).flags.intersects(winlink_flags::WINLINK_SILENCE) {return xstrdup(c"1".as_ptr()).as_ptr().cast();}
             return xstrdup(c"0".as_ptr()).as_ptr().cast();
         }
         null_mut()
