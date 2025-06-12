@@ -25,7 +25,7 @@ use crate::compat::{strlcpy, strtonum};
 pub static mut style_default: style = style {
     gc: grid_cell::new(
         utf8_data::new([b' '], 0, 1, 1),
-        0,
+        grid_attr::empty(),
         grid_flag::empty(),
         8,
         8,
@@ -67,7 +67,6 @@ pub unsafe extern "C" fn style_parse(
         let mut tmp = tmp_bak.as_mut_ptr();
 
         let mut found: *mut c_char = null_mut();
-        let mut value: i32 = 0;
         let mut end: usize = 0;
         let mut n: u32 = 0;
 
@@ -218,13 +217,13 @@ pub unsafe extern "C" fn style_parse(
                         break 'error;
                     }
                 } else if (end > 5 && strncasecmp(tmp, c"fill=".as_ptr(), 5) == 0) {
-                    value = colour_fromstring(tmp.add(5));
+                    let value = colour_fromstring(tmp.add(5));
                     if value == -1 {
                         break 'error;
                     }
                     (*sy).fill = value;
                 } else if (end > 3 && strncasecmp(tmp.add(1), c"g=".as_ptr(), 2) == 0) {
-                    value = colour_fromstring(tmp.add(3));
+                    let value = colour_fromstring(tmp.add(3));
                     if value == -1 {
                         break 'error;
                     }
@@ -244,7 +243,7 @@ pub unsafe extern "C" fn style_parse(
                         break 'error;
                     }
                 } else if (end > 3 && strncasecmp(tmp, c"us=".as_ptr(), 3) == 0) {
-                    value = colour_fromstring(tmp.add(3));
+                    let value = colour_fromstring(tmp.add(3));
                     if value == -1 {
                         break 'error;
                     }
@@ -254,19 +253,17 @@ pub unsafe extern "C" fn style_parse(
                         (*sy).gc.us = (*base).us;
                     }
                 } else if (strcasecmp(tmp, c"none".as_ptr()) == 0) {
-                    (*sy).gc.attr = 0;
+                    (*sy).gc.attr = grid_attr::empty();
                 } else if (end > 2 && strncasecmp(tmp, c"no".as_ptr(), 2) == 0) {
-                    value = attributes_fromstring(tmp.add(2));
-                    if value == -1 {
+                    let Ok(value) = attributes_fromstring(tmp.add(2)) else {
                         break 'error;
-                    }
-                    (*sy).gc.attr &= !value as u16;
+                    };
+                    (*sy).gc.attr &= !value;
                 } else {
-                    value = attributes_fromstring(tmp);
-                    if value == -1 {
+                    let Ok(value) = attributes_fromstring(tmp) else {
                         break 'error;
-                    }
-                    (*sy).gc.attr |= value as u16;
+                    };
+                    (*sy).gc.attr |= value;
                 }
 
                 in_ = in_.add(end + strspn(in_.add(end), delimiters));
@@ -440,13 +437,13 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
             );
             comma = c",".as_ptr();
         }
-        if ((*gc).attr != 0) {
+        if !(*gc).attr.is_empty() {
             xsnprintf(
                 s.add(off as usize),
                 size_of::<s_type>() - off as usize,
                 c"%s%s".as_ptr(),
                 comma,
-                attributes_tostring((*gc).attr as i32),
+                attributes_tostring((*gc).attr),
             );
             comma = c",".as_ptr();
         }

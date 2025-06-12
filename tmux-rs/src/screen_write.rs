@@ -2236,7 +2236,7 @@ pub unsafe extern "C" fn screen_write_collect_add(
         collect = 1;
         if ((*gc).data.width != 1 || (*gc).data.size != 1 || (*gc).data.data[0] >= 0x7f) {
             collect = 0;
-        } else if ((*gc).attr & GRID_ATTR_CHARSET != 0) {
+        } else if (*gc).attr.intersects(grid_attr::GRID_ATTR_CHARSET) {
             collect = 0;
         } else if (!(*s).mode.intersects(mode_flag::MODE_WRAP)) {
             collect = 0;
@@ -2374,7 +2374,7 @@ pub unsafe extern "C" fn screen_write_cell(ctx: *mut screen_write_ctx, gc: *cons
                     skip = 0;
                 } else if ((*gc).flags != (*gce).flags) {
                     skip = 0;
-                } else if ((*gc).attr != (*gce).union_.data.attr as u16) {
+                } else if ((*gc).attr.bits() != (*gce).union_.data.attr as u16) {
                     skip = 0;
                 } else if ((*gc).fg != (*gce).union_.data.fg as i32) {
                     skip = 0;

@@ -2836,8 +2836,6 @@ int colour_palette_set(struct colour_palette *, int, int);
 void colour_palette_from_option(struct colour_palette *, struct options *);
 
 /* attributes.c */
-const char *attributes_tostring(int);
-int attributes_fromstring(const char *);
 
 /* grid.c */
 extern const struct grid_cell grid_default_cell;

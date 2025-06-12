@@ -23,7 +23,7 @@ use crate::xmalloc::xreallocarray;
 #[unsafe(no_mangle)]
 pub static grid_default_cell: grid_cell = grid_cell::new(
     utf8_data::new([b' '], 0, 1, 1),
-    0,
+    grid_attr::empty(),
     grid_flag::empty(),
     8,
     8,
@@ -36,7 +36,7 @@ pub static grid_default_cell: grid_cell = grid_cell::new(
 #[unsafe(no_mangle)]
 pub static grid_padding_cell: grid_cell = grid_cell::new(
     utf8_data::new([b'!'], 0, 0, 0),
-    0,
+    grid_attr::empty(),
     grid_flag::PADDING,
     8,
     8,
@@ -48,7 +48,7 @@ pub static grid_padding_cell: grid_cell = grid_cell::new(
 #[unsafe(no_mangle)]
 pub static grid_cleared_cell: grid_cell = grid_cell::new(
     utf8_data::new([b' '], 0, 1, 1),
-    0,
+    grid_attr::empty(),
     grid_flag::CLEARED,
     8,
     8,
@@ -85,7 +85,7 @@ pub unsafe extern "C" fn grid_store_cell(gce: *mut grid_cell_entry, gc: *const g
             (*gce).flags |= grid_flag::BG256;
         }
 
-        (*gce).union_.data.attr = (*gc).attr as u8;
+        (*gce).union_.data.attr = (*gc).attr.bits() as u8;
         (*gce).union_.data.data = c;
     }
 }
@@ -100,7 +100,7 @@ pub unsafe extern "C" fn grid_need_extended_cell(
         if (*gce).flags.contains(grid_flag::EXTENDED) {
             return 1;
         }
-        if (*gc).attr > 0xff {
+        if (*gc).attr.bits() > 0xff {
             return 1;
         }
         if (*gc).data.size != 1 || (*gc).data.width != 1 {
@@ -161,7 +161,7 @@ pub unsafe extern "C" fn grid_extended_cell(
 
         let gee = &mut *(*gl).extddata.offset((*gce).union_.offset as isize);
         gee.data = *uc;
-        gee.attr = (*gc).attr;
+        gee.attr = (*gc).attr.bits();
         gee.flags = flags.bits();
         gee.fg = (*gc).fg;
         gee.bg = (*gc).bg;
@@ -387,7 +387,7 @@ pub unsafe extern "C" fn grid_compare(ga: *mut grid, gb: *mut grid) -> c_int {
             for xx in 0..gla.cellsize {
                 let mut gca = grid_cell::new(
                     utf8_data::new([0; 4], 0, 0, 0),
-                    0,
+                    grid_attr::empty(),
                     grid_flag::empty(),
                     0,
                     0,
@@ -396,7 +396,7 @@ pub unsafe extern "C" fn grid_compare(ga: *mut grid, gb: *mut grid) -> c_int {
                 );
                 let mut gcb = grid_cell::new(
                     utf8_data::new([0; 4], 0, 0, 0),
-                    0,
+                    grid_attr::empty(),
                     grid_flag::empty(),
                     0,
                     0,
@@ -598,7 +598,7 @@ unsafe fn grid_get_cell1(gl: *mut grid_line, px: c_uint, gc: *mut grid_cell) {
             } else {
                 let gee = (*gl).extddata.add((*gce).union_.offset as usize);
                 (*gc).flags = grid_flag::from_bits((*gee).flags).unwrap();
-                (*gc).attr = (*gee).attr;
+                (*gc).attr = grid_attr::from_bits((*gee).attr).expect("invalid grid_attr");
                 (*gc).fg = (*gee).fg;
                 (*gc).bg = (*gee).bg;
                 (*gc).us = (*gee).us;
@@ -609,7 +609,7 @@ unsafe fn grid_get_cell1(gl: *mut grid_line, px: c_uint, gc: *mut grid_cell) {
         }
 
         (*gc).flags = (*gce).flags & !(grid_flag::FG256 | grid_flag::BG256);
-        (*gc).attr = (*gce).union_.data.attr as u16;
+        (*gc).attr = grid_attr::from_bits((*gce).union_.data.attr as u16).unwrap();
         (*gc).fg = (*gce).union_.data.fg as i32;
         if (*gce).flags.contains(grid_flag::FG256) {
             (*gc).fg |= COLOUR_FLAG_256;
@@ -1132,37 +1132,37 @@ pub unsafe extern "C" fn grid_string_cells_code(
         let mut uri: *const c_char = null();
         let mut id: *const c_char = null();
 
-        static ATTRS: [(u16, c_uint); 13] = [
-            (GRID_ATTR_BRIGHT, 1),
-            (GRID_ATTR_DIM, 2),
-            (GRID_ATTR_ITALICS, 3),
-            (GRID_ATTR_UNDERSCORE, 4),
-            (GRID_ATTR_BLINK, 5),
-            (GRID_ATTR_REVERSE, 7),
-            (GRID_ATTR_HIDDEN, 8),
-            (GRID_ATTR_STRIKETHROUGH, 9),
-            (GRID_ATTR_UNDERSCORE_2, 42),
-            (GRID_ATTR_UNDERSCORE_3, 43),
-            (GRID_ATTR_UNDERSCORE_4, 44),
-            (GRID_ATTR_UNDERSCORE_5, 45),
-            (GRID_ATTR_OVERLINE, 53),
+        static ATTRS: [(grid_attr, c_uint); 13] = [
+            (grid_attr::GRID_ATTR_BRIGHT, 1),
+            (grid_attr::GRID_ATTR_DIM, 2),
+            (grid_attr::GRID_ATTR_ITALICS, 3),
+            (grid_attr::GRID_ATTR_UNDERSCORE, 4),
+            (grid_attr::GRID_ATTR_BLINK, 5),
+            (grid_attr::GRID_ATTR_REVERSE, 7),
+            (grid_attr::GRID_ATTR_HIDDEN, 8),
+            (grid_attr::GRID_ATTR_STRIKETHROUGH, 9),
+            (grid_attr::GRID_ATTR_UNDERSCORE_2, 42),
+            (grid_attr::GRID_ATTR_UNDERSCORE_3, 43),
+            (grid_attr::GRID_ATTR_UNDERSCORE_4, 44),
+            (grid_attr::GRID_ATTR_UNDERSCORE_5, 45),
+            (grid_attr::GRID_ATTR_OVERLINE, 53),
         ];
 
         // If any attribute is removed, begin with 0
         for (i, &(mask, _)) in ATTRS.iter().enumerate() {
-            if ((!attr & mask) != 0 && (lastattr & mask) != 0)
+            if !attr.intersects(mask) && lastattr.intersects(mask)
                 || ((*lastgc).us != 8 && (*gc).us == 8)
             {
                 s[n as usize] = 0;
                 n += 1;
-                lastattr &= GRID_ATTR_CHARSET;
+                lastattr &= grid_attr::GRID_ATTR_CHARSET;
                 break;
             }
         }
 
         // For each attribute that is newly set, add its code
         for &(mask, code) in ATTRS.iter() {
-            if (attr & mask) != 0 && (lastattr & mask) == 0 {
+            if attr.intersects(mask) && !lastattr.intersects(mask) {
                 s[n as usize] = code as c_int;
                 n += 1;
             }
@@ -1248,14 +1248,17 @@ pub unsafe extern "C" fn grid_string_cells_code(
         );
 
         // Append shift in/shift out if needed
-        if (attr & GRID_ATTR_CHARSET) != 0 && (lastattr & GRID_ATTR_CHARSET) == 0 {
+        if attr.intersects(grid_attr::GRID_ATTR_CHARSET)
+            && !lastattr.intersects(grid_attr::GRID_ATTR_CHARSET)
+        {
             if flags & GRID_STRING_ESCAPE_SEQUENCES != 0 {
                 strlcat(buf, c"\\016".as_ptr() as *const c_char, len); // SO
             } else {
                 strlcat(buf, c"\x0e".as_ptr() as *const c_char, len); // SO
             }
         }
-        if (attr & GRID_ATTR_CHARSET) == 0 && (lastattr & GRID_ATTR_CHARSET) != 0 {
+        if !attr.intersects(grid_attr::GRID_ATTR_CHARSET) && lastattr.intersects(GRID_ATTR_CHARSET)
+        {
             if flags & GRID_STRING_ESCAPE_SEQUENCES != 0 {
                 strlcat(buf, c"\\017".as_ptr() as *const c_char, len); // SI
             } else {

@@ -640,7 +640,7 @@ pub unsafe fn menu_set_style(
                 (*gc).bg = (*sytmp).gc.bg;
             }
         }
-        (*gc).attr = 0;
+        (*gc).attr = grid_attr::empty();
     }
 }
 

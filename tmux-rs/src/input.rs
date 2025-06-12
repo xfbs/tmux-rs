@@ -1355,9 +1355,9 @@ unsafe extern "C" fn input_print(ictx: *mut input_ctx) -> i32 {
             (*ictx).cell.g1set
         };
         if set == 1 {
-            (*ictx).cell.cell.attr |= GRID_ATTR_CHARSET;
+            (*ictx).cell.cell.attr |= grid_attr::GRID_ATTR_CHARSET;
         } else {
-            (*ictx).cell.cell.attr &= !GRID_ATTR_CHARSET;
+            (*ictx).cell.cell.attr &= !grid_attr::GRID_ATTR_CHARSET;
         }
 
         utf8_set(&raw mut (*ictx).cell.cell.data, (*ictx).ch as u8);
@@ -1366,7 +1366,7 @@ unsafe extern "C" fn input_print(ictx: *mut input_ctx) -> i32 {
         utf8_copy(&raw mut (*ictx).last, &raw mut (*ictx).cell.cell.data);
         (*ictx).flags |= input_flags::INPUT_LAST;
 
-        (*ictx).cell.cell.attr &= !GRID_ATTR_CHARSET;
+        (*ictx).cell.cell.attr &= !grid_attr::GRID_ATTR_CHARSET;
     }
 
     0
@@ -2256,23 +2256,23 @@ unsafe extern "C" fn input_csi_dispatch_sgr_colon(ictx: *mut input_ctx, mut i: u
                 0 => (*gc).attr &= !GRID_ATTR_ALL_UNDERSCORE,
                 1 => {
                     (*gc).attr &= !GRID_ATTR_ALL_UNDERSCORE;
-                    (*gc).attr |= GRID_ATTR_UNDERSCORE;
+                    (*gc).attr |= grid_attr::GRID_ATTR_UNDERSCORE;
                 }
                 2 => {
                     (*gc).attr &= !GRID_ATTR_ALL_UNDERSCORE;
-                    (*gc).attr |= GRID_ATTR_UNDERSCORE_2;
+                    (*gc).attr |= grid_attr::GRID_ATTR_UNDERSCORE_2;
                 }
                 3 => {
                     (*gc).attr &= !GRID_ATTR_ALL_UNDERSCORE;
-                    (*gc).attr |= GRID_ATTR_UNDERSCORE_3;
+                    (*gc).attr |= grid_attr::GRID_ATTR_UNDERSCORE_3;
                 }
                 4 => {
                     (*gc).attr &= !GRID_ATTR_ALL_UNDERSCORE;
-                    (*gc).attr |= GRID_ATTR_UNDERSCORE_4;
+                    (*gc).attr |= grid_attr::GRID_ATTR_UNDERSCORE_4;
                 }
                 5 => {
                     (*gc).attr &= !GRID_ATTR_ALL_UNDERSCORE;
-                    (*gc).attr |= GRID_ATTR_UNDERSCORE_5;
+                    (*gc).attr |= grid_attr::GRID_ATTR_UNDERSCORE_5;
                 }
                 _ => (),
             }
@@ -2351,34 +2351,34 @@ unsafe extern "C" fn input_csi_dispatch_sgr(ictx: *mut input_ctx) {
                     memcpy__(gc, &raw const grid_default_cell);
                     (*gc).link = link;
                 }
-                1 => (*gc).attr |= GRID_ATTR_BRIGHT,
-                2 => (*gc).attr |= GRID_ATTR_DIM,
-                3 => (*gc).attr |= GRID_ATTR_ITALICS,
+                1 => (*gc).attr |= grid_attr::GRID_ATTR_BRIGHT,
+                2 => (*gc).attr |= grid_attr::GRID_ATTR_DIM,
+                3 => (*gc).attr |= grid_attr::GRID_ATTR_ITALICS,
                 4 => {
                     (*gc).attr &= !GRID_ATTR_ALL_UNDERSCORE;
-                    (*gc).attr |= GRID_ATTR_UNDERSCORE;
+                    (*gc).attr |= grid_attr::GRID_ATTR_UNDERSCORE;
                 }
-                5 | 6 => (*gc).attr |= GRID_ATTR_BLINK,
-                7 => (*gc).attr |= GRID_ATTR_REVERSE,
-                8 => (*gc).attr |= GRID_ATTR_HIDDEN,
-                9 => (*gc).attr |= GRID_ATTR_STRIKETHROUGH,
+                5 | 6 => (*gc).attr |= grid_attr::GRID_ATTR_BLINK,
+                7 => (*gc).attr |= grid_attr::GRID_ATTR_REVERSE,
+                8 => (*gc).attr |= grid_attr::GRID_ATTR_HIDDEN,
+                9 => (*gc).attr |= grid_attr::GRID_ATTR_STRIKETHROUGH,
                 21 => {
                     (*gc).attr &= !GRID_ATTR_ALL_UNDERSCORE;
-                    (*gc).attr |= GRID_ATTR_UNDERSCORE_2;
+                    (*gc).attr |= grid_attr::GRID_ATTR_UNDERSCORE_2;
                 }
-                22 => (*gc).attr &= !(GRID_ATTR_BRIGHT | GRID_ATTR_DIM),
-                23 => (*gc).attr &= !GRID_ATTR_ITALICS,
+                22 => (*gc).attr &= !(grid_attr::GRID_ATTR_BRIGHT | grid_attr::GRID_ATTR_DIM),
+                23 => (*gc).attr &= !grid_attr::GRID_ATTR_ITALICS,
                 24 => (*gc).attr &= !GRID_ATTR_ALL_UNDERSCORE,
-                25 => (*gc).attr &= !GRID_ATTR_BLINK,
-                27 => (*gc).attr &= !GRID_ATTR_REVERSE,
-                28 => (*gc).attr &= !GRID_ATTR_HIDDEN,
-                29 => (*gc).attr &= !GRID_ATTR_STRIKETHROUGH,
+                25 => (*gc).attr &= !grid_attr::GRID_ATTR_BLINK,
+                27 => (*gc).attr &= !grid_attr::GRID_ATTR_REVERSE,
+                28 => (*gc).attr &= !grid_attr::GRID_ATTR_HIDDEN,
+                29 => (*gc).attr &= !grid_attr::GRID_ATTR_STRIKETHROUGH,
                 30..=37 => (*gc).fg = n - 30,
                 39 => (*gc).fg = 8,
                 40..=47 => (*gc).bg = n - 40,
                 49 => (*gc).bg = 8,
-                53 => (*gc).attr |= GRID_ATTR_OVERLINE,
-                55 => (*gc).attr &= !GRID_ATTR_OVERLINE,
+                53 => (*gc).attr |= grid_attr::GRID_ATTR_OVERLINE,
+                55 => (*gc).attr &= !grid_attr::GRID_ATTR_OVERLINE,
                 59 => (*gc).us = 8,
                 90..=97 => (*gc).fg = n,
                 100..=107 => (*gc).bg = n - 10,

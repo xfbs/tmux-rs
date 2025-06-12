@@ -862,10 +862,6 @@ pub unsafe extern "C" fn status_prompt_redraw(c: *mut client) -> i32 {
         let mut old_screen: screen = zeroed();
 
         let mut offset: u32 = 0;
-        // u_int i, lines, offset, left, start, width;
-        // u_int pcursor, pwidth, promptline;
-        // struct grid_cell gc, cursorgc;
-        // struct format_tree *ft;
 
         let mut gc: grid_cell = zeroed();
         let mut cursorgc: grid_cell = zeroed();
@@ -901,7 +897,7 @@ pub unsafe extern "C" fn status_prompt_redraw(c: *mut client) -> i32 {
             format_free(ft);
 
             memcpy__(&raw mut cursorgc, &raw const gc);
-            cursorgc.attr ^= GRID_ATTR_REVERSE;
+            cursorgc.attr ^= grid_attr::GRID_ATTR_REVERSE;
 
             let mut start = format_width((*c).prompt_string);
             if start > (*c).tty.sx {

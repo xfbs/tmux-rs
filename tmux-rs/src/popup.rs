@@ -890,7 +890,7 @@ pub unsafe extern "C" fn popup_display(
                 (*pd).border_cell.bg = (*sytmp.as_ptr()).gc.bg;
             }
         }
-        (*pd).border_cell.attr = 0;
+        (*pd).border_cell.attr = grid_attr::empty();
 
         screen_init(&raw mut (*pd).s, jx, jy, 0);
         colour_palette_init(&raw mut (*pd).palette);
@@ -911,7 +911,7 @@ pub unsafe extern "C" fn popup_display(
                 (*pd).defaults.bg = (*sytmp.as_ptr()).gc.bg;
             }
         }
-        (*pd).defaults.attr = 0;
+        (*pd).defaults.attr = grid_attr::empty();
 
         (*pd).px = px;
         (*pd).py = py;

@@ -686,28 +686,65 @@ pub struct colour_palette {
     pub default_palette: *mut i32,
 }
 
+const GRID_ATTR_BRIGHT: grid_attr = grid_attr::GRID_ATTR_BRIGHT;
+const GRID_ATTR_DIM: grid_attr = grid_attr::GRID_ATTR_DIM;
+const GRID_ATTR_UNDERSCORE: grid_attr = grid_attr::GRID_ATTR_UNDERSCORE;
+const GRID_ATTR_BLINK: grid_attr = grid_attr::GRID_ATTR_BLINK;
+const GRID_ATTR_REVERSE: grid_attr = grid_attr::GRID_ATTR_REVERSE;
+const GRID_ATTR_HIDDEN: grid_attr = grid_attr::GRID_ATTR_HIDDEN;
+const GRID_ATTR_ITALICS: grid_attr = grid_attr::GRID_ATTR_ITALICS;
+const GRID_ATTR_CHARSET: grid_attr = grid_attr::GRID_ATTR_CHARSET;
+const GRID_ATTR_STRIKETHROUGH: grid_attr = grid_attr::GRID_ATTR_STRIKETHROUGH;
+const GRID_ATTR_UNDERSCORE_2: grid_attr = grid_attr::GRID_ATTR_UNDERSCORE_2;
+const GRID_ATTR_UNDERSCORE_3: grid_attr = grid_attr::GRID_ATTR_UNDERSCORE_3;
+const GRID_ATTR_UNDERSCORE_4: grid_attr = grid_attr::GRID_ATTR_UNDERSCORE_4;
+const GRID_ATTR_UNDERSCORE_5: grid_attr = grid_attr::GRID_ATTR_UNDERSCORE_5;
+const GRID_ATTR_OVERLINE: grid_attr = grid_attr::GRID_ATTR_OVERLINE;
+
+bitflags::bitflags! {
+    /// Grid flags.
+    #[repr(transparent)]
+    #[derive(Copy, Clone, Eq, PartialEq)]
+    pub struct grid_attr : u16 {
+        const GRID_ATTR_BRIGHT = 0x1;
+        const GRID_ATTR_DIM = 0x2;
+        const GRID_ATTR_UNDERSCORE = 0x4;
+        const GRID_ATTR_BLINK = 0x8;
+        const GRID_ATTR_REVERSE = 0x10;
+        const GRID_ATTR_HIDDEN = 0x20;
+        const GRID_ATTR_ITALICS = 0x40;
+        const GRID_ATTR_CHARSET = 0x80; // alternative character set
+        const GRID_ATTR_STRIKETHROUGH = 0x100;
+        const GRID_ATTR_UNDERSCORE_2 = 0x200;
+        const GRID_ATTR_UNDERSCORE_3 = 0x400;
+        const GRID_ATTR_UNDERSCORE_4 = 0x800;
+        const GRID_ATTR_UNDERSCORE_5 = 0x1000;
+        const GRID_ATTR_OVERLINE = 0x2000;
+    }
+}
+
 // Grid attributes. Anything above 0xff is stored in an extended cell.
-pub const GRID_ATTR_BRIGHT: u16 = 0x1;
-pub const GRID_ATTR_DIM: u16 = 0x2;
-pub const GRID_ATTR_UNDERSCORE: u16 = 0x4;
-pub const GRID_ATTR_BLINK: u16 = 0x8;
-pub const GRID_ATTR_REVERSE: u16 = 0x10;
-pub const GRID_ATTR_HIDDEN: u16 = 0x20;
-pub const GRID_ATTR_ITALICS: u16 = 0x40;
-pub const GRID_ATTR_CHARSET: u16 = 0x80; // alternative character set
-pub const GRID_ATTR_STRIKETHROUGH: u16 = 0x100;
-pub const GRID_ATTR_UNDERSCORE_2: u16 = 0x200;
-pub const GRID_ATTR_UNDERSCORE_3: u16 = 0x400;
-pub const GRID_ATTR_UNDERSCORE_4: u16 = 0x800;
-pub const GRID_ATTR_UNDERSCORE_5: u16 = 0x1000;
-pub const GRID_ATTR_OVERLINE: u16 = 0x2000;
+// pub const GRID_ATTR_BRIGHT: u16 = 0x1;
+// pub const GRID_ATTR_DIM: u16 = 0x2;
+// pub const GRID_ATTR_UNDERSCORE: u16 = 0x4;
+// pub const GRID_ATTR_BLINK: u16 = 0x8;
+// pub const GRID_ATTR_REVERSE: u16 = 0x10;
+// pub const GRID_ATTR_HIDDEN: u16 = 0x20;
+// pub const GRID_ATTR_ITALICS: u16 = 0x40;
+// pub const GRID_ATTR_CHARSET: u16 = 0x80; // alternative character set
+// pub const GRID_ATTR_STRIKETHROUGH: u16 = 0x100;
+// pub const GRID_ATTR_UNDERSCORE_2: u16 = 0x200;
+// pub const GRID_ATTR_UNDERSCORE_3: u16 = 0x400;
+// pub const GRID_ATTR_UNDERSCORE_4: u16 = 0x800;
+// pub const GRID_ATTR_UNDERSCORE_5: u16 = 0x1000;
+// pub const GRID_ATTR_OVERLINE: u16 = 0x2000;
 
 /// All underscore attributes.
-pub const GRID_ATTR_ALL_UNDERSCORE: u16 = GRID_ATTR_UNDERSCORE
-    | GRID_ATTR_UNDERSCORE_2
-    | GRID_ATTR_UNDERSCORE_3
-    | GRID_ATTR_UNDERSCORE_4
-    | GRID_ATTR_UNDERSCORE_5;
+pub const GRID_ATTR_ALL_UNDERSCORE: grid_attr = grid_attr::GRID_ATTR_UNDERSCORE
+    .union(grid_attr::GRID_ATTR_UNDERSCORE_2)
+    .union(grid_attr::GRID_ATTR_UNDERSCORE_3)
+    .union(grid_attr::GRID_ATTR_UNDERSCORE_4)
+    .union(grid_attr::GRID_ATTR_UNDERSCORE_5);
 
 bitflags::bitflags! {
     /// Grid flags.
@@ -778,7 +815,7 @@ pub const PADDED_BORDERS: [u8; 13] = [b' '; 13];
 #[derive(Copy, Clone)]
 pub struct grid_cell {
     pub data: utf8_data,
-    pub attr: c_ushort,
+    pub attr: grid_attr,
     pub flags: grid_flag,
     pub fg: i32,
     pub bg: i32,
@@ -789,7 +826,7 @@ pub struct grid_cell {
 impl grid_cell {
     pub const fn new(
         data: utf8_data,
-        attr: c_ushort,
+        attr: grid_attr,
         flags: grid_flag,
         fg: i32,
         bg: i32,

@@ -732,7 +732,7 @@ pub unsafe extern "C" fn tty_putc(tty: *mut tty, ch: u8) {
             return;
         }
 
-        if (*tty).cell.attr & GRID_ATTR_CHARSET != 0 {
+        if (*tty).cell.attr.intersects(grid_attr::GRID_ATTR_CHARSET) {
             let acs = tty_acs_get(tty, ch);
             if !acs.is_null() {
                 tty_add(tty, acs, strlen(acs));
@@ -1933,7 +1933,7 @@ pub unsafe extern "C" fn tty_draw_line(
             let gcp = tty_check_codeset(tty, &gc);
             if len != 0
                 && (!tty_check_overlay(tty, atx + ux + width, aty)
-                    || (*gcp).attr & GRID_ATTR_CHARSET != 0
+                    || (*gcp).attr.intersects(grid_attr::GRID_ATTR_CHARSET)
                     || (*gcp).flags != last.flags
                     || (*gcp).attr != last.attr
                     || (*gcp).fg != last.fg
@@ -1996,7 +1996,7 @@ pub unsafe extern "C" fn tty_draw_line(
                         }
                     }
                 }
-            } else if ((*gcp).attr & GRID_ATTR_CHARSET != 0) {
+            } else if (*gcp).attr.intersects(grid_attr::GRID_ATTR_CHARSET) {
                 tty_attributes(tty, &raw mut last, defaults, palette, (*s).hyperlinks);
                 tty_cursor(tty, atx + ux, aty);
                 for j in 0..(*gcp).data.size {
@@ -3039,7 +3039,7 @@ pub unsafe extern "C" fn tty_reset(tty: *mut tty) {
             if (*gc).link != 0 {
                 tty_putcode_ss(tty, tty_code_code::TTYC_HLS, c"".as_ptr(), c"".as_ptr());
             }
-            if ((*gc).attr & GRID_ATTR_CHARSET != 0) && tty_acs_needed(tty) != 0 {
+            if (*gc).attr.intersects(grid_attr::GRID_ATTR_CHARSET) && tty_acs_needed(tty) != 0 {
                 tty_putcode(tty, tty_code_code::TTYC_RMACS);
             }
             tty_putcode(tty, tty_code_code::TTYC_SGR0);
@@ -3434,7 +3434,7 @@ pub unsafe extern "C" fn tty_attributes(
     unsafe {
         let mut tc = &raw mut (*tty).cell;
         let mut gc2: grid_cell = zeroed();
-        let mut changed: u16 = 0;
+        let mut changed = grid_attr::empty();
 
         /* Copy cell and update default colours. */
         memcpy__(&raw mut gc2, gc);
@@ -3463,7 +3463,7 @@ pub unsafe extern "C" fn tty_attributes(
          * any serious harm and makes a couple of applications happier.
          */
         if !tty_term_has((*tty).term, tty_code_code::TTYC_SETAB) {
-            if (gc2.attr & GRID_ATTR_REVERSE != 0) {
+            if (gc2.attr.intersects(grid_attr::GRID_ATTR_REVERSE)) {
                 if gc2.fg != 7 && !COLOUR_DEFAULT(gc2.fg) {
                     gc2.attr &= !GRID_ATTR_REVERSE;
                 }
@@ -3483,7 +3483,7 @@ pub unsafe extern "C" fn tty_attributes(
          * If any bits are being cleared or the underline colour is now default,
          * reset everything.
          */
-        if ((*tc).attr & !gc2.attr) != 0 || ((*tc).us != gc2.us && gc2.us == 0) {
+        if (*tc).attr.intersects(!gc2.attr) || (*tc).us != gc2.us && gc2.us == 0 {
             tty_reset(tty);
         }
 
@@ -3498,50 +3498,50 @@ pub unsafe extern "C" fn tty_attributes(
         (*tc).attr = gc2.attr;
 
         /* Set the attributes. */
-        if changed & GRID_ATTR_BRIGHT != 0 {
+        if changed.intersects(grid_attr::GRID_ATTR_BRIGHT) {
             tty_putcode(tty, tty_code_code::TTYC_BOLD);
         }
-        if changed & GRID_ATTR_DIM != 0 {
+        if changed.intersects(grid_attr::GRID_ATTR_DIM) {
             tty_putcode(tty, tty_code_code::TTYC_DIM);
         }
-        if changed & GRID_ATTR_ITALICS != 0 {
+        if changed.intersects(grid_attr::GRID_ATTR_ITALICS) {
             tty_set_italics(tty);
         }
-        if changed & GRID_ATTR_ALL_UNDERSCORE != 0 {
-            if ((changed & GRID_ATTR_UNDERSCORE != 0)
+        if changed.intersects(GRID_ATTR_ALL_UNDERSCORE) {
+            if ((changed.intersects(grid_attr::GRID_ATTR_UNDERSCORE))
                 || !tty_term_has((*tty).term, tty_code_code::TTYC_SMULX))
             {
                 tty_putcode(tty, tty_code_code::TTYC_SMUL);
-            } else if (changed & GRID_ATTR_UNDERSCORE_2 != 0) {
+            } else if (changed.intersects(grid_attr::GRID_ATTR_UNDERSCORE_2)) {
                 tty_putcode_i(tty, tty_code_code::TTYC_SMULX, 2);
-            } else if (changed & GRID_ATTR_UNDERSCORE_3 != 0) {
+            } else if (changed.intersects(grid_attr::GRID_ATTR_UNDERSCORE_3)) {
                 tty_putcode_i(tty, tty_code_code::TTYC_SMULX, 3);
-            } else if (changed & GRID_ATTR_UNDERSCORE_4 != 0) {
+            } else if (changed.intersects(grid_attr::GRID_ATTR_UNDERSCORE_4)) {
                 tty_putcode_i(tty, tty_code_code::TTYC_SMULX, 4);
-            } else if changed & GRID_ATTR_UNDERSCORE_5 != 0 {
+            } else if changed.intersects(grid_attr::GRID_ATTR_UNDERSCORE_5) {
                 tty_putcode_i(tty, tty_code_code::TTYC_SMULX, 5);
             }
         }
-        if changed & GRID_ATTR_BLINK != 0 {
+        if changed.intersects(grid_attr::GRID_ATTR_BLINK) {
             tty_putcode(tty, tty_code_code::TTYC_BLINK);
         }
-        if changed & GRID_ATTR_REVERSE != 0 {
+        if changed.intersects(grid_attr::GRID_ATTR_REVERSE) {
             if tty_term_has((*tty).term, tty_code_code::TTYC_REV).as_bool() {
                 tty_putcode(tty, tty_code_code::TTYC_REV);
             } else if tty_term_has((*tty).term, tty_code_code::TTYC_SMSO).as_bool() {
                 tty_putcode(tty, tty_code_code::TTYC_SMSO);
             }
         }
-        if (changed & GRID_ATTR_HIDDEN) != 0 {
+        if changed.intersects(grid_attr::GRID_ATTR_HIDDEN) {
             tty_putcode(tty, tty_code_code::TTYC_INVIS);
         }
-        if (changed & GRID_ATTR_STRIKETHROUGH) != 0 {
+        if changed.intersects(grid_attr::GRID_ATTR_STRIKETHROUGH) {
             tty_putcode(tty, tty_code_code::TTYC_SMXX);
         }
-        if (changed & GRID_ATTR_OVERLINE) != 0 {
+        if changed.intersects(grid_attr::GRID_ATTR_OVERLINE) {
             tty_putcode(tty, tty_code_code::TTYC_SMOL);
         }
-        if (changed & GRID_ATTR_CHARSET) != 0 && tty_acs_needed(tty) != 0 {
+        if changed.intersects(grid_attr::GRID_ATTR_CHARSET) && tty_acs_needed(tty) != 0 {
             tty_putcode(tty, tty_code_code::TTYC_SMACS);
         }
 
@@ -3624,7 +3624,7 @@ pub unsafe extern "C" fn tty_check_fg(
         if !(*gc).flags.intersects(grid_flag::NOPALETTE) {
             c = (*gc).fg;
             if c < 8
-                && (*gc).attr & GRID_ATTR_BRIGHT != 0
+                && (*gc).attr.intersects(grid_attr::GRID_ATTR_BRIGHT)
                 && !tty_term_has((*tty).term, tty_code_code::TTYC_NOBR)
             {
                 c += 90;
