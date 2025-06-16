@@ -1,6 +1,7 @@
-[workspace]
-members = ["tmux-rs"]
-resolver = "2"
+[package]
+name = "tmux-rs"
+version = "0.1.0"
+edition = "2024"
 
 [profile.dev]
 # debug-assertions = false
@@ -10,29 +11,24 @@ panic = "abort"
 debug = true
 panic = "abort"
 
-# # BUGS
-#
-# Warnings disabled in Cargo.toml still show in rust-analyzer
-# and must be allowed separately.
-# - <https://github.com/rust-lang/rust-analyzer/issues/16628>
-# - <https://github.com/rust-lang/rust-analyzer/issues/15344>
+[dependencies]
+bitflags     = { version = "2.6.0"   }
+lalrpop-util = { version = "0.21.0", default-features = false, features = ["lexer", "unicode"] }
+libc         = { version = "0.2.169" }
+num_enum     = { version = "0.7.3"   }
+paste        = { version = "1.0.15"  }
 
-# [workspace.lints.rust]
-# non_camel_case_types   = "allow"
-# non_snake_case         = "allow"
-# non_upper_case_globals = "allow"
-# private_interfaces     = "allow"
-# unused                 = "allow"
-# unsafe_op_in_unsafe_fn = "allow"
-# 
-# # oddly enough having this causes rust-analyzer to break, because of cargo clippy breaking
-# # unexpected_cfgs        = { level = "warn", check-cfg = ['cfg(disabled)'] }
-# 
-# [workspace.lints.clippy]
-# collapsible_if        = "allow"
-# collapsible_else_if   = "allow"
-# manual_range_contains = "allow"
-# missing_safety_doc    = "allow"
-# needless_return       = "allow"
-# new_without_default   = "allow"
-# zero_ptr              = "allow"
+[build-dependencies]
+lalrpop      = { version = "0.22.1", default-features = false  }
+
+[features]
+cgroups     = []
+hyperlinks  = []
+iutf8       = []
+ncurses     = []
+nokerninfo  = []
+sixel       = []
+sys_signame = []
+systemd     = []
+utempter    = []
+utf8proc    = []
