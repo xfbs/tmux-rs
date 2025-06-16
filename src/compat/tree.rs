@@ -231,63 +231,21 @@ where
 
 // RB_GENERATE_STATIC name, type, field, cmp
 macro_rules! RB_GENERATE {
-    ($head_ty:ty, $ty:ty, $entry_field:ident, $cmp_fn:ident) => {
-        ::paste::paste! {
-            impl $crate::compat::tree::GetEntry<$ty, [<discr_ $entry_field>] > for $ty {
-                unsafe fn entry(this: *const Self) -> *const rb_entry<$ty> { unsafe { &raw const (*this).$entry_field } }
-                unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<$ty> { unsafe { &raw mut (*this).$entry_field } }
-                unsafe fn cmp(this: *const Self, other: *const Self) -> i32 { unsafe { $cmp_fn(this, other) } }
+    ($head_ty:ty, $ty:ty, $entry_field:ident, $entry_field_discr:ty, $cmp_fn:ident) => {
+        impl $crate::compat::tree::GetEntry<$ty, $entry_field_discr> for $ty {
+            unsafe fn entry(this: *const Self) -> *const rb_entry<$ty> {
+                unsafe { &raw const (*this).$entry_field }
             }
-
-            #[allow(non_snake_case)]
-            #[unsafe(no_mangle)]
-            pub unsafe extern "C" fn [<$head_ty _RB_MINMAX>](head: *mut rb_head<$ty>, val: i32) -> *mut $ty {
-                unsafe { $crate::compat::tree::rb_minmax::<$ty, [<discr_ $entry_field>]>(head, val) }
+            unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<$ty> {
+                unsafe { &raw mut (*this).$entry_field }
             }
-
-            #[allow(non_snake_case)]
-            #[unsafe(no_mangle)]
-            pub unsafe extern "C" fn [<$head_ty _RB_NEXT>](elm: *mut $ty) -> *mut $ty {
-                unsafe { $crate::compat::tree::rb_next::<$ty, [<discr_ $entry_field>]>(elm) }
-            }
-
-            #[allow(non_snake_case)]
-            #[unsafe(no_mangle)]
-            pub unsafe extern "C" fn [<$head_ty _RB_PREV>](elm: *mut $ty) -> *mut $ty {
-                unsafe { $crate::compat::tree::rb_prev::<$ty, [<discr_ $entry_field>]>(elm) }
+            unsafe fn cmp(this: *const Self, other: *const Self) -> i32 {
+                unsafe { $cmp_fn(this, other) }
             }
         }
     };
 }
 pub(crate) use RB_GENERATE;
-
-macro_rules! RB_GENERATE_STATIC {
-    ($head_ty:ty, $ty:ty, $entry_field:ident, $cmp_fn:ident) => {
-        ::paste::paste! {
-            impl $crate::compat::tree::GetEntry<$ty, [<discr_ $entry_field>] > for $ty {
-                unsafe fn entry(this: *const Self) -> *const rb_entry<$ty> { unsafe { &raw const (*this).$entry_field } }
-                unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<$ty> { unsafe { &raw mut (*this).$entry_field } }
-                unsafe fn cmp(this: *const Self, other: *const Self) -> i32 { unsafe { $cmp_fn(this, other) } }
-            }
-
-            #[allow(non_snake_case)]
-            pub unsafe extern "C" fn [<$head_ty _RB_MINMAX>](head: *mut rb_head<$ty>, val: i32) -> *mut $ty {
-                unsafe { $crate::compat::tree::rb_minmax::<$ty, [<discr_ $entry_field>]>(head, val) }
-            }
-
-            #[allow(non_snake_case)]
-            pub unsafe extern "C" fn [<$head_ty _RB_NEXT>](elm: *mut $ty) -> *mut $ty {
-                unsafe { $crate::compat::tree::rb_next::<$ty, [<discr_ $entry_field>]>(elm) }
-            }
-
-            #[allow(non_snake_case)]
-            pub unsafe extern "C" fn [<$head_ty _RB_PREV>](elm: *mut $ty) -> *mut $ty {
-                unsafe { $crate::compat::tree::rb_prev::<$ty, [<discr_ $entry_field>]>(elm) }
-            }
-        }
-    };
-}
-pub(crate) use RB_GENERATE_STATIC;
 
 pub unsafe fn rb_minmax<T, D>(head: *mut rb_head<T>, val: i32) -> *mut T
 where

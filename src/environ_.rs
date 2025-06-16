@@ -21,7 +21,7 @@ use crate::compat::{
 use crate::xmalloc::xcalloc_;
 
 pub type environ = rb_head<environ_entry>;
-RB_GENERATE!(environ, environ_entry, entry, environ_cmp);
+RB_GENERATE!(environ, environ_entry, entry, discr_entry, environ_cmp);
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_cmp(

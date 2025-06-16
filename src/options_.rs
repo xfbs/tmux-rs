@@ -16,7 +16,7 @@ use crate::*;
 use libc::{fnmatch, isdigit, sscanf, strcasecmp, strchr, strcmp, strncmp, strstr};
 
 use crate::compat::{
-    RB_GENERATE_STATIC,
+    RB_GENERATE,
     queue::tailq_foreach,
     strtonum,
     tree::{rb_find, rb_foreach, rb_init, rb_insert, rb_min, rb_next, rb_remove},
@@ -51,7 +51,13 @@ pub unsafe extern "C" fn options_array_cmp(
         0
     }
 }
-RB_GENERATE_STATIC!(options_array, options_array_item, entry, options_array_cmp);
+RB_GENERATE!(
+    options_array,
+    options_array_item,
+    entry,
+    discr_entry,
+    options_array_cmp
+);
 
 #[repr(C)]
 pub struct options_entry {
@@ -113,7 +119,7 @@ pub fn OPTIONS_IS_ARRAY(o: *const options_entry) -> bool {
     }
 }
 
-RB_GENERATE_STATIC!(options_tree, options_entry, entry, options_cmp);
+RB_GENERATE!(options_tree, options_entry, entry, discr_entry, options_cmp);
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn options_cmp(lhs: *const options_entry, rhs: *const options_entry) -> i32 {

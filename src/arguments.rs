@@ -59,7 +59,7 @@ pub struct args_command_state {
     pub pi: cmd_parse_input,
 }
 
-crate::compat::RB_GENERATE!(args_tree, args_entry, entry, args_cmp);
+crate::compat::RB_GENERATE!(args_tree, args_entry, entry, discr_entry, args_cmp);
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn args_cmp(a1: *const args_entry, a2: *const args_entry) -> i32 {

@@ -67,11 +67,11 @@ unsafe extern "C" fn hyperlinks_by_uri_cmp(
     }
 }
 
-// RB_PROTOTYPE_STATIC(hyperlinks_by_uri_tree, hyperlinks_uri, by_uri_entry, hyperlinks_by_uri_cmp);
 RB_GENERATE!(
     hyperlinks_by_uri_tree,
     hyperlinks_uri,
     by_uri_entry,
+    discr_by_uri_entry,
     hyperlinks_by_uri_cmp
 );
 
@@ -83,11 +83,11 @@ unsafe extern "C" fn hyperlinks_by_inner_cmp(
     unsafe { (*left).inner.wrapping_sub((*right).inner) as i32 }
 }
 
-// RB_PROTOTYPE_STATIC(hyperlinks_by_inner_tree, hyperlinks_uri, by_inner_entry, hyperlinks_by_inner_cmp);
 RB_GENERATE!(
     hyperlinks_by_inner_tree,
     hyperlinks_uri,
     by_inner_entry,
+    discr_by_inner_entry,
     hyperlinks_by_inner_cmp
 );
 

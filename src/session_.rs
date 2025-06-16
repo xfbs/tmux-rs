@@ -24,8 +24,14 @@ use crate::compat::{
     },
 };
 
-RB_GENERATE!(sessions, session, entry, session_cmp);
-RB_GENERATE!(session_groups, session_group, entry, session_group_cmp);
+RB_GENERATE!(sessions, session, entry, discr_entry, session_cmp);
+RB_GENERATE!(
+    session_groups,
+    session_group,
+    entry,
+    discr_entry,
+    session_group_cmp
+);
 
 #[unsafe(no_mangle)]
 pub static mut sessions: sessions = unsafe { zeroed() };

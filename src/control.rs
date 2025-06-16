@@ -156,7 +156,13 @@ pub unsafe extern "C" fn control_pane_cmp(
         }
     }
 }
-RB_GENERATE!(control_panes, control_pane, entry, control_pane_cmp);
+RB_GENERATE!(
+    control_panes,
+    control_pane,
+    entry,
+    discr_entry,
+    control_pane_cmp
+);
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_sub_cmp(
@@ -165,7 +171,13 @@ pub unsafe extern "C" fn control_sub_cmp(
 ) -> i32 {
     unsafe { strcmp((*csub1).name, (*csub2).name) }
 }
-RB_GENERATE!(control_subs, control_sub, entry, control_sub_cmp);
+RB_GENERATE!(
+    control_subs,
+    control_sub,
+    entry,
+    discr_entry,
+    control_sub_cmp
+);
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn control_sub_pane_cmp(
@@ -192,6 +204,7 @@ RB_GENERATE!(
     control_sub_panes,
     control_sub_pane,
     entry,
+    discr_entry,
     control_sub_pane_cmp
 );
 
@@ -220,6 +233,7 @@ RB_GENERATE!(
     control_sub_windows,
     control_sub_window,
     entry,
+    discr_entry,
     control_sub_window_cmp
 );
 

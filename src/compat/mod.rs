@@ -16,7 +16,7 @@ pub mod vis_;
 pub use systemd::systemd_create_socket;
 
 pub(crate) use queue::{TAILQ_HEAD_INITIALIZER, impl_tailq_entry, tailq_insert_head};
-pub(crate) use tree::{RB_GENERATE, RB_GENERATE_STATIC};
+pub(crate) use tree::RB_GENERATE;
 
 // pub use bsd_sys::{bsd_getopt, optarg as BSDoptarg, optind as BSDoptind};
 // bsd_getopt, closefrom, getpeereid, optarg, optind, recallocarray, setproctitle, strlcat, strlcpy, strtonum, vis,

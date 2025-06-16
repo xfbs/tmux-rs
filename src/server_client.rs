@@ -43,8 +43,6 @@ pub unsafe extern "C" fn server_client_window_cmp(
     }
 }
 
-// RB_GENERATE!( client_windows, client_window, entry, server_client_window_cmp);
-
 /// Number of attached clients.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_client_how_many() -> u32 {

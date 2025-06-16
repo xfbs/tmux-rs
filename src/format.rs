@@ -20,7 +20,7 @@ use libc::{
 
 use crate::{
     compat::{
-        HOST_NAME_MAX, RB_GENERATE_STATIC,
+        HOST_NAME_MAX, RB_GENERATE,
         queue::tailq_empty,
         strlcat, strtonum,
         tree::{
@@ -68,7 +68,13 @@ pub struct format_job {
 pub type format_job_tree = rb_head<format_job>;
 #[unsafe(no_mangle)]
 pub static mut format_jobs: format_job_tree = rb_initializer();
-RB_GENERATE_STATIC!(format_job_tree, format_job, entry, format_job_cmp);
+RB_GENERATE!(
+    format_job_tree,
+    format_job,
+    entry,
+    discr_entry,
+    format_job_cmp
+);
 
 // Format job tree comparison function.
 #[unsafe(no_mangle)]
@@ -163,7 +169,13 @@ pub struct format_tree {
     pub tree: format_entry_tree,
 }
 pub type format_entry_tree = rb_head<format_entry>;
-RB_GENERATE_STATIC!(format_entry_tree, format_entry, entry, format_entry_cmp);
+RB_GENERATE!(
+    format_entry_tree,
+    format_entry,
+    entry,
+    discr_entry,
+    format_entry_cmp
+);
 
 /// Format expand state.
 #[repr(C)]

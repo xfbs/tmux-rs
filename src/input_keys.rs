@@ -15,7 +15,7 @@
 use crate::*;
 
 use crate::compat::{
-    RB_GENERATE_STATIC,
+    RB_GENERATE,
     tree::{rb_find, rb_foreach, rb_initializer, rb_insert},
 };
 use crate::log::log_debug_c;
@@ -56,7 +56,13 @@ pub unsafe extern "C" fn input_key_cmp(
     }
 }
 
-RB_GENERATE_STATIC!(input_key_tree, input_key_entry, entry, input_key_cmp);
+RB_GENERATE!(
+    input_key_tree,
+    input_key_entry,
+    entry,
+    discr_entry,
+    input_key_cmp
+);
 static mut input_key_tree: input_key_tree = rb_initializer();
 
 const input_key_defaults_len: usize = 83;

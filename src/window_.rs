@@ -50,9 +50,15 @@ pub struct window_pane_input_data {
     file: *mut client_file,
 }
 
-RB_GENERATE!(windows, window, entry, window_cmp);
-RB_GENERATE!(winlinks, winlink, entry, winlink_cmp);
-RB_GENERATE!(window_pane_tree, window_pane, tree_entry, window_pane_cmp);
+RB_GENERATE!(windows, window, entry, discr_entry, window_cmp);
+RB_GENERATE!(winlinks, winlink, entry, discr_entry, winlink_cmp);
+RB_GENERATE!(
+    window_pane_tree,
+    window_pane,
+    tree_entry,
+    discr_tree_entry,
+    window_pane_cmp
+);
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_cmp(w1: *const window, w2: *const window) -> i32 {

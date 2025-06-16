@@ -56,7 +56,13 @@ pub unsafe extern "C" fn server_acl_cmp(
 pub type server_acl_entries = rb_head<server_acl_user>;
 static mut server_acl_entries: server_acl_entries = unsafe { zeroed() };
 
-RB_GENERATE!(server_acl_entries, server_acl_user, entry, server_acl_cmp);
+RB_GENERATE!(
+    server_acl_entries,
+    server_acl_user,
+    entry,
+    discr_entry,
+    server_acl_cmp
+);
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_acl_init() {

@@ -81,7 +81,13 @@ pub unsafe extern "C" fn utf8_data_cmp(ui1: *const utf8_item, ui2: *const utf8_i
     }
 }
 pub type utf8_data_tree = rb_head<utf8_item>;
-RB_GENERATE!(utf8_data_tree, utf8_item, data_entry, utf8_data_cmp);
+RB_GENERATE!(
+    utf8_data_tree,
+    utf8_item,
+    data_entry,
+    discr_data_entry,
+    utf8_data_cmp
+);
 static mut utf8_data_tree: utf8_data_tree = rb_initializer();
 
 #[unsafe(no_mangle)]
@@ -97,7 +103,13 @@ pub unsafe extern "C" fn utf8_index_cmp(ui1: *const utf8_item, ui2: *const utf8_
     0
 }
 pub type utf8_index_tree = rb_head<utf8_item>;
-RB_GENERATE!(utf8_index_tree, utf8_item, index_entry, utf8_index_cmp);
+RB_GENERATE!(
+    utf8_index_tree,
+    utf8_item,
+    index_entry,
+    discr_index_entry,
+    utf8_index_cmp
+);
 static mut utf8_index_tree: utf8_index_tree = rb_initializer();
 
 static mut utf8_next_index: u32 = 0;

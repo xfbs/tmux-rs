@@ -46,12 +46,24 @@ type paste_time_tree = rb_head<paste_buffer>;
 static mut paste_by_name: paste_name_tree = rb_initializer();
 static mut paste_by_time: paste_time_tree = rb_initializer();
 
-RB_GENERATE!(paste_name_tree, paste_buffer, name_entry, paste_cmp_names);
+RB_GENERATE!(
+    paste_name_tree,
+    paste_buffer,
+    name_entry,
+    discr_name_entry,
+    paste_cmp_names
+);
 fn paste_cmp_names(a: *const paste_buffer, b: *const paste_buffer) -> i32 {
     unsafe { libc::strcmp((*a).name, (*b).name) }
 }
 
-RB_GENERATE!(paste_time_tree, paste_buffer, time_entry, paste_cmp_times);
+RB_GENERATE!(
+    paste_time_tree,
+    paste_buffer,
+    time_entry,
+    discr_time_entry,
+    paste_cmp_times
+);
 fn paste_cmp_times(a: *const paste_buffer, b: *const paste_buffer) -> i32 {
     unsafe {
         let x = (*a).order;

@@ -60,7 +60,13 @@ pub type wait_channels = rb_head<wait_channel>;
 #[unsafe(no_mangle)]
 static mut wait_channels: wait_channels = rb_initializer();
 
-RB_GENERATE!(wait_channels, wait_channel, entry, wait_channel_cmp);
+RB_GENERATE!(
+    wait_channels,
+    wait_channel,
+    entry,
+    discr_entry,
+    wait_channel_cmp
+);
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wait_channel_cmp(
     wc1: *const wait_channel,

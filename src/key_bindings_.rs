@@ -17,7 +17,7 @@ use crate::*;
 use libc::strcmp;
 
 use crate::compat::{
-    RB_GENERATE_STATIC,
+    RB_GENERATE,
     tree::{
         rb_empty, rb_find, rb_foreach, rb_init, rb_initializer, rb_insert, rb_min, rb_next,
         rb_remove,
@@ -87,8 +87,14 @@ macro_rules! DEFAULT_PANE_MENU {
     };
 }
 
-RB_GENERATE_STATIC!(key_bindings, key_binding, entry, key_bindings_cmp);
-RB_GENERATE_STATIC!(key_tables, key_table, entry, key_table_cmp);
+RB_GENERATE!(
+    key_bindings,
+    key_binding,
+    entry,
+    discr_entry,
+    key_bindings_cmp
+);
+RB_GENERATE!(key_tables, key_table, entry, discr_entry, key_table_cmp);
 static mut key_tables: key_tables = rb_initializer();
 
 #[unsafe(no_mangle)]

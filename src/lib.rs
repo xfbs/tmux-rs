@@ -2167,7 +2167,7 @@ pub struct client_file {
     pub entry: rb_entry<client_file>,
 }
 pub type client_files = rb_head<client_file>;
-RB_GENERATE!(client_files, client_file, entry, file_cmp);
+RB_GENERATE!(client_files, client_file, entry, discr_entry, file_cmp);
 
 // Client window.
 #[repr(C)]
@@ -2185,6 +2185,7 @@ RB_GENERATE!(
     client_windows,
     client_window,
     entry,
+    discr_entry,
     server_client_window_cmp
 );
 
