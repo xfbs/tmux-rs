@@ -246,50 +246,30 @@ pub unsafe extern "C" fn notify_add(
         };
 
         (*ne).formats = format_create(null_mut(), null_mut(), 0, format_flags::FORMAT_NOJOBS);
-        format_add((*ne).formats, c"hook".as_ptr(), c"%s".as_ptr(), name);
+        format_add!((*ne).formats, c"hook".as_ptr(), "{}", _s(name));
         if !c.is_null() {
-            format_add(
-                (*ne).formats,
-                c"hook_client".as_ptr(),
-                c"%s".as_ptr(),
-                (*c).name,
-            );
+            format_add!((*ne).formats, c"hook_client".as_ptr(), "{}", _s((*c).name),);
         }
         if !s.is_null() {
-            format_add(
-                (*ne).formats,
-                c"hook_session".as_ptr(),
-                c"$%u".as_ptr(),
-                (*s).id,
-            );
-            format_add(
+            format_add!((*ne).formats, c"hook_session".as_ptr(), "${}", (*s).id);
+            format_add!(
                 (*ne).formats,
                 c"hook_session_name".as_ptr(),
-                c"%s".as_ptr(),
-                (*s).name,
+                "{}",
+                _s((*s).name),
             );
         }
         if !w.is_null() {
-            format_add(
-                (*ne).formats,
-                c"hook_window".as_ptr(),
-                c"@%u".as_ptr(),
-                (*w).id,
-            );
-            format_add(
+            format_add!((*ne).formats, c"hook_window".as_ptr(), "@{}", (*w).id,);
+            format_add!(
                 (*ne).formats,
                 c"hook_window_name".as_ptr(),
-                c"%s".as_ptr(),
-                (*w).name,
+                "{}",
+                _s((*w).name),
             );
         }
         if !wp.is_null() {
-            format_add(
-                (*ne).formats,
-                c"hook_pane".as_ptr(),
-                c"%%%d".as_ptr(),
-                (*wp).id,
-            );
+            format_add!((*ne).formats, c"hook_pane".as_ptr(), "%%{}", (*wp).id,);
         }
         format_log_debug((*ne).formats, __func__);
 
@@ -335,7 +315,7 @@ pub unsafe extern "C" fn notify_hook(item: *mut cmdq_item, name: *mut c_char) {
         };
 
         ne.formats = format_create(null_mut(), null_mut(), 0, format_flags::FORMAT_NOJOBS);
-        format_add(ne.formats, c"hook".as_ptr(), c"%s".as_ptr(), name);
+        format_add!(ne.formats, c"hook".as_ptr(), "{}", _s(name));
         format_log_debug(ne.formats, __func__);
 
         notify_insert_hook(item, &raw mut ne);

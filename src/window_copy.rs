@@ -825,75 +825,45 @@ pub unsafe extern "C" fn window_copy_formats(wme: *mut window_mode_entry, ft: *m
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
 
-        format_add(ft, c"scroll_position".as_ptr(), c"%d".as_ptr(), (*data).oy);
-        format_add(
-            ft,
-            c"rectangle_toggle".as_ptr(),
-            c"%d".as_ptr(),
-            (*data).rectflag,
-        );
+        format_add!(ft, c"scroll_position".as_ptr(), "{}", (*data).oy);
+        format_add!(ft, c"rectangle_toggle".as_ptr(), "{}", (*data).rectflag,);
 
-        format_add(ft, c"copy_cursor_x".as_ptr(), c"%d".as_ptr(), (*data).cx);
-        format_add(ft, c"copy_cursor_y".as_ptr(), c"%d".as_ptr(), (*data).cy);
+        format_add!(ft, c"copy_cursor_x".as_ptr(), "{}", (*data).cx);
+        format_add!(ft, c"copy_cursor_y".as_ptr(), "{}", (*data).cy);
 
         if !(*data).screen.sel.is_null() {
-            format_add(
-                ft,
-                c"selection_start_x".as_ptr(),
-                c"%d".as_ptr(),
-                (*data).selx,
-            );
-            format_add(
-                ft,
-                c"selection_start_y".as_ptr(),
-                c"%d".as_ptr(),
-                (*data).sely,
-            );
-            format_add(
-                ft,
-                c"selection_end_x".as_ptr(),
-                c"%d".as_ptr(),
-                (*data).endselx,
-            );
-            format_add(
-                ft,
-                c"selection_end_y".as_ptr(),
-                c"%d".as_ptr(),
-                (*data).endsely,
-            );
+            format_add!(ft, c"selection_start_x".as_ptr(), "{}", (*data).selx,);
+            format_add!(ft, c"selection_start_y".as_ptr(), "{}", (*data).sely,);
+            format_add!(ft, c"selection_end_x".as_ptr(), "{}", (*data).endselx,);
+            format_add!(ft, c"selection_end_y".as_ptr(), "{}", (*data).endsely,);
 
             if (*data).cursordrag != cursordrag::CURSORDRAG_NONE {
-                format_add(ft, c"selection_active".as_ptr(), c"1".as_ptr());
+                format_add!(ft, c"selection_active".as_ptr(), "1");
             } else {
-                format_add(ft, c"selection_active".as_ptr(), c"0".as_ptr());
+                format_add!(ft, c"selection_active".as_ptr(), "0");
             }
             if (*data).endselx != (*data).selx || (*data).endsely != (*data).sely {
-                format_add(ft, c"selection_present".as_ptr(), c"1".as_ptr());
+                format_add!(ft, c"selection_present".as_ptr(), "1");
             } else {
-                format_add(ft, c"selection_present".as_ptr(), c"0".as_ptr());
+                format_add!(ft, c"selection_present".as_ptr(), "0");
             }
         } else {
-            format_add(ft, c"selection_active".as_ptr(), c"0".as_ptr());
-            format_add(ft, c"selection_present".as_ptr(), c"0".as_ptr());
+            format_add!(ft, c"selection_active".as_ptr(), "0");
+            format_add!(ft, c"selection_present".as_ptr(), "0");
         }
 
-        format_add(
+        format_add!(
             ft,
             c"search_present".as_ptr(),
-            c"%d".as_ptr(),
+            "{}",
             !(*data).searchmark.is_null() as i32,
         );
         if (*data).searchcount != -1 {
-            format_add(
-                ft,
-                c"search_count".as_ptr(),
-                c"%d".as_ptr(),
-                (*data).searchcount,
-            );
-            format_add(
+            format_add!(ft, c"search_count".as_ptr(), "{}", (*data).searchcount,);
+            format_add!(
                 ft,
                 c"search_count_partial".as_ptr(),
-                c"%d".as_ptr(),
+                "{}",
                 (*data).searchmore,
             );
         }

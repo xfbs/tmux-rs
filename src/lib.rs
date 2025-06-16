@@ -2580,8 +2580,8 @@ pub use crate::proc::{
 
 mod cfg_;
 pub use crate::cfg_::{
-    cfg_add_cause, cfg_client, cfg_files, cfg_finished, cfg_nfiles, cfg_print_causes, cfg_quiet,
-    cfg_show_causes, load_cfg, load_cfg_from_buffer, start_cfg,
+    cfg_client, cfg_files, cfg_finished, cfg_nfiles, cfg_print_causes, cfg_quiet, cfg_show_causes,
+    load_cfg, load_cfg_from_buffer, start_cfg,
 };
 
 mod paste;
@@ -2592,8 +2592,9 @@ pub use crate::paste::{
 };
 
 mod format;
+use crate::format::format_add;
 pub use crate::format::{
-    FORMAT_NONE, FORMAT_PANE, FORMAT_WINDOW, format_add, format_add_cb, format_add_tv, format_cb,
+    FORMAT_NONE, FORMAT_PANE, FORMAT_WINDOW, format_add_cb, format_add_tv, format_cb,
     format_create, format_create_defaults, format_create_from_state, format_create_from_target,
     format_defaults, format_defaults_pane, format_defaults_paste_buffer, format_defaults_window,
     format_each, format_expand, format_expand_time, format_flags, format_free, format_get_pane,
@@ -2710,13 +2711,14 @@ pub use crate::arguments::{
 };
 
 mod cmd_;
+use crate::cmd_::cmd_log_argv;
 pub use crate::cmd_::{
     cmd, cmd_append_argv, cmd_copy, cmd_copy_argv, cmd_free, cmd_free_argv, cmd_get_alias,
     cmd_get_args, cmd_get_entry, cmd_get_group, cmd_get_source, cmd_list_all_have,
     cmd_list_any_have, cmd_list_append, cmd_list_append_all, cmd_list_copy, cmd_list_first,
-    cmd_list_free, cmd_list_move, cmd_list_new, cmd_list_next, cmd_list_print, cmd_log_argv,
-    cmd_mouse_at, cmd_mouse_pane, cmd_mouse_window, cmd_pack_argv, cmd_parse, cmd_prepend_argv,
-    cmd_print, cmd_stringify_argv, cmd_table, cmd_template_replace, cmd_unpack_argv, cmds,
+    cmd_list_free, cmd_list_move, cmd_list_new, cmd_list_next, cmd_list_print, cmd_mouse_at,
+    cmd_mouse_pane, cmd_mouse_window, cmd_pack_argv, cmd_parse, cmd_prepend_argv, cmd_print,
+    cmd_stringify_argv, cmd_table, cmd_template_replace, cmd_unpack_argv, cmds,
 };
 
 pub use crate::cmd_::cmd_attach_session::cmd_attach_session;
@@ -2734,13 +2736,14 @@ pub use crate::cmd_parse::{
     cmd_parse_from_buffer, cmd_parse_from_file, cmd_parse_from_string, cmd_parse_state, *,
 };
 
+use crate::cmd_::cmd_queue::cmdq_add_format;
 pub use crate::cmd_::cmd_queue::{
-    cmdq_add_format, cmdq_add_formats, cmdq_append, cmdq_continue, cmdq_copy_state, cmdq_error,
-    cmdq_free, cmdq_free_state, cmdq_get_callback1, cmdq_get_client, cmdq_get_command,
-    cmdq_get_current, cmdq_get_error, cmdq_get_event, cmdq_get_flags, cmdq_get_name,
-    cmdq_get_source, cmdq_get_state, cmdq_get_target, cmdq_get_target_client, cmdq_guard,
-    cmdq_insert_after, cmdq_insert_hook, cmdq_item, cmdq_link_state, cmdq_list, cmdq_merge_formats,
-    cmdq_new, cmdq_new_state, cmdq_next, cmdq_print, cmdq_print_data, cmdq_running, cmdq_state,
+    cmdq_add_formats, cmdq_append, cmdq_continue, cmdq_copy_state, cmdq_error, cmdq_free,
+    cmdq_free_state, cmdq_get_callback1, cmdq_get_client, cmdq_get_command, cmdq_get_current,
+    cmdq_get_error, cmdq_get_event, cmdq_get_flags, cmdq_get_name, cmdq_get_source, cmdq_get_state,
+    cmdq_get_target, cmdq_get_target_client, cmdq_guard, cmdq_insert_after, cmdq_insert_hook,
+    cmdq_item, cmdq_link_state, cmdq_list, cmdq_merge_formats, cmdq_new, cmdq_new_state, cmdq_next,
+    cmdq_print, cmdq_print_data, cmdq_running, cmdq_state,
 };
 
 pub use crate::cmd_::cmd_wait_for::cmd_wait_for_flush;

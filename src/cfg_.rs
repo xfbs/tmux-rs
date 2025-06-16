@@ -129,7 +129,7 @@ pub unsafe extern "C" fn load_cfg(
             if errno!() == ENOENT && flags.intersects(cmd_parse_input_flags::CMD_PARSE_QUIET) {
                 return 0;
             }
-            cfg_add_cause(c"%s: %s".as_ptr(), path, strerror(*__errno_location()));
+            cfg_add_cause!("{}: {}", _s(path), _s(strerror(*__errno_location())));
             return -1;
         }
 
@@ -143,7 +143,7 @@ pub unsafe extern "C" fn load_cfg(
         let pr = cmd_parse_from_file(f, &raw mut pi);
         fclose(f);
         if (*pr).status == cmd_parse_status::CMD_PARSE_ERROR {
-            cfg_add_cause(c"%s".as_ptr(), (*pr).error);
+            cfg_add_cause!("{}", _s((*pr).error));
             free((*pr).error as _);
             return -1;
         }
@@ -157,7 +157,7 @@ pub unsafe extern "C" fn load_cfg(
         } else {
             cmdq_new_state(null_mut(), null_mut(), 0)
         };
-        cmdq_add_format(state, c"current_file".as_ptr(), c"%s".as_ptr(), pi.file);
+        cmdq_add_format!(state, c"current_file".as_ptr(), "{}", _s(pi.file));
 
         let mut new_item0 = cmdq_get_command((*pr).cmdlist, state);
         if !item.is_null() {
@@ -203,7 +203,7 @@ pub unsafe extern "C" fn load_cfg_from_buffer(
 
         let pr = cmd_parse_from_buffer(buf, len, &raw mut pi);
         if (*pr).status == cmd_parse_status::CMD_PARSE_ERROR {
-            cfg_add_cause(c"%s".as_ptr(), (*pr).error);
+            cfg_add_cause!("{}", _s((*pr).error));
             free((*pr).error as _);
             return -1;
         }
@@ -217,7 +217,7 @@ pub unsafe extern "C" fn load_cfg_from_buffer(
         } else {
             cmdq_new_state(null_mut(), null_mut(), 0)
         };
-        cmdq_add_format(state, c"current_file".as_ptr(), c"%s".as_ptr(), pi.file);
+        cmdq_add_format!(state, c"current_file".as_ptr(), "{}", _s(pi.file));
 
         let mut new_item0 = cmdq_get_command((*pr).cmdlist, state);
         if !item.is_null() {
@@ -235,16 +235,22 @@ pub unsafe extern "C" fn load_cfg_from_buffer(
     }
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn cfg_add_cause(fmt: *const c_char, mut args: ...) {
-    let mut msg = MaybeUninit::<*mut c_char>::uninit();
+macro_rules! cfg_add_cause {
+   ($fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::cfg_::cfg_add_cause_(format_args!($fmt $(, $args)*))
+    };
+}
+pub(crate) use cfg_add_cause;
 
+pub unsafe fn cfg_add_cause_(args: std::fmt::Arguments) {
     unsafe {
-        xvasprintf(msg.as_mut_ptr(), fmt, args.as_va_list());
+        let mut msg = args.to_string();
+        msg.push('\0');
+        let msg = msg.leak();
 
         cfg_ncauses += 1;
         cfg_causes = xreallocarray_::<*mut c_char>(cfg_causes, cfg_ncauses as usize).as_ptr();
-        *cfg_causes.add(cfg_ncauses as usize - 1) = msg.assume_init();
+        *cfg_causes.add(cfg_ncauses as usize - 1) = msg.as_mut_ptr().cast();
     }
 }
 

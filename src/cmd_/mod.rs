@@ -339,22 +339,20 @@ impl Entry<cmd, qentry> for cmd {
 #[unsafe(no_mangle)]
 pub static mut cmd_list_next_group: u32 = 1;
 
-// Log an argument vector.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmd_log_argv(
-    argc: i32,
-    argv: *mut *mut c_char,
-    fmt: *const c_char,
-    mut args: ...
-) {
-    unsafe {
-        let mut prefix: *mut c_char = null_mut();
-        xvasprintf(&raw mut prefix, fmt, args.as_va_list());
+macro_rules! cmd_log_argv {
+   ($argc:expr, $argv:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::cmd_::cmd_log_argv_($argc, $argv, format_args!($fmt $(, $args)*))
+    };
+}
+pub(crate) use cmd_log_argv;
 
+// Log an argument vector.
+pub unsafe fn cmd_log_argv_(argc: i32, argv: *mut *mut c_char, args: std::fmt::Arguments) {
+    unsafe {
+        let mut prefix = args.to_string();
         for i in 0..argc {
-            log_debug!("{}: argv[{}]{}", _s(prefix), i, _s(*argv.add(i as usize)));
+            log_debug!("{}: argv[{}]{}", prefix, i, _s(*argv.add(i as usize)));
         }
-        free_(prefix);
     }
 }
 
@@ -405,7 +403,7 @@ pub unsafe extern "C" fn cmd_pack_argv(
         if argc == 0 {
             return 0;
         }
-        cmd_log_argv(argc, argv, c"%s".as_ptr(), c"cmd_pack_argv".as_ptr());
+        cmd_log_argv!(argc, argv, "cmd_pack_argv");
 
         *buf = b'\0' as c_char;
         for i in 0..argc {
@@ -447,7 +445,7 @@ pub unsafe extern "C" fn cmd_unpack_argv(
             buf = buf.add(arglen);
             len -= arglen;
         }
-        cmd_log_argv(argc, *argv, c"%s".as_ptr(), c"cmd_unpack_argv".as_ptr());
+        cmd_log_argv!(argc, *argv, "cmd_unpack_argv");
 
         0
     }

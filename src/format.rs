@@ -3429,7 +3429,7 @@ pub unsafe extern "C" fn format_merge(ft: *mut format_tree, from: *mut format_tr
     unsafe {
         for fe in rb_foreach(&raw mut (*from).tree).map(NonNull::as_ptr) {
             if !(*fe).value.is_null() {
-                format_add(ft, (*fe).key, c"%s".as_ptr(), (*fe).value);
+                format_add!(ft, (*fe).key, "{}", _s((*fe).value));
             }
         }
     }
@@ -3557,14 +3557,15 @@ pub unsafe extern "C" fn format_each(
     }
 }
 
+macro_rules! format_add {
+   ($state:expr, $key:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::format::format_add_($state, $key, format_args!($fmt $(, $args)*))
+    };
+}
+pub(crate) use format_add;
+
 /// Add a key-value pair.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn format_add(
-    ft: *mut format_tree,
-    key: *const c_char,
-    fmt: *const c_char,
-    mut ap: ...
-) {
+pub unsafe fn format_add_(ft: *mut format_tree, key: *const c_char, args: std::fmt::Arguments) {
     unsafe {
         let mut fe = xmalloc_::<format_entry>().as_ptr();
 
@@ -3581,7 +3582,9 @@ pub unsafe extern "C" fn format_add(
         (*fe).cb = None;
         (*fe).time = 0;
 
-        xvasprintf(&raw mut (*fe).value, fmt, ap.as_va_list());
+        let mut value = args.to_string();
+        value.push('\0');
+        (*fe).value = value.leak().as_mut_ptr().cast();
     }
 }
 

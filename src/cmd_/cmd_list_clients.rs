@@ -63,7 +63,7 @@ unsafe extern "C" fn cmd_list_clients_exec(self_: *mut cmd, item: *mut cmdq_item
                 FORMAT_NONE,
                 format_flags::empty(),
             );
-            format_add(ft, c"line".as_ptr(), c"%u".as_ptr(), idx);
+            format_add!(ft, c"line".as_ptr(), "{idx}");
             format_defaults(ft, c, None, None, None);
 
             let mut flag = 0;

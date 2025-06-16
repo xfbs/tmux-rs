@@ -14,6 +14,7 @@
 
 use crate::*;
 
+use crate::cfg_::cfg_add_cause;
 use crate::compat::queue::{
     tailq_empty, tailq_first, tailq_init, tailq_insert_after, tailq_insert_tail, tailq_last,
     tailq_next, tailq_remove,
@@ -277,24 +278,26 @@ pub unsafe extern "C" fn cmdq_free_state(state: *mut cmdq_state) {
     }
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmdq_add_format(
+macro_rules! cmdq_add_format {
+   ($state:expr, $key:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::cmd_::cmd_queue::cmdq_add_format_($state, $key, format_args!($fmt $(, $args)*))
+    };
+}
+pub(crate) use cmdq_add_format;
+
+pub unsafe fn cmdq_add_format_(
     state: *mut cmdq_state,
     key: *const c_char,
-    fmt: *const c_char,
-    mut args: ...
+    args: std::fmt::Arguments,
 ) {
-    let mut value = null_mut();
     unsafe {
-        xvasprintf(&raw mut value, fmt, args.as_va_list());
+        let value = args.to_string();
 
         if (*state).formats.is_null() {
             (*state).formats =
                 format_create(null_mut(), null_mut(), FORMAT_NONE, format_flags::empty());
         }
-        format_add((*state).formats, key, c"%s".as_ptr(), value);
-
-        free_(value);
+        format_add!((*state).formats, key, "{}", value);
     }
 }
 
@@ -314,7 +317,7 @@ pub unsafe extern "C" fn cmdq_merge_formats(item: *mut cmdq_item, ft: *mut forma
     unsafe {
         if !(*item).cmd.is_null() {
             let entry = cmd_get_entry((*item).cmd);
-            format_add(ft, c"command".as_ptr(), c"%s".as_ptr(), (*entry).name);
+            format_add!(ft, c"command".as_ptr(), "{}", _s((*entry).name));
         }
 
         if !(*(*item).state).formats.is_null() {
@@ -435,37 +438,32 @@ pub unsafe extern "C" fn cmdq_insert_hook(
          * target or formats for any subsequent commands.
          */
         let new_state = cmdq_new_state(current, &raw mut (*state).event, CMDQ_STATE_NOHOOKS);
-        cmdq_add_format(new_state, c"hook".as_ptr(), c"%s".as_ptr(), name);
+        cmdq_add_format!(new_state, c"hook".as_ptr(), "{}", _s(name));
 
         let arguments = args_print(args);
-        cmdq_add_format(
-            new_state,
-            c"hook_arguments".as_ptr(),
-            c"%s".as_ptr(),
-            arguments,
-        );
+        cmdq_add_format!(new_state, c"hook_arguments".as_ptr(), "{}", _s(arguments),);
         free_(arguments);
 
         for i in 0..args_count(args) {
             xsnprintf(tmp, sizeof_tmp, c"hook_argument_%d".as_ptr(), i);
-            cmdq_add_format(new_state, tmp, c"%s".as_ptr(), args_string(args, i));
+            cmdq_add_format!(new_state, tmp, "{}", _s(args_string(args, i)));
         }
         flag = args_first(args, &raw mut ae);
         while flag != 0 {
             let value = args_get(args, flag);
             if value.is_null() {
                 xsnprintf(tmp, sizeof_tmp, c"hook_flag_%c".as_ptr(), flag as u32);
-                cmdq_add_format(new_state, tmp, c"1".as_ptr());
+                cmdq_add_format!(new_state, tmp, "1");
             } else {
                 xsnprintf(tmp, sizeof_tmp, c"hook_flag_%c".as_ptr(), flag as u32);
-                cmdq_add_format(new_state, tmp, c"%s".as_ptr(), value);
+                cmdq_add_format!(new_state, tmp, "{}", _s(value));
             }
 
             let mut i = 0;
             let mut av = args_first_value(args, flag);
             while !av.is_null() {
                 xsnprintf(tmp, sizeof_tmp, c"hook_flag_%c_%d".as_ptr(), flag as u32, i);
-                cmdq_add_format(new_state, tmp, c"%s".as_ptr(), (*av).union_.string);
+                cmdq_add_format!(new_state, tmp, "{}", _s((*av).union_.string));
                 i += 1;
                 av = args_next_value(av);
             }
@@ -955,7 +953,7 @@ pub unsafe extern "C" fn cmdq_error(item: *mut cmdq_item, fmt: *const c_char, mu
 
         if c.is_null() {
             cmd_get_source(cmd, &raw mut file, &raw mut line);
-            cfg_add_cause(c"%s:%u: %s".as_ptr(), file, line, msg);
+            cfg_add_cause!("{}:{}: {}", _s(file), line, _s(msg));
         } else if (*c).session.is_null() || (*c).flags.intersects(client_flag::CONTROL) {
             server_add_message(c"%s message: %s".as_ptr(), (*c).name, msg);
             if !(*c).flags.intersects(client_flag::UTF8) {

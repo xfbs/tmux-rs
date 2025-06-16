@@ -401,24 +401,19 @@ unsafe extern "C" fn cmd_list_keys_commands(self_: *mut cmd, item: *mut cmdq_ite
                 continue;
             }
 
-            format_add(
-                ft,
-                c"command_list_name".as_ptr(),
-                c"%s".as_ptr(),
-                (*entry).name,
-            );
+            format_add!(ft, c"command_list_name".as_ptr(), "{}", _s((*entry).name),);
             let s = if !(*entry).alias.is_null() {
                 (*entry).alias
             } else {
                 c"".as_ptr()
             };
-            format_add(ft, c"command_list_alias".as_ptr(), c"%s".as_ptr(), s);
+            format_add!(ft, c"command_list_alias".as_ptr(), "{}", _s(s));
             let s = if !(*entry).usage.is_null() {
                 (*entry).usage
             } else {
                 c"".as_ptr()
             };
-            format_add(ft, c"command_list_usage".as_ptr(), c"%s".as_ptr(), s);
+            format_add!(ft, c"command_list_usage".as_ptr(), "{}", _s(s));
 
             let line = format_expand(ft, template);
             if *line != b'\0' as _ {

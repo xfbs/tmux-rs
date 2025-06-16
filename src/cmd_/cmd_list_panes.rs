@@ -131,7 +131,7 @@ fn cmd_list_panes_window(
                 FORMAT_NONE,
                 format_flags::empty(),
             );
-            format_add(ft, c"line".as_ptr(), c"%u".as_ptr(), n as u32);
+            format_add!(ft, c"line".as_ptr(), "{n}");
             format_defaults(ft, null_mut(), NonNull::new(s), NonNull::new(wl), Some(wp));
 
             let mut flag = 0;

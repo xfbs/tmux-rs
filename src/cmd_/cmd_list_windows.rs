@@ -90,7 +90,7 @@ unsafe extern "C" fn cmd_list_windows_session(
                 FORMAT_NONE,
                 format_flags::empty(),
             );
-            format_add(ft, c"line".as_ptr(), c"%u".as_ptr(), n as u32);
+            format_add!(ft, c"line".as_ptr(), "{n}");
             format_defaults(ft, null_mut(), Some(s), Some(wl), None);
 
             if !filter.is_null() {

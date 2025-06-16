@@ -89,7 +89,7 @@ pub unsafe extern "C" fn job_run(
     sx: c_int,
     sy: c_int,
 ) -> *mut job {
-    let __func__ = c"job_run".as_ptr();
+    let __func__ = "job_run";
     unsafe {
         let mut job: *mut job = null_mut();
         let mut env: *mut environ = null_mut();
@@ -151,17 +151,17 @@ pub unsafe extern "C" fn job_run(
             }
 
             if cmd.is_null() {
-                cmd_log_argv(argc, argv, c"%s:".as_ptr(), __func__);
+                cmd_log_argv!(argc, argv, "{__func__}");
                 log_debug!(
                     "{} cwd={} shell={}",
-                    _s(__func__),
+                    __func__,
                     _s(if cwd.is_null() { c"".as_ptr() } else { cwd }),
                     _s(shell),
                 );
             } else {
                 log_debug!(
                     "{} cmd={} cwd={} shell={}",
-                    _s(__func__),
+                    __func__,
                     _s(cmd),
                     _s(if cwd.is_null() { c"".as_ptr() } else { cwd }),
                     _s(shell),

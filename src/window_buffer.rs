@@ -359,7 +359,7 @@ pub unsafe extern "C" fn window_buffer_get_key(
         format_defaults(ft, null_mut(), None, None, None);
         format_defaults(ft, null_mut(), s, wl, wp);
         format_defaults_paste_buffer(ft, pb.as_ptr());
-        format_add(ft, c"line".as_ptr(), c"%u".as_ptr(), line);
+        format_add!(ft, c"line".as_ptr(), "{line}");
 
         let expanded = format_expand(ft, (*data.as_ptr()).key_format);
         let key = key_string_lookup_string(expanded);

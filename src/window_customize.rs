@@ -254,9 +254,9 @@ unsafe extern "C" fn window_customize_build_array(
             let mut name: *mut c_char = null_mut();
 
             xasprintf(&raw mut name, c"%s[%u]".as_ptr(), options_name(o), idx);
-            format_add(ft, c"option_name".as_ptr(), c"%s".as_ptr(), name);
+            format_add!(ft, c"option_name".as_ptr(), "{}", _s(name));
             let value: *mut c_char = options_to_string(o, idx as i32, 0);
-            format_add(ft, c"option_value".as_ptr(), c"%s".as_ptr(), value);
+            format_add!(ft, c"option_value".as_ptr(), "{}", _s(value));
 
             let item = window_customize_add_item(data);
             (*item).scope = scope;
@@ -312,23 +312,23 @@ unsafe extern "C" fn window_customize_build_option(
             return;
         }
 
-        format_add(ft, c"option_name".as_ptr(), c"%s".as_ptr(), name);
-        format_add(ft, c"option_is_global".as_ptr(), c"%d".as_ptr(), global);
-        format_add(ft, c"option_is_array".as_ptr(), c"%d".as_ptr(), array);
+        format_add!(ft, c"option_name".as_ptr(), "{}", _s(name));
+        format_add!(ft, c"option_is_global".as_ptr(), "{global}");
+        format_add!(ft, c"option_is_array".as_ptr(), "{array}");
 
         let mut text = window_customize_scope_text(scope, fs);
-        format_add(ft, c"option_scope".as_ptr(), c"%s".as_ptr(), text);
+        format_add!(ft, c"option_scope".as_ptr(), "{}", _s(text));
         free_(text);
 
         if !oe.is_null() && !(*oe).unit.is_null() {
-            format_add(ft, c"option_unit".as_ptr(), c"%s".as_ptr(), (*oe).unit);
+            format_add!(ft, c"option_unit".as_ptr(), "{}", _s((*oe).unit));
         } else {
-            format_add(ft, c"option_unit".as_ptr(), c"%s".as_ptr(), c"".as_ptr());
+            format_add!(ft, c"option_unit".as_ptr(), "{}", "");
         }
 
         if array == 0 {
             let value = options_to_string(o, -1, 0);
-            format_add(ft, c"option_value".as_ptr(), c"%s".as_ptr(), value);
+            format_add!(ft, c"option_value".as_ptr(), "{}", _s(value));
             free_(value);
         }
 
@@ -521,19 +521,19 @@ unsafe extern "C" fn window_customize_build_keys(
         free_(title);
 
         ft = format_create_from_state(null_mut(), null_mut(), fs);
-        format_add(ft, c"is_option".as_ptr(), c"0".as_ptr());
-        format_add(ft, c"is_key".as_ptr(), c"1".as_ptr());
+        format_add!(ft, c"is_option".as_ptr(), "0");
+        format_add!(ft, c"is_key".as_ptr(), "1");
 
         let mut bd = key_bindings_first(kt);
         while !bd.is_null() {
-            format_add(
+            format_add!(
                 ft,
                 c"key".as_ptr(),
-                c"%s".as_ptr(),
-                key_string_lookup_key((*bd).key, 0),
+                "{}",
+                _s(key_string_lookup_key((*bd).key, 0)),
             );
             if !(*bd).note.is_null() {
-                format_add(ft, c"key_note".as_ptr(), c"%s".as_ptr(), (*bd).note);
+                format_add!(ft, c"key_note".as_ptr(), "{}", _s((*bd).note));
             }
             if !filter.is_null() {
                 let expanded = format_expand(ft, filter);
@@ -647,8 +647,8 @@ unsafe extern "C" fn window_customize_build(
         }
 
         let mut ft = format_create_from_state(null_mut(), null_mut(), &raw mut fs);
-        format_add(ft, c"is_option".as_ptr(), c"1".as_ptr());
-        format_add(ft, c"is_key".as_ptr(), c"0".as_ptr());
+        format_add!(ft, c"is_option".as_ptr(), "1");
+        format_add!(ft, c"is_key".as_ptr(), "0");
 
         window_customize_build_options(
             data,

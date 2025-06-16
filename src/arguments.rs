@@ -417,9 +417,9 @@ pub unsafe extern "C" fn args_copy(
     argc: i32,
     argv: *mut *mut c_char,
 ) -> *mut args {
-    let __func__ = c"args_copy".as_ptr();
+    let __func__ = "args_copy";
     unsafe {
-        cmd_log_argv(argc, argv, c"%s".as_ptr(), __func__);
+        cmd_log_argv!(argc, argv, "{__func__}");
 
         let new_args = args_create();
         for entry in rb_foreach(&raw mut (*args).tree).map(NonNull::as_ptr) {
@@ -528,22 +528,21 @@ pub unsafe extern "C" fn args_from_vector(argc: i32, argv: *mut *mut c_char) -> 
     }
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn args_print_add(
-    buf: *mut *mut c_char,
-    len: *mut usize,
-    fmt: *const c_char,
-    mut ap: ...
-) {
-    unsafe {
-        let mut s = null_mut();
-        let slen: usize = xvasprintf(&raw mut s, fmt, ap.as_va_list()) as usize;
+macro_rules! args_print_add {
+   ($buf:expr, $len:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::arguments::args_print_add_($buf, $len, format_args!($fmt $(, $args)*))
+    };
+}
+pub(crate) use args_print_add;
 
-        *len += slen;
+pub unsafe fn args_print_add_(buf: *mut *mut c_char, len: *mut usize, fmt: std::fmt::Arguments) {
+    unsafe {
+        let mut s = fmt.to_string();
+
+        *len += s.len();
         *buf = xrealloc(*buf as *mut c_void, *len).cast().as_ptr();
 
-        strlcat(*buf, s, *len);
-        free_(s);
+        strlcat(*buf, s.as_ptr().cast(), *len);
     }
 }
 
@@ -555,19 +554,19 @@ pub unsafe extern "C" fn args_print_add_value(
 ) {
     unsafe {
         if **buf != b'\0' as c_char {
-            args_print_add(buf, len, c" ".as_ptr());
+            args_print_add!(buf, len, " ");
         }
 
         match (*value).type_ {
             args_type::ARGS_NONE => (),
             args_type::ARGS_COMMANDS => {
                 let expanded = cmd_list_print((*value).union_.cmdlist, 0);
-                args_print_add(buf, len, c"{ %s }".as_ptr(), expanded);
+                args_print_add!(buf, len, "{{ {} }}", _s(expanded));
                 free_(expanded);
             }
             args_type::ARGS_STRING => {
                 let expanded = args_escape((*value).union_.string);
-                args_print_add(buf, len, c"%s".as_ptr(), expanded);
+                args_print_add!(buf, len, "{}", _s(expanded));
                 free_(expanded);
             }
         }
@@ -596,14 +595,14 @@ pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
             }
 
             if *buf == b'\0' as c_char {
-                args_print_add(&raw mut buf, &raw mut len, c"-".as_ptr());
+                args_print_add!(&raw mut buf, &raw mut len, "-");
             }
             for j in 0..(*entry).count {
-                args_print_add(
+                args_print_add!(
                     &raw mut buf,
                     &raw mut len,
-                    c"%c".as_ptr(),
-                    (*entry).flag as i32,
+                    "{}",
+                    (*entry).flag as u8 as char
                 );
             }
         }
@@ -612,18 +611,18 @@ pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
         for entry in rb_foreach(&raw mut (*args).tree).map(NonNull::as_ptr) {
             if (*entry).flags & ARGS_ENTRY_OPTIONAL_VALUE != 0 {
                 if *buf != b'\0' as c_char {
-                    args_print_add(
+                    args_print_add!(
                         &raw mut buf,
                         &raw mut len,
-                        c" -%c".as_ptr(),
-                        (*entry).flag as i32,
+                        " -{}",
+                        (*entry).flag as u8 as char
                     );
                 } else {
-                    args_print_add(
+                    args_print_add!(
                         &raw mut buf,
                         &raw mut len,
-                        c"-%c".as_ptr(),
-                        (*entry).flag as i32,
+                        "-{}",
+                        (*entry).flag as u8 as char,
                     );
                 }
                 last = entry;
@@ -635,18 +634,18 @@ pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
             for value in tailq_foreach(&raw mut (*entry).values) {
                 {
                     if *buf != b'\0' as c_char {
-                        args_print_add(
+                        args_print_add!(
                             &raw mut buf,
                             &raw mut len,
-                            c" -%c".as_ptr(),
-                            (*entry).flag as i32,
+                            " -{}",
+                            (*entry).flag as u8 as char,
                         );
                     } else {
-                        args_print_add(
+                        args_print_add!(
                             &raw mut buf,
                             &raw mut len,
-                            c"-%c".as_ptr(),
-                            (*entry).flag as i32,
+                            "-{}",
+                            (*entry).flag as u8 as char,
                         );
                     }
                     args_print_add_value(&raw mut buf, &raw mut len, value.as_ptr());
@@ -655,7 +654,7 @@ pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
             last = entry;
         }
         if !last.is_null() && ((*last).flags & ARGS_ENTRY_OPTIONAL_VALUE != 0) {
-            args_print_add(&raw mut buf, &raw mut len, c" --".as_ptr());
+            args_print_add!(&raw mut buf, &raw mut len, " --");
         }
 
         /* And finally the argument vector. */
@@ -935,7 +934,7 @@ pub unsafe extern "C" fn args_make_commands(
 
         let mut cmd = xstrdup((*state).cmd).as_ptr();
         log_debug!("{}: {}", __func__, _s(cmd));
-        cmd_log_argv(argc, argv, c"args_make_commands".as_ptr());
+        cmd_log_argv!(argc, argv, "args_make_commands");
         for i in 0..argc {
             let new_cmd = cmd_template_replace(cmd, *argv.add(i as usize), i + 1);
             log_debug!(

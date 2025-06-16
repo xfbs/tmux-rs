@@ -129,8 +129,8 @@ unsafe extern "C" fn cmd_display_menu_get_position(
         /* Create format with mouse position if any. */
         let ft = format_create_from_target(item);
         if (*event).m.valid != 0 {
-            format_add(ft, c"popup_mouse_x".as_ptr(), c"%u".as_ptr(), (*event).m.x);
-            format_add(ft, c"popup_mouse_y".as_ptr(), c"%u".as_ptr(), (*event).m.y);
+            format_add!(ft, c"popup_mouse_x".as_ptr(), "{}", (*event).m.x);
+            format_add!(ft, c"popup_mouse_y".as_ptr(), "{}", (*event).m.y);
         }
 
         /*
@@ -166,106 +166,81 @@ unsafe extern "C" fn cmd_display_menu_get_position(
             }
 
             if !sr.is_null() {
-                format_add(
+                format_add!(
                     ft,
                     c"popup_window_status_line_x".as_ptr(),
-                    c"%u".as_ptr(),
+                    "{}",
                     (*sr).start,
                 );
                 if position == 0 {
-                    format_add(
+                    format_add!(
                         ft,
                         c"popup_window_status_line_y".as_ptr(),
-                        c"%u".as_ptr(),
+                        "{}",
                         line + 1 + h,
                     );
                 } else {
-                    format_add(
+                    format_add!(
                         ft,
                         c"popup_window_status_line_y".as_ptr(),
-                        c"%u".as_ptr(),
+                        "{}",
                         (*tty).sy - lines + line,
                     );
                 }
             }
 
             if position == 0 {
-                format_add(
-                    ft,
-                    c"popup_status_line_y".as_ptr(),
-                    c"%u".as_ptr(),
-                    lines + h,
-                );
+                format_add!(ft, c"popup_status_line_y".as_ptr(), "{}", lines + h,);
             } else {
-                format_add(
-                    ft,
-                    c"popup_status_line_y".as_ptr(),
-                    c"%u".as_ptr(),
-                    (*tty).sy - lines,
-                );
+                format_add!(ft, c"popup_status_line_y".as_ptr(), "{}", (*tty).sy - lines,);
             }
         } else {
             top = 0;
         }
 
         /* Popup width and height. */
-        format_add(ft, c"popup_width".as_ptr(), c"%u".as_ptr(), w);
-        format_add(ft, c"popup_height".as_ptr(), c"%u".as_ptr(), h);
+        format_add!(ft, c"popup_width".as_ptr(), "{w}");
+        format_add!(ft, c"popup_height".as_ptr(), "{h}");
 
         /* Position so popup is in the centre. */
         n = ((*tty).sx - 1) as c_long / 2 - w as c_long / 2;
         if n < 0 {
-            format_add(ft, c"popup_centre_x".as_ptr(), c"%u".as_ptr(), 0);
+            format_add!(ft, c"popup_centre_x".as_ptr(), "0");
         } else {
-            format_add(ft, c"popup_centre_x".as_ptr(), c"%ld".as_ptr(), n);
+            format_add!(ft, c"popup_centre_x".as_ptr(), "{n}");
         }
         n = (((*tty).sy - 1) / 2 + h / 2) as i64;
         if n >= (*tty).sy as i64 {
-            format_add(
-                ft,
-                c"popup_centre_y".as_ptr(),
-                c"%u".as_ptr(),
-                (*tty).sy - h,
-            );
+            format_add!(ft, c"popup_centre_y".as_ptr(), "{}", (*tty).sy - h,);
         } else {
-            format_add(ft, c"popup_centre_y".as_ptr(), c"%ld".as_ptr(), n);
+            format_add!(ft, c"popup_centre_y".as_ptr(), "{n}");
         }
 
         /* Position of popup relative to mouse. */
         if (*event).m.valid != 0 {
             n = (*event).m.x as c_long - w as c_long / 2;
             if n < 0 {
-                format_add(ft, c"popup_mouse_centre_x".as_ptr(), c"%u".as_ptr(), 0);
+                format_add!(ft, c"popup_mouse_centre_x".as_ptr(), "0");
             } else {
-                format_add(ft, c"popup_mouse_centre_x".as_ptr(), c"%ld".as_ptr(), n);
+                format_add!(ft, c"popup_mouse_centre_x".as_ptr(), "{n}");
             }
             n = ((*event).m.y - h / 2) as i64;
             if n + h as c_long >= (*tty).sy as i64 {
-                format_add(
-                    ft,
-                    c"popup_mouse_centre_y".as_ptr(),
-                    c"%u".as_ptr(),
-                    (*tty).sy - h,
-                );
+                format_add!(ft, c"popup_mouse_centre_y".as_ptr(), "{}", (*tty).sy - h,);
             } else {
-                format_add(ft, c"popup_mouse_centre_y".as_ptr(), c"%ld".as_ptr(), n);
+                format_add!(ft, c"popup_mouse_centre_y".as_ptr(), "{n}");
             }
             n = (*event).m.y as c_long + h as c_long;
             if n >= (*tty).sy as c_long {
-                format_add(
-                    ft,
-                    c"popup_mouse_top".as_ptr(),
-                    c"%u".as_ptr(),
-                    (*tty).sy - 1,
-                );
+                format_add!(ft, c"popup_mouse_top".as_ptr(), "{}", (*tty).sy - 1,);
             } else {
-                format_add(ft, c"popup_mouse_top".as_ptr(), c"%ld".as_ptr(), n);
+                format_add!(ft, c"popup_mouse_top".as_ptr(), "{n}");
             }
             n = ((*event).m.y - h) as c_long;
             if n < 0 {
-                format_add(ft, c"popup_mouse_bottom".as_ptr(), c"%u".as_ptr(), 0);
+                format_add!(ft, c"popup_mouse_bottom".as_ptr(), "0");
             } else {
-                format_add(ft, c"popup_mouse_bottom".as_ptr(), c"%ld".as_ptr(), n);
+                format_add!(ft, c"popup_mouse_bottom".as_ptr(), "{n}");
             }
         }
 
@@ -279,32 +254,22 @@ unsafe extern "C" fn cmd_display_menu_get_position(
         );
         n = top as i64 + (*wp).yoff as i64 - oy as i64 + h as i64;
         if n >= (*tty).sy as i64 {
-            format_add(
-                ft,
-                c"popup_pane_top".as_ptr(),
-                c"%u".as_ptr(),
-                (*tty).sy - h,
-            );
+            format_add!(ft, c"popup_pane_top".as_ptr(), "{}", (*tty).sy - h,);
         } else {
-            format_add(ft, c"popup_pane_top".as_ptr(), c"%ld".as_ptr(), n);
+            format_add!(ft, c"popup_pane_top".as_ptr(), "{n}");
         }
-        format_add(
+        format_add!(
             ft,
             c"popup_pane_bottom".as_ptr(),
-            c"%u".as_ptr(),
+            "{}",
             top + (*wp).yoff as i32 + (*wp).sy as i32 - oy as i32,
         );
-        format_add(
-            ft,
-            c"popup_pane_left".as_ptr(),
-            c"%u".as_ptr(),
-            (*wp).xoff - ox,
-        );
+        format_add!(ft, c"popup_pane_left".as_ptr(), "{}", (*wp).xoff - ox,);
         n = (*wp).xoff as c_long + (*wp).sx as i64 - ox as i64 - w as i64;
         if n < 0 {
-            format_add(ft, c"popup_pane_right".as_ptr(), c"%u".as_ptr(), 0);
+            format_add!(ft, c"popup_pane_right".as_ptr(), "0");
         } else {
-            format_add(ft, c"popup_pane_right".as_ptr(), c"%ld".as_ptr(), n);
+            format_add!(ft, c"popup_pane_right".as_ptr(), "{n}");
         }
 
         /* Expand horizontal position. */

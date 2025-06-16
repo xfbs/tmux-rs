@@ -101,13 +101,8 @@ unsafe extern "C" fn cmd_show_messages_exec(self_: *mut cmd, item: *mut cmdq_ite
         }
 
         for msg in tailq_foreach_reverse(&raw mut message_log).map(NonNull::as_ptr) {
-            format_add(ft, c"message_text".as_ptr(), c"%s".as_ptr(), (*msg).msg);
-            format_add(
-                ft,
-                c"message_number".as_ptr(),
-                c"%u".as_ptr(),
-                (*msg).msg_num,
-            );
+            format_add!(ft, c"message_text".as_ptr(), "{}", _s((*msg).msg));
+            format_add!(ft, c"message_number".as_ptr(), "{}", (*msg).msg_num,);
             format_add_tv(ft, c"message_time".as_ptr(), &raw mut (*msg).msg_time);
 
             let s = format_expand(ft, SHOW_MESSAGES_TEMPLATE.as_ptr());
