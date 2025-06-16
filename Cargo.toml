@@ -16,9 +16,9 @@ debug = true
 panic = "abort"
 
 [dependencies]
-bitflags     = { version = "2.6.0"   }
+bitflags     = { version = "2.9.1" }
 lalrpop-util = { version = "0.22.2", default-features = false, features = ["lexer", "unicode"] }
-libc         = { version = "0.2.169" }
+libc         = { version = "0.2.173" }
 num_enum     = { version = "0.7.3"   }
 paste        = { version = "1.0.15"  }
 

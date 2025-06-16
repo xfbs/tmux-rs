@@ -50,6 +50,7 @@ pub unsafe fn attributes_tostring(attr: grid_attr) -> *const c_char {
     }
 }
 
+#[allow(clippy::result_unit_err)]
 pub unsafe fn attributes_fromstring(mut str: *const c_char) -> Result<grid_attr, ()> {
     struct table_entry {
         name: &'static CStr,

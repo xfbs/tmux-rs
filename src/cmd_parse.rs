@@ -1160,7 +1160,7 @@ unsafe fn yylex_token_variable(
                 yylex_ungetc(ps, ch);
                 return true;
             }
-            name[namelen as usize] = ch as i8;
+            name[namelen] = ch as i8;
             namelen += 1;
         }
 
