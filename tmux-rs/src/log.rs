@@ -221,6 +221,7 @@ pub unsafe extern "C" fn log_debug_c(msg: *const c_char, mut args: ...) {
     }
 }
 
+#[track_caller]
 pub fn log_debug_rs(args: std::fmt::Arguments) {
     if log_file.lock().unwrap().is_none() {
         return;
@@ -228,6 +229,7 @@ pub fn log_debug_rs(args: std::fmt::Arguments) {
     log_vwrite_rs(args, "");
 }
 
+#[track_caller]
 fn log_vwrite_rs(args: std::fmt::Arguments, prefix: &str) {
     unsafe {
         if log_file.lock().unwrap().is_none() {
@@ -252,7 +254,12 @@ fn log_vwrite_rs(args: std::fmt::Arguments, prefix: &str) {
 
         let str_out = CStr::from_ptr(out).to_string_lossy();
         if let Some(f) = log_file.lock().unwrap().as_mut() {
-            let _ = f.write_fmt(format_args!("{secs}.{micros:06} {prefix}{str_out}\n"));
+            let location = std::panic::Location::caller();
+            let file = location.file();
+            let line = location.line();
+            let _ = f.write_fmt(format_args!(
+                "{secs}.{micros:06} {file}:{line} {prefix}{str_out}\n"
+            ));
         }
 
         crate::free_(out);
@@ -292,9 +299,15 @@ pub unsafe extern "C" fn fatalx_c(msg: *const c_char, mut args: ...) -> ! {
     std::process::exit(1)
 }
 
+#[track_caller]
 pub fn fatalx(msg: &CStr) -> ! {
     let msg = msg.to_str().unwrap();
-    log_vwrite_rs(format_args!("{msg}"), "fatal: ");
+
+    let location = std::panic::Location::caller();
+    let file = location.file();
+    let line = location.line();
+
+    log_vwrite_rs(format_args!("{file}:{line} {msg}"), "fatal: ");
     std::process::exit(1)
 }
 

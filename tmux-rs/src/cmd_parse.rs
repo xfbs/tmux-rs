@@ -15,6 +15,7 @@
 use crate::*;
 
 use lalrpop_util::lalrpop_mod;
+use libc::_SC_MB_LEN_MAX;
 
 use crate::compat::queue::{
     tailq_empty, tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_last,
@@ -22,8 +23,22 @@ use crate::compat::queue::{
 };
 use crate::xmalloc::{Zeroable, xrecallocarray__};
 
-unsafe extern "C" {
-    fn yyparse() -> i32;
+// unsafe extern "C" { fn yyparse() -> i32; }
+unsafe fn yyparse() -> i32 {
+    unsafe {
+        let mut parser = cmd_parse::LinesParser::new();
+
+        let mut ps = NonNull::new(&raw mut parse_state).unwrap();
+        let mut lexer = lexer::Lexer::new(ps);
+
+        match parser.parse(ps, lexer) {
+            Ok(()) => 0,
+            Err(parse_err) => {
+                log_debug!("parsing error {parse_err:?}");
+                1
+            }
+        }
+    }
 }
 
 lalrpop_mod!(cmd_parse);
@@ -702,189 +717,777 @@ pub unsafe extern "C" fn cmd_parse_from_arguments(
     }
 }
 
-pub struct Lexer<'input> {
-    chars: std::str::CharIndices<'input>,
-}
-impl<'input> Lexer<'input> {
-    pub fn new(input: &'input str) -> Self {
-        Lexer {
-            chars: input.char_indices(),
+mod lexer {
+    use crate::{cmd_parse_state, transmute_ptr};
+    use core::ffi::c_char;
+    use core::ptr::NonNull;
+
+    pub struct Lexer {
+        ps: NonNull<cmd_parse_state>,
+    }
+    impl Lexer {
+        pub fn new(ps: NonNull<cmd_parse_state>) -> Self {
+            Lexer { ps }
         }
     }
-}
 
-pub enum Tok {
-    Error,
-    Hidden,
-    If,
-    Else,
-    Elif,
-    Endif,
-    Format(*const c_char),
-    Token(*const c_char),
-    Equals(*const c_char),
-}
+    #[derive(Copy, Clone, Debug)]
+    pub enum Tok {
+        Zero, // invalid
+        Newline,
+        Semicolon,
+        LeftBrace,
+        RightBrace,
 
-pub enum LexicalError {
-    // Not possible
-}
-type Loc = usize;
-impl<'input> Iterator for Lexer<'input> {
-    type Item = Result<(Loc, Tok, Loc), LexicalError>;
+        Error,
+        Hidden,
+        If,
+        Else,
+        Elif,
+        Endif,
 
-    fn next(&mut self) -> Option<Result<(Loc, Tok, Loc), LexicalError>> {
-        loop {
-            match self.chars.next() {
-                Some((i, ' ')) => return todo!(),
-                Some((i, '\t')) => return todo!(),
-                Some((i, '\n')) => return todo!(),
-
-                None => return None, // End of file
-                _ => continue,       // Comment; skip this character
+        Format(Option<NonNull<c_char>>),
+        Token(Option<NonNull<c_char>>),
+        Equals(Option<NonNull<c_char>>),
+    }
+    impl std::fmt::Display for Tok {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                Tok::Zero => write!(f, "zero"),
+                Tok::Newline => write!(f, "\\n"),
+                Tok::Semicolon => write!(f, ";"),
+                Tok::LeftBrace => write!(f, "{{"),
+                Tok::RightBrace => write!(f, "}}"),
+                Tok::Error => write!(f, "%error"),
+                Tok::Hidden => write!(f, "%hidden"),
+                Tok::If => write!(f, "%if"),
+                Tok::Else => write!(f, "%else"),
+                Tok::Elif => write!(f, "%elif"),
+                Tok::Endif => write!(f, "%endif"),
+                Tok::Format(non_null) => {
+                    write!(f, "format({})", crate::_s(transmute_ptr(*non_null)))
+                }
+                Tok::Token(non_null) => write!(f, "token({})", crate::_s(transmute_ptr(*non_null))),
+                Tok::Equals(non_null) => {
+                    write!(f, "equals({})", crate::_s(transmute_ptr(*non_null)))
+                }
             }
         }
     }
-}
 
-// ===================================
+    #[derive(Debug)]
+    pub enum LexicalError {
+        // Not possible
+    }
+    type Loc = usize;
+    impl Iterator for Lexer {
+        type Item = Result<(Loc, Tok, Loc), LexicalError>;
 
-mod parser {
+        fn next(&mut self) -> Option<Result<(Loc, Tok, Loc), LexicalError>> {
+            unsafe { super::yylex_(self.ps.as_ptr()).map(|tok| Ok((0, tok, 0))) }
+        }
+    }
 
-    // yyparse modifies global state
-    // see YYPARSE_DECL()
-    //
-    // #[unsafe(no_mangle)]
-    // unsafe extern "C" fn yyparse_() -> i32 {}
-}
+    #[test]
+    fn test_lexer() {
+        unsafe {
+            use super::dummy_cmd_parse_state_init;
+            use std::mem::MaybeUninit;
 
-unsafe fn dummy_cmd_parse_state_init(this: *mut cmd_parse_state) -> NonNull<cmd_parse_state> {
-    unsafe {
-        let f = libc::fopen(c"test.tmuxconf".as_ptr(), c"r".as_ptr());
-
-        *this = cmd_parse_state {
-            f,
-            buf: null(),
-            len: 0,
-            off: 0,
-            condition: 0,
-            eol: 0,
-            eof: 0,
-            input: null_mut(),
-            escapes: 0,
-            error: null_mut(),
-            commands: null_mut(),
-            scope: null_mut(),
-            stack: tailq_head {
-                tqh_first: null_mut(),
-                tqh_last: null_mut(),
-            },
-        };
-        tailq_init(&raw mut (*this).stack);
-
-        NonNull::new(this).unwrap()
+            let input = "set -g clock-mode-color magenta";
+            let mut state: MaybeUninit<cmd_parse_state> = MaybeUninit::uninit();
+            let state = dummy_cmd_parse_state_init(state.as_mut_ptr());
+            let mut lexer = Lexer::new(state);
+            let tokens = lexer.into_iter().collect::<Vec<_>>();
+            assert!(false, "{tokens:?}");
+        }
     }
 }
 
-#[test]
-fn test_parse_lines() {
-    use crate::compat::queue::tailq_init;
-
+unsafe extern "C" fn yyerror(ps: *mut cmd_parse_state, fmt: *const c_char, mut ap: ...) -> i32 {
     unsafe {
-        let lines = "set -g clock-mode-color magenta";
+        let mut pi: *mut cmd_parse_input = (*ps).input;
 
-        // need a way to update all the things that are updated by
-        // the C implmentation in parser state
-        //
-        //
-        //
-        // TODO:
-        // need to properly initialize state for this test
-        // input.line
-        // stack
-        // scope
+        if !(*ps).error.is_null() {
+            return 0;
+        }
 
-        // pi = tmux_rs::cmd_parse_input {flags: tmux_rs::cmd_parse_input_flags (tmux_rs::_::InternalBitFlags (16)), file: 0x0, line: 0, item: 0x0, c: 0x0, fs: tmux_rs::cmd_find_state {flags: 0, current: 0x0, s: 0x0, wl: 0x0, w: 0x0, wp: 0x0, idx: 0}}
-        //
-        // parser_state:
-        // input = pi
-        // buf = "bind -N 'Send the prefix key' C-b { send-prefix }"
-        // len = 47
-        //
-        // cmd_parse_run_parser
-        // init commands and stack
-        // then call yyparse
-        //
-        //
-        //
-        //(gdb) p *ps
+        let mut error = null_mut();
+        xvasprintf(&raw mut error, fmt, ap.as_va_list());
 
-        // let input = cmd_parse_input {
-        //     flags: cmd_parse_input_flags::CMD_PARSE_ONEGROUP,
-        //     file: null_mut(),
-        //     line: 0,
-        //     item: null_mut(),
-        //     c: null_mut(),
-        //     fs: cmd_find_state {
-        //         flags: 0,
-        //         current: null_mut(),
-        //         s: null_mut(),
-        //         wl: null_mut(),
-        //         w: null_mut(),
-        //         wp: null_mut(),
-        //         idx: 0,
-        //     },
-        // };
+        (*ps).error = cmd_parse_get_error((*pi).file, (*pi).line, error).as_ptr();
+        free_(error);
+        0
+    }
+}
 
-        // let commands = compat::queue::tailq_head::<crate::cmd_parse::cmd_parse_command> {
-        //     tqh_first: cmd_parse::cmd_parse_command { // 0x555555a22410
-        //         line: 0,
-        //         arguments: compat::queue::tailq_head::<cmd_parse::cmd_parse_argument> {
-        //             tqh_first:
-        // cmd_parse_argument { // 0x555555a22440,
-        //                 type_: cmd_parse::cmd_parse_argument_type::CMD_PARSE_STRING,
-        //                 string: 0x555555a221c0,
-        //                 commands: 0x0,
-        //                 cmdlist: 0x0,
-        //                 entry: compat::queue::tailq_entry::<cmd_parse::cmd_parse_argument> {
-        //                     tqe_next: 0x555555a22200, tqe_prev: 0x555555a22418
-        //                 }
-        //             },
-        //             tqh_last: // 0x555555a223d0, -> null_mut(),
-        //         },
-        //         entry: compat::queue::tailq_entry::<cmd_parse::cmd_parse_command> {
-        //             tqe_next: null_mut(),
-        //             tqe_prev: 0x555555a223f0,
-        //         },
-        //     },
+fn yylex_is_var(ch: c_char, first: bool) -> bool {
+    if ch == b'=' as i8 {
+        false
+    } else if first && (ch as u8).is_ascii_digit() {
+        false
+    } else {
+        (ch as u8).is_ascii_alphanumeric() || ch == b'_' as i8
+    }
+}
 
-        //     tqh_last: // 0x555555a22428 -> null_mut()
-        // };
+unsafe fn yylex_append(buf: *mut *mut c_char, len: *mut usize, add: *const c_char, addlen: usize) {
+    unsafe {
+        if (addlen > usize::MAX - 1 || *len > usize::MAX - 1 - addlen) {
+            fatalx(c"buffer is too big");
+        }
+        *buf = xrealloc_(*buf, (*len) + 1 + addlen).as_ptr();
+        libc::memcpy((*buf).add(*len).cast(), add.cast(), addlen);
+        (*len) += addlen;
+    }
+}
 
-        // let test_parse_state = cmd_parse_state {
-        //     f: null_mut(),
-        //     buf: c"bind -N 'Send the prefix key' C-b { send-prefix }".as_ptr(),
-        //     len: 49,
-        //     off: 49,
-        //     condition: 0,
-        //     eol: 0,
-        //     eof: 1,
-        //     input: &raw mut input,
-        //     escapes: 0,
-        //     error: null_mut(),
-        //     commands: 0x555555a223f0,
-        //     scope: null_mut(),
-        //     stack: crate::compat::queue::tailq_head {
-        //         tqh_first: null_mut(),
-        //         tqh_last: 0x5555559fec70,
-        //     },
-        // };
+unsafe fn yylex_append1(buf: *mut *mut c_char, len: *mut usize, add: c_char) {
+    unsafe {
+        yylex_append(buf, len, &raw const add, 1);
+    }
+}
 
-        let mut state: MaybeUninit<cmd_parse_state> = MaybeUninit::uninit();
-        let state = dummy_cmd_parse_state_init(state.as_mut_ptr());
+#[unsafe(no_mangle)]
+unsafe fn yylex_getc1(ps: *mut cmd_parse_state) -> i32 {
+    let ch;
+    unsafe {
+        if !(*ps).f.is_null() {
+            ch = libc::fgetc((*ps).f);
+        } else {
+            if (*ps).off == (*ps).len {
+                ch = libc::EOF;
+            } else {
+                ch = *(*ps).buf.add((*ps).off) as i32;
+                (*ps).off += 1;
+            }
+        }
+    }
+    ch
+}
 
-        let mut parser = cmd_parse::StatementParser::new();
-        let parsed = parser.parse(state, lines).unwrap();
-        println!("{parsed:?}");
+unsafe fn yylex_ungetc(ps: *mut cmd_parse_state, ch: i32) {
+    unsafe {
+        if !(*ps).f.is_null() {
+            libc::ungetc(ch, (*ps).f);
+        } else if (*ps).off > 0 && ch != libc::EOF {
+            (*ps).off -= 1;
+        }
+    }
+}
+
+unsafe fn yylex_getc(ps: *mut cmd_parse_state) -> i32 {
+    unsafe {
+        if (*ps).escapes != 0 {
+            (*ps).escapes -= 1;
+            return '\\' as i32;
+        }
+        loop {
+            let ch = yylex_getc1(ps);
+            if ch == '\\' as i32 {
+                (*ps).escapes += 1;
+                continue;
+            }
+            if ch == '\n' as i32 && (*ps).escapes % 2 == 1 {
+                (*(*ps).input).line += 1;
+                (*ps).escapes -= 1;
+                continue;
+            }
+
+            if ((*ps).escapes != 0) {
+                yylex_ungetc(ps, ch);
+                (*ps).escapes -= 1;
+                return '\\' as i32;
+            }
+            return ch;
+        }
+    }
+}
+
+unsafe fn yylex_get_word(ps: *mut cmd_parse_state, mut ch: i32) -> *mut c_char {
+    unsafe {
+        let mut len = 0;
+        let mut buf: *mut i8 = xmalloc(1).cast().as_ptr();
+
+        loop {
+            yylex_append1(&raw mut buf, &raw mut len, ch as i8);
+            ch = yylex_getc(ps);
+            if ch == libc::EOF || !libc::strchr(c" \t\n".as_ptr(), ch).is_null() {
+                break;
+            }
+        }
+        yylex_ungetc(ps, ch);
+
+        *buf.add(len) = b'\0' as i8;
+        // log_debug("%s: %s", __func__, buf);
+        buf
+    }
+}
+
+use lexer::Tok;
+
+#[unsafe(no_mangle)]
+unsafe fn yylex_(ps: *mut cmd_parse_state) -> Option<Tok> {
+    unsafe {
+        let mut next: i32 = 0;
+
+        if ((*ps).eol != 0) {
+            (*(*ps).input).line += 1;
+        }
+        (*ps).eol = 0;
+
+        let mut condition = (*ps).condition;
+        (*ps).condition = 0;
+
+        loop {
+            let mut ch = yylex_getc(ps);
+
+            if ch == libc::EOF {
+                /*
+                 * Ensure every file or string is terminated by a
+                 * newline. This keeps the parser simpler and avoids
+                 * having to add a newline to each string.
+                 */
+                if (*ps).eof != 0 {
+                    break;
+                }
+                (*ps).eof = 1;
+                return Some(Tok::Newline);
+            }
+
+            if (ch == ' ' as i32 || ch == '\t' as i32) {
+                /*
+                 * Ignore whitespace.
+                 */
+                continue;
+            }
+
+            if (ch == '\r' as i32) {
+                /*
+                 * Treat \r\n as \n.
+                 */
+                ch = yylex_getc(ps);
+                if (ch != '\n' as i32) {
+                    yylex_ungetc(ps, ch);
+                    ch = '\r' as i32;
+                }
+            }
+            if (ch == '\n' as i32) {
+                /*
+                 * End of line. Update the line number.
+                 */
+                (*ps).eol = 1;
+                return Some(Tok::Newline);
+            }
+
+            if ch == ';' as i32 {
+                return Some(Tok::Semicolon);
+            }
+            if ch == '{' as i32 {
+                return Some(Tok::LeftBrace);
+            }
+            if ch == '}' as i32 {
+                return Some(Tok::RightBrace);
+            }
+
+            if (ch == '#' as i32) {
+                /*
+                 * #{ after a condition opens a format; anything else
+                 * is a comment, ignore up to the end of the line.
+                 */
+                next = yylex_getc(ps);
+                if (condition != 0 && next == '{' as i32) {
+                    let yylval_token = yylex_format(ps);
+                    if yylval_token.is_none() {
+                        return Some(Tok::Error);
+                    }
+                    return Some(Tok::Format(yylval_token));
+                }
+                while (next != '\n' as i32 && next != libc::EOF) {
+                    next = yylex_getc(ps);
+                }
+                if next == '\n' as i32 {
+                    (*(*ps).input).line += 1;
+                    return Some(Tok::Newline);
+                }
+                continue;
+            }
+
+            if ch == '%' as i32 {
+                /*
+                 * % is a condition unless it is all % or all numbers,
+                 * then it is a token.
+                 */
+                let yylval_token = yylex_get_word(ps, '%' as i32);
+                let mut cp = yylval_token;
+                while *cp != b'\0' as i8 {
+                    if *cp != b'%' as i8 && !(*cp as u8).is_ascii_digit() {
+                        break;
+                    }
+                    cp = cp.add(1);
+                }
+                if (*cp == b'\0' as i8) {
+                    return Some(Tok::Token(NonNull::new(yylval_token)));
+                }
+                (*ps).condition = 1;
+                if (libc::strcmp(yylval_token, c"%hidden".as_ptr()) == 0) {
+                    free_(yylval_token);
+                    return Some(Tok::Hidden);
+                }
+                if libc::strcmp(yylval_token, c"%if".as_ptr()) == 0 {
+                    free_(yylval_token);
+                    return Some(Tok::If);
+                }
+                if (libc::strcmp(yylval_token, c"%else".as_ptr()) == 0) {
+                    free_(yylval_token);
+                    return Some(Tok::Else);
+                }
+                if (libc::strcmp(yylval_token, c"%elif".as_ptr()) == 0) {
+                    free_(yylval_token);
+                    return Some(Tok::Elif);
+                }
+                if (libc::strcmp(yylval_token, c"%endif".as_ptr()) == 0) {
+                    free_(yylval_token);
+                    return Some(Tok::Endif);
+                }
+                free_(yylval_token);
+                return Some(Tok::Error);
+            }
+
+            /*
+             * Otherwise this is a token.
+             */
+            let token = yylex_token(ps, ch);
+            if token.is_null() {
+                return Some(Tok::Error);
+            }
+            let yylval_token = token;
+
+            if !libc::strchr(token, b'=' as i32).is_null() && yylex_is_var(*token, true) {
+                let mut cp = token.add(1);
+                while *cp != '=' as i8 {
+                    if !yylex_is_var(*cp, false) {
+                        break;
+                    }
+                    cp = cp.add(1);
+                }
+                if *cp == b'=' as i8 {
+                    return Some(Tok::Equals(NonNull::new(yylval_token)));
+                }
+            }
+            return Some(Tok::Token(NonNull::new(yylval_token)));
+        }
+
+        None
+    }
+}
+
+unsafe fn yylex_format(ps: *mut cmd_parse_state) -> Option<NonNull<c_char>> {
+    unsafe {
+        let mut brackets = 1;
+        let mut len = 0;
+        let mut buf = xmalloc_::<c_char>().as_ptr();
+
+        'error: {
+            yylex_append(&raw mut buf, &raw mut len, c"#{".as_ptr(), 2);
+            loop {
+                let mut ch = yylex_getc(ps);
+                if (ch == libc::EOF || ch == '\n' as i32) {
+                    break 'error;
+                }
+                if (ch == '#' as i32) {
+                    ch = yylex_getc(ps);
+                    if (ch == libc::EOF || ch == '\n' as i32) {
+                        break 'error;
+                    }
+                    if ch == '{' as i32 {
+                        brackets += 1;
+                    }
+                    yylex_append1(&raw mut buf, &raw mut len, b'#' as c_char);
+                } else if (ch == '}' as i32) {
+                    if brackets != 0
+                        && ({
+                            brackets -= 1;
+                            brackets == 0
+                        })
+                    {
+                        yylex_append1(&raw mut buf, &raw mut len, ch as c_char);
+                        break;
+                    }
+                }
+                yylex_append1(&raw mut buf, &raw mut len, ch as c_char);
+            }
+            if (brackets != 0) {
+                break 'error;
+            }
+
+            *buf.add(len) = b'\0' as i8;
+            // log_debug("%s: %s", __func__, buf);
+            return NonNull::new(buf);
+        } // error:
+
+        free_(buf);
+        None
+    }
+}
+
+unsafe fn yylex_token_variable(
+    ps: *mut cmd_parse_state,
+    buf: *mut *mut c_char,
+    len: *mut usize,
+) -> bool {
+    unsafe {
+        // struct environ_entry	*envent;
+        // int			 ch, brackets = 0;
+        // char			 name[1024];
+        // size_t			 namelen = 0;
+        // const char		*value;
+
+        let mut namelen: usize = 0;
+        let mut name: [c_char; 1024] = [0; 1024];
+        const sizeof_name: usize = 1024;
+        let mut brackets = 0;
+
+        let mut ch = yylex_getc(ps);
+        if (ch == libc::EOF) {
+            return false;
+        }
+        if (ch == '{' as i32) {
+            brackets = 1;
+        } else {
+            if !yylex_is_var(ch as c_char, true) {
+                yylex_append1(buf, len, b'$' as i8);
+                yylex_ungetc(ps, ch);
+                return true;
+            }
+            name[namelen as usize] = ch as i8;
+            namelen += 1;
+        }
+
+        loop {
+            ch = yylex_getc(ps);
+            if (brackets != 0 && ch == '}' as i32) {
+                break;
+            }
+            if (ch == libc::EOF || !yylex_is_var(ch as c_char, false)) {
+                if brackets == 0 {
+                    yylex_ungetc(ps, ch);
+                    break;
+                }
+                yyerror(ps, c"invalid environment variable".as_ptr());
+                return false;
+            }
+            if namelen == sizeof_name - 2 {
+                yyerror(ps, c"environment variable is too long".as_ptr());
+                return false;
+            }
+            name[namelen] = ch as i8;
+            namelen += 1;
+        }
+        name[namelen] = b'\0' as i8;
+
+        let mut envent = environ_find(global_environ, (&raw const name).cast());
+        if !envent.is_null() && (*envent).value.is_some() {
+            let value = (*envent).value;
+            // log_debug("%s: %s -> %s", __func__, name, value);
+            yylex_append(
+                buf,
+                len,
+                transmute_ptr(value),
+                libc::strlen(transmute_ptr(value)),
+            );
+        }
+        true
+    }
+}
+
+unsafe fn yylex_token_tilde(
+    ps: *mut cmd_parse_state,
+    buf: *mut *mut c_char,
+    len: *mut usize,
+) -> bool {
+    unsafe {
+        let mut home = null();
+        let mut pw = null();
+        let mut namelen: usize = 0;
+        let mut name: [c_char; 1024] = [0; 1024];
+        const sizeof_name: usize = 1024;
+
+        loop {
+            let ch = yylex_getc(ps);
+            if ch == libc::EOF || !libc::strchr(c"/ \t\n\"'".as_ptr(), ch).is_null() {
+                yylex_ungetc(ps, ch);
+                break;
+            }
+            if namelen == sizeof_name - 2 {
+                yyerror(ps, c"user name is too long".as_ptr());
+                return false;
+            }
+            name[namelen] = ch as i8;
+            namelen += 1;
+        }
+        name[namelen] = b'\0' as i8;
+
+        if name[0] == b'\0' as i8 {
+            let envent = environ_find(global_environ, c"HOME".as_ptr());
+            if (!envent.is_null() && (*(*envent).value.unwrap().as_ptr()) != b'\0' as i8) {
+                home = transmute_ptr((*envent).value);
+            } else if ({
+                pw = libc::getpwuid(libc::getuid());
+                !pw.is_null()
+            }) {
+                home = (*pw).pw_dir;
+            }
+        } else {
+            pw = libc::getpwnam((&raw const name) as *const i8);
+            if !pw.is_null() {
+                home = (*pw).pw_dir;
+            }
+        }
+        if home.is_null() {
+            return false;
+        }
+
+        // log_debug("%s: ~%s -> %s", __func__, name, home);
+        yylex_append(buf, len, home, strlen(home));
+        true
+    }
+}
+
+unsafe fn yylex_token(ps: *mut cmd_parse_state, mut ch: i32) -> *mut c_char {
+    unsafe {
+        #[derive(Copy, Clone, Eq, PartialEq)]
+        enum State {
+            Start,
+            None,
+            DoubleQuotes,
+            SingleQuotes,
+        }
+
+        let mut state = State::None;
+        let mut last = State::Start;
+
+        let mut len = 0;
+        let mut buf = xmalloc_::<c_char>().as_ptr();
+
+        'error: {
+            'aloop: loop {
+                'next: {
+                    'skip: {
+                        /* EOF or \n are always the end of the token. */
+                        if (ch == libc::EOF) {
+                            // log_debug("%s: end at EOF", __func__);
+                            break 'aloop;
+                        }
+                        if (state == State::None && ch == '\r' as i32) {
+                            ch = yylex_getc(ps);
+                            if (ch != '\n' as i32) {
+                                yylex_ungetc(ps, ch);
+                                ch = '\r' as i32;
+                            }
+                        }
+                        if (state == State::None && ch == '\n' as i32) {
+                            // log_debug("%s: end at EOL", __func__);
+                            break 'aloop;
+                        }
+
+                        /* Whitespace or ; or } ends a token unless inside quotes. */
+                        if state == State::None && (ch == ' ' as i32 || ch == '\t' as i32) {
+                            // log_debug("%s: end at WS", __func__);
+                            break 'aloop;
+                        }
+                        if (state == State::None && (ch == ';' as i32 || ch == '}' as i32)) {
+                            // log_debug("%s: end at %c", __func__, ch);
+                            break 'aloop;
+                        }
+
+                        /*
+                         * Spaces and comments inside quotes after \n are removed but
+                         * the \n is left.
+                         */
+                        if (ch == '\n' as i32 && state != State::None) {
+                            yylex_append1(&raw mut buf, &raw mut len, b'\n' as i8);
+                            while ({
+                                ch = yylex_getc(ps);
+                                ch == b' ' as i32
+                            }) || ch == '\t' as i32
+                            {}
+                            if (ch != '#' as i32) {
+                                continue 'aloop;
+                            }
+                            ch = yylex_getc(ps);
+                            if !libc::strchr(c",#{}:".as_ptr(), ch).is_null() {
+                                yylex_ungetc(ps, ch);
+                                ch = '#' as i32;
+                            } else {
+                                while ({
+                                    ch = yylex_getc(ps);
+                                    ch != '\n' as i32 && ch != libc::EOF
+                                }) { /* nothing */ }
+                            }
+                            continue 'aloop;
+                        }
+
+                        /* \ ~ and $ are expanded except in single quotes. */
+                        if ch == '\\' as i32 && state != State::SingleQuotes {
+                            if !yylex_token_escape(ps, &raw mut buf, &raw mut len) {
+                                break 'error;
+                            }
+                            break 'skip;
+                        }
+                        if ch == '~' as i32 && last != state && state != State::SingleQuotes {
+                            if !yylex_token_tilde(ps, &raw mut buf, &raw mut len) {
+                                break 'error;
+                            }
+                            break 'skip;
+                        }
+                        if ch == '$' as i32 && state != State::SingleQuotes {
+                            if !yylex_token_variable(ps, &raw mut buf, &raw mut len) {
+                                break 'error;
+                            }
+                            break 'skip;
+                        }
+                        if ch == '}' as i32 && state == State::None {
+                            break 'error; /* unmatched (matched ones were handled) */
+                        }
+
+                        /* ' and " starts or end quotes (and is consumed). */
+                        if ch == '\'' as i32 {
+                            if (state == State::None) {
+                                state = State::SingleQuotes;
+                                break 'next;
+                            }
+                            if (state == State::SingleQuotes) {
+                                state = State::None;
+                                break 'next;
+                            }
+                        }
+                        if ch == b'"' as i32 {
+                            if (state == State::None) {
+                                state = State::DoubleQuotes;
+                                break 'next;
+                            }
+                            if (state == State::DoubleQuotes) {
+                                state = State::None;
+                                break 'next;
+                            }
+                        }
+
+                        /* Otherwise add the character to the buffer. */
+                        yylex_append1(&raw mut buf, &raw mut len, ch as c_char);
+                    }
+                    // skip:
+                    last = state;
+                }
+                // next:
+                ch = yylex_getc(ps);
+            }
+            yylex_ungetc(ps, ch);
+
+            *buf.add(len) = b'\0' as i8;
+            // log_debug("%s: %s", __func__, buf);
+            return (buf);
+        } // error:
+        free_(buf);
+
+        null_mut()
+    }
+}
+
+unsafe fn yylex_token_escape(
+    ps: *mut cmd_parse_state,
+    buf: *mut *mut c_char,
+    len: *mut usize,
+) -> bool {
+    unsafe {
+        const sizeof_m: usize = libc::_SC_MB_LEN_MAX as usize;
+
+        let mut tmp: u32 = 0;
+        let mut s: [c_char; 9] = [0; 9];
+        let mut m: [c_char; libc::_SC_MB_LEN_MAX as usize] = [0; libc::_SC_MB_LEN_MAX as usize];
+        let mut size: usize = 0;
+        let mut type_: i32 = 0;
+
+        'unicode: {
+            let mut ch = yylex_getc(ps);
+
+            if (ch >= '4' as i32 && ch <= '7' as i32) {
+                yyerror(ps, c"invalid octal escape".as_ptr());
+                return false;
+            }
+            if (ch >= '0' as i32 && ch <= '3' as i32) {
+                let o2 = yylex_getc(ps);
+                if (o2 >= '0' as i32 && o2 <= '7' as i32) {
+                    let o3 = yylex_getc(ps);
+                    if (o3 >= '0' as i32 && o3 <= '7' as i32) {
+                        ch = 64 * (ch - '0' as i32) + 8 * (o2 - '0' as i32) + (o3 - '0' as i32);
+                        yylex_append1(buf, len, ch as i8);
+                        return true;
+                    }
+                }
+                yyerror(ps, c"invalid octal escape".as_ptr());
+                return false;
+            }
+
+            if ch == libc::EOF {
+                return false;
+            }
+
+            match ch as u8 as char {
+                'a' => ch = '\x07' as i32,
+                'b' => ch = '\x08' as i32,
+                'e' => ch = '\x1B' as i32,
+                'f' => ch = '\x0C' as i32,
+                's' => ch = ' ' as i32,
+                'v' => ch = '\x0B' as i32,
+                'r' => ch = '\r' as i32,
+                'n' => ch = '\n' as i32,
+                't' => ch = '\t' as i32,
+                'u' => {
+                    type_ = 'u' as i32;
+                    size = 4;
+                    break 'unicode;
+                }
+                'U' => {
+                    type_ = 'U' as i32;
+                    size = 8;
+                    break 'unicode;
+                }
+                _ => (),
+            }
+
+            yylex_append1(buf, len, ch as i8);
+            return true;
+        } // unicode:
+        let mut i = 0;
+        for i_ in 0..size {
+            i = i_;
+            let ch = yylex_getc(ps);
+            if ch == libc::EOF || ch == '\n' as i32 {
+                return false;
+            }
+            if !(ch as u8).is_ascii_hexdigit() {
+                yyerror(ps, c"invalid \\%c argument".as_ptr(), type_);
+                return false;
+            }
+            s[i] = ch as i8;
+        }
+        s[i] = b'\0' as c_char;
+
+        if ((size == 4 && libc::sscanf((&raw mut s).cast(), c"%4x".as_ptr(), &raw mut tmp) != 1)
+            || (size == 8 && libc::sscanf((&raw mut s).cast(), c"%8x".as_ptr(), &raw mut tmp) != 1))
+        {
+            yyerror(ps, c"invalid \\%c argument".as_ptr(), type_);
+            return false;
+        }
+        let mlen = wctomb((&raw mut m).cast(), tmp as i32);
+        if mlen <= 0 || mlen > sizeof_m as i32 {
+            yyerror(ps, c"invalid \\%c argument".as_ptr(), type_);
+            return false;
+        }
+        yylex_append(buf, len, (&raw const m).cast(), mlen as usize);
+
+        true
     }
 }
 

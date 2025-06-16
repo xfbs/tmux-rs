@@ -44,8 +44,6 @@ more then just server exited unexpectedly.
 - print a stacktrace on server process segfault
 
 # NEXT
-- [ ] 159 cmd-parse.y (partially translated), need to figure out an approach to get rid of yacc/bison
-    - figure out how to write equivalence tests for the lalrpop parser and the yacc one
 - [ ] verify all uses of tailq and rbq, any structs with multiple "entry" fields we use correctly
 - [ ] ffi compatible timeval struct with useful utilities
 - [ ] reduce usage of NUL terminated C strings and use rust strings
@@ -84,7 +82,6 @@ more then just server exited unexpectedly.
     - also need to ensure no pointers are created and stored from the references
     - NonNull use as_uninit_mut
 - get rid of paste crate, won't need to join symbols any more for C code
-- implement cmd-parse.y parser in pest or nom to remove yacc as a build dependency
 - performance: perf command like: perf record -F 99 -i -p 696418 -p 696420
 - lints
 - miri (too many libc functions, maybe possible for tests)
@@ -112,6 +109,18 @@ more then just server exited unexpectedly.
 - prototypes
 - variadics
 - function pointer equality comparison
+
+# Bitflags
+- cmd_find_flags
+- cmdq_state
+- prompt_flag
+- options_table
+- options_table_is
+- spawn_flag
+- job_
+- menu_
+- popup_
+
 
 # Notes
 

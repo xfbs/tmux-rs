@@ -1,7 +1,12 @@
 use crate::*;
 
+use crate::transmute_ptr;
+
 use crate::cmd_parse::{cmd_parse_argument_type, yystype_elif, cmd_parse_state, cmd_parse_command};
 use crate::compat::queue::{tailq_concat, tailq_init, tailq_insert_head, tailq_remove, tailq_insert_tail, tailq_empty};
+
+use crate::cmd_parse::lexer::Tok;
+use crate::cmd_parse::lexer;
 
 grammar(ps: NonNull<cmd_parse_state>);
 
@@ -53,7 +58,10 @@ pub Statement: NonNull<cmd_parse_commands> = {
     }
 };
 
-pub Format: NonNull<c_char> = { FORMAT, TOKEN };
+pub Format: NonNull<c_char> = {
+  <arg:format> => (arg.unwrap()),
+  <arg:token> => (arg.unwrap()),
+};
 
 pub Expanded: NonNull<c_char> = {
     <arg1:Format> => unsafe {
@@ -81,22 +89,22 @@ pub Expanded: NonNull<c_char> = {
 pub OptionalAssignment: () = { Assignment? };
 
 pub Assignment: () = {
-    <arg1:EQUALS> => unsafe {
+    <arg1:equals> => unsafe {
       let flags = (*(*ps.as_ptr()).input).flags;
       if !flags.intersects(cmd_parse_input_flags::CMD_PARSE_PARSEONLY) && ((*ps.as_ptr()).scope.is_null() || (*(*ps.as_ptr()).scope).flag != 0) {
-        environ_put(global_environ, arg1.as_ptr(), 0);
+        environ_put(global_environ, transmute_ptr(arg1), 0);
       }
-      free_(arg1.as_ptr());
+      free_(transmute_ptr(arg1));
     }
 };
 
 pub HiddenAssignment: () = {
-    "%hidden" <arg2:EQUALS> => unsafe {
+    "%hidden" <arg2:equals> => unsafe {
       let flags = (*(*ps.as_ptr()).input).flags;
       if !flags.intersects(cmd_parse_input_flags::CMD_PARSE_PARSEONLY) && ((*ps.as_ptr()).scope.is_null() || (*(*ps.as_ptr()).scope).flag != 0) {
-        environ_put(global_environ, arg2.as_ptr(), ENVIRON_HIDDEN);
+        environ_put(global_environ, transmute_ptr(arg2), ENVIRON_HIDDEN);
       }
-      free_(arg2.as_ptr());
+      free_(transmute_ptr(arg2));
     }
 };
 
@@ -282,19 +290,19 @@ pub Command: NonNull<cmd_parse_command> = {
         tailq_init(&raw mut (*command).arguments);
         NonNull::new_unchecked(command)
     },
-    <_arg1:OptionalAssignment> <arg2:TOKEN> => unsafe {
+    <_arg1:OptionalAssignment> <arg2:token> => unsafe {
         let mut command: *mut cmd_parse_command = xcalloc1::<cmd_parse_command>();
         (*command).line = (*(*ps.as_ptr()).input).line;
         tailq_init(&raw mut (*command).arguments);
 
         let mut arg: *mut cmd_parse_argument = xcalloc1::<cmd_parse_argument>();
         (*arg).type_ = cmd_parse_argument_type::CMD_PARSE_STRING;
-        (*arg).string = arg2.as_ptr();
+        (*arg).string = transmute_ptr(arg2);
         tailq_insert_head!(&raw mut (*command).arguments, arg, entry);
 
         NonNull::new_unchecked(command)
     },
-    <_arg1:OptionalAssignment> <arg2:TOKEN> <arg3:Arguments> => unsafe {
+    <_arg1:OptionalAssignment> <arg2:token> <arg3:Arguments> => unsafe {
         let mut command: *mut cmd_parse_command = xcalloc1::<cmd_parse_command>();
         (*command).line = (*(*ps.as_ptr()).input).line;
         tailq_init(&raw mut (*command).arguments);
@@ -305,7 +313,7 @@ pub Command: NonNull<cmd_parse_command> = {
 
         let mut arg: *mut cmd_parse_argument = xcalloc1::<cmd_parse_argument>();
         (*arg).type_ = cmd_parse_argument_type::CMD_PARSE_STRING;
-        (*arg).string = arg2.as_ptr();
+        (*arg).string = transmute_ptr(arg2);
         tailq_insert_head!(&raw mut (*command).arguments, arg, entry);
 
         NonNull::new_unchecked(command)
@@ -415,16 +423,16 @@ pub Arguments: NonNull<cmd_parse_arguments> = {
 };
 
 pub Argument: NonNull<cmd_parse_argument> = {
-    <token:TOKEN> => unsafe {
+    <token:token> => unsafe {
       let value = NonNull::new_unchecked(xcalloc1::<cmd_parse_argument>());
       (*value.as_ptr()).type_ = cmd_parse_argument_type::CMD_PARSE_STRING;
-      (*value.as_ptr()).string = (token).as_ptr();
+      (*value.as_ptr()).string = transmute_ptr(token);
       value
     },
-    <equals:EQUALS> => unsafe {
+    <equals:equals> => unsafe {
       let value = NonNull::new_unchecked(xcalloc1::<cmd_parse_argument>());
       (*value.as_ptr()).type_ = cmd_parse_argument_type::CMD_PARSE_STRING;
-      (*value.as_ptr()).string = (equals).as_ptr();
+      (*value.as_ptr()).string = transmute_ptr(equals);
       value
     },
     "{" <statements:ArgumentStatements> => unsafe {
@@ -445,11 +453,49 @@ pub ArgumentStatements: NonNull<cmd_parse_commands> = {
     }
 };
 
+
+// http://lalrpop.github.io/lalrpop/lexer_tutorial/003_writing_custom_lexer.html#updating-the-parser
+extern {
+    type Location = usize;
+    type Error = crate::cmd_parse::lexer::LexicalError;
+
+    // pub enum Tok {
+    //     Error,
+    //     Hidden,
+    //     // If,
+    //     // Else,
+    //     // Elif,
+    //     // Endif,
+    //     Format(*const c_char),
+    //     Token(*const c_char),
+    //     Equals(*const c_char),
+    // }
+
+    enum crate::cmd_parse::lexer::Tok {
+      "\n" => lexer::Tok::Newline,
+      ";" => lexer::Tok::Semicolon,
+      "{" => lexer::Tok::LeftBrace,
+      "}" => lexer::Tok::RightBrace,
+
+      "%hidden" => lexer::Tok::Hidden,
+      "%if" => lexer::Tok::If,
+      "%elif" => lexer::Tok::Elif,
+      "%endif" => lexer::Tok::Endif,
+      "%else" => lexer::Tok::Else,
+
+      error => lexer::Tok::Error,
+      format => lexer::Tok::Format(<Option<NonNull<c_char>>>),
+      token => lexer::Tok::Token(<Option<NonNull<c_char>>>),
+      equals => lexer::Tok::Equals(<Option<NonNull<c_char>>>),
+    }
+}
+
+
 // the C lexer seems to pair braces in the format string
 // maybe better to not do that at the lexer level?
-pub FORMAT: NonNull<c_char> = r"#\{" => NonNull::new((<>).to_string().leak().as_mut_ptr().cast()).unwrap();
-pub EQUALS: NonNull<c_char> = r"=[^\n]*" => NonNull::new((<>).to_string().leak().as_mut_ptr().cast()).unwrap();
-pub TOKEN: NonNull<c_char> = r"[^=#].*" => NonNull::new((<>).to_string().leak().as_mut_ptr().cast()).unwrap();
+// pub FORMAT: NonNull<c_char> = r"#\{" => NonNull::new((<>).to_string().leak().as_mut_ptr().cast()).unwrap();
+// pub EQUALS: NonNull<c_char> = r"=[^\n]*" => NonNull::new((<>).to_string().leak().as_mut_ptr().cast()).unwrap();
+// pub TOKEN: NonNull<c_char> = r"[^=#].*" => NonNull::new((<>).to_string().leak().as_mut_ptr().cast()).unwrap();
 
 
 // equals seems to consume everything after =
