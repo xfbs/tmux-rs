@@ -1,7 +1,11 @@
 [package]
 name = "tmux-rs"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2024"
+authors = ["Collin Richards"]
+repository = "https://github.com/richardscollin/tmux-rs"
+description = "A Rust port of tmux"
+license-file = "COPYING"
 
 [profile.dev]
 # debug-assertions = false
@@ -13,13 +17,13 @@ panic = "abort"
 
 [dependencies]
 bitflags     = { version = "2.6.0"   }
-lalrpop-util = { version = "0.21.0", default-features = false, features = ["lexer", "unicode"] }
+lalrpop-util = { version = "0.22.2", default-features = false, features = ["lexer", "unicode"] }
 libc         = { version = "0.2.169" }
 num_enum     = { version = "0.7.3"   }
 paste        = { version = "1.0.15"  }
 
 [build-dependencies]
-lalrpop      = { version = "0.22.1", default-features = false  }
+lalrpop      = { version = "0.22.2", default-features = false  }
 
 [features]
 cgroups     = []
