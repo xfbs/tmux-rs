@@ -21,9 +21,6 @@ bug - check for double %% in print, forgot that printf escapes % when translatin
 see: args_print_add
 
 - [ ]  18 fatalx_c
-- [ ]  47 cmdq_print
-- [ ]  57 format_printf
-- [ ]  61 format_log1
 - [ ]  88 fatalx
 - [ ] 144 log_debug
 - [ ] 162 cmdq_error

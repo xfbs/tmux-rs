@@ -240,24 +240,29 @@ pub unsafe extern "C" fn format_logging(ft: *mut format_tree) -> boolint {
     unsafe { log_get_level() != 0 || (*ft).flags.intersects(format_flags::FORMAT_VERBOSE) }.into()
 }
 
+macro_rules! format_log1 {
+   ($es:expr, $from:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        format_log1_($es, $from, format_args!($fmt $(, $args)*))
+    };
+}
+
 /// Log a message if verbose.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn format_log1(
+pub unsafe fn format_log1_(
     es: *mut format_expand_state,
     from: *const c_char,
-    fmt: *const c_char,
-    mut ap: ...
+    args: std::fmt::Arguments,
 ) {
     unsafe {
         let ft: *mut format_tree = (*es).ft;
-        let mut s = null_mut();
         let spaces = c"          ";
 
         if !format_logging(ft) {
             return;
         }
 
-        xvasprintf(&raw mut s, fmt, ap.as_va_list());
+        let mut s = args.to_string();
+        s.push('\0');
+        let s = s.leak().as_mut_ptr().cast();
 
         log_debug!("{}: {}", _s(from), _s(s));
         if !(*ft).item.is_null() && (*ft).flags.intersects(format_flags::FORMAT_VERBOSE) {
@@ -542,12 +547,17 @@ pub unsafe extern "C" fn format_lost_client(c: *mut client) {
     }
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn format_printf(fmt: *const c_char, mut ap: ...) -> *mut c_char {
+macro_rules! format_printf {
+   ($fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::format::format_printf_(format_args!($fmt $(, $args)*))
+    };
+}
+pub(crate) use format_printf;
+pub unsafe fn format_printf_(args: std::fmt::Arguments) -> *mut c_char {
     unsafe {
-        let mut s: *mut c_char = null_mut();
-        xvasprintf(&raw mut s, fmt, ap.as_va_list());
-        s
+        let mut s = args.to_string();
+        s.push('\0');
+        s.leak().as_mut_ptr().cast()
     }
 }
 
@@ -1494,7 +1504,7 @@ pub unsafe extern "C" fn format_cb_alternate_on(ft: *mut format_tree) -> *mut c_
 pub unsafe extern "C" fn format_cb_alternate_saved_x(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            return format_printf(c"%u".as_ptr(), (*(*ft).wp).base.saved_cx).cast();
+            return format_printf!("{}", (*(*ft).wp).base.saved_cx).cast();
         }
         null_mut()
     }
@@ -1504,7 +1514,7 @@ pub unsafe extern "C" fn format_cb_alternate_saved_x(ft: *mut format_tree) -> *m
 pub unsafe extern "C" fn format_cb_alternate_saved_y(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            return format_printf(c"%u".as_ptr(), (*(*ft).wp).base.saved_cy).cast();
+            return format_printf!("{}", (*(*ft).wp).base.saved_cy).cast();
         }
         null_mut()
     }
@@ -1536,7 +1546,7 @@ pub unsafe extern "C" fn format_cb_buffer_size(ft: *mut format_tree) -> *mut c_v
         if !(*ft).pb.is_null() {
             let mut size = 0usize;
             paste_buffer_data((*ft).pb, &mut size);
-            return format_printf(c"%zu".as_ptr(), size).cast();
+            return format_printf!("{size}").cast();
         }
         null_mut()
     }
@@ -1546,7 +1556,7 @@ pub unsafe extern "C" fn format_cb_buffer_size(ft: *mut format_tree) -> *mut c_v
 pub unsafe extern "C" fn format_cb_client_cell_height(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() && (*(*ft).c).tty.flags.intersects(tty_flags::TTY_STARTED) {
-            return format_printf(c"%u".as_ptr(), (*(*ft).c).tty.ypixel).cast();
+            return format_printf!("{}", (*(*ft).c).tty.ypixel).cast();
         }
         null_mut()
     }
@@ -1556,7 +1566,7 @@ pub unsafe extern "C" fn format_cb_client_cell_height(ft: *mut format_tree) -> *
 pub unsafe extern "C" fn format_cb_client_cell_width(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() && (*(*ft).c).tty.flags.intersects(tty_flags::TTY_STARTED) {
-            return format_printf(c"%u".as_ptr(), (*(*ft).c).tty.xpixel).cast();
+            return format_printf!("{}", (*(*ft).c).tty.xpixel).cast();
         }
         null_mut()
     }
@@ -1579,7 +1589,7 @@ pub unsafe extern "C" fn format_cb_client_control_mode(ft: *mut format_tree) -> 
 pub unsafe extern "C" fn format_cb_client_discarded(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
-            return format_printf(c"%zu".as_ptr(), (*(*ft).c).discarded).cast();
+            return format_printf!("{}", (*(*ft).c).discarded).cast();
         }
         null_mut()
     }
@@ -1599,7 +1609,7 @@ pub unsafe extern "C" fn format_cb_client_flags(ft: *mut format_tree) -> *mut c_
 pub unsafe extern "C" fn format_cb_client_height(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() && (*(*ft).c).tty.flags.intersects(tty_flags::TTY_STARTED) {
-            return format_printf(c"%u".as_ptr(), (*(*ft).c).tty.sy).cast();
+            return format_printf!("{}", (*(*ft).c).tty.sy).cast();
         }
         null_mut()
     }
@@ -1642,7 +1652,7 @@ pub unsafe extern "C" fn format_cb_client_name(ft: *mut format_tree) -> *mut c_v
 pub unsafe extern "C" fn format_cb_client_pid(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
-            return format_printf(c"%ld".as_ptr(), (*(*ft).c).pid as c_long).cast();
+            return format_printf!("{}", (*(*ft).c).pid as c_long).cast();
         }
         null_mut()
     }
@@ -1737,7 +1747,7 @@ pub unsafe extern "C" fn format_cb_client_uid(ft: *mut format_tree) -> *mut c_vo
         if !(*ft).c.is_null() {
             let uid = proc_get_peer_uid((*(*ft).c).peer);
             if uid != -1_i32 as uid_t {
-                return format_printf(c"%ld".as_ptr(), uid as c_long).cast();
+                return format_printf!("{}", uid as c_long).cast();
             }
         }
         null_mut()
@@ -1776,7 +1786,7 @@ pub unsafe extern "C" fn format_cb_client_utf8(ft: *mut format_tree) -> *mut c_v
 pub unsafe extern "C" fn format_cb_client_width(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
-            return format_printf(c"%u".as_ptr(), (*(*ft).c).tty.sx).cast();
+            return format_printf!("{}", (*(*ft).c).tty.sx).cast();
         }
         null_mut()
     }
@@ -1786,7 +1796,7 @@ pub unsafe extern "C" fn format_cb_client_width(ft: *mut format_tree) -> *mut c_
 pub unsafe extern "C" fn format_cb_client_written(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
-            return format_printf(c"%zu".as_ptr(), (*(*ft).c).written).cast();
+            return format_printf!("{}", (*(*ft).c).written).cast();
         }
         null_mut()
     }
@@ -1832,7 +1842,7 @@ pub unsafe extern "C" fn format_cb_cursor_flag(ft: *mut format_tree) -> *mut c_v
 pub unsafe extern "C" fn format_cb_cursor_x(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            return format_printf(c"%u".as_ptr(), (*(*ft).wp).base.cx).cast();
+            return format_printf!("{}", (*(*ft).wp).base.cx).cast();
         }
         null_mut()
     }
@@ -1843,7 +1853,7 @@ pub unsafe extern "C" fn format_cb_cursor_x(ft: *mut format_tree) -> *mut c_void
 pub unsafe extern "C" fn format_cb_cursor_y(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            return format_printf(c"%u".as_ptr(), (*(*ft).wp).base.cy).cast();
+            return format_printf!("{}", (*(*ft).wp).base.cy).cast();
         }
         null_mut()
     }
@@ -1854,7 +1864,7 @@ pub unsafe extern "C" fn format_cb_cursor_y(ft: *mut format_tree) -> *mut c_void
 pub unsafe extern "C" fn format_cb_history_limit(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            return format_printf(c"%u".as_ptr(), (*(*(*ft).wp).base.grid).hlimit).cast();
+            return format_printf!("{}", (*(*(*ft).wp).base.grid).hlimit).cast();
         }
         null_mut()
     }
@@ -1865,7 +1875,7 @@ pub unsafe extern "C" fn format_cb_history_limit(ft: *mut format_tree) -> *mut c
 pub unsafe extern "C" fn format_cb_history_size(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            return format_printf(c"%u".as_ptr(), (*(*(*ft).wp).base.grid).hsize).cast();
+            return format_printf!("{}", (*(*(*ft).wp).base.grid).hsize).cast();
         }
         null_mut()
     }
@@ -1965,7 +1975,7 @@ pub unsafe extern "C" fn format_cb_mouse_pane(ft: *mut format_tree) -> *mut c_vo
     unsafe {
         if (*ft).m.valid != 0 {
             if let Some(wp) = cmd_mouse_pane(&raw mut (*ft).m, null_mut(), null_mut()) {
-                return format_printf(c"%%%u".as_ptr(), (*wp.as_ptr()).id).cast();
+                return format_printf!("%{}", (*wp.as_ptr()).id).cast();
             }
             return null_mut();
         }
@@ -2032,14 +2042,14 @@ pub unsafe extern "C" fn format_cb_mouse_x(ft: *mut format_tree) -> *mut c_void 
         if let Some(wp) = wp
             && cmd_mouse_at(wp.as_ptr(), &raw mut (*ft).m, &mut x, &mut y, 0) == 0
         {
-            return format_printf(c"%u".as_ptr(), x).cast();
+            return format_printf!("{}", x).cast();
         }
         if !(*ft).c.is_null() && (*(*ft).c).tty.flags.intersects(tty_flags::TTY_STARTED) {
             if (*ft).m.statusat == 0 && (*ft).m.y < (*ft).m.statuslines {
-                return format_printf(c"%u".as_ptr(), (*ft).m.x).cast();
+                return format_printf!("{}", (*ft).m.x).cast();
             }
             if (*ft).m.statusat > 0 && (*ft).m.y >= (*ft).m.statusat as u32 {
-                return format_printf(c"%u".as_ptr(), (*ft).m.x).cast();
+                return format_printf!("{}", (*ft).m.x).cast();
             }
         }
         null_mut()
@@ -2059,14 +2069,14 @@ pub unsafe extern "C" fn format_cb_mouse_y(ft: *mut format_tree) -> *mut c_void 
         if let Some(wp) = wp
             && cmd_mouse_at(wp.as_ptr(), &raw mut (*ft).m, &mut x, &mut y, 0) == 0
         {
-            return format_printf(c"%u".as_ptr(), y).cast();
+            return format_printf!("{}", y).cast();
         }
         if !(*ft).c.is_null() && (*(*ft).c).tty.flags.intersects(tty_flags::TTY_STARTED) {
             if (*ft).m.statusat == 0 && (*ft).m.y < (*ft).m.statuslines {
-                return format_printf(c"%u".as_ptr(), (*ft).m.y).cast();
+                return format_printf!("{}", (*ft).m.y).cast();
             }
             if (*ft).m.statusat > 0 && (*ft).m.y >= (*ft).m.statusat as u32 {
-                return format_printf(c"%u".as_ptr(), (*ft).m.y - (*ft).m.statusat as u32).cast();
+                return format_printf!("{}", (*ft).m.y - (*ft).m.statusat as u32).cast();
             }
         }
         null_mut()
@@ -2076,7 +2086,10 @@ pub unsafe extern "C" fn format_cb_mouse_y(ft: *mut format_tree) -> *mut c_void 
 /// Callback for next_session_id.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_next_session_id(_ft: *mut format_tree) -> *mut c_void {
-    unsafe { format_printf(c"$%u".as_ptr(), next_session_id).cast() }
+    unsafe {
+        let value = next_session_id;
+        format_printf!("${value}").cast()
+    }
 }
 
 /// Callback for origin_flag.
@@ -2140,7 +2153,7 @@ pub unsafe extern "C" fn format_cb_pane_at_right(ft: *mut format_tree) -> *mut c
 pub unsafe extern "C" fn format_cb_pane_bottom(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            return format_printf(c"%u".as_ptr(), (*(*ft).wp).yoff + (*(*ft).wp).sy - 1).cast();
+            return format_printf!("{}", (*(*ft).wp).yoff + (*(*ft).wp).sy - 1).cast();
         }
         null_mut()
     }
@@ -2170,7 +2183,7 @@ pub unsafe extern "C" fn format_cb_pane_dead_signal(ft: *mut format_tree) -> *mu
                 && WIFSIGNALED((*wp).status)
             {
                 let name = sig2name(WTERMSIG((*wp).status));
-                return format_printf(c"%s".as_ptr(), name).cast();
+                return format_printf!("{}", _s(name)).cast();
             }
             return null_mut();
         }
@@ -2187,7 +2200,7 @@ pub unsafe extern "C" fn format_cb_pane_dead_status(ft: *mut format_tree) -> *mu
             if (*wp).flags.intersects(window_pane_flags::PANE_STATUSREADY)
                 && WIFEXITED((*wp).status)
             {
-                return format_printf(c"%d".as_ptr(), WEXITSTATUS((*wp).status)).cast();
+                return format_printf!("{}", WEXITSTATUS((*wp).status)).cast();
             }
             return null_mut();
         }
@@ -2226,7 +2239,7 @@ pub unsafe extern "C" fn format_cb_pane_format(ft: *mut format_tree) -> *mut c_v
 pub unsafe extern "C" fn format_cb_pane_height(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            return format_printf(c"%u".as_ptr(), (*(*ft).wp).sy).cast();
+            return format_printf!("{}", (*(*ft).wp).sy).cast();
         }
         null_mut()
     }
@@ -2237,7 +2250,7 @@ pub unsafe extern "C" fn format_cb_pane_height(ft: *mut format_tree) -> *mut c_v
 pub unsafe extern "C" fn format_cb_pane_id(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            return format_printf(c"%%%u".as_ptr(), (*(*ft).wp).id).cast();
+            return format_printf!("%{}", (*(*ft).wp).id).cast();
         }
         null_mut()
     }
@@ -2249,7 +2262,7 @@ pub unsafe extern "C" fn format_cb_pane_index(ft: *mut format_tree) -> *mut c_vo
     unsafe {
         let mut idx: u32 = 0;
         if !(*ft).wp.is_null() && window_pane_index((*ft).wp, &mut idx) == 0 {
-            return format_printf(c"%u".as_ptr(), idx).cast();
+            return format_printf!("{}", idx).cast();
         }
         null_mut()
     }
@@ -2325,7 +2338,7 @@ pub unsafe extern "C" fn format_cb_pane_last(ft: *mut format_tree) -> *mut c_voi
 pub unsafe extern "C" fn format_cb_pane_left(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            return format_printf(c"%u".as_ptr(), (*(*ft).wp).xoff).cast();
+            return format_printf!("{}", (*(*ft).wp).xoff).cast();
         }
         null_mut()
     }
@@ -2393,7 +2406,7 @@ pub unsafe extern "C" fn format_cb_pane_path(ft: *mut format_tree) -> *mut c_voi
 pub unsafe extern "C" fn format_cb_pane_pid(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            return format_printf(c"%ld".as_ptr(), (*(*ft).wp).pid as i64).cast();
+            return format_printf!("{}", (*(*ft).wp).pid as i64).cast();
         }
         null_mut()
     }
@@ -2418,7 +2431,7 @@ pub unsafe extern "C" fn format_cb_pane_pipe(ft: *mut format_tree) -> *mut c_voi
 pub unsafe extern "C" fn format_cb_pane_right(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            return format_printf(c"%u".as_ptr(), (*(*ft).wp).xoff + (*(*ft).wp).sx - 1).cast();
+            return format_printf!("{}", (*(*ft).wp).xoff + (*(*ft).wp).sx - 1).cast();
         }
         null_mut()
     }
@@ -2468,7 +2481,7 @@ pub unsafe extern "C" fn format_cb_pane_title(ft: *mut format_tree) -> *mut c_vo
 pub unsafe extern "C" fn format_cb_pane_top(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            return format_printf(c"%u".as_ptr(), (*(*ft).wp).yoff).cast();
+            return format_printf!("{}", (*(*ft).wp).yoff).cast();
         }
         null_mut()
     }
@@ -2490,7 +2503,7 @@ pub unsafe extern "C" fn format_cb_pane_tty(ft: *mut format_tree) -> *mut c_void
 pub unsafe extern "C" fn format_cb_pane_width(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            return format_printf(c"%u".as_ptr(), (*(*ft).wp).sx).cast();
+            return format_printf!("{}", (*(*ft).wp).sx).cast();
         }
         null_mut()
     }
@@ -2501,7 +2514,7 @@ pub unsafe extern "C" fn format_cb_pane_width(ft: *mut format_tree) -> *mut c_vo
 pub unsafe extern "C" fn format_cb_scroll_region_lower(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            return format_printf(c"%u".as_ptr(), (*(*ft).wp).base.rlower).cast();
+            return format_printf!("{}", (*(*ft).wp).base.rlower).cast();
         }
         null_mut()
     }
@@ -2512,7 +2525,7 @@ pub unsafe extern "C" fn format_cb_scroll_region_lower(ft: *mut format_tree) -> 
 pub unsafe extern "C" fn format_cb_scroll_region_upper(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            return format_printf(c"%u".as_ptr(), (*(*ft).wp).base.rupper).cast();
+            return format_printf!("{}", (*(*ft).wp).base.rupper).cast();
         }
         null_mut()
     }
@@ -2523,7 +2536,7 @@ pub unsafe extern "C" fn format_cb_scroll_region_upper(ft: *mut format_tree) -> 
 pub unsafe extern "C" fn format_cb_server_sessions(_ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let n: u32 = rb_foreach(&raw mut sessions).count() as u32;
-        format_printf(c"%u".as_ptr(), n).cast()
+        format_printf!("{}", n).cast()
     }
 }
 
@@ -2532,7 +2545,7 @@ pub unsafe extern "C" fn format_cb_server_sessions(_ft: *mut format_tree) -> *mu
 pub unsafe extern "C" fn format_cb_session_attached(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).s.is_null() {
-            return format_printf(c"%u".as_ptr(), (*(*ft).s).attached).cast();
+            return format_printf!("{}", (*(*ft).s).attached).cast();
         }
         null_mut()
     }
@@ -2570,7 +2583,7 @@ pub unsafe extern "C" fn format_cb_session_group_attached(ft: *mut format_tree) 
         if !(*ft).s.is_null() {
             let sg = session_group_contains((*ft).s);
             if !sg.is_null() {
-                return format_printf(c"%u".as_ptr(), session_group_attached_count(sg)).cast();
+                return format_printf!("{}", session_group_attached_count(sg)).cast();
             }
         }
         null_mut()
@@ -2603,7 +2616,7 @@ pub unsafe extern "C" fn format_cb_session_group_size(ft: *mut format_tree) -> *
         if !(*ft).s.is_null() {
             let sg = session_group_contains((*ft).s);
             if !sg.is_null() {
-                return format_printf(c"%u".as_ptr(), session_group_count(sg)).cast();
+                return format_printf!("{}", session_group_count(sg)).cast();
             }
         }
         null_mut()
@@ -2629,7 +2642,7 @@ pub unsafe extern "C" fn format_cb_session_grouped(ft: *mut format_tree) -> *mut
 pub unsafe extern "C" fn format_cb_session_id(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).s.is_null() {
-            return format_printf(c"$%u".as_ptr(), (*(*ft).s).id).cast();
+            return format_printf!("${}", (*(*ft).s).id).cast();
         }
         null_mut()
     }
@@ -2690,8 +2703,7 @@ pub unsafe extern "C" fn format_cb_session_path(ft: *mut format_tree) -> *mut c_
 pub unsafe extern "C" fn format_cb_session_windows(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).s.is_null() {
-            return format_printf(c"%u".as_ptr(), winlink_count(&raw mut (*(*ft).s).windows))
-                .cast();
+            return format_printf!("{}", winlink_count(&raw mut (*(*ft).s).windows)).cast();
         }
         null_mut()
     }
@@ -2714,7 +2726,7 @@ pub unsafe extern "C" fn format_cb_version(_ft: *mut format_tree) -> *mut c_void
 pub unsafe extern "C" fn format_cb_active_window_index(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).s.is_null() {
-            return format_printf(c"%u".as_ptr(), (*(*(*ft).s).curw).idx).cast();
+            return format_printf!("{}", (*(*(*ft).s).curw).idx).cast();
         }
         null_mut()
     }
@@ -2726,7 +2738,7 @@ pub unsafe extern "C" fn format_cb_last_window_index(ft: *mut format_tree) -> *m
     unsafe {
         if !(*ft).s.is_null() {
             let wl = rb_max(&raw mut (*(*ft).s).windows);
-            return format_printf(c"%u".as_ptr(), (*wl).idx).cast();
+            return format_printf!("{}", (*wl).idx).cast();
         }
         null_mut()
     }
@@ -2800,7 +2812,7 @@ pub unsafe extern "C" fn format_cb_window_bigger(ft: *mut format_tree) -> *mut c
 pub unsafe extern "C" fn format_cb_window_cell_height(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).w.is_null() {
-            return format_printf(c"%u".as_ptr(), (*(*ft).w).ypixel).cast();
+            return format_printf!("{}", (*(*ft).w).ypixel).cast();
         }
         null_mut()
     }
@@ -2811,7 +2823,7 @@ pub unsafe extern "C" fn format_cb_window_cell_height(ft: *mut format_tree) -> *
 pub unsafe extern "C" fn format_cb_window_cell_width(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).w.is_null() {
-            return format_printf(c"%u".as_ptr(), (*(*ft).w).xpixel).cast();
+            return format_printf!("{}", (*(*ft).w).xpixel).cast();
         }
         null_mut()
     }
@@ -2858,7 +2870,7 @@ pub unsafe extern "C" fn format_cb_window_format(ft: *mut format_tree) -> *mut c
 pub unsafe extern "C" fn format_cb_window_height(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).w.is_null() {
-            return format_printf(c"%u".as_ptr(), (*(*ft).w).sy).cast();
+            return format_printf!("{}", (*(*ft).w).sy).cast();
         }
         null_mut()
     }
@@ -2869,7 +2881,7 @@ pub unsafe extern "C" fn format_cb_window_height(ft: *mut format_tree) -> *mut c
 pub unsafe extern "C" fn format_cb_window_id(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).w.is_null() {
-            return format_printf(c"@%u".as_ptr(), (*(*ft).w).id).cast();
+            return format_printf!("@{}", (*(*ft).w).id).cast();
         }
         null_mut()
     }
@@ -2880,7 +2892,7 @@ pub unsafe extern "C" fn format_cb_window_id(ft: *mut format_tree) -> *mut c_voi
 pub unsafe extern "C" fn format_cb_window_index(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wl.is_null() {
-            return format_printf(c"%d".as_ptr(), (*(*ft).wl).idx).cast();
+            return format_printf!("{}", (*(*ft).wl).idx).cast();
         }
         null_mut()
     }
@@ -2919,7 +2931,7 @@ pub unsafe extern "C" fn format_cb_window_linked(ft: *mut format_tree) -> *mut c
 pub unsafe extern "C" fn format_cb_window_linked_sessions(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wl.is_null() {
-            return format_printf(c"%u".as_ptr(), (*(*(*ft).wl).window).references).cast();
+            return format_printf!("{}", (*(*(*ft).wl).window).references).cast();
         }
         null_mut()
     }
@@ -2944,7 +2956,7 @@ pub unsafe extern "C" fn format_cb_window_marked_flag(ft: *mut format_tree) -> *
 pub unsafe extern "C" fn format_cb_window_name(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).w.is_null() {
-            return format_printf(c"%s".as_ptr(), (*(*ft).w).name).cast();
+            return format_printf!("{}", _s((*(*ft).w).name)).cast();
         }
         null_mut()
     }
@@ -2960,7 +2972,7 @@ pub unsafe extern "C" fn format_cb_window_offset_x(ft: *mut format_tree) -> *mut
             let mut sx: u32 = 0;
             let mut sy: u32 = 0;
             if tty_window_offset(&raw mut (*(*ft).c).tty, &mut ox, &mut oy, &mut sx, &mut sy) != 0 {
-                return format_printf(c"%u".as_ptr(), ox).cast();
+                return format_printf!("{}", ox).cast();
             }
         }
         null_mut()
@@ -2977,7 +2989,7 @@ pub unsafe extern "C" fn format_cb_window_offset_y(ft: *mut format_tree) -> *mut
             let mut sx: u32 = 0;
             let mut sy: u32 = 0;
             if tty_window_offset(&raw mut (*(*ft).c).tty, &mut ox, &mut oy, &mut sx, &mut sy) != 0 {
-                return format_printf(c"%u".as_ptr(), oy).cast();
+                return format_printf!("{}", oy).cast();
             }
         }
         null_mut()
@@ -2989,7 +3001,7 @@ pub unsafe extern "C" fn format_cb_window_offset_y(ft: *mut format_tree) -> *mut
 pub unsafe extern "C" fn format_cb_window_panes(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).w.is_null() {
-            return format_printf(c"%u".as_ptr(), window_count_panes((*ft).w)).cast();
+            return format_printf!("{}", window_count_panes((*ft).w)).cast();
         }
         null_mut()
     }
@@ -3039,7 +3051,7 @@ pub unsafe extern "C" fn format_cb_window_start_flag(ft: *mut format_tree) -> *m
 pub unsafe extern "C" fn format_cb_window_width(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).w.is_null() {
-            return format_printf(c"%u".as_ptr(), (*(*ft).w).sx).cast();
+            return format_printf!("{}", (*(*ft).w).sx).cast();
         }
         null_mut()
     }
@@ -3183,7 +3195,7 @@ pub unsafe extern "C" fn format_cb_tree_mode_format(_ft: *mut format_tree) -> *m
 /// Callback for uid.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_uid(_ft: *mut format_tree) -> *mut c_void {
-    unsafe { format_printf(c"%ld".as_ptr(), getuid() as i64).cast() }
+    unsafe { format_printf!("{}", getuid() as i64).cast() }
 }
 
 /// Callback for user.
@@ -4337,10 +4349,10 @@ pub unsafe extern "C" fn format_loop_sessions(
         let mut valuelen = 1;
 
         for s in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
-            format_log1(
+            format_log1!(
                 es,
                 c"format_loop_sessions".as_ptr(),
-                c"session loop: $%u".as_ptr(),
+                "session loop: ${}",
                 (*s).id,
             );
             let nft = format_create(c, item, FORMAT_NONE, (*ft).flags);
@@ -4369,10 +4381,10 @@ pub unsafe extern "C" fn format_window_name(
     unsafe {
         let ft = (*es).ft;
         if (*ft).s.is_null() {
-            format_log1(
+            format_log1!(
                 es,
                 c"format_window_name".as_ptr(),
-                c"window name but no session".as_ptr(),
+                "window name but no session",
             );
             return null_mut();
         }
@@ -4404,10 +4416,10 @@ pub unsafe extern "C" fn format_loop_windows(
         let mut valuelen = 1;
 
         if (*ft).s.is_null() {
-            format_log1(
+            format_log1!(
                 es,
                 c"format_loop_windows".as_ptr(),
-                c"window loop but no session".as_ptr(),
+                "window loop but no session",
             );
             return null_mut();
         }
@@ -4419,10 +4431,10 @@ pub unsafe extern "C" fn format_loop_windows(
 
         for wl in rb_foreach(&raw mut (*(*ft).s).windows).map(NonNull::as_ptr) {
             let w = (*wl).window;
-            format_log1(
+            format_log1!(
                 es,
                 c"format_loop_windows".as_ptr(),
-                c"window loop: %u @%u".as_ptr(),
+                "window loop: {} @{}",
                 (*wl).idx,
                 (*w).id,
             );
@@ -4464,11 +4476,7 @@ pub unsafe extern "C" fn format_loop_panes(
         let item = (*ft).item;
 
         if (*ft).w.is_null() {
-            format_log1(
-                es,
-                c"format_loop_panes".as_ptr(),
-                c"pane loop but no window".as_ptr(),
-            );
+            format_log1!(es, c"format_loop_panes".as_ptr(), "pane loop but no window");
             return null_mut();
         }
 
@@ -4485,10 +4493,10 @@ pub unsafe extern "C" fn format_loop_panes(
         let mut next = MaybeUninit::<format_expand_state>::uninit();
         let next = next.as_mut_ptr();
         for wp in tailq_foreach::<_, discr_entry>(&raw mut (*(*ft).w).panes).map(NonNull::as_ptr) {
-            format_log1(
+            format_log1!(
                 es,
                 c"format_loop_panes".as_ptr(),
-                c"pane loop: %%%u".as_ptr(),
+                "pane loop: %{}",
                 (*wp).id,
             );
             let use_ = if !active.is_null() && wp == (*(*ft).w).active {
@@ -4539,11 +4547,11 @@ pub unsafe extern "C" fn format_loop_clients(
         let mut valuelen = 1;
 
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
-            format_log1(
+            format_log1!(
                 es,
                 c"format_loop_clients".as_ptr(),
-                c"client loop: %s".as_ptr(),
-                (*c).name,
+                "client loop: {}",
+                _s((*c).name),
             );
             let nft = format_create(c, item, 0, (*ft).flags);
             format_defaults(
@@ -4634,11 +4642,11 @@ pub unsafe extern "C" fn format_replace_expression(
             } else if strcmp(*(*mexp).argv, c"<=".as_ptr()) == 0 {
                 operator = Operator::LessThanEqual;
             } else {
-                format_log1(
+                format_log1!(
                     es,
                     c"format_replace_expression".as_ptr(),
-                    c"expression has no valid operator: '%s'".as_ptr(),
-                    *(*mexp).argv,
+                    "expression has no valid operator: '{}'",
+                    _s(*(*mexp).argv),
                 );
                 break 'fail;
             }
@@ -4658,44 +4666,44 @@ pub unsafe extern "C" fn format_replace_expression(
                     &raw mut errstr,
                 ) as u32;
                 if !errstr.is_null() {
-                    format_log1(
+                    format_log1!(
                         es,
                         c"format_replace_expression".as_ptr(),
-                        c"expression precision %s: %s".as_ptr(),
-                        errstr,
-                        *(*mexp).argv.add(2),
+                        "expression precision {}: {}",
+                        _s(errstr),
+                        _s(*(*mexp).argv.add(2)),
                     );
                     break 'fail;
                 }
             }
 
             if format_choose(es, copy, &raw mut left, &raw mut right, 1) != 0 {
-                format_log1(
+                format_log1!(
                     es,
                     c"format_replace_expression".as_ptr(),
-                    c"expression syntax error".as_ptr(),
+                    "expression syntax error"
                 );
                 break 'fail;
             }
 
             mleft = strtod(left, &raw mut endch);
             if *endch != b'\0' as c_char {
-                format_log1(
+                format_log1!(
                     es,
                     c"format_replace_expression".as_ptr(),
-                    c"expression left side is invalid: %s".as_ptr(),
-                    left,
+                    "expression left side is invalid: {}",
+                    _s(left),
                 );
                 break 'fail;
             }
 
             mright = strtod(right, &raw mut endch);
             if *endch != b'\0' as c_char {
-                format_log1(
+                format_log1!(
                     es,
                     c"format_replace_expression".as_ptr(),
-                    c"expression right side is invalid: %s".as_ptr(),
-                    right,
+                    "expression right side is invalid: {}",
+                    _s(right),
                 );
                 break 'fail;
             }
@@ -4704,18 +4712,18 @@ pub unsafe extern "C" fn format_replace_expression(
                 mleft = (mleft as c_longlong) as f64;
                 mright = (mright as c_longlong) as f64;
             }
-            format_log1(
+            format_log1!(
                 es,
                 c"format_replace_expression".as_ptr(),
-                c"expression left side is: %.*f".as_ptr(),
-                prec,
+                "expression left side is: {1:0$}",
+                prec as usize,
                 mleft,
             );
-            format_log1(
+            format_log1!(
                 es,
                 c"format_replace_expression".as_ptr(),
-                c"expression right side is: %.*f".as_ptr(),
-                prec,
+                "expression right side is: {1:0$}",
+                prec as usize,
                 mright,
             );
 
@@ -4743,11 +4751,11 @@ pub unsafe extern "C" fn format_replace_expression(
                     (result as c_longlong) as f64,
                 );
             }
-            format_log1(
+            format_log1!(
                 es,
                 c"format_replace_expression".as_ptr(),
-                c"expression result is %s".as_ptr(),
-                value,
+                "expression result is {}",
+                _s(value),
             );
 
             free_(right);
@@ -4827,21 +4835,21 @@ pub unsafe extern "C" fn format_replace(
                 for i in 0..count {
                     fm = list.add(i as usize);
                     if format_logging(ft).as_bool() {
-                        format_log1(
+                        format_log1!(
                             es,
                             __func__,
-                            c"modifier %u is %s".as_ptr(),
+                            "modifier {} is {}",
                             i,
-                            (*fm).modifier,
+                            _s((&raw mut (*fm).modifier).cast())
                         );
                         for j in 0..(*fm).argc {
-                            format_log1(
+                            format_log1!(
                                 es,
                                 __func__,
-                                c"modifier %u argument %d: %s".as_ptr(),
+                                "modifier {} argument {}: {}",
                                 i,
                                 j,
-                                *(*fm).argv.add(j as usize),
+                                _s(*(*fm).argv.add(j as usize)),
                             );
                         }
                     }
@@ -4954,7 +4962,7 @@ pub unsafe extern "C" fn format_replace(
 
                 /* Is this a literal string? */
                 if modifiers.intersects(format_modifiers::FORMAT_LITERAL) {
-                    format_log1(es, __func__, c"literal string is '%s'".as_ptr(), copy);
+                    format_log1!(es, __func__, "literal string is '{}'", _s(copy));
                     value = format_unescape(copy);
                     break 'done;
                 }
@@ -5025,44 +5033,38 @@ pub unsafe extern "C" fn format_replace(
                     /* Search in pane. */
                     new = format_expand1(es, copy);
                     if wp.is_null() {
-                        format_log1(es, __func__, c"search '%s' but no pane".as_ptr(), new);
+                        format_log1!(es, __func__, "search '{}' but no pane", _s(new));
                         value = xstrdup(c"0".as_ptr()).as_ptr();
                     } else {
-                        format_log1(
-                            es,
-                            __func__,
-                            c"search '%s' pane %%%u".as_ptr(),
-                            new,
-                            (*wp).id,
-                        );
+                        format_log1!(es, __func__, "search '{}' pane %{}", _s(new), (*wp).id,);
                         value = format_search(search, wp, new);
                     }
                     free_(new);
                 } else if !cmp.is_null() {
                     /* Comparison of left and right. */
                     if format_choose(es, copy, &raw mut left, &raw mut right, 1) != 0 {
-                        format_log1(
+                        format_log1!(
                             es,
                             __func__,
-                            c"compare %s syntax error: %s".as_ptr(),
-                            (*cmp).modifier,
-                            copy,
+                            "compare {} syntax error: {}",
+                            _s((&raw const (*cmp).modifier).cast()),
+                            _s(copy),
                         );
                         break 'fail;
                     }
-                    format_log1(
+                    format_log1!(
                         es,
                         __func__,
-                        c"compare %s left is: %s".as_ptr(),
-                        (*cmp).modifier,
-                        left,
+                        "compare {} left is: {}",
+                        _s((&raw const (*cmp).modifier).cast()),
+                        _s(left),
                     );
-                    format_log1(
+                    format_log1!(
                         es,
                         __func__,
-                        c"compare %s right is: %s".as_ptr(),
-                        (*cmp).modifier,
-                        right,
+                        "compare {} right is: {}",
+                        _s((&raw const (*cmp).modifier).cast()),
+                        _s(right),
                     );
 
                     if strcmp((*cmp).modifier.as_ptr(), c"||".as_ptr()) == 0 {
@@ -5123,17 +5125,12 @@ pub unsafe extern "C" fn format_replace(
                     /* Conditional: check first and choose second or third. */
                     cp = format_skip(copy.add(1), c",".as_ptr());
                     if cp.is_null() {
-                        format_log1(
-                            es,
-                            __func__,
-                            c"condition syntax error: %s".as_ptr(),
-                            copy.add(1),
-                        );
+                        format_log1!(es, __func__, "condition syntax error: {}", _s(copy.add(1)),);
                         break 'fail;
                     }
                     condition =
                         xstrndup(copy.add(1), cp.offset_from(copy.add(1)) as usize).as_ptr();
-                    format_log1(es, __func__, c"condition is: %s".as_ptr(), condition);
+                    format_log1!(es, __func__, "condition is: {}", _s(condition));
 
                     found = format_find(ft, condition, modifiers, time_format);
                     if found.is_null() {
@@ -5146,39 +5143,39 @@ pub unsafe extern "C" fn format_replace(
                         if strcmp(found, condition) == 0 {
                             free_(found);
                             found = xstrdup(c"".as_ptr()).as_ptr();
-                            format_log1(
+                            format_log1!(
                                 es,
                                 __func__,
-                                c"condition '%s' not found; assuming false".as_ptr(),
-                                condition,
+                                "condition '{}' not found; assuming false",
+                                _s(condition),
                             );
                         }
                     } else {
-                        format_log1(
+                        format_log1!(
                             es,
                             __func__,
-                            c"condition '%s' found: %s".as_ptr(),
-                            condition,
-                            found,
+                            "condition '{}' found: {}",
+                            _s(condition),
+                            _s(found),
                         );
                     }
 
                     if format_choose(es, cp.add(1), &raw mut left, &raw mut right, 0) != 0 {
-                        format_log1(
+                        format_log1!(
                             es,
                             __func__,
-                            c"condition '%s' syntax error: %s".as_ptr(),
-                            condition,
-                            cp.add(1),
+                            "condition '{}' syntax error: {}",
+                            _s(condition),
+                            _s(cp.add(1)),
                         );
                         free_(found);
                         break 'fail;
                     }
                     if format_true(found) != 0 {
-                        format_log1(es, __func__, c"condition '%s' is true".as_ptr(), condition);
+                        format_log1!(es, __func__, "condition '{}' is true", _s(condition));
                         value = format_expand1(es, left);
                     } else {
-                        format_log1(es, __func__, c"condition '%s' is false".as_ptr(), condition);
+                        format_log1!(es, __func__, "condition '{}' is false", _s(condition));
                         value = format_expand1(es, right);
                     }
                     free_(right);
@@ -5193,20 +5190,20 @@ pub unsafe extern "C" fn format_replace(
                     }
                 } else {
                     if !strstr(copy, c"#{".as_ptr()).is_null() {
-                        format_log1(es, __func__, c"expanding inner format '%s'".as_ptr(), copy);
+                        format_log1!(es, __func__, "expanding inner format '{}'", _s(copy));
                         value = format_expand1(es, copy);
                     } else {
                         value = format_find(ft, copy, modifiers, time_format);
                         if value.is_null() {
-                            format_log1(es, __func__, c"format '%s' not found".as_ptr(), copy);
+                            format_log1!(es, __func__, "format '{}' not found", _s(copy));
                             value = xstrdup(c"".as_ptr()).as_ptr();
                         } else {
-                            format_log1(
+                            format_log1!(
                                 es,
                                 __func__,
-                                c"format '%s' found: %s".as_ptr(),
-                                copy,
-                                value,
+                                "format '{}' found: {}",
+                                _s(copy),
+                                _s(value),
                             );
                         }
                     }
@@ -5231,13 +5228,13 @@ pub unsafe extern "C" fn format_replace(
                 left = format_expand1(es, *(**sub.add(i as usize)).argv);
                 right = format_expand1(es, *(**sub.add(i as usize)).argv.add(1));
                 new = format_sub(*sub.add(i as usize), value, left, right);
-                format_log1(
+                format_log1!(
                     es,
                     __func__,
-                    c"substitute '%s' to '%s': %s".as_ptr(),
-                    left,
-                    right,
-                    new,
+                    "substitute '{}' to '{}': {}",
+                    _s(left),
+                    _s(right),
+                    _s(new),
                 );
                 free_(value);
                 value = new;
@@ -5255,12 +5252,12 @@ pub unsafe extern "C" fn format_replace(
                     free_(value);
                     value = new;
                 }
-                format_log1(
+                format_log1!(
                     es,
                     __func__,
-                    c"applied length limit %d: %s".as_ptr(),
+                    "applied length limit {}: {}",
                     limit,
-                    value,
+                    _s(value),
                 );
             } else if limit < 0 {
                 new = format_trim_right(value, (-limit) as u32);
@@ -5271,12 +5268,12 @@ pub unsafe extern "C" fn format_replace(
                     free_(value);
                     value = new;
                 }
-                format_log1(
+                format_log1!(
                     es,
                     __func__,
-                    c"applied length limit %d: %s".as_ptr(),
+                    "applied length limit {}: {}",
                     limit,
-                    value,
+                    _s(value),
                 );
             }
 
@@ -5285,23 +5282,23 @@ pub unsafe extern "C" fn format_replace(
                 new = utf8_padcstr(value, width as u32);
                 free_(value);
                 value = new;
-                format_log1(
+                format_log1!(
                     es,
                     __func__,
-                    c"applied padding width %d: %s".as_ptr(),
+                    "applied padding width {}: {}",
                     width,
-                    value,
+                    _s(value),
                 );
             } else if width < 0 {
                 new = utf8_rpadcstr(value, (-width) as u32);
                 free_(value);
                 value = new;
-                format_log1(
+                format_log1!(
                     es,
                     __func__,
-                    c"applied padding width %d: %s".as_ptr(),
+                    "applied padding width {}: {}",
                     width,
-                    value,
+                    _s(value),
                 );
             }
 
@@ -5310,13 +5307,13 @@ pub unsafe extern "C" fn format_replace(
                 xasprintf(&raw mut new, c"%zu".as_ptr(), strlen(value));
                 free_(value);
                 value = new;
-                format_log1(es, __func__, c"replacing with length: %s".as_ptr(), new);
+                format_log1!(es, __func__, "replacing with length: {}", _s(new));
             }
             if modifiers.intersects(format_modifiers::FORMAT_WIDTH) {
                 xasprintf(&raw mut new, c"%u".as_ptr(), format_width(value));
                 free_(value);
                 value = new;
-                format_log1(es, __func__, c"replacing with width: %s".as_ptr(), new);
+                format_log1!(es, __func__, "replacing with width: {}", _s(new));
             }
 
             // Expand the buffer and copy in the value.
@@ -5328,12 +5325,12 @@ pub unsafe extern "C" fn format_replace(
             memcpy((*buf).add(*off).cast(), value.cast(), valuelen);
             *off += valuelen;
 
-            format_log1(
+            format_log1!(
                 es,
                 __func__,
-                c"replaced '%s' with '%s'".as_ptr(),
-                copy0,
-                value,
+                "replaced '{}' with '{}'",
+                _s(copy0),
+                _s(value),
             );
             free_(value);
 
@@ -5344,7 +5341,7 @@ pub unsafe extern "C" fn format_replace(
         }
 
         // fail:
-        format_log1(es, __func__, c"failed %s".as_ptr(), copy0);
+        format_log1!(es, __func__, "failed {}", _s(copy0));
 
         free_(sub);
         format_free_modifiers(list, count);
@@ -5381,21 +5378,21 @@ pub unsafe extern "C" fn format_expand1(
         }
 
         if (*es).loop_ == FORMAT_LOOP_LIMIT as u32 {
-            format_log1(
+            format_log1!(
                 es,
                 c"format_expand1".as_ptr(),
-                c"reached loop limit (%u)".as_ptr(),
+                "reached loop limit ({})",
                 FORMAT_LOOP_LIMIT,
             );
             return xstrdup(c"".as_ptr()).as_ptr();
         }
         (*es).loop_ += 1;
 
-        format_log1(
+        format_log1!(
             es,
             c"format_expand1".as_ptr(),
-            c"expanding format: %s".as_ptr(),
-            fmt,
+            "expanding format: {}",
+            _s(fmt),
         );
 
         if ((*es)
@@ -5408,19 +5405,15 @@ pub unsafe extern "C" fn format_expand1(
                 localtime_r(&raw mut (*es).time, &raw mut (*es).tm);
             }
             if strftime(expanded, sizeof_expanded, fmt, &raw mut (*es).tm) == 0 {
-                format_log1(
-                    es,
-                    c"format_expand1".as_ptr(),
-                    c"format is too long".as_ptr(),
-                );
+                format_log1!(es, c"format_expand1".as_ptr(), "format is too long",);
                 return xstrdup(c"".as_ptr()).as_ptr();
             }
             if format_logging(ft).as_bool() && strcmp(expanded, fmt) != 0 {
-                format_log1(
+                format_log1!(
                     es,
                     c"format_expand1".as_ptr(),
-                    c"after time expanded: %s".as_ptr(),
-                    expanded,
+                    "after time expanded: {}",
+                    _s(expanded),
                 );
             }
             fmt = expanded;
@@ -5473,12 +5466,7 @@ pub unsafe extern "C" fn format_expand1(
                     n = ptr.offset_from(fmt) as usize;
 
                     let name = xstrndup(fmt, n).as_ptr();
-                    format_log1(
-                        es,
-                        c"format_expand1".as_ptr(),
-                        c"found #(): %s".as_ptr(),
-                        name,
-                    );
+                    format_log1!(es, c"format_expand1".as_ptr(), "found #(): {}", _s(name),);
 
                     if ((*ft).flags.intersects(format_flags::FORMAT_NOJOBS))
                         || ((*es)
@@ -5486,15 +5474,10 @@ pub unsafe extern "C" fn format_expand1(
                             .intersects(format_expand_flags::FORMAT_EXPAND_NOJOBS))
                     {
                         out = xstrdup(c"".as_ptr()).as_ptr();
-                        format_log1(es, c"format_expand1".as_ptr(), c"#() is disabled".as_ptr());
+                        format_log1!(es, c"format_expand1".as_ptr(), "#() is disabled");
                     } else {
                         out = format_job_get(es, name);
-                        format_log1(
-                            es,
-                            c"format_expand1".as_ptr(),
-                            c"#() result: %s".as_ptr(),
-                            out,
-                        );
+                        format_log1!(es, c"format_expand1".as_ptr(), "#() result: {}", _s(out),);
                     }
                     free_(name);
 
@@ -5518,12 +5501,12 @@ pub unsafe extern "C" fn format_expand1(
                     }
                     n = ptr.offset_from(fmt) as usize;
 
-                    format_log1(
+                    format_log1!(
                         es,
                         c"format_expand1".as_ptr(),
-                        c"found #{}: %.*s".as_ptr(),
-                        n as i32,
-                        fmt,
+                        "found #{}: {1:0$}",
+                        n,
+                        _s(fmt),
                     );
                     if format_replace(es, fmt, n, &raw mut buf, &raw mut len, &raw mut off) != 0 {
                         break;
@@ -5544,7 +5527,7 @@ pub unsafe extern "C" fn format_expand1(
                     }
                     if *ptr == b'[' as c_char {
                         style_end = format_skip(fmt.offset(-2), c"]".as_ptr());
-                        format_log1(es, c"format_expand1".as_ptr(), c"found #*%zu[".as_ptr(), n);
+                        format_log1!(es, c"format_expand1".as_ptr(), "found #*{}[", n);
                         while len - off < n + 2 {
                             buf = xreallocarray(buf.cast(), 2, len).as_ptr().cast();
                             len *= 2;
@@ -5555,12 +5538,7 @@ pub unsafe extern "C" fn format_expand1(
                         continue;
                     }
                     /* FALLTHROUGH */
-                    format_log1(
-                        es,
-                        c"format_expand1".as_ptr(),
-                        c"found #%c".as_ptr(),
-                        ch as u32,
-                    );
+                    format_log1!(es, c"format_expand1".as_ptr(), "found #{}", ch as char);
                     while len - off < 2 {
                         buf = xreallocarray(buf.cast(), 2, len).as_ptr().cast();
                         len *= 2;
@@ -5571,12 +5549,7 @@ pub unsafe extern "C" fn format_expand1(
                 }
                 /* FALLTHROUGH */
                 b'}' | b',' => {
-                    format_log1(
-                        es,
-                        c"format_expand1".as_ptr(),
-                        c"found #%c".as_ptr(),
-                        ch as u32,
-                    );
+                    format_log1!(es, c"format_expand1".as_ptr(), "found #{}", ch as char,);
                     while len - off < 2 {
                         buf = xreallocarray(buf.cast(), 2, len).as_ptr().cast();
                         len *= 2;
@@ -5607,12 +5580,12 @@ pub unsafe extern "C" fn format_expand1(
                         continue;
                     }
                     n = strlen(s);
-                    format_log1(
+                    format_log1!(
                         es,
                         c"format_expand1".as_ptr(),
-                        c"found #%c: %s".as_ptr(),
-                        ch as u32,
-                        s,
+                        "found #{}: {}",
+                        ch as char,
+                        _s(s),
                     );
                     if format_replace(es, s, n, &raw mut buf, &raw mut len, &raw mut off) != 0 {
                         break;
@@ -5625,12 +5598,7 @@ pub unsafe extern "C" fn format_expand1(
         }
         *buf.add(off) = b'\0' as c_char;
 
-        format_log1(
-            es,
-            c"format_expand1".as_ptr(),
-            c"result is: %s".as_ptr(),
-            buf,
-        );
+        format_log1!(es, c"format_expand1".as_ptr(), "result is: {}", _s(buf),);
         (*es).loop_ -= 1;
 
         buf
