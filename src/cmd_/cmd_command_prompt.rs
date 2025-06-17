@@ -147,7 +147,7 @@ unsafe extern "C" fn cmd_command_prompt_exec(self_: *mut cmd, item: *mut cmdq_it
         if !type_.is_null() {
             (*cdata).prompt_type = status_prompt_type(type_);
             if (*cdata).prompt_type == prompt_type::PROMPT_TYPE_INVALID {
-                cmdq_error(item, c"unknown type: %s".as_ptr(), type_);
+                cmdq_error!(item, "unknown type: {}", _s(type_));
                 cmd_command_prompt_free(NonNull::new(cdata.cast()).unwrap());
                 return cmd_retval::CMD_RETURN_ERROR;
             }

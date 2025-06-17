@@ -37,7 +37,7 @@ unsafe extern "C" fn cmd_paste_buffer_exec(self_: *mut cmd, item: *mut cmdq_item
         let bracket = args_has(args, b'p') != 0;
 
         if window_pane_exited(wp) != 0 {
-            cmdq_error(item, c"target pane has exited".as_ptr());
+            cmdq_error!(item, "target pane has exited");
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
@@ -52,7 +52,7 @@ unsafe extern "C" fn cmd_paste_buffer_exec(self_: *mut cmd, item: *mut cmdq_item
         } else {
             pb = paste_get_name(bufname);
             if pb.is_null() {
-                cmdq_error(item, c"no buffer %s".as_ptr(), bufname);
+                cmdq_error!(item, "no buffer {}", _s(bufname));
                 return cmd_retval::CMD_RETURN_ERROR;
             }
         }

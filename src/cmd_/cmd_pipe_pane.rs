@@ -59,7 +59,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
 
         /* Do nothing if pane is dead. */
         if window_pane_exited(wp) != 0 {
-            cmdq_error(item, c"target pane has exited".as_ptr());
+            cmdq_error!(item, "target pane has exited");
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
@@ -102,7 +102,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
 
         /* Open the new pipe. */
         if socketpair(AF_UNIX, libc::SOCK_STREAM, PF_UNSPEC, pipe_fd.as_mut_ptr()) != 0 {
-            cmdq_error(item, c"socketpair error: %s".as_ptr(), strerror(errno!()));
+            cmdq_error!(item, "socketpair error: {}", _s(strerror(errno!())));
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
@@ -123,7 +123,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
         match libc::fork() {
             -1 => {
                 sigprocmask(SIG_SETMASK, &raw const oldset, null_mut());
-                cmdq_error(item, c"fork error: %s".as_ptr(), strerror(errno!()));
+                cmdq_error!(item, "fork error: {}", _s(strerror(errno!())));
 
                 free_(cmd);
                 cmd_retval::CMD_RETURN_ERROR

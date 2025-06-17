@@ -72,7 +72,7 @@ unsafe extern "C" fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
         server_unzoom_window(src_w);
 
         if src_wp == dst_wp {
-            cmdq_error(item, c"source and target panes must be different".as_ptr());
+            cmdq_error!(item, "source and target panes must be different");
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
@@ -117,7 +117,7 @@ unsafe extern "C" fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
             }
         }
         if !cause.is_null() {
-            cmdq_error(item, c"size %s".as_ptr(), cause);
+            cmdq_error!(item, "size {}", _s(cause));
             free_(cause);
             return cmd_retval::CMD_RETURN_ERROR;
         }
@@ -132,7 +132,7 @@ unsafe extern "C" fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
 
         let lc: *mut layout_cell = layout_split_pane(dst_wp, type_, size, flags);
         if lc.is_null() {
-            cmdq_error(item, c"create pane failed: pane too small".as_ptr());
+            cmdq_error!(item, "create pane failed: pane too small");
             return cmd_retval::CMD_RETURN_ERROR;
         }
 

@@ -87,7 +87,7 @@ unsafe extern "C" fn cmd_show_options_exec(self_: *mut cmd, item: *mut cmdq_item
                         if args_has_(args, 'q') {
                             return cmd_retval::CMD_RETURN_NORMAL;
                         }
-                        cmdq_error(item, c"%s".as_ptr(), cause);
+                        cmdq_error!(item, "{}", _s(cause));
                         free_(cause);
                         return cmd_retval::CMD_RETURN_ERROR;
                     }
@@ -101,9 +101,9 @@ unsafe extern "C" fn cmd_show_options_exec(self_: *mut cmd, item: *mut cmdq_item
                         break 'out;
                     }
                     if ambiguous != 0 {
-                        cmdq_error(item, c"ambiguous option: %s".as_ptr(), argument);
+                        cmdq_error!(item, "ambiguous option: {}", _s(argument));
                     } else {
-                        cmdq_error(item, c"invalid option: %s".as_ptr(), argument);
+                        cmdq_error!(item, "invalid option: {}", _s(argument));
                     }
                     break 'fail;
                 }
@@ -119,7 +119,7 @@ unsafe extern "C" fn cmd_show_options_exec(self_: *mut cmd, item: *mut cmdq_item
                     if args_has_(args, 'q') {
                         break 'out;
                     }
-                    cmdq_error(item, c"%s".as_ptr(), cause);
+                    cmdq_error!(item, "{}", _s(cause));
                     free_(cause);
                     break 'fail;
                 }
@@ -136,7 +136,7 @@ unsafe extern "C" fn cmd_show_options_exec(self_: *mut cmd, item: *mut cmdq_item
                     if args_has_(args, 'q') {
                         break 'out;
                     }
-                    cmdq_error(item, c"invalid option: %s".as_ptr(), argument);
+                    cmdq_error!(item, "invalid option: {}", _s(argument));
                     break 'fail;
                 }
             }

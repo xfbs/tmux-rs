@@ -59,7 +59,7 @@ unsafe extern "C" fn cmd_save_buffer_done(
 
     unsafe {
         if error != 0 {
-            cmdq_error(item, c"%s: %s".as_ptr(), path, strerror(error));
+            cmdq_error!(item, "{}: {}", _s(path), _s(strerror(error)));
         }
         cmdq_continue(item);
     }
@@ -77,13 +77,13 @@ unsafe extern "C" fn cmd_save_buffer_exec(self_: *mut cmd, item: *mut cmdq_item)
 
         let pb = if bufname.is_null() {
             let Some(pb) = NonNull::new(paste_get_top(null_mut())) else {
-                cmdq_error(item, c"no buffers".as_ptr());
+                cmdq_error!(item, "no buffers");
                 return cmd_retval::CMD_RETURN_ERROR;
             };
             pb
         } else {
             let Some(pb) = NonNull::new(paste_get_name(bufname)) else {
-                cmdq_error(item, c"no buffer %s".as_ptr(), bufname);
+                cmdq_error!(item, "no buffer {}", _s(bufname));
                 return cmd_retval::CMD_RETURN_ERROR;
             };
             pb

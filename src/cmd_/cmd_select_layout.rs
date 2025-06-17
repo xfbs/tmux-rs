@@ -122,7 +122,7 @@ unsafe extern "C" fn cmd_select_layout_exec(self_: *mut cmd, item: *mut cmdq_ite
                 if !layoutname.is_null() {
                     let mut cause = null_mut();
                     if layout_parse(w, layoutname, &raw mut cause) == -1 {
-                        cmdq_error(item, c"%s: %s".as_ptr(), cause, layoutname);
+                        cmdq_error!(item, "{}: {}", _s(cause), _s(layoutname));
                         free_(cause);
                         break 'error;
                     }

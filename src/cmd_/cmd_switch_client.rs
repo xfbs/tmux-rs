@@ -66,7 +66,7 @@ unsafe extern "C" fn cmd_switch_client_exec(self_: *mut cmd, item: *mut cmdq_ite
         if !tablename.is_null() {
             let table = key_bindings_get_table(tablename, 0);
             if table.is_null() {
-                cmdq_error(item, c"table %s doesn't exist".as_ptr(), tablename);
+                cmdq_error!(item, "table {} doesn't exist", _s(tablename));
                 return cmd_retval::CMD_RETURN_ERROR;
             }
             (*table).references += 1;
@@ -78,13 +78,13 @@ unsafe extern "C" fn cmd_switch_client_exec(self_: *mut cmd, item: *mut cmdq_ite
         if args_has_(args, 'n') {
             s = session_next_session((*tc).session);
             if s.is_null() {
-                cmdq_error(item, c"can't find next session".as_ptr());
+                cmdq_error!(item, "can't find next session");
                 return cmd_retval::CMD_RETURN_ERROR;
             }
         } else if args_has_(args, 'p') {
             s = session_previous_session((*tc).session);
             if s.is_null() {
-                cmdq_error(item, c"can't find previous session".as_ptr());
+                cmdq_error!(item, "can't find previous session");
                 return cmd_retval::CMD_RETURN_ERROR;
             }
         } else if args_has_(args, 'l') {
@@ -94,7 +94,7 @@ unsafe extern "C" fn cmd_switch_client_exec(self_: *mut cmd, item: *mut cmdq_ite
                 s = null_mut();
             }
             if s.is_null() {
-                cmdq_error(item, c"can't find last session".as_ptr());
+                cmdq_error!(item, "can't find last session");
                 return cmd_retval::CMD_RETURN_ERROR;
             }
         } else {

@@ -50,7 +50,7 @@ unsafe extern "C" fn cmd_resize_window_exec(self_: *mut cmd, item: *mut cmdq_ite
         } else {
             adjust = strtonum(args_string(args, 0), 1, i32::MAX as i64, &raw mut errstr) as u32;
             if !errstr.is_null() {
-                cmdq_error(item, c"adjustment %s".as_ptr(), errstr);
+                cmdq_error!(item, "adjustment {}", _s(errstr));
                 return cmd_retval::CMD_RETURN_ERROR;
             }
         }
@@ -67,7 +67,7 @@ unsafe extern "C" fn cmd_resize_window_exec(self_: *mut cmd, item: *mut cmdq_ite
                 &raw mut cause,
             ) as u32;
             if !cause.is_null() {
-                cmdq_error(item, c"width %s".as_ptr(), cause);
+                cmdq_error!(item, "width {}", _s(cause));
                 free_(cause);
                 return cmd_retval::CMD_RETURN_ERROR;
             }
@@ -81,7 +81,7 @@ unsafe extern "C" fn cmd_resize_window_exec(self_: *mut cmd, item: *mut cmdq_ite
                 &raw mut cause,
             ) as u32;
             if !cause.is_null() {
-                cmdq_error(item, c"height %s".as_ptr(), cause);
+                cmdq_error!(item, "height {}", _s(cause));
                 free_(cause);
                 return cmd_retval::CMD_RETURN_ERROR;
             }

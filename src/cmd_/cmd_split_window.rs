@@ -93,7 +93,7 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
             }
         }
         if !cause.is_null() {
-            cmdq_error(item, c"size %s".as_ptr(), cause);
+            cmdq_error!(item, "size {}", _s(cause));
             free_(cause);
             return cmd_retval::CMD_RETURN_ERROR;
         }
@@ -114,7 +114,7 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
 
         let lc = layout_split_pane(wp, type_, size, flags);
         if lc.is_null() {
-            cmdq_error(item, c"no space for new pane".as_ptr());
+            cmdq_error!(item, "no space for new pane");
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
@@ -148,7 +148,7 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
 
         let new_wp = spawn_pane(&raw mut sc, &raw mut cause);
         if new_wp.is_null() {
-            cmdq_error(item, c"create pane failed: %s".as_ptr(), cause);
+            cmdq_error!(item, "create pane failed: {}", _s(cause));
             free_(cause);
             if !sc.argv.is_null() {
                 cmd_free_argv(sc.argc, sc.argv);
@@ -162,7 +162,7 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
                     server_client_remove_pane(new_wp);
                     layout_close_pane(new_wp);
                     window_remove_pane((*wp).window, new_wp);
-                    cmdq_error(item, c"%s".as_ptr(), cause);
+                    cmdq_error!(item, "{}", _s(cause));
                     free_(cause);
                     if !sc.argv.is_null() {
                         cmd_free_argv(sc.argc, sc.argv);

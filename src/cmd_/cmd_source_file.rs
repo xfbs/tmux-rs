@@ -100,7 +100,7 @@ unsafe extern "C" fn cmd_source_file_done(
         }
 
         if error != 0 {
-            cmdq_error(item, c"%s: %s".as_ptr(), path, strerror(error));
+            cmdq_error!(item, "{}: {}", _s(path), _s(strerror(error)));
         } else if bsize != 0 {
             if load_cfg_from_buffer(
                 bdata.cast(),
@@ -210,7 +210,7 @@ unsafe extern "C" fn cmd_source_file_exec(self_: *mut cmd, item: *mut cmdq_item)
                     } else {
                         error = strerror(EINVAL);
                     }
-                    cmdq_error(item, c"%s: %s".as_ptr(), path, error);
+                    cmdq_error!(item, "{}: {}", _s(path), _s(error));
                     retval = cmd_retval::CMD_RETURN_ERROR;
                 }
                 globfree(g.as_mut_ptr());

@@ -134,7 +134,7 @@ unsafe extern "C" fn cmd_capture_pane_history(
             gd = (*wp).base.saved_grid;
             if gd.is_null() {
                 if args_has(args, b'q') == 0 {
-                    cmdq_error(item, c"no alternate screen".as_ptr());
+                    cmdq_error!(item, "no alternate screen");
                     return null_mut();
                 }
                 return xstrdup(c"".as_ptr()).as_ptr();
@@ -267,7 +267,7 @@ unsafe extern "C" fn cmd_capture_pane_exec(self_: *mut cmd, item: *mut cmdq_item
                 control_write!(c, "{1:0$}", len, _s(buf));
             } else {
                 if file_can_print(c) == 0 {
-                    cmdq_error(item, c"can't write to client".as_ptr());
+                    cmdq_error!(item, "can't write to client");
                     free_(buf);
                     return cmd_retval::CMD_RETURN_ERROR;
                 }
@@ -283,7 +283,7 @@ unsafe extern "C" fn cmd_capture_pane_exec(self_: *mut cmd, item: *mut cmdq_item
             }
 
             if paste_set(buf, len, bufname, &raw mut cause) != 0 {
-                cmdq_error(item, c"%s".as_ptr(), cause);
+                cmdq_error!(item, "{}", _s(cause));
                 free_(cause);
                 free_(buf);
                 return cmd_retval::CMD_RETURN_ERROR;

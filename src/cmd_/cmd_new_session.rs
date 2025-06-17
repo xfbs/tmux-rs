@@ -102,7 +102,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
             }
 
             if args_has_(args, 't') && (count != 0 || args_has_(args, 'n')) {
-                cmdq_error(item, c"command or window name given with target".as_ptr());
+                cmdq_error!(item, "command or window name given with target");
                 return cmd_retval::CMD_RETURN_ERROR;
             }
 
@@ -111,7 +111,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                 name = format_single(item, tmp, c, null_mut(), null_mut(), null_mut());
                 newname = session_check_name(name);
                 if newname.is_null() {
-                    cmdq_error(item, c"invalid session: %s".as_ptr(), name);
+                    cmdq_error!(item, "invalid session: {}", _s(name));
                     free_(name);
                     return cmd_retval::CMD_RETURN_ERROR;
                 }
@@ -139,7 +139,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                 }
             }
             if !newname.is_null() && !session_find(newname).is_null() {
-                cmdq_error(item, c"duplicate session: %s".as_ptr(), newname);
+                cmdq_error!(item, "duplicate session: {}", _s(newname));
                 break 'fail;
             }
 
@@ -159,7 +159,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                 } else {
                     prefix = session_check_name(group);
                     if prefix.is_null() {
-                        cmdq_error(item, c"invalid session group: %s".as_ptr(), group);
+                        cmdq_error!(item, "invalid session group: {}", _s(group));
                         break 'fail;
                     }
                 }
@@ -202,9 +202,9 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                 && !(*c).flags.intersects(client_flag::CONTROL)
             {
                 if server_client_check_nested(cmdq_get_client(item)) != 0 {
-                    cmdq_error(
+                    cmdq_error!(
                         item,
-                        c"sessions should be nested with care, unset $TMUX to force".as_ptr(),
+                        "sessions should be nested with care, unset $TMUX to force"
                     );
                     break 'fail;
                 }
@@ -219,7 +219,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
             /* Open the terminal if necessary. */
             if !detached && !already_attached {
                 if server_client_open(c, &raw mut cause) != 0 {
-                    cmdq_error(item, c"open terminal failed: %s".as_ptr(), cause);
+                    cmdq_error!(item, "open terminal failed: {}", _s(cause));
                     free_(cause);
                     break 'fail;
                 }
@@ -233,7 +233,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                 } else {
                     let dsx_ = strtonum(tmp, 1, u16::MAX as i64, &raw mut errstr) as u32;
                     if !errstr.is_null() {
-                        cmdq_error(item, c"width %s".as_ptr(), errstr);
+                        cmdq_error!(item, "width {}", _s(errstr));
                         break 'fail;
                     }
                     dsx_
@@ -249,7 +249,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                 } else {
                     let dsy_ = strtonum(tmp, 1, u16::MAX as i64, &raw mut errstr) as u32;
                     if !errstr.is_null() {
-                        cmdq_error(item, c"height %s".as_ptr(), errstr);
+                        cmdq_error!(item, "height {}", _s(errstr));
                         break 'fail;
                     }
                     dsy_
@@ -327,7 +327,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
 
             if spawn_window(&raw mut sc, &raw mut cause).is_null() {
                 session_destroy(s, 0, __func__);
-                cmdq_error(item, c"create window failed: %s".as_ptr(), cause);
+                cmdq_error!(item, "create window failed: {}", _s(cause));
                 free_(cause);
                 break 'fail;
             }

@@ -42,11 +42,11 @@ unsafe extern "C" fn cmd_set_environment_exec(self_: *mut cmd, item: *mut cmdq_i
 
         'out: {
             if *name == b'\0' as _ {
-                cmdq_error(item, c"empty variable name".as_ptr());
+                cmdq_error!(item, "empty variable name");
                 return cmd_retval::CMD_RETURN_ERROR;
             }
             if !strchr_(name, '=').is_null() {
-                cmdq_error(item, c"variable name contains =".as_ptr());
+                cmdq_error!(item, "variable name contains =");
                 return cmd_retval::CMD_RETURN_ERROR;
             }
 
@@ -65,9 +65,9 @@ unsafe extern "C" fn cmd_set_environment_exec(self_: *mut cmd, item: *mut cmdq_i
                 if (*target).s.is_null() {
                     tflag = args_get_(args, 't');
                     if !tflag.is_null() {
-                        cmdq_error(item, c"no such session: %s".as_ptr(), tflag);
+                        cmdq_error!(item, "no such session: {}", _s(tflag));
                     } else {
-                        cmdq_error(item, c"no current session".as_ptr());
+                        cmdq_error!(item, "no current session");
                     }
                     retval = cmd_retval::CMD_RETURN_ERROR;
                     break 'out;
@@ -77,21 +77,21 @@ unsafe extern "C" fn cmd_set_environment_exec(self_: *mut cmd, item: *mut cmdq_i
 
             if args_has_(args, 'u') {
                 if !value.is_null() {
-                    cmdq_error(item, c"can't specify a value with -u".as_ptr());
+                    cmdq_error!(item, "can't specify a value with -u");
                     retval = cmd_retval::CMD_RETURN_ERROR;
                     break 'out;
                 }
                 environ_unset(env, name);
             } else if args_has_(args, 'r') {
                 if !value.is_null() {
-                    cmdq_error(item, c"can't specify a value with -r".as_ptr());
+                    cmdq_error!(item, "can't specify a value with -r");
                     retval = cmd_retval::CMD_RETURN_ERROR;
                     break 'out;
                 }
                 environ_clear(env, name);
             } else {
                 if value.is_null() {
-                    cmdq_error(item, c"no value specified".as_ptr());
+                    cmdq_error!(item, "no value specified");
                     retval = cmd_retval::CMD_RETURN_ERROR;
                     break 'out;
                 }

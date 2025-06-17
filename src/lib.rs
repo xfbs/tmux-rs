@@ -2739,11 +2739,11 @@ pub use crate::cmd_parse::{
     cmd_parse_from_buffer, cmd_parse_from_file, cmd_parse_from_string, cmd_parse_state, *,
 };
 
-use crate::cmd_::cmd_queue::{cmdq_add_format, cmdq_insert_hook, cmdq_print};
+use crate::cmd_::cmd_queue::{cmdq_add_format, cmdq_error, cmdq_insert_hook, cmdq_print};
 pub use crate::cmd_::cmd_queue::{
-    cmdq_add_formats, cmdq_append, cmdq_continue, cmdq_copy_state, cmdq_error, cmdq_free,
-    cmdq_free_state, cmdq_get_callback1, cmdq_get_client, cmdq_get_command, cmdq_get_current,
-    cmdq_get_error, cmdq_get_event, cmdq_get_flags, cmdq_get_name, cmdq_get_source, cmdq_get_state,
+    cmdq_add_formats, cmdq_append, cmdq_continue, cmdq_copy_state, cmdq_free, cmdq_free_state,
+    cmdq_get_callback1, cmdq_get_client, cmdq_get_command, cmdq_get_current, cmdq_get_error,
+    cmdq_get_event, cmdq_get_flags, cmdq_get_name, cmdq_get_source, cmdq_get_state,
     cmdq_get_target, cmdq_get_target_client, cmdq_guard, cmdq_insert_after, cmdq_item,
     cmdq_link_state, cmdq_list, cmdq_merge_formats, cmdq_new, cmdq_new_state, cmdq_next,
     cmdq_print_data, cmdq_running, cmdq_state,

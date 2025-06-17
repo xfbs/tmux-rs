@@ -38,7 +38,7 @@ unsafe extern "C" fn cmd_server_access_deny(
     unsafe {
         let user = server_acl_user_find((*pw).pw_uid);
         if user.is_null() {
-            cmdq_error(item, c"user %s not found".as_ptr(), (*pw).pw_name);
+            cmdq_error!(item, "user {} not found", _s((*pw).pw_name));
             return cmd_retval::CMD_RETURN_ERROR;
         }
         for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
@@ -65,7 +65,7 @@ unsafe extern "C" fn cmd_server_access_exec(self_: *mut cmd, item: *mut cmdq_ite
             return cmd_retval::CMD_RETURN_NORMAL;
         }
         if args_count(args) == 0 {
-            cmdq_error(item, c"missing user argument".as_ptr());
+            cmdq_error!(item, "missing user argument");
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
@@ -82,26 +82,26 @@ unsafe extern "C" fn cmd_server_access_exec(self_: *mut cmd, item: *mut cmdq_ite
             pw = getpwnam(name);
         }
         if pw.is_null() {
-            cmdq_error(item, c"unknown user: %s".as_ptr(), name);
+            cmdq_error!(item, "unknown user: {}", _s(name));
             return cmd_retval::CMD_RETURN_ERROR;
         }
         free_(name);
 
         if (*pw).pw_uid == 0 || (*pw).pw_uid == getuid() {
-            cmdq_error(
+            cmdq_error!(
                 item,
-                c"%s owns the server, can't change access".as_ptr(),
-                (*pw).pw_name,
+                "{} owns the server, can't change access",
+                _s((*pw).pw_name),
             );
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
         if args_has_(args, 'a') && args_has_(args, 'd') {
-            cmdq_error(item, c"-a and -d cannot be used together".as_ptr());
+            cmdq_error!(item, "-a and -d cannot be used together");
             return cmd_retval::CMD_RETURN_ERROR;
         }
         if args_has_(args, 'w') && args_has_(args, 'r') {
-            cmdq_error(item, c"-r and -w cannot be used together".as_ptr());
+            cmdq_error!(item, "-r and -w cannot be used together");
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
@@ -110,7 +110,7 @@ unsafe extern "C" fn cmd_server_access_exec(self_: *mut cmd, item: *mut cmdq_ite
         }
         if args_has_(args, 'a') {
             if !server_acl_user_find((*pw).pw_uid).is_null() {
-                cmdq_error(item, c"user %s is already added".as_ptr(), (*pw).pw_name);
+                cmdq_error!(item, "user {} is already added", _s((*pw).pw_name));
                 return cmd_retval::CMD_RETURN_ERROR;
             }
             server_acl_user_allow((*pw).pw_uid);
@@ -123,7 +123,7 @@ unsafe extern "C" fn cmd_server_access_exec(self_: *mut cmd, item: *mut cmdq_ite
 
         if args_has_(args, 'w') {
             if server_acl_user_find((*pw).pw_uid).is_null() {
-                cmdq_error(item, c"user %s not found".as_ptr(), (*pw).pw_name);
+                cmdq_error!(item, "user {} not found", _s((*pw).pw_name));
                 return cmd_retval::CMD_RETURN_ERROR;
             }
             server_acl_user_allow_write((*pw).pw_uid);
@@ -132,7 +132,7 @@ unsafe extern "C" fn cmd_server_access_exec(self_: *mut cmd, item: *mut cmdq_ite
 
         if args_has_(args, 'r') {
             if server_acl_user_find((*pw).pw_uid).is_null() {
-                cmdq_error(item, c"user %s not found".as_ptr(), (*pw).pw_name);
+                cmdq_error!(item, "user {} not found", _s((*pw).pw_name));
                 return cmd_retval::CMD_RETURN_ERROR;
             }
             server_acl_user_deny_write((*pw).pw_uid);

@@ -59,7 +59,7 @@ unsafe extern "C" fn cmd_kill_window_exec(self_: *mut cmd, item: *mut cmdq_item)
 
         if cmd_get_entry(self_) == &raw mut cmd_unlink_window_entry {
             if !args_has(args, b'k') != 0 && session_is_linked(s, w) == 0 {
-                cmdq_error(item, c"window only linked to one session".as_ptr());
+                cmdq_error!(item, "window only linked to one session");
                 return cmd_retval::CMD_RETURN_ERROR;
             }
             server_unlink_window(s, wl);

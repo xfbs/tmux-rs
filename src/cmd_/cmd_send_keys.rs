@@ -187,13 +187,13 @@ pub unsafe extern "C" fn cmd_send_keys_exec(self_: *mut cmd, item: *mut cmdq_ite
             np = args_strtonum_and_expand(args, b'N', 1, u32::MAX as i64, item, &raw mut cause)
                 as u32;
             if !cause.is_null() {
-                cmdq_error(item, c"repeat count %s".as_ptr(), cause);
+                cmdq_error!(item, "repeat count {}", _s(cause));
                 free_(cause);
                 return cmd_retval::CMD_RETURN_ERROR;
             }
             if !wme.is_null() && (args_has_(args, 'X') || count == 0) {
                 if (*(*wme).mode).command.is_none() {
-                    cmdq_error(item, c"not in a mode".as_ptr());
+                    cmdq_error!(item, "not in a mode");
                     return cmd_retval::CMD_RETURN_ERROR;
                 }
                 (*wme).prefix = np;
@@ -202,7 +202,7 @@ pub unsafe extern "C" fn cmd_send_keys_exec(self_: *mut cmd, item: *mut cmdq_ite
 
         if args_has_(args, 'X') {
             if wme.is_null() || (*(*wme).mode).command.is_none() {
-                cmdq_error(item, c"not in a mode".as_ptr());
+                cmdq_error!(item, "not in a mode");
                 return cmd_retval::CMD_RETURN_ERROR;
             }
             if (*m).valid == 0 {
@@ -215,7 +215,7 @@ pub unsafe extern "C" fn cmd_send_keys_exec(self_: *mut cmd, item: *mut cmdq_ite
         if args_has_(args, 'M') {
             wp = transmute_ptr(cmd_mouse_pane(m, &raw mut s, null_mut()));
             if wp.is_null() {
-                cmdq_error(item, c"no mouse target".as_ptr());
+                cmdq_error!(item, "no mouse target");
                 return cmd_retval::CMD_RETURN_ERROR;
             }
             window_pane_key(wp, tc, s, wl, (*m).key, m);

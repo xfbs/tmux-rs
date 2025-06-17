@@ -57,7 +57,7 @@ pub unsafe extern "C" fn cmd_attach_session(
         let msgtype: msgtype;
 
         if rb_empty(&raw mut sessions) {
-            cmdq_error(item, c"no sessions".as_ptr());
+            cmdq_error!(item, "no sessions");
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
@@ -66,9 +66,9 @@ pub unsafe extern "C" fn cmd_attach_session(
         }
 
         if server_client_check_nested(c) != 0 {
-            cmdq_error(
+            cmdq_error!(
                 item,
-                c"sessions should be nested with care, unset $TMUX to force".as_ptr(),
+                "sessions should be nested with care, unset $TMUX to force",
             );
             return cmd_retval::CMD_RETURN_ERROR;
         }
@@ -138,7 +138,7 @@ pub unsafe extern "C" fn cmd_attach_session(
             }
         } else {
             if server_client_open(c, &raw mut cause) != 0 {
-                cmdq_error(item, c"open terminal failed: %s".as_ptr(), cause);
+                cmdq_error!(item, "open terminal failed: {}", _s(cause));
                 free_(cause);
                 return cmd_retval::CMD_RETURN_ERROR;
             }

@@ -23,7 +23,6 @@ see: args_print_add
 - [ ]  18 fatalx_c
 - [ ]  88 fatalx
 - [ ] 144 log_debug
-- [ ] 162 cmdq_error
 - [ ] xasprintf
 - [ ] xasprintf
 - [ ] xasprintf_

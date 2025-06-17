@@ -794,7 +794,7 @@ pub unsafe extern "C" fn cmdq_error_callback(
     let error = data as *mut c_char;
 
     unsafe {
-        cmdq_error(item, c"%s".as_ptr(), error);
+        cmdq_error!(item, "{}", _s(error));
         free_(error);
     }
 
@@ -944,20 +944,25 @@ pub unsafe fn cmdq_print_(item: *mut cmdq_item, args: std::fmt::Arguments) {
     }
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmdq_error(item: *mut cmdq_item, fmt: *const c_char, mut args: ...) {
-    let __func__ = "cmdq_error";
+macro_rules! cmdq_error {
+   ($item:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::cmd_::cmd_queue::cmdq_error_($item, format_args!($fmt $(, $args)*))
+    };
+}
+pub(crate) use cmdq_error;
+pub unsafe fn cmdq_error_(item: *mut cmdq_item, args: std::fmt::Arguments) {
     unsafe {
         let c = (*item).client;
         let cmd = (*item).cmd;
-        let mut msg = null_mut();
         let mut tmp = null_mut();
         let mut file = null();
         let mut line = 0u32;
 
-        xvasprintf(&raw mut msg, fmt, args.as_va_list());
+        let mut msg = args.to_string();
+        msg.push('\0');
+        let mut msg = msg.leak().as_mut_ptr().cast();
 
-        log_debug!("{}: {}", __func__, _s(msg));
+        log_debug!("cmdq_error: {}", _s(msg));
 
         if c.is_null() {
             cmd_get_source(cmd, &raw mut file, &raw mut line);

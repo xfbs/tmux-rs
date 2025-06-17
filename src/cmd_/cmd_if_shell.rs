@@ -116,7 +116,7 @@ unsafe extern "C" fn cmd_if_shell_exec(self_: *mut cmd, item: *mut cmdq_item) ->
         )
         .is_null()
         {
-            cmdq_error(item, c"failed to run command: %s".as_ptr(), shellcmd);
+            cmdq_error!(item, "failed to run command: {}", _s(shellcmd));
             free_(shellcmd);
             free_(cdata);
             return cmd_retval::CMD_RETURN_ERROR;
@@ -157,7 +157,7 @@ unsafe extern "C" fn cmd_if_shell_callback(job: *mut job) {
                     *error = toupper(*error as i32) as i8;
                     status_message_set!(c, -1, 1, 0, "{}", _s(error));
                 } else {
-                    cmdq_error((*cdata).item, c"%s".as_ptr(), error);
+                    cmdq_error!((*cdata).item, "{}", _s(error));
                 }
                 free_(error);
             } else if item.is_null() {

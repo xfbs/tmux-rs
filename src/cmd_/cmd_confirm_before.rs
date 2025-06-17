@@ -67,7 +67,7 @@ unsafe extern "C" fn cmd_confirm_before_exec(self_: *mut cmd, item: *mut cmdq_it
             if *confirm_key.add(1) == b'\0' as _ && *confirm_key > 31 && *confirm_key < 127 {
                 (*cdata).confirm_key = *confirm_key as _;
             } else {
-                cmdq_error(item, c"invalid confirm key".as_ptr());
+                cmdq_error!(item, "invalid confirm key");
                 free_(cdata);
                 return cmd_retval::CMD_RETURN_ERROR;
             }

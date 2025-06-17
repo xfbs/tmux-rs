@@ -1094,7 +1094,7 @@ pub unsafe extern "C" fn cmd_find_target(
                                     log_debug!("{}: current is from client", __func__);
                                 } else {
                                     if !flags & CMD_FIND_QUIET != 0 {
-                                        cmdq_error(item, c"no current target".as_ptr());
+                                        cmdq_error!(item, "no current target");
                                     }
                                     break 'error;
                                 }
@@ -1153,7 +1153,7 @@ pub unsafe extern "C" fn cmd_find_target(
                                     }
                                     if (*fs).wp.is_null() {
                                         if !flags & CMD_FIND_QUIET != 0 {
-                                            cmdq_error(item, c"no mouse target".as_ptr());
+                                            cmdq_error!(item, "no mouse target");
                                         }
                                         break 'error;
                                     }
@@ -1165,7 +1165,7 @@ pub unsafe extern "C" fn cmd_find_target(
                                 {
                                     if !server_check_marked() {
                                         if !flags & CMD_FIND_QUIET != 0 {
-                                            cmdq_error(item, c"no marked target".as_ptr());
+                                            cmdq_error!(item, "no marked target");
                                         }
                                         break 'error;
                                     }
@@ -1284,7 +1284,7 @@ pub unsafe extern "C" fn cmd_find_target(
 
                                 if !pane.is_null() && (flags & CMD_FIND_WINDOW_INDEX != 0) {
                                     if !flags & CMD_FIND_QUIET != 0 {
-                                        cmdq_error(item, c"can't specify pane here".as_ptr());
+                                        cmdq_error!(item, "can't specify pane here");
                                     }
                                     break 'error;
                                 }
@@ -1373,19 +1373,19 @@ pub unsafe extern "C" fn cmd_find_target(
                     }
                     // no_session:
                     if !flags & CMD_FIND_QUIET != 0 {
-                        cmdq_error(item, c"can't find session: %s".as_ptr(), session);
+                        cmdq_error!(item, "can't find session: {}", _s(session));
                     }
                     break 'error;
                 }
                 // no_window:
                 if !flags & CMD_FIND_QUIET != 0 {
-                    cmdq_error(item, c"can't find window: %s".as_ptr(), window);
+                    cmdq_error!(item, "can't find window: {}", _s(window));
                 }
                 break 'error;
             }
             // no_pane:
             if !flags & CMD_FIND_QUIET != 0 {
-                cmdq_error(item, c"can't find pane: %s".as_ptr(), pane);
+                cmdq_error!(item, "can't find pane: {}", _s(pane));
             }
             break 'error;
         }
@@ -1438,7 +1438,7 @@ pub unsafe extern "C" fn cmd_find_current_client(item: *mut cmdq_item, quiet: i3
             }
         }
         if found.is_null() && !item.is_null() && quiet == 0 {
-            cmdq_error(item, c"no current client".as_ptr());
+            cmdq_error!(item, "no current client");
         }
         log_debug!("{}: no target, return {:p}", __func__, found);
         found
@@ -1497,7 +1497,7 @@ pub unsafe extern "C" fn cmd_find_client(
         }
 
         if c.is_null() && quiet == 0 {
-            cmdq_error(item, c"can't find client: %s".as_ptr(), copy);
+            cmdq_error!(item, "can't find client: {}", _s(copy));
         }
 
         free_(copy);

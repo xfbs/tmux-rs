@@ -56,13 +56,13 @@ unsafe extern "C" fn cmd_load_buffer_done(
         }
 
         if error != 0 {
-            cmdq_error(item, c"%s: %s".as_ptr(), path, strerror(error));
+            cmdq_error!(item, "{}: {}", _s(path), _s(strerror(error)));
         } else if bsize != 0 {
             let copy = xmalloc(bsize).as_ptr();
             memcpy_(copy, bdata as _, bsize);
             let mut cause = null_mut();
             if paste_set(copy as _, bsize, (*cdata).name, &raw mut cause) != 0 {
-                cmdq_error(item, c"%s".as_ptr(), cause);
+                cmdq_error!(item, "{}", _s(cause));
                 free_(cause);
                 free_(copy);
             } else if !tc.is_null()

@@ -38,7 +38,7 @@ unsafe extern "C" fn cmd_unbind_key_exec(self_: *mut cmd, item: *mut cmdq_item) 
         if args_has(args, b'a') != 0 {
             if !keystr.is_null() {
                 if quiet == 0 {
-                    cmdq_error(item, c"key given with -a".as_ptr());
+                    cmdq_error!(item, "key given with -a");
                 }
                 return cmd_retval::CMD_RETURN_ERROR;
             }
@@ -53,7 +53,7 @@ unsafe extern "C" fn cmd_unbind_key_exec(self_: *mut cmd, item: *mut cmdq_item) 
             }
             if key_bindings_get_table(tablename, 0).is_null() {
                 if quiet == 0 {
-                    cmdq_error(item, c"table %s doesn't exist".as_ptr(), tablename);
+                    cmdq_error!(item, "table {} doesn't exist", _s(tablename));
                 }
                 return cmd_retval::CMD_RETURN_ERROR;
             }
@@ -64,7 +64,7 @@ unsafe extern "C" fn cmd_unbind_key_exec(self_: *mut cmd, item: *mut cmdq_item) 
 
         if keystr.is_null() {
             if quiet == 0 {
-                cmdq_error(item, c"missing key".as_ptr());
+                cmdq_error!(item, "missing key");
             }
             return cmd_retval::CMD_RETURN_ERROR;
         }
@@ -72,7 +72,7 @@ unsafe extern "C" fn cmd_unbind_key_exec(self_: *mut cmd, item: *mut cmdq_item) 
         let key = key_string_lookup_string(keystr);
         if key == KEYC_NONE || key == KEYC_UNKNOWN {
             if quiet == 0 {
-                cmdq_error(item, c"unknown key unbind: %s".as_ptr(), keystr);
+                cmdq_error!(item, "unknown key unbind: {}", _s(keystr));
             }
             return cmd_retval::CMD_RETURN_ERROR;
         }
@@ -81,7 +81,7 @@ unsafe extern "C" fn cmd_unbind_key_exec(self_: *mut cmd, item: *mut cmdq_item) 
             tablename = args_get(args, b'T');
             if key_bindings_get_table(tablename, 0).is_null() {
                 if quiet == 0 {
-                    cmdq_error(item, c"table %s doesn't exist".as_ptr(), tablename);
+                    cmdq_error!(item, "table {} doesn't exist", _s(tablename));
                 }
                 return cmd_retval::CMD_RETURN_ERROR;
             }

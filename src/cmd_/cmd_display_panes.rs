@@ -353,7 +353,7 @@ unsafe extern "C" fn cmd_display_panes_exec(self_: *mut cmd, item: *mut cmdq_ite
         if args_has_(args, 'd') {
             delay = args_strtonum(args, b'd', 0, u32::MAX as i64, &raw mut cause) as u32;
             if !cause.is_null() {
-                cmdq_error(item, c"delay %s".as_ptr(), cause);
+                cmdq_error!(item, "delay {}", _s(cause));
                 free_(cause);
                 return cmd_retval::CMD_RETURN_ERROR;
             }

@@ -104,7 +104,7 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
                 }
             }
             if lastwp.is_null() {
-                cmdq_error(item, c"no last pane".as_ptr());
+                cmdq_error!(item, "no last pane");
                 return cmd_retval::CMD_RETURN_ERROR;
             }
             if args_has_(args, 'e') {
@@ -167,7 +167,7 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
         if !style.is_null() {
             let o = options_set_string!(oo, c"window-style".as_ptr(), 0, "{}", _s(style));
             if o.is_null() {
-                cmdq_error(item, c"bad style: %s".as_ptr(), style);
+                cmdq_error!(item, "bad style: {}", _s(style));
                 return cmd_retval::CMD_RETURN_ERROR;
             }
             options_set_string!(oo, c"window-active-style".as_ptr(), 0, "{}", _s(style),);

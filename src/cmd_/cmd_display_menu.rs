@@ -381,7 +381,7 @@ unsafe extern "C" fn cmd_display_menu_exec(self_: *mut cmd, item: *mut cmdq_item
                 starting_choice =
                     args_strtonum(args, b'C', 0, u32::MAX as i64, &raw mut cause) as i32;
                 if !cause.is_null() {
-                    cmdq_error(item, c"starting choice %s".as_ptr(), cause);
+                    cmdq_error!(item, "starting choice {}", _s(cause));
                     free_(cause);
                     return cmd_retval::CMD_RETURN_ERROR;
                 }
@@ -406,7 +406,7 @@ unsafe extern "C" fn cmd_display_menu_exec(self_: *mut cmd, item: *mut cmdq_item
             }
 
             if count - i < 2 {
-                cmdq_error(item, c"not enough arguments".as_ptr());
+                cmdq_error!(item, "not enough arguments");
                 menu_free(menu);
                 return cmd_retval::CMD_RETURN_ERROR;
             }
@@ -421,7 +421,7 @@ unsafe extern "C" fn cmd_display_menu_exec(self_: *mut cmd, item: *mut cmdq_item
             menu_add_item(menu, &raw mut menu_item, item, tc, target);
         }
         if menu.is_null() {
-            cmdq_error(item, c"invalid menu arguments".as_ptr());
+            cmdq_error!(item, "invalid menu arguments");
             return cmd_retval::CMD_RETURN_ERROR;
         }
         if (*menu).count == 0 {
@@ -447,7 +447,7 @@ unsafe extern "C" fn cmd_display_menu_exec(self_: *mut cmd, item: *mut cmdq_item
             let oe = options_get(o, c"menu-border-lines".as_ptr());
             let lines = options_find_choice(options_table_entry(oe), value, &raw mut cause);
             if lines == -1 {
-                cmdq_error(item, c"menu-border-lines %s".as_ptr(), cause);
+                cmdq_error!(item, "menu-border-lines {}", _s(cause));
                 free_(cause);
                 return cmd_retval::CMD_RETURN_ERROR;
             }
@@ -526,7 +526,7 @@ unsafe extern "C" fn cmd_display_popup_exec(self_: *mut cmd, item: *mut cmdq_ite
                 &raw mut cause,
             ) as u32;
             if !cause.is_null() {
-                cmdq_error(item, c"height %s".as_ptr(), cause);
+                cmdq_error!(item, "height {}", _s(cause));
                 free_(cause);
                 return cmd_retval::CMD_RETURN_ERROR;
             }
@@ -543,7 +543,7 @@ unsafe extern "C" fn cmd_display_popup_exec(self_: *mut cmd, item: *mut cmdq_ite
                 &raw mut cause,
             ) as u32;
             if !cause.is_null() {
-                cmdq_error(item, c"width %s".as_ptr(), cause);
+                cmdq_error!(item, "width {}", _s(cause));
                 free_(cause);
                 return cmd_retval::CMD_RETURN_ERROR;
             }
@@ -566,7 +566,7 @@ unsafe extern "C" fn cmd_display_popup_exec(self_: *mut cmd, item: *mut cmdq_ite
             let oe = options_get(o, c"popup-border-lines".as_ptr());
             lines = options_find_choice(options_table_entry(oe), value, &raw mut cause);
             if !cause.is_null() {
-                cmdq_error(item, c"popup-border-lines %s".as_ptr(), cause);
+                cmdq_error!(item, "popup-border-lines {}", _s(cause));
                 free_(cause);
                 return cmd_retval::CMD_RETURN_ERROR;
             }

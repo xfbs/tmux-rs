@@ -104,7 +104,7 @@ pub unsafe extern "C" fn cmd_refresh_client_control_client_size(
         {
             if x < WINDOW_MINIMUM || x > WINDOW_MAXIMUM || y < WINDOW_MINIMUM || y > WINDOW_MAXIMUM
             {
-                cmdq_error(item, c"size too small or too big".as_ptr());
+                cmdq_error!(item, "size too small or too big");
                 return cmd_retval::CMD_RETURN_ERROR;
             }
             log_debug!(
@@ -141,11 +141,11 @@ pub unsafe extern "C" fn cmd_refresh_client_control_client_size(
         if sscanf(size, c"%u,%u".as_ptr(), &x, &y) != 2
             && sscanf(size, c"%ux%u".as_ptr(), &x, &y) != 2
         {
-            cmdq_error(item, c"bad size argument".as_ptr());
+            cmdq_error!(item, "bad size argument");
             return cmd_retval::CMD_RETURN_ERROR;
         }
         if x < WINDOW_MINIMUM || x > WINDOW_MAXIMUM || y < WINDOW_MINIMUM || y > WINDOW_MAXIMUM {
-            cmdq_error(item, c"size too small or too big".as_ptr());
+            cmdq_error!(item, "size too small or too big");
             return cmd_retval::CMD_RETURN_ERROR;
         }
         tty_set_size(&raw mut (*tc).tty, x, y, 0, 0);
@@ -304,7 +304,7 @@ pub unsafe extern "C" fn cmd_refresh_client_exec(
                     adjust =
                         strtonum(args_string(args, 0), 1, i32::MAX as i64, &raw mut errstr) as u32;
                     if !errstr.is_null() {
-                        cmdq_error(item, c"adjustment %s".as_ptr(), errstr);
+                        cmdq_error!(item, "adjustment {}", _s(errstr));
                         return cmd_retval::CMD_RETURN_ERROR;
                     }
                 }
@@ -400,7 +400,7 @@ pub unsafe extern "C" fn cmd_refresh_client_exec(
             return cmd_retval::CMD_RETURN_NORMAL;
         }
         // not_control_client:
-        cmdq_error(item, c"not a control client".as_ptr());
+        cmdq_error!(item, "not a control client");
         cmd_retval::CMD_RETURN_ERROR
     }
 }

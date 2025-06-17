@@ -102,18 +102,18 @@ unsafe extern "C" fn cmd_select_window_exec(self_: *mut cmd, item: *mut cmdq_ite
             let activity = args_has(args, b'a');
             if next {
                 if session_next(s, activity) != 0 {
-                    cmdq_error(item, c"no next window".as_ptr());
+                    cmdq_error!(item, "no next window");
                     return cmd_retval::CMD_RETURN_ERROR;
                 }
             } else if previous {
                 if session_previous(s, activity) != 0 {
-                    cmdq_error(item, c"no previous window".as_ptr());
+                    cmdq_error!(item, "no previous window");
                     return cmd_retval::CMD_RETURN_ERROR;
                 }
             } else {
                 #[allow(clippy::collapsible_else_if)]
                 if session_last(s) != 0 {
-                    cmdq_error(item, c"no last window".as_ptr());
+                    cmdq_error!(item, "no last window");
                     return cmd_retval::CMD_RETURN_ERROR;
                 }
             }
@@ -127,7 +127,7 @@ unsafe extern "C" fn cmd_select_window_exec(self_: *mut cmd, item: *mut cmdq_ite
              */
             if args_has_(args, 'T') && wl == (*s).curw {
                 if session_last(s) != 0 {
-                    cmdq_error(item, c"no last window".as_ptr());
+                    cmdq_error!(item, "no last window");
                     return cmd_retval::CMD_RETURN_ERROR;
                 }
                 if (*current).s == s {

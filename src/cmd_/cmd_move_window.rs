@@ -102,7 +102,7 @@ unsafe extern "C" fn cmd_move_window_exec(self_: *mut cmd, item: *mut cmdq_item)
         }
 
         if server_link_window(src, wl, dst, idx, kflag, !dflag, &raw mut cause) != 0 {
-            cmdq_error(item, c"%s".as_ptr(), cause);
+            cmdq_error!(item, "{}", _s(cause));
             free_(cause);
             return cmd_retval::CMD_RETURN_ERROR;
         }

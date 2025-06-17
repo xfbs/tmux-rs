@@ -820,7 +820,7 @@ pub unsafe extern "C" fn args_make_commands_now(
         let state = args_make_commands_prepare(self_, item, idx, null_mut(), 0, expand);
         let cmdlist = args_make_commands(state, 0, null_mut(), &raw mut error);
         if cmdlist.is_null() {
-            cmdq_error(item, c"%s".as_ptr(), error);
+            cmdq_error!(item, "{}", _s(error));
             free_(error);
         } else {
             (*cmdlist).references += 1;

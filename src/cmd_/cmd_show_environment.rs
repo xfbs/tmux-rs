@@ -117,7 +117,7 @@ unsafe extern "C" fn cmd_show_environment_exec(
         let mut tflag = args_get_(args, 't');
         if !tflag.is_null() {
             if (*target).s.is_null() {
-                cmdq_error(item, c"no such session: %s".as_ptr(), tflag);
+                cmdq_error!(item, "no such session: {}", _s(tflag));
                 return cmd_retval::CMD_RETURN_ERROR;
             }
         }
@@ -128,9 +128,9 @@ unsafe extern "C" fn cmd_show_environment_exec(
             if (*target).s.is_null() {
                 tflag = args_get_(args, 't');
                 if !tflag.is_null() {
-                    cmdq_error(item, c"no such session: %s".as_ptr(), tflag);
+                    cmdq_error!(item, "no such session: {}", _s(tflag));
                 } else {
-                    cmdq_error(item, c"no current session".as_ptr());
+                    cmdq_error!(item, "no current session");
                 }
                 return cmd_retval::CMD_RETURN_ERROR;
             }
@@ -141,7 +141,7 @@ unsafe extern "C" fn cmd_show_environment_exec(
         if !name.is_null() {
             envent = environ_find(env, name);
             if envent.is_null() {
-                cmdq_error(item, c"unknown variable: %s".as_ptr(), name);
+                cmdq_error!(item, "unknown variable: {}", _s(name));
                 return cmd_retval::CMD_RETURN_ERROR;
             }
             cmd_show_environment_print(self_, item, envent);

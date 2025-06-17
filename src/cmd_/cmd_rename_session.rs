@@ -41,7 +41,7 @@ unsafe extern "C" fn cmd_rename_session_exec(self_: *mut cmd, item: *mut cmdq_it
         let tmp = format_single_from_target(item, args_string(args, 0));
         let newname = session_check_name(tmp);
         if newname.is_null() {
-            cmdq_error(item, c"invalid session: %s".as_ptr(), tmp);
+            cmdq_error!(item, "invalid session: {}", _s(tmp));
             free_(tmp);
             return cmd_retval::CMD_RETURN_ERROR;
         }
@@ -51,7 +51,7 @@ unsafe extern "C" fn cmd_rename_session_exec(self_: *mut cmd, item: *mut cmdq_it
             return cmd_retval::CMD_RETURN_NORMAL;
         }
         if !session_find(newname).is_null() {
-            cmdq_error(item, c"duplicate session: %s".as_ptr(), newname);
+            cmdq_error!(item, "duplicate session: {}", _s(newname));
             free_(newname);
             return cmd_retval::CMD_RETURN_ERROR;
         }

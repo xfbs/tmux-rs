@@ -124,7 +124,7 @@ pub unsafe extern "C" fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_ite
         if !delay.is_null() {
             d = strtod(delay, &raw mut end);
             if *end != b'\0' as _ {
-                cmdq_error(item, c"invalid delay time: %s".as_ptr(), delay);
+                cmdq_error!(item, "invalid delay time: {}", _s(delay));
                 return cmd_retval::CMD_RETURN_ERROR;
             }
         } else if args_count(args) == 0 {
@@ -238,7 +238,7 @@ pub unsafe extern "C" fn cmd_run_shell_timer(_fd: i32, _events: i16, arg: *mut c
                 *error = toupper(*error as i32) as i8;
                 status_message_set!(c, -1, 1, 0, "{}", _s(error));
             } else {
-                cmdq_error((*cdata).item, c"%s".as_ptr(), error);
+                cmdq_error!((*cdata).item, "{}", _s(error));
             }
             free_(error);
         } else if item.is_null() {

@@ -61,13 +61,13 @@ unsafe extern "C" fn cmd_set_buffer_exec(self_: *mut cmd, item: *mut cmdq_item) 
         if cmd_get_entry(self_) == &raw mut cmd_delete_buffer_entry {
             if pb.is_null() {
                 if !bufname.is_null() {
-                    cmdq_error(item, c"unknown buffer: %s".as_ptr(), bufname);
+                    cmdq_error!(item, "unknown buffer: {}", _s(bufname));
                     return cmd_retval::CMD_RETURN_ERROR;
                 }
                 pb = paste_get_top(&raw mut bufname);
             }
             if pb.is_null() {
-                cmdq_error(item, c"no buffer".as_ptr());
+                cmdq_error!(item, "no buffer");
                 return cmd_retval::CMD_RETURN_ERROR;
             }
             paste_free(NonNull::new_unchecked(pb));
@@ -77,17 +77,17 @@ unsafe extern "C" fn cmd_set_buffer_exec(self_: *mut cmd, item: *mut cmdq_item) 
         if args_has_(args, 'n') {
             if pb.is_null() {
                 if !bufname.is_null() {
-                    cmdq_error(item, c"unknown buffer: %s".as_ptr(), bufname);
+                    cmdq_error!(item, "unknown buffer: {}", _s(bufname));
                     return cmd_retval::CMD_RETURN_ERROR;
                 }
                 pb = paste_get_top(&raw mut bufname);
             }
             if pb.is_null() {
-                cmdq_error(item, c"no buffer".as_ptr());
+                cmdq_error!(item, "no buffer");
                 return cmd_retval::CMD_RETURN_ERROR;
             }
             if paste_rename(bufname, args_get_(args, 'n'), &raw mut cause) != 0 {
-                cmdq_error(item, c"%s".as_ptr(), cause);
+                cmdq_error!(item, "{}", _s(cause));
                 free_(cause);
                 return cmd_retval::CMD_RETURN_ERROR;
             }
@@ -95,7 +95,7 @@ unsafe extern "C" fn cmd_set_buffer_exec(self_: *mut cmd, item: *mut cmdq_item) 
         }
 
         if args_count(args) != 1 {
-            cmdq_error(item, c"no data specified".as_ptr());
+            cmdq_error!(item, "no data specified");
             return cmd_retval::CMD_RETURN_ERROR;
         }
         let newsize = strlen(args_string(args, 0));
@@ -119,7 +119,7 @@ unsafe extern "C" fn cmd_set_buffer_exec(self_: *mut cmd, item: *mut cmdq_item) 
         bufsize += newsize;
 
         if paste_set(bufdata, bufsize, bufname, &raw mut cause) != 0 {
-            cmdq_error(item, c"%s".as_ptr(), cause);
+            cmdq_error!(item, "{}", _s(cause));
             free_(bufdata);
             free_(cause);
             return cmd_retval::CMD_RETURN_ERROR;

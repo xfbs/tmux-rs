@@ -179,7 +179,7 @@ pub unsafe extern "C" fn cmd_wait_for_wait(
         let c = cmdq_get_client(item);
 
         if c.is_null() {
-            cmdq_error(item, c"not able to wait".as_ptr());
+            cmdq_error!(item, "not able to wait");
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
@@ -209,7 +209,7 @@ pub unsafe extern "C" fn cmd_wait_for_lock(
 ) -> cmd_retval {
     unsafe {
         if cmdq_get_client(item).is_null() {
-            cmdq_error(item, c"not able to lock".as_ptr());
+            cmdq_error!(item, "not able to lock");
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
@@ -236,7 +236,7 @@ pub unsafe extern "C" fn cmd_wait_for_unlock(
 ) -> cmd_retval {
     unsafe {
         if wc.is_null() || (*wc).locked == 0 {
-            cmdq_error(item, c"channel %s not locked".as_ptr(), name);
+            cmdq_error!(item, "channel {} not locked", _s(name));
             return cmd_retval::CMD_RETURN_ERROR;
         }
 

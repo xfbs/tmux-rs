@@ -171,7 +171,7 @@ unsafe extern "C" fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -
             if !keystr.is_null() {
                 only = key_string_lookup_string(keystr);
                 if only == KEYC_UNKNOWN {
-                    cmdq_error(item, c"invalid key: %s".as_ptr(), keystr);
+                    cmdq_error!(item, "invalid key: {}", _s(keystr));
                     return cmd_retval::CMD_RETURN_ERROR;
                 }
                 only &= KEYC_MASK_KEY | KEYC_MASK_MODIFIERS;
@@ -179,7 +179,7 @@ unsafe extern "C" fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -
 
             let tablename = args_get(args, b'T');
             if !tablename.is_null() && key_bindings_get_table(tablename, 0).is_null() {
-                cmdq_error(item, c"table %s doesn't exist".as_ptr(), tablename);
+                cmdq_error!(item, "table {} doesn't exist", _s(tablename));
                 return cmd_retval::CMD_RETURN_ERROR;
             }
 
@@ -353,7 +353,7 @@ unsafe extern "C" fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -
         }
 
         if only != KEYC_UNKNOWN && found == 0 {
-            cmdq_error(item, c"unknown key list: %s".as_ptr(), args_string(args, 0));
+            cmdq_error!(item, "unknown key list: {}", _s(args_string(args, 0)));
             return cmd_retval::CMD_RETURN_ERROR;
         }
         cmd_retval::CMD_RETURN_NORMAL

@@ -3005,7 +3005,7 @@ pub unsafe extern "C" fn server_client_read_only(
     _data: *mut c_void,
 ) -> cmd_retval {
     unsafe {
-        cmdq_error(item, c"client is read-only".as_ptr());
+        cmdq_error!(item, "client is read-only");
         cmd_retval::CMD_RETURN_ERROR
     }
 }

@@ -75,7 +75,7 @@ pub unsafe extern "C" fn cmd_break_pane_exec(self_: *mut cmd, item: *mut cmdq_it
                 &raw mut cause,
             ) != 0
             {
-                cmdq_error(item, c"%s".as_ptr(), cause);
+                cmdq_error!(item, "{}", _s(cause));
                 free_(cause);
                 return cmd_retval::CMD_RETURN_ERROR;
             }
@@ -87,7 +87,7 @@ pub unsafe extern "C" fn cmd_break_pane_exec(self_: *mut cmd, item: *mut cmdq_it
             return cmd_retval::CMD_RETURN_NORMAL;
         }
         if idx != -1 && !winlink_find_by_index(&raw mut (*dst_s).windows, idx).is_null() {
-            cmdq_error(item, c"index in use: %d".as_ptr(), idx);
+            cmdq_error!(item, "index in use: {}", idx);
             return cmd_retval::CMD_RETURN_ERROR;
         }
 

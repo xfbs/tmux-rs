@@ -67,7 +67,7 @@ unsafe extern "C" fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) 
                     new_wl = wl;
                     continue;
                 }
-                cmdq_error(item, c"multiple windows named %s".as_ptr(), name);
+                cmdq_error!(item, "multiple windows named {}", _s(name));
                 free_(expanded);
                 return cmd_retval::CMD_RETURN_ERROR;
             }
@@ -123,7 +123,7 @@ unsafe extern "C" fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) 
 
         let new_wl = spawn_window(&raw mut sc, &raw mut cause);
         if new_wl.is_null() {
-            cmdq_error(item, c"create window failed: %s".as_ptr(), cause);
+            cmdq_error!(item, "create window failed: {}", _s(cause));
             free_(cause);
             if !sc.argv.is_null() {
                 cmd_free_argv(sc.argc, sc.argv);

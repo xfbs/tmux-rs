@@ -67,7 +67,7 @@ unsafe extern "C" fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_i
             }
             match window_pane_start_input(wp, item, &raw mut cause) {
                 -1 => {
-                    cmdq_error(item, c"%s".as_ptr(), cause);
+                    cmdq_error!(item, "{}", _s(cause));
                     free_(cause);
                     return cmd_retval::CMD_RETURN_ERROR;
                 }
@@ -82,14 +82,14 @@ unsafe extern "C" fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_i
         }
 
         if args_has_(args, 'F') && count != 0 {
-            cmdq_error(item, c"only one of -F or argument must be given".as_ptr());
+            cmdq_error!(item, "only one of -F or argument must be given");
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
         if args_has_(args, 'd') {
             delay = args_strtonum(args, b'd', 0, u32::MAX as i64, &raw mut cause);
             if !cause.is_null() {
-                cmdq_error(item, c"delay %s".as_ptr(), cause);
+                cmdq_error!(item, "delay {}", _s(cause));
                 free_(cause);
                 return cmd_retval::CMD_RETURN_ERROR;
             }
@@ -138,7 +138,7 @@ unsafe extern "C" fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_i
         };
 
         if cmdq_get_client(item).is_null() {
-            cmdq_error(item, c"%s".as_ptr(), msg);
+            cmdq_error!(item, "{}", _s(msg));
         } else if args_has_(args, 'p') {
             cmdq_print!(item, "{}", _s(msg));
         } else if !tc.is_null() && (*tc).flags.intersects(client_flag::CONTROL) {

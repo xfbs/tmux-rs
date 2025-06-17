@@ -59,7 +59,7 @@ unsafe extern "C" fn cmd_show_prompt_history_exec(
             } else {
                 type_ = status_prompt_type(typestr);
                 if type_ == prompt_type::PROMPT_TYPE_INVALID {
-                    cmdq_error(item, c"invalid type: %s".as_ptr(), typestr);
+                    cmdq_error!(item, "invalid type: {}", _s(typestr));
                     return cmd_retval::CMD_RETURN_ERROR;
                 }
                 free_(status_prompt_hlist[type_ as usize]);
@@ -90,7 +90,7 @@ unsafe extern "C" fn cmd_show_prompt_history_exec(
         } else {
             type_ = status_prompt_type(typestr);
             if type_ == prompt_type::PROMPT_TYPE_INVALID {
-                cmdq_error(item, c"invalid type: %s".as_ptr(), typestr);
+                cmdq_error!(item, "invalid type: {}", _s(typestr));
                 return cmd_retval::CMD_RETURN_ERROR;
             }
             cmdq_print!(
