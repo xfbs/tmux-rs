@@ -97,9 +97,9 @@ unsafe extern "C" fn cmd_set_environment_exec(self_: *mut cmd, item: *mut cmdq_i
                 }
 
                 if args_has_(args, 'h') {
-                    environ_set(env, name, ENVIRON_HIDDEN, c"%s".as_ptr(), value);
+                    environ_set!(env, name, ENVIRON_HIDDEN, "{}", _s(value));
                 } else {
-                    environ_set(env, name, 0, c"%s".as_ptr(), value);
+                    environ_set!(env, name, 0, "{}", _s(value));
                 }
             }
         }

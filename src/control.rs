@@ -399,7 +399,7 @@ pub unsafe extern "C" fn control_continue_pane(c: *mut client, wp: *mut window_p
             (*cp).flags &= !CONTROL_PANE_PAUSED;
             memcpy__(&raw mut (*cp).offset, &raw const (*wp).offset);
             memcpy__(&raw mut (*cp).queued, &raw const (*wp).offset);
-            control_write(c, c"%%continue %%%u".as_ptr(), (*wp).id);
+            control_write!(c, "%continue %{}", (*wp).id);
         }
     }
 }
@@ -411,18 +411,19 @@ pub unsafe extern "C" fn control_pause_pane(c: *mut client, wp: *mut window_pane
         if !(*cp).flags & CONTROL_PANE_PAUSED != 0 {
             (*cp).flags |= CONTROL_PANE_PAUSED;
             control_discard_pane(c, cp);
-            control_write(c, c"%%pause %%%u".as_ptr(), (*wp).id);
+            control_write!(c, "%pause %{}", (*wp).id);
         }
     }
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn control_vwrite(c: *mut client, fmt: *const c_char, ap: VaList) {
+pub unsafe fn control_vwrite(c: *mut client, args: std::fmt::Arguments) {
     unsafe {
         let cs = (*c).control_state;
-        let mut s = null_mut();
 
-        xvasprintf(&raw mut s, fmt, ap);
+        let mut s = args.to_string();
+        s.push('\0');
+        let s = s.as_mut_ptr().cast();
+
         log_debug!(
             "{}: {}: writing line: {}",
             "control_vwrite",
@@ -438,18 +439,26 @@ pub unsafe extern "C" fn control_vwrite(c: *mut client, fmt: *const c_char, ap: 
     }
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn control_write(c: *mut client, fmt: *const c_char, mut ap: ...) {
+macro_rules! control_write {
+   ($c:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::control::control_write_($c, format_args!($fmt $(, $args)*))
+    };
+}
+pub(crate) use control_write;
+
+pub unsafe fn control_write_(c: *mut client, args: std::fmt::Arguments) {
     unsafe {
         let cs = (*c).control_state;
 
         if tailq_empty(&raw mut (*cs).all_blocks) {
-            control_vwrite(c, fmt, ap.as_va_list());
+            control_vwrite(c, args);
             return;
         }
 
         let cb = xcalloc_::<control_block>(1).as_ptr();
-        xvasprintf(&raw mut (*cb).line, fmt, ap.as_va_list());
+        let mut value = args.to_string();
+        value.push('\0');
+        (*cb).line = value.leak().as_mut_ptr().cast();
         tailq_insert_tail::<_, discr_all_entry>(&raw mut (*cs).all_blocks, cb);
         (*cb).t = get_timer();
 
@@ -495,7 +504,7 @@ pub unsafe extern "C" fn control_check_age(
             }
             (*cp).flags |= CONTROL_PANE_PAUSED;
             control_discard_pane(c, cp);
-            control_write(c, c"%%pause %%%u".as_ptr(), (*wp).id);
+            control_write!(c, "%pause %{}", (*wp).id);
         } else {
             if age < CONTROL_MAXIMUM_AGE {
                 return 0;
@@ -590,7 +599,7 @@ pub unsafe extern "C" fn control_error(item: *mut cmdq_item, data: *mut c_void) 
         let error = data as *mut c_char;
 
         cmdq_guard(item, c"begin".as_ptr(), 1);
-        control_write(c, c"parse error: %s".as_ptr(), error);
+        control_write!(c, "parse error: {}", _s(error));
         cmdq_guard(item, c"error".as_ptr(), 1);
 
         free_(error);
@@ -975,12 +984,12 @@ pub unsafe extern "C" fn control_check_subs_session(c: *mut client, csub: *mut c
             free_(value);
             return;
         }
-        control_write(
+        control_write!(
             c,
-            c"%%subscription-changed %s $%u - - - : %s".as_ptr(),
-            (*csub).name,
+            "%subscription-changed {} ${} - - - : {}",
+            _s((*csub).name),
             (*s).id,
-            value,
+            _s(value),
         );
         free_((*csub).last);
         (*csub).last = value;
@@ -1023,15 +1032,15 @@ pub unsafe extern "C" fn control_check_subs_pane(c: *mut client, csub: *mut cont
                 free_(value);
                 continue;
             }
-            control_write(
+            control_write!(
                 c,
-                c"%%subscription-changed %s $%u @%u %u %%%u : %s".as_ptr(),
-                (*csub).name,
+                "%subscription-changed {} ${} @{} {} %{} : {}",
+                _s((*csub).name),
                 (*s).id,
                 (*w).id,
                 (*wl).idx,
                 (*wp).id,
-                value,
+                _s(value),
             );
             free_((*csp).last);
             (*csp).last = value;
@@ -1067,15 +1076,15 @@ pub unsafe extern "C" fn control_check_subs_all_panes(c: *mut client, csub: *mut
                     free_(value);
                     continue;
                 }
-                control_write(
+                control_write!(
                     c,
-                    c"%%subscription-changed %s $%u @%u %u %%%u : %s".as_ptr(),
-                    (*csub).name,
+                    "%subscription-changed {} ${} @{} {} %{} : {}",
+                    _s((*csub).name),
                     (*s).id,
                     (*w).id,
                     (*wl).idx,
                     (*wp).id,
-                    value,
+                    _s(value),
                 );
                 free_((*csp).last);
                 (*csp).last = value;
@@ -1121,14 +1130,14 @@ pub unsafe extern "C" fn control_check_subs_window(c: *mut client, csub: *mut co
                 free_(value);
                 continue;
             }
-            control_write(
+            control_write!(
                 c,
-                c"%%subscription-changed %s $%u @%u %u - : %s".as_ptr(),
-                (*csub).name,
+                "%subscription-changed {} ${} @{} {} - : {}",
+                _s((*csub).name),
                 (*s).id,
                 (*w).id,
                 (*wl).idx,
-                value,
+                _s(value),
             );
             free_((*csw).last);
             (*csw).last = value;
@@ -1164,14 +1173,14 @@ pub unsafe extern "C" fn control_check_subs_all_windows(c: *mut client, csub: *m
                 free_(value);
                 continue;
             }
-            control_write(
+            control_write!(
                 c,
-                c"%%subscription-changed %s $%u @%u %u - : %s".as_ptr(),
-                (*csub).name,
+                "%subscription-changed {} ${} @{} {} - : {}",
+                _s((*csub).name),
                 (*s).id,
                 (*w).id,
                 (*wl).idx,
-                value,
+                _s(value),
             );
             free_((*csw).last);
             (*csw).last = value;

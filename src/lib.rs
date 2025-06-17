@@ -2641,12 +2641,12 @@ pub use crate::job_::{
 };
 
 mod environ_;
-use crate::environ_::environ_log;
 pub use crate::environ_::{
     environ, environ_clear, environ_copy, environ_create, environ_find, environ_first,
-    environ_for_session, environ_free, environ_next, environ_push, environ_put, environ_set,
-    environ_unset, environ_update,
+    environ_for_session, environ_free, environ_next, environ_push, environ_put, environ_unset,
+    environ_update,
 };
+use crate::environ_::{environ_log, environ_set};
 
 mod tty_;
 pub use crate::tty_::{
@@ -3003,11 +3003,12 @@ mod names;
 pub use crate::names::{check_window_name, default_window_name, parse_window_name};
 
 mod control;
+use crate::control::control_write;
 pub use crate::control::{
     control_add_sub, control_all_done, control_continue_pane, control_discard, control_pane_offset,
     control_pause_pane, control_ready, control_remove_sub, control_reset_offsets,
     control_set_pane_off, control_set_pane_on, control_start, control_state, control_stop,
-    control_write, control_write_output,
+    control_write_output,
 };
 
 mod control_notify;

@@ -912,7 +912,7 @@ pub unsafe extern "C" fn cmdq_guard(item: *mut cmdq_item, guard: *const c_char, 
         let number = (*item).number;
 
         if !c.is_null() && (*c).flags.intersects(client_flag::CONTROL) {
-            control_write(c, c"%%%s %ld %u %d".as_ptr(), guard, t, number, flags);
+            control_write!(c, "%{} {} {} {}", _s(guard), t, number, flags);
         }
     }
 }
@@ -970,7 +970,7 @@ pub unsafe extern "C" fn cmdq_error(item: *mut cmdq_item, fmt: *const c_char, mu
                 free_(tmp);
             }
             if (*c).flags.intersects(client_flag::CONTROL) {
-                control_write(c, c"%s".as_ptr(), msg);
+                control_write!(c, "{}", _s(msg));
             } else {
                 file_error!(c, "{}\n", _s(msg));
             }

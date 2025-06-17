@@ -20,10 +20,7 @@ bug - check for double %% in print, forgot that printf escapes % when translatin
 
 see: args_print_add
 
-- [ ]  18 environ_set
 - [ ]  18 fatalx_c
-- [ ]  33 fatal
-- [ ]  34 control_write
 - [ ]  47 cmdq_print
 - [ ]  57 format_printf
 - [ ]  61 format_log1

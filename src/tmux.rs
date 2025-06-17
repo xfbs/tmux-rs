@@ -471,7 +471,7 @@ pub unsafe extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *m
 
         let cwd = find_cwd();
         if !cwd.is_null() {
-            environ_set(global_environ, c"PWD".as_ptr(), 0, c"%s".as_ptr(), cwd);
+            environ_set!(global_environ, c"PWD".as_ptr(), 0, "{}", _s(cwd));
         }
         expand_paths(
             TMUX_CONF.as_ptr(),

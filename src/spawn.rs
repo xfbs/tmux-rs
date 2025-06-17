@@ -381,13 +381,7 @@ pub unsafe extern "C" fn spawn_pane(
             if !(*sc).environ.is_null() {
                 environ_copy((*sc).environ, child);
             }
-            environ_set(
-                child,
-                c"TMUX_PANE".as_ptr(),
-                0,
-                c"%%%u".as_ptr(),
-                (*new_wp).id,
-            );
+            environ_set!(child, c"TMUX_PANE".as_ptr(), 0, "%{}", (*new_wp).id,);
 
             /*
              * Then the PATH environment variable. The session one is replaced from
@@ -398,11 +392,17 @@ pub unsafe extern "C" fn spawn_pane(
                 /* only unattached clients */
                 ee = environ_find((*c).environ, c"PATH".as_ptr());
                 if !ee.is_null() {
-                    environ_set(child, c"PATH".as_ptr(), 0, c"%s".as_ptr(), (*ee).value);
+                    environ_set!(
+                        child,
+                        c"PATH".as_ptr(),
+                        0,
+                        "{}",
+                        _s(transmute_ptr((*ee).value))
+                    );
                 }
             }
             if environ_find(child, c"PATH".as_ptr()).is_null() {
-                environ_set(child, c"PATH".as_ptr(), 0, c"%s".as_ptr(), _PATH_DEFPATH);
+                environ_set!(child, c"PATH".as_ptr(), 0, "{}", _s(_PATH_DEFPATH));
             }
 
             /* Then the shell. If respawning, use the old one. */
@@ -414,7 +414,7 @@ pub unsafe extern "C" fn spawn_pane(
                 free_((*new_wp).shell);
                 (*new_wp).shell = xstrdup(tmp).as_ptr();
             }
-            environ_set(child, c"SHELL".as_ptr(), 0, c"%s".as_ptr(), (*new_wp).shell);
+            environ_set!(child, c"SHELL".as_ptr(), 0, "{}", _s((*new_wp).shell));
 
             /* Log the arguments we are going to use. */
             log_debug!("{}: shell={}", _s(__func__), _s((*new_wp).shell));
@@ -492,15 +492,15 @@ pub unsafe extern "C" fn spawn_pane(
              * fails.
              */
             if chdir((*new_wp).cwd) == 0 {
-                environ_set(child, c"PWD".as_ptr(), 0, c"%s".as_ptr(), (*new_wp).cwd);
+                environ_set!(child, c"PWD".as_ptr(), 0, "{}", _s((*new_wp).cwd));
             } else if ({
                 tmp = find_home();
                 !tmp.is_null()
             }) && chdir(tmp) == 0
             {
-                environ_set(child, c"PWD".as_ptr(), 0, c"%s".as_ptr(), tmp);
+                environ_set!(child, c"PWD".as_ptr(), 0, "{}", _s(tmp));
             } else if chdir(c"/".as_ptr()) == 0 {
-                environ_set(child, c"PWD".as_ptr(), 0, c"/".as_ptr());
+                environ_set!(child, c"PWD".as_ptr(), 0, "/");
             } else {
                 fatal(c"chdir failed".as_ptr());
             }

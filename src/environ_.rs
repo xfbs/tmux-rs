@@ -73,12 +73,12 @@ pub unsafe extern "C" fn environ_copy(srcenv: *mut environ, dstenv: *mut environ
     unsafe {
         for envent in rb_foreach(srcenv).map(NonNull::as_ptr) {
             if let Some(value) = (*envent).value {
-                environ_set(
+                environ_set!(
                     dstenv,
                     (*envent).name.unwrap().as_ptr(),
                     (*envent).flags,
-                    c"%s".as_ptr(),
-                    value.as_ptr(),
+                    "{}",
+                    _s(value.as_ptr()),
                 );
             } else {
                 environ_clear(dstenv, transmute_ptr((*envent).name));
@@ -103,27 +103,33 @@ pub unsafe extern "C" fn environ_find(
     unsafe { rb_find(env, envent) }
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn environ_set(
+macro_rules! environ_set {
+   ($env:expr, $name:expr, $flags:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::environ_::environ_set_($env, $name, $flags, format_args!($fmt $(, $args)*))
+    };
+}
+pub(crate) use environ_set;
+pub unsafe fn environ_set_(
     env: *mut environ,
     name: *const c_char,
     flags: c_int,
-    fmt: *const c_char,
-    args: ...
+    args: std::fmt::Arguments,
 ) {
     unsafe {
         let mut envent = environ_find(env, name);
+        let mut s = args.to_string();
+        s.push('\0');
+        let s = NonNull::new(s.leak().as_mut_ptr().cast());
+
         if !envent.is_null() {
             (*envent).flags = flags;
             free_(transmute_ptr((*envent).value));
-            let mut ap = args.clone();
-            xvasprintf(&raw mut (*envent).value as _, fmt, ap.as_va_list());
+            (*envent).value = s;
         } else {
             envent = xmalloc_::<environ_entry>().as_ptr();
             (*envent).name = Some(xstrdup(name).cast());
             (*envent).flags = flags;
-            let mut ap = args.clone();
-            xvasprintf(&raw mut (*envent).value as _, fmt, ap.as_va_list());
+            (*envent).value = s;
             rb_insert(env, envent);
         }
     }
@@ -158,7 +164,7 @@ pub unsafe extern "C" fn environ_put(env: *mut environ, var: *const c_char, flag
         let name: *mut c_char = xstrdup(var).cast().as_ptr();
         *name.add(libc::strcspn(name, c"=".as_ptr())) = b'\0' as c_char;
 
-        environ_set(env, name, flags, c"%s".as_ptr(), value);
+        environ_set!(env, name, flags, "{}", _s(value));
         free_(name);
     }
 }
@@ -192,12 +198,12 @@ pub unsafe extern "C" fn environ_update(oo: *mut options, src: *mut environ, dst
             found = 0;
             for envent in rb_foreach(src).map(NonNull::as_ptr) {
                 if libc::fnmatch((*ov).string, transmute_ptr((*envent).name), 0) == 0 {
-                    environ_set(
+                    environ_set!(
                         dst,
                         transmute_ptr((*envent).name),
                         0,
-                        c"%s".as_ptr(),
-                        (*envent).value,
+                        "{}",
+                        _s(transmute_ptr((*envent).value)),
                     );
                     found = 1;
                 }
@@ -267,20 +273,14 @@ pub unsafe extern "C" fn environ_for_session(s: *mut session, no_term: c_int) ->
 
         if no_term == 0 {
             let value = options_get_string(global_options, c"default-terminal".as_ptr());
-            environ_set(env, c"TERM".as_ptr(), 0, c"%s".as_ptr(), value);
-            environ_set(
-                env,
-                c"TERM_PROGRAM".as_ptr(),
-                0,
-                c"%s".as_ptr(),
-                c"tmux".as_ptr(),
-            );
-            environ_set(
+            environ_set!(env, c"TERM".as_ptr(), 0, "{}", _s(value));
+            environ_set!(env, c"TERM_PROGRAM".as_ptr(), 0, "{}", "tmux");
+            environ_set!(
                 env,
                 c"TERM_PROGRAM_VERSION".as_ptr(),
                 0,
-                c"%s".as_ptr(),
-                getversion(),
+                "{}",
+                _s(getversion()),
             );
         }
 
@@ -293,13 +293,13 @@ pub unsafe extern "C" fn environ_for_session(s: *mut session, no_term: c_int) ->
 
         let idx = if !s.is_null() { (*s).id as i32 } else { -1 };
 
-        environ_set(
+        environ_set!(
             env,
             c"TMUX".as_ptr(),
             0,
-            c"%s,%ld,%d".as_ptr(),
-            socket_path,
-            std::process::id() as c_long,
+            "{},{},{}",
+            _s(socket_path),
+            std::process::id(),
             idx,
         );
 

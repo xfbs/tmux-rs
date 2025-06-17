@@ -32,7 +32,7 @@ pub unsafe extern "C" fn control_notify_pane_mode_changed(pane: c_int) {
                     continue;
                 }
 
-                control_write(c, c"%%pane-mode-changed %%%u".as_ptr(), pane);
+                control_write!(c, "%pane-mode-changed %{}", pane);
             }
         }
     }
@@ -64,7 +64,7 @@ pub unsafe extern "C" fn control_notify_window_layout_changed(w: *mut window) {
                 if let Some(wl) = winlink_find_by_window(&raw mut (*s).windows, w) {
                     let cp =
                         format_single(null_mut(), template, c, null_mut(), wl.as_ptr(), null_mut());
-                    control_write(c, c"%s".as_ptr(), cp);
+                    control_write!(c, "{}", _s(cp));
                     free_(cp);
                 }
             }
@@ -81,9 +81,9 @@ pub unsafe extern "C" fn control_notify_window_pane_changed(w: *mut window) {
                     continue;
                 }
 
-                control_write(
+                control_write!(
                     c,
-                    c"%%window-pane-changed @%u %%%u".as_ptr(),
+                    "%window-pane-changed @{} %{}",
                     (*w).id,
                     (*(*w).active).id,
                 );
@@ -103,9 +103,9 @@ pub unsafe extern "C" fn control_notify_window_unlinked(s: *mut session, w: *mut
                 let cs = (*c).session;
 
                 if !winlink_find_by_window_id(&raw mut (*cs).windows, (*w).id).is_null() {
-                    control_write(c, c"%%window-close @%u".as_ptr(), (*w).id);
+                    control_write!(c, "%window-close @{}", (*w).id);
                 } else {
-                    control_write(c, c"%%unlinked-window-close @%u".as_ptr(), (*w).id);
+                    control_write!(c, "%unlinked-window-close @{}", (*w).id);
                 }
             }
         }
@@ -123,9 +123,9 @@ pub unsafe extern "C" fn control_notify_window_linked(s: *mut session, w: *mut w
                 let cs = (*c).session;
 
                 if !winlink_find_by_window_id(&raw mut (*cs).windows, (*w).id).is_null() {
-                    control_write(c, c"%%window-add @%u".as_ptr(), (*w).id);
+                    control_write!(c, "%window-add @{}", (*w).id);
                 } else {
-                    control_write(c, c"%%unlinked-window-add @%u".as_ptr(), (*w).id);
+                    control_write!(c, "%unlinked-window-add @{}", (*w).id);
                 }
             }
         }
@@ -143,14 +143,9 @@ pub unsafe extern "C" fn control_notify_window_renamed(w: *mut window) {
                 let cs = (*c).session;
 
                 if !winlink_find_by_window_id(&raw mut (*cs).windows, (*w).id).is_null() {
-                    control_write(c, c"%%window-renamed @%u %s".as_ptr(), (*w).id, (*w).name);
+                    control_write!(c, "%window-renamed @{} {}", (*w).id, _s((*w).name));
                 } else {
-                    control_write(
-                        c,
-                        c"%%unlinked-window-renamed @%u %s".as_ptr(),
-                        (*w).id,
-                        (*w).name,
-                    );
+                    control_write!(c, "%unlinked-window-renamed @{} {}", (*w).id, _s((*w).name),);
                 }
             }
         }
@@ -172,14 +167,14 @@ pub unsafe extern "C" fn control_notify_client_session_changed(cc: *mut client) 
                 }
 
                 if cc == c {
-                    control_write(c, c"%%session-changed $%u %s".as_ptr(), (*s).id, (*s).name);
+                    control_write!(c, "%session-changed ${} {}", (*s).id, _s((*s).name));
                 } else {
-                    control_write(
+                    control_write!(
                         c,
-                        c"%%client-session-changed %s $%u %s".as_ptr(),
-                        (*cc).name,
+                        "%client-session-changed {} ${} {}",
+                        _s((*cc).name),
                         (*s).id,
-                        (*s).name,
+                        _s((*s).name),
                     );
                 }
             }
@@ -193,7 +188,7 @@ pub unsafe extern "C" fn control_notify_client_detached(cc: *mut client) {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             {
                 if CONTROL_SHOULD_NOTIFY_CLIENT!(c) {
-                    control_write(c, c"%%client-detached %s".as_ptr(), (*cc).name);
+                    control_write!(c, "%client-detached {}", _s((*cc).name));
                 }
             }
         }
@@ -209,7 +204,7 @@ pub unsafe extern "C" fn control_notify_session_renamed(s: *mut session) {
                     continue;
                 }
 
-                control_write(c, c"%%session-renamed $%u %s".as_ptr(), (*s).id, (*s).name);
+                control_write!(c, "%session-renamed ${} {}", (*s).id, _s((*s).name));
             }
         }
     }
@@ -224,7 +219,7 @@ pub unsafe extern "C" fn control_notify_session_created(_: *mut session) {
                     continue;
                 }
 
-                control_write(c, c"%%sessions-changed".as_ptr());
+                control_write!(c, "%sessions-changed");
             }
         }
     }
@@ -239,7 +234,7 @@ pub unsafe extern "C" fn control_notify_session_closed(_: *mut session) {
                     continue;
                 }
 
-                control_write(c, c"%%sessions-changed".as_ptr());
+                control_write!(c, "%sessions-changed");
             }
         }
     }
@@ -254,9 +249,9 @@ pub unsafe extern "C" fn control_notify_session_window_changed(s: *mut session) 
                     continue;
                 }
 
-                control_write(
+                control_write!(
                     c,
-                    c"%%session-window-changed $%u @%u".as_ptr(),
+                    "%session-window-changed ${} @{}",
                     (*s).id,
                     (*(*(*s).curw).window).id,
                 );
@@ -274,7 +269,7 @@ pub unsafe extern "C" fn control_notify_paste_buffer_changed(name: *const c_char
                     continue;
                 }
 
-                control_write(c, c"%%paste-buffer-changed %s".as_ptr(), name);
+                control_write!(c, "%paste-buffer-changed {}", _s(name));
             }
         }
     }
@@ -289,7 +284,7 @@ pub unsafe extern "C" fn control_notify_paste_buffer_deleted(name: *const c_char
                     continue;
                 }
 
-                control_write(c, c"%%paste-buffer-deleted %s".as_ptr(), name);
+                control_write!(c, "%paste-buffer-deleted {}", _s(name));
             }
         }
     }

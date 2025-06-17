@@ -264,7 +264,7 @@ unsafe extern "C" fn cmd_capture_pane_exec(self_: *mut cmd, item: *mut cmdq_item
                 len -= 1;
             }
             if (*c).flags.intersects(client_flag::CONTROL) {
-                control_write(c, c"%.*s".as_ptr(), len as i32, buf);
+                control_write!(c, "{1:0$}", len, _s(buf));
             } else {
                 if file_can_print(c) == 0 {
                     cmdq_error(item, c"can't write to client".as_ptr());
