@@ -231,25 +231,27 @@ pub unsafe extern "C" fn environ_push(env: *mut environ) {
     }
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn environ_log(env: *mut environ, fmt: *const c_char, mut args: ...) {
-    unsafe {
-        let mut prefix: *mut c_char = null_mut();
+macro_rules! environ_log {
+   ($env:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::environ_::environ_log_($env, format_args!($fmt $(, $args)*))
+    };
+}
+pub(crate) use environ_log;
 
-        vasprintf(&raw mut prefix, fmt, args.as_va_list());
+pub unsafe fn environ_log_(env: *mut environ, args: std::fmt::Arguments) {
+    unsafe {
+        let prefix = args.to_string();
 
         for envent in rb_foreach(env).map(NonNull::as_ptr) {
             if (*envent).value.is_some() && *(*envent).name.unwrap().as_ptr() != b'\0' as c_char {
                 log_debug!(
                     "{}{}={}",
-                    _s(prefix),
+                    prefix,
                     _s(transmute_ptr((*envent).name)),
                     _s(transmute_ptr((*envent).value))
                 );
             }
         }
-
-        free_(prefix);
     }
 }
 

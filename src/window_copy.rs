@@ -473,17 +473,12 @@ pub unsafe extern "C" fn window_copy_free(wme: NonNull<window_mode_entry>) {
     }
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_copy_add(
-    wp: *mut window_pane,
-    parse: i32,
-    fmt: *const c_char,
-    mut ap: ...
-) {
-    unsafe {
-        window_copy_vadd(wp, parse, fmt, ap.as_va_list());
-    }
+macro_rules! window_copy_add {
+   ($wp:expr, $parse:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::window_copy::window_copy_vadd($wp, $parse, format_args!($fmt $(, $args)*))
+    };
 }
+pub(crate) use window_copy_add;
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_init_ctx_cb(ctx: *mut screen_write_ctx, ttyctx: *mut tty_ctx) {
@@ -496,13 +491,7 @@ pub unsafe extern "C" fn window_copy_init_ctx_cb(ctx: *mut screen_write_ctx, tty
     }
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn window_copy_vadd(
-    wp: *mut window_pane,
-    parse: i32,
-    fmt: *const c_char,
-    mut ap: VaList,
-) {
+pub unsafe fn window_copy_vadd(wp: *mut window_pane, parse: i32, args: std::fmt::Arguments) {
     unsafe {
         let wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -517,10 +506,10 @@ pub unsafe extern "C" fn window_copy_vadd(
         let mut old_hsize: u32 = 0;
         let mut old_cy: u32 = 0;
         let sx = screen_size_x(backing);
-        let mut text: *mut c_char = null_mut();
 
         if parse != 0 {
-            vasprintf(&raw mut text, fmt, ap.as_va_list());
+            let mut text = args.to_string();
+            text.push('\0');
             screen_write_start(&raw mut writing_ctx, writing);
             screen_write_reset(&raw mut writing_ctx);
             input_parse_screen(
@@ -528,10 +517,9 @@ pub unsafe extern "C" fn window_copy_vadd(
                 writing,
                 Some(window_copy_init_ctx_cb),
                 data.cast(),
-                text.cast(),
-                strlen(text),
+                text.as_mut_ptr(),
+                text.len(),
             );
-            free_(text);
         }
 
         old_hsize = screen_hsize((*data).backing);
@@ -551,7 +539,7 @@ pub unsafe extern "C" fn window_copy_vadd(
             screen_write_fast_copy(&raw mut backing_ctx, writing, 0, 0, sx, 1);
         } else {
             memcpy__(&raw mut gc, &raw const grid_default_cell);
-            screen_write_vnputs(&raw mut backing_ctx, 0, &raw const gc, fmt, ap.as_va_list());
+            screen_write_vnputs_(&raw mut backing_ctx, 0, &raw const gc, args);
         }
         screen_write_stop(&raw mut backing_ctx);
 
@@ -4629,17 +4617,17 @@ pub unsafe extern "C" fn window_copy_search(
 
         screen_init(
             &raw mut ss,
-            screen_write_strlen(c"%s".as_ptr(), str) as u32,
+            screen_write_strlen!("{}", _s(str)) as u32,
             1,
             0,
         );
         screen_write_start(&raw mut ctx, &raw mut ss);
-        screen_write_nputs(
+        screen_write_nputs!(
             &raw mut ctx,
             -1,
             &raw const grid_default_cell,
-            c"%s".as_ptr(),
-            str,
+            "{}",
+            _s(str),
         );
         screen_write_stop(&raw mut ctx);
 
@@ -4821,15 +4809,15 @@ pub unsafe extern "C" fn window_copy_search_marks(
         let mut t: u64 = 0;
         'out: {
             if ssp.is_null() {
-                width = screen_write_strlen(c"%s".as_ptr(), (*data).searchstr) as u32;
+                width = screen_write_strlen!("{}", _s((*data).searchstr)) as u32;
                 screen_init(&raw mut ss, width, 1, 0);
                 screen_write_start(&raw mut ctx, &raw mut ss);
-                screen_write_nputs(
+                screen_write_nputs!(
                     &raw mut ctx,
                     -1,
                     &raw const grid_default_cell,
-                    c"%s".as_ptr(),
-                    (*data).searchstr,
+                    "{}",
+                    _s((*data).searchstr),
                 );
                 screen_write_stop(&raw mut ctx);
                 ssp = &raw mut ss;
@@ -5335,7 +5323,7 @@ pub unsafe extern "C" fn window_copy_write_line(
                 size = screen_size_x(s) as usize;
             }
             screen_write_cursormove(ctx, screen_size_x(s) as i32 - size as i32, 0, 0);
-            screen_write_puts(ctx, &raw mut gc, c"%s".as_ptr(), hdr);
+            screen_write_puts!(ctx, &raw mut gc, "{}", _s((&raw const hdr).cast()));
         } else {
             size = 0;
         }

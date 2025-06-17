@@ -109,9 +109,9 @@ unsafe extern "C" fn cmd_list_keys_print_notes(
 
             let tmp = utf8_padcstr(key, keywidth + 1);
             if args_has_(args, '1') && !tc.is_null() {
-                status_message_set(tc, -1, 1, 0, c"%s%s%s".as_ptr(), prefix, tmp, note);
+                status_message_set!(tc, -1, 1, 0, "{}{}{}", _s(prefix), _s(tmp), _s(note));
             } else {
-                cmdq_print(item, c"%s%s%s".as_ptr(), prefix, tmp, note);
+                cmdq_print!(item, "{}{}{}", _s(prefix), _s(tmp), _s(note));
             }
             free_(tmp);
             free_(note);
@@ -335,9 +335,9 @@ unsafe extern "C" fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -
                     free_(cp);
 
                     if args_has_(args, '1') && tc.is_null() {
-                        status_message_set(tc, -1, 1, 0, c"bind-key %s".as_ptr(), tmp);
+                        status_message_set!(tc, -1, 1, 0, "bind-key {}", _s(tmp.as_ptr()));
                     } else {
-                        cmdq_print(item, c"bind-key %s".as_ptr(), tmp);
+                        cmdq_print!(item, "bind-key {}", _s(tmp.as_ptr()));
                     }
                     free_(key);
 
@@ -417,7 +417,7 @@ unsafe extern "C" fn cmd_list_keys_commands(self_: *mut cmd, item: *mut cmdq_ite
 
             let line = format_expand(ft, template);
             if *line != b'\0' as _ {
-                cmdq_print(item, c"%s".as_ptr(), line);
+                cmdq_print!(item, "{}", _s(line));
             }
             free_(line);
             entryp = entryp.add(1);

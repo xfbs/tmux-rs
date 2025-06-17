@@ -207,7 +207,7 @@ pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_it
                         cmdq_error(item, c"empty value".as_ptr());
                         break 'fail;
                     }
-                    options_set_string(oo, name, append, c"%s".as_ptr(), value);
+                    options_set_string!(oo, name, append, "{}", _s(value));
                 } else if idx == -1 && options_is_array(parent) == 0 {
                     error = options_from_string(
                         oo,

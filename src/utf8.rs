@@ -22,7 +22,7 @@ use crate::compat::{
     vis_::VIS_DQ,
 };
 use crate::{
-    log::{fatalx_c, log_debug_c},
+    log::fatalx_c,
     xmalloc::{Zeroable, xreallocarray},
 };
 
@@ -165,16 +165,14 @@ pub unsafe extern "C" fn utf8_put_item(
     size: usize,
     index: *mut u32,
 ) -> i32 {
-    let __func__ = c"utf8_put_item".as_ptr();
     unsafe {
         let ui = utf8_item_by_data(data, size);
         if !ui.is_null() {
             *index = (*ui).index;
-            log_debug_c(
-                c"%s: found %.*s = %u".as_ptr(),
-                __func__,
-                size as i32,
-                (&raw const data) as *const c_char,
+            log_debug!(
+                "utf8_put_item: found {1:0$} = {2}",
+                size,
+                _s((&raw const data) as *const c_char),
                 *index,
             );
             return 0;
@@ -194,11 +192,10 @@ pub unsafe extern "C" fn utf8_put_item(
         rb_insert::<_, discr_data_entry>(&raw mut utf8_data_tree, ui);
 
         *index = ui.index;
-        log_debug_c(
-            c"%s: added %.*s = %u".as_ptr(),
-            __func__,
-            size as i32,
-            (&raw const data) as *const c_char,
+        log_debug!(
+            "utf8_put_item: added {1:0$} = {2}",
+            size,
+            _s((&raw const data).cast()),
             *index,
         );
         0
@@ -228,7 +225,6 @@ pub unsafe extern "C" fn utf8_in_table(find: wchar_t, table: *const wchar_t, cou
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn utf8_from_data(ud: *const utf8_data, uc: *mut utf8_char) -> utf8_state {
-    let __func__ = c"utf8_from_data".as_ptr();
     unsafe {
         let mut index: u32 = 0;
         'fail: {
@@ -252,13 +248,12 @@ pub unsafe extern "C" fn utf8_from_data(ud: *const utf8_data, uc: *mut utf8_char
                 break 'fail;
             }
             *uc = utf8_set_size((*ud).size) | utf8_set_width((*ud).width) | index;
-            log_debug_c(
-                c"%s: (%d %d %.*s) -> %08x".as_ptr(),
-                __func__,
-                (*ud).width as u32,
-                (*ud).size as u32,
-                (*ud).size as i32,
-                (*ud).data.as_ptr(),
+            log_debug!(
+                "utf8_from_data: ({0} {1} {3:2$}) -> {4:08x}",
+                (*ud).width,
+                (*ud).size,
+                (*ud).size as usize,
+                _s((&raw const (*ud).data).cast()),
                 *uc,
             );
             return utf8_state::UTF8_DONE;
@@ -278,7 +273,6 @@ pub unsafe extern "C" fn utf8_from_data(ud: *const utf8_data, uc: *mut utf8_char
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn utf8_to_data(uc: utf8_char, ud: *mut utf8_data) {
-    let __func__ = c"utf8_to_data".as_ptr();
     unsafe {
         core::ptr::write(ud, zeroed());
         (*ud).size = utf8_get_size(uc);
@@ -307,14 +301,13 @@ pub unsafe extern "C" fn utf8_to_data(uc: utf8_char, ud: *mut utf8_data) {
             }
         }
 
-        log_debug_c(
-            c"%s: %08x -> (%d %d %.*s)".as_ptr(),
-            __func__,
+        log_debug!(
+            "utf8_to_data: {0:08x} -> ({1} {2} {4:3$})",
             uc,
-            (*ud).width as u32,
-            (*ud).size as u32,
-            (*ud).size as i32,
-            (*ud).data.as_ptr(),
+            (*ud).width,
+            (*ud).size,
+            (*ud).size as usize,
+            _s((&raw const (*ud).data).cast()),
         );
     }
 }
@@ -374,7 +367,7 @@ pub unsafe extern "C" fn utf8_width(ud: *mut utf8_data, width: *mut i32) -> utf8
             }
         } else {
             *width = wcwidth(wc);
-            log_debug_c(c"wcwidth(%05X) returned %d".as_ptr(), wc as u32, *width);
+            log_debug!("wcwidth({:05X}) returned {}", wc, *width);
             if *width < 0 {
                 *width = if wc >= 0x80 && wc <= 0x9f { 0 } else { 1 };
             }
@@ -396,10 +389,10 @@ pub unsafe extern "C" fn utf8_towc(ud: *const utf8_data, wc: *mut wchar_t) -> ut
 
         match value {
             -1 => {
-                log_debug_c(
-                    c"UTF-8 %.*s, mbtowc() %d".as_ptr(),
-                    (*ud).size as i32,
-                    (*ud).data.as_ptr(),
+                log_debug!(
+                    "UTF-8 {1:0$}, mbtowc() {2}",
+                    (*ud).size as usize,
+                    _s((&raw const (*ud).data).cast()),
                     errno!(),
                 );
                 mbtowc(null_mut(), null(), MB_CUR_MAX());
@@ -408,10 +401,10 @@ pub unsafe extern "C" fn utf8_towc(ud: *const utf8_data, wc: *mut wchar_t) -> ut
             0 => return utf8_state::UTF8_ERROR,
             _ => (),
         }
-        log_debug_c(
-            c"UTF-8 %.*s is %05X".as_ptr(),
-            (*ud).size as i32,
-            (*ud).data.as_ptr(),
+        log_debug!(
+            "UTF-8 {1:0$} is {2:5X}",
+            (*ud).size as usize,
+            _s((&raw const (*ud).data).cast()),
             *wc as u32,
         );
     }

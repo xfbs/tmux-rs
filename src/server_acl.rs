@@ -100,9 +100,9 @@ pub unsafe extern "C" fn server_acl_display(item: *mut cmdq_item) {
                 c"unknown".as_ptr()
             };
             if (*loop_).flags == server_acl_user_flags::SERVER_ACL_READONLY {
-                cmdq_print(item, c"%s (R)".as_ptr(), name);
+                cmdq_print!(item, "{} (R)", _s(name));
             } else {
-                cmdq_print(item, c"%s (W)".as_ptr(), name);
+                cmdq_print!(item, "{} (W)", _s(name));
             }
         }
     }

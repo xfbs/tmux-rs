@@ -509,16 +509,16 @@ pub unsafe extern "C" fn job_print_summary(item: *mut cmdq_item, mut blank: i32)
     unsafe {
         for job in list_foreach(&raw mut all_jobs).map(NonNull::as_ptr) {
             if blank != 0 {
-                cmdq_print(item, c"%s".as_ptr(), c"".as_ptr());
+                cmdq_print!(item, "");
                 blank = 0;
             }
-            cmdq_print(
+            cmdq_print!(
                 item,
-                c"Job %u: %s [fd=%d, pid=%ld, status=%d]".as_ptr(),
+                "Job {}: {} [fd={}, pid={}, status={}]",
                 n,
-                (*job).cmd,
+                _s((*job).cmd),
                 (*job).fd,
-                (*job).pid as c_long,
+                (*job).pid,
                 (*job).status,
             );
             n += 1;

@@ -598,19 +598,21 @@ unsafe extern "C" fn server_child_stopped(pid: pid_t, status: i32) {
     }
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn server_add_message(fmt: *const c_char, args: ...) {
+macro_rules! server_add_message {
+   ($fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::server::server_add_message_(format_args!($fmt $(, $args)*))
+    };
+}
+pub(crate) use server_add_message;
+pub unsafe fn server_add_message_(args: std::fmt::Arguments) {
     unsafe {
-        let mut s: *mut c_char = null_mut();
-
-        let mut ap: VaListImpl = args.clone();
-        xmalloc::xvasprintf(&raw mut s, fmt, ap.as_va_list());
+        let mut s = args.to_string();
+        s.push('\0');
+        let s = s.leak().as_mut_ptr().cast();
 
         log_debug!("message: {}", _s(s));
 
-        let msg: *mut message_entry = xmalloc::xcalloc(1, size_of::<message_entry>())
-            .cast()
-            .as_ptr();
+        let msg: *mut message_entry = xcalloc1::<message_entry>() as *mut message_entry;
         gettimeofday(&raw mut (*msg).msg_time, null_mut());
         (*msg).msg_num = message_next + 1;
         message_next += 1;

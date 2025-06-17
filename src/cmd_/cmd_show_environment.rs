@@ -75,25 +75,30 @@ unsafe extern "C" fn cmd_show_environment_print(
 
         if !args_has_(args, 's') {
             if let Some(value) = (*envent).value {
-                cmdq_print(item, c"%s=%s".as_ptr(), (*envent).name, value);
+                cmdq_print!(
+                    item,
+                    "{}={}",
+                    _s(transmute_ptr((*envent).name)),
+                    _s(value.as_ptr())
+                );
             } else {
-                cmdq_print(item, c"-%s".as_ptr(), (*envent).name);
+                cmdq_print!(item, "-{}", _s(transmute_ptr((*envent).name)));
             }
             return;
         }
 
         if (*envent).value.is_some() {
             escaped = cmd_show_environment_escape(envent);
-            cmdq_print(
+            cmdq_print!(
                 item,
-                c"%s=\"%s\"; export %s;".as_ptr(),
-                (*envent).name,
-                escaped,
-                (*envent).name,
+                "{}=\"{}\"; export {};",
+                _s(transmute_ptr((*envent).name)),
+                _s(escaped),
+                _s(transmute_ptr((*envent).name)),
             );
             free_(escaped);
         } else {
-            cmdq_print(item, c"unset %s;".as_ptr(), (*envent).name);
+            cmdq_print!(item, "unset {};", _s(transmute_ptr((*envent).name)));
         }
     }
 }

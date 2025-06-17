@@ -189,13 +189,13 @@ unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item
                 template = SPLIT_WINDOW_TEMPLATE.as_ptr();
             }
             let cp = format_single(item, template, tc, s, wl, new_wp);
-            cmdq_print(item, c"%s".as_ptr(), cp);
+            cmdq_print!(item, "{}", _s(cp));
             free_(cp);
         }
 
         let mut fs: cmd_find_state = zeroed(); // TODO use uninit
         cmd_find_from_winlink_pane(&raw mut fs, wl, new_wp, 0);
-        cmdq_insert_hook(s, item, &raw mut fs, c"after-split-window".as_ptr());
+        cmdq_insert_hook!(s, item, &raw mut fs, "after-split-window");
 
         if !sc.argv.is_null() {
             cmd_free_argv(sc.argc, sc.argv);

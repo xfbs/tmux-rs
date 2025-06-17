@@ -3596,14 +3596,14 @@ pub unsafe extern "C" fn server_client_print(c: *mut client, parse: i32, evb: *m
                     if (*c).flags.intersects(client_flag::CONTROL) {
                         control_write(c, c"%s".as_ptr(), sanitized);
                     } else {
-                        file_print(c, c"%s\n".as_ptr(), sanitized);
+                        file_print!(c, "{}\n", _s(sanitized));
                     }
                     free_(sanitized);
                 } else {
                     if (*c).flags.intersects(client_flag::CONTROL) {
                         control_write(c, c"%s".as_ptr(), msg);
                     } else {
-                        file_print(c, c"%s\n".as_ptr(), msg);
+                        file_print!(c, "{}\n", _s(msg));
                     }
                 }
                 break 'out;
@@ -3624,7 +3624,7 @@ pub unsafe extern "C" fn server_client_print(c: *mut client, parse: i32, evb: *m
                 loop {
                     line = evbuffer_readln(evb, null_mut(), evbuffer_eol_style_EVBUFFER_EOL_LF);
                     if !line.is_null() {
-                        window_copy_add(wp, 1, c"%s".as_ptr(), line);
+                        window_copy_add!(wp, 1, "{}", _s(line));
                         free_(line);
                     }
                     if line.is_null() {
@@ -3635,10 +3635,10 @@ pub unsafe extern "C" fn server_client_print(c: *mut client, parse: i32, evb: *m
                 size = EVBUFFER_LENGTH(evb);
                 if size != 0 {
                     line = EVBUFFER_DATA(evb).cast();
-                    window_copy_add(wp, 1, c"%.*s".as_ptr(), size as i32, line);
+                    window_copy_add!(wp, 1, "{:1$}", _s(line), size);
                 }
             } else {
-                window_copy_add(wp, 0, c"%s".as_ptr(), msg);
+                window_copy_add!(wp, 0, "{}", _s(msg));
             }
         } // out:
         if parse == 0 {

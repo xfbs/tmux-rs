@@ -142,7 +142,7 @@ pub unsafe extern "C" fn cmd_break_pane_exec(self_: *mut cmd, item: *mut cmdq_it
                 template = c"#{session_name}:#{window_index}.#{pane_index}".as_ptr();
             }
             cp = format_single(item, template, tc, dst_s, wl, wp);
-            cmdq_print(item, c"%s".as_ptr(), cp);
+            cmdq_print!(item, "{}", _s(cp));
             free_(cp);
         }
 

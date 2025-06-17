@@ -272,7 +272,7 @@ unsafe extern "C" fn cmd_capture_pane_exec(self_: *mut cmd, item: *mut cmdq_item
                     return cmd_retval::CMD_RETURN_ERROR;
                 }
                 file_print_buffer(c, buf as _, len);
-                file_print(c, c"\n".as_ptr());
+                file_print!(c, "\n");
                 free_(buf);
             }
         } else {

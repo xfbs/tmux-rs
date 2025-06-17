@@ -258,7 +258,7 @@ pub unsafe fn cfg_add_cause_(args: std::fmt::Arguments) {
 pub unsafe extern "C" fn cfg_print_causes(item: *mut cmdq_item) {
     unsafe {
         for i in 0..cfg_ncauses {
-            cmdq_print(item, c"%s".as_ptr(), *cfg_causes.add(i as usize));
+            cmdq_print!(item, "{}", _s(*cfg_causes.add(i as usize)));
             free_(*cfg_causes.add(i as usize));
         }
 
@@ -313,7 +313,7 @@ pub unsafe extern "C" fn cfg_show_causes(mut s: *mut session) {
                 );
             }
             for i in 0..cfg_ncauses {
-                window_copy_add(wp, 0, c"%s".as_ptr(), *cfg_causes.add(i as usize));
+                window_copy_add!(wp, 0, "{}", _s(*cfg_causes.add(i as usize)));
                 free(*cfg_causes.add(i as usize) as _);
             }
             break 'out;

@@ -297,7 +297,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                 if !args_has_(args, 'y') {
                     dsy = sy;
                 }
-                options_set_string(oo, c"default-size".as_ptr(), 0, c"%ux%u".as_ptr(), dsx, dsy);
+                options_set_string!(oo, c"default-size".as_ptr(), 0, "{dsx}x{dsy}");
             }
             env = environ_create().as_ptr();
             if !c.is_null() && !args_has_(args, 'E') {
@@ -379,7 +379,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                     template = NEW_SESSION_TEMPLATE.as_ptr();
                 }
                 cp = format_single(item, template, c, s, (*s).curw, null_mut());
-                cmdq_print(item, c"%s".as_ptr(), cp);
+                cmdq_print!(item, "{}", _s(cp));
                 free_(cp);
             }
 
@@ -392,7 +392,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
 
             let mut fs: MaybeUninit<cmd_find_state> = MaybeUninit::<cmd_find_state>::uninit(); //TODO use uninit;
             cmd_find_from_session(fs.as_mut_ptr(), s, 0);
-            cmdq_insert_hook(s, item, fs.as_mut_ptr(), c"after-new-session".as_ptr());
+            cmdq_insert_hook!(s, item, fs.as_mut_ptr(), "after-new-session");
 
             if cfg_finished != 0 {
                 cfg_show_causes(s);

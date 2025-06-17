@@ -20,10 +20,7 @@ use crate::compat::{
     queue::{tailq_empty, tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_remove},
     tree::{rb_empty, rb_find, rb_foreach, rb_init, rb_insert, rb_remove},
 };
-use crate::{
-    log::{fatalx_c, log_debug_c},
-    xmalloc::Zeroable,
-};
+use crate::{log::fatalx_c, xmalloc::Zeroable};
 
 unsafe impl Zeroable for control_block {}
 #[repr(C)]
@@ -702,14 +699,9 @@ pub unsafe extern "C" fn control_append_data(
                 fatalx(c"out of memory");
             }
             if (*c).flags.intersects(client_flag::CONTROL_PAUSEAFTER) {
-                evbuffer_add_printf(
-                    message,
-                    c"%%extended-output %%%u %llu : ".as_ptr(),
-                    (*wp).id,
-                    age as c_ulonglong,
-                );
+                evbuffer_add_printf!(message, "%extended-output %{} {} : ", (*wp).id, age);
             } else {
-                evbuffer_add_printf(message, c"%%output %%%u ".as_ptr(), (*wp).id);
+                evbuffer_add_printf!(message, "%output %{} ", (*wp).id);
             }
         }
 
@@ -721,9 +713,9 @@ pub unsafe extern "C" fn control_append_data(
         }
         for i in 0..size {
             if *new_data.add(i) < b' ' || *new_data.add(i) == b'\\' {
-                evbuffer_add_printf(message, c"\\%03o".as_ptr(), *new_data.add(i) as i32);
+                evbuffer_add_printf!(message, "\\{:03o}", *new_data.add(i) as i32);
             } else {
-                evbuffer_add_printf(message, c"%c".as_ptr(), *new_data.add(i) as i32);
+                evbuffer_add_printf!(message, "{}", *new_data.add(i) as char);
             }
         }
         window_pane_update_used_data(wp, &raw mut (*cp).offset, size);
@@ -736,12 +728,11 @@ pub unsafe extern "C" fn control_write_data(c: *mut client, message: *mut evbuff
     unsafe {
         let cs = (*c).control_state;
 
-        log_debug_c(
-            c"%s: %s: %.*s".as_ptr(),
-            c"control_write_data".as_ptr(),
-            (*c).name,
-            EVBUFFER_LENGTH(message) as i32,
-            EVBUFFER_DATA(message),
+        log_debug!(
+            "control_write_data: {0}: {2:1$}",
+            _s((*c).name),
+            EVBUFFER_LENGTH(message),
+            _s(EVBUFFER_DATA(message).cast()),
         );
 
         evbuffer_add(message, c"\n".as_ptr().cast(), 1);

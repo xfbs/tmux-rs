@@ -176,7 +176,7 @@ pub unsafe extern "C" fn cmd_show_options_print(
                 a = options_array_first(o);
                 if a.is_null() {
                     if !args_has_(args, 'v') {
-                        cmdq_print(item, c"%s".as_ptr(), name);
+                        cmdq_print!(item, "{}", _s(name));
                     }
                     return;
                 }
@@ -191,20 +191,20 @@ pub unsafe extern "C" fn cmd_show_options_print(
 
         value = options_to_string(o, idx, 0);
         if args_has_(args, 'v') {
-            cmdq_print(item, c"%s".as_ptr(), value);
+            cmdq_print!(item, "{}", _s(value));
         } else if options_is_string(o) != 0 {
             escaped = args_escape(value);
             if parent != 0 {
-                cmdq_print(item, c"%s* %s".as_ptr(), name, escaped);
+                cmdq_print!(item, "{}* {}", _s(name), _s(escaped));
             } else {
-                cmdq_print(item, c"%s %s".as_ptr(), name, escaped);
+                cmdq_print!(item, "{} {}", _s(name), _s(escaped));
             }
             free_(escaped);
         } else {
             if parent != 0 {
-                cmdq_print(item, c"%s* %s".as_ptr(), name, value);
+                cmdq_print!(item, "{}* {}", _s(name), _s(value));
             } else {
-                cmdq_print(item, c"%s %s".as_ptr(), name, value);
+                cmdq_print!(item, "{} {}", _s(name), _s(value));
             }
         }
         free_(value);
@@ -277,9 +277,9 @@ pub unsafe extern "C" fn cmd_show_options_all(
                 if !args_has_(args, 'v') {
                     let name = options_name(o);
                     if parent != 0 {
-                        cmdq_print(item, c"%s*".as_ptr(), name);
+                        cmdq_print!(item, "{}*", _s(name));
                     } else {
-                        cmdq_print(item, c"%s".as_ptr(), name);
+                        cmdq_print!(item, "{}", _s(name));
                     }
                 }
             } else {

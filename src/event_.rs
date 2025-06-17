@@ -6,13 +6,15 @@ use ::libc::timeval;
 
 use crate::boolint;
 
-unsafe extern "C" {
-    pub fn evbuffer_add_printf(buf: *mut evbuffer, fmt: *const c_char, ...) -> i32;
-    pub fn evbuffer_add_vprintf(
-        buf: *mut evbuffer,
-        fmt: *const c_char,
-        ap: core::ffi::va_list::VaList,
-    ) -> i32;
+macro_rules! evbuffer_add_printf {
+   ($buf:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::event_::evbuffer_add_vprintf($buf, format_args!($fmt $(, $args)*))
+    };
+}
+pub(crate) use evbuffer_add_printf;
+pub unsafe fn evbuffer_add_vprintf(buf: *mut evbuffer, args: std::fmt::Arguments) -> i32 {
+    let s = args.to_string(); // TODO this is doing unecessary allocating and freeing
+    unsafe { evbuffer_add(buf, s.as_ptr().cast(), s.len()) }
 }
 
 pub const EVLOOP_NO_EXIT_ON_EMPTY: i32 = 0x04;

@@ -425,7 +425,7 @@ pub unsafe extern "C" fn spawn_pane(
             }
             log_debug!("{}: cwd={}", _s(__func__), _s((*new_wp).cwd));
             cmd_log_argv!((*new_wp).argc, (*new_wp).argv, "{}", _s(__func__));
-            environ_log(child, c"%s: environment ".as_ptr(), __func__);
+            environ_log!(child, "{}: environment ", _s(__func__));
 
             /* Initialize the window size. */
             memset0(&raw mut ws);

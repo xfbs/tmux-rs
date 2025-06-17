@@ -147,9 +147,9 @@ pub unsafe extern "C" fn cmd_parse_print_commands(
         }
         let s = cmd_list_print(cmdlist, 0);
         if !(*pi).file.is_null() {
-            cmdq_print((*pi).item, c"%s:%u: %s".as_ptr(), (*pi).file, (*pi).line, s);
+            cmdq_print!((*pi).item, "{}:{}: {}", _s((*pi).file), (*pi).line, _s(s));
         } else {
-            cmdq_print((*pi).item, c"%u: %s".as_ptr(), (*pi).line, s);
+            cmdq_print!((*pi).item, "{}: {}", (*pi).line, _s(s));
         }
         free_(s);
     }
@@ -785,21 +785,6 @@ mod lexer {
 
         fn next(&mut self) -> Option<Result<(Loc, Tok, Loc), LexicalError>> {
             unsafe { super::yylex_(self.ps.as_ptr()).map(|tok| Ok((0, tok, 0))) }
-        }
-    }
-
-    #[test]
-    fn test_lexer() {
-        unsafe {
-            use super::dummy_cmd_parse_state_init;
-            use std::mem::MaybeUninit;
-
-            let input = "set -g clock-mode-color magenta";
-            let mut state: MaybeUninit<cmd_parse_state> = MaybeUninit::uninit();
-            let state = dummy_cmd_parse_state_init(state.as_mut_ptr());
-            let mut lexer = Lexer::new(state);
-            let tokens = lexer.into_iter().collect::<Vec<_>>();
-            assert!(false, "{tokens:?}");
         }
     }
 }

@@ -165,25 +165,19 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
 
         let style = args_get(args, b'P');
         if !style.is_null() {
-            let o = options_set_string(oo, c"window-style".as_ptr(), 0, c"%s".as_ptr(), style);
+            let o = options_set_string!(oo, c"window-style".as_ptr(), 0, "{}", _s(style));
             if o.is_null() {
                 cmdq_error(item, c"bad style: %s".as_ptr(), style);
                 return cmd_retval::CMD_RETURN_ERROR;
             }
-            options_set_string(
-                oo,
-                c"window-active-style".as_ptr(),
-                0,
-                c"%s".as_ptr(),
-                style,
-            );
+            options_set_string!(oo, c"window-active-style".as_ptr(), 0, "{}", _s(style),);
             (*wp).flags |= window_pane_flags::PANE_REDRAW | window_pane_flags::PANE_STYLECHANGED;
         }
         if args_has_(args, 'g') {
-            cmdq_print(
+            cmdq_print!(
                 item,
-                c"%s".as_ptr(),
-                options_get_string(oo, c"window-style".as_ptr()),
+                "{}",
+                _s(options_get_string(oo, c"window-style".as_ptr())),
             );
             return cmd_retval::CMD_RETURN_NORMAL;
         }
@@ -256,7 +250,7 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
         } else if window_set_active_pane(w, wp, 1) != 0 {
             cmd_find_from_winlink_pane(current, wl, wp, 0);
         }
-        cmdq_insert_hook(s, item, current, c"after-select-pane".as_ptr());
+        cmdq_insert_hook!(s, item, current, "after-select-pane");
         cmd_select_pane_redraw(w);
         if window_pop_zoom(w) != 0 {
             server_redraw_window(w);

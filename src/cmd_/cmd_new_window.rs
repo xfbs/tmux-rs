@@ -144,13 +144,13 @@ unsafe extern "C" fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) 
                 template = NEW_WINDOW_TEMPLATE.as_ptr();
             }
             let cp = format_single(item, template, tc, s, new_wl, (*(*new_wl).window).active);
-            cmdq_print(item, c"%s".as_ptr(), cp);
+            cmdq_print!(item, "{}", _s(cp));
             free_(cp);
         }
 
         let mut fs: cmd_find_state = zeroed(); //TODO can be uninit
         cmd_find_from_winlink(&raw mut fs, new_wl, 0);
-        cmdq_insert_hook(s, item, &raw mut fs, c"after-new-window".as_ptr());
+        cmdq_insert_hook!(s, item, &raw mut fs, "after-new-window");
 
         if !sc.argv.is_null() {
             cmd_free_argv(sc.argc, sc.argv);

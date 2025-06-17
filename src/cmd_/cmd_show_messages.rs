@@ -47,23 +47,23 @@ unsafe extern "C" fn cmd_show_messages_terminals(
                 continue;
             }
             if blank != 0 {
-                cmdq_print(item, c"%s".as_ptr(), c"".as_ptr());
+                cmdq_print!(item, "");
                 blank = 0;
             }
-            cmdq_print(
+            cmdq_print!(
                 item,
-                c"Terminal %u: %s for %s, flags=0x%x:".as_ptr(),
+                "Terminal {}: {} for {}, flags=0x{:x}:",
                 n,
-                (*term).name,
-                (*(*(*term).tty).client).name,
+                _s((*term).name),
+                _s((*(*(*term).tty).client).name),
                 (*term).flags,
             );
             n += 1;
             for i in 0..tty_term_ncodes() {
-                cmdq_print(
+                cmdq_print!(
                     item,
-                    c"%s".as_ptr(),
-                    tty_term_describe(term, tty_code_code::try_from(i).unwrap()),
+                    "{}",
+                    _s(tty_term_describe(term, tty_code_code::try_from(i).unwrap())),
                 );
             }
         }
@@ -106,7 +106,7 @@ unsafe extern "C" fn cmd_show_messages_exec(self_: *mut cmd, item: *mut cmdq_ite
             format_add_tv(ft, c"message_time".as_ptr(), &raw mut (*msg).msg_time);
 
             let s = format_expand(ft, SHOW_MESSAGES_TEMPLATE.as_ptr());
-            cmdq_print(item, c"%s".as_ptr(), s);
+            cmdq_print!(item, "{}", _s(s));
             free_(s);
         }
         format_free(ft);

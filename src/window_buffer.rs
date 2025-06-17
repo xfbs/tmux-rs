@@ -277,12 +277,12 @@ pub unsafe extern "C" fn window_buffer_draw(
             );
             if *buf != b'\0' as c_char {
                 screen_write_cursormove(ctx, cx as i32, (cy + i) as i32, 0);
-                screen_write_nputs(
+                screen_write_nputs!(
                     ctx,
                     sx as isize,
                     &raw const grid_default_cell,
-                    c"%s".as_ptr(),
-                    buf,
+                    "{}",
+                    _s(buf),
                 );
             }
 

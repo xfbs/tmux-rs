@@ -919,20 +919,26 @@ pub unsafe fn options_get_number_(oo: *mut options, name: &CStr) -> i64 {
     }
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn options_set_string(
+macro_rules! options_set_string {
+   ($oo:expr, $name:expr, $append:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::options_::options_set_string_($oo, $name, $append, format_args!($fmt $(, $args)*))
+    };
+}
+pub(crate) use options_set_string;
+
+pub unsafe fn options_set_string_(
     oo: *mut options,
     name: *const c_char,
     append: c_int,
-    fmt: *const c_char,
-    mut ap: ...
+    args: std::fmt::Arguments,
 ) -> *mut options_entry {
     unsafe {
-        let mut s: *mut c_char = null_mut();
         let mut separator = c"".as_ptr();
         let mut value: *mut c_char = null_mut();
 
-        xvasprintf(&mut s, fmt, ap.as_va_list());
+        let mut s = args.to_string();
+        s.push('\0');
+        let s = s.leak().as_mut_ptr().cast();
 
         let mut o = options_get_only(oo, name);
         if !o.is_null() && append != 0 && OPTIONS_IS_STRING(o) {
@@ -964,7 +970,7 @@ pub unsafe extern "C" fn options_set_string(
         }
 
         if !OPTIONS_IS_STRING(o) {
-            fatalx_c(c"option %s is not a string".as_ptr(), name);
+            panic!("option {} is not a string", _s(name));
         }
         free_((*o).value.string);
         (*o).value.string = value;
@@ -981,7 +987,7 @@ pub unsafe extern "C" fn options_set_number(
 ) -> *mut options_entry {
     unsafe {
         if *name == b'@' as c_char {
-            fatalx_c(c"user option %s must be a string".as_ptr(), name);
+            panic!("user option {} must be a string", _s(name));
         }
 
         let mut o = options_get_only(oo, name);
@@ -993,7 +999,7 @@ pub unsafe extern "C" fn options_set_number(
         }
 
         if !OPTIONS_IS_NUMBER(o) {
-            fatalx_c(c"option %s is not a number".as_ptr(), name);
+            panic!("option {} is not a number", _s(name));
         }
         (*o).value.number = value;
         o
@@ -1348,11 +1354,11 @@ pub unsafe extern "C" fn options_from_string(
         match type_ {
             options_table_type::OPTIONS_TABLE_STRING => {
                 old = xstrdup(options_get_string(oo, name)).as_ptr();
-                options_set_string(oo, name, append, c"%s".as_ptr(), value);
+                options_set_string!(oo, name, append, "{}", _s(value));
 
                 new = options_get_string(oo, name);
                 if options_from_string_check(oe, new, cause) != 0 {
-                    options_set_string(oo, name, 0, c"%s".as_ptr(), old);
+                    options_set_string!(oo, name, 0, "{}", _s(old));
                     free_(old);
                     return -1;
                 }

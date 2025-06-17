@@ -529,15 +529,19 @@ pub unsafe extern "C" fn status_redraw(c: *mut client) -> i32 {
     }
 }
 
+macro_rules! status_message_set {
+   ($c:expr, $delay:expr, $ignore_styles:expr, $ignore_keys:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::status::status_message_set_($c, $delay, $ignore_styles, $ignore_keys, format_args!($fmt $(, $args)*))
+    };
+}
+pub(crate) use status_message_set;
 /// Set a status line message.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn status_message_set(
+pub unsafe fn status_message_set_(
     c: *mut client,
     mut delay: i32,
     ignore_styles: i32,
     ignore_keys: i32,
-    fmt: *const c_char,
-    mut ap: ...
+    args: std::fmt::Arguments,
 ) {
     unsafe {
         // struct timeval tv;
@@ -545,21 +549,21 @@ pub unsafe extern "C" fn status_message_set(
         // char *s;
 
         let mut tv: timeval = zeroed();
-        let mut s: *mut c_char = null_mut();
-        xvasprintf(&raw mut s, fmt, ap.as_va_list());
+        let mut s = args.to_string();
 
         // log_debug("%s: %s", __func__, s);
 
         if c.is_null() {
-            server_add_message(c"message: %s".as_ptr(), s);
-            free_(s);
+            server_add_message!("message: {}", s);
             return;
         }
 
         status_message_clear(c);
         status_push_screen(c);
+        s.push('\0');
+        let s = s.leak().as_mut_ptr().cast();
         (*c).message_string = s;
-        server_add_message(c"%s message: %s".as_ptr(), (*c).name, s);
+        server_add_message!("{} message: {}", _s((*c).name), _s(s));
 
         /*
          * With delay -1, the display-time option is used; zero means wait for
@@ -652,7 +656,7 @@ pub unsafe extern "C" fn status_message_redraw(c: *mut client) -> i32 {
             messageline = lines - 1;
         }
 
-        let mut len = screen_write_strlen(c"%s".as_ptr(), (*c).message_string);
+        let mut len = screen_write_strlen!("{}", _s((*c).message_string));
         if len > (*c).tty.sx as usize {
             len = (*c).tty.sx as usize;
         }
@@ -676,12 +680,12 @@ pub unsafe extern "C" fn status_message_redraw(c: *mut client) -> i32 {
         }
         screen_write_cursormove(&raw mut ctx, 0, messageline as i32, 0);
         if (*c).message_ignore_styles != 0 {
-            screen_write_nputs(
+            screen_write_nputs!(
                 &raw mut ctx,
                 len as isize,
                 &raw mut gc,
-                c"%s".as_ptr(),
-                (*c).message_string,
+                "{}",
+                _s((*c).message_string),
             );
         } else {
             format_draw(

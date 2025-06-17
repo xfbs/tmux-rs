@@ -399,9 +399,14 @@ pub unsafe extern "C" fn screen_write_putc(
     }
 }
 
+macro_rules! screen_write_strlen {
+   ($fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::screen_write::screen_write_strlen_(format_args!($fmt $(, $args)*))
+    };
+}
+pub(crate) use screen_write_strlen;
 /// Calculate string length.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn screen_write_strlen(fmt: *const c_char, mut ap: ...) -> usize {
+pub unsafe fn screen_write_strlen_(args: std::fmt::Arguments) -> usize {
     unsafe {
         let mut msg: *mut c_char = null_mut();
         let mut ud: utf8_data = zeroed();
@@ -410,9 +415,9 @@ pub unsafe extern "C" fn screen_write_strlen(fmt: *const c_char, mut ap: ...) ->
         let mut size = 0;
         let mut more: utf8_state = utf8_state::UTF8_DONE;
 
-        xvasprintf(&raw mut msg, fmt, ap.as_va_list());
-
-        let mut ptr: *mut u8 = msg.cast();
+        let mut msg = args.to_string();
+        msg.push('\0');
+        let mut ptr: *mut u8 = msg.as_mut_ptr();
 
         while *ptr != b'\0' {
             if *ptr > 0x7f && utf8_open(&raw mut ud, *ptr) == utf8_state::UTF8_MORE {
@@ -441,37 +446,40 @@ pub unsafe extern "C" fn screen_write_strlen(fmt: *const c_char, mut ap: ...) ->
             }
         }
 
-        free_(msg);
         size as usize
     }
 }
 
+macro_rules! screen_write_text {
+   ($ctx:expr, $cx:expr, $width: expr, $lines: expr, $more: expr, $gcp: expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::screen_write::screen_write_text_($ctx, $cx, $width, $lines, $more, $gcp, format_args!($fmt $(, $args)*))
+    };
+}
+pub(crate) use screen_write_text;
+
 /// Write string wrapped over lines.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn screen_write_text(
+pub unsafe fn screen_write_text_(
     ctx: *mut screen_write_ctx,
     cx: u32,
     width: u32,
     lines: u32,
     more: i32,
     gcp: *const grid_cell,
-    fmt: *const c_char,
-    mut ap: ...
+    args: std::fmt::Arguments,
 ) -> boolint {
     unsafe {
         let more = boolint(more);
         let s = (*ctx).s;
-        let mut tmp = null_mut();
         let cy = (*s).cy;
         let mut idx = 0;
 
         let mut gc: grid_cell = zeroed();
         memcpy__(&raw mut gc, gcp);
 
-        xvasprintf(&raw mut tmp, fmt, ap.as_va_list());
-
+        let mut tmp = args.to_string();
+        tmp.push('\0');
+        let tmp = tmp.as_mut_ptr().cast();
         let text = utf8_fromcstr(tmp);
-        free_(tmp);
 
         let mut left = (cx + width) - (*s).cx;
         loop {
@@ -555,51 +563,45 @@ pub unsafe extern "C" fn screen_write_text(
 }
 
 /// Write simple string (no maximum length).
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn screen_write_puts(
-    ctx: *mut screen_write_ctx,
-    gcp: *const grid_cell,
-    fmt: *const c_char,
-    mut ap: ...
-) {
-    unsafe {
-        screen_write_vnputs(ctx, -1, gcp, fmt, ap.as_va_list());
-    }
+macro_rules! screen_write_puts {
+   ($ctx:expr, $gcp:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::screen_write::screen_write_vnputs!($ctx, -1, $gcp, $fmt $(, $args)*);
+   }
 }
+pub(crate) use screen_write_puts;
 
 /// Write string with length limit (-1 for unlimited).
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn screen_write_nputs(
-    ctx: *mut screen_write_ctx,
-    maxlen: isize,
-    gcp: *const grid_cell,
-    fmt: *const c_char,
-    mut ap: ...
-) {
-    unsafe {
-        screen_write_vnputs(ctx, maxlen, gcp, fmt, ap.as_va_list());
-    }
+macro_rules! screen_write_nputs {
+   ($ctx:expr, $maxlen:expr, $gcp:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::screen_write::screen_write_vnputs!($ctx, $maxlen, $gcp, $fmt $(, $args)*);
+   }
 }
+pub(crate) use screen_write_nputs;
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn screen_write_vnputs(
+macro_rules! screen_write_vnputs {
+   ($ctx:expr, $maxlen:expr, $gcp:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::screen_write::screen_write_vnputs_($ctx, $maxlen, $gcp, format_args!($fmt $(, $args)*))
+    };
+}
+pub(crate) use screen_write_vnputs;
+
+pub(crate) unsafe fn screen_write_vnputs_(
     ctx: *mut screen_write_ctx,
     maxlen: isize,
     gcp: *const grid_cell,
-    fmt: *const c_char,
-    ap: VaList,
+    args: std::fmt::Arguments,
 ) {
     unsafe {
         let mut gc: grid_cell = zeroed();
         let ud: *mut utf8_data = &raw mut gc.data;
-        let mut msg = null_mut();
         let mut size: usize = 0;
         let mut more: utf8_state = utf8_state::UTF8_DONE;
 
         memcpy__(&raw mut gc, gcp);
-        xvasprintf(&raw mut msg, fmt, ap);
+        let mut msg = args.to_string();
+        msg.push('\0');
 
-        let mut ptr: *mut u8 = msg.cast();
+        let mut ptr: *mut u8 = msg.as_mut_ptr();
         while *ptr != b'\0' {
             if *ptr > 0x7f && utf8_open(ud, *ptr) == utf8_state::UTF8_MORE {
                 ptr = ptr.add(1);
@@ -645,8 +647,6 @@ pub unsafe extern "C" fn screen_write_vnputs(
                 ptr = ptr.add(1);
             }
         }
-
-        free_(msg);
     }
 }
 

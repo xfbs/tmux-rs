@@ -741,16 +741,16 @@ unsafe extern "C" fn window_customize_draw_key(
         if *note != b'\0' as i8 && *note.add(libc::strlen(note) - 1) != b'.' as i8 {
             period = c".".as_ptr();
         }
-        if !screen_write_text(
+        if !screen_write_text!(
             ctx,
             cx,
             sx,
             sy,
             0,
             &grid_default_cell,
-            c"%s%s".as_ptr(),
-            note,
-            period,
+            "{}{}",
+            _s(note),
+            _s(period),
         ) {
             return;
         }
@@ -759,30 +759,30 @@ unsafe extern "C" fn window_customize_draw_key(
             return;
         }
 
-        if !screen_write_text(
+        if !screen_write_text!(
             ctx,
             cx,
             sx,
             sy - ((*s).cy - cy),
             0,
             &raw const grid_default_cell,
-            c"This key is in the %s table.".as_ptr(),
-            (*kt).name,
+            "This key is in the {} table.",
+            _s((*kt).name),
         ) {
             return;
         }
-        if !screen_write_text(
+        if !screen_write_text!(
             ctx,
             cx,
             sx,
             sy - ((*s).cy - cy),
             0,
             &raw const grid_default_cell,
-            c"This key %s repeat.".as_ptr(),
+            "This key {} repeat.",
             if (*bd).flags & KEY_BINDING_REPEAT != 0 {
-                c"does".as_ptr()
+                "does"
             } else {
-                c"does not".as_ptr()
+                "does not"
             },
         ) {
             return;
@@ -793,15 +793,15 @@ unsafe extern "C" fn window_customize_draw_key(
         }
 
         let cmd = cmd_list_print((*bd).cmdlist, 0);
-        if !screen_write_text(
+        if !screen_write_text!(
             ctx,
             cx,
             sx,
             sy - ((*s).cy - cy),
             0,
             &raw const grid_default_cell,
-            c"Command: %s".as_ptr(),
-            cmd,
+            "Command: {}",
+            _s(cmd),
         ) {
             free_(cmd);
             return;
@@ -810,15 +810,15 @@ unsafe extern "C" fn window_customize_draw_key(
         if !default_bd.is_null() {
             let default_cmd = cmd_list_print((*default_bd).cmdlist, 0);
             if libc::strcmp(cmd, default_cmd) != 0
-                && !screen_write_text(
+                && !screen_write_text!(
                     ctx,
                     cx,
                     sx,
                     sy - ((*s).cy - cy),
                     0,
                     &grid_default_cell,
-                    c"The default is: %s".as_ptr(),
-                    default_cmd,
+                    "The default is: {}",
+                    _s(default_cmd),
                 )
             {
                 free_(default_cmd);
@@ -887,7 +887,16 @@ unsafe extern "C" fn window_customize_draw_option(
                 (*oe).text
             };
 
-            if !screen_write_text(ctx, cx, sx, sy, 0, &grid_default_cell, c"%s".as_ptr(), text) {
+            if !screen_write_text!(
+                ctx,
+                cx,
+                sx,
+                sy,
+                0,
+                &raw const grid_default_cell,
+                "{}",
+                _s(text),
+            ) {
                 break 'out;
             }
             screen_write_cursormove(ctx, cx as i32, (*s).cy as i32 + 1, 0); /* skip line */
@@ -908,41 +917,40 @@ unsafe extern "C" fn window_customize_draw_option(
             } else {
                 text = c"server".as_ptr();
             }
-            if !screen_write_text(
+            if !screen_write_text!(
                 ctx,
                 cx,
                 sx,
                 sy - ((*s).cy - cy),
                 0,
                 &raw const grid_default_cell,
-                c"This is a %s option.".as_ptr(),
-                text,
+                "This is a {} option.",
+                _s(text),
             ) {
                 break 'out;
             }
             if !oe.is_null() && (*oe).flags & OPTIONS_TABLE_IS_ARRAY != 0 {
                 if idx != -1 {
-                    if !screen_write_text(
+                    if !screen_write_text!(
                         ctx,
                         cx,
                         sx,
                         sy - ((*s).cy - cy),
                         0,
                         &raw const grid_default_cell,
-                        c"This is an array option, index %u.".as_ptr(),
-                        idx,
+                        "This is an array option, index {idx}."
                     ) {
                         break 'out;
                     }
                 } else {
-                    if !screen_write_text(
+                    if !screen_write_text!(
                         ctx,
                         cx,
                         sx,
                         sy - ((*s).cy - cy),
                         0,
                         &raw const grid_default_cell,
-                        c"This is an array option.".as_ptr(),
+                        "This is an array option.",
                     ) {
                         break 'out;
                     }
@@ -964,32 +972,32 @@ unsafe extern "C" fn window_customize_draw_option(
                     default_value = null_mut();
                 }
             }
-            if !screen_write_text(
+            if !screen_write_text!(
                 ctx,
                 cx,
                 sx,
                 sy - ((*s).cy - cy),
                 0,
                 &raw const grid_default_cell,
-                c"Option value: %s%s%s".as_ptr(),
-                value,
-                space,
-                unit,
+                "Option value: {}{}{}",
+                _s(value),
+                _s(space),
+                _s(unit),
             ) {
                 break 'out;
             }
             if oe.is_null() || (*oe).type_ == options_table_type::OPTIONS_TABLE_STRING {
                 expanded = format_expand(ft, value);
                 if libc::strcmp(expanded, value) != 0 {
-                    if !screen_write_text(
+                    if !screen_write_text!(
                         ctx,
                         cx,
                         sx,
                         sy - ((*s).cy - cy),
                         0,
                         &raw const grid_default_cell,
-                        c"This expands to: %s".as_ptr(),
-                        expanded,
+                        "This expands to: {}",
+                        _s(expanded),
                     ) {
                         break 'out;
                     }
@@ -1007,82 +1015,75 @@ unsafe extern "C" fn window_customize_draw_option(
                     choice = choice.add(1);
                 }
                 choices[libc::strlen(choices.as_ptr()) - 2] = b'\0' as i8;
-                if !screen_write_text(
+                if !screen_write_text!(
                     ctx,
                     cx,
                     sx,
                     sy - ((*s).cy - cy),
                     0,
                     &raw const grid_default_cell,
-                    c"Available values are: %s".as_ptr(),
-                    choices,
+                    "Available values are: {}",
+                    _s((&raw const choices) as *const i8),
                 ) {
                     break 'out;
                 }
             }
             if !oe.is_null() && (*oe).type_ == options_table_type::OPTIONS_TABLE_COLOUR {
-                if !screen_write_text(
+                if !screen_write_text!(
                     ctx,
                     cx,
                     sx,
                     sy - ((*s).cy - cy),
                     1,
                     &raw const grid_default_cell,
-                    c"This is a colour option: ".as_ptr(),
+                    "This is a colour option: ",
                 ) {
                     break 'out;
                 }
                 memcpy__(&raw mut gc, &raw const grid_default_cell);
                 gc.fg = options_get_number((*item).oo, name) as i32;
-                if !screen_write_text(
+                if !screen_write_text!(
                     ctx,
                     cx,
                     sx,
                     sy - ((*s).cy - cy),
                     0,
                     &raw const gc,
-                    c"EXAMPLE".as_ptr(),
+                    "EXAMPLE",
                 ) {
                     break 'out;
                 }
             }
             if !oe.is_null() && (*oe).flags & OPTIONS_TABLE_IS_STYLE != 0 {
-                if !screen_write_text(
+                if !screen_write_text!(
                     ctx,
                     cx,
                     sx,
                     sy - ((*s).cy - cy),
                     1,
                     &raw const grid_default_cell,
-                    c"This is a style option: ".as_ptr(),
+                    "This is a style option: "
                 ) {
                     break 'out;
                 }
                 style_apply(&raw mut gc, (*item).oo, name, ft);
-                if !screen_write_text(
-                    ctx,
-                    cx,
-                    sx,
-                    sy - ((*s).cy - cy),
-                    0,
-                    &raw mut gc,
-                    c"EXAMPLE".as_ptr(),
-                ) {
+                if !screen_write_text!(ctx, cx, sx, sy - ((*s).cy - cy), 0, &raw mut gc, "EXAMPLE")
+                {
                     break 'out;
                 }
             }
             if !default_value.is_null() {
-                if !screen_write_text(
+                if !screen_write_text!(
                     ctx,
                     cx,
                     sx,
                     sy - ((*s).cy - cy),
                     0,
                     &raw const grid_default_cell,
-                    c"The default is: %s%s%s".as_ptr(),
-                    default_value,
-                    space,
-                    unit,
+                    "The default is: {}{}{}",
+                    _s(default_value),
+                    _s(space),
+                    _s(unit),
                 ) {
                     break 'out;
                 }
@@ -1111,18 +1112,18 @@ unsafe extern "C" fn window_customize_draw_option(
                 let parent = options_get_only(wo, name);
                 if !parent.is_null() {
                     value = options_to_string(parent, -1, 0);
-                    if !screen_write_text(
+                    if !screen_write_text!(
                         ctx,
                         (*s).cx,
                         sx,
                         sy - ((*s).cy - cy),
                         0,
                         &raw const grid_default_cell,
-                        c"Window value (from window %u): %s%s%s".as_ptr(),
+                        "Window value (from window {}): {}{}{}",
                         (*fs.wl).idx,
-                        value,
-                        space,
-                        unit,
+                        _s(value),
+                        _s(space),
+                        _s(unit),
                     ) {
                         break 'out;
                     }
@@ -1132,17 +1133,17 @@ unsafe extern "C" fn window_customize_draw_option(
                 let parent = options_get_only(go, name);
                 if !parent.is_null() {
                     value = options_to_string(parent, -1, 0);
-                    if !screen_write_text(
+                    if !screen_write_text!(
                         ctx,
                         (*s).cx,
                         sx,
                         sy - ((*s).cy - cy),
                         0,
                         &raw const grid_default_cell,
-                        c"Global value: %s%s%s".as_ptr(),
-                        value,
-                        space,
-                        unit,
+                        "Global value: {}{}{}",
+                        _s(value),
+                        _s(space),
+                        _s(unit),
                     ) {
                         break 'out;
                     }
@@ -1375,7 +1376,7 @@ pub unsafe extern "C" fn window_customize_set_option_callback(
             return 0;
         } // 'fail:
         *cause = libc::toupper(*cause as u8 as i32) as i8;
-        status_message_set(c, -1, 1, 0, c"%s".as_ptr(), cause);
+        status_message_set!(c, -1, 1, 0, "{}", _s(cause));
         free_(cause);
         0
     }
@@ -1627,7 +1628,7 @@ pub unsafe extern "C" fn window_customize_set_command_callback(
         }
         // 'fail:
         *error = libc::toupper(*error as u8 as i32) as i8;
-        status_message_set(c, -1, 1, 0, c"%s".as_ptr(), error);
+        status_message_set!(c, -1, 1, 0, "{}", _s(error));
         free_(error);
         0
     }

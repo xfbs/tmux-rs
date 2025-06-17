@@ -681,7 +681,7 @@ unsafe extern "C" fn window_tree_draw_label(
             );
         }
         screen_write_cursormove(ctx, (px + ox) as i32, (py + oy) as i32, 0);
-        screen_write_puts(ctx, gc, c"%s".as_ptr(), label);
+        screen_write_puts!(ctx, gc, "{}", _s(label));
     }
 }
 
@@ -782,7 +782,7 @@ unsafe extern "C" fn window_tree_draw_session(
             screen_write_cursormove(ctx, (cx + 2) as i32, cy as i32, 0);
             screen_write_vline(ctx, sy, 0, 0);
             screen_write_cursormove(ctx, cx as i32, (cy + sy / 2) as i32, 0);
-            screen_write_puts(ctx, &raw const grid_default_cell, c"<".as_ptr());
+            screen_write_puts!(ctx, &raw const grid_default_cell, "<");
         } else {
             (*data).left = -1;
         }
@@ -791,7 +791,7 @@ unsafe extern "C" fn window_tree_draw_session(
             screen_write_cursormove(ctx, (cx + sx - 3) as i32, cy as i32, 0);
             screen_write_vline(ctx, sy, 0, 0);
             screen_write_cursormove(ctx, (cx + sx - 1) as i32, (cy + sy / 2) as i32, 0);
-            screen_write_puts(ctx, &raw const grid_default_cell, c">".as_ptr());
+            screen_write_puts!(ctx, &raw const grid_default_cell, ">");
         } else {
             (*data).right = -1;
         }
@@ -938,7 +938,7 @@ unsafe extern "C" fn window_tree_draw_window(
             screen_write_cursormove(ctx, (cx + 2) as i32, cy as i32, 0);
             screen_write_vline(ctx, sy, 0, 0);
             screen_write_cursormove(ctx, cx as i32, (cy + sy / 2) as i32, 0);
-            screen_write_puts(ctx, &raw const grid_default_cell, c"<".as_ptr());
+            screen_write_puts!(ctx, &raw const grid_default_cell, "<");
         } else {
             (*data).left = -1;
         }
@@ -947,7 +947,7 @@ unsafe extern "C" fn window_tree_draw_window(
             screen_write_cursormove(ctx, (cx + sx - 3) as i32, cy as i32, 0);
             screen_write_vline(ctx, sy, 0, 0);
             screen_write_cursormove(ctx, (cx + sx - 1) as i32, (cy + sy / 2) as i32, 0);
-            screen_write_puts(ctx, &raw const grid_default_cell, c">".as_ptr());
+            screen_write_puts!(ctx, &raw const grid_default_cell, ">");
         } else {
             (*data).right = -1;
         }

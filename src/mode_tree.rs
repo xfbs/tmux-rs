@@ -892,13 +892,7 @@ pub unsafe extern "C" fn mode_tree_draw(mtd: *mut mode_tree_data) {
 
                 if i != (*mtd).current {
                     screen_write_clearendofline(&raw mut ctx, 8);
-                    screen_write_nputs(
-                        &raw mut ctx,
-                        w as isize,
-                        &raw mut gc0,
-                        c"%s".as_ptr(),
-                        text,
-                    );
+                    screen_write_nputs!(&raw mut ctx, w as isize, &raw mut gc0, "{}", _s(text),);
                     if !(*mti).text.is_null() {
                         format_draw(
                             &raw mut ctx,
@@ -911,7 +905,7 @@ pub unsafe extern "C" fn mode_tree_draw(mtd: *mut mode_tree_data) {
                     }
                 } else {
                     screen_write_clearendofline(&raw mut ctx, gc.bg as u32);
-                    screen_write_nputs(&raw mut ctx, w as isize, &raw mut gc, c"%s".as_ptr(), text);
+                    screen_write_nputs!(&raw mut ctx, w as isize, &raw mut gc, "{}", _s(text));
                     if !(*mti).text.is_null() {
                         format_draw(
                             &raw mut ctx,
@@ -970,7 +964,7 @@ pub unsafe extern "C" fn mode_tree_draw(mtd: *mut mode_tree_data) {
             }
             if w - 2 >= strlen(text) as u32 {
                 screen_write_cursormove(&raw mut ctx, 1, h as i32, 0);
-                screen_write_puts(&raw mut ctx, &raw mut gc0, c"%s".as_ptr(), text);
+                screen_write_puts!(&raw mut ctx, &raw mut gc0, "{}", _s(text));
 
                 let n = if (*mtd).no_matches != 0 {
                     "no matches".len()
@@ -979,15 +973,15 @@ pub unsafe extern "C" fn mode_tree_draw(mtd: *mut mode_tree_data) {
                 };
 
                 if !(*mtd).filter.is_null() && w as usize - 2 >= strlen(text) + 10 + n + 2 {
-                    screen_write_puts(&raw mut ctx, &raw mut gc0, c" (filter: ".as_ptr());
+                    screen_write_puts!(&raw mut ctx, &raw mut gc0, " (filter: ");
                     if (*mtd).no_matches != 0 {
-                        screen_write_puts(&raw mut ctx, &raw mut gc, c"no matches".as_ptr());
+                        screen_write_puts!(&raw mut ctx, &raw mut gc, "no matches");
                     } else {
-                        screen_write_puts(&raw mut ctx, &raw mut gc0, c"active".as_ptr());
+                        screen_write_puts!(&raw mut ctx, &raw mut gc0, "active");
                     }
-                    screen_write_puts(&raw mut ctx, &raw mut gc0, c") ".as_ptr());
+                    screen_write_puts!(&raw mut ctx, &raw mut gc0, ") ");
                 } else {
-                    screen_write_puts(&raw mut ctx, &raw mut gc0, c" ".as_ptr());
+                    screen_write_puts!(&raw mut ctx, &raw mut gc0, " ");
                 }
             }
             free_(text);
@@ -1663,7 +1657,7 @@ pub unsafe extern "C" fn mode_tree_run_command(
             if status == cmd_parse_status::CMD_PARSE_ERROR {
                 if !c.is_null() {
                     *error = (*error as u8 as char).to_ascii_uppercase() as i8;
-                    status_message_set(c, -1, 1, 0, c"%s".as_ptr(), error);
+                    status_message_set!(c, -1, 1, 0, "{}", _s(error));
                 }
                 free_(error);
             }

@@ -598,12 +598,7 @@ pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
                 args_print_add!(&raw mut buf, &raw mut len, "-");
             }
             for j in 0..(*entry).count {
-                args_print_add!(
-                    &raw mut buf,
-                    &raw mut len,
-                    "{}",
-                    (*entry).flag as u8 as char
-                );
+                args_print_add!(&raw mut buf, &raw mut len, "{}", (*entry).flag as char);
             }
         }
 
@@ -611,19 +606,9 @@ pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
         for entry in rb_foreach(&raw mut (*args).tree).map(NonNull::as_ptr) {
             if (*entry).flags & ARGS_ENTRY_OPTIONAL_VALUE != 0 {
                 if *buf != b'\0' as c_char {
-                    args_print_add!(
-                        &raw mut buf,
-                        &raw mut len,
-                        " -{}",
-                        (*entry).flag as u8 as char
-                    );
+                    args_print_add!(&raw mut buf, &raw mut len, " -{}", (*entry).flag as char);
                 } else {
-                    args_print_add!(
-                        &raw mut buf,
-                        &raw mut len,
-                        "-{}",
-                        (*entry).flag as u8 as char,
-                    );
+                    args_print_add!(&raw mut buf, &raw mut len, "-{}", (*entry).flag as char,);
                 }
                 last = entry;
                 continue;
@@ -634,19 +619,9 @@ pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
             for value in tailq_foreach(&raw mut (*entry).values) {
                 {
                     if *buf != b'\0' as c_char {
-                        args_print_add!(
-                            &raw mut buf,
-                            &raw mut len,
-                            " -{}",
-                            (*entry).flag as u8 as char,
-                        );
+                        args_print_add!(&raw mut buf, &raw mut len, " -{}", (*entry).flag as char,);
                     } else {
-                        args_print_add!(
-                            &raw mut buf,
-                            &raw mut len,
-                            "-{}",
-                            (*entry).flag as u8 as char,
-                        );
+                        args_print_add!(&raw mut buf, &raw mut len, "-{}", (*entry).flag as char,);
                     }
                     args_print_add_value(&raw mut buf, &raw mut len, value.as_ptr());
                 }

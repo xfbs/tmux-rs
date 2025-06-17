@@ -396,13 +396,18 @@ pub unsafe extern "C" fn cmdq_insert_after(
     }
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmdq_insert_hook(
+macro_rules! cmdq_insert_hook {
+   ($s:expr,$item:expr,$current:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::cmd_::cmd_queue::cmdq_insert_hook_($s, $item, $current, format_args!($fmt $(, $args)*))
+    };
+}
+pub(crate) use cmdq_insert_hook;
+
+pub unsafe fn cmdq_insert_hook_(
     s: *mut session,
     mut item: *mut cmdq_item,
     current: *mut cmd_find_state,
-    fmt: *const c_char,
-    mut ap: ...
+    format_args: std::fmt::Arguments,
 ) {
     unsafe {
         let state = (*item).state;
@@ -410,7 +415,6 @@ pub unsafe extern "C" fn cmdq_insert_hook(
         let args = cmd_get_args(cmd);
         let mut ae: *mut args_entry = null_mut();
         let mut flag: c_uchar = 0;
-        let mut name: *mut c_char = null_mut();
         const sizeof_tmp: usize = 32;
         let mut buf: [c_char; 32] = zeroed();
         let tmp = &raw mut buf as *mut c_char;
@@ -424,21 +428,21 @@ pub unsafe extern "C" fn cmdq_insert_hook(
             (*s).options
         };
 
-        xvasprintf(&raw mut name, fmt, ap.as_va_list());
+        let mut name: String = format_args.to_string();
+        name.push('\0');
 
-        let o = options_get(oo, name);
+        let o = options_get(oo, name.as_ptr().cast());
         if o.is_null() {
-            free_(name);
             return;
         }
-        log_debug!("running hook {} (parent {:p})", _s(name), item);
+        log_debug!("running hook {} (parent {:p})", name, item);
 
         /*
          * The hooks get a new state because they should not update the current
          * target or formats for any subsequent commands.
          */
         let new_state = cmdq_new_state(current, &raw mut (*state).event, CMDQ_STATE_NOHOOKS);
-        cmdq_add_format!(new_state, c"hook".as_ptr(), "{}", _s(name));
+        cmdq_add_format!(new_state, c"hook".as_ptr(), "{}", name);
 
         let arguments = args_print(args);
         cmdq_add_format!(new_state, c"hook_arguments".as_ptr(), "{}", _s(arguments),);
@@ -486,7 +490,6 @@ pub unsafe extern "C" fn cmdq_insert_hook(
         }
 
         cmdq_free_state(new_state);
-        free_(name);
     }
 }
 
@@ -640,13 +643,13 @@ pub unsafe extern "C" fn cmdq_add_message(item: *mut cmdq_item) {
             }
             if !(*c).session.is_null() && (*state).event.key != KEYC_NONE {
                 let key = key_string_lookup_key((*state).event.key, 0);
-                server_add_message(c"%s%s key %s: %s".as_ptr(), (*c).name, user, key, tmp);
+                server_add_message!("{}{} key {}: {}", _s((*c).name), _s(user), _s(key), _s(tmp));
             } else {
-                server_add_message(c"%s%s command: %s".as_ptr(), (*c).name, user, tmp);
+                server_add_message!("{}{} command: {}", _s((*c).name), _s(user), _s(tmp));
             }
             free_(user);
         } else {
-            server_add_message(c"command: %s".as_ptr(), tmp);
+            server_add_message!("command: {}", _s(tmp));
         }
         free_(tmp);
     }
@@ -733,7 +736,7 @@ pub unsafe extern "C" fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
                 } else {
                     break 'out;
                 };
-                cmdq_insert_hook((*fsp).s, item, fsp, c"after-%s".as_ptr(), (*entry).name);
+                cmdq_insert_hook!((*fsp).s, item, fsp, "after-{}", _s((*entry).name));
             }
         }
 
@@ -747,11 +750,11 @@ pub unsafe extern "C" fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
             } else if cmd_find_from_client(&raw mut fs, (*item).client, 0) == 0 {
                 fsp = &raw mut fs;
             }
-            cmdq_insert_hook(
+            cmdq_insert_hook!(
                 if !fsp.is_null() { (*fsp).s } else { null_mut() },
                 item,
                 fsp,
-                c"command-error".as_ptr(),
+                "command-error"
             );
             cmdq_guard(item, c"error".as_ptr(), flags);
         } else {
@@ -921,15 +924,20 @@ pub unsafe extern "C" fn cmdq_print_data(item: *mut cmdq_item, parse: i32, evb: 
     }
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn cmdq_print(item: *mut cmdq_item, fmt: *const c_char, mut ap: ...) {
+macro_rules! cmdq_print {
+   ($item:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::cmd_::cmd_queue::cmdq_print_($item, format_args!($fmt $(, $args)*))
+    };
+}
+pub(crate) use cmdq_print;
+pub unsafe fn cmdq_print_(item: *mut cmdq_item, args: std::fmt::Arguments) {
     unsafe {
         let evb = evbuffer_new();
         if evb.is_null() {
             fatalx(c"out of memory");
         }
 
-        evbuffer_add_vprintf(evb, fmt, ap.as_va_list());
+        evbuffer_add_vprintf(evb, args);
 
         cmdq_print_data(item, 0, evb);
         evbuffer_free(evb);
@@ -955,7 +963,7 @@ pub unsafe extern "C" fn cmdq_error(item: *mut cmdq_item, fmt: *const c_char, mu
             cmd_get_source(cmd, &raw mut file, &raw mut line);
             cfg_add_cause!("{}:{}: {}", _s(file), line, _s(msg));
         } else if (*c).session.is_null() || (*c).flags.intersects(client_flag::CONTROL) {
-            server_add_message(c"%s message: %s".as_ptr(), (*c).name, msg);
+            server_add_message!("{} message: {}", _s((*c).name), _s(msg));
             if !(*c).flags.intersects(client_flag::UTF8) {
                 tmp = msg;
                 msg = utf8_sanitize(tmp);
@@ -964,12 +972,12 @@ pub unsafe extern "C" fn cmdq_error(item: *mut cmdq_item, fmt: *const c_char, mu
             if (*c).flags.intersects(client_flag::CONTROL) {
                 control_write(c, c"%s".as_ptr(), msg);
             } else {
-                file_error(c, c"%s\n".as_ptr(), msg);
+                file_error!(c, "{}\n", _s(msg));
             }
             (*c).retval = 1;
         } else {
             *msg = toupper((*msg) as i32) as _;
-            status_message_set(c, -1, 1, 0, c"%s".as_ptr(), msg);
+            status_message_set!(c, -1, 1, 0, "{}", _s(msg));
         }
 
         free_(msg);

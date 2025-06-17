@@ -5,7 +5,7 @@ edition = "2024"
 authors = ["Collin Richards"]
 repository = "https://github.com/richardscollin/tmux-rs"
 description = "A Rust port of tmux"
-license-file = "COPYING"
+license = "ISC"
 
 [profile.dev]
 # debug-assertions = false

@@ -204,15 +204,14 @@ pub unsafe extern "C" fn file_can_print(c: *mut client) -> c_int {
     }
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn file_print(c: *mut client, fmt: *const c_char, mut args: ...) {
-    unsafe {
-        file_vprint(c, fmt, args.as_va_list());
-    }
+macro_rules! file_print {
+   ($client:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::file::file_vprint($client, format_args!($fmt $(, $args)*))
+    };
 }
+pub(crate) use file_print;
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn file_vprint(c: *mut client, fmt: *const c_char, ap: VaList) {
+pub unsafe fn file_vprint(c: *mut client, args: std::fmt::Arguments) {
     unsafe {
         let cf: *mut client_file = null_mut();
         let mut find: client_file = zeroed();
@@ -229,7 +228,7 @@ pub unsafe extern "C" fn file_vprint(c: *mut client, fmt: *const c_char, ap: VaL
             (*cf).path = xstrdup(c"-".as_ptr()).as_ptr();
 
             // TODO
-            evbuffer_add_vprintf((*cf).buffer, fmt, ap);
+            evbuffer_add_vprintf((*cf).buffer, args);
 
             msg.stream = 1;
             msg.fd = STDOUT_FILENO;
@@ -242,7 +241,7 @@ pub unsafe extern "C" fn file_vprint(c: *mut client, fmt: *const c_char, ap: VaL
                 size_of::<msg_write_open>(),
             );
         } else {
-            evbuffer_add_vprintf((*cf).buffer, fmt, ap);
+            evbuffer_add_vprintf((*cf).buffer, args);
             file_push(cf);
         }
     }
@@ -285,8 +284,13 @@ pub unsafe extern "C" fn file_print_buffer(c: *mut client, data: *mut c_void, si
     }
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn file_error(c: *mut client, fmt: *const c_char, mut ap: ...) {
+macro_rules! file_error {
+   ($client:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::file::file_error_($client, format_args!($fmt $(, $args)*))
+    };
+}
+pub(crate) use file_error;
+pub unsafe fn file_error_(c: *mut client, args: std::fmt::Arguments) {
     unsafe {
         let mut cf: *mut client_file = null_mut();
         let mut find: client_file = zeroed();
@@ -302,7 +306,7 @@ pub unsafe extern "C" fn file_error(c: *mut client, fmt: *const c_char, mut ap: 
             cf = file_create_with_client(c, 2, None, null_mut());
             (*cf).path = xstrdup(c"-".as_ptr()).as_ptr();
 
-            evbuffer_add_vprintf((*cf).buffer, fmt, ap.as_va_list());
+            evbuffer_add_vprintf((*cf).buffer, args);
 
             msg.stream = 2;
             msg.fd = STDERR_FILENO;
@@ -315,7 +319,7 @@ pub unsafe extern "C" fn file_error(c: *mut client, fmt: *const c_char, mut ap: 
                 size_of::<msg_write_open>(),
             );
         } else {
-            evbuffer_add_vprintf((*cf).buffer, fmt, ap.as_va_list());
+            evbuffer_add_vprintf((*cf).buffer, args);
             file_push(cf);
         }
     }

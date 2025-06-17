@@ -13,3 +13,24 @@ Why not? This a fun hobby project for me. It's been my gardening for the past ye
 
 I like tmux. I want tmux, not something else. Also I tried out using it before and the compilation time was 8 minutes on my machine.
 That's a bit to long for me.
+
+# TODO
+bug - check for double %% in print, forgot that printf escapes % when translating
+
+
+see: args_print_add
+
+- [ ]  18 environ_set
+- [ ]  18 fatalx_c
+- [ ]  33 fatal
+- [ ]  34 control_write
+- [ ]  47 cmdq_print
+- [ ]  57 format_printf
+- [ ]  61 format_log1
+- [ ]  88 fatalx
+- [ ] 144 log_debug
+- [ ] 162 cmdq_error
+- [ ] xasprintf
+- [ ] xasprintf
+- [ ] xasprintf_
+- [ ] xsnprintf

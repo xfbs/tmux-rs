@@ -2613,6 +2613,7 @@ pub use crate::notify::{
 };
 
 mod options_;
+use crate::options_::options_set_string;
 pub use crate::options_::{
     options, options_array_assign, options_array_clear, options_array_first, options_array_get,
     options_array_item, options_array_item_index, options_array_item_value, options_array_next,
@@ -2622,7 +2623,7 @@ pub use crate::options_::{
     options_is_string, options_match, options_match_get, options_name, options_next, options_owner,
     options_parse, options_parse_get, options_push_changes, options_remove_or_default,
     options_scope_from_flags, options_scope_from_name, options_set_number, options_set_parent,
-    options_set_string, options_string_to_style, options_table_entry, options_to_string,
+    options_string_to_style, options_table_entry, options_to_string,
 };
 
 mod options_table;
@@ -2640,10 +2641,11 @@ pub use crate::job_::{
 };
 
 mod environ_;
+use crate::environ_::environ_log;
 pub use crate::environ_::{
     environ, environ_clear, environ_copy, environ_create, environ_find, environ_first,
-    environ_for_session, environ_free, environ_log, environ_next, environ_push, environ_put,
-    environ_set, environ_unset, environ_update,
+    environ_for_session, environ_free, environ_next, environ_push, environ_put, environ_set,
+    environ_unset, environ_update,
 };
 
 mod tty_;
@@ -2736,14 +2738,14 @@ pub use crate::cmd_parse::{
     cmd_parse_from_buffer, cmd_parse_from_file, cmd_parse_from_string, cmd_parse_state, *,
 };
 
-use crate::cmd_::cmd_queue::cmdq_add_format;
+use crate::cmd_::cmd_queue::{cmdq_add_format, cmdq_insert_hook, cmdq_print};
 pub use crate::cmd_::cmd_queue::{
     cmdq_add_formats, cmdq_append, cmdq_continue, cmdq_copy_state, cmdq_error, cmdq_free,
     cmdq_free_state, cmdq_get_callback1, cmdq_get_client, cmdq_get_command, cmdq_get_current,
     cmdq_get_error, cmdq_get_event, cmdq_get_flags, cmdq_get_name, cmdq_get_source, cmdq_get_state,
-    cmdq_get_target, cmdq_get_target_client, cmdq_guard, cmdq_insert_after, cmdq_insert_hook,
-    cmdq_item, cmdq_link_state, cmdq_list, cmdq_merge_formats, cmdq_new, cmdq_new_state, cmdq_next,
-    cmdq_print, cmdq_print_data, cmdq_running, cmdq_state,
+    cmdq_get_target, cmdq_get_target_client, cmdq_guard, cmdq_insert_after, cmdq_item,
+    cmdq_link_state, cmdq_list, cmdq_merge_formats, cmdq_new, cmdq_new_state, cmdq_next,
+    cmdq_print_data, cmdq_running, cmdq_state,
 };
 
 pub use crate::cmd_::cmd_wait_for::cmd_wait_for_flush;
@@ -2769,17 +2771,19 @@ mod file;
 pub use crate::file::{
     client_files_RB_FIND, client_files_RB_INSERT, client_files_RB_INSERT_COLOR,
     client_files_RB_NFIND, client_files_RB_REMOVE, client_files_RB_REMOVE_COLOR, file_can_print,
-    file_cancel, file_cmp, file_create_with_client, file_create_with_peer, file_error,
-    file_fire_done, file_fire_read, file_free, file_print, file_print_buffer, file_push, file_read,
-    file_read_cancel, file_read_data, file_read_done, file_read_open, file_vprint, file_write,
-    file_write_close, file_write_data, file_write_left, file_write_open, file_write_ready,
+    file_cancel, file_cmp, file_create_with_client, file_create_with_peer, file_fire_done,
+    file_fire_read, file_free, file_print_buffer, file_push, file_read, file_read_cancel,
+    file_read_data, file_read_done, file_read_open, file_vprint, file_write, file_write_close,
+    file_write_data, file_write_left, file_write_open, file_write_ready,
 };
+use crate::file::{file_error, file_print};
 
 mod server;
+use crate::server::server_add_message;
 pub use crate::server::{
-    clients, current_time, marked_pane, message_log, server_add_accept, server_add_message,
-    server_check_marked, server_clear_marked, server_create_socket, server_is_marked, server_proc,
-    server_set_marked, server_start, server_update_socket,
+    clients, current_time, marked_pane, message_log, server_add_accept, server_check_marked,
+    server_clear_marked, server_create_socket, server_is_marked, server_proc, server_set_marked,
+    server_start, server_update_socket,
 };
 
 mod server_client;
@@ -2806,13 +2810,14 @@ pub use crate::server_fn::{
 };
 
 mod status;
+use crate::status::status_message_set;
 pub use crate::status::{
     status_at_line, status_free, status_get_range, status_init, status_line_size,
-    status_message_clear, status_message_redraw, status_message_set, status_prompt_clear,
-    status_prompt_hlist, status_prompt_hsize, status_prompt_key, status_prompt_load_history,
-    status_prompt_redraw, status_prompt_save_history, status_prompt_set, status_prompt_type,
-    status_prompt_type_string, status_prompt_update, status_redraw, status_timer_start,
-    status_timer_start_all, status_update_cache,
+    status_message_clear, status_message_redraw, status_prompt_clear, status_prompt_hlist,
+    status_prompt_hsize, status_prompt_key, status_prompt_load_history, status_prompt_redraw,
+    status_prompt_save_history, status_prompt_set, status_prompt_type, status_prompt_type_string,
+    status_prompt_update, status_redraw, status_timer_start, status_timer_start_all,
+    status_update_cache,
 };
 
 mod resize;
@@ -2895,12 +2900,15 @@ pub use crate::screen_write::{
     screen_write_deleteline, screen_write_fast_copy, screen_write_free_list,
     screen_write_fullredraw, screen_write_hline, screen_write_insertcharacter,
     screen_write_insertline, screen_write_linefeed, screen_write_make_list, screen_write_menu,
-    screen_write_mode_clear, screen_write_mode_set, screen_write_nputs, screen_write_preview,
-    screen_write_putc, screen_write_puts, screen_write_rawstring, screen_write_reset,
-    screen_write_reverseindex, screen_write_scrolldown, screen_write_scrollregion,
-    screen_write_scrollup, screen_write_setselection, screen_write_start,
-    screen_write_start_callback, screen_write_start_pane, screen_write_stop, screen_write_strlen,
-    screen_write_text, screen_write_vline, screen_write_vnputs,
+    screen_write_mode_clear, screen_write_mode_set, screen_write_preview, screen_write_putc,
+    screen_write_rawstring, screen_write_reset, screen_write_reverseindex, screen_write_scrolldown,
+    screen_write_scrollregion, screen_write_scrollup, screen_write_setselection,
+    screen_write_start, screen_write_start_callback, screen_write_start_pane, screen_write_stop,
+    screen_write_vline,
+};
+use crate::screen_write::{
+    screen_write_nputs, screen_write_puts, screen_write_strlen, screen_write_text,
+    screen_write_vnputs, screen_write_vnputs_,
 };
 
 mod screen_redraw;
@@ -2982,10 +2990,10 @@ mod window_client;
 pub use crate::window_client::window_client_mode;
 
 mod window_copy;
+use crate::window_copy::window_copy_add;
 pub use crate::window_copy::{
-    window_copy_add, window_copy_get_line, window_copy_get_word, window_copy_mode,
-    window_copy_pagedown, window_copy_pageup, window_copy_start_drag, window_copy_vadd,
-    window_view_mode,
+    window_copy_get_line, window_copy_get_word, window_copy_mode, window_copy_pagedown,
+    window_copy_pageup, window_copy_start_drag, window_copy_vadd, window_view_mode,
 };
 
 mod window_customize;
@@ -3183,13 +3191,18 @@ impl _s {
 impl std::fmt::Display for _s {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.0.is_null() {
-            f.write_str("(null)")
-        } else {
-            let len = unsafe { libc::strlen(self.0) };
-            let s: &[u8] = unsafe { std::slice::from_raw_parts(self.0 as *const u8, len) };
-            let s = std::str::from_utf8(s).unwrap_or("%s-invalid-utf8");
-            f.write_str(s)
+            return f.write_str("(null)");
         }
+
+        let len = if let Some(width) = f.width() {
+            width
+        } else {
+            unsafe { libc::strlen(self.0) }
+        };
+
+        let s: &[u8] = unsafe { std::slice::from_raw_parts(self.0 as *const u8, len) };
+        let s = std::str::from_utf8(s).unwrap_or("%s-invalid-utf8");
+        f.write_str(s)
     }
 }
 

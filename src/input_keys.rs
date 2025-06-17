@@ -18,7 +18,6 @@ use crate::compat::{
     RB_GENERATE,
     tree::{rb_find, rb_foreach, rb_initializer, rb_insert},
 };
-use crate::log::log_debug_c;
 
 // Entry in the key tree.
 pub struct input_key_entry {
@@ -268,7 +267,7 @@ pub unsafe extern "C" fn input_key_write(
     size: usize,
 ) {
     unsafe {
-        log_debug_c(c"%s: %.*s".as_ptr(), from, size as i32, data);
+        log_debug!("{0}: {2:1$}", _s(from), size, _s(data));
         bufferevent_write(bev, data.cast(), size);
     }
 }
@@ -732,7 +731,7 @@ pub unsafe extern "C" fn input_key_mouse(wp: *mut window_pane, m: *mut mouse_eve
         if input_key_get_mouse(s, m, x, y, &raw mut buf, &raw mut len) == 0 {
             return;
         }
-        log_debug_c(c"writing mouse %.*s to %%%u".as_ptr(), len, buf, (*wp).id);
+        log_debug!("writing mouse {1:0$} to %{2}", len, _s(buf), (*wp).id);
         input_key_write(__func__, (*wp).event, buf, len);
     }
 }

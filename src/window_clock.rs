@@ -297,7 +297,12 @@ pub unsafe extern "C" fn window_clock_draw_screen(wme: NonNull<window_mode_entry
                 gc.write(grid_default_cell);
                 (*gc.as_mut_ptr()).flags |= grid_flag::NOPALETTE;
                 (*gc.as_mut_ptr()).fg = colour as i32;
-                screen_write_puts(&raw mut ctx, gc.as_mut_ptr(), c"%s".as_ptr(), tim);
+                screen_write_puts!(
+                    &raw mut ctx,
+                    gc.as_mut_ptr(),
+                    "{}",
+                    _s((&raw const tim).cast())
+                );
             }
 
             screen_write_stop(&raw mut ctx);

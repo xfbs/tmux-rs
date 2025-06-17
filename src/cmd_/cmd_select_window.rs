@@ -119,7 +119,7 @@ unsafe extern "C" fn cmd_select_window_exec(self_: *mut cmd, item: *mut cmdq_ite
             }
             cmd_find_from_session(current, s, 0);
             server_redraw_session(s);
-            cmdq_insert_hook(s, item, current, c"after-select-window".as_ptr());
+            cmdq_insert_hook!(s, item, current, "after-select-window");
         } else {
             /*
              * If -T and select-window is invoked on same window as
@@ -138,7 +138,7 @@ unsafe extern "C" fn cmd_select_window_exec(self_: *mut cmd, item: *mut cmdq_ite
                 cmd_find_from_session(current, s, 0);
                 server_redraw_session(s);
             }
-            cmdq_insert_hook(s, item, current, c"after-select-window".as_ptr());
+            cmdq_insert_hook!(s, item, current, "after-select-window");
         }
         if !c.is_null() && !(*c).session.is_null() {
             (*(*(*s).curw).window).latest = c as _;

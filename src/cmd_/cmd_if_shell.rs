@@ -155,7 +155,7 @@ unsafe extern "C" fn cmd_if_shell_callback(job: *mut job) {
             if cmdlist.is_null() {
                 if (*cdata).item.is_null() {
                     *error = toupper(*error as i32) as i8;
-                    status_message_set(c, -1, 1, 0, c"%s".as_ptr(), error);
+                    status_message_set!(c, -1, 1, 0, "{}", _s(error));
                 } else {
                     cmdq_error((*cdata).item, c"%s".as_ptr(), error);
                 }

@@ -61,7 +61,7 @@ unsafe extern "C" fn cmd_list_sessions_exec(self_: *mut cmd, item: *mut cmdq_ite
             }
             if flag != 0 {
                 let line = format_expand(ft, template);
-                cmdq_print(item, c"%s".as_ptr(), line);
+                cmdq_print!(item, "{}", _s(line));
                 free_(line);
             }
 

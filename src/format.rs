@@ -261,7 +261,13 @@ pub unsafe extern "C" fn format_log1(
 
         log_debug!("{}: {}", _s(from), _s(s));
         if !(*ft).item.is_null() && (*ft).flags.intersects(format_flags::FORMAT_VERBOSE) {
-            cmdq_print((*ft).item, c"#%.*s%s".as_ptr(), (*es).loop_, spaces, s);
+            cmdq_print!(
+                (*ft).item,
+                "#{1:0$}{2}",
+                (*es).loop_ as usize,
+                _s(spaces.as_ptr()),
+                _s(s)
+            );
         }
 
         free(s as *mut c_void);
@@ -607,7 +613,7 @@ pub unsafe extern "C" fn format_cb_session_attached_list(ft: *mut format_tree) -
                 if EVBUFFER_LENGTH(buffer) > 0 {
                     evbuffer_add(buffer, c",".as_ptr().cast(), 1);
                 }
-                evbuffer_add_printf(buffer, c"%s".as_ptr(), (*loop_).name);
+                evbuffer_add_printf!(buffer, "{}", _s((*loop_).name));
             }
         }
 
@@ -746,7 +752,7 @@ pub unsafe extern "C" fn format_cb_window_linked_sessions_list(
             if EVBUFFER_LENGTH(buffer) > 0 {
                 evbuffer_add(buffer, c",".as_ptr().cast(), 1);
             }
-            evbuffer_add_printf(buffer, c"%s".as_ptr(), (*(*wl).session).name);
+            evbuffer_add_printf!(buffer, "{}", _s((*(*wl).session).name));
         }
 
         let size = EVBUFFER_LENGTH(buffer);
@@ -803,7 +809,7 @@ pub unsafe extern "C" fn format_cb_window_active_sessions_list(
                 if EVBUFFER_LENGTH(buffer) > 0 {
                     evbuffer_add(buffer, c",".as_ptr().cast(), 1);
                 }
-                evbuffer_add_printf(buffer, c"%s".as_ptr(), (*(*wl).session).name);
+                evbuffer_add_printf!(buffer, "{}", _s((*(*wl).session).name));
             }
         }
 
@@ -873,7 +879,7 @@ pub unsafe extern "C" fn format_cb_window_active_clients_list(ft: *mut format_tr
                 if EVBUFFER_LENGTH(buffer) > 0 {
                     evbuffer_add(buffer, c",".as_ptr().cast(), 1);
                 }
-                evbuffer_add_printf(buffer, c"%s".as_ptr(), (*loop_).name);
+                evbuffer_add_printf!(buffer, "{}", _s((*loop_).name));
             }
         }
 
@@ -1082,7 +1088,7 @@ pub unsafe extern "C" fn format_cb_pane_tabs(ft: *mut format_tree) -> *mut c_voi
             if !first {
                 evbuffer_add(buffer, c",".as_ptr().cast(), 1);
             }
-            evbuffer_add_printf(buffer, c"%u".as_ptr(), i);
+            evbuffer_add_printf!(buffer, "{i}");
             first = false;
         }
 
@@ -1156,7 +1162,7 @@ pub unsafe extern "C" fn format_cb_session_group_list(ft: *mut format_tree) -> *
             if EVBUFFER_LENGTH(buffer) > 0 {
                 evbuffer_add(buffer, c",".as_ptr().cast(), 1);
             }
-            evbuffer_add_printf(buffer, c"%s".as_ptr(), (*loop_).name);
+            evbuffer_add_printf!(buffer, "{}", _s((*loop_).name));
         }
 
         let mut value = null_mut();
@@ -1207,7 +1213,7 @@ pub unsafe extern "C" fn format_cb_session_group_attached_list(
                     if EVBUFFER_LENGTH(buffer) > 0 {
                         evbuffer_add(buffer, c",".as_ptr().cast(), 1);
                     }
-                    evbuffer_add_printf(buffer, c"%s".as_ptr(), (*loop_).name);
+                    evbuffer_add_printf!(buffer, "{}", _s((*loop_).name));
                 }
             }
         }

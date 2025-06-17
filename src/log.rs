@@ -211,16 +211,6 @@ fn log_vwrite_rs(args: std::fmt::Arguments, prefix: &CStr) {
 //     }
 // }
 
-#[unsafe(export_name = "log_debug")]
-pub unsafe extern "C" fn log_debug_c(msg: *const c_char, mut args: ...) {
-    unsafe {
-        if log_file.lock().unwrap().is_none() {
-            return;
-        }
-        log_vwrite(CStr::from_ptr(msg), args.as_va_list(), c"");
-    }
-}
-
 #[track_caller]
 pub fn log_debug_rs(args: std::fmt::Arguments) {
     if log_file.lock().unwrap().is_none() {

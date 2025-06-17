@@ -43,7 +43,7 @@ unsafe extern "C" fn cmd_display_message_each(
     let item = arg as *mut cmdq_item;
 
     unsafe {
-        cmdq_print(item, c"%s=%s".as_ptr(), key, value);
+        cmdq_print!(item, "{}={}", _s(key), _s(value));
     }
 }
 
@@ -140,17 +140,17 @@ unsafe extern "C" fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_i
         if cmdq_get_client(item).is_null() {
             cmdq_error(item, c"%s".as_ptr(), msg);
         } else if args_has_(args, 'p') {
-            cmdq_print(item, c"%s".as_ptr(), msg);
+            cmdq_print!(item, "{}", _s(msg));
         } else if !tc.is_null() && (*tc).flags.intersects(client_flag::CONTROL) {
             let evb = evbuffer_new();
             if evb.is_null() {
                 fatalx(c"out of memory");
             }
-            evbuffer_add_printf(evb, c"%%message %s".as_ptr(), msg);
+            evbuffer_add_printf!(evb, "%message {}", _s(msg));
             server_client_print(tc, 0, evb);
             evbuffer_free(evb);
         } else if !tc.is_null() {
-            status_message_set(tc, delay as i32, 0, nflag, c"%s".as_ptr(), msg);
+            status_message_set!(tc, delay as i32, 0, nflag, "{}", _s(msg));
         }
         free_(msg);
 

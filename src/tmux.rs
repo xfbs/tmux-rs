@@ -597,12 +597,12 @@ pub unsafe extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *m
         }
 
         // The default shell comes from SHELL or from the user's passwd entry if available.
-        options_set_string(
+        options_set_string!(
             global_s_options,
             c"default-shell".as_ptr(),
             0,
-            c"%s".as_ptr(),
-            getshell(),
+            "{}",
+            _s(getshell()),
         );
 
         // Override keys to vi if VISUAL or EDITOR are set.
@@ -613,7 +613,7 @@ pub unsafe extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *m
                 !s.is_null()
             })
         {
-            options_set_string(global_options, c"editor".as_ptr(), 0, c"%s".as_ptr(), s);
+            options_set_string!(global_options, c"editor".as_ptr(), 0, "{}", _s(s));
             if !strrchr(s, b'/' as _).is_null() {
                 s = strrchr(s, b'/' as _).add(1);
             }

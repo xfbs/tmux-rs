@@ -76,7 +76,7 @@ pub unsafe extern "C" fn cmd_run_shell_print(job: *mut job, msg: *const c_char) 
         }
         if wp.is_null() {
             if !(*cdata).item.is_null() {
-                cmdq_print((*cdata).item, c"%s".as_ptr(), msg);
+                cmdq_print!((*cdata).item, "{}", _s(msg));
                 return;
             }
             if !(*cdata).item.is_null() && !(*cdata).client.is_null() {
@@ -100,7 +100,7 @@ pub unsafe extern "C" fn cmd_run_shell_print(job: *mut job, msg: *const c_char) 
                 null_mut(),
             );
         }
-        window_copy_add(wp, 1, c"%s".as_ptr(), msg);
+        window_copy_add!(wp, 1, "{}", _s(msg));
     }
 }
 
@@ -236,7 +236,7 @@ pub unsafe extern "C" fn cmd_run_shell_timer(_fd: i32, _events: i16, arg: *mut c
         if cmdlist.is_null() {
             if (*cdata).item.is_null() {
                 *error = toupper(*error as i32) as i8;
-                status_message_set(c, -1, 1, 0, c"%s".as_ptr(), error);
+                status_message_set!(c, -1, 1, 0, "{}", _s(error));
             } else {
                 cmdq_error((*cdata).item, c"%s".as_ptr(), error);
             }

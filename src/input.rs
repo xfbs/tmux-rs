@@ -1287,22 +1287,24 @@ pub unsafe extern "C" fn input_get(
     }
 }
 
+macro_rules! input_reply {
+   ($ictx:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::input::input_reply_($ictx, format_args!($fmt $(, $args)*))
+    };
+}
 /// Reply to terminal query.
-#[unsafe(no_mangle)]
-unsafe extern "C" fn input_reply(ictx: *mut input_ctx, fmt: *const c_char, mut args: ...) {
+unsafe fn input_reply_(ictx: *mut input_ctx, args: std::fmt::Arguments) {
     unsafe {
         let bev = (*ictx).event;
-        let mut reply: *mut c_char = null_mut();
-
         if bev.is_null() {
             return;
         }
 
-        xvasprintf(&raw mut reply, fmt, args.as_va_list());
+        let mut reply = args.to_string();
+        reply.push('\0');
 
-        log_debug!("{}: {}", "input_reply", _s(reply));
-        bufferevent_write(bev, reply.cast(), strlen(reply));
-        free_(reply);
+        log_debug!("{}: {}", "input_reply", _s(reply.as_ptr().cast()));
+        bufferevent_write(bev, reply.as_ptr().cast(), strlen(reply.as_ptr().cast()));
     }
 }
 
@@ -1709,14 +1711,14 @@ unsafe extern "C" fn input_csi_dispatch(ictx: *mut input_ctx) -> i32 {
                     }
                     #[cfg(not(feature = "sixel"))]
                     {
-                        input_reply(ictx, c"\x1b[?1;2c".as_ptr());
+                        input_reply!(ictx, "\x1b[?1;2c");
                     }
                 }
                 _ => log_debug!("{}: unknown '{}'", __func__, (*ictx).ch),
             },
             Ok(input_csi_type::INPUT_CSI_DA_TWO) => match input_get(ictx, 0, 0, 0) {
                 -1 => (),
-                0 => input_reply(ictx, c"\x1b[>84;0;0c".as_ptr()),
+                0 => input_reply!(ictx, "\x1b[>84;0;0c"),
                 _ => log_debug!("{}: unknown '{}'", __func__, (*ictx).ch as u8 as char),
             },
             Ok(input_csi_type::INPUT_CSI_ECH) => {
@@ -1746,8 +1748,8 @@ unsafe extern "C" fn input_csi_dispatch(ictx: *mut input_ctx) -> i32 {
             }
             Ok(input_csi_type::INPUT_CSI_DSR) => match input_get(ictx, 0, 0, 0) {
                 -1 => (),
-                5 => input_reply(ictx, c"\x1b[0n".as_ptr()),
-                6 => input_reply(ictx, c"\x1b[%u;%uR".as_ptr(), (*s).cy + 1, (*s).cx + 1),
+                5 => input_reply!(ictx, "\x1b[0n"),
+                6 => input_reply!(ictx, "\x1b[{};{}R", (*s).cy + 1, (*s).cx + 1),
                 _ => log_debug!("{}: unknown '{}'", __func__, (*ictx).ch as u8 as char),
             },
             Ok(input_csi_type::INPUT_CSI_ED) => {
@@ -1853,7 +1855,7 @@ unsafe extern "C" fn input_csi_dispatch(ictx: *mut input_ctx) -> i32 {
             }
             Ok(input_csi_type::INPUT_CSI_XDA) => {
                 if input_get(ictx, 0, 0, 0) == 0 {
-                    input_reply(ictx, c"\x1bP>|tmux %s\x1b\\".as_ptr(), getversion());
+                    input_reply!(ictx, "\x1bP>|tmux {}\x1b\\", _s(getversion()));
                 }
             }
             Err(_) => (),
@@ -2069,31 +2071,21 @@ unsafe extern "C" fn input_csi_dispatch_winops(ictx: *mut input_ctx) {
                 }
                 14 => {
                     if !w.is_null() {
-                        input_reply(
-                            ictx,
-                            c"\x1b[4;%u;%ut".as_ptr(),
-                            y * (*w).ypixel,
-                            x * (*w).xpixel,
-                        );
+                        input_reply!(ictx, "\x1b[4;{};{}t", y * (*w).ypixel, x * (*w).xpixel);
                     }
                 }
                 15 => {
                     if !w.is_null() {
-                        input_reply(
-                            ictx,
-                            c"\x1b[5;%u;%ut".as_ptr(),
-                            y * (*w).ypixel,
-                            x * (*w).xpixel,
-                        );
+                        input_reply!(ictx, "\x1b[5;{};{}t", y * (*w).ypixel, x * (*w).xpixel,);
                     }
                 }
                 16 => {
                     if !w.is_null() {
-                        input_reply(ictx, c"\x1b[6;%u;%ut".as_ptr(), (*w).ypixel, (*w).xpixel);
+                        input_reply!(ictx, "\x1b[6;{};{}t", (*w).ypixel, (*w).xpixel);
                     }
                 }
-                18 => input_reply(ictx, c"\x1b[8;%u;%ut".as_ptr(), y, x),
-                19 => input_reply(ictx, c"\x1b[9;%u;%ut".as_ptr(), y, x),
+                18 => input_reply!(ictx, "\x1b[8;{};{}t", y, x),
+                19 => input_reply!(ictx, "\x1b[9;{};{}t", y, x),
                 22 => {
                     m += 1;
                     match input_get(ictx, m as u32, 0, -1) {
@@ -2701,17 +2693,17 @@ unsafe extern "C" fn input_osc_colour_reply(ictx: *mut input_ctx, n: u32, mut c:
             c"\x1b\\".as_ptr()
         };
 
-        input_reply(
+        input_reply!(
             ictx,
-            c"\x1b]%u;rgb:%02hhx%02hhx/%02hhx%02hhx/%02hhx%02hhx%s".as_ptr(),
+            "\x1b]{};rgb:{:02x}{:02x}/{:02x}{:02x}/{:02x}{:02x}{}",
             n,
-            r as u32,
-            r as u32,
-            g as u32,
-            g as u32,
-            b as u32,
-            b as u32,
-            end,
+            r,
+            r,
+            g,
+            g,
+            b,
+            b,
+            _s(end),
         );
     }
 }
