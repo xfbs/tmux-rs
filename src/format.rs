@@ -22,7 +22,7 @@ use crate::{
     compat::{
         HOST_NAME_MAX, RB_GENERATE,
         queue::tailq_empty,
-        strlcat, strtonum,
+        strlcat,
         tree::{
             rb_find, rb_foreach, rb_init, rb_initializer, rb_insert, rb_max, rb_min, rb_remove,
         },
@@ -3750,10 +3750,7 @@ fn format_find(
         // found
         if modifiers.intersects(format_modifiers::FORMAT_TIMESTRING) {
             if t == 0 && !found.is_null() {
-                t = strtonum(found, 0, i64::MAX, &raw mut errstr);
-                if !errstr.is_null() {
-                    t = 0;
-                }
+                t = strtonum_(found, 0, i64::MAX).unwrap_or_default();
                 free_(found);
             }
             if t == 0 {
@@ -4469,7 +4466,6 @@ pub unsafe extern "C" fn format_replace_expression(
 ) -> *mut c_char {
     unsafe {
         let argc = (*mexp).argc;
-        let mut errstr = null();
 
         let mut endch: *mut c_char = null_mut();
         let mut value: *mut c_char = null_mut();
@@ -4543,21 +4539,18 @@ pub unsafe extern "C" fn format_replace_expression(
 
             /* The third argument may be precision. */
             if argc >= 3 {
-                prec = strtonum(
-                    *(*mexp).argv.add(2),
-                    i32::MIN as i64,
-                    i32::MAX as i64,
-                    &raw mut errstr,
-                ) as u32;
-                if !errstr.is_null() {
-                    format_log1!(
-                        es,
-                        c"format_replace_expression".as_ptr(),
-                        "expression precision {}: {}",
-                        _s(errstr),
-                        _s(*(*mexp).argv.add(2)),
-                    );
-                    break 'fail;
+                prec = match strtonum_(*(*mexp).argv.add(2), i32::MIN, i32::MAX) {
+                    Ok(value) => value as u32,
+                    Err(errstr) => {
+                        format_log1!(
+                            es,
+                            c"format_replace_expression".as_ptr(),
+                            "expression precision {}: {}",
+                            errstr.to_string_lossy(),
+                            _s(*(*mexp).argv.add(2)),
+                        );
+                        break 'fail;
+                    }
                 }
             }
 
@@ -4747,15 +4740,8 @@ pub unsafe extern "C" fn format_replace(
                             b'=' => {
                                 if (*fm).argc < 1 {
                                 } else {
-                                    limit = strtonum(
-                                        *(*fm).argv,
-                                        i32::MIN as i64,
-                                        i32::MAX as i64,
-                                        &raw mut errstr,
-                                    ) as i32;
-                                    if !errstr.is_null() {
-                                        limit = 0;
-                                    }
+                                    limit = strtonum_(*(*fm).argv, i32::MIN, i32::MAX)
+                                        .unwrap_or_default();
                                     if (*fm).argc >= 2 && !(*(*fm).argv.add(1)).is_null() {
                                         marker = *(*fm).argv.add(1);
                                     }
@@ -4765,15 +4751,8 @@ pub unsafe extern "C" fn format_replace(
                                 if (*fm).argc < 1 {
                                     break;
                                 } else {
-                                    width = strtonum(
-                                        *(*fm).argv,
-                                        i32::MIN as i64,
-                                        i32::MAX as i64,
-                                        &raw mut errstr,
-                                    ) as i32;
-                                    if !errstr.is_null() {
-                                        width = 0;
-                                    }
+                                    width = strtonum_(*(*fm).argv, i32::MIN, i32::MAX)
+                                        .unwrap_or_default();
                                 }
                             }
                             b'w' => modifiers |= format_modifiers::FORMAT_WIDTH,
@@ -4849,11 +4828,9 @@ pub unsafe extern "C" fn format_replace(
                 /* Is this a character? */
                 if modifiers.intersects(format_modifiers::FORMAT_CHARACTER) {
                     new = format_expand1(es, copy);
-                    c = strtonum(new, 32, 126, &raw mut errstr) as i32;
-                    value = if !errstr.is_null() {
-                        xstrdup(c"".as_ptr()).as_ptr()
-                    } else {
-                        format_nul!("{}", c as u8 as char)
+                    value = match strtonum_::<u8>(new, 32, 126) {
+                        Ok(n) => format_nul!("{}", n as char),
+                        Err(_) => xstrdup(c"".as_ptr()).as_ptr(),
                     };
                     free_(new);
                     break 'done;

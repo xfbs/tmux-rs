@@ -16,8 +16,6 @@ use crate::*;
 
 use libc::{sscanf, strchr, strcmp};
 
-use crate::compat::strtonum;
-
 pub static mut cmd_refresh_client_entry: cmd_entry = cmd_entry {
     name: c"refresh-client".as_ptr(),
     alias: c"refresh".as_ptr(),

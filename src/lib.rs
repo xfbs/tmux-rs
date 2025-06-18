@@ -30,6 +30,7 @@
 #![allow(clippy::shadow_reuse)] // 145 instances
 
 pub mod compat;
+pub use compat::{strtonum, strtonum_};
 
 pub mod ncurses_;
 pub use ncurses_::*;

@@ -17,7 +17,7 @@ use crate::{log::fatalx_c, xmalloc::xreallocarray, *};
 use crate::compat::{
     VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB,
     queue::{list_head_initializer, list_insert_head, list_remove},
-    strnvis, strtonum, strunvis,
+    strnvis, strunvis,
 };
 use libc::{fnmatch, memset, strchr, strcmp, strcspn, strncmp};
 
@@ -578,7 +578,6 @@ pub unsafe extern "C" fn tty_term_apply(
         let mut value = null_mut();
         let mut s = null_mut();
 
-        let mut errstr = null();
         let name = (*term).name;
         // u_int i;
         // int n, remove;
@@ -640,10 +639,9 @@ pub unsafe extern "C" fn tty_term_apply(
                         (*code).type_ = (*ent).type_;
                     }
                     tty_code_type::Number => {
-                        let n = strtonum(value, 0, i32::MAX as i64, &raw mut errstr) as i32;
-                        if errstr.is_null() {
+                        let Ok(n) = strtonum_(value, 0, i32::MAX) else {
                             break;
-                        }
+                        };
                         (*code).value.number = n;
                         (*code).type_ = (*ent).type_;
                     }
@@ -829,15 +827,15 @@ pub unsafe extern "C" fn tty_term_create(
                             (*code).type_ = tty_code_type::String;
                             (*code).value.string = tty_term_strip(value);
                         }
-                        tty_code_type::Number => {
-                            let n = strtonum(value, 0, i32::MAX as i64, &raw mut errstr) as i32;
-                            if !errstr.is_null() {
-                                log_debug!("{}: {}", _s(ent.name), _s(errstr));
-                            } else {
+                        tty_code_type::Number => match strtonum_(value, 0, i32::MAX) {
+                            Ok(n) => {
                                 (*code).type_ = tty_code_type::Number;
                                 (*code).value.number = n;
                             }
-                        }
+                            Err(errstr) => {
+                                log_debug!("{}: {}", _s(ent.name), errstr.to_string_lossy());
+                            }
+                        },
                         tty_code_type::Flag => {
                             (*code).type_ = tty_code_type::Flag;
                             (*code).value.flag = (*value == b'1' as c_char) as i32;
