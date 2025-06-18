@@ -273,7 +273,7 @@ pub unsafe extern "C" fn server_link_window(
         let srcsg = session_group_contains(src);
         let dstsg = session_group_contains(dst);
         if src != dst && !srcsg.is_null() && !dstsg.is_null() && srcsg == dstsg {
-            xasprintf(cause, c"sessions are grouped".as_ptr());
+            *cause = format_nul!("sessions are grouped");
             return -1;
         }
 
@@ -282,7 +282,7 @@ pub unsafe extern "C" fn server_link_window(
         }
         if !dstwl.is_null() {
             if (*dstwl).window == (*srcwl).window {
-                xasprintf(cause, c"same index: %d".as_ptr(), dstidx);
+                *cause = format_nul!("same index: {}", dstidx);
                 return -1;
             }
             if killflag != 0 {

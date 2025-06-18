@@ -349,7 +349,7 @@ unsafe extern "C" fn window_tree_build_pane(
 
         let text: *mut c_char =
             format_single(null_mut(), (*data.as_ptr()).format, null_mut(), s, wl, wp);
-        xasprintf(&raw mut name, c"%u".as_ptr(), idx);
+        name = format_nul!("{idx}");
 
         mode_tree_add(
             (*data.as_ptr()).data,
@@ -427,7 +427,7 @@ unsafe extern "C" fn window_tree_build_window(
                 wl,
                 null_mut(),
             );
-            xasprintf(&raw mut name, c"%u".as_ptr(), (*wl).idx);
+            name = format_nul!("{}", (*wl).idx);
 
             if matches!(
                 (*data.as_ptr()).type_,
@@ -832,9 +832,9 @@ unsafe extern "C" fn window_tree_draw_session(
             screen_write_cursormove(ctx, (cx + offset) as i32, cy as i32, 0);
             screen_write_preview(ctx, &raw mut (*(*w).active).base, width, sy);
 
-            xasprintf(&raw mut label, c" %u:%s ".as_ptr(), (*wl).idx, (*w).name);
+            label = format_nul!(" {}:{} ", (*wl).idx, _s((*w).name));
             if strlen(label) > width as usize {
-                xasprintf(&raw mut label, c" %u ".as_ptr(), (*wl).idx);
+                label = format_nul!(" {} ", (*wl).idx);
             }
             window_tree_draw_label(ctx, cx + offset, cy, width, sy, &raw mut gc, label);
             free_(label);
@@ -989,7 +989,7 @@ unsafe extern "C" fn window_tree_draw_window(
             if window_pane_index(wp, &raw mut pane_idx) != 0 {
                 pane_idx = loop_;
             }
-            xasprintf(&raw mut label, c" %u ".as_ptr(), pane_idx);
+            label = format_nul!(" {} ", pane_idx);
             window_tree_draw_label(ctx, cx + offset, cy, each, sy, &raw mut gc, label);
             free_(label);
 
@@ -1279,19 +1279,14 @@ unsafe extern "C" fn window_tree_get_target(
             window_tree_type::WINDOW_TREE_NONE => (),
             window_tree_type::WINDOW_TREE_SESSION => {
                 if let Some(s) = s {
-                    xasprintf(&raw mut target, c"=%s:".as_ptr(), (*s.as_ptr()).name);
+                    target = format_nul!("={}:", _s((*s.as_ptr()).name));
                 }
             }
             window_tree_type::WINDOW_TREE_WINDOW => {
                 if let Some(s) = s
                     && let Some(wl) = wl
                 {
-                    xasprintf(
-                        &raw mut target,
-                        c"=%s:%u.".as_ptr(),
-                        (*s.as_ptr()).name,
-                        (*wl.as_ptr()).idx,
-                    );
+                    target = format_nul!("={}:{}.", _s((*s.as_ptr()).name), (*wl.as_ptr()).idx);
                 }
             }
             window_tree_type::WINDOW_TREE_PANE => {
@@ -1299,12 +1294,11 @@ unsafe extern "C" fn window_tree_get_target(
                     && let Some(wl) = wl
                     && let Some(wp) = wp
                 {
-                    xasprintf(
-                        &raw mut target,
-                        c"=%s:%u.%%%u".as_ptr(),
-                        (*s.as_ptr()).name,
+                    target = format_nul!(
+                        "={}:{}.%{}",
+                        _s((*s.as_ptr()).name),
                         (*wl.as_ptr()).idx,
-                        (*wp.as_ptr()).id,
+                        (*wp.as_ptr()).id
                     );
                 }
             }
@@ -1652,27 +1646,19 @@ unsafe extern "C" fn window_tree_key(
                         window_tree_type::WINDOW_TREE_NONE => (),
                         window_tree_type::WINDOW_TREE_SESSION => {
                             if let Some(ns) = ns {
-                                xasprintf(
-                                    &raw mut prompt,
-                                    c"Kill session %s? ".as_ptr(),
-                                    (*ns.as_ptr()).name,
-                                );
+                                prompt = format_nul!("Kill session {}? ", _s((*ns.as_ptr()).name));
                             }
                         }
                         window_tree_type::WINDOW_TREE_WINDOW => {
                             if let Some(nwl) = nwl {
-                                xasprintf(
-                                    &raw mut prompt,
-                                    c"Kill window %u? ".as_ptr(),
-                                    (*nwl.as_ptr()).idx,
-                                );
+                                prompt = format_nul!("Kill window {}? ", (*nwl.as_ptr()).idx);
                             }
                         }
                         window_tree_type::WINDOW_TREE_PANE => {
                             if let Some(nwp) = nwp
                                 && window_pane_index(nwp.as_ptr(), &raw mut idx) == 0
                             {
-                                xasprintf(&raw mut prompt, c"Kill pane %u? ".as_ptr(), idx);
+                                prompt = format_nul!("Kill pane {}? ", idx);
                             }
                         }
                     }
@@ -1698,7 +1684,7 @@ unsafe extern "C" fn window_tree_key(
                     if tagged == 0 {
                         break;
                     }
-                    xasprintf(&raw mut prompt, c"Kill %u tagged? ".as_ptr(), tagged);
+                    prompt = format_nul!("Kill {} tagged? ", tagged);
                     (*data).references += 1;
                     status_prompt_set(
                         c,
@@ -1715,11 +1701,11 @@ unsafe extern "C" fn window_tree_key(
                 }
                 b':' => {
                     tagged = mode_tree_count_tagged((*data).data);
-                    if tagged != 0 {
-                        xasprintf(&raw mut prompt, c"(%u tagged) ".as_ptr(), tagged);
+                    prompt = if tagged != 0 {
+                        format_nul!("({} tagged) ", tagged)
                     } else {
-                        xasprintf(&raw mut prompt, c"(current) ".as_ptr());
-                    }
+                        format_nul!("(current) ")
+                    };
                     (*data).references += 1;
                     status_prompt_set(
                         c,

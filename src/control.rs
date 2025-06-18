@@ -718,7 +718,7 @@ pub unsafe extern "C" fn control_append_data(
         let new_data: *mut c_uchar =
             window_pane_get_new_data(wp, &raw mut (*cp).offset, &raw mut new_size).cast();
         if new_size < size {
-            fatalx_c(c"not enough data: %zu < %zu".as_ptr(), new_size, size);
+            fatalx_!("not enough data: {} < {}", new_size, size);
         }
         for i in 0..size {
             if *new_data.add(i) < b' ' || *new_data.add(i) == b'\\' {

@@ -815,17 +815,11 @@ pub unsafe extern "C" fn mode_tree_draw(mtd: *mut mode_tree_data) {
                 screen_write_cursormove(&raw mut ctx, 0, i as i32 - (*mtd).offset as i32, 0);
 
                 let pad = keylen - 2 - (*mti).keylen as i32;
-                if (*mti).key != KEYC_NONE {
-                    xasprintf(
-                        &raw mut key,
-                        c"(%s)%*s".as_ptr(),
-                        (*mti).keystr,
-                        pad,
-                        c"".as_ptr(),
-                    );
+                key = if (*mti).key != KEYC_NONE {
+                    format_nul!("({0}){2:>1$}", _s((*mti).keystr), pad as usize, "")
                 } else {
-                    key = xstrdup_(c"").as_ptr();
-                }
+                    xstrdup_(c"").as_ptr()
+                };
 
                 let symbol = if (*line).flat != 0 {
                     c"".as_ptr()
@@ -865,19 +859,14 @@ pub unsafe extern "C" fn mode_tree_draw(mtd: *mut mode_tree_data) {
                 } else {
                     c"".as_ptr()
                 };
-                xasprintf(
-                    &raw mut text,
-                    c"%-*s%s%s%s%s".as_ptr(),
-                    keylen,
-                    key,
-                    start,
-                    (*mti).name,
-                    tag,
-                    if !(*mti).text.is_null() {
-                        c": ".as_ptr()
-                    } else {
-                        c"".as_ptr()
-                    },
+                text = format_nul!(
+                    "{1:<0$}{2}{3}{4}{5}",
+                    keylen as usize,
+                    _s(key),
+                    _s(start),
+                    _s((*mti).name),
+                    _s(tag),
+                    if !(*mti).text.is_null() { ": " } else { "" },
                 );
                 width = utf8_cstrwidth(text);
                 if width > w {
@@ -947,21 +936,20 @@ pub unsafe extern "C" fn mode_tree_draw(mtd: *mut mode_tree_data) {
                 null(),
             );
 
-            if !(*mtd).sort_list.is_null() {
-                xasprintf(
-                    &raw mut text,
-                    c" %s (sort: %s%s)".as_ptr(),
-                    (*mti).name,
-                    *(*mtd).sort_list.add((*mtd).sort_crit.field as usize),
+            text = if !(*mtd).sort_list.is_null() {
+                format_nul!(
+                    " {} (sort: {}{})",
+                    _s((*mti).name),
+                    _s(*(*mtd).sort_list.add((*mtd).sort_crit.field as usize)),
                     if (*mtd).sort_crit.reversed != 0 {
-                        c", reversed".as_ptr()
+                        ", reversed"
                     } else {
-                        c"".as_ptr()
+                        ""
                     },
-                );
+                )
             } else {
-                xasprintf(&raw mut text, c" %s".as_ptr(), (*mti).name);
-            }
+                format_nul!(" {}", _s((*mti).name))
+            };
             if w - 2 >= strlen(text) as u32 {
                 screen_write_cursormove(&raw mut ctx, 1, h as i32, 0);
                 screen_write_puts!(&raw mut ctx, &raw mut gc0, "{}", _s(text));
@@ -1284,7 +1272,7 @@ pub unsafe extern "C" fn mode_tree_display_menu(
         let mut items = null();
         if outside == 0 {
             items = (*mtd).menu;
-            xasprintf(&raw mut title, c"#[align=centre]%s".as_ptr(), (*mti).name);
+            title = format_nul!("#[align=centre]{}", _s((*mti).name));
         } else {
             items = (&raw const mode_tree_menu_items) as *const menu_item;
             title = xstrdup_(c"").as_ptr();

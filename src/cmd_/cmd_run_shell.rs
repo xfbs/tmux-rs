@@ -301,16 +301,11 @@ pub unsafe extern "C" fn cmd_run_shell_callback(job: *mut job) {
         if WIFEXITED(status) {
             retcode = WEXITSTATUS(status);
             if retcode != 0 {
-                xasprintf(&raw mut msg, c"'%s' returned %d".as_ptr(), cmd, retcode);
+                msg = format_nul!("'{}' returned {}", _s(cmd), retcode);
             }
         } else if WIFSIGNALED(status) {
             retcode = WTERMSIG(status);
-            xasprintf(
-                &raw mut msg,
-                c"'%s' terminated by signal %d".as_ptr(),
-                cmd,
-                retcode,
-            );
+            msg = format_nul!("'{}' terminated by signal {}", _s(cmd), retcode);
             retcode += 128;
         } else {
             retcode = 0;

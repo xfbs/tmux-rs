@@ -93,7 +93,7 @@ unsafe extern "C" fn cmd_command_prompt_exec(self_: *mut cmd, item: *mut cmdq_it
         if s.is_null() {
             if count != 0 {
                 let tmp = args_make_commands_get_command((*cdata).state);
-                xasprintf(&raw mut prompts, c"(%s)".as_ptr(), tmp);
+                prompts = format_nul!("({})", _s(tmp));
                 free_(tmp);
             } else {
                 prompts = xstrdup_(c":").as_ptr();
@@ -120,11 +120,11 @@ unsafe extern "C" fn cmd_command_prompt_exec(self_: *mut cmd, item: *mut cmdq_it
                 (*cdata).count as usize + 1,
             )
             .as_ptr();
-            if space == 0 {
-                tmp = xstrdup(prompt).as_ptr();
+            tmp = if space == 0 {
+                xstrdup(prompt).as_ptr()
             } else {
-                xasprintf(&raw mut tmp, c"%s ".as_ptr(), prompt);
-            }
+                format_nul!("{} ", _s(prompt))
+            };
             (*(*cdata).prompts.add((*cdata).count as usize)).prompt = tmp;
 
             let mut input = null();

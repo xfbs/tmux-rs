@@ -621,7 +621,7 @@ pub unsafe extern "C" fn cmd_find(name: *const c_char, cause: *mut *mut c_char) 
             }
             if found.is_null() {
                 // TODO BUG, for some reason name isn't properly NUL terminated
-                xasprintf(cause, c"unknown command: %s".as_ptr(), name);
+                *cause = format_nul!("unknown command: {}", _s(name));
                 return null_mut();
             }
 
@@ -645,11 +645,10 @@ pub unsafe extern "C" fn cmd_find(name: *const c_char, cause: *mut *mut c_char) 
             loop_ = loop_.add(1);
         }
         s[strlen(&raw mut s as _) - 2] = b'\0' as c_char;
-        xasprintf(
-            cause,
-            c"ambiguous command: %s, could be: %s".as_ptr(),
-            name,
-            s,
+        *cause = format_nul!(
+            "ambiguous command: {}, could be: {}",
+            _s(name),
+            _s((&raw const s).cast()),
         );
 
         null_mut()
@@ -668,7 +667,7 @@ pub unsafe extern "C" fn cmd_parse(
         let mut error: *mut c_char = null_mut();
 
         if count == 0 || (*values).type_ != args_type::ARGS_STRING {
-            xasprintf(cause, c"no command".as_ptr());
+            *cause = format_nul!("no command");
             return null_mut();
         }
         let entry = cmd_find((*values).union_.string, cause);
@@ -678,16 +677,11 @@ pub unsafe extern "C" fn cmd_parse(
 
         let args = args_parse(&raw mut (*entry).args, values, count, &raw mut error);
         if args.is_null() && error.is_null() {
-            xasprintf(
-                cause,
-                c"usage: %s %s".as_ptr(),
-                (*entry).name,
-                (*entry).usage,
-            );
+            *cause = format_nul!("usage: {} {}", _s((*entry).name), _s((*entry).usage));
             return null_mut();
         }
         if args.is_null() {
-            xasprintf(cause, c"command %s: %s".as_ptr(), (*entry).name, error);
+            *cause = format_nul!("command {}: {}", _s((*entry).name), _s(error));
             free(error as _);
             return null_mut();
         }
@@ -734,14 +728,12 @@ pub unsafe extern "C" fn cmd_copy(cmd: *mut cmd, argc: c_int, argv: *mut *mut c_
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_print(cmd: *mut cmd) -> *mut c_char {
     unsafe {
-        let mut out: *mut c_char = null_mut();
-
         let s = args_print((*cmd).args);
-        if *s != b'\0' as c_char {
-            xasprintf(&raw mut out, c"%s %s".as_ptr(), (*(*cmd).entry).name, s);
+        let out = if *s != b'\0' as c_char {
+            format_nul!("{} {}", _s((*(*cmd).entry).name), _s(s))
         } else {
-            out = xstrdup((*(*cmd).entry).name).as_ptr();
-        }
+            xstrdup((*(*cmd).entry).name).as_ptr()
+        };
         free(s as _);
 
         out

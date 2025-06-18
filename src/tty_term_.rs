@@ -878,11 +878,11 @@ pub unsafe extern "C" fn tty_term_create(
 
             /* These are always required. */
             if !tty_term_has(term, tty_code_code::TTYC_CLEAR) {
-                xasprintf(cause, c"terminal does not support clear".as_ptr());
+                *cause = format_nul!("terminal does not support clear");
                 break 'error;
             }
             if !tty_term_has(term, tty_code_code::TTYC_CUP) {
-                xasprintf(cause, c"terminal does not support cup".as_ptr());
+                *cause = format_nul!("terminal does not support cup");
                 break 'error;
             }
 
@@ -972,10 +972,10 @@ pub unsafe extern "C" fn tty_term_read_list(
 
         if setupterm(name, fd, &raw mut error) != OK {
             match error {
-                1 => xasprintf(cause, c"can't use hardcopy terminal: %s".as_ptr(), name),
-                0 => xasprintf(cause, c"missing or unsuitable terminal: %s".as_ptr(), name),
-                -1 => xasprintf(cause, c"can't find terminfo database".as_ptr()),
-                _ => xasprintf(cause, c"unknown error".as_ptr()),
+                1 => *cause = format_nul!("can't use hardcopy terminal: {}", _s(name)),
+                0 => *cause = format_nul!("missing or unsuitable terminal: {}", _s(name)),
+                -1 => *cause = format_nul!("can't find terminfo database"),
+                _ => *cause = format_nul!("unknown error"),
             };
             return -1;
         }
@@ -998,7 +998,7 @@ pub unsafe extern "C" fn tty_term_read_list(
                     if n == -1 || n == -2 {
                         continue;
                     }
-                    xsnprintf(&raw mut tmp as *mut i8, sizeof_tmp, c"%d".as_ptr(), n);
+                    xsnprintf_!(&raw mut tmp as *mut i8, sizeof_tmp, "{}", n);
                     s = &raw mut tmp as *mut i8;
                 }
                 tty_code_type::Flag => {
@@ -1021,7 +1021,7 @@ pub unsafe extern "C" fn tty_term_read_list(
             )
             .as_ptr()
             .cast();
-            xasprintf((*caps).add(*ncaps as usize), c"%s=%s".as_ptr(), ent.name, s);
+            *(*caps).add(*ncaps as usize) = format_nul!("{}={}", _s(ent.name), _s(s));
             (*ncaps) += 1;
         }
 
@@ -1057,7 +1057,7 @@ pub unsafe extern "C" fn tty_term_string(
             return c"".as_ptr();
         }
         if (*(*term).codes.add(code as usize)).type_ != tty_code_type::String {
-            fatalx_c(c"not a string: %d".as_ptr(), code);
+            fatalx_!("not a string: {}", code as u32);
         }
         (*(*term).codes.add(code as usize)).value.string
     }
@@ -1217,7 +1217,7 @@ pub unsafe extern "C" fn tty_term_number(term: *mut tty_term, code: tty_code_cod
             return 0;
         }
         if (*(*term).codes.add(code as usize)).type_ != tty_code_type::Number {
-            fatalx_c(c"not a number: %d".as_ptr(), code);
+            fatalx_!("not a number: {}", code as u32);
         }
         (*(*term).codes.add(code as usize)).value.number
     }
@@ -1230,7 +1230,7 @@ pub unsafe extern "C" fn tty_term_flag(term: *mut tty_term, code: tty_code_code)
             return 0;
         }
         if (*(*term).codes.add(code as usize)).type_ != tty_code_type::Flag {
-            fatalx_c(c"not a flag: %d".as_ptr(), code);
+            fatalx_!("not a flag: {}", code as u32);
         }
         (*(*term).codes.add(code as usize)).value.flag
     }
@@ -1250,12 +1250,12 @@ pub unsafe extern "C" fn tty_term_describe(
 
         match (*(*term).codes.add(code as usize)).type_ {
             tty_code_type::None => {
-                xsnprintf(
+                xsnprintf_!(
                     &raw mut s as *mut c_char,
                     sizeof_s,
-                    c"%4u: %s: [missing]".as_ptr(),
-                    code,
-                    tty_term_codes[code as usize].name,
+                    "{:4}: {}: [missing]",
+                    code as u32,
+                    _s(tty_term_codes[code as usize].name),
                 );
             }
             tty_code_type::String => {
@@ -1265,37 +1265,33 @@ pub unsafe extern "C" fn tty_term_describe(
                     sizeof_out,
                     VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL,
                 );
-                xsnprintf(
+                xsnprintf_!(
                     &raw mut s as *mut c_char,
                     sizeof_s,
-                    c"%4u: %s: (string) %s".as_ptr(),
-                    code,
-                    tty_term_codes[code as usize].name,
-                    &raw const out as *const c_char,
+                    "{:4}: {}: (string) {}",
+                    code as u32,
+                    _s(tty_term_codes[code as usize].name),
+                    _s(&raw const out as *const c_char),
                 );
             }
             tty_code_type::Number => {
-                xsnprintf(
+                xsnprintf_!(
                     &raw mut s as *mut c_char,
                     sizeof_s,
-                    c"%4u: %s: (number) %d".as_ptr(),
-                    code,
-                    tty_term_codes[code as usize].name,
+                    "{:4}: {}: (number) {}",
+                    code as u32,
+                    _s(tty_term_codes[code as usize].name),
                     (*(*term).codes.add(code as usize)).value.number,
                 );
             }
             tty_code_type::Flag => {
-                xsnprintf(
+                xsnprintf_!(
                     &raw mut s as *mut c_char,
                     sizeof_s,
-                    c"%4u: %s: (flag) %s".as_ptr(),
-                    code,
-                    tty_term_codes[code as usize].name,
-                    if (*(*term).codes.add(code as usize)).value.flag != 0 {
-                        c"true".as_ptr()
-                    } else {
-                        c"false".as_ptr()
-                    },
+                    "{:4}: {}: (flag) {}",
+                    code as u32,
+                    _s(tty_term_codes[code as usize].name),
+                    (*(*term).codes.add(code as usize)).value.flag != 0
                 );
             }
         };

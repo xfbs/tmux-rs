@@ -156,11 +156,10 @@ pub unsafe extern "C" fn server_create_socket(
 
         // fail:
         if !cause.is_null() {
-            xmalloc::xasprintf(
-                cause,
-                c"error creating %s (%s)".as_ptr(),
-                socket_path,
-                strerror(errno!()),
+            *cause = format_nul!(
+                "error creating {} ({})",
+                _s(socket_path),
+                _s(strerror(errno!()))
             );
         }
         -1

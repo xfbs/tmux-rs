@@ -16,11 +16,11 @@ That's a bit to long for me.
 
 # TODO
 bug - check for double %% in print, forgot that printf escapes % when translating
+printf width to precision 
 
 
 see: args_print_add
 
-- [ ]  18 fatalx_c
 - [ ]  88 fatalx
 - [ ] 144 log_debug
 - [ ] xasprintf

@@ -134,12 +134,7 @@ unsafe extern "C" fn cmd_list_keys_get_prefix(
         *prefix = options_get_number(global_s_options, c"prefix".as_ptr()) as _;
         if !args_has_(args, 'P') {
             if *prefix != KEYC_NONE {
-                let mut s = null_mut();
-                xasprintf(
-                    &raw mut s,
-                    c"%s ".as_ptr(),
-                    key_string_lookup_key(*prefix, 0),
-                );
+                let mut s = format_nul!("{} ", _s(key_string_lookup_key(*prefix, 0)));
                 NonNull::new(s).unwrap()
             } else {
                 xstrdup_(c"")
@@ -303,7 +298,7 @@ unsafe extern "C" fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -
                     }
                     .as_ptr();
                     let mut tmpused: usize =
-                        xsnprintf(tmp.as_ptr(), tmpsize, c"%s-T ".as_ptr(), r) as _;
+                        xsnprintf_!(tmp.as_ptr(), tmpsize, "{}-T ", _s(r.cast())).unwrap() as _;
 
                     let mut cp = utf8_padcstr((*table).name, tablewidth as _);
                     let mut cplen = strlen(cp) + 1;

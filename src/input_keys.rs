@@ -309,20 +309,20 @@ pub unsafe extern "C" fn input_key_extended(bev: *mut bufferevent, mut key: key_
         }
 
         if options_get_number(global_options, c"extended-keys-format".as_ptr()) == 1 {
-            xsnprintf(
+            xsnprintf_!(
                 tmp.as_mut_ptr().cast(),
                 sizeof_tmp,
-                c"\x1b[27;%c;%llu~".as_ptr(),
-                modifier as u32,
+                "\x1b[27;{};{}~",
+                modifier as char,
                 key,
             );
         } else {
-            xsnprintf(
+            xsnprintf_!(
                 tmp.as_mut_ptr().cast(),
                 sizeof_tmp,
-                c"\x1b[%llu;%cu".as_ptr(),
+                "\x1b[{};{}",
                 key,
-                modifier as u32,
+                modifier as char,
             );
         }
 
@@ -651,15 +651,16 @@ pub unsafe extern "C" fn input_key_get_mouse(
          */
         let mut len: usize = 0;
         if (*m).sgr_type != ' ' as u32 && (*s).mode.intersects(mode_flag::MODE_MOUSE_SGR) {
-            len = xsnprintf(
+            len = xsnprintf_!(
                 &raw mut buf as *mut c_char,
                 sizeof_buf,
-                c"\x1b[<%u;%u;%u%c".as_ptr(),
+                "\x1b[<{};{};{}{}",
                 (*m).sgr_b,
                 x + 1,
                 y + 1,
                 (*m).sgr_type,
-            ) as usize;
+            )
+            .unwrap() as usize;
         } else if (*s).mode.intersects(mode_flag::MODE_MOUSE_UTF8) {
             if (*m).b > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_BTN_OFF)
                 || x > (MOUSE_PARAM_UTF8_MAX - MOUSE_PARAM_POS_OFF)
@@ -667,7 +668,7 @@ pub unsafe extern "C" fn input_key_get_mouse(
             {
                 return 0;
             }
-            len = xsnprintf(&raw mut buf as *mut c_char, sizeof_buf, c"\x1b[M".as_ptr()) as usize;
+            len = xsnprintf_!(&raw mut buf as *mut c_char, sizeof_buf, "\x1b[M").unwrap() as usize;
             len += input_key_split2((*m).b + MOUSE_PARAM_BTN_OFF, &raw mut buf[len] as _);
             len += input_key_split2(x + MOUSE_PARAM_POS_OFF, &raw mut buf[len] as _);
             len += input_key_split2(y + MOUSE_PARAM_POS_OFF, &raw mut buf[len] as _);
@@ -676,7 +677,7 @@ pub unsafe extern "C" fn input_key_get_mouse(
                 return 0;
             }
 
-            len = xsnprintf(&raw mut buf as *mut c_char, sizeof_buf, c"\x1b[M".as_ptr()) as usize;
+            len = xsnprintf_!(&raw mut buf as *mut c_char, sizeof_buf, "\x1b[M").unwrap() as usize;
             buf[len] = ((*m).b + MOUSE_PARAM_BTN_OFF) as c_char;
             len += 1;
 

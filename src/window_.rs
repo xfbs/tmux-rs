@@ -1469,7 +1469,7 @@ pub unsafe extern "C" fn window_pane_search(
             if ignore != 0 {
                 flags |= FNM_CASEFOLD;
             }
-            xasprintf(&raw mut new, c"*%s*".as_ptr(), term);
+            new = format_nul!("*{}*", _s(term));
         } else {
             if ignore != 0 {
                 flags |= REG_ICASE;

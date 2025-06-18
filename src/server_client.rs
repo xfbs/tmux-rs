@@ -353,7 +353,7 @@ pub unsafe extern "C" fn server_client_open(c: *mut client, cause: *mut *mut c_c
                     })
                     && libc::strcmp((*c).ttyname, ttynam) == 0))
         {
-            xasprintf(cause, c"can't use %s".as_ptr(), (*c).ttyname);
+            *cause = format_nul!("can't use {}", _s((*c).ttyname));
             return -1;
         }
 
@@ -3245,12 +3245,11 @@ pub unsafe extern "C" fn server_client_dispatch_identify(c: *mut client, imsg: *
         }
         (*c).flags |= client_flag::IDENTIFIED;
 
-        let mut name = null_mut();
-        if *(*c).ttyname != b'\0' as i8 {
-            name = xstrdup((*c).ttyname).as_ptr();
+        let mut name = if *(*c).ttyname != b'\0' as i8 {
+            xstrdup((*c).ttyname).as_ptr()
         } else {
-            xasprintf(&raw mut name, c"client-%ld".as_ptr(), (*c).pid as i64);
-        }
+            format_nul!("client-{}", (*c).pid)
+        };
         (*c).name = name;
         // log_debug("client %p name is %s", c, (*c).name);
 
@@ -3447,10 +3446,10 @@ pub unsafe extern "C" fn server_client_get_flags(c: *mut client) -> *const c_cha
             strlcat((&raw mut s).cast(), c"wait-exit,".as_ptr(), sizeof_s);
         }
         if (*c).flags.intersects(client_flag::CONTROL_PAUSEAFTER) {
-            xsnprintf(
+            xsnprintf_!(
                 (&raw mut tmp).cast(),
                 sizeof_tmp,
-                c"pause-after=%u,".as_ptr(),
+                "pause-after={},",
                 (*c).pause_age / 1000,
             );
             strlcat((&raw mut s).cast(), (&raw mut tmp).cast(), sizeof_s);

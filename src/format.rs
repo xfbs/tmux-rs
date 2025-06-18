@@ -475,16 +475,12 @@ pub unsafe extern "C" fn format_job_get(
             );
             if (*fj).job.is_null() {
                 free((*fj).out.cast());
-                xasprintf(
-                    &raw mut (*fj).out,
-                    c"<'%s' didn't start>".as_ptr(),
-                    (*fj).cmd,
-                );
+                (*fj).out = format_nul!("<'{}' didn't start>", _s((*fj).cmd),);
             }
             (*fj).last = t;
             (*fj).updated = 0;
         } else if !(*fj).job.is_null() && (t - (*fj).last) > 1 && (*fj).out.is_null() {
-            xasprintf(&raw mut (*fj).out, c"<'%s' not ready>".as_ptr(), (*fj).cmd);
+            (*fj).out = format_nul!("<'{}' not ready>", _s((*fj).cmd));
         }
         free(expanded.cast());
 
@@ -595,11 +591,7 @@ pub unsafe extern "C" fn format_cb_host_short(ft: *mut format_tree) -> *mut c_vo
 /// Callback for pid.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_pid(ft: *mut format_tree) -> *mut c_void {
-    unsafe {
-        let mut value = null_mut();
-        xasprintf(&raw mut value, c"%ld".as_ptr(), libc::getpid());
-        value.cast()
-    }
+    unsafe { libc::getpid().to_string().leak().as_mut_ptr().cast() }
 }
 
 /// Callback for session_attached_list.
@@ -629,12 +621,7 @@ pub unsafe extern "C" fn format_cb_session_attached_list(ft: *mut format_tree) -
 
         let size = EVBUFFER_LENGTH(buffer);
         if size != 0 {
-            xasprintf(
-                &raw mut value,
-                c"%.*s".as_ptr(),
-                size,
-                EVBUFFER_DATA(buffer),
-            );
+            value = format_nul!("{1:0$}", size, _s(EVBUFFER_DATA(buffer).cast()));
         }
         evbuffer_free(buffer);
         value.cast()
@@ -662,7 +649,7 @@ pub unsafe extern "C" fn format_cb_session_alerts(ft: *mut format_tree) -> *mut 
             if !(*wl).flags.intersects(WINLINK_ALERTFLAGS) {
                 continue;
             }
-            xsnprintf(tmp, sizeof_tmp, c"%u".as_ptr(), (*wl).idx);
+            xsnprintf_!(tmp, sizeof_tmp, "{}", (*wl).idx);
 
             if *alerts != b'\0' as c_char {
                 strlcat(alerts, c",".as_ptr(), sizeof_alerts);
@@ -699,9 +686,9 @@ pub unsafe extern "C" fn format_cb_session_stack(ft: *mut format_tree) -> *mut c
             return null_mut();
         }
 
-        xsnprintf(result, sizeof_result, c"%u".as_ptr(), (*(*s).curw).idx);
+        xsnprintf_!(result, sizeof_result, "{}", (*(*s).curw).idx);
         for wl in tailq_foreach::<_, discr_sentry>(&raw mut (*s).lastw).map(NonNull::as_ptr) {
-            xsnprintf(tmp, sizeof_tmp, c"%u".as_ptr(), (*wl).idx);
+            xsnprintf_!(tmp, sizeof_tmp, "{}", (*wl).idx);
 
             if *result != b'\0' as c_char {
                 strlcat(result, c",".as_ptr(), sizeof_result);
@@ -735,8 +722,7 @@ pub unsafe extern "C" fn format_cb_window_stack_index(ft: *mut format_tree) -> *
         if wl.is_null() {
             return xstrdup(c"0".as_ptr()).as_ptr().cast();
         }
-        xasprintf(&raw mut value, c"%u".as_ptr(), idx);
-        value.cast()
+        format_nul!("{idx}").cast()
     }
 }
 
@@ -767,12 +753,7 @@ pub unsafe extern "C" fn format_cb_window_linked_sessions_list(
 
         let size = EVBUFFER_LENGTH(buffer);
         if size != 0 {
-            xasprintf(
-                &raw mut value,
-                c"%.*s".as_ptr(),
-                size,
-                EVBUFFER_DATA(buffer),
-            );
+            value = format_nul!("{1:0$}", size, _s(EVBUFFER_DATA(buffer).cast()));
         }
         evbuffer_free(buffer);
         value.cast()
@@ -792,9 +773,7 @@ pub unsafe extern "C" fn format_cb_window_active_sessions(ft: *mut format_tree) 
             .filter(|wl| (*(*wl.as_ptr()).session).curw == wl.as_ptr())
             .count() as u32;
 
-        let mut value = null_mut();
-        xasprintf(&raw mut value, c"%u".as_ptr(), n);
-        value.cast()
+        format_nul!("{n}").cast()
     }
 }
 
@@ -826,12 +805,7 @@ pub unsafe extern "C" fn format_cb_window_active_sessions_list(
         let size = EVBUFFER_LENGTH(buffer);
         let mut value = null_mut();
         if size != 0 {
-            xasprintf(
-                &raw mut value,
-                c"%.*s".as_ptr(),
-                size,
-                EVBUFFER_DATA(buffer),
-            );
+            value = format_nul!("{1:0$}", size, _s(EVBUFFER_DATA(buffer).cast()));
         }
         evbuffer_free(buffer);
         value.cast()
@@ -859,9 +833,7 @@ pub unsafe extern "C" fn format_cb_window_active_clients(ft: *mut format_tree) -
             }
         }
 
-        let mut value = null_mut();
-        xasprintf(&raw mut value, c"%u".as_ptr(), n);
-        value.cast()
+        format_nul!("{n}").cast()
     }
 }
 
@@ -896,12 +868,7 @@ pub unsafe extern "C" fn format_cb_window_active_clients_list(ft: *mut format_tr
         let mut value = null_mut();
         let size = EVBUFFER_LENGTH(buffer);
         if size != 0 {
-            xasprintf(
-                &raw mut value,
-                c"%.*s".as_ptr(),
-                size,
-                EVBUFFER_DATA(buffer),
-            );
+            value = format_nul!("{1:0$}", size, _s(EVBUFFER_DATA(buffer).cast()));
         }
         evbuffer_free(buffer);
         value.cast()
@@ -1032,9 +999,7 @@ pub unsafe extern "C" fn format_cb_history_bytes(ft: *mut format_tree) -> *mut c
         }
         size += ((*gd).hsize + (*gd).sy) as usize * std::mem::size_of::<grid_line>();
 
-        let mut value = null_mut();
-        xasprintf(&raw mut value, c"%zu".as_ptr(), size);
-        value.cast()
+        format_nul!("{size}").cast()
     }
 }
 
@@ -1059,18 +1024,16 @@ pub unsafe extern "C" fn format_cb_history_all_bytes(ft: *mut format_tree) -> *m
             extended_cells += (*gl).extdsize;
         }
 
-        let mut value = null_mut();
-        xasprintf(
-            &raw mut value,
-            c"%u,%zu,%u,%zu,%u,%zu".as_ptr(),
+        format_nul!(
+            "{},{},{},{},{},{}",
             lines,
             lines as usize * std::mem::size_of::<grid_line>(),
             cells,
             cells as usize * std::mem::size_of::<grid_cell>(),
             extended_cells,
             extended_cells as usize * std::mem::size_of::<grid_cell>(),
-        );
-        value.cast()
+        )
+        .cast()
     }
 }
 
@@ -1105,12 +1068,7 @@ pub unsafe extern "C" fn format_cb_pane_tabs(ft: *mut format_tree) -> *mut c_voi
         let mut value = null_mut();
         let size = EVBUFFER_LENGTH(buffer);
         if size != 0 {
-            xasprintf(
-                &raw mut value,
-                c"%.*s".as_ptr(),
-                size,
-                EVBUFFER_DATA(buffer),
-            );
+            value = format_nul!("{1:0$}", size, _s(EVBUFFER_DATA(buffer).cast()));
         }
         evbuffer_free(buffer);
         value.cast()
@@ -1178,12 +1136,7 @@ pub unsafe extern "C" fn format_cb_session_group_list(ft: *mut format_tree) -> *
         let mut value = null_mut();
         let size = EVBUFFER_LENGTH(buffer);
         if size != 0 {
-            xasprintf(
-                &raw mut value,
-                c"%.*s".as_ptr(),
-                size,
-                EVBUFFER_DATA(buffer),
-            );
+            value = format_nul!("{1:0$}", size, _s(EVBUFFER_DATA(buffer).cast()));
         }
         evbuffer_free(buffer);
         value.cast()
@@ -1231,12 +1184,7 @@ pub unsafe extern "C" fn format_cb_session_group_attached_list(
         let mut value = null_mut();
         let size = EVBUFFER_LENGTH(buffer);
         if size != 0 {
-            xasprintf(
-                &raw mut value,
-                c"%.*s".as_ptr(),
-                size,
-                EVBUFFER_DATA(buffer),
-            );
+            value = format_nul!("{1:0$}", size, _s(EVBUFFER_DATA(buffer).cast()));
         }
         evbuffer_free(buffer);
         value.cast()
@@ -1254,9 +1202,7 @@ pub unsafe extern "C" fn format_cb_pane_in_mode(ft: *mut format_tree) -> *mut c_
 
         let n = tailq_foreach(&raw mut (*wp).modes).count() as u32;
 
-        let mut value = null_mut();
-        xasprintf(&raw mut value, c"%u".as_ptr(), n);
-        value.cast()
+        format_nul!("{n}").cast()
     }
 }
 
@@ -1277,9 +1223,7 @@ pub unsafe extern "C" fn format_cb_pane_at_top(ft: *mut format_tree) -> *mut c_v
             (*wp).yoff == 0
         };
 
-        let mut value = null_mut();
-        xasprintf(&raw mut value, c"%d".as_ptr(), flag as i32);
-        value.cast()
+        format_nul!("{flag}").cast()
     }
 }
 
@@ -1300,9 +1244,7 @@ pub unsafe extern "C" fn format_cb_pane_at_bottom(ft: *mut format_tree) -> *mut 
             (*wp).yoff + (*wp).sy == (*w).sy
         };
 
-        let mut value = null_mut();
-        xasprintf(&raw mut value, c"%d".as_ptr(), flag as i32);
-        value.cast()
+        format_nul!("{flag}").cast()
     }
 }
 
@@ -1323,11 +1265,10 @@ pub unsafe extern "C" fn format_cb_cursor_character(ft: *mut format_tree) -> *mu
         );
         let mut value = null_mut();
         if !(*gc.as_ptr()).flags.intersects(grid_flag::PADDING) {
-            xasprintf(
-                &raw mut value,
-                c"%.*s".as_ptr(),
-                (*gc.as_ptr()).data.size as i32,
-                (*gc.as_ptr()).data.data,
+            value = format_nul!(
+                "{1:0$}",
+                (*gc.as_ptr()).data.size as usize,
+                _s((&raw const (*gc.as_ptr()).data.data).cast())
             );
         }
         value.cast()
@@ -1427,9 +1368,7 @@ pub unsafe extern "C" fn format_cb_mouse_status_line(ft: *mut format_tree) -> *m
             return null_mut();
         };
 
-        let mut value = null_mut();
-        xasprintf(&mut value, c"%u".as_ptr(), y);
-        value.cast()
+        format_nul!("{y}").cast()
     }
 }
 
@@ -1813,7 +1752,7 @@ pub unsafe extern "C" fn format_cb_config_files(_ft: *mut format_tree) -> *mut c
         for i in 0..(cfg_nfiles as usize) {
             let n = strlen(*cfg_files.add(i)) + 1;
             s = xrealloc(s.cast(), slen + n + 1).as_ptr() as *mut c_char;
-            slen += xsnprintf(s.add(slen), n + 1, c"%s,".as_ptr(), *cfg_files.add(i)) as usize;
+            slen += xsnprintf_!(s.add(slen), n + 1, "{},", _s(*cfg_files.add(i))).unwrap();
         }
         if s.is_null() {
             return xstrdup(c"".as_ptr()).as_ptr().cast();
@@ -3550,7 +3489,7 @@ pub unsafe extern "C" fn format_each(
 
             if fte.type_ == format_table_type::FORMAT_TABLE_TIME {
                 let tv = value as *const timeval;
-                xsnprintf(s.as_mut_ptr(), s.len(), c"%lld".as_ptr(), (*tv).tv_sec);
+                xsnprintf_!(s.as_mut_ptr(), s.len(), "{}", (*tv).tv_sec);
                 cb.unwrap()(fte.key.as_ptr(), s.as_ptr(), arg);
             } else {
                 cb.unwrap()(fte.key.as_ptr(), value as *const c_char, arg);
@@ -3560,7 +3499,7 @@ pub unsafe extern "C" fn format_each(
 
         for fe in rb_foreach(&raw mut (*ft).tree).map(NonNull::as_ptr) {
             if (*fe).time != 0 {
-                xsnprintf(s.as_mut_ptr(), s.len(), c"%lld".as_ptr(), (*fe).time);
+                xsnprintf_!(s.as_mut_ptr(), s.len(), "{}", (*fe).time);
                 cb.unwrap()((*fe).key, s.as_ptr(), arg);
             } else {
                 if (*fe).value.is_null() && (*fe).cb.is_some() {
@@ -3881,7 +3820,7 @@ fn format_find(
         }
 
         if t != 0 {
-            xasprintf(&raw mut found, c"%lld".as_ptr(), t as i64);
+            found = format_nul!("{t}");
         } else if found.is_null() {
             return null_mut();
         }
@@ -4306,12 +4245,7 @@ pub unsafe extern "C" fn format_search(
                 regex = 1;
             }
         }
-        xasprintf(
-            &mut value,
-            c"%u".as_ptr(),
-            window_pane_search(wp, s, regex, ignore),
-        );
-        value
+        format_nul!("{}", window_pane_search(wp, s, regex, ignore))
     }
 }
 
@@ -4741,16 +4675,11 @@ pub unsafe extern "C" fn format_replace_expression(
                 Operator::LessThanEqual => (mleft <= mright) as i32 as f64,
             };
 
-            if use_fp != 0 {
-                xasprintf(&raw mut value, c"%.*f".as_ptr(), prec, result);
+            value = if use_fp != 0 {
+                format_nul!("{:.*}", prec as usize, result)
             } else {
-                xasprintf(
-                    &raw mut value,
-                    c"%.*f".as_ptr(),
-                    prec,
-                    (result as c_longlong) as f64,
-                );
-            }
+                format_nul!("{:.*}", prec as usize, (result as c_longlong) as f64)
+            };
             format_log1!(
                 es,
                 c"format_replace_expression".as_ptr(),
@@ -4971,11 +4900,11 @@ pub unsafe extern "C" fn format_replace(
                 if modifiers.intersects(format_modifiers::FORMAT_CHARACTER) {
                     new = format_expand1(es, copy);
                     c = strtonum(new, 32, 126, &raw mut errstr) as i32;
-                    if !errstr.is_null() {
-                        value = xstrdup(c"".as_ptr()).as_ptr();
+                    value = if !errstr.is_null() {
+                        xstrdup(c"".as_ptr()).as_ptr()
                     } else {
-                        xasprintf(&raw mut value, c"%c".as_ptr(), c);
-                    }
+                        format_nul!("{}", c as u8 as char)
+                    };
                     free_(new);
                     break 'done;
                 }
@@ -4984,16 +4913,15 @@ pub unsafe extern "C" fn format_replace(
                 if modifiers.intersects(format_modifiers::FORMAT_COLOUR) {
                     new = format_expand1(es, copy);
                     c = colour_fromstring(new);
-                    if c == -1
+                    value = if c == -1
                         || ({
                             c = colour_force_rgb(c);
                             c == -1
-                        })
-                    {
-                        value = xstrdup(c"".as_ptr()).as_ptr();
+                        }) {
+                        xstrdup(c"".as_ptr()).as_ptr()
                     } else {
-                        xasprintf(&raw mut value, c"%06x".as_ptr(), c & 0xffffff);
-                    }
+                        format_nul!("{:06x}", c & 0xffffff)
+                    };
                     free_(new);
                     break 'done;
                 }
@@ -5245,13 +5173,13 @@ pub unsafe extern "C" fn format_replace(
             // Truncate the value if needed.
             if limit > 0 {
                 new = format_trim_left(value, limit as u32);
-                if !marker.is_null() && strcmp(new, value) != 0 {
+                value = if !marker.is_null() && strcmp(new, value) != 0 {
                     free_(value);
-                    xasprintf(&raw mut value, c"%s%s".as_ptr(), new, marker);
+                    format_nul!("{}{}", _s(new), _s(marker))
                 } else {
                     free_(value);
-                    value = new;
-                }
+                    new
+                };
                 format_log1!(
                     es,
                     __func__,
@@ -5261,13 +5189,13 @@ pub unsafe extern "C" fn format_replace(
                 );
             } else if limit < 0 {
                 new = format_trim_right(value, (-limit) as u32);
-                if !marker.is_null() && strcmp(new, value) != 0 {
+                value = if !marker.is_null() && strcmp(new, value) != 0 {
                     free_(value);
-                    xasprintf(&raw mut value, c"%s%s".as_ptr(), marker, new);
+                    format_nul!("{}{}", _s(marker), _s(new))
                 } else {
                     free_(value);
-                    value = new;
-                }
+                    new
+                };
                 format_log1!(
                     es,
                     __func__,
@@ -5304,13 +5232,13 @@ pub unsafe extern "C" fn format_replace(
 
             /* Replace with the length or width if needed. */
             if modifiers.intersects(format_modifiers::FORMAT_LENGTH) {
-                xasprintf(&raw mut new, c"%zu".as_ptr(), strlen(value));
+                new = format_nul!("{}", strlen(value));
                 free_(value);
                 value = new;
                 format_log1!(es, __func__, "replacing with length: {}", _s(new));
             }
             if modifiers.intersects(format_modifiers::FORMAT_WIDTH) {
-                xasprintf(&raw mut new, c"%u".as_ptr(), format_width(value));
+                new = format_nul!("{}", format_width(value));
                 free_(value);
                 value = new;
                 format_log1!(es, __func__, "replacing with width: {}", _s(new));

@@ -55,11 +55,10 @@ pub unsafe extern "C" fn image_free_all(s: *mut screen) -> i32 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn image_fallback(ret: *mut *mut c_char, sx: u32, sy: u32) {
     unsafe {
-        let mut label: *mut c_char = null_mut();
+        let mut label: *mut c_char = format_nul!("SIXEL IMAGE ({}x{})\r\n", sx, sy);
 
         // Allocate first line.
-        let lsize: u32 =
-            xasprintf(&raw mut label, c"SIXEL IMAGE (%ux%u)\r\n".as_ptr(), sx, sy) as u32 + 1;
+        let lsize: u32 = libc::strlen(label) as u32 + 1;
         let mut size: u32 = if sx < lsize - 3 { lsize - 1 } else { sx + 2 };
 
         // Remaining lines. Every placeholder line has \r\n at the end.

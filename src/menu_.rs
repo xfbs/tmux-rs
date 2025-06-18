@@ -126,18 +126,16 @@ pub unsafe extern "C" fn menu_add_item(
             c"".as_ptr()
         };
         let trimmed = format_trim_right(s, max_width);
-        let mut name: *mut c_char = null_mut();
-        if !key.is_null() {
-            xasprintf(
-                &raw mut name,
-                c"%s%s#[default] #[align=right](%s)".as_ptr(),
-                trimmed,
-                suffix,
-                key,
-            );
+        let mut name: *mut c_char = if !key.is_null() {
+            format_nul!(
+                "{}{}#[default] #[align=right]({})",
+                _s(trimmed),
+                _s(suffix),
+                _s(key),
+            )
         } else {
-            xasprintf(&raw mut name, c"%s%s".as_ptr(), trimmed, suffix);
-        }
+            format_nul!("{}{}", _s(trimmed), _s(suffix))
+        };
         free_(trimmed);
 
         (*new_item).name = SyncCharPtr::from_ptr(name);

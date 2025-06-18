@@ -1045,19 +1045,9 @@ pub unsafe extern "C" fn grid_string_cells_add_code(
 
         for i in 0..nnewc {
             if i + 1 < nnewc {
-                xsnprintf(
-                    tmp.as_mut_ptr(),
-                    tmp.len(),
-                    c"%d;".as_ptr() as *const c_char,
-                    *newc.add(i),
-                );
+                xsnprintf_!(tmp.as_mut_ptr(), tmp.len(), "{};", *newc.add(i));
             } else {
-                xsnprintf(
-                    tmp.as_mut_ptr(),
-                    tmp.len(),
-                    c"%d".as_ptr() as *const c_char,
-                    *newc.add(i),
-                );
+                xsnprintf_!(tmp.as_mut_ptr(), tmp.len(), "{}", *newc.add(i));
             }
             strlcat(buf, tmp.as_ptr(), len);
         }
@@ -1087,7 +1077,7 @@ pub unsafe extern "C" fn grid_string_cells_add_hyperlink(
         }
 
         if *id != 0 {
-            xasprintf(&mut tmp, c"id=%s;".as_ptr() as *const c_char, id);
+            let tmp = format_nul!("id={};", _s(id));
             strlcat(buf, tmp, len);
             free_(tmp);
         } else {
@@ -1179,17 +1169,12 @@ pub unsafe extern "C" fn grid_string_cells_code(
 
             for i in 0..n {
                 if s[i as usize] < 10 {
-                    xsnprintf(
-                        tmp.as_mut_ptr(),
-                        tmp.len(),
-                        c"%d".as_ptr() as *const c_char,
-                        s[i as usize],
-                    );
+                    xsnprintf_!(tmp.as_mut_ptr(), tmp.len(), "{}", s[i as usize],);
                 } else {
-                    xsnprintf(
+                    xsnprintf_!(
                         tmp.as_mut_ptr(),
                         tmp.len(),
-                        c"%d:%d".as_ptr() as *const c_char,
+                        "{}:{}",
                         s[i as usize] / 10,
                         s[i as usize] % 10,
                     );

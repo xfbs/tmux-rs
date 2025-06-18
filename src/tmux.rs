@@ -122,8 +122,7 @@ pub unsafe extern "C" fn expand_path(path: *const c_char, home: *const c_char) -
             if home.is_null() {
                 return null_mut();
             }
-            xasprintf(&raw mut expanded, c"%s%s".as_ptr(), home, path.add(1));
-            return expanded;
+            return format_nul!("{}{}", _s(home), _s(path.add(1)));
         }
 
         if *path == b'$' as c_char {
@@ -143,8 +142,7 @@ pub unsafe extern "C" fn expand_path(path: *const c_char, home: *const c_char) -
             if end.is_null() {
                 end = c"".as_ptr();
             }
-            xasprintf(&raw mut expanded, c"%s%s".as_ptr(), (*value).value, end);
-            return expanded;
+            return format_nul!("{}{}", _s(transmute_ptr((*value).value)), _s(end));
         }
 
         xstrdup(path).cast().as_ptr()
@@ -237,7 +235,7 @@ unsafe extern "C" fn make_label(
 
             expand_paths(TMUX_SOCK.as_ptr(), &raw mut paths, &raw mut n, 1);
             if n == 0 {
-                xasprintf(cause, c"no suitable socket path".as_ptr());
+                *cause = format_nul!("no suitable socket path");
                 return null_mut();
             }
             path = *paths; /* can only have one socket! */
@@ -246,35 +244,33 @@ unsafe extern "C" fn make_label(
             }
             free_(paths);
 
-            xasprintf(&raw mut base, c"%s/tmux-%ld".as_ptr(), path, uid as c_long);
+            base = format_nul!("{}/tmux-{}", _s(path), uid);
             free_(path);
             if mkdir(base, S_IRWXU) != 0 && errno!() != EEXIST {
-                xasprintf(
-                    cause,
-                    c"couldn't create directory %s (%s)".as_ptr(),
-                    base,
-                    strerror(errno!()),
+                *cause = format_nul!(
+                    "couldn't create directory {} ({})",
+                    _s(base),
+                    _s(strerror(errno!()))
                 );
                 break 'fail;
             }
             if lstat(base, &raw mut sb) != 0 {
-                xasprintf(
-                    cause,
-                    c"couldn't read directory %s (%s)".as_ptr(),
-                    base,
-                    strerror(errno!()),
+                *cause = format_nul!(
+                    "couldn't read directory {} ({})",
+                    _s(base),
+                    _s(strerror(errno!())),
                 );
                 break 'fail;
             }
             if !S_ISDIR(sb.st_mode) {
-                xasprintf(cause, c"%s is not a directory".as_ptr(), base);
+                *cause = format_nul!("{} is not a directory", _s(base));
                 break 'fail;
             }
             if sb.st_uid != uid || (sb.st_mode & S_IRWXO) != 0 {
-                xasprintf(cause, c"directory %s has unsafe permissions".as_ptr(), base);
+                *cause = format_nul!("directory {} has unsafe permissions", _s(base));
                 break 'fail;
             }
-            xasprintf(&raw mut path, c"%s/%s".as_ptr(), base, label);
+            path = format_nul!("{}/{}", _s(base), _s(label));
             free_(base);
             return path;
         }
@@ -288,8 +284,6 @@ unsafe extern "C" fn make_label(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn shell_argv0(shell: *const c_char, is_login: c_int) -> *mut c_char {
     unsafe {
-        let mut argv0 = null_mut();
-
         let slash = strrchr(shell, b'/' as _);
         let name = if !slash.is_null() && *slash.add(1) != b'\0' as c_char {
             slash.add(1)
@@ -298,12 +292,10 @@ pub unsafe extern "C" fn shell_argv0(shell: *const c_char, is_login: c_int) -> *
         };
 
         if is_login != 0 {
-            xasprintf(&raw mut argv0, c"-%s".as_ptr(), name);
+            format_nul!("-{}", _s(name))
         } else {
-            xasprintf(&raw mut argv0, c"%s".as_ptr(), name);
+            format_nul!("{}", _s(name))
         }
-
-        argv0
     }
 }
 
@@ -351,12 +343,7 @@ pub unsafe extern "C" fn sig2name(signo: i32) -> *mut c_char {
                     }
                 }
         */
-        xsnprintf(
-            &raw mut s as _,
-            size_of::<[c_char; 11]>(),
-            c"%d".as_ptr(),
-            signo,
-        );
+        xsnprintf_!(&raw mut s as _, size_of::<[c_char; 11]>(), "{}", signo,);
         &raw mut s as _
     }
 }

@@ -89,11 +89,11 @@ unsafe extern "C" fn cmd_capture_pane_pending(
                     tmp[0] = *line.add(i) as _;
                     tmp[1] = b'\0' as _;
                 } else {
-                    xsnprintf(
+                    xsnprintf_!(
                         &raw mut tmp as _,
                         size_of::<[c_char; 5]>(),
-                        c"\\%03hho".as_ptr(),
-                        *line.add(i) as usize,
+                        "\\{:03o}",
+                        *line.add(i),
                     );
                 }
                 buf =

@@ -61,13 +61,11 @@ unsafe extern "C" fn status_prompt_find_history_file() -> *mut c_char {
             return null_mut();
         }
 
-        let home = find_home();
-        if home.is_null() {
+        let Some(home) = NonNull::new(find_home()) else {
             return null_mut();
-        }
-        let mut path = null_mut();
-        xasprintf(&raw mut path, c"%s%s".as_ptr(), home, history_file.add(1));
-        path
+        };
+
+        format_nul!("{}{}", _s(home.as_ptr()), _s(history_file.add(1)))
     }
 }
 
@@ -1850,7 +1848,7 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
         (*c).flags |= client_flag::REDRAWSTATUS;
         if (*c).prompt_flags & PROMPT_INCREMENTAL != 0 {
             s = utf8_tocstr((*c).prompt_buffer);
-            xasprintf(&raw mut cp, c"%c%s".as_ptr(), prefix as u32, s);
+            cp = format_nul!("{}{}", prefix as char, _s(s));
             (*c).prompt_inputcb.unwrap()(c, NonNull::new((*c).prompt_data).unwrap(), cp, 0);
             free_(cp);
             free_(s);
@@ -2029,7 +2027,7 @@ unsafe extern "C" fn status_prompt_complete_list(
                         break 'next;
                     }
 
-                    xasprintf(&raw mut tmp, c"%.*s".as_ptr(), valuelen as i32, value);
+                    tmp = format_nul!("{:.*}", valuelen, _s(value));
                     status_prompt_add_list(&raw mut list, size, tmp);
                     free_(tmp);
                 } // next:
@@ -2099,16 +2097,15 @@ unsafe extern "C" fn status_prompt_menu_callback(
 
         if key != KEYC_NONE {
             idx += (*spm).start;
-            if (*spm).flag == b'\0' as i8 {
-                s = xstrdup(*(*spm).list.add(idx as usize)).as_ptr();
+            s = if (*spm).flag == b'\0' as i8 {
+                xstrdup(*(*spm).list.add(idx as usize)).as_ptr()
             } else {
-                xasprintf(
-                    &raw mut s,
-                    c"-%c%s".as_ptr(),
-                    (*spm).flag as i32,
-                    *(*spm).list.add(idx as usize),
-                );
-            }
+                format_nul!(
+                    "-{}{}",
+                    (*spm).flag as u8 as char,
+                    _s(*(*spm).list.add(idx as usize))
+                )
+            };
             if (*c).prompt_type == prompt_type::PROMPT_TYPE_WINDOW_TARGET {
                 free_((*c).prompt_buffer);
                 (*c).prompt_buffer = utf8_fromcstr(s);
@@ -2252,7 +2249,7 @@ unsafe extern "C" fn status_prompt_complete_window_menu(
         let menu = menu_create(c"".as_ptr());
         for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
             if !word.is_null() && *word != b'\0' as i8 {
-                xasprintf(&raw mut tmp, c"%d".as_ptr(), (*wl).idx);
+                tmp = format_nul!("{}", (*wl).idx);
                 if strncmp(tmp, word, strlen(word)) != 0 {
                     free_(tmp);
                     continue;
@@ -2262,23 +2259,17 @@ unsafe extern "C" fn status_prompt_complete_window_menu(
 
             list = xreallocarray_(list, size + 1).as_ptr();
             if (*c).prompt_type == prompt_type::PROMPT_TYPE_WINDOW_TARGET {
-                xasprintf(
-                    &raw mut tmp,
-                    c"%d (%s)".as_ptr(),
-                    (*wl).idx,
-                    (*(*wl).window).name,
-                );
-                xasprintf(list.add(size), c"%d".as_ptr(), (*wl).idx);
+                tmp = format_nul!("{} ({})", (*wl).idx, _s((*(*wl).window).name),);
+                *list.add(size) = format_nul!("{}", (*wl).idx);
                 size += 1;
             } else {
-                xasprintf(
-                    &raw mut tmp,
-                    c"%s:%d (%s)".as_ptr(),
-                    (*s).name,
+                tmp = format_nul!(
+                    "{}:{} ({})",
+                    _s((*s).name),
                     (*wl).idx,
-                    (*(*wl).window).name,
+                    _s((*(*wl).window).name),
                 );
-                xasprintf(list.add(size), c"%s:%d".as_ptr(), (*s).name, (*wl).idx);
+                *list.add(size) = format_nul!("{}:{}", _s((*s).name), (*wl).idx);
                 size += 1;
             }
             item.name = SyncCharPtr::from_ptr(tmp);
@@ -2299,7 +2290,7 @@ unsafe extern "C" fn status_prompt_complete_window_menu(
         if size == 1 {
             menu_free(menu);
             if flag != b'\0' as i8 {
-                xasprintf(&raw mut tmp, c"-%c%s".as_ptr(), flag as i32, *list);
+                tmp = format_nul!("-{}{}", flag as u8 as char, _s(*list));
                 free_(*list);
             } else {
                 tmp = *list;
@@ -2380,22 +2371,22 @@ unsafe extern "C" fn status_prompt_complete_session(
         for loop_ in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
             if *s == b'\0' as i8 || strncmp((*loop_).name, s, strlen(s)) == 0 {
                 *list = xreallocarray_(*list, (*size) as usize + 2).as_ptr();
-                xasprintf((*list).add(*size as usize), c"%s:".as_ptr(), (*loop_).name);
+                *(*list).add(*size as usize) = format_nul!("{}:", _s((*loop_).name));
                 (*size) += 1;
             } else if *s == b'$' as i8 {
-                xsnprintf((&raw mut n).cast(), n.len(), c"%u".as_ptr(), (*loop_).id);
+                xsnprintf_!((&raw mut n).cast(), n.len(), "{}", (*loop_).id);
                 if *s.add(1) == b'\0' as i8
                     || strncmp((&raw mut n).cast(), s.add(1), strlen(s) - 1) == 0
                 {
                     *list = xreallocarray_(*list, (*size) as usize + 2).as_ptr();
-                    xasprintf((*list).add(*size as usize), c"$%s:".as_ptr(), n);
+                    *(*list).add(*size as usize) = format_nul!("${}:", _s((&raw const n).cast()));
                     (*size) += 1
                 }
             }
         }
         let mut out = status_prompt_complete_prefix(*list, *size);
         if !out.is_null() && flag != b'\0' as i8 {
-            xasprintf(&raw mut tmp, c"-%c%s".as_ptr(), flag as i32, out);
+            tmp = format_nul!("-{}{}", flag as u8 as char, _s(out));
             free_(out);
             out = tmp;
         }
@@ -2437,13 +2428,13 @@ unsafe extern "C" fn status_prompt_complete(
                 && strncmp(word, c"-s".as_ptr(), 2) != 0
             {
                 list = status_prompt_complete_list(&raw mut size, word, (offset == 0) as i32);
-                if size == 0 {
-                    out = null_mut();
+                out = if size == 0 {
+                    null_mut()
                 } else if size == 1 {
-                    xasprintf(&raw mut out, c"%s ".as_ptr(), *list);
+                    format_nul!("{} ", _s(*list))
                 } else {
-                    out = status_prompt_complete_prefix(list, size);
-                }
+                    status_prompt_complete_prefix(list, size)
+                };
                 break 'found;
             }
 

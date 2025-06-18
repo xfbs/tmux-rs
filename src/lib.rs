@@ -11,8 +11,6 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
-#![feature(c_variadic)]
 #![feature(iter_array_chunks)]
 #![allow(non_camel_case_types)]
 #![allow(non_upper_case_globals)]
@@ -55,7 +53,6 @@ pub use core::{
     ffi::{
         CStr, c_char, c_int, c_long, c_longlong, c_short, c_uchar, c_uint, c_ulonglong, c_ushort,
         c_void,
-        va_list::{VaList, VaListImpl},
     },
     mem::{ManuallyDrop, MaybeUninit, size_of, zeroed},
     ops::ControlFlow,
@@ -3058,10 +3055,10 @@ unsafe extern "C" {
 
 #[macro_use] // log_debug
 mod log;
-use crate::log::log_debug;
 pub use crate::log::{
     fatal, fatalx, log_add_level, log_close, log_get_level, log_open, log_toggle,
 };
+use crate::log::{fatalx_, log_debug};
 
 pub const MENU_NOMOUSE: i32 = 0x1;
 pub const MENU_TAB: i32 = 0x2;
@@ -3108,10 +3105,10 @@ pub use crate::hyperlinks_::{
 };
 
 pub mod xmalloc;
+use crate::xmalloc::{format_nul, xsnprintf_};
 pub use crate::xmalloc::{
-    free_, memcpy_, memcpy__, xasprintf, xasprintf_, xcalloc, xcalloc_, xcalloc__, xcalloc1,
-    xmalloc, xmalloc_, xrealloc, xrealloc_, xreallocarray_, xsnprintf, xstrdup, xstrdup_,
-    xvasprintf,
+    free_, memcpy_, memcpy__, xcalloc, xcalloc_, xcalloc__, xcalloc1, xmalloc, xmalloc_, xrealloc,
+    xrealloc_, xreallocarray_, xstrdup, xstrdup_,
 };
 
 pub mod tmux_protocol;
@@ -3121,8 +3118,8 @@ pub use crate::tmux_protocol::{
 };
 
 unsafe extern "C-unwind" {
-    pub fn vsnprintf(_: *mut c_char, _: usize, _: *const c_char, _: VaList) -> c_int;
-    pub fn vasprintf(_: *mut *mut c_char, _: *const c_char, _: VaList) -> c_int;
+    pub fn vsnprintf(_: *mut c_char, _: usize, _: *const c_char, _: ...) -> c_int;
+    pub fn vasprintf(_: *mut *mut c_char, _: *const c_char, _: ...) -> c_int;
 }
 
 unsafe impl Sync for SyncCharPtr {}
@@ -3196,8 +3193,12 @@ impl std::fmt::Display for _s {
             return f.write_str("(null)");
         }
 
-        let len = if let Some(width) = f.width() {
-            width
+        // TODO alignment
+
+        let len = if let Some(width) = f.precision() {
+            unsafe { libc::strnlen(self.0, width) }
+        } else if let Some(width) = f.width() {
+            unsafe { libc::strnlen(self.0, width) }
         } else {
             unsafe { libc::strlen(self.0) }
         };

@@ -229,7 +229,7 @@ pub unsafe extern "C" fn utf8_from_data(ud: *const utf8_data, uc: *mut utf8_char
         let mut index: u32 = 0;
         'fail: {
             if (*ud).width > 2 {
-                fatalx_c(c"invalid UTF-8 width: %u".as_ptr(), (*ud).width as u32);
+                fatalx_!("invalid UTF-8 width: {}", (*ud).width);
             }
 
             if (*ud).size > UTF8_SIZE as u8 {

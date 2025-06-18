@@ -11,7 +11,7 @@
 // called by a name other than "ssh" or "Secure Shell".
 
 use ::core::{
-    ffi::{CStr, VaList, c_char, c_int, c_void},
+    ffi::{CStr, c_char, c_int, c_void},
     mem::MaybeUninit,
     num::NonZero,
     ptr::NonNull,
@@ -207,71 +207,75 @@ pub unsafe extern "C" fn xstrndup(str: *const c_char, maxlen: usize) -> NonNull<
 // #[allow(improper_ctypes_definitions, reason = "must be extern C to use c variadics")]
 // pub unsafe extern "C" fn xasprintf__(args: std::fmt::Arguments<'_>) -> NonNull<c_char> {}
 
-#[allow(
-    improper_ctypes_definitions,
-    reason = "must be extern C to use c variadics"
-)]
-pub unsafe extern "C" fn xasprintf_(fmt: &CStr, mut args: ...) -> NonNull<c_char> {
-    let mut ret = core::ptr::null_mut();
-    unsafe { xvasprintf(&raw mut ret, fmt.as_ptr(), args.as_va_list()) };
-    NonNull::new(ret).unwrap()
+macro_rules! format_nul {
+   ($fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::xmalloc::format_nul_(format_args!($fmt $(, $args)*))
+    };
+}
+pub(crate) use format_nul;
+pub(crate) fn format_nul_(args: std::fmt::Arguments) -> *mut c_char {
+    let mut s = args.to_string();
+    s.push('\0');
+    s.leak().as_mut_ptr().cast()
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn xasprintf(
-    ret: *mut *mut c_char,
-    fmt: *const c_char,
-    mut args: ...
-) -> c_int {
-    unsafe { xvasprintf(ret, fmt, args.as_va_list()) }
+macro_rules! xsnprintf_ {
+   ($out:expr, $len:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::xmalloc::xsnprintf__($out, $len, format_args!($fmt $(, $args)*))
+    };
 }
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn xvasprintf(
-    ret: *mut *mut c_char,
-    fmt: *const c_char,
-    args: VaList,
-) -> c_int {
-    unsafe {
-        let i = vasprintf(ret, fmt, args);
-
-        if i == -1 {
-            panic!("xasprintf");
-        }
-
-        i
-    }
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn xsnprintf(
-    str: *mut c_char,
+pub(crate) use xsnprintf_;
+pub(crate) unsafe fn xsnprintf__(
+    out: *mut c_char,
     len: usize,
-    fmt: *const c_char,
-    mut args: ...
-) -> c_int {
-    unsafe { xvsnprintf(str, len, fmt, args.as_va_list()) }
-}
+    args: std::fmt::Arguments,
+) -> std::io::Result<usize> {
+    use std::io::Write;
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn xvsnprintf(
-    str: *mut c_char,
-    len: usize,
-    fmt: *const c_char,
-    args: VaList,
-) -> c_int {
-    unsafe {
-        if len > i32::MAX as usize {
-            panic!("xsnprintf: len > INT_MAX");
-        }
-
-        let i = vsnprintf(str, len, fmt, args);
-        if i < 0 || i >= len as c_int {
-            panic!("xsnprintf: overflow");
-        }
-
-        i
+    struct WriteAdapter {
+        buffer: *mut c_char,
+        length: usize,
+        written: usize,
     }
+    impl WriteAdapter {
+        fn new(buffer: *mut c_char, length: usize) -> Self {
+            Self {
+                buffer,
+                length,
+                written: 0,
+            }
+        }
+    }
+
+    impl std::io::Write for WriteAdapter {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            let remaining = self.length - self.written;
+            let write_amount = buf.len().min(remaining);
+
+            unsafe {
+                std::ptr::copy_nonoverlapping(
+                    buf.as_ptr(),
+                    self.buffer.add(self.written).cast(),
+                    write_amount,
+                );
+            }
+            self.written += write_amount;
+
+            Ok(write_amount)
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    let mut adapter = WriteAdapter::new(out, len);
+    adapter.write_fmt(args)?;
+    if adapter.write(&[0])? == 0 {
+        return Err(std::io::ErrorKind::WriteZero.into());
+    }
+
+    Ok(adapter.written)
 }
 
 pub unsafe fn free_<T>(p: *mut T) {

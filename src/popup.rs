@@ -1050,7 +1050,7 @@ pub unsafe extern "C" fn popup_editor(
         let py = ((*c).tty.sy / 2).wrapping_sub(sy / 2);
 
         let mut cmd: *mut c_char = null_mut();
-        xasprintf(&raw mut cmd, c"%s %s".as_ptr(), editor, path.as_ptr());
+        cmd = format_nul!("{} {}", _s(editor), _s(path.as_ptr()));
         if popup_display(
             POPUP_INTERNAL | POPUP_CLOSEEXIT,
             box_lines::BOX_LINES_DEFAULT,

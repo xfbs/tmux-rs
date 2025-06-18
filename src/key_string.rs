@@ -553,14 +553,9 @@ pub unsafe extern "C" fn key_string_lookup_key(
                     tmp[0] = key as c_char;
                     tmp[1] = b'\0' as c_char;
                 } else if key == 127 {
-                    xsnprintf(&raw mut tmp as *mut c_char, sizeof_tmp, c"C-?".as_ptr());
+                    xsnprintf_!(&raw mut tmp as *mut c_char, sizeof_tmp, "C-?");
                 } else if key >= 128 {
-                    xsnprintf(
-                        &raw mut tmp as *mut c_char,
-                        sizeof_tmp,
-                        c"\\%llo".as_ptr(),
-                        key,
-                    );
+                    xsnprintf_!(&raw mut tmp as *mut c_char, sizeof_tmp, "\\{:o}", key,);
                 }
 
                 strlcat(

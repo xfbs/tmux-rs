@@ -155,7 +155,7 @@ pub unsafe extern "C" fn client_connect(
                     close(fd);
 
                     if locked == 0 {
-                        xasprintf(&raw mut lockfile, c"%s.lock".as_ptr(), path);
+                        lockfile = format_nul!("{}.lock", _s(path));
                         lockfd = client_get_lock(lockfile);
                         if lockfd < 0 {
                             log_debug!("didn't get lock ({})", lockfd);
@@ -211,11 +211,11 @@ pub unsafe extern "C" fn client_exit_message() -> *const c_char {
         client_exitreason::CLIENT_EXIT_DETACHED => {
             unsafe {
                 if !client_exitsession.is_null() {
-                    xsnprintf(
+                    xsnprintf_!(
                         &raw mut msg as _,
                         size_of::<msgbuf>(),
-                        c"detached (from session %s)".as_ptr(),
-                        client_exitsession,
+                        "detached (from session {})",
+                        _s(client_exitsession),
                     );
                     return &raw mut msg as _;
                 }
@@ -225,11 +225,12 @@ pub unsafe extern "C" fn client_exit_message() -> *const c_char {
         client_exitreason::CLIENT_EXIT_DETACHED_HUP => {
             unsafe {
                 if !client_exitsession.is_null() {
-                    xsnprintf(
+                    let tmp = client_exitsession;
+                    xsnprintf_!(
                         &raw mut msg as _,
                         size_of::<msgbuf>(),
-                        c"detached and SIGHUP (from session %s)".as_ptr(),
-                        client_exitsession,
+                        "detached and SIGHUP (from session {})",
+                        _s(tmp),
                     );
                     return &raw mut msg as _;
                 }

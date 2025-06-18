@@ -192,7 +192,7 @@ unsafe extern "C" fn cmd_source_file_exec(self_: *mut cmd, item: *mut cmdq_item)
             if *path == b'/' as c_char {
                 pattern = xstrdup(path).as_ptr();
             } else {
-                xasprintf(&raw mut pattern, c"%s/%s".as_ptr(), cwd, path);
+                pattern = format_nul!("{}/{}", _s(cwd), _s(path));
             }
             log_debug!("{}: {}", __func__, _s(pattern));
 

@@ -158,7 +158,7 @@ pub unsafe extern "C" fn args_parse_flag_argument(
             } else {
                 argument = values.add(*i as usize);
                 if (*argument).type_ != args_type::ARGS_STRING {
-                    xasprintf(cause, c"-%c argument must be a string".as_ptr(), flag);
+                    *cause = format_nul!("-{} argument must be a string", flag as u8 as char);
                     args_free_value(new);
                     free(new as _);
                     return -1;
@@ -173,7 +173,7 @@ pub unsafe extern "C" fn args_parse_flag_argument(
                     args_set(args, flag as c_uchar, null_mut(), ARGS_ENTRY_OPTIONAL_VALUE);
                     return 0; /* either - or end */
                 }
-                xasprintf(cause, c"-%c expects an argument".as_ptr(), flag);
+                *cause = format_nul!("-{} expects an argument", flag as u8 as char);
                 return -1;
             }
 
@@ -232,13 +232,13 @@ pub unsafe extern "C" fn args_parse_flags(
                 return -1;
             }
             if !flag.is_ascii_alphanumeric() {
-                xasprintf(cause, c"invalid flag -%c".as_ptr(), flag as i32);
+                *cause = format_nul!("invalid flag -{}", flag as char);
                 return -1;
             }
 
             let found = strchr((*parse).template, flag as i32);
             if found.is_null() {
-                xasprintf(cause, c"unknown flag -%c".as_ptr(), flag as i32);
+                *cause = format_nul!("unknown flag -{}", flag as char);
                 return -1;
             }
             if *found.add(1) != b':' as c_char {
@@ -333,11 +333,7 @@ pub unsafe extern "C" fn args_parse(
                     args_parse_type::ARGS_PARSE_INVALID => fatalx(c"unexpected argument type"),
                     args_parse_type::ARGS_PARSE_STRING => {
                         if (*value).type_ != args_type::ARGS_STRING {
-                            xasprintf(
-                                cause,
-                                c"argument %u must be \"string\"".as_ptr(),
-                                (*args).count,
-                            );
+                            *cause = format_nul!("argument {} must be \"string\"", (*args).count,);
                             args_free(args);
                             return null_mut();
                         }
@@ -346,11 +342,8 @@ pub unsafe extern "C" fn args_parse(
                     args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING => args_copy_value(new, value),
                     args_parse_type::ARGS_PARSE_COMMANDS => {
                         if (*value).type_ != args_type::ARGS_COMMANDS {
-                            xasprintf(
-                                cause,
-                                c"argument %u must be { commands }".as_ptr(),
-                                (*args).count,
-                            );
+                            *cause =
+                                format_nul!("argument {} must be {{ commands }}", (*args).count,);
                             args_free(args);
                             return null_mut();
                         }
@@ -362,20 +355,12 @@ pub unsafe extern "C" fn args_parse(
         }
 
         if (*parse).lower != -1 && (*args).count < (*parse).lower as u32 {
-            xasprintf(
-                cause,
-                c"too few arguments (need at least %u)".as_ptr(),
-                (*parse).lower,
-            );
+            *cause = format_nul!("too few arguments (need at least {})", (*parse).lower);
             args_free(args);
             return null_mut();
         }
         if (*parse).upper != -1 && (*args).count > (*parse).upper as u32 {
-            xasprintf(
-                cause,
-                c"too many arguments (need at most %u)".as_ptr(),
-                (*parse).upper,
-            );
+            *cause = format_nul!("too many arguments (need at most {})", (*parse).upper);
             args_free(args);
             return null_mut();
         }
@@ -655,8 +640,7 @@ pub unsafe extern "C" fn args_escape(s: *const c_char) -> *mut c_char {
         let mut quotes: i32 = 0;
 
         if *s == b'\0' as c_char {
-            xasprintf(&raw mut result, c"''".as_ptr());
-            return result;
+            return format_nul!("''");
         }
         if *s.add(strcspn(s, dquoted)) != b'\0' as _ {
             quotes = b'"' as _;
@@ -665,7 +649,7 @@ pub unsafe extern "C" fn args_escape(s: *const c_char) -> *mut c_char {
         }
 
         if *s != b' ' as _ && *s.add(1) == b'\0' as _ && (quotes != 0 || *s == b'~' as _) {
-            xasprintf(&raw mut escaped, c"\\%c".as_ptr(), *s as i32);
+            escaped = format_nul!("\\{}", *s as u8 as char);
             return escaped;
         }
 
@@ -675,21 +659,21 @@ pub unsafe extern "C" fn args_escape(s: *const c_char) -> *mut c_char {
         }
         utf8_stravis(&raw mut escaped, s, flags);
 
-        if quotes == b'\'' as i32 {
-            xasprintf(&raw mut result, c"'%s'".as_ptr(), escaped);
+        let result = if quotes == b'\'' as i32 {
+            format_nul!("'{}'", _s(escaped))
         } else if quotes == b'"' as i32 {
             if *escaped == b'~' as i8 {
-                xasprintf(&raw mut result, c"\"\\%s\"".as_ptr(), escaped);
+                format_nul!("\"\\{}\"", _s(escaped))
             } else {
-                xasprintf(&raw mut result, c"\"%s\"".as_ptr(), escaped);
+                format_nul!("\"{}\"", _s(escaped))
             }
         } else {
             if *escaped == b'~' as i8 {
-                xasprintf(&raw mut result, c"\\%s".as_ptr(), escaped);
+                format_nul!("\\{}", _s(escaped))
             } else {
-                result = xstrdup(escaped).as_ptr();
+                xstrdup(escaped).as_ptr()
             }
-        }
+        };
         free_(escaped);
 
         result
@@ -967,9 +951,7 @@ pub unsafe extern "C" fn args_make_commands_get_command(
             return xstrdup((*cmd_get_entry(first)).name).as_ptr();
         }
         let n = strcspn((*state).cmd, c" ,".as_ptr());
-        let mut s = null_mut();
-        xasprintf(&raw mut s, c"%.*s".as_ptr(), n, (*state).cmd);
-        s
+        format_nul!("{1:0$}", n, _s((*state).cmd))
     }
 }
 

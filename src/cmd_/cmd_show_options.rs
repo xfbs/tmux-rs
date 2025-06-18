@@ -169,7 +169,7 @@ pub unsafe extern "C" fn cmd_show_options_print(
         let mut escaped = null_mut();
 
         if idx != -1 {
-            xasprintf(&raw mut tmp, c"%s[%d]".as_ptr(), name, idx);
+            tmp = format_nul!("{}[{}]", _s(name), idx);
             name = tmp;
         } else {
             if options_is_array(o) != 0 {

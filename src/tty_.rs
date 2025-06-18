@@ -50,11 +50,11 @@ pub unsafe extern "C" fn tty_create_log() {
     unsafe {
         let mut name: [c_char; 64] = [0; 64];
 
-        xsnprintf(
+        xsnprintf_!(
             (&raw mut name).cast(),
             64,
-            c"tmux-out-%ld.log".as_ptr(),
-            libc::getpid() as i64,
+            "tmux-out-{}.log",
+            libc::getpid()
         );
 
         tty_log_fd = libc::open(
@@ -856,14 +856,7 @@ pub unsafe extern "C" fn tty_force_cursor_colour(tty: *mut tty, mut c: i32) {
             tty_putcode(tty, tty_code_code::TTYC_CR);
         } else {
             let (r, g, b) = colour_split_rgb_(c);
-            xsnprintf(
-                (&raw mut s).cast(),
-                13,
-                c"rgb:%02hhx/%02hhx/%02hhx".as_ptr(),
-                r as u32,
-                g as u32,
-                b as u32,
-            );
+            xsnprintf_!((&raw mut s).cast(), 13, "rgb:{:02x}/{:02x}/{:02x}", r, g, b,);
             tty_putcode_s(tty, tty_code_code::TTYC_CS, (&raw const s).cast());
         }
         (*tty).ccolour = c;
@@ -1594,10 +1587,10 @@ pub unsafe extern "C" fn tty_clear_area(
             if (*(*tty).term).flags.intersects(term_flags::TERM_DECFRA)
                 && !COLOUR_DEFAULT(bg as i32)
             {
-                xsnprintf(
+                xsnprintf_!(
                     (&raw mut tmp).cast(),
                     sizeof_tmp,
-                    c"\x1b[32;%u;%u;%u;%u$x".as_ptr(),
+                    "\x1b[32;{};{};{};{}$x",
                     py + 1,
                     px + 1,
                     py + ny,
@@ -3793,12 +3786,7 @@ pub unsafe extern "C" fn tty_colours_fg(tty: *mut tty, gc: *const grid_cell) {
             /* Is this an aixterm bright colour? */
             if (*gc).fg >= 90 && (*gc).fg <= 97 {
                 if (*(*tty).term).flags.intersects(term_flags::TERM_256COLOURS) {
-                    xsnprintf(
-                        (&raw mut s).cast(),
-                        sizeof_s,
-                        c"\x1b[%dm".as_ptr(),
-                        (*gc).fg,
-                    );
+                    xsnprintf_!((&raw mut s).cast(), sizeof_s, "\x1b[{}m", (*gc).fg,);
                     tty_puts(tty, (&raw const s).cast());
                 } else {
                     tty_putcode_i(tty, tty_code_code::TTYC_SETAF, (*gc).fg - 90 + 8);
@@ -3835,12 +3823,7 @@ pub unsafe extern "C" fn tty_colours_bg(tty: *mut tty, gc: *const grid_cell) {
             /* Is this an aixterm bright colour? */
             if (*gc).bg >= 90 && (*gc).bg <= 97 {
                 if (*(*tty).term).flags.intersects(term_flags::TERM_256COLOURS) {
-                    xsnprintf(
-                        (&raw mut s).cast(),
-                        sizeof_s,
-                        c"\x1b[%dm".as_ptr(),
-                        (*gc).bg + 10,
-                    );
+                    xsnprintf_!((&raw mut s).cast(), sizeof_s, "\x1b[{}m", (*gc).bg + 10,);
                     tty_puts(tty, (&raw const s).cast());
                 } else {
                     tty_putcode_i(tty, tty_code_code::TTYC_SETAB, (*gc).bg - 90 + 8);

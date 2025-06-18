@@ -32,8 +32,7 @@ pub unsafe extern "C" fn osdep_get_name(fd: i32, tty: *const c_char) -> *mut c_c
             return null_mut();
         }
 
-        let mut path = null_mut();
-        xasprintf(&raw mut path, c"/proc/%lld/cmdline".as_ptr(), pgrp as i64);
+        let mut path = format_nul!("/proc/{pgrp}/cmdline");
         let f = fopen(path, c"r".as_ptr());
         if f.is_null() {
             free_(path);
@@ -77,14 +76,13 @@ pub unsafe extern "C" fn osdep_get_cwd(fd: i32) -> *const c_char {
             return null_mut();
         }
 
-        let mut path = null_mut();
-        xasprintf(&raw mut path, c"/proc/%lld/cwd".as_ptr(), pgrp);
+        let mut path = format_nul!("/proc/{pgrp}/cwd");
         let mut n = libc::readlink(path, target, MAXPATHLEN);
         free_(path);
 
         let mut sid: pid_t = 0;
         if n == -1 && ioctl(fd, TIOCGSID, &raw mut sid) != -1 {
-            xasprintf(&raw mut path, c"/proc/%lld/cwd".as_ptr(), sid as i64);
+            path = format_nul!("/proc/{sid}/cwd");
             n = readlink(path, target, MAXPATHLEN);
             free_(path);
         }

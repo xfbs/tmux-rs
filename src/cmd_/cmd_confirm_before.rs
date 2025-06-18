@@ -77,14 +77,13 @@ unsafe extern "C" fn cmd_confirm_before_exec(self_: *mut cmd, item: *mut cmdq_it
 
         let prompt = args_get(args, b'p');
         if !prompt.is_null() {
-            xasprintf(&raw mut new_prompt, c"%s ".as_ptr(), prompt);
+            new_prompt = format_nul!("{} ", _s(prompt));
         } else {
             let cmd = (*cmd_get_entry(cmd_list_first((*cdata).cmdlist))).name;
-            xasprintf(
-                &raw mut new_prompt,
-                c"Confirm '%s'? (%c/n) ".as_ptr(),
-                cmd,
-                (*cdata).confirm_key as u32,
+            new_prompt = format_nul!(
+                "Confirm '{}'? ({}/n) ",
+                _s(cmd),
+                (*cdata).confirm_key as char
             );
         }
 

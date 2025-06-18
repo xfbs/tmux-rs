@@ -143,11 +143,11 @@ pub unsafe extern "C" fn session_create(
                 s.id = next_session_id;
                 next_session_id += 1;
                 free_(s.name);
-                if !prefix.is_null() {
-                    xasprintf(&raw mut s.name, c"%s-%u".as_ptr(), prefix, s.id);
+                s.name = if !prefix.is_null() {
+                    format_nul!("{}-{}", _s(prefix), s.id)
                 } else {
-                    xasprintf(&raw mut s.name, c"%u".as_ptr(), s.id);
-                }
+                    format_nul!("{}", s.id)
+                };
 
                 if rb_find(&raw mut sessions, s).is_null() {
                     break;
@@ -403,7 +403,7 @@ pub unsafe extern "C" fn session_attach(
         let wl = winlink_add(&raw mut (*s).windows, idx);
 
         if wl.is_null() {
-            xasprintf(cause, c"index in use: %d".as_ptr(), idx);
+            *cause = format_nul!("index in use: {}", idx);
             return null_mut();
         }
         (*wl).session = s;

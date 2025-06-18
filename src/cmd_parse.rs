@@ -125,9 +125,7 @@ pub unsafe extern "C" fn cmd_parse_get_error(
         if file.is_null() {
             xstrdup(error)
         } else {
-            let mut s = null_mut();
-            xasprintf(&raw mut s, c"%s:%u: %s".as_ptr(), file, line, error);
-            NonNull::new_unchecked(s)
+            NonNull::new_unchecked(format_nul!("{}:{}: {}", _s(file), line, _s(error)))
         }
     }
 }
@@ -279,8 +277,7 @@ pub unsafe extern "C" fn cmd_parse_log_commands(
                         log_debug!("{} {}:{}: {}", _s(prefix), i, j, _s((*arg).string))
                     }
                     cmd_parse_argument_type::CMD_PARSE_COMMANDS => {
-                        let mut s = null_mut();
-                        xasprintf(&raw mut s, c"%s %u:%u".as_ptr(), prefix, i, j);
+                        let s = format_nul!("{} {}:{}", _s(prefix), i, j);
                         cmd_parse_log_commands((*arg).commands, s);
                         free_(s);
                     }
@@ -789,7 +786,12 @@ mod lexer {
     }
 }
 
-unsafe extern "C" fn yyerror(ps: *mut cmd_parse_state, fmt: *const c_char, mut ap: ...) -> i32 {
+macro_rules! yyerror {
+   ($ps:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
+        crate::cmd_parse::yyerror_($ps, format_args!($fmt $(, $args)*))
+    };
+}
+unsafe fn yyerror_(ps: *mut cmd_parse_state, args: std::fmt::Arguments) -> i32 {
     unsafe {
         let mut pi: *mut cmd_parse_input = (*ps).input;
 
@@ -797,11 +799,10 @@ unsafe extern "C" fn yyerror(ps: *mut cmd_parse_state, fmt: *const c_char, mut a
             return 0;
         }
 
-        let mut error = null_mut();
-        xvasprintf(&raw mut error, fmt, ap.as_va_list());
+        let mut error = args.to_string();
+        error.push('\0');
 
-        (*ps).error = cmd_parse_get_error((*pi).file, (*pi).line, error).as_ptr();
-        free_(error);
+        (*ps).error = cmd_parse_get_error((*pi).file, (*pi).line, error.as_ptr().cast()).as_ptr();
         0
     }
 }
@@ -1159,11 +1160,11 @@ unsafe fn yylex_token_variable(
                     yylex_ungetc(ps, ch);
                     break;
                 }
-                yyerror(ps, c"invalid environment variable".as_ptr());
+                yyerror!(ps, "invalid environment variable");
                 return false;
             }
             if namelen == sizeof_name - 2 {
-                yyerror(ps, c"environment variable is too long".as_ptr());
+                yyerror!(ps, "environment variable is too long");
                 return false;
             }
             name[namelen] = ch as i8;
@@ -1205,7 +1206,7 @@ unsafe fn yylex_token_tilde(
                 break;
             }
             if namelen == sizeof_name - 2 {
-                yyerror(ps, c"user name is too long".as_ptr());
+                yyerror!(ps, "user name is too long");
                 return false;
             }
             name[namelen] = ch as i8;
@@ -1397,7 +1398,7 @@ unsafe fn yylex_token_escape(
             let mut ch = yylex_getc(ps);
 
             if (ch >= '4' as i32 && ch <= '7' as i32) {
-                yyerror(ps, c"invalid octal escape".as_ptr());
+                yyerror!(ps, "invalid octal escape");
                 return false;
             }
             if (ch >= '0' as i32 && ch <= '3' as i32) {
@@ -1410,7 +1411,7 @@ unsafe fn yylex_token_escape(
                         return true;
                     }
                 }
-                yyerror(ps, c"invalid octal escape".as_ptr());
+                yyerror!(ps, "invalid octal escape");
                 return false;
             }
 
@@ -1452,7 +1453,7 @@ unsafe fn yylex_token_escape(
                 return false;
             }
             if !(ch as u8).is_ascii_hexdigit() {
-                yyerror(ps, c"invalid \\%c argument".as_ptr(), type_);
+                yyerror!(ps, "invalid \\{} argument", type_ as u8 as char);
                 return false;
             }
             s[i] = ch as i8;
@@ -1462,12 +1463,12 @@ unsafe fn yylex_token_escape(
         if ((size == 4 && libc::sscanf((&raw mut s).cast(), c"%4x".as_ptr(), &raw mut tmp) != 1)
             || (size == 8 && libc::sscanf((&raw mut s).cast(), c"%8x".as_ptr(), &raw mut tmp) != 1))
         {
-            yyerror(ps, c"invalid \\%c argument".as_ptr(), type_);
+            yyerror!(ps, "invalid \\{} argument", type_ as u8 as char);
             return false;
         }
         let mlen = wctomb((&raw mut m).cast(), tmp as i32);
         if mlen <= 0 || mlen > sizeof_m as i32 {
-            yyerror(ps, c"invalid \\%c argument".as_ptr(), type_);
+            yyerror!(ps, "invalid \\{} argument", type_ as u8 as char);
             return false;
         }
         yylex_append(buf, len, (&raw const m).cast(), mlen as usize);

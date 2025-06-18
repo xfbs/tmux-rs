@@ -147,11 +147,9 @@ pub unsafe extern "C" fn hyperlinks_put(
                 return (*hlu).inner;
             }
         }
-        xasprintf(
-            &raw mut external_id,
-            c"tmux%llX".as_ptr(),
-            hyperlinks_next_external_id,
-        );
+
+        let id = hyperlinks_next_external_id;
+        external_id = format_nul!("tmux{:X}", id);
         hyperlinks_next_external_id += 1;
 
         let hlu = xcalloc1::<hyperlinks_uri>() as *mut hyperlinks_uri;

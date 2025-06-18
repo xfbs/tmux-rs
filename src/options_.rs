@@ -147,12 +147,12 @@ pub unsafe extern "C" fn options_parent_table_entry(
 ) -> *const options_table_entry {
     unsafe {
         if (*oo).parent.is_null() {
-            fatalx_c(c"no parent options for %s".as_ptr(), s);
+            fatalx_!("no parent options for {}", _s(s));
         }
 
         let o = options_get((*oo).parent, s);
         if o.is_null() {
-            fatalx_c(c"%s not in parent options".as_ptr(), s);
+            fatalx_!("{} not in parent options", _s(s));
         }
 
         (*o).tableentry
@@ -185,35 +185,35 @@ pub unsafe extern "C" fn options_value_to_string(
         }
 
         if OPTIONS_IS_NUMBER(o) {
-            match (*(*o).tableentry).type_ {
+            s = match (*(*o).tableentry).type_ {
                 options_table_type::OPTIONS_TABLE_NUMBER => {
-                    xasprintf(&raw mut s, c"%lld".as_ptr(), (*ov).number);
+                    format_nul!("{}", (*ov).number)
                 }
                 options_table_type::OPTIONS_TABLE_KEY => {
-                    s = xstrdup(key_string_lookup_key((*ov).number as u64, 0)).as_ptr();
+                    xstrdup(key_string_lookup_key((*ov).number as u64, 0)).as_ptr()
                 }
                 options_table_type::OPTIONS_TABLE_COLOUR => {
-                    s = xstrdup(colour_tostring((*ov).number as i32)).as_ptr();
+                    xstrdup(colour_tostring((*ov).number as i32)).as_ptr()
                 }
                 options_table_type::OPTIONS_TABLE_FLAG => {
                     if numeric != 0 {
-                        xasprintf(&mut s, c"%lld".as_ptr(), (*ov).number);
+                        format_nul!("{}", (*ov).number)
                     } else {
-                        s = xstrdup(if (*ov).number != 0 {
+                        xstrdup(if (*ov).number != 0 {
                             c"on".as_ptr()
                         } else {
                             c"off".as_ptr()
                         })
-                        .as_ptr();
+                        .as_ptr()
                     }
                 }
                 options_table_type::OPTIONS_TABLE_CHOICE => {
-                    s = xstrdup(*(*(*o).tableentry).choices.add((*ov).number as usize)).as_ptr();
+                    xstrdup(*(*(*o).tableentry).choices.add((*ov).number as usize)).as_ptr()
                 }
                 _ => {
                     fatalx(c"not a number option type");
                 }
-            }
+            };
             return s;
         }
 
@@ -381,9 +381,7 @@ pub unsafe extern "C" fn options_default_to_string(
             options_table_type::OPTIONS_TABLE_STRING
             | options_table_type::OPTIONS_TABLE_COMMAND => xstrdup((*oe).default_str),
             options_table_type::OPTIONS_TABLE_NUMBER => {
-                let mut s = null_mut();
-                xasprintf(&mut s, c"%lld".as_ptr(), (*oe).default_num);
-                NonNull::new(s).unwrap()
+                NonNull::new(format_nul!("{}", (*oe).default_num)).unwrap()
             }
             options_table_type::OPTIONS_TABLE_KEY => {
                 xstrdup(key_string_lookup_key((*oe).default_num as u64, 0))
@@ -559,9 +557,7 @@ pub unsafe extern "C" fn options_array_set(
         if OPTIONS_IS_STRING(o) {
             let mut a = options_array_item(o, idx);
             let new = if !a.is_null() && append != 0 {
-                let mut new = null_mut();
-                xasprintf(&mut new, c"%s%s".as_ptr(), (*a).value.string, value);
-                new
+                format_nul!("{}{}", _s((*a).value.string), _s(value))
             } else {
                 xstrdup(value).as_ptr()
             };
@@ -580,7 +576,7 @@ pub unsafe extern "C" fn options_array_set(
         {
             let number = colour_fromstring(value);
             if number == -1 {
-                xasprintf(cause, c"bad colour: %s".as_ptr(), value);
+                *cause = format_nul!("bad colour: {}", _s(value));
                 return -1;
             }
             let mut a = options_array_item(o, idx);
@@ -715,8 +711,7 @@ pub unsafe extern "C" fn options_to_string(
                     if last.is_null() {
                         result = next;
                     } else {
-                        let mut new_result = null_mut();
-                        xasprintf(&mut new_result, c"%s %s".as_ptr(), last, next);
+                        let mut new_result = format_nul!("{} {}", _s(last), _s(next));
                         free_(last);
                         free_(next);
                         result = new_result;
@@ -883,10 +878,10 @@ pub unsafe extern "C" fn options_get_string(
     unsafe {
         let o = options_get(oo, name);
         if o.is_null() {
-            fatalx_c(c"missing option %s".as_ptr(), name);
+            fatalx_!("missing option {}", _s(name));
         }
         if !OPTIONS_IS_STRING(o) {
-            fatalx_c(c"option %s is not a string".as_ptr(), name);
+            fatalx_!("option {} is not a string", _s(name));
         }
         (*o).value.string
     }
@@ -897,10 +892,10 @@ pub unsafe extern "C" fn options_get_number(oo: *mut options, name: *const c_cha
     unsafe {
         let o = options_get(oo, name);
         if o.is_null() {
-            fatalx_c(c"missing option %s".as_ptr(), name);
+            fatalx_!("missing option {}", _s(name));
         }
         if !OPTIONS_IS_NUMBER(o) {
-            fatalx_c(c"option %s is not a number".as_ptr(), name);
+            fatalx_!("option {} is not a number", _s(name));
         }
         (*o).value.number
     }
@@ -910,10 +905,10 @@ pub unsafe fn options_get_number_(oo: *mut options, name: &CStr) -> i64 {
     unsafe {
         let o = options_get_(oo, name);
         if o.is_null() {
-            fatalx_c(c"missing option %s".as_ptr(), name);
+            fatalx_!("missing option {}", _s(name.as_ptr()));
         }
         if !OPTIONS_IS_NUMBER(o) {
-            fatalx_c(c"option %s is not a number".as_ptr(), name);
+            fatalx_!("option {} is not a number", _s(name.as_ptr()));
         }
         (*o).value.number
     }
@@ -948,13 +943,7 @@ pub unsafe fn options_set_string_(
                     separator = c"".as_ptr();
                 }
             }
-            xasprintf(
-                &raw mut value,
-                c"%s%s%s".as_ptr(),
-                (*o).value.string,
-                separator,
-                s,
-            );
+            value = format_nul!("{}{}{}", _s((*o).value.string), _s(separator), _s(s),);
             free_(s);
         } else {
             value = s;
@@ -1035,7 +1024,7 @@ pub unsafe extern "C" fn options_scope_from_name(
         }
 
         if (*oe).name.is_null() {
-            xasprintf(cause, c"unknown option: %s".as_ptr(), name);
+            *cause = format_nul!("unknown option: {}", _s(name));
             return OPTIONS_TABLE_NONE;
         }
 
@@ -1050,9 +1039,9 @@ pub unsafe extern "C" fn options_scope_from_name(
                     *oo = global_s_options;
                     scope = OPTIONS_TABLE_SESSION;
                 } else if s.is_null() && !target.is_null() {
-                    xasprintf(cause, c"no such session: %s".as_ptr(), target);
+                    *cause = format_nul!("no such session: {}", _s(target));
                 } else if s.is_null() {
-                    xasprintf(cause, c"no current session".as_ptr());
+                    *cause = format_nul!("no current session");
                 } else {
                     *oo = (*s).options;
                     scope = OPTIONS_TABLE_SESSION;
@@ -1061,9 +1050,9 @@ pub unsafe extern "C" fn options_scope_from_name(
             OPTIONS_TABLE_WINDOW_AND_PANE => {
                 if args_has_(args, 'p') {
                     if wp.is_null() && !target.is_null() {
-                        xasprintf(cause, c"no such pane: %s".as_ptr(), target);
+                        *cause = format_nul!("no such pane: {}", _s(target));
                     } else if wp.is_null() {
-                        xasprintf(cause, c"no current pane".as_ptr());
+                        *cause = format_nul!("no current pane");
                     } else {
                         *oo = (*wp).options;
                         scope = OPTIONS_TABLE_PANE;
@@ -1074,9 +1063,9 @@ pub unsafe extern "C" fn options_scope_from_name(
                         *oo = global_w_options;
                         scope = OPTIONS_TABLE_WINDOW;
                     } else if wl.is_null() && !target.is_null() {
-                        xasprintf(cause, c"no such window: %s".as_ptr(), target);
+                        *cause = format_nul!("no such window: {}", _s(target));
                     } else if wl.is_null() {
-                        xasprintf(cause, c"no current window".as_ptr());
+                        *cause = format_nul!("no current window");
                     } else {
                         *oo = (*(*wl).window).options;
                         scope = OPTIONS_TABLE_WINDOW;
@@ -1088,9 +1077,9 @@ pub unsafe extern "C" fn options_scope_from_name(
                     *oo = global_w_options;
                     scope = OPTIONS_TABLE_WINDOW;
                 } else if wl.is_null() && !target.is_null() {
-                    xasprintf(cause, c"no such window: %s".as_ptr(), target);
+                    *cause = format_nul!("no such window: {}", _s(target));
                 } else if wl.is_null() {
-                    xasprintf(cause, c"no current window".as_ptr());
+                    *cause = format_nul!("no current window");
                 } else {
                     *oo = (*(*wl).window).options;
                     scope = OPTIONS_TABLE_WINDOW;
@@ -1124,9 +1113,9 @@ pub unsafe extern "C" fn options_scope_from_flags(
         if args_has_(args, 'p') {
             if wp.is_null() {
                 if !target.is_null() {
-                    xasprintf(cause, c"no such pane: %s".as_ptr(), target);
+                    *cause = format_nul!("no such pane: {}", _s(target));
                 } else {
-                    xasprintf(cause, c"no current pane".as_ptr());
+                    *cause = format_nul!("no current pane");
                 }
                 return OPTIONS_TABLE_NONE;
             }
@@ -1139,9 +1128,9 @@ pub unsafe extern "C" fn options_scope_from_flags(
             }
             if wl.is_null() {
                 if !target.is_null() {
-                    xasprintf(cause, c"no such window: %s".as_ptr(), target);
+                    *cause = format_nul!("no such window: {}", _s(target));
                 } else {
-                    xasprintf(cause, c"no current window".as_ptr());
+                    *cause = format_nul!("no current window");
                 }
                 return OPTIONS_TABLE_NONE;
             }
@@ -1154,9 +1143,9 @@ pub unsafe extern "C" fn options_scope_from_flags(
             }
             if s.is_null() {
                 if !target.is_null() {
-                    xasprintf(cause, c"no such session: %s".as_ptr(), target);
+                    *cause = format_nul!("no such session: {}", _s(target));
                 } else {
-                    xasprintf(cause, c"no current session".as_ptr());
+                    *cause = format_nul!("no current session");
                 }
                 return OPTIONS_TABLE_NONE;
             }
@@ -1220,18 +1209,18 @@ unsafe fn options_from_string_check(
             return 0;
         }
         if strcmp((*oe).name, c"default-shell".as_ptr()) == 0 && !checkshell(value) {
-            xasprintf(cause, c"not a suitable shell: %s".as_ptr(), value);
+            *cause = format_nul!("not a suitable shell: {}", _s(value));
             return -1;
         }
         if !(*oe).pattern.is_null() && fnmatch((*oe).pattern, value, 0) != 0 {
-            xasprintf(cause, c"value is invalid: %s".as_ptr(), value);
+            *cause = format_nul!("value is invalid: {}", _s(value));
             return -1;
         }
         if ((*oe).flags & OPTIONS_TABLE_IS_STYLE) != 0
             && strstr(value, c"#{".as_ptr()).is_null()
             && style_parse(&mut sy, &grid_default_cell, value) != 0
         {
-            xasprintf(cause, c"invalid style: %s".as_ptr(), value);
+            *cause = format_nul!("invalid style: {}", _s(value));
             return -1;
         }
         0
@@ -1258,7 +1247,7 @@ unsafe fn options_from_string_flag(
         {
             0
         } else {
-            xasprintf(cause, c"bad value: %s".as_ptr(), value);
+            *cause = format_nul!("bad value: {}", _s(value));
             return -1;
         };
         options_set_number(oo, name, flag);
@@ -1285,7 +1274,7 @@ pub unsafe extern "C" fn options_find_choice(
             cp = cp.add(1);
         }
         if choice == -1 {
-            xasprintf(cause, c"unknown value: %s".as_ptr(), value);
+            *cause = format_nul!("unknown value: {}", _s(value));
             return -1;
         }
         choice
@@ -1339,13 +1328,13 @@ pub unsafe extern "C" fn options_from_string(
                 && (*oe).type_ != options_table_type::OPTIONS_TABLE_FLAG
                 && (*oe).type_ != options_table_type::OPTIONS_TABLE_CHOICE
             {
-                xasprintf(cause, c"empty value".as_ptr());
+                *cause = format_nul!("empty value");
                 return -1;
             }
             (*oe).type_
         } else {
             if *name != b'@' as c_char {
-                xasprintf(cause, c"bad option name".as_ptr());
+                *cause = format_nul!("bad option name");
                 return -1;
             }
             options_table_type::OPTIONS_TABLE_STRING
@@ -1375,7 +1364,7 @@ pub unsafe extern "C" fn options_from_string(
                     &raw mut errstr,
                 );
                 if !errstr.is_null() {
-                    xasprintf(cause, c"value is %s: %s".as_ptr(), errstr, value);
+                    *cause = format_nul!("value is {}: {}", _s(errstr), _s(value));
                     return -1;
                 }
                 options_set_number(oo, name, number);
@@ -1385,7 +1374,7 @@ pub unsafe extern "C" fn options_from_string(
             options_table_type::OPTIONS_TABLE_KEY => {
                 key = key_string_lookup_string(value);
                 if key == KEYC_UNKNOWN {
-                    xasprintf(cause, c"bad key: %s".as_ptr(), value);
+                    *cause = format_nul!("bad key: {}", _s(value));
                     return -1;
                 }
                 options_set_number(oo, name, key as i64);
@@ -1395,7 +1384,7 @@ pub unsafe extern "C" fn options_from_string(
             options_table_type::OPTIONS_TABLE_COLOUR => {
                 number = colour_fromstring(value) as i64;
                 if number == -1 {
-                    xasprintf(cause, c"bad colour: %s".as_ptr(), value);
+                    *cause = format_nul!("bad colour: {}", _s(value));
                     return -1;
                 }
                 options_set_number(oo, name, number);

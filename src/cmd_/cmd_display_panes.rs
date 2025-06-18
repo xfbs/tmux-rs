@@ -58,7 +58,6 @@ unsafe extern "C" fn cmd_display_panes_draw_pane(
         // int			 colour, active_colour;
         // char			 buf[16], lbuf[16], rbuf[16], *ptr;
         // size_t			 len, llen, rlen;
-        let bufsize = 16;
 
         'out: {
             if (*wp).xoff + (*wp).sx <= (*ctx).ox
@@ -119,7 +118,8 @@ unsafe extern "C" fn cmd_display_panes_draw_pane(
                 fatalx(c"index not found");
             }
             let mut buf = [0i8; 16];
-            let mut len: usize = xsnprintf(&raw mut buf as _, bufsize, c"%u".as_ptr(), pane) as _;
+            let bufsize = 16;
+            let mut len: usize = xsnprintf_!(&raw mut buf as _, bufsize, "{}", pane).unwrap() as _;
 
             if (sx as usize) < len {
                 return;
@@ -141,20 +141,16 @@ unsafe extern "C" fn cmd_display_panes_draw_pane(
 
             let mut rbuf = [0i8; 16];
             let mut lbuf = [0i8; 16];
-            let rlen: usize = xsnprintf(
-                &raw mut rbuf as _,
-                bufsize,
-                c"%ux%u".as_ptr(),
-                (*wp).sx,
-                (*wp).sy,
-            ) as _;
+            let rlen: usize =
+                xsnprintf_!(&raw mut rbuf as _, bufsize, "{}x{}", (*wp).sx, (*wp).sy).unwrap() as _;
             let llen: usize = if pane > 9 && pane < 35 {
-                xsnprintf(
+                xsnprintf_!(
                     &raw mut lbuf as _,
                     bufsize,
-                    c"%c".as_ptr(),
-                    b'a' as u32 + (pane - 10),
-                ) as _
+                    "{}",
+                    (b'a' as u32 + (pane - 10)) as u8 as char,
+                )
+                .unwrap() as _
             } else {
                 0
             };
@@ -316,7 +312,7 @@ unsafe extern "C" fn cmd_display_panes_key(
         window_unzoom(w, 1);
 
         let mut expanded = null_mut();
-        xasprintf(&raw mut expanded, c"%%%u".as_ptr(), (*wp).id);
+        expanded = format_nul!("%{}", (*wp).id);
 
         let mut error = null_mut();
         let cmdlist = args_make_commands((*cdata).state, 1, &raw mut expanded, &raw mut error);

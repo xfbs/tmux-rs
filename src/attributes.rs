@@ -23,25 +23,25 @@ pub unsafe fn attributes_tostring(attr: grid_attr) -> *const c_char {
 
     unsafe {
         #[rustfmt::skip]
-        let len: isize = xsnprintf(
+        let len: isize = xsnprintf_!(
             &raw mut buf as _,
             size_of::<buffer>(),
-            c"%s%s%s%s%s%s%s%s%s%s%s%s%s%s".as_ptr(),
-            if attr.intersects(grid_attr::GRID_ATTR_CHARSET) { c"acs,".as_ptr() } else { c"".as_ptr() },
-            if attr.intersects(grid_attr::GRID_ATTR_BRIGHT) { c"bright,".as_ptr() } else { c"".as_ptr() },
-            if attr.intersects(grid_attr::GRID_ATTR_DIM ) { c"dim,".as_ptr() } else { c"".as_ptr() },
-            if attr.intersects(grid_attr::GRID_ATTR_UNDERSCORE) { c"underscore,".as_ptr() } else { c"".as_ptr() },
-            if attr.intersects(grid_attr::GRID_ATTR_BLINK) { c"blink,".as_ptr() } else { c"".as_ptr() },
-            if attr.intersects(grid_attr::GRID_ATTR_REVERSE ) { c"reverse,".as_ptr() } else { c"".as_ptr() },
-            if attr.intersects(grid_attr::GRID_ATTR_HIDDEN) { c"hidden,".as_ptr() } else { c"".as_ptr() },
-            if attr.intersects(grid_attr::GRID_ATTR_ITALICS ) { c"italics,".as_ptr() } else { c"".as_ptr() },
-            if attr.intersects(grid_attr::GRID_ATTR_STRIKETHROUGH) { c"strikethrough,".as_ptr() } else { c"".as_ptr() },
-            if attr.intersects(grid_attr::GRID_ATTR_UNDERSCORE_2) { c"double-underscore,".as_ptr() } else { c"".as_ptr() },
-            if attr.intersects(grid_attr::GRID_ATTR_UNDERSCORE_3) { c"curly-underscore,".as_ptr() } else { c"".as_ptr() },
-            if attr.intersects(grid_attr::GRID_ATTR_UNDERSCORE_4) { c"dotted-underscore,".as_ptr() } else { c"".as_ptr() },
-            if attr.intersects(grid_attr::GRID_ATTR_UNDERSCORE_5) { c"dashed-underscore,".as_ptr() } else { c"".as_ptr() },
-            if attr.intersects(grid_attr::GRID_ATTR_OVERLINE) { c"overline,".as_ptr() } else { c"".as_ptr() },
-        ) as isize;
+            "{}{}{}{}{}{}{}{}{}{}{}{}{}{}",
+            if attr.intersects(grid_attr::GRID_ATTR_CHARSET) { "acs," } else { "" },
+            if attr.intersects(grid_attr::GRID_ATTR_BRIGHT) { "bright," } else { "" },
+            if attr.intersects(grid_attr::GRID_ATTR_DIM ) { "dim," } else { "" },
+            if attr.intersects(grid_attr::GRID_ATTR_UNDERSCORE) { "underscore," } else { "" },
+            if attr.intersects(grid_attr::GRID_ATTR_BLINK) { "blink," } else { "" },
+            if attr.intersects(grid_attr::GRID_ATTR_REVERSE ) { "reverse," } else { "" },
+            if attr.intersects(grid_attr::GRID_ATTR_HIDDEN) { "hidden," } else { "" },
+            if attr.intersects(grid_attr::GRID_ATTR_ITALICS ) { "italics," } else { "" },
+            if attr.intersects(grid_attr::GRID_ATTR_STRIKETHROUGH) { "strikethrough," } else { "" },
+            if attr.intersects(grid_attr::GRID_ATTR_UNDERSCORE_2) { "double-underscore," } else { "" },
+            if attr.intersects(grid_attr::GRID_ATTR_UNDERSCORE_3) { "curly-underscore," } else { "" },
+            if attr.intersects(grid_attr::GRID_ATTR_UNDERSCORE_4) { "dotted-underscore," } else { "" },
+            if attr.intersects(grid_attr::GRID_ATTR_UNDERSCORE_5) { "dashed-underscore," } else { "" },
+            if attr.intersects(grid_attr::GRID_ATTR_OVERLINE) { "overline," } else { "" },
+        ).unwrap() as isize;
         if len > 0 {
             buf[len as usize - 1] = b'\0' as c_char;
         }

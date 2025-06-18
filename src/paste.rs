@@ -200,12 +200,8 @@ pub unsafe extern "C" fn paste_add(mut prefix: *const c_char, data: *mut c_char,
         (*pb).name = null_mut();
         loop {
             free_((*pb).name);
-            xasprintf(
-                &raw mut (*pb).name,
-                c"%s%u".as_ptr(),
-                prefix,
-                paste_next_index,
-            );
+            let tmp = paste_next_index;
+            (*pb).name = format_nul!("{}{}", _s(prefix), tmp);
             paste_next_index += 1;
             if paste_get_name((*pb).name).is_null() {
                 break;
@@ -256,7 +252,7 @@ pub unsafe extern "C" fn paste_rename(
         let pb = paste_get_name(oldname);
         if pb.is_null() {
             if !cause.is_null() {
-                xasprintf(cause, c"no buffer %s".as_ptr(), oldname);
+                *cause = format_nul!("no buffer {}", _s(oldname));
             }
             return -1;
         }

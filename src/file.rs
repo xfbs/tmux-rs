@@ -45,7 +45,12 @@ pub unsafe extern "C" fn file_get_path(c: *mut client, file: *const c_char) -> N
         if *file == b'/' as c_char {
             xstrdup(file)
         } else {
-            xasprintf_(c"%s/%s", server_client_get_cwd(c, null_mut()), file)
+            NonNull::new(format_nul!(
+                "{}/{}",
+                _s(server_client_get_cwd(c, null_mut())),
+                _s(file)
+            ))
+            .unwrap()
         }
     }
 }

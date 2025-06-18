@@ -122,9 +122,9 @@ pub unsafe extern "C" fn cmdq_name(c: *const client) -> *const c_char {
 
     unsafe {
         if !(*c).name.is_null() {
-            xsnprintf(s, 256, c"<%s>".as_ptr(), (*c).name);
+            xsnprintf_!(s, 256, "<{}>", _s((*c).name));
         } else {
-            xsnprintf(s, 256, c"<%p>".as_ptr(), c);
+            xsnprintf_!(s, 256, "<{:p}>", c);
         }
     }
 
@@ -449,24 +449,24 @@ pub unsafe fn cmdq_insert_hook_(
         free_(arguments);
 
         for i in 0..args_count(args) {
-            xsnprintf(tmp, sizeof_tmp, c"hook_argument_%d".as_ptr(), i);
+            xsnprintf_!(tmp, sizeof_tmp, "hook_argument_{}", i);
             cmdq_add_format!(new_state, tmp, "{}", _s(args_string(args, i)));
         }
         flag = args_first(args, &raw mut ae);
         while flag != 0 {
             let value = args_get(args, flag);
             if value.is_null() {
-                xsnprintf(tmp, sizeof_tmp, c"hook_flag_%c".as_ptr(), flag as u32);
+                xsnprintf_!(tmp, sizeof_tmp, "hook_flag_{}", flag as char);
                 cmdq_add_format!(new_state, tmp, "1");
             } else {
-                xsnprintf(tmp, sizeof_tmp, c"hook_flag_%c".as_ptr(), flag as u32);
+                xsnprintf_!(tmp, sizeof_tmp, "hook_flag_{}", flag as char);
                 cmdq_add_format!(new_state, tmp, "{}", _s(value));
             }
 
             let mut i = 0;
             let mut av = args_first_value(args, flag);
             while !av.is_null() {
-                xsnprintf(tmp, sizeof_tmp, c"hook_flag_%c_%d".as_ptr(), flag as u32, i);
+                xsnprintf_!(tmp, sizeof_tmp, "hook_flag_{}_{}", flag as char, i);
                 cmdq_add_format!(new_state, tmp, "{}", _s((*av).union_.string));
                 i += 1;
                 av = args_next_value(av);
@@ -564,12 +564,7 @@ pub unsafe extern "C" fn cmdq_get_command(
             let entry = cmd_get_entry(cmd);
 
             let item = xcalloc1::<cmdq_item>() as *mut cmdq_item;
-            xasprintf(
-                &raw mut (*item).name,
-                c"[%s/%p]".as_ptr(),
-                (*entry).name,
-                item,
-            );
+            (*item).name = format_nul!("[{}/{:p}]", _s((*entry).name), item,);
             (*item).type_ = cmdq_type::CMDQ_COMMAND;
 
             (*item).group = cmd_get_group(cmd);
@@ -634,7 +629,7 @@ pub unsafe extern "C" fn cmdq_add_message(item: *mut cmdq_item) {
             if uid != -1i32 as uid_t && uid != getuid() {
                 let pw = getpwuid(uid);
                 if !pw.is_null() {
-                    xasprintf(&raw mut user, c"[%s]".as_ptr(), (*pw).pw_name);
+                    user = format_nul!("[{}]", _s((*pw).pw_name));
                 } else {
                     user = xstrdup(c"[unknown]".as_ptr()).as_ptr();
                 }
@@ -773,7 +768,7 @@ pub unsafe extern "C" fn cmdq_get_callback1(
     let item = xcalloc_::<cmdq_item>(1).as_ptr();
 
     unsafe {
-        xasprintf(&raw mut (*item).name, c"[%s/%p]".as_ptr(), name, item);
+        (*item).name = format_nul!("[{}/{:p}]", _s(name), item);
         (*item).type_ = cmdq_type::CMDQ_CALLBACK;
 
         (*item).group = 0;

@@ -63,83 +63,71 @@ unsafe extern "C" fn cmd_find_window_exec(self_: *mut cmd, item: *mut cmdq_item)
         let filter = xcalloc_::<args_value>(1).as_ptr();
         (*filter).type_ = args_type::ARGS_STRING;
 
-        if c && n && t {
-            xasprintf(
-                &raw mut (*filter).union_.string,
-                c"#{||:#{C%s:%s},#{||:#{m%s:%s%s%s,#{window_name}},#{m%s:%s%s%s,#{pane_title}}}}"
-                    .as_ptr(),
-                suffix,
-                s,
-                suffix,
-                star,
-                s,
-                star,
-                suffix,
-                star,
-                s,
-                star,
-            );
+        (*filter).union_.string = if c && n && t {
+            format_nul!(
+                "#{{||:#{{C{}:{}}},#{{||:#{{m{}:{}{}{},#{{window_name}}}},#{{m{}:{}{}{},#{{pane_title}}}}}}}}",
+                _s(suffix),
+                _s(s),
+                _s(suffix),
+                _s(star),
+                _s(s),
+                _s(star),
+                _s(suffix),
+                _s(star),
+                _s(s),
+                _s(star),
+            )
         } else if c && n {
-            xasprintf(
-                &raw mut (*filter).union_.string,
-                c"#{||:#{C%s:%s},#{m%s:%s%s%s,#{window_name}}}".as_ptr(),
-                suffix,
-                s,
-                suffix,
-                star,
-                s,
-                star,
-            );
+            format_nul!(
+                "#{{{{||:#{{{{C{}:{}}}}},#{{{{m{}:{}{}{},#{{{{window_name}}}}}}}}}}}}",
+                _s(suffix),
+                _s(s),
+                _s(suffix),
+                _s(star),
+                _s(s),
+                _s(star)
+            )
         } else if c && t {
-            xasprintf(
-                &raw mut (*filter).union_.string,
-                c"#{||:#{C%s:%s},#{m%s:%s%s%s,#{pane_title}}}".as_ptr(),
-                suffix,
-                s,
-                suffix,
-                star,
-                s,
-                star,
-            );
+            format_nul!(
+                "#{{||:#{{C{}:{}}},#{{m{}:{}{}{},#{{pane_title}}}}}}",
+                _s(suffix),
+                _s(s),
+                _s(suffix),
+                _s(star),
+                _s(s),
+                _s(star),
+            )
         } else if n && t {
-            xasprintf(
-                &raw mut (*filter).union_.string,
-                c"#{||:#{m%s:%s%s%s,#{window_name}},#{m%s:%s%s%s,#{pane_title}}}".as_ptr(),
-                suffix,
-                star,
-                s,
-                star,
-                suffix,
-                star,
-                s,
-                star,
-            );
+            format_nul!(
+                "#{{||:#{{m{}:{}{}{},#{{window_name}}}},#{{m{}:{}{}{},#{{pane_title}}}}}}",
+                _s(suffix),
+                _s(star),
+                _s(s),
+                _s(star),
+                _s(suffix),
+                _s(star),
+                _s(s),
+                _s(star),
+            )
         } else if c {
-            xasprintf(
-                &raw mut (*filter).union_.string,
-                c"#{C%s:%s}".as_ptr(),
-                suffix,
-                s,
-            );
+            format_nul!("#{{C{}:{}}}", _s(suffix), _s(s),)
         } else if n {
-            xasprintf(
-                &raw mut (*filter).union_.string,
-                c"#{m%s:%s%s%s,#{window_name}}".as_ptr(),
-                suffix,
-                star,
-                s,
-                star,
-            );
+            format_nul!(
+                "#{{m{}:{}{}{},#{{window_name}}}}",
+                _s(suffix),
+                _s(star),
+                _s(s),
+                _s(star),
+            )
         } else {
-            xasprintf(
-                &raw mut (*filter).union_.string,
-                c"#{m%s:%s%s%s,#{pane_title}}".as_ptr(),
-                suffix,
-                star,
-                s,
-                star,
-            );
-        }
+            format_nul!(
+                "#{{m{}:{}{}{},#{{pane_title}}}}",
+                _s(suffix),
+                _s(star),
+                _s(s),
+                _s(star),
+            )
+        };
 
         let new_args: *mut args = args_create();
         if args_has_(args, 'Z') {

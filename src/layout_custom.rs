@@ -51,20 +51,12 @@ pub unsafe extern "C" fn layout_dump(root: *mut layout_cell) -> *mut c_char {
         let mut layout: MaybeUninit<[c_char; 8192]> = MaybeUninit::<[c_char; 8192]>::uninit();
         let layout = layout.as_mut_ptr() as *mut i8;
 
-        let mut out: *mut c_char = null_mut();
-
         *layout = b'\0' as _;
         if layout_append(root, layout, 8192) != 0 {
             return null_mut();
         }
 
-        xasprintf(
-            &raw mut out,
-            c"%04hx,%s".as_ptr(),
-            layout_checksum(layout) as u32,
-            layout,
-        );
-        out
+        format_nul!("{:04x},{}", layout_checksum(layout), _s(layout),)
     }
 }
 
@@ -85,29 +77,31 @@ pub unsafe extern "C" fn layout_append(lc: *mut layout_cell, buf: *mut c_char, l
         }
 
         let tmplen = if !(*lc).wp.is_null() {
-            xsnprintf(
+            xsnprintf_!(
                 tmp,
                 sizeof_tmp,
-                c"%ux%u,%u,%u,%u".as_ptr(),
+                "{}x{},{},{},{}",
                 (*lc).sx,
                 (*lc).sy,
                 (*lc).xoff,
                 (*lc).yoff,
                 (*(*lc).wp).id,
             )
+            .unwrap()
         } else {
-            xsnprintf(
+            xsnprintf_!(
                 tmp,
                 sizeof_tmp,
-                c"%ux%u,%u,%u".as_ptr(),
+                "{}x{},{},{}",
                 (*lc).sx,
                 (*lc).sy,
                 (*lc).xoff,
                 (*lc).yoff,
             )
+            .unwrap()
         };
 
-        if tmplen > sizeof_tmp as i32 - 1 {
+        if tmplen > sizeof_tmp - 1 {
             return -1;
         }
         if strlcat(buf, tmp, len) >= len {
@@ -223,7 +217,7 @@ pub unsafe extern "C" fn layout_parse(
                 let npanes = window_count_panes(w);
                 let ncells = layout_count_cells(lc);
                 if npanes > ncells {
-                    xasprintf(cause, c"have %u panes but need %u".as_ptr(), npanes, ncells);
+                    *cause = format_nul!("have {} panes but need {}", npanes, ncells);
                     break 'fail;
                 }
                 if npanes == ncells {

@@ -196,17 +196,16 @@ unsafe extern "C" fn window_customize_scope_text(
         match scope {
             window_customize_scope::WINDOW_CUSTOMIZE_PANE => {
                 window_pane_index((*fs).wp, &raw mut idx);
-                xasprintf(&raw mut s, c"pane %u".as_ptr(), idx);
+                format_nul!("pane {}", idx)
             }
             window_customize_scope::WINDOW_CUSTOMIZE_SESSION => {
-                xasprintf(&raw mut s, c"session %s".as_ptr(), (*(*fs).s).name);
+                format_nul!("session {}", _s((*(*fs).s).name))
             }
             window_customize_scope::WINDOW_CUSTOMIZE_WINDOW => {
-                xasprintf(&raw mut s, c"window %u".as_ptr(), (*(*fs).wl).idx);
+                format_nul!("window {}", (*(*fs).wl).idx)
             }
-            _ => s = xstrdup_(c"").as_ptr(),
+            _ => xstrdup_(c"").as_ptr(),
         }
-        s
     }
 }
 
@@ -253,7 +252,7 @@ unsafe extern "C" fn window_customize_build_array(
             let idx = options_array_item_index(ai);
             let mut name: *mut c_char = null_mut();
 
-            xasprintf(&raw mut name, c"%s[%u]".as_ptr(), options_name(o), idx);
+            name = format_nul!("{}[{}]", _s(options_name(o)), idx);
             format_add!(ft, c"option_name".as_ptr(), "{}", _s(name));
             let value: *mut c_char = options_to_string(o, idx as i32, 0);
             format_add!(ft, c"option_value".as_ptr(), "{}", _s(value));
@@ -507,7 +506,7 @@ unsafe extern "C" fn window_customize_build_keys(
         let mut title: *mut c_char = null_mut();
         let tag: u64 = (1u64 << 62) | ((number as u64) << 54) | 1;
 
-        xasprintf(&raw mut title, c"Key Table - %s".as_ptr(), (*kt).name);
+        title = format_nul!("Key Table - {}", _s((*kt).name));
         let top = mode_tree_add(
             (*data).data,
             null_mut(),
@@ -564,7 +563,7 @@ unsafe extern "C" fn window_customize_build_keys(
             free_(expanded);
 
             let tmp = cmd_list_print((*bd).cmdlist, 0);
-            xasprintf(&raw mut text, c"#[ignore]%s".as_ptr(), tmp);
+            text = format_nul!("#[ignore]{}", _s(tmp));
             free_(tmp);
             let mut mti = mode_tree_add(
                 (*data).data,
@@ -580,7 +579,7 @@ unsafe extern "C" fn window_customize_build_keys(
             free_(text);
 
             if !(*bd).note.is_null() {
-                xasprintf(&raw mut text, c"#[ignore]%s".as_ptr(), (*bd).note);
+                text = format_nul!("#[ignore]{}", _s((*bd).note));
             } else {
                 text = xstrdup(c"".as_ptr()).as_ptr();
             }
@@ -1406,7 +1405,6 @@ pub unsafe extern "C" fn window_customize_set_option(
 
         // char *prompt, *value, *text;
         // struct cmd_find_state fs;
-        let mut prompt = null_mut();
         let mut value = null_mut();
         let mut fs: cmd_find_state = zeroed();
 
@@ -1495,22 +1493,15 @@ pub unsafe extern "C" fn window_customize_set_option(
             } else if scope != window_customize_scope::WINDOW_CUSTOMIZE_SERVER {
                 space = c", global".as_ptr();
             }
-            if !oe.is_null() && (*oe).flags & OPTIONS_TABLE_IS_ARRAY != 0 {
+            let prompt = if !oe.is_null() && (*oe).flags & OPTIONS_TABLE_IS_ARRAY != 0 {
                 if idx == -1 {
-                    xasprintf(&raw mut prompt, c"(%s[+]%s%s) ".as_ptr(), name, space, text);
+                    format_nul!("({}[+]{}{}) ", _s(name), _s(space), _s(text))
                 } else {
-                    xasprintf(
-                        &raw mut prompt,
-                        c"(%s[%d]%s%s) ".as_ptr(),
-                        name,
-                        idx,
-                        space,
-                        text,
-                    );
+                    format_nul!("({}[{}]{}{}) ", _s(name), idx, _s(space), _s(text))
                 }
             } else {
-                xasprintf(&raw mut prompt, c"(%s%s%s) ".as_ptr(), name, space, text);
-            }
+                format_nul!("({}{}{}) ", _s(name), _s(space), _s(text))
+            };
             free_(text);
 
             value = options_to_string(o, idx, 0);
@@ -1691,11 +1682,7 @@ pub unsafe extern "C" fn window_customize_set_key(
         if libc::strcmp(s, c"Repeat".as_ptr()) == 0 {
             (*bd).flags ^= KEY_BINDING_REPEAT;
         } else if libc::strcmp(s, c"Command".as_ptr()) == 0 {
-            xasprintf(
-                &raw mut prompt,
-                c"(%s) ".as_ptr(),
-                key_string_lookup_key(key, 0),
-            );
+            prompt = format_nul!("({}) ", _s(key_string_lookup_key(key, 0)));
             value = cmd_list_print((*bd).cmdlist, 0);
 
             let new_item =
@@ -1720,11 +1707,7 @@ pub unsafe extern "C" fn window_customize_set_key(
             free_(prompt);
             free_(value);
         } else if libc::strcmp(s, c"Note".as_ptr()) == 0 {
-            xasprintf(
-                &raw mut prompt,
-                c"(%s) ".as_ptr(),
-                key_string_lookup_key(key, 0),
-            );
+            prompt = format_nul!("({}) ", _s(key_string_lookup_key(key, 0)));
 
             let new_item =
                 xcalloc1::<window_customize_itemdata>() as *mut window_customize_itemdata;
@@ -1969,11 +1952,7 @@ pub unsafe extern "C" fn window_customize_key(
             }
             b'd' => {
                 if !(item.is_null() || (*item).idx != -1) {
-                    xasprintf(
-                        &raw mut prompt,
-                        c"Reset %s to default? ".as_ptr(),
-                        (*item).name,
-                    );
+                    prompt = format_nul!("Reset {} to default? ", _s((*item).name));
                     (*data).references += 1;
                     (*data).change = window_customize_change::WINDOW_CUSTOMIZE_RESET;
                     status_prompt_set(
@@ -1993,11 +1972,7 @@ pub unsafe extern "C" fn window_customize_key(
             b'D' => {
                 let tagged = mode_tree_count_tagged((*data).data);
                 if tagged != 0 {
-                    xasprintf(
-                        &raw mut prompt,
-                        c"Reset %u tagged to default? ".as_ptr(),
-                        tagged,
-                    );
+                    prompt = format_nul!("Reset {} tagged to default? ", tagged);
                     (*data).references += 1;
                     (*data).change = window_customize_change::WINDOW_CUSTOMIZE_RESET;
                     status_prompt_set(
@@ -2017,16 +1992,11 @@ pub unsafe extern "C" fn window_customize_key(
             b'u' => {
                 if !item.is_null() {
                     let idx = (*item).idx;
-                    if idx != -1 {
-                        xasprintf(
-                            &raw mut prompt,
-                            c"Unset %s[%d]? ".as_ptr(),
-                            (*item).name,
-                            idx,
-                        );
+                    prompt = if idx != -1 {
+                        format_nul!("Unset {}[{}]? ", _s((*item).name), idx)
                     } else {
-                        xasprintf(&raw mut prompt, c"Unset %s? ".as_ptr(), (*item).name);
-                    }
+                        format_nul!("Unset {}? ", _s((*item).name))
+                    };
                     (*data).references += 1;
                     (*data).change = window_customize_change::WINDOW_CUSTOMIZE_UNSET;
                     status_prompt_set(
@@ -2046,7 +2016,7 @@ pub unsafe extern "C" fn window_customize_key(
             b'U' => {
                 let tagged = mode_tree_count_tagged((*data).data);
                 if tagged != 0 {
-                    xasprintf(&raw mut prompt, c"Unset %u tagged? ".as_ptr(), tagged);
+                    prompt = format_nul!("Unset {} tagged? ", tagged);
                     (*data).references += 1;
                     (*data).change = window_customize_change::WINDOW_CUSTOMIZE_UNSET;
                     status_prompt_set(

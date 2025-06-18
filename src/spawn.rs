@@ -41,32 +41,32 @@ pub unsafe extern "C" fn spawn_log(from: *const c_char, sc: *mut spawn_context) 
         log_debug!("{}: {}, flags={:#x}", _s(from), _s(name), (*sc).flags);
 
         if !wl.is_null() && !wp0.is_null() {
-            xsnprintf(
+            xsnprintf_!(
                 tmp.as_mut_ptr().cast(),
                 size_of::<tmp_type>(),
-                c"wl=%d wp0=%%%u".as_ptr(),
+                "wl={} wp0=%{}",
                 (*wl).idx,
                 (*wp0).id,
             );
         } else if !wl.is_null() {
-            xsnprintf(
+            xsnprintf_!(
                 tmp.as_mut_ptr().cast(),
                 size_of::<tmp_type>(),
-                c"wl=%d wp0=none".as_ptr(),
+                "wl={} wp0=none",
                 (*wl).idx,
             );
         } else if !wp0.is_null() {
-            xsnprintf(
+            xsnprintf_!(
                 tmp.as_mut_ptr().cast(),
                 size_of::<tmp_type>(),
-                c"wl=none wp0=%%%u".as_ptr(),
+                "wl=none wp0=%{}",
                 (*wp0).id,
             );
         } else {
-            xsnprintf(
+            xsnprintf_!(
                 tmp.as_mut_ptr().cast(),
                 size_of::<tmp_type>(),
-                c"wl=none wp0=none".as_ptr(),
+                "wl=none wp0=none",
             );
         }
         log_debug!(
@@ -122,12 +122,8 @@ pub unsafe extern "C" fn spawn_window(
                     }
                 }
                 if !wp.is_null() {
-                    xasprintf(
-                        cause,
-                        c"window %s:%d still active".as_ptr(),
-                        (*s).name,
-                        (*(*sc).wl).idx,
-                    );
+                    *cause =
+                        format_nul!("window {}:{} still active", _s((*s).name), (*(*sc).wl).idx,);
                     return null_mut();
                 }
             }
@@ -153,7 +149,7 @@ pub unsafe extern "C" fn spawn_window(
         if (!(*sc).flags & SPAWN_RESPAWN != 0) && idx != -1 {
             let wl = winlink_find_by_index(&raw mut (*s).windows, idx);
             if !wl.is_null() && (!(*sc).flags & SPAWN_KILL != 0) {
-                xasprintf(cause, c"index %d in use".as_ptr(), idx);
+                *cause = format_nul!("index {} in use", idx);
                 return null_mut();
             }
             if !wl.is_null() {
@@ -180,7 +176,7 @@ pub unsafe extern "C" fn spawn_window(
             }
             (*sc).wl = winlink_add(&raw mut (*s).windows, idx);
             if (*sc).wl.is_null() {
-                xasprintf(cause, c"couldn't add window %d".as_ptr(), idx);
+                *cause = format_nul!("couldn't add window {}", idx);
                 return null_mut();
             }
             let mut sx = 0u32;
@@ -200,7 +196,7 @@ pub unsafe extern "C" fn spawn_window(
             w = window_create(sx, sy, xpixel, ypixel);
             if w.is_null() {
                 winlink_remove(&raw mut (*s).windows, (*sc).wl);
-                xasprintf(cause, c"couldn't create window %d".as_ptr(), idx);
+                *cause = format_nul!("couldn't create window {idx}");
                 return null_mut();
             }
             if (*s).curw.is_null() {
@@ -287,12 +283,8 @@ pub unsafe extern "C" fn spawn_pane(
             if !(*sc).cwd.is_null() {
                 cwd = format_single(item, (*sc).cwd, c, (*target).s, null_mut(), null_mut());
                 if *cwd != b'/' as _ {
-                    xasprintf(
-                        &raw mut new_cwd,
-                        c"%s/%s".as_ptr(),
-                        server_client_get_cwd(c, (*target).s),
-                        cwd,
-                    );
+                    new_cwd =
+                        format_nul!("{}/{}", _s(server_client_get_cwd(c, (*target).s)), _s(cwd));
                     free_(cwd);
                     cwd = new_cwd;
                 }
@@ -310,12 +302,11 @@ pub unsafe extern "C" fn spawn_pane(
             if (*sc).flags & SPAWN_RESPAWN != 0 {
                 if (*(*sc).wp0).fd != -1 && (!(*sc).flags & SPAWN_KILL != 0) {
                     window_pane_index((*sc).wp0, &raw mut idx);
-                    xasprintf(
-                        cause,
-                        c"pane %s:%d.%u still active".as_ptr(),
-                        (*s).name,
+                    *cause = format_nul!(
+                        "pane {}:{}.{} still active",
+                        _s((*s).name),
                         (*(*sc).wl).idx,
-                        idx,
+                        idx
                     );
                     free_(cwd);
                     return null_mut();
@@ -455,7 +446,7 @@ pub unsafe extern "C" fn spawn_pane(
                 &raw mut ws,
             );
             if (*new_wp).pid == -1 {
-                xasprintf(cause, c"fork failed: %s".as_ptr(), strerror(errno!()));
+                *cause = format_nul!("fork failed: {}", _s(strerror(errno!())));
                 (*new_wp).fd = -1;
                 if !(*sc).flags & SPAWN_RESPAWN != 0 {
                     server_client_remove_pane(new_wp);
@@ -553,11 +544,11 @@ pub unsafe extern "C" fn spawn_pane(
             cp = strrchr((*new_wp).shell, b'/' as i32);
             if (*new_wp).argc == 1 {
                 tmp = *(*new_wp).argv;
-                if !cp.is_null() && *cp.add(1) != b'\0' as c_char {
-                    xasprintf(&raw mut argv0, c"%s".as_ptr(), cp.add(1));
+                argv0 = if !cp.is_null() && *cp.add(1) != b'\0' as c_char {
+                    format_nul!("{}", _s(cp.add(1)))
                 } else {
-                    xasprintf(&raw mut argv0, c"%s".as_ptr(), (*new_wp).shell);
-                }
+                    format_nul!("{}", _s((*new_wp).shell))
+                };
                 execl(
                     (*new_wp).shell,
                     argv0,
@@ -567,11 +558,11 @@ pub unsafe extern "C" fn spawn_pane(
                 );
                 _exit(1);
             }
-            if !cp.is_null() && *cp.add(1) != b'\0' as c_char {
-                xasprintf(&raw mut argv0, c"-%s".as_ptr(), cp.add(1));
+            argv0 = if !cp.is_null() && *cp.add(1) != b'\0' as c_char {
+                format_nul!("-{}", _s(cp.add(1)))
             } else {
-                xasprintf(&raw mut argv0, c"-%s".as_ptr(), (*new_wp).shell);
-            }
+                format_nul!("-{}", _s((*new_wp).shell))
+            };
             execl((*new_wp).shell, argv0, null_mut::<c_char>());
             _exit(1);
         }
@@ -580,12 +571,7 @@ pub unsafe extern "C" fn spawn_pane(
         #[cfg(feature = "utempter")]
         {
             if !(*new_wp).flags.intersects(window_pane_flags::PANE_EMPTY) {
-                xasprintf(
-                    &raw mut cp,
-                    c"tmux(%lu).%%%u".as_ptr(),
-                    std::process::id() as c_long,
-                    (*new_wp).id,
-                );
+                cp = format_nul!("tmux({}).%{}", std::process::id() as c_long, (*new_wp).id);
                 utempter_add_record((*new_wp).fd, cp);
                 kill(std::process::id() as i32, SIGCHLD);
                 free_(cp);

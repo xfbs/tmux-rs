@@ -5268,20 +5268,14 @@ pub unsafe extern "C" fn window_copy_write_line(
         if py == 0 && (*s).rupper < (*s).rlower && (*data).hide_position == 0 {
             gl = grid_get_line((*(*data).backing).grid, hsize - (*data).oy);
             if (*gl).time == 0 {
-                xsnprintf(
-                    (&raw mut tmp).cast(),
-                    512,
-                    c"[%u/%u]".as_ptr(),
-                    (*data).oy,
-                    hsize,
-                );
+                xsnprintf_!((&raw mut tmp).cast(), 512, "[{}/{}]", (*data).oy, hsize,);
             } else {
                 t = format_pretty_time((*gl).time, 1);
-                xsnprintf(
+                xsnprintf_!(
                     (&raw mut tmp).cast(),
                     512,
-                    c"%s [%u/%u]".as_ptr(),
-                    t,
+                    "{} [{}/{}]",
+                    _s(t),
                     (*data).oy,
                     hsize,
                 );
@@ -5290,33 +5284,31 @@ pub unsafe extern "C" fn window_copy_write_line(
 
             if (*data).searchmark.is_null() {
                 if (*data).timeout != 0 {
-                    size = xsnprintf(
+                    size = xsnprintf_!(
                         (&raw mut hdr).cast(),
                         512,
-                        c"(timed out) %s".as_ptr(),
-                        &raw const tmp,
-                    ) as usize;
+                        "(timed out) {}",
+                        _s(&raw const tmp as _)
+                    )
+                    .unwrap() as usize;
                 } else {
-                    size = xsnprintf((&raw mut hdr).cast(), 512, c"%s".as_ptr(), &raw const tmp)
-                        as usize;
+                    size = xsnprintf_!((&raw mut hdr).cast(), 512, "{}", _s(&raw const tmp as _))
+                        .unwrap() as usize;
                 }
             } else {
                 if (*data).searchcount == -1 {
-                    size = xsnprintf((&raw mut hdr).cast(), 512, c"%s".as_ptr(), &raw const tmp)
-                        as usize;
+                    size = xsnprintf_!((&raw mut hdr).cast(), 512, "{}", _s(&raw const tmp as _))
+                        .unwrap() as usize;
                 } else {
-                    size = xsnprintf(
+                    size = xsnprintf_!(
                         (&raw mut hdr).cast(),
                         512,
-                        c"(%d%s results) %s".as_ptr(),
+                        "({}{} results) {}",
                         (*data).searchcount,
-                        if (*data).searchmore != 0 {
-                            c"+".as_ptr()
-                        } else {
-                            c"".as_ptr()
-                        },
-                        &raw const tmp,
-                    ) as usize;
+                        if (*data).searchmore != 0 { "+" } else { "" },
+                        _s(&raw const tmp as _)
+                    )
+                    .unwrap() as usize;
                 }
             }
             if size > screen_size_x(s) as usize {

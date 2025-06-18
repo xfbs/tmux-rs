@@ -307,13 +307,14 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
             } else if (*sy).list == style_list::STYLE_LIST_RIGHT_MARKER {
                 tmp = c"right-marker".as_ptr();
             }
-            off += xsnprintf(
+            off += xsnprintf_!(
                 s.add(off as usize),
                 size_of::<s_type>() - off as usize,
-                c"%slist=%s".as_ptr(),
-                comma,
-                tmp,
-            );
+                "{}list={}",
+                _s(comma),
+                _s(tmp),
+            )
+            .unwrap() as i32;
             comma = c",".as_ptr();
         }
         if (*sy).range_type != style_range_type::STYLE_RANGE_NONE {
@@ -354,13 +355,14 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
                 );
                 tmp = &raw const b as _;
             }
-            off += xsnprintf(
+            off += xsnprintf_!(
                 s.add(off as usize),
                 size_of::<s_type>() - off as usize,
-                c"%srange=%s".as_ptr(),
-                comma,
-                tmp,
-            );
+                "{}range={}",
+                _s(comma),
+                _s(tmp),
+            )
+            .unwrap() as i32;
             comma = c",".as_ptr();
         }
         if (*sy).align != style_align::STYLE_ALIGN_DEFAULT {
@@ -373,13 +375,14 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
             } else if (*sy).align == style_align::STYLE_ALIGN_ABSOLUTE_CENTRE {
                 tmp = c"absolute-centre".as_ptr();
             }
-            off += xsnprintf(
+            off += xsnprintf_!(
                 s.add(off as usize),
                 size_of::<s_type>() - off as usize,
-                c"%salign=%s".as_ptr(),
-                comma,
-                tmp,
-            );
+                "{}align={}",
+                _s(comma),
+                _s(tmp),
+            )
+            .unwrap() as i32;
             comma = c",".as_ptr();
         }
         if (*sy).default_type != style_default_type::STYLE_DEFAULT_BASE {
@@ -388,62 +391,67 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
             } else if (*sy).default_type == style_default_type::STYLE_DEFAULT_POP {
                 tmp = c"pop-default".as_ptr();
             }
-            off += xsnprintf(
+            off += xsnprintf_!(
                 s.add(off as usize),
                 size_of::<s_type>() - off as usize,
-                c"%s%s".as_ptr(),
-                comma,
-                tmp,
-            );
+                "{}{}",
+                _s(comma),
+                _s(tmp),
+            )
+            .unwrap() as i32;
             comma = c",".as_ptr();
         }
         if (*sy).fill != 8 {
-            off += xsnprintf(
+            off += xsnprintf_!(
                 s.add(off as usize),
                 size_of::<s_type>() - off as usize,
-                c"%sfill=%s".as_ptr(),
-                comma,
-                colour_tostring((*sy).fill),
-            );
+                "{}fill={}",
+                _s(comma),
+                _s(colour_tostring((*sy).fill)),
+            )
+            .unwrap() as i32;
             comma = c",".as_ptr();
         }
         if (*gc).fg != 8 {
-            off += xsnprintf(
+            off += xsnprintf_!(
                 s.add(off as usize),
                 size_of::<s_type>() - off as usize,
-                c"%sfg=%s".as_ptr(),
-                comma,
-                colour_tostring((*gc).fg),
-            );
+                "{}fg={}",
+                _s(comma),
+                _s(colour_tostring((*gc).fg)),
+            )
+            .unwrap() as i32;
             comma = c",".as_ptr();
         }
         if (*gc).bg != 8 {
-            off += xsnprintf(
+            off += xsnprintf_!(
                 s.add(off as usize),
                 size_of::<s_type>() - off as usize,
-                c"%sbg=%s".as_ptr(),
-                comma,
-                colour_tostring((*gc).bg),
-            );
+                "{}bg={}",
+                _s(comma),
+                _s(colour_tostring((*gc).bg)),
+            )
+            .unwrap() as i32;
             comma = c",".as_ptr();
         }
         if (*gc).us != 8 {
-            off += xsnprintf(
+            off += xsnprintf_!(
                 s.add(off as usize),
                 size_of::<s_type>() - off as usize,
-                c"%sus=%s".as_ptr(),
-                comma,
-                colour_tostring((*gc).us),
-            );
+                "{}us={}",
+                _s(comma),
+                _s(colour_tostring((*gc).us)),
+            )
+            .unwrap() as i32;
             comma = c",".as_ptr();
         }
         if !(*gc).attr.is_empty() {
-            xsnprintf(
+            xsnprintf_!(
                 s.add(off as usize),
                 size_of::<s_type>() - off as usize,
-                c"%s%s".as_ptr(),
-                comma,
-                attributes_tostring((*gc).attr),
+                "{}{}",
+                _s(comma),
+                _s(attributes_tostring((*gc).attr)),
             );
             comma = c",".as_ptr();
         }
