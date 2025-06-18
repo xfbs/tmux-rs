@@ -49,16 +49,22 @@ const REVERSE: [u8; 80] = const {
 };
 
 fn pton<'out>(src: &'_ [u8], dst: &'out mut [MaybeUninit<u8>]) -> Result<&'out mut [u8], ()> {
+    // dst must be at least 3/4 of src, and room for NUL byte
+    if src.len().div_ceil(4) * 3 + 1 > dst.len() {
+        return Err(());
+    }
+
     let mut i = 0;
-    let mut it = src
-        .iter()
-        .cloned()
-        .filter(|b| !b.is_ascii_whitespace())
-        .array_chunks::<4>();
+    let mut it = src.iter().cloned().filter(|b| !b.is_ascii_whitespace());
 
-    // TODO length check
+    while let Some(ch) = it.next() {
+        let chunk: [u8; 4] = [
+            ch,
+            it.next().ok_or(())?,
+            it.next().ok_or(())?,
+            it.next().ok_or(())?, // TODO consider special handling for missing =
+        ];
 
-    for chunk in &mut it {
         for g in chunk {
             if !matches!(g, b'A'..=b'Z' | b'a'..=b'z' | b'+' | b'/') {
                 return Err(());
@@ -80,10 +86,6 @@ fn pton<'out>(src: &'_ [u8], dst: &'out mut [MaybeUninit<u8>]) -> Result<&'out m
         dst[i + 1] = MaybeUninit::new((b << 4) | (c >> 2));
         dst[i + 2] = MaybeUninit::new((c << 4) | d);
         i += 3;
-    }
-
-    if it.into_remainder().is_some() {
-        return Err(());
     }
 
     dst[i] = MaybeUninit::new(0);
