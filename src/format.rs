@@ -5286,10 +5286,6 @@ pub unsafe extern "C" fn format_expand1(
 ) -> *mut c_char {
     unsafe {
         let ft = (*es).ft;
-        // char *buf, *out, *name;
-        // const char *ptr, *s, *style_end = NULL;
-        // size_t off, len, n, outlen;
-        // int ch, brackets;
         let buf: *mut c_char = null_mut();
         let mut out: *mut c_char = null_mut();
 

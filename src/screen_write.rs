@@ -62,7 +62,7 @@ unsafe extern "C" fn screen_write_get_citem() -> NonNull<screen_write_citem> {
             memset0(ci.as_ptr());
             return ci;
         }
-        NonNull::from_mut(xcalloc1::<screen_write_citem>())
+        NonNull::new(xcalloc1::<screen_write_citem>()).unwrap()
     }
 }
 

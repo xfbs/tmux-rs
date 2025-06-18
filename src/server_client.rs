@@ -3502,7 +3502,7 @@ pub unsafe extern "C" fn server_client_add_client_window(
             let cw: &mut client_window = xcalloc1();
             cw.window = id;
             rb_insert(&raw mut (*c).windows, cw);
-            NonNull::from_mut(cw)
+            NonNull::new(cw).unwrap()
         }
     }
 }
