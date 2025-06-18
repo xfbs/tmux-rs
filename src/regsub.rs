@@ -72,7 +72,6 @@ pub unsafe fn regsub_expand(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe fn regsub(
     pattern: *const c_char,
     with: *const c_char,

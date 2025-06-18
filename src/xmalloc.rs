@@ -21,7 +21,6 @@ use ::libc::{calloc, malloc, reallocarray, strdup, strndup};
 
 use crate::{compat::recallocarray, fatalx, vasprintf, vsnprintf};
 
-#[unsafe(no_mangle)]
 pub extern "C" fn xmalloc(size: usize) -> NonNull<c_void> {
     debug_assert!(size != 0, "xmalloc: zero size");
 
@@ -61,7 +60,6 @@ pub fn calloc_(nmemb: usize, size: usize) -> *mut c_void {
     unsafe { calloc(nmemb, size) }
 }
 
-#[unsafe(no_mangle)]
 pub extern "C" fn xcalloc(nmemb: usize, size: usize) -> NonNull<c_void> {
     debug_assert!(size != 0 && nmemb != 0, "xcalloc: zero size");
 
@@ -105,7 +103,6 @@ pub fn xcalloc1__<'a, T>() -> &'a mut MaybeUninit<T> {
     unsafe { &mut *ptr.cast::<MaybeUninit<T>>() }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn xrealloc(ptr: *mut c_void, size: usize) -> NonNull<c_void> {
     unsafe { xrealloc_(ptr, size) }
 }
@@ -114,7 +111,6 @@ pub unsafe fn xrealloc_<T>(ptr: *mut T, size: usize) -> NonNull<T> {
     unsafe { xreallocarray_old(ptr, 1, size) }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn xreallocarray(
     ptr: *mut c_void,
     nmemb: usize,
@@ -150,7 +146,6 @@ pub unsafe fn xreallocarray_<T>(ptr: *mut T, nmemb: usize) -> NonNull<T> {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn xrecallocarray(
     ptr: *mut c_void,
     oldnmemb: usize,
@@ -186,7 +181,6 @@ pub unsafe fn xrecallocarray__<T>(ptr: *mut T, oldnmemb: usize, nmemb: usize) ->
         .cast()
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn xstrdup(str: *const c_char) -> NonNull<c_char> {
     NonNull::new(unsafe { strdup(str) }).unwrap()
 }
@@ -199,7 +193,6 @@ pub fn xstrdup__<'a>(str: &CStr) -> &'a CStr {
     unsafe { CStr::from_ptr(xstrdup(str.as_ptr()).as_ptr()) }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn xstrndup(str: *const c_char, maxlen: usize) -> NonNull<c_char> {
     NonNull::new(unsafe { strndup(str, maxlen) }).unwrap()
 }

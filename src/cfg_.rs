@@ -17,20 +17,18 @@ use libc::{__errno_location, ENOENT, fclose, fopen, strerror};
 
 use crate::compat::{queue::tailq_first, tree::rb_min};
 
-#[unsafe(no_mangle)]
 pub static mut cfg_client: *mut client = null_mut();
-#[unsafe(no_mangle)]
+
 pub static mut cfg_finished: c_int = 0;
 
 static mut cfg_causes: *mut *mut c_char = null_mut();
 static mut cfg_ncauses: c_uint = 0;
 static mut cfg_item: *mut cmdq_item = null_mut();
 
-#[unsafe(no_mangle)]
 pub static mut cfg_quiet: c_int = 1;
-#[unsafe(no_mangle)]
+
 pub static mut cfg_files: *mut *mut c_char = null_mut();
-#[unsafe(no_mangle)]
+
 pub static mut cfg_nfiles: c_uint = 0;
 
 unsafe extern "C" fn cfg_client_done(_item: *mut cmdq_item, _data: *mut c_void) -> cmd_retval {
@@ -41,7 +39,6 @@ unsafe extern "C" fn cfg_client_done(_item: *mut cmdq_item, _data: *mut c_void) 
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cfg_done(item: *mut cmdq_item, _data: *mut c_void) -> cmd_retval {
     unsafe {
         if cfg_finished != 0 {
@@ -61,7 +58,6 @@ unsafe extern "C" fn cfg_done(item: *mut cmdq_item, _data: *mut c_void) -> cmd_r
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn start_cfg() {
     let c: *mut client;
     let mut i: u32;
@@ -109,7 +105,6 @@ pub unsafe extern "C" fn start_cfg() {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn load_cfg(
     path: *const c_char,
     c: *mut client,
@@ -176,7 +171,6 @@ pub unsafe extern "C" fn load_cfg(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn load_cfg_from_buffer(
     buf: *mut c_void,
     len: usize,
@@ -254,7 +248,6 @@ pub unsafe fn cfg_add_cause_(args: std::fmt::Arguments) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cfg_print_causes(item: *mut cmdq_item) {
     unsafe {
         for i in 0..cfg_ncauses {
@@ -268,7 +261,6 @@ pub unsafe extern "C" fn cfg_print_causes(item: *mut cmdq_item) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cfg_show_causes(mut s: *mut session) {
     unsafe {
         'out: {

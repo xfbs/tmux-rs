@@ -138,7 +138,7 @@ static mut options_table_allow_passthrough_list: [*const c_char; 4] =
     [c"off".as_ptr(), c"on".as_ptr(), c"all".as_ptr(), null()];
 
 /// Map of name conversions.
-#[unsafe(no_mangle)]
+
 pub static mut options_other_names: [options_name_map; 6] = [
     options_name_map::new(
         c"display-panes-color".as_ptr(),
@@ -231,7 +231,6 @@ pub const OPTIONS_TABLE_STATUS_FORMAT2: *const c_char = concat!(
 .as_ptr()
 .cast();
 
-#[unsafe(no_mangle)]
 pub static mut options_table_status_format_default: [*const c_char; 3] = [
     OPTIONS_TABLE_STATUS_FORMAT1,
     OPTIONS_TABLE_STATUS_FORMAT2,
@@ -281,7 +280,6 @@ macro_rules! options_table_window_hook {
     };
 }
 
-#[unsafe(no_mangle)]
 pub static mut options_table: [options_table_entry; 191] = [
     options_table_entry {
         name: c"backspace".as_ptr(),

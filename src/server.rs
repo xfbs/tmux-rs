@@ -29,33 +29,28 @@ use crate::compat::{
     tree::{rb_empty, rb_foreach, rb_init},
 };
 
-#[unsafe(no_mangle)]
 pub static mut clients: clients = unsafe { zeroed() };
 
-#[unsafe(no_mangle)]
 pub static mut server_proc: *mut tmuxproc = null_mut();
-#[unsafe(no_mangle)] // TODO remove
+// TODO remove
 pub static mut server_fd: c_int = -1;
-#[unsafe(no_mangle)] // TODO remove
+// TODO remove
 pub static mut server_client_flags: client_flag = client_flag::empty();
-#[unsafe(no_mangle)] // TODO remove
+// TODO remove
 pub static mut server_exit: c_int = 0;
-#[unsafe(no_mangle)] // TODO remove
+// TODO remove
 pub static mut server_ev_accept: event = unsafe { zeroed() };
-#[unsafe(no_mangle)] // TODO remove
+// TODO remove
 pub static mut server_ev_tidy: event = unsafe { zeroed() };
 
-#[unsafe(no_mangle)]
 pub static mut marked_pane: cmd_find_state = unsafe { zeroed() };
 
 pub static mut message_next: c_uint = 0;
-#[unsafe(no_mangle)]
+
 pub static mut message_log: message_list = unsafe { zeroed() };
 
-#[unsafe(no_mangle)]
 pub static mut current_time: time_t = unsafe { zeroed() };
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_set_marked(
     s: *mut session,
     wl: *mut winlink,
@@ -70,14 +65,12 @@ pub unsafe extern "C" fn server_set_marked(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_clear_marked() {
     unsafe {
         cmd_find_clear_state(&raw mut marked_pane, 0);
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_is_marked(
     s: *mut session,
     wl: *mut winlink,
@@ -98,12 +91,10 @@ pub unsafe extern "C" fn server_is_marked(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_check_marked() -> boolint {
     unsafe { cmd_find_valid_state(&raw mut marked_pane) }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_create_socket(
     flags: client_flag,
     cause: *mut *mut c_char,
@@ -167,7 +158,7 @@ pub unsafe extern "C" fn server_create_socket(
 }
 
 /// Tidy up every hour.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn server_tidy_event(_fd: i32, _events: i16, _data: *mut c_void) {
     let tv = timeval {
         tv_sec: 3600,
@@ -189,7 +180,6 @@ unsafe extern "C" fn server_tidy_event(_fd: i32, _events: i16, _data: *mut c_voi
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_start(
     client: *mut tmuxproc,
     flags: client_flag,
@@ -306,7 +296,6 @@ pub unsafe extern "C" fn server_start(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_loop() -> i32 {
     unsafe {
         current_time = libc::time(null_mut());
@@ -359,7 +348,6 @@ pub unsafe extern "C" fn server_loop() -> i32 {
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn server_send_exit() {
     unsafe {
         cmd_wait_for_flush();
@@ -380,7 +368,6 @@ unsafe extern "C" fn server_send_exit() {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_update_socket() {
     static mut last: c_int = -1;
     unsafe {
@@ -419,7 +406,6 @@ pub unsafe extern "C" fn server_update_socket() {
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn server_accept(fd: i32, events: i16, _data: *mut c_void) {
     unsafe {
         let mut sa: sockaddr_storage = zeroed(); // TODO remove this init
@@ -457,7 +443,6 @@ unsafe extern "C" fn server_accept(fd: i32, events: i16, _data: *mut c_void) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_add_accept(timeout: c_int) {
     unsafe {
         let mut tv = timeval {
@@ -496,7 +481,7 @@ pub unsafe extern "C" fn server_add_accept(timeout: c_int) {
 }
 
 // Signal handler.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn server_signal(sig: i32) {
     unsafe {
         log_debug!("{}: {}", "server_signal", _s(strsignal(sig)));
@@ -525,7 +510,7 @@ unsafe extern "C" fn server_signal(sig: i32) {
 }
 
 // handle SIGCHLD
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn server_child_signal() {
     let mut status = 0i32;
     unsafe {
@@ -555,7 +540,6 @@ unsafe extern "C" fn server_child_signal() {
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn server_child_exited(pid: pid_t, status: i32) {
     unsafe {
         for w in rb_foreach(&raw mut windows).map(NonNull::as_ptr) {
@@ -577,7 +561,7 @@ unsafe extern "C" fn server_child_exited(pid: pid_t, status: i32) {
         job_check_died(pid, status);
     }
 }
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn server_child_stopped(pid: pid_t, status: i32) {
     unsafe {
         if WSTOPSIG(status) == SIGTTIN || WSTOPSIG(status) == SIGTTOU {

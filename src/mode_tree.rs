@@ -146,7 +146,6 @@ struct mode_tree_menu {
     line: u32,
 }
 
-#[unsafe(no_mangle)]
 static mode_tree_menu_items: [menu_item; 5] = [
     menu_item::new(Some(c"Scroll Left"), '<' as u64, null_mut()),
     menu_item::new(Some(c"Scroll Right"), '>' as u64, null_mut()),
@@ -155,7 +154,6 @@ static mode_tree_menu_items: [menu_item; 5] = [
     menu_item::new(None, KEYC_NONE, null_mut()),
 ];
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn mode_tree_find_item(
     mtl: *mut mode_tree_list,
     tag: u64,
@@ -174,7 +172,6 @@ unsafe extern "C" fn mode_tree_find_item(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn mode_tree_free_item(mti: *mut mode_tree_item) {
     unsafe {
         mode_tree_free_items(&raw mut (*mti).children);
@@ -187,7 +184,6 @@ unsafe extern "C" fn mode_tree_free_item(mti: *mut mode_tree_item) {
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn mode_tree_free_items(mtl: *mut mode_tree_list) {
     unsafe {
         for mti in tailq_foreach(mtl).map(NonNull::as_ptr) {
@@ -197,7 +193,6 @@ unsafe extern "C" fn mode_tree_free_items(mtl: *mut mode_tree_list) {
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn mode_tree_check_selected(mtd: *mut mode_tree_data) {
     unsafe {
         /*
@@ -210,7 +205,6 @@ unsafe extern "C" fn mode_tree_check_selected(mtd: *mut mode_tree_data) {
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn mode_tree_clear_lines(mtd: *mut mode_tree_data) {
     unsafe {
         free_((*mtd).line_list);
@@ -219,7 +213,6 @@ unsafe extern "C" fn mode_tree_clear_lines(mtd: *mut mode_tree_data) {
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn mode_tree_build_lines(
     mtd: *mut mode_tree_data,
     mtl: *mut mode_tree_list,
@@ -285,7 +278,6 @@ unsafe extern "C" fn mode_tree_build_lines(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn mode_tree_clear_tagged(mtl: *mut mode_tree_list) {
     unsafe {
         for mti in tailq_foreach(mtl).map(NonNull::as_ptr) {
@@ -295,7 +287,6 @@ unsafe extern "C" fn mode_tree_clear_tagged(mtl: *mut mode_tree_list) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_up(mtd: *mut mode_tree_data, wrap: i32) {
     unsafe {
         if (*mtd).current == 0 {
@@ -314,7 +305,6 @@ pub unsafe extern "C" fn mode_tree_up(mtd: *mut mode_tree_data, wrap: i32) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_down(mtd: *mut mode_tree_data, wrap: i32) -> i32 {
     unsafe {
         if (*mtd).current == (*mtd).line_size - 1 {
@@ -335,18 +325,15 @@ pub unsafe extern "C" fn mode_tree_down(mtd: *mut mode_tree_data, wrap: i32) -> 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_get_current(mtd: *mut mode_tree_data) -> NonNull<c_void> {
     NonNull::new(unsafe { (*(*(*mtd).line_list.add((*mtd).current as usize)).item).itemdata })
         .unwrap()
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_get_current_name(mtd: *mut mode_tree_data) -> *const c_char {
     unsafe { (*(*(*mtd).line_list.add((*mtd).current as usize)).item).name }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_expand_current(mtd: *mut mode_tree_data) {
     unsafe {
         if (*(*(*mtd).line_list.add((*mtd).current as usize)).item).expanded == 0 {
@@ -356,7 +343,6 @@ pub unsafe extern "C" fn mode_tree_expand_current(mtd: *mut mode_tree_data) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_collapse_current(mtd: *mut mode_tree_data) {
     unsafe {
         if ((*(*(*mtd).line_list.add((*mtd).current as usize)).item).expanded) != 0 {
@@ -366,7 +352,6 @@ pub unsafe extern "C" fn mode_tree_collapse_current(mtd: *mut mode_tree_data) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_get_tag(
     mtd: *mut mode_tree_data,
     tag: u64,
@@ -389,7 +374,6 @@ pub unsafe extern "C" fn mode_tree_get_tag(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_expand(mtd: *mut mode_tree_data, tag: u64) {
     unsafe {
         let mut found: u32 = 0;
@@ -403,7 +387,6 @@ pub unsafe extern "C" fn mode_tree_expand(mtd: *mut mode_tree_data, tag: u64) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_set_current(mtd: *mut mode_tree_data, tag: u64) -> i32 {
     unsafe {
         let mut found: u32 = 0;
@@ -423,7 +406,6 @@ pub unsafe extern "C" fn mode_tree_set_current(mtd: *mut mode_tree_data, tag: u6
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_count_tagged(mtd: *mut mode_tree_data) -> u32 {
     unsafe {
         let mut tagged: u32 = 0;
@@ -437,7 +419,6 @@ pub unsafe extern "C" fn mode_tree_count_tagged(mtd: *mut mode_tree_data) -> u32
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_each_tagged(
     mtd: *mut mode_tree_data,
     cb: mode_tree_each_cb,
@@ -471,7 +452,6 @@ pub unsafe extern "C" fn mode_tree_each_tagged(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_start(
     wp: *mut window_pane,
     args: *mut args,
@@ -541,7 +521,6 @@ pub unsafe extern "C" fn mode_tree_start(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_zoom(mtd: *mut mode_tree_data, args: *mut args) {
     unsafe {
         let wp: *mut window_pane = (*mtd).wp;
@@ -557,7 +536,6 @@ pub unsafe extern "C" fn mode_tree_zoom(mtd: *mut mode_tree_data, args: *mut arg
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_set_height(mtd: *mut mode_tree_data) {
     unsafe {
         let s: *mut screen = &raw mut (*mtd).screen;
@@ -582,7 +560,6 @@ pub unsafe extern "C" fn mode_tree_set_height(mtd: *mut mode_tree_data) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_build(mtd: *mut mode_tree_data) {
     unsafe {
         let s = &raw mut (*mtd).screen;
@@ -633,7 +610,6 @@ pub unsafe extern "C" fn mode_tree_build(mtd: *mut mode_tree_data) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_remove_ref(mtd: *mut mode_tree_data) {
     unsafe {
         (*mtd).references -= 1;
@@ -643,7 +619,6 @@ pub unsafe extern "C" fn mode_tree_remove_ref(mtd: *mut mode_tree_data) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_free(mtd: *mut mode_tree_data) {
     unsafe {
         let wp = (*mtd).wp;
@@ -664,7 +639,6 @@ pub unsafe extern "C" fn mode_tree_free(mtd: *mut mode_tree_data) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_resize(mtd: *mut mode_tree_data, sx: u32, sy: u32) {
     unsafe {
         let s: *mut screen = &raw mut (*mtd).screen;
@@ -678,7 +652,6 @@ pub unsafe extern "C" fn mode_tree_resize(mtd: *mut mode_tree_data, sx: u32, sy:
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_add(
     mtd: *mut mode_tree_data,
     parent: *mut mode_tree_item,
@@ -725,21 +698,18 @@ pub unsafe extern "C" fn mode_tree_add(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_draw_as_parent(mti: *mut mode_tree_item) {
     unsafe {
         (*mti).draw_as_parent = 1;
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_no_tag(mti: *mut mode_tree_item) {
     unsafe {
         (*mti).no_tag = 1;
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_remove(mtd: *mut mode_tree_data, mti: *mut mode_tree_item) {
     unsafe {
         let parent: *mut mode_tree_item = (*mti).parent;
@@ -752,7 +722,7 @@ pub unsafe extern "C" fn mode_tree_remove(mtd: *mut mode_tree_data, mti: *mut mo
         mode_tree_free_item(mti);
     }
 }
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn mode_tree_draw(mtd: *mut mode_tree_data) {
     unsafe {
         let wp = (*mtd).wp;
@@ -999,7 +969,6 @@ pub unsafe extern "C" fn mode_tree_draw(mtd: *mut mode_tree_data) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_search_backward(
     mtd: *mut mode_tree_data,
 ) -> *mut mode_tree_item {
@@ -1059,7 +1028,6 @@ pub unsafe extern "C" fn mode_tree_search_backward(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_search_forward(mtd: *mut mode_tree_data) -> *mut mode_tree_item {
     unsafe {
         // struct mode_tree_item *mti, *last, *next;
@@ -1120,7 +1088,6 @@ pub unsafe extern "C" fn mode_tree_search_forward(mtd: *mut mode_tree_data) -> *
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_search_set(mtd: *mut mode_tree_data) {
     unsafe {
         let mti = if (*mtd).search_dir == mode_tree_search_dir::MODE_TREE_SEARCH_FORWARD {
@@ -1146,7 +1113,6 @@ pub unsafe extern "C" fn mode_tree_search_set(mtd: *mut mode_tree_data) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_search_callback(
     _c: *mut client,
     data: NonNull<c_void>,
@@ -1172,14 +1138,12 @@ pub unsafe extern "C" fn mode_tree_search_callback(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_search_free(data: NonNull<c_void>) {
     unsafe {
         mode_tree_remove_ref(data.cast().as_ptr());
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_filter_callback(
     _c: *mut client,
     data: NonNull<c_void>,
@@ -1210,14 +1174,12 @@ pub unsafe extern "C" fn mode_tree_filter_callback(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_filter_free(data: NonNull<c_void>) {
     unsafe {
         mode_tree_remove_ref(data.cast().as_ptr());
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_menu_callback(
     _menu: *mut menu,
     _idx: u32,
@@ -1245,7 +1207,6 @@ pub unsafe extern "C" fn mode_tree_menu_callback(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_display_menu(
     mtd: *mut mode_tree_data,
     c: *mut client,
@@ -1314,7 +1275,6 @@ pub unsafe extern "C" fn mode_tree_display_menu(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_key(
     mtd: *mut mode_tree_data,
     c: *mut client,
@@ -1628,7 +1588,6 @@ pub unsafe extern "C" fn mode_tree_key(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mode_tree_run_command(
     c: *mut client,
     fs: *mut cmd_find_state,

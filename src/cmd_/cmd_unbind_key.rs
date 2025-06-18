@@ -14,8 +14,7 @@
 
 use crate::*;
 
-#[unsafe(no_mangle)]
-static mut cmd_unbind_key_entry: cmd_entry = cmd_entry {
+pub static mut cmd_unbind_key_entry: cmd_entry = cmd_entry {
     name: c"unbind-key".as_ptr(),
     alias: c"unbind".as_ptr(),
 
@@ -27,7 +26,6 @@ static mut cmd_unbind_key_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_unbind_key_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

@@ -16,8 +16,7 @@ use crate::*;
 
 use crate::compat::tree::{rb_insert, rb_remove};
 
-#[unsafe(no_mangle)]
-static mut cmd_rename_session_entry: cmd_entry = cmd_entry {
+pub static mut cmd_rename_session_entry: cmd_entry = cmd_entry {
     name: c"rename-session".as_ptr(),
     alias: c"rename".as_ptr(),
 
@@ -31,7 +30,6 @@ static mut cmd_rename_session_entry: cmd_entry = cmd_entry {
     exec: Some(cmd_rename_session_exec),
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_rename_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

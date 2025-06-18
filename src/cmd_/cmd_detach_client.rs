@@ -15,8 +15,7 @@ use crate::*;
 
 use crate::compat::queue::tailq_foreach;
 
-#[unsafe(no_mangle)]
-static mut cmd_detach_client_entry: cmd_entry = cmd_entry {
+pub static mut cmd_detach_client_entry: cmd_entry = cmd_entry {
     name: c"detach-client".as_ptr(),
     alias: c"detach".as_ptr(),
 
@@ -30,8 +29,7 @@ static mut cmd_detach_client_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_suspend_client_entry: cmd_entry = cmd_entry {
+pub static mut cmd_suspend_client_entry: cmd_entry = cmd_entry {
     name: c"suspend-client".as_ptr(),
     alias: c"suspendc".as_ptr(),
 
@@ -43,7 +41,6 @@ static mut cmd_suspend_client_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_detach_client_exec(
     self_: *mut cmd,
     item: *mut cmdq_item,

@@ -20,7 +20,6 @@ use crate::compat::{
     strlcat,
 };
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn layout_find_bottomright(mut lc: *mut layout_cell) -> *mut layout_cell {
     unsafe {
         if (*lc).type_ == layout_type::LAYOUT_WINDOWPANE {
@@ -31,7 +30,6 @@ pub unsafe extern "C" fn layout_find_bottomright(mut lc: *mut layout_cell) -> *m
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn layout_checksum(mut layout: *const c_char) -> u16 {
     unsafe {
         let mut csum = 0u16;
@@ -45,7 +43,7 @@ pub unsafe extern "C" fn layout_checksum(mut layout: *const c_char) -> u16 {
 }
 
 /// Dump layout as a string.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn layout_dump(root: *mut layout_cell) -> *mut c_char {
     unsafe {
         let mut layout: MaybeUninit<[c_char; 8192]> = MaybeUninit::<[c_char; 8192]>::uninit();
@@ -60,7 +58,6 @@ pub unsafe extern "C" fn layout_dump(root: *mut layout_cell) -> *mut c_char {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn layout_append(lc: *mut layout_cell, buf: *mut c_char, len: usize) -> i32 {
     unsafe {
         let sizeof_tmp = 64;
@@ -134,7 +131,7 @@ pub unsafe extern "C" fn layout_append(lc: *mut layout_cell, buf: *mut c_char, l
 }
 
 /// Check layout sizes fit.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn layout_check(lc: *mut layout_cell) -> i32 {
     unsafe {
         let mut n = 0u32;
@@ -174,7 +171,6 @@ pub unsafe extern "C" fn layout_check(lc: *mut layout_cell) -> i32 {
     1
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn layout_parse(
     w: *mut window,
     mut layout: *const c_char,
@@ -295,7 +291,7 @@ pub unsafe extern "C" fn layout_parse(
 }
 
 /* Assign panes into cells. */
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn layout_assign(wp: *mut *mut window_pane, lc: *mut layout_cell) {
     unsafe {
         match (*lc).type_ {
@@ -313,7 +309,7 @@ unsafe extern "C" fn layout_assign(wp: *mut *mut window_pane, lc: *mut layout_ce
 }
 
 /* Construct a cell from all or part of a layout tree. */
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn layout_construct(
     lcparent: *mut layout_cell,
     layout: *mut *const c_char,

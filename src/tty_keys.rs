@@ -47,7 +47,6 @@ impl tty_default_key_raw {
     }
 }
 
-#[unsafe(no_mangle)]
 static tty_default_raw_keys: [tty_default_key_raw; 100] = [
     /* Application escape. */
     tty_default_key_raw::new(c"\x1bO[", '\x1b' as u64),
@@ -220,7 +219,6 @@ impl tty_default_key_xterm {
     }
 }
 
-#[unsafe(no_mangle)]
 static tty_default_xterm_keys: [tty_default_key_xterm; 30] = [
     tty_default_key_xterm::new(c"\x1b[1;_P", keyc::KEYC_F1),
     tty_default_key_xterm::new(c"\x1bO1;_P", keyc::KEYC_F1),
@@ -254,7 +252,6 @@ static tty_default_xterm_keys: [tty_default_key_xterm; 30] = [
     tty_default_key_xterm::new(c"\x1b[3;_~", keyc::KEYC_DC),
 ];
 
-#[unsafe(no_mangle)]
 static tty_default_xterm_modifiers: [key_code; 10] = [
     0,
     0,
@@ -282,7 +279,6 @@ impl tty_default_key_code {
     }
 }
 
-#[unsafe(no_mangle)]
 static tty_default_code_keys: [tty_default_key_code; 136] = [
     /* Function keys. */
     tty_default_key_code::new(tty_code_code::TTYC_KF1, keyc::KEYC_F1 as key_code),
@@ -777,7 +773,7 @@ static tty_default_code_keys: [tty_default_key_code; 136] = [
 ];
 
 /// Add key to tree.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn tty_keys_add(tty: *mut tty, s: *const c_char, key: key_code) {
     unsafe {
         let mut size: usize = 0;
@@ -795,7 +791,7 @@ unsafe extern "C" fn tty_keys_add(tty: *mut tty, s: *const c_char, key: key_code
 }
 
 /// Add next node to the tree.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn tty_keys_add1(
     mut tkp: *mut *mut tty_key,
     mut s: *const c_char,
@@ -838,7 +834,7 @@ unsafe extern "C" fn tty_keys_add1(
 }
 
 /// Initialise a key tree from the table.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_keys_build(tty: *mut tty) {
     unsafe {
         let mut copy: [c_char; 16] = [0; 16];
@@ -896,7 +892,7 @@ pub unsafe extern "C" fn tty_keys_build(tty: *mut tty) {
 }
 
 /// Free the entire key tree.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_keys_free(tty: *mut tty) {
     unsafe {
         tty_keys_free1((*tty).key_tree);
@@ -904,7 +900,7 @@ pub unsafe extern "C" fn tty_keys_free(tty: *mut tty) {
 }
 
 // Free a single key.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn tty_keys_free1(tk: *mut tty_key) {
     unsafe {
         if !(*tk).next.is_null() {
@@ -921,7 +917,7 @@ unsafe extern "C" fn tty_keys_free1(tk: *mut tty_key) {
 }
 
 /// Lookup a key in the tree.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_keys_find(
     tty: *mut tty,
     buf: *const c_char,
@@ -934,7 +930,6 @@ pub unsafe extern "C" fn tty_keys_find(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn tty_keys_find1(
     mut tk: *mut tty_key,
     mut buf: *const c_char,
@@ -979,7 +974,6 @@ unsafe extern "C" fn tty_keys_find1(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn tty_keys_next1(
     tty: *mut tty,
     buf: *const c_char,
@@ -1048,7 +1042,7 @@ unsafe extern "C" fn tty_keys_next1(
 }
 
 /* Process at least one key in the buffer. Return 0 if no keys present. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_keys_next(tty: *mut tty) -> i32 {
     unsafe {
         let c = (*tty).client;
@@ -1372,7 +1366,7 @@ pub unsafe extern "C" fn tty_keys_next(tty: *mut tty) -> i32 {
 }
 
 /// Key timer callback.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn tty_keys_callback(_fd: i32, _events: i16, data: *mut c_void) {
     let tty: *mut tty = data.cast();
 
@@ -1386,7 +1380,7 @@ unsafe extern "C" fn tty_keys_callback(_fd: i32, _events: i16, data: *mut c_void
 /// Handle extended key input. This has two forms: \x1b[27;m;k~ and \x1b[k;mu,
 /// where k is key as a number and m is a modifier. Returns 0 for success, -1
 /// for failure, 1 for partial;
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn tty_keys_extended_key(
     tty: *mut tty,
     buf: *const c_char,
@@ -1544,7 +1538,7 @@ unsafe extern "C" fn tty_keys_extended_key(
 /// Handle mouse key input. Returns 0 for success, -1 for failure, 1 for partial
 /// (probably a mouse sequence but need more data), -2 if an invalid mouse
 /// sequence.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn tty_keys_mouse(
     tty: *mut tty,
     buf: *const c_char,
@@ -1717,7 +1711,7 @@ unsafe extern "C" fn tty_keys_mouse(
  * Handle OSC 52 clipboard input. Returns 0 for success, -1 for failure, 1 for
  * partial.
  */
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn tty_keys_clipboard(
     tty: *mut tty,
     mut buf: *const c_char,
@@ -1851,7 +1845,7 @@ unsafe extern "C" fn tty_keys_clipboard(
  * Handle primary device attributes input. Returns 0 for success, -1 for
  * failure, 1 for partial.
  */
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn tty_keys_device_attributes(
     tty: *mut tty,
     buf: *const c_char,
@@ -1956,7 +1950,7 @@ unsafe extern "C" fn tty_keys_device_attributes(
  * Handle secondary device attributes input. Returns 0 for success, -1 for
  * failure, 1 for partial.
  */
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn tty_keys_device_attributes2(
     tty: *mut tty,
     buf: *const c_char,
@@ -2066,7 +2060,7 @@ unsafe extern "C" fn tty_keys_device_attributes2(
  * Handle extended device attributes input. Returns 0 for success, -1 for
  * failure, 1 for partial.
  */
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn tty_keys_extended_device_attributes(
     tty: *mut tty,
     buf: *const c_char,
@@ -2153,7 +2147,7 @@ unsafe extern "C" fn tty_keys_extended_device_attributes(
  * Handle foreground or background input. Returns 0 for success, -1 for
  * failure, 1 for partial.
  */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_keys_colours(
     tty: *mut tty,
     buf: *const c_char,
@@ -2225,7 +2219,7 @@ pub unsafe extern "C" fn tty_keys_colours(
         }
         *size = 6 + i;
 
-        let n: i32 = colour_parseX11(tmp.as_ptr());
+        let n: i32 = colour_parse_x11(tmp.as_ptr());
         if n != -1 && *buf.add(3) == '0' as i8 {
             if !c.is_null() {
                 // log_debug(c"%s fg is %s\0".as_ptr(), (*c).name, colour_tostring(n));

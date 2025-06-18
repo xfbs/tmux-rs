@@ -20,8 +20,7 @@ use libc::{WEXITSTATUS, WIFEXITED, WIFSIGNALED, WTERMSIG, memcpy, strtod, touppe
 use crate::compat::queue::tailq_first;
 use crate::xmalloc::Zeroable;
 
-#[unsafe(no_mangle)]
-static mut cmd_run_shell_entry: cmd_entry = cmd_entry {
+pub static mut cmd_run_shell_entry: cmd_entry = cmd_entry {
     name: c"run-shell".as_ptr(),
     alias: c"run".as_ptr(),
 
@@ -49,7 +48,6 @@ pub struct cmd_run_shell_data {
     pub flags: i32,
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_run_shell_args_parse(
     args: *mut args,
     _idx: u32,
@@ -64,7 +62,6 @@ pub unsafe extern "C" fn cmd_run_shell_args_parse(
     args_parse_type::ARGS_PARSE_STRING
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_run_shell_print(job: *mut job, msg: *const c_char) {
     unsafe {
         let cdata: *mut cmd_run_shell_data = job_get_data(job) as *mut cmd_run_shell_data;
@@ -104,7 +101,6 @@ pub unsafe extern "C" fn cmd_run_shell_print(job: *mut job, msg: *const c_char) 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     let __func__ = c"cmd_run_shell_exec".as_ptr();
     unsafe {
@@ -190,7 +186,6 @@ pub unsafe extern "C" fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_ite
     cmd_retval::CMD_RETURN_WAIT
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_run_shell_timer(_fd: i32, _events: i16, arg: *mut c_void) {
     unsafe {
         let cdata = arg as *mut cmd_run_shell_data;
@@ -256,7 +251,6 @@ pub unsafe extern "C" fn cmd_run_shell_timer(_fd: i32, _events: i16, arg: *mut c
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_run_shell_callback(job: *mut job) {
     unsafe {
         let cdata = job_get_data(job) as *mut cmd_run_shell_data;
@@ -324,7 +318,6 @@ pub unsafe extern "C" fn cmd_run_shell_callback(job: *mut job) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_run_shell_free(data: *mut c_void) {
     unsafe {
         let __func__ = c"cmd_run_shell_free".as_ptr();

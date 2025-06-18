@@ -29,7 +29,6 @@ pub struct notify_entry {
     pub pbname: *mut c_char,
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn notify_insert_one_hook(
     item: *mut cmdq_item,
     ne: *mut notify_entry,
@@ -55,7 +54,6 @@ pub unsafe extern "C" fn notify_insert_one_hook(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut notify_entry) {
     let __func__ = "notify_insert_hook";
     unsafe {
@@ -136,7 +134,6 @@ pub unsafe extern "C" fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut n
 // notify_callback
 // notify_add
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn notify_callback(item: *mut cmdq_item, data: *mut c_void) -> cmd_retval {
     let __func__ = c"notify_callback".as_ptr();
     unsafe {
@@ -212,7 +209,6 @@ pub unsafe extern "C" fn notify_callback(item: *mut cmdq_item, data: *mut c_void
     cmd_retval::CMD_RETURN_NORMAL
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn notify_add(
     name: *const c_char,
     fs: *mut cmd_find_state,
@@ -295,7 +291,6 @@ pub unsafe extern "C" fn notify_add(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn notify_hook(item: *mut cmdq_item, name: *mut c_char) {
     let __func__ = c"notify_hook".as_ptr();
     unsafe {
@@ -323,7 +318,6 @@ pub unsafe extern "C" fn notify_hook(item: *mut cmdq_item, name: *mut c_char) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn notify_client(name: *const c_char, c: *mut client) {
     unsafe {
         let mut fs: cmd_find_state = zeroed(); // TODO use uninit
@@ -341,7 +335,6 @@ pub unsafe extern "C" fn notify_client(name: *const c_char, c: *mut client) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn notify_session(name: *const c_char, s: *mut session) {
     unsafe {
         let mut fs = zeroed(); // TODO use uninit
@@ -363,7 +356,6 @@ pub unsafe extern "C" fn notify_session(name: *const c_char, s: *mut session) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn notify_winlink(name: *const c_char, wl: *mut winlink) {
     unsafe {
         let mut fs: cmd_find_state = zeroed();
@@ -381,7 +373,6 @@ pub unsafe extern "C" fn notify_winlink(name: *const c_char, wl: *mut winlink) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn notify_session_window(
     name: *const c_char,
     s: *mut session,
@@ -395,7 +386,6 @@ pub unsafe extern "C" fn notify_session_window(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn notify_window(name: *const c_char, w: *mut window) {
     unsafe {
         let mut fs: cmd_find_state = zeroed();
@@ -413,7 +403,6 @@ pub unsafe extern "C" fn notify_window(name: *const c_char, w: *mut window) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn notify_pane(name: *const c_char, wp: *mut window_pane) {
     unsafe {
         let mut fs: cmd_find_state = zeroed();
@@ -431,7 +420,6 @@ pub unsafe extern "C" fn notify_pane(name: *const c_char, wp: *mut window_pane) 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn notify_paste_buffer(pbname: *const c_char, deleted: i32) {
     unsafe {
         let mut fs: cmd_find_state = zeroed();

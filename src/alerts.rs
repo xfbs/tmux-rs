@@ -79,7 +79,6 @@ pub unsafe fn alerts_check_all(w: *mut window) -> window_flag {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn alerts_check_session(s: *mut session) {
     unsafe {
         for wl in rb_foreach(&raw mut (*s).windows) {
@@ -110,7 +109,6 @@ pub unsafe fn alerts_enabled(w: *mut window, flags: window_flag) -> c_int {
     0
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn alerts_reset_all() {
     unsafe {
         for w in rb_foreach(&raw mut windows) {
@@ -119,7 +117,6 @@ pub unsafe extern "C" fn alerts_reset_all() {
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe fn alerts_reset(w: NonNull<window>) {
     let w = w.as_ptr();
     unsafe {
@@ -142,7 +139,6 @@ unsafe fn alerts_reset(w: NonNull<window>) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn alerts_queue(w: NonNull<window>, flags: window_flag) {
     unsafe {
         alerts_reset(w);

@@ -14,8 +14,7 @@
 
 use crate::*;
 
-#[unsafe(no_mangle)]
-static mut cmd_choose_tree_entry: cmd_entry = cmd_entry {
+pub static mut cmd_choose_tree_entry: cmd_entry = cmd_entry {
     name: c"choose-tree".as_ptr(),
     alias: null_mut(),
 
@@ -29,8 +28,7 @@ static mut cmd_choose_tree_entry: cmd_entry = cmd_entry {
     exec: Some(cmd_choose_tree_exec),
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_choose_client_entry: cmd_entry = cmd_entry {
+pub static mut cmd_choose_client_entry: cmd_entry = cmd_entry {
     name: c"choose-client".as_ptr(),
     alias: null_mut(),
 
@@ -44,8 +42,7 @@ static mut cmd_choose_client_entry: cmd_entry = cmd_entry {
     exec: Some(cmd_choose_tree_exec),
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_choose_buffer_entry: cmd_entry = cmd_entry {
+pub static mut cmd_choose_buffer_entry: cmd_entry = cmd_entry {
     name: c"choose-buffer".as_ptr(),
     alias: null_mut(),
 
@@ -59,8 +56,7 @@ static mut cmd_choose_buffer_entry: cmd_entry = cmd_entry {
     exec: Some(cmd_choose_tree_exec),
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_customize_mode_entry: cmd_entry = cmd_entry {
+pub static mut cmd_customize_mode_entry: cmd_entry = cmd_entry {
     name: c"customize-mode".as_ptr(),
     alias: null_mut(),
 
@@ -74,7 +70,6 @@ static mut cmd_customize_mode_entry: cmd_entry = cmd_entry {
     exec: Some(cmd_choose_tree_exec),
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_choose_tree_args_parse(
     _args: *mut args,
     _idx: u32,
@@ -83,7 +78,6 @@ unsafe extern "C" fn cmd_choose_tree_args_parse(
     args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_choose_tree_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

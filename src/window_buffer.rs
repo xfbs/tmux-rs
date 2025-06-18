@@ -35,7 +35,6 @@ const WINDOW_BUFFER_DEFAULT_KEY_FORMAT: *const i8 = concat!(
 .as_ptr()
 .cast();
 
-#[unsafe(no_mangle)]
 static mut window_buffer_menu_items: [menu_item; 12] = [
     menu_item::new(Some(c"Paste"), 'p' as u64, null_mut()),
     menu_item::new(Some(c"Paste Tagged"), 'P' as u64, null_mut()),
@@ -51,7 +50,6 @@ static mut window_buffer_menu_items: [menu_item; 12] = [
     menu_item::new(None, KEYC_NONE, null_mut()),
 ];
 
-#[unsafe(no_mangle)]
 pub static window_buffer_mode: window_mode = window_mode {
     name: SyncCharPtr::new(c"buffer-mode"),
     default_format: SyncCharPtr::from_ptr(WINDOW_BUFFER_DEFAULT_FORMAT),
@@ -105,7 +103,6 @@ pub struct window_buffer_editdata {
     pub pb: *mut paste_buffer,
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_buffer_add_item(
     data: *mut window_buffer_modedata,
 ) -> *mut window_buffer_itemdata {
@@ -119,7 +116,6 @@ pub unsafe extern "C" fn window_buffer_add_item(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_buffer_free_item(item: *mut window_buffer_itemdata) {
     unsafe {
         free_((*item).name);
@@ -127,7 +123,6 @@ pub unsafe extern "C" fn window_buffer_free_item(item: *mut window_buffer_itemda
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_buffer_cmp(a0: *const c_void, b0: *const c_void) -> i32 {
     unsafe {
         let a = a0 as *const *const window_buffer_itemdata;
@@ -155,7 +150,6 @@ pub unsafe extern "C" fn window_buffer_cmp(a0: *const c_void, b0: *const c_void)
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_buffer_build(
     modedata: NonNull<c_void>,
     sort_crit: *mut mode_tree_sort_criteria,
@@ -240,7 +234,6 @@ pub unsafe extern "C" fn window_buffer_build(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_buffer_draw(
     modedata: *mut c_void,
     itemdata: Option<NonNull<c_void>>,
@@ -295,7 +288,6 @@ pub unsafe extern "C" fn window_buffer_draw(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_buffer_search(
     modedata: *mut c_void,
     itemdata: NonNull<c_void>,
@@ -315,7 +307,6 @@ pub unsafe extern "C" fn window_buffer_search(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_buffer_menu(
     modedata: NonNull<c_void>,
     c: *mut client,
@@ -333,7 +324,6 @@ pub unsafe extern "C" fn window_buffer_menu(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_buffer_get_key(
     modedata: NonNull<c_void>,
     itemdata: NonNull<c_void>,
@@ -369,7 +359,6 @@ pub unsafe extern "C" fn window_buffer_get_key(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_buffer_init(
     wme: NonNull<window_mode_entry>,
     fs: *mut cmd_find_state,
@@ -423,7 +412,6 @@ pub unsafe extern "C" fn window_buffer_init(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_buffer_free(wme: NonNull<window_mode_entry>) {
     unsafe {
         let data = (*wme.as_ptr()).data as *mut window_buffer_modedata;
@@ -447,7 +435,6 @@ pub unsafe extern "C" fn window_buffer_free(wme: NonNull<window_mode_entry>) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_buffer_resize(wme: NonNull<window_mode_entry>, sx: u32, sy: u32) {
     unsafe {
         let data = (*wme.as_ptr()).data as *mut window_buffer_modedata;
@@ -455,7 +442,6 @@ pub unsafe extern "C" fn window_buffer_resize(wme: NonNull<window_mode_entry>, s
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_buffer_update(wme: NonNull<window_mode_entry>) {
     unsafe {
         let data = (*wme.as_ptr()).data as *mut window_buffer_modedata;
@@ -466,7 +452,6 @@ pub unsafe extern "C" fn window_buffer_update(wme: NonNull<window_mode_entry>) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_buffer_do_delete(
     modedata: NonNull<c_void>,
     itemdata: NonNull<c_void>,
@@ -495,7 +480,6 @@ pub unsafe extern "C" fn window_buffer_do_delete(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_buffer_do_paste(
     modedata: NonNull<c_void>,
     itemdata: NonNull<c_void>,
@@ -517,7 +501,6 @@ pub unsafe extern "C" fn window_buffer_do_paste(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_buffer_finish_edit(ed: *mut window_buffer_editdata) {
     unsafe {
         free_((*ed).name);
@@ -525,7 +508,6 @@ pub unsafe extern "C" fn window_buffer_finish_edit(ed: *mut window_buffer_editda
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_buffer_edit_close_cb(
     buf: *mut c_char,
     mut len: usize,
@@ -572,7 +554,6 @@ pub unsafe extern "C" fn window_buffer_edit_close_cb(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_buffer_start_edit(
     data: *mut window_buffer_modedata,
     item: *mut window_buffer_itemdata,
@@ -602,7 +583,6 @@ pub unsafe extern "C" fn window_buffer_start_edit(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_buffer_key(
     wme: NonNull<window_mode_entry>,
     c: *mut client,

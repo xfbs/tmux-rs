@@ -50,12 +50,10 @@ pub fn log_add_level() {
     log_level.fetch_add(1, DEFAULT_ORDERING);
 }
 
-#[unsafe(no_mangle)]
 pub extern "C" fn log_get_level() -> i32 {
     log_level.load(DEFAULT_ORDERING)
 }
 
-#[unsafe(no_mangle)]
 pub fn log_open(name: &CStr) {
     if log_level.load(DEFAULT_ORDERING) == 0 {
         return;
@@ -77,7 +75,6 @@ pub fn log_open(name: &CStr) {
     unsafe { event_set_log_callback(Some(log_event_cb)) };
 }
 
-#[unsafe(no_mangle)]
 pub fn log_toggle(name: &CStr) {
     if log_level.fetch_xor(1, DEFAULT_ORDERING) == 0 {
         log_open(name);
@@ -88,7 +85,6 @@ pub fn log_toggle(name: &CStr) {
     };
 }
 
-#[unsafe(no_mangle)]
 pub fn log_close() {
     // If we drop the file when it's already closed it will panic in debug mode.
     // Because of this and our use of fork, extra care has to be made when closing the file.
@@ -333,7 +329,7 @@ macro_rules! fatal_rs {
     ($e:expr) => {};
 }
 
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn fatal_rs(args: &std::fmt::Arguments<'_>) -> ! {
     unsafe {
         let mut tmp: [u8; 256] = [0; 256];

@@ -15,7 +15,6 @@ use super::*;
 
 use crate::compat::strtonum;
 
-#[unsafe(no_mangle)]
 pub static window_copy_mode: window_mode = window_mode {
     name: SyncCharPtr::new(c"copy-mode"),
     init: Some(window_copy_init),
@@ -27,7 +26,6 @@ pub static window_copy_mode: window_mode = window_mode {
     ..window_mode::default()
 };
 
-#[unsafe(no_mangle)]
 pub static window_view_mode: window_mode = window_mode {
     name: SyncCharPtr::new(c"view-mode"),
     init: Some(window_copy_view_init),
@@ -214,7 +212,6 @@ pub struct window_copy_mode_data {
     dragtimer: event,
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_scroll_timer(_fd: i32, _events: i16, arg: *mut c_void) {
     unsafe {
         let wme: *mut window_mode_entry = arg.cast();
@@ -241,7 +238,6 @@ pub unsafe extern "C" fn window_copy_scroll_timer(_fd: i32, _events: i16, arg: *
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_clone_screen(
     src: *mut screen,
     hint: *mut screen,
@@ -307,7 +303,7 @@ pub unsafe extern "C" fn window_copy_clone_screen(
         dst
     }
 }
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn window_copy_common_init(
     wme: *mut window_mode_entry,
 ) -> *mut window_copy_mode_data {
@@ -361,7 +357,6 @@ pub unsafe extern "C" fn window_copy_common_init(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_init(
     wme: NonNull<window_mode_entry>,
     _fs: *mut cmd_find_state,
@@ -417,7 +412,6 @@ pub unsafe extern "C" fn window_copy_init(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_view_init(
     wme: NonNull<window_mode_entry>,
     fs: *mut cmd_find_state,
@@ -446,7 +440,6 @@ pub unsafe extern "C" fn window_copy_view_init(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_free(wme: NonNull<window_mode_entry>) {
     unsafe {
         let wme = wme.as_ptr();
@@ -480,7 +473,6 @@ macro_rules! window_copy_add {
 }
 pub(crate) use window_copy_add;
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_init_ctx_cb(ctx: *mut screen_write_ctx, ttyctx: *mut tty_ctx) {
     unsafe {
         memcpy__(&raw mut (*ttyctx).defaults, &raw const grid_default_cell);
@@ -562,14 +554,12 @@ pub unsafe fn window_copy_vadd(wp: *mut window_pane, parse: i32, args: std::fmt:
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_pageup(wp: *mut window_pane, half_page: i32) {
     unsafe {
         window_copy_pageup1(tailq_first(&raw mut (*wp).modes), half_page);
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_pageup1(wme: *mut window_mode_entry, half_page: i32) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -621,7 +611,6 @@ pub unsafe extern "C" fn window_copy_pageup1(wme: *mut window_mode_entry, half_p
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_pagedown(
     wp: *mut window_pane,
     half_page: i32,
@@ -634,7 +623,6 @@ pub unsafe extern "C" fn window_copy_pagedown(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_pagedown1(
     wme: *mut window_mode_entry,
     half_page: i32,
@@ -694,7 +682,6 @@ pub unsafe extern "C" fn window_copy_pagedown1(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_previous_paragraph(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -713,7 +700,6 @@ pub unsafe extern "C" fn window_copy_previous_paragraph(wme: *mut window_mode_en
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_next_paragraph(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -735,7 +721,6 @@ pub unsafe extern "C" fn window_copy_next_paragraph(wme: *mut window_mode_entry)
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_get_word(wp: *mut window_pane, x: u32, y: u32) -> *mut c_char {
     unsafe {
         let wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
@@ -746,7 +731,6 @@ pub unsafe extern "C" fn window_copy_get_word(wp: *mut window_pane, x: u32, y: u
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_get_line(wp: *mut window_pane, y: u32) -> *mut c_char {
     unsafe {
         let wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
@@ -757,7 +741,6 @@ pub unsafe extern "C" fn window_copy_get_line(wp: *mut window_pane, y: u32) -> *
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_hyperlink_cb(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let wp = format_get_pane(ft);
@@ -775,7 +758,6 @@ pub unsafe extern "C" fn window_copy_cursor_hyperlink_cb(ft: *mut format_tree) -
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_word_cb(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let wp: *mut window_pane = format_get_pane(ft);
@@ -786,7 +768,6 @@ pub unsafe extern "C" fn window_copy_cursor_word_cb(ft: *mut format_tree) -> *mu
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_line_cb(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let wp: *mut window_pane = format_get_pane(ft);
@@ -797,7 +778,6 @@ pub unsafe extern "C" fn window_copy_cursor_line_cb(ft: *mut format_tree) -> *mu
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_search_match_cb(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let wp: *mut window_pane = format_get_pane(ft);
@@ -808,7 +788,6 @@ pub unsafe extern "C" fn window_copy_search_match_cb(ft: *mut format_tree) -> *m
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_formats(wme: *mut window_mode_entry, ft: *mut format_tree) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -879,7 +858,6 @@ pub unsafe extern "C" fn window_copy_formats(wme: *mut window_mode_entry, ft: *m
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_size_changed(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -903,7 +881,6 @@ pub unsafe extern "C" fn window_copy_size_changed(wme: *mut window_mode_entry) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_resize(wme: NonNull<window_mode_entry>, sx: u32, sy: u32) {
     unsafe {
         let wme = wme.as_ptr();
@@ -940,7 +917,6 @@ pub unsafe extern "C" fn window_copy_resize(wme: NonNull<window_mode_entry>, sx:
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_key_table(wme: *mut window_mode_entry) -> *const c_char {
     unsafe {
         let wp = (*wme).wp;
@@ -956,7 +932,6 @@ pub unsafe extern "C" fn window_copy_key_table(wme: *mut window_mode_entry) -> *
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_expand_search_string(cs: *mut window_copy_cmd_state) -> i32 {
     unsafe {
         let wme: *mut window_mode_entry = (*cs).wme;
@@ -990,7 +965,6 @@ pub unsafe extern "C" fn window_copy_expand_search_string(cs: *mut window_copy_c
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_append_selection(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1006,7 +980,6 @@ pub unsafe extern "C" fn window_copy_cmd_append_selection(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_append_selection_and_cancel(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1022,7 +995,6 @@ pub unsafe extern "C" fn window_copy_cmd_append_selection_and_cancel(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_back_to_indentation(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1032,7 +1004,6 @@ pub unsafe extern "C" fn window_copy_cmd_back_to_indentation(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_begin_selection(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1054,7 +1025,6 @@ pub unsafe extern "C" fn window_copy_cmd_begin_selection(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_stop_selection(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1069,7 +1039,6 @@ pub unsafe extern "C" fn window_copy_cmd_stop_selection(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_bottom_line(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1085,14 +1054,12 @@ pub unsafe extern "C" fn window_copy_cmd_bottom_line(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_cancel(
     _cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe { window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_clear_selection(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1104,7 +1071,6 @@ pub unsafe extern "C" fn window_copy_cmd_clear_selection(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_do_copy_end_of_line(
     cs: *mut window_copy_cmd_state,
     pipe: i32,
@@ -1173,35 +1139,30 @@ pub unsafe extern "C" fn window_copy_do_copy_end_of_line(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_copy_end_of_line(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe { window_copy_do_copy_end_of_line(cs, 0, 0) }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_copy_end_of_line_and_cancel(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe { window_copy_do_copy_end_of_line(cs, 0, 1) }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_copy_pipe_end_of_line(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe { window_copy_do_copy_end_of_line(cs, 1, 0) }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_copy_pipe_end_of_line_and_cancel(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe { window_copy_do_copy_end_of_line(cs, 1, 1) }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_do_copy_line(
     cs: *mut window_copy_cmd_state,
     pipe: i32,
@@ -1274,35 +1235,30 @@ pub unsafe extern "C" fn window_copy_do_copy_line(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_copy_line(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe { window_copy_do_copy_line(cs, 0, 0) }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_copy_line_and_cancel(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe { window_copy_do_copy_line(cs, 0, 1) }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_copy_pipe_line(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe { window_copy_do_copy_line(cs, 1, 0) }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_copy_pipe_line_and_cancel(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe { window_copy_do_copy_line(cs, 1, 1) }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_copy_selection_no_clear(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1328,7 +1284,6 @@ pub unsafe extern "C" fn window_copy_cmd_copy_selection_no_clear(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_copy_selection(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1341,7 +1296,6 @@ pub unsafe extern "C" fn window_copy_cmd_copy_selection(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_copy_selection_and_cancel(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1354,7 +1308,6 @@ pub unsafe extern "C" fn window_copy_cmd_copy_selection_and_cancel(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_cursor_down(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1370,7 +1323,6 @@ pub unsafe extern "C" fn window_copy_cmd_cursor_down(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_cursor_down_and_cancel(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1393,7 +1345,6 @@ pub unsafe extern "C" fn window_copy_cmd_cursor_down_and_cancel(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_cursor_left(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1409,7 +1360,6 @@ pub unsafe extern "C" fn window_copy_cmd_cursor_left(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_cursor_right(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1430,7 +1380,7 @@ pub unsafe extern "C" fn window_copy_cmd_cursor_right(
 }
 
 /* Scroll line containing the cursor to the given position. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn window_copy_cmd_scroll_to(
     cs: *mut window_copy_cmd_state,
     to: u32,
@@ -1460,7 +1410,7 @@ pub unsafe extern "C" fn window_copy_cmd_scroll_to(
 }
 
 /* Scroll line containing the cursor to the bottom. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn window_copy_cmd_scroll_bottom(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1473,7 +1423,7 @@ pub unsafe extern "C" fn window_copy_cmd_scroll_bottom(
 }
 
 /* Scroll line containing the cursor to the middle. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn window_copy_cmd_scroll_middle(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1485,14 +1435,13 @@ pub unsafe extern "C" fn window_copy_cmd_scroll_middle(
 }
 
 /* Scroll line containing the cursor to the top. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn window_copy_cmd_scroll_top(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
     unsafe { window_copy_cmd_scroll_to(cs, 0) }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_cursor_up(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1508,7 +1457,6 @@ pub unsafe extern "C" fn window_copy_cmd_cursor_up(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_end_of_line(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1520,7 +1468,6 @@ pub unsafe extern "C" fn window_copy_cmd_end_of_line(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_halfpage_down(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1539,7 +1486,6 @@ pub unsafe extern "C" fn window_copy_cmd_halfpage_down(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_halfpage_down_and_cancel(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1557,7 +1503,6 @@ pub unsafe extern "C" fn window_copy_cmd_halfpage_down_and_cancel(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_halfpage_up(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1573,7 +1518,6 @@ pub unsafe extern "C" fn window_copy_cmd_halfpage_up(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_toggle_position(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1586,7 +1530,6 @@ pub unsafe extern "C" fn window_copy_cmd_toggle_position(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_history_bottom(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1612,7 +1555,6 @@ pub unsafe extern "C" fn window_copy_cmd_history_bottom(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_history_top(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1637,7 +1579,6 @@ pub unsafe extern "C" fn window_copy_cmd_history_top(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_jump_again(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1677,7 +1618,6 @@ pub unsafe extern "C" fn window_copy_cmd_jump_again(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_jump_reverse(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1717,7 +1657,6 @@ pub unsafe extern "C" fn window_copy_cmd_jump_reverse(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_middle_line(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1733,7 +1672,6 @@ pub unsafe extern "C" fn window_copy_cmd_middle_line(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_previous_matching_bracket(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1841,7 +1779,6 @@ pub unsafe extern "C" fn window_copy_cmd_previous_matching_bracket(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_next_matching_bracket(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -1990,7 +1927,6 @@ pub unsafe extern "C" fn window_copy_cmd_next_matching_bracket(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_next_paragraph(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2006,7 +1942,6 @@ pub unsafe extern "C" fn window_copy_cmd_next_paragraph(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_next_space(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2022,7 +1957,6 @@ pub unsafe extern "C" fn window_copy_cmd_next_space(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_next_space_end(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2038,7 +1972,6 @@ pub unsafe extern "C" fn window_copy_cmd_next_space_end(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_next_word(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2056,7 +1989,6 @@ pub unsafe extern "C" fn window_copy_cmd_next_word(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_next_word_end(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2074,7 +2006,6 @@ pub unsafe extern "C" fn window_copy_cmd_next_word_end(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_other_end(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2091,7 +2022,6 @@ pub unsafe extern "C" fn window_copy_cmd_other_end(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_page_down(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2110,7 +2040,6 @@ pub unsafe extern "C" fn window_copy_cmd_page_down(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_page_down_and_cancel(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2128,7 +2057,6 @@ pub unsafe extern "C" fn window_copy_cmd_page_down_and_cancel(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_page_up(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2144,7 +2072,6 @@ pub unsafe extern "C" fn window_copy_cmd_page_up(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_previous_paragraph(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2160,7 +2087,6 @@ pub unsafe extern "C" fn window_copy_cmd_previous_paragraph(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_previous_space(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2176,7 +2102,6 @@ pub unsafe extern "C" fn window_copy_cmd_previous_space(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_previous_word(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2194,7 +2119,6 @@ pub unsafe extern "C" fn window_copy_cmd_previous_word(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_rectangle_on(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2209,7 +2133,6 @@ pub unsafe extern "C" fn window_copy_cmd_rectangle_on(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_rectangle_off(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2224,7 +2147,6 @@ pub unsafe extern "C" fn window_copy_cmd_rectangle_off(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_rectangle_toggle(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2239,7 +2161,6 @@ pub unsafe extern "C" fn window_copy_cmd_rectangle_toggle(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_scroll_down(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2260,7 +2181,6 @@ pub unsafe extern "C" fn window_copy_cmd_scroll_down(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_scroll_down_and_cancel(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2281,7 +2201,6 @@ pub unsafe extern "C" fn window_copy_cmd_scroll_down_and_cancel(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_scroll_up(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2297,7 +2216,6 @@ pub unsafe extern "C" fn window_copy_cmd_scroll_up(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_search_again(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2321,7 +2239,6 @@ pub unsafe extern "C" fn window_copy_cmd_search_again(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_search_reverse(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2345,7 +2262,6 @@ pub unsafe extern "C" fn window_copy_cmd_search_reverse(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_select_line(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2378,7 +2294,6 @@ pub unsafe extern "C" fn window_copy_cmd_select_line(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_select_word(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2436,7 +2351,6 @@ pub unsafe extern "C" fn window_copy_cmd_select_word(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_set_mark(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2450,7 +2364,6 @@ pub unsafe extern "C" fn window_copy_cmd_set_mark(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_start_of_line(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2460,7 +2373,6 @@ pub unsafe extern "C" fn window_copy_cmd_start_of_line(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_top_line(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2476,7 +2388,6 @@ pub unsafe extern "C" fn window_copy_cmd_top_line(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_copy_pipe_no_clear(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2506,7 +2417,6 @@ pub unsafe extern "C" fn window_copy_cmd_copy_pipe_no_clear(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_copy_pipe(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2519,7 +2429,6 @@ pub unsafe extern "C" fn window_copy_cmd_copy_pipe(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_copy_pipe_and_cancel(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2532,7 +2441,6 @@ pub unsafe extern "C" fn window_copy_cmd_copy_pipe_and_cancel(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_pipe_no_clear(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2555,7 +2463,6 @@ pub unsafe extern "C" fn window_copy_cmd_pipe_no_clear(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_pipe(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2568,7 +2475,6 @@ pub unsafe extern "C" fn window_copy_cmd_pipe(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_pipe_and_cancel(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2581,7 +2487,6 @@ pub unsafe extern "C" fn window_copy_cmd_pipe_and_cancel(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_goto_line(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2596,7 +2501,6 @@ pub unsafe extern "C" fn window_copy_cmd_goto_line(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_jump_backward(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2619,7 +2523,6 @@ pub unsafe extern "C" fn window_copy_cmd_jump_backward(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_jump_forward(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2642,7 +2545,6 @@ pub unsafe extern "C" fn window_copy_cmd_jump_forward(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_jump_to_backward(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2665,7 +2567,6 @@ pub unsafe extern "C" fn window_copy_cmd_jump_to_backward(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_jump_to_forward(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2688,7 +2589,6 @@ pub unsafe extern "C" fn window_copy_cmd_jump_to_forward(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_jump_to_mark(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2700,7 +2600,6 @@ pub unsafe extern "C" fn window_copy_cmd_jump_to_mark(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_next_prompt(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2713,7 +2612,6 @@ pub unsafe extern "C" fn window_copy_cmd_next_prompt(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_previous_prompt(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2726,7 +2624,6 @@ pub unsafe extern "C" fn window_copy_cmd_previous_prompt(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_search_backward(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2752,7 +2649,6 @@ pub unsafe extern "C" fn window_copy_cmd_search_backward(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_search_backward_text(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2778,7 +2674,6 @@ pub unsafe extern "C" fn window_copy_cmd_search_backward_text(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_search_forward(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2804,7 +2699,6 @@ pub unsafe extern "C" fn window_copy_cmd_search_forward(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_search_forward_text(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2830,7 +2724,6 @@ pub unsafe extern "C" fn window_copy_cmd_search_forward_text(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_search_backward_incremental(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2888,7 +2781,6 @@ pub unsafe extern "C" fn window_copy_cmd_search_backward_incremental(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_search_forward_incremental(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -2946,7 +2838,6 @@ pub unsafe extern "C" fn window_copy_cmd_search_forward_incremental(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cmd_refresh_from_pane(
     cs: *mut window_copy_cmd_state,
 ) -> window_copy_cmd_action {
@@ -3581,7 +3472,6 @@ static window_copy_cmd_table: [window_copy_cmd_table_entry; 85] = [
     },
 ];
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_command(
     wme: NonNull<window_mode_entry>,
     c: *mut client,
@@ -3658,7 +3548,6 @@ pub unsafe extern "C" fn window_copy_command(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_scroll_to(
     wme: *mut window_mode_entry,
     px: u32,
@@ -3699,7 +3588,6 @@ pub unsafe extern "C" fn window_copy_scroll_to(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_search_compare(
     gd: *mut grid,
     px: u32,
@@ -3734,7 +3622,6 @@ pub unsafe extern "C" fn window_copy_search_compare(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_search_lr(
     gd: *mut grid,
     sgd: *mut grid,
@@ -3783,7 +3670,6 @@ pub unsafe extern "C" fn window_copy_search_lr(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_search_rl(
     gd: *mut grid,
     sgd: *mut grid,
@@ -3835,7 +3721,6 @@ pub unsafe extern "C" fn window_copy_search_rl(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_search_lr_regex(
     gd: *mut grid,
     ppx: *mut u32,
@@ -3924,7 +3809,6 @@ pub unsafe extern "C" fn window_copy_search_lr_regex(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_search_rl_regex(
     gd: *mut grid,
     ppx: *mut u32,
@@ -3975,7 +3859,6 @@ pub unsafe extern "C" fn window_copy_search_rl_regex(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cellstring(
     gl: *mut grid_line,
     px: u32,
@@ -4024,7 +3907,7 @@ pub unsafe extern "C" fn window_copy_cellstring(
 }
 
 /* Find last match in given range. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn window_copy_last_regex(
     gd: *mut grid,
     py: u32,
@@ -4100,7 +3983,7 @@ pub unsafe extern "C" fn window_copy_last_regex(
 }
 
 /* Stringify line and append to input buffer. Caller frees. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn window_copy_stringify(
     gd: *mut grid,
     py: u32,
@@ -4152,7 +4035,7 @@ pub unsafe extern "C" fn window_copy_stringify(
 }
 
 /* Map start of C string containing UTF-8 data to grid cell position. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn window_copy_cstrtocellpos(
     gd: *mut grid,
     ncells: u32,
@@ -4260,7 +4143,6 @@ pub unsafe extern "C" fn window_copy_cstrtocellpos(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_move_left(
     s: *mut screen,
     fx: *mut u32,
@@ -4286,7 +4168,6 @@ pub unsafe extern "C" fn window_copy_move_left(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_move_right(
     s: *mut screen,
     fx: *mut u32,
@@ -4312,7 +4193,6 @@ pub unsafe extern "C" fn window_copy_move_right(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_is_lowercase(mut ptr: *const c_char) -> boolint {
     unsafe {
         while *ptr != b'\0' as i8 {
@@ -4329,7 +4209,7 @@ pub unsafe extern "C" fn window_copy_is_lowercase(mut ptr: *const c_char) -> boo
  * Handle backward wrapped regex searches with overlapping matches. In this case
  * find the longest overlapping match from previous wrapped lines.
  */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn window_copy_search_back_overlap(
     gd: *mut grid,
     preg: *mut libc::regex_t,
@@ -4400,7 +4280,7 @@ pub unsafe extern "C" fn window_copy_search_back_overlap(
  * up, down otherwise. If wrap then go to begin/end of grid and try again if
  * not found.
  */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn window_copy_search_jump(
     wme: *mut window_mode_entry,
     gd: *mut grid,
@@ -4528,7 +4408,6 @@ pub unsafe extern "C" fn window_copy_search_jump(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_move_after_search_mark(
     data: *mut window_copy_mode_data,
     fx: *mut u32,
@@ -4565,7 +4444,7 @@ pub unsafe extern "C" fn window_copy_move_after_search_mark(
  * Search in for text searchstr. If direction is 0 then search up, otherwise
  * down.
  */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn window_copy_search(
     wme: *mut window_mode_entry,
     direction: i32,
@@ -4730,7 +4609,6 @@ pub unsafe extern "C" fn window_copy_search(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_visible_lines(
     data: *mut window_copy_mode_data,
     start: *mut u32,
@@ -4752,7 +4630,6 @@ pub unsafe extern "C" fn window_copy_visible_lines(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_search_mark_at(
     data: *mut window_copy_mode_data,
     px: u32,
@@ -4774,7 +4651,6 @@ pub unsafe extern "C" fn window_copy_search_mark_at(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_search_marks(
     wme: *mut window_mode_entry,
     mut ssp: *mut screen,
@@ -4968,7 +4844,6 @@ pub unsafe extern "C" fn window_copy_search_marks(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_clear_marks(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -4978,17 +4853,14 @@ pub unsafe extern "C" fn window_copy_clear_marks(wme: *mut window_mode_entry) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_search_up(wme: *mut window_mode_entry, regex: i32) -> i32 {
     unsafe { window_copy_search(wme, 0, regex) }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_search_down(wme: *mut window_mode_entry, regex: i32) -> i32 {
     unsafe { window_copy_search(wme, 1, regex) }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_goto_line(
     wme: *mut window_mode_entry,
     linestr: *const c_char,
@@ -5011,7 +4883,6 @@ pub unsafe extern "C" fn window_copy_goto_line(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_match_start_end(
     data: *mut window_copy_mode_data,
     at: u32,
@@ -5040,7 +4911,6 @@ pub unsafe extern "C" fn window_copy_match_start_end(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_match_at_cursor(
     data: *mut window_copy_mode_data,
 ) -> *mut c_char {
@@ -5103,7 +4973,6 @@ pub unsafe extern "C" fn window_copy_match_at_cursor(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_update_style(
     wme: *mut window_mode_entry,
     fx: u32,
@@ -5192,7 +5061,6 @@ pub unsafe extern "C" fn window_copy_update_style(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_write_one(
     wme: *mut window_mode_entry,
     ctx: *mut screen_write_ctx,
@@ -5219,7 +5087,6 @@ pub unsafe extern "C" fn window_copy_write_one(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_write_line(
     wme: *mut window_mode_entry,
     ctx: *mut screen_write_ctx,
@@ -5340,7 +5207,6 @@ pub unsafe extern "C" fn window_copy_write_line(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_write_lines(
     wme: *mut window_mode_entry,
     ctx: *mut screen_write_ctx,
@@ -5354,7 +5220,6 @@ pub unsafe extern "C" fn window_copy_write_lines(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_redraw_selection(wme: *mut window_mode_entry, old_y: u32) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -5380,7 +5245,6 @@ pub unsafe extern "C" fn window_copy_redraw_selection(wme: *mut window_mode_entr
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_redraw_lines(wme: *mut window_mode_entry, py: u32, ny: u32) {
     unsafe {
         let wp: *mut window_pane = (*wme).wp;
@@ -5396,7 +5260,6 @@ pub unsafe extern "C" fn window_copy_redraw_lines(wme: *mut window_mode_entry, p
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_redraw_screen(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -5405,7 +5268,6 @@ pub unsafe extern "C" fn window_copy_redraw_screen(wme: *mut window_mode_entry) 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_synchronize_cursor_end(
     wme: *mut window_mode_entry,
     mut begin: i32,
@@ -5488,7 +5350,6 @@ pub unsafe extern "C" fn window_copy_synchronize_cursor_end(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_synchronize_cursor(
     wme: *mut window_mode_entry,
     no_reset: i32,
@@ -5504,7 +5365,6 @@ pub unsafe extern "C" fn window_copy_synchronize_cursor(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_update_cursor(wme: *mut window_mode_entry, cx: u32, cy: u32) {
     unsafe {
         let wp: *mut window_pane = (*wme).wp;
@@ -5529,7 +5389,6 @@ pub unsafe extern "C" fn window_copy_update_cursor(wme: *mut window_mode_entry, 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_start_selection(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -5546,7 +5405,6 @@ pub unsafe extern "C" fn window_copy_start_selection(wme: *mut window_mode_entry
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_adjust_selection(
     wme: *mut window_mode_entry,
     selx: *mut u32,
@@ -5584,7 +5442,6 @@ pub unsafe extern "C" fn window_copy_adjust_selection(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_update_selection(
     wme: *mut window_mode_entry,
     may_redraw: i32,
@@ -5601,7 +5458,6 @@ pub unsafe extern "C" fn window_copy_update_selection(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_set_selection(
     wme: *mut window_mode_entry,
     may_redraw: i32,
@@ -5676,7 +5532,6 @@ pub unsafe extern "C" fn window_copy_set_selection(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_get_selection(
     wme: *mut window_mode_entry,
     len: *mut usize,
@@ -5823,7 +5678,6 @@ pub unsafe extern "C" fn window_copy_get_selection(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_copy_buffer(
     wme: *mut window_mode_entry,
     prefix: *const c_char,
@@ -5845,7 +5699,6 @@ pub unsafe extern "C" fn window_copy_copy_buffer(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_pipe_run(
     wme: *mut window_mode_entry,
     s: *mut session,
@@ -5879,7 +5732,6 @@ pub unsafe extern "C" fn window_copy_pipe_run(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_pipe(
     wme: *mut window_mode_entry,
     s: *mut session,
@@ -5892,7 +5744,6 @@ pub unsafe extern "C" fn window_copy_pipe(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_copy_pipe(
     wme: *mut window_mode_entry,
     s: *mut session,
@@ -5908,7 +5759,6 @@ pub unsafe extern "C" fn window_copy_copy_pipe(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_copy_selection(
     wme: *mut window_mode_entry,
     prefix: *const c_char,
@@ -5922,7 +5772,6 @@ pub unsafe extern "C" fn window_copy_copy_selection(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_append_selection(wme: *mut window_mode_entry) {
     unsafe {
         let wp: *mut window_pane = (*wme).wp;
@@ -5958,7 +5807,6 @@ pub unsafe extern "C" fn window_copy_append_selection(wme: *mut window_mode_entr
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_copy_line(
     wme: *mut window_mode_entry,
     buf: *mut *mut c_char,
@@ -6038,7 +5886,6 @@ pub unsafe extern "C" fn window_copy_copy_line(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_clear_selection(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -6057,7 +5904,6 @@ pub unsafe extern "C" fn window_copy_clear_selection(wme: *mut window_mode_entry
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_in_set(
     wme: *mut window_mode_entry,
     px: u32,
@@ -6076,7 +5922,6 @@ pub unsafe extern "C" fn window_copy_in_set(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_find_length(wme: *mut window_mode_entry, py: u32) -> u32 {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -6085,7 +5930,6 @@ pub unsafe extern "C" fn window_copy_find_length(wme: *mut window_mode_entry, py
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_start_of_line(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -6104,7 +5948,6 @@ pub unsafe extern "C" fn window_copy_cursor_start_of_line(wme: *mut window_mode_
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_back_to_indentation(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -6123,7 +5966,6 @@ pub unsafe extern "C" fn window_copy_cursor_back_to_indentation(wme: *mut window
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_end_of_line(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -6155,7 +5997,6 @@ pub unsafe extern "C" fn window_copy_cursor_end_of_line(wme: *mut window_mode_en
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_other_end(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -6209,7 +6050,6 @@ pub unsafe extern "C" fn window_copy_other_end(wme: *mut window_mode_entry) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_left(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -6228,7 +6068,6 @@ pub unsafe extern "C" fn window_copy_cursor_left(wme: *mut window_mode_entry) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_right(wme: *mut window_mode_entry, all: i32) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -6256,7 +6095,6 @@ pub unsafe extern "C" fn window_copy_cursor_right(wme: *mut window_mode_entry, a
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_up(wme: *mut window_mode_entry, scroll_only: i32) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -6334,7 +6172,6 @@ pub unsafe extern "C" fn window_copy_cursor_up(wme: *mut window_mode_entry, scro
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_down(wme: *mut window_mode_entry, scroll_only: i32) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -6404,7 +6241,6 @@ pub unsafe extern "C" fn window_copy_cursor_down(wme: *mut window_mode_entry, sc
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_jump(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -6433,7 +6269,6 @@ pub unsafe extern "C" fn window_copy_cursor_jump(wme: *mut window_mode_entry) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_jump_back(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -6454,7 +6289,6 @@ pub unsafe extern "C" fn window_copy_cursor_jump_back(wme: *mut window_mode_entr
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_jump_to(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -6484,7 +6318,6 @@ pub unsafe extern "C" fn window_copy_cursor_jump_to(wme: *mut window_mode_entry)
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_jump_to_back(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -6507,7 +6340,6 @@ pub unsafe extern "C" fn window_copy_cursor_jump_to_back(wme: *mut window_mode_e
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_next_word(
     wme: *mut window_mode_entry,
     separators: *const c_char,
@@ -6539,7 +6371,7 @@ pub unsafe extern "C" fn window_copy_cursor_next_word(
 }
 
 /* Compute the next place where a word ends. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn window_copy_cursor_next_word_end_pos(
     wme: *mut window_mode_entry,
     separators: *const c_char,
@@ -6576,7 +6408,7 @@ pub unsafe extern "C" fn window_copy_cursor_next_word_end_pos(
 }
 
 /* Move to the next place where a word ends. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn window_copy_cursor_next_word_end(
     wme: *mut window_mode_entry,
     separators: *const c_char,
@@ -6621,7 +6453,7 @@ pub unsafe extern "C" fn window_copy_cursor_next_word_end(
 }
 
 /* Compute the previous place where a word begins. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn window_copy_cursor_previous_word_pos(
     wme: *mut window_mode_entry,
     separators: *const c_char,
@@ -6651,7 +6483,7 @@ pub unsafe extern "C" fn window_copy_cursor_previous_word_pos(
 }
 
 /* Move to the previous place where a word begins. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn window_copy_cursor_previous_word(
     wme: *mut window_mode_entry,
     separators: *const c_char,
@@ -6684,7 +6516,6 @@ pub unsafe extern "C" fn window_copy_cursor_previous_word(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_cursor_prompt(
     wme: *mut window_mode_entry,
     direction: i32,
@@ -6742,7 +6573,6 @@ pub unsafe extern "C" fn window_copy_cursor_prompt(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_scroll_up(wme: *mut window_mode_entry, mut ny: u32) {
     unsafe {
         let wp: *mut window_pane = (*wme).wp;
@@ -6782,7 +6612,6 @@ pub unsafe extern "C" fn window_copy_scroll_up(wme: *mut window_mode_entry, mut 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_scroll_down(wme: *mut window_mode_entry, mut ny: u32) {
     unsafe {
         let wp: *mut window_pane = (*wme).wp;
@@ -6821,7 +6650,6 @@ pub unsafe extern "C" fn window_copy_scroll_down(wme: *mut window_mode_entry, mu
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_rectangle_set(wme: *mut window_mode_entry, rectflag: i32) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -6839,7 +6667,6 @@ pub unsafe extern "C" fn window_copy_rectangle_set(wme: *mut window_mode_entry, 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_move_mouse(m: *mut mouse_event) {
     unsafe {
         let Some(wp) = cmd_mouse_pane(m, null_mut(), null_mut()) else {
@@ -6862,7 +6689,7 @@ pub unsafe extern "C" fn window_copy_move_mouse(m: *mut mouse_event) {
         window_copy_update_cursor(wme, x, y);
     }
 }
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn window_copy_start_drag(c: *mut client, m: *mut mouse_event) {
     unsafe {
         let mut wp: *mut window_pane;
@@ -6923,7 +6750,6 @@ pub unsafe extern "C" fn window_copy_start_drag(c: *mut client, m: *mut mouse_ev
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_drag_update(c: *mut client, m: *mut mouse_event) {
     unsafe {
         let mut wp: *mut window_pane;
@@ -6975,7 +6801,6 @@ pub unsafe extern "C" fn window_copy_drag_update(c: *mut client, m: *mut mouse_e
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_drag_release(c: *mut client, m: *mut mouse_event) {
     unsafe {
         if c.is_null() {
@@ -6999,7 +6824,6 @@ pub unsafe extern "C" fn window_copy_drag_release(c: *mut client, m: *mut mouse_
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_copy_jump_to_mark(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -7023,7 +6847,7 @@ pub unsafe extern "C" fn window_copy_jump_to_mark(wme: *mut window_mode_entry) {
 }
 
 /* Scroll up if the cursor went off the visible screen. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn window_copy_acquire_cursor_up(
     wme: *mut window_mode_entry,
     hsize: u32,
@@ -7058,7 +6882,7 @@ pub unsafe extern "C" fn window_copy_acquire_cursor_up(
 }
 
 /* Scroll down if the cursor went off the visible screen. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn window_copy_acquire_cursor_down(
     wme: *mut window_mode_entry,
     hsize: u32,

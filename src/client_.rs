@@ -32,16 +32,16 @@ use crate::compat::{
     tree::rb_initializer,
 };
 
-#[unsafe(no_mangle)]
+unsafe extern "C" {
+    fn ttyname(fd: i32) -> *mut c_char;
+}
+
 pub static mut client_proc: *mut tmuxproc = null_mut();
 
-#[unsafe(no_mangle)]
 pub static mut client_peer: *mut tmuxpeer = null_mut();
 
-#[unsafe(no_mangle)]
 pub static mut client_flags: client_flag = client_flag::empty();
 
-#[unsafe(no_mangle)]
 pub static mut client_suspended: i32 = 0;
 
 #[repr(i32)]
@@ -58,30 +58,26 @@ pub enum client_exitreason {
     CLIENT_EXIT_MESSAGE_PROVIDED,
 }
 
-#[unsafe(no_mangle)]
 pub static mut client_exitreason: client_exitreason = client_exitreason::CLIENT_EXIT_NONE;
 
-#[unsafe(no_mangle)]
 pub static mut client_exitflag: i32 = 0;
-#[unsafe(no_mangle)]
+
 pub static mut client_exitval: i32 = 0;
 
-#[unsafe(no_mangle)]
 static mut client_exittype: msgtype = msgtype::ZERO; // TODO
-#[unsafe(no_mangle)]
+
 static mut client_exitsession: *mut c_char = null_mut();
-#[unsafe(no_mangle)]
+
 static mut client_exitmessage: *mut c_char = null_mut();
-#[unsafe(no_mangle)]
+
 static mut client_execshell: *mut c_char = null_mut();
-#[unsafe(no_mangle)]
+
 static mut client_execcmd: *mut c_char = null_mut();
-#[unsafe(no_mangle)]
+
 static mut client_attached: i32 = 0;
-#[unsafe(no_mangle)]
+
 static mut client_files: client_files = rb_initializer();
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn client_get_lock(lockfile: *mut c_char) -> i32 {
     unsafe {
         log_debug!("lock file is {}", _s(lockfile));
@@ -107,7 +103,6 @@ pub unsafe extern "C" fn client_get_lock(lockfile: *mut c_char) -> i32 {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn client_connect(
     base: *mut event_base,
     path: *const c_char,
@@ -202,7 +197,6 @@ pub unsafe extern "C" fn client_connect(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn client_exit_message() -> *const c_char {
     type msgbuf = [c_char; 256];
     static mut msg: msgbuf = [0; 256];
@@ -247,7 +241,6 @@ pub unsafe extern "C" fn client_exit_message() -> *const c_char {
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn client_exit() {
     unsafe {
         if file_write_left(&raw mut client_files) == 0 {
@@ -256,12 +249,7 @@ unsafe extern "C" fn client_exit() {
     }
 }
 
-unsafe extern "C" {
-    fn ttyname(fd: i32) -> *mut c_char;
-}
-
 #[expect(clippy::deref_addrof)]
-#[unsafe(no_mangle)]
 pub unsafe extern "C-unwind" fn client_main(
     base: *mut event_base,
     argc: i32,
@@ -508,7 +496,6 @@ pub unsafe extern "C-unwind" fn client_main(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn client_send_identify(
     ttynam: *const c_char,
     termname: *const c_char,
@@ -623,7 +610,7 @@ unsafe extern "C" fn client_send_identify(
 }
 
 #[expect(clippy::deref_addrof)]
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn client_exec(shell: *mut c_char, shellcmd: *mut c_char) {
     unsafe {
         log_debug!("shell {}, command {}", _s(shell), _s(shellcmd));
@@ -645,7 +632,6 @@ unsafe extern "C" fn client_exec(shell: *mut c_char, shellcmd: *mut c_char) {
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn client_signal(sig: i32) {
     unsafe {
         let mut sigact: sigaction = zeroed();
@@ -704,7 +690,6 @@ unsafe extern "C" fn client_signal(sig: i32) {
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn client_file_check_cb(
     _c: *mut client,
     _path: *mut c_char,
@@ -720,7 +705,6 @@ unsafe extern "C" fn client_file_check_cb(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn client_dispatch(imsg: *mut imsg, _arg: *mut c_void) {
     unsafe {
         if imsg.is_null() {
@@ -740,7 +724,6 @@ unsafe extern "C" fn client_dispatch(imsg: *mut imsg, _arg: *mut c_void) {
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn client_dispatch_exit_message(mut data: *const c_char, mut datalen: usize) {
     unsafe {
         let mut retval = 0;
@@ -769,7 +752,7 @@ unsafe extern "C" fn client_dispatch_exit_message(mut data: *const c_char, mut d
 }
 
 #[expect(clippy::deref_addrof)]
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
     // char		*data;
     // ssize_t		 datalen;
@@ -879,7 +862,7 @@ unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
 }
 
 #[expect(clippy::deref_addrof)]
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn client_dispatch_attached(imsg: *mut imsg) {
     unsafe {
         let mut sigact: sigaction = zeroed();

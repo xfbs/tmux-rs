@@ -43,7 +43,6 @@ pub struct hyperlinks {
     pub references: u32,
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn hyperlinks_by_uri_cmp(
     left: *const hyperlinks_uri,
     right: *const hyperlinks_uri,
@@ -75,7 +74,6 @@ RB_GENERATE!(
     hyperlinks_by_uri_cmp
 );
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn hyperlinks_by_inner_cmp(
     left: *const hyperlinks_uri,
     right: *const hyperlinks_uri,
@@ -91,7 +89,6 @@ RB_GENERATE!(
     hyperlinks_by_inner_cmp
 );
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn hyperlinks_remove(hlu: *mut hyperlinks_uri) {
     unsafe {
         let hl = (*hlu).tree;
@@ -109,7 +106,6 @@ unsafe extern "C" fn hyperlinks_remove(hlu: *mut hyperlinks_uri) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hyperlinks_put(
     hl: *mut hyperlinks,
     uri_in: *const c_char,
@@ -172,7 +168,6 @@ pub unsafe extern "C" fn hyperlinks_put(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hyperlinks_get(
     hl: *mut hyperlinks,
     inner: u32,
@@ -200,7 +195,6 @@ pub unsafe extern "C" fn hyperlinks_get(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hyperlinks_init() -> *mut hyperlinks {
     unsafe {
         let hl = xcalloc_::<hyperlinks>(1).as_ptr();
@@ -212,7 +206,6 @@ pub unsafe extern "C" fn hyperlinks_init() -> *mut hyperlinks {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hyperlinks_copy(hl: *mut hyperlinks) -> *mut hyperlinks {
     unsafe {
         (*hl).references += 1;
@@ -220,7 +213,6 @@ pub unsafe extern "C" fn hyperlinks_copy(hl: *mut hyperlinks) -> *mut hyperlinks
     hl
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hyperlinks_reset(hl: *mut hyperlinks) {
     unsafe {
         for hlu in rb_foreach::<_, discr_by_inner_entry>(&raw mut (*hl).by_inner) {
@@ -229,7 +221,6 @@ pub unsafe extern "C" fn hyperlinks_reset(hl: *mut hyperlinks) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hyperlinks_free(hl: *mut hyperlinks) {
     unsafe {
         (*hl).references -= 1;

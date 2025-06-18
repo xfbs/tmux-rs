@@ -14,8 +14,7 @@
 
 use crate::*;
 
-#[unsafe(no_mangle)]
-static mut cmd_select_window_entry: cmd_entry = cmd_entry {
+pub static mut cmd_select_window_entry: cmd_entry = cmd_entry {
     name: c"select-window".as_ptr(),
     alias: c"selectw".as_ptr(),
 
@@ -29,8 +28,7 @@ static mut cmd_select_window_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_next_window_entry: cmd_entry = cmd_entry {
+pub static mut cmd_next_window_entry: cmd_entry = cmd_entry {
     name: c"next-window".as_ptr(),
     alias: c"next".as_ptr(),
 
@@ -44,8 +42,7 @@ static mut cmd_next_window_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_previous_window_entry: cmd_entry = cmd_entry {
+pub static mut cmd_previous_window_entry: cmd_entry = cmd_entry {
     name: c"previous-window".as_ptr(),
     alias: c"prev".as_ptr(),
 
@@ -59,8 +56,7 @@ static mut cmd_previous_window_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_last_window_entry: cmd_entry = cmd_entry {
+pub static mut cmd_last_window_entry: cmd_entry = cmd_entry {
     name: c"last-window".as_ptr(),
     alias: c"last".as_ptr(),
 
@@ -74,7 +70,6 @@ static mut cmd_last_window_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_select_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

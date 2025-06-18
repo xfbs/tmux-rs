@@ -66,7 +66,7 @@ pub struct format_job {
 }
 
 pub type format_job_tree = rb_head<format_job>;
-#[unsafe(no_mangle)]
+
 pub static mut format_jobs: format_job_tree = rb_initializer();
 RB_GENERATE!(
     format_job_tree,
@@ -77,7 +77,7 @@ RB_GENERATE!(
 );
 
 // Format job tree comparison function.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_job_cmp(fj1: *const format_job, fj2: *const format_job) -> i32 {
     unsafe {
         if (*fj1).tag < (*fj2).tag {
@@ -198,13 +198,13 @@ pub struct format_modifier {
 }
 
 /// Format entry tree comparison function.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn format_entry_cmp(fe1: *const format_entry, fe2: *const format_entry) -> i32 {
     unsafe { strcmp((*fe1).key, (*fe2).key) }
 }
 
 /// Single-character uppercase aliases.
-#[unsafe(no_mangle)]
+
 static format_upper: [SyncCharPtr; 26] = const {
     const fn idx(c: char) -> usize {
         (c as u8 - b'A') as usize
@@ -224,7 +224,7 @@ static format_upper: [SyncCharPtr; 26] = const {
 };
 
 /// Single-character lowercase aliases.
-#[unsafe(no_mangle)]
+
 static format_lower: [SyncCharPtr; 26] = const {
     const fn idx(c: char) -> usize {
         (c as u8 - b'a') as usize
@@ -235,7 +235,7 @@ static format_lower: [SyncCharPtr; 26] = const {
 };
 
 /// Is logging enabled?
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_logging(ft: *mut format_tree) -> boolint {
     unsafe { log_get_level() != 0 || (*ft).flags.intersects(format_flags::FORMAT_VERBOSE) }.into()
 }
@@ -297,7 +297,7 @@ macro_rules! format_log {
 }
 
 /// Copy expand state.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_copy_state(
     to: *mut format_expand_state,
     from: *mut format_expand_state,
@@ -313,7 +313,7 @@ pub unsafe extern "C" fn format_copy_state(
 }
 
 /// Format job update callback.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_job_update(job: *mut job) {
     unsafe {
         let fj = job_get_data(job) as *mut format_job;
@@ -352,7 +352,7 @@ pub unsafe extern "C" fn format_job_update(job: *mut job) {
 }
 
 // Format job complete callback.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_job_complete(job: *mut job) {
     unsafe {
         let fj = job_get_data(job) as *mut format_job;
@@ -398,7 +398,6 @@ pub unsafe extern "C" fn format_job_complete(job: *mut job) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_job_get(
     es: *mut format_expand_state,
     cmd: *mut c_char,
@@ -495,7 +494,6 @@ pub unsafe extern "C" fn format_job_get(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_job_tidy(jobs: *mut format_job_tree, force: i32) {
     unsafe {
         let now = libc::time(null_mut());
@@ -521,7 +519,6 @@ pub unsafe extern "C" fn format_job_tidy(jobs: *mut format_job_tree, force: i32)
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_tidy_jobs() {
     unsafe {
         format_job_tidy(&raw mut format_jobs, 0);
@@ -533,7 +530,6 @@ pub unsafe extern "C" fn format_tidy_jobs() {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_lost_client(c: *mut client) {
     unsafe {
         if !(*c).jobs.is_null() {
@@ -557,7 +553,6 @@ pub unsafe fn format_printf_(args: std::fmt::Arguments) -> *mut c_char {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_host(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let mut host = MaybeUninit::<[c_char; HOST_NAME_MAX + 1]>::uninit();
@@ -571,7 +566,7 @@ pub unsafe extern "C" fn format_cb_host(ft: *mut format_tree) -> *mut c_void {
 }
 
 /// Callback for host_short.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_host_short(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let mut host = MaybeUninit::<[c_char; HOST_NAME_MAX + 1]>::uninit();
@@ -589,13 +584,13 @@ pub unsafe extern "C" fn format_cb_host_short(ft: *mut format_tree) -> *mut c_vo
 }
 
 /// Callback for pid.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pid(ft: *mut format_tree) -> *mut c_void {
     unsafe { libc::getpid().to_string().leak().as_mut_ptr().cast() }
 }
 
 /// Callback for session_attached_list.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_session_attached_list(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let s = (*ft).s;
@@ -629,7 +624,7 @@ pub unsafe extern "C" fn format_cb_session_attached_list(ft: *mut format_tree) -
 }
 
 /// Callback for session_alerts.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_session_alerts(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let s: *mut session = (*ft).s;
@@ -670,7 +665,7 @@ pub unsafe extern "C" fn format_cb_session_alerts(ft: *mut format_tree) -> *mut 
 }
 
 /// Callback for session_stack.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_session_stack(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let s = (*ft).s;
@@ -700,7 +695,7 @@ pub unsafe extern "C" fn format_cb_session_stack(ft: *mut format_tree) -> *mut c
 }
 
 /// Callback for window_stack_index.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_stack_index(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let mut value: *mut c_char = null_mut();
@@ -727,7 +722,7 @@ pub unsafe extern "C" fn format_cb_window_stack_index(ft: *mut format_tree) -> *
 }
 
 /// Callback for window_linked_sessions_list.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_linked_sessions_list(
     ft: *mut format_tree,
 ) -> *mut c_void {
@@ -761,7 +756,7 @@ pub unsafe extern "C" fn format_cb_window_linked_sessions_list(
 }
 
 /// Callback for window_active_sessions.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_active_sessions(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if (*ft).wl.is_null() {
@@ -778,7 +773,7 @@ pub unsafe extern "C" fn format_cb_window_active_sessions(ft: *mut format_tree) 
 }
 
 /// Callback for window_active_sessions_list.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_active_sessions_list(
     ft: *mut format_tree,
 ) -> *mut c_void {
@@ -813,7 +808,7 @@ pub unsafe extern "C" fn format_cb_window_active_sessions_list(
 }
 
 /// Callback for window_active_clients.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_active_clients(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if (*ft).wl.is_null() {
@@ -838,7 +833,7 @@ pub unsafe extern "C" fn format_cb_window_active_clients(ft: *mut format_tree) -
 }
 
 /// Callback for window_active_clients_list.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_active_clients_list(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if (*ft).wl.is_null() {
@@ -876,7 +871,7 @@ pub unsafe extern "C" fn format_cb_window_active_clients_list(ft: *mut format_tr
 }
 
 /// Callback for window_layout.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_layout(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let w = (*ft).w;
@@ -893,7 +888,7 @@ pub unsafe extern "C" fn format_cb_window_layout(ft: *mut format_tree) -> *mut c
 }
 
 /// Callback for window_visible_layout.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_visible_layout(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let w = (*ft).w;
@@ -906,7 +901,7 @@ pub unsafe extern "C" fn format_cb_window_visible_layout(ft: *mut format_tree) -
     }
 }
 /// Callback for pane_start_command.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_start_command(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let wp = (*ft).wp;
@@ -920,7 +915,7 @@ pub unsafe extern "C" fn format_cb_start_command(ft: *mut format_tree) -> *mut c
 }
 
 /// Callback for pane_start_path.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_start_path(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let wp = (*ft).wp;
@@ -937,7 +932,7 @@ pub unsafe extern "C" fn format_cb_start_path(ft: *mut format_tree) -> *mut c_vo
 }
 
 /// Callback for pane_current_command.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_current_command(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let wp = (*ft).wp;
@@ -962,7 +957,7 @@ pub unsafe extern "C" fn format_cb_current_command(ft: *mut format_tree) -> *mut
 }
 
 /// Callback for pane_current_path.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_current_path(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let wp = (*ft).wp;
@@ -980,7 +975,7 @@ pub unsafe extern "C" fn format_cb_current_path(ft: *mut format_tree) -> *mut c_
 }
 
 /// Callback for history_bytes.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_history_bytes(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let wp = (*ft).wp;
@@ -1004,7 +999,7 @@ pub unsafe extern "C" fn format_cb_history_bytes(ft: *mut format_tree) -> *mut c
 }
 
 /// Callback for history_all_bytes.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_history_all_bytes(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let wp = (*ft).wp;
@@ -1038,7 +1033,7 @@ pub unsafe extern "C" fn format_cb_history_all_bytes(ft: *mut format_tree) -> *m
 }
 
 /// Callback for pane_tabs.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_tabs(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let wp = (*ft).wp;
@@ -1076,7 +1071,7 @@ pub unsafe extern "C" fn format_cb_pane_tabs(ft: *mut format_tree) -> *mut c_voi
 }
 
 /// Callback for pane_fg.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_fg(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let wp = (*ft).wp;
@@ -1092,7 +1087,7 @@ pub unsafe extern "C" fn format_cb_pane_fg(ft: *mut format_tree) -> *mut c_void 
 }
 
 /// Callback for pane_bg.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_bg(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let wp = (*ft).wp;
@@ -1108,7 +1103,7 @@ pub unsafe extern "C" fn format_cb_pane_bg(ft: *mut format_tree) -> *mut c_void 
 }
 
 /// Callback for session_group_list.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_session_group_list(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let s = (*ft).s;
@@ -1144,7 +1139,7 @@ pub unsafe extern "C" fn format_cb_session_group_list(ft: *mut format_tree) -> *
 }
 
 /// Callback for session_group_attached_list.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_session_group_attached_list(
     ft: *mut format_tree,
 ) -> *mut c_void {
@@ -1192,7 +1187,7 @@ pub unsafe extern "C" fn format_cb_session_group_attached_list(
 }
 
 /// Callback for pane_in_mode.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_in_mode(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let wp = (*ft).wp;
@@ -1207,7 +1202,7 @@ pub unsafe extern "C" fn format_cb_pane_in_mode(ft: *mut format_tree) -> *mut c_
 }
 
 /// Callback for pane_at_top.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_at_top(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let wp = (*ft).wp;
@@ -1228,7 +1223,7 @@ pub unsafe extern "C" fn format_cb_pane_at_top(ft: *mut format_tree) -> *mut c_v
 }
 
 /// Callback for pane_at_bottom.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_at_bottom(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let wp = (*ft).wp;
@@ -1249,7 +1244,7 @@ pub unsafe extern "C" fn format_cb_pane_at_bottom(ft: *mut format_tree) -> *mut 
 }
 
 /// Callback for cursor_character.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_cursor_character(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let wp = (*ft).wp;
@@ -1276,7 +1271,7 @@ pub unsafe extern "C" fn format_cb_cursor_character(ft: *mut format_tree) -> *mu
 }
 
 /// Callback for mouse_word.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_mouse_word(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if (*ft).m.valid == 0 {
@@ -1303,7 +1298,7 @@ pub unsafe extern "C" fn format_cb_mouse_word(ft: *mut format_tree) -> *mut c_vo
 }
 
 /// Callback for mouse_hyperlink.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_mouse_hyperlink(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if (*ft).m.valid == 0 {
@@ -1323,7 +1318,7 @@ pub unsafe extern "C" fn format_cb_mouse_hyperlink(ft: *mut format_tree) -> *mut
 }
 
 /// Callback for mouse_line.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_mouse_line(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if (*ft).m.valid == 0 {
@@ -1350,7 +1345,7 @@ pub unsafe extern "C" fn format_cb_mouse_line(ft: *mut format_tree) -> *mut c_vo
 }
 
 /// Callback for mouse_status_line.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_mouse_status_line(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if (*ft).m.valid == 0 {
@@ -1373,7 +1368,7 @@ pub unsafe extern "C" fn format_cb_mouse_status_line(ft: *mut format_tree) -> *m
 }
 
 /// Callback for mouse_status_range.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_mouse_status_range(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if (*ft).m.valid == 0 {
@@ -1426,7 +1421,6 @@ pub unsafe extern "C" fn format_cb_mouse_status_range(ft: *mut format_tree) -> *
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_alternate_on(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -1439,7 +1433,6 @@ pub unsafe extern "C" fn format_cb_alternate_on(ft: *mut format_tree) -> *mut c_
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_alternate_saved_x(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -1449,7 +1442,6 @@ pub unsafe extern "C" fn format_cb_alternate_saved_x(ft: *mut format_tree) -> *m
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_alternate_saved_y(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -1459,7 +1451,6 @@ pub unsafe extern "C" fn format_cb_alternate_saved_y(ft: *mut format_tree) -> *m
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_buffer_name(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if let Some(pb) = NonNull::new((*ft).pb) {
@@ -1469,7 +1460,6 @@ pub unsafe extern "C" fn format_cb_buffer_name(ft: *mut format_tree) -> *mut c_v
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_buffer_sample(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).pb.is_null() {
@@ -1479,7 +1469,6 @@ pub unsafe extern "C" fn format_cb_buffer_sample(ft: *mut format_tree) -> *mut c
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_buffer_size(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).pb.is_null() {
@@ -1491,7 +1480,6 @@ pub unsafe extern "C" fn format_cb_buffer_size(ft: *mut format_tree) -> *mut c_v
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_client_cell_height(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() && (*(*ft).c).tty.flags.intersects(tty_flags::TTY_STARTED) {
@@ -1501,7 +1489,6 @@ pub unsafe extern "C" fn format_cb_client_cell_height(ft: *mut format_tree) -> *
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_client_cell_width(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() && (*(*ft).c).tty.flags.intersects(tty_flags::TTY_STARTED) {
@@ -1511,7 +1498,6 @@ pub unsafe extern "C" fn format_cb_client_cell_width(ft: *mut format_tree) -> *m
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_client_control_mode(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
@@ -1524,7 +1510,6 @@ pub unsafe extern "C" fn format_cb_client_control_mode(ft: *mut format_tree) -> 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_client_discarded(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
@@ -1534,7 +1519,6 @@ pub unsafe extern "C" fn format_cb_client_discarded(ft: *mut format_tree) -> *mu
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_client_flags(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
@@ -1544,7 +1528,6 @@ pub unsafe extern "C" fn format_cb_client_flags(ft: *mut format_tree) -> *mut c_
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_client_height(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() && (*(*ft).c).tty.flags.intersects(tty_flags::TTY_STARTED) {
@@ -1554,7 +1537,6 @@ pub unsafe extern "C" fn format_cb_client_height(ft: *mut format_tree) -> *mut c
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_client_key_table(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
@@ -1564,7 +1546,6 @@ pub unsafe extern "C" fn format_cb_client_key_table(ft: *mut format_tree) -> *mu
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_client_last_session(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null()
@@ -1577,7 +1558,6 @@ pub unsafe extern "C" fn format_cb_client_last_session(ft: *mut format_tree) -> 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_client_name(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
@@ -1587,7 +1567,6 @@ pub unsafe extern "C" fn format_cb_client_name(ft: *mut format_tree) -> *mut c_v
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_client_pid(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
@@ -1598,7 +1577,7 @@ pub unsafe extern "C" fn format_cb_client_pid(ft: *mut format_tree) -> *mut c_vo
 }
 
 /// Callback for client_prefix.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_client_prefix(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
@@ -1612,7 +1591,6 @@ pub unsafe extern "C" fn format_cb_client_prefix(ft: *mut format_tree) -> *mut c
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_client_readonly(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
@@ -1625,7 +1603,6 @@ pub unsafe extern "C" fn format_cb_client_readonly(ft: *mut format_tree) -> *mut
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_client_session(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() && !(*(*ft).c).session.is_null() {
@@ -1635,7 +1612,6 @@ pub unsafe extern "C" fn format_cb_client_session(ft: *mut format_tree) -> *mut 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_client_termfeatures(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
@@ -1647,7 +1623,6 @@ pub unsafe extern "C" fn format_cb_client_termfeatures(ft: *mut format_tree) -> 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_client_termname(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
@@ -1657,7 +1632,6 @@ pub unsafe extern "C" fn format_cb_client_termname(ft: *mut format_tree) -> *mut
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_client_termtype(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
@@ -1670,7 +1644,6 @@ pub unsafe extern "C" fn format_cb_client_termtype(ft: *mut format_tree) -> *mut
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_client_tty(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
@@ -1680,7 +1653,6 @@ pub unsafe extern "C" fn format_cb_client_tty(ft: *mut format_tree) -> *mut c_vo
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_client_uid(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
@@ -1693,7 +1665,6 @@ pub unsafe extern "C" fn format_cb_client_uid(ft: *mut format_tree) -> *mut c_vo
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_client_user(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
@@ -1708,7 +1679,6 @@ pub unsafe extern "C" fn format_cb_client_user(ft: *mut format_tree) -> *mut c_v
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_client_utf8(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
@@ -1721,7 +1691,6 @@ pub unsafe extern "C" fn format_cb_client_utf8(ft: *mut format_tree) -> *mut c_v
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_client_width(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
@@ -1731,7 +1700,6 @@ pub unsafe extern "C" fn format_cb_client_width(ft: *mut format_tree) -> *mut c_
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_cb_client_written(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
@@ -1742,7 +1710,7 @@ pub unsafe extern "C" fn format_cb_client_written(ft: *mut format_tree) -> *mut 
 }
 
 /// Callback for config_files.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_config_files(_ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let mut s: *mut c_char = null_mut();
@@ -1763,7 +1731,7 @@ pub unsafe extern "C" fn format_cb_config_files(_ft: *mut format_tree) -> *mut c
 }
 
 /// Callback for cursor_flag.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_cursor_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -1777,7 +1745,7 @@ pub unsafe extern "C" fn format_cb_cursor_flag(ft: *mut format_tree) -> *mut c_v
 }
 
 /// Callback for cursor_x.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_cursor_x(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -1788,7 +1756,7 @@ pub unsafe extern "C" fn format_cb_cursor_x(ft: *mut format_tree) -> *mut c_void
 }
 
 /// Callback for cursor_y.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_cursor_y(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -1799,7 +1767,7 @@ pub unsafe extern "C" fn format_cb_cursor_y(ft: *mut format_tree) -> *mut c_void
 }
 
 /// Callback for history_limit.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_history_limit(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -1810,7 +1778,7 @@ pub unsafe extern "C" fn format_cb_history_limit(ft: *mut format_tree) -> *mut c
 }
 
 /// Callback for history_size.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_history_size(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -1821,7 +1789,7 @@ pub unsafe extern "C" fn format_cb_history_size(ft: *mut format_tree) -> *mut c_
 }
 
 /// Callback for insert_flag.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_insert_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -1835,7 +1803,7 @@ pub unsafe extern "C" fn format_cb_insert_flag(ft: *mut format_tree) -> *mut c_v
 }
 
 /// Callback for keypad_cursor_flag.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_keypad_cursor_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -1849,7 +1817,7 @@ pub unsafe extern "C" fn format_cb_keypad_cursor_flag(ft: *mut format_tree) -> *
 }
 
 /// Callback for keypad_flag.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_keypad_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -1863,7 +1831,7 @@ pub unsafe extern "C" fn format_cb_keypad_flag(ft: *mut format_tree) -> *mut c_v
 }
 
 /// Callback for mouse_all_flag.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_mouse_all_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -1877,7 +1845,7 @@ pub unsafe extern "C" fn format_cb_mouse_all_flag(ft: *mut format_tree) -> *mut 
 }
 
 /// Callback for mouse_any_flag.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_mouse_any_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -1891,7 +1859,7 @@ pub unsafe extern "C" fn format_cb_mouse_any_flag(ft: *mut format_tree) -> *mut 
 }
 
 /// Callback for mouse_button_flag.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_mouse_button_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -1909,7 +1877,7 @@ pub unsafe extern "C" fn format_cb_mouse_button_flag(ft: *mut format_tree) -> *m
 }
 
 /// Callback for mouse_pane.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_mouse_pane(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if (*ft).m.valid != 0 {
@@ -1923,7 +1891,7 @@ pub unsafe extern "C" fn format_cb_mouse_pane(ft: *mut format_tree) -> *mut c_vo
 }
 
 /// Callback for mouse_sgr_flag.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_mouse_sgr_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -1937,7 +1905,7 @@ pub unsafe extern "C" fn format_cb_mouse_sgr_flag(ft: *mut format_tree) -> *mut 
 }
 
 /// Callback for mouse_standard_flag.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_mouse_standard_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -1955,7 +1923,7 @@ pub unsafe extern "C" fn format_cb_mouse_standard_flag(ft: *mut format_tree) -> 
 }
 
 /// Callback for mouse_utf8_flag.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_mouse_utf8_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -1969,7 +1937,7 @@ pub unsafe extern "C" fn format_cb_mouse_utf8_flag(ft: *mut format_tree) -> *mut
 }
 
 /// Callback for mouse_x.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_mouse_x(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if (*ft).m.valid == 0 {
@@ -1996,7 +1964,7 @@ pub unsafe extern "C" fn format_cb_mouse_x(ft: *mut format_tree) -> *mut c_void 
 }
 
 /// Callback for mouse_y.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_mouse_y(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if (*ft).m.valid == 0 {
@@ -2023,7 +1991,7 @@ pub unsafe extern "C" fn format_cb_mouse_y(ft: *mut format_tree) -> *mut c_void 
 }
 
 /// Callback for next_session_id.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_next_session_id(_ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let value = next_session_id;
@@ -2032,7 +2000,7 @@ pub unsafe extern "C" fn format_cb_next_session_id(_ft: *mut format_tree) -> *mu
 }
 
 /// Callback for origin_flag.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_origin_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2046,7 +2014,7 @@ pub unsafe extern "C" fn format_cb_origin_flag(ft: *mut format_tree) -> *mut c_v
 }
 
 /// Callback for pane_active.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_active(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2060,7 +2028,7 @@ pub unsafe extern "C" fn format_cb_pane_active(ft: *mut format_tree) -> *mut c_v
 }
 
 /// Callback for pane_at_left.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_at_left(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2074,7 +2042,7 @@ pub unsafe extern "C" fn format_cb_pane_at_left(ft: *mut format_tree) -> *mut c_
 }
 
 /// Callback for pane_at_right.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_at_right(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2088,7 +2056,7 @@ pub unsafe extern "C" fn format_cb_pane_at_right(ft: *mut format_tree) -> *mut c
 }
 
 /// Callback for pane_bottom.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_bottom(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2099,7 +2067,7 @@ pub unsafe extern "C" fn format_cb_pane_bottom(ft: *mut format_tree) -> *mut c_v
 }
 
 /// Callback for pane_dead.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_dead(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2113,7 +2081,7 @@ pub unsafe extern "C" fn format_cb_pane_dead(ft: *mut format_tree) -> *mut c_voi
 }
 
 /// Callback for pane_dead_signal.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_dead_signal(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let wp = (*ft).wp;
@@ -2131,7 +2099,7 @@ pub unsafe extern "C" fn format_cb_pane_dead_signal(ft: *mut format_tree) -> *mu
 }
 
 /// Callback for pane_dead_status.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_dead_status(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let wp = (*ft).wp;
@@ -2148,7 +2116,7 @@ pub unsafe extern "C" fn format_cb_pane_dead_status(ft: *mut format_tree) -> *mu
 }
 
 /// Callback for pane_dead_time.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_dead_time(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let wp = (*ft).wp;
@@ -2163,7 +2131,7 @@ pub unsafe extern "C" fn format_cb_pane_dead_time(ft: *mut format_tree) -> *mut 
 }
 
 /// Callback for pane_format.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_format(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if (*ft).type_ == format_type::FORMAT_TYPE_PANE {
@@ -2174,7 +2142,7 @@ pub unsafe extern "C" fn format_cb_pane_format(ft: *mut format_tree) -> *mut c_v
 }
 
 /// Callback for pane_height.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_height(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2185,7 +2153,7 @@ pub unsafe extern "C" fn format_cb_pane_height(ft: *mut format_tree) -> *mut c_v
 }
 
 /// Callback for pane_id.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_id(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2196,7 +2164,7 @@ pub unsafe extern "C" fn format_cb_pane_id(ft: *mut format_tree) -> *mut c_void 
 }
 
 /// Callback for pane_index.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_index(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let mut idx: u32 = 0;
@@ -2208,7 +2176,7 @@ pub unsafe extern "C" fn format_cb_pane_index(ft: *mut format_tree) -> *mut c_vo
 }
 
 /// Callback for pane_input_off.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_input_off(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2225,7 +2193,7 @@ pub unsafe extern "C" fn format_cb_pane_input_off(ft: *mut format_tree) -> *mut 
 }
 
 /// Callback for pane_unseen_changes.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_unseen_changes(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2242,7 +2210,7 @@ pub unsafe extern "C" fn format_cb_pane_unseen_changes(ft: *mut format_tree) -> 
 }
 
 /// Callback for pane_key_mode.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_key_mode(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() && !(*(*ft).wp).screen.is_null() {
@@ -2259,7 +2227,7 @@ pub unsafe extern "C" fn format_cb_pane_key_mode(ft: *mut format_tree) -> *mut c
 }
 
 /// Callback for pane_last.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_last(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2273,7 +2241,7 @@ pub unsafe extern "C" fn format_cb_pane_last(ft: *mut format_tree) -> *mut c_voi
 }
 
 /// Callback for pane_left.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_left(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2284,7 +2252,7 @@ pub unsafe extern "C" fn format_cb_pane_left(ft: *mut format_tree) -> *mut c_voi
 }
 
 /// Callback for pane_marked.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_marked(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2298,7 +2266,7 @@ pub unsafe extern "C" fn format_cb_pane_marked(ft: *mut format_tree) -> *mut c_v
 }
 
 /// Callback for pane_marked_set.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_marked_set(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2312,7 +2280,7 @@ pub unsafe extern "C" fn format_cb_pane_marked_set(ft: *mut format_tree) -> *mut
 }
 
 /// Callback for pane_mode.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_mode(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2327,7 +2295,7 @@ pub unsafe extern "C" fn format_cb_pane_mode(ft: *mut format_tree) -> *mut c_voi
 }
 
 /// Callback for pane_path.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_path(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2341,7 +2309,7 @@ pub unsafe extern "C" fn format_cb_pane_path(ft: *mut format_tree) -> *mut c_voi
 }
 
 /// Callback for pane_pid.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_pid(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2352,7 +2320,7 @@ pub unsafe extern "C" fn format_cb_pane_pid(ft: *mut format_tree) -> *mut c_void
 }
 
 /// Callback for pane_pipe.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_pipe(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2366,7 +2334,7 @@ pub unsafe extern "C" fn format_cb_pane_pipe(ft: *mut format_tree) -> *mut c_voi
 }
 
 /// Callback for pane_right.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_right(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2377,7 +2345,7 @@ pub unsafe extern "C" fn format_cb_pane_right(ft: *mut format_tree) -> *mut c_vo
 }
 
 /// Callback for pane_search_string.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_search_string(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2391,7 +2359,7 @@ pub unsafe extern "C" fn format_cb_pane_search_string(ft: *mut format_tree) -> *
 }
 
 /// Callback for pane_synchronized.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_synchronized(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2405,7 +2373,7 @@ pub unsafe extern "C" fn format_cb_pane_synchronized(ft: *mut format_tree) -> *m
 }
 
 /// Callback for pane_title.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_title(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2416,7 +2384,7 @@ pub unsafe extern "C" fn format_cb_pane_title(ft: *mut format_tree) -> *mut c_vo
 }
 
 /// Callback for pane_top.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_top(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2427,7 +2395,7 @@ pub unsafe extern "C" fn format_cb_pane_top(ft: *mut format_tree) -> *mut c_void
 }
 
 /// Callback for pane_tty.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_tty(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2438,7 +2406,7 @@ pub unsafe extern "C" fn format_cb_pane_tty(ft: *mut format_tree) -> *mut c_void
 }
 
 /// Callback for pane_width.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_pane_width(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2449,7 +2417,7 @@ pub unsafe extern "C" fn format_cb_pane_width(ft: *mut format_tree) -> *mut c_vo
 }
 
 /// Callback for scroll_region_lower.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_scroll_region_lower(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2460,7 +2428,7 @@ pub unsafe extern "C" fn format_cb_scroll_region_lower(ft: *mut format_tree) -> 
 }
 
 /// Callback for scroll_region_upper.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_scroll_region_upper(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -2471,7 +2439,7 @@ pub unsafe extern "C" fn format_cb_scroll_region_upper(ft: *mut format_tree) -> 
 }
 
 /// Callback for server_sessions.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_server_sessions(_ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let n: u32 = rb_foreach(&raw mut sessions).count() as u32;
@@ -2480,7 +2448,7 @@ pub unsafe extern "C" fn format_cb_server_sessions(_ft: *mut format_tree) -> *mu
 }
 
 /// Callback for session_attached.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_session_attached(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).s.is_null() {
@@ -2491,7 +2459,7 @@ pub unsafe extern "C" fn format_cb_session_attached(ft: *mut format_tree) -> *mu
 }
 
 /// Callback for session_format.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_session_format(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if (*ft).type_ == format_type::FORMAT_TYPE_SESSION {
@@ -2502,7 +2470,7 @@ pub unsafe extern "C" fn format_cb_session_format(ft: *mut format_tree) -> *mut 
 }
 
 /// Callback for session_group.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_session_group(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).s.is_null() {
@@ -2516,7 +2484,7 @@ pub unsafe extern "C" fn format_cb_session_group(ft: *mut format_tree) -> *mut c
 }
 
 /// Callback for session_group_attached.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_session_group_attached(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).s.is_null() {
@@ -2530,7 +2498,7 @@ pub unsafe extern "C" fn format_cb_session_group_attached(ft: *mut format_tree) 
 }
 
 /// Callback for session_group_many_attached.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_session_group_many_attached(
     ft: *mut format_tree,
 ) -> *mut c_void {
@@ -2549,7 +2517,7 @@ pub unsafe extern "C" fn format_cb_session_group_many_attached(
 }
 
 /// Callback for session_group_size.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_session_group_size(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).s.is_null() {
@@ -2563,7 +2531,7 @@ pub unsafe extern "C" fn format_cb_session_group_size(ft: *mut format_tree) -> *
 }
 
 /// Callback for session_grouped.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_session_grouped(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).s.is_null() {
@@ -2577,7 +2545,7 @@ pub unsafe extern "C" fn format_cb_session_grouped(ft: *mut format_tree) -> *mut
 }
 
 /// Callback for session_id.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_session_id(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).s.is_null() {
@@ -2588,7 +2556,7 @@ pub unsafe extern "C" fn format_cb_session_id(ft: *mut format_tree) -> *mut c_vo
 }
 
 /// Callback for session_many_attached.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_session_many_attached(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).s.is_null() {
@@ -2602,7 +2570,7 @@ pub unsafe extern "C" fn format_cb_session_many_attached(ft: *mut format_tree) -
 }
 
 /// Callback for session_marked.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_session_marked(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).s.is_null() {
@@ -2616,7 +2584,7 @@ pub unsafe extern "C" fn format_cb_session_marked(ft: *mut format_tree) -> *mut 
 }
 
 /// Callback for session_name.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_session_name(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).s.is_null() {
@@ -2627,7 +2595,7 @@ pub unsafe extern "C" fn format_cb_session_name(ft: *mut format_tree) -> *mut c_
 }
 
 /// Callback for session_path.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_session_path(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).s.is_null() {
@@ -2638,7 +2606,7 @@ pub unsafe extern "C" fn format_cb_session_path(ft: *mut format_tree) -> *mut c_
 }
 
 /// Callback for session_windows.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_session_windows(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).s.is_null() {
@@ -2649,19 +2617,19 @@ pub unsafe extern "C" fn format_cb_session_windows(ft: *mut format_tree) -> *mut
 }
 
 /// Callback for socket_path.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_socket_path(_ft: *mut format_tree) -> *mut c_void {
     unsafe { xstrdup(socket_path).as_ptr().cast() }
 }
 
 /// Callback for version.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_version(_ft: *mut format_tree) -> *mut c_void {
     unsafe { xstrdup(getversion()).as_ptr().cast() }
 }
 
 /// Callback for active_window_index.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_active_window_index(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).s.is_null() {
@@ -2672,7 +2640,7 @@ pub unsafe extern "C" fn format_cb_active_window_index(ft: *mut format_tree) -> 
 }
 
 /// Callback for last_window_index.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_last_window_index(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).s.is_null() {
@@ -2684,7 +2652,7 @@ pub unsafe extern "C" fn format_cb_last_window_index(ft: *mut format_tree) -> *m
 }
 
 /// Callback for window_active.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_active(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wl.is_null() {
@@ -2698,7 +2666,7 @@ pub unsafe extern "C" fn format_cb_window_active(ft: *mut format_tree) -> *mut c
 }
 
 /// Callback for window_activity_flag.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_activity_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wl.is_null() {
@@ -2715,7 +2683,7 @@ pub unsafe extern "C" fn format_cb_window_activity_flag(ft: *mut format_tree) ->
 }
 
 /// Callback for window_bell_flag.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_bell_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wl.is_null() {
@@ -2729,7 +2697,7 @@ pub unsafe extern "C" fn format_cb_window_bell_flag(ft: *mut format_tree) -> *mu
 }
 
 /// Callback for window_bigger.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_bigger(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
@@ -2747,7 +2715,7 @@ pub unsafe extern "C" fn format_cb_window_bigger(ft: *mut format_tree) -> *mut c
 }
 
 /// Callback for window_cell_height.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_cell_height(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).w.is_null() {
@@ -2758,7 +2726,7 @@ pub unsafe extern "C" fn format_cb_window_cell_height(ft: *mut format_tree) -> *
 }
 
 /// Callback for window_cell_width.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_cell_width(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).w.is_null() {
@@ -2769,7 +2737,7 @@ pub unsafe extern "C" fn format_cb_window_cell_width(ft: *mut format_tree) -> *m
 }
 
 /// Callback for window_end_flag.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_end_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wl.is_null() {
@@ -2783,7 +2751,7 @@ pub unsafe extern "C" fn format_cb_window_end_flag(ft: *mut format_tree) -> *mut
 }
 
 /// Callback for window_flags.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_flags(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wl.is_null() {
@@ -2794,7 +2762,7 @@ pub unsafe extern "C" fn format_cb_window_flags(ft: *mut format_tree) -> *mut c_
 }
 
 /// Callback for window_format.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_format(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if (*ft).type_ == format_type::FORMAT_TYPE_WINDOW {
@@ -2805,7 +2773,7 @@ pub unsafe extern "C" fn format_cb_window_format(ft: *mut format_tree) -> *mut c
 }
 
 /// Callback for window_height.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_height(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).w.is_null() {
@@ -2816,7 +2784,7 @@ pub unsafe extern "C" fn format_cb_window_height(ft: *mut format_tree) -> *mut c
 }
 
 /// Callback for window_id.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_id(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).w.is_null() {
@@ -2827,7 +2795,7 @@ pub unsafe extern "C" fn format_cb_window_id(ft: *mut format_tree) -> *mut c_voi
 }
 
 /// Callback for window_index.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_index(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wl.is_null() {
@@ -2838,7 +2806,7 @@ pub unsafe extern "C" fn format_cb_window_index(ft: *mut format_tree) -> *mut c_
 }
 
 /// Callback for window_last_flag.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_last_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wl.is_null() {
@@ -2852,7 +2820,7 @@ pub unsafe extern "C" fn format_cb_window_last_flag(ft: *mut format_tree) -> *mu
 }
 
 /// Callback for window_linked.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_linked(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wl.is_null() {
@@ -2866,7 +2834,7 @@ pub unsafe extern "C" fn format_cb_window_linked(ft: *mut format_tree) -> *mut c
 }
 
 /// Callback for window_linked_sessions.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_linked_sessions(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wl.is_null() {
@@ -2877,7 +2845,7 @@ pub unsafe extern "C" fn format_cb_window_linked_sessions(ft: *mut format_tree) 
 }
 
 /// Callback for window_marked_flag.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_marked_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wl.is_null() {
@@ -2891,7 +2859,7 @@ pub unsafe extern "C" fn format_cb_window_marked_flag(ft: *mut format_tree) -> *
 }
 
 /// Callback for window_name.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_name(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).w.is_null() {
@@ -2902,7 +2870,7 @@ pub unsafe extern "C" fn format_cb_window_name(ft: *mut format_tree) -> *mut c_v
 }
 
 /// Callback for window_offset_x.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_offset_x(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
@@ -2919,7 +2887,7 @@ pub unsafe extern "C" fn format_cb_window_offset_x(ft: *mut format_tree) -> *mut
 }
 
 /// Callback for window_offset_y.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_offset_y(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
@@ -2936,7 +2904,7 @@ pub unsafe extern "C" fn format_cb_window_offset_y(ft: *mut format_tree) -> *mut
 }
 
 /// Callback for window_panes.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_panes(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).w.is_null() {
@@ -2947,7 +2915,7 @@ pub unsafe extern "C" fn format_cb_window_panes(ft: *mut format_tree) -> *mut c_
 }
 
 /// Callback for window_raw_flags.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_raw_flags(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wl.is_null() {
@@ -2958,7 +2926,7 @@ pub unsafe extern "C" fn format_cb_window_raw_flags(ft: *mut format_tree) -> *mu
 }
 
 /// Callback for window_silence_flag.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_silence_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wl.is_null() {
@@ -2972,7 +2940,7 @@ pub unsafe extern "C" fn format_cb_window_silence_flag(ft: *mut format_tree) -> 
 }
 
 /// Callback for window_start_flag.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_start_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wl.is_null() {
@@ -2986,7 +2954,7 @@ pub unsafe extern "C" fn format_cb_window_start_flag(ft: *mut format_tree) -> *m
 }
 
 /// Callback for window_width.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_width(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).w.is_null() {
@@ -2997,7 +2965,7 @@ pub unsafe extern "C" fn format_cb_window_width(ft: *mut format_tree) -> *mut c_
 }
 
 /// Callback for window_zoomed_flag.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_zoomed_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).w.is_null() {
@@ -3011,7 +2979,7 @@ pub unsafe extern "C" fn format_cb_window_zoomed_flag(ft: *mut format_tree) -> *
 }
 
 /// Callback for wrap_flag.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_wrap_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
@@ -3025,7 +2993,7 @@ pub unsafe extern "C" fn format_cb_wrap_flag(ft: *mut format_tree) -> *mut c_voi
 }
 
 /// Callback for buffer_created.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_buffer_created(ft: *mut format_tree) -> *mut c_void {
     static mut tv: timeval = timeval {
         tv_sec: 0,
@@ -3042,7 +3010,7 @@ pub unsafe extern "C" fn format_cb_buffer_created(ft: *mut format_tree) -> *mut 
 }
 
 /// Callback for client_activity.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_client_activity(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
@@ -3053,7 +3021,7 @@ pub unsafe extern "C" fn format_cb_client_activity(ft: *mut format_tree) -> *mut
 }
 
 /// Callback for client_created.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_client_created(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).c.is_null() {
@@ -3064,7 +3032,7 @@ pub unsafe extern "C" fn format_cb_client_created(ft: *mut format_tree) -> *mut 
 }
 
 /// Callback for session_activity.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_session_activity(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).s.is_null() {
@@ -3075,7 +3043,7 @@ pub unsafe extern "C" fn format_cb_session_activity(ft: *mut format_tree) -> *mu
 }
 
 /// Callback for session_created.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_session_created(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).s.is_null() {
@@ -3086,7 +3054,7 @@ pub unsafe extern "C" fn format_cb_session_created(ft: *mut format_tree) -> *mut
 }
 
 /// Callback for session_last_attached.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_session_last_attached(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).s.is_null() {
@@ -3097,13 +3065,13 @@ pub unsafe extern "C" fn format_cb_session_last_attached(ft: *mut format_tree) -
 }
 
 /// Callback for start_time.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_start_time(_ft: *mut format_tree) -> *mut c_void {
     unsafe { &raw mut start_time as *mut c_void }
 }
 
 /// Callback for window_activity.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_window_activity(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).w.is_null() {
@@ -3114,31 +3082,31 @@ pub unsafe extern "C" fn format_cb_window_activity(ft: *mut format_tree) -> *mut
 }
 
 /// Callback for buffer_mode_format.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_buffer_mode_format(_ft: *mut format_tree) -> *mut c_void {
     unsafe { xstrdup(window_buffer_mode.default_format.0).as_ptr().cast() }
 }
 
 /// Callback for client_mode_format.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_client_mode_format(_ft: *mut format_tree) -> *mut c_void {
     unsafe { xstrdup(window_client_mode.default_format.0).as_ptr().cast() }
 }
 
 /// Callback for tree_mode_format.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_tree_mode_format(_ft: *mut format_tree) -> *mut c_void {
     unsafe { xstrdup(window_tree_mode.default_format.0).as_ptr().cast() }
 }
 
 /// Callback for uid.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_uid(_ft: *mut format_tree) -> *mut c_void {
     unsafe { format_printf!("{}", getuid() as i64).cast() }
 }
 
 /// Callback for user.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_cb_user(_ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if let Some(pw) = NonNull::new(getpwuid(getuid())) {
@@ -3359,7 +3327,6 @@ static format_table: [format_table_entry ; 171] = [
      format_table_entry::new(c"wrap_flag", format_table_type::FORMAT_TABLE_STRING, format_cb_wrap_flag)
 ];
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_table_compare(key0: *const c_void, entry0: *const c_void) -> i32 {
     unsafe {
         let key = key0 as *const c_char;
@@ -3368,7 +3335,6 @@ pub unsafe extern "C" fn format_table_compare(key0: *const c_void, entry0: *cons
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_table_get(key: *const c_char) -> *mut format_table_entry {
     unsafe {
         libc::bsearch(
@@ -3381,7 +3347,6 @@ pub unsafe extern "C" fn format_table_get(key: *const c_char) -> *mut format_tab
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_merge(ft: *mut format_tree, from: *mut format_tree) {
     unsafe {
         for fe in rb_foreach(&raw mut (*from).tree).map(NonNull::as_ptr) {
@@ -3392,12 +3357,10 @@ pub unsafe extern "C" fn format_merge(ft: *mut format_tree, from: *mut format_tr
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_get_pane(ft: *mut format_tree) -> *mut window_pane {
     unsafe { (*ft).wp }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_create_add_item(ft: *mut format_tree, item: *mut cmdq_item) {
     unsafe {
         let event = cmdq_get_event(item);
@@ -3408,7 +3371,6 @@ pub unsafe extern "C" fn format_create_add_item(ft: *mut format_tree, item: *mut
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_create(
     c: *mut client,
     item: *mut cmdq_item,
@@ -3435,7 +3397,6 @@ pub unsafe extern "C" fn format_create(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_free(ft: *mut format_tree) {
     unsafe {
         for fe in rb_foreach(&raw mut (*ft).tree).map(NonNull::as_ptr) {
@@ -3452,7 +3413,6 @@ pub unsafe extern "C" fn format_free(ft: *mut format_tree) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_log_debug_cb(
     key: *const c_char,
     value: *const c_char,
@@ -3464,14 +3424,12 @@ pub unsafe extern "C" fn format_log_debug_cb(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_log_debug(ft: *mut format_tree, prefix: *const c_char) {
     unsafe {
         format_each(ft, Some(format_log_debug_cb), prefix as *mut c_void);
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_each(
     ft: *mut format_tree,
     cb: Option<unsafe extern "C" fn(*const c_char, *const c_char, *mut c_void)>,
@@ -3546,7 +3504,7 @@ pub unsafe fn format_add_(ft: *mut format_tree, key: *const c_char, args: std::f
 }
 
 /// Add a key and time.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_add_tv(
     ft: *mut format_tree,
     key: *const c_char,
@@ -3573,7 +3531,7 @@ pub unsafe extern "C" fn format_add_tv(
 }
 
 /// Add a key and function.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_add_cb(ft: *mut format_tree, key: *const c_char, cb: format_cb) {
     unsafe {
         let mut fe = xmalloc_::<format_entry>().as_ptr();
@@ -3596,7 +3554,7 @@ pub unsafe extern "C" fn format_add_cb(ft: *mut format_tree, key: *const c_char,
 }
 
 /// Quote shell special characters in string.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_quote_shell(s: *const c_char) -> *mut c_char {
     unsafe {
         let out: *mut c_char = xmalloc(strlen(s) * 2 + 1).as_ptr().cast();
@@ -3617,7 +3575,7 @@ pub unsafe extern "C" fn format_quote_shell(s: *const c_char) -> *mut c_char {
 }
 
 /// Quote #s in string.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_quote_style(s: *const c_char) -> *mut c_char {
     unsafe {
         let out: *mut c_char = xmalloc(strlen(s) * 2 + 1).as_ptr().cast();
@@ -3639,7 +3597,7 @@ pub unsafe extern "C" fn format_quote_style(s: *const c_char) -> *mut c_char {
 }
 
 /// Make a prettier time.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_pretty_time(t: time_t, seconds: i32) -> *mut c_char {
     unsafe {
         // struct tm now_tm, tm;
@@ -3696,7 +3654,7 @@ pub unsafe extern "C" fn format_pretty_time(t: time_t, seconds: i32) -> *mut c_c
 }
 
 /* Find a format entry. */
-#[unsafe(no_mangle)]
+
 fn format_find(
     ft: *mut format_tree,
     key: *const c_char,
@@ -3850,7 +3808,7 @@ fn format_find(
 }
 
 /* Unescape escaped characters. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_unescape(mut s: *const c_char) -> *mut c_char {
     unsafe {
         let mut cp = xmalloc(strlen(s) + 1).as_ptr().cast();
@@ -3881,7 +3839,7 @@ pub unsafe extern "C" fn format_unescape(mut s: *const c_char) -> *mut c_char {
 }
 
 /// Remove escaped characters.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_strip(mut s: *const c_char) -> *mut c_char {
     unsafe {
         let out = xmalloc(strlen(s) + 1).as_ptr().cast();
@@ -3913,7 +3871,7 @@ pub unsafe extern "C" fn format_strip(mut s: *const c_char) -> *mut c_char {
 }
 
 /* Skip until end. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_skip(mut s: *const c_char, end: *const c_char) -> *const c_char {
     unsafe {
         let mut brackets = 0;
@@ -3945,7 +3903,7 @@ pub unsafe extern "C" fn format_skip(mut s: *const c_char, end: *const c_char) -
 }
 
 /* Return left and right alternatives separated by commas. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_choose(
     es: *mut format_expand_state,
     s: *const c_char,
@@ -3975,7 +3933,7 @@ pub unsafe extern "C" fn format_choose(
 }
 
 /* Is this true? */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_true(s: *const c_char) -> c_int {
     unsafe {
         if !s.is_null()
@@ -3989,13 +3947,13 @@ pub unsafe extern "C" fn format_true(s: *const c_char) -> c_int {
 }
 
 /* Check if modifier end. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_is_end(c: c_char) -> boolint {
     unsafe { boolint::from(c == b';' as c_char || c == b':' as c_char) }
 }
 
 /* Add to modifier list. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_add_modifier(
     list: *mut *mut format_modifier,
     count: *mut u32,
@@ -4021,7 +3979,7 @@ pub unsafe extern "C" fn format_add_modifier(
 }
 
 /// Free modifier list.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_free_modifiers(list: *mut format_modifier, count: u32) {
     unsafe {
         for i in 0..count as usize {
@@ -4032,7 +3990,7 @@ pub unsafe extern "C" fn format_free_modifiers(list: *mut format_modifier, count
 }
 
 /// Build modifier list.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_build_modifiers(
     es: *mut format_expand_state,
     s: *mut *const c_char,
@@ -4164,7 +4122,6 @@ pub unsafe extern "C" fn format_build_modifiers(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_match(
     fm: *mut format_modifier,
     pattern: *const c_char,
@@ -4204,7 +4161,6 @@ pub unsafe extern "C" fn format_match(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_sub(
     fm: *mut format_modifier,
     text: *const c_char,
@@ -4226,7 +4182,6 @@ pub unsafe extern "C" fn format_sub(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_search(
     fm: *mut format_modifier,
     wp: *mut window_pane,
@@ -4249,7 +4204,6 @@ pub unsafe extern "C" fn format_search(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_session_name(
     es: *mut format_expand_state,
     fmt: *const c_char,
@@ -4270,7 +4224,6 @@ pub unsafe extern "C" fn format_session_name(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_loop_sessions(
     es: *mut format_expand_state,
     fmt: *const c_char,
@@ -4307,7 +4260,6 @@ pub unsafe extern "C" fn format_loop_sessions(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_window_name(
     es: *mut format_expand_state,
     fmt: *const c_char,
@@ -4335,7 +4287,6 @@ pub unsafe extern "C" fn format_window_name(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_loop_windows(
     es: *mut format_expand_state,
     fmt: *const c_char,
@@ -4399,7 +4350,7 @@ pub unsafe extern "C" fn format_loop_windows(
 }
 
 /// Loop over panes.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_loop_panes(
     es: *mut format_expand_state,
     fmt: *const c_char,
@@ -4466,7 +4417,7 @@ pub unsafe extern "C" fn format_loop_panes(
 }
 
 /// Loop over clients.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_loop_clients(
     es: *mut format_expand_state,
     fmt: *const c_char,
@@ -4511,7 +4462,6 @@ pub unsafe extern "C" fn format_loop_clients(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn format_replace_expression(
     mexp: *mut format_modifier,
     es: *mut format_expand_state,
@@ -4700,7 +4650,7 @@ pub unsafe extern "C" fn format_replace_expression(
 }
 
 /// Replace a key.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_replace(
     es: *mut format_expand_state,
     key: *const c_char,
@@ -5279,7 +5229,7 @@ pub unsafe extern "C" fn format_replace(
 }
 
 /// Expand keys in a template.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_expand1(
     es: *mut format_expand_state,
     mut fmt: *const c_char,
@@ -5530,7 +5480,7 @@ pub unsafe extern "C" fn format_expand1(
 }
 
 /// Expand keys in a template, passing through strftime first.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_expand_time(
     ft: *mut format_tree,
     fmt: *const c_char,
@@ -5547,7 +5497,7 @@ pub unsafe extern "C" fn format_expand_time(
 }
 
 /// Expand keys in a template.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_expand(ft: *mut format_tree, fmt: *const c_char) -> *mut c_char {
     unsafe {
         let mut es = MaybeUninit::<format_expand_state>::uninit();
@@ -5561,7 +5511,7 @@ pub unsafe extern "C" fn format_expand(ft: *mut format_tree, fmt: *const c_char)
 }
 
 /// Expand a single string.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_single(
     item: *mut cmdq_item,
     fmt: *const c_char,
@@ -5579,7 +5529,7 @@ pub unsafe extern "C" fn format_single(
 }
 
 /// Expand a single string using state.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_single_from_state(
     item: *mut cmdq_item,
     fmt: *const c_char,
@@ -5590,7 +5540,7 @@ pub unsafe extern "C" fn format_single_from_state(
 }
 
 /// Expand a single string using target.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_single_from_target(
     item: *mut cmdq_item,
     fmt: *const c_char,
@@ -5603,7 +5553,7 @@ pub unsafe extern "C" fn format_single_from_target(
 }
 
 /// Create and add defaults.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_create_defaults(
     item: *mut cmdq_item,
     c: *mut client,
@@ -5628,7 +5578,7 @@ pub unsafe extern "C" fn format_create_defaults(
 }
 
 /// Create and add defaults using state.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_create_from_state(
     item: *mut cmdq_item,
     c: *mut client,
@@ -5638,7 +5588,7 @@ pub unsafe extern "C" fn format_create_from_state(
 }
 
 /// Create and add defaults using target.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_create_from_target(item: *mut cmdq_item) -> *mut format_tree {
     unsafe {
         let tc = cmdq_get_target_client(item);
@@ -5648,7 +5598,7 @@ pub unsafe extern "C" fn format_create_from_target(item: *mut cmdq_item) -> *mut
 }
 
 /// Set defaults for any of arguments that are not NULL.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_defaults(
     ft: *mut format_tree,
     c: *mut client,
@@ -5727,7 +5677,7 @@ pub unsafe extern "C" fn format_defaults(
 }
 
 /// Set default format keys for a session.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_defaults_session(ft: *mut format_tree, s: *mut session) {
     unsafe {
         (*ft).s = s;
@@ -5735,7 +5685,7 @@ pub unsafe extern "C" fn format_defaults_session(ft: *mut format_tree, s: *mut s
 }
 
 /// Set default format keys for a client.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_defaults_client(ft: *mut format_tree, c: *mut client) {
     unsafe {
         if (*ft).s.is_null() {
@@ -5746,7 +5696,7 @@ pub unsafe extern "C" fn format_defaults_client(ft: *mut format_tree, c: *mut cl
 }
 
 /// Set default format keys for a window.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_defaults_window(ft: *mut format_tree, w: *mut window) {
     unsafe {
         (*ft).w = w;
@@ -5754,7 +5704,7 @@ pub unsafe extern "C" fn format_defaults_window(ft: *mut format_tree, w: *mut wi
 }
 
 /// Set default format keys for a winlink.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_defaults_winlink(ft: *mut format_tree, wl: *mut winlink) {
     unsafe {
         if (*ft).w.is_null() {
@@ -5765,7 +5715,7 @@ pub unsafe extern "C" fn format_defaults_winlink(ft: *mut format_tree, wl: *mut 
 }
 
 /// Set default format keys for a window pane.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_defaults_pane(ft: *mut format_tree, wp: *mut window_pane) {
     unsafe {
         if (*ft).w.is_null() {
@@ -5782,7 +5732,7 @@ pub unsafe extern "C" fn format_defaults_pane(ft: *mut format_tree, wp: *mut win
 }
 
 /// Set default format keys for paste buffer.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_defaults_paste_buffer(ft: *mut format_tree, pb: *mut paste_buffer) {
     unsafe {
         (*ft).pb = pb;
@@ -5790,7 +5740,7 @@ pub unsafe extern "C" fn format_defaults_paste_buffer(ft: *mut format_tree, pb: 
 }
 
 /// Return word at given coordinates. Caller frees.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_grid_word(gd: *mut grid, mut x: u32, mut y: u32) -> *mut c_char {
     unsafe {
         let mut size = 0;
@@ -5873,7 +5823,7 @@ pub unsafe extern "C" fn format_grid_word(gd: *mut grid, mut x: u32, mut y: u32)
 }
 
 /// Return line at given coordinates. Caller frees.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_grid_line(gd: *mut grid, y: u32) -> *mut c_char {
     unsafe {
         let mut ud: *mut utf8_data = null_mut();
@@ -5901,7 +5851,7 @@ pub unsafe extern "C" fn format_grid_line(gd: *mut grid, y: u32) -> *mut c_char 
 }
 
 /// Return hyperlink at given coordinates. Caller frees.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn format_grid_hyperlink(
     gd: *mut grid,
     x: u32,

@@ -16,7 +16,6 @@ use libc::{INT_MIN, strcmp, strlen};
 
 use crate::*;
 
-#[unsafe(no_mangle)]
 pub static mut cmd_capture_pane_entry: cmd_entry = cmd_entry {
     name: c"capture-pane".as_ptr(),
     alias: c"capturep".as_ptr(),
@@ -31,7 +30,6 @@ pub static mut cmd_capture_pane_entry: cmd_entry = cmd_entry {
     exec: Some(cmd_capture_pane_exec),
 };
 
-#[unsafe(no_mangle)]
 pub static mut cmd_clear_history_entry: cmd_entry = cmd_entry {
     name: c"clear-history".as_ptr(),
     alias: c"clearhist".as_ptr(),
@@ -50,7 +48,6 @@ pub static mut cmd_clear_history_entry: cmd_entry = cmd_entry {
     exec: Some(cmd_capture_pane_exec),
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_capture_pane_append(
     mut buf: *mut c_char,
     len: *mut usize,
@@ -65,7 +62,6 @@ unsafe extern "C" fn cmd_capture_pane_append(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_capture_pane_pending(
     args: *mut args,
     wp: *const window_pane,
@@ -106,7 +102,6 @@ unsafe extern "C" fn cmd_capture_pane_pending(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_capture_pane_history(
     args: *mut args,
     item: *mut cmdq_item,
@@ -233,7 +228,6 @@ unsafe extern "C" fn cmd_capture_pane_history(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_capture_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

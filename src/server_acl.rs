@@ -40,7 +40,6 @@ pub struct server_acl_user {
     pub entry: rb_entry<server_acl_user>,
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_acl_cmp(
     user1: *const server_acl_user,
     user2: *const server_acl_user,
@@ -64,7 +63,6 @@ RB_GENERATE!(
     server_acl_cmp
 );
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_acl_init() {
     unsafe {
         rb_init(&raw mut server_acl_entries);
@@ -76,7 +74,6 @@ pub unsafe extern "C" fn server_acl_init() {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_acl_user_find(uid: uid_t) -> *mut server_acl_user {
     unsafe {
         let mut find: server_acl_user = server_acl_user { uid, ..zeroed() };
@@ -85,7 +82,6 @@ pub unsafe extern "C" fn server_acl_user_find(uid: uid_t) -> *mut server_acl_use
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_acl_display(item: *mut cmdq_item) {
     unsafe {
         // server_acl_entries
@@ -108,7 +104,6 @@ pub unsafe extern "C" fn server_acl_display(item: *mut cmdq_item) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_acl_user_allow(uid: uid_t) {
     unsafe {
         let mut user = server_acl_user_find(uid);
@@ -121,7 +116,6 @@ pub unsafe extern "C" fn server_acl_user_allow(uid: uid_t) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_acl_user_deny(uid: uid_t) {
     unsafe {
         let user = server_acl_user_find(uid);
@@ -133,7 +127,6 @@ pub unsafe extern "C" fn server_acl_user_deny(uid: uid_t) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_acl_user_allow_write(mut uid: uid_t) {
     unsafe {
         let user = server_acl_user_find(uid);
@@ -151,7 +144,6 @@ pub unsafe extern "C" fn server_acl_user_allow_write(mut uid: uid_t) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_acl_user_deny_write(mut uid: uid_t) {
     unsafe {
         unsafe {
@@ -171,7 +163,6 @@ pub unsafe extern "C" fn server_acl_user_deny_write(mut uid: uid_t) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_acl_join(c: *mut client) -> c_int {
     unsafe {
         let uid = proc_get_peer_uid((*c).peer);
@@ -193,7 +184,6 @@ pub unsafe extern "C" fn server_acl_join(c: *mut client) -> c_int {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_acl_get_uid(user: *mut server_acl_user) -> uid_t {
     unsafe { (*user).uid }
 }

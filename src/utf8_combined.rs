@@ -24,7 +24,6 @@ static utf8_modifier_table: [wchar_t; 31] = [
     0x1F3FF,
 ];
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn utf8_has_zwj(ud: *const utf8_data) -> i32 {
     unsafe {
         if (*ud).size < 3 {
@@ -38,7 +37,6 @@ pub unsafe extern "C" fn utf8_has_zwj(ud: *const utf8_data) -> i32 {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn utf8_is_zwj(ud: *const utf8_data) -> i32 {
     unsafe {
         if (*ud).size != 3 {
@@ -52,7 +50,6 @@ pub unsafe extern "C" fn utf8_is_zwj(ud: *const utf8_data) -> i32 {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn utf8_is_vs(ud: *const utf8_data) -> i32 {
     unsafe {
         if (*ud).size != 3 {
@@ -66,7 +63,6 @@ pub unsafe extern "C" fn utf8_is_vs(ud: *const utf8_data) -> i32 {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn utf8_is_modifier(ud: *const utf8_data) -> i32 {
     let mut wc: wchar_t = 0;
     unsafe {

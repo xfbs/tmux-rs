@@ -18,7 +18,6 @@ use libc::sscanf;
 
 use crate::compat::{queue::tailq_foreach, tree::rb_foreach};
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn resize_window(
     w: *mut window,
     mut sx: u32,
@@ -73,7 +72,6 @@ pub unsafe extern "C" fn resize_window(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn ignore_client_size(c: *mut client) -> i32 {
     unsafe {
         if (*c).session.is_null() {
@@ -109,7 +107,6 @@ pub unsafe extern "C" fn ignore_client_size(c: *mut client) -> i32 {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn clients_with_window(w: *mut window) -> u32 {
     let mut n = 0u32;
     unsafe {
@@ -126,7 +123,6 @@ pub unsafe extern "C" fn clients_with_window(w: *mut window) -> u32 {
     n
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn clients_calculate_size(
     type_: window_size_option,
     current: i32,
@@ -332,7 +328,6 @@ pub unsafe extern "C" fn clients_calculate_size(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn default_window_size_skip_client(
     loop_: *mut client,
     type_: window_size_option,
@@ -441,7 +436,6 @@ pub unsafe fn default_window_size(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn recalculate_size_skip_client(
     loop_: *mut client,
     type_: window_size_option,
@@ -466,7 +460,6 @@ pub unsafe extern "C" fn recalculate_size_skip_client(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn recalculate_size(w: *mut window, now: i32) {
     let __func__ = "recalculate_size";
 
@@ -557,14 +550,12 @@ pub unsafe extern "C" fn recalculate_size(w: *mut window, now: i32) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn recalculate_sizes() {
     unsafe {
         recalculate_sizes_now(0);
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn recalculate_sizes_now(now: i32) {
     unsafe {
         // struct session *s;

@@ -33,21 +33,16 @@ RB_GENERATE!(
     session_group_cmp
 );
 
-#[unsafe(no_mangle)]
 pub static mut sessions: sessions = unsafe { zeroed() };
 
-#[unsafe(no_mangle)]
 pub static mut next_session_id: u32 = 0;
 
-#[unsafe(no_mangle)]
 pub static mut session_groups: session_groups = rb_initializer();
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_cmp(s1: *const session, s2: *const session) -> i32 {
     unsafe { libc::strcmp((*s1).name, (*s2).name) }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_group_cmp(
     s1: *const session_group,
     s2: *const session_group,
@@ -55,7 +50,6 @@ pub unsafe extern "C" fn session_group_cmp(
     unsafe { libc::strcmp((*s1).name, (*s2).name) }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_alive(s: *mut session) -> boolint {
     unsafe {
         for s_loop in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
@@ -69,7 +63,7 @@ pub unsafe extern "C" fn session_alive(s: *mut session) -> boolint {
 }
 
 /// Find session by name.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_find(name: *mut c_char) -> *mut session {
     let mut s = MaybeUninit::<session>::uninit();
     let s = s.as_mut_ptr();
@@ -81,7 +75,7 @@ pub unsafe extern "C" fn session_find(name: *mut c_char) -> *mut session {
 }
 
 /// Find session by id parsed from a string.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_find_by_id_str(s: *const c_char) -> *mut session {
     unsafe {
         if *s != b'$' as c_char {
@@ -98,13 +92,13 @@ pub unsafe extern "C" fn session_find_by_id_str(s: *const c_char) -> *mut sessio
 }
 
 /// Find session by id.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_find_by_id(id: u32) -> Option<NonNull<session>> {
     unsafe { rb_foreach(&raw mut sessions).find(|s| (*s.as_ptr()).id == id) }
 }
 
 /// Create a new session.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_create(
     prefix: *const c_char,
     name: *const c_char,
@@ -168,7 +162,7 @@ pub unsafe extern "C" fn session_create(
 }
 
 /// Add a reference to a session.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_add_ref(s: *mut session, from: *const c_char) {
     let __func__ = "session_add_ref";
     unsafe {
@@ -184,7 +178,7 @@ pub unsafe extern "C" fn session_add_ref(s: *mut session, from: *const c_char) {
 }
 
 /// Remove a reference from a session.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_remove_ref(s: *mut session, from: *const c_char) {
     let __func__ = "session_remove_ref";
     unsafe {
@@ -204,7 +198,7 @@ pub unsafe extern "C" fn session_remove_ref(s: *mut session, from: *const c_char
 }
 
 /// Free session.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_free(_fd: i32, _events: i16, arg: *mut c_void) {
     unsafe {
         let s = arg as *mut session;
@@ -225,7 +219,7 @@ pub unsafe extern "C" fn session_free(_fd: i32, _events: i16, arg: *mut c_void) 
 }
 
 /// Destroy a session.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_destroy(s: *mut session, notify: i32, from: *const c_char) {
     let __func__ = c"session_destroy".as_ptr();
     unsafe {
@@ -265,7 +259,7 @@ pub unsafe extern "C" fn session_destroy(s: *mut session, notify: i32, from: *co
 }
 
 /// Sanitize session name.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_check_name(name: *const c_char) -> *mut c_char {
     unsafe {
         let mut new_name = null_mut();
@@ -291,7 +285,7 @@ pub unsafe extern "C" fn session_check_name(name: *const c_char) -> *mut c_char 
 }
 
 /// Lock session if it has timed out.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_lock_timer(fd: i32, events: i16, arg: *mut c_void) {
     unsafe {
         let s = arg as *mut session;
@@ -312,7 +306,7 @@ pub unsafe extern "C" fn session_lock_timer(fd: i32, events: i16, arg: *mut c_vo
 }
 
 /// Update activity time.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_update_activity(s: *mut session, from: *mut timeval) {
     unsafe {
         let last = &raw mut (*s).last_activity_time;
@@ -353,7 +347,7 @@ pub unsafe extern "C" fn session_update_activity(s: *mut session, from: *mut tim
 }
 
 /// Find the next usable session.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_next_session(s: *mut session) -> *mut session {
     unsafe {
         if rb_empty(&raw mut sessions) || !session_alive(s) {
@@ -373,7 +367,7 @@ pub unsafe extern "C" fn session_next_session(s: *mut session) -> *mut session {
 }
 
 /// Find the previous usable session.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_previous_session(s: *mut session) -> *mut session {
     unsafe {
         if rb_empty(&raw mut sessions) || !session_alive(s) {
@@ -392,7 +386,7 @@ pub unsafe extern "C" fn session_previous_session(s: *mut session) -> *mut sessi
 }
 
 /// Attach a window to a session.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_attach(
     s: *mut session,
     w: *mut window,
@@ -416,7 +410,7 @@ pub unsafe extern "C" fn session_attach(
 }
 
 /// Detach a window from a session.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_detach(s: *mut session, wl: *mut winlink) -> i32 {
     unsafe {
         if (*s).curw == wl && session_last(s) != 0 && session_previous(s, 0) != 0 {
@@ -438,7 +432,7 @@ pub unsafe extern "C" fn session_detach(s: *mut session, wl: *mut winlink) -> i3
 }
 
 /// Return if session has window.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_has(s: *mut session, w: *mut window) -> i32 {
     unsafe {
         tailq_foreach::<_, discr_wentry>(&raw mut (*w).winlinks)
@@ -450,7 +444,7 @@ pub unsafe extern "C" fn session_has(s: *mut session, w: *mut window) -> i32 {
  * Return 1 if a window is linked outside this session (not including session
  * groups). The window must be in this session!
  */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_is_linked(s: *mut session, w: *mut window) -> i32 {
     unsafe {
         let sg = session_group_contains(s);
@@ -461,7 +455,6 @@ pub unsafe extern "C" fn session_is_linked(s: *mut session, w: *mut window) -> i
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_next_alert(mut wl: *mut winlink) -> *mut winlink {
     unsafe {
         while !wl.is_null() {
@@ -475,7 +468,7 @@ pub unsafe extern "C" fn session_next_alert(mut wl: *mut winlink) -> *mut winlin
 }
 
 /* Move session to next window. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_next(s: *mut session, alert: i32) -> i32 {
     // struct winlink *wl;
     unsafe {
@@ -502,7 +495,6 @@ pub unsafe extern "C" fn session_next(s: *mut session, alert: i32) -> i32 {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_previous_alert(mut wl: *mut winlink) -> *mut winlink {
     unsafe {
         while !wl.is_null() {
@@ -516,7 +508,7 @@ pub unsafe extern "C" fn session_previous_alert(mut wl: *mut winlink) -> *mut wi
 }
 
 /* Move session to previous window. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_previous(s: *mut session, alert: i32) -> i32 {
     unsafe {
         if (*s).curw.is_null() {
@@ -543,7 +535,7 @@ pub unsafe extern "C" fn session_previous(s: *mut session, alert: i32) -> i32 {
 }
 
 /* Move session to specific window. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_select(s: *mut session, idx: i32) -> i32 {
     unsafe {
         let wl = winlink_find_by_index(&raw mut (*s).windows, idx);
@@ -552,7 +544,7 @@ pub unsafe extern "C" fn session_select(s: *mut session, idx: i32) -> i32 {
 }
 
 /* Move session to last used window. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_last(s: *mut session) -> i32 {
     unsafe {
         let wl = tailq_first(&raw mut (*s).lastw);
@@ -568,7 +560,7 @@ pub unsafe extern "C" fn session_last(s: *mut session) -> i32 {
 }
 
 /// Set current winlink to wl.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_set_current(s: *mut session, wl: *mut winlink) -> i32 {
     unsafe {
         let old: *mut winlink = (*s).curw;
@@ -598,7 +590,7 @@ pub unsafe extern "C" fn session_set_current(s: *mut session, wl: *mut winlink) 
 }
 
 /* Find the session group containing a session. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_group_contains(target: *mut session) -> *mut session_group {
     unsafe {
         for sg in rb_foreach(&raw mut session_groups) {
@@ -614,7 +606,7 @@ pub unsafe extern "C" fn session_group_contains(target: *mut session) -> *mut se
 }
 
 /* Find session group by name. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_group_find(name: *const c_char) -> *mut session_group {
     unsafe {
         let mut sg = MaybeUninit::<session_group>::uninit();
@@ -626,7 +618,7 @@ pub unsafe extern "C" fn session_group_find(name: *const c_char) -> *mut session
 }
 
 /* Create a new session group. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_group_new(name: *const c_char) -> *mut session_group {
     unsafe {
         let mut sg = session_group_find(name);
@@ -644,7 +636,7 @@ pub unsafe extern "C" fn session_group_new(name: *const c_char) -> *mut session_
 }
 
 /* Add a session to a session group. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_group_add(sg: *mut session_group, s: *mut session) {
     unsafe {
         if session_group_contains(s).is_null() {
@@ -654,7 +646,7 @@ pub unsafe extern "C" fn session_group_add(sg: *mut session_group, s: *mut sessi
 }
 
 /* Remove a session from its group and destroy the group if empty. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_group_remove(s: *mut session) {
     unsafe {
         let sg = session_group_contains(s);
@@ -672,13 +664,13 @@ pub unsafe extern "C" fn session_group_remove(s: *mut session) {
 }
 
 /* Count number of sessions in session group. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_group_count(sg: *mut session_group) -> u32 {
     unsafe { tailq_foreach(&raw mut (*sg).sessions).count() as u32 }
 }
 
 /* Count number of clients attached to sessions in session group. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_group_attached_count(sg: *mut session_group) -> u32 {
     unsafe {
         tailq_foreach(&raw mut (*sg).sessions)
@@ -688,7 +680,7 @@ pub unsafe extern "C" fn session_group_attached_count(sg: *mut session_group) ->
 }
 
 /// Synchronize a session to its session group.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_group_synchronize_to(s: *mut session) {
     unsafe {
         let sg = session_group_contains(s);
@@ -710,7 +702,7 @@ pub unsafe extern "C" fn session_group_synchronize_to(s: *mut session) {
 }
 
 /* Synchronize a session group to a session. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_group_synchronize_from(target: *mut session) {
     unsafe {
         let sg = session_group_contains(target);
@@ -731,7 +723,7 @@ pub unsafe extern "C" fn session_group_synchronize_from(target: *mut session) {
  * winlinks then recreating them, then updating the current window, last window
  * stack and alerts.
  */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_group_synchronize1(target: *mut session, s: *mut session) {
     let mut old_windows = MaybeUninit::<winlinks>::uninit();
     let mut old_lastw = MaybeUninit::<winlink_stack>::uninit();
@@ -797,7 +789,7 @@ pub unsafe extern "C" fn session_group_synchronize1(target: *mut session, s: *mu
 }
 
 /// Renumber the windows across winlinks attached to a specific session.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn session_renumber_windows(s: *mut session) {
     unsafe {
         // struct winlink *wl, *wl1, *wl_new;

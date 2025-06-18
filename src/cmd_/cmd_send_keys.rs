@@ -18,8 +18,7 @@ use libc::strtol;
 
 use crate::compat::queue::tailq_first;
 
-#[unsafe(no_mangle)]
-static mut cmd_send_keys_entry: cmd_entry = cmd_entry {
+pub static mut cmd_send_keys_entry: cmd_entry = cmd_entry {
     name: c"send-keys".as_ptr(),
     alias: c"send".as_ptr(),
 
@@ -36,8 +35,7 @@ static mut cmd_send_keys_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_send_prefix_entry: cmd_entry = cmd_entry {
+pub static mut cmd_send_prefix_entry: cmd_entry = cmd_entry {
     name: c"send-prefix".as_ptr(),
     alias: null(),
 
@@ -51,7 +49,6 @@ static mut cmd_send_prefix_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_send_keys_inject_key(
     item: *mut cmdq_item,
     mut after: *mut cmdq_item,
@@ -101,7 +98,6 @@ pub unsafe extern "C" fn cmd_send_keys_inject_key(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_send_keys_inject_string(
     item: *mut cmdq_item,
     mut after: *mut cmdq_item,
@@ -164,7 +160,6 @@ pub unsafe extern "C" fn cmd_send_keys_inject_string(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_send_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

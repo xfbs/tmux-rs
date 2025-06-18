@@ -16,8 +16,7 @@ use crate::*;
 
 use crate::compat::tree::{rb_foreach, rb_next, rb_prev};
 
-#[unsafe(no_mangle)]
-static mut cmd_kill_window_entry: cmd_entry = cmd_entry {
+pub static mut cmd_kill_window_entry: cmd_entry = cmd_entry {
     name: c"kill-window".as_ptr(),
     alias: c"killw".as_ptr(),
 
@@ -31,8 +30,7 @@ static mut cmd_kill_window_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_unlink_window_entry: cmd_entry = cmd_entry {
+pub static mut cmd_unlink_window_entry: cmd_entry = cmd_entry {
     name: c"unlink-window".as_ptr(),
     alias: c"unlinkw".as_ptr(),
 
@@ -46,7 +44,6 @@ static mut cmd_unlink_window_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_kill_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

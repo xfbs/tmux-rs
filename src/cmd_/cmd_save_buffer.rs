@@ -16,8 +16,7 @@ use libc::{O_APPEND, O_TRUNC};
 
 use crate::*;
 
-#[unsafe(no_mangle)]
-static mut cmd_save_buffer_entry: cmd_entry = cmd_entry {
+pub static mut cmd_save_buffer_entry: cmd_entry = cmd_entry {
     name: c"save-buffer".as_ptr(),
     alias: c"saveb".as_ptr(),
 
@@ -29,8 +28,7 @@ static mut cmd_save_buffer_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_show_buffer_entry: cmd_entry = cmd_entry {
+pub static mut cmd_show_buffer_entry: cmd_entry = cmd_entry {
     name: c"show-buffer".as_ptr(),
     alias: c"showb".as_ptr(),
 
@@ -42,7 +40,6 @@ static mut cmd_show_buffer_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_save_buffer_done(
     _c: *mut client,
     path: *mut c_char,
@@ -65,7 +62,6 @@ unsafe extern "C" fn cmd_save_buffer_done(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_save_buffer_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

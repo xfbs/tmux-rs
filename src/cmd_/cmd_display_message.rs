@@ -16,8 +16,7 @@ use crate::*;
 
 const DISPLAY_MESSAGE_TEMPLATE: &CStr = c"[#{session_name}] #{window_index}:#{window_name}, current pane #{pane_index} - (%H:%M %d-%b-%y)";
 
-#[unsafe(no_mangle)]
-static mut cmd_display_message_entry: cmd_entry = cmd_entry {
+pub static mut cmd_display_message_entry: cmd_entry = cmd_entry {
     name: c"display-message".as_ptr(),
     alias: c"display".as_ptr(),
 
@@ -34,7 +33,6 @@ static mut cmd_display_message_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_display_message_each(
     key: *const c_char,
     value: *const c_char,
@@ -47,7 +45,6 @@ unsafe extern "C" fn cmd_display_message_each(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

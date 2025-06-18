@@ -26,7 +26,6 @@ static WINDOW_CUSTOMIZE_DEFAULT_FORMAT: &str = concat!(
     "}\0"
 );
 
-#[unsafe(no_mangle)]
 static window_customize_menu_items: [menu_item; 9] = [
     menu_item::new(Some(c"Select"), '\r' as key_code, null_mut()),
     menu_item::new(Some(c"Expand"), keyc::KEYC_RIGHT as key_code, null_mut()),
@@ -39,7 +38,6 @@ static window_customize_menu_items: [menu_item; 9] = [
     menu_item::new(None, KEYC_NONE, null_mut()),
 ];
 
-#[unsafe(no_mangle)]
 pub static window_customize_mode: window_mode = window_mode {
     name: SyncCharPtr::new(c"options-mode"),
     default_format: SyncCharPtr::from_ptr(WINDOW_CUSTOMIZE_DEFAULT_FORMAT.as_ptr().cast()),
@@ -101,7 +99,6 @@ pub struct window_customize_modedata {
     change: window_customize_change,
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_customize_get_tag(
     o: *mut options_entry,
     idx: i32,
@@ -119,7 +116,6 @@ unsafe extern "C" fn window_customize_get_tag(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_customize_get_tree(
     scope: window_customize_scope,
     fs: *mut cmd_find_state,
@@ -138,7 +134,6 @@ unsafe extern "C" fn window_customize_get_tree(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_customize_check_item(
     data: *mut window_customize_modedata,
     item: *mut window_customize_itemdata,
@@ -161,7 +156,6 @@ unsafe extern "C" fn window_customize_check_item(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_customize_get_key(
     item: *mut window_customize_itemdata,
     ktp: *mut *mut key_table,
@@ -186,7 +180,6 @@ unsafe extern "C" fn window_customize_get_key(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_customize_scope_text(
     scope: window_customize_scope,
     fs: *mut cmd_find_state,
@@ -211,7 +204,6 @@ unsafe extern "C" fn window_customize_scope_text(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_customize_add_item(
     data: *mut window_customize_modedata,
 ) -> *mut window_customize_itemdata {
@@ -228,7 +220,6 @@ unsafe extern "C" fn window_customize_add_item(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_customize_free_item(item: *mut window_customize_itemdata) {
     unsafe {
         free_((*item).table);
@@ -237,7 +228,6 @@ unsafe extern "C" fn window_customize_free_item(item: *mut window_customize_item
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_customize_build_array(
     data: *mut window_customize_modedata,
     top: *mut mode_tree_item,
@@ -278,7 +268,6 @@ unsafe extern "C" fn window_customize_build_array(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_customize_build_option(
     data: *mut window_customize_modedata,
     top: *mut mode_tree_item,
@@ -362,7 +351,6 @@ unsafe extern "C" fn window_customize_build_option(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_customize_find_user_options(
     oo: *mut options,
     list: *mut *mut *const c_char,
@@ -396,7 +384,6 @@ unsafe extern "C" fn window_customize_find_user_options(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_customize_build_options(
     data: *mut window_customize_modedata,
     title: *const c_char,
@@ -487,7 +474,6 @@ unsafe extern "C" fn window_customize_build_options(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_customize_build_keys(
     data: *mut window_customize_modedata,
     kt: *mut key_table,
@@ -622,7 +608,6 @@ unsafe extern "C" fn window_customize_build_keys(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_customize_build(
     modedata: NonNull<c_void>,
     _: *mut mode_tree_sort_criteria,
@@ -714,7 +699,6 @@ unsafe extern "C" fn window_customize_build(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_customize_draw_key(
     _: *mut window_customize_modedata,
     item: *mut window_customize_itemdata,
@@ -832,7 +816,6 @@ unsafe extern "C" fn window_customize_draw_key(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_customize_draw_option(
     data: *mut window_customize_modedata,
     item: *mut window_customize_itemdata,
@@ -1157,7 +1140,6 @@ unsafe extern "C" fn window_customize_draw_option(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_customize_draw(
     modedata: *mut c_void,
     itemdata: Option<NonNull<c_void>>,
@@ -1181,7 +1163,6 @@ unsafe extern "C" fn window_customize_draw(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_customize_menu(
     modedata: NonNull<c_void>,
     c: *mut client,
@@ -1203,12 +1184,10 @@ unsafe extern "C" fn window_customize_menu(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_customize_height(_modedata: *mut c_void, _height: u32) -> u32 {
     12
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_customize_init(
     wme: NonNull<window_mode_entry>,
     fs: *mut cmd_find_state,
@@ -1255,7 +1234,6 @@ pub unsafe extern "C" fn window_customize_init(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_customize_destroy(data: *mut window_customize_modedata) {
     unsafe {
         (*data).references -= 1;
@@ -1274,7 +1252,6 @@ pub unsafe extern "C" fn window_customize_destroy(data: *mut window_customize_mo
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_customize_free(wme: NonNull<window_mode_entry>) {
     unsafe {
         let data: *mut window_customize_modedata = (*wme.as_ptr()).data.cast();
@@ -1289,7 +1266,6 @@ pub unsafe extern "C" fn window_customize_free(wme: NonNull<window_mode_entry>) 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_customize_resize(
     wme: NonNull<window_mode_entry>,
     sx: u32,
@@ -1302,14 +1278,12 @@ pub unsafe extern "C" fn window_customize_resize(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_customize_free_callback(modedata: NonNull<c_void>) {
     unsafe {
         window_customize_destroy(modedata.cast().as_ptr());
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_customize_free_item_callback(itemdata: NonNull<c_void>) {
     unsafe {
         let item: NonNull<window_customize_itemdata> = itemdata.cast();
@@ -1320,7 +1294,6 @@ pub unsafe extern "C" fn window_customize_free_item_callback(itemdata: NonNull<c
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_customize_set_option_callback(
     c: *mut client,
     itemdata: NonNull<c_void>,
@@ -1383,7 +1356,6 @@ pub unsafe extern "C" fn window_customize_set_option_callback(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_customize_set_option(
     c: *mut client,
     data: *mut window_customize_modedata,
@@ -1535,7 +1507,6 @@ pub unsafe extern "C" fn window_customize_set_option(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_customize_unset_option(
     data: *mut window_customize_modedata,
     item: *mut window_customize_itemdata,
@@ -1556,7 +1527,6 @@ pub unsafe extern "C" fn window_customize_unset_option(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_customize_reset_option(
     data: *mut window_customize_modedata,
     item: *mut window_customize_itemdata,
@@ -1580,7 +1550,6 @@ pub unsafe extern "C" fn window_customize_reset_option(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_customize_set_command_callback(
     c: *mut client,
     itemdata: NonNull<c_void>,
@@ -1627,7 +1596,6 @@ pub unsafe extern "C" fn window_customize_set_command_callback(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_customize_set_note_callback(
     _c: *mut client,
     itemdata: NonNull<c_void>,
@@ -1658,7 +1626,6 @@ pub unsafe extern "C" fn window_customize_set_note_callback(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_customize_set_key(
     c: *mut client,
     data: *mut window_customize_modedata,
@@ -1739,7 +1706,6 @@ pub unsafe extern "C" fn window_customize_set_key(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_customize_unset_key(
     data: *mut window_customize_modedata,
     item: *mut window_customize_itemdata,
@@ -1760,7 +1726,6 @@ pub unsafe extern "C" fn window_customize_unset_key(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_customize_reset_key(
     data: *mut window_customize_modedata,
     item: *mut window_customize_itemdata,
@@ -1785,7 +1750,6 @@ pub unsafe extern "C" fn window_customize_reset_key(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_customize_change_each(
     modedata: NonNull<c_void>,
     itemdata: NonNull<c_void>,
@@ -1821,7 +1785,6 @@ pub unsafe extern "C" fn window_customize_change_each(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_customize_change_current_callback(
     c: *mut client,
     modedata: NonNull<c_void>,
@@ -1867,7 +1830,6 @@ pub unsafe extern "C" fn window_customize_change_current_callback(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_customize_change_tagged_callback(
     c: *mut client,
     modedata: NonNull<c_void>,
@@ -1899,7 +1861,6 @@ pub unsafe extern "C" fn window_customize_change_tagged_callback(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_customize_key(
     wme: NonNull<window_mode_entry>,
     c: *mut client,

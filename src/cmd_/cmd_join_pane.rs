@@ -17,8 +17,7 @@ use crate::*;
 
 use crate::compat::queue::{tailq_insert_after, tailq_insert_before, tailq_remove};
 
-#[unsafe(no_mangle)]
-static mut cmd_join_pane_entry: cmd_entry = cmd_entry {
+pub static mut cmd_join_pane_entry: cmd_entry = cmd_entry {
     name: c"join-pane".as_ptr(),
     alias: c"joinp".as_ptr(),
 
@@ -32,8 +31,7 @@ static mut cmd_join_pane_entry: cmd_entry = cmd_entry {
     exec: Some(cmd_join_pane_exec),
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_move_pane_entry: cmd_entry = cmd_entry {
+pub static mut cmd_move_pane_entry: cmd_entry = cmd_entry {
     name: c"move-pane".as_ptr(),
     alias: c"movep".as_ptr(),
 
@@ -47,7 +45,6 @@ static mut cmd_move_pane_entry: cmd_entry = cmd_entry {
     exec: Some(cmd_join_pane_exec),
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

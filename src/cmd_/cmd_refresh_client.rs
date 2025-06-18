@@ -18,8 +18,7 @@ use libc::{sscanf, strchr, strcmp};
 
 use crate::compat::strtonum;
 
-#[unsafe(no_mangle)]
-static mut cmd_refresh_client_entry: cmd_entry = cmd_entry {
+pub static mut cmd_refresh_client_entry: cmd_entry = cmd_entry {
     name: c"refresh-client".as_ptr(),
     alias: c"refresh".as_ptr(),
 
@@ -31,7 +30,6 @@ static mut cmd_refresh_client_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_refresh_client_update_subscription(
     tc: *mut client,
     value: *const c_char,
@@ -78,7 +76,6 @@ pub unsafe extern "C" fn cmd_refresh_client_update_subscription(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_refresh_client_control_client_size(
     self_: *mut cmd,
     item: *mut cmdq_item,
@@ -155,7 +152,6 @@ pub unsafe extern "C" fn cmd_refresh_client_control_client_size(
     cmd_retval::CMD_RETURN_NORMAL
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_refresh_client_update_offset(tc: *mut client, value: *const c_char) {
     unsafe {
         let mut pane: u32 = 0;
@@ -196,7 +192,6 @@ pub unsafe extern "C" fn cmd_refresh_client_update_offset(tc: *mut client, value
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_refresh_client_clipboard(
     self_: *mut cmd,
     item: *mut cmdq_item,
@@ -239,7 +234,6 @@ pub unsafe extern "C" fn cmd_refresh_client_clipboard(
     cmd_retval::CMD_RETURN_NORMAL
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_refresh_report(tty: *mut tty, value: *const c_char) {
     unsafe {
         let pane: u32 = 0;
@@ -279,7 +273,6 @@ pub unsafe extern "C" fn cmd_refresh_report(tty: *mut tty, value: *const c_char)
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_refresh_client_exec(
     self_: *mut cmd,
     item: *mut cmdq_item,

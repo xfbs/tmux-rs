@@ -61,7 +61,6 @@ impl tty_term_code_entry {
     }
 }
 
-#[unsafe(no_mangle)]
 static tty_term_codes: [tty_term_code_entry; 232] = const {
     let mut tmp: [tty_term_code_entry; 232] = unsafe { zeroed() };
 
@@ -477,12 +476,10 @@ static tty_term_codes: [tty_term_code_entry; 232] = const {
     tmp
 };
 
-#[unsafe(no_mangle)]
 pub const unsafe extern "C" fn tty_term_ncodes() -> u32 {
     tty_term_codes.len() as u32
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_term_strip(s: *const c_char) -> *mut c_char {
     let sizeof_buf: usize = 8192;
     static mut buf: [c_char; 8192] = [0; 8192];
@@ -525,7 +522,6 @@ pub unsafe extern "C" fn tty_term_strip(s: *const c_char) -> *mut c_char {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_term_override_next(
     s: *const c_char,
     offset: *mut usize,
@@ -569,7 +565,6 @@ pub unsafe extern "C" fn tty_term_override_next(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_term_apply(
     term: *mut tty_term,
     capabilities: *const c_char,
@@ -664,7 +659,6 @@ pub unsafe extern "C" fn tty_term_apply(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_term_apply_overrides(term: *mut tty_term) {
     let mut ov: *mut options_value = null_mut();
     let mut s: *const c_char = null();
@@ -782,7 +776,6 @@ pub unsafe extern "C" fn tty_term_apply_overrides(term: *mut tty_term) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_term_create(
     tty: *mut tty,
     name: *mut c_char,
@@ -938,7 +931,6 @@ pub unsafe extern "C" fn tty_term_create(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_term_free(term: *mut tty_term) {
     unsafe {
         log_debug!("removing term {}", _s((*term).name));
@@ -956,7 +948,6 @@ pub unsafe extern "C" fn tty_term_free(term: *mut tty_term) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_term_read_list(
     name: *const c_char,
     fd: i32,
@@ -1032,7 +1023,6 @@ pub unsafe extern "C" fn tty_term_read_list(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_term_free_list(caps: *mut *mut c_char, ncaps: u32) {
     unsafe {
         for i in 0..ncaps {
@@ -1042,12 +1032,10 @@ pub unsafe extern "C" fn tty_term_free_list(caps: *mut *mut c_char, ncaps: u32) 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_term_has(term: *mut tty_term, code: tty_code_code) -> boolint {
     unsafe { boolint::from((*(*term).codes.add(code as usize)).type_ != tty_code_type::None) }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_term_string(
     term: *mut tty_term,
     code: tty_code_code,
@@ -1063,7 +1051,6 @@ pub unsafe extern "C" fn tty_term_string(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_term_string_i(
     term: *mut tty_term,
     code: tty_code_code,
@@ -1090,7 +1077,6 @@ pub unsafe extern "C" fn tty_term_string_i(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_term_string_ii(
     term: *mut tty_term,
     code: tty_code_code,
@@ -1120,7 +1106,6 @@ pub unsafe extern "C" fn tty_term_string_ii(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_term_string_iii(
     term: *mut tty_term,
     code: tty_code_code,
@@ -1150,7 +1135,6 @@ pub unsafe extern "C" fn tty_term_string_iii(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_term_string_s(
     term: *mut tty_term,
     code: tty_code_code,
@@ -1179,7 +1163,6 @@ pub unsafe extern "C" fn tty_term_string_s(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_term_string_ss(
     term: *mut tty_term,
     code: tty_code_code,
@@ -1210,7 +1193,6 @@ pub unsafe extern "C" fn tty_term_string_ss(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_term_number(term: *mut tty_term, code: tty_code_code) -> i32 {
     unsafe {
         if !tty_term_has(term, code) {
@@ -1223,7 +1205,6 @@ pub unsafe extern "C" fn tty_term_number(term: *mut tty_term, code: tty_code_cod
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_term_flag(term: *mut tty_term, code: tty_code_code) -> i32 {
     unsafe {
         if !tty_term_has(term, code) {
@@ -1236,7 +1217,6 @@ pub unsafe extern "C" fn tty_term_flag(term: *mut tty_term, code: tty_code_code)
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_term_describe(
     term: *mut tty_term,
     code: tty_code_code,

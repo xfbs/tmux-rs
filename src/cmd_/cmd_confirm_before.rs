@@ -13,8 +13,7 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use crate::*;
 
-#[unsafe(no_mangle)]
-static mut cmd_confirm_before_entry: cmd_entry = cmd_entry {
+pub static mut cmd_confirm_before_entry: cmd_entry = cmd_entry {
     name: c"confirm-before".as_ptr(),
     alias: c"confirm".as_ptr(),
 
@@ -41,7 +40,6 @@ unsafe extern "C" fn cmd_confirm_before_args_parse(
     args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_confirm_before_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
@@ -107,7 +105,6 @@ unsafe extern "C" fn cmd_confirm_before_exec(self_: *mut cmd, item: *mut cmdq_it
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_confirm_before_callback(
     c: *mut client,
     data: NonNull<c_void>,
@@ -155,7 +152,6 @@ unsafe extern "C" fn cmd_confirm_before_callback(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_confirm_before_free(data: NonNull<c_void>) {
     unsafe {
         let cdata: NonNull<cmd_confirm_before_data> = data.cast();

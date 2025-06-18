@@ -19,8 +19,7 @@ use crate::compat::{strtonum, tree::rb_min};
 
 const NEW_SESSION_TEMPLATE: &CStr = c"#{session_name}:";
 
-#[unsafe(no_mangle)]
-static mut cmd_new_session_entry: cmd_entry = cmd_entry {
+pub static mut cmd_new_session_entry: cmd_entry = cmd_entry {
     name: c"new-session".as_ptr(),
     alias: c"new".as_ptr(),
 
@@ -34,8 +33,7 @@ static mut cmd_new_session_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_has_session_entry: cmd_entry = cmd_entry {
+pub static mut cmd_has_session_entry: cmd_entry = cmd_entry {
     name: c"has-session".as_ptr(),
     alias: c"has".as_ptr(),
 
@@ -50,11 +48,6 @@ static mut cmd_has_session_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-unsafe extern "C" {
-    // fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval;
-}
-
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     let __func__ = c"cmd_new_session_exec".as_ptr();
 

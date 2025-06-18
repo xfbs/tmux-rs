@@ -13,8 +13,7 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use crate::*;
 
-#[unsafe(no_mangle)]
-static mut cmd_show_prompt_history_entry: cmd_entry = cmd_entry {
+pub static mut cmd_show_prompt_history_entry: cmd_entry = cmd_entry {
     name: c"show-prompt-history".as_ptr(),
     alias: c"showphist".as_ptr(),
 
@@ -26,8 +25,7 @@ static mut cmd_show_prompt_history_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_clear_prompt_history_entry: cmd_entry = cmd_entry {
+pub static mut cmd_clear_prompt_history_entry: cmd_entry = cmd_entry {
     name: c"clear-prompt-history".as_ptr(),
     alias: c"clearphist".as_ptr(),
 
@@ -39,7 +37,6 @@ static mut cmd_clear_prompt_history_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_show_prompt_history_exec(
     self_: *mut cmd,
     item: *mut cmdq_item,

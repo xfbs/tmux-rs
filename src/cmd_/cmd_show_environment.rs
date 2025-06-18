@@ -14,8 +14,7 @@
 
 use crate::*;
 
-#[unsafe(no_mangle)]
-static mut cmd_show_environment_entry: cmd_entry = cmd_entry {
+pub static mut cmd_show_environment_entry: cmd_entry = cmd_entry {
     name: c"show-environment".as_ptr(),
     alias: c"showenv".as_ptr(),
 
@@ -29,7 +28,6 @@ static mut cmd_show_environment_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_show_environment_escape(envent: *mut environ_entry) -> *mut c_char {
     unsafe {
         let mut value = transmute_ptr((*envent).value);
@@ -56,7 +54,6 @@ unsafe extern "C" fn cmd_show_environment_escape(envent: *mut environ_entry) -> 
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_show_environment_print(
     self_: *mut cmd,
     item: *mut cmdq_item,
@@ -103,7 +100,6 @@ unsafe extern "C" fn cmd_show_environment_print(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_show_environment_exec(
     self_: *mut cmd,
     item: *mut cmdq_item,

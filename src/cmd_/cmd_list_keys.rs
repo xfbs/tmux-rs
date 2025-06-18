@@ -16,8 +16,7 @@ use crate::*;
 use crate::compat::strlcat;
 use libc::strcmp;
 
-#[unsafe(no_mangle)]
-static mut cmd_list_keys_entry: cmd_entry = cmd_entry {
+pub static mut cmd_list_keys_entry: cmd_entry = cmd_entry {
     name: c"list-keys".as_ptr(),
     alias: c"lsk".as_ptr(),
 
@@ -29,8 +28,7 @@ static mut cmd_list_keys_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_list_commands_entry: cmd_entry = cmd_entry {
+pub static mut cmd_list_commands_entry: cmd_entry = cmd_entry {
     name: c"list-commands".as_ptr(),
     alias: c"lscm".as_ptr(),
 
@@ -42,7 +40,6 @@ static mut cmd_list_commands_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_list_keys_get_width(tablename: *const c_char, only: key_code) -> u32 {
     unsafe {
         let mut keywidth = 0u32;
@@ -71,7 +68,7 @@ unsafe extern "C" fn cmd_list_keys_get_width(tablename: *const c_char, only: key
         keywidth
     }
 }
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn cmd_list_keys_print_notes(
     item: *mut cmdq_item,
     args: *mut args,
@@ -125,7 +122,6 @@ unsafe extern "C" fn cmd_list_keys_print_notes(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_list_keys_get_prefix(
     args: *mut args,
     prefix: *mut key_code,
@@ -145,7 +141,6 @@ unsafe extern "C" fn cmd_list_keys_get_prefix(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
@@ -355,7 +350,6 @@ unsafe extern "C" fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_list_keys_commands(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

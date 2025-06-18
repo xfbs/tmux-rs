@@ -360,7 +360,6 @@ static tty_features: [&tty_feature; 20] = [
     &tty_feature_usstyle,
 ];
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_add_features(
     feat: *mut i32,
     s: *const c_char,
@@ -400,7 +399,6 @@ pub unsafe extern "C" fn tty_add_features(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_get_features(feat: i32) -> *const c_char {
     static mut s_buf: [MaybeUninit<c_char>; 512] = [MaybeUninit::uninit(); 512];
     unsafe {
@@ -424,7 +422,6 @@ pub unsafe extern "C" fn tty_get_features(feat: i32) -> *const c_char {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_apply_features(term: *mut tty_term, feat: i32) -> boolint {
     if feat == 0 {
         return boolint::FALSE;
@@ -458,7 +455,6 @@ pub unsafe extern "C" fn tty_apply_features(term: *mut tty_term, feat: i32) -> b
     boolint::TRUE
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_default_features(feat: *mut i32, name: *const c_char, version: u32) {
     struct entry {
         name: &'static CStr,

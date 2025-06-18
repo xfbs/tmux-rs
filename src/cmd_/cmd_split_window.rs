@@ -15,8 +15,7 @@ use crate::*;
 
 const SPLIT_WINDOW_TEMPLATE: &CStr = c"#{session_name}:#{window_index}.#{pane_index}";
 
-#[unsafe(no_mangle)]
-static mut cmd_split_window_entry: cmd_entry = cmd_entry {
+pub static mut cmd_split_window_entry: cmd_entry = cmd_entry {
     name: c"split-window".as_ptr(),
     alias: c"splitw".as_ptr(),
 
@@ -30,7 +29,6 @@ static mut cmd_split_window_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

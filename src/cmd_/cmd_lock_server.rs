@@ -13,8 +13,7 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use crate::*;
 
-#[unsafe(no_mangle)]
-static mut cmd_lock_server_entry: cmd_entry = cmd_entry {
+pub static mut cmd_lock_server_entry: cmd_entry = cmd_entry {
     name: c"lock-server".as_ptr(),
     alias: c"lock".as_ptr(),
 
@@ -26,8 +25,7 @@ static mut cmd_lock_server_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_lock_session_entry: cmd_entry = cmd_entry {
+pub static mut cmd_lock_session_entry: cmd_entry = cmd_entry {
     name: c"lock-session".as_ptr(),
     alias: c"locks".as_ptr(),
 
@@ -41,8 +39,7 @@ static mut cmd_lock_session_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_lock_client_entry: cmd_entry = cmd_entry {
+pub static mut cmd_lock_client_entry: cmd_entry = cmd_entry {
     name: c"lock-client".as_ptr(),
     alias: c"lockc".as_ptr(),
 
@@ -54,7 +51,6 @@ static mut cmd_lock_client_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_lock_server_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let target = cmdq_get_target(item);

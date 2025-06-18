@@ -12,11 +12,10 @@
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use crate::{colour::colour_split_rgb_, compat::b64::b64_ntop};
+use crate::{colour::colour_split_rgb, compat::b64::b64_ntop};
 
 use super::*;
 
-#[unsafe(no_mangle)]
 static mut tty_log_fd: i32 = -1;
 
 #[inline]
@@ -45,7 +44,6 @@ unsafe fn TTY_BLOCK_STOP(tty: *const tty) -> u32 {
     unsafe { 1 + ((*tty).sx * (*tty).sy) / 8 }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_create_log() {
     unsafe {
         let mut name: [c_char; 64] = [0; 64];
@@ -68,7 +66,6 @@ pub unsafe extern "C" fn tty_create_log() {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_init(tty: *mut tty, c: *mut client) -> i32 {
     unsafe {
         if libc::isatty((*c).fd) == 0 {
@@ -91,7 +88,6 @@ pub unsafe extern "C" fn tty_init(tty: *mut tty, c: *mut client) -> i32 {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_resize(tty: *mut tty) {
     unsafe {
         let c = (*tty).client;
@@ -128,7 +124,6 @@ pub unsafe extern "C" fn tty_resize(tty: *mut tty) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_set_size(tty: *mut tty, sx: u32, sy: u32, xpixel: u32, ypixel: u32) {
     unsafe {
         (*tty).sx = sx;
@@ -138,7 +133,6 @@ pub unsafe extern "C" fn tty_set_size(tty: *mut tty, sx: u32, sy: u32, xpixel: u
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_read_callback(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
         let tty = data as *mut tty;
@@ -163,7 +157,6 @@ pub unsafe extern "C" fn tty_read_callback(_fd: i32, _events: i16, data: *mut c_
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_timer_callback(_fd: i32, events: i16, data: *mut c_void) {
     unsafe {
         let tty = data as *mut tty;
@@ -188,7 +181,6 @@ pub unsafe extern "C" fn tty_timer_callback(_fd: i32, events: i16, data: *mut c_
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_block_maybe(tty: *mut tty) -> i32 {
     unsafe {
         let c = (*tty).client;
@@ -224,7 +216,6 @@ pub unsafe extern "C" fn tty_block_maybe(tty: *mut tty) -> i32 {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_write_callback(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
         let tty = data as *mut tty;
@@ -254,7 +245,6 @@ pub unsafe extern "C" fn tty_write_callback(_fd: i32, _events: i16, data: *mut c
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_open(tty: *mut tty, cause: *mut *mut c_char) -> i32 {
     unsafe {
         let c = (*tty).client;
@@ -311,7 +301,6 @@ pub unsafe extern "C" fn tty_open(tty: *mut tty, cause: *mut *mut c_char) -> i32
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_start_timer_callback(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
         let tty = data as *mut tty;
@@ -328,7 +317,6 @@ pub unsafe extern "C" fn tty_start_timer_callback(_fd: i32, _events: i16, data: 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_start_tty(tty: *mut tty) {
     unsafe {
         let c = (*tty).client;
@@ -407,7 +395,6 @@ pub unsafe extern "C" fn tty_start_tty(tty: *mut tty) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_send_requests(tty: *mut tty) {
     unsafe {
         if !(*tty).flags.intersects(tty_flags::TTY_STARTED) {
@@ -434,7 +421,6 @@ pub unsafe extern "C" fn tty_send_requests(tty: *mut tty) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_repeat_requests(tty: *mut tty) {
     unsafe {
         let t = libc::time(null_mut());
@@ -455,7 +441,6 @@ pub unsafe extern "C" fn tty_repeat_requests(tty: *mut tty) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_stop_tty(tty: *mut tty) {
     unsafe {
         let c = (*tty).client;
@@ -539,7 +524,6 @@ pub unsafe extern "C" fn tty_stop_tty(tty: *mut tty) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_close(tty: *mut tty) {
     unsafe {
         if event_initialized(&raw mut (*tty).key_timer).as_bool() {
@@ -561,14 +545,12 @@ pub unsafe extern "C" fn tty_close(tty: *mut tty) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_free(tty: *mut tty) {
     unsafe {
         tty_close(tty);
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_update_features(tty: *mut tty) {
     unsafe {
         let c = (*tty).client;
@@ -600,7 +582,6 @@ pub unsafe extern "C" fn tty_update_features(tty: *mut tty) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_raw(tty: *mut tty, mut s: *const c_char) {
     unsafe {
         let c = (*tty).client;
@@ -622,14 +603,12 @@ pub unsafe extern "C" fn tty_raw(tty: *mut tty, mut s: *const c_char) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_putcode(tty: *mut tty, code: tty_code_code) {
     unsafe {
         tty_puts(tty, tty_term_string((*tty).term, code));
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_putcode_i(tty: *mut tty, code: tty_code_code, a: i32) {
     unsafe {
         if a < 0 {
@@ -639,7 +618,6 @@ pub unsafe extern "C" fn tty_putcode_i(tty: *mut tty, code: tty_code_code, a: i3
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_putcode_ii(tty: *mut tty, code: tty_code_code, a: i32, b: i32) {
     unsafe {
         if a < 0 || b < 0 {
@@ -649,7 +627,6 @@ pub unsafe extern "C" fn tty_putcode_ii(tty: *mut tty, code: tty_code_code, a: i
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_putcode_iii(
     tty: *mut tty,
     code: tty_code_code,
@@ -665,7 +642,6 @@ pub unsafe extern "C" fn tty_putcode_iii(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_putcode_s(tty: *mut tty, code: tty_code_code, a: *const c_char) {
     unsafe {
         if !a.is_null() {
@@ -674,7 +650,6 @@ pub unsafe extern "C" fn tty_putcode_s(tty: *mut tty, code: tty_code_code, a: *c
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_putcode_ss(
     tty: *mut tty,
     code: tty_code_code,
@@ -688,7 +663,6 @@ pub unsafe extern "C" fn tty_putcode_ss(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_add(tty: *mut tty, buf: *const c_char, len: usize) {
     unsafe {
         let c = (*tty).client;
@@ -711,7 +685,6 @@ pub unsafe extern "C" fn tty_add(tty: *mut tty, buf: *const c_char, len: usize) 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_puts(tty: *mut tty, s: *const c_char) {
     unsafe {
         if *s != b'\0' as i8 {
@@ -720,7 +693,6 @@ pub unsafe extern "C" fn tty_puts(tty: *mut tty, s: *const c_char) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_putc(tty: *mut tty, ch: u8) {
     unsafe {
         if (*(*tty).term).flags.intersects(term_flags::TERM_NOAM)
@@ -770,7 +742,6 @@ pub unsafe extern "C" fn tty_putc(tty: *mut tty, ch: u8) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_putn(tty: *mut tty, buf: *const c_void, mut len: usize, width: u32) {
     unsafe {
         if (*(*tty).term).flags.intersects(term_flags::TERM_NOAM)
@@ -795,7 +766,6 @@ pub unsafe extern "C" fn tty_putn(tty: *mut tty, buf: *const c_void, mut len: us
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_set_italics(tty: *mut tty) {
     unsafe {
         if tty_term_has((*tty).term, tty_code_code::TTYC_SITM).as_bool() {
@@ -811,7 +781,6 @@ pub unsafe extern "C" fn tty_set_italics(tty: *mut tty) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_set_title(tty: *mut tty, title: *const c_char) {
     unsafe {
         if !tty_term_has((*tty).term, tty_code_code::TTYC_TSL)
@@ -826,7 +795,6 @@ pub unsafe extern "C" fn tty_set_title(tty: *mut tty, title: *const c_char) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_set_path(tty: *mut tty, title: *const c_char) {
     unsafe {
         if !tty_term_has((*tty).term, tty_code_code::TTYC_SWD)
@@ -841,7 +809,6 @@ pub unsafe extern "C" fn tty_set_path(tty: *mut tty, title: *const c_char) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_force_cursor_colour(tty: *mut tty, mut c: i32) {
     unsafe {
         let mut s: [c_char; 13] = [0; 13];
@@ -855,7 +822,7 @@ pub unsafe extern "C" fn tty_force_cursor_colour(tty: *mut tty, mut c: i32) {
         if c == -1 {
             tty_putcode(tty, tty_code_code::TTYC_CR);
         } else {
-            let (r, g, b) = colour_split_rgb_(c);
+            let (r, g, b) = colour_split_rgb(c);
             xsnprintf_!((&raw mut s).cast(), 13, "rgb:{:02x}/{:02x}/{:02x}", r, g, b,);
             tty_putcode_s(tty, tty_code_code::TTYC_CS, (&raw const s).cast());
         }
@@ -863,7 +830,6 @@ pub unsafe extern "C" fn tty_force_cursor_colour(tty: *mut tty, mut c: i32) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_update_cursor(
     tty: *mut tty,
     mode: mode_flag,
@@ -979,7 +945,6 @@ pub unsafe extern "C" fn tty_update_cursor(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_update_mode(tty: *mut tty, mut mode: mode_flag, s: *mut screen) {
     unsafe {
         let term = (*tty).term;
@@ -1028,7 +993,6 @@ pub unsafe extern "C" fn tty_update_mode(tty: *mut tty, mut mode: mode_flag, s: 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_emulate_repeat(
     tty: *mut tty,
     code: tty_code_code,
@@ -1049,7 +1013,6 @@ pub unsafe extern "C" fn tty_emulate_repeat(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_repeat_space(tty: *mut tty, mut n: u32) {
     const sizeof_s: usize = 500;
     static mut s: [u8; sizeof_s] = [0; sizeof_s];
@@ -1070,7 +1033,7 @@ pub unsafe extern "C" fn tty_repeat_space(tty: *mut tty, mut n: u32) {
 }
 
 /// Is this window bigger than the terminal?
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_window_bigger(tty: *mut tty) -> boolint {
     unsafe {
         let c = (*tty).client;
@@ -1081,7 +1044,7 @@ pub unsafe extern "C" fn tty_window_bigger(tty: *mut tty) -> boolint {
 }
 
 /// What offset should this window be drawn at?
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_window_offset(
     tty: *mut tty,
     ox: *mut u32,
@@ -1100,7 +1063,7 @@ pub unsafe extern "C" fn tty_window_offset(
 }
 
 /// What offset should this window be drawn at?
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_window_offset1(
     tty: *mut tty,
     ox: *mut u32,
@@ -1177,7 +1140,7 @@ pub unsafe extern "C" fn tty_window_offset1(
 }
 
 /// Update stored offsets for a window and redraw if necessary.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_update_window_offset(w: *mut window) {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
@@ -1192,7 +1155,7 @@ pub unsafe extern "C" fn tty_update_window_offset(w: *mut window) {
 }
 
 /// Update stored offsets for a client and redraw if necessary.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_update_client_offset(c: *mut client) {
     unsafe {
         let mut ox: u32 = 0;
@@ -1241,13 +1204,13 @@ pub unsafe extern "C" fn tty_update_client_offset(c: *mut client) {
 /// Is the region large enough to be worth redrawing once later rather than
 /// probably several times now? Currently yes if it is more than 50% of the
 /// pane.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_large_region(_tty: *mut tty, ctx: *const tty_ctx) -> boolint {
     unsafe { boolint::from((*ctx).orlower - (*ctx).orupper >= (*ctx).sy / 2) }
 }
 
 /// Return if BCE is needed but the terminal doesn't have it - it'll need to be emulated.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_fake_bce(tty: *const tty, gc: *const grid_cell, bg: u32) -> boolint {
     unsafe {
         if tty_term_flag((*tty).term, tty_code_code::TTYC_BCE) != 0 {
@@ -1265,7 +1228,7 @@ pub unsafe extern "C" fn tty_fake_bce(tty: *const tty, gc: *const grid_cell, bg:
  * CSR not supported, or window is a pane that doesn't take up the full
  * width of the terminal.
  */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_redraw_region(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         let c = (*tty).client;
@@ -1287,7 +1250,7 @@ pub unsafe extern "C" fn tty_redraw_region(tty: *mut tty, ctx: *const tty_ctx) {
 }
 
 /// Is this position visible in the pane?
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_is_visible(
     _tty: *mut tty,
     ctx: *const tty_ctx,
@@ -1315,7 +1278,7 @@ pub unsafe extern "C" fn tty_is_visible(
 }
 
 /// Clamp line position to visible part of pane.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_clamp_line(
     tty: *mut tty,
     ctx: *const tty_ctx,
@@ -1365,7 +1328,7 @@ pub unsafe extern "C" fn tty_clamp_line(
 }
 
 /// Clear a line.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_clear_line(
     tty: *mut tty,
     defaults: *const grid_cell,
@@ -1427,7 +1390,7 @@ pub unsafe extern "C" fn tty_clear_line(
 }
 
 /// Clear a line, adjusting to visible part of pane.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_clear_pane_line(
     tty: *mut tty,
     ctx: *const tty_ctx,
@@ -1465,7 +1428,7 @@ pub unsafe extern "C" fn tty_clear_pane_line(
 }
 
 /// Clamp area position to visible part of pane.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_clamp_area(
     tty: *mut tty,
     ctx: *const tty_ctx,
@@ -1543,7 +1506,7 @@ pub unsafe extern "C" fn tty_clamp_area(
 }
 
 /// Clear an area, adjusting to visible part of pane.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_clear_area(
     tty: *mut tty,
     defaults: *const grid_cell,
@@ -1638,7 +1601,7 @@ pub unsafe extern "C" fn tty_clear_area(
 }
 
 /// Clear an area in a pane.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_clear_pane_area(
     tty: *mut tty,
     ctx: *const tty_ctx,
@@ -1677,7 +1640,6 @@ pub unsafe extern "C" fn tty_clear_pane_area(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_draw_pane(tty: *mut tty, ctx: *const tty_ctx, py: u32) {
     unsafe {
         let s = (*ctx).s;
@@ -1731,7 +1693,6 @@ pub unsafe extern "C" fn tty_draw_pane(tty: *mut tty, ctx: *const tty_ctx, py: u
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_check_codeset(
     tty: *mut tty,
     gc: *const grid_cell,
@@ -1776,7 +1737,7 @@ pub unsafe extern "C" fn tty_check_codeset(
 }
 
 /// Check if a single character is obstructed by the overlay and return a boolean.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_check_overlay(tty: *mut tty, px: u32, py: u32) -> boolint {
     unsafe {
         let mut r: overlay_ranges = zeroed();
@@ -1796,7 +1757,7 @@ pub unsafe extern "C" fn tty_check_overlay(tty: *mut tty, px: u32, py: u32) -> b
 }
 
 /// Return parts of the input range which are visible.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_check_overlay_range(
     tty: *mut tty,
     px: u32,
@@ -1820,7 +1781,6 @@ pub unsafe extern "C" fn tty_check_overlay_range(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_draw_line(
     tty: *mut tty,
     s: *mut screen,
@@ -2033,7 +1993,7 @@ pub unsafe extern "C" fn tty_draw_line(
 
 #[cfg(feature = "sixel")]
 /// Update context for client.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_set_client_cb(ttyctx: *mut tty_ctx, c: *mut client) -> i32 {
     unsafe {
         let mut wp: *mut window_pane = (*ttyctx).arg.cast();
@@ -2065,7 +2025,7 @@ pub unsafe extern "C" fn tty_set_client_cb(ttyctx: *mut tty_ctx, c: *mut client)
 }
 
 #[cfg(feature = "sixel")]
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_draw_images(c: *mut client, wp: *mut window_pane, s: *mut screen) {
     unsafe {
         for im in tailq_foreach(&raw mut (*s).images).map(NonNull::as_ptr) {
@@ -2093,7 +2053,6 @@ pub unsafe extern "C" fn tty_draw_images(c: *mut client, wp: *mut window_pane, s
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_sync_start(tty: *mut tty) {
     unsafe {
         if (*tty).flags.intersects(tty_flags::TTY_BLOCK) {
@@ -2111,7 +2070,6 @@ pub unsafe extern "C" fn tty_sync_start(tty: *mut tty) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_sync_end(tty: *mut tty) {
     unsafe {
         if (*tty).flags.intersects(tty_flags::TTY_BLOCK) {
@@ -2129,7 +2087,6 @@ pub unsafe extern "C" fn tty_sync_end(tty: *mut tty) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_client_ready(ctx: *const tty_ctx, c: *mut client) -> i32 {
     unsafe {
         if (*c).session.is_null() || (*c).tty.term.is_null() {
@@ -2157,7 +2114,6 @@ pub unsafe extern "C" fn tty_client_ready(ctx: *const tty_ctx, c: *mut client) -
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_write(
     cmdfn: Option<unsafe extern "C" fn(*mut tty, *const tty_ctx)>,
     ctx: *mut tty_ctx,
@@ -2184,7 +2140,7 @@ pub unsafe extern "C" fn tty_write(
 
 /// Only write to the incoming tty instead of every client.
 #[cfg(feature = "sixel")]
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_write_one(
     cmdfn: fn(*mut tty, *const tty_ctx),
     c: *mut client,
@@ -2198,7 +2154,6 @@ pub unsafe extern "C" fn tty_write_one(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cmd_insertcharacter(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         let c = (*tty).client;
@@ -2233,7 +2188,6 @@ pub unsafe extern "C" fn tty_cmd_insertcharacter(tty: *mut tty, ctx: *const tty_
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cmd_deletecharacter(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         let c = (*tty).client;
@@ -2268,7 +2222,6 @@ pub unsafe extern "C" fn tty_cmd_deletecharacter(tty: *mut tty, ctx: *const tty_
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cmd_clearcharacter(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         tty_default_attributes(
@@ -2283,7 +2236,6 @@ pub unsafe extern "C" fn tty_cmd_clearcharacter(tty: *mut tty, ctx: *const tty_c
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cmd_insertline(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         let c = (*tty).client;
@@ -2324,7 +2276,6 @@ pub unsafe extern "C" fn tty_cmd_insertline(tty: *mut tty, ctx: *const tty_ctx) 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cmd_deleteline(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         let c = (*tty).client;
@@ -2365,7 +2316,6 @@ pub unsafe extern "C" fn tty_cmd_deleteline(tty: *mut tty, ctx: *const tty_ctx) 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cmd_clearline(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         tty_default_attributes(
@@ -2380,7 +2330,6 @@ pub unsafe extern "C" fn tty_cmd_clearline(tty: *mut tty, ctx: *const tty_ctx) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cmd_clearendofline(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         let nx = (*ctx).sx - (*ctx).ocx;
@@ -2397,7 +2346,6 @@ pub unsafe extern "C" fn tty_cmd_clearendofline(tty: *mut tty, ctx: *const tty_c
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cmd_clearstartofline(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         tty_default_attributes(
@@ -2412,7 +2360,6 @@ pub unsafe extern "C" fn tty_cmd_clearstartofline(tty: *mut tty, ctx: *const tty
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cmd_reverseindex(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         let c = (*tty).client;
@@ -2455,7 +2402,6 @@ pub unsafe extern "C" fn tty_cmd_reverseindex(tty: *mut tty, ctx: *const tty_ctx
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cmd_linefeed(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         let c = (*tty).client;
@@ -2508,7 +2454,6 @@ pub unsafe extern "C" fn tty_cmd_linefeed(tty: *mut tty, ctx: *const tty_ctx) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cmd_scrollup(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         let c = (*tty).client;
@@ -2556,7 +2501,6 @@ pub unsafe extern "C" fn tty_cmd_scrollup(tty: *mut tty, ctx: *const tty_ctx) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cmd_scrolldown(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         let c = (*tty).client;
@@ -2597,7 +2541,6 @@ pub unsafe extern "C" fn tty_cmd_scrolldown(tty: *mut tty, ctx: *const tty_ctx) 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cmd_clearendofscreen(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         tty_default_attributes(
@@ -2626,7 +2569,6 @@ pub unsafe extern "C" fn tty_cmd_clearendofscreen(tty: *mut tty, ctx: *const tty
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cmd_clearstartofscreen(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         tty_default_attributes(
@@ -2655,7 +2597,6 @@ pub unsafe extern "C" fn tty_cmd_clearstartofscreen(tty: *mut tty, ctx: *const t
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cmd_clearscreen(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         tty_default_attributes(
@@ -2678,7 +2619,6 @@ pub unsafe extern "C" fn tty_cmd_clearscreen(tty: *mut tty, ctx: *const tty_ctx)
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cmd_alignmenttest(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         if (*ctx).bigger != 0 {
@@ -2706,7 +2646,6 @@ pub unsafe extern "C" fn tty_cmd_alignmenttest(tty: *mut tty, ctx: *const tty_ct
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cmd_cell(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         let gcp = (*ctx).cell;
@@ -2768,7 +2707,6 @@ pub unsafe extern "C" fn tty_cmd_cell(tty: *mut tty, ctx: *const tty_ctx) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cmd_cells(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         let mut r: overlay_ranges = zeroed();
@@ -2829,7 +2767,6 @@ pub unsafe extern "C" fn tty_cmd_cells(tty: *mut tty, ctx: *const tty_ctx) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cmd_setselection(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         tty_set_selection(
@@ -2841,7 +2778,6 @@ pub unsafe extern "C" fn tty_cmd_setselection(tty: *mut tty, ctx: *const tty_ctx
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_set_selection(
     tty: *mut tty,
     flags: *const c_char,
@@ -2867,7 +2803,6 @@ pub unsafe extern "C" fn tty_set_selection(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cmd_rawstring(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         (*tty).flags |= tty_flags::TTY_NOBLOCK;
@@ -2877,7 +2812,7 @@ pub unsafe extern "C" fn tty_cmd_rawstring(tty: *mut tty, ctx: *const tty_ctx) {
 }
 
 #[cfg(feature = "sixel")]
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_cmd_sixelimage(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         let mut im: *mut image = (*ctx).ptr.cast();
@@ -2957,7 +2892,6 @@ pub unsafe extern "C" fn tty_cmd_sixelimage(tty: *mut tty, ctx: *const tty_ctx) 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cmd_syncstart(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         if (*ctx).num == 0x11 {
@@ -2977,7 +2911,6 @@ pub unsafe extern "C" fn tty_cmd_syncstart(tty: *mut tty, ctx: *const tty_ctx) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_cell(
     tty: *mut tty,
     gc: *const grid_cell,
@@ -3023,7 +2956,6 @@ pub unsafe extern "C" fn tty_cell(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_reset(tty: *mut tty) {
     unsafe {
         let gc = &raw mut (*tty).cell;
@@ -3042,7 +2974,6 @@ pub unsafe extern "C" fn tty_reset(tty: *mut tty) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_invalidate(tty: *mut tty) {
     unsafe {
         memcpy__(&raw mut (*tty).cell, &raw const grid_default_cell);
@@ -3074,7 +3005,7 @@ pub unsafe extern "C" fn tty_invalidate(tty: *mut tty) {
 }
 
 /// Turn off margin.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_region_off(tty: *mut tty) {
     unsafe {
         tty_region(tty, 0, (*tty).sy - 1);
@@ -3082,7 +3013,7 @@ pub unsafe extern "C" fn tty_region_off(tty: *mut tty) {
 }
 
 /// Set region inside pane.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_region_pane(
     tty: *mut tty,
     ctx: *const tty_ctx,
@@ -3099,7 +3030,7 @@ pub unsafe extern "C" fn tty_region_pane(
 }
 
 /// Set region at absolute position.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_region(tty: *mut tty, rupper: u32, rlower: u32) {
     unsafe {
         if (*tty).rlower == rlower && (*tty).rupper == rupper {
@@ -3138,7 +3069,7 @@ pub unsafe extern "C" fn tty_region(tty: *mut tty, rupper: u32, rlower: u32) {
 }
 
 /// Turn off margin.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_margin_off(tty: *mut tty) {
     unsafe {
         tty_margin(tty, 0, (*tty).sx - 1);
@@ -3146,7 +3077,7 @@ pub unsafe extern "C" fn tty_margin_off(tty: *mut tty) {
 }
 
 /// Set margin inside pane.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_margin_pane(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         tty_margin(
@@ -3158,7 +3089,7 @@ pub unsafe extern "C" fn tty_margin_pane(tty: *mut tty, ctx: *const tty_ctx) {
 }
 
 /* Set margin at absolute position. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_margin(tty: *mut tty, rleft: u32, rright: u32) {
     unsafe {
         if !tty_use_margin(tty) {
@@ -3192,7 +3123,7 @@ pub unsafe extern "C" fn tty_margin(tty: *mut tty, rleft: u32, rright: u32) {
  * Move the cursor, unless it would wrap itself when the next character is
  * printed.
  */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_cursor_pane_unless_wrap(
     tty: *mut tty,
     ctx: *const tty_ctx,
@@ -3216,7 +3147,7 @@ pub unsafe extern "C" fn tty_cursor_pane_unless_wrap(
 }
 
 /* Move cursor inside pane. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_cursor_pane(tty: *mut tty, ctx: *const tty_ctx, cx: u32, cy: u32) {
     unsafe {
         tty_cursor(
@@ -3228,7 +3159,7 @@ pub unsafe extern "C" fn tty_cursor_pane(tty: *mut tty, ctx: *const tty_ctx, cx:
 }
 
 /* Move cursor to absolute position. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn tty_cursor(tty: *mut tty, mut cx: u32, cy: u32) {
     unsafe {
         let term = (*tty).term;
@@ -3393,7 +3324,6 @@ pub unsafe extern "C" fn tty_cursor(tty: *mut tty, mut cx: u32, cy: u32) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_hyperlink(tty: *mut tty, gc: *const grid_cell, hl: *mut hyperlinks) {
     unsafe {
         if (*gc).link == (*tty).cell.link {
@@ -3416,7 +3346,6 @@ pub unsafe extern "C" fn tty_hyperlink(tty: *mut tty, gc: *const grid_cell, hl: 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_attributes(
     tty: *mut tty,
     gc: *const grid_cell,
@@ -3545,7 +3474,6 @@ pub unsafe extern "C" fn tty_attributes(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_colours(tty: *mut tty, gc: *const grid_cell) {
     unsafe {
         let tc = &raw mut (*tty).cell;
@@ -3599,7 +3527,6 @@ pub unsafe extern "C" fn tty_colours(tty: *mut tty, gc: *const grid_cell) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_check_fg(
     tty: *const tty,
     palette: *const colour_palette,
@@ -3634,7 +3561,7 @@ pub unsafe extern "C" fn tty_check_fg(
             if (*(*tty).term).flags.intersects(term_flags::TERM_RGBCOLOURS) {
                 return;
             }
-            let (r, g, b) = colour_split_rgb_((*gc).fg);
+            let (r, g, b) = colour_split_rgb((*gc).fg);
             (*gc).fg = colour_find_rgb(r, g, b);
         }
 
@@ -3668,7 +3595,6 @@ pub unsafe extern "C" fn tty_check_fg(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_check_bg(
     tty: *const tty,
     palette: *const colour_palette,
@@ -3692,7 +3618,7 @@ pub unsafe extern "C" fn tty_check_bg(
             if (*(*tty).term).flags.intersects(term_flags::TERM_RGBCOLOURS) {
                 return;
             }
-            let (r, g, b) = colour_split_rgb_((*gc).bg);
+            let (r, g, b) = colour_split_rgb((*gc).bg);
             (*gc).bg = colour_find_rgb(r, g, b);
         }
 
@@ -3729,7 +3655,6 @@ pub unsafe extern "C" fn tty_check_bg(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_check_us(
     tty: *const tty,
     palette: *const colour_palette,
@@ -3758,7 +3683,6 @@ pub unsafe extern "C" fn tty_check_us(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_colours_fg(tty: *mut tty, gc: *const grid_cell) {
     unsafe {
         let tc = &raw mut (*tty).cell;
@@ -3803,7 +3727,6 @@ pub unsafe extern "C" fn tty_colours_fg(tty: *mut tty, gc: *const grid_cell) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_colours_bg(tty: *mut tty, gc: *const grid_cell) {
     unsafe {
         let tc = &raw mut (*tty).cell;
@@ -3840,7 +3763,6 @@ pub unsafe extern "C" fn tty_colours_bg(tty: *mut tty, gc: *const grid_cell) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_colours_us(tty: *mut tty, gc: *const grid_cell) {
     unsafe {
         let tc = &raw mut (*tty).cell;
@@ -3874,7 +3796,7 @@ pub unsafe extern "C" fn tty_colours_us(tty: *mut tty, gc: *const grid_cell) {
              * Setulc and setal follows the ncurses(3) one argument "direct colour"
              * capability format. Calculate the colour value.
              */
-            let (r, g, b) = colour_split_rgb_((*gc).us);
+            let (r, g, b) = colour_split_rgb((*gc).us);
             c = (65536 * r as u32) + (256 * g as u32) + b as u32;
 
             /*
@@ -3895,7 +3817,6 @@ pub unsafe extern "C" fn tty_colours_us(tty: *mut tty, gc: *const grid_cell) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_try_colour(tty: *mut tty, colour: i32, type_: *const c_char) -> i32 {
     unsafe {
         if colour & COLOUR_FLAG_256 != 0 {
@@ -3910,7 +3831,7 @@ pub unsafe extern "C" fn tty_try_colour(tty: *mut tty, colour: i32, type_: *cons
         }
 
         if colour & COLOUR_FLAG_RGB != 0 {
-            let (r, g, b) = colour_split_rgb_(colour & 0xffffff);
+            let (r, g, b) = colour_split_rgb(colour & 0xffffff);
             if *type_ == b'3' as i8
                 && tty_term_has((*tty).term, tty_code_code::TTYC_SETRGBF).as_bool()
             {
@@ -3937,7 +3858,6 @@ pub unsafe extern "C" fn tty_try_colour(tty: *mut tty, colour: i32, type_: *cons
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_window_default_style(gc: *mut grid_cell, wp: *mut window_pane) {
     unsafe {
         memcpy__(gc, &raw const grid_default_cell);
@@ -3946,7 +3866,6 @@ pub unsafe extern "C" fn tty_window_default_style(gc: *mut grid_cell, wp: *mut w
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_default_colours(gc: *mut grid_cell, wp: *mut window_pane) {
     unsafe {
         let oo = (*wp).options;
@@ -3994,7 +3913,6 @@ pub unsafe extern "C" fn tty_default_colours(gc: *mut grid_cell, wp: *mut window
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_default_attributes(
     tty: *mut tty,
     defaults: *const grid_cell,
@@ -4010,7 +3928,6 @@ pub unsafe extern "C" fn tty_default_attributes(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_clipboard_query_callback(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
         let tty: *mut tty = data.cast();
@@ -4025,7 +3942,6 @@ pub unsafe extern "C" fn tty_clipboard_query_callback(_fd: i32, _events: i16, da
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tty_clipboard_query(tty: *mut tty) {
     unsafe {
         let tv = libc::timeval {

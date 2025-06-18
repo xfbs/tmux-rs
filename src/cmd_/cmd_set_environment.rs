@@ -13,8 +13,7 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use crate::*;
 
-#[unsafe(no_mangle)]
-static mut cmd_set_environment_entry: cmd_entry = cmd_entry {
+pub static mut cmd_set_environment_entry: cmd_entry = cmd_entry {
     name: c"set-environment".as_ptr(),
     alias: c"setenv".as_ptr(),
 
@@ -28,7 +27,6 @@ static mut cmd_set_environment_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_set_environment_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

@@ -17,8 +17,7 @@ use libc::{WEXITSTATUS, WIFEXITED, toupper};
 
 use crate::*;
 
-#[unsafe(no_mangle)]
-static mut cmd_if_shell_entry: cmd_entry = cmd_entry {
+pub static mut cmd_if_shell_entry: cmd_entry = cmd_entry {
     name: c"if-shell".as_ptr(),
     alias: c"if".as_ptr(),
 
@@ -53,7 +52,6 @@ unsafe extern "C" fn cmd_if_shell_args_parse(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_if_shell_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
@@ -130,7 +128,6 @@ unsafe extern "C" fn cmd_if_shell_exec(self_: *mut cmd, item: *mut cmdq_item) ->
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_if_shell_callback(job: *mut job) {
     unsafe {
         let cdata = job_get_data(job) as *mut cmd_if_shell_data;
@@ -176,7 +173,6 @@ unsafe extern "C" fn cmd_if_shell_callback(job: *mut job) {
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_if_shell_free(data: *mut c_void) {
     unsafe {
         let cdata = data as *mut cmd_if_shell_data;

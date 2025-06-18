@@ -19,8 +19,7 @@ use crate::compat::queue::{
     tailq_remove, tailq_replace,
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_swap_pane_entry: cmd_entry = cmd_entry {
+pub static mut cmd_swap_pane_entry: cmd_entry = cmd_entry {
     name: c"swap-pane".as_ptr(),
     alias: c"swapp".as_ptr(),
 
@@ -34,7 +33,6 @@ static mut cmd_swap_pane_entry: cmd_entry = cmd_entry {
     exec: Some(cmd_swap_pane_exec),
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_swap_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

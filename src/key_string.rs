@@ -114,7 +114,6 @@ macro_rules! KEYC_MOUSE_STRING11 {
     };
 }
 
-#[unsafe(no_mangle)]
 static key_string_table: [key_string_table_entry; 469] = const {
     let mut out_i: usize = 0;
     let mut out: [key_string_table_entry; 469] = unsafe { zeroed() };
@@ -237,7 +236,7 @@ static key_string_table: [key_string_table_entry; 469] = const {
 };
 
 /// Find key string in table.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn key_string_search_table(string: *const c_char) -> key_code {
     unsafe {
         for key_string in key_string_table.iter() {
@@ -256,7 +255,7 @@ pub unsafe extern "C" fn key_string_search_table(string: *const c_char) -> key_c
 }
 
 /// Find modifiers.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn key_string_get_modifiers(string: *mut *const c_char) -> key_code {
     unsafe {
         let mut modifiers: key_code = 0;
@@ -288,7 +287,7 @@ pub unsafe extern "C" fn key_string_get_modifiers(string: *mut *const c_char) ->
 const MB_LEN_MAX: usize = 16;
 
 /* Lookup a string and convert to a key value. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn key_string_lookup_string(mut string: *const c_char) -> key_code {
     unsafe {
         let mut key: key_code = 0;
@@ -391,7 +390,7 @@ pub unsafe extern "C" fn key_string_lookup_string(mut string: *const c_char) -> 
 }
 
 /// Convert a key code into string format, with prefix if necessary.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn key_string_lookup_key(
     mut key: key_code,
     with_flags: i32,

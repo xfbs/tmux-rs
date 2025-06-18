@@ -18,8 +18,7 @@ use crate::compat::queue::{
     tailq_last, tailq_next, tailq_prev, tailq_remove,
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_rotate_window_entry: cmd_entry = cmd_entry {
+pub static mut cmd_rotate_window_entry: cmd_entry = cmd_entry {
     name: c"rotate-window".as_ptr(),
     alias: c"rotatew".as_ptr(),
 
@@ -33,7 +32,6 @@ static mut cmd_rotate_window_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

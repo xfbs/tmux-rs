@@ -32,7 +32,7 @@ const BORDER_MARKERS: [u8; 6] = [b' ', b' ', b'+', b',', b'.', b'-'];
 // pub unsafe fn screen_redraw_border_set( w: *mut window, wp: *mut window_pane, pane_lines: pane_lines, cell_type: cell_type, gc: *mut grid_cell,);
 // #[cfg(disabled)]
 /// Get cell border character.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn screen_redraw_border_set(
     w: *mut window,
     wp: *mut window_pane,
@@ -85,7 +85,7 @@ pub unsafe extern "C" fn screen_redraw_border_set(
 // pub unsafe fn screen_redraw_two_panes(w: *mut window, direction: i32) -> i32;
 // #[cfg(disabled)]
 /// Return if window has only two panes.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn screen_redraw_two_panes(w: *mut window, direction: i32) -> i32 {
     unsafe {
         let wp: *mut window_pane =
@@ -109,7 +109,7 @@ pub unsafe extern "C" fn screen_redraw_two_panes(w: *mut window, direction: i32)
 // pub unsafe fn screen_redraw_pane_border( ctx: *mut screen_redraw_ctx, wp: *mut window_pane, px: u32, py: u32,) -> screen_redraw_border_type;
 // #[cfg(disabled)]
 /// Check if cell is on the border of a pane.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn screen_redraw_pane_border(
     ctx: *mut screen_redraw_ctx,
     wp: *mut window_pane,
@@ -212,7 +212,7 @@ pub unsafe extern "C" fn screen_redraw_pane_border(
 // pub unsafe fn screen_redraw_cell_border(ctx: *mut screen_redraw_ctx, px: u32, py: u32) -> i32;
 // #[cfg(disabled)]
 /// Check if a cell is on a border.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn screen_redraw_cell_border(
     ctx: *mut screen_redraw_ctx,
     px: u32,
@@ -259,7 +259,7 @@ pub unsafe extern "C" fn screen_redraw_cell_border(
 // pub unsafe fn screen_redraw_type_of_cell(ctx: *mut screen_redraw_ctx, px: u32, py: u32) -> cell_type;
 // #[cfg(disabled)]
 /// Work out type of border cell from surrounding cells.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn screen_redraw_type_of_cell(
     ctx: *mut screen_redraw_ctx,
     px: u32,
@@ -333,10 +333,7 @@ pub unsafe extern "C" fn screen_redraw_type_of_cell(
     }
 }
 
-// unsafe extern "C" { pub unsafe fn screen_redraw_check_cell( ctx: *mut screen_redraw_ctx, px: u32, py: u32, wpp: *mut *mut window_pane,) -> cell_type; }
-// #[cfg(disabled)]
 /// Check if cell inside a pane.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_redraw_check_cell(
     ctx: *mut screen_redraw_ctx,
     px: u32,
@@ -431,7 +428,7 @@ pub unsafe extern "C" fn screen_redraw_check_cell(
 // pub unsafe fn screen_redraw_check_is(ctx: *mut screen_redraw_ctx, px: u32, py: u32, wp: *mut window_pane) -> i32;
 // #[cfg(disabled)]
 /// Check if the border of a particular pane.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn screen_redraw_check_is(
     ctx: *mut screen_redraw_ctx,
     px: u32,
@@ -451,7 +448,7 @@ pub unsafe extern "C" fn screen_redraw_check_is(
 
 // pub unsafe fn screen_redraw_make_pane_status( c: *mut client, wp: *mut window_pane, rctx: *mut screen_redraw_ctx, pane_lines: pane_lines,) -> i32;
 /// Update pane status.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn screen_redraw_make_pane_status(
     c: *mut client,
     wp: NonNull<window_pane>,
@@ -547,7 +544,7 @@ pub unsafe extern "C" fn screen_redraw_make_pane_status(
 }
 
 /// Draw pane status.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn screen_redraw_draw_pane_status(ctx: *mut screen_redraw_ctx) {
     unsafe {
         let c = (*ctx).c;
@@ -615,10 +612,7 @@ pub unsafe extern "C" fn screen_redraw_draw_pane_status(ctx: *mut screen_redraw_
     }
 }
 
-// unsafe extern "C" { unsafe fn screen_redraw_update(c: *mut client, flags: client_flag) -> client_flag; }
-// #[cfg(disabled)]
 /// Update status line and change flags if unchanged.
-#[unsafe(no_mangle)]
 unsafe extern "C" fn screen_redraw_update(c: *mut client, mut flags: client_flag) -> client_flag {
     unsafe {
         let w = (*(*(*c).session).curw).window;
@@ -675,7 +669,7 @@ unsafe extern "C" fn screen_redraw_update(c: *mut client, mut flags: client_flag
 
 /// Set up redraw context.
 // #[cfg(disabled)]
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn screen_redraw_set_context(c: *mut client, ctx: *mut screen_redraw_ctx) {
     unsafe {
         let s = (*c).session;
@@ -725,10 +719,8 @@ pub unsafe extern "C" fn screen_redraw_set_context(c: *mut client, ctx: *mut scr
         );
     }
 }
-// unsafe extern "C" { pub fn screen_redraw_screen(c: *mut client); }
-// #[cfg(disabled)]
+
 /// Redraw entire screen.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_redraw_screen(c: *mut client) {
     unsafe {
         let mut ctx = MaybeUninit::<screen_redraw_ctx>::uninit();
@@ -777,7 +769,7 @@ pub unsafe extern "C" fn screen_redraw_screen(c: *mut client) {
 
 // #[cfg(disabled)]
 /// Redraw a single pane.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn screen_redraw_pane(c: *mut client, wp: *mut window_pane) {
     unsafe {
         let mut ctx = MaybeUninit::<screen_redraw_ctx>::uninit();
@@ -795,10 +787,8 @@ pub unsafe extern "C" fn screen_redraw_pane(c: *mut client, wp: *mut window_pane
         tty_reset(&raw mut (*c).tty);
     }
 }
-// unsafe extern "C" { pub fn screen_redraw_draw_borders_style( ctx: *mut screen_redraw_ctx, x: u32, y: u32, wp: *mut window_pane,) -> *const grid_cell; }
-// #[cfg(disabled)]
+
 /// Get border cell style.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_redraw_draw_borders_style(
     ctx: *mut screen_redraw_ctx,
     x: u32,
@@ -839,10 +829,7 @@ pub unsafe extern "C" fn screen_redraw_draw_borders_style(
     }
 }
 
-// unsafe extern "C" { pub fn screen_redraw_draw_borders_cell(ctx: *mut screen_redraw_ctx, i: u32, j: u32); }
-// #[cfg(disabled)]
 /// Draw a border cell.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_redraw_draw_borders_cell(
     ctx: *mut screen_redraw_ctx,
     i: u32,
@@ -955,10 +942,7 @@ pub unsafe extern "C" fn screen_redraw_draw_borders_cell(
     }
 }
 
-// unsafe extern "C" { pub unsafe fn screen_redraw_draw_borders(ctx: *mut screen_redraw_ctx); }
-// #[cfg(disabled)]
 /// Draw the borders.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_redraw_draw_borders(ctx: *mut screen_redraw_ctx) {
     unsafe {
         let c = (*ctx).c;
@@ -983,10 +967,8 @@ pub unsafe extern "C" fn screen_redraw_draw_borders(ctx: *mut screen_redraw_ctx)
         }
     }
 }
-// unsafe extern "C" { pub fn screen_redraw_draw_panes(ctx: *mut screen_redraw_ctx); }
-// #[cfg(disabled)]
+
 /// Draw the panes.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_redraw_draw_panes(ctx: *mut screen_redraw_ctx) {
     unsafe {
         let c = (*ctx).c;
@@ -1007,10 +989,7 @@ pub unsafe extern "C" fn screen_redraw_draw_panes(ctx: *mut screen_redraw_ctx) {
     }
 }
 
-// unsafe extern "C" { pub fn screen_redraw_draw_status(ctx: *mut screen_redraw_ctx); }
-// #[cfg(disabled)]
 /// Draw the status line.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn screen_redraw_draw_status(ctx: *mut screen_redraw_ctx) {
     unsafe {
         let c = (*ctx).c;
@@ -1049,7 +1028,7 @@ pub unsafe extern "C" fn screen_redraw_draw_status(ctx: *mut screen_redraw_ctx) 
 
 // #[cfg(disabled)]
 /// Draw one pane.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn screen_redraw_draw_pane(
     ctx: *mut screen_redraw_ctx,
     wp: *mut window_pane,

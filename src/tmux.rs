@@ -32,25 +32,22 @@ use libc::{
     strcasecmp, strcasestr, strchr, strcspn, strerror, strncmp, strrchr, strstr, timespec,
 };
 
-#[unsafe(no_mangle)]
 pub static mut global_options: *mut options = null_mut();
-#[unsafe(no_mangle)]
+
 pub static mut global_s_options: *mut options = null_mut();
-#[unsafe(no_mangle)]
+
 pub static mut global_w_options: *mut options = null_mut();
-#[unsafe(no_mangle)]
+
 pub static mut global_environ: *mut environ = null_mut();
 
-#[unsafe(no_mangle)]
 pub static mut start_time: timeval = unsafe { zeroed() };
-#[unsafe(no_mangle)]
+
 pub static mut socket_path: *const c_char = null_mut();
-#[unsafe(no_mangle)]
+
 pub static mut ptm_fd: c_int = -1;
-#[unsafe(no_mangle)]
+
 pub static mut shell_command: *mut c_char = null_mut();
 
-#[unsafe(no_mangle)]
 pub extern "C" fn usage() -> ! {
     unsafe {
         libc::fprintf(stderr, c"usage: %s [-2CDlNuVv] [-c shell-command] [-f file] [-L socket-name]\n            [-S socket-path] [-T features] [command [flags]]\n".as_ptr(), getprogname());
@@ -58,7 +55,6 @@ pub extern "C" fn usage() -> ! {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn getshell() -> *const c_char {
     unsafe {
         let shell = getenv(c"SHELL".as_ptr());
@@ -75,7 +71,6 @@ pub unsafe extern "C" fn getshell() -> *const c_char {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn checkshell(shell: *const c_char) -> boolint {
     unsafe {
         if shell.is_null() || *shell != b'/' as c_char {
@@ -91,7 +86,6 @@ pub unsafe extern "C" fn checkshell(shell: *const c_char) -> boolint {
     boolint::TRUE
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn areshell(shell: *const c_char) -> c_int {
     unsafe {
         let ptr = strrchr(shell, b'/' as c_int);
@@ -112,7 +106,6 @@ pub unsafe extern "C" fn areshell(shell: *const c_char) -> c_int {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn expand_path(path: *const c_char, home: *const c_char) -> *mut c_char {
     unsafe {
         let mut expanded: *mut c_char = null_mut();
@@ -149,7 +142,6 @@ pub unsafe extern "C" fn expand_path(path: *const c_char, home: *const c_char) -
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn expand_paths(
     s: *const c_char,
     paths: *mut *mut *mut c_char,
@@ -214,7 +206,6 @@ unsafe extern "C" fn expand_paths(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn make_label(
     mut label: *const c_char,
     cause: *mut *mut c_char,
@@ -281,7 +272,6 @@ unsafe extern "C" fn make_label(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn shell_argv0(shell: *const c_char, is_login: c_int) -> *mut c_char {
     unsafe {
         let slash = strrchr(shell, b'/' as _);
@@ -299,7 +289,6 @@ pub unsafe extern "C" fn shell_argv0(shell: *const c_char, is_login: c_int) -> *
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn setblocking(fd: c_int, state: c_int) {
     unsafe {
         let mut mode = fcntl(fd, F_GETFL);
@@ -315,7 +304,6 @@ pub unsafe extern "C" fn setblocking(fd: c_int, state: c_int) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn get_timer() -> u64 {
     unsafe {
         let mut ts: timespec = zeroed();
@@ -328,7 +316,6 @@ pub unsafe extern "C" fn get_timer() -> u64 {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn sig2name(signo: i32) -> *mut c_char {
     static mut s: [c_char; 11] = unsafe { zeroed() };
 
@@ -348,7 +335,6 @@ pub unsafe extern "C" fn sig2name(signo: i32) -> *mut c_char {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn find_cwd() -> *mut c_char {
     static mut cwd: [c_char; PATH_MAX as usize] = [0; PATH_MAX as usize];
     unsafe {
@@ -379,7 +365,6 @@ pub unsafe extern "C" fn find_cwd() -> *mut c_char {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn find_home() -> *mut c_char {
     static mut home: *mut c_char = null_mut();
 
@@ -402,7 +387,6 @@ pub unsafe extern "C" fn find_home() -> *mut c_char {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn getversion() -> *const c_char {
     // TODO get this from build config somehow
     c"3.5rs".as_ptr()

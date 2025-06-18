@@ -52,7 +52,6 @@ const WINDOW_TREE_DEFAULT_KEY_FORMAT: &str = concat!(
     "}\0"
 );
 
-#[unsafe(no_mangle)]
 static window_tree_menu_items: [menu_item; 13] = [
     menu_item::new(Some(c"Select"), b'\r' as key_code, null()),
     menu_item::new(Some(c"Expand"), keyc::KEYC_RIGHT as key_code, null()),
@@ -69,7 +68,6 @@ static window_tree_menu_items: [menu_item; 13] = [
     menu_item::new(None, KEYC_NONE, null()),
 ];
 
-#[unsafe(no_mangle)]
 pub static window_tree_mode: window_mode = window_mode {
     name: SyncCharPtr::new(c"tree-mode"),
     default_format: SyncCharPtr::from_ptr(WINDOW_TREE_DEFAULT_FORMAT.as_ptr().cast()),
@@ -91,13 +89,13 @@ enum window_tree_sort_type {
 }
 
 const window_tree_sort_list_len: usize = 3;
-#[unsafe(no_mangle)]
+
 static mut window_tree_sort_list: [SyncCharPtr; window_tree_sort_list_len] = [
     SyncCharPtr::new(c"index"),
     SyncCharPtr::new(c"name"),
     SyncCharPtr::new(c"time"),
 ];
-#[unsafe(no_mangle)]
+
 static mut window_tree_sort: *mut mode_tree_sort_criteria = null_mut();
 
 #[repr(i32)]
@@ -146,7 +144,6 @@ struct window_tree_modedata {
     each: u32,
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_pull_item(
     item: NonNull<window_tree_itemdata>,
     sp: *mut Option<NonNull<session>>,
@@ -201,7 +198,6 @@ unsafe extern "C" fn window_tree_pull_item(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_add_item(
     data: NonNull<window_tree_modedata>,
 ) -> *mut window_tree_itemdata {
@@ -216,14 +212,12 @@ unsafe extern "C" fn window_tree_add_item(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_free_item(item: *mut window_tree_itemdata) {
     unsafe {
         free_(item);
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_cmp_session(a0: *const c_void, b0: *const c_void) -> i32 {
     unsafe {
         let a: *mut *mut session = a0 as *mut *mut session;
@@ -263,7 +257,6 @@ unsafe extern "C" fn window_tree_cmp_session(a0: *const c_void, b0: *const c_voi
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_cmp_window(a0: *const c_void, b0: *const c_void) -> i32 {
     unsafe {
         let a = a0 as *mut *mut winlink;
@@ -302,7 +295,6 @@ unsafe extern "C" fn window_tree_cmp_window(a0: *const c_void, b0: *const c_void
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_cmp_pane(a0: *const c_void, b0: *const c_void) -> i32 {
     unsafe {
         let a = a0 as *mut *mut window_pane;
@@ -326,7 +318,6 @@ unsafe extern "C" fn window_tree_cmp_pane(a0: *const c_void, b0: *const c_void) 
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_build_pane(
     s: *mut session,
     wl: *mut winlink,
@@ -365,7 +356,6 @@ unsafe extern "C" fn window_tree_build_pane(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_filter_pane(
     s: *mut session,
     wl: *mut winlink,
@@ -385,7 +375,6 @@ unsafe extern "C" fn window_tree_filter_pane(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_build_window(
     s: *mut session,
     wl: *mut winlink,
@@ -499,7 +488,6 @@ unsafe extern "C" fn window_tree_build_window(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_build_session(
     s: *mut session,
     modedata: NonNull<c_void>,
@@ -580,7 +568,6 @@ unsafe extern "C" fn window_tree_build_session(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_build(
     modedata: NonNull<c_void>,
     sort_crit: *mut mode_tree_sort_criteria,
@@ -651,7 +638,6 @@ unsafe extern "C" fn window_tree_build(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_draw_label(
     ctx: *mut screen_write_ctx,
     px: u32,
@@ -685,7 +671,6 @@ unsafe extern "C" fn window_tree_draw_label(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_draw_session(
     data: *mut window_tree_modedata,
     s: *mut session,
@@ -850,7 +835,6 @@ unsafe extern "C" fn window_tree_draw_session(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_draw_window(
     data: *mut window_tree_modedata,
     s: *mut session,
@@ -1004,7 +988,6 @@ unsafe extern "C" fn window_tree_draw_window(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_draw(
     modedata: *mut c_void,
     itemdata: Option<NonNull<c_void>>,
@@ -1043,7 +1026,6 @@ unsafe extern "C" fn window_tree_draw(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_search(
     _modedata: *mut c_void,
     itemdata: NonNull<c_void>,
@@ -1094,7 +1076,6 @@ unsafe extern "C" fn window_tree_search(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_menu(modedata: NonNull<c_void>, c: *mut client, key: key_code) {
     unsafe {
         let data: NonNull<window_tree_modedata> = modedata.cast();
@@ -1107,7 +1088,6 @@ unsafe extern "C" fn window_tree_menu(modedata: NonNull<c_void>, c: *mut client,
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_get_key(
     modedata: NonNull<c_void>,
     itemdata: NonNull<c_void>,
@@ -1141,7 +1121,6 @@ unsafe extern "C" fn window_tree_get_key(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_init(
     wme: NonNull<window_mode_entry>,
     fs: *mut cmd_find_state,
@@ -1210,7 +1189,6 @@ unsafe extern "C" fn window_tree_init(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_destroy(data: NonNull<window_tree_modedata>) {
     unsafe {
         let data = data.as_ptr();
@@ -1232,7 +1210,6 @@ unsafe extern "C" fn window_tree_destroy(data: NonNull<window_tree_modedata>) {
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_free(wme: NonNull<window_mode_entry>) {
     unsafe {
         if let Some(data) = NonNull::new((*wme.as_ptr()).data.cast::<window_tree_modedata>()) {
@@ -1243,7 +1220,6 @@ unsafe extern "C" fn window_tree_free(wme: NonNull<window_mode_entry>) {
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_resize(wme: NonNull<window_mode_entry>, sx: u32, sy: u32) {
     unsafe {
         let data: *mut window_tree_modedata = (*wme.as_ptr()).data.cast();
@@ -1251,7 +1227,6 @@ unsafe extern "C" fn window_tree_resize(wme: NonNull<window_mode_entry>, sx: u32
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_update(wme: NonNull<window_mode_entry>) {
     unsafe {
         let data: *mut window_tree_modedata = (*wme.as_ptr()).data.cast();
@@ -1262,7 +1237,6 @@ unsafe extern "C" fn window_tree_update(wme: NonNull<window_mode_entry>) {
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_get_target(
     item: NonNull<window_tree_itemdata>,
     fs: *mut cmd_find_state,
@@ -1314,7 +1288,6 @@ unsafe extern "C" fn window_tree_get_target(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_command_each(
     modedata: NonNull<c_void>,
     itemdata: NonNull<c_void>,
@@ -1333,7 +1306,6 @@ unsafe extern "C" fn window_tree_command_each(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_command_done(
     _: *mut cmdq_item,
     modedata: *mut c_void,
@@ -1352,7 +1324,6 @@ unsafe extern "C" fn window_tree_command_done(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_command_callback(
     c: *mut client,
     modedata: NonNull<c_void>,
@@ -1387,14 +1358,12 @@ unsafe extern "C" fn window_tree_command_callback(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_command_free(modedata: NonNull<c_void>) {
     unsafe {
         window_tree_destroy(modedata.cast());
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_kill_each(
     _: NonNull<c_void>,
     itemdata: NonNull<c_void>,
@@ -1431,7 +1400,6 @@ unsafe extern "C" fn window_tree_kill_each(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_kill_current_callback(
     c: *mut client,
     modedata: NonNull<c_void>,
@@ -1462,7 +1430,6 @@ unsafe extern "C" fn window_tree_kill_current_callback(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_kill_tagged_callback(
     c: *mut client,
     modedata: NonNull<c_void>,
@@ -1498,7 +1465,6 @@ unsafe extern "C" fn window_tree_kill_tagged_callback(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_mouse(
     data: *mut window_tree_modedata,
     key: key_code,
@@ -1575,7 +1541,6 @@ unsafe extern "C" fn window_tree_mouse(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn window_tree_key(
     wme: NonNull<window_mode_entry>,
     c: *mut client,

@@ -15,8 +15,7 @@ use crate::*;
 
 use crate::compat::queue::tailq_foreach;
 
-#[unsafe(no_mangle)]
-static mut cmd_set_option_entry: cmd_entry = cmd_entry {
+pub static mut cmd_set_option_entry: cmd_entry = cmd_entry {
     name: c"set-option".as_ptr(),
     alias: c"set".as_ptr(),
 
@@ -30,8 +29,7 @@ static mut cmd_set_option_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_set_window_option_entry: cmd_entry = cmd_entry {
+pub static mut cmd_set_window_option_entry: cmd_entry = cmd_entry {
     name: c"set-window-option".as_ptr(),
     alias: c"setw".as_ptr(),
 
@@ -45,8 +43,7 @@ static mut cmd_set_window_option_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_set_hook_entry: cmd_entry = cmd_entry {
+pub static mut cmd_set_hook_entry: cmd_entry = cmd_entry {
     name: c"set-hook".as_ptr(),
     alias: null(),
 
@@ -60,7 +57,6 @@ static mut cmd_set_hook_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_set_option_args_parse(
     _args: *mut args,
     idx: u32,
@@ -72,7 +68,6 @@ pub unsafe extern "C" fn cmd_set_option_args_parse(
     args_parse_type::ARGS_PARSE_STRING
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

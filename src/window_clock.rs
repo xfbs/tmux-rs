@@ -16,7 +16,6 @@ use crate::*;
 
 use crate::compat::{queue::tailq_first, strlcat};
 
-#[unsafe(no_mangle)]
 pub static window_clock_mode: window_mode = window_mode {
     name: SyncCharPtr::new(c"clock-mode"),
 
@@ -35,7 +34,7 @@ pub struct window_clock_mode_data {
 }
 
 #[rustfmt::skip]
-#[unsafe(no_mangle)]
+ 
 pub static mut window_clock_table: [[[c_char; 5]; 5]; 14] = [
     [
         [1, 1, 1, 1, 1], /* 0 */
@@ -137,7 +136,6 @@ pub static mut window_clock_table: [[[c_char; 5]; 5]; 14] = [
     ],
 ];
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_clock_timer_callback(fd: i32, events: i16, arg: *mut c_void) {
     unsafe {
         let wme = arg as *mut window_mode_entry;
@@ -171,7 +169,6 @@ pub unsafe extern "C" fn window_clock_timer_callback(fd: i32, events: i16, arg: 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_clock_init(
     wme: NonNull<window_mode_entry>,
     _fs: *mut cmd_find_state,
@@ -210,7 +207,6 @@ pub unsafe extern "C" fn window_clock_init(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_clock_free(wme: NonNull<window_mode_entry>) {
     unsafe {
         let data = (*wme.as_ptr()).data as *mut window_clock_mode_data;
@@ -221,7 +217,6 @@ pub unsafe extern "C" fn window_clock_free(wme: NonNull<window_mode_entry>) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_clock_resize(wme: NonNull<window_mode_entry>, sx: u32, sy: u32) {
     unsafe {
         let data = (*wme.as_ptr()).data as *mut window_clock_mode_data;
@@ -232,7 +227,6 @@ pub unsafe extern "C" fn window_clock_resize(wme: NonNull<window_mode_entry>, sx
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_clock_key(
     wme: NonNull<window_mode_entry>,
     c: *mut client,
@@ -246,7 +240,6 @@ pub unsafe extern "C" fn window_clock_key(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn window_clock_draw_screen(wme: NonNull<window_mode_entry>) {
     unsafe {
         let wp = (*wme.as_ptr()).wp;

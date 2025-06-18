@@ -2766,12 +2766,10 @@ pub use crate::alerts::{alerts_check_session, alerts_queue, alerts_reset_all};
 
 mod file;
 pub use crate::file::{
-    client_files_RB_FIND, client_files_RB_INSERT, client_files_RB_INSERT_COLOR,
-    client_files_RB_NFIND, client_files_RB_REMOVE, client_files_RB_REMOVE_COLOR, file_can_print,
-    file_cancel, file_cmp, file_create_with_client, file_create_with_peer, file_fire_done,
-    file_fire_read, file_free, file_print_buffer, file_push, file_read, file_read_cancel,
-    file_read_data, file_read_done, file_read_open, file_vprint, file_write, file_write_close,
-    file_write_data, file_write_left, file_write_open, file_write_ready,
+    file_can_print, file_cancel, file_cmp, file_create_with_client, file_create_with_peer,
+    file_fire_done, file_fire_read, file_free, file_print_buffer, file_push, file_read,
+    file_read_cancel, file_read_data, file_read_done, file_read_open, file_vprint, file_write,
+    file_write_close, file_write_data, file_write_left, file_write_open, file_write_ready,
 };
 use crate::file::{file_error, file_print};
 
@@ -2834,7 +2832,6 @@ pub use crate::input_keys::{input_key, input_key_build, input_key_get_mouse, inp
 mod colour;
 pub use crate::colour::{
     colour_256to16,
-    colour_256toRGB,
     colour_byname,
     colour_find_rgb,
     colour_force_rgb,
@@ -2846,8 +2843,8 @@ pub use crate::colour::{
     colour_palette_get,
     colour_palette_init,
     colour_palette_set,
-    colour_parseX11,
-    colour_split_rgb_,
+    colour_parse_x11,
+    colour_split_rgb,
     //colour_split_rgb
     colour_tostring,
 };
@@ -3030,7 +3027,6 @@ pub use crate::session_::{
     session_remove_ref, session_renumber_windows, session_select, session_set_current,
     session_update_activity, sessions,
 };
-// sessions_RB_INSERT, sessions_RB_INSERT_COLOR, sessions_RB_NFIND, sessions_RB_REMOVE, sessions_RB_REMOVE_COLOR, sessions_RB_FIND
 
 mod utf8;
 pub use crate::utf8::{

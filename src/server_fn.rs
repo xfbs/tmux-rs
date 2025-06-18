@@ -22,21 +22,18 @@ use crate::compat::{
     tree::rb_foreach,
 };
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_redraw_client(c: *mut client) {
     unsafe {
         (*c).flags |= CLIENT_ALLREDRAWFLAGS;
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_status_client(c: *mut client) {
     unsafe {
         (*c).flags |= client_flag::REDRAWSTATUS;
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_redraw_session(s: *mut session) {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
@@ -47,7 +44,6 @@ pub unsafe extern "C" fn server_redraw_session(s: *mut session) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_redraw_session_group(s: *mut session) {
     unsafe {
         let sg = session_group_contains(s);
@@ -61,7 +57,6 @@ pub unsafe extern "C" fn server_redraw_session_group(s: *mut session) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_status_session(s: *mut session) {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
@@ -72,7 +67,6 @@ pub unsafe extern "C" fn server_status_session(s: *mut session) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_status_session_group(s: *mut session) {
     unsafe {
         let sg = session_group_contains(s);
@@ -86,7 +80,6 @@ pub unsafe extern "C" fn server_status_session_group(s: *mut session) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_redraw_window(w: *mut window) {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
@@ -97,7 +90,6 @@ pub unsafe extern "C" fn server_redraw_window(w: *mut window) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_redraw_window_borders(w: *mut window) {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
@@ -108,7 +100,6 @@ pub unsafe extern "C" fn server_redraw_window_borders(w: *mut window) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_status_window(w: *mut window) {
     unsafe {
         /*
@@ -125,7 +116,6 @@ pub unsafe extern "C" fn server_status_window(w: *mut window) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_lock() {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
@@ -136,7 +126,6 @@ pub unsafe extern "C" fn server_lock() {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_lock_session(s: *mut session) {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
@@ -147,7 +136,6 @@ pub unsafe extern "C" fn server_lock_session(s: *mut session) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_lock_client(c: *mut client) {
     unsafe {
         if (*c).flags.intersects(client_flag::CONTROL) {
@@ -188,7 +176,6 @@ pub unsafe extern "C" fn server_lock_client(c: *mut client) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_kill_pane(wp: *mut window_pane) {
     unsafe {
         let w = (*wp).window;
@@ -206,7 +193,6 @@ pub unsafe extern "C" fn server_kill_pane(wp: *mut window_pane) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_kill_window(w: *mut window, renumber: i32) {
     unsafe {
         for s in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
@@ -232,7 +218,6 @@ pub unsafe extern "C" fn server_kill_window(w: *mut window, renumber: i32) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_renumber_session(s: *mut session) {
     unsafe {
         if options_get_number((*s).options, c"renumber-windows".as_ptr()) != 0 {
@@ -248,7 +233,6 @@ pub unsafe extern "C" fn server_renumber_session(s: *mut session) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_renumber_all() {
     unsafe {
         for s in rb_foreach(&raw mut sessions) {
@@ -257,7 +241,6 @@ pub unsafe extern "C" fn server_renumber_all() {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_link_window(
     src: *mut session,
     srcwl: *mut winlink,
@@ -320,7 +303,6 @@ pub unsafe extern "C" fn server_link_window(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_unlink_window(s: *mut session, wl: *mut winlink) {
     unsafe {
         if session_detach(s, wl) != 0 {
@@ -331,7 +313,6 @@ pub unsafe extern "C" fn server_unlink_window(s: *mut session, wl: *mut winlink)
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_destroy_pane(wp: *mut window_pane, notify: i32) {
     unsafe {
         let w = (*wp).window;
@@ -419,7 +400,6 @@ pub unsafe extern "C" fn server_destroy_pane(wp: *mut window_pane, notify: i32) 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_destroy_session_group(s: *mut session) {
     unsafe {
         let sg = session_group_contains(s);
@@ -435,7 +415,6 @@ pub unsafe extern "C" fn server_destroy_session_group(s: *mut session) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_find_session(
     s: *mut session,
     f: unsafe extern "C" fn(*mut session, *mut session) -> i32,
@@ -451,7 +430,6 @@ pub unsafe extern "C" fn server_find_session(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_newer_session(s_loop: *mut session, s_out: *mut session) -> i32 {
     unsafe {
         (timer::new(&raw const (*s_loop).activity_time)
@@ -459,7 +437,6 @@ pub unsafe extern "C" fn server_newer_session(s_loop: *mut session, s_out: *mut 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_newer_detached_session(
     s_loop: *mut session,
     s_out: *mut session,
@@ -472,7 +449,6 @@ pub unsafe extern "C" fn server_newer_detached_session(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_destroy_session(s: *mut session) {
     unsafe {
         let detach_on_destroy = options_get_number((*s).options, c"detach-on-destroy".as_ptr());
@@ -507,7 +483,6 @@ pub unsafe extern "C" fn server_destroy_session(s: *mut session) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_check_unattached() {
     unsafe {
         for s in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
@@ -538,7 +513,6 @@ pub unsafe extern "C" fn server_check_unattached() {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_unzoom_window(w: *mut window) {
     unsafe {
         if window_unzoom(w, 1) == 0 {

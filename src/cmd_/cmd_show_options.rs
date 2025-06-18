@@ -13,8 +13,7 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use crate::*;
 
-#[unsafe(no_mangle)]
-static mut cmd_show_options_entry: cmd_entry = cmd_entry {
+pub static mut cmd_show_options_entry: cmd_entry = cmd_entry {
     name: c"show-options".as_ptr(),
     alias: c"show".as_ptr(),
 
@@ -28,8 +27,7 @@ static mut cmd_show_options_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_show_window_options_entry: cmd_entry = cmd_entry {
+pub static mut cmd_show_window_options_entry: cmd_entry = cmd_entry {
     name: c"show-window-options".as_ptr(),
     alias: c"showw".as_ptr(),
 
@@ -44,8 +42,7 @@ static mut cmd_show_window_options_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_show_hooks_entry: cmd_entry = cmd_entry {
+pub static mut cmd_show_hooks_entry: cmd_entry = cmd_entry {
     name: c"show-hooks".as_ptr(),
     alias: null(),
 
@@ -60,7 +57,6 @@ static mut cmd_show_hooks_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_show_options_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
@@ -152,7 +148,6 @@ unsafe extern "C" fn cmd_show_options_exec(self_: *mut cmd, item: *mut cmdq_item
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_show_options_print(
     self_: *mut cmd,
     item: *mut cmdq_item,
@@ -213,7 +208,6 @@ pub unsafe extern "C" fn cmd_show_options_print(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_show_options_all(
     self_: *mut cmd,
     item: *mut cmdq_item,

@@ -15,8 +15,7 @@ use crate::*;
 
 use crate::compat::{queue::tailq_empty, strtonum};
 
-#[unsafe(no_mangle)]
-static mut cmd_resize_pane_entry: cmd_entry = cmd_entry {
+pub static mut cmd_resize_pane_entry: cmd_entry = cmd_entry {
     name: c"resize-pane".as_ptr(),
     alias: c"resizep".as_ptr(),
 
@@ -30,7 +29,6 @@ static mut cmd_resize_pane_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
@@ -161,7 +159,7 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
 }
 
 #[expect(clippy::needless_range_loop)]
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn cmd_resize_pane_mouse_update(c: *mut client, m: *mut mouse_event) {
     unsafe {
         let mut w: *mut window = null_mut();

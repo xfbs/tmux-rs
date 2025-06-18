@@ -18,8 +18,7 @@ use libc::{strcmp, strtol};
 use crate::compat::queue::tailq_foreach;
 use crate::options_::options_find_choice;
 
-#[unsafe(no_mangle)]
-static mut cmd_display_menu_entry: cmd_entry = cmd_entry {
+pub static mut cmd_display_menu_entry: cmd_entry = cmd_entry {
     name: c"display-menu".as_ptr(),
     alias: c"menu".as_ptr(),
 
@@ -32,8 +31,7 @@ static mut cmd_display_menu_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_display_popup_entry: cmd_entry = cmd_entry {
+pub static mut cmd_display_popup_entry: cmd_entry = cmd_entry {
     name: c"display-popup".as_ptr(),
     alias: c"popup".as_ptr(),
 
@@ -46,7 +44,6 @@ static mut cmd_display_popup_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_display_menu_args_parse(
     args: *mut args,
     idx: u32,
@@ -84,7 +81,6 @@ unsafe extern "C" fn cmd_display_menu_args_parse(
     type_
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_display_menu_get_position(
     tc: *mut client,
     item: *mut cmdq_item,
@@ -344,7 +340,6 @@ unsafe extern "C" fn cmd_display_menu_get_position(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_display_menu_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
@@ -482,7 +477,6 @@ unsafe extern "C" fn cmd_display_menu_exec(self_: *mut cmd, item: *mut cmdq_item
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_display_popup_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

@@ -39,7 +39,7 @@ impl input_key_entry {
 }
 
 /// Input key comparison function.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn input_key_cmp(
     ike1: *const input_key_entry,
     ike2: *const input_key_entry,
@@ -65,7 +65,7 @@ RB_GENERATE!(
 static mut input_key_tree: input_key_tree = rb_initializer();
 
 const input_key_defaults_len: usize = 83;
-#[unsafe(no_mangle)]
+
 static mut input_key_defaults: [input_key_entry; 83] = [
     /* Paste keys. */
     input_key_entry::new(keyc::KEYC_PASTE_START as u64, c"\xb11[200~"),
@@ -166,7 +166,6 @@ static mut input_key_defaults: [input_key_entry; 83] = [
     input_key_entry::new(keyc::KEYC_DC as u64 | KEYC_BUILD_MODIFIERS, c"\xb11[3;_~"),
 ];
 
-#[unsafe(no_mangle)]
 static input_key_modifiers: [key_code; 9] = [
     0,
     0,
@@ -180,7 +179,7 @@ static input_key_modifiers: [key_code; 9] = [
 ];
 
 /// Look for key in tree.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn input_key_get(key: key_code) -> *mut input_key_entry {
     unsafe {
         let mut entry = MaybeUninit::<input_key_entry>::uninit();
@@ -189,7 +188,6 @@ pub unsafe extern "C" fn input_key_get(key: key_code) -> *mut input_key_entry {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn input_key_split2(c: u32, dst: *mut u8) -> usize {
     unsafe {
         if c > 0x7f {
@@ -207,7 +205,7 @@ pub unsafe extern "C" fn input_key_split2(c: u32, dst: *mut u8) -> usize {
 
 #[expect(clippy::needless_range_loop)]
 /// Build input key tree.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C-unwind" fn input_key_build() {
     unsafe {
         for i in 0..input_key_defaults_len {
@@ -238,7 +236,7 @@ pub unsafe extern "C-unwind" fn input_key_build() {
 }
 
 /// Translate a key code into an output key sequence for a pane.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn input_key_pane(
     wp: *mut window_pane,
     key: key_code,
@@ -259,7 +257,6 @@ pub unsafe extern "C" fn input_key_pane(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn input_key_write(
     from: *const c_char,
     bev: *mut bufferevent,
@@ -272,7 +269,6 @@ pub unsafe extern "C" fn input_key_write(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn input_key_extended(bev: *mut bufferevent, mut key: key_code) -> i32 {
     let __func__ = c"input_key_extended".as_ptr();
     unsafe {
@@ -350,7 +346,7 @@ static standard_map: [SyncCharPtr; 2] = [
  * complicated output mode, with a lot of remapping in order to
  * emulate quirks of terminals that today can be only found in museums.
  */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn input_key_vt10x(bev: *mut bufferevent, mut key: key_code) -> i32 {
     let __func__ = c"input_key_vt10x".as_ptr();
     unsafe {
@@ -412,7 +408,7 @@ pub unsafe extern "C" fn input_key_vt10x(bev: *mut bufferevent, mut key: key_cod
 }
 
 /// Pick keys that are reported as vt10x keys in modifyOtherKeys=1 mode.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn input_key_mode1(bev: *mut bufferevent, key: key_code) -> i32 {
     unsafe {
         log_debug!("{}: key in {}", "input_key_mode1", key);
@@ -440,7 +436,7 @@ pub unsafe extern "C" fn input_key_mode1(bev: *mut bufferevent, key: key_code) -
 }
 
 /// Translate a key code into an output key sequence.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn input_key(
     s: *mut screen,
     bev: *mut bufferevent,
@@ -592,7 +588,7 @@ pub unsafe extern "C" fn input_key(
 }
 
 /* Get mouse event string. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn input_key_get_mouse(
     s: *mut screen,
     m: *mut mouse_event,
@@ -709,7 +705,7 @@ pub unsafe extern "C" fn input_key_get_mouse(
 }
 
 /* Translate mouse and output. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn input_key_mouse(wp: *mut window_pane, m: *mut mouse_event) {
     let __func__ = c"input_key_mouse".as_ptr();
     unsafe {

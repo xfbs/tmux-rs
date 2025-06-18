@@ -13,7 +13,6 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use crate::*;
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_reader_start(gr: *mut grid_reader, gd: *mut grid, cx: u32, cy: u32) {
     unsafe {
         (*gr).gd = gd;
@@ -22,7 +21,6 @@ pub unsafe extern "C" fn grid_reader_start(gr: *mut grid_reader, gd: *mut grid, 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_reader_get_cursor(gr: *mut grid_reader, cx: *mut u32, cy: *mut u32) {
     unsafe {
         *cx = (*gr).cx;
@@ -30,12 +28,10 @@ pub unsafe extern "C" fn grid_reader_get_cursor(gr: *mut grid_reader, cx: *mut u
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_reader_line_length(gr: *mut grid_reader) -> u32 {
     unsafe { grid_line_length((*gr).gd, (*gr).cy) }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_reader_cursor_right(gr: *mut grid_reader, wrap: u32, all: i32) {
     unsafe {
         let mut gc = MaybeUninit::<grid_cell>::uninit();
@@ -62,7 +58,6 @@ pub unsafe extern "C" fn grid_reader_cursor_right(gr: *mut grid_reader, wrap: u3
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_reader_cursor_left(gr: *mut grid_reader, wrap: i32) {
     unsafe {
         let mut gc = MaybeUninit::<grid_cell>::uninit();
@@ -89,7 +84,6 @@ pub unsafe extern "C" fn grid_reader_cursor_left(gr: *mut grid_reader, wrap: i32
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_reader_cursor_down(gr: *mut grid_reader) {
     unsafe {
         let mut gc = MaybeUninit::<grid_cell>::uninit();
@@ -108,7 +102,6 @@ pub unsafe extern "C" fn grid_reader_cursor_down(gr: *mut grid_reader) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_reader_cursor_up(gr: *mut grid_reader) {
     unsafe {
         let mut gc = MaybeUninit::<grid_cell>::uninit();
@@ -127,7 +120,6 @@ pub unsafe extern "C" fn grid_reader_cursor_up(gr: *mut grid_reader) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_reader_cursor_start_of_line(gr: *mut grid_reader, wrap: i32) {
     unsafe {
         if wrap != 0 {
@@ -143,7 +135,6 @@ pub unsafe extern "C" fn grid_reader_cursor_start_of_line(gr: *mut grid_reader, 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_reader_cursor_end_of_line(gr: *mut grid_reader, wrap: i32, all: i32) {
     unsafe {
         if wrap != 0 {
@@ -164,7 +155,6 @@ pub unsafe extern "C" fn grid_reader_cursor_end_of_line(gr: *mut grid_reader, wr
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_reader_handle_wrap(
     gr: *mut grid_reader,
     xx: *mut u32,
@@ -191,7 +181,6 @@ pub unsafe extern "C" fn grid_reader_handle_wrap(
     1
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_reader_in_set(gr: *mut grid_reader, set: *const c_char) -> i32 {
     unsafe {
         let mut gc = MaybeUninit::<grid_cell>::uninit();
@@ -205,7 +194,6 @@ pub unsafe extern "C" fn grid_reader_in_set(gr: *mut grid_reader, set: *const c_
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_reader_cursor_next_word(
     gr: *mut grid_reader,
     separators: *const c_char,
@@ -257,7 +245,6 @@ pub unsafe extern "C" fn grid_reader_cursor_next_word(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_reader_cursor_next_word_end(
     gr: *mut grid_reader,
     separators: *const c_char,
@@ -306,7 +293,6 @@ pub unsafe extern "C" fn grid_reader_cursor_next_word_end(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_reader_cursor_previous_word(
     gr: *mut grid_reader,
     separators: *const c_char,
@@ -382,7 +368,6 @@ pub unsafe extern "C" fn grid_reader_cursor_previous_word(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_reader_cursor_jump(
     gr: *mut grid_reader,
     jc: *const utf8_data,
@@ -428,7 +413,6 @@ pub unsafe extern "C" fn grid_reader_cursor_jump(
     0
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_reader_cursor_jump_back(
     gr: *mut grid_reader,
     jc: *mut utf8_data,
@@ -474,7 +458,6 @@ pub unsafe extern "C" fn grid_reader_cursor_jump_back(
     0
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_reader_cursor_back_to_indentation(gr: *mut grid_reader) {
     unsafe {
         let mut gc = MaybeUninit::<grid_cell>::uninit();

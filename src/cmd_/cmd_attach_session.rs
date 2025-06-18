@@ -16,7 +16,6 @@ use super::*;
 use crate::compat::queue::tailq_foreach;
 use crate::compat::tree::rb_empty;
 
-#[unsafe(no_mangle)]
 pub static mut cmd_attach_session_entry: cmd_entry = cmd_entry {
     name: c"attach-session".as_ptr(),
     alias: c"attach".as_ptr(),
@@ -29,7 +28,6 @@ pub static mut cmd_attach_session_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_attach_session(
     item: *mut cmdq_item,
     tflag: *const c_char,
@@ -177,7 +175,6 @@ pub unsafe extern "C" fn cmd_attach_session(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_attach_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

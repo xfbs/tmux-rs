@@ -21,10 +21,8 @@ use crate::compat::{
     tree::{rb_foreach, rb_max, rb_min},
 };
 
-#[unsafe(no_mangle)]
 static mut cmd_find_session_table: [[*const c_char; 2]; 1] = [[null_mut(), null_mut()]];
 
-#[unsafe(no_mangle)]
 static mut cmd_find_window_table: [[*const c_char; 2]; 6] = [
     [c"{start}".as_ptr(), c"^".as_ptr()],
     [c"{last}".as_ptr(), c"!".as_ptr()],
@@ -34,7 +32,6 @@ static mut cmd_find_window_table: [[*const c_char; 2]; 6] = [
     [null(), null()],
 ];
 
-#[unsafe(no_mangle)]
 static mut cmd_find_pane_table: [[*const c_char; 2]; 16] = [
     [c"{last}".as_ptr(), c"!".as_ptr()],
     [c"{next}".as_ptr(), c"+".as_ptr()],
@@ -54,7 +51,6 @@ static mut cmd_find_pane_table: [[*const c_char; 2]; 16] = [
     [null(), null()],
 ];
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_inside_pane(c: *mut client) -> *mut window_pane {
     let __func__ = "cmd_find_inside_pane";
     unsafe {
@@ -88,7 +84,6 @@ pub unsafe extern "C" fn cmd_find_inside_pane(c: *mut client) -> *mut window_pan
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_client_better(c: *mut client, than: *mut client) -> i32 {
     if than.is_null() {
         return 1;
@@ -99,7 +94,6 @@ pub unsafe extern "C" fn cmd_find_client_better(c: *mut client, than: *mut clien
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_best_client(mut s: *mut session) -> *mut client {
     unsafe {
         if (*s).attached == 0 {
@@ -123,7 +117,6 @@ pub unsafe extern "C" fn cmd_find_best_client(mut s: *mut session) -> *mut clien
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_session_better(
     s: *mut session,
     than: *mut session,
@@ -147,7 +140,6 @@ pub unsafe extern "C" fn cmd_find_session_better(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_best_session(
     slist: *mut *mut session,
     ssize: u32,
@@ -175,7 +167,6 @@ pub unsafe extern "C" fn cmd_find_best_session(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_best_session_with_window(fs: *mut cmd_find_state) -> i32 {
     let __func__ = "cmd_find_best_session_with_window";
     unsafe {
@@ -209,7 +200,6 @@ pub unsafe extern "C" fn cmd_find_best_session_with_window(fs: *mut cmd_find_sta
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_best_winlink_with_window(fs: *mut cmd_find_state) -> i32 {
     let __func__ = "cmd_find_best_winlink_with_window";
     unsafe {
@@ -235,7 +225,6 @@ pub unsafe extern "C" fn cmd_find_best_winlink_with_window(fs: *mut cmd_find_sta
     0
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_map_table(
     table: *const [*const c_char; 2],
     s: *const c_char,
@@ -252,7 +241,6 @@ pub unsafe extern "C" fn cmd_find_map_table(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_get_session(
     fs: *mut cmd_find_state,
     session: *const c_char,
@@ -315,7 +303,6 @@ pub unsafe extern "C" fn cmd_find_get_session(
     -1
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_get_window(
     fs: *mut cmd_find_state,
     window: *const c_char,
@@ -351,7 +338,6 @@ pub unsafe extern "C" fn cmd_find_get_window(
     -1
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_get_window_with_session(
     fs: *mut cmd_find_state,
     window: *const c_char,
@@ -510,7 +496,6 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(
     -1
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_get_pane(
     fs: *mut cmd_find_state,
     pane: *const c_char,
@@ -546,7 +531,6 @@ pub unsafe extern "C" fn cmd_find_get_pane(
     -1
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_get_pane_with_session(
     fs: *mut cmd_find_state,
     pane: *const c_char,
@@ -572,7 +556,6 @@ pub unsafe extern "C" fn cmd_find_get_pane_with_session(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_get_pane_with_window(
     fs: *mut cmd_find_state,
     pane: *const c_char,
@@ -660,7 +643,6 @@ pub unsafe extern "C" fn cmd_find_get_pane_with_window(
     -1
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_clear_state(fs: *mut cmd_find_state, flags: i32) {
     unsafe {
         memset0(fs);
@@ -671,14 +653,12 @@ pub unsafe extern "C" fn cmd_find_clear_state(fs: *mut cmd_find_state, flags: i3
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_empty_state(fs: *mut cmd_find_state) -> i32 {
     unsafe {
         ((*fs).s.is_null() && (*fs).wl.is_null() && (*fs).w.is_null() && (*fs).wp.is_null()) as i32
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_valid_state(fs: *mut cmd_find_state) -> boolint {
     unsafe {
         if (*fs).s.is_null() || (*fs).wl.is_null() || (*fs).w.is_null() || (*fs).wp.is_null() {
@@ -709,7 +689,6 @@ pub unsafe extern "C" fn cmd_find_valid_state(fs: *mut cmd_find_state) -> boolin
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_copy_state(dst: *mut cmd_find_state, src: *mut cmd_find_state) {
     unsafe {
         (*dst).s = (*src).s;
@@ -720,7 +699,6 @@ pub unsafe extern "C" fn cmd_find_copy_state(dst: *mut cmd_find_state, src: *mut
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_log_state(prefix: *const c_char, fs: *const cmd_find_state) {
     unsafe {
         if !(*fs).s.is_null() {
@@ -751,7 +729,6 @@ pub unsafe extern "C" fn cmd_find_log_state(prefix: *const c_char, fs: *const cm
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_from_session(
     fs: *mut cmd_find_state,
     s: *mut session,
@@ -769,7 +746,6 @@ pub unsafe extern "C" fn cmd_find_from_session(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_from_winlink(
     fs: *mut cmd_find_state,
     wl: *mut winlink,
@@ -787,7 +763,6 @@ pub unsafe extern "C" fn cmd_find_from_winlink(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_from_session_window(
     fs: *mut cmd_find_state,
     s: *mut session,
@@ -810,7 +785,6 @@ pub unsafe extern "C" fn cmd_find_from_session_window(
     0
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_from_window(
     fs: *mut cmd_find_state,
     w: *mut window,
@@ -835,7 +809,6 @@ pub unsafe extern "C" fn cmd_find_from_window(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_from_winlink_pane(
     fs: *mut cmd_find_state,
     wl: *mut winlink,
@@ -855,7 +828,6 @@ pub unsafe extern "C" fn cmd_find_from_winlink_pane(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_from_pane(
     fs: *mut cmd_find_state,
     wp: *mut window_pane,
@@ -873,7 +845,6 @@ pub unsafe extern "C" fn cmd_find_from_pane(
     0
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_from_nothing(fs: *mut cmd_find_state, flags: i32) -> i32 {
     unsafe {
         cmd_find_clear_state(fs, flags);
@@ -893,7 +864,6 @@ pub unsafe extern "C" fn cmd_find_from_nothing(fs: *mut cmd_find_state, flags: i
     0
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_from_mouse(
     fs: *mut cmd_find_state,
     m: *mut mouse_event,
@@ -918,7 +888,6 @@ pub unsafe extern "C" fn cmd_find_from_mouse(
     0
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_from_client(
     fs: *mut cmd_find_state,
     c: *mut client,
@@ -971,7 +940,6 @@ pub unsafe extern "C" fn cmd_find_from_client(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_target(
     fs: *mut cmd_find_state,
     item: *mut cmdq_item,
@@ -1402,7 +1370,6 @@ pub unsafe extern "C" fn cmd_find_target(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_current_client(item: *mut cmdq_item, quiet: i32) -> *mut client {
     let __func__ = "cmd_find_current_client";
     unsafe {
@@ -1445,7 +1412,6 @@ pub unsafe extern "C" fn cmd_find_current_client(item: *mut cmdq_item, quiet: i3
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find_client(
     item: *mut cmdq_item,
     target: *const c_char,

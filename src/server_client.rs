@@ -27,7 +27,7 @@ use crate::{
 };
 
 /// Compare client windows.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_window_cmp(
     cw1: *const client_window,
     cw2: *const client_window,
@@ -44,7 +44,7 @@ pub unsafe extern "C" fn server_client_window_cmp(
 }
 
 /// Number of attached clients.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_how_many() -> u32 {
     unsafe {
         tailq_foreach(&raw mut clients)
@@ -57,7 +57,7 @@ pub unsafe extern "C" fn server_client_how_many() -> u32 {
 }
 
 /// Overlay timer callback.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_overlay_timer(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
         server_client_clear_overlay(data.cast());
@@ -65,7 +65,7 @@ pub unsafe extern "C" fn server_client_overlay_timer(_fd: i32, _events: i16, dat
 }
 
 /// Set an overlay on client.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_set_overlay(
     c: *mut client,
     delay: u32,
@@ -118,7 +118,7 @@ pub unsafe extern "C" fn server_client_set_overlay(
 }
 
 /// Clear overlay mode on client.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_clear_overlay(c: *mut client) {
     unsafe {
         if (*c).overlay_draw.is_none() {
@@ -146,7 +146,7 @@ pub unsafe extern "C" fn server_client_clear_overlay(c: *mut client) {
 }
 
 /// Given overlay position and dimensions, return parts of the input range which are visible.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_overlay_range(
     x: u32,
     y: u32,
@@ -200,7 +200,7 @@ pub unsafe extern "C" fn server_client_overlay_range(
 }
 
 /// Check if this client is inside this server.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_check_nested(c: *mut client) -> i32 {
     unsafe {
         let envent = environ_find((*c).environ, c"TMUX".as_ptr());
@@ -218,7 +218,7 @@ pub unsafe extern "C" fn server_client_check_nested(c: *mut client) -> i32 {
 }
 
 /// Set client key table.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_set_key_table(c: *mut client, mut name: *const c_char) {
     unsafe {
         if name.is_null() {
@@ -234,7 +234,6 @@ pub unsafe extern "C" fn server_client_set_key_table(c: *mut client, mut name: *
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn server_client_key_table_activity_diff(c: *mut client) -> u64 {
     unsafe {
         let mut diff: libc::timeval = zeroed();
@@ -248,7 +247,7 @@ pub unsafe extern "C" fn server_client_key_table_activity_diff(c: *mut client) -
 }
 
 /// Get default key table.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_get_key_table(c: *mut client) -> *const c_char {
     unsafe {
         let s = (*c).session;
@@ -265,7 +264,7 @@ pub unsafe extern "C" fn server_client_get_key_table(c: *mut client) -> *const c
 }
 
 /// Is this table the default key table?
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_is_default_key_table(
     c: *mut client,
     table: *mut key_table,
@@ -274,7 +273,7 @@ pub unsafe extern "C" fn server_client_is_default_key_table(
 }
 
 /// Create a new client.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_create(fd: i32) -> *mut client {
     unsafe {
         setblocking(fd, 0);
@@ -324,7 +323,7 @@ pub unsafe extern "C" fn server_client_create(fd: i32) -> *mut client {
 }
 
 /// Open client terminal if needed.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_open(c: *mut client, cause: *mut *mut c_char) -> i32 {
     unsafe {
         let mut ttynam = _PATH_TTY;
@@ -371,7 +370,7 @@ pub unsafe extern "C" fn server_client_open(c: *mut client, cause: *mut *mut c_c
 }
 
 /// Lost an attached client.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_attached_lost(c: *mut client) {
     unsafe {
         log_debug!("lost attached client {:p}", c);
@@ -404,7 +403,7 @@ pub unsafe extern "C" fn server_client_attached_lost(c: *mut client) {
 }
 
 /// Set client session.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_set_session(c: *mut client, s: *mut session) {
     unsafe {
         let old = (*c).session;
@@ -440,7 +439,7 @@ pub unsafe extern "C" fn server_client_set_session(c: *mut client, s: *mut sessi
 }
 
 /// Lost a client.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_lost(c: *mut client) {
     unsafe {
         (*c).flags |= client_flag::DEAD;
@@ -522,7 +521,7 @@ pub unsafe extern "C" fn server_client_lost(c: *mut client) {
 }
 
 /// Remove reference from a client.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_unref(c: *mut client) {
     unsafe {
         log_debug!("unref client {:p} ({} references)", c, (*c).references);
@@ -541,7 +540,7 @@ pub unsafe extern "C" fn server_client_unref(c: *mut client) {
 }
 
 /// Free dead client.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_free(_fd: i32, _events: i16, arg: *mut c_void) {
     unsafe {
         let c: *mut client = arg.cast();
@@ -557,7 +556,7 @@ pub unsafe extern "C" fn server_client_free(_fd: i32, _events: i16, arg: *mut c_
 }
 
 /// Suspend a client.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_suspend(c: *mut client) {
     unsafe {
         let s: *mut session = (*c).session;
@@ -573,7 +572,7 @@ pub unsafe extern "C" fn server_client_suspend(c: *mut client) {
 }
 
 /// Detach a client.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_detach(c: *mut client, msgtype: msgtype) {
     unsafe {
         let s = (*c).session;
@@ -591,7 +590,7 @@ pub unsafe extern "C" fn server_client_detach(c: *mut client, msgtype: msgtype) 
 }
 
 /// Execute command to replace a client.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_exec(c: *mut client, cmd: *const c_char) {
     unsafe {
         let s = (*c).session;
@@ -626,7 +625,7 @@ pub unsafe extern "C" fn server_client_exec(c: *mut client, cmd: *const c_char) 
 }
 
 /// Check for mouse keys.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_check_mouse(
     c: *mut client,
     event: *mut key_event,
@@ -1726,7 +1725,7 @@ pub unsafe extern "C" fn server_client_check_mouse(
 }
 
 /// Is this a bracket paste key?
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_is_bracket_pasting(c: *mut client, key: key_code) -> i32 {
     unsafe {
         if key == keyc::KEYC_PASTE_START as u64 {
@@ -1746,7 +1745,7 @@ pub unsafe extern "C" fn server_client_is_bracket_pasting(c: *mut client, key: k
 }
 
 /// Is this fast enough to probably be a paste?
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_assume_paste(s: *mut session) -> i32 {
     unsafe {
         let mut tv: timeval = zeroed();
@@ -1781,7 +1780,7 @@ pub unsafe extern "C" fn server_client_assume_paste(s: *mut session) -> i32 {
 }
 
 /// Has the latest client changed?
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_update_latest(c: *mut client) {
     unsafe {
         if (*c).session.is_null() {
@@ -1806,7 +1805,7 @@ pub unsafe extern "C" fn server_client_update_latest(c: *mut client) {
 }
 
 /// Handle data key input from client. This owns and can modify the key event it is given and is responsible for freeing it.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_key_callback(
     item: *mut cmdq_item,
     data: *mut c_void,
@@ -2101,7 +2100,7 @@ pub unsafe extern "C" fn server_client_key_callback(
 }
 
 /// Handle a key event.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_handle_key(c: *mut client, event: *mut key_event) -> i32 {
     unsafe {
         let s = (*c).session;
@@ -2149,7 +2148,7 @@ pub unsafe extern "C" fn server_client_handle_key(c: *mut client, event: *mut ke
 }
 
 /// Client functions that need to happen every loop.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_loop() {
     unsafe {
         // Check for window resize. This is done before redrawing.
@@ -2182,7 +2181,7 @@ pub unsafe extern "C" fn server_client_loop() {
 }
 
 /// Check if window needs to be resized.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_check_window_resize(w: *mut window) {
     unsafe {
         if !(*w).flags.intersects(window_flag::RESIZE) {
@@ -2216,7 +2215,7 @@ pub unsafe extern "C" fn server_client_check_window_resize(w: *mut window) {
 }
 
 /// Resize timer event.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_resize_timer(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
         let wp: *mut window_pane = data.cast();
@@ -2231,7 +2230,7 @@ pub unsafe extern "C" fn server_client_resize_timer(_fd: i32, _events: i16, data
 }
 
 /// Check if pane should be resized.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_check_pane_resize(wp: *mut window_pane) {
     unsafe {
         let mut tv: libc::timeval = libc::timeval {
@@ -2320,7 +2319,7 @@ pub unsafe extern "C" fn server_client_check_pane_resize(wp: *mut window_pane) {
 }
 
 /// Check pane buffer size.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_check_pane_buffer(wp: *mut window_pane) {
     unsafe {
         let evb = (*(*wp).event).input;
@@ -2433,7 +2432,7 @@ pub unsafe extern "C" fn server_client_check_pane_buffer(wp: *mut window_pane) {
 ///
 /// tty_region/tty_reset/tty_update_mode already take care of not resetting
 /// things that are already in their default state.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_reset_state(c: *mut client) {
     unsafe {
         let tty = &raw mut (*c).tty;
@@ -2561,7 +2560,7 @@ pub unsafe extern "C" fn server_client_reset_state(c: *mut client) {
 }
 
 /// Repeat time callback.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_repeat_timer(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
         let c: *mut client = data.cast();
@@ -2575,7 +2574,7 @@ pub unsafe extern "C" fn server_client_repeat_timer(_fd: i32, _events: i16, data
 }
 
 /// Double-click callback.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_click_timer(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
         let c: *mut client = data.cast();
@@ -2595,7 +2594,7 @@ pub unsafe extern "C" fn server_client_click_timer(_fd: i32, _events: i16, data:
 }
 
 /// Check if client should be exited.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_check_exit(c: *mut client) {
     unsafe {
         let name = (*c).exit_session;
@@ -2662,7 +2661,7 @@ pub unsafe extern "C" fn server_client_check_exit(c: *mut client) {
 }
 
 /// Redraw timer callback.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_redraw_timer(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
         log_debug!("redraw timer fired");
@@ -2673,7 +2672,7 @@ pub unsafe extern "C" fn server_client_redraw_timer(_fd: i32, _events: i16, data
  * Check if modes need to be updated. Only modes in the current window are
  * updated and it is done when the status line is redrawn.
  */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_check_modes(c: *mut client) {
     unsafe {
         let w = (*(*(*c).session).curw).window;
@@ -2698,7 +2697,7 @@ pub unsafe extern "C" fn server_client_check_modes(c: *mut client) {
 }
 
 /// Check for client redraws.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_check_redraw(c: *mut client) {
     static mut ev: event = unsafe { zeroed() };
     unsafe {
@@ -2851,7 +2850,7 @@ pub unsafe extern "C" fn server_client_check_redraw(c: *mut client) {
 }
 
 /* Set client title. */
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_set_title(c: *mut client) {
     unsafe {
         let s = (*c).session;
@@ -2874,7 +2873,7 @@ pub unsafe extern "C" fn server_client_set_title(c: *mut client) {
 }
 
 /// Set client path.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_set_path(c: *mut client) {
     unsafe {
         let s = (*c).session;
@@ -2896,7 +2895,7 @@ pub unsafe extern "C" fn server_client_set_path(c: *mut client) {
 }
 
 /// Dispatch message from client.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_dispatch(imsg: *mut imsg, arg: *mut c_void) {
     unsafe {
         let c: *mut client = arg.cast();
@@ -2999,7 +2998,7 @@ pub unsafe extern "C" fn server_client_dispatch(imsg: *mut imsg, arg: *mut c_voi
 }
 
 /// Callback when command is not allowed.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_read_only(
     item: *mut cmdq_item,
     _data: *mut c_void,
@@ -3011,7 +3010,7 @@ pub unsafe extern "C" fn server_client_read_only(
 }
 
 /// Callback when command is done.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_command_done(
     item: *mut cmdq_item,
     _data: *mut c_void,
@@ -3032,7 +3031,7 @@ pub unsafe extern "C" fn server_client_command_done(
 }
 
 /// Handle command message.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_dispatch_command(c: *mut client, imsg: *mut imsg) {
     unsafe {
         let mut data: msg_command = zeroed();
@@ -3113,7 +3112,7 @@ pub unsafe extern "C" fn server_client_dispatch_command(c: *mut client, imsg: *m
 }
 
 /// Handle identify message.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_dispatch_identify(c: *mut client, imsg: *mut imsg) {
     unsafe {
         let mut home: *mut c_char = null_mut();
@@ -3287,7 +3286,7 @@ pub unsafe extern "C" fn server_client_dispatch_identify(c: *mut client, imsg: *
 }
 
 /// Handle shell message.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_dispatch_shell(c: *mut client) {
     unsafe {
         let mut shell = options_get_string(global_s_options, c"default-shell".as_ptr());
@@ -3307,7 +3306,7 @@ pub unsafe extern "C" fn server_client_dispatch_shell(c: *mut client) {
 }
 
 /// Get client working directory.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_get_cwd(
     c: *mut client,
     mut s: *mut session,
@@ -3336,7 +3335,7 @@ pub unsafe extern "C" fn server_client_get_cwd(
 }
 
 /// Get control client flags.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_control_flags(
     c: *mut client,
     next: *const c_char,
@@ -3359,7 +3358,7 @@ pub unsafe extern "C" fn server_client_control_flags(
 }
 
 /// Set client flags.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_set_flags(c: *mut client, flags: *const c_char) {
     unsafe {
         let mut next = null_mut();
@@ -3418,7 +3417,7 @@ pub unsafe extern "C" fn server_client_set_flags(c: *mut client, flags: *const c
 }
 
 /// Get client flags. This is only flags useful to show to users.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_get_flags(c: *mut client) -> *const c_char {
     unsafe {
         const sizeof_s: usize = 256;
@@ -3474,7 +3473,7 @@ pub unsafe extern "C" fn server_client_get_flags(c: *mut client) -> *const c_cha
 }
 
 /// Get client window.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_get_client_window(
     c: *mut client,
     id: u32,
@@ -3490,7 +3489,7 @@ pub unsafe extern "C" fn server_client_get_client_window(
 }
 
 /// Add client window.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_add_client_window(
     c: *mut client,
     id: u32,
@@ -3508,7 +3507,7 @@ pub unsafe extern "C" fn server_client_add_client_window(
 }
 
 /// Get client active pane.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_get_pane(c: *mut client) -> *mut window_pane {
     unsafe {
         let s = (*c).session;
@@ -3529,7 +3528,7 @@ pub unsafe extern "C" fn server_client_get_pane(c: *mut client) -> *mut window_p
 }
 
 // Set client active pane.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_set_pane(c: *mut client, wp: *mut window_pane) {
     unsafe {
         let s = (*c).session;
@@ -3545,7 +3544,7 @@ pub unsafe extern "C" fn server_client_set_pane(c: *mut client, wp: *mut window_
 }
 
 /// Remove pane from client lists.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_remove_pane(wp: *mut window_pane) {
     unsafe {
         let w = (*wp).window;
@@ -3561,7 +3560,7 @@ pub unsafe extern "C" fn server_client_remove_pane(wp: *mut window_pane) {
 }
 
 /// Print to a client.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn server_client_print(c: *mut client, parse: i32, evb: *mut evbuffer) {
     unsafe {
         let data = EVBUFFER_DATA(evb);

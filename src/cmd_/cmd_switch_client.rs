@@ -16,8 +16,7 @@ use libc::strcspn;
 
 use crate::*;
 
-#[unsafe(no_mangle)]
-static mut cmd_switch_client_entry: cmd_entry = cmd_entry {
+pub static mut cmd_switch_client_entry: cmd_entry = cmd_entry {
     name: c"switch-client".as_ptr(),
     alias: c"switchc".as_ptr(),
 
@@ -29,7 +28,6 @@ static mut cmd_switch_client_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_switch_client_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

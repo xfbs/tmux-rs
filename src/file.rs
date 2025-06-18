@@ -23,23 +23,8 @@ use libc::{
     fopen, fread, fwrite, memcpy, open, strcmp,
 };
 
-unsafe extern "C" {
-    pub fn client_files_RB_INSERT_COLOR(_: *mut client_files, _: *mut client_file);
-    pub fn client_files_RB_REMOVE_COLOR(
-        _: *mut client_files,
-        _: *mut client_file,
-        _: *mut client_file,
-    );
-    pub fn client_files_RB_REMOVE(_: *mut client_files, _: *mut client_file) -> *mut client_file;
-    pub fn client_files_RB_INSERT(_: *mut client_files, _: *mut client_file) -> *mut client_file;
-    pub fn client_files_RB_FIND(_: *mut client_files, _: *mut client_file) -> *mut client_file;
-    pub fn client_files_RB_NFIND(_: *mut client_files, _: *mut client_file) -> *mut client_file;
-}
-
-#[unsafe(no_mangle)]
 pub static mut file_next_stream: i32 = 3;
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_get_path(c: *mut client, file: *const c_char) -> NonNull<c_char> {
     unsafe {
         if *file == b'/' as c_char {
@@ -55,7 +40,6 @@ pub unsafe extern "C" fn file_get_path(c: *mut client, file: *const c_char) -> N
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_cmp(cf1: *const client_file, cf2: *const client_file) -> c_int {
     // TODO this can be more consise, just subtraction
     unsafe {
@@ -69,7 +53,6 @@ pub unsafe extern "C" fn file_cmp(cf1: *const client_file, cf2: *const client_fi
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_create_with_peer(
     peer: *mut tmuxpeer,
     files: *mut client_files,
@@ -99,7 +82,6 @@ pub unsafe extern "C" fn file_create_with_peer(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_create_with_client(
     mut c: *mut client,
     stream: c_int,
@@ -135,7 +117,6 @@ pub unsafe extern "C" fn file_create_with_client(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_free(cf: *mut client_file) {
     unsafe {
         (*cf).references -= 1;
@@ -157,7 +138,6 @@ pub unsafe extern "C" fn file_free(cf: *mut client_file) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_fire_done_cb(_fd: i32, _events: i16, arg: *mut c_void) {
     unsafe {
         let cf: *mut client_file = arg as _;
@@ -172,14 +152,12 @@ pub unsafe extern "C" fn file_fire_done_cb(_fd: i32, _events: i16, arg: *mut c_v
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_fire_done(cf: *mut client_file) {
     unsafe {
         event_once(-1, EV_TIMEOUT, Some(file_fire_done_cb), cf as _, null_mut());
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_fire_read(cf: *mut client_file) {
     unsafe {
         if let Some(cb) = (*cf).cb {
@@ -195,7 +173,6 @@ pub unsafe extern "C" fn file_fire_read(cf: *mut client_file) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_can_print(c: *mut client) -> c_int {
     unsafe {
         if c.is_null()
@@ -252,7 +229,6 @@ pub unsafe fn file_vprint(c: *mut client, args: std::fmt::Arguments) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_print_buffer(c: *mut client, data: *mut c_void, size: usize) {
     unsafe {
         let cf: *mut client_file = null_mut();
@@ -330,7 +306,6 @@ pub unsafe fn file_error_(c: *mut client, args: std::fmt::Arguments) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_write(
     c: *mut client,
     path: *const c_char,
@@ -422,7 +397,6 @@ pub unsafe extern "C" fn file_write(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_read(
     c: *mut client,
     path: *const c_char,
@@ -513,7 +487,6 @@ pub unsafe extern "C" fn file_read(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_cancel(cf: *mut client_file) {
     unsafe {
         log_debug!("read cancel file {}", (*cf).stream);
@@ -536,7 +509,6 @@ pub unsafe extern "C" fn file_cancel(cf: *mut client_file) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_push_cb(_fd: i32, _events: i16, arg: *mut c_void) {
     let cf = arg as *mut client_file;
 
@@ -548,7 +520,6 @@ pub unsafe extern "C" fn file_push_cb(_fd: i32, _events: i16, arg: *mut c_void) 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_push(cf: *mut client_file) {
     unsafe {
         let mut msglen: usize = 0;
@@ -605,7 +576,6 @@ pub unsafe extern "C" fn file_push(cf: *mut client_file) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_write_left(files: *mut client_files) -> c_int {
     let mut left = 0;
     let mut waiting: i32 = 0;
@@ -626,7 +596,6 @@ pub unsafe extern "C" fn file_write_left(files: *mut client_files) -> c_int {
     (waiting != 0) as i32
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_write_error_callback(
     bev: *mut bufferevent,
     what: i16,
@@ -649,7 +618,6 @@ pub unsafe extern "C" fn file_write_error_callback(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_write_callback(bev: *mut bufferevent, arg: *mut c_void) {
     unsafe {
         let cf = arg as *mut client_file;
@@ -669,7 +637,6 @@ pub unsafe extern "C" fn file_write_callback(bev: *mut bufferevent, arg: *mut c_
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_write_open(
     files: *mut client_files,
     peer: *mut tmuxpeer,
@@ -757,7 +724,6 @@ pub unsafe extern "C" fn file_write_open(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_write_data(files: *mut client_files, imsg: *mut imsg) {
     unsafe {
         let msg = (*imsg).data as *mut msg_write_data;
@@ -781,7 +747,6 @@ pub unsafe extern "C" fn file_write_data(files: *mut client_files, imsg: *mut im
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_write_close(files: *mut client_files, imsg: *mut imsg) {
     unsafe {
         let msg = (*imsg).data as *mut msg_write_close;
@@ -812,7 +777,6 @@ pub unsafe extern "C" fn file_write_close(files: *mut client_files, imsg: *mut i
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_read_error_callback(
     _bev: *mut bufferevent,
     what: i16,
@@ -842,7 +806,6 @@ pub unsafe extern "C" fn file_read_error_callback(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_read_callback(bev: *mut bufferevent, arg: *mut c_void) {
     let cf = arg as *mut client_file;
     unsafe {
@@ -878,7 +841,6 @@ pub unsafe extern "C" fn file_read_callback(bev: *mut bufferevent, arg: *mut c_v
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_read_open(
     files: *mut client_files,
     peer: *mut tmuxpeer,
@@ -968,7 +930,6 @@ pub unsafe extern "C" fn file_read_open(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_read_cancel(files: *mut client_files, imsg: *mut imsg) {
     unsafe {
         let msg = (*imsg).data as *mut msg_read_cancel;
@@ -989,7 +950,6 @@ pub unsafe extern "C" fn file_read_cancel(files: *mut client_files, imsg: *mut i
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_write_ready(files: *mut client_files, imsg: *mut imsg) {
     unsafe {
         let msg = (*imsg).data as *mut msg_write_ready;
@@ -1013,7 +973,6 @@ pub unsafe extern "C" fn file_write_ready(files: *mut client_files, imsg: *mut i
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_read_data(files: *mut client_files, imsg: *mut imsg) {
     unsafe {
         let msg = (*imsg).data as *mut msg_read_data;
@@ -1043,7 +1002,6 @@ pub unsafe extern "C" fn file_read_data(files: *mut client_files, imsg: *mut ims
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn file_read_done(files: *mut client_files, imsg: *mut imsg) {
     unsafe {
         let msg = (*imsg).data as *mut msg_read_done;

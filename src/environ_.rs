@@ -23,7 +23,6 @@ use crate::xmalloc::xcalloc_;
 pub type environ = rb_head<environ_entry>;
 RB_GENERATE!(environ, environ_entry, entry, discr_entry, environ_cmp);
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_cmp(
     envent1: *const environ_entry,
     envent2: *const environ_entry,
@@ -36,7 +35,6 @@ pub unsafe extern "C" fn environ_cmp(
     }
 }
 
-#[unsafe(no_mangle)]
 pub extern "C" fn environ_create() -> NonNull<environ> {
     unsafe {
         let env: NonNull<environ> = xcalloc_::<environ>(1);
@@ -45,7 +43,6 @@ pub extern "C" fn environ_create() -> NonNull<environ> {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_free(env: *mut environ) {
     unsafe {
         for envent in rb_foreach(env).map(NonNull::as_ptr) {
@@ -58,17 +55,14 @@ pub unsafe extern "C" fn environ_free(env: *mut environ) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_first(env: *mut environ) -> *mut environ_entry {
     unsafe { rb_min(env) }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_next(envent: *mut environ_entry) -> *mut environ_entry {
     unsafe { rb_next(envent) }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_copy(srcenv: *mut environ, dstenv: *mut environ) {
     unsafe {
         for envent in rb_foreach(srcenv).map(NonNull::as_ptr) {
@@ -87,7 +81,6 @@ pub unsafe extern "C" fn environ_copy(srcenv: *mut environ, dstenv: *mut environ
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_find(
     env: *mut environ,
     name: *const c_char,
@@ -135,7 +128,6 @@ pub unsafe fn environ_set_(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_clear(env: *mut environ, name: *const c_char) {
     unsafe {
         let mut envent = environ_find(env, name);
@@ -152,7 +144,6 @@ pub unsafe extern "C" fn environ_clear(env: *mut environ, name: *const c_char) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_put(env: *mut environ, var: *const c_char, flags: c_int) {
     unsafe {
         let mut value = libc::strchr(var, b'=' as c_int);
@@ -169,7 +160,6 @@ pub unsafe extern "C" fn environ_put(env: *mut environ, var: *const c_char, flag
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_unset(env: *mut environ, name: *const c_char) {
     unsafe {
         let envent = environ_find(env, name);
@@ -183,7 +173,6 @@ pub unsafe extern "C" fn environ_unset(env: *mut environ, name: *const c_char) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_update(oo: *mut options, src: *mut environ, dst: *mut environ) {
     unsafe {
         let mut found: i32 = 0;
@@ -216,7 +205,6 @@ pub unsafe extern "C" fn environ_update(oo: *mut options, src: *mut environ, dst
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_push(env: *mut environ) {
     unsafe {
         let mut envent: *mut environ_entry;
@@ -261,7 +249,6 @@ pub unsafe fn environ_log_(env: *mut environ, args: std::fmt::Arguments) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn environ_for_session(s: *mut session, no_term: c_int) -> *mut environ {
     let env: *mut environ = environ_create().as_ptr();
 

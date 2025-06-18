@@ -17,8 +17,7 @@ use libc::{getpwnam, getuid};
 
 use crate::compat::queue::tailq_foreach;
 
-#[unsafe(no_mangle)]
-static mut cmd_server_access_entry: cmd_entry = cmd_entry {
+pub static mut cmd_server_access_entry: cmd_entry = cmd_entry {
     name: c"server-access".as_ptr(),
     alias: null(),
 
@@ -30,7 +29,6 @@ static mut cmd_server_access_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_server_access_deny(
     item: *mut cmdq_item,
     pw: *mut libc::passwd,
@@ -54,7 +52,6 @@ unsafe extern "C" fn cmd_server_access_deny(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_server_access_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

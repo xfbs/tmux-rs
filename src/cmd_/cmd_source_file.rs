@@ -17,8 +17,7 @@ use libc::{EINVAL, ENOENT, ENOMEM, GLOB_NOMATCH, GLOB_NOSPACE, glob, glob_t, glo
 
 use crate::compat::VIS_GLOB;
 
-#[unsafe(no_mangle)]
-static mut cmd_source_file_entry: cmd_entry = cmd_entry {
+pub static mut cmd_source_file_entry: cmd_entry = cmd_entry {
     name: c"source-file".as_ptr(),
     alias: c"source".as_ptr(),
 
@@ -45,7 +44,6 @@ pub struct cmd_source_file_data {
     pub nfiles: u32,
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_source_file_complete_cb(
     item: *mut cmdq_item,
     data: *mut c_void,
@@ -56,7 +54,6 @@ unsafe extern "C" fn cmd_source_file_complete_cb(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_source_file_complete(c: *mut client, cdata: *mut cmd_source_file_data) {
     unsafe {
         if cfg_finished != 0 {
@@ -78,7 +75,6 @@ unsafe extern "C" fn cmd_source_file_complete(c: *mut client, cdata: *mut cmd_so
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_source_file_done(
     c: *mut client,
     path: *mut c_char,
@@ -135,7 +131,6 @@ unsafe extern "C" fn cmd_source_file_done(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_source_file_add(cdata: *mut cmd_source_file_data, path: *const c_char) {
     unsafe {
         let mut __func__ = "cmd_source_file_add";
@@ -146,7 +141,6 @@ unsafe extern "C" fn cmd_source_file_add(cdata: *mut cmd_source_file_data, path:
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_source_file_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     let __func__ = "cmd_source_file_exec";
 

@@ -37,7 +37,6 @@ pub struct menu_data {
     pub data: *mut c_void,
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn menu_add_items(
     menu: *mut menu,
     items: *const menu_item,
@@ -54,7 +53,6 @@ pub unsafe extern "C" fn menu_add_items(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn menu_add_item(
     menu: *mut menu,
     item: *const menu_item,
@@ -164,7 +162,6 @@ pub unsafe extern "C" fn menu_add_item(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn menu_create(title: *const c_char) -> *mut menu {
     unsafe {
         let menu = xcalloc1::<menu>() as *mut menu;
@@ -175,7 +172,6 @@ pub unsafe extern "C" fn menu_create(title: *const c_char) -> *mut menu {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn menu_free(menu: *mut menu) {
     unsafe {
         for i in 0..(*menu).count {
@@ -190,7 +186,6 @@ pub unsafe extern "C" fn menu_free(menu: *mut menu) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn menu_mode_cb(
     _c: *mut client,
     data: *mut c_void,
@@ -211,7 +206,6 @@ pub unsafe extern "C" fn menu_mode_cb(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn menu_check_cb(
     c: *mut client,
     data: *mut c_void,
@@ -237,7 +231,6 @@ pub unsafe extern "C" fn menu_check_cb(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn menu_draw_cb(
     c: *mut client,
     data: *mut c_void,
@@ -295,7 +288,6 @@ pub unsafe extern "C" fn menu_draw_cb(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn menu_free_cb(c: *mut client, data: *mut c_void) {
     unsafe {
         let md = data as *mut menu_data;
@@ -314,7 +306,6 @@ pub unsafe extern "C" fn menu_free_cb(c: *mut client, data: *mut c_void) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn menu_key_cb(
     c: *mut client,
     data: *mut c_void,
@@ -614,7 +605,6 @@ pub unsafe extern "C" fn menu_key_cb(
     1
 }
 
-#[unsafe(no_mangle)]
 pub unsafe fn menu_set_style(
     c: *mut client,
     gc: *mut grid_cell,
@@ -640,7 +630,6 @@ pub unsafe fn menu_set_style(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn menu_prepare(
     menu: *mut menu,
     flags: i32,
@@ -757,7 +746,6 @@ pub unsafe extern "C" fn menu_prepare(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn menu_display(
     menu: *mut menu,
     flags: i32,

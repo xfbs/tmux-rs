@@ -183,7 +183,7 @@ enum input_esc_type {
 }
 
 /// Escape command table.
-#[unsafe(no_mangle)]
+
 static input_esc_table: [input_table_entry; 15] = [
     input_table_entry::new_esc('0', c"(", input_esc_type::INPUT_ESC_SCSG0_ON),
     input_table_entry::new_esc('0', c")", input_esc_type::INPUT_ESC_SCSG1_ON),
@@ -247,7 +247,7 @@ enum input_csi_type {
 }
 
 /// control (csi) command table.
-#[unsafe(no_mangle)]
+
 static input_csi_table: [input_table_entry; 40] = [
     input_table_entry::new_csi('@', c"", input_csi_type::INPUT_CSI_ICH),
     input_table_entry::new_csi('A', c"", input_csi_type::INPUT_CSI_CUU),
@@ -359,119 +359,118 @@ const INPUT_STATE_ANYWHERE: [input_transition; 3] = [
     input_transition::new(0x1b, 0x1b, None, &raw mut input_state_esc_enter),
 ];
 
-#[unsafe(no_mangle)]
 pub static mut input_state_ground: input_state = input_state::new(
     c"ground",
     Some(input_ground),
     None,
     (&raw mut input_state_ground_table).cast(),
 );
-#[unsafe(no_mangle)]
+
 pub static mut input_state_esc_enter: input_state = input_state::new(
     c"esc_enter",
     Some(input_clear),
     None,
     (&raw mut input_state_esc_enter_table).cast(),
 );
-#[unsafe(no_mangle)]
+
 pub static mut input_state_esc_intermediate: input_state = input_state::new(
     c"esc_intermediate",
     None,
     None,
     (&raw mut input_state_esc_intermediate_table).cast(),
 );
-#[unsafe(no_mangle)]
+
 pub static mut input_state_csi_enter: input_state = input_state::new(
     c"csi_enter",
     Some(input_clear),
     None,
     (&raw mut input_state_csi_enter_table).cast(),
 );
-#[unsafe(no_mangle)]
+
 pub static mut input_state_csi_parameter: input_state = input_state::new(
     c"csi_parameter",
     None,
     None,
     (&raw mut input_state_csi_parameter_table).cast(),
 );
-#[unsafe(no_mangle)]
+
 pub static mut input_state_csi_intermediate: input_state = input_state::new(
     c"csi_intermediate",
     None,
     None,
     (&raw mut input_state_csi_intermediate_table).cast(),
 );
-#[unsafe(no_mangle)]
+
 pub static mut input_state_csi_ignore: input_state = input_state::new(
     c"csi_ignore",
     None,
     None,
     (&raw mut input_state_csi_ignore_table).cast(),
 );
-#[unsafe(no_mangle)]
+
 pub static mut input_state_dcs_enter: input_state = input_state::new(
     c"dcs_enter",
     Some(input_enter_dcs),
     None,
     (&raw mut input_state_dcs_enter_table).cast(),
 );
-#[unsafe(no_mangle)]
+
 pub static mut input_state_dcs_parameter: input_state = input_state::new(
     c"dcs_parameter",
     None,
     None,
     (&raw mut input_state_dcs_parameter_table).cast(),
 );
-#[unsafe(no_mangle)]
+
 pub static mut input_state_dcs_intermediate: input_state = input_state::new(
     c"dcs_intermediate",
     None,
     None,
     (&raw mut input_state_dcs_intermediate_table).cast(),
 );
-#[unsafe(no_mangle)]
+
 pub static mut input_state_dcs_handler: input_state = input_state::new(
     c"dcs_handler",
     None,
     None,
     (&raw mut input_state_dcs_handler_table).cast(),
 );
-#[unsafe(no_mangle)]
+
 pub static mut input_state_dcs_escape: input_state = input_state::new(
     c"dcs_escape",
     None,
     None,
     (&raw mut input_state_dcs_escape_table).cast(),
 );
-#[unsafe(no_mangle)]
+
 pub static mut input_state_dcs_ignore: input_state = input_state::new(
     c"dcs_ignore",
     None,
     None,
     (&raw mut input_state_dcs_ignore_table).cast(),
 );
-#[unsafe(no_mangle)]
+
 pub static mut input_state_osc_string: input_state = input_state::new(
     c"osc_string",
     Some(input_enter_osc),
     Some(input_exit_osc),
     (&raw mut input_state_osc_string_table).cast(),
 );
-#[unsafe(no_mangle)]
+
 pub static mut input_state_apc_string: input_state = input_state::new(
     c"apc_string",
     Some(input_enter_apc),
     Some(input_exit_apc),
     (&raw mut input_state_apc_string_table).cast(),
 );
-#[unsafe(no_mangle)]
+
 pub static mut input_state_rename_string: input_state = input_state::new(
     c"rename_string",
     Some(input_enter_rename),
     Some(input_exit_rename),
     (&raw mut input_state_rename_string_table).cast(),
 );
-#[unsafe(no_mangle)]
+
 pub static mut input_state_consume_st: input_state = input_state::new(
     c"consume_st",
     Some(input_enter_rename),
@@ -479,7 +478,6 @@ pub static mut input_state_consume_st: input_state = input_state::new(
     /* rename also waits for ST */ (&raw mut input_state_consume_st_table).cast(),
 );
 
-#[unsafe(no_mangle)]
 static mut input_state_ground_table: [input_transition; 10] = concat_array(
     INPUT_STATE_ANYWHERE,
     [
@@ -493,7 +491,6 @@ static mut input_state_ground_table: [input_transition; 10] = concat_array(
     ],
 );
 
-#[unsafe(no_mangle)]
 static mut input_state_esc_enter_table: [input_transition; 23] = concat_array(
     INPUT_STATE_ANYWHERE,
     [
@@ -560,7 +557,6 @@ static mut input_state_esc_enter_table: [input_transition; 23] = concat_array(
     ],
 );
 
-#[unsafe(no_mangle)]
 static mut input_state_esc_intermediate_table: [input_transition; 10] = concat_array(
     INPUT_STATE_ANYWHERE,
     [
@@ -579,7 +575,6 @@ static mut input_state_esc_intermediate_table: [input_transition; 10] = concat_a
     ],
 );
 
-#[unsafe(no_mangle)]
 static mut input_state_csi_enter_table: [input_transition; 14] = concat_array(
     INPUT_STATE_ANYWHERE,
     [
@@ -627,7 +622,6 @@ static mut input_state_csi_enter_table: [input_transition; 14] = concat_array(
     ],
 );
 
-#[unsafe(no_mangle)]
 static mut input_state_csi_parameter_table: [input_transition; 14] = concat_array(
     INPUT_STATE_ANYWHERE,
     [
@@ -655,7 +649,6 @@ static mut input_state_csi_parameter_table: [input_transition; 14] = concat_arra
     ],
 );
 
-#[unsafe(no_mangle)]
 static mut input_state_csi_intermediate_table: [input_transition; 11] = concat_array(
     INPUT_STATE_ANYWHERE,
     [
@@ -675,7 +668,6 @@ static mut input_state_csi_intermediate_table: [input_transition; 11] = concat_a
     ],
 );
 
-#[unsafe(no_mangle)]
 static mut input_state_csi_ignore_table: [input_transition; 10] = concat_array(
     INPUT_STATE_ANYWHERE,
     [
@@ -689,7 +681,6 @@ static mut input_state_csi_ignore_table: [input_transition; 10] = concat_array(
     ],
 );
 
-#[unsafe(no_mangle)]
 static mut input_state_dcs_enter_table: [input_transition; 14] = concat_array(
     INPUT_STATE_ANYWHERE,
     [
@@ -732,7 +723,6 @@ static mut input_state_dcs_enter_table: [input_transition; 14] = concat_array(
     ],
 );
 
-#[unsafe(no_mangle)]
 static mut input_state_dcs_parameter_table: [input_transition; 14] = concat_array(
     INPUT_STATE_ANYWHERE,
     [
@@ -760,7 +750,6 @@ static mut input_state_dcs_parameter_table: [input_transition; 14] = concat_arra
     ],
 );
 
-#[unsafe(no_mangle)]
 static mut input_state_dcs_intermediate_table: [input_transition; 11] = concat_array(
     INPUT_STATE_ANYWHERE,
     [
@@ -780,7 +769,6 @@ static mut input_state_dcs_intermediate_table: [input_transition; 11] = concat_a
     ],
 );
 
-#[unsafe(no_mangle)]
 static mut input_state_dcs_handler_table: [input_transition; 4] = [
     /* No INPUT_STATE_ANYWHERE */
     input_transition::new(0x00, 0x1a, Some(input_input), null_mut()),
@@ -789,7 +777,6 @@ static mut input_state_dcs_handler_table: [input_transition; 4] = [
     input_transition::new(-1, -1, None, null_mut()),
 ];
 
-#[unsafe(no_mangle)]
 static mut input_state_dcs_escape_table: [input_transition; 4] = [
     /* No INPUT_STATE_ANYWHERE */
     input_transition::new(
@@ -813,7 +800,6 @@ static mut input_state_dcs_escape_table: [input_transition; 4] = [
     input_transition::new(-1, -1, None, null_mut()),
 ];
 
-#[unsafe(no_mangle)]
 static mut input_state_dcs_ignore_table: [input_transition; 8] = concat_array(
     INPUT_STATE_ANYWHERE,
     [
@@ -825,7 +811,6 @@ static mut input_state_dcs_ignore_table: [input_transition; 8] = concat_array(
     ],
 );
 
-#[unsafe(no_mangle)]
 static mut input_state_osc_string_table: [input_transition; 10] = concat_array(
     INPUT_STATE_ANYWHERE,
     [
@@ -839,7 +824,6 @@ static mut input_state_osc_string_table: [input_transition; 10] = concat_array(
     ],
 );
 
-#[unsafe(no_mangle)]
 static mut input_state_apc_string_table: [input_transition; 8] = concat_array(
     INPUT_STATE_ANYWHERE,
     [
@@ -851,7 +835,6 @@ static mut input_state_apc_string_table: [input_transition; 8] = concat_array(
     ],
 );
 
-#[unsafe(no_mangle)]
 static mut input_state_rename_string_table: [input_transition; 8] = concat_array(
     INPUT_STATE_ANYWHERE,
     [
@@ -863,7 +846,6 @@ static mut input_state_rename_string_table: [input_transition; 8] = concat_array
     ],
 );
 
-#[unsafe(no_mangle)]
 static mut input_state_consume_st_table: [input_transition; 8] = concat_array(
     INPUT_STATE_ANYWHERE,
     [
@@ -875,7 +857,6 @@ static mut input_state_consume_st_table: [input_transition; 8] = concat_array(
     ],
 );
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn input_table_compare(key: *const c_void, value: *const c_void) -> i32 {
     unsafe {
         let ictx: *const input_ctx = key.cast();
@@ -895,7 +876,7 @@ unsafe extern "C" fn input_table_compare(key: *const c_void, value: *const c_voi
 /// Timer
 ///
 /// if this expires then have been waiting for a terminator for too long, so reset to ground.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_timer_callback(_fd: i32, events: i16, arg: *mut c_void) {
     unsafe {
         let ictx: *mut input_ctx = arg as *mut input_ctx;
@@ -910,7 +891,7 @@ unsafe extern "C" fn input_timer_callback(_fd: i32, events: i16, arg: *mut c_voi
 }
 
 /// Start the timer.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_start_timer(ictx: *mut input_ctx) {
     unsafe {
         let tv: timeval = timeval {
@@ -924,7 +905,7 @@ unsafe extern "C" fn input_start_timer(ictx: *mut input_ctx) {
 }
 
 /// Reset cell state to default.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_reset_cell(ictx: *mut input_ctx) {
     unsafe {
         memcpy__(&raw mut (*ictx).cell.cell, &raw const grid_default_cell);
@@ -939,7 +920,7 @@ unsafe extern "C" fn input_reset_cell(ictx: *mut input_ctx) {
 }
 
 /// Save screen state.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_save_state(ictx: *mut input_ctx) {
     unsafe {
         let sctx: *mut screen_write_ctx = &raw mut (*ictx).ctx;
@@ -953,7 +934,7 @@ unsafe extern "C" fn input_save_state(ictx: *mut input_ctx) {
 }
 
 /// Restore screen state.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_restore_state(ictx: *mut input_ctx) {
     unsafe {
         let sctx: *mut screen_write_ctx = &raw mut (*ictx).ctx;
@@ -969,7 +950,7 @@ unsafe extern "C" fn input_restore_state(ictx: *mut input_ctx) {
 }
 
 /// Initialise input parser.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn input_init(
     wp: *mut window_pane,
     bev: *mut bufferevent,
@@ -1001,7 +982,7 @@ pub unsafe extern "C" fn input_init(
 }
 
 /// Destroy input parser.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn input_free(ictx: *mut input_ctx) {
     unsafe {
         for i in 0..(*ictx).param_list_len {
@@ -1020,7 +1001,7 @@ pub unsafe extern "C" fn input_free(ictx: *mut input_ctx) {
 }
 
 // Reset input state and clear screen.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn input_reset(ictx: *mut input_ctx, clear: i32) {
     unsafe {
         let sctx = &raw mut (*ictx).ctx;
@@ -1046,12 +1027,11 @@ pub unsafe extern "C" fn input_reset(ictx: *mut input_ctx, clear: i32) {
 }
 
 /// Return pending data.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn input_pending(ictx: *mut input_ctx) -> *mut evbuffer {
     unsafe { (*ictx).since_ground }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn input_set_state(ictx: *mut input_ctx, itr: *mut input_transition) {
     unsafe {
         if let Some(exit) = (*(*ictx).state).exit {
@@ -1129,7 +1109,7 @@ fn input_parse(ictx: *mut input_ctx, buf: *mut u8, len: usize) {
 }
 
 /// Parse input from pane.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn input_parse_pane(wp: *mut window_pane) {
     unsafe {
         let mut new_size: usize = 0;
@@ -1140,7 +1120,7 @@ pub unsafe extern "C" fn input_parse_pane(wp: *mut window_pane) {
 }
 
 /// Parse given input.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn input_parse_buffer(wp: *mut window_pane, buf: *mut u8, len: usize) {
     unsafe {
         let ictx = (*wp).ictx;
@@ -1172,7 +1152,7 @@ pub unsafe extern "C" fn input_parse_buffer(wp: *mut window_pane, buf: *mut u8, 
 }
 
 /// Parse given input for screen.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn input_parse_screen(
     ictx: *mut input_ctx,
     s: *mut screen,
@@ -1195,7 +1175,7 @@ pub unsafe extern "C" fn input_parse_screen(
 }
 
 /// Split the parameter list (if any).
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_split(ictx: *mut input_ctx) -> i32 {
     unsafe {
         // const char *errstr;
@@ -1265,7 +1245,7 @@ unsafe extern "C" fn input_split(ictx: *mut input_ctx) -> i32 {
 }
 
 /// Get an argument or return default value.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn input_get(
     ictx: *mut input_ctx,
     validx: u32,
@@ -1309,7 +1289,7 @@ unsafe fn input_reply_(ictx: *mut input_ctx, args: std::fmt::Arguments) {
 }
 
 /// Clear saved state.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_clear(ictx: *mut input_ctx) {
     unsafe {
         event_del(&raw mut (*ictx).timer);
@@ -1330,7 +1310,7 @@ unsafe extern "C" fn input_clear(ictx: *mut input_ctx) {
 }
 
 /// Reset for ground state.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_ground(ictx: *mut input_ctx) {
     unsafe {
         event_del(&raw mut (*ictx).timer);
@@ -1344,7 +1324,7 @@ unsafe extern "C" fn input_ground(ictx: *mut input_ctx) {
 }
 
 /// Output this character to the screen.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_print(ictx: *mut input_ctx) -> i32 {
     unsafe {
         let sctx = &raw mut (*ictx).ctx;
@@ -1375,7 +1355,7 @@ unsafe extern "C" fn input_print(ictx: *mut input_ctx) -> i32 {
 }
 
 /// Collect intermediate string.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_intermediate(ictx: *mut input_ctx) -> i32 {
     let sizeof_interm_buf = 4;
     unsafe {
@@ -1391,7 +1371,7 @@ unsafe extern "C" fn input_intermediate(ictx: *mut input_ctx) -> i32 {
 }
 
 /// Collect parameter string.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_parameter(ictx: *mut input_ctx) -> i32 {
     let sizeof_param_buf = 64;
     unsafe {
@@ -1429,7 +1409,7 @@ unsafe extern "C" fn input_input(ictx: *mut input_ctx) -> i32 {
 }
 
 /// Execute C0 control sequence.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_c0_dispatch(ictx: *mut input_ctx) -> i32 {
     let func = "input_c0_dispatch";
     unsafe {
@@ -1490,7 +1470,7 @@ unsafe extern "C" fn input_c0_dispatch(ictx: *mut input_ctx) -> i32 {
 }
 
 /// Execute escape sequence.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_esc_dispatch(ictx: *mut input_ctx) -> i32 {
     let __func__ = "input_esc_dispatch";
     unsafe {
@@ -1566,7 +1546,7 @@ unsafe extern "C" fn input_esc_dispatch(ictx: *mut input_ctx) -> i32 {
 }
 
 /// Execute control sequence.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_csi_dispatch(ictx: *mut input_ctx) -> i32 {
     let __func__ = "input_csi_dispatch";
     unsafe {
@@ -1867,7 +1847,7 @@ unsafe extern "C" fn input_csi_dispatch(ictx: *mut input_ctx) -> i32 {
 }
 
 /// Handle CSI RM.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_csi_dispatch_rm(ictx: *mut input_ctx) {
     unsafe {
         let sctx = &raw mut (*ictx).ctx;
@@ -1887,7 +1867,7 @@ unsafe extern "C" fn input_csi_dispatch_rm(ictx: *mut input_ctx) {
 }
 
 /// Handle CSI private RM.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_csi_dispatch_rm_private(ictx: *mut input_ctx) {
     unsafe {
         let sctx = &raw mut (*ictx).ctx;
@@ -1932,7 +1912,7 @@ unsafe extern "C" fn input_csi_dispatch_rm_private(ictx: *mut input_ctx) {
 }
 
 /// Handle CSI SM.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_csi_dispatch_sm(ictx: *mut input_ctx) {
     unsafe {
         let sctx = &raw mut (*ictx).ctx;
@@ -1953,7 +1933,7 @@ unsafe extern "C" fn input_csi_dispatch_sm(ictx: *mut input_ctx) {
 }
 
 /// Handle CSI private SM.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_csi_dispatch_sm_private(ictx: *mut input_ctx) {
     unsafe {
         let sctx = &raw mut (*ictx).ctx;
@@ -2008,7 +1988,7 @@ unsafe extern "C" fn input_csi_dispatch_sm_private(ictx: *mut input_ctx) {
 }
 
 /// Handle CSI graphics SM.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_csi_dispatch_sm_graphics(ictx: *mut input_ctx) {
     unsafe {
         #[cfg(feature = "sixel")]
@@ -2030,7 +2010,7 @@ unsafe extern "C" fn input_csi_dispatch_sm_graphics(ictx: *mut input_ctx) {
 }
 
 /// Handle CSI window operations.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_csi_dispatch_winops(ictx: *mut input_ctx) {
     unsafe {
         let sctx = &(*ictx).ctx;
@@ -2121,7 +2101,7 @@ unsafe extern "C" fn input_csi_dispatch_winops(ictx: *mut input_ctx) {
 }
 
 /// Helper for 256 colour SGR.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_csi_dispatch_sgr_256_do(ictx: *mut input_ctx, fgbg: i32, c: i32) -> i32 {
     unsafe {
         let gc = &raw mut (*ictx).cell.cell;
@@ -2146,7 +2126,7 @@ unsafe extern "C" fn input_csi_dispatch_sgr_256_do(ictx: *mut input_ctx, fgbg: i
 }
 
 /// Handle CSI SGR for 256 colours.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_csi_dispatch_sgr_256(ictx: *mut input_ctx, fgbg: i32, i: *mut u32) {
     unsafe {
         let c = input_get(ictx, (*i) + 1, 0, -1);
@@ -2157,7 +2137,7 @@ unsafe extern "C" fn input_csi_dispatch_sgr_256(ictx: *mut input_ctx, fgbg: i32,
 }
 
 /// Helper for RGB colour SGR.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_csi_dispatch_sgr_rgb_do(
     ictx: *mut input_ctx,
     fgbg: i32,
@@ -2184,7 +2164,7 @@ unsafe extern "C" fn input_csi_dispatch_sgr_rgb_do(
 }
 
 /// Handle CSI SGR for RGB colours.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_csi_dispatch_sgr_rgb(ictx: *mut input_ctx, fgbg: i32, i: *mut u32) {
     unsafe {
         let r = input_get(ictx, (*i) + 1, 0, -1);
@@ -2197,7 +2177,7 @@ unsafe extern "C" fn input_csi_dispatch_sgr_rgb(ictx: *mut input_ctx, fgbg: i32,
 }
 
 /// Handle CSI SGR with a ISO parameter.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_csi_dispatch_sgr_colon(ictx: *mut input_ctx, mut i: u32) {
     let __func__ = "input_csi_dispatch_sgr_colon";
     unsafe {
@@ -2303,7 +2283,7 @@ unsafe extern "C" fn input_csi_dispatch_sgr_colon(ictx: *mut input_ctx, mut i: u
 }
 
 /// Handle CSI SGR.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_csi_dispatch_sgr(ictx: *mut input_ctx) {
     unsafe {
         let gc = &raw mut (*ictx).cell.cell;
@@ -2382,7 +2362,7 @@ unsafe extern "C" fn input_csi_dispatch_sgr(ictx: *mut input_ctx) {
 }
 
 /// End of input with BEL.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_end_bel(ictx: *mut input_ctx) -> i32 {
     log_debug!("input_end_bel");
 
@@ -2394,7 +2374,7 @@ unsafe extern "C" fn input_end_bel(ictx: *mut input_ctx) -> i32 {
 }
 
 /// DCS string started.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_enter_dcs(ictx: *mut input_ctx) {
     unsafe {
         log_debug!("input_enter_dcs");
@@ -2406,7 +2386,7 @@ unsafe extern "C" fn input_enter_dcs(ictx: *mut input_ctx) {
 }
 
 /// DCS terminator (ST) received.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_dcs_dispatch(ictx: *mut input_ctx) -> i32 {
     unsafe {
         let func = "input_dcs_dispatch";
@@ -2462,7 +2442,7 @@ unsafe extern "C" fn input_dcs_dispatch(ictx: *mut input_ctx) -> i32 {
 }
 
 /// OSC string started.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_enter_osc(ictx: *mut input_ctx) {
     unsafe {
         log_debug!("input_enter_osc");
@@ -2474,7 +2454,7 @@ unsafe extern "C" fn input_enter_osc(ictx: *mut input_ctx) {
 }
 
 /// OSC terminator (ST) received.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_exit_osc(ictx: *mut input_ctx) {
     unsafe {
         let sctx = &raw mut (*ictx).ctx;
@@ -2548,7 +2528,7 @@ unsafe extern "C" fn input_exit_osc(ictx: *mut input_ctx) {
 }
 
 /// APC string started.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_enter_apc(ictx: *mut input_ctx) {
     unsafe {
         log_debug!("input_enter_apc");
@@ -2560,7 +2540,7 @@ unsafe extern "C" fn input_enter_apc(ictx: *mut input_ctx) {
 }
 
 /// APC terminator (ST) received.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_exit_apc(ictx: *mut input_ctx) {
     unsafe {
         let sctx = &raw mut (*ictx).ctx;
@@ -2580,7 +2560,7 @@ unsafe extern "C" fn input_exit_apc(ictx: *mut input_ctx) {
 }
 
 /// Rename string started.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_enter_rename(ictx: *mut input_ctx) {
     unsafe {
         log_debug!("input_enter_rename");
@@ -2592,7 +2572,7 @@ unsafe extern "C" fn input_enter_rename(ictx: *mut input_ctx) {
 }
 
 /// Rename terminator (ST) received.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_exit_rename(ictx: *mut input_ctx) {
     unsafe {
         let wp = (*ictx).wp;
@@ -2636,7 +2616,7 @@ unsafe extern "C" fn input_exit_rename(ictx: *mut input_ctx) {
 }
 
 /// Open UTF-8 character.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_top_bit_set(ictx: *mut input_ctx) -> i32 {
     let __func__ = "input_top_bit_set";
     unsafe {
@@ -2676,7 +2656,7 @@ unsafe extern "C" fn input_top_bit_set(ictx: *mut input_ctx) -> i32 {
 }
 
 /// Reply to a colour request.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_osc_colour_reply(ictx: *mut input_ctx, n: u32, mut c: i32) {
     unsafe {
         if c != -1 {
@@ -2685,7 +2665,7 @@ unsafe extern "C" fn input_osc_colour_reply(ictx: *mut input_ctx, n: u32, mut c:
         if c == -1 {
             return;
         }
-        let (r, g, b) = colour_split_rgb_(c);
+        let (r, g, b) = colour_split_rgb(c);
 
         let end = if (*ictx).input_end == input_end_type::INPUT_END_BEL {
             c"\x07".as_ptr()
@@ -2709,7 +2689,7 @@ unsafe extern "C" fn input_osc_colour_reply(ictx: *mut input_ctx, n: u32, mut c:
 }
 
 /// Handle the OSC 4 sequence for setting (multiple) palette entries.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_osc_4(ictx: *mut input_ctx, p: *mut c_char) {
     unsafe {
         // char *copy, *s, *next = NULL;
@@ -2745,7 +2725,7 @@ unsafe extern "C" fn input_osc_4(ictx: *mut input_ctx, p: *mut c_char) {
                 }
                 continue;
             }
-            c = colour_parseX11(s);
+            c = colour_parse_x11(s);
             if c == -1 {
                 s = next;
                 continue;
@@ -2766,7 +2746,7 @@ unsafe extern "C" fn input_osc_4(ictx: *mut input_ctx, p: *mut c_char) {
 }
 
 /// Handle the OSC 8 sequence for embedding hyperlinks.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_osc_8(ictx: *mut input_ctx, p: *mut c_char) {
     unsafe {
         let hl: *mut hyperlinks = (*(*ictx).ctx.s).hyperlinks;
@@ -2825,7 +2805,7 @@ unsafe extern "C" fn input_osc_8(ictx: *mut input_ctx, p: *mut c_char) {
 
 /// Get a client with a foreground for the pane.
 /// There isn't much to choose between them so just use the first.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_get_fg_client(wp: *mut window_pane) -> i32 {
     unsafe {
         let w = (*wp).window;
@@ -2847,7 +2827,7 @@ unsafe extern "C" fn input_get_fg_client(wp: *mut window_pane) -> i32 {
 }
 
 /// Get a client with a background for the pane.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_get_bg_client(wp: *mut window_pane) -> i32 {
     unsafe {
         let w = (*wp).window;
@@ -2870,7 +2850,7 @@ unsafe extern "C" fn input_get_bg_client(wp: *mut window_pane) -> i32 {
 
 // If any control mode client exists that has provided a bg color, return it.
 // Otherwise, return -1.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_get_bg_control_client(wp: *mut window_pane) -> i32 {
     unsafe {
         if (*wp).control_bg == -1 {
@@ -2889,7 +2869,7 @@ unsafe extern "C" fn input_get_bg_control_client(wp: *mut window_pane) -> i32 {
 
 // If any control mode client exists that has provided a fg color, return it.
 // Otherwise, return -1.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_get_fg_control_client(wp: *mut window_pane) -> i32 {
     unsafe {
         if (*wp).control_fg == -1 {
@@ -2906,7 +2886,7 @@ unsafe extern "C" fn input_get_fg_control_client(wp: *mut window_pane) -> i32 {
 }
 
 // Handle the OSC 10 sequence for setting and querying foreground colour.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_osc_10(ictx: *mut input_ctx, p: *mut c_char) {
     unsafe {
         let wp = (*ictx).wp;
@@ -2930,7 +2910,7 @@ unsafe extern "C" fn input_osc_10(ictx: *mut input_ctx, p: *mut c_char) {
             return;
         }
 
-        c = colour_parseX11(p);
+        c = colour_parse_x11(p);
         if c == -1 {
             log_debug!("bad OSC 10: {}", _s(p));
             return;
@@ -2946,7 +2926,7 @@ unsafe extern "C" fn input_osc_10(ictx: *mut input_ctx, p: *mut c_char) {
 }
 
 // Handle the OSC 110 sequence for resetting foreground colour.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_osc_110(ictx: *mut input_ctx, p: *const c_char) {
     unsafe {
         let wp = (*ictx).wp;
@@ -2966,7 +2946,7 @@ unsafe extern "C" fn input_osc_110(ictx: *mut input_ctx, p: *const c_char) {
 }
 
 /// Handle the OSC 11 sequence for setting and querying background colour.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_osc_11(ictx: *mut input_ctx, p: *const c_char) {
     unsafe {
         let wp = (*ictx).wp;
@@ -2991,7 +2971,7 @@ unsafe extern "C" fn input_osc_11(ictx: *mut input_ctx, p: *const c_char) {
             return;
         }
 
-        c = colour_parseX11(p);
+        c = colour_parse_x11(p);
         if c == -1 {
             log_debug!("bad OSC 11: {}", _s(p));
             return;
@@ -3007,7 +2987,7 @@ unsafe extern "C" fn input_osc_11(ictx: *mut input_ctx, p: *const c_char) {
 }
 
 /// Handle the OSC 111 sequence for resetting background colour.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_osc_111(ictx: *mut input_ctx, p: *mut c_char) {
     unsafe {
         let wp = (*ictx).wp;
@@ -3026,7 +3006,7 @@ unsafe extern "C" fn input_osc_111(ictx: *mut input_ctx, p: *mut c_char) {
 }
 
 /// Handle the OSC 12 sequence for setting and querying cursor colour.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_osc_12(ictx: *mut input_ctx, p: *const c_char) {
     unsafe {
         let wp = (*ictx).wp;
@@ -3043,7 +3023,7 @@ unsafe extern "C" fn input_osc_12(ictx: *mut input_ctx, p: *const c_char) {
             return;
         }
 
-        c = colour_parseX11(p);
+        c = colour_parse_x11(p);
         if c == -1 {
             log_debug!("bad OSC 12: {}", _s(p));
             return;
@@ -3053,7 +3033,7 @@ unsafe extern "C" fn input_osc_12(ictx: *mut input_ctx, p: *const c_char) {
 }
 
 /// Handle the OSC 112 sequence for resetting cursor colour.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_osc_112(ictx: *mut input_ctx, p: *const c_char) {
     unsafe {
         if *p == b'\0' as i8 {
@@ -3064,7 +3044,7 @@ unsafe extern "C" fn input_osc_112(ictx: *mut input_ctx, p: *const c_char) {
 }
 
 /// Handle the OSC 133 sequence.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_osc_133(ictx: *mut input_ctx, p: *const c_char) {
     unsafe {
         let gd = (*(*ictx).ctx.s).grid;
@@ -3084,7 +3064,7 @@ unsafe extern "C" fn input_osc_133(ictx: *mut input_ctx, p: *const c_char) {
 }
 
 /// Handle the OSC 52 sequence for setting the clipboard.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_osc_52(ictx: *mut input_ctx, p: *const c_char) {
     let __func__ = "input_osc_52";
 
@@ -3172,7 +3152,7 @@ unsafe extern "C" fn input_osc_52(ictx: *mut input_ctx, p: *const c_char) {
 }
 
 /// Handle the OSC 104 sequence for unsetting (multiple) palette entries.
-#[unsafe(no_mangle)]
+
 unsafe extern "C" fn input_osc_104(ictx: *mut input_ctx, p: *const c_char) {
     unsafe {
         let mut bad = false;
@@ -3213,7 +3193,6 @@ unsafe extern "C" fn input_osc_104(ictx: *mut input_ctx, p: *const c_char) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn input_reply_clipboard(
     bev: *mut bufferevent,
     buf: *const c_char,

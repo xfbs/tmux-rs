@@ -16,8 +16,7 @@ use crate::*;
 
 use crate::compat::queue::{tailq_insert_tail, tailq_remove};
 
-#[unsafe(no_mangle)]
-static mut cmd_swap_window_entry: cmd_entry = cmd_entry {
+pub static mut cmd_swap_window_entry: cmd_entry = cmd_entry {
     name: c"swap-window".as_ptr(),
     alias: c"swapw".as_ptr(),
 
@@ -35,7 +34,6 @@ static mut cmd_swap_window_entry: cmd_entry = cmd_entry {
     exec: Some(cmd_swap_window_exec),
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_swap_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

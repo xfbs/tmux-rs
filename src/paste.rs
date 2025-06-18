@@ -73,22 +73,18 @@ fn paste_cmp_times(a: *const paste_buffer, b: *const paste_buffer) -> i32 {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn paste_buffer_name(pb: NonNull<paste_buffer>) -> *const c_char {
     unsafe { (*pb.as_ptr()).name }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn paste_buffer_order(pb: NonNull<paste_buffer>) -> u32 {
     unsafe { (*pb.as_ptr()).order }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn paste_buffer_created(pb: NonNull<paste_buffer>) -> time_t {
     unsafe { (*pb.as_ptr()).created }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn paste_buffer_data(
     pb: *mut paste_buffer,
     size: *mut usize,
@@ -108,7 +104,6 @@ pub unsafe fn paste_buffer_data_(pb: NonNull<paste_buffer>, size: &mut usize) ->
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn paste_walk(pb: *mut paste_buffer) -> *mut paste_buffer {
     unsafe {
         if pb.is_null() {
@@ -118,12 +113,10 @@ pub unsafe extern "C" fn paste_walk(pb: *mut paste_buffer) -> *mut paste_buffer 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn paste_is_empty() -> i32 {
     unsafe { rb_root(&raw mut paste_by_time).is_null() as i32 }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn paste_get_top(name: *mut *const c_char) -> *mut paste_buffer {
     unsafe {
         let mut pb = rb_min::<_, discr_time_entry>(&raw mut paste_by_time);
@@ -141,7 +134,6 @@ pub unsafe extern "C" fn paste_get_top(name: *mut *const c_char) -> *mut paste_b
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn paste_get_name(name: *const c_char) -> *mut paste_buffer {
     unsafe {
         let mut pbfind = MaybeUninit::<paste_buffer>::uninit();
@@ -155,7 +147,6 @@ pub unsafe extern "C" fn paste_get_name(name: *const c_char) -> *mut paste_buffe
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn paste_free(pb: NonNull<paste_buffer>) {
     unsafe {
         let pb = pb.as_ptr();
@@ -173,7 +164,6 @@ pub unsafe extern "C" fn paste_free(pb: NonNull<paste_buffer>) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn paste_add(mut prefix: *const c_char, data: *mut c_char, size: usize) {
     unsafe {
         if prefix.is_null() {
@@ -225,7 +215,6 @@ pub unsafe extern "C" fn paste_add(mut prefix: *const c_char, data: *mut c_char,
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn paste_rename(
     oldname: *const c_char,
     newname: *const c_char,
@@ -279,7 +268,6 @@ pub unsafe extern "C" fn paste_rename(
     0
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn paste_set(
     data: *mut c_char,
     size: usize,
@@ -342,7 +330,6 @@ pub unsafe fn paste_replace(pb: NonNull<paste_buffer>, data: *mut c_char, size: 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn paste_make_sample(pb: *mut paste_buffer) -> *mut c_char {
     unsafe {
         const flags: i32 = VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL;

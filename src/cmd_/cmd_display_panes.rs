@@ -15,8 +15,7 @@ use crate::*;
 
 use crate::compat::queue::tailq_foreach;
 
-#[unsafe(no_mangle)]
-static mut cmd_display_panes_entry: cmd_entry = cmd_entry {
+pub static mut cmd_display_panes_entry: cmd_entry = cmd_entry {
     name: c"display-panes".as_ptr(),
     alias: c"displayp".as_ptr(),
 
@@ -34,7 +33,6 @@ pub struct cmd_display_panes_data {
     pub state: *mut args_command_state,
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_display_panes_args_parse(
     _: *mut args,
     _: u32,
@@ -43,7 +41,6 @@ unsafe extern "C" fn cmd_display_panes_args_parse(
     args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_display_panes_draw_pane(
     ctx: *mut screen_redraw_ctx,
     wp: *mut window_pane,
@@ -238,7 +235,6 @@ unsafe extern "C" fn cmd_display_panes_draw_pane(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_display_panes_draw(
     c: *mut client,
     data: *mut c_void,
@@ -262,7 +258,6 @@ unsafe extern "C" fn cmd_display_panes_draw(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_display_panes_free(c: *mut client, data: *mut c_void) {
     unsafe {
         let cdata = data as *mut cmd_display_panes_data;
@@ -275,7 +270,6 @@ unsafe extern "C" fn cmd_display_panes_free(c: *mut client, data: *mut c_void) {
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_display_panes_key(
     c: *mut client,
     data: *mut c_void,
@@ -332,7 +326,6 @@ unsafe extern "C" fn cmd_display_panes_key(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_display_panes_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

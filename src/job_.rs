@@ -73,7 +73,6 @@ impl ListEntry<job, ()> for job {
 type joblist = list_head<job>;
 static mut all_jobs: joblist = list_head_initializer();
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn job_run(
     cmd: *const c_char,
     argc: c_int,
@@ -286,7 +285,6 @@ pub unsafe extern "C" fn job_run(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn job_transfer(
     job: *mut job,
     pid: *mut pid_t,
@@ -323,7 +321,6 @@ pub unsafe extern "C" fn job_transfer(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn job_free(job: *mut job) {
     unsafe {
         log_debug!("free job {:p}: {}", job, _s((*job).cmd));
@@ -349,7 +346,6 @@ pub unsafe extern "C" fn job_free(job: *mut job) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn job_resize(job: *mut job, sx: c_uint, sy: c_uint) {
     let mut ws = MaybeUninit::<winsize>::uninit();
 
@@ -423,7 +419,6 @@ unsafe extern "C" fn job_error_callback(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn job_check_died(pid: pid_t, status: i32) {
     unsafe {
         let mut job: *mut job = null_mut();
@@ -466,20 +461,18 @@ pub unsafe extern "C" fn job_check_died(pid: pid_t, status: i32) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn job_get_status(job: *mut job) -> i32 {
     unsafe { (*job).status }
 }
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn job_get_data(job: *mut job) -> *mut c_void {
     unsafe { (*job).data }
 }
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn job_get_event(job: *mut job) -> *mut bufferevent {
     unsafe { (*job).event }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn job_kill_all() {
     unsafe {
         for job in list_foreach(&raw mut all_jobs).map(NonNull::as_ptr) {
@@ -490,7 +483,6 @@ pub unsafe extern "C" fn job_kill_all() {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn job_still_running() -> i32 {
     unsafe {
         for job in list_foreach(&raw mut all_jobs).map(NonNull::as_ptr) {
@@ -503,7 +495,6 @@ pub unsafe extern "C" fn job_still_running() -> i32 {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn job_print_summary(item: *mut cmdq_item, mut blank: i32) {
     let mut n = 0u32;
     unsafe {

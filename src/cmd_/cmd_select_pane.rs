@@ -15,8 +15,7 @@ use crate::*;
 
 use crate::compat::queue::{tailq_first, tailq_foreach, tailq_next, tailq_prev};
 
-#[unsafe(no_mangle)]
-static mut cmd_select_pane_entry: cmd_entry = cmd_entry {
+pub static mut cmd_select_pane_entry: cmd_entry = cmd_entry {
     name: c"select-pane".as_ptr(),
     alias: c"selectp".as_ptr(),
 
@@ -31,8 +30,7 @@ static mut cmd_select_pane_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_last_pane_entry: cmd_entry = cmd_entry {
+pub static mut cmd_last_pane_entry: cmd_entry = cmd_entry {
     name: c"last-pane".as_ptr(),
     alias: c"lastp".as_ptr(),
 
@@ -46,7 +44,6 @@ static mut cmd_last_pane_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_select_pane_redraw(w: *mut window) {
     unsafe {
         /*
@@ -73,7 +70,6 @@ pub unsafe extern "C" fn cmd_select_pane_redraw(w: *mut window) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

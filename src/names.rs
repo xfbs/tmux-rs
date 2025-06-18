@@ -16,11 +16,6 @@ use ::libc::{gettimeofday, memcpy, strchr, strcmp, strcspn, strlen, strncmp};
 use crate::event_::{event_add, event_initialized};
 use crate::*;
 
-unsafe extern "C" {
-    unsafe fn basename(_: *mut c_char) -> *mut c_char;
-}
-
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn name_time_callback(_fd: c_int, _events: c_short, arg: *mut c_void) {
     let w = arg as *mut window;
     unsafe {
@@ -28,7 +23,6 @@ pub unsafe extern "C" fn name_time_callback(_fd: c_int, _events: c_short, arg: *
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn name_time_expired(w: *mut window, tv: *mut timeval) -> c_int {
     unsafe {
         let mut offset: MaybeUninit<timeval> = MaybeUninit::<timeval>::uninit();
@@ -44,7 +38,6 @@ pub unsafe extern "C" fn name_time_expired(w: *mut window, tv: *mut timeval) -> 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe fn check_window_name(w: *mut window) {
     unsafe {
         let mut tv: timeval = zeroed();
@@ -108,7 +101,6 @@ pub unsafe fn check_window_name(w: *mut window) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn default_window_name(w: *mut window) -> *mut c_char {
     unsafe {
         if (*w).active.is_null() {
@@ -145,7 +137,6 @@ unsafe extern "C" fn format_window_name(w: *mut window) -> *const c_char {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe fn parse_window_name(in_: *const c_char) -> *mut c_char {
     unsafe {
         let sizeof_exec: usize = 6; // sizeof "exec "
@@ -181,7 +172,7 @@ pub unsafe fn parse_window_name(in_: *const c_char) -> *mut c_char {
         }
 
         if *name == b'/' as c_char {
-            name = basename(name);
+            name = libc::posix_basename(name);
         }
         name = xstrdup(name).cast().as_ptr();
         free(copy as _);

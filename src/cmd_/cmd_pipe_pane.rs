@@ -21,8 +21,7 @@ use libc::{
 
 use crate::compat::closefrom;
 
-#[unsafe(no_mangle)]
-static mut cmd_pipe_pane_entry: cmd_entry = cmd_entry {
+pub static mut cmd_pipe_pane_entry: cmd_entry = cmd_entry {
     name: c"pipe-pane".as_ptr(),
     alias: c"pipep".as_ptr(),
 
@@ -36,7 +35,6 @@ static mut cmd_pipe_pane_entry: cmd_entry = cmd_entry {
     exec: Some(cmd_pipe_pane_exec),
 };
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
@@ -204,7 +202,6 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_pipe_pane_read_callback(_bufev: *mut bufferevent, data: *mut c_void) {
     unsafe {
         let wp: *mut window_pane = data as *mut window_pane;
@@ -222,7 +219,6 @@ pub unsafe extern "C" fn cmd_pipe_pane_read_callback(_bufev: *mut bufferevent, d
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_pipe_pane_write_callback(_bufev: *mut bufferevent, data: *mut c_void) {
     unsafe {
         let wp: *mut window_pane = data as *mut window_pane;
@@ -235,7 +231,6 @@ pub unsafe extern "C" fn cmd_pipe_pane_write_callback(_bufev: *mut bufferevent, 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_pipe_pane_error_callback(
     _bufev: *mut bufferevent,
     _what: i16,

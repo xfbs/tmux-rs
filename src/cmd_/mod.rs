@@ -89,136 +89,89 @@ pub mod cmd_switch_client;
 pub mod cmd_unbind_key;
 pub mod cmd_wait_for;
 
-unsafe extern "C" {
-    // pub static mut cmd_table: [*const cmd_entry; 0usize];
-    // pub fn cmd_log_argv(_: c_int, _: *mut *mut c_char, _: *const c_char, ...);
-    // pub fn cmd_prepend_argv(_: *mut c_int, _: *mut *mut *mut c_char, _: *const c_char);
-    // pub fn cmd_append_argv(_: *mut c_int, _: *mut *mut *mut c_char, _: *const c_char);
-    // pub fn cmd_pack_argv(_: c_int, _: *mut *mut c_char, _: *mut c_char, _: usize) -> c_int;
-    // pub fn cmd_unpack_argv(_: *mut c_char, _: usize, _: c_int, _: *mut *mut *mut c_char) -> c_int;
-    // pub fn cmd_copy_argv(_: c_int, _: *mut *mut c_char) -> *mut *mut c_char;
-    // pub fn cmd_free_argv(_: c_int, _: *mut *mut c_char);
-    // pub fn cmd_stringify_argv(_: c_int, _: *mut *mut c_char) -> *mut c_char;
-    // pub fn cmd_get_alias(_: *const c_char) -> *mut c_char;
-    // pub fn cmd_get_entry(_: *mut cmd) -> *const cmd_entry;
-    // pub fn cmd_get_args(_: *mut cmd) -> *mut args;
-    // pub fn cmd_get_group(_: *mut cmd) -> c_uint;
-    // pub fn cmd_get_source(_: *mut cmd, _: *mut *const c_char, _: *mut c_uint);
-    // pub fn cmd_parse(_: *mut args_value, _: c_uint, _: *const c_char, _: c_uint, _: *mut *mut c_char) -> *mut cmd;
-    // pub fn cmd_copy(_: *mut cmd, _: c_int, _: *mut *mut c_char) -> *mut cmd;
-    // pub fn cmd_free(_: *mut cmd);
-    // pub fn cmd_print(_: *mut cmd) -> *mut c_char;
-    // pub fn cmd_list_new() -> *mut cmd_list;
-    // pub fn cmd_list_copy(_: *mut cmd_list, _: c_int, _: *mut *mut c_char) -> *mut cmd_list;
-    // pub fn cmd_list_append(_: *mut cmd_list, _: *mut cmd);
-    // pub fn cmd_list_append_all(_: *mut cmd_list, _: *mut cmd_list);
-    // pub fn cmd_list_move(_: *mut cmd_list, _: *mut cmd_list);
-    // pub fn cmd_list_free(_: *mut cmd_list);
-    // pub fn cmd_list_print(_: *mut cmd_list, _: c_int) -> *mut c_char;
-    // pub fn cmd_list_first(_: *mut cmd_list) -> *mut cmd;
-    // pub fn cmd_list_next(_: *mut cmd) -> *mut cmd;
-    // pub fn cmd_list_all_have(_: *mut cmd_list, _: c_int) -> c_int;
-    // pub fn cmd_list_any_have(_: *mut cmd_list, _: c_int) -> c_int;
-    // pub fn cmd_mouse_at(_: *mut window_pane, _: *mut mouse_event, _: *mut c_uint, _: *mut c_uint, _: c_int) -> c_int;
-    // pub fn cmd_mouse_window(_: *mut mouse_event, _: *mut *mut session) -> *mut winlink;
-    // pub fn cmd_mouse_pane(_: *mut mouse_event, _: *mut *mut session, _: *mut *mut winlink) -> *mut window_pane;
-    // pub fn cmd_template_replace(_: *const c_char, _: *const c_char, _: c_int) -> *mut c_char;
-}
+use cmd_attach_session::cmd_attach_session_entry;
+use cmd_bind_key::cmd_bind_key_entry;
+use cmd_break_pane::cmd_break_pane_entry;
+use cmd_capture_pane::{cmd_capture_pane_entry, cmd_clear_history_entry};
+use cmd_choose_tree::{
+    cmd_choose_buffer_entry, cmd_choose_client_entry, cmd_choose_tree_entry,
+    cmd_customize_mode_entry,
+};
+use cmd_command_prompt::cmd_command_prompt_entry;
+use cmd_confirm_before::cmd_confirm_before_entry;
+use cmd_copy_mode::{cmd_clock_mode_entry, cmd_copy_mode_entry};
+use cmd_detach_client::cmd_detach_client_entry;
+use cmd_detach_client::cmd_suspend_client_entry;
+use cmd_display_menu::{cmd_display_menu_entry, cmd_display_popup_entry};
+use cmd_display_message::cmd_display_message_entry;
+use cmd_display_panes::cmd_display_panes_entry;
+use cmd_find_window::cmd_find_window_entry;
+use cmd_if_shell::cmd_if_shell_entry;
+use cmd_join_pane::{cmd_join_pane_entry, cmd_move_pane_entry};
+use cmd_kill_pane::cmd_kill_pane_entry;
+use cmd_kill_server::cmd_kill_server_entry;
+use cmd_kill_server::cmd_start_server_entry;
+use cmd_kill_session::cmd_kill_session_entry;
+use cmd_kill_window::cmd_kill_window_entry;
+use cmd_kill_window::cmd_unlink_window_entry;
+use cmd_list_buffers::cmd_list_buffers_entry;
+use cmd_list_clients::cmd_list_clients_entry;
+use cmd_list_keys::{cmd_list_commands_entry, cmd_list_keys_entry};
+use cmd_list_panes::cmd_list_panes_entry;
+use cmd_list_sessions::cmd_list_sessions_entry;
+use cmd_list_windows::cmd_list_windows_entry;
+use cmd_load_buffer::cmd_load_buffer_entry;
+use cmd_lock_server::{cmd_lock_client_entry, cmd_lock_server_entry, cmd_lock_session_entry};
+use cmd_move_window::cmd_link_window_entry;
+use cmd_move_window::cmd_move_window_entry;
+use cmd_new_session::cmd_has_session_entry;
+use cmd_new_session::cmd_new_session_entry;
+use cmd_new_window::cmd_new_window_entry;
+use cmd_paste_buffer::cmd_paste_buffer_entry;
+use cmd_pipe_pane::cmd_pipe_pane_entry;
+use cmd_refresh_client::cmd_refresh_client_entry;
+use cmd_rename_session::cmd_rename_session_entry;
+use cmd_rename_window::cmd_rename_window_entry;
+use cmd_resize_pane::cmd_resize_pane_entry;
+use cmd_resize_window::cmd_resize_window_entry;
+use cmd_respawn_pane::cmd_respawn_pane_entry;
+use cmd_respawn_window::cmd_respawn_window_entry;
+use cmd_rotate_window::cmd_rotate_window_entry;
+use cmd_run_shell::cmd_run_shell_entry;
+use cmd_save_buffer::cmd_save_buffer_entry;
+use cmd_save_buffer::cmd_show_buffer_entry;
+use cmd_select_layout::cmd_next_layout_entry;
+use cmd_select_layout::cmd_previous_layout_entry;
+use cmd_select_layout::cmd_select_layout_entry;
+use cmd_select_pane::cmd_last_pane_entry;
+use cmd_select_pane::cmd_select_pane_entry;
+use cmd_select_window::cmd_last_window_entry;
+use cmd_select_window::cmd_next_window_entry;
+use cmd_select_window::cmd_previous_window_entry;
+use cmd_select_window::cmd_select_window_entry;
+use cmd_send_keys::cmd_send_keys_entry;
+use cmd_send_keys::cmd_send_prefix_entry;
+use cmd_server_access::cmd_server_access_entry;
+use cmd_set_buffer::cmd_delete_buffer_entry;
+use cmd_set_buffer::cmd_set_buffer_entry;
+use cmd_set_environment::cmd_set_environment_entry;
+use cmd_set_option::cmd_set_hook_entry;
+use cmd_set_option::cmd_set_option_entry;
+use cmd_set_option::cmd_set_window_option_entry;
+use cmd_show_environment::cmd_show_environment_entry;
+use cmd_show_messages::cmd_show_messages_entry;
+use cmd_show_options::cmd_show_hooks_entry;
+use cmd_show_options::cmd_show_options_entry;
+use cmd_show_options::cmd_show_window_options_entry;
+use cmd_show_prompt_history::{cmd_clear_prompt_history_entry, cmd_show_prompt_history_entry};
+use cmd_source_file::cmd_source_file_entry;
+use cmd_split_window::cmd_split_window_entry;
+use cmd_swap_pane::cmd_swap_pane_entry;
+use cmd_swap_window::cmd_swap_window_entry;
+use cmd_switch_client::cmd_switch_client_entry;
+use cmd_unbind_key::cmd_unbind_key_entry;
+use cmd_wait_for::cmd_wait_for_entry;
 
-unsafe extern "C" {
-    static cmd_attach_session_entry: cmd_entry;
-    static cmd_bind_key_entry: cmd_entry;
-    static cmd_break_pane_entry: cmd_entry;
-    static cmd_capture_pane_entry: cmd_entry;
-    static cmd_choose_buffer_entry: cmd_entry;
-    static cmd_choose_client_entry: cmd_entry;
-    static cmd_choose_tree_entry: cmd_entry;
-    static cmd_clear_history_entry: cmd_entry;
-    static cmd_clear_prompt_history_entry: cmd_entry;
-    static cmd_clock_mode_entry: cmd_entry;
-    static cmd_command_prompt_entry: cmd_entry;
-    static cmd_confirm_before_entry: cmd_entry;
-    static cmd_copy_mode_entry: cmd_entry;
-    static cmd_customize_mode_entry: cmd_entry;
-    static cmd_delete_buffer_entry: cmd_entry;
-    static cmd_detach_client_entry: cmd_entry;
-    static cmd_display_menu_entry: cmd_entry;
-    static cmd_display_message_entry: cmd_entry;
-    static cmd_display_popup_entry: cmd_entry;
-    static cmd_display_panes_entry: cmd_entry;
-    static cmd_find_window_entry: cmd_entry;
-    static cmd_has_session_entry: cmd_entry;
-    static cmd_if_shell_entry: cmd_entry;
-    static cmd_join_pane_entry: cmd_entry;
-    static cmd_kill_pane_entry: cmd_entry;
-    static cmd_kill_server_entry: cmd_entry;
-    static cmd_kill_session_entry: cmd_entry;
-    static cmd_kill_window_entry: cmd_entry;
-    static cmd_last_pane_entry: cmd_entry;
-    static cmd_last_window_entry: cmd_entry;
-    static cmd_link_window_entry: cmd_entry;
-    static cmd_list_buffers_entry: cmd_entry;
-    static cmd_list_clients_entry: cmd_entry;
-    static cmd_list_commands_entry: cmd_entry;
-    static cmd_list_keys_entry: cmd_entry;
-    static cmd_list_panes_entry: cmd_entry;
-    static cmd_list_sessions_entry: cmd_entry;
-    static cmd_list_windows_entry: cmd_entry;
-    static cmd_load_buffer_entry: cmd_entry;
-    static cmd_lock_client_entry: cmd_entry;
-    static cmd_lock_server_entry: cmd_entry;
-    static cmd_lock_session_entry: cmd_entry;
-    static cmd_move_pane_entry: cmd_entry;
-    static cmd_move_window_entry: cmd_entry;
-    static cmd_new_session_entry: cmd_entry;
-    static cmd_new_window_entry: cmd_entry;
-    static cmd_next_layout_entry: cmd_entry;
-    static cmd_next_window_entry: cmd_entry;
-    static cmd_paste_buffer_entry: cmd_entry;
-    static cmd_pipe_pane_entry: cmd_entry;
-    static cmd_previous_layout_entry: cmd_entry;
-    static cmd_previous_window_entry: cmd_entry;
-    static cmd_refresh_client_entry: cmd_entry;
-    static cmd_rename_session_entry: cmd_entry;
-    static cmd_rename_window_entry: cmd_entry;
-    static cmd_resize_pane_entry: cmd_entry;
-    static cmd_resize_window_entry: cmd_entry;
-    static cmd_respawn_pane_entry: cmd_entry;
-    static cmd_respawn_window_entry: cmd_entry;
-    static cmd_rotate_window_entry: cmd_entry;
-    static cmd_run_shell_entry: cmd_entry;
-    static cmd_save_buffer_entry: cmd_entry;
-    static cmd_select_layout_entry: cmd_entry;
-    static cmd_select_pane_entry: cmd_entry;
-    static cmd_select_window_entry: cmd_entry;
-    static cmd_send_keys_entry: cmd_entry;
-    static cmd_send_prefix_entry: cmd_entry;
-    static cmd_server_access_entry: cmd_entry;
-    static cmd_set_buffer_entry: cmd_entry;
-    static cmd_set_environment_entry: cmd_entry;
-    static cmd_set_hook_entry: cmd_entry;
-    static cmd_set_option_entry: cmd_entry;
-    static cmd_set_window_option_entry: cmd_entry;
-    static cmd_show_buffer_entry: cmd_entry;
-    static cmd_show_environment_entry: cmd_entry;
-    static cmd_show_hooks_entry: cmd_entry;
-    static cmd_show_messages_entry: cmd_entry;
-    static cmd_show_options_entry: cmd_entry;
-    static cmd_show_prompt_history_entry: cmd_entry;
-    static cmd_show_window_options_entry: cmd_entry;
-    static cmd_source_file_entry: cmd_entry;
-    static cmd_split_window_entry: cmd_entry;
-    static cmd_start_server_entry: cmd_entry;
-    static cmd_suspend_client_entry: cmd_entry;
-    static cmd_swap_pane_entry: cmd_entry;
-    static cmd_swap_window_entry: cmd_entry;
-    static cmd_switch_client_entry: cmd_entry;
-    static cmd_unbind_key_entry: cmd_entry;
-    static cmd_unlink_window_entry: cmd_entry;
-    static cmd_wait_for_entry: cmd_entry;
-}
-
-#[unsafe(no_mangle)]
 pub static mut cmd_table: [*const cmd_entry; 91] = unsafe {
     [
         &raw const cmd_attach_session_entry,
@@ -336,7 +289,7 @@ impl Entry<cmd, qentry> for cmd {
 }
 
 // Next group number for new command list.
-#[unsafe(no_mangle)]
+
 pub static mut cmd_list_next_group: u32 = 1;
 
 macro_rules! cmd_log_argv {
@@ -356,7 +309,6 @@ pub unsafe fn cmd_log_argv_(argc: i32, argv: *mut *mut c_char, args: std::fmt::A
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_prepend_argv(
     argc: *mut c_int,
     argv: *mut *mut *mut c_char,
@@ -378,7 +330,6 @@ pub unsafe extern "C" fn cmd_prepend_argv(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_append_argv(
     argc: *mut c_int,
     argv: *mut *mut *mut c_char,
@@ -391,7 +342,6 @@ pub unsafe extern "C" fn cmd_append_argv(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_pack_argv(
     argc: c_int,
     argv: *mut *mut c_char,
@@ -419,7 +369,6 @@ pub unsafe extern "C" fn cmd_pack_argv(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_unpack_argv(
     mut buf: *mut c_char,
     mut len: usize,
@@ -451,7 +400,6 @@ pub unsafe extern "C" fn cmd_unpack_argv(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_copy_argv(argc: c_int, argv: *mut *mut c_char) -> *mut *mut c_char {
     unsafe {
         if argc == 0 {
@@ -469,7 +417,6 @@ pub unsafe extern "C" fn cmd_copy_argv(argc: c_int, argv: *mut *mut c_char) -> *
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_free_argv(argc: c_int, argv: *mut *mut c_char) {
     unsafe {
         if argc == 0 {
@@ -482,7 +429,6 @@ pub unsafe extern "C" fn cmd_free_argv(argc: c_int, argv: *mut *mut c_char) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_stringify_argv(argc: c_int, argv: *mut *mut c_char) -> *mut c_char {
     unsafe {
         //char	*buf = NULL, *s;
@@ -522,22 +468,18 @@ pub unsafe extern "C" fn cmd_stringify_argv(argc: c_int, argv: *mut *mut c_char)
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_get_entry(cmd: *mut cmd) -> *mut cmd_entry {
     unsafe { (*cmd).entry }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_get_args(cmd: *mut cmd) -> *mut args {
     unsafe { (*cmd).args }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_get_group(cmd: *mut cmd) -> c_uint {
     unsafe { (*cmd).group }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_get_source(
     cmd: *mut cmd,
     file: *mut *const c_char,
@@ -553,7 +495,6 @@ pub unsafe extern "C" fn cmd_get_source(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_get_alias(name: *const c_char) -> *mut c_char {
     unsafe {
         let o = options_get_only(global_options, c"command-alias".as_ptr());
@@ -580,7 +521,6 @@ pub unsafe extern "C" fn cmd_get_alias(name: *const c_char) -> *mut c_char {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_find(name: *const c_char, cause: *mut *mut c_char) -> *mut cmd_entry {
     let mut loop_: *mut *mut cmd_entry = null_mut();
     let mut entry: *mut cmd_entry = null_mut();
@@ -655,7 +595,6 @@ pub unsafe extern "C" fn cmd_find(name: *const c_char, cause: *mut *mut c_char) 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_parse(
     values: *mut args_value,
     count: c_uint,
@@ -699,7 +638,6 @@ pub unsafe extern "C" fn cmd_parse(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_free(cmd: *mut cmd) {
     unsafe {
         free((*cmd).file as _);
@@ -709,7 +647,6 @@ pub unsafe extern "C" fn cmd_free(cmd: *mut cmd) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_copy(cmd: *mut cmd, argc: c_int, argv: *mut *mut c_char) -> *mut cmd {
     unsafe {
         let new_cmd: *mut cmd = xcalloc(1, size_of::<cmd>()).cast().as_ptr();
@@ -725,7 +662,6 @@ pub unsafe extern "C" fn cmd_copy(cmd: *mut cmd, argc: c_int, argv: *mut *mut c_
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_print(cmd: *mut cmd) -> *mut c_char {
     unsafe {
         let s = args_print((*cmd).args);
@@ -740,7 +676,6 @@ pub unsafe extern "C" fn cmd_print(cmd: *mut cmd) -> *mut c_char {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_list_new() -> *mut cmd_list {
     unsafe {
         let cmdlist: *mut cmd_list = xcalloc(1, size_of::<cmd_list>()).cast().as_ptr();
@@ -753,7 +688,6 @@ pub unsafe extern "C" fn cmd_list_new() -> *mut cmd_list {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_list_append(cmdlist: *mut cmd_list, cmd: *mut cmd) {
     unsafe {
         (*cmd).group = (*cmdlist).group;
@@ -761,7 +695,6 @@ pub unsafe extern "C" fn cmd_list_append(cmdlist: *mut cmd_list, cmd: *mut cmd) 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_list_append_all(cmdlist: *mut cmd_list, from: *mut cmd_list) {
     unsafe {
         for cmd in tailq_foreach::<_, qentry>((*from).list).map(NonNull::as_ptr) {
@@ -771,7 +704,6 @@ pub unsafe extern "C" fn cmd_list_append_all(cmdlist: *mut cmd_list, from: *mut 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_list_move(cmdlist: *mut cmd_list, from: *mut cmd_list) {
     unsafe {
         tailq_concat::<_, qentry>((*cmdlist).list, (*from).list);
@@ -780,7 +712,6 @@ pub unsafe extern "C" fn cmd_list_move(cmdlist: *mut cmd_list, from: *mut cmd_li
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_list_free(cmdlist: *mut cmd_list) {
     unsafe {
         (*cmdlist).references -= 1;
@@ -797,7 +728,6 @@ pub unsafe extern "C" fn cmd_list_free(cmdlist: *mut cmd_list) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_list_copy(
     cmdlist: *mut cmd_list,
     argc: c_int,
@@ -828,7 +758,6 @@ pub unsafe extern "C" fn cmd_list_copy(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_list_print(cmdlist: *mut cmd_list, escaped: c_int) -> *mut c_char {
     unsafe {
         let mut len = 1;
@@ -867,17 +796,14 @@ pub unsafe extern "C" fn cmd_list_print(cmdlist: *mut cmd_list, escaped: c_int) 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_list_first(cmdlist: *mut cmd_list) -> *mut cmd {
     unsafe { tailq_first((*cmdlist).list) }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_list_next(cmd: *mut cmd) -> *mut cmd {
     unsafe { tailq_next::<_, _, qentry>(cmd) }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_list_all_have(cmdlist: *mut cmd_list, flag: cmd_flag) -> boolint {
     unsafe {
         boolint::from(
@@ -888,7 +814,6 @@ pub unsafe extern "C" fn cmd_list_all_have(cmdlist: *mut cmd_list, flag: cmd_fla
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_list_any_have(cmdlist: *mut cmd_list, flag: cmd_flag) -> boolint {
     unsafe {
         tailq_foreach((*cmdlist).list)
@@ -898,7 +823,6 @@ pub unsafe extern "C" fn cmd_list_any_have(cmdlist: *mut cmd_list, flag: cmd_fla
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_mouse_at(
     wp: *mut window_pane,
     m: *mut mouse_event,
@@ -947,7 +871,6 @@ pub unsafe extern "C" fn cmd_mouse_at(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_mouse_window(
     m: *mut mouse_event,
     sp: *mut *mut session,
@@ -983,7 +906,6 @@ pub unsafe extern "C" fn cmd_mouse_window(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_mouse_pane(
     m: *mut mouse_event,
     sp: *mut *mut session,
@@ -1009,7 +931,6 @@ pub unsafe extern "C" fn cmd_mouse_pane(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn cmd_template_replace(
     template: *const c_char,
     s: *const c_char,

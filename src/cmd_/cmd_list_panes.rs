@@ -15,8 +15,7 @@ use crate::*;
 
 use crate::compat::{queue::tailq_foreach, tree::rb_foreach};
 
-#[unsafe(no_mangle)]
-static mut cmd_list_panes_entry: cmd_entry = cmd_entry {
+pub static mut cmd_list_panes_entry: cmd_entry = cmd_entry {
     name: c"list-panes".as_ptr(),
     alias: c"lsp".as_ptr(),
 
@@ -30,7 +29,6 @@ static mut cmd_list_panes_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_list_panes_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
@@ -50,7 +48,6 @@ unsafe extern "C" fn cmd_list_panes_exec(self_: *mut cmd, item: *mut cmdq_item) 
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_list_panes_server(self_: *mut cmd, item: *mut cmdq_item) {
     unsafe {
         for s in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
@@ -59,7 +56,6 @@ unsafe extern "C" fn cmd_list_panes_server(self_: *mut cmd, item: *mut cmdq_item
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_list_panes_session(
     self_: *mut cmd,
     s: *mut session,

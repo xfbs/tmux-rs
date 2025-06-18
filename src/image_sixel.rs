@@ -43,7 +43,6 @@ pub struct sixel_image {
     lines: *mut sixel_line,
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn sixel_parse_expand_lines(si: *mut sixel_image, y: u32) -> i32 {
     unsafe {
         if y <= (*si).y {
@@ -58,7 +57,6 @@ unsafe extern "C" fn sixel_parse_expand_lines(si: *mut sixel_image, y: u32) -> i
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn sixel_parse_expand_line(
     si: *mut sixel_image,
     sl: *mut sixel_line,
@@ -80,7 +78,6 @@ unsafe extern "C" fn sixel_parse_expand_line(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn sixel_get_pixel(si: *mut sixel_image, x: u32, y: u32) -> u32 {
     unsafe {
         if y >= (*si).y {
@@ -94,7 +91,6 @@ unsafe extern "C" fn sixel_get_pixel(si: *mut sixel_image, x: u32, y: u32) -> u3
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn sixel_set_pixel(si: *mut sixel_image, x: u32, y: u32, c: u32) -> i32 {
     unsafe {
         if sixel_parse_expand_lines(si, y + 1) != 0 {
@@ -110,7 +106,6 @@ unsafe extern "C" fn sixel_set_pixel(si: *mut sixel_image, x: u32, y: u32, c: u3
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn sixel_parse_write(si: *mut sixel_image, ch: u32) -> i32 {
     if sixel_parse_expand_lines(si, (*si).dy + 6) != 0 {
         return 1;
@@ -129,7 +124,6 @@ unsafe extern "C" fn sixel_parse_write(si: *mut sixel_image, ch: u32) -> i32 {
     return 0;
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn sixel_parse_attributes(
     si: *mut sixel_image,
     cp: *const c_char,
@@ -184,7 +178,6 @@ unsafe extern "C" fn sixel_parse_attributes(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn sixel_parse_colour(
     si: *mut sixel_image,
     cp: *const c_char,
@@ -246,7 +239,6 @@ unsafe extern "C" fn sixel_parse_colour(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn sixel_parse_repeat(
     si: *mut sixel_image,
     cp: *const c_char,
@@ -303,7 +295,6 @@ unsafe extern "C" fn sixel_parse_repeat(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn sixel_parse(
     buf: *const c_char,
     len: usize,
@@ -381,7 +372,7 @@ pub unsafe extern "C" fn sixel_parse(
         return null_mut();
     }
 }
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn sixel_free(si: *mut sixel_image) {
     unsafe {
         for y in 0..(*si).y {
@@ -394,7 +385,6 @@ pub unsafe extern "C" fn sixel_free(si: *mut sixel_image) {
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn sixel_log(si: *mut sixel_image) {
     unsafe {
         let mut s: [c_char; SIXEL_WIDTH_LIMIT as usize + 1] = [0; SIXEL_WIDTH_LIMIT as usize + 1];
@@ -426,7 +416,6 @@ unsafe extern "C" fn sixel_log(si: *mut sixel_image) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn sixel_size_in_cells(si: *mut sixel_image, x: *mut u32, y: *mut u32) {
     unsafe {
         if (((*si).x % (*si).xpixel) == 0) {
@@ -442,7 +431,6 @@ pub unsafe extern "C" fn sixel_size_in_cells(si: *mut sixel_image, x: *mut u32, 
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn sixel_scale(
     si: *mut sixel_image,
     mut xpixel: u32,
@@ -517,7 +505,6 @@ pub unsafe extern "C" fn sixel_scale(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn sixel_print_add(
     buf: *mut *mut c_char,
     len: *mut usize,
@@ -535,7 +522,6 @@ unsafe extern "C" fn sixel_print_add(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn sixel_print_repeat(
     buf: *mut *mut c_char,
     len: *mut usize,
@@ -567,7 +553,6 @@ unsafe extern "C" fn sixel_print_repeat(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn sixel_print(
     si: *mut sixel_image,
     map: *mut sixel_image,
@@ -727,7 +712,6 @@ unsafe extern "C" fn sixel_print(
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn sixel_to_screen(si: *mut sixel_image) -> *mut screen {
     unsafe {
         let mut ctx: screen_write_ctx = zeroed();

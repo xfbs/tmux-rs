@@ -27,28 +27,24 @@ unsafe fn grid_view_y(gd: *mut grid, y: u32) -> u32 {
     unsafe { (*gd).hsize + (y) }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_view_get_cell(gd: *mut grid, px: u32, py: u32, gc: *mut grid_cell) {
     unsafe {
         grid_get_cell(gd, grid_view_x(gd, px), grid_view_y(gd, py), gc);
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_view_set_cell(gd: *mut grid, px: u32, py: u32, gc: *const grid_cell) {
     unsafe {
         grid_set_cell(gd, grid_view_x(gd, px), grid_view_y(gd, py), gc);
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_view_set_padding(gd: *mut grid, px: u32, py: u32) {
     unsafe {
         grid_set_padding(gd, grid_view_x(gd, px), grid_view_y(gd, py));
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_view_set_cells(
     gd: *mut grid,
     px: u32,
@@ -62,7 +58,6 @@ pub unsafe extern "C" fn grid_view_set_cells(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_view_clear_history(gd: *mut grid, bg: u32) {
     unsafe {
         let mut last = 0u32;
@@ -89,7 +84,6 @@ pub unsafe extern "C" fn grid_view_clear_history(gd: *mut grid, bg: u32) {
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_view_clear(
     gd: *mut grid,
     mut px: u32,
@@ -106,7 +100,6 @@ pub unsafe extern "C" fn grid_view_clear(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_view_scroll_region_up(
     gd: *mut grid,
     mut rupper: u32,
@@ -131,7 +124,6 @@ pub unsafe extern "C" fn grid_view_scroll_region_up(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_view_scroll_region_down(
     gd: *mut grid,
     mut rupper: u32,
@@ -146,7 +138,6 @@ pub unsafe extern "C" fn grid_view_scroll_region_down(
     }
 }
 
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn grid_view_insert_lines(gd: *mut grid, mut py: u32, ny: u32, bg: u32) {
     unsafe {
         py = grid_view_y(gd, py);
@@ -158,7 +149,7 @@ pub unsafe extern "C" fn grid_view_insert_lines(gd: *mut grid, mut py: u32, ny: 
 }
 
 /// Insert lines in region.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn grid_view_insert_lines_region(
     gd: *mut grid,
     mut rlower: u32,
@@ -179,7 +170,7 @@ pub unsafe extern "C" fn grid_view_insert_lines_region(
 }
 
 /// Delete lines.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn grid_view_delete_lines(gd: *mut grid, mut py: u32, ny: u32, bg: u32) {
     unsafe {
         py = grid_view_y(gd, py);
@@ -206,7 +197,7 @@ pub unsafe extern "C" fn grid_view_delete_lines(gd: *mut grid, mut py: u32, ny: 
 }
 
 /// Delete lines inside scroll region.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn grid_view_delete_lines_region(
     gd: *mut grid,
     mut rlower: u32,
@@ -227,7 +218,7 @@ pub unsafe extern "C" fn grid_view_delete_lines_region(
 }
 
 /// Insert characters.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn grid_view_insert_cells(
     gd: *mut grid,
     mut px: u32,
@@ -250,7 +241,7 @@ pub unsafe extern "C" fn grid_view_insert_cells(
 }
 
 /// Delete characters.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn grid_view_delete_cells(
     gd: *mut grid,
     mut px: u32,
@@ -270,7 +261,7 @@ pub unsafe extern "C" fn grid_view_delete_cells(
 }
 
 /// Convert cells into a string.
-#[unsafe(no_mangle)]
+
 pub unsafe extern "C" fn grid_view_string_cells(
     gd: *mut grid,
     mut px: u32,

@@ -14,8 +14,7 @@
 
 use super::*;
 
-#[unsafe(no_mangle)]
-static mut cmd_copy_mode_entry: cmd_entry = cmd_entry {
+pub static mut cmd_copy_mode_entry: cmd_entry = cmd_entry {
     name: c"copy-mode".as_ptr(),
     alias: null_mut(),
 
@@ -29,8 +28,7 @@ static mut cmd_copy_mode_entry: cmd_entry = cmd_entry {
     exec: Some(cmd_copy_mode_exec),
 };
 
-#[unsafe(no_mangle)]
-static mut cmd_clock_mode_entry: cmd_entry = cmd_entry {
+pub static mut cmd_clock_mode_entry: cmd_entry = cmd_entry {
     name: c"clock-mode".as_ptr(),
     alias: null_mut(),
 
@@ -44,7 +42,6 @@ static mut cmd_clock_mode_entry: cmd_entry = cmd_entry {
     exec: Some(cmd_copy_mode_exec),
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_copy_mode_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);

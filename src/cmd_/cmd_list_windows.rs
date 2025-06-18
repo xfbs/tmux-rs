@@ -18,8 +18,7 @@ use crate::compat::tree::rb_foreach;
 const LIST_WINDOWS_TEMPLATE: &CStr = c"#{window_index}: #{window_name}#{window_raw_flags} (#{window_panes} panes) [#{window_width}x#{window_height}] [layout #{window_layout}] #{window_id}#{?window_active, (active),}";
 const LIST_WINDOWS_WITH_SESSION_TEMPLATE: &CStr = c"#{session_name}:#{window_index}: #{window_name}#{window_raw_flags} (#{window_panes} panes) [#{window_width}x#{window_height}] ";
 
-#[unsafe(no_mangle)]
-static mut cmd_list_windows_entry: cmd_entry = cmd_entry {
+pub static mut cmd_list_windows_entry: cmd_entry = cmd_entry {
     name: c"list-windows".as_ptr(),
     alias: c"lsw".as_ptr(),
 
@@ -33,7 +32,6 @@ static mut cmd_list_windows_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_list_windows_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
@@ -49,7 +47,6 @@ unsafe extern "C" fn cmd_list_windows_exec(self_: *mut cmd, item: *mut cmdq_item
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_list_windows_server(self_: *mut cmd, item: *mut cmdq_item) {
     unsafe {
         for s in rb_foreach(&raw mut sessions) {
@@ -58,7 +55,6 @@ unsafe extern "C" fn cmd_list_windows_server(self_: *mut cmd, item: *mut cmdq_it
     }
 }
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_list_windows_session(
     self_: *mut cmd,
     s: NonNull<session>,

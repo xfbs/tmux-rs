@@ -18,8 +18,7 @@ use crate::compat::queue::tailq_foreach;
 
 const LIST_CLIENTS_TEMPLATE: &CStr = c"#{client_name}: #{session_name} [#{client_width}x#{client_height} #{client_termname}] #{?#{!=:#{client_uid},#{uid}},[user #{?client_user,#{client_user},#{client_uid},}] ,}#{?client_flags,(,}#{client_flags}#{?client_flags,),}";
 
-#[unsafe(no_mangle)]
-static mut cmd_list_clients_entry: cmd_entry = cmd_entry {
+pub static mut cmd_list_clients_entry: cmd_entry = cmd_entry {
     name: c"list-clients".as_ptr(),
     alias: c"lsc".as_ptr(),
 
@@ -33,7 +32,6 @@ static mut cmd_list_clients_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-#[unsafe(no_mangle)]
 unsafe extern "C" fn cmd_list_clients_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
