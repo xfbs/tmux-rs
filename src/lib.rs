@@ -29,27 +29,27 @@
 #![allow(clippy::shadow_unrelated)] // TODO, 134 instances probably some latent bugs
 #![allow(clippy::shadow_reuse)] // 145 instances
 
-pub mod compat;
-pub use compat::{strtonum, strtonum_};
+mod compat;
+use compat::{strtonum, strtonum_};
 
-pub mod ncurses_;
-pub use ncurses_::*;
+mod ncurses_;
+use ncurses_::*;
 
-pub mod libc_;
-pub use libc_::*;
+mod libc_;
+use libc_::*;
 use xmalloc::Zeroable; // want to rexport everything from here
 
 #[cfg(feature = "sixel")]
-pub mod image_;
+mod image_;
 #[cfg(feature = "sixel")]
-pub mod image_sixel;
+mod image_sixel;
 #[cfg(feature = "sixel")]
 use image_sixel::sixel_image;
 
 #[cfg(feature = "utempter")]
-pub mod utempter;
+mod utempter;
 
-pub use core::{
+use core::{
     ffi::{
         CStr, c_char, c_int, c_long, c_longlong, c_short, c_uchar, c_uint, c_ulonglong, c_ushort,
         c_void,
@@ -59,7 +59,7 @@ pub use core::{
     ptr::{NonNull, null, null_mut},
 };
 
-pub use libc::{
+use libc::{
     FILE, REG_EXTENDED, REG_ICASE, SEEK_END, SEEK_SET, SIGHUP, WEXITSTATUS, WIFEXITED, WIFSIGNALED,
     WTERMSIG, fclose, fdopen, fopen, fread, free, fseeko, ftello, fwrite, malloc, memcmp, mkstemp,
     pid_t, strcpy, strerror, strlen, termios, time_t, timeval, uid_t, unlink,
@@ -67,7 +67,7 @@ pub use libc::{
 
 // libevent2
 mod event_;
-pub use event_::*;
+use event_::*;
 
 use crate::compat::{
     RB_GENERATE,
@@ -79,22 +79,22 @@ use crate::compat::{
 };
 
 unsafe extern "C" {
-    pub static mut environ: *mut *mut c_char;
+    static mut environ: *mut *mut c_char;
     fn strsep(_: *mut *mut c_char, _delim: *const c_char) -> *mut c_char;
     // fn strsep(_: *mut *mut c_char, _delim: *const c_char) -> *mut c_char;
 }
 
 #[inline]
-pub const fn transmute_ptr<T>(value: Option<NonNull<T>>) -> *mut T {
+const fn transmute_ptr<T>(value: Option<NonNull<T>>) -> *mut T {
     match value {
         Some(ptr) => ptr.as_ptr(),
         None => null_mut(),
     }
 }
 
-pub use compat::imsg::imsg; // TODO move
+use compat::imsg::imsg; // TODO move
 
-pub type wchar_t = core::ffi::c_int;
+type wchar_t = core::ffi::c_int;
 unsafe extern "C" {
     static mut stdin: *mut FILE;
     static mut stdout: *mut FILE;
@@ -102,18 +102,18 @@ unsafe extern "C" {
 }
 
 // TODO move to compat
-pub unsafe fn strchr_(cs: *const c_char, c: char) -> *mut c_char {
+unsafe fn strchr_(cs: *const c_char, c: char) -> *mut c_char {
     unsafe { libc::strchr(cs, c as i32) }
 }
 
 // use crate::tmux_protocol_h::*;
 
-pub type bitstr_t = u8;
+type bitstr_t = u8;
 
-pub unsafe fn bit_alloc(nbits: u32) -> *mut u8 {
+unsafe fn bit_alloc(nbits: u32) -> *mut u8 {
     unsafe { libc::calloc(nbits.div_ceil(8) as usize, 1).cast() }
 }
-pub unsafe fn bit_set(bits: *mut u8, i: u32) {
+unsafe fn bit_set(bits: *mut u8, i: u32) {
     unsafe {
         let byte_index = i / 8;
         let bit_index = i % 8;
@@ -122,7 +122,7 @@ pub unsafe fn bit_set(bits: *mut u8, i: u32) {
 }
 
 #[inline]
-pub unsafe fn bit_clear(bits: *mut u8, i: u32) {
+unsafe fn bit_clear(bits: *mut u8, i: u32) {
     unsafe {
         let byte_index = i / 8;
         let bit_index = i % 8;
@@ -131,7 +131,7 @@ pub unsafe fn bit_clear(bits: *mut u8, i: u32) {
 }
 
 /// clear bits start..=stop in bitstring
-pub unsafe fn bit_nclear(bits: *mut u8, start: u32, stop: u32) {
+unsafe fn bit_nclear(bits: *mut u8, start: u32, stop: u32) {
     unsafe {
         // TODO this is written inefficiently, assuming the compiler will optimize it. if it doesn't rewrite it
         for i in start..=stop {
@@ -140,7 +140,7 @@ pub unsafe fn bit_nclear(bits: *mut u8, start: u32, stop: u32) {
     }
 }
 
-pub unsafe fn bit_test(bits: *const u8, i: u32) -> bool {
+unsafe fn bit_test(bits: *const u8, i: u32) -> bool {
     unsafe {
         let byte_index = i / 8;
         let bit_index = i % 8;
@@ -151,95 +151,91 @@ pub unsafe fn bit_test(bits: *const u8, i: u32) -> bool {
 const TTY_NAME_MAX: usize = 32;
 
 // discriminant structs
-pub struct discr_alerts_entry;
-pub struct discr_all_entry;
-pub struct discr_by_uri_entry;
-pub struct discr_by_inner_entry;
-pub struct discr_data_entry;
-pub struct discr_entry;
-pub struct discr_gentry;
-pub struct discr_index_entry;
-pub struct discr_name_entry;
-pub struct discr_pending_entry;
-pub struct discr_sentry;
-pub struct discr_time_entry;
-pub struct discr_tree_entry;
-pub struct discr_wentry;
-
-unsafe extern "C" {
-    unsafe fn basename(_: *mut c_char) -> *mut c_char;
-}
+struct discr_alerts_entry;
+struct discr_all_entry;
+struct discr_by_uri_entry;
+struct discr_by_inner_entry;
+struct discr_data_entry;
+struct discr_entry;
+struct discr_gentry;
+struct discr_index_entry;
+struct discr_name_entry;
+struct discr_pending_entry;
+struct discr_sentry;
+struct discr_time_entry;
+struct discr_tree_entry;
+struct discr_wentry;
 
 // /usr/include/paths.h
-pub const _PATH_TTY: *const c_char = c"/dev/tty".as_ptr();
-pub const _PATH_BSHELL: *const c_char = c"/bin/sh".as_ptr();
-pub const _PATH_DEFPATH: *const c_char = c"/usr/bin:/bin".as_ptr();
-pub const _PATH_DEV: *const c_char = c"/dev/".as_ptr();
-pub const _PATH_DEVNULL: *const c_char = c"/dev/null".as_ptr();
-pub const _PATH_VI: *const c_char = c"/usr/bin/vi".as_ptr();
+const _PATH_TTY: *const c_char = c"/dev/tty".as_ptr();
+const _PATH_BSHELL: *const c_char = c"/bin/sh".as_ptr();
+const _PATH_DEFPATH: *const c_char = c"/usr/bin:/bin".as_ptr();
+const _PATH_DEV: *const c_char = c"/dev/".as_ptr();
+const _PATH_DEVNULL: *const c_char = c"/dev/null".as_ptr();
+const _PATH_VI: *const c_char = c"/usr/bin/vi".as_ptr();
 
-pub const SIZEOF_PATH_DEV: usize = 6;
+const SIZEOF_PATH_DEV: usize = 6;
 
-pub const TMUX_CONF: &CStr = c"/etc/tmux.conf:~/.tmux.conf";
-pub const TMUX_SOCK: &CStr = c"$TMUX_TMPDIR:/tmp/";
-pub const TMUX_TERM: &CStr = c"screen";
-pub const TMUX_LOCK_CMD: &CStr = c"lock -np";
+const TMUX_CONF: &CStr = c"/etc/tmux.conf:~/.tmux.conf";
+const TMUX_SOCK: &CStr = c"$TMUX_TMPDIR:/tmp/";
+const TMUX_TERM: &CStr = c"screen";
+const TMUX_LOCK_CMD: &CStr = c"lock -np";
 
 /// Minimum layout cell size, NOT including border lines.
-pub const PANE_MINIMUM: u32 = 1;
+const PANE_MINIMUM: u32 = 1;
 
 /// Automatic name refresh interval, in microseconds. Must be < 1 second.
-pub const NAME_INTERVAL: i32 = 500000;
+const NAME_INTERVAL: i32 = 500000;
 
 /// Default pixel cell sizes.
-pub const DEFAULT_XPIXEL: u32 = 16;
-pub const DEFAULT_YPIXEL: u32 = 32;
+const DEFAULT_XPIXEL: u32 = 16;
+const DEFAULT_YPIXEL: u32 = 32;
 
 // Alert option values
-pub const ALERT_NONE: i32 = 0;
-pub const ALERT_ANY: i32 = 1;
-pub const ALERT_CURRENT: i32 = 2;
-pub const ALERT_OTHER: i32 = 3;
+const ALERT_NONE: i32 = 0;
+const ALERT_ANY: i32 = 1;
+const ALERT_CURRENT: i32 = 2;
+const ALERT_OTHER: i32 = 3;
 
 // Visual option values
-pub const VISUAL_OFF: i32 = 0;
-pub const VISUAL_ON: i32 = 1;
-pub const VISUAL_BOTH: i32 = 2;
+const VISUAL_OFF: i32 = 0;
+const VISUAL_ON: i32 = 1;
+const VISUAL_BOTH: i32 = 2;
 
 // No key or unknown key.
-pub const KEYC_NONE: c_ulonglong = 0x000ff000000000;
-pub const KEYC_UNKNOWN: c_ulonglong = 0x000fe000000000;
+const KEYC_NONE: c_ulonglong = 0x000ff000000000;
+const KEYC_UNKNOWN: c_ulonglong = 0x000fe000000000;
 
 // Base for special (that is, not Unicode) keys. An enum must be at most a
 // signed int, so these are based in the highest Unicode PUA.
-pub const KEYC_BASE: c_ulonglong = 0x0000000010e000;
-pub const KEYC_USER: c_ulonglong = 0x0000000010f000;
-pub const KEYC_USER_END: c_ulonglong = KEYC_USER + KEYC_NUSER;
+const KEYC_BASE: c_ulonglong = 0x0000000010e000;
+const KEYC_USER: c_ulonglong = 0x0000000010f000;
+const KEYC_USER_END: c_ulonglong = KEYC_USER + KEYC_NUSER;
 
 // Key modifier bits
-pub const KEYC_META: c_ulonglong = 0x00100000000000;
-pub const KEYC_CTRL: c_ulonglong = 0x00200000000000;
-pub const KEYC_SHIFT: c_ulonglong = 0x00400000000000;
+const KEYC_META: c_ulonglong = 0x00100000000000;
+const KEYC_CTRL: c_ulonglong = 0x00200000000000;
+const KEYC_SHIFT: c_ulonglong = 0x00400000000000;
 
 // Key flag bits.
-pub const KEYC_LITERAL: c_ulonglong = 0x01000000000000;
-pub const KEYC_KEYPAD: c_ulonglong = 0x02000000000000;
-pub const KEYC_CURSOR: c_ulonglong = 0x04000000000000;
-pub const KEYC_IMPLIED_META: c_ulonglong = 0x08000000000000;
-pub const KEYC_BUILD_MODIFIERS: c_ulonglong = 0x10000000000000;
-pub const KEYC_VI: c_ulonglong = 0x20000000000000;
-pub const KEYC_SENT: c_ulonglong = 0x40000000000000;
+const KEYC_LITERAL: c_ulonglong = 0x01000000000000;
+const KEYC_KEYPAD: c_ulonglong = 0x02000000000000;
+const KEYC_CURSOR: c_ulonglong = 0x04000000000000;
+const KEYC_IMPLIED_META: c_ulonglong = 0x08000000000000;
+const KEYC_BUILD_MODIFIERS: c_ulonglong = 0x10000000000000;
+const KEYC_VI: c_ulonglong = 0x20000000000000;
+const KEYC_SENT: c_ulonglong = 0x40000000000000;
 
 // Masks for key bits.
-pub const KEYC_MASK_MODIFIERS: c_ulonglong = 0x00f00000000000;
-pub const KEYC_MASK_FLAGS: c_ulonglong = 0xff000000000000;
-pub const KEYC_MASK_KEY: c_ulonglong = 0x000fffffffffff;
+const KEYC_MASK_MODIFIERS: c_ulonglong = 0x00f00000000000;
+const KEYC_MASK_FLAGS: c_ulonglong = 0xff000000000000;
+const KEYC_MASK_KEY: c_ulonglong = 0x000fffffffffff;
 
-pub const KEYC_NUSER: c_ulonglong = 1000;
+const KEYC_NUSER: c_ulonglong = 1000;
 
 #[allow(non_snake_case)]
 #[inline(always)]
-pub fn KEYC_IS_MOUSE(key: key_code) -> bool {
+fn KEYC_IS_MOUSE(key: key_code) -> bool {
     const KEYC_MOUSE: c_ulonglong = keyc::KEYC_MOUSE as c_ulonglong;
     const KEYC_BSPACE: c_ulonglong = keyc::KEYC_BSPACE as c_ulonglong;
 
@@ -248,7 +244,7 @@ pub fn KEYC_IS_MOUSE(key: key_code) -> bool {
 
 #[allow(non_snake_case)]
 #[inline(always)]
-pub fn KEYC_IS_UNICODE(key: key_code) -> bool {
+fn KEYC_IS_UNICODE(key: key_code) -> bool {
     let masked = key & KEYC_MASK_KEY;
 
     const KEYC_BASE_END: c_ulonglong = keyc::KEYC_BASE_END as c_ulonglong;
@@ -257,11 +253,11 @@ pub fn KEYC_IS_UNICODE(key: key_code) -> bool {
         && (masked < KEYC_USER || masked >= KEYC_USER_END)
 }
 
-pub const KEYC_CLICK_TIMEOUT: i32 = 300;
+const KEYC_CLICK_TIMEOUT: i32 = 300;
 
 /// A single key. This can be ASCII or Unicode or one of the keys between
 /// KEYC_BASE and KEYC_BASE_END.
-pub type key_code = core::ffi::c_ulonglong;
+type key_code = core::ffi::c_ulonglong;
 
 // skipped C0 control characters
 
@@ -319,7 +315,7 @@ include!("keyc_mouse_key.rs");
 /// Termcap codes.
 #[repr(u32)]
 #[derive(Copy, Clone, num_enum::TryFromPrimitive)]
-pub enum tty_code_code {
+enum tty_code_code {
     TTYC_ACSC,
     TTYC_AM,
     TTYC_AX,
@@ -554,11 +550,11 @@ pub enum tty_code_code {
     TTYC_XT,
 }
 
-pub const WHITESPACE: &CStr = c" ";
+const WHITESPACE: &CStr = c" ";
 
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq, num_enum::TryFromPrimitive)]
-pub enum modekey {
+enum modekey {
     MODEKEY_EMACS = 0,
     MODEKEY_VI = 1,
 }
@@ -567,7 +563,7 @@ bitflags::bitflags! {
     /// Grid flags.
     #[repr(transparent)]
     #[derive(Copy, Clone, Eq, PartialEq)]
-    pub struct mode_flag : i32 {
+    struct mode_flag : i32 {
         const MODE_CURSOR = 0x1;
         const MODE_INSERT = 0x2;
         const MODE_KCURSOR = 0x4;
@@ -590,26 +586,25 @@ bitflags::bitflags! {
     }
 }
 
-pub const ALL_MODES: i32 = 0xffffff;
-pub const ALL_MOUSE_MODES: mode_flag = mode_flag::MODE_MOUSE_STANDARD
+const ALL_MODES: i32 = 0xffffff;
+const ALL_MOUSE_MODES: mode_flag = mode_flag::MODE_MOUSE_STANDARD
     .union(mode_flag::MODE_MOUSE_BUTTON)
     .union(mode_flag::MODE_MOUSE_ALL);
-pub const MOTION_MOUSE_MODES: mode_flag =
-    mode_flag::MODE_MOUSE_BUTTON.union(mode_flag::MODE_MOUSE_ALL);
-pub const CURSOR_MODES: mode_flag = mode_flag::MODE_CURSOR
+const MOTION_MOUSE_MODES: mode_flag = mode_flag::MODE_MOUSE_BUTTON.union(mode_flag::MODE_MOUSE_ALL);
+const CURSOR_MODES: mode_flag = mode_flag::MODE_CURSOR
     .union(mode_flag::MODE_CURSOR_BLINKING)
     .union(mode_flag::MODE_CURSOR_VERY_VISIBLE);
-pub const EXTENDED_KEY_MODES: mode_flag =
+const EXTENDED_KEY_MODES: mode_flag =
     mode_flag::MODE_KEYS_EXTENDED.union(mode_flag::MODE_KEYS_EXTENDED_2);
 
 // Mouse protocol constants.
-pub const MOUSE_PARAM_MAX: u32 = 0xff;
-pub const MOUSE_PARAM_UTF8_MAX: u32 = 0x7ff;
-pub const MOUSE_PARAM_BTN_OFF: u32 = 0x20;
-pub const MOUSE_PARAM_POS_OFF: u32 = 0x21;
+const MOUSE_PARAM_MAX: u32 = 0xff;
+const MOUSE_PARAM_UTF8_MAX: u32 = 0x7ff;
+const MOUSE_PARAM_BTN_OFF: u32 = 0x20;
+const MOUSE_PARAM_POS_OFF: u32 = 0x21;
 
 /* A single UTF-8 character. */
-pub type utf8_char = c_uint;
+type utf8_char = c_uint;
 
 // An expanded UTF-8 character. UTF8_SIZE must be big enough to hold combining
 // characters as well. It can't be more than 32 bytes without changes to how
@@ -618,18 +613,18 @@ const UTF8_SIZE: usize = 21;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct utf8_data {
-    pub data: [c_uchar; UTF8_SIZE],
+struct utf8_data {
+    data: [c_uchar; UTF8_SIZE],
 
-    pub have: c_uchar,
-    pub size: c_uchar,
+    have: c_uchar,
+    size: c_uchar,
 
     /// 0xff if invalid
-    pub width: c_uchar,
+    width: c_uchar,
 }
 
 impl utf8_data {
-    pub const fn new<const N: usize>(
+    const fn new<const N: usize>(
         data: [u8; N],
         have: c_uchar,
         size: c_uchar,
@@ -657,32 +652,32 @@ impl utf8_data {
 
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum utf8_state {
+enum utf8_state {
     UTF8_MORE,
     UTF8_DONE,
     UTF8_ERROR,
 }
 
 // Colour flags.
-pub const COLOUR_FLAG_256: i32 = 0x01000000;
-pub const COLOUR_FLAG_RGB: i32 = 0x02000000;
+const COLOUR_FLAG_256: i32 = 0x01000000;
+const COLOUR_FLAG_RGB: i32 = 0x02000000;
 
 /// Special colours.
 #[allow(non_snake_case)]
 #[inline]
-pub fn COLOUR_DEFAULT(c: i32) -> bool {
+fn COLOUR_DEFAULT(c: i32) -> bool {
     c == 8 || c == 9
 }
 
 // Replacement palette.
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct colour_palette {
-    pub fg: i32,
-    pub bg: i32,
+struct colour_palette {
+    fg: i32,
+    bg: i32,
 
-    pub palette: *mut i32,
-    pub default_palette: *mut i32,
+    palette: *mut i32,
+    default_palette: *mut i32,
 }
 
 // Grid attributes. Anything above 0xff is stored in an extended cell.
@@ -690,7 +685,7 @@ bitflags::bitflags! {
     /// Grid flags.
     #[repr(transparent)]
     #[derive(Copy, Clone, Eq, PartialEq)]
-    pub struct grid_attr : u16 {
+    struct grid_attr : u16 {
         const GRID_ATTR_BRIGHT = 0x1;
         const GRID_ATTR_DIM = 0x2;
         const GRID_ATTR_UNDERSCORE = 0x4;
@@ -709,7 +704,7 @@ bitflags::bitflags! {
 }
 
 /// All underscore attributes.
-pub const GRID_ATTR_ALL_UNDERSCORE: grid_attr = grid_attr::GRID_ATTR_UNDERSCORE
+const GRID_ATTR_ALL_UNDERSCORE: grid_attr = grid_attr::GRID_ATTR_UNDERSCORE
     .union(grid_attr::GRID_ATTR_UNDERSCORE_2)
     .union(grid_attr::GRID_ATTR_UNDERSCORE_3)
     .union(grid_attr::GRID_ATTR_UNDERSCORE_4)
@@ -719,7 +714,7 @@ bitflags::bitflags! {
     /// Grid flags.
     #[repr(transparent)]
     #[derive(Copy, Clone, Eq, PartialEq)]
-    pub struct grid_flag : u8 {
+    struct grid_flag : u8 {
         const FG256 = 0x1;
         const BG256 = 0x2;
         const PADDING = 0x4;
@@ -734,7 +729,7 @@ bitflags::bitflags! {
 bitflags::bitflags! {
     #[repr(transparent)]
     #[derive(Copy, Clone, Eq, PartialEq)]
-    pub struct grid_line_flag: i32 {
+    struct grid_line_flag: i32 {
         const WRAPPED      = 1 << 0; // 0x1
         const EXTENDED     = 1 << 1; // 0x2
         const DEAD         = 1 << 2; // 0x4
@@ -747,7 +742,7 @@ bitflags::bitflags! {
 bitflags::bitflags! {
     #[repr(transparent)]
     #[derive(Copy, Clone, Eq, PartialEq)]
-    pub struct grid_string_flags: i32 {
+    struct grid_string_flags: i32 {
         const GRID_STRING_WITH_SEQUENCES = 0x1;
         const GRID_STRING_ESCAPE_SEQUENCES = 0x2;
         const GRID_STRING_TRIM_SPACES = 0x4;
@@ -759,7 +754,7 @@ bitflags::bitflags! {
 /// Cell positions.
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum cell_type {
+enum cell_type {
     CELL_INSIDE = 0,
     CELL_TOPBOTTOM = 1,
     CELL_LEFTRIGHT = 2,
@@ -777,29 +772,29 @@ pub enum cell_type {
 use cell_type::*; // TODO remove
 
 // Cell borders.
-pub const CELL_BORDERS: [u8; 13] = [
+const CELL_BORDERS: [u8; 13] = [
     b' ', b'x', b'q', b'l', b'k', b'm', b'j', b'w', b'v', b't', b'u', b'n', b'~',
 ];
-pub const SIMPLE_BORDERS: [u8; 13] = [
+const SIMPLE_BORDERS: [u8; 13] = [
     b' ', b'|', b'-', b'+', b'+', b'+', b'+', b'+', b'+', b'+', b'+', b'+', b'.',
 ];
-pub const PADDED_BORDERS: [u8; 13] = [b' '; 13];
+const PADDED_BORDERS: [u8; 13] = [b' '; 13];
 
 /// Grid cell data.
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct grid_cell {
-    pub data: utf8_data,
-    pub attr: grid_attr,
-    pub flags: grid_flag,
-    pub fg: i32,
-    pub bg: i32,
-    pub us: i32,
-    pub link: u32,
+struct grid_cell {
+    data: utf8_data,
+    attr: grid_attr,
+    flags: grid_flag,
+    fg: i32,
+    bg: i32,
+    us: i32,
+    link: u32,
 }
 
 impl grid_cell {
-    pub const fn new(
+    const fn new(
         data: utf8_data,
         attr: grid_attr,
         flags: grid_flag,
@@ -822,80 +817,80 @@ impl grid_cell {
 
 /// Grid extended cell entry.
 #[repr(C)]
-pub struct grid_extd_entry {
-    pub data: utf8_char,
-    pub attr: u16,
-    pub flags: u8,
-    pub fg: i32,
-    pub bg: i32,
-    pub us: i32,
-    pub link: u32,
+struct grid_extd_entry {
+    data: utf8_char,
+    attr: u16,
+    flags: u8,
+    fg: i32,
+    bg: i32,
+    us: i32,
+    link: u32,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C, align(4))]
-pub struct grid_cell_entry_data {
-    pub attr: c_uchar,
-    pub fg: c_uchar,
-    pub bg: c_uchar,
-    pub data: c_uchar,
+struct grid_cell_entry_data {
+    attr: c_uchar,
+    fg: c_uchar,
+    bg: c_uchar,
+    data: c_uchar,
 }
 
 #[repr(C)]
-pub union grid_cell_entry_union {
-    pub offset: u32,
-    pub data: grid_cell_entry_data,
+union grid_cell_entry_union {
+    offset: u32,
+    data: grid_cell_entry_data,
 }
 
 #[repr(C)]
-pub struct grid_cell_entry {
-    pub union_: grid_cell_entry_union,
-    pub flags: grid_flag,
+struct grid_cell_entry {
+    union_: grid_cell_entry_union,
+    flags: grid_flag,
 }
 
 /// Grid line.
 #[repr(C)]
-pub struct grid_line {
-    pub celldata: *mut grid_cell_entry,
-    pub cellused: u32,
-    pub cellsize: u32,
+struct grid_line {
+    celldata: *mut grid_cell_entry,
+    cellused: u32,
+    cellsize: u32,
 
-    pub extddata: *mut grid_extd_entry,
-    pub extdsize: u32,
+    extddata: *mut grid_extd_entry,
+    extdsize: u32,
 
-    pub flags: grid_line_flag,
-    pub time: time_t,
+    flags: grid_line_flag,
+    time: time_t,
 }
 
-pub const GRID_HISTORY: i32 = 0x1; // scroll lines into history
+const GRID_HISTORY: i32 = 0x1; // scroll lines into history
 
 /// Entire grid of cells.
 #[repr(C)]
-pub struct grid {
-    pub flags: i32,
+struct grid {
+    flags: i32,
 
-    pub sx: u32,
-    pub sy: u32,
+    sx: u32,
+    sy: u32,
 
-    pub hscrolled: u32,
-    pub hsize: u32,
-    pub hlimit: u32,
+    hscrolled: u32,
+    hsize: u32,
+    hlimit: u32,
 
-    pub linedata: *mut grid_line,
+    linedata: *mut grid_line,
 }
 
 /// Virtual cursor in a grid.
 #[repr(C)]
-pub struct grid_reader {
-    pub gd: *mut grid,
-    pub cx: u32,
-    pub cy: u32,
+struct grid_reader {
+    gd: *mut grid,
+    cx: u32,
+    cy: u32,
 }
 
 /// Style alignment.
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum style_align {
+enum style_align {
     STYLE_ALIGN_DEFAULT,
     STYLE_ALIGN_LEFT,
     STYLE_ALIGN_CENTRE,
@@ -906,7 +901,7 @@ pub enum style_align {
 /// Style list.
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum style_list {
+enum style_list {
     STYLE_LIST_OFF,
     STYLE_LIST_ON,
     STYLE_LIST_FOCUS,
@@ -917,7 +912,7 @@ pub enum style_list {
 /// Style range.
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum style_range_type {
+enum style_range_type {
     STYLE_RANGE_NONE,
     STYLE_RANGE_LEFT,
     STYLE_RANGE_RIGHT,
@@ -930,23 +925,23 @@ pub enum style_range_type {
 crate::compat::impl_tailq_entry!(style_range, entry, tailq_entry<style_range>);
 // #[derive(crate::compat::TailQEntry)]
 #[repr(C)]
-pub struct style_range {
-    pub type_: style_range_type,
-    pub argument: u32,
-    pub string: [c_char; 16],
-    pub start: u32,
+struct style_range {
+    type_: style_range_type,
+    argument: u32,
+    string: [c_char; 16],
+    start: u32,
     /// not included
-    pub end: u32,
+    end: u32,
 
     // #[entry]
-    pub entry: tailq_entry<style_range>,
+    entry: tailq_entry<style_range>,
 }
-pub type style_ranges = tailq_head<style_range>;
+type style_ranges = tailq_head<style_range>;
 
 /// Style default.
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum style_default_type {
+enum style_default_type {
     STYLE_DEFAULT_BASE,
     STYLE_DEFAULT_PUSH,
     STYLE_DEFAULT_POP,
@@ -955,19 +950,19 @@ pub enum style_default_type {
 /// Style option.
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct style {
-    pub gc: grid_cell,
-    pub ignore: i32,
+struct style {
+    gc: grid_cell,
+    ignore: i32,
 
-    pub fill: i32,
-    pub align: style_align,
-    pub list: style_list,
+    fill: i32,
+    align: style_align,
+    list: style_list,
 
-    pub range_type: style_range_type,
-    pub range_argument: u32,
-    pub range_string: [c_char; 16],
+    range_type: style_range_type,
+    range_argument: u32,
+    range_string: [c_char; 16],
 
-    pub default_type: style_default_type,
+    default_type: style_default_type,
 }
 
 #[cfg(feature = "sixel")]
@@ -977,7 +972,7 @@ crate::compat::impl_tailq_entry!(image, entry, tailq_entry<image>);
 #[cfg(feature = "sixel")]
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct image {
+struct image {
     s: *mut screen,
     data: *mut sixel_image,
     fallback: *mut c_char,
@@ -991,12 +986,12 @@ pub struct image {
 }
 
 #[cfg(feature = "sixel")]
-pub type images = tailq_head<image>;
+type images = tailq_head<image>;
 
 /// Cursor style.
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum screen_cursor_style {
+enum screen_cursor_style {
     SCREEN_CURSOR_DEFAULT,
     SCREEN_CURSOR_BLOCK,
     SCREEN_CURSOR_UNDERLINE,
@@ -1006,77 +1001,76 @@ pub enum screen_cursor_style {
 /// Virtual screen.
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct screen {
-    pub title: *mut c_char,
-    pub path: *mut c_char,
-    pub titles: *mut screen_titles,
+struct screen {
+    title: *mut c_char,
+    path: *mut c_char,
+    titles: *mut screen_titles,
 
     /// grid data
-    pub grid: *mut grid,
+    grid: *mut grid,
 
     /// cursor x
-    pub cx: u32,
+    cx: u32,
     /// cursor y
-    pub cy: u32,
+    cy: u32,
 
     /// cursor style
-    pub cstyle: screen_cursor_style,
-    pub default_cstyle: screen_cursor_style,
+    cstyle: screen_cursor_style,
+    default_cstyle: screen_cursor_style,
     /// cursor colour
-    pub ccolour: i32,
+    ccolour: i32,
     /// default cursor colour
-    pub default_ccolour: i32,
+    default_ccolour: i32,
 
     /// scroll region top
-    pub rupper: u32,
+    rupper: u32,
     /// scroll region bottom
-    pub rlower: u32,
+    rlower: u32,
 
-    pub mode: mode_flag,
-    pub default_mode: mode_flag,
+    mode: mode_flag,
+    default_mode: mode_flag,
 
-    pub saved_cx: u32,
-    pub saved_cy: u32,
-    pub saved_grid: *mut grid,
-    pub saved_cell: grid_cell,
-    pub saved_flags: i32,
+    saved_cx: u32,
+    saved_cy: u32,
+    saved_grid: *mut grid,
+    saved_cell: grid_cell,
+    saved_flags: i32,
 
-    pub tabs: *mut bitstr_t,
-    pub sel: *mut screen_sel,
+    tabs: *mut bitstr_t,
+    sel: *mut screen_sel,
 
     #[cfg(feature = "sixel")]
-    pub images: images,
+    images: images,
 
-    pub write_list: *mut screen_write_cline,
+    write_list: *mut screen_write_cline,
 
-    pub hyperlinks: *mut hyperlinks,
+    hyperlinks: *mut hyperlinks,
 }
 
-pub const SCREEN_WRITE_SYNC: i32 = 0x1;
+const SCREEN_WRITE_SYNC: i32 = 0x1;
 
 // Screen write context.
-pub type screen_write_init_ctx_cb =
-    Option<unsafe extern "C" fn(*mut screen_write_ctx, *mut tty_ctx)>;
+type screen_write_init_ctx_cb = Option<unsafe extern "C" fn(*mut screen_write_ctx, *mut tty_ctx)>;
 #[repr(C)]
-pub struct screen_write_ctx {
-    pub wp: *mut window_pane,
-    pub s: *mut screen,
+struct screen_write_ctx {
+    wp: *mut window_pane,
+    s: *mut screen,
 
-    pub flags: i32,
+    flags: i32,
 
-    pub init_ctx_cb: screen_write_init_ctx_cb,
+    init_ctx_cb: screen_write_init_ctx_cb,
 
-    pub arg: *mut c_void,
+    arg: *mut c_void,
 
-    pub item: *mut screen_write_citem,
-    pub scrolled: u32,
-    pub bg: u32,
+    item: *mut screen_write_citem,
+    scrolled: u32,
+    bg: u32,
 }
 
 /// Box border lines option.
 #[repr(i32)]
 #[derive(Copy, Clone, Default, Eq, PartialEq, num_enum::TryFromPrimitive)]
-pub enum box_lines {
+enum box_lines {
     #[default]
     BOX_LINES_DEFAULT = -1,
     BOX_LINES_SINGLE,
@@ -1091,7 +1085,7 @@ pub enum box_lines {
 /// Pane border lines option.
 #[repr(i32)]
 #[derive(Copy, Clone, Default, Eq, PartialEq, num_enum::TryFromPrimitive)]
-pub enum pane_lines {
+enum pane_lines {
     #[default]
     PANE_LINES_SINGLE,
     PANE_LINES_DOUBLE,
@@ -1103,7 +1097,7 @@ pub enum pane_lines {
 macro_rules! define_error_unit {
     ($error_type:ident) => {
         #[derive(Debug)]
-        pub struct $error_type;
+        struct $error_type;
         impl ::std::error::Error for $error_type {}
         impl ::std::fmt::Display for $error_type {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -1115,7 +1109,7 @@ macro_rules! define_error_unit {
 
 #[repr(i32)]
 #[derive(Copy, Clone, num_enum::TryFromPrimitive)]
-pub enum pane_border_indicator {
+enum pane_border_indicator {
     PANE_BORDER_OFF,
     PANE_BORDER_COLOUR,
     PANE_BORDER_ARROWS,
@@ -1123,49 +1117,49 @@ pub enum pane_border_indicator {
 }
 
 // Mode returned by window_pane_mode function.
-pub const WINDOW_PANE_NO_MODE: i32 = 0;
-pub const WINDOW_PANE_COPY_MODE: i32 = 1;
-pub const WINDOW_PANE_VIEW_MODE: i32 = 2;
+const WINDOW_PANE_NO_MODE: i32 = 0;
+const WINDOW_PANE_COPY_MODE: i32 = 1;
+const WINDOW_PANE_VIEW_MODE: i32 = 2;
 
 // Screen redraw context.
 #[repr(C)]
-pub struct screen_redraw_ctx {
-    pub c: *mut client,
+struct screen_redraw_ctx {
+    c: *mut client,
 
-    pub statuslines: u32,
-    pub statustop: i32,
+    statuslines: u32,
+    statustop: i32,
 
-    pub pane_status: pane_status,
-    pub pane_lines: pane_lines,
+    pane_status: pane_status,
+    pane_lines: pane_lines,
 
-    pub no_pane_gc: grid_cell,
-    pub no_pane_gc_set: i32,
+    no_pane_gc: grid_cell,
+    no_pane_gc_set: i32,
 
-    pub sx: u32,
-    pub sy: u32,
-    pub ox: u32,
-    pub oy: u32,
+    sx: u32,
+    sy: u32,
+    ox: u32,
+    oy: u32,
 }
 
-pub unsafe fn screen_size_x(s: *const screen) -> u32 {
+unsafe fn screen_size_x(s: *const screen) -> u32 {
     unsafe { (*(*s).grid).sx }
 }
-pub unsafe fn screen_size_y(s: *const screen) -> u32 {
+unsafe fn screen_size_y(s: *const screen) -> u32 {
     unsafe { (*(*s).grid).sy }
 }
-pub unsafe fn screen_hsize(s: *const screen) -> u32 {
+unsafe fn screen_hsize(s: *const screen) -> u32 {
     unsafe { (*(*s).grid).hsize }
 }
-pub unsafe fn screen_hlimit(s: *const screen) -> u32 {
+unsafe fn screen_hlimit(s: *const screen) -> u32 {
     unsafe { (*(*s).grid).hlimit }
 }
 
 // Menu.
 #[repr(C)]
-pub struct menu_item {
-    pub name: SyncCharPtr,
-    pub key: key_code,
-    pub command: SyncCharPtr,
+struct menu_item {
+    name: SyncCharPtr,
+    key: key_code,
+    command: SyncCharPtr,
 }
 impl menu_item {
     const fn new(name: Option<&'static CStr>, key: key_code, command: *const c_char) -> Self {
@@ -1181,32 +1175,32 @@ impl menu_item {
 }
 
 #[repr(C)]
-pub struct menu {
-    pub title: *const c_char,
-    pub items: *mut menu_item,
-    pub count: u32,
-    pub width: u32,
+struct menu {
+    title: *const c_char,
+    items: *mut menu_item,
+    count: u32,
+    width: u32,
 }
-pub type menu_choice_cb = Option<unsafe extern "C" fn(*mut menu, u32, key_code, *mut c_void)>;
+type menu_choice_cb = Option<unsafe extern "C" fn(*mut menu, u32, key_code, *mut c_void)>;
 
 // Window mode. Windows can be in several modes and this is used to call the
 // right function to handle input and output.
 #[repr(C)]
-pub struct window_mode {
-    pub name: SyncCharPtr,
-    pub default_format: SyncCharPtr,
+struct window_mode {
+    name: SyncCharPtr,
+    default_format: SyncCharPtr,
 
-    pub init: Option<
+    init: Option<
         unsafe extern "C" fn(
             NonNull<window_mode_entry>,
             *mut cmd_find_state,
             *mut args,
         ) -> *mut screen,
     >,
-    pub free: Option<unsafe extern "C" fn(NonNull<window_mode_entry>)>,
-    pub resize: Option<unsafe extern "C" fn(NonNull<window_mode_entry>, u32, u32)>,
-    pub update: Option<unsafe extern "C" fn(NonNull<window_mode_entry>)>,
-    pub key: Option<
+    free: Option<unsafe extern "C" fn(NonNull<window_mode_entry>)>,
+    resize: Option<unsafe extern "C" fn(NonNull<window_mode_entry>, u32, u32)>,
+    update: Option<unsafe extern "C" fn(NonNull<window_mode_entry>)>,
+    key: Option<
         unsafe extern "C" fn(
             NonNull<window_mode_entry>,
             *mut client,
@@ -1217,8 +1211,8 @@ pub struct window_mode {
         ),
     >,
 
-    pub key_table: Option<unsafe extern "C" fn(*mut window_mode_entry) -> *const c_char>,
-    pub command: Option<
+    key_table: Option<unsafe extern "C" fn(*mut window_mode_entry) -> *const c_char>,
+    command: Option<
         unsafe extern "C" fn(
             NonNull<window_mode_entry>,
             *mut client,
@@ -1228,7 +1222,7 @@ pub struct window_mode {
             *mut mouse_event,
         ),
     >,
-    pub formats: Option<unsafe extern "C" fn(*mut window_mode_entry, *mut format_tree)>,
+    formats: Option<unsafe extern "C" fn(*mut window_mode_entry, *mut format_tree)>,
 }
 
 impl window_mode {
@@ -1252,47 +1246,47 @@ impl window_mode {
 crate::compat::impl_tailq_entry!(window_mode_entry, entry, tailq_entry<window_mode_entry>);
 // #[derive(Copy, Clone, crate::compat::TailQEntry)]
 #[repr(C)]
-pub struct window_mode_entry {
-    pub wp: *mut window_pane,
-    pub swp: *mut window_pane,
+struct window_mode_entry {
+    wp: *mut window_pane,
+    swp: *mut window_pane,
 
-    pub mode: *const window_mode,
-    pub data: *mut c_void,
+    mode: *const window_mode,
+    data: *mut c_void,
 
-    pub screen: *mut screen,
-    pub prefix: u32,
+    screen: *mut screen,
+    prefix: u32,
 
     // #[entry]
-    pub entry: tailq_entry<window_mode_entry>,
+    entry: tailq_entry<window_mode_entry>,
 }
 
 /// Offsets into pane buffer.
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct window_pane_offset {
-    pub used: usize,
+struct window_pane_offset {
+    used: usize,
 }
 
 /// Queued pane resize.
 crate::compat::impl_tailq_entry!(window_pane_resize, entry, tailq_entry<window_pane_resize>);
 // #[derive(Copy, Clone, crate::compat::TailQEntry)]
 #[repr(C)]
-pub struct window_pane_resize {
-    pub sx: u32,
-    pub sy: u32,
+struct window_pane_resize {
+    sx: u32,
+    sy: u32,
 
-    pub osx: u32,
-    pub osy: u32,
+    osx: u32,
+    osy: u32,
 
     // #[entry]
-    pub entry: tailq_entry<window_pane_resize>,
+    entry: tailq_entry<window_pane_resize>,
 }
-pub type window_pane_resizes = tailq_head<window_pane_resize>;
+type window_pane_resizes = tailq_head<window_pane_resize>;
 
 bitflags::bitflags! {
     #[repr(transparent)]
     #[derive(Copy, Clone, Eq, PartialEq)]
-    pub struct window_pane_flags : i32 {
+    struct window_pane_flags : i32 {
         const PANE_REDRAW = 0x1;
         const PANE_DROP = 0x2;
         const PANE_FOCUSED = 0x4;
@@ -1313,78 +1307,78 @@ bitflags::bitflags! {
 /// Child window structure.
 // #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct window_pane {
-    pub id: u32,
-    pub active_point: u32,
+struct window_pane {
+    id: u32,
+    active_point: u32,
 
-    pub window: *mut window,
-    pub options: *mut options,
+    window: *mut window,
+    options: *mut options,
 
-    pub layout_cell: *mut layout_cell,
-    pub saved_layout_cell: *mut layout_cell,
+    layout_cell: *mut layout_cell,
+    saved_layout_cell: *mut layout_cell,
 
-    pub sx: u32,
-    pub sy: u32,
+    sx: u32,
+    sy: u32,
 
-    pub xoff: u32,
-    pub yoff: u32,
+    xoff: u32,
+    yoff: u32,
 
-    pub flags: window_pane_flags,
+    flags: window_pane_flags,
 
-    pub argc: i32,
-    pub argv: *mut *mut c_char,
-    pub shell: *mut c_char,
-    pub cwd: *mut c_char,
+    argc: i32,
+    argv: *mut *mut c_char,
+    shell: *mut c_char,
+    cwd: *mut c_char,
 
-    pub pid: pid_t,
-    pub tty: [c_char; TTY_NAME_MAX],
-    pub status: i32,
-    pub dead_time: timeval,
+    pid: pid_t,
+    tty: [c_char; TTY_NAME_MAX],
+    status: i32,
+    dead_time: timeval,
 
-    pub fd: i32,
-    pub event: *mut bufferevent,
+    fd: i32,
+    event: *mut bufferevent,
 
-    pub offset: window_pane_offset,
-    pub base_offset: usize,
+    offset: window_pane_offset,
+    base_offset: usize,
 
-    pub resize_queue: window_pane_resizes,
-    pub resize_timer: event,
+    resize_queue: window_pane_resizes,
+    resize_timer: event,
 
-    pub ictx: *mut input_ctx,
+    ictx: *mut input_ctx,
 
-    pub cached_gc: grid_cell,
-    pub cached_active_gc: grid_cell,
-    pub palette: colour_palette,
+    cached_gc: grid_cell,
+    cached_active_gc: grid_cell,
+    palette: colour_palette,
 
-    pub pipe_fd: i32,
-    pub pipe_event: *mut bufferevent,
-    pub pipe_offset: window_pane_offset,
+    pipe_fd: i32,
+    pipe_event: *mut bufferevent,
+    pipe_offset: window_pane_offset,
 
-    pub screen: *mut screen,
-    pub base: screen,
+    screen: *mut screen,
+    base: screen,
 
-    pub status_screen: screen,
-    pub status_size: usize,
+    status_screen: screen,
+    status_size: usize,
 
-    pub modes: tailq_head<window_mode_entry>,
+    modes: tailq_head<window_mode_entry>,
 
-    pub searchstr: *mut c_char,
-    pub searchregex: i32,
+    searchstr: *mut c_char,
+    searchregex: i32,
 
-    pub border_gc_set: i32,
-    pub border_gc: grid_cell,
+    border_gc_set: i32,
+    border_gc: grid_cell,
 
-    pub control_bg: i32,
-    pub control_fg: i32,
+    control_bg: i32,
+    control_fg: i32,
 
     /// link in list of all panes
-    pub entry: tailq_entry<window_pane>,
+    entry: tailq_entry<window_pane>,
     /// link in list of last visited
-    pub sentry: tailq_entry<window_pane>,
-    pub tree_entry: rb_entry<window_pane>,
+    sentry: tailq_entry<window_pane>,
+    tree_entry: rb_entry<window_pane>,
 }
-pub type window_panes = tailq_head<window_pane>;
-pub type window_pane_tree = rb_head<window_pane>;
+type window_panes = tailq_head<window_pane>;
+type window_pane_tree = rb_head<window_pane>;
 
 impl Entry<window_pane, discr_entry> for window_pane {
     unsafe fn entry(this: *mut Self) -> *mut tailq_entry<window_pane> {
@@ -1400,7 +1394,7 @@ impl Entry<window_pane, discr_sentry> for window_pane {
 bitflags::bitflags! {
     #[repr(transparent)]
     #[derive(Copy, Clone, Eq, PartialEq)]
-    pub struct window_flag: i32 {
+    struct window_flag: i32 {
         const BELL = 0x1;
         const ACTIVITY = 0x2;
         const SILENCE = 0x4;
@@ -1409,60 +1403,60 @@ bitflags::bitflags! {
         const RESIZE = 0x20;
     }
 }
-pub const WINDOW_ALERTFLAGS: window_flag = window_flag::BELL
+const WINDOW_ALERTFLAGS: window_flag = window_flag::BELL
     .union(window_flag::ACTIVITY)
     .union(window_flag::SILENCE);
 
 /// Window structure.
 #[repr(C)]
 // #[derive(Copy, Clone)]
-pub struct window {
-    pub id: u32,
-    pub latest: *mut c_void,
+struct window {
+    id: u32,
+    latest: *mut c_void,
 
-    pub name: *mut c_char,
-    pub name_event: event,
-    pub name_time: timeval,
+    name: *mut c_char,
+    name_event: event,
+    name_time: timeval,
 
-    pub alerts_timer: event,
-    pub offset_timer: event,
+    alerts_timer: event,
+    offset_timer: event,
 
-    pub activity_time: timeval,
+    activity_time: timeval,
 
-    pub active: *mut window_pane,
-    pub last_panes: window_panes,
-    pub panes: window_panes,
+    active: *mut window_pane,
+    last_panes: window_panes,
+    panes: window_panes,
 
-    pub lastlayout: i32,
-    pub layout_root: *mut layout_cell,
-    pub saved_layout_root: *mut layout_cell,
-    pub old_layout: *mut c_char,
+    lastlayout: i32,
+    layout_root: *mut layout_cell,
+    saved_layout_root: *mut layout_cell,
+    old_layout: *mut c_char,
 
-    pub sx: u32,
-    pub sy: u32,
-    pub manual_sx: u32,
-    pub manual_sy: u32,
-    pub xpixel: u32,
-    pub ypixel: u32,
+    sx: u32,
+    sy: u32,
+    manual_sx: u32,
+    manual_sy: u32,
+    xpixel: u32,
+    ypixel: u32,
 
-    pub new_sx: u32,
-    pub new_sy: u32,
-    pub new_xpixel: u32,
-    pub new_ypixel: u32,
+    new_sx: u32,
+    new_sy: u32,
+    new_xpixel: u32,
+    new_ypixel: u32,
 
-    pub fill_character: *mut utf8_data,
-    pub flags: window_flag,
+    fill_character: *mut utf8_data,
+    flags: window_flag,
 
-    pub alerts_queued: i32,
-    pub alerts_entry: tailq_entry<window>,
+    alerts_queued: i32,
+    alerts_entry: tailq_entry<window>,
 
-    pub options: *mut options,
+    options: *mut options,
 
-    pub references: u32,
-    pub winlinks: tailq_head<winlink>,
-    pub entry: rb_entry<window>,
+    references: u32,
+    winlinks: tailq_head<winlink>,
+    entry: rb_entry<window>,
 }
-pub type windows = rb_head<window>;
+type windows = rb_head<window>;
 // crate::compat::impl_rb_tree_protos!(windows, window);
 
 impl crate::compat::queue::Entry<window, discr_alerts_entry> for window {
@@ -1474,30 +1468,30 @@ impl crate::compat::queue::Entry<window, discr_alerts_entry> for window {
 bitflags::bitflags! {
     #[repr(transparent)]
     #[derive(Copy, Clone, Eq, PartialEq)]
-    pub struct winlink_flags: i32 {
+    struct winlink_flags: i32 {
         const WINLINK_BELL = 0x1;
         const WINLINK_ACTIVITY = 0x2;
         const WINLINK_SILENCE = 0x4;
         const WINLINK_VISITED = 0x8;
     }
 }
-pub const WINLINK_ALERTFLAGS: winlink_flags = winlink_flags::WINLINK_BELL
+const WINLINK_ALERTFLAGS: winlink_flags = winlink_flags::WINLINK_BELL
     .union(winlink_flags::WINLINK_ACTIVITY)
     .union(winlink_flags::WINLINK_SILENCE);
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct winlink {
-    pub idx: i32,
-    pub session: *mut session,
-    pub window: *mut window,
+struct winlink {
+    idx: i32,
+    session: *mut session,
+    window: *mut window,
 
-    pub flags: winlink_flags,
+    flags: winlink_flags,
 
-    pub entry: rb_entry<winlink>,
+    entry: rb_entry<winlink>,
 
-    pub wentry: tailq_entry<winlink>,
-    pub sentry: tailq_entry<winlink>,
+    wentry: tailq_entry<winlink>,
+    sentry: tailq_entry<winlink>,
 }
 
 impl crate::compat::queue::Entry<winlink, discr_wentry> for winlink {
@@ -1512,15 +1506,15 @@ impl crate::compat::queue::Entry<winlink, discr_sentry> for winlink {
     }
 }
 
-pub type winlinks = rb_head<winlink>;
+type winlinks = rb_head<winlink>;
 // crate::compat::impl_rb_tree_protos!(winlinks, winlink);
-pub type winlink_stack = tailq_head<winlink>;
+type winlink_stack = tailq_head<winlink>;
 // crate::compat::impl_rb_tree_protos!(winlink_stack, winlink);
 
 /// Window size option.
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq, num_enum::TryFromPrimitive)]
-pub enum window_size_option {
+enum window_size_option {
     WINDOW_SIZE_LARGEST,
     WINDOW_SIZE_SMALLEST,
     WINDOW_SIZE_MANUAL,
@@ -1530,7 +1524,7 @@ pub enum window_size_option {
 /// Pane border status option.
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq, num_enum::TryFromPrimitive)]
-pub enum pane_status {
+enum pane_status {
     PANE_STATUS_OFF,
     PANE_STATUS_TOP,
     PANE_STATUS_BOTTOM,
@@ -1539,186 +1533,186 @@ pub enum pane_status {
 /// Layout direction.
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum layout_type {
+enum layout_type {
     LAYOUT_LEFTRIGHT,
     LAYOUT_TOPBOTTOM,
     LAYOUT_WINDOWPANE,
 }
 
 /// Layout cells queue.
-pub type layout_cells = tailq_head<layout_cell>;
+type layout_cells = tailq_head<layout_cell>;
 
 /// Layout cell.
 crate::compat::impl_tailq_entry!(layout_cell, entry, tailq_entry<layout_cell>);
 // #[derive(crate::compat::TailQEntry)]
 #[repr(C)]
-pub struct layout_cell {
-    pub type_: layout_type,
+struct layout_cell {
+    type_: layout_type,
 
-    pub parent: *mut layout_cell,
+    parent: *mut layout_cell,
 
-    pub sx: u32,
-    pub sy: u32,
+    sx: u32,
+    sy: u32,
 
-    pub xoff: u32,
-    pub yoff: u32,
+    xoff: u32,
+    yoff: u32,
 
-    pub wp: *mut window_pane,
-    pub cells: layout_cells,
+    wp: *mut window_pane,
+    cells: layout_cells,
 
     // #[entry]
-    pub entry: tailq_entry<layout_cell>,
+    entry: tailq_entry<layout_cell>,
 }
 
-pub const ENVIRON_HIDDEN: i32 = 0x1;
+const ENVIRON_HIDDEN: i32 = 0x1;
 
 /// Environment variable.
 #[repr(C)]
-pub struct environ_entry {
-    pub name: Option<NonNull<c_char>>,
-    pub value: Option<NonNull<c_char>>,
+struct environ_entry {
+    name: Option<NonNull<c_char>>,
+    value: Option<NonNull<c_char>>,
 
-    pub flags: i32,
-    pub entry: rb_entry<environ_entry>,
+    flags: i32,
+    entry: rb_entry<environ_entry>,
 }
 
 /// Client session.
 #[repr(C)]
-pub struct session_group {
-    pub name: *const c_char,
-    pub sessions: tailq_head<session>,
+struct session_group {
+    name: *const c_char,
+    sessions: tailq_head<session>,
 
-    pub entry: rb_entry<session_group>,
+    entry: rb_entry<session_group>,
 }
-pub type session_groups = rb_head<session_group>;
+type session_groups = rb_head<session_group>;
 
-pub const SESSION_PASTING: i32 = 0x1;
-pub const SESSION_ALERTED: i32 = 0x2;
+const SESSION_PASTING: i32 = 0x1;
+const SESSION_ALERTED: i32 = 0x2;
 
 #[repr(C)]
-pub struct session {
-    pub id: u32,
-    pub name: *mut c_char,
-    pub cwd: *mut c_char,
+struct session {
+    id: u32,
+    name: *mut c_char,
+    cwd: *mut c_char,
 
-    pub creation_time: timeval,
-    pub last_attached_time: timeval,
-    pub activity_time: timeval,
-    pub last_activity_time: timeval,
+    creation_time: timeval,
+    last_attached_time: timeval,
+    activity_time: timeval,
+    last_activity_time: timeval,
 
-    pub lock_timer: event,
+    lock_timer: event,
 
-    pub curw: *mut winlink,
-    pub lastw: winlink_stack,
-    pub windows: winlinks,
+    curw: *mut winlink,
+    lastw: winlink_stack,
+    windows: winlinks,
 
-    pub statusat: i32,
-    pub statuslines: u32,
+    statusat: i32,
+    statuslines: u32,
 
-    pub options: *mut options,
+    options: *mut options,
 
-    pub flags: i32,
+    flags: i32,
 
-    pub attached: u32,
+    attached: u32,
 
-    pub tio: *mut termios,
+    tio: *mut termios,
 
-    pub environ: *mut environ,
+    environ: *mut environ,
 
-    pub references: i32,
+    references: i32,
 
-    pub gentry: tailq_entry<session>,
-    pub entry: rb_entry<session>,
+    gentry: tailq_entry<session>,
+    entry: rb_entry<session>,
 }
-pub type sessions = rb_head<session>;
+type sessions = rb_head<session>;
 crate::compat::impl_tailq_entry!(session, gentry, tailq_entry<session>);
 
-pub const MOUSE_MASK_BUTTONS: u32 = 195;
-pub const MOUSE_MASK_SHIFT: u32 = 4;
-pub const MOUSE_MASK_META: u32 = 8;
-pub const MOUSE_MASK_CTRL: u32 = 16;
-pub const MOUSE_MASK_DRAG: u32 = 32;
-pub const MOUSE_MASK_MODIFIERS: u32 = MOUSE_MASK_SHIFT | MOUSE_MASK_META | MOUSE_MASK_CTRL;
+const MOUSE_MASK_BUTTONS: u32 = 195;
+const MOUSE_MASK_SHIFT: u32 = 4;
+const MOUSE_MASK_META: u32 = 8;
+const MOUSE_MASK_CTRL: u32 = 16;
+const MOUSE_MASK_DRAG: u32 = 32;
+const MOUSE_MASK_MODIFIERS: u32 = MOUSE_MASK_SHIFT | MOUSE_MASK_META | MOUSE_MASK_CTRL;
 
 /* Mouse wheel type. */
-pub const MOUSE_WHEEL_UP: u32 = 64;
-pub const MOUSE_WHEEL_DOWN: u32 = 65;
+const MOUSE_WHEEL_UP: u32 = 64;
+const MOUSE_WHEEL_DOWN: u32 = 65;
 
 /* Mouse button type. */
-pub const MOUSE_BUTTON_1: u32 = 0;
-pub const MOUSE_BUTTON_2: u32 = 1;
-pub const MOUSE_BUTTON_3: u32 = 2;
-pub const MOUSE_BUTTON_6: u32 = 66;
-pub const MOUSE_BUTTON_7: u32 = 67;
-pub const MOUSE_BUTTON_8: u32 = 128;
-pub const MOUSE_BUTTON_9: u32 = 129;
-pub const MOUSE_BUTTON_10: u32 = 130;
-pub const MOUSE_BUTTON_11: u32 = 131;
+const MOUSE_BUTTON_1: u32 = 0;
+const MOUSE_BUTTON_2: u32 = 1;
+const MOUSE_BUTTON_3: u32 = 2;
+const MOUSE_BUTTON_6: u32 = 66;
+const MOUSE_BUTTON_7: u32 = 67;
+const MOUSE_BUTTON_8: u32 = 128;
+const MOUSE_BUTTON_9: u32 = 129;
+const MOUSE_BUTTON_10: u32 = 130;
+const MOUSE_BUTTON_11: u32 = 131;
 
 // Mouse helpers.
 #[allow(non_snake_case)]
 #[inline]
-pub fn MOUSE_BUTTONS(b: u32) -> u32 {
+fn MOUSE_BUTTONS(b: u32) -> u32 {
     b & MOUSE_MASK_BUTTONS
 }
 #[allow(non_snake_case)]
 #[inline]
-pub fn MOUSE_WHEEL(b: u32) -> bool {
+fn MOUSE_WHEEL(b: u32) -> bool {
     ((b) & MOUSE_MASK_BUTTONS) == MOUSE_WHEEL_UP || ((b) & MOUSE_MASK_BUTTONS) == MOUSE_WHEEL_DOWN
 }
 #[allow(non_snake_case)]
 #[inline]
-pub fn MOUSE_DRAG(b: u32) -> bool {
+fn MOUSE_DRAG(b: u32) -> bool {
     b & MOUSE_MASK_DRAG != 0
 }
 #[allow(non_snake_case)]
 #[inline]
-pub fn MOUSE_RELEASE(b: u32) -> bool {
+fn MOUSE_RELEASE(b: u32) -> bool {
     b & MOUSE_MASK_BUTTONS == 3
 }
 
 // Mouse input.
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct mouse_event {
-    pub valid: i32,
-    pub ignore: i32,
+struct mouse_event {
+    valid: i32,
+    ignore: i32,
 
-    pub key: key_code,
+    key: key_code,
 
-    pub statusat: i32,
-    pub statuslines: u32,
+    statusat: i32,
+    statuslines: u32,
 
-    pub x: u32,
-    pub y: u32,
-    pub b: u32,
+    x: u32,
+    y: u32,
+    b: u32,
 
-    pub lx: u32,
-    pub ly: u32,
-    pub lb: u32,
+    lx: u32,
+    ly: u32,
+    lb: u32,
 
-    pub ox: u32,
-    pub oy: u32,
+    ox: u32,
+    oy: u32,
 
-    pub s: i32,
-    pub w: i32,
-    pub wp: i32,
+    s: i32,
+    w: i32,
+    wp: i32,
 
-    pub sgr_type: u32,
-    pub sgr_b: u32,
+    sgr_type: u32,
+    sgr_b: u32,
 }
 
 /// Key event.
 #[repr(C)]
-pub struct key_event {
-    pub key: key_code,
-    pub m: mouse_event,
+struct key_event {
+    key: key_code,
+    m: mouse_event,
 }
 
 bitflags::bitflags! {
     #[repr(transparent)]
     #[derive(Copy, Clone)]
-    pub struct term_flags: i32 {
+    struct term_flags: i32 {
         const TERM_256COLOURS = 0x1;
         const TERM_NOAM = 0x2;
         const TERM_DECSLRM = 0x4;
@@ -1732,20 +1726,20 @@ bitflags::bitflags! {
 unsafe impl Zeroable for tty_term {}
 /// Terminal definition.
 #[repr(C)]
-pub struct tty_term {
-    pub name: *mut c_char,
-    pub tty: *mut tty,
-    pub features: i32,
+struct tty_term {
+    name: *mut c_char,
+    tty: *mut tty,
+    features: i32,
 
-    pub acs: [[c_char; 2]; c_uchar::MAX as usize + 1],
+    acs: [[c_char; 2]; c_uchar::MAX as usize + 1],
 
-    pub codes: *mut tty_code,
+    codes: *mut tty_code,
 
-    pub flags: term_flags,
+    flags: term_flags,
 
-    pub entry: list_entry<tty_term>,
+    entry: list_entry<tty_term>,
 }
-pub type tty_terms = list_head<tty_term>;
+type tty_terms = list_head<tty_term>;
 impl ListEntry<tty_term, discr_entry> for tty_term {
     unsafe fn field(this: *mut Self) -> *mut list_entry<tty_term> {
         unsafe { &raw mut (*this).entry }
@@ -1755,7 +1749,7 @@ impl ListEntry<tty_term, discr_entry> for tty_term {
 bitflags::bitflags! {
     #[repr(transparent)]
     #[derive(Copy, Clone)]
-    pub struct tty_flags: i32 {
+    struct tty_flags: i32 {
         const TTY_NOCURSOR = 0x1;
         const TTY_FREEZE = 0x2;
         const TTY_TIMER = 0x4;
@@ -1770,153 +1764,153 @@ bitflags::bitflags! {
         const TTY_HAVEDA2 = 0x800; // Secondary DA.
     }
 }
-pub const TTY_ALL_REQUEST_FLAGS: tty_flags = tty_flags::TTY_HAVEDA
+const TTY_ALL_REQUEST_FLAGS: tty_flags = tty_flags::TTY_HAVEDA
     .union(tty_flags::TTY_HAVEDA2)
     .union(tty_flags::TTY_HAVEXDA);
 
 /// Client terminal.
 #[repr(C)]
-pub struct tty {
-    pub client: *mut client,
-    pub start_timer: event,
-    pub clipboard_timer: event,
-    pub last_requests: time_t,
+struct tty {
+    client: *mut client,
+    start_timer: event,
+    clipboard_timer: event,
+    last_requests: time_t,
 
-    pub sx: u32,
-    pub sy: u32,
+    sx: u32,
+    sy: u32,
 
-    pub xpixel: u32,
-    pub ypixel: u32,
+    xpixel: u32,
+    ypixel: u32,
 
-    pub cx: u32,
-    pub cy: u32,
-    pub cstyle: screen_cursor_style,
-    pub ccolour: i32,
+    cx: u32,
+    cy: u32,
+    cstyle: screen_cursor_style,
+    ccolour: i32,
 
-    pub oflag: i32,
-    pub oox: u32,
-    pub ooy: u32,
-    pub osx: u32,
-    pub osy: u32,
+    oflag: i32,
+    oox: u32,
+    ooy: u32,
+    osx: u32,
+    osy: u32,
 
-    pub mode: mode_flag,
-    pub fg: i32,
-    pub bg: i32,
+    mode: mode_flag,
+    fg: i32,
+    bg: i32,
 
-    pub rlower: u32,
-    pub rupper: u32,
+    rlower: u32,
+    rupper: u32,
 
-    pub rleft: u32,
-    pub rright: u32,
+    rleft: u32,
+    rright: u32,
 
-    pub event_in: event,
-    pub in_: *mut evbuffer,
-    pub event_out: event,
-    pub out: *mut evbuffer,
-    pub timer: event,
-    pub discarded: usize,
+    event_in: event,
+    in_: *mut evbuffer,
+    event_out: event,
+    out: *mut evbuffer,
+    timer: event,
+    discarded: usize,
 
-    pub tio: termios,
+    tio: termios,
 
-    pub cell: grid_cell,
-    pub last_cell: grid_cell,
+    cell: grid_cell,
+    last_cell: grid_cell,
 
-    pub flags: tty_flags,
+    flags: tty_flags,
 
-    pub term: *mut tty_term,
+    term: *mut tty_term,
 
-    pub mouse_last_x: u32,
-    pub mouse_last_y: u32,
-    pub mouse_last_b: u32,
-    pub mouse_drag_flag: i32,
-    pub mouse_drag_update: Option<unsafe extern "C" fn(*mut client, *mut mouse_event)>,
-    pub mouse_drag_release: Option<unsafe extern "C" fn(*mut client, *mut mouse_event)>,
+    mouse_last_x: u32,
+    mouse_last_y: u32,
+    mouse_last_b: u32,
+    mouse_drag_flag: i32,
+    mouse_drag_update: Option<unsafe extern "C" fn(*mut client, *mut mouse_event)>,
+    mouse_drag_release: Option<unsafe extern "C" fn(*mut client, *mut mouse_event)>,
 
-    pub key_timer: event,
-    pub key_tree: *mut tty_key,
+    key_timer: event,
+    key_tree: *mut tty_key,
 }
 
-pub type tty_ctx_redraw_cb = Option<unsafe extern "C" fn(*const tty_ctx)>;
-pub type tty_ctx_set_client_cb = Option<unsafe extern "C" fn(*mut tty_ctx, *mut client) -> i32>;
+type tty_ctx_redraw_cb = Option<unsafe extern "C" fn(*const tty_ctx)>;
+type tty_ctx_set_client_cb = Option<unsafe extern "C" fn(*mut tty_ctx, *mut client) -> i32>;
 
 #[repr(C)]
-pub struct tty_ctx {
-    pub s: *mut screen,
+struct tty_ctx {
+    s: *mut screen,
 
-    pub redraw_cb: tty_ctx_redraw_cb,
-    pub set_client_cb: tty_ctx_set_client_cb,
-    pub arg: *mut c_void,
+    redraw_cb: tty_ctx_redraw_cb,
+    set_client_cb: tty_ctx_set_client_cb,
+    arg: *mut c_void,
 
-    pub cell: *const grid_cell,
-    pub wrapped: i32,
+    cell: *const grid_cell,
+    wrapped: i32,
 
-    pub num: u32,
-    pub ptr: *mut c_void,
-    pub ptr2: *mut c_void,
+    num: u32,
+    ptr: *mut c_void,
+    ptr2: *mut c_void,
 
-    pub allow_invisible_panes: i32,
+    allow_invisible_panes: i32,
 
     /*
      * Cursor and region position before the screen was updated - this is
      * where the command should be applied; the values in the screen have
      * already been updated.
      */
-    pub ocx: u32,
-    pub ocy: u32,
+    ocx: u32,
+    ocy: u32,
 
-    pub orupper: u32,
-    pub orlower: u32,
+    orupper: u32,
+    orlower: u32,
 
     /* Target region (usually pane) offset and size. */
-    pub xoff: u32,
-    pub yoff: u32,
-    pub rxoff: u32,
-    pub ryoff: u32,
-    pub sx: u32,
-    pub sy: u32,
+    xoff: u32,
+    yoff: u32,
+    rxoff: u32,
+    ryoff: u32,
+    sx: u32,
+    sy: u32,
 
     // The background colour used for clearing (erasing).
-    pub bg: u32,
+    bg: u32,
 
     // The default colours and palette.
-    pub defaults: grid_cell,
-    pub palette: *const colour_palette,
+    defaults: grid_cell,
+    palette: *const colour_palette,
 
     // Containing region (usually window) offset and size.
-    pub bigger: i32,
-    pub wox: u32,
-    pub woy: u32,
-    pub wsx: u32,
-    pub wsy: u32,
+    bigger: i32,
+    wox: u32,
+    woy: u32,
+    wsx: u32,
+    wsy: u32,
 }
 
 // Saved message entry.
 crate::compat::impl_tailq_entry!(message_entry, entry, tailq_entry<message_entry>);
 // #[derive(Copy, Clone, crate::compat::TailQEntry)]
 #[repr(C)]
-pub struct message_entry {
-    pub msg: *mut c_char,
-    pub msg_num: u32,
-    pub msg_time: timeval,
+struct message_entry {
+    msg: *mut c_char,
+    msg_num: u32,
+    msg_time: timeval,
 
     // #[entry]
-    pub entry: tailq_entry<message_entry>,
+    entry: tailq_entry<message_entry>,
 }
-pub type message_list = tailq_head<message_entry>;
+type message_list = tailq_head<message_entry>;
 
 /// Argument type.
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum args_type {
+enum args_type {
     ARGS_NONE,
     ARGS_STRING,
     ARGS_COMMANDS,
 }
 
 #[repr(C)]
-pub union args_value_union {
-    pub string: *mut c_char,
-    pub cmdlist: *mut cmd_list,
+union args_value_union {
+    string: *mut c_char,
+    cmdlist: *mut cmd_list,
 }
 
 unsafe impl Zeroable for args_value {}
@@ -1924,37 +1918,37 @@ unsafe impl Zeroable for args_value {}
 crate::compat::impl_tailq_entry!(args_value, entry, tailq_entry<args_value>);
 // #[derive(crate::compat::TailQEntry)]
 #[repr(C)]
-pub struct args_value {
-    pub type_: args_type,
-    pub union_: args_value_union,
-    pub cached: *mut c_char,
+struct args_value {
+    type_: args_type,
+    union_: args_value_union,
+    cached: *mut c_char,
     // #[entry]
-    pub entry: tailq_entry<args_value>,
+    entry: tailq_entry<args_value>,
 }
-pub type args_tree = rb_head<args_entry>;
+type args_tree = rb_head<args_entry>;
 
 /// Arguments parsing type.
 #[repr(C)]
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum args_parse_type {
+enum args_parse_type {
     ARGS_PARSE_INVALID,
     ARGS_PARSE_STRING,
     ARGS_PARSE_COMMANDS_OR_STRING,
     ARGS_PARSE_COMMANDS,
 }
 
-pub type args_parse_cb =
+type args_parse_cb =
     Option<unsafe extern "C" fn(*mut args, u32, *mut *mut c_char) -> args_parse_type>;
 #[repr(C)]
-pub struct args_parse {
-    pub template: *const c_char,
-    pub lower: i32,
-    pub upper: i32,
-    pub cb: args_parse_cb,
+struct args_parse {
+    template: *const c_char,
+    lower: i32,
+    upper: i32,
+    cb: args_parse_cb,
 }
 
 impl args_parse {
-    pub const fn new(template: &CStr, lower: i32, upper: i32, cb: args_parse_cb) -> Self {
+    const fn new(template: &CStr, lower: i32, upper: i32, cb: args_parse_cb) -> Self {
         Self {
             template: template.as_ptr(),
             lower,
@@ -1967,7 +1961,7 @@ impl args_parse {
 /// Command find structures.
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub enum cmd_find_type {
+enum cmd_find_type {
     CMD_FIND_PANE,
     CMD_FIND_WINDOW,
     CMD_FIND_SESSION,
@@ -1975,38 +1969,38 @@ pub enum cmd_find_type {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct cmd_find_state {
-    pub flags: i32,
-    pub current: *mut cmd_find_state,
+struct cmd_find_state {
+    flags: i32,
+    current: *mut cmd_find_state,
 
-    pub s: *mut session,
-    pub wl: *mut winlink,
-    pub w: *mut window,
-    pub wp: *mut window_pane,
-    pub idx: i32,
+    s: *mut session,
+    wl: *mut winlink,
+    w: *mut window,
+    wp: *mut window_pane,
+    idx: i32,
 }
 
 // Command find flags.
-pub const CMD_FIND_PREFER_UNATTACHED: i32 = 0x1;
-pub const CMD_FIND_QUIET: i32 = 0x2;
-pub const CMD_FIND_WINDOW_INDEX: i32 = 0x4;
-pub const CMD_FIND_DEFAULT_MARKED: i32 = 0x8;
-pub const CMD_FIND_EXACT_SESSION: i32 = 0x10;
-pub const CMD_FIND_EXACT_WINDOW: i32 = 0x20;
-pub const CMD_FIND_CANFAIL: i32 = 0x40;
+const CMD_FIND_PREFER_UNATTACHED: i32 = 0x1;
+const CMD_FIND_QUIET: i32 = 0x2;
+const CMD_FIND_WINDOW_INDEX: i32 = 0x4;
+const CMD_FIND_DEFAULT_MARKED: i32 = 0x8;
+const CMD_FIND_EXACT_SESSION: i32 = 0x10;
+const CMD_FIND_EXACT_WINDOW: i32 = 0x20;
+const CMD_FIND_CANFAIL: i32 = 0x40;
 
 /// List of commands.
 #[repr(C)]
-pub struct cmd_list {
-    pub references: i32,
-    pub group: u32,
-    pub list: *mut cmds,
+struct cmd_list {
+    references: i32,
+    group: u32,
+    list: *mut cmds,
 }
 
 /* Command return values. */
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum cmd_retval {
+enum cmd_retval {
     CMD_RETURN_ERROR = -1,
     CMD_RETURN_NORMAL = 0,
     CMD_RETURN_WAIT,
@@ -2016,21 +2010,21 @@ pub enum cmd_retval {
 // Command parse result.
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum cmd_parse_status {
+enum cmd_parse_status {
     CMD_PARSE_ERROR,
     CMD_PARSE_SUCCESS,
 }
 #[repr(C)]
-pub struct cmd_parse_result {
-    pub status: cmd_parse_status,
-    pub cmdlist: *mut cmd_list,
-    pub error: *mut c_char,
+struct cmd_parse_result {
+    status: cmd_parse_status,
+    cmdlist: *mut cmd_list,
+    error: *mut c_char,
 }
 
 bitflags::bitflags! {
     #[repr(transparent)]
     #[derive(Copy, Clone, Eq, PartialEq)]
-    pub struct cmd_parse_input_flags: i32 {
+    struct cmd_parse_input_flags: i32 {
         const CMD_PARSE_QUIET = 0x1;
         const CMD_PARSE_PARSEONLY = 0x2;
         const CMD_PARSE_NOALIAS = 0x4;
@@ -2040,36 +2034,36 @@ bitflags::bitflags! {
 }
 
 #[repr(C)]
-pub struct cmd_parse_input {
-    pub flags: cmd_parse_input_flags,
+struct cmd_parse_input {
+    flags: cmd_parse_input_flags,
 
-    pub file: *const c_char,
-    pub line: u32,
+    file: *const c_char,
+    line: u32,
 
-    pub item: *mut cmdq_item,
-    pub c: *mut client,
-    pub fs: cmd_find_state,
+    item: *mut cmdq_item,
+    c: *mut client,
+    fs: cmd_find_state,
 }
 
 /* Command queue flags. */
-pub const CMDQ_STATE_REPEAT: i32 = 0x1;
-pub const CMDQ_STATE_CONTROL: i32 = 0x2;
-pub const CMDQ_STATE_NOHOOKS: i32 = 0x4;
+const CMDQ_STATE_REPEAT: i32 = 0x1;
+const CMDQ_STATE_CONTROL: i32 = 0x2;
+const CMDQ_STATE_NOHOOKS: i32 = 0x4;
 
 // Command queue callback.
-pub type cmdq_cb = Option<unsafe extern "C" fn(*mut cmdq_item, *mut c_void) -> cmd_retval>;
+type cmdq_cb = Option<unsafe extern "C" fn(*mut cmdq_item, *mut c_void) -> cmd_retval>;
 
 // Command definition flag.
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct cmd_entry_flag {
-    pub flag: c_char,
-    pub type_: cmd_find_type,
-    pub flags: i32,
+struct cmd_entry_flag {
+    flag: c_char,
+    type_: cmd_find_type,
+    flags: i32,
 }
 
 impl cmd_entry_flag {
-    pub const fn new(flag: u8, type_: cmd_find_type, flags: i32) -> Self {
+    const fn new(flag: u8, type_: cmd_find_type, flags: i32) -> Self {
         Self {
             flag: flag as c_char,
             type_,
@@ -2081,7 +2075,7 @@ impl cmd_entry_flag {
 bitflags::bitflags! {
     #[repr(transparent)]
     #[derive(Copy, Clone, Eq, PartialEq)]
-    pub struct cmd_flag: i32 {
+    struct cmd_flag: i32 {
         const CMD_STARTSERVER = 0x1;
         const CMD_READONLY = 0x2;
         const CMD_AFTERHOOK = 0x4;
@@ -2093,45 +2087,45 @@ bitflags::bitflags! {
 
 // Command definition.
 #[repr(C)]
-pub struct cmd_entry {
-    pub name: *const c_char,
-    pub alias: *const c_char,
+struct cmd_entry {
+    name: *const c_char,
+    alias: *const c_char,
 
-    pub args: args_parse,
-    pub usage: *const c_char,
+    args: args_parse,
+    usage: *const c_char,
 
-    pub source: cmd_entry_flag,
-    pub target: cmd_entry_flag,
+    source: cmd_entry_flag,
+    target: cmd_entry_flag,
 
-    pub flags: cmd_flag,
+    flags: cmd_flag,
 
-    pub exec: Option<unsafe extern "C" fn(*mut cmd, *mut cmdq_item) -> cmd_retval>,
+    exec: Option<unsafe extern "C" fn(*mut cmd, *mut cmdq_item) -> cmd_retval>,
 }
 
 /* Status line. */
-pub const STATUS_LINES_LIMIT: usize = 5;
+const STATUS_LINES_LIMIT: usize = 5;
 #[repr(C)]
-pub struct status_line_entry {
-    pub expanded: *mut c_char,
-    pub ranges: style_ranges,
+struct status_line_entry {
+    expanded: *mut c_char,
+    ranges: style_ranges,
 }
 #[repr(C)]
-pub struct status_line {
-    pub timer: event,
+struct status_line {
+    timer: event,
 
-    pub screen: screen,
-    pub active: *mut screen,
-    pub references: c_int,
+    screen: screen,
+    active: *mut screen,
+    references: c_int,
 
-    pub style: grid_cell,
-    pub entries: [status_line_entry; STATUS_LINES_LIMIT],
+    style: grid_cell,
+    entries: [status_line_entry; STATUS_LINES_LIMIT],
 }
 
 /* Prompt type. */
-pub const PROMPT_NTYPES: u32 = 4;
+const PROMPT_NTYPES: u32 = 4;
 #[repr(u32)]
 #[derive(Copy, Clone, Eq, PartialEq, num_enum::TryFromPrimitive)]
-pub enum prompt_type {
+enum prompt_type {
     PROMPT_TYPE_COMMAND,
     PROMPT_TYPE_SEARCH,
     PROMPT_TYPE_TARGET,
@@ -2140,45 +2134,45 @@ pub enum prompt_type {
 }
 
 /* File in client. */
-pub type client_file_cb =
+type client_file_cb =
     Option<unsafe extern "C" fn(*mut client, *mut c_char, i32, i32, *mut evbuffer, *mut c_void)>;
 #[repr(C)]
-pub struct client_file {
-    pub c: *mut client,
-    pub peer: *mut tmuxpeer,
-    pub tree: *mut client_files,
+struct client_file {
+    c: *mut client,
+    peer: *mut tmuxpeer,
+    tree: *mut client_files,
 
-    pub references: i32,
-    pub stream: i32,
+    references: i32,
+    stream: i32,
 
-    pub path: *mut c_char,
-    pub buffer: *mut evbuffer,
-    pub event: *mut bufferevent,
+    path: *mut c_char,
+    buffer: *mut evbuffer,
+    event: *mut bufferevent,
 
-    pub fd: i32,
-    pub error: i32,
-    pub closed: i32,
+    fd: i32,
+    error: i32,
+    closed: i32,
 
-    pub cb: client_file_cb,
-    pub data: *mut c_void,
+    cb: client_file_cb,
+    data: *mut c_void,
 
-    pub entry: rb_entry<client_file>,
+    entry: rb_entry<client_file>,
 }
-pub type client_files = rb_head<client_file>;
+type client_files = rb_head<client_file>;
 RB_GENERATE!(client_files, client_file, entry, discr_entry, file_cmp);
 
 // Client window.
 #[repr(C)]
-pub struct client_window {
-    pub window: u32,
-    pub pane: *mut window_pane,
+struct client_window {
+    window: u32,
+    pane: *mut window_pane,
 
-    pub sx: u32,
-    pub sy: u32,
+    sx: u32,
+    sy: u32,
 
-    pub entry: rb_entry<client_window>,
+    entry: rb_entry<client_window>,
 }
-pub type client_windows = rb_head<client_window>;
+type client_windows = rb_head<client_window>;
 RB_GENERATE!(
     client_windows,
     client_window,
@@ -2188,31 +2182,30 @@ RB_GENERATE!(
 );
 
 /* Visible areas not obstructed by overlays. */
-pub const OVERLAY_MAX_RANGES: usize = 3;
+const OVERLAY_MAX_RANGES: usize = 3;
 #[repr(C)]
-pub struct overlay_ranges {
-    pub px: [u32; OVERLAY_MAX_RANGES],
-    pub nx: [u32; OVERLAY_MAX_RANGES],
+struct overlay_ranges {
+    px: [u32; OVERLAY_MAX_RANGES],
+    nx: [u32; OVERLAY_MAX_RANGES],
 }
 
-pub type prompt_input_cb =
+type prompt_input_cb =
     Option<unsafe extern "C" fn(*mut client, NonNull<c_void>, *const c_char, i32) -> i32>;
-pub type prompt_free_cb = Option<unsafe extern "C" fn(NonNull<c_void>)>;
-pub type overlay_check_cb =
+type prompt_free_cb = Option<unsafe extern "C" fn(NonNull<c_void>)>;
+type overlay_check_cb =
     Option<unsafe extern "C" fn(*mut client, *mut c_void, u32, u32, u32, *mut overlay_ranges)>;
-pub type overlay_mode_cb =
+type overlay_mode_cb =
     Option<unsafe extern "C" fn(*mut client, *mut c_void, *mut u32, *mut u32) -> *mut screen>;
-pub type overlay_draw_cb =
+type overlay_draw_cb =
     Option<unsafe extern "C" fn(*mut client, *mut c_void, *mut screen_redraw_ctx)>;
-pub type overlay_key_cb =
-    Option<unsafe extern "C" fn(*mut client, *mut c_void, *mut key_event) -> i32>;
-pub type overlay_free_cb = Option<unsafe extern "C" fn(*mut client, *mut c_void)>;
-pub type overlay_resize_cb = Option<unsafe extern "C" fn(*mut client, *mut c_void)>;
+type overlay_key_cb = Option<unsafe extern "C" fn(*mut client, *mut c_void, *mut key_event) -> i32>;
+type overlay_free_cb = Option<unsafe extern "C" fn(*mut client, *mut c_void)>;
+type overlay_resize_cb = Option<unsafe extern "C" fn(*mut client, *mut c_void)>;
 
 bitflags::bitflags! {
     #[repr(transparent)]
     #[derive(Copy, Clone, Eq, PartialEq)]
-    pub struct client_flag: u64 {
+    struct client_flag: u64 {
         const TERMINAL           = 0x0000000001u64;
         const LOGIN              = 0x0000000002u64;
         const EXIT               = 0x0000000004u64;
@@ -2253,139 +2246,139 @@ bitflags::bitflags! {
     }
 }
 
-pub const CLIENT_ALLREDRAWFLAGS: client_flag = client_flag::REDRAWWINDOW
+const CLIENT_ALLREDRAWFLAGS: client_flag = client_flag::REDRAWWINDOW
     .union(client_flag::REDRAWSTATUS)
     .union(client_flag::REDRAWSTATUSALWAYS)
     .union(client_flag::REDRAWBORDERS)
     .union(client_flag::REDRAWOVERLAY)
     .union(client_flag::REDRAWPANES);
-pub const CLIENT_UNATTACHEDFLAGS: client_flag = client_flag::DEAD
+const CLIENT_UNATTACHEDFLAGS: client_flag = client_flag::DEAD
     .union(client_flag::SUSPENDED)
     .union(client_flag::EXIT);
-pub const CLIENT_NODETACHFLAGS: client_flag = client_flag::DEAD.union(client_flag::EXIT);
-pub const CLIENT_NOSIZEFLAGS: client_flag = client_flag::DEAD
+const CLIENT_NODETACHFLAGS: client_flag = client_flag::DEAD.union(client_flag::EXIT);
+const CLIENT_NOSIZEFLAGS: client_flag = client_flag::DEAD
     .union(client_flag::SUSPENDED)
     .union(client_flag::EXIT);
 
-pub const PROMPT_SINGLE: i32 = 0x1;
-pub const PROMPT_NUMERIC: i32 = 0x2;
-pub const PROMPT_INCREMENTAL: i32 = 0x4;
-pub const PROMPT_NOFORMAT: i32 = 0x8;
-pub const PROMPT_KEY: i32 = 0x8;
+const PROMPT_SINGLE: i32 = 0x1;
+const PROMPT_NUMERIC: i32 = 0x2;
+const PROMPT_INCREMENTAL: i32 = 0x4;
+const PROMPT_NOFORMAT: i32 = 0x8;
+const PROMPT_KEY: i32 = 0x8;
 
 //#[derive(Copy, Clone)]
 crate::compat::impl_tailq_entry!(client, entry, tailq_entry<client>);
 // #[derive(crate::compat::TailQEntry)]
 #[repr(C)]
-pub struct client {
-    pub name: *const c_char,
-    pub peer: *mut tmuxpeer,
-    pub queue: *mut cmdq_list,
+struct client {
+    name: *const c_char,
+    peer: *mut tmuxpeer,
+    queue: *mut cmdq_list,
 
-    pub windows: client_windows,
+    windows: client_windows,
 
-    pub control_state: *mut control_state,
-    pub pause_age: c_uint,
+    control_state: *mut control_state,
+    pause_age: c_uint,
 
-    pub pid: pid_t,
-    pub fd: c_int,
-    pub out_fd: c_int,
-    pub event: event,
-    pub retval: c_int,
+    pid: pid_t,
+    fd: c_int,
+    out_fd: c_int,
+    event: event,
+    retval: c_int,
 
-    pub creation_time: timeval,
-    pub activity_time: timeval,
+    creation_time: timeval,
+    activity_time: timeval,
 
-    pub environ: *mut environ,
-    pub jobs: *mut format_job_tree,
+    environ: *mut environ,
+    jobs: *mut format_job_tree,
 
-    pub title: *mut c_char,
-    pub path: *mut c_char,
-    pub cwd: *const c_char,
+    title: *mut c_char,
+    path: *mut c_char,
+    cwd: *const c_char,
 
-    pub term_name: *mut c_char,
-    pub term_features: c_int,
-    pub term_type: *mut c_char,
-    pub term_caps: *mut *mut c_char,
-    pub term_ncaps: c_uint,
+    term_name: *mut c_char,
+    term_features: c_int,
+    term_type: *mut c_char,
+    term_caps: *mut *mut c_char,
+    term_ncaps: c_uint,
 
-    pub ttyname: *mut c_char,
-    pub tty: tty,
+    ttyname: *mut c_char,
+    tty: tty,
 
-    pub written: usize,
-    pub discarded: usize,
-    pub redraw: usize,
+    written: usize,
+    discarded: usize,
+    redraw: usize,
 
-    pub repeat_timer: event,
+    repeat_timer: event,
 
-    pub click_timer: event,
-    pub click_button: c_uint,
-    pub click_event: mouse_event,
+    click_timer: event,
+    click_button: c_uint,
+    click_event: mouse_event,
 
-    pub status: status_line,
+    status: status_line,
 
-    pub flags: client_flag,
+    flags: client_flag,
 
-    pub exit_type: exit_type,
-    pub exit_msgtype: msgtype,
-    pub exit_session: *mut c_char,
-    pub exit_message: *mut c_char,
+    exit_type: exit_type,
+    exit_msgtype: msgtype,
+    exit_session: *mut c_char,
+    exit_message: *mut c_char,
 
-    pub keytable: *mut key_table,
+    keytable: *mut key_table,
 
-    pub redraw_panes: u64,
+    redraw_panes: u64,
 
-    pub message_ignore_keys: c_int,
-    pub message_ignore_styles: c_int,
-    pub message_string: *mut c_char,
-    pub message_timer: event,
+    message_ignore_keys: c_int,
+    message_ignore_styles: c_int,
+    message_string: *mut c_char,
+    message_timer: event,
 
-    pub prompt_string: *mut c_char,
-    pub prompt_buffer: *mut utf8_data,
-    pub prompt_last: *mut c_char,
-    pub prompt_index: usize,
-    pub prompt_inputcb: prompt_input_cb,
-    pub prompt_freecb: prompt_free_cb,
-    pub prompt_data: *mut c_void,
-    pub prompt_hindex: [c_uint; 4],
-    pub prompt_mode: prompt_mode,
-    pub prompt_saved: *mut utf8_data,
+    prompt_string: *mut c_char,
+    prompt_buffer: *mut utf8_data,
+    prompt_last: *mut c_char,
+    prompt_index: usize,
+    prompt_inputcb: prompt_input_cb,
+    prompt_freecb: prompt_free_cb,
+    prompt_data: *mut c_void,
+    prompt_hindex: [c_uint; 4],
+    prompt_mode: prompt_mode,
+    prompt_saved: *mut utf8_data,
 
-    pub prompt_flags: c_int,
-    pub prompt_type: prompt_type,
-    pub prompt_cursor: c_int,
+    prompt_flags: c_int,
+    prompt_type: prompt_type,
+    prompt_cursor: c_int,
 
-    pub session: *mut session,
-    pub last_session: *mut session,
+    session: *mut session,
+    last_session: *mut session,
 
-    pub references: c_int,
+    references: c_int,
 
-    pub pan_window: *mut c_void,
-    pub pan_ox: c_uint,
-    pub pan_oy: c_uint,
+    pan_window: *mut c_void,
+    pan_ox: c_uint,
+    pan_oy: c_uint,
 
-    pub overlay_check: overlay_check_cb,
-    pub overlay_mode: overlay_mode_cb,
-    pub overlay_draw: overlay_draw_cb,
-    pub overlay_key: overlay_key_cb,
-    pub overlay_free: overlay_free_cb,
-    pub overlay_resize: overlay_resize_cb,
-    pub overlay_data: *mut c_void,
-    pub overlay_timer: event,
+    overlay_check: overlay_check_cb,
+    overlay_mode: overlay_mode_cb,
+    overlay_draw: overlay_draw_cb,
+    overlay_key: overlay_key_cb,
+    overlay_free: overlay_free_cb,
+    overlay_resize: overlay_resize_cb,
+    overlay_data: *mut c_void,
+    overlay_timer: event,
 
-    pub files: client_files,
+    files: client_files,
 
-    pub clipboard_panes: *mut c_uint,
-    pub clipboard_npanes: c_uint,
+    clipboard_panes: *mut c_uint,
+    clipboard_npanes: c_uint,
 
     // #[entry]
-    pub entry: tailq_entry<client>,
+    entry: tailq_entry<client>,
 }
-pub type clients = tailq_head<client>;
+type clients = tailq_head<client>;
 
 /// Control mode subscription type.
 #[repr(i32)]
-pub enum control_sub_type {
+enum control_sub_type {
     CONTROL_SUB_SESSION,
     CONTROL_SUB_PANE,
     CONTROL_SUB_ALL_PANES,
@@ -2393,51 +2386,51 @@ pub enum control_sub_type {
     CONTROL_SUB_ALL_WINDOWS,
 }
 
-pub const KEY_BINDING_REPEAT: i32 = 0x1;
+const KEY_BINDING_REPEAT: i32 = 0x1;
 
 /// Key binding and key table.
 #[repr(C)]
-pub struct key_binding {
-    pub key: key_code,
-    pub cmdlist: *mut cmd_list,
-    pub note: *mut c_char,
+struct key_binding {
+    key: key_code,
+    cmdlist: *mut cmd_list,
+    note: *mut c_char,
 
-    pub flags: i32,
+    flags: i32,
 
-    pub entry: rb_entry<key_binding>,
+    entry: rb_entry<key_binding>,
 }
-pub type key_bindings = rb_head<key_binding>;
+type key_bindings = rb_head<key_binding>;
 
 #[repr(C)]
-pub struct key_table {
-    pub name: *mut c_char,
-    pub activity_time: timeval,
-    pub key_bindings: key_bindings,
-    pub default_key_bindings: key_bindings,
+struct key_table {
+    name: *mut c_char,
+    activity_time: timeval,
+    key_bindings: key_bindings,
+    default_key_bindings: key_bindings,
 
-    pub references: u32,
+    references: u32,
 
-    pub entry: rb_entry<key_table>,
+    entry: rb_entry<key_table>,
 }
-pub type key_tables = rb_head<key_table>;
+type key_tables = rb_head<key_table>;
 
 // Option data.
-pub type options_array = rb_head<options_array_item>;
+type options_array = rb_head<options_array_item>;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub union options_value {
-    pub string: *mut c_char,
-    pub number: c_longlong,
-    pub style: style,
-    pub array: options_array,
-    pub cmdlist: *mut cmd_list,
+union options_value {
+    string: *mut c_char,
+    number: c_longlong,
+    style: style,
+    array: options_array,
+    cmdlist: *mut cmd_list,
 }
 
 // Option table entries.
 #[repr(i32)]
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub enum options_table_type {
+enum options_table_type {
     OPTIONS_TABLE_STRING,
     OPTIONS_TABLE_NUMBER,
     OPTIONS_TABLE_KEY,
@@ -2447,43 +2440,43 @@ pub enum options_table_type {
     OPTIONS_TABLE_COMMAND,
 }
 
-pub const OPTIONS_TABLE_NONE: i32 = 0;
-pub const OPTIONS_TABLE_SERVER: i32 = 0x1;
-pub const OPTIONS_TABLE_SESSION: i32 = 0x2;
-pub const OPTIONS_TABLE_WINDOW: i32 = 0x4;
-pub const OPTIONS_TABLE_PANE: i32 = 0x8;
+const OPTIONS_TABLE_NONE: i32 = 0;
+const OPTIONS_TABLE_SERVER: i32 = 0x1;
+const OPTIONS_TABLE_SESSION: i32 = 0x2;
+const OPTIONS_TABLE_WINDOW: i32 = 0x4;
+const OPTIONS_TABLE_PANE: i32 = 0x8;
 
-pub const OPTIONS_TABLE_IS_ARRAY: i32 = 0x1;
-pub const OPTIONS_TABLE_IS_HOOK: i32 = 0x2;
-pub const OPTIONS_TABLE_IS_STYLE: i32 = 0x4;
+const OPTIONS_TABLE_IS_ARRAY: i32 = 0x1;
+const OPTIONS_TABLE_IS_HOOK: i32 = 0x2;
+const OPTIONS_TABLE_IS_STYLE: i32 = 0x4;
 
 #[repr(C)]
-pub struct options_table_entry {
-    pub name: *const c_char,
-    pub alternative_name: *mut c_char,
-    pub type_: options_table_type,
-    pub scope: i32,
-    pub flags: i32,
-    pub minimum: u32,
-    pub maximum: u32,
+struct options_table_entry {
+    name: *const c_char,
+    alternative_name: *mut c_char,
+    type_: options_table_type,
+    scope: i32,
+    flags: i32,
+    minimum: u32,
+    maximum: u32,
 
-    pub choices: *const *const c_char,
+    choices: *const *const c_char,
 
-    pub default_str: *const c_char,
-    pub default_num: c_longlong,
-    pub default_arr: *const *const c_char,
+    default_str: *const c_char,
+    default_num: c_longlong,
+    default_arr: *const *const c_char,
 
-    pub separator: *const c_char,
-    pub pattern: *const c_char,
+    separator: *const c_char,
+    pattern: *const c_char,
 
-    pub text: *const c_char,
-    pub unit: *const c_char,
+    text: *const c_char,
+    unit: *const c_char,
 }
 
 #[repr(C)]
-pub struct options_name_map {
-    pub from: *const c_char,
-    pub to: *const c_char,
+struct options_name_map {
+    from: *const c_char,
+    to: *const c_char,
 }
 impl options_name_map {
     const fn new(from: *const c_char, to: *const c_char) -> Self {
@@ -2492,60 +2485,60 @@ impl options_name_map {
 }
 
 /* Common command usages. */
-pub const CMD_TARGET_PANE_USAGE: &CStr = c"[-t target-pane]";
-pub const CMD_TARGET_WINDOW_USAGE: &CStr = c"[-t target-window]";
-pub const CMD_TARGET_SESSION_USAGE: &CStr = c"[-t target-session]";
-pub const CMD_TARGET_CLIENT_USAGE: &CStr = c"[-t target-client]";
-pub const CMD_SRCDST_PANE_USAGE: &CStr = c"[-s src-pane] [-t dst-pane]";
-pub const CMD_SRCDST_WINDOW_USAGE: &CStr = c"[-s src-window] [-t dst-window]";
-pub const CMD_SRCDST_SESSION_USAGE: &CStr = c"[-s src-session] [-t dst-session]";
-pub const CMD_SRCDST_CLIENT_USAGE: &CStr = c"[-s src-client] [-t dst-client]";
-pub const CMD_BUFFER_USAGE: &CStr = c"[-b buffer-name]";
+const CMD_TARGET_PANE_USAGE: &CStr = c"[-t target-pane]";
+const CMD_TARGET_WINDOW_USAGE: &CStr = c"[-t target-window]";
+const CMD_TARGET_SESSION_USAGE: &CStr = c"[-t target-session]";
+const CMD_TARGET_CLIENT_USAGE: &CStr = c"[-t target-client]";
+const CMD_SRCDST_PANE_USAGE: &CStr = c"[-s src-pane] [-t dst-pane]";
+const CMD_SRCDST_WINDOW_USAGE: &CStr = c"[-s src-window] [-t dst-window]";
+const CMD_SRCDST_SESSION_USAGE: &CStr = c"[-s src-session] [-t dst-session]";
+const CMD_SRCDST_CLIENT_USAGE: &CStr = c"[-s src-client] [-t dst-client]";
+const CMD_BUFFER_USAGE: &CStr = c"[-b buffer-name]";
 
-pub const SPAWN_KILL: i32 = 0x1;
-pub const SPAWN_DETACHED: i32 = 0x2;
-pub const SPAWN_RESPAWN: i32 = 0x4;
-pub const SPAWN_BEFORE: i32 = 0x8;
-pub const SPAWN_NONOTIFY: i32 = 0x10;
-pub const SPAWN_FULLSIZE: i32 = 0x20;
-pub const SPAWN_EMPTY: i32 = 0x40;
-pub const SPAWN_ZOOM: i32 = 0x80;
+const SPAWN_KILL: i32 = 0x1;
+const SPAWN_DETACHED: i32 = 0x2;
+const SPAWN_RESPAWN: i32 = 0x4;
+const SPAWN_BEFORE: i32 = 0x8;
+const SPAWN_NONOTIFY: i32 = 0x10;
+const SPAWN_FULLSIZE: i32 = 0x20;
+const SPAWN_EMPTY: i32 = 0x40;
+const SPAWN_ZOOM: i32 = 0x80;
 
 /// Spawn common context.
 #[repr(C)]
-pub struct spawn_context {
-    pub item: *mut cmdq_item,
+struct spawn_context {
+    item: *mut cmdq_item,
 
-    pub s: *mut session,
-    pub wl: *mut winlink,
-    pub tc: *mut client,
+    s: *mut session,
+    wl: *mut winlink,
+    tc: *mut client,
 
-    pub wp0: *mut window_pane,
-    pub lc: *mut layout_cell,
+    wp0: *mut window_pane,
+    lc: *mut layout_cell,
 
-    pub name: *const c_char,
-    pub argv: *mut *mut c_char,
-    pub argc: i32,
-    pub environ: *mut environ,
+    name: *const c_char,
+    argv: *mut *mut c_char,
+    argc: i32,
+    environ: *mut environ,
 
-    pub idx: i32,
-    pub cwd: *const c_char,
+    idx: i32,
+    cwd: *const c_char,
 
-    pub flags: i32,
+    flags: i32,
 }
 
 /// Mode tree sort order.
 #[repr(C)]
-pub struct mode_tree_sort_criteria {
-    pub field: u32,
-    pub reversed: i32,
+struct mode_tree_sort_criteria {
+    field: u32,
+    reversed: i32,
 }
 
-pub const WINDOW_MINIMUM: u32 = PANE_MINIMUM;
-pub const WINDOW_MAXIMUM: u32 = 10_000;
+const WINDOW_MINIMUM: u32 = PANE_MINIMUM;
+const WINDOW_MAXIMUM: u32 = 10_000;
 
 #[repr(i32)]
-pub enum exit_type {
+enum exit_type {
     CLIENT_EXIT_RETURN,
     CLIENT_EXIT_SHUTDOWN,
     CLIENT_EXIT_DETACH,
@@ -2553,7 +2546,7 @@ pub enum exit_type {
 
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum prompt_mode {
+enum prompt_mode {
     PROMPT_ENTRY,
     PROMPT_COMMAND,
 }
@@ -2563,27 +2556,27 @@ mod tmux;
 #[cfg(not(test))]
 pub use crate::tmux::main;
 
-pub use crate::tmux::{
+use crate::tmux::{
     checkshell, find_cwd, find_home, get_timer, getversion, global_environ, global_options,
     global_s_options, global_w_options, ptm_fd, setblocking, shell_argv0, shell_command, sig2name,
     socket_path, start_time,
 };
 
 mod proc;
-pub use crate::proc::{
+use crate::proc::{
     proc_add_peer, proc_clear_signals, proc_exit, proc_flush_peer, proc_fork_and_daemon,
     proc_get_peer_uid, proc_kill_peer, proc_loop, proc_remove_peer, proc_send, proc_set_signals,
     proc_start, proc_toggle_log, tmuxpeer, tmuxproc,
 };
 
 mod cfg_;
-pub use crate::cfg_::{
+use crate::cfg_::{
     cfg_client, cfg_files, cfg_finished, cfg_nfiles, cfg_print_causes, cfg_quiet, cfg_show_causes,
     load_cfg, load_cfg_from_buffer, start_cfg,
 };
 
 mod paste;
-pub use crate::paste::{
+use crate::paste::{
     paste_add, paste_buffer, paste_buffer_created, paste_buffer_data, paste_buffer_data_,
     paste_buffer_name, paste_buffer_order, paste_free, paste_get_name, paste_get_top,
     paste_is_empty, paste_make_sample, paste_rename, paste_replace, paste_set, paste_walk,
@@ -2591,7 +2584,7 @@ pub use crate::paste::{
 
 mod format;
 use crate::format::format_add;
-pub use crate::format::{
+use crate::format::{
     FORMAT_NONE, FORMAT_PANE, FORMAT_WINDOW, format_add_cb, format_add_tv, format_cb,
     format_create, format_create_defaults, format_create_from_state, format_create_from_target,
     format_defaults, format_defaults_pane, format_defaults_paste_buffer, format_defaults_window,
@@ -2602,17 +2595,17 @@ pub use crate::format::{
 };
 
 mod format_draw_;
-pub use crate::format_draw_::{format_draw, format_trim_left, format_trim_right, format_width};
+use crate::format_draw_::{format_draw, format_trim_left, format_trim_right, format_width};
 
 mod notify;
-pub use crate::notify::{
+use crate::notify::{
     notify_client, notify_hook, notify_pane, notify_paste_buffer, notify_session,
     notify_session_window, notify_window, notify_winlink,
 };
 
 mod options_;
 use crate::options_::options_set_string;
-pub use crate::options_::{
+use crate::options_::{
     options, options_array_assign, options_array_clear, options_array_first, options_array_get,
     options_array_item, options_array_item_index, options_array_item_value, options_array_next,
     options_array_set, options_create, options_default, options_default_to_string, options_empty,
@@ -2625,21 +2618,21 @@ pub use crate::options_::{
 };
 
 mod options_table;
-pub use crate::options_table::{options_other_names, options_table};
+use crate::options_table::{options_other_names, options_table};
 
 mod job_;
-pub const JOB_NOWAIT: i32 = 1;
-pub const JOB_KEEPWRITE: i32 = 2;
-pub const JOB_PTY: i32 = 4;
-pub const JOB_DEFAULTSHELL: i32 = 8;
-pub use crate::job_::{
+const JOB_NOWAIT: i32 = 1;
+const JOB_KEEPWRITE: i32 = 2;
+const JOB_PTY: i32 = 4;
+const JOB_DEFAULTSHELL: i32 = 8;
+use crate::job_::{
     job, job_check_died, job_complete_cb, job_free, job_free_cb, job_get_data, job_get_event,
     job_get_status, job_kill_all, job_print_summary, job_resize, job_run, job_still_running,
     job_transfer, job_update_cb,
 };
 
 mod environ_;
-pub use crate::environ_::{
+use crate::environ_::{
     environ, environ_clear, environ_copy, environ_create, environ_find, environ_first,
     environ_for_session, environ_free, environ_next, environ_push, environ_put, environ_unset,
     environ_update,
@@ -2647,7 +2640,7 @@ pub use crate::environ_::{
 use crate::environ_::{environ_log, environ_set};
 
 mod tty_;
-pub use crate::tty_::{
+use crate::tty_::{
     tty_attributes, tty_cell, tty_clipboard_query, tty_close, tty_cmd_alignmenttest, tty_cmd_cell,
     tty_cmd_cells, tty_cmd_clearcharacter, tty_cmd_clearendofline, tty_cmd_clearendofscreen,
     tty_cmd_clearline, tty_cmd_clearscreen, tty_cmd_clearstartofline, tty_cmd_clearstartofscreen,
@@ -2663,7 +2656,7 @@ pub use crate::tty_::{
 };
 
 mod tty_term_;
-pub use crate::tty_term_::{
+use crate::tty_term_::{
     tty_code, tty_term_apply, tty_term_apply_overrides, tty_term_create, tty_term_describe,
     tty_term_flag, tty_term_free, tty_term_free_list, tty_term_has, tty_term_ncodes,
     tty_term_number, tty_term_read_list, tty_term_string, tty_term_string_i, tty_term_string_ii,
@@ -2671,36 +2664,34 @@ pub use crate::tty_term_::{
 };
 
 mod tty_features;
-pub use crate::tty_features::{
+use crate::tty_features::{
     tty_add_features, tty_apply_features, tty_default_features, tty_get_features,
 };
 
 mod tty_acs;
-pub use crate::tty_acs::{
+use crate::tty_acs::{
     tty_acs_double_borders, tty_acs_get, tty_acs_heavy_borders, tty_acs_needed,
     tty_acs_reverse_get, tty_acs_rounded_borders,
 };
 
 mod tty_keys;
-pub use crate::tty_keys::{
-    tty_key, tty_keys_build, tty_keys_colours, tty_keys_free, tty_keys_next,
-};
+use crate::tty_keys::{tty_key, tty_keys_build, tty_keys_colours, tty_keys_free, tty_keys_next};
 
 mod arguments;
 
 // TODO convert calls to args_has to args_has_
-pub unsafe fn args_has_(args: *mut args, flag: char) -> bool {
+unsafe fn args_has_(args: *mut args, flag: char) -> bool {
     debug_assert!(flag.is_ascii());
     unsafe { args_has(args, flag as u8) != 0 }
 }
 
-// pub unsafe fn args_get(_: *mut args, _: c_uchar) -> *const c_char;
-pub unsafe fn args_get_(args: *mut args, flag: char) -> *const c_char {
+// unsafe fn args_get(_: *mut args, _: c_uchar) -> *const c_char;
+unsafe fn args_get_(args: *mut args, flag: char) -> *const c_char {
     debug_assert!(flag.is_ascii());
     unsafe { args_get(args, flag as u8) }
 }
 
-pub use crate::arguments::{
+use crate::arguments::{
     args, args_command_state, args_copy, args_count, args_create, args_entry, args_escape,
     args_first, args_first_value, args_free, args_free_value, args_free_values, args_from_vector,
     args_get, args_has, args_make_commands, args_make_commands_free,
@@ -2712,7 +2703,7 @@ pub use crate::arguments::{
 
 mod cmd_;
 use crate::cmd_::cmd_log_argv;
-pub use crate::cmd_::{
+use crate::cmd_::{
     cmd, cmd_append_argv, cmd_copy, cmd_copy_argv, cmd_free, cmd_free_argv, cmd_get_alias,
     cmd_get_args, cmd_get_entry, cmd_get_group, cmd_get_source, cmd_list_all_have,
     cmd_list_any_have, cmd_list_append, cmd_list_append_all, cmd_list_copy, cmd_list_first,
@@ -2721,23 +2712,23 @@ pub use crate::cmd_::{
     cmd_stringify_argv, cmd_table, cmd_template_replace, cmd_unpack_argv, cmds,
 };
 
-pub use crate::cmd_::cmd_attach_session::cmd_attach_session;
+use crate::cmd_::cmd_attach_session::cmd_attach_session;
 
-pub use crate::cmd_::cmd_find::{
+use crate::cmd_::cmd_find::{
     cmd_find_best_client, cmd_find_clear_state, cmd_find_client, cmd_find_copy_state,
     cmd_find_empty_state, cmd_find_from_client, cmd_find_from_mouse, cmd_find_from_nothing,
     cmd_find_from_pane, cmd_find_from_session, cmd_find_from_session_window, cmd_find_from_window,
     cmd_find_from_winlink, cmd_find_from_winlink_pane, cmd_find_target, cmd_find_valid_state,
 };
 
-pub mod cmd_parse;
-pub use crate::cmd_parse::{
+mod cmd_parse;
+use crate::cmd_parse::{
     cmd_parse_and_append, cmd_parse_and_insert, cmd_parse_command, cmd_parse_from_arguments,
     cmd_parse_from_buffer, cmd_parse_from_file, cmd_parse_from_string, cmd_parse_state, *,
 };
 
 use crate::cmd_::cmd_queue::{cmdq_add_format, cmdq_error, cmdq_insert_hook, cmdq_print};
-pub use crate::cmd_::cmd_queue::{
+use crate::cmd_::cmd_queue::{
     cmdq_add_formats, cmdq_append, cmdq_continue, cmdq_copy_state, cmdq_free, cmdq_free_state,
     cmdq_get_callback1, cmdq_get_client, cmdq_get_command, cmdq_get_current, cmdq_get_error,
     cmdq_get_event, cmdq_get_flags, cmdq_get_name, cmdq_get_source, cmdq_get_state,
@@ -2746,13 +2737,13 @@ pub use crate::cmd_::cmd_queue::{
     cmdq_print_data, cmdq_running, cmdq_state,
 };
 
-pub use crate::cmd_::cmd_wait_for::cmd_wait_for_flush;
+use crate::cmd_::cmd_wait_for::cmd_wait_for_flush;
 
 mod client_;
-pub use crate::client_::client_main;
+use crate::client_::client_main;
 
 mod key_bindings_;
-pub use crate::key_bindings_::{
+use crate::key_bindings_::{
     key_bindings_add, key_bindings_dispatch, key_bindings_first, key_bindings_first_table,
     key_bindings_get, key_bindings_get_default, key_bindings_get_table, key_bindings_init,
     key_bindings_next, key_bindings_next_table, key_bindings_remove, key_bindings_remove_table,
@@ -2760,13 +2751,13 @@ pub use crate::key_bindings_::{
 };
 
 mod key_string;
-pub use crate::key_string::{key_string_lookup_key, key_string_lookup_string};
+use crate::key_string::{key_string_lookup_key, key_string_lookup_string};
 
 mod alerts;
-pub use crate::alerts::{alerts_check_session, alerts_queue, alerts_reset_all};
+use crate::alerts::{alerts_check_session, alerts_queue, alerts_reset_all};
 
 mod file;
-pub use crate::file::{
+use crate::file::{
     file_can_print, file_cancel, file_cmp, file_create_with_client, file_create_with_peer,
     file_fire_done, file_fire_read, file_free, file_print_buffer, file_push, file_read,
     file_read_cancel, file_read_data, file_read_done, file_read_open, file_vprint, file_write,
@@ -2776,14 +2767,14 @@ use crate::file::{file_error, file_print};
 
 mod server;
 use crate::server::server_add_message;
-pub use crate::server::{
+use crate::server::{
     clients, current_time, marked_pane, message_log, server_add_accept, server_check_marked,
     server_clear_marked, server_create_socket, server_is_marked, server_proc, server_set_marked,
     server_start, server_update_socket,
 };
 
 mod server_client;
-pub use crate::server_client::{
+use crate::server_client::{
     server_client_add_client_window, server_client_check_nested, server_client_clear_overlay,
     server_client_create, server_client_detach, server_client_exec,
     server_client_get_client_window, server_client_get_cwd, server_client_get_flags,
@@ -2796,7 +2787,7 @@ pub use crate::server_client::{
 };
 
 mod server_fn;
-pub use crate::server_fn::{
+use crate::server_fn::{
     server_check_unattached, server_destroy_pane, server_destroy_session, server_kill_pane,
     server_kill_window, server_link_window, server_lock, server_lock_client, server_lock_session,
     server_redraw_client, server_redraw_session, server_redraw_session_group, server_redraw_window,
@@ -2807,7 +2798,7 @@ pub use crate::server_fn::{
 
 mod status;
 use crate::status::status_message_set;
-pub use crate::status::{
+use crate::status::{
     status_at_line, status_free, status_get_range, status_init, status_line_size,
     status_message_clear, status_message_redraw, status_prompt_clear, status_prompt_hlist,
     status_prompt_hsize, status_prompt_key, status_prompt_load_history, status_prompt_redraw,
@@ -2817,21 +2808,21 @@ pub use crate::status::{
 };
 
 mod resize;
-pub use crate::resize::{
+use crate::resize::{
     default_window_size, recalculate_size, recalculate_sizes, recalculate_sizes_now, resize_window,
 };
 
 mod input;
-pub use crate::input::{
+use crate::input::{
     input_ctx, input_free, input_init, input_parse_buffer, input_parse_pane, input_parse_screen,
     input_pending, input_reply_clipboard, input_reset,
 };
 
 mod input_keys;
-pub use crate::input_keys::{input_key, input_key_build, input_key_get_mouse, input_key_pane};
+use crate::input_keys::{input_key, input_key_build, input_key_get_mouse, input_key_pane};
 
 mod colour;
-pub use crate::colour::{
+use crate::colour::{
     colour_256to16,
     colour_byname,
     colour_find_rgb,
@@ -2851,10 +2842,10 @@ pub use crate::colour::{
 };
 
 mod attributes;
-pub use crate::attributes::{attributes_fromstring, attributes_tostring};
+use crate::attributes::{attributes_fromstring, attributes_tostring};
 
 mod grid_;
-pub use crate::grid_::{
+use crate::grid_::{
     grid_adjust_lines, grid_cells_equal, grid_cells_look_equal, grid_clear, grid_clear_history,
     grid_clear_lines, grid_collect_history, grid_compare, grid_create, grid_default_cell,
     grid_destroy, grid_duplicate_lines, grid_empty_line, grid_get_cell, grid_get_line,
@@ -2864,7 +2855,7 @@ pub use crate::grid_::{
 };
 
 mod grid_reader_;
-pub use crate::grid_reader_::{
+use crate::grid_reader_::{
     grid_reader_cursor_back_to_indentation, grid_reader_cursor_down,
     grid_reader_cursor_end_of_line, grid_reader_cursor_jump, grid_reader_cursor_jump_back,
     grid_reader_cursor_left, grid_reader_cursor_next_word, grid_reader_cursor_next_word_end,
@@ -2874,7 +2865,7 @@ pub use crate::grid_reader_::{
 };
 
 mod grid_view;
-pub use crate::grid_view::{
+use crate::grid_view::{
     grid_view_clear, grid_view_clear_history, grid_view_delete_cells, grid_view_delete_lines,
     grid_view_delete_lines_region, grid_view_get_cell, grid_view_insert_cells,
     grid_view_insert_lines, grid_view_insert_lines_region, grid_view_scroll_region_down,
@@ -2883,7 +2874,7 @@ pub use crate::grid_view::{
 };
 
 mod screen_write;
-pub use crate::screen_write::{
+use crate::screen_write::{
     screen_write_alignmenttest, screen_write_alternateoff, screen_write_alternateon,
     screen_write_backspace, screen_write_box, screen_write_carriagereturn, screen_write_cell,
     screen_write_citem, screen_write_clearcharacter, screen_write_clearendofline,
@@ -2907,10 +2898,10 @@ use crate::screen_write::{
 };
 
 mod screen_redraw;
-pub use crate::screen_redraw::{screen_redraw_pane, screen_redraw_screen};
+use crate::screen_redraw::{screen_redraw_pane, screen_redraw_screen};
 
 mod screen_;
-pub use crate::screen_::{
+use crate::screen_::{
     screen_alternate_off, screen_alternate_on, screen_check_selection, screen_clear_selection,
     screen_free, screen_hide_selection, screen_init, screen_mode_to_string, screen_pop_title,
     screen_push_title, screen_reinit, screen_reset_hyperlinks, screen_reset_tabs, screen_resize,
@@ -2920,7 +2911,7 @@ pub use crate::screen_::{
 };
 
 mod window_;
-pub use crate::window_::{
+use crate::window_::{
     all_window_panes, window_add_pane, window_add_ref, window_cmp, window_count_panes,
     window_create, window_destroy_panes, window_find_by_id, window_find_by_id_str,
     window_find_string, window_get_active_at, window_has_pane, window_lost_pane,
@@ -2943,7 +2934,7 @@ pub use crate::window_::{
 };
 
 mod layout;
-pub use crate::layout::{
+use crate::layout::{
     layout_assign_pane, layout_close_pane, layout_count_cells, layout_create_cell,
     layout_destroy_cell, layout_fix_offsets, layout_fix_panes, layout_free, layout_free_cell,
     layout_init, layout_make_leaf, layout_make_node, layout_print_cell, layout_resize,
@@ -2953,15 +2944,15 @@ pub use crate::layout::{
 };
 
 mod layout_custom;
-pub use crate::layout_custom::{layout_dump, layout_parse};
+use crate::layout_custom::{layout_dump, layout_parse};
 
 mod layout_set;
-pub use crate::layout_set::{
+use crate::layout_set::{
     layout_set_lookup, layout_set_next, layout_set_previous, layout_set_select,
 };
 
 mod mode_tree;
-pub use crate::mode_tree::{
+use crate::mode_tree::{
     mode_tree_add, mode_tree_build, mode_tree_build_cb, mode_tree_collapse_current,
     mode_tree_count_tagged, mode_tree_data, mode_tree_down, mode_tree_draw,
     mode_tree_draw_as_parent, mode_tree_draw_cb, mode_tree_each_cb, mode_tree_each_tagged,
@@ -2973,33 +2964,33 @@ pub use crate::mode_tree::{
 };
 
 mod window_buffer;
-pub use crate::window_buffer::window_buffer_mode;
+use crate::window_buffer::window_buffer_mode;
 
 mod window_tree;
-pub use crate::window_tree::window_tree_mode;
+use crate::window_tree::window_tree_mode;
 
 mod window_clock;
-pub use crate::window_clock::{window_clock_mode, window_clock_table};
+use crate::window_clock::{window_clock_mode, window_clock_table};
 
 mod window_client;
-pub use crate::window_client::window_client_mode;
+use crate::window_client::window_client_mode;
 
 mod window_copy;
 use crate::window_copy::window_copy_add;
-pub use crate::window_copy::{
+use crate::window_copy::{
     window_copy_get_line, window_copy_get_word, window_copy_mode, window_copy_pagedown,
     window_copy_pageup, window_copy_start_drag, window_copy_vadd, window_view_mode,
 };
 
 mod window_customize;
-pub use crate::window_customize::window_customize_mode;
+use crate::window_customize::window_customize_mode;
 
 mod names;
-pub use crate::names::{check_window_name, default_window_name, parse_window_name};
+use crate::names::{check_window_name, default_window_name, parse_window_name};
 
 mod control;
 use crate::control::control_write;
-pub use crate::control::{
+use crate::control::{
     control_add_sub, control_all_done, control_continue_pane, control_discard, control_pane_offset,
     control_pause_pane, control_ready, control_remove_sub, control_reset_offsets,
     control_set_pane_off, control_set_pane_on, control_start, control_state, control_stop,
@@ -3007,7 +2998,7 @@ pub use crate::control::{
 };
 
 mod control_notify;
-pub use crate::control_notify::{
+use crate::control_notify::{
     control_notify_client_detached, control_notify_client_session_changed,
     control_notify_pane_mode_changed, control_notify_paste_buffer_changed,
     control_notify_paste_buffer_deleted, control_notify_session_closed,
@@ -3018,7 +3009,7 @@ pub use crate::control_notify::{
 };
 
 mod session_;
-pub use crate::session_::{
+use crate::session_::{
     next_session_id, session_add_ref, session_alive, session_attach, session_check_name,
     session_cmp, session_create, session_destroy, session_detach, session_find, session_find_by_id,
     session_find_by_id_str, session_group_add, session_group_attached_count,
@@ -3030,7 +3021,7 @@ pub use crate::session_::{
 };
 
 mod utf8;
-pub use crate::utf8::{
+use crate::utf8::{
     utf8_append, utf8_build_one, utf8_copy, utf8_cstrhas, utf8_cstrwidth, utf8_from_data,
     utf8_fromcstr, utf8_fromwc, utf8_in_table, utf8_isvalid, utf8_open, utf8_padcstr,
     utf8_rpadcstr, utf8_sanitize, utf8_set, utf8_stravis, utf8_stravisx, utf8_strlen, utf8_strvis,
@@ -3038,49 +3029,45 @@ pub use crate::utf8::{
 };
 
 mod osdep;
-pub use crate::osdep::{osdep_event_init, osdep_get_cwd, osdep_get_name};
+use crate::osdep::{osdep_event_init, osdep_get_cwd, osdep_get_name};
 
 mod utf8_combined;
-pub use crate::utf8_combined::{utf8_has_zwj, utf8_is_modifier, utf8_is_vs, utf8_is_zwj};
+use crate::utf8_combined::{utf8_has_zwj, utf8_is_modifier, utf8_is_vs, utf8_is_zwj};
 
 // procname.c
 unsafe extern "C" {
-    pub unsafe fn get_proc_name(_: c_int, _: *mut c_char) -> *mut c_char;
-    pub unsafe fn get_proc_cwd(_: c_int) -> *mut c_char;
+    unsafe fn get_proc_name(_: c_int, _: *mut c_char) -> *mut c_char;
+    unsafe fn get_proc_cwd(_: c_int) -> *mut c_char;
 }
 
 #[macro_use] // log_debug
 mod log;
-pub use crate::log::{
-    fatal, fatalx, log_add_level, log_close, log_get_level, log_open, log_toggle,
-};
+use crate::log::{fatal, fatalx, log_add_level, log_close, log_get_level, log_open, log_toggle};
 use crate::log::{fatalx_, log_debug};
 
-pub const MENU_NOMOUSE: i32 = 0x1;
-pub const MENU_TAB: i32 = 0x2;
-pub const MENU_STAYOPEN: i32 = 0x4;
+const MENU_NOMOUSE: i32 = 0x1;
+const MENU_TAB: i32 = 0x2;
+const MENU_STAYOPEN: i32 = 0x4;
 mod menu_;
-pub use crate::menu_::{
+use crate::menu_::{
     menu_add_item, menu_add_items, menu_check_cb, menu_create, menu_data, menu_display,
     menu_draw_cb, menu_free, menu_free_cb, menu_key_cb, menu_mode_cb, menu_prepare,
 };
 
-pub const POPUP_CLOSEEXIT: i32 = 0x1;
-pub const POPUP_CLOSEEXITZERO: i32 = 0x2;
-pub const POPUP_INTERNAL: i32 = 0x4;
+const POPUP_CLOSEEXIT: i32 = 0x1;
+const POPUP_CLOSEEXITZERO: i32 = 0x2;
+const POPUP_INTERNAL: i32 = 0x4;
 mod popup;
-pub use crate::popup::{popup_close_cb, popup_display, popup_editor, popup_finish_edit_cb};
+use crate::popup::{popup_close_cb, popup_display, popup_editor, popup_finish_edit_cb};
 
 mod style_;
-pub use crate::style_::{
-    style_add, style_apply, style_copy, style_parse, style_set, style_tostring,
-};
+use crate::style_::{style_add, style_apply, style_copy, style_parse, style_set, style_tostring};
 
 mod spawn;
-pub use crate::spawn::{spawn_pane, spawn_window};
+use crate::spawn::{spawn_pane, spawn_window};
 
 mod regsub;
-pub use crate::regsub::regsub;
+use crate::regsub::regsub;
 
 /* image.c */
 unsafe extern "C" {}
@@ -3088,40 +3075,40 @@ unsafe extern "C" {}
 unsafe extern "C" {}
 
 mod server_acl;
-pub use crate::server_acl::{
+use crate::server_acl::{
     server_acl_display, server_acl_get_uid, server_acl_init, server_acl_join, server_acl_user,
     server_acl_user_allow, server_acl_user_allow_write, server_acl_user_deny,
     server_acl_user_deny_write, server_acl_user_find,
 };
 
 mod hyperlinks_;
-pub use crate::hyperlinks_::{
+use crate::hyperlinks_::{
     hyperlinks, hyperlinks_copy, hyperlinks_free, hyperlinks_get, hyperlinks_init, hyperlinks_put,
     hyperlinks_reset, hyperlinks_uri,
 };
 
-pub mod xmalloc;
+mod xmalloc;
 use crate::xmalloc::{format_nul, xsnprintf_};
-pub use crate::xmalloc::{
+use crate::xmalloc::{
     free_, memcpy_, memcpy__, xcalloc, xcalloc_, xcalloc__, xcalloc1, xmalloc, xmalloc_, xrealloc,
     xrealloc_, xreallocarray_, xstrdup, xstrdup_,
 };
 
-pub mod tmux_protocol;
-pub use crate::tmux_protocol::{
+mod tmux_protocol;
+use crate::tmux_protocol::{
     PROTOCOL_VERSION, msg_command, msg_read_cancel, msg_read_data, msg_read_done, msg_read_open,
     msg_write_close, msg_write_data, msg_write_open, msg_write_ready, msgtype,
 };
 
 unsafe extern "C-unwind" {
-    pub fn vsnprintf(_: *mut c_char, _: usize, _: *const c_char, _: ...) -> c_int;
-    pub fn vasprintf(_: *mut *mut c_char, _: *const c_char, _: ...) -> c_int;
+    fn vsnprintf(_: *mut c_char, _: usize, _: *const c_char, _: ...) -> c_int;
+    fn vasprintf(_: *mut *mut c_char, _: *const c_char, _: ...) -> c_int;
 }
 
 unsafe impl Sync for SyncCharPtr {}
 #[repr(transparent)]
 #[derive(Copy, Clone)]
-pub struct SyncCharPtr(*const c_char);
+struct SyncCharPtr(*const c_char);
 impl SyncCharPtr {
     const fn new(value: &'static CStr) -> Self {
         Self(value.as_ptr())
@@ -3140,7 +3127,7 @@ impl SyncCharPtr {
 // TODO this will eventually swap to be bool, but for now, while there is C code should be ffi compatible with i32
 #[repr(transparent)]
 #[derive(Copy, Clone)]
-pub struct boolint(i32);
+struct boolint(i32);
 impl boolint {
     const FALSE: boolint = Self(0);
     const TRUE: boolint = Self(1);
@@ -3177,7 +3164,7 @@ impl std::ops::Not for boolint {
 // TODO struct should have some sort of lifetime
 /// Display wrapper for a *c_char pointer
 #[repr(transparent)]
-pub struct _s(*const i8);
+struct _s(*const i8);
 impl _s {
     unsafe fn from_raw(s: *const c_char) -> Self {
         _s(s)
@@ -3224,7 +3211,7 @@ macro_rules! function_name {
     }};
 }
 
-pub const fn concat_array<const N: usize, const M: usize, const O: usize, T: Copy>(
+const fn concat_array<const N: usize, const M: usize, const O: usize, T: Copy>(
     a1: [T; N],
     a2: [T; M],
 ) -> [T; O] {

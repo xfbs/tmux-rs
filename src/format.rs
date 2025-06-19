@@ -3782,7 +3782,7 @@ fn format_find(
         let mut saved: *mut c_char = null_mut();
         if modifiers.intersects(format_modifiers::FORMAT_BASENAME) {
             saved = found;
-            found = xstrdup(basename(saved)).as_ptr();
+            found = xstrdup(libc::posix_basename(saved)).as_ptr();
             free_(saved);
         }
         if modifiers.intersects(format_modifiers::FORMAT_DIRNAME) {

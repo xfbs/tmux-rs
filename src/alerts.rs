@@ -37,7 +37,7 @@ unsafe extern "C" fn alerts_timer(_fd: i32, _events: i16, arg: *mut c_void) {
     }
 }
 
-pub unsafe extern "C" fn alerts_callback(_fd: c_int, _events: c_short, arg: *mut c_void) {
+unsafe extern "C" fn alerts_callback(_fd: c_int, _events: c_short, arg: *mut c_void) {
     unsafe {
         for w in
             tailq_foreach::<_, crate::discr_alerts_entry>(&raw mut alerts_list).map(NonNull::as_ptr)
@@ -58,7 +58,7 @@ pub unsafe extern "C" fn alerts_callback(_fd: c_int, _events: c_short, arg: *mut
     }
 }
 
-pub unsafe fn alerts_action_applies(wl: *mut winlink, name: *const c_char) -> c_int {
+unsafe fn alerts_action_applies(wl: *mut winlink, name: *const c_char) -> c_int {
     unsafe {
         let action: i32 = options_get_number((*(*wl).session).options, name) as i32;
         match action {
@@ -70,7 +70,7 @@ pub unsafe fn alerts_action_applies(wl: *mut winlink, name: *const c_char) -> c_
     }
 }
 
-pub unsafe fn alerts_check_all(w: *mut window) -> window_flag {
+unsafe fn alerts_check_all(w: *mut window) -> window_flag {
     unsafe {
         let mut alerts = alerts_check_bell(w);
         alerts |= alerts_check_activity(w);
@@ -79,7 +79,7 @@ pub unsafe fn alerts_check_all(w: *mut window) -> window_flag {
     }
 }
 
-pub unsafe extern "C" fn alerts_check_session(s: *mut session) {
+pub(crate) unsafe extern "C" fn alerts_check_session(s: *mut session) {
     unsafe {
         for wl in rb_foreach(&raw mut (*s).windows) {
             alerts_check_all((*wl.as_ptr()).window);
@@ -87,7 +87,7 @@ pub unsafe extern "C" fn alerts_check_session(s: *mut session) {
     }
 }
 
-pub unsafe fn alerts_enabled(w: *mut window, flags: window_flag) -> c_int {
+unsafe fn alerts_enabled(w: *mut window, flags: window_flag) -> c_int {
     unsafe {
         if flags.intersects(window_flag::BELL) {
             if options_get_number((*w).options, c"monitor-bell".as_ptr()) != 0 {
@@ -109,7 +109,7 @@ pub unsafe fn alerts_enabled(w: *mut window, flags: window_flag) -> c_int {
     0
 }
 
-pub unsafe extern "C" fn alerts_reset_all() {
+pub(crate) unsafe extern "C" fn alerts_reset_all() {
     unsafe {
         for w in rb_foreach(&raw mut windows) {
             alerts_reset(w);
@@ -139,7 +139,7 @@ unsafe fn alerts_reset(w: NonNull<window>) {
     }
 }
 
-pub unsafe extern "C" fn alerts_queue(w: NonNull<window>, flags: window_flag) {
+pub(crate) unsafe extern "C" fn alerts_queue(w: NonNull<window>, flags: window_flag) {
     unsafe {
         alerts_reset(w);
         let w = w.as_ptr();
