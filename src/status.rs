@@ -48,7 +48,7 @@ pub static mut status_prompt_hsize: [u32; PROMPT_NTYPES as usize] = [0; PROMPT_N
 
 unsafe extern "C" fn status_prompt_find_history_file() -> *mut c_char {
     unsafe {
-        let history_file = options_get_string(global_options, c"history-file".as_ptr());
+        let history_file = options_get_string_(global_options, c"history-file");
         if *history_file == b'\0' as i8 {
             return null_mut();
         }
@@ -98,9 +98,6 @@ unsafe extern "C" fn status_prompt_add_typed_history(mut line: *mut c_char) {
 
 pub unsafe extern "C" fn status_prompt_load_history() {
     unsafe {
-        // FILE *f;
-        // char *history_file, *line, *tmp;
-        // size_t length;
         let mut length: usize = 0;
 
         let Some(history_file) = NonNull::new(status_prompt_find_history_file()) else {
@@ -110,8 +107,10 @@ pub unsafe extern "C" fn status_prompt_load_history() {
 
         log_debug!("loading history from {}", _s(history_file));
 
+        // std::fs::OpenOptions::read(true).open()
+
         let Some(f) = NonNull::new(libc::fopen(history_file, c"r".as_ptr())) else {
-            // log_debug("%s: %s", history_file, strerror(errno));
+            log_debug!("{}: {}", _s(history_file), _s(strerror(errno!())));
             free_(history_file);
             return;
         };
@@ -191,7 +190,7 @@ unsafe extern "C" fn status_timer_callback(_fd: i32, _events: i16, arg: *mut c_v
 
         let mut tv: timeval = zeroed();
         timerclear(&raw mut tv);
-        tv.tv_sec = options_get_number((*s).options, c"status-interval".as_ptr());
+        tv.tv_sec = options_get_number_((*s).options, c"status-interval");
 
         if tv.tv_sec != 0 {
             evtimer_add(&raw mut (*c).status.timer, &raw const tv);
@@ -216,7 +215,7 @@ pub unsafe extern "C" fn status_timer_start(c: *mut client) {
             );
         }
 
-        if !s.is_null() && options_get_number((*s).options, c"status".as_ptr()) != 0 {
+        if !s.is_null() && options_get_number_((*s).options, c"status") != 0 {
             status_timer_callback(-1, 0, c.cast());
         }
     }
@@ -236,10 +235,10 @@ pub unsafe extern "C" fn status_timer_start_all() {
 
 pub unsafe extern "C" fn status_update_cache(s: *mut session) {
     unsafe {
-        (*s).statuslines = options_get_number((*s).options, c"status".as_ptr()) as u32;
+        (*s).statuslines = options_get_number_((*s).options, c"status") as u32;
         if (*s).statuslines == 0 {
             (*s).statusat = -1;
-        } else if options_get_number((*s).options, c"status-position".as_ptr()) == 0 {
+        } else if options_get_number_((*s).options, c"status-position") == 0 {
             (*s).statusat = 0;
         } else {
             (*s).statusat = 1;
@@ -279,7 +278,7 @@ pub unsafe extern "C" fn status_line_size(c: *mut client) -> u32 {
             return 0;
         }
         if s.is_null() {
-            return options_get_number(global_s_options, c"status".as_ptr()) as u32;
+            return options_get_number_(global_s_options, c"status") as u32;
         }
         (*s).statuslines
     }
@@ -297,7 +296,7 @@ unsafe extern "C" fn status_prompt_line_at(c: *mut client) -> u32 {
         {
             return 1;
         }
-        options_get_number((*s).options, c"message-line".as_ptr()) as u32
+        options_get_number_((*s).options, c"message-line") as u32
     }
 }
 
@@ -444,11 +443,11 @@ pub unsafe extern "C" fn status_redraw(c: *mut client) -> i32 {
 
         /* Set up default colour. */
         style_apply(&raw mut gc, (*s).options, c"status-style".as_ptr(), ft);
-        let fg = options_get_number((*s).options, c"status-fg".as_ptr()) as i32;
+        let fg = options_get_number_((*s).options, c"status-fg") as i32;
         if !COLOUR_DEFAULT(fg) {
             gc.fg = fg;
         }
-        let bg = options_get_number((*s).options, c"status-bg".as_ptr()) as i32;
+        let bg = options_get_number_((*s).options, c"status-bg") as i32;
         if !COLOUR_DEFAULT(bg) {
             gc.bg = bg;
         }
@@ -567,7 +566,7 @@ pub unsafe fn status_message_set_(
          * key press; more than zero is the actual delay time in milliseconds.
          */
         if delay == -1 {
-            delay = options_get_number((*(*c).session).options, c"display-time".as_ptr()) as i32;
+            delay = options_get_number_((*(*c).session).options, c"display-time") as i32;
         }
         if delay > 0 {
             tv.tv_sec = (delay / 1000) as i64;
@@ -1534,9 +1533,9 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
                     }
                     key &= !KEYC_MASK_FLAGS;
 
-                    let keys = modekey::try_from(options_get_number(
+                    let keys = modekey::try_from(options_get_number_(
                         (*(*c).session).options,
-                        c"status-keys".as_ptr(),
+                        c"status-keys",
                     ) as i32);
                     if keys == Ok(modekey::MODEKEY_VI) {
                         match status_prompt_translate_key(c, key, &raw mut key) {
@@ -1612,7 +1611,7 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
                         }
                     }
                     code::W_CTRL => {
-                        separators = options_get_string(oo, c"word-separators".as_ptr());
+                        separators = options_get_string_(oo, c"word-separators");
                         idx = (*c).prompt_index;
 
                         /* Find non-whitespace. */
@@ -1667,7 +1666,7 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
                         break 'changed;
                     }
                     code::RIGHT_CTRL | code::F_META => {
-                        separators = options_get_string(oo, c"word-separators".as_ptr());
+                        separators = options_get_string_(oo, c"word-separators");
                         status_prompt_forward_word(c, size, 0, separators);
                         break 'changed;
                     }
@@ -1676,7 +1675,7 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
                         break 'changed;
                     }
                     code::E_VI => {
-                        separators = options_get_string(oo, c"word-separators".as_ptr());
+                        separators = options_get_string_(oo, c"word-separators");
                         status_prompt_end_word(c, size, separators);
                         break 'changed;
                     }
@@ -1685,7 +1684,7 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
                         break 'changed;
                     }
                     code::W_VI => {
-                        separators = options_get_string(oo, c"word-separators".as_ptr());
+                        separators = options_get_string_(oo, c"word-separators");
                         status_prompt_forward_word(c, size, 1, separators);
                         break 'changed;
                     }
@@ -1694,7 +1693,7 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
                         break 'changed;
                     }
                     code::LEFT_CTRL | code::B_META => {
-                        separators = options_get_string(oo, c"word-separators".as_ptr());
+                        separators = options_get_string_(oo, c"word-separators");
                         status_prompt_backward_word(c, separators);
                         break 'changed;
                     }
@@ -1912,7 +1911,7 @@ unsafe extern "C" fn status_prompt_add_history(line: *const c_char, type_: u32) 
             new = 0;
         }
 
-        let hlimit = options_get_number(global_options, c"prompt-history-limit".as_ptr()) as u32;
+        let hlimit = options_get_number_(global_options, c"prompt-history-limit") as u32;
         if hlimit > oldsize {
             if new == 0 {
                 return;
@@ -2172,7 +2171,7 @@ unsafe extern "C" fn status_prompt_complete_list_menu(
             menu_add_item(menu, &raw mut item, null_mut(), c, null_mut());
         }
 
-        let py = if options_get_number((*(*c).session).options, c"status-position".as_ptr()) == 0 {
+        let py = if options_get_number_((*(*c).session).options, c"status-position") == 0 {
             lines
         } else {
             (*c).tty.sy - 3 - height
@@ -2305,7 +2304,7 @@ unsafe extern "C" fn status_prompt_complete_window_menu(
         (*spm).size = size as u32;
         (*spm).list = list;
 
-        let py = if options_get_number((*(*c).session).options, c"status-position".as_ptr()) == 0 {
+        let py = if options_get_number_((*(*c).session).options, c"status-position") == 0 {
             lines
         } else {
             (*c).tty.sy - 3 - height

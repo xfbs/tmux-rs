@@ -146,7 +146,7 @@ pub unsafe extern "C" fn server_lock_client(c: *mut client) {
             return;
         }
 
-        let cmd = options_get_string((*(*c).session).options, c"lock-command".as_ptr());
+        let cmd = options_get_string_((*(*c).session).options, c"lock-command");
         if *cmd == b'\0' as c_char || strlen(cmd) + 1 > MAX_IMSGSIZE - IMSG_HEADER_SIZE {
             return;
         }
@@ -220,7 +220,7 @@ pub unsafe extern "C" fn server_kill_window(w: *mut window, renumber: i32) {
 
 pub unsafe extern "C" fn server_renumber_session(s: *mut session) {
     unsafe {
-        if options_get_number((*s).options, c"renumber-windows".as_ptr()) != 0 {
+        if options_get_number_((*s).options, c"renumber-windows") != 0 {
             let sg = session_group_contains(s);
             if !sg.is_null() {
                 for s in tailq_foreach(&raw mut (*sg).sessions) {
@@ -287,7 +287,7 @@ pub unsafe extern "C" fn server_link_window(
         }
 
         if dstidx == -1 {
-            dstidx = -1 - options_get_number((*dst).options, c"base-index".as_ptr()) as i32;
+            dstidx = -1 - options_get_number_((*dst).options, c"base-index") as i32;
         }
         dstwl = session_attach(dst, (*srcwl).window, dstidx, cause);
         if dstwl.is_null() {
@@ -336,7 +336,7 @@ pub unsafe extern "C" fn server_destroy_pane(wp: *mut window_pane, notify: i32) 
             (*wp).fd = -1;
         }
 
-        let remain_on_exit = options_get_number((*wp).options, c"remain-on-exit".as_ptr());
+        let remain_on_exit = options_get_number_((*wp).options, c"remain-on-exit");
         if remain_on_exit != 0 && !(*wp).flags.intersects(window_pane_flags::PANE_STATUSREADY) {
             return;
         }
@@ -359,7 +359,7 @@ pub unsafe extern "C" fn server_destroy_pane(wp: *mut window_pane, notify: i32) 
                         notify_pane(c"pane-died".as_ptr(), wp);
                     }
 
-                    let s = options_get_string((*wp).options, c"remain-on-exit-format".as_ptr());
+                    let s = options_get_string_((*wp).options, c"remain-on-exit-format");
                     if *s != '\0' as c_char {
                         screen_write_start_pane(ctx, wp, &raw mut (*wp).base);
                         screen_write_scrollregion(ctx, 0, sy - 1);
@@ -451,7 +451,7 @@ pub unsafe extern "C" fn server_newer_detached_session(
 
 pub unsafe extern "C" fn server_destroy_session(s: *mut session) {
     unsafe {
-        let detach_on_destroy = options_get_number((*s).options, c"detach-on-destroy".as_ptr());
+        let detach_on_destroy = options_get_number_((*s).options, c"detach-on-destroy");
 
         let mut s_new: *mut session = if detach_on_destroy == 0 {
             server_find_session(s, server_newer_session)
@@ -489,7 +489,7 @@ pub unsafe extern "C" fn server_check_unattached() {
             if (*s).attached != 0 {
                 continue;
             }
-            match options_get_number((*s).options, c"destroy-unattached".as_ptr()) {
+            match options_get_number_((*s).options, c"destroy-unattached") {
                 0 => continue, // off
                 1 => (),       // on
                 2 => {

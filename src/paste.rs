@@ -175,7 +175,7 @@ pub unsafe extern "C" fn paste_add(mut prefix: *const c_char, data: *mut c_char,
             return;
         }
 
-        let limit = options_get_number(global_options, c"buffer-limit".as_ptr());
+        let limit = options_get_number_(global_options, c"buffer-limit");
         for pb in rb_foreach_reverse::<_, discr_time_entry>(&raw mut paste_by_time) {
             if (paste_num_automatic as i64) < limit {
                 break;

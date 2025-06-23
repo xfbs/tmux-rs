@@ -562,10 +562,10 @@ pub unsafe extern "C" fn tty_update_features(tty: *mut tty) {
         if tty_use_margin(tty) {
             tty_putcode(tty, tty_code_code::TTYC_ENMG);
         }
-        if options_get_number(global_options, c"extended-keys".as_ptr()) != 0 {
+        if options_get_number_(global_options, c"extended-keys") != 0 {
             tty_puts(tty, tty_term_string((*tty).term, tty_code_code::TTYC_ENEKS));
         }
-        if options_get_number(global_options, c"focus-events".as_ptr()) != 0 {
+        if options_get_number_(global_options, c"focus-events") != 0 {
             tty_puts(tty, tty_term_string((*tty).term, tty_code_code::TTYC_ENFCS));
         }
         if (*(*tty).term).flags.intersects(term_flags::TERM_VT100LIKE) {
@@ -769,7 +769,7 @@ pub unsafe extern "C" fn tty_putn(tty: *mut tty, buf: *const c_void, mut len: us
 pub unsafe extern "C" fn tty_set_italics(tty: *mut tty) {
     unsafe {
         if tty_term_has((*tty).term, tty_code_code::TTYC_SITM).as_bool() {
-            let s = options_get_string(global_options, c"default-terminal".as_ptr());
+            let s = options_get_string_(global_options, c"default-terminal");
             if libc::strcmp(s, c"screen".as_ptr()) != 0
                 && libc::strncmp(s, c"screen-".as_ptr(), 7) != 0
             {

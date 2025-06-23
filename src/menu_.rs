@@ -663,11 +663,9 @@ pub unsafe extern "C" fn menu_prepare(
         }
 
         if lines == box_lines::BOX_LINES_DEFAULT {
-            lines = std::mem::transmute::<i32, box_lines>(options_get_number(
-                o,
-                c"menu-border-lines".as_ptr(),
-            ) as i32);
-        } // TODO implement box_lines from
+            lines =
+                box_lines::try_from(options_get_number_(o, c"menu-border-lines") as i32).unwrap();
+        }
 
         let md = xcalloc1::<menu_data>() as *mut menu_data;
         (*md).item = item;

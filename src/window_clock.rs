@@ -254,8 +254,8 @@ pub unsafe extern "C" fn window_clock_draw_screen(wme: NonNull<window_mode_entry
         let mut y: u32 = 0;
         let mut idx: u32 = 0;
 
-        let colour = options_get_number((*(*wp).window).options, c"clock-mode-colour".as_ptr());
-        let style = options_get_number((*(*wp).window).options, c"clock-mode-style".as_ptr());
+        let colour = options_get_number_((*(*wp).window).options, c"clock-mode-colour");
+        let style = options_get_number_((*(*wp).window).options, c"clock-mode-style");
 
         screen_write_start(&raw mut ctx, s);
 

@@ -257,12 +257,12 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
             if !detached && !is_control {
                 sx = (*c).tty.sx;
                 sy = (*c).tty.sy;
-                if sy > 0 && options_get_number(global_s_options, c"status".as_ptr()) != 0 {
+                if sy > 0 && options_get_number_(global_s_options, c"status") != 0 {
                     sy -= 1;
                 }
             } else {
-                tmp = options_get_string(global_s_options, c"default-size".as_ptr());
-                if sscanf(tmp, c"%ux%u".as_ptr(), &sx, &sy) != 2 {
+                tmp = options_get_string_(global_s_options, c"default-size");
+                if sscanf(tmp, c"%ux%u".as_ptr(), &raw mut sx, &raw mut sy) != 2 {
                     sx = dsx;
                     sy = dsy;
                 } else {

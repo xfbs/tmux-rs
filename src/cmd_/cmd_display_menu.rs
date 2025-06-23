@@ -141,7 +141,7 @@ unsafe extern "C" fn cmd_display_menu_get_position(
             } else {
                 top = 0;
             }
-            let position = options_get_number((*s).options, c"status-position".as_ptr());
+            let position = options_get_number_((*s).options, c"status-position");
 
             for line_ in 0..lines {
                 line = line_;
@@ -574,7 +574,7 @@ unsafe extern "C" fn cmd_display_popup_exec(self_: *mut cmd, item: *mut cmdq_ite
         };
         let mut shellcmd = null();
         if count == 0 {
-            shellcmd = options_get_string((*s).options, c"default-command".as_ptr());
+            shellcmd = options_get_string_((*s).options, c"default-command");
         } else if count == 1 {
             shellcmd = args_string(args, 0);
         }
@@ -584,7 +584,7 @@ unsafe extern "C" fn cmd_display_popup_exec(self_: *mut cmd, item: *mut cmdq_ite
 
         if count <= 1 && (shellcmd.is_null() || *shellcmd == b'\0' as _) {
             shellcmd = null_mut();
-            shell = options_get_string((*s).options, c"default-shell".as_ptr());
+            shell = options_get_string_((*s).options, c"default-shell");
             if !checkshell(shell) {
                 shell = _PATH_BSHELL;
             }

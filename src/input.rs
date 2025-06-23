@@ -1636,7 +1636,7 @@ unsafe extern "C" fn input_csi_dispatch(ictx: *mut input_ctx) -> i32 {
 
                     // Set the extended key reporting mode as per the client
                     // request, unless "extended-keys" is set to "off".
-                    let ek = options_get_number(global_options, c"extended-keys".as_ptr());
+                    let ek = options_get_number_(global_options, c"extended-keys");
                     if ek != 0 {
                         screen_write_mode_clear(sctx, EXTENDED_KEY_MODES);
                         if m == 2 {
@@ -1656,7 +1656,7 @@ unsafe extern "C" fn input_csi_dispatch(ictx: *mut input_ctx) -> i32 {
                         sctx,
                         mode_flag::MODE_KEYS_EXTENDED | mode_flag::MODE_KEYS_EXTENDED_2,
                     );
-                    if options_get_number(global_options, c"extended-keys".as_ptr()) == 2 {
+                    if options_get_number_(global_options, c"extended-keys") == 2 {
                         screen_write_mode_set(sctx, mode_flag::MODE_KEYS_EXTENDED);
                     }
                 }
@@ -2420,7 +2420,7 @@ unsafe extern "C" fn input_dcs_dispatch(ictx: *mut input_ctx) -> i32 {
             }
         }
 
-        let allow_passthrough = options_get_number((*wp).options, c"allow-passthrough".as_ptr());
+        let allow_passthrough = options_get_number_((*wp).options, c"allow-passthrough");
         if allow_passthrough == 0 {
             return 0;
         }
@@ -2494,7 +2494,7 @@ unsafe extern "C" fn input_exit_osc(ictx: *mut input_ctx) {
         match option {
             0 | 2 => {
                 if !wp.is_null()
-                    && options_get_number((*wp).options, c"allow-set-title".as_ptr()) != 0
+                    && options_get_number_((*wp).options, c"allow-set-title") != 0
                     && screen_set_title((*sctx).s, p.cast()) != 0
                 {
                     notify_pane(c"pane-title-changed".as_ptr(), wp);
@@ -2583,7 +2583,7 @@ unsafe extern "C" fn input_exit_rename(ictx: *mut input_ctx) {
         if (*ictx).flags.intersects(input_flags::INPUT_DISCARD) {
             return;
         }
-        if options_get_number((*(*ictx).wp).options, c"allow-rename".as_ptr()) == 0 {
+        if options_get_number_((*(*ictx).wp).options, c"allow-rename") == 0 {
             return;
         }
         log_debug!(
@@ -2603,7 +2603,7 @@ unsafe extern "C" fn input_exit_rename(ictx: *mut input_ctx) {
             {
                 options_remove_or_default(o.as_ptr(), -1, null_mut());
             }
-            if options_get_number((*w).options, c"automatic-rename".as_ptr()) == 0 {
+            if options_get_number_((*w).options, c"automatic-rename") == 0 {
                 window_set_name(w, c"".as_ptr());
             }
         } else {
@@ -3085,7 +3085,7 @@ unsafe extern "C" fn input_osc_52(ictx: *mut input_ctx, p: *const c_char) {
         if wp.is_null() {
             return;
         }
-        let state: i32 = options_get_number(global_options, c"set-clipboard".as_ptr()) as i32;
+        let state: i32 = options_get_number_(global_options, c"set-clipboard") as i32;
         if state != 2 {
             return;
         }

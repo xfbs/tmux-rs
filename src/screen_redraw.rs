@@ -129,11 +129,9 @@ pub unsafe extern "C" fn screen_redraw_pane_border(
         }
 
         // Get pane indicator
-        match pane_border_indicator::try_from(options_get_number(
-            oo,
-            c"pane-border-indicators".as_ptr(),
-        ) as i32)
-        {
+        match pane_border_indicator::try_from(
+            options_get_number_(oo, c"pane-border-indicators") as i32
+        ) {
             Ok(pane_border_indicator::PANE_BORDER_COLOUR)
             | Ok(pane_border_indicator::PANE_BORDER_BOTH) => {
                 split = 1;
@@ -490,7 +488,7 @@ pub unsafe extern "C" fn screen_redraw_make_pane_status(
             style_apply(&mut gc, (*w).options, c"pane-border-style".as_ptr(), ft);
         }
         let wp = wp.as_ptr();
-        let fmt = options_get_string((*wp).options, c"pane-border-format".as_ptr());
+        let fmt = options_get_string_((*wp).options, c"pane-border-format");
 
         let expanded = format_expand_time(ft, fmt);
         if (*wp).sx < 4 {
@@ -639,9 +637,8 @@ unsafe extern "C" fn screen_redraw_update(c: *mut client, mut flags: client_flag
             != pane_status::PANE_STATUS_OFF as i32
         {
             screen_redraw_set_context(c, ctx.as_mut_ptr());
-            let lines =
-                pane_lines::try_from(options_get_number(wo, c"pane-border-lines".as_ptr()) as i32)
-                    .unwrap_or_default();
+            let lines = pane_lines::try_from(options_get_number_(wo, c"pane-border-lines") as i32)
+                .unwrap_or_default();
             redraw = 0;
 
             // Safe replacement for TAILQ_FOREACH macro
@@ -685,15 +682,15 @@ pub unsafe extern "C" fn screen_redraw_set_context(c: *mut client, ctx: *mut scr
         if !(*c).message_string.is_null() || !(*c).prompt_string.is_null() {
             lines = if lines == 0 { 1 } else { lines };
         }
-        if lines != 0 && options_get_number(oo, c"status-position".as_ptr()) == 0 {
+        if lines != 0 && options_get_number_(oo, c"status-position") == 0 {
             (*ctx).statustop = 1;
         }
         (*ctx).statuslines = lines;
 
-        (*ctx).pane_status = (options_get_number(wo, c"pane-border-status".as_ptr()) as i32)
+        (*ctx).pane_status = (options_get_number_(wo, c"pane-border-status") as i32)
             .try_into()
             .unwrap();
-        (*ctx).pane_lines = (options_get_number(wo, c"pane-border-lines".as_ptr()) as i32)
+        (*ctx).pane_lines = (options_get_number_(wo, c"pane-border-lines") as i32)
             .try_into()
             .unwrap();
 
@@ -904,11 +901,9 @@ pub unsafe extern "C" fn screen_redraw_draw_borders_cell(
             tty_puts(tty, END_ISOLATE.as_ptr());
         }
 
-        match pane_border_indicator::try_from(options_get_number(
-            oo,
-            c"pane-border-indicators".as_ptr(),
-        ) as i32)
-        {
+        match pane_border_indicator::try_from(
+            options_get_number_(oo, c"pane-border-indicators") as i32
+        ) {
             Ok(pane_border_indicator::PANE_BORDER_ARROWS)
             | Ok(pane_border_indicator::PANE_BORDER_BOTH) => arrows = 1,
             _ => {}

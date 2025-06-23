@@ -77,7 +77,6 @@ pub struct options {
 
 #[allow(non_snake_case)]
 #[inline]
-
 pub fn OPTIONS_IS_STRING(o: *const options_entry) -> bool {
     unsafe {
         (*o).tableentry.is_null()
@@ -87,7 +86,6 @@ pub fn OPTIONS_IS_STRING(o: *const options_entry) -> bool {
 
 #[allow(non_snake_case)]
 #[inline]
-
 pub fn OPTIONS_IS_NUMBER(o: *const options_entry) -> bool {
     unsafe {
         !(*o).tableentry.is_null()
@@ -101,7 +99,6 @@ pub fn OPTIONS_IS_NUMBER(o: *const options_entry) -> bool {
 
 #[allow(non_snake_case)]
 #[inline]
-
 pub fn OPTIONS_IS_COMMAND(o: *const options_entry) -> bool {
     unsafe {
         !(*o).tableentry.is_null()
@@ -111,7 +108,6 @@ pub fn OPTIONS_IS_COMMAND(o: *const options_entry) -> bool {
 
 #[allow(non_snake_case)]
 #[inline]
-
 pub fn OPTIONS_IS_ARRAY(o: *const options_entry) -> bool {
     unsafe {
         !(*o).tableentry.is_null() && ((*(*o).tableentry).flags & OPTIONS_TABLE_IS_ARRAY) != 0
@@ -844,6 +840,19 @@ pub unsafe extern "C" fn options_get_string(
         }
         if !OPTIONS_IS_STRING(o) {
             fatalx_!("option {} is not a string", _s(name));
+        }
+        (*o).value.string
+    }
+}
+
+pub unsafe fn options_get_string_(oo: *mut options, name: &CStr) -> *const c_char {
+    unsafe {
+        let o = options_get_(oo, name);
+        if o.is_null() {
+            fatalx_!("missing option {}", _s(name.as_ptr()));
+        }
+        if !OPTIONS_IS_STRING(o) {
+            fatalx_!("option {} is not a string", _s(name.as_ptr()));
         }
         (*o).value.string
     }

@@ -125,8 +125,7 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
                 return cmd_retval::CMD_RETURN_ERROR;
             }
 
-            let status: i32 =
-                options_get_number((*w).options, c"pane-border-status".as_ptr()) as i32;
+            let status: i32 = options_get_number_((*w).options, c"pane-border-status") as i32;
             match pane_status::try_from(status) {
                 Ok(pane_status::PANE_STATUS_TOP) => {
                     if y != i32::MAX && (*wp).yoff == 1 {

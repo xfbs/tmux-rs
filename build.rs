@@ -6,17 +6,18 @@ fn main() {
 
     println!("cargo::rustc-link-lib=bsd");
     // symbols used by libbsd:
-    // - setproctitle
-    // - strlcpy
-    // - setproctitle_init
-    // - strunvis
-    // - recallocarray
-    // - strtonum
-    // - freezero
-    // - strnvis
-    // - vis
-    // - fgetln
-    // - stravis
+    // - [ ] setproctitle
+    // - [ ] setproctitle_init
+    // - [ ] recallocarray
+    // - [ ] freezero
+    // - [ ] strunvis
+    // - [ ] vis
+    // - [ ] strnvis
+    // - [ ] stravis
+    // - [ ] fgetln
+    // - [x] strlcat
+    // - [x] strlcpy
+    // - [x] strtonum
 
     println!("cargo::rustc-link-lib=tinfo");
     // symbols used from tinfo:

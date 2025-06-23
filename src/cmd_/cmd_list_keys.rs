@@ -127,7 +127,7 @@ unsafe extern "C" fn cmd_list_keys_get_prefix(
     prefix: *mut key_code,
 ) -> NonNull<c_char> {
     unsafe {
-        *prefix = options_get_number(global_s_options, c"prefix".as_ptr()) as _;
+        *prefix = options_get_number_(global_s_options, c"prefix") as _;
         if !args_has_(args, 'P') {
             if *prefix != KEYC_NONE {
                 let mut s = format_nul!("{} ", _s(key_string_lookup_key(*prefix, 0)));

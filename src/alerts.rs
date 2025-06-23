@@ -21,12 +21,7 @@ use crate::compat::{
 
 static mut alerts_fired: i32 = 0;
 
-static mut alerts_list: tailq_head<window> = const {
-    tailq_head {
-        tqh_first: null_mut(),
-        tqh_last: unsafe { &raw mut alerts_list.tqh_first },
-    }
-};
+static mut alerts_list: tailq_head<window> = compat::TAILQ_HEAD_INITIALIZER!(alerts_list);
 
 unsafe extern "C" fn alerts_timer(_fd: i32, _events: i16, arg: *mut c_void) {
     let w = arg as *mut window;
@@ -58,25 +53,20 @@ unsafe extern "C" fn alerts_callback(_fd: c_int, _events: c_short, arg: *mut c_v
     }
 }
 
-unsafe fn alerts_action_applies(wl: *mut winlink, name: *const c_char) -> c_int {
+unsafe fn alerts_action_applies(wl: *mut winlink, name: &'static CStr) -> c_int {
     unsafe {
-        let action: i32 = options_get_number((*(*wl).session).options, name) as i32;
+        let action: i32 = options_get_number_((*(*wl).session).options, name) as i32;
         match action {
-            ALERT_ANY => 1,
-            ALERT_CURRENT => (wl == (*(*wl).session).curw) as i32,
-            ALERT_OTHER => (wl != (*(*wl).session).curw) as i32,
+            crate::ALERT_ANY => 1,
+            crate::ALERT_CURRENT => (wl == (*(*wl).session).curw) as i32,
+            crate::ALERT_OTHER => (wl != (*(*wl).session).curw) as i32,
             _ => 0,
         }
     }
 }
 
 unsafe fn alerts_check_all(w: *mut window) -> window_flag {
-    unsafe {
-        let mut alerts = alerts_check_bell(w);
-        alerts |= alerts_check_activity(w);
-        alerts |= alerts_check_silence(w);
-        alerts
-    }
+    unsafe { alerts_check_bell(w) | alerts_check_activity(w) | alerts_check_silence(w) }
 }
 
 pub(crate) unsafe extern "C" fn alerts_check_session(s: *mut session) {
@@ -90,17 +80,17 @@ pub(crate) unsafe extern "C" fn alerts_check_session(s: *mut session) {
 unsafe fn alerts_enabled(w: *mut window, flags: window_flag) -> c_int {
     unsafe {
         if flags.intersects(window_flag::BELL) {
-            if options_get_number((*w).options, c"monitor-bell".as_ptr()) != 0 {
+            if options_get_number_((*w).options, c"monitor-bell") != 0 {
                 return 1;
             }
         }
         if flags.intersects(window_flag::ACTIVITY) {
-            if options_get_number((*w).options, c"monitor-activity".as_ptr()) != 0 {
+            if options_get_number_((*w).options, c"monitor-activity") != 0 {
                 return 1;
             }
         }
         if flags.intersects(window_flag::SILENCE) {
-            if options_get_number((*w).options, c"monitor-silence".as_ptr()) != 0 {
+            if options_get_number_((*w).options, c"monitor-silence") != 0 {
                 return 1;
             }
         }
@@ -128,7 +118,7 @@ unsafe fn alerts_reset(w: NonNull<window>) {
         event_del(&raw mut (*w).alerts_timer);
 
         let mut tv = timeval {
-            tv_sec: options_get_number((*w).options, c"monitor-silence".as_ptr()),
+            tv_sec: options_get_number_((*w).options, c"monitor-silence"),
             tv_usec: 0,
         };
 
@@ -176,7 +166,7 @@ unsafe fn alerts_check_bell(w: *mut window) -> window_flag {
         if !(*w).flags.intersects(window_flag::BELL) {
             return window_flag::empty();
         }
-        if options_get_number((*w).options, c"monitor-bell".as_ptr()) == 0 {
+        if options_get_number_((*w).options, c"monitor-bell") == 0 {
             return window_flag::empty();
         }
 
@@ -196,7 +186,7 @@ unsafe fn alerts_check_bell(w: *mut window) -> window_flag {
                 (*wl).flags |= winlink_flags::WINLINK_BELL;
                 server_status_session(s);
             }
-            if alerts_action_applies(wl, c"bell-action".as_ptr()) == 0 {
+            if alerts_action_applies(wl, c"bell-action") == 0 {
                 continue;
             }
             notify_winlink(c"alert-bell".as_ptr(), wl);
@@ -206,7 +196,7 @@ unsafe fn alerts_check_bell(w: *mut window) -> window_flag {
             }
             (*s).flags |= SESSION_ALERTED;
 
-            alerts_set_message(wl, c"Bell".as_ptr(), c"visual-bell".as_ptr());
+            alerts_set_message(wl, c"Bell", c"visual-bell");
         }
     }
     window_flag::BELL
@@ -217,7 +207,7 @@ unsafe fn alerts_check_activity(w: *mut window) -> window_flag {
         if !(*w).flags.intersects(window_flag::ACTIVITY) {
             return window_flag::empty();
         }
-        if options_get_number((*w).options, c"monitor-activity".as_ptr()) == 0 {
+        if options_get_number_((*w).options, c"monitor-activity") == 0 {
             return window_flag::empty();
         }
 
@@ -235,7 +225,7 @@ unsafe fn alerts_check_activity(w: *mut window) -> window_flag {
                 (*wl).flags |= winlink_flags::WINLINK_ACTIVITY;
                 server_status_session(s);
             }
-            if alerts_action_applies(wl, c"activity-action".as_ptr()) == 0 {
+            if alerts_action_applies(wl, c"activity-action") == 0 {
                 continue;
             }
             notify_winlink(c"alert-activity".as_ptr(), wl);
@@ -245,7 +235,7 @@ unsafe fn alerts_check_activity(w: *mut window) -> window_flag {
             }
             (*s).flags |= SESSION_ALERTED;
 
-            alerts_set_message(wl, c"Activity".as_ptr(), c"visual-activity".as_ptr());
+            alerts_set_message(wl, c"Activity", c"visual-activity");
         }
     }
     window_flag::ACTIVITY
@@ -256,7 +246,7 @@ unsafe fn alerts_check_silence(w: *mut window) -> window_flag {
         if !(*w).flags.intersects(window_flag::SILENCE) {
             return window_flag::empty();
         }
-        if options_get_number((*w).options, c"monitor-silence".as_ptr()) == 0 {
+        if options_get_number_((*w).options, c"monitor-silence") == 0 {
             return window_flag::empty();
         }
 
@@ -277,7 +267,7 @@ unsafe fn alerts_check_silence(w: *mut window) -> window_flag {
                 (*wl).flags |= winlink_flags::WINLINK_SILENCE;
                 server_status_session(s);
             }
-            if alerts_action_applies(wl, c"silence-action".as_ptr()) == 0 {
+            if alerts_action_applies(wl, c"silence-action") == 0 {
                 continue;
             }
             notify_winlink(c"alert-silence".as_ptr(), wl);
@@ -287,16 +277,16 @@ unsafe fn alerts_check_silence(w: *mut window) -> window_flag {
             }
             (*s).flags |= SESSION_ALERTED;
 
-            alerts_set_message(wl, c"Silence".as_ptr(), c"visual-silence".as_ptr());
+            alerts_set_message(wl, c"Silence", c"visual-silence");
         }
     }
 
     window_flag::SILENCE
 }
 
-unsafe fn alerts_set_message(wl: *mut winlink, type_: *const c_char, option: *const c_char) {
+unsafe fn alerts_set_message(wl: *mut winlink, type_: &'static CStr, option: &'static CStr) {
     unsafe {
-        let visual: i32 = options_get_number((*(*wl).session).options, option) as i32;
+        let visual: i32 = options_get_number_((*(*wl).session).options, option) as i32;
 
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if (*c).session != (*wl).session || (*c).flags.intersects(client_flag::CONTROL) {
@@ -310,9 +300,17 @@ unsafe fn alerts_set_message(wl: *mut winlink, type_: *const c_char, option: *co
                 continue;
             }
             if (*(*c).session).curw == wl {
-                status_message_set!(c, -1, 1, 0, "{} in current window", _s(type_));
+                status_message_set!(c, -1, 1, 0, "{} in current window", _s(type_.as_ptr()));
             } else {
-                status_message_set!(c, -1, 1, 0, "{} in window {}", _s(type_), (*wl).idx);
+                status_message_set!(
+                    c,
+                    -1,
+                    1,
+                    0,
+                    "{} in window {}",
+                    _s(type_.as_ptr()),
+                    (*wl).idx
+                );
             }
         }
     }

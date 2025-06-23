@@ -121,7 +121,7 @@ pub unsafe extern "C" fn job_run(
                 } else {
                     oo = global_s_options;
                 }
-                shell = options_get_string(oo, c"default-shell".as_ptr());
+                shell = options_get_string_(oo, c"default-shell");
                 if !checkshell(shell) {
                     shell = _PATH_BSHELL;
                 }

@@ -259,7 +259,7 @@ pub unsafe extern "C" fn environ_for_session(s: *mut session, no_term: c_int) ->
         }
 
         if no_term == 0 {
-            let value = options_get_string(global_options, c"default-terminal".as_ptr());
+            let value = options_get_string_(global_options, c"default-terminal");
             environ_set!(env, c"TERM".as_ptr(), 0, "{}", _s(value));
             environ_set!(env, c"TERM_PROGRAM".as_ptr(), 0, "{}", "tmux");
             environ_set!(

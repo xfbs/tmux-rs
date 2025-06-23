@@ -273,10 +273,9 @@ unsafe fn layout_add_border(w: *mut window, lc: *mut layout_cell, status: pane_s
 
 pub unsafe extern "C" fn layout_fix_panes(w: *mut window, skip: *mut window_pane) {
     unsafe {
-        let status: pane_status = (options_get_number((*w).options, c"pane-border-status".as_ptr())
-            as i32)
-            .try_into()
-            .unwrap();
+        let status: pane_status =
+            pane_status::try_from(options_get_number_((*w).options, c"pane-border-status") as i32)
+                .unwrap();
 
         for wp in tailq_foreach::<window_pane, discr_entry>(&raw mut (*w).panes) {
             let wp = wp.as_ptr();
@@ -328,10 +327,9 @@ pub unsafe extern "C" fn layout_resize_check(
         let mut available: u32;
         let mut minimum: u32;
 
-        let status: pane_status = (options_get_number((*w).options, c"pane-border-status".as_ptr())
-            as i32)
-            .try_into()
-            .unwrap();
+        let status: pane_status =
+            pane_status::try_from(options_get_number_((*w).options, c"pane-border-status") as i32)
+                .unwrap();
 
         if (*lc).type_ == layout_type::LAYOUT_WINDOWPANE {
             /* Space available in this cell only. */
@@ -986,9 +984,9 @@ pub unsafe extern "C" fn layout_split_pane(
         } else {
             (*wp).layout_cell
         };
-        let status = pane_status::try_from(options_get_number(
+        let status = pane_status::try_from(options_get_number_(
             (*(*wp).window).options,
-            c"pane-border-status".as_ptr(),
+            c"pane-border-status",
         ) as i32)
         .unwrap();
 
@@ -1178,8 +1176,7 @@ pub unsafe extern "C" fn layout_spread_cell(w: *mut window, parent: *mut layout_
             return 0;
         }
 
-        let status: pane_status = (options_get_number((*w).options, c"pane-border-status".as_ptr())
-            as i32)
+        let status: pane_status = (options_get_number_((*w).options, c"pane-border-status") as i32)
             .try_into()
             .unwrap();
 

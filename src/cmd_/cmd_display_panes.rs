@@ -122,9 +122,8 @@ unsafe extern "C" fn cmd_display_panes_draw_pane(
                 return;
             }
 
-            let colour: i32 = options_get_number(oo, c"display-panes-colour".as_ptr()) as _;
-            let active_colour: i32 =
-                options_get_number(oo, c"display-panes-active-colour".as_ptr()) as _;
+            let colour: i32 = options_get_number_(oo, c"display-panes-colour") as _;
+            let active_colour: i32 = options_get_number_(oo, c"display-panes-active-colour") as _;
 
             let mut fgc = grid_default_cell;
             let mut bgc = grid_default_cell;
@@ -347,7 +346,7 @@ unsafe extern "C" fn cmd_display_panes_exec(self_: *mut cmd, item: *mut cmdq_ite
                 return cmd_retval::CMD_RETURN_ERROR;
             }
         } else {
-            delay = options_get_number((*s).options, c"display-panes-time".as_ptr()) as u32;
+            delay = options_get_number_((*s).options, c"display-panes-time") as u32;
         }
 
         let cdata = xcalloc_::<cmd_display_panes_data>(1).as_ptr();

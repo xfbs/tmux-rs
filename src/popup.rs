@@ -429,7 +429,7 @@ pub extern "C" fn popup_make_pane(pd: *mut popup_data, type_: layout_type) {
         window_unzoom(w, 1);
 
         let lc = layout_split_pane(wp, type_, -1, 0);
-        let hlimit = options_get_number((*s).options, c"history-limit".as_ptr()) as u32;
+        let hlimit = options_get_number_((*s).options, c"history-limit") as u32;
         let new_wp = window_add_pane((*wp).window, null_mut(), hlimit, 0);
         layout_assign_pane(lc, new_wp, 0);
 
@@ -447,7 +447,7 @@ pub extern "C" fn popup_make_pane(pd: *mut popup_data, type_: layout_type) {
         screen_resize(&raw mut (*new_wp).base, (*new_wp).sx, (*new_wp).sy, 1);
         screen_init(&raw mut (*pd).s, 1, 1, 0);
 
-        let mut shell: *const i8 = options_get_string((*s).options, c"default-shell".as_ptr());
+        let mut shell: *const i8 = options_get_string_((*s).options, c"default-shell");
         if !checkshell(shell) {
             shell = _PATH_BSHELL;
         }
@@ -833,7 +833,7 @@ pub unsafe extern "C" fn popup_display(
         };
 
         lines = if lines == box_lines::BOX_LINES_DEFAULT {
-            (options_get_number(o, c"popup-border-lines".as_ptr()) as i32)
+            (options_get_number_(o, c"popup-border-lines") as i32)
                 .try_into()
                 .unwrap_or(box_lines::BOX_LINES_ROUNDED) // TODO
         } else {
@@ -1015,7 +1015,7 @@ pub unsafe extern "C" fn popup_editor(
         let mut path = [0i8; 256];
         strcpy(path.as_mut_ptr(), c"/tmp/tmux.XXXXXXXX".as_ptr().cast());
 
-        let editor = options_get_string(global_options, c"editor".as_ptr().cast());
+        let editor = options_get_string_(global_options, c"editor");
         if *editor == b'\0' as c_char {
             return -1;
         }

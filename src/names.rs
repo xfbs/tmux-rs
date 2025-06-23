@@ -47,7 +47,7 @@ pub unsafe fn check_window_name(w: *mut window) {
             return;
         }
 
-        if options_get_number((*w).options, c"automatic-rename".as_ptr()) == 0 {
+        if options_get_number_((*w).options, c"automatic-rename") == 0 {
             return;
         }
 
@@ -129,7 +129,7 @@ unsafe extern "C" fn format_window_name(w: *mut window) -> *const c_char {
         format_defaults_window(ft, w);
         format_defaults_pane(ft, (*w).active);
 
-        let fmt = options_get_string((*w).options, c"automatic-rename-format".as_ptr());
+        let fmt = options_get_string_((*w).options, c"automatic-rename-format");
         let name = format_expand(ft, fmt);
 
         format_free(ft);

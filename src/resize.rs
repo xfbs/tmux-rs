@@ -372,10 +372,9 @@ pub unsafe fn default_window_size(
 
             /* Get type_ if not provided. */
             let type_ = type_.unwrap_or_else(|| {
-                window_size_option::try_from(options_get_number(
-                    global_w_options,
-                    c"window-size".as_ptr(),
-                ) as i32)
+                window_size_option::try_from(
+                    options_get_number_(global_w_options, c"window-size") as i32
+                )
                 .unwrap()
             });
 
@@ -420,7 +419,7 @@ pub unsafe fn default_window_size(
                 ypixel,
             ) == 0
             {
-                let value = options_get_string((*s).options, c"default-size".as_ptr());
+                let value = options_get_string_((*s).options, c"default-size");
                 if sscanf(value, c"%ux%u".as_ptr(), sx, sy) != 2 {
                     *sx = 80;
                     *sy = 24;
@@ -485,12 +484,10 @@ pub unsafe extern "C" fn recalculate_size(w: *mut window, now: i32) {
          * aggressive-resize option (do not resize based on clients where the
          * window is not the current window).
          */
-        let type_ = window_size_option::try_from(options_get_number(
-            (*w).options,
-            c"window-size".as_ptr(),
-        ) as i32)
-        .unwrap();
-        let current = options_get_number((*w).options, c"aggressive-resize".as_ptr()) as i32;
+        let type_ =
+            window_size_option::try_from(options_get_number_((*w).options, c"window-size") as i32)
+                .unwrap();
+        let current = options_get_number_((*w).options, c"aggressive-resize") as i32;
 
         /* Look for a suitable client and get the new size. */
         let mut changed = clients_calculate_size(

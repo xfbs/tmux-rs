@@ -7,11 +7,16 @@ pub mod getprogname;
 pub mod imsg;
 pub mod imsg_buffer;
 pub mod queue;
-mod strtonum;
 pub mod systemd;
 pub mod tree;
 pub mod vis_;
 
+mod strlcat;
+mod strlcpy;
+mod strtonum;
+
+pub use strlcat::strlcat;
+pub use strlcpy::strlcpy;
 pub use strtonum::{strtonum, strtonum_};
 pub use systemd::systemd_create_socket;
 
@@ -29,9 +34,6 @@ pub const VIS_DQ: i32 = 32768;
 #[rustfmt::skip]
 unsafe extern "C" {
     pub fn fgetln(stream: *mut libc::FILE, len: *mut usize) -> *mut c_char;
-
-    pub fn strlcpy(dst: *mut c_char, src: *const c_char, siz: usize) -> usize;
-    pub fn strlcat(dst: *mut c_char, src: *const c_char, siz: usize) -> usize;
 
     pub fn setproctitle(fmt: *const c_char, ...);
     pub fn getprogname() -> *const c_char;

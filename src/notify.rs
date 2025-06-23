@@ -57,14 +57,6 @@ pub unsafe extern "C" fn notify_insert_one_hook(
 pub unsafe extern "C" fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut notify_entry) {
     let __func__ = "notify_insert_hook";
     unsafe {
-        // struct options			*oo;
-        // struct cmdq_state		*state;
-        // struct options_entry		*o;
-        // struct options_array_item	*a;
-        // struct cmd_list			*cmdlist;
-        // const char			*value;
-        // struct cmd_parse_result		*pr;
-
         log_debug!("{}: inserting hook {}", __func__, _s((*ne).name));
 
         let mut o: *mut options_entry = null_mut();

@@ -170,11 +170,7 @@ pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_i
             (*wp).flags |= window_pane_flags::PANE_REDRAW | window_pane_flags::PANE_STYLECHANGED;
         }
         if args_has_(args, 'g') {
-            cmdq_print!(
-                item,
-                "{}",
-                _s(options_get_string(oo, c"window-style".as_ptr())),
-            );
+            cmdq_print!(item, "{}", _s(options_get_string_(oo, c"window-style")),);
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 

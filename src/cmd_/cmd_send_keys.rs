@@ -219,9 +219,9 @@ pub unsafe extern "C" fn cmd_send_keys_exec(self_: *mut cmd, item: *mut cmdq_ite
 
         if cmd_get_entry(self_) == &raw mut cmd_send_prefix_entry {
             key = if args_has_(args, '2') {
-                options_get_number((*s).options, c"prefix2".as_ptr()) as u64
+                options_get_number_((*s).options, c"prefix2") as u64
             } else {
-                options_get_number((*s).options, c"prefix".as_ptr()) as u64
+                options_get_number_((*s).options, c"prefix") as u64
             };
             cmd_send_keys_inject_key(item, item, args, key);
             return cmd_retval::CMD_RETURN_NORMAL;
