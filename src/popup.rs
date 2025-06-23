@@ -931,7 +931,10 @@ pub unsafe extern "C" fn popup_display(
             Some(popup_job_complete_cb),
             None,
             pd.cast(),
-            JOB_NOWAIT | JOB_PTY | JOB_KEEPWRITE | JOB_DEFAULTSHELL,
+            job_flag::JOB_NOWAIT
+                | job_flag::JOB_PTY
+                | job_flag::JOB_KEEPWRITE
+                | job_flag::JOB_DEFAULTSHELL,
             jx as i32,
             jy as i32,
         );

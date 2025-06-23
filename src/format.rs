@@ -468,7 +468,7 @@ pub unsafe extern "C" fn format_job_get(
                 Some(format_job_complete),
                 None,
                 fj.cast(),
-                JOB_NOWAIT,
+                job_flag::JOB_NOWAIT,
                 -1,
                 -1,
             );

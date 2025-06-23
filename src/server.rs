@@ -340,7 +340,7 @@ pub unsafe extern "C" fn server_loop() -> i32 {
             return 0;
         }
 
-        if job_still_running() != 0 {
+        if job_still_running() {
             return 0;
         }
 

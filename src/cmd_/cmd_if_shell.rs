@@ -108,7 +108,7 @@ unsafe extern "C" fn cmd_if_shell_exec(self_: *mut cmd, item: *mut cmdq_item) ->
             Some(cmd_if_shell_callback),
             Some(cmd_if_shell_free),
             cdata as _,
-            0,
+            job_flag::empty(),
             -1,
             -1,
         )

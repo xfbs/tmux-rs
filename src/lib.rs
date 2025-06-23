@@ -2621,11 +2621,17 @@ use crate::options_::{
 mod options_table;
 use crate::options_table::{options_other_names, options_table};
 
+bitflags::bitflags! {
+    #[repr(transparent)]
+    #[derive(Copy, Clone, Eq, PartialEq)]
+    struct job_flag: i32 {
+        const JOB_NOWAIT = 1;
+        const JOB_KEEPWRITE = 2;
+        const JOB_PTY = 4;
+        const JOB_DEFAULTSHELL = 8;
+    }
+}
 mod job_;
-const JOB_NOWAIT: i32 = 1;
-const JOB_KEEPWRITE: i32 = 2;
-const JOB_PTY: i32 = 4;
-const JOB_DEFAULTSHELL: i32 = 8;
 use crate::job_::{
     job, job_check_died, job_complete_cb, job_free, job_free_cb, job_get_data, job_get_event,
     job_get_status, job_kill_all, job_print_summary, job_resize, job_run, job_still_running,

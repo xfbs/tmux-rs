@@ -5715,7 +5715,7 @@ pub unsafe extern "C" fn window_copy_pipe_run(
                 None,
                 None,
                 null_mut(),
-                JOB_NOWAIT,
+                job_flag::JOB_NOWAIT,
                 -1,
                 -1,
             );

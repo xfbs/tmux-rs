@@ -47,7 +47,7 @@ pub enum job_state {
 pub struct job {
     pub state: job_state,
 
-    pub flags: i32,
+    pub flags: job_flag,
 
     pub cmd: *mut c_char,
     pub pid: pid_t,
@@ -84,7 +84,7 @@ pub unsafe extern "C" fn job_run(
     completecb: job_complete_cb,
     freecb: job_free_cb,
     data: *mut c_void,
-    flags: c_int,
+    flags: job_flag,
     sx: c_int,
     sy: c_int,
 ) -> *mut job {
@@ -113,7 +113,7 @@ pub unsafe extern "C" fn job_run(
                 environ_copy(e, env);
             }
 
-            if !flags & JOB_DEFAULTSHELL != 0 {
+            if !flags.intersects(job_flag::JOB_DEFAULTSHELL) {
                 shell = _PATH_BSHELL;
             } else {
                 if !s.is_null() {
@@ -131,7 +131,7 @@ pub unsafe extern "C" fn job_run(
             sigfillset(set.as_mut_ptr());
             sigprocmask(SIG_BLOCK, set.as_mut_ptr(), oldset.as_mut_ptr());
 
-            if flags & JOB_PTY != 0 {
+            if flags.intersects(job_flag::JOB_PTY) {
                 memset(ws.as_mut_ptr().cast(), 0, size_of::<winsize>());
                 (*ws.as_mut_ptr()).ws_col = sx as u16;
                 (*ws.as_mut_ptr()).ws_row = sy as u16;
@@ -169,7 +169,7 @@ pub unsafe extern "C" fn job_run(
 
             match pid {
                 -1 => {
-                    if !flags & JOB_PTY != 0 {
+                    if !flags.intersects(job_flag::JOB_PTY) {
                         close(out[0]);
                         close(out[1]);
                     }
@@ -192,7 +192,7 @@ pub unsafe extern "C" fn job_run(
                     environ_push(env);
                     environ_free(env);
 
-                    if !flags & JOB_PTY != 0 {
+                    if !flags.intersects(job_flag::JOB_PTY) {
                         if dup2(out[1], STDIN_FILENO) == -1 {
                             fatal(c"dup2 failed".as_ptr());
                         }
@@ -254,7 +254,7 @@ pub unsafe extern "C" fn job_run(
             (*job).freecb = freecb;
             (*job).data = data;
 
-            if !flags & JOB_PTY != 0 {
+            if !flags.intersects(job_flag::JOB_PTY) {
                 close(out[1]);
                 (*job).fd = out[0];
             } else {
@@ -351,7 +351,7 @@ pub unsafe extern "C" fn job_resize(job: *mut job, sx: c_uint, sy: c_uint) {
 
     unsafe {
         let ws = ws.as_mut_ptr();
-        if (*job).fd == -1 || !(*job).flags & JOB_PTY != 0 {
+        if (*job).fd == -1 || !(*job).flags.intersects(job_flag::JOB_PTY) {
             return;
         }
         log_debug!("resize job {:p}: {}x{}", job, sx, sy);
@@ -386,7 +386,7 @@ unsafe extern "C" fn job_write_callback(bufev: *mut bufferevent, data: *mut libc
             len,
         );
 
-        if len == 0 && !(*job).flags & JOB_KEEPWRITE != 0 {
+        if len == 0 && !(*job).flags.intersects(job_flag::JOB_KEEPWRITE) {
             shutdown((*job).fd, SHUT_WR);
             bufferevent_disable((*job).event, EV_WRITE);
         }
@@ -483,22 +483,23 @@ pub unsafe extern "C" fn job_kill_all() {
     }
 }
 
-pub unsafe extern "C" fn job_still_running() -> i32 {
+pub unsafe fn job_still_running() -> bool {
     unsafe {
-        for job in list_foreach(&raw mut all_jobs).map(NonNull::as_ptr) {
-            if (!(*job).flags & JOB_NOWAIT != 0) && (*job).state == job_state::JOB_RUNNING {
-                return 1;
-            }
-        }
-
-        0
+        list_foreach(&raw mut all_jobs)
+            .map(NonNull::as_ptr)
+            .any(|job| {
+                !(*job).flags.intersects(job_flag::JOB_NOWAIT)
+                    && (*job).state == job_state::JOB_RUNNING
+            })
     }
 }
 
 pub unsafe extern "C" fn job_print_summary(item: *mut cmdq_item, mut blank: i32) {
-    let mut n = 0u32;
     unsafe {
-        for job in list_foreach(&raw mut all_jobs).map(NonNull::as_ptr) {
+        for (n, job) in list_foreach(&raw mut all_jobs)
+            .map(NonNull::as_ptr)
+            .enumerate()
+        {
             if blank != 0 {
                 cmdq_print!(item, "");
                 blank = 0;
@@ -512,7 +513,6 @@ pub unsafe extern "C" fn job_print_summary(item: *mut cmdq_item, mut blank: i32)
                 (*job).pid,
                 (*job).status,
             );
-            n += 1;
         }
     }
 }

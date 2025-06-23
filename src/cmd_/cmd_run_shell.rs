@@ -45,7 +45,7 @@ pub struct cmd_run_shell_data {
     pub s: *mut session,
     pub wp_id: i32,
     pub timer: event,
-    pub flags: i32,
+    pub flags: job_flag,
 }
 
 pub unsafe extern "C" fn cmd_run_shell_args_parse(
@@ -148,7 +148,7 @@ pub unsafe extern "C" fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_ite
             (*cdata).item = item;
         } else {
             (*cdata).client = tc;
-            (*cdata).flags |= JOB_NOWAIT;
+            (*cdata).flags |= job_flag::JOB_NOWAIT;
         }
         if !(*cdata).client.is_null() {
             (*(*cdata).client).references += 1;
