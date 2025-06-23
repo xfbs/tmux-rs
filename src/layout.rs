@@ -1060,9 +1060,9 @@ pub unsafe extern "C" fn layout_split_pane(
             lcparent = (*lc).parent;
             lcnew = layout_create_cell(lcparent);
             if (flags & SPAWN_BEFORE) != 0 {
-                tailq_insert_before!(lc, lcnew, entry);
+                tailq_insert_before(lc, lcnew);
             } else {
-                tailq_insert_after!(&raw mut (*lcparent).cells, lc, lcnew, entry);
+                tailq_insert_after(&raw mut (*lcparent).cells, lc, lcnew);
             }
         } else if full_size && (*lc).parent.is_null() && (*lc).type_ == type_ {
             // If the new full size pane is the same type as the root
@@ -1089,7 +1089,7 @@ pub unsafe extern "C" fn layout_split_pane(
                 layout_set_size(lcnew, sx, size, 0, 0);
             }
             if (flags & SPAWN_BEFORE) != 0 {
-                tailq_insert_head!(&raw mut (*lc).cells, lcnew, entry);
+                tailq_insert_head(&raw mut (*lc).cells, lcnew);
             } else {
                 tailq_insert_tail(&raw mut (*lc).cells, lcnew);
             }
@@ -1108,12 +1108,12 @@ pub unsafe extern "C" fn layout_split_pane(
 
             // Insert the old cell.
             (*lc).parent = lcparent;
-            tailq_insert_head!(&raw mut (*lcparent).cells, lc, entry);
+            tailq_insert_head(&raw mut (*lcparent).cells, lc);
 
             // Create the new child cell.
             lcnew = layout_create_cell(lcparent);
             if (flags & SPAWN_BEFORE) != 0 {
-                tailq_insert_head!(&raw mut (*lcparent).cells, lcnew, entry);
+                tailq_insert_head(&raw mut (*lcparent).cells, lcnew);
             } else {
                 tailq_insert_tail(&raw mut (*lcparent).cells, lcnew);
             }

@@ -132,7 +132,7 @@ pub unsafe extern "C" fn spawn_window(
             layout_free(w);
             window_destroy_panes(w);
 
-            tailq_insert_head!(&raw mut (*w).panes, (*sc).wp0, entry);
+            tailq_insert_head::<_, discr_entry>(&raw mut (*w).panes, (*sc).wp0);
             window_pane_resize((*sc).wp0, (*w).sx, (*w).sy);
 
             layout_init(w, (*sc).wp0);

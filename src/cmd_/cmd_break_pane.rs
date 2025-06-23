@@ -99,7 +99,7 @@ pub unsafe extern "C" fn cmd_break_pane_exec(self_: *mut cmd, item: *mut cmdq_it
 
         options_set_parent((*wp).options, (*w).options);
         (*wp).flags |= window_pane_flags::PANE_STYLECHANGED;
-        tailq_insert_head!(&raw mut (*w).panes, wp, entry);
+        tailq_insert_head::<_, discr_entry>(&raw mut (*w).panes, wp);
         (*w).active = wp;
         (*w).latest = tc as *mut c_void;
 

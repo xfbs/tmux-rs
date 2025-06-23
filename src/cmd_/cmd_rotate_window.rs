@@ -52,7 +52,7 @@ unsafe extern "C" fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_ite
         if args_has_(args, 'D') {
             wp = tailq_last(&raw mut (*w).panes);
             tailq_remove::<_, discr_entry>(&raw mut (*w).panes, wp);
-            tailq_insert_head!(&raw mut (*w).panes, wp, entry);
+            tailq_insert_head::<_, discr_entry>(&raw mut (*w).panes, wp);
 
             lc = (*wp).layout_cell;
             xoff = (*wp).xoff;

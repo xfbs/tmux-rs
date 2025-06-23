@@ -81,9 +81,9 @@ unsafe extern "C" fn cmd_swap_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
                 tmp_wp = dst_wp;
             }
             if tmp_wp.is_null() {
-                tailq_insert_head!(&raw mut (*dst_w).panes, src_wp, entry);
+                tailq_insert_head::<_, discr_entry>(&raw mut (*dst_w).panes, src_wp);
             } else {
-                tailq_insert_after!(&raw mut (*dst_w).panes, tmp_wp, src_wp, entry);
+                tailq_insert_after::<_, discr_entry>(&raw mut (*dst_w).panes, tmp_wp, src_wp);
             }
 
             let src_lc = (*src_wp).layout_cell;

@@ -27,12 +27,8 @@ pub unsafe fn list_first<T>(head: *mut list_head<T>) -> *mut T {
     unsafe { (*head).lh_first }
 }
 
-pub fn list_end<T>() -> *mut T {
-    null_mut()
-}
-
-pub unsafe fn list_empty<T>(head: *mut list_head<T>) -> bool {
-    unsafe { list_first(head).is_null() }
+pub unsafe fn list_empty<T>(head: *const list_head<T>) -> bool {
+    unsafe { (*head).lh_first.is_null() }
 }
 
 pub unsafe fn list_next<T, Discriminant>(elm: *mut T) -> *mut T
@@ -71,7 +67,7 @@ where
 
 pub unsafe fn list_init<T>(head: *mut list_head<T>) {
     unsafe {
-        (*head).lh_first = list_end();
+        (*head).lh_first = null_mut();
     }
 }
 
@@ -234,22 +230,25 @@ pub unsafe fn tailq_empty<T>(head: *const tailq_head<T>) -> bool {
     unsafe { (*head).tqh_first.is_null() }
 }
 
-macro_rules! tailq_insert_head {
-    ($head:expr, $elm:expr, $field:ident) => {
-        ((*$elm).$field.tqe_next = (*$head).tqh_first);
-        if !(*$elm).$field.tqe_next.is_null() {
-            (*(*$head).tqh_first).$field.tqe_prev = &raw mut (*$elm).$field.tqe_next;
+pub unsafe fn tailq_insert_head<T, D>(head: *mut tailq_head<T>, elm: *mut T)
+where
+    T: Entry<T, D>,
+{
+    unsafe {
+        (*T::entry(elm)).tqe_next = (*head).tqh_first;
+
+        if !(*T::entry(elm)).tqe_next.is_null() {
+            (*T::entry((*head).tqh_first)).tqe_prev = &raw mut (*T::entry(elm)).tqe_next;
         } else {
-            (*$head).tqh_last = &raw mut (*$elm).$field.tqe_next;
+            (*head).tqh_last = &raw mut (*T::entry(elm)).tqe_next;
         }
 
-        (*$head).tqh_first = $elm;
-        (*$elm).$field.tqe_prev = &raw mut (*$head).tqh_first;
-    };
+        (*head).tqh_first = elm;
+        (*T::entry(elm)).tqe_prev = &raw mut (*head).tqh_first;
+    }
 }
-pub(crate) use tailq_insert_head;
 
-pub unsafe extern "C" fn tailq_insert_tail<T, D>(head: *mut tailq_head<T>, elm: *mut T)
+pub unsafe fn tailq_insert_tail<T, D>(head: *mut tailq_head<T>, elm: *mut T)
 where
     T: Entry<T, D>,
 {
@@ -261,31 +260,35 @@ where
     }
 }
 
-macro_rules! tailq_insert_after {
-    ($head:expr, $listelm:ident, $elm:ident, $field:ident) => {
-        (*$elm).$field.tqe_next = (*$listelm).$field.tqe_next;
+pub unsafe fn tailq_insert_after<T, D>(head: *mut tailq_head<T>, listelm: *mut T, elm: *mut T)
+where
+    T: Entry<T, D>,
+{
+    unsafe {
+        (*T::entry(elm)).tqe_next = (*T::entry(listelm)).tqe_next;
 
-        if !(*$elm).$field.tqe_next.is_null() {
-            (*(*$elm).$field.tqe_next).$field.tqe_prev = &raw mut (*$elm).$field.tqe_next;
+        if !(*T::entry(elm)).tqe_next.is_null() {
+            (*T::entry((*T::entry(elm)).tqe_next)).tqe_prev = &raw mut (*T::entry(elm)).tqe_next;
         } else {
-            (*$head).tqh_last = &raw mut (*$elm).$field.tqe_next;
+            (*head).tqh_last = &raw mut (*T::entry(elm)).tqe_next;
         }
 
-        (*$listelm).$field.tqe_next = $elm;
-        (*$elm).$field.tqe_prev = &raw mut (*$listelm).$field.tqe_next;
-    };
+        (*T::entry(listelm)).tqe_next = elm;
+        (*T::entry(elm)).tqe_prev = &raw mut (*T::entry(listelm)).tqe_next;
+    }
 }
-pub(crate) use tailq_insert_after;
 
-macro_rules! tailq_insert_before {
-    ($listelm:expr, $elm:ident, $field:ident) => {
-        (*$elm).$field.tqe_prev = (*$listelm).$field.tqe_prev;
-        (*$elm).$field.tqe_next = $listelm;
-        *(*$listelm).$field.tqe_prev = $elm;
-        (*$listelm).$field.tqe_prev = &raw mut (*$elm).$field.tqe_next;
-    };
+pub unsafe fn tailq_insert_before<T, D>(listelm: *mut T, elm: *mut T)
+where
+    T: Entry<T, D>,
+{
+    unsafe {
+        (*T::entry(elm)).tqe_prev = (*T::entry(listelm)).tqe_prev;
+        (*T::entry(elm)).tqe_next = listelm;
+        *(*T::entry(listelm)).tqe_prev = elm;
+        (*T::entry(listelm)).tqe_prev = &raw mut (*T::entry(elm)).tqe_next;
+    }
 }
-pub(crate) use tailq_insert_before;
 
 pub unsafe fn tailq_remove<T, D>(head: *mut tailq_head<T>, elm: *mut T)
 where

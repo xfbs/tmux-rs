@@ -254,7 +254,6 @@ pub unsafe extern "C" fn args_parse_flags(
 }
 
 /// Parse arguments into a new argument set.
-
 pub unsafe extern "C" fn args_parse(
     parse: *mut args_parse,
     values: *mut args_value,
@@ -387,7 +386,6 @@ pub unsafe extern "C" fn args_copy_copy_value(
 }
 
 /// Copy an arguments set.
-
 pub unsafe extern "C" fn args_copy(
     args: *mut args,
     argc: i32,
@@ -505,7 +503,6 @@ macro_rules! args_print_add {
     };
 }
 pub(crate) use args_print_add;
-
 pub unsafe fn args_print_add_(buf: *mut *mut c_char, len: *mut usize, fmt: std::fmt::Arguments) {
     unsafe {
         let mut s = fmt.to_string();
@@ -611,7 +608,6 @@ pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
 }
 
 /// Escape an argument.
-
 pub unsafe extern "C" fn args_escape(s: *const c_char) -> *mut c_char {
     unsafe {
         static mut dquoted: *const c_char = c" #';${}%".as_ptr();
@@ -726,7 +722,6 @@ pub unsafe extern "C" fn args_first(args: *mut args, entry: *mut *mut args_entry
 }
 
 /// Get next argument.
-
 pub unsafe extern "C" fn args_next(entry: *mut *mut args_entry) -> u8 {
     unsafe {
         *entry = rb_next(*entry);
@@ -738,19 +733,16 @@ pub unsafe extern "C" fn args_next(entry: *mut *mut args_entry) -> u8 {
 }
 
 /// Get argument count.
-
 pub unsafe extern "C" fn args_count(args: *const args) -> u32 {
     unsafe { (*args).count }
 }
 
 /// Get argument values.
-
 pub unsafe extern "C" fn args_values(args: *mut args) -> *mut args_value {
     unsafe { (*args).values }
 }
 
 /// Get argument value.
-
 pub unsafe extern "C" fn args_value(args: *mut args, idx: u32) -> *mut args_value {
     unsafe {
         if idx >= (*args).count {
@@ -761,7 +753,6 @@ pub unsafe extern "C" fn args_value(args: *mut args, idx: u32) -> *mut args_valu
 }
 
 /// Return argument as string.
-
 pub unsafe extern "C" fn args_string(args: *mut args, idx: u32) -> *const c_char {
     unsafe {
         if idx >= (*args).count {
@@ -772,7 +763,6 @@ pub unsafe extern "C" fn args_string(args: *mut args, idx: u32) -> *const c_char
 }
 
 /// Make a command now.
-
 pub unsafe extern "C" fn args_make_commands_now(
     self_: *mut cmd,
     item: *mut cmdq_item,
@@ -795,7 +785,6 @@ pub unsafe extern "C" fn args_make_commands_now(
 }
 
 /// Save bits to make a command later.
-
 pub unsafe extern "C" fn args_make_commands_prepare(
     self_: *mut cmd,
     item: *mut cmdq_item,
@@ -855,7 +844,6 @@ pub unsafe extern "C" fn args_make_commands_prepare(
 }
 
 /// Return argument as command.
-
 pub unsafe extern "C" fn args_make_commands(
     state: *mut args_command_state,
     argc: i32,
@@ -902,7 +890,6 @@ pub unsafe extern "C" fn args_make_commands(
 }
 
 /// Free commands state.
-
 pub unsafe extern "C" fn args_make_commands_free(state: *mut args_command_state) {
     unsafe {
         if !(*state).cmdlist.is_null() {
@@ -918,7 +905,6 @@ pub unsafe extern "C" fn args_make_commands_free(state: *mut args_command_state)
 }
 
 /// Get prepared command.
-
 pub unsafe extern "C" fn args_make_commands_get_command(
     state: *mut args_command_state,
 ) -> *mut c_char {
@@ -936,7 +922,6 @@ pub unsafe extern "C" fn args_make_commands_get_command(
 }
 
 /// Get first value in argument.
-
 pub unsafe extern "C" fn args_first_value(args: *mut args, flag: u8) -> *mut args_value {
     unsafe {
         let entry = args_find(args, flag);
@@ -948,23 +933,19 @@ pub unsafe extern "C" fn args_first_value(args: *mut args, flag: u8) -> *mut arg
 }
 
 /// Get next value in argument.
-
 pub unsafe extern "C" fn args_next_value(value: *mut args_value) -> *mut args_value {
     unsafe { tailq_next(value) }
 }
 
 /// Convert an argument value to a number.
-
 pub unsafe extern "C" fn args_strtonum(
     args: *mut args,
     flag: u8,
-    minval: c_longlong,
-    maxval: c_longlong,
+    minval: i64,
+    maxval: i64,
     cause: *mut *mut c_char,
-) -> c_longlong {
+) -> i64 {
     unsafe {
-        let mut errstr = null();
-
         let entry = args_find(args, flag);
         if entry.is_null() {
             *cause = xstrdup_(c"missing").as_ptr();
@@ -979,19 +960,20 @@ pub unsafe extern "C" fn args_strtonum(
             return 0;
         }
 
-        let ll = strtonum((*value).union_.string, minval, maxval, &raw mut errstr);
-        if !errstr.is_null() {
-            *cause = xstrdup(errstr).as_ptr();
-            return 0;
+        match strtonum_((*value).union_.string, minval, maxval) {
+            Ok(ll) => {
+                *cause = null_mut();
+                ll
+            }
+            Err(errstr) => {
+                *cause = xstrdup(errstr.as_ptr()).as_ptr();
+                0
+            }
         }
-
-        *cause = null_mut();
-        ll
     }
 }
 
 /// Convert an argument value to a number, and expand formats.
-
 pub unsafe extern "C" fn args_strtonum_and_expand(
     args: *mut args,
     flag: u8,
@@ -1018,20 +1000,22 @@ pub unsafe extern "C" fn args_strtonum_and_expand(
         }
 
         let formatted = format_single_from_target(item, (*value).union_.string);
-        let ll = strtonum(formatted, minval, maxval, &raw mut errstr);
+        let tmp = strtonum_(formatted, minval, maxval);
         free_(formatted);
-        if !errstr.is_null() {
-            *cause = xstrdup(errstr).as_ptr();
-            return 0;
+        match tmp {
+            Ok(ll) => {
+                *cause = null_mut();
+                ll
+            }
+            Err(errstr) => {
+                *cause = xstrdup_(errstr).as_ptr();
+                0
+            }
         }
-
-        *cause = null_mut();
-        ll
     }
 }
 
 /// Convert an argument to a number which may be a percentage.
-
 pub unsafe extern "C" fn args_percentage(
     args: *mut args,
     flag: u8,
@@ -1056,7 +1040,6 @@ pub unsafe extern "C" fn args_percentage(
 }
 
 /// Convert a string to a number which may be a percentage.
-
 pub unsafe extern "C" fn args_string_percentage(
     value: *const c_char,
     minval: i64,
@@ -1078,12 +1061,15 @@ pub unsafe extern "C" fn args_string_percentage(
             copy = xstrdup(value).as_ptr();
             *copy.add(valuelen - 1) = b'\0' as _;
 
-            ll = strtonum(copy, 0, 100, &raw mut errstr);
+            let tmp = strtonum_(copy, 0, 100);
             free_(copy);
-            if !errstr.is_null() {
-                *cause = xstrdup(errstr).as_ptr();
-                return 0;
-            }
+            ll = match tmp {
+                Ok(ll) => ll,
+                Err(errstr) => {
+                    *cause = xstrdup(errstr.as_ptr()).as_ptr();
+                    return 0;
+                }
+            };
             ll = (curval * ll) / 100;
             if ll < minval {
                 *cause = xstrdup_(c"too small").as_ptr();
@@ -1094,11 +1080,13 @@ pub unsafe extern "C" fn args_string_percentage(
                 return 0;
             }
         } else {
-            ll = strtonum(value, minval, maxval, &raw mut errstr);
-            if !errstr.is_null() {
-                *cause = xstrdup(errstr).as_ptr();
-                return 0;
-            }
+            ll = match strtonum_(value, minval, maxval) {
+                Ok(ll) => ll,
+                Err(errstr) => {
+                    *cause = xstrdup(errstr.as_ptr()).as_ptr();
+                    return 0;
+                }
+            };
         }
 
         *cause = null_mut();
@@ -1106,8 +1094,7 @@ pub unsafe extern "C" fn args_string_percentage(
     }
 }
 
-///Convert an argument to a number which may be a percentage, and expand formats.
-
+/// Convert an argument to a number which may be a percentage, and expand formats.
 pub unsafe extern "C" fn args_percentage_and_expand(
     args: *mut args,
     flag: u8,
@@ -1133,7 +1120,6 @@ pub unsafe extern "C" fn args_percentage_and_expand(
 }
 
 /// Convert a string to a number which may be a percentage, and expand formats.
-
 pub unsafe extern "C" fn args_string_percentage_and_expand(
     value: *mut c_char,
     minval: i64,
@@ -1153,13 +1139,16 @@ pub unsafe extern "C" fn args_string_percentage_and_expand(
             *copy.add(valuelen - 1) = b'\0' as c_char;
 
             f = format_single_from_target(item, copy);
-            ll = strtonum(f, 0, 100, &raw mut errstr);
+            let tmp = strtonum_(f, 0, 100);
             free_(f);
             free_(copy);
-            if !errstr.is_null() {
-                *cause = xstrdup(errstr).as_ptr();
-                return 0;
-            }
+            ll = match tmp {
+                Ok(value) => value,
+                Err(errstr) => {
+                    *cause = xstrdup_(errstr).as_ptr();
+                    return 0;
+                }
+            };
             ll = (curval * ll) / 100;
             if ll < minval {
                 *cause = xstrdup_(c"too small").as_ptr();
@@ -1171,12 +1160,15 @@ pub unsafe extern "C" fn args_string_percentage_and_expand(
             }
         } else {
             f = format_single_from_target(item, value);
-            ll = strtonum(f, minval, maxval, &raw mut errstr);
+            let tmp = strtonum_(f, minval, maxval);
             free_(f);
-            if !errstr.is_null() {
-                *cause = xstrdup(errstr).as_ptr();
-                return 0;
-            }
+            ll = match tmp {
+                Ok(value) => value,
+                Err(errstr) => {
+                    *cause = xstrdup_(errstr).as_ptr();
+                    return 0;
+                }
+            };
         }
 
         *cause = null_mut();

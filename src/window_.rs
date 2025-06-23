@@ -229,7 +229,7 @@ pub unsafe extern "C" fn winlink_stack_push(stack: *mut winlink_stack, wl: *mut 
 
     unsafe {
         winlink_stack_remove(stack, wl);
-        tailq_insert_head!(stack, wl, sentry);
+        tailq_insert_head::<_, discr_sentry>(stack, wl);
         (*wl).flags |= winlink_flags::WINLINK_VISITED;
     }
 }
@@ -818,20 +818,20 @@ pub unsafe extern "C" fn window_add_pane(
         let wp = window_pane_create(w, (*w).sx, (*w).sy, hlimit);
         if tailq_empty(&raw mut (*w).panes) {
             log_debug!("{}: @{} at start", func, (*w).id);
-            tailq_insert_head!(&raw mut (*w).panes, wp, entry);
+            tailq_insert_head::<_, discr_entry>(&raw mut (*w).panes, wp);
         } else if flags & SPAWN_BEFORE != 0 {
             log_debug!("{}: @{} before %%{}", func, (*w).id, (*wp).id);
             if flags & SPAWN_FULLSIZE != 0 {
-                tailq_insert_head!(&raw mut (*w).panes, wp, entry);
+                tailq_insert_head::<_, discr_entry>(&raw mut (*w).panes, wp);
             } else {
-                tailq_insert_before!(other, wp, entry);
+                tailq_insert_before::<_, discr_entry>(other, wp);
             }
         } else {
             log_debug!("{}: @{} after %%{}", func, (*w).id, (*wp).id);
             if flags & SPAWN_FULLSIZE != 0 {
                 tailq_insert_tail::<_, discr_entry>(&raw mut (*w).panes, wp);
             } else {
-                tailq_insert_after!(&raw mut (*w).panes, other, wp, entry);
+                tailq_insert_after::<_, discr_entry>(&raw mut (*w).panes, other, wp);
             }
         }
 
@@ -1244,14 +1244,14 @@ pub unsafe extern "C" fn window_pane_set_mode(
 
         if !wme.is_null() {
             tailq_remove::<_, ()>(&raw mut (*wp).modes, wme);
-            tailq_insert_head!(&raw mut (*wp).modes, wme, entry);
+            tailq_insert_head(&raw mut (*wp).modes, wme);
         } else {
             wme = xcalloc_::<window_mode_entry>(1).as_ptr();
             (*wme).wp = wp;
             (*wme).swp = swp;
             (*wme).mode = mode;
             (*wme).prefix = 1;
-            tailq_insert_head!(&raw mut (*wp).modes, wme, entry);
+            tailq_insert_head(&raw mut (*wp).modes, wme);
             (*wme).screen = (*(*wme).mode).init.unwrap()(NonNull::new_unchecked(wme), fs, args);
         }
 
@@ -1722,7 +1722,7 @@ pub unsafe extern "C" fn window_pane_stack_push(stack: *mut window_panes, wp: *m
     unsafe {
         if !wp.is_null() {
             window_pane_stack_remove(stack, wp);
-            tailq_insert_head!(stack, wp, sentry);
+            tailq_insert_head::<_, discr_sentry>(stack, wp);
             (*wp).flags |= window_pane_flags::PANE_VISITED;
         }
     }

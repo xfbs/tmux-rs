@@ -288,7 +288,7 @@ pub unsafe extern "C" fn screen_push_title(s: *mut screen) {
 
         let title_entry = xmalloc_::<screen_title_entry>().as_ptr();
         (*title_entry).text = xstrdup((*s).title).as_ptr();
-        tailq_insert_head!((*s).titles, title_entry, entry);
+        tailq_insert_head((*s).titles, title_entry);
     }
 }
 

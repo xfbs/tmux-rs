@@ -12,7 +12,6 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
 use crate::*;
 use core::ffi::{CStr, c_char, c_double, c_int, c_uchar};
 use std::{
@@ -51,7 +50,6 @@ fn colour_to_6cube(v: i32) -> i32 {
 /// not evenly spread out), so our 6 levels are not evenly spread: 0x0, 0x5f
 /// (95), 0x87 (135), 0xaf (175), 0xd7 (215) and 0xff (255). Greys are more
 /// evenly spread (8, 18, 28 ... 238).
-
 pub fn colour_find_rgb(r: u8, g: u8, b: u8) -> i32 {
     // convert to i32 to better match c's integer promotion rules
     let r = r as i32;
@@ -94,8 +92,7 @@ pub fn colour_find_rgb(r: u8, g: u8, b: u8) -> i32 {
 }
 
 /// Join RGB into a colour.
-
-pub fn colour_join_rgb(r: c_uchar, g: c_uchar, b: c_uchar) -> i32 {
+pub fn colour_join_rgb(r: u8, g: u8, b: u8) -> i32 {
     (((r as i32) << 16) | ((g as i32) << 8) | (b as i32)) | COLOUR_FLAG_RGB
 }
 
@@ -110,8 +107,7 @@ pub fn colour_split_rgb(c: i32) -> (u8 /* red */, u8 /* green */, u8 /* blue */)
 }
 
 /// Force colour to RGB if not already.
-
-pub extern "C" fn colour_force_rgb(c: i32) -> i32 {
+pub fn colour_force_rgb(c: i32) -> i32 {
     if c & COLOUR_FLAG_RGB != 0 {
         c
     } else if c & COLOUR_FLAG_256 != 0 || (0..=7).contains(&c) {
@@ -174,9 +170,8 @@ pub unsafe extern "C" fn colour_tostring(c: i32) -> *const c_char {
     }
 }
 
-// Convert colour from string.
-
-pub unsafe extern "C" fn colour_fromstring(s: *const c_char) -> c_int {
+/// Convert colour from string.
+pub unsafe fn colour_fromstring(s: *const c_char) -> c_int {
     unsafe {
         if *s as u8 == b'#' && libc::strlen(s) == 7 {
             let mut cp = s.wrapping_add(1);
@@ -953,7 +948,6 @@ pub unsafe extern "C" fn colour_palette_init(p: *mut colour_palette) {
 }
 
 /// Clear palette.
-
 pub unsafe extern "C" fn colour_palette_clear(p: *mut colour_palette) {
     unsafe {
         if !p.is_null() {
@@ -966,7 +960,6 @@ pub unsafe extern "C" fn colour_palette_clear(p: *mut colour_palette) {
 }
 
 /// Free a palette
-
 pub unsafe extern "C" fn colour_palette_free(p: *mut colour_palette) {
     if let Some(p) = std::ptr::NonNull::new(p) {
         let p = p.as_ptr();
@@ -980,7 +973,6 @@ pub unsafe extern "C" fn colour_palette_free(p: *mut colour_palette) {
 }
 
 /// Get a colour from a palette.
-
 pub unsafe extern "C" fn colour_palette_get(p: *const colour_palette, mut c: i32) -> i32 {
     unsafe {
         if p.is_null() {
@@ -1065,7 +1057,6 @@ pub unsafe extern "C" fn colour_palette_from_option(p: *mut colour_palette, oo: 
 }
 
 // below has the auto generated code I haven't bothered to translate yet
-
 pub unsafe extern "C" fn colour_parse_x11(mut p: *const c_char) -> c_int {
     unsafe {
         let mut c: f64 = 0.0;

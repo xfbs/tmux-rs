@@ -1548,7 +1548,7 @@ pub unsafe extern "C" fn screen_write_clearendofline(ctx: *mut screen_write_ctx,
                 ci,
             );
         } else {
-            tailq_insert_before!(before, ci, entry);
+            tailq_insert_before(before, ci);
         }
         (*ctx).item = screen_write_get_citem().as_ptr();
     }
@@ -1591,7 +1591,7 @@ pub unsafe extern "C" fn screen_write_clearstartofline(ctx: *mut screen_write_ct
                 ci,
             );
         } else {
-            tailq_insert_before!(before, ci, entry);
+            tailq_insert_before(before, ci);
         }
         (*ctx).item = screen_write_get_citem().as_ptr();
     }
@@ -2017,7 +2017,7 @@ pub unsafe extern "C" fn screen_write_collect_trim(
             (*ci2).type_ = (*ci).type_;
             (*ci2).bg = (*ci).bg;
             memcpy__(&raw mut (*ci2).gc, &raw mut (*ci).gc);
-            tailq_insert_after!(&raw mut (*cl).items, ci, ci2, entry);
+            tailq_insert_after(&raw mut (*cl).items, ci, ci2);
 
             (*ci).used = sx - csx;
             (*ci2).x = ex + 1;
@@ -2163,7 +2163,7 @@ pub unsafe extern "C" fn screen_write_collect_end(ctx: *mut screen_write_ctx) {
         if before.is_null() {
             tailq_insert_tail(&raw mut (*cl).items, ci);
         } else {
-            tailq_insert_before!(before, ci, entry);
+            tailq_insert_before(before, ci);
         }
         (*ctx).item = screen_write_get_citem().as_ptr();
 

@@ -116,7 +116,7 @@ pub IfOpen: i32 = {
       free_(arg2.as_ptr());
 
       if !(*ps.as_ptr()).scope.is_null() {
-        tailq_insert_head!(&raw mut (*ps.as_ptr()).stack, (*ps.as_ptr()).scope, entry);
+        tailq_insert_head(&raw mut (*ps.as_ptr()).stack, (*ps.as_ptr()).scope);
       }
       (*ps.as_ptr()).scope = scope;
 
@@ -298,7 +298,7 @@ pub Command: NonNull<cmd_parse_command> = {
         let mut arg: *mut cmd_parse_argument = xcalloc1::<cmd_parse_argument>();
         (*arg).type_ = cmd_parse_argument_type::CMD_PARSE_STRING;
         (*arg).string = transmute_ptr(arg2);
-        tailq_insert_head!(&raw mut (*command).arguments, arg, entry);
+        tailq_insert_head(&raw mut (*command).arguments, arg);
 
         NonNull::new_unchecked(command)
     },
@@ -314,7 +314,7 @@ pub Command: NonNull<cmd_parse_command> = {
         let mut arg: *mut cmd_parse_argument = xcalloc1::<cmd_parse_argument>();
         (*arg).type_ = cmd_parse_argument_type::CMD_PARSE_STRING;
         (*arg).string = transmute_ptr(arg2);
-        tailq_insert_head!(&raw mut (*command).arguments, arg, entry);
+        tailq_insert_head(&raw mut (*command).arguments, arg);
 
         NonNull::new_unchecked(command)
     },
@@ -412,12 +412,12 @@ pub Arguments: NonNull<cmd_parse_arguments> = {
       let mut value = NonNull::new_unchecked(xcalloc1::<cmd_parse_arguments>());
       tailq_init(value.as_ptr());
 
-      tailq_insert_head!(value.as_ptr(), (arg1).as_ptr(), entry);
+      tailq_insert_head(value.as_ptr(), (arg1).as_ptr());
 
       value
     },
     <arg1:Argument> <arg2:Arguments> => unsafe {
-      tailq_insert_head!(arg2.as_ptr(), arg1.as_ptr(), entry);
+      tailq_insert_head(arg2.as_ptr(), arg1.as_ptr());
       arg2
     },
 };

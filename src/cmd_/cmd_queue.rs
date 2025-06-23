@@ -357,7 +357,7 @@ pub unsafe extern "C" fn cmdq_insert_after(
             (*item).client = c;
 
             (*item).queue = queue;
-            tailq_insert_after!(&raw mut (*queue).list, after, item, entry);
+            tailq_insert_after(&raw mut (*queue).list, after, item);
             log_debug!(
                 "{} {}: {} after {}",
                 "cmdq_insert_after",
