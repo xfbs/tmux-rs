@@ -238,7 +238,7 @@ static key_string_table: [key_string_table_entry; 469] = const {
 
 pub unsafe extern "C" fn key_string_search_table(string: *const c_char) -> key_code {
     unsafe {
-        for key_string in key_string_table.iter() {
+        for key_string in &key_string_table {
             if strcasecmp(string, key_string.string) == 0 {
                 return key_string.key;
             }
@@ -401,7 +401,6 @@ pub unsafe extern "C" fn key_string_lookup_key(
         let sizeof_tmp: usize = 8;
         let mut tmp: [c_char; 8] = [0; 8];
         let mut s = null();
-        let mut i = 0;
         let mut ud: utf8_data = zeroed();
         let mut off: usize = 0;
 
@@ -506,14 +505,11 @@ pub unsafe extern "C" fn key_string_lookup_key(
                     break 'out;
                 }
 
-                /* Try the key against the string table. */
-                for i_ in 0..key_string_table.len() {
-                    i = i_;
-                    if key == (key_string_table[i].key & KEYC_MASK_KEY) {
-                        break;
-                    }
-                }
-                if i != key_string_table.len() {
+                // Try the key against the string table.
+                if let Some(i) = key_string_table
+                    .iter()
+                    .position(|e| key == e.key & KEYC_MASK_KEY)
+                {
                     strlcat(
                         &raw mut out as *mut c_char,
                         key_string_table[i].string,
