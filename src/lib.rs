@@ -191,15 +191,23 @@ const DEFAULT_XPIXEL: u32 = 16;
 const DEFAULT_YPIXEL: u32 = 32;
 
 // Alert option values
-const ALERT_NONE: i32 = 0;
-const ALERT_ANY: i32 = 1;
-const ALERT_CURRENT: i32 = 2;
-const ALERT_OTHER: i32 = 3;
+#[repr(i32)]
+#[derive(Copy, Clone, num_enum::TryFromPrimitive)]
+enum alert_option {
+    ALERT_NONE,
+    ALERT_ANY,
+    ALERT_CURRENT,
+    ALERT_OTHER,
+}
 
 // Visual option values
-const VISUAL_OFF: i32 = 0;
-const VISUAL_ON: i32 = 1;
-const VISUAL_BOTH: i32 = 2;
+#[repr(i32)]
+#[derive(Copy, Clone, Eq, PartialEq, num_enum::TryFromPrimitive)]
+enum visual_option {
+    VISUAL_OFF,
+    VISUAL_ON,
+    VISUAL_BOTH,
+}
 
 // No key or unknown key.
 const KEYC_NONE: c_ulonglong = 0x000ff000000000;

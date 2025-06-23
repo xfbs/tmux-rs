@@ -157,8 +157,6 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
     cmd_retval::CMD_RETURN_NORMAL
 }
 
-#[expect(clippy::needless_range_loop)]
-
 unsafe extern "C" fn cmd_resize_pane_mouse_update(c: *mut client, m: *mut mouse_event) {
     unsafe {
         let mut w: *mut window = null_mut();
@@ -196,8 +194,8 @@ unsafe extern "C" fn cmd_resize_pane_mouse_update(c: *mut client, m: *mut mouse_
         for i in 0..cells.len() {
             let mut lc = layout_search_by_border(
                 (*w).layout_root,
-                lx + offsets[i][0] as u32,
-                ly + offsets[i][1] as u32,
+                (lx as i32 + offsets[i][0]).max(0) as u32,
+                (ly as i32 + offsets[i][1]).max(0) as u32,
             );
             if lc.is_null() {
                 continue;
@@ -220,13 +218,13 @@ unsafe extern "C" fn cmd_resize_pane_mouse_update(c: *mut client, m: *mut mouse_
             return;
         }
 
-        for cell in cells.iter().cloned() {
-            let type_ = (*(*cell).parent).type_;
+        for i in 0..ncells {
+            let type_ = (*(*cells[i as usize]).parent).type_;
             if y != ly && type_ == layout_type::LAYOUT_TOPBOTTOM {
-                layout_resize_layout(w, cell, type_, y as i32 - ly as i32, 0);
+                layout_resize_layout(w, cells[i as usize], type_, y as i32 - ly as i32, 0);
                 resizes += 1;
             } else if x != lx && type_ == layout_type::LAYOUT_LEFTRIGHT {
-                layout_resize_layout(w, cell, type_, x as i32 - lx as i32, 0);
+                layout_resize_layout(w, cells[i as usize], type_, x as i32 - lx as i32, 0);
                 resizes += 1;
             }
         }

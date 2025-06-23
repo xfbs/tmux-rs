@@ -526,7 +526,7 @@ pub static mut options_table: [options_table_entry; 191] = [
         type_: options_table_type::OPTIONS_TABLE_CHOICE,
         scope: OPTIONS_TABLE_SESSION,
         choices: &raw const options_table_bell_action_list as *const *const c_char,
-        default_num: ALERT_OTHER as i64,
+        default_num: alert_option::ALERT_OTHER as i64,
         text: c"Action to take on an activity alert.".as_ptr(),
         ..unsafe { zeroed() }
     },
@@ -556,7 +556,7 @@ pub static mut options_table: [options_table_entry; 191] = [
         type_: options_table_type::OPTIONS_TABLE_CHOICE,
         scope: OPTIONS_TABLE_SESSION,
         choices: &raw const options_table_bell_action_list as *const *const c_char,
-        default_num: ALERT_ANY as i64,
+        default_num: alert_option::ALERT_ANY as i64,
         text: c"Action to take on a bell alert.".as_ptr(),
         ..unsafe { zeroed() }
     },
@@ -772,7 +772,7 @@ pub static mut options_table: [options_table_entry; 191] = [
         type_: options_table_type::OPTIONS_TABLE_CHOICE,
         scope: OPTIONS_TABLE_SESSION,
         choices: &raw const options_table_bell_action_list as *const *const c_char,
-        default_num: ALERT_OTHER as i64,
+        default_num: alert_option::ALERT_OTHER as i64,
         text: c"Action to take on a silence alert.".as_ptr(),
         ..unsafe { zeroed() }
     },
@@ -928,7 +928,7 @@ pub static mut options_table: [options_table_entry; 191] = [
         type_: options_table_type::OPTIONS_TABLE_CHOICE,
         scope: OPTIONS_TABLE_SESSION,
         choices: &raw const options_table_visual_bell_list as *const *const c_char,
-        default_num: VISUAL_OFF as i64,
+        default_num: visual_option::VISUAL_OFF as i64,
         text: c"How activity alerts should be shown: a message ('on'), a message and a bell ('both') or nothing ('off').".as_ptr(),
         ..unsafe { zeroed() }
     },
@@ -937,7 +937,7 @@ pub static mut options_table: [options_table_entry; 191] = [
         type_: options_table_type::OPTIONS_TABLE_CHOICE,
         scope: OPTIONS_TABLE_SESSION,
         choices: &raw const options_table_visual_bell_list as *const *const c_char,
-        default_num: VISUAL_OFF as i64,
+        default_num: visual_option::VISUAL_OFF as i64,
         text: c"How bell alerts should be shown: a message ('on'), a message and a bell ('both') or nothing ('off').".as_ptr(),
         ..unsafe { zeroed() }
     },
@@ -946,7 +946,7 @@ pub static mut options_table: [options_table_entry; 191] = [
         type_: options_table_type::OPTIONS_TABLE_CHOICE,
         scope: OPTIONS_TABLE_SESSION,
         choices: &raw const options_table_visual_bell_list as *const *const c_char,
-        default_num: VISUAL_OFF as i64,
+        default_num: visual_option::VISUAL_OFF as i64,
         text: c"How silence alerts should be shown: a message ('on'), a message and a bell ('both') or nothing ('off').".as_ptr(),
         ..unsafe { zeroed() }
     },

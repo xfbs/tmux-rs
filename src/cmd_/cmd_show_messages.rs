@@ -32,12 +32,11 @@ pub static mut cmd_show_messages_entry: cmd_entry = cmd_entry {
 unsafe extern "C" fn cmd_show_messages_terminals(
     self_: *mut cmd,
     item: *mut cmdq_item,
-    blank: i32,
+    mut blank: i32,
 ) -> c_int {
     unsafe {
         let args = cmd_get_args(self_);
         let tc = cmdq_get_target_client(item);
-        let mut blank = 0;
 
         let mut n = 0u32;
         for term in list_foreach::<_, discr_entry>(&raw mut tty_terms).map(NonNull::as_ptr) {
@@ -72,22 +71,18 @@ unsafe extern "C" fn cmd_show_messages_terminals(
 unsafe extern "C" fn cmd_show_messages_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
-        //struct message_entry	*msg;
-        //char			*s;
-        //int			 done, blank;
-        //struct format_tree	*ft;
 
-        let mut done = 0;
+        let mut done = false;
         let mut blank = 0;
-        if args_has(args, b'T') != 0 {
+        if args_has_(args, 'T') {
             blank = cmd_show_messages_terminals(self_, item, blank);
-            done = 1;
+            done = true;
         }
-        if args_has(args, b'J') != 0 {
+        if args_has_(args, 'J') {
             job_print_summary(item, blank);
-            done = 1;
+            done = true;
         }
-        if done != 0 {
+        if done {
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
