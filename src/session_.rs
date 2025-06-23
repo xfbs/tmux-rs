@@ -11,8 +11,9 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
 use crate::*;
+
+use std::cmp::Ordering;
 
 use crate::compat::{
     RB_GENERATE, VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB,
@@ -39,15 +40,27 @@ pub static mut next_session_id: u32 = 0;
 
 pub static mut session_groups: session_groups = rb_initializer();
 
-pub unsafe extern "C" fn session_cmp(s1: *const session, s2: *const session) -> i32 {
-    unsafe { libc::strcmp((*s1).name, (*s2).name) }
+pub unsafe extern "C" fn session_cmp(s1: *const session, s2: *const session) -> Ordering {
+    unsafe {
+        match libc::strcmp((*s1).name, (*s2).name) {
+            ..0 => Ordering::Less,
+            0 => Ordering::Equal,
+            0.. => Ordering::Greater,
+        }
+    }
 }
 
 pub unsafe extern "C" fn session_group_cmp(
     s1: *const session_group,
     s2: *const session_group,
-) -> i32 {
-    unsafe { libc::strcmp((*s1).name, (*s2).name) }
+) -> Ordering {
+    unsafe {
+        match libc::strcmp((*s1).name, (*s2).name) {
+            ..0 => Ordering::Less,
+            0 => Ordering::Equal,
+            0.. => Ordering::Greater,
+        }
+    }
 }
 
 pub unsafe extern "C" fn session_alive(s: *mut session) -> boolint {

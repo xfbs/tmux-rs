@@ -15,6 +15,8 @@ use crate::*;
 
 use libc::{fnmatch, isdigit, sscanf, strcasecmp, strchr, strcmp, strncmp, strstr};
 
+use std::cmp::Ordering;
+
 use crate::compat::{
     RB_GENERATE,
     queue::tailq_foreach,
@@ -39,16 +41,8 @@ pub struct options_array_item {
 pub unsafe extern "C" fn options_array_cmp(
     a1: *const options_array_item,
     a2: *const options_array_item,
-) -> c_int {
-    unsafe {
-        if (*a1).index < (*a2).index {
-            return -1;
-        }
-        if (*a1).index > (*a2).index {
-            return 1;
-        }
-        0
-    }
+) -> Ordering {
+    unsafe { (*a1).index.cmp(&(*a2).index) }
 }
 RB_GENERATE!(
     options_array,
@@ -116,8 +110,11 @@ pub fn OPTIONS_IS_ARRAY(o: *const options_entry) -> bool {
 
 RB_GENERATE!(options_tree, options_entry, entry, discr_entry, options_cmp);
 
-pub unsafe extern "C" fn options_cmp(lhs: *const options_entry, rhs: *const options_entry) -> i32 {
-    unsafe { libc::strcmp((*lhs).name, (*rhs).name) }
+pub unsafe extern "C" fn options_cmp(
+    lhs: *const options_entry,
+    rhs: *const options_entry,
+) -> Ordering {
+    unsafe { i32_to_ordering(libc::strcmp((*lhs).name, (*rhs).name)) }
 }
 
 pub unsafe extern "C" fn options_map_name(name: *const c_char) -> *const c_char {

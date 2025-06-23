@@ -12,6 +12,8 @@
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+use std::cmp::Ordering;
+
 use crate::*;
 
 use libc::{
@@ -58,16 +60,19 @@ RB_GENERATE!(
     window_pane_cmp
 );
 
-pub unsafe extern "C" fn window_cmp(w1: *const window, w2: *const window) -> i32 {
-    unsafe { (*w1).id.wrapping_sub((*w2).id) as i32 }
+pub unsafe extern "C" fn window_cmp(w1: *const window, w2: *const window) -> Ordering {
+    unsafe { (*w1).id.cmp(&(*w2).id) }
 }
 
-pub unsafe extern "C" fn winlink_cmp(wl1: *const winlink, wl2: *const winlink) -> i32 {
-    unsafe { (*wl1).idx.wrapping_sub((*wl2).idx) }
+pub unsafe extern "C" fn winlink_cmp(wl1: *const winlink, wl2: *const winlink) -> Ordering {
+    unsafe { (*wl1).idx.cmp(&(*wl2).idx) }
 }
 
-pub unsafe extern "C" fn window_pane_cmp(wp1: *const window_pane, wp2: *const window_pane) -> i32 {
-    unsafe { (*wp1).id.wrapping_sub((*wp2).id) as i32 }
+pub unsafe extern "C" fn window_pane_cmp(
+    wp1: *const window_pane,
+    wp2: *const window_pane,
+) -> Ordering {
+    unsafe { (*wp1).id.cmp(&(*wp2).id) }
 }
 
 pub unsafe extern "C" fn winlink_find_by_window(

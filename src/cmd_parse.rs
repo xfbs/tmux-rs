@@ -21,7 +21,7 @@ use crate::compat::queue::{
     tailq_empty, tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_last,
     tailq_remove,
 };
-use crate::xmalloc::{Zeroable, xrecallocarray__};
+use crate::xmalloc::xrecallocarray__;
 
 // unsafe extern "C" { fn yyparse() -> i32; }
 unsafe fn yyparse() -> i32 {
@@ -65,7 +65,6 @@ pub enum cmd_parse_argument_type {
     CMD_PARSE_PARSED_COMMANDS,
 }
 
-unsafe impl Zeroable for cmd_parse_argument {}
 crate::compat::impl_tailq_entry!(cmd_parse_argument, entry, tailq_entry<cmd_parse_argument>);
 #[repr(C)]
 pub struct cmd_parse_argument {
@@ -79,7 +78,6 @@ pub struct cmd_parse_argument {
 }
 pub type cmd_parse_arguments = tailq_head<cmd_parse_argument>;
 
-unsafe impl Zeroable for cmd_parse_command {}
 crate::compat::impl_tailq_entry!(cmd_parse_command, entry, tailq_entry<cmd_parse_command>);
 #[repr(C)]
 pub struct cmd_parse_command {

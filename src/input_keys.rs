@@ -12,6 +12,8 @@
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+use std::cmp::Ordering;
+
 use crate::*;
 
 use crate::compat::{
@@ -43,16 +45,8 @@ impl input_key_entry {
 pub unsafe extern "C" fn input_key_cmp(
     ike1: *const input_key_entry,
     ike2: *const input_key_entry,
-) -> i32 {
-    unsafe {
-        if (*ike1).key < (*ike2).key {
-            -1
-        } else if (*ike1).key > (*ike2).key {
-            1
-        } else {
-            0
-        }
-    }
+) -> Ordering {
+    unsafe { (*ike1).key.cmp(&(*ike2).key) }
 }
 
 RB_GENERATE!(

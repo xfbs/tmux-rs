@@ -13,16 +13,14 @@
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use crate::*;
-
-use libc::{close, strcmp};
+use std::cmp::Ordering;
 
 use crate::compat::{
     queue::{tailq_empty, tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_remove},
     tree::{rb_empty, rb_find, rb_foreach, rb_init, rb_insert, rb_remove},
 };
-use crate::{log::fatalx_c, xmalloc::Zeroable};
+use crate::log::fatalx_c;
 
-unsafe impl Zeroable for control_block {}
 #[repr(C)]
 pub struct control_block {
     pub size: usize,
@@ -141,16 +139,8 @@ pub const CONTROL_IGNORE_FLAGS: client_flag =
 pub unsafe extern "C" fn control_pane_cmp(
     cp1: *const control_pane,
     cp2: *const control_pane,
-) -> i32 {
-    unsafe {
-        if (*cp1).pane < (*cp2).pane {
-            -1
-        } else if (*cp1).pane > (*cp2).pane {
-            1
-        } else {
-            0
-        }
-    }
+) -> Ordering {
+    unsafe { (*cp1).pane.cmp(&(*cp2).pane) }
 }
 RB_GENERATE!(
     control_panes,
@@ -163,8 +153,8 @@ RB_GENERATE!(
 pub unsafe extern "C" fn control_sub_cmp(
     csub1: *const control_sub,
     csub2: *const control_sub,
-) -> i32 {
-    unsafe { strcmp((*csub1).name, (*csub2).name) }
+) -> std::cmp::Ordering {
+    unsafe { i32_to_ordering(libc::strcmp((*csub1).name, (*csub2).name)) }
 }
 RB_GENERATE!(
     control_subs,
@@ -177,22 +167,13 @@ RB_GENERATE!(
 pub unsafe extern "C" fn control_sub_pane_cmp(
     csp1: *const control_sub_pane,
     csp2: *const control_sub_pane,
-) -> i32 {
+) -> std::cmp::Ordering {
     unsafe {
-        if (*csp1).pane < (*csp2).pane {
-            return -1;
-        }
-        if (*csp1).pane > (*csp2).pane {
-            return 1;
-        }
-        if (*csp1).idx < (*csp2).idx {
-            return -1;
-        }
-        if (*csp1).idx > (*csp2).idx {
-            return 1;
-        }
+        (*csp1)
+            .pane
+            .cmp(&(*csp2).pane)
+            .then_with(|| (*csp1).idx.cmp(&(*csp2).idx))
     }
-    0
 }
 RB_GENERATE!(
     control_sub_panes,
@@ -205,22 +186,13 @@ RB_GENERATE!(
 pub unsafe extern "C" fn control_sub_window_cmp(
     csw1: *const control_sub_window,
     csw2: *const control_sub_window,
-) -> i32 {
+) -> Ordering {
     unsafe {
-        if (*csw1).window < (*csw2).window {
-            return -1;
-        }
-        if (*csw1).window > (*csw2).window {
-            return 1;
-        }
-        if (*csw1).idx < (*csw2).idx {
-            return -1;
-        }
-        if (*csw1).idx > (*csw2).idx {
-            return 1;
-        }
+        (*csw1)
+            .window
+            .cmp(&(*csw2).window)
+            .then_with(|| (*csw1).idx.cmp(&(*csw2).idx))
     }
-    0
 }
 RB_GENERATE!(
     control_sub_windows,
@@ -851,7 +823,7 @@ pub unsafe extern "C" fn control_write_callback(bufev: *mut bufferevent, data: *
 pub unsafe extern "C" fn control_start(c: *mut client) {
     unsafe {
         if (*c).flags.intersects(client_flag::CONTROLCONTROL) {
-            close((*c).out_fd);
+            libc::close((*c).out_fd);
             (*c).out_fd = -1;
         } else {
             setblocking((*c).out_fd, 0);
@@ -949,7 +921,7 @@ pub unsafe extern "C" fn control_check_subs_session(c: *mut client, csub: *mut c
         let value = format_expand(ft, (*csub).format);
         format_free(ft);
 
-        if !(*csub).last.is_null() && strcmp(value, (*csub).last) == 0 {
+        if !(*csub).last.is_null() && libc::strcmp(value, (*csub).last) == 0 {
             free_(value);
             return;
         }
@@ -996,7 +968,7 @@ pub unsafe extern "C" fn control_check_subs_pane(c: *mut client, csub: *mut cont
                 rb_insert(&raw mut (*csub).panes, csp);
             }
 
-            if !(*csp).last.is_null() && strcmp(value, (*csp).last) == 0 {
+            if !(*csp).last.is_null() && libc::strcmp(value, (*csp).last) == 0 {
                 free_(value);
                 continue;
             }
@@ -1039,7 +1011,7 @@ pub unsafe extern "C" fn control_check_subs_all_panes(c: *mut client, csub: *mut
                     rb_insert(&raw mut (*csub).panes, csp);
                 }
 
-                if !(*csp).last.is_null() && strcmp(value, (*csp).last) == 0 {
+                if !(*csp).last.is_null() && libc::strcmp(value, (*csp).last) == 0 {
                     free_(value);
                     continue;
                 }
@@ -1092,7 +1064,7 @@ pub unsafe extern "C" fn control_check_subs_window(c: *mut client, csub: *mut co
                 rb_insert(&raw mut (*csub).windows, csw);
             }
 
-            if !(*csw).last.is_null() && strcmp(value, (*csw).last) == 0 {
+            if !(*csw).last.is_null() && libc::strcmp(value, (*csw).last) == 0 {
                 free_(value);
                 continue;
             }
@@ -1134,7 +1106,7 @@ pub unsafe extern "C" fn control_check_subs_all_windows(c: *mut client, csub: *m
                 rb_insert(&raw mut (*csub).windows, csw);
             }
 
-            if !(*csw).last.is_null() && strcmp(value, (*csw).last) == 0 {
+            if !(*csw).last.is_null() && libc::strcmp(value, (*csw).last) == 0 {
                 free_(value);
                 continue;
             }

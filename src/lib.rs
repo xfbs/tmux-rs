@@ -37,7 +37,6 @@ use ncurses_::*;
 
 mod libc_;
 use libc_::*;
-use xmalloc::Zeroable; // want to rexport everything from here
 
 #[cfg(feature = "sixel")]
 mod image_;
@@ -1723,7 +1722,6 @@ bitflags::bitflags! {
     }
 }
 
-unsafe impl Zeroable for tty_term {}
 /// Terminal definition.
 #[repr(C)]
 struct tty_term {
@@ -1913,7 +1911,6 @@ union args_value_union {
     cmdlist: *mut cmd_list,
 }
 
-unsafe impl Zeroable for args_value {}
 /// Argument value.
 crate::compat::impl_tailq_entry!(args_value, entry, tailq_entry<args_value>);
 // #[derive(crate::compat::TailQEntry)]
@@ -3097,8 +3094,8 @@ use crate::hyperlinks_::{
 mod xmalloc;
 use crate::xmalloc::{format_nul, xsnprintf_};
 use crate::xmalloc::{
-    free_, memcpy_, memcpy__, xcalloc, xcalloc_, xcalloc__, xcalloc1, xmalloc, xmalloc_, xrealloc,
-    xrealloc_, xreallocarray_, xstrdup, xstrdup_,
+    free_, memcpy_, memcpy__, xcalloc, xcalloc_, xcalloc1, xmalloc, xmalloc_, xrealloc, xrealloc_,
+    xreallocarray_, xstrdup, xstrdup_,
 };
 
 mod tmux_protocol;
@@ -3240,4 +3237,12 @@ const fn concat_array<const N: usize, const M: usize, const O: usize, T: Copy>(
     unsafe { std::mem::transmute_copy(&out) }
     // TODO once stabilized switch to:
     // unsafe { MaybeUninit::array_assume_init(out) }
+}
+
+pub fn i32_to_ordering(value: i32) -> std::cmp::Ordering {
+    match value {
+        ..0 => std::cmp::Ordering::Less,
+        0 => std::cmp::Ordering::Equal,
+        0.. => std::cmp::Ordering::Greater,
+    }
 }

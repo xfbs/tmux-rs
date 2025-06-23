@@ -15,7 +15,6 @@ use libc::strcmp;
 
 use crate::*;
 
-unsafe impl Zeroable for notify_entry {}
 #[repr(C)]
 pub struct notify_entry {
     pub name: *mut c_char,

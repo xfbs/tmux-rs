@@ -12,6 +12,8 @@
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+use std::cmp::Ordering;
+
 use crate::*;
 
 use crate::compat::{
@@ -53,8 +55,8 @@ RB_GENERATE!(
     discr_name_entry,
     paste_cmp_names
 );
-fn paste_cmp_names(a: *const paste_buffer, b: *const paste_buffer) -> i32 {
-    unsafe { libc::strcmp((*a).name, (*b).name) }
+fn paste_cmp_names(a: *const paste_buffer, b: *const paste_buffer) -> Ordering {
+    unsafe { i32_to_ordering(libc::strcmp((*a).name, (*b).name)) }
 }
 
 RB_GENERATE!(
@@ -64,12 +66,12 @@ RB_GENERATE!(
     discr_time_entry,
     paste_cmp_times
 );
-fn paste_cmp_times(a: *const paste_buffer, b: *const paste_buffer) -> i32 {
+fn paste_cmp_times(a: *const paste_buffer, b: *const paste_buffer) -> Ordering {
     unsafe {
         let x = (*a).order;
         let y = (*b).order;
 
-        u32::cmp(&x, &y) as i32
+        u32::cmp(&x, &y)
     }
 }
 

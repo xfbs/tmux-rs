@@ -21,10 +21,7 @@ use crate::compat::{
     vis,
     vis_::VIS_DQ,
 };
-use crate::{
-    log::fatalx_c,
-    xmalloc::{Zeroable, xreallocarray},
-};
+use crate::{log::fatalx_c, xmalloc::xreallocarray};
 
 #[cfg(feature = "utf8proc")]
 unsafe extern "C" {
@@ -53,7 +50,6 @@ static utf8_force_wide: [wchar_t; 162] = [
     0x1FAF7, 0x1FAF8,
 ];
 
-unsafe impl Zeroable for utf8_item {}
 #[repr(C)]
 pub struct utf8_item {
     pub index_entry: rb_entry<utf8_item>,
@@ -64,19 +60,18 @@ pub struct utf8_item {
     pub size: c_uchar,
 }
 
-pub unsafe extern "C" fn utf8_data_cmp(ui1: *const utf8_item, ui2: *const utf8_item) -> i32 {
+pub unsafe extern "C" fn utf8_data_cmp(
+    ui1: *const utf8_item,
+    ui2: *const utf8_item,
+) -> std::cmp::Ordering {
     unsafe {
-        if (*ui1).size < (*ui2).size {
-            return -1;
-        }
-        if (*ui1).size > (*ui2).size {
-            return 1;
-        }
-        memcmp(
-            (*ui1).data.as_ptr().cast(),
-            (*ui2).data.as_ptr().cast(),
-            (*ui1).size as usize,
-        )
+        (*ui1).size.cmp(&(*ui2).size).then_with(|| {
+            i32_to_ordering(memcmp(
+                (*ui1).data.as_ptr().cast(),
+                (*ui2).data.as_ptr().cast(),
+                (*ui1).size as usize,
+            ))
+        })
     }
 }
 pub type utf8_data_tree = rb_head<utf8_item>;
@@ -89,16 +84,11 @@ RB_GENERATE!(
 );
 static mut utf8_data_tree: utf8_data_tree = rb_initializer();
 
-pub unsafe extern "C" fn utf8_index_cmp(ui1: *const utf8_item, ui2: *const utf8_item) -> i32 {
-    unsafe {
-        if (*ui1).index < (*ui2).index {
-            return -1;
-        }
-        if (*ui1).index > (*ui2).index {
-            return 1;
-        }
-    }
-    0
+pub unsafe extern "C" fn utf8_index_cmp(
+    ui1: *const utf8_item,
+    ui2: *const utf8_item,
+) -> std::cmp::Ordering {
+    unsafe { (*ui1).index.cmp(&(*ui2).index) }
 }
 pub type utf8_index_tree = rb_head<utf8_item>;
 RB_GENERATE!(

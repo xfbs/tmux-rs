@@ -12,6 +12,8 @@
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+use std::cmp::Ordering;
+
 use crate::*;
 
 use crate::compat::{
@@ -26,12 +28,16 @@ RB_GENERATE!(environ, environ_entry, entry, discr_entry, environ_cmp);
 pub unsafe extern "C" fn environ_cmp(
     envent1: *const environ_entry,
     envent2: *const environ_entry,
-) -> c_int {
+) -> Ordering {
     unsafe {
-        libc::strcmp(
+        match libc::strcmp(
             transmute_ptr((*envent1).name),
             transmute_ptr((*envent2).name),
-        )
+        ) {
+            ..0 => Ordering::Less,
+            0 => Ordering::Equal,
+            0.. => Ordering::Greater,
+        }
     }
 }
 

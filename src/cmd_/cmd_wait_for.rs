@@ -12,10 +12,8 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
 use crate::*;
-
-use crate::xmalloc::Zeroable;
+use std::cmp::Ordering;
 
 use crate::compat::{
     queue::{tailq_empty, tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_remove},
@@ -34,7 +32,6 @@ pub static mut cmd_wait_for_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-unsafe impl Zeroable for wait_item {}
 crate::compat::impl_tailq_entry!(wait_item, entry, tailq_entry<wait_item>);
 #[repr(C)]
 pub struct wait_item {
@@ -70,8 +67,8 @@ RB_GENERATE!(
 pub unsafe extern "C" fn wait_channel_cmp(
     wc1: *const wait_channel,
     wc2: *const wait_channel,
-) -> i32 {
-    unsafe { libc::strcmp((*wc1).name, (*wc2).name) }
+) -> Ordering {
+    unsafe { i32_to_ordering(libc::strcmp((*wc1).name, (*wc2).name)) }
 }
 
 pub unsafe extern "C" fn cmd_wait_for_add(name: *const c_char) -> *mut wait_channel {

@@ -18,7 +18,6 @@ use crate::*;
 use libc::{WEXITSTATUS, WIFEXITED, WIFSIGNALED, WTERMSIG, memcpy, strtod, toupper};
 
 use crate::compat::queue::tailq_first;
-use crate::xmalloc::Zeroable;
 
 pub static mut cmd_run_shell_entry: cmd_entry = cmd_entry {
     name: c"run-shell".as_ptr(),
@@ -34,7 +33,6 @@ pub static mut cmd_run_shell_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-unsafe impl Zeroable for cmd_run_shell_data {}
 #[repr(C)]
 pub struct cmd_run_shell_data {
     pub client: *mut client,

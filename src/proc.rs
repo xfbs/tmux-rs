@@ -31,9 +31,7 @@ use crate::compat::{
     setproctitle,
 };
 use crate::event_::{signal_add, signal_set};
-use crate::xmalloc::Zeroable;
 
-unsafe impl Zeroable for tmuxproc {}
 #[repr(C)]
 pub struct tmuxproc {
     pub name: *const c_char,
@@ -55,7 +53,6 @@ pub struct tmuxproc {
 
 pub const PEER_BAD: i32 = 0x1;
 
-unsafe impl Zeroable for tmuxpeer {}
 crate::compat::impl_tailq_entry!(tmuxpeer, entry, tailq_entry<tmuxpeer>);
 #[repr(C)]
 pub struct tmuxpeer {

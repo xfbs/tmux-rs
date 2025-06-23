@@ -11,8 +11,7 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
-use super::*;
+use crate::*;
 
 use crate::{
     compat::{
@@ -27,24 +26,14 @@ use crate::{
 };
 
 /// Compare client windows.
-
 pub unsafe extern "C" fn server_client_window_cmp(
     cw1: *const client_window,
     cw2: *const client_window,
-) -> i32 {
-    unsafe {
-        if (*cw1).window < (*cw2).window {
-            return -1;
-        }
-        if (*cw1).window > (*cw2).window {
-            return 1;
-        }
-        0
-    }
+) -> std::cmp::Ordering {
+    unsafe { (*cw1).window.cmp(&(*cw2).window) }
 }
 
 /// Number of attached clients.
-
 pub unsafe extern "C" fn server_client_how_many() -> u32 {
     unsafe {
         tailq_foreach(&raw mut clients)
@@ -57,7 +46,6 @@ pub unsafe extern "C" fn server_client_how_many() -> u32 {
 }
 
 /// Overlay timer callback.
-
 pub unsafe extern "C" fn server_client_overlay_timer(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
         server_client_clear_overlay(data.cast());
@@ -65,7 +53,6 @@ pub unsafe extern "C" fn server_client_overlay_timer(_fd: i32, _events: i16, dat
 }
 
 /// Set an overlay on client.
-
 pub unsafe extern "C" fn server_client_set_overlay(
     c: *mut client,
     delay: u32,
@@ -118,7 +105,6 @@ pub unsafe extern "C" fn server_client_set_overlay(
 }
 
 /// Clear overlay mode on client.
-
 pub unsafe extern "C" fn server_client_clear_overlay(c: *mut client) {
     unsafe {
         if (*c).overlay_draw.is_none() {
@@ -146,7 +132,6 @@ pub unsafe extern "C" fn server_client_clear_overlay(c: *mut client) {
 }
 
 /// Given overlay position and dimensions, return parts of the input range which are visible.
-
 pub unsafe extern "C" fn server_client_overlay_range(
     x: u32,
     y: u32,
@@ -200,7 +185,6 @@ pub unsafe extern "C" fn server_client_overlay_range(
 }
 
 /// Check if this client is inside this server.
-
 pub unsafe extern "C" fn server_client_check_nested(c: *mut client) -> i32 {
     unsafe {
         let envent = environ_find((*c).environ, c"TMUX".as_ptr());
@@ -218,7 +202,6 @@ pub unsafe extern "C" fn server_client_check_nested(c: *mut client) -> i32 {
 }
 
 /// Set client key table.
-
 pub unsafe extern "C" fn server_client_set_key_table(c: *mut client, mut name: *const c_char) {
     unsafe {
         if name.is_null() {
@@ -247,7 +230,6 @@ pub unsafe extern "C" fn server_client_key_table_activity_diff(c: *mut client) -
 }
 
 /// Get default key table.
-
 pub unsafe extern "C" fn server_client_get_key_table(c: *mut client) -> *const c_char {
     unsafe {
         let s = (*c).session;
@@ -264,7 +246,6 @@ pub unsafe extern "C" fn server_client_get_key_table(c: *mut client) -> *const c
 }
 
 /// Is this table the default key table?
-
 pub unsafe extern "C" fn server_client_is_default_key_table(
     c: *mut client,
     table: *mut key_table,
@@ -273,7 +254,6 @@ pub unsafe extern "C" fn server_client_is_default_key_table(
 }
 
 /// Create a new client.
-
 pub unsafe extern "C" fn server_client_create(fd: i32) -> *mut client {
     unsafe {
         setblocking(fd, 0);
@@ -323,7 +303,6 @@ pub unsafe extern "C" fn server_client_create(fd: i32) -> *mut client {
 }
 
 /// Open client terminal if needed.
-
 pub unsafe extern "C" fn server_client_open(c: *mut client, cause: *mut *mut c_char) -> i32 {
     unsafe {
         let mut ttynam = _PATH_TTY;
@@ -370,7 +349,6 @@ pub unsafe extern "C" fn server_client_open(c: *mut client, cause: *mut *mut c_c
 }
 
 /// Lost an attached client.
-
 pub unsafe extern "C" fn server_client_attached_lost(c: *mut client) {
     unsafe {
         log_debug!("lost attached client {:p}", c);
@@ -403,7 +381,6 @@ pub unsafe extern "C" fn server_client_attached_lost(c: *mut client) {
 }
 
 /// Set client session.
-
 pub unsafe extern "C" fn server_client_set_session(c: *mut client, s: *mut session) {
     unsafe {
         let old = (*c).session;
@@ -439,7 +416,6 @@ pub unsafe extern "C" fn server_client_set_session(c: *mut client, s: *mut sessi
 }
 
 /// Lost a client.
-
 pub unsafe extern "C" fn server_client_lost(c: *mut client) {
     unsafe {
         (*c).flags |= client_flag::DEAD;
@@ -521,7 +497,6 @@ pub unsafe extern "C" fn server_client_lost(c: *mut client) {
 }
 
 /// Remove reference from a client.
-
 pub unsafe extern "C" fn server_client_unref(c: *mut client) {
     unsafe {
         log_debug!("unref client {:p} ({} references)", c, (*c).references);
@@ -540,7 +515,6 @@ pub unsafe extern "C" fn server_client_unref(c: *mut client) {
 }
 
 /// Free dead client.
-
 pub unsafe extern "C" fn server_client_free(_fd: i32, _events: i16, arg: *mut c_void) {
     unsafe {
         let c: *mut client = arg.cast();
@@ -556,7 +530,6 @@ pub unsafe extern "C" fn server_client_free(_fd: i32, _events: i16, arg: *mut c_
 }
 
 /// Suspend a client.
-
 pub unsafe extern "C" fn server_client_suspend(c: *mut client) {
     unsafe {
         let s: *mut session = (*c).session;
@@ -572,7 +545,6 @@ pub unsafe extern "C" fn server_client_suspend(c: *mut client) {
 }
 
 /// Detach a client.
-
 pub unsafe extern "C" fn server_client_detach(c: *mut client, msgtype: msgtype) {
     unsafe {
         let s = (*c).session;
@@ -590,7 +562,6 @@ pub unsafe extern "C" fn server_client_detach(c: *mut client, msgtype: msgtype) 
 }
 
 /// Execute command to replace a client.
-
 pub unsafe extern "C" fn server_client_exec(c: *mut client, cmd: *const c_char) {
     unsafe {
         let s = (*c).session;
@@ -625,7 +596,6 @@ pub unsafe extern "C" fn server_client_exec(c: *mut client, cmd: *const c_char) 
 }
 
 /// Check for mouse keys.
-
 pub unsafe extern "C" fn server_client_check_mouse(
     c: *mut client,
     event: *mut key_event,

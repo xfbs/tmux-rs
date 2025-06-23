@@ -13,6 +13,8 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use crate::*;
 
+use std::cmp::Ordering;
+
 use libc::{
     FNM_CASEFOLD, REG_NOSUB, ctime_r, getpwuid, getuid, ispunct, localtime_r, memcpy, regcomp,
     regex_t, regexec, regfree, strchr, strcmp, strcspn, strftime, strstr, strtod, tm,
@@ -77,16 +79,15 @@ RB_GENERATE!(
 );
 
 // Format job tree comparison function.
-
-pub unsafe extern "C" fn format_job_cmp(fj1: *const format_job, fj2: *const format_job) -> i32 {
+pub unsafe extern "C" fn format_job_cmp(
+    fj1: *const format_job,
+    fj2: *const format_job,
+) -> Ordering {
     unsafe {
-        if (*fj1).tag < (*fj2).tag {
-            return -1;
-        }
-        if (*fj1).tag > (*fj2).tag {
-            return 1;
-        }
-        strcmp((*fj1).cmd, (*fj2).cmd)
+        (*fj1)
+            .tag
+            .cmp(&(*fj2).tag)
+            .then_with(|| i32_to_ordering(strcmp((*fj1).cmd, (*fj2).cmd)))
     }
 }
 
@@ -199,8 +200,11 @@ pub struct format_modifier {
 
 /// Format entry tree comparison function.
 
-unsafe extern "C" fn format_entry_cmp(fe1: *const format_entry, fe2: *const format_entry) -> i32 {
-    unsafe { strcmp((*fe1).key, (*fe2).key) }
+unsafe extern "C" fn format_entry_cmp(
+    fe1: *const format_entry,
+    fe2: *const format_entry,
+) -> Ordering {
+    unsafe { i32_to_ordering(strcmp((*fe1).key, (*fe2).key)) }
 }
 
 /// Single-character uppercase aliases.

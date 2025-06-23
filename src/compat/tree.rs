@@ -1,6 +1,7 @@
 // https://man.openbsd.org/tree.3
 // probably best way define a generic struct
 // make the macros call the generic struct
+use ::core::cmp::Ordering;
 use ::core::ptr::{NonNull, null_mut};
 
 #[repr(C)]
@@ -65,7 +66,7 @@ impl<T> Clone for rb_entry<T> {
 pub trait GetEntry<T, D = ()> {
     unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<T>;
     unsafe fn entry(this: *const Self) -> *const rb_entry<T>;
-    unsafe fn cmp(this: *const Self, other: *const Self) -> i32;
+    unsafe fn cmp(this: *const Self, other: *const Self) -> std::cmp::Ordering;
 }
 
 pub const unsafe fn rb_init<T>(head: *mut rb_head<T>) {
@@ -239,7 +240,7 @@ macro_rules! RB_GENERATE {
             unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<$ty> {
                 unsafe { &raw mut (*this).$entry_field }
             }
-            unsafe fn cmp(this: *const Self, other: *const Self) -> i32 {
+            unsafe fn cmp(this: *const Self, other: *const Self) -> std::cmp::Ordering {
                 unsafe { $cmp_fn(this, other) }
             }
         }
@@ -494,7 +495,7 @@ where
 {
     unsafe {
         let mut parent = null_mut();
-        let mut comp = 0;
+        let mut comp = Ordering::Equal;
 
         let mut tmp = rb_root(head);
         while !tmp.is_null() {
@@ -502,14 +503,14 @@ where
 
             comp = T::cmp(elm, parent);
             tmp = match comp {
-                ..0 => rb_left(tmp),
-                1.. => rb_right(tmp),
-                0 => return tmp,
+                Ordering::Less => rb_left(tmp),
+                Ordering::Greater => rb_right(tmp),
+                Ordering::Equal => return tmp,
             };
         }
         rb_set(elm, parent);
         if !parent.is_null() {
-            if comp < 0 {
+            if matches!(comp, Ordering::Less) {
                 rb_left!(parent) = elm;
             } else {
                 rb_right!(parent) = elm;
@@ -530,11 +531,10 @@ where
         let mut tmp: *mut T = (*head).rbh_root;
 
         while !tmp.is_null() {
-            let comp: i32 = T::cmp(elm, tmp);
-            tmp = match comp {
-                ..0 => rb_left(tmp),
-                1.. => rb_right(tmp),
-                0 => return tmp,
+            tmp = match T::cmp(elm, tmp) {
+                Ordering::Less => rb_left(tmp),
+                Ordering::Greater => rb_right(tmp),
+                Ordering::Equal => return tmp,
             };
         }
     }
@@ -551,12 +551,12 @@ where
         let mut res = null_mut();
         while !tmp.is_null() {
             tmp = match T::cmp(elm, tmp) {
-                ..0 => {
+                Ordering::Less => {
                     res = tmp;
                     rb_left(tmp)
                 }
-                1.. => rb_right(tmp),
-                0 => return tmp,
+                Ordering::Greater => rb_right(tmp),
+                Ordering::Equal => return tmp,
             };
         }
         res

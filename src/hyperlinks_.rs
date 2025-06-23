@@ -1,16 +1,32 @@
+// Copyright (c) 2021 Will <author@will.party>
+// Copyright (c) 2022 Jeff Chiang <pobomp@gmail.com>
+//
+// Permission to use, copy, modify, and distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+// ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
+// IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
+// OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+use crate::*;
+
 use crate::compat::{
     TAILQ_HEAD_INITIALIZER, VIS_CSTYLE, VIS_OCTAL,
     queue::{tailq_first, tailq_insert_tail, tailq_remove},
     tree::{rb_find, rb_foreach, rb_init, rb_insert, rb_remove},
 };
-use crate::{xmalloc::Zeroable, *};
+
+use std::cmp::Ordering;
 
 const MAX_HYPERLINKS: u32 = 5000;
 
 static mut hyperlinks_next_external_id: c_longlong = 1;
 static mut global_hyperlinks_count: u32 = 0;
 
-unsafe impl Zeroable for hyperlinks_uri {}
 crate::compat::impl_tailq_entry!(hyperlinks_uri, list_entry, tailq_entry<hyperlinks_uri>);
 #[repr(C)]
 pub struct hyperlinks_uri {
@@ -46,23 +62,20 @@ pub struct hyperlinks {
 unsafe extern "C" fn hyperlinks_by_uri_cmp(
     left: *const hyperlinks_uri,
     right: *const hyperlinks_uri,
-) -> i32 {
+) -> std::cmp::Ordering {
     unsafe {
         if *(*left).internal_id == b'\0' as _ || *(*right).internal_id == b'\0' as _ {
             if *(*left).internal_id != b'\0' as _ {
-                return -1;
+                return Ordering::Less;
             }
             if *(*right).internal_id != b'\0' as _ {
-                return 1;
+                return Ordering::Greater;
             }
-            return (*left).inner as i32 - (*right).inner as i32;
+            return (*left).inner.cmp(&(*right).inner);
         }
 
-        let r = libc::strcmp((*left).internal_id, (*right).internal_id);
-        if r != 0 {
-            return r;
-        }
-        libc::strcmp((*left).uri, (*right).uri)
+        i32_to_ordering(libc::strcmp((*left).internal_id, (*right).internal_id))
+            .then_with(|| i32_to_ordering(libc::strcmp((*left).uri, (*right).uri)))
     }
 }
 
@@ -77,8 +90,8 @@ RB_GENERATE!(
 unsafe extern "C" fn hyperlinks_by_inner_cmp(
     left: *const hyperlinks_uri,
     right: *const hyperlinks_uri,
-) -> i32 {
-    unsafe { (*left).inner.wrapping_sub((*right).inner) as i32 }
+) -> Ordering {
+    unsafe { (*left).inner.cmp(&(*right).inner) }
 }
 
 RB_GENERATE!(

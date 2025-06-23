@@ -12,6 +12,8 @@
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+use std::cmp::Ordering;
+
 use crate::*;
 
 use libc::strcmp;
@@ -97,20 +99,18 @@ RB_GENERATE!(
 RB_GENERATE!(key_tables, key_table, entry, discr_entry, key_table_cmp);
 static mut key_tables: key_tables = rb_initializer();
 
-pub unsafe extern "C" fn key_table_cmp(table1: *const key_table, table2: *const key_table) -> i32 {
-    unsafe { strcmp((*table1).name, (*table2).name) }
+pub unsafe extern "C" fn key_table_cmp(
+    table1: *const key_table,
+    table2: *const key_table,
+) -> Ordering {
+    unsafe { i32_to_ordering(strcmp((*table1).name, (*table2).name)) }
 }
 
-pub unsafe extern "C" fn key_bindings_cmp(bd1: *const key_binding, bd2: *const key_binding) -> i32 {
-    unsafe {
-        if (*bd1).key < (*bd2).key {
-            return -1;
-        }
-        if (*bd1).key > (*bd2).key {
-            return 1;
-        }
-    }
-    0
+pub unsafe extern "C" fn key_bindings_cmp(
+    bd1: *const key_binding,
+    bd2: *const key_binding,
+) -> Ordering {
+    unsafe { (*bd1).key.cmp(&(*bd2).key) }
 }
 
 pub unsafe extern "C" fn key_bindings_free(bd: *mut key_binding) {

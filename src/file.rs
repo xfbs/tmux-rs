@@ -40,17 +40,11 @@ pub unsafe extern "C" fn file_get_path(c: *mut client, file: *const c_char) -> N
     }
 }
 
-pub unsafe extern "C" fn file_cmp(cf1: *const client_file, cf2: *const client_file) -> c_int {
-    // TODO this can be more consise, just subtraction
-    unsafe {
-        if (*cf1).stream < (*cf2).stream {
-            -1
-        } else if (*cf1).stream > (*cf2).stream {
-            1
-        } else {
-            0
-        }
-    }
+pub unsafe extern "C" fn file_cmp(
+    cf1: *const client_file,
+    cf2: *const client_file,
+) -> std::cmp::Ordering {
+    unsafe { (*cf1).stream.cmp(&(*cf2).stream) }
 }
 
 pub unsafe extern "C" fn file_create_with_peer(

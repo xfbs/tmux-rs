@@ -12,11 +12,9 @@
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use libc::{strchr, strcspn};
+use std::cmp::Ordering;
 
-use crate::{
-    xmalloc::{Zeroable, xrecallocarray},
-    *,
-};
+use crate::{xmalloc::xrecallocarray, *};
 
 use crate::compat::{
     VIS_CSTYLE, VIS_DQ, VIS_NL, VIS_OCTAL, VIS_TAB,
@@ -30,7 +28,6 @@ use crate::compat::{
 
 pub type args_values = tailq_head<args_value>;
 
-unsafe impl Zeroable for args_entry {}
 const ARGS_ENTRY_OPTIONAL_VALUE: c_int = 1;
 #[repr(C)]
 pub struct args_entry {
@@ -43,7 +40,6 @@ pub struct args_entry {
     pub entry: rb_entry<args_entry>,
 }
 
-unsafe impl Zeroable for args {}
 #[repr(C)]
 pub struct args {
     pub tree: args_tree,
@@ -51,7 +47,6 @@ pub struct args {
     pub values: *mut args_value,
 }
 
-unsafe impl Zeroable for args_command_state {}
 #[repr(C)]
 pub struct args_command_state {
     pub cmdlist: *mut cmd_list,
@@ -61,8 +56,8 @@ pub struct args_command_state {
 
 crate::compat::RB_GENERATE!(args_tree, args_entry, entry, discr_entry, args_cmp);
 
-unsafe extern "C" fn args_cmp(a1: *const args_entry, a2: *const args_entry) -> i32 {
-    unsafe { ((*a1).flag).wrapping_sub((*a2).flag) as i32 }
+unsafe extern "C" fn args_cmp(a1: *const args_entry, a2: *const args_entry) -> Ordering {
+    unsafe { ((*a1).flag).cmp(&(*a2).flag) }
 }
 
 pub unsafe extern "C" fn args_find(args: *mut args, flag: c_uchar) -> *mut args_entry {

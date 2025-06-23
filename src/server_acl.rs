@@ -13,6 +13,8 @@
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+use std::cmp::Ordering;
+
 use crate::*;
 
 use libc::{getpwuid, getuid};
@@ -21,7 +23,6 @@ use crate::compat::{
     queue::tailq_foreach,
     tree::{rb_find, rb_foreach, rb_init, rb_insert, rb_remove},
 };
-use crate::xmalloc::Zeroable;
 
 bitflags::bitflags! {
     #[repr(transparent)]
@@ -31,7 +32,6 @@ bitflags::bitflags! {
     }
 }
 
-unsafe impl Zeroable for server_acl_user {}
 pub struct server_acl_user {
     pub uid: uid_t,
 
@@ -43,13 +43,8 @@ pub struct server_acl_user {
 pub unsafe extern "C" fn server_acl_cmp(
     user1: *const server_acl_user,
     user2: *const server_acl_user,
-) -> i32 {
-    unsafe {
-        if (*user1).uid < (*user2).uid {
-            return -1;
-        }
-        ((*user1).uid > (*user2).uid) as i32
-    }
+) -> Ordering {
+    unsafe { (*user1).uid.cmp(&(*user2).uid) }
 }
 
 pub type server_acl_entries = rb_head<server_acl_user>;
