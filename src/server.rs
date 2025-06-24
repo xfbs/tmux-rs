@@ -158,7 +158,6 @@ pub unsafe extern "C" fn server_create_socket(
 }
 
 /// Tidy up every hour.
-
 unsafe extern "C" fn server_tidy_event(_fd: i32, _events: i16, _data: *mut c_void) {
     let tv = timeval {
         tv_sec: 3600,

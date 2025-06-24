@@ -149,7 +149,6 @@ pub unsafe extern "C" fn grid_view_insert_lines(gd: *mut grid, mut py: u32, ny: 
 }
 
 /// Insert lines in region.
-
 pub unsafe extern "C" fn grid_view_insert_lines_region(
     gd: *mut grid,
     mut rlower: u32,
@@ -170,7 +169,6 @@ pub unsafe extern "C" fn grid_view_insert_lines_region(
 }
 
 /// Delete lines.
-
 pub unsafe extern "C" fn grid_view_delete_lines(gd: *mut grid, mut py: u32, ny: u32, bg: u32) {
     unsafe {
         py = grid_view_y(gd, py);
@@ -197,7 +195,6 @@ pub unsafe extern "C" fn grid_view_delete_lines(gd: *mut grid, mut py: u32, ny: 
 }
 
 /// Delete lines inside scroll region.
-
 pub unsafe extern "C" fn grid_view_delete_lines_region(
     gd: *mut grid,
     mut rlower: u32,
@@ -218,7 +215,6 @@ pub unsafe extern "C" fn grid_view_delete_lines_region(
 }
 
 /// Insert characters.
-
 pub unsafe extern "C" fn grid_view_insert_cells(
     gd: *mut grid,
     mut px: u32,
@@ -241,7 +237,6 @@ pub unsafe extern "C" fn grid_view_insert_cells(
 }
 
 /// Delete characters.
-
 pub unsafe extern "C" fn grid_view_delete_cells(
     gd: *mut grid,
     mut px: u32,
@@ -261,7 +256,6 @@ pub unsafe extern "C" fn grid_view_delete_cells(
 }
 
 /// Convert cells into a string.
-
 pub unsafe extern "C" fn grid_view_string_cells(
     gd: *mut grid,
     mut px: u32,

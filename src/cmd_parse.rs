@@ -785,9 +785,7 @@ unsafe fn yyerror_(ps: *mut cmd_parse_state, args: std::fmt::Arguments) -> i32 {
 }
 
 fn yylex_is_var(ch: c_char, first: bool) -> bool {
-    if ch == b'=' as i8 {
-        false
-    } else if first && (ch as u8).is_ascii_digit() {
+    if ch == b'=' as i8 || (first && (ch as u8).is_ascii_digit()) {
         false
     } else {
         (ch as u8).is_ascii_alphanumeric() || ch == b'_' as i8

@@ -35,7 +35,6 @@ type format_ranges = tailq_head<format_range>;
 crate::compat::impl_tailq_entry!(format_range, entry, tailq_entry<format_range>);
 
 /// Does this range match this style?
-
 unsafe fn format_is_type(fr: *mut format_range, sy: *mut style) -> boolint {
     unsafe {
         if (*fr).type_ != (*sy).range_type {
@@ -71,7 +70,6 @@ unsafe extern "C" fn format_free_range(frs: *mut format_ranges, fr: *mut format_
 }
 
 /// Fix range positions.
-
 unsafe extern "C" fn format_update_ranges(
     frs: *mut format_ranges,
     s: *mut screen,
@@ -115,7 +113,6 @@ unsafe extern "C" fn format_update_ranges(
 }
 
 /// Draw a part of the format.
-
 unsafe extern "C" fn format_draw_put(
     octx: *mut screen_write_ctx,
     ocx: u32,
@@ -136,7 +133,6 @@ unsafe extern "C" fn format_draw_put(
 }
 
 /// Draw list part of format.
-
 unsafe extern "C" fn format_draw_put_list(
     octx: *mut screen_write_ctx,
     ocx: u32,
@@ -189,7 +185,6 @@ unsafe extern "C" fn format_draw_put_list(
 }
 
 /// Draw format with no list.
-
 unsafe extern "C" fn format_draw_none(
     octx: *mut screen_write_ctx,
     available: u32,
@@ -268,7 +263,6 @@ unsafe extern "C" fn format_draw_none(
 }
 
 /// Draw format with list on the left.
-
 unsafe extern "C" fn format_draw_left(
     octx: *mut screen_write_ctx,
     available: u32,
@@ -895,8 +889,7 @@ unsafe extern "C" fn format_leading_hashes(
     }
 }
 
-// Draw multiple characters.
-
+/// Draw multiple characters.
 unsafe extern "C" fn format_draw_many(
     ctx: *mut screen_write_ctx,
     sy: *mut style,
@@ -914,7 +907,6 @@ unsafe extern "C" fn format_draw_many(
 }
 
 /// Draw a format to a screen.
-
 pub unsafe fn format_draw(
     octx: *mut screen_write_ctx,
     base: *const grid_cell,
@@ -1464,14 +1456,8 @@ pub unsafe fn format_draw(
 }
 
 /// Get width, taking #[] into account.
-
 pub unsafe extern "C" fn format_width(expanded: *const c_char) -> u32 {
     unsafe {
-        // const char *cp, *end;
-        // u_int n, leading_width, width = 0;
-        // struct utf8_data ud;
-        // enum utf8_state more;
-
         let mut cp: *const c_char = expanded;
 
         let mut n: u32 = 0;
@@ -1524,7 +1510,6 @@ pub unsafe extern "C" fn format_width(expanded: *const c_char) -> u32 {
 ///
 /// Note, we copy the whole set of unescaped #s, but only add their escaped size to width.
 /// This is because the format_draw function will actually do the escaping when it runs
-
 pub unsafe extern "C" fn format_trim_left(expanded: *const c_char, limit: u32) -> *mut c_char {
     unsafe {
         // char *copy, *out;

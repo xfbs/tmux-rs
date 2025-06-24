@@ -463,7 +463,6 @@ pub unsafe extern "C" fn proc_toggle_log(tp: *mut tmuxproc) {
 }
 
 /// On success, the PID of the child process is returned in the parent, and 0 is returned in the child.
-
 pub unsafe extern "C" fn proc_fork_and_daemon(fd: *mut i32) -> pid_t {
     unsafe {
         let mut pair: [c_int; 2] = [0; 2];

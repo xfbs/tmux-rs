@@ -138,7 +138,6 @@ static mut options_table_allow_passthrough_list: [*const c_char; 4] =
     [c"off".as_ptr(), c"on".as_ptr(), c"all".as_ptr(), null()];
 
 /// Map of name conversions.
-
 pub static mut options_other_names: [options_name_map; 6] = [
     options_name_map::new(
         c"display-panes-color".as_ptr(),

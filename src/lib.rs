@@ -20,13 +20,11 @@
 #![allow(clippy::collapsible_else_if)]
 #![allow(clippy::collapsible_if)]
 #![allow(clippy::manual_range_contains)]
-#![allow(clippy::if_same_then_else)]
 #![allow(clippy::blocks_in_conditions)] // keep, not worth fixing yet
 #![allow(clippy::missing_safety_doc)]
 // 1012 keep, not worth fixing yet
-#![allow(clippy::empty_line_after_doc_comments)] // TODO fix
 //
-#![warn(clippy::multiple_crate_versions)]
+#![deny(clippy::multiple_crate_versions)]
 #![warn(clippy::shadow_same)]
 #![allow(clippy::shadow_unrelated)] // TODO, 134 instances probably some latent bugs
 #![allow(clippy::shadow_reuse)] // 145 instances
@@ -2565,7 +2563,7 @@ pub use crate::tmux::main;
 
 use crate::tmux::{
     checkshell, find_cwd, find_home, get_timer, getversion, global_environ, global_options,
-    global_s_options, global_w_options, ptm_fd, setblocking, shell_argv0, shell_command, sig2name,
+    global_s_options, global_w_options, ptm_fd, setblocking, shell_argv0, shell_command,
     socket_path, start_time,
 };
 

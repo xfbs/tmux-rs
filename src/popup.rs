@@ -707,7 +707,7 @@ pub unsafe extern "C" fn popup_key_cb(
             } else {
                 menu_add_items(
                     (*pd).menu,
-                    &raw mut popup_internal_menu_items as *mut menu_item,
+                    &raw mut popup_menu_items as *mut menu_item,
                     null_mut(),
                     c,
                     null_mut(),

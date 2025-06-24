@@ -20,7 +20,6 @@ use crate::compat::strlcat;
 use crate::xmalloc::xreallocarray;
 
 /// Default grid cell data.
-
 pub static grid_default_cell: grid_cell = grid_cell::new(
     utf8_data::new([b' '], 0, 1, 1),
     grid_attr::empty(),
@@ -33,7 +32,6 @@ pub static grid_default_cell: grid_cell = grid_cell::new(
 
 /// Padding grid cell data. Padding cells are the only zero width cell that
 /// appears in the grid - because of this, they are always extended cells.
-
 pub static grid_padding_cell: grid_cell = grid_cell::new(
     utf8_data::new([b'!'], 0, 0, 0),
     grid_attr::empty(),
@@ -45,7 +43,6 @@ pub static grid_padding_cell: grid_cell = grid_cell::new(
 );
 
 /// Cleared grid cell data.
-
 pub static grid_cleared_cell: grid_cell = grid_cell::new(
     utf8_data::new([b' '], 0, 1, 1),
     grid_attr::empty(),
@@ -69,7 +66,6 @@ pub static grid_cleared_entry: grid_cell_entry = grid_cell_entry {
 };
 
 /// Store cell in entry.
-
 pub unsafe extern "C" fn grid_store_cell(gce: *mut grid_cell_entry, gc: *const grid_cell, c: u8) {
     unsafe {
         (*gce).flags = (*gc).flags & !grid_flag::CLEARED;
@@ -90,7 +86,6 @@ pub unsafe extern "C" fn grid_store_cell(gce: *mut grid_cell_entry, gc: *const g
 }
 
 /// Check if a cell should be an extended cell.
-
 pub unsafe extern "C" fn grid_need_extended_cell(
     gce: *const grid_cell_entry,
     gc: *const grid_cell,
@@ -120,7 +115,6 @@ pub unsafe extern "C" fn grid_need_extended_cell(
 }
 
 /// Get an extended cell.
-
 pub unsafe extern "C" fn grid_get_extended_cell(
     gl: *mut grid_line,
     gce: *mut grid_cell_entry,
@@ -138,7 +132,6 @@ pub unsafe extern "C" fn grid_get_extended_cell(
 }
 
 /// Set cell as extended.
-
 pub unsafe extern "C" fn grid_extended_cell(
     gl: *mut grid_line,
     gce: *mut grid_cell_entry,
@@ -171,7 +164,6 @@ pub unsafe extern "C" fn grid_extended_cell(
 }
 
 /// Free up unused extended cells.
-
 pub unsafe extern "C" fn grid_compact_line(gl: *mut grid_line) {
     unsafe {
         let mut new_extdsize = 0u32;
@@ -221,20 +213,18 @@ pub unsafe extern "C" fn grid_compact_line(gl: *mut grid_line) {
 }
 
 /// Get line data.
-
 pub unsafe extern "C" fn grid_get_line(gd: *mut grid, line: c_uint) -> *mut grid_line {
     unsafe { (*gd).linedata.add(line as usize) }
 }
 
 /// Adjust number of lines.
-
 pub unsafe extern "C" fn grid_adjust_lines(gd: *mut grid, lines: c_uint) {
     unsafe {
         (*gd).linedata = xreallocarray_((*gd).linedata, lines as usize).as_ptr();
     }
 }
-/// Copy default into a cell.
 
+/// Copy default into a cell.
 pub unsafe extern "C" fn grid_clear_cell(gd: *mut grid, px: c_uint, py: c_uint, bg: c_uint) {
     unsafe {
         let gl = (*gd).linedata.add(py as usize);
@@ -256,7 +246,6 @@ pub unsafe extern "C" fn grid_clear_cell(gd: *mut grid, px: c_uint, py: c_uint, 
 }
 
 /// Check grid y position.
-
 pub unsafe extern "C" fn grid_check_y(gd: *mut grid, from: *const c_char, py: c_uint) -> c_int {
     unsafe {
         if py >= (*gd).hsize as c_uint + (*gd).sy as c_uint {
@@ -268,7 +257,6 @@ pub unsafe extern "C" fn grid_check_y(gd: *mut grid, from: *const c_char, py: c_
 }
 
 /// Check if two styles are (visibly) the same.
-
 pub unsafe extern "C" fn grid_cells_look_equal(
     gc1: *const grid_cell,
     gc2: *const grid_cell,
@@ -288,7 +276,6 @@ pub unsafe extern "C" fn grid_cells_look_equal(
 }
 
 /// Compare grid cells. Return 1 if equal, 0 if not.
-
 pub unsafe extern "C" fn grid_cells_equal(gc1: *const grid_cell, gc2: *const grid_cell) -> c_int {
     unsafe {
         if grid_cells_look_equal(gc1, gc2) == 0 {
@@ -314,7 +301,6 @@ pub unsafe extern "C" fn grid_cells_equal(gc1: *const grid_cell, gc2: *const gri
 }
 
 /// Free one line.
-
 pub unsafe extern "C" fn grid_free_line(gd: *mut grid, py: c_uint) {
     unsafe {
         free_((*(*gd).linedata.add(py as usize)).celldata);
@@ -325,7 +311,6 @@ pub unsafe extern "C" fn grid_free_line(gd: *mut grid, py: c_uint) {
 }
 
 /// Free several lines.
-
 pub unsafe extern "C" fn grid_free_lines(gd: *mut grid, py: c_uint, ny: c_uint) {
     unsafe {
         for yy in py..(py + ny) {
@@ -335,7 +320,6 @@ pub unsafe extern "C" fn grid_free_lines(gd: *mut grid, py: c_uint, ny: c_uint) 
 }
 
 /// Create a new grid.
-
 pub unsafe extern "C" fn grid_create(sx: u32, sy: u32, hlimit: u32) -> *mut grid {
     unsafe {
         let gd = xmalloc_::<grid>().as_ptr();
@@ -358,7 +342,6 @@ pub unsafe extern "C" fn grid_create(sx: u32, sy: u32, hlimit: u32) -> *mut grid
 }
 
 /// Destroy grid.
-
 pub unsafe extern "C" fn grid_destroy(gd: *mut grid) {
     unsafe {
         grid_free_lines(gd, 0, (*gd).hsize + (*gd).sy);
@@ -368,7 +351,6 @@ pub unsafe extern "C" fn grid_destroy(gd: *mut grid) {
 }
 
 /// Compare grids.
-
 pub unsafe extern "C" fn grid_compare(ga: *mut grid, gb: *mut grid) -> c_int {
     unsafe {
         if (*ga).sx != (*gb).sx || (*ga).sy != (*gb).sy {
@@ -417,7 +399,6 @@ pub unsafe extern "C" fn grid_compare(ga: *mut grid, gb: *mut grid) -> c_int {
 }
 
 /// Trim lines from the history.
-
 unsafe extern "C" fn grid_trim_history(gd: *mut grid, ny: c_uint) {
     unsafe {
         grid_free_lines(gd, 0, ny);
@@ -429,9 +410,7 @@ unsafe extern "C" fn grid_trim_history(gd: *mut grid, ny: c_uint) {
     }
 }
 
-/// Collect lines from the history if at the limit. Free the top (oldest) 10%
-/// and shift up.
-
+/// Collect lines from the history if at the limit. Free the top (oldest) 10% and shift up.
 pub unsafe extern "C" fn grid_collect_history(gd: *mut grid) {
     unsafe {
         if (*gd).hsize == 0 || (*gd).hsize < (*gd).hlimit {
@@ -457,7 +436,6 @@ pub unsafe extern "C" fn grid_collect_history(gd: *mut grid) {
 }
 
 /// Remove lines from the bottom of the history.
-
 pub unsafe extern "C" fn grid_remove_history(gd: *mut grid, ny: c_uint) {
     unsafe {
         if ny > (*gd).hsize {
@@ -472,7 +450,6 @@ pub unsafe extern "C" fn grid_remove_history(gd: *mut grid, ny: c_uint) {
 
 /// Scroll the entire visible screen, moving one line into the history. Just
 /// allocate a new line at the bottom and move the history size indicator.
-
 pub unsafe extern "C" fn grid_scroll_history(gd: *mut grid, bg: c_uint) {
     unsafe {
         let yy = (*gd).hsize + (*gd).sy;
@@ -488,7 +465,6 @@ pub unsafe extern "C" fn grid_scroll_history(gd: *mut grid, bg: c_uint) {
 }
 
 /// Clear the history.
-
 pub unsafe extern "C" fn grid_clear_history(gd: *mut grid) {
     unsafe {
         grid_trim_history(gd, (*gd).hsize);
@@ -501,7 +477,6 @@ pub unsafe extern "C" fn grid_clear_history(gd: *mut grid) {
 }
 
 /// Scroll a region up, moving the top line into the history.
-
 pub unsafe extern "C" fn grid_scroll_history_region(
     gd: *mut grid,
     mut upper: c_uint,
@@ -538,7 +513,6 @@ pub unsafe extern "C" fn grid_scroll_history_region(
 }
 
 /// Expand line to fit to cell.
-
 unsafe fn grid_expand_line(gd: *mut grid, py: c_uint, mut sx: c_uint, bg: c_uint) {
     unsafe {
         let gl = (*gd).linedata.add(py as usize);
@@ -564,7 +538,6 @@ unsafe fn grid_expand_line(gd: *mut grid, py: c_uint, mut sx: c_uint, bg: c_uint
 }
 
 /// Empty a line and set background colour if needed.
-
 pub unsafe extern "C" fn grid_empty_line(gd: *mut grid, py: c_uint, bg: c_uint) {
     unsafe {
         (*gd).linedata.add(py as usize).write(zeroed());
@@ -575,7 +548,6 @@ pub unsafe extern "C" fn grid_empty_line(gd: *mut grid, py: c_uint, bg: c_uint) 
 }
 
 /// Peek at grid line.
-
 pub unsafe extern "C" fn grid_peek_line(gd: *mut grid, py: c_uint) -> *mut grid_line {
     unsafe {
         if grid_check_y(gd, c"grid_peek_line".as_ptr(), py) != 0 {
@@ -586,7 +558,6 @@ pub unsafe extern "C" fn grid_peek_line(gd: *mut grid, py: c_uint) -> *mut grid_
 }
 
 /// Get cell from line.
-
 unsafe fn grid_get_cell1(gl: *mut grid_line, px: c_uint, gc: *mut grid_cell) {
     unsafe {
         let gce = (*gl).celldata.add(px as usize);
@@ -624,7 +595,6 @@ unsafe fn grid_get_cell1(gl: *mut grid_line, px: c_uint, gc: *mut grid_cell) {
 }
 
 /// Get cell for reading.
-
 pub unsafe extern "C" fn grid_get_cell(gd: *mut grid, px: c_uint, py: c_uint, gc: *mut grid_cell) {
     unsafe {
         if grid_check_y(gd, c"grid_get_cell".as_ptr(), py) != 0
@@ -638,7 +608,6 @@ pub unsafe extern "C" fn grid_get_cell(gd: *mut grid, px: c_uint, py: c_uint, gc
 }
 
 /// Set cell at position.
-
 pub unsafe extern "C" fn grid_set_cell(
     gd: *mut grid,
     px: c_uint,
@@ -667,7 +636,6 @@ pub unsafe extern "C" fn grid_set_cell(
 }
 
 /// Set padding at position.
-
 pub unsafe extern "C" fn grid_set_padding(gd: *mut grid, px: c_uint, py: c_uint) {
     unsafe {
         grid_set_cell(gd, px, py, &grid_padding_cell);
@@ -675,7 +643,6 @@ pub unsafe extern "C" fn grid_set_padding(gd: *mut grid, px: c_uint, py: c_uint)
 }
 
 /// Set cells at position.
-
 pub unsafe extern "C" fn grid_set_cells(
     gd: *mut grid,
     px: u32,
@@ -709,7 +676,6 @@ pub unsafe extern "C" fn grid_set_cells(
 }
 
 /// Clear area.
-
 pub unsafe extern "C" fn grid_clear(
     gd: *mut grid,
     px: c_uint,
@@ -761,7 +727,6 @@ pub unsafe extern "C" fn grid_clear(
 }
 
 /// Clear lines. This just frees and truncates the lines.
-
 pub unsafe extern "C" fn grid_clear_lines(gd: *mut grid, py: c_uint, ny: c_uint, bg: c_uint) {
     unsafe {
         if ny == 0 {
@@ -786,7 +751,6 @@ pub unsafe extern "C" fn grid_clear_lines(gd: *mut grid, py: c_uint, ny: c_uint,
 }
 
 /// Move a group of lines.
-
 pub unsafe extern "C" fn grid_move_lines(
     gd: *mut grid,
     dy: c_uint,
@@ -841,7 +805,6 @@ pub unsafe extern "C" fn grid_move_lines(
 }
 
 /// Move a group of cells.
-
 pub unsafe extern "C" fn grid_move_cells(
     gd: *mut grid,
     dx: c_uint,
@@ -882,7 +845,6 @@ pub unsafe extern "C" fn grid_move_cells(
 }
 
 /// Get ANSI foreground sequence.
-
 pub unsafe extern "C" fn grid_string_cells_fg(gc: *const grid_cell, values: *mut c_int) -> usize {
     unsafe {
         let mut n: usize = 0;
@@ -928,7 +890,6 @@ pub unsafe extern "C" fn grid_string_cells_fg(gc: *const grid_cell, values: *mut
 }
 
 /// Get ANSI background sequence.
-
 pub unsafe extern "C" fn grid_string_cells_bg(gc: *const grid_cell, values: *mut c_int) -> usize {
     unsafe {
         let mut n: usize = 0;
@@ -974,7 +935,6 @@ pub unsafe extern "C" fn grid_string_cells_bg(gc: *const grid_cell, values: *mut
 }
 
 /// Get underscore colour sequence.
-
 pub unsafe extern "C" fn grid_string_cells_us(gc: *const grid_cell, values: *mut c_int) -> usize {
     unsafe {
         let mut n: usize = 0;
@@ -1003,7 +963,6 @@ pub unsafe extern "C" fn grid_string_cells_us(gc: *const grid_cell, values: *mut
 }
 
 /// Add on SGR code.
-
 pub unsafe extern "C" fn grid_string_cells_add_code(
     buf: *mut c_char,
     len: usize,
@@ -1094,9 +1053,7 @@ pub unsafe extern "C" fn grid_string_cells_add_hyperlink(
     }
 }
 
-/// Returns ANSI code to set particular attributes (colour, bold and so on)
-/// given a current state.
-
+/// Returns ANSI code to set particular attributes (colour, bold and so on) given a current state.
 pub unsafe extern "C" fn grid_string_cells_code(
     lastgc: *const grid_cell,
     gc: *const grid_cell,
@@ -1277,7 +1234,6 @@ pub unsafe extern "C" fn grid_string_cells_code(
 }
 
 /// Convert cells into a string.
-
 pub unsafe extern "C" fn grid_string_cells(
     gd: *mut grid,
     px: c_uint,
@@ -1388,9 +1344,7 @@ pub unsafe extern "C" fn grid_string_cells(
     }
 }
 
-/// Duplicate a set of lines between two grids. Both source and destination
-/// should be big enough.
-
+/// Duplicate a set of lines between two grids. Both source and destination should be big enough.
 pub unsafe extern "C" fn grid_duplicate_lines(
     dst: *mut grid,
     mut dy: c_uint,
@@ -1594,7 +1548,6 @@ unsafe fn grid_reflow_join(
 }
 
 /// Split this line into several new ones
-
 pub unsafe extern "C" fn grid_reflow_split(
     target: *mut grid,
     gd: *mut grid,
@@ -1670,7 +1623,6 @@ pub unsafe extern "C" fn grid_reflow_split(
 }
 
 /// Reflow lines on grid to new width
-
 pub unsafe extern "C" fn grid_reflow(gd: *mut grid, sx: u32) {
     unsafe {
         // Create destination grid - just used as container for line data
@@ -1741,7 +1693,6 @@ pub unsafe extern "C" fn grid_reflow(gd: *mut grid, sx: u32) {
 }
 
 /// Convert to position based on wrapped lines
-
 pub unsafe extern "C" fn grid_wrap_position(
     gd: *mut grid,
     px: u32,
@@ -1776,7 +1727,6 @@ pub unsafe extern "C" fn grid_wrap_position(
 }
 
 /// Convert position based on wrapped lines back
-
 pub unsafe extern "C" fn grid_unwrap_position(
     gd: *mut grid,
     px: *mut u32,
@@ -1829,7 +1779,6 @@ pub unsafe extern "C" fn grid_unwrap_position(
 }
 
 /// Get length of line
-
 pub unsafe extern "C" fn grid_line_length(gd: *mut grid, py: u32) -> u32 {
     unsafe {
         let mut gc = zeroed();

@@ -41,7 +41,6 @@ impl input_key_entry {
 }
 
 /// Input key comparison function.
-
 pub unsafe extern "C" fn input_key_cmp(
     ike1: *const input_key_entry,
     ike2: *const input_key_entry,
@@ -173,7 +172,6 @@ static input_key_modifiers: [key_code; 9] = [
 ];
 
 /// Look for key in tree.
-
 pub unsafe extern "C" fn input_key_get(key: key_code) -> *mut input_key_entry {
     unsafe {
         let mut entry = MaybeUninit::<input_key_entry>::uninit();
@@ -199,7 +197,6 @@ pub unsafe extern "C" fn input_key_split2(c: u32, dst: *mut u8) -> usize {
 
 #[expect(clippy::needless_range_loop)]
 /// Build input key tree.
-
 pub unsafe extern "C-unwind" fn input_key_build() {
     unsafe {
         for i in 0..input_key_defaults_len {
@@ -230,7 +227,6 @@ pub unsafe extern "C-unwind" fn input_key_build() {
 }
 
 /// Translate a key code into an output key sequence for a pane.
-
 pub unsafe extern "C" fn input_key_pane(
     wp: *mut window_pane,
     key: key_code,
@@ -335,12 +331,9 @@ static standard_map: [SyncCharPtr; 2] = [
     SyncCharPtr::from_ptr(b"119900=+;;'',,..\x1f\x1f\x7f\x7f\0\0\0".as_ptr().cast()),
 ];
 
-/*
- * Outputs the key in the "standard" mode. This is by far the most
- * complicated output mode, with a lot of remapping in order to
- * emulate quirks of terminals that today can be only found in museums.
- */
-
+/// Outputs the key in the "standard" mode. This is by far the most
+/// complicated output mode, with a lot of remapping in order to
+/// emulate quirks of terminals that today can be only found in museums.
 pub unsafe extern "C" fn input_key_vt10x(bev: *mut bufferevent, mut key: key_code) -> i32 {
     let __func__ = c"input_key_vt10x".as_ptr();
     unsafe {
@@ -402,7 +395,6 @@ pub unsafe extern "C" fn input_key_vt10x(bev: *mut bufferevent, mut key: key_cod
 }
 
 /// Pick keys that are reported as vt10x keys in modifyOtherKeys=1 mode.
-
 pub unsafe extern "C" fn input_key_mode1(bev: *mut bufferevent, key: key_code) -> i32 {
     unsafe {
         log_debug!("{}: key in {}", "input_key_mode1", key);
@@ -430,7 +422,6 @@ pub unsafe extern "C" fn input_key_mode1(bev: *mut bufferevent, key: key_code) -
 }
 
 /// Translate a key code into an output key sequence.
-
 pub unsafe extern "C" fn input_key(
     s: *mut screen,
     bev: *mut bufferevent,
@@ -581,8 +572,7 @@ pub unsafe extern "C" fn input_key(
     }
 }
 
-/* Get mouse event string. */
-
+/// Get mouse event string.
 pub unsafe extern "C" fn input_key_get_mouse(
     s: *mut screen,
     m: *mut mouse_event,
@@ -698,8 +688,7 @@ pub unsafe extern "C" fn input_key_get_mouse(
     1
 }
 
-/* Translate mouse and output. */
-
+/// Translate mouse and output.
 pub unsafe extern "C" fn input_key_mouse(wp: *mut window_pane, m: *mut mouse_event) {
     let __func__ = c"input_key_mouse".as_ptr();
     unsafe {

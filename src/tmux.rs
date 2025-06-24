@@ -316,25 +316,6 @@ pub unsafe extern "C" fn get_timer() -> u64 {
     }
 }
 
-pub unsafe extern "C" fn sig2name(signo: i32) -> *mut c_char {
-    static mut s: [c_char; 11] = unsafe { zeroed() };
-
-    unsafe {
-        /*
-                // TODO
-                // #ifdef HAVE_SYS_SIGNAME
-                #[cfg(feature = "sys_signame")]
-                {
-                    if (signo > 0 && signo < NSIG) {
-                        return sys_signame[signo];
-                    }
-                }
-        */
-        xsnprintf_!(&raw mut s as _, size_of::<[c_char; 11]>(), "{}", signo,);
-        &raw mut s as _
-    }
-}
-
 pub unsafe extern "C" fn find_cwd() -> *mut c_char {
     static mut cwd: [c_char; PATH_MAX as usize] = [0; PATH_MAX as usize];
     unsafe {

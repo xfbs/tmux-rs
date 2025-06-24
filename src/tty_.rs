@@ -1031,7 +1031,6 @@ pub unsafe extern "C" fn tty_repeat_space(tty: *mut tty, mut n: u32) {
 }
 
 /// Is this window bigger than the terminal?
-
 pub unsafe extern "C" fn tty_window_bigger(tty: *mut tty) -> boolint {
     unsafe {
         let c = (*tty).client;
@@ -1042,7 +1041,6 @@ pub unsafe extern "C" fn tty_window_bigger(tty: *mut tty) -> boolint {
 }
 
 /// What offset should this window be drawn at?
-
 pub unsafe extern "C" fn tty_window_offset(
     tty: *mut tty,
     ox: *mut u32,
@@ -1061,7 +1059,6 @@ pub unsafe extern "C" fn tty_window_offset(
 }
 
 /// What offset should this window be drawn at?
-
 pub unsafe extern "C" fn tty_window_offset1(
     tty: *mut tty,
     ox: *mut u32,
@@ -1138,7 +1135,6 @@ pub unsafe extern "C" fn tty_window_offset1(
 }
 
 /// Update stored offsets for a window and redraw if necessary.
-
 pub unsafe extern "C" fn tty_update_window_offset(w: *mut window) {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
@@ -1153,7 +1149,6 @@ pub unsafe extern "C" fn tty_update_window_offset(w: *mut window) {
 }
 
 /// Update stored offsets for a client and redraw if necessary.
-
 pub unsafe extern "C" fn tty_update_client_offset(c: *mut client) {
     unsafe {
         let mut ox: u32 = 0;
@@ -1202,13 +1197,11 @@ pub unsafe extern "C" fn tty_update_client_offset(c: *mut client) {
 /// Is the region large enough to be worth redrawing once later rather than
 /// probably several times now? Currently yes if it is more than 50% of the
 /// pane.
-
 pub unsafe extern "C" fn tty_large_region(_tty: *mut tty, ctx: *const tty_ctx) -> boolint {
     unsafe { boolint::from((*ctx).orlower - (*ctx).orupper >= (*ctx).sy / 2) }
 }
 
 /// Return if BCE is needed but the terminal doesn't have it - it'll need to be emulated.
-
 pub unsafe extern "C" fn tty_fake_bce(tty: *const tty, gc: *const grid_cell, bg: u32) -> boolint {
     unsafe {
         if tty_term_flag((*tty).term, tty_code_code::TTYC_BCE) != 0 {
@@ -1248,7 +1241,6 @@ pub unsafe extern "C" fn tty_redraw_region(tty: *mut tty, ctx: *const tty_ctx) {
 }
 
 /// Is this position visible in the pane?
-
 pub unsafe extern "C" fn tty_is_visible(
     _tty: *mut tty,
     ctx: *const tty_ctx,
@@ -1276,7 +1268,6 @@ pub unsafe extern "C" fn tty_is_visible(
 }
 
 /// Clamp line position to visible part of pane.
-
 pub unsafe extern "C" fn tty_clamp_line(
     tty: *mut tty,
     ctx: *const tty_ctx,
@@ -1326,7 +1317,6 @@ pub unsafe extern "C" fn tty_clamp_line(
 }
 
 /// Clear a line.
-
 pub unsafe extern "C" fn tty_clear_line(
     tty: *mut tty,
     defaults: *const grid_cell,
@@ -1388,7 +1378,6 @@ pub unsafe extern "C" fn tty_clear_line(
 }
 
 /// Clear a line, adjusting to visible part of pane.
-
 pub unsafe extern "C" fn tty_clear_pane_line(
     tty: *mut tty,
     ctx: *const tty_ctx,
@@ -1426,7 +1415,6 @@ pub unsafe extern "C" fn tty_clear_pane_line(
 }
 
 /// Clamp area position to visible part of pane.
-
 pub unsafe extern "C" fn tty_clamp_area(
     tty: *mut tty,
     ctx: *const tty_ctx,
@@ -1504,7 +1492,6 @@ pub unsafe extern "C" fn tty_clamp_area(
 }
 
 /// Clear an area, adjusting to visible part of pane.
-
 pub unsafe extern "C" fn tty_clear_area(
     tty: *mut tty,
     defaults: *const grid_cell,
@@ -1599,7 +1586,6 @@ pub unsafe extern "C" fn tty_clear_area(
 }
 
 /// Clear an area in a pane.
-
 pub unsafe extern "C" fn tty_clear_pane_area(
     tty: *mut tty,
     ctx: *const tty_ctx,
@@ -1735,7 +1721,6 @@ pub unsafe extern "C" fn tty_check_codeset(
 }
 
 /// Check if a single character is obstructed by the overlay and return a boolean.
-
 pub unsafe extern "C" fn tty_check_overlay(tty: *mut tty, px: u32, py: u32) -> boolint {
     unsafe {
         let mut r: overlay_ranges = zeroed();
@@ -1755,7 +1740,6 @@ pub unsafe extern "C" fn tty_check_overlay(tty: *mut tty, px: u32, py: u32) -> b
 }
 
 /// Return parts of the input range which are visible.
-
 pub unsafe extern "C" fn tty_check_overlay_range(
     tty: *mut tty,
     px: u32,
@@ -1989,9 +1973,8 @@ pub unsafe extern "C" fn tty_draw_line(
     }
 }
 
-#[cfg(feature = "sixel")]
 /// Update context for client.
-
+#[cfg(feature = "sixel")]
 pub unsafe extern "C" fn tty_set_client_cb(ttyctx: *mut tty_ctx, c: *mut client) -> i32 {
     unsafe {
         let mut wp: *mut window_pane = (*ttyctx).arg.cast();
@@ -2023,7 +2006,6 @@ pub unsafe extern "C" fn tty_set_client_cb(ttyctx: *mut tty_ctx, c: *mut client)
 }
 
 #[cfg(feature = "sixel")]
-
 pub unsafe extern "C" fn tty_draw_images(c: *mut client, wp: *mut window_pane, s: *mut screen) {
     unsafe {
         for im in tailq_foreach(&raw mut (*s).images).map(NonNull::as_ptr) {
@@ -2809,7 +2791,6 @@ pub unsafe extern "C" fn tty_cmd_rawstring(tty: *mut tty, ctx: *const tty_ctx) {
 }
 
 #[cfg(feature = "sixel")]
-
 pub unsafe extern "C" fn tty_cmd_sixelimage(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         let mut im: *mut image = (*ctx).ptr.cast();
@@ -3002,7 +2983,6 @@ pub unsafe extern "C" fn tty_invalidate(tty: *mut tty) {
 }
 
 /// Turn off margin.
-
 pub unsafe extern "C" fn tty_region_off(tty: *mut tty) {
     unsafe {
         tty_region(tty, 0, (*tty).sy - 1);
@@ -3010,7 +2990,6 @@ pub unsafe extern "C" fn tty_region_off(tty: *mut tty) {
 }
 
 /// Set region inside pane.
-
 pub unsafe extern "C" fn tty_region_pane(
     tty: *mut tty,
     ctx: *const tty_ctx,
@@ -3027,7 +3006,6 @@ pub unsafe extern "C" fn tty_region_pane(
 }
 
 /// Set region at absolute position.
-
 pub unsafe extern "C" fn tty_region(tty: *mut tty, rupper: u32, rlower: u32) {
     unsafe {
         if (*tty).rlower == rlower && (*tty).rupper == rupper {
@@ -3066,7 +3044,6 @@ pub unsafe extern "C" fn tty_region(tty: *mut tty, rupper: u32, rlower: u32) {
 }
 
 /// Turn off margin.
-
 pub unsafe extern "C" fn tty_margin_off(tty: *mut tty) {
     unsafe {
         tty_margin(tty, 0, (*tty).sx - 1);
@@ -3074,7 +3051,6 @@ pub unsafe extern "C" fn tty_margin_off(tty: *mut tty) {
 }
 
 /// Set margin inside pane.
-
 pub unsafe extern "C" fn tty_margin_pane(tty: *mut tty, ctx: *const tty_ctx) {
     unsafe {
         tty_margin(

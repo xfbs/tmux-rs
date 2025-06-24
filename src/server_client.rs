@@ -1694,7 +1694,6 @@ pub unsafe extern "C" fn server_client_check_mouse(
 }
 
 /// Is this a bracket paste key?
-
 pub unsafe extern "C" fn server_client_is_bracket_pasting(c: *mut client, key: key_code) -> i32 {
     unsafe {
         if key == keyc::KEYC_PASTE_START as u64 {
@@ -1714,7 +1713,6 @@ pub unsafe extern "C" fn server_client_is_bracket_pasting(c: *mut client, key: k
 }
 
 /// Is this fast enough to probably be a paste?
-
 pub unsafe extern "C" fn server_client_assume_paste(s: *mut session) -> i32 {
     unsafe {
         let mut tv: timeval = zeroed();
@@ -1749,7 +1747,6 @@ pub unsafe extern "C" fn server_client_assume_paste(s: *mut session) -> i32 {
 }
 
 /// Has the latest client changed?
-
 pub unsafe extern "C" fn server_client_update_latest(c: *mut client) {
     unsafe {
         if (*c).session.is_null() {
@@ -1773,7 +1770,6 @@ pub unsafe extern "C" fn server_client_update_latest(c: *mut client) {
 }
 
 /// Handle data key input from client. This owns and can modify the key event it is given and is responsible for freeing it.
-
 pub unsafe extern "C" fn server_client_key_callback(
     item: *mut cmdq_item,
     data: *mut c_void,
@@ -2067,7 +2063,6 @@ pub unsafe extern "C" fn server_client_key_callback(
 }
 
 /// Handle a key event.
-
 pub unsafe extern "C" fn server_client_handle_key(c: *mut client, event: *mut key_event) -> i32 {
     unsafe {
         let s = (*c).session;
@@ -2115,7 +2110,6 @@ pub unsafe extern "C" fn server_client_handle_key(c: *mut client, event: *mut ke
 }
 
 /// Client functions that need to happen every loop.
-
 pub unsafe extern "C" fn server_client_loop() {
     unsafe {
         // Check for window resize. This is done before redrawing.
@@ -2148,7 +2142,6 @@ pub unsafe extern "C" fn server_client_loop() {
 }
 
 /// Check if window needs to be resized.
-
 pub unsafe extern "C" fn server_client_check_window_resize(w: *mut window) {
     unsafe {
         if !(*w).flags.intersects(window_flag::RESIZE) {
@@ -2182,7 +2175,6 @@ pub unsafe extern "C" fn server_client_check_window_resize(w: *mut window) {
 }
 
 /// Resize timer event.
-
 pub unsafe extern "C" fn server_client_resize_timer(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
         let wp: *mut window_pane = data.cast();
@@ -2197,7 +2189,6 @@ pub unsafe extern "C" fn server_client_resize_timer(_fd: i32, _events: i16, data
 }
 
 /// Check if pane should be resized.
-
 pub unsafe extern "C" fn server_client_check_pane_resize(wp: *mut window_pane) {
     unsafe {
         let mut tv: libc::timeval = libc::timeval {
@@ -2286,7 +2277,6 @@ pub unsafe extern "C" fn server_client_check_pane_resize(wp: *mut window_pane) {
 }
 
 /// Check pane buffer size.
-
 pub unsafe extern "C" fn server_client_check_pane_buffer(wp: *mut window_pane) {
     unsafe {
         let evb = (*(*wp).event).input;
@@ -2399,7 +2389,6 @@ pub unsafe extern "C" fn server_client_check_pane_buffer(wp: *mut window_pane) {
 ///
 /// tty_region/tty_reset/tty_update_mode already take care of not resetting
 /// things that are already in their default state.
-
 pub unsafe extern "C" fn server_client_reset_state(c: *mut client) {
     unsafe {
         let tty = &raw mut (*c).tty;
@@ -2527,7 +2516,6 @@ pub unsafe extern "C" fn server_client_reset_state(c: *mut client) {
 }
 
 /// Repeat time callback.
-
 pub unsafe extern "C" fn server_client_repeat_timer(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
         let c: *mut client = data.cast();
@@ -2541,7 +2529,6 @@ pub unsafe extern "C" fn server_client_repeat_timer(_fd: i32, _events: i16, data
 }
 
 /// Double-click callback.
-
 pub unsafe extern "C" fn server_client_click_timer(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
         let c: *mut client = data.cast();
@@ -2561,7 +2548,6 @@ pub unsafe extern "C" fn server_client_click_timer(_fd: i32, _events: i16, data:
 }
 
 /// Check if client should be exited.
-
 pub unsafe extern "C" fn server_client_check_exit(c: *mut client) {
     unsafe {
         let name = (*c).exit_session;
@@ -2628,7 +2614,6 @@ pub unsafe extern "C" fn server_client_check_exit(c: *mut client) {
 }
 
 /// Redraw timer callback.
-
 pub unsafe extern "C" fn server_client_redraw_timer(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
         log_debug!("redraw timer fired");
@@ -2639,7 +2624,6 @@ pub unsafe extern "C" fn server_client_redraw_timer(_fd: i32, _events: i16, data
  * Check if modes need to be updated. Only modes in the current window are
  * updated and it is done when the status line is redrawn.
  */
-
 pub unsafe extern "C" fn server_client_check_modes(c: *mut client) {
     unsafe {
         let w = (*(*(*c).session).curw).window;
@@ -2664,7 +2648,6 @@ pub unsafe extern "C" fn server_client_check_modes(c: *mut client) {
 }
 
 /// Check for client redraws.
-
 pub unsafe extern "C" fn server_client_check_redraw(c: *mut client) {
     static mut ev: event = unsafe { zeroed() };
     unsafe {
@@ -2816,8 +2799,7 @@ pub unsafe extern "C" fn server_client_check_redraw(c: *mut client) {
     }
 }
 
-/* Set client title. */
-
+/// Set client title.
 pub unsafe extern "C" fn server_client_set_title(c: *mut client) {
     unsafe {
         let s = (*c).session;
@@ -2840,7 +2822,6 @@ pub unsafe extern "C" fn server_client_set_title(c: *mut client) {
 }
 
 /// Set client path.
-
 pub unsafe extern "C" fn server_client_set_path(c: *mut client) {
     unsafe {
         let s = (*c).session;
@@ -2862,7 +2843,6 @@ pub unsafe extern "C" fn server_client_set_path(c: *mut client) {
 }
 
 /// Dispatch message from client.
-
 pub unsafe extern "C" fn server_client_dispatch(imsg: *mut imsg, arg: *mut c_void) {
     unsafe {
         let c: *mut client = arg.cast();
@@ -2965,7 +2945,6 @@ pub unsafe extern "C" fn server_client_dispatch(imsg: *mut imsg, arg: *mut c_voi
 }
 
 /// Callback when command is not allowed.
-
 pub unsafe extern "C" fn server_client_read_only(
     item: *mut cmdq_item,
     _data: *mut c_void,
@@ -2977,7 +2956,6 @@ pub unsafe extern "C" fn server_client_read_only(
 }
 
 /// Callback when command is done.
-
 pub unsafe extern "C" fn server_client_command_done(
     item: *mut cmdq_item,
     _data: *mut c_void,
@@ -2998,7 +2976,6 @@ pub unsafe extern "C" fn server_client_command_done(
 }
 
 /// Handle command message.
-
 pub unsafe extern "C" fn server_client_dispatch_command(c: *mut client, imsg: *mut imsg) {
     unsafe {
         let mut data: msg_command = zeroed();
@@ -3079,7 +3056,6 @@ pub unsafe extern "C" fn server_client_dispatch_command(c: *mut client, imsg: *m
 }
 
 /// Handle identify message.
-
 pub unsafe extern "C" fn server_client_dispatch_identify(c: *mut client, imsg: *mut imsg) {
     unsafe {
         let mut home: *mut c_char = null_mut();
@@ -3253,7 +3229,6 @@ pub unsafe extern "C" fn server_client_dispatch_identify(c: *mut client, imsg: *
 }
 
 /// Handle shell message.
-
 pub unsafe extern "C" fn server_client_dispatch_shell(c: *mut client) {
     unsafe {
         let mut shell = options_get_string_(global_s_options, c"default-shell");
@@ -3273,7 +3248,6 @@ pub unsafe extern "C" fn server_client_dispatch_shell(c: *mut client) {
 }
 
 /// Get client working directory.
-
 pub unsafe extern "C" fn server_client_get_cwd(
     c: *mut client,
     mut s: *mut session,
@@ -3281,10 +3255,10 @@ pub unsafe extern "C" fn server_client_get_cwd(
     unsafe {
         if cfg_finished == 0 && !cfg_client.is_null() {
             (*cfg_client).cwd
-        } else if !c.is_null() && (*c).session.is_null() && !(*c).cwd.is_null() {
+        } else if (!c.is_null() && (*c).session.is_null() && !(*c).cwd.is_null())
+            || (!s.is_null() && !(*s).cwd.is_null())
+        {
             (*c).cwd
-        } else if !s.is_null() && !(*s).cwd.is_null() {
-            (*s).cwd
         } else if !c.is_null()
             && ({
                 s = (*c).session;
@@ -3302,7 +3276,6 @@ pub unsafe extern "C" fn server_client_get_cwd(
 }
 
 /// Get control client flags.
-
 pub unsafe extern "C" fn server_client_control_flags(
     c: *mut client,
     next: *const c_char,
@@ -3325,7 +3298,6 @@ pub unsafe extern "C" fn server_client_control_flags(
 }
 
 /// Set client flags.
-
 pub unsafe extern "C" fn server_client_set_flags(c: *mut client, flags: *const c_char) {
     unsafe {
         let mut next = null_mut();
@@ -3384,7 +3356,6 @@ pub unsafe extern "C" fn server_client_set_flags(c: *mut client, flags: *const c
 }
 
 /// Get client flags. This is only flags useful to show to users.
-
 pub unsafe extern "C" fn server_client_get_flags(c: *mut client) -> *const c_char {
     unsafe {
         const sizeof_s: usize = 256;
@@ -3440,7 +3411,6 @@ pub unsafe extern "C" fn server_client_get_flags(c: *mut client) -> *const c_cha
 }
 
 /// Get client window.
-
 pub unsafe extern "C" fn server_client_get_client_window(
     c: *mut client,
     id: u32,
@@ -3456,7 +3426,6 @@ pub unsafe extern "C" fn server_client_get_client_window(
 }
 
 /// Add client window.
-
 pub unsafe extern "C" fn server_client_add_client_window(
     c: *mut client,
     id: u32,
@@ -3474,7 +3443,6 @@ pub unsafe extern "C" fn server_client_add_client_window(
 }
 
 /// Get client active pane.
-
 pub unsafe extern "C" fn server_client_get_pane(c: *mut client) -> *mut window_pane {
     unsafe {
         let s = (*c).session;
@@ -3495,7 +3463,6 @@ pub unsafe extern "C" fn server_client_get_pane(c: *mut client) -> *mut window_p
 }
 
 // Set client active pane.
-
 pub unsafe extern "C" fn server_client_set_pane(c: *mut client, wp: *mut window_pane) {
     unsafe {
         let s = (*c).session;
@@ -3511,7 +3478,6 @@ pub unsafe extern "C" fn server_client_set_pane(c: *mut client, wp: *mut window_
 }
 
 /// Remove pane from client lists.
-
 pub unsafe extern "C" fn server_client_remove_pane(wp: *mut window_pane) {
     unsafe {
         let w = (*wp).window;
@@ -3527,7 +3493,6 @@ pub unsafe extern "C" fn server_client_remove_pane(wp: *mut window_pane) {
 }
 
 /// Print to a client.
-
 pub unsafe extern "C" fn server_client_print(c: *mut client, parse: i32, evb: *mut evbuffer) {
     unsafe {
         let data = EVBUFFER_DATA(evb);

@@ -773,7 +773,6 @@ static tty_default_code_keys: [tty_default_key_code; 136] = [
 ];
 
 /// Add key to tree.
-
 unsafe extern "C" fn tty_keys_add(tty: *mut tty, s: *const c_char, key: key_code) {
     unsafe {
         let mut size: usize = 0;
@@ -791,7 +790,6 @@ unsafe extern "C" fn tty_keys_add(tty: *mut tty, s: *const c_char, key: key_code
 }
 
 /// Add next node to the tree.
-
 unsafe extern "C" fn tty_keys_add1(
     mut tkp: *mut *mut tty_key,
     mut s: *const c_char,
@@ -834,7 +832,6 @@ unsafe extern "C" fn tty_keys_add1(
 }
 
 /// Initialise a key tree from the table.
-
 pub unsafe extern "C" fn tty_keys_build(tty: *mut tty) {
     unsafe {
         let mut copy: [c_char; 16] = [0; 16];
@@ -892,15 +889,13 @@ pub unsafe extern "C" fn tty_keys_build(tty: *mut tty) {
 }
 
 /// Free the entire key tree.
-
 pub unsafe extern "C" fn tty_keys_free(tty: *mut tty) {
     unsafe {
         tty_keys_free1((*tty).key_tree);
     }
 }
 
-// Free a single key.
-
+/// Free a single key.
 unsafe extern "C" fn tty_keys_free1(tk: *mut tty_key) {
     unsafe {
         if !(*tk).next.is_null() {
@@ -917,7 +912,6 @@ unsafe extern "C" fn tty_keys_free1(tk: *mut tty_key) {
 }
 
 /// Lookup a key in the tree.
-
 pub unsafe extern "C" fn tty_keys_find(
     tty: *mut tty,
     buf: *const c_char,
@@ -1366,7 +1360,6 @@ pub unsafe extern "C" fn tty_keys_next(tty: *mut tty) -> i32 {
 }
 
 /// Key timer callback.
-
 unsafe extern "C" fn tty_keys_callback(_fd: i32, _events: i16, data: *mut c_void) {
     let tty: *mut tty = data.cast();
 
@@ -1380,7 +1373,6 @@ unsafe extern "C" fn tty_keys_callback(_fd: i32, _events: i16, data: *mut c_void
 /// Handle extended key input. This has two forms: \x1b[27;m;k~ and \x1b[k;mu,
 /// where k is key as a number and m is a modifier. Returns 0 for success, -1
 /// for failure, 1 for partial;
-
 unsafe extern "C" fn tty_keys_extended_key(
     tty: *mut tty,
     buf: *const c_char,
@@ -1538,7 +1530,6 @@ unsafe extern "C" fn tty_keys_extended_key(
 /// Handle mouse key input. Returns 0 for success, -1 for failure, 1 for partial
 /// (probably a mouse sequence but need more data), -2 if an invalid mouse
 /// sequence.
-
 unsafe extern "C" fn tty_keys_mouse(
     tty: *mut tty,
     buf: *const c_char,
