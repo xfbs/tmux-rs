@@ -64,7 +64,7 @@ pub static mut client_exitflag: i32 = 0;
 
 pub static mut client_exitval: i32 = 0;
 
-static mut client_exittype: msgtype = msgtype::ZERO; // TODO
+static mut client_exittype: msgtype = msgtype::MSG_ZERO; // TODO
 
 static mut client_exitsession: *mut c_char = null_mut();
 

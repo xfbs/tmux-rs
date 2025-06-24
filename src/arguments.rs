@@ -1037,7 +1037,7 @@ pub unsafe extern "C" fn args_string_percentage(
             let tmp = strtonum_(copy, 0, 100);
             free_(copy);
             ll = match tmp {
-                Ok(ll) => ll,
+                Ok(n) => n,
                 Err(errstr) => {
                     *cause = xstrdup(errstr.as_ptr()).as_ptr();
                     return 0;
@@ -1054,7 +1054,7 @@ pub unsafe extern "C" fn args_string_percentage(
             }
         } else {
             ll = match strtonum_(value, minval, maxval) {
-                Ok(ll) => ll,
+                Ok(n) => n,
                 Err(errstr) => {
                     *cause = xstrdup(errstr.as_ptr()).as_ptr();
                     return 0;
@@ -1115,7 +1115,7 @@ pub unsafe extern "C" fn args_string_percentage_and_expand(
             free_(f);
             free_(copy);
             ll = match tmp {
-                Ok(value) => value,
+                Ok(n) => n,
                 Err(errstr) => {
                     *cause = xstrdup_(errstr).as_ptr();
                     return 0;
@@ -1135,7 +1135,7 @@ pub unsafe extern "C" fn args_string_percentage_and_expand(
             let tmp = strtonum_(f, minval, maxval);
             free_(f);
             ll = match tmp {
-                Ok(value) => value,
+                Ok(n) => n,
                 Err(errstr) => {
                     *cause = xstrdup_(errstr).as_ptr();
                     return 0;

@@ -1019,15 +1019,10 @@ pub unsafe extern "C" fn mode_tree_search_forward(mtd: *mut mode_tree_data) -> *
         let last = (*(*mtd).line_list.add((*mtd).current as usize)).item;
         let mut mti = last;
         loop {
-            let mut next: *mut mode_tree_item;
-
             if !tailq_empty(&raw mut (*mti).children) {
                 mti = tailq_first(&raw mut (*mti).children);
-            } else if {
-                next = tailq_next(mti);
-                !next.is_null()
-            } {
-                mti = next;
+            } else if let Some(next) = NonNull::new(tailq_next(mti)) {
+                mti = next.as_ptr();
             } else {
                 loop {
                     mti = (*mti).parent;
@@ -1035,9 +1030,8 @@ pub unsafe extern "C" fn mode_tree_search_forward(mtd: *mut mode_tree_data) -> *
                         break;
                     }
 
-                    next = tailq_next(mti);
-                    if !next.is_null() {
-                        mti = next;
+                    if let Some(next) = NonNull::new(tailq_next(mti)) {
+                        mti = next.as_ptr();
                         break;
                     }
                 }

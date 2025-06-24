@@ -11,7 +11,7 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
+#![allow(clippy::uninlined_format_args)] // for lalrpop generated code
 use crate::*;
 
 use lalrpop_util::lalrpop_mod;
@@ -23,7 +23,6 @@ use crate::compat::queue::{
 };
 use crate::xmalloc::xrecallocarray__;
 
-// unsafe extern "C" { fn yyparse() -> i32; }
 unsafe fn yyparse() -> i32 {
     unsafe {
         let mut parser = cmd_parse::LinesParser::new();
@@ -1164,7 +1163,6 @@ unsafe fn yylex_token_tilde(
 ) -> bool {
     unsafe {
         let mut home = null();
-        let mut pw = null();
         let mut namelen: usize = 0;
         let mut name: [c_char; 1024] = [0; 1024];
         const sizeof_name: usize = 1024;
@@ -1188,17 +1186,11 @@ unsafe fn yylex_token_tilde(
             let envent = environ_find(global_environ, c"HOME".as_ptr());
             if (!envent.is_null() && (*(*envent).value.unwrap().as_ptr()) != b'\0' as i8) {
                 home = transmute_ptr((*envent).value);
-            } else if ({
-                pw = libc::getpwuid(libc::getuid());
-                !pw.is_null()
-            }) {
-                home = (*pw).pw_dir;
+            } else if let Some(pw) = NonNull::new(libc::getpwuid(libc::getuid())) {
+                home = (*pw.as_ptr()).pw_dir;
             }
-        } else {
-            pw = libc::getpwnam((&raw const name) as *const i8);
-            if !pw.is_null() {
-                home = (*pw).pw_dir;
-            }
+        } else if let Some(pw) = NonNull::new(libc::getpwnam((&raw const name) as *const i8)) {
+            home = (*pw.as_ptr()).pw_dir;
         }
         if home.is_null() {
             return false;

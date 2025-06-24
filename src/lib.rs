@@ -11,20 +11,21 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+// won't fix:
 #![allow(non_camel_case_types)]
+#![allow(
+    clippy::manual_range_contains,
+    reason = "more closely follow upstream C"
+)]
+#![allow(clippy::missing_safety_doc, reason = "currently using too much unsafe")]
+// maybe fix:
 #![allow(non_upper_case_globals)]
+// will fix:
 #![allow(unused)] // TODO 5000
 #![allow(unpredictable_function_pointer_comparisons)] // TODO 2
-//
-#![allow(clippy::upper_case_acronyms)]
-#![allow(clippy::uninlined_format_args)] // mainly for lalrpop generated code
-// #![allow(clippy::collapsible_if)]
-#![allow(clippy::manual_range_contains)]
-#![allow(clippy::blocks_in_conditions)] // keep, not worth fixing yet
-#![allow(clippy::missing_safety_doc)]
-// 1012 keep, not worth fixing yet
-//
-#![deny(clippy::multiple_crate_versions)]
+// extra enabled:
+#![warn(clippy::multiple_crate_versions)]
 #![warn(clippy::shadow_same)]
 #![allow(clippy::shadow_unrelated)] // TODO, 134 instances probably some latent bugs
 #![allow(clippy::shadow_reuse)] // 145 instances
@@ -80,7 +81,6 @@ use crate::compat::{
 unsafe extern "C" {
     static mut environ: *mut *mut c_char;
     fn strsep(_: *mut *mut c_char, _delim: *const c_char) -> *mut c_char;
-    // fn strsep(_: *mut *mut c_char, _delim: *const c_char) -> *mut c_char;
 }
 
 #[inline]
@@ -1251,7 +1251,6 @@ impl window_mode {
 
 // Active window mode.
 crate::compat::impl_tailq_entry!(window_mode_entry, entry, tailq_entry<window_mode_entry>);
-// #[derive(Copy, Clone, crate::compat::TailQEntry)]
 #[repr(C)]
 struct window_mode_entry {
     wp: *mut window_pane,
@@ -1276,7 +1275,6 @@ struct window_pane_offset {
 
 /// Queued pane resize.
 crate::compat::impl_tailq_entry!(window_pane_resize, entry, tailq_entry<window_pane_resize>);
-// #[derive(Copy, Clone, crate::compat::TailQEntry)]
 #[repr(C)]
 struct window_pane_resize {
     sx: u32,
@@ -1285,7 +1283,6 @@ struct window_pane_resize {
     osx: u32,
     osy: u32,
 
-    // #[entry]
     entry: tailq_entry<window_pane_resize>,
 }
 type window_pane_resizes = tailq_head<window_pane_resize>;
@@ -1312,7 +1309,6 @@ bitflags::bitflags! {
 }
 
 /// Child window structure.
-// #[derive(Copy, Clone)]
 #[repr(C)]
 struct window_pane {
     id: u32,
@@ -1416,7 +1412,6 @@ const WINDOW_ALERTFLAGS: window_flag = window_flag::BELL
 
 /// Window structure.
 #[repr(C)]
-// #[derive(Copy, Clone)]
 struct window {
     id: u32,
     latest: *mut c_void,
@@ -1551,7 +1546,6 @@ type layout_cells = tailq_head<layout_cell>;
 
 /// Layout cell.
 crate::compat::impl_tailq_entry!(layout_cell, entry, tailq_entry<layout_cell>);
-// #[derive(crate::compat::TailQEntry)]
 #[repr(C)]
 struct layout_cell {
     type_: layout_type,
@@ -1567,7 +1561,6 @@ struct layout_cell {
     wp: *mut window_pane,
     cells: layout_cells,
 
-    // #[entry]
     entry: tailq_entry<layout_cell>,
 }
 
@@ -1678,7 +1671,7 @@ fn MOUSE_RELEASE(b: u32) -> bool {
     b & MOUSE_MASK_BUTTONS == 3
 }
 
-// Mouse input.
+/// Mouse input.
 #[repr(C)]
 #[derive(Copy, Clone)]
 struct mouse_event {

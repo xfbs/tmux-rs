@@ -4,7 +4,7 @@ pub const PROTOCOL_VERSION: i32 = 8;
 #[repr(i32)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, num_enum::TryFromPrimitive)]
 pub enum msgtype {
-    ZERO = 0, // TODO rust added so not ub on static init
+    MSG_ZERO = 0, // TODO rust added so not ub on static init
     MSG_VERSION = 12,
 
     MSG_IDENTIFY_FLAGS = 100,
@@ -58,7 +58,7 @@ impl TryFrom<u32> for msgtype {
 
     fn try_from(value: u32) -> Result<Self, Self::Error> {
         Ok(match value {
-            0 => msgtype::ZERO,
+            0 => msgtype::MSG_ZERO,
             12 => msgtype::MSG_VERSION,
             100 => msgtype::MSG_IDENTIFY_FLAGS,
             101 => msgtype::MSG_IDENTIFY_TERM,

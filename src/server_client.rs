@@ -625,31 +625,29 @@ pub unsafe extern "C" fn server_client_check_mouse(
 
         #[derive(Copy, Clone, Eq, PartialEq)]
         enum type_ {
-            NOTYPE,
-            MOVE,
-            DOWN,
-            UP,
-            DRAG,
-            WHEEL,
-            SECOND,
-            DOUBLE,
-            TRIPLE,
+            NoType,
+            Move,
+            Down,
+            Up,
+            Drag,
+            Wheel,
+            Second,
+            Double,
+            Triple,
         }
-        use type_::*;
-        let mut type_ = type_::NOTYPE;
+        let mut type_ = type_::NoType;
 
         #[derive(Copy, Clone, Eq, PartialEq)]
         enum where_ {
-            NOWHERE,
-            PANE,
-            STATUS,
-            STATUS_LEFT,
-            STATUS_RIGHT,
-            STATUS_DEFAULT,
-            BORDER,
+            Nowhere,
+            Pane,
+            Status,
+            StatusLeft,
+            StatusRight,
+            StatusDefault,
+            Border,
         }
-        use where_::*;
-        let mut where_ = where_::NOWHERE;
+        let mut where_ = where_::Nowhere;
 
         'out: {
             'have_event: {
@@ -657,7 +655,7 @@ pub unsafe extern "C" fn server_client_check_mouse(
 
                 /* What type of event is this? */
                 if (*event).key == keyc::KEYC_DOUBLECLICK as u64 {
-                    type_ = DOUBLE;
+                    type_ = type_::Double;
                     x = (*m).x;
                     y = (*m).y;
                     b = (*m).b;
@@ -671,13 +669,13 @@ pub unsafe extern "C" fn server_client_check_mouse(
                         && MOUSE_RELEASE((*m).b)
                         && MOUSE_RELEASE((*m).lb))
                 {
-                    type_ = MOVE;
+                    type_ = type_::Move;
                     x = (*m).x;
                     y = (*m).y;
                     b = 0;
                     log_debug!("move at {x},{y}");
                 } else if MOUSE_DRAG((*m).b) {
-                    type_ = DRAG;
+                    type_ = type_::Drag;
                     if (*c).tty.mouse_drag_flag != 0 {
                         x = (*m).x;
                         y = (*m).y;
@@ -693,13 +691,13 @@ pub unsafe extern "C" fn server_client_check_mouse(
                         log_debug!("drag start at {x},{y}");
                     }
                 } else if MOUSE_WHEEL((*m).b) {
-                    type_ = WHEEL;
+                    type_ = type_::Wheel;
                     x = (*m).x;
                     y = (*m).y;
                     b = (*m).b;
                     log_debug!("wheel at {},{}", x, y);
                 } else if MOUSE_RELEASE((*m).b) {
-                    type_ = UP;
+                    type_ = type_::Up;
                     x = (*m).x;
                     y = (*m).y;
                     b = (*m).lb;
@@ -712,7 +710,7 @@ pub unsafe extern "C" fn server_client_check_mouse(
                         evtimer_del(&raw mut (*c).click_timer);
                         (*c).flags &= !client_flag::DOUBLECLICK;
                         if (*m).b == (*c).click_button {
-                            type_ = SECOND;
+                            type_ = type_::Second;
                             x = (*m).x;
                             y = (*m).y;
                             b = (*m).b;
@@ -723,7 +721,7 @@ pub unsafe extern "C" fn server_client_check_mouse(
                         evtimer_del(&raw mut (*c).click_timer);
                         (*c).flags &= !client_flag::TRIPLECLICK;
                         if (*m).b == (*c).click_button {
-                            type_ = TRIPLE;
+                            type_ = type_::Triple;
                             x = (*m).x;
                             y = (*m).y;
                             b = (*m).b;
@@ -733,8 +731,8 @@ pub unsafe extern "C" fn server_client_check_mouse(
                     }
 
                     /* DOWN is the only remaining event type. */
-                    if type_ == NOTYPE {
-                        type_ = DOWN;
+                    if type_ == type_::NoType {
+                        type_ = type_::Down;
                         x = (*m).x;
                         y = (*m).y;
                         b = (*m).b;
@@ -754,7 +752,7 @@ pub unsafe extern "C" fn server_client_check_mouse(
                     }
                 }
             } // have_event:
-            if type_ == NOTYPE {
+            if type_ == type_::NoType {
                 return KEYC_UNKNOWN;
             }
 
@@ -773,17 +771,17 @@ pub unsafe extern "C" fn server_client_check_mouse(
             {
                 sr = status_get_range(c, x, y - (*m).statusat as u32);
                 if sr.is_null() {
-                    where_ = STATUS_DEFAULT;
+                    where_ = where_::StatusDefault;
                 } else {
                     match (*sr).type_ {
                         style_range_type::STYLE_RANGE_NONE => return KEYC_UNKNOWN,
                         style_range_type::STYLE_RANGE_LEFT => {
                             log_debug!("mouse range: left");
-                            where_ = STATUS_LEFT;
+                            where_ = where_::StatusLeft;
                         }
                         style_range_type::STYLE_RANGE_RIGHT => {
                             log_debug!("mouse range: right");
-                            where_ = STATUS_RIGHT;
+                            where_ = where_::StatusRight;
                         }
                         style_range_type::STYLE_RANGE_PANE => {
                             fwp = window_pane_find_by_id((*sr).argument);
@@ -793,7 +791,7 @@ pub unsafe extern "C" fn server_client_check_mouse(
                             (*m).wp = (*sr).argument as i32;
 
                             log_debug!("mouse range: pane %%{}", (*m).wp);
-                            where_ = STATUS;
+                            where_ = where_::Status;
                         }
                         style_range_type::STYLE_RANGE_WINDOW => {
                             fwl =
@@ -804,7 +802,7 @@ pub unsafe extern "C" fn server_client_check_mouse(
                             (*m).w = (*(*fwl).window).id as i32;
 
                             log_debug!("mouse range: window @{}", (*m).w);
-                            where_ = STATUS;
+                            where_ = where_::Status;
                         }
                         style_range_type::STYLE_RANGE_SESSION => {
                             fs = transmute_ptr(session_find_by_id((*sr).argument));
@@ -814,15 +812,15 @@ pub unsafe extern "C" fn server_client_check_mouse(
                             (*m).s = (*sr).argument as i32;
 
                             log_debug!("mouse range: session ${}", (*m).s);
-                            where_ = STATUS;
+                            where_ = where_::Status;
                         }
-                        style_range_type::STYLE_RANGE_USER => where_ = STATUS,
+                        style_range_type::STYLE_RANGE_USER => where_ = where_::Status,
                     }
                 }
             }
 
             /* Not on status line. Adjust position and check for border or pane. */
-            if where_ == NOWHERE {
+            if where_ == where_::Nowhere {
                 px = x;
                 if (*m).statusat == 0 && y >= (*m).statuslines {
                     py = y - (*m).statuslines;
@@ -864,30 +862,30 @@ pub unsafe extern "C" fn server_client_check_mouse(
                         }
                     }
                     if !wp.is_null() {
-                        where_ = BORDER;
+                        where_ = where_::Border;
                     }
                 }
 
                 /* Otherwise try inside the pane. */
-                if where_ == NOWHERE {
+                if where_ == where_::Nowhere {
                     wp = window_get_active_at((*(*s).curw).window, px, py);
                     if !wp.is_null() {
-                        where_ = PANE;
+                        where_ = where_::Pane;
                     } else {
                         return KEYC_UNKNOWN;
                     }
                 }
-                if where_ == PANE {
+                if where_ == where_::Pane {
                     log_debug!("mouse {},{} on pane %%{}", x, y, (*wp).id);
-                } else if where_ == BORDER {
+                } else if where_ == where_::Border {
                     log_debug!("mouse on pane %%{} border", (*wp).id);
                 }
                 (*m).wp = (*wp).id as i32;
                 (*m).w = (*(*wp).window).id as i32;
             }
 
-            /* Stop dragging if needed. */
-            if type_ != DRAG && type_ != WHEEL && (*c).tty.mouse_drag_flag != 0 {
+            // Stop dragging if needed.
+            if !matches!(type_, type_::Drag | type_::Wheel) && (*c).tty.mouse_drag_flag != 0 {
                 if let Some(mouse_drag_release) = (*c).tty.mouse_drag_release {
                     mouse_drag_release(c, m);
                 }
@@ -899,101 +897,105 @@ pub unsafe extern "C" fn server_client_check_mouse(
                 match ((*c).tty.mouse_drag_flag - 1) as u32 {
                     crate::MOUSE_BUTTON_1 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_MOUSEDRAGEND1_PANE as u64,
-                            STATUS => keyc::KEYC_MOUSEDRAGEND1_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_MOUSEDRAGEND1_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_MOUSEDRAGEND1_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_MOUSEDRAGEND1_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_MOUSEDRAGEND1_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_MOUSEDRAGEND1_PANE as u64,
+                            where_::Status => keyc::KEYC_MOUSEDRAGEND1_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_MOUSEDRAGEND1_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_MOUSEDRAGEND1_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_MOUSEDRAGEND1_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_MOUSEDRAGEND1_BORDER as u64,
+                            where_::Nowhere => key,
                         }
                     }
                     crate::MOUSE_BUTTON_2 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_MOUSEDRAGEND2_PANE as u64,
-                            STATUS => keyc::KEYC_MOUSEDRAGEND2_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_MOUSEDRAGEND2_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_MOUSEDRAGEND2_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_MOUSEDRAGEND2_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_MOUSEDRAGEND2_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_MOUSEDRAGEND2_PANE as u64,
+                            where_::Status => keyc::KEYC_MOUSEDRAGEND2_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_MOUSEDRAGEND2_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_MOUSEDRAGEND2_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_MOUSEDRAGEND2_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_MOUSEDRAGEND2_BORDER as u64,
+                            where_::Nowhere => key,
                         }
                     }
                     crate::MOUSE_BUTTON_3 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_MOUSEDRAGEND3_PANE as u64,
-                            STATUS => keyc::KEYC_MOUSEDRAGEND3_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_MOUSEDRAGEND3_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_MOUSEDRAGEND3_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_MOUSEDRAGEND3_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_MOUSEDRAGEND3_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_MOUSEDRAGEND3_PANE as u64,
+                            where_::Status => keyc::KEYC_MOUSEDRAGEND3_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_MOUSEDRAGEND3_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_MOUSEDRAGEND3_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_MOUSEDRAGEND3_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_MOUSEDRAGEND3_BORDER as u64,
+                            where_::Nowhere => key,
                         }
                     }
                     crate::MOUSE_BUTTON_6 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_MOUSEDRAGEND6_PANE as u64,
-                            STATUS => keyc::KEYC_MOUSEDRAGEND6_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_MOUSEDRAGEND6_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_MOUSEDRAGEND6_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_MOUSEDRAGEND6_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_MOUSEDRAGEND6_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_MOUSEDRAGEND6_PANE as u64,
+                            where_::Status => keyc::KEYC_MOUSEDRAGEND6_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_MOUSEDRAGEND6_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_MOUSEDRAGEND6_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_MOUSEDRAGEND6_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_MOUSEDRAGEND6_BORDER as u64,
+                            where_::Nowhere => key,
                         }
                     }
                     crate::MOUSE_BUTTON_7 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_MOUSEDRAGEND7_PANE as u64,
-                            STATUS => keyc::KEYC_MOUSEDRAGEND7_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_MOUSEDRAGEND7_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_MOUSEDRAGEND7_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_MOUSEDRAGEND7_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_MOUSEDRAGEND7_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_MOUSEDRAGEND7_PANE as u64,
+                            where_::Status => keyc::KEYC_MOUSEDRAGEND7_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_MOUSEDRAGEND7_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_MOUSEDRAGEND7_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_MOUSEDRAGEND7_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_MOUSEDRAGEND7_BORDER as u64,
+                            where_::Nowhere => key,
                         }
                     }
                     crate::MOUSE_BUTTON_8 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_MOUSEDRAGEND8_PANE as u64,
-                            STATUS => keyc::KEYC_MOUSEDRAGEND8_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_MOUSEDRAGEND8_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_MOUSEDRAGEND8_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_MOUSEDRAGEND8_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_MOUSEDRAGEND8_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_MOUSEDRAGEND8_PANE as u64,
+                            where_::Status => keyc::KEYC_MOUSEDRAGEND8_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_MOUSEDRAGEND8_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_MOUSEDRAGEND8_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_MOUSEDRAGEND8_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_MOUSEDRAGEND8_BORDER as u64,
+                            where_::Nowhere => key,
                         }
                     }
                     crate::MOUSE_BUTTON_9 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_MOUSEDRAGEND9_PANE as u64,
-                            STATUS => keyc::KEYC_MOUSEDRAGEND9_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_MOUSEDRAGEND9_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_MOUSEDRAGEND9_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_MOUSEDRAGEND9_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_MOUSEDRAGEND9_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_MOUSEDRAGEND9_PANE as u64,
+                            where_::Status => keyc::KEYC_MOUSEDRAGEND9_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_MOUSEDRAGEND9_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_MOUSEDRAGEND9_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_MOUSEDRAGEND9_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_MOUSEDRAGEND9_BORDER as u64,
+                            where_::Nowhere => key,
                         }
                     }
                     crate::MOUSE_BUTTON_10 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_MOUSEDRAGEND10_PANE as u64,
-                            STATUS => keyc::KEYC_MOUSEDRAGEND10_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_MOUSEDRAGEND10_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_MOUSEDRAGEND10_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_MOUSEDRAGEND10_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_MOUSEDRAGEND10_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_MOUSEDRAGEND10_PANE as u64,
+                            where_::Status => keyc::KEYC_MOUSEDRAGEND10_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_MOUSEDRAGEND10_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_MOUSEDRAGEND10_STATUS_RIGHT as u64,
+                            where_::StatusDefault => {
+                                keyc::KEYC_MOUSEDRAGEND10_STATUS_DEFAULT as u64
+                            }
+                            where_::Border => keyc::KEYC_MOUSEDRAGEND10_BORDER as u64,
+                            where_::Nowhere => key,
                         }
                     }
                     crate::MOUSE_BUTTON_11 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_MOUSEDRAGEND11_PANE as u64,
-                            STATUS => keyc::KEYC_MOUSEDRAGEND11_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_MOUSEDRAGEND11_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_MOUSEDRAGEND11_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_MOUSEDRAGEND11_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_MOUSEDRAGEND11_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_MOUSEDRAGEND11_PANE as u64,
+                            where_::Status => keyc::KEYC_MOUSEDRAGEND11_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_MOUSEDRAGEND11_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_MOUSEDRAGEND11_STATUS_RIGHT as u64,
+                            where_::StatusDefault => {
+                                keyc::KEYC_MOUSEDRAGEND11_STATUS_DEFAULT as u64
+                            }
+                            where_::Border => keyc::KEYC_MOUSEDRAGEND11_BORDER as u64,
+                            where_::Nowhere => key,
                         }
                     }
                     _ => key = keyc::KEYC_MOUSE as u64,
@@ -1005,120 +1007,156 @@ pub unsafe extern "C" fn server_client_check_mouse(
             // Convert to a key binding.
             key = KEYC_UNKNOWN;
             match type_ {
-                type_::NOTYPE => (),
-                type_::MOVE => {
+                type_::NoType => (),
+                type_::Move => {
                     key = match where_ {
-                        PANE => keyc::KEYC_MOUSEMOVE_PANE as u64,
-                        STATUS => keyc::KEYC_MOUSEMOVE_STATUS as u64,
-                        STATUS_LEFT => keyc::KEYC_MOUSEMOVE_STATUS_LEFT as u64,
-                        STATUS_RIGHT => keyc::KEYC_MOUSEMOVE_STATUS_RIGHT as u64,
-                        STATUS_DEFAULT => keyc::KEYC_MOUSEMOVE_STATUS_DEFAULT as u64,
-                        BORDER => keyc::KEYC_MOUSEMOVE_BORDER as u64,
-                        NOWHERE => key,
+                        where_::Pane => keyc::KEYC_MOUSEMOVE_PANE as u64,
+                        where_::Status => keyc::KEYC_MOUSEMOVE_STATUS as u64,
+                        where_::StatusLeft => keyc::KEYC_MOUSEMOVE_STATUS_LEFT as u64,
+                        where_::StatusRight => keyc::KEYC_MOUSEMOVE_STATUS_RIGHT as u64,
+                        where_::StatusDefault => keyc::KEYC_MOUSEMOVE_STATUS_DEFAULT as u64,
+                        where_::Border => keyc::KEYC_MOUSEMOVE_BORDER as u64,
+                        where_::Nowhere => key,
                     };
                 }
-                type_::DRAG => {
+                type_::Drag => {
                     if (*c).tty.mouse_drag_update.is_some() {
                         key = keyc::KEYC_DRAGGING as u64;
                     } else {
                         match MOUSE_BUTTONS(b) {
                             crate::MOUSE_BUTTON_1 => {
                                 key = match where_ {
-                                    PANE => keyc::KEYC_MOUSEDRAG1_PANE as u64,
-                                    STATUS => keyc::KEYC_MOUSEDRAG1_STATUS as u64,
-                                    STATUS_LEFT => keyc::KEYC_MOUSEDRAG1_STATUS_LEFT as u64,
-                                    STATUS_RIGHT => keyc::KEYC_MOUSEDRAG1_STATUS_RIGHT as u64,
-                                    STATUS_DEFAULT => keyc::KEYC_MOUSEDRAG1_STATUS_DEFAULT as u64,
-                                    BORDER => keyc::KEYC_MOUSEDRAG1_BORDER as u64,
-                                    NOWHERE => key,
+                                    where_::Pane => keyc::KEYC_MOUSEDRAG1_PANE as u64,
+                                    where_::Status => keyc::KEYC_MOUSEDRAG1_STATUS as u64,
+                                    where_::StatusLeft => keyc::KEYC_MOUSEDRAG1_STATUS_LEFT as u64,
+                                    where_::StatusRight => {
+                                        keyc::KEYC_MOUSEDRAG1_STATUS_RIGHT as u64
+                                    }
+                                    where_::StatusDefault => {
+                                        keyc::KEYC_MOUSEDRAG1_STATUS_DEFAULT as u64
+                                    }
+                                    where_::Border => keyc::KEYC_MOUSEDRAG1_BORDER as u64,
+                                    where_::Nowhere => key,
                                 };
                             }
                             crate::MOUSE_BUTTON_2 => {
                                 key = match where_ {
-                                    PANE => keyc::KEYC_MOUSEDRAG2_PANE as u64,
-                                    STATUS => keyc::KEYC_MOUSEDRAG2_STATUS as u64,
-                                    STATUS_LEFT => keyc::KEYC_MOUSEDRAG2_STATUS_LEFT as u64,
-                                    STATUS_RIGHT => keyc::KEYC_MOUSEDRAG2_STATUS_RIGHT as u64,
-                                    STATUS_DEFAULT => keyc::KEYC_MOUSEDRAG2_STATUS_DEFAULT as u64,
-                                    BORDER => keyc::KEYC_MOUSEDRAG2_BORDER as u64,
-                                    NOWHERE => key,
+                                    where_::Pane => keyc::KEYC_MOUSEDRAG2_PANE as u64,
+                                    where_::Status => keyc::KEYC_MOUSEDRAG2_STATUS as u64,
+                                    where_::StatusLeft => keyc::KEYC_MOUSEDRAG2_STATUS_LEFT as u64,
+                                    where_::StatusRight => {
+                                        keyc::KEYC_MOUSEDRAG2_STATUS_RIGHT as u64
+                                    }
+                                    where_::StatusDefault => {
+                                        keyc::KEYC_MOUSEDRAG2_STATUS_DEFAULT as u64
+                                    }
+                                    where_::Border => keyc::KEYC_MOUSEDRAG2_BORDER as u64,
+                                    where_::Nowhere => key,
                                 };
                             }
                             crate::MOUSE_BUTTON_3 => {
                                 key = match where_ {
-                                    PANE => keyc::KEYC_MOUSEDRAG3_PANE as u64,
-                                    STATUS => keyc::KEYC_MOUSEDRAG3_STATUS as u64,
-                                    STATUS_LEFT => keyc::KEYC_MOUSEDRAG3_STATUS_LEFT as u64,
-                                    STATUS_RIGHT => keyc::KEYC_MOUSEDRAG3_STATUS_RIGHT as u64,
-                                    STATUS_DEFAULT => keyc::KEYC_MOUSEDRAG3_STATUS_DEFAULT as u64,
-                                    BORDER => keyc::KEYC_MOUSEDRAG3_BORDER as u64,
-                                    NOWHERE => key,
+                                    where_::Pane => keyc::KEYC_MOUSEDRAG3_PANE as u64,
+                                    where_::Status => keyc::KEYC_MOUSEDRAG3_STATUS as u64,
+                                    where_::StatusLeft => keyc::KEYC_MOUSEDRAG3_STATUS_LEFT as u64,
+                                    where_::StatusRight => {
+                                        keyc::KEYC_MOUSEDRAG3_STATUS_RIGHT as u64
+                                    }
+                                    where_::StatusDefault => {
+                                        keyc::KEYC_MOUSEDRAG3_STATUS_DEFAULT as u64
+                                    }
+                                    where_::Border => keyc::KEYC_MOUSEDRAG3_BORDER as u64,
+                                    where_::Nowhere => key,
                                 };
                             }
                             crate::MOUSE_BUTTON_6 => {
                                 key = match where_ {
-                                    PANE => keyc::KEYC_MOUSEDRAG6_PANE as u64,
-                                    STATUS => keyc::KEYC_MOUSEDRAG6_STATUS as u64,
-                                    STATUS_LEFT => keyc::KEYC_MOUSEDRAG6_STATUS_LEFT as u64,
-                                    STATUS_RIGHT => keyc::KEYC_MOUSEDRAG6_STATUS_RIGHT as u64,
-                                    STATUS_DEFAULT => keyc::KEYC_MOUSEDRAG6_STATUS_DEFAULT as u64,
-                                    BORDER => keyc::KEYC_MOUSEDRAG6_BORDER as u64,
-                                    NOWHERE => key,
+                                    where_::Pane => keyc::KEYC_MOUSEDRAG6_PANE as u64,
+                                    where_::Status => keyc::KEYC_MOUSEDRAG6_STATUS as u64,
+                                    where_::StatusLeft => keyc::KEYC_MOUSEDRAG6_STATUS_LEFT as u64,
+                                    where_::StatusRight => {
+                                        keyc::KEYC_MOUSEDRAG6_STATUS_RIGHT as u64
+                                    }
+                                    where_::StatusDefault => {
+                                        keyc::KEYC_MOUSEDRAG6_STATUS_DEFAULT as u64
+                                    }
+                                    where_::Border => keyc::KEYC_MOUSEDRAG6_BORDER as u64,
+                                    where_::Nowhere => key,
                                 };
                             }
                             crate::MOUSE_BUTTON_7 => {
                                 key = match where_ {
-                                    PANE => keyc::KEYC_MOUSEDRAG7_PANE as u64,
-                                    STATUS => keyc::KEYC_MOUSEDRAG7_STATUS as u64,
-                                    STATUS_LEFT => keyc::KEYC_MOUSEDRAG7_STATUS_LEFT as u64,
-                                    STATUS_RIGHT => keyc::KEYC_MOUSEDRAG7_STATUS_RIGHT as u64,
-                                    STATUS_DEFAULT => keyc::KEYC_MOUSEDRAG7_STATUS_DEFAULT as u64,
-                                    BORDER => keyc::KEYC_MOUSEDRAG7_BORDER as u64,
-                                    NOWHERE => key,
+                                    where_::Pane => keyc::KEYC_MOUSEDRAG7_PANE as u64,
+                                    where_::Status => keyc::KEYC_MOUSEDRAG7_STATUS as u64,
+                                    where_::StatusLeft => keyc::KEYC_MOUSEDRAG7_STATUS_LEFT as u64,
+                                    where_::StatusRight => {
+                                        keyc::KEYC_MOUSEDRAG7_STATUS_RIGHT as u64
+                                    }
+                                    where_::StatusDefault => {
+                                        keyc::KEYC_MOUSEDRAG7_STATUS_DEFAULT as u64
+                                    }
+                                    where_::Border => keyc::KEYC_MOUSEDRAG7_BORDER as u64,
+                                    where_::Nowhere => key,
                                 };
                             }
                             crate::MOUSE_BUTTON_8 => {
                                 key = match where_ {
-                                    PANE => keyc::KEYC_MOUSEDRAG8_PANE as u64,
-                                    STATUS => keyc::KEYC_MOUSEDRAG8_STATUS as u64,
-                                    STATUS_LEFT => keyc::KEYC_MOUSEDRAG8_STATUS_LEFT as u64,
-                                    STATUS_RIGHT => keyc::KEYC_MOUSEDRAG8_STATUS_RIGHT as u64,
-                                    STATUS_DEFAULT => keyc::KEYC_MOUSEDRAG8_STATUS_DEFAULT as u64,
-                                    BORDER => keyc::KEYC_MOUSEDRAG8_BORDER as u64,
-                                    NOWHERE => key,
+                                    where_::Pane => keyc::KEYC_MOUSEDRAG8_PANE as u64,
+                                    where_::Status => keyc::KEYC_MOUSEDRAG8_STATUS as u64,
+                                    where_::StatusLeft => keyc::KEYC_MOUSEDRAG8_STATUS_LEFT as u64,
+                                    where_::StatusRight => {
+                                        keyc::KEYC_MOUSEDRAG8_STATUS_RIGHT as u64
+                                    }
+                                    where_::StatusDefault => {
+                                        keyc::KEYC_MOUSEDRAG8_STATUS_DEFAULT as u64
+                                    }
+                                    where_::Border => keyc::KEYC_MOUSEDRAG8_BORDER as u64,
+                                    where_::Nowhere => key,
                                 };
                             }
                             crate::MOUSE_BUTTON_9 => {
                                 key = match where_ {
-                                    PANE => keyc::KEYC_MOUSEDRAG9_PANE as u64,
-                                    STATUS => keyc::KEYC_MOUSEDRAG9_STATUS as u64,
-                                    STATUS_LEFT => keyc::KEYC_MOUSEDRAG9_STATUS_LEFT as u64,
-                                    STATUS_RIGHT => keyc::KEYC_MOUSEDRAG9_STATUS_RIGHT as u64,
-                                    STATUS_DEFAULT => keyc::KEYC_MOUSEDRAG9_STATUS_DEFAULT as u64,
-                                    BORDER => keyc::KEYC_MOUSEDRAG9_BORDER as u64,
-                                    NOWHERE => key,
+                                    where_::Pane => keyc::KEYC_MOUSEDRAG9_PANE as u64,
+                                    where_::Status => keyc::KEYC_MOUSEDRAG9_STATUS as u64,
+                                    where_::StatusLeft => keyc::KEYC_MOUSEDRAG9_STATUS_LEFT as u64,
+                                    where_::StatusRight => {
+                                        keyc::KEYC_MOUSEDRAG9_STATUS_RIGHT as u64
+                                    }
+                                    where_::StatusDefault => {
+                                        keyc::KEYC_MOUSEDRAG9_STATUS_DEFAULT as u64
+                                    }
+                                    where_::Border => keyc::KEYC_MOUSEDRAG9_BORDER as u64,
+                                    where_::Nowhere => key,
                                 };
                             }
                             crate::MOUSE_BUTTON_10 => {
                                 key = match where_ {
-                                    PANE => keyc::KEYC_MOUSEDRAG10_PANE as u64,
-                                    STATUS => keyc::KEYC_MOUSEDRAG10_STATUS as u64,
-                                    STATUS_LEFT => keyc::KEYC_MOUSEDRAG10_STATUS_LEFT as u64,
-                                    STATUS_RIGHT => keyc::KEYC_MOUSEDRAG10_STATUS_RIGHT as u64,
-                                    STATUS_DEFAULT => keyc::KEYC_MOUSEDRAG10_STATUS_DEFAULT as u64,
-                                    BORDER => keyc::KEYC_MOUSEDRAG10_BORDER as u64,
-                                    NOWHERE => key,
+                                    where_::Pane => keyc::KEYC_MOUSEDRAG10_PANE as u64,
+                                    where_::Status => keyc::KEYC_MOUSEDRAG10_STATUS as u64,
+                                    where_::StatusLeft => keyc::KEYC_MOUSEDRAG10_STATUS_LEFT as u64,
+                                    where_::StatusRight => {
+                                        keyc::KEYC_MOUSEDRAG10_STATUS_RIGHT as u64
+                                    }
+                                    where_::StatusDefault => {
+                                        keyc::KEYC_MOUSEDRAG10_STATUS_DEFAULT as u64
+                                    }
+                                    where_::Border => keyc::KEYC_MOUSEDRAG10_BORDER as u64,
+                                    where_::Nowhere => key,
                                 };
                             }
                             crate::MOUSE_BUTTON_11 => {
                                 key = match where_ {
-                                    PANE => keyc::KEYC_MOUSEDRAG11_PANE as u64,
-                                    STATUS => keyc::KEYC_MOUSEDRAG11_STATUS as u64,
-                                    STATUS_LEFT => keyc::KEYC_MOUSEDRAG11_STATUS_LEFT as u64,
-                                    STATUS_RIGHT => keyc::KEYC_MOUSEDRAG11_STATUS_RIGHT as u64,
-                                    STATUS_DEFAULT => keyc::KEYC_MOUSEDRAG11_STATUS_DEFAULT as u64,
-                                    BORDER => keyc::KEYC_MOUSEDRAG11_BORDER as u64,
-                                    NOWHERE => key,
+                                    where_::Pane => keyc::KEYC_MOUSEDRAG11_PANE as u64,
+                                    where_::Status => keyc::KEYC_MOUSEDRAG11_STATUS as u64,
+                                    where_::StatusLeft => keyc::KEYC_MOUSEDRAG11_STATUS_LEFT as u64,
+                                    where_::StatusRight => {
+                                        keyc::KEYC_MOUSEDRAG11_STATUS_RIGHT as u64
+                                    }
+                                    where_::StatusDefault => {
+                                        keyc::KEYC_MOUSEDRAG11_STATUS_DEFAULT as u64
+                                    }
+                                    where_::Border => keyc::KEYC_MOUSEDRAG11_BORDER as u64,
+                                    where_::Nowhere => key,
                                 };
                             }
                             _ => (),
@@ -1131,538 +1169,538 @@ pub unsafe extern "C" fn server_client_check_mouse(
                      */
                     (*c).tty.mouse_drag_flag = MOUSE_BUTTONS(b) as i32 + 1;
                 }
-                type_::WHEEL => {
+                type_::Wheel => {
                     if MOUSE_BUTTONS(b) == MOUSE_WHEEL_UP {
                         key = match where_ {
-                            PANE => keyc::KEYC_WHEELUP_PANE as u64,
-                            STATUS => keyc::KEYC_WHEELUP_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_WHEELUP_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_WHEELUP_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_WHEELUP_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_WHEELUP_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_WHEELUP_PANE as u64,
+                            where_::Status => keyc::KEYC_WHEELUP_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_WHEELUP_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_WHEELUP_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_WHEELUP_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_WHEELUP_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     } else {
                         key = match where_ {
-                            PANE => keyc::KEYC_WHEELDOWN_PANE as u64,
-                            STATUS => keyc::KEYC_WHEELDOWN_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_WHEELDOWN_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_WHEELDOWN_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_WHEELDOWN_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_WHEELDOWN_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_WHEELDOWN_PANE as u64,
+                            where_::Status => keyc::KEYC_WHEELDOWN_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_WHEELDOWN_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_WHEELDOWN_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_WHEELDOWN_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_WHEELDOWN_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                 }
-                type_::UP => {
+                type_::Up => {
                     match MOUSE_BUTTONS(b) {
                         crate::MOUSE_BUTTON_1 => {
                             key = match where_ {
-                                PANE => keyc::KEYC_MOUSEUP1_PANE as u64,
-                                STATUS => keyc::KEYC_MOUSEUP1_STATUS as u64,
-                                STATUS_LEFT => keyc::KEYC_MOUSEUP1_STATUS_LEFT as u64,
-                                STATUS_RIGHT => keyc::KEYC_MOUSEUP1_STATUS_RIGHT as u64,
-                                STATUS_DEFAULT => keyc::KEYC_MOUSEUP1_STATUS_DEFAULT as u64,
-                                BORDER => keyc::KEYC_MOUSEUP1_BORDER as u64,
-                                NOWHERE => key,
+                                where_::Pane => keyc::KEYC_MOUSEUP1_PANE as u64,
+                                where_::Status => keyc::KEYC_MOUSEUP1_STATUS as u64,
+                                where_::StatusLeft => keyc::KEYC_MOUSEUP1_STATUS_LEFT as u64,
+                                where_::StatusRight => keyc::KEYC_MOUSEUP1_STATUS_RIGHT as u64,
+                                where_::StatusDefault => keyc::KEYC_MOUSEUP1_STATUS_DEFAULT as u64,
+                                where_::Border => keyc::KEYC_MOUSEUP1_BORDER as u64,
+                                where_::Nowhere => key,
                             };
                         }
                         crate::MOUSE_BUTTON_2 => {
                             key = match where_ {
-                                PANE => keyc::KEYC_MOUSEUP2_PANE as u64,
-                                STATUS => keyc::KEYC_MOUSEUP2_STATUS as u64,
-                                STATUS_LEFT => keyc::KEYC_MOUSEUP2_STATUS_LEFT as u64,
-                                STATUS_RIGHT => keyc::KEYC_MOUSEUP2_STATUS_RIGHT as u64,
-                                STATUS_DEFAULT => keyc::KEYC_MOUSEUP2_STATUS_DEFAULT as u64,
-                                BORDER => keyc::KEYC_MOUSEUP2_BORDER as u64,
-                                NOWHERE => key,
+                                where_::Pane => keyc::KEYC_MOUSEUP2_PANE as u64,
+                                where_::Status => keyc::KEYC_MOUSEUP2_STATUS as u64,
+                                where_::StatusLeft => keyc::KEYC_MOUSEUP2_STATUS_LEFT as u64,
+                                where_::StatusRight => keyc::KEYC_MOUSEUP2_STATUS_RIGHT as u64,
+                                where_::StatusDefault => keyc::KEYC_MOUSEUP2_STATUS_DEFAULT as u64,
+                                where_::Border => keyc::KEYC_MOUSEUP2_BORDER as u64,
+                                where_::Nowhere => key,
                             };
                         }
                         crate::MOUSE_BUTTON_3 => {
                             key = match where_ {
-                                PANE => keyc::KEYC_MOUSEUP3_PANE as u64,
-                                STATUS => keyc::KEYC_MOUSEUP3_STATUS as u64,
-                                STATUS_LEFT => keyc::KEYC_MOUSEUP3_STATUS_LEFT as u64,
-                                STATUS_RIGHT => keyc::KEYC_MOUSEUP3_STATUS_RIGHT as u64,
-                                STATUS_DEFAULT => keyc::KEYC_MOUSEUP3_STATUS_DEFAULT as u64,
-                                BORDER => keyc::KEYC_MOUSEUP3_BORDER as u64,
-                                NOWHERE => key,
+                                where_::Pane => keyc::KEYC_MOUSEUP3_PANE as u64,
+                                where_::Status => keyc::KEYC_MOUSEUP3_STATUS as u64,
+                                where_::StatusLeft => keyc::KEYC_MOUSEUP3_STATUS_LEFT as u64,
+                                where_::StatusRight => keyc::KEYC_MOUSEUP3_STATUS_RIGHT as u64,
+                                where_::StatusDefault => keyc::KEYC_MOUSEUP3_STATUS_DEFAULT as u64,
+                                where_::Border => keyc::KEYC_MOUSEUP3_BORDER as u64,
+                                where_::Nowhere => key,
                             };
                         }
                         crate::MOUSE_BUTTON_6 => {
                             key = match where_ {
-                                PANE => keyc::KEYC_MOUSEUP6_PANE as u64,
-                                STATUS => keyc::KEYC_MOUSEUP6_STATUS as u64,
-                                STATUS_LEFT => keyc::KEYC_MOUSEUP6_STATUS_LEFT as u64,
-                                STATUS_RIGHT => keyc::KEYC_MOUSEUP6_STATUS_RIGHT as u64,
-                                STATUS_DEFAULT => keyc::KEYC_MOUSEUP6_STATUS_DEFAULT as u64,
-                                BORDER => keyc::KEYC_MOUSEUP6_BORDER as u64,
-                                NOWHERE => key,
+                                where_::Pane => keyc::KEYC_MOUSEUP6_PANE as u64,
+                                where_::Status => keyc::KEYC_MOUSEUP6_STATUS as u64,
+                                where_::StatusLeft => keyc::KEYC_MOUSEUP6_STATUS_LEFT as u64,
+                                where_::StatusRight => keyc::KEYC_MOUSEUP6_STATUS_RIGHT as u64,
+                                where_::StatusDefault => keyc::KEYC_MOUSEUP6_STATUS_DEFAULT as u64,
+                                where_::Border => keyc::KEYC_MOUSEUP6_BORDER as u64,
+                                where_::Nowhere => key,
                             };
                         }
                         crate::MOUSE_BUTTON_7 => {
                             key = match where_ {
-                                PANE => keyc::KEYC_MOUSEUP7_PANE as u64,
-                                STATUS => keyc::KEYC_MOUSEUP7_STATUS as u64,
-                                STATUS_LEFT => keyc::KEYC_MOUSEUP7_STATUS_LEFT as u64,
-                                STATUS_RIGHT => keyc::KEYC_MOUSEUP7_STATUS_RIGHT as u64,
-                                STATUS_DEFAULT => keyc::KEYC_MOUSEUP7_STATUS_DEFAULT as u64,
-                                BORDER => keyc::KEYC_MOUSEUP7_BORDER as u64,
-                                NOWHERE => key,
+                                where_::Pane => keyc::KEYC_MOUSEUP7_PANE as u64,
+                                where_::Status => keyc::KEYC_MOUSEUP7_STATUS as u64,
+                                where_::StatusLeft => keyc::KEYC_MOUSEUP7_STATUS_LEFT as u64,
+                                where_::StatusRight => keyc::KEYC_MOUSEUP7_STATUS_RIGHT as u64,
+                                where_::StatusDefault => keyc::KEYC_MOUSEUP7_STATUS_DEFAULT as u64,
+                                where_::Border => keyc::KEYC_MOUSEUP7_BORDER as u64,
+                                where_::Nowhere => key,
                             };
                         }
                         crate::MOUSE_BUTTON_8 => {
                             key = match where_ {
-                                PANE => keyc::KEYC_MOUSEUP8_PANE as u64,
-                                STATUS => keyc::KEYC_MOUSEUP8_STATUS as u64,
-                                STATUS_LEFT => keyc::KEYC_MOUSEUP8_STATUS_LEFT as u64,
-                                STATUS_RIGHT => keyc::KEYC_MOUSEUP8_STATUS_RIGHT as u64,
-                                STATUS_DEFAULT => keyc::KEYC_MOUSEUP8_STATUS_DEFAULT as u64,
-                                BORDER => keyc::KEYC_MOUSEUP8_BORDER as u64,
-                                NOWHERE => key,
+                                where_::Pane => keyc::KEYC_MOUSEUP8_PANE as u64,
+                                where_::Status => keyc::KEYC_MOUSEUP8_STATUS as u64,
+                                where_::StatusLeft => keyc::KEYC_MOUSEUP8_STATUS_LEFT as u64,
+                                where_::StatusRight => keyc::KEYC_MOUSEUP8_STATUS_RIGHT as u64,
+                                where_::StatusDefault => keyc::KEYC_MOUSEUP8_STATUS_DEFAULT as u64,
+                                where_::Border => keyc::KEYC_MOUSEUP8_BORDER as u64,
+                                where_::Nowhere => key,
                             };
                         }
                         crate::MOUSE_BUTTON_9 => {
                             key = match where_ {
-                                PANE => keyc::KEYC_MOUSEUP9_PANE as u64,
-                                STATUS => keyc::KEYC_MOUSEUP9_STATUS as u64,
-                                STATUS_LEFT => keyc::KEYC_MOUSEUP9_STATUS_LEFT as u64,
-                                STATUS_RIGHT => keyc::KEYC_MOUSEUP9_STATUS_RIGHT as u64,
-                                STATUS_DEFAULT => keyc::KEYC_MOUSEUP9_STATUS_DEFAULT as u64,
-                                BORDER => keyc::KEYC_MOUSEUP9_BORDER as u64,
-                                NOWHERE => key,
+                                where_::Pane => keyc::KEYC_MOUSEUP9_PANE as u64,
+                                where_::Status => keyc::KEYC_MOUSEUP9_STATUS as u64,
+                                where_::StatusLeft => keyc::KEYC_MOUSEUP9_STATUS_LEFT as u64,
+                                where_::StatusRight => keyc::KEYC_MOUSEUP9_STATUS_RIGHT as u64,
+                                where_::StatusDefault => keyc::KEYC_MOUSEUP9_STATUS_DEFAULT as u64,
+                                where_::Border => keyc::KEYC_MOUSEUP9_BORDER as u64,
+                                where_::Nowhere => key,
                             };
                         }
                         crate::MOUSE_BUTTON_10 => {
                             // TODO why is this mouseup1 and not mouse up 10, is that a typo?
                             key = match where_ {
-                                PANE => keyc::KEYC_MOUSEUP1_PANE as u64,
-                                STATUS => keyc::KEYC_MOUSEUP1_STATUS as u64,
-                                STATUS_LEFT => keyc::KEYC_MOUSEUP1_STATUS_LEFT as u64,
-                                STATUS_RIGHT => keyc::KEYC_MOUSEUP1_STATUS_RIGHT as u64,
-                                STATUS_DEFAULT => keyc::KEYC_MOUSEUP1_STATUS_DEFAULT as u64,
-                                BORDER => keyc::KEYC_MOUSEUP1_BORDER as u64,
-                                NOWHERE => key,
+                                where_::Pane => keyc::KEYC_MOUSEUP1_PANE as u64,
+                                where_::Status => keyc::KEYC_MOUSEUP1_STATUS as u64,
+                                where_::StatusLeft => keyc::KEYC_MOUSEUP1_STATUS_LEFT as u64,
+                                where_::StatusRight => keyc::KEYC_MOUSEUP1_STATUS_RIGHT as u64,
+                                where_::StatusDefault => keyc::KEYC_MOUSEUP1_STATUS_DEFAULT as u64,
+                                where_::Border => keyc::KEYC_MOUSEUP1_BORDER as u64,
+                                where_::Nowhere => key,
                             };
                         }
                         crate::MOUSE_BUTTON_11 => {
                             key = match where_ {
-                                PANE => keyc::KEYC_MOUSEUP11_PANE as u64,
-                                STATUS => keyc::KEYC_MOUSEUP11_STATUS as u64,
-                                STATUS_LEFT => keyc::KEYC_MOUSEUP11_STATUS_LEFT as u64,
-                                STATUS_RIGHT => keyc::KEYC_MOUSEUP11_STATUS_RIGHT as u64,
-                                STATUS_DEFAULT => keyc::KEYC_MOUSEUP11_STATUS_DEFAULT as u64,
-                                BORDER => keyc::KEYC_MOUSEUP11_BORDER as u64,
-                                NOWHERE => key,
+                                where_::Pane => keyc::KEYC_MOUSEUP11_PANE as u64,
+                                where_::Status => keyc::KEYC_MOUSEUP11_STATUS as u64,
+                                where_::StatusLeft => keyc::KEYC_MOUSEUP11_STATUS_LEFT as u64,
+                                where_::StatusRight => keyc::KEYC_MOUSEUP11_STATUS_RIGHT as u64,
+                                where_::StatusDefault => keyc::KEYC_MOUSEUP11_STATUS_DEFAULT as u64,
+                                where_::Border => keyc::KEYC_MOUSEUP11_BORDER as u64,
+                                where_::Nowhere => key,
                             };
                         }
                         _ => (),
                     }
                 }
-                type_::DOWN => match MOUSE_BUTTONS(b) {
+                type_::Down => match MOUSE_BUTTONS(b) {
                     crate::MOUSE_BUTTON_1 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_MOUSEDOWN1_PANE as u64,
-                            STATUS => keyc::KEYC_MOUSEDOWN1_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_MOUSEDOWN1_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_MOUSEDOWN1_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_MOUSEDOWN1_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_MOUSEDOWN1_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_MOUSEDOWN1_PANE as u64,
+                            where_::Status => keyc::KEYC_MOUSEDOWN1_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_MOUSEDOWN1_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_MOUSEDOWN1_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_MOUSEDOWN1_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_MOUSEDOWN1_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_2 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_MOUSEDOWN2_PANE as u64,
-                            STATUS => keyc::KEYC_MOUSEDOWN2_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_MOUSEDOWN2_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_MOUSEDOWN2_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_MOUSEDOWN2_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_MOUSEDOWN2_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_MOUSEDOWN2_PANE as u64,
+                            where_::Status => keyc::KEYC_MOUSEDOWN2_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_MOUSEDOWN2_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_MOUSEDOWN2_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_MOUSEDOWN2_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_MOUSEDOWN2_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_3 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_MOUSEDOWN3_PANE as u64,
-                            STATUS => keyc::KEYC_MOUSEDOWN3_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_MOUSEDOWN3_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_MOUSEDOWN3_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_MOUSEDOWN3_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_MOUSEDOWN3_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_MOUSEDOWN3_PANE as u64,
+                            where_::Status => keyc::KEYC_MOUSEDOWN3_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_MOUSEDOWN3_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_MOUSEDOWN3_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_MOUSEDOWN3_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_MOUSEDOWN3_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_6 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_MOUSEDOWN6_PANE as u64,
-                            STATUS => keyc::KEYC_MOUSEDOWN6_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_MOUSEDOWN6_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_MOUSEDOWN6_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_MOUSEDOWN6_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_MOUSEDOWN6_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_MOUSEDOWN6_PANE as u64,
+                            where_::Status => keyc::KEYC_MOUSEDOWN6_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_MOUSEDOWN6_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_MOUSEDOWN6_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_MOUSEDOWN6_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_MOUSEDOWN6_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_7 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_MOUSEDOWN7_PANE as u64,
-                            STATUS => keyc::KEYC_MOUSEDOWN7_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_MOUSEDOWN7_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_MOUSEDOWN7_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_MOUSEDOWN7_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_MOUSEDOWN7_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_MOUSEDOWN7_PANE as u64,
+                            where_::Status => keyc::KEYC_MOUSEDOWN7_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_MOUSEDOWN7_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_MOUSEDOWN7_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_MOUSEDOWN7_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_MOUSEDOWN7_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_8 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_MOUSEDOWN8_PANE as u64,
-                            STATUS => keyc::KEYC_MOUSEDOWN8_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_MOUSEDOWN8_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_MOUSEDOWN8_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_MOUSEDOWN8_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_MOUSEDOWN8_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_MOUSEDOWN8_PANE as u64,
+                            where_::Status => keyc::KEYC_MOUSEDOWN8_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_MOUSEDOWN8_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_MOUSEDOWN8_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_MOUSEDOWN8_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_MOUSEDOWN8_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_9 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_MOUSEDOWN9_PANE as u64,
-                            STATUS => keyc::KEYC_MOUSEDOWN9_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_MOUSEDOWN9_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_MOUSEDOWN9_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_MOUSEDOWN9_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_MOUSEDOWN9_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_MOUSEDOWN9_PANE as u64,
+                            where_::Status => keyc::KEYC_MOUSEDOWN9_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_MOUSEDOWN9_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_MOUSEDOWN9_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_MOUSEDOWN9_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_MOUSEDOWN9_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_10 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_MOUSEDOWN10_PANE as u64,
-                            STATUS => keyc::KEYC_MOUSEDOWN10_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_MOUSEDOWN10_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_MOUSEDOWN10_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_MOUSEDOWN10_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_MOUSEDOWN10_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_MOUSEDOWN10_PANE as u64,
+                            where_::Status => keyc::KEYC_MOUSEDOWN10_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_MOUSEDOWN10_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_MOUSEDOWN10_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_MOUSEDOWN10_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_MOUSEDOWN10_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_11 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_MOUSEDOWN11_PANE as u64,
-                            STATUS => keyc::KEYC_MOUSEDOWN11_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_MOUSEDOWN11_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_MOUSEDOWN11_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_MOUSEDOWN11_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_MOUSEDOWN11_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_MOUSEDOWN11_PANE as u64,
+                            where_::Status => keyc::KEYC_MOUSEDOWN11_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_MOUSEDOWN11_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_MOUSEDOWN11_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_MOUSEDOWN11_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_MOUSEDOWN11_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     _ => (),
                 },
-                type_::SECOND => match MOUSE_BUTTONS(b) {
+                type_::Second => match MOUSE_BUTTONS(b) {
                     crate::MOUSE_BUTTON_1 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_SECONDCLICK1_PANE as u64,
-                            STATUS => keyc::KEYC_SECONDCLICK1_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_SECONDCLICK1_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_SECONDCLICK1_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_SECONDCLICK1_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_SECONDCLICK1_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_SECONDCLICK1_PANE as u64,
+                            where_::Status => keyc::KEYC_SECONDCLICK1_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_SECONDCLICK1_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_SECONDCLICK1_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_SECONDCLICK1_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_SECONDCLICK1_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_2 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_SECONDCLICK2_PANE as u64,
-                            STATUS => keyc::KEYC_SECONDCLICK2_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_SECONDCLICK2_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_SECONDCLICK2_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_SECONDCLICK2_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_SECONDCLICK2_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_SECONDCLICK2_PANE as u64,
+                            where_::Status => keyc::KEYC_SECONDCLICK2_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_SECONDCLICK2_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_SECONDCLICK2_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_SECONDCLICK2_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_SECONDCLICK2_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_3 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_SECONDCLICK3_PANE as u64,
-                            STATUS => keyc::KEYC_SECONDCLICK3_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_SECONDCLICK3_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_SECONDCLICK3_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_SECONDCLICK3_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_SECONDCLICK3_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_SECONDCLICK3_PANE as u64,
+                            where_::Status => keyc::KEYC_SECONDCLICK3_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_SECONDCLICK3_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_SECONDCLICK3_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_SECONDCLICK3_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_SECONDCLICK3_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_6 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_SECONDCLICK6_PANE as u64,
-                            STATUS => keyc::KEYC_SECONDCLICK6_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_SECONDCLICK6_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_SECONDCLICK6_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_SECONDCLICK6_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_SECONDCLICK6_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_SECONDCLICK6_PANE as u64,
+                            where_::Status => keyc::KEYC_SECONDCLICK6_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_SECONDCLICK6_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_SECONDCLICK6_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_SECONDCLICK6_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_SECONDCLICK6_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_7 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_SECONDCLICK7_PANE as u64,
-                            STATUS => keyc::KEYC_SECONDCLICK7_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_SECONDCLICK7_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_SECONDCLICK7_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_SECONDCLICK7_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_SECONDCLICK7_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_SECONDCLICK7_PANE as u64,
+                            where_::Status => keyc::KEYC_SECONDCLICK7_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_SECONDCLICK7_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_SECONDCLICK7_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_SECONDCLICK7_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_SECONDCLICK7_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_8 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_SECONDCLICK8_PANE as u64,
-                            STATUS => keyc::KEYC_SECONDCLICK8_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_SECONDCLICK8_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_SECONDCLICK8_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_SECONDCLICK8_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_SECONDCLICK8_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_SECONDCLICK8_PANE as u64,
+                            where_::Status => keyc::KEYC_SECONDCLICK8_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_SECONDCLICK8_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_SECONDCLICK8_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_SECONDCLICK8_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_SECONDCLICK8_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_9 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_SECONDCLICK9_PANE as u64,
-                            STATUS => keyc::KEYC_SECONDCLICK9_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_SECONDCLICK9_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_SECONDCLICK9_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_SECONDCLICK9_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_SECONDCLICK9_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_SECONDCLICK9_PANE as u64,
+                            where_::Status => keyc::KEYC_SECONDCLICK9_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_SECONDCLICK9_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_SECONDCLICK9_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_SECONDCLICK9_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_SECONDCLICK9_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_10 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_SECONDCLICK10_PANE as u64,
-                            STATUS => keyc::KEYC_SECONDCLICK10_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_SECONDCLICK10_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_SECONDCLICK10_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_SECONDCLICK10_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_SECONDCLICK10_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_SECONDCLICK10_PANE as u64,
+                            where_::Status => keyc::KEYC_SECONDCLICK10_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_SECONDCLICK10_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_SECONDCLICK10_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_SECONDCLICK10_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_SECONDCLICK10_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_11 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_SECONDCLICK11_PANE as u64,
-                            STATUS => keyc::KEYC_SECONDCLICK11_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_SECONDCLICK11_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_SECONDCLICK11_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_SECONDCLICK11_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_SECONDCLICK11_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_SECONDCLICK11_PANE as u64,
+                            where_::Status => keyc::KEYC_SECONDCLICK11_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_SECONDCLICK11_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_SECONDCLICK11_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_SECONDCLICK11_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_SECONDCLICK11_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     _ => (),
                 },
-                type_::DOUBLE => match MOUSE_BUTTONS(b) {
+                type_::Double => match MOUSE_BUTTONS(b) {
                     crate::MOUSE_BUTTON_1 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_DOUBLECLICK1_PANE as u64,
-                            STATUS => keyc::KEYC_DOUBLECLICK1_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_DOUBLECLICK1_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_DOUBLECLICK1_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_DOUBLECLICK1_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_DOUBLECLICK1_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_DOUBLECLICK1_PANE as u64,
+                            where_::Status => keyc::KEYC_DOUBLECLICK1_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_DOUBLECLICK1_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_DOUBLECLICK1_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_DOUBLECLICK1_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_DOUBLECLICK1_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_2 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_DOUBLECLICK2_PANE as u64,
-                            STATUS => keyc::KEYC_DOUBLECLICK2_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_DOUBLECLICK2_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_DOUBLECLICK2_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_DOUBLECLICK2_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_DOUBLECLICK2_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_DOUBLECLICK2_PANE as u64,
+                            where_::Status => keyc::KEYC_DOUBLECLICK2_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_DOUBLECLICK2_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_DOUBLECLICK2_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_DOUBLECLICK2_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_DOUBLECLICK2_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_3 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_DOUBLECLICK3_PANE as u64,
-                            STATUS => keyc::KEYC_DOUBLECLICK3_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_DOUBLECLICK3_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_DOUBLECLICK3_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_DOUBLECLICK3_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_DOUBLECLICK3_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_DOUBLECLICK3_PANE as u64,
+                            where_::Status => keyc::KEYC_DOUBLECLICK3_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_DOUBLECLICK3_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_DOUBLECLICK3_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_DOUBLECLICK3_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_DOUBLECLICK3_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_6 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_DOUBLECLICK6_PANE as u64,
-                            STATUS => keyc::KEYC_DOUBLECLICK6_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_DOUBLECLICK6_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_DOUBLECLICK6_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_DOUBLECLICK6_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_DOUBLECLICK6_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_DOUBLECLICK6_PANE as u64,
+                            where_::Status => keyc::KEYC_DOUBLECLICK6_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_DOUBLECLICK6_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_DOUBLECLICK6_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_DOUBLECLICK6_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_DOUBLECLICK6_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_7 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_DOUBLECLICK7_PANE as u64,
-                            STATUS => keyc::KEYC_DOUBLECLICK7_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_DOUBLECLICK7_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_DOUBLECLICK7_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_DOUBLECLICK7_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_DOUBLECLICK7_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_DOUBLECLICK7_PANE as u64,
+                            where_::Status => keyc::KEYC_DOUBLECLICK7_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_DOUBLECLICK7_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_DOUBLECLICK7_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_DOUBLECLICK7_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_DOUBLECLICK7_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_8 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_DOUBLECLICK8_PANE as u64,
-                            STATUS => keyc::KEYC_DOUBLECLICK8_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_DOUBLECLICK8_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_DOUBLECLICK8_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_DOUBLECLICK8_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_DOUBLECLICK8_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_DOUBLECLICK8_PANE as u64,
+                            where_::Status => keyc::KEYC_DOUBLECLICK8_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_DOUBLECLICK8_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_DOUBLECLICK8_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_DOUBLECLICK8_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_DOUBLECLICK8_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_9 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_DOUBLECLICK9_PANE as u64,
-                            STATUS => keyc::KEYC_DOUBLECLICK9_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_DOUBLECLICK9_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_DOUBLECLICK9_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_DOUBLECLICK9_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_DOUBLECLICK9_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_DOUBLECLICK9_PANE as u64,
+                            where_::Status => keyc::KEYC_DOUBLECLICK9_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_DOUBLECLICK9_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_DOUBLECLICK9_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_DOUBLECLICK9_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_DOUBLECLICK9_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_10 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_DOUBLECLICK10_PANE as u64,
-                            STATUS => keyc::KEYC_DOUBLECLICK10_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_DOUBLECLICK10_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_DOUBLECLICK10_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_DOUBLECLICK10_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_DOUBLECLICK10_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_DOUBLECLICK10_PANE as u64,
+                            where_::Status => keyc::KEYC_DOUBLECLICK10_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_DOUBLECLICK10_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_DOUBLECLICK10_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_DOUBLECLICK10_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_DOUBLECLICK10_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_11 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_DOUBLECLICK11_PANE as u64,
-                            STATUS => keyc::KEYC_DOUBLECLICK11_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_DOUBLECLICK11_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_DOUBLECLICK11_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_DOUBLECLICK11_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_DOUBLECLICK11_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_DOUBLECLICK11_PANE as u64,
+                            where_::Status => keyc::KEYC_DOUBLECLICK11_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_DOUBLECLICK11_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_DOUBLECLICK11_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_DOUBLECLICK11_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_DOUBLECLICK11_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     _ => (),
                 },
-                type_::TRIPLE => match MOUSE_BUTTONS(b) {
+                type_::Triple => match MOUSE_BUTTONS(b) {
                     crate::MOUSE_BUTTON_1 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_TRIPLECLICK1_PANE as u64,
-                            STATUS => keyc::KEYC_TRIPLECLICK1_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_TRIPLECLICK1_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_TRIPLECLICK1_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_TRIPLECLICK1_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_TRIPLECLICK1_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_TRIPLECLICK1_PANE as u64,
+                            where_::Status => keyc::KEYC_TRIPLECLICK1_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_TRIPLECLICK1_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_TRIPLECLICK1_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_TRIPLECLICK1_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_TRIPLECLICK1_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_2 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_TRIPLECLICK2_PANE as u64,
-                            STATUS => keyc::KEYC_TRIPLECLICK2_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_TRIPLECLICK2_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_TRIPLECLICK2_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_TRIPLECLICK2_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_TRIPLECLICK2_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_TRIPLECLICK2_PANE as u64,
+                            where_::Status => keyc::KEYC_TRIPLECLICK2_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_TRIPLECLICK2_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_TRIPLECLICK2_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_TRIPLECLICK2_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_TRIPLECLICK2_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_3 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_TRIPLECLICK3_PANE as u64,
-                            STATUS => keyc::KEYC_TRIPLECLICK3_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_TRIPLECLICK3_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_TRIPLECLICK3_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_TRIPLECLICK3_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_TRIPLECLICK3_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_TRIPLECLICK3_PANE as u64,
+                            where_::Status => keyc::KEYC_TRIPLECLICK3_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_TRIPLECLICK3_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_TRIPLECLICK3_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_TRIPLECLICK3_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_TRIPLECLICK3_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_6 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_TRIPLECLICK6_PANE as u64,
-                            STATUS => keyc::KEYC_TRIPLECLICK6_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_TRIPLECLICK6_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_TRIPLECLICK6_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_TRIPLECLICK6_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_TRIPLECLICK6_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_TRIPLECLICK6_PANE as u64,
+                            where_::Status => keyc::KEYC_TRIPLECLICK6_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_TRIPLECLICK6_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_TRIPLECLICK6_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_TRIPLECLICK6_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_TRIPLECLICK6_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_7 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_TRIPLECLICK7_PANE as u64,
-                            STATUS => keyc::KEYC_TRIPLECLICK7_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_TRIPLECLICK7_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_TRIPLECLICK7_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_TRIPLECLICK7_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_TRIPLECLICK7_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_TRIPLECLICK7_PANE as u64,
+                            where_::Status => keyc::KEYC_TRIPLECLICK7_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_TRIPLECLICK7_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_TRIPLECLICK7_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_TRIPLECLICK7_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_TRIPLECLICK7_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_8 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_TRIPLECLICK8_PANE as u64,
-                            STATUS => keyc::KEYC_TRIPLECLICK8_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_TRIPLECLICK8_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_TRIPLECLICK8_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_TRIPLECLICK8_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_TRIPLECLICK8_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_TRIPLECLICK8_PANE as u64,
+                            where_::Status => keyc::KEYC_TRIPLECLICK8_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_TRIPLECLICK8_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_TRIPLECLICK8_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_TRIPLECLICK8_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_TRIPLECLICK8_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_9 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_TRIPLECLICK9_PANE as u64,
-                            STATUS => keyc::KEYC_TRIPLECLICK9_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_TRIPLECLICK9_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_TRIPLECLICK9_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_TRIPLECLICK9_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_TRIPLECLICK9_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_TRIPLECLICK9_PANE as u64,
+                            where_::Status => keyc::KEYC_TRIPLECLICK9_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_TRIPLECLICK9_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_TRIPLECLICK9_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_TRIPLECLICK9_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_TRIPLECLICK9_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_10 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_TRIPLECLICK10_PANE as u64,
-                            STATUS => keyc::KEYC_TRIPLECLICK10_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_TRIPLECLICK10_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_TRIPLECLICK10_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_TRIPLECLICK10_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_TRIPLECLICK10_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_TRIPLECLICK10_PANE as u64,
+                            where_::Status => keyc::KEYC_TRIPLECLICK10_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_TRIPLECLICK10_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_TRIPLECLICK10_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_TRIPLECLICK10_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_TRIPLECLICK10_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     crate::MOUSE_BUTTON_11 => {
                         key = match where_ {
-                            PANE => keyc::KEYC_TRIPLECLICK11_PANE as u64,
-                            STATUS => keyc::KEYC_TRIPLECLICK11_STATUS as u64,
-                            STATUS_LEFT => keyc::KEYC_TRIPLECLICK11_STATUS_LEFT as u64,
-                            STATUS_RIGHT => keyc::KEYC_TRIPLECLICK11_STATUS_RIGHT as u64,
-                            STATUS_DEFAULT => keyc::KEYC_TRIPLECLICK11_STATUS_DEFAULT as u64,
-                            BORDER => keyc::KEYC_TRIPLECLICK11_BORDER as u64,
-                            NOWHERE => key,
+                            where_::Pane => keyc::KEYC_TRIPLECLICK11_PANE as u64,
+                            where_::Status => keyc::KEYC_TRIPLECLICK11_STATUS as u64,
+                            where_::StatusLeft => keyc::KEYC_TRIPLECLICK11_STATUS_LEFT as u64,
+                            where_::StatusRight => keyc::KEYC_TRIPLECLICK11_STATUS_RIGHT as u64,
+                            where_::StatusDefault => keyc::KEYC_TRIPLECLICK11_STATUS_DEFAULT as u64,
+                            where_::Border => keyc::KEYC_TRIPLECLICK11_BORDER as u64,
+                            where_::Nowhere => key,
                         };
                     }
                     _ => (),
@@ -3056,7 +3094,6 @@ pub unsafe extern "C" fn server_client_dispatch_command(c: *mut client, imsg: *m
 /// Handle identify message.
 pub unsafe extern "C" fn server_client_dispatch_identify(c: *mut client, imsg: *mut imsg) {
     unsafe {
-        let mut home: *mut c_char = null_mut();
         let mut feat: i32 = 0;
         let mut flags: i32 = 0;
         let mut longflags: u64 = 0;
@@ -3136,11 +3173,8 @@ pub unsafe extern "C" fn server_client_dispatch_identify(c: *mut client, imsg: *
                 }
                 if libc::access(data.cast(), libc::X_OK) == 0 {
                     (*c).cwd = xstrdup(data.cast()).as_ptr();
-                } else if {
-                    home = find_home();
-                    !home.is_null()
-                } {
-                    (*c).cwd = xstrdup(home).as_ptr();
+                } else if let Some(home) = NonNull::new(find_home()) {
+                    (*c).cwd = xstrdup(home.as_ptr()).as_ptr();
                 } else {
                     (*c).cwd = xstrdup(c"/".as_ptr()).as_ptr();
                 }

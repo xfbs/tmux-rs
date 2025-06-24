@@ -1463,7 +1463,6 @@ pub unsafe extern "C" fn format_width(expanded: *const c_char) -> u32 {
         let mut width: u32 = 0;
 
         let mut ud: utf8_data = zeroed();
-        let mut more = utf8_state::UTF8_ERROR;
 
         while *cp != b'\0' as i8 {
             if *cp == b'#' as i8 {
@@ -1477,10 +1476,9 @@ pub unsafe extern "C" fn format_width(expanded: *const c_char) -> u32 {
                     }
                     cp = end.add(1);
                 }
-            } else if {
-                more = utf8_open(&raw mut ud, *cp as u8);
-                more == utf8_state::UTF8_MORE
-            } {
+            } else if let mut more = utf8_open(&raw mut ud, *cp as u8)
+                && more == utf8_state::UTF8_MORE
+            {
                 while ({
                     cp = cp.add(1);
                     *cp != b'\0' as i8
@@ -1557,10 +1555,9 @@ pub unsafe extern "C" fn format_trim_left(expanded: *const c_char, limit: u32) -
                     out = out.offset(end.add(1).offset_from(cp));
                     cp = end.add(1);
                 }
-            } else if {
-                more = utf8_open(&raw mut ud, *cp as u8);
-                more == utf8_state::UTF8_MORE
-            } {
+            } else if let mut more = utf8_open(&raw mut ud, *cp as u8)
+                && more == utf8_state::UTF8_MORE
+            {
                 while ({
                     cp = cp.add(1);
                     *cp != b'\0' as i8
@@ -1656,10 +1653,9 @@ pub unsafe extern "C" fn format_trim_right(expanded: *const c_char, limit: u32) 
                     out = out.offset(end.add(1).offset_from(cp));
                     cp = end.add(1);
                 }
-            } else if {
-                more = utf8_open(&raw mut ud, *cp as u8);
-                more == utf8_state::UTF8_MORE
-            } {
+            } else if let mut more = utf8_open(&raw mut ud, *cp as u8)
+                && more == utf8_state::UTF8_MORE
+            {
                 while ({
                     cp = cp.add(1);
                     *(cp) != b'\0' as i8
