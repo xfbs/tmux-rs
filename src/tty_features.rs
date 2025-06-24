@@ -371,25 +371,21 @@ pub unsafe extern "C" fn tty_add_features(
         let copy = xstrdup(s).as_ptr();
         let loop_ = copy;
         let mut next = null_mut();
-        let mut tf: *const tty_feature = null();
         let mut loop_ = null_mut();
 
         while {
             next = strsep(&raw mut loop_, separators);
             !next.is_null()
         } {
-            let mut i = 0;
-            for j in 0..tty_features.len() {
-                i = j;
-                tf = tty_features[i] as *const _;
-                if libc::strcasecmp((*tf).name.as_ptr(), next) == 0 {
-                    break;
-                }
-            }
-            if i == tty_features.len() {
+            let Some(i) = tty_features
+                .iter()
+                .position(|tf| libc::strcasecmp((*tf).name.as_ptr(), next) == 0)
+            else {
                 log_debug!("unknown terminal feature: {}", _s(next));
                 break;
-            }
+            };
+
+            let tf = tty_features[i];
             if !(*feat) & (1 << i) != 0 {
                 log_debug!("adding terminal feature: {}", _s((*tf).name.as_ptr()));
                 (*feat) |= 1 << i;

@@ -1888,6 +1888,7 @@ unsafe extern "C" fn tty_keys_device_attributes(
         }
 
         /* Copy the rest up to a c. */
+        let mut found = false;
         let mut i: usize = 0;
         for j in 0..tmp.len() {
             i = j;
@@ -1895,11 +1896,12 @@ unsafe extern "C" fn tty_keys_device_attributes(
                 return 1;
             }
             if *buf.add(3 + i) == 'c' as i8 {
+                found = true;
                 break;
             }
             tmp[i] = *buf.add(3 + i);
         }
-        if i == tmp.len() {
+        if !found {
             return -1;
         }
         tmp[i] = '\0' as i8;
@@ -1994,6 +1996,7 @@ unsafe extern "C" fn tty_keys_device_attributes2(
         }
 
         /* Copy the rest up to a c. */
+        let mut found = false;
         let mut i: usize = 0;
         for j in 0..tmp.len() {
             i = j;
@@ -2001,11 +2004,12 @@ unsafe extern "C" fn tty_keys_device_attributes2(
                 return 1;
             }
             if *buf.add(3 + i) == 'c' as i8 {
+                found = true;
                 break;
             }
             tmp[i] = *buf.add(3 + i);
         }
-        if i == tmp.len() {
+        if !found {
             return -1;
         }
         tmp[i] = '\0' as i8;
@@ -2105,17 +2109,19 @@ unsafe extern "C" fn tty_keys_extended_device_attributes(
         }
 
         /* Copy the rest up to \x1b\. */
+        let mut found = false;
         for j in 0..tmp.len() - 1 {
             i = j;
             if 4 + i == len {
                 return 1;
             }
             if *buf.add(4 + i - 1) == '\x1b' as i8 && *buf.add(4 + i) == '\\' as i8 {
+                found = true;
                 break;
             }
             tmp[i] = *buf.add(4 + i);
         }
-        if i == tmp.len() - 1 {
+        if !found {
             return -1;
         }
         tmp[i - 1] = '\0' as i8;
@@ -2194,6 +2200,7 @@ pub unsafe extern "C" fn tty_keys_colours(
             return 1;
         }
 
+        let mut found = false;
         let mut i: usize = 0;
         /* Copy the rest up to \x1b\ or \x07. */
         for j in 0..tmp.len() - 1 {
@@ -2202,14 +2209,16 @@ pub unsafe extern "C" fn tty_keys_colours(
                 return 1;
             }
             if *buf.add(5 + i - 1) == '\x1b' as i8 && *buf.add(5 + i) == '\\' as i8 {
+                found = true;
                 break;
             }
             if *buf.add(5 + i) == '\x07' as i8 {
+                found = true;
                 break;
             }
             tmp[i] = *buf.add(5 + i);
         }
-        if i == tmp.len() - 1 {
+        if !found {
             return -1;
         }
         if tmp[i - 1] == '\x1b' as i8 {

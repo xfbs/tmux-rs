@@ -94,20 +94,14 @@ pub unsafe fn attributes_fromstring(mut str: *const c_char) -> Result<grid_attr,
         let mut attr = grid_attr::empty();
         loop {
             let end = libc::strcspn(str, delimiters);
-            let mut i = 0;
-            for j in 0..TABLE.len() {
-                i = j;
-                if end != TABLE[i].name.to_bytes().len() {
-                    continue;
-                }
-                if libc::strncasecmp(str, TABLE[i].name.as_ptr(), end) == 0 {
-                    attr |= TABLE[i].attr;
-                    break;
-                }
-            }
-            if i == TABLE.len() {
+
+            let Some(i) = TABLE.iter().position(|t| {
+                end == t.name.to_bytes().len() && libc::strncasecmp(str, t.name.as_ptr(), end) == 0
+            }) else {
                 return Err(());
-            }
+            };
+
+            attr |= TABLE[i].attr;
             str = str.add(end + libc::strspn(str.add(end), delimiters));
 
             if *str == b'\0' as c_char {
