@@ -179,7 +179,7 @@ pub unsafe extern "C" fn layout_make_node(lc: *mut layout_cell, type_: layout_ty
     }
 }
 
-/* Fix cell offsets for a child cell. */
+/// Fix cell offsets for a child cell.
 unsafe fn layout_fix_offsets1(lc: *mut layout_cell) {
     unsafe {
         if (*lc).type_ == layout_type::LAYOUT_LEFTRIGHT {
@@ -208,8 +208,7 @@ unsafe fn layout_fix_offsets1(lc: *mut layout_cell) {
     }
 }
 
-/* Update cell offsets based on their sizes. */
-
+/// Update cell offsets based on their sizes.
 pub unsafe extern "C" fn layout_fix_offsets(w: *mut window) {
     unsafe {
         let lc = (*w).layout_root;
@@ -218,8 +217,8 @@ pub unsafe extern "C" fn layout_fix_offsets(w: *mut window) {
         layout_fix_offsets1(lc);
     }
 }
-/* Is this a top cell? */
 
+/// Is this a top cell?
 unsafe fn layout_cell_is_top(w: *mut window, mut lc: *mut layout_cell) -> c_int {
     unsafe {
         while lc != (*w).layout_root {
@@ -235,8 +234,7 @@ unsafe fn layout_cell_is_top(w: *mut window, mut lc: *mut layout_cell) -> c_int 
     }
 }
 
-/* Is this a bottom cell? */
-
+/// Is this a bottom cell?
 unsafe fn layout_cell_is_bottom(w: *mut window, mut lc: *mut layout_cell) -> c_int {
     unsafe {
         while lc != (*w).layout_root {
@@ -252,11 +250,8 @@ unsafe fn layout_cell_is_bottom(w: *mut window, mut lc: *mut layout_cell) -> c_i
     }
 }
 
-/*
- * Returns 1 if we need to add an extra line for the pane status line. This is
- * the case for the most upper or lower panes only.
- */
-
+/// Returns 1 if we need to add an extra line for the pane status line. This is
+/// the case for the most upper or lower panes only.
 unsafe fn layout_add_border(w: *mut window, lc: *mut layout_cell, status: pane_status) -> boolint {
     unsafe {
         if status == pane_status::PANE_STATUS_TOP {
@@ -269,8 +264,7 @@ unsafe fn layout_add_border(w: *mut window, lc: *mut layout_cell, status: pane_s
     }
 }
 
-/* Update pane offsets and sizes based on their cells. */
-
+/// Update pane offsets and sizes based on their cells.
 pub unsafe extern "C" fn layout_fix_panes(w: *mut window, skip: *mut window_pane) {
     unsafe {
         let status: pane_status =
@@ -299,8 +293,7 @@ pub unsafe extern "C" fn layout_fix_panes(w: *mut window, skip: *mut window_pane
     }
 }
 
-/* Count the number of available cells in a layout. */
-
+/// Count the number of available cells in a layout.
 pub unsafe extern "C" fn layout_count_cells(lc: *mut layout_cell) -> u32 {
     unsafe {
         match (*lc).type_ {
@@ -317,7 +310,6 @@ pub unsafe extern "C" fn layout_count_cells(lc: *mut layout_cell) -> u32 {
 }
 
 /// Calculate how much size is available to be removed from a cell.
-
 pub unsafe extern "C" fn layout_resize_check(
     w: *mut window,
     lc: *mut layout_cell,
@@ -373,7 +365,6 @@ pub unsafe extern "C" fn layout_resize_check(
 
 /// Adjust cell size evenly, including altering its children. This function
 /// expects the change to have already been bounded to the space available.
-
 pub unsafe extern "C" fn layout_resize_adjust(
     w: *mut window,
     lc: *mut layout_cell,
@@ -423,7 +414,6 @@ pub unsafe extern "C" fn layout_resize_adjust(
 }
 
 /// Destroy a cell and redistribute the space.
-
 pub unsafe extern "C" fn layout_destroy_cell(
     w: *mut window,
     lc: *mut layout_cell,
@@ -496,7 +486,6 @@ pub unsafe extern "C" fn layout_free(w: *mut window) {
 }
 
 /// Resize the entire layout after window resize.
-
 pub unsafe extern "C" fn layout_resize(w: *mut window, sx: c_uint, sy: c_uint) {
     unsafe {
         let lc = (*w).layout_root;
@@ -554,7 +543,6 @@ pub unsafe extern "C" fn layout_resize(w: *mut window, sx: c_uint, sy: c_uint) {
 }
 
 /// Resize a pane to an absolute size.
-
 pub unsafe extern "C" fn layout_resize_pane_to(
     wp: *mut window_pane,
     type_: layout_type,
@@ -656,7 +644,6 @@ pub unsafe extern "C" fn layout_resize_pane(
 }
 
 /// Helper function to grow pane.
-
 pub unsafe extern "C" fn layout_resize_pane_grow(
     w: *mut window,
     lc: *mut layout_cell,
@@ -706,7 +693,6 @@ pub unsafe extern "C" fn layout_resize_pane_grow(
 }
 
 /// Helper function to shrink pane.
-
 pub unsafe extern "C" fn layout_resize_pane_shrink(
     w: *mut window,
     lc: *mut layout_cell,
@@ -749,7 +735,6 @@ pub unsafe extern "C" fn layout_resize_pane_shrink(
 }
 
 /// Assign window pane to newly split cell.
-
 pub unsafe extern "C" fn layout_assign_pane(
     lc: *mut layout_cell,
     wp: *mut window_pane,
@@ -766,7 +751,6 @@ pub unsafe extern "C" fn layout_assign_pane(
 }
 
 /// Calculate the new pane size for resized parent.
-
 pub unsafe extern "C" fn layout_new_pane_size(
     w: *mut window,
     previous: u32,
@@ -812,10 +796,7 @@ pub unsafe extern "C" fn layout_new_pane_size(
     }
 }
 
-// unsafe extern "C" { fn layout_set_size_check(w: *mut window, lc: *mut layout_cell, type_: layout_type, size: c_int) -> boolint; }
-
 /// Check if the cell and all its children can be resized to a specific size.
-
 pub unsafe extern "C" fn layout_set_size_check(
     w: *mut window,
     lc: *mut layout_cell,
@@ -894,7 +875,6 @@ pub unsafe extern "C" fn layout_set_size_check(
 
 // unsafe extern "C" { pub fn layout_resize_child_cells(w: *mut window, lc: *mut layout_cell); }
 /// Resize all child cells to fit within the current cell.
-
 pub unsafe extern "C" fn layout_resize_child_cells(w: *mut window, lc: *mut layout_cell) {
     unsafe {
         if (*lc).type_ == layout_type::LAYOUT_WINDOWPANE {
@@ -963,7 +943,6 @@ pub unsafe extern "C" fn layout_resize_child_cells(w: *mut window, lc: *mut layo
 
 /// Split a pane into two. size is a hint, or -1 for default half/half
 /// split. This must be followed by layout_assign_pane before much else happens!
-
 pub unsafe extern "C" fn layout_split_pane(
     wp: *mut window_pane,
     type_: layout_type,
@@ -1149,7 +1128,6 @@ pub unsafe extern "C" fn layout_split_pane(
 }
 
 /// Destroy the cell associated with a pane.
-
 pub unsafe extern "C" fn layout_close_pane(wp: *mut window_pane) {
     unsafe {
         let w = (*wp).window;
@@ -1167,7 +1145,6 @@ pub unsafe extern "C" fn layout_close_pane(wp: *mut window_pane) {
 }
 
 /// Spread cells evenly within a parent cell
-
 pub unsafe extern "C" fn layout_spread_cell(w: *mut window, parent: *mut layout_cell) -> c_int {
     unsafe {
         // Count number of cells
@@ -1239,7 +1216,6 @@ pub unsafe extern "C" fn layout_spread_cell(w: *mut window, parent: *mut layout_
 }
 
 /// Spread out a pane and its parent cells
-
 pub unsafe extern "C" fn layout_spread_out(wp: *mut window_pane) {
     unsafe {
         let mut parent = (*wp).layout_cell;

@@ -28,7 +28,8 @@ pub const VIS_CSTYLE: i32 = 2;
 pub const VIS_TAB: i32 = 8;
 pub const VIS_NL: i32 = 16;
 pub const VIS_GLOB: i32 = 4096;
-pub const VIS_DQ: i32 = 32768;
+pub const VIS_DQ: i32 = 0x200;
+pub const VIS_NOSLASH: i32 = 0x40;
 
 // from libbsd
 #[rustfmt::skip]

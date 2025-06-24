@@ -48,7 +48,6 @@ pub struct screen_title_entry {
 pub type screen_titles = tailq_head<screen_title_entry>;
 
 /// Free titles stack.
-
 pub unsafe extern "C" fn screen_free_titles(s: *mut screen) {
     unsafe {
         if (*s).titles.is_null() {
@@ -67,8 +66,7 @@ pub unsafe extern "C" fn screen_free_titles(s: *mut screen) {
     }
 }
 
-/* Create a new screen. */
-
+/// Create a new screen.
 pub unsafe extern "C" fn screen_init(s: *mut screen, sx: u32, sy: u32, hlimit: u32) {
     unsafe {
         (*s).grid = grid_create(sx, sy, hlimit);
@@ -98,7 +96,6 @@ pub unsafe extern "C" fn screen_init(s: *mut screen, sx: u32, sy: u32, hlimit: u
 }
 
 /// Reinitialise screen.
-
 pub unsafe extern "C" fn screen_reinit(s: *mut screen) {
     unsafe {
         (*s).cx = 0;
@@ -134,8 +131,7 @@ pub unsafe extern "C" fn screen_reinit(s: *mut screen) {
     }
 }
 
-/* Reset hyperlinks of a screen. */
-
+/// Reset hyperlinks of a screen.
 pub unsafe extern "C" fn screen_reset_hyperlinks(s: *mut screen) {
     unsafe {
         if (*s).hyperlinks.is_null() {
@@ -147,7 +143,6 @@ pub unsafe extern "C" fn screen_reset_hyperlinks(s: *mut screen) {
 }
 
 /// Destroy a screen.
-
 pub unsafe extern "C" fn screen_free(s: *mut screen) {
     unsafe {
         free_((*s).sel);
@@ -175,7 +170,6 @@ pub unsafe extern "C" fn screen_free(s: *mut screen) {
 }
 
 /// Reset tabs to default, eight spaces apart.
-
 pub unsafe extern "C" fn screen_reset_tabs(s: *mut screen) {
     unsafe {
         free_((*s).tabs);
@@ -204,8 +198,7 @@ unsafe fn bit_set(bits: *mut u8, i: u32) {
     }
 }
 
-/* Set screen cursor style and mode. */
-
+/// Set screen cursor style and mode.
 pub unsafe extern "C" fn screen_set_cursor_style(
     style: u32,
     cstyle: *mut screen_cursor_style,
@@ -244,7 +237,6 @@ pub unsafe extern "C" fn screen_set_cursor_style(
 }
 
 /// Set screen cursor colour.
-
 pub unsafe extern "C" fn screen_set_cursor_colour(s: *mut screen, colour: c_int) {
     unsafe {
         (*s).ccolour = colour;
@@ -252,7 +244,6 @@ pub unsafe extern "C" fn screen_set_cursor_colour(s: *mut screen, colour: c_int)
 }
 
 /// Set screen title.
-
 pub unsafe extern "C" fn screen_set_title(s: *mut screen, title: *const c_char) -> c_int {
     unsafe {
         if !utf8_isvalid(title) {
@@ -265,7 +256,6 @@ pub unsafe extern "C" fn screen_set_title(s: *mut screen, title: *const c_char) 
 }
 
 /// Set screen path.
-
 pub unsafe extern "C" fn screen_set_path(s: *mut screen, path: *const c_char) {
     unsafe {
         free_((*s).path);
@@ -278,7 +268,6 @@ pub unsafe extern "C" fn screen_set_path(s: *mut screen, path: *const c_char) {
 }
 
 /// Push the current title onto the stack.
-
 pub unsafe extern "C" fn screen_push_title(s: *mut screen) {
     unsafe {
         if (*s).titles.is_null() {
@@ -292,11 +281,7 @@ pub unsafe extern "C" fn screen_push_title(s: *mut screen) {
     }
 }
 
-/*
- * Pop a title from the stack and set it as the screen title. If the stack is
- * empty, do nothing.
- */
-
+/// Pop a title from the stack and set it as the screen title. If the stack is empty, do nothing.
 pub unsafe extern "C" fn screen_pop_title(s: *mut screen) {
     unsafe {
         if (*s).titles.is_null() {
@@ -314,7 +299,6 @@ pub unsafe extern "C" fn screen_pop_title(s: *mut screen) {
 }
 
 /// Resize screen with options.
-
 pub unsafe extern "C" fn screen_resize_cursor(
     s: *mut screen,
     sx: u32,
@@ -390,7 +374,6 @@ pub unsafe extern "C" fn screen_resize_cursor(
 }
 
 /// Resize screen.
-
 pub unsafe extern "C" fn screen_resize(s: *mut screen, sx: u32, sy: u32, reflow: i32) {
     unsafe {
         screen_resize_cursor(s, sx, sy, reflow, 1, 1);
@@ -398,7 +381,6 @@ pub unsafe extern "C" fn screen_resize(s: *mut screen, sx: u32, sy: u32, reflow:
 }
 
 /// Resize screen vertically.
-
 unsafe extern "C" fn screen_resize_y(s: *mut screen, sy: u32, eat_empty: i32, cy: *mut u32) {
     unsafe {
         let gd = (*s).grid;
@@ -484,7 +466,6 @@ unsafe extern "C" fn screen_resize_y(s: *mut screen, sy: u32, eat_empty: i32, cy
 }
 
 /// Set selection.
-
 pub unsafe extern "C" fn screen_set_selection(
     s: *mut screen,
     sx: u32,
@@ -513,7 +494,6 @@ pub unsafe extern "C" fn screen_set_selection(
 }
 
 /// Clear selection.
-
 pub unsafe extern "C" fn screen_clear_selection(s: *mut screen) {
     unsafe {
         free_((*s).sel);
@@ -522,7 +502,6 @@ pub unsafe extern "C" fn screen_clear_selection(s: *mut screen) {
 }
 
 /// Hide selection.
-
 pub unsafe extern "C" fn screen_hide_selection(s: *mut screen) {
     unsafe {
         if !(*s).sel.is_null() {
@@ -532,7 +511,6 @@ pub unsafe extern "C" fn screen_hide_selection(s: *mut screen) {
 }
 
 /// Check if cell in selection.
-
 pub unsafe extern "C" fn screen_check_selection(s: *mut screen, px: u32, py: u32) -> c_int {
     unsafe {
         let sel = (*s).sel;
@@ -660,7 +638,6 @@ pub unsafe extern "C" fn screen_check_selection(s: *mut screen, px: u32, py: u32
 }
 
 /// Get selected grid cell.
-
 pub unsafe extern "C" fn screen_select_cell(
     s: *mut screen,
     dst: *mut grid_cell,
@@ -681,7 +658,6 @@ pub unsafe extern "C" fn screen_select_cell(
 }
 
 /// Reflow wrapped lines.
-
 unsafe extern "C" fn screen_reflow(
     s: *mut screen,
     new_x: u32,
@@ -719,7 +695,6 @@ unsafe extern "C" fn screen_reflow(
 
 /// Enter alternative screen mode. A copy of the visible screen is saved and the
 /// history is not updated.
-
 pub unsafe extern "C" fn screen_alternate_on(s: *mut screen, gc: *mut grid_cell, cursor: i32) {
     unsafe {
         if !(*s).saved_grid.is_null() {
@@ -744,7 +719,6 @@ pub unsafe extern "C" fn screen_alternate_on(s: *mut screen, gc: *mut grid_cell,
 }
 
 /// Exit alternate screen mode and restore the copied grid.
-
 pub unsafe extern "C" fn screen_alternate_off(s: *mut screen, gc: *mut grid_cell, cursor: i32) {
     unsafe {
         let sx = screen_size_x(s);
@@ -806,7 +780,6 @@ pub unsafe extern "C" fn screen_alternate_off(s: *mut screen, gc: *mut grid_cell
 }
 
 /// Get mode as a string.
-
 pub unsafe extern "C" fn screen_mode_to_string(mode: mode_flag) -> *const c_char {
     const TMP_LEN: usize = 1024;
     static mut TMP: [MaybeUninit<c_char>; 1024] = [MaybeUninit::uninit(); 1024];

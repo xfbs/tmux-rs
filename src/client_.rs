@@ -610,7 +610,6 @@ unsafe extern "C" fn client_send_identify(
 }
 
 #[expect(clippy::deref_addrof)]
-
 unsafe extern "C" fn client_exec(shell: *mut c_char, shellcmd: *mut c_char) {
     unsafe {
         log_debug!("shell {}, command {}", _s(shell), _s(shellcmd));
@@ -752,10 +751,7 @@ unsafe extern "C" fn client_dispatch_exit_message(mut data: *const c_char, mut d
 }
 
 #[expect(clippy::deref_addrof)]
-
 unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
-    // char		*data;
-    // ssize_t		 datalen;
     static mut pledge_applied: i32 = 0;
 
     unsafe {
@@ -862,7 +858,6 @@ unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
 }
 
 #[expect(clippy::deref_addrof)]
-
 unsafe extern "C" fn client_dispatch_attached(imsg: *mut imsg) {
     unsafe {
         let mut sigact: sigaction = zeroed();

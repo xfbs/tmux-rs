@@ -2504,7 +2504,7 @@ unsafe extern "C" fn input_exit_osc(ictx: *mut input_ctx) {
             }
             4 => input_osc_4(ictx, p.cast()),
             7 => {
-                if utf8_isvalid(p.cast()).as_bool() {
+                if utf8_isvalid(p.cast()) {
                     screen_set_path((*sctx).s, p.cast());
                     if !wp.is_null() {
                         server_redraw_window_borders((*wp).window);

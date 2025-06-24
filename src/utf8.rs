@@ -14,14 +14,14 @@
 
 use crate::*;
 
-use libc::{isalpha, memcpy, memset};
+use libc::{memcpy, memset};
 
 use crate::compat::{
+    VIS_DQ,
     tree::{rb_find, rb_initializer, rb_insert},
     vis,
-    vis_::VIS_DQ,
 };
-use crate::{log::fatalx_c, xmalloc::xreallocarray};
+use crate::xmalloc::xreallocarray;
 
 #[cfg(feature = "utf8proc")]
 unsafe extern "C" {
@@ -115,10 +115,7 @@ fn utf8_set_width(width: u8) -> utf8_char {
     (width as utf8_char + 1) << 29
 }
 
-pub unsafe extern "C" fn utf8_item_by_data(
-    data: *const [i8; UTF8_SIZE],
-    size: usize,
-) -> *mut utf8_item {
+pub unsafe fn utf8_item_by_data(data: *const [i8; UTF8_SIZE], size: usize) -> *mut utf8_item {
     unsafe {
         let mut ui = MaybeUninit::<utf8_item>::uninit();
         let ui = ui.as_mut_ptr();
@@ -134,7 +131,7 @@ pub unsafe extern "C" fn utf8_item_by_data(
     }
 }
 
-pub unsafe extern "C" fn utf8_item_by_index(index: u32) -> *mut utf8_item {
+pub unsafe fn utf8_item_by_index(index: u32) -> *mut utf8_item {
     unsafe {
         let mut ui = MaybeUninit::<utf8_item>::uninit();
         let ui = ui.as_mut_ptr();
@@ -145,11 +142,7 @@ pub unsafe extern "C" fn utf8_item_by_index(index: u32) -> *mut utf8_item {
     }
 }
 
-pub unsafe extern "C" fn utf8_put_item(
-    data: *const [c_char; UTF8_SIZE],
-    size: usize,
-    index: *mut u32,
-) -> i32 {
+pub unsafe fn utf8_put_item(data: *const [c_char; UTF8_SIZE], size: usize, index: *mut u32) -> i32 {
     unsafe {
         let ui = utf8_item_by_data(data, size);
         if !ui.is_null() {
@@ -193,7 +186,7 @@ pub unsafe extern "C" fn utf8_table_cmp(vp1: *const c_void, vp2: *const c_void) 
     unsafe { wchar_t::cmp(&*wc1, &*wc2) as i8 as i32 }
 }
 
-pub unsafe extern "C" fn utf8_in_table(find: wchar_t, table: *const wchar_t, count: u32) -> i32 {
+pub unsafe fn utf8_in_table(find: wchar_t, table: *const wchar_t, count: u32) -> i32 {
     unsafe {
         let found = bsearch_(
             &raw const find,
@@ -495,7 +488,7 @@ pub unsafe extern "C" fn utf8_strvis(
                 src = src.sub(ud.have as usize);
             }
             if (flag & VIS_DQ != 0) && *src == b'$' as c_char && src < end.sub(1) {
-                if isalpha(*src.add(1) as i32) != 0
+                if (*src.add(1) as u8).is_ascii_alphabetic()
                     || *src.add(1) == b'_' as c_char
                     || *src.add(1) == b'{' as c_char
                 {
@@ -541,14 +534,13 @@ pub unsafe extern "C" fn utf8_stravisx(
     }
 }
 
-pub unsafe extern "C" fn utf8_isvalid(mut s: *const c_char) -> boolint {
+pub unsafe fn utf8_isvalid(mut s: *const c_char) -> bool {
     unsafe {
         let mut ud: utf8_data = zeroed();
-        let mut more: utf8_state = zeroed();
 
         let end = s.add(strlen(s));
         while s < end {
-            more = utf8_open(&raw mut ud, *s as u8);
+            let mut more = utf8_open(&raw mut ud, *s as u8);
             if more == utf8_state::UTF8_MORE {
                 while {
                     s = s.add(1);
@@ -559,18 +551,19 @@ pub unsafe extern "C" fn utf8_isvalid(mut s: *const c_char) -> boolint {
                 if more == utf8_state::UTF8_DONE {
                     continue;
                 }
-                return boolint::FALSE;
+                return false;
             }
             if *s < 0x20 || *s > 0x7e {
-                return boolint::FALSE;
+                return false;
             }
             s = s.add(1);
         }
     }
-    boolint::TRUE
+
+    true
 }
 
-pub unsafe extern "C" fn utf8_sanitize(mut src: *const c_char) -> *mut c_char {
+pub unsafe fn utf8_sanitize(mut src: *const c_char) -> *mut c_char {
     unsafe {
         let mut dst: *mut c_char = null_mut();
         let mut n: usize = 0;
@@ -588,7 +581,7 @@ pub unsafe extern "C" fn utf8_sanitize(mut src: *const c_char) -> *mut c_char {
                 }
                 if more == utf8_state::UTF8_DONE {
                     dst = xreallocarray_(dst, n + ud.width as usize).as_ptr();
-                    for i in 0..ud.width {
+                    for _ in 0..ud.width {
                         *dst.add(n) = b'_' as c_char;
                         n += 1;
                     }
@@ -611,7 +604,7 @@ pub unsafe extern "C" fn utf8_sanitize(mut src: *const c_char) -> *mut c_char {
     }
 }
 
-pub unsafe extern "C" fn utf8_strlen(s: *const utf8_data) -> usize {
+pub unsafe fn utf8_strlen(s: *const utf8_data) -> usize {
     let mut i = 0;
 
     unsafe {
@@ -623,7 +616,7 @@ pub unsafe extern "C" fn utf8_strlen(s: *const utf8_data) -> usize {
     i
 }
 
-pub unsafe extern "C" fn utf8_strwidth(s: *const utf8_data, n: isize) -> u32 {
+pub unsafe fn utf8_strwidth(s: *const utf8_data, n: isize) -> u32 {
     unsafe {
         let mut width: u32 = 0;
 
@@ -640,7 +633,7 @@ pub unsafe extern "C" fn utf8_strwidth(s: *const utf8_data, n: isize) -> u32 {
     }
 }
 
-pub unsafe extern "C" fn utf8_fromcstr(mut src: *const c_char) -> *mut utf8_data {
+pub unsafe fn utf8_fromcstr(mut src: *const c_char) -> *mut utf8_data {
     unsafe {
         let mut dst: *mut utf8_data = null_mut();
         let mut n = 0;
@@ -672,7 +665,7 @@ pub unsafe extern "C" fn utf8_fromcstr(mut src: *const c_char) -> *mut utf8_data
     }
 }
 
-pub unsafe extern "C" fn utf8_tocstr(mut src: *mut utf8_data) -> *mut c_char {
+pub unsafe fn utf8_tocstr(mut src: *mut utf8_data) -> *mut c_char {
     unsafe {
         let mut dst = null_mut::<c_char>();
         let mut n: usize = 0;
@@ -693,7 +686,7 @@ pub unsafe extern "C" fn utf8_tocstr(mut src: *mut utf8_data) -> *mut c_char {
     }
 }
 
-pub unsafe extern "C" fn utf8_cstrwidth(mut s: *const c_char) -> u32 {
+pub unsafe fn utf8_cstrwidth(mut s: *const c_char) -> u32 {
     unsafe {
         let mut tmp: utf8_data = zeroed();
 
@@ -722,7 +715,7 @@ pub unsafe extern "C" fn utf8_cstrwidth(mut s: *const c_char) -> u32 {
     }
 }
 
-pub unsafe extern "C" fn utf8_padcstr(s: *const c_char, width: u32) -> *mut c_char {
+pub unsafe fn utf8_padcstr(s: *const c_char, width: u32) -> *mut c_char {
     unsafe {
         let n = utf8_cstrwidth(s);
         if n >= width {
@@ -743,7 +736,7 @@ pub unsafe extern "C" fn utf8_padcstr(s: *const c_char, width: u32) -> *mut c_ch
     }
 }
 
-pub unsafe extern "C" fn utf8_rpadcstr(s: *const c_char, width: u32) -> *mut c_char {
+pub unsafe fn utf8_rpadcstr(s: *const c_char, width: u32) -> *mut c_char {
     unsafe {
         let n = utf8_cstrwidth(s);
         if n >= width {
@@ -763,7 +756,7 @@ pub unsafe extern "C" fn utf8_rpadcstr(s: *const c_char, width: u32) -> *mut c_c
     }
 }
 
-pub unsafe extern "C" fn utf8_cstrhas(s: *const c_char, ud: *const utf8_data) -> i32 {
+pub unsafe fn utf8_cstrhas(s: *const c_char, ud: *const utf8_data) -> i32 {
     let mut found: i32 = 0;
 
     unsafe {

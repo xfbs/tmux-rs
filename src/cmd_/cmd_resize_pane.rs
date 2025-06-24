@@ -191,11 +191,11 @@ unsafe extern "C" fn cmd_resize_pane_mouse_update(c: *mut client, m: *mut mouse_
             ly = ((*m).statusat - 1) as u32;
         }
 
-        for i in 0..cells.len() {
+        for offset in offsets {
             let mut lc = layout_search_by_border(
                 (*w).layout_root,
-                (lx as i32 + offsets[i][0]).max(0) as u32,
-                (ly as i32 + offsets[i][1]).max(0) as u32,
+                (lx as i32 + offset[0]).max(0) as u32,
+                (ly as i32 + offset[1]).max(0) as u32,
             );
             if lc.is_null() {
                 continue;

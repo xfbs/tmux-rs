@@ -43,7 +43,6 @@ pub unsafe extern "C" fn layout_checksum(mut layout: *const c_char) -> u16 {
 }
 
 /// Dump layout as a string.
-
 pub unsafe extern "C" fn layout_dump(root: *mut layout_cell) -> *mut c_char {
     unsafe {
         let mut layout: MaybeUninit<[c_char; 8192]> = MaybeUninit::<[c_char; 8192]>::uninit();
@@ -131,7 +130,6 @@ pub unsafe extern "C" fn layout_append(lc: *mut layout_cell, buf: *mut c_char, l
 }
 
 /// Check layout sizes fit.
-
 pub unsafe extern "C" fn layout_check(lc: *mut layout_cell) -> i32 {
     unsafe {
         let mut n = 0u32;

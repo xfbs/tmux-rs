@@ -124,7 +124,6 @@ pub fn colour_force_rgb(c: i32) -> i32 {
     static_mut_refs,
     reason = "TODO need to find a better way to make use of the write macro without invoking ub"
 )]
-
 pub unsafe extern "C" fn colour_tostring(c: i32) -> *const c_char {
     // TODO this function returns a static buffer
     // this means it's not thread safe and multiple

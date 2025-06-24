@@ -36,7 +36,7 @@ pub unsafe extern "C" fn environ_cmp(
         ) {
             ..0 => Ordering::Less,
             0 => Ordering::Equal,
-            0.. => Ordering::Greater,
+            1.. => Ordering::Greater,
         }
     }
 }

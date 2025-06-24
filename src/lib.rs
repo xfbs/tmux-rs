@@ -22,7 +22,9 @@
 #![allow(clippy::manual_range_contains)]
 #![allow(clippy::if_same_then_else)]
 #![allow(clippy::blocks_in_conditions)] // keep, not worth fixing yet
-#![allow(clippy::missing_safety_doc)] // 1012 keep, not worth fixing yet
+#![allow(clippy::missing_safety_doc)]
+// 1012 keep, not worth fixing yet
+#![allow(clippy::empty_line_after_doc_comments)] // TODO fix
 //
 #![warn(clippy::multiple_crate_versions)]
 #![warn(clippy::shadow_same)]
@@ -3251,6 +3253,6 @@ pub fn i32_to_ordering(value: i32) -> std::cmp::Ordering {
     match value {
         ..0 => std::cmp::Ordering::Less,
         0 => std::cmp::Ordering::Equal,
-        0.. => std::cmp::Ordering::Greater,
+        1.. => std::cmp::Ordering::Greater,
     }
 }

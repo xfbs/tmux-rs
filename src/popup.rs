@@ -186,8 +186,6 @@ pub unsafe extern "C" fn popup_mode_cb(
 }
 
 /// Return parts of the input range which are not obstructed by the popup.
-// #[cfg(disabled)]
-
 pub unsafe extern "C" fn popup_check_cb(
     c: *mut client,
     data: *mut c_void,
