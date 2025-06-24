@@ -41,15 +41,9 @@ pub unsafe extern "C" fn cmd_attach_session(
     unsafe {
         let current: *mut cmd_find_state = cmdq_get_current(item);
         let mut target: cmd_find_state = zeroed(); // TODO can be uninit
-        let type_: cmd_find_type;
-        let mut flags: i32 = 0;
         let c: *mut client = cmdq_get_client(item);
-        let c_loop: *mut client = null_mut();
-        let mut s: *mut session = null_mut();
-        let mut wl: *mut winlink = null_mut();
-        let mut wp: *mut window_pane = null_mut();
 
-        let mut cwd: *mut c_char = null_mut();
+        let cwd: *mut c_char;
         let mut cause: *mut c_char = null_mut();
 
         let msgtype: msgtype;
@@ -71,19 +65,20 @@ pub unsafe extern "C" fn cmd_attach_session(
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
-        if !tflag.is_null() && *tflag.add(libc::strcspn(tflag, c":.".as_ptr())) != b'\0' as c_char {
-            type_ = cmd_find_type::CMD_FIND_PANE;
-            flags = 0;
+        let (type_, flags) = if !tflag.is_null()
+            && *tflag.add(libc::strcspn(tflag, c":.".as_ptr())) != b'\0' as c_char
+        {
+            (cmd_find_type::CMD_FIND_PANE, 0)
         } else {
-            type_ = cmd_find_type::CMD_FIND_SESSION;
-            flags = CMD_FIND_PREFER_UNATTACHED;
-        }
+            (cmd_find_type::CMD_FIND_SESSION, CMD_FIND_PREFER_UNATTACHED)
+        };
         if cmd_find_target(&raw mut target, item, tflag, type_, flags) != 0 {
             return cmd_retval::CMD_RETURN_ERROR;
         }
-        s = target.s;
-        wl = target.wl;
-        wp = target.wp;
+
+        let s = target.s;
+        let wl = target.wl;
+        let wp = target.wp;
 
         if !wl.is_null() {
             if !wp.is_null() {

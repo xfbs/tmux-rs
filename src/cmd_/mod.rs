@@ -172,101 +172,99 @@ use cmd_switch_client::cmd_switch_client_entry;
 use cmd_unbind_key::cmd_unbind_key_entry;
 use cmd_wait_for::cmd_wait_for_entry;
 
-pub static mut cmd_table: [*const cmd_entry; 91] = unsafe {
-    [
-        &raw const cmd_attach_session_entry,
-        &raw const cmd_bind_key_entry,
-        &raw const cmd_break_pane_entry,
-        &raw const cmd_capture_pane_entry,
-        &raw const cmd_choose_buffer_entry,
-        &raw const cmd_choose_client_entry,
-        &raw const cmd_choose_tree_entry,
-        &raw const cmd_clear_history_entry,
-        &raw const cmd_clear_prompt_history_entry,
-        &raw const cmd_clock_mode_entry,
-        &raw const cmd_command_prompt_entry,
-        &raw const cmd_confirm_before_entry,
-        &raw const cmd_copy_mode_entry,
-        &raw const cmd_customize_mode_entry,
-        &raw const cmd_delete_buffer_entry,
-        &raw const cmd_detach_client_entry,
-        &raw const cmd_display_menu_entry,
-        &raw const cmd_display_message_entry,
-        &raw const cmd_display_popup_entry,
-        &raw const cmd_display_panes_entry,
-        &raw const cmd_find_window_entry,
-        &raw const cmd_has_session_entry,
-        &raw const cmd_if_shell_entry,
-        &raw const cmd_join_pane_entry,
-        &raw const cmd_kill_pane_entry,
-        &raw const cmd_kill_server_entry,
-        &raw const cmd_kill_session_entry,
-        &raw const cmd_kill_window_entry,
-        &raw const cmd_last_pane_entry,
-        &raw const cmd_last_window_entry,
-        &raw const cmd_link_window_entry,
-        &raw const cmd_list_buffers_entry,
-        &raw const cmd_list_clients_entry,
-        &raw const cmd_list_commands_entry,
-        &raw const cmd_list_keys_entry,
-        &raw const cmd_list_panes_entry,
-        &raw const cmd_list_sessions_entry,
-        &raw const cmd_list_windows_entry,
-        &raw const cmd_load_buffer_entry,
-        &raw const cmd_lock_client_entry,
-        &raw const cmd_lock_server_entry,
-        &raw const cmd_lock_session_entry,
-        &raw const cmd_move_pane_entry,
-        &raw const cmd_move_window_entry,
-        &raw const cmd_new_session_entry,
-        &raw const cmd_new_window_entry,
-        &raw const cmd_next_layout_entry,
-        &raw const cmd_next_window_entry,
-        &raw const cmd_paste_buffer_entry,
-        &raw const cmd_pipe_pane_entry,
-        &raw const cmd_previous_layout_entry,
-        &raw const cmd_previous_window_entry,
-        &raw const cmd_refresh_client_entry,
-        &raw const cmd_rename_session_entry,
-        &raw const cmd_rename_window_entry,
-        &raw const cmd_resize_pane_entry,
-        &raw const cmd_resize_window_entry,
-        &raw const cmd_respawn_pane_entry,
-        &raw const cmd_respawn_window_entry,
-        &raw const cmd_rotate_window_entry,
-        &raw const cmd_run_shell_entry,
-        &raw const cmd_save_buffer_entry,
-        &raw const cmd_select_layout_entry,
-        &raw const cmd_select_pane_entry,
-        &raw const cmd_select_window_entry,
-        &raw const cmd_send_keys_entry,
-        &raw const cmd_send_prefix_entry,
-        &raw const cmd_server_access_entry,
-        &raw const cmd_set_buffer_entry,
-        &raw const cmd_set_environment_entry,
-        &raw const cmd_set_hook_entry,
-        &raw const cmd_set_option_entry,
-        &raw const cmd_set_window_option_entry,
-        &raw const cmd_show_buffer_entry,
-        &raw const cmd_show_environment_entry,
-        &raw const cmd_show_hooks_entry,
-        &raw const cmd_show_messages_entry,
-        &raw const cmd_show_options_entry,
-        &raw const cmd_show_prompt_history_entry,
-        &raw const cmd_show_window_options_entry,
-        &raw const cmd_source_file_entry,
-        &raw const cmd_split_window_entry,
-        &raw const cmd_start_server_entry,
-        &raw const cmd_suspend_client_entry,
-        &raw const cmd_swap_pane_entry,
-        &raw const cmd_swap_window_entry,
-        &raw const cmd_switch_client_entry,
-        &raw const cmd_unbind_key_entry,
-        &raw const cmd_unlink_window_entry,
-        &raw const cmd_wait_for_entry,
-        null(),
-    ]
-};
+pub static mut cmd_table: [*const cmd_entry; 91] = [
+    &raw const cmd_attach_session_entry,
+    &raw const cmd_bind_key_entry,
+    &raw const cmd_break_pane_entry,
+    &raw const cmd_capture_pane_entry,
+    &raw const cmd_choose_buffer_entry,
+    &raw const cmd_choose_client_entry,
+    &raw const cmd_choose_tree_entry,
+    &raw const cmd_clear_history_entry,
+    &raw const cmd_clear_prompt_history_entry,
+    &raw const cmd_clock_mode_entry,
+    &raw const cmd_command_prompt_entry,
+    &raw const cmd_confirm_before_entry,
+    &raw const cmd_copy_mode_entry,
+    &raw const cmd_customize_mode_entry,
+    &raw const cmd_delete_buffer_entry,
+    &raw const cmd_detach_client_entry,
+    &raw const cmd_display_menu_entry,
+    &raw const cmd_display_message_entry,
+    &raw const cmd_display_popup_entry,
+    &raw const cmd_display_panes_entry,
+    &raw const cmd_find_window_entry,
+    &raw const cmd_has_session_entry,
+    &raw const cmd_if_shell_entry,
+    &raw const cmd_join_pane_entry,
+    &raw const cmd_kill_pane_entry,
+    &raw const cmd_kill_server_entry,
+    &raw const cmd_kill_session_entry,
+    &raw const cmd_kill_window_entry,
+    &raw const cmd_last_pane_entry,
+    &raw const cmd_last_window_entry,
+    &raw const cmd_link_window_entry,
+    &raw const cmd_list_buffers_entry,
+    &raw const cmd_list_clients_entry,
+    &raw const cmd_list_commands_entry,
+    &raw const cmd_list_keys_entry,
+    &raw const cmd_list_panes_entry,
+    &raw const cmd_list_sessions_entry,
+    &raw const cmd_list_windows_entry,
+    &raw const cmd_load_buffer_entry,
+    &raw const cmd_lock_client_entry,
+    &raw const cmd_lock_server_entry,
+    &raw const cmd_lock_session_entry,
+    &raw const cmd_move_pane_entry,
+    &raw const cmd_move_window_entry,
+    &raw const cmd_new_session_entry,
+    &raw const cmd_new_window_entry,
+    &raw const cmd_next_layout_entry,
+    &raw const cmd_next_window_entry,
+    &raw const cmd_paste_buffer_entry,
+    &raw const cmd_pipe_pane_entry,
+    &raw const cmd_previous_layout_entry,
+    &raw const cmd_previous_window_entry,
+    &raw const cmd_refresh_client_entry,
+    &raw const cmd_rename_session_entry,
+    &raw const cmd_rename_window_entry,
+    &raw const cmd_resize_pane_entry,
+    &raw const cmd_resize_window_entry,
+    &raw const cmd_respawn_pane_entry,
+    &raw const cmd_respawn_window_entry,
+    &raw const cmd_rotate_window_entry,
+    &raw const cmd_run_shell_entry,
+    &raw const cmd_save_buffer_entry,
+    &raw const cmd_select_layout_entry,
+    &raw const cmd_select_pane_entry,
+    &raw const cmd_select_window_entry,
+    &raw const cmd_send_keys_entry,
+    &raw const cmd_send_prefix_entry,
+    &raw const cmd_server_access_entry,
+    &raw const cmd_set_buffer_entry,
+    &raw const cmd_set_environment_entry,
+    &raw const cmd_set_hook_entry,
+    &raw const cmd_set_option_entry,
+    &raw const cmd_set_window_option_entry,
+    &raw const cmd_show_buffer_entry,
+    &raw const cmd_show_environment_entry,
+    &raw const cmd_show_hooks_entry,
+    &raw const cmd_show_messages_entry,
+    &raw const cmd_show_options_entry,
+    &raw const cmd_show_prompt_history_entry,
+    &raw const cmd_show_window_options_entry,
+    &raw const cmd_source_file_entry,
+    &raw const cmd_split_window_entry,
+    &raw const cmd_start_server_entry,
+    &raw const cmd_suspend_client_entry,
+    &raw const cmd_swap_pane_entry,
+    &raw const cmd_swap_window_entry,
+    &raw const cmd_switch_client_entry,
+    &raw const cmd_unbind_key_entry,
+    &raw const cmd_unlink_window_entry,
+    &raw const cmd_wait_for_entry,
+    null(),
+];
 
 // Instance of a command.
 #[repr(C)]
@@ -302,31 +300,10 @@ pub(crate) use cmd_log_argv;
 // Log an argument vector.
 pub unsafe fn cmd_log_argv_(argc: i32, argv: *mut *mut c_char, args: std::fmt::Arguments) {
     unsafe {
-        let mut prefix = args.to_string();
+        let prefix = args.to_string();
         for i in 0..argc {
             log_debug!("{}: argv[{}]{}", prefix, i, _s(*argv.add(i as usize)));
         }
-    }
-}
-
-pub unsafe extern "C" fn cmd_prepend_argv(
-    argc: *mut c_int,
-    argv: *mut *mut *mut c_char,
-    arg: *const c_char,
-) {
-    unsafe {
-        let new_argv: *mut *mut c_char =
-            xreallocarray_::<*mut c_char>(null_mut(), (*argc) as usize + 1)
-                .cast()
-                .as_ptr();
-        *new_argv = xstrdup(arg).as_ptr();
-        for i in 0..*argc {
-            *new_argv.add(1 + i as usize) = *(*argv).add(i as usize);
-        }
-
-        free(*argv as _);
-        *argv = new_argv;
-        *argc += 1;
     }
 }
 
@@ -431,10 +408,6 @@ pub unsafe extern "C" fn cmd_free_argv(argc: c_int, argv: *mut *mut c_char) {
 
 pub unsafe extern "C" fn cmd_stringify_argv(argc: c_int, argv: *mut *mut c_char) -> *mut c_char {
     unsafe {
-        //char	*buf = NULL, *s;
-        //size_t	 len = 0;
-        //int	 i;
-        let s: *mut c_char = null_mut();
         let mut buf: *mut c_char = null_mut();
         let mut len: usize = 0;
 
@@ -522,8 +495,8 @@ pub unsafe extern "C" fn cmd_get_alias(name: *const c_char) -> *mut c_char {
 }
 
 pub unsafe extern "C" fn cmd_find(name: *const c_char, cause: *mut *mut c_char) -> *mut cmd_entry {
-    let mut loop_: *mut *mut cmd_entry = null_mut();
-    let mut entry: *mut cmd_entry = null_mut();
+    let mut loop_: *mut *mut cmd_entry;
+    let mut entry: *mut cmd_entry;
     let mut found: *mut cmd_entry = null_mut();
 
     let mut ambiguous: i32 = 0;
@@ -877,7 +850,6 @@ pub unsafe extern "C" fn cmd_mouse_window(
 ) -> Option<NonNull<winlink>> {
     unsafe {
         let mut s: *mut session = null_mut();
-        let mut wl: Option<NonNull<winlink>> = None;
 
         if (*m).valid == 0 {
             return None;
@@ -890,15 +862,15 @@ pub unsafe extern "C" fn cmd_mouse_window(
         {
             return None;
         }
-        if (*m).w == -1 {
-            wl = NonNull::new((*s).curw);
+        let wl = if (*m).w == -1 {
+            NonNull::new((*s).curw)
         } else {
             let w = window_find_by_id((*m).w as u32);
             if w.is_null() {
                 return None;
             }
-            wl = winlink_find_by_window(&raw mut (*s).windows, w);
-        }
+            winlink_find_by_window(&raw mut (*s).windows, w)
+        };
         if !sp.is_null() {
             *sp = s;
         }

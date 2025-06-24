@@ -2722,8 +2722,8 @@ use crate::cmd_::{
     cmd_get_args, cmd_get_entry, cmd_get_group, cmd_get_source, cmd_list_all_have,
     cmd_list_any_have, cmd_list_append, cmd_list_append_all, cmd_list_copy, cmd_list_first,
     cmd_list_free, cmd_list_move, cmd_list_new, cmd_list_next, cmd_list_print, cmd_mouse_at,
-    cmd_mouse_pane, cmd_mouse_window, cmd_pack_argv, cmd_parse, cmd_prepend_argv, cmd_print,
-    cmd_stringify_argv, cmd_table, cmd_template_replace, cmd_unpack_argv, cmds,
+    cmd_mouse_pane, cmd_mouse_window, cmd_pack_argv, cmd_parse, cmd_print, cmd_stringify_argv,
+    cmd_table, cmd_template_replace, cmd_unpack_argv, cmds,
 };
 
 use crate::cmd_::cmd_attach_session::cmd_attach_session;

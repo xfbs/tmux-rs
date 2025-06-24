@@ -1835,7 +1835,7 @@ unsafe extern "C" fn input_csi_dispatch(ictx: *mut input_ctx) -> i32 {
             }
             Ok(input_csi_type::INPUT_CSI_XDA) => {
                 if input_get(ictx, 0, 0, 0) == 0 {
-                    input_reply!(ictx, "\x1bP>|tmux {}\x1b\\", _s(getversion()));
+                    input_reply!(ictx, "\x1bP>|tmux {}\x1b\\", getversion());
                 }
             }
             Err(_) => (),

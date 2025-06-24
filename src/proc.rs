@@ -74,12 +74,11 @@ pub struct tmuxpeer {
 pub unsafe extern "C" fn proc_event_cb(_fd: i32, events: i16, arg: *mut c_void) {
     unsafe {
         let peer = arg as *mut tmuxpeer;
-        let mut n = 0isize;
         let mut imsg: MaybeUninit<imsg> = MaybeUninit::<imsg>::uninit();
         let imsg = imsg.as_mut_ptr();
 
         if (*peer).flags & PEER_BAD == 0 && events & EV_READ != 0 {
-            n = imsg_read(&raw mut (*peer).ibuf);
+            let mut n = imsg_read(&raw mut (*peer).ibuf);
             if (n == -1 && errno!() != EAGAIN) || n == 0 {
                 ((*peer).dispatchcb.unwrap())(null_mut(), (*peer).arg);
                 return;
@@ -126,7 +125,7 @@ pub unsafe extern "C" fn proc_event_cb(_fd: i32, events: i16, arg: *mut c_void) 
     }
 }
 
-pub unsafe extern "C" fn proc_signal_cb(signo: i32, events: i16, arg: *mut c_void) {
+pub unsafe extern "C" fn proc_signal_cb(signo: i32, _events: i16, arg: *mut c_void) {
     unsafe {
         let tp = arg as *mut tmuxproc;
 
@@ -210,7 +209,7 @@ pub unsafe fn proc_start(name: &CStr) -> *mut tmuxproc {
             "{} started ({}): version {}, socket {}, protocol {}",
             _s(name),
             std::process::id(),
-            _s(getversion()),
+            getversion(),
             _s(socket_path),
             PROTOCOL_VERSION,
         );

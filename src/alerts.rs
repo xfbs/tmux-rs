@@ -11,7 +11,6 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
 use crate::*;
 
 use crate::compat::{
@@ -32,21 +31,19 @@ unsafe extern "C" fn alerts_timer(_fd: i32, _events: i16, arg: *mut c_void) {
     }
 }
 
-unsafe extern "C" fn alerts_callback(_fd: c_int, _events: c_short, arg: *mut c_void) {
+unsafe extern "C" fn alerts_callback(_fd: c_int, _events: c_short, _arg: *mut c_void) {
     unsafe {
         for w in tailq_foreach::<_, crate::discr_alerts_entry>(&raw mut alerts_list) {
-            unsafe {
-                let alerts = alerts_check_all(w);
+            let alerts = alerts_check_all(w);
 
-                let w = w.as_ptr();
-                log_debug!("@{} alerts check, alerts {:#x}", (*w).id, alerts);
+            let w = w.as_ptr();
+            log_debug!("@{} alerts check, alerts {:#x}", (*w).id, alerts);
 
-                (*w).alerts_queued = 0;
-                tailq_remove::<_, crate::discr_alerts_entry>(&raw mut alerts_list, w);
+            (*w).alerts_queued = 0;
+            tailq_remove::<_, crate::discr_alerts_entry>(&raw mut alerts_list, w);
 
-                (*w).flags &= !WINDOW_ALERTFLAGS;
-                window_remove_ref(w, c"alerts_callback".as_ptr());
-            }
+            (*w).flags &= !WINDOW_ALERTFLAGS;
+            window_remove_ref(w, c"alerts_callback".as_ptr());
         }
         alerts_fired = 0;
     }

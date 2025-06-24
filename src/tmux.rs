@@ -387,8 +387,11 @@ pub unsafe extern "C" fn find_home() -> *mut c_char {
     }
 }
 
-pub unsafe extern "C" fn getversion() -> *const c_char {
-    // TODO get this from build config somehow
+pub fn getversion() -> &'static str {
+    "3.5rs"
+}
+
+pub fn getversion_c() -> *const c_char {
     c"3.5rs".as_ptr()
 }
 
@@ -482,7 +485,7 @@ pub unsafe extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *m
                     cfg_quiet = 0;
                 }
                 b'V' => {
-                    printf(c"tmux %s\n".as_ptr(), getversion());
+                    println!("tmux {}", getversion());
                     std::process::exit(0);
                 }
                 b'l' => flags |= client_flag::LOGIN,

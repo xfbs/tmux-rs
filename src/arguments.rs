@@ -11,7 +11,6 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use libc::{strchr, strcspn};
 use std::cmp::Ordering;
 
 use crate::{xmalloc::xrecallocarray, *};
@@ -22,7 +21,7 @@ use crate::compat::{
         tailq_empty, tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_last,
         tailq_next, tailq_remove,
     },
-    strlcat, strtonum,
+    strlcat,
     tree::{rb_find, rb_foreach, rb_init, rb_insert, rb_min, rb_next, rb_remove},
 };
 
@@ -62,10 +61,7 @@ unsafe extern "C" fn args_cmp(a1: *const args_entry, a2: *const args_entry) -> O
 
 pub unsafe extern "C" fn args_find(args: *mut args, flag: c_uchar) -> *mut args_entry {
     unsafe {
-        let mut entry: args_entry = args_entry {
-            flag,
-            ..unsafe { zeroed() }
-        };
+        let mut entry: args_entry = args_entry { flag, ..zeroed() };
 
         rb_find(&raw mut (*args).tree, &raw mut entry)
     }
@@ -130,7 +126,6 @@ pub unsafe extern "C" fn args_parse_flag_argument(
 ) -> i32 {
     let argument: *mut args_value;
     let new: *mut args_value;
-    let mut s: *mut c_char;
     unsafe {
         'out: {
             new = xcalloc(1, size_of::<args_value>()).cast().as_ptr();
@@ -223,7 +218,7 @@ pub unsafe extern "C" fn args_parse_flags(
                 return -1;
             }
 
-            let found = strchr((*parse).template, flag as i32);
+            let found = libc::strchr((*parse).template, flag as i32);
             if found.is_null() {
                 *cause = format_nul!("unknown flag -{}", flag as char);
                 return -1;
@@ -258,10 +253,6 @@ pub unsafe extern "C" fn args_parse(
     let __func__ = "args_parse";
     unsafe {
         let mut type_: args_parse_type;
-        let mut value: *mut args_value = null_mut();
-        let mut new: *mut args_value = null_mut();
-        let mut s: *const c_char = null();
-        let mut stop: i32 = 0;
 
         if count == 0 {
             return args_create();
@@ -271,7 +262,7 @@ pub unsafe extern "C" fn args_parse(
 
         let mut i: u32 = 1;
         while i < count {
-            stop = args_parse_flags(parse, values, count, cause, args, &raw mut i);
+            let stop = args_parse_flags(parse, values, count, cause, args, &raw mut i);
             if stop == -1 {
                 args_free(args);
                 return null_mut();
@@ -283,9 +274,9 @@ pub unsafe extern "C" fn args_parse(
         log_debug!("{}: flags end at {} of {}", __func__, i, count);
         if i != count {
             while i < count {
-                value = values.add(i as usize);
+                let value = values.add(i as usize);
 
-                s = args_value_as_string(value);
+                let s = args_value_as_string(value);
                 log_debug!(
                     "{}: {} = {} (type {})",
                     __func__,
@@ -312,7 +303,7 @@ pub unsafe extern "C" fn args_parse(
                 )
                 .cast()
                 .as_ptr();
-                new = (*args).values.add((*args).count as usize);
+                let new = (*args).values.add((*args).count as usize);
                 (*args).count += 1;
 
                 match type_ {
@@ -393,7 +384,7 @@ pub unsafe extern "C" fn args_copy(
         let new_args = args_create();
         for entry in rb_foreach(&raw mut (*args).tree).map(NonNull::as_ptr) {
             if tailq_empty(&raw mut (*entry).values) {
-                for i in 0..(*entry).count {
+                for _ in 0..(*entry).count {
                     args_set(new_args, (*entry).flag, null_mut(), 0);
                 }
                 continue;
@@ -500,7 +491,7 @@ macro_rules! args_print_add {
 pub(crate) use args_print_add;
 pub unsafe fn args_print_add_(buf: *mut *mut c_char, len: *mut usize, fmt: std::fmt::Arguments) {
     unsafe {
-        let mut s = fmt.to_string();
+        let s = fmt.to_string();
 
         *len += s.len();
         *buf = xrealloc(*buf as *mut c_void, *len).cast().as_ptr();
@@ -537,11 +528,7 @@ pub unsafe extern "C" fn args_print_add_value(
 
 pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
     unsafe {
-        let i: u32 = 0;
-        let j: u32 = 0;
-        let entry: *mut args_entry = null_mut();
         let mut last: *mut args_entry = null_mut();
-        let value: *mut args_entry = null_mut();
 
         let mut len: usize = 1;
         let mut buf: *mut c_char = xcalloc(1, len).cast().as_ptr();
@@ -558,7 +545,7 @@ pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
             if *buf == b'\0' as c_char {
                 args_print_add!(&raw mut buf, &raw mut len, "-");
             }
-            for j in 0..(*entry).count {
+            for _ in 0..(*entry).count {
                 args_print_add!(&raw mut buf, &raw mut len, "{}", (*entry).flag as char);
             }
         }
@@ -609,17 +596,15 @@ pub unsafe extern "C" fn args_escape(s: *const c_char) -> *mut c_char {
         static mut squoted: *const c_char = c" \"".as_ptr();
 
         let mut escaped: *mut c_char = null_mut();
-        let mut result: *mut c_char = null_mut();
 
-        let mut flags: i32 = 0;
         let mut quotes: i32 = 0;
 
         if *s == b'\0' as c_char {
             return format_nul!("''");
         }
-        if *s.add(strcspn(s, dquoted)) != b'\0' as _ {
+        if *s.add(libc::strcspn(s, dquoted)) != b'\0' as _ {
             quotes = b'"' as _;
-        } else if *s.add(strcspn(s, squoted)) != b'\0' as _ {
+        } else if *s.add(libc::strcspn(s, squoted)) != b'\0' as _ {
             quotes = b'\'' as _;
         }
 
@@ -628,7 +613,7 @@ pub unsafe extern "C" fn args_escape(s: *const c_char) -> *mut c_char {
             return escaped;
         }
 
-        flags = VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL;
+        let mut flags = VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL;
         if quotes == b'"' as _ {
             flags |= VIS_DQ;
         }
@@ -795,24 +780,22 @@ pub unsafe extern "C" fn args_make_commands_prepare(
         let tc = cmdq_get_target_client(item);
 
         let mut file = null();
-        let mut value: *mut args_value = null_mut();
-        let mut cmd = null();
         let state = xcalloc1::<args_command_state>() as *mut args_command_state;
 
-        if idx < (*args).count {
-            value = (*args).values.add(idx as usize);
+        let cmd = if idx < (*args).count {
+            let value = (*args).values.add(idx as usize);
             if (*value).type_ == args_type::ARGS_COMMANDS {
                 (*state).cmdlist = (*value).union_.cmdlist;
                 (*(*state).cmdlist).references += 1;
                 return state;
             }
-            cmd = (*value).union_.string;
+            (*value).union_.string
         } else {
             if default_command.is_null() {
                 fatalx(c"argument out of range");
             }
-            cmd = default_command;
-        }
+            default_command
+        };
 
         if expand != 0 {
             (*state).cmd = format_single_from_target(item, cmd);
@@ -873,14 +856,14 @@ pub unsafe extern "C" fn args_make_commands(
 
         let pr = cmd_parse_from_string(cmd, &raw mut (*state).pi);
         free_(cmd);
+
         match (*pr).status {
             cmd_parse_status::CMD_PARSE_ERROR => {
                 *error = (*pr).error;
-                return null_mut();
+                null_mut()
             }
-            cmd_parse_status::CMD_PARSE_SUCCESS => return (*pr).cmdlist,
+            cmd_parse_status::CMD_PARSE_SUCCESS => (*pr).cmdlist,
         }
-        fatalx(c"invalid parse return state");
     }
 }
 
@@ -911,7 +894,7 @@ pub unsafe extern "C" fn args_make_commands_get_command(
             }
             return xstrdup((*cmd_get_entry(first)).name).as_ptr();
         }
-        let n = strcspn((*state).cmd, c" ,".as_ptr());
+        let n = libc::strcspn((*state).cmd, c" ,".as_ptr());
         format_nul!("{1:0$}", n, _s((*state).cmd))
     }
 }
@@ -978,8 +961,6 @@ pub unsafe extern "C" fn args_strtonum_and_expand(
     cause: *mut *mut c_char,
 ) -> c_longlong {
     unsafe {
-        let mut errstr: *const i8 = null();
-
         let entry = args_find(args, flag);
         if entry.is_null() {
             *cause = xstrdup_(c"missing").as_ptr();
@@ -1043,10 +1024,9 @@ pub unsafe extern "C" fn args_string_percentage(
     cause: *mut *mut c_char,
 ) -> i64 {
     unsafe {
-        let mut errstr: *const c_char = null();
-        let mut ll: i64 = 0;
+        let mut ll: i64;
         let valuelen: usize = strlen(value);
-        let mut copy = null_mut();
+        let copy;
 
         if valuelen == 0 {
             *cause = xstrdup_(c"empty").as_ptr();
@@ -1124,10 +1104,9 @@ pub unsafe extern "C" fn args_string_percentage_and_expand(
     cause: *mut *mut c_char,
 ) -> i64 {
     unsafe {
-        let mut errstr: *const c_char = null();
         let valuelen = strlen(value);
-        let mut ll: i64 = 0;
-        let mut f: *mut c_char = null_mut();
+        let mut ll: i64;
+        let f: *mut c_char;
 
         if *value.add(valuelen - 1) == b'%' as _ {
             let copy = xstrdup(value).as_ptr();

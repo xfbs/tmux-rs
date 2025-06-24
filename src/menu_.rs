@@ -124,7 +124,7 @@ pub unsafe extern "C" fn menu_add_item(
             c"".as_ptr()
         };
         let trimmed = format_trim_right(s, max_width);
-        let mut name: *mut c_char = if !key.is_null() {
+        let name: *mut c_char = if !key.is_null() {
             format_nul!(
                 "{}{}#[default] #[align=right]({})",
                 _s(trimmed),
@@ -207,7 +207,7 @@ pub unsafe extern "C" fn menu_mode_cb(
 }
 
 pub unsafe extern "C" fn menu_check_cb(
-    c: *mut client,
+    _c: *mut client,
     data: *mut c_void,
     px: u32,
     py: u32,
@@ -234,7 +234,7 @@ pub unsafe extern "C" fn menu_check_cb(
 pub unsafe extern "C" fn menu_draw_cb(
     c: *mut client,
     data: *mut c_void,
-    rctx: *mut screen_redraw_ctx,
+    _rctx: *mut screen_redraw_ctx,
 ) {
     unsafe {
         let md = data as *mut menu_data;
@@ -288,7 +288,7 @@ pub unsafe extern "C" fn menu_draw_cb(
     }
 }
 
-pub unsafe extern "C" fn menu_free_cb(c: *mut client, data: *mut c_void) {
+pub unsafe extern "C" fn menu_free_cb(_c: *mut client, data: *mut c_void) {
     unsafe {
         let md = data as *mut menu_data;
 
@@ -315,13 +315,10 @@ pub unsafe extern "C" fn menu_key_cb(
         let md = data as *mut menu_data;
         let menu = (*md).menu;
         let m = &raw mut (*event).m;
-        // u_int i;
         let count = (*menu).count;
         let mut old = (*md).choice;
 
         let mut name: *const c_char = null();
-        let mut item: *const menu_item = null();
-        let mut state: *mut cmdq_state = null_mut();
         let mut error = null_mut();
 
         'chosen: {
@@ -567,7 +564,7 @@ pub unsafe extern "C" fn menu_key_cb(
         if (*md).choice == -1 {
             return 1;
         }
-        item = (*menu).items.add((*md).choice as usize);
+        let item = (*menu).items.add((*md).choice as usize);
         if (*item).name.as_ptr().is_null() || *(*item).name.as_ptr() == b'-' as c_char {
             if (*md).flags & MENU_STAYOPEN != 0 {
                 return 0;
@@ -585,7 +582,7 @@ pub unsafe extern "C" fn menu_key_cb(
         } else {
             event = null_mut();
         }
-        state = cmdq_new_state(&raw mut (*md).fs, event, 0);
+        let state = cmdq_new_state(&raw mut (*md).fs, event, 0);
 
         // TODO fix this cast
         let status = cmd_parse_and_append(
@@ -647,8 +644,8 @@ pub unsafe extern "C" fn menu_prepare(
     data: *mut c_void,
 ) -> *mut menu_data {
     unsafe {
-        let mut choice = 0;
-        let mut name: *const c_char = null();
+        let mut choice;
+        let mut name: *const c_char;
 
         let o = (*(*(*(*c).session).curw).window).options;
 

@@ -11,8 +11,6 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use libc::strcmp;
-
 use crate::*;
 
 #[repr(C)]
@@ -58,8 +56,6 @@ pub unsafe extern "C" fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut n
     unsafe {
         log_debug!("{}: inserting hook {}", __func__, _s((*ne).name));
 
-        let mut o: *mut options_entry = null_mut();
-        let mut oo: *mut options = null_mut();
         let mut fs: cmd_find_state = zeroed();
 
         cmd_find_clear_state(&raw mut fs, 0);
@@ -70,12 +66,12 @@ pub unsafe extern "C" fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut n
             cmd_find_copy_state(&raw mut fs, &raw mut (*ne).fs);
         }
 
-        if fs.s.is_null() {
-            oo = global_s_options;
+        let mut oo = if fs.s.is_null() {
+            global_s_options
         } else {
-            oo = (*fs.s).options;
-        }
-        o = options_get(oo, (*ne).name);
+            (*fs.s).options
+        };
+        let mut o = options_get(oo, (*ne).name);
         if o.is_null() && !fs.wp.is_null() {
             oo = (*fs.wp).options;
             o = options_get(oo, (*ne).name);
@@ -132,46 +128,46 @@ pub unsafe extern "C" fn notify_callback(item: *mut cmdq_item, data: *mut c_void
 
         log_debug!("{}: {}", _s(__func__), _s((*ne).name));
 
-        if strcmp((*ne).name, c"pane-mode-changed".as_ptr()) == 0 {
+        if streq_((*ne).name, "pane-mode-changed") {
             control_notify_pane_mode_changed((*ne).pane);
         }
-        if strcmp((*ne).name, c"window-layout-changed".as_ptr()) == 0 {
+        if streq_((*ne).name, "window-layout-changed") {
             control_notify_window_layout_changed((*ne).window);
         }
-        if strcmp((*ne).name, c"window-pane-changed".as_ptr()) == 0 {
+        if streq_((*ne).name, "window-pane-changed") {
             control_notify_window_pane_changed((*ne).window);
         }
-        if strcmp((*ne).name, c"window-unlinked".as_ptr()) == 0 {
+        if streq_((*ne).name, "window-unlinked") {
             control_notify_window_unlinked((*ne).session, (*ne).window);
         }
-        if strcmp((*ne).name, c"window-linked".as_ptr()) == 0 {
+        if streq_((*ne).name, "window-linked") {
             control_notify_window_linked((*ne).session, (*ne).window);
         }
-        if strcmp((*ne).name, c"window-renamed".as_ptr()) == 0 {
+        if streq_((*ne).name, "window-renamed") {
             control_notify_window_renamed((*ne).window);
         }
-        if strcmp((*ne).name, c"client-session-changed".as_ptr()) == 0 {
+        if streq_((*ne).name, "client-session-changed") {
             control_notify_client_session_changed((*ne).client);
         }
-        if strcmp((*ne).name, c"client-detached".as_ptr()) == 0 {
+        if streq_((*ne).name, "client-detached") {
             control_notify_client_detached((*ne).client);
         }
-        if strcmp((*ne).name, c"session-renamed".as_ptr()) == 0 {
+        if streq_((*ne).name, "session-renamed") {
             control_notify_session_renamed((*ne).session);
         }
-        if strcmp((*ne).name, c"session-created".as_ptr()) == 0 {
+        if streq_((*ne).name, "session-created") {
             control_notify_session_created((*ne).session);
         }
-        if strcmp((*ne).name, c"session-closed".as_ptr()) == 0 {
+        if streq_((*ne).name, "session-closed") {
             control_notify_session_closed((*ne).session);
         }
-        if strcmp((*ne).name, c"session-window-changed".as_ptr()) == 0 {
+        if streq_((*ne).name, "session-window-changed") {
             control_notify_session_window_changed((*ne).session);
         }
-        if strcmp((*ne).name, c"paste-buffer-changed".as_ptr()) == 0 {
+        if streq_((*ne).name, "paste-buffer-changed") {
             control_notify_paste_buffer_changed((*ne).pbname);
         }
-        if strcmp((*ne).name, c"paste-buffer-deleted".as_ptr()) == 0 {
+        if streq_((*ne).name, "paste-buffer-deleted") {
             control_notify_paste_buffer_deleted((*ne).pbname);
         }
 

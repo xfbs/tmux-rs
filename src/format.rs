@@ -11,6 +11,7 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+use crate::tmux::getversion_c;
 use crate::*;
 
 use std::cmp::Ordering;
@@ -2629,7 +2630,7 @@ pub unsafe extern "C" fn format_cb_socket_path(_ft: *mut format_tree) -> *mut c_
 /// Callback for version.
 
 pub unsafe extern "C" fn format_cb_version(_ft: *mut format_tree) -> *mut c_void {
-    unsafe { xstrdup(getversion()).as_ptr().cast() }
+    unsafe { xstrdup(getversion_c()).as_ptr().cast() }
 }
 
 /// Callback for active_window_index.
@@ -3069,13 +3070,11 @@ pub unsafe extern "C" fn format_cb_session_last_attached(ft: *mut format_tree) -
 }
 
 /// Callback for start_time.
-
 pub unsafe extern "C" fn format_cb_start_time(_ft: *mut format_tree) -> *mut c_void {
-    unsafe { &raw mut start_time as *mut c_void }
+    &raw mut start_time as *mut c_void
 }
 
 /// Callback for window_activity.
-
 pub unsafe extern "C" fn format_cb_window_activity(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).w.is_null() {
@@ -3086,31 +3085,26 @@ pub unsafe extern "C" fn format_cb_window_activity(ft: *mut format_tree) -> *mut
 }
 
 /// Callback for buffer_mode_format.
-
 pub unsafe extern "C" fn format_cb_buffer_mode_format(_ft: *mut format_tree) -> *mut c_void {
     unsafe { xstrdup(window_buffer_mode.default_format.0).as_ptr().cast() }
 }
 
 /// Callback for client_mode_format.
-
 pub unsafe extern "C" fn format_cb_client_mode_format(_ft: *mut format_tree) -> *mut c_void {
     unsafe { xstrdup(window_client_mode.default_format.0).as_ptr().cast() }
 }
 
 /// Callback for tree_mode_format.
-
 pub unsafe extern "C" fn format_cb_tree_mode_format(_ft: *mut format_tree) -> *mut c_void {
     unsafe { xstrdup(window_tree_mode.default_format.0).as_ptr().cast() }
 }
 
 /// Callback for uid.
-
 pub unsafe extern "C" fn format_cb_uid(_ft: *mut format_tree) -> *mut c_void {
     unsafe { format_printf!("{}", getuid() as i64).cast() }
 }
 
 /// Callback for user.
-
 pub unsafe extern "C" fn format_cb_user(_ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if let Some(pw) = NonNull::new(getpwuid(getuid())) {
@@ -3422,10 +3416,8 @@ pub unsafe extern "C" fn format_log_debug_cb(
     value: *const c_char,
     arg: *mut c_void,
 ) {
-    unsafe {
-        let prefix = arg as *const c_char;
-        log_debug!("{}: {}={}", _s(prefix), _s(key), _s(value));
-    }
+    let prefix = arg as *const c_char;
+    log_debug!("{}: {}={}", _s(prefix), _s(key), _s(value));
 }
 
 pub unsafe extern "C" fn format_log_debug(ft: *mut format_tree, prefix: *const c_char) {
@@ -3678,7 +3670,6 @@ fn format_find(
         // struct tm tm;
         let mut s = MaybeUninit::<[i8; 512]>::uninit();
         let s = s.as_mut_ptr() as *mut i8;
-        let mut errstr: *const c_char = null();
         let mut fe_find = MaybeUninit::<format_entry>::uninit();
 
         const sizeof_s: usize = 512;

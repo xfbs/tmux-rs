@@ -9,7 +9,6 @@ pub mod imsg_buffer;
 pub mod queue;
 pub mod systemd;
 pub mod tree;
-pub mod vis_;
 
 mod strlcat;
 mod strlcpy;

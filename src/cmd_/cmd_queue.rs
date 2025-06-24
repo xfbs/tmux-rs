@@ -23,6 +23,7 @@ use crate::xmalloc::xcalloc1;
 
 macro_rules! cstringify {
     ($e:expr) => {
+        #[allow(unused_unsafe)]
         unsafe {
             ::core::ffi::CStr::from_bytes_with_nul_unchecked(
                 concat!(stringify!($e), "\0").as_bytes(),

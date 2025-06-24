@@ -39,7 +39,7 @@ unsafe extern "C" fn cfg_client_done(_item: *mut cmdq_item, _data: *mut c_void) 
     }
 }
 
-unsafe extern "C" fn cfg_done(item: *mut cmdq_item, _data: *mut c_void) -> cmd_retval {
+unsafe extern "C" fn cfg_done(_item: *mut cmdq_item, _data: *mut c_void) -> cmd_retval {
     unsafe {
         if cfg_finished != 0 {
             return cmd_retval::CMD_RETURN_NORMAL;
