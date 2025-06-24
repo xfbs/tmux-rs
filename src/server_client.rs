@@ -3529,12 +3529,10 @@ pub unsafe extern "C" fn server_client_print(c: *mut client, parse: i32, evb: *m
                         file_print!(c, "{}\n", _s(sanitized));
                     }
                     free_(sanitized);
+                } else if (*c).flags.intersects(client_flag::CONTROL) {
+                    control_write!(c, "{}", _s(msg));
                 } else {
-                    if (*c).flags.intersects(client_flag::CONTROL) {
-                        control_write!(c, "{}", _s(msg));
-                    } else {
-                        file_print!(c, "{}\n", _s(msg));
-                    }
+                    file_print!(c, "{}\n", _s(msg));
                 }
                 break 'out;
             }

@@ -156,12 +156,10 @@ pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_it
                 if !args_has_(args, 'u') && args_has_(args, 'o') {
                     if idx == -1 {
                         already = !o.is_null() as i32;
+                    } else if o.is_null() {
+                        already = 0;
                     } else {
-                        if o.is_null() {
-                            already = 0;
-                        } else {
-                            already = (!options_array_get(o, idx as u32).is_null()) as i32;
-                        }
+                        already = (!options_array_get(o, idx as u32).is_null()) as i32;
                     }
                     if already != 0 {
                         if args_has_(args, 'q') {

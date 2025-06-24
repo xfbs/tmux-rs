@@ -627,12 +627,10 @@ pub unsafe extern "C" fn args_escape(s: *const c_char) -> *mut c_char {
             } else {
                 format_nul!("\"{}\"", _s(escaped))
             }
+        } else if *escaped == b'~' as i8 {
+            format_nul!("\\{}", _s(escaped))
         } else {
-            if *escaped == b'~' as i8 {
-                format_nul!("\\{}", _s(escaped))
-            } else {
-                xstrdup(escaped).as_ptr()
-            }
+            xstrdup(escaped).as_ptr()
         };
         free_(escaped);
 

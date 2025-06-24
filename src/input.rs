@@ -1192,16 +1192,14 @@ unsafe extern "C" fn input_split(ictx: *mut input_ctx) -> i32 {
         } {
             if *out == b'\0' as i8 {
                 (*ip).type_ = input_param_type::INPUT_MISSING;
+            } else if !libc::strchr(out, b':' as i32).is_null() {
+                (*ip).type_ = input_param_type::INPUT_STRING;
+                (*ip).union_.str = xstrdup(out).as_ptr();
             } else {
-                if !libc::strchr(out, b':' as i32).is_null() {
-                    (*ip).type_ = input_param_type::INPUT_STRING;
-                    (*ip).union_.str = xstrdup(out).as_ptr();
-                } else {
-                    (*ip).type_ = input_param_type::INPUT_NUMBER;
-                    (*ip).union_.num = strtonum(out, 0, i32::MAX as i64, &raw mut errstr) as i32;
-                    if !errstr.is_null() {
-                        return -1;
-                    }
+                (*ip).type_ = input_param_type::INPUT_NUMBER;
+                (*ip).union_.num = strtonum(out, 0, i32::MAX as i64, &raw mut errstr) as i32;
+                if !errstr.is_null() {
+                    return -1;
                 }
             }
             (*ictx).param_list_len += 1;

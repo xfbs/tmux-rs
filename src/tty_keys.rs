@@ -818,12 +818,10 @@ unsafe extern "C" fn tty_keys_add1(
 
             // Use the child tree for the next character.
             tkp = &raw mut (*tk).next;
-        } else {
-            if *s < (*tk).ch {
-                tkp = &raw mut (*tk).left;
-            } else if *s > (*tk).ch {
-                tkp = &raw mut (*tk).right;
-            }
+        } else if *s < (*tk).ch {
+            tkp = &raw mut (*tk).left;
+        } else if *s > (*tk).ch {
+            tkp = &raw mut (*tk).right;
         }
 
         // And recurse to add it.
@@ -955,12 +953,10 @@ unsafe extern "C" fn tty_keys_find1(
 
             // Move into the next tree for the following character
             tk = (*tk).next;
-        } else {
-            if *buf < (*tk).ch {
-                tk = (*tk).left;
-            } else if *buf > (*tk).ch {
-                tk = (*tk).right;
-            }
+        } else if *buf < (*tk).ch {
+            tk = (*tk).left;
+        } else if *buf > (*tk).ch {
+            tk = (*tk).right;
         }
 
         // Move to the next in the tree
@@ -1442,16 +1438,14 @@ unsafe extern "C" fn tty_keys_extended_key(
             {
                 return -1;
             }
-        } else {
-            if libc::sscanf(
-                tmp.as_ptr(),
-                c"%u;%u".as_ptr(),
-                &raw mut number,
-                &raw mut modifiers,
-            ) != 2
-            {
-                return -1;
-            }
+        } else if libc::sscanf(
+            tmp.as_ptr(),
+            c"%u;%u".as_ptr(),
+            &raw mut number,
+            &raw mut modifiers,
+        ) != 2
+        {
+            return -1;
         }
         *size = end + 1;
 

@@ -139,24 +139,20 @@ pub unsafe extern "C" fn screen_redraw_pane_border(
                 if (*wp).xoff != 0 && px == (*wp).xoff - 1 && py > (*wp).sy / 2 {
                     return screen_redraw_border_type::SCREEN_REDRAW_BORDER_LEFT;
                 }
-            } else {
-                if ((*wp).yoff == 0 || py >= (*wp).yoff - 1) && py <= ey {
-                    if (*wp).xoff != 0 && px == (*wp).xoff - 1 {
-                        return screen_redraw_border_type::SCREEN_REDRAW_BORDER_LEFT;
-                    }
-                    if px == ex {
-                        return screen_redraw_border_type::SCREEN_REDRAW_BORDER_RIGHT;
-                    }
-                }
-            }
-        } else {
-            if ((*wp).yoff == 0 || py >= (*wp).yoff - 1) && py <= ey {
+            } else if ((*wp).yoff == 0 || py >= (*wp).yoff - 1) && py <= ey {
                 if (*wp).xoff != 0 && px == (*wp).xoff - 1 {
                     return screen_redraw_border_type::SCREEN_REDRAW_BORDER_LEFT;
                 }
                 if px == ex {
                     return screen_redraw_border_type::SCREEN_REDRAW_BORDER_RIGHT;
                 }
+            }
+        } else if ((*wp).yoff == 0 || py >= (*wp).yoff - 1) && py <= ey {
+            if (*wp).xoff != 0 && px == (*wp).xoff - 1 {
+                return screen_redraw_border_type::SCREEN_REDRAW_BORDER_LEFT;
+            }
+            if px == ex {
+                return screen_redraw_border_type::SCREEN_REDRAW_BORDER_RIGHT;
             }
         }
 
@@ -169,14 +165,12 @@ pub unsafe extern "C" fn screen_redraw_pane_border(
                 if (*wp).yoff != 0 && py == (*wp).yoff - 1 && px > (*wp).sx / 2 {
                     return screen_redraw_border_type::SCREEN_REDRAW_BORDER_TOP;
                 }
-            } else {
-                if ((*wp).xoff == 0 || px >= (*wp).xoff - 1) && px <= ex {
-                    if (*wp).yoff != 0 && py == (*wp).yoff - 1 {
-                        return screen_redraw_border_type::SCREEN_REDRAW_BORDER_TOP;
-                    }
-                    if py == ey {
-                        return screen_redraw_border_type::SCREEN_REDRAW_BORDER_BOTTOM;
-                    }
+            } else if ((*wp).xoff == 0 || px >= (*wp).xoff - 1) && px <= ex {
+                if (*wp).yoff != 0 && py == (*wp).yoff - 1 {
+                    return screen_redraw_border_type::SCREEN_REDRAW_BORDER_TOP;
+                }
+                if py == ey {
+                    return screen_redraw_border_type::SCREEN_REDRAW_BORDER_BOTTOM;
                 }
             }
         } else if pane_status == pane_status::PANE_STATUS_TOP {
@@ -185,11 +179,9 @@ pub unsafe extern "C" fn screen_redraw_pane_border(
                     return screen_redraw_border_type::SCREEN_REDRAW_BORDER_TOP;
                 }
             }
-        } else {
-            if ((*wp).xoff == 0 || px >= (*wp).xoff - 1) && px <= ex {
-                if py == ey {
-                    return screen_redraw_border_type::SCREEN_REDRAW_BORDER_BOTTOM;
-                }
+        } else if ((*wp).xoff == 0 || px >= (*wp).xoff - 1) && px <= ex {
+            if py == ey {
+                return screen_redraw_border_type::SCREEN_REDRAW_BORDER_BOTTOM;
             }
         }
 

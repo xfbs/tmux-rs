@@ -166,22 +166,20 @@ pub unsafe extern "C" fn cmd_show_options_print(
         if idx != -1 {
             tmp = format_nul!("{}[{}]", _s(name), idx);
             name = tmp;
-        } else {
-            if options_is_array(o) != 0 {
-                a = options_array_first(o);
-                if a.is_null() {
-                    if !args_has_(args, 'v') {
-                        cmdq_print!(item, "{}", _s(name));
-                    }
-                    return;
-                }
-                while !a.is_null() {
-                    idx = options_array_item_index(a) as i32;
-                    cmd_show_options_print(self_, item, o, idx, parent);
-                    a = options_array_next(a);
+        } else if options_is_array(o) != 0 {
+            a = options_array_first(o);
+            if a.is_null() {
+                if !args_has_(args, 'v') {
+                    cmdq_print!(item, "{}", _s(name));
                 }
                 return;
             }
+            while !a.is_null() {
+                idx = options_array_item_index(a) as i32;
+                cmd_show_options_print(self_, item, o, idx, parent);
+                a = options_array_next(a);
+            }
+            return;
         }
 
         value = options_to_string(o, idx, 0);
@@ -195,12 +193,10 @@ pub unsafe extern "C" fn cmd_show_options_print(
                 cmdq_print!(item, "{} {}", _s(name), _s(escaped));
             }
             free_(escaped);
+        } else if parent != 0 {
+            cmdq_print!(item, "{}* {}", _s(name), _s(value));
         } else {
-            if parent != 0 {
-                cmdq_print!(item, "{}* {}", _s(name), _s(value));
-            } else {
-                cmdq_print!(item, "{} {}", _s(name), _s(value));
-            }
+            cmdq_print!(item, "{} {}", _s(name), _s(value));
         }
         free_(value);
 

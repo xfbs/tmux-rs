@@ -4605,8 +4605,7 @@ pub unsafe extern "C" fn format_replace(
                             b'n' => modifiers |= format_modifiers::FORMAT_LENGTH,
                             b't' => {
                                 modifiers |= format_modifiers::FORMAT_TIMESTRING;
-                                if (*fm).argc < 1 {
-                                } else {
+                                if (*fm).argc >= 1 {
                                     if !strchr(*(*fm).argv, b'p' as i32).is_null() {
                                         modifiers |= format_modifiers::FORMAT_PRETTY;
                                     } else if (*fm).argc >= 2
@@ -4878,24 +4877,16 @@ pub unsafe extern "C" fn format_replace(
                     if value.is_null() {
                         value = xstrdup(c"".as_ptr()).as_ptr();
                     }
+                } else if !strstr(copy, c"#{".as_ptr()).is_null() {
+                    format_log1!(es, __func__, "expanding inner format '{}'", _s(copy));
+                    value = format_expand1(es, copy);
                 } else {
-                    if !strstr(copy, c"#{".as_ptr()).is_null() {
-                        format_log1!(es, __func__, "expanding inner format '{}'", _s(copy));
-                        value = format_expand1(es, copy);
+                    value = format_find(ft, copy, modifiers, time_format);
+                    if value.is_null() {
+                        format_log1!(es, __func__, "format '{}' not found", _s(copy));
+                        value = xstrdup(c"".as_ptr()).as_ptr();
                     } else {
-                        value = format_find(ft, copy, modifiers, time_format);
-                        if value.is_null() {
-                            format_log1!(es, __func__, "format '{}' not found", _s(copy));
-                            value = xstrdup(c"".as_ptr()).as_ptr();
-                        } else {
-                            format_log1!(
-                                es,
-                                __func__,
-                                "format '{}' found: {}",
-                                _s(copy),
-                                _s(value),
-                            );
-                        }
+                        format_log1!(es, __func__, "format '{}' found: {}", _s(copy), _s(value),);
                     }
                 }
             }

@@ -14,10 +14,10 @@
 #![allow(non_camel_case_types)]
 #![allow(non_upper_case_globals)]
 #![allow(unused)] // TODO 5000
+#![allow(unpredictable_function_pointer_comparisons)] // TODO 2
 //
 #![allow(clippy::upper_case_acronyms)]
 #![allow(clippy::uninlined_format_args)] // mainly for lalrpop generated code
-#![allow(clippy::collapsible_else_if)]
 #![allow(clippy::collapsible_if)]
 #![allow(clippy::manual_range_contains)]
 #![allow(clippy::blocks_in_conditions)] // keep, not worth fixing yet

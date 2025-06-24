@@ -926,18 +926,16 @@ unsafe extern "C" fn window_customize_draw_option(
                     ) {
                         break 'out;
                     }
-                } else {
-                    if !screen_write_text!(
-                        ctx,
-                        cx,
-                        sx,
-                        sy - ((*s).cy - cy),
-                        0,
-                        &raw const grid_default_cell,
-                        "This is an array option.",
-                    ) {
-                        break 'out;
-                    }
+                } else if !screen_write_text!(
+                    ctx,
+                    cx,
+                    sx,
+                    sy - ((*s).cy - cy),
+                    0,
+                    &raw const grid_default_cell,
+                    "This is an array option.",
+                ) {
+                    break 'out;
                 }
                 if idx == -1 {
                     break 'out;
@@ -1336,10 +1334,8 @@ pub unsafe extern "C" fn window_customize_set_option_callback(
                 if options_array_set(o, idx as u32, s, 0, &raw mut cause) != 0 {
                     break 'fail;
                 }
-            } else {
-                if options_from_string(oo, oe, name, s, 0, &raw mut cause) != 0 {
-                    break 'fail;
-                }
+            } else if options_from_string(oo, oe, name, s, 0, &raw mut cause) != 0 {
+                break 'fail;
             }
 
             options_push_changes((*item).name);

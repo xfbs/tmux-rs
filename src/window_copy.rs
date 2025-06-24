@@ -1095,10 +1095,8 @@ pub unsafe extern "C" fn window_copy_do_copy_end_of_line(
             if !s.is_null() && count > 1 && *arg1 != b'\0' as i8 {
                 command = format_single(null_mut(), arg1, c, s, wl, wp);
             }
-        } else {
-            if count == 2 {
-                prefix = format_single(null_mut(), arg1, c, s, wl, wp);
-            }
+        } else if count == 2 {
+            prefix = format_single(null_mut(), arg1, c, s, wl, wp);
         }
 
         let ocx = (*data).cx;
@@ -1189,10 +1187,8 @@ pub unsafe extern "C" fn window_copy_do_copy_line(
             if !s.is_null() && count > 1 && *arg1 != b'\0' as i8 {
                 command = format_single(null_mut(), arg1, c, s, wl, wp);
             }
-        } else {
-            if count == 2 {
-                prefix = format_single(null_mut(), arg1, c, s, wl, wp);
-            }
+        } else if count == 2 {
+            prefix = format_single(null_mut(), arg1, c, s, wl, wp);
         }
 
         let ocx = (*data).cx;
@@ -5157,21 +5153,19 @@ pub unsafe extern "C" fn window_copy_write_line(
                     size = xsnprintf_!((&raw mut hdr).cast(), 512, "{}", _s(&raw const tmp as _))
                         .unwrap() as usize;
                 }
-            } else {
-                if (*data).searchcount == -1 {
-                    size = xsnprintf_!((&raw mut hdr).cast(), 512, "{}", _s(&raw const tmp as _))
-                        .unwrap() as usize;
-                } else {
-                    size = xsnprintf_!(
-                        (&raw mut hdr).cast(),
-                        512,
-                        "({}{} results) {}",
-                        (*data).searchcount,
-                        if (*data).searchmore != 0 { "+" } else { "" },
-                        _s(&raw const tmp as _)
-                    )
+            } else if (*data).searchcount == -1 {
+                size = xsnprintf_!((&raw mut hdr).cast(), 512, "{}", _s(&raw const tmp as _))
                     .unwrap() as usize;
-                }
+            } else {
+                size = xsnprintf_!(
+                    (&raw mut hdr).cast(),
+                    512,
+                    "({}{} results) {}",
+                    (*data).searchcount,
+                    if (*data).searchmore != 0 { "+" } else { "" },
+                    _s(&raw const tmp as _)
+                )
+                .unwrap() as usize;
             }
             if size > screen_size_x(s) as usize {
                 size = screen_size_x(s) as usize;
@@ -5514,12 +5508,10 @@ pub unsafe extern "C" fn window_copy_set_selection(
                 } else {
                     window_copy_redraw_lines(wme, cy, sy - cy + 1);
                 }
+            } else if endsy < cy {
+                window_copy_redraw_lines(wme, endsy, cy - endsy + 1);
             } else {
-                if endsy < cy {
-                    window_copy_redraw_lines(wme, endsy, cy - endsy + 1);
-                } else {
-                    window_copy_redraw_lines(wme, cy, endsy - cy + 1);
-                }
+                window_copy_redraw_lines(wme, cy, endsy - cy + 1);
             }
         }
 

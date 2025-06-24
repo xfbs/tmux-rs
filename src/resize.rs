@@ -511,10 +511,8 @@ pub unsafe extern "C" fn recalculate_size(w: *mut window, now: i32) {
             if now == 0 && changed != 0 && (*w).new_sx == sx && (*w).new_sy == sy {
                 changed = 0;
             }
-        } else {
-            if now == 0 && changed != 0 && (*w).sx == sx && (*w).sy == sy {
-                changed = 0;
-            }
+        } else if now == 0 && changed != 0 && (*w).sx == sx && (*w).sy == sy {
+            changed = 0;
         }
 
         /*

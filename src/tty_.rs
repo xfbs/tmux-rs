@@ -3362,10 +3362,8 @@ pub unsafe extern "C" fn tty_attributes(
                 if gc2.fg != 7 && !COLOUR_DEFAULT(gc2.fg) {
                     gc2.attr &= !grid_attr::GRID_ATTR_REVERSE;
                 }
-            } else {
-                if gc2.bg != 0 && !COLOUR_DEFAULT(gc2.bg) {
-                    gc2.attr |= grid_attr::GRID_ATTR_REVERSE;
-                }
+            } else if gc2.bg != 0 && !COLOUR_DEFAULT(gc2.bg) {
+                gc2.attr |= grid_attr::GRID_ATTR_REVERSE;
             }
         }
 

@@ -338,10 +338,9 @@ pub unsafe extern "C" fn menu_key_cb(
                         if MOUSE_RELEASE((*m).b) {
                             return 1;
                         }
-                    } else {
-                        if !MOUSE_RELEASE((*m).b) && !MOUSE_WHEEL((*m).b) && !MOUSE_DRAG((*m).b) {
-                            return 1;
-                        }
+                    } else if !MOUSE_RELEASE((*m).b) && !MOUSE_WHEEL((*m).b) && !MOUSE_DRAG((*m).b)
+                    {
+                        return 1;
                     }
                     if (*md).choice != -1 {
                         (*md).choice = -1;
@@ -353,10 +352,8 @@ pub unsafe extern "C" fn menu_key_cb(
                     if MOUSE_RELEASE((*m).b) {
                         break 'chosen;
                     }
-                } else {
-                    if !MOUSE_WHEEL((*m).b) && !MOUSE_DRAG((*m).b) {
-                        break 'chosen;
-                    }
+                } else if !MOUSE_WHEEL((*m).b) && !MOUSE_DRAG((*m).b) {
+                    break 'chosen;
                 }
                 (*md).choice = (*m).y as i32 - ((*md).py as i32 + 1);
                 if (*md).choice != old {

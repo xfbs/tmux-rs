@@ -1170,19 +1170,17 @@ pub unsafe extern "C" fn cmd_find_target(
                                     window = copy;
                                     pane = period;
                                     pane_only = 1;
+                                } else if *copy == b'$' as _ {
+                                    session = copy;
+                                } else if *copy == b'@' as _ {
+                                    window = copy;
+                                } else if *copy == b'%' as _ {
+                                    pane = copy;
                                 } else {
-                                    if *copy == b'$' as _ {
-                                        session = copy;
-                                    } else if *copy == b'@' as _ {
-                                        window = copy;
-                                    } else if *copy == b'%' as _ {
-                                        pane = copy;
-                                    } else {
-                                        match type_ {
-                                            cmd_find_type::CMD_FIND_SESSION => session = copy,
-                                            cmd_find_type::CMD_FIND_WINDOW => window = copy,
-                                            cmd_find_type::CMD_FIND_PANE => pane = copy,
-                                        }
+                                    match type_ {
+                                        cmd_find_type::CMD_FIND_SESSION => session = copy,
+                                        cmd_find_type::CMD_FIND_WINDOW => window = copy,
+                                        cmd_find_type::CMD_FIND_PANE => pane = copy,
                                     }
                                 }
 

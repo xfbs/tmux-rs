@@ -1151,10 +1151,8 @@ pub unsafe extern "C" fn options_string_to_style(
                 return null_mut();
             }
             free_(expanded);
-        } else {
-            if style_parse(&mut (*o).style, &grid_default_cell, s) != 0 {
-                return null_mut();
-            }
+        } else if style_parse(&mut (*o).style, &grid_default_cell, s) != 0 {
+            return null_mut();
         }
         &mut (*o).style
     }

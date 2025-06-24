@@ -814,13 +814,11 @@ unsafe fn yylex_getc1(ps: *mut cmd_parse_state) -> i32 {
     unsafe {
         if !(*ps).f.is_null() {
             ch = libc::fgetc((*ps).f);
+        } else if (*ps).off == (*ps).len {
+            ch = libc::EOF;
         } else {
-            if (*ps).off == (*ps).len {
-                ch = libc::EOF;
-            } else {
-                ch = *(*ps).buf.add((*ps).off) as i32;
-                (*ps).off += 1;
-            }
+            ch = *(*ps).buf.add((*ps).off) as i32;
+            (*ps).off += 1;
         }
     }
     ch

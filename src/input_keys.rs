@@ -610,14 +610,12 @@ pub unsafe extern "C" fn input_key_get_mouse(
             {
                 return 0;
             }
-        } else {
-            if MOUSE_DRAG((*m).b)
-                && MOUSE_RELEASE((*m).b)
-                && MOUSE_RELEASE((*m).lb)
-                && !(*s).mode.intersects(mode_flag::MODE_MOUSE_ALL)
-            {
-                return 0;
-            }
+        } else if MOUSE_DRAG((*m).b)
+            && MOUSE_RELEASE((*m).b)
+            && MOUSE_RELEASE((*m).lb)
+            && !(*s).mode.intersects(mode_flag::MODE_MOUSE_ALL)
+        {
+            return 0;
         }
 
         /*
