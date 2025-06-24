@@ -344,10 +344,11 @@ pub unsafe extern "C" fn server_destroy_pane(wp: *mut window_pane, notify: i32) 
             match remain_on_exit {
                 0 => (),
                 1 | 2 => {
-                    if remain_on_exit == 2 {
-                        if WIFEXITED((*wp).status) && WEXITSTATUS((*wp).status) == 0 {
-                            break 'out;
-                        }
+                    if remain_on_exit == 2
+                        && WIFEXITED((*wp).status)
+                        && WEXITSTATUS((*wp).status) == 0
+                    {
+                        break 'out;
                     }
                     if (*wp).flags.intersects(window_pane_flags::PANE_STATUSDRAWN) {
                         return;

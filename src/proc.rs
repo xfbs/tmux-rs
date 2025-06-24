@@ -109,11 +109,12 @@ pub unsafe extern "C" fn proc_event_cb(_fd: i32, events: i16, arg: *mut c_void) 
             }
         }
 
-        if events & EV_WRITE != 0 {
-            if msgbuf_write((&raw mut (*peer).ibuf.w).cast()) <= 0 && errno!() != EAGAIN {
-                ((*peer).dispatchcb.unwrap())(null_mut(), (*peer).arg);
-                return;
-            }
+        if events & EV_WRITE != 0
+            && msgbuf_write((&raw mut (*peer).ibuf.w).cast()) <= 0
+            && errno!() != EAGAIN
+        {
+            ((*peer).dispatchcb.unwrap())(null_mut(), (*peer).arg);
+            return;
         }
 
         if ((*peer).flags & PEER_BAD != 0) && (*peer).ibuf.w.queued == 0 {

@@ -18,7 +18,7 @@
 //
 #![allow(clippy::upper_case_acronyms)]
 #![allow(clippy::uninlined_format_args)] // mainly for lalrpop generated code
-#![allow(clippy::collapsible_if)]
+// #![allow(clippy::collapsible_if)]
 #![allow(clippy::manual_range_contains)]
 #![allow(clippy::blocks_in_conditions)] // keep, not worth fixing yet
 #![allow(clippy::missing_safety_doc)]

@@ -174,15 +174,15 @@ pub unsafe extern "C" fn screen_redraw_pane_border(
                 }
             }
         } else if pane_status == pane_status::PANE_STATUS_TOP {
-            if ((*wp).xoff == 0 || px >= (*wp).xoff - 1) && px <= ex {
-                if (*wp).yoff != 0 && py == (*wp).yoff - 1 {
-                    return screen_redraw_border_type::SCREEN_REDRAW_BORDER_TOP;
-                }
+            if ((*wp).xoff == 0 || px >= (*wp).xoff - 1)
+                && px <= ex
+                && (*wp).yoff != 0
+                && py == (*wp).yoff - 1
+            {
+                return screen_redraw_border_type::SCREEN_REDRAW_BORDER_TOP;
             }
-        } else if ((*wp).xoff == 0 || px >= (*wp).xoff - 1) && px <= ex {
-            if py == ey {
-                return screen_redraw_border_type::SCREEN_REDRAW_BORDER_BOTTOM;
-            }
+        } else if ((*wp).xoff == 0 || px >= (*wp).xoff - 1) && px <= ex && py == ey {
+            return screen_redraw_border_type::SCREEN_REDRAW_BORDER_BOTTOM;
         }
 
         // Outside pane

@@ -112,10 +112,10 @@ unsafe extern "C" fn cmd_server_access_exec(self_: *mut cmd, item: *mut cmdq_ite
             }
             server_acl_user_allow((*pw).pw_uid);
             /* Do not return - allow -r or -w with -a. */
-        } else if args_has_(args, 'r') || args_has_(args, 'w') {
-            if server_acl_user_find((*pw).pw_uid).is_null() {
-                server_acl_user_allow((*pw).pw_uid);
-            }
+        } else if (args_has_(args, 'r') || args_has_(args, 'w'))
+            && server_acl_user_find((*pw).pw_uid).is_null()
+        {
+            server_acl_user_allow((*pw).pw_uid);
         } /* -r or -w implies -a if user does not exist. */
 
         if args_has_(args, 'w') {

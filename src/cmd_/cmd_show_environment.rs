@@ -111,11 +111,9 @@ unsafe extern "C" fn cmd_show_environment_exec(
         let name = args_string(args, 0);
 
         let mut tflag = args_get_(args, 't');
-        if !tflag.is_null() {
-            if (*target).s.is_null() {
-                cmdq_error!(item, "no such session: {}", _s(tflag));
-                return cmd_retval::CMD_RETURN_ERROR;
-            }
+        if !tflag.is_null() && (*target).s.is_null() {
+            cmdq_error!(item, "no such session: {}", _s(tflag));
+            return cmd_retval::CMD_RETURN_ERROR;
         }
 
         if args_has_(args, 'g') {

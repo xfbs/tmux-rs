@@ -4927,15 +4927,14 @@ pub unsafe extern "C" fn window_copy_match_at_cursor(
         if window_copy_search_mark_at(data, (*data).cx, cy, &raw mut at) != 0 {
             return null_mut();
         }
-        if *(*data).searchmark.add(at as usize) == 0 {
-            if at == 0
+        if *(*data).searchmark.add(at as usize) == 0
+            && (at == 0
                 || ({
                     at -= 1;
                     *(*data).searchmark.add(at as usize) == 0
-                })
-            {
-                return null_mut();
-            }
+                }))
+        {
+            return null_mut();
         } /* Allow one position after the match. */
         window_copy_match_start_end(data, at, &raw mut start, &raw mut end);
 
@@ -5225,10 +5224,8 @@ pub unsafe extern "C" fn window_copy_redraw_selection(wme: *mut window_mode_entr
          * In word selection mode the first word on the line below the cursor
          * might be selected, so add this line to the redraw area.
          */
-        if (*data).selflag == selflag::SEL_WORD {
-            if end < (*gd).sy + (*data).oy - 1 {
-                end += 1;
-            }
+        if (*data).selflag == selflag::SEL_WORD && end < (*gd).sy + (*data).oy - 1 {
+            end += 1;
         } /* Last grid line in data coordinates. */
         window_copy_redraw_lines(wme, start, end - start + 1);
     }
@@ -5649,14 +5646,13 @@ pub unsafe extern "C" fn window_copy_get_selection(
             return null_mut();
         }
         /* Remove final \n (unless at end in vi mode). */
-        if keys == Ok(modekey::MODEKEY_EMACS) || lastex <= ey_last {
-            if !(*grid_get_line((*(*data).backing).grid, ey))
+        if (keys == Ok(modekey::MODEKEY_EMACS) || lastex <= ey_last)
+            && (!(*grid_get_line((*(*data).backing).grid, ey))
                 .flags
                 .intersects(grid_line_flag::WRAPPED)
-                || lastex != ey_last
-            {
-                off -= 1;
-            }
+                || lastex != ey_last)
+        {
+            off -= 1;
         }
         *len = off;
         buf

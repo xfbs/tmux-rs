@@ -2878,10 +2878,10 @@ pub unsafe extern "C" fn tty_cmd_syncstart(tty: *mut tty, ctx: *const tty_ctx) {
              * start synchronized updates.
              */
             tty_sync_start(tty);
-        } else if !(*ctx).num & 0x10 != 0 {
-            if (*ctx).num != 0 || (*(*tty).client).overlay_draw.is_some() {
-                tty_sync_start(tty);
-            }
+        } else if !(*ctx).num & 0x10 != 0
+            && ((*ctx).num != 0 || (*(*tty).client).overlay_draw.is_some())
+        {
+            tty_sync_start(tty);
         } /*
          * This is a pane. If there is an overlay, always start;
          * otherwise, only if requested.

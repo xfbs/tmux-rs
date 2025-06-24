@@ -1200,19 +1200,17 @@ pub unsafe fn format_draw(
                         style_list::STYLE_LIST_RIGHT_MARKER => {
                             // note conditions are flipped from original c source because of break
 
-                            if list_state == 0 {
-                                if s[Current::ListRight as usize].cx == 0 {
-                                    if !fr.is_null() {
-                                        // abort any region
-                                        free_(fr);
-                                        fr = null_mut();
-                                    }
-                                    if focus_start != -1 && focus_end == -1 {
-                                        focus_start = -1;
-                                        focus_end = -1;
-                                    }
-                                    current = Current::ListRight;
+                            if list_state == 0 && s[Current::ListRight as usize].cx == 0 {
+                                if !fr.is_null() {
+                                    // abort any region
+                                    free_(fr);
+                                    fr = null_mut();
                                 }
+                                if focus_start != -1 && focus_end == -1 {
+                                    focus_start = -1;
+                                    focus_end = -1;
+                                }
+                                current = Current::ListRight;
                             }
                         }
                     }

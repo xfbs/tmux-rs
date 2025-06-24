@@ -201,12 +201,10 @@ pub unsafe extern "C" fn server_start(
         sigfillset(&raw mut set);
         sigprocmask(SIG_BLOCK, &raw const set, &raw mut oldset);
 
-        if !flags.intersects(client_flag::NOFORK) {
-            if proc_fork_and_daemon(&raw mut fd) != 0 {
-                // in parent process i.e. client
-                sigprocmask(SIG_SETMASK, &raw mut oldset, null_mut());
-                return fd;
-            }
+        if !flags.intersects(client_flag::NOFORK) && proc_fork_and_daemon(&raw mut fd) != 0 {
+            // in parent process i.e. client
+            sigprocmask(SIG_SETMASK, &raw mut oldset, null_mut());
+            return fd;
         }
 
         std::panic::set_hook(Box::new(|panic_info| {
@@ -318,10 +316,10 @@ pub unsafe extern "C" fn server_loop() -> i32 {
             return 0;
         }
 
-        if options_get_number_(global_options, c"exit-unattached") == 0 {
-            if !rb_empty(&raw mut sessions) {
-                return 0;
-            }
+        if options_get_number_(global_options, c"exit-unattached") == 0
+            && !rb_empty(&raw mut sessions)
+        {
+            return 0;
         }
 
         for c in tailq_foreach(&raw mut clients) {
@@ -569,10 +567,8 @@ unsafe extern "C" fn server_child_stopped(pid: pid_t, status: i32) {
 
         for w in rb_foreach(&raw mut windows).map(NonNull::as_ptr) {
             for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
-                if (*wp).pid == pid {
-                    if killpg(pid, SIGCONT) != 0 {
-                        kill(pid, SIGCONT);
-                    }
+                if (*wp).pid == pid && killpg(pid, SIGCONT) != 0 {
+                    kill(pid, SIGCONT);
                 }
             }
         }

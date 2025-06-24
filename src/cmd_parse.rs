@@ -1061,16 +1061,15 @@ unsafe fn yylex_format(ps: *mut cmd_parse_state) -> Option<NonNull<c_char>> {
                         brackets += 1;
                     }
                     yylex_append1(&raw mut buf, &raw mut len, b'#' as c_char);
-                } else if (ch == '}' as i32) {
-                    if brackets != 0
-                        && ({
-                            brackets -= 1;
-                            brackets == 0
-                        })
-                    {
-                        yylex_append1(&raw mut buf, &raw mut len, ch as c_char);
-                        break;
-                    }
+                } else if (ch == '}' as i32)
+                    && brackets != 0
+                    && ({
+                        brackets -= 1;
+                        brackets == 0
+                    })
+                {
+                    yylex_append1(&raw mut buf, &raw mut len, ch as c_char);
+                    break;
                 }
                 yylex_append1(&raw mut buf, &raw mut len, ch as c_char);
             }

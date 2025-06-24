@@ -599,12 +599,10 @@ unsafe extern "C" fn window_tree_build(
                     sg = session_group_contains(s);
                     !sg.is_null()
                 })
+                && ((sg == current && s != (*data).fs.s)
+                    || (sg != current && s != tailq_first(&raw mut (*sg).sessions)))
             {
-                if (sg == current && s != (*data).fs.s)
-                    || (sg != current && s != tailq_first(&raw mut (*sg).sessions))
-                {
-                    continue;
-                }
+                continue;
             }
             l = xreallocarray_(l, n as usize + 1).as_ptr();
             *l.add(n as usize) = s;

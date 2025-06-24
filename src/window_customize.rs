@@ -970,8 +970,8 @@ unsafe extern "C" fn window_customize_draw_option(
             }
             if oe.is_null() || (*oe).type_ == options_table_type::OPTIONS_TABLE_STRING {
                 expanded = format_expand(ft, value);
-                if libc::strcmp(expanded, value) != 0 {
-                    if !screen_write_text!(
+                if libc::strcmp(expanded, value) != 0
+                    && !screen_write_text!(
                         ctx,
                         cx,
                         sx,
@@ -980,9 +980,9 @@ unsafe extern "C" fn window_customize_draw_option(
                         &raw const grid_default_cell,
                         "This expands to: {}",
                         _s(expanded),
-                    ) {
-                        break 'out;
-                    }
+                    )
+                {
+                    break 'out;
                 }
                 free_(expanded);
             }
@@ -1054,8 +1054,8 @@ unsafe extern "C" fn window_customize_draw_option(
                     break 'out;
                 }
             }
-            if !default_value.is_null() {
-                if !screen_write_text!(
+            if !default_value.is_null()
+                && !screen_write_text!(
                     ctx,
                     cx,
                     sx,
@@ -1066,9 +1066,9 @@ unsafe extern "C" fn window_customize_draw_option(
                     _s(default_value),
                     _s(space),
                     _s(unit),
-                ) {
-                    break 'out;
-                }
+                )
+            {
+                break 'out;
             }
 
             screen_write_cursormove(ctx, cx as i32, (*s).cy as i32 + 1, 0); /* skip line */

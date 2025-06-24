@@ -1630,10 +1630,10 @@ pub unsafe extern "C" fn format_cb_client_user(ft: *mut format_tree) -> *mut c_v
     unsafe {
         if !(*ft).c.is_null() {
             let uid = proc_get_peer_uid((*(*ft).c).peer);
-            if uid != -1_i32 as uid_t {
-                if let Some(pw) = NonNull::new(libc::getpwuid(uid)) {
-                    return xstrdup((*pw.as_ptr()).pw_name).as_ptr().cast();
-                }
+            if uid != -1_i32 as uid_t
+                && let Some(pw) = NonNull::new(libc::getpwuid(uid))
+            {
+                return xstrdup((*pw.as_ptr()).pw_name).as_ptr().cast();
             }
         }
         null_mut()
@@ -4639,16 +4639,15 @@ pub unsafe extern "C" fn format_replace(
                             b'L' => modifiers |= format_modifiers::FORMAT_CLIENTS,
                             _ => (),
                         }
-                    } else if (*fm).size == 2 {
-                        if streq_((*fm).modifier.as_ptr(), "||")
+                    } else if (*fm).size == 2
+                        && (streq_((*fm).modifier.as_ptr(), "||")
                             || streq_((*fm).modifier.as_ptr(), "&&")
                             || streq_((*fm).modifier.as_ptr(), "==")
                             || streq_((*fm).modifier.as_ptr(), "!=")
                             || streq_((*fm).modifier.as_ptr(), ">=")
-                            || streq_((*fm).modifier.as_ptr(), "<=")
-                        {
-                            cmp = fm;
-                        }
+                            || streq_((*fm).modifier.as_ptr(), "<="))
+                    {
+                        cmp = fm;
                     }
                 }
 
@@ -5511,10 +5510,10 @@ pub unsafe extern "C" fn format_defaults_pane(ft: *mut format_tree, wp: *mut win
         }
         (*ft).wp = wp;
 
-        if let Some(wme) = NonNull::new(tailq_first(&raw mut (*wp).modes)) {
-            if let Some(formats) = (*(*wme.as_ptr()).mode).formats {
-                formats(wme.as_ptr(), ft);
-            }
+        if let Some(wme) = NonNull::new(tailq_first(&raw mut (*wp).modes))
+            && let Some(formats) = (*(*wme.as_ptr()).mode).formats
+        {
+            formats(wme.as_ptr(), ft);
         }
     }
 }

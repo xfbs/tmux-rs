@@ -210,12 +210,10 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
             }
 
             /* Open the terminal if necessary. */
-            if !detached && !already_attached {
-                if server_client_open(c, &raw mut cause) != 0 {
-                    cmdq_error!(item, "open terminal failed: {}", _s(cause));
-                    free_(cause);
-                    break 'fail;
-                }
+            if !detached && !already_attached && server_client_open(c, &raw mut cause) != 0 {
+                cmdq_error!(item, "open terminal failed: {}", _s(cause));
+                free_(cause);
+                break 'fail;
             }
 
             /* Get default session size. */

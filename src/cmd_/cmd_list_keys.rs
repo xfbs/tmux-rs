@@ -196,8 +196,8 @@ unsafe extern "C" fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -
                         only,
                         empty,
                     );
-                    if prefix != KEYC_NONE {
-                        if cmd_list_keys_print_notes(
+                    if prefix != KEYC_NONE
+                        && cmd_list_keys_print_notes(
                             item,
                             args,
                             c"prefix".as_ptr(),
@@ -205,9 +205,8 @@ unsafe extern "C" fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -
                             only,
                             start,
                         ) != 0
-                        {
-                            found = 1;
-                        }
+                    {
+                        found = 1;
                     }
                     free_(empty);
                 } else {

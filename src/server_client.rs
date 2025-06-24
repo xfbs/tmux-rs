@@ -2095,10 +2095,8 @@ pub unsafe extern "C" fn server_client_handle_key(c: *mut client, event: *mut ke
                 }
             }
             server_client_clear_overlay(c);
-            if !(*c).prompt_string.is_null() {
-                if status_prompt_key(c, (*event).key) == 0 {
-                    return 0;
-                }
+            if !(*c).prompt_string.is_null() && status_prompt_key(c, (*event).key) == 0 {
+                return 0;
             }
         }
 
