@@ -770,9 +770,7 @@ pub unsafe extern "C" fn tty_set_italics(tty: *mut tty) {
     unsafe {
         if tty_term_has((*tty).term, tty_code_code::TTYC_SITM).as_bool() {
             let s = options_get_string_(global_options, c"default-terminal");
-            if libc::strcmp(s, c"screen".as_ptr()) != 0
-                && libc::strncmp(s, c"screen-".as_ptr(), 7) != 0
-            {
+            if !streq_(s, "screen") && libc::strncmp(s, c"screen-".as_ptr(), 7) != 0 {
                 tty_putcode(tty, tty_code_code::TTYC_SITM);
                 return;
             }
@@ -2140,7 +2138,6 @@ pub unsafe extern "C" fn tty_write(
 
 /// Only write to the incoming tty instead of every client.
 #[cfg(feature = "sixel")]
-
 pub unsafe extern "C" fn tty_write_one(
     cmdfn: fn(*mut tty, *const tty_ctx),
     c: *mut client,

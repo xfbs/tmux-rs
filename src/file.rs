@@ -321,7 +321,7 @@ pub unsafe extern "C" fn file_write(
 
         'done: {
             'skip: {
-                if strcmp(path, c"-".as_ptr()) == 0 {
+                if streq_(path, "-") {
                     cf = file_create_with_client(c, stream as i32, cb, cbdata);
                     (*cf).path = xstrdup_(c"-").as_ptr();
 
@@ -409,7 +409,7 @@ pub unsafe extern "C" fn file_read(
         let mut buffer = MaybeUninit::<[c_char; BUFSIZ as usize]>::uninit();
         'done: {
             'skip: {
-                if strcmp(path, c"-".as_ptr()) == 0 {
+                if streq_(path, "-") {
                     cf = file_create_with_client(c, stream as i32, cb, cbdata);
                     (*cf).path = xstrdup_(c"-").as_ptr();
 

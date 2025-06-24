@@ -991,23 +991,23 @@ unsafe fn yylex_(ps: *mut cmd_parse_state) -> Option<Tok> {
                     return Some(Tok::Token(NonNull::new(yylval_token)));
                 }
                 (*ps).condition = 1;
-                if (libc::strcmp(yylval_token, c"%hidden".as_ptr()) == 0) {
+                if streq_(yylval_token, "%hidden") {
                     free_(yylval_token);
                     return Some(Tok::Hidden);
                 }
-                if libc::strcmp(yylval_token, c"%if".as_ptr()) == 0 {
+                if streq_(yylval_token, "%if") {
                     free_(yylval_token);
                     return Some(Tok::If);
                 }
-                if (libc::strcmp(yylval_token, c"%else".as_ptr()) == 0) {
+                if streq_(yylval_token, "%else") {
                     free_(yylval_token);
                     return Some(Tok::Else);
                 }
-                if (libc::strcmp(yylval_token, c"%elif".as_ptr()) == 0) {
+                if streq_(yylval_token, "%elif") {
                     free_(yylval_token);
                     return Some(Tok::Elif);
                 }
-                if (libc::strcmp(yylval_token, c"%endif".as_ptr()) == 0) {
+                if streq_(yylval_token, "%endif") {
                     free_(yylval_token);
                     return Some(Tok::Endif);
                 }

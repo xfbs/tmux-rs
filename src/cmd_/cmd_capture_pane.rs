@@ -140,7 +140,7 @@ unsafe extern "C" fn cmd_capture_pane_history(
 
         let sflag: *const c_char = args_get(args, b'S');
         let mut top = 0;
-        if !sflag.is_null() && strcmp(sflag, c"-".as_ptr()) == 0 {
+        if !sflag.is_null() && streq_(sflag, "-") {
             top = 0;
         } else {
             n = args_strtonum_and_expand(
@@ -165,7 +165,7 @@ unsafe extern "C" fn cmd_capture_pane_history(
         }
 
         let eflag: *const c_char = args_get(args, b'E');
-        if !eflag.is_null() && strcmp(eflag, c"-".as_ptr()) == 0 {
+        if !eflag.is_null() && streq_(eflag, "-") {
             bottom = (*gd).hsize + (*gd).sy - 1;
         } else {
             n = args_strtonum_and_expand(

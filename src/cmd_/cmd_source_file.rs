@@ -13,7 +13,7 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use crate::*;
 
-use libc::{EINVAL, ENOENT, ENOMEM, GLOB_NOMATCH, GLOB_NOSPACE, glob, glob_t, globfree, strcmp};
+use libc::{EINVAL, ENOENT, ENOMEM, GLOB_NOMATCH, GLOB_NOSPACE, glob, glob_t, globfree};
 
 use crate::compat::VIS_GLOB;
 
@@ -178,7 +178,7 @@ unsafe extern "C" fn cmd_source_file_exec(self_: *mut cmd, item: *mut cmdq_item)
                 expanded = format_single_from_target(item, path);
                 path = expanded;
             }
-            if strcmp(path, c"-".as_ptr()) == 0 {
+            if streq_(path, "-") {
                 cmd_source_file_add(cdata, c"-".as_ptr());
                 continue;
             }

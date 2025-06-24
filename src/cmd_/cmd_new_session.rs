@@ -13,7 +13,7 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use crate::*;
 
-use libc::{sscanf, strcmp, tcgetattr};
+use libc::{sscanf, tcgetattr};
 
 use crate::compat::{strtonum, tree::rb_min};
 
@@ -221,7 +221,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
             /* Get default session size. */
             dsx = if args_has_(args, 'x') {
                 tmp = args_get_(args, 'x');
-                if strcmp(tmp, c"-".as_ptr()) == 0 {
+                if streq_(tmp, "-") {
                     if !c.is_null() { (*c).tty.sx } else { 80 }
                 } else {
                     let dsx_ = strtonum(tmp, 1, u16::MAX as i64, &raw mut errstr) as u32;
@@ -237,7 +237,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
 
             dsy = if args_has_(args, 'y') {
                 tmp = args_get_(args, 'y');
-                if strcmp(tmp, c"-".as_ptr()) == 0 {
+                if streq_(tmp, "-") {
                     if !c.is_null() { (*c).tty.sy } else { 24 }
                 } else {
                     let dsy_ = strtonum(tmp, 1, u16::MAX as i64, &raw mut errstr) as u32;

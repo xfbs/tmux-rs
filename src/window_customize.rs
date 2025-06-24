@@ -1633,12 +1633,6 @@ pub unsafe extern "C" fn window_customize_set_key(
 ) {
     unsafe {
         let key = (*item).key;
-
-        // struct key_binding *bd;
-        // const char *s;
-        // char *prompt, *value;
-        // struct window_customize_itemdata *new_item;
-
         let mut prompt: *mut c_char = null_mut();
         let mut value: *mut c_char = null_mut();
         let mut bd: *mut key_binding = null_mut();
@@ -1648,9 +1642,9 @@ pub unsafe extern "C" fn window_customize_set_key(
         }
 
         let s = mode_tree_get_current_name((*data).data);
-        if libc::strcmp(s, c"Repeat".as_ptr()) == 0 {
+        if streq_(s, "Repeat") {
             (*bd).flags ^= KEY_BINDING_REPEAT;
-        } else if libc::strcmp(s, c"Command".as_ptr()) == 0 {
+        } else if streq_(s, "Command") {
             prompt = format_nul!("({}) ", _s(key_string_lookup_key(key, 0)));
             value = cmd_list_print((*bd).cmdlist, 0);
 
@@ -1675,7 +1669,7 @@ pub unsafe extern "C" fn window_customize_set_key(
             );
             free_(prompt);
             free_(value);
-        } else if libc::strcmp(s, c"Note".as_ptr()) == 0 {
+        } else if streq_(s, "Note") {
             prompt = format_nul!("({}) ", _s(key_string_lookup_key(key, 0)));
 
             let new_item =

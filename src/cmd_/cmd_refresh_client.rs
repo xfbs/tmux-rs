@@ -55,11 +55,11 @@ pub unsafe extern "C" fn cmd_refresh_client_update_subscription(
             *split = b'\0' as c_char;
             split = split.add(1);
 
-            let subtype = if strcmp(what, c"%*".as_ptr()) == 0 {
+            let subtype = if streq_(what, "%*") {
                 control_sub_type::CONTROL_SUB_ALL_PANES
             } else if sscanf(what, c"%%%d".as_ptr(), &subid) == 1 && subid >= 0 {
                 control_sub_type::CONTROL_SUB_PANE
-            } else if strcmp(what, c"@*".as_ptr()) == 0 {
+            } else if streq_(what, "@*") {
                 control_sub_type::CONTROL_SUB_ALL_WINDOWS
             } else if sscanf(what, c"@%d".as_ptr(), &subid) == 1 && subid >= 0 {
                 control_sub_type::CONTROL_SUB_WINDOW
@@ -174,13 +174,13 @@ pub unsafe extern "C" fn cmd_refresh_client_update_offset(tc: *mut client, value
                 break 'out;
             }
 
-            if strcmp(split, c"on".as_ptr()) == 0 {
+            if streq_(split, "on") {
                 control_set_pane_on(tc, wp);
-            } else if strcmp(split, c"off".as_ptr()) == 0 {
+            } else if streq_(split, "off") {
                 control_set_pane_off(tc, wp);
-            } else if strcmp(split, c"continue".as_ptr()) == 0 {
+            } else if streq_(split, "continue") {
                 control_continue_pane(tc, wp);
-            } else if strcmp(split, c"pause".as_ptr()) == 0 {
+            } else if streq_(split, "pause") {
                 control_pause_pane(tc, wp);
             }
         }

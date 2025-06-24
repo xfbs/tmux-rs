@@ -2718,7 +2718,7 @@ unsafe extern "C" fn input_osc_4(ictx: *mut input_ctx, p: *mut c_char) {
             }
 
             s = strsep(&raw mut next, c";".as_ptr());
-            if strcmp(s, c"?".as_ptr()) == 0 {
+            if streq_(s, "?") {
                 c = colour_palette_get((*ictx).palette, idx as i32);
                 if c != -1 {
                     input_osc_colour_reply(ictx, 4, c);
@@ -2893,7 +2893,7 @@ unsafe extern "C" fn input_osc_10(ictx: *mut input_ctx, p: *mut c_char) {
         let mut defaults: grid_cell = zeroed();
         let mut c = 0;
 
-        if strcmp(p, c"?".as_ptr()) == 0 {
+        if streq_(p, "?") {
             if wp.is_null() {
                 return;
             }
@@ -2954,7 +2954,7 @@ unsafe extern "C" fn input_osc_11(ictx: *mut input_ctx, p: *const c_char) {
 
         let mut c = 0;
 
-        if libc::strcmp(p, c"?".as_ptr()) == 0 {
+        if streq_(p, "?") {
             if wp.is_null() {
                 return;
             }
@@ -3012,7 +3012,7 @@ unsafe extern "C" fn input_osc_12(ictx: *mut input_ctx, p: *const c_char) {
         let wp = (*ictx).wp;
         let mut c = 0;
 
-        if libc::strcmp(p, c"?".as_ptr()) == 0 {
+        if streq_(p, "?") {
             if !wp.is_null() {
                 c = (*(*ictx).ctx.s).ccolour;
                 if c == -1 {
@@ -3112,7 +3112,7 @@ unsafe extern "C" fn input_osc_52(ictx: *mut input_ctx, p: *const c_char) {
         }
         // log_debug("%s: %.*s %s", __func__, (int)(end - p - 1), p, flags);
 
-        if strcmp(end, c"?".as_ptr()) == 0 {
+        if streq_(end, "?") {
             pb = paste_get_top(null_mut());
             if !pb.is_null() {
                 buf = paste_buffer_data(pb, &raw mut len);

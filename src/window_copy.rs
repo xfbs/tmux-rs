@@ -6522,7 +6522,7 @@ pub unsafe extern "C" fn window_copy_cursor_prompt(
         let mut end_line: u32 = 0;
         let mut add: i32 = 0;
 
-        let line_flag = if !args.is_null() && libc::strcmp(args, c"-o".as_ptr()) == 0 {
+        let line_flag = if !args.is_null() && streq_(args, "-o") {
             grid_line_flag::START_OUTPUT
         } else {
             grid_line_flag::START_PROMPT

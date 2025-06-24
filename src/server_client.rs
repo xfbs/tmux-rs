@@ -1892,7 +1892,7 @@ pub unsafe extern "C" fn server_client_key_callback(
                     key0 = key & (KEYC_MASK_KEY | KEYC_MASK_MODIFIERS);
                     if (key0 == (prefix & (KEYC_MASK_KEY | KEYC_MASK_MODIFIERS))
                         || key0 == (prefix2 & (KEYC_MASK_KEY | KEYC_MASK_MODIFIERS)))
-                        && libc::strcmp((*table).name, c"prefix".as_ptr()) != 0
+                        && !streq_((*table).name, "prefix")
                     {
                         server_client_set_key_table(c, c"prefix".as_ptr());
                         server_status_client(c);
@@ -1921,7 +1921,7 @@ pub unsafe extern "C" fn server_client_key_callback(
                         prefix_delay =
                             options_get_number_(global_options, c"prefix-timeout") as u64;
                         if prefix_delay > 0
-                            && libc::strcmp((*table).name, c"prefix".as_ptr()) == 0
+                            && streq_((*table).name, "prefix")
                             && server_client_key_table_activity_diff(c) > prefix_delay
                         {
                             if !bd.is_null()
@@ -3308,15 +3308,15 @@ pub unsafe extern "C" fn server_client_control_flags(
     next: *const c_char,
 ) -> client_flag {
     unsafe {
-        if libc::strcmp(next, c"pause-after".as_ptr()) == 0 {
+        if streq_(next, "pause-after") {
             (*c).pause_age = 0;
             client_flag::CONTROL_PAUSEAFTER
         } else if libc::sscanf(next, c"pause-after=%u".as_ptr(), &raw mut (*c).pause_age) == 1 {
             (*c).pause_age *= 1000;
             client_flag::CONTROL_PAUSEAFTER
-        } else if libc::strcmp(next, c"no-output".as_ptr()) == 0 {
+        } else if streq_(next, "no-output") {
             client_flag::CONTROL_NOOUTPUT
-        } else if libc::strcmp(next, c"wait-exit".as_ptr()) == 0 {
+        } else if streq_(next, "wait-exit") {
             client_flag::CONTROL_WAITEXIT
         } else {
             client_flag::empty()
@@ -3348,11 +3348,11 @@ pub unsafe extern "C" fn server_client_set_flags(c: *mut client, flags: *const c
             } else {
                 flag = client_flag::empty();
             }
-            if libc::strcmp(next, c"read-only".as_ptr()) == 0 {
+            if streq_(next, "read-only") {
                 flag = client_flag::READONLY;
-            } else if libc::strcmp(next, c"ignore-size".as_ptr()) == 0 {
+            } else if streq_(next, "ignore-size") {
                 flag = client_flag::IGNORESIZE;
-            } else if libc::strcmp(next, c"active-pane".as_ptr()) == 0 {
+            } else if streq_(next, "active-pane") {
                 flag = client_flag::ACTIVEPANE;
             }
             if flag == client_flag::empty() {
