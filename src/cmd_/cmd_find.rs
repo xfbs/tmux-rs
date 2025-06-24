@@ -398,7 +398,7 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(
         }
 
         if exact == 0 {
-            if strcmp(window, c"!".as_ptr()) == 0 {
+            if streq_(window, "!") {
                 (*fs).wl = tailq_first(&raw mut (*(*fs).s).lastw);
                 if (*fs).wl.is_null() {
                     return -1;
@@ -406,7 +406,7 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(
                 (*fs).idx = (*(*fs).wl).idx;
                 (*fs).w = (*(*fs).wl).window;
                 return 0;
-            } else if strcmp(window, c"^".as_ptr()) == 0 {
+            } else if streq_(window, "^") {
                 (*fs).wl = rb_min(&raw mut (*(*fs).s).windows);
                 if (*fs).wl.is_null() {
                     return -1;
@@ -414,7 +414,7 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(
                 (*fs).idx = (*(*fs).wl).idx;
                 (*fs).w = (*(*fs).wl).window;
                 return 0;
-            } else if strcmp(window, c"$".as_ptr()) == 0 {
+            } else if streq_(window, "$") {
                 (*fs).wl = rb_max(&raw mut (*(*fs).s).windows);
                 if (*fs).wl.is_null() {
                     return -1;
@@ -578,31 +578,31 @@ pub unsafe extern "C" fn cmd_find_get_pane_with_window(
             return 0;
         }
 
-        if strcmp(pane, c"!".as_ptr()) == 0 {
+        if streq_(pane, "!") {
             (*fs).wp = tailq_first(&raw mut (*(*fs).w).last_panes);
             if (*fs).wp.is_null() {
                 return -1;
             }
             return 0;
-        } else if strcmp(pane, c"{up-of}".as_ptr()) == 0 {
+        } else if streq_(pane, "{up-of}") {
             (*fs).wp = window_pane_find_up((*(*fs).w).active);
             if (*fs).wp.is_null() {
                 return -1;
             }
             return 0;
-        } else if strcmp(pane, c"{down-of}".as_ptr()) == 0 {
+        } else if streq_(pane, "{down-of}") {
             (*fs).wp = window_pane_find_down((*(*fs).w).active);
             if (*fs).wp.is_null() {
                 return -1;
             }
             return 0;
-        } else if strcmp(pane, c"{left-of}".as_ptr()) == 0 {
+        } else if streq_(pane, "{left-of}") {
             (*fs).wp = window_pane_find_left((*(*fs).w).active);
             if (*fs).wp.is_null() {
                 return -1;
             }
             return 0;
-        } else if strcmp(pane, c"{right-of}".as_ptr()) == 0 {
+        } else if streq_(pane, "{right-of}") {
             (*fs).wp = window_pane_find_right((*(*fs).w).active);
             if (*fs).wp.is_null() {
                 return -1;
@@ -1076,9 +1076,7 @@ pub unsafe extern "C" fn cmd_find_target(
                                 }
 
                                 /* Mouse target is a plain = or {mouse}. */
-                                if strcmp(target, c"=".as_ptr()) == 0
-                                    || strcmp(target, c"{mouse}".as_ptr()) == 0
-                                {
+                                if streq_(target, "=") || streq_(target, "{mouse}") {
                                     m = &raw mut (*cmdq_get_event(item)).m;
                                     match type_ {
                                         cmd_find_type::CMD_FIND_PANE => {
@@ -1128,9 +1126,7 @@ pub unsafe extern "C" fn cmd_find_target(
                                     break 'found;
                                 }
 
-                                if strcmp(target, c"~".as_ptr()) == 0
-                                    || strcmp(target, c"{marked}".as_ptr()) == 0
-                                {
+                                if streq_(target, "~") || streq_(target, "{marked}") {
                                     if !server_check_marked() {
                                         if !flags & CMD_FIND_QUIET != 0 {
                                             cmdq_error!(item, "no marked target");

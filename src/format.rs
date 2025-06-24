@@ -4492,29 +4492,27 @@ pub unsafe extern "C" fn format_replace_expression(
 
             let operator;
 
-            if strcmp(*(*mexp).argv, c"+".as_ptr()) == 0 {
+            if streq_(*(*mexp).argv, "+") {
                 operator = Operator::Add;
-            } else if strcmp(*(*mexp).argv, c"-".as_ptr()) == 0 {
+            } else if streq_(*(*mexp).argv, "-") {
                 operator = Operator::Subtract;
-            } else if strcmp(*(*mexp).argv, c"*".as_ptr()) == 0 {
+            } else if streq_(*(*mexp).argv, "*") {
                 operator = Operator::Multiply;
-            } else if strcmp(*(*mexp).argv, c"/".as_ptr()) == 0 {
+            } else if streq_(*(*mexp).argv, "/") {
                 operator = Operator::Divide;
-            } else if strcmp(*(*mexp).argv, c"%".as_ptr()) == 0
-                || strcmp(*(*mexp).argv, c"m".as_ptr()) == 0
-            {
+            } else if streq_(*(*mexp).argv, "%") || streq_(*(*mexp).argv, "m") {
                 operator = Operator::Modulus;
-            } else if strcmp(*(*mexp).argv, c"==".as_ptr()) == 0 {
+            } else if streq_(*(*mexp).argv, "==") {
                 operator = Operator::Equal;
-            } else if strcmp(*(*mexp).argv, c"!=".as_ptr()) == 0 {
+            } else if streq_(*(*mexp).argv, "!=") {
                 operator = Operator::NotEqual;
-            } else if strcmp(*(*mexp).argv, c">".as_ptr()) == 0 {
+            } else if streq_(*(*mexp).argv, ">") {
                 operator = Operator::GreaterThan;
-            } else if strcmp(*(*mexp).argv, c"<".as_ptr()) == 0 {
+            } else if streq_(*(*mexp).argv, "<") {
                 operator = Operator::LessThan;
-            } else if strcmp(*(*mexp).argv, c">=".as_ptr()) == 0 {
+            } else if streq_(*(*mexp).argv, ">=") {
                 operator = Operator::GreaterThanEqual;
-            } else if strcmp(*(*mexp).argv, c"<=".as_ptr()) == 0 {
+            } else if streq_(*(*mexp).argv, "<=") {
                 operator = Operator::LessThanEqual;
             } else {
                 format_log1!(
@@ -4801,12 +4799,12 @@ pub unsafe extern "C" fn format_replace(
                             _ => (),
                         }
                     } else if (*fm).size == 2 {
-                        if strcmp((*fm).modifier.as_ptr(), c"||".as_ptr()) == 0
-                            || strcmp((*fm).modifier.as_ptr(), c"&&".as_ptr()) == 0
-                            || strcmp((*fm).modifier.as_ptr(), c"==".as_ptr()) == 0
-                            || strcmp((*fm).modifier.as_ptr(), c"!=".as_ptr()) == 0
-                            || strcmp((*fm).modifier.as_ptr(), c">=".as_ptr()) == 0
-                            || strcmp((*fm).modifier.as_ptr(), c"<=".as_ptr()) == 0
+                        if streq_((*fm).modifier.as_ptr(), "||")
+                            || streq_((*fm).modifier.as_ptr(), "&&")
+                            || streq_((*fm).modifier.as_ptr(), "==")
+                            || streq_((*fm).modifier.as_ptr(), "!=")
+                            || streq_((*fm).modifier.as_ptr(), ">=")
+                            || streq_((*fm).modifier.as_ptr(), "<=")
                         {
                             cmp = fm;
                         }
@@ -4917,55 +4915,55 @@ pub unsafe extern "C" fn format_replace(
                         _s(right),
                     );
 
-                    if strcmp((*cmp).modifier.as_ptr(), c"||".as_ptr()) == 0 {
+                    if streq_((*cmp).modifier.as_ptr(), "||") {
                         if format_true(left) != 0 || format_true(right) != 0 {
                             value = xstrdup(c"1".as_ptr()).as_ptr();
                         } else {
                             value = xstrdup(c"0".as_ptr()).as_ptr();
                         }
-                    } else if strcmp((*cmp).modifier.as_ptr(), c"&&".as_ptr()) == 0 {
+                    } else if streq_((*cmp).modifier.as_ptr(), "&&") {
                         if format_true(left) != 0 && format_true(right) != 0 {
                             value = xstrdup(c"1".as_ptr()).as_ptr();
                         } else {
                             value = xstrdup(c"0".as_ptr()).as_ptr();
                         }
-                    } else if strcmp((*cmp).modifier.as_ptr(), c"==".as_ptr()) == 0 {
+                    } else if streq_((*cmp).modifier.as_ptr(), "==") {
                         if strcmp(left, right) == 0 {
                             value = xstrdup(c"1".as_ptr()).as_ptr();
                         } else {
                             value = xstrdup(c"0".as_ptr()).as_ptr();
                         }
-                    } else if strcmp((*cmp).modifier.as_ptr(), c"!=".as_ptr()) == 0 {
+                    } else if streq_((*cmp).modifier.as_ptr(), "!=") {
                         if strcmp(left, right) != 0 {
                             value = xstrdup(c"1".as_ptr()).as_ptr();
                         } else {
                             value = xstrdup(c"0".as_ptr()).as_ptr();
                         }
-                    } else if strcmp((*cmp).modifier.as_ptr(), c"<".as_ptr()) == 0 {
+                    } else if streq_((*cmp).modifier.as_ptr(), "<") {
                         if strcmp(left, right) < 0 {
                             value = xstrdup(c"1".as_ptr()).as_ptr();
                         } else {
                             value = xstrdup(c"0".as_ptr()).as_ptr();
                         }
-                    } else if strcmp((*cmp).modifier.as_ptr(), c">".as_ptr()) == 0 {
+                    } else if streq_((*cmp).modifier.as_ptr(), ">") {
                         if strcmp(left, right) > 0 {
                             value = xstrdup(c"1".as_ptr()).as_ptr();
                         } else {
                             value = xstrdup(c"0".as_ptr()).as_ptr();
                         }
-                    } else if strcmp((*cmp).modifier.as_ptr(), c"<=".as_ptr()) == 0 {
+                    } else if streq_((*cmp).modifier.as_ptr(), "<=") {
                         if strcmp(left, right) <= 0 {
                             value = xstrdup(c"1".as_ptr()).as_ptr();
                         } else {
                             value = xstrdup(c"0".as_ptr()).as_ptr();
                         }
-                    } else if strcmp((*cmp).modifier.as_ptr(), c">=".as_ptr()) == 0 {
+                    } else if streq_((*cmp).modifier.as_ptr(), ">=") {
                         if strcmp(left, right) >= 0 {
                             value = xstrdup(c"1".as_ptr()).as_ptr();
                         } else {
                             value = xstrdup(c"0".as_ptr()).as_ptr();
                         }
-                    } else if strcmp((*cmp).modifier.as_ptr(), c"m".as_ptr()) == 0 {
+                    } else if streq_((*cmp).modifier.as_ptr(), "m") {
                         value = format_match(cmp, left, right);
                     }
 

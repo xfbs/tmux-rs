@@ -220,50 +220,37 @@ pub unsafe fn colour_fromstring(s: *const c_char) -> c_int {
             8
         } else if strcasecmp(s, c"terminal".as_ptr()) == 0 {
             9
-        } else if strcasecmp(s, c"black".as_ptr()) == 0 || libc::strcmp(s, c"0".as_ptr()) == 0 {
+        } else if strcasecmp(s, c"black".as_ptr()) == 0 || streq_(s, "0") {
             0
-        } else if strcasecmp(s, c"red".as_ptr()) == 0 || libc::strcmp(s, c"1".as_ptr()) == 0 {
+        } else if strcasecmp(s, c"red".as_ptr()) == 0 || streq_(s, "1") {
             1
-        } else if strcasecmp(s, c"green".as_ptr()) == 0 || libc::strcmp(s, c"2".as_ptr()) == 0 {
+        } else if strcasecmp(s, c"green".as_ptr()) == 0 || streq_(s, "2") {
             2
-        } else if strcasecmp(s, c"yellow".as_ptr()) == 0 || libc::strcmp(s, c"3".as_ptr()) == 0 {
+        } else if strcasecmp(s, c"yellow".as_ptr()) == 0 || streq_(s, "3") {
             3
-        } else if strcasecmp(s, c"blue".as_ptr()) == 0 || libc::strcmp(s, c"4".as_ptr()) == 0 {
+        } else if strcasecmp(s, c"blue".as_ptr()) == 0 || streq_(s, "4") {
             4
-        } else if strcasecmp(s, c"magenta".as_ptr()) == 0 || libc::strcmp(s, c"5".as_ptr()) == 0 {
+        } else if strcasecmp(s, c"magenta".as_ptr()) == 0 || streq_(s, "5") {
             5
-        } else if strcasecmp(s, c"cyan".as_ptr()) == 0 || libc::strcmp(s, c"6".as_ptr()) == 0 {
+        } else if strcasecmp(s, c"cyan".as_ptr()) == 0 || streq_(s, "6") {
             6
-        } else if strcasecmp(s, c"white".as_ptr()) == 0 || libc::strcmp(s, c"7".as_ptr()) == 0 {
+        } else if strcasecmp(s, c"white".as_ptr()) == 0 || streq_(s, "7") {
             7
-        } else if strcasecmp(s, c"brightblack".as_ptr()) == 0
-            || libc::strcmp(s, c"90".as_ptr()) == 0
-        {
+        } else if strcasecmp(s, c"brightblack".as_ptr()) == 0 || streq_(s, "90") {
             90
-        } else if strcasecmp(s, c"brightred".as_ptr()) == 0 || libc::strcmp(s, c"91".as_ptr()) == 0
-        {
+        } else if strcasecmp(s, c"brightred".as_ptr()) == 0 || streq_(s, "91") {
             91
-        } else if strcasecmp(s, c"brightgreen".as_ptr()) == 0
-            || libc::strcmp(s, c"92".as_ptr()) == 0
-        {
+        } else if strcasecmp(s, c"brightgreen".as_ptr()) == 0 || streq_(s, "92") {
             92
-        } else if strcasecmp(s, c"brightyellow".as_ptr()) == 0
-            || libc::strcmp(s, c"93".as_ptr()) == 0
-        {
+        } else if strcasecmp(s, c"brightyellow".as_ptr()) == 0 || streq_(s, "93") {
             93
-        } else if strcasecmp(s, c"brightblue".as_ptr()) == 0 || libc::strcmp(s, c"94".as_ptr()) == 0
-        {
+        } else if strcasecmp(s, c"brightblue".as_ptr()) == 0 || streq_(s, "94") {
             94
-        } else if strcasecmp(s, c"brightmagenta".as_ptr()) == 0
-            || libc::strcmp(s, c"95".as_ptr()) == 0
-        {
+        } else if strcasecmp(s, c"brightmagenta".as_ptr()) == 0 || streq_(s, "95") {
             95
-        } else if strcasecmp(s, c"brightcyan".as_ptr()) == 0 || libc::strcmp(s, c"96".as_ptr()) == 0
-        {
+        } else if strcasecmp(s, c"brightcyan".as_ptr()) == 0 || streq_(s, "96") {
             96
-        } else if strcasecmp(s, c"brightwhite".as_ptr()) == 0
-            || libc::strcmp(s, c"97".as_ptr()) == 0
-        {
+        } else if strcasecmp(s, c"brightwhite".as_ptr()) == 0 || streq_(s, "97") {
             97
         } else {
             colour_byname(s)

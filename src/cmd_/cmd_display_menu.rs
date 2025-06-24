@@ -13,7 +13,7 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use crate::*;
 
-use libc::{strcmp, strtol};
+use libc::strtol;
 
 use crate::compat::queue::tailq_foreach;
 use crate::options_::options_find_choice;
@@ -270,15 +270,15 @@ unsafe extern "C" fn cmd_display_menu_get_position(
 
         /* Expand horizontal position. */
         let mut xp = args_get_(args, 'x');
-        if xp.is_null() || strcmp(xp, c"C".as_ptr()) == 0 {
+        if xp.is_null() || streq_(xp, "C") {
             xp = c"#{popup_centre_x}".as_ptr();
-        } else if strcmp(xp, c"R".as_ptr()) == 0 {
+        } else if streq_(xp, "R") {
             xp = c"#{popup_pane_right}".as_ptr();
-        } else if strcmp(xp, c"P".as_ptr()) == 0 {
+        } else if streq_(xp, "P") {
             xp = c"#{popup_pane_left}".as_ptr();
-        } else if strcmp(xp, c"M".as_ptr()) == 0 {
+        } else if streq_(xp, "M") {
             xp = c"#{popup_mouse_centre_x}".as_ptr();
-        } else if strcmp(xp, c"W".as_ptr()) == 0 {
+        } else if streq_(xp, "W") {
             xp = c"#{popup_window_status_line_x}".as_ptr();
         }
         let p = format_expand(ft, xp);
@@ -301,15 +301,15 @@ unsafe extern "C" fn cmd_display_menu_get_position(
 
         /* Expand vertical position  */
         let mut yp = args_get_(args, 'y');
-        if yp.is_null() || strcmp(yp, c"C".as_ptr()) == 0 {
+        if yp.is_null() || streq_(yp, "C") {
             yp = c"#{popup_centre_y}".as_ptr();
-        } else if strcmp(yp, c"P".as_ptr()) == 0 {
+        } else if streq_(yp, "P") {
             yp = c"#{popup_pane_bottom}".as_ptr();
-        } else if strcmp(yp, c"M".as_ptr()) == 0 {
+        } else if streq_(yp, "M") {
             yp = c"#{popup_mouse_top}".as_ptr();
-        } else if strcmp(yp, c"S".as_ptr()) == 0 {
+        } else if streq_(yp, "S") {
             yp = c"#{popup_status_line_y}".as_ptr();
-        } else if strcmp(yp, c"W".as_ptr()) == 0 {
+        } else if streq_(yp, "W") {
             yp = c"#{popup_window_status_line_y}".as_ptr();
         }
         let p = format_expand(ft, yp);
@@ -370,7 +370,7 @@ unsafe extern "C" fn cmd_display_menu_exec(self_: *mut cmd, item: *mut cmdq_item
         }
 
         if args_has_(args, 'C') {
-            if strcmp(args_get(args, b'C'), c"-".as_ptr()) == 0 {
+            if streq_(args_get(args, b'C'), "-") {
                 starting_choice = -1;
             } else {
                 starting_choice =

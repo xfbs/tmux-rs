@@ -1171,7 +1171,7 @@ unsafe fn options_from_string_check(
         if oe.is_null() {
             return 0;
         }
-        if strcmp((*oe).name, c"default-shell".as_ptr()) == 0 && !checkshell(value) {
+        if streq_((*oe).name, "default-shell") && !checkshell(value) {
             *cause = format_nul!("not a suitable shell: {}", _s(value));
             return -1;
         }
@@ -1199,12 +1199,12 @@ unsafe fn options_from_string_flag(
     unsafe {
         let flag = if value.is_null() || *value == 0 {
             !options_get_number(oo, name)
-        } else if strcmp(value, c"1".as_ptr()) == 0
+        } else if streq_(value, "1")
             || strcasecmp(value, c"on".as_ptr()) == 0
             || strcasecmp(value, c"yes".as_ptr()) == 0
         {
             1
-        } else if strcmp(value, c"0".as_ptr()) == 0
+        } else if streq_(value, "0")
             || strcasecmp(value, c"off".as_ptr()) == 0
             || strcasecmp(value, c"no".as_ptr()) == 0
         {
@@ -1378,7 +1378,7 @@ pub unsafe extern "C" fn options_push_changes(name: *const c_char) {
 
         log_debug!("{}: {}", _s(__func__), _s(name));
 
-        if strcmp(name, c"automatic-rename".as_ptr()) == 0 {
+        if streq_(name, "automatic-rename") {
             for w in rb_foreach(&raw mut windows).map(NonNull::as_ptr) {
                 if (*w).active.is_null() {
                     continue;
@@ -1389,31 +1389,31 @@ pub unsafe extern "C" fn options_push_changes(name: *const c_char) {
             }
         }
 
-        if strcmp(name, c"cursor-colour".as_ptr()) == 0 {
+        if streq_(name, "cursor-colour") {
             for wp in rb_foreach(&raw mut all_window_panes) {
                 window_pane_default_cursor(wp.as_ptr());
             }
         }
 
-        if strcmp(name, c"cursor-style".as_ptr()) == 0 {
+        if streq_(name, "cursor-style") {
             for wp in rb_foreach(&raw mut all_window_panes) {
                 window_pane_default_cursor(wp.as_ptr());
             }
         }
 
-        if strcmp(name, c"fill-character".as_ptr()) == 0 {
+        if streq_(name, "fill-character") {
             for w in rb_foreach(&raw mut windows) {
                 window_set_fill_character(w);
             }
         }
 
-        if strcmp(name, c"key-table".as_ptr()) == 0 {
+        if streq_(name, "key-table") {
             for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
                 server_client_set_key_table(loop_, null_mut());
             }
         }
 
-        if strcmp(name, c"user-keys".as_ptr()) == 0 {
+        if streq_(name, "user-keys") {
             for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
                 if (*loop_).tty.flags.intersects(tty_flags::TTY_OPENED) {
                     tty_keys_build(&mut (*loop_).tty);
@@ -1421,29 +1421,27 @@ pub unsafe extern "C" fn options_push_changes(name: *const c_char) {
             }
         }
 
-        if strcmp(name, c"status".as_ptr()) == 0 || strcmp(name, c"status-interval".as_ptr()) == 0 {
+        if streq_(name, "status") || streq_(name, "status-interval") {
             status_timer_start_all();
         }
 
-        if strcmp(name, c"monitor-silence".as_ptr()) == 0 {
+        if streq_(name, "monitor-silence") {
             alerts_reset_all();
         }
 
-        if strcmp(name, c"window-style".as_ptr()) == 0
-            || strcmp(name, c"window-active-style".as_ptr()) == 0
-        {
+        if streq_(name, "window-style") || streq_(name, "window-active-style") {
             for wp in rb_foreach(&raw mut all_window_panes) {
                 (*wp.as_ptr()).flags |= window_pane_flags::PANE_STYLECHANGED;
             }
         }
 
-        if strcmp(name, c"pane-colours".as_ptr()) == 0 {
+        if streq_(name, "pane-colours") {
             for wp in rb_foreach(&raw mut all_window_panes).map(NonNull::as_ptr) {
                 colour_palette_from_option(&raw mut (*wp).palette, (*wp).options);
             }
         }
 
-        if strcmp(name, c"pane-border-status".as_ptr()) == 0 {
+        if streq_(name, "pane-border-status") {
             for w in rb_foreach(&raw mut windows) {
                 layout_fix_panes(w.as_ptr(), null_mut());
             }
