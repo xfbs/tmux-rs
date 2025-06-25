@@ -418,9 +418,9 @@ pub unsafe extern "C" fn tty_get_features(feat: i32) -> *const c_char {
     }
 }
 
-pub unsafe extern "C" fn tty_apply_features(term: *mut tty_term, feat: i32) -> boolint {
+pub unsafe extern "C" fn tty_apply_features(term: *mut tty_term, feat: i32) -> bool {
     if feat == 0 {
-        return boolint::FALSE;
+        return false;
     }
 
     unsafe {
@@ -443,12 +443,12 @@ pub unsafe extern "C" fn tty_apply_features(term: *mut tty_term, feat: i32) -> b
             (*term).flags |= tf.flags;
         }
         if ((*term).features | feat) == (*term).features {
-            return boolint::FALSE;
+            return false;
         }
         (*term).features |= feat;
     }
 
-    boolint::TRUE
+    true
 }
 
 pub unsafe extern "C" fn tty_default_features(feat: *mut i32, name: *const c_char, version: u32) {

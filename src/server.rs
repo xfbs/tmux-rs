@@ -75,23 +75,23 @@ pub unsafe extern "C" fn server_is_marked(
     s: *mut session,
     wl: *mut winlink,
     wp: *mut window_pane,
-) -> boolint {
+) -> bool {
     if s.is_null() || wl.is_null() || wp.is_null() {
-        return boolint::FALSE;
+        return false;
     }
 
     unsafe {
         if marked_pane.s != s || marked_pane.wl != wl {
-            return boolint::FALSE;
+            return false;
         }
         if marked_pane.wp != wp {
-            return boolint::FALSE;
+            return false;
         }
         server_check_marked()
     }
 }
 
-pub unsafe extern "C" fn server_check_marked() -> boolint {
+pub unsafe extern "C" fn server_check_marked() -> bool {
     unsafe { cmd_find_valid_state(&raw mut marked_pane) }
 }
 
@@ -451,7 +451,7 @@ pub unsafe extern "C" fn server_add_accept(timeout: c_int) {
             return;
         }
 
-        if event_initialized(&raw mut server_ev_accept).as_bool() {
+        if event_initialized(&raw mut server_ev_accept) != 0 {
             event_del(&raw mut server_ev_accept);
         }
 

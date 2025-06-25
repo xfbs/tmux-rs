@@ -43,7 +43,7 @@ pub type mode_tree_draw_cb = Option<
     ),
 >;
 pub type mode_tree_search_cb =
-    Option<unsafe extern "C" fn(_: *mut c_void, _: NonNull<c_void>, _: *const c_char) -> boolint>;
+    Option<unsafe extern "C" fn(_: *mut c_void, _: NonNull<c_void>, _: *const c_char) -> bool>;
 pub type mode_tree_menu_cb =
     Option<unsafe extern "C" fn(_: NonNull<c_void>, _: *mut client, _: key_code)>;
 pub type mode_tree_height_cb = Option<unsafe extern "C" fn(_: *mut c_void, _: c_uint) -> c_uint>;
@@ -1000,9 +1000,7 @@ pub unsafe extern "C" fn mode_tree_search_backward(
                 (*mtd).modedata,
                 NonNull::new((*mti).itemdata).unwrap(),
                 (*mtd).search,
-            )
-            .as_bool()
-            {
+            ) {
                 return mti;
             }
         }
@@ -1053,9 +1051,7 @@ pub unsafe extern "C" fn mode_tree_search_forward(mtd: *mut mode_tree_data) -> *
                 (*mtd).modedata,
                 NonNull::new((*mti).itemdata).unwrap(),
                 (*mtd).search,
-            )
-            .as_bool()
-            {
+            ) {
                 return mti;
             }
         }

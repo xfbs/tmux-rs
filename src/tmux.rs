@@ -58,12 +58,12 @@ pub extern "C" fn usage() -> ! {
 pub unsafe extern "C" fn getshell() -> *const c_char {
     unsafe {
         let shell = getenv(c"SHELL".as_ptr());
-        if checkshell(shell).as_bool() {
+        if checkshell(shell) {
             return shell;
         }
 
         let pw = getpwuid(getuid());
-        if !pw.is_null() && checkshell((*pw).pw_shell).as_bool() {
+        if !pw.is_null() && checkshell((*pw).pw_shell) {
             return (*pw).pw_shell;
         }
 
@@ -71,19 +71,19 @@ pub unsafe extern "C" fn getshell() -> *const c_char {
     }
 }
 
-pub unsafe extern "C" fn checkshell(shell: *const c_char) -> boolint {
+pub unsafe extern "C" fn checkshell(shell: *const c_char) -> bool {
     unsafe {
         if shell.is_null() || *shell != b'/' as c_char {
-            return boolint::FALSE;
+            return false;
         }
         if areshell(shell) != 0 {
-            return boolint::FALSE;
+            return false;
         }
         if access(shell, X_OK) != 0 {
-            return boolint::FALSE;
+            return false;
         }
     }
-    boolint::TRUE
+    true
 }
 
 pub unsafe extern "C" fn areshell(shell: *const c_char) -> c_int {

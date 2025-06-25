@@ -63,16 +63,16 @@ pub unsafe extern "C" fn session_group_cmp(
     }
 }
 
-pub unsafe extern "C" fn session_alive(s: *mut session) -> boolint {
+pub unsafe extern "C" fn session_alive(s: *mut session) -> bool {
     unsafe {
         for s_loop in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
             if s_loop == s {
-                return boolint::TRUE;
+                return true;
             }
         }
     }
 
-    boolint::FALSE
+    false
 }
 
 /// Find session by name.
@@ -242,7 +242,7 @@ pub unsafe extern "C" fn session_destroy(s: *mut session, notify: i32, from: *co
 
         free_((*s).tio);
 
-        if event_initialized(&raw mut (*s).lock_timer).as_bool() {
+        if event_initialized(&raw mut (*s).lock_timer) != 0 {
             event_del(&raw mut (*s).lock_timer);
         }
 
@@ -330,7 +330,7 @@ pub unsafe extern "C" fn session_update_activity(s: *mut session, from: *mut tim
             (*last).tv_usec as i32,
         );
 
-        if evtimer_initialized(&raw mut (*s).lock_timer).as_bool() {
+        if evtimer_initialized(&raw mut (*s).lock_timer) {
             evtimer_del(&raw mut (*s).lock_timer);
         } else {
             evtimer_set(&raw mut (*s).lock_timer, Some(session_lock_timer), s.cast());

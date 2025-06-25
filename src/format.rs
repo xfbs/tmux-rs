@@ -237,7 +237,7 @@ static format_lower: [SyncCharPtr; 26] = const {
 };
 
 /// Is logging enabled?
-pub unsafe extern "C" fn format_logging(ft: *mut format_tree) -> boolint {
+pub unsafe extern "C" fn format_logging(ft: *mut format_tree) -> bool {
     unsafe { log_get_level() != 0 || (*ft).flags.intersects(format_flags::FORMAT_VERBOSE) }.into()
 }
 
@@ -1512,7 +1512,7 @@ pub unsafe extern "C" fn format_cb_client_last_session(ft: *mut format_tree) -> 
     unsafe {
         if !(*ft).c.is_null()
             && !(*(*ft).c).last_session.is_null()
-            && session_alive((*(*ft).c).last_session).as_bool()
+            && session_alive((*(*ft).c).last_session)
         {
             return xstrdup((*(*(*ft).c).last_session).name).as_ptr().cast();
         }
@@ -2178,7 +2178,7 @@ pub unsafe extern "C" fn format_cb_pane_left(ft: *mut format_tree) -> *mut c_voi
 pub unsafe extern "C" fn format_cb_pane_marked(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            if server_check_marked().as_bool() && marked_pane.wp == (*ft).wp {
+            if server_check_marked() && marked_pane.wp == (*ft).wp {
                 return xstrdup(c"1".as_ptr()).as_ptr().cast();
             }
             return xstrdup(c"0".as_ptr()).as_ptr().cast();
@@ -2191,7 +2191,7 @@ pub unsafe extern "C" fn format_cb_pane_marked(ft: *mut format_tree) -> *mut c_v
 pub unsafe extern "C" fn format_cb_pane_marked_set(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wp.is_null() {
-            if server_check_marked().as_bool() {
+            if server_check_marked() {
                 return xstrdup(c"1".as_ptr()).as_ptr().cast();
             }
             return xstrdup(c"0".as_ptr()).as_ptr().cast();
@@ -2471,7 +2471,7 @@ pub unsafe extern "C" fn format_cb_session_many_attached(ft: *mut format_tree) -
 pub unsafe extern "C" fn format_cb_session_marked(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).s.is_null() {
-            if server_check_marked().as_bool() && marked_pane.s == (*ft).s {
+            if server_check_marked() && marked_pane.s == (*ft).s {
                 return xstrdup(c"1".as_ptr()).as_ptr().cast();
             }
             return xstrdup(c"0".as_ptr()).as_ptr().cast();
@@ -2723,7 +2723,7 @@ pub unsafe extern "C" fn format_cb_window_linked_sessions(ft: *mut format_tree) 
 pub unsafe extern "C" fn format_cb_window_marked_flag(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).wl.is_null() {
-            if server_check_marked().as_bool() && marked_pane.wl == (*ft).wl {
+            if server_check_marked() && marked_pane.wl == (*ft).wl {
                 return xstrdup(c"1".as_ptr()).as_ptr().cast();
             }
             return xstrdup(c"0".as_ptr()).as_ptr().cast();
@@ -3784,10 +3784,9 @@ pub unsafe extern "C" fn format_true(s: *const c_char) -> c_int {
     }
 }
 
-/* Check if modifier end. */
-
-pub unsafe extern "C" fn format_is_end(c: c_char) -> boolint {
-    unsafe { boolint::from(c == b';' as c_char || c == b':' as c_char) }
+/// Check if modifier end.
+pub fn format_is_end(c: c_char) -> bool {
+    c == b';' as c_char || c == b':' as c_char
 }
 
 /* Add to modifier list. */
@@ -3872,7 +3871,7 @@ pub unsafe extern "C" fn format_build_modifiers(
 
             /* Check single character modifiers with no arguments. */
             if !strchr(c"labcdnwETSWPL<>".as_ptr(), *cp as i32).is_null()
-                && format_is_end(*cp.add(1)).as_bool()
+                && format_is_end(*cp.add(1))
             {
                 format_add_modifier(&raw mut list, count, cp, 1, null_mut(), 0);
                 cp = cp.add(1);
@@ -3886,7 +3885,7 @@ pub unsafe extern "C" fn format_build_modifiers(
                 || memcmp(c"==".as_ptr().cast(), cp.cast(), 2) == 0
                 || memcmp(c"<=".as_ptr().cast(), cp.cast(), 2) == 0
                 || memcmp(c">=".as_ptr().cast(), cp.cast(), 2) == 0)
-                && format_is_end(*cp.add(2)).as_bool()
+                && format_is_end(*cp.add(2))
             {
                 format_add_modifier(&raw mut list, count, cp, 2, null_mut(), 0);
                 cp = cp.add(2);
@@ -3900,7 +3899,7 @@ pub unsafe extern "C" fn format_build_modifiers(
             c = *cp;
 
             /* No arguments provided. */
-            if format_is_end(*cp.add(1)).as_bool() {
+            if format_is_end(*cp.add(1)) {
                 format_add_modifier(&raw mut list, count, cp, 1, null_mut(), 0);
                 cp = cp.add(1);
                 continue;
@@ -3930,7 +3929,7 @@ pub unsafe extern "C" fn format_build_modifiers(
             *last = *cp.add(1);
             cp = cp.add(1);
             loop {
-                if *cp == *last && format_is_end(*cp.add(1)).as_bool() {
+                if *cp == *last && format_is_end(*cp.add(1)) {
                     cp = cp.add(1);
                     break;
                 }
@@ -3947,7 +3946,7 @@ pub unsafe extern "C" fn format_build_modifiers(
                 free_(value);
 
                 cp = end;
-                if format_is_end(*cp).as_bool() {
+                if format_is_end(*cp) {
                     break;
                 }
             }
@@ -4545,7 +4544,7 @@ pub unsafe extern "C" fn format_replace(
                 list = format_build_modifiers(es, &raw mut copy, &raw mut count);
                 for i in 0..count {
                     fm = list.add(i as usize);
-                    if format_logging(ft).as_bool() {
+                    if format_logging(ft) {
                         format_log1!(
                             es,
                             __func__,
@@ -5087,7 +5086,7 @@ pub unsafe extern "C" fn format_expand1(
                 format_log1!(es, c"format_expand1".as_ptr(), "format is too long",);
                 return xstrdup(c"".as_ptr()).as_ptr();
             }
-            if format_logging(ft).as_bool() && strcmp(expanded, fmt) != 0 {
+            if format_logging(ft) && strcmp(expanded, fmt) != 0 {
                 format_log1!(
                     es,
                     c"format_expand1".as_ptr(),

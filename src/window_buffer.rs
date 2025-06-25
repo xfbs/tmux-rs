@@ -190,7 +190,7 @@ pub unsafe extern "C" fn window_buffer_build(
             Some(window_buffer_cmp),
         );
 
-        if cmd_find_valid_state(&raw mut (*data).fs).as_bool() {
+        if cmd_find_valid_state(&raw mut (*data).fs) {
             s = NonNull::new((*data).fs.s);
             wl = NonNull::new((*data).fs.wl);
             wp = NonNull::new((*data).fs.wp);
@@ -292,18 +292,18 @@ pub unsafe extern "C" fn window_buffer_search(
     modedata: *mut c_void,
     itemdata: NonNull<c_void>,
     ss: *const c_char,
-) -> boolint {
+) -> bool {
     unsafe {
         let item: NonNull<window_buffer_itemdata> = itemdata.cast();
         let Some(pb) = NonNull::new(paste_get_name((*item.as_ptr()).name)) else {
-            return boolint::FALSE;
+            return false;
         };
         if !strstr((*item.as_ptr()).name, ss).is_null() {
-            return boolint::TRUE;
+            return true;
         }
         let mut bufsize = 0;
         let bufdata = paste_buffer_data_(pb, &mut bufsize);
-        boolint::from(!memmem(bufdata.cast(), bufsize, ss.cast(), strlen(ss)).is_null())
+        !memmem(bufdata.cast(), bufsize, ss.cast(), strlen(ss)).is_null()
     }
 }
 
@@ -336,7 +336,7 @@ pub unsafe extern "C" fn window_buffer_get_key(
         let mut wl = None;
         let mut wp = None;
 
-        if cmd_find_valid_state(&raw mut (*data.as_ptr()).fs).as_bool() {
+        if cmd_find_valid_state(&raw mut (*data.as_ptr()).fs) {
             s = NonNull::new((*data.as_ptr()).fs.s);
             wl = NonNull::new((*data.as_ptr()).fs.wl);
             wp = NonNull::new((*data.as_ptr()).fs.wp);

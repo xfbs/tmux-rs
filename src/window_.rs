@@ -358,14 +358,14 @@ unsafe extern "C" fn window_destroy(w: *mut window) {
 
         window_destroy_panes(w);
 
-        if event_initialized(&raw mut (*w).name_event).as_bool() {
+        if event_initialized(&raw mut (*w).name_event) != 0 {
             event_del(&raw mut (*w).name_event);
         }
 
-        if event_initialized(&raw mut (*w).alerts_timer).as_bool() {
+        if event_initialized(&raw mut (*w).alerts_timer) != 0 {
             event_del(&raw mut (*w).alerts_timer);
         }
-        if event_initialized(&raw mut (*w).offset_timer).as_bool() {
+        if event_initialized(&raw mut (*w).offset_timer) != 0 {
             event_del(&raw mut (*w).offset_timer);
         }
 
@@ -515,12 +515,11 @@ pub unsafe extern "C" fn window_pane_send_resize(wp: *mut window_pane, sx: u32, 
     }
 }
 
-pub unsafe extern "C" fn window_has_pane(w: *mut window, wp: *mut window_pane) -> boolint {
+pub unsafe extern "C" fn window_has_pane(w: *mut window, wp: *mut window_pane) -> bool {
     unsafe {
         tailq_foreach::<_, discr_entry>(&raw mut (*w).panes)
             .into_iter()
             .any(|wp1| wp1.as_ptr() == wp)
-            .into()
     }
 }
 
@@ -995,7 +994,7 @@ pub unsafe extern "C" fn window_printable_flags(wl: *mut winlink, escape: i32) -
             flags[pos] = b'-' as c_char;
             pos += 1;
         }
-        if server_check_marked().as_bool() && wl == marked_pane.wl {
+        if server_check_marked() && wl == marked_pane.wl {
             flags[pos] = b'M' as c_char;
             pos += 1;
         }
@@ -1107,7 +1106,7 @@ unsafe extern "C" fn window_pane_destroy(wp: *mut window_pane) {
             close((*wp).pipe_fd);
         }
 
-        if event_initialized(&raw mut (*wp).resize_timer).as_bool() {
+        if event_initialized(&raw mut (*wp).resize_timer) != 0 {
             event_del(&raw mut (*wp).resize_timer);
         }
         for r in tailq_foreach(&raw mut (*wp).resize_queue).map(NonNull::as_ptr) {

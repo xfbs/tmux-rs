@@ -1265,7 +1265,7 @@ pub unsafe extern "C" fn tty_keys_next(tty: *mut tty) -> i32 {
 
                     /* If timer is going, check for expiration. */
                     if (*tty).flags.intersects(tty_flags::TTY_TIMER) {
-                        if evtimer_initialized(&raw mut (*tty).key_timer).as_bool()
+                        if evtimer_initialized(&raw mut (*tty).key_timer)
                             && evtimer_pending(&raw mut (*tty).key_timer, null_mut()) == 0
                         {
                             expired = 1;
@@ -1283,7 +1283,7 @@ pub unsafe extern "C" fn tty_keys_next(tty: *mut tty) -> i32 {
                     tv.tv_usec = (delay % 1000) * 1000i64;
 
                     // Start the timer.
-                    if event_initialized(&raw const (*tty).key_timer).as_bool() {
+                    if event_initialized(&raw const (*tty).key_timer) != 0 {
                         evtimer_del(&raw mut (*tty).key_timer);
                     }
                     evtimer_set(
@@ -1315,7 +1315,7 @@ pub unsafe extern "C" fn tty_keys_next(tty: *mut tty) -> i32 {
                 evbuffer_drain((*tty).in_, size);
 
                 // Remove key timer.
-                if event_initialized(&raw const (*tty).key_timer).as_bool() {
+                if event_initialized(&raw const (*tty).key_timer) != 0 {
                     evtimer_del(&raw mut (*tty).key_timer);
                 }
                 (*tty).flags &= !tty_flags::TTY_TIMER;

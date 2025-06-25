@@ -659,14 +659,14 @@ pub unsafe extern "C" fn cmd_find_empty_state(fs: *mut cmd_find_state) -> i32 {
     }
 }
 
-pub unsafe extern "C" fn cmd_find_valid_state(fs: *mut cmd_find_state) -> boolint {
+pub unsafe extern "C" fn cmd_find_valid_state(fs: *mut cmd_find_state) -> bool {
     unsafe {
         if (*fs).s.is_null() || (*fs).wl.is_null() || (*fs).w.is_null() || (*fs).wp.is_null() {
-            return boolint::FALSE;
+            return false;
         }
 
         if !session_alive((*fs).s) {
-            return boolint::FALSE;
+            return false;
         }
 
         let mut wl = null_mut();
@@ -678,11 +678,11 @@ pub unsafe extern "C" fn cmd_find_valid_state(fs: *mut cmd_find_state) -> boolin
         }
 
         if wl.is_null() {
-            return boolint::FALSE;
+            return false;
         }
 
         if (*fs).w != (*(*fs).wl).window {
-            return boolint::FALSE;
+            return false;
         }
 
         window_has_pane((*fs).w, (*fs).wp)
@@ -1044,12 +1044,10 @@ pub unsafe extern "C" fn cmd_find_target(
 
                                 cmd_find_clear_state(fs, flags);
 
-                                if server_check_marked().as_bool()
-                                    && (flags & CMD_FIND_DEFAULT_MARKED != 0)
-                                {
+                                if server_check_marked() && (flags & CMD_FIND_DEFAULT_MARKED != 0) {
                                     (*fs).current = &raw mut marked_pane;
                                     log_debug!("{}: current is marked pane", __func__);
-                                } else if cmd_find_valid_state(cmdq_get_current(item)).as_bool() {
+                                } else if cmd_find_valid_state(cmdq_get_current(item)) {
                                     (*fs).current = cmdq_get_current(item);
                                     log_debug!("{}: current is from queue", __func__);
                                 } else if cmd_find_from_client(

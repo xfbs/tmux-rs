@@ -3129,43 +3129,6 @@ impl SyncCharPtr {
     }
 }
 
-// TODO this will eventually swap to be bool, but for now, while there is C code should be ffi compatible with i32
-#[repr(transparent)]
-#[derive(Copy, Clone)]
-struct boolint(i32);
-impl boolint {
-    const FALSE: boolint = Self(0);
-    const TRUE: boolint = Self(1);
-
-    #[inline]
-    const fn as_bool(&self) -> bool {
-        self.0 != 0
-    }
-
-    const fn as_int(&self) -> i32 {
-        self.0
-    }
-}
-
-impl From<boolint> for bool {
-    fn from(value: boolint) -> Self {
-        value.as_bool()
-    }
-}
-
-impl From<bool> for boolint {
-    fn from(value: bool) -> Self {
-        Self(value as i32)
-    }
-}
-
-impl std::ops::Not for boolint {
-    type Output = bool;
-    fn not(self) -> bool {
-        self.0 == 0
-    }
-}
-
 // TODO struct should have some sort of lifetime
 /// Display wrapper for a *c_char pointer
 #[repr(transparent)]

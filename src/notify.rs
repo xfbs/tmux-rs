@@ -326,7 +326,7 @@ pub unsafe extern "C" fn notify_session(name: *const c_char, s: *mut session) {
     unsafe {
         let mut fs = zeroed(); // TODO use uninit
 
-        if session_alive(s).as_bool() {
+        if session_alive(s) {
             cmd_find_from_session(&raw mut fs, s, 0);
         } else {
             cmd_find_from_nothing(&raw mut fs, 0);

@@ -138,7 +138,7 @@ unsafe extern "C" fn window_customize_check_item(
     data: *mut window_customize_modedata,
     item: *mut window_customize_itemdata,
     mut fsp: *mut cmd_find_state,
-) -> boolint {
+) -> bool {
     unsafe {
         let mut fs: cmd_find_state = zeroed();
 
@@ -146,13 +146,13 @@ unsafe extern "C" fn window_customize_check_item(
             fsp = &raw mut fs;
         }
 
-        if cmd_find_valid_state(&raw mut (*data).fs).as_bool() {
+        if cmd_find_valid_state(&raw mut (*data).fs) {
             cmd_find_copy_state(fsp, &raw mut (*data).fs);
         } else {
             cmd_find_from_pane(fsp, (*data).wp, 0);
         }
 
-        boolint::from((*item).oo == window_customize_get_tree((*item).scope, fsp))
+        (*item).oo == window_customize_get_tree((*item).scope, fsp)
     }
 }
 
@@ -626,7 +626,7 @@ unsafe extern "C" fn window_customize_build(
         (*data).item_list = null_mut();
         (*data).item_size = 0;
 
-        if cmd_find_valid_state(&raw mut (*data).fs).as_bool() {
+        if cmd_find_valid_state(&raw mut (*data).fs) {
             cmd_find_copy_state(&raw mut fs, &raw mut (*data).fs);
         } else {
             cmd_find_from_pane(&raw mut fs, (*data).wp, 0);

@@ -898,7 +898,7 @@ pub unsafe extern "C" fn control_stop(c: *mut client) {
         for csub in rb_foreach(&raw mut (*cs).subs).map(NonNull::as_ptr) {
             control_free_sub(cs, csub);
         }
-        if evtimer_initialized(&raw mut (*cs).subs_timer).as_bool() {
+        if evtimer_initialized(&raw mut (*cs).subs_timer) {
             evtimer_del(&raw mut (*cs).subs_timer);
         }
 

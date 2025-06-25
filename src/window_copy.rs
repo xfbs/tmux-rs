@@ -694,7 +694,7 @@ pub unsafe extern "C" fn window_copy_previous_paragraph(wme: *mut window_mode_en
             oy -= 1;
         }
 
-        window_copy_scroll_to(wme, 0, oy, boolint::FALSE);
+        window_copy_scroll_to(wme, 0, oy, false);
     }
 }
 
@@ -715,7 +715,7 @@ pub unsafe extern "C" fn window_copy_next_paragraph(wme: *mut window_mode_entry)
         }
 
         let ox = window_copy_find_length(wme, oy);
-        window_copy_scroll_to(wme, ox, oy, boolint::FALSE);
+        window_copy_scroll_to(wme, ox, oy, false);
     }
 }
 
@@ -1762,7 +1762,7 @@ pub unsafe extern "C" fn window_copy_cmd_previous_matching_bracket(
 
                 // Move the cursor to the found location if any.
                 if failed == 0 {
-                    window_copy_scroll_to(wme, px, py, boolint::FALSE);
+                    window_copy_scroll_to(wme, px, py, false);
                 }
                 break;
             } // retry
@@ -1825,7 +1825,7 @@ pub unsafe extern "C" fn window_copy_cmd_next_matching_bracket(
                         let sx = (*data).cx;
                         let sy = screen_hsize(s) + (*data).cy - (*data).oy;
 
-                        window_copy_scroll_to(wme, px, py, boolint::FALSE);
+                        window_copy_scroll_to(wme, px, py, false);
                         window_copy_cmd_previous_matching_bracket(cs);
 
                         px = (*data).cx;
@@ -1836,7 +1836,7 @@ pub unsafe extern "C" fn window_copy_cmd_next_matching_bracket(
                             && !libc::strchr((&raw const close).cast(), gc.data.data[0] as i32)
                                 .is_null()
                         {
-                            window_copy_scroll_to(wme, sx, sy, boolint::FALSE);
+                            window_copy_scroll_to(wme, sx, sy, false);
                         }
                         break;
                     }
@@ -1910,7 +1910,7 @@ pub unsafe extern "C" fn window_copy_cmd_next_matching_bracket(
 
                 /* Move the cursor to the found location if any. */
                 if !failed {
-                    window_copy_scroll_to(wme, px, py, boolint::FALSE);
+                    window_copy_scroll_to(wme, px, py, false);
                 }
                 break;
             }
@@ -3546,7 +3546,7 @@ pub unsafe extern "C" fn window_copy_scroll_to(
     wme: *mut window_mode_entry,
     px: u32,
     py: u32,
-    no_redraw: boolint,
+    no_redraw: bool,
 ) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -3589,7 +3589,7 @@ pub unsafe extern "C" fn window_copy_search_compare(
     sgd: *mut grid,
     spx: u32,
     cis: i32,
-) -> boolint {
+) -> bool {
     unsafe {
         let mut gc: grid_cell = zeroed();
         let mut sgc: grid_cell = zeroed();
@@ -3599,20 +3599,18 @@ pub unsafe extern "C" fn window_copy_search_compare(
         let sud = &raw const sgc.data;
 
         if (*ud).size != (*sud).size || (*ud).width != (*sud).width {
-            return boolint::FALSE;
+            return false;
         }
 
         if cis != 0 && (*ud).size == 1 {
-            return boolint::from((*ud).data[0].to_ascii_lowercase() == (*sud).data[0]);
+            return (*ud).data[0].to_ascii_lowercase() == (*sud).data[0];
         }
 
-        boolint::from(
-            libc::memcmp(
-                (&raw const (*ud).data).cast(),
-                (&raw const (*sud).data).cast(),
-                (*ud).size as usize,
-            ) == 0,
-        )
+        libc::memcmp(
+            (&raw const (*ud).data).cast(),
+            (&raw const (*sud).data).cast(),
+            (*ud).size as usize,
+        ) == 0
     }
 }
 
@@ -4187,15 +4185,15 @@ pub unsafe extern "C" fn window_copy_move_right(
     }
 }
 
-pub unsafe extern "C" fn window_copy_is_lowercase(mut ptr: *const c_char) -> boolint {
+pub unsafe extern "C" fn window_copy_is_lowercase(mut ptr: *const c_char) -> bool {
     unsafe {
         while *ptr != b'\0' as i8 {
             if *ptr as u8 != (*ptr as u8).to_ascii_lowercase() {
-                return boolint::FALSE;
+                return false;
             }
             ptr = ptr.add(1);
         }
-        boolint::TRUE
+        true
     }
 }
 
@@ -4377,7 +4375,7 @@ pub unsafe extern "C" fn window_copy_search_jump(
         }
 
         if found != 0 {
-            window_copy_scroll_to(wme, px, i, boolint::TRUE);
+            window_copy_scroll_to(wme, px, i, true);
             return 1;
         }
         if wrap != 0 {
@@ -4505,7 +4503,7 @@ pub unsafe extern "C" fn window_copy_search(
         screen_write_stop(&raw mut ctx);
 
         wrapflag = options_get_number_((*(*wp).window).options, c"wrap-search") as i32;
-        cis = window_copy_is_lowercase(str).as_int();
+        cis = window_copy_is_lowercase(str) as i32;
 
         let keys =
             modekey::try_from(options_get_number_((*(*wp).window).options, c"mode-keys") as i32);
@@ -4693,7 +4691,7 @@ pub unsafe extern "C" fn window_copy_search_marks(
                 width = screen_size_x(ssp);
             }
 
-            cis = window_copy_is_lowercase((*data).searchstr).as_int();
+            cis = window_copy_is_lowercase((*data).searchstr) as i32;
 
             if regex != 0 {
                 sbuf = xmalloc(ssize as usize).as_ptr().cast();

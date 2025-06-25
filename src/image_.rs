@@ -110,7 +110,7 @@ pub unsafe extern "C" fn image_store(s: *mut screen, si: *mut sixel_image) -> *m
     }
 }
 
-pub unsafe extern "C" fn image_check_line(s: *mut screen, py: u32, ny: u32) -> boolint {
+pub unsafe extern "C" fn image_check_line(s: *mut screen, py: u32, ny: u32) -> bool {
     unsafe {
         let mut redraw = false;
 
@@ -120,7 +120,7 @@ pub unsafe extern "C" fn image_check_line(s: *mut screen, py: u32, ny: u32) -> b
                 redraw = true;
             }
         }
-        boolint::from(redraw)
+        redraw
     }
 }
 
@@ -130,7 +130,7 @@ pub unsafe extern "C" fn image_check_area(
     py: u32,
     nx: u32,
     ny: u32,
-) -> boolint {
+) -> bool {
     unsafe {
         let mut redraw = false;
 
@@ -144,7 +144,7 @@ pub unsafe extern "C" fn image_check_area(
             image_free(im);
             redraw = true;
         }
-        boolint::from(redraw)
+        redraw
     }
 }
 

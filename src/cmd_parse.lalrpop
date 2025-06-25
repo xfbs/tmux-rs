@@ -70,7 +70,7 @@ pub Expanded: NonNull<c_char> = {
       let flags = format_flags::FORMAT_NOJOBS;
 
       let mut fs = MaybeUninit::<cmd_find_state>::uninit();
-      let fsp = if cmd_find_valid_state(&raw mut (*pi).fs).as_bool() {
+      let fsp = if cmd_find_valid_state(&raw mut (*pi).fs) {
         &raw mut (*pi).fs
       } else {
         cmd_find_from_client(fs.as_mut_ptr(), c, 0);

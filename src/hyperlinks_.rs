@@ -187,7 +187,7 @@ pub unsafe extern "C" fn hyperlinks_get(
     uri_out: *mut *const c_char,
     internal_id_out: *mut *const c_char,
     external_id_out: *mut *const c_char,
-) -> boolint {
+) -> bool {
     unsafe {
         let mut find = MaybeUninit::<hyperlinks_uri>::uninit();
         let find = find.as_mut_ptr();
@@ -195,7 +195,7 @@ pub unsafe extern "C" fn hyperlinks_get(
 
         let hlu = rb_find::<_, discr_by_inner_entry>(&raw mut (*hl).by_inner, find);
         if hlu.is_null() {
-            return boolint::FALSE;
+            return false;
         }
         if !internal_id_out.is_null() {
             *internal_id_out = (*hlu).internal_id;
@@ -204,7 +204,7 @@ pub unsafe extern "C" fn hyperlinks_get(
             *external_id_out = (*hlu).external_id;
         }
         *uri_out = (*hlu).uri as _;
-        boolint::TRUE
+        true
     }
 }
 

@@ -688,8 +688,8 @@ pub unsafe extern "C" fn tty_term_apply_overrides(term: *mut tty_term) {
             );
 
             /* Update the RGB flag if the terminal has RGB colours. */
-            if tty_term_has(term, tty_code_code::TTYC_SETRGBF).as_bool()
-                && tty_term_has(term, tty_code_code::TTYC_SETRGBB).as_bool()
+            if tty_term_has(term, tty_code_code::TTYC_SETRGBF)
+                && tty_term_has(term, tty_code_code::TTYC_SETRGBB)
             {
                 (*term).flags |= term_flags::TERM_RGBCOLOURS;
             } else {
@@ -704,8 +704,8 @@ pub unsafe extern "C" fn tty_term_apply_overrides(term: *mut tty_term) {
              * Set or clear the DECSLRM flag if the terminal has the margin
              * capabilities.
              */
-            if tty_term_has(term, tty_code_code::TTYC_CMG).as_bool()
-                && tty_term_has(term, tty_code_code::TTYC_CLMG).as_bool()
+            if tty_term_has(term, tty_code_code::TTYC_CMG)
+                && tty_term_has(term, tty_code_code::TTYC_CLMG)
             {
                 (*term).flags |= term_flags::TERM_DECSLRM;
             } else {
@@ -720,7 +720,7 @@ pub unsafe extern "C" fn tty_term_apply_overrides(term: *mut tty_term) {
              * Set or clear the DECFRA flag if the terminal has the rectangle
              * capability.
              */
-            if tty_term_has(term, tty_code_code::TTYC_RECT).as_bool() {
+            if tty_term_has(term, tty_code_code::TTYC_RECT) {
                 (*term).flags |= term_flags::TERM_DECFRA;
             } else {
                 (*term).flags &= !term_flags::TERM_DECFRA;
@@ -761,7 +761,7 @@ pub unsafe extern "C" fn tty_term_apply_overrides(term: *mut tty_term) {
                 0,
                 size_of::<[[i8; 2]; 256]>(),
             );
-            if tty_term_has(term, tty_code_code::TTYC_ACSC).as_bool() {
+            if tty_term_has(term, tty_code_code::TTYC_ACSC) {
                 acs = tty_term_string(term, tty_code_code::TTYC_ACSC);
             } else {
                 acs = c"a#j+k+l+m+n+o-p-q-r-s-t+u+v+w+x|y<z>~.".as_ptr();
@@ -899,15 +899,15 @@ pub unsafe extern "C" fn tty_term_create(
 
             /* Add RGB feature if terminal has RGB colours. */
             if (tty_term_flag(term, tty_code_code::TTYC_TC) != 0
-                || tty_term_has(term, tty_code_code::TTYC_RGB).as_bool())
-                && (!tty_term_has(term, tty_code_code::TTYC_SETRGBF).as_bool()
-                    || !tty_term_has(term, tty_code_code::TTYC_SETRGBB).as_bool())
+                || tty_term_has(term, tty_code_code::TTYC_RGB))
+                && (!tty_term_has(term, tty_code_code::TTYC_SETRGBF)
+                    || !tty_term_has(term, tty_code_code::TTYC_SETRGBB))
             {
                 tty_add_features(feat, c"RGB".as_ptr(), c",".as_ptr());
             }
 
             /* Apply the features and overrides again. */
-            if tty_apply_features(term, *feat).as_bool() {
+            if tty_apply_features(term, *feat) {
                 tty_term_apply_overrides(term);
             }
 
@@ -1030,8 +1030,8 @@ pub unsafe extern "C" fn tty_term_free_list(caps: *mut *mut c_char, ncaps: u32) 
     }
 }
 
-pub unsafe extern "C" fn tty_term_has(term: *mut tty_term, code: tty_code_code) -> boolint {
-    unsafe { boolint::from((*(*term).codes.add(code as usize)).type_ != tty_code_type::None) }
+pub unsafe extern "C" fn tty_term_has(term: *mut tty_term, code: tty_code_code) -> bool {
+    unsafe { (*(*term).codes.add(code as usize)).type_ != tty_code_type::None }
 }
 
 pub unsafe extern "C" fn tty_term_string(

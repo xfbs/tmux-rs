@@ -73,7 +73,7 @@ pub unsafe extern "C" fn server_client_set_overlay(
             tv_usec: (delay as i64 % 1000) * 1000,
         };
 
-        if event_initialized(&raw mut (*c).overlay_timer).as_bool() {
+        if event_initialized(&raw mut (*c).overlay_timer) != 0 {
             evtimer_del(&raw mut (*c).overlay_timer);
         }
         evtimer_set(
@@ -110,7 +110,7 @@ pub unsafe extern "C" fn server_client_clear_overlay(c: *mut client) {
             return;
         }
 
-        if event_initialized(&raw mut (*c).overlay_timer).as_bool() {
+        if event_initialized(&raw mut (*c).overlay_timer) != 0 {
             evtimer_del(&raw mut (*c).overlay_timer);
         }
 
@@ -464,7 +464,7 @@ pub unsafe extern "C" fn server_client_lost(c: *mut client) {
         key_bindings_unref_table((*c).keytable);
 
         free_((*c).message_string);
-        if event_initialized(&raw mut (*c).message_timer).as_bool() {
+        if event_initialized(&raw mut (*c).message_timer) != 0 {
             evtimer_del(&raw mut (*c).message_timer);
         }
 
@@ -2236,7 +2236,7 @@ pub unsafe extern "C" fn server_client_check_pane_resize(wp: *mut window_pane) {
             return;
         }
 
-        if !event_initialized(&raw mut (*wp).resize_timer) {
+        if event_initialized(&raw mut (*wp).resize_timer) == 0 {
             evtimer_set(
                 &raw mut (*wp).resize_timer,
                 Some(server_client_resize_timer),
@@ -2721,21 +2721,21 @@ pub unsafe extern "C" fn server_client_check_redraw(c: *mut client) {
          * consumed. We can just add a timer to get out of the event loop and
          * end up back here.
          */
-        let mut needed = boolint::FALSE;
+        let mut needed = false;
         if (*c).flags.intersects(CLIENT_ALLREDRAWFLAGS) {
-            needed = boolint::TRUE;
+            needed = true;
         } else {
             for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
                 if (*wp).flags.intersects(window_pane_flags::PANE_REDRAW) {
-                    needed = boolint::TRUE;
+                    needed = true;
                     break;
                 }
             }
-            if needed.as_bool() {
+            if needed {
                 client_flags |= client_flag::REDRAWPANES;
             }
         }
-        if needed.as_bool()
+        if needed
             && ({
                 left = EVBUFFER_LENGTH((*tty).out);
                 left != 0
@@ -2774,7 +2774,7 @@ pub unsafe extern "C" fn server_client_check_redraw(c: *mut client) {
             }
             (*c).flags |= client_flags;
             return;
-        } else if needed.as_bool() {
+        } else if needed {
             // log_debug("%s: redraw needed", (*c).name);
         }
 
@@ -2823,7 +2823,7 @@ pub unsafe extern "C" fn server_client_check_redraw(c: *mut client) {
 
         (*c).flags &= !(CLIENT_ALLREDRAWFLAGS | client_flag::STATUSFORCE);
 
-        if needed.as_bool() {
+        if needed {
             /*
              * We would have deferred the redraw unless the output buffer
              * was empty, so we can record how many bytes the redraw

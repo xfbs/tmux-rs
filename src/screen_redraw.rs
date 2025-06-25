@@ -847,7 +847,7 @@ pub unsafe extern "C" fn screen_redraw_draw_borders_cell(
             }
             memcpy__(&raw mut gc, tmp);
 
-            if server_is_marked(s, (*s).curw, marked_pane.wp).as_bool()
+            if server_is_marked(s, (*s).curw, marked_pane.wp)
                 && screen_redraw_check_is(ctx, x, y, marked_pane.wp) != 0
             {
                 gc.attr ^= grid_attr::GRID_ATTR_REVERSE;
@@ -857,7 +857,7 @@ pub unsafe extern "C" fn screen_redraw_draw_borders_cell(
 
         let isolates = cell_type == CELL_TOPBOTTOM
             && (*c).flags.intersects(client_flag::UTF8)
-            && tty_term_has((*tty).term, tty_code_code::TTYC_BIDI).as_bool();
+            && tty_term_has((*tty).term, tty_code_code::TTYC_BIDI);
 
         if (*ctx).statustop != 0 {
             tty_cursor(tty, i, (*ctx).statuslines + j);

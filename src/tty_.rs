@@ -367,11 +367,11 @@ pub unsafe extern "C" fn tty_start_tty(tty: *mut tty) {
         }
 
         tty_putcode(tty, tty_code_code::TTYC_CNORM);
-        if tty_term_has((*tty).term, tty_code_code::TTYC_KMOUS).as_bool() {
+        if tty_term_has((*tty).term, tty_code_code::TTYC_KMOUS) {
             tty_puts(tty, c"\x1b[?1000l\x1b[?1002l\x1b[?1003l".as_ptr());
             tty_puts(tty, c"\x1b[?1006l\x1b[?1005l".as_ptr());
         }
-        if tty_term_has((*tty).term, tty_code_code::TTYC_ENBP).as_bool() {
+        if tty_term_has((*tty).term, tty_code_code::TTYC_ENBP) {
             tty_putcode(tty, tty_code_code::TTYC_ENBP);
         }
 
@@ -487,9 +487,9 @@ pub unsafe extern "C" fn tty_stop_tty(tty: *mut tty) {
         tty_raw(tty, tty_term_string((*tty).term, tty_code_code::TTYC_RMKX));
         tty_raw(tty, tty_term_string((*tty).term, tty_code_code::TTYC_CLEAR));
         if (*tty).cstyle != screen_cursor_style::SCREEN_CURSOR_DEFAULT {
-            if tty_term_has((*tty).term, tty_code_code::TTYC_SE).as_bool() {
+            if tty_term_has((*tty).term, tty_code_code::TTYC_SE) {
                 tty_raw(tty, tty_term_string((*tty).term, tty_code_code::TTYC_SE));
-            } else if tty_term_has((*tty).term, tty_code_code::TTYC_SS).as_bool() {
+            } else if tty_term_has((*tty).term, tty_code_code::TTYC_SS) {
                 tty_raw(
                     tty,
                     tty_term_string_i((*tty).term, tty_code_code::TTYC_SS, 0),
@@ -501,11 +501,11 @@ pub unsafe extern "C" fn tty_stop_tty(tty: *mut tty) {
         }
 
         tty_raw(tty, tty_term_string((*tty).term, tty_code_code::TTYC_CNORM));
-        if tty_term_has((*tty).term, tty_code_code::TTYC_KMOUS).as_bool() {
+        if tty_term_has((*tty).term, tty_code_code::TTYC_KMOUS) {
             tty_raw(tty, c"\x1b[?1000l\x1b[?1002l\x1b[?1003l".as_ptr());
             tty_raw(tty, c"\x1b[?1006l\x1b[?1005l".as_ptr());
         }
-        if tty_term_has((*tty).term, tty_code_code::TTYC_DSBP).as_bool() {
+        if tty_term_has((*tty).term, tty_code_code::TTYC_DSBP) {
             tty_raw(tty, tty_term_string((*tty).term, tty_code_code::TTYC_DSBP));
         }
 
@@ -526,7 +526,7 @@ pub unsafe extern "C" fn tty_stop_tty(tty: *mut tty) {
 
 pub unsafe extern "C" fn tty_close(tty: *mut tty) {
     unsafe {
-        if event_initialized(&raw mut (*tty).key_timer).as_bool() {
+        if event_initialized(&raw mut (*tty).key_timer) != 0 {
             evtimer_del(&raw mut (*tty).key_timer);
         }
         tty_stop_tty(tty);
@@ -555,7 +555,7 @@ pub unsafe extern "C" fn tty_update_features(tty: *mut tty) {
     unsafe {
         let c = (*tty).client;
 
-        if tty_apply_features((*tty).term, (*c).term_features).as_bool() {
+        if tty_apply_features((*tty).term, (*c).term_features) {
             tty_term_apply_overrides((*tty).term);
         }
 
@@ -768,7 +768,7 @@ pub unsafe extern "C" fn tty_putn(tty: *mut tty, buf: *const c_void, mut len: us
 
 pub unsafe extern "C" fn tty_set_italics(tty: *mut tty) {
     unsafe {
-        if tty_term_has((*tty).term, tty_code_code::TTYC_SITM).as_bool() {
+        if tty_term_has((*tty).term, tty_code_code::TTYC_SITM) {
             let s = options_get_string_(global_options, c"default-terminal");
             if !streq_(s, "screen") && libc::strncmp(s, c"screen-".as_ptr(), 7) != 0 {
                 tty_putcode(tty, tty_code_code::TTYC_SITM);
@@ -892,7 +892,7 @@ pub unsafe extern "C" fn tty_update_cursor(
         match cstyle {
             screen_cursor_style::SCREEN_CURSOR_DEFAULT => {
                 if (*tty).cstyle != screen_cursor_style::SCREEN_CURSOR_DEFAULT {
-                    if tty_term_has((*tty).term, tty_code_code::TTYC_SE).as_bool() {
+                    if tty_term_has((*tty).term, tty_code_code::TTYC_SE) {
                         tty_putcode(tty, tty_code_code::TTYC_SE);
                     } else {
                         tty_putcode_i(tty, tty_code_code::TTYC_SS, 0);
@@ -905,7 +905,7 @@ pub unsafe extern "C" fn tty_update_cursor(
                 }
             }
             screen_cursor_style::SCREEN_CURSOR_BLOCK => {
-                if tty_term_has((*tty).term, tty_code_code::TTYC_SS).as_bool() {
+                if tty_term_has((*tty).term, tty_code_code::TTYC_SS) {
                     if cmode.intersects(mode_flag::MODE_CURSOR_BLINKING) {
                         tty_putcode_i(tty, tty_code_code::TTYC_SS, 1);
                     } else {
@@ -916,7 +916,7 @@ pub unsafe extern "C" fn tty_update_cursor(
                 }
             }
             screen_cursor_style::SCREEN_CURSOR_UNDERLINE => {
-                if tty_term_has((*tty).term, tty_code_code::TTYC_SS).as_bool() {
+                if tty_term_has((*tty).term, tty_code_code::TTYC_SS) {
                     if cmode.intersects(mode_flag::MODE_CURSOR_BLINKING) {
                         tty_putcode_i(tty, tty_code_code::TTYC_SS, 3);
                     } else {
@@ -927,7 +927,7 @@ pub unsafe extern "C" fn tty_update_cursor(
                 }
             }
             screen_cursor_style::SCREEN_CURSOR_BAR => {
-                if tty_term_has((*tty).term, tty_code_code::TTYC_SS).as_bool() {
+                if tty_term_has((*tty).term, tty_code_code::TTYC_SS) {
                     if cmode.intersects(mode_flag::MODE_CURSOR_BLINKING) {
                         tty_putcode_i(tty, tty_code_code::TTYC_SS, 5);
                     } else {
@@ -964,9 +964,7 @@ pub unsafe extern "C" fn tty_update_mode(tty: *mut tty, mut mode: mode_flag, s: 
             // log_debug("%s: setting mode %s", (*c).name, screen_mode_to_string(mode));
         }
 
-        if changed.intersects(ALL_MOUSE_MODES)
-            && tty_term_has(term, tty_code_code::TTYC_KMOUS).as_bool()
-        {
+        if changed.intersects(ALL_MOUSE_MODES) && tty_term_has(term, tty_code_code::TTYC_KMOUS) {
             /*
              * If the mouse modes have changed, clear then all and apply
              * again. There are differences in how terminals track the
@@ -998,7 +996,7 @@ pub unsafe extern "C" fn tty_emulate_repeat(
     mut n: u32,
 ) {
     unsafe {
-        if tty_term_has((*tty).term, code).as_bool() {
+        if tty_term_has((*tty).term, code) {
             tty_putcode_i(tty, code, n as i32);
         } else {
             while {
@@ -1031,12 +1029,12 @@ pub unsafe extern "C" fn tty_repeat_space(tty: *mut tty, mut n: u32) {
 }
 
 /// Is this window bigger than the terminal?
-pub unsafe extern "C" fn tty_window_bigger(tty: *mut tty) -> boolint {
+pub unsafe extern "C" fn tty_window_bigger(tty: *mut tty) -> bool {
     unsafe {
         let c = (*tty).client;
         let w = (*(*(*c).session).curw).window;
 
-        boolint::from((*tty).sx < (*w).sx || (*tty).sy - status_line_size(c) < (*w).sy)
+        (*tty).sx < (*w).sx || (*tty).sy - status_line_size(c) < (*w).sy
     }
 }
 
@@ -1197,19 +1195,19 @@ pub unsafe extern "C" fn tty_update_client_offset(c: *mut client) {
 /// Is the region large enough to be worth redrawing once later rather than
 /// probably several times now? Currently yes if it is more than 50% of the
 /// pane.
-pub unsafe extern "C" fn tty_large_region(_tty: *mut tty, ctx: *const tty_ctx) -> boolint {
-    unsafe { boolint::from((*ctx).orlower - (*ctx).orupper >= (*ctx).sy / 2) }
+pub unsafe extern "C" fn tty_large_region(_tty: *mut tty, ctx: *const tty_ctx) -> bool {
+    unsafe { (*ctx).orlower - (*ctx).orupper >= (*ctx).sy / 2 }
 }
 
 /// Return if BCE is needed but the terminal doesn't have it - it'll need to be emulated.
-pub unsafe extern "C" fn tty_fake_bce(tty: *const tty, gc: *const grid_cell, bg: u32) -> boolint {
+pub unsafe extern "C" fn tty_fake_bce(tty: *const tty, gc: *const grid_cell, bg: u32) -> bool {
     unsafe {
         if tty_term_flag((*tty).term, tty_code_code::TTYC_BCE) != 0 {
-            boolint::FALSE
+            false
         } else if !COLOUR_DEFAULT(bg as i32) || !COLOUR_DEFAULT((*gc).bg) {
-            boolint::TRUE
+            true
         } else {
-            boolint::FALSE
+            false
         }
     }
 }
@@ -1228,7 +1226,7 @@ pub unsafe extern "C" fn tty_redraw_region(tty: *mut tty, ctx: *const tty_ctx) {
          * If region is large, schedule a redraw. In most cases this is likely
          * to be followed by some more scrolling.
          */
-        if tty_large_region(tty, ctx).as_bool() {
+        if tty_large_region(tty, ctx) {
             // log_debug("%s: %s large redraw", __func__, (*c).name);
             (*ctx).redraw_cb.unwrap()(ctx);
             return;
@@ -1248,21 +1246,21 @@ pub unsafe extern "C" fn tty_is_visible(
     py: u32,
     nx: u32,
     ny: u32,
-) -> boolint {
+) -> bool {
     unsafe {
         let xoff = (*ctx).rxoff + px;
         let yoff = (*ctx).ryoff + py;
 
         if (*ctx).bigger == 0 {
-            boolint::TRUE
+            true
         } else if xoff + nx <= (*ctx).wox
             || xoff >= (*ctx).wox + (*ctx).wsx
             || yoff + ny <= (*ctx).woy
             || yoff >= (*ctx).woy + (*ctx).wsy
         {
-            boolint::FALSE
+            false
         } else {
-            boolint::TRUE
+            true
         }
     }
 }
@@ -1278,12 +1276,12 @@ pub unsafe extern "C" fn tty_clamp_line(
     x: *mut u32,
     rx: *mut u32,
     ry: *mut u32,
-) -> boolint {
+) -> bool {
     unsafe {
         let xoff = (*ctx).rxoff + px;
 
         if !tty_is_visible(tty, ctx, px, py, nx, 1) {
-            return boolint::FALSE;
+            return false;
         }
         *ry = (*ctx).yoff + py - (*ctx).woy;
 
@@ -1312,7 +1310,7 @@ pub unsafe extern "C" fn tty_clamp_line(
             panic!("tty_clamp_line: x too big, {} > {}", *rx, nx);
         }
 
-        boolint::TRUE
+        true
     }
 }
 
@@ -1341,21 +1339,21 @@ pub unsafe extern "C" fn tty_clear_line(
         /* If genuine BCE is available, can try escape sequences. */
         if (*c).overlay_check.is_none() && !tty_fake_bce(tty, defaults, bg) {
             /* Off the end of the line, use EL if available. */
-            if px + nx >= (*tty).sx && tty_term_has((*tty).term, tty_code_code::TTYC_EL).as_bool() {
+            if px + nx >= (*tty).sx && tty_term_has((*tty).term, tty_code_code::TTYC_EL) {
                 tty_cursor(tty, px, py);
                 tty_putcode(tty, tty_code_code::TTYC_EL);
                 return;
             }
 
             /* At the start of the line. Use EL1. */
-            if px == 0 && tty_term_has((*tty).term, tty_code_code::TTYC_EL1).as_bool() {
+            if px == 0 && tty_term_has((*tty).term, tty_code_code::TTYC_EL1) {
                 tty_cursor(tty, px + nx - 1, py);
                 tty_putcode(tty, tty_code_code::TTYC_EL1);
                 return;
             }
 
             /* Section of line. Use ECH if possible. */
-            if tty_term_has((*tty).term, tty_code_code::TTYC_ECH).as_bool() {
+            if tty_term_has((*tty).term, tty_code_code::TTYC_ECH) {
                 tty_cursor(tty, px, py);
                 tty_putcode_i(tty, tty_code_code::TTYC_ECH, nx as i32);
                 return;
@@ -1406,9 +1404,7 @@ pub unsafe extern "C" fn tty_clear_pane_line(
             &raw mut x,
             &raw mut rx,
             &raw mut ry,
-        )
-        .as_bool()
-        {
+        ) {
             tty_clear_line(tty, &raw const (*ctx).defaults, ry, x, rx, bg);
         }
     }
@@ -1428,13 +1424,13 @@ pub unsafe extern "C" fn tty_clamp_area(
     y: *mut u32,
     rx: *mut u32,
     ry: *mut u32,
-) -> boolint {
+) -> bool {
     unsafe {
         let xoff = (*ctx).rxoff + px;
         let yoff = (*ctx).ryoff + py;
 
         if !tty_is_visible(tty, ctx, px, py, nx, ny) {
-            return boolint::FALSE;
+            return false;
         }
 
         if xoff >= (*ctx).wox && xoff + nx <= (*ctx).wox + (*ctx).wsx {
@@ -1487,7 +1483,7 @@ pub unsafe extern "C" fn tty_clamp_area(
             panic!("tty_clamp_area: y too big, {} > {}", *ry, ny);
         }
 
-        boolint::TRUE
+        true
     }
 }
 
@@ -1520,7 +1516,7 @@ pub unsafe extern "C" fn tty_clear_area(
             if px == 0
                 && px + nx >= (*tty).sx
                 && py + ny >= (*tty).sy
-                && tty_term_has((*tty).term, tty_code_code::TTYC_ED).as_bool()
+                && tty_term_has((*tty).term, tty_code_code::TTYC_ED)
             {
                 tty_cursor(tty, 0, py);
                 tty_putcode(tty, tty_code_code::TTYC_ED);
@@ -1552,8 +1548,8 @@ pub unsafe extern "C" fn tty_clear_area(
             if px == 0
                 && px + nx >= (*tty).sx
                 && ny > 2
-                && tty_term_has((*tty).term, tty_code_code::TTYC_CSR).as_bool()
-                && tty_term_has((*tty).term, tty_code_code::TTYC_INDN).as_bool()
+                && tty_term_has((*tty).term, tty_code_code::TTYC_CSR)
+                && tty_term_has((*tty).term, tty_code_code::TTYC_INDN)
             {
                 tty_region(tty, py, py + ny - 1);
                 tty_margin_off(tty);
@@ -1567,9 +1563,9 @@ pub unsafe extern "C" fn tty_clear_area(
              */
             if nx > 2
                 && ny > 2
-                && tty_term_has((*tty).term, tty_code_code::TTYC_CSR).as_bool()
+                && tty_term_has((*tty).term, tty_code_code::TTYC_CSR)
                 && tty_use_margin(tty)
-                && tty_term_has((*tty).term, tty_code_code::TTYC_INDN).as_bool()
+                && tty_term_has((*tty).term, tty_code_code::TTYC_INDN)
             {
                 tty_region(tty, py, py + ny - 1);
                 tty_margin(tty, px, px + nx - 1);
@@ -1616,9 +1612,7 @@ pub unsafe extern "C" fn tty_clear_pane_area(
             &raw mut y,
             &raw mut rx,
             &raw mut ry,
-        )
-        .as_bool()
-        {
+        ) {
             tty_clear_area(tty, &raw const (*ctx).defaults, y, ry, x, rx, bg);
         }
     }
@@ -1659,9 +1653,7 @@ pub unsafe extern "C" fn tty_draw_pane(tty: *mut tty, ctx: *const tty_ctx, py: u
             &raw mut x,
             &raw mut rx,
             &raw mut ry,
-        )
-        .as_bool()
-        {
+        ) {
             tty_draw_line(
                 tty,
                 s,
@@ -1721,7 +1713,7 @@ pub unsafe extern "C" fn tty_check_codeset(
 }
 
 /// Check if a single character is obstructed by the overlay and return a boolean.
-pub unsafe extern "C" fn tty_check_overlay(tty: *mut tty, px: u32, py: u32) -> boolint {
+pub unsafe extern "C" fn tty_check_overlay(tty: *mut tty, px: u32, py: u32) -> bool {
     unsafe {
         let mut r: overlay_ranges = zeroed();
 
@@ -1731,11 +1723,7 @@ pub unsafe extern "C" fn tty_check_overlay(tty: *mut tty, px: u32, py: u32) -> b
          * two entries.
          */
         tty_check_overlay_range(tty, px, py, 1, &raw mut r);
-        if r.nx[0] + r.nx[1] == 0 {
-            boolint::FALSE
-        } else {
-            boolint::TRUE
-        }
+        if r.nx[0] + r.nx[1] == 0 { false } else { true }
     }
 }
 
@@ -1845,7 +1833,7 @@ pub unsafe extern "C" fn tty_draw_line(
             if nx < (*tty).sx
                 && atx == 0
                 && px + sx != nx
-                && tty_term_has((*tty).term, tty_code_code::TTYC_EL1).as_bool()
+                && tty_term_has((*tty).term, tty_code_code::TTYC_EL1)
                 && !tty_fake_bce(tty, defaults, 8)
                 && (*c).overlay_check.is_none()
             {
@@ -2043,7 +2031,7 @@ pub unsafe extern "C" fn tty_sync_start(tty: *mut tty) {
         }
         (*tty).flags |= tty_flags::TTY_SYNCING;
 
-        if tty_term_has((*tty).term, tty_code_code::TTYC_SYNC).as_bool() {
+        if tty_term_has((*tty).term, tty_code_code::TTYC_SYNC) {
             // log_debug("%s sync start", (*(*tty).client).name);
             tty_putcode_i(tty, tty_code_code::TTYC_SYNC, 1);
         }
@@ -2060,7 +2048,7 @@ pub unsafe extern "C" fn tty_sync_end(tty: *mut tty) {
         }
         (*tty).flags &= !tty_flags::TTY_SYNCING;
 
-        if tty_term_has((*tty).term, tty_code_code::TTYC_SYNC).as_bool() {
+        if tty_term_has((*tty).term, tty_code_code::TTYC_SYNC) {
             // log_debug("%s sync end", (*(*tty).client).name);
             tty_putcode_i(tty, tty_code_code::TTYC_SYNC, 2);
         }
@@ -2139,7 +2127,7 @@ pub unsafe extern "C" fn tty_cmd_insertcharacter(tty: *mut tty, ctx: *const tty_
 
         if (*ctx).bigger != 0
             || !tty_full_width(tty, ctx)
-            || tty_fake_bce(tty, &(*ctx).defaults, (*ctx).bg).as_bool()
+            || tty_fake_bce(tty, &(*ctx).defaults, (*ctx).bg)
             || (!tty_term_has((*tty).term, tty_code_code::TTYC_ICH)
                 && !tty_term_has((*tty).term, tty_code_code::TTYC_ICH1))
             || (*c).overlay_check.is_some()
@@ -2173,7 +2161,7 @@ pub unsafe extern "C" fn tty_cmd_deletecharacter(tty: *mut tty, ctx: *const tty_
 
         if (*ctx).bigger != 0
             || !tty_full_width(tty, ctx)
-            || tty_fake_bce(tty, &raw const (*ctx).defaults, (*ctx).bg).as_bool()
+            || tty_fake_bce(tty, &raw const (*ctx).defaults, (*ctx).bg)
             || (!tty_term_has((*tty).term, tty_code_code::TTYC_DCH)
                 && !tty_term_has((*tty).term, tty_code_code::TTYC_DCH1))
             || (*c).overlay_check.is_some()
@@ -2221,7 +2209,7 @@ pub unsafe extern "C" fn tty_cmd_insertline(tty: *mut tty, ctx: *const tty_ctx) 
 
         if (*ctx).bigger != 0
             || !tty_full_width(tty, ctx)
-            || tty_fake_bce(tty, &raw const (*ctx).defaults, (*ctx).bg).as_bool()
+            || tty_fake_bce(tty, &raw const (*ctx).defaults, (*ctx).bg)
             || !tty_term_has((*tty).term, tty_code_code::TTYC_CSR)
             || !tty_term_has((*tty).term, tty_code_code::TTYC_IL1)
             || (*ctx).sx == 1
@@ -2261,7 +2249,7 @@ pub unsafe extern "C" fn tty_cmd_deleteline(tty: *mut tty, ctx: *const tty_ctx) 
 
         if (*ctx).bigger != 0
             || !tty_full_width(tty, ctx)
-            || tty_fake_bce(tty, &raw const (*ctx).defaults, (*ctx).bg).as_bool()
+            || tty_fake_bce(tty, &raw const (*ctx).defaults, (*ctx).bg)
             || !tty_term_has((*tty).term, tty_code_code::TTYC_CSR)
             || !tty_term_has((*tty).term, tty_code_code::TTYC_DL1)
             || (*ctx).sx == 1
@@ -2349,7 +2337,7 @@ pub unsafe extern "C" fn tty_cmd_reverseindex(tty: *mut tty, ctx: *const tty_ctx
 
         if (*ctx).bigger != 0
             || (!tty_full_width(tty, ctx) && !tty_use_margin(tty))
-            || tty_fake_bce(tty, &raw const (*ctx).defaults, 8).as_bool()
+            || tty_fake_bce(tty, &raw const (*ctx).defaults, 8)
             || !tty_term_has((*tty).term, tty_code_code::TTYC_CSR)
             || (!tty_term_has((*tty).term, tty_code_code::TTYC_RI)
                 && !tty_term_has((*tty).term, tty_code_code::TTYC_RIN))
@@ -2373,7 +2361,7 @@ pub unsafe extern "C" fn tty_cmd_reverseindex(tty: *mut tty, ctx: *const tty_ctx
         tty_margin_pane(tty, ctx);
         tty_cursor_pane(tty, ctx, (*ctx).ocx, (*ctx).orupper);
 
-        if tty_term_has((*tty).term, tty_code_code::TTYC_RI).as_bool() {
+        if tty_term_has((*tty).term, tty_code_code::TTYC_RI) {
             tty_putcode(tty, tty_code_code::TTYC_RI);
         } else {
             tty_putcode_i(tty, tty_code_code::TTYC_RIN, 1);
@@ -2391,7 +2379,7 @@ pub unsafe extern "C" fn tty_cmd_linefeed(tty: *mut tty, ctx: *const tty_ctx) {
 
         if (*ctx).bigger != 0
             || (!tty_full_width(tty, ctx) && !tty_use_margin(tty))
-            || tty_fake_bce(tty, &raw const (*ctx).defaults, 8).as_bool()
+            || tty_fake_bce(tty, &raw const (*ctx).defaults, 8)
             || !tty_term_has((*tty).term, tty_code_code::TTYC_CSR)
             || (*ctx).sx == 1
             || (*ctx).sy == 1
@@ -2439,7 +2427,7 @@ pub unsafe extern "C" fn tty_cmd_scrollup(tty: *mut tty, ctx: *const tty_ctx) {
 
         if (*ctx).bigger != 0
             || (!tty_full_width(tty, ctx) && !tty_use_margin(tty))
-            || tty_fake_bce(tty, &raw const (*ctx).defaults, 8).as_bool()
+            || tty_fake_bce(tty, &raw const (*ctx).defaults, 8)
             || !tty_term_has((*tty).term, tty_code_code::TTYC_CSR)
             || (*ctx).sx == 1
             || (*ctx).sy == 1
@@ -2486,7 +2474,7 @@ pub unsafe extern "C" fn tty_cmd_scrolldown(tty: *mut tty, ctx: *const tty_ctx) 
 
         if (*ctx).bigger != 0
             || (!tty_full_width(tty, ctx) && !tty_use_margin(tty))
-            || tty_fake_bce(tty, &raw const (*ctx).defaults, 8).as_bool()
+            || tty_fake_bce(tty, &raw const (*ctx).defaults, 8)
             || !tty_term_has((*tty).term, tty_code_code::TTYC_CSR)
             || (!tty_term_has((*tty).term, tty_code_code::TTYC_RI)
                 && !tty_term_has((*tty).term, tty_code_code::TTYC_RIN))
@@ -2510,7 +2498,7 @@ pub unsafe extern "C" fn tty_cmd_scrolldown(tty: *mut tty, ctx: *const tty_ctx) 
         tty_margin_pane(tty, ctx);
         tty_cursor_pane(tty, ctx, (*ctx).ocx, (*ctx).orupper);
 
-        if tty_term_has((*tty).term, tty_code_code::TTYC_RIN).as_bool() {
+        if tty_term_has((*tty).term, tty_code_code::TTYC_RIN) {
             tty_putcode_i(tty, tty_code_code::TTYC_RIN, (*ctx).num as i32);
         } else {
             for i in 0..(*ctx).num {
@@ -3168,7 +3156,7 @@ pub unsafe extern "C" fn tty_cursor(tty: *mut tty, mut cx: u32, cy: u32) {
                 }
 
                 /* Move to home position (0, 0). */
-                if cx == 0 && cy == 0 && tty_term_has(term, tty_code_code::TTYC_HOME).as_bool() {
+                if cx == 0 && cy == 0 && tty_term_has(term, tty_code_code::TTYC_HOME) {
                     tty_putcode(tty, tty_code_code::TTYC_HOME);
                     break 'out;
                 }
@@ -3198,15 +3186,13 @@ pub unsafe extern "C" fn tty_cursor(tty: *mut tty, mut cx: u32, cy: u32) {
 
                     /* One to the left. */
                     // TODO underflows on debug rust
-                    if cx == thisx.wrapping_sub(1)
-                        && tty_term_has(term, tty_code_code::TTYC_CUB1).as_bool()
-                    {
+                    if cx == thisx.wrapping_sub(1) && tty_term_has(term, tty_code_code::TTYC_CUB1) {
                         tty_putcode(tty, tty_code_code::TTYC_CUB1);
                         break 'out;
                     }
 
                     /* One to the right. */
-                    if cx == thisx + 1 && tty_term_has(term, tty_code_code::TTYC_CUF1).as_bool() {
+                    if cx == thisx + 1 && tty_term_has(term, tty_code_code::TTYC_CUF1) {
                         tty_putcode(tty, tty_code_code::TTYC_CUF1);
                         break 'out;
                     }
@@ -3218,16 +3204,14 @@ pub unsafe extern "C" fn tty_cursor(tty: *mut tty, mut cx: u32, cy: u32) {
                      * Use HPA if change is larger than absolute, otherwise move
                      * the cursor with CUB/CUF.
                      */
-                    if change.unsigned_abs() > cx
-                        && tty_term_has(term, tty_code_code::TTYC_HPA).as_bool()
-                    {
+                    if change.unsigned_abs() > cx && tty_term_has(term, tty_code_code::TTYC_HPA) {
                         tty_putcode_i(tty, tty_code_code::TTYC_HPA, cx as i32);
                         break 'out;
                     } else if change > 0
-                        && tty_term_has(term, tty_code_code::TTYC_CUB).as_bool()
+                        && tty_term_has(term, tty_code_code::TTYC_CUB)
                         && !tty_use_margin(tty)
                     {
-                        if change == 2 && tty_term_has(term, tty_code_code::TTYC_CUB1).as_bool() {
+                        if change == 2 && tty_term_has(term, tty_code_code::TTYC_CUB1) {
                             tty_putcode(tty, tty_code_code::TTYC_CUB1);
                             tty_putcode(tty, tty_code_code::TTYC_CUB1);
                             break 'out;
@@ -3235,7 +3219,7 @@ pub unsafe extern "C" fn tty_cursor(tty: *mut tty, mut cx: u32, cy: u32) {
                         tty_putcode_i(tty, tty_code_code::TTYC_CUB, change);
                         break 'out;
                     } else if change < 0
-                        && tty_term_has(term, tty_code_code::TTYC_CUF).as_bool()
+                        && tty_term_has(term, tty_code_code::TTYC_CUF)
                         && !tty_use_margin(tty)
                     {
                         tty_putcode_i(tty, tty_code_code::TTYC_CUF, -change);
@@ -3249,7 +3233,7 @@ pub unsafe extern "C" fn tty_cursor(tty: *mut tty, mut cx: u32, cy: u32) {
                     /* One above. */
                     if thisy != (*tty).rupper
                         && cy == thisy - 1
-                        && tty_term_has(term, tty_code_code::TTYC_CUU1).as_bool()
+                        && tty_term_has(term, tty_code_code::TTYC_CUU1)
                     {
                         tty_putcode(tty, tty_code_code::TTYC_CUU1);
                         break 'out;
@@ -3258,7 +3242,7 @@ pub unsafe extern "C" fn tty_cursor(tty: *mut tty, mut cx: u32, cy: u32) {
                     /* One below. */
                     if thisy != (*tty).rlower
                         && cy == thisy + 1
-                        && tty_term_has(term, tty_code_code::TTYC_CUD1).as_bool()
+                        && tty_term_has(term, tty_code_code::TTYC_CUD1)
                     {
                         tty_putcode(tty, tty_code_code::TTYC_CUD1);
                         break 'out;
@@ -3275,14 +3259,14 @@ pub unsafe extern "C" fn tty_cursor(tty: *mut tty, mut cx: u32, cy: u32) {
                         || (change < 0 && cy as i32 - change > (*tty).rlower as i32)
                         || (change > 0 && cy as i32 - change < (*tty).rupper as i32)
                     {
-                        if tty_term_has(term, tty_code_code::TTYC_VPA).as_bool() {
+                        if tty_term_has(term, tty_code_code::TTYC_VPA) {
                             tty_putcode_i(tty, tty_code_code::TTYC_VPA, cy as i32);
                             break 'out;
                         }
-                    } else if change > 0 && tty_term_has(term, tty_code_code::TTYC_CUU).as_bool() {
+                    } else if change > 0 && tty_term_has(term, tty_code_code::TTYC_CUU) {
                         tty_putcode_i(tty, tty_code_code::TTYC_CUU, change);
                         break 'out;
-                    } else if change < 0 && tty_term_has(term, tty_code_code::TTYC_CUD).as_bool() {
+                    } else if change < 0 && tty_term_has(term, tty_code_code::TTYC_CUD) {
                         tty_putcode_i(tty, tty_code_code::TTYC_CUD, -change);
                         break 'out;
                     }
@@ -3419,9 +3403,9 @@ pub unsafe extern "C" fn tty_attributes(
             tty_putcode(tty, tty_code_code::TTYC_BLINK);
         }
         if changed.intersects(grid_attr::GRID_ATTR_REVERSE) {
-            if tty_term_has((*tty).term, tty_code_code::TTYC_REV).as_bool() {
+            if tty_term_has((*tty).term, tty_code_code::TTYC_REV) {
                 tty_putcode(tty, tty_code_code::TTYC_REV);
-            } else if tty_term_has((*tty).term, tty_code_code::TTYC_SMSO).as_bool() {
+            } else if tty_term_has((*tty).term, tty_code_code::TTYC_SMSO) {
                 tty_putcode(tty, tty_code_code::TTYC_SMSO);
             }
         }
@@ -3774,10 +3758,10 @@ pub unsafe extern "C" fn tty_colours_us(tty: *mut tty, gc: *const grid_cell) {
              * Write the colour. Only use setal if the RGB flag is set because the
              * non-RGB version may be wrong.
              */
-            if tty_term_has((*tty).term, tty_code_code::TTYC_SETULC).as_bool() {
+            if tty_term_has((*tty).term, tty_code_code::TTYC_SETULC) {
                 tty_putcode_i(tty, tty_code_code::TTYC_SETULC, c as i32);
-            } else if tty_term_has((*tty).term, tty_code_code::TTYC_SETAL).as_bool()
-                && tty_term_has((*tty).term, tty_code_code::TTYC_RGB).as_bool()
+            } else if tty_term_has((*tty).term, tty_code_code::TTYC_SETAL)
+                && tty_term_has((*tty).term, tty_code_code::TTYC_RGB)
             {
                 tty_putcode_i(tty, tty_code_code::TTYC_SETAL, c as i32);
             }
@@ -3791,11 +3775,9 @@ pub unsafe extern "C" fn tty_colours_us(tty: *mut tty, gc: *const grid_cell) {
 pub unsafe extern "C" fn tty_try_colour(tty: *mut tty, colour: i32, type_: *const c_char) -> i32 {
     unsafe {
         if colour & COLOUR_FLAG_256 != 0 {
-            if *type_ == b'3' as i8
-                && tty_term_has((*tty).term, tty_code_code::TTYC_SETAF).as_bool()
-            {
+            if *type_ == b'3' as i8 && tty_term_has((*tty).term, tty_code_code::TTYC_SETAF) {
                 tty_putcode_i(tty, tty_code_code::TTYC_SETAF, colour & 0xff);
-            } else if tty_term_has((*tty).term, tty_code_code::TTYC_SETAB).as_bool() {
+            } else if tty_term_has((*tty).term, tty_code_code::TTYC_SETAB) {
                 tty_putcode_i(tty, tty_code_code::TTYC_SETAB, colour & 0xff);
             }
             return 0;
@@ -3803,9 +3785,7 @@ pub unsafe extern "C" fn tty_try_colour(tty: *mut tty, colour: i32, type_: *cons
 
         if colour & COLOUR_FLAG_RGB != 0 {
             let (r, g, b) = colour_split_rgb(colour & 0xffffff);
-            if *type_ == b'3' as i8
-                && tty_term_has((*tty).term, tty_code_code::TTYC_SETRGBF).as_bool()
-            {
+            if *type_ == b'3' as i8 && tty_term_has((*tty).term, tty_code_code::TTYC_SETRGBF) {
                 tty_putcode_iii(
                     tty,
                     tty_code_code::TTYC_SETRGBF,
@@ -3813,7 +3793,7 @@ pub unsafe extern "C" fn tty_try_colour(tty: *mut tty, colour: i32, type_: *cons
                     g as i32,
                     b as i32,
                 );
-            } else if tty_term_has((*tty).term, tty_code_code::TTYC_SETRGBB).as_bool() {
+            } else if tty_term_has((*tty).term, tty_code_code::TTYC_SETRGBB) {
                 tty_putcode_iii(
                     tty,
                     tty_code_code::TTYC_SETRGBB,

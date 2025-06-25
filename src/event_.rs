@@ -4,8 +4,6 @@ use ::core::{
 };
 use ::libc::timeval;
 
-use crate::boolint;
-
 macro_rules! evbuffer_add_printf {
    ($buf:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
         crate::event_::evbuffer_add_vprintf($buf, format_args!($fmt $(, $args)*))
@@ -48,8 +46,8 @@ pub unsafe extern "C" fn evtimer_add(ev: *mut event, tv: *const timeval) -> c_in
     unsafe { event_add(ev, tv) }
 }
 
-pub unsafe extern "C" fn evtimer_initialized(ev: *mut event) -> boolint {
-    unsafe { event_initialized(ev) }
+pub unsafe extern "C" fn evtimer_initialized(ev: *mut event) -> bool {
+    unsafe { event_initialized(ev) != 0 }
 }
 
 // #define evtimer_del(ev)			event_del(ev)
@@ -313,7 +311,7 @@ unsafe extern "C" {
     pub fn event_del(arg1: *mut event) -> c_int;
     pub fn event_active(ev: *mut event, res: c_int, ncalls: c_short);
     pub fn event_pending(ev: *const event, events: c_short, tv: *mut timeval) -> c_int;
-    pub fn event_initialized(ev: *const event) -> boolint;
+    pub fn event_initialized(ev: *const event) -> c_int;
     pub fn event_get_version() -> *const c_char;
     pub fn event_loop(arg1: c_int) -> c_int;
     pub fn event_once(

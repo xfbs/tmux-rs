@@ -108,7 +108,7 @@ unsafe extern "C" fn screen_write_set_cursor(ctx: *mut screen_write_ctx, mut cx:
         }
         let w = (*wp).window;
 
-        if !event_initialized(&raw mut (*w).offset_timer) {
+        if event_initialized(&raw mut (*w).offset_timer) == 0 {
             evtimer_set(
                 &raw mut (*w).offset_timer,
                 Some(screen_write_offset_timer),
@@ -449,9 +449,9 @@ pub unsafe fn screen_write_text_(
     more: i32,
     gcp: *const grid_cell,
     args: std::fmt::Arguments,
-) -> boolint {
+) -> bool {
     unsafe {
-        let more = boolint(more);
+        let more = more != 0;
         let s = (*ctx).s;
         let cy = (*s).cy;
         let mut idx = 0;
@@ -530,7 +530,7 @@ pub unsafe fn screen_write_text_(
             || (*text.add(idx)).size != 0
         {
             free_(text);
-            return boolint::FALSE;
+            return false;
         }
         free_(text);
 
@@ -541,7 +541,7 @@ pub unsafe fn screen_write_text_(
         if !more || (*s).cx == cx + width {
             screen_write_cursormove(ctx, cx as i32, (*s).cy as i32 + 1, 0);
         }
-        boolint::TRUE
+        true
     }
 }
 

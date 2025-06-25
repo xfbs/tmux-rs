@@ -1028,7 +1028,7 @@ unsafe extern "C" fn window_tree_search(
     _modedata: *mut c_void,
     itemdata: NonNull<c_void>,
     ss: *const c_char,
-) -> boolint {
+) -> bool {
     unsafe {
         let item: NonNull<window_tree_itemdata> = itemdata.cast();
         let mut s: Option<NonNull<session>> = None;
@@ -1037,19 +1037,17 @@ unsafe extern "C" fn window_tree_search(
         window_tree_pull_item(item, &raw mut s, &raw mut wl, &raw mut wp);
 
         match (*item.as_ptr()).type_ {
-            window_tree_type::WINDOW_TREE_NONE => return boolint::FALSE,
+            window_tree_type::WINDOW_TREE_NONE => return false,
             window_tree_type::WINDOW_TREE_SESSION => {
                 if let Some(s) = s {
-                    return boolint::from(!libc::strstr((*s.as_ptr()).name, ss).is_null());
+                    return !libc::strstr((*s.as_ptr()).name, ss).is_null();
                 }
             }
             window_tree_type::WINDOW_TREE_WINDOW => {
                 if let Some(s) = s
                     && let Some(wl) = wl
                 {
-                    return boolint::from(
-                        !libc::strstr((*(*wl.as_ptr()).window).name, ss).is_null(),
-                    );
+                    return !libc::strstr((*(*wl.as_ptr()).window).name, ss).is_null();
                 }
             }
             window_tree_type::WINDOW_TREE_PANE => {
@@ -1060,9 +1058,9 @@ unsafe extern "C" fn window_tree_search(
                     let cmd: *mut c_char =
                         osdep_get_name((*wp.as_ptr()).fd, (&raw const (*wp.as_ptr()).tty).cast());
                     if cmd.is_null() || *cmd == b'\0' as c_char {
-                        return boolint::FALSE;
+                        return false;
                     } else {
-                        let retval = boolint::from(!libc::strstr(cmd, ss).is_null());
+                        let retval = !libc::strstr(cmd, ss).is_null();
                         free_(cmd);
                         return retval;
                     }
@@ -1070,7 +1068,7 @@ unsafe extern "C" fn window_tree_search(
             }
         }
 
-        boolint::FALSE
+        false
     }
 }
 

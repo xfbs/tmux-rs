@@ -35,16 +35,16 @@ type format_ranges = tailq_head<format_range>;
 crate::compat::impl_tailq_entry!(format_range, entry, tailq_entry<format_range>);
 
 /// Does this range match this style?
-unsafe fn format_is_type(fr: *mut format_range, sy: *mut style) -> boolint {
+unsafe fn format_is_type(fr: *mut format_range, sy: *mut style) -> bool {
     unsafe {
         if (*fr).type_ != (*sy).range_type {
-            return boolint::FALSE;
+            return false;
         }
 
         match (*fr).type_ {
             style_range_type::STYLE_RANGE_NONE
             | style_range_type::STYLE_RANGE_LEFT
-            | style_range_type::STYLE_RANGE_RIGHT => boolint::TRUE,
+            | style_range_type::STYLE_RANGE_RIGHT => true,
             style_range_type::STYLE_RANGE_PANE
             | style_range_type::STYLE_RANGE_WINDOW
             | style_range_type::STYLE_RANGE_SESSION => {
@@ -55,7 +55,7 @@ unsafe fn format_is_type(fr: *mut format_range, sy: *mut style) -> boolint {
                 (&raw const (*sy).range_string).cast(),
             ) == 0)
                 .into(),
-            _ => boolint::TRUE,
+            _ => true,
         }
     }
 }

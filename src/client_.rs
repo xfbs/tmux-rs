@@ -286,7 +286,7 @@ pub unsafe extern "C-unwind" fn client_main(
             values = args_from_vector(argc, argv);
             pr = cmd_parse_from_arguments(values, argc as u32, null_mut());
             if (*pr).status == cmd_parse_status::CMD_PARSE_SUCCESS {
-                if cmd_list_any_have((*pr).cmdlist, cmd_flag::CMD_STARTSERVER).as_bool() {
+                if cmd_list_any_have((*pr).cmdlist, cmd_flag::CMD_STARTSERVER) {
                     flags |= client_flag::STARTSERVER;
                 }
                 cmd_list_free((*pr).cmdlist);

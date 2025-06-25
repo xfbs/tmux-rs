@@ -63,7 +63,7 @@ pub unsafe fn check_window_name(w: *mut window) {
         gettimeofday(&raw mut tv, null_mut());
         let left = name_time_expired(w, &raw mut tv);
         if left != 0 {
-            if !event_initialized(&raw mut (*w).name_event) {
+            if event_initialized(&raw mut (*w).name_event) == 0 {
                 evtimer_set(&raw mut (*w).name_event, Some(name_time_callback), w as _);
             }
             if evtimer_pending(&raw mut (*w).name_event, null_mut()) == 0 {
@@ -81,7 +81,7 @@ pub unsafe fn check_window_name(w: *mut window) {
             &raw const tv as _,
             size_of::<timeval>(),
         );
-        if event_initialized(&raw mut (*w).name_event).as_bool() {
+        if event_initialized(&raw mut (*w).name_event) != 0 {
             evtimer_del(&raw mut (*w).name_event);
         }
 

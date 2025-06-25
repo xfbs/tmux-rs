@@ -704,7 +704,7 @@ pub unsafe extern "C" fn key_bindings_dispatch(
         let readonly = if c.is_null() || !(*c).flags.intersects(client_flag::READONLY) {
             true
         } else {
-            cmd_list_all_have((*bd).cmdlist, cmd_flag::CMD_READONLY).as_bool()
+            cmd_list_all_have((*bd).cmdlist, cmd_flag::CMD_READONLY)
         };
 
         let mut new_item = null_mut();

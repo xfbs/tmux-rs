@@ -777,17 +777,15 @@ pub unsafe extern "C" fn cmd_list_next(cmd: *mut cmd) -> *mut cmd {
     unsafe { tailq_next::<_, _, qentry>(cmd) }
 }
 
-pub unsafe extern "C" fn cmd_list_all_have(cmdlist: *mut cmd_list, flag: cmd_flag) -> boolint {
+pub unsafe extern "C" fn cmd_list_all_have(cmdlist: *mut cmd_list, flag: cmd_flag) -> bool {
     unsafe {
-        boolint::from(
-            tailq_foreach((*cmdlist).list)
-                .into_iter()
-                .all(|cmd| (*(*cmd.as_ptr()).entry).flags.intersects(flag)),
-        )
+        tailq_foreach((*cmdlist).list)
+            .into_iter()
+            .all(|cmd| (*(*cmd.as_ptr()).entry).flags.intersects(flag))
     }
 }
 
-pub unsafe extern "C" fn cmd_list_any_have(cmdlist: *mut cmd_list, flag: cmd_flag) -> boolint {
+pub unsafe extern "C" fn cmd_list_any_have(cmdlist: *mut cmd_list, flag: cmd_flag) -> bool {
     unsafe {
         tailq_foreach((*cmdlist).list)
             .into_iter()

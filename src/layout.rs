@@ -252,15 +252,15 @@ unsafe fn layout_cell_is_bottom(w: *mut window, mut lc: *mut layout_cell) -> c_i
 
 /// Returns 1 if we need to add an extra line for the pane status line. This is
 /// the case for the most upper or lower panes only.
-unsafe fn layout_add_border(w: *mut window, lc: *mut layout_cell, status: pane_status) -> boolint {
+unsafe fn layout_add_border(w: *mut window, lc: *mut layout_cell, status: pane_status) -> bool {
     unsafe {
         if status == pane_status::PANE_STATUS_TOP {
-            return boolint::from(layout_cell_is_top(w, lc) != 0);
+            return layout_cell_is_top(w, lc) != 0;
         }
         if status == pane_status::PANE_STATUS_BOTTOM {
-            return boolint::from(layout_cell_is_bottom(w, lc) != 0);
+            return layout_cell_is_bottom(w, lc) != 0;
         }
-        boolint::FALSE
+        false
     }
 }
 
@@ -281,7 +281,7 @@ pub unsafe extern "C" fn layout_fix_panes(w: *mut window, skip: *mut window_pane
             (*wp).xoff = (*lc).xoff;
             (*wp).yoff = (*lc).yoff;
 
-            if layout_add_border(w, lc, status).as_bool() {
+            if layout_add_border(w, lc, status) {
                 if status == pane_status::PANE_STATUS_TOP {
                     (*wp).yoff += 1;
                 }
@@ -330,7 +330,7 @@ pub unsafe extern "C" fn layout_resize_check(
                 minimum = PANE_MINIMUM;
             } else {
                 available = (*lc).sy;
-                if layout_add_border(w, lc, status).as_bool() {
+                if layout_add_border(w, lc, status) {
                     minimum = PANE_MINIMUM + 1;
                 } else {
                     minimum = PANE_MINIMUM;
@@ -802,7 +802,7 @@ pub unsafe extern "C" fn layout_set_size_check(
     lc: *mut layout_cell,
     type_: layout_type,
     size: c_int,
-) -> boolint {
+) -> bool {
     unsafe {
         let mut lcchild: *mut layout_cell;
         let mut new_size: u32;
@@ -812,7 +812,7 @@ pub unsafe extern "C" fn layout_set_size_check(
 
         // Cells with no children must just be bigger than minimum
         if (*lc).type_ == layout_type::LAYOUT_WINDOWPANE {
-            return boolint::from(size >= PANE_MINIMUM as i32);
+            return size >= PANE_MINIMUM as i32;
         }
         available = size as u32;
 
@@ -822,7 +822,7 @@ pub unsafe extern "C" fn layout_set_size_check(
         // Check new size will work for each child
         if (*lc).type_ == type_ {
             if available < (count * 2) - 1 {
-                return boolint::FALSE;
+                return false;
             }
 
             if type_ == layout_type::LAYOUT_LEFTRIGHT {
@@ -844,17 +844,17 @@ pub unsafe extern "C" fn layout_set_size_check(
                 );
                 if idx == count - 1 {
                     if new_size > available {
-                        return boolint::FALSE;
+                        return false;
                     }
                     available -= new_size;
                 } else {
                     if new_size + 1 > available {
-                        return boolint::FALSE;
+                        return false;
                     }
                     available -= new_size + 1;
                 }
                 if !layout_set_size_check(w, lcchild, type_, new_size as i32) {
-                    return boolint::FALSE;
+                    return false;
                 }
                 idx += 1;
             }
@@ -864,12 +864,12 @@ pub unsafe extern "C" fn layout_set_size_check(
                     continue;
                 }
                 if !layout_set_size_check(w, lcchild, type_, size) {
-                    return boolint::FALSE;
+                    return false;
                 }
             }
         }
 
-        boolint::TRUE
+        true
     }
 }
 
@@ -983,7 +983,7 @@ pub unsafe extern "C" fn layout_split_pane(
                 }
             }
             layout_type::LAYOUT_TOPBOTTOM => {
-                if layout_add_border((*wp).window, lc, status).as_bool() {
+                if layout_add_border((*wp).window, lc, status) {
                     minimum = PANE_MINIMUM * 2 + 2;
                 } else {
                     minimum = PANE_MINIMUM * 2 + 1;
@@ -1161,7 +1161,7 @@ pub unsafe extern "C" fn layout_spread_cell(w: *mut window, parent: *mut layout_
         let size = match (*parent).type_ {
             layout_type::LAYOUT_LEFTRIGHT => (*parent).sx,
             layout_type::LAYOUT_TOPBOTTOM => {
-                if layout_add_border(w, parent, status).as_bool() {
+                if layout_add_border(w, parent, status) {
                     (*parent).sy - 1
                 } else {
                     (*parent).sy
@@ -1194,7 +1194,7 @@ pub unsafe extern "C" fn layout_spread_cell(w: *mut window, parent: *mut layout_
                     change
                 }
                 layout_type::LAYOUT_TOPBOTTOM => {
-                    let this = if layout_add_border(w, lc, status).as_bool() {
+                    let this = if layout_add_border(w, lc, status) {
                         each + 1
                     } else {
                         each
