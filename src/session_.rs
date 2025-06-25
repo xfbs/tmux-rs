@@ -336,13 +336,14 @@ pub unsafe extern "C" fn session_update_activity(s: *mut session, from: *mut tim
             evtimer_set(&raw mut (*s).lock_timer, Some(session_lock_timer), s.cast());
         }
 
-        let mut tv = MaybeUninit::<timeval>::uninit();
-        let tv = tv.as_mut_ptr();
         if (*s).attached != 0 {
-            timerclear(tv);
-            (*tv).tv_sec = options_get_number_((*s).options, c"lock-after-time");
-            if (*tv).tv_sec != 0 {
-                evtimer_add(&raw mut (*s).lock_timer, tv);
+            let tv = timeval {
+                tv_sec: options_get_number_((*s).options, c"lock-after-time"),
+                tv_usec: 0,
+            };
+
+            if tv.tv_sec != 0 {
+                evtimer_add(&raw mut (*s).lock_timer, &tv);
             }
         }
     }
