@@ -1,27 +1,6 @@
 use core::ffi::{CStr, c_char, c_longlong};
 
-// #[deprecated(note = "prefer using strtonum_")]
-pub unsafe fn strtonum(
-    nptr: *const c_char,
-    minval: c_longlong,
-    maxval: c_longlong,
-    errstr: *mut *const c_char,
-) -> c_longlong {
-    unsafe {
-        match strtonum_::<i64>(nptr, minval, maxval) {
-            Ok(n) => {
-                *errstr = core::ptr::null();
-                n
-            }
-            Err(err) => {
-                *errstr = err.as_ptr().cast();
-                0
-            }
-        }
-    }
-}
-
-pub unsafe fn strtonum_<T>(nptr: *const c_char, minval: T, maxval: T) -> Result<T, &'static CStr>
+pub unsafe fn strtonum<T>(nptr: *const c_char, minval: T, maxval: T) -> Result<T, &'static CStr>
 where
     T: Into<i64>,
     i64: TryInto<T>,

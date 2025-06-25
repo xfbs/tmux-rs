@@ -17,7 +17,6 @@ fn main() {
     // - [ ] fgetln
     // - [x] strlcat
     // - [x] strlcpy
-    // - [x] strtonum
 
     println!("cargo::rustc-link-lib=tinfo");
     // symbols used from tinfo:

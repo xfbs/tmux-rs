@@ -17,7 +17,7 @@ use super::*;
 
 use libc::{snprintf, strcasecmp, strchr, strcspn, strncasecmp, strspn};
 
-use crate::compat::{strlcpy, strtonum};
+use crate::compat::strlcpy;
 
 // #define STYLE_ATTR_MASK (~0)
 
@@ -159,10 +159,9 @@ pub unsafe extern "C" fn style_parse(
                         if *found != b'%' as _ || *found.add(1) == b'\0' as _ {
                             break 'error;
                         }
-                        n = strtonum(found.add(1), 0, u32::MAX as i64, &raw mut errstr as _) as u32;
-                        if !errstr.is_null() {
+                        let Ok(n) = strtonum(found.add(1), 0, u32::MAX) else {
                             break 'error;
-                        }
+                        };
                         (*sy).range_type = style_range_type::STYLE_RANGE_PANE;
                         (*sy).range_argument = n;
                         style_set_range_string(sy, c"".as_ptr());
@@ -170,10 +169,9 @@ pub unsafe extern "C" fn style_parse(
                         if found.is_null() {
                             break 'error;
                         }
-                        n = strtonum(found, 0, u32::MAX as i64, &raw mut errstr as _) as u32;
-                        if !errstr.is_null() {
+                        let Ok(n) = strtonum(found, 0, u32::MAX) else {
                             break 'error;
-                        }
+                        };
                         (*sy).range_type = style_range_type::STYLE_RANGE_WINDOW;
                         (*sy).range_argument = n;
                         style_set_range_string(sy, c"".as_ptr());
@@ -184,10 +182,9 @@ pub unsafe extern "C" fn style_parse(
                         if *found != b'$' as _ || *found.add(1) == b'\0' as _ {
                             break 'error;
                         }
-                        n = strtonum(found.add(1), 0, u32::MAX as i64, &raw mut errstr as _) as u32;
-                        if !errstr.is_null() {
+                        let Ok(n) = strtonum(found.add(1), 0, u32::MAX) else {
                             break 'error;
-                        }
+                        };
                         (*sy).range_type = style_range_type::STYLE_RANGE_SESSION;
                         (*sy).range_argument = n;
                         style_set_range_string(sy, c"".as_ptr());

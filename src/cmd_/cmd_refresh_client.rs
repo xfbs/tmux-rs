@@ -289,16 +289,17 @@ pub unsafe extern "C" fn cmd_refresh_client_exec(
                 || args_has_(args, 'U')
                 || args_has_(args, 'D')
             {
-                if args_count(args) == 0 {
-                    adjust = 1;
+                adjust = if args_count(args) == 0 {
+                    1
                 } else {
-                    adjust =
-                        strtonum(args_string(args, 0), 1, i32::MAX as i64, &raw mut errstr) as u32;
-                    if !errstr.is_null() {
-                        cmdq_error!(item, "adjustment {}", _s(errstr));
-                        return cmd_retval::CMD_RETURN_ERROR;
+                    match strtonum(args_string(args, 0), 1, i32::MAX) {
+                        Ok(n) => n as u32,
+                        Err(errstr) => {
+                            cmdq_error!(item, "adjustment {}", _s(errstr.as_ptr()));
+                            return cmd_retval::CMD_RETURN_ERROR;
+                        }
                     }
-                }
+                };
 
                 if args_has_(args, 'c') {
                     (*tc).pan_window = null_mut();

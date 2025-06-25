@@ -18,7 +18,6 @@ use std::cmp::Ordering;
 use crate::compat::{
     RB_GENERATE, VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB,
     queue::{tailq_empty, tailq_foreach, tailq_init, tailq_insert_tail, tailq_remove},
-    strtonum,
     tree::{
         rb_empty, rb_find, rb_foreach, rb_init, rb_initializer, rb_insert, rb_max, rb_min, rb_next,
         rb_prev, rb_remove, rb_root,
@@ -41,38 +40,18 @@ pub static mut next_session_id: u32 = 0;
 pub static mut session_groups: session_groups = rb_initializer();
 
 pub unsafe extern "C" fn session_cmp(s1: *const session, s2: *const session) -> Ordering {
-    unsafe {
-        match libc::strcmp((*s1).name, (*s2).name) {
-            ..0 => Ordering::Less,
-            0 => Ordering::Equal,
-            1.. => Ordering::Greater,
-        }
-    }
+    unsafe { i32_to_ordering(libc::strcmp((*s1).name, (*s2).name)) }
 }
 
 pub unsafe extern "C" fn session_group_cmp(
     s1: *const session_group,
     s2: *const session_group,
 ) -> Ordering {
-    unsafe {
-        match libc::strcmp((*s1).name, (*s2).name) {
-            ..0 => Ordering::Less,
-            0 => Ordering::Equal,
-            1.. => Ordering::Greater,
-        }
-    }
+    unsafe { i32_to_ordering(libc::strcmp((*s1).name, (*s2).name)) }
 }
 
-pub unsafe extern "C" fn session_alive(s: *mut session) -> bool {
-    unsafe {
-        for s_loop in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
-            if s_loop == s {
-                return true;
-            }
-        }
-    }
-
-    false
+pub unsafe fn session_alive(s: *mut session) -> bool {
+    unsafe { rb_foreach(&raw mut sessions).any(|s_loop| s_loop.as_ptr() == s) }
 }
 
 /// Find session by name.
@@ -94,10 +73,9 @@ pub unsafe extern "C" fn session_find_by_id_str(s: *const c_char) -> *mut sessio
         }
 
         let mut errstr: *const c_char = null();
-        let id = strtonum(s.add(1), 0, u32::MAX as i64, &raw mut errstr) as u32;
-        if !errstr.is_null() {
+        let Ok(id) = strtonum(s.add(1), 0, u32::MAX) else {
             return null_mut();
-        }
+        };
         transmute_ptr(session_find_by_id(id))
     }
 }
@@ -105,6 +83,70 @@ pub unsafe extern "C" fn session_find_by_id_str(s: *const c_char) -> *mut sessio
 /// Find session by id.
 pub unsafe extern "C" fn session_find_by_id(id: u32) -> Option<NonNull<session>> {
     unsafe { rb_foreach(&raw mut sessions).find(|s| (*s.as_ptr()).id == id) }
+}
+
+impl session {
+    fn create(
+        prefix: *const c_char,
+        name: *const c_char,
+        cwd: *const c_char,
+        env: *mut environ,
+        oo: *mut options,
+        tio: *mut termios,
+    ) -> Box<Self> {
+        unsafe {
+            let mut s: Box<session> = Box::new(zeroed());
+            s.references = 1;
+            s.flags = 0;
+
+            s.cwd = xstrdup(cwd).as_ptr();
+
+            tailq_init(&raw mut s.lastw);
+            rb_init(&raw mut s.windows);
+
+            s.environ = env;
+            s.options = oo;
+
+            status_update_cache(s.as_mut());
+
+            s.tio = null_mut();
+            if !tio.is_null() {
+                s.tio = xmalloc_::<termios>().as_ptr();
+                memcpy__(s.tio, tio);
+            }
+
+            if !name.is_null() {
+                s.name = xstrdup(name).as_ptr();
+                s.id = next_session_id;
+                next_session_id += 1;
+            } else {
+                loop {
+                    s.id = next_session_id;
+                    next_session_id += 1;
+                    free_(s.name);
+                    s.name = if !prefix.is_null() {
+                        format_nul!("{}-{}", _s(prefix), s.id)
+                    } else {
+                        format_nul!("{}", s.id)
+                    };
+
+                    if rb_find(&raw mut sessions, s.as_mut()).is_null() {
+                        break;
+                    }
+                }
+            }
+            rb_insert(&raw mut sessions, s.as_mut());
+
+            log_debug!("new session {} ${}", _s(s.name), s.id);
+
+            if libc::gettimeofday(&raw mut s.creation_time, null_mut()) != 0 {
+                fatal(c"gettimeofday failed".as_ptr());
+            }
+            session_update_activity(s.as_mut(), &raw mut s.creation_time);
+
+            s
+        }
+    }
 }
 
 /// Create a new session.
@@ -116,58 +158,7 @@ pub unsafe extern "C" fn session_create(
     oo: *mut options,
     tio: *mut termios,
 ) -> *mut session {
-    unsafe {
-        let s = xcalloc1::<session>();
-        s.references = 1;
-        s.flags = 0;
-
-        s.cwd = xstrdup(cwd).as_ptr();
-
-        tailq_init(&raw mut s.lastw);
-        rb_init(&raw mut s.windows);
-
-        s.environ = env;
-        s.options = oo;
-
-        status_update_cache(s);
-
-        s.tio = null_mut();
-        if !tio.is_null() {
-            s.tio = xmalloc_::<termios>().as_ptr();
-            memcpy__(s.tio, tio);
-        }
-
-        if !name.is_null() {
-            s.name = xstrdup(name).as_ptr();
-            s.id = next_session_id;
-            next_session_id += 1;
-        } else {
-            loop {
-                s.id = next_session_id;
-                next_session_id += 1;
-                free_(s.name);
-                s.name = if !prefix.is_null() {
-                    format_nul!("{}-{}", _s(prefix), s.id)
-                } else {
-                    format_nul!("{}", s.id)
-                };
-
-                if rb_find(&raw mut sessions, s).is_null() {
-                    break;
-                }
-            }
-        }
-        rb_insert(&raw mut sessions, s);
-
-        log_debug!("new session {} ${}", _s(s.name), s.id);
-
-        if libc::gettimeofday(&raw mut s.creation_time, null_mut()) != 0 {
-            fatal(c"gettimeofday failed".as_ptr());
-        }
-        session_update_activity(s, &raw mut s.creation_time);
-
-        s
-    }
+    unsafe { Box::leak(session::create(prefix, name, cwd, env, oo, tio)) }
 }
 
 /// Add a reference to a session.

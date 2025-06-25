@@ -20,7 +20,6 @@ use std::cmp::Ordering;
 use crate::compat::{
     RB_GENERATE,
     queue::tailq_foreach,
-    strtonum,
     tree::{rb_find, rb_foreach, rb_init, rb_insert, rb_min, rb_next, rb_remove},
 };
 use crate::log::fatalx_c;
@@ -1276,7 +1275,6 @@ pub unsafe extern "C" fn options_from_string(
     cause: *mut *mut c_char,
 ) -> c_int {
     unsafe {
-        let number: i64;
         let mut errstr: *const c_char;
         let new: *const c_char;
         let old: *mut c_char;
@@ -1315,19 +1313,16 @@ pub unsafe extern "C" fn options_from_string(
             }
 
             options_table_type::OPTIONS_TABLE_NUMBER => {
-                let mut errstr = null();
-                number = strtonum(
-                    value,
-                    (*oe).minimum as i64,
-                    (*oe).maximum as i64,
-                    &raw mut errstr,
-                );
-                if !errstr.is_null() {
-                    *cause = format_nul!("value is {}: {}", _s(errstr), _s(value));
-                    return -1;
+                match strtonum(value, (*oe).minimum as i64, (*oe).maximum as i64) {
+                    Ok(number) => {
+                        options_set_number(oo, name, number);
+                        return 0;
+                    }
+                    Err(errstr) => {
+                        *cause = format_nul!("value is {}: {}", _s(errstr.as_ptr()), _s(value));
+                        return -1;
+                    }
                 }
-                options_set_number(oo, name, number);
-                return 0;
             }
 
             options_table_type::OPTIONS_TABLE_KEY => {
@@ -1341,7 +1336,7 @@ pub unsafe extern "C" fn options_from_string(
             }
 
             options_table_type::OPTIONS_TABLE_COLOUR => {
-                number = colour_fromstring(value) as i64;
+                let number = colour_fromstring(value) as i64;
                 if number == -1 {
                     *cause = format_nul!("bad colour: {}", _s(value));
                     return -1;

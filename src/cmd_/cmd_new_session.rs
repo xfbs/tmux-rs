@@ -15,7 +15,7 @@ use crate::*;
 
 use libc::{sscanf, tcgetattr};
 
-use crate::compat::{strtonum, tree::rb_min};
+use crate::compat::tree::rb_min;
 
 const NEW_SESSION_TEMPLATE: &CStr = c"#{session_name}:";
 
@@ -222,12 +222,11 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                 if streq_(tmp, "-") {
                     if !c.is_null() { (*c).tty.sx } else { 80 }
                 } else {
-                    let dsx_ = strtonum(tmp, 1, u16::MAX as i64, &raw mut errstr) as u32;
-                    if !errstr.is_null() {
+                    let Ok(dsx_) = strtonum(tmp, 1, u16::MAX) else {
                         cmdq_error!(item, "width {}", _s(errstr));
                         break 'fail;
-                    }
-                    dsx_
+                    };
+                    dsx_ as u32
                 }
             } else {
                 80
@@ -238,12 +237,11 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                 if streq_(tmp, "-") {
                     if !c.is_null() { (*c).tty.sy } else { 24 }
                 } else {
-                    let dsy_ = strtonum(tmp, 1, u16::MAX as i64, &raw mut errstr) as u32;
-                    if !errstr.is_null() {
+                    let Ok(dsy_) = strtonum(tmp, 1, u16::MAX) else {
                         cmdq_error!(item, "height {}", _s(errstr));
                         break 'fail;
-                    }
-                    dsy_
+                    };
+                    dsy_ as u32
                 }
             } else {
                 24

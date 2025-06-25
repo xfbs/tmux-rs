@@ -127,6 +127,33 @@ pub unsafe fn strcmp_(left: *const c_char, right: &'static str) -> std::cmp::Ord
     }
 }
 
+pub unsafe fn strcasecmp_(left: *const c_char, right: &'static str) -> std::cmp::Ordering {
+    unsafe {
+        for (i, r_ch) in right.bytes().enumerate() {
+            let l_ch = *left.add(i) as u8;
+
+            if l_ch == b'\0' {
+                return std::cmp::Ordering::Less;
+            }
+
+            match l_ch.to_ascii_lowercase().cmp(&r_ch.to_ascii_lowercase()) {
+                std::cmp::Ordering::Equal => continue,
+                value => return value,
+            }
+        }
+
+        if *left.add(right.len()) == b'\0' as i8 {
+            std::cmp::Ordering::Equal
+        } else {
+            std::cmp::Ordering::Greater
+        }
+    }
+}
+
 pub unsafe fn streq_(left: *const c_char, right: &'static str) -> bool {
     unsafe { matches!(strcmp_(left, right), std::cmp::Ordering::Equal) }
+}
+
+pub unsafe fn strcaseeq_(left: *const c_char, right: &'static str) -> bool {
+    unsafe { matches!(strcasecmp_(left, right), std::cmp::Ordering::Equal) }
 }

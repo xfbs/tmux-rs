@@ -16,7 +16,7 @@ mod strtonum;
 
 pub use strlcat::strlcat;
 pub use strlcpy::strlcpy;
-pub use strtonum::{strtonum, strtonum_};
+pub use strtonum::strtonum;
 pub use systemd::systemd_create_socket;
 
 pub(crate) use queue::{TAILQ_HEAD_INITIALIZER, impl_tailq_entry, tailq_insert_head};

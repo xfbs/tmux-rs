@@ -17,7 +17,7 @@ use libc::strcmp;
 
 use crate::compat::{
     queue::{tailq_first, tailq_foreach},
-    strlcat, strtonum,
+    strlcat,
     tree::{rb_foreach, rb_max, rb_min},
 };
 
@@ -345,7 +345,6 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(
     let __func__ = "cmd_find_get_window_with_session";
     unsafe {
         let mut errstr: *const c_char = null();
-        let mut idx = 0i32;
         let mut n = 0i32;
         let mut exact = 0i32;
         let mut s = null_mut();
@@ -365,11 +364,11 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(
         }
 
         if exact == 0 && (*window == b'+' as _ || *window == b'-' as _) {
-            if *window.add(1) != b'\0' as _ {
-                n = strtonum(window.add(1), 1, i32::MAX as i64, null_mut()) as i32;
+            n = if *window.add(1) != b'\0' as _ {
+                strtonum(window.add(1), 1, i32::MAX).unwrap_or_default()
             } else {
-                n = 1;
-            }
+                1
+            };
             s = (*fs).s;
             if (*fs).flags & CMD_FIND_WINDOW_INDEX != 0 {
                 if *window == b'+' as _ {
@@ -426,8 +425,7 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(
         }
 
         if *window != b'+' as _ && *window != b'-' as _ {
-            idx = strtonum(window, 0, i32::MAX as i64, &raw mut errstr) as i32;
-            if errstr.is_null() {
+            if let Ok(idx) = strtonum(window, 0, i32::MAX) {
                 (*fs).wl = winlink_find_by_index(&raw mut (*(*fs).s).windows, idx);
                 if !(*fs).wl.is_null() {
                     (*fs).idx = (*(*fs).wl).idx;
@@ -611,11 +609,11 @@ pub unsafe extern "C" fn cmd_find_get_pane_with_window(
         }
 
         if *pane == b'+' as _ || *pane == b'-' as _ {
-            if *pane.add(1) != b'\0' as _ {
-                n = strtonum(pane.add(1), 1, i32::MAX as i64, null_mut()) as u32;
+            n = if *pane.add(1) != b'\0' as _ {
+                strtonum(pane.add(1), 1, i32::MAX).unwrap_or_default() as u32
             } else {
-                n = 1;
-            }
+                1
+            };
             let wp = (*(*fs).w).active;
             if *pane == b'+' as _ {
                 (*fs).wp = window_pane_next_by_number((*fs).w, wp, n);
@@ -627,8 +625,7 @@ pub unsafe extern "C" fn cmd_find_get_pane_with_window(
             }
         }
 
-        let idx = strtonum(pane, 0, i32::MAX as i64, &raw mut errstr) as i32;
-        if errstr.is_null() {
+        if let Ok(idx) = strtonum(pane, 0, i32::MAX) {
             (*fs).wp = window_pane_at_index((*fs).w, idx as u32);
             if !(*fs).wp.is_null() {
                 return 0;

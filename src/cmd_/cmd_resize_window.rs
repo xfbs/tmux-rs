@@ -11,10 +11,7 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
 use crate::*;
-
-use crate::compat::strtonum;
 
 pub static mut cmd_resize_window_entry: cmd_entry = cmd_entry {
     name: c"resize-window".as_ptr(),
@@ -37,21 +34,21 @@ unsafe extern "C" fn cmd_resize_window_exec(self_: *mut cmd, item: *mut cmdq_ite
         let wl = (*target).wl;
         let w = (*wl).window;
         let s = (*target).s;
-        let mut errstr: *const c_char = null();
         let mut cause = null_mut();
-        let mut adjust: u32 = 0;
         let mut xpixel = 0u32;
         let mut ypixel = 0u32;
 
-        if args_count(args) == 0 {
-            adjust = 1;
+        let adjust = if args_count(args) == 0 {
+            1
         } else {
-            adjust = strtonum(args_string(args, 0), 1, i32::MAX as i64, &raw mut errstr) as u32;
-            if !errstr.is_null() {
-                cmdq_error!(item, "adjustment {}", _s(errstr));
-                return cmd_retval::CMD_RETURN_ERROR;
+            match strtonum(args_string(args, 0), 1, i32::MAX) {
+                Ok(n) => n as u32,
+                Err(errstr) => {
+                    cmdq_error!(item, "adjustment {}", _s(errstr.as_ptr()));
+                    return cmd_retval::CMD_RETURN_ERROR;
+                }
             }
-        }
+        };
 
         let mut sx = (*w).sx;
         let mut sy = (*w).sy;

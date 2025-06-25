@@ -936,7 +936,7 @@ pub unsafe extern "C" fn args_strtonum(
             return 0;
         }
 
-        match strtonum_((*value).union_.string, minval, maxval) {
+        match strtonum((*value).union_.string, minval, maxval) {
             Ok(ll) => {
                 *cause = null_mut();
                 ll
@@ -974,7 +974,7 @@ pub unsafe extern "C" fn args_strtonum_and_expand(
         }
 
         let formatted = format_single_from_target(item, (*value).union_.string);
-        let tmp = strtonum_(formatted, minval, maxval);
+        let tmp = strtonum(formatted, minval, maxval);
         free_(formatted);
         match tmp {
             Ok(ll) => {
@@ -1034,7 +1034,7 @@ pub unsafe extern "C" fn args_string_percentage(
             copy = xstrdup(value).as_ptr();
             *copy.add(valuelen - 1) = b'\0' as _;
 
-            let tmp = strtonum_(copy, 0, 100);
+            let tmp = strtonum(copy, 0, 100);
             free_(copy);
             ll = match tmp {
                 Ok(n) => n,
@@ -1053,7 +1053,7 @@ pub unsafe extern "C" fn args_string_percentage(
                 return 0;
             }
         } else {
-            ll = match strtonum_(value, minval, maxval) {
+            ll = match strtonum(value, minval, maxval) {
                 Ok(n) => n,
                 Err(errstr) => {
                     *cause = xstrdup(errstr.as_ptr()).as_ptr();
@@ -1111,7 +1111,7 @@ pub unsafe extern "C" fn args_string_percentage_and_expand(
             *copy.add(valuelen - 1) = b'\0' as c_char;
 
             f = format_single_from_target(item, copy);
-            let tmp = strtonum_(f, 0, 100);
+            let tmp = strtonum(f, 0, 100);
             free_(f);
             free_(copy);
             ll = match tmp {
@@ -1132,7 +1132,7 @@ pub unsafe extern "C" fn args_string_percentage_and_expand(
             }
         } else {
             f = format_single_from_target(item, value);
-            let tmp = strtonum_(f, minval, maxval);
+            let tmp = strtonum(f, minval, maxval);
             free_(f);
             ll = match tmp {
                 Ok(n) => n,

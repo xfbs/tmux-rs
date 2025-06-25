@@ -40,7 +40,6 @@ use libc::{strchr, strcmp, strpbrk, strtol};
 use crate::compat::{
     b64::{b64_ntop, b64_pton},
     queue::tailq_empty,
-    strtonum,
 };
 use crate::xmalloc::xstrndup;
 
@@ -1197,10 +1196,10 @@ unsafe extern "C" fn input_split(ictx: *mut input_ctx) -> i32 {
                 (*ip).union_.str = xstrdup(out).as_ptr();
             } else {
                 (*ip).type_ = input_param_type::INPUT_NUMBER;
-                (*ip).union_.num = strtonum(out, 0, i32::MAX as i64, &raw mut errstr) as i32;
-                if !errstr.is_null() {
-                    return -1;
-                }
+                (*ip).union_.num = match strtonum(out, 0, i32::MAX) {
+                    Ok(n) => n,
+                    Err(_errstr) => return -1,
+                };
             }
             (*ictx).param_list_len += 1;
             ip = &raw mut (*ictx).param_list[(*ictx).param_list_len as usize];
@@ -2164,9 +2163,18 @@ unsafe extern "C" fn input_csi_dispatch_sgr_colon(ictx: *mut input_ctx, mut i: u
             !out.is_null()
         } {
             if *out != b'\0' as c_char {
-                p[n] = strtonum(out, 0, i32::MAX as i64, &raw mut errstr) as i32;
-                n += 1;
-                if !errstr.is_null() || n == p.len() {
+                match strtonum(out, 0, i32::MAX) {
+                    Ok(x) => {
+                        p[n] = x;
+                        n += 1;
+                    }
+                    Err(errstr) => {
+                        free_(copy);
+                        return;
+                    }
+                }
+
+                if n == p.len() {
                     free_(copy);
                     return;
                 }

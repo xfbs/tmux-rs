@@ -28,7 +28,6 @@ use crate::compat::{
         tailq_insert_before, tailq_insert_head, tailq_insert_tail, tailq_last, tailq_next,
         tailq_prev, tailq_remove,
     },
-    strtonum,
     tree::{rb_find, rb_foreach, rb_insert, rb_min, rb_next, rb_prev, rb_remove},
 };
 
@@ -256,10 +255,9 @@ pub unsafe extern "C" fn window_find_by_id_str(s: *const c_char) -> *mut window 
             return null_mut();
         }
 
-        let id = strtonum(s.wrapping_add(1), 0, u32::MAX as i64, &raw mut errstr) as u32;
-        if !errstr.is_null() {
+        let Ok(id) = strtonum(s.wrapping_add(1), 0, u32::MAX) else {
             return null_mut();
-        }
+        };
 
         window_find_by_id(id)
     }
@@ -1014,11 +1012,9 @@ pub unsafe extern "C" fn window_pane_find_by_id_str(s: *const c_char) -> *mut wi
             return null_mut();
         }
 
-        let id = strtonum(s.add(1), 0, u32::MAX as i64, &raw mut errstr) as u32;
-        if !errstr.is_null() {
-            null_mut()
-        } else {
-            window_pane_find_by_id(id)
+        match strtonum(s.add(1), 0, u32::MAX) {
+            Ok(id) => window_pane_find_by_id(id),
+            Err(_errstr) => null_mut(),
         }
     }
 }

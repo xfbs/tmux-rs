@@ -13,8 +13,6 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use super::*;
 
-use crate::compat::strtonum;
-
 pub static window_copy_mode: window_mode = window_mode {
     name: SyncCharPtr::new(c"copy-mode"),
     init: Some(window_copy_init),
@@ -4859,10 +4857,9 @@ pub unsafe extern "C" fn window_copy_goto_line(
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut errstr: *const c_char = null();
 
-        let mut lineno = strtonum(linestr, -1, i32::MAX as i64, &raw mut errstr) as i32;
-        if !errstr.is_null() {
+        let Ok(mut lineno) = strtonum(linestr, -1, i32::MAX) else {
             return;
-        }
+        };
         if lineno < 0 || lineno as u32 > screen_hsize((*data).backing) {
             lineno = screen_hsize((*data).backing) as i32;
         }

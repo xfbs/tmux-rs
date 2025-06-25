@@ -13,7 +13,7 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use crate::*;
 
-use crate::compat::{queue::tailq_empty, strtonum};
+use crate::compat::queue::tailq_empty;
 
 pub static mut cmd_resize_pane_entry: cmd_entry = cmd_entry {
     name: c"resize-pane".as_ptr(),
@@ -84,15 +84,17 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
         }
         server_unzoom_window(w);
 
-        if args_count(args) == 0 {
-            adjust = 1;
+        let adjust = if args_count(args) == 0 {
+            1
         } else {
-            adjust = strtonum(args_string(args, 0), 1, i32::MAX as i64, &raw mut errstr) as u32;
-            if !errstr.is_null() {
-                cmdq_error!(item, "adjustment {}", _s(errstr));
-                return cmd_retval::CMD_RETURN_ERROR;
+            match strtonum(args_string(args, 0), 1, i32::MAX) {
+                Ok(n) => n,
+                Err(errstr) => {
+                    cmdq_error!(item, "adjustment {}", _s(errstr.as_ptr()));
+                    return cmd_retval::CMD_RETURN_ERROR;
+                }
             }
-        }
+        };
 
         if args_has_(args, 'x') {
             x = args_percentage(

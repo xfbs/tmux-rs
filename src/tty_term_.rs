@@ -639,7 +639,7 @@ pub unsafe extern "C" fn tty_term_apply(
                         (*code).type_ = (*ent).type_;
                     }
                     tty_code_type::Number => {
-                        let Ok(n) = strtonum_(value, 0, i32::MAX) else {
+                        let Ok(n) = strtonum(value, 0, i32::MAX) else {
                             break;
                         };
                         (*code).value.number = n;
@@ -827,7 +827,7 @@ pub unsafe extern "C" fn tty_term_create(
                             (*code).type_ = tty_code_type::String;
                             (*code).value.string = tty_term_strip(value);
                         }
-                        tty_code_type::Number => match strtonum_(value, 0, i32::MAX) {
+                        tty_code_type::Number => match strtonum(value, 0, i32::MAX) {
                             Ok(n) => {
                                 (*code).type_ = tty_code_type::Number;
                                 (*code).value.number = n;

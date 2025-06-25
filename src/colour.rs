@@ -19,7 +19,6 @@ use std::{
     ptr::{null, null_mut},
 };
 
-use crate::compat::strtonum;
 use libc::{free, sscanf, strcasecmp, strncasecmp, strncmp};
 use xmalloc::xstrndup;
 
@@ -198,59 +197,57 @@ pub unsafe fn colour_fromstring(s: *const c_char) -> c_int {
             return colour_join_rgb(r, g, b);
         }
 
-        if strncasecmp(s, c"colour".as_ptr(), 6) == 0 {
+        if strcaseeq_(s, "colour") {
             let mut errstr: *const c_char = null();
-            let n = strtonum(s.add(6), 0, 255, &raw mut errstr) as i32;
-            if !errstr.is_null() {
+            let Ok(n) = strtonum(s.add(6), 0i32, 255) else {
                 return -1;
-            }
+            };
             return n | COLOUR_FLAG_256;
         }
 
-        if strncasecmp(s, c"color".as_ptr(), 5) == 0 {
+        if strcaseeq_(s, "color") {
             let mut errstr: *const c_char = null();
-            let n = strtonum(s.add(5), 0, 255, &raw mut errstr) as i32;
-            if !errstr.is_null() {
+            let Ok(n) = strtonum(s.add(5), 0i32, 255) else {
                 return -1;
-            }
+            };
             return n | COLOUR_FLAG_256;
         }
 
-        if strcasecmp(s, c"default".as_ptr()) == 0 {
+        if strcaseeq_(s, "default") {
             8
-        } else if strcasecmp(s, c"terminal".as_ptr()) == 0 {
+        } else if strcaseeq_(s, "terminal") {
             9
-        } else if strcasecmp(s, c"black".as_ptr()) == 0 || streq_(s, "0") {
+        } else if strcaseeq_(s, "black") || streq_(s, "0") {
             0
-        } else if strcasecmp(s, c"red".as_ptr()) == 0 || streq_(s, "1") {
+        } else if strcaseeq_(s, "red") || streq_(s, "1") {
             1
-        } else if strcasecmp(s, c"green".as_ptr()) == 0 || streq_(s, "2") {
+        } else if strcaseeq_(s, "green") || streq_(s, "2") {
             2
-        } else if strcasecmp(s, c"yellow".as_ptr()) == 0 || streq_(s, "3") {
+        } else if strcaseeq_(s, "yellow") || streq_(s, "3") {
             3
-        } else if strcasecmp(s, c"blue".as_ptr()) == 0 || streq_(s, "4") {
+        } else if strcaseeq_(s, "blue") || streq_(s, "4") {
             4
-        } else if strcasecmp(s, c"magenta".as_ptr()) == 0 || streq_(s, "5") {
+        } else if strcaseeq_(s, "magenta") || streq_(s, "5") {
             5
-        } else if strcasecmp(s, c"cyan".as_ptr()) == 0 || streq_(s, "6") {
+        } else if strcaseeq_(s, "cyan") || streq_(s, "6") {
             6
-        } else if strcasecmp(s, c"white".as_ptr()) == 0 || streq_(s, "7") {
+        } else if strcaseeq_(s, "white") || streq_(s, "7") {
             7
-        } else if strcasecmp(s, c"brightblack".as_ptr()) == 0 || streq_(s, "90") {
+        } else if strcaseeq_(s, "brightblack") || streq_(s, "90") {
             90
-        } else if strcasecmp(s, c"brightred".as_ptr()) == 0 || streq_(s, "91") {
+        } else if strcaseeq_(s, "brightred") || streq_(s, "91") {
             91
-        } else if strcasecmp(s, c"brightgreen".as_ptr()) == 0 || streq_(s, "92") {
+        } else if strcaseeq_(s, "brightgreen") || streq_(s, "92") {
             92
-        } else if strcasecmp(s, c"brightyellow".as_ptr()) == 0 || streq_(s, "93") {
+        } else if strcaseeq_(s, "brightyellow") || streq_(s, "93") {
             93
-        } else if strcasecmp(s, c"brightblue".as_ptr()) == 0 || streq_(s, "94") {
+        } else if strcaseeq_(s, "brightblue") || streq_(s, "94") {
             94
-        } else if strcasecmp(s, c"brightmagenta".as_ptr()) == 0 || streq_(s, "95") {
+        } else if strcaseeq_(s, "brightmagenta") || streq_(s, "95") {
             95
-        } else if strcasecmp(s, c"brightcyan".as_ptr()) == 0 || streq_(s, "96") {
+        } else if strcaseeq_(s, "brightcyan") || streq_(s, "96") {
             96
-        } else if strcasecmp(s, c"brightwhite".as_ptr()) == 0 || streq_(s, "97") {
+        } else if strcaseeq_(s, "brightwhite") || streq_(s, "97") {
             97
         } else {
             colour_byname(s)
@@ -900,10 +897,9 @@ pub unsafe extern "C" fn colour_byname(name: *const c_char) -> i32 {
             }
 
             let mut errstr: *const c_char = null();
-            let c = strtonum(name.add(4), 0, 100, &raw mut errstr);
-            if !errstr.is_null() {
+            let Ok(c) = strtonum(name.add(4), 0, 100) else {
                 return -1;
-            }
+            };
             let c = (2.55f32 * (c as f32)).round() as i32;
 
             if !(0..=255).contains(&c) {
@@ -926,10 +922,12 @@ pub unsafe extern "C" fn colour_byname(name: *const c_char) -> i32 {
 
 pub unsafe extern "C" fn colour_palette_init(p: *mut colour_palette) {
     unsafe {
-        (*p).fg = 8;
-        (*p).bg = 8;
-        (*p).palette = null_mut();
-        (*p).default_palette = null_mut();
+        *p = colour_palette {
+            fg: 8,
+            bg: 8,
+            palette: null_mut(),
+            default_palette: null_mut(),
+        };
     }
 }
 

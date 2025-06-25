@@ -3593,7 +3593,7 @@ fn format_find(
         // found
         if modifiers.intersects(format_modifiers::FORMAT_TIMESTRING) {
             if t == 0 && !found.is_null() {
-                t = strtonum_(found, 0, i64::MAX).unwrap_or_default();
+                t = strtonum(found, 0, i64::MAX).unwrap_or_default();
                 free_(found);
             }
             if t == 0 {
@@ -4378,7 +4378,7 @@ pub unsafe extern "C" fn format_replace_expression(
 
             /* The third argument may be precision. */
             if argc >= 3 {
-                prec = match strtonum_(*(*mexp).argv.add(2), i32::MIN, i32::MAX) {
+                prec = match strtonum(*(*mexp).argv.add(2), i32::MIN, i32::MAX) {
                     Ok(value) => value as u32,
                     Err(errstr) => {
                         format_log1!(
@@ -4578,7 +4578,7 @@ pub unsafe extern "C" fn format_replace(
                             b'=' => {
                                 if (*fm).argc < 1 {
                                 } else {
-                                    limit = strtonum_(*(*fm).argv, i32::MIN, i32::MAX)
+                                    limit = strtonum(*(*fm).argv, i32::MIN, i32::MAX)
                                         .unwrap_or_default();
                                     if (*fm).argc >= 2 && !(*(*fm).argv.add(1)).is_null() {
                                         marker = *(*fm).argv.add(1);
@@ -4589,7 +4589,7 @@ pub unsafe extern "C" fn format_replace(
                                 if (*fm).argc < 1 {
                                     break;
                                 } else {
-                                    width = strtonum_(*(*fm).argv, i32::MIN, i32::MAX)
+                                    width = strtonum(*(*fm).argv, i32::MIN, i32::MAX)
                                         .unwrap_or_default();
                                 }
                             }
@@ -4664,7 +4664,7 @@ pub unsafe extern "C" fn format_replace(
                 /* Is this a character? */
                 if modifiers.intersects(format_modifiers::FORMAT_CHARACTER) {
                     new = format_expand1(es, copy);
-                    value = match strtonum_::<u8>(new, 32, 126) {
+                    value = match strtonum::<u8>(new, 32, 126) {
                         Ok(n) => format_nul!("{}", n as char),
                         Err(_) => xstrdup(c"".as_ptr()).as_ptr(),
                     };
