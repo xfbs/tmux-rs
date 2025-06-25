@@ -3709,8 +3709,7 @@ pub unsafe extern "C" fn format_strip(mut s: *const c_char) -> *mut c_char {
     }
 }
 
-/* Skip until end. */
-
+// Skip until end.
 pub unsafe extern "C" fn format_skip(mut s: *const c_char, end: *const c_char) -> *const c_char {
     unsafe {
         let mut brackets = 0;
@@ -3838,7 +3837,12 @@ pub unsafe extern "C" fn format_build_modifiers(
         let mut end: *const c_char = null();
         let mut list: *mut format_modifier = null_mut();
 
-        let mut last: [c_char; 3] = [b'X' as c_char, b';' as c_char, b':' as c_char];
+        let mut last: [c_char; 4] = [
+            b'X' as c_char,
+            b';' as c_char,
+            b':' as c_char,
+            '\0' as c_char,
+        ];
         let last: *mut c_char = last.as_mut_ptr();
 
         // char c, last[] = "X;:", **argv, *value;
