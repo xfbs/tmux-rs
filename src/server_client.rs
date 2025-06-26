@@ -15,7 +15,6 @@ use crate::*;
 
 use crate::{
     compat::{
-        VIS_CSTYLE, VIS_NOSLASH, VIS_OCTAL,
         imsg::{IMSG_HEADER_SIZE, imsg_get_fd},
         queue::{tailq_empty, tailq_insert_tail, tailq_last, tailq_prev, tailq_remove},
         strlcat,
@@ -3538,7 +3537,7 @@ pub unsafe extern "C" fn server_client_print(c: *mut client, parse: i32, evb: *m
                     &raw mut msg,
                     data.cast(),
                     size,
-                    VIS_OCTAL | VIS_CSTYLE | VIS_NOSLASH,
+                    vis_flags::VIS_OCTAL | vis_flags::VIS_CSTYLE | vis_flags::VIS_NOSLASH,
                 );
                 // log_debug("%s: %s", __func__, msg);
             } else {

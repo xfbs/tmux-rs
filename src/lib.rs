@@ -32,6 +32,7 @@
 
 mod compat;
 use compat::strtonum;
+use compat::vis_flags;
 
 mod ncurses_;
 use ncurses_::*;

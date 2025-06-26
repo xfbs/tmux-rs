@@ -1,4 +1,4 @@
-use core::ffi::{CStr, c_char, c_longlong};
+use core::ffi::{CStr, c_char};
 
 pub unsafe fn strtonum<T>(nptr: *const c_char, minval: T, maxval: T) -> Result<T, &'static CStr>
 where
@@ -7,6 +7,7 @@ where
 {
     let minval: i64 = minval.into();
     let maxval: i64 = maxval.into();
+
     if minval > maxval {
         return Err(c"invalid");
     }

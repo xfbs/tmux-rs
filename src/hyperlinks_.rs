@@ -15,7 +15,7 @@
 use crate::*;
 
 use crate::compat::{
-    TAILQ_HEAD_INITIALIZER, VIS_CSTYLE, VIS_OCTAL,
+    TAILQ_HEAD_INITIALIZER,
     queue::{tailq_first, tailq_insert_tail, tailq_remove},
     tree::{rb_find, rb_foreach, rb_init, rb_insert, rb_remove},
 };
@@ -140,8 +140,16 @@ pub unsafe extern "C" fn hyperlinks_put(
             internal_id_in = c"".as_ptr();
         }
 
-        utf8_stravis(&raw mut uri, uri_in, VIS_OCTAL | VIS_CSTYLE);
-        utf8_stravis(&raw mut internal_id, internal_id_in, VIS_OCTAL | VIS_CSTYLE);
+        utf8_stravis(
+            &raw mut uri,
+            uri_in,
+            vis_flags::VIS_OCTAL | vis_flags::VIS_CSTYLE,
+        );
+        utf8_stravis(
+            &raw mut internal_id,
+            internal_id_in,
+            vis_flags::VIS_OCTAL | vis_flags::VIS_CSTYLE,
+        );
 
         if *internal_id_in != b'\0' as _ {
             let mut find = MaybeUninit::<hyperlinks_uri>::uninit();

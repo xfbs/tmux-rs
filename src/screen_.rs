@@ -16,7 +16,7 @@ use super::*;
 use std::ptr::{addr_of, addr_of_mut};
 
 use crate::compat::{
-    VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB, impl_tailq_entry,
+    impl_tailq_entry,
     queue::{tailq_first, tailq_init, tailq_insert_head, tailq_remove},
     strlcat,
 };
@@ -262,7 +262,7 @@ pub unsafe extern "C" fn screen_set_path(s: *mut screen, path: *const c_char) {
         utf8_stravis(
             &mut (*s).path,
             path,
-            VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL,
+            vis_flags::VIS_OCTAL | vis_flags::VIS_CSTYLE | vis_flags::VIS_TAB | vis_flags::VIS_NL,
         );
     }
 }

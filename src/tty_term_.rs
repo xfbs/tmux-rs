@@ -15,7 +15,6 @@
 use crate::{log::fatalx_c, xmalloc::xreallocarray, *};
 
 use crate::compat::{
-    VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB,
     queue::{list_head_initializer, list_insert_head, list_remove},
     strnvis, strunvis,
 };
@@ -571,7 +570,6 @@ pub unsafe extern "C" fn tty_term_apply(
     quiet: i32,
 ) {
     unsafe {
-        // const struct tty_term_code_entry *ent;
         let mut code: *mut tty_code = null_mut();
         let mut offset = 0usize;
         let mut cp = null_mut();
@@ -579,8 +577,6 @@ pub unsafe extern "C" fn tty_term_apply(
         let mut s = null_mut();
 
         let name = (*term).name;
-        // u_int i;
-        // int n, remove;
 
         while {
             s = tty_term_override_next(capabilities, &raw mut offset);
@@ -1241,7 +1237,10 @@ pub unsafe extern "C" fn tty_term_describe(
                     &raw mut out as *mut c_char,
                     (*(*term).codes.add(code as usize)).value.string,
                     sizeof_out,
-                    VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL,
+                    vis_flags::VIS_OCTAL
+                        | vis_flags::VIS_CSTYLE
+                        | vis_flags::VIS_TAB
+                        | vis_flags::VIS_NL,
                 );
                 xsnprintf_!(
                     &raw mut s as *mut c_char,

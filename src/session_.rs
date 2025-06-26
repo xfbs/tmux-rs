@@ -16,7 +16,7 @@ use crate::*;
 use std::cmp::Ordering;
 
 use crate::compat::{
-    RB_GENERATE, VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB,
+    RB_GENERATE,
     queue::{tailq_empty, tailq_foreach, tailq_init, tailq_insert_tail, tailq_remove},
     tree::{
         rb_empty, rb_find, rb_foreach, rb_init, rb_initializer, rb_insert, rb_max, rb_min, rb_next,
@@ -272,7 +272,7 @@ pub unsafe extern "C" fn session_check_name(name: *const c_char) -> *mut c_char 
         utf8_stravis(
             &raw mut new_name,
             copy,
-            VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL,
+            vis_flags::VIS_OCTAL | vis_flags::VIS_CSTYLE | vis_flags::VIS_TAB | vis_flags::VIS_NL,
         );
         free_(copy);
         new_name

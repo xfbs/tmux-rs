@@ -22,7 +22,7 @@ use libc::{
 };
 
 use crate::compat::{
-    HOST_NAME_MAX, RB_GENERATE, VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB,
+    HOST_NAME_MAX, RB_GENERATE,
     queue::{
         tailq_empty, tailq_first, tailq_foreach, tailq_init, tailq_insert_after,
         tailq_insert_before, tailq_insert_head, tailq_insert_tail, tailq_last, tailq_next,
@@ -431,7 +431,7 @@ pub unsafe extern "C" fn window_set_name(w: *mut window, new_name: *const c_char
         utf8_stravis(
             &raw mut (*w).name,
             new_name,
-            VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL,
+            vis_flags::VIS_OCTAL | vis_flags::VIS_CSTYLE | vis_flags::VIS_TAB | vis_flags::VIS_NL,
         );
         notify_window(c"window-renamed".as_ptr(), w);
     }

@@ -15,8 +15,6 @@ use crate::*;
 
 use libc::{EINVAL, ENOENT, ENOMEM, GLOB_NOMATCH, GLOB_NOSPACE, glob, glob_t, globfree};
 
-use crate::compat::VIS_GLOB;
-
 pub static mut cmd_source_file_entry: cmd_entry = cmd_entry {
     name: c"source-file".as_ptr(),
     alias: c"source".as_ptr(),
@@ -169,7 +167,11 @@ unsafe extern "C" fn cmd_source_file_exec(self_: *mut cmd, item: *mut cmdq_item)
             (*cdata).flags |= cmd_parse_input_flags::CMD_PARSE_VERBOSE;
         }
 
-        utf8_stravis(&raw mut cwd, server_client_get_cwd(c, null_mut()), VIS_GLOB);
+        utf8_stravis(
+            &raw mut cwd,
+            server_client_get_cwd(c, null_mut()),
+            vis_flags::VIS_GLOB,
+        );
 
         for i in 0..args_count(args) {
             let mut path = args_string(args, i);

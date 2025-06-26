@@ -13,7 +13,7 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use super::*;
 
-use crate::compat::{VIS_CSTYLE, VIS_OCTAL, VIS_TAB, queue::tailq_first};
+use crate::compat::queue::tailq_first;
 use libc::{memmem, qsort, strcmp, strstr};
 
 use crate::xmalloc::xreallocarray;
@@ -266,7 +266,7 @@ pub unsafe extern "C" fn window_buffer_draw(
                 buf,
                 start,
                 end.offset_from(start) as usize,
-                VIS_OCTAL | VIS_CSTYLE | VIS_TAB,
+                vis_flags::VIS_OCTAL | vis_flags::VIS_CSTYLE | vis_flags::VIS_TAB,
             );
             if *buf != b'\0' as c_char {
                 screen_write_cursormove(ctx, cx as i32, (cy + i) as i32, 0);

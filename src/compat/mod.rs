@@ -10,46 +10,36 @@ pub mod queue;
 pub mod systemd;
 pub mod tree;
 
+mod closefrom;
+mod fgetln;
+mod freezero;
+mod getpeereid;
+mod recallocarray;
+mod setproctitle;
 mod strlcat;
 mod strlcpy;
 mod strtonum;
+mod unvis;
+mod vis;
 
+pub use closefrom::closefrom;
+pub use fgetln::fgetln;
+pub use freezero::freezero;
+pub use getpeereid::getpeereid;
+pub use recallocarray::recallocarray;
+pub use setproctitle::setproctitle_;
 pub use strlcat::strlcat;
 pub use strlcpy::strlcpy;
 pub use strtonum::strtonum;
 pub use systemd::systemd_create_socket;
+pub use unvis::strunvis;
+pub use vis::*;
 
 pub(crate) use queue::{TAILQ_HEAD_INITIALIZER, impl_tailq_entry, tailq_insert_head};
 pub(crate) use tree::RB_GENERATE;
 
-pub const VIS_OCTAL: i32 = 1;
-pub const VIS_CSTYLE: i32 = 2;
-pub const VIS_TAB: i32 = 8;
-pub const VIS_NL: i32 = 16;
-pub const VIS_GLOB: i32 = 4096;
-pub const VIS_DQ: i32 = 0x200;
-pub const VIS_NOSLASH: i32 = 0x40;
-
-// from libbsd
 #[rustfmt::skip]
 unsafe extern "C" {
-    pub fn fgetln(stream: *mut libc::FILE, len: *mut usize) -> *mut c_char;
-
-    pub fn setproctitle(fmt: *const c_char, ...);
-    pub fn getprogname() -> *const c_char;
-
-    pub fn recallocarray(ptr: *mut c_void, oldnmemb: usize, nmemb: usize, size: usize) -> *mut c_void;
-    pub fn freezero(ptr: *mut c_void, size: usize);
-
-    pub fn getpeereid(s: c_int, euid: *mut libc::uid_t, egid: *mut libc::gid_t) -> c_int;
-
-    pub fn closefrom(__lowfd: c_int);
-
-    pub fn vis(arg1: *mut c_char, arg2: c_int, arg3: c_int, arg4: c_int) -> *mut c_char;
-    pub fn stravis(arg1: *mut *mut c_char, arg2: *const c_char, arg3: c_int) -> c_int;
-    pub fn strnvis(arg1: *mut c_char, arg2: *const c_char, arg3: usize, arg4: c_int) -> c_int;
-    pub fn strunvis(arg1: *mut c_char, arg2: *const c_char) -> c_int;
-
     pub static mut optreset: c_int;
     pub static mut optarg: *mut c_char;
     pub static mut optind: c_int;
@@ -80,17 +70,3 @@ macro_rules! errno {
     };
 }
 use errno;
-
-mod bsd {
-    // symbols used by libbsd:
-    // - setproctitle
-    // - strlcpy
-    // - setproctitle_init
-    // - strunvis
-    // - recallocarray
-    // - freezero
-    // - strnvis
-    // - vis
-    // - fgetln
-    // - stravis
-}

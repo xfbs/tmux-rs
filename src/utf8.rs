@@ -17,7 +17,6 @@ use crate::*;
 use libc::{memcpy, memset};
 
 use crate::compat::{
-    VIS_DQ,
     tree::{rb_find, rb_initializer, rb_insert},
     vis,
 };
@@ -461,7 +460,7 @@ pub unsafe extern "C" fn utf8_strvis(
     mut dst: *mut c_char,
     mut src: *const c_char,
     len: usize,
-    flag: i32,
+    flag: vis_flags,
 ) -> i32 {
     unsafe {
         let mut ud: utf8_data = zeroed();
@@ -487,7 +486,7 @@ pub unsafe extern "C" fn utf8_strvis(
                 /* Not a complete, valid UTF-8 character. */
                 src = src.sub(ud.have as usize);
             }
-            if (flag & VIS_DQ != 0) && *src == b'$' as c_char && src < end.sub(1) {
+            if flag.intersects(vis_flags::VIS_DQ) && *src == b'$' as c_char && src < end.sub(1) {
                 if (*src.add(1) as u8).is_ascii_alphabetic()
                     || *src.add(1) == b'_' as c_char
                     || *src.add(1) == b'{' as c_char
@@ -509,7 +508,11 @@ pub unsafe extern "C" fn utf8_strvis(
     }
 }
 
-pub unsafe extern "C" fn utf8_stravis(dst: *mut *mut c_char, src: *const c_char, flag: i32) -> i32 {
+pub unsafe extern "C" fn utf8_stravis(
+    dst: *mut *mut c_char,
+    src: *const c_char,
+    flag: vis_flags,
+) -> i32 {
     unsafe {
         let buf = xreallocarray(null_mut(), 4, strlen(src) + 1);
         let len = utf8_strvis(buf.as_ptr().cast(), src, strlen(src), flag);
@@ -523,7 +526,7 @@ pub unsafe extern "C" fn utf8_stravisx(
     dst: *mut *mut c_char,
     src: *const c_char,
     srclen: usize,
-    flag: i32,
+    flag: vis_flags,
 ) -> i32 {
     unsafe {
         let buf = xreallocarray(null_mut(), 4, srclen + 1);

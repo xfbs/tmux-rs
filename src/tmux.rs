@@ -11,10 +11,8 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
-use crate::*;
-
 use crate::xmalloc::xstrndup;
+use crate::*;
 
 unsafe extern "C" {
     // TODO move/remove
@@ -376,10 +374,6 @@ pub fn getversion_c() -> *const c_char {
     c"3.5rs".as_ptr()
 }
 
-unsafe extern "C" {
-    fn setproctitle_init(argc: i32, argv: *const *const c_char, envp: *const *const c_char);
-}
-
 #[cfg_attr(not(test), unsafe(no_mangle))]
 pub unsafe extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *mut *mut c_char) {
     std::panic::set_hook(Box::new(|panic_info| {
@@ -389,7 +383,7 @@ pub unsafe extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *m
     }));
 
     unsafe {
-        setproctitle_init(argc, argv.cast(), env.cast());
+        // setproctitle_init(argc, argv.cast(), env.cast());
         let mut cause: *mut c_char = null_mut();
         let mut path: *const c_char = null_mut();
         let mut label: *mut c_char = null_mut();

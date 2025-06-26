@@ -16,7 +16,6 @@ use std::cmp::Ordering;
 use crate::{xmalloc::xrecallocarray, *};
 
 use crate::compat::{
-    VIS_CSTYLE, VIS_DQ, VIS_NL, VIS_OCTAL, VIS_TAB,
     queue::{
         tailq_empty, tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_last,
         tailq_next, tailq_remove,
@@ -83,11 +82,11 @@ pub unsafe extern "C" fn args_copy_value(to: *mut args_value, from: *const args_
     }
 }
 
-pub extern "C" fn args_type_to_string(type_: args_type) -> *const c_char {
+pub fn args_type_to_string(type_: args_type) -> &'static str {
     match type_ {
-        args_type::ARGS_NONE => c"NONE".as_ptr(),
-        args_type::ARGS_STRING => c"STRING".as_ptr(),
-        args_type::ARGS_COMMANDS => c"COMMANDS".as_ptr(),
+        args_type::ARGS_NONE => "NONE",
+        args_type::ARGS_STRING => "STRING",
+        args_type::ARGS_COMMANDS => "COMMANDS",
     }
 }
 
@@ -106,12 +105,18 @@ pub unsafe extern "C" fn args_value_as_string(value: *mut args_value) -> *const 
     }
 }
 
-pub unsafe extern "C" fn args_create() -> *mut args {
-    unsafe {
-        let args: *mut args = xcalloc1();
-        rb_init(&raw mut (*args).tree);
-        args
+impl args {
+    fn create() -> Box<Self> {
+        Box::new(Self {
+            tree: rb_head::rb_init(),
+            count: 0,
+            values: null_mut(),
+        })
     }
+}
+
+pub fn args_create<'a>() -> &'a mut args {
+    Box::leak(args::create())
 }
 
 pub unsafe extern "C" fn args_parse_flag_argument(
@@ -282,7 +287,7 @@ pub unsafe extern "C" fn args_parse(
                     __func__,
                     i,
                     _s(s),
-                    _s(args_type_to_string((*value).type_)),
+                    args_type_to_string((*value).type_),
                 );
 
                 if let Some(cb) = (*parse).cb {
@@ -409,7 +414,7 @@ pub unsafe extern "C" fn args_copy(
     }
 }
 
-pub unsafe extern "C" fn args_free_value(value: *mut args_value) {
+pub unsafe fn args_free_value(value: *mut args_value) {
     unsafe {
         match (*value).type_ {
             args_type::ARGS_NONE => (),
@@ -420,7 +425,7 @@ pub unsafe extern "C" fn args_free_value(value: *mut args_value) {
     }
 }
 
-pub unsafe extern "C" fn args_free_values(values: *mut args_value, count: u32) {
+pub unsafe fn args_free_values(values: *mut args_value, count: u32) {
     unsafe {
         for i in 0..count {
             args_free_value(values.add(i as usize));
@@ -428,7 +433,7 @@ pub unsafe extern "C" fn args_free_values(values: *mut args_value, count: u32) {
     }
 }
 
-pub unsafe extern "C" fn args_free(args: *mut args) {
+pub unsafe fn args_free(args: *mut args) {
     unsafe {
         args_free_values((*args).values, (*args).count);
         free_((*args).values);
@@ -447,11 +452,7 @@ pub unsafe extern "C" fn args_free(args: *mut args) {
     }
 }
 
-pub unsafe extern "C" fn args_to_vector(
-    args: *mut args,
-    argc: *mut i32,
-    argv: *mut *mut *mut c_char,
-) {
+pub unsafe fn args_to_vector(args: *mut args, argc: *mut i32, argv: *mut *mut *mut c_char) {
     unsafe {
         *argc = 0;
         *argv = null_mut();
@@ -472,7 +473,7 @@ pub unsafe extern "C" fn args_to_vector(
     }
 }
 
-pub unsafe extern "C" fn args_from_vector(argc: i32, argv: *mut *mut c_char) -> *mut args_value {
+pub unsafe fn args_from_vector(argc: i32, argv: *mut *mut c_char) -> *mut args_value {
     unsafe {
         let values: *mut args_value = xcalloc_(argc as usize).as_ptr();
         for i in 0..argc {
@@ -500,11 +501,7 @@ pub unsafe fn args_print_add_(buf: *mut *mut c_char, len: *mut usize, fmt: std::
     }
 }
 
-pub unsafe extern "C" fn args_print_add_value(
-    buf: *mut *mut c_char,
-    len: *mut usize,
-    value: *mut args_value,
-) {
+pub unsafe fn args_print_add_value(buf: *mut *mut c_char, len: *mut usize, value: *mut args_value) {
     unsafe {
         if **buf != b'\0' as c_char {
             args_print_add!(buf, len, " ");
@@ -526,7 +523,7 @@ pub unsafe extern "C" fn args_print_add_value(
     }
 }
 
-pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
+pub unsafe fn args_print(args: *mut args) -> *mut c_char {
     unsafe {
         let mut last: *mut args_entry = null_mut();
 
@@ -590,7 +587,7 @@ pub unsafe extern "C" fn args_print(args: *mut args) -> *mut c_char {
 }
 
 /// Escape an argument.
-pub unsafe extern "C" fn args_escape(s: *const c_char) -> *mut c_char {
+pub unsafe fn args_escape(s: *const c_char) -> *mut c_char {
     unsafe {
         static mut dquoted: *const c_char = c" #';${}%".as_ptr();
         static mut squoted: *const c_char = c" \"".as_ptr();
@@ -613,9 +610,10 @@ pub unsafe extern "C" fn args_escape(s: *const c_char) -> *mut c_char {
             return escaped;
         }
 
-        let mut flags = VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL;
+        let mut flags =
+            vis_flags::VIS_OCTAL | vis_flags::VIS_CSTYLE | vis_flags::VIS_TAB | vis_flags::VIS_NL;
         if quotes == b'"' as _ {
-            flags |= VIS_DQ;
+            flags |= vis_flags::VIS_DQ;
         }
         utf8_stravis(&raw mut escaped, s, flags);
 
@@ -638,7 +636,7 @@ pub unsafe extern "C" fn args_escape(s: *const c_char) -> *mut c_char {
     }
 }
 
-pub unsafe extern "C" fn args_has(args: *mut args, flag: u8) -> i32 {
+pub unsafe fn args_has(args: *mut args, flag: u8) -> i32 {
     unsafe {
         let entry = args_find(args, flag);
         if entry.is_null() {

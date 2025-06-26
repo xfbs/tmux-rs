@@ -11,7 +11,6 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
 use crate::*;
 
 use libc::{
@@ -28,7 +27,7 @@ use crate::compat::{
     },
     imsg_buffer::msgbuf_write,
     queue::{tailq_foreach, tailq_init, tailq_insert_tail, tailq_remove},
-    setproctitle,
+    setproctitle_,
 };
 use crate::event_::{signal_add, signal_set};
 
@@ -198,7 +197,7 @@ pub unsafe fn proc_start(name: &CStr) -> *mut tmuxproc {
     unsafe {
         log_open(name);
         let name = name.as_ptr();
-        setproctitle(c"%s (%s)".as_ptr(), name, socket_path);
+        setproctitle_(c"%s (%s)".as_ptr(), name, socket_path);
 
         let mut u = MaybeUninit::<utsname>::uninit();
         if uname(u.as_mut_ptr()) < 0 {

@@ -17,7 +17,7 @@ use std::cmp::Ordering;
 use crate::*;
 
 use crate::compat::{
-    VIS_CSTYLE, VIS_NL, VIS_OCTAL, VIS_TAB, strlcpy,
+    strlcpy,
     tree::{
         rb_find, rb_foreach_reverse, rb_initializer, rb_insert, rb_min, rb_next, rb_remove, rb_root,
     },
@@ -334,7 +334,6 @@ pub unsafe fn paste_replace(pb: NonNull<paste_buffer>, data: *mut c_char, size: 
 
 pub unsafe extern "C" fn paste_make_sample(pb: *mut paste_buffer) -> *mut c_char {
     unsafe {
-        const flags: i32 = VIS_OCTAL | VIS_CSTYLE | VIS_TAB | VIS_NL;
         let width = 200;
 
         let mut len = (*pb).size;
@@ -343,7 +342,12 @@ pub unsafe extern "C" fn paste_make_sample(pb: *mut paste_buffer) -> *mut c_char
         }
         let buf: *mut c_char = xreallocarray(null_mut(), len, 4 + 4).cast().as_ptr();
 
-        let used = utf8_strvis(buf, (*pb).data, len, flags);
+        let used = utf8_strvis(
+            buf,
+            (*pb).data,
+            len,
+            vis_flags::VIS_OCTAL | vis_flags::VIS_CSTYLE | vis_flags::VIS_TAB | vis_flags::VIS_NL,
+        );
         if (*pb).size > width || used > width as i32 {
             strlcpy(buf.add(width), c"...".as_ptr(), 4);
         }
