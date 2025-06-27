@@ -30,6 +30,7 @@ requires `libevent2` and `libtinfo` (usually packaged with ncurses).
 ```sh
 sudo apt-get install ncurses libevent-core-2.1-7
 cargo install tmux-rs
+tmux-rs
 ```
 
 Also don't run tmux-rs if there is an existing tmux session running in
