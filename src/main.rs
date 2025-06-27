@@ -1,4 +1,5 @@
 #![no_main]
+use ::tmux_rs::main;
 
 use ::std::alloc::{GlobalAlloc, Layout};
 
@@ -31,5 +32,3 @@ unsafe impl GlobalAlloc for MyAlloc {
 // it would be adding unecessary code to free in the common case.
 
 // It could also be interesting to add in a histogram for viewing memory allocations
-
-use ::tmux_rs::main;

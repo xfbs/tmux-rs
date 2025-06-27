@@ -35,7 +35,6 @@ macro_rules! cstringify {
 pub(crate) use cstringify;
 
 // #define cmdq_get_callback(cb, data) cmdq_get_callback1(#cb, cb, data)
-#[macro_export]
 macro_rules! cmdq_get_callback {
     ($cb:ident, $data:expr) => {
         $crate::cmd_::cmd_queue::cmdq_get_callback1(
@@ -45,7 +44,7 @@ macro_rules! cmdq_get_callback {
         )
     };
 }
-pub use cmdq_get_callback;
+pub(crate) use cmdq_get_callback;
 use libc::{getpwuid, getuid, toupper};
 
 /* Command queue flags. */

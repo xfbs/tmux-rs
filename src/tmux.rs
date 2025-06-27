@@ -374,6 +374,7 @@ pub fn getversion_c() -> *const c_char {
     c"3.5rs".as_ptr()
 }
 
+/// entrypoint for tmux binary
 #[cfg_attr(not(test), unsafe(no_mangle))]
 pub unsafe extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *mut *mut c_char) {
     std::panic::set_hook(Box::new(|panic_info| {

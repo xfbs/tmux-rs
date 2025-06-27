@@ -14,7 +14,7 @@
 
 // Special key codes.
 #[repr(u64)]
-pub enum keyc {
+pub(crate) enum keyc {
     // Focus events.
     KEYC_FOCUS_IN = KEYC_BASE,
     KEYC_FOCUS_OUT,

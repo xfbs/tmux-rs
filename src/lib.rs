@@ -11,13 +11,10 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
+#![doc = include_str!("../README.md")]
 // won't fix:
-#![allow(non_camel_case_types)]
-#![allow(
-    clippy::manual_range_contains,
-    reason = "more closely follow upstream C"
-)]
+#![allow(non_camel_case_types, reason = "match upstream")]
+#![allow(clippy::manual_range_contains, reason = "match upstream")]
 #![allow(clippy::missing_safety_doc, reason = "currently using too much unsafe")]
 // maybe fix:
 #![allow(non_upper_case_globals)]
@@ -2733,14 +2730,14 @@ use crate::cmd_parse::{
     cmd_parse_from_buffer, cmd_parse_from_file, cmd_parse_from_string, cmd_parse_state, *,
 };
 
-use crate::cmd_::cmd_queue::{cmdq_add_format, cmdq_error, cmdq_insert_hook, cmdq_print};
 use crate::cmd_::cmd_queue::{
-    cmdq_add_formats, cmdq_append, cmdq_continue, cmdq_copy_state, cmdq_free, cmdq_free_state,
-    cmdq_get_callback1, cmdq_get_client, cmdq_get_command, cmdq_get_current, cmdq_get_error,
-    cmdq_get_event, cmdq_get_flags, cmdq_get_name, cmdq_get_source, cmdq_get_state,
-    cmdq_get_target, cmdq_get_target_client, cmdq_guard, cmdq_insert_after, cmdq_item,
-    cmdq_link_state, cmdq_list, cmdq_merge_formats, cmdq_new, cmdq_new_state, cmdq_next,
-    cmdq_print_data, cmdq_running, cmdq_state,
+    cmdq_add_format, cmdq_add_formats, cmdq_append, cmdq_continue, cmdq_copy_state, cmdq_error,
+    cmdq_free, cmdq_free_state, cmdq_get_callback, cmdq_get_callback1, cmdq_get_client,
+    cmdq_get_command, cmdq_get_current, cmdq_get_error, cmdq_get_event, cmdq_get_flags,
+    cmdq_get_name, cmdq_get_source, cmdq_get_state, cmdq_get_target, cmdq_get_target_client,
+    cmdq_guard, cmdq_insert_after, cmdq_insert_hook, cmdq_item, cmdq_link_state, cmdq_list,
+    cmdq_merge_formats, cmdq_new, cmdq_new_state, cmdq_next, cmdq_print, cmdq_print_data,
+    cmdq_running, cmdq_state,
 };
 
 use crate::cmd_::cmd_wait_for::cmd_wait_for_flush;
@@ -2765,18 +2762,17 @@ use crate::alerts::{alerts_check_session, alerts_queue, alerts_reset_all};
 mod file;
 use crate::file::{
     file_can_print, file_cancel, file_cmp, file_create_with_client, file_create_with_peer,
-    file_fire_done, file_fire_read, file_free, file_print_buffer, file_push, file_read,
-    file_read_cancel, file_read_data, file_read_done, file_read_open, file_vprint, file_write,
-    file_write_close, file_write_data, file_write_left, file_write_open, file_write_ready,
+    file_error, file_fire_done, file_fire_read, file_free, file_print, file_print_buffer,
+    file_push, file_read, file_read_cancel, file_read_data, file_read_done, file_read_open,
+    file_vprint, file_write, file_write_close, file_write_data, file_write_left, file_write_open,
+    file_write_ready,
 };
-use crate::file::{file_error, file_print};
 
 mod server;
-use crate::server::server_add_message;
 use crate::server::{
-    clients, current_time, marked_pane, message_log, server_add_accept, server_check_marked,
-    server_clear_marked, server_create_socket, server_is_marked, server_proc, server_set_marked,
-    server_start, server_update_socket,
+    clients, current_time, marked_pane, message_log, server_add_accept, server_add_message,
+    server_check_marked, server_clear_marked, server_create_socket, server_is_marked, server_proc,
+    server_set_marked, server_start, server_update_socket,
 };
 
 mod server_client;
@@ -2803,14 +2799,13 @@ use crate::server_fn::{
 };
 
 mod status;
-use crate::status::status_message_set;
 use crate::status::{
     status_at_line, status_free, status_get_range, status_init, status_line_size,
-    status_message_clear, status_message_redraw, status_prompt_clear, status_prompt_hlist,
-    status_prompt_hsize, status_prompt_key, status_prompt_load_history, status_prompt_redraw,
-    status_prompt_save_history, status_prompt_set, status_prompt_type, status_prompt_type_string,
-    status_prompt_update, status_redraw, status_timer_start, status_timer_start_all,
-    status_update_cache,
+    status_message_clear, status_message_redraw, status_message_set, status_prompt_clear,
+    status_prompt_hlist, status_prompt_hsize, status_prompt_key, status_prompt_load_history,
+    status_prompt_redraw, status_prompt_save_history, status_prompt_set, status_prompt_type,
+    status_prompt_type_string, status_prompt_update, status_redraw, status_timer_start,
+    status_timer_start_all, status_update_cache,
 };
 
 mod resize;
@@ -2829,22 +2824,10 @@ use crate::input_keys::{input_key, input_key_build, input_key_get_mouse, input_k
 
 mod colour;
 use crate::colour::{
-    colour_256to16,
-    colour_byname,
-    colour_find_rgb,
-    colour_force_rgb,
-    colour_fromstring,
-    colour_join_rgb,
-    colour_palette_clear,
-    colour_palette_free,
-    colour_palette_from_option,
-    colour_palette_get,
-    colour_palette_init,
-    colour_palette_set,
-    colour_parse_x11,
-    colour_split_rgb,
-    //colour_split_rgb
-    colour_tostring,
+    colour_256to16, colour_byname, colour_find_rgb, colour_force_rgb, colour_fromstring,
+    colour_join_rgb, colour_palette_clear, colour_palette_free, colour_palette_from_option,
+    colour_palette_get, colour_palette_init, colour_palette_set, colour_parse_x11,
+    colour_split_rgb, colour_tostring,
 };
 
 mod attributes;
@@ -3163,7 +3146,6 @@ impl std::fmt::Display for _s {
 
 // TOOD make usable in const context
 // https://stackoverflow.com/a/63904992
-#[macro_export]
 macro_rules! function_name {
     () => {{
         fn f() {}
@@ -3179,6 +3161,7 @@ macro_rules! function_name {
         }
     }};
 }
+pub(crate) use function_name;
 
 const fn concat_array<const N: usize, const M: usize, const O: usize, T: Copy>(
     a1: [T; N],
@@ -3204,7 +3187,7 @@ const fn concat_array<const N: usize, const M: usize, const O: usize, T: Copy>(
     // unsafe { MaybeUninit::array_assume_init(out) }
 }
 
-pub fn i32_to_ordering(value: i32) -> std::cmp::Ordering {
+pub(crate) fn i32_to_ordering(value: i32) -> std::cmp::Ordering {
     match value {
         ..0 => std::cmp::Ordering::Less,
         0 => std::cmp::Ordering::Equal,

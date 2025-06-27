@@ -13,8 +13,9 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use crate::*;
 
-use libc::{__errno_location, ENOENT, fclose, fopen, strerror};
+use libc::{ENOENT, fclose, fopen, strerror};
 
+use crate::cmd_::cmd_queue::cmdq_get_callback;
 use crate::compat::{queue::tailq_first, tree::rb_min};
 
 pub static mut cfg_client: *mut client = null_mut();
@@ -124,7 +125,7 @@ pub unsafe extern "C" fn load_cfg(
             if errno!() == ENOENT && flags.intersects(cmd_parse_input_flags::CMD_PARSE_QUIET) {
                 return 0;
             }
-            cfg_add_cause!("{}: {}", _s(path), _s(strerror(*__errno_location())));
+            cfg_add_cause!("{}: {}", _s(path), _s(strerror(errno!())));
             return -1;
         }
 
