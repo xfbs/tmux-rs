@@ -6,9 +6,28 @@ date: 2025-06-25
 ---
 For the 6 months or so I've been quietly porting tmux from C to Rust. I've recently reached a big milestone: the code base is now 100% (unsafe) Rust.
 
-In the process of refactoring, I learned a thing or two and I'd like to share some of the more interesting notes.
+I'd like to share the process of porting the original codebase from ~67,000 lines of C code to ~81,000 lines of Rust (excluding comments and empty lines).
 
-You might be asking: why did you rewrite tmux in Rust? And yeah, I don't really have a good reason. This hobby project is like gardening for me. So let's get to it.
+You might be asking: why did you rewrite tmux in Rust? And yeah, I don't really have a good reason. It's a hobby project. Like gardening, but with more segfaults.
+
+{% toc %}
+
+- [Starting with C2Rust](#starting-with-c2rust)
+- [Build process](#build-process)
+- [Interesting Bugs](#interesting-bugs)
+- C vs Rust semantics
+  - pointers
+  - intrusive data structures
+  - goto
+- Development Process
+    - vim
+    - ai (llms)
+    - debuggers
+- interesting inflection points
+- Misc. translation bugs
+
+
+## Starting with C2Rust
 
 I started this project as a way of trying out [C2Rust](https://github.com/immunant/c2rust), a C to Rust transpiler. The tool was a little tricky to set up, but once it was running the generated output was a successful port of the tmux codebase in Rust.
 
@@ -66,7 +85,9 @@ pub unsafe extern "C" fn colour_palette_get(
 }
 ```
 
-This is a pretty simple example, but things can get a lot worse. My main concern was losing information from named constants like `COLOUR_FLAG_256`. Having that being translated to `0x1000000` is an example of the kind of information loss that happens during the transpilation process.
+This is a pretty simple example, but things can get a lot worse. My main concern was losing information from named constants like `COLOUR_FLAG_256`. Having that translated to `0x1000000` is an example of the kind of information loss that frequently happens during the transpilation process.
+
+There are a lot of casts to `libc::c_int` polluting the code as well. I suspect this is to handle [C's integer promotion rules](https://stackoverflow.com/a/46073296). Most of them are completely unnecessary when operating on literals in Rust.
 
 I spent quite a lot of time manually refactoring the shitty Rust code to less shitty Rust code, but I kept finding myself having to look at the original C code to understand the program's intent. Here's a cleaned up Rust version of that function. Still not perfect, but much better in my opinion:
 
@@ -99,31 +120,7 @@ pub unsafe fn colour_palette_get(p: *const colour_palette, mut c: i32) -> i32 {
 
 After manually refactoring many files this way I gave up with this approach. I threw away all of the C2Rust output and decided I would translate all of the files into Rust manually from C.
 
-Despite not using C2Rust for this project I still think it's a great tool. It was very important for me to actually compile and run the project from the beginning. It made me realize this endeavour was achievable. It's like starting at the finish line and going backwards. I've also played around with C2Rust for other side projects like integrating C to rust into a [proc-macro](https://crates.io/crates/include).
-
-## Ship of Theseus
-
-There's a legend of an ancient ship which sailed for many years. Slowly the ship aged and different parts of the boat were replaced piece by piece until no single part of the original ship remained.
-
-My mind kept coming back to this story while working on this port.
-
-Not only because another popular project recently rewritten in Rust  titled their blog post sharing their rewrite "Fish of Theseus" a nod to the Ship of Theseus.
-
-But also because it's quite a cool thing to swap out an entire project piece by piece and still have something working.
-
-I'll limit myself in this post to the parts that I think are the most interesting:
-
-- initial project build setup
-- translation bugs
-- C vs Rust semantics
-  - pointers
-  - intrusive data structures
-  - goto
-- development process
-    - vim
-    - ai (llms)
-    - debuggers
-- interesting inflection points
+Despite not using C2Rust for this project I still think it's a great tool. It was very important for me to actually be able to compile and run the project from the start. It made me realize this endeavour was achievable. It's like starting at the finish line and going backwards.
 
 ## Build process
 
@@ -210,9 +207,12 @@ fn main() {
 
     builder.compile("foo");
 }
+
 ```
 
-## Bug 1 (symbol resolution and linker shenanigans)
+## Interesting Bugs
+
+### Bug 1 (symbol resolution and linker shenanigans)
 
 Eventually I can eliminate using the `cc` crate after all of the C files are translated.
 
@@ -389,10 +389,10 @@ Well today I'm going to release version 0.0.1. I am aware of many bugs. For exam
 
 ## Bugs
 
-As part of the translation process some bugs were introduced. I made a list of the bugs that I found which were introduced during the translation process:
+During the development process I like to make list of the bugs that I find. Whenever I find an issue due to something silly I'd add it to my list below. Part of this is so that I can avoid making the same mistakes again. These are some of the bugs which were introduced during the translation process. Feel free to skim the list, most of them are written in such a way which is only meaningful to myself. By far the most common was accidentally flipping a conditional during the translation.
 
+- Incorrect translation of != null check (wrote x.is_null() instead of !x.is_null())
 - Incorrect translation of do while
-- Incorrect translation of != null check
 - Incorrect translation of self-referential struct (just used null to init because lazyness when translating)
 - missing init for tailq in struct // the big one causing crash on init
 - missing break at end of loop emulating goto in rb_remove: hangs on Ctrl-D
