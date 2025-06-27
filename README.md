@@ -1,4 +1,4 @@
-<section class="warning">
+<section class="warning markdown-alert markdown-alert-warning">
 
 This project is alpha quality and has many known bugs. It's written in
 almost entirely unsafe Rust. Don't use it yet unless you're willing to deal
