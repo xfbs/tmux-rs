@@ -1,6 +1,6 @@
 > [!WARNING]
-> This project is alpha quality and has many known bugs. It's almost
-> entirely unsafe Rust. Don't use it yet unless you're willing to deal
+> This project is alpha quality and has many known bugs. It's written in
+> almost entirely unsafe Rust. Don't use it yet unless you're willing to deal
 > with frequent crashes.
 >
 > THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
@@ -20,18 +20,18 @@ A rust port of [tmux](https://github.com/tmux/tmux).
 Why not? This a fun hobby project for me. It's been my gardening for the past year.
 
 Why not just use [zellij](https://zellij.dev/)? I like tmux. I want tmux,
-not something else. Also I tried out using it before and the compilation
-time was 8 minutes on my machine. That's a bit too long for me.
+not something else.
 
 ## Installation
 
-Currently only Linux is supported. I've only tested on Debian 12.
+Currently only Linux is supported. I've only tested on Debian 12. Like `tmux` it
+requires `libevent2` and `libtinfo` (usually packaged with ncurses).
 
 ```sh
 sudo apt-get install ncurses libevent-core-2.1-7
 cargo install tmux-rs
 ```
 
-Don't run tmux-rs while there is an existing tmux session running in
+Also don't run tmux-rs if there is an existing tmux session running in
 the background. I haven't tested this and it could result in crashes of
 the original tmux session.
