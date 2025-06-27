@@ -1204,10 +1204,8 @@ pub unsafe extern "C" fn tty_fake_bce(tty: *const tty, gc: *const grid_cell, bg:
     unsafe {
         if tty_term_flag((*tty).term, tty_code_code::TTYC_BCE) != 0 {
             false
-        } else if !COLOUR_DEFAULT(bg as i32) || !COLOUR_DEFAULT((*gc).bg) {
-            true
         } else {
-            false
+            !COLOUR_DEFAULT(bg as i32) || !COLOUR_DEFAULT((*gc).bg)
         }
     }
 }
@@ -1239,6 +1237,7 @@ pub unsafe extern "C" fn tty_redraw_region(tty: *mut tty, ctx: *const tty_ctx) {
 }
 
 /// Is this position visible in the pane?
+#[expect(clippy::needless_bool)]
 pub unsafe extern "C" fn tty_is_visible(
     _tty: *mut tty,
     ctx: *const tty_ctx,
@@ -1723,7 +1722,7 @@ pub unsafe extern "C" fn tty_check_overlay(tty: *mut tty, px: u32, py: u32) -> b
          * two entries.
          */
         tty_check_overlay_range(tty, px, py, 1, &raw mut r);
-        if r.nx[0] + r.nx[1] == 0 { false } else { true }
+        r.nx[0] + r.nx[1] != 0
     }
 }
 

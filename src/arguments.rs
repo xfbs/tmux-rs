@@ -291,7 +291,7 @@ pub unsafe extern "C" fn args_parse(
                 );
 
                 if let Some(cb) = (*parse).cb {
-                    type_ = cb(args, (*args).count, cause);
+                    type_ = cb(args, args.count, cause);
                     if type_ == args_parse_type::ARGS_PARSE_INVALID {
                         args_free(args);
                         return null_mut();
@@ -300,22 +300,22 @@ pub unsafe extern "C" fn args_parse(
                     type_ = args_parse_type::ARGS_PARSE_STRING;
                 }
 
-                (*args).values = xrecallocarray(
-                    (*args).values.cast(),
-                    (*args).count as usize,
-                    (*args).count as usize + 1,
+                args.values = xrecallocarray(
+                    args.values.cast(),
+                    args.count as usize,
+                    args.count as usize + 1,
                     size_of::<args_value>(),
                 )
                 .cast()
                 .as_ptr();
-                let new = (*args).values.add((*args).count as usize);
-                (*args).count += 1;
+                let new = args.values.add(args.count as usize);
+                args.count += 1;
 
                 match type_ {
                     args_parse_type::ARGS_PARSE_INVALID => fatalx(c"unexpected argument type"),
                     args_parse_type::ARGS_PARSE_STRING => {
                         if (*value).type_ != args_type::ARGS_STRING {
-                            *cause = format_nul!("argument {} must be \"string\"", (*args).count,);
+                            *cause = format_nul!("argument {} must be \"string\"", args.count);
                             args_free(args);
                             return null_mut();
                         }
@@ -324,8 +324,7 @@ pub unsafe extern "C" fn args_parse(
                     args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING => args_copy_value(new, value),
                     args_parse_type::ARGS_PARSE_COMMANDS => {
                         if (*value).type_ != args_type::ARGS_COMMANDS {
-                            *cause =
-                                format_nul!("argument {} must be {{ commands }}", (*args).count,);
+                            *cause = format_nul!("argument {} must be {{ commands }}", args.count,);
                             args_free(args);
                             return null_mut();
                         }
@@ -336,12 +335,12 @@ pub unsafe extern "C" fn args_parse(
             }
         }
 
-        if (*parse).lower != -1 && (*args).count < (*parse).lower as u32 {
+        if (*parse).lower != -1 && args.count < (*parse).lower as u32 {
             *cause = format_nul!("too few arguments (need at least {})", (*parse).lower);
             args_free(args);
             return null_mut();
         }
-        if (*parse).upper != -1 && (*args).count > (*parse).upper as u32 {
+        if (*parse).upper != -1 && args.count > (*parse).upper as u32 {
             *cause = format_nul!("too many arguments (need at most {})", (*parse).upper);
             args_free(args);
             return null_mut();
@@ -403,10 +402,10 @@ pub unsafe extern "C" fn args_copy(
         if (*args).count == 0 {
             return new_args;
         }
-        (*new_args).count = (*args).count;
-        (*new_args).values = xcalloc_((*args).count as usize).as_ptr();
+        new_args.count = (*args).count;
+        new_args.values = xcalloc_((*args).count as usize).as_ptr();
         for i in 0..(*args).count {
-            let new_value = (*new_args).values.add(i as usize);
+            let new_value = new_args.values.add(i as usize);
             args_copy_copy_value(new_value, (*args).values.add(i as usize), argc, argv);
         }
 

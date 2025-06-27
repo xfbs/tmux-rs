@@ -47,15 +47,13 @@ unsafe fn format_is_type(fr: *mut format_range, sy: *mut style) -> bool {
             | style_range_type::STYLE_RANGE_RIGHT => true,
             style_range_type::STYLE_RANGE_PANE
             | style_range_type::STYLE_RANGE_WINDOW
-            | style_range_type::STYLE_RANGE_SESSION => {
-                ((*fr).argument == (*sy).range_argument).into()
+            | style_range_type::STYLE_RANGE_SESSION => (*fr).argument == (*sy).range_argument,
+            style_range_type::STYLE_RANGE_USER => {
+                libc::strcmp(
+                    (&raw const (*fr).string).cast(),
+                    (&raw const (*sy).range_string).cast(),
+                ) == 0
             }
-            style_range_type::STYLE_RANGE_USER => (libc::strcmp(
-                (&raw const (*fr).string).cast(),
-                (&raw const (*sy).range_string).cast(),
-            ) == 0)
-                .into(),
-            _ => true,
         }
     }
 }

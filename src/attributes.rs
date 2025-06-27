@@ -11,7 +11,12 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use super::*;
+use core::{
+    ffi::{CStr, c_char},
+    mem::{size_of, zeroed},
+};
+
+use crate::{grid_attr, strcaseeq_, xsnprintf_};
 
 pub unsafe fn attributes_tostring(attr: grid_attr) -> *const c_char {
     type buffer = [c_char; 512];
@@ -51,63 +56,56 @@ pub unsafe fn attributes_tostring(attr: grid_attr) -> *const c_char {
 }
 
 #[allow(clippy::result_unit_err)]
-pub unsafe fn attributes_fromstring(mut str: *const c_char) -> Result<grid_attr, ()> {
+pub unsafe fn attributes_fromstring(str: *const c_char) -> Result<grid_attr, ()> {
     struct table_entry {
-        name: &'static CStr,
+        name: &'static str,
         attr: grid_attr,
     }
+
     #[rustfmt::skip]
     const TABLE: [table_entry; 15] = [
-        table_entry { name: c"acs", attr: grid_attr::GRID_ATTR_CHARSET, },
-        table_entry { name: c"bright", attr: grid_attr::GRID_ATTR_BRIGHT, },
-        table_entry { name: c"bold", attr: grid_attr::GRID_ATTR_BRIGHT, },
-        table_entry { name: c"dim", attr: grid_attr::GRID_ATTR_DIM, },
-        table_entry { name: c"underscore", attr: grid_attr::GRID_ATTR_UNDERSCORE, },
-        table_entry { name: c"blink", attr: grid_attr::GRID_ATTR_BLINK, },
-        table_entry { name: c"reverse", attr: grid_attr::GRID_ATTR_REVERSE, },
-        table_entry { name: c"hidden", attr: grid_attr::GRID_ATTR_HIDDEN, },
-        table_entry { name: c"italics", attr: grid_attr::GRID_ATTR_ITALICS, },
-        table_entry { name: c"strikethrough", attr: grid_attr::GRID_ATTR_STRIKETHROUGH, },
-        table_entry { name: c"double-underscore", attr: grid_attr::GRID_ATTR_UNDERSCORE_2, },
-        table_entry { name: c"curly-underscore", attr: grid_attr::GRID_ATTR_UNDERSCORE_3, },
-        table_entry { name: c"dotted-underscore", attr: grid_attr::GRID_ATTR_UNDERSCORE_4, },
-        table_entry { name: c"dashed-underscore", attr: grid_attr::GRID_ATTR_UNDERSCORE_5, },
-        table_entry { name: c"overline", attr: grid_attr::GRID_ATTR_OVERLINE, },
+        table_entry { name: "acs", attr: grid_attr::GRID_ATTR_CHARSET, },
+        table_entry { name: "bright", attr: grid_attr::GRID_ATTR_BRIGHT, },
+        table_entry { name: "bold", attr: grid_attr::GRID_ATTR_BRIGHT, },
+        table_entry { name: "dim", attr: grid_attr::GRID_ATTR_DIM, },
+        table_entry { name: "underscore", attr: grid_attr::GRID_ATTR_UNDERSCORE, },
+        table_entry { name: "blink", attr: grid_attr::GRID_ATTR_BLINK, },
+        table_entry { name: "reverse", attr: grid_attr::GRID_ATTR_REVERSE, },
+        table_entry { name: "hidden", attr: grid_attr::GRID_ATTR_HIDDEN, },
+        table_entry { name: "italics", attr: grid_attr::GRID_ATTR_ITALICS, },
+        table_entry { name: "strikethrough", attr: grid_attr::GRID_ATTR_STRIKETHROUGH, },
+        table_entry { name: "double-underscore", attr: grid_attr::GRID_ATTR_UNDERSCORE_2, },
+        table_entry { name: "curly-underscore", attr: grid_attr::GRID_ATTR_UNDERSCORE_3, },
+        table_entry { name: "dotted-underscore", attr: grid_attr::GRID_ATTR_UNDERSCORE_4, },
+        table_entry { name: "dashed-underscore", attr: grid_attr::GRID_ATTR_UNDERSCORE_5, },
+        table_entry { name: "overline", attr: grid_attr::GRID_ATTR_OVERLINE, },
     ];
 
-    let delimiters = c" ,|".as_ptr();
+    let delimiters = &[' ', ',', '|'];
 
-    unsafe {
-        if *str == b'\0' as c_char || libc::strcspn(str, delimiters) == 0 {
-            return Err(());
-        }
-        if !libc::strchr(delimiters, *str.add(libc::strlen(str) - 1) as i32).is_null() {
-            return Err(());
-        }
+    let str = unsafe { std::ffi::CStr::from_ptr(str) }
+        .to_str()
+        .expect("invalid utf8");
 
-        if libc::strcasecmp(str, c"default".as_ptr()) == 0
-            || libc::strcasecmp(str, c"none".as_ptr()) == 0
-        {
-            return Ok(grid_attr::empty());
-        }
-
-        let mut attr = grid_attr::empty();
-        loop {
-            let end = libc::strcspn(str, delimiters);
-
-            let Some(i) = TABLE.iter().position(|t| {
-                end == t.name.to_bytes().len() && libc::strncasecmp(str, t.name.as_ptr(), end) == 0
-            }) else {
-                return Err(());
-            };
-
-            attr |= TABLE[i].attr;
-            str = str.add(end + libc::strspn(str.add(end), delimiters));
-
-            if *str == b'\0' as c_char {
-                break;
-            }
-        }
-        Ok(attr)
+    if str.is_empty() || str.find(delimiters) == Some(0) {
+        return Err(());
     }
+
+    if matches!(str.chars().next_back().unwrap(), ' ' | ',' | '|') {
+        return Err(());
+    }
+
+    if str.eq_ignore_ascii_case("default") || str.eq_ignore_ascii_case("none") {
+        return Ok(grid_attr::empty());
+    }
+
+    let mut attr = grid_attr::empty();
+    for str in str.split(delimiters) {
+        let Some(i) = TABLE.iter().position(|t| str.eq_ignore_ascii_case(t.name)) else {
+            return Err(());
+        };
+        attr |= TABLE[i].attr;
+    }
+
+    Ok(attr)
 }

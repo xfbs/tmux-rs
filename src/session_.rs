@@ -81,7 +81,7 @@ pub unsafe extern "C" fn session_find_by_id_str(s: *const c_char) -> *mut sessio
 }
 
 /// Find session by id.
-pub unsafe extern "C" fn session_find_by_id(id: u32) -> Option<NonNull<session>> {
+pub unsafe fn session_find_by_id(id: u32) -> Option<NonNull<session>> {
     unsafe { rb_foreach(&raw mut sessions).find(|s| (*s.as_ptr()).id == id) }
 }
 

@@ -238,7 +238,7 @@ static format_lower: [SyncCharPtr; 26] = const {
 
 /// Is logging enabled?
 pub unsafe extern "C" fn format_logging(ft: *mut format_tree) -> bool {
-    unsafe { log_get_level() != 0 || (*ft).flags.intersects(format_flags::FORMAT_VERBOSE) }.into()
+    unsafe { log_get_level() != 0 || (*ft).flags.intersects(format_flags::FORMAT_VERBOSE) }
 }
 
 macro_rules! format_log1 {

@@ -64,7 +64,7 @@ unsafe fn alerts_check_all(w: NonNull<window>) -> window_flag {
     unsafe { alerts_check_bell(w) | alerts_check_activity(w) | alerts_check_silence(w) }
 }
 
-pub(crate) unsafe extern "C" fn alerts_check_session(s: *mut session) {
+pub(crate) unsafe fn alerts_check_session(s: *mut session) {
     unsafe {
         for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
             alerts_check_all(NonNull::new_unchecked((*wl).window));
@@ -94,7 +94,7 @@ unsafe fn alerts_enabled(w: *mut window, flags: window_flag) -> c_int {
     0
 }
 
-pub(crate) unsafe extern "C" fn alerts_reset_all() {
+pub(crate) unsafe fn alerts_reset_all() {
     unsafe {
         for w in rb_foreach(&raw mut windows) {
             alerts_reset(w);
@@ -124,7 +124,7 @@ unsafe fn alerts_reset(w: NonNull<window>) {
     }
 }
 
-pub(crate) unsafe extern "C" fn alerts_queue(w: NonNull<window>, flags: window_flag) {
+pub(crate) unsafe fn alerts_queue(w: NonNull<window>, flags: window_flag) {
     unsafe {
         alerts_reset(w);
         let w = w.as_ptr();

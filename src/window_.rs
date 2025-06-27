@@ -514,11 +514,7 @@ pub unsafe extern "C" fn window_pane_send_resize(wp: *mut window_pane, sx: u32, 
 }
 
 pub unsafe extern "C" fn window_has_pane(w: *mut window, wp: *mut window_pane) -> bool {
-    unsafe {
-        tailq_foreach::<_, discr_entry>(&raw mut (*w).panes)
-            .into_iter()
-            .any(|wp1| wp1.as_ptr() == wp)
-    }
+    unsafe { tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).any(|wp1| wp1.as_ptr() == wp) }
 }
 
 pub unsafe extern "C" fn window_update_focus(w: *mut window) {

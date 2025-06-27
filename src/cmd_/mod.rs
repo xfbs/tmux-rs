@@ -779,18 +779,13 @@ pub unsafe extern "C" fn cmd_list_next(cmd: *mut cmd) -> *mut cmd {
 
 pub unsafe extern "C" fn cmd_list_all_have(cmdlist: *mut cmd_list, flag: cmd_flag) -> bool {
     unsafe {
-        tailq_foreach((*cmdlist).list)
-            .into_iter()
-            .all(|cmd| (*(*cmd.as_ptr()).entry).flags.intersects(flag))
+        tailq_foreach((*cmdlist).list).all(|cmd| (*(*cmd.as_ptr()).entry).flags.intersects(flag))
     }
 }
 
 pub unsafe extern "C" fn cmd_list_any_have(cmdlist: *mut cmd_list, flag: cmd_flag) -> bool {
     unsafe {
-        tailq_foreach((*cmdlist).list)
-            .into_iter()
-            .any(|cmd| (*(*cmd.as_ptr()).entry).flags.intersects(flag))
-            .into()
+        tailq_foreach((*cmdlist).list).any(|cmd| (*(*cmd.as_ptr()).entry).flags.intersects(flag))
     }
 }
 
