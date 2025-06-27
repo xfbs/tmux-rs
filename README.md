@@ -28,7 +28,7 @@ Currently only Linux is supported. I've only tested on Debian 12. Like `tmux` it
 requires `libevent2` and `libtinfo` (usually packaged with ncurses).
 
 ```sh
-sudo apt-get install ncurses libevent-core-2.1-7
+sudo apt-get install ncurses libevent-dev
 cargo install tmux-rs
 tmux-rs
 ```

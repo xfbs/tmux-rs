@@ -9,7 +9,7 @@ jobs:
     steps:
       - run: |
           sudo apt-get update
-          sudo apt-get install -y libevent-dev libbsd-dev
-      - uses: dtolnay/rust-toolchain@nightly
+          sudo apt-get install -y ncurses libevent-dev
+      - uses: dtolnay/rust-toolchain@stable
       - uses: actions/checkout@v4
       - run: cargo build
