@@ -11,6 +11,7 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#![expect(rustdoc::broken_intra_doc_links, reason = "github markdown callout")]
 #![doc = include_str!("../README.md")]
 // won't fix:
 #![allow(non_camel_case_types, reason = "match upstream")]
