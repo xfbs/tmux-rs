@@ -159,7 +159,7 @@ pub unsafe extern "C" fn cmd_attach_session(
             if !(*c).flags.intersects(client_flag::CONTROL) {
                 proc_send((*c).peer, msgtype::MSG_READY, -1, null_mut(), 0);
             }
-            notify_client(c"client-attached".as_ptr(), c);
+            notify_client(c"client-attached", c);
             (*c).flags |= client_flag::ATTACHED;
 
             if cfg_finished != 0 {

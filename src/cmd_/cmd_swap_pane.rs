@@ -135,9 +135,9 @@ unsafe extern "C" fn cmd_swap_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -
             }
             server_redraw_window(src_w);
             server_redraw_window(dst_w);
-            notify_window(c"window-layout-changed".as_ptr(), src_w);
+            notify_window(c"window-layout-changed", src_w);
             if src_w != dst_w {
-                notify_window(c"window-layout-changed".as_ptr(), dst_w);
+                notify_window(c"window-layout-changed", dst_w);
             }
         }
 

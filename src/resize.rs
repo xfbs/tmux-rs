@@ -66,8 +66,8 @@ pub unsafe extern "C" fn resize_window(
 
         tty_update_window_offset(w);
         server_redraw_window(w);
-        notify_window(c"window-layout-changed".as_ptr(), w);
-        notify_window(c"window-resized".as_ptr(), w);
+        notify_window(c"window-layout-changed", w);
+        notify_window(c"window-resized", w);
         (*w).flags &= !window_flag::RESIZE;
     }
 }

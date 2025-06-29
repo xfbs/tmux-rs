@@ -178,7 +178,7 @@ pub unsafe extern "C" fn layout_set_even(w: *mut window, type_: layout_type) {
         layout_print_cell((*w).layout_root, __func__, 1);
 
         window_resize(w, (*lc).sx, (*lc).sy, -1, -1);
-        notify_window(c"window-layout-changed".as_ptr(), w);
+        notify_window(c"window-layout-changed", w);
         server_redraw_window(w);
     }
 }
@@ -297,7 +297,7 @@ pub unsafe extern "C" fn layout_set_main_h(w: *mut window) {
         layout_print_cell((*w).layout_root, __func__, 1);
 
         window_resize(w, (*lc).sx, (*lc).sy, -1, -1);
-        notify_window(c"window-layout-changed".as_ptr(), w);
+        notify_window(c"window-layout-changed", w);
         server_redraw_window(w);
     }
 }
@@ -399,7 +399,7 @@ pub unsafe extern "C" fn layout_set_main_h_mirrored(w: *mut window) {
         layout_print_cell((*w).layout_root, __func__, 1);
 
         window_resize(w, (*lc).sx, (*lc).sy, -1, -1);
-        notify_window(c"window-layout-changed".as_ptr(), w);
+        notify_window(c"window-layout-changed", w);
         server_redraw_window(w);
     }
 }
@@ -502,7 +502,7 @@ pub unsafe extern "C" fn layout_set_main_v(w: *mut window) {
         layout_print_cell((*w).layout_root, __func__, 1);
 
         window_resize(w, (*lc).sx, (*lc).sy, -1, -1);
-        notify_window(c"window-layout-changed".as_ptr(), w);
+        notify_window(c"window-layout-changed", w);
         server_redraw_window(w);
     }
 }
@@ -604,7 +604,7 @@ pub unsafe extern "C" fn layout_set_main_v_mirrored(w: *mut window) {
         layout_print_cell((*w).layout_root, __func__, 1);
 
         window_resize(w, (*lc).sx, (*lc).sy, -1, -1);
-        notify_window(c"window-layout-changed".as_ptr(), w);
+        notify_window(c"window-layout-changed", w);
         server_redraw_window(w);
     }
 }
@@ -731,7 +731,7 @@ pub unsafe extern "C" fn layout_set_tiled(w: *mut window) {
         layout_print_cell((*w).layout_root, __func__, 1);
 
         window_resize(w, (*lc).sx, (*lc).sy, -1, -1);
-        notify_window(c"window-layout-changed".as_ptr(), w);
+        notify_window(c"window-layout-changed", w);
         server_redraw_window(w);
     }
 }

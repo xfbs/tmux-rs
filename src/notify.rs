@@ -196,8 +196,8 @@ pub unsafe extern "C" fn notify_callback(item: *mut cmdq_item, data: *mut c_void
     cmd_retval::CMD_RETURN_NORMAL
 }
 
-pub unsafe extern "C" fn notify_add(
-    name: *const c_char,
+pub unsafe fn notify_add(
+    name: &'static CStr,
     fs: *mut cmd_find_state,
     c: *mut client,
     s: *mut session,
@@ -207,16 +207,13 @@ pub unsafe extern "C" fn notify_add(
 ) {
     let __func__ = c"notify_add".as_ptr();
     unsafe {
-        // struct notify_entry *ne;
-        // struct cmdq_item *item;
-
         let item = cmdq_running(null_mut());
         if !item.is_null() && cmdq_get_flags(item) & CMDQ_STATE_NOHOOKS != 0 {
             return;
         }
 
         let ne = xcalloc1::<notify_entry>() as *mut notify_entry;
-        (*ne).name = xstrdup(name).as_ptr();
+        (*ne).name = xstrdup(name.as_ptr()).as_ptr();
 
         (*ne).client = c;
         (*ne).session = s;
@@ -229,7 +226,7 @@ pub unsafe extern "C" fn notify_add(
         };
 
         (*ne).formats = format_create(null_mut(), null_mut(), 0, format_flags::FORMAT_NOJOBS);
-        format_add!((*ne).formats, c"hook".as_ptr(), "{}", _s(name));
+        format_add!((*ne).formats, c"hook".as_ptr(), "{}", _s(name.as_ptr()));
         if !c.is_null() {
             format_add!((*ne).formats, c"hook_client".as_ptr(), "{}", _s((*c).name),);
         }
@@ -305,7 +302,7 @@ pub unsafe extern "C" fn notify_hook(item: *mut cmdq_item, name: *mut c_char) {
     }
 }
 
-pub unsafe extern "C" fn notify_client(name: *const c_char, c: *mut client) {
+pub unsafe fn notify_client(name: &'static CStr, c: *mut client) {
     unsafe {
         let mut fs: cmd_find_state = zeroed(); // TODO use uninit
 
@@ -322,7 +319,7 @@ pub unsafe extern "C" fn notify_client(name: *const c_char, c: *mut client) {
     }
 }
 
-pub unsafe extern "C" fn notify_session(name: *const c_char, s: *mut session) {
+pub unsafe fn notify_session(name: &'static CStr, s: *mut session) {
     unsafe {
         let mut fs = zeroed(); // TODO use uninit
 
@@ -343,7 +340,7 @@ pub unsafe extern "C" fn notify_session(name: *const c_char, s: *mut session) {
     }
 }
 
-pub unsafe extern "C" fn notify_winlink(name: *const c_char, wl: *mut winlink) {
+pub unsafe fn notify_winlink(name: &'static CStr, wl: *mut winlink) {
     unsafe {
         let mut fs: cmd_find_state = zeroed();
 
@@ -360,11 +357,7 @@ pub unsafe extern "C" fn notify_winlink(name: *const c_char, wl: *mut winlink) {
     }
 }
 
-pub unsafe extern "C" fn notify_session_window(
-    name: *const c_char,
-    s: *mut session,
-    w: *mut window,
-) {
+pub unsafe fn notify_session_window(name: &'static CStr, s: *mut session, w: *mut window) {
     unsafe {
         let mut fs: cmd_find_state = zeroed();
 
@@ -373,7 +366,7 @@ pub unsafe extern "C" fn notify_session_window(
     }
 }
 
-pub unsafe extern "C" fn notify_window(name: *const c_char, w: *mut window) {
+pub unsafe fn notify_window(name: &'static CStr, w: *mut window) {
     unsafe {
         let mut fs: cmd_find_state = zeroed();
 
@@ -390,7 +383,7 @@ pub unsafe extern "C" fn notify_window(name: *const c_char, w: *mut window) {
     }
 }
 
-pub unsafe extern "C" fn notify_pane(name: *const c_char, wp: *mut window_pane) {
+pub unsafe fn notify_pane(name: &'static CStr, wp: *mut window_pane) {
     unsafe {
         let mut fs: cmd_find_state = zeroed();
 
@@ -414,7 +407,7 @@ pub unsafe extern "C" fn notify_paste_buffer(pbname: *const c_char, deleted: i32
         cmd_find_clear_state(&raw mut fs, 0);
         if deleted != 0 {
             notify_add(
-                c"paste-buffer-deleted".as_ptr(),
+                c"paste-buffer-deleted",
                 &raw mut fs,
                 null_mut(),
                 null_mut(),
@@ -424,7 +417,7 @@ pub unsafe extern "C" fn notify_paste_buffer(pbname: *const c_char, deleted: i32
             );
         } else {
             notify_add(
-                c"paste-buffer-changed".as_ptr(),
+                c"paste-buffer-changed",
                 &raw mut fs,
                 null_mut(),
                 null_mut(),

@@ -185,7 +185,7 @@ unsafe fn alerts_check_bell(w: NonNull<window>) -> window_flag {
             if alerts_action_applies(wl, c"bell-action") == 0 {
                 continue;
             }
-            notify_winlink(c"alert-bell".as_ptr(), wl);
+            notify_winlink(c"alert-bell", wl);
 
             if (*s).flags & SESSION_ALERTED != 0 {
                 continue;
@@ -225,7 +225,7 @@ unsafe fn alerts_check_activity(w: NonNull<window>) -> window_flag {
             if alerts_action_applies(wl, c"activity-action") == 0 {
                 continue;
             }
-            notify_winlink(c"alert-activity".as_ptr(), wl);
+            notify_winlink(c"alert-activity", wl);
 
             if (*s).flags & SESSION_ALERTED != 0 {
                 continue;
@@ -268,7 +268,7 @@ unsafe fn alerts_check_silence(w: NonNull<window>) -> window_flag {
             if alerts_action_applies(wl, c"silence-action") == 0 {
                 continue;
             }
-            notify_winlink(c"alert-silence".as_ptr(), wl);
+            notify_winlink(c"alert-silence", wl);
 
             if (*s).flags & SESSION_ALERTED != 0 {
                 continue;

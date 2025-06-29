@@ -278,7 +278,7 @@ pub unsafe extern "C" fn layout_parse(
 
             layout_print_cell(lc, __func__, 0);
 
-            notify_window(c"window-layout-changed".as_ptr(), w);
+            notify_window(c"window-layout-changed", w);
 
             return 0;
         }

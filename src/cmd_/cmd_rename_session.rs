@@ -60,7 +60,7 @@ unsafe extern "C" fn cmd_rename_session_exec(self_: *mut cmd, item: *mut cmdq_it
         rb_insert(&raw mut sessions, s);
 
         server_status_session(s);
-        notify_session(c"session-renamed".as_ptr(), s);
+        notify_session(c"session-renamed", s);
     }
 
     cmd_retval::CMD_RETURN_NORMAL

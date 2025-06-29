@@ -5668,7 +5668,7 @@ pub unsafe extern "C" fn window_copy_copy_buffer(
             screen_write_start_pane(&raw mut ctx, wp, null_mut());
             screen_write_setselection(&raw mut ctx, c"".as_ptr(), buf.cast(), len as u32);
             screen_write_stop(&raw mut ctx);
-            notify_pane(c"pane-set-clipboard".as_ptr(), wp);
+            notify_pane(c"pane-set-clipboard", wp);
         }
 
         paste_add(prefix, buf.cast(), len);
@@ -5766,7 +5766,7 @@ pub unsafe extern "C" fn window_copy_append_selection(wme: *mut window_mode_entr
             screen_write_start_pane(&raw mut ctx, wp, null_mut());
             screen_write_setselection(&raw mut ctx, c"".as_ptr(), buf.cast(), len as u32);
             screen_write_stop(&raw mut ctx);
-            notify_pane(c"pane-set-clipboard".as_ptr(), wp);
+            notify_pane(c"pane-set-clipboard", wp);
         }
 
         pb = paste_get_top(&raw mut bufname);

@@ -133,7 +133,7 @@ unsafe extern "C" fn cmd_select_layout_exec(self_: *mut cmd, item: *mut cmdq_ite
             free_(oldlayout);
             recalculate_sizes();
             server_redraw_window(w);
-            notify_window(c"window-layout-changed".as_ptr(), w);
+            notify_window(c"window-layout-changed", w);
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 

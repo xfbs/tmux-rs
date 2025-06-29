@@ -156,7 +156,7 @@ pub unsafe extern "C" fn spawn_window(
                  * if this makes it empty.
                  */
                 (*wl).flags &= !WINLINK_ALERTFLAGS;
-                notify_session_window(c"window-unlinked".as_ptr(), s, (*wl).window);
+                notify_session_window(c"window-unlinked", s, (*wl).window);
                 winlink_stack_remove(&raw mut (*s).lastw, wl);
                 winlink_remove(&raw mut (*s).windows, wl);
 
@@ -235,7 +235,7 @@ pub unsafe extern "C" fn spawn_window(
 
         /* Fire notification if new window. */
         if !(*sc).flags & SPAWN_RESPAWN != 0 {
-            notify_session_window(c"window-linked".as_ptr(), s, w);
+            notify_session_window(c"window-linked", s, w);
         }
 
         session_group_synchronize_from(s);
@@ -593,7 +593,7 @@ pub unsafe extern "C" fn spawn_pane(
             }
         }
         if !(*sc).flags & SPAWN_NONOTIFY != 0 {
-            notify_window(c"window-layout-changed".as_ptr(), w);
+            notify_window(c"window-layout-changed", w);
         }
 
         new_wp
