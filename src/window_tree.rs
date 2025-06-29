@@ -1450,7 +1450,7 @@ unsafe extern "C" fn window_tree_kill_tagged_callback(
         cmdq_append(
             c,
             cmdq_get_callback1(
-                c"window_tree_command_done".as_ptr(),
+                "window_tree_command_done",
                 Some(window_tree_command_done),
                 data.cast().as_ptr(),
             )

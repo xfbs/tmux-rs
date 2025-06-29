@@ -21,27 +21,10 @@ use crate::compat::queue::{
 };
 use crate::xmalloc::xcalloc1;
 
-macro_rules! cstringify {
-    ($e:expr) => {
-        #[allow(unused_unsafe)]
-        unsafe {
-            ::core::ffi::CStr::from_bytes_with_nul_unchecked(
-                concat!(stringify!($e), "\0").as_bytes(),
-            )
-            .as_ptr()
-        }
-    };
-}
-pub(crate) use cstringify;
-
 // #define cmdq_get_callback(cb, data) cmdq_get_callback1(#cb, cb, data)
 macro_rules! cmdq_get_callback {
     ($cb:ident, $data:expr) => {
-        $crate::cmd_::cmd_queue::cmdq_get_callback1(
-            const { $crate::cmd_::cmd_queue::cstringify!($cb) },
-            Some($cb),
-            $data,
-        )
+        $crate::cmd_::cmd_queue::cmdq_get_callback1(stringify!($cb), Some($cb), $data)
     };
 }
 pub(crate) use cmdq_get_callback;
@@ -519,7 +502,10 @@ pub unsafe extern "C" fn cmdq_remove_group(item: *mut cmdq_item) {
     }
 }
 
-pub unsafe extern "C" fn cmdq_empty_command(item: *mut cmdq_item, data: *mut c_void) -> cmd_retval {
+pub unsafe extern "C" fn cmdq_empty_command(
+    _item: *mut cmdq_item,
+    _data: *mut c_void,
+) -> cmd_retval {
     cmd_retval::CMD_RETURN_NORMAL
 }
 
@@ -657,11 +643,6 @@ pub unsafe extern "C" fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
                 free_(tmp);
             }
 
-            // TODO check this makes sense with the original C
-            // original code does:
-            // flags = !!(state->flags & CMDQ_STATE_CONTROL);
-            // but this would mean if were in control state go to bit pattern of 1 which is CMDQ_STATE_REPEAT
-            // otherwise empty
             flags = (*state)
                 .flags
                 .intersects(cmdq_state_flags::CMDQ_STATE_CONTROL);
@@ -745,15 +726,11 @@ pub unsafe extern "C" fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
     }
 }
 
-pub unsafe extern "C" fn cmdq_get_callback1(
-    name: *const c_char,
-    cb: cmdq_cb,
-    data: *mut c_char,
-) -> NonNull<cmdq_item> {
+pub unsafe fn cmdq_get_callback1(name: &str, cb: cmdq_cb, data: *mut c_char) -> NonNull<cmdq_item> {
     let item = xcalloc_::<cmdq_item>(1).as_ptr();
 
     unsafe {
-        (*item).name = format_nul!("[{}/{:p}]", _s(name), item);
+        (*item).name = format_nul!("[{}/{:p}]", name, item);
         (*item).type_ = cmdq_type::CMDQ_CALLBACK;
 
         (*item).group = 0;
