@@ -1006,7 +1006,7 @@ enum screen_cursor_style {
 
 /// Virtual screen.
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 struct screen {
     title: *mut c_char,
     path: *mut c_char,

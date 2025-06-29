@@ -11,9 +11,6 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
-use std::cmp::Ordering;
-
 use crate::*;
 
 use crate::compat::{
@@ -28,28 +25,24 @@ RB_GENERATE!(environ, environ_entry, entry, discr_entry, environ_cmp);
 pub unsafe extern "C" fn environ_cmp(
     envent1: *const environ_entry,
     envent2: *const environ_entry,
-) -> Ordering {
+) -> std::cmp::Ordering {
     unsafe {
-        match libc::strcmp(
+        i32_to_ordering(libc::strcmp(
             transmute_ptr((*envent1).name),
             transmute_ptr((*envent2).name),
-        ) {
-            ..0 => Ordering::Less,
-            0 => Ordering::Equal,
-            1.. => Ordering::Greater,
-        }
+        ))
     }
 }
 
-pub extern "C" fn environ_create() -> NonNull<environ> {
+pub fn environ_create() -> NonNull<environ> {
     unsafe {
-        let env: NonNull<environ> = xcalloc_::<environ>(1);
-        rb_init(env.as_ptr());
-        env
+        let env = xcalloc1::<environ>();
+        rb_init(env);
+        NonNull::new_unchecked(env)
     }
 }
 
-pub unsafe extern "C" fn environ_free(env: *mut environ) {
+pub unsafe fn environ_free(env: *mut environ) {
     unsafe {
         for envent in rb_foreach(env).map(NonNull::as_ptr) {
             rb_remove(env, envent);

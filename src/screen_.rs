@@ -48,7 +48,7 @@ pub struct screen_title_entry {
 pub type screen_titles = tailq_head<screen_title_entry>;
 
 /// Free titles stack.
-pub unsafe extern "C" fn screen_free_titles(s: *mut screen) {
+pub unsafe fn screen_free_titles(s: *mut screen) {
     unsafe {
         if (*s).titles.is_null() {
             return;
