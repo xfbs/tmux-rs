@@ -97,7 +97,7 @@ pub type cmdq_item_list = tailq_head<cmdq_item>;
 #[repr(C)]
 pub struct cmdq_state {
     pub references: i32,
-    pub flags: i32,
+    pub flags: cmdq_state_flags,
 
     pub formats: *mut format_tree,
 
@@ -194,14 +194,14 @@ pub unsafe extern "C" fn cmdq_get_current(item: *mut cmdq_item) -> *mut cmd_find
     unsafe { &raw mut (*(*item).state).current }
 }
 
-pub unsafe extern "C" fn cmdq_get_flags(item: *mut cmdq_item) -> i32 {
+pub unsafe extern "C" fn cmdq_get_flags(item: *mut cmdq_item) -> cmdq_state_flags {
     unsafe { (*(*item).state).flags }
 }
 
 pub unsafe extern "C" fn cmdq_new_state(
     current: *mut cmd_find_state,
     event: *mut key_event,
-    flags: i32,
+    flags: cmdq_state_flags,
 ) -> *mut cmdq_state {
     unsafe {
         let state: *mut cmdq_state = xcalloc1::<cmdq_state>();
@@ -399,7 +399,10 @@ pub unsafe fn cmdq_insert_hook_(
         let mut buf: [c_char; 32] = zeroed();
         let tmp = &raw mut buf as *mut c_char;
 
-        if (*(*item).state).flags & CMDQ_STATE_NOHOOKS != 0 {
+        if (*(*item).state)
+            .flags
+            .intersects(cmdq_state_flags::CMDQ_STATE_NOHOOKS)
+        {
             return;
         }
         let oo = if s.is_null() {
@@ -421,7 +424,11 @@ pub unsafe fn cmdq_insert_hook_(
          * The hooks get a new state because they should not update the current
          * target or formats for any subsequent commands.
          */
-        let new_state = cmdq_new_state(current, &raw mut (*state).event, CMDQ_STATE_NOHOOKS);
+        let new_state = cmdq_new_state(
+            current,
+            &raw mut (*state).event,
+            cmdq_state_flags::CMDQ_STATE_NOHOOKS,
+        );
         cmdq_add_format!(new_state, c"hook".as_ptr(), "{}", name);
 
         let arguments = args_print(args);
@@ -531,7 +538,7 @@ pub unsafe extern "C" fn cmdq_get_command(
         }
 
         if state.is_null() {
-            state = cmdq_new_state(null_mut(), null_mut(), 0);
+            state = cmdq_new_state(null_mut(), null_mut(), cmdq_state_flags::empty());
             created = true;
         }
 
@@ -637,8 +644,8 @@ pub unsafe extern "C" fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
         let mut retval;
         let mut fs: cmd_find_state = zeroed();
         let mut fsp: *mut cmd_find_state = null_mut();
-        let mut flags = 0;
         let mut quiet = 0;
+        let mut flags = false;
 
         'out: {
             if cfg_finished != 0 {
@@ -650,7 +657,14 @@ pub unsafe extern "C" fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
                 free_(tmp);
             }
 
-            flags = !!((*state).flags & CMDQ_STATE_CONTROL);
+            // TODO check this makes sense with the original C
+            // original code does:
+            // flags = !!(state->flags & CMDQ_STATE_CONTROL);
+            // but this would mean if were in control state go to bit pattern of 1 which is CMDQ_STATE_REPEAT
+            // otherwise empty
+            flags = (*state)
+                .flags
+                .intersects(cmdq_state_flags::CMDQ_STATE_CONTROL);
             cmdq_guard(item, c"begin".as_ptr(), flags);
 
             if (*item).client.is_null() {
@@ -743,7 +757,7 @@ pub unsafe extern "C" fn cmdq_get_callback1(
         (*item).type_ = cmdq_type::CMDQ_CALLBACK;
 
         (*item).group = 0;
-        (*item).state = cmdq_new_state(null_mut(), null_mut(), 0);
+        (*item).state = cmdq_new_state(null_mut(), null_mut(), cmdq_state_flags::empty());
 
         (*item).cb = cb;
         (*item).data = data as _;
@@ -865,14 +879,14 @@ pub unsafe extern "C" fn cmdq_running(c: *mut client) -> *mut cmdq_item {
     }
 }
 
-pub unsafe extern "C" fn cmdq_guard(item: *mut cmdq_item, guard: *const c_char, flags: i32) {
+pub unsafe extern "C" fn cmdq_guard(item: *mut cmdq_item, guard: *const c_char, flags: bool) {
     unsafe {
         let c = (*item).client;
         let t = (*item).time;
         let number = (*item).number;
 
         if !c.is_null() && (*c).flags.intersects(client_flag::CONTROL) {
-            control_write!(c, "%{} {} {} {}", _s(guard), t, number, flags);
+            control_write!(c, "%{} {} {} {}", _s(guard), t, number, flags as i32);
         }
     }
 }

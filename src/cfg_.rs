@@ -151,7 +151,7 @@ pub unsafe extern "C" fn load_cfg(
         let state = if !item.is_null() {
             cmdq_copy_state(cmdq_get_state(item), current)
         } else {
-            cmdq_new_state(null_mut(), null_mut(), 0)
+            cmdq_new_state(null_mut(), null_mut(), cmdq_state_flags::empty())
         };
         cmdq_add_format!(state, c"current_file".as_ptr(), "{}", _s(pi.file));
 
@@ -210,7 +210,7 @@ pub unsafe extern "C" fn load_cfg_from_buffer(
         let state = if !item.is_null() {
             cmdq_copy_state(cmdq_get_state(item), current)
         } else {
-            cmdq_new_state(null_mut(), null_mut(), 0)
+            cmdq_new_state(null_mut(), null_mut(), cmdq_state_flags::empty())
         };
         cmdq_add_format!(state, c"current_file".as_ptr(), "{}", _s(pi.file));
 

@@ -579,7 +579,7 @@ pub unsafe extern "C" fn menu_key_cb(
         } else {
             event = null_mut();
         }
-        let state = cmdq_new_state(&raw mut (*md).fs, event, 0);
+        let state = cmdq_new_state(&raw mut (*md).fs, event, cmdq_state_flags::empty());
 
         // TODO fix this cast
         let status = cmd_parse_and_append(

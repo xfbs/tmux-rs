@@ -699,7 +699,7 @@ pub unsafe extern "C" fn key_bindings_dispatch(
     fs: *mut cmd_find_state,
 ) -> *mut cmdq_item {
     unsafe {
-        let mut flags = 0;
+        let mut flags = cmdq_state_flags::empty();
 
         let readonly = if c.is_null() || !(*c).flags.intersects(client_flag::READONLY) {
             true
@@ -712,7 +712,7 @@ pub unsafe extern "C" fn key_bindings_dispatch(
             new_item = cmdq_get_callback!(key_bindings_read_only, null_mut()).as_ptr();
         } else {
             if (*bd).flags & KEY_BINDING_REPEAT != 0 {
-                flags |= CMDQ_STATE_REPEAT;
+                flags |= cmdq_state_flags::CMDQ_STATE_REPEAT;
             }
             let new_state = cmdq_new_state(fs, event, flags);
             new_item = cmdq_get_command((*bd).cmdlist, new_state);

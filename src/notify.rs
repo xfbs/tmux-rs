@@ -85,7 +85,11 @@ pub unsafe extern "C" fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut n
             return;
         }
 
-        let state = cmdq_new_state(&raw mut fs, null_mut(), CMDQ_STATE_NOHOOKS);
+        let state = cmdq_new_state(
+            &raw mut fs,
+            null_mut(),
+            cmdq_state_flags::CMDQ_STATE_NOHOOKS,
+        );
         cmdq_add_formats(state, (*ne).formats);
 
         if *(*ne).name == b'@' as c_char {
@@ -208,7 +212,8 @@ pub unsafe fn notify_add(
     let __func__ = c"notify_add".as_ptr();
     unsafe {
         let item = cmdq_running(null_mut());
-        if !item.is_null() && cmdq_get_flags(item) & CMDQ_STATE_NOHOOKS != 0 {
+        if !item.is_null() && cmdq_get_flags(item).intersects(cmdq_state_flags::CMDQ_STATE_NOHOOKS)
+        {
             return;
         }
 

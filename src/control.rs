@@ -552,9 +552,9 @@ pub unsafe extern "C" fn control_error(item: *mut cmdq_item, data: *mut c_void) 
         let c = cmdq_get_client(item);
         let error = data as *mut c_char;
 
-        cmdq_guard(item, c"begin".as_ptr(), 1);
+        cmdq_guard(item, c"begin".as_ptr(), true);
         control_write!(c, "parse error: {}", _s(error));
-        cmdq_guard(item, c"error".as_ptr(), 1);
+        cmdq_guard(item, c"error".as_ptr(), true);
 
         free_(error);
     }
@@ -594,7 +594,8 @@ pub unsafe extern "C" fn control_read_callback(bufev: *mut bufferevent, data: *m
                 break;
             }
 
-            let state = cmdq_new_state(null_mut(), null_mut(), CMDQ_STATE_CONTROL);
+            let state =
+                cmdq_new_state(null_mut(), null_mut(), cmdq_state_flags::CMDQ_STATE_CONTROL);
             let status = cmd_parse_and_append(line, null_mut(), c, state, &raw mut error);
             if status == cmd_parse_status::CMD_PARSE_ERROR {
                 cmdq_append(c, cmdq_get_callback!(control_error, error).as_ptr());

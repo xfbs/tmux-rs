@@ -356,7 +356,7 @@ unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item)
                     (*c).last_session = (*c).session;
                 }
                 server_client_set_session(c, s);
-                if !cmdq_get_flags(item) & CMDQ_STATE_REPEAT != 0 {
+                if !cmdq_get_flags(item).intersects(cmdq_state_flags::CMDQ_STATE_REPEAT) {
                     server_client_set_key_table(c, null_mut());
                 }
             }

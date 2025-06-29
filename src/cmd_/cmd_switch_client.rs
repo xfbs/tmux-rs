@@ -121,7 +121,7 @@ unsafe extern "C" fn cmd_switch_client_exec(self_: *mut cmd, item: *mut cmdq_ite
         }
 
         server_client_set_session(tc, s);
-        if !cmdq_get_flags(item) & CMDQ_STATE_REPEAT != 0 {
+        if !cmdq_get_flags(item).intersects(cmdq_state_flags::CMDQ_STATE_REPEAT) {
             server_client_set_key_table(tc, null_mut());
         }
 

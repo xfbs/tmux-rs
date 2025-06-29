@@ -2042,10 +2042,16 @@ struct cmd_parse_input {
     fs: cmd_find_state,
 }
 
-/* Command queue flags. */
-const CMDQ_STATE_REPEAT: i32 = 0x1;
-const CMDQ_STATE_CONTROL: i32 = 0x2;
-const CMDQ_STATE_NOHOOKS: i32 = 0x4;
+/// Command queue flags.
+bitflags::bitflags! {
+    #[repr(transparent)]
+    #[derive(Copy, Clone, Eq, PartialEq)]
+    struct cmdq_state_flags: i32 {
+        const CMDQ_STATE_REPEAT = 0x1;
+        const CMDQ_STATE_CONTROL = 0x2;
+        const CMDQ_STATE_NOHOOKS = 0x4;
+    }
+}
 
 // Command queue callback.
 type cmdq_cb = Option<unsafe extern "C" fn(*mut cmdq_item, *mut c_void) -> cmd_retval>;
