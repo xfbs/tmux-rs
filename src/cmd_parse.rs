@@ -23,11 +23,11 @@ use crate::compat::queue::{
 };
 use crate::xmalloc::xrecallocarray__;
 
-unsafe fn yyparse() -> i32 {
+unsafe fn yyparse(ps: &mut cmd_parse_state) -> i32 {
     unsafe {
         let mut parser = cmd_parse::LinesParser::new();
 
-        let mut ps = NonNull::new(&raw mut parse_state).unwrap();
+        let mut ps = NonNull::new(ps).unwrap();
         let mut lexer = lexer::Lexer::new(ps);
 
         match parser.parse(ps, lexer) {
@@ -108,8 +108,6 @@ pub struct cmd_parse_state {
     pub scope: *mut cmd_parse_scope,
     pub stack: tailq_head<cmd_parse_scope>,
 }
-
-pub static mut parse_state: cmd_parse_state = unsafe { zeroed() };
 
 pub unsafe extern "C" fn cmd_parse_get_error(
     file: *const c_char,
@@ -192,14 +190,15 @@ pub unsafe extern "C" fn cmd_parse_free_commands(cmds: *mut cmd_parse_commands) 
     }
 }
 
-pub unsafe extern "C" fn cmd_parse_run_parser(cause: *mut *mut c_char) -> *mut cmd_parse_commands {
+pub unsafe extern "C" fn cmd_parse_run_parser(
+    ps: &mut cmd_parse_state,
+    cause: *mut *mut c_char,
+) -> *mut cmd_parse_commands {
     unsafe {
-        let ps = &raw mut parse_state;
-
         (*ps).commands = null_mut();
         tailq_init(&raw mut (*ps).stack);
 
-        let retval = yyparse();
+        let retval = yyparse(ps);
         for scope in tailq_foreach(&raw mut (*ps).stack).map(NonNull::as_ptr) {
             tailq_remove(&raw mut (*ps).stack, scope);
             free_(scope);
@@ -221,29 +220,27 @@ pub unsafe extern "C" fn cmd_parse_do_file(
     pi: *mut cmd_parse_input,
     cause: *mut *mut c_char,
 ) -> *mut cmd_parse_commands {
-    let ps = &raw mut parse_state;
     unsafe {
-        libc::memset(ps.cast(), 0, size_of::<cmd_parse_state>());
-        (*ps).input = pi;
-        (*ps).f = f;
-        cmd_parse_run_parser(cause)
+        let mut ps: Box<cmd_parse_state> = Box::new(zeroed());
+        ps.input = pi;
+        ps.f = f;
+        cmd_parse_run_parser(&mut ps, cause)
     }
 }
 
-pub unsafe extern "C" fn cmd_parse_do_buffer(
+pub unsafe fn cmd_parse_do_buffer(
     buf: *const c_char,
     len: usize,
     pi: *mut cmd_parse_input,
     cause: *mut *mut c_char,
 ) -> *mut cmd_parse_commands {
     unsafe {
-        let ps = &raw mut parse_state;
+        let mut ps: Box<cmd_parse_state> = Box::new(zeroed());
 
-        libc::memset(ps.cast(), 0, size_of::<cmd_parse_state>());
-        (*ps).input = pi;
-        (*ps).buf = buf;
-        (*ps).len = len;
-        cmd_parse_run_parser(cause)
+        ps.input = pi;
+        ps.buf = buf;
+        ps.len = len;
+        cmd_parse_run_parser(&mut ps, cause)
     }
 }
 
@@ -417,11 +414,8 @@ pub unsafe extern "C" fn cmd_parse_build_commands(
 ) {
     let __func__ = c"cmd_parse_build_commands".as_ptr();
     unsafe {
-        // struct cmd_parse_command	*cmd;
         let mut line = u32::MAX;
         let mut current: *mut cmd_list = null_mut();
-        // struct cmd_list			*current = NULL, *result;
-        // char				*s;
 
         *pr = zeroed();
 
@@ -592,9 +586,6 @@ pub unsafe extern "C" fn cmd_parse_from_buffer(
     let mut input: cmd_parse_input;
     let mut cause = null_mut();
     unsafe {
-        // struct cmd_parse_commands	*cmds;
-        // char				*cause;
-
         if pi.is_null() {
             input = unsafe { zeroed() };
             pi = &raw mut input;
