@@ -13,11 +13,9 @@ use crate::cmd_parse::lexer;
 // scope, stack, input, commands
 grammar<'a>(ps: NonNull<cmd_parse_state<'a>>);
 
-pub Lines: () = {
-    => (),
-    <s:Statements> => unsafe {
-      (*ps.as_ptr()).commands = Some(s);
-    }
+pub Lines: Option<&'static mut cmd_parse_commands> = {
+    => None,
+    <s:Statements> => Some(s),
 };
 
 pub Statements: &'static mut cmd_parse_commands = {

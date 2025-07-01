@@ -28,17 +28,17 @@ use crate::compat::queue::{
 };
 use crate::xmalloc::xrecallocarray__;
 
-fn yyparse(ps: &mut cmd_parse_state) -> i32 {
+fn yyparse(ps: &mut cmd_parse_state) -> Result<Option<&'static mut cmd_parse_commands>, ()> {
     let mut parser = cmd_parse::LinesParser::new();
 
     let mut ps = NonNull::new(ps).unwrap();
     let mut lexer = lexer::Lexer::new(ps);
 
     match parser.parse(ps, lexer) {
-        Ok(()) => 0,
+        Ok(cmds) => Ok(cmds),
         Err(parse_err) => {
             log_debug!("parsing error {parse_err:?}");
-            1
+            Err(())
         }
     }
 }
@@ -104,7 +104,6 @@ pub struct cmd_parse_state<'a> {
     pub escapes: u32,
 
     pub error: *mut c_char,
-    pub commands: Option<&'static mut cmd_parse_commands>,
 
     pub scope: Option<&'a mut cmd_parse_scope>,
     pub stack: tailq_head<cmd_parse_scope>,
@@ -197,7 +196,6 @@ pub unsafe fn cmd_parse_run_parser(
     ps: &mut cmd_parse_state,
 ) -> Result<&'static mut cmd_parse_commands, *mut c_char> {
     unsafe {
-        ps.commands = None;
         tailq_init(&mut ps.stack);
 
         let retval = yyparse(ps);
@@ -205,14 +203,11 @@ pub unsafe fn cmd_parse_run_parser(
             tailq_remove(&mut ps.stack, scope);
             free_(scope);
         }
-        if retval != 0 {
-            return Err(ps.error);
-        }
 
-        if let Some(commands) = ps.commands.take() {
-            Ok(commands)
-        } else {
-            Ok(cmd_parse_new_commands())
+        match retval {
+            Ok(Some(cmds)) => Ok(cmds),
+            Ok(None) => Ok(cmd_parse_new_commands()),
+            Err(_) => Err(ps.error),
         }
     }
 }
@@ -563,7 +558,7 @@ pub unsafe fn cmd_parse_and_append(
 pub unsafe fn cmd_parse_from_buffer(buf: &[u8], pi: Option<&cmd_parse_input>) -> cmd_parse_result {
     unsafe {
         let mut input: cmd_parse_input = zeroed();
-        let pi = pi.unwrap_or(&mut input);
+        let pi = pi.unwrap_or(&input);
 
         if buf.is_empty() {
             return Ok(cmd_list_new());
