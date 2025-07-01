@@ -1560,8 +1560,7 @@ pub unsafe extern "C" fn mode_tree_run_command(
         let command = cmd_template_replace(template, name, 1);
         if !command.is_null() && *command != b'\0' as i8 {
             let state = cmdq_new_state(fs, null_mut(), cmdq_state_flags::empty());
-            let status =
-                cmd_parse_and_append(cstr_to_str(command), null_mut(), c, state, &raw mut error);
+            let status = cmd_parse_and_append(cstr_to_str(command), None, c, state, &raw mut error);
             if status == cmd_parse_status::CMD_PARSE_ERROR {
                 if !c.is_null() {
                     *error = (*error as u8 as char).to_ascii_uppercase() as i8;

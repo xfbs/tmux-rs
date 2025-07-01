@@ -286,9 +286,8 @@ impl Entry<cmd, qentry> for cmd {
     }
 }
 
-// Next group number for new command list.
-
-pub static mut cmd_list_next_group: u32 = 1;
+/// Next group number for new command list.
+static cmd_list_next_group: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(1);
 
 macro_rules! cmd_log_argv {
    ($argc:expr, $argv:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
@@ -494,7 +493,7 @@ pub unsafe extern "C" fn cmd_get_alias(name: *const c_char) -> *mut c_char {
     }
 }
 
-pub unsafe extern "C" fn cmd_find(name: *const c_char, cause: *mut *mut c_char) -> *mut cmd_entry {
+pub unsafe fn cmd_find(name: *const c_char) -> Result<*mut cmd_entry, *mut c_char> {
     let mut loop_: *mut *mut cmd_entry;
     let mut entry: *mut cmd_entry;
     let mut found: *mut cmd_entry = null_mut();
@@ -534,11 +533,10 @@ pub unsafe extern "C" fn cmd_find(name: *const c_char, cause: *mut *mut c_char) 
             }
             if found.is_null() {
                 // TODO BUG, for some reason name isn't properly NUL terminated
-                *cause = format_nul!("unknown command: {}", _s(name));
-                return null_mut();
+                return Err(format_nul!("unknown command: {}", _s(name)));
             }
 
-            return found;
+            return Ok(found);
         }
 
         // ambiguous:
@@ -558,44 +556,38 @@ pub unsafe extern "C" fn cmd_find(name: *const c_char, cause: *mut *mut c_char) 
             loop_ = loop_.add(1);
         }
         s[strlen(&raw mut s as _) - 2] = b'\0' as c_char;
-        *cause = format_nul!(
+
+        Err(format_nul!(
             "ambiguous command: {}, could be: {}",
             _s(name),
             _s((&raw const s).cast()),
-        );
-
-        null_mut()
+        ))
     }
 }
 
-pub unsafe extern "C" fn cmd_parse(
+pub unsafe fn cmd_parse(
     values: *mut args_value,
     count: c_uint,
     file: *const c_char,
     line: c_uint,
-    cause: *mut *mut c_char,
-) -> *mut cmd {
+) -> Result<*mut cmd, *mut c_char> {
     unsafe {
         let mut error: *mut c_char = null_mut();
 
         if count == 0 || (*values).type_ != args_type::ARGS_STRING {
-            *cause = format_nul!("no command");
-            return null_mut();
+            return Err(format_nul!("no command"));
         }
-        let entry = cmd_find((*values).union_.string, cause);
-        if entry.is_null() {
-            return null_mut();
-        }
+        let entry = cmd_find((*values).union_.string)?;
 
         let args = args_parse(&raw mut (*entry).args, values, count, &raw mut error);
         if args.is_null() && error.is_null() {
-            *cause = format_nul!("usage: {} {}", _s((*entry).name), _s((*entry).usage));
-            return null_mut();
+            let cause = format_nul!("usage: {} {}", _s((*entry).name), _s((*entry).usage));
+            return Err(cause);
         }
         if args.is_null() {
-            *cause = format_nul!("command {}: {}", _s((*entry).name), _s(error));
+            let cause = format_nul!("command {}: {}", _s((*entry).name), _s(error));
             free(error as _);
-            return null_mut();
+            return Err(cause);
         }
 
         let cmd: *mut cmd = xcalloc(1, size_of::<cmd>()).cast().as_ptr();
@@ -607,7 +599,7 @@ pub unsafe extern "C" fn cmd_parse(
         }
         (*cmd).line = line;
 
-        cmd
+        Ok(cmd)
     }
 }
 
@@ -649,14 +641,17 @@ pub unsafe extern "C" fn cmd_print(cmd: *mut cmd) -> *mut c_char {
     }
 }
 
-pub unsafe extern "C" fn cmd_list_new() -> *mut cmd_list {
+pub unsafe fn cmd_list_new<'a>() -> &'a mut cmd_list {
     unsafe {
-        let cmdlist: *mut cmd_list = xcalloc(1, size_of::<cmd_list>()).cast().as_ptr();
-        (*cmdlist).references = 1;
-        (*cmdlist).group = cmd_list_next_group;
-        cmd_list_next_group += 1;
-        (*cmdlist).list = xcalloc(1, size_of::<cmds>()).cast().as_ptr();
-        tailq_init((*cmdlist).list);
+        let group = cmd_list_next_group.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+
+        let cmdlist = Box::leak(Box::new(cmd_list {
+            references: 1,
+            group,
+            list: Box::leak(Box::new(zeroed())),
+        }));
+
+        tailq_init(cmdlist.list);
         cmdlist
     }
 }
@@ -680,8 +675,7 @@ pub unsafe extern "C" fn cmd_list_append_all(cmdlist: *mut cmd_list, from: *mut 
 pub unsafe extern "C" fn cmd_list_move(cmdlist: *mut cmd_list, from: *mut cmd_list) {
     unsafe {
         tailq_concat::<_, qentry>((*cmdlist).list, (*from).list);
-        (*cmdlist).group = cmd_list_next_group;
-        cmd_list_next_group += 1;
+        (*cmdlist).group = cmd_list_next_group.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     }
 }
 
@@ -702,21 +696,21 @@ pub unsafe extern "C" fn cmd_list_free(cmdlist: *mut cmd_list) {
 }
 
 pub unsafe extern "C" fn cmd_list_copy(
-    cmdlist: *mut cmd_list,
+    cmdlist: &mut cmd_list,
     argc: c_int,
     argv: *mut *mut c_char,
 ) -> *mut cmd_list {
     unsafe {
-        let mut group: u32 = (*cmdlist).group;
+        let mut group: u32 = cmdlist.group;
         let s = cmd_list_print(cmdlist, 0);
         log_debug!("{}: {}", "cmd_list_copy", _s(s));
         free(s as _);
 
         let new_cmdlist = cmd_list_new();
-        for cmd in tailq_foreach((*cmdlist).list).map(NonNull::as_ptr) {
+        for cmd in tailq_foreach(cmdlist.list).map(NonNull::as_ptr) {
             if (*cmd).group != group {
-                (*new_cmdlist).group = cmd_list_next_group;
-                cmd_list_next_group += 1;
+                new_cmdlist.group =
+                    cmd_list_next_group.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                 group = (*cmd).group;
             }
             let new_cmd = cmd_copy(cmd, argc, argv);
@@ -731,12 +725,12 @@ pub unsafe extern "C" fn cmd_list_copy(
     }
 }
 
-pub unsafe extern "C" fn cmd_list_print(cmdlist: *mut cmd_list, escaped: c_int) -> *mut c_char {
+pub fn cmd_list_print(cmdlist: &mut cmd_list, escaped: c_int) -> *mut c_char {
     unsafe {
         let mut len = 1;
         let mut buf: *mut c_char = xcalloc(1, len).cast().as_ptr();
 
-        for cmd in tailq_foreach::<_, qentry>((*cmdlist).list).map(NonNull::as_ptr) {
+        for cmd in tailq_foreach::<_, qentry>(cmdlist.list).map(NonNull::as_ptr) {
             let this = cmd_print(cmd);
 
             len += strlen(this) + 6;

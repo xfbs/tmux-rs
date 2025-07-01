@@ -283,7 +283,7 @@ pub unsafe extern "C-unwind" fn client_main(
             msg = msgtype::MSG_COMMAND;
 
             values = args_from_vector(argc, argv);
-            match cmd_parse_from_arguments(values, argc as u32, null_mut()) {
+            match cmd_parse_from_arguments(values, argc as u32, None) {
                 Ok(cmdlist) => {
                     if cmd_list_any_have(cmdlist, cmd_flag::CMD_STARTSERVER) {
                         flags |= client_flag::STARTSERVER;

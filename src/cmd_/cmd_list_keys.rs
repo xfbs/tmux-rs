@@ -99,7 +99,7 @@ unsafe extern "C" fn cmd_list_keys_print_notes(
             key = key_string_lookup_key((*bd).key, 0);
 
             let note = if (*bd).note.is_null() || *(*bd).note == b'\0' as _ {
-                cmd_list_print((*bd).cmdlist, 1)
+                cmd_list_print(&mut *(*bd).cmdlist, 1)
             } else {
                 xstrdup((*bd).note).as_ptr()
             };
@@ -314,7 +314,7 @@ unsafe extern "C" fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -
                     tmpused = strlcat(tmp.as_ptr(), c" ".as_ptr(), tmpsize);
                     free_(cp);
 
-                    cp = cmd_list_print((*bd).cmdlist, 1);
+                    cp = cmd_list_print(&mut *(*bd).cmdlist, 1);
                     cplen = strlen(cp);
                     while tmpused + cplen + 1 >= tmpsize {
                         tmpsize *= 2;

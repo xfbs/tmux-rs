@@ -37,7 +37,7 @@ pub unsafe extern "C" fn notify_insert_one_hook(
             return item;
         }
         if log_get_level() != 0 {
-            let s = cmd_list_print(cmdlist, 0);
+            let s = cmd_list_print(&mut *cmdlist, 0);
             log_debug!(
                 "{}: hook {}: {}",
                 "notify_insert_one_hook",
@@ -94,7 +94,7 @@ pub unsafe extern "C" fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut n
 
         if *(*ne).name == b'@' as c_char {
             let value = options_get_string(oo, (*ne).name);
-            match cmd_parse_from_string(cstr_to_str(value), null_mut()) {
+            match cmd_parse_from_string(cstr_to_str(value), None) {
                 Err(error) => {
                     log_debug!(
                         "{}: can't parse hook {}: {}",

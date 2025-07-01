@@ -167,7 +167,7 @@ pub unsafe extern "C" fn options_value_to_string(
         let mut s: *mut c_char = null_mut();
 
         if OPTIONS_IS_COMMAND(o) {
-            return cmd_list_print((*ov).cmdlist, 0);
+            return cmd_list_print(&mut *(*ov).cmdlist, 0);
         }
 
         if OPTIONS_IS_NUMBER(o) {
@@ -498,7 +498,7 @@ pub unsafe extern "C" fn options_array_set(
         }
 
         if OPTIONS_IS_COMMAND(o) {
-            let cmdlist = match cmd_parse_from_string(cstr_to_str(value), null_mut()) {
+            let cmdlist = match cmd_parse_from_string(cstr_to_str(value), None) {
                 Err(error) => {
                     if !cause.is_null() {
                         *cause = error;

@@ -424,7 +424,7 @@ pub unsafe extern "C" fn cmd_find_get_window_with_session(
             }
         }
 
-        if *window != b'+' as _ && *window != b'-' as _ {
+        if *window != b'+' as _ && *window != b'-' as i8 {
             if let Ok(idx) = strtonum(window, 0, i32::MAX) {
                 (*fs).wl = winlink_find_by_index(&raw mut (*(*fs).s).windows, idx);
                 if !(*fs).wl.is_null() {

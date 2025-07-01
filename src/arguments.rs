@@ -97,7 +97,7 @@ pub unsafe extern "C" fn args_value_as_string(value: *mut args_value) -> *const 
             args_type::ARGS_STRING => (*value).union_.string,
             args_type::ARGS_COMMANDS => {
                 if (*value).cached.is_null() {
-                    (*value).cached = cmd_list_print((*value).union_.cmdlist, 0);
+                    (*value).cached = cmd_list_print(&mut *(*value).union_.cmdlist, 0);
                 }
                 (*value).cached
             }
@@ -369,7 +369,7 @@ pub unsafe extern "C" fn args_copy_copy_value(
                 (*to).union_.string = expanded;
             }
             args_type::ARGS_COMMANDS => {
-                (*to).union_.cmdlist = cmd_list_copy((*from).union_.cmdlist, argc, argv)
+                (*to).union_.cmdlist = cmd_list_copy(&mut *(*from).union_.cmdlist, argc, argv)
             }
         }
     }
@@ -463,7 +463,8 @@ pub unsafe fn args_to_vector(args: *mut args, argc: *mut i32, argv: *mut *mut *m
                     cmd_append_argv(argc, argv, (*(*args).values.add(i as usize)).union_.string)
                 }
                 args_type::ARGS_COMMANDS => {
-                    let s = cmd_list_print((*(*args).values.add(i as usize)).union_.cmdlist, 0);
+                    let s =
+                        cmd_list_print(&mut *(*(*args).values.add(i as usize)).union_.cmdlist, 0);
                     cmd_append_argv(argc, argv, s);
                     free_(s);
                 }
@@ -509,7 +510,7 @@ pub unsafe fn args_print_add_value(buf: *mut *mut c_char, len: *mut usize, value
         match (*value).type_ {
             args_type::ARGS_NONE => (),
             args_type::ARGS_COMMANDS => {
-                let expanded = cmd_list_print((*value).union_.cmdlist, 0);
+                let expanded = cmd_list_print(&mut *(*value).union_.cmdlist, 0);
                 args_print_add!(buf, len, "{{ {} }}", _s(expanded));
                 free_(expanded);
             }
@@ -829,7 +830,7 @@ pub unsafe extern "C" fn args_make_commands(
             if argc == 0 {
                 return (*state).cmdlist;
             }
-            return cmd_list_copy((*state).cmdlist, argc, argv);
+            return cmd_list_copy(&mut *(*state).cmdlist, argc, argv);
         }
 
         let mut cmd = xstrdup((*state).cmd).as_ptr();
@@ -849,7 +850,7 @@ pub unsafe extern "C" fn args_make_commands(
         }
         log_debug!("{}: {}", __func__, _s(cmd));
 
-        let pr = cmd_parse_from_string(cstr_to_str(cmd), &raw mut (*state).pi);
+        let pr = cmd_parse_from_string(cstr_to_str(cmd), Some(&mut (*state).pi));
         free_(cmd);
 
         match pr {

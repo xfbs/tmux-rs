@@ -14,6 +14,8 @@
 #![allow(clippy::uninlined_format_args)] // for lalrpop generated code
 use crate::*;
 
+use std::io::Read as _;
+
 use lalrpop_util::lalrpop_mod;
 use libc::_SC_MB_LEN_MAX;
 
@@ -23,19 +25,17 @@ use crate::compat::queue::{
 };
 use crate::xmalloc::xrecallocarray__;
 
-unsafe fn yyparse(ps: &mut cmd_parse_state) -> i32 {
-    unsafe {
-        let mut parser = cmd_parse::LinesParser::new();
+fn yyparse(ps: &mut cmd_parse_state) -> i32 {
+    let mut parser = cmd_parse::LinesParser::new();
 
-        let mut ps = NonNull::new(ps).unwrap();
-        let mut lexer = lexer::Lexer::new(ps);
+    let mut ps = NonNull::new(ps).unwrap();
+    let mut lexer = lexer::Lexer::new(ps);
 
-        match parser.parse(ps, lexer) {
-            Ok(()) => 0,
-            Err(parse_err) => {
-                log_debug!("parsing error {parse_err:?}");
-                1
-            }
+    match parser.parse(ps, lexer) {
+        Ok(()) => 0,
+        Err(parse_err) => {
+            log_debug!("parsing error {parse_err:?}");
+            1
         }
     }
 }
@@ -60,7 +60,7 @@ pub enum cmd_parse_argument_type {
     /// string
     String(*mut c_char),
     /// commands
-    Commands(*mut cmd_parse_commands),
+    Commands(&'static mut cmd_parse_commands),
     /// cmdlist
     ParsedCommands(*mut cmd_list),
 }
@@ -97,61 +97,59 @@ pub struct cmd_parse_state<'a> {
     pub condition: i32,
     pub eol: i32,
     pub eof: i32,
-    pub input: *mut cmd_parse_input,
+    pub input: Option<&'a mut cmd_parse_input>,
     pub escapes: u32,
 
     pub error: *mut c_char,
     pub commands: Option<&'static mut cmd_parse_commands>,
 
-    pub scope: *mut cmd_parse_scope,
+    pub scope: Option<&'a mut cmd_parse_scope>,
     pub stack: tailq_head<cmd_parse_scope>,
 }
 
-pub unsafe fn cmd_parse_get_error(
-    file: *const c_char,
-    line: u32,
-    error: *const c_char,
-) -> NonNull<c_char> {
-    unsafe {
-        if file.is_null() {
-            xstrdup(error)
-        } else {
-            NonNull::new_unchecked(format_nul!("{}:{}: {}", _s(file), line, _s(error)))
-        }
+pub unsafe fn cmd_parse_get_error(file: *const c_char, line: u32, error: &str) -> *mut c_char {
+    if file.is_null() {
+        let mut s = error.to_string();
+        s.push('\0');
+        s.leak().as_mut_ptr().cast()
+    } else {
+        format_nul!("{}:{}: {}", _s(file), line, error)
     }
 }
 
-pub unsafe fn cmd_parse_print_commands(pi: *mut cmd_parse_input, cmdlist: *mut cmd_list) {
+pub fn cmd_parse_print_commands(pi: &mut cmd_parse_input, cmdlist: &mut cmd_list) {
+    if pi.item.is_null()
+        || !pi
+            .flags
+            .intersects(cmd_parse_input_flags::CMD_PARSE_VERBOSE)
+    {
+        return;
+    }
+
+    let s = cmd_list_print(cmdlist, 0);
+
     unsafe {
-        if (*pi).item.is_null()
-            || !(*pi)
-                .flags
-                .intersects(cmd_parse_input_flags::CMD_PARSE_VERBOSE)
-        {
-            return;
-        }
-        let s = cmd_list_print(cmdlist, 0);
-        if !(*pi).file.is_null() {
-            cmdq_print!((*pi).item, "{}:{}: {}", _s((*pi).file), (*pi).line, _s(s));
+        if !pi.file.is_null() {
+            cmdq_print!(pi.item, "{}:{}: {}", _s(pi.file), pi.line, _s(s));
         } else {
-            cmdq_print!((*pi).item, "{}: {}", (*pi).line, _s(s));
+            cmdq_print!(pi.item, "{}: {}", pi.line, _s(s));
         }
-        free_(s);
+        free_(s)
     }
 }
 
 pub unsafe fn cmd_parse_free_argument(arg: *mut cmd_parse_argument) {
     unsafe {
-        match (*arg).type_ {
-            cmd_parse_argument_type::String(string) => free_(string),
-            cmd_parse_argument_type::Commands(commands) => cmd_parse_free_commands(commands),
-            cmd_parse_argument_type::ParsedCommands(cmdlist) => cmd_list_free(cmdlist),
+        match &mut (*arg).type_ {
+            cmd_parse_argument_type::String(string) => free_(*string),
+            cmd_parse_argument_type::Commands(commands) => cmd_parse_free_commands(*commands),
+            cmd_parse_argument_type::ParsedCommands(cmdlist) => cmd_list_free(*cmdlist),
         }
         free_(arg);
     }
 }
 
-pub unsafe fn cmd_parse_free_arguments(args: *mut cmd_parse_arguments) {
+pub unsafe fn cmd_parse_free_arguments(args: &mut cmd_parse_arguments) {
     unsafe {
         for arg in tailq_foreach(args).map(NonNull::as_ptr) {
             tailq_remove(args, arg);
@@ -162,7 +160,7 @@ pub unsafe fn cmd_parse_free_arguments(args: *mut cmd_parse_arguments) {
 
 pub unsafe fn cmd_parse_free_command(cmd: *mut cmd_parse_command) {
     unsafe {
-        cmd_parse_free_arguments(&raw mut (*cmd).arguments);
+        cmd_parse_free_arguments(&mut (*cmd).arguments);
         free_(cmd);
     }
 }
@@ -211,11 +209,11 @@ pub unsafe fn cmd_parse_run_parser(
 
 pub unsafe fn cmd_parse_do_file(
     f: &mut std::io::BufReader<std::fs::File>,
-    pi: *mut cmd_parse_input,
+    pi: &mut cmd_parse_input,
 ) -> Result<&'static mut cmd_parse_commands, *mut c_char> {
     unsafe {
         let mut ps: Box<cmd_parse_state> = Box::new(zeroed());
-        ps.input = pi;
+        ps.input = Some(pi);
         ps.f = Some(f);
         cmd_parse_run_parser(&mut ps)
     }
@@ -223,12 +221,12 @@ pub unsafe fn cmd_parse_do_file(
 
 pub unsafe fn cmd_parse_do_buffer(
     buf: &[u8],
-    pi: *mut cmd_parse_input,
+    pi: &mut cmd_parse_input,
 ) -> Result<&'static mut cmd_parse_commands, *mut c_char> {
     unsafe {
         let mut ps: Box<cmd_parse_state> = Box::new(zeroed());
 
-        ps.input = pi;
+        ps.input = Some(pi);
         ps.buf = Some(buf);
         cmd_parse_run_parser(&mut ps)
     }
@@ -241,17 +239,17 @@ pub unsafe fn cmd_parse_log_commands(cmds: *mut cmd_parse_commands, prefix: *con
                 .map(NonNull::as_ptr)
                 .enumerate()
             {
-                match (*arg).type_ {
+                match &mut (*arg).type_ {
                     cmd_parse_argument_type::String(string) => {
-                        log_debug!("{} {}:{}: {}", _s(prefix), i, j, _s(string))
+                        log_debug!("{} {}:{}: {}", _s(prefix), i, j, _s(*string))
                     }
                     cmd_parse_argument_type::Commands(commands) => {
                         let s = format_nul!("{} {}:{}", _s(prefix), i, j);
-                        cmd_parse_log_commands(commands, s);
+                        cmd_parse_log_commands(*commands, s);
                         free_(s);
                     }
                     cmd_parse_argument_type::ParsedCommands(cmdlist) => {
-                        let s = cmd_list_print(cmdlist, 0);
+                        let s = cmd_list_print(&mut **cmdlist, 0);
                         log_debug!("{} {}:{}: {}", _s(prefix), i, j, _s(s));
                         free_(s);
                     }
@@ -263,12 +261,12 @@ pub unsafe fn cmd_parse_log_commands(cmds: *mut cmd_parse_commands, prefix: *con
 
 pub unsafe fn cmd_parse_expand_alias(
     cmd: *mut cmd_parse_command,
-    pi: *mut cmd_parse_input,
+    pi: &mut cmd_parse_input,
     pr: &mut cmd_parse_result,
 ) -> i32 {
     let __func__ = c"cmd_parse_expand_alias".as_ptr();
     unsafe {
-        if (*pi)
+        if pi
             .flags
             .intersects(cmd_parse_input_flags::CMD_PARSE_NOALIAS)
         {
@@ -294,7 +292,7 @@ pub unsafe fn cmd_parse_expand_alias(
         log_debug!(
             "{}: {} alias {} = {}",
             _s(__func__),
-            (*pi).line,
+            pi.line,
             _s(name),
             _s(alias)
         );
@@ -327,20 +325,19 @@ pub unsafe fn cmd_parse_expand_alias(
         }
         cmd_parse_log_commands(cmds, __func__);
 
-        (*pi).flags |= cmd_parse_input_flags::CMD_PARSE_NOALIAS;
+        pi.flags |= cmd_parse_input_flags::CMD_PARSE_NOALIAS;
         cmd_parse_build_commands(cmds, pi, pr);
-        (*pi).flags &= !cmd_parse_input_flags::CMD_PARSE_NOALIAS;
+        pi.flags &= !cmd_parse_input_flags::CMD_PARSE_NOALIAS;
         1
     }
 }
 
 pub unsafe fn cmd_parse_build_command(
     cmd: *mut cmd_parse_command,
-    pi: *mut cmd_parse_input,
+    pi: &mut cmd_parse_input,
     pr: &mut cmd_parse_result,
 ) {
     unsafe {
-        let mut cause = null_mut();
         let mut values: *mut args_value = null_mut();
         let mut count: u32 = 0;
         let idx = 0u32;
@@ -354,10 +351,10 @@ pub unsafe fn cmd_parse_build_command(
             for arg in tailq_foreach(&raw mut (*cmd).arguments).map(NonNull::as_ptr) {
                 values = xrecallocarray__::<args_value>(values, count as usize, count as usize + 1)
                     .as_ptr();
-                match (*arg).type_ {
+                match &mut (*arg).type_ {
                     cmd_parse_argument_type::String(string) => {
                         (*values.add(count as usize)).type_ = args_type::ARGS_STRING;
-                        (*values.add(count as usize)).union_.string = xstrdup(string).as_ptr();
+                        (*values.add(count as usize)).union_.string = xstrdup(*string).as_ptr();
                     }
                     cmd_parse_argument_type::Commands(commands) => {
                         cmd_parse_build_commands(commands, pi, pr);
@@ -371,22 +368,25 @@ pub unsafe fn cmd_parse_build_command(
                     }
                     cmd_parse_argument_type::ParsedCommands(cmdlist) => {
                         (*values.add(count as _)).type_ = args_type::ARGS_COMMANDS;
-                        (*values.add(count as _)).union_.cmdlist = cmdlist;
+                        (*values.add(count as _)).union_.cmdlist = *cmdlist;
                         (*(*values.add(count as _)).union_.cmdlist).references += 1;
                     }
                 }
                 count += 1;
             }
 
-            let add = cmd_parse(values, count, (*pi).file, (*pi).line, &raw mut cause);
-            if add.is_null() {
-                *pr = Err(cmd_parse_get_error((*pi).file, (*pi).line, cause).as_ptr());
-                free_(cause);
-                break 'out;
+            match cmd_parse(values, count, pi.file, pi.line) {
+                Ok(add) => {
+                    let cmdlist = cmd_list_new();
+                    *pr = Ok(cmdlist);
+                    cmd_list_append(cmdlist, add);
+                }
+                Err(cause) => {
+                    *pr = Err(cmd_parse_get_error(pi.file, pi.line, cstr_to_str(cause)));
+                    free_(cause);
+                    break 'out;
+                }
             }
-            let cmdlist = cmd_list_new();
-            *pr = Ok(cmdlist);
-            cmd_list_append(cmdlist, add);
         }
         // out:
         for idx in 0..count {
@@ -397,8 +397,8 @@ pub unsafe fn cmd_parse_build_command(
 }
 
 pub unsafe fn cmd_parse_build_commands(
-    cmds: *mut cmd_parse_commands,
-    pi: *mut cmd_parse_input,
+    cmds: &mut cmd_parse_commands,
+    pi: &mut cmd_parse_input,
     pr: &mut cmd_parse_result,
 ) {
     unsafe {
@@ -420,13 +420,13 @@ pub unsafe fn cmd_parse_build_commands(
         // executed).
         let result = cmd_list_new();
         for cmd in tailq_foreach(cmds).map(NonNull::as_ptr) {
-            if !(*pi)
+            if !pi
                 .flags
                 .intersects(cmd_parse_input_flags::CMD_PARSE_ONEGROUP)
                 && (*cmd).line != line
             {
                 if !current.is_null() {
-                    cmd_parse_print_commands(pi, current);
+                    cmd_parse_print_commands(pi, &mut *current);
                     cmd_list_move(result, current);
                     cmd_list_free(current);
                 }
@@ -436,7 +436,7 @@ pub unsafe fn cmd_parse_build_commands(
                 current = cmd_list_new();
             }
             line = (*cmd).line;
-            line = (*pi).line;
+            pi.line = (*cmd).line;
 
             cmd_parse_build_command(cmd, pi, pr);
             match *pr {
@@ -453,7 +453,7 @@ pub unsafe fn cmd_parse_build_commands(
         }
 
         if !current.is_null() {
-            cmd_parse_print_commands(pi, current);
+            cmd_parse_print_commands(pi, &mut *current);
             cmd_list_move(result, current);
             cmd_list_free(current);
         }
@@ -468,15 +468,11 @@ pub unsafe fn cmd_parse_build_commands(
 
 pub unsafe fn cmd_parse_from_file(
     f: &mut std::io::BufReader<std::fs::File>,
-    mut pi: *mut cmd_parse_input,
+    pi: Option<&mut cmd_parse_input>,
 ) -> cmd_parse_result {
     unsafe {
         let mut input: cmd_parse_input = zeroed();
-
-        if pi.is_null() {
-            input = zeroed();
-            pi = &raw mut input;
-        }
+        let pi = pi.unwrap_or(&mut input);
 
         let cmds = match cmd_parse_do_file(f, pi) {
             Ok(cmds) => cmds,
@@ -491,24 +487,19 @@ pub unsafe fn cmd_parse_from_file(
     }
 }
 
-pub unsafe fn cmd_parse_from_string(s: &str, mut pi: *mut cmd_parse_input) -> cmd_parse_result {
+pub unsafe fn cmd_parse_from_string(s: &str, pi: Option<&mut cmd_parse_input>) -> cmd_parse_result {
     unsafe {
-        let mut input = MaybeUninit::<cmd_parse_input>::uninit();
-        let input = input.as_mut_ptr();
+        let mut input: cmd_parse_input = zeroed();
+        let pi = pi.unwrap_or(&mut input);
 
-        if pi.is_null() {
-            memset0(input);
-            pi = input;
-        }
-
-        (*pi).flags |= cmd_parse_input_flags::CMD_PARSE_ONEGROUP;
-        cmd_parse_from_buffer(s.as_bytes(), pi)
+        pi.flags |= cmd_parse_input_flags::CMD_PARSE_ONEGROUP;
+        cmd_parse_from_buffer(s.as_bytes(), Some(pi))
     }
 }
 
 pub unsafe fn cmd_parse_and_insert(
     s: &str,
-    pi: *mut cmd_parse_input,
+    pi: Option<&mut cmd_parse_input>,
     after: *mut cmdq_item,
     state: *mut cmdq_state,
     error: *mut *mut c_char,
@@ -535,7 +526,7 @@ pub unsafe fn cmd_parse_and_insert(
 
 pub unsafe fn cmd_parse_and_append(
     s: &str,
-    pi: *mut cmd_parse_input,
+    pi: Option<&mut cmd_parse_input>,
     c: *mut client,
     state: *mut cmdq_state,
     error: *mut *mut c_char,
@@ -560,14 +551,13 @@ pub unsafe fn cmd_parse_and_append(
     }
 }
 
-pub unsafe fn cmd_parse_from_buffer(buf: &[u8], mut pi: *mut cmd_parse_input) -> cmd_parse_result {
-    let mut input: cmd_parse_input;
-
+pub unsafe fn cmd_parse_from_buffer(
+    buf: &[u8],
+    pi: Option<&mut cmd_parse_input>,
+) -> cmd_parse_result {
     unsafe {
-        if pi.is_null() {
-            input = unsafe { zeroed() };
-            pi = &raw mut input;
-        }
+        let mut input: cmd_parse_input = zeroed();
+        let pi = pi.unwrap_or(&mut input);
 
         if buf.is_empty() {
             return Ok(cmd_list_new());
@@ -589,20 +579,16 @@ pub unsafe fn cmd_parse_from_buffer(buf: &[u8], mut pi: *mut cmd_parse_input) ->
 pub unsafe fn cmd_parse_from_arguments(
     values: *mut args_value,
     count: u32,
-    mut pi: *mut cmd_parse_input,
+    pi: Option<&mut cmd_parse_input>,
 ) -> cmd_parse_result {
     unsafe {
-        let mut input: cmd_parse_input;
-
-        if pi.is_null() {
-            input = zeroed();
-            pi = &raw mut input;
-        }
+        let mut input: cmd_parse_input = zeroed();
+        let pi = pi.unwrap_or(&mut input);
         let mut pr = Err(null_mut());
         let cmds = cmd_parse_new_commands();
 
         let mut cmd = xcalloc1::<cmd_parse_command>() as *mut cmd_parse_command;
-        (*cmd).line = (*pi).line;
+        (*cmd).line = pi.line;
         tailq_init(&raw mut (*cmd).arguments);
 
         for i in 0..count {
@@ -638,7 +624,7 @@ pub unsafe fn cmd_parse_from_arguments(
             if end != 0 {
                 tailq_insert_tail(cmds, cmd);
                 cmd = xcalloc1::<cmd_parse_command>();
-                (*cmd).line = (*pi).line;
+                (*cmd).line = pi.line;
                 tailq_init(&raw mut (*cmd).arguments);
             }
         }
@@ -721,28 +707,28 @@ mod lexer {
         type Item = Result<(Loc, Tok, Loc), LexicalError>;
 
         fn next(&mut self) -> Option<Result<(Loc, Tok, Loc), LexicalError>> {
-            unsafe { super::yylex_(self.ps.as_ptr()).map(|tok| Ok((0, tok, 0))) }
+            unsafe { super::yylex_(&mut *self.ps.as_ptr()).map(|tok| Ok((0, tok, 0))) }
         }
     }
 }
 
 macro_rules! yyerror {
    ($ps:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
-        crate::cmd_parse::yyerror_($ps, format_args!($fmt $(, $args)*))
+        crate::cmd_parse::yyerror_(&mut *$ps, format_args!($fmt $(, $args)*))
     };
 }
-unsafe fn yyerror_(ps: *mut cmd_parse_state, args: std::fmt::Arguments) -> i32 {
+unsafe fn yyerror_(ps: &mut cmd_parse_state, args: std::fmt::Arguments) -> i32 {
     unsafe {
-        let mut pi: *mut cmd_parse_input = (*ps).input;
-
-        if !(*ps).error.is_null() {
+        if !ps.error.is_null() {
             return 0;
         }
+
+        let mut pi = ps.input.as_mut().unwrap();
 
         let mut error = args.to_string();
         error.push('\0');
 
-        (*ps).error = cmd_parse_get_error((*pi).file, (*pi).line, error.as_ptr().cast()).as_ptr();
+        ps.error = cmd_parse_get_error(pi.file, pi.line, &error);
         0
     }
 }
@@ -772,79 +758,72 @@ unsafe fn yylex_append1(buf: *mut *mut c_char, len: *mut usize, add: c_char) {
     }
 }
 
-unsafe fn yylex_getc1(ps: *mut cmd_parse_state) -> i32 {
-    use std::io::Read;
+fn yylex_getc1(ps: &mut cmd_parse_state) -> i32 {
     let ch;
-    unsafe {
-        if let Some(f) = (*ps).f.as_mut() {
-            if let Some(c) = (*ps).unget_buf.take() {
-                return c;
-            }
-            let mut buf: [u8; 1] = [0];
-            match f.read(&mut buf) {
-                Ok(count) => {
-                    if count == 0 {
-                        ch = libc::EOF;
-                    } else if count == 1 {
-                        ch = buf[0] as i32;
-                    } else {
-                        panic!("unexecpted read size");
-                    }
-                }
-                Err(err) => {
-                    ch = libc::EOF;
-                }
-            }
-        } else if (*ps).off == (*ps).buf.unwrap().len() {
-            ch = libc::EOF;
-        } else {
-            ch = (*ps).buf.unwrap()[(*ps).off] as i32;
-            (*ps).off += 1;
+    if let Some(f) = ps.f.as_mut() {
+        if let Some(c) = ps.unget_buf.take() {
+            return c;
         }
+        let mut buf: [u8; 1] = [0];
+        match f.read(&mut buf) {
+            Ok(count) => {
+                if count == 0 {
+                    ch = libc::EOF;
+                } else if count == 1 {
+                    ch = buf[0] as i32;
+                } else {
+                    panic!("unexecpted read size");
+                }
+            }
+            Err(err) => {
+                ch = libc::EOF;
+            }
+        }
+    } else if ps.off == ps.buf.unwrap().len() {
+        ch = libc::EOF;
+    } else {
+        ch = ps.buf.unwrap()[ps.off] as i32;
+        ps.off += 1;
     }
 
     ch
 }
 
-unsafe fn yylex_ungetc(ps: *mut cmd_parse_state, ch: i32) {
-    unsafe {
-        if let Some(f) = (*ps).f.as_mut() {
-            (*ps).unget_buf = Some(ch)
-        } else if (*ps).off > 0 && ch != libc::EOF {
-            (*ps).off -= 1;
-        }
+fn yylex_ungetc(ps: &mut cmd_parse_state, ch: i32) {
+    if let Some(f) = ps.f.as_mut() {
+        ps.unget_buf = Some(ch)
+    } else if ps.off > 0 && ch != libc::EOF {
+        ps.off -= 1;
     }
 }
 
-unsafe fn yylex_getc(ps: *mut cmd_parse_state) -> i32 {
-    unsafe {
-        if (*ps).escapes != 0 {
-            (*ps).escapes -= 1;
+fn yylex_getc(ps: &mut cmd_parse_state) -> i32 {
+    if ps.escapes != 0 {
+        ps.escapes -= 1;
+        return '\\' as i32;
+    }
+    loop {
+        let ch = yylex_getc1(ps);
+        if ch == '\\' as i32 {
+            ps.escapes += 1;
+            continue;
+        }
+        if ch == '\n' as i32 && ps.escapes % 2 == 1 {
+            ps.input.as_mut().unwrap().line += 1;
+            ps.escapes -= 1;
+            continue;
+        }
+
+        if ps.escapes != 0 {
+            yylex_ungetc(ps, ch);
+            ps.escapes -= 1;
             return '\\' as i32;
         }
-        loop {
-            let ch = yylex_getc1(ps);
-            if ch == '\\' as i32 {
-                (*ps).escapes += 1;
-                continue;
-            }
-            if ch == '\n' as i32 && (*ps).escapes % 2 == 1 {
-                (*(*ps).input).line += 1;
-                (*ps).escapes -= 1;
-                continue;
-            }
-
-            if ((*ps).escapes != 0) {
-                yylex_ungetc(ps, ch);
-                (*ps).escapes -= 1;
-                return '\\' as i32;
-            }
-            return ch;
-        }
+        return ch;
     }
 }
 
-unsafe fn yylex_get_word(ps: *mut cmd_parse_state, mut ch: i32) -> *mut c_char {
+unsafe fn yylex_get_word(ps: &mut cmd_parse_state, mut ch: i32) -> *mut c_char {
     unsafe {
         let mut len = 0;
         let mut buf: *mut i8 = xmalloc(1).cast().as_ptr();
@@ -866,17 +845,17 @@ unsafe fn yylex_get_word(ps: *mut cmd_parse_state, mut ch: i32) -> *mut c_char {
 
 use lexer::Tok;
 
-unsafe fn yylex_(ps: *mut cmd_parse_state) -> Option<Tok> {
+unsafe fn yylex_(ps: &mut cmd_parse_state) -> Option<Tok> {
     unsafe {
         let mut next: i32 = 0;
 
-        if ((*ps).eol != 0) {
-            (*(*ps).input).line += 1;
+        if (ps.eol != 0) {
+            ps.input.as_mut().unwrap().line += 1;
         }
-        (*ps).eol = 0;
+        ps.eol = 0;
 
-        let mut condition = (*ps).condition;
-        (*ps).condition = 0;
+        let mut condition = ps.condition;
+        ps.condition = 0;
 
         loop {
             let mut ch = yylex_getc(ps);
@@ -887,10 +866,10 @@ unsafe fn yylex_(ps: *mut cmd_parse_state) -> Option<Tok> {
                  * newline. This keeps the parser simpler and avoids
                  * having to add a newline to each string.
                  */
-                if (*ps).eof != 0 {
+                if ps.eof != 0 {
                     break;
                 }
-                (*ps).eof = 1;
+                ps.eof = 1;
                 return Some(Tok::Newline);
             }
 
@@ -915,7 +894,7 @@ unsafe fn yylex_(ps: *mut cmd_parse_state) -> Option<Tok> {
                 /*
                  * End of line. Update the line number.
                  */
-                (*ps).eol = 1;
+                ps.eol = 1;
                 return Some(Tok::Newline);
             }
 
@@ -946,7 +925,7 @@ unsafe fn yylex_(ps: *mut cmd_parse_state) -> Option<Tok> {
                     next = yylex_getc(ps);
                 }
                 if next == '\n' as i32 {
-                    (*(*ps).input).line += 1;
+                    ps.input.as_mut().unwrap().line += 1;
                     return Some(Tok::Newline);
                 }
                 continue;
@@ -968,7 +947,7 @@ unsafe fn yylex_(ps: *mut cmd_parse_state) -> Option<Tok> {
                 if (*cp == b'\0' as i8) {
                     return Some(Tok::Token(NonNull::new(yylval_token)));
                 }
-                (*ps).condition = 1;
+                ps.condition = 1;
                 if streq_(yylval_token, "%hidden") {
                     free_(yylval_token);
                     return Some(Tok::Hidden);
@@ -993,9 +972,7 @@ unsafe fn yylex_(ps: *mut cmd_parse_state) -> Option<Tok> {
                 return Some(Tok::Error);
             }
 
-            /*
-             * Otherwise this is a token.
-             */
+            // Otherwise this is a token.
             let token = yylex_token(ps, ch);
             if token.is_null() {
                 return Some(Tok::Error);
@@ -1021,7 +998,7 @@ unsafe fn yylex_(ps: *mut cmd_parse_state) -> Option<Tok> {
     }
 }
 
-unsafe fn yylex_format(ps: *mut cmd_parse_state) -> Option<NonNull<c_char>> {
+unsafe fn yylex_format(ps: &mut cmd_parse_state) -> Option<NonNull<c_char>> {
     unsafe {
         let mut brackets = 1;
         let mut len = 0;
@@ -1070,17 +1047,11 @@ unsafe fn yylex_format(ps: *mut cmd_parse_state) -> Option<NonNull<c_char>> {
 }
 
 unsafe fn yylex_token_variable(
-    ps: *mut cmd_parse_state,
+    ps: &mut cmd_parse_state,
     buf: *mut *mut c_char,
     len: *mut usize,
 ) -> bool {
     unsafe {
-        // struct environ_entry	*envent;
-        // int			 ch, brackets = 0;
-        // char			 name[1024];
-        // size_t			 namelen = 0;
-        // const char		*value;
-
         let mut namelen: usize = 0;
         let mut name: [c_char; 1024] = [0; 1024];
         const sizeof_name: usize = 1024;
@@ -1140,7 +1111,7 @@ unsafe fn yylex_token_variable(
 }
 
 unsafe fn yylex_token_tilde(
-    ps: *mut cmd_parse_state,
+    ps: &mut cmd_parse_state,
     buf: *mut *mut c_char,
     len: *mut usize,
 ) -> bool {
@@ -1185,7 +1156,7 @@ unsafe fn yylex_token_tilde(
     }
 }
 
-unsafe fn yylex_token(ps: *mut cmd_parse_state, mut ch: i32) -> *mut c_char {
+unsafe fn yylex_token(ps: &mut cmd_parse_state, mut ch: i32) -> *mut c_char {
     unsafe {
         #[derive(Copy, Clone, Eq, PartialEq)]
         enum State {
@@ -1326,7 +1297,7 @@ unsafe fn yylex_token(ps: *mut cmd_parse_state, mut ch: i32) -> *mut c_char {
 }
 
 unsafe fn yylex_token_escape(
-    ps: *mut cmd_parse_state,
+    ps: &mut cmd_parse_state,
     buf: *mut *mut c_char,
     len: *mut usize,
 ) -> bool {

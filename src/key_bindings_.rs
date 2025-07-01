@@ -253,7 +253,7 @@ pub unsafe extern "C" fn key_bindings_add(
         }
         (*bd).cmdlist = cmdlist;
 
-        let s = cmd_list_print((*bd).cmdlist, 0);
+        let s = cmd_list_print(&mut *(*bd).cmdlist, 0);
         log_debug!(
             "{}: {:#x} {} = {}",
             "key_bindings_add",
@@ -666,7 +666,7 @@ pub unsafe extern "C" fn key_bindings_init() {
 
     unsafe {
         for default in defaults {
-            match cmd_parse_from_string(default, null_mut()) {
+            match cmd_parse_from_string(default, None) {
                 Err(error) => {
                     log_debug!("{}", _s(error));
                     fatalx_!("bad default key: {}", default);
