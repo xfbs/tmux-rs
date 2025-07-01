@@ -498,7 +498,7 @@ pub unsafe extern "C" fn options_array_set(
         }
 
         if OPTIONS_IS_COMMAND(o) {
-            let cmdlist = match cmd_parse_from_string(value, null_mut()) {
+            let cmdlist = match cmd_parse_from_string(cstr_to_str(value), null_mut()) {
                 Err(error) => {
                     if !cause.is_null() {
                         *cause = error;

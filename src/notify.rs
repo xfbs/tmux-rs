@@ -94,7 +94,7 @@ pub unsafe extern "C" fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut n
 
         if *(*ne).name == b'@' as c_char {
             let value = options_get_string(oo, (*ne).name);
-            match cmd_parse_from_string(value, null_mut()) {
+            match cmd_parse_from_string(cstr_to_str(value), null_mut()) {
                 Err(error) => {
                     log_debug!(
                         "{}: can't parse hook {}: {}",

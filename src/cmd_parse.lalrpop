@@ -306,8 +306,7 @@ pub Command: &'static mut cmd_parse_command = {
         tailq_init(&raw mut (*command).arguments);
 
         let mut arg: *mut cmd_parse_argument = xcalloc1::<cmd_parse_argument>();
-        (*arg).type_ = cmd_parse_argument_type::CMD_PARSE_STRING;
-        (*arg).string = transmute_ptr(arg2);
+        (*arg).type_ = cmd_parse_argument_type::String(transmute_ptr(arg2));
         tailq_insert_head(&raw mut (*command).arguments, arg);
 
         command
@@ -321,8 +320,7 @@ pub Command: &'static mut cmd_parse_command = {
         free_(arg3);
 
         let mut arg: *mut cmd_parse_argument = xcalloc1::<cmd_parse_argument>();
-        (*arg).type_ = cmd_parse_argument_type::CMD_PARSE_STRING;
-        (*arg).string = transmute_ptr(arg2);
+        (*arg).type_ = cmd_parse_argument_type::String(transmute_ptr(arg2));
         tailq_insert_head(&raw mut (*command).arguments, arg);
 
         command
@@ -443,20 +441,17 @@ pub Arguments: &'static mut cmd_parse_arguments = {
 pub Argument: &'static mut cmd_parse_argument = {
     <token:token> => unsafe {
       let value = xcalloc1::<cmd_parse_argument>();
-      (*value).type_ = cmd_parse_argument_type::CMD_PARSE_STRING;
-      (*value).string = transmute_ptr(token);
+      (*value).type_ = cmd_parse_argument_type::String(transmute_ptr(token));
       value
     },
     <equals:equals> => unsafe {
       let value = xcalloc1::<cmd_parse_argument>();
-      (*value).type_ = cmd_parse_argument_type::CMD_PARSE_STRING;
-      (*value).string = transmute_ptr(equals);
+      (*value).type_ = cmd_parse_argument_type::String(transmute_ptr(equals));
       value
     },
     "{" <statements:ArgumentStatements> => unsafe {
       let value = xcalloc1::<cmd_parse_argument>();
-      (*value).type_ = cmd_parse_argument_type::CMD_PARSE_COMMANDS;
-      (*value).commands = statements;
+      (*value).type_ = cmd_parse_argument_type::Commands(statements);
       value
     }
 };

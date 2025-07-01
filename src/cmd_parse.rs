@@ -56,20 +56,19 @@ pub struct cmd_parse_scope {
 }
 
 #[repr(i32)]
-#[derive(Copy, Clone, Eq, PartialEq)]
 pub enum cmd_parse_argument_type {
-    CMD_PARSE_STRING,
-    CMD_PARSE_COMMANDS,
-    CMD_PARSE_PARSED_COMMANDS,
+    /// string
+    String(*mut c_char),
+    /// commands
+    Commands(*mut cmd_parse_commands),
+    /// cmdlist
+    ParsedCommands(*mut cmd_list),
 }
 
 crate::compat::impl_tailq_entry!(cmd_parse_argument, entry, tailq_entry<cmd_parse_argument>);
 #[repr(C)]
 pub struct cmd_parse_argument {
     pub type_: cmd_parse_argument_type,
-    pub string: *mut c_char,
-    pub commands: *mut cmd_parse_commands,
-    pub cmdlist: *mut cmd_list,
 
     // #[entry]
     pub entry: tailq_entry<cmd_parse_argument>,
@@ -92,8 +91,7 @@ pub struct cmd_parse_state<'a> {
     pub f: Option<&'a mut std::io::BufReader<std::fs::File>>,
     pub unget_buf: Option<i32>,
 
-    pub buf: *const c_char,
-    pub len: usize,
+    pub buf: Option<&'a [u8]>,
     pub off: usize,
 
     pub condition: i32,
@@ -145,9 +143,9 @@ pub unsafe fn cmd_parse_print_commands(pi: *mut cmd_parse_input, cmdlist: *mut c
 pub unsafe fn cmd_parse_free_argument(arg: *mut cmd_parse_argument) {
     unsafe {
         match (*arg).type_ {
-            cmd_parse_argument_type::CMD_PARSE_STRING => free_((*arg).string),
-            cmd_parse_argument_type::CMD_PARSE_COMMANDS => cmd_parse_free_commands((*arg).commands),
-            cmd_parse_argument_type::CMD_PARSE_PARSED_COMMANDS => cmd_list_free((*arg).cmdlist),
+            cmd_parse_argument_type::String(string) => free_(string),
+            cmd_parse_argument_type::Commands(commands) => cmd_parse_free_commands(commands),
+            cmd_parse_argument_type::ParsedCommands(cmdlist) => cmd_list_free(cmdlist),
         }
         free_(arg);
     }
@@ -211,8 +209,8 @@ pub unsafe fn cmd_parse_run_parser(
     }
 }
 
-pub unsafe fn cmd_parse_do_file<'a>(
-    f: &'a mut std::io::BufReader<std::fs::File>,
+pub unsafe fn cmd_parse_do_file(
+    f: &mut std::io::BufReader<std::fs::File>,
     pi: *mut cmd_parse_input,
 ) -> Result<&'static mut cmd_parse_commands, *mut c_char> {
     unsafe {
@@ -224,16 +222,14 @@ pub unsafe fn cmd_parse_do_file<'a>(
 }
 
 pub unsafe fn cmd_parse_do_buffer(
-    buf: *const c_char,
-    len: usize,
+    buf: &[u8],
     pi: *mut cmd_parse_input,
 ) -> Result<&'static mut cmd_parse_commands, *mut c_char> {
     unsafe {
         let mut ps: Box<cmd_parse_state> = Box::new(zeroed());
 
         ps.input = pi;
-        ps.buf = buf;
-        ps.len = len;
+        ps.buf = Some(buf);
         cmd_parse_run_parser(&mut ps)
     }
 }
@@ -246,16 +242,16 @@ pub unsafe fn cmd_parse_log_commands(cmds: *mut cmd_parse_commands, prefix: *con
                 .enumerate()
             {
                 match (*arg).type_ {
-                    cmd_parse_argument_type::CMD_PARSE_STRING => {
-                        log_debug!("{} {}:{}: {}", _s(prefix), i, j, _s((*arg).string))
+                    cmd_parse_argument_type::String(string) => {
+                        log_debug!("{} {}:{}: {}", _s(prefix), i, j, _s(string))
                     }
-                    cmd_parse_argument_type::CMD_PARSE_COMMANDS => {
+                    cmd_parse_argument_type::Commands(commands) => {
                         let s = format_nul!("{} {}:{}", _s(prefix), i, j);
-                        cmd_parse_log_commands((*arg).commands, s);
+                        cmd_parse_log_commands(commands, s);
                         free_(s);
                     }
-                    cmd_parse_argument_type::CMD_PARSE_PARSED_COMMANDS => {
-                        let s = cmd_list_print((*arg).cmdlist, 0);
+                    cmd_parse_argument_type::ParsedCommands(cmdlist) => {
+                        let s = cmd_list_print(cmdlist, 0);
                         log_debug!("{} {}:{}: {}", _s(prefix), i, j, _s(s));
                         free_(s);
                     }
@@ -281,11 +277,15 @@ pub unsafe fn cmd_parse_expand_alias(
         *pr = Err(null_mut());
 
         let first = tailq_first(&raw mut (*cmd).arguments);
-        if first.is_null() || (*first).type_ != cmd_parse_argument_type::CMD_PARSE_STRING {
+        if first.is_null() || !matches!((*first).type_, cmd_parse_argument_type::String(_)) {
             *pr = Ok(cmd_list_new());
             return 1;
         }
-        let name = (*first).string;
+
+        let name = match (*first).type_ {
+            cmd_parse_argument_type::String(string) => string,
+            _ => panic!(),
+        };
 
         let alias = cmd_get_alias(name);
         if alias.is_null() {
@@ -299,7 +299,10 @@ pub unsafe fn cmd_parse_expand_alias(
             _s(alias)
         );
 
-        let result = cmd_parse_do_buffer(alias, strlen(alias), pi);
+        let result = cmd_parse_do_buffer(
+            std::slice::from_raw_parts(alias.cast(), libc::strlen(alias)),
+            pi,
+        );
         free_(alias);
         let cmds = match result {
             Ok(cmds) => cmds,
@@ -352,13 +355,12 @@ pub unsafe fn cmd_parse_build_command(
                 values = xrecallocarray__::<args_value>(values, count as usize, count as usize + 1)
                     .as_ptr();
                 match (*arg).type_ {
-                    cmd_parse_argument_type::CMD_PARSE_STRING => {
+                    cmd_parse_argument_type::String(string) => {
                         (*values.add(count as usize)).type_ = args_type::ARGS_STRING;
-                        (*values.add(count as usize)).union_.string =
-                            xstrdup((*arg).string).as_ptr();
+                        (*values.add(count as usize)).union_.string = xstrdup(string).as_ptr();
                     }
-                    cmd_parse_argument_type::CMD_PARSE_COMMANDS => {
-                        cmd_parse_build_commands((*arg).commands, pi, pr);
+                    cmd_parse_argument_type::Commands(commands) => {
+                        cmd_parse_build_commands(commands, pi, pr);
                         match *pr {
                             Err(_) => break 'out,
                             Ok(cmdlist) => {
@@ -367,9 +369,9 @@ pub unsafe fn cmd_parse_build_command(
                             }
                         }
                     }
-                    cmd_parse_argument_type::CMD_PARSE_PARSED_COMMANDS => {
+                    cmd_parse_argument_type::ParsedCommands(cmdlist) => {
                         (*values.add(count as _)).type_ = args_type::ARGS_COMMANDS;
-                        (*values.add(count as _)).union_.cmdlist = (*arg).cmdlist;
+                        (*values.add(count as _)).union_.cmdlist = cmdlist;
                         (*(*values.add(count as _)).union_.cmdlist).references += 1;
                     }
                 }
@@ -489,10 +491,7 @@ pub unsafe fn cmd_parse_from_file(
     }
 }
 
-pub unsafe fn cmd_parse_from_string(
-    s: *const c_char,
-    mut pi: *mut cmd_parse_input,
-) -> cmd_parse_result {
+pub unsafe fn cmd_parse_from_string(s: &str, mut pi: *mut cmd_parse_input) -> cmd_parse_result {
     unsafe {
         let mut input = MaybeUninit::<cmd_parse_input>::uninit();
         let input = input.as_mut_ptr();
@@ -503,12 +502,12 @@ pub unsafe fn cmd_parse_from_string(
         }
 
         (*pi).flags |= cmd_parse_input_flags::CMD_PARSE_ONEGROUP;
-        cmd_parse_from_buffer(s.cast(), strlen(s), pi)
+        cmd_parse_from_buffer(s.as_bytes(), pi)
     }
 }
 
 pub unsafe fn cmd_parse_and_insert(
-    s: *mut c_char,
+    s: &str,
     pi: *mut cmd_parse_input,
     after: *mut cmdq_item,
     state: *mut cmdq_state,
@@ -535,7 +534,7 @@ pub unsafe fn cmd_parse_and_insert(
 }
 
 pub unsafe fn cmd_parse_and_append(
-    s: *mut c_char,
+    s: &str,
     pi: *mut cmd_parse_input,
     c: *mut client,
     state: *mut cmdq_state,
@@ -561,11 +560,7 @@ pub unsafe fn cmd_parse_and_append(
     }
 }
 
-pub unsafe fn cmd_parse_from_buffer(
-    buf: *const c_void,
-    len: usize,
-    mut pi: *mut cmd_parse_input,
-) -> cmd_parse_result {
+pub unsafe fn cmd_parse_from_buffer(buf: &[u8], mut pi: *mut cmd_parse_input) -> cmd_parse_result {
     let mut input: cmd_parse_input;
 
     unsafe {
@@ -574,11 +569,11 @@ pub unsafe fn cmd_parse_from_buffer(
             pi = &raw mut input;
         }
 
-        if len == 0 {
+        if buf.is_empty() {
             return Ok(cmd_list_new());
         }
 
-        let cmds = match cmd_parse_do_buffer(buf.cast(), len, pi) {
+        let cmds = match cmd_parse_do_buffer(buf, pi) {
             Ok(cmds) => cmds,
             Err(cause) => {
                 return Err(cause);
@@ -626,17 +621,16 @@ pub unsafe fn cmd_parse_from_arguments(
                 }
                 if end == 0 || size != 0 {
                     let arg = xcalloc1::<cmd_parse_argument>() as *mut cmd_parse_argument;
-                    (*arg).type_ = cmd_parse_argument_type::CMD_PARSE_STRING;
-                    (*arg).string = copy;
+                    (*arg).type_ = cmd_parse_argument_type::String(copy);
                     tailq_insert_tail(&raw mut (*cmd).arguments, arg);
                 } else {
                     free_(copy);
                 }
             } else if (*values.add(i as usize)).type_ == args_type::ARGS_COMMANDS {
                 let arg = xcalloc1::<cmd_parse_argument>() as *mut cmd_parse_argument;
-                (*arg).type_ = cmd_parse_argument_type::CMD_PARSE_PARSED_COMMANDS;
-                (*arg).cmdlist = (*values.add(i as usize)).union_.cmdlist;
-                (*(*arg).cmdlist).references += 1;
+                let cmdlist = (*values.add(i as usize)).union_.cmdlist;
+                (*cmdlist).references += 1;
+                (*arg).type_ = cmd_parse_argument_type::ParsedCommands(cmdlist);
                 tailq_insert_tail(&raw mut (*cmd).arguments, arg);
             } else {
                 fatalx(c"unknown argument type");
@@ -801,10 +795,10 @@ unsafe fn yylex_getc1(ps: *mut cmd_parse_state) -> i32 {
                     ch = libc::EOF;
                 }
             }
-        } else if (*ps).off == (*ps).len {
+        } else if (*ps).off == (*ps).buf.unwrap().len() {
             ch = libc::EOF;
         } else {
-            ch = *(*ps).buf.add((*ps).off) as i32;
+            ch = (*ps).buf.unwrap()[(*ps).off] as i32;
             (*ps).off += 1;
         }
     }

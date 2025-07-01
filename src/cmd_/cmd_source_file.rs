@@ -97,8 +97,7 @@ unsafe extern "C" fn cmd_source_file_done(
             cmdq_error!(item, "{}: {}", _s(path), _s(strerror(error)));
         } else if bsize != 0 {
             if load_cfg_from_buffer(
-                bdata.cast(),
-                bsize,
+                std::slice::from_raw_parts(bdata, bsize),
                 path,
                 c,
                 (*cdata).after,

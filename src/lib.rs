@@ -3199,3 +3199,13 @@ pub(crate) fn i32_to_ordering(value: i32) -> std::cmp::Ordering {
         1.. => std::cmp::Ordering::Greater,
     }
 }
+
+pub(crate) unsafe fn cstr_to_str<'a>(ptr: *const c_char) -> &'a str {
+    unsafe {
+        let len = libc::strlen(ptr);
+
+        let bytes = std::slice::from_raw_parts(ptr.cast::<u8>(), len);
+
+        std::str::from_utf8(bytes).expect("bad cstr_to_str")
+    }
+}

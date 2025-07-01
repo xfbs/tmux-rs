@@ -183,9 +183,8 @@ pub unsafe fn load_cfg(
     }
 }
 
-pub unsafe extern "C" fn load_cfg_from_buffer(
-    buf: *mut c_void,
-    len: usize,
+pub unsafe fn load_cfg_from_buffer(
+    buf: &[u8],
     path: *const c_char,
     c: *mut client,
     item: *mut cmdq_item,
@@ -207,7 +206,7 @@ pub unsafe extern "C" fn load_cfg_from_buffer(
         pi.item = item;
         pi.c = c;
 
-        let cmdlist = match cmd_parse_from_buffer(buf, len, &raw mut pi) {
+        let cmdlist = match cmd_parse_from_buffer(buf, &raw mut pi) {
             Err(error) => {
                 cfg_add_cause!("{}", _s(error));
                 free_(error);

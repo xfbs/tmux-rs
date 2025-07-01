@@ -1567,7 +1567,7 @@ pub unsafe extern "C" fn window_customize_set_command_callback(
                 return 0;
             }
 
-            let cmdlist = match cmd_parse_from_string(s, null_mut()) {
+            let cmdlist = match cmd_parse_from_string(cstr_to_str(s), null_mut()) {
                 Ok(cmdlist) => cmdlist,
                 Err(pr_error) => {
                     error = pr_error;

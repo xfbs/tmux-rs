@@ -596,7 +596,8 @@ pub unsafe extern "C" fn control_read_callback(bufev: *mut bufferevent, data: *m
 
             let state =
                 cmdq_new_state(null_mut(), null_mut(), cmdq_state_flags::CMDQ_STATE_CONTROL);
-            let status = cmd_parse_and_append(line, null_mut(), c, state, &raw mut error);
+            let status =
+                cmd_parse_and_append(cstr_to_str(line), null_mut(), c, state, &raw mut error);
             if status == cmd_parse_status::CMD_PARSE_ERROR {
                 cmdq_append(c, cmdq_get_callback!(control_error, error).as_ptr());
             }

@@ -581,14 +581,10 @@ pub unsafe extern "C" fn menu_key_cb(
         }
         let state = cmdq_new_state(&raw mut (*md).fs, event, cmdq_state_flags::empty());
 
-        // TODO fix this cast
-        let status = cmd_parse_and_append(
-            (*item).command.as_ptr().cast_mut(),
-            null_mut(),
-            c,
-            state,
-            &raw mut error,
-        );
+        let ptr = (*item).command.as_ptr();
+        let cmd_str =
+            std::str::from_utf8(std::slice::from_raw_parts(ptr.cast(), libc::strlen(ptr))).unwrap();
+        let status = cmd_parse_and_append(cmd_str, null_mut(), c, state, &raw mut error);
         if status == cmd_parse_status::CMD_PARSE_ERROR {
             cmdq_append(c, cmdq_get_error(error).as_ptr());
             free_(error);
