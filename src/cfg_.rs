@@ -120,14 +120,22 @@ pub unsafe fn load_cfg(
         }
 
         log_debug!("loading {}", _s(path));
-        let f = fopen(path, c"rb".as_ptr());
-        if f.is_null() {
-            if errno!() == ENOENT && flags.intersects(cmd_parse_input_flags::CMD_PARSE_QUIET) {
-                return 0;
+        // let f = fopen(path, c"rb".as_ptr());
+        let path_name_buf = std::slice::from_raw_parts(path as *mut u8, strlen(path));
+        let path_name_str = std::str::from_utf8(path_name_buf).unwrap();
+
+        let mut f = match std::fs::OpenOptions::new().read(true).open(path_name_str) {
+            Ok(f) => std::io::BufReader::new(f),
+            Err(err) => {
+                let code = err.raw_os_error().unwrap();
+
+                if code == ENOENT && flags.intersects(cmd_parse_input_flags::CMD_PARSE_QUIET) {
+                    return 0;
+                }
+                cfg_add_cause!("{}: {}", _s(path), _s(strerror(code)));
+                return -1;
             }
-            cfg_add_cause!("{}: {}", _s(path), _s(strerror(errno!())));
-            return -1;
-        }
+        };
 
         let mut pi: cmd_parse_input = zeroed();
         pi.flags = flags;
@@ -136,8 +144,8 @@ pub unsafe fn load_cfg(
         pi.item = item;
         pi.c = c;
 
-        let pr = cmd_parse_from_file(f, &raw mut pi);
-        fclose(f);
+        let pr = cmd_parse_from_file(&mut f, &raw mut pi);
+        drop(f);
         if (*pr).status == cmd_parse_status::CMD_PARSE_ERROR {
             cfg_add_cause!("{}", _s((*pr).error));
             free((*pr).error as _);

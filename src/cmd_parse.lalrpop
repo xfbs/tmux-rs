@@ -9,7 +9,7 @@ use crate::cmd_parse::lexer::Tok;
 use crate::cmd_parse::lexer;
 
 // scope, stack, input, commands
-grammar(ps: NonNull<cmd_parse_state>);
+grammar<'a>(ps: NonNull<cmd_parse_state<'a>>);
 
 pub Lines: () = {
     => (),

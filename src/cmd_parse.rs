@@ -88,8 +88,9 @@ pub struct cmd_parse_command {
 pub type cmd_parse_commands = tailq_head<cmd_parse_command>;
 
 #[repr(C)]
-pub struct cmd_parse_state {
-    pub f: *mut FILE,
+pub struct cmd_parse_state<'a> {
+    pub f: Option<&'a mut std::io::BufReader<std::fs::File>>,
+    pub unget_buf: Option<i32>,
 
     pub buf: *const c_char,
     pub len: usize,
@@ -210,14 +211,14 @@ pub unsafe fn cmd_parse_run_parser(
     }
 }
 
-pub unsafe fn cmd_parse_do_file(
-    f: *mut FILE,
+pub unsafe fn cmd_parse_do_file<'a>(
+    f: &'a mut std::io::BufReader<std::fs::File>,
     pi: *mut cmd_parse_input,
 ) -> Result<&'static mut cmd_parse_commands, *mut c_char> {
     unsafe {
         let mut ps: Box<cmd_parse_state> = Box::new(zeroed());
         ps.input = pi;
-        ps.f = f;
+        ps.f = Some(f);
         cmd_parse_run_parser(&mut ps)
     }
 }
@@ -466,8 +467,8 @@ pub unsafe fn cmd_parse_build_commands(
     }
 }
 
-pub unsafe fn cmd_parse_from_file(
-    f: *mut FILE,
+pub unsafe fn cmd_parse_from_file<'a>(
+    f: &'a mut std::io::BufReader<std::fs::File>,
     mut pi: *mut cmd_parse_input,
 ) -> *mut cmd_parse_result {
     unsafe {
@@ -676,11 +677,11 @@ mod lexer {
     use core::ffi::c_char;
     use core::ptr::NonNull;
 
-    pub struct Lexer {
-        ps: NonNull<cmd_parse_state>,
+    pub struct Lexer<'a> {
+        ps: NonNull<cmd_parse_state<'a>>,
     }
-    impl Lexer {
-        pub fn new(ps: NonNull<cmd_parse_state>) -> Self {
+    impl<'a> Lexer<'a> {
+        pub fn new(ps: NonNull<cmd_parse_state<'a>>) -> Self {
             Lexer { ps }
         }
     }
@@ -734,7 +735,7 @@ mod lexer {
         // Not possible
     }
     type Loc = usize;
-    impl Iterator for Lexer {
+    impl Iterator for Lexer<'_> {
         type Item = Result<(Loc, Tok, Loc), LexicalError>;
 
         fn next(&mut self) -> Option<Result<(Loc, Tok, Loc), LexicalError>> {
@@ -790,10 +791,28 @@ unsafe fn yylex_append1(buf: *mut *mut c_char, len: *mut usize, add: c_char) {
 }
 
 unsafe fn yylex_getc1(ps: *mut cmd_parse_state) -> i32 {
+    use std::io::Read;
     let ch;
     unsafe {
-        if !(*ps).f.is_null() {
-            ch = libc::fgetc((*ps).f);
+        if let Some(f) = (*ps).f.as_mut() {
+            if let Some(c) = (*ps).unget_buf.take() {
+                return c;
+            }
+            let mut buf: [u8; 1] = [0];
+            match f.read(&mut buf) {
+                Ok(count) => {
+                    if count == 0 {
+                        ch = libc::EOF;
+                    } else if count == 1 {
+                        ch = buf[0] as i32;
+                    } else {
+                        panic!("unexecpted read size");
+                    }
+                }
+                Err(err) => {
+                    ch = libc::EOF;
+                }
+            }
         } else if (*ps).off == (*ps).len {
             ch = libc::EOF;
         } else {
@@ -801,13 +820,14 @@ unsafe fn yylex_getc1(ps: *mut cmd_parse_state) -> i32 {
             (*ps).off += 1;
         }
     }
+
     ch
 }
 
 unsafe fn yylex_ungetc(ps: *mut cmd_parse_state, ch: i32) {
     unsafe {
-        if !(*ps).f.is_null() {
-            libc::ungetc(ch, (*ps).f);
+        if let Some(f) = (*ps).f.as_mut() {
+            (*ps).unget_buf = Some(ch)
         } else if (*ps).off > 0 && ch != libc::EOF {
             (*ps).off -= 1;
         }
