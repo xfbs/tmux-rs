@@ -30,9 +30,9 @@ struct cmd_command_prompt_prompt {
     prompt: *mut c_char,
 }
 
-struct cmd_command_prompt_cdata {
+struct cmd_command_prompt_cdata<'a> {
     item: *mut cmdq_item,
-    state: *mut args_command_state,
+    state: *mut args_command_state<'a>,
 
     flags: i32,
     prompt_type: prompt_type,

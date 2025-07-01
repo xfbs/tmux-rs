@@ -34,10 +34,10 @@ pub static mut cmd_run_shell_entry: cmd_entry = cmd_entry {
 };
 
 #[repr(C)]
-pub struct cmd_run_shell_data {
+pub struct cmd_run_shell_data<'a> {
     pub client: *mut client,
     pub cmd: *mut c_char,
-    pub state: *mut args_command_state,
+    pub state: *mut args_command_state<'a>,
     pub cwd: *mut c_char,
     pub item: *mut cmdq_item,
     pub s: *mut session,

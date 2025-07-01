@@ -906,7 +906,7 @@ pub unsafe fn cmdq_error_(item: *mut cmdq_item, args: std::fmt::Arguments) {
         let cmd = (*item).cmd;
         let mut tmp = null_mut();
         let mut file = null();
-        let mut line = 0u32;
+        let mut line = AtomicU32::new(0);
 
         let mut msg = args.to_string();
         msg.push('\0');
@@ -915,8 +915,8 @@ pub unsafe fn cmdq_error_(item: *mut cmdq_item, args: std::fmt::Arguments) {
         log_debug!("cmdq_error: {}", _s(msg));
 
         if c.is_null() {
-            cmd_get_source(cmd, &raw mut file, &raw mut line);
-            cfg_add_cause!("{}:{}: {}", _s(file), line, _s(msg));
+            cmd_get_source(cmd, &raw mut file, &line);
+            cfg_add_cause!("{}:{}: {}", _s(file), line.into_inner(), _s(msg));
         } else if (*c).session.is_null() || (*c).flags.intersects(client_flag::CONTROL) {
             server_add_message!("{} message: {}", _s((*c).name), _s(msg));
             if !(*c).flags.intersects(client_flag::UTF8) {

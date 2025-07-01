@@ -28,9 +28,9 @@ pub static mut cmd_display_panes_entry: cmd_entry = cmd_entry {
 };
 
 #[repr(C)]
-pub struct cmd_display_panes_data {
+pub struct cmd_display_panes_data<'a> {
     pub item: *mut cmdq_item,
-    pub state: *mut args_command_state,
+    pub state: *mut args_command_state<'a>,
 }
 
 unsafe extern "C" fn cmd_display_panes_args_parse(

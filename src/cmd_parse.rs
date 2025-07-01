@@ -15,6 +15,9 @@
 use crate::*;
 
 use std::io::Read as _;
+use std::ops::BitAndAssign as _;
+use std::ops::BitOrAssign as _;
+use std::sync::atomic::Ordering;
 
 use lalrpop_util::lalrpop_mod;
 use libc::_SC_MB_LEN_MAX;
@@ -97,7 +100,7 @@ pub struct cmd_parse_state<'a> {
     pub condition: i32,
     pub eol: i32,
     pub eof: i32,
-    pub input: Option<&'a mut cmd_parse_input>,
+    pub input: Option<&'a cmd_parse_input<'a>>,
     pub escapes: u32,
 
     pub error: *mut c_char,
@@ -107,17 +110,18 @@ pub struct cmd_parse_state<'a> {
     pub stack: tailq_head<cmd_parse_scope>,
 }
 
-pub unsafe fn cmd_parse_get_error(file: *const c_char, line: u32, error: &str) -> *mut c_char {
-    if file.is_null() {
-        let mut s = error.to_string();
-        s.push('\0');
-        s.leak().as_mut_ptr().cast()
-    } else {
-        format_nul!("{}:{}: {}", _s(file), line, error)
+pub unsafe fn cmd_parse_get_error(file: Option<&str>, line: u32, error: &str) -> *mut c_char {
+    match file {
+        None => {
+            let mut s = error.to_string();
+            s.push('\0');
+            s.leak().as_mut_ptr().cast()
+        }
+        Some(file) => format_nul!("{}:{}: {}", file, line, error),
     }
 }
 
-pub fn cmd_parse_print_commands(pi: &mut cmd_parse_input, cmdlist: &mut cmd_list) {
+pub fn cmd_parse_print_commands(pi: &cmd_parse_input, cmdlist: &mut cmd_list) {
     if pi.item.is_null()
         || !pi
             .flags
@@ -129,10 +133,16 @@ pub fn cmd_parse_print_commands(pi: &mut cmd_parse_input, cmdlist: &mut cmd_list
     let s = cmd_list_print(cmdlist, 0);
 
     unsafe {
-        if !pi.file.is_null() {
-            cmdq_print!(pi.item, "{}:{}: {}", _s(pi.file), pi.line, _s(s));
+        if let Some(file) = pi.file {
+            cmdq_print!(
+                pi.item,
+                "{}:{}: {}",
+                file,
+                pi.line.load(Ordering::SeqCst),
+                _s(s)
+            );
         } else {
-            cmdq_print!(pi.item, "{}: {}", pi.line, _s(s));
+            cmdq_print!(pi.item, "{}: {}", pi.line.load(Ordering::SeqCst), _s(s));
         }
         free_(s)
     }
@@ -207,9 +217,9 @@ pub unsafe fn cmd_parse_run_parser(
     }
 }
 
-pub unsafe fn cmd_parse_do_file(
-    f: &mut std::io::BufReader<std::fs::File>,
-    pi: &mut cmd_parse_input,
+pub unsafe fn cmd_parse_do_file<'a>(
+    f: &'a mut std::io::BufReader<std::fs::File>,
+    pi: &'a cmd_parse_input<'a>,
 ) -> Result<&'static mut cmd_parse_commands, *mut c_char> {
     unsafe {
         let mut ps: Box<cmd_parse_state> = Box::new(zeroed());
@@ -219,9 +229,9 @@ pub unsafe fn cmd_parse_do_file(
     }
 }
 
-pub unsafe fn cmd_parse_do_buffer(
-    buf: &[u8],
-    pi: &mut cmd_parse_input,
+pub unsafe fn cmd_parse_do_buffer<'a>(
+    buf: &'a [u8],
+    pi: &'a cmd_parse_input<'a>,
 ) -> Result<&'static mut cmd_parse_commands, *mut c_char> {
     unsafe {
         let mut ps: Box<cmd_parse_state> = Box::new(zeroed());
@@ -259,9 +269,9 @@ pub unsafe fn cmd_parse_log_commands(cmds: *mut cmd_parse_commands, prefix: *con
     }
 }
 
-pub unsafe fn cmd_parse_expand_alias(
+pub unsafe fn cmd_parse_expand_alias<'a>(
     cmd: *mut cmd_parse_command,
-    pi: &mut cmd_parse_input,
+    pi: &'a cmd_parse_input<'a>,
     pr: &mut cmd_parse_result,
 ) -> i32 {
     let __func__ = c"cmd_parse_expand_alias".as_ptr();
@@ -292,7 +302,7 @@ pub unsafe fn cmd_parse_expand_alias(
         log_debug!(
             "{}: {} alias {} = {}",
             _s(__func__),
-            pi.line,
+            pi.line.load(Ordering::SeqCst),
             _s(name),
             _s(alias)
         );
@@ -325,16 +335,16 @@ pub unsafe fn cmd_parse_expand_alias(
         }
         cmd_parse_log_commands(cmds, __func__);
 
-        pi.flags |= cmd_parse_input_flags::CMD_PARSE_NOALIAS;
+        (&pi.flags).bitor_assign(cmd_parse_input_flags::CMD_PARSE_NOALIAS);
         cmd_parse_build_commands(cmds, pi, pr);
-        pi.flags &= !cmd_parse_input_flags::CMD_PARSE_NOALIAS;
+        (&pi.flags).bitand_assign(!cmd_parse_input_flags::CMD_PARSE_NOALIAS);
         1
     }
 }
 
 pub unsafe fn cmd_parse_build_command(
     cmd: *mut cmd_parse_command,
-    pi: &mut cmd_parse_input,
+    pi: &cmd_parse_input,
     pr: &mut cmd_parse_result,
 ) {
     unsafe {
@@ -375,14 +385,18 @@ pub unsafe fn cmd_parse_build_command(
                 count += 1;
             }
 
-            match cmd_parse(values, count, pi.file, pi.line) {
+            match cmd_parse(values, count, pi.file, pi.line.load(Ordering::SeqCst)) {
                 Ok(add) => {
                     let cmdlist = cmd_list_new();
                     *pr = Ok(cmdlist);
                     cmd_list_append(cmdlist, add);
                 }
                 Err(cause) => {
-                    *pr = Err(cmd_parse_get_error(pi.file, pi.line, cstr_to_str(cause)));
+                    *pr = Err(cmd_parse_get_error(
+                        pi.file,
+                        pi.line.load(Ordering::SeqCst),
+                        cstr_to_str(cause),
+                    ));
                     free_(cause);
                     break 'out;
                 }
@@ -398,7 +412,7 @@ pub unsafe fn cmd_parse_build_command(
 
 pub unsafe fn cmd_parse_build_commands(
     cmds: &mut cmd_parse_commands,
-    pi: &mut cmd_parse_input,
+    pi: &cmd_parse_input,
     pr: &mut cmd_parse_result,
 ) {
     unsafe {
@@ -436,7 +450,7 @@ pub unsafe fn cmd_parse_build_commands(
                 current = cmd_list_new();
             }
             line = (*cmd).line;
-            pi.line = (*cmd).line;
+            pi.line.store((*cmd).line, Ordering::SeqCst);
 
             cmd_parse_build_command(cmd, pi, pr);
             match *pr {
@@ -466,20 +480,15 @@ pub unsafe fn cmd_parse_build_commands(
     }
 }
 
-pub unsafe fn cmd_parse_from_file(
-    f: &mut std::io::BufReader<std::fs::File>,
-    pi: Option<&mut cmd_parse_input>,
+pub unsafe fn cmd_parse_from_file<'a>(
+    f: &'a mut std::io::BufReader<std::fs::File>,
+    pi: Option<&'a cmd_parse_input<'a>>,
 ) -> cmd_parse_result {
     unsafe {
         let mut input: cmd_parse_input = zeroed();
-        let pi = pi.unwrap_or(&mut input);
+        let pi = pi.unwrap_or(&input);
 
-        let cmds = match cmd_parse_do_file(f, pi) {
-            Ok(cmds) => cmds,
-            Err(cause) => {
-                return Err(cause);
-            }
-        };
+        let cmds = cmd_parse_do_file(f, pi)?;
         let mut pr = Err(null_mut());
         cmd_parse_build_commands(cmds, pi, &mut pr);
         cmd_parse_free_commands(cmds);
@@ -487,19 +496,19 @@ pub unsafe fn cmd_parse_from_file(
     }
 }
 
-pub unsafe fn cmd_parse_from_string(s: &str, pi: Option<&mut cmd_parse_input>) -> cmd_parse_result {
+pub unsafe fn cmd_parse_from_string(s: &str, pi: Option<&cmd_parse_input>) -> cmd_parse_result {
     unsafe {
         let mut input: cmd_parse_input = zeroed();
-        let pi = pi.unwrap_or(&mut input);
+        let pi = pi.unwrap_or(&input);
 
-        pi.flags |= cmd_parse_input_flags::CMD_PARSE_ONEGROUP;
+        (&pi.flags).bitor_assign(cmd_parse_input_flags::CMD_PARSE_ONEGROUP);
         cmd_parse_from_buffer(s.as_bytes(), Some(pi))
     }
 }
 
 pub unsafe fn cmd_parse_and_insert(
     s: &str,
-    pi: Option<&mut cmd_parse_input>,
+    pi: Option<&cmd_parse_input>,
     after: *mut cmdq_item,
     state: *mut cmdq_state,
     error: *mut *mut c_char,
@@ -526,7 +535,7 @@ pub unsafe fn cmd_parse_and_insert(
 
 pub unsafe fn cmd_parse_and_append(
     s: &str,
-    pi: Option<&mut cmd_parse_input>,
+    pi: Option<&cmd_parse_input>,
     c: *mut client,
     state: *mut cmdq_state,
     error: *mut *mut c_char,
@@ -551,10 +560,7 @@ pub unsafe fn cmd_parse_and_append(
     }
 }
 
-pub unsafe fn cmd_parse_from_buffer(
-    buf: &[u8],
-    pi: Option<&mut cmd_parse_input>,
-) -> cmd_parse_result {
+pub unsafe fn cmd_parse_from_buffer(buf: &[u8], pi: Option<&cmd_parse_input>) -> cmd_parse_result {
     unsafe {
         let mut input: cmd_parse_input = zeroed();
         let pi = pi.unwrap_or(&mut input);
@@ -588,7 +594,7 @@ pub unsafe fn cmd_parse_from_arguments(
         let cmds = cmd_parse_new_commands();
 
         let mut cmd = xcalloc1::<cmd_parse_command>() as *mut cmd_parse_command;
-        (*cmd).line = pi.line;
+        (*cmd).line = pi.line.load(Ordering::SeqCst);
         tailq_init(&raw mut (*cmd).arguments);
 
         for i in 0..count {
@@ -624,7 +630,7 @@ pub unsafe fn cmd_parse_from_arguments(
             if end != 0 {
                 tailq_insert_tail(cmds, cmd);
                 cmd = xcalloc1::<cmd_parse_command>();
-                (*cmd).line = pi.line;
+                (*cmd).line = pi.line.load(Ordering::SeqCst);
                 tailq_init(&raw mut (*cmd).arguments);
             }
         }
@@ -728,7 +734,7 @@ unsafe fn yyerror_(ps: &mut cmd_parse_state, args: std::fmt::Arguments) -> i32 {
         let mut error = args.to_string();
         error.push('\0');
 
-        ps.error = cmd_parse_get_error(pi.file, pi.line, &error);
+        ps.error = cmd_parse_get_error(pi.file, pi.line.load(Ordering::SeqCst), &error);
         0
     }
 }
@@ -809,7 +815,11 @@ fn yylex_getc(ps: &mut cmd_parse_state) -> i32 {
             continue;
         }
         if ch == '\n' as i32 && ps.escapes % 2 == 1 {
-            ps.input.as_mut().unwrap().line += 1;
+            ps.input
+                .as_mut()
+                .unwrap()
+                .line
+                .fetch_add(1, Ordering::SeqCst);
             ps.escapes -= 1;
             continue;
         }
@@ -850,7 +860,11 @@ unsafe fn yylex_(ps: &mut cmd_parse_state) -> Option<Tok> {
         let mut next: i32 = 0;
 
         if (ps.eol != 0) {
-            ps.input.as_mut().unwrap().line += 1;
+            ps.input
+                .as_mut()
+                .unwrap()
+                .line
+                .fetch_add(1, Ordering::SeqCst);
         }
         ps.eol = 0;
 
@@ -925,7 +939,11 @@ unsafe fn yylex_(ps: &mut cmd_parse_state) -> Option<Tok> {
                     next = yylex_getc(ps);
                 }
                 if next == '\n' as i32 {
-                    ps.input.as_mut().unwrap().line += 1;
+                    ps.input
+                        .as_mut()
+                        .unwrap()
+                        .line
+                        .fetch_add(1, Ordering::SeqCst);
                     return Some(Tok::Newline);
                 }
                 continue;

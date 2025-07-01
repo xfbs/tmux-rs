@@ -452,18 +452,12 @@ pub unsafe extern "C" fn cmd_get_group(cmd: *mut cmd) -> c_uint {
     unsafe { (*cmd).group }
 }
 
-pub unsafe extern "C" fn cmd_get_source(
-    cmd: *mut cmd,
-    file: *mut *const c_char,
-    line: *mut c_uint,
-) {
+pub unsafe fn cmd_get_source(cmd: *mut cmd, file: *mut *const c_char, line: &AtomicU32) {
     unsafe {
         if !file.is_null() {
             *file = (*cmd).file;
         }
-        if !line.is_null() {
-            *line = (*cmd).line;
-        }
+        line.store((*cmd).line, std::sync::atomic::Ordering::SeqCst);
     }
 }
 
@@ -568,7 +562,7 @@ pub unsafe fn cmd_find(name: *const c_char) -> Result<*mut cmd_entry, *mut c_cha
 pub unsafe fn cmd_parse(
     values: *mut args_value,
     count: c_uint,
-    file: *const c_char,
+    file: Option<&str>,
     line: c_uint,
 ) -> Result<*mut cmd, *mut c_char> {
     unsafe {
@@ -594,8 +588,10 @@ pub unsafe fn cmd_parse(
         (*cmd).entry = entry;
         (*cmd).args = args;
 
-        if !file.is_null() {
-            (*cmd).file = xstrdup(file).as_ptr();
+        if let Some(file) = file {
+            let mut file = file.to_string();
+            file.push('\0');
+            (*cmd).file = file.leak().as_mut_ptr().cast();
         }
         (*cmd).line = line;
 

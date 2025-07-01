@@ -100,6 +100,12 @@ where
 {
     unsafe { (*T::entry_mut(this)).rbe_left }
 }
+pub unsafe fn rb_left_const<T, D>(this: *const T) -> *const T
+where
+    T: GetEntry<T, D>,
+{
+    unsafe { (*T::entry(this)).rbe_left }
+}
 
 #[inline]
 pub unsafe fn is_left_sibling<T, D>(this: *mut T) -> bool
@@ -127,6 +133,12 @@ where
     T: GetEntry<T, D>,
 {
     unsafe { (*T::entry_mut(this)).rbe_right }
+}
+pub unsafe fn rb_right_const<T, D>(this: *const T) -> *const T
+where
+    T: GetEntry<T, D>,
+{
+    unsafe { (*T::entry(this)).rbe_right }
 }
 
 macro_rules! rb_parent {
@@ -255,6 +267,27 @@ macro_rules! RB_GENERATE {
     };
 }
 pub(crate) use RB_GENERATE;
+
+pub unsafe fn rb_minmax_const<T, D>(head: *const rb_head<T>, val: i32) -> *const T
+where
+    T: GetEntry<T, D>,
+{
+    unsafe {
+        let mut tmp: *const T = (*head).rbh_root;
+        let mut parent: *const T = null_mut();
+
+        while !tmp.is_null() {
+            parent = tmp;
+            if val < 0 {
+                tmp = rb_left_const(tmp);
+            } else {
+                tmp = rb_right_const(tmp);
+            }
+        }
+
+        parent
+    }
+}
 
 pub unsafe fn rb_minmax<T, D>(head: *mut rb_head<T>, val: i32) -> *mut T
 where
@@ -583,6 +616,32 @@ where
     T: GetEntry<T, D>,
 {
     unsafe { rb_minmax(head, 1) }
+}
+
+pub unsafe fn rb_foreach_const<T, D>(head: *const rb_head<T>) -> ConstRbForwardIterator<T, D>
+where
+    T: GetEntry<T, D>,
+{
+    ConstRbForwardIterator {
+        // TODO being a bit lazy reusing NonNull
+        curr: NonNull::new(unsafe { rb_minmax_const(head, -1).cast_mut() }),
+        _phantom: std::marker::PhantomData,
+    }
+}
+pub struct ConstRbForwardIterator<T, D> {
+    curr: Option<NonNull<T>>,
+    _phantom: std::marker::PhantomData<D>,
+}
+
+impl<T, D> Iterator for ConstRbForwardIterator<T, D>
+where
+    T: GetEntry<T, D>,
+{
+    type Item = NonNull<T>;
+    fn next(&mut self) -> Option<Self::Item> {
+        let curr = self.curr?.as_ptr();
+        std::mem::replace(&mut self.curr, NonNull::new(unsafe { rb_next(curr) }))
+    }
 }
 
 pub unsafe fn rb_foreach<T, D>(head: *mut rb_head<T>) -> RbForwardIterator<T, D>

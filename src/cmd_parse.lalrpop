@@ -1,5 +1,7 @@
 use crate::*;
 
+use std::sync::atomic::Ordering;
+
 use crate::transmute_ptr;
 
 use crate::cmd_parse::{cmd_parse_argument_type, yystype_elif, cmd_parse_state, cmd_parse_command};
@@ -71,11 +73,11 @@ pub Expanded: NonNull<c_char> = {
       let flags = format_flags::FORMAT_NOJOBS;
 
       let mut fs = MaybeUninit::<cmd_find_state>::uninit();
-      let fsp = if cmd_find_valid_state(&raw mut (*pi).fs) {
-        &raw mut (*pi).fs
+      let fsp = if cmd_find_valid_state(&raw const (*pi).fs) {
+        &(*pi).fs
       } else {
         cmd_find_from_client(fs.as_mut_ptr(), c, 0);
-        fs.as_mut_ptr()
+        fs.as_ptr()
       };
       let mut ft = format_create(null_mut(), (*pi).item, FORMAT_NONE, flags);
       format_defaults(ft, c, NonNull::new((*fsp).s), NonNull::new((*fsp).wl), NonNull::new((*fsp).wp));
@@ -91,7 +93,7 @@ pub OptionalAssignment: () = { Assignment? };
 
 pub Assignment: () = {
     <arg1:equals> => unsafe {
-      let flags = (*(*ps.as_ptr()).input.as_mut().unwrap()).flags;
+      let flags = &(*(*ps.as_ptr()).input.as_ref().unwrap()).flags;
       if !flags.intersects(cmd_parse_input_flags::CMD_PARSE_PARSEONLY) && (*ps.as_ptr()).scope.as_ref().is_none_or(|scope| scope.flag != 0) {
         environ_put(global_environ, transmute_ptr(arg1), 0);
       }
@@ -101,7 +103,7 @@ pub Assignment: () = {
 
 pub HiddenAssignment: () = {
     "%hidden" <arg2:equals> => unsafe {
-      let flags = (*(*ps.as_ptr()).input.as_mut().unwrap()).flags;
+      let flags = &(*(*ps.as_ptr()).input.as_ref().unwrap()).flags;
       if !flags.intersects(cmd_parse_input_flags::CMD_PARSE_PARSEONLY) && (*ps.as_ptr()).scope.as_ref().is_none_or(|scope|scope .flag != 0) {
         environ_put(global_environ, transmute_ptr(arg2), ENVIRON_HIDDEN);
       }
@@ -301,13 +303,13 @@ pub Commands: &'static mut cmd_parse_commands = {
 pub Command: &'static mut cmd_parse_command = {
     Assignment => unsafe {
         let mut command = xcalloc1::<cmd_parse_command>();
-        (*command).line = (*(*ps.as_ptr()).input.as_mut().unwrap()).line;
+        (*command).line = (*(*ps.as_ptr()).input.as_mut().unwrap()).line.load(Ordering::SeqCst);
         tailq_init(&raw mut (*command).arguments);
         command
     },
     <_arg1:OptionalAssignment> <arg2:token> => unsafe {
         let mut command = xcalloc1::<cmd_parse_command>();
-        (*command).line = (*(*ps.as_ptr()).input.as_mut().unwrap()).line;
+        (*command).line = (*(*ps.as_ptr()).input.as_mut().unwrap()).line.load(Ordering::SeqCst);
         tailq_init(&raw mut (*command).arguments);
 
         let mut arg: *mut cmd_parse_argument = xcalloc1::<cmd_parse_argument>();
@@ -318,7 +320,7 @@ pub Command: &'static mut cmd_parse_command = {
     },
     <_arg1:OptionalAssignment> <arg2:token> <arg3:Arguments> => unsafe {
         let mut command = xcalloc1::<cmd_parse_command>();
-        (*command).line = (*(*ps.as_ptr()).input.as_mut().unwrap()).line;
+        (*command).line = (*(*ps.as_ptr()).input.as_mut().unwrap()).line.load(Ordering::SeqCst);
         tailq_init(&raw mut (*command).arguments);
 
         tailq_concat(&raw mut (*command).arguments, arg3);

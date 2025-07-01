@@ -46,10 +46,10 @@ pub struct args {
 }
 
 #[repr(C)]
-pub struct args_command_state {
+pub struct args_command_state<'a> {
     pub cmdlist: *mut cmd_list,
     pub cmd: *mut c_char,
-    pub pi: cmd_parse_input,
+    pub pi: cmd_parse_input<'a>,
 }
 
 crate::compat::RB_GENERATE!(args_tree, args_entry, entry, discr_entry, args_cmp);
@@ -761,21 +761,20 @@ pub unsafe extern "C" fn args_make_commands_now(
 }
 
 /// Save bits to make a command later.
-pub unsafe extern "C" fn args_make_commands_prepare(
+pub unsafe extern "C" fn args_make_commands_prepare<'a>(
     self_: *mut cmd,
     item: *mut cmdq_item,
     idx: u32,
     default_command: *const c_char,
     wait: i32,
     expand: i32,
-) -> *mut args_command_state {
+) -> *mut args_command_state<'a> {
     let __func__ = "args_make_commands_prepare";
     unsafe {
         let args = cmd_get_args(self_);
         let target = cmdq_get_target(item);
         let tc = cmdq_get_target_client(item);
 
-        let mut file = null();
         let state = xcalloc1::<args_command_state>() as *mut args_command_state;
 
         let cmd = if idx < (*args).count {
@@ -803,9 +802,10 @@ pub unsafe extern "C" fn args_make_commands_prepare(
         if wait != 0 {
             (*state).pi.item = item;
         }
-        cmd_get_source(self_, &raw mut file, &raw mut (*state).pi.line);
+        let mut file = null();
+        cmd_get_source(self_, &raw mut file, &(*state).pi.line);
         if !file.is_null() {
-            (*state).pi.file = xstrdup(file).as_ptr();
+            (*state).pi.file = Some(cstr_to_str(xstrdup(file).as_ptr()));
         }
         (*state).pi.c = tc;
         if !(*state).pi.c.is_null() {
@@ -872,7 +872,14 @@ pub unsafe extern "C" fn args_make_commands_free(state: *mut args_command_state)
         if !(*state).pi.c.is_null() {
             server_client_unref((*state).pi.c);
         }
-        free((*state).pi.file as *mut c_void); // TODO casting away const
+        free_(
+            (*state)
+                .pi
+                .file
+                .map(|p| p.as_ptr())
+                .unwrap_or_default()
+                .cast_mut(),
+        ); // TODO casting away const
         free_((*state).cmd);
         free_(state);
     }

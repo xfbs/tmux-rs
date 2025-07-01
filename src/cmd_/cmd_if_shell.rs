@@ -32,9 +32,9 @@ pub static mut cmd_if_shell_entry: cmd_entry = cmd_entry {
 };
 
 #[repr(C)]
-pub struct cmd_if_shell_data {
-    pub cmd_if: *mut args_command_state,
-    pub cmd_else: *mut args_command_state,
+pub struct cmd_if_shell_data<'a> {
+    pub cmd_if: *mut args_command_state<'a>,
+    pub cmd_else: *mut args_command_state<'a>,
 
     pub client: *mut client,
     pub item: *mut cmdq_item,

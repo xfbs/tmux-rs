@@ -322,6 +322,36 @@ where
     }
 }
 
+pub unsafe fn tailq_foreach_const<T, D>(
+    head: *const tailq_head<T>,
+) -> ConstTailqForwardIterator<T, D>
+where
+    T: Entry<T, D>,
+{
+    unsafe {
+        ConstTailqForwardIterator {
+            curr: NonNull::new((*head).tqh_first),
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+// this implementation can be used in place of safe and non-safe
+pub struct ConstTailqForwardIterator<T, D> {
+    curr: Option<NonNull<T>>,
+    _phantom: std::marker::PhantomData<D>,
+}
+impl<T, D> Iterator for ConstTailqForwardIterator<T, D>
+where
+    T: Entry<T, D>,
+{
+    type Item = NonNull<T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let curr = self.curr?.as_ptr();
+        std::mem::replace(&mut self.curr, NonNull::new(unsafe { tailq_next(curr) }))
+    }
+}
+
 pub unsafe fn tailq_foreach<T, D>(head: *mut tailq_head<T>) -> TailqForwardIterator<T, D>
 where
     T: Entry<T, D>,

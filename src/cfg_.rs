@@ -89,7 +89,7 @@ pub unsafe extern "C" fn start_cfg() {
         i = 0;
         while i < cfg_nfiles {
             load_cfg(
-                *cfg_files.add(i as usize),
+                cstr_to_str(*cfg_files.add(i as usize)),
                 c,
                 null_mut(),
                 null_mut(),
@@ -107,7 +107,7 @@ pub unsafe extern "C" fn start_cfg() {
 }
 
 pub unsafe fn load_cfg(
-    path: *const c_char,
+    path: &str,
     c: *mut client,
     item: *mut cmdq_item,
     current: *mut cmd_find_state,
@@ -119,12 +119,8 @@ pub unsafe fn load_cfg(
             *new_item = null_mut();
         }
 
-        log_debug!("loading {}", _s(path));
-        // let f = fopen(path, c"rb".as_ptr());
-        let path_name_buf = std::slice::from_raw_parts(path as *mut u8, strlen(path));
-        let path_name_str = std::str::from_utf8(path_name_buf).unwrap();
-
-        let mut f = match std::fs::OpenOptions::new().read(true).open(path_name_str) {
+        log_debug!("loading {}", path);
+        let mut f = match std::fs::OpenOptions::new().read(true).open(path) {
             Ok(f) => std::io::BufReader::new(f),
             Err(err) => {
                 let code = err.raw_os_error().unwrap();
@@ -132,15 +128,15 @@ pub unsafe fn load_cfg(
                 if code == ENOENT && flags.intersects(cmd_parse_input_flags::CMD_PARSE_QUIET) {
                     return 0;
                 }
-                cfg_add_cause!("{}: {}", _s(path), _s(strerror(code)));
+                cfg_add_cause!("{}: {}", path, _s(strerror(code)));
                 return -1;
             }
         };
 
         let mut pi: cmd_parse_input = zeroed();
-        pi.flags = flags;
-        pi.file = path;
-        pi.line = 1;
+        pi.flags = flags.into();
+        pi.file = Some(path);
+        pi.line = AtomicU32::new(1);
         pi.item = item;
         pi.c = c;
 
@@ -164,7 +160,12 @@ pub unsafe fn load_cfg(
         } else {
             cmdq_new_state(null_mut(), null_mut(), cmdq_state_flags::empty())
         };
-        cmdq_add_format!(state, c"current_file".as_ptr(), "{}", _s(pi.file));
+        cmdq_add_format!(
+            state,
+            c"current_file".as_ptr(),
+            "{}",
+            pi.file.as_ref().unwrap()
+        );
 
         let mut new_item0 = cmdq_get_command(cmdlist, state);
         if !item.is_null() {
@@ -185,7 +186,7 @@ pub unsafe fn load_cfg(
 
 pub unsafe fn load_cfg_from_buffer(
     buf: &[u8],
-    path: *const c_char,
+    path: &str,
     c: *mut client,
     item: *mut cmdq_item,
     current: *mut cmd_find_state,
@@ -197,12 +198,12 @@ pub unsafe fn load_cfg_from_buffer(
             *new_item = null_mut();
         }
 
-        log_debug!("loading {}", _s(path));
+        log_debug!("loading {}", path);
 
         let mut pi: cmd_parse_input = zeroed();
-        pi.flags = flags;
-        pi.file = path;
-        pi.line = 1;
+        pi.flags = flags.into();
+        pi.file = Some(path);
+        pi.line = AtomicU32::new(1);
         pi.item = item;
         pi.c = c;
 
@@ -225,7 +226,12 @@ pub unsafe fn load_cfg_from_buffer(
         } else {
             cmdq_new_state(null_mut(), null_mut(), cmdq_state_flags::empty())
         };
-        cmdq_add_format!(state, c"current_file".as_ptr(), "{}", _s(pi.file));
+        cmdq_add_format!(
+            state,
+            c"current_file".as_ptr(),
+            "{}",
+            pi.file.as_ref().unwrap()
+        );
 
         let mut new_item0 = cmdq_get_command(cmdlist, state);
         if !item.is_null() {

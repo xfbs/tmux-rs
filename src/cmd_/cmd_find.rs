@@ -18,7 +18,7 @@ use libc::strcmp;
 use crate::compat::{
     queue::{tailq_first, tailq_foreach},
     strlcat,
-    tree::{rb_foreach, rb_max, rb_min},
+    tree::{rb_foreach, rb_foreach_const, rb_max, rb_min},
 };
 
 static mut cmd_find_session_table: [[*const c_char; 2]; 1] = [[null_mut(), null_mut()]];
@@ -656,7 +656,7 @@ pub unsafe extern "C" fn cmd_find_empty_state(fs: *mut cmd_find_state) -> i32 {
     }
 }
 
-pub unsafe extern "C" fn cmd_find_valid_state(fs: *mut cmd_find_state) -> bool {
+pub unsafe extern "C" fn cmd_find_valid_state(fs: *const cmd_find_state) -> bool {
     unsafe {
         if (*fs).s.is_null() || (*fs).wl.is_null() || (*fs).w.is_null() || (*fs).wp.is_null() {
             return false;
@@ -666,9 +666,9 @@ pub unsafe extern "C" fn cmd_find_valid_state(fs: *mut cmd_find_state) -> bool {
             return false;
         }
 
-        let mut wl = null_mut();
-        for wl_ in rb_foreach(&raw mut (*(*fs).s).windows) {
-            wl = wl_.as_ptr();
+        let mut wl: *const winlink = null();
+        for wl_ in rb_foreach_const(&raw const (*(*fs).s).windows) {
+            wl = wl_.as_ptr().cast_const();
             if (*wl).window == (*fs).w && wl == (*fs).wl {
                 break;
             }

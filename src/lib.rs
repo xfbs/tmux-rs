@@ -58,6 +58,7 @@ use core::{
     ops::ControlFlow,
     ptr::{NonNull, null, null_mut},
 };
+use std::sync::atomic::AtomicU32;
 
 use libc::{
     FILE, REG_EXTENDED, REG_ICASE, SEEK_END, SEEK_SET, SIGHUP, WEXITSTATUS, WIFEXITED, WIFSIGNALED,
@@ -2028,12 +2029,39 @@ bitflags::bitflags! {
     }
 }
 
-#[repr(C)]
-struct cmd_parse_input {
-    flags: cmd_parse_input_flags,
+#[repr(transparent)]
+struct AtomicCmdParseInputFlags(std::sync::atomic::AtomicI32);
+impl From<cmd_parse_input_flags> for AtomicCmdParseInputFlags {
+    fn from(value: cmd_parse_input_flags) -> Self {
+        Self(std::sync::atomic::AtomicI32::new(value.bits()))
+    }
+}
+impl AtomicCmdParseInputFlags {
+    fn intersects(&self, rhs: cmd_parse_input_flags) -> bool {
+        cmd_parse_input_flags::from_bits(self.0.load(std::sync::atomic::Ordering::SeqCst))
+            .unwrap()
+            .intersects(rhs)
+    }
+}
+impl std::ops::BitOrAssign<cmd_parse_input_flags> for &AtomicCmdParseInputFlags {
+    fn bitor_assign(&mut self, rhs: cmd_parse_input_flags) {
+        self.0
+            .fetch_or(rhs.bits(), std::sync::atomic::Ordering::SeqCst);
+    }
+}
+impl std::ops::BitAndAssign<cmd_parse_input_flags> for &AtomicCmdParseInputFlags {
+    fn bitand_assign(&mut self, rhs: cmd_parse_input_flags) {
+        self.0
+            .fetch_and(rhs.bits(), std::sync::atomic::Ordering::SeqCst);
+    }
+}
 
-    file: *const c_char,
-    line: u32,
+#[repr(C)]
+struct cmd_parse_input<'a> {
+    flags: AtomicCmdParseInputFlags,
+
+    file: Option<&'a str>,
+    line: AtomicU32, // work around borrow checker
 
     item: *mut cmdq_item,
     c: *mut client,
