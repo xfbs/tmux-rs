@@ -498,18 +498,17 @@ pub unsafe extern "C" fn options_array_set(
         }
 
         if OPTIONS_IS_COMMAND(o) {
-            let pr = cmd_parse_from_string(value, null_mut());
-            match (*pr).status {
-                cmd_parse_status::CMD_PARSE_ERROR => {
+            let cmdlist = match cmd_parse_from_string(value, null_mut()) {
+                Err(error) => {
                     if !cause.is_null() {
-                        *cause = (*pr).error;
+                        *cause = error;
                     } else {
-                        free_((*pr).error);
+                        free_(error);
                     }
                     return -1;
                 }
-                cmd_parse_status::CMD_PARSE_SUCCESS => (),
-            }
+                Ok(cmdlist) => cmdlist,
+            };
 
             let mut a = options_array_item(o, idx);
             if a.is_null() {
@@ -517,7 +516,7 @@ pub unsafe extern "C" fn options_array_set(
             } else {
                 options_value_free(o, &raw mut (*a).value);
             }
-            (*a).value.cmdlist = (*pr).cmdlist;
+            (*a).value.cmdlist = cmdlist;
             return 0;
         }
 

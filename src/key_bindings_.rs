@@ -666,13 +666,16 @@ pub unsafe extern "C" fn key_bindings_init() {
 
     unsafe {
         for default in defaults {
-            let pr = cmd_parse_from_string(default, null_mut());
-            if (*pr).status != cmd_parse_status::CMD_PARSE_SUCCESS {
-                log_debug!("{}", _s((*pr).error));
-                fatalx_!("bad default key: {}", _s(default));
+            match cmd_parse_from_string(default, null_mut()) {
+                Err(error) => {
+                    log_debug!("{}", _s(error));
+                    fatalx_!("bad default key: {}", _s(default));
+                }
+                Ok(cmdlist) => {
+                    cmdq_append(null_mut(), cmdq_get_command(cmdlist, null_mut()));
+                    cmd_list_free(cmdlist);
+                }
             }
-            cmdq_append(null_mut(), cmdq_get_command((*pr).cmdlist, null_mut()));
-            cmd_list_free((*pr).cmdlist);
         }
         cmdq_append(
             null_mut(),

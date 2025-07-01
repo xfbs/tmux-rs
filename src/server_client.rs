@@ -3019,7 +3019,6 @@ pub unsafe extern "C" fn server_client_dispatch_command(c: *mut client, imsg: *m
         let mut argc = 0;
         let mut argv: *mut *mut c_char = null_mut();
         let mut cause: *mut c_char = null_mut();
-        let mut pr = null_mut();
         let mut values = null_mut();
         let mut new_item = null_mut();
 
@@ -3052,24 +3051,23 @@ pub unsafe extern "C" fn server_client_dispatch_command(c: *mut client, imsg: *m
             }
 
             values = args_from_vector(argc, argv);
-            pr = cmd_parse_from_arguments(values, argc as u32, null_mut());
-            match (*pr).status {
-                cmd_parse_status::CMD_PARSE_ERROR => {
-                    cause = (*pr).error;
+            let cmdlist = match cmd_parse_from_arguments(values, argc as u32, null_mut()) {
+                Ok(cmdlist) => cmdlist,
+                Err(err) => {
+                    cause = err;
                     break 'error;
                 }
-                cmd_parse_status::CMD_PARSE_SUCCESS => (),
-            }
+            };
             args_free_values(values, argc as u32);
             free_(values);
             cmd_free_argv(argc, argv);
 
             if (*c).flags.intersects(client_flag::READONLY)
-                && !cmd_list_all_have((*pr).cmdlist, cmd_flag::CMD_READONLY)
+                && !cmd_list_all_have(cmdlist, cmd_flag::CMD_READONLY)
             {
                 new_item = cmdq_get_callback!(server_client_read_only, null_mut()).as_ptr();
             } else {
-                new_item = cmdq_get_command((*pr).cmdlist, null_mut());
+                new_item = cmdq_get_command(cmdlist, null_mut());
             }
             cmdq_append(c, new_item);
             cmdq_append(
@@ -3077,7 +3075,7 @@ pub unsafe extern "C" fn server_client_dispatch_command(c: *mut client, imsg: *m
                 cmdq_get_callback!(server_client_command_done, null_mut()).as_ptr(),
             );
 
-            cmd_list_free((*pr).cmdlist);
+            cmd_list_free(cmdlist);
             return;
         }
         // error:

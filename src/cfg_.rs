@@ -146,13 +146,16 @@ pub unsafe fn load_cfg(
 
         let pr = cmd_parse_from_file(&mut f, &raw mut pi);
         drop(f);
-        if (*pr).status == cmd_parse_status::CMD_PARSE_ERROR {
-            cfg_add_cause!("{}", _s((*pr).error));
-            free((*pr).error as _);
-            return -1;
-        }
+        let cmdlist = match pr {
+            Err(error) => {
+                cfg_add_cause!("{}", _s(error));
+                free_(error);
+                return -1;
+            }
+            Ok(cmdlist) => cmdlist,
+        };
         if flags.intersects(cmd_parse_input_flags::CMD_PARSE_PARSEONLY) {
-            cmd_list_free((*pr).cmdlist);
+            cmd_list_free(cmdlist);
             return 0;
         }
 
@@ -163,13 +166,13 @@ pub unsafe fn load_cfg(
         };
         cmdq_add_format!(state, c"current_file".as_ptr(), "{}", _s(pi.file));
 
-        let mut new_item0 = cmdq_get_command((*pr).cmdlist, state);
+        let mut new_item0 = cmdq_get_command(cmdlist, state);
         if !item.is_null() {
             new_item0 = cmdq_insert_after(item, new_item0);
         } else {
             new_item0 = cmdq_append(null_mut(), new_item0);
         }
-        cmd_list_free((*pr).cmdlist);
+        cmd_list_free(cmdlist);
         cmdq_free_state(state);
 
         if !new_item.is_null() {
@@ -204,14 +207,17 @@ pub unsafe extern "C" fn load_cfg_from_buffer(
         pi.item = item;
         pi.c = c;
 
-        let pr = cmd_parse_from_buffer(buf, len, &raw mut pi);
-        if (*pr).status == cmd_parse_status::CMD_PARSE_ERROR {
-            cfg_add_cause!("{}", _s((*pr).error));
-            free((*pr).error as _);
-            return -1;
-        }
+        let cmdlist = match cmd_parse_from_buffer(buf, len, &raw mut pi) {
+            Err(error) => {
+                cfg_add_cause!("{}", _s(error));
+                free_(error);
+                return -1;
+            }
+            Ok(cmdlist) => cmdlist,
+        };
+
         if flags.intersects(cmd_parse_input_flags::CMD_PARSE_PARSEONLY) {
-            cmd_list_free((*pr).cmdlist);
+            cmd_list_free(cmdlist);
             return 0;
         }
 
@@ -222,13 +228,13 @@ pub unsafe extern "C" fn load_cfg_from_buffer(
         };
         cmdq_add_format!(state, c"current_file".as_ptr(), "{}", _s(pi.file));
 
-        let mut new_item0 = cmdq_get_command((*pr).cmdlist, state);
+        let mut new_item0 = cmdq_get_command(cmdlist, state);
         if !item.is_null() {
             new_item0 = cmdq_insert_after(item, new_item0);
         } else {
             new_item0 = cmdq_append(null_mut(), new_item0);
         }
-        cmd_list_free((*pr).cmdlist);
+        cmd_list_free(cmdlist);
         cmdq_free_state(state);
 
         if !new_item.is_null() {

@@ -27,7 +27,7 @@
 #![warn(clippy::shadow_same)]
 #![allow(clippy::shadow_unrelated)] // TODO, 134 instances probably some latent bugs
 #![allow(clippy::shadow_reuse)] // 145 instances
-#![allow(clippy::manual_is_multiple_of)]
+#![warn(clippy::manual_is_multiple_of)]
 
 mod compat;
 use compat::strtonum;
@@ -2007,17 +2007,14 @@ enum cmd_retval {
 
 // Command parse result.
 #[repr(i32)]
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Default, Eq, PartialEq)]
 enum cmd_parse_status {
+    #[default]
     CMD_PARSE_ERROR,
     CMD_PARSE_SUCCESS,
 }
-#[repr(C)]
-struct cmd_parse_result {
-    status: cmd_parse_status,
-    cmdlist: *mut cmd_list,
-    error: *mut c_char,
-}
+
+type cmd_parse_result = Result<*mut cmd_list /* cmdlist */, *mut c_char /* error */>;
 
 bitflags::bitflags! {
     #[repr(transparent)]

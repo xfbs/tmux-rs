@@ -852,12 +852,12 @@ pub unsafe extern "C" fn args_make_commands(
         let pr = cmd_parse_from_string(cmd, &raw mut (*state).pi);
         free_(cmd);
 
-        match (*pr).status {
-            cmd_parse_status::CMD_PARSE_ERROR => {
-                *error = (*pr).error;
+        match pr {
+            Err(err) => {
+                *error = err;
                 null_mut()
             }
-            cmd_parse_status::CMD_PARSE_SUCCESS => (*pr).cmdlist,
+            Ok(cmdlist) => cmdlist,
         }
     }
 }

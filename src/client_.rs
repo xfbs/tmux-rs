@@ -258,7 +258,6 @@ pub unsafe extern "C-unwind" fn client_main(
     feat: i32,
 ) -> i32 {
     unsafe {
-        let mut pr: *mut cmd_parse_result = null_mut();
         let mut data: *mut msg_command = null_mut();
         let mut fd = 0;
         let mut cwd: *const c_char = null_mut();
@@ -284,17 +283,19 @@ pub unsafe extern "C-unwind" fn client_main(
             msg = msgtype::MSG_COMMAND;
 
             values = args_from_vector(argc, argv);
-            pr = cmd_parse_from_arguments(values, argc as u32, null_mut());
-            if (*pr).status == cmd_parse_status::CMD_PARSE_SUCCESS {
-                if cmd_list_any_have((*pr).cmdlist, cmd_flag::CMD_STARTSERVER) {
-                    flags |= client_flag::STARTSERVER;
+            match cmd_parse_from_arguments(values, argc as u32, null_mut()) {
+                Ok(cmdlist) => {
+                    if cmd_list_any_have(cmdlist, cmd_flag::CMD_STARTSERVER) {
+                        flags |= client_flag::STARTSERVER;
+                    }
+                    cmd_list_free(cmdlist);
                 }
-                cmd_list_free((*pr).cmdlist);
-            } else {
-                free((*pr).error as _);
+                Err(error) => {
+                    free_(error);
+                }
             }
             args_free_values(values, argc as u32);
-            free(values as _);
+            free_(values);
         }
 
         client_proc = proc_start(c"client");

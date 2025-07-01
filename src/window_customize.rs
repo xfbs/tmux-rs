@@ -1567,16 +1567,15 @@ pub unsafe extern "C" fn window_customize_set_command_callback(
                 return 0;
             }
 
-            let pr = cmd_parse_from_string(s, null_mut());
-            match (*pr).status {
-                cmd_parse_status::CMD_PARSE_ERROR => {
-                    error = (*pr).error;
+            let cmdlist = match cmd_parse_from_string(s, null_mut()) {
+                Ok(cmdlist) => cmdlist,
+                Err(pr_error) => {
+                    error = pr_error;
                     break 'fail;
                 }
-                cmd_parse_status::CMD_PARSE_SUCCESS => (),
-            }
+            };
             cmd_list_free((*bd).cmdlist);
-            (*bd).cmdlist = (*pr).cmdlist;
+            (*bd).cmdlist = cmdlist;
 
             mode_tree_build((*data).data);
             mode_tree_draw((*data).data);

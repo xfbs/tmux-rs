@@ -76,16 +76,16 @@ unsafe extern "C" fn cmd_bind_key_exec(self_: *mut cmd, item: *mut cmdq_item) ->
             cmd_parse_from_arguments(args_values(args).add(1), count - 1, null_mut())
         };
 
-        match (*pr).status {
-            cmd_parse_status::CMD_PARSE_ERROR => {
-                cmdq_error!(item, "{}", _s((*pr).error));
-                free_((*pr).error);
-                return cmd_retval::CMD_RETURN_ERROR;
+        match pr {
+            Err(error) => {
+                cmdq_error!(item, "{}", _s(error));
+                free_(error);
+                cmd_retval::CMD_RETURN_ERROR
             }
-            cmd_parse_status::CMD_PARSE_SUCCESS => (),
+            Ok(cmdlist) => {
+                key_bindings_add(tablename, key, note, repeat, cmdlist);
+                cmd_retval::CMD_RETURN_NORMAL
+            }
         }
-        key_bindings_add(tablename, key, note, repeat, (*pr).cmdlist);
-
-        cmd_retval::CMD_RETURN_NORMAL
     }
 }
