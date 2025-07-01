@@ -106,7 +106,7 @@ pub unsafe extern "C" fn start_cfg() {
     }
 }
 
-pub unsafe extern "C" fn load_cfg(
+pub unsafe fn load_cfg(
     path: *const c_char,
     c: *mut client,
     item: *mut cmdq_item,
