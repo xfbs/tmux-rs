@@ -2,7 +2,7 @@
 layout: post
 title: Introducing tmux-rs (draft)
 author: Collin Richards
-date: 2025-06-25
+date: 2025-07-03
 ---
 For the 6 months or so I've been quietly porting tmux from C to Rust. I've recently reached a big milestone: the code base is now 100% (unsafe) Rust.
 
@@ -10,28 +10,26 @@ I'd like to share the process of porting the original codebase from ~67,000 line
 
 You might be asking: why did you rewrite tmux in Rust? And yeah, I don't really have a good reason. It's a hobby project. Like gardening, but with more segfaults.
 
-{% toc %}
-
 - [Starting with C2Rust](#starting-with-c2rust)
 - [Build process](#build-process)
-- [Interesting Bugs](#interesting-bugs)
-- C vs Rust semantics
-  - pointers
-  - intrusive data structures
-  - goto
-- Development Process
-    - vim
-    - ai (llms)
-    - debuggers
-- interesting inflection points
-- Misc. translation bugs
-
+- [Interesting bugs](#interesting-bugs)
+  - [Bug 1](#bug-1)
+  - [Bug 2](#bug-2)
+- [C Patterns in Rust](#c-patterns-in-rust)
+  - [Raw pointers](#raw-pointers)
+  - [Considering Goto](#considering-goto)
+  - [Intrusive Macros](#intrusive-macros)
+  - [Yacc shaving](#yacc-shaving)
+- [Development process](#development-process)
+  - [Vim](#vim)
+  - [Linters](#linters)
+  - [AI Tools](#ai-tools)
 
 ## Starting with C2Rust
 
 I started this project as a way of trying out [C2Rust](https://github.com/immunant/c2rust), a C to Rust transpiler. The tool was a little tricky to set up, but once it was running the generated output was a successful port of the tmux codebase in Rust.
 
-Despite the generated code working, it was basically unmaintainable and 3x larger than the original C. You wouldn't want to touch it with a 10 foot pole. Here's an example of the input and output:
+Despite the generated code working, it was basically unmaintainable and 3x larger than the original C. You wouldn't want to touch it with a 10 foot pole. Here's an example of the output:
 
 ```c
 // original C code
@@ -85,42 +83,11 @@ pub unsafe extern "C" fn colour_palette_get(
 }
 ```
 
-This is a pretty simple example, but things can get a lot worse. My main concern was losing information from named constants like `COLOUR_FLAG_256`. Having that translated to `0x1000000` is an example of the kind of information loss that frequently happens during the transpilation process.
+This snippet isn't that bad, but things can get a lot worse. My main concern was losing information from named constants like `COLOUR_FLAG_256`. Having that translated to `0x1000000` isn't acceptable. There are also a lot of casts to `libc::c_int` polluting the code as well. I suspect this is to handle [C's integer promotion rules](https://stackoverflow.com/a/46073296). Most of them are completely unnecessary when operating on literals in Rust.
 
-There are a lot of casts to `libc::c_int` polluting the code as well. I suspect this is to handle [C's integer promotion rules](https://stackoverflow.com/a/46073296). Most of them are completely unnecessary when operating on literals in Rust.
+I spent quite a lot of time manually refactoring the shitty Rust code to less shitty Rust code, but I kept finding myself having to look at the original C code to understand the program's intent. After manually refactoring many files this way I gave up with this approach. I threw away all of the C2Rust output and decided I would translate all of the files into Rust manually from C.
 
-I spent quite a lot of time manually refactoring the shitty Rust code to less shitty Rust code, but I kept finding myself having to look at the original C code to understand the program's intent. Here's a cleaned up Rust version of that function. Still not perfect, but much better in my opinion:
-
-```rust
-/// Get a colour from a palette.
-pub unsafe fn colour_palette_get(p: *const colour_palette, mut c: i32) -> i32 {
-    unsafe {
-        if p.is_null() {
-            return -1;
-        } else if (90..=97).contains(&c) {
-            c = 8 + c - 90;
-        } else if c & COLOUR_FLAG_256 != 0 {
-            c &= !COLOUR_FLAG_256;
-        } else if c >= 8 {
-            return -1;
-        }
-
-        let c = c as usize;
-
-        if !(*p).palette.is_null() && *(*p).palette.add(c) != -1 {
-            *(*p).palette.add(c)
-        } else if !(*p).default_palette.is_null() && *(*p).default_palette.add(c) != -1 {
-            *(*p).default_palette.add(c)
-        } else {
-            -1
-        }
-    }
-}
-```
-
-After manually refactoring many files this way I gave up with this approach. I threw away all of the C2Rust output and decided I would translate all of the files into Rust manually from C.
-
-Despite not using C2Rust for this project I still think it's a great tool. It was very important for me to actually be able to compile and run the project from the start. It made me realize this endeavour was achievable. It's like starting at the finish line and going backwards.
+> Despite not using C2Rust for this project I still think it's a great tool. It was very important for me to actually be able to compile and run the project from the start. It made me realize this endeavour was achievable. I've also integrated it as part of one of my [other side projects](https://crates.io/crates/include).
 
 ## Build process
 
@@ -153,20 +120,18 @@ Despite not using C2Rust for this project I still think it's a great tool. It wa
                                       └───────────────┘                                     
 ```
 
-I think the most important part of this rewrite was developing a solid understanding of how the project was built. This meant doing a bit of research on the bespoke build setup that every C project has. For tmux this is `autotools`. I figured out where I could remove files in `autogen.sh` and manually modified the generated `Makefile` to link in a shared library generated by my rust crate using the `crate-type = "staticlib"` option.
+I think the most important part of this rewrite was developing a solid understanding of how the project was built. For tmux this is `autotools`. I figured out where to add/remove files in `autogen.sh` and manually modified the generated `Makefile` to link in a static library generated by my rust crate using the `crate-type = "staticlib"` option.
 
-This did mean my build process wasn't as simple as just running cargo build. I wrote a small `build.sh` script which would invoke cargo, then run `make` using the modified `Makefile`. This worked for a while but any time I completed translating a file and removed a C file I had to reconfigure and re-modify the makefile.
+This did mean my build process wasn't as simple as just running cargo build. I wrote a small `build.sh` script which would invoke cargo, then run `make` using the modified `Makefile`. This worked for a while, but any time I completed translating a file and needed to remove the C file I had to reconfigure and re-modify the `Makefile`.
 
-The one of the first files I translated was `colour.c`. It's quite small, most of the functions are pure and self contained. Files which are leaves in the build graph are good candidates to rewrite first, such as `xmalloc.c` (a wrapper around malloc which aborts on failure).
+Early on I would try to break things up into mini-crates. It ends up being easier to put everything in the same crate for two reasons. 1. Crates can't have circular dependencies and 2. you can run into linking issues when linking multiple Rust libraries into the same binary.
 
-Early on I would try to break things up into mini-crates. It ends up being easier to put everything in the same crate for two reasons. Crates can't have circular dependencies and you can run into linking issues when linking multiple Rust libraries into the same binary.
+At first I would translate one file at a time, with no way to validate the changes when halfway through a file. After translating a rather large file and spending a long time debugging the issue down to a flipped conditional I changed the development process to translate function by function, with a quick `build.sh run` step in between to make sure everything worked. This did mean adding extra headers in the C code for functions which were originally static. The new process looked like this:
 
-At first I would translate one file at a time, with no way to validate the changes when halfway through a file. After translating a rather large file and spending a long time debugging the issue down to a flipped conditional I changed the development process to translate function by function. This did mean adding headers in the C code for functions which were originally static. The new process looked like this:
+- copy the header of the C function
+- comment out the C function body
 
 ```c
-// copy the header of the C function
-// and comment out the C function body
-
 int colour_palette_get(struct colour_palette *p, int c);
 // int colour_palette_get(struct colour_palette *p, int c) {
 // ...
@@ -177,12 +142,12 @@ Then the code could be translated one function at a time. The C code
 would link against the Rust implementation as long as the function had
 the `#[unsafe(no_mangle)]` attribute `extern "C"` annotation and importantly the correct signature.
 
-After translating about half of the C files I started thinking this build process was a bit silly. Most of the code was now in Rust. Maybe instead of building a C binary and linking in a Rust library I should be building a Rust binary and linking in a C library. Well that's exactly what you can use the cc crate to do.
+After translating about half of the C files I started thinking the current build process was a bit silly. Most of the code was now in Rust. Instead of building a C binary and linking in a Rust library I should be building a Rust binary and linking in a C library. Well that's exactly what you can do using the `cc` crate.
 
 I set up a build.rs like so:
 
 ```rust
-// simplified version from: git show 4b82e3709029a6b9d3bd572db16aa136ed5992e2 -- tmux-rs/build.rs
+// simplified version of tmux-rs/build.rs
 fn main() {
     println!("cargo::rerun-if-changed=build.rs");
     println!("cargo::rustc-link-lib=bsd");
@@ -212,50 +177,50 @@ fn main() {
 
 ## Interesting Bugs
 
-### Bug 1 (symbol resolution and linker shenanigans)
+I introduced many bugs while translating the code. I'd like to share the process of discovering and fixing a few.
 
-Eventually I can eliminate using the `cc` crate after all of the C files are translated.
+### Bug 1
 
-
-linking issues with static variables.
+The program started segfaulting after translating a trivial function. The source and translation are below:
 
 ```c
-// imsg.c
-int imsg_fd_overhead = 0;
+void* get_addr(client* c) {
+  return c->bar;
+}
 ```
 
 ```rust
-// imsg.rs
-static mut imsg_fd_overhead: i32 = 0;
+unsafe extern "C" fn get_addr(c: *mut client) -> *mut c_void {
+  unsafe {
+    (*c).bar
+  }
+}
 ```
 
-Oh no! because we aren't using no_mangle there's two copies of the same variable (rust mangles the symbol so there isn't a conflict).
+After running in the debugger or with address sanitizer the error was: `Invalid read at address 0x2764` or something like that.
 
-if we properly annotated the rust symbol:
-```rust
-// imsg.rs
-#[unsafe(no_mangle)]
-static mut imsg_fd_overhead: i32 = 0;
+I walked through the code again in the debugger. Inside of the Rust function `get_addr` `(*c).bar`
+had a valid address, but it was something like `0x60302764`. But value received from the calling C code
+was `0x2764`. Do you know the problem yet? Need another hint? If I looked more closely at the C compilation
+warnings I would have seen:
+
+```
+warning: implicit declaration of function ‘get_addr’ [-Wimplicit-function-declaration]
 ```
 
-Then we would have gotten a linker error and would have found out we should
-also modify the C code to be a declaration instead of a definition like so:
+That's right, the C code was using the implicit declaration which is:
 
 ```c
-// imsg.c
-extern int imsg_fd_overhead;
+int get_addr();
 ```
 
-Why this mattered when I changed the build system. At this point in development I was still working using a couple crates. The main project crate tmux-rs and a support crate called `compat_rs`. imsg.rs lived in `compat_rs`.
+That explains why the value was incorrect, the C compiler was thinking a 4 byte int was returned not an 8 byte pointer.
+So the top 4 bytes were being truncated or ignored. The fix was as simple as adding the correct prototype to the C code
+and the compiler would generate the correct code for getting the return value.
 
-When switching the build process to use cargo, rust resolves the symbols in compat_rs using the rust library and not as a static library.
+### Bug 2
 
-I built the code as a staticlib and a rust lib.
-
-
-### Bug 2 (Mismatched struct definition)
-
-I noticed this bug when translating the simplest function that shouldn't have caused a bug. It was something like this:
+Again I noticed this bug after translating a trivial function which shouldn't have caused a bug. It was something like this:
 
 
 ```c
@@ -272,154 +237,221 @@ unsafe extern "C" fn set_value(c: *mut client) {
 }
 ```
 
-I was shocked that after translating this simple function the program started segfaulting. By inspecting it in the debugger showed that the segfault in the rust code was happening on that line, which should be identical to the C. So what's the issue. Well it just so happens that when I manually translated the type declaration of the client struct I missed an `*` on one of the types. This type was just above the data field. Meaning the C and Rust code had different views of the type after that mismatched field.
+I was shocked that after translating this simple function the program started segfaulting. By inspecting it in the debugger showed that the segfault in the Rust code was happening on that line, which should be identical to the C.
 
+So what's the issue? Well it just so happens that when I manually translated the type declaration of the client struct I missed an `*` on one of the types. This type was just above the data field. Meaning the C and Rust code had different views of the type after that mismatched field.
 
-### Bug 3 (Mismatched function declaration)
-
-One other interesting case. I translated a simple function which returned a pointer.
-
+For example the C struct looked like:
 
 ```c
-void* get_addr(client* c) {
-  return c->bar;
+struct client {
+  int bar;
+  int *baz;
+  int foo;
 }
 ```
 
+And the Rust looked like:
+
 ```rust
-unsafe extern "C" fn get_addr(c: *mut client) -> *mut c_void {
-  unsafe {
-    (*c).bar
+struct client {
+  bar: i32,
+  baz: i32,
+  foo: i32,
+}
+```
+
+Nothing in the Rust touched `baz` yet, so there were no compiler errors, but the data would be interpreted and accessed incorrectly.
+
+## C Patterns in Rust
+
+### Raw pointers
+
+Rust has two reference types: &T a shared reference or &mut T an exclusive or mutable reference. A Rust reference is just an address with several other invariants.One of the invariants is that a Rust reference can never be null and the value pointed to must be fully initialized and valid.
+
+The natural mapping of pointers in a C program would be a reference in Rust, either exclusive or shared depending if it's modified in the code. The problem is, often times some of the invariants required by references in Rust cannot always be upheld if we do a straight one-to-one mapping of the source from C to Rust. That means we can't use Rust references. We have to use another type, raw pointers: `*mut T` and `*const T`. Semantically raw pointers are the same as C pointers, but because you don't really use them outside of unsafe Rust they are extremely unergonomic to use.
+
+### Considering Goto
+
+C has goto. People like to hate on goto, but actually even though it's used throughout the tmux codebase, only one or two of the usages actually cause implementation difficulties.
+
+The c2rust transpiler uses an algorithm to emulate goto logic. A good video describing a similar algorithm can be found in this[video](https://www.youtube.com/watch?v=qAeEWKr9wfU). However most cases don't actually require using this algorithm and can instead use a much simpler method.
+
+Forward jumps can be implemented using a labeled block with a break statement:
+
+```rust
+fn foo() {
+  'error: {
+    println!("hello");
+
+    if random() % 2 == 0 {
+      break 'error; // same as goto error in C
+    }
+
+    println!("world");
+    return;
+  } // 'error:
+  println!("error");
+
+}
+```
+
+Backward jumps can be implemented using a labeled loop with continue and break statements at the end of the loop:
+
+```rust
+fn bar() {
+  'again: loop {
+    println!("hello");
+
+    if random() % 2 == 0 {
+      continue 'again; // same as goto again in C
+    }
+
+    println!("world");
+    return;
   }
 }
 ```
 
-This time after doing the translation I hastily commented out `get_addr`
-in C and did my hacky `build.sh` compilation process with the usual compiler warnings.
+These are the most common types of usages of goto in the tmux codebase. Only a handful of more complex goto usage required me getting out a pencil and paper to trace out how to map the control flow (search `window_copy_search_marks` in the codebase if you're interested).
 
-This time I got another segmentation fault. Read at address `0x2764` something like that.
-I walked through the code again in the debugger. Inside of the function `get_addr` `(*c).bar`
-had a valid address, but it was something like `0x60302764`. But value received from the calling C code
-was `0x2764`. Do you know the problem yet? Need another hint. If I looked more closely at the compilation
-warnings I would have seen:
+### Intrusive Macros
 
-```
-warning: implicit declaration of function ‘get_addr’ [-Wimplicit-function-declaration]
-```
+Tmux makes extensive use of two data structures defined using macros: an intrusion red black tree and intrusion linked list. An intrusive data structure is one where the pieces of the data structure live within your struct. This is different from how most container data structures are implemented today where the container holds the unmodified struct and doesn't require support from the struct to hold data for the collection.
 
-That's right, the C code was using the implicit declaration which is something like:
+I actually went through many iterations of implementing a good Rust interface for mimicking the C code.
 
 ```c
-int get_addr();
+// cmd-kill-session.c
+RB_FOREACH(wl, winlinks, &s->windows) {
+  wl->window->flags &= ~WINDOW_ALERTFLAGS;
+  wl->flags &= ~WINLINK_ALERTFLAGS;
+}
 ```
 
-That explains why the value was incorrect, the C compiler was thinking a 4 byte value was returned not an 8 byte pointer.
-So the top 4 bytes were being truncated or ignored. The fix was as simple as adding the correct prototype to the C code
-and the compiler would generate the correct code for getting the return value.
+```rust
+// cmd_kill_session.rs
+for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
+    (*(*wl).window).flags &= !WINDOW_ALERTFLAGS;
+    (*wl).flags &= !WINLINK_ALERTFLAGS;
+}
+```
+
+The code would actually be cleaner if I didn't return a `NonNull<T>` from the iterator. I implemented my own trait in order to mimic this interface. One
+of the challenges of this some instances can live in different containers at the same time. This is problematic because a trait can only be implemented once for a given type. The solution was making the trait generic so that it's not a single trait but multiple depending on the generic parameter. I used a dummy unit type when I need to distinguish which trait to use in the code. 
 
 
-I haven't yet talked much about actual Rust code. Only build processes. I'll start with what I think is a fundamental difference between Rust and C. Pointers vs. References.
+```rust
+pub trait GetEntry<T, D = ()> {
+    unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<T>;
+    unsafe fn entry(this: *const Self) -> *const rb_entry<T>;
+    unsafe fn cmp(this: *const Self, other: *const Self) -> std::cmp::Ordering;
+}
 
-Rust has two reference types: &T a shared reference or &mut T an exclusive or mutable reference. For anyone familiar with C++ or Java Rust reference have different semantics from these languages. A Rust reference is just an address with several other invariants. (An invariant is something that is always true. If you break one of these contracts then your code would be invoking undefined behavior and your computer will explode). One of the invariants is that references cannot be null and the value pointed to is fully initialized and valid.
+pub unsafe fn rb_foreach<T, D>(head: *mut rb_head<T>) -> RbForwardIterator<T, D>
+where
+    T: GetEntry<T, D>,
+{
+    RbForwardIterator {
+        curr: NonNull::new(unsafe { rb_min(head) }),
+        _phantom: std::marker::PhantomData,
+    }
+}
+pub struct RbForwardIterator<T, D> {
+    curr: Option<NonNull<T>>,
+    _phantom: std::marker::PhantomData<D>,
+}
 
-The natural mapping of pointers in a C program would be a reference in rust, either exclusive or shared depending if it's modified in the code. The problem is, often times some of the invariants required by references in Rust cannot always be upheld if we do a straight one-to-one mapping of the source from C to Rust. That means we can't use rust references. We have to use another type provided by rust called raw pointers. Semantically raw pointers are the same as C pointers, but because you don't really use them outside of unsafe Rust they are extremely unergonomic to use. For example:
+impl<T, D> Iterator for RbForwardIterator<T, D>
+where
+    T: GetEntry<T, D>,
+{
+    type Item = NonNull<T>;
+    fn next(&mut self) -> Option<Self::Item> {
+        let curr = self.curr?.as_ptr();
+        std::mem::replace(&mut self.curr, NonNull::new(unsafe { rb_next(curr) }))
+    }
+}
 
-Again, I don't like this code. I much prefer C to this flavor of Rust, also known as cRust. Link up tsoding video.
+```
 
+### Yacc shaving
 
-There's two other interesting C language features which I want to discuss. The first is goto, the second isn't a language feature, but a macro header library for intrusive data structures.
+Tmux uses `yacc` to implement a custom parser for it's configuration language. I was aware of `lex` and `yacc`, the vintage unix lexer and parser generator tools but had never used them myself personally. The last step to converting the project from C to Rust was figuring out how to reimplement the parser in `cmd-parse.y` from `yacc` to Rust. After completing this I'd be able to completely shed the `cc` crate and streamline the build process.
 
-### Goto
+After one or two failed attempts I settled on using the `lalrpop` crate to implement the parser. The structure of lalrpop code closely matches `yacc` which allowed me to do a straight reimplementation.
 
-C has goto. People like to hate on goto, but actually even though it's used throughout the tmux codebase, only one or two of the usages actually cause implementation difficulties.
+The original yacc parser looks like this:
 
-The c2rust transpiler uses an algorithm called relooper to emulate goto logic. However most cases don't actually require using this algorithm and can instead use a much simpler method.
+```
+lines		: /* empty */
+		| statements
+		{
+			struct cmd_parse_state	*ps = &parse_state;
 
-For forward jumps a labeled block with a break statement is sufficient.
+			ps->commands = $1;
+		}
 
-Backward jumps can be implemented using a labeled loop with continue and break statements at the end of the loop.
+statements	: statement '\n'
+		{
+			$$ = $1;
+		}
+		| statements statement '\n'
+		{
+			$$ = $1;
+			TAILQ_CONCAT($$, $2, entry);
+			free($2);
+		}
+```
 
-These are the most common usages in the form of goto error; and goto try_again; it's only when the location being jumped to is in the middle of a loop or oddly nested do things get tricky.
+It's a grammar with a series of actions to perform when the rules are matched.
+The equivalent section of the grammar translates to the following `lalrpop` snippet.
 
-I think these are called irreducible blocks and research was done on them a while ago.
+```rust
+grammar(ps: NonNull<cmd_parse_state>);
 
-It's always fun to read a paper from the 70's to help with a problem you have now.
+pub Lines: () = {
+    => (),
+    <s:Statements> => unsafe {
+      (*ps.as_ptr()).commands = s.as_ptr();
+    }
+};
 
-I spent a couple hours drawing out the control flow to figure out how to map it to only forward and back jumps.
+pub Statements: NonNull<cmd_parse_commands> = {
+    <s:Statement> "\n" => s,
+    <arg1:Statements> <arg2:Statement> "\n" => unsafe {
+      let mut value = arg1;
+      tailq_concat(value.as_ptr(), arg2.as_ptr());
+      free_(arg2.as_ptr());
+      value
+    }
+};
+```
 
-I stumbled into a solution for my specific case before learning weather or not the case I had was truly irreducible. If I have a bit more time I'd like to study that a bit more, but I've already solved the task at hand so it's hard to justify spending more time on that detour.
+> `lalrpop` has a few bugs, for example it can't handle raw pointers properly (the * seems to throw off the parser), that's fine I just ended up using `NonNull<T>` in all the places in the grammar instead and it worked.
 
-### Macro header library
-
-Tmux makes heavy use of two data structures defined in tree.h and queue.h. They are an intrusion red black tree and a linked list defined by macros. If you're not familiar, an intrusive data structure is one where the pieces of the data structure live within your struct. This is apposed to how most container data structures are implemented today where the container holds the unmodified struct and doesn't require support from the struct to hold data critical to a correct implementation.
-
-For example:
-
-A normal linked list might look like this:
-
-An intrusive one might look like this:
-
-I actually went through many iterations of implementing a good rust interface for mimicking the c code. This is what I ended up with and why:
+After reimplementing the grammar I also had to implement an adapter to interface lalrpop with the custom lexer. I was amazed that once the lexer was hooked up to the parser it just seemed to work. I was then able to get rid of all of the C code and headers I was no longer using.
 
 ## Development process
 
-Throughout working on this project I used many different text editors and ides. I did start trying out cursor for part of the development process.
+### Vim
 
-My typical workflow was using vim to do the translation heavily relying on custom macros to speed up the translation process.
+Throughout working on this project I used many different text editors and ides. My typical workflow used neovim while heavily relying on custom macros to speed up the translation process. For example, I made vim macros for things like converting:
 
-I also found that making some edits while the file is still a C file also helped. For example I used clang format to add braces for all if statements (they can be implicit in C).
+- `ptr == NULL` to `ptr.is_null()`
+- `ptr->field` to `(*ptr).field`
 
-The things that I made vim macros were for things like converting == NULL to .is_null()
+### Linters
 
-As stated earlier one of the more annoying things to fix was changing -> to .*
+I found that making some edits while the file is still a C file also helped. For example, I used `clang-format` to add braces for all `if` statements. 
 
 Most of these mechanical changes are very easy to make, but are hard to do all at once with a find and replace. This means doing it by hand thousands of times.
 
-AI tooling really helps. I used it for translating functions at a time. It would occasionally insert bugs, just like me, so as much time needed to be spent reviewing the generated code as it would take to write it. The only thing it saved was my hands.
+### AI Tools
+
+I did start trying out Cursor towards the end of the development process. I ended up stopping using it though because I felt like it didn't actually increase my speed, it only saved me from finger pain. That's because when using cursor to translate the code it would occasionally insert bugs, just like me. So I spent as much time needed to be spent reviewing the generated code as it would take to write it. The only thing it saved was my hands.
 
 Doing this large amount of refactoring is really hard on your fingers. So even though I quit using cursor my feeling is that I'd still reach for it if my hands are really physically hurting, but I need to keep working. Usually when I reach that point I think it's better to just take a break though.
 
-I'd love to talk more about refactoring tricks with different editors and IDEs, but I think it's actually more compelling to see that in action so I'll plan to make a video for that instead.
-
-In this porting project there were many key inflection points. For example right now I'm trying to improve the code in general, fix clippy lints, reduce unsafe code, and usage of external c libraries.
-
-A big portion of time was spent thinking how to remove the yacc dependency. Lalrpop really helped with that.
-
 Well today I'm going to release version 0.0.1. I am aware of many bugs. For example just passing prefix + ? Will cause a crash / hang. Don't use it for anything important yet.
 
-## Bugs
-
-During the development process I like to make list of the bugs that I find. Whenever I find an issue due to something silly I'd add it to my list below. Part of this is so that I can avoid making the same mistakes again. These are some of the bugs which were introduced during the translation process. Feel free to skim the list, most of them are written in such a way which is only meaningful to myself. By far the most common was accidentally flipping a conditional during the translation.
-
-- Incorrect translation of != null check (wrote x.is_null() instead of !x.is_null())
-- Incorrect translation of do while
-- Incorrect translation of self-referential struct (just used null to init because lazyness when translating)
-- missing init for tailq in struct // the big one causing crash on init
-- missing break at end of loop emulating goto in rb_remove: hangs on Ctrl-D
-- missing field in struct translation
-- incorrect field in struct. used struct instead of struct pointer
-- flipped == args_type::ARGS_NONE instead of flipped != args_type::ARGS_NONE
-- flipped != 0 instead of == 0 for coverting from !int_like_value in conditional
-- incorrect translation of for loop with continue to while with continue and increment at end; increment isn't applied (cmd_find)
-- incorrect translation of cmd_entry args_parse cb None, when should have been Some(cb): after translating cmd-display-menu immediately aborts on start
-- typo in rb_right macro, expanded to access left field
-- crashes when config file is completely commented out: missing early exit in cmdq_get_command, no return in function
-- Due to use after shadowing in client_.rs client_connect xasprintf usage found by using LSAN_OPTIONS=report_objects=1 leak on exit:
-- memcpy_(&raw mut tmp as *mut i8, in_, end); should have been: memcpy_(tmp, in_, end)
-  -  because I switched to a pointer instead of buffer,but didn't change memcpy code
-- typo fps, fsp, variable unused null, cmd-queue.c ( causing crash when C-b t for clock)
-- missing C prototype :struct cmd_parse_commands \* cmd_parse_do_buffer(const char \*buf, size_t len, struct cmd_parse_input \*pi, char \*\*cause)
-  - return address value truncated to int
-- for loop never entered didn't init variable needed for side effect after for loop ended (arguments)
-- incorrect for loop translation. used 1..count, but should have used while loop
-- extra copy paste: duplicate value += 1; value +=1;
-- flipped null check
-- flipped : char		 acs[UCHAR_MAX + 1][2]; -> pub acs: [[c_char; c_uchar::MAX as usize + 1]; 2], should be [[c_char; 2]; c_uchar::MAX as usize + 1],
-- crashes when typing 'c' because of one of my bindings (seems something fixed this)
-- linking problem
-  - found many bugs in imsg and imsg-buffer implementation, seem to have not been caught when implemented due to how symbols are resolved
-    - completely retranslate imsg and imsg-buffer
-  - I suspect that linking is shadowing some broken rust implementations, and maybe when compiling with rust the rust implementation is preferred
-    - it's interesting I notice differences in behavior between debug and release for this
-- incorrect terminal behavior ; typed keys not displayed properly; lowercased ascii value in table when should be upper (likely caused by vim mistype u in visual)
-- incorrect terminal behavior ; bad flag check should be value == 0, but i did !value != 0)
