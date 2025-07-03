@@ -32,7 +32,7 @@ pub struct cmd_confirm_before_data {
     default_yes: i32,
 }
 
-unsafe extern "C" fn cmd_confirm_before_args_parse(
+unsafe fn cmd_confirm_before_args_parse(
     _: *mut args,
     _: u32,
     _: *mut *mut c_char,
@@ -40,7 +40,7 @@ unsafe extern "C" fn cmd_confirm_before_args_parse(
     args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING
 }
 
-unsafe extern "C" fn cmd_confirm_before_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_confirm_before_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let tc = cmdq_get_target_client(item);
@@ -105,7 +105,7 @@ unsafe extern "C" fn cmd_confirm_before_exec(self_: *mut cmd, item: *mut cmdq_it
     }
 }
 
-unsafe extern "C" fn cmd_confirm_before_callback(
+unsafe fn cmd_confirm_before_callback(
     c: *mut client,
     data: NonNull<c_void>,
     s: *const c_char,
@@ -152,7 +152,7 @@ unsafe extern "C" fn cmd_confirm_before_callback(
     }
 }
 
-unsafe extern "C" fn cmd_confirm_before_free(data: NonNull<c_void>) {
+unsafe fn cmd_confirm_before_free(data: NonNull<c_void>) {
     unsafe {
         let cdata: NonNull<cmd_confirm_before_data> = data.cast();
         cmd_list_free((*cdata.as_ptr()).cmdlist);

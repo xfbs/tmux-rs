@@ -83,7 +83,7 @@ pub struct window_client_modedata {
     item_size: u32,
 }
 
-pub unsafe extern "C" fn window_client_add_item(
+pub unsafe fn window_client_add_item(
     data: *mut window_client_modedata,
 ) -> *mut window_client_itemdata {
     unsafe {
@@ -97,7 +97,7 @@ pub unsafe extern "C" fn window_client_add_item(
     }
 }
 
-pub unsafe extern "C" fn window_client_free_item(item: *mut window_client_itemdata) {
+pub unsafe fn window_client_free_item(item: *mut window_client_itemdata) {
     unsafe {
         server_client_unref((*item).c);
         free_(item);
@@ -159,7 +159,7 @@ pub unsafe extern "C" fn window_client_cmp(a0: *const c_void, b0: *const c_void)
     }
 }
 
-pub unsafe extern "C" fn window_client_build(
+pub unsafe fn window_client_build(
     modedata: NonNull<c_void>,
     sort_crit: *mut mode_tree_sort_criteria,
     _tag: *mut u64,
@@ -231,7 +231,7 @@ pub unsafe extern "C" fn window_client_build(
     }
 }
 
-pub unsafe extern "C" fn window_client_draw(
+pub unsafe fn window_client_draw(
     modedata: *mut c_void,
     itemdata: Option<NonNull<c_void>>,
     ctx: *mut screen_write_ctx,
@@ -276,7 +276,7 @@ pub unsafe extern "C" fn window_client_draw(
     }
 }
 
-pub unsafe extern "C" fn window_client_menu(
+pub unsafe fn window_client_menu(
     modedata: NonNull<c_void>,
     c: *mut client,
     key: key_code,
@@ -293,7 +293,7 @@ pub unsafe extern "C" fn window_client_menu(
     }
 }
 
-pub unsafe extern "C" fn window_client_get_key(
+pub unsafe fn window_client_get_key(
     modedata: NonNull<c_void>,
     itemdata: NonNull<c_void>,
     line: u32,
@@ -314,7 +314,7 @@ pub unsafe extern "C" fn window_client_get_key(
     }
 }
 
-pub unsafe extern "C" fn window_client_init(
+pub unsafe fn window_client_init(
     wme: NonNull<window_mode_entry>,
     _fs: *mut cmd_find_state,
     args: *mut args,
@@ -368,7 +368,7 @@ pub unsafe extern "C" fn window_client_init(
     }
 }
 
-pub unsafe extern "C" fn window_client_free(wme: NonNull<window_mode_entry>) {
+pub unsafe fn window_client_free(wme: NonNull<window_mode_entry>) {
     unsafe {
         let data: *mut window_client_modedata = (*wme.as_ptr()).data as *mut window_client_modedata;
 
@@ -391,7 +391,7 @@ pub unsafe extern "C" fn window_client_free(wme: NonNull<window_mode_entry>) {
     }
 }
 
-pub unsafe extern "C" fn window_client_resize(wme: NonNull<window_mode_entry>, sx: u32, sy: u32) {
+pub unsafe fn window_client_resize(wme: NonNull<window_mode_entry>, sx: u32, sy: u32) {
     unsafe {
         let data = (*wme.as_ptr()).data as *mut window_client_modedata;
 
@@ -399,7 +399,7 @@ pub unsafe extern "C" fn window_client_resize(wme: NonNull<window_mode_entry>, s
     }
 }
 
-pub unsafe extern "C" fn window_client_update(wme: NonNull<window_mode_entry>) {
+pub unsafe fn window_client_update(wme: NonNull<window_mode_entry>) {
     unsafe {
         let data = (*wme.as_ptr()).data as *mut window_client_modedata;
 
@@ -409,7 +409,7 @@ pub unsafe extern "C" fn window_client_update(wme: NonNull<window_mode_entry>) {
     }
 }
 
-pub unsafe extern "C" fn window_client_do_detach(
+pub unsafe fn window_client_do_detach(
     modedata: NonNull<c_void>,
     itemdata: NonNull<c_void>,
     c: *mut client,
@@ -434,7 +434,7 @@ pub unsafe extern "C" fn window_client_do_detach(
     }
 }
 
-pub unsafe extern "C" fn window_client_key(
+pub unsafe fn window_client_key(
     wme: NonNull<window_mode_entry>,
     c: *mut client,
     _: *mut session,

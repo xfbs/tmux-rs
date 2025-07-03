@@ -29,7 +29,7 @@ pub static mut cmd_resize_pane_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let target = cmdq_get_target(item);
@@ -159,7 +159,7 @@ unsafe extern "C" fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item)
     cmd_retval::CMD_RETURN_NORMAL
 }
 
-unsafe extern "C" fn cmd_resize_pane_mouse_update(c: *mut client, m: *mut mouse_event) {
+unsafe fn cmd_resize_pane_mouse_update(c: *mut client, m: *mut mouse_event) {
     unsafe {
         let mut w: *mut window = null_mut();
         let mut y: u32 = 0;

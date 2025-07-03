@@ -51,7 +51,7 @@ pub static mut cmd_lock_client_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-unsafe extern "C" fn cmd_lock_server_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_lock_server_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let target = cmdq_get_target(item);
         let tc = cmdq_get_target_client(item);

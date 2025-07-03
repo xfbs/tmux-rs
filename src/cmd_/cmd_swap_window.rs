@@ -34,7 +34,7 @@ pub static mut cmd_swap_window_entry: cmd_entry = cmd_entry {
     exec: Some(cmd_swap_window_exec),
 };
 
-unsafe extern "C" fn cmd_swap_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_swap_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let source = cmdq_get_source(item);

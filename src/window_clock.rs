@@ -135,7 +135,7 @@ pub static mut window_clock_table: [[[c_char; 5]; 5]; 14] = [
     ],
 ];
 
-pub unsafe extern "C" fn window_clock_timer_callback(fd: i32, events: i16, arg: *mut c_void) {
+pub unsafe fn window_clock_timer_callback(fd: i32, events: i16, arg: *mut c_void) {
     unsafe {
         let wme = arg as *mut window_mode_entry;
         let wp = (*wme).wp;
@@ -168,7 +168,7 @@ pub unsafe extern "C" fn window_clock_timer_callback(fd: i32, events: i16, arg: 
     }
 }
 
-pub unsafe extern "C" fn window_clock_init(
+pub unsafe fn window_clock_init(
     wme: NonNull<window_mode_entry>,
     _fs: *mut cmd_find_state,
     args: *mut args,
@@ -206,7 +206,7 @@ pub unsafe extern "C" fn window_clock_init(
     }
 }
 
-pub unsafe extern "C" fn window_clock_free(wme: NonNull<window_mode_entry>) {
+pub unsafe fn window_clock_free(wme: NonNull<window_mode_entry>) {
     unsafe {
         let data = (*wme.as_ptr()).data as *mut window_clock_mode_data;
 
@@ -216,7 +216,7 @@ pub unsafe extern "C" fn window_clock_free(wme: NonNull<window_mode_entry>) {
     }
 }
 
-pub unsafe extern "C" fn window_clock_resize(wme: NonNull<window_mode_entry>, sx: u32, sy: u32) {
+pub unsafe fn window_clock_resize(wme: NonNull<window_mode_entry>, sx: u32, sy: u32) {
     unsafe {
         let data = (*wme.as_ptr()).data as *mut window_clock_mode_data;
         let s = &raw mut (*data).screen;
@@ -226,7 +226,7 @@ pub unsafe extern "C" fn window_clock_resize(wme: NonNull<window_mode_entry>, sx
     }
 }
 
-pub unsafe extern "C" fn window_clock_key(
+pub unsafe fn window_clock_key(
     wme: NonNull<window_mode_entry>,
     c: *mut client,
     s: *mut session,
@@ -239,7 +239,7 @@ pub unsafe extern "C" fn window_clock_key(
     }
 }
 
-pub unsafe extern "C" fn window_clock_draw_screen(wme: NonNull<window_mode_entry>) {
+pub unsafe fn window_clock_draw_screen(wme: NonNull<window_mode_entry>) {
     unsafe {
         let wp = (*wme.as_ptr()).wp;
         let data = (*wme.as_ptr()).data as *mut window_clock_mode_data;

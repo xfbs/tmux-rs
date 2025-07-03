@@ -31,9 +31,9 @@ use crate::compat::{
     strlcpy,
 };
 
-pub type job_update_cb = Option<unsafe extern "C" fn(*mut job)>;
-pub type job_complete_cb = Option<unsafe extern "C" fn(*mut job)>;
-pub type job_free_cb = Option<unsafe extern "C" fn(*mut c_void)>;
+pub type job_update_cb = Option<unsafe fn(*mut job)>;
+pub type job_complete_cb = Option<unsafe fn(*mut job)>;
+pub type job_free_cb = Option<unsafe fn(*mut c_void)>;
 
 #[derive(Eq, PartialEq)]
 #[repr(i32)]
@@ -73,7 +73,7 @@ impl ListEntry<job, ()> for job {
 type joblist = list_head<job>;
 static mut all_jobs: joblist = list_head_initializer();
 
-pub unsafe extern "C" fn job_run(
+pub unsafe fn job_run(
     cmd: *const c_char,
     argc: c_int,
     argv: *mut *mut c_char,
@@ -285,7 +285,7 @@ pub unsafe extern "C" fn job_run(
     }
 }
 
-pub unsafe extern "C" fn job_transfer(
+pub unsafe fn job_transfer(
     job: *mut job,
     pid: *mut pid_t,
     tty: *mut c_char,
@@ -321,7 +321,7 @@ pub unsafe extern "C" fn job_transfer(
     }
 }
 
-pub unsafe extern "C" fn job_free(job: *mut job) {
+pub unsafe fn job_free(job: *mut job) {
     unsafe {
         log_debug!("free job {:p}: {}", job, _s((*job).cmd));
 
@@ -346,7 +346,7 @@ pub unsafe extern "C" fn job_free(job: *mut job) {
     }
 }
 
-pub unsafe extern "C" fn job_resize(job: *mut job, sx: c_uint, sy: c_uint) {
+pub unsafe fn job_resize(job: *mut job, sx: c_uint, sy: c_uint) {
     let mut ws = MaybeUninit::<winsize>::uninit();
 
     unsafe {
@@ -364,7 +364,7 @@ pub unsafe extern "C" fn job_resize(job: *mut job, sx: c_uint, sy: c_uint) {
     }
 }
 
-unsafe extern "C" fn job_read_callback(bufev: *mut bufferevent, data: *mut libc::c_void) {
+unsafe fn job_read_callback(bufev: *mut bufferevent, data: *mut libc::c_void) {
     let job = data as *mut job;
 
     unsafe {
@@ -373,7 +373,7 @@ unsafe extern "C" fn job_read_callback(bufev: *mut bufferevent, data: *mut libc:
         }
     }
 }
-unsafe extern "C" fn job_write_callback(bufev: *mut bufferevent, data: *mut libc::c_void) {
+unsafe fn job_write_callback(bufev: *mut bufferevent, data: *mut libc::c_void) {
     unsafe {
         let job = data as *mut job;
         let len = EVBUFFER_LENGTH(EVBUFFER_OUTPUT((*job).event));
@@ -393,7 +393,7 @@ unsafe extern "C" fn job_write_callback(bufev: *mut bufferevent, data: *mut libc
     }
 }
 
-unsafe extern "C" fn job_error_callback(
+unsafe fn job_error_callback(
     bufev: *mut bufferevent,
     events: libc::c_short,
     data: *mut libc::c_void,
@@ -419,7 +419,7 @@ unsafe extern "C" fn job_error_callback(
     }
 }
 
-pub unsafe extern "C" fn job_check_died(pid: pid_t, status: i32) {
+pub unsafe fn job_check_died(pid: pid_t, status: i32) {
     unsafe {
         let mut job: *mut job = null_mut();
 
@@ -461,19 +461,19 @@ pub unsafe extern "C" fn job_check_died(pid: pid_t, status: i32) {
     }
 }
 
-pub unsafe extern "C" fn job_get_status(job: *mut job) -> i32 {
+pub unsafe fn job_get_status(job: *mut job) -> i32 {
     unsafe { (*job).status }
 }
 
-pub unsafe extern "C" fn job_get_data(job: *mut job) -> *mut c_void {
+pub unsafe fn job_get_data(job: *mut job) -> *mut c_void {
     unsafe { (*job).data }
 }
 
-pub unsafe extern "C" fn job_get_event(job: *mut job) -> *mut bufferevent {
+pub unsafe fn job_get_event(job: *mut job) -> *mut bufferevent {
     unsafe { (*job).event }
 }
 
-pub unsafe extern "C" fn job_kill_all() {
+pub unsafe fn job_kill_all() {
     unsafe {
         for job in list_foreach(&raw mut all_jobs).map(NonNull::as_ptr) {
             if (*job).pid != -1 {
@@ -494,7 +494,7 @@ pub unsafe fn job_still_running() -> bool {
     }
 }
 
-pub unsafe extern "C" fn job_print_summary(item: *mut cmdq_item, mut blank: i32) {
+pub unsafe fn job_print_summary(item: *mut cmdq_item, mut blank: i32) {
     unsafe {
         for (n, job) in list_foreach(&raw mut all_jobs)
             .map(NonNull::as_ptr)

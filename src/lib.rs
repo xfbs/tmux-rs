@@ -1058,7 +1058,7 @@ struct screen {
 const SCREEN_WRITE_SYNC: i32 = 0x1;
 
 // Screen write context.
-type screen_write_init_ctx_cb = Option<unsafe extern "C" fn(*mut screen_write_ctx, *mut tty_ctx)>;
+type screen_write_init_ctx_cb = Option<unsafe fn(*mut screen_write_ctx, *mut tty_ctx)>;
 #[repr(C)]
 struct screen_write_ctx {
     wp: *mut window_pane,
@@ -1189,7 +1189,7 @@ struct menu {
     count: u32,
     width: u32,
 }
-type menu_choice_cb = Option<unsafe extern "C" fn(*mut menu, u32, key_code, *mut c_void)>;
+type menu_choice_cb = Option<unsafe fn(*mut menu, u32, key_code, *mut c_void)>;
 
 // Window mode. Windows can be in several modes and this is used to call the
 // right function to handle input and output.
@@ -1199,17 +1199,17 @@ struct window_mode {
     default_format: SyncCharPtr,
 
     init: Option<
-        unsafe extern "C" fn(
+        unsafe fn(
             NonNull<window_mode_entry>,
             *mut cmd_find_state,
             *mut args,
         ) -> *mut screen,
     >,
-    free: Option<unsafe extern "C" fn(NonNull<window_mode_entry>)>,
-    resize: Option<unsafe extern "C" fn(NonNull<window_mode_entry>, u32, u32)>,
-    update: Option<unsafe extern "C" fn(NonNull<window_mode_entry>)>,
+    free: Option<unsafe fn(NonNull<window_mode_entry>)>,
+    resize: Option<unsafe fn(NonNull<window_mode_entry>, u32, u32)>,
+    update: Option<unsafe fn(NonNull<window_mode_entry>)>,
     key: Option<
-        unsafe extern "C" fn(
+        unsafe fn(
             NonNull<window_mode_entry>,
             *mut client,
             *mut session,
@@ -1219,9 +1219,9 @@ struct window_mode {
         ),
     >,
 
-    key_table: Option<unsafe extern "C" fn(*mut window_mode_entry) -> *const c_char>,
+    key_table: Option<unsafe fn(*mut window_mode_entry) -> *const c_char>,
     command: Option<
-        unsafe extern "C" fn(
+        unsafe fn(
             NonNull<window_mode_entry>,
             *mut client,
             *mut session,
@@ -1230,7 +1230,7 @@ struct window_mode {
             *mut mouse_event,
         ),
     >,
-    formats: Option<unsafe extern "C" fn(*mut window_mode_entry, *mut format_tree)>,
+    formats: Option<unsafe fn(*mut window_mode_entry, *mut format_tree)>,
 }
 
 impl window_mode {
@@ -1823,15 +1823,15 @@ struct tty {
     mouse_last_y: u32,
     mouse_last_b: u32,
     mouse_drag_flag: i32,
-    mouse_drag_update: Option<unsafe extern "C" fn(*mut client, *mut mouse_event)>,
-    mouse_drag_release: Option<unsafe extern "C" fn(*mut client, *mut mouse_event)>,
+    mouse_drag_update: Option<unsafe fn(*mut client, *mut mouse_event)>,
+    mouse_drag_release: Option<unsafe fn(*mut client, *mut mouse_event)>,
 
     key_timer: event,
     key_tree: *mut tty_key,
 }
 
-type tty_ctx_redraw_cb = Option<unsafe extern "C" fn(*const tty_ctx)>;
-type tty_ctx_set_client_cb = Option<unsafe extern "C" fn(*mut tty_ctx, *mut client) -> i32>;
+type tty_ctx_redraw_cb = Option<unsafe fn(*const tty_ctx)>;
+type tty_ctx_set_client_cb = Option<unsafe fn(*mut tty_ctx, *mut client) -> i32>;
 
 #[repr(C)]
 struct tty_ctx {
@@ -1937,7 +1937,7 @@ enum args_parse_type {
 }
 
 type args_parse_cb =
-    Option<unsafe extern "C" fn(*mut args, u32, *mut *mut c_char) -> args_parse_type>;
+    Option<unsafe fn(*mut args, u32, *mut *mut c_char) -> args_parse_type>;
 #[repr(C)]
 struct args_parse {
     template: *const c_char,
@@ -2080,7 +2080,7 @@ bitflags::bitflags! {
 }
 
 // Command queue callback.
-type cmdq_cb = Option<unsafe extern "C" fn(*mut cmdq_item, *mut c_void) -> cmd_retval>;
+type cmdq_cb = Option<unsafe fn(*mut cmdq_item, *mut c_void) -> cmd_retval>;
 
 // Command definition flag.
 #[repr(C)]
@@ -2128,7 +2128,7 @@ struct cmd_entry {
 
     flags: cmd_flag,
 
-    exec: Option<unsafe extern "C" fn(*mut cmd, *mut cmdq_item) -> cmd_retval>,
+    exec: Option<unsafe fn(*mut cmd, *mut cmdq_item) -> cmd_retval>,
 }
 
 /* Status line. */
@@ -2164,7 +2164,7 @@ enum prompt_type {
 
 /* File in client. */
 type client_file_cb =
-    Option<unsafe extern "C" fn(*mut client, *mut c_char, i32, i32, *mut evbuffer, *mut c_void)>;
+    Option<unsafe fn(*mut client, *mut c_char, i32, i32, *mut evbuffer, *mut c_void)>;
 #[repr(C)]
 struct client_file {
     c: *mut client,
@@ -2219,17 +2219,17 @@ struct overlay_ranges {
 }
 
 type prompt_input_cb =
-    Option<unsafe extern "C" fn(*mut client, NonNull<c_void>, *const c_char, i32) -> i32>;
-type prompt_free_cb = Option<unsafe extern "C" fn(NonNull<c_void>)>;
+    Option<unsafe fn(*mut client, NonNull<c_void>, *const c_char, i32) -> i32>;
+type prompt_free_cb = Option<unsafe fn(NonNull<c_void>)>;
 type overlay_check_cb =
-    Option<unsafe extern "C" fn(*mut client, *mut c_void, u32, u32, u32, *mut overlay_ranges)>;
+    Option<unsafe fn(*mut client, *mut c_void, u32, u32, u32, *mut overlay_ranges)>;
 type overlay_mode_cb =
-    Option<unsafe extern "C" fn(*mut client, *mut c_void, *mut u32, *mut u32) -> *mut screen>;
+    Option<unsafe fn(*mut client, *mut c_void, *mut u32, *mut u32) -> *mut screen>;
 type overlay_draw_cb =
-    Option<unsafe extern "C" fn(*mut client, *mut c_void, *mut screen_redraw_ctx)>;
-type overlay_key_cb = Option<unsafe extern "C" fn(*mut client, *mut c_void, *mut key_event) -> i32>;
-type overlay_free_cb = Option<unsafe extern "C" fn(*mut client, *mut c_void)>;
-type overlay_resize_cb = Option<unsafe extern "C" fn(*mut client, *mut c_void)>;
+    Option<unsafe fn(*mut client, *mut c_void, *mut screen_redraw_ctx)>;
+type overlay_key_cb = Option<unsafe fn(*mut client, *mut c_void, *mut key_event) -> i32>;
+type overlay_free_cb = Option<unsafe fn(*mut client, *mut c_void)>;
+type overlay_resize_cb = Option<unsafe fn(*mut client, *mut c_void)>;
 
 bitflags::bitflags! {
     #[repr(transparent)]

@@ -5,7 +5,7 @@ pub extern "C" fn getptmfd() -> c_int {
     c_int::MAX
 }
 
-pub unsafe extern "C" fn fdforkpty(
+pub unsafe fn fdforkpty(
     _ptmfd: c_int,
     master: *mut c_int,
     name: *mut c_char,

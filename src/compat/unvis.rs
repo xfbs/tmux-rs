@@ -29,7 +29,7 @@
 // TODO refactor
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn unvis(
+pub unsafe fn unvis(
     mut cp: *mut libc::c_char,
     mut c: libc::c_char,
     mut astate: *mut libc::c_int,
@@ -187,7 +187,7 @@ pub unsafe extern "C" fn unvis(
     }
 }
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn strunvis(mut dst: *mut libc::c_char, mut src: *const libc::c_char) -> i32 {
+pub unsafe fn strunvis(mut dst: *mut libc::c_char, mut src: *const libc::c_char) -> i32 {
     unsafe {
         let mut c: libc::c_char = 0;
         let mut start: *mut libc::c_char = dst;
@@ -229,7 +229,7 @@ pub unsafe extern "C" fn strunvis(mut dst: *mut libc::c_char, mut src: *const li
     }
 }
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn strnunvis(
+pub unsafe fn strnunvis(
     mut dst: *mut libc::c_char,
     mut src: *const libc::c_char,
     mut sz: usize,

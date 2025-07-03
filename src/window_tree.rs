@@ -144,7 +144,7 @@ struct window_tree_modedata {
     each: u32,
 }
 
-unsafe extern "C" fn window_tree_pull_item(
+unsafe fn window_tree_pull_item(
     item: NonNull<window_tree_itemdata>,
     sp: *mut Option<NonNull<session>>,
     wlp: *mut Option<NonNull<winlink>>,
@@ -198,7 +198,7 @@ unsafe extern "C" fn window_tree_pull_item(
     }
 }
 
-unsafe extern "C" fn window_tree_add_item(
+unsafe fn window_tree_add_item(
     data: NonNull<window_tree_modedata>,
 ) -> *mut window_tree_itemdata {
     unsafe {
@@ -212,7 +212,7 @@ unsafe extern "C" fn window_tree_add_item(
     }
 }
 
-unsafe extern "C" fn window_tree_free_item(item: *mut window_tree_itemdata) {
+unsafe fn window_tree_free_item(item: *mut window_tree_itemdata) {
     unsafe {
         free_(item);
     }
@@ -318,7 +318,7 @@ unsafe extern "C" fn window_tree_cmp_pane(a0: *const c_void, b0: *const c_void) 
     }
 }
 
-unsafe extern "C" fn window_tree_build_pane(
+unsafe fn window_tree_build_pane(
     s: *mut session,
     wl: *mut winlink,
     wp: *mut window_pane,
@@ -356,7 +356,7 @@ unsafe extern "C" fn window_tree_build_pane(
     }
 }
 
-unsafe extern "C" fn window_tree_filter_pane(
+unsafe fn window_tree_filter_pane(
     s: *mut session,
     wl: *mut winlink,
     wp: *mut window_pane,
@@ -375,7 +375,7 @@ unsafe extern "C" fn window_tree_filter_pane(
     }
 }
 
-unsafe extern "C" fn window_tree_build_window(
+unsafe fn window_tree_build_window(
     s: *mut session,
     wl: *mut winlink,
     modedata: NonNull<c_void>,
@@ -488,7 +488,7 @@ unsafe extern "C" fn window_tree_build_window(
     }
 }
 
-unsafe extern "C" fn window_tree_build_session(
+unsafe fn window_tree_build_session(
     s: *mut session,
     modedata: NonNull<c_void>,
     sort_crit: *mut mode_tree_sort_criteria,
@@ -568,7 +568,7 @@ unsafe extern "C" fn window_tree_build_session(
     }
 }
 
-unsafe extern "C" fn window_tree_build(
+unsafe fn window_tree_build(
     modedata: NonNull<c_void>,
     sort_crit: *mut mode_tree_sort_criteria,
     tag: *mut u64,
@@ -636,7 +636,7 @@ unsafe extern "C" fn window_tree_build(
     }
 }
 
-unsafe extern "C" fn window_tree_draw_label(
+unsafe fn window_tree_draw_label(
     ctx: *mut screen_write_ctx,
     px: u32,
     py: u32,
@@ -669,7 +669,7 @@ unsafe extern "C" fn window_tree_draw_label(
     }
 }
 
-unsafe extern "C" fn window_tree_draw_session(
+unsafe fn window_tree_draw_session(
     data: *mut window_tree_modedata,
     s: *mut session,
     ctx: *mut screen_write_ctx,
@@ -833,7 +833,7 @@ unsafe extern "C" fn window_tree_draw_session(
     }
 }
 
-unsafe extern "C" fn window_tree_draw_window(
+unsafe fn window_tree_draw_window(
     data: *mut window_tree_modedata,
     s: *mut session,
     w: *mut window,
@@ -986,7 +986,7 @@ unsafe extern "C" fn window_tree_draw_window(
     }
 }
 
-unsafe extern "C" fn window_tree_draw(
+unsafe fn window_tree_draw(
     modedata: *mut c_void,
     itemdata: Option<NonNull<c_void>>,
     ctx: *mut screen_write_ctx,
@@ -1024,7 +1024,7 @@ unsafe extern "C" fn window_tree_draw(
     }
 }
 
-unsafe extern "C" fn window_tree_search(
+unsafe fn window_tree_search(
     _modedata: *mut c_void,
     itemdata: NonNull<c_void>,
     ss: *const c_char,
@@ -1072,7 +1072,7 @@ unsafe extern "C" fn window_tree_search(
     }
 }
 
-unsafe extern "C" fn window_tree_menu(modedata: NonNull<c_void>, c: *mut client, key: key_code) {
+unsafe fn window_tree_menu(modedata: NonNull<c_void>, c: *mut client, key: key_code) {
     unsafe {
         let data: NonNull<window_tree_modedata> = modedata.cast();
         let wp: NonNull<window_pane> = NonNull::new_unchecked((*data.as_ptr()).wp);
@@ -1084,7 +1084,7 @@ unsafe extern "C" fn window_tree_menu(modedata: NonNull<c_void>, c: *mut client,
     }
 }
 
-unsafe extern "C" fn window_tree_get_key(
+unsafe fn window_tree_get_key(
     modedata: NonNull<c_void>,
     itemdata: NonNull<c_void>,
     line: u32,
@@ -1117,7 +1117,7 @@ unsafe extern "C" fn window_tree_get_key(
     }
 }
 
-unsafe extern "C" fn window_tree_init(
+unsafe fn window_tree_init(
     wme: NonNull<window_mode_entry>,
     fs: *mut cmd_find_state,
     args: *mut args,
@@ -1185,7 +1185,7 @@ unsafe extern "C" fn window_tree_init(
     }
 }
 
-unsafe extern "C" fn window_tree_destroy(data: NonNull<window_tree_modedata>) {
+unsafe fn window_tree_destroy(data: NonNull<window_tree_modedata>) {
     unsafe {
         let data = data.as_ptr();
         (*data).references -= 1;
@@ -1206,7 +1206,7 @@ unsafe extern "C" fn window_tree_destroy(data: NonNull<window_tree_modedata>) {
     }
 }
 
-unsafe extern "C" fn window_tree_free(wme: NonNull<window_mode_entry>) {
+unsafe fn window_tree_free(wme: NonNull<window_mode_entry>) {
     unsafe {
         if let Some(data) = NonNull::new((*wme.as_ptr()).data.cast::<window_tree_modedata>()) {
             (*data.as_ptr()).dead = 1;
@@ -1216,14 +1216,14 @@ unsafe extern "C" fn window_tree_free(wme: NonNull<window_mode_entry>) {
     }
 }
 
-unsafe extern "C" fn window_tree_resize(wme: NonNull<window_mode_entry>, sx: u32, sy: u32) {
+unsafe fn window_tree_resize(wme: NonNull<window_mode_entry>, sx: u32, sy: u32) {
     unsafe {
         let data: *mut window_tree_modedata = (*wme.as_ptr()).data.cast();
         mode_tree_resize((*data).data, sx, sy);
     }
 }
 
-unsafe extern "C" fn window_tree_update(wme: NonNull<window_mode_entry>) {
+unsafe fn window_tree_update(wme: NonNull<window_mode_entry>) {
     unsafe {
         let data: *mut window_tree_modedata = (*wme.as_ptr()).data.cast();
 
@@ -1233,7 +1233,7 @@ unsafe extern "C" fn window_tree_update(wme: NonNull<window_mode_entry>) {
     }
 }
 
-unsafe extern "C" fn window_tree_get_target(
+unsafe fn window_tree_get_target(
     item: NonNull<window_tree_itemdata>,
     fs: *mut cmd_find_state,
 ) -> *mut c_char {
@@ -1284,7 +1284,7 @@ unsafe extern "C" fn window_tree_get_target(
     }
 }
 
-unsafe extern "C" fn window_tree_command_each(
+unsafe fn window_tree_command_each(
     modedata: NonNull<c_void>,
     itemdata: NonNull<c_void>,
     c: *mut client,
@@ -1302,7 +1302,7 @@ unsafe extern "C" fn window_tree_command_each(
     }
 }
 
-unsafe extern "C" fn window_tree_command_done(
+unsafe fn window_tree_command_done(
     _: *mut cmdq_item,
     modedata: *mut c_void,
 ) -> cmd_retval {
@@ -1320,7 +1320,7 @@ unsafe extern "C" fn window_tree_command_done(
     }
 }
 
-unsafe extern "C" fn window_tree_command_callback(
+unsafe fn window_tree_command_callback(
     c: *mut client,
     modedata: NonNull<c_void>,
     s: *const c_char,
@@ -1354,13 +1354,13 @@ unsafe extern "C" fn window_tree_command_callback(
     }
 }
 
-unsafe extern "C" fn window_tree_command_free(modedata: NonNull<c_void>) {
+unsafe fn window_tree_command_free(modedata: NonNull<c_void>) {
     unsafe {
         window_tree_destroy(modedata.cast());
     }
 }
 
-unsafe extern "C" fn window_tree_kill_each(
+unsafe fn window_tree_kill_each(
     _: NonNull<c_void>,
     itemdata: NonNull<c_void>,
     _: *mut client,
@@ -1396,7 +1396,7 @@ unsafe extern "C" fn window_tree_kill_each(
     }
 }
 
-unsafe extern "C" fn window_tree_kill_current_callback(
+unsafe fn window_tree_kill_current_callback(
     c: *mut client,
     modedata: NonNull<c_void>,
     s: *const c_char,
@@ -1426,7 +1426,7 @@ unsafe extern "C" fn window_tree_kill_current_callback(
     }
 }
 
-unsafe extern "C" fn window_tree_kill_tagged_callback(
+unsafe fn window_tree_kill_tagged_callback(
     c: *mut client,
     modedata: NonNull<c_void>,
     s: *const c_char,
@@ -1461,7 +1461,7 @@ unsafe extern "C" fn window_tree_kill_tagged_callback(
     }
 }
 
-unsafe extern "C" fn window_tree_mouse(
+unsafe fn window_tree_mouse(
     data: *mut window_tree_modedata,
     key: key_code,
     mut x: u32,
@@ -1537,7 +1537,7 @@ unsafe extern "C" fn window_tree_mouse(
     }
 }
 
-unsafe extern "C" fn window_tree_key(
+unsafe fn window_tree_key(
     wme: NonNull<window_mode_entry>,
     c: *mut client,
     _: *mut session,

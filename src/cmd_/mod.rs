@@ -306,7 +306,7 @@ pub unsafe fn cmd_log_argv_(argc: i32, argv: *mut *mut c_char, args: std::fmt::A
     }
 }
 
-pub unsafe extern "C" fn cmd_append_argv(
+pub unsafe fn cmd_append_argv(
     argc: *mut c_int,
     argv: *mut *mut *mut c_char,
     arg: *const c_char,
@@ -318,7 +318,7 @@ pub unsafe extern "C" fn cmd_append_argv(
     }
 }
 
-pub unsafe extern "C" fn cmd_pack_argv(
+pub unsafe fn cmd_pack_argv(
     argc: c_int,
     argv: *mut *mut c_char,
     mut buf: *mut c_char,
@@ -345,7 +345,7 @@ pub unsafe extern "C" fn cmd_pack_argv(
     }
 }
 
-pub unsafe extern "C" fn cmd_unpack_argv(
+pub unsafe fn cmd_unpack_argv(
     mut buf: *mut c_char,
     mut len: usize,
     argc: c_int,
@@ -376,7 +376,7 @@ pub unsafe extern "C" fn cmd_unpack_argv(
     }
 }
 
-pub unsafe extern "C" fn cmd_copy_argv(argc: c_int, argv: *mut *mut c_char) -> *mut *mut c_char {
+pub unsafe fn cmd_copy_argv(argc: c_int, argv: *mut *mut c_char) -> *mut *mut c_char {
     unsafe {
         if argc == 0 {
             return null_mut();
@@ -393,7 +393,7 @@ pub unsafe extern "C" fn cmd_copy_argv(argc: c_int, argv: *mut *mut c_char) -> *
     }
 }
 
-pub unsafe extern "C" fn cmd_free_argv(argc: c_int, argv: *mut *mut c_char) {
+pub unsafe fn cmd_free_argv(argc: c_int, argv: *mut *mut c_char) {
     unsafe {
         if argc == 0 {
             return;
@@ -405,7 +405,7 @@ pub unsafe extern "C" fn cmd_free_argv(argc: c_int, argv: *mut *mut c_char) {
     }
 }
 
-pub unsafe extern "C" fn cmd_stringify_argv(argc: c_int, argv: *mut *mut c_char) -> *mut c_char {
+pub unsafe fn cmd_stringify_argv(argc: c_int, argv: *mut *mut c_char) -> *mut c_char {
     unsafe {
         let mut buf: *mut c_char = null_mut();
         let mut len: usize = 0;
@@ -440,15 +440,15 @@ pub unsafe extern "C" fn cmd_stringify_argv(argc: c_int, argv: *mut *mut c_char)
     }
 }
 
-pub unsafe extern "C" fn cmd_get_entry(cmd: *mut cmd) -> *mut cmd_entry {
+pub unsafe fn cmd_get_entry(cmd: *mut cmd) -> *mut cmd_entry {
     unsafe { (*cmd).entry }
 }
 
-pub unsafe extern "C" fn cmd_get_args(cmd: *mut cmd) -> *mut args {
+pub unsafe fn cmd_get_args(cmd: *mut cmd) -> *mut args {
     unsafe { (*cmd).args }
 }
 
-pub unsafe extern "C" fn cmd_get_group(cmd: *mut cmd) -> c_uint {
+pub unsafe fn cmd_get_group(cmd: *mut cmd) -> c_uint {
     unsafe { (*cmd).group }
 }
 
@@ -461,7 +461,7 @@ pub unsafe fn cmd_get_source(cmd: *mut cmd, file: *mut *const c_char, line: &Ato
     }
 }
 
-pub unsafe extern "C" fn cmd_get_alias(name: *const c_char) -> *mut c_char {
+pub unsafe fn cmd_get_alias(name: *const c_char) -> *mut c_char {
     unsafe {
         let o = options_get_only(global_options, c"command-alias".as_ptr());
         if o.is_null() {
@@ -599,7 +599,7 @@ pub unsafe fn cmd_parse(
     }
 }
 
-pub unsafe extern "C" fn cmd_free(cmd: *mut cmd) {
+pub unsafe fn cmd_free(cmd: *mut cmd) {
     unsafe {
         free((*cmd).file as _);
 
@@ -608,7 +608,7 @@ pub unsafe extern "C" fn cmd_free(cmd: *mut cmd) {
     }
 }
 
-pub unsafe extern "C" fn cmd_copy(cmd: *mut cmd, argc: c_int, argv: *mut *mut c_char) -> *mut cmd {
+pub unsafe fn cmd_copy(cmd: *mut cmd, argc: c_int, argv: *mut *mut c_char) -> *mut cmd {
     unsafe {
         let new_cmd: *mut cmd = xcalloc(1, size_of::<cmd>()).cast().as_ptr();
         (*new_cmd).entry = (*cmd).entry;
@@ -623,7 +623,7 @@ pub unsafe extern "C" fn cmd_copy(cmd: *mut cmd, argc: c_int, argv: *mut *mut c_
     }
 }
 
-pub unsafe extern "C" fn cmd_print(cmd: *mut cmd) -> *mut c_char {
+pub unsafe fn cmd_print(cmd: *mut cmd) -> *mut c_char {
     unsafe {
         let s = args_print((*cmd).args);
         let out = if *s != b'\0' as c_char {
@@ -652,14 +652,14 @@ pub unsafe fn cmd_list_new<'a>() -> &'a mut cmd_list {
     }
 }
 
-pub unsafe extern "C" fn cmd_list_append(cmdlist: *mut cmd_list, cmd: *mut cmd) {
+pub unsafe fn cmd_list_append(cmdlist: *mut cmd_list, cmd: *mut cmd) {
     unsafe {
         (*cmd).group = (*cmdlist).group;
         tailq_insert_tail::<_, qentry>((*cmdlist).list, cmd);
     }
 }
 
-pub unsafe extern "C" fn cmd_list_append_all(cmdlist: *mut cmd_list, from: *mut cmd_list) {
+pub unsafe fn cmd_list_append_all(cmdlist: *mut cmd_list, from: *mut cmd_list) {
     unsafe {
         for cmd in tailq_foreach::<_, qentry>((*from).list).map(NonNull::as_ptr) {
             (*cmd).group = (*cmdlist).group;
@@ -668,14 +668,14 @@ pub unsafe extern "C" fn cmd_list_append_all(cmdlist: *mut cmd_list, from: *mut 
     }
 }
 
-pub unsafe extern "C" fn cmd_list_move(cmdlist: *mut cmd_list, from: *mut cmd_list) {
+pub unsafe fn cmd_list_move(cmdlist: *mut cmd_list, from: *mut cmd_list) {
     unsafe {
         tailq_concat::<_, qentry>((*cmdlist).list, (*from).list);
         (*cmdlist).group = cmd_list_next_group.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     }
 }
 
-pub unsafe extern "C" fn cmd_list_free(cmdlist: *mut cmd_list) {
+pub unsafe fn cmd_list_free(cmdlist: *mut cmd_list) {
     unsafe {
         (*cmdlist).references -= 1;
         if (*cmdlist).references != 0 {
@@ -691,7 +691,7 @@ pub unsafe extern "C" fn cmd_list_free(cmdlist: *mut cmd_list) {
     }
 }
 
-pub unsafe extern "C" fn cmd_list_copy(
+pub unsafe fn cmd_list_copy(
     cmdlist: &mut cmd_list,
     argc: c_int,
     argv: *mut *mut c_char,
@@ -759,27 +759,27 @@ pub fn cmd_list_print(cmdlist: &mut cmd_list, escaped: c_int) -> *mut c_char {
     }
 }
 
-pub unsafe extern "C" fn cmd_list_first(cmdlist: *mut cmd_list) -> *mut cmd {
+pub unsafe fn cmd_list_first(cmdlist: *mut cmd_list) -> *mut cmd {
     unsafe { tailq_first((*cmdlist).list) }
 }
 
-pub unsafe extern "C" fn cmd_list_next(cmd: *mut cmd) -> *mut cmd {
+pub unsafe fn cmd_list_next(cmd: *mut cmd) -> *mut cmd {
     unsafe { tailq_next::<_, _, qentry>(cmd) }
 }
 
-pub unsafe extern "C" fn cmd_list_all_have(cmdlist: *mut cmd_list, flag: cmd_flag) -> bool {
+pub unsafe fn cmd_list_all_have(cmdlist: *mut cmd_list, flag: cmd_flag) -> bool {
     unsafe {
         tailq_foreach((*cmdlist).list).all(|cmd| (*(*cmd.as_ptr()).entry).flags.intersects(flag))
     }
 }
 
-pub unsafe extern "C" fn cmd_list_any_have(cmdlist: *mut cmd_list, flag: cmd_flag) -> bool {
+pub unsafe fn cmd_list_any_have(cmdlist: *mut cmd_list, flag: cmd_flag) -> bool {
     unsafe {
         tailq_foreach((*cmdlist).list).any(|cmd| (*(*cmd.as_ptr()).entry).flags.intersects(flag))
     }
 }
 
-pub unsafe extern "C" fn cmd_mouse_at(
+pub unsafe fn cmd_mouse_at(
     wp: *mut window_pane,
     m: *mut mouse_event,
     xp: *mut c_uint,
@@ -827,7 +827,7 @@ pub unsafe extern "C" fn cmd_mouse_at(
     }
 }
 
-pub unsafe extern "C" fn cmd_mouse_window(
+pub unsafe fn cmd_mouse_window(
     m: *mut mouse_event,
     sp: *mut *mut session,
 ) -> Option<NonNull<winlink>> {
@@ -861,7 +861,7 @@ pub unsafe extern "C" fn cmd_mouse_window(
     }
 }
 
-pub unsafe extern "C" fn cmd_mouse_pane(
+pub unsafe fn cmd_mouse_pane(
     m: *mut mouse_event,
     sp: *mut *mut session,
     wlp: *mut *mut winlink,
@@ -886,7 +886,7 @@ pub unsafe extern "C" fn cmd_mouse_pane(
     }
 }
 
-pub unsafe extern "C" fn cmd_template_replace(
+pub unsafe fn cmd_template_replace(
     template: *const c_char,
     s: *const c_char,
     idx: c_int,

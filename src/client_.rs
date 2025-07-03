@@ -78,7 +78,7 @@ static mut client_attached: i32 = 0;
 
 static mut client_files: client_files = rb_initializer();
 
-pub unsafe extern "C" fn client_get_lock(lockfile: *mut c_char) -> i32 {
+pub unsafe fn client_get_lock(lockfile: *mut c_char) -> i32 {
     unsafe {
         log_debug!("lock file is {}", _s(lockfile));
 
@@ -103,7 +103,7 @@ pub unsafe extern "C" fn client_get_lock(lockfile: *mut c_char) -> i32 {
     }
 }
 
-pub unsafe extern "C" fn client_connect(
+pub unsafe fn client_connect(
     base: *mut event_base,
     path: *const c_char,
     flags: client_flag,
@@ -197,7 +197,7 @@ pub unsafe extern "C" fn client_connect(
     }
 }
 
-pub unsafe extern "C" fn client_exit_message() -> *const c_char {
+pub unsafe fn client_exit_message() -> *const c_char {
     type msgbuf = [c_char; 256];
     static mut msg: msgbuf = [0; 256];
 
@@ -241,7 +241,7 @@ pub unsafe extern "C" fn client_exit_message() -> *const c_char {
     }
 }
 
-unsafe extern "C" fn client_exit() {
+unsafe fn client_exit() {
     unsafe {
         if file_write_left(&raw mut client_files) == 0 {
             proc_exit(client_proc);
@@ -497,7 +497,7 @@ pub unsafe extern "C-unwind" fn client_main(
     }
 }
 
-unsafe extern "C" fn client_send_identify(
+unsafe fn client_send_identify(
     ttynam: *const c_char,
     termname: *const c_char,
     caps: *mut *mut c_char,
@@ -611,7 +611,7 @@ unsafe extern "C" fn client_send_identify(
 }
 
 #[expect(clippy::deref_addrof)]
-unsafe extern "C" fn client_exec(shell: *mut c_char, shellcmd: *mut c_char) {
+unsafe fn client_exec(shell: *mut c_char, shellcmd: *mut c_char) {
     unsafe {
         log_debug!("shell {}, command {}", _s(shell), _s(shellcmd));
         let argv0 = shell_argv0(
@@ -632,7 +632,7 @@ unsafe extern "C" fn client_exec(shell: *mut c_char, shellcmd: *mut c_char) {
     }
 }
 
-unsafe extern "C" fn client_signal(sig: i32) {
+unsafe fn client_signal(sig: i32) {
     unsafe {
         let mut sigact: sigaction = zeroed();
         let mut status: i32 = 0;
@@ -690,7 +690,7 @@ unsafe extern "C" fn client_signal(sig: i32) {
     }
 }
 
-unsafe extern "C" fn client_file_check_cb(
+unsafe fn client_file_check_cb(
     _c: *mut client,
     _path: *mut c_char,
     _error: i32,
@@ -705,7 +705,7 @@ unsafe extern "C" fn client_file_check_cb(
     }
 }
 
-unsafe extern "C" fn client_dispatch(imsg: *mut imsg, _arg: *mut c_void) {
+unsafe fn client_dispatch(imsg: *mut imsg, _arg: *mut c_void) {
     unsafe {
         if imsg.is_null() {
             if client_exitflag == 0 {
@@ -724,7 +724,7 @@ unsafe extern "C" fn client_dispatch(imsg: *mut imsg, _arg: *mut c_void) {
     }
 }
 
-unsafe extern "C" fn client_dispatch_exit_message(mut data: *const c_char, mut datalen: usize) {
+unsafe fn client_dispatch_exit_message(mut data: *const c_char, mut datalen: usize) {
     unsafe {
         let mut retval = 0;
         const size_of_retval: usize = size_of::<i32>();
@@ -752,7 +752,7 @@ unsafe extern "C" fn client_dispatch_exit_message(mut data: *const c_char, mut d
 }
 
 #[expect(clippy::deref_addrof)]
-unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
+unsafe fn client_dispatch_wait(imsg: *mut imsg) {
     static mut pledge_applied: i32 = 0;
 
     unsafe {
@@ -859,7 +859,7 @@ unsafe extern "C" fn client_dispatch_wait(imsg: *mut imsg) {
 }
 
 #[expect(clippy::deref_addrof)]
-unsafe extern "C" fn client_dispatch_attached(imsg: *mut imsg) {
+unsafe fn client_dispatch_attached(imsg: *mut imsg) {
     unsafe {
         let mut sigact: sigaction = zeroed();
         let data: *mut c_char = (*imsg).data as _;

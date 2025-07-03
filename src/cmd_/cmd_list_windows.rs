@@ -32,7 +32,7 @@ pub static mut cmd_list_windows_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-unsafe extern "C" fn cmd_list_windows_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_list_windows_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let target = cmdq_get_target(item);
@@ -47,7 +47,7 @@ unsafe extern "C" fn cmd_list_windows_exec(self_: *mut cmd, item: *mut cmdq_item
     }
 }
 
-unsafe extern "C" fn cmd_list_windows_server(self_: *mut cmd, item: *mut cmdq_item) {
+unsafe fn cmd_list_windows_server(self_: *mut cmd, item: *mut cmdq_item) {
     unsafe {
         for s in rb_foreach(&raw mut sessions) {
             cmd_list_windows_session(self_, s, item, 1);
@@ -55,7 +55,7 @@ unsafe extern "C" fn cmd_list_windows_server(self_: *mut cmd, item: *mut cmdq_it
     }
 }
 
-unsafe extern "C" fn cmd_list_windows_session(
+unsafe fn cmd_list_windows_session(
     self_: *mut cmd,
     s: NonNull<session>,
     item: *mut cmdq_item,

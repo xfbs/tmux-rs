@@ -57,7 +57,7 @@ pub static mut cmd_set_hook_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-pub unsafe extern "C" fn cmd_set_option_args_parse(
+pub unsafe fn cmd_set_option_args_parse(
     _args: *mut args,
     idx: u32,
     cause: *mut *mut c_char,
@@ -68,7 +68,7 @@ pub unsafe extern "C" fn cmd_set_option_args_parse(
     args_parse_type::ARGS_PARSE_STRING
 }
 
-pub unsafe extern "C" fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+pub unsafe fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let append = args_has(args, b'a');

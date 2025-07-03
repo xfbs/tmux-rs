@@ -99,21 +99,21 @@ RB_GENERATE!(
 RB_GENERATE!(key_tables, key_table, entry, discr_entry, key_table_cmp);
 static mut key_tables: key_tables = rb_initializer();
 
-pub unsafe extern "C" fn key_table_cmp(
+pub unsafe fn key_table_cmp(
     table1: *const key_table,
     table2: *const key_table,
 ) -> Ordering {
     unsafe { i32_to_ordering(strcmp((*table1).name, (*table2).name)) }
 }
 
-pub unsafe extern "C" fn key_bindings_cmp(
+pub unsafe fn key_bindings_cmp(
     bd1: *const key_binding,
     bd2: *const key_binding,
 ) -> Ordering {
     unsafe { (*bd1).key.cmp(&(*bd2).key) }
 }
 
-pub unsafe extern "C" fn key_bindings_free(bd: *mut key_binding) {
+pub unsafe fn key_bindings_free(bd: *mut key_binding) {
     unsafe {
         cmd_list_free((*bd).cmdlist);
         free_((*bd).note);
@@ -121,7 +121,7 @@ pub unsafe extern "C" fn key_bindings_free(bd: *mut key_binding) {
     }
 }
 
-pub unsafe extern "C" fn key_bindings_get_table(
+pub unsafe fn key_bindings_get_table(
     name: *const c_char,
     create: i32,
 ) -> *mut key_table {
@@ -148,15 +148,15 @@ pub unsafe extern "C" fn key_bindings_get_table(
     }
 }
 
-pub unsafe extern "C" fn key_bindings_first_table() -> *mut key_table {
+pub unsafe fn key_bindings_first_table() -> *mut key_table {
     unsafe { rb_min(&raw mut key_tables) }
 }
 
-pub unsafe extern "C" fn key_bindings_next_table(table: *mut key_table) -> *mut key_table {
+pub unsafe fn key_bindings_next_table(table: *mut key_table) -> *mut key_table {
     unsafe { rb_next(table) }
 }
 
-pub unsafe extern "C" fn key_bindings_unref_table(table: *mut key_table) {
+pub unsafe fn key_bindings_unref_table(table: *mut key_table) {
     unsafe {
         (*table).references -= 1;
         if (*table).references != 0 {
@@ -177,7 +177,7 @@ pub unsafe extern "C" fn key_bindings_unref_table(table: *mut key_table) {
     }
 }
 
-pub unsafe extern "C" fn key_bindings_get(
+pub unsafe fn key_bindings_get(
     table: NonNull<key_table>,
     key: key_code,
 ) -> *mut key_binding {
@@ -190,7 +190,7 @@ pub unsafe extern "C" fn key_bindings_get(
     }
 }
 
-pub unsafe extern "C" fn key_bindings_get_default(
+pub unsafe fn key_bindings_get_default(
     table: *mut key_table,
     key: key_code,
 ) -> *mut key_binding {
@@ -203,18 +203,18 @@ pub unsafe extern "C" fn key_bindings_get_default(
     }
 }
 
-pub unsafe extern "C" fn key_bindings_first(table: *mut key_table) -> *mut key_binding {
+pub unsafe fn key_bindings_first(table: *mut key_table) -> *mut key_binding {
     unsafe { rb_min(&raw mut (*table).key_bindings) }
 }
 
-pub unsafe extern "C" fn key_bindings_next(
+pub unsafe fn key_bindings_next(
     _table: *mut key_table,
     bd: *mut key_binding,
 ) -> *mut key_binding {
     unsafe { rb_next(bd) }
 }
 
-pub unsafe extern "C" fn key_bindings_add(
+pub unsafe fn key_bindings_add(
     name: *const c_char,
     key: key_code,
     note: *const c_char,
@@ -265,7 +265,7 @@ pub unsafe extern "C" fn key_bindings_add(
     }
 }
 
-pub unsafe extern "C" fn key_bindings_remove(name: *const c_char, key: key_code) {
+pub unsafe fn key_bindings_remove(name: *const c_char, key: key_code) {
     unsafe {
         let Some(table) = NonNull::new(key_bindings_get_table(name, 0)) else {
             return;
@@ -295,7 +295,7 @@ pub unsafe extern "C" fn key_bindings_remove(name: *const c_char, key: key_code)
     }
 }
 
-pub unsafe extern "C" fn key_bindings_reset(name: *const c_char, key: key_code) {
+pub unsafe fn key_bindings_reset(name: *const c_char, key: key_code) {
     unsafe {
         let Some(table) = NonNull::new(key_bindings_get_table(name, 0)) else {
             return;
@@ -326,7 +326,7 @@ pub unsafe extern "C" fn key_bindings_reset(name: *const c_char, key: key_code) 
     }
 }
 
-pub unsafe extern "C" fn key_bindings_remove_table(name: *const c_char) {
+pub unsafe fn key_bindings_remove_table(name: *const c_char) {
     unsafe {
         let table = key_bindings_get_table(name, 0);
         if !table.is_null() {
@@ -341,7 +341,7 @@ pub unsafe extern "C" fn key_bindings_remove_table(name: *const c_char) {
     }
 }
 
-pub unsafe extern "C" fn key_bindings_reset_table(name: *const c_char) {
+pub unsafe fn key_bindings_reset_table(name: *const c_char) {
     unsafe {
         let table = key_bindings_get_table(name, 0);
         if table.is_null() {
@@ -357,7 +357,7 @@ pub unsafe extern "C" fn key_bindings_reset_table(name: *const c_char) {
     }
 }
 
-pub unsafe extern "C" fn key_bindings_init_done(
+pub unsafe fn key_bindings_init_done(
     _item: *mut cmdq_item,
     data: *mut c_void,
 ) -> cmd_retval {
@@ -380,7 +380,7 @@ pub unsafe extern "C" fn key_bindings_init_done(
     cmd_retval::CMD_RETURN_NORMAL
 }
 
-pub unsafe extern "C" fn key_bindings_init() {
+pub unsafe fn key_bindings_init() {
     #[rustfmt::skip]
     static defaults: [&str; 262] = [
         // Prefix keys.
@@ -684,7 +684,7 @@ pub unsafe extern "C" fn key_bindings_init() {
     }
 }
 
-pub unsafe extern "C" fn key_bindings_read_only(
+pub unsafe fn key_bindings_read_only(
     item: *mut cmdq_item,
     data: *mut c_void,
 ) -> cmd_retval {
@@ -694,7 +694,7 @@ pub unsafe extern "C" fn key_bindings_read_only(
     cmd_retval::CMD_RETURN_ERROR
 }
 
-pub unsafe extern "C" fn key_bindings_dispatch(
+pub unsafe fn key_bindings_dispatch(
     bd: *mut key_binding,
     item: *mut cmdq_item,
     c: *mut client,

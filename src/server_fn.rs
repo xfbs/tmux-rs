@@ -22,19 +22,19 @@ use crate::compat::{
     tree::rb_foreach,
 };
 
-pub unsafe extern "C" fn server_redraw_client(c: *mut client) {
+pub unsafe fn server_redraw_client(c: *mut client) {
     unsafe {
         (*c).flags |= CLIENT_ALLREDRAWFLAGS;
     }
 }
 
-pub unsafe extern "C" fn server_status_client(c: *mut client) {
+pub unsafe fn server_status_client(c: *mut client) {
     unsafe {
         (*c).flags |= client_flag::REDRAWSTATUS;
     }
 }
 
-pub unsafe extern "C" fn server_redraw_session(s: *mut session) {
+pub unsafe fn server_redraw_session(s: *mut session) {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if (*c).session == s {
@@ -44,7 +44,7 @@ pub unsafe extern "C" fn server_redraw_session(s: *mut session) {
     }
 }
 
-pub unsafe extern "C" fn server_redraw_session_group(s: *mut session) {
+pub unsafe fn server_redraw_session_group(s: *mut session) {
     unsafe {
         let sg = session_group_contains(s);
         if sg.is_null() {
@@ -57,7 +57,7 @@ pub unsafe extern "C" fn server_redraw_session_group(s: *mut session) {
     }
 }
 
-pub unsafe extern "C" fn server_status_session(s: *mut session) {
+pub unsafe fn server_status_session(s: *mut session) {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if (*c).session == s {
@@ -67,7 +67,7 @@ pub unsafe extern "C" fn server_status_session(s: *mut session) {
     }
 }
 
-pub unsafe extern "C" fn server_status_session_group(s: *mut session) {
+pub unsafe fn server_status_session_group(s: *mut session) {
     unsafe {
         let sg = session_group_contains(s);
         if sg.is_null() {
@@ -80,7 +80,7 @@ pub unsafe extern "C" fn server_status_session_group(s: *mut session) {
     }
 }
 
-pub unsafe extern "C" fn server_redraw_window(w: *mut window) {
+pub unsafe fn server_redraw_window(w: *mut window) {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if !(*c).session.is_null() && (*(*(*c).session).curw).window == w {
@@ -90,7 +90,7 @@ pub unsafe extern "C" fn server_redraw_window(w: *mut window) {
     }
 }
 
-pub unsafe extern "C" fn server_redraw_window_borders(w: *mut window) {
+pub unsafe fn server_redraw_window_borders(w: *mut window) {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if !(*c).session.is_null() && (*(*(*c).session).curw).window == w {
@@ -100,7 +100,7 @@ pub unsafe extern "C" fn server_redraw_window_borders(w: *mut window) {
     }
 }
 
-pub unsafe extern "C" fn server_status_window(w: *mut window) {
+pub unsafe fn server_status_window(w: *mut window) {
     unsafe {
         /*
          * This is slightly different. We want to redraw the status line of any
@@ -116,7 +116,7 @@ pub unsafe extern "C" fn server_status_window(w: *mut window) {
     }
 }
 
-pub unsafe extern "C" fn server_lock() {
+pub unsafe fn server_lock() {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if !(*c).session.is_null() {
@@ -126,7 +126,7 @@ pub unsafe extern "C" fn server_lock() {
     }
 }
 
-pub unsafe extern "C" fn server_lock_session(s: *mut session) {
+pub unsafe fn server_lock_session(s: *mut session) {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             if (*c).session == s {
@@ -136,7 +136,7 @@ pub unsafe extern "C" fn server_lock_session(s: *mut session) {
     }
 }
 
-pub unsafe extern "C" fn server_lock_client(c: *mut client) {
+pub unsafe fn server_lock_client(c: *mut client) {
     unsafe {
         if (*c).flags.intersects(client_flag::CONTROL) {
             return;
@@ -176,7 +176,7 @@ pub unsafe extern "C" fn server_lock_client(c: *mut client) {
     }
 }
 
-pub unsafe extern "C" fn server_kill_pane(wp: *mut window_pane) {
+pub unsafe fn server_kill_pane(wp: *mut window_pane) {
     unsafe {
         let w = (*wp).window;
 
@@ -193,7 +193,7 @@ pub unsafe extern "C" fn server_kill_pane(wp: *mut window_pane) {
     }
 }
 
-pub unsafe extern "C" fn server_kill_window(w: *mut window, renumber: i32) {
+pub unsafe fn server_kill_window(w: *mut window, renumber: i32) {
     unsafe {
         for s in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
             if session_has(s, w) == 0 {
@@ -218,7 +218,7 @@ pub unsafe extern "C" fn server_kill_window(w: *mut window, renumber: i32) {
     }
 }
 
-pub unsafe extern "C" fn server_renumber_session(s: *mut session) {
+pub unsafe fn server_renumber_session(s: *mut session) {
     unsafe {
         if options_get_number_((*s).options, c"renumber-windows") != 0 {
             let sg = session_group_contains(s);
@@ -233,7 +233,7 @@ pub unsafe extern "C" fn server_renumber_session(s: *mut session) {
     }
 }
 
-pub unsafe extern "C" fn server_renumber_all() {
+pub unsafe fn server_renumber_all() {
     unsafe {
         for s in rb_foreach(&raw mut sessions) {
             server_renumber_session(s.as_ptr());
@@ -241,7 +241,7 @@ pub unsafe extern "C" fn server_renumber_all() {
     }
 }
 
-pub unsafe extern "C" fn server_link_window(
+pub unsafe fn server_link_window(
     src: *mut session,
     srcwl: *mut winlink,
     dst: *mut session,
@@ -303,7 +303,7 @@ pub unsafe extern "C" fn server_link_window(
     }
 }
 
-pub unsafe extern "C" fn server_unlink_window(s: *mut session, wl: *mut winlink) {
+pub unsafe fn server_unlink_window(s: *mut session, wl: *mut winlink) {
     unsafe {
         if session_detach(s, wl) != 0 {
             server_destroy_session_group(s);
@@ -313,7 +313,7 @@ pub unsafe extern "C" fn server_unlink_window(s: *mut session, wl: *mut winlink)
     }
 }
 
-pub unsafe extern "C" fn server_destroy_pane(wp: *mut window_pane, notify: i32) {
+pub unsafe fn server_destroy_pane(wp: *mut window_pane, notify: i32) {
     unsafe {
         let w = (*wp).window;
         let mut ctx: MaybeUninit<screen_write_ctx> = MaybeUninit::<screen_write_ctx>::uninit();
@@ -401,7 +401,7 @@ pub unsafe extern "C" fn server_destroy_pane(wp: *mut window_pane, notify: i32) 
     }
 }
 
-pub unsafe extern "C" fn server_destroy_session_group(s: *mut session) {
+pub unsafe fn server_destroy_session_group(s: *mut session) {
     unsafe {
         let sg = session_group_contains(s);
         if sg.is_null() {
@@ -416,9 +416,9 @@ pub unsafe extern "C" fn server_destroy_session_group(s: *mut session) {
     }
 }
 
-pub unsafe extern "C" fn server_find_session(
+pub unsafe fn server_find_session(
     s: *mut session,
-    f: unsafe extern "C" fn(*mut session, *mut session) -> i32,
+    f: unsafe fn(*mut session, *mut session) -> i32,
 ) -> *mut session {
     unsafe {
         let mut s_out: *mut session = null_mut();
@@ -431,14 +431,14 @@ pub unsafe extern "C" fn server_find_session(
     }
 }
 
-pub unsafe extern "C" fn server_newer_session(s_loop: *mut session, s_out: *mut session) -> i32 {
+pub unsafe fn server_newer_session(s_loop: *mut session, s_out: *mut session) -> i32 {
     unsafe {
         (timer::new(&raw const (*s_loop).activity_time)
             > timer::new(&raw const (*s_out).activity_time)) as i32
     }
 }
 
-pub unsafe extern "C" fn server_newer_detached_session(
+pub unsafe fn server_newer_detached_session(
     s_loop: *mut session,
     s_out: *mut session,
 ) -> i32 {
@@ -450,7 +450,7 @@ pub unsafe extern "C" fn server_newer_detached_session(
     }
 }
 
-pub unsafe extern "C" fn server_destroy_session(s: *mut session) {
+pub unsafe fn server_destroy_session(s: *mut session) {
     unsafe {
         let detach_on_destroy = options_get_number_((*s).options, c"detach-on-destroy");
 
@@ -484,7 +484,7 @@ pub unsafe extern "C" fn server_destroy_session(s: *mut session) {
     }
 }
 
-pub unsafe extern "C" fn server_check_unattached() {
+pub unsafe fn server_check_unattached() {
     unsafe {
         for s in rb_foreach(&raw mut sessions).map(NonNull::as_ptr) {
             if (*s).attached != 0 {
@@ -514,7 +514,7 @@ pub unsafe extern "C" fn server_check_unattached() {
     }
 }
 
-pub unsafe extern "C" fn server_unzoom_window(w: *mut window) {
+pub unsafe fn server_unzoom_window(w: *mut window) {
     unsafe {
         if window_unzoom(w, 1) == 0 {
             server_redraw_window(w);

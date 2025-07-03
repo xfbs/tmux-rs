@@ -28,7 +28,7 @@ pub static mut cmd_show_environment_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-unsafe extern "C" fn cmd_show_environment_escape(envent: *mut environ_entry) -> *mut c_char {
+unsafe fn cmd_show_environment_escape(envent: *mut environ_entry) -> *mut c_char {
     unsafe {
         let mut value = transmute_ptr((*envent).value);
         let ret: *mut i8 = xmalloc(strlen(value) * 2 + 1).as_ptr().cast(); /* at most twice the size */
@@ -54,7 +54,7 @@ unsafe extern "C" fn cmd_show_environment_escape(envent: *mut environ_entry) -> 
     }
 }
 
-unsafe extern "C" fn cmd_show_environment_print(
+unsafe fn cmd_show_environment_print(
     self_: *mut cmd,
     item: *mut cmdq_item,
     envent: *mut environ_entry,
@@ -100,7 +100,7 @@ unsafe extern "C" fn cmd_show_environment_print(
     }
 }
 
-unsafe extern "C" fn cmd_show_environment_exec(
+unsafe fn cmd_show_environment_exec(
     self_: *mut cmd,
     item: *mut cmdq_item,
 ) -> cmd_retval {

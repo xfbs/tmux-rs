@@ -13,9 +13,9 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use crate::*;
 
-pub type popup_close_cb = Option<unsafe extern "C" fn(_: i32, _: *mut c_void)>;
+pub type popup_close_cb = Option<unsafe fn(_: i32, _: *mut c_void)>;
 pub type popup_finish_edit_cb =
-    Option<unsafe extern "C" fn(_: *mut c_char, _: usize, _: *mut c_void)>;
+    Option<unsafe fn(_: *mut c_char, _: usize, _: *mut c_void)>;
 
 #[repr(i32)]
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -103,7 +103,7 @@ static mut popup_internal_menu_items: [menu_item; 5] = [
 
 // #[cfg(disabled)]
 
-pub unsafe extern "C" fn popup_redraw_cb(ttyctx: *const tty_ctx) {
+pub unsafe fn popup_redraw_cb(ttyctx: *const tty_ctx) {
     unsafe {
         let pd = (*ttyctx).arg.cast::<popup_data>();
         (*(*pd).c).flags |= client_flag::REDRAWOVERLAY;
@@ -112,7 +112,7 @@ pub unsafe extern "C" fn popup_redraw_cb(ttyctx: *const tty_ctx) {
 
 // #[cfg(disabled)]
 
-pub unsafe extern "C" fn popup_set_client_cb(ttyctx: *mut tty_ctx, c: *mut client) -> i32 {
+pub unsafe fn popup_set_client_cb(ttyctx: *mut tty_ctx, c: *mut client) -> i32 {
     unsafe {
         let pd = (*ttyctx).arg.cast::<popup_data>();
 
@@ -147,7 +147,7 @@ pub unsafe extern "C" fn popup_set_client_cb(ttyctx: *mut tty_ctx, c: *mut clien
 
 // #[cfg(disabled)]
 
-pub unsafe extern "C" fn popup_init_ctx_cb(ctx: *mut screen_write_ctx, ttyctx: *mut tty_ctx) {
+pub unsafe fn popup_init_ctx_cb(ctx: *mut screen_write_ctx, ttyctx: *mut tty_ctx) {
     unsafe {
         let pd = (*ctx).arg.cast::<popup_data>();
 
@@ -161,7 +161,7 @@ pub unsafe extern "C" fn popup_init_ctx_cb(ctx: *mut screen_write_ctx, ttyctx: *
 
 // #[cfg(disabled)]
 
-pub unsafe extern "C" fn popup_mode_cb(
+pub unsafe fn popup_mode_cb(
     c: *mut client,
     data: *mut c_void,
     cx: *mut u32,
@@ -186,7 +186,7 @@ pub unsafe extern "C" fn popup_mode_cb(
 }
 
 /// Return parts of the input range which are not obstructed by the popup.
-pub unsafe extern "C" fn popup_check_cb(
+pub unsafe fn popup_check_cb(
     c: *mut client,
     data: *mut c_void,
     px: u32,
@@ -246,7 +246,7 @@ pub unsafe extern "C" fn popup_check_cb(
 
 // #[cfg(disabled)]
 
-pub unsafe extern "C" fn popup_draw_cb(
+pub unsafe fn popup_draw_cb(
     c: *mut client,
     data: *mut c_void,
     rctx: *mut screen_redraw_ctx,
@@ -334,7 +334,7 @@ pub unsafe extern "C" fn popup_draw_cb(
 
 // #[cfg(disabled)]
 
-pub extern "C" fn popup_free_cb(c: *mut client, data: *mut c_void) {
+pub fn popup_free_cb(c: *mut client, data: *mut c_void) {
     unsafe {
         let pd = data as *mut popup_data;
         let item = (*pd).item;
@@ -371,7 +371,7 @@ pub extern "C" fn popup_free_cb(c: *mut client, data: *mut c_void) {
 
 // #[cfg(disabled)]
 
-pub extern "C" fn popup_resize_cb(_c: *mut client, data: *mut c_void) {
+pub fn popup_resize_cb(_c: *mut client, data: *mut c_void) {
     unsafe {
         let pd = data as *mut popup_data;
         if pd.is_null() {
@@ -417,7 +417,7 @@ pub extern "C" fn popup_resize_cb(_c: *mut client, data: *mut c_void) {
 
 //#[cfg(disabled)]
 
-pub extern "C" fn popup_make_pane(pd: *mut popup_data, type_: layout_type) {
+pub fn popup_make_pane(pd: *mut popup_data, type_: layout_type) {
     unsafe {
         let c = (*pd).c;
         let s = (*c).session;
@@ -461,7 +461,7 @@ pub extern "C" fn popup_make_pane(pd: *mut popup_data, type_: layout_type) {
 
 // #[cfg(disabled)]
 
-pub extern "C" fn popup_menu_done(
+pub fn popup_menu_done(
     _menu: *mut menu,
     _choice: u32,
     key: key_code,
@@ -505,7 +505,7 @@ pub extern "C" fn popup_menu_done(
 
 // #[cfg(disabled)]
 
-pub unsafe extern "C" fn popup_handle_drag(
+pub unsafe fn popup_handle_drag(
     c: *mut client,
     pd: *mut popup_data,
     m: *mut mouse_event,
@@ -577,7 +577,7 @@ pub unsafe extern "C" fn popup_handle_drag(
 
 // #[cfg(disabled)]
 
-pub unsafe extern "C" fn popup_key_cb(
+pub unsafe fn popup_key_cb(
     c: *mut client,
     data: *mut c_void,
     event: *mut key_event,
@@ -742,7 +742,7 @@ pub unsafe extern "C" fn popup_key_cb(
 
 // #[cfg(disabled)]
 
-pub unsafe extern "C" fn popup_job_update_cb(job: *mut job) {
+pub unsafe fn popup_job_update_cb(job: *mut job) {
     unsafe {
         let pd = job_get_data(job) as *mut popup_data;
         let evb = (*job_get_event(job)).input;
@@ -778,7 +778,7 @@ pub unsafe extern "C" fn popup_job_update_cb(job: *mut job) {
 }
 
 // #[cfg(disabled)]
-pub unsafe extern "C" fn popup_job_complete_cb(job: *mut job) {
+pub unsafe fn popup_job_complete_cb(job: *mut job) {
     unsafe {
         let pd = job_get_data(job) as *mut popup_data;
         let status = job_get_status((*pd).job);
@@ -802,7 +802,7 @@ pub unsafe extern "C" fn popup_job_complete_cb(job: *mut job) {
 
 // #[cfg(disabled)]
 
-pub unsafe extern "C" fn popup_display(
+pub unsafe fn popup_display(
     flags: c_int,
     mut lines: box_lines,
     item: *mut cmdq_item,
@@ -955,7 +955,7 @@ pub unsafe extern "C" fn popup_display(
 
 // #[cfg(disabled)]
 
-pub unsafe extern "C" fn popup_editor_free(pe: *mut popup_editor) {
+pub unsafe fn popup_editor_free(pe: *mut popup_editor) {
     unsafe {
         unlink((*pe).path);
         free_((*pe).path);
@@ -965,7 +965,7 @@ pub unsafe extern "C" fn popup_editor_free(pe: *mut popup_editor) {
 
 // #[cfg(disabled)]
 
-pub unsafe extern "C" fn popup_editor_close_cb(status: i32, arg: *mut c_void) {
+pub unsafe fn popup_editor_close_cb(status: i32, arg: *mut c_void) {
     unsafe {
         let pe = arg as *mut popup_editor;
         let mut buf: *mut c_char = null_mut();
@@ -1005,7 +1005,7 @@ pub unsafe extern "C" fn popup_editor_close_cb(status: i32, arg: *mut c_void) {
 
 // #[cfg(disabled)]
 
-pub unsafe extern "C" fn popup_editor(
+pub unsafe fn popup_editor(
     c: *mut client,
     buf: *const c_char,
     len: usize,

@@ -25,7 +25,7 @@ use libc::{
 
 pub static mut file_next_stream: i32 = 3;
 
-pub unsafe extern "C" fn file_get_path(c: *mut client, file: *const c_char) -> NonNull<c_char> {
+pub unsafe fn file_get_path(c: *mut client, file: *const c_char) -> NonNull<c_char> {
     unsafe {
         if *file == b'/' as c_char {
             xstrdup(file)
@@ -40,14 +40,14 @@ pub unsafe extern "C" fn file_get_path(c: *mut client, file: *const c_char) -> N
     }
 }
 
-pub unsafe extern "C" fn file_cmp(
+pub unsafe fn file_cmp(
     cf1: *const client_file,
     cf2: *const client_file,
 ) -> std::cmp::Ordering {
     unsafe { (*cf1).stream.cmp(&(*cf2).stream) }
 }
 
-pub unsafe extern "C" fn file_create_with_peer(
+pub unsafe fn file_create_with_peer(
     peer: *mut tmuxpeer,
     files: *mut client_files,
     stream: c_int,
@@ -76,7 +76,7 @@ pub unsafe extern "C" fn file_create_with_peer(
     }
 }
 
-pub unsafe extern "C" fn file_create_with_client(
+pub unsafe fn file_create_with_client(
     mut c: *mut client,
     stream: c_int,
     cb: client_file_cb,
@@ -111,7 +111,7 @@ pub unsafe extern "C" fn file_create_with_client(
     }
 }
 
-pub unsafe extern "C" fn file_free(cf: *mut client_file) {
+pub unsafe fn file_free(cf: *mut client_file) {
     unsafe {
         (*cf).references -= 1;
         if (*cf).references != 0 {
@@ -132,7 +132,7 @@ pub unsafe extern "C" fn file_free(cf: *mut client_file) {
     }
 }
 
-pub unsafe extern "C" fn file_fire_done_cb(_fd: i32, _events: i16, arg: *mut c_void) {
+pub unsafe fn file_fire_done_cb(_fd: i32, _events: i16, arg: *mut c_void) {
     unsafe {
         let cf: *mut client_file = arg as _;
         let c: *mut client = (*cf).c;
@@ -146,13 +146,13 @@ pub unsafe extern "C" fn file_fire_done_cb(_fd: i32, _events: i16, arg: *mut c_v
     }
 }
 
-pub unsafe extern "C" fn file_fire_done(cf: *mut client_file) {
+pub unsafe fn file_fire_done(cf: *mut client_file) {
     unsafe {
         event_once(-1, EV_TIMEOUT, Some(file_fire_done_cb), cf as _, null_mut());
     }
 }
 
-pub unsafe extern "C" fn file_fire_read(cf: *mut client_file) {
+pub unsafe fn file_fire_read(cf: *mut client_file) {
     unsafe {
         if let Some(cb) = (*cf).cb {
             cb(
@@ -167,7 +167,7 @@ pub unsafe extern "C" fn file_fire_read(cf: *mut client_file) {
     }
 }
 
-pub unsafe extern "C" fn file_can_print(c: *mut client) -> c_int {
+pub unsafe fn file_can_print(c: *mut client) -> c_int {
     unsafe {
         if c.is_null()
             || (*c).flags.intersects(client_flag::ATTACHED)
@@ -223,7 +223,7 @@ pub unsafe fn file_vprint(c: *mut client, args: std::fmt::Arguments) {
     }
 }
 
-pub unsafe extern "C" fn file_print_buffer(c: *mut client, data: *mut c_void, size: usize) {
+pub unsafe fn file_print_buffer(c: *mut client, data: *mut c_void, size: usize) {
     unsafe {
         let cf: *mut client_file = null_mut();
         let mut find: client_file = zeroed();
@@ -300,7 +300,7 @@ pub unsafe fn file_error_(c: *mut client, args: std::fmt::Arguments) {
     }
 }
 
-pub unsafe extern "C" fn file_write(
+pub unsafe fn file_write(
     c: *mut client,
     path: *const c_char,
     flags: c_int,
@@ -391,7 +391,7 @@ pub unsafe extern "C" fn file_write(
     }
 }
 
-pub unsafe extern "C" fn file_read(
+pub unsafe fn file_read(
     c: *mut client,
     path: *const c_char,
     cb: client_file_cb,
@@ -481,7 +481,7 @@ pub unsafe extern "C" fn file_read(
     }
 }
 
-pub unsafe extern "C" fn file_cancel(cf: *mut client_file) {
+pub unsafe fn file_cancel(cf: *mut client_file) {
     unsafe {
         log_debug!("read cancel file {}", (*cf).stream);
 
@@ -503,7 +503,7 @@ pub unsafe extern "C" fn file_cancel(cf: *mut client_file) {
     }
 }
 
-pub unsafe extern "C" fn file_push_cb(_fd: i32, _events: i16, arg: *mut c_void) {
+pub unsafe fn file_push_cb(_fd: i32, _events: i16, arg: *mut c_void) {
     let cf = arg as *mut client_file;
 
     unsafe {
@@ -514,7 +514,7 @@ pub unsafe extern "C" fn file_push_cb(_fd: i32, _events: i16, arg: *mut c_void) 
     }
 }
 
-pub unsafe extern "C" fn file_push(cf: *mut client_file) {
+pub unsafe fn file_push(cf: *mut client_file) {
     unsafe {
         let mut msglen: usize = 0;
         let mut sent: usize = 0;
@@ -570,7 +570,7 @@ pub unsafe extern "C" fn file_push(cf: *mut client_file) {
     }
 }
 
-pub unsafe extern "C" fn file_write_left(files: *mut client_files) -> c_int {
+pub unsafe fn file_write_left(files: *mut client_files) -> c_int {
     let mut left = 0;
     let mut waiting: i32 = 0;
 
@@ -590,7 +590,7 @@ pub unsafe extern "C" fn file_write_left(files: *mut client_files) -> c_int {
     (waiting != 0) as i32
 }
 
-pub unsafe extern "C" fn file_write_error_callback(
+pub unsafe fn file_write_error_callback(
     bev: *mut bufferevent,
     what: i16,
     arg: *mut c_void,
@@ -612,7 +612,7 @@ pub unsafe extern "C" fn file_write_error_callback(
     }
 }
 
-pub unsafe extern "C" fn file_write_callback(bev: *mut bufferevent, arg: *mut c_void) {
+pub unsafe fn file_write_callback(bev: *mut bufferevent, arg: *mut c_void) {
     unsafe {
         let cf = arg as *mut client_file;
 
@@ -631,7 +631,7 @@ pub unsafe extern "C" fn file_write_callback(bev: *mut bufferevent, arg: *mut c_
     }
 }
 
-pub unsafe extern "C" fn file_write_open(
+pub unsafe fn file_write_open(
     files: *mut client_files,
     peer: *mut tmuxpeer,
     imsg: *mut imsg,
@@ -718,7 +718,7 @@ pub unsafe extern "C" fn file_write_open(
     }
 }
 
-pub unsafe extern "C" fn file_write_data(files: *mut client_files, imsg: *mut imsg) {
+pub unsafe fn file_write_data(files: *mut client_files, imsg: *mut imsg) {
     unsafe {
         let msg = (*imsg).data as *mut msg_write_data;
         let msglen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
@@ -741,7 +741,7 @@ pub unsafe extern "C" fn file_write_data(files: *mut client_files, imsg: *mut im
     }
 }
 
-pub unsafe extern "C" fn file_write_close(files: *mut client_files, imsg: *mut imsg) {
+pub unsafe fn file_write_close(files: *mut client_files, imsg: *mut imsg) {
     unsafe {
         let msg = (*imsg).data as *mut msg_write_close;
         let msglen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
@@ -771,7 +771,7 @@ pub unsafe extern "C" fn file_write_close(files: *mut client_files, imsg: *mut i
     }
 }
 
-pub unsafe extern "C" fn file_read_error_callback(
+pub unsafe fn file_read_error_callback(
     _bev: *mut bufferevent,
     what: i16,
     arg: *mut c_void,
@@ -800,7 +800,7 @@ pub unsafe extern "C" fn file_read_error_callback(
     }
 }
 
-pub unsafe extern "C" fn file_read_callback(bev: *mut bufferevent, arg: *mut c_void) {
+pub unsafe fn file_read_callback(bev: *mut bufferevent, arg: *mut c_void) {
     let cf = arg as *mut client_file;
     unsafe {
         let mut msg = xmalloc_::<msg_read_data>();
@@ -835,7 +835,7 @@ pub unsafe extern "C" fn file_read_callback(bev: *mut bufferevent, arg: *mut c_v
     }
 }
 
-pub unsafe extern "C" fn file_read_open(
+pub unsafe fn file_read_open(
     files: *mut client_files,
     peer: *mut tmuxpeer,
     imsg: *mut imsg,
@@ -924,7 +924,7 @@ pub unsafe extern "C" fn file_read_open(
     }
 }
 
-pub unsafe extern "C" fn file_read_cancel(files: *mut client_files, imsg: *mut imsg) {
+pub unsafe fn file_read_cancel(files: *mut client_files, imsg: *mut imsg) {
     unsafe {
         let msg = (*imsg).data as *mut msg_read_cancel;
         let msglen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
@@ -944,7 +944,7 @@ pub unsafe extern "C" fn file_read_cancel(files: *mut client_files, imsg: *mut i
     }
 }
 
-pub unsafe extern "C" fn file_write_ready(files: *mut client_files, imsg: *mut imsg) {
+pub unsafe fn file_write_ready(files: *mut client_files, imsg: *mut imsg) {
     unsafe {
         let msg = (*imsg).data as *mut msg_write_ready;
         let msglen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
@@ -967,7 +967,7 @@ pub unsafe extern "C" fn file_write_ready(files: *mut client_files, imsg: *mut i
     }
 }
 
-pub unsafe extern "C" fn file_read_data(files: *mut client_files, imsg: *mut imsg) {
+pub unsafe fn file_read_data(files: *mut client_files, imsg: *mut imsg) {
     unsafe {
         let msg = (*imsg).data as *mut msg_read_data;
         let msglen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
@@ -996,7 +996,7 @@ pub unsafe extern "C" fn file_read_data(files: *mut client_files, imsg: *mut ims
     }
 }
 
-pub unsafe extern "C" fn file_read_done(files: *mut client_files, imsg: *mut imsg) {
+pub unsafe fn file_read_done(files: *mut client_files, imsg: *mut imsg) {
     unsafe {
         let msg = (*imsg).data as *mut msg_read_done;
         let msglen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;

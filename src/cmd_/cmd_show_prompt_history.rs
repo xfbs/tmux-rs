@@ -37,7 +37,7 @@ pub static mut cmd_clear_prompt_history_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-unsafe extern "C" fn cmd_show_prompt_history_exec(
+unsafe fn cmd_show_prompt_history_exec(
     self_: *mut cmd,
     item: *mut cmdq_item,
 ) -> cmd_retval {

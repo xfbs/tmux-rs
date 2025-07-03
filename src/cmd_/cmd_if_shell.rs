@@ -40,7 +40,7 @@ pub struct cmd_if_shell_data<'a> {
     pub item: *mut cmdq_item,
 }
 
-unsafe extern "C" fn cmd_if_shell_args_parse(
+unsafe fn cmd_if_shell_args_parse(
     _: *mut args,
     idx: u32,
     _: *mut *mut c_char,
@@ -52,7 +52,7 @@ unsafe extern "C" fn cmd_if_shell_args_parse(
     }
 }
 
-unsafe extern "C" fn cmd_if_shell_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_if_shell_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let target = cmdq_get_target(item);
@@ -128,7 +128,7 @@ unsafe extern "C" fn cmd_if_shell_exec(self_: *mut cmd, item: *mut cmdq_item) ->
     }
 }
 
-unsafe extern "C" fn cmd_if_shell_callback(job: *mut job) {
+unsafe fn cmd_if_shell_callback(job: *mut job) {
     unsafe {
         let cdata = job_get_data(job) as *mut cmd_if_shell_data;
         let c = (*cdata).client;
@@ -173,7 +173,7 @@ unsafe extern "C" fn cmd_if_shell_callback(job: *mut job) {
     }
 }
 
-unsafe extern "C" fn cmd_if_shell_free(data: *mut c_void) {
+unsafe fn cmd_if_shell_free(data: *mut c_void) {
     unsafe {
         let cdata = data as *mut cmd_if_shell_data;
 

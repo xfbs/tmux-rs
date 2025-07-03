@@ -34,7 +34,7 @@ pub struct cmd_load_buffer_data {
     pub name: *mut c_char,
 }
 
-unsafe extern "C" fn cmd_load_buffer_done(
+unsafe fn cmd_load_buffer_done(
     _c: *mut client,
     path: *mut c_char,
     error: i32,
@@ -80,7 +80,7 @@ unsafe extern "C" fn cmd_load_buffer_done(
     }
 }
 
-unsafe extern "C" fn cmd_load_buffer_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_load_buffer_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let tc = cmdq_get_target_client(item);

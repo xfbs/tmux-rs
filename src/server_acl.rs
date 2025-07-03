@@ -40,7 +40,7 @@ pub struct server_acl_user {
     pub entry: rb_entry<server_acl_user>,
 }
 
-pub unsafe extern "C" fn server_acl_cmp(
+pub unsafe fn server_acl_cmp(
     user1: *const server_acl_user,
     user2: *const server_acl_user,
 ) -> Ordering {
@@ -58,7 +58,7 @@ RB_GENERATE!(
     server_acl_cmp
 );
 
-pub unsafe extern "C" fn server_acl_init() {
+pub unsafe fn server_acl_init() {
     unsafe {
         rb_init(&raw mut server_acl_entries);
 
@@ -69,7 +69,7 @@ pub unsafe extern "C" fn server_acl_init() {
     }
 }
 
-pub unsafe extern "C" fn server_acl_user_find(uid: uid_t) -> *mut server_acl_user {
+pub unsafe fn server_acl_user_find(uid: uid_t) -> *mut server_acl_user {
     unsafe {
         let mut find: server_acl_user = server_acl_user { uid, ..zeroed() };
 
@@ -77,7 +77,7 @@ pub unsafe extern "C" fn server_acl_user_find(uid: uid_t) -> *mut server_acl_use
     }
 }
 
-pub unsafe extern "C" fn server_acl_display(item: *mut cmdq_item) {
+pub unsafe fn server_acl_display(item: *mut cmdq_item) {
     unsafe {
         // server_acl_entries
         for loop_ in rb_foreach(&raw mut server_acl_entries).map(NonNull::as_ptr) {
@@ -99,7 +99,7 @@ pub unsafe extern "C" fn server_acl_display(item: *mut cmdq_item) {
     }
 }
 
-pub unsafe extern "C" fn server_acl_user_allow(uid: uid_t) {
+pub unsafe fn server_acl_user_allow(uid: uid_t) {
     unsafe {
         let mut user = server_acl_user_find(uid);
         if user.is_null() {
@@ -111,7 +111,7 @@ pub unsafe extern "C" fn server_acl_user_allow(uid: uid_t) {
     }
 }
 
-pub unsafe extern "C" fn server_acl_user_deny(uid: uid_t) {
+pub unsafe fn server_acl_user_deny(uid: uid_t) {
     unsafe {
         let user = server_acl_user_find(uid);
         if !user.is_null() {
@@ -122,7 +122,7 @@ pub unsafe extern "C" fn server_acl_user_deny(uid: uid_t) {
     }
 }
 
-pub unsafe extern "C" fn server_acl_user_allow_write(mut uid: uid_t) {
+pub unsafe fn server_acl_user_allow_write(mut uid: uid_t) {
     unsafe {
         let user = server_acl_user_find(uid);
         if user.is_null() {
@@ -139,7 +139,7 @@ pub unsafe extern "C" fn server_acl_user_allow_write(mut uid: uid_t) {
     }
 }
 
-pub unsafe extern "C" fn server_acl_user_deny_write(mut uid: uid_t) {
+pub unsafe fn server_acl_user_deny_write(mut uid: uid_t) {
     unsafe {
         unsafe {
             let user = server_acl_user_find(uid);
@@ -158,7 +158,7 @@ pub unsafe extern "C" fn server_acl_user_deny_write(mut uid: uid_t) {
     }
 }
 
-pub unsafe extern "C" fn server_acl_join(c: *mut client) -> c_int {
+pub unsafe fn server_acl_join(c: *mut client) -> c_int {
     unsafe {
         let uid = proc_get_peer_uid((*c).peer);
         if uid == -1i32 as uid_t {
@@ -179,6 +179,6 @@ pub unsafe extern "C" fn server_acl_join(c: *mut client) -> c_int {
     }
 }
 
-pub unsafe extern "C" fn server_acl_get_uid(user: *mut server_acl_user) -> uid_t {
+pub unsafe fn server_acl_get_uid(user: *mut server_acl_user) -> uid_t {
     unsafe { (*user).uid }
 }

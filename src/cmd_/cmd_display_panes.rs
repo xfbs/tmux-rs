@@ -33,7 +33,7 @@ pub struct cmd_display_panes_data<'a> {
     pub state: *mut args_command_state<'a>,
 }
 
-unsafe extern "C" fn cmd_display_panes_args_parse(
+unsafe fn cmd_display_panes_args_parse(
     _: *mut args,
     _: u32,
     _: *mut *mut c_char,
@@ -41,7 +41,7 @@ unsafe extern "C" fn cmd_display_panes_args_parse(
     args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING
 }
 
-unsafe extern "C" fn cmd_display_panes_draw_pane(
+unsafe fn cmd_display_panes_draw_pane(
     ctx: *mut screen_redraw_ctx,
     wp: *mut window_pane,
 ) {
@@ -234,7 +234,7 @@ unsafe extern "C" fn cmd_display_panes_draw_pane(
     }
 }
 
-unsafe extern "C" fn cmd_display_panes_draw(
+unsafe fn cmd_display_panes_draw(
     c: *mut client,
     data: *mut c_void,
     ctx: *mut screen_redraw_ctx,
@@ -257,7 +257,7 @@ unsafe extern "C" fn cmd_display_panes_draw(
     }
 }
 
-unsafe extern "C" fn cmd_display_panes_free(c: *mut client, data: *mut c_void) {
+unsafe fn cmd_display_panes_free(c: *mut client, data: *mut c_void) {
     unsafe {
         let cdata = data as *mut cmd_display_panes_data;
 
@@ -269,7 +269,7 @@ unsafe extern "C" fn cmd_display_panes_free(c: *mut client, data: *mut c_void) {
     }
 }
 
-unsafe extern "C" fn cmd_display_panes_key(
+unsafe fn cmd_display_panes_key(
     c: *mut client,
     data: *mut c_void,
     event: *mut key_event,
@@ -325,7 +325,7 @@ unsafe extern "C" fn cmd_display_panes_key(
     }
 }
 
-unsafe extern "C" fn cmd_display_panes_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_display_panes_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let tc = cmdq_get_target_client(item);

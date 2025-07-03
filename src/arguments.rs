@@ -54,11 +54,11 @@ pub struct args_command_state<'a> {
 
 crate::compat::RB_GENERATE!(args_tree, args_entry, entry, discr_entry, args_cmp);
 
-unsafe extern "C" fn args_cmp(a1: *const args_entry, a2: *const args_entry) -> Ordering {
+unsafe fn args_cmp(a1: *const args_entry, a2: *const args_entry) -> Ordering {
     unsafe { ((*a1).flag).cmp(&(*a2).flag) }
 }
 
-pub unsafe extern "C" fn args_find(args: *mut args, flag: c_uchar) -> *mut args_entry {
+pub unsafe fn args_find(args: *mut args, flag: c_uchar) -> *mut args_entry {
     unsafe {
         let mut entry: args_entry = args_entry { flag, ..zeroed() };
 
@@ -66,7 +66,7 @@ pub unsafe extern "C" fn args_find(args: *mut args, flag: c_uchar) -> *mut args_
     }
 }
 
-pub unsafe extern "C" fn args_copy_value(to: *mut args_value, from: *const args_value) {
+pub unsafe fn args_copy_value(to: *mut args_value, from: *const args_value) {
     unsafe {
         (*to).type_ = (*from).type_;
         match (*from).type_ {
@@ -90,7 +90,7 @@ pub fn args_type_to_string(type_: args_type) -> &'static str {
     }
 }
 
-pub unsafe extern "C" fn args_value_as_string(value: *mut args_value) -> *const c_char {
+pub unsafe fn args_value_as_string(value: *mut args_value) -> *const c_char {
     unsafe {
         match (*value).type_ {
             args_type::ARGS_NONE => c"".as_ptr(),
@@ -119,7 +119,7 @@ pub fn args_create<'a>() -> &'a mut args {
     Box::leak(args::create())
 }
 
-pub unsafe extern "C" fn args_parse_flag_argument(
+pub unsafe fn args_parse_flag_argument(
     values: *mut args_value,
     count: u32,
     cause: *mut *mut c_char,
@@ -179,7 +179,7 @@ pub unsafe extern "C" fn args_parse_flag_argument(
     0
 }
 
-pub unsafe extern "C" fn args_parse_flags(
+pub unsafe fn args_parse_flags(
     parse: *mut args_parse,
     values: *mut args_value,
     count: u32,
@@ -249,7 +249,7 @@ pub unsafe extern "C" fn args_parse_flags(
 }
 
 /// Parse arguments into a new argument set.
-pub unsafe extern "C" fn args_parse(
+pub unsafe fn args_parse(
     parse: *mut args_parse,
     values: *mut args_value,
     count: u32,
@@ -349,7 +349,7 @@ pub unsafe extern "C" fn args_parse(
     }
 }
 
-pub unsafe extern "C" fn args_copy_copy_value(
+pub unsafe fn args_copy_copy_value(
     to: *mut args_value,
     from: *mut args_value,
     argc: i32,
@@ -376,7 +376,7 @@ pub unsafe extern "C" fn args_copy_copy_value(
 }
 
 /// Copy an arguments set.
-pub unsafe extern "C" fn args_copy(
+pub unsafe fn args_copy(
     args: *mut args,
     argc: i32,
     argv: *mut *mut c_char,
@@ -646,7 +646,7 @@ pub unsafe fn args_has(args: *mut args, flag: u8) -> i32 {
     }
 }
 
-pub unsafe extern "C" fn args_set(
+pub unsafe fn args_set(
     args: *mut args,
     flag: c_uchar,
     value: *mut args_value,
@@ -673,7 +673,7 @@ pub unsafe extern "C" fn args_set(
     }
 }
 
-pub unsafe extern "C" fn args_get(args: *mut args, flag: u8) -> *const c_char {
+pub unsafe fn args_get(args: *mut args, flag: u8) -> *const c_char {
     unsafe {
         let entry = args_find(args, flag);
 
@@ -687,7 +687,7 @@ pub unsafe extern "C" fn args_get(args: *mut args, flag: u8) -> *const c_char {
     }
 }
 
-pub unsafe extern "C" fn args_first(args: *mut args, entry: *mut *mut args_entry) -> u8 {
+pub unsafe fn args_first(args: *mut args, entry: *mut *mut args_entry) -> u8 {
     unsafe {
         *entry = rb_min(&raw mut (*args).tree);
         if (*entry).is_null() {
@@ -698,7 +698,7 @@ pub unsafe extern "C" fn args_first(args: *mut args, entry: *mut *mut args_entry
 }
 
 /// Get next argument.
-pub unsafe extern "C" fn args_next(entry: *mut *mut args_entry) -> u8 {
+pub unsafe fn args_next(entry: *mut *mut args_entry) -> u8 {
     unsafe {
         *entry = rb_next(*entry);
         if (*entry).is_null() {
@@ -709,17 +709,17 @@ pub unsafe extern "C" fn args_next(entry: *mut *mut args_entry) -> u8 {
 }
 
 /// Get argument count.
-pub unsafe extern "C" fn args_count(args: *const args) -> u32 {
+pub unsafe fn args_count(args: *const args) -> u32 {
     unsafe { (*args).count }
 }
 
 /// Get argument values.
-pub unsafe extern "C" fn args_values(args: *mut args) -> *mut args_value {
+pub unsafe fn args_values(args: *mut args) -> *mut args_value {
     unsafe { (*args).values }
 }
 
 /// Get argument value.
-pub unsafe extern "C" fn args_value(args: *mut args, idx: u32) -> *mut args_value {
+pub unsafe fn args_value(args: *mut args, idx: u32) -> *mut args_value {
     unsafe {
         if idx >= (*args).count {
             return null_mut();
@@ -729,7 +729,7 @@ pub unsafe extern "C" fn args_value(args: *mut args, idx: u32) -> *mut args_valu
 }
 
 /// Return argument as string.
-pub unsafe extern "C" fn args_string(args: *mut args, idx: u32) -> *const c_char {
+pub unsafe fn args_string(args: *mut args, idx: u32) -> *const c_char {
     unsafe {
         if idx >= (*args).count {
             return null();
@@ -739,7 +739,7 @@ pub unsafe extern "C" fn args_string(args: *mut args, idx: u32) -> *const c_char
 }
 
 /// Make a command now.
-pub unsafe extern "C" fn args_make_commands_now(
+pub unsafe fn args_make_commands_now(
     self_: *mut cmd,
     item: *mut cmdq_item,
     idx: u32,
@@ -761,7 +761,7 @@ pub unsafe extern "C" fn args_make_commands_now(
 }
 
 /// Save bits to make a command later.
-pub unsafe extern "C" fn args_make_commands_prepare<'a>(
+pub unsafe fn args_make_commands_prepare<'a>(
     self_: *mut cmd,
     item: *mut cmdq_item,
     idx: u32,
@@ -818,7 +818,7 @@ pub unsafe extern "C" fn args_make_commands_prepare<'a>(
 }
 
 /// Return argument as command.
-pub unsafe extern "C" fn args_make_commands(
+pub unsafe fn args_make_commands(
     state: *mut args_command_state,
     argc: i32,
     argv: *mut *mut c_char,
@@ -864,7 +864,7 @@ pub unsafe extern "C" fn args_make_commands(
 }
 
 /// Free commands state.
-pub unsafe extern "C" fn args_make_commands_free(state: *mut args_command_state) {
+pub unsafe fn args_make_commands_free(state: *mut args_command_state) {
     unsafe {
         if !(*state).cmdlist.is_null() {
             cmd_list_free((*state).cmdlist);
@@ -886,7 +886,7 @@ pub unsafe extern "C" fn args_make_commands_free(state: *mut args_command_state)
 }
 
 /// Get prepared command.
-pub unsafe extern "C" fn args_make_commands_get_command(
+pub unsafe fn args_make_commands_get_command(
     state: *mut args_command_state,
 ) -> *mut c_char {
     unsafe {
@@ -903,7 +903,7 @@ pub unsafe extern "C" fn args_make_commands_get_command(
 }
 
 /// Get first value in argument.
-pub unsafe extern "C" fn args_first_value(args: *mut args, flag: u8) -> *mut args_value {
+pub unsafe fn args_first_value(args: *mut args, flag: u8) -> *mut args_value {
     unsafe {
         let entry = args_find(args, flag);
         if entry.is_null() {
@@ -914,12 +914,12 @@ pub unsafe extern "C" fn args_first_value(args: *mut args, flag: u8) -> *mut arg
 }
 
 /// Get next value in argument.
-pub unsafe extern "C" fn args_next_value(value: *mut args_value) -> *mut args_value {
+pub unsafe fn args_next_value(value: *mut args_value) -> *mut args_value {
     unsafe { tailq_next(value) }
 }
 
 /// Convert an argument value to a number.
-pub unsafe extern "C" fn args_strtonum(
+pub unsafe fn args_strtonum(
     args: *mut args,
     flag: u8,
     minval: i64,
@@ -955,7 +955,7 @@ pub unsafe extern "C" fn args_strtonum(
 }
 
 /// Convert an argument value to a number, and expand formats.
-pub unsafe extern "C" fn args_strtonum_and_expand(
+pub unsafe fn args_strtonum_and_expand(
     args: *mut args,
     flag: u8,
     minval: c_longlong,
@@ -995,7 +995,7 @@ pub unsafe extern "C" fn args_strtonum_and_expand(
 }
 
 /// Convert an argument to a number which may be a percentage.
-pub unsafe extern "C" fn args_percentage(
+pub unsafe fn args_percentage(
     args: *mut args,
     flag: u8,
     minval: i64,
@@ -1019,7 +1019,7 @@ pub unsafe extern "C" fn args_percentage(
 }
 
 /// Convert a string to a number which may be a percentage.
-pub unsafe extern "C" fn args_string_percentage(
+pub unsafe fn args_string_percentage(
     value: *const c_char,
     minval: i64,
     maxval: i64,
@@ -1073,7 +1073,7 @@ pub unsafe extern "C" fn args_string_percentage(
 }
 
 /// Convert an argument to a number which may be a percentage, and expand formats.
-pub unsafe extern "C" fn args_percentage_and_expand(
+pub unsafe fn args_percentage_and_expand(
     args: *mut args,
     flag: u8,
     minval: i64,
@@ -1098,7 +1098,7 @@ pub unsafe extern "C" fn args_percentage_and_expand(
 }
 
 /// Convert a string to a number which may be a percentage, and expand formats.
-pub unsafe extern "C" fn args_string_percentage_and_expand(
+pub unsafe fn args_string_percentage_and_expand(
     value: *mut c_char,
     minval: i64,
     maxval: i64,

@@ -168,17 +168,17 @@ static tty_acs_rounded_borders_list: [utf8_data; 13] = [
     utf8_data::new([0o302, 0o267, 0o000, 0o000], 0, 2, 1), /* U+00B7 */
 ];
 
-pub unsafe extern "C" fn tty_acs_double_borders(cell_type: cell_type) -> *const utf8_data {
+pub unsafe fn tty_acs_double_borders(cell_type: cell_type) -> *const utf8_data {
     unsafe { &raw const tty_acs_double_borders_list[cell_type as usize] }
 }
 
-pub unsafe extern "C" fn tty_acs_heavy_borders(cell_type: cell_type) -> *const utf8_data {
+pub unsafe fn tty_acs_heavy_borders(cell_type: cell_type) -> *const utf8_data {
     unsafe { &raw const tty_acs_heavy_borders_list[cell_type as usize] }
 }
 
 /* Get cell border character for rounded style. */
 
-pub unsafe extern "C" fn tty_acs_rounded_borders(cell_type: cell_type) -> *const utf8_data {
+pub unsafe fn tty_acs_rounded_borders(cell_type: cell_type) -> *const utf8_data {
     unsafe { &raw const tty_acs_rounded_borders_list[cell_type as usize] }
 }
 
@@ -202,7 +202,7 @@ pub unsafe extern "C" fn tty_acs_reverse_cmp(key: *const c_void, value: *const c
 
 /* Should this terminal use ACS instead of UTF-8 line drawing? */
 
-pub unsafe extern "C" fn tty_acs_needed(tty: *const tty) -> i32 {
+pub unsafe fn tty_acs_needed(tty: *const tty) -> i32 {
     unsafe {
         if tty.is_null() {
             return 0;
@@ -223,7 +223,7 @@ pub unsafe extern "C" fn tty_acs_needed(tty: *const tty) -> i32 {
 
 /* Retrieve ACS to output as UTF-8. */
 
-pub unsafe extern "C" fn tty_acs_get(tty: *mut tty, ch: u8) -> *const c_char {
+pub unsafe fn tty_acs_get(tty: *mut tty, ch: u8) -> *const c_char {
     unsafe {
         // const struct tty_acs_entry	*entry;
 
@@ -253,7 +253,7 @@ pub unsafe extern "C" fn tty_acs_get(tty: *mut tty, ch: u8) -> *const c_char {
 
 /* Reverse UTF-8 into ACS. */
 
-pub unsafe extern "C" fn tty_acs_reverse_get(
+pub unsafe fn tty_acs_reverse_get(
     tty: *const tty,
     s: *const c_char,
     slen: usize,

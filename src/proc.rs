@@ -36,7 +36,7 @@ pub struct tmuxproc {
     pub name: *const c_char,
     pub exit: i32,
 
-    pub signalcb: Option<unsafe extern "C" fn(i32)>,
+    pub signalcb: Option<unsafe fn(i32)>,
 
     pub ev_sigint: event,
     pub ev_sighup: event,
@@ -63,14 +63,14 @@ pub struct tmuxpeer {
 
     pub flags: i32,
 
-    pub dispatchcb: Option<unsafe extern "C" fn(*mut imsg, *mut c_void)>,
+    pub dispatchcb: Option<unsafe fn(*mut imsg, *mut c_void)>,
     pub arg: *mut c_void,
 
     // #[entry]
     pub entry: tailq_entry<tmuxpeer>,
 }
 
-pub unsafe extern "C" fn proc_event_cb(_fd: i32, events: i16, arg: *mut c_void) {
+pub unsafe fn proc_event_cb(_fd: i32, events: i16, arg: *mut c_void) {
     unsafe {
         let peer = arg as *mut tmuxpeer;
         let mut imsg: MaybeUninit<imsg> = MaybeUninit::<imsg>::uninit();
@@ -125,7 +125,7 @@ pub unsafe extern "C" fn proc_event_cb(_fd: i32, events: i16, arg: *mut c_void) 
     }
 }
 
-pub unsafe extern "C" fn proc_signal_cb(signo: i32, _events: i16, arg: *mut c_void) {
+pub unsafe fn proc_signal_cb(signo: i32, _events: i16, arg: *mut c_void) {
     unsafe {
         let tp = arg as *mut tmuxproc;
 
@@ -133,7 +133,7 @@ pub unsafe extern "C" fn proc_signal_cb(signo: i32, _events: i16, arg: *mut c_vo
     }
 }
 
-pub unsafe extern "C" fn peer_check_version(peer: *mut tmuxpeer, imsg: *mut imsg) -> i32 {
+pub unsafe fn peer_check_version(peer: *mut tmuxpeer, imsg: *mut imsg) -> i32 {
     unsafe {
         let version = (*imsg).hdr.peerid & 0xff;
         if (*imsg).hdr.type_ != msgtype::MSG_VERSION as u32 && version != PROTOCOL_VERSION as u32 {
@@ -148,7 +148,7 @@ pub unsafe extern "C" fn peer_check_version(peer: *mut tmuxpeer, imsg: *mut imsg
     }
 }
 
-pub unsafe extern "C" fn proc_update_event(peer: *mut tmuxpeer) {
+pub unsafe fn proc_update_event(peer: *mut tmuxpeer) {
     unsafe {
         event_del(&raw mut (*peer).event);
 
@@ -168,7 +168,7 @@ pub unsafe extern "C" fn proc_update_event(peer: *mut tmuxpeer) {
     }
 }
 
-pub unsafe extern "C" fn proc_send(
+pub unsafe fn proc_send(
     peer: *mut tmuxpeer,
     type_: msgtype,
     fd: i32,
@@ -245,9 +245,9 @@ pub unsafe fn proc_start(name: &CStr) -> *mut tmuxproc {
     }
 }
 
-pub unsafe extern "C" fn proc_loop(
+pub unsafe fn proc_loop(
     tp: *mut tmuxproc,
-    loopcb: Option<unsafe extern "C" fn() -> i32>,
+    loopcb: Option<unsafe fn() -> i32>,
 ) {
     unsafe {
         log_debug!("{} loop enter", _s((*tp).name));
@@ -275,7 +275,7 @@ pub unsafe extern "C" fn proc_loop(
     }
 }
 
-pub unsafe extern "C" fn proc_exit(tp: *mut tmuxproc) {
+pub unsafe fn proc_exit(tp: *mut tmuxproc) {
     unsafe {
         for peer in tailq_foreach(&raw mut (*tp).peers).map(NonNull::as_ptr) {
             imsg_flush(&raw mut (*peer).ibuf);
@@ -284,9 +284,9 @@ pub unsafe extern "C" fn proc_exit(tp: *mut tmuxproc) {
     }
 }
 
-pub unsafe extern "C" fn proc_set_signals(
+pub unsafe fn proc_set_signals(
     tp: *mut tmuxproc,
-    signalcb: Option<unsafe extern "C" fn(i32)>,
+    signalcb: Option<unsafe fn(i32)>,
 ) {
     unsafe {
         let mut sa: sigaction = zeroed();
@@ -362,7 +362,7 @@ pub unsafe extern "C" fn proc_set_signals(
     }
 }
 
-pub unsafe extern "C" fn proc_clear_signals(tp: *mut tmuxproc, defaults: i32) {
+pub unsafe fn proc_clear_signals(tp: *mut tmuxproc, defaults: i32) {
     unsafe {
         let mut sa: sigaction = zeroed();
 
@@ -396,10 +396,10 @@ pub unsafe extern "C" fn proc_clear_signals(tp: *mut tmuxproc, defaults: i32) {
     }
 }
 
-pub unsafe extern "C" fn proc_add_peer(
+pub unsafe fn proc_add_peer(
     tp: *mut tmuxproc,
     fd: i32,
-    dispatchcb: Option<unsafe extern "C" fn(*mut imsg, *mut c_void)>,
+    dispatchcb: Option<unsafe fn(*mut imsg, *mut c_void)>,
     arg: *mut c_void,
 ) -> *mut tmuxpeer {
     unsafe {
@@ -431,7 +431,7 @@ pub unsafe extern "C" fn proc_add_peer(
     }
 }
 
-pub unsafe extern "C" fn proc_remove_peer(peer: *mut tmuxpeer) {
+pub unsafe fn proc_remove_peer(peer: *mut tmuxpeer) {
     unsafe {
         tailq_remove(&raw mut (*(*peer).parent).peers, peer);
         log_debug!("remove peer {:p}", peer);
@@ -444,26 +444,26 @@ pub unsafe extern "C" fn proc_remove_peer(peer: *mut tmuxpeer) {
     }
 }
 
-pub unsafe extern "C" fn proc_kill_peer(peer: *mut tmuxpeer) {
+pub unsafe fn proc_kill_peer(peer: *mut tmuxpeer) {
     unsafe {
         (*peer).flags |= PEER_BAD;
     }
 }
 
-pub unsafe extern "C" fn proc_flush_peer(peer: *mut tmuxpeer) {
+pub unsafe fn proc_flush_peer(peer: *mut tmuxpeer) {
     unsafe {
         imsg_flush(&raw mut (*peer).ibuf);
     }
 }
 
-pub unsafe extern "C" fn proc_toggle_log(tp: *mut tmuxproc) {
+pub unsafe fn proc_toggle_log(tp: *mut tmuxproc) {
     unsafe {
         log_toggle(CStr::from_ptr((*tp).name));
     }
 }
 
 /// On success, the PID of the child process is returned in the parent, and 0 is returned in the child.
-pub unsafe extern "C" fn proc_fork_and_daemon(fd: *mut i32) -> pid_t {
+pub unsafe fn proc_fork_and_daemon(fd: *mut i32) -> pid_t {
     unsafe {
         let mut pair: [c_int; 2] = [0; 2];
 
@@ -496,6 +496,6 @@ pub unsafe extern "C" fn proc_fork_and_daemon(fd: *mut i32) -> pid_t {
     }
 }
 
-pub unsafe extern "C" fn proc_get_peer_uid(peer: *const tmuxpeer) -> uid_t {
+pub unsafe fn proc_get_peer_uid(peer: *const tmuxpeer) -> uid_t {
     unsafe { (*peer).uid }
 }

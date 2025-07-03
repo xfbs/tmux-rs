@@ -44,7 +44,7 @@ pub static mut status_prompt_hlist: [*mut *mut c_char; PROMPT_NTYPES as usize] =
 pub static mut status_prompt_hsize: [u32; PROMPT_NTYPES as usize] = [0; PROMPT_NTYPES as usize];
 
 /// Find the history file to load/save from/to.
-unsafe extern "C" fn status_prompt_find_history_file() -> *mut c_char {
+unsafe fn status_prompt_find_history_file() -> *mut c_char {
     unsafe {
         let history_file = options_get_string_(global_options, c"history-file");
         if *history_file == b'\0' as i8 {
@@ -67,7 +67,7 @@ unsafe extern "C" fn status_prompt_find_history_file() -> *mut c_char {
 }
 
 /// Add loaded history item to the appropriate list.
-unsafe extern "C" fn status_prompt_add_typed_history(mut line: *mut c_char) {
+unsafe fn status_prompt_add_typed_history(mut line: *mut c_char) {
     unsafe {
         let mut type_ = prompt_type::PROMPT_TYPE_INVALID;
 
@@ -92,7 +92,7 @@ unsafe extern "C" fn status_prompt_add_typed_history(mut line: *mut c_char) {
 }
 
 /// Load status prompt history from file.
-pub unsafe extern "C" fn status_prompt_load_history() {
+pub unsafe fn status_prompt_load_history() {
     unsafe {
         let mut length: usize = 0;
 
@@ -137,7 +137,7 @@ pub unsafe extern "C" fn status_prompt_load_history() {
 }
 
 /// Save status prompt history to file.
-pub unsafe extern "C" fn status_prompt_save_history() {
+pub unsafe fn status_prompt_save_history() {
     unsafe {
         let Some(history_file) = NonNull::new(status_prompt_find_history_file()) else {
             return;
@@ -167,7 +167,7 @@ pub unsafe extern "C" fn status_prompt_save_history() {
 }
 
 /// Status timer callback.
-unsafe extern "C" fn status_timer_callback(_fd: i32, _events: i16, arg: *mut c_void) {
+unsafe fn status_timer_callback(_fd: i32, _events: i16, arg: *mut c_void) {
     unsafe {
         let c: *mut client = arg.cast();
         let s: *mut session = (*c).session;
@@ -194,7 +194,7 @@ unsafe extern "C" fn status_timer_callback(_fd: i32, _events: i16, arg: *mut c_v
 }
 
 /// Start status timer for client.
-pub unsafe extern "C" fn status_timer_start(c: *mut client) {
+pub unsafe fn status_timer_start(c: *mut client) {
     unsafe {
         let s: *mut session = (*c).session;
 
@@ -215,7 +215,7 @@ pub unsafe extern "C" fn status_timer_start(c: *mut client) {
 }
 
 /// Start status timer for all clients.
-pub unsafe extern "C" fn status_timer_start_all() {
+pub unsafe fn status_timer_start_all() {
     unsafe {
         for c in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
             status_timer_start(c);
@@ -224,7 +224,7 @@ pub unsafe extern "C" fn status_timer_start_all() {
 }
 
 /// Update status cache.
-pub unsafe extern "C" fn status_update_cache(s: *mut session) {
+pub unsafe fn status_update_cache(s: *mut session) {
     unsafe {
         (*s).statuslines = options_get_number_((*s).options, c"status") as u32;
         if (*s).statuslines == 0 {
@@ -238,7 +238,7 @@ pub unsafe extern "C" fn status_update_cache(s: *mut session) {
 }
 
 /// Get screen line of status line. -1 means off.
-pub unsafe extern "C" fn status_at_line(c: *mut client) -> i32 {
+pub unsafe fn status_at_line(c: *mut client) -> i32 {
     unsafe {
         let s: *mut session = (*c).session;
 
@@ -256,7 +256,7 @@ pub unsafe extern "C" fn status_at_line(c: *mut client) -> i32 {
 }
 
 /// Get size of status line for client's session. 0 means off.
-pub unsafe extern "C" fn status_line_size(c: *mut client) -> u32 {
+pub unsafe fn status_line_size(c: *mut client) -> u32 {
     unsafe {
         let s: *mut session = (*c).session;
 
@@ -274,7 +274,7 @@ pub unsafe extern "C" fn status_line_size(c: *mut client) -> u32 {
 }
 
 /// Get the prompt line number for client's session. 1 means at the bottom.
-unsafe extern "C" fn status_prompt_line_at(c: *mut client) -> u32 {
+unsafe fn status_prompt_line_at(c: *mut client) -> u32 {
     unsafe {
         let s = (*c).session;
 
@@ -289,7 +289,7 @@ unsafe extern "C" fn status_prompt_line_at(c: *mut client) -> u32 {
 }
 
 /// Get window at window list position.
-pub unsafe extern "C" fn status_get_range(c: *mut client, x: u32, y: u32) -> *mut style_range {
+pub unsafe fn status_get_range(c: *mut client, x: u32, y: u32) -> *mut style_range {
     unsafe {
         let sl = &raw mut (*c).status;
 
@@ -306,7 +306,7 @@ pub unsafe extern "C" fn status_get_range(c: *mut client, x: u32, y: u32) -> *mu
 }
 
 /// Free all ranges.
-unsafe extern "C" fn status_free_ranges(srs: *mut style_ranges) {
+unsafe fn status_free_ranges(srs: *mut style_ranges) {
     unsafe {
         for sr in tailq_foreach(srs).map(NonNull::as_ptr) {
             tailq_remove(srs, sr);
@@ -316,7 +316,7 @@ unsafe extern "C" fn status_free_ranges(srs: *mut style_ranges) {
 }
 
 /// Save old status line.
-unsafe extern "C" fn status_push_screen(c: *mut client) {
+unsafe fn status_push_screen(c: *mut client) {
     unsafe {
         let sl = &raw mut (*c).status;
 
@@ -329,7 +329,7 @@ unsafe extern "C" fn status_push_screen(c: *mut client) {
 }
 
 /// Restore old status line.
-unsafe extern "C" fn status_pop_screen(c: *mut client) {
+unsafe fn status_pop_screen(c: *mut client) {
     unsafe {
         let sl = &raw mut (*c).status;
 
@@ -343,7 +343,7 @@ unsafe extern "C" fn status_pop_screen(c: *mut client) {
 }
 
 /// Initialize status line.
-pub unsafe extern "C" fn status_init(c: *mut client) {
+pub unsafe fn status_init(c: *mut client) {
     unsafe {
         let sl = &raw mut (*c).status;
 
@@ -357,7 +357,7 @@ pub unsafe extern "C" fn status_init(c: *mut client) {
 }
 
 /// Free status line.
-pub unsafe extern "C" fn status_free(c: *mut client) {
+pub unsafe fn status_free(c: *mut client) {
     unsafe {
         let sl = &raw mut (*c).status;
 
@@ -379,7 +379,7 @@ pub unsafe extern "C" fn status_free(c: *mut client) {
 }
 
 /// Draw status line for client.
-pub unsafe extern "C" fn status_redraw(c: *mut client) -> i32 {
+pub unsafe fn status_redraw(c: *mut client) -> i32 {
     unsafe {
         let sl = &raw mut (*c).status;
         // status_line_entry *sle;
@@ -576,7 +576,7 @@ pub unsafe fn status_message_set_(
 }
 
 /// Clear status line message.
-pub unsafe extern "C" fn status_message_clear(c: *mut client) {
+pub unsafe fn status_message_clear(c: *mut client) {
     unsafe {
         if (*c).message_string.is_null() {
             return;
@@ -595,14 +595,14 @@ pub unsafe extern "C" fn status_message_clear(c: *mut client) {
 }
 
 /// Clear status line message after timer expires.
-unsafe extern "C" fn status_message_callback(_fd: i32, _event: i16, data: *mut c_void) {
+unsafe fn status_message_callback(_fd: i32, _event: i16, data: *mut c_void) {
     unsafe {
         status_message_clear(data.cast());
     }
 }
 
 /// Draw client message on status line of present else on last line.
-pub unsafe extern "C" fn status_message_redraw(c: *mut client) -> i32 {
+pub unsafe fn status_message_redraw(c: *mut client) -> i32 {
     unsafe {
         let sl = &raw mut (*c).status;
         let mut ctx: screen_write_ctx = zeroed();
@@ -683,7 +683,7 @@ pub unsafe extern "C" fn status_message_redraw(c: *mut client) -> i32 {
 }
 
 /// Enable status line prompt.
-pub unsafe extern "C" fn status_prompt_set(
+pub unsafe fn status_prompt_set(
     c: *mut client,
     fs: *mut cmd_find_state,
     msg: *const c_char,
@@ -761,7 +761,7 @@ pub unsafe extern "C" fn status_prompt_set(
 }
 
 /// Remove status line prompt.
-pub unsafe extern "C" fn status_prompt_clear(c: *mut client) {
+pub unsafe fn status_prompt_clear(c: *mut client) {
     unsafe {
         if (*c).prompt_string.is_null() {
             return;
@@ -793,7 +793,7 @@ pub unsafe extern "C" fn status_prompt_clear(c: *mut client) {
 }
 
 /// Update status line prompt with a new prompt string.
-pub unsafe extern "C" fn status_prompt_update(
+pub unsafe fn status_prompt_update(
     c: *mut client,
     msg: *const c_char,
     input: *const c_char,
@@ -825,7 +825,7 @@ pub unsafe extern "C" fn status_prompt_update(
 }
 
 /// Draw client prompt on status line of present else on last line.
-pub unsafe extern "C" fn status_prompt_redraw(c: *mut client) -> i32 {
+pub unsafe fn status_prompt_redraw(c: *mut client) -> i32 {
     unsafe {
         let sl = &raw mut (*c).status;
         let mut ctx: screen_write_ctx = zeroed();
@@ -965,7 +965,7 @@ pub unsafe extern "C" fn status_prompt_redraw(c: *mut client) -> i32 {
 }
 
 /// Is this a separator?
-unsafe extern "C" fn status_prompt_in_list(ws: *const c_char, ud: *const utf8_data) -> i32 {
+unsafe fn status_prompt_in_list(ws: *const c_char, ud: *const utf8_data) -> i32 {
     unsafe {
         if (*ud).size != 1 || (*ud).width != 1 {
             return 0;
@@ -975,7 +975,7 @@ unsafe extern "C" fn status_prompt_in_list(ws: *const c_char, ud: *const utf8_da
 }
 
 /// Is this a space?
-unsafe extern "C" fn status_prompt_space(ud: *const utf8_data) -> i32 {
+unsafe fn status_prompt_space(ud: *const utf8_data) -> i32 {
     unsafe {
         if (*ud).size != 1 || (*ud).width != 1 {
             return 0;
@@ -986,7 +986,7 @@ unsafe extern "C" fn status_prompt_space(ud: *const utf8_data) -> i32 {
 
 /// Translate key from vi to emacs. Return 0 to drop key, 1 to process the key
 /// as an emacs key; return 2 to append to the buffer.
-unsafe extern "C" fn status_prompt_translate_key(
+unsafe fn status_prompt_translate_key(
     c: *mut client,
     key: key_code,
     new_key: *mut key_code,
@@ -1139,7 +1139,7 @@ unsafe extern "C" fn status_prompt_translate_key(
 }
 
 /// Paste into prompt.
-unsafe extern "C" fn status_prompt_paste(c: *mut client) -> i32 {
+unsafe fn status_prompt_paste(c: *mut client) -> i32 {
     unsafe {
         // struct paste_buffer *pb;
         // const char *bufdata;
@@ -1223,7 +1223,7 @@ unsafe extern "C" fn status_prompt_paste(c: *mut client) -> i32 {
 }
 
 /// Finish completion.
-unsafe extern "C" fn status_prompt_replace_complete(c: *mut client, mut s: *const c_char) -> i32 {
+unsafe fn status_prompt_replace_complete(c: *mut client, mut s: *const c_char) -> i32 {
     unsafe {
         let mut word: [c_char; 64] = [0; 64];
         let mut allocated: *mut c_char = null_mut();
@@ -1320,7 +1320,7 @@ unsafe extern "C" fn status_prompt_replace_complete(c: *mut client, mut s: *cons
 }
 
 /// Prompt forward to the next beginning of a word.
-unsafe extern "C" fn status_prompt_forward_word(
+unsafe fn status_prompt_forward_word(
     c: *mut client,
     size: usize,
     vi: i32,
@@ -1373,7 +1373,7 @@ unsafe extern "C" fn status_prompt_forward_word(
 }
 
 /// Prompt forward to the next end of a word.
-unsafe extern "C" fn status_prompt_end_word(
+unsafe fn status_prompt_end_word(
     c: *mut client,
     size: usize,
     separators: *const c_char,
@@ -1422,7 +1422,7 @@ unsafe extern "C" fn status_prompt_end_word(
 }
 
 /// Prompt backward to the previous beginning of a word.
-unsafe extern "C" fn status_prompt_backward_word(c: *mut client, separators: *const c_char) {
+unsafe fn status_prompt_backward_word(c: *mut client, separators: *const c_char) {
     unsafe {
         let mut idx = (*c).prompt_index;
 
@@ -1452,7 +1452,7 @@ unsafe extern "C" fn status_prompt_backward_word(c: *mut client, separators: *co
 }
 
 /// Handle keys in prompt.
-pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) -> i32 {
+pub unsafe fn status_prompt_key(c: *mut client, mut key: key_code) -> i32 {
     unsafe {
         let oo = (*(*c).session).options;
         let mut s = null_mut();
@@ -1821,7 +1821,7 @@ pub unsafe extern "C" fn status_prompt_key(c: *mut client, mut key: key_code) ->
 }
 
 /// Get previous line from the history.
-unsafe extern "C" fn status_prompt_up_history(idx: *mut u32, type_: u32) -> *mut c_char {
+unsafe fn status_prompt_up_history(idx: *mut u32, type_: u32) -> *mut c_char {
     unsafe {
         /*
          * History runs from 0 to size - 1. Index is from 0 to size. Zero is
@@ -1840,7 +1840,7 @@ unsafe extern "C" fn status_prompt_up_history(idx: *mut u32, type_: u32) -> *mut
 }
 
 /// Get next line from the history.
-unsafe extern "C" fn status_prompt_down_history(idx: *mut u32, type_: u32) -> *const c_char {
+unsafe fn status_prompt_down_history(idx: *mut u32, type_: u32) -> *const c_char {
     unsafe {
         if status_prompt_hsize[type_ as usize] == 0 || *idx.add(type_ as usize) == 0 {
             return c"".as_ptr();
@@ -1856,7 +1856,7 @@ unsafe extern "C" fn status_prompt_down_history(idx: *mut u32, type_: u32) -> *c
 }
 
 /// Add line to the history.
-unsafe extern "C" fn status_prompt_add_history(line: *const c_char, type_: u32) {
+unsafe fn status_prompt_add_history(line: *const c_char, type_: u32) {
     unsafe {
         let mut new: u32 = 1;
         let mut newsize: u32 = 0;
@@ -1919,7 +1919,7 @@ unsafe extern "C" fn status_prompt_add_history(line: *const c_char, type_: u32) 
 }
 
 /// Add to completion list.
-unsafe extern "C" fn status_prompt_add_list(
+unsafe fn status_prompt_add_list(
     list: *mut *mut *mut c_char,
     size: *mut u32,
     s: *const c_char,
@@ -1937,7 +1937,7 @@ unsafe extern "C" fn status_prompt_add_list(
 }
 
 /// Build completion list.
-unsafe extern "C" fn status_prompt_complete_list(
+unsafe fn status_prompt_complete_list(
     size: *mut u32,
     s: *const c_char,
     at_start: i32,
@@ -2014,7 +2014,7 @@ unsafe extern "C" fn status_prompt_complete_list(
 }
 
 /// Find longest prefix.
-unsafe extern "C" fn status_prompt_complete_prefix(
+unsafe fn status_prompt_complete_prefix(
     list: *mut *mut c_char,
     size: u32,
 ) -> *mut c_char {
@@ -2040,7 +2040,7 @@ unsafe extern "C" fn status_prompt_complete_prefix(
 }
 
 /// Complete word menu callback.
-unsafe extern "C" fn status_prompt_menu_callback(
+unsafe fn status_prompt_menu_callback(
     _menu: *mut menu,
     mut idx: u32,
     key: key_code,
@@ -2081,7 +2081,7 @@ unsafe extern "C" fn status_prompt_menu_callback(
 }
 
 /// Show complete word menu.
-unsafe extern "C" fn status_prompt_complete_list_menu(
+unsafe fn status_prompt_complete_list_menu(
     c: *mut client,
     list: *mut *mut c_char,
     size: u32,
@@ -2166,7 +2166,7 @@ unsafe extern "C" fn status_prompt_complete_list_menu(
 }
 
 /// Show complete word menu.
-unsafe extern "C" fn status_prompt_complete_window_menu(
+unsafe fn status_prompt_complete_window_menu(
     c: *mut client,
     s: *mut session,
     word: *const c_char,
@@ -2308,7 +2308,7 @@ unsafe extern "C" fn status_prompt_complete_sort(a: *const c_void, b: *const c_v
 }
 
 /// Complete a session.
-unsafe extern "C" fn status_prompt_complete_session(
+unsafe fn status_prompt_complete_session(
     list: *mut *mut *mut c_char,
     size: *mut u32,
     s: *const c_char,
@@ -2347,7 +2347,7 @@ unsafe extern "C" fn status_prompt_complete_session(
 }
 
 /// Complete word.
-unsafe extern "C" fn status_prompt_complete(
+unsafe fn status_prompt_complete(
     c: *mut client,
     word: *const c_char,
     mut offset: u32,
@@ -2459,7 +2459,7 @@ unsafe extern "C" fn status_prompt_complete(
 }
 
 /// Return the type of the prompt as an enum.
-pub unsafe extern "C" fn status_prompt_type(type_: *const c_char) -> prompt_type {
+pub unsafe fn status_prompt_type(type_: *const c_char) -> prompt_type {
     unsafe {
         for i in 0..PROMPT_NTYPES {
             if libc::strcmp(type_, status_prompt_type_string(i)) == 0 {
@@ -2471,7 +2471,7 @@ pub unsafe extern "C" fn status_prompt_type(type_: *const c_char) -> prompt_type
 }
 
 /// Accessor for prompt_type_strings.
-pub unsafe extern "C" fn status_prompt_type_string(type_: u32) -> *const c_char {
+pub unsafe fn status_prompt_type_string(type_: u32) -> *const c_char {
     if type_ >= PROMPT_NTYPES {
         return c"invalid".as_ptr();
     }

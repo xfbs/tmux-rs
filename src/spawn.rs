@@ -28,7 +28,7 @@ use libc::{
 #[cfg(feature = "utempter")]
 use crate::utempter::utempter_add_record;
 
-pub unsafe extern "C" fn spawn_log(from: *const c_char, sc: *mut spawn_context) {
+pub unsafe fn spawn_log(from: *const c_char, sc: *mut spawn_context) {
     unsafe {
         let s = (*sc).s;
         let wl = (*sc).wl;
@@ -87,7 +87,7 @@ pub unsafe extern "C" fn spawn_log(from: *const c_char, sc: *mut spawn_context) 
     }
 }
 
-pub unsafe extern "C" fn spawn_window(
+pub unsafe fn spawn_window(
     sc: *mut spawn_context,
     cause: *mut *mut c_char,
 ) -> *mut winlink {
@@ -243,7 +243,7 @@ pub unsafe extern "C" fn spawn_window(
     }
 }
 
-pub unsafe extern "C" fn spawn_pane(
+pub unsafe fn spawn_pane(
     sc: *mut spawn_context,
     cause: *mut *mut c_char,
 ) -> *mut window_pane {

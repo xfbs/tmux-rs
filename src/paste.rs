@@ -75,19 +75,19 @@ fn paste_cmp_times(a: *const paste_buffer, b: *const paste_buffer) -> Ordering {
     }
 }
 
-pub unsafe extern "C" fn paste_buffer_name(pb: NonNull<paste_buffer>) -> *const c_char {
+pub unsafe fn paste_buffer_name(pb: NonNull<paste_buffer>) -> *const c_char {
     unsafe { (*pb.as_ptr()).name }
 }
 
-pub unsafe extern "C" fn paste_buffer_order(pb: NonNull<paste_buffer>) -> u32 {
+pub unsafe fn paste_buffer_order(pb: NonNull<paste_buffer>) -> u32 {
     unsafe { (*pb.as_ptr()).order }
 }
 
-pub unsafe extern "C" fn paste_buffer_created(pb: NonNull<paste_buffer>) -> time_t {
+pub unsafe fn paste_buffer_created(pb: NonNull<paste_buffer>) -> time_t {
     unsafe { (*pb.as_ptr()).created }
 }
 
-pub unsafe extern "C" fn paste_buffer_data(
+pub unsafe fn paste_buffer_data(
     pb: *mut paste_buffer,
     size: *mut usize,
 ) -> *const c_char {
@@ -106,7 +106,7 @@ pub unsafe fn paste_buffer_data_(pb: NonNull<paste_buffer>, size: &mut usize) ->
     }
 }
 
-pub unsafe extern "C" fn paste_walk(pb: *mut paste_buffer) -> *mut paste_buffer {
+pub unsafe fn paste_walk(pb: *mut paste_buffer) -> *mut paste_buffer {
     unsafe {
         if pb.is_null() {
             return rb_min::<_, discr_time_entry>(&raw mut paste_by_time);
@@ -115,11 +115,11 @@ pub unsafe extern "C" fn paste_walk(pb: *mut paste_buffer) -> *mut paste_buffer 
     }
 }
 
-pub unsafe extern "C" fn paste_is_empty() -> i32 {
+pub unsafe fn paste_is_empty() -> i32 {
     unsafe { rb_root(&raw mut paste_by_time).is_null() as i32 }
 }
 
-pub unsafe extern "C" fn paste_get_top(name: *mut *const c_char) -> *mut paste_buffer {
+pub unsafe fn paste_get_top(name: *mut *const c_char) -> *mut paste_buffer {
     unsafe {
         let mut pb = rb_min::<_, discr_time_entry>(&raw mut paste_by_time);
         while !pb.is_null() && (*pb).automatic == 0 {
@@ -136,7 +136,7 @@ pub unsafe extern "C" fn paste_get_top(name: *mut *const c_char) -> *mut paste_b
     }
 }
 
-pub unsafe extern "C" fn paste_get_name(name: *const c_char) -> *mut paste_buffer {
+pub unsafe fn paste_get_name(name: *const c_char) -> *mut paste_buffer {
     unsafe {
         let mut pbfind = MaybeUninit::<paste_buffer>::uninit();
 
@@ -149,7 +149,7 @@ pub unsafe extern "C" fn paste_get_name(name: *const c_char) -> *mut paste_buffe
     }
 }
 
-pub unsafe extern "C" fn paste_free(pb: NonNull<paste_buffer>) {
+pub unsafe fn paste_free(pb: NonNull<paste_buffer>) {
     unsafe {
         let pb = pb.as_ptr();
         notify_paste_buffer((*pb).name, 1);
@@ -166,7 +166,7 @@ pub unsafe extern "C" fn paste_free(pb: NonNull<paste_buffer>) {
     }
 }
 
-pub unsafe extern "C" fn paste_add(mut prefix: *const c_char, data: *mut c_char, size: usize) {
+pub unsafe fn paste_add(mut prefix: *const c_char, data: *mut c_char, size: usize) {
     unsafe {
         if prefix.is_null() {
             prefix = c"buffer".as_ptr();
@@ -217,7 +217,7 @@ pub unsafe extern "C" fn paste_add(mut prefix: *const c_char, data: *mut c_char,
     }
 }
 
-pub unsafe extern "C" fn paste_rename(
+pub unsafe fn paste_rename(
     oldname: *const c_char,
     newname: *const c_char,
     cause: *mut *mut c_char,
@@ -270,7 +270,7 @@ pub unsafe extern "C" fn paste_rename(
     0
 }
 
-pub unsafe extern "C" fn paste_set(
+pub unsafe fn paste_set(
     data: *mut c_char,
     size: usize,
     name: *const c_char,
@@ -332,7 +332,7 @@ pub unsafe fn paste_replace(pb: NonNull<paste_buffer>, data: *mut c_char, size: 
     }
 }
 
-pub unsafe extern "C" fn paste_make_sample(pb: *mut paste_buffer) -> *mut c_char {
+pub unsafe fn paste_make_sample(pb: *mut paste_buffer) -> *mut c_char {
     unsafe {
         let width = 200;
 

@@ -29,7 +29,7 @@ pub static mut cmd_kill_session_entry: cmd_entry = cmd_entry {
     exec: Some(cmd_kill_session_exec),
 };
 
-unsafe extern "C" fn cmd_kill_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_kill_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let target = cmdq_get_target(item);

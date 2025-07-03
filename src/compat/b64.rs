@@ -3,7 +3,7 @@ use core::mem::MaybeUninit;
 
 // https://www.rfc-editor.org/rfc/rfc4648
 
-pub unsafe extern "C" fn b64_ntop(
+pub unsafe fn b64_ntop(
     src: *const u8,
     srclength: usize,
     target: *mut c_char,
@@ -22,7 +22,7 @@ pub unsafe extern "C" fn b64_ntop(
 /// converts characters, four at a time, starting at (or after)
 /// src from base - 64 numbers into three 8 bit bytes in the target area.
 /// it returns the number of data bytes stored at the target, or -1 on error.
-pub unsafe extern "C" fn b64_pton(src: *const c_char, target: *mut u8, targsize: usize) -> i32 {
+pub unsafe fn b64_pton(src: *const c_char, target: *mut u8, targsize: usize) -> i32 {
     let srclength: usize = unsafe { libc::strlen(src) };
     let src = unsafe { std::slice::from_raw_parts(src.cast::<u8>(), srclength) };
     let dst = unsafe { std::slice::from_raw_parts_mut(target.cast::<MaybeUninit<u8>>(), targsize) };

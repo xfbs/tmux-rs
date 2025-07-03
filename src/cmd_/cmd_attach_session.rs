@@ -28,7 +28,7 @@ pub static mut cmd_attach_session_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-pub unsafe extern "C" fn cmd_attach_session(
+pub unsafe fn cmd_attach_session(
     item: *mut cmdq_item,
     tflag: *const c_char,
     dflag: c_int,
@@ -170,7 +170,7 @@ pub unsafe extern "C" fn cmd_attach_session(
     }
 }
 
-unsafe extern "C" fn cmd_attach_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_attach_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
 

@@ -26,7 +26,7 @@ pub struct notify_entry {
     pub pbname: *mut c_char,
 }
 
-pub unsafe extern "C" fn notify_insert_one_hook(
+pub unsafe fn notify_insert_one_hook(
     item: *mut cmdq_item,
     ne: *mut notify_entry,
     cmdlist: *mut cmd_list,
@@ -51,7 +51,7 @@ pub unsafe extern "C" fn notify_insert_one_hook(
     }
 }
 
-pub unsafe extern "C" fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut notify_entry) {
+pub unsafe fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut notify_entry) {
     let __func__ = "notify_insert_hook";
     unsafe {
         log_debug!("{}: inserting hook {}", __func__, _s((*ne).name));
@@ -124,7 +124,7 @@ pub unsafe extern "C" fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut n
 // notify_callback
 // notify_add
 
-pub unsafe extern "C" fn notify_callback(item: *mut cmdq_item, data: *mut c_void) -> cmd_retval {
+pub unsafe fn notify_callback(item: *mut cmdq_item, data: *mut c_void) -> cmd_retval {
     let __func__ = c"notify_callback".as_ptr();
     unsafe {
         let ne = data as *mut notify_entry;
@@ -279,7 +279,7 @@ pub unsafe fn notify_add(
     }
 }
 
-pub unsafe extern "C" fn notify_hook(item: *mut cmdq_item, name: *mut c_char) {
+pub unsafe fn notify_hook(item: *mut cmdq_item, name: *mut c_char) {
     let __func__ = c"notify_hook".as_ptr();
     unsafe {
         let target = cmdq_get_target(item);
@@ -404,7 +404,7 @@ pub unsafe fn notify_pane(name: &'static CStr, wp: *mut window_pane) {
     }
 }
 
-pub unsafe extern "C" fn notify_paste_buffer(pbname: *const c_char, deleted: i32) {
+pub unsafe fn notify_paste_buffer(pbname: *const c_char, deleted: i32) {
     unsafe {
         let mut fs: cmd_find_state = zeroed();
 

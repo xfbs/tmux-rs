@@ -44,7 +44,7 @@ pub static mut cmd_last_pane_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-pub unsafe extern "C" fn cmd_select_pane_redraw(w: *mut window) {
+pub unsafe fn cmd_select_pane_redraw(w: *mut window) {
     unsafe {
         /*
          * Redraw entire window if it is bigger than the client (the
@@ -69,7 +69,7 @@ pub unsafe extern "C" fn cmd_select_pane_redraw(w: *mut window) {
     }
 }
 
-pub unsafe extern "C" fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+pub unsafe fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let entry = cmd_get_entry(self_);

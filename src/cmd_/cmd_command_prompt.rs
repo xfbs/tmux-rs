@@ -45,7 +45,7 @@ struct cmd_command_prompt_cdata<'a> {
     argv: *mut *mut c_char,
 }
 
-unsafe extern "C" fn cmd_command_prompt_args_parse(
+unsafe fn cmd_command_prompt_args_parse(
     _args: *mut args,
     _idx: u32,
     _cause: *mut *mut c_char,
@@ -53,7 +53,7 @@ unsafe extern "C" fn cmd_command_prompt_args_parse(
     args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING
 }
 
-unsafe extern "C" fn cmd_command_prompt_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_command_prompt_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let tc = cmdq_get_target_client(item);
@@ -180,7 +180,7 @@ unsafe extern "C" fn cmd_command_prompt_exec(self_: *mut cmd, item: *mut cmdq_it
     }
 }
 
-unsafe extern "C" fn cmd_command_prompt_callback(
+unsafe fn cmd_command_prompt_callback(
     c: *mut client,
     data: NonNull<c_void>,
     s: *const c_char,
@@ -257,7 +257,7 @@ unsafe extern "C" fn cmd_command_prompt_callback(
     }
 }
 
-unsafe extern "C" fn cmd_command_prompt_free(data: NonNull<c_void>) {
+unsafe fn cmd_command_prompt_free(data: NonNull<c_void>) {
     unsafe {
         let cdata: NonNull<cmd_command_prompt_cdata> = data.cast();
 

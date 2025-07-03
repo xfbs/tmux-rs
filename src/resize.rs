@@ -18,7 +18,7 @@ use libc::sscanf;
 
 use crate::compat::{queue::tailq_foreach, tree::rb_foreach};
 
-pub unsafe extern "C" fn resize_window(
+pub unsafe fn resize_window(
     w: *mut window,
     mut sx: u32,
     mut sy: u32,
@@ -72,7 +72,7 @@ pub unsafe extern "C" fn resize_window(
     }
 }
 
-pub unsafe extern "C" fn ignore_client_size(c: *mut client) -> i32 {
+pub unsafe fn ignore_client_size(c: *mut client) -> i32 {
     unsafe {
         if (*c).session.is_null() {
             return 1;
@@ -107,7 +107,7 @@ pub unsafe extern "C" fn ignore_client_size(c: *mut client) -> i32 {
     }
 }
 
-pub unsafe extern "C" fn clients_with_window(w: *mut window) -> u32 {
+pub unsafe fn clients_with_window(w: *mut window) -> u32 {
     let mut n = 0u32;
     unsafe {
         for loop_ in tailq_foreach(&raw mut clients).map(NonNull::as_ptr) {
@@ -123,14 +123,14 @@ pub unsafe extern "C" fn clients_with_window(w: *mut window) -> u32 {
     n
 }
 
-pub unsafe extern "C" fn clients_calculate_size(
+pub unsafe fn clients_calculate_size(
     type_: window_size_option,
     current: i32,
     c: *mut client,
     s: *mut session,
     w: *mut window,
     skip_client: Option<
-        unsafe extern "C" fn(
+        unsafe fn(
             *mut client,
             window_size_option,
             i32,
@@ -328,7 +328,7 @@ pub unsafe extern "C" fn clients_calculate_size(
     }
 }
 
-pub unsafe extern "C" fn default_window_size_skip_client(
+pub unsafe fn default_window_size_skip_client(
     loop_: *mut client,
     type_: window_size_option,
     current: i32,
@@ -435,7 +435,7 @@ pub unsafe fn default_window_size(
     }
 }
 
-pub unsafe extern "C" fn recalculate_size_skip_client(
+pub unsafe fn recalculate_size_skip_client(
     loop_: *mut client,
     type_: window_size_option,
     current: i32,
@@ -459,7 +459,7 @@ pub unsafe extern "C" fn recalculate_size_skip_client(
     }
 }
 
-pub unsafe extern "C" fn recalculate_size(w: *mut window, now: i32) {
+pub unsafe fn recalculate_size(w: *mut window, now: i32) {
     let __func__ = "recalculate_size";
 
     unsafe {
@@ -545,13 +545,13 @@ pub unsafe extern "C" fn recalculate_size(w: *mut window, now: i32) {
     }
 }
 
-pub unsafe extern "C" fn recalculate_sizes() {
+pub unsafe fn recalculate_sizes() {
     unsafe {
         recalculate_sizes_now(0);
     }
 }
 
-pub unsafe extern "C" fn recalculate_sizes_now(now: i32) {
+pub unsafe fn recalculate_sizes_now(now: i32) {
     unsafe {
         // struct session *s;
         // struct client *c;

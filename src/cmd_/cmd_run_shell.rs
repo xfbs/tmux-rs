@@ -46,7 +46,7 @@ pub struct cmd_run_shell_data<'a> {
     pub flags: job_flag,
 }
 
-pub unsafe extern "C" fn cmd_run_shell_args_parse(
+pub unsafe fn cmd_run_shell_args_parse(
     args: *mut args,
     _idx: u32,
     cause: *mut *mut c_char,
@@ -60,7 +60,7 @@ pub unsafe extern "C" fn cmd_run_shell_args_parse(
     args_parse_type::ARGS_PARSE_STRING
 }
 
-pub unsafe extern "C" fn cmd_run_shell_print(job: *mut job, msg: *const c_char) {
+pub unsafe fn cmd_run_shell_print(job: *mut job, msg: *const c_char) {
     unsafe {
         let cdata: *mut cmd_run_shell_data = job_get_data(job) as *mut cmd_run_shell_data;
         let mut wp = null_mut();
@@ -99,7 +99,7 @@ pub unsafe extern "C" fn cmd_run_shell_print(job: *mut job, msg: *const c_char) 
     }
 }
 
-pub unsafe extern "C" fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+pub unsafe fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     let __func__ = c"cmd_run_shell_exec".as_ptr();
     unsafe {
         let args = cmd_get_args(self_);
@@ -184,7 +184,7 @@ pub unsafe extern "C" fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_ite
     cmd_retval::CMD_RETURN_WAIT
 }
 
-pub unsafe extern "C" fn cmd_run_shell_timer(_fd: i32, _events: i16, arg: *mut c_void) {
+pub unsafe fn cmd_run_shell_timer(_fd: i32, _events: i16, arg: *mut c_void) {
     unsafe {
         let cdata = arg as *mut cmd_run_shell_data;
         let c = (*cdata).client;
@@ -249,7 +249,7 @@ pub unsafe extern "C" fn cmd_run_shell_timer(_fd: i32, _events: i16, arg: *mut c
     }
 }
 
-pub unsafe extern "C" fn cmd_run_shell_callback(job: *mut job) {
+pub unsafe fn cmd_run_shell_callback(job: *mut job) {
     unsafe {
         let cdata = job_get_data(job) as *mut cmd_run_shell_data;
         let event = job_get_event(job);
@@ -316,7 +316,7 @@ pub unsafe extern "C" fn cmd_run_shell_callback(job: *mut job) {
     }
 }
 
-pub unsafe extern "C" fn cmd_run_shell_free(data: *mut c_void) {
+pub unsafe fn cmd_run_shell_free(data: *mut c_void) {
     unsafe {
         let __func__ = c"cmd_run_shell_free".as_ptr();
         let cdata = data as *mut cmd_run_shell_data;

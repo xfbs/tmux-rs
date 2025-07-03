@@ -21,7 +21,7 @@ static mut all_images: images = TAILQ_HEAD_INITIALIZER!(all_images);
 
 static mut all_images_count: u32 = 0;
 
-unsafe extern "C" fn image_free(im: NonNull<image>) {
+unsafe fn image_free(im: NonNull<image>) {
     unsafe {
         let im = im.as_ptr();
         let mut s = (*im).s;
@@ -36,7 +36,7 @@ unsafe extern "C" fn image_free(im: NonNull<image>) {
     }
 }
 
-pub unsafe extern "C" fn image_free_all(s: *mut screen) -> i32 {
+pub unsafe fn image_free_all(s: *mut screen) -> i32 {
     unsafe {
         let mut redraw = !tailq_empty(&raw mut (*s).images);
 
@@ -49,7 +49,7 @@ pub unsafe extern "C" fn image_free_all(s: *mut screen) -> i32 {
 
 /// Create text placeholder for an image.
 
-pub unsafe extern "C" fn image_fallback(ret: *mut *mut c_char, sx: u32, sy: u32) {
+pub unsafe fn image_fallback(ret: *mut *mut c_char, sx: u32, sy: u32) {
     unsafe {
         let mut label: *mut c_char = format_nul!("SIXEL IMAGE ({}x{})\r\n", sx, sy);
 
@@ -87,7 +87,7 @@ pub unsafe extern "C" fn image_fallback(ret: *mut *mut c_char, sx: u32, sy: u32)
     }
 }
 
-pub unsafe extern "C" fn image_store(s: *mut screen, si: *mut sixel_image) -> *mut image {
+pub unsafe fn image_store(s: *mut screen, si: *mut sixel_image) -> *mut image {
     unsafe {
         let mut im = xcalloc1::<image>() as *mut image;
         (*im).s = s;
@@ -110,7 +110,7 @@ pub unsafe extern "C" fn image_store(s: *mut screen, si: *mut sixel_image) -> *m
     }
 }
 
-pub unsafe extern "C" fn image_check_line(s: *mut screen, py: u32, ny: u32) -> bool {
+pub unsafe fn image_check_line(s: *mut screen, py: u32, ny: u32) -> bool {
     unsafe {
         let mut redraw = false;
 
@@ -124,7 +124,7 @@ pub unsafe extern "C" fn image_check_line(s: *mut screen, py: u32, ny: u32) -> b
     }
 }
 
-pub unsafe extern "C" fn image_check_area(
+pub unsafe fn image_check_area(
     s: *mut screen,
     px: u32,
     py: u32,
@@ -148,7 +148,7 @@ pub unsafe extern "C" fn image_check_area(
     }
 }
 
-pub unsafe extern "C" fn image_scroll_up(s: *mut screen, lines: u32) -> i32 {
+pub unsafe fn image_scroll_up(s: *mut screen, lines: u32) -> i32 {
     unsafe {
         let mut redraw = false;
 

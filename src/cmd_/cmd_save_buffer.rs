@@ -40,7 +40,7 @@ pub static mut cmd_show_buffer_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-unsafe extern "C" fn cmd_save_buffer_done(
+unsafe fn cmd_save_buffer_done(
     _c: *mut client,
     path: *mut c_char,
     error: i32,
@@ -62,7 +62,7 @@ unsafe extern "C" fn cmd_save_buffer_done(
     }
 }
 
-unsafe extern "C" fn cmd_save_buffer_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_save_buffer_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let c = cmdq_get_client(item);

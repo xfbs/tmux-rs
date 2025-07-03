@@ -475,11 +475,11 @@ static tty_term_codes: [tty_term_code_entry; 232] = const {
     tmp
 };
 
-pub const unsafe extern "C" fn tty_term_ncodes() -> u32 {
+pub const unsafe fn tty_term_ncodes() -> u32 {
     tty_term_codes.len() as u32
 }
 
-pub unsafe extern "C" fn tty_term_strip(s: *const c_char) -> *mut c_char {
+pub unsafe fn tty_term_strip(s: *const c_char) -> *mut c_char {
     let sizeof_buf: usize = 8192;
     static mut buf: [c_char; 8192] = [0; 8192];
 
@@ -521,7 +521,7 @@ pub unsafe extern "C" fn tty_term_strip(s: *const c_char) -> *mut c_char {
     }
 }
 
-pub unsafe extern "C" fn tty_term_override_next(
+pub unsafe fn tty_term_override_next(
     s: *const c_char,
     offset: *mut usize,
 ) -> *mut c_char {
@@ -564,7 +564,7 @@ pub unsafe extern "C" fn tty_term_override_next(
     }
 }
 
-pub unsafe extern "C" fn tty_term_apply(
+pub unsafe fn tty_term_apply(
     term: *mut tty_term,
     capabilities: *const c_char,
     quiet: i32,
@@ -653,7 +653,7 @@ pub unsafe extern "C" fn tty_term_apply(
     }
 }
 
-pub unsafe extern "C" fn tty_term_apply_overrides(term: *mut tty_term) {
+pub unsafe fn tty_term_apply_overrides(term: *mut tty_term) {
     let mut ov: *mut options_value = null_mut();
     let mut s: *const c_char = null();
     let mut acs: *const c_char = null();
@@ -770,7 +770,7 @@ pub unsafe extern "C" fn tty_term_apply_overrides(term: *mut tty_term) {
     }
 }
 
-pub unsafe extern "C" fn tty_term_create(
+pub unsafe fn tty_term_create(
     tty: *mut tty,
     name: *mut c_char,
     caps: *mut *mut c_char,
@@ -925,7 +925,7 @@ pub unsafe extern "C" fn tty_term_create(
     }
 }
 
-pub unsafe extern "C" fn tty_term_free(term: *mut tty_term) {
+pub unsafe fn tty_term_free(term: *mut tty_term) {
     unsafe {
         log_debug!("removing term {}", _s((*term).name));
 
@@ -942,7 +942,7 @@ pub unsafe extern "C" fn tty_term_free(term: *mut tty_term) {
     }
 }
 
-pub unsafe extern "C" fn tty_term_read_list(
+pub unsafe fn tty_term_read_list(
     name: *const c_char,
     fd: i32,
     caps: *mut *mut *mut c_char,
@@ -1017,7 +1017,7 @@ pub unsafe extern "C" fn tty_term_read_list(
     }
 }
 
-pub unsafe extern "C" fn tty_term_free_list(caps: *mut *mut c_char, ncaps: u32) {
+pub unsafe fn tty_term_free_list(caps: *mut *mut c_char, ncaps: u32) {
     unsafe {
         for i in 0..ncaps {
             free_(*caps.add(i as usize));
@@ -1026,11 +1026,11 @@ pub unsafe extern "C" fn tty_term_free_list(caps: *mut *mut c_char, ncaps: u32) 
     }
 }
 
-pub unsafe extern "C" fn tty_term_has(term: *mut tty_term, code: tty_code_code) -> bool {
+pub unsafe fn tty_term_has(term: *mut tty_term, code: tty_code_code) -> bool {
     unsafe { (*(*term).codes.add(code as usize)).type_ != tty_code_type::None }
 }
 
-pub unsafe extern "C" fn tty_term_string(
+pub unsafe fn tty_term_string(
     term: *mut tty_term,
     code: tty_code_code,
 ) -> *const c_char {
@@ -1045,7 +1045,7 @@ pub unsafe extern "C" fn tty_term_string(
     }
 }
 
-pub unsafe extern "C" fn tty_term_string_i(
+pub unsafe fn tty_term_string_i(
     term: *mut tty_term,
     code: tty_code_code,
     a: i32,
@@ -1071,7 +1071,7 @@ pub unsafe extern "C" fn tty_term_string_i(
     }
 }
 
-pub unsafe extern "C" fn tty_term_string_ii(
+pub unsafe fn tty_term_string_ii(
     term: *mut tty_term,
     code: tty_code_code,
     a: i32,
@@ -1100,7 +1100,7 @@ pub unsafe extern "C" fn tty_term_string_ii(
     }
 }
 
-pub unsafe extern "C" fn tty_term_string_iii(
+pub unsafe fn tty_term_string_iii(
     term: *mut tty_term,
     code: tty_code_code,
     a: i32,
@@ -1129,7 +1129,7 @@ pub unsafe extern "C" fn tty_term_string_iii(
     }
 }
 
-pub unsafe extern "C" fn tty_term_string_s(
+pub unsafe fn tty_term_string_s(
     term: *mut tty_term,
     code: tty_code_code,
     a: *const c_char,
@@ -1157,7 +1157,7 @@ pub unsafe extern "C" fn tty_term_string_s(
     }
 }
 
-pub unsafe extern "C" fn tty_term_string_ss(
+pub unsafe fn tty_term_string_ss(
     term: *mut tty_term,
     code: tty_code_code,
     a: *const c_char,
@@ -1187,7 +1187,7 @@ pub unsafe extern "C" fn tty_term_string_ss(
     }
 }
 
-pub unsafe extern "C" fn tty_term_number(term: *mut tty_term, code: tty_code_code) -> i32 {
+pub unsafe fn tty_term_number(term: *mut tty_term, code: tty_code_code) -> i32 {
     unsafe {
         if !tty_term_has(term, code) {
             return 0;
@@ -1199,7 +1199,7 @@ pub unsafe extern "C" fn tty_term_number(term: *mut tty_term, code: tty_code_cod
     }
 }
 
-pub unsafe extern "C" fn tty_term_flag(term: *mut tty_term, code: tty_code_code) -> i32 {
+pub unsafe fn tty_term_flag(term: *mut tty_term, code: tty_code_code) -> i32 {
     unsafe {
         if !tty_term_has(term, code) {
             return 0;
@@ -1211,7 +1211,7 @@ pub unsafe extern "C" fn tty_term_flag(term: *mut tty_term, code: tty_code_code)
     }
 }
 
-pub unsafe extern "C" fn tty_term_describe(
+pub unsafe fn tty_term_describe(
     term: *mut tty_term,
     code: tty_code_code,
 ) -> *const c_char {

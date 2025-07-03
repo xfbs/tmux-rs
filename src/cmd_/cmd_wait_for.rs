@@ -64,14 +64,14 @@ RB_GENERATE!(
     wait_channel_cmp
 );
 
-pub unsafe extern "C" fn wait_channel_cmp(
+pub unsafe fn wait_channel_cmp(
     wc1: *const wait_channel,
     wc2: *const wait_channel,
 ) -> Ordering {
     unsafe { i32_to_ordering(libc::strcmp((*wc1).name, (*wc2).name)) }
 }
 
-pub unsafe extern "C" fn cmd_wait_for_add(name: *const c_char) -> *mut wait_channel {
+pub unsafe fn cmd_wait_for_add(name: *const c_char) -> *mut wait_channel {
     let wc: *mut wait_channel = xmalloc_().as_ptr();
     unsafe {
         (*wc).name = xstrdup(name).as_ptr();
@@ -89,7 +89,7 @@ pub unsafe extern "C" fn cmd_wait_for_add(name: *const c_char) -> *mut wait_chan
     wc
 }
 
-pub unsafe extern "C" fn cmd_wait_for_remove(wc: *mut wait_channel) {
+pub unsafe fn cmd_wait_for_remove(wc: *mut wait_channel) {
     unsafe {
         if (*wc).locked != 0 {
             return;
@@ -107,7 +107,7 @@ pub unsafe extern "C" fn cmd_wait_for_remove(wc: *mut wait_channel) {
     }
 }
 
-pub unsafe extern "C" fn cmd_wait_for_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+pub unsafe fn cmd_wait_for_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let name = args_string(args, 0);
@@ -131,7 +131,7 @@ pub unsafe extern "C" fn cmd_wait_for_exec(self_: *mut cmd, item: *mut cmdq_item
     }
 }
 
-pub unsafe extern "C" fn cmd_wait_for_signal(
+pub unsafe fn cmd_wait_for_signal(
     _item: *mut cmdq_item,
     name: *const c_char,
     mut wc: *mut wait_channel,
@@ -161,7 +161,7 @@ pub unsafe extern "C" fn cmd_wait_for_signal(
     }
 }
 
-pub unsafe extern "C" fn cmd_wait_for_wait(
+pub unsafe fn cmd_wait_for_wait(
     item: *mut cmdq_item,
     name: *const c_char,
     mut wc: *mut wait_channel,
@@ -192,7 +192,7 @@ pub unsafe extern "C" fn cmd_wait_for_wait(
     cmd_retval::CMD_RETURN_WAIT
 }
 
-pub unsafe extern "C" fn cmd_wait_for_lock(
+pub unsafe fn cmd_wait_for_lock(
     item: *mut cmdq_item,
     name: *const c_char,
     mut wc: *mut wait_channel,
@@ -218,7 +218,7 @@ pub unsafe extern "C" fn cmd_wait_for_lock(
     cmd_retval::CMD_RETURN_NORMAL
 }
 
-pub unsafe extern "C" fn cmd_wait_for_unlock(
+pub unsafe fn cmd_wait_for_unlock(
     item: *mut cmdq_item,
     name: *const c_char,
     wc: *mut wait_channel,
@@ -242,7 +242,7 @@ pub unsafe extern "C" fn cmd_wait_for_unlock(
     cmd_retval::CMD_RETURN_NORMAL
 }
 
-pub unsafe extern "C" fn cmd_wait_for_flush() {
+pub unsafe fn cmd_wait_for_flush() {
     unsafe {
         for wc in rb_foreach(&raw mut wait_channels).map(NonNull::as_ptr) {
             for wi in tailq_foreach(&raw mut (*wc).waiters).map(NonNull::as_ptr) {

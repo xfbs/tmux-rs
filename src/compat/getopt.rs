@@ -17,7 +17,7 @@ pub static mut BSDoptreset: libc::c_int = 0;
 #[no_mangle]
 pub static mut BSDoptarg: *mut libc::c_char = 0 as *const libc::c_char as *mut libc::c_char;
 #[no_mangle]
-pub unsafe extern "C" fn BSDgetopt(
+pub unsafe fn BSDgetopt(
     mut nargc: libc::c_int,
     mut nargv: *const *mut libc::c_char,
     mut ostr: *const libc::c_char,

@@ -33,7 +33,7 @@ pub static mut cmd_display_message_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-unsafe extern "C" fn cmd_display_message_each(
+unsafe fn cmd_display_message_each(
     key: *const c_char,
     value: *const c_char,
     arg: *mut c_void,
@@ -45,7 +45,7 @@ unsafe extern "C" fn cmd_display_message_each(
     }
 }
 
-unsafe extern "C" fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let target = cmdq_get_target(item);

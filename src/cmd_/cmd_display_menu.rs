@@ -44,7 +44,7 @@ pub static mut cmd_display_popup_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-unsafe extern "C" fn cmd_display_menu_args_parse(
+unsafe fn cmd_display_menu_args_parse(
     args: *mut args,
     idx: u32,
     cause: *mut *mut c_char,
@@ -81,7 +81,7 @@ unsafe extern "C" fn cmd_display_menu_args_parse(
     type_
 }
 
-unsafe extern "C" fn cmd_display_menu_get_position(
+unsafe fn cmd_display_menu_get_position(
     tc: *mut client,
     item: *mut cmdq_item,
     args: *mut args,
@@ -340,7 +340,7 @@ unsafe extern "C" fn cmd_display_menu_get_position(
     }
 }
 
-unsafe extern "C" fn cmd_display_menu_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_display_menu_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let target = cmdq_get_target(item);
@@ -477,7 +477,7 @@ unsafe extern "C" fn cmd_display_menu_exec(self_: *mut cmd, item: *mut cmdq_item
     }
 }
 
-unsafe extern "C" fn cmd_display_popup_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_display_popup_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let target = cmdq_get_target(item);
