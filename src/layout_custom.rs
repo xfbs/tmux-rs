@@ -20,7 +20,7 @@ use crate::compat::{
     strlcat,
 };
 
-pub unsafe extern "C" fn layout_find_bottomright(mut lc: *mut layout_cell) -> *mut layout_cell {
+pub unsafe fn layout_find_bottomright(mut lc: *mut layout_cell) -> *mut layout_cell {
     unsafe {
         if (*lc).type_ == layout_type::LAYOUT_WINDOWPANE {
             return lc;
@@ -30,7 +30,7 @@ pub unsafe extern "C" fn layout_find_bottomright(mut lc: *mut layout_cell) -> *m
     }
 }
 
-pub unsafe extern "C" fn layout_checksum(mut layout: *const c_char) -> u16 {
+pub unsafe fn layout_checksum(mut layout: *const c_char) -> u16 {
     unsafe {
         let mut csum = 0u16;
         while *layout != b'\0' as _ {
@@ -43,7 +43,7 @@ pub unsafe extern "C" fn layout_checksum(mut layout: *const c_char) -> u16 {
 }
 
 /// Dump layout as a string.
-pub unsafe extern "C" fn layout_dump(root: *mut layout_cell) -> *mut c_char {
+pub unsafe fn layout_dump(root: *mut layout_cell) -> *mut c_char {
     unsafe {
         let mut layout: MaybeUninit<[c_char; 8192]> = MaybeUninit::<[c_char; 8192]>::uninit();
         let layout = layout.as_mut_ptr() as *mut i8;
@@ -57,7 +57,7 @@ pub unsafe extern "C" fn layout_dump(root: *mut layout_cell) -> *mut c_char {
     }
 }
 
-pub unsafe extern "C" fn layout_append(lc: *mut layout_cell, buf: *mut c_char, len: usize) -> i32 {
+pub unsafe fn layout_append(lc: *mut layout_cell, buf: *mut c_char, len: usize) -> i32 {
     unsafe {
         let sizeof_tmp = 64;
         let mut tmp = MaybeUninit::<[c_char; 64]>::uninit();
@@ -130,7 +130,7 @@ pub unsafe extern "C" fn layout_append(lc: *mut layout_cell, buf: *mut c_char, l
 }
 
 /// Check layout sizes fit.
-pub unsafe extern "C" fn layout_check(lc: *mut layout_cell) -> i32 {
+pub unsafe fn layout_check(lc: *mut layout_cell) -> i32 {
     unsafe {
         let mut n = 0u32;
 
@@ -169,7 +169,7 @@ pub unsafe extern "C" fn layout_check(lc: *mut layout_cell) -> i32 {
     1
 }
 
-pub unsafe extern "C" fn layout_parse(
+pub unsafe fn layout_parse(
     w: *mut window,
     mut layout: *const c_char,
     cause: *mut *mut c_char,
@@ -290,7 +290,7 @@ pub unsafe extern "C" fn layout_parse(
 
 /* Assign panes into cells. */
 
-unsafe extern "C" fn layout_assign(wp: *mut *mut window_pane, lc: *mut layout_cell) {
+unsafe fn layout_assign(wp: *mut *mut window_pane, lc: *mut layout_cell) {
     unsafe {
         match (*lc).type_ {
             layout_type::LAYOUT_WINDOWPANE => {
@@ -308,7 +308,7 @@ unsafe extern "C" fn layout_assign(wp: *mut *mut window_pane, lc: *mut layout_ce
 
 /* Construct a cell from all or part of a layout tree. */
 
-unsafe extern "C" fn layout_construct(
+unsafe fn layout_construct(
     lcparent: *mut layout_cell,
     layout: *mut *const c_char,
 ) -> *mut layout_cell {

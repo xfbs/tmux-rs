@@ -29,7 +29,7 @@ pub static mut cmd_server_access_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-unsafe extern "C" fn cmd_server_access_deny(
+unsafe fn cmd_server_access_deny(
     item: *mut cmdq_item,
     pw: *mut libc::passwd,
 ) -> cmd_retval {
@@ -52,7 +52,7 @@ unsafe extern "C" fn cmd_server_access_deny(
     }
 }
 
-unsafe extern "C" fn cmd_server_access_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_server_access_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let c = cmdq_get_target_client(item);

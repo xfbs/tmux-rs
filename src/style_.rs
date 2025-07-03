@@ -44,13 +44,13 @@ pub static mut style_default: style = style {
     default_type: style_default_type::STYLE_DEFAULT_BASE,
 };
 
-pub unsafe extern "C" fn style_set_range_string(sy: *mut style, s: *const c_char) {
+pub unsafe fn style_set_range_string(sy: *mut style, s: *const c_char) {
     unsafe {
         strlcpy(&raw mut (*sy).range_string as _, s, 16); // TODO use better sizeof
     }
 }
 
-pub unsafe extern "C" fn style_parse(
+pub unsafe fn style_parse(
     sy: *mut style,
     base: *const grid_cell,
     mut in_: *const c_char,
@@ -275,7 +275,7 @@ pub unsafe extern "C" fn style_parse(
     }
 }
 
-pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
+pub unsafe fn style_tostring(sy: *const style) -> *const c_char {
     type s_type = [i8; 256];
     static mut s_buf: MaybeUninit<s_type> = MaybeUninit::<s_type>::uninit();
 
@@ -456,7 +456,7 @@ pub unsafe extern "C" fn style_tostring(sy: *const style) -> *const c_char {
     }
 }
 
-pub unsafe extern "C" fn style_add(
+pub unsafe fn style_add(
     gc: *mut grid_cell,
     oo: *mut options,
     name: *const c_char,
@@ -492,7 +492,7 @@ pub unsafe extern "C" fn style_add(
     }
 }
 
-pub unsafe extern "C" fn style_apply(
+pub unsafe fn style_apply(
     gc: *mut grid_cell,
     oo: *mut options,
     name: *const c_char,
@@ -504,14 +504,14 @@ pub unsafe extern "C" fn style_apply(
     }
 }
 
-pub unsafe extern "C" fn style_set(sy: *mut style, gc: *const grid_cell) {
+pub unsafe fn style_set(sy: *mut style, gc: *const grid_cell) {
     unsafe {
         memcpy__(sy, &raw const style_default);
         memcpy__(&raw mut (*sy).gc, gc);
     }
 }
 
-pub unsafe extern "C" fn style_copy(dst: *mut style, src: *const style) {
+pub unsafe fn style_copy(dst: *mut style, src: *const style) {
     unsafe {
         memcpy__(dst, src);
     }

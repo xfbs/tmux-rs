@@ -60,7 +60,7 @@ unsafe fn format_is_type(fr: *mut format_range, sy: *mut style) -> bool {
 
 // Free a range.
 
-unsafe extern "C" fn format_free_range(frs: *mut format_ranges, fr: *mut format_range) {
+unsafe fn format_free_range(frs: *mut format_ranges, fr: *mut format_range) {
     unsafe {
         tailq_remove(frs, fr);
         free(fr.cast());
@@ -68,7 +68,7 @@ unsafe extern "C" fn format_free_range(frs: *mut format_ranges, fr: *mut format_
 }
 
 /// Fix range positions.
-unsafe extern "C" fn format_update_ranges(
+unsafe fn format_update_ranges(
     frs: *mut format_ranges,
     s: *mut screen,
     offset: u32,
@@ -111,7 +111,7 @@ unsafe extern "C" fn format_update_ranges(
 }
 
 /// Draw a part of the format.
-unsafe extern "C" fn format_draw_put(
+unsafe fn format_draw_put(
     octx: *mut screen_write_ctx,
     ocx: u32,
     ocy: u32,
@@ -131,7 +131,7 @@ unsafe extern "C" fn format_draw_put(
 }
 
 /// Draw list part of format.
-unsafe extern "C" fn format_draw_put_list(
+unsafe fn format_draw_put_list(
     octx: *mut screen_write_ctx,
     ocx: u32,
     ocy: u32,
@@ -183,7 +183,7 @@ unsafe extern "C" fn format_draw_put_list(
 }
 
 /// Draw format with no list.
-unsafe extern "C" fn format_draw_none(
+unsafe fn format_draw_none(
     octx: *mut screen_write_ctx,
     available: u32,
     ocx: u32,
@@ -261,7 +261,7 @@ unsafe extern "C" fn format_draw_none(
 }
 
 /// Draw format with list on the left.
-unsafe extern "C" fn format_draw_left(
+unsafe fn format_draw_left(
     octx: *mut screen_write_ctx,
     available: u32,
     ocx: u32,
@@ -407,7 +407,7 @@ unsafe extern "C" fn format_draw_left(
 
 // Draw format with list in the centre.
 
-unsafe extern "C" fn format_draw_centre(
+unsafe fn format_draw_centre(
     octx: *mut screen_write_ctx,
     available: u32,
     ocx: u32,
@@ -559,7 +559,7 @@ unsafe extern "C" fn format_draw_centre(
 
 /* Draw format with list on the right. */
 
-unsafe extern "C" fn format_draw_right(
+unsafe fn format_draw_right(
     octx: *mut screen_write_ctx,
     available: u32,
     ocx: u32,
@@ -705,7 +705,7 @@ unsafe extern "C" fn format_draw_right(
     }
 }
 
-unsafe extern "C" fn format_draw_absolute_centre(
+unsafe fn format_draw_absolute_centre(
     octx: *mut screen_write_ctx,
     available: u32,
     ocx: u32,
@@ -851,7 +851,7 @@ unsafe extern "C" fn format_draw_absolute_centre(
 
 // Get width and count of any leading #s.
 
-unsafe extern "C" fn format_leading_hashes(
+unsafe fn format_leading_hashes(
     cp: *const c_char,
     n: *mut u32,
     width: *mut u32,
@@ -888,7 +888,7 @@ unsafe extern "C" fn format_leading_hashes(
 }
 
 /// Draw multiple characters.
-unsafe extern "C" fn format_draw_many(
+unsafe fn format_draw_many(
     ctx: *mut screen_write_ctx,
     sy: *mut style,
     ch: c_char,
@@ -1452,7 +1452,7 @@ pub unsafe fn format_draw(
 }
 
 /// Get width, taking #[] into account.
-pub unsafe extern "C" fn format_width(expanded: *const c_char) -> u32 {
+pub unsafe fn format_width(expanded: *const c_char) -> u32 {
     unsafe {
         let mut cp: *const c_char = expanded;
 
@@ -1504,7 +1504,7 @@ pub unsafe extern "C" fn format_width(expanded: *const c_char) -> u32 {
 ///
 /// Note, we copy the whole set of unescaped #s, but only add their escaped size to width.
 /// This is because the format_draw function will actually do the escaping when it runs
-pub unsafe extern "C" fn format_trim_left(expanded: *const c_char, limit: u32) -> *mut c_char {
+pub unsafe fn format_trim_left(expanded: *const c_char, limit: u32) -> *mut c_char {
     unsafe {
         // char *copy, *out;
         // const char *cp = expanded, *end;
@@ -1590,7 +1590,7 @@ pub unsafe extern "C" fn format_trim_left(expanded: *const c_char, limit: u32) -
 
 // Trim on the right, taking #[] into account.
 
-pub unsafe extern "C" fn format_trim_right(expanded: *const c_char, limit: u32) -> *mut c_char {
+pub unsafe fn format_trim_right(expanded: *const c_char, limit: u32) -> *mut c_char {
     unsafe {
         //char *copy, *out;
         //const char *cp = expanded, *end;

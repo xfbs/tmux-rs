@@ -42,7 +42,7 @@ pub struct cmd_source_file_data {
     pub nfiles: u32,
 }
 
-unsafe extern "C" fn cmd_source_file_complete_cb(
+unsafe fn cmd_source_file_complete_cb(
     item: *mut cmdq_item,
     data: *mut c_void,
 ) -> cmd_retval {
@@ -52,7 +52,7 @@ unsafe extern "C" fn cmd_source_file_complete_cb(
     }
 }
 
-unsafe extern "C" fn cmd_source_file_complete(c: *mut client, cdata: *mut cmd_source_file_data) {
+unsafe fn cmd_source_file_complete(c: *mut client, cdata: *mut cmd_source_file_data) {
     unsafe {
         if cfg_finished != 0 {
             if (*cdata).retval == cmd_retval::CMD_RETURN_ERROR
@@ -73,7 +73,7 @@ unsafe extern "C" fn cmd_source_file_complete(c: *mut client, cdata: *mut cmd_so
     }
 }
 
-unsafe extern "C" fn cmd_source_file_done(
+unsafe fn cmd_source_file_done(
     c: *mut client,
     path: *mut c_char,
     error: i32,
@@ -128,7 +128,7 @@ unsafe extern "C" fn cmd_source_file_done(
     }
 }
 
-unsafe extern "C" fn cmd_source_file_add(cdata: *mut cmd_source_file_data, path: *const c_char) {
+unsafe fn cmd_source_file_add(cdata: *mut cmd_source_file_data, path: *const c_char) {
     unsafe {
         let mut __func__ = "cmd_source_file_add";
         log_debug!("{}: {}", __func__, _s(path));
@@ -138,7 +138,7 @@ unsafe extern "C" fn cmd_source_file_add(cdata: *mut cmd_source_file_data, path:
     }
 }
 
-unsafe extern "C" fn cmd_source_file_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_source_file_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     let __func__ = "cmd_source_file_exec";
 
     unsafe {

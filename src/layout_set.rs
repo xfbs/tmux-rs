@@ -17,10 +17,10 @@ use crate::compat::queue::{tailq_first, tailq_foreach, tailq_insert_tail, tailq_
 
 struct layout_sets_entry {
     name: SyncCharPtr,
-    arrange: Option<unsafe extern "C" fn(*mut window)>,
+    arrange: Option<unsafe fn(*mut window)>,
 }
 impl layout_sets_entry {
-    const fn new(name: &'static CStr, arrange: unsafe extern "C" fn(*mut window)) -> Self {
+    const fn new(name: &'static CStr, arrange: unsafe fn(*mut window)) -> Self {
         Self {
             name: SyncCharPtr::new(name),
             arrange: Some(arrange),
@@ -39,7 +39,7 @@ static layout_sets: [layout_sets_entry; layout_sets_len] = [
     layout_sets_entry::new(c"tiled", layout_set_tiled),
 ];
 
-pub unsafe extern "C" fn layout_set_lookup(name: *const c_char) -> i32 {
+pub unsafe fn layout_set_lookup(name: *const c_char) -> i32 {
     unsafe {
         let mut matched: i32 = -1;
 
@@ -63,7 +63,7 @@ pub unsafe extern "C" fn layout_set_lookup(name: *const c_char) -> i32 {
     }
 }
 
-pub unsafe extern "C" fn layout_set_select(w: *mut window, mut layout: u32) -> u32 {
+pub unsafe fn layout_set_select(w: *mut window, mut layout: u32) -> u32 {
     unsafe {
         if layout > layout_sets_len as u32 - 1 {
             layout = layout_sets_len as u32 - 1;
@@ -78,7 +78,7 @@ pub unsafe extern "C" fn layout_set_select(w: *mut window, mut layout: u32) -> u
     }
 }
 
-pub unsafe extern "C" fn layout_set_next(w: *mut window) -> u32 {
+pub unsafe fn layout_set_next(w: *mut window) -> u32 {
     unsafe {
         let mut layout: u32 = 0;
 
@@ -99,7 +99,7 @@ pub unsafe extern "C" fn layout_set_next(w: *mut window) -> u32 {
     }
 }
 
-pub unsafe extern "C" fn layout_set_previous(w: *mut window) -> u32 {
+pub unsafe fn layout_set_previous(w: *mut window) -> u32 {
     unsafe {
         let mut layout: u32 = 0;
 
@@ -122,7 +122,7 @@ pub unsafe extern "C" fn layout_set_previous(w: *mut window) -> u32 {
     }
 }
 
-pub unsafe extern "C" fn layout_set_even(w: *mut window, type_: layout_type) {
+pub unsafe fn layout_set_even(w: *mut window, type_: layout_type) {
     let __func__ = c"layout_set_even".as_ptr();
     unsafe {
         // struct window_pane *wp;
@@ -183,19 +183,19 @@ pub unsafe extern "C" fn layout_set_even(w: *mut window, type_: layout_type) {
     }
 }
 
-unsafe extern "C" fn layout_set_even_h(w: *mut window) {
+unsafe fn layout_set_even_h(w: *mut window) {
     unsafe {
         layout_set_even(w, layout_type::LAYOUT_LEFTRIGHT);
     }
 }
 
-unsafe extern "C" fn layout_set_even_v(w: *mut window) {
+unsafe fn layout_set_even_v(w: *mut window) {
     unsafe {
         layout_set_even(w, layout_type::LAYOUT_TOPBOTTOM);
     }
 }
 
-pub unsafe extern "C" fn layout_set_main_h(w: *mut window) {
+pub unsafe fn layout_set_main_h(w: *mut window) {
     let __func__ = c"layout_set_main_h".as_ptr();
     unsafe {
         // struct window_pane *wp;
@@ -302,7 +302,7 @@ pub unsafe extern "C" fn layout_set_main_h(w: *mut window) {
     }
 }
 
-pub unsafe extern "C" fn layout_set_main_h_mirrored(w: *mut window) {
+pub unsafe fn layout_set_main_h_mirrored(w: *mut window) {
     let __func__ = c"layout_set_main_h_mirrored".as_ptr();
     unsafe {
         let mut otherh: u32;
@@ -404,7 +404,7 @@ pub unsafe extern "C" fn layout_set_main_h_mirrored(w: *mut window) {
     }
 }
 
-pub unsafe extern "C" fn layout_set_main_v(w: *mut window) {
+pub unsafe fn layout_set_main_v(w: *mut window) {
     let __func__ = c"layout_set_main_v".as_ptr();
     let mut cause = null_mut();
 
@@ -507,7 +507,7 @@ pub unsafe extern "C" fn layout_set_main_v(w: *mut window) {
     }
 }
 
-pub unsafe extern "C" fn layout_set_main_v_mirrored(w: *mut window) {
+pub unsafe fn layout_set_main_v_mirrored(w: *mut window) {
     let __func__ = c"layout_set_main_v_mirrored".as_ptr();
     unsafe {
         let mut cause: *mut c_char = null_mut();
@@ -609,7 +609,7 @@ pub unsafe extern "C" fn layout_set_main_v_mirrored(w: *mut window) {
     }
 }
 
-pub unsafe extern "C" fn layout_set_tiled(w: *mut window) {
+pub unsafe fn layout_set_tiled(w: *mut window) {
     let __func__ = c"layout_set_tiled".as_ptr();
 
     unsafe {

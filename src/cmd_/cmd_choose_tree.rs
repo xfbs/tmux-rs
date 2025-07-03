@@ -70,7 +70,7 @@ pub static mut cmd_customize_mode_entry: cmd_entry = cmd_entry {
     exec: Some(cmd_choose_tree_exec),
 };
 
-unsafe extern "C" fn cmd_choose_tree_args_parse(
+unsafe fn cmd_choose_tree_args_parse(
     _args: *mut args,
     _idx: u32,
     _cause: *mut *mut c_char,
@@ -78,7 +78,7 @@ unsafe extern "C" fn cmd_choose_tree_args_parse(
     args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING
 }
 
-unsafe extern "C" fn cmd_choose_tree_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_choose_tree_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let target = cmdq_get_target(item);

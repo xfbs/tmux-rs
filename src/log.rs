@@ -42,7 +42,7 @@ static log_level: AtomicI32 = AtomicI32::new(0);
 
 const DEFAULT_ORDERING: Ordering = Ordering::SeqCst;
 
-unsafe extern "C" fn log_event_cb(_severity: c_int, msg: *const c_char) {
+unsafe fn log_event_cb(_severity: c_int, msg: *const c_char) {
     unsafe { log_debug!("{}", _s(msg)) }
 }
 
@@ -50,7 +50,7 @@ pub fn log_add_level() {
     log_level.fetch_add(1, DEFAULT_ORDERING);
 }
 
-pub extern "C" fn log_get_level() -> i32 {
+pub fn log_get_level() -> i32 {
     log_level.load(DEFAULT_ORDERING)
 }
 

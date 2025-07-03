@@ -39,11 +39,11 @@ pub static mut next_session_id: u32 = 0;
 
 pub static mut session_groups: session_groups = rb_initializer();
 
-pub unsafe extern "C" fn session_cmp(s1: *const session, s2: *const session) -> Ordering {
+pub unsafe fn session_cmp(s1: *const session, s2: *const session) -> Ordering {
     unsafe { i32_to_ordering(libc::strcmp((*s1).name, (*s2).name)) }
 }
 
-pub unsafe extern "C" fn session_group_cmp(
+pub unsafe fn session_group_cmp(
     s1: *const session_group,
     s2: *const session_group,
 ) -> Ordering {
@@ -55,7 +55,7 @@ pub unsafe fn session_alive(s: *mut session) -> bool {
 }
 
 /// Find session by name.
-pub unsafe extern "C" fn session_find(name: *mut c_char) -> *mut session {
+pub unsafe fn session_find(name: *mut c_char) -> *mut session {
     let mut s = MaybeUninit::<session>::uninit();
     let s = s.as_mut_ptr();
 
@@ -66,7 +66,7 @@ pub unsafe extern "C" fn session_find(name: *mut c_char) -> *mut session {
 }
 
 /// Find session by id parsed from a string.
-pub unsafe extern "C" fn session_find_by_id_str(s: *const c_char) -> *mut session {
+pub unsafe fn session_find_by_id_str(s: *const c_char) -> *mut session {
     unsafe {
         if *s != b'$' as c_char {
             return null_mut();
@@ -150,7 +150,7 @@ impl session {
 }
 
 /// Create a new session.
-pub unsafe extern "C" fn session_create(
+pub unsafe fn session_create(
     prefix: *const c_char,
     name: *const c_char,
     cwd: *const c_char,
@@ -162,7 +162,7 @@ pub unsafe extern "C" fn session_create(
 }
 
 /// Add a reference to a session.
-pub unsafe extern "C" fn session_add_ref(s: *mut session, from: *const c_char) {
+pub unsafe fn session_add_ref(s: *mut session, from: *const c_char) {
     let __func__ = "session_add_ref";
     unsafe {
         (*s).references += 1;
@@ -177,7 +177,7 @@ pub unsafe extern "C" fn session_add_ref(s: *mut session, from: *const c_char) {
 }
 
 /// Remove a reference from a session.
-pub unsafe extern "C" fn session_remove_ref(s: *mut session, from: *const c_char) {
+pub unsafe fn session_remove_ref(s: *mut session, from: *const c_char) {
     let __func__ = "session_remove_ref";
     unsafe {
         (*s).references -= 1;
@@ -196,7 +196,7 @@ pub unsafe extern "C" fn session_remove_ref(s: *mut session, from: *const c_char
 }
 
 /// Free session.
-pub unsafe extern "C" fn session_free(_fd: i32, _events: i16, arg: *mut c_void) {
+pub unsafe fn session_free(_fd: i32, _events: i16, arg: *mut c_void) {
     unsafe {
         let s = arg as *mut session;
 
@@ -216,7 +216,7 @@ pub unsafe extern "C" fn session_free(_fd: i32, _events: i16, arg: *mut c_void) 
 }
 
 /// Destroy a session.
-pub unsafe extern "C" fn session_destroy(s: *mut session, notify: i32, from: *const c_char) {
+pub unsafe fn session_destroy(s: *mut session, notify: i32, from: *const c_char) {
     let __func__ = c"session_destroy".as_ptr();
     unsafe {
         log_debug!("session {} destroyed ({})", _s((*s).name), _s(from));
@@ -255,7 +255,7 @@ pub unsafe extern "C" fn session_destroy(s: *mut session, notify: i32, from: *co
 }
 
 /// Sanitize session name.
-pub unsafe extern "C" fn session_check_name(name: *const c_char) -> *mut c_char {
+pub unsafe fn session_check_name(name: *const c_char) -> *mut c_char {
     unsafe {
         let mut new_name = null_mut();
         if *name == b'\0' as c_char {
@@ -280,7 +280,7 @@ pub unsafe extern "C" fn session_check_name(name: *const c_char) -> *mut c_char 
 }
 
 /// Lock session if it has timed out.
-pub unsafe extern "C" fn session_lock_timer(fd: i32, events: i16, arg: *mut c_void) {
+pub unsafe fn session_lock_timer(fd: i32, events: i16, arg: *mut c_void) {
     unsafe {
         let s = arg as *mut session;
 
@@ -300,7 +300,7 @@ pub unsafe extern "C" fn session_lock_timer(fd: i32, events: i16, arg: *mut c_vo
 }
 
 /// Update activity time.
-pub unsafe extern "C" fn session_update_activity(s: *mut session, from: *mut timeval) {
+pub unsafe fn session_update_activity(s: *mut session, from: *mut timeval) {
     unsafe {
         let last = &raw mut (*s).last_activity_time;
 
@@ -341,7 +341,7 @@ pub unsafe extern "C" fn session_update_activity(s: *mut session, from: *mut tim
 }
 
 /// Find the next usable session.
-pub unsafe extern "C" fn session_next_session(s: *mut session) -> *mut session {
+pub unsafe fn session_next_session(s: *mut session) -> *mut session {
     unsafe {
         if rb_empty(&raw mut sessions) || !session_alive(s) {
             return null_mut();
@@ -360,7 +360,7 @@ pub unsafe extern "C" fn session_next_session(s: *mut session) -> *mut session {
 }
 
 /// Find the previous usable session.
-pub unsafe extern "C" fn session_previous_session(s: *mut session) -> *mut session {
+pub unsafe fn session_previous_session(s: *mut session) -> *mut session {
     unsafe {
         if rb_empty(&raw mut sessions) || !session_alive(s) {
             return null_mut();
@@ -378,7 +378,7 @@ pub unsafe extern "C" fn session_previous_session(s: *mut session) -> *mut sessi
 }
 
 /// Attach a window to a session.
-pub unsafe extern "C" fn session_attach(
+pub unsafe fn session_attach(
     s: *mut session,
     w: *mut window,
     idx: i32,
@@ -401,7 +401,7 @@ pub unsafe extern "C" fn session_attach(
 }
 
 /// Detach a window from a session.
-pub unsafe extern "C" fn session_detach(s: *mut session, wl: *mut winlink) -> i32 {
+pub unsafe fn session_detach(s: *mut session, wl: *mut winlink) -> i32 {
     unsafe {
         if (*s).curw == wl && session_last(s) != 0 && session_previous(s, 0) != 0 {
             session_next(s, 0);
@@ -422,7 +422,7 @@ pub unsafe extern "C" fn session_detach(s: *mut session, wl: *mut winlink) -> i3
 }
 
 /// Return if session has window.
-pub unsafe extern "C" fn session_has(s: *mut session, w: *mut window) -> i32 {
+pub unsafe fn session_has(s: *mut session, w: *mut window) -> i32 {
     unsafe {
         tailq_foreach::<_, discr_wentry>(&raw mut (*w).winlinks)
             .any(|wl| (*wl.as_ptr()).session == s) as i32
@@ -430,7 +430,7 @@ pub unsafe extern "C" fn session_has(s: *mut session, w: *mut window) -> i32 {
 }
 
 /// Return 1 if a window is linked outside this session (not including session groups). The window must be in this session!
-pub unsafe extern "C" fn session_is_linked(s: *mut session, w: *mut window) -> i32 {
+pub unsafe fn session_is_linked(s: *mut session, w: *mut window) -> i32 {
     unsafe {
         let sg = session_group_contains(s);
         if sg.is_null() {
@@ -440,7 +440,7 @@ pub unsafe extern "C" fn session_is_linked(s: *mut session, w: *mut window) -> i
     }
 }
 
-pub unsafe extern "C" fn session_next_alert(mut wl: *mut winlink) -> *mut winlink {
+pub unsafe fn session_next_alert(mut wl: *mut winlink) -> *mut winlink {
     unsafe {
         while !wl.is_null() {
             if (*wl).flags.intersects(WINLINK_ALERTFLAGS) {
@@ -453,7 +453,7 @@ pub unsafe extern "C" fn session_next_alert(mut wl: *mut winlink) -> *mut winlin
 }
 
 /// Move session to next window.
-pub unsafe extern "C" fn session_next(s: *mut session, alert: i32) -> i32 {
+pub unsafe fn session_next(s: *mut session, alert: i32) -> i32 {
     unsafe {
         if (*s).curw.is_null() {
             return -1;
@@ -478,7 +478,7 @@ pub unsafe extern "C" fn session_next(s: *mut session, alert: i32) -> i32 {
     }
 }
 
-pub unsafe extern "C" fn session_previous_alert(mut wl: *mut winlink) -> *mut winlink {
+pub unsafe fn session_previous_alert(mut wl: *mut winlink) -> *mut winlink {
     unsafe {
         while !wl.is_null() {
             if (*wl).flags.intersects(WINLINK_ALERTFLAGS) {
@@ -491,7 +491,7 @@ pub unsafe extern "C" fn session_previous_alert(mut wl: *mut winlink) -> *mut wi
 }
 
 /// Move session to previous window.
-pub unsafe extern "C" fn session_previous(s: *mut session, alert: i32) -> i32 {
+pub unsafe fn session_previous(s: *mut session, alert: i32) -> i32 {
     unsafe {
         if (*s).curw.is_null() {
             return -1;
@@ -517,7 +517,7 @@ pub unsafe extern "C" fn session_previous(s: *mut session, alert: i32) -> i32 {
 }
 
 /// Move session to specific window.
-pub unsafe extern "C" fn session_select(s: *mut session, idx: i32) -> i32 {
+pub unsafe fn session_select(s: *mut session, idx: i32) -> i32 {
     unsafe {
         let wl = winlink_find_by_index(&raw mut (*s).windows, idx);
         session_set_current(s, wl)
@@ -525,7 +525,7 @@ pub unsafe extern "C" fn session_select(s: *mut session, idx: i32) -> i32 {
 }
 
 /// Move session to last used window.
-pub unsafe extern "C" fn session_last(s: *mut session) -> i32 {
+pub unsafe fn session_last(s: *mut session) -> i32 {
     unsafe {
         let wl = tailq_first(&raw mut (*s).lastw);
         if wl.is_null() {
@@ -540,7 +540,7 @@ pub unsafe extern "C" fn session_last(s: *mut session) -> i32 {
 }
 
 /// Set current winlink to wl.
-pub unsafe extern "C" fn session_set_current(s: *mut session, wl: *mut winlink) -> i32 {
+pub unsafe fn session_set_current(s: *mut session, wl: *mut winlink) -> i32 {
     unsafe {
         let old: *mut winlink = (*s).curw;
 
@@ -569,7 +569,7 @@ pub unsafe extern "C" fn session_set_current(s: *mut session, wl: *mut winlink) 
 }
 
 /// Find the session group containing a session.
-pub unsafe extern "C" fn session_group_contains(target: *mut session) -> *mut session_group {
+pub unsafe fn session_group_contains(target: *mut session) -> *mut session_group {
     unsafe {
         for sg in rb_foreach(&raw mut session_groups) {
             for s in tailq_foreach(&raw mut (*sg.as_ptr()).sessions) {
@@ -584,7 +584,7 @@ pub unsafe extern "C" fn session_group_contains(target: *mut session) -> *mut se
 }
 
 /// Find session group by name.
-pub unsafe extern "C" fn session_group_find(name: *const c_char) -> *mut session_group {
+pub unsafe fn session_group_find(name: *const c_char) -> *mut session_group {
     unsafe {
         let mut sg = MaybeUninit::<session_group>::uninit();
         let sg = sg.as_mut_ptr();
@@ -595,7 +595,7 @@ pub unsafe extern "C" fn session_group_find(name: *const c_char) -> *mut session
 }
 
 /// Create a new session group.
-pub unsafe extern "C" fn session_group_new(name: *const c_char) -> *mut session_group {
+pub unsafe fn session_group_new(name: *const c_char) -> *mut session_group {
     unsafe {
         let mut sg = session_group_find(name);
         if !sg.is_null() {
@@ -612,7 +612,7 @@ pub unsafe extern "C" fn session_group_new(name: *const c_char) -> *mut session_
 }
 
 /// Add a session to a session group.
-pub unsafe extern "C" fn session_group_add(sg: *mut session_group, s: *mut session) {
+pub unsafe fn session_group_add(sg: *mut session_group, s: *mut session) {
     unsafe {
         if session_group_contains(s).is_null() {
             tailq_insert_tail(&raw mut (*sg).sessions, s);
@@ -621,7 +621,7 @@ pub unsafe extern "C" fn session_group_add(sg: *mut session_group, s: *mut sessi
 }
 
 /// Remove a session from its group and destroy the group if empty.
-pub unsafe extern "C" fn session_group_remove(s: *mut session) {
+pub unsafe fn session_group_remove(s: *mut session) {
     unsafe {
         let sg = session_group_contains(s);
 
@@ -638,12 +638,12 @@ pub unsafe extern "C" fn session_group_remove(s: *mut session) {
 }
 
 /// Count number of sessions in session group.
-pub unsafe extern "C" fn session_group_count(sg: *mut session_group) -> u32 {
+pub unsafe fn session_group_count(sg: *mut session_group) -> u32 {
     unsafe { tailq_foreach(&raw mut (*sg).sessions).count() as u32 }
 }
 
 /// Count number of clients attached to sessions in session group.
-pub unsafe extern "C" fn session_group_attached_count(sg: *mut session_group) -> u32 {
+pub unsafe fn session_group_attached_count(sg: *mut session_group) -> u32 {
     unsafe {
         tailq_foreach(&raw mut (*sg).sessions)
             .map(|s| (*s.as_ptr()).attached)
@@ -652,7 +652,7 @@ pub unsafe extern "C" fn session_group_attached_count(sg: *mut session_group) ->
 }
 
 /// Synchronize a session to its session group.
-pub unsafe extern "C" fn session_group_synchronize_to(s: *mut session) {
+pub unsafe fn session_group_synchronize_to(s: *mut session) {
     unsafe {
         let sg = session_group_contains(s);
         if sg.is_null() {
@@ -673,7 +673,7 @@ pub unsafe extern "C" fn session_group_synchronize_to(s: *mut session) {
 }
 
 /// Synchronize a session group to a session.
-pub unsafe extern "C" fn session_group_synchronize_from(target: *mut session) {
+pub unsafe fn session_group_synchronize_from(target: *mut session) {
     unsafe {
         let sg = session_group_contains(target);
         if sg.is_null() {
@@ -693,7 +693,7 @@ pub unsafe extern "C" fn session_group_synchronize_from(target: *mut session) {
  * winlinks then recreating them, then updating the current window, last window
  * stack and alerts.
  */
-pub unsafe extern "C" fn session_group_synchronize1(target: *mut session, s: *mut session) {
+pub unsafe fn session_group_synchronize1(target: *mut session, s: *mut session) {
     let mut old_windows = MaybeUninit::<winlinks>::uninit();
     let mut old_lastw = MaybeUninit::<winlink_stack>::uninit();
 
@@ -758,7 +758,7 @@ pub unsafe extern "C" fn session_group_synchronize1(target: *mut session, s: *mu
 }
 
 /// Renumber the windows across winlinks attached to a specific session.
-pub unsafe extern "C" fn session_renumber_windows(s: *mut session) {
+pub unsafe fn session_renumber_windows(s: *mut session) {
     unsafe {
         let mut old_wins = MaybeUninit::<winlinks>::uninit();
         let mut old_lastw = MaybeUninit::<winlink_stack>::uninit();

@@ -16,14 +16,14 @@ use ::libc::{gettimeofday, memcpy, strchr, strcmp, strcspn, strlen, strncmp};
 use crate::event_::{event_add, event_initialized};
 use crate::*;
 
-pub unsafe extern "C" fn name_time_callback(_fd: c_int, _events: c_short, arg: *mut c_void) {
+pub unsafe fn name_time_callback(_fd: c_int, _events: c_short, arg: *mut c_void) {
     let w = arg as *mut window;
     unsafe {
         log_debug!("@{} timer expired", (*w).id);
     }
 }
 
-pub unsafe extern "C" fn name_time_expired(w: *mut window, tv: *mut timeval) -> c_int {
+pub unsafe fn name_time_expired(w: *mut window, tv: *mut timeval) -> c_int {
     unsafe {
         let mut offset: MaybeUninit<timeval> = MaybeUninit::<timeval>::uninit();
 
@@ -101,7 +101,7 @@ pub unsafe fn check_window_name(w: *mut window) {
     }
 }
 
-pub unsafe extern "C" fn default_window_name(w: *mut window) -> *mut c_char {
+pub unsafe fn default_window_name(w: *mut window) -> *mut c_char {
     unsafe {
         if (*w).active.is_null() {
             return xstrdup(c"".as_ptr()).cast().as_ptr();
@@ -118,7 +118,7 @@ pub unsafe extern "C" fn default_window_name(w: *mut window) -> *mut c_char {
     }
 }
 
-unsafe extern "C" fn format_window_name(w: *mut window) -> *const c_char {
+unsafe fn format_window_name(w: *mut window) -> *const c_char {
     unsafe {
         let ft = format_create(
             null_mut(),

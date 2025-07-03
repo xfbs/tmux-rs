@@ -70,7 +70,7 @@ pub static mut cmd_last_window_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-unsafe extern "C" fn cmd_select_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_select_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let c = cmdq_get_client(item);

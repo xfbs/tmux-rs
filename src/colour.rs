@@ -123,7 +123,7 @@ pub fn colour_force_rgb(c: i32) -> i32 {
     static_mut_refs,
     reason = "TODO need to find a better way to make use of the write macro without invoking ub"
 )]
-pub unsafe extern "C" fn colour_tostring(c: i32) -> *const c_char {
+pub unsafe fn colour_tostring(c: i32) -> *const c_char {
     // TODO this function returns a static buffer
     // this means it's not thread safe and multiple
     // concurrent calls to this function would result in bugs
@@ -308,7 +308,7 @@ pub fn colour_256to16(c: i32) -> i32 {
     table[c as u8 as usize] as i32
 }
 
-pub unsafe extern "C" fn colour_byname(name: *const c_char) -> i32 {
+pub unsafe fn colour_byname(name: *const c_char) -> i32 {
     const COLOURS: [(&CStr, i32); 578] = [
         (c"AliceBlue", 0xf0f8ff),
         (c"AntiqueWhite", 0xfaebd7),
@@ -920,7 +920,7 @@ pub unsafe extern "C" fn colour_byname(name: *const c_char) -> i32 {
     -1
 }
 
-pub unsafe extern "C" fn colour_palette_init(p: *mut colour_palette) {
+pub unsafe fn colour_palette_init(p: *mut colour_palette) {
     unsafe {
         *p = colour_palette {
             fg: 8,
@@ -932,7 +932,7 @@ pub unsafe extern "C" fn colour_palette_init(p: *mut colour_palette) {
 }
 
 /// Clear palette.
-pub unsafe extern "C" fn colour_palette_clear(p: *mut colour_palette) {
+pub unsafe fn colour_palette_clear(p: *mut colour_palette) {
     unsafe {
         if !p.is_null() {
             (*p).fg = 8;
@@ -944,7 +944,7 @@ pub unsafe extern "C" fn colour_palette_clear(p: *mut colour_palette) {
 }
 
 /// Free a palette
-pub unsafe extern "C" fn colour_palette_free(p: *mut colour_palette) {
+pub unsafe fn colour_palette_free(p: *mut colour_palette) {
     if let Some(p) = std::ptr::NonNull::new(p) {
         let p = p.as_ptr();
         unsafe {
@@ -957,7 +957,7 @@ pub unsafe extern "C" fn colour_palette_free(p: *mut colour_palette) {
 }
 
 /// Get a colour from a palette.
-pub unsafe extern "C" fn colour_palette_get(p: *const colour_palette, mut c: i32) -> i32 {
+pub unsafe fn colour_palette_get(p: *const colour_palette, mut c: i32) -> i32 {
     unsafe {
         if p.is_null() {
             return -1;
@@ -981,7 +981,7 @@ pub unsafe extern "C" fn colour_palette_get(p: *const colour_palette, mut c: i32
     }
 }
 
-pub unsafe extern "C" fn colour_palette_set(p: *mut colour_palette, n: i32, c: i32) -> i32 {
+pub unsafe fn colour_palette_set(p: *mut colour_palette, n: i32, c: i32) -> i32 {
     unsafe {
         if p.is_null() || n > 255 {
             return 0;
@@ -1005,7 +1005,7 @@ pub unsafe extern "C" fn colour_palette_set(p: *mut colour_palette, n: i32, c: i
     }
 }
 
-pub unsafe extern "C" fn colour_palette_from_option(p: *mut colour_palette, oo: *mut options) {
+pub unsafe fn colour_palette_from_option(p: *mut colour_palette, oo: *mut options) {
     unsafe {
         if p.is_null() {
             return;
@@ -1041,7 +1041,7 @@ pub unsafe extern "C" fn colour_palette_from_option(p: *mut colour_palette, oo: 
 }
 
 // below has the auto generated code I haven't bothered to translate yet
-pub unsafe extern "C" fn colour_parse_x11(mut p: *const c_char) -> c_int {
+pub unsafe fn colour_parse_x11(mut p: *const c_char) -> c_int {
     unsafe {
         let mut c: f64 = 0.0;
         let mut m: f64 = 0.0;

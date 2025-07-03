@@ -42,7 +42,7 @@ pub static mut cmd_clock_mode_entry: cmd_entry = cmd_entry {
     exec: Some(cmd_copy_mode_exec),
 };
 
-unsafe extern "C" fn cmd_copy_mode_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_copy_mode_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let event = cmdq_get_event(item);

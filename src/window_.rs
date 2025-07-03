@@ -59,22 +59,22 @@ RB_GENERATE!(
     window_pane_cmp
 );
 
-pub unsafe extern "C" fn window_cmp(w1: *const window, w2: *const window) -> Ordering {
+pub unsafe fn window_cmp(w1: *const window, w2: *const window) -> Ordering {
     unsafe { (*w1).id.cmp(&(*w2).id) }
 }
 
-pub unsafe extern "C" fn winlink_cmp(wl1: *const winlink, wl2: *const winlink) -> Ordering {
+pub unsafe fn winlink_cmp(wl1: *const winlink, wl2: *const winlink) -> Ordering {
     unsafe { (*wl1).idx.cmp(&(*wl2).idx) }
 }
 
-pub unsafe extern "C" fn window_pane_cmp(
+pub unsafe fn window_pane_cmp(
     wp1: *const window_pane,
     wp2: *const window_pane,
 ) -> Ordering {
     unsafe { (*wp1).id.cmp(&(*wp2).id) }
 }
 
-pub unsafe extern "C" fn winlink_find_by_window(
+pub unsafe fn winlink_find_by_window(
     wwl: *mut winlinks,
     w: *mut window,
 ) -> Option<NonNull<winlink>> {
@@ -88,7 +88,7 @@ pub unsafe extern "C" fn winlink_find_by_window(
     }
 }
 
-pub unsafe extern "C" fn winlink_find_by_index(wwl: *mut winlinks, idx: i32) -> *mut winlink {
+pub unsafe fn winlink_find_by_index(wwl: *mut winlinks, idx: i32) -> *mut winlink {
     unsafe {
         if idx < 0 {
             fatalx(c"bad index");
@@ -101,7 +101,7 @@ pub unsafe extern "C" fn winlink_find_by_index(wwl: *mut winlinks, idx: i32) -> 
     }
 }
 
-pub unsafe extern "C" fn winlink_find_by_window_id(wwl: *mut winlinks, id: u32) -> *mut winlink {
+pub unsafe fn winlink_find_by_window_id(wwl: *mut winlinks, id: u32) -> *mut winlink {
     unsafe {
         for wl in rb_foreach(wwl).map(NonNull::as_ptr) {
             if (*(*wl).window).id == id {
@@ -113,7 +113,7 @@ pub unsafe extern "C" fn winlink_find_by_window_id(wwl: *mut winlinks, id: u32) 
     }
 }
 
-unsafe extern "C" fn winlink_next_index(wwl: *mut winlinks, idx: i32) -> i32 {
+unsafe fn winlink_next_index(wwl: *mut winlinks, idx: i32) -> i32 {
     let mut i = idx;
 
     loop {
@@ -135,11 +135,11 @@ unsafe extern "C" fn winlink_next_index(wwl: *mut winlinks, idx: i32) -> i32 {
     -1
 }
 
-pub unsafe extern "C" fn winlink_count(wwl: *mut winlinks) -> u32 {
+pub unsafe fn winlink_count(wwl: *mut winlinks) -> u32 {
     unsafe { rb_foreach(wwl).count() as u32 }
 }
 
-pub unsafe extern "C" fn winlink_add(wwl: *mut winlinks, mut idx: i32) -> *mut winlink {
+pub unsafe fn winlink_add(wwl: *mut winlinks, mut idx: i32) -> *mut winlink {
     unsafe {
         if idx < 0 {
             idx = winlink_next_index(wwl, -idx - 1);
@@ -158,7 +158,7 @@ pub unsafe extern "C" fn winlink_add(wwl: *mut winlinks, mut idx: i32) -> *mut w
     }
 }
 
-pub unsafe extern "C" fn winlink_set_window(wl: *mut winlink, w: *mut window) {
+pub unsafe fn winlink_set_window(wl: *mut winlink, w: *mut window) {
     unsafe {
         if !(*wl).window.is_null() {
             tailq_remove::<_, discr_wentry>(&raw mut (*(*wl).window).winlinks, wl);
@@ -170,7 +170,7 @@ pub unsafe extern "C" fn winlink_set_window(wl: *mut winlink, w: *mut window) {
     }
 }
 
-pub unsafe extern "C" fn winlink_remove(wwl: *mut winlinks, wl: *mut winlink) {
+pub unsafe fn winlink_remove(wwl: *mut winlinks, wl: *mut winlink) {
     unsafe {
         let w = (*wl).window;
 
@@ -184,15 +184,15 @@ pub unsafe extern "C" fn winlink_remove(wwl: *mut winlinks, wl: *mut winlink) {
     }
 }
 
-pub unsafe extern "C" fn winlink_next(wl: *mut winlink) -> *mut winlink {
+pub unsafe fn winlink_next(wl: *mut winlink) -> *mut winlink {
     unsafe { rb_next(wl) }
 }
 
-pub unsafe extern "C" fn winlink_previous(wl: *mut winlink) -> *mut winlink {
+pub unsafe fn winlink_previous(wl: *mut winlink) -> *mut winlink {
     unsafe { rb_prev(wl) }
 }
 
-pub unsafe extern "C" fn winlink_next_by_number(
+pub unsafe fn winlink_next_by_number(
     mut wl: *mut winlink,
     s: *mut session,
     n: i32,
@@ -209,7 +209,7 @@ pub unsafe extern "C" fn winlink_next_by_number(
     wl
 }
 
-pub unsafe extern "C" fn winlink_previous_by_number(
+pub unsafe fn winlink_previous_by_number(
     mut wl: *mut winlink,
     s: *mut session,
     n: i32,
@@ -226,7 +226,7 @@ pub unsafe extern "C" fn winlink_previous_by_number(
     wl
 }
 
-pub unsafe extern "C" fn winlink_stack_push(stack: *mut winlink_stack, wl: *mut winlink) {
+pub unsafe fn winlink_stack_push(stack: *mut winlink_stack, wl: *mut winlink) {
     if wl.is_null() {
         return;
     }
@@ -238,7 +238,7 @@ pub unsafe extern "C" fn winlink_stack_push(stack: *mut winlink_stack, wl: *mut 
     }
 }
 
-pub unsafe extern "C" fn winlink_stack_remove(stack: *mut winlink_stack, wl: *mut winlink) {
+pub unsafe fn winlink_stack_remove(stack: *mut winlink_stack, wl: *mut winlink) {
     unsafe {
         if !wl.is_null() && (*wl).flags.intersects(winlink_flags::WINLINK_VISITED) {
             tailq_remove::<_, discr_sentry>(stack, wl);
@@ -247,7 +247,7 @@ pub unsafe extern "C" fn winlink_stack_remove(stack: *mut winlink_stack, wl: *mu
     }
 }
 
-pub unsafe extern "C" fn window_find_by_id_str(s: *const c_char) -> *mut window {
+pub unsafe fn window_find_by_id_str(s: *const c_char) -> *mut window {
     unsafe {
         let mut errstr: *const c_char = null_mut();
 
@@ -263,7 +263,7 @@ pub unsafe extern "C" fn window_find_by_id_str(s: *const c_char) -> *mut window 
     }
 }
 
-pub unsafe extern "C" fn window_find_by_id(id: u32) -> *mut window {
+pub unsafe fn window_find_by_id(id: u32) -> *mut window {
     unsafe {
         let mut w: window = std::mem::zeroed();
 
@@ -272,14 +272,14 @@ pub unsafe extern "C" fn window_find_by_id(id: u32) -> *mut window {
     }
 }
 
-pub unsafe extern "C" fn window_update_activity(w: NonNull<window>) {
+pub unsafe fn window_update_activity(w: NonNull<window>) {
     unsafe {
         gettimeofday(&raw mut (*w.as_ptr()).activity_time, null_mut());
         alerts_queue(w, window_flag::ACTIVITY);
     }
 }
 
-pub unsafe extern "C" fn window_create(
+pub unsafe fn window_create(
     sx: u32,
     sy: u32,
     mut xpixel: u32,
@@ -335,7 +335,7 @@ pub unsafe extern "C" fn window_create(
     }
 }
 
-unsafe extern "C" fn window_destroy(w: *mut window) {
+unsafe fn window_destroy(w: *mut window) {
     unsafe {
         log_debug!(
             "window @{} destroyed ({} references)",
@@ -375,7 +375,7 @@ unsafe extern "C" fn window_destroy(w: *mut window) {
     }
 }
 
-pub unsafe extern "C" fn window_pane_destroy_ready(wp: *mut window_pane) -> i32 {
+pub unsafe fn window_pane_destroy_ready(wp: *mut window_pane) -> i32 {
     let mut n = 0;
     unsafe {
         if (*wp).pipe_fd != -1 {
@@ -395,7 +395,7 @@ pub unsafe extern "C" fn window_pane_destroy_ready(wp: *mut window_pane) -> i32 
     1
 }
 
-pub unsafe extern "C" fn window_add_ref(w: *mut window, from: *const c_char) {
+pub unsafe fn window_add_ref(w: *mut window, from: *const c_char) {
     unsafe {
         (*w).references += 1;
         log_debug!(
@@ -408,7 +408,7 @@ pub unsafe extern "C" fn window_add_ref(w: *mut window, from: *const c_char) {
     }
 }
 
-pub unsafe extern "C" fn window_remove_ref(w: *mut window, from: *const c_char) {
+pub unsafe fn window_remove_ref(w: *mut window, from: *const c_char) {
     unsafe {
         (*w).references -= 1;
         log_debug!(
@@ -425,7 +425,7 @@ pub unsafe extern "C" fn window_remove_ref(w: *mut window, from: *const c_char) 
     }
 }
 
-pub unsafe extern "C" fn window_set_name(w: *mut window, new_name: *const c_char) {
+pub unsafe fn window_set_name(w: *mut window, new_name: *const c_char) {
     unsafe {
         free_((*w).name);
         utf8_stravis(
@@ -437,7 +437,7 @@ pub unsafe extern "C" fn window_set_name(w: *mut window, new_name: *const c_char
     }
 }
 
-pub unsafe extern "C" fn window_resize(
+pub unsafe fn window_resize(
     w: *mut window,
     sx: u32,
     sy: u32,
@@ -481,7 +481,7 @@ pub unsafe extern "C" fn window_resize(
     }
 }
 
-pub unsafe extern "C" fn window_pane_send_resize(wp: *mut window_pane, sx: u32, sy: u32) {
+pub unsafe fn window_pane_send_resize(wp: *mut window_pane, sx: u32, sy: u32) {
     unsafe {
         let w = (*wp).window;
         let mut ws: winsize = core::mem::zeroed();
@@ -513,11 +513,11 @@ pub unsafe extern "C" fn window_pane_send_resize(wp: *mut window_pane, sx: u32, 
     }
 }
 
-pub unsafe extern "C" fn window_has_pane(w: *mut window, wp: *mut window_pane) -> bool {
+pub unsafe fn window_has_pane(w: *mut window, wp: *mut window_pane) -> bool {
     unsafe { tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).any(|wp1| wp1.as_ptr() == wp) }
 }
 
-pub unsafe extern "C" fn window_update_focus(w: *mut window) {
+pub unsafe fn window_update_focus(w: *mut window) {
     unsafe {
         if !w.is_null() {
             log_debug!("{}: @{}", "window_update_focus", (*w).id);
@@ -526,7 +526,7 @@ pub unsafe extern "C" fn window_update_focus(w: *mut window) {
     }
 }
 
-pub unsafe extern "C" fn window_pane_update_focus(wp: *mut window_pane) {
+pub unsafe fn window_pane_update_focus(wp: *mut window_pane) {
     unsafe {
         let mut focused = false;
 
@@ -570,7 +570,7 @@ pub unsafe extern "C" fn window_pane_update_focus(wp: *mut window_pane) {
     }
 }
 
-pub unsafe extern "C" fn window_set_active_pane(
+pub unsafe fn window_set_active_pane(
     w: *mut window,
     wp: *mut window_pane,
     notify: i32,
@@ -606,7 +606,7 @@ pub unsafe extern "C" fn window_set_active_pane(
     1
 }
 
-unsafe extern "C" fn window_pane_get_palette(wp: *mut window_pane, c: i32) -> i32 {
+unsafe fn window_pane_get_palette(wp: *mut window_pane, c: i32) -> i32 {
     if wp.is_null() {
         -1
     } else {
@@ -614,7 +614,7 @@ unsafe extern "C" fn window_pane_get_palette(wp: *mut window_pane, c: i32) -> i3
     }
 }
 
-pub unsafe extern "C" fn window_redraw_active_switch(w: *mut window, mut wp: *mut window_pane) {
+pub unsafe fn window_redraw_active_switch(w: *mut window, mut wp: *mut window_pane) {
     unsafe {
         if wp == (*w).active {
             return;
@@ -650,7 +650,7 @@ pub unsafe extern "C" fn window_redraw_active_switch(w: *mut window, mut wp: *mu
     }
 }
 
-pub unsafe extern "C" fn window_get_active_at(w: *mut window, x: u32, y: u32) -> *mut window_pane {
+pub unsafe fn window_get_active_at(w: *mut window, x: u32, y: u32) -> *mut window_pane {
     unsafe {
         for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
             if window_pane_visible(wp) != 0 {
@@ -668,7 +668,7 @@ pub unsafe extern "C" fn window_get_active_at(w: *mut window, x: u32, y: u32) ->
     }
 }
 
-pub unsafe extern "C" fn window_find_string(w: *mut window, s: *const c_char) -> *mut window_pane {
+pub unsafe fn window_find_string(w: *mut window, s: *const c_char) -> *mut window_pane {
     unsafe {
         let mut top: u32 = 0;
         let mut bottom: u32 = (*w).sy - 1;
@@ -712,7 +712,7 @@ pub unsafe extern "C" fn window_find_string(w: *mut window, s: *const c_char) ->
     }
 }
 
-pub unsafe extern "C" fn window_zoom(wp: *mut window_pane) -> i32 {
+pub unsafe fn window_zoom(wp: *mut window_pane) -> i32 {
     unsafe {
         let w = (*wp).window;
 
@@ -742,7 +742,7 @@ pub unsafe extern "C" fn window_zoom(wp: *mut window_pane) -> i32 {
     }
 }
 
-pub unsafe extern "C" fn window_unzoom(w: *mut window, notify: i32) -> i32 {
+pub unsafe fn window_unzoom(w: *mut window, notify: i32) -> i32 {
     unsafe {
         if !(*w).flags.intersects(window_flag::ZOOMED) {
             return -1;
@@ -767,7 +767,7 @@ pub unsafe extern "C" fn window_unzoom(w: *mut window, notify: i32) -> i32 {
     }
 }
 
-pub unsafe extern "C" fn window_push_zoom(w: *mut window, always: i32, flag: i32) -> i32 {
+pub unsafe fn window_push_zoom(w: *mut window, always: i32, flag: i32) -> i32 {
     unsafe {
         log_debug!(
             "{}: @{} {}",
@@ -785,7 +785,7 @@ pub unsafe extern "C" fn window_push_zoom(w: *mut window, always: i32, flag: i32
     }
 }
 
-pub unsafe extern "C" fn window_pop_zoom(w: *mut window) -> i32 {
+pub unsafe fn window_pop_zoom(w: *mut window) -> i32 {
     unsafe {
         log_debug!(
             "{}: @{} {}",
@@ -801,7 +801,7 @@ pub unsafe extern "C" fn window_pop_zoom(w: *mut window) -> i32 {
     0
 }
 
-pub unsafe extern "C" fn window_add_pane(
+pub unsafe fn window_add_pane(
     w: *mut window,
     mut other: *mut window_pane,
     hlimit: u32,
@@ -837,7 +837,7 @@ pub unsafe extern "C" fn window_add_pane(
     }
 }
 
-pub unsafe extern "C" fn window_lost_pane(w: *mut window, wp: *mut window_pane) {
+pub unsafe fn window_lost_pane(w: *mut window, wp: *mut window_pane) {
     unsafe {
         log_debug!("{}: @{} pane %%{}", "window_lost_pane", (*w).id, (*wp).id);
 
@@ -864,7 +864,7 @@ pub unsafe extern "C" fn window_lost_pane(w: *mut window, wp: *mut window_pane) 
     }
 }
 
-pub unsafe extern "C" fn window_remove_pane(w: *mut window, wp: *mut window_pane) {
+pub unsafe fn window_remove_pane(w: *mut window, wp: *mut window_pane) {
     unsafe {
         window_lost_pane(w, wp);
 
@@ -873,7 +873,7 @@ pub unsafe extern "C" fn window_remove_pane(w: *mut window, wp: *mut window_pane
     }
 }
 
-pub unsafe extern "C" fn window_pane_at_index(w: *mut window, idx: u32) -> *mut window_pane {
+pub unsafe fn window_pane_at_index(w: *mut window, idx: u32) -> *mut window_pane {
     unsafe {
         let mut n: u32 = options_get_number_((*w).options, c"pane-base-index") as _;
 
@@ -888,7 +888,7 @@ pub unsafe extern "C" fn window_pane_at_index(w: *mut window, idx: u32) -> *mut 
     }
 }
 
-pub unsafe extern "C" fn window_pane_next_by_number(
+pub unsafe fn window_pane_next_by_number(
     w: *mut window,
     mut wp: *mut window_pane,
     n: u32,
@@ -905,7 +905,7 @@ pub unsafe extern "C" fn window_pane_next_by_number(
     wp
 }
 
-pub unsafe extern "C" fn window_pane_previous_by_number(
+pub unsafe fn window_pane_previous_by_number(
     w: *mut window,
     mut wp: *mut window_pane,
     n: u32,
@@ -922,7 +922,7 @@ pub unsafe extern "C" fn window_pane_previous_by_number(
     wp
 }
 
-pub unsafe extern "C" fn window_pane_index(wp: *mut window_pane, i: *mut u32) -> i32 {
+pub unsafe fn window_pane_index(wp: *mut window_pane, i: *mut u32) -> i32 {
     unsafe {
         let w = (*wp).window;
 
@@ -937,11 +937,11 @@ pub unsafe extern "C" fn window_pane_index(wp: *mut window_pane, i: *mut u32) ->
     }
 }
 
-pub unsafe extern "C" fn window_count_panes(w: *mut window) -> u32 {
+pub unsafe fn window_count_panes(w: *mut window) -> u32 {
     unsafe { tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).count() as u32 }
 }
 
-pub unsafe extern "C" fn window_destroy_panes(w: *mut window) {
+pub unsafe fn window_destroy_panes(w: *mut window) {
     let mut wp: *mut window_pane;
     unsafe {
         while !tailq_empty(&raw mut (*w).last_panes) {
@@ -957,7 +957,7 @@ pub unsafe extern "C" fn window_destroy_panes(w: *mut window) {
     }
 }
 
-pub unsafe extern "C" fn window_printable_flags(wl: *mut winlink, escape: i32) -> *const c_char {
+pub unsafe fn window_printable_flags(wl: *mut winlink, escape: i32) -> *const c_char {
     static mut flags: [c_char; 32] = [0; 32];
 
     unsafe {
@@ -1001,7 +1001,7 @@ pub unsafe extern "C" fn window_printable_flags(wl: *mut winlink, escape: i32) -
     }
 }
 
-pub unsafe extern "C" fn window_pane_find_by_id_str(s: *const c_char) -> *mut window_pane {
+pub unsafe fn window_pane_find_by_id_str(s: *const c_char) -> *mut window_pane {
     let mut errstr: *const c_char = null_mut();
     unsafe {
         if *s != b'%' as c_char {
@@ -1015,7 +1015,7 @@ pub unsafe extern "C" fn window_pane_find_by_id_str(s: *const c_char) -> *mut wi
     }
 }
 
-pub unsafe extern "C" fn window_pane_find_by_id(id: u32) -> *mut window_pane {
+pub unsafe fn window_pane_find_by_id(id: u32) -> *mut window_pane {
     unsafe {
         let mut wp: window_pane = zeroed();
         wp.id = id;
@@ -1023,7 +1023,7 @@ pub unsafe extern "C" fn window_pane_find_by_id(id: u32) -> *mut window_pane {
     }
 }
 
-pub unsafe extern "C" fn window_pane_create(
+pub unsafe fn window_pane_create(
     w: *mut window,
     sx: u32,
     sy: u32,
@@ -1072,7 +1072,7 @@ pub unsafe extern "C" fn window_pane_create(
     }
 }
 
-unsafe extern "C" fn window_pane_destroy(wp: *mut window_pane) {
+unsafe fn window_pane_destroy(wp: *mut window_pane) {
     unsafe {
         window_pane_reset_mode_all(wp);
         free((*wp).searchstr as _);
@@ -1117,7 +1117,7 @@ unsafe extern "C" fn window_pane_destroy(wp: *mut window_pane) {
     }
 }
 
-unsafe extern "C" fn window_pane_read_callback(_bufev: *mut bufferevent, data: *mut c_void) {
+unsafe fn window_pane_read_callback(_bufev: *mut bufferevent, data: *mut c_void) {
     unsafe {
         let wp: *mut window_pane = data as _;
         let evb: *mut evbuffer = (*(*wp).event).input;
@@ -1144,7 +1144,7 @@ unsafe extern "C" fn window_pane_read_callback(_bufev: *mut bufferevent, data: *
     }
 }
 
-unsafe extern "C" fn window_pane_error_callback(
+unsafe fn window_pane_error_callback(
     _bufev: *mut bufferevent,
     _what: c_short,
     data: *mut c_void,
@@ -1160,7 +1160,7 @@ unsafe extern "C" fn window_pane_error_callback(
     }
 }
 
-pub unsafe extern "C" fn window_pane_set_event(wp: *mut window_pane) {
+pub unsafe fn window_pane_set_event(wp: *mut window_pane) {
     unsafe {
         setblocking((*wp).fd, 0);
 
@@ -1180,7 +1180,7 @@ pub unsafe extern "C" fn window_pane_set_event(wp: *mut window_pane) {
     }
 }
 
-pub unsafe extern "C" fn window_pane_resize(wp: *mut window_pane, sx: u32, sy: u32) {
+pub unsafe fn window_pane_resize(wp: *mut window_pane, sx: u32, sy: u32) {
     unsafe {
         if sx == (*wp).sx && sy == (*wp).sy {
             return;
@@ -1218,7 +1218,7 @@ pub unsafe extern "C" fn window_pane_resize(wp: *mut window_pane, sx: u32, sy: u
     }
 }
 
-pub unsafe extern "C" fn window_pane_set_mode(
+pub unsafe fn window_pane_set_mode(
     wp: *mut window_pane,
     swp: *mut window_pane,
     mode: *const window_mode,
@@ -1262,7 +1262,7 @@ pub unsafe extern "C" fn window_pane_set_mode(
     }
 }
 
-pub unsafe extern "C" fn window_pane_reset_mode(wp: *mut window_pane) {
+pub unsafe fn window_pane_reset_mode(wp: *mut window_pane) {
     let func = "window_pane_reset_mode";
     unsafe {
         if tailq_empty(&raw mut (*wp).modes) {
@@ -1297,7 +1297,7 @@ pub unsafe extern "C" fn window_pane_reset_mode(wp: *mut window_pane) {
     }
 }
 
-pub unsafe extern "C" fn window_pane_reset_mode_all(wp: *mut window_pane) {
+pub unsafe fn window_pane_reset_mode_all(wp: *mut window_pane) {
     unsafe {
         while !tailq_empty(&raw mut (*wp).modes) {
             window_pane_reset_mode(wp);
@@ -1305,7 +1305,7 @@ pub unsafe extern "C" fn window_pane_reset_mode_all(wp: *mut window_pane) {
     }
 }
 
-unsafe extern "C" fn window_pane_copy_key(wp: *mut window_pane, key: key_code) {
+unsafe fn window_pane_copy_key(wp: *mut window_pane, key: key_code) {
     unsafe {
         for loop_ in
             tailq_foreach::<_, discr_entry>(&raw mut (*(*wp).window).panes).map(NonNull::as_ptr)
@@ -1323,7 +1323,7 @@ unsafe extern "C" fn window_pane_copy_key(wp: *mut window_pane, key: key_code) {
     }
 }
 
-pub unsafe extern "C" fn window_pane_key(
+pub unsafe fn window_pane_key(
     wp: *mut window_pane,
     c: *mut client,
     s: *mut session,
@@ -1363,7 +1363,7 @@ pub unsafe extern "C" fn window_pane_key(
     0
 }
 
-pub unsafe extern "C" fn window_pane_visible(wp: *mut window_pane) -> i32 {
+pub unsafe fn window_pane_visible(wp: *mut window_pane) -> i32 {
     unsafe {
         if !(*(*wp).window).flags.intersects(window_flag::ZOOMED) {
             return 1;
@@ -1372,7 +1372,7 @@ pub unsafe extern "C" fn window_pane_visible(wp: *mut window_pane) -> i32 {
     }
 }
 
-pub unsafe extern "C" fn window_pane_exited(wp: *mut window_pane) -> i32 {
+pub unsafe fn window_pane_exited(wp: *mut window_pane) -> i32 {
     unsafe {
         if (*wp).fd == -1 || (*wp).flags.intersects(window_pane_flags::PANE_EXITED) {
             1
@@ -1382,7 +1382,7 @@ pub unsafe extern "C" fn window_pane_exited(wp: *mut window_pane) -> i32 {
     }
 }
 
-pub unsafe extern "C" fn window_pane_search(
+pub unsafe fn window_pane_search(
     wp: *mut window_pane,
     term: *const c_char,
     regex: i32,
@@ -1449,7 +1449,7 @@ pub unsafe extern "C" fn window_pane_search(
 
 /* Get MRU pane from a list. */
 
-unsafe extern "C" fn window_pane_choose_best(
+unsafe fn window_pane_choose_best(
     list: *mut *mut window_pane,
     size: u32,
 ) -> *mut window_pane {
@@ -1474,7 +1474,7 @@ unsafe extern "C" fn window_pane_choose_best(
  * top edge and then choose the best.
  */
 
-pub unsafe extern "C" fn window_pane_find_up(wp: *mut window_pane) -> *mut window_pane {
+pub unsafe fn window_pane_find_up(wp: *mut window_pane) -> *mut window_pane {
     unsafe {
         if wp.is_null() {
             return null_mut();
@@ -1543,7 +1543,7 @@ pub unsafe extern "C" fn window_pane_find_up(wp: *mut window_pane) -> *mut windo
 
 /* Find the pane directly below another. */
 
-pub unsafe extern "C" fn window_pane_find_down(wp: *mut window_pane) -> *mut window_pane {
+pub unsafe fn window_pane_find_down(wp: *mut window_pane) -> *mut window_pane {
     unsafe {
         if wp.is_null() {
             return null_mut();
@@ -1612,7 +1612,7 @@ pub unsafe extern "C" fn window_pane_find_down(wp: *mut window_pane) -> *mut win
 
 /* Find the pane directly to the left of another. */
 
-pub unsafe extern "C" fn window_pane_find_left(wp: *mut window_pane) -> *mut window_pane {
+pub unsafe fn window_pane_find_left(wp: *mut window_pane) -> *mut window_pane {
     if wp.is_null() {
         return null_mut();
     }
@@ -1664,7 +1664,7 @@ pub unsafe extern "C" fn window_pane_find_left(wp: *mut window_pane) -> *mut win
 
 /* Find the pane directly to the right of another. */
 
-pub unsafe extern "C" fn window_pane_find_right(wp: *mut window_pane) -> *mut window_pane {
+pub unsafe fn window_pane_find_right(wp: *mut window_pane) -> *mut window_pane {
     if wp.is_null() {
         return null_mut();
     }
@@ -1714,7 +1714,7 @@ pub unsafe extern "C" fn window_pane_find_right(wp: *mut window_pane) -> *mut wi
     }
 }
 
-pub unsafe extern "C" fn window_pane_stack_push(stack: *mut window_panes, wp: *mut window_pane) {
+pub unsafe fn window_pane_stack_push(stack: *mut window_panes, wp: *mut window_pane) {
     unsafe {
         if !wp.is_null() {
             window_pane_stack_remove(stack, wp);
@@ -1724,7 +1724,7 @@ pub unsafe extern "C" fn window_pane_stack_push(stack: *mut window_panes, wp: *m
     }
 }
 
-pub unsafe extern "C" fn window_pane_stack_remove(stack: *mut window_panes, wp: *mut window_pane) {
+pub unsafe fn window_pane_stack_remove(stack: *mut window_panes, wp: *mut window_pane) {
     unsafe {
         if !wp.is_null() && (*wp).flags.intersects(window_pane_flags::PANE_VISITED) {
             tailq_remove::<_, crate::discr_sentry>(stack, wp);
@@ -1735,7 +1735,7 @@ pub unsafe extern "C" fn window_pane_stack_remove(stack: *mut window_panes, wp: 
 
 /* Clear alert flags for a winlink */
 
-pub unsafe extern "C" fn winlink_clear_flags(wl: *mut winlink) {
+pub unsafe fn winlink_clear_flags(wl: *mut winlink) {
     unsafe {
         (*(*wl).window).flags &= !WINDOW_ALERTFLAGS;
         for loop_ in tailq_foreach::<_, crate::discr_wentry>(&raw mut (*(*wl).window).winlinks)
@@ -1751,7 +1751,7 @@ pub unsafe extern "C" fn winlink_clear_flags(wl: *mut winlink) {
 
 /* Shuffle window indexes up. */
 
-pub unsafe extern "C" fn winlink_shuffle_up(
+pub unsafe fn winlink_shuffle_up(
     s: *mut session,
     mut wl: *mut winlink,
     before: i32,
@@ -1791,7 +1791,7 @@ pub unsafe extern "C" fn winlink_shuffle_up(
     }
 }
 
-unsafe extern "C" fn window_pane_input_callback(
+unsafe fn window_pane_input_callback(
     c: *mut client,
     _path: *mut c_char,
     error: i32,
@@ -1822,7 +1822,7 @@ unsafe extern "C" fn window_pane_input_callback(
     }
 }
 
-pub unsafe extern "C" fn window_pane_start_input(
+pub unsafe fn window_pane_start_input(
     wp: *mut window_pane,
     item: *mut cmdq_item,
     cause: *mut *mut c_char,
@@ -1859,7 +1859,7 @@ pub unsafe extern "C" fn window_pane_start_input(
     }
 }
 
-pub unsafe extern "C" fn window_pane_get_new_data(
+pub unsafe fn window_pane_get_new_data(
     wp: *mut window_pane,
     wpo: *mut window_pane_offset,
     size: *mut usize,
@@ -1872,7 +1872,7 @@ pub unsafe extern "C" fn window_pane_get_new_data(
     }
 }
 
-pub unsafe extern "C" fn window_pane_update_used_data(
+pub unsafe fn window_pane_update_used_data(
     wp: *mut window_pane,
     wpo: *mut window_pane_offset,
     mut size: usize,
@@ -1887,7 +1887,7 @@ pub unsafe extern "C" fn window_pane_update_used_data(
     }
 }
 
-pub unsafe extern "C" fn window_set_fill_character(w: NonNull<window>) {
+pub unsafe fn window_set_fill_character(w: NonNull<window>) {
     let w = w.as_ptr();
     //const char		*value;
     //struct utf8_data	*ud;
@@ -1905,7 +1905,7 @@ pub unsafe extern "C" fn window_set_fill_character(w: NonNull<window>) {
     }
 }
 
-pub unsafe extern "C" fn window_pane_default_cursor(wp: *mut window_pane) {
+pub unsafe fn window_pane_default_cursor(wp: *mut window_pane) {
     unsafe {
         let s = (*wp).screen;
 
@@ -1922,7 +1922,7 @@ pub unsafe extern "C" fn window_pane_default_cursor(wp: *mut window_pane) {
     }
 }
 
-pub unsafe extern "C" fn window_pane_mode(wp: *mut window_pane) -> i32 {
+pub unsafe fn window_pane_mode(wp: *mut window_pane) -> i32 {
     unsafe {
         if !tailq_first(&raw mut (*wp).modes).is_null() {
             if (*tailq_first(&raw mut (*wp).modes)).mode.addr()

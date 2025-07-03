@@ -48,7 +48,7 @@ pub static mut cmd_clear_history_entry: cmd_entry = cmd_entry {
     exec: Some(cmd_capture_pane_exec),
 };
 
-unsafe extern "C" fn cmd_capture_pane_append(
+unsafe fn cmd_capture_pane_append(
     mut buf: *mut c_char,
     len: *mut usize,
     line: *mut c_char,
@@ -62,7 +62,7 @@ unsafe extern "C" fn cmd_capture_pane_append(
     }
 }
 
-unsafe extern "C" fn cmd_capture_pane_pending(
+unsafe fn cmd_capture_pane_pending(
     args: *mut args,
     wp: *const window_pane,
     len: *mut usize,
@@ -102,7 +102,7 @@ unsafe extern "C" fn cmd_capture_pane_pending(
     }
 }
 
-unsafe extern "C" fn cmd_capture_pane_history(
+unsafe fn cmd_capture_pane_history(
     args: *mut args,
     item: *mut cmdq_item,
     wp: *mut window_pane,
@@ -228,7 +228,7 @@ unsafe extern "C" fn cmd_capture_pane_history(
     }
 }
 
-unsafe extern "C" fn cmd_capture_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_capture_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let c = cmdq_get_client(item);

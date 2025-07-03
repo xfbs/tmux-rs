@@ -99,7 +99,7 @@ pub struct window_customize_modedata {
     change: window_customize_change,
 }
 
-unsafe extern "C" fn window_customize_get_tag(
+unsafe fn window_customize_get_tag(
     o: *mut options_entry,
     idx: i32,
     oe: *const options_table_entry,
@@ -116,7 +116,7 @@ unsafe extern "C" fn window_customize_get_tag(
     }
 }
 
-unsafe extern "C" fn window_customize_get_tree(
+unsafe fn window_customize_get_tree(
     scope: window_customize_scope,
     fs: *mut cmd_find_state,
 ) -> *mut options {
@@ -134,7 +134,7 @@ unsafe extern "C" fn window_customize_get_tree(
     }
 }
 
-unsafe extern "C" fn window_customize_check_item(
+unsafe fn window_customize_check_item(
     data: *mut window_customize_modedata,
     item: *mut window_customize_itemdata,
     mut fsp: *mut cmd_find_state,
@@ -156,7 +156,7 @@ unsafe extern "C" fn window_customize_check_item(
     }
 }
 
-unsafe extern "C" fn window_customize_get_key(
+unsafe fn window_customize_get_key(
     item: *mut window_customize_itemdata,
     ktp: *mut *mut key_table,
     bdp: *mut *mut key_binding,
@@ -180,7 +180,7 @@ unsafe extern "C" fn window_customize_get_key(
     }
 }
 
-unsafe extern "C" fn window_customize_scope_text(
+unsafe fn window_customize_scope_text(
     scope: window_customize_scope,
     fs: *mut cmd_find_state,
 ) -> *mut c_char {
@@ -204,7 +204,7 @@ unsafe extern "C" fn window_customize_scope_text(
     }
 }
 
-unsafe extern "C" fn window_customize_add_item(
+unsafe fn window_customize_add_item(
     data: *mut window_customize_modedata,
 ) -> *mut window_customize_itemdata {
     unsafe {
@@ -220,7 +220,7 @@ unsafe extern "C" fn window_customize_add_item(
     }
 }
 
-unsafe extern "C" fn window_customize_free_item(item: *mut window_customize_itemdata) {
+unsafe fn window_customize_free_item(item: *mut window_customize_itemdata) {
     unsafe {
         free_((*item).table);
         free_((*item).name);
@@ -228,7 +228,7 @@ unsafe extern "C" fn window_customize_free_item(item: *mut window_customize_item
     }
 }
 
-unsafe extern "C" fn window_customize_build_array(
+unsafe fn window_customize_build_array(
     data: *mut window_customize_modedata,
     top: *mut mode_tree_item,
     scope: window_customize_scope,
@@ -268,7 +268,7 @@ unsafe extern "C" fn window_customize_build_array(
     }
 }
 
-unsafe extern "C" fn window_customize_build_option(
+unsafe fn window_customize_build_option(
     data: *mut window_customize_modedata,
     top: *mut mode_tree_item,
     scope: window_customize_scope,
@@ -351,7 +351,7 @@ unsafe extern "C" fn window_customize_build_option(
     }
 }
 
-unsafe extern "C" fn window_customize_find_user_options(
+unsafe fn window_customize_find_user_options(
     oo: *mut options,
     list: *mut *mut *const c_char,
     size: *mut u32,
@@ -384,7 +384,7 @@ unsafe extern "C" fn window_customize_find_user_options(
     }
 }
 
-unsafe extern "C" fn window_customize_build_options(
+unsafe fn window_customize_build_options(
     data: *mut window_customize_modedata,
     title: *const c_char,
     tag: u64,
@@ -474,7 +474,7 @@ unsafe extern "C" fn window_customize_build_options(
     }
 }
 
-unsafe extern "C" fn window_customize_build_keys(
+unsafe fn window_customize_build_keys(
     data: *mut window_customize_modedata,
     kt: *mut key_table,
     mut ft: *mut format_tree,
@@ -608,7 +608,7 @@ unsafe extern "C" fn window_customize_build_keys(
     }
 }
 
-unsafe extern "C" fn window_customize_build(
+unsafe fn window_customize_build(
     modedata: NonNull<c_void>,
     _: *mut mode_tree_sort_criteria,
     _: *mut u64,
@@ -699,7 +699,7 @@ unsafe extern "C" fn window_customize_build(
     }
 }
 
-unsafe extern "C" fn window_customize_draw_key(
+unsafe fn window_customize_draw_key(
     _: *mut window_customize_modedata,
     item: *mut window_customize_itemdata,
     ctx: *mut screen_write_ctx,
@@ -816,7 +816,7 @@ unsafe extern "C" fn window_customize_draw_key(
     }
 }
 
-unsafe extern "C" fn window_customize_draw_option(
+unsafe fn window_customize_draw_option(
     data: *mut window_customize_modedata,
     item: *mut window_customize_itemdata,
     ctx: *mut screen_write_ctx,
@@ -1138,7 +1138,7 @@ unsafe extern "C" fn window_customize_draw_option(
     }
 }
 
-unsafe extern "C" fn window_customize_draw(
+unsafe fn window_customize_draw(
     modedata: *mut c_void,
     itemdata: Option<NonNull<c_void>>,
     ctx: *mut screen_write_ctx,
@@ -1161,7 +1161,7 @@ unsafe extern "C" fn window_customize_draw(
     }
 }
 
-unsafe extern "C" fn window_customize_menu(
+unsafe fn window_customize_menu(
     modedata: NonNull<c_void>,
     c: *mut client,
     key: key_code,
@@ -1182,11 +1182,11 @@ unsafe extern "C" fn window_customize_menu(
     }
 }
 
-unsafe extern "C" fn window_customize_height(_modedata: *mut c_void, _height: u32) -> u32 {
+unsafe fn window_customize_height(_modedata: *mut c_void, _height: u32) -> u32 {
     12
 }
 
-pub unsafe extern "C" fn window_customize_init(
+pub unsafe fn window_customize_init(
     wme: NonNull<window_mode_entry>,
     fs: *mut cmd_find_state,
     args: *mut args,
@@ -1232,7 +1232,7 @@ pub unsafe extern "C" fn window_customize_init(
     }
 }
 
-pub unsafe extern "C" fn window_customize_destroy(data: *mut window_customize_modedata) {
+pub unsafe fn window_customize_destroy(data: *mut window_customize_modedata) {
     unsafe {
         (*data).references -= 1;
         if (*data).references != 0 {
@@ -1250,7 +1250,7 @@ pub unsafe extern "C" fn window_customize_destroy(data: *mut window_customize_mo
     }
 }
 
-pub unsafe extern "C" fn window_customize_free(wme: NonNull<window_mode_entry>) {
+pub unsafe fn window_customize_free(wme: NonNull<window_mode_entry>) {
     unsafe {
         let data: *mut window_customize_modedata = (*wme.as_ptr()).data.cast();
 
@@ -1264,7 +1264,7 @@ pub unsafe extern "C" fn window_customize_free(wme: NonNull<window_mode_entry>) 
     }
 }
 
-pub unsafe extern "C" fn window_customize_resize(
+pub unsafe fn window_customize_resize(
     wme: NonNull<window_mode_entry>,
     sx: u32,
     sy: u32,
@@ -1276,13 +1276,13 @@ pub unsafe extern "C" fn window_customize_resize(
     }
 }
 
-pub unsafe extern "C" fn window_customize_free_callback(modedata: NonNull<c_void>) {
+pub unsafe fn window_customize_free_callback(modedata: NonNull<c_void>) {
     unsafe {
         window_customize_destroy(modedata.cast().as_ptr());
     }
 }
 
-pub unsafe extern "C" fn window_customize_free_item_callback(itemdata: NonNull<c_void>) {
+pub unsafe fn window_customize_free_item_callback(itemdata: NonNull<c_void>) {
     unsafe {
         let item: NonNull<window_customize_itemdata> = itemdata.cast();
         let data: *mut window_customize_modedata = (*item.as_ptr()).data;
@@ -1292,7 +1292,7 @@ pub unsafe extern "C" fn window_customize_free_item_callback(itemdata: NonNull<c
     }
 }
 
-pub unsafe extern "C" fn window_customize_set_option_callback(
+pub unsafe fn window_customize_set_option_callback(
     c: *mut client,
     itemdata: NonNull<c_void>,
     s: *const c_char,
@@ -1352,7 +1352,7 @@ pub unsafe extern "C" fn window_customize_set_option_callback(
     }
 }
 
-pub unsafe extern "C" fn window_customize_set_option(
+pub unsafe fn window_customize_set_option(
     c: *mut client,
     data: *mut window_customize_modedata,
     item: *mut window_customize_itemdata,
@@ -1503,7 +1503,7 @@ pub unsafe extern "C" fn window_customize_set_option(
     }
 }
 
-pub unsafe extern "C" fn window_customize_unset_option(
+pub unsafe fn window_customize_unset_option(
     data: *mut window_customize_modedata,
     item: *mut window_customize_itemdata,
 ) {
@@ -1523,7 +1523,7 @@ pub unsafe extern "C" fn window_customize_unset_option(
     }
 }
 
-pub unsafe extern "C" fn window_customize_reset_option(
+pub unsafe fn window_customize_reset_option(
     data: *mut window_customize_modedata,
     item: *mut window_customize_itemdata,
 ) {
@@ -1546,7 +1546,7 @@ pub unsafe extern "C" fn window_customize_reset_option(
     }
 }
 
-pub unsafe extern "C" fn window_customize_set_command_callback(
+pub unsafe fn window_customize_set_command_callback(
     c: *mut client,
     itemdata: NonNull<c_void>,
     s: *const c_char,
@@ -1591,7 +1591,7 @@ pub unsafe extern "C" fn window_customize_set_command_callback(
     }
 }
 
-pub unsafe extern "C" fn window_customize_set_note_callback(
+pub unsafe fn window_customize_set_note_callback(
     _c: *mut client,
     itemdata: NonNull<c_void>,
     s: *const c_char,
@@ -1621,7 +1621,7 @@ pub unsafe extern "C" fn window_customize_set_note_callback(
     }
 }
 
-pub unsafe extern "C" fn window_customize_set_key(
+pub unsafe fn window_customize_set_key(
     c: *mut client,
     data: *mut window_customize_modedata,
     item: *mut window_customize_itemdata,
@@ -1695,7 +1695,7 @@ pub unsafe extern "C" fn window_customize_set_key(
     }
 }
 
-pub unsafe extern "C" fn window_customize_unset_key(
+pub unsafe fn window_customize_unset_key(
     data: *mut window_customize_modedata,
     item: *mut window_customize_itemdata,
 ) {
@@ -1715,7 +1715,7 @@ pub unsafe extern "C" fn window_customize_unset_key(
     }
 }
 
-pub unsafe extern "C" fn window_customize_reset_key(
+pub unsafe fn window_customize_reset_key(
     data: *mut window_customize_modedata,
     item: *mut window_customize_itemdata,
 ) {
@@ -1739,7 +1739,7 @@ pub unsafe extern "C" fn window_customize_reset_key(
     }
 }
 
-pub unsafe extern "C" fn window_customize_change_each(
+pub unsafe fn window_customize_change_each(
     modedata: NonNull<c_void>,
     itemdata: NonNull<c_void>,
     _c: *mut client,
@@ -1774,7 +1774,7 @@ pub unsafe extern "C" fn window_customize_change_each(
     }
 }
 
-pub unsafe extern "C" fn window_customize_change_current_callback(
+pub unsafe fn window_customize_change_current_callback(
     c: *mut client,
     modedata: NonNull<c_void>,
     s: *const c_char,
@@ -1819,7 +1819,7 @@ pub unsafe extern "C" fn window_customize_change_current_callback(
     }
 }
 
-pub unsafe extern "C" fn window_customize_change_tagged_callback(
+pub unsafe fn window_customize_change_tagged_callback(
     c: *mut client,
     modedata: NonNull<c_void>,
     s: *const c_char,
@@ -1850,7 +1850,7 @@ pub unsafe extern "C" fn window_customize_change_tagged_callback(
     }
 }
 
-pub unsafe extern "C" fn window_customize_key(
+pub unsafe fn window_customize_key(
     wme: NonNull<window_mode_entry>,
     c: *mut client,
     s: *mut session,

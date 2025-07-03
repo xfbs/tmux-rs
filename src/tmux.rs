@@ -46,14 +46,14 @@ pub static mut ptm_fd: c_int = -1;
 
 pub static mut shell_command: *mut c_char = null_mut();
 
-pub extern "C" fn usage() -> ! {
+pub fn usage() -> ! {
     unsafe {
         libc::fprintf(stderr, c"usage: %s [-2CDlNuVv] [-c shell-command] [-f file] [-L socket-name]\n            [-S socket-path] [-T features] [command [flags]]\n".as_ptr(), getprogname());
         std::process::exit(1)
     }
 }
 
-pub unsafe extern "C" fn getshell() -> *const c_char {
+pub unsafe fn getshell() -> *const c_char {
     unsafe {
         let shell = getenv(c"SHELL".as_ptr());
         if checkshell(shell) {
@@ -69,7 +69,7 @@ pub unsafe extern "C" fn getshell() -> *const c_char {
     }
 }
 
-pub unsafe extern "C" fn checkshell(shell: *const c_char) -> bool {
+pub unsafe fn checkshell(shell: *const c_char) -> bool {
     unsafe {
         if shell.is_null() || *shell != b'/' as c_char {
             return false;
@@ -84,7 +84,7 @@ pub unsafe extern "C" fn checkshell(shell: *const c_char) -> bool {
     true
 }
 
-pub unsafe extern "C" fn areshell(shell: *const c_char) -> c_int {
+pub unsafe fn areshell(shell: *const c_char) -> c_int {
     unsafe {
         let ptr = strrchr(shell, b'/' as c_int);
         let ptr = if !ptr.is_null() {
@@ -104,7 +104,7 @@ pub unsafe extern "C" fn areshell(shell: *const c_char) -> c_int {
     }
 }
 
-pub unsafe extern "C" fn expand_path(path: *const c_char, home: *const c_char) -> *mut c_char {
+pub unsafe fn expand_path(path: *const c_char, home: *const c_char) -> *mut c_char {
     unsafe {
         let mut expanded: *mut c_char = null_mut();
         let mut end: *const c_char = null_mut();
@@ -140,7 +140,7 @@ pub unsafe extern "C" fn expand_path(path: *const c_char, home: *const c_char) -
     }
 }
 
-unsafe extern "C" fn expand_paths(
+unsafe fn expand_paths(
     s: *const c_char,
     paths: *mut *mut *mut c_char,
     n: *mut u32,
@@ -204,7 +204,7 @@ unsafe extern "C" fn expand_paths(
     }
 }
 
-unsafe extern "C" fn make_label(
+unsafe fn make_label(
     mut label: *const c_char,
     cause: *mut *mut c_char,
 ) -> *const c_char {
@@ -270,7 +270,7 @@ unsafe extern "C" fn make_label(
     }
 }
 
-pub unsafe extern "C" fn shell_argv0(shell: *const c_char, is_login: c_int) -> *mut c_char {
+pub unsafe fn shell_argv0(shell: *const c_char, is_login: c_int) -> *mut c_char {
     unsafe {
         let slash = strrchr(shell, b'/' as _);
         let name = if !slash.is_null() && *slash.add(1) != b'\0' as c_char {
@@ -287,7 +287,7 @@ pub unsafe extern "C" fn shell_argv0(shell: *const c_char, is_login: c_int) -> *
     }
 }
 
-pub unsafe extern "C" fn setblocking(fd: c_int, state: c_int) {
+pub unsafe fn setblocking(fd: c_int, state: c_int) {
     unsafe {
         let mut mode = fcntl(fd, F_GETFL);
 
@@ -302,7 +302,7 @@ pub unsafe extern "C" fn setblocking(fd: c_int, state: c_int) {
     }
 }
 
-pub unsafe extern "C" fn get_timer() -> u64 {
+pub unsafe fn get_timer() -> u64 {
     unsafe {
         let mut ts: timespec = zeroed();
         //We want a timestamp in milliseconds suitable for time measurement,
@@ -314,7 +314,7 @@ pub unsafe extern "C" fn get_timer() -> u64 {
     }
 }
 
-pub unsafe extern "C" fn find_cwd() -> *mut c_char {
+pub unsafe fn find_cwd() -> *mut c_char {
     static mut cwd: [c_char; PATH_MAX as usize] = [0; PATH_MAX as usize];
     unsafe {
         let mut resolved1: [c_char; PATH_MAX as usize] = [0; PATH_MAX as usize];
@@ -344,7 +344,7 @@ pub unsafe extern "C" fn find_cwd() -> *mut c_char {
     }
 }
 
-pub unsafe extern "C" fn find_home() -> *mut c_char {
+pub unsafe fn find_home() -> *mut c_char {
     static mut home: *mut c_char = null_mut();
 
     unsafe {
@@ -376,7 +376,7 @@ pub fn getversion_c() -> *const c_char {
 
 /// entrypoint for tmux binary
 #[cfg_attr(not(test), unsafe(no_mangle))]
-pub unsafe extern "C" fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *mut *mut c_char) {
+pub unsafe fn main(mut argc: i32, mut argv: *mut *mut c_char, env: *mut *mut c_char) {
     std::panic::set_hook(Box::new(|panic_info| {
         let backtrace = std::backtrace::Backtrace::capture();
         let err_str = format!("{backtrace:#?}");

@@ -29,7 +29,7 @@ pub static mut cmd_split_window_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-unsafe extern "C" fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let current = cmdq_get_current(item);

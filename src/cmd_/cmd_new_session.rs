@@ -48,7 +48,7 @@ pub static mut cmd_has_session_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-unsafe extern "C" fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     let __func__ = c"cmd_new_session_exec".as_ptr();
 
     unsafe {

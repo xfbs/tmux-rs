@@ -235,7 +235,7 @@ static key_string_table: [key_string_table_entry; 469] = const {
 };
 
 /// Find key string in table.
-pub unsafe extern "C" fn key_string_search_table(string: *const c_char) -> key_code {
+pub unsafe fn key_string_search_table(string: *const c_char) -> key_code {
     unsafe {
         for key_string in &key_string_table {
             if strcasecmp(string, key_string.string) == 0 {
@@ -253,7 +253,7 @@ pub unsafe extern "C" fn key_string_search_table(string: *const c_char) -> key_c
 }
 
 /// Find modifiers.
-pub unsafe extern "C" fn key_string_get_modifiers(string: *mut *const c_char) -> key_code {
+pub unsafe fn key_string_get_modifiers(string: *mut *const c_char) -> key_code {
     unsafe {
         let mut modifiers: key_code = 0;
 
@@ -285,7 +285,7 @@ const MB_LEN_MAX: usize = 16;
 
 /* Lookup a string and convert to a key value. */
 
-pub unsafe extern "C" fn key_string_lookup_string(mut string: *const c_char) -> key_code {
+pub unsafe fn key_string_lookup_string(mut string: *const c_char) -> key_code {
     unsafe {
         let mut key: key_code = 0;
         let mut modifiers: key_code = 0;
@@ -387,7 +387,7 @@ pub unsafe extern "C" fn key_string_lookup_string(mut string: *const c_char) -> 
 }
 
 /// Convert a key code into string format, with prefix if necessary.
-pub unsafe extern "C" fn key_string_lookup_key(
+pub unsafe fn key_string_lookup_key(
     mut key: key_code,
     with_flags: i32,
 ) -> *const c_char {

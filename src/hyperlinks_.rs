@@ -59,7 +59,7 @@ pub struct hyperlinks {
     pub references: u32,
 }
 
-unsafe extern "C" fn hyperlinks_by_uri_cmp(
+unsafe fn hyperlinks_by_uri_cmp(
     left: *const hyperlinks_uri,
     right: *const hyperlinks_uri,
 ) -> std::cmp::Ordering {
@@ -87,7 +87,7 @@ RB_GENERATE!(
     hyperlinks_by_uri_cmp
 );
 
-unsafe extern "C" fn hyperlinks_by_inner_cmp(
+unsafe fn hyperlinks_by_inner_cmp(
     left: *const hyperlinks_uri,
     right: *const hyperlinks_uri,
 ) -> Ordering {
@@ -102,7 +102,7 @@ RB_GENERATE!(
     hyperlinks_by_inner_cmp
 );
 
-unsafe extern "C" fn hyperlinks_remove(hlu: *mut hyperlinks_uri) {
+unsafe fn hyperlinks_remove(hlu: *mut hyperlinks_uri) {
     unsafe {
         let hl = (*hlu).tree;
 
@@ -119,7 +119,7 @@ unsafe extern "C" fn hyperlinks_remove(hlu: *mut hyperlinks_uri) {
     }
 }
 
-pub unsafe extern "C" fn hyperlinks_put(
+pub unsafe fn hyperlinks_put(
     hl: *mut hyperlinks,
     uri_in: *const c_char,
     mut internal_id_in: *const c_char,
@@ -189,7 +189,7 @@ pub unsafe extern "C" fn hyperlinks_put(
     }
 }
 
-pub unsafe extern "C" fn hyperlinks_get(
+pub unsafe fn hyperlinks_get(
     hl: *mut hyperlinks,
     inner: u32,
     uri_out: *mut *const c_char,
@@ -216,7 +216,7 @@ pub unsafe extern "C" fn hyperlinks_get(
     }
 }
 
-pub unsafe extern "C" fn hyperlinks_init() -> *mut hyperlinks {
+pub unsafe fn hyperlinks_init() -> *mut hyperlinks {
     unsafe {
         let hl = xcalloc_::<hyperlinks>(1).as_ptr();
         (*hl).next_inner = 1;
@@ -227,14 +227,14 @@ pub unsafe extern "C" fn hyperlinks_init() -> *mut hyperlinks {
     }
 }
 
-pub unsafe extern "C" fn hyperlinks_copy(hl: *mut hyperlinks) -> *mut hyperlinks {
+pub unsafe fn hyperlinks_copy(hl: *mut hyperlinks) -> *mut hyperlinks {
     unsafe {
         (*hl).references += 1;
     }
     hl
 }
 
-pub unsafe extern "C" fn hyperlinks_reset(hl: *mut hyperlinks) {
+pub unsafe fn hyperlinks_reset(hl: *mut hyperlinks) {
     unsafe {
         for hlu in rb_foreach::<_, discr_by_inner_entry>(&raw mut (*hl).by_inner) {
             hyperlinks_remove(hlu.as_ptr());
@@ -242,7 +242,7 @@ pub unsafe extern "C" fn hyperlinks_reset(hl: *mut hyperlinks) {
     }
 }
 
-pub unsafe extern "C" fn hyperlinks_free(hl: *mut hyperlinks) {
+pub unsafe fn hyperlinks_free(hl: *mut hyperlinks) {
     unsafe {
         (*hl).references -= 1;
         if (*hl).references == 0 {

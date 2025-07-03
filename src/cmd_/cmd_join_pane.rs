@@ -45,7 +45,7 @@ pub static mut cmd_move_pane_entry: cmd_entry = cmd_entry {
     exec: Some(cmd_join_pane_exec),
 };
 
-unsafe extern "C" fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let current = cmdq_get_current(item);

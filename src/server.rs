@@ -51,7 +51,7 @@ pub static mut message_log: message_list = unsafe { zeroed() };
 
 pub static mut current_time: time_t = unsafe { zeroed() };
 
-pub unsafe extern "C" fn server_set_marked(
+pub unsafe fn server_set_marked(
     s: *mut session,
     wl: *mut winlink,
     wp: *mut window_pane,
@@ -65,13 +65,13 @@ pub unsafe extern "C" fn server_set_marked(
     }
 }
 
-pub unsafe extern "C" fn server_clear_marked() {
+pub unsafe fn server_clear_marked() {
     unsafe {
         cmd_find_clear_state(&raw mut marked_pane, 0);
     }
 }
 
-pub unsafe extern "C" fn server_is_marked(
+pub unsafe fn server_is_marked(
     s: *mut session,
     wl: *mut winlink,
     wp: *mut window_pane,
@@ -91,11 +91,11 @@ pub unsafe extern "C" fn server_is_marked(
     }
 }
 
-pub unsafe extern "C" fn server_check_marked() -> bool {
+pub unsafe fn server_check_marked() -> bool {
     unsafe { cmd_find_valid_state(&raw mut marked_pane) }
 }
 
-pub unsafe extern "C" fn server_create_socket(
+pub unsafe fn server_create_socket(
     flags: client_flag,
     cause: *mut *mut c_char,
 ) -> c_int {
@@ -158,7 +158,7 @@ pub unsafe extern "C" fn server_create_socket(
 }
 
 /// Tidy up every hour.
-unsafe extern "C" fn server_tidy_event(_fd: i32, _events: i16, _data: *mut c_void) {
+unsafe fn server_tidy_event(_fd: i32, _events: i16, _data: *mut c_void) {
     let tv = timeval {
         tv_sec: 3600,
         tv_usec: 0,
@@ -179,7 +179,7 @@ unsafe extern "C" fn server_tidy_event(_fd: i32, _events: i16, _data: *mut c_voi
     }
 }
 
-pub unsafe extern "C" fn server_start(
+pub unsafe fn server_start(
     client: *mut tmuxproc,
     flags: client_flag,
     base: *mut event_base,
@@ -293,7 +293,7 @@ pub unsafe extern "C" fn server_start(
     }
 }
 
-pub unsafe extern "C" fn server_loop() -> i32 {
+pub unsafe fn server_loop() -> i32 {
     unsafe {
         current_time = libc::time(null_mut());
 
@@ -345,7 +345,7 @@ pub unsafe extern "C" fn server_loop() -> i32 {
     }
 }
 
-unsafe extern "C" fn server_send_exit() {
+unsafe fn server_send_exit() {
     unsafe {
         cmd_wait_for_flush();
 
@@ -365,7 +365,7 @@ unsafe extern "C" fn server_send_exit() {
     }
 }
 
-pub unsafe extern "C" fn server_update_socket() {
+pub unsafe fn server_update_socket() {
     static mut last: c_int = -1;
     unsafe {
         let mut sb: stat = zeroed(); // TODO remove unecessary init
@@ -403,7 +403,7 @@ pub unsafe extern "C" fn server_update_socket() {
     }
 }
 
-unsafe extern "C" fn server_accept(fd: i32, events: i16, _data: *mut c_void) {
+unsafe fn server_accept(fd: i32, events: i16, _data: *mut c_void) {
     unsafe {
         let mut sa: sockaddr_storage = zeroed(); // TODO remove this init
         let mut slen: socklen_t = size_of::<sockaddr_storage>() as socklen_t;
@@ -440,7 +440,7 @@ unsafe extern "C" fn server_accept(fd: i32, events: i16, _data: *mut c_void) {
     }
 }
 
-pub unsafe extern "C" fn server_add_accept(timeout: c_int) {
+pub unsafe fn server_add_accept(timeout: c_int) {
     unsafe {
         let mut tv = timeval {
             tv_sec: timeout as i64,
@@ -479,7 +479,7 @@ pub unsafe extern "C" fn server_add_accept(timeout: c_int) {
 
 // Signal handler.
 
-unsafe extern "C" fn server_signal(sig: i32) {
+unsafe fn server_signal(sig: i32) {
     unsafe {
         log_debug!("{}: {}", "server_signal", _s(strsignal(sig)));
         match sig {
@@ -508,7 +508,7 @@ unsafe extern "C" fn server_signal(sig: i32) {
 
 // handle SIGCHLD
 
-unsafe extern "C" fn server_child_signal() {
+unsafe fn server_child_signal() {
     let mut status = 0i32;
     unsafe {
         loop {
@@ -537,7 +537,7 @@ unsafe extern "C" fn server_child_signal() {
     }
 }
 
-unsafe extern "C" fn server_child_exited(pid: pid_t, status: i32) {
+unsafe fn server_child_exited(pid: pid_t, status: i32) {
     unsafe {
         for w in rb_foreach(&raw mut windows).map(NonNull::as_ptr) {
             for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
@@ -559,7 +559,7 @@ unsafe extern "C" fn server_child_exited(pid: pid_t, status: i32) {
     }
 }
 
-unsafe extern "C" fn server_child_stopped(pid: pid_t, status: i32) {
+unsafe fn server_child_stopped(pid: pid_t, status: i32) {
     unsafe {
         if WSTOPSIG(status) == SIGTTIN || WSTOPSIG(status) == SIGTTOU {
             return;

@@ -29,7 +29,7 @@ pub static mut cmd_show_messages_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-unsafe extern "C" fn cmd_show_messages_terminals(
+unsafe fn cmd_show_messages_terminals(
     self_: *mut cmd,
     item: *mut cmdq_item,
     mut blank: i32,
@@ -68,7 +68,7 @@ unsafe extern "C" fn cmd_show_messages_terminals(
     }
 }
 
-unsafe extern "C" fn cmd_show_messages_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_show_messages_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
 

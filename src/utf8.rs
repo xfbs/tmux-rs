@@ -59,7 +59,7 @@ pub struct utf8_item {
     pub size: c_uchar,
 }
 
-pub unsafe extern "C" fn utf8_data_cmp(
+pub unsafe fn utf8_data_cmp(
     ui1: *const utf8_item,
     ui2: *const utf8_item,
 ) -> std::cmp::Ordering {
@@ -83,7 +83,7 @@ RB_GENERATE!(
 );
 static mut utf8_data_tree: utf8_data_tree = rb_initializer();
 
-pub unsafe extern "C" fn utf8_index_cmp(
+pub unsafe fn utf8_index_cmp(
     ui1: *const utf8_item,
     ui2: *const utf8_item,
 ) -> std::cmp::Ordering {
@@ -198,7 +198,7 @@ pub unsafe fn utf8_in_table(find: wchar_t, table: *const wchar_t, count: u32) ->
     }
 }
 
-pub unsafe extern "C" fn utf8_from_data(ud: *const utf8_data, uc: *mut utf8_char) -> utf8_state {
+pub unsafe fn utf8_from_data(ud: *const utf8_data, uc: *mut utf8_char) -> utf8_state {
     unsafe {
         let mut index: u32 = 0;
         'fail: {
@@ -245,7 +245,7 @@ pub unsafe extern "C" fn utf8_from_data(ud: *const utf8_data, uc: *mut utf8_char
     }
 }
 
-pub unsafe extern "C" fn utf8_to_data(uc: utf8_char, ud: *mut utf8_data) {
+pub unsafe fn utf8_to_data(uc: utf8_char, ud: *mut utf8_data) {
     unsafe {
         core::ptr::write(ud, zeroed());
         (*ud).size = utf8_get_size(uc);
@@ -285,11 +285,11 @@ pub unsafe extern "C" fn utf8_to_data(uc: utf8_char, ud: *mut utf8_data) {
     }
 }
 
-pub extern "C" fn utf8_build_one(ch: c_uchar) -> u32 {
+pub fn utf8_build_one(ch: c_uchar) -> u32 {
     utf8_set_size(1) | utf8_set_width(1) | ch as u32
 }
 
-pub unsafe extern "C" fn utf8_set(ud: *mut utf8_data, ch: c_uchar) {
+pub unsafe fn utf8_set(ud: *mut utf8_data, ch: c_uchar) {
     static empty: utf8_data = utf8_data {
         data: unsafe { zeroed() },
         have: 1,
@@ -303,7 +303,7 @@ pub unsafe extern "C" fn utf8_set(ud: *mut utf8_data, ch: c_uchar) {
     }
 }
 
-pub unsafe extern "C" fn utf8_copy(to: *mut utf8_data, from: *const utf8_data) {
+pub unsafe fn utf8_copy(to: *mut utf8_data, from: *const utf8_data) {
     unsafe {
         memcpy__(to, from);
 
@@ -313,7 +313,7 @@ pub unsafe extern "C" fn utf8_copy(to: *mut utf8_data, from: *const utf8_data) {
     }
 }
 
-pub unsafe extern "C" fn utf8_width(ud: *mut utf8_data, width: *mut i32) -> utf8_state {
+pub unsafe fn utf8_width(ud: *mut utf8_data, width: *mut i32) -> utf8_state {
     unsafe {
         let mut wc: wchar_t = 0;
 
@@ -348,7 +348,7 @@ pub unsafe extern "C" fn utf8_width(ud: *mut utf8_data, width: *mut i32) -> utf8
     }
 }
 
-pub unsafe extern "C" fn utf8_towc(ud: *const utf8_data, wc: *mut wchar_t) -> utf8_state {
+pub unsafe fn utf8_towc(ud: *const utf8_data, wc: *mut wchar_t) -> utf8_state {
     unsafe {
         #[cfg(feature = "utf8proc")]
         let value = utf8proc_mbtowc(wc, (*ud).data.as_ptr().cast(), (*ud).size as usize);
@@ -380,7 +380,7 @@ pub unsafe extern "C" fn utf8_towc(ud: *const utf8_data, wc: *mut wchar_t) -> ut
     utf8_state::UTF8_DONE
 }
 
-pub unsafe extern "C" fn utf8_fromwc(wc: wchar_t, ud: *mut utf8_data) -> utf8_state {
+pub unsafe fn utf8_fromwc(wc: wchar_t, ud: *mut utf8_data) -> utf8_state {
     unsafe {
         let mut width: i32 = 0;
 
@@ -407,7 +407,7 @@ pub unsafe extern "C" fn utf8_fromwc(wc: wchar_t, ud: *mut utf8_data) -> utf8_st
     utf8_state::UTF8_ERROR
 }
 
-pub unsafe extern "C" fn utf8_open(ud: *mut utf8_data, ch: c_uchar) -> utf8_state {
+pub unsafe fn utf8_open(ud: *mut utf8_data, ch: c_uchar) -> utf8_state {
     unsafe {
         memset(ud.cast(), 0, size_of::<utf8_data>());
 
@@ -424,7 +424,7 @@ pub unsafe extern "C" fn utf8_open(ud: *mut utf8_data, ch: c_uchar) -> utf8_stat
     utf8_state::UTF8_MORE
 }
 
-pub unsafe extern "C" fn utf8_append(ud: *mut utf8_data, ch: c_uchar) -> utf8_state {
+pub unsafe fn utf8_append(ud: *mut utf8_data, ch: c_uchar) -> utf8_state {
     unsafe {
         let mut width: i32 = 0;
 
@@ -456,7 +456,7 @@ pub unsafe extern "C" fn utf8_append(ud: *mut utf8_data, ch: c_uchar) -> utf8_st
     utf8_state::UTF8_DONE
 }
 
-pub unsafe extern "C" fn utf8_strvis(
+pub unsafe fn utf8_strvis(
     mut dst: *mut c_char,
     mut src: *const c_char,
     len: usize,
@@ -508,7 +508,7 @@ pub unsafe extern "C" fn utf8_strvis(
     }
 }
 
-pub unsafe extern "C" fn utf8_stravis(
+pub unsafe fn utf8_stravis(
     dst: *mut *mut c_char,
     src: *const c_char,
     flag: vis_flags,
@@ -522,7 +522,7 @@ pub unsafe extern "C" fn utf8_stravis(
     }
 }
 
-pub unsafe extern "C" fn utf8_stravisx(
+pub unsafe fn utf8_stravisx(
     dst: *mut *mut c_char,
     src: *const c_char,
     srclen: usize,

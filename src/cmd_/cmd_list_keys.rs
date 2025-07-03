@@ -40,7 +40,7 @@ pub static mut cmd_list_commands_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-unsafe extern "C" fn cmd_list_keys_get_width(tablename: *const c_char, only: key_code) -> u32 {
+unsafe fn cmd_list_keys_get_width(tablename: *const c_char, only: key_code) -> u32 {
     unsafe {
         let mut keywidth = 0u32;
 
@@ -69,7 +69,7 @@ unsafe extern "C" fn cmd_list_keys_get_width(tablename: *const c_char, only: key
     }
 }
 
-unsafe extern "C" fn cmd_list_keys_print_notes(
+unsafe fn cmd_list_keys_print_notes(
     item: *mut cmdq_item,
     args: *mut args,
     tablename: *const c_char,
@@ -122,7 +122,7 @@ unsafe extern "C" fn cmd_list_keys_print_notes(
     }
 }
 
-unsafe extern "C" fn cmd_list_keys_get_prefix(
+unsafe fn cmd_list_keys_get_prefix(
     args: *mut args,
     prefix: *mut key_code,
 ) -> NonNull<c_char> {
@@ -141,7 +141,7 @@ unsafe extern "C" fn cmd_list_keys_get_prefix(
     }
 }
 
-unsafe extern "C" fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let tc = cmdq_get_target_client(item);
@@ -349,7 +349,7 @@ unsafe extern "C" fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -
     }
 }
 
-unsafe extern "C" fn cmd_list_keys_commands(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+unsafe fn cmd_list_keys_commands(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         //const struct cmd_entry **entryp;

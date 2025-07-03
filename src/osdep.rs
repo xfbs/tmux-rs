@@ -18,7 +18,7 @@ use crate::*;
 
 // this is for osdep-linux.c
 
-pub unsafe extern "C" fn osdep_get_name(fd: i32, tty: *const c_char) -> *mut c_char {
+pub unsafe fn osdep_get_name(fd: i32, tty: *const c_char) -> *mut c_char {
     unsafe {
         let pgrp = tcgetpgrp(fd);
         if pgrp == -1 {
@@ -57,7 +57,7 @@ pub unsafe extern "C" fn osdep_get_name(fd: i32, tty: *const c_char) -> *mut c_c
     }
 }
 
-pub unsafe extern "C" fn osdep_get_cwd(fd: i32) -> *const c_char {
+pub unsafe fn osdep_get_cwd(fd: i32) -> *const c_char {
     const MAXPATHLEN: usize = libc::PATH_MAX as usize;
     static mut target_buffer: [c_char; MAXPATHLEN + 1] = [0; MAXPATHLEN + 1];
     unsafe {
@@ -87,7 +87,7 @@ pub unsafe extern "C" fn osdep_get_cwd(fd: i32) -> *const c_char {
     }
 }
 
-pub unsafe extern "C" fn osdep_event_init() -> *mut event_base {
+pub unsafe fn osdep_event_init() -> *mut event_base {
     unsafe {
         // On Linux, epoll doesn't work on /dev/null (yes, really).
         libc::setenv(c"EVENT_NOEPOLL".as_ptr(), c"1".as_ptr(), 1);

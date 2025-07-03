@@ -88,7 +88,7 @@ pub fn xcalloc1__<'a, T>() -> &'a mut MaybeUninit<T> {
     unsafe { &mut *ptr.cast::<MaybeUninit<T>>() }
 }
 
-pub unsafe extern "C" fn xrealloc(ptr: *mut c_void, size: usize) -> NonNull<c_void> {
+pub unsafe fn xrealloc(ptr: *mut c_void, size: usize) -> NonNull<c_void> {
     unsafe { xrealloc_(ptr, size) }
 }
 
@@ -96,7 +96,7 @@ pub unsafe fn xrealloc_<T>(ptr: *mut T, size: usize) -> NonNull<T> {
     unsafe { xreallocarray_old(ptr, 1, size) }
 }
 
-pub unsafe extern "C" fn xreallocarray(
+pub unsafe fn xreallocarray(
     ptr: *mut c_void,
     nmemb: usize,
     size: usize,
@@ -131,7 +131,7 @@ pub unsafe fn xreallocarray_<T>(ptr: *mut T, nmemb: usize) -> NonNull<T> {
     }
 }
 
-pub unsafe extern "C" fn xrecallocarray(
+pub unsafe fn xrecallocarray(
     ptr: *mut c_void,
     oldnmemb: usize,
     nmemb: usize,
@@ -166,7 +166,7 @@ pub unsafe fn xrecallocarray__<T>(ptr: *mut T, oldnmemb: usize, nmemb: usize) ->
         .cast()
 }
 
-pub unsafe extern "C" fn xstrdup(str: *const c_char) -> NonNull<c_char> {
+pub unsafe fn xstrdup(str: *const c_char) -> NonNull<c_char> {
     NonNull::new(unsafe { strdup(str) }).unwrap()
 }
 
@@ -178,12 +178,12 @@ pub fn xstrdup__<'a>(str: &CStr) -> &'a CStr {
     unsafe { CStr::from_ptr(xstrdup(str.as_ptr()).as_ptr()) }
 }
 
-pub unsafe extern "C" fn xstrndup(str: *const c_char, maxlen: usize) -> NonNull<c_char> {
+pub unsafe fn xstrndup(str: *const c_char, maxlen: usize) -> NonNull<c_char> {
     NonNull::new(unsafe { strndup(str, maxlen) }).unwrap()
 }
 
 // #[allow(improper_ctypes_definitions, reason = "must be extern C to use c variadics")]
-// pub unsafe extern "C" fn xasprintf__(args: std::fmt::Arguments<'_>) -> NonNull<c_char> {}
+// pub unsafe fn xasprintf__(args: std::fmt::Arguments<'_>) -> NonNull<c_char> {}
 
 macro_rules! format_nul {
    ($fmt:literal $(, $args:expr)* $(,)?) => {

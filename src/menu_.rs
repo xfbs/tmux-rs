@@ -37,7 +37,7 @@ pub struct menu_data {
     pub data: *mut c_void,
 }
 
-pub unsafe extern "C" fn menu_add_items(
+pub unsafe fn menu_add_items(
     menu: *mut menu,
     items: *const menu_item,
     qitem: *mut cmdq_item,
@@ -53,7 +53,7 @@ pub unsafe extern "C" fn menu_add_items(
     }
 }
 
-pub unsafe extern "C" fn menu_add_item(
+pub unsafe fn menu_add_item(
     menu: *mut menu,
     item: *const menu_item,
     qitem: *mut cmdq_item,
@@ -162,7 +162,7 @@ pub unsafe extern "C" fn menu_add_item(
     }
 }
 
-pub unsafe extern "C" fn menu_create(title: *const c_char) -> *mut menu {
+pub unsafe fn menu_create(title: *const c_char) -> *mut menu {
     unsafe {
         let menu = xcalloc1::<menu>() as *mut menu;
         (*menu).title = xstrdup(title).as_ptr();
@@ -172,7 +172,7 @@ pub unsafe extern "C" fn menu_create(title: *const c_char) -> *mut menu {
     }
 }
 
-pub unsafe extern "C" fn menu_free(menu: *mut menu) {
+pub unsafe fn menu_free(menu: *mut menu) {
     unsafe {
         for i in 0..(*menu).count {
             // TODO consider making the struct hold mut pointer
@@ -186,7 +186,7 @@ pub unsafe extern "C" fn menu_free(menu: *mut menu) {
     }
 }
 
-pub unsafe extern "C" fn menu_mode_cb(
+pub unsafe fn menu_mode_cb(
     _c: *mut client,
     data: *mut c_void,
     cx: *mut u32,
@@ -206,7 +206,7 @@ pub unsafe extern "C" fn menu_mode_cb(
     }
 }
 
-pub unsafe extern "C" fn menu_check_cb(
+pub unsafe fn menu_check_cb(
     _c: *mut client,
     data: *mut c_void,
     px: u32,
@@ -231,7 +231,7 @@ pub unsafe extern "C" fn menu_check_cb(
     }
 }
 
-pub unsafe extern "C" fn menu_draw_cb(
+pub unsafe fn menu_draw_cb(
     c: *mut client,
     data: *mut c_void,
     _rctx: *mut screen_redraw_ctx,
@@ -288,7 +288,7 @@ pub unsafe extern "C" fn menu_draw_cb(
     }
 }
 
-pub unsafe extern "C" fn menu_free_cb(_c: *mut client, data: *mut c_void) {
+pub unsafe fn menu_free_cb(_c: *mut client, data: *mut c_void) {
     unsafe {
         let md = data as *mut menu_data;
 
@@ -306,7 +306,7 @@ pub unsafe extern "C" fn menu_free_cb(_c: *mut client, data: *mut c_void) {
     }
 }
 
-pub unsafe extern "C" fn menu_key_cb(
+pub unsafe fn menu_key_cb(
     c: *mut client,
     data: *mut c_void,
     mut event: *mut key_event,
@@ -620,7 +620,7 @@ pub unsafe fn menu_set_style(
     }
 }
 
-pub unsafe extern "C" fn menu_prepare(
+pub unsafe fn menu_prepare(
     menu: *mut menu,
     flags: i32,
     mut starting_choice: i32,
@@ -734,7 +734,7 @@ pub unsafe extern "C" fn menu_prepare(
     }
 }
 
-pub unsafe extern "C" fn menu_display(
+pub unsafe fn menu_display(
     menu: *mut menu,
     flags: i32,
     starting_choice: i32,

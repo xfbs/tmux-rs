@@ -35,7 +35,7 @@ pub static mut cmd_pipe_pane_entry: cmd_entry = cmd_entry {
     exec: Some(cmd_pipe_pane_exec),
 };
 
-pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
+pub unsafe fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let target = cmdq_get_target(item);
@@ -202,7 +202,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_ite
     }
 }
 
-pub unsafe extern "C" fn cmd_pipe_pane_read_callback(_bufev: *mut bufferevent, data: *mut c_void) {
+pub unsafe fn cmd_pipe_pane_read_callback(_bufev: *mut bufferevent, data: *mut c_void) {
     unsafe {
         let wp: *mut window_pane = data as *mut window_pane;
         let evb = (*(*wp).pipe_event).input;
@@ -219,7 +219,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_read_callback(_bufev: *mut bufferevent, d
     }
 }
 
-pub unsafe extern "C" fn cmd_pipe_pane_write_callback(_bufev: *mut bufferevent, data: *mut c_void) {
+pub unsafe fn cmd_pipe_pane_write_callback(_bufev: *mut bufferevent, data: *mut c_void) {
     unsafe {
         let wp: *mut window_pane = data as *mut window_pane;
 
@@ -231,7 +231,7 @@ pub unsafe extern "C" fn cmd_pipe_pane_write_callback(_bufev: *mut bufferevent, 
     }
 }
 
-pub unsafe extern "C" fn cmd_pipe_pane_error_callback(
+pub unsafe fn cmd_pipe_pane_error_callback(
     _bufev: *mut bufferevent,
     _what: i16,
     data: *mut c_void,

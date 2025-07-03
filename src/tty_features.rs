@@ -360,7 +360,7 @@ static tty_features: [&tty_feature; 20] = [
     &tty_feature_usstyle,
 ];
 
-pub unsafe extern "C" fn tty_add_features(
+pub unsafe fn tty_add_features(
     feat: *mut i32,
     s: *const c_char,
     separators: *const c_char,
@@ -395,7 +395,7 @@ pub unsafe extern "C" fn tty_add_features(
     }
 }
 
-pub unsafe extern "C" fn tty_get_features(feat: i32) -> *const c_char {
+pub unsafe fn tty_get_features(feat: i32) -> *const c_char {
     static mut s_buf: [MaybeUninit<c_char>; 512] = [MaybeUninit::uninit(); 512];
     unsafe {
         let s: *mut c_char = (&raw mut s_buf).cast();
@@ -418,7 +418,7 @@ pub unsafe extern "C" fn tty_get_features(feat: i32) -> *const c_char {
     }
 }
 
-pub unsafe extern "C" fn tty_apply_features(term: *mut tty_term, feat: i32) -> bool {
+pub unsafe fn tty_apply_features(term: *mut tty_term, feat: i32) -> bool {
     if feat == 0 {
         return false;
     }
@@ -451,7 +451,7 @@ pub unsafe extern "C" fn tty_apply_features(term: *mut tty_term, feat: i32) -> b
     true
 }
 
-pub unsafe extern "C" fn tty_default_features(feat: *mut i32, name: *const c_char, version: u32) {
+pub unsafe fn tty_default_features(feat: *mut i32, name: *const c_char, version: u32) {
     struct entry {
         name: &'static CStr,
         version: u32,

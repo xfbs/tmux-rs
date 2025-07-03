@@ -32,7 +32,7 @@ pub static mut cfg_files: *mut *mut c_char = null_mut();
 
 pub static mut cfg_nfiles: c_uint = 0;
 
-unsafe extern "C" fn cfg_client_done(_item: *mut cmdq_item, _data: *mut c_void) -> cmd_retval {
+unsafe fn cfg_client_done(_item: *mut cmdq_item, _data: *mut c_void) -> cmd_retval {
     if unsafe { cfg_finished } == 0 {
         cmd_retval::CMD_RETURN_WAIT
     } else {
@@ -40,7 +40,7 @@ unsafe extern "C" fn cfg_client_done(_item: *mut cmdq_item, _data: *mut c_void) 
     }
 }
 
-unsafe extern "C" fn cfg_done(_item: *mut cmdq_item, _data: *mut c_void) -> cmd_retval {
+unsafe fn cfg_done(_item: *mut cmdq_item, _data: *mut c_void) -> cmd_retval {
     unsafe {
         if cfg_finished != 0 {
             return cmd_retval::CMD_RETURN_NORMAL;
@@ -59,7 +59,7 @@ unsafe extern "C" fn cfg_done(_item: *mut cmdq_item, _data: *mut c_void) -> cmd_
     }
 }
 
-pub unsafe extern "C" fn start_cfg() {
+pub unsafe fn start_cfg() {
     let c: *mut client;
     let mut i: u32;
     let mut flags: cmd_parse_input_flags = cmd_parse_input_flags::empty();
@@ -268,7 +268,7 @@ pub unsafe fn cfg_add_cause_(args: std::fmt::Arguments) {
     }
 }
 
-pub unsafe extern "C" fn cfg_print_causes(item: *mut cmdq_item) {
+pub unsafe fn cfg_print_causes(item: *mut cmdq_item) {
     unsafe {
         for i in 0..cfg_ncauses {
             cmdq_print!(item, "{}", _s(*cfg_causes.add(i as usize)));
@@ -281,7 +281,7 @@ pub unsafe extern "C" fn cfg_print_causes(item: *mut cmdq_item) {
     }
 }
 
-pub unsafe extern "C" fn cfg_show_causes(mut s: *mut session) {
+pub unsafe fn cfg_show_causes(mut s: *mut session) {
     unsafe {
         'out: {
             let c = tailq_first(&raw mut clients);
