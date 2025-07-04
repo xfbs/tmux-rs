@@ -670,17 +670,11 @@ pub unsafe extern "C" fn cmd_find_valid_state(fs: *const cmd_find_state) -> bool
             return false;
         }
 
-        let mut wl: *const winlink = null();
-        for wl_ in rb_foreach_const(&raw const (*(*fs).s).windows) {
-            wl = wl_.as_ptr().cast_const();
-            if (*wl).window == (*fs).w && wl == (*fs).wl {
-                break;
-            }
-        }
-
-        if wl.is_null() {
+        let Some(wl) = rb_foreach_const(&raw const (*(*fs).s).windows)
+            .find(|wl| (*wl.as_ptr()).window == (*fs).w && wl.as_ptr() == (*fs).wl)
+        else {
             return false;
-        }
+        };
 
         if (*fs).w != (*(*fs).wl).window {
             return false;
