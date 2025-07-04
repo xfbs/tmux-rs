@@ -22,7 +22,7 @@ static mut alerts_fired: i32 = 0;
 
 static mut alerts_list: tailq_head<window> = compat::TAILQ_HEAD_INITIALIZER!(alerts_list);
 
-unsafe fn alerts_timer(_fd: i32, _events: i16, arg: *mut c_void) {
+unsafe extern "C" fn alerts_timer(_fd: i32, _events: i16, arg: *mut c_void) {
     let w = arg as *mut window;
 
     unsafe {
@@ -31,7 +31,7 @@ unsafe fn alerts_timer(_fd: i32, _events: i16, arg: *mut c_void) {
     }
 }
 
-unsafe fn alerts_callback(_fd: c_int, _events: c_short, _arg: *mut c_void) {
+unsafe extern "C" fn alerts_callback(_fd: c_int, _events: c_short, _arg: *mut c_void) {
     unsafe {
         for w in tailq_foreach::<_, crate::discr_alerts_entry>(&raw mut alerts_list) {
             let alerts = alerts_check_all(w);

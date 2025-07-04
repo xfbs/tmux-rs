@@ -133,7 +133,7 @@ pub unsafe fn tty_set_size(tty: *mut tty, sx: u32, sy: u32, xpixel: u32, ypixel:
     }
 }
 
-pub unsafe fn tty_read_callback(_fd: i32, _events: i16, data: *mut c_void) {
+pub unsafe extern "C" fn tty_read_callback(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
         let tty = data as *mut tty;
         let c = (*tty).client;
@@ -157,7 +157,7 @@ pub unsafe fn tty_read_callback(_fd: i32, _events: i16, data: *mut c_void) {
     }
 }
 
-pub unsafe fn tty_timer_callback(_fd: i32, events: i16, data: *mut c_void) {
+pub unsafe extern "C" fn tty_timer_callback(_fd: i32, events: i16, data: *mut c_void) {
     unsafe {
         let tty = data as *mut tty;
         let c = (*tty).client;
@@ -216,7 +216,7 @@ pub unsafe fn tty_block_maybe(tty: *mut tty) -> i32 {
     }
 }
 
-pub unsafe fn tty_write_callback(_fd: i32, _events: i16, data: *mut c_void) {
+pub unsafe extern "C" fn tty_write_callback(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
         let tty = data as *mut tty;
         let c = (*tty).client;
@@ -301,7 +301,7 @@ pub unsafe fn tty_open(tty: *mut tty, cause: *mut *mut c_char) -> i32 {
     }
 }
 
-pub unsafe fn tty_start_timer_callback(_fd: i32, _events: i16, data: *mut c_void) {
+pub unsafe extern "C" fn tty_start_timer_callback(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
         let tty = data as *mut tty;
         let c = (*tty).client;
@@ -3878,7 +3878,7 @@ pub unsafe fn tty_default_attributes(
     }
 }
 
-pub unsafe fn tty_clipboard_query_callback(_fd: i32, _events: i16, data: *mut c_void) {
+pub unsafe extern "C" fn tty_clipboard_query_callback(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
         let tty: *mut tty = data.cast();
         let c = (*tty).client;

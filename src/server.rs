@@ -158,7 +158,7 @@ pub unsafe fn server_create_socket(
 }
 
 /// Tidy up every hour.
-unsafe fn server_tidy_event(_fd: i32, _events: i16, _data: *mut c_void) {
+unsafe extern "C" fn server_tidy_event(_fd: i32, _events: i16, _data: *mut c_void) {
     let tv = timeval {
         tv_sec: 3600,
         tv_usec: 0,
@@ -403,7 +403,7 @@ pub unsafe fn server_update_socket() {
     }
 }
 
-unsafe fn server_accept(fd: i32, events: i16, _data: *mut c_void) {
+unsafe extern "C" fn server_accept(fd: i32, events: i16, _data: *mut c_void) {
     unsafe {
         let mut sa: sockaddr_storage = zeroed(); // TODO remove this init
         let mut slen: socklen_t = size_of::<sockaddr_storage>() as socklen_t;
