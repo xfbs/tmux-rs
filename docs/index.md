@@ -235,7 +235,7 @@ unsafe extern "C" fn set_value(c: *mut client) {
 }
 ```
 
-I was shocked that after translating this simple function the program started segfaulting. Inspecting it in the debugger showed that the segfault in the Rust code was happening on that line, which should be identical to the C. In the debugger I noticed that the address was slightly different in the C from the Rust, maybe that's just do address randomization.
+I was shocked that after translating this simple function the program started segfaulting. Inspecting it in the debugger showed that the segfault in the Rust code was happening on that line, which should be identical to the C. In the debugger I noticed that the address was slightly different in the C from the Rust, maybe that's just due to address randomization.
 
 So what's the issue? Well it just so happens that when I manually translated the type declaration of the client struct I missed an `*` on one of the types. This type was just above the data field. Meaning the C and Rust code had different views of the type after that mismatched field.
 
@@ -265,7 +265,7 @@ Nothing in the Rust touched `baz` yet, so there were no compiler errors, but the
 
 ### Raw pointers
 
-Rust has two reference types: `&T`: a shared reference or `&mut T`: an exclusive (or mutable) reference. A Rust reference is a pointer with several other invariants.One of the invariants is that a Rust reference can never be null and the value pointed to must be fully initialized and valid.
+Rust has two reference types: `&T`: a shared reference or `&mut T`: an exclusive (or mutable) reference. A Rust reference is a pointer with several other invariants. One of the invariants is that a Rust reference can never be null and the value pointed to must be fully initialized and valid.
 
 The natural mapping of pointers in a C program would be a reference in Rust, either exclusive or shared depending if it's modified in the code. The problem is, often times some of the invariants required by references in Rust cannot always be upheld if we do a straight one-to-one mapping of the source from C to Rust. That means we can't use Rust references in our port yet. We have to use another type, raw pointers: `*mut T` and `*const T`. Semantically raw pointers are the same as C pointers, but because you don't really use them outside of unsafe Rust they are extremely unergonomic to use.
 
