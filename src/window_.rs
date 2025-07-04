@@ -40,10 +40,6 @@ pub static mut windows: windows = unsafe { std::mem::zeroed() };
 
 pub static mut all_window_panes: window_pane_tree = unsafe { std::mem::zeroed() };
 
-static next_window_pane_id: AtomicU32 = AtomicU32::new(0);
-static next_window_id: AtomicU32 = AtomicU32::new(0);
-static next_active_point: AtomicU32 = AtomicU32::new(0);
-
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct window_pane_input_data {
@@ -288,6 +284,8 @@ pub unsafe extern "C" fn window_create(
     mut xpixel: u32,
     mut ypixel: u32,
 ) -> *mut window {
+    static next_window_id: AtomicU32 = AtomicU32::new(0);
+
     if xpixel == 0 {
         xpixel = DEFAULT_XPIXEL;
     }
@@ -577,6 +575,8 @@ pub unsafe extern "C" fn window_set_active_pane(
     wp: *mut window_pane,
     notify: i32,
 ) -> i32 {
+    static next_active_point: AtomicU32 = AtomicU32::new(0);
+
     let lastwp: *mut window_pane;
     unsafe {
         log_debug!("{}: pane %%{}", "window_set_active_pane", (*wp).id);
@@ -1030,6 +1030,8 @@ pub unsafe extern "C" fn window_pane_create(
     sy: u32,
     hlimit: u32,
 ) -> *mut window_pane {
+    static next_window_pane_id: AtomicU32 = AtomicU32::new(0);
+
     unsafe {
         let mut host: [c_char; HOST_NAME_MAX + 1] = zeroed();
         let wp: *mut window_pane = xcalloc_::<window_pane>(1).as_ptr();
