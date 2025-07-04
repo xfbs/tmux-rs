@@ -117,6 +117,7 @@ pub unsafe fn clients_with_window(w: *mut window) -> u32 {
     n
 }
 
+#[expect(clippy::type_complexity)]
 pub unsafe fn clients_calculate_size(
     type_: window_size_option,
     current: i32,

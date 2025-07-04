@@ -18,6 +18,7 @@
 #![allow(clippy::manual_range_contains, reason = "match upstream")]
 #![allow(clippy::missing_safety_doc, reason = "currently using too much unsafe")]
 // maybe fix:
+#![allow(clippy::too_many_arguments)]
 #![allow(non_upper_case_globals)]
 // will fix:
 #![allow(unused)] // TODO 5000
@@ -1191,8 +1192,9 @@ struct menu {
 }
 type menu_choice_cb = Option<unsafe fn(*mut menu, u32, key_code, *mut c_void)>;
 
-// Window mode. Windows can be in several modes and this is used to call the
-// right function to handle input and output.
+#[expect(clippy::type_complexity)]
+/// Window mode. Windows can be in several modes and this is used to call the
+/// right function to handle input and output.
 #[repr(C)]
 struct window_mode {
     name: SyncCharPtr,
