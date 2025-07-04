@@ -140,7 +140,7 @@ pub unsafe fn load_cfg(
         pi.item = item;
         pi.c = c;
 
-        let pr = cmd_parse_from_file(&mut f, Some(&mut pi));
+        let pr = cmd_parse_from_file(&mut f, Some(&pi));
         drop(f);
         let cmdlist = match pr {
             Err(error) => {
@@ -207,7 +207,7 @@ pub unsafe fn load_cfg_from_buffer(
         pi.item = item;
         pi.c = c;
 
-        let cmdlist = match cmd_parse_from_buffer(buf, Some(&mut pi)) {
+        let cmdlist = match cmd_parse_from_buffer(buf, Some(&pi)) {
             Err(error) => {
                 cfg_add_cause!("{}", _s(error));
                 free_(error);

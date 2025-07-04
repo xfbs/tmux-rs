@@ -850,7 +850,7 @@ pub unsafe extern "C" fn args_make_commands(
         }
         log_debug!("{}: {}", __func__, _s(cmd));
 
-        let pr = cmd_parse_from_string(cstr_to_str(cmd), Some(&mut (*state).pi));
+        let pr = cmd_parse_from_string(cstr_to_str(cmd), Some(&(*state).pi));
         free_(cmd);
 
         match pr {
