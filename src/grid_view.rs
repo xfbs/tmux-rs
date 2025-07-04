@@ -84,14 +84,7 @@ pub unsafe fn grid_view_clear_history(gd: *mut grid, bg: u32) {
     }
 }
 
-pub unsafe fn grid_view_clear(
-    gd: *mut grid,
-    mut px: u32,
-    mut py: u32,
-    nx: u32,
-    ny: u32,
-    bg: u32,
-) {
+pub unsafe fn grid_view_clear(gd: *mut grid, mut px: u32, mut py: u32, nx: u32, ny: u32, bg: u32) {
     unsafe {
         px = grid_view_x(gd, px);
         py = grid_view_y(gd, py);
@@ -100,12 +93,7 @@ pub unsafe fn grid_view_clear(
     }
 }
 
-pub unsafe fn grid_view_scroll_region_up(
-    gd: *mut grid,
-    mut rupper: u32,
-    mut rlower: u32,
-    bg: u32,
-) {
+pub unsafe fn grid_view_scroll_region_up(gd: *mut grid, mut rupper: u32, mut rlower: u32, bg: u32) {
     unsafe {
         if (*gd).flags & GRID_HISTORY != 0 {
             grid_collect_history(gd);
@@ -215,13 +203,7 @@ pub unsafe fn grid_view_delete_lines_region(
 }
 
 /// Insert characters.
-pub unsafe fn grid_view_insert_cells(
-    gd: *mut grid,
-    mut px: u32,
-    mut py: u32,
-    nx: u32,
-    bg: u32,
-) {
+pub unsafe fn grid_view_insert_cells(gd: *mut grid, mut px: u32, mut py: u32, nx: u32, bg: u32) {
     unsafe {
         px = grid_view_x(gd, px);
         py = grid_view_y(gd, py);
@@ -237,13 +219,7 @@ pub unsafe fn grid_view_insert_cells(
 }
 
 /// Delete characters.
-pub unsafe fn grid_view_delete_cells(
-    gd: *mut grid,
-    mut px: u32,
-    mut py: u32,
-    nx: u32,
-    bg: u32,
-) {
+pub unsafe fn grid_view_delete_cells(gd: *mut grid, mut px: u32, mut py: u32, nx: u32, bg: u32) {
     unsafe {
         px = grid_view_x(gd, px);
         py = grid_view_y(gd, py);

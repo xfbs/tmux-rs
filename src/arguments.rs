@@ -376,11 +376,7 @@ pub unsafe fn args_copy_copy_value(
 }
 
 /// Copy an arguments set.
-pub unsafe fn args_copy(
-    args: *mut args,
-    argc: i32,
-    argv: *mut *mut c_char,
-) -> *mut args {
+pub unsafe fn args_copy(args: *mut args, argc: i32, argv: *mut *mut c_char) -> *mut args {
     let __func__ = "args_copy";
     unsafe {
         cmd_log_argv!(argc, argv, "{__func__}");
@@ -646,12 +642,7 @@ pub unsafe fn args_has(args: *mut args, flag: u8) -> i32 {
     }
 }
 
-pub unsafe fn args_set(
-    args: *mut args,
-    flag: c_uchar,
-    value: *mut args_value,
-    flags: i32,
-) {
+pub unsafe fn args_set(args: *mut args, flag: c_uchar, value: *mut args_value, flags: i32) {
     unsafe {
         let mut entry: *mut args_entry = args_find(args, flag);
 
@@ -886,9 +877,7 @@ pub unsafe fn args_make_commands_free(state: *mut args_command_state) {
 }
 
 /// Get prepared command.
-pub unsafe fn args_make_commands_get_command(
-    state: *mut args_command_state,
-) -> *mut c_char {
+pub unsafe fn args_make_commands_get_command(state: *mut args_command_state) -> *mut c_char {
     unsafe {
         if !(*state).cmdlist.is_null() {
             let first = cmd_list_first((*state).cmdlist);

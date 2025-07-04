@@ -638,11 +638,7 @@ pub unsafe fn screen_check_selection(s: *mut screen, px: u32, py: u32) -> c_int 
 }
 
 /// Get selected grid cell.
-pub unsafe fn screen_select_cell(
-    s: *mut screen,
-    dst: *mut grid_cell,
-    src: *const grid_cell,
-) {
+pub unsafe fn screen_select_cell(s: *mut screen, dst: *mut grid_cell, src: *const grid_cell) {
     unsafe {
         if (*s).sel.is_null() || (*(*s).sel).hidden != 0 {
             return;
@@ -658,13 +654,7 @@ pub unsafe fn screen_select_cell(
 }
 
 /// Reflow wrapped lines.
-unsafe fn screen_reflow(
-    s: *mut screen,
-    new_x: u32,
-    cx: *mut u32,
-    cy: *mut u32,
-    cursor: i32,
-) {
+unsafe fn screen_reflow(s: *mut screen, new_x: u32, cx: *mut u32, cy: *mut u32, cursor: i32) {
     unsafe {
         let mut wx: u32 = 0;
         let mut wy: u32 = 0;

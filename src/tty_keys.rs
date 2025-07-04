@@ -790,11 +790,7 @@ unsafe fn tty_keys_add(tty: *mut tty, s: *const c_char, key: key_code) {
 }
 
 /// Add next node to the tree.
-unsafe fn tty_keys_add1(
-    mut tkp: *mut *mut tty_key,
-    mut s: *const c_char,
-    key: key_code,
-) {
+unsafe fn tty_keys_add1(mut tkp: *mut *mut tty_key, mut s: *const c_char, key: key_code) {
     unsafe {
         // Allocate a tree entry if there isn't one already.
         let mut tk = *tkp;

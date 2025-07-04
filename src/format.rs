@@ -80,10 +80,7 @@ RB_GENERATE!(
 );
 
 // Format job tree comparison function.
-pub unsafe fn format_job_cmp(
-    fj1: *const format_job,
-    fj2: *const format_job,
-) -> Ordering {
+pub unsafe fn format_job_cmp(fj1: *const format_job, fj2: *const format_job) -> Ordering {
     unsafe {
         (*fj1)
             .tag
@@ -200,10 +197,7 @@ pub struct format_modifier {
 }
 
 /// Format entry tree comparison function.
-unsafe fn format_entry_cmp(
-    fe1: *const format_entry,
-    fe2: *const format_entry,
-) -> Ordering {
+unsafe fn format_entry_cmp(fe1: *const format_entry, fe2: *const format_entry) -> Ordering {
     unsafe { i32_to_ordering(strcmp((*fe1).key, (*fe2).key)) }
 }
 
@@ -396,10 +390,7 @@ pub unsafe fn format_job_complete(job: *mut job) {
     }
 }
 
-pub unsafe fn format_job_get(
-    es: *mut format_expand_state,
-    cmd: *mut c_char,
-) -> *mut c_char {
+pub unsafe fn format_job_get(es: *mut format_expand_state, cmd: *mut c_char) -> *mut c_char {
     unsafe {
         let ft: *mut format_tree = (*es).ft;
         // format_job_tree *jobs;
@@ -710,9 +701,7 @@ pub unsafe fn format_cb_window_stack_index(ft: *mut format_tree) -> *mut c_void 
 }
 
 /// Callback for window_linked_sessions_list.
-pub unsafe fn format_cb_window_linked_sessions_list(
-    ft: *mut format_tree,
-) -> *mut c_void {
+pub unsafe fn format_cb_window_linked_sessions_list(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let mut value = null_mut();
 
@@ -759,9 +748,7 @@ pub unsafe fn format_cb_window_active_sessions(ft: *mut format_tree) -> *mut c_v
 }
 
 /// Callback for window_active_sessions_list.
-pub unsafe fn format_cb_window_active_sessions_list(
-    ft: *mut format_tree,
-) -> *mut c_void {
+pub unsafe fn format_cb_window_active_sessions_list(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if (*ft).wl.is_null() {
             return null_mut();
@@ -1111,9 +1098,7 @@ pub unsafe fn format_cb_session_group_list(ft: *mut format_tree) -> *mut c_void 
 }
 
 /// Callback for session_group_attached_list.
-pub unsafe fn format_cb_session_group_attached_list(
-    ft: *mut format_tree,
-) -> *mut c_void {
+pub unsafe fn format_cb_session_group_attached_list(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         let s = (*ft).s;
         if s.is_null() {
@@ -2401,9 +2386,7 @@ pub unsafe fn format_cb_session_group_attached(ft: *mut format_tree) -> *mut c_v
 }
 
 /// Callback for session_group_many_attached.
-pub unsafe fn format_cb_session_group_many_attached(
-    ft: *mut format_tree,
-) -> *mut c_void {
+pub unsafe fn format_cb_session_group_many_attached(ft: *mut format_tree) -> *mut c_void {
     unsafe {
         if !(*ft).s.is_null() {
             let sg = session_group_contains((*ft).s);
@@ -3264,11 +3247,7 @@ pub unsafe fn format_free(ft: *mut format_tree) {
     }
 }
 
-pub unsafe fn format_log_debug_cb(
-    key: *const c_char,
-    value: *const c_char,
-    arg: *mut c_void,
-) {
+pub unsafe fn format_log_debug_cb(key: *const c_char, value: *const c_char, arg: *mut c_void) {
     let prefix = arg as *const c_char;
     log_debug!("{}: {}={}", _s(prefix), _s(key), _s(value));
 }
@@ -3353,11 +3332,7 @@ pub unsafe fn format_add_(ft: *mut format_tree, key: *const c_char, args: std::f
 }
 
 /// Add a key and time.
-pub unsafe fn format_add_tv(
-    ft: *mut format_tree,
-    key: *const c_char,
-    tv: *const timeval,
-) {
+pub unsafe fn format_add_tv(ft: *mut format_tree, key: *const c_char, tv: *const timeval) {
     unsafe {
         let mut fe = xmalloc_::<format_entry>().as_ptr();
 
@@ -4044,10 +4019,7 @@ pub unsafe fn format_search(
     }
 }
 
-pub unsafe fn format_session_name(
-    es: *mut format_expand_state,
-    fmt: *const c_char,
-) -> *mut c_char {
+pub unsafe fn format_session_name(es: *mut format_expand_state, fmt: *const c_char) -> *mut c_char {
     unsafe {
         let name = format_expand1(es, fmt);
         let s: *mut session = null_mut();
@@ -4100,10 +4072,7 @@ pub unsafe fn format_loop_sessions(
     }
 }
 
-pub unsafe fn format_window_name(
-    es: *mut format_expand_state,
-    fmt: *const c_char,
-) -> *mut c_char {
+pub unsafe fn format_window_name(es: *mut format_expand_state, fmt: *const c_char) -> *mut c_char {
     unsafe {
         let ft = (*es).ft;
         if (*ft).s.is_null() {
@@ -4127,10 +4096,7 @@ pub unsafe fn format_window_name(
     }
 }
 
-pub unsafe fn format_loop_windows(
-    es: *mut format_expand_state,
-    fmt: *const c_char,
-) -> *mut c_char {
+pub unsafe fn format_loop_windows(es: *mut format_expand_state, fmt: *const c_char) -> *mut c_char {
     unsafe {
         let ft = (*es).ft;
         let c = (*ft).client;
@@ -4190,10 +4156,7 @@ pub unsafe fn format_loop_windows(
 }
 
 /// Loop over panes.
-pub unsafe fn format_loop_panes(
-    es: *mut format_expand_state,
-    fmt: *const c_char,
-) -> *mut c_char {
+pub unsafe fn format_loop_panes(es: *mut format_expand_state, fmt: *const c_char) -> *mut c_char {
     unsafe {
         let ft = (*es).ft;
         let c = (*ft).client;
@@ -4256,10 +4219,7 @@ pub unsafe fn format_loop_panes(
 }
 
 /// Loop over clients.
-pub unsafe fn format_loop_clients(
-    es: *mut format_expand_state,
-    fmt: *const c_char,
-) -> *mut c_char {
+pub unsafe fn format_loop_clients(es: *mut format_expand_state, fmt: *const c_char) -> *mut c_char {
     unsafe {
         let ft = (*es).ft;
         let item = (*ft).item;
@@ -5034,10 +4994,7 @@ pub unsafe fn format_replace(
 }
 
 /// Expand keys in a template.
-pub unsafe fn format_expand1(
-    es: *mut format_expand_state,
-    mut fmt: *const c_char,
-) -> *mut c_char {
+pub unsafe fn format_expand1(es: *mut format_expand_state, mut fmt: *const c_char) -> *mut c_char {
     unsafe {
         let ft = (*es).ft;
         let buf: *mut c_char = null_mut();
@@ -5284,10 +5241,7 @@ pub unsafe fn format_expand1(
 }
 
 /// Expand keys in a template, passing through strftime first.
-pub unsafe fn format_expand_time(
-    ft: *mut format_tree,
-    fmt: *const c_char,
-) -> *mut c_char {
+pub unsafe fn format_expand_time(ft: *mut format_tree, fmt: *const c_char) -> *mut c_char {
     unsafe {
         let mut es = MaybeUninit::<format_expand_state>::uninit();
         let es = es.as_mut_ptr();
@@ -5340,10 +5294,7 @@ pub unsafe fn format_single_from_state(
 }
 
 /// Expand a single string using target.
-pub unsafe fn format_single_from_target(
-    item: *mut cmdq_item,
-    fmt: *const c_char,
-) -> *mut c_char {
+pub unsafe fn format_single_from_target(item: *mut cmdq_item, fmt: *const c_char) -> *mut c_char {
     unsafe {
         let tc = cmdq_get_target_client(item);
 
@@ -5638,12 +5589,7 @@ pub unsafe fn format_grid_line(gd: *mut grid, y: u32) -> *mut c_char {
 }
 
 /// Return hyperlink at given coordinates. Caller frees.
-pub unsafe fn format_grid_hyperlink(
-    gd: *mut grid,
-    x: u32,
-    y: u32,
-    s: *mut screen,
-) -> *mut c_char {
+pub unsafe fn format_grid_hyperlink(gd: *mut grid, x: u32, y: u32, s: *mut screen) -> *mut c_char {
     unsafe {
         let mut uri: *const c_char = null();
         let mut gc = MaybeUninit::<grid_cell>::uninit();

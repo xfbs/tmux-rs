@@ -502,10 +502,7 @@ pub unsafe fn cmdq_remove_group(item: *mut cmdq_item) {
     }
 }
 
-pub unsafe fn cmdq_empty_command(
-    _item: *mut cmdq_item,
-    _data: *mut c_void,
-) -> cmd_retval {
+pub unsafe fn cmdq_empty_command(_item: *mut cmdq_item, _data: *mut c_void) -> cmd_retval {
     cmd_retval::CMD_RETURN_NORMAL
 }
 
@@ -743,10 +740,7 @@ pub unsafe fn cmdq_get_callback1(name: &str, cb: cmdq_cb, data: *mut c_char) -> 
     }
 }
 
-pub unsafe fn cmdq_error_callback(
-    item: *mut cmdq_item,
-    data: *mut c_void,
-) -> cmd_retval {
+pub unsafe fn cmdq_error_callback(item: *mut cmdq_item, data: *mut c_void) -> cmd_retval {
     let error = data as *mut c_char;
 
     unsafe {

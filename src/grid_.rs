@@ -86,10 +86,7 @@ pub unsafe fn grid_store_cell(gce: *mut grid_cell_entry, gc: *const grid_cell, c
 }
 
 /// Check if a cell should be an extended cell.
-pub unsafe fn grid_need_extended_cell(
-    gce: *const grid_cell_entry,
-    gc: *const grid_cell,
-) -> i32 {
+pub unsafe fn grid_need_extended_cell(gce: *const grid_cell_entry, gc: *const grid_cell) -> i32 {
     unsafe {
         if (*gce).flags.contains(grid_flag::EXTENDED) {
             return 1;
@@ -257,10 +254,7 @@ pub unsafe fn grid_check_y(gd: *mut grid, from: *const c_char, py: c_uint) -> c_
 }
 
 /// Check if two styles are (visibly) the same.
-pub unsafe fn grid_cells_look_equal(
-    gc1: *const grid_cell,
-    gc2: *const grid_cell,
-) -> c_int {
+pub unsafe fn grid_cells_look_equal(gc1: *const grid_cell, gc2: *const grid_cell) -> c_int {
     unsafe {
         if (*gc1).fg != (*gc2).fg || (*gc1).bg != (*gc2).bg {
             return 0;
@@ -608,12 +602,7 @@ pub unsafe fn grid_get_cell(gd: *mut grid, px: c_uint, py: c_uint, gc: *mut grid
 }
 
 /// Set cell at position.
-pub unsafe fn grid_set_cell(
-    gd: *mut grid,
-    px: c_uint,
-    py: c_uint,
-    gc: *const grid_cell,
-) {
+pub unsafe fn grid_set_cell(gd: *mut grid, px: c_uint, py: c_uint, gc: *const grid_cell) {
     unsafe {
         if grid_check_y(gd, c"grid_set_cell".as_ptr(), py) != 0 {
             return;
@@ -751,13 +740,7 @@ pub unsafe fn grid_clear_lines(gd: *mut grid, py: c_uint, ny: c_uint, bg: c_uint
 }
 
 /// Move a group of lines.
-pub unsafe fn grid_move_lines(
-    gd: *mut grid,
-    dy: c_uint,
-    py: c_uint,
-    ny: c_uint,
-    bg: c_uint,
-) {
+pub unsafe fn grid_move_lines(gd: *mut grid, dy: c_uint, py: c_uint, ny: c_uint, bg: c_uint) {
     unsafe {
         if ny == 0 || py == dy {
             return;
@@ -1546,13 +1529,7 @@ unsafe fn grid_reflow_join(
 }
 
 /// Split this line into several new ones
-pub unsafe fn grid_reflow_split(
-    target: *mut grid,
-    gd: *mut grid,
-    sx: u32,
-    yy: u32,
-    at: u32,
-) {
+pub unsafe fn grid_reflow_split(target: *mut grid, gd: *mut grid, sx: u32, yy: u32, at: u32) {
     unsafe {
         let gl = (*gd).linedata.add(yy as usize);
         let mut gc = zeroed();
@@ -1691,13 +1668,7 @@ pub unsafe fn grid_reflow(gd: *mut grid, sx: u32) {
 }
 
 /// Convert to position based on wrapped lines
-pub unsafe fn grid_wrap_position(
-    gd: *mut grid,
-    px: u32,
-    py: u32,
-    wx: *mut u32,
-    wy: *mut u32,
-) {
+pub unsafe fn grid_wrap_position(gd: *mut grid, px: u32, py: u32, wx: *mut u32, wy: *mut u32) {
     unsafe {
         let mut ax = 0;
         let mut ay = 0;

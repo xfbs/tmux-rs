@@ -521,10 +521,7 @@ pub unsafe fn tty_term_strip(s: *const c_char) -> *mut c_char {
     }
 }
 
-pub unsafe fn tty_term_override_next(
-    s: *const c_char,
-    offset: *mut usize,
-) -> *mut c_char {
+pub unsafe fn tty_term_override_next(s: *const c_char, offset: *mut usize) -> *mut c_char {
     let sizeof_value = 8192;
     static mut value: [c_char; 8192] = [0; 8192];
     unsafe {
@@ -564,11 +561,7 @@ pub unsafe fn tty_term_override_next(
     }
 }
 
-pub unsafe fn tty_term_apply(
-    term: *mut tty_term,
-    capabilities: *const c_char,
-    quiet: i32,
-) {
+pub unsafe fn tty_term_apply(term: *mut tty_term, capabilities: *const c_char, quiet: i32) {
     unsafe {
         let mut code: *mut tty_code = null_mut();
         let mut offset = 0usize;
@@ -1030,10 +1023,7 @@ pub unsafe fn tty_term_has(term: *mut tty_term, code: tty_code_code) -> bool {
     unsafe { (*(*term).codes.add(code as usize)).type_ != tty_code_type::None }
 }
 
-pub unsafe fn tty_term_string(
-    term: *mut tty_term,
-    code: tty_code_code,
-) -> *const c_char {
+pub unsafe fn tty_term_string(term: *mut tty_term, code: tty_code_code) -> *const c_char {
     unsafe {
         if !tty_term_has(term, code) {
             return c"".as_ptr();
@@ -1045,11 +1035,7 @@ pub unsafe fn tty_term_string(
     }
 }
 
-pub unsafe fn tty_term_string_i(
-    term: *mut tty_term,
-    code: tty_code_code,
-    a: i32,
-) -> *const c_char {
+pub unsafe fn tty_term_string_i(term: *mut tty_term, code: tty_code_code, a: i32) -> *const c_char {
     unsafe {
         let x = tty_term_string(term, code);
 
@@ -1211,10 +1197,7 @@ pub unsafe fn tty_term_flag(term: *mut tty_term, code: tty_code_code) -> i32 {
     }
 }
 
-pub unsafe fn tty_term_describe(
-    term: *mut tty_term,
-    code: tty_code_code,
-) -> *const c_char {
+pub unsafe fn tty_term_describe(term: *mut tty_term, code: tty_code_code) -> *const c_char {
     let sizeof_s = 256;
     static mut s: [c_char; 256] = [0; 256];
 

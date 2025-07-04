@@ -306,11 +306,7 @@ pub unsafe fn cmd_log_argv_(argc: i32, argv: *mut *mut c_char, args: std::fmt::A
     }
 }
 
-pub unsafe fn cmd_append_argv(
-    argc: *mut c_int,
-    argv: *mut *mut *mut c_char,
-    arg: *const c_char,
-) {
+pub unsafe fn cmd_append_argv(argc: *mut c_int, argv: *mut *mut *mut c_char, arg: *const c_char) {
     unsafe {
         *argv = xreallocarray_::<*mut c_char>(*argv, (*argc) as usize + 1).as_ptr();
         *(*argv).add((*argc) as usize) = xstrdup(arg).as_ptr();

@@ -244,10 +244,7 @@ pub unsafe fn server_client_get_key_table(c: *mut client) -> *const c_char {
 }
 
 /// Is this table the default key table?
-pub unsafe fn server_client_is_default_key_table(
-    c: *mut client,
-    table: *mut key_table,
-) -> i32 {
+pub unsafe fn server_client_is_default_key_table(c: *mut client, table: *mut key_table) -> i32 {
     unsafe { (libc::strcmp((*table).name, server_client_get_key_table(c)) == 0) as i32 }
 }
 
@@ -594,10 +591,7 @@ pub unsafe fn server_client_exec(c: *mut client, cmd: *const c_char) {
 }
 
 /// Check for mouse keys.
-pub unsafe fn server_client_check_mouse(
-    c: *mut client,
-    event: *mut key_event,
-) -> key_code {
+pub unsafe fn server_client_check_mouse(c: *mut client, event: *mut key_event) -> key_code {
     unsafe {
         let m = &raw mut (*event).m;
         let s = (*c).session;
@@ -1807,10 +1801,7 @@ pub unsafe fn server_client_update_latest(c: *mut client) {
 }
 
 /// Handle data key input from client. This owns and can modify the key event it is given and is responsible for freeing it.
-pub unsafe fn server_client_key_callback(
-    item: *mut cmdq_item,
-    data: *mut c_void,
-) -> cmd_retval {
+pub unsafe fn server_client_key_callback(item: *mut cmdq_item, data: *mut c_void) -> cmd_retval {
     unsafe {
         let c = cmdq_get_client(item);
         let event = data as *mut key_event;
@@ -2980,10 +2971,7 @@ pub unsafe fn server_client_dispatch(imsg: *mut imsg, arg: *mut c_void) {
 }
 
 /// Callback when command is not allowed.
-pub unsafe fn server_client_read_only(
-    item: *mut cmdq_item,
-    _data: *mut c_void,
-) -> cmd_retval {
+pub unsafe fn server_client_read_only(item: *mut cmdq_item, _data: *mut c_void) -> cmd_retval {
     unsafe {
         cmdq_error!(item, "client is read-only");
         cmd_retval::CMD_RETURN_ERROR
@@ -2991,10 +2979,7 @@ pub unsafe fn server_client_read_only(
 }
 
 /// Callback when command is done.
-pub unsafe fn server_client_command_done(
-    item: *mut cmdq_item,
-    _data: *mut c_void,
-) -> cmd_retval {
+pub unsafe fn server_client_command_done(item: *mut cmdq_item, _data: *mut c_void) -> cmd_retval {
     unsafe {
         let c = cmdq_get_client(item);
 
@@ -3277,10 +3262,7 @@ pub unsafe fn server_client_dispatch_shell(c: *mut client) {
 }
 
 /// Get client working directory.
-pub unsafe fn server_client_get_cwd(
-    c: *mut client,
-    mut s: *mut session,
-) -> *const c_char {
+pub unsafe fn server_client_get_cwd(c: *mut client, mut s: *mut session) -> *const c_char {
     unsafe {
         if cfg_finished == 0 && !cfg_client.is_null() {
             (*cfg_client).cwd
@@ -3305,10 +3287,7 @@ pub unsafe fn server_client_get_cwd(
 }
 
 /// Get control client flags.
-pub unsafe fn server_client_control_flags(
-    c: *mut client,
-    next: *const c_char,
-) -> client_flag {
+pub unsafe fn server_client_control_flags(c: *mut client, next: *const c_char) -> client_flag {
     unsafe {
         if streq_(next, "pause-after") {
             (*c).pause_age = 0;
@@ -3440,10 +3419,7 @@ pub unsafe fn server_client_get_flags(c: *mut client) -> *const c_char {
 }
 
 /// Get client window.
-pub unsafe fn server_client_get_client_window(
-    c: *mut client,
-    id: u32,
-) -> *mut client_window {
+pub unsafe fn server_client_get_client_window(c: *mut client, id: u32) -> *mut client_window {
     unsafe {
         let mut cw: client_window = client_window {
             window: id,
@@ -3455,10 +3431,7 @@ pub unsafe fn server_client_get_client_window(
 }
 
 /// Add client window.
-pub unsafe fn server_client_add_client_window(
-    c: *mut client,
-    id: u32,
-) -> NonNull<client_window> {
+pub unsafe fn server_client_add_client_window(c: *mut client, id: u32) -> NonNull<client_window> {
     unsafe {
         if let Some(cw) = NonNull::new(server_client_get_client_window(c, id)) {
             cw

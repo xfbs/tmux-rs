@@ -1199,11 +1199,7 @@ struct window_mode {
     default_format: SyncCharPtr,
 
     init: Option<
-        unsafe fn(
-            NonNull<window_mode_entry>,
-            *mut cmd_find_state,
-            *mut args,
-        ) -> *mut screen,
+        unsafe fn(NonNull<window_mode_entry>, *mut cmd_find_state, *mut args) -> *mut screen,
     >,
     free: Option<unsafe fn(NonNull<window_mode_entry>)>,
     resize: Option<unsafe fn(NonNull<window_mode_entry>, u32, u32)>,
@@ -1936,8 +1932,7 @@ enum args_parse_type {
     ARGS_PARSE_COMMANDS,
 }
 
-type args_parse_cb =
-    Option<unsafe fn(*mut args, u32, *mut *mut c_char) -> args_parse_type>;
+type args_parse_cb = Option<unsafe fn(*mut args, u32, *mut *mut c_char) -> args_parse_type>;
 #[repr(C)]
 struct args_parse {
     template: *const c_char,
@@ -2218,15 +2213,13 @@ struct overlay_ranges {
     nx: [u32; OVERLAY_MAX_RANGES],
 }
 
-type prompt_input_cb =
-    Option<unsafe fn(*mut client, NonNull<c_void>, *const c_char, i32) -> i32>;
+type prompt_input_cb = Option<unsafe fn(*mut client, NonNull<c_void>, *const c_char, i32) -> i32>;
 type prompt_free_cb = Option<unsafe fn(NonNull<c_void>)>;
 type overlay_check_cb =
     Option<unsafe fn(*mut client, *mut c_void, u32, u32, u32, *mut overlay_ranges)>;
 type overlay_mode_cb =
     Option<unsafe fn(*mut client, *mut c_void, *mut u32, *mut u32) -> *mut screen>;
-type overlay_draw_cb =
-    Option<unsafe fn(*mut client, *mut c_void, *mut screen_redraw_ctx)>;
+type overlay_draw_cb = Option<unsafe fn(*mut client, *mut c_void, *mut screen_redraw_ctx)>;
 type overlay_key_cb = Option<unsafe fn(*mut client, *mut c_void, *mut key_event) -> i32>;
 type overlay_free_cb = Option<unsafe fn(*mut client, *mut c_void)>;
 type overlay_resize_cb = Option<unsafe fn(*mut client, *mut c_void)>;

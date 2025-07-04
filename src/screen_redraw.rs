@@ -191,11 +191,7 @@ pub unsafe fn screen_redraw_pane_border(
 }
 
 /// Check if a cell is on a border.
-pub unsafe fn screen_redraw_cell_border(
-    ctx: *mut screen_redraw_ctx,
-    px: u32,
-    py: u32,
-) -> i32 {
+pub unsafe fn screen_redraw_cell_border(ctx: *mut screen_redraw_ctx, px: u32, py: u32) -> i32 {
     unsafe {
         let c = (*ctx).c;
         let w = (*(*(*c).session).curw).window;
@@ -794,11 +790,7 @@ pub unsafe fn screen_redraw_draw_borders_style(
 }
 
 /// Draw a border cell.
-pub unsafe fn screen_redraw_draw_borders_cell(
-    ctx: *mut screen_redraw_ctx,
-    i: u32,
-    j: u32,
-) {
+pub unsafe fn screen_redraw_draw_borders_cell(ctx: *mut screen_redraw_ctx, i: u32, j: u32) {
     unsafe {
         let c = (*ctx).c;
         let s = (*c).session;
@@ -989,10 +981,7 @@ pub unsafe fn screen_redraw_draw_status(ctx: *mut screen_redraw_ctx) {
 }
 
 /// Draw one pane.
-pub unsafe fn screen_redraw_draw_pane(
-    ctx: *mut screen_redraw_ctx,
-    wp: *mut window_pane,
-) {
+pub unsafe fn screen_redraw_draw_pane(ctx: *mut screen_redraw_ctx, wp: *mut window_pane) {
     unsafe {
         let c = (*ctx).c;
         let w = (*(*(*c).session).curw).window;

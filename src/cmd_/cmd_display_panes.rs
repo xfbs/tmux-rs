@@ -41,10 +41,7 @@ unsafe fn cmd_display_panes_args_parse(
     args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING
 }
 
-unsafe fn cmd_display_panes_draw_pane(
-    ctx: *mut screen_redraw_ctx,
-    wp: *mut window_pane,
-) {
+unsafe fn cmd_display_panes_draw_pane(ctx: *mut screen_redraw_ctx, wp: *mut window_pane) {
     unsafe {
         let c = (*ctx).c;
         let tty = &raw mut (*c).tty;
@@ -234,11 +231,7 @@ unsafe fn cmd_display_panes_draw_pane(
     }
 }
 
-unsafe fn cmd_display_panes_draw(
-    c: *mut client,
-    data: *mut c_void,
-    ctx: *mut screen_redraw_ctx,
-) {
+unsafe fn cmd_display_panes_draw(c: *mut client, data: *mut c_void, ctx: *mut screen_redraw_ctx) {
     unsafe {
         let w: *mut window = (*(*(*c).session).curw).window;
 
@@ -269,11 +262,7 @@ unsafe fn cmd_display_panes_free(c: *mut client, data: *mut c_void) {
     }
 }
 
-unsafe fn cmd_display_panes_key(
-    c: *mut client,
-    data: *mut c_void,
-    event: *mut key_event,
-) -> i32 {
+unsafe fn cmd_display_panes_key(c: *mut client, data: *mut c_void, event: *mut key_event) -> i32 {
     unsafe {
         let cdata = data as *mut cmd_display_panes_data;
         //char				*expanded, *error;

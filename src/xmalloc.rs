@@ -96,11 +96,7 @@ pub unsafe fn xrealloc_<T>(ptr: *mut T, size: usize) -> NonNull<T> {
     unsafe { xreallocarray_old(ptr, 1, size) }
 }
 
-pub unsafe fn xreallocarray(
-    ptr: *mut c_void,
-    nmemb: usize,
-    size: usize,
-) -> NonNull<c_void> {
+pub unsafe fn xreallocarray(ptr: *mut c_void, nmemb: usize, size: usize) -> NonNull<c_void> {
     unsafe { xreallocarray_old(ptr, nmemb, size) }
 }
 

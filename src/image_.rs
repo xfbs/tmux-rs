@@ -124,13 +124,7 @@ pub unsafe fn image_check_line(s: *mut screen, py: u32, ny: u32) -> bool {
     }
 }
 
-pub unsafe fn image_check_area(
-    s: *mut screen,
-    px: u32,
-    py: u32,
-    nx: u32,
-    ny: u32,
-) -> bool {
+pub unsafe fn image_check_area(s: *mut screen, px: u32, py: u32, nx: u32, ny: u32) -> bool {
     unsafe {
         let mut redraw = false;
 

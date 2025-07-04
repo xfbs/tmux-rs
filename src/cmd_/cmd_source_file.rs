@@ -42,10 +42,7 @@ pub struct cmd_source_file_data {
     pub nfiles: u32,
 }
 
-unsafe fn cmd_source_file_complete_cb(
-    item: *mut cmdq_item,
-    data: *mut c_void,
-) -> cmd_retval {
+unsafe fn cmd_source_file_complete_cb(item: *mut cmdq_item, data: *mut c_void) -> cmd_retval {
     unsafe {
         cfg_print_causes(item);
         cmd_retval::CMD_RETURN_NORMAL

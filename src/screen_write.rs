@@ -190,11 +190,7 @@ unsafe fn screen_write_set_client_cb(ttyctx: *mut tty_ctx, c: *mut client) -> i3
 }
 
 /// Set up context for TTY command.
-unsafe fn screen_write_initctx(
-    ctx: *mut screen_write_ctx,
-    ttyctx: *mut tty_ctx,
-    sync: i32,
-) {
+unsafe fn screen_write_initctx(ctx: *mut screen_write_ctx, ttyctx: *mut tty_ctx, sync: i32) {
     unsafe {
         let s = (*ctx).s;
 
@@ -368,11 +364,7 @@ pub unsafe fn screen_write_reset(ctx: *mut screen_write_ctx) {
 }
 
 /// Write character.
-pub unsafe fn screen_write_putc(
-    ctx: *mut screen_write_ctx,
-    gcp: *const grid_cell,
-    ch: u8,
-) {
+pub unsafe fn screen_write_putc(ctx: *mut screen_write_ctx, gcp: *const grid_cell, ch: u8) {
     unsafe {
         let mut gc: grid_cell = zeroed();
         memcpy__(&raw mut gc, gcp);
@@ -675,11 +667,7 @@ pub unsafe fn screen_write_fast_copy(
 }
 
 /// Select character set for drawing border lines.
-unsafe fn screen_write_box_border_set(
-    lines: box_lines,
-    cell_type: cell_type,
-    gc: *mut grid_cell,
-) {
+unsafe fn screen_write_box_border_set(lines: box_lines, cell_type: cell_type, gc: *mut grid_cell) {
     unsafe {
         match lines {
             box_lines::BOX_LINES_NONE => (),
@@ -759,12 +747,7 @@ pub unsafe fn screen_write_hline(
 }
 
 /// Draw a vertical line on screen.
-pub unsafe fn screen_write_vline(
-    ctx: *mut screen_write_ctx,
-    ny: u32,
-    top: i32,
-    bottom: i32,
-) {
+pub unsafe fn screen_write_vline(ctx: *mut screen_write_ctx, ny: u32, top: i32, bottom: i32) {
     unsafe {
         let s = (*ctx).s;
         let mut gc: grid_cell = zeroed();
@@ -921,12 +904,7 @@ pub unsafe fn screen_write_box(
 }
 
 /// Write a preview version of a window. Assumes target area is big enough and already cleared.
-pub unsafe fn screen_write_preview(
-    ctx: *mut screen_write_ctx,
-    src: *mut screen,
-    nx: u32,
-    ny: u32,
-) {
+pub unsafe fn screen_write_preview(ctx: *mut screen_write_ctx, src: *mut screen, nx: u32, ny: u32) {
     unsafe {
         let s = (*ctx).s;
         let mut gc: grid_cell = zeroed();
@@ -1187,11 +1165,7 @@ pub unsafe fn screen_write_alignmenttest(ctx: *mut screen_write_ctx) {
 }
 
 /// Insert nx characters.
-pub unsafe fn screen_write_insertcharacter(
-    ctx: *mut screen_write_ctx,
-    mut nx: u32,
-    bg: u32,
-) {
+pub unsafe fn screen_write_insertcharacter(ctx: *mut screen_write_ctx, mut nx: u32, bg: u32) {
     unsafe {
         let s = (*ctx).s;
         let mut ttyctx: tty_ctx = zeroed();
@@ -1230,11 +1204,7 @@ pub unsafe fn screen_write_insertcharacter(
 }
 
 /// Delete nx characters.
-pub unsafe fn screen_write_deletecharacter(
-    ctx: *mut screen_write_ctx,
-    mut nx: u32,
-    bg: u32,
-) {
+pub unsafe fn screen_write_deletecharacter(ctx: *mut screen_write_ctx, mut nx: u32, bg: u32) {
     unsafe {
         let s = (*ctx).s;
         let mut ttyctx: tty_ctx = zeroed();
@@ -1273,11 +1243,7 @@ pub unsafe fn screen_write_deletecharacter(
 }
 
 /// Clear nx characters.
-pub unsafe fn screen_write_clearcharacter(
-    ctx: *mut screen_write_ctx,
-    mut nx: u32,
-    bg: u32,
-) {
+pub unsafe fn screen_write_clearcharacter(ctx: *mut screen_write_ctx, mut nx: u32, bg: u32) {
     unsafe {
         let s = (*ctx).s;
         let mut ttyctx: tty_ctx = zeroed();
@@ -1695,11 +1661,7 @@ pub unsafe fn screen_write_linefeed(ctx: *mut screen_write_ctx, wrapped: i32, bg
 }
 
 /// Scroll up.
-pub unsafe fn screen_write_scrollup(
-    ctx: *mut screen_write_ctx,
-    mut lines: u32,
-    bg: u32,
-) {
+pub unsafe fn screen_write_scrollup(ctx: *mut screen_write_ctx, mut lines: u32, bg: u32) {
     unsafe {
         let s = (*ctx).s;
         let gd = (*s).grid;
@@ -1731,11 +1693,7 @@ pub unsafe fn screen_write_scrollup(
 }
 
 /// Scroll down.
-pub unsafe fn screen_write_scrolldown(
-    ctx: *mut screen_write_ctx,
-    mut lines: u32,
-    bg: u32,
-) {
+pub unsafe fn screen_write_scrolldown(ctx: *mut screen_write_ctx, mut lines: u32, bg: u32) {
     unsafe {
         let s = (*ctx).s;
         let gd = (*s).grid;
@@ -2159,10 +2117,7 @@ pub unsafe fn screen_write_collect_end(ctx: *mut screen_write_ctx) {
 }
 
 /// Write cell data, collecting if necessary.
-pub unsafe fn screen_write_collect_add(
-    ctx: *mut screen_write_ctx,
-    gc: *const grid_cell,
-) {
+pub unsafe fn screen_write_collect_add(ctx: *mut screen_write_ctx, gc: *const grid_cell) {
     unsafe {
         let s = (*ctx).s;
         let mut ci: *mut screen_write_citem = null_mut();
@@ -2366,10 +2321,7 @@ pub unsafe fn screen_write_cell(ctx: *mut screen_write_ctx, gc: *const grid_cell
 }
 
 /// Combine a UTF-8 zero-width character onto the previous if necessary.
-pub unsafe fn screen_write_combine(
-    ctx: *mut screen_write_ctx,
-    gc: *const grid_cell,
-) -> i32 {
+pub unsafe fn screen_write_combine(ctx: *mut screen_write_ctx, gc: *const grid_cell) -> i32 {
     unsafe {
         let s = (*ctx).s;
         let gd = (*s).grid;
@@ -2593,11 +2545,7 @@ pub unsafe fn screen_write_rawstring(
 // TODO
 #[cfg(feature = "sixel")]
 /// Write a SIXEL image.
-unsafe fn screen_write_sixelimage(
-    ctx: *mut screen_write_ctx,
-    si: *mut sixel_image,
-    bg: u32,
-) {
+unsafe fn screen_write_sixelimage(ctx: *mut screen_write_ctx, si: *mut sixel_image, bg: u32) {
     unsafe {
         let mut s = (*ctx).s;
         let mut gd = (*s).grid;

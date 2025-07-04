@@ -122,10 +122,7 @@ unsafe fn cmd_list_keys_print_notes(
     }
 }
 
-unsafe fn cmd_list_keys_get_prefix(
-    args: *mut args,
-    prefix: *mut key_code,
-) -> NonNull<c_char> {
+unsafe fn cmd_list_keys_get_prefix(args: *mut args, prefix: *mut key_code) -> NonNull<c_char> {
     unsafe {
         *prefix = options_get_number_(global_s_options, c"prefix") as _;
         if !args_has_(args, 'P') {

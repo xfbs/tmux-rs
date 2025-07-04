@@ -37,10 +37,7 @@ pub static mut cmd_clear_prompt_history_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-unsafe fn cmd_show_prompt_history_exec(
-    self_: *mut cmd,
-    item: *mut cmdq_item,
-) -> cmd_retval {
+unsafe fn cmd_show_prompt_history_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let typestr = args_get(args, b'T');

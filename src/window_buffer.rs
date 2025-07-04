@@ -307,11 +307,7 @@ pub unsafe fn window_buffer_search(
     }
 }
 
-pub unsafe fn window_buffer_menu(
-    modedata: NonNull<c_void>,
-    c: *mut client,
-    key: key_code,
-) {
+pub unsafe fn window_buffer_menu(modedata: NonNull<c_void>, c: *mut client, key: key_code) {
     unsafe {
         let data: NonNull<window_buffer_modedata> = modedata.cast();
         let wp: *mut window_pane = (*data.as_ptr()).wp;
@@ -508,11 +504,7 @@ pub unsafe fn window_buffer_finish_edit(ed: *mut window_buffer_editdata) {
     }
 }
 
-pub unsafe fn window_buffer_edit_close_cb(
-    buf: *mut c_char,
-    mut len: usize,
-    arg: *mut c_void,
-) {
+pub unsafe fn window_buffer_edit_close_cb(buf: *mut c_char, mut len: usize, arg: *mut c_void) {
     unsafe {
         let ed = arg as *mut window_buffer_editdata;
 

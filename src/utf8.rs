@@ -59,10 +59,7 @@ pub struct utf8_item {
     pub size: c_uchar,
 }
 
-pub unsafe fn utf8_data_cmp(
-    ui1: *const utf8_item,
-    ui2: *const utf8_item,
-) -> std::cmp::Ordering {
+pub unsafe fn utf8_data_cmp(ui1: *const utf8_item, ui2: *const utf8_item) -> std::cmp::Ordering {
     unsafe {
         (*ui1).size.cmp(&(*ui2).size).then_with(|| {
             i32_to_ordering(memcmp(
@@ -83,10 +80,7 @@ RB_GENERATE!(
 );
 static mut utf8_data_tree: utf8_data_tree = rb_initializer();
 
-pub unsafe fn utf8_index_cmp(
-    ui1: *const utf8_item,
-    ui2: *const utf8_item,
-) -> std::cmp::Ordering {
+pub unsafe fn utf8_index_cmp(ui1: *const utf8_item, ui2: *const utf8_item) -> std::cmp::Ordering {
     unsafe { (*ui1).index.cmp(&(*ui2).index) }
 }
 pub type utf8_index_tree = rb_head<utf8_item>;
@@ -508,11 +502,7 @@ pub unsafe fn utf8_strvis(
     }
 }
 
-pub unsafe fn utf8_stravis(
-    dst: *mut *mut c_char,
-    src: *const c_char,
-    flag: vis_flags,
-) -> i32 {
+pub unsafe fn utf8_stravis(dst: *mut *mut c_char, src: *const c_char, flag: vis_flags) -> i32 {
     unsafe {
         let buf = xreallocarray(null_mut(), 4, strlen(src) + 1);
         let len = utf8_strvis(buf.as_ptr().cast(), src, strlen(src), flag);

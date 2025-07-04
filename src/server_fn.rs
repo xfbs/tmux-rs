@@ -438,10 +438,7 @@ pub unsafe fn server_newer_session(s_loop: *mut session, s_out: *mut session) ->
     }
 }
 
-pub unsafe fn server_newer_detached_session(
-    s_loop: *mut session,
-    s_out: *mut session,
-) -> i32 {
+pub unsafe fn server_newer_detached_session(s_loop: *mut session, s_out: *mut session) -> i32 {
     unsafe {
         if (*s_loop).attached != 0 {
             return 0;

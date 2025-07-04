@@ -155,11 +155,7 @@ pub unsafe fn grid_reader_cursor_end_of_line(gr: *mut grid_reader, wrap: i32, al
     }
 }
 
-pub unsafe fn grid_reader_handle_wrap(
-    gr: *mut grid_reader,
-    xx: *mut u32,
-    yy: *mut u32,
-) -> i32 {
+pub unsafe fn grid_reader_handle_wrap(gr: *mut grid_reader, xx: *mut u32, yy: *mut u32) -> i32 {
     unsafe {
         while (*gr).cx > *xx {
             if (*gr).cy == *yy {
@@ -194,10 +190,7 @@ pub unsafe fn grid_reader_in_set(gr: *mut grid_reader, set: *const c_char) -> i3
     }
 }
 
-pub unsafe fn grid_reader_cursor_next_word(
-    gr: *mut grid_reader,
-    separators: *const c_char,
-) {
+pub unsafe fn grid_reader_cursor_next_word(gr: *mut grid_reader, separators: *const c_char) {
     unsafe {
         /* Do not break up wrapped words. */
         let mut xx = if (*grid_get_line((*gr).gd, (*gr).cy))
@@ -245,10 +238,7 @@ pub unsafe fn grid_reader_cursor_next_word(
     }
 }
 
-pub unsafe fn grid_reader_cursor_next_word_end(
-    gr: *mut grid_reader,
-    separators: *const c_char,
-) {
+pub unsafe fn grid_reader_cursor_next_word_end(gr: *mut grid_reader, separators: *const c_char) {
     unsafe {
         /* Do not break up wrapped words. */
         let mut xx = if (*grid_get_line((*gr).gd, (*gr).cy))
@@ -368,10 +358,7 @@ pub unsafe fn grid_reader_cursor_previous_word(
     }
 }
 
-pub unsafe fn grid_reader_cursor_jump(
-    gr: *mut grid_reader,
-    jc: *const utf8_data,
-) -> i32 {
+pub unsafe fn grid_reader_cursor_jump(gr: *mut grid_reader, jc: *const utf8_data) -> i32 {
     unsafe {
         let mut gc = MaybeUninit::<grid_cell>::uninit();
         let gc = gc.as_mut_ptr();
@@ -413,10 +400,7 @@ pub unsafe fn grid_reader_cursor_jump(
     0
 }
 
-pub unsafe fn grid_reader_cursor_jump_back(
-    gr: *mut grid_reader,
-    jc: *mut utf8_data,
-) -> i32 {
+pub unsafe fn grid_reader_cursor_jump_back(gr: *mut grid_reader, jc: *mut utf8_data) -> i32 {
     unsafe {
         let mut gc = MaybeUninit::<grid_cell>::uninit();
         let gc = gc.as_mut_ptr();

@@ -14,8 +14,7 @@
 use crate::*;
 
 pub type popup_close_cb = Option<unsafe fn(_: i32, _: *mut c_void)>;
-pub type popup_finish_edit_cb =
-    Option<unsafe fn(_: *mut c_char, _: usize, _: *mut c_void)>;
+pub type popup_finish_edit_cb = Option<unsafe fn(_: *mut c_char, _: usize, _: *mut c_void)>;
 
 #[repr(i32)]
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -246,11 +245,7 @@ pub unsafe fn popup_check_cb(
 
 // #[cfg(disabled)]
 
-pub unsafe fn popup_draw_cb(
-    c: *mut client,
-    data: *mut c_void,
-    rctx: *mut screen_redraw_ctx,
-) {
+pub unsafe fn popup_draw_cb(c: *mut client, data: *mut c_void, rctx: *mut screen_redraw_ctx) {
     unsafe {
         let pd = data.cast::<popup_data>();
         let tty = &mut (*c).tty;
@@ -461,12 +456,7 @@ pub fn popup_make_pane(pd: *mut popup_data, type_: layout_type) {
 
 // #[cfg(disabled)]
 
-pub fn popup_menu_done(
-    _menu: *mut menu,
-    _choice: u32,
-    key: key_code,
-    data: *mut c_void,
-) {
+pub fn popup_menu_done(_menu: *mut menu, _choice: u32, key: key_code, data: *mut c_void) {
     unsafe {
         let pd = data as *mut popup_data;
         let c = (*pd).c;
@@ -505,11 +495,7 @@ pub fn popup_menu_done(
 
 // #[cfg(disabled)]
 
-pub unsafe fn popup_handle_drag(
-    c: *mut client,
-    pd: *mut popup_data,
-    m: *mut mouse_event,
-) {
+pub unsafe fn popup_handle_drag(c: *mut client, pd: *mut popup_data, m: *mut mouse_event) {
     unsafe {
         let px: u32;
         let py: u32;
@@ -577,11 +563,7 @@ pub unsafe fn popup_handle_drag(
 
 // #[cfg(disabled)]
 
-pub unsafe fn popup_key_cb(
-    c: *mut client,
-    data: *mut c_void,
-    event: *mut key_event,
-) -> i32 {
+pub unsafe fn popup_key_cb(c: *mut client, data: *mut c_void, event: *mut key_event) -> i32 {
     unsafe {
         let pd = data as *mut popup_data;
         let m = &raw mut (*event).m;

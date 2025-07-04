@@ -40,11 +40,7 @@ pub struct cmd_if_shell_data<'a> {
     pub item: *mut cmdq_item,
 }
 
-unsafe fn cmd_if_shell_args_parse(
-    _: *mut args,
-    idx: u32,
-    _: *mut *mut c_char,
-) -> args_parse_type {
+unsafe fn cmd_if_shell_args_parse(_: *mut args, idx: u32, _: *mut *mut c_char) -> args_parse_type {
     if idx == 1 || idx == 2 {
         args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING
     } else {

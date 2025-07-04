@@ -40,10 +40,7 @@ pub unsafe fn file_get_path(c: *mut client, file: *const c_char) -> NonNull<c_ch
     }
 }
 
-pub unsafe fn file_cmp(
-    cf1: *const client_file,
-    cf2: *const client_file,
-) -> std::cmp::Ordering {
+pub unsafe fn file_cmp(cf1: *const client_file, cf2: *const client_file) -> std::cmp::Ordering {
     unsafe { (*cf1).stream.cmp(&(*cf2).stream) }
 }
 

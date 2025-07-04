@@ -387,10 +387,7 @@ pub unsafe fn key_string_lookup_string(mut string: *const c_char) -> key_code {
 }
 
 /// Convert a key code into string format, with prefix if necessary.
-pub unsafe fn key_string_lookup_key(
-    mut key: key_code,
-    with_flags: i32,
-) -> *const c_char {
+pub unsafe fn key_string_lookup_key(mut key: key_code, with_flags: i32) -> *const c_char {
     let sizeof_out: usize = 64;
     static mut out: [c_char; 64] = [0; 64];
     unsafe {

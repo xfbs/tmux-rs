@@ -627,13 +627,7 @@ pub unsafe fn tty_putcode_ii(tty: *mut tty, code: tty_code_code, a: i32, b: i32)
     }
 }
 
-pub unsafe fn tty_putcode_iii(
-    tty: *mut tty,
-    code: tty_code_code,
-    a: i32,
-    b: i32,
-    c: i32,
-) {
+pub unsafe fn tty_putcode_iii(tty: *mut tty, code: tty_code_code, a: i32, b: i32, c: i32) {
     unsafe {
         if a < 0 || b < 0 || c < 0 {
             return;
@@ -828,11 +822,7 @@ pub unsafe fn tty_force_cursor_colour(tty: *mut tty, mut c: i32) {
     }
 }
 
-pub unsafe fn tty_update_cursor(
-    tty: *mut tty,
-    mode: mode_flag,
-    s: *mut screen,
-) -> mode_flag {
+pub unsafe fn tty_update_cursor(tty: *mut tty, mode: mode_flag, s: *mut screen) -> mode_flag {
     unsafe {
         let mut cstyle: screen_cursor_style;
         let mut ccolour: i32 = 0;
@@ -1668,10 +1658,7 @@ pub unsafe fn tty_draw_pane(tty: *mut tty, ctx: *const tty_ctx, py: u32) {
     }
 }
 
-pub unsafe fn tty_check_codeset(
-    tty: *mut tty,
-    gc: *const grid_cell,
-) -> *const grid_cell {
+pub unsafe fn tty_check_codeset(tty: *mut tty, gc: *const grid_cell) -> *const grid_cell {
     static mut new: grid_cell = unsafe { zeroed() };
     unsafe {
         /* Characters less than 0x7f are always fine, no matter what. */
@@ -2081,10 +2068,7 @@ pub unsafe fn tty_client_ready(ctx: *const tty_ctx, c: *mut client) -> i32 {
     }
 }
 
-pub unsafe fn tty_write(
-    cmdfn: Option<unsafe fn(*mut tty, *const tty_ctx)>,
-    ctx: *mut tty_ctx,
-) {
+pub unsafe fn tty_write(cmdfn: Option<unsafe fn(*mut tty, *const tty_ctx)>, ctx: *mut tty_ctx) {
     unsafe {
         let Some(set_client_cb) = (*ctx).set_client_cb else {
             return;
@@ -2977,12 +2961,7 @@ pub unsafe fn tty_region_off(tty: *mut tty) {
 }
 
 /// Set region inside pane.
-pub unsafe fn tty_region_pane(
-    tty: *mut tty,
-    ctx: *const tty_ctx,
-    rupper: u32,
-    rlower: u32,
-) {
+pub unsafe fn tty_region_pane(tty: *mut tty, ctx: *const tty_ctx, rupper: u32, rlower: u32) {
     unsafe {
         tty_region(
             tty,
@@ -3084,12 +3063,7 @@ pub unsafe fn tty_margin(tty: *mut tty, rleft: u32, rright: u32) {
  * printed.
  */
 
-pub unsafe fn tty_cursor_pane_unless_wrap(
-    tty: *mut tty,
-    ctx: *const tty_ctx,
-    cx: u32,
-    cy: u32,
-) {
+pub unsafe fn tty_cursor_pane_unless_wrap(tty: *mut tty, ctx: *const tty_ctx, cx: u32, cy: u32) {
     unsafe {
         if !(*ctx).wrapped != 0
             || !tty_full_width(tty, ctx)
@@ -3481,11 +3455,7 @@ pub unsafe fn tty_colours(tty: *mut tty, gc: *const grid_cell) {
     }
 }
 
-pub unsafe fn tty_check_fg(
-    tty: *const tty,
-    palette: *const colour_palette,
-    gc: *mut grid_cell,
-) {
+pub unsafe fn tty_check_fg(tty: *const tty, palette: *const colour_palette, gc: *mut grid_cell) {
     unsafe {
         let mut colours: u32 = 0;
         let mut c: i32 = 0;
@@ -3549,11 +3519,7 @@ pub unsafe fn tty_check_fg(
     }
 }
 
-pub unsafe fn tty_check_bg(
-    tty: *const tty,
-    palette: *const colour_palette,
-    gc: *mut grid_cell,
-) {
+pub unsafe fn tty_check_bg(tty: *const tty, palette: *const colour_palette, gc: *mut grid_cell) {
     unsafe {
         let mut colours: u32 = 0;
         let mut c: i32 = 0;
@@ -3609,11 +3575,7 @@ pub unsafe fn tty_check_bg(
     }
 }
 
-pub unsafe fn tty_check_us(
-    tty: *const tty,
-    palette: *const colour_palette,
-    gc: *mut grid_cell,
-) {
+pub unsafe fn tty_check_us(tty: *const tty, palette: *const colour_palette, gc: *mut grid_cell) {
     unsafe {
         let mut c = 0;
 

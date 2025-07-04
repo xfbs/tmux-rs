@@ -43,10 +43,7 @@ pub unsafe fn session_cmp(s1: *const session, s2: *const session) -> Ordering {
     unsafe { i32_to_ordering(libc::strcmp((*s1).name, (*s2).name)) }
 }
 
-pub unsafe fn session_group_cmp(
-    s1: *const session_group,
-    s2: *const session_group,
-) -> Ordering {
+pub unsafe fn session_group_cmp(s1: *const session_group, s2: *const session_group) -> Ordering {
     unsafe { i32_to_ordering(libc::strcmp((*s1).name, (*s2).name)) }
 }
 

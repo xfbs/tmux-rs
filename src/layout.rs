@@ -94,11 +94,7 @@ pub unsafe fn layout_print_cell(lc: *mut layout_cell, hdr: *const c_char, n: u32
     }
 }
 
-pub unsafe fn layout_search_by_border(
-    lc: *mut layout_cell,
-    x: u32,
-    y: u32,
-) -> *mut layout_cell {
+pub unsafe fn layout_search_by_border(lc: *mut layout_cell, x: u32, y: u32) -> *mut layout_cell {
     unsafe {
         let mut last: *mut layout_cell = null_mut();
 
@@ -140,13 +136,7 @@ pub unsafe fn layout_search_by_border(
     }
 }
 
-pub unsafe fn layout_set_size(
-    lc: *mut layout_cell,
-    sx: u32,
-    sy: u32,
-    xoff: u32,
-    yoff: u32,
-) {
+pub unsafe fn layout_set_size(lc: *mut layout_cell, sx: u32, sy: u32, xoff: u32, yoff: u32) {
     unsafe {
         (*lc).sx = sx;
         (*lc).sy = sy;
@@ -310,11 +300,7 @@ pub unsafe fn layout_count_cells(lc: *mut layout_cell) -> u32 {
 }
 
 /// Calculate how much size is available to be removed from a cell.
-pub unsafe fn layout_resize_check(
-    w: *mut window,
-    lc: *mut layout_cell,
-    type_: layout_type,
-) -> u32 {
+pub unsafe fn layout_resize_check(w: *mut window, lc: *mut layout_cell, type_: layout_type) -> u32 {
     unsafe {
         let mut available: u32;
         let mut minimum: u32;
@@ -543,11 +529,7 @@ pub unsafe fn layout_resize(w: *mut window, sx: c_uint, sy: c_uint) {
 }
 
 /// Resize a pane to an absolute size.
-pub unsafe fn layout_resize_pane_to(
-    wp: *mut window_pane,
-    type_: layout_type,
-    new_size: u32,
-) {
+pub unsafe fn layout_resize_pane_to(wp: *mut window_pane, type_: layout_type, new_size: u32) {
     unsafe {
         let mut lc = (*wp).layout_cell;
         let mut lcparent;
@@ -735,11 +717,7 @@ pub unsafe fn layout_resize_pane_shrink(
 }
 
 /// Assign window pane to newly split cell.
-pub unsafe fn layout_assign_pane(
-    lc: *mut layout_cell,
-    wp: *mut window_pane,
-    do_not_resize: c_int,
-) {
+pub unsafe fn layout_assign_pane(lc: *mut layout_cell, wp: *mut window_pane, do_not_resize: c_int) {
     unsafe {
         layout_make_leaf(lc, wp);
         if do_not_resize != 0 {

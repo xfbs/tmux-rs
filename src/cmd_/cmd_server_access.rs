@@ -29,10 +29,7 @@ pub static mut cmd_server_access_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-unsafe fn cmd_server_access_deny(
-    item: *mut cmdq_item,
-    pw: *mut libc::passwd,
-) -> cmd_retval {
+unsafe fn cmd_server_access_deny(item: *mut cmdq_item, pw: *mut libc::passwd) -> cmd_retval {
     unsafe {
         let user = server_acl_user_find((*pw).pw_uid);
         if user.is_null() {

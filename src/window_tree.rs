@@ -198,9 +198,7 @@ unsafe fn window_tree_pull_item(
     }
 }
 
-unsafe fn window_tree_add_item(
-    data: NonNull<window_tree_modedata>,
-) -> *mut window_tree_itemdata {
+unsafe fn window_tree_add_item(data: NonNull<window_tree_modedata>) -> *mut window_tree_itemdata {
     unsafe {
         let data = data.as_ptr();
         (*data).item_list =
@@ -1302,10 +1300,7 @@ unsafe fn window_tree_command_each(
     }
 }
 
-unsafe fn window_tree_command_done(
-    _: *mut cmdq_item,
-    modedata: *mut c_void,
-) -> cmd_retval {
+unsafe fn window_tree_command_done(_: *mut cmdq_item, modedata: *mut c_void) -> cmd_retval {
     unsafe {
         let data: NonNull<window_tree_modedata> = NonNull::new(modedata.cast()).unwrap();
 

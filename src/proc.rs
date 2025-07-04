@@ -245,10 +245,7 @@ pub unsafe fn proc_start(name: &CStr) -> *mut tmuxproc {
     }
 }
 
-pub unsafe fn proc_loop(
-    tp: *mut tmuxproc,
-    loopcb: Option<unsafe fn() -> i32>,
-) {
+pub unsafe fn proc_loop(tp: *mut tmuxproc, loopcb: Option<unsafe fn() -> i32>) {
     unsafe {
         log_debug!("{} loop enter", _s((*tp).name));
         match loopcb {
@@ -284,10 +281,7 @@ pub unsafe fn proc_exit(tp: *mut tmuxproc) {
     }
 }
 
-pub unsafe fn proc_set_signals(
-    tp: *mut tmuxproc,
-    signalcb: Option<unsafe fn(i32)>,
-) {
+pub unsafe fn proc_set_signals(tp: *mut tmuxproc, signalcb: Option<unsafe fn(i32)>) {
     unsafe {
         let mut sa: sigaction = zeroed();
 

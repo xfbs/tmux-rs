@@ -26,12 +26,7 @@ use crate::compat::{
 };
 
 pub type mode_tree_build_cb = Option<
-    unsafe fn(
-        _: NonNull<c_void>,
-        _: *mut mode_tree_sort_criteria,
-        _: *mut u64,
-        _: *const c_char,
-    ),
+    unsafe fn(_: NonNull<c_void>, _: *mut mode_tree_sort_criteria, _: *mut u64, _: *const c_char),
 >;
 pub type mode_tree_draw_cb = Option<
     unsafe fn(
@@ -44,14 +39,12 @@ pub type mode_tree_draw_cb = Option<
 >;
 pub type mode_tree_search_cb =
     Option<unsafe fn(_: *mut c_void, _: NonNull<c_void>, _: *const c_char) -> bool>;
-pub type mode_tree_menu_cb =
-    Option<unsafe fn(_: NonNull<c_void>, _: *mut client, _: key_code)>;
+pub type mode_tree_menu_cb = Option<unsafe fn(_: NonNull<c_void>, _: *mut client, _: key_code)>;
 pub type mode_tree_height_cb = Option<unsafe fn(_: *mut c_void, _: c_uint) -> c_uint>;
 pub type mode_tree_key_cb =
     Option<unsafe fn(_: NonNull<c_void>, _: NonNull<c_void>, _: c_uint) -> key_code>;
-pub type mode_tree_each_cb = Option<
-    unsafe fn(_: NonNull<c_void>, _: NonNull<c_void>, _: *mut client, _: key_code),
->;
+pub type mode_tree_each_cb =
+    Option<unsafe fn(_: NonNull<c_void>, _: NonNull<c_void>, _: *mut client, _: key_code)>;
 
 #[repr(C)]
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -154,10 +147,7 @@ static mode_tree_menu_items: [menu_item; 5] = [
     menu_item::new(None, KEYC_NONE, null_mut()),
 ];
 
-unsafe fn mode_tree_find_item(
-    mtl: *mut mode_tree_list,
-    tag: u64,
-) -> *mut mode_tree_item {
+unsafe fn mode_tree_find_item(mtl: *mut mode_tree_list, tag: u64) -> *mut mode_tree_item {
     unsafe {
         for mti in tailq_foreach(mtl).map(NonNull::as_ptr) {
             if (*mti).tag == tag {
@@ -213,11 +203,7 @@ unsafe fn mode_tree_clear_lines(mtd: *mut mode_tree_data) {
     }
 }
 
-unsafe fn mode_tree_build_lines(
-    mtd: *mut mode_tree_data,
-    mtl: *mut mode_tree_list,
-    depth: u32,
-) {
+unsafe fn mode_tree_build_lines(mtd: *mut mode_tree_data, mtl: *mut mode_tree_list, depth: u32) {
     unsafe {
         let mut flat = 1;
 
@@ -349,11 +335,7 @@ pub unsafe fn mode_tree_collapse_current(mtd: *mut mode_tree_data) {
     }
 }
 
-pub unsafe fn mode_tree_get_tag(
-    mtd: *mut mode_tree_data,
-    tag: u64,
-    found: *mut u32,
-) -> i32 {
+pub unsafe fn mode_tree_get_tag(mtd: *mut mode_tree_data, tag: u64, found: *mut u32) -> i32 {
     unsafe {
         let mut i = 0;
         for j in 0..(*mtd).line_size {
@@ -954,9 +936,7 @@ pub unsafe fn mode_tree_draw(mtd: *mut mode_tree_data) {
     }
 }
 
-pub unsafe fn mode_tree_search_backward(
-    mtd: *mut mode_tree_data,
-) -> *mut mode_tree_item {
+pub unsafe fn mode_tree_search_backward(mtd: *mut mode_tree_data) -> *mut mode_tree_item {
     unsafe {
         if (*mtd).search.is_null() {
             return null_mut();

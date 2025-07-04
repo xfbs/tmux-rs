@@ -80,10 +80,7 @@ pub unsafe fn environ_copy(srcenv: *mut environ, dstenv: *mut environ) {
     }
 }
 
-pub unsafe fn environ_find(
-    env: *mut environ,
-    name: *const c_char,
-) -> *mut environ_entry {
+pub unsafe fn environ_find(env: *mut environ, name: *const c_char) -> *mut environ_entry {
     let mut envent: MaybeUninit<environ_entry> = MaybeUninit::uninit();
     let envent = envent.as_mut_ptr();
 

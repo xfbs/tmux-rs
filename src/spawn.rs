@@ -87,10 +87,7 @@ pub unsafe fn spawn_log(from: *const c_char, sc: *mut spawn_context) {
     }
 }
 
-pub unsafe fn spawn_window(
-    sc: *mut spawn_context,
-    cause: *mut *mut c_char,
-) -> *mut winlink {
+pub unsafe fn spawn_window(sc: *mut spawn_context, cause: *mut *mut c_char) -> *mut winlink {
     let __func__ = c"spawn_window".as_ptr();
     unsafe {
         let item = (*sc).item;
@@ -243,10 +240,7 @@ pub unsafe fn spawn_window(
     }
 }
 
-pub unsafe fn spawn_pane(
-    sc: *mut spawn_context,
-    cause: *mut *mut c_char,
-) -> *mut window_pane {
+pub unsafe fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut c_char) -> *mut window_pane {
     let __func__ = c"spawn_pane".as_ptr();
     unsafe {
         let item = (*sc).item;

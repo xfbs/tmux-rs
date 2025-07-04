@@ -231,11 +231,7 @@ pub unsafe fn menu_check_cb(
     }
 }
 
-pub unsafe fn menu_draw_cb(
-    c: *mut client,
-    data: *mut c_void,
-    _rctx: *mut screen_redraw_ctx,
-) {
+pub unsafe fn menu_draw_cb(c: *mut client, data: *mut c_void, _rctx: *mut screen_redraw_ctx) {
     unsafe {
         let md = data as *mut menu_data;
         let tty = &raw mut (*c).tty;
@@ -306,11 +302,7 @@ pub unsafe fn menu_free_cb(_c: *mut client, data: *mut c_void) {
     }
 }
 
-pub unsafe fn menu_key_cb(
-    c: *mut client,
-    data: *mut c_void,
-    mut event: *mut key_event,
-) -> i32 {
+pub unsafe fn menu_key_cb(c: *mut client, data: *mut c_void, mut event: *mut key_event) -> i32 {
     unsafe {
         let md = data as *mut menu_data;
         let menu = (*md).menu;

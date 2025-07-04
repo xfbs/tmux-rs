@@ -109,10 +109,7 @@ pub fn OPTIONS_IS_ARRAY(o: *const options_entry) -> bool {
 
 RB_GENERATE!(options_tree, options_entry, entry, discr_entry, options_cmp);
 
-pub unsafe fn options_cmp(
-    lhs: *const options_entry,
-    rhs: *const options_entry,
-) -> Ordering {
+pub unsafe fn options_cmp(lhs: *const options_entry, rhs: *const options_entry) -> Ordering {
     unsafe { i32_to_ordering(libc::strcmp((*lhs).name, (*rhs).name)) }
 }
 
@@ -247,10 +244,7 @@ pub unsafe fn options_next(o: *mut options_entry) -> *mut options_entry {
     unsafe { rb_next(o) }
 }
 
-pub unsafe fn options_get_only(
-    oo: *mut options,
-    name: *const c_char,
-) -> *mut options_entry {
+pub unsafe fn options_get_only(oo: *mut options, name: *const c_char) -> *mut options_entry {
     unsafe {
         let mut o = options_entry {
             name,
@@ -267,10 +261,7 @@ pub unsafe fn options_get_only(
     }
 }
 
-pub unsafe fn options_get(
-    mut oo: *mut options,
-    name: *const c_char,
-) -> *mut options_entry {
+pub unsafe fn options_get(mut oo: *mut options, name: *const c_char) -> *mut options_entry {
     unsafe {
         let mut o = options_get_only(oo, name);
         while o.is_null() {
@@ -348,9 +339,7 @@ pub unsafe fn options_default(
     }
 }
 
-pub unsafe fn options_default_to_string(
-    oe: *const options_table_entry,
-) -> NonNull<c_char> {
+pub unsafe fn options_default_to_string(oe: *const options_table_entry) -> NonNull<c_char> {
     unsafe {
         match (*oe).type_ {
             options_table_type::OPTIONS_TABLE_STRING
@@ -633,9 +622,7 @@ pub unsafe fn options_array_item_index(a: *mut options_array_item) -> u32 {
     unsafe { (*a).index }
 }
 
-pub unsafe fn options_array_item_value(
-    a: *mut options_array_item,
-) -> *mut options_value {
+pub unsafe fn options_array_item_value(a: *mut options_array_item) -> *mut options_value {
     unsafe { &raw mut (*a).value }
 }
 
@@ -647,11 +634,7 @@ pub unsafe fn options_is_string(o: *mut options_entry) -> i32 {
     unsafe { OPTIONS_IS_STRING(o) as i32 }
 }
 
-pub unsafe fn options_to_string(
-    o: *mut options_entry,
-    idx: i32,
-    numeric: i32,
-) -> *mut c_char {
+pub unsafe fn options_to_string(o: *mut options_entry, idx: i32, numeric: i32) -> *mut c_char {
     unsafe {
         if OPTIONS_IS_ARRAY(o) {
             if idx == -1 {
@@ -751,11 +734,7 @@ pub unsafe fn options_parse_get(
     }
 }
 
-pub unsafe fn options_match(
-    s: *const c_char,
-    idx: *mut i32,
-    ambiguous: *mut i32,
-) -> *mut c_char {
+pub unsafe fn options_match(s: *const c_char, idx: *mut i32, ambiguous: *mut i32) -> *mut c_char {
     unsafe {
         let parsed = options_parse(s, idx);
         if parsed.is_null() {
@@ -824,10 +803,7 @@ pub unsafe fn options_match_get(
     }
 }
 
-pub unsafe fn options_get_string(
-    oo: *mut options,
-    name: *const c_char,
-) -> *const c_char {
+pub unsafe fn options_get_string(oo: *mut options, name: *const c_char) -> *const c_char {
     unsafe {
         let o = options_get(oo, name);
         if o.is_null() {

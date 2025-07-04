@@ -64,10 +64,7 @@ RB_GENERATE!(
     wait_channel_cmp
 );
 
-pub unsafe fn wait_channel_cmp(
-    wc1: *const wait_channel,
-    wc2: *const wait_channel,
-) -> Ordering {
+pub unsafe fn wait_channel_cmp(wc1: *const wait_channel, wc2: *const wait_channel) -> Ordering {
     unsafe { i32_to_ordering(libc::strcmp((*wc1).name, (*wc2).name)) }
 }
 

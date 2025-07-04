@@ -50,11 +50,7 @@ pub unsafe fn style_set_range_string(sy: *mut style, s: *const c_char) {
     }
 }
 
-pub unsafe fn style_parse(
-    sy: *mut style,
-    base: *const grid_cell,
-    mut in_: *const c_char,
-) -> i32 {
+pub unsafe fn style_parse(sy: *mut style, base: *const grid_cell, mut in_: *const c_char) -> i32 {
     unsafe {
         let delimiters = c" ,\n".as_ptr();
         let mut errstr: *mut c_char = null_mut();

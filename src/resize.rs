@@ -18,13 +18,7 @@ use libc::sscanf;
 
 use crate::compat::{queue::tailq_foreach, tree::rb_foreach};
 
-pub unsafe fn resize_window(
-    w: *mut window,
-    mut sx: u32,
-    mut sy: u32,
-    xpixel: i32,
-    ypixel: i32,
-) {
+pub unsafe fn resize_window(w: *mut window, mut sx: u32, mut sy: u32, xpixel: i32, ypixel: i32) {
     unsafe {
         let zoomed = 0;
 
@@ -130,13 +124,7 @@ pub unsafe fn clients_calculate_size(
     s: *mut session,
     w: *mut window,
     skip_client: Option<
-        unsafe fn(
-            *mut client,
-            window_size_option,
-            i32,
-            *mut session,
-            *mut window,
-        ) -> i32,
+        unsafe fn(*mut client, window_size_option, i32, *mut session, *mut window) -> i32,
     >,
     sx: *mut u32,
     sy: *mut u32,

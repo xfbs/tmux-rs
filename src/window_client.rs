@@ -276,11 +276,7 @@ pub unsafe fn window_client_draw(
     }
 }
 
-pub unsafe fn window_client_menu(
-    modedata: NonNull<c_void>,
-    c: *mut client,
-    key: key_code,
-) {
+pub unsafe fn window_client_menu(modedata: NonNull<c_void>, c: *mut client, key: key_code) {
     unsafe {
         let data: NonNull<window_client_modedata> = modedata.cast();
         let wp: *mut window_pane = (*data.as_ptr()).wp;

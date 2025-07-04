@@ -360,11 +360,7 @@ static tty_features: [&tty_feature; 20] = [
     &tty_feature_usstyle,
 ];
 
-pub unsafe fn tty_add_features(
-    feat: *mut i32,
-    s: *const c_char,
-    separators: *const c_char,
-) {
+pub unsafe fn tty_add_features(feat: *mut i32, s: *const c_char, separators: *const c_char) {
     unsafe {
         log_debug!("adding terminal features {}", _s(s));
 

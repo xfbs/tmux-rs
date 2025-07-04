@@ -51,11 +51,7 @@ pub static mut message_log: message_list = unsafe { zeroed() };
 
 pub static mut current_time: time_t = unsafe { zeroed() };
 
-pub unsafe fn server_set_marked(
-    s: *mut session,
-    wl: *mut winlink,
-    wp: *mut window_pane,
-) {
+pub unsafe fn server_set_marked(s: *mut session, wl: *mut winlink, wp: *mut window_pane) {
     unsafe {
         cmd_find_clear_state(&raw mut marked_pane, 0);
         marked_pane.s = s;
@@ -71,11 +67,7 @@ pub unsafe fn server_clear_marked() {
     }
 }
 
-pub unsafe fn server_is_marked(
-    s: *mut session,
-    wl: *mut winlink,
-    wp: *mut window_pane,
-) -> bool {
+pub unsafe fn server_is_marked(s: *mut session, wl: *mut winlink, wp: *mut window_pane) -> bool {
     if s.is_null() || wl.is_null() || wp.is_null() {
         return false;
     }
@@ -95,10 +87,7 @@ pub unsafe fn server_check_marked() -> bool {
     unsafe { cmd_find_valid_state(&raw mut marked_pane) }
 }
 
-pub unsafe fn server_create_socket(
-    flags: client_flag,
-    cause: *mut *mut c_char,
-) -> c_int {
+pub unsafe fn server_create_socket(flags: client_flag, cause: *mut *mut c_char) -> c_int {
     unsafe {
         'fail: {
             let mut sa: sockaddr_un = zeroed();

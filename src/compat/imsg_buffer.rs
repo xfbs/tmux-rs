@@ -212,12 +212,7 @@ pub unsafe fn ibuf_seek(buf: *mut ibuf, pos: usize, len: usize) -> *mut c_void {
     }
 }
 
-pub unsafe fn ibuf_set(
-    buf: *mut ibuf,
-    pos: usize,
-    data: *const c_void,
-    len: usize,
-) -> c_int {
+pub unsafe fn ibuf_set(buf: *mut ibuf, pos: usize, data: *const c_void, len: usize) -> c_int {
     unsafe {
         let b = ibuf_seek(buf, pos, len);
         if b.is_null() {

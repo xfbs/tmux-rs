@@ -227,11 +227,7 @@ pub unsafe extern "C-unwind" fn input_key_build() {
 }
 
 /// Translate a key code into an output key sequence for a pane.
-pub unsafe fn input_key_pane(
-    wp: *mut window_pane,
-    key: key_code,
-    m: *mut mouse_event,
-) -> i32 {
+pub unsafe fn input_key_pane(wp: *mut window_pane, key: key_code, m: *mut mouse_event) -> i32 {
     unsafe {
         if log_get_level() != 0 {
             // log_debug( c"writing key 0x%llx (%s) to %%%u".as_ptr(), key, key_string_lookup_key(key, 1), (*wp).id,);
@@ -422,11 +418,7 @@ pub unsafe fn input_key_mode1(bev: *mut bufferevent, key: key_code) -> i32 {
 }
 
 /// Translate a key code into an output key sequence.
-pub unsafe fn input_key(
-    s: *mut screen,
-    bev: *mut bufferevent,
-    mut key: key_code,
-) -> i32 {
+pub unsafe fn input_key(s: *mut screen, bev: *mut bufferevent, mut key: key_code) -> i32 {
     let __func__ = c"input_key".as_ptr();
     unsafe {
         let mut ike: *mut input_key_entry = null_mut();

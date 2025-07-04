@@ -136,10 +136,7 @@ pub const CONTROL_MAXIMUM_AGE: u64 = 300000;
 pub const CONTROL_IGNORE_FLAGS: client_flag =
     client_flag::CONTROL_NOOUTPUT.union(CLIENT_UNATTACHEDFLAGS);
 
-pub unsafe fn control_pane_cmp(
-    cp1: *const control_pane,
-    cp2: *const control_pane,
-) -> Ordering {
+pub unsafe fn control_pane_cmp(cp1: *const control_pane, cp2: *const control_pane) -> Ordering {
     unsafe { (*cp1).pane.cmp(&(*cp2).pane) }
 }
 RB_GENERATE!(
@@ -229,10 +226,7 @@ pub unsafe fn control_free_block(cs: *mut control_state, cb: *mut control_block)
     }
 }
 
-pub unsafe fn control_get_pane(
-    c: *mut client,
-    wp: *mut window_pane,
-) -> *mut control_pane {
+pub unsafe fn control_get_pane(c: *mut client, wp: *mut window_pane) -> *mut control_pane {
     unsafe {
         let cs = (*c).control_state;
         let mut cp = MaybeUninit::<control_pane>::uninit();
@@ -241,10 +235,7 @@ pub unsafe fn control_get_pane(
     }
 }
 
-pub unsafe fn control_add_pane(
-    c: *mut client,
-    wp: *mut window_pane,
-) -> NonNull<control_pane> {
+pub unsafe fn control_add_pane(c: *mut client, wp: *mut window_pane) -> NonNull<control_pane> {
     unsafe {
         let cs = (*c).control_state;
 
@@ -275,10 +266,7 @@ pub unsafe fn control_discard_pane(c: *mut client, cp: *mut control_pane) {
     }
 }
 
-pub unsafe fn control_window_pane(
-    c: *mut client,
-    pane: u32,
-) -> Option<NonNull<window_pane>> {
+pub unsafe fn control_window_pane(c: *mut client, pane: u32) -> Option<NonNull<window_pane>> {
     unsafe {
         if (*c).session.is_null() {
             return None;
@@ -699,11 +687,7 @@ pub unsafe fn control_write_data(c: *mut client, message: *mut evbuffer) {
     }
 }
 
-pub unsafe fn control_write_pending(
-    c: *mut client,
-    cp: *mut control_pane,
-    limit: usize,
-) -> i32 {
+pub unsafe fn control_write_pending(c: *mut client, cp: *mut control_pane, limit: usize) -> i32 {
     unsafe {
         let cs = (*c).control_state;
         let mut message: *mut evbuffer = null_mut();

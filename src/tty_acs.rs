@@ -253,11 +253,7 @@ pub unsafe fn tty_acs_get(tty: *mut tty, ch: u8) -> *const c_char {
 
 /* Reverse UTF-8 into ACS. */
 
-pub unsafe fn tty_acs_reverse_get(
-    tty: *const tty,
-    s: *const c_char,
-    slen: usize,
-) -> i32 {
+pub unsafe fn tty_acs_reverse_get(tty: *const tty, s: *const c_char, slen: usize) -> i32 {
     unsafe {
         let table;
         let items;

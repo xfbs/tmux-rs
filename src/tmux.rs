@@ -204,10 +204,7 @@ unsafe fn expand_paths(
     }
 }
 
-unsafe fn make_label(
-    mut label: *const c_char,
-    cause: *mut *mut c_char,
-) -> *const c_char {
+unsafe fn make_label(mut label: *const c_char, cause: *mut *mut c_char) -> *const c_char {
     let mut paths: *mut *mut c_char = null_mut();
     let mut path: *mut c_char = null_mut();
     let mut base: *mut c_char = null_mut();

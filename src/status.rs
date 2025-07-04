@@ -793,11 +793,7 @@ pub unsafe fn status_prompt_clear(c: *mut client) {
 }
 
 /// Update status line prompt with a new prompt string.
-pub unsafe fn status_prompt_update(
-    c: *mut client,
-    msg: *const c_char,
-    input: *const c_char,
-) {
+pub unsafe fn status_prompt_update(c: *mut client, msg: *const c_char, input: *const c_char) {
     unsafe {
         let ft = format_create(c, null_mut(), FORMAT_NONE, format_flags::empty());
         format_defaults(ft, c, None, None, None);
@@ -1373,11 +1369,7 @@ unsafe fn status_prompt_forward_word(
 }
 
 /// Prompt forward to the next end of a word.
-unsafe fn status_prompt_end_word(
-    c: *mut client,
-    size: usize,
-    separators: *const c_char,
-) {
+unsafe fn status_prompt_end_word(c: *mut client, size: usize, separators: *const c_char) {
     unsafe {
         let mut idx = (*c).prompt_index;
         // int word_is_separators;
@@ -1919,11 +1911,7 @@ unsafe fn status_prompt_add_history(line: *const c_char, type_: u32) {
 }
 
 /// Add to completion list.
-unsafe fn status_prompt_add_list(
-    list: *mut *mut *mut c_char,
-    size: *mut u32,
-    s: *const c_char,
-) {
+unsafe fn status_prompt_add_list(list: *mut *mut *mut c_char, size: *mut u32, s: *const c_char) {
     unsafe {
         for i in 0..*size {
             if libc::strcmp(*(*list).add(i as usize), s) == 0 {
@@ -2014,10 +2002,7 @@ unsafe fn status_prompt_complete_list(
 }
 
 /// Find longest prefix.
-unsafe fn status_prompt_complete_prefix(
-    list: *mut *mut c_char,
-    size: u32,
-) -> *mut c_char {
+unsafe fn status_prompt_complete_prefix(list: *mut *mut c_char, size: u32) -> *mut c_char {
     unsafe {
         if list.is_null() || size == 0 {
             return null_mut();

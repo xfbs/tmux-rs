@@ -1161,11 +1161,7 @@ unsafe fn window_customize_draw(
     }
 }
 
-unsafe fn window_customize_menu(
-    modedata: NonNull<c_void>,
-    c: *mut client,
-    key: key_code,
-) {
+unsafe fn window_customize_menu(modedata: NonNull<c_void>, c: *mut client, key: key_code) {
     unsafe {
         let data: NonNull<window_customize_modedata> = modedata.cast();
         let wp: *mut window_pane = (*data.as_ptr()).wp;
@@ -1264,11 +1260,7 @@ pub unsafe fn window_customize_free(wme: NonNull<window_mode_entry>) {
     }
 }
 
-pub unsafe fn window_customize_resize(
-    wme: NonNull<window_mode_entry>,
-    sx: u32,
-    sy: u32,
-) {
+pub unsafe fn window_customize_resize(wme: NonNull<window_mode_entry>, sx: u32, sy: u32) {
     unsafe {
         let data: *mut window_customize_modedata = (*wme.as_ptr()).data.cast();
 

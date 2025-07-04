@@ -851,11 +851,7 @@ unsafe fn format_draw_absolute_centre(
 
 // Get width and count of any leading #s.
 
-unsafe fn format_leading_hashes(
-    cp: *const c_char,
-    n: *mut u32,
-    width: *mut u32,
-) -> *const c_char {
+unsafe fn format_leading_hashes(cp: *const c_char, n: *mut u32, width: *mut u32) -> *const c_char {
     unsafe {
         *n = 0;
         while *cp.add(*n as usize) == b'#' as i8 {
@@ -888,12 +884,7 @@ unsafe fn format_leading_hashes(
 }
 
 /// Draw multiple characters.
-unsafe fn format_draw_many(
-    ctx: *mut screen_write_ctx,
-    sy: *mut style,
-    ch: c_char,
-    n: u32,
-) {
+unsafe fn format_draw_many(ctx: *mut screen_write_ctx, sy: *mut style, ch: c_char, n: u32) {
     unsafe {
         let mut i: u32;
 

@@ -99,17 +99,11 @@ RB_GENERATE!(
 RB_GENERATE!(key_tables, key_table, entry, discr_entry, key_table_cmp);
 static mut key_tables: key_tables = rb_initializer();
 
-pub unsafe fn key_table_cmp(
-    table1: *const key_table,
-    table2: *const key_table,
-) -> Ordering {
+pub unsafe fn key_table_cmp(table1: *const key_table, table2: *const key_table) -> Ordering {
     unsafe { i32_to_ordering(strcmp((*table1).name, (*table2).name)) }
 }
 
-pub unsafe fn key_bindings_cmp(
-    bd1: *const key_binding,
-    bd2: *const key_binding,
-) -> Ordering {
+pub unsafe fn key_bindings_cmp(bd1: *const key_binding, bd2: *const key_binding) -> Ordering {
     unsafe { (*bd1).key.cmp(&(*bd2).key) }
 }
 
@@ -121,10 +115,7 @@ pub unsafe fn key_bindings_free(bd: *mut key_binding) {
     }
 }
 
-pub unsafe fn key_bindings_get_table(
-    name: *const c_char,
-    create: i32,
-) -> *mut key_table {
+pub unsafe fn key_bindings_get_table(name: *const c_char, create: i32) -> *mut key_table {
     unsafe {
         let mut table_find = MaybeUninit::<key_table>::uninit();
         let table_find = table_find.as_mut_ptr();
@@ -177,10 +168,7 @@ pub unsafe fn key_bindings_unref_table(table: *mut key_table) {
     }
 }
 
-pub unsafe fn key_bindings_get(
-    table: NonNull<key_table>,
-    key: key_code,
-) -> *mut key_binding {
+pub unsafe fn key_bindings_get(table: NonNull<key_table>, key: key_code) -> *mut key_binding {
     unsafe {
         let mut bd = MaybeUninit::<key_binding>::uninit();
         let bd = bd.as_mut_ptr();
@@ -190,10 +178,7 @@ pub unsafe fn key_bindings_get(
     }
 }
 
-pub unsafe fn key_bindings_get_default(
-    table: *mut key_table,
-    key: key_code,
-) -> *mut key_binding {
+pub unsafe fn key_bindings_get_default(table: *mut key_table, key: key_code) -> *mut key_binding {
     unsafe {
         let mut bd = MaybeUninit::<key_binding>::uninit();
         let bd = bd.as_mut_ptr();
@@ -207,10 +192,7 @@ pub unsafe fn key_bindings_first(table: *mut key_table) -> *mut key_binding {
     unsafe { rb_min(&raw mut (*table).key_bindings) }
 }
 
-pub unsafe fn key_bindings_next(
-    _table: *mut key_table,
-    bd: *mut key_binding,
-) -> *mut key_binding {
+pub unsafe fn key_bindings_next(_table: *mut key_table, bd: *mut key_binding) -> *mut key_binding {
     unsafe { rb_next(bd) }
 }
 
@@ -357,10 +339,7 @@ pub unsafe fn key_bindings_reset_table(name: *const c_char) {
     }
 }
 
-pub unsafe fn key_bindings_init_done(
-    _item: *mut cmdq_item,
-    data: *mut c_void,
-) -> cmd_retval {
+pub unsafe fn key_bindings_init_done(_item: *mut cmdq_item, data: *mut c_void) -> cmd_retval {
     unsafe {
         for table in rb_foreach(&raw mut key_tables).map(NonNull::as_ptr) {
             for bd in rb_foreach(&raw mut (*table).key_bindings).map(NonNull::as_ptr) {
@@ -684,10 +663,7 @@ pub unsafe fn key_bindings_init() {
     }
 }
 
-pub unsafe fn key_bindings_read_only(
-    item: *mut cmdq_item,
-    data: *mut c_void,
-) -> cmd_retval {
+pub unsafe fn key_bindings_read_only(item: *mut cmdq_item, data: *mut c_void) -> cmd_retval {
     unsafe {
         cmdq_error!(item, "client is read-only");
     }

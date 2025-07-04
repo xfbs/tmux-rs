@@ -57,11 +57,7 @@ unsafe fn sixel_parse_expand_lines(si: *mut sixel_image, y: u32) -> i32 {
     }
 }
 
-unsafe fn sixel_parse_expand_line(
-    si: *mut sixel_image,
-    sl: *mut sixel_line,
-    x: u32,
-) -> i32 {
+unsafe fn sixel_parse_expand_line(si: *mut sixel_image, sl: *mut sixel_line, x: u32) -> i32 {
     unsafe {
         if x <= (*sl).x {
             return 0;

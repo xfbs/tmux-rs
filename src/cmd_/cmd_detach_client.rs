@@ -41,10 +41,7 @@ pub static mut cmd_suspend_client_entry: cmd_entry = cmd_entry {
     ..unsafe { zeroed() }
 };
 
-pub unsafe fn cmd_detach_client_exec(
-    self_: *mut cmd,
-    item: *mut cmdq_item,
-) -> cmd_retval {
+pub unsafe fn cmd_detach_client_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval {
     unsafe {
         let args = cmd_get_args(self_);
         let source = cmdq_get_source(item);

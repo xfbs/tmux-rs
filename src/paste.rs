@@ -87,10 +87,7 @@ pub unsafe fn paste_buffer_created(pb: NonNull<paste_buffer>) -> time_t {
     unsafe { (*pb.as_ptr()).created }
 }
 
-pub unsafe fn paste_buffer_data(
-    pb: *mut paste_buffer,
-    size: *mut usize,
-) -> *const c_char {
+pub unsafe fn paste_buffer_data(pb: *mut paste_buffer, size: *mut usize) -> *const c_char {
     unsafe {
         if !size.is_null() {
             *size = (*pb).size;

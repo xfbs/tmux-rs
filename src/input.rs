@@ -1228,12 +1228,7 @@ unsafe fn input_split(ictx: *mut input_ctx) -> i32 {
 }
 
 /// Get an argument or return default value.
-pub unsafe fn input_get(
-    ictx: *mut input_ctx,
-    validx: u32,
-    minval: i32,
-    defval: i32,
-) -> i32 {
+pub unsafe fn input_get(ictx: *mut input_ctx, validx: u32, minval: i32, defval: i32) -> i32 {
     unsafe {
         if validx >= (*ictx).param_list_len {
             return defval;

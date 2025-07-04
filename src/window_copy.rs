@@ -302,9 +302,7 @@ pub unsafe fn window_copy_clone_screen(
     }
 }
 
-pub unsafe fn window_copy_common_init(
-    wme: *mut window_mode_entry,
-) -> *mut window_copy_mode_data {
+pub unsafe fn window_copy_common_init(wme: *mut window_mode_entry) -> *mut window_copy_mode_data {
     unsafe {
         let wp = (*wme).wp;
         let base = &raw mut (*wp).base;
@@ -607,11 +605,7 @@ pub unsafe fn window_copy_pageup1(wme: *mut window_mode_entry, half_page: i32) {
     }
 }
 
-pub unsafe fn window_copy_pagedown(
-    wp: *mut window_pane,
-    half_page: i32,
-    scroll_exit: i32,
-) {
+pub unsafe fn window_copy_pagedown(wp: *mut window_pane, half_page: i32, scroll_exit: i32) {
     unsafe {
         if window_copy_pagedown1(tailq_first(&raw mut (*wp).modes), half_page, scroll_exit) != 0 {
             window_pane_reset_mode(wp);
@@ -1050,9 +1044,7 @@ pub unsafe fn window_copy_cmd_bottom_line(
     }
 }
 
-pub unsafe fn window_copy_cmd_cancel(
-    _cs: *mut window_copy_cmd_state,
-) -> window_copy_cmd_action {
+pub unsafe fn window_copy_cmd_cancel(_cs: *mut window_copy_cmd_state) -> window_copy_cmd_action {
     unsafe { window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL }
 }
 
@@ -1227,9 +1219,7 @@ pub unsafe fn window_copy_do_copy_line(
     }
 }
 
-pub unsafe fn window_copy_cmd_copy_line(
-    cs: *mut window_copy_cmd_state,
-) -> window_copy_cmd_action {
+pub unsafe fn window_copy_cmd_copy_line(cs: *mut window_copy_cmd_state) -> window_copy_cmd_action {
     unsafe { window_copy_do_copy_line(cs, 0, 0) }
 }
 
@@ -1428,15 +1418,11 @@ pub unsafe fn window_copy_cmd_scroll_middle(
 
 /* Scroll line containing the cursor to the top. */
 
-pub unsafe fn window_copy_cmd_scroll_top(
-    cs: *mut window_copy_cmd_state,
-) -> window_copy_cmd_action {
+pub unsafe fn window_copy_cmd_scroll_top(cs: *mut window_copy_cmd_state) -> window_copy_cmd_action {
     unsafe { window_copy_cmd_scroll_to(cs, 0) }
 }
 
-pub unsafe fn window_copy_cmd_cursor_up(
-    cs: *mut window_copy_cmd_state,
-) -> window_copy_cmd_action {
+pub unsafe fn window_copy_cmd_cursor_up(cs: *mut window_copy_cmd_state) -> window_copy_cmd_action {
     unsafe {
         let wme: *mut window_mode_entry = (*cs).wme;
         let mut np = (*wme).prefix;
@@ -1571,9 +1557,7 @@ pub unsafe fn window_copy_cmd_history_top(
     }
 }
 
-pub unsafe fn window_copy_cmd_jump_again(
-    cs: *mut window_copy_cmd_state,
-) -> window_copy_cmd_action {
+pub unsafe fn window_copy_cmd_jump_again(cs: *mut window_copy_cmd_state) -> window_copy_cmd_action {
     unsafe {
         let wme: *mut window_mode_entry = (*cs).wme;
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -1934,9 +1918,7 @@ pub unsafe fn window_copy_cmd_next_paragraph(
     }
 }
 
-pub unsafe fn window_copy_cmd_next_space(
-    cs: *mut window_copy_cmd_state,
-) -> window_copy_cmd_action {
+pub unsafe fn window_copy_cmd_next_space(cs: *mut window_copy_cmd_state) -> window_copy_cmd_action {
     unsafe {
         let wme: *mut window_mode_entry = (*cs).wme;
         let mut np = (*wme).prefix;
@@ -1964,9 +1946,7 @@ pub unsafe fn window_copy_cmd_next_space_end(
     }
 }
 
-pub unsafe fn window_copy_cmd_next_word(
-    cs: *mut window_copy_cmd_state,
-) -> window_copy_cmd_action {
+pub unsafe fn window_copy_cmd_next_word(cs: *mut window_copy_cmd_state) -> window_copy_cmd_action {
     unsafe {
         let wme: *mut window_mode_entry = (*cs).wme;
         let mut np = (*wme).prefix;
@@ -1998,9 +1978,7 @@ pub unsafe fn window_copy_cmd_next_word_end(
     }
 }
 
-pub unsafe fn window_copy_cmd_other_end(
-    cs: *mut window_copy_cmd_state,
-) -> window_copy_cmd_action {
+pub unsafe fn window_copy_cmd_other_end(cs: *mut window_copy_cmd_state) -> window_copy_cmd_action {
     unsafe {
         let wme: *mut window_mode_entry = (*cs).wme;
         let np = (*wme).prefix;
@@ -2014,9 +1992,7 @@ pub unsafe fn window_copy_cmd_other_end(
     }
 }
 
-pub unsafe fn window_copy_cmd_page_down(
-    cs: *mut window_copy_cmd_state,
-) -> window_copy_cmd_action {
+pub unsafe fn window_copy_cmd_page_down(cs: *mut window_copy_cmd_state) -> window_copy_cmd_action {
     unsafe {
         let wme: *mut window_mode_entry = (*cs).wme;
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -2049,9 +2025,7 @@ pub unsafe fn window_copy_cmd_page_down_and_cancel(
     }
 }
 
-pub unsafe fn window_copy_cmd_page_up(
-    cs: *mut window_copy_cmd_state,
-) -> window_copy_cmd_action {
+pub unsafe fn window_copy_cmd_page_up(cs: *mut window_copy_cmd_state) -> window_copy_cmd_action {
     unsafe {
         let wme: *mut window_mode_entry = (*cs).wme;
         let mut np = (*wme).prefix;
@@ -2193,9 +2167,7 @@ pub unsafe fn window_copy_cmd_scroll_down_and_cancel(
     }
 }
 
-pub unsafe fn window_copy_cmd_scroll_up(
-    cs: *mut window_copy_cmd_state,
-) -> window_copy_cmd_action {
+pub unsafe fn window_copy_cmd_scroll_up(cs: *mut window_copy_cmd_state) -> window_copy_cmd_action {
     unsafe {
         let wme: *mut window_mode_entry = (*cs).wme;
         let mut np = (*wme).prefix;
@@ -2343,9 +2315,7 @@ pub unsafe fn window_copy_cmd_select_word(
     }
 }
 
-pub unsafe fn window_copy_cmd_set_mark(
-    cs: *mut window_copy_cmd_state,
-) -> window_copy_cmd_action {
+pub unsafe fn window_copy_cmd_set_mark(cs: *mut window_copy_cmd_state) -> window_copy_cmd_action {
     unsafe {
         let data: *mut window_copy_mode_data = (*(*cs).wme).data.cast();
 
@@ -2365,9 +2335,7 @@ pub unsafe fn window_copy_cmd_start_of_line(
     }
 }
 
-pub unsafe fn window_copy_cmd_top_line(
-    cs: *mut window_copy_cmd_state,
-) -> window_copy_cmd_action {
+pub unsafe fn window_copy_cmd_top_line(cs: *mut window_copy_cmd_state) -> window_copy_cmd_action {
     unsafe {
         let wme: *mut window_mode_entry = (*cs).wme;
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -2409,9 +2377,7 @@ pub unsafe fn window_copy_cmd_copy_pipe_no_clear(
     }
 }
 
-pub unsafe fn window_copy_cmd_copy_pipe(
-    cs: *mut window_copy_cmd_state,
-) -> window_copy_cmd_action {
+pub unsafe fn window_copy_cmd_copy_pipe(cs: *mut window_copy_cmd_state) -> window_copy_cmd_action {
     unsafe {
         let wme: *mut window_mode_entry = (*cs).wme;
 
@@ -2455,9 +2421,7 @@ pub unsafe fn window_copy_cmd_pipe_no_clear(
     }
 }
 
-pub unsafe fn window_copy_cmd_pipe(
-    cs: *mut window_copy_cmd_state,
-) -> window_copy_cmd_action {
+pub unsafe fn window_copy_cmd_pipe(cs: *mut window_copy_cmd_state) -> window_copy_cmd_action {
     unsafe {
         let wme: *mut window_mode_entry = (*cs).wme;
 
@@ -2479,9 +2443,7 @@ pub unsafe fn window_copy_cmd_pipe_and_cancel(
     }
 }
 
-pub unsafe fn window_copy_cmd_goto_line(
-    cs: *mut window_copy_cmd_state,
-) -> window_copy_cmd_action {
+pub unsafe fn window_copy_cmd_goto_line(cs: *mut window_copy_cmd_state) -> window_copy_cmd_action {
     unsafe {
         let wme: *mut window_mode_entry = (*cs).wme;
         let arg1 = args_string((*cs).args, 1);
@@ -4133,12 +4095,7 @@ pub unsafe fn window_copy_cstrtocellpos(
     }
 }
 
-pub unsafe fn window_copy_move_left(
-    s: *mut screen,
-    fx: *mut u32,
-    fy: *mut u32,
-    wrapflag: i32,
-) {
+pub unsafe fn window_copy_move_left(s: *mut screen, fx: *mut u32, fy: *mut u32, wrapflag: i32) {
     unsafe {
         if *fx == 0 {
             /* left */
@@ -4158,12 +4115,7 @@ pub unsafe fn window_copy_move_left(
     }
 }
 
-pub unsafe fn window_copy_move_right(
-    s: *mut screen,
-    fx: *mut u32,
-    fy: *mut u32,
-    wrapflag: i32,
-) {
+pub unsafe fn window_copy_move_right(s: *mut screen, fx: *mut u32, fy: *mut u32, wrapflag: i32) {
     unsafe {
         if *fx == screen_size_x(s) - 1 {
             /* right */
@@ -4849,10 +4801,7 @@ pub unsafe fn window_copy_search_down(wme: *mut window_mode_entry, regex: i32) -
     unsafe { window_copy_search(wme, 1, regex) }
 }
 
-pub unsafe fn window_copy_goto_line(
-    wme: *mut window_mode_entry,
-    linestr: *const c_char,
-) {
+pub unsafe fn window_copy_goto_line(wme: *mut window_mode_entry, linestr: *const c_char) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut errstr: *const c_char = null();
@@ -4898,9 +4847,7 @@ pub unsafe fn window_copy_match_start_end(
     }
 }
 
-pub unsafe fn window_copy_match_at_cursor(
-    data: *mut window_copy_mode_data,
-) -> *mut c_char {
+pub unsafe fn window_copy_match_at_cursor(data: *mut window_copy_mode_data) -> *mut c_char {
     unsafe {
         let gd: *mut grid = (*(*data).backing).grid;
         let mut gc: grid_cell = zeroed();
@@ -5331,10 +5278,7 @@ pub unsafe fn window_copy_synchronize_cursor_end(
     }
 }
 
-pub unsafe fn window_copy_synchronize_cursor(
-    wme: *mut window_mode_entry,
-    no_reset: i32,
-) {
+pub unsafe fn window_copy_synchronize_cursor(wme: *mut window_mode_entry, no_reset: i32) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
 
@@ -5708,11 +5652,7 @@ pub unsafe fn window_copy_pipe_run(
     }
 }
 
-pub unsafe fn window_copy_pipe(
-    wme: *mut window_mode_entry,
-    s: *mut session,
-    cmd: *const c_char,
-) {
+pub unsafe fn window_copy_pipe(wme: *mut window_mode_entry, s: *mut session, cmd: *const c_char) {
     unsafe {
         let mut len: usize = 0;
 
@@ -5735,10 +5675,7 @@ pub unsafe fn window_copy_copy_pipe(
     }
 }
 
-pub unsafe fn window_copy_copy_selection(
-    wme: *mut window_mode_entry,
-    prefix: *const c_char,
-) {
+pub unsafe fn window_copy_copy_selection(wme: *mut window_mode_entry, prefix: *const c_char) {
     unsafe {
         let mut len: usize = 0;
         let buf = window_copy_get_selection(wme, &raw mut len);
@@ -6316,10 +6253,7 @@ pub unsafe fn window_copy_cursor_jump_to_back(wme: *mut window_mode_entry) {
     }
 }
 
-pub unsafe fn window_copy_cursor_next_word(
-    wme: *mut window_mode_entry,
-    separators: *const c_char,
-) {
+pub unsafe fn window_copy_cursor_next_word(wme: *mut window_mode_entry, separators: *const c_char) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let back_s: *mut screen = (*data).backing;
