@@ -44,7 +44,7 @@ pub unsafe fn server_client_how_many() -> u32 {
 }
 
 /// Overlay timer callback.
-pub unsafe fn server_client_overlay_timer(_fd: i32, _events: i16, data: *mut c_void) {
+pub unsafe extern "C" fn server_client_overlay_timer(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
         server_client_clear_overlay(data.cast());
     }
@@ -513,7 +513,7 @@ pub unsafe fn server_client_unref(c: *mut client) {
 }
 
 /// Free dead client.
-pub unsafe fn server_client_free(_fd: i32, _events: i16, arg: *mut c_void) {
+pub unsafe extern "C" fn server_client_free(_fd: i32, _events: i16, arg: *mut c_void) {
     unsafe {
         let c: *mut client = arg.cast();
         log_debug!("free client {:p} ({} references)", c, (*c).references);
@@ -2210,7 +2210,7 @@ pub unsafe fn server_client_check_window_resize(w: *mut window) {
 }
 
 /// Resize timer event.
-pub unsafe fn server_client_resize_timer(_fd: i32, _events: i16, data: *mut c_void) {
+pub unsafe extern "C" fn server_client_resize_timer(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
         let wp: *mut window_pane = data.cast();
 
@@ -2551,7 +2551,7 @@ pub unsafe fn server_client_reset_state(c: *mut client) {
 }
 
 /// Repeat time callback.
-pub unsafe fn server_client_repeat_timer(_fd: i32, _events: i16, data: *mut c_void) {
+pub unsafe extern "C" fn server_client_repeat_timer(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
         let c: *mut client = data.cast();
 
@@ -2564,7 +2564,7 @@ pub unsafe fn server_client_repeat_timer(_fd: i32, _events: i16, data: *mut c_vo
 }
 
 /// Double-click callback.
-pub unsafe fn server_client_click_timer(_fd: i32, _events: i16, data: *mut c_void) {
+pub unsafe extern "C" fn server_client_click_timer(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
         let c: *mut client = data.cast();
         log_debug!("click timer expired");
@@ -2649,7 +2649,7 @@ pub unsafe fn server_client_check_exit(c: *mut client) {
 }
 
 /// Redraw timer callback.
-pub unsafe fn server_client_redraw_timer(_fd: i32, _events: i16, data: *mut c_void) {
+pub unsafe extern "C" fn server_client_redraw_timer(_fd: i32, _events: i16, data: *mut c_void) {
     unsafe {
         log_debug!("redraw timer fired");
     }

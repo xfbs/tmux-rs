@@ -196,7 +196,7 @@ pub unsafe fn session_remove_ref(s: *mut session, from: *const c_char) {
 }
 
 /// Free session.
-pub unsafe fn session_free(_fd: i32, _events: i16, arg: *mut c_void) {
+pub unsafe extern "C" fn session_free(_fd: i32, _events: i16, arg: *mut c_void) {
     unsafe {
         let s = arg as *mut session;
 
@@ -280,7 +280,7 @@ pub unsafe fn session_check_name(name: *const c_char) -> *mut c_char {
 }
 
 /// Lock session if it has timed out.
-pub unsafe fn session_lock_timer(fd: i32, events: i16, arg: *mut c_void) {
+pub unsafe extern "C" fn session_lock_timer(fd: i32, events: i16, arg: *mut c_void) {
     unsafe {
         let s = arg as *mut session;
 

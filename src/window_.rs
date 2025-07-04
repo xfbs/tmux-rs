@@ -1117,7 +1117,7 @@ unsafe fn window_pane_destroy(wp: *mut window_pane) {
     }
 }
 
-unsafe fn window_pane_read_callback(_bufev: *mut bufferevent, data: *mut c_void) {
+unsafe extern "C" fn window_pane_read_callback(_bufev: *mut bufferevent, data: *mut c_void) {
     unsafe {
         let wp: *mut window_pane = data as _;
         let evb: *mut evbuffer = (*(*wp).event).input;
@@ -1144,7 +1144,7 @@ unsafe fn window_pane_read_callback(_bufev: *mut bufferevent, data: *mut c_void)
     }
 }
 
-unsafe fn window_pane_error_callback(
+unsafe extern "C" fn window_pane_error_callback(
     _bufev: *mut bufferevent,
     _what: c_short,
     data: *mut c_void,

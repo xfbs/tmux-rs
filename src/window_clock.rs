@@ -135,7 +135,7 @@ pub static mut window_clock_table: [[[c_char; 5]; 5]; 14] = [
     ],
 ];
 
-pub unsafe fn window_clock_timer_callback(fd: i32, events: i16, arg: *mut c_void) {
+pub unsafe extern "C" fn window_clock_timer_callback(fd: i32, events: i16, arg: *mut c_void) {
     unsafe {
         let wme = arg as *mut window_mode_entry;
         let wp = (*wme).wp;

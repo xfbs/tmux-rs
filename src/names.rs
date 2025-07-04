@@ -16,7 +16,7 @@ use ::libc::{gettimeofday, memcpy, strchr, strcmp, strcspn, strlen, strncmp};
 use crate::event_::{event_add, event_initialized};
 use crate::*;
 
-pub unsafe fn name_time_callback(_fd: c_int, _events: c_short, arg: *mut c_void) {
+pub unsafe extern "C" fn name_time_callback(_fd: c_int, _events: c_short, arg: *mut c_void) {
     let w = arg as *mut window;
     unsafe {
         log_debug!("@{} timer expired", (*w).id);

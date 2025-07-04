@@ -167,7 +167,7 @@ pub unsafe fn status_prompt_save_history() {
 }
 
 /// Status timer callback.
-unsafe fn status_timer_callback(_fd: i32, _events: i16, arg: *mut c_void) {
+unsafe extern "C" fn status_timer_callback(_fd: i32, _events: i16, arg: *mut c_void) {
     unsafe {
         let c: *mut client = arg.cast();
         let s: *mut session = (*c).session;
@@ -595,7 +595,7 @@ pub unsafe fn status_message_clear(c: *mut client) {
 }
 
 /// Clear status line message after timer expires.
-unsafe fn status_message_callback(_fd: i32, _event: i16, data: *mut c_void) {
+unsafe extern "C" fn status_message_callback(_fd: i32, _event: i16, data: *mut c_void) {
     unsafe {
         status_message_clear(data.cast());
     }

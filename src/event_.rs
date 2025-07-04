@@ -33,7 +33,7 @@ pub const EV_WRITE: i16 = 0x04;
 // #define evtimer_set(ev, cb, arg)	event_set((ev), -1, 0, (cb), (arg))
 pub unsafe fn evtimer_set(
     ev: *mut event,
-    cb: Option<unsafe fn(_: c_int, _: c_short, _: *mut c_void)>,
+    cb: Option<unsafe extern "C" fn(_: c_int, _: c_short, _: *mut c_void)>,
     arg: *mut c_void,
 ) {
     unsafe {
@@ -71,7 +71,7 @@ pub unsafe fn signal_add(ev: *mut event, tv: *const timeval) -> i32 {
 pub unsafe fn signal_set(
     ev: *mut event,
     x: i32,
-    cb: Option<unsafe fn(c_int, c_short, *mut c_void)>,
+    cb: Option<unsafe extern "C" fn(c_int, c_short, *mut c_void)>,
     arg: *mut c_void,
 ) {
     unsafe { event_set(ev, x, EV_SIGNAL | EV_PERSIST, cb, arg) }
@@ -159,9 +159,9 @@ pub struct event_base {
     _unused: [u8; 0],
 }
 pub type bufferevent_data_cb =
-    Option<unsafe fn(bev: *mut bufferevent, ctx: *mut c_void)>;
+    Option<unsafe extern "C" fn(bev: *mut bufferevent, ctx: *mut c_void)>;
 pub type bufferevent_event_cb =
-    Option<unsafe fn(bev: *mut bufferevent, what: c_short, ctx: *mut c_void)>;
+    Option<unsafe extern "C" fn(bev: *mut bufferevent, what: c_short, ctx: *mut c_void)>;
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct event_callback {
@@ -181,10 +181,10 @@ pub struct event_callback__bindgen_ty_1 {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union event_callback__bindgen_ty_2 {
-    pub evcb_callback: Option<unsafe fn(arg1: c_int, arg2: c_short, arg3: *mut c_void)>,
-    pub evcb_selfcb: Option<unsafe fn(arg1: *mut event_callback, arg2: *mut c_void)>,
-    pub evcb_evfinalize: Option<unsafe fn(arg1: *mut event, arg2: *mut c_void)>,
-    pub evcb_cbfinalize: Option<unsafe fn(arg1: *mut event_callback, arg2: *mut c_void)>,
+    pub evcb_callback: Option<unsafe extern "C" fn(arg1: c_int, arg2: c_short, arg3: *mut c_void)>,
+    pub evcb_selfcb: Option<unsafe extern "C" fn(arg1: *mut event_callback, arg2: *mut c_void)>,
+    pub evcb_evfinalize: Option<unsafe extern "C" fn(arg1: *mut event, arg2: *mut c_void)>,
+    pub evcb_cbfinalize: Option<unsafe extern "C" fn(arg1: *mut event_callback, arg2: *mut c_void)>,
 }
 #[repr(C)]
 pub struct event {
@@ -263,7 +263,7 @@ pub struct bufferevent {
     pub timeout_write: timeval,
     pub enabled: c_short,
 }
-pub type event_log_cb = Option<unsafe fn(severity: c_int, msg: *const c_char)>;
+pub type event_log_cb = Option<unsafe extern "C" fn(severity: c_int, msg: *const c_char)>;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct bufferevent_ops {
@@ -317,7 +317,7 @@ unsafe extern "C" {
     pub fn event_once(
         arg1: c_int,
         arg2: c_short,
-        arg3: Option<unsafe fn(arg1: c_int, arg2: c_short, arg3: *mut c_void)>,
+        arg3: Option<unsafe extern "C" fn(arg1: c_int, arg2: c_short, arg3: *mut c_void)>,
         arg4: *mut c_void,
         arg5: *const timeval,
     ) -> c_int;
@@ -326,7 +326,7 @@ unsafe extern "C" {
         arg1: *mut event,
         arg2: c_int,
         arg3: c_short,
-        arg4: Option<unsafe fn(arg1: c_int, arg2: c_short, arg3: *mut c_void)>,
+        arg4: Option<unsafe extern "C" fn(arg1: c_int, arg2: c_short, arg3: *mut c_void)>,
         arg5: *mut c_void,
     );
 }
@@ -336,7 +336,7 @@ pub unsafe fn event_set_<T>(
     arg1: *mut event,
     arg2: c_int,
     arg3: c_short,
-    arg4: Option<unsafe fn(arg1: c_int, arg2: c_short, arg3: *mut T)>,
+    arg4: Option<unsafe extern "C" fn(arg1: c_int, arg2: c_short, arg3: *mut T)>,
     arg5: *mut T,
 ) {
     // with this we can start changing the interface of all the event set calls and modify
@@ -347,8 +347,8 @@ pub unsafe fn event_set_<T>(
             arg2,
             arg3,
             std::mem::transmute::<
-                Option<unsafe fn(arg1: c_int, arg2: c_short, arg3: *mut T)>,
-                Option<unsafe fn(arg1: c_int, arg2: c_short, arg3: *mut c_void)>,
+                Option<unsafe extern "C" fn(arg1: c_int, arg2: c_short, arg3: *mut T)>,
+                Option<unsafe extern "C" fn(arg1: c_int, arg2: c_short, arg3: *mut c_void)>,
             >(arg4),
             arg5.cast(),
         )
