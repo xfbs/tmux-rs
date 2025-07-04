@@ -12,8 +12,6 @@
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use std::cmp::Ordering;
-
 use crate::*;
 
 use libc::{
@@ -31,15 +29,20 @@ use crate::compat::{
     tree::{rb_find, rb_foreach, rb_insert, rb_min, rb_next, rb_prev, rb_remove},
 };
 
+use std::cmp;
+use std::sync::atomic;
+use std::sync::atomic::AtomicU32;
+
 #[cfg(feature = "utempter")]
 use crate::utempter::utempter_remove_record;
 
 pub static mut windows: windows = unsafe { std::mem::zeroed() };
 
 pub static mut all_window_panes: window_pane_tree = unsafe { std::mem::zeroed() };
-static mut next_window_pane_id: u32 = 0;
-static mut next_window_id: u32 = 0;
-static mut next_active_point: u32 = 0;
+
+static next_window_pane_id: AtomicU32 = AtomicU32::new(0);
+static next_window_id: AtomicU32 = AtomicU32::new(0);
+static next_active_point: AtomicU32 = AtomicU32::new(0);
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -59,18 +62,18 @@ RB_GENERATE!(
     window_pane_cmp
 );
 
-pub unsafe extern "C" fn window_cmp(w1: *const window, w2: *const window) -> Ordering {
+pub unsafe extern "C" fn window_cmp(w1: *const window, w2: *const window) -> cmp::Ordering {
     unsafe { (*w1).id.cmp(&(*w2).id) }
 }
 
-pub unsafe extern "C" fn winlink_cmp(wl1: *const winlink, wl2: *const winlink) -> Ordering {
+pub unsafe extern "C" fn winlink_cmp(wl1: *const winlink, wl2: *const winlink) -> cmp::Ordering {
     unsafe { (*wl1).idx.cmp(&(*wl2).idx) }
 }
 
 pub unsafe extern "C" fn window_pane_cmp(
     wp1: *const window_pane,
     wp2: *const window_pane,
-) -> Ordering {
+) -> cmp::Ordering {
     unsafe { (*wp1).id.cmp(&(*wp2).id) }
 }
 
@@ -315,8 +318,7 @@ pub unsafe extern "C" fn window_create(
         (*w).references = 0;
         tailq_init(&raw mut (*w).winlinks);
 
-        (*w).id = next_window_id;
-        next_window_id += 1;
+        (*w).id = next_window_id.fetch_add(1, atomic::Ordering::Relaxed);
         rb_insert(&raw mut windows, w);
 
         window_set_fill_character(NonNull::new_unchecked(w));
@@ -588,8 +590,7 @@ pub unsafe extern "C" fn window_set_active_pane(
         window_pane_stack_push(&raw mut (*w).last_panes, lastwp);
 
         (*w).active = wp;
-        (*(*w).active).active_point = next_active_point;
-        next_active_point += 1;
+        (*(*w).active).active_point = next_active_point.fetch_add(1, atomic::Ordering::Relaxed);
         (*(*w).active).flags |= window_pane_flags::PANE_CHANGED;
 
         if options_get_number_(global_options, c"focus-events") != 0 {
@@ -1036,8 +1037,7 @@ pub unsafe extern "C" fn window_pane_create(
         (*wp).options = options_create((*w).options);
         (*wp).flags = window_pane_flags::PANE_STYLECHANGED;
 
-        (*wp).id = next_window_pane_id;
-        next_window_pane_id += 1;
+        (*wp).id = next_window_pane_id.fetch_add(1, atomic::Ordering::Relaxed);
 
         rb_insert(&raw mut all_window_panes, wp);
 
