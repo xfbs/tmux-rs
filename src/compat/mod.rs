@@ -14,6 +14,7 @@ mod closefrom;
 mod fgetln;
 mod freezero;
 mod getpeereid;
+mod reallocarray;
 mod recallocarray;
 mod setproctitle;
 mod strlcat;
@@ -26,6 +27,7 @@ pub use closefrom::closefrom;
 pub use fgetln::fgetln;
 pub use freezero::freezero;
 pub use getpeereid::getpeereid;
+pub use reallocarray::reallocarray;
 pub use recallocarray::recallocarray;
 pub use setproctitle::setproctitle_;
 pub use strlcat::strlcat;
@@ -57,16 +59,9 @@ pub const ACCESSPERMS: libc::mode_t = libc::S_IRWXU | libc::S_IRWXG | libc::S_IR
 // TODO move this to a better spot
 #[allow(non_snake_case)]
 #[inline]
-pub fn S_ISDIR(mode: u32) -> bool {
+pub fn S_ISDIR(mode: libc::mode_t) -> bool {
     mode & libc::S_IFMT == libc::S_IFDIR
 }
 
 // extern crate compat_derive;
 // pub use compat_derive::TailQEntry;
-
-macro_rules! errno {
-    () => {
-        *::libc::__errno_location()
-    };
-}
-use errno;

@@ -186,7 +186,7 @@ const TMUX_LOCK_CMD: &CStr = c"lock -np";
 const PANE_MINIMUM: u32 = 1;
 
 /// Automatic name refresh interval, in microseconds. Must be < 1 second.
-const NAME_INTERVAL: i32 = 500000;
+const NAME_INTERVAL: libc::suseconds_t = 500000;
 
 /// Default pixel cell sizes.
 const DEFAULT_XPIXEL: u32 = 16;
@@ -3231,4 +3231,13 @@ pub(crate) unsafe fn cstr_to_str<'a>(ptr: *const c_char) -> &'a str {
 
         std::str::from_utf8(bytes).expect("bad cstr_to_str")
     }
+}
+
+#[cfg(target_os = "macos")]
+pub(crate) unsafe fn basename(path: *mut c_char) -> *mut c_char {
+    unsafe { libc::basename(path) }
+}
+#[cfg(target_os = "linux")]
+pub(crate) unsafe fn basename(path: *mut c_char) -> *mut c_char {
+    unsafe { libc::posix_basename(path) }
 }

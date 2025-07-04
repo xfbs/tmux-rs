@@ -17,9 +17,9 @@ use ::core::{
     ptr::NonNull,
 };
 
-use ::libc::{calloc, malloc, reallocarray, strdup, strndup};
+use ::libc::{calloc, malloc, strdup, strndup};
 
-use crate::{compat::recallocarray, fatalx, vasprintf, vsnprintf};
+use crate::{compat::{recallocarray, reallocarray}, fatalx, vasprintf, vsnprintf};
 
 pub extern "C" fn xmalloc(size: usize) -> NonNull<c_void> {
     debug_assert!(size != 0, "xmalloc: zero size");

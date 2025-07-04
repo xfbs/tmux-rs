@@ -28,7 +28,7 @@ unsafe fn tty_full_width(tty: *const tty, ctx: *const tty_ctx) -> bool {
     unsafe { (*ctx).xoff == 0 && (*ctx).sx >= (*tty).sx }
 }
 
-const TTY_BLOCK_INTERVAL: usize = 100_000; // 100 millis
+const TTY_BLOCK_INTERVAL: libc::suseconds_t = 100_000; // 100 millis
 const TTY_QUERY_TIMEOUT: i32 = 5;
 const TTY_REQUEST_LIMIT: i32 = 30;
 
@@ -163,7 +163,7 @@ pub unsafe extern "C" fn tty_timer_callback(_fd: i32, events: i16, data: *mut c_
         let c = (*tty).client;
         let mut tv = libc::timeval {
             tv_sec: 0,
-            tv_usec: TTY_BLOCK_INTERVAL as i64,
+            tv_usec: TTY_BLOCK_INTERVAL,
         };
 
         // log_debug("%s: %zu discarded", (*c).name, (*tty).discarded);
@@ -187,7 +187,7 @@ pub unsafe fn tty_block_maybe(tty: *mut tty) -> i32 {
         let size = EVBUFFER_LENGTH((*tty).out);
         let tv = libc::timeval {
             tv_sec: 0,
-            tv_usec: TTY_BLOCK_INTERVAL as i64,
+            tv_usec: TTY_BLOCK_INTERVAL,
         };
 
         if size == 0 {

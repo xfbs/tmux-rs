@@ -12,15 +12,14 @@
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use libc::{EOF, TIOCGSID, fgetc, ioctl, readlink, tcgetpgrp};
-
 use crate::*;
 
 // this is for osdep-linux.c
 
+#[cfg(target_os = "linux")]
 pub unsafe fn osdep_get_name(fd: i32, tty: *const c_char) -> *mut c_char {
     unsafe {
-        let pgrp = tcgetpgrp(fd);
+        let pgrp = libc::tcgetpgrp(fd);
         if pgrp == -1 {
             return null_mut();
         }
@@ -37,8 +36,8 @@ pub unsafe fn osdep_get_name(fd: i32, tty: *const c_char) -> *mut c_char {
         let mut buf: *mut c_char = null_mut();
 
         loop {
-            let ch = fgetc(f);
-            if ch == EOF {
+            let ch = libc::fgetc(f);
+            if ch == libc::EOF {
                 break;
             }
             if ch == b'\0' as i32 {
@@ -57,13 +56,14 @@ pub unsafe fn osdep_get_name(fd: i32, tty: *const c_char) -> *mut c_char {
     }
 }
 
+#[cfg(target_os = "linux")]
 pub unsafe fn osdep_get_cwd(fd: i32) -> *const c_char {
     const MAXPATHLEN: usize = libc::PATH_MAX as usize;
     static mut target_buffer: [c_char; MAXPATHLEN + 1] = [0; MAXPATHLEN + 1];
     unsafe {
         let target = &raw mut target_buffer as *mut c_char;
 
-        let pgrp = tcgetpgrp(fd);
+        let pgrp = libc::tcgetpgrp(fd);
         if pgrp == -1 {
             return null_mut();
         }
@@ -73,9 +73,9 @@ pub unsafe fn osdep_get_cwd(fd: i32) -> *const c_char {
         free_(path);
 
         let mut sid: pid_t = 0;
-        if n == -1 && ioctl(fd, TIOCGSID, &raw mut sid) != -1 {
+        if n == -1 && libc::ioctl(fd, libc::TIOCGSID, &raw mut sid) != -1 {
             path = format_nul!("/proc/{sid}/cwd");
-            n = readlink(path, target, MAXPATHLEN);
+            n = libc::readlink(path, target, MAXPATHLEN);
             free_(path);
         }
 
@@ -87,6 +87,7 @@ pub unsafe fn osdep_get_cwd(fd: i32) -> *const c_char {
     }
 }
 
+#[cfg(target_os = "linux")]
 pub unsafe fn osdep_event_init() -> *mut event_base {
     unsafe {
         // On Linux, epoll doesn't work on /dev/null (yes, really).
@@ -96,4 +97,60 @@ pub unsafe fn osdep_event_init() -> *mut event_base {
         libc::unsetenv(c"EVENT_NOEPOLL".as_ptr());
         base
     }
+}
+
+// osdep darwin
+
+#[cfg(target_os = "macos")]
+pub unsafe fn osdep_get_name(fd: i32, tty: *const c_char) -> *mut c_char {
+    // note only bothering to port the version for > Mac OS X 10.7 SDK or later
+    unsafe {
+        // https://zameermanji.com/blog/2021/8/1/counting-open-file-descriptors-on-macos/
+
+        unsafe extern "C" {
+            fn proc_pidinfo(
+                pid: i32,
+                flavor: i32,
+                arg: u64,
+                buffer: *mut c_void,
+                buffersize: i32,
+            ) -> i32;
+        }
+
+        #[repr(C)]
+        struct proc_bsdshortinfo {
+            padding: [u32; 4],
+            pbsi_comm: [c_char; 16],
+            padding2: [u32; 8],
+        };
+
+        const PROC_PIDT_SHORTBSDINFO: usize = size_of::<proc_bsdshortinfo>();
+        let mut bsdinfo: proc_bsdshortinfo = zeroed();
+        let mut pgrp: pid_t = libc::tcgetpgrp(fd);
+        if pgrp == -1 {
+            return null_mut();
+        }
+
+        let mut ret = proc_pidinfo(
+            pgrp,
+            PROC_PIDT_SHORTBSDINFO as _,
+            0,
+            (&raw mut bsdinfo).cast(),
+            size_of::<proc_bsdshortinfo>() as _,
+        );
+        if (ret == size_of::<proc_bsdshortinfo>() as _ && bsdinfo.pbsi_comm[0] != b'\0' as i8) {
+            return libc::strdup((&raw const bsdinfo.pbsi_comm).cast());
+        }
+        null_mut()
+    }
+}
+
+#[cfg(target_os = "macos")]
+pub unsafe fn osdep_get_cwd(fd: i32) -> *const c_char {
+    todo!()
+}
+
+#[cfg(target_os = "macos")]
+pub unsafe fn osdep_event_init() -> *mut event_base {
+    todo!()
 }

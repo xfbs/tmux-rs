@@ -116,7 +116,7 @@ const WINDOW_COPY_SEARCH_TIMEOUT: u64 = 10000;
 const WINDOW_COPY_SEARCH_ALL_TIMEOUT: u64 = 200;
 const WINDOW_COPY_SEARCH_MAX_LINE: u32 = 2000;
 
-const WINDOW_COPY_DRAG_REPEAT_TIME: i64 = 50000;
+const WINDOW_COPY_DRAG_REPEAT_TIME: libc::suseconds_t = 50000;
 
 /*
  * Copy mode's visible screen (the "screen" field) is filled from one of two

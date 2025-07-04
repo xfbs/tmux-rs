@@ -20,7 +20,6 @@ use std::ops::BitOrAssign as _;
 use std::sync::atomic::Ordering;
 
 use lalrpop_util::lalrpop_mod;
-use libc::_SC_MB_LEN_MAX;
 
 use crate::compat::queue::{
     tailq_empty, tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_last,
@@ -1315,11 +1314,16 @@ unsafe fn yylex_token_escape(
     len: *mut usize,
 ) -> bool {
     unsafe {
+        #[cfg(not(target_os = "macos"))]
         const sizeof_m: usize = libc::_SC_MB_LEN_MAX as usize;
+
+        // TODO determine a more stable way to get this value on mac
+        #[cfg(target_os = "macos")]
+        const sizeof_m: usize = 6; // compiled and printed constant from C
 
         let mut tmp: u32 = 0;
         let mut s: [c_char; 9] = [0; 9];
-        let mut m: [c_char; libc::_SC_MB_LEN_MAX as usize] = [0; libc::_SC_MB_LEN_MAX as usize];
+        let mut m: [c_char; sizeof_m] = [0; sizeof_m];
         let mut size: usize = 0;
         let mut type_: i32 = 0;
 

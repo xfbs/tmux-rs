@@ -25,9 +25,16 @@ pub unsafe fn bsearch__<T>(
     unsafe { ::libc::bsearch(key.cast(), base.cast(), num, size_of::<T>(), Some(compar)).cast() }
 }
 
+#[cfg(target_os = "linux")]
 macro_rules! errno {
     () => {
         *::libc::__errno_location()
+    };
+}
+#[cfg(target_os = "macos")]
+macro_rules! errno {
+    () => {
+        *::libc::__error()
     };
 }
 pub(crate) use errno;

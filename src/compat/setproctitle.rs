@@ -15,6 +15,7 @@ use core::ffi::c_char;
 
 // a custom version of setproctitle which just supports our usage:
 // setproctitle(c"%s (%s)".as_ptr(), name, socket_path);
+#[cfg(target_os = "linux")]
 pub unsafe fn setproctitle_(_fmt: *const c_char, name: *const c_char, socket_path: *const c_char) {
     unsafe {
         let mut name: [c_char; 16] = [0; 16];
@@ -36,6 +37,9 @@ pub unsafe fn setproctitle_(_fmt: *const c_char, name: *const c_char, socket_pat
         libc::prctl(libc::PR_SET_NAME, &raw const name as *const c_char);
     }
 }
+
+#[cfg(target_os = "macos")]
+pub unsafe fn setproctitle_(_: *const c_char, _: *const c_char, _: *const c_char) {}
 
 fn getprogname() -> *const c_char {
     c"tmux".as_ptr()

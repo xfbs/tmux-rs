@@ -550,8 +550,8 @@ pub unsafe fn status_message_set_(
             delay = options_get_number_((*(*c).session).options, c"display-time") as i32;
         }
         if delay > 0 {
-            tv.tv_sec = (delay / 1000) as i64;
-            tv.tv_usec = (delay as i64 % 1000) * 1000i64;
+            tv.tv_sec = (delay / 1000) as libc::time_t;
+            tv.tv_usec = (delay as libc::suseconds_t % 1000) * (1000 as libc::suseconds_t);
 
             if event_initialized(&raw mut (*c).message_timer) != 0 {
                 evtimer_del(&raw mut (*c).message_timer);

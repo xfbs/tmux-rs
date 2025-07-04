@@ -78,7 +78,7 @@ pub unsafe fn recallocarray(
             libc::memcpy(newptr, ptr, newsize);
         }
 
-        libc::explicit_bzero(ptr, oldsize);
+        libc::memset(ptr, 0, oldsize);
         libc::free(ptr);
 
         newptr

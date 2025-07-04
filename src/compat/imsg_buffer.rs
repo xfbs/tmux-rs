@@ -9,12 +9,12 @@ use ::libc::{
     memset, msghdr, sendmsg, writev,
 };
 
-use super::errno;
 use super::imsg::{ibuf, msgbuf};
 use super::queue::{
     tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_next, tailq_remove,
 };
 use super::{freezero, recallocarray};
+use crate::errno;
 
 const IOV_MAX: usize = 1024; // TODO find where IOV_MAX is defined
 
@@ -593,13 +593,13 @@ pub unsafe fn msgbuf_write(msgbuf: *mut msgbuf) -> c_int {
         }
 
         msg.msg_iov = iov.as_mut_ptr();
-        msg.msg_iovlen = i as usize;
+        msg.msg_iovlen = i.try_into().unwrap();
 
         if !buf0.is_null() {
             msg.msg_control = &raw mut cmsgbuf.buf as _;
-            msg.msg_controllen = size_of_val(&cmsgbuf.buf);
+            msg.msg_controllen = size_of_val(&cmsgbuf.buf).try_into().unwrap();
             let cmsg = CMSG_FIRSTHDR(&raw const msg);
-            (*cmsg).cmsg_len = CMSG_LEN(size_of::<c_int>() as u32) as usize;
+            (*cmsg).cmsg_len = CMSG_LEN(size_of::<c_int>() as u32).into();
             (*cmsg).cmsg_level = SOL_SOCKET;
             (*cmsg).cmsg_type = SCM_RIGHTS;
             *CMSG_DATA(cmsg).cast() = (*buf0).fd;

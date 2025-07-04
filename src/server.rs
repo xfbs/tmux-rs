@@ -17,9 +17,8 @@ use libc::{
     AF_UNIX, ECHILD, ENAMETOOLONG, S_IRGRP, S_IROTH, S_IRUSR, S_IRWXG, S_IRWXO, S_IXGRP, S_IXOTH,
     S_IXUSR, SIG_BLOCK, SIG_SETMASK, SIGCONT, SIGTTIN, SIGTTOU, SOCK_STREAM, WIFEXITED,
     WIFSIGNALED, WIFSTOPPED, WNOHANG, WSTOPSIG, WUNTRACED, accept, bind, chmod, close, fprintf,
-    gettimeofday, kill, killpg, listen, malloc_trim, sigfillset, sigprocmask, sigset_t,
-    sockaddr_storage, sockaddr_un, socket, socklen_t, stat, strerror, strsignal, umask, unlink,
-    waitpid,
+    gettimeofday, kill, killpg, listen, sigfillset, sigprocmask, sigset_t, sockaddr_storage,
+    sockaddr_un, socket, socklen_t, stat, strerror, strsignal, umask, unlink, waitpid,
 };
 
 use crate::compat::{
@@ -157,7 +156,10 @@ unsafe extern "C" fn server_tidy_event(_fd: i32, _events: i16, _data: *mut c_voi
 
         format_tidy_jobs();
 
-        malloc_trim(0);
+        #[cfg(not(target_os = "macos"))]
+        {
+            libc::malloc_trim(0);
+        }
 
         log_debug!(
             "{}: took {} milliseconds",
