@@ -597,7 +597,7 @@ pub unsafe fn msgbuf_write(msgbuf: *mut msgbuf) -> c_int {
 
         if !buf0.is_null() {
             msg.msg_control = &raw mut cmsgbuf.buf as _;
-            msg.msg_controllen = size_of_val(&cmsgbuf.buf).try_into().unwrap();
+            msg.msg_controllen = size_of_val(&cmsgbuf.buf) as _;
             let cmsg = CMSG_FIRSTHDR(&raw const msg);
             (*cmsg).cmsg_len = CMSG_LEN(size_of::<c_int>() as u32) as _;
             (*cmsg).cmsg_level = SOL_SOCKET;

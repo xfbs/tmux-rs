@@ -132,7 +132,7 @@ pub unsafe fn imsg_read(imsgbuf: *mut imsgbuf) -> isize {
         msg.msg_iov = &raw mut iov;
         msg.msg_iovlen = 1;
         msg.msg_control = &raw mut cmsgbuf.buf as *mut c_void;
-        msg.msg_controllen = BUFSIZE.try_into().unwrap();
+        msg.msg_controllen = BUFSIZE as _;
 
         let mut ifd: *mut imsg_fd = calloc(1, size_of::<imsg_fd>()) as *mut imsg_fd;
         if ifd.is_null() {
