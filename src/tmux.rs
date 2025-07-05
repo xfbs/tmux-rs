@@ -38,7 +38,10 @@ pub static mut global_w_options: *mut options = null_mut();
 
 pub static mut global_environ: *mut environ = null_mut();
 
-pub static mut start_time: timeval = unsafe { zeroed() };
+pub static mut start_time: timeval = timeval {
+    tv_sec: 0,
+    tv_usec: 0,
+};
 
 pub static mut socket_path: *const c_char = null_mut();
 
@@ -47,10 +50,10 @@ pub static mut ptm_fd: c_int = -1;
 pub static mut shell_command: *mut c_char = null_mut();
 
 pub fn usage() -> ! {
-    unsafe {
-        libc::fprintf(stderr, c"usage: %s [-2CDlNuVv] [-c shell-command] [-f file] [-L socket-name]\n            [-S socket-path] [-T features] [command [flags]]\n".as_ptr(), getprogname());
-        std::process::exit(1)
-    }
+    eprintln!(
+        "usage: tmux-rs [-2CDlNuVv] [-c shell-command] [-f file] [-L socket-name]\n               [-S socket-path] [-T features] [command [flags]]\n"
+    );
+    std::process::exit(1)
 }
 
 pub unsafe fn getshell() -> *const c_char {
