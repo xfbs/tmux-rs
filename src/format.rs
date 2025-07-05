@@ -82,8 +82,7 @@ RB_GENERATE!(
 // Format job tree comparison function.
 pub fn format_job_cmp(fj1: &format_job, fj2: &format_job) -> Ordering {
     unsafe {
-        fj1
-            .tag
+        fj1.tag
             .cmp(&fj2.tag)
             .then_with(|| i32_to_ordering(strcmp(fj1.cmd, fj2.cmd)))
     }

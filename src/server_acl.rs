@@ -40,10 +40,7 @@ pub struct server_acl_user {
     pub entry: rb_entry<server_acl_user>,
 }
 
-pub fn server_acl_cmp(
-    user1: &server_acl_user,
-    user2: &server_acl_user,
-) -> Ordering {
+pub fn server_acl_cmp(user1: &server_acl_user, user2: &server_acl_user) -> Ordering {
     user1.uid.cmp(&user2.uid)
 }
 
