@@ -186,7 +186,7 @@ pub unsafe fn job_run(
                         }) || chdir(home) != 0)
                         && chdir(c"/".as_ptr()) != 0
                     {
-                        fatal(c"chdir failed".as_ptr());
+                        fatal("chdir failed");
                     }
 
                     environ_push(env);
@@ -194,10 +194,10 @@ pub unsafe fn job_run(
 
                     if !flags.intersects(job_flag::JOB_PTY) {
                         if dup2(out[1], STDIN_FILENO) == -1 {
-                            fatal(c"dup2 failed".as_ptr());
+                            fatal("dup2 failed");
                         }
                         if dup2(out[1], STDOUT_FILENO) == -1 {
-                            fatal(c"dup2 failed".as_ptr());
+                            fatal("dup2 failed");
                         }
                         if out[1] != STDIN_FILENO && out[1] != STDOUT_FILENO {
                             close(out[1]);
@@ -206,10 +206,10 @@ pub unsafe fn job_run(
 
                         nullfd = open(_PATH_DEVNULL, O_RDWR);
                         if nullfd == -1 {
-                            fatal(c"open failed".as_ptr());
+                            fatal("open failed");
                         }
                         if dup2(nullfd, STDERR_FILENO) == -1 {
-                            fatal(c"dup2 failed".as_ptr());
+                            fatal("dup2 failed");
                         }
                         if nullfd != STDERR_FILENO {
                             close(nullfd);
@@ -220,11 +220,11 @@ pub unsafe fn job_run(
                     if !cmd.is_null() {
                         setenv(c"SHELL".as_ptr(), shell, 1);
                         execl(shell, argv0, c"-c".as_ptr(), cmd, null_mut::<c_void>());
-                        fatal(c"execl failed".as_ptr());
+                        fatal("execl failed");
                     } else {
                         argvp = cmd_copy_argv(argc, argv);
                         execvp(*argvp, argvp as *const *const i8);
-                        fatal(c"execvp failed".as_ptr());
+                        fatal("execvp failed");
                     }
                 }
                 _ => (),
@@ -359,7 +359,7 @@ pub unsafe fn job_resize(job: *mut job, sx: c_uint, sy: c_uint) {
         (*ws).ws_row = sy as u16;
 
         if ioctl((*job).fd, TIOCSWINSZ, ws) == -1 {
-            fatal(c"ioctl failed".as_ptr());
+            fatal("ioctl failed");
         }
     }
 }

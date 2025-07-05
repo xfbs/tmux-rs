@@ -469,16 +469,16 @@ pub unsafe fn proc_fork_and_daemon(fd: *mut i32) -> pid_t {
             &raw mut pair as *mut i32,
         ) != 0
         {
-            fatal(c"socketpair failed".as_ptr());
+            fatal("socketpair failed");
         }
 
         match libc::fork() {
-            -1 => fatal(c"fork failed".as_ptr()),
+            -1 => fatal("fork failed"),
             0 => {
                 close(pair[0]);
                 *fd = pair[1];
                 if libc::daemon(1, 0) != 0 {
-                    fatal(c"daemon failed".as_ptr());
+                    fatal("daemon failed");
                 }
                 0
             }

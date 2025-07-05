@@ -413,7 +413,7 @@ unsafe extern "C" fn server_accept(fd: i32, events: i16, _data: *mut c_void) {
                     server_add_accept(1);
                     return;
                 }
-                _ => fatal(c"accept failed".as_ptr()),
+                _ => fatal("accept failed"),
             }
         }
 
@@ -513,7 +513,7 @@ unsafe fn server_child_signal() {
                     if errno!() == ECHILD {
                         return;
                     }
-                    fatal(c"waitpid failed".as_ptr());
+                    fatal("waitpid failed");
                 }
                 0 => return,
                 _ => {

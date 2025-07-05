@@ -137,7 +137,7 @@ impl session {
             log_debug!("new session {} ${}", _s(s.name), s.id);
 
             if libc::gettimeofday(&raw mut s.creation_time, null_mut()) != 0 {
-                fatal(c"gettimeofday failed".as_ptr());
+                fatal("gettimeofday failed");
             }
             session_update_activity(s.as_mut(), &raw mut s.creation_time);
 

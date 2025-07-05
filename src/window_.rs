@@ -494,7 +494,7 @@ pub unsafe fn window_pane_send_resize(wp: *mut window_pane, sx: u32, sy: u32) {
         // TODO sun ifdef
 
         if ioctl((*wp).fd, TIOCSWINSZ, &ws) == -1 {
-            fatal(c"ioctl failed".as_ptr());
+            fatal("ioctl failed");
         }
     }
 }
