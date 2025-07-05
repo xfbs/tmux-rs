@@ -269,6 +269,8 @@ pub type event_log_cb = Option<unsafe extern "C" fn(severity: c_int, msg: *const
 pub struct bufferevent_ops {
     pub _address: u8,
 }
+
+#[link(name = "event_core")]
 unsafe extern "C" {
     pub fn evbuffer_new() -> *mut evbuffer;
     pub fn evbuffer_free(buf: *mut evbuffer);

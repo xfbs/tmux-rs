@@ -10,6 +10,7 @@ pub struct TERMINAL {
     _opaque: [u8; 0],
 }
 
+#[link(name = "ncurses")]
 unsafe extern "C" {
     pub fn setupterm(term: *const c_char, filedes: i32, errret: *mut i32) -> i32;
 
