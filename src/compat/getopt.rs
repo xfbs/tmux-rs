@@ -1,8 +1,9 @@
 use ::libc::fprintf;
 
+use crate::stderr;
+use crate::getprogname;
+
 extern "C" {
-    static mut stderr: *mut libc::FILE;
-    fn getprogname() -> *const libc::c_char;
     fn strchr(_: *const libc::c_char, _: libc::c_int) -> *mut libc::c_char;
 }
 

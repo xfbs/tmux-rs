@@ -1,4 +1,5 @@
 // Copyright (c) 2009 Nicholas Marriott <nicholas.marriott@gmail.com>
+// Copyright (c) 2009 Joshua Elsasser <josh@elsasser.org>
 //
 // Permission to use, copy, modify, and distribute this software for any
 // purpose with or without fee is hereby granted, provided that the above
@@ -105,30 +106,21 @@ pub unsafe fn osdep_event_init() -> *mut event_base {
 pub unsafe fn osdep_get_name(fd: i32, tty: *const c_char) -> *mut c_char {
     // note only bothering to port the version for > Mac OS X 10.7 SDK or later
     unsafe {
-        // https://zameermanji.com/blog/2021/8/1/counting-open-file-descriptors-on-macos/
+        use libc::proc_pidinfo;
 
-        unsafe extern "C" {
-            fn proc_pidinfo(
-                pid: i32,
-                flavor: i32,
-                arg: u64,
-                buffer: *mut c_void,
-                buffersize: i32,
-            ) -> i32;
-        }
-
-        #[repr(C)]
-        struct proc_bsdshortinfo {
-            padding: [u32; 4],
-            pbsi_comm: [c_char; 16],
-            padding2: [u32; 8],
-        };
-
-        const PROC_PIDT_SHORTBSDINFO: usize = size_of::<proc_bsdshortinfo>();
         let mut bsdinfo: proc_bsdshortinfo = zeroed();
         let mut pgrp: pid_t = libc::tcgetpgrp(fd);
         if pgrp == -1 {
             return null_mut();
+        }
+
+        const PROC_PIDT_SHORTBSDINFO: i32 = 13;
+        // abi compatible version of struct defined in sys/proc_info.h
+        #[repr(C)]
+        struct proc_bsdshortinfo {
+            padding1: [u32; 4],
+            pbsi_comm: [c_char; 16],
+            padding2: [u32; 8],
         }
 
         let mut ret = proc_pidinfo(
@@ -147,10 +139,49 @@ pub unsafe fn osdep_get_name(fd: i32, tty: *const c_char) -> *mut c_char {
 
 #[cfg(target_os = "macos")]
 pub unsafe fn osdep_get_cwd(fd: i32) -> *const c_char {
-    todo!()
+    static mut wd: [c_char; libc::PATH_MAX as usize] = [0; libc::PATH_MAX as usize];
+    unsafe {
+        let mut pathinfo: libc::proc_vnodepathinfo = zeroed();
+
+        let mut pgrp: pid_t = libc::tcgetpgrp(fd);
+        if pgrp == -1 {
+            return null_mut();
+        }
+
+        let ret = libc::proc_pidinfo(
+            pgrp,
+            libc::PROC_PIDVNODEPATHINFO as _,
+            0,
+            (&raw mut pathinfo).cast(),
+            size_of::<libc::proc_vnodepathinfo>() as _,
+        );
+        if ret == size_of::<libc::proc_vnodepathinfo>() as i32 {
+            crate::compat::strlcpy(
+                &raw mut wd as *mut c_char,
+                &raw const pathinfo.pvi_cdir.vip_path as *const c_char,
+                libc::PATH_MAX as usize,
+            );
+            return &raw const wd as *const c_char;
+        }
+
+        null_mut()
+    }
 }
 
 #[cfg(target_os = "macos")]
 pub unsafe fn osdep_event_init() -> *mut event_base {
-    todo!()
+    unsafe {
+        /*
+         * On OS X, kqueue and poll are both completely broken and don't
+         * work on anything except socket file descriptors (yes, really).
+         */
+        libc::setenv(c"EVENT_NOKQUEUE".as_ptr(), c"1".as_ptr(), 1);
+        libc::setenv(c"EVENT_NOPOLL".as_ptr(), c"1".as_ptr(), 1);
+
+        let mut base: *mut event_base = event_init();
+        libc::unsetenv(c"EVENT_NOKQUEUE".as_ptr());
+        libc::unsetenv(c"EVENT_NOPOLL".as_ptr());
+
+        base
+    }
 }

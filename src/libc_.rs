@@ -39,6 +39,7 @@ macro_rules! errno {
 }
 pub(crate) use errno;
 
+#[cfg(target_os = "linux")]
 #[allow(non_snake_case)]
 #[inline]
 pub fn MB_CUR_MAX() -> usize {
@@ -46,6 +47,16 @@ pub fn MB_CUR_MAX() -> usize {
         unsafe fn __ctype_get_mb_cur_max() -> usize;
     }
     unsafe { __ctype_get_mb_cur_max() }
+}
+
+#[cfg(target_os = "macos")]
+#[allow(non_snake_case)]
+#[inline]
+pub fn MB_CUR_MAX() -> usize {
+    unsafe extern "C" {
+        unsafe fn ___mb_cur_max() -> i32;
+    }
+    unsafe { ___mb_cur_max() as usize }
 }
 
 unsafe extern "C" {

@@ -15,11 +15,7 @@ use core::ffi::{c_char, c_void};
 use core::ptr::null_mut;
 
 #[cfg(target_os = "macos")]
-pub unsafe fn reallocarray(
-    optr: *mut c_void,
-    nmemb: usize,
-    size: usize,
-) -> *mut c_void {
+pub unsafe fn reallocarray(optr: *mut c_void, nmemb: usize, size: usize) -> *mut c_void {
     const MUL_NO_OVERFLOW: usize = 1usize << (size_of::<usize>() * 4);
 
     unsafe {
