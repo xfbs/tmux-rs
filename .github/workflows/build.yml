@@ -9,7 +9,8 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-
+    env:
+      LIBRARY_PATH: /opt/homebrew/lib
     steps:
       - name: Install system dependencies (Linux)
         if: matrix.os == 'ubuntu-latest'
