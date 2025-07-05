@@ -136,8 +136,8 @@ pub const CONTROL_MAXIMUM_AGE: u64 = 300000;
 pub const CONTROL_IGNORE_FLAGS: client_flag =
     client_flag::CONTROL_NOOUTPUT.union(CLIENT_UNATTACHEDFLAGS);
 
-pub unsafe fn control_pane_cmp(cp1: *const control_pane, cp2: *const control_pane) -> Ordering {
-    unsafe { (*cp1).pane.cmp(&(*cp2).pane) }
+pub fn control_pane_cmp(cp1: &control_pane, cp2: &control_pane) -> Ordering {
+    cp1.pane.cmp(&cp2.pane)
 }
 RB_GENERATE!(
     control_panes,
@@ -147,11 +147,8 @@ RB_GENERATE!(
     control_pane_cmp
 );
 
-pub unsafe fn control_sub_cmp(
-    csub1: *const control_sub,
-    csub2: *const control_sub,
-) -> std::cmp::Ordering {
-    unsafe { i32_to_ordering(libc::strcmp((*csub1).name, (*csub2).name)) }
+pub fn control_sub_cmp(csub1: &control_sub, csub2: &control_sub) -> std::cmp::Ordering {
+    unsafe { i32_to_ordering(libc::strcmp(csub1.name, csub2.name)) }
 }
 RB_GENERATE!(
     control_subs,
@@ -161,16 +158,13 @@ RB_GENERATE!(
     control_sub_cmp
 );
 
-pub unsafe fn control_sub_pane_cmp(
-    csp1: *const control_sub_pane,
-    csp2: *const control_sub_pane,
+pub fn control_sub_pane_cmp(
+    csp1: &control_sub_pane,
+    csp2: &control_sub_pane,
 ) -> std::cmp::Ordering {
-    unsafe {
-        (*csp1)
-            .pane
-            .cmp(&(*csp2).pane)
-            .then_with(|| (*csp1).idx.cmp(&(*csp2).idx))
-    }
+    csp1.pane
+        .cmp(&csp2.pane)
+        .then_with(|| csp1.idx.cmp(&csp2.idx))
 }
 RB_GENERATE!(
     control_sub_panes,
@@ -180,16 +174,10 @@ RB_GENERATE!(
     control_sub_pane_cmp
 );
 
-pub unsafe fn control_sub_window_cmp(
-    csw1: *const control_sub_window,
-    csw2: *const control_sub_window,
-) -> Ordering {
-    unsafe {
-        (*csw1)
-            .window
-            .cmp(&(*csw2).window)
-            .then_with(|| (*csw1).idx.cmp(&(*csw2).idx))
-    }
+pub fn control_sub_window_cmp(csw1: &control_sub_window, csw2: &control_sub_window) -> Ordering {
+    csw1.window
+        .cmp(&csw2.window)
+        .then_with(|| csw1.idx.cmp(&csw2.idx))
 }
 RB_GENERATE!(
     control_sub_windows,

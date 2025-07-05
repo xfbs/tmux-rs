@@ -59,16 +59,10 @@ pub struct utf8_item {
     pub size: c_uchar,
 }
 
-pub unsafe fn utf8_data_cmp(ui1: *const utf8_item, ui2: *const utf8_item) -> std::cmp::Ordering {
-    unsafe {
-        (*ui1).size.cmp(&(*ui2).size).then_with(|| {
-            i32_to_ordering(memcmp(
-                (*ui1).data.as_ptr().cast(),
-                (*ui2).data.as_ptr().cast(),
-                (*ui1).size as usize,
-            ))
-        })
-    }
+pub fn utf8_data_cmp(ui1: &utf8_item, ui2: &utf8_item) -> std::cmp::Ordering {
+    ui1.size
+        .cmp(&ui2.size)
+        .then_with(|| ui1.data[..ui1.size as usize].cmp(&ui2.data[..ui2.size as usize]))
 }
 pub type utf8_data_tree = rb_head<utf8_item>;
 RB_GENERATE!(
@@ -80,8 +74,8 @@ RB_GENERATE!(
 );
 static mut utf8_data_tree: utf8_data_tree = rb_initializer();
 
-pub unsafe fn utf8_index_cmp(ui1: *const utf8_item, ui2: *const utf8_item) -> std::cmp::Ordering {
-    unsafe { (*ui1).index.cmp(&(*ui2).index) }
+pub fn utf8_index_cmp(ui1: &utf8_item, ui2: &utf8_item) -> std::cmp::Ordering {
+    ui1.index.cmp(&ui2.index)
 }
 pub type utf8_index_tree = rb_head<utf8_item>;
 RB_GENERATE!(

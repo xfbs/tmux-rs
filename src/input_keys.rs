@@ -41,11 +41,8 @@ impl input_key_entry {
 }
 
 /// Input key comparison function.
-pub unsafe fn input_key_cmp(
-    ike1: *const input_key_entry,
-    ike2: *const input_key_entry,
-) -> Ordering {
-    unsafe { (*ike1).key.cmp(&(*ike2).key) }
+pub fn input_key_cmp(ike1: &input_key_entry, ike2: &input_key_entry) -> Ordering {
+    ike1.key.cmp(&ike2.key)
 }
 
 RB_GENERATE!(

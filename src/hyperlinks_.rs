@@ -59,23 +59,20 @@ pub struct hyperlinks {
     pub references: u32,
 }
 
-unsafe fn hyperlinks_by_uri_cmp(
-    left: *const hyperlinks_uri,
-    right: *const hyperlinks_uri,
-) -> std::cmp::Ordering {
+fn hyperlinks_by_uri_cmp(left: &hyperlinks_uri, right: &hyperlinks_uri) -> std::cmp::Ordering {
     unsafe {
-        if *(*left).internal_id == b'\0' as _ || *(*right).internal_id == b'\0' as _ {
-            if *(*left).internal_id != b'\0' as _ {
+        if *left.internal_id == b'\0' as _ || *right.internal_id == b'\0' as _ {
+            if *left.internal_id != b'\0' as _ {
                 return Ordering::Less;
             }
-            if *(*right).internal_id != b'\0' as _ {
+            if *right.internal_id != b'\0' as _ {
                 return Ordering::Greater;
             }
-            return (*left).inner.cmp(&(*right).inner);
+            return left.inner.cmp(&right.inner);
         }
 
-        i32_to_ordering(libc::strcmp((*left).internal_id, (*right).internal_id))
-            .then_with(|| i32_to_ordering(libc::strcmp((*left).uri, (*right).uri)))
+        i32_to_ordering(libc::strcmp(left.internal_id, right.internal_id))
+            .then_with(|| i32_to_ordering(libc::strcmp(left.uri, right.uri)))
     }
 }
 
@@ -87,11 +84,8 @@ RB_GENERATE!(
     hyperlinks_by_uri_cmp
 );
 
-unsafe fn hyperlinks_by_inner_cmp(
-    left: *const hyperlinks_uri,
-    right: *const hyperlinks_uri,
-) -> Ordering {
-    unsafe { (*left).inner.cmp(&(*right).inner) }
+fn hyperlinks_by_inner_cmp(left: &hyperlinks_uri, right: &hyperlinks_uri) -> Ordering {
+    left.inner.cmp(&right.inner)
 }
 
 RB_GENERATE!(

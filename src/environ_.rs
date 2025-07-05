@@ -22,14 +22,14 @@ use crate::xmalloc::xcalloc_;
 pub type environ = rb_head<environ_entry>;
 RB_GENERATE!(environ, environ_entry, entry, discr_entry, environ_cmp);
 
-pub unsafe fn environ_cmp(
-    envent1: *const environ_entry,
-    envent2: *const environ_entry,
+pub fn environ_cmp(
+    envent1: &environ_entry,
+    envent2: &environ_entry,
 ) -> std::cmp::Ordering {
     unsafe {
         i32_to_ordering(libc::strcmp(
-            transmute_ptr((*envent1).name),
-            transmute_ptr((*envent2).name),
+            transmute_ptr(envent1.name),
+            transmute_ptr(envent2.name),
         ))
     }
 }

@@ -58,16 +58,16 @@ RB_GENERATE!(
     window_pane_cmp
 );
 
-pub unsafe fn window_cmp(w1: *const window, w2: *const window) -> cmp::Ordering {
-    unsafe { (*w1).id.cmp(&(*w2).id) }
+pub fn window_cmp(w1: &window, w2: &window) -> cmp::Ordering {
+    w1.id.cmp(&w2.id)
 }
 
-pub unsafe fn winlink_cmp(wl1: *const winlink, wl2: *const winlink) -> cmp::Ordering {
-    unsafe { (*wl1).idx.cmp(&(*wl2).idx) }
+pub fn winlink_cmp(wl1: &winlink, wl2: &winlink) -> cmp::Ordering {
+    wl1.idx.cmp(&wl2.idx)
 }
 
-pub unsafe fn window_pane_cmp(wp1: *const window_pane, wp2: *const window_pane) -> cmp::Ordering {
-    unsafe { (*wp1).id.cmp(&(*wp2).id) }
+pub fn window_pane_cmp(wp1: &window_pane, wp2: &window_pane) -> cmp::Ordering {
+    wp1.id.cmp(&wp2.id)
 }
 
 pub unsafe fn winlink_find_by_window(

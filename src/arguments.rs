@@ -54,8 +54,8 @@ pub struct args_command_state<'a> {
 
 crate::compat::RB_GENERATE!(args_tree, args_entry, entry, discr_entry, args_cmp);
 
-unsafe fn args_cmp(a1: *const args_entry, a2: *const args_entry) -> Ordering {
-    unsafe { ((*a1).flag).cmp(&(*a2).flag) }
+fn args_cmp(a1: &args_entry, a2: &args_entry) -> Ordering {
+    a1.flag.cmp(&a2.flag)
 }
 
 pub unsafe fn args_find(args: *mut args, flag: c_uchar) -> *mut args_entry {

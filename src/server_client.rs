@@ -24,11 +24,8 @@ use crate::{
 };
 
 /// Compare client windows.
-pub unsafe fn server_client_window_cmp(
-    cw1: *const client_window,
-    cw2: *const client_window,
-) -> std::cmp::Ordering {
-    unsafe { (*cw1).window.cmp(&(*cw2).window) }
+pub fn server_client_window_cmp(cw1: &client_window, cw2: &client_window) -> std::cmp::Ordering {
+    cw1.window.cmp(&cw2.window)
 }
 
 /// Number of attached clients.

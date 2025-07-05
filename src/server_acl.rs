@@ -40,11 +40,11 @@ pub struct server_acl_user {
     pub entry: rb_entry<server_acl_user>,
 }
 
-pub unsafe fn server_acl_cmp(
-    user1: *const server_acl_user,
-    user2: *const server_acl_user,
+pub fn server_acl_cmp(
+    user1: &server_acl_user,
+    user2: &server_acl_user,
 ) -> Ordering {
-    unsafe { (*user1).uid.cmp(&(*user2).uid) }
+    user1.uid.cmp(&user2.uid)
 }
 
 pub type server_acl_entries = rb_head<server_acl_user>;

@@ -74,7 +74,7 @@ impl<T> Clone for rb_entry<T> {
 pub trait GetEntry<T, D = ()> {
     unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<T>;
     unsafe fn entry(this: *const Self) -> *const rb_entry<T>;
-    unsafe fn cmp(this: *const Self, other: *const Self) -> std::cmp::Ordering;
+    fn cmp(this: &Self, other: &Self) -> std::cmp::Ordering;
 }
 
 pub const unsafe fn rb_init<T>(head: *mut rb_head<T>) {
@@ -260,8 +260,8 @@ macro_rules! RB_GENERATE {
             unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<$ty> {
                 unsafe { &raw mut (*this).$entry_field }
             }
-            unsafe fn cmp(this: *const Self, other: *const Self) -> std::cmp::Ordering {
-                unsafe { $cmp_fn(this, other) }
+            fn cmp(this: &Self, other: &Self) -> std::cmp::Ordering {
+                $cmp_fn(this, other)
             }
         }
     };
@@ -542,7 +542,7 @@ where
         while !tmp.is_null() {
             parent = tmp;
 
-            comp = T::cmp(elm, parent);
+            comp = T::cmp(unsafe { &*elm }, unsafe { &*parent });
             tmp = match comp {
                 Ordering::Less => rb_left(tmp),
                 Ordering::Greater => rb_right(tmp),
@@ -572,7 +572,7 @@ where
         let mut tmp: *mut T = (*head).rbh_root;
 
         while !tmp.is_null() {
-            tmp = match T::cmp(elm, tmp) {
+            tmp = match T::cmp(unsafe { &*elm }, unsafe { &*tmp }) {
                 Ordering::Less => rb_left(tmp),
                 Ordering::Greater => rb_right(tmp),
                 Ordering::Equal => return tmp,
@@ -591,7 +591,7 @@ where
         let mut tmp = rb_root(head);
         let mut res = null_mut();
         while !tmp.is_null() {
-            tmp = match T::cmp(elm, tmp) {
+            tmp = match T::cmp(unsafe { &*elm }, unsafe { &*tmp }) {
                 Ordering::Less => {
                     res = tmp;
                     rb_left(tmp)
