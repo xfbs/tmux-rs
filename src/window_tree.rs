@@ -72,12 +72,14 @@ pub static window_tree_mode: window_mode = window_mode {
     name: SyncCharPtr::new(c"tree-mode"),
     default_format: SyncCharPtr::from_ptr(WINDOW_TREE_DEFAULT_FORMAT.as_ptr().cast()),
 
-    init: Some(window_tree_init),
-    free: Some(window_tree_free),
-    resize: Some(window_tree_resize),
+    init: window_tree_init,
+    free: window_tree_free,
+    resize: window_tree_resize,
     update: Some(window_tree_update),
     key: Some(window_tree_key),
-    ..unsafe { zeroed() }
+    key_table: None,
+    command: None,
+    formats: None,
 };
 
 #[repr(i32)]

@@ -39,12 +39,14 @@ pub static window_client_mode: window_mode = window_mode {
     name: SyncCharPtr::new(c"client-mode"),
     default_format: SyncCharPtr::new(WINDOW_CLIENT_DEFAULT_FORMAT),
 
-    init: Some(window_client_init),
-    free: Some(window_client_free),
-    resize: Some(window_client_resize),
+    init: window_client_init,
+    free: window_client_free,
+    resize: window_client_resize,
     update: Some(window_client_update),
     key: Some(window_client_key),
-    ..unsafe { zeroed() }
+    key_table: None,
+    command: None,
+    formats: None,
 };
 
 #[repr(u32)]

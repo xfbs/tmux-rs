@@ -1194,10 +1194,8 @@ pub unsafe fn window_pane_resize(wp: *mut window_pane, sx: u32, sy: u32) {
             (*wp).base.saved_grid.is_null() as i32,
         );
 
-        if let Some(wme) = NonNull::new(tailq_first(&raw mut (*wp).modes))
-            && let Some(resize) = (*(*wme.as_ptr()).mode).resize
-        {
-            resize(wme, sx, sy);
+        if let Some(wme) = NonNull::new(tailq_first(&raw mut (*wp).modes)) {
+            ((*(*wme.as_ptr()).mode).resize)(wme, sx, sy);
         }
     }
 }
@@ -1232,7 +1230,7 @@ pub unsafe fn window_pane_set_mode(
             (*wme).mode = mode;
             (*wme).prefix = 1;
             tailq_insert_head(&raw mut (*wp).modes, wme);
-            (*wme).screen = (*(*wme).mode).init.unwrap()(NonNull::new_unchecked(wme), fs, args);
+            (*wme).screen = ((*(*wme).mode).init)(NonNull::new_unchecked(wme), fs, args);
         }
 
         (*wp).screen = (*wme).screen;
@@ -1255,7 +1253,7 @@ pub unsafe fn window_pane_reset_mode(wp: *mut window_pane) {
 
         let wme = tailq_first(&raw mut (*wp).modes);
         tailq_remove::<_, ()>(&raw mut (*wp).modes, wme);
-        (*(*wme).mode).free.unwrap()(NonNull::new(wme).unwrap());
+        ((*(*wme).mode).free)(NonNull::new(wme).unwrap());
         free(wme as _);
 
         if let Some(next) = NonNull::new(tailq_first(&raw mut (*wp).modes)) {
@@ -1265,9 +1263,7 @@ pub unsafe fn window_pane_reset_mode(wp: *mut window_pane) {
                 _s((*(*next.as_ptr()).mode).name.as_ptr())
             );
             (*wp).screen = (*next.as_ptr()).screen;
-            if let Some(resize) = (*(*next.as_ptr()).mode).resize {
-                resize(next, (*wp).sx, (*wp).sy);
-            }
+            ((*(*next.as_ptr()).mode).resize)(next, (*wp).sx, (*wp).sy);
         } else {
             (*wp).flags &= !window_pane_flags::PANE_UNSEENCHANGES;
             log_debug!("{}: no next mode", func);
@@ -1431,8 +1427,7 @@ pub unsafe fn window_pane_search(
     }
 }
 
-/* Get MRU pane from a list. */
-
+/// Get MRU pane from a list.
 unsafe fn window_pane_choose_best(list: *mut *mut window_pane, size: u32) -> *mut window_pane {
     if size == 0 {
         return null_mut();
@@ -1450,11 +1445,7 @@ unsafe fn window_pane_choose_best(list: *mut *mut window_pane, size: u32) -> *mu
     }
 }
 
-/*
- * Find the pane directly above another. We build a list of those adjacent to
- * top edge and then choose the best.
- */
-
+/// Find the pane directly above another. We build a list of those adjacent to top edge and then choose the best.
 pub unsafe fn window_pane_find_up(wp: *mut window_pane) -> *mut window_pane {
     unsafe {
         if wp.is_null() {
@@ -1522,8 +1513,7 @@ pub unsafe fn window_pane_find_up(wp: *mut window_pane) -> *mut window_pane {
     }
 }
 
-/* Find the pane directly below another. */
-
+/// Find the pane directly below another.
 pub unsafe fn window_pane_find_down(wp: *mut window_pane) -> *mut window_pane {
     unsafe {
         if wp.is_null() {
@@ -1591,8 +1581,7 @@ pub unsafe fn window_pane_find_down(wp: *mut window_pane) -> *mut window_pane {
     }
 }
 
-/* Find the pane directly to the left of another. */
-
+/// Find the pane directly to the left of another.
 pub unsafe fn window_pane_find_left(wp: *mut window_pane) -> *mut window_pane {
     if wp.is_null() {
         return null_mut();
@@ -1643,8 +1632,7 @@ pub unsafe fn window_pane_find_left(wp: *mut window_pane) -> *mut window_pane {
     }
 }
 
-/* Find the pane directly to the right of another. */
-
+/// Find the pane directly to the right of another.
 pub unsafe fn window_pane_find_right(wp: *mut window_pane) -> *mut window_pane {
     if wp.is_null() {
         return null_mut();
@@ -1714,8 +1702,7 @@ pub unsafe fn window_pane_stack_remove(stack: *mut window_panes, wp: *mut window
     }
 }
 
-/* Clear alert flags for a winlink */
-
+/// Clear alert flags for a winlink
 pub unsafe fn winlink_clear_flags(wl: *mut winlink) {
     unsafe {
         (*(*wl).window).flags &= !WINDOW_ALERTFLAGS;
@@ -1730,8 +1717,7 @@ pub unsafe fn winlink_clear_flags(wl: *mut winlink) {
     }
 }
 
-/* Shuffle window indexes up. */
-
+/// Shuffle window indexes up.
 pub unsafe fn winlink_shuffle_up(s: *mut session, mut wl: *mut winlink, before: i32) -> i32 {
     if wl.is_null() {
         return -1;
@@ -1866,8 +1852,6 @@ pub unsafe fn window_pane_update_used_data(
 
 pub unsafe fn window_set_fill_character(w: NonNull<window>) {
     let w = w.as_ptr();
-    //const char		*value;
-    //struct utf8_data	*ud;
     unsafe {
         free((*w).fill_character as _);
         (*w).fill_character = null_mut();

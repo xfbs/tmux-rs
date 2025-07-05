@@ -15,24 +15,28 @@ use super::*;
 
 pub static window_copy_mode: window_mode = window_mode {
     name: SyncCharPtr::new(c"copy-mode"),
-    init: Some(window_copy_init),
-    free: Some(window_copy_free),
-    resize: Some(window_copy_resize),
+    init: window_copy_init,
+    free: window_copy_free,
+    resize: window_copy_resize,
     key_table: Some(window_copy_key_table),
     command: Some(window_copy_command),
     formats: Some(window_copy_formats),
-    ..window_mode::default()
+    default_format: SyncCharPtr::null(),
+    update: None,
+    key: None,
 };
 
 pub static window_view_mode: window_mode = window_mode {
     name: SyncCharPtr::new(c"view-mode"),
-    init: Some(window_copy_view_init),
-    free: Some(window_copy_free),
-    resize: Some(window_copy_resize),
+    init: window_copy_view_init,
+    free: window_copy_free,
+    resize: window_copy_resize,
     key_table: Some(window_copy_key_table),
     command: Some(window_copy_command),
     formats: Some(window_copy_formats),
-    ..window_mode::default()
+    default_format: SyncCharPtr::null(),
+    update: None,
+    key: None,
 };
 
 #[repr(i32)]

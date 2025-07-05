@@ -42,11 +42,14 @@ pub static window_customize_mode: window_mode = window_mode {
     name: SyncCharPtr::new(c"options-mode"),
     default_format: SyncCharPtr::from_ptr(WINDOW_CUSTOMIZE_DEFAULT_FORMAT.as_ptr().cast()),
 
-    init: Some(window_customize_init),
-    free: Some(window_customize_free),
-    resize: Some(window_customize_resize),
+    init: window_customize_init,
+    free: window_customize_free,
+    resize: window_customize_resize,
     key: Some(window_customize_key),
-    ..unsafe { zeroed() }
+    update: None,
+    key_table: None,
+    command: None,
+    formats: None,
 };
 
 #[repr(i32)]

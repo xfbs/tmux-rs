@@ -54,12 +54,14 @@ pub static window_buffer_mode: window_mode = window_mode {
     name: SyncCharPtr::new(c"buffer-mode"),
     default_format: SyncCharPtr::from_ptr(WINDOW_BUFFER_DEFAULT_FORMAT),
 
-    init: Some(window_buffer_init),
-    free: Some(window_buffer_free),
-    resize: Some(window_buffer_resize),
+    init: window_buffer_init,
+    free: window_buffer_free,
+    resize: window_buffer_resize,
     update: Some(window_buffer_update),
     key: Some(window_buffer_key),
-    ..unsafe { zeroed() }
+    key_table: None,
+    command: None,
+    formats: None,
 };
 
 #[repr(u32)]

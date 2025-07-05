@@ -19,11 +19,15 @@ use crate::compat::{queue::tailq_first, strlcat};
 pub static window_clock_mode: window_mode = window_mode {
     name: SyncCharPtr::new(c"clock-mode"),
 
-    init: Some(window_clock_init),
-    free: Some(window_clock_free),
-    resize: Some(window_clock_resize),
+    init: window_clock_init,
+    free: window_clock_free,
+    resize: window_clock_resize,
     key: Some(window_clock_key),
-    ..unsafe { zeroed() }
+    default_format: SyncCharPtr::null(),
+    update: None,
+    key_table: None,
+    command: None,
+    formats: None,
 };
 
 #[repr(C)]

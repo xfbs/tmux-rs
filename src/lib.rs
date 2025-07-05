@@ -1212,11 +1212,9 @@ struct window_mode {
     name: SyncCharPtr,
     default_format: SyncCharPtr,
 
-    init: Option<
-        unsafe fn(NonNull<window_mode_entry>, *mut cmd_find_state, *mut args) -> *mut screen,
-    >,
-    free: Option<unsafe fn(NonNull<window_mode_entry>)>,
-    resize: Option<unsafe fn(NonNull<window_mode_entry>, u32, u32)>,
+    init: unsafe fn(NonNull<window_mode_entry>, *mut cmd_find_state, *mut args) -> *mut screen,
+    free: unsafe fn(NonNull<window_mode_entry>),
+    resize: unsafe fn(NonNull<window_mode_entry>, u32, u32),
     update: Option<unsafe fn(NonNull<window_mode_entry>)>,
     key: Option<
         unsafe fn(
@@ -1241,23 +1239,6 @@ struct window_mode {
         ),
     >,
     formats: Option<unsafe fn(*mut window_mode_entry, *mut format_tree)>,
-}
-
-impl window_mode {
-    const fn default() -> Self {
-        Self {
-            name: SyncCharPtr::null(),
-            default_format: SyncCharPtr::null(),
-            init: None,
-            free: None,
-            resize: None,
-            update: None,
-            key: None,
-            key_table: None,
-            command: None,
-            formats: None,
-        }
-    }
 }
 
 // Active window mode.
