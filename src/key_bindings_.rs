@@ -99,12 +99,12 @@ RB_GENERATE!(
 RB_GENERATE!(key_tables, key_table, entry, discr_entry, key_table_cmp);
 static mut key_tables: key_tables = rb_initializer();
 
-pub unsafe fn key_table_cmp(table1: *const key_table, table2: *const key_table) -> Ordering {
-    unsafe { i32_to_ordering(strcmp((*table1).name, (*table2).name)) }
+pub fn key_table_cmp(table1: &key_table, table2: &key_table) -> Ordering {
+    unsafe { i32_to_ordering(strcmp(table1.name, table2.name)) }
 }
 
-pub unsafe fn key_bindings_cmp(bd1: *const key_binding, bd2: *const key_binding) -> Ordering {
-    unsafe { (*bd1).key.cmp(&(*bd2).key) }
+pub fn key_bindings_cmp(bd1: &key_binding, bd2: &key_binding) -> Ordering {
+    bd1.key.cmp(&bd2.key)
 }
 
 pub unsafe fn key_bindings_free(bd: *mut key_binding) {

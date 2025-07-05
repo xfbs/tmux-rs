@@ -80,12 +80,12 @@ RB_GENERATE!(
 );
 
 // Format job tree comparison function.
-pub unsafe fn format_job_cmp(fj1: *const format_job, fj2: *const format_job) -> Ordering {
+pub fn format_job_cmp(fj1: &format_job, fj2: &format_job) -> Ordering {
     unsafe {
-        (*fj1)
+        fj1
             .tag
-            .cmp(&(*fj2).tag)
-            .then_with(|| i32_to_ordering(strcmp((*fj1).cmd, (*fj2).cmd)))
+            .cmp(&fj2.tag)
+            .then_with(|| i32_to_ordering(strcmp(fj1.cmd, fj2.cmd)))
     }
 }
 
@@ -197,8 +197,8 @@ pub struct format_modifier {
 }
 
 /// Format entry tree comparison function.
-unsafe fn format_entry_cmp(fe1: *const format_entry, fe2: *const format_entry) -> Ordering {
-    unsafe { i32_to_ordering(strcmp((*fe1).key, (*fe2).key)) }
+fn format_entry_cmp(fe1: &format_entry, fe2: &format_entry) -> Ordering {
+    unsafe { i32_to_ordering(strcmp(fe1.key, fe2.key)) }
 }
 
 /// Single-character uppercase aliases.

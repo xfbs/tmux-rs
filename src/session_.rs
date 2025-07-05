@@ -39,12 +39,12 @@ pub static mut next_session_id: u32 = 0;
 
 pub static mut session_groups: session_groups = rb_initializer();
 
-pub unsafe fn session_cmp(s1: *const session, s2: *const session) -> Ordering {
-    unsafe { i32_to_ordering(libc::strcmp((*s1).name, (*s2).name)) }
+pub fn session_cmp(s1: &session, s2: &session) -> Ordering {
+    unsafe { i32_to_ordering(libc::strcmp(s1.name, s2.name)) }
 }
 
-pub unsafe fn session_group_cmp(s1: *const session_group, s2: *const session_group) -> Ordering {
-    unsafe { i32_to_ordering(libc::strcmp((*s1).name, (*s2).name)) }
+pub fn session_group_cmp(s1: &session_group, s2: &session_group) -> Ordering {
+    unsafe { i32_to_ordering(libc::strcmp(s1.name, s2.name)) }
 }
 
 pub unsafe fn session_alive(s: *mut session) -> bool {
