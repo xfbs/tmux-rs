@@ -15,8 +15,8 @@ use crate::*;
 
 use libc::{
     AF_UNIX, EAGAIN, PF_UNSPEC, SA_RESTART, SIG_DFL, SIG_IGN, SIGCHLD, SIGCONT, SIGHUP, SIGINT,
-    SIGPIPE, SIGQUIT, SIGTERM, SIGTSTP, SIGTTIN, SIGTTOU, SIGUSR1, SIGUSR2, SIGWINCH, close,
-    daemon, gid_t, sigaction, sigemptyset, socketpair, uname, utsname,
+    SIGPIPE, SIGQUIT, SIGTERM, SIGTSTP, SIGTTIN, SIGTTOU, SIGUSR1, SIGUSR2, SIGWINCH, close, gid_t,
+    sigaction, sigemptyset, socketpair, uname, utsname,
 };
 
 use crate::compat::{
@@ -456,6 +456,7 @@ pub unsafe fn proc_toggle_log(tp: *mut tmuxproc) {
     }
 }
 
+#[cfg_attr(target_os = "macos", expect(deprecated))]
 /// On success, the PID of the child process is returned in the parent, and 0 is returned in the child.
 pub unsafe fn proc_fork_and_daemon(fd: *mut i32) -> pid_t {
     unsafe {
@@ -476,7 +477,7 @@ pub unsafe fn proc_fork_and_daemon(fd: *mut i32) -> pid_t {
             0 => {
                 close(pair[0]);
                 *fd = pair[1];
-                if daemon(1, 0) != 0 {
+                if libc::daemon(1, 0) != 0 {
                     fatal(c"daemon failed".as_ptr());
                 }
                 0

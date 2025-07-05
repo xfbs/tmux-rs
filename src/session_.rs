@@ -313,9 +313,9 @@ pub unsafe fn session_update_activity(s: *mut session, from: *mut timeval) {
             (*s).id,
             _s((*s).name),
             (*s).activity_time.tv_sec,
-            (*s).activity_time.tv_usec as i32,
+            (*s).activity_time.tv_usec,
             (*last).tv_sec,
-            (*last).tv_usec as i32,
+            (*last).tv_usec,
         );
 
         if evtimer_initialized(&raw mut (*s).lock_timer) {
