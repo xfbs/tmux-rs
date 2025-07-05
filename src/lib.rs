@@ -2589,8 +2589,7 @@ enum prompt_mode {
 
 mod tmux;
 
-#[cfg(not(test))]
-pub use crate::tmux::main;
+pub use crate::tmux::tmux_main;
 
 use crate::tmux::{
     checkshell, find_cwd, find_home, get_timer, getversion, global_environ, global_options,
