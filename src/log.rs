@@ -163,29 +163,15 @@ fn log_vwrite_rs(args: std::fmt::Arguments, prefix: &str) {
     }
 }
 
-pub unsafe fn fatal(msg: *const c_char) -> ! {
-    unsafe {
-        let mut tmp: [c_char; 256] = [0; 256];
+pub fn fatal(msg: &str) -> ! {
+    let os_error = std::io::Error::last_os_error();
+    let error_msg = os_error.to_string();
 
-        if snprintf(
-            tmp.as_mut_ptr(),
-            size_of_val(&tmp),
-            c"fatal: %s: ".as_ptr(),
-            strerror(errno!()),
-        ) < 0
-        {
-            std::process::exit(1);
-        }
+    let prefix = format!("fatal: {error_msg}: ");
 
-        log_vwrite_rs(
-            format_args!("{}", _s(msg)),
-            CStr::from_ptr(tmp.as_ptr())
-                .to_str()
-                .expect("fatal: invalid utf8"),
-        );
+    log_vwrite_rs(format_args!("{msg}"), &prefix);
 
-        std::process::exit(1)
-    }
+    std::process::exit(1)
 }
 
 macro_rules! fatalx_ {

@@ -570,13 +570,13 @@ unsafe fn client_send_identify(
 
         let fd = dup(STDIN_FILENO);
         if fd == -1 {
-            fatal(c"dup failed".as_ptr());
+            fatal("dup failed");
         }
         proc_send(client_peer, msgtype::MSG_IDENTIFY_STDIN, fd, null_mut(), 0);
 
         let fd = dup(STDOUT_FILENO);
         if fd == -1 {
-            fatal(c"dup failed".as_ptr());
+            fatal("dup failed");
         }
         proc_send(client_peer, msgtype::MSG_IDENTIFY_STDOUT, fd, null_mut(), 0);
 
@@ -628,7 +628,7 @@ unsafe fn client_exec(shell: *mut c_char, shellcmd: *mut c_char) {
         closefrom(STDERR_FILENO + 1);
 
         execl(shell, argv0, c"-c".as_ptr(), shellcmd, null_mut::<c_void>());
-        fatal(c"execl failed".as_ptr());
+        fatal("execl failed");
     }
 }
 
@@ -679,7 +679,7 @@ unsafe fn client_signal(sig: i32) {
                     sigact.sa_flags = SA_RESTART;
                     sigact.sa_sigaction = SIG_IGN;
                     if sigaction(SIGTSTP, &raw mut sigact, null_mut()) != 0 {
-                        fatal(c"sigaction failed".as_ptr());
+                        fatal("sigaction failed");
                     }
                     proc_send(client_peer, msgtype::MSG_WAKEUP, -1, null_mut(), 0);
                     client_suspended = 0;
@@ -943,7 +943,7 @@ unsafe fn client_dispatch_attached(imsg: *mut imsg) {
                 sigact.sa_flags = SA_RESTART;
                 sigact.sa_sigaction = SIG_DFL;
                 if sigaction(SIGTSTP, &raw mut sigact, null_mut()) != 0 {
-                    fatal(c"sigaction failed".as_ptr());
+                    fatal("sigaction failed");
                 }
                 client_suspended = 1;
                 kill(std::process::id() as i32, SIGTSTP);

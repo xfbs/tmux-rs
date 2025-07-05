@@ -202,7 +202,7 @@ unsafe fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
                     break 'fail;
                 }
                 if tcgetattr((*c).fd, &raw mut tio) != 0 {
-                    fatal(c"tcgetattr failed".as_ptr());
+                    fatal("tcgetattr failed");
                 }
                 tiop = &raw mut tio;
             } else {

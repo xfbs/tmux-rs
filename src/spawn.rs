@@ -484,7 +484,7 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut c_char) -> *mu
             } else if chdir(c"/".as_ptr()) == 0 {
                 environ_set!(child, c"PWD".as_ptr(), 0, "/");
             } else {
-                fatal(c"chdir failed".as_ptr());
+                fatal("chdir failed");
             }
 
             /*

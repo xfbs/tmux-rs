@@ -61,7 +61,7 @@ pub unsafe fn tty_create_log() {
             0o644,
         );
         if tty_log_fd != -1 && libc::fcntl(tty_log_fd, libc::F_SETFD, libc::FD_CLOEXEC) == -1 {
-            fatal(c"fcntl failed".as_ptr());
+            fatal("fcntl failed");
         }
     }
 }
@@ -277,7 +277,7 @@ pub unsafe fn tty_open(tty: *mut tty, cause: *mut *mut c_char) -> i32 {
         );
         (*tty).in_ = evbuffer_new();
         if (*tty).in_.is_null() {
-            fatal(c"out of memory".as_ptr());
+            fatal("out of memory");
         }
 
         event_set(
@@ -289,7 +289,7 @@ pub unsafe fn tty_open(tty: *mut tty, cause: *mut *mut c_char) -> i32 {
         );
         (*tty).out = evbuffer_new();
         if (*tty).out.is_null() {
-            fatal(c"out of memory".as_ptr());
+            fatal("out of memory");
         }
 
         evtimer_set(&raw mut (*tty).timer, Some(tty_timer_callback), tty.cast());

@@ -207,7 +207,7 @@ pub unsafe fn server_client_set_key_table(c: *mut client, mut name: *const c_cha
         (*c).keytable = key_bindings_get_table(name, 1);
         (*(*c).keytable).references += 1;
         if libc::gettimeofday(&raw mut (*(*c).keytable).activity_time, null_mut()) != 0 {
-            fatal(c"gettimeofday failed".as_ptr());
+            fatal("gettimeofday failed");
         }
     }
 }
@@ -255,7 +255,7 @@ pub unsafe fn server_client_create(fd: i32) -> *mut client {
         (*c).peer = proc_add_peer(server_proc, fd, Some(server_client_dispatch), c.cast());
 
         if libc::gettimeofday(&raw mut (*c).creation_time, null_mut()) != 0 {
-            fatal(c"gettimeofday failed".as_ptr());
+            fatal("gettimeofday failed");
         }
         memcpy__(&raw mut (*c).activity_time, &raw mut (*c).creation_time);
 
@@ -1832,7 +1832,7 @@ pub unsafe fn server_client_key_callback(item: *mut cmdq_item, data: *mut c_void
 
                 /* Update the activity timer. */
                 if libc::gettimeofday(&raw mut (*c).activity_time, null_mut()) != 0 {
-                    fatal(c"gettimeofday failed".as_ptr());
+                    fatal("gettimeofday failed");
                 }
                 session_update_activity(s, &raw mut (*c).activity_time);
 
@@ -2941,7 +2941,7 @@ pub unsafe fn server_client_dispatch(imsg: *mut imsg, arg: *mut c_void) {
                 let s = (*c).session;
 
                 if libc::gettimeofday(&raw mut (*c).activity_time, null_mut()) != 0 {
-                    fatal(c"gettimeofday failed".as_ptr());
+                    fatal("gettimeofday failed");
                 }
 
                 tty_start_tty(&raw mut (*c).tty);

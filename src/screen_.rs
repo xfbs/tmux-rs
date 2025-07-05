@@ -176,7 +176,7 @@ pub unsafe fn screen_reset_tabs(s: *mut screen) {
 
         (*s).tabs = bit_alloc(screen_size_x(s));
         if (*s).tabs.is_null() {
-            fatal(c"bit_alloc failed".as_ptr() as *const c_char);
+            fatal("bit_alloc failed");
         }
 
         let mut i = 8;
