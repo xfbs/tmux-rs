@@ -33,7 +33,7 @@ pub unsafe fn name_time_expired(w: *mut window, tv: *mut timeval) -> c_int {
         if offset.tv_sec != 0 || offset.tv_usec > NAME_INTERVAL {
             0
         } else {
-            NAME_INTERVAL - offset.tv_usec as c_int
+            (NAME_INTERVAL - offset.tv_usec) as c_int
         }
     }
 }

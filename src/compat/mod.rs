@@ -27,7 +27,7 @@ pub use closefrom::closefrom;
 pub use fgetln::fgetln;
 pub use freezero::freezero;
 pub use getpeereid::getpeereid;
-pub use reallocarray::reallocarray;
+pub(crate) use reallocarray::reallocarray;
 pub use recallocarray::recallocarray;
 pub use setproctitle::setproctitle_;
 pub use strlcat::strlcat;
