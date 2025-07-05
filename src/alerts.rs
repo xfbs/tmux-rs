@@ -18,7 +18,9 @@ use crate::compat::{
     tree::rb_foreach,
 };
 
-static mut alerts_fired: i32 = 0;
+use std::sync::atomic;
+
+static alerts_fired: atomic::AtomicI32 = atomic::AtomicI32::new(0);
 
 static mut alerts_list: tailq_head<window> = compat::TAILQ_HEAD_INITIALIZER!(alerts_list);
 
@@ -45,7 +47,7 @@ unsafe extern "C" fn alerts_callback(_fd: c_int, _events: c_short, _arg: *mut c_
             (*w).flags &= !WINDOW_ALERTFLAGS;
             window_remove_ref(w, c"alerts_callback".as_ptr());
         }
-        alerts_fired = 0;
+        alerts_fired.store(0, atomic::Ordering::Release);
     }
 }
 
@@ -141,7 +143,7 @@ pub(crate) unsafe fn alerts_queue(w: NonNull<window>, flags: window_flag) {
                 window_add_ref(w, c"alerts_queue".as_ptr());
             }
 
-            if alerts_fired == 0 {
+            if alerts_fired.load(atomic::Ordering::Acquire) == 0 {
                 log_debug!("alerts check queued (by @{})", (*w).id);
                 event_once(
                     -1,
@@ -150,7 +152,7 @@ pub(crate) unsafe fn alerts_queue(w: NonNull<window>, flags: window_flag) {
                     null_mut(),
                     null_mut(),
                 );
-                alerts_fired = 1;
+                alerts_fired.store(1, atomic::Ordering::Release);
             }
         }
     }

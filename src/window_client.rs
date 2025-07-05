@@ -23,7 +23,7 @@ static WINDOW_CLIENT_DEFAULT_FORMAT: &CStr = c"#{t/p:client_activity}: session #
 static WINDOW_CLIENT_DEFAULT_KEY_FORMAT: &CStr =
     c"#{?#{e|<:#{line},10},#{line},#{?#{e|<:#{line},36},M-#{a:#{e|+:97,#{e|-:#{line},10}}},}}";
 
-static mut window_client_menu_items: [menu_item; 9] = [
+static window_client_menu_items: [menu_item; 9] = [
     menu_item::new(Some(c"Detach"), b'd' as _, null()),
     menu_item::new(Some(c"Detach Tagged"), b'D' as _, null()),
     menu_item::new(Some(c""), KEYC_NONE, null()),
