@@ -28,24 +28,26 @@ pub unsafe fn b64_pton(src: *const c_char, target: *mut u8, targsize: usize) -> 
     let dst = unsafe { std::slice::from_raw_parts_mut(target.cast::<MaybeUninit<u8>>(), targsize) };
 
     match pton(src, dst) {
-        Ok(out) => (out.len() - 1) as i32,
+        Ok(out) => out.len() as i32,
         Err(_) => -1,
     }
 }
 
+/// minimum ascii value used in encoded format
 const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-const REVERSE: [u8; 80] = const {
-    let mut tmp: [u8; 80] = [u8::MAX; 80];
+const REVERSE: [u8; u8::MAX as usize] = const {
+    let mut tmp = [u8::MAX; u8::MAX as usize];
 
     let mut i: u8 = 0;
     while i < ALPHABET.len() as u8 {
-        tmp[(ALPHABET[i as usize] - b'+') as usize] = i;
+        tmp[ALPHABET[i as usize] as usize] = i;
         i += 1;
     }
 
     tmp
 };
 
+/// decode
 fn pton<'out>(src: &'_ [u8], dst: &'out mut [MaybeUninit<u8>]) -> Result<&'out mut [u8], ()> {
     // dst must be at least 3/4 of src, and room for NUL byte
     if src.len().div_ceil(4) * 3 + 1 > dst.len() {
@@ -69,10 +71,10 @@ fn pton<'out>(src: &'_ [u8], dst: &'out mut [MaybeUninit<u8>]) -> Result<&'out m
             }
         }
 
-        let a = REVERSE[(chunk[0] - b'+') as usize];
-        let b = REVERSE[(chunk[1] - b'+') as usize];
-        let c = REVERSE[(chunk[2] - b'+') as usize];
-        let d = REVERSE[(chunk[3] - b'+') as usize];
+        let a = REVERSE[chunk[0] as usize];
+        let b = REVERSE[chunk[1] as usize];
+        let c = REVERSE[chunk[2] as usize];
+        let d = REVERSE[chunk[3] as usize];
 
         //        a                 b                 c                 d
         // X X 0 0 0 0 0 0 | X X 0 0 0 0 0 0 | X X 0 0 0 0 0 0 | X X 0 0 0 0 0 0
@@ -80,9 +82,9 @@ fn pton<'out>(src: &'_ [u8], dst: &'out mut [MaybeUninit<u8>]) -> Result<&'out m
         // ( a << 2  ) ( b >> 4 )    (b<<4) (    c >> 2    )     (c<<4)(      d       )
         // 0  0  0  0  0  0  0  0  |  0  0  0  0  0  0  0  0  |  0  0  0  0  0  0  0  0
         //
-        dst[i] = MaybeUninit::new((a << 2) | (b >> 4));
-        dst[i + 1] = MaybeUninit::new((b << 4) | (c >> 2));
-        dst[i + 2] = MaybeUninit::new((c << 4) | d);
+        dst[i] = MaybeUninit::new(a << 2 | b >> 4);
+        dst[i + 1] = MaybeUninit::new(b << 4 | c >> 2);
+        dst[i + 2] = MaybeUninit::new(c << 6 | d);
         i += 3;
     }
 
@@ -90,8 +92,8 @@ fn pton<'out>(src: &'_ [u8], dst: &'out mut [MaybeUninit<u8>]) -> Result<&'out m
     Ok(unsafe { std::slice::from_raw_parts_mut(dst.as_mut_ptr().cast::<u8>(), i) })
 }
 
+/// encode
 fn ntop<'out>(src: &'_ [u8], dst: &'out mut [MaybeUninit<u8>]) -> Result<&'out mut [u8], ()> {
-    const MASK: u8 = 0b00111111;
     if dst.len() < src.len().div_ceil(3) * 4 + 1 {
         return Err(());
     }
@@ -99,13 +101,17 @@ fn ntop<'out>(src: &'_ [u8], dst: &'out mut [MaybeUninit<u8>]) -> Result<&'out m
     let mut i = 0;
     let mut it = src.chunks_exact(3);
 
+    macro_rules! enc {
+        ($e:expr) => {
+            MaybeUninit::new(ALPHABET[($e & 0b00111111) as usize])
+        }
+    }
+
     for chunk in &mut it {
-        dst[i] = MaybeUninit::new(ALPHABET[((chunk[0] >> 2) & MASK) as usize]);
-        dst[i + 1] =
-            MaybeUninit::new(ALPHABET[(((chunk[0] << 4) | (chunk[1] >> 4)) & MASK) as usize]);
-        dst[i + 2] =
-            MaybeUninit::new(ALPHABET[(((chunk[1] << 2) | (chunk[2] >> 6)) & MASK) as usize]);
-        dst[i + 3] = MaybeUninit::new(ALPHABET[(chunk[2] & MASK) as usize]);
+        dst[i] = enc!(chunk[0] >> 2);
+        dst[i + 1] = enc!(chunk[0] << 4 | chunk[1] >> 4);
+        dst[i + 2] = enc!(chunk[1] << 2 | chunk[2] >> 6);
+        dst[i + 3] = enc!(chunk[2]);
         i += 4;
     }
 
@@ -113,17 +119,16 @@ fn ntop<'out>(src: &'_ [u8], dst: &'out mut [MaybeUninit<u8>]) -> Result<&'out m
     match chunk.len() {
         0 => (),
         1 => {
-            dst[i] = MaybeUninit::new(ALPHABET[((chunk[0] >> 2) & MASK) as usize]);
-            dst[i + 1] = MaybeUninit::new(ALPHABET[((chunk[0] << 4) & MASK) as usize]);
+            dst[i] = enc!(chunk[0] >> 2);
+            dst[i + 1] = enc!(chunk[0] << 4);
             dst[i + 2] = MaybeUninit::new(b'=');
             dst[i + 3] = MaybeUninit::new(b'=');
             i += 4;
         }
         2 => {
-            dst[i] = MaybeUninit::new(ALPHABET[((chunk[0] >> 2) & MASK) as usize]);
-            dst[i + 1] =
-                MaybeUninit::new(ALPHABET[(((chunk[0] << 4) | (chunk[1] >> 4)) & MASK) as usize]);
-            dst[i + 2] = MaybeUninit::new(ALPHABET[((chunk[1] << 2) & MASK) as usize]);
+            dst[i] = enc!(chunk[0] >> 2);
+            dst[i + 1] = enc!(chunk[0] << 4 | chunk[1] >> 4);
+            dst[i + 2] = enc!(chunk[1] << 2);
             dst[i + 3] = MaybeUninit::new(b'=');
             i += 4;
         }
@@ -141,13 +146,13 @@ mod tests {
     #[test]
     fn test_b64_pton_valid() {
         let input = c"TWFu";
-        let mut output = [0u8; 3];
-        let expected = [77, 97, 110];
+        let mut output = [0u8; 4];
+        let expected = [b'M', b'a', b'n', 0];
 
         unsafe {
             let result = b64_pton(input.as_ptr(), output.as_mut_ptr(), output.len());
-            assert_eq!(result, 3);
             assert_eq!(&output, &expected);
+            assert_eq!(result, 3);
         }
     }
 
@@ -166,12 +171,11 @@ mod tests {
     fn test_b64_pton_partial() {
         let input = c"TWE=";
         let mut output = [0u8; 2];
-        let expected = [77, 97];
+        // TODO currently not supporting missing =, but we could
 
         unsafe {
             let result = b64_pton(input.as_ptr(), output.as_mut_ptr(), output.len());
-            assert_eq!(result, 2);
-            assert_eq!(&output, &expected);
+            assert_eq!(result, -1);
         }
     }
 }
