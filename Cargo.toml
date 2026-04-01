@@ -167,4 +167,5 @@ used_underscore_items               = "allow" # _s and other's will naturally be
 wildcard_imports                    = "allow" # too many, c style codebase, eventually will be fixed / refactored
 
 [dev-dependencies]
+nix = { version = "0.31.2", features = ["term"] }
 tempfile = "3.27.0"

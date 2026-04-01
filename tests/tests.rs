@@ -7,6 +7,7 @@ pub mod harness;
 mod key_bindings;
 mod options;
 mod pane;
+mod pty_client;
 mod session;
 mod source_and_misc;
 mod window;

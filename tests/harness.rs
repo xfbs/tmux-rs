@@ -1,5 +1,6 @@
 use std::env;
-use std::io::BufReader;
+use std::io::{BufReader, Read as _, Write as _};
+use std::os::fd::{AsRawFd, OwnedFd};
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -334,4 +335,284 @@ impl TmuxResult {
             "tmux command succeeded but expected failure"
         );
     }
+}
+
+/// An attached tmux client backed by a real PTY.
+///
+/// Spawns `tmux attach` (or `new-session`) with its stdio connected to a
+/// pseudo-terminal we control. The test harness reads/writes the master side
+/// to interact with the full terminal output — status bar, pane contents, etc.
+///
+/// ```text
+/// ┌─────────────┐     ┌──────────┐     ┌──────────────┐
+/// │ Test harness │────▸│ PTY pair │────▸│ tmux client  │
+/// │ (master fd)  │◂────│ m ←→ s   │◂────│ (slave=stdio)│
+/// └─────────────┘     └──────────┘     └──────────────┘
+///                                             │ unix socket
+///                                      ┌──────────────┐
+///                                      │ tmux server   │
+///                                      └──────────────┘
+/// ```
+#[allow(dead_code)]
+pub struct PtyClient {
+    master: OwnedFd,
+    child: std::process::Child,
+}
+
+#[allow(dead_code)]
+impl PtyClient {
+    /// Attach to an existing session on the given harness.
+    ///
+    /// The client is spawned as `tmux -L<socket> attach`, connected to a PTY
+    /// with the given dimensions.
+    pub fn attach(harness: &TmuxTestHarness, cols: u16, rows: u16) -> Self {
+        Self::spawn_with_args(harness, &["attach"], cols, rows)
+    }
+
+    /// Create a new session and attach to it.
+    pub fn new_session(harness: &TmuxTestHarness, cols: u16, rows: u16) -> Self {
+        Self::spawn_with_args(harness, &["-f/dev/null", "new-session"], cols, rows)
+    }
+
+    fn spawn_with_args(
+        harness: &TmuxTestHarness,
+        args: &[&str],
+        cols: u16,
+        rows: u16,
+    ) -> Self {
+        let winsize = nix::pty::Winsize {
+            ws_row: rows,
+            ws_col: cols,
+            ws_xpixel: 0,
+            ws_ypixel: 0,
+        };
+
+        let pty = nix::pty::openpty(Some(&winsize), None)
+            .expect("openpty failed");
+
+        let slave_fd = pty.slave;
+
+        // Make the master non-blocking so reads don't hang
+        let master_raw = pty.master.as_raw_fd();
+        unsafe {
+            let flags = libc::fcntl(master_raw, libc::F_GETFL);
+            libc::fcntl(master_raw, libc::F_SETFL, flags | libc::O_NONBLOCK);
+        }
+
+        // Dup the slave fd for each stdio stream — from_raw_fd takes ownership
+        let slave_stdin = slave_fd.try_clone().expect("dup slave for stdin");
+        let slave_stdout = slave_fd.try_clone().expect("dup slave for stdout");
+        let slave_stderr = slave_fd.try_clone().expect("dup slave for stderr");
+        drop(slave_fd); // close original in parent
+
+        let bin = client_bin();
+        let child = Command::new(&bin)
+            .args(["-L", harness.socket_name()])
+            .args(args)
+            .env("TERM", "screen")
+            .stdin(Stdio::from(slave_stdin))
+            .stdout(Stdio::from(slave_stdout))
+            .stderr(Stdio::from(slave_stderr))
+            .spawn()
+            .expect("failed to spawn tmux client");
+
+        let mut client = PtyClient {
+            master: pty.master,
+            child,
+        };
+
+        // Wait for the client to connect and render initial output
+        client.wait_for_content(Duration::from_secs(5));
+
+        client
+    }
+
+    /// Write raw bytes to the client's terminal input.
+    pub fn write(&mut self, data: &[u8]) {
+        let mut f = std::fs::File::from(self.master.try_clone().unwrap());
+        f.write_all(data).expect("failed to write to PTY master");
+    }
+
+    /// Write a string to the client's terminal input.
+    pub fn write_str(&mut self, s: &str) {
+        self.write(s.as_bytes());
+    }
+
+    /// Send a key by name (translates common names to escape sequences).
+    pub fn send_key(&mut self, key: &str) {
+        let bytes: &[u8] = match key {
+            "Enter" => b"\r",
+            "Escape" | "Esc" => b"\x1b",
+            "Tab" => b"\t",
+            "Up" => b"\x1b[A",
+            "Down" => b"\x1b[B",
+            "Right" => b"\x1b[C",
+            "Left" => b"\x1b[D",
+            "C-b" => b"\x02", // tmux prefix key
+            "C-c" => b"\x03",
+            "C-d" => b"\x04",
+            "C-l" => b"\x0c",
+            _ => {
+                // Single character
+                if key.len() == 1 {
+                    self.write(key.as_bytes());
+                    return;
+                }
+                panic!("unknown key name: {key}");
+            }
+        };
+        self.write(bytes);
+    }
+
+    /// Read all currently available output from the terminal.
+    /// Returns the raw bytes (including escape sequences).
+    pub fn read_raw(&mut self) -> Vec<u8> {
+        let mut buf = vec![0u8; 65536];
+        let mut output = Vec::new();
+        let mut f = std::fs::File::from(self.master.try_clone().unwrap());
+        loop {
+            match f.read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => output.extend_from_slice(&buf[..n]),
+                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => break,
+                Err(e) => panic!("read from PTY master failed: {e}"),
+            }
+        }
+        output
+    }
+
+    /// Read output and strip ANSI escape sequences, returning plain text.
+    pub fn read_screen(&mut self) -> String {
+        let raw = self.read_raw();
+        strip_ansi_escapes(&raw)
+    }
+
+    /// Wait until some output is available, then read and return it.
+    /// Useful after sending a command to wait for the response.
+    pub fn wait_and_read(&mut self, timeout: Duration) -> String {
+        let start = Instant::now();
+        loop {
+            let output = self.read_screen();
+            if !output.is_empty() {
+                return output;
+            }
+            if start.elapsed() > timeout {
+                return String::new();
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+    }
+
+    /// Wait until the screen contains a specific string.
+    pub fn wait_for_text(&mut self, needle: &str, timeout: Duration) -> String {
+        let start = Instant::now();
+        let mut accumulated = String::new();
+        loop {
+            let chunk = self.read_screen();
+            accumulated.push_str(&chunk);
+            if accumulated.contains(needle) {
+                return accumulated;
+            }
+            if start.elapsed() > timeout {
+                panic!(
+                    "timed out waiting for '{needle}' in PTY output.\nGot so far:\n{accumulated}"
+                );
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+    }
+
+    /// Wait until any content appears on the PTY.
+    fn wait_for_content(&mut self, timeout: Duration) {
+        let start = Instant::now();
+        loop {
+            let raw = self.read_raw();
+            if !raw.is_empty() {
+                return;
+            }
+            if start.elapsed() > timeout {
+                panic!("timed out waiting for initial PTY output");
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        }
+    }
+
+    /// Check if the child process is still running.
+    pub fn is_alive(&mut self) -> bool {
+        self.child
+            .try_wait()
+            .expect("failed to check child status")
+            .is_none()
+    }
+}
+
+impl Drop for PtyClient {
+    fn drop(&mut self) {
+        // Send q to exit any mode, then detach
+        let _ = self.write(b"\x02d"); // C-b d (prefix + detach)
+        std::thread::sleep(Duration::from_millis(100));
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
+/// Strip ANSI escape sequences from raw terminal output.
+fn strip_ansi_escapes(input: &[u8]) -> String {
+    let mut output = Vec::new();
+    let mut i = 0;
+    while i < input.len() {
+        if input[i] == 0x1b {
+            i += 1;
+            if i >= input.len() {
+                break;
+            }
+            match input[i] {
+                b'[' => {
+                    // CSI sequence: ESC [ ... final_byte
+                    i += 1;
+                    while i < input.len() && !(0x40..=0x7e).contains(&input[i]) {
+                        i += 1;
+                    }
+                    if i < input.len() {
+                        i += 1; // skip final byte
+                    }
+                }
+                b']' => {
+                    // OSC sequence: ESC ] ... ST (or BEL)
+                    i += 1;
+                    while i < input.len() && input[i] != 0x07 {
+                        if input[i] == 0x1b && i + 1 < input.len() && input[i + 1] == b'\\' {
+                            i += 2;
+                            break;
+                        }
+                        i += 1;
+                    }
+                    if i < input.len() && input[i] == 0x07 {
+                        i += 1;
+                    }
+                }
+                b'(' | b')' => {
+                    // Character set designation: ESC ( X or ESC ) X
+                    i += 1;
+                    if i < input.len() {
+                        i += 1;
+                    }
+                }
+                _ => {
+                    // Other ESC sequences: ESC + one byte
+                    i += 1;
+                }
+            }
+        } else if input[i] == b'\r' {
+            // Skip carriage returns (keep newlines)
+            i += 1;
+        } else if input[i] >= 0x20 || input[i] == b'\n' || input[i] == b'\t' {
+            output.push(input[i]);
+            i += 1;
+        } else {
+            // Skip other control characters
+            i += 1;
+        }
+    }
+    String::from_utf8_lossy(&output).into_owned()
 }
