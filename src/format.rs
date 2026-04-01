@@ -114,7 +114,6 @@ pub struct format_entry {
     pub cb: Option<format_cb>,
 }
 
-#[repr(C)]
 pub struct format_tree {
     pub type_: format_type,
 
