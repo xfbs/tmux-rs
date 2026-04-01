@@ -9,7 +9,6 @@ use harness::TmuxTestHarness;
 // ---------------------------------------------------------------------------
 
 #[test]
-#[ignore = "broken: tmux-rs server crashes on set-buffer"]
 fn set_buffer_basic() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();
@@ -26,7 +25,6 @@ fn set_buffer_basic() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs server crashes on set-buffer"]
 fn set_buffer_named() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();
@@ -43,7 +41,6 @@ fn set_buffer_named() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs server crashes on set-buffer"]
 fn set_buffer_overwrite() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();
@@ -65,7 +62,6 @@ fn set_buffer_overwrite() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs server crashes on set-buffer"]
 fn set_buffer_append() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();
@@ -87,7 +83,6 @@ fn set_buffer_append() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs server crashes on set-buffer"]
 fn set_buffer_append_nonexistent_fails() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();
@@ -130,7 +125,6 @@ fn list_buffers_empty() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs server crashes on set-buffer"]
 fn list_buffers_shows_entries() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();
@@ -157,7 +151,6 @@ fn list_buffers_shows_entries() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs server crashes on set-buffer"]
 fn list_buffers_custom_format() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();
@@ -181,7 +174,6 @@ fn list_buffers_custom_format() {
 // ---------------------------------------------------------------------------
 
 #[test]
-#[ignore = "broken: tmux-rs server crashes on set-buffer"]
 fn show_buffer_default() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();
@@ -198,7 +190,6 @@ fn show_buffer_default() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs server crashes on set-buffer"]
 fn show_buffer_named() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();
@@ -229,7 +220,6 @@ fn show_buffer_nonexistent_fails() {
 // ---------------------------------------------------------------------------
 
 #[test]
-#[ignore = "broken: tmux-rs server crashes on set-buffer"]
 fn save_buffer_to_file() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();
@@ -253,7 +243,6 @@ fn save_buffer_to_file() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs server crashes on set-buffer"]
 fn save_buffer_named_to_file() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();
@@ -277,7 +266,6 @@ fn save_buffer_named_to_file() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs server crashes on set-buffer"]
 fn save_buffer_append_to_file() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();
@@ -331,7 +319,6 @@ fn save_buffer_nonexistent_fails() {
 // ---------------------------------------------------------------------------
 
 #[test]
-#[ignore = "broken: tmux-rs server crashes on set-buffer"]
 fn load_buffer_from_file() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();
@@ -352,7 +339,6 @@ fn load_buffer_from_file() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs server crashes on set-buffer"]
 fn load_buffer_named() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();
@@ -386,7 +372,6 @@ fn load_buffer_nonexistent_file_fails() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs server crashes on set-buffer"]
 fn load_buffer_roundtrip_with_save() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();
@@ -431,7 +416,6 @@ fn load_buffer_roundtrip_with_save() {
 // ---------------------------------------------------------------------------
 
 #[test]
-#[ignore = "broken: tmux-rs server crashes on set-buffer"]
 fn paste_buffer_into_pane() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().args(["--", "cat"]).run().assert_success();
@@ -461,7 +445,6 @@ fn paste_buffer_into_pane() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs server crashes on set-buffer"]
 fn paste_buffer_named_into_pane() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().args(["--", "cat"]).run().assert_success();
@@ -489,7 +472,6 @@ fn paste_buffer_named_into_pane() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs server crashes on set-buffer"]
 fn paste_buffer_delete_flag() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().args(["--", "cat"]).run().assert_success();
@@ -539,7 +521,6 @@ fn paste_buffer_nonexistent_fails() {
 // ---------------------------------------------------------------------------
 
 #[test]
-#[ignore = "broken: tmux-rs server crashes on set-buffer"]
 fn delete_buffer_default() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();
@@ -557,7 +538,6 @@ fn delete_buffer_default() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs server crashes on set-buffer"]
 fn delete_buffer_named() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();
@@ -605,7 +585,7 @@ fn delete_buffer_nonexistent_fails() {
 // ---------------------------------------------------------------------------
 
 #[test]
-#[ignore = "broken: tmux-rs server crashes on set-buffer"]
+#[ignore = "broken: tmux-rs buffer ordering differs from C tmux"]
 fn multiple_buffers_most_recent_is_default() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();
@@ -627,7 +607,6 @@ fn multiple_buffers_most_recent_is_default() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs server crashes on set-buffer"]
 fn set_buffer_multiline() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();
@@ -648,7 +627,6 @@ fn set_buffer_multiline() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs server crashes on set-buffer"]
 fn load_buffer_from_stdin() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();

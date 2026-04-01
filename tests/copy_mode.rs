@@ -204,7 +204,6 @@ fn copy_selection_vi() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs crashes on buffer operations"]
 fn copy_selection_with_send_keys() {
     let (tmux, mut client) = setup(40, 10);
     set_mode_keys(&tmux, "vi");
