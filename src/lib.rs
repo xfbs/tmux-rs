@@ -283,7 +283,6 @@ struct discr_all_entry;
 struct discr_entry;
 struct discr_pending_entry;
 struct discr_sentry;
-struct discr_tree_entry;
 struct discr_wentry;
 
 /// Minimum layout cell size, NOT including border lines.
@@ -1373,10 +1372,9 @@ struct window_pane {
     entry: tailq_entry<window_pane>,
     /// link in list of last visited
     sentry: tailq_entry<window_pane>,
-    tree_entry: rb_entry<window_pane>,
 }
 type window_panes = tailq_head<window_pane>;
-type window_pane_tree = rb_head<window_pane>;
+type window_pane_tree = BTreeMap<u32, *mut window_pane>;
 
 impl Entry<window_pane, discr_entry> for window_pane {
     unsafe fn entry(this: *mut Self) -> *mut tailq_entry<window_pane> {

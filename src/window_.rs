@@ -27,7 +27,7 @@ pub const DEFAULT_YPIXEL: u32 = 32;
 
 pub static mut WINDOWS: windows = unsafe { std::mem::zeroed() };
 
-pub static mut ALL_WINDOW_PANES: window_pane_tree = unsafe { std::mem::zeroed() };
+pub static mut ALL_WINDOW_PANES: window_pane_tree = BTreeMap::new();
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -39,13 +39,6 @@ pub struct window_pane_input_data {
 
 RB_GENERATE!(windows, window, entry, discr_entry, window_cmp);
 RB_GENERATE!(winlinks, winlink, entry, discr_entry, winlink_cmp);
-RB_GENERATE!(
-    window_pane_tree,
-    window_pane,
-    tree_entry,
-    discr_tree_entry,
-    window_pane_cmp
-);
 
 pub fn window_cmp(w1: &window, w2: &window) -> cmp::Ordering {
     w1.id.cmp(&w2.id)
@@ -55,9 +48,6 @@ pub fn winlink_cmp(wl1: &winlink, wl2: &winlink) -> cmp::Ordering {
     wl1.idx.cmp(&wl2.idx)
 }
 
-pub fn window_pane_cmp(wp1: &window_pane, wp2: &window_pane) -> cmp::Ordering {
-    wp1.id.cmp(&wp2.id)
-}
 
 pub unsafe fn winlink_find_by_window(
     wwl: *mut winlinks,
@@ -984,9 +974,10 @@ pub unsafe fn window_pane_find_by_id_str(s: &str) -> *mut window_pane {
 
 pub unsafe fn window_pane_find_by_id(id: u32) -> *mut window_pane {
     unsafe {
-        let mut wp: window_pane = zeroed();
-        wp.id = id;
-        rb_find(&raw mut ALL_WINDOW_PANES, &raw mut wp)
+        (*(&raw mut ALL_WINDOW_PANES))
+            .get(&id)
+            .copied()
+            .unwrap_or(null_mut())
     }
 }
 
@@ -1007,7 +998,7 @@ pub unsafe fn window_pane_create(
 
         (*wp).id = NEXT_WINDOW_PANE_ID.fetch_add(1, atomic::Ordering::Relaxed);
 
-        rb_insert(&raw mut ALL_WINDOW_PANES, wp);
+        (*(&raw mut ALL_WINDOW_PANES)).insert((*wp).id, wp);
 
         (*wp).fd = -1;
 
@@ -1074,7 +1065,7 @@ unsafe fn window_pane_destroy(wp: *mut window_pane) {
             free_(r);
         }
 
-        rb_remove(&raw mut ALL_WINDOW_PANES, wp);
+        (*(&raw mut ALL_WINDOW_PANES)).remove(&(*wp).id);
 
         options_free((*wp).options);
         free((*wp).cwd as _);

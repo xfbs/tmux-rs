@@ -55,7 +55,7 @@ pub unsafe fn cmd_find_inside_pane(c: *mut client) -> *mut window_pane {
         }
 
         let mut wp: *mut window_pane = null_mut();
-        for wp_ in rb_foreach(&raw mut ALL_WINDOW_PANES) {
+        for wp_ in (*(&raw mut ALL_WINDOW_PANES)).values().map(|wp| NonNull::new(*wp).unwrap()) {
             wp = wp_.as_ptr();
             if (*wp).fd != -1 && strcmp((*wp).tty.as_ptr(), (*c).ttyname) == 0 {
                 break;

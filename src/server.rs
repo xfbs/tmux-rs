@@ -236,7 +236,7 @@ pub unsafe fn server_start(
 
         input_key_build();
         rb_init(&raw mut WINDOWS);
-        rb_init(&raw mut ALL_WINDOW_PANES);
+        ALL_WINDOW_PANES = BTreeMap::new();
         tailq_init(&raw mut CLIENTS);
         rb_init(&raw mut SESSIONS);
         key_bindings_init();

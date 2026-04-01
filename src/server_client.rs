@@ -181,7 +181,7 @@ pub unsafe fn server_client_check_nested(c: *mut client) -> bool {
             return false;
         }
 
-        for wp in rb_foreach(&raw mut ALL_WINDOW_PANES) {
+        for wp in (*(&raw mut ALL_WINDOW_PANES)).values().map(|wp| NonNull::new(*wp).unwrap()) {
             if libc::strcmp((&raw const (*wp.as_ptr()).tty) as _, (*c).ttyname) == 0 {
                 return true;
             }

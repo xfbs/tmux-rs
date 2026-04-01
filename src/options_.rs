@@ -1332,13 +1332,13 @@ pub unsafe fn options_push_changes(name: &str) {
         }
 
         if name == "cursor-colour" {
-            for wp in rb_foreach(&raw mut ALL_WINDOW_PANES) {
+            for wp in (*(&raw mut ALL_WINDOW_PANES)).values().map(|wp| NonNull::new(*wp).unwrap()) {
                 window_pane_default_cursor(wp.as_ptr());
             }
         }
 
         if name == "cursor-style" {
-            for wp in rb_foreach(&raw mut ALL_WINDOW_PANES) {
+            for wp in (*(&raw mut ALL_WINDOW_PANES)).values().map(|wp| NonNull::new(*wp).unwrap()) {
                 window_pane_default_cursor(wp.as_ptr());
             }
         }
@@ -1372,13 +1372,13 @@ pub unsafe fn options_push_changes(name: &str) {
         }
 
         if name == "window-style" || name == "window-active-style" {
-            for wp in rb_foreach(&raw mut ALL_WINDOW_PANES) {
+            for wp in (*(&raw mut ALL_WINDOW_PANES)).values().map(|wp| NonNull::new(*wp).unwrap()) {
                 (*wp.as_ptr()).flags |= window_pane_flags::PANE_STYLECHANGED;
             }
         }
 
         if name == "pane-colours" {
-            for wp in rb_foreach(&raw mut ALL_WINDOW_PANES).map(NonNull::as_ptr) {
+            for wp in (*(&raw mut ALL_WINDOW_PANES)).values().copied() {
                 colour_palette_from_option(Some(&mut (*wp).palette), (*wp).options);
             }
         }
