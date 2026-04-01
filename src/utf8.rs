@@ -75,7 +75,7 @@ impl utf8_data {
 }
 
 #[repr(i32)]
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) enum utf8_state {
     UTF8_MORE,
     UTF8_DONE,
@@ -862,5 +862,330 @@ pub unsafe fn utf8_cstrhas(s: *const u8, ud: *const utf8_data) -> bool {
         free_(copy);
 
         found
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::mem::zeroed;
+
+    // ---------------------------------------------------------------
+    // utf8_build_one
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn build_one_ascii_nul() {
+        let uc = utf8_build_one(0);
+        assert_eq!(utf8_get_size(uc), 1);
+        assert_eq!(utf8_get_width(uc), 1);
+        assert_eq!(uc & 0xff, 0);
+    }
+
+    #[test]
+    fn build_one_ascii_a() {
+        let uc = utf8_build_one(b'A');
+        assert_eq!(utf8_get_size(uc), 1);
+        assert_eq!(utf8_get_width(uc), 1);
+        assert_eq!(uc & 0xff, b'A' as u32);
+    }
+
+    #[test]
+    fn build_one_ascii_tilde() {
+        let uc = utf8_build_one(0x7e);
+        assert_eq!(utf8_get_size(uc), 1);
+        assert_eq!(utf8_get_width(uc), 1);
+        assert_eq!(uc & 0xff, 0x7e);
+    }
+
+    #[test]
+    fn build_one_space() {
+        let uc = utf8_build_one(b' ');
+        assert_eq!(utf8_get_size(uc), 1);
+        assert_eq!(utf8_get_width(uc), 1);
+        assert_eq!(uc & 0xff, 0x20);
+    }
+
+    // ---------------------------------------------------------------
+    // utf8_set_size / utf8_get_size round-trip
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn set_get_size_roundtrip() {
+        for s in 0..=21u8 {
+            let packed = utf8_set_size(s);
+            assert_eq!(utf8_get_size(packed), s, "size round-trip failed for {s}");
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // utf8_set_width / utf8_get_width round-trip
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn set_get_width_roundtrip() {
+        for w in 0..=2u8 {
+            let packed = utf8_set_width(w);
+            assert_eq!(
+                utf8_get_width(packed),
+                w,
+                "width round-trip failed for {w}"
+            );
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // utf8_from_data / utf8_to_data round-trip for small (<=3 byte)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn from_data_to_data_roundtrip_ascii() {
+        // 1-byte ASCII 'Z'
+        let ud = utf8_data::new([b'Z'], 1, 1, 1);
+        let mut uc: utf8_char = 0;
+        let state = unsafe { utf8_from_data(&ud, &mut uc) };
+        assert_eq!(state, utf8_state::UTF8_DONE);
+        assert_eq!(utf8_get_size(uc), 1);
+        assert_eq!(utf8_get_width(uc), 1);
+
+        let back = utf8_to_data(uc);
+        assert_eq!(back.size, 1);
+        assert_eq!(back.width, 1);
+        assert_eq!(&back.data[..1], &[b'Z']);
+    }
+
+    #[test]
+    fn from_data_to_data_roundtrip_2byte() {
+        // U+00E9 (e-acute) = 0xC3 0xA9
+        let ud = utf8_data::new([0xC3, 0xA9], 2, 2, 1);
+        let mut uc: utf8_char = 0;
+        let state = unsafe { utf8_from_data(&ud, &mut uc) };
+        assert_eq!(state, utf8_state::UTF8_DONE);
+        assert_eq!(utf8_get_size(uc), 2);
+
+        let back = utf8_to_data(uc);
+        assert_eq!(back.size, 2);
+        assert_eq!(&back.data[..2], &[0xC3, 0xA9]);
+    }
+
+    #[test]
+    fn from_data_to_data_roundtrip_3byte() {
+        // U+4E16 (CJK "world") = 0xE4 0xB8 0x96
+        let ud = utf8_data::new([0xE4, 0xB8, 0x96], 3, 3, 2);
+        let mut uc: utf8_char = 0;
+        let state = unsafe { utf8_from_data(&ud, &mut uc) };
+        assert_eq!(state, utf8_state::UTF8_DONE);
+        assert_eq!(utf8_get_size(uc), 3);
+
+        let back = utf8_to_data(uc);
+        assert_eq!(back.size, 3);
+        assert_eq!(back.width, 2);
+        assert_eq!(&back.data[..3], &[0xE4, 0xB8, 0x96]);
+    }
+
+    // ---------------------------------------------------------------
+    // utf8_to_string
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn to_string_empty() {
+        let data: Vec<utf8_data> = vec![];
+        assert_eq!(utf8_to_string(&data), "");
+    }
+
+    #[test]
+    fn to_string_ascii() {
+        let h = utf8_data::new([b'H'], 1, 1, 1);
+        let i = utf8_data::new([b'i'], 1, 1, 1);
+        assert_eq!(utf8_to_string(&[h, i]), "Hi");
+    }
+
+    #[test]
+    fn to_string_sentinel_stops() {
+        // A zero-size entry should act as sentinel and stop iteration
+        let a = utf8_data::new([b'A'], 1, 1, 1);
+        let sentinel = utf8_data {
+            data: [0; UTF8_SIZE],
+            have: 0,
+            size: 0,
+            width: 0,
+        };
+        let b = utf8_data::new([b'B'], 1, 1, 1);
+        assert_eq!(utf8_to_string(&[a, sentinel, b]), "A");
+    }
+
+    #[test]
+    fn to_string_multibyte() {
+        // U+00E9 = 0xC3 0xA9 -> "e" with acute
+        let ud = utf8_data::new([0xC3, 0xA9], 2, 2, 1);
+        assert_eq!(utf8_to_string(&[ud]), "\u{00E9}");
+    }
+
+    // ---------------------------------------------------------------
+    // utf8_in_table
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn in_table_found() {
+        let table: &[wchar_t] = &[10, 20, 30, 40, 50];
+        assert!(utf8_in_table(30, table));
+    }
+
+    #[test]
+    fn in_table_not_found() {
+        let table: &[wchar_t] = &[10, 20, 30, 40, 50];
+        assert!(!utf8_in_table(25, table));
+    }
+
+    #[test]
+    fn in_table_empty() {
+        let table: &[wchar_t] = &[];
+        assert!(!utf8_in_table(1, table));
+    }
+
+    #[test]
+    fn in_force_wide_table() {
+        // 0x1F600 should NOT be in the force-wide table
+        assert!(!utf8_in_table(0x1F600, &UTF8_FORCE_WIDE));
+        // 0x1F385 should be in the force-wide table (Santa Claus)
+        assert!(utf8_in_table(0x1F385, &UTF8_FORCE_WIDE));
+        // First and last entries
+        assert!(utf8_in_table(0x0261D, &UTF8_FORCE_WIDE));
+        assert!(utf8_in_table(0x1FAF8, &UTF8_FORCE_WIDE));
+    }
+
+    // ---------------------------------------------------------------
+    // utf8_data::new and initialized_slice
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn utf8_data_new_and_slice() {
+        let ud = utf8_data::new([b'x', b'y', b'z'], 3, 3, 1);
+        assert_eq!(ud.initialized_slice(), b"xyz");
+    }
+
+    #[test]
+    fn utf8_data_new_pads_with_zeroes() {
+        let ud = utf8_data::new([b'a'], 1, 1, 1);
+        // Bytes beyond size should be zero
+        assert_eq!(ud.data[1], 0);
+        assert_eq!(ud.data[UTF8_SIZE - 1], 0);
+    }
+
+    // ---------------------------------------------------------------
+    // utf8_open / utf8_append — encoding/decoding UTF-8 sequences
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn open_rejects_ascii() {
+        // ASCII bytes should not start a multi-byte sequence
+        unsafe {
+            let mut ud: utf8_data = zeroed();
+            let state = utf8_open(&mut ud, b'A');
+            assert_eq!(state, utf8_state::UTF8_ERROR);
+        }
+    }
+
+    #[test]
+    fn open_rejects_continuation_byte() {
+        unsafe {
+            let mut ud: utf8_data = zeroed();
+            // 0x80 is a continuation byte, not a valid starter
+            let state = utf8_open(&mut ud, 0x80);
+            assert_eq!(state, utf8_state::UTF8_ERROR);
+        }
+    }
+
+    #[test]
+    fn open_2byte_sequence() {
+        unsafe {
+            let mut ud: utf8_data = zeroed();
+            // U+00E9 -> 0xC3 0xA9
+            let state = utf8_open(&mut ud, 0xC3);
+            assert_eq!(state, utf8_state::UTF8_MORE);
+            assert_eq!(ud.size, 2);
+            assert_eq!(ud.have, 1);
+        }
+    }
+
+    #[test]
+    fn open_3byte_sequence() {
+        unsafe {
+            let mut ud: utf8_data = zeroed();
+            // U+4E16 -> 0xE4 ...
+            let state = utf8_open(&mut ud, 0xE4);
+            assert_eq!(state, utf8_state::UTF8_MORE);
+            assert_eq!(ud.size, 3);
+            assert_eq!(ud.have, 1);
+        }
+    }
+
+    #[test]
+    fn open_4byte_sequence() {
+        unsafe {
+            let mut ud: utf8_data = zeroed();
+            // U+1F600 -> 0xF0 ...
+            let state = utf8_open(&mut ud, 0xF0);
+            assert_eq!(state, utf8_state::UTF8_MORE);
+            assert_eq!(ud.size, 4);
+            assert_eq!(ud.have, 1);
+        }
+    }
+
+    #[test]
+    fn open_invalid_high_byte() {
+        unsafe {
+            let mut ud: utf8_data = zeroed();
+            // 0xF5 and above are not valid UTF-8 starters
+            let state = utf8_open(&mut ud, 0xF5);
+            assert_eq!(state, utf8_state::UTF8_ERROR);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // utf8_item_data
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn utf8_item_data_display() {
+        let item = utf8_item_data::new(b"hello");
+        assert_eq!(format!("{item}"), "hello");
+    }
+
+    #[test]
+    fn utf8_item_data_initialized_slice() {
+        let item = utf8_item_data::new(&[0xC3, 0xA9]);
+        assert_eq!(item.initialized_slice(), &[0xC3, 0xA9]);
+    }
+
+    // ---------------------------------------------------------------
+    // Build-one then to_data round-trip
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn build_one_then_to_data() {
+        for ch in [0u8, b'A', b' ', b'~', 127] {
+            let uc = utf8_build_one(ch);
+            let ud = utf8_to_data(uc);
+            assert_eq!(ud.size, 1, "size for byte {ch}");
+            assert_eq!(ud.width, 1, "width for byte {ch}");
+            assert_eq!(ud.data[0], ch, "data[0] for byte {ch}");
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // utf8_data equality via from_data encoding stability
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn from_data_encoding_is_deterministic() {
+        let ud = utf8_data::new([0xC3, 0xA9], 2, 2, 1);
+        let mut uc1: utf8_char = 0;
+        let mut uc2: utf8_char = 0;
+        unsafe {
+            utf8_from_data(&ud, &mut uc1);
+            utf8_from_data(&ud, &mut uc2);
+        }
+        assert_eq!(uc1, uc2, "same input should produce same compact encoding");
     }
 }

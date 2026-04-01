@@ -567,3 +567,271 @@ pub unsafe fn key_string_lookup_key(mut key: key_code, with_flags: i32) -> *cons
         &raw const OUT as *const u8
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Helper to convert a `*const u8` C string to a Rust `&str`.
+    unsafe fn cptr_to_str<'a>(p: *const u8) -> &'a str {
+        unsafe { core::ffi::CStr::from_ptr(p.cast()).to_str().unwrap() }
+    }
+
+    // ---------------------------------------------------------------
+    // key_string_lookup_string — parse key name to key code
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn lookup_single_ascii_chars() {
+        unsafe {
+            assert_eq!(key_string_lookup_string(c"a".as_ptr().cast()), b'a' as key_code);
+            assert_eq!(key_string_lookup_string(c"z".as_ptr().cast()), b'z' as key_code);
+            assert_eq!(key_string_lookup_string(c"0".as_ptr().cast()), b'0' as key_code);
+        }
+    }
+
+    #[test]
+    fn lookup_control_keys() {
+        unsafe {
+            let key = key_string_lookup_string(c"C-a".as_ptr().cast());
+            assert_eq!(key, b'a' as key_code | KEYC_CTRL);
+
+            let key = key_string_lookup_string(c"C-z".as_ptr().cast());
+            assert_eq!(key, b'z' as key_code | KEYC_CTRL);
+
+            // C-Space should parse: Space maps to ' ' with KEYC_CTRL
+            let key = key_string_lookup_string(c"C-Space".as_ptr().cast());
+            assert_eq!(key, b' ' as key_code | KEYC_CTRL);
+        }
+    }
+
+    #[test]
+    fn lookup_meta_keys() {
+        unsafe {
+            let key = key_string_lookup_string(c"M-a".as_ptr().cast());
+            assert_eq!(key, b'a' as key_code | KEYC_META);
+
+            // M-C-a should have both meta and control
+            let key = key_string_lookup_string(c"M-C-a".as_ptr().cast());
+            assert_eq!(key, b'a' as key_code | KEYC_META | KEYC_CTRL);
+        }
+    }
+
+    #[test]
+    fn lookup_special_keys() {
+        unsafe {
+            let key = key_string_lookup_string(c"Enter".as_ptr().cast());
+            assert_eq!(key, c0::C0_CR as key_code);
+
+            let key = key_string_lookup_string(c"Tab".as_ptr().cast());
+            assert_eq!(key, c0::C0_HT as key_code);
+
+            let key = key_string_lookup_string(c"Escape".as_ptr().cast());
+            assert_eq!(key, c0::C0_ESC as key_code);
+
+            let key = key_string_lookup_string(c"Space".as_ptr().cast());
+            assert_eq!(key, b' ' as key_code);
+
+            let key = key_string_lookup_string(c"BSpace".as_ptr().cast());
+            assert_eq!(key, keyc::KEYC_BSPACE as key_code);
+        }
+    }
+
+    #[test]
+    fn lookup_arrow_keys() {
+        unsafe {
+            for name in [c"Up", c"Down", c"Left", c"Right"] {
+                let key = key_string_lookup_string(name.as_ptr().cast());
+                assert_ne!(
+                    key & KEYC_MASK_KEY,
+                    KEYC_NONE,
+                    "arrow key {:?} should resolve to a valid keycode",
+                    name
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn lookup_function_keys() {
+        unsafe {
+            for name in [c"F1", c"F2", c"F3", c"F10", c"F12"] {
+                let key = key_string_lookup_string(name.as_ptr().cast());
+                assert_ne!(
+                    key & KEYC_MASK_KEY,
+                    KEYC_NONE,
+                    "function key {:?} should resolve",
+                    name
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn lookup_named_keys() {
+        unsafe {
+            for name in [c"Home", c"End", c"IC", c"DC", c"PPage", c"NPage"] {
+                let key = key_string_lookup_string(name.as_ptr().cast());
+                assert_ne!(
+                    key & KEYC_MASK_KEY,
+                    KEYC_NONE,
+                    "named key {:?} should resolve",
+                    name
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn lookup_none_and_invalid() {
+        unsafe {
+            let key = key_string_lookup_string(c"None".as_ptr().cast());
+            assert_eq!(key, KEYC_NONE);
+
+            let key = key_string_lookup_string(c"NotAKey".as_ptr().cast());
+            assert_eq!(key, KEYC_UNKNOWN);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // key_string_lookup_key — format key code back to string
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn lookup_key_single_char() {
+        unsafe {
+            let s = cptr_to_str(key_string_lookup_key(b'a' as key_code, 0));
+            assert_eq!(s, "a");
+        }
+    }
+
+    #[test]
+    fn lookup_key_special() {
+        unsafe {
+            let s = cptr_to_str(key_string_lookup_key(c0::C0_CR as key_code, 0));
+            assert_eq!(s, "Enter");
+
+            let s = cptr_to_str(key_string_lookup_key(c0::C0_HT as key_code, 0));
+            assert_eq!(s, "Tab");
+
+            let s = cptr_to_str(key_string_lookup_key(c0::C0_ESC as key_code, 0));
+            assert_eq!(s, "Escape");
+        }
+    }
+
+    #[test]
+    fn lookup_key_with_modifiers() {
+        unsafe {
+            let s = cptr_to_str(key_string_lookup_key(b'a' as key_code | KEYC_CTRL, 0));
+            assert_eq!(s, "C-a");
+
+            let s = cptr_to_str(key_string_lookup_key(b'a' as key_code | KEYC_META, 0));
+            assert_eq!(s, "M-a");
+
+            let s = cptr_to_str(key_string_lookup_key(b'a' as key_code | KEYC_CTRL | KEYC_META, 0));
+            assert_eq!(s, "C-M-a");
+        }
+    }
+
+    #[test]
+    fn lookup_key_none() {
+        unsafe {
+            let s = cptr_to_str(key_string_lookup_key(KEYC_NONE, 0));
+            assert_eq!(s, "None");
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Round-trip: parse then format
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn round_trip_simple_keys() {
+        unsafe {
+            for name in &[c"a", c"z", c"Enter", c"Tab", c"Escape", c"Space", c"BSpace"] {
+                let key = key_string_lookup_string(name.as_ptr().cast());
+                let result = cptr_to_str(key_string_lookup_key(key, 0));
+                let expected = core::ffi::CStr::from_ptr(name.as_ptr()).to_str().unwrap();
+                assert_eq!(result, expected, "round-trip failed for {expected}");
+            }
+        }
+    }
+
+    #[test]
+    fn round_trip_with_modifiers() {
+        unsafe {
+            for name in &[c"C-a", c"M-a", c"M-C-a"] {
+                let key = key_string_lookup_string(name.as_ptr().cast());
+                assert_ne!(key, KEYC_UNKNOWN, "parse failed");
+                let result = cptr_to_str(key_string_lookup_key(key, 0));
+                let expected = core::ffi::CStr::from_ptr(name.as_ptr()).to_str().unwrap();
+                // Note: the formatter outputs modifiers in C-M-S- order,
+                // so M-C-a round-trips as C-M-a.
+                if expected == "M-C-a" {
+                    assert_eq!(result, "C-M-a");
+                } else {
+                    assert_eq!(result, expected, "round-trip failed for {expected}");
+                }
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // key_string_get_modifiers — extract modifier prefix
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn get_modifiers_ctrl() {
+        unsafe {
+            let input = c"C-x".as_ptr().cast::<u8>();
+            let mut ptr = input;
+            let mods = key_string_get_modifiers(&raw mut ptr);
+            assert_eq!(mods, KEYC_CTRL);
+            assert_eq!(*ptr, b'x');
+        }
+    }
+
+    #[test]
+    fn get_modifiers_meta() {
+        unsafe {
+            let input = c"M-x".as_ptr().cast::<u8>();
+            let mut ptr = input;
+            let mods = key_string_get_modifiers(&raw mut ptr);
+            assert_eq!(mods, KEYC_META);
+            assert_eq!(*ptr, b'x');
+        }
+    }
+
+    #[test]
+    fn get_modifiers_meta_ctrl() {
+        unsafe {
+            let input = c"M-C-x".as_ptr().cast::<u8>();
+            let mut ptr = input;
+            let mods = key_string_get_modifiers(&raw mut ptr);
+            assert_eq!(mods, KEYC_META | KEYC_CTRL);
+            assert_eq!(*ptr, b'x');
+        }
+    }
+
+    #[test]
+    fn get_modifiers_shift() {
+        unsafe {
+            let input = c"S-x".as_ptr().cast::<u8>();
+            let mut ptr = input;
+            let mods = key_string_get_modifiers(&raw mut ptr);
+            assert_eq!(mods, KEYC_SHIFT);
+            assert_eq!(*ptr, b'x');
+        }
+    }
+
+    #[test]
+    fn get_modifiers_none() {
+        unsafe {
+            let input = c"x".as_ptr().cast::<u8>();
+            let mut ptr = input;
+            let mods = key_string_get_modifiers(&raw mut ptr);
+            assert_eq!(mods, 0);
+            assert_eq!(*ptr, b'x');
+        }
+    }
+}

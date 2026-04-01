@@ -1117,3 +1117,548 @@ pub unsafe fn colour_parse_x11(mut p: *const u8) -> i32 {
         colour
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ---------------------------------------------------------------
+    // colour_to_6cube
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_colour_to_6cube_below_48() {
+        // Values below 48 should map to cube index 0
+        assert_eq!(colour_to_6cube(0), 0);
+        assert_eq!(colour_to_6cube(47), 0);
+    }
+
+    #[test]
+    fn test_colour_to_6cube_48_to_113() {
+        // Values 48..114 should map to cube index 1
+        assert_eq!(colour_to_6cube(48), 1);
+        assert_eq!(colour_to_6cube(113), 1);
+    }
+
+    #[test]
+    fn test_colour_to_6cube_114_and_above() {
+        // 114 => (114-35)/40 = 79/40 = 1  (integer division)
+        assert_eq!(colour_to_6cube(114), 1);
+        // 115 => (115-35)/40 = 80/40 = 2
+        assert_eq!(colour_to_6cube(115), 2);
+        // 155 => (155-35)/40 = 120/40 = 3
+        assert_eq!(colour_to_6cube(155), 3);
+        // 195 => (195-35)/40 = 160/40 = 4
+        assert_eq!(colour_to_6cube(195), 4);
+        // 235 => (235-35)/40 = 200/40 = 5
+        assert_eq!(colour_to_6cube(235), 5);
+        // 255 => (255-35)/40 = 220/40 = 5
+        assert_eq!(colour_to_6cube(255), 5);
+    }
+
+    // ---------------------------------------------------------------
+    // colour_join_rgb / colour_split_rgb
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_colour_join_rgb_known_values() {
+        // Pure black
+        let c = colour_join_rgb(0, 0, 0);
+        assert_eq!(c & COLOUR_FLAG_RGB, COLOUR_FLAG_RGB);
+        assert_eq!(c & 0x00ffffff, 0x000000);
+
+        // Pure white
+        let c = colour_join_rgb(255, 255, 255);
+        assert_eq!(c & 0x00ffffff, 0xffffff);
+
+        // Pure red
+        let c = colour_join_rgb(255, 0, 0);
+        assert_eq!(c & 0x00ffffff, 0xff0000);
+
+        // Pure green
+        let c = colour_join_rgb(0, 255, 0);
+        assert_eq!(c & 0x00ffffff, 0x00ff00);
+
+        // Pure blue
+        let c = colour_join_rgb(0, 0, 255);
+        assert_eq!(c & 0x00ffffff, 0x0000ff);
+    }
+
+    #[test]
+    fn test_colour_split_rgb_known_values() {
+        let c = colour_join_rgb(0xab, 0xcd, 0xef);
+        let (r, g, b) = colour_split_rgb(c);
+        assert_eq!(r, 0xab);
+        assert_eq!(g, 0xcd);
+        assert_eq!(b, 0xef);
+    }
+
+    #[test]
+    fn test_colour_join_split_roundtrip() {
+        for (r, g, b) in [(0, 0, 0), (255, 255, 255), (1, 2, 3), (128, 64, 32), (0xde, 0xad, 0xbe)] {
+            let c = colour_join_rgb(r, g, b);
+            let (r2, g2, b2) = colour_split_rgb(c);
+            assert_eq!((r, g, b), (r2, g2, b2), "roundtrip failed for ({r}, {g}, {b})");
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // colour_find_rgb
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_colour_find_rgb_pure_black() {
+        let c = colour_find_rgb(0, 0, 0);
+        assert!(c & COLOUR_FLAG_256 != 0);
+        // Black is colour index 16 in the 6x6x6 cube (0,0,0)
+        assert_eq!(c & 0xff, 16);
+    }
+
+    #[test]
+    fn test_colour_find_rgb_pure_white() {
+        let c = colour_find_rgb(255, 255, 255);
+        assert!(c & COLOUR_FLAG_256 != 0);
+        // White is colour index 231 in the 6x6x6 cube (5,5,5)
+        assert_eq!(c & 0xff, 231);
+    }
+
+    #[test]
+    fn test_colour_find_rgb_exact_cube_colour() {
+        // 0x5f = 95 maps to cube index 1 for each channel
+        // Index = 16 + 36*1 + 6*1 + 1 = 59
+        let c = colour_find_rgb(0x5f, 0x5f, 0x5f);
+        assert!(c & COLOUR_FLAG_256 != 0);
+        assert_eq!(c & 0xff, 59);
+    }
+
+    #[test]
+    fn test_colour_find_rgb_exact_cube_red() {
+        // Pure red at 0xff => cube index (5,0,0)
+        // Index = 16 + 36*5 + 0 + 0 = 196
+        let c = colour_find_rgb(0xff, 0x00, 0x00);
+        assert!(c & COLOUR_FLAG_256 != 0);
+        assert_eq!(c & 0xff, 196);
+    }
+
+    #[test]
+    fn test_colour_find_rgb_grey_region() {
+        // A grey-ish color that is closer to a greyscale entry than a cube entry
+        // 128,128,128 => average=128, grey_idx=(128-3)/10=12, grey=8+120=128
+        // Cube: qr=qg=qb=colour_to_6cube(128)=(128-35)/40=2 => cr=cg=cb=0x87=135
+        // dist_cube = 3*(135-128)^2 = 3*49 = 147
+        // dist_grey = 0 (exact match at grey 128)
+        // So should pick grey: 232 + 12 = 244
+        let c = colour_find_rgb(128, 128, 128);
+        assert!(c & COLOUR_FLAG_256 != 0);
+        assert_eq!(c & 0xff, 244);
+    }
+
+    #[test]
+    fn test_colour_find_rgb_returns_256_flag() {
+        // All results should have the 256 flag set
+        let c = colour_find_rgb(100, 200, 50);
+        assert!(c & COLOUR_FLAG_256 != 0);
+    }
+
+    // ---------------------------------------------------------------
+    // colour_tostring
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_colour_tostring_none() {
+        assert_eq!(colour_tostring(-1), "none");
+    }
+
+    #[test]
+    fn test_colour_tostring_named_colours() {
+        assert_eq!(colour_tostring(0), "black");
+        assert_eq!(colour_tostring(1), "red");
+        assert_eq!(colour_tostring(2), "green");
+        assert_eq!(colour_tostring(3), "yellow");
+        assert_eq!(colour_tostring(4), "blue");
+        assert_eq!(colour_tostring(5), "magenta");
+        assert_eq!(colour_tostring(6), "cyan");
+        assert_eq!(colour_tostring(7), "white");
+        assert_eq!(colour_tostring(8), "default");
+        assert_eq!(colour_tostring(9), "terminal");
+    }
+
+    #[test]
+    fn test_colour_tostring_bright_colours() {
+        assert_eq!(colour_tostring(90), "brightblack");
+        assert_eq!(colour_tostring(91), "brightred");
+        assert_eq!(colour_tostring(97), "brightwhite");
+    }
+
+    #[test]
+    fn test_colour_tostring_256_palette() {
+        let c = 100 | COLOUR_FLAG_256;
+        assert_eq!(colour_tostring(c), "colour100");
+
+        let c = 0 | COLOUR_FLAG_256;
+        assert_eq!(colour_tostring(c), "colour0");
+
+        let c = 255 | COLOUR_FLAG_256;
+        assert_eq!(colour_tostring(c), "colour255");
+    }
+
+    #[test]
+    fn test_colour_tostring_rgb() {
+        let c = colour_join_rgb(0xff, 0x00, 0x00);
+        assert_eq!(colour_tostring(c), "#ff0000");
+
+        let c = colour_join_rgb(0x00, 0xff, 0x00);
+        assert_eq!(colour_tostring(c), "#00ff00");
+
+        let c = colour_join_rgb(0xab, 0xcd, 0xef);
+        assert_eq!(colour_tostring(c), "#abcdef");
+    }
+
+    #[test]
+    fn test_colour_tostring_invalid() {
+        assert_eq!(colour_tostring(42), "invalid");
+    }
+
+    // ---------------------------------------------------------------
+    // colour_fromstring
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_colour_fromstring_named_colours() {
+        assert_eq!(colour_fromstring("red"), 1);
+        assert_eq!(colour_fromstring("blue"), 4);
+        assert_eq!(colour_fromstring("black"), 0);
+        assert_eq!(colour_fromstring("white"), 7);
+        assert_eq!(colour_fromstring("default"), 8);
+        assert_eq!(colour_fromstring("terminal"), 9);
+    }
+
+    #[test]
+    fn test_colour_fromstring_bright_colours() {
+        assert_eq!(colour_fromstring("brightred"), 91);
+        assert_eq!(colour_fromstring("brightwhite"), 97);
+    }
+
+    #[test]
+    fn test_colour_fromstring_case_insensitive() {
+        assert_eq!(colour_fromstring("RED"), 1);
+        assert_eq!(colour_fromstring("Blue"), 4);
+        assert_eq!(colour_fromstring("Default"), 8);
+    }
+
+    #[test]
+    fn test_colour_fromstring_colour_number() {
+        let c = colour_fromstring("colour123");
+        assert_eq!(c, 123 | COLOUR_FLAG_256);
+
+        let c = colour_fromstring("colour0");
+        assert_eq!(c, 0 | COLOUR_FLAG_256);
+
+        let c = colour_fromstring("colour255");
+        assert_eq!(c, 255 | COLOUR_FLAG_256);
+    }
+
+    #[test]
+    fn test_colour_fromstring_color_american_spelling() {
+        let c = colour_fromstring("color123");
+        assert_eq!(c, 123 | COLOUR_FLAG_256);
+    }
+
+    #[test]
+    fn test_colour_fromstring_hex_rgb() {
+        let c = colour_fromstring("#ff0000");
+        assert_eq!(c, colour_join_rgb(0xff, 0x00, 0x00));
+
+        let c = colour_fromstring("#abcdef");
+        assert_eq!(c, colour_join_rgb(0xab, 0xcd, 0xef));
+    }
+
+    #[test]
+    fn test_colour_fromstring_numeric_strings() {
+        assert_eq!(colour_fromstring("0"), 0);
+        assert_eq!(colour_fromstring("7"), 7);
+        assert_eq!(colour_fromstring("90"), 90);
+        assert_eq!(colour_fromstring("97"), 97);
+    }
+
+    #[test]
+    fn test_colour_fromstring_invalid() {
+        assert_eq!(colour_fromstring("invalid_color_name_xyz"), -1);
+    }
+
+    #[test]
+    fn test_colour_fromstring_colour_out_of_range() {
+        assert_eq!(colour_fromstring("colour256"), -1);
+        assert_eq!(colour_fromstring("colour-1"), -1);
+    }
+
+    // ---------------------------------------------------------------
+    // colour_256to16
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_colour_256to16_basic_passthrough() {
+        // First 16 colours should map to themselves
+        for i in 0..16 {
+            assert_eq!(colour_256to16(i), i, "colour {i} should map to itself");
+        }
+    }
+
+    #[test]
+    fn test_colour_256to16_cube_colours() {
+        // Index 16 is black (0,0,0) in the cube, should map to 0
+        assert_eq!(colour_256to16(16), 0);
+        // Index 231 is white (5,5,5) in the cube
+        // From the table: TABLE[231] = 15
+        assert_eq!(colour_256to16(231), 15);
+    }
+
+    #[test]
+    fn test_colour_256to16_greyscale() {
+        // Index 232 (darkest grey, 0x080808) should map to 0 (black)
+        assert_eq!(colour_256to16(232), 0);
+        // Index 255 (lightest grey, 0xeeeeee) should map to 15 (bright white)
+        assert_eq!(colour_256to16(255), 15);
+    }
+
+    #[test]
+    fn test_colour_256to16_mid_range() {
+        // Index 244 (medium grey) maps to 7 (white/light grey)
+        assert_eq!(colour_256to16(244), 7);
+    }
+
+    // ---------------------------------------------------------------
+    // colour_byname
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_colour_byname_known_names() {
+        // Alice Blue = 0xf0f8ff
+        let c = colour_byname("alice blue");
+        assert_eq!(c, 0xf0f8ff | COLOUR_FLAG_RGB);
+
+        // coral = 0xff7f50
+        let c = colour_byname("coral");
+        assert_eq!(c, 0xff7f50 | COLOUR_FLAG_RGB);
+    }
+
+    #[test]
+    fn test_colour_byname_case_insensitive() {
+        let c1 = colour_byname("AliceBlue");
+        let c2 = colour_byname("aliceblue");
+        assert_eq!(c1, c2);
+    }
+
+    #[test]
+    fn test_colour_byname_grey_scale() {
+        // grey0 = 0 => 0,0,0
+        let c = colour_byname("grey0");
+        assert_eq!(c, colour_join_rgb(0, 0, 0));
+
+        // grey100 = 255 => 255,255,255
+        let c = colour_byname("grey100");
+        assert_eq!(c, colour_join_rgb(255, 255, 255));
+
+        // grey50 => round(2.55*50) = round(127.5) = 128
+        let c = colour_byname("grey50");
+        assert_eq!(c, colour_join_rgb(128, 128, 128));
+    }
+
+    #[test]
+    fn test_colour_byname_gray_alias() {
+        // "gray" should work same as "grey"
+        assert_eq!(colour_byname("gray50"), colour_byname("grey50"));
+    }
+
+    #[test]
+    fn test_colour_byname_unknown() {
+        assert_eq!(colour_byname("nonexistent_colour"), -1);
+    }
+
+    #[test]
+    fn test_colour_byname_grey_without_number() {
+        // "grey" alone (without a number) should return -1
+        assert_eq!(colour_byname("grey"), -1);
+        assert_eq!(colour_byname("gray"), -1);
+    }
+
+    // ---------------------------------------------------------------
+    // colour_palette_init / set / get / clear
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_colour_palette_init() {
+        let p = colour_palette_init();
+        assert_eq!(p.fg, 8);
+        assert_eq!(p.bg, 8);
+        assert!(p.palette.is_none());
+        assert!(p.default_palette.is_none());
+    }
+
+    #[test]
+    fn test_colour_palette_set_and_get() {
+        let mut p = colour_palette_init();
+
+        // Set colour index 5 to some value
+        let ret = colour_palette_set(Some(&mut p), 5, 0x123456);
+        assert_eq!(ret, 1);
+
+        // Get it back
+        let c = colour_palette_get(Some(&p), 5);
+        assert_eq!(c, 0x123456);
+    }
+
+    #[test]
+    fn test_colour_palette_get_unset_returns_minus_one() {
+        let mut p = colour_palette_init();
+        // Set one entry to force palette allocation
+        colour_palette_set(Some(&mut p), 0, 42);
+
+        // Index 100 was never set, should return -1
+        let c = colour_palette_get(Some(&p), 100 | COLOUR_FLAG_256);
+        assert_eq!(c, -1);
+    }
+
+    #[test]
+    fn test_colour_palette_get_none_returns_minus_one() {
+        assert_eq!(colour_palette_get(None, 5), -1);
+    }
+
+    #[test]
+    fn test_colour_palette_set_none_returns_zero() {
+        assert_eq!(colour_palette_set(None, 5, 42), 0);
+    }
+
+    #[test]
+    fn test_colour_palette_set_out_of_range() {
+        let mut p = colour_palette_init();
+        // n > 255 should return 0 and do nothing
+        assert_eq!(colour_palette_set(Some(&mut p), 256, 42), 0);
+    }
+
+    #[test]
+    fn test_colour_palette_clear() {
+        let mut p = colour_palette_init();
+        colour_palette_set(Some(&mut p), 5, 42);
+        assert!(p.palette.is_some());
+
+        colour_palette_clear(Some(&mut p));
+        assert_eq!(p.fg, 8);
+        assert_eq!(p.bg, 8);
+        assert!(p.palette.is_none());
+    }
+
+    #[test]
+    fn test_colour_palette_free() {
+        let mut p = colour_palette_init();
+        colour_palette_set(Some(&mut p), 5, 42);
+        p.default_palette = Some(vec![-1; 256].into_boxed_slice());
+
+        colour_palette_free(Some(&mut p));
+        assert!(p.palette.is_none());
+        assert!(p.default_palette.is_none());
+    }
+
+    #[test]
+    fn test_colour_palette_get_with_256_flag() {
+        let mut p = colour_palette_init();
+        colour_palette_set(Some(&mut p), 100, 0xabcdef);
+
+        // Access via the COLOUR_FLAG_256 stripped index
+        let c = colour_palette_get(Some(&p), 100 | COLOUR_FLAG_256);
+        assert_eq!(c, 0xabcdef);
+    }
+
+    #[test]
+    fn test_colour_palette_get_bright_colour_mapping() {
+        let mut p = colour_palette_init();
+        // Bright colours 90..=97 get remapped: c = 8 + c - 90
+        // So 90 => 8, 91 => 9, etc.
+        colour_palette_set(Some(&mut p), 8, 0x111111);
+
+        let c = colour_palette_get(Some(&p), 90);
+        assert_eq!(c, 0x111111);
+    }
+
+    #[test]
+    fn test_colour_palette_get_out_of_range() {
+        let p = colour_palette_init();
+        // c >= 8 and not in 90..97 and no 256 flag => -1
+        assert_eq!(colour_palette_get(Some(&p), 50), -1);
+    }
+
+    #[test]
+    fn test_colour_palette_default_palette_fallback() {
+        let mut p = colour_palette_init();
+        p.default_palette = Some(vec![-1; 256].into_boxed_slice());
+        (p.default_palette.as_mut().unwrap())[3] = 0xfedcba;
+
+        // No primary palette set, should fall back to default_palette
+        let c = colour_palette_get(Some(&p), 3);
+        assert_eq!(c, 0xfedcba);
+    }
+
+    // ---------------------------------------------------------------
+    // colour_force_rgb
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_colour_force_rgb_already_rgb() {
+        let c = colour_join_rgb(0xaa, 0xbb, 0xcc);
+        assert_eq!(colour_force_rgb(c), c);
+    }
+
+    #[test]
+    fn test_colour_force_rgb_from_basic() {
+        // Basic colour 1 (red) should convert to RGB
+        let c = colour_force_rgb(1);
+        assert!(c & COLOUR_FLAG_RGB != 0);
+    }
+
+    #[test]
+    fn test_colour_force_rgb_from_256() {
+        let c = colour_force_rgb(196 | COLOUR_FLAG_256);
+        assert!(c & COLOUR_FLAG_RGB != 0);
+    }
+
+    #[test]
+    fn test_colour_force_rgb_invalid() {
+        // A value like 50 (not in 0..=7, not 90..=97, no flags) returns -1
+        assert_eq!(colour_force_rgb(50), -1);
+    }
+
+    #[test]
+    fn test_colour_force_rgb_bright_colours() {
+        // 90..=97 should be remapped: 90 => 8, 91 => 9, etc.
+        let c = colour_force_rgb(91);
+        assert!(c & COLOUR_FLAG_RGB != 0);
+    }
+
+    // ---------------------------------------------------------------
+    // Round-trip: fromstring -> tostring
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_roundtrip_named_colours() {
+        for name in ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white", "default"] {
+            let c = colour_fromstring(name);
+            assert_eq!(colour_tostring(c), name, "round-trip failed for {name}");
+        }
+    }
+
+    #[test]
+    fn test_roundtrip_256_colours() {
+        for i in 0..=255 {
+            let s = format!("colour{i}");
+            let c = colour_fromstring(&s);
+            assert_eq!(colour_tostring(c), s, "round-trip failed for {s}");
+        }
+    }
+
+    #[test]
+    fn test_roundtrip_rgb() {
+        let s = "#abcdef";
+        let c = colour_fromstring(s);
+        assert_eq!(colour_tostring(c), s);
+    }
+}
