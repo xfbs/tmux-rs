@@ -2165,7 +2165,6 @@ enum prompt_type {
 
 // File in client.
 type client_file_cb = Option<unsafe fn(*mut client, *mut u8, i32, i32, *mut evbuffer, *mut c_void)>;
-#[repr(C)]
 struct client_file {
     c: *mut client,
     peer: *mut tmuxpeer,
@@ -2184,11 +2183,8 @@ struct client_file {
 
     cb: client_file_cb,
     data: *mut c_void,
-
-    entry: rb_entry<client_file>,
 }
-type client_files = rb_head<client_file>;
-RB_GENERATE!(client_files, client_file, entry, discr_entry, file_cmp);
+type client_files = BTreeMap<i32, Box<client_file>>;
 
 // Client window.
 struct client_window {

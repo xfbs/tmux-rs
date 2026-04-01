@@ -260,7 +260,7 @@ pub unsafe fn server_client_create(fd: i32) -> *mut client {
 
         (*c).queue = cmdq_new().as_ptr();
         (*c).windows = BTreeMap::new();
-        rb_init(&raw mut (*c).files);
+        (*c).files = BTreeMap::new();
 
         (*c).tty.sx = 80;
         (*c).tty.sy = 24;
@@ -410,9 +410,9 @@ pub unsafe fn server_client_lost(c: *mut client) {
         status_prompt_clear(c);
         status_message_clear(NonNull::new_unchecked(c));
 
-        for cf in rb_foreach(&raw mut (*c).files).map(NonNull::as_ptr) {
-            (*cf).error = libc::EINTR;
-            file_fire_done(cf);
+        for cf in (*c).files.values_mut() {
+            cf.error = libc::EINTR;
+            file_fire_done(&mut **cf as *mut client_file);
         }
         (*c).windows.clear();
 
@@ -2582,8 +2582,8 @@ pub unsafe fn server_client_check_exit(c: *mut client) {
                 return;
             }
         }
-        for cf in rb_foreach(&raw mut (*c).files).map(NonNull::as_ptr) {
-            if EVBUFFER_LENGTH((*cf).buffer) != 0 {
+        for cf in (*c).files.values() {
+            if EVBUFFER_LENGTH(cf.buffer) != 0 {
                 return;
             }
         }

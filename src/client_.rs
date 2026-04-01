@@ -57,7 +57,7 @@ static mut CLIENT_EXITMESSAGE: *mut u8 = null_mut();
 static mut CLIENT_EXECSHELL: *mut u8 = null_mut();
 static mut CLIENT_EXECCMD: *mut u8 = null_mut();
 static mut CLIENT_ATTACHED: i32 = 0;
-static mut CLIENT_FILES: client_files = rb_initializer();
+static mut CLIENT_FILES: client_files = BTreeMap::new();
 
 pub unsafe fn client_get_lock(lockfile: *mut u8) -> i32 {
     unsafe {

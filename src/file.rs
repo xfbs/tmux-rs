@@ -37,10 +37,6 @@ pub unsafe fn file_get_path(c: *mut client, file: *const u8) -> NonNull<u8> {
     }
 }
 
-pub fn file_cmp(cf1: &client_file, cf2: &client_file) -> std::cmp::Ordering {
-    cf1.stream.cmp(&cf2.stream)
-}
-
 pub unsafe fn file_create_with_peer(
     peer: *mut tmuxpeer,
     files: *mut client_files,
@@ -49,24 +45,29 @@ pub unsafe fn file_create_with_peer(
     cbdata: *mut c_void,
 ) -> *mut client_file {
     unsafe {
-        let cf = xcalloc_::<client_file>(1).as_ptr();
-        (*cf).c = null_mut();
-        (*cf).references = 1;
-        (*cf).stream = stream;
-
-        (*cf).buffer = evbuffer_new();
-        if (*cf).buffer.is_null() {
+        let buffer = evbuffer_new();
+        if buffer.is_null() {
             fatalx("out of memory");
         }
 
-        (*cf).cb = cb;
-        (*cf).data = cbdata;
-
-        (*cf).peer = peer;
-        (*cf).tree = files;
-        rb_insert::<client_file, _>(files, cf);
-
-        cf
+        let cf = Box::new(client_file {
+            c: null_mut(),
+            references: 1,
+            stream,
+            buffer,
+            cb,
+            data: cbdata,
+            peer,
+            tree: files,
+            path: null_mut(),
+            event: null_mut(),
+            fd: 0,
+            error: 0,
+            closed: 0,
+        });
+        (*files).insert(stream, cf);
+        let cf_ptr = &mut **(*files).get_mut(&stream).unwrap() as *mut client_file;
+        cf_ptr
     }
 }
 
@@ -81,27 +82,42 @@ pub unsafe fn file_create_with_client(
             c = null_mut();
         }
 
-        let cf: *mut client_file = xcalloc_::<client_file>(1).as_ptr();
-        (*cf).c = c;
-        (*cf).references = 1;
-        (*cf).stream = stream;
-
-        (*cf).buffer = evbuffer_new();
-        if (*cf).buffer.is_null() {
+        let buffer = evbuffer_new();
+        if buffer.is_null() {
             fatalx("out of memory");
         }
 
-        (*cf).cb = cb;
-        (*cf).data = cbdata;
+        let peer = if !c.is_null() { (*c).peer } else { null_mut() };
+        let tree = if !c.is_null() { &raw mut (*c).files } else { null_mut() };
 
-        if !(*cf).c.is_null() {
-            (*cf).peer = (*(*cf).c).peer;
-            (*cf).tree = &raw mut (*(*cf).c).files;
-            rb_insert(&raw mut (*(*cf).c).files, cf);
-            (*(*cf).c).references += 1;
+        let cf = Box::new(client_file {
+            c,
+            references: 1,
+            stream,
+            buffer,
+            cb,
+            data: cbdata,
+            peer,
+            tree,
+            path: null_mut(),
+            event: null_mut(),
+            fd: 0,
+            error: 0,
+            closed: 0,
+        });
+
+        let cf_ptr: *mut client_file;
+        if !c.is_null() {
+            (*c).files.insert(stream, cf);
+            cf_ptr = &mut **(*c).files.get_mut(&stream).unwrap() as *mut client_file;
+            (*c).references += 1;
+        } else {
+            // No tree to insert into; leak the Box and return raw pointer.
+            // The caller must ensure cleanup.
+            cf_ptr = Box::into_raw(cf);
         }
 
-        cf
+        cf_ptr
     }
 }
 
@@ -115,14 +131,20 @@ pub unsafe fn file_free(cf: *mut client_file) {
         evbuffer_free((*cf).buffer);
         free_((*cf).path);
 
-        if !(*cf).tree.is_null() {
-            rb_remove((*cf).tree, cf);
-        }
-        if !(*cf).c.is_null() {
-            server_client_unref((*cf).c);
-        }
+        let c = (*cf).c;
+        let tree = (*cf).tree;
+        let stream = (*cf).stream;
 
-        free_(cf);
+        if !tree.is_null() {
+            // Removing from the BTreeMap drops the Box and frees cf
+            (*tree).remove(&stream);
+        } else {
+            // Not in a tree, was allocated with Box::into_raw
+            drop(Box::from_raw(cf));
+        }
+        if !c.is_null() {
+            server_client_unref(c);
+        }
     }
 }
 
@@ -178,22 +200,22 @@ pub(crate) use file_print;
 
 pub unsafe fn file_vprint(c: *mut client, args: std::fmt::Arguments) {
     unsafe {
-        let mut find: client_file = zeroed();
-        let mut msg: msg_write_open = zeroed();
-
         if !file_can_print(c) {
             return;
         }
 
-        find.stream = 1;
-        let mut cf = rb_find(&raw mut (*c).files, &raw mut find);
-        if cf.is_null() {
-            cf = file_create_with_client(c, 1, None, null_mut());
+        if let Some(cf) = (*c).files.get_mut(&1) {
+            let cf = &mut **cf as *mut client_file;
+            evbuffer_add_vprintf((*cf).buffer, args);
+            file_push(cf);
+        } else {
+            let cf = file_create_with_client(c, 1, None, null_mut());
             (*cf).path = xstrdup(c!("-")).as_ptr();
 
             // TODO
             evbuffer_add_vprintf((*cf).buffer, args);
 
+            let mut msg: msg_write_open = zeroed();
             msg.stream = 1;
             msg.fd = STDOUT_FILENO;
             msg.flags = 0;
@@ -204,31 +226,27 @@ pub unsafe fn file_vprint(c: *mut client, args: std::fmt::Arguments) {
                 &raw mut msg as _,
                 size_of::<msg_write_open>(),
             );
-        } else {
-            evbuffer_add_vprintf((*cf).buffer, args);
-            file_push(cf);
         }
     }
 }
 
 pub unsafe fn file_print_buffer(c: *mut client, data: *mut c_void, size: usize) {
     unsafe {
-        let mut find: client_file = zeroed();
-        let mut msg: msg_write_open = zeroed();
-
         if !file_can_print(c) {
             return;
         }
 
-        find.stream = 1;
-
-        let mut cf = rb_find(&raw mut (*c).files, &raw mut find);
-        if cf.is_null() {
-            cf = file_create_with_client(c, 1, None, null_mut());
+        if let Some(cf) = (*c).files.get_mut(&1) {
+            let cf = &mut **cf as *mut client_file;
+            evbuffer_add((*cf).buffer, data, size);
+            file_push(cf);
+        } else {
+            let cf = file_create_with_client(c, 1, None, null_mut());
             (*cf).path = xstrdup(c!("-")).as_ptr();
 
             evbuffer_add((*cf).buffer, data, size);
 
+            let mut msg: msg_write_open = zeroed();
             msg.stream = 1;
             msg.fd = STDOUT_FILENO;
             msg.flags = 0;
@@ -239,9 +257,6 @@ pub unsafe fn file_print_buffer(c: *mut client, data: *mut c_void, size: usize) 
                 &raw mut msg as _,
                 size_of::<msg_write_open>(),
             );
-        } else {
-            evbuffer_add((*cf).buffer, data, size);
-            file_push(cf);
         }
     }
 }
@@ -254,21 +269,21 @@ macro_rules! file_error {
 pub(crate) use file_error;
 pub unsafe fn file_error_(c: *mut client, args: std::fmt::Arguments) {
     unsafe {
-        let mut find: client_file = zeroed();
-        let mut msg: msg_write_open = zeroed();
-
         if !file_can_print(c) {
             return;
         }
 
-        find.stream = 2;
-        let mut cf = rb_find(&raw mut (*c).files, &raw mut find);
-        if cf.is_null() {
-            cf = file_create_with_client(c, 2, None, null_mut());
+        if let Some(cf) = (*c).files.get_mut(&2) {
+            let cf = &mut **cf as *mut client_file;
+            evbuffer_add_vprintf((*cf).buffer, args);
+            file_push(cf);
+        } else {
+            let cf = file_create_with_client(c, 2, None, null_mut());
             (*cf).path = xstrdup(c!("-")).as_ptr();
 
             evbuffer_add_vprintf((*cf).buffer, args);
 
+            let mut msg: msg_write_open = zeroed();
             msg.stream = 2;
             msg.fd = STDERR_FILENO;
             msg.flags = 0;
@@ -279,9 +294,6 @@ pub unsafe fn file_error_(c: *mut client, args: std::fmt::Arguments) {
                 &raw mut msg as _,
                 size_of::<msg_write_open>(),
             );
-        } else {
-            evbuffer_add_vprintf((*cf).buffer, args);
-            file_push(cf);
         }
     }
 }
@@ -562,14 +574,14 @@ pub unsafe fn file_write_left(files: *mut client_files) -> c_int {
     let mut waiting: i32 = 0;
 
     unsafe {
-        for cf in rb_foreach(files).map(NonNull::as_ptr) {
-            if (*cf).event.is_null() {
+        for cf in (*files).values() {
+            if cf.event.is_null() {
                 continue;
             }
-            left = EVBUFFER_LENGTH((*(*cf).event).output);
+            left = EVBUFFER_LENGTH((*cf.event).output);
             if left != 0 {
                 waiting += 1;
-                log_debug!("file {} {} bytes left", (*cf).stream, left);
+                log_debug!("file {} {} bytes left", cf.stream, left);
             }
         }
     }
@@ -612,7 +624,6 @@ pub unsafe extern "C-unwind" fn file_write_callback(_bev: *mut bufferevent, arg:
         if (*cf).closed != 0 && EVBUFFER_LENGTH((*(*cf).event).output) == 0 {
             bufferevent_free((*cf).event);
             close((*cf).fd);
-            rb_remove((*cf).tree, cf);
             file_free(cf);
         }
     }
@@ -631,7 +642,6 @@ pub unsafe fn file_write_open(
         let msg = (*imsg).data as *mut msg_write_open;
         let msglen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
         let path: *const u8;
-        let mut find: client_file = zeroed();
         let flags = O_NONBLOCK | O_WRONLY | O_CREAT;
         let mut error: i32 = 0;
         'reply: {
@@ -645,8 +655,7 @@ pub unsafe fn file_write_open(
             }
             log_debug!("open write file {} {}", (*msg).stream, _s(path));
 
-            find.stream = (*msg).stream;
-            if !rb_find(files, &raw mut find).is_null() {
+            if (*files).contains_key(&(*msg).stream) {
                 error = EBADF;
                 break 'reply;
             }
@@ -709,14 +718,14 @@ pub unsafe fn file_write_data(files: *mut client_files, imsg: *mut imsg) {
     unsafe {
         let msg = (*imsg).data as *mut msg_write_data;
         let msglen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
-        let mut find: client_file = zeroed(); // TODO use uninit
         let size = msglen - size_of::<msg_write_data>();
 
         if msglen < size_of::<msg_write_data>() {
             fatalx("bad MSG_WRITE size");
         }
-        find.stream = (*msg).stream;
-        let cf = rb_find(files, &raw mut find);
+        let cf = (*files)
+            .get_mut(&(*msg).stream)
+            .map_or(null_mut(), |cf| &mut **cf as *mut client_file);
         if cf.is_null() {
             fatalx("unknown stream number");
         }
@@ -732,14 +741,13 @@ pub unsafe fn file_write_close(files: *mut client_files, imsg: *mut imsg) {
     unsafe {
         let msg = (*imsg).data as *mut msg_write_close;
         let msglen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
-        let mut find: client_file = zeroed(); // TODO uninit
-        // struct client_file find, *cf;
 
         if msglen != size_of::<msg_write_close>() {
             fatalx("bad MSG_WRITE_CLOSE size");
         }
-        find.stream = (*msg).stream;
-        let cf = rb_find(files, &raw mut find);
+        let cf = (*files)
+            .get_mut(&(*msg).stream)
+            .map_or(null_mut(), |cf| &mut **cf as *mut client_file);
         if cf.is_null() {
             fatalx("unknown stream number");
         }
@@ -752,7 +760,6 @@ pub unsafe fn file_write_close(files: *mut client_files, imsg: *mut imsg) {
             if (*cf).fd != -1 {
                 close((*cf).fd);
             }
-            rb_remove(files, cf);
             file_free(cf);
         }
     }
@@ -782,7 +789,6 @@ pub unsafe extern "C-unwind" fn file_read_error_callback(
 
         bufferevent_free((*cf).event);
         close((*cf).fd);
-        rb_remove((*cf).tree, cf);
         file_free(cf);
     }
 }
@@ -849,8 +855,6 @@ pub unsafe fn file_read_open(
         let flags = O_NONBLOCK | O_RDONLY;
         let error;
 
-        let mut find = MaybeUninit::<client_file>::uninit();
-
         'reply: {
             if msglen < size_of::<msg_read_done>() {
                 fatalx("bad MSG_READ_OPEN size");
@@ -862,8 +866,7 @@ pub unsafe fn file_read_open(
             }
             log_debug!("open read file {} {}", (*msg).stream, _s(path));
 
-            (*find.as_mut_ptr()).stream = (*msg).stream;
-            if !rb_find(files, find.as_mut_ptr()).is_null() {
+            if (*files).contains_key(&(*msg).stream) {
                 error = EBADF;
                 break 'reply;
             }
@@ -925,13 +928,13 @@ pub unsafe fn file_read_cancel(files: *mut client_files, imsg: *mut imsg) {
     unsafe {
         let msg = (*imsg).data as *mut msg_read_cancel;
         let msglen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
-        let mut find = MaybeUninit::<client_file>::uninit();
 
         if msglen != size_of::<msg_read_cancel>() {
             fatalx("bad MSG_READ_CANCEL size");
         }
-        (*find.as_mut_ptr()).stream = (*msg).stream;
-        let cf = rb_find(files, find.as_mut_ptr());
+        let cf = (*files)
+            .get_mut(&(*msg).stream)
+            .map_or(null_mut(), |cf| &mut **cf as *mut client_file);
         if cf.is_null() {
             fatalx("unknown stream number");
         }
@@ -945,13 +948,13 @@ pub unsafe fn file_write_ready(files: *mut client_files, imsg: *mut imsg) {
     unsafe {
         let msg = (*imsg).data as *mut msg_write_ready;
         let msglen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
-        let mut find = MaybeUninit::<client_file>::uninit();
 
         if msglen != size_of::<msg_write_ready>() {
             fatalx("bad MSG_WRITE_READY size");
         }
-        (*find.as_mut_ptr()).stream = (*msg).stream;
-        let cf = rb_find(files, find.as_mut_ptr());
+        let cf = (*files)
+            .get_mut(&(*msg).stream)
+            .map_or(null_mut(), |cf| &mut **cf as *mut client_file);
         if cf.is_null() {
             return;
         }
@@ -970,13 +973,13 @@ pub unsafe fn file_read_data(files: *mut client_files, imsg: *mut imsg) {
         let msglen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
         let bdata: *mut c_void = msg.add(1).cast();
         let bsize = msglen - size_of::<msg_read_data>();
-        let mut find = MaybeUninit::<client_file>::uninit();
 
         if msglen < size_of::<msg_read_data>() {
             fatalx("bad MSG_READ_DATA size");
         }
-        (*find.as_mut_ptr()).stream = (*msg).stream;
-        let cf = rb_find(files, find.as_mut_ptr());
+        let cf = (*files)
+            .get_mut(&(*msg).stream)
+            .map_or(null_mut(), |cf| &mut **cf as *mut client_file);
         if cf.is_null() {
             return;
         }
@@ -997,13 +1000,13 @@ pub unsafe fn file_read_done(files: *mut client_files, imsg: *mut imsg) {
     unsafe {
         let msg = (*imsg).data as *mut msg_read_done;
         let msglen = (*imsg).hdr.len as usize - IMSG_HEADER_SIZE;
-        let mut find = MaybeUninit::<client_file>::uninit();
 
         if msglen != size_of::<msg_read_done>() {
             fatalx("bad MSG_READ_DONE size");
         }
-        (*find.as_mut_ptr()).stream = (*msg).stream;
-        let cf = rb_find(files, find.as_mut_ptr());
+        let cf = (*files)
+            .get_mut(&(*msg).stream)
+            .map_or(null_mut(), |cf| &mut **cf as *mut client_file);
         if cf.is_null() {
             return;
         }
