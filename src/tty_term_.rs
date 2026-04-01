@@ -478,8 +478,7 @@ pub unsafe fn tty_term_apply_overrides(term: *mut tty_term) {
     unsafe {
         // Update capabilities from the option.
         let o = options_get_only(GLOBAL_OPTIONS, "terminal-overrides");
-        let mut a = options_array_first(o);
-        while !a.is_null() {
+        for a in options_array_items(o) {
             ov = options_array_item_value(a);
             s = (*ov).string;
 
@@ -488,7 +487,6 @@ pub unsafe fn tty_term_apply_overrides(term: *mut tty_term) {
             if !first.is_null() && fnmatch(first, (*term).name, 0) == 0 {
                 tty_term_apply(term, cstr_to_str(s.add(offset)), 0);
             }
-            a = options_array_next(a);
         }
 
         // Log the SIXEL flag.
@@ -641,8 +639,7 @@ pub unsafe fn tty_term_create(
 
             // Apply terminal features.
             let o = options_get_only(GLOBAL_OPTIONS, "terminal-features");
-            let mut a = options_array_first(o);
-            while !a.is_null() {
+            for a in options_array_items(o) {
                 let ov = options_array_item_value(a);
                 let s = (*ov).string;
 
@@ -651,7 +648,6 @@ pub unsafe fn tty_term_create(
                 if !first.is_null() && fnmatch(first, (*term).name, 0) == 0 {
                     tty_add_features(feat, cstr_to_str(s.add(offset)), c!(":"));
                 }
-                a = options_array_next(a);
             }
 
             // Apply overrides so any capabilities used for features are changed.

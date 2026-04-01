@@ -236,8 +236,7 @@ unsafe fn window_customize_build_array(
         let oe = options_table_entry(o);
         let oo = options_owner(o);
 
-        let mut ai = options_array_first(o);
-        while !ai.is_null() {
+        for ai in options_array_items(o) {
             let idx = options_array_item_index(ai);
             let name: String = format!("{}[{}]", options_name(o), idx);
 
@@ -265,8 +264,6 @@ unsafe fn window_customize_build_array(
             free_(text);
 
             free_(value);
-
-            ai = options_array_next(ai);
         }
     }
 }

@@ -173,8 +173,7 @@ pub unsafe fn environ_update(oo: *mut options, src: *mut environ, dst: *mut envi
         if o.is_null() {
             return;
         }
-        let mut a = options_array_first(o);
-        while !a.is_null() {
+        for a in options_array_items(o) {
             let ov = options_array_item_value(a);
             found = false;
             for entry in (*src).entries.values() {
@@ -192,7 +191,6 @@ pub unsafe fn environ_update(oo: *mut options, src: *mut environ, dst: *mut envi
             if !found {
                 environ_clear(dst, (*ov).string);
             }
-            a = options_array_next(a);
         }
     }
 }

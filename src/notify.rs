@@ -110,11 +110,9 @@ pub unsafe fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut notify_entry
                 }
             }
         } else {
-            let mut a = options_array_first(o);
-            while !a.is_null() {
+            for a in options_array_items(o) {
                 let cmdlist = (*options_array_item_value(a)).cmdlist;
                 item = notify_insert_one_hook(item, ne, cmdlist, state);
-                a = options_array_next(a);
             }
         }
 

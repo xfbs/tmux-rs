@@ -15,7 +15,7 @@
 use std::borrow::Cow;
 
 use crate::*;
-use crate::options_::{options, options_array_first, options_array_item_index, options_array_item_value, options_array_next, options_get};
+use crate::options_::{options, options_array_item_index, options_array_item_value, options_array_items, options_get};
 
 const COLOUR_FLAG_256: i32 = 0x01000000;
 const COLOUR_FLAG_RGB: i32 = 0x02000000;
@@ -991,8 +991,8 @@ pub unsafe fn colour_palette_from_option(p: Option<&mut colour_palette>, oo: *mu
 
         let o = options_get(&mut *oo, "pane-colours");
 
-        let mut a = options_array_first(o);
-        if a.is_null() {
+        let items = options_array_items(o);
+        if items.is_empty() {
             p.default_palette.take();
             return;
         }
@@ -1002,13 +1002,12 @@ pub unsafe fn colour_palette_from_option(p: Option<&mut colour_palette>, oo: *mu
             Some(palette) => palette.fill(-1),
         }
 
-        while !a.is_null() {
+        for a in items {
             let n = options_array_item_index(a);
             if n < 256 {
                 let c = (*options_array_item_value(a)).number as i32;
                 (p.default_palette.as_mut().unwrap())[n as usize] = c;
             }
-            a = options_array_next(a);
         }
     }
 }

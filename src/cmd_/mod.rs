@@ -455,8 +455,7 @@ pub unsafe fn cmd_get_alias(name: *const u8) -> *mut u8 {
         }
         let wanted = strlen(name);
 
-        let mut a = options_array_first(o);
-        while !a.is_null() {
+        for a in options_array_items(o) {
             let ov = options_array_item_value(a);
 
             let equals = strchr((*ov).string, b'=' as i32);
@@ -466,8 +465,6 @@ pub unsafe fn cmd_get_alias(name: *const u8) -> *mut u8 {
                     return xstrdup(equals.add(1)).as_ptr();
                 }
             }
-
-            a = options_array_next(a);
         }
         null_mut()
     }

@@ -2442,7 +2442,7 @@ struct key_table {
 type key_tables = BTreeMap<String, Box<key_table>>;
 
 // Option data.
-type options_array = rb_head<options_array_item>;
+type options_array = BTreeMap<u32, options_array_item>;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -2450,7 +2450,7 @@ union options_value {
     string: *mut u8,
     number: c_longlong,
     style: style,
-    array: options_array,
+    array: *mut options_array,
     cmdlist: *mut cmd_list,
 }
 

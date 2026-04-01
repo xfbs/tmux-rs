@@ -439,8 +439,7 @@ pub unsafe fn cmdq_insert_hook_(
             }
         }
 
-        let mut a = options_array_first(o);
-        while !a.is_null() {
+        for a in options_array_items(o) {
             let cmdlist = (*options_array_item_value(a)).cmdlist;
             if !cmdlist.is_null() {
                 let new_item = cmdq_get_command(cmdlist, new_state);
@@ -450,7 +449,6 @@ pub unsafe fn cmdq_insert_hook_(
                     item = cmdq_append(null_mut(), new_item);
                 }
             }
-            a = options_array_next(a);
         }
 
         cmdq_free_state(new_state);

@@ -1915,24 +1915,20 @@ unsafe fn status_prompt_complete_list(s: *const u8, at_start: i32) -> Vec<String
         }
         let o = options_get_only(GLOBAL_OPTIONS, "command-alias");
         if !o.is_null() {
-            let mut a = options_array_first(o);
-            while !a.is_null() {
-                'next: {
-                    let value = (*options_array_item_value(a)).string;
+            for a in options_array_items(o) {
+                let value = (*options_array_item_value(a)).string;
 
-                    let cp = libc::strchr(value, b'=' as i32);
-                    if cp.is_null() {
-                        break 'next;
-                    }
-                    let valuelen = cp.offset_from_unsigned(value);
-                    if s.len() > valuelen || !cstr_to_str(value).starts_with(s) {
-                        break 'next;
-                    }
+                let cp = libc::strchr(value, b'=' as i32);
+                if cp.is_null() {
+                    continue;
+                }
+                let valuelen = cp.offset_from_unsigned(value);
+                if s.len() > valuelen || !cstr_to_str(value).starts_with(s) {
+                    continue;
+                }
 
-                    let tmp = format!("{:.*}", valuelen, _s(value));
-                    status_prompt_add_list(&mut list, &tmp);
-                } // next:
-                a = options_array_next(a);
+                let tmp = format!("{:.*}", valuelen, _s(value));
+                status_prompt_add_list(&mut list, &tmp);
             }
         }
         if at_start != 0 {

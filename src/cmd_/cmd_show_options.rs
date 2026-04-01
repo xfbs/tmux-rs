@@ -165,7 +165,6 @@ pub unsafe fn cmd_show_options_print(
 ) {
     unsafe {
         let args = cmd_get_args(self_);
-        let mut a: *mut options_array_item;
         let tmp;
         let mut name = options_name(o);
         let escaped;
@@ -174,17 +173,16 @@ pub unsafe fn cmd_show_options_print(
             tmp = format!("{name}[{idx}]");
             name = &tmp;
         } else if options_is_array(o) {
-            a = options_array_first(o);
-            if a.is_null() {
+            let items = options_array_items(o);
+            if items.is_empty() {
                 if !args_has(args, 'v') {
                     cmdq_print!(item, "{}", name);
                 }
                 return;
             }
-            while !a.is_null() {
+            for a in items {
                 idx = options_array_item_index(a) as i32;
                 cmd_show_options_print(self_, item, o, idx, parent);
-                a = options_array_next(a);
             }
             return;
         }
@@ -258,12 +256,10 @@ pub unsafe fn cmd_show_options_all(
 
             if !options_is_array(o) {
                 cmd_show_options_print(self_, item, o, -1, parent);
-            } else if let Some(a) = NonNull::new(options_array_first(o)) {
-                let mut a = a.as_ptr();
-                while !a.is_null() {
+            } else if !options_array_items(o).is_empty() {
+                for a in options_array_items(o) {
                     let idx = options_array_item_index(a);
                     cmd_show_options_print(self_, item, o, idx as i32, parent);
-                    a = options_array_next(a);
                 }
             } else if !args_has(args, 'v') {
                 let name = options_name(o);

@@ -19,24 +19,13 @@ use crate::*;
 
 use std::collections::HashMap;
 
-#[repr(C)]
+use std::collections::BTreeMap;
+
 #[derive(Copy, Clone)]
 pub struct options_array_item {
     pub index: u32,
     pub value: options_value,
-    pub entry: rb_entry<options_array_item>,
 }
-
-fn options_array_cmp(a1: &options_array_item, a2: &options_array_item) -> cmp::Ordering {
-    a1.index.cmp(&a2.index)
-}
-RB_GENERATE!(
-    options_array,
-    options_array_item,
-    entry,
-    discr_entry,
-    options_array_cmp
-);
 
 pub struct options_entry {
     owner: *mut options,
@@ -308,7 +297,7 @@ pub unsafe fn options_empty(
         (*o).tableentry = oe;
 
         if (*oe).flags & OPTIONS_TABLE_IS_ARRAY != 0 {
-            rb_init(&raw mut (*o).value.array);
+            (*o).value.array = Box::into_raw(Box::new(BTreeMap::new()));
         }
         o
     }
@@ -451,30 +440,40 @@ pub unsafe fn options_table_entry(o: *mut options_entry) -> *const options_table
     unsafe { (*o).tableentry }
 }
 
+/// Get the array map from an options_entry, creating it if null.
+unsafe fn options_array_map(o: *mut options_entry) -> &'static mut options_array {
+    unsafe {
+        if (*o).value.array.is_null() {
+            (*o).value.array = Box::into_raw(Box::new(BTreeMap::new()));
+        }
+        &mut *(*o).value.array
+    }
+}
+
 unsafe fn options_array_item(o: *mut options_entry, idx: c_uint) -> *mut options_array_item {
     unsafe {
-        let mut a = options_array_item {
-            index: idx,
-            ..zeroed() // TODO use uninit
-        };
-        rb_find(&raw mut (*o).value.array, &raw mut a)
+        let map = options_array_map(o);
+        map.get_mut(&idx)
+            .map_or(null_mut(), |a| a as *mut options_array_item)
     }
 }
 
 unsafe fn options_array_new(o: *mut options_entry, idx: c_uint) -> *mut options_array_item {
     unsafe {
-        let a = xcalloc1::<options_array_item>() as *mut options_array_item;
-        (*a).index = idx;
-        rb_insert(&mut (*o).value.array, a);
-        a
+        let map = options_array_map(o);
+        map.entry(idx).or_insert(options_array_item {
+            index: idx,
+            value: options_value { number: 0 },
+        });
+        &mut *map.get_mut(&idx).unwrap() as *mut options_array_item
     }
 }
 
 unsafe fn options_array_free(o: *mut options_entry, a: *mut options_array_item) {
     unsafe {
         options_value_free(o, &mut (*a).value);
-        rb_remove(&mut (*o).value.array, a);
-        free_(a);
+        let map = options_array_map(o);
+        map.remove(&(*a).index);
     }
 }
 
@@ -483,12 +482,12 @@ pub unsafe fn options_array_clear(o: *mut options_entry) {
         if !options_is_array(o) {
             return;
         }
-
-        let mut a = rb_min(&raw mut (*o).value.array);
-        while !a.is_null() {
-            let next: *mut options_array_item = rb_next(a);
-            options_array_free(o, a);
-            a = next;
+        let map = options_array_map(o);
+        let indices: Vec<u32> = map.keys().copied().collect();
+        for idx in indices {
+            if let Some(mut item) = map.remove(&idx) {
+                options_value_free(o, &mut item.value);
+            }
         }
     }
 }
@@ -632,18 +631,19 @@ pub unsafe fn options_array_assign(o: *mut options_entry, s: &str) -> Result<(),
     }
 }
 
-pub unsafe fn options_array_first(o: *mut options_entry) -> *mut options_array_item {
+/// Collect all array item pointers in index order.
+pub unsafe fn options_array_items(o: *mut options_entry) -> Vec<*mut options_array_item> {
     unsafe {
         if !OPTIONS_IS_ARRAY(o) {
-            return null_mut();
+            return Vec::new();
         }
-        rb_min(&raw mut (*o).value.array)
+        let map = options_array_map(o);
+        map.values_mut()
+            .map(|a| a as *mut options_array_item)
+            .collect()
     }
 }
 
-pub unsafe fn options_array_next(a: *mut options_array_item) -> *mut options_array_item {
-    unsafe { rb_next(a) }
-}
 
 pub unsafe fn options_array_item_index(a: *mut options_array_item) -> u32 {
     unsafe { (*a).index }
@@ -668,11 +668,10 @@ pub unsafe fn options_to_string(o: *mut options_entry, idx: i32, numeric: i32) -
                 let mut result = null_mut();
                 let mut last: *mut u8 = null_mut();
 
-                let mut a = rb_min(&raw mut (*o).value.array);
-                while !a.is_null() {
+                for a in options_array_items(o) {
                     let next = options_value_to_string(
                         o,
-                        &raw mut (*a.cast::<options_array_item>()).value,
+                        &raw mut (*a).value,
                         numeric,
                     );
 
@@ -685,8 +684,6 @@ pub unsafe fn options_to_string(o: *mut options_entry, idx: i32, numeric: i32) -
                         result = new_result;
                     }
                     last = result;
-
-                    a = rb_next(a);
                 }
 
                 if result.is_null() {
