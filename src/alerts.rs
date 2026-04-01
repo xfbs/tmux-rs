@@ -103,7 +103,7 @@ fn alerts_enabled(w: &window, flags: window_flag) -> bool {
 
 pub(crate) unsafe fn alerts_reset_all() {
     unsafe {
-        for w in rb_foreach(&raw mut WINDOWS) {
+        for w in (*(&raw mut WINDOWS)).values().map(|w| NonNull::new(*w).unwrap()) {
             alerts_reset(w);
         }
     }

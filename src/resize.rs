@@ -534,7 +534,7 @@ pub unsafe fn recalculate_sizes_now(now: i32) {
         }
 
         // Walk each window and adjust the size.
-        for w in rb_foreach(&raw mut WINDOWS) {
+        for w in (*(&raw mut WINDOWS)).values().map(|w| NonNull::new(*w).unwrap()) {
             recalculate_size(w.as_ptr(), now);
         }
     }

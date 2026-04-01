@@ -1448,9 +1448,8 @@ struct window {
 
     references: u32,
     winlinks: tailq_head<winlink>,
-    entry: rb_entry<window>,
 }
-type windows = rb_head<window>;
+type windows = BTreeMap<u32, *mut window>;
 
 bitflags::bitflags! {
     #[repr(transparent)]

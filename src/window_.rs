@@ -25,7 +25,7 @@ use crate::options_::{options_create, options_free, options_get_number___, optio
 pub const DEFAULT_XPIXEL: u32 = 16;
 pub const DEFAULT_YPIXEL: u32 = 32;
 
-pub static mut WINDOWS: windows = unsafe { std::mem::zeroed() };
+pub static mut WINDOWS: windows = BTreeMap::new();
 
 pub static mut ALL_WINDOW_PANES: window_pane_tree = BTreeMap::new();
 
@@ -37,12 +37,8 @@ pub struct window_pane_input_data {
     file: *mut client_file,
 }
 
-RB_GENERATE!(windows, window, entry, discr_entry, window_cmp);
 RB_GENERATE!(winlinks, winlink, entry, discr_entry, winlink_cmp);
 
-pub fn window_cmp(w1: &window, w2: &window) -> cmp::Ordering {
-    w1.id.cmp(&w2.id)
-}
 
 pub fn winlink_cmp(wl1: &winlink, wl2: &winlink) -> cmp::Ordering {
     wl1.idx.cmp(&wl2.idx)
@@ -238,10 +234,10 @@ pub unsafe fn window_find_by_id_str(s: &str) -> *mut window {
 
 pub unsafe fn window_find_by_id(id: u32) -> *mut window {
     unsafe {
-        let mut w: window = std::mem::zeroed();
-
-        w.id = id;
-        rb_find(&raw mut WINDOWS, &raw mut w)
+        (*(&raw mut WINDOWS))
+            .get(&id)
+            .copied()
+            .unwrap_or(null_mut())
     }
 }
 
@@ -286,7 +282,7 @@ pub unsafe fn window_create(sx: u32, sy: u32, mut xpixel: u32, mut ypixel: u32) 
         tailq_init(&raw mut (*w).winlinks);
 
         (*w).id = NEXT_WINDOW_ID.fetch_add(1, atomic::Ordering::Relaxed);
-        rb_insert(&raw mut WINDOWS, w);
+        (*(&raw mut WINDOWS)).insert((*w).id, w);
 
         window_set_fill_character(NonNull::new_unchecked(w));
         window_update_activity(NonNull::new_unchecked(w));
@@ -313,7 +309,7 @@ unsafe fn window_destroy(w: *mut window) {
         );
 
         window_unzoom(w, 0);
-        rb_remove(&raw mut WINDOWS, w);
+        (*(&raw mut WINDOWS)).remove(&(*w).id);
 
         if !(*w).layout_root.is_null() {
             layout_free_cell((*w).layout_root);

@@ -235,7 +235,7 @@ pub unsafe fn server_start(
         // TODO pledge
 
         input_key_build();
-        rb_init(&raw mut WINDOWS);
+        WINDOWS = BTreeMap::new();
         ALL_WINDOW_PANES = BTreeMap::new();
         tailq_init(&raw mut CLIENTS);
         rb_init(&raw mut SESSIONS);
@@ -531,7 +531,7 @@ unsafe fn server_child_signal() {
 
 unsafe fn server_child_exited(pid: pid_t, status: i32) {
     unsafe {
-        for w in rb_foreach(&raw mut WINDOWS).map(NonNull::as_ptr) {
+        for w in (*(&raw mut WINDOWS)).values().copied() {
             for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
                 if (*wp).pid == pid {
                     (*wp).status = status;
@@ -557,7 +557,7 @@ unsafe fn server_child_stopped(pid: pid_t, status: i32) {
             return;
         }
 
-        for w in rb_foreach(&raw mut WINDOWS).map(NonNull::as_ptr) {
+        for w in (*(&raw mut WINDOWS)).values().copied() {
             for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
                 if (*wp).pid == pid && killpg(pid, SIGCONT) != 0 {
                     kill(pid, SIGCONT);
