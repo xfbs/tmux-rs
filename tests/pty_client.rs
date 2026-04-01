@@ -3,6 +3,7 @@ use super::harness;
 use std::time::Duration;
 
 use harness::{PtyClient, TmuxTestHarness};
+use std::time::Instant;
 
 #[test]
 fn pty_client_attaches_and_renders() {
@@ -16,12 +17,19 @@ fn pty_client_attaches_and_renders() {
     let mut client = PtyClient::attach(&tmux, 80, 24);
     assert!(client.is_alive(), "client should be running");
 
-    // The client should render something (prompt, status bar, etc.)
-    let output = client.wait_and_read(Duration::from_secs(3));
-    assert!(
-        !output.is_empty(),
-        "expected some terminal output from attached client"
-    );
+    // The client should render something (prompt, status bar, escape sequences, etc.)
+    // Use wait_for_raw since stripped output may be empty if it's all escape sequences.
+    let start = Instant::now();
+    loop {
+        let raw = client.read_raw();
+        if !raw.is_empty() {
+            break;
+        }
+        if start.elapsed() > Duration::from_secs(5) {
+            panic!("expected some terminal output from attached client");
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
 }
 
 #[test]

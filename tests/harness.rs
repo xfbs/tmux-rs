@@ -37,22 +37,26 @@ fn cargo_bin() -> PathBuf {
 #[allow(dead_code)]
 /// A test harness that manages a tmux server with an isolated socket.
 ///
-/// Each instance gets a unique socket name so tests can run in parallel
+/// Each instance gets a unique socket path so tests can run in parallel
 /// without interfering with each other or any running tmux session.
+///
+/// Uses `-S <absolute_path>` instead of `-L <name>` so that mixed
+/// binary testing (tmux-rs client ↔ C tmux server) works regardless
+/// of each binary's default socket directory.
 pub struct TmuxTestHarness {
-    socket_name: String,
+    socket_path: String,
     server_started: bool,
 }
 
 #[allow(dead_code)]
 impl TmuxTestHarness {
-    /// Create a new harness with a unique socket name. Does not start a server yet.
+    /// Create a new harness with a unique socket path. Does not start a server yet.
     pub fn new() -> Self {
         let id = SOCKET_COUNTER.fetch_add(1, Ordering::Relaxed);
         let pid = std::process::id();
-        let socket_name = format!("tmux-rs-test-{pid}-{id}");
+        let socket_path = format!("/tmp/tmux-test-{pid}-{id}");
         Self {
-            socket_name,
+            socket_path,
             server_started: false,
         }
     }
@@ -110,7 +114,7 @@ impl TmuxTestHarness {
         let full_cmd = format!(
             "{} -L{} {}",
             bin.display(),
-            self.socket_name,
+            self.socket_path,
             shell_args,
         );
         let output = Command::new("sh")
@@ -125,7 +129,7 @@ impl TmuxTestHarness {
     pub fn control_mode(&self, input: &str) -> TmuxResult {
         let bin = client_bin();
         let child = Command::new(bin)
-            .args(["-L", &self.socket_name, "-C", "attach"])
+            .args(["-S", &self.socket_path, "-C", "attach"])
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -202,7 +206,7 @@ impl TmuxTestHarness {
         }
         panic!(
             "tmux server on socket '{}' did not become ready within {:?}",
-            self.socket_name, timeout
+            self.socket_path, timeout
         );
     }
 
@@ -211,8 +215,8 @@ impl TmuxTestHarness {
         let _ = self.cmd().args(["kill-server"]).run();
     }
 
-    pub fn socket_name(&self) -> &str {
-        &self.socket_name
+    pub fn socket_path(&self) -> &str {
+        &self.socket_path
     }
 }
 
@@ -221,6 +225,8 @@ impl Drop for TmuxTestHarness {
         if self.server_started {
             self.kill_server();
         }
+        // Clean up the socket file
+        let _ = std::fs::remove_file(&self.socket_path);
     }
 }
 
@@ -257,7 +263,7 @@ impl<'a> TmuxCommandBuilder<'a> {
 
     pub fn run(self) -> TmuxResult {
         let mut cmd = Command::new(&self.bin);
-        cmd.args(["-L", &self.harness.socket_name]);
+        cmd.args(["-S", &self.harness.socket_path]);
         cmd.args(&self.extra_args);
         cmd.env("TERM", "screen");
 
@@ -407,7 +413,7 @@ impl PtyClient {
 
         let bin = client_bin();
         let child = Command::new(&bin)
-            .args(["-L", harness.socket_name()])
+            .args(["-S", harness.socket_path()])
             .args(args)
             .env("TERM", "screen")
             .stdin(Stdio::from(slave_stdin))

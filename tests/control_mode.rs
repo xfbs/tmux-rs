@@ -11,7 +11,7 @@ use harness::TmuxTestHarness;
 fn spawn_control_client(tmux: &TmuxTestHarness) -> std::process::Child {
     let bin = harness::client_bin();
     Command::new(&bin)
-        .args(["-L", tmux.socket_name(), "-C", "attach"])
+        .args(["-S", tmux.socket_path(), "-C", "attach"])
         .env("TERM", "screen")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
