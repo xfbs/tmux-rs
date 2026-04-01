@@ -1737,3 +1737,507 @@ pub unsafe fn grid_line_length(gd: *mut grid, py: u32) -> u32 {
         px
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::mem::zeroed;
+    use std::ptr::null_mut;
+
+    /// Helper: create a grid_cell with a single ASCII character.
+    fn make_cell(ch: u8, fg: i32, bg: i32) -> grid_cell {
+        grid_cell::new(
+            utf8_data::new([ch], 0, 1, 1),
+            grid_attr::empty(),
+            grid_flag::empty(),
+            fg,
+            bg,
+            8,
+            0,
+        )
+    }
+
+    // ---------------------------------------------------------------
+    // Constructors / destructors
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn grid_create_returns_valid_grid() {
+        let gd = grid_create(80, 24, 1000);
+        assert!(!gd.is_null());
+        unsafe {
+            assert_eq!((*gd).sx, 80);
+            assert_eq!((*gd).sy, 24);
+            assert_eq!((*gd).hlimit, 1000);
+            assert_eq!((*gd).hsize, 0);
+            grid_destroy(gd);
+        }
+    }
+
+    #[test]
+    fn grid_create_zero_size() {
+        let gd = grid_create(0, 0, 0);
+        assert!(!gd.is_null());
+        unsafe {
+            assert_eq!((*gd).sx, 0);
+            assert_eq!((*gd).sy, 0);
+            grid_destroy(gd);
+        }
+    }
+
+    #[test]
+    fn grid_destroy_does_not_crash() {
+        let gd = grid_create(10, 5, 0);
+        unsafe {
+            grid_destroy(gd);
+        }
+        // If we reach here, destroy did not crash.
+    }
+
+    // ---------------------------------------------------------------
+    // Cell operations
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn grid_get_cell_on_fresh_grid_returns_default() {
+        let gd = grid_create(80, 24, 0);
+        unsafe {
+            let mut gc: grid_cell = zeroed();
+            grid_get_cell(gd, 0, 0, &mut gc);
+            // Fresh grid returns GRID_DEFAULT_CELL (space character).
+            assert!(grid_cells_equal(&gc, &GRID_DEFAULT_CELL));
+            grid_destroy(gd);
+        }
+    }
+
+    #[test]
+    fn grid_set_cell_then_get_cell_roundtrip() {
+        let gd = grid_create(80, 24, 0);
+        unsafe {
+            let cell_in = make_cell(b'A', 8, 8);
+            grid_set_cell(gd, 5, 3, &cell_in);
+
+            let mut cell_out: grid_cell = zeroed();
+            grid_get_cell(gd, 5, 3, &mut cell_out);
+
+            assert!(grid_cells_equal(&cell_in, &cell_out));
+            grid_destroy(gd);
+        }
+    }
+
+    #[test]
+    fn grid_set_cell_multiple_positions() {
+        let gd = grid_create(80, 24, 0);
+        unsafe {
+            let cell_a = make_cell(b'X', 8, 8);
+            let cell_b = make_cell(b'Y', 8, 8);
+
+            grid_set_cell(gd, 0, 0, &cell_a);
+            grid_set_cell(gd, 1, 0, &cell_b);
+
+            let mut out_a: grid_cell = zeroed();
+            let mut out_b: grid_cell = zeroed();
+            grid_get_cell(gd, 0, 0, &mut out_a);
+            grid_get_cell(gd, 1, 0, &mut out_b);
+
+            assert!(grid_cells_equal(&cell_a, &out_a));
+            assert!(grid_cells_equal(&cell_b, &out_b));
+            grid_destroy(gd);
+        }
+    }
+
+    #[test]
+    fn grid_cells_equal_identical() {
+        let a = make_cell(b'Z', 8, 8);
+        let b = make_cell(b'Z', 8, 8);
+        assert!(unsafe { grid_cells_equal(&a, &b) });
+    }
+
+    #[test]
+    fn grid_cells_equal_different_char() {
+        let a = make_cell(b'A', 8, 8);
+        let b = make_cell(b'B', 8, 8);
+        assert!(!unsafe { grid_cells_equal(&a, &b) });
+    }
+
+    #[test]
+    fn grid_cells_equal_different_fg() {
+        let a = make_cell(b'A', 1, 8);
+        let b = make_cell(b'A', 2, 8);
+        assert!(!unsafe { grid_cells_equal(&a, &b) });
+    }
+
+    #[test]
+    fn grid_cells_look_equal_same() {
+        let a = make_cell(b'A', 8, 8);
+        let b = make_cell(b'A', 8, 8);
+        assert_eq!(unsafe { grid_cells_look_equal(&a, &b) }, 1);
+    }
+
+    #[test]
+    fn grid_cells_look_equal_different_fg() {
+        let a = make_cell(b'A', 1, 8);
+        let b = make_cell(b'A', 2, 8);
+        assert_eq!(unsafe { grid_cells_look_equal(&a, &b) }, 0);
+    }
+
+    #[test]
+    fn grid_cells_look_equal_different_char_same_style() {
+        // look_equal only compares style, not data content
+        let a = make_cell(b'A', 8, 8);
+        let b = make_cell(b'B', 8, 8);
+        assert_eq!(unsafe { grid_cells_look_equal(&a, &b) }, 1);
+    }
+
+    // ---------------------------------------------------------------
+    // Line operations
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn grid_get_line_returns_non_null() {
+        let gd = grid_create(80, 24, 0);
+        unsafe {
+            let gl = grid_get_line(gd, 0);
+            assert!(!gl.is_null());
+            let gl_last = grid_get_line(gd, 23);
+            assert!(!gl_last.is_null());
+            grid_destroy(gd);
+        }
+    }
+
+    #[test]
+    fn grid_line_length_on_empty_line() {
+        let gd = grid_create(80, 24, 0);
+        unsafe {
+            let len = grid_line_length(gd, 0);
+            assert_eq!(len, 0);
+            grid_destroy(gd);
+        }
+    }
+
+    #[test]
+    fn grid_line_length_after_set_cell() {
+        let gd = grid_create(80, 24, 0);
+        unsafe {
+            let cell = make_cell(b'A', 8, 8);
+            grid_set_cell(gd, 0, 0, &cell);
+            grid_set_cell(gd, 4, 0, &cell);
+
+            // Line length should be 5 (positions 0..=4, trailing spaces trimmed).
+            let len = grid_line_length(gd, 0);
+            assert_eq!(len, 5);
+            grid_destroy(gd);
+        }
+    }
+
+    #[test]
+    fn grid_empty_line_clears_cells() {
+        let gd = grid_create(80, 24, 0);
+        unsafe {
+            let cell = make_cell(b'X', 8, 8);
+            grid_set_cell(gd, 0, 0, &cell);
+            grid_set_cell(gd, 5, 0, &cell);
+
+            // Now empty line 0.
+            grid_empty_line(gd, 0, 8);
+
+            // After emptying, get_cell should return default.
+            let mut gc: grid_cell = zeroed();
+            grid_get_cell(gd, 0, 0, &mut gc);
+            assert!(grid_cells_equal(&gc, &GRID_DEFAULT_CELL));
+
+            let len = grid_line_length(gd, 0);
+            assert_eq!(len, 0);
+            grid_destroy(gd);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Grid-wide operations
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn grid_clear_rectangular_region() {
+        let gd = grid_create(80, 24, 0);
+        unsafe {
+            let cell = make_cell(b'#', 8, 8);
+            // Fill row 0, columns 0..10
+            for x in 0..10 {
+                grid_set_cell(gd, x, 0, &cell);
+            }
+
+            // Clear columns 2..6 on row 0 (px=2, py=0, nx=4, ny=1).
+            grid_clear(gd, 2, 0, 4, 1, 8);
+
+            // Cells outside cleared region should still be '#'.
+            let mut gc: grid_cell = zeroed();
+            grid_get_cell(gd, 0, 0, &mut gc);
+            assert!(grid_cells_equal(&gc, &cell));
+            grid_get_cell(gd, 1, 0, &mut gc);
+            assert!(grid_cells_equal(&gc, &cell));
+
+            // Cells inside cleared region should be cleared/default.
+            grid_get_cell(gd, 2, 0, &mut gc);
+            assert!(
+                grid_cells_equal(&gc, &GRID_CLEARED_CELL)
+                    || grid_cells_equal(&gc, &GRID_DEFAULT_CELL)
+            );
+
+            // Cell after cleared region still '#'.
+            grid_get_cell(gd, 6, 0, &mut gc);
+            assert!(grid_cells_equal(&gc, &cell));
+
+            grid_destroy(gd);
+        }
+    }
+
+    #[test]
+    fn grid_compare_equal_grids() {
+        let g1 = grid_create(80, 24, 0);
+        let g2 = grid_create(80, 24, 0);
+        unsafe {
+            assert_eq!(grid_compare(g1, g2), 0);
+            grid_destroy(g1);
+            grid_destroy(g2);
+        }
+    }
+
+    #[test]
+    fn grid_compare_different_dimensions() {
+        let g1 = grid_create(80, 24, 0);
+        let g2 = grid_create(40, 24, 0);
+        unsafe {
+            assert_ne!(grid_compare(g1, g2), 0);
+            grid_destroy(g1);
+            grid_destroy(g2);
+        }
+    }
+
+    #[test]
+    fn grid_compare_different_content() {
+        let g1 = grid_create(80, 24, 0);
+        let g2 = grid_create(80, 24, 0);
+        unsafe {
+            let cell = make_cell(b'A', 8, 8);
+            grid_set_cell(g1, 0, 0, &cell);
+            // g2 has no cell set at (0,0), so they differ.
+            assert_ne!(grid_compare(g1, g2), 0);
+            grid_destroy(g1);
+            grid_destroy(g2);
+        }
+    }
+
+    #[test]
+    fn grid_compare_same_content() {
+        let g1 = grid_create(80, 24, 0);
+        let g2 = grid_create(80, 24, 0);
+        unsafe {
+            let cell = make_cell(b'Q', 8, 8);
+            grid_set_cell(g1, 3, 2, &cell);
+            grid_set_cell(g2, 3, 2, &cell);
+            assert_eq!(grid_compare(g1, g2), 0);
+            grid_destroy(g1);
+            grid_destroy(g2);
+        }
+    }
+
+    #[test]
+    fn grid_move_lines_basic() {
+        let gd = grid_create(80, 10, 0);
+        unsafe {
+            let cell = make_cell(b'M', 8, 8);
+            grid_set_cell(gd, 0, 0, &cell);
+
+            // Move line 0 to line 5.
+            grid_move_lines(gd, 5, 0, 1, 8);
+
+            // Line 0 should now be empty.
+            let mut gc: grid_cell = zeroed();
+            grid_get_cell(gd, 0, 0, &mut gc);
+            assert!(grid_cells_equal(&gc, &GRID_DEFAULT_CELL));
+
+            // Line 5 should have the cell.
+            grid_get_cell(gd, 0, 5, &mut gc);
+            assert!(grid_cells_equal(&gc, &cell));
+
+            grid_destroy(gd);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Position operations
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn grid_wrap_unwrap_position_roundtrip() {
+        let gd = grid_create(80, 10, 0);
+        unsafe {
+            // Place content so that cellused > px for the lines we test.
+            let cell = make_cell(b'.', 8, 8);
+            for y in 0..4 {
+                for x in 0..10 {
+                    grid_set_cell(gd, x, y, &cell);
+                }
+            }
+
+            let mut wx: u32 = 0;
+            let mut wy: u32 = 0;
+            grid_wrap_position(gd, 5, 3, &mut wx, &mut wy);
+
+            let mut px: u32 = 0;
+            let mut py: u32 = 0;
+            grid_unwrap_position(gd, &mut px, &mut py, wx, wy);
+
+            assert_eq!(px, 5);
+            assert_eq!(py, 3);
+
+            grid_destroy(gd);
+        }
+    }
+
+    #[test]
+    fn grid_wrap_position_at_end_of_line() {
+        let gd = grid_create(80, 10, 0);
+        unsafe {
+            // Position past cellused gives wx = u32::MAX.
+            let mut wx: u32 = 0;
+            let mut wy: u32 = 0;
+            // cellused for line 0 is 0 on a fresh grid, so px=0 >= cellused=0.
+            grid_wrap_position(gd, 0, 0, &mut wx, &mut wy);
+            assert_eq!(wx, u32::MAX);
+            assert_eq!(wy, 0);
+            grid_destroy(gd);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // String conversion
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn grid_string_cells_empty_line() {
+        let gd = grid_create(80, 24, 0);
+        unsafe {
+            let mut lastgc: *mut grid_cell = null_mut();
+            let buf = grid_string_cells(
+                gd,
+                0,
+                0,
+                80,
+                &mut lastgc,
+                grid_string_flags::empty(),
+                null_mut(),
+            );
+            assert!(!buf.is_null());
+            // Empty line should produce empty string.
+            assert_eq!(*buf, 0);
+            free_(buf);
+            grid_destroy(gd);
+        }
+    }
+
+    #[test]
+    fn grid_string_cells_with_content() {
+        let gd = grid_create(80, 24, 0);
+        unsafe {
+            let cell_h = make_cell(b'H', 8, 8);
+            let cell_i = make_cell(b'i', 8, 8);
+            grid_set_cell(gd, 0, 0, &cell_h);
+            grid_set_cell(gd, 1, 0, &cell_i);
+
+            let mut lastgc: *mut grid_cell = null_mut();
+            let buf = grid_string_cells(
+                gd,
+                0,
+                0,
+                80,
+                &mut lastgc,
+                grid_string_flags::empty(),
+                null_mut(),
+            );
+            assert!(!buf.is_null());
+
+            let s = std::ffi::CStr::from_ptr(buf as *const i8);
+            assert_eq!(s.to_str().unwrap(), "Hi");
+
+            free_(buf);
+            grid_destroy(gd);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Grid duplicate lines
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn grid_duplicate_lines_produces_equal_grids() {
+        let src = grid_create(80, 5, 0);
+        let dst = grid_create(80, 5, 0);
+        unsafe {
+            let cell = make_cell(b'D', 8, 8);
+            grid_set_cell(src, 0, 0, &cell);
+            grid_set_cell(src, 3, 2, &cell);
+
+            grid_duplicate_lines(dst, 0, src, 0, 5);
+
+            assert_eq!(grid_compare(src, dst), 0);
+
+            grid_destroy(src);
+            grid_destroy(dst);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Edge cases
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn grid_clear_zero_size_does_not_crash() {
+        let gd = grid_create(80, 24, 0);
+        unsafe {
+            // nx=0 or ny=0 should be no-op.
+            grid_clear(gd, 0, 0, 0, 1, 8);
+            grid_clear(gd, 0, 0, 1, 0, 8);
+            grid_destroy(gd);
+        }
+    }
+
+    #[test]
+    fn grid_move_lines_noop_same_src_dst() {
+        let gd = grid_create(80, 10, 0);
+        unsafe {
+            let cell = make_cell(b'N', 8, 8);
+            grid_set_cell(gd, 0, 2, &cell);
+
+            // Moving line 2 to line 2 should be a no-op.
+            grid_move_lines(gd, 2, 2, 1, 8);
+
+            let mut gc: grid_cell = zeroed();
+            grid_get_cell(gd, 0, 2, &mut gc);
+            assert!(grid_cells_equal(&gc, &cell));
+
+            grid_destroy(gd);
+        }
+    }
+
+    #[test]
+    fn grid_default_cell_is_space() {
+        assert_eq!(GRID_DEFAULT_CELL.data.data[0], b' ');
+        assert_eq!(GRID_DEFAULT_CELL.data.size, 1);
+        assert_eq!(GRID_DEFAULT_CELL.data.width, 1);
+        assert_eq!(GRID_DEFAULT_CELL.fg, 8);
+        assert_eq!(GRID_DEFAULT_CELL.bg, 8);
+    }
+
+    #[test]
+    fn grid_padding_cell_has_padding_flag() {
+        assert!(GRID_PADDING_CELL.flags.intersects(grid_flag::PADDING));
+        assert_eq!(GRID_PADDING_CELL.data.width, 0);
+    }
+
+    #[test]
+    fn grid_cleared_cell_has_cleared_flag() {
+        assert!(GRID_CLEARED_CELL.flags.intersects(grid_flag::CLEARED));
+        assert_eq!(GRID_CLEARED_CELL.data.data[0], b' ');
+    }
+}

@@ -47,7 +47,7 @@ struct input_cell {
 }
 
 #[repr(i32)]
-#[derive(Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 enum input_param_type {
     INPUT_MISSING,
     INPUT_NUMBER,
@@ -3123,5 +3123,729 @@ pub unsafe fn input_reply_clipboard(
         }
         bufferevent_write(bev, end.cast(), strlen(end));
         free_(out);
+    }
+}
+
+#[cfg(test)]
+#[allow(dangerous_implicit_autorefs, unsafe_op_in_unsafe_fn)]
+mod tests {
+    use super::*;
+
+    // ---------------------------------------------------------------
+    // Helper: create and return an input_ctx with NULL wp and event.
+    // The caller must call input_free() when done.
+    // ---------------------------------------------------------------
+    unsafe fn make_test_ctx() -> *mut input_ctx {
+        let mut palette = Box::new(colour_palette_init());
+        let ictx = input_init(null_mut(), null_mut(), &raw mut *palette);
+        // Leak the palette so it outlives the context (tests clean it up).
+        Box::leak(palette);
+        ictx
+    }
+
+    // ---------------------------------------------------------------
+    // input_init / input_free lifecycle
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_input_init_and_free() {
+        unsafe {
+            let mut palette = Box::new(colour_palette_init());
+            let ictx = input_init(null_mut(), null_mut(), &raw mut *palette);
+            assert!(!ictx.is_null());
+
+            // The context should start in the ground state.
+            assert_eq!((*ictx).state, &raw const INPUT_STATE_GROUND);
+
+            // Flags should be empty after init.
+            assert!((*ictx).flags.is_empty());
+
+            // param_list_len should be 0.
+            assert_eq!((*ictx).param_list_len, 0);
+
+            // input_buf should have been allocated.
+            assert!(!(*ictx).input_buf.is_null());
+            assert_eq!((*ictx).input_space, INPUT_BUF_START);
+
+            // since_ground evbuffer should be allocated.
+            assert!(!(*ictx).since_ground.is_null());
+
+            input_free(ictx);
+            drop(palette);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // input_split: empty param buffer
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_input_split_empty() {
+        unsafe {
+            let ictx = make_test_ctx();
+
+            // param_len == 0 means no parameters to split.
+            (*ictx).param_len = 0;
+            let ret = input_split(ictx);
+            assert_eq!(ret, 0);
+            assert_eq!((*ictx).param_list_len, 0);
+
+            input_free(ictx);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // input_split: single numeric parameter
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_input_split_single_number() {
+        unsafe {
+            let ictx = make_test_ctx();
+
+            // Write "42" into param_buf.
+            (*ictx).param_buf[0] = b'4';
+            (*ictx).param_buf[1] = b'2';
+            (*ictx).param_buf[2] = 0;
+            (*ictx).param_len = 2;
+
+            let ret = input_split(ictx);
+            assert_eq!(ret, 0);
+            assert_eq!((*ictx).param_list_len, 1);
+            assert!((*ictx).param_list[0].type_ == input_param_type::INPUT_NUMBER);
+            assert_eq!((*ictx).param_list[0].union_.num, 42);
+
+            input_free(ictx);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // input_split: multiple numeric parameters separated by semicolons
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_input_split_multiple_numbers() {
+        unsafe {
+            let ictx = make_test_ctx();
+
+            // Write "1;2" into param_buf (e.g. cursor position row;col).
+            let params = b"1;2\0";
+            (*ictx).param_buf[..params.len()].copy_from_slice(params);
+            (*ictx).param_len = 3;
+
+            let ret = input_split(ictx);
+            assert_eq!(ret, 0);
+            assert_eq!((*ictx).param_list_len, 2);
+
+            assert!((*ictx).param_list[0].type_ == input_param_type::INPUT_NUMBER);
+            assert_eq!((*ictx).param_list[0].union_.num, 1);
+
+            assert!((*ictx).param_list[1].type_ == input_param_type::INPUT_NUMBER);
+            assert_eq!((*ictx).param_list[1].union_.num, 2);
+
+            input_free(ictx);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // input_split: missing parameter (empty between semicolons)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_input_split_missing_param() {
+        unsafe {
+            let ictx = make_test_ctx();
+
+            // ";5" -- first param is missing, second is 5.
+            let params = b";5\0";
+            (*ictx).param_buf[..params.len()].copy_from_slice(params);
+            (*ictx).param_len = 2;
+
+            let ret = input_split(ictx);
+            assert_eq!(ret, 0);
+            assert_eq!((*ictx).param_list_len, 2);
+
+            assert!((*ictx).param_list[0].type_ == input_param_type::INPUT_MISSING);
+
+            assert!((*ictx).param_list[1].type_ == input_param_type::INPUT_NUMBER);
+            assert_eq!((*ictx).param_list[1].union_.num, 5);
+
+            input_free(ictx);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // input_split: string parameter (contains colon)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_input_split_string_param() {
+        unsafe {
+            let ictx = make_test_ctx();
+
+            // "2:5" -- colon makes it a string parameter.
+            let params = b"2:5\0";
+            (*ictx).param_buf[..params.len()].copy_from_slice(params);
+            (*ictx).param_len = 3;
+
+            let ret = input_split(ictx);
+            assert_eq!(ret, 0);
+            assert_eq!((*ictx).param_list_len, 1);
+
+            assert!((*ictx).param_list[0].type_ == input_param_type::INPUT_STRING);
+            // The string was xstrdup'd, so it should match "2:5".
+            let s = CStr::from_ptr((*ictx).param_list[0].union_.str.cast());
+            assert_eq!(s.to_bytes(), b"2:5");
+
+            input_free(ictx);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // input_split: trailing semicolons yield missing params
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_input_split_trailing_semicolon() {
+        unsafe {
+            let ictx = make_test_ctx();
+
+            // "7;" -- number 7 then a missing param.
+            let params = b"7;\0";
+            (*ictx).param_buf[..params.len()].copy_from_slice(params);
+            (*ictx).param_len = 2;
+
+            let ret = input_split(ictx);
+            assert_eq!(ret, 0);
+            assert_eq!((*ictx).param_list_len, 2);
+
+            assert!((*ictx).param_list[0].type_ == input_param_type::INPUT_NUMBER);
+            assert_eq!((*ictx).param_list[0].union_.num, 7);
+
+            assert!((*ictx).param_list[1].type_ == input_param_type::INPUT_MISSING);
+
+            input_free(ictx);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // input_get: retrieve parsed parameters with defaults
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_input_get_returns_default_when_out_of_range() {
+        unsafe {
+            let ictx = make_test_ctx();
+
+            // No parameters parsed yet.
+            (*ictx).param_list_len = 0;
+
+            // Asking for index 0 with no params should return the default.
+            let val = input_get(ictx, 0, 0, 99);
+            assert_eq!(val, 99);
+
+            input_free(ictx);
+        }
+    }
+
+    #[test]
+    fn test_input_get_returns_number() {
+        unsafe {
+            let ictx = make_test_ctx();
+
+            // Set up one numeric parameter with value 42.
+            (*ictx).param_list_len = 1;
+            (*ictx).param_list[0].type_ = input_param_type::INPUT_NUMBER;
+            (*ictx).param_list[0].union_.num = 42;
+
+            let val = input_get(ictx, 0, 0, 0);
+            assert_eq!(val, 42);
+
+            input_free(ictx);
+        }
+    }
+
+    #[test]
+    fn test_input_get_clamps_to_minval() {
+        unsafe {
+            let ictx = make_test_ctx();
+
+            // Value 3, but minimum is 10.
+            (*ictx).param_list_len = 1;
+            (*ictx).param_list[0].type_ = input_param_type::INPUT_NUMBER;
+            (*ictx).param_list[0].union_.num = 3;
+
+            let val = input_get(ictx, 0, 10, 0);
+            assert_eq!(val, 10);
+
+            input_free(ictx);
+        }
+    }
+
+    #[test]
+    fn test_input_get_returns_default_for_missing() {
+        unsafe {
+            let ictx = make_test_ctx();
+
+            (*ictx).param_list_len = 1;
+            (*ictx).param_list[0].type_ = input_param_type::INPUT_MISSING;
+
+            let val = input_get(ictx, 0, 0, 55);
+            assert_eq!(val, 55);
+
+            input_free(ictx);
+        }
+    }
+
+    #[test]
+    fn test_input_get_returns_minus_one_for_string() {
+        unsafe {
+            let ictx = make_test_ctx();
+
+            (*ictx).param_list_len = 1;
+            (*ictx).param_list[0].type_ = input_param_type::INPUT_STRING;
+            (*ictx).param_list[0].union_.str = xstrdup_(c"hello").as_ptr();
+
+            let val = input_get(ictx, 0, 0, 0);
+            assert_eq!(val, -1);
+
+            // Clean up the string before freeing context.
+            free_((*ictx).param_list[0].union_.str);
+            (*ictx).param_list[0].type_ = input_param_type::INPUT_MISSING;
+            (*ictx).param_list_len = 0;
+
+            input_free(ictx);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // ESC table: verify sorted order (required for binary_search_by)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_esc_table_sorted() {
+        for (i, pair) in INPUT_ESC_TABLE.windows(2).enumerate() {
+            let a = &pair[0];
+            let b = &pair[1];
+            let ord_ch = a.ch.cmp(&b.ch);
+            let ord_interm = unsafe {
+                libc::strcmp(a.interm.as_ptr().cast(), b.interm.as_ptr().cast())
+            };
+            let combined = ord_ch.then(i32_to_ordering(ord_interm));
+            assert!(
+                combined.is_lt(),
+                "INPUT_ESC_TABLE not sorted at index {}: ch={:#x} >= ch={:#x}",
+                i,
+                a.ch,
+                b.ch,
+            );
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // CSI table: verify sorted order (required for binary_search_by)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_csi_table_sorted() {
+        for (i, pair) in INPUT_CSI_TABLE.windows(2).enumerate() {
+            let a = &pair[0];
+            let b = &pair[1];
+            let ord_ch = a.ch.cmp(&b.ch);
+            let ord_interm = unsafe {
+                libc::strcmp(a.interm.as_ptr().cast(), b.interm.as_ptr().cast())
+            };
+            let combined = ord_ch.then(i32_to_ordering(ord_interm));
+            assert!(
+                combined.is_lt(),
+                "INPUT_CSI_TABLE not sorted at index {}: ch={:#x} >= ch={:#x}",
+                i,
+                a.ch,
+                b.ch,
+            );
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // State transition tables: each table covers the full 0x00..=0xff
+    // byte range (every byte must match at least one transition).
+    // ---------------------------------------------------------------
+
+    fn transitions_cover_all_bytes(table: &[input_transition]) {
+        for byte in 0x00..=0xffi32 {
+            let found = table.iter().any(|t| byte >= t.first && byte <= t.last);
+            assert!(
+                found,
+                "byte {:#04x} not covered by any transition in the table",
+                byte
+            );
+        }
+    }
+
+    #[test]
+    fn test_ground_table_covers_all_bytes() {
+        transitions_cover_all_bytes(&INPUT_STATE_GROUND_TABLE);
+    }
+
+    #[test]
+    fn test_esc_enter_table_covers_all_bytes() {
+        transitions_cover_all_bytes(&INPUT_STATE_ESC_ENTER_TABLE);
+    }
+
+    #[test]
+    fn test_csi_enter_table_covers_all_bytes() {
+        transitions_cover_all_bytes(&INPUT_STATE_CSI_ENTER_TABLE);
+    }
+
+    #[test]
+    fn test_csi_parameter_table_covers_all_bytes() {
+        transitions_cover_all_bytes(&INPUT_STATE_CSI_PARAMETER_TABLE);
+    }
+
+    #[test]
+    fn test_csi_intermediate_table_covers_all_bytes() {
+        transitions_cover_all_bytes(&INPUT_STATE_CSI_INTERMEDIATE_TABLE);
+    }
+
+    // ---------------------------------------------------------------
+    // input_split then input_get round-trip: parse "1;2" and retrieve
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_split_then_get_round_trip() {
+        unsafe {
+            let ictx = make_test_ctx();
+
+            // Simulate CSI params "1;2" (as in ESC[1;2H).
+            let params = b"1;2\0";
+            (*ictx).param_buf[..params.len()].copy_from_slice(params);
+            (*ictx).param_len = 3;
+
+            let ret = input_split(ictx);
+            assert_eq!(ret, 0);
+
+            // Row 1, col 2.
+            assert_eq!(input_get(ictx, 0, 1, 1), 1);
+            assert_eq!(input_get(ictx, 1, 1, 1), 2);
+            // Index 2 out of range -> default.
+            assert_eq!(input_get(ictx, 2, 1, 1), 1);
+
+            input_free(ictx);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // input_split with many parameters
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_input_split_many_params() {
+        unsafe {
+            let ictx = make_test_ctx();
+
+            // "38;2;255;128;0" -- as in 24-bit color SGR.
+            let params = b"38;2;255;128;0\0";
+            (*ictx).param_buf[..params.len()].copy_from_slice(params);
+            (*ictx).param_len = params.len() - 1; // exclude NUL
+
+            let ret = input_split(ictx);
+            assert_eq!(ret, 0);
+            assert_eq!((*ictx).param_list_len, 5);
+
+            assert_eq!((*ictx).param_list[0].union_.num, 38);
+            assert_eq!((*ictx).param_list[1].union_.num, 2);
+            assert_eq!((*ictx).param_list[2].union_.num, 255);
+            assert_eq!((*ictx).param_list[3].union_.num, 128);
+            assert_eq!((*ictx).param_list[4].union_.num, 0);
+
+            input_free(ictx);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // input_split: re-splitting cleans up old string params
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_input_split_cleans_previous_strings() {
+        unsafe {
+            let ictx = make_test_ctx();
+
+            // First split with a string param.
+            let params1 = b"1:2\0";
+            (*ictx).param_buf[..params1.len()].copy_from_slice(params1);
+            (*ictx).param_len = params1.len() - 1;
+            let ret = input_split(ictx);
+            assert_eq!(ret, 0);
+            assert_eq!((*ictx).param_list_len, 1);
+            assert!((*ictx).param_list[0].type_ == input_param_type::INPUT_STRING);
+
+            // Second split should free the old string and parse new data.
+            let params2 = b"99\0";
+            (*ictx).param_buf[..params2.len()].copy_from_slice(params2);
+            (*ictx).param_len = params2.len() - 1;
+            let ret = input_split(ictx);
+            assert_eq!(ret, 0);
+            assert_eq!((*ictx).param_list_len, 1);
+            assert!((*ictx).param_list[0].type_ == input_param_type::INPUT_NUMBER);
+            assert_eq!((*ictx).param_list[0].union_.num, 99);
+
+            input_free(ictx);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Ground state transition table: ASCII printable range 0x20..0x7e
+    // goes to the input_print handler.
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_ground_printable_transitions() {
+        // In the ground table, bytes 0x20..=0x7e should hit a transition
+        // with handler_is_input_print == true.
+        for byte in 0x20i32..=0x7e {
+            let tr = INPUT_STATE_GROUND_TABLE
+                .iter()
+                .find(|t| byte >= t.first && byte <= t.last);
+            assert!(
+                tr.is_some(),
+                "no transition for printable byte {:#04x}",
+                byte
+            );
+            assert!(
+                tr.unwrap().handler_is_input_print,
+                "byte {:#04x} in ground state does not use input_print handler",
+                byte,
+            );
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Ground state: ESC (0x1b) transitions to esc_enter state.
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_ground_esc_goes_to_esc_enter() {
+        let tr = INPUT_STATE_GROUND_TABLE
+            .iter()
+            .find(|t| 0x1b >= t.first && 0x1b <= t.last);
+        assert!(tr.is_some(), "no transition for ESC in ground table");
+        let tr = tr.unwrap();
+        let dest: *const input_state =
+            tr.state.map(|s| &raw const *s).unwrap_or(null());
+        assert_eq!(
+            dest,
+            &raw const INPUT_STATE_ESC_ENTER,
+            "ESC from ground should go to esc_enter"
+        );
+    }
+
+    // ---------------------------------------------------------------
+    // ESC enter state: '[' (0x5b) transitions to CSI enter state.
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_esc_enter_bracket_goes_to_csi_enter() {
+        let tr = INPUT_STATE_ESC_ENTER_TABLE
+            .iter()
+            .find(|t| 0x5b >= t.first && 0x5b <= t.last);
+        assert!(tr.is_some(), "no transition for '[' in esc_enter table");
+        let tr = tr.unwrap();
+        let dest: *const input_state =
+            tr.state.map(|s| &raw const *s).unwrap_or(null());
+        assert_eq!(
+            dest,
+            &raw const INPUT_STATE_CSI_ENTER,
+            "ESC '[' should transition to csi_enter"
+        );
+    }
+
+    // ---------------------------------------------------------------
+    // ESC enter state: ']' (0x5d) transitions to OSC string state.
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_esc_enter_close_bracket_goes_to_osc_string() {
+        let tr = INPUT_STATE_ESC_ENTER_TABLE
+            .iter()
+            .find(|t| 0x5d >= t.first && 0x5d <= t.last);
+        assert!(tr.is_some(), "no transition for ']' in esc_enter table");
+        let tr = tr.unwrap();
+        let dest: *const input_state =
+            tr.state.map(|s| &raw const *s).unwrap_or(null());
+        assert_eq!(
+            dest,
+            &raw const INPUT_STATE_OSC_STRING,
+            "ESC ']' should transition to osc_string"
+        );
+    }
+
+    // ---------------------------------------------------------------
+    // ESC enter state: 'P' (0x50) transitions to DCS enter state.
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_esc_enter_p_goes_to_dcs_enter() {
+        let tr = INPUT_STATE_ESC_ENTER_TABLE
+            .iter()
+            .find(|t| 0x50 >= t.first && 0x50 <= t.last);
+        assert!(tr.is_some(), "no transition for 'P' in esc_enter table");
+        let tr = tr.unwrap();
+        let dest: *const input_state =
+            tr.state.map(|s| &raw const *s).unwrap_or(null());
+        assert_eq!(
+            dest,
+            &raw const INPUT_STATE_DCS_ENTER,
+            "ESC 'P' should transition to dcs_enter"
+        );
+    }
+
+    // ---------------------------------------------------------------
+    // CSI table: known entries can be found by binary search
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_csi_table_find_sgr() {
+        // SGR is 'm' with empty intermediate.
+        let result = INPUT_CSI_TABLE.binary_search_by(|e| {
+            e.ch.cmp(&(b'm' as i32)).then_with(|| {
+                i32_to_ordering(unsafe {
+                    libc::strcmp(e.interm.as_ptr().cast(), c"".as_ptr().cast())
+                })
+            })
+        });
+        assert!(result.is_ok(), "SGR entry ('m', \"\") not found in CSI table");
+        assert_eq!(
+            INPUT_CSI_TABLE[result.unwrap()].type_,
+            input_csi_type::INPUT_CSI_SGR as i32
+        );
+    }
+
+    #[test]
+    fn test_csi_table_find_cup() {
+        // CUP is 'H' with empty intermediate.
+        let result = INPUT_CSI_TABLE.binary_search_by(|e| {
+            e.ch.cmp(&(b'H' as i32)).then_with(|| {
+                i32_to_ordering(unsafe {
+                    libc::strcmp(e.interm.as_ptr().cast(), c"".as_ptr().cast())
+                })
+            })
+        });
+        assert!(result.is_ok(), "CUP entry ('H', \"\") not found in CSI table");
+        assert_eq!(
+            INPUT_CSI_TABLE[result.unwrap()].type_,
+            input_csi_type::INPUT_CSI_CUP as i32
+        );
+    }
+
+    #[test]
+    fn test_csi_table_find_sm_private() {
+        // SM private is 'h' with "?" intermediate.
+        let result = INPUT_CSI_TABLE.binary_search_by(|e| {
+            e.ch.cmp(&(b'h' as i32)).then_with(|| {
+                i32_to_ordering(unsafe {
+                    libc::strcmp(e.interm.as_ptr().cast(), c"?".as_ptr().cast())
+                })
+            })
+        });
+        assert!(
+            result.is_ok(),
+            "SM_PRIVATE entry ('h', \"?\") not found in CSI table"
+        );
+        assert_eq!(
+            INPUT_CSI_TABLE[result.unwrap()].type_,
+            input_csi_type::INPUT_CSI_SM_PRIVATE as i32
+        );
+    }
+
+    // ---------------------------------------------------------------
+    // ESC table: known entries can be found by binary search
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_esc_table_find_ris() {
+        // RIS is 'c' with empty intermediate.
+        let result = INPUT_ESC_TABLE.binary_search_by(|e| {
+            e.ch.cmp(&(b'c' as i32)).then_with(|| {
+                i32_to_ordering(unsafe {
+                    libc::strcmp(e.interm.as_ptr().cast(), c"".as_ptr().cast())
+                })
+            })
+        });
+        assert!(result.is_ok(), "RIS entry ('c', \"\") not found in ESC table");
+        assert_eq!(
+            INPUT_ESC_TABLE[result.unwrap()].type_,
+            input_esc_type::INPUT_ESC_RIS as i32
+        );
+    }
+
+    #[test]
+    fn test_esc_table_find_decsc() {
+        // DECSC is '7' with empty intermediate.
+        let result = INPUT_ESC_TABLE.binary_search_by(|e| {
+            e.ch.cmp(&(b'7' as i32)).then_with(|| {
+                i32_to_ordering(unsafe {
+                    libc::strcmp(e.interm.as_ptr().cast(), c"".as_ptr().cast())
+                })
+            })
+        });
+        assert!(
+            result.is_ok(),
+            "DECSC entry ('7', \"\") not found in ESC table"
+        );
+        assert_eq!(
+            INPUT_ESC_TABLE[result.unwrap()].type_,
+            input_esc_type::INPUT_ESC_DECSC as i32
+        );
+    }
+
+    // ---------------------------------------------------------------
+    // input_split: zero value parameter
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_input_split_zero_value() {
+        unsafe {
+            let ictx = make_test_ctx();
+
+            let params = b"0\0";
+            (*ictx).param_buf[..params.len()].copy_from_slice(params);
+            (*ictx).param_len = 1;
+
+            let ret = input_split(ictx);
+            assert_eq!(ret, 0);
+            assert_eq!((*ictx).param_list_len, 1);
+            assert!((*ictx).param_list[0].type_ == input_param_type::INPUT_NUMBER);
+            assert_eq!((*ictx).param_list[0].union_.num, 0);
+
+            input_free(ictx);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // input_get: second index with multiple params
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_input_get_second_param() {
+        unsafe {
+            let ictx = make_test_ctx();
+
+            (*ictx).param_list_len = 3;
+            (*ictx).param_list[0].type_ = input_param_type::INPUT_NUMBER;
+            (*ictx).param_list[0].union_.num = 10;
+            (*ictx).param_list[1].type_ = input_param_type::INPUT_NUMBER;
+            (*ictx).param_list[1].union_.num = 20;
+            (*ictx).param_list[2].type_ = input_param_type::INPUT_NUMBER;
+            (*ictx).param_list[2].union_.num = 30;
+
+            assert_eq!(input_get(ictx, 0, 0, 0), 10);
+            assert_eq!(input_get(ictx, 1, 0, 0), 20);
+            assert_eq!(input_get(ictx, 2, 0, 0), 30);
+            // Out of range.
+            assert_eq!(input_get(ictx, 3, 0, 77), 77);
+
+            input_free(ictx);
+        }
     }
 }

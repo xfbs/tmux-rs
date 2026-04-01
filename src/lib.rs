@@ -2647,7 +2647,7 @@ unsafe fn args_get_(args: *mut args, flag: char) -> *const u8 {
 
 unsafe impl Sync for SyncCharPtr {}
 #[repr(transparent)]
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Debug, Default)]
 struct SyncCharPtr(*const u8);
 impl SyncCharPtr {
     const fn new(value: &'static CStr) -> Self {
