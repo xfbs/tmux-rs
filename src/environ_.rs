@@ -238,6 +238,199 @@ pub unsafe fn environ_log_(env: *mut environ, args: std::fmt::Arguments) {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn create_and_free() {
+        unsafe {
+            let env = environ_create();
+            environ_free(env.as_ptr());
+        }
+    }
+
+    #[test]
+    fn set_and_find() {
+        unsafe {
+            let env = environ_create().as_ptr();
+
+            environ_set!(env, c!("FOO"), environ_flags::empty(), "{}", "bar");
+
+            let entry = environ_find(env, c!("FOO"));
+            assert!(!entry.is_null());
+            assert_eq!(_s(transmute_ptr((*entry).value)).to_string(), "bar");
+
+            // Non-existent key
+            let missing = environ_find(env, c!("NOPE"));
+            assert!(missing.is_null());
+
+            environ_free(env);
+        }
+    }
+
+    #[test]
+    fn set_overwrites() {
+        unsafe {
+            let env = environ_create().as_ptr();
+
+            environ_set!(env, c!("KEY"), environ_flags::empty(), "{}", "first");
+            environ_set!(env, c!("KEY"), environ_flags::empty(), "{}", "second");
+
+            let entry = environ_find(env, c!("KEY"));
+            assert!(!entry.is_null());
+            assert_eq!(_s(transmute_ptr((*entry).value)).to_string(), "second");
+
+            environ_free(env);
+        }
+    }
+
+    #[test]
+    fn unset_removes() {
+        unsafe {
+            let env = environ_create().as_ptr();
+
+            environ_set!(env, c!("DEL"), environ_flags::empty(), "{}", "val");
+            assert!(!environ_find(env, c!("DEL")).is_null());
+
+            environ_unset(env, c!("DEL"));
+            assert!(environ_find(env, c!("DEL")).is_null());
+
+            environ_free(env);
+        }
+    }
+
+    #[test]
+    fn unset_nonexistent_is_safe() {
+        unsafe {
+            let env = environ_create().as_ptr();
+            environ_unset(env, c!("NOPE")); // should not crash
+            environ_free(env);
+        }
+    }
+
+    #[test]
+    fn clear_sets_value_to_none() {
+        unsafe {
+            let env = environ_create().as_ptr();
+
+            environ_set!(env, c!("CLR"), environ_flags::empty(), "{}", "val");
+            environ_clear(env, c!("CLR"));
+
+            let entry = environ_find(env, c!("CLR"));
+            assert!(!entry.is_null());
+            assert!((*entry).value.is_none(), "value should be None after clear");
+
+            environ_free(env);
+        }
+    }
+
+    #[test]
+    fn clear_nonexistent_creates_entry() {
+        unsafe {
+            let env = environ_create().as_ptr();
+
+            environ_clear(env, c!("NEW"));
+
+            let entry = environ_find(env, c!("NEW"));
+            assert!(!entry.is_null(), "clear should create entry");
+            assert!((*entry).value.is_none());
+
+            environ_free(env);
+        }
+    }
+
+    #[test]
+    fn put_parses_key_value() {
+        unsafe {
+            let env = environ_create().as_ptr();
+
+            environ_put(env, c!("MY_VAR=hello world"), environ_flags::empty());
+
+            let entry = environ_find(env, c!("MY_VAR"));
+            assert!(!entry.is_null());
+            assert_eq!(_s(transmute_ptr((*entry).value)).to_string(), "hello world");
+
+            environ_free(env);
+        }
+    }
+
+    #[test]
+    fn put_ignores_no_equals() {
+        unsafe {
+            let env = environ_create().as_ptr();
+
+            environ_put(env, c!("NOEQUALS"), environ_flags::empty());
+
+            let entry = environ_find(env, c!("NOEQUALS"));
+            assert!(entry.is_null(), "put without = should be ignored");
+
+            environ_free(env);
+        }
+    }
+
+    #[test]
+    fn copy_duplicates_entries() {
+        unsafe {
+            let src = environ_create().as_ptr();
+            let dst = environ_create().as_ptr();
+
+            environ_set!(src, c!("A"), environ_flags::empty(), "{}", "1");
+            environ_set!(src, c!("B"), environ_flags::empty(), "{}", "2");
+
+            environ_copy(src, dst);
+
+            let a = environ_find(dst, c!("A"));
+            assert!(!a.is_null());
+            assert_eq!(_s(transmute_ptr((*a).value)).to_string(), "1");
+
+            let b = environ_find(dst, c!("B"));
+            assert!(!b.is_null());
+            assert_eq!(_s(transmute_ptr((*b).value)).to_string(), "2");
+
+            environ_free(src);
+            environ_free(dst);
+        }
+    }
+
+    #[test]
+    fn iteration_with_first_next() {
+        unsafe {
+            let env = environ_create().as_ptr();
+
+            environ_set!(env, c!("X"), environ_flags::empty(), "{}", "1");
+            environ_set!(env, c!("Y"), environ_flags::empty(), "{}", "2");
+            environ_set!(env, c!("Z"), environ_flags::empty(), "{}", "3");
+
+            let mut count = 0;
+            let mut entry = environ_first(env);
+            while !entry.is_null() {
+                count += 1;
+                entry = environ_next(entry);
+            }
+            assert_eq!(count, 3);
+
+            environ_free(env);
+        }
+    }
+
+    #[test]
+    fn hidden_flag_preserved() {
+        unsafe {
+            let env = environ_create().as_ptr();
+
+            environ_set!(env, c!("SECRET"), ENVIRON_HIDDEN, "{}", "hidden_val");
+
+            let entry = environ_find(env, c!("SECRET"));
+            assert!(!entry.is_null());
+            assert!((*entry).flags.intersects(ENVIRON_HIDDEN));
+            assert_eq!(_s(transmute_ptr((*entry).value)).to_string(), "hidden_val");
+
+            environ_free(env);
+        }
+    }
+}
+
 pub unsafe fn environ_for_session(s: *mut session, no_term: c_int) -> *mut environ {
     let env: *mut environ = environ_create().as_ptr();
 
