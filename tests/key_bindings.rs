@@ -1,4 +1,4 @@
-mod harness;
+use super::harness;
 
 use std::time::Duration;
 

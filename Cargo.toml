@@ -11,6 +11,11 @@ repository   = "https://github.com/richardscollin/tmux-rs"
 rust-version = "1.88" # let chains
 description  = "A Rust port of tmux"
 
+# single integration test improves compile times, so we turn
+# off automatic test file discovery to only have a single entry
+# point at tests/tests.rs (see lib section below)
+autotests = false
+
 # Note: most of these features are not supported yet
 # they just exist to make matching upstream's
 # configuration options easier. However, sixel support is implemented
@@ -43,6 +48,10 @@ terminfo-lean = { version = "0.1.2" }
 
 [build-dependencies]
 lalrpop      = { version = "0.22.2", default-features = false }
+
+[[test]]
+name = "integration"
+path = "tests/tests.rs"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(fuzzing)'] }

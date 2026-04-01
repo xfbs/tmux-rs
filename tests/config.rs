@@ -1,4 +1,4 @@
-mod harness;
+use super::harness;
 
 use std::io::Write;
 use std::time::Duration;
