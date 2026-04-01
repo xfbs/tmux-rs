@@ -61,13 +61,8 @@ fn pty_client_shows_status_bar() {
 
     let mut client = PtyClient::attach(&tmux, 80, 24);
 
-    // Give time for full render including status bar
-    std::thread::sleep(Duration::from_millis(500));
-    let output = client.read_screen();
-
-    // The status bar should contain the session name
-    // (it may not always be visible in the stripped output depending on timing,
-    // but let's check that we get substantial output)
+    // Wait for the client to render something substantial
+    let output = client.wait_and_read(Duration::from_secs(5));
     assert!(
         output.len() > 10,
         "expected substantial terminal output, got {} bytes: {:?}",
@@ -154,8 +149,7 @@ fn pty_client_new_session_creates_and_attaches() {
     assert!(client.is_alive(), "client should be running");
 
     // Wait for initial render
-    std::thread::sleep(Duration::from_millis(500));
-    let output = client.read_screen();
+    let output = client.wait_and_read(Duration::from_secs(5));
     assert!(
         !output.is_empty(),
         "attached client should produce output"
