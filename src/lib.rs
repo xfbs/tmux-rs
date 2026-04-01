@@ -25,6 +25,8 @@
     reason = "this lint is here instead of in Cargo.toml because of a bug in rust analyzer"
 )]
 
+use std::collections::BTreeMap;
+
 mod libc;
 pub(crate) use crate::libc::errno;
 pub(crate) use crate::libc::*;
@@ -2421,20 +2423,17 @@ enum control_sub_type {
 
 const KEY_BINDING_REPEAT: i32 = 0x1;
 
-/// Key binding and key table.
-#[repr(C)]
+/// Key binding.
 struct key_binding {
     key: key_code,
     cmdlist: *mut cmd_list,
     note: *mut u8,
 
     flags: i32,
-
-    entry: rb_entry<key_binding>,
 }
-type key_bindings = rb_head<key_binding>;
+type key_bindings = BTreeMap<key_code, Box<key_binding>>;
 
-#[repr(C)]
+/// Key table — a named group of key bindings.
 struct key_table {
     name: *mut u8,
     activity_time: timeval,
@@ -2442,10 +2441,8 @@ struct key_table {
     default_key_bindings: key_bindings,
 
     references: u32,
-
-    entry: rb_entry<key_table>,
 }
-type key_tables = rb_head<key_table>;
+type key_tables = BTreeMap<String, Box<key_table>>;
 
 // Option data.
 type options_array = rb_head<options_array_item>;

@@ -75,67 +75,50 @@ macro_rules! DEFAULT_PANE_MENU {
     };
 }
 
-RB_GENERATE!(
-    key_bindings,
-    key_binding,
-    entry,
-    discr_entry,
-    key_bindings_cmp
-);
-RB_GENERATE!(key_tables, key_table, entry, discr_entry, key_table_cmp);
-static mut KEY_TABLES: key_tables = rb_initializer();
+static mut KEY_TABLES: key_tables = BTreeMap::new();
 
-pub fn key_table_cmp(table1: &key_table, table2: &key_table) -> cmp::Ordering {
-    unsafe { i32_to_ordering(strcmp(table1.name, table2.name)) }
-}
-
-pub fn key_bindings_cmp(bd1: &key_binding, bd2: &key_binding) -> cmp::Ordering {
-    bd1.key.cmp(&bd2.key)
-}
-
-pub unsafe fn key_bindings_free(bd: *mut key_binding) {
+unsafe fn key_binding_free_fields(bd: &mut key_binding) {
     unsafe {
-        cmd_list_free((*bd).cmdlist);
-        free_((*bd).note);
-        free_(bd);
+        cmd_list_free(bd.cmdlist);
+        free_(bd.note);
     }
 }
 
 pub unsafe fn key_bindings_get_table(name: *const u8, create: bool) -> *mut key_table {
     unsafe {
-        let mut table_find = MaybeUninit::<key_table>::uninit();
-        let table_find = table_find.as_mut_ptr();
-
-        (*table_find).name = name.cast_mut();
-        let table = rb_find(&raw mut KEY_TABLES, table_find);
-        if !table.is_null() || !create {
-            return table;
+        let key = cstr_to_str(name).to_string();
+        if create {
+            let table = (*(&raw mut KEY_TABLES)).entry(key).or_insert_with(|| {
+                Box::new(key_table {
+                    name: xstrdup(name).as_ptr(),
+                    activity_time: timeval {
+                        tv_sec: 0,
+                        tv_usec: 0,
+                    },
+                    key_bindings: BTreeMap::new(),
+                    default_key_bindings: BTreeMap::new(),
+                    references: 1,
+                })
+            });
+            &mut **table as *mut key_table
+        } else {
+            (*(&raw mut KEY_TABLES))
+                .get_mut(&key)
+                .map_or(null_mut(), |t| &mut **t as *mut key_table)
         }
-
-        let table = Box::leak(Box::new(key_table {
-            name: xstrdup(name).as_ptr(),
-            activity_time: timeval {
-                tv_sec: 0,
-                tv_usec: 0,
-            },
-            key_bindings: rb_initializer(),
-            default_key_bindings: rb_initializer(),
-            references: 1, /* one reference in key_tables */
-            entry: rb_entry::default(),
-        }));
-        rb_insert(&raw mut KEY_TABLES, table);
-
-        table
     }
 }
 
-pub unsafe fn key_bindings_first_table() -> *mut key_table {
-    unsafe { rb_min(&raw mut KEY_TABLES) }
+/// Collect all key table pointers in sorted order.
+pub unsafe fn key_tables_entries() -> Vec<*mut key_table> {
+    unsafe {
+        (*(&raw mut KEY_TABLES))
+            .values_mut()
+            .map(|t| &mut **t as *mut key_table)
+            .collect()
+    }
 }
 
-pub unsafe fn key_bindings_next_table(table: *mut key_table) -> *mut key_table {
-    unsafe { rb_next(table) }
-}
 
 pub unsafe fn key_bindings_unref_table(table: *mut key_table) {
     unsafe {
@@ -144,47 +127,46 @@ pub unsafe fn key_bindings_unref_table(table: *mut key_table) {
             return;
         }
 
-        for bd in rb_foreach(&raw mut (*table).key_bindings).map(NonNull::as_ptr) {
-            rb_remove(&raw mut (*table).key_bindings, bd);
-            key_bindings_free(bd);
+        for bd in (*table).key_bindings.values_mut() {
+            key_binding_free_fields(&mut **bd);
         }
-        for bd in rb_foreach(&raw mut (*table).default_key_bindings).map(NonNull::as_ptr) {
-            rb_remove(&raw mut (*table).default_key_bindings, bd);
-            key_bindings_free(bd);
+        for bd in (*table).default_key_bindings.values_mut() {
+            key_binding_free_fields(&mut **bd);
         }
 
         free_((*table).name);
-        free_(table);
     }
 }
 
 pub unsafe fn key_bindings_get(table: NonNull<key_table>, key: key_code) -> *mut key_binding {
     unsafe {
-        let mut bd = MaybeUninit::<key_binding>::uninit();
-        let bd = bd.as_mut_ptr();
-
-        (*bd).key = key;
-        rb_find(&raw mut (*table.as_ptr()).key_bindings, bd)
+        (*table.as_ptr())
+            .key_bindings
+            .get_mut(&key)
+            .map_or(null_mut(), |bd| &mut **bd as *mut key_binding)
     }
 }
 
 pub unsafe fn key_bindings_get_default(table: *mut key_table, key: key_code) -> *mut key_binding {
     unsafe {
-        let mut bd = MaybeUninit::<key_binding>::uninit();
-        let bd = bd.as_mut_ptr();
-
-        (*bd).key = key;
-        rb_find(&raw mut (*table).default_key_bindings, bd)
+        (*table)
+            .default_key_bindings
+            .get_mut(&key)
+            .map_or(null_mut(), |bd| &mut **bd as *mut key_binding)
     }
 }
 
-pub unsafe fn key_bindings_first(table: *mut key_table) -> *mut key_binding {
-    unsafe { rb_min(&raw mut (*table).key_bindings) }
+/// Collect all binding pointers in sorted order.
+pub unsafe fn key_bindings_entries(table: *mut key_table) -> Vec<*mut key_binding> {
+    unsafe {
+        (*table)
+            .key_bindings
+            .values_mut()
+            .map(|bd| &mut **bd as *mut key_binding)
+            .collect()
+    }
 }
 
-pub unsafe fn key_bindings_next(_table: *mut key_table, bd: *mut key_binding) -> *mut key_binding {
-    unsafe { rb_next(bd) }
-}
 
 pub unsafe fn key_bindings_add(
     name: *const u8,
@@ -195,74 +177,75 @@ pub unsafe fn key_bindings_add(
 ) {
     unsafe {
         let table = key_bindings_get_table(name, true);
+        let masked_key = key & !KEYC_MASK_FLAGS;
 
-        let mut bd = key_bindings_get(NonNull::new(table).unwrap(), key & !KEYC_MASK_FLAGS);
         if cmdlist.is_null() {
-            if !bd.is_null() {
-                free_((*bd).note);
-                if !note.is_null() {
-                    (*bd).note = xstrdup(note).as_ptr();
+            // Just update note on existing binding
+            if let Some(bd) = (*table).key_bindings.get_mut(&masked_key) {
+                free_(bd.note);
+                bd.note = if !note.is_null() {
+                    xstrdup(note).as_ptr()
                 } else {
-                    (*bd).note = null_mut();
-                }
+                    null_mut()
+                };
             }
             return;
         }
-        if !bd.is_null() {
-            rb_remove(&raw mut (*table).key_bindings, bd);
-            key_bindings_free(bd);
+
+        // Remove old binding if exists
+        if let Some(mut old) = (*table).key_bindings.remove(&masked_key) {
+            key_binding_free_fields(&mut old);
         }
 
-        bd = xcalloc1::<key_binding>();
-        (*bd).key = key & !KEYC_MASK_FLAGS;
-        if !note.is_null() {
-            (*bd).note = xstrdup(note).as_ptr();
-        }
-        rb_insert(&raw mut (*table).key_bindings, bd);
+        let bd = key_binding {
+            key: masked_key,
+            note: if !note.is_null() {
+                xstrdup(note).as_ptr()
+            } else {
+                null_mut()
+            },
+            flags: if repeat { KEY_BINDING_REPEAT } else { 0 },
+            cmdlist,
+        };
 
-        if repeat {
-            (*bd).flags |= KEY_BINDING_REPEAT;
-        }
-        (*bd).cmdlist = cmdlist;
-
-        let s = cmd_list_print(&*(*bd).cmdlist, 0);
+        let s = cmd_list_print(&*bd.cmdlist, 0);
         log_debug!(
             "{}: {:#x} {} = {}",
             "key_bindings_add",
-            (*bd).key,
-            _s(key_string_lookup_key((*bd).key, 1)),
+            bd.key,
+            _s(key_string_lookup_key(bd.key, 1)),
             _s(s),
         );
         free_(s);
+
+        (*table).key_bindings.insert(masked_key, Box::new(bd));
     }
 }
 
 pub unsafe fn key_bindings_remove(name: *const u8, key: key_code) {
     unsafe {
-        let Some(table) = NonNull::new(key_bindings_get_table(name, false)) else {
-            return;
-        };
-
-        let bd = key_bindings_get(table, key & !KEYC_MASK_FLAGS);
-        if bd.is_null() {
+        let table = key_bindings_get_table(name, false);
+        if table.is_null() {
             return;
         }
 
-        log_debug!(
-            "{}: {:#x} {}",
-            "key_bindings_remove",
-            (*bd).key,
-            _s(key_string_lookup_key((*bd).key, 1)),
-        );
+        let masked_key = key & !KEYC_MASK_FLAGS;
+        if let Some(mut old) = (*table).key_bindings.remove(&masked_key) {
+            log_debug!(
+                "{}: {:#x} {}",
+                "key_bindings_remove",
+                old.key,
+                _s(key_string_lookup_key(old.key, 1)),
+            );
+            key_binding_free_fields(&mut old);
+        }
 
-        rb_remove(&raw mut (*table.as_ptr()).key_bindings, bd);
-        key_bindings_free(bd);
-
-        if rb_empty(&raw mut (*table.as_ptr()).key_bindings)
-            && rb_empty(&raw mut (*table.as_ptr()).default_key_bindings)
-        {
-            rb_remove(&raw mut KEY_TABLES, table.as_ptr());
-            key_bindings_unref_table(table.as_ptr());
+        if (*table).key_bindings.is_empty() && (*table).default_key_bindings.is_empty() {
+            let table_name = cstr_to_str((*table).name).to_string();
+            if let Some(mut removed) = (*(&raw mut KEY_TABLES)).remove(&table_name) {
+                removed.references -= 1;
+                free_(removed.name);
+            }
         }
     }
 }
@@ -300,14 +283,18 @@ pub unsafe fn key_bindings_reset(name: *const u8, key: key_code) {
 
 pub unsafe fn key_bindings_remove_table(name: *const u8) {
     unsafe {
-        let table = key_bindings_get_table(name, false);
-        if !table.is_null() {
-            rb_remove(&raw mut KEY_TABLES, table);
-            key_bindings_unref_table(table);
-        }
-        for c in crate::compat::queue::tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
-            if (*c).keytable == table {
-                server_client_set_key_table(c, null_mut());
+        let key = cstr_to_str(name).to_string();
+        let table_ptr = (*(&raw mut KEY_TABLES))
+            .get_mut(&key)
+            .map_or(null_mut(), |t| &mut **t as *mut key_table);
+        if !table_ptr.is_null() {
+            for c in crate::compat::queue::tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+                if (*c).keytable == table_ptr {
+                    server_client_set_key_table(c, null_mut());
+                }
+            }
+            if let Some(mut removed) = (*(&raw mut KEY_TABLES)).remove(&key) {
+                key_bindings_unref_table(&mut *removed as *mut key_table);
             }
         }
     }
@@ -320,29 +307,41 @@ unsafe fn key_bindings_reset_table(name: *const u8) {
         if table.is_null() {
             return;
         }
-        if rb_empty(&raw mut (*table).default_key_bindings) {
+        if (*table).default_key_bindings.is_empty() {
             key_bindings_remove_table(name);
             return;
         }
-        for bd in rb_foreach(&raw mut (*table).key_bindings).map(NonNull::as_ptr) {
-            key_bindings_reset(name, (*bd).key);
+        let keys: Vec<key_code> = (*table).key_bindings.keys().copied().collect();
+        for key in keys {
+            key_bindings_reset(name, key);
         }
     }
 }
 
 unsafe fn key_bindings_init_done(_item: *mut cmdq_item, _data: *mut c_void) -> cmd_retval {
     unsafe {
-        for table in rb_foreach(&raw mut KEY_TABLES).map(NonNull::as_ptr) {
-            for bd in rb_foreach(&raw mut (*table).key_bindings).map(NonNull::as_ptr) {
-                let new_bd = xcalloc1::<key_binding>();
-                new_bd.key = (*bd).key;
-                if !(*bd).note.is_null() {
-                    new_bd.note = xstrdup((*bd).note).as_ptr();
-                }
-                new_bd.flags = (*bd).flags;
-                new_bd.cmdlist = (*bd).cmdlist;
-                (*new_bd.cmdlist).references += 1;
-                rb_insert(&raw mut (*table).default_key_bindings, new_bd);
+        for table in (*(&raw mut KEY_TABLES)).values_mut() {
+            // Copy current bindings to default_key_bindings
+            let copies: Vec<(key_code, key_binding)> = table
+                .key_bindings
+                .iter()
+                .map(|(&key, bd)| {
+                    let new_bd = key_binding {
+                        key: bd.key,
+                        note: if !bd.note.is_null() {
+                            xstrdup(bd.note).as_ptr()
+                        } else {
+                            null_mut()
+                        },
+                        flags: bd.flags,
+                        cmdlist: bd.cmdlist,
+                    };
+                    (*new_bd.cmdlist).references += 1;
+                    (key, new_bd)
+                })
+                .collect();
+            for (key, bd) in copies {
+                table.default_key_bindings.insert(key, Box::new(bd));
             }
         }
     }

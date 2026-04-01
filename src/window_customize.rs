@@ -509,8 +509,7 @@ unsafe fn window_customize_build_keys(
         format_add!(ft, "is_option", "0");
         format_add!(ft, "is_key", "1");
 
-        let mut bd = key_bindings_first(kt);
-        while !bd.is_null() {
+        for bd in key_bindings_entries(kt) {
             format_add!(ft, "key", "{}", _s(key_string_lookup_key((*bd).key, 0)),);
             if !(*bd).note.is_null() {
                 format_add!(ft, "key_note", "{}", _s((*bd).note));
@@ -594,7 +593,6 @@ unsafe fn window_customize_build_keys(
             mode_tree_draw_as_parent(mti);
             mode_tree_no_tag(mti);
 
-            bd = key_bindings_next(kt, bd);
         }
 
         format_free(ft);
@@ -676,16 +674,14 @@ unsafe fn window_customize_build(
         ft = format_create_from_state(null_mut(), null_mut(), &raw mut fs);
 
         let mut i = 0;
-        let mut kt = key_bindings_first_table();
-        while !kt.is_null() {
-            if !rb_empty(&raw mut (*kt).key_bindings) {
+        for kt in key_tables_entries() {
+            if !(*kt).key_bindings.is_empty() {
                 window_customize_build_keys(data, kt, ft, filter, &raw mut fs, i);
                 i += 1;
                 if i == 256 {
                     break;
                 }
             }
-            kt = key_bindings_next_table(kt);
         }
 
         format_free(ft);

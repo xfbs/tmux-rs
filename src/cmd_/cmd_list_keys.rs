@@ -50,22 +50,18 @@ unsafe fn cmd_list_keys_get_width(tablename: *const u8, only: key_code) -> u32 {
         if table.is_null() {
             return 0;
         }
-        let mut bd = key_bindings_first(table);
-        while !bd.is_null() {
+        for bd in key_bindings_entries(table) {
             if (only != KEYC_UNKNOWN && (*bd).key != only)
                 || KEYC_IS_MOUSE((*bd).key)
                 || (*bd).note.is_null()
                 || *(*bd).note == b'\0'
             {
-                bd = key_bindings_next(table, bd);
                 continue;
             }
             let width = utf8_cstrwidth(key_string_lookup_key((*bd).key, 0));
             if width > keywidth {
                 keywidth = width;
             }
-
-            bd = key_bindings_next(table, bd);
         }
         keywidth
     }
@@ -87,13 +83,11 @@ unsafe fn cmd_list_keys_print_notes(
         if table.is_null() {
             return 0;
         }
-        let mut bd = key_bindings_first(table);
-        while !bd.is_null() {
+        for bd in key_bindings_entries(table) {
             if (only != KEYC_UNKNOWN && (*bd).key != only)
                 || KEYC_IS_MOUSE((*bd).key)
                 || (((*bd).note.is_null() || *(*bd).note == b'\0') && !args_has(args, 'a'))
             {
-                bd = key_bindings_next(table, bd);
                 continue;
             }
             found = 1;
@@ -117,7 +111,6 @@ unsafe fn cmd_list_keys_print_notes(
             if args_has(args, '1') {
                 break;
             }
-            bd = key_bindings_next(table, bd);
         }
         found
     }
@@ -143,7 +136,7 @@ unsafe fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
     unsafe {
         let args = cmd_get_args(self_);
         let tc = cmdq_get_target_client(item);
-        let mut table: *mut key_table;
+        let _table: *mut key_table; // kept for type reference
         let mut width: i32;
         let mut prefix: key_code = 0;
         let mut keywidth: i32;
@@ -230,16 +223,12 @@ unsafe fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
             let mut repeat = 0;
             let mut tablewidth = 0;
             keywidth = 0;
-            table = key_bindings_first_table();
-            while !table.is_null() {
+            for table in key_tables_entries() {
                 if !tablename.is_null() && strcmp((*table).name, tablename) != 0 {
-                    table = key_bindings_next_table(table);
                     continue;
                 }
-                let mut bd = key_bindings_first(table);
-                while !bd.is_null() {
+                for bd in key_bindings_entries(table) {
                     if only != KEYC_UNKNOWN && (*bd).key != only {
-                        bd = key_bindings_next(table, bd);
                         continue;
                     }
                     let key = args_escape(key_string_lookup_key((*bd).key, 0));
@@ -258,24 +247,18 @@ unsafe fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
                     }
 
                     free_(key);
-                    bd = key_bindings_next(table, bd);
                 }
-                table = key_bindings_next_table(table);
             }
 
             let mut tmpsize: usize = 256;
             let mut tmp: NonNull<u8> = xmalloc(tmpsize).cast();
 
-            table = key_bindings_first_table();
-            while !table.is_null() {
+            'outer: for table in key_tables_entries() {
                 if !tablename.is_null() && strcmp((*table).name, tablename) != 0 {
-                    table = key_bindings_next_table(table);
                     continue;
                 }
-                let mut bd = key_bindings_first(table);
-                while !bd.is_null() {
+                for bd in key_bindings_entries(table) {
                     if only != KEYC_UNKNOWN && (*bd).key != only {
-                        bd = key_bindings_next(table, bd);
                         continue;
                     }
                     found = 1;
@@ -328,11 +311,9 @@ unsafe fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
                     free_(key);
 
                     if args_has(args, '1') {
-                        break;
+                        break 'outer;
                     }
-                    bd = key_bindings_next(table, bd);
                 }
-                table = key_bindings_next_table(table);
             }
 
             free_(tmp.as_ptr());
