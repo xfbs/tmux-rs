@@ -348,20 +348,21 @@ pub unsafe fn control_vwrite(c: *mut client, args: std::fmt::Arguments) {
 
         let mut s = args.to_string();
         s.push('\0');
-        let s: *mut u8 = s.as_mut_ptr().cast();
+        let s_ptr: *mut u8 = s.as_mut_ptr().cast();
 
         log_debug!(
             "{}: {}: writing line: {}",
             "control_vwrite",
             _s((*c).name),
-            _s(s)
+            _s(s_ptr)
         );
 
-        bufferevent_write((*cs).write_event, s.cast(), strlen(s));
+        bufferevent_write((*cs).write_event, s_ptr.cast(), strlen(s_ptr));
         bufferevent_write((*cs).write_event, c!("\n").cast(), 1);
 
         bufferevent_enable((*cs).write_event, EV_WRITE);
-        free_(s);
+        // `s` (the String) is dropped here, freeing the buffer.
+        // Do NOT call free_() — the memory is owned by the Rust String.
     }
 }
 

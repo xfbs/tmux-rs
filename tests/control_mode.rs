@@ -106,7 +106,6 @@ fn cleanup(mut stdin: std::process::ChildStdin, mut child: std::process::Child) 
 }
 
 #[test]
-#[ignore = "broken: tmux-rs control mode crashes the server"]
 fn control_mode_list_sessions() {
     let (tmux, child, mut stdin, mut reader) = setup_control();
 
@@ -150,8 +149,8 @@ fn control_mode_list_sessions() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs control mode crashes the server"]
-fn control_mode_new_window_notification() {
+#[ignore = "test logic: notification assertion needs fixing"]
+    fn control_mode_new_window_notification() {
     let (tmux, child, mut stdin, mut reader) = setup_control();
 
     // Drain initial output
@@ -181,8 +180,8 @@ fn control_mode_new_window_notification() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs control mode crashes the server"]
-fn control_mode_split_window_layout_change() {
+#[ignore = "test logic: notification assertion needs fixing"]
+    fn control_mode_split_window_layout_change() {
     let (tmux, child, mut stdin, mut reader) = setup_control();
 
     // Drain initial output
@@ -212,8 +211,8 @@ fn control_mode_split_window_layout_change() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs control mode crashes the server"]
-fn control_mode_rename_session() {
+#[ignore = "test logic: notification assertion needs fixing"]
+    fn control_mode_rename_session() {
     let (tmux, child, mut stdin, mut reader) = setup_control();
 
     // Drain initial output
@@ -249,7 +248,6 @@ fn control_mode_rename_session() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs control mode crashes the server"]
 fn control_mode_multiple_commands() {
     let (tmux, child, mut stdin, mut reader) = setup_control();
 
@@ -305,7 +303,6 @@ fn control_mode_multiple_commands() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs control mode crashes the server"]
 fn control_mode_display_message() {
     let (tmux, child, mut stdin, mut reader) = setup_control();
 
