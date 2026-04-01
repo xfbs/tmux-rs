@@ -13,6 +13,7 @@
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use crate::*;
+use std::collections::BTreeMap;
 
 #[repr(C)]
 pub struct control_block {
@@ -39,7 +40,6 @@ impl crate::compat::queue::Entry<control_block, discr_all_entry> for control_blo
 pub const CONTROL_PANE_OFF: i32 = 1;
 pub const CONTROL_PANE_PAUSED: i32 = 2;
 
-#[repr(C)]
 pub struct control_pane {
     pub pane: u32,
 
@@ -52,10 +52,8 @@ pub struct control_pane {
     pub pending_entry: tailq_entry<control_pane>,
 
     pub blocks: tailq_head<control_block>,
-
-    pub entry: rb_entry<control_pane>,
 }
-pub type control_panes = rb_head<control_pane>;
+pub type control_panes = BTreeMap<u32, Box<control_pane>>;
 
 impl Entry<control_pane, discr_pending_entry> for control_pane {
     unsafe fn entry(this: *mut Self) -> *mut tailq_entry<control_pane> {
@@ -63,27 +61,20 @@ impl Entry<control_pane, discr_pending_entry> for control_pane {
     }
 }
 
-#[repr(C)]
 pub struct control_sub_pane {
     pane: u32,
     idx: u32,
     last: *mut u8,
-
-    entry: rb_entry<control_sub_pane>,
 }
-pub type control_sub_panes = rb_head<control_sub_pane>;
+pub type control_sub_panes = BTreeMap<(u32, u32), control_sub_pane>;
 
-#[repr(C)]
 pub struct control_sub_window {
     window: u32,
     idx: u32,
     last: *mut u8,
-
-    entry: rb_entry<control_sub_window>,
 }
-pub type control_sub_windows = rb_head<control_sub_window>;
+pub type control_sub_windows = BTreeMap<(u32, u32), control_sub_window>;
 
-#[repr(C)]
 pub struct control_sub {
     pub name: *mut u8,
     pub format: *mut u8,
@@ -94,12 +85,9 @@ pub struct control_sub {
 
     pub panes: control_sub_panes,
     pub windows: control_sub_windows,
-
-    pub entry: rb_entry<control_sub>,
 }
-pub type control_subs = rb_head<control_sub>;
+pub type control_subs = BTreeMap<String, Box<control_sub>>;
 
-#[repr(C)]
 pub struct control_state {
     pub panes: control_panes,
 
@@ -129,73 +117,20 @@ pub const CONTROL_MAXIMUM_AGE: u64 = 300000;
 pub const CONTROL_IGNORE_FLAGS: client_flag =
     client_flag::CONTROL_NOOUTPUT.union(CLIENT_UNATTACHEDFLAGS);
 
-pub fn control_pane_cmp(cp1: &control_pane, cp2: &control_pane) -> cmp::Ordering {
-    cp1.pane.cmp(&cp2.pane)
-}
-RB_GENERATE!(
-    control_panes,
-    control_pane,
-    entry,
-    discr_entry,
-    control_pane_cmp
-);
 
-pub fn control_sub_cmp(csub1: &control_sub, csub2: &control_sub) -> cmp::Ordering {
-    unsafe { i32_to_ordering(libc::strcmp(csub1.name, csub2.name)) }
-}
-RB_GENERATE!(
-    control_subs,
-    control_sub,
-    entry,
-    discr_entry,
-    control_sub_cmp
-);
-
-pub fn control_sub_pane_cmp(csp1: &control_sub_pane, csp2: &control_sub_pane) -> cmp::Ordering {
-    csp1.pane
-        .cmp(&csp2.pane)
-        .then_with(|| csp1.idx.cmp(&csp2.idx))
-}
-RB_GENERATE!(
-    control_sub_panes,
-    control_sub_pane,
-    entry,
-    discr_entry,
-    control_sub_pane_cmp
-);
-
-pub fn control_sub_window_cmp(
-    csw1: &control_sub_window,
-    csw2: &control_sub_window,
-) -> cmp::Ordering {
-    csw1.window
-        .cmp(&csw2.window)
-        .then_with(|| csw1.idx.cmp(&csw2.idx))
-}
-RB_GENERATE!(
-    control_sub_windows,
-    control_sub_window,
-    entry,
-    discr_entry,
-    control_sub_window_cmp
-);
-
-pub unsafe fn control_free_sub(cs: *mut control_state, csub: *mut control_sub) {
+pub unsafe fn control_free_sub(cs: *mut control_state, name: &str) {
     unsafe {
-        for csp in rb_foreach(&raw mut (*csub).panes).map(NonNull::as_ptr) {
-            rb_remove(&raw mut (*csub).panes, csp);
-            free_(csp);
+        if let Some(mut csub) = (*cs).subs.remove(name) {
+            for (_, csp) in std::mem::take(&mut csub.panes) {
+                free_(csp.last);
+            }
+            for (_, csw) in std::mem::take(&mut csub.windows) {
+                free_(csw.last);
+            }
+            free_(csub.last);
+            free_(csub.name);
+            free_(csub.format);
         }
-        for csw in rb_foreach(&raw mut (*csub).windows).map(NonNull::as_ptr) {
-            rb_remove(&raw mut (*csub).windows, csw);
-            free_(csw);
-        }
-        free_((*csub).last);
-
-        rb_remove(&raw mut (*cs).subs, csub);
-        free_((*csub).name);
-        free_((*csub).format);
-        free_(csub);
     }
 }
 
@@ -210,29 +145,28 @@ pub unsafe fn control_free_block(cs: *mut control_state, cb: *mut control_block)
 pub unsafe fn control_get_pane(c: *mut client, wp: *mut window_pane) -> *mut control_pane {
     unsafe {
         let cs = (*c).control_state;
-        let mut cp = MaybeUninit::<control_pane>::uninit();
-        (*cp.as_mut_ptr()).pane = (*wp).id;
-        rb_find(&raw mut (*cs).panes, cp.as_mut_ptr())
+        match (*cs).panes.get_mut(&(*wp).id) {
+            Some(cp) => &mut **cp as *mut control_pane,
+            None => null_mut(),
+        }
     }
 }
 
 pub unsafe fn control_add_pane(c: *mut client, wp: *mut window_pane) -> NonNull<control_pane> {
     unsafe {
         let cs = (*c).control_state;
+        let id = (*wp).id;
 
-        if let Some(cp) = NonNull::new(control_get_pane(c, wp)) {
-            return cp;
-        }
+        let cp = (*cs).panes.entry(id).or_insert_with(|| {
+            let mut cp: Box<control_pane> = Box::new(zeroed());
+            cp.pane = id;
+            cp.offset = (*wp).offset;
+            cp.queued = (*wp).offset;
+            tailq_init(&raw mut cp.blocks);
+            cp
+        });
 
-        let cp = xcalloc_::<control_pane>(1);
-        (*cp.as_ptr()).pane = (*wp).id;
-        rb_insert(&raw mut (*cs).panes, cp.as_ptr());
-
-        (*cp.as_ptr()).offset = (*wp).offset;
-        (*cp.as_ptr()).queued = (*wp).offset;
-        tailq_init(&raw mut (*cp.as_ptr()).blocks);
-
-        cp
+        NonNull::new_unchecked(&mut **cp as *mut control_pane)
     }
 }
 
@@ -264,10 +198,7 @@ pub unsafe fn control_reset_offsets(c: *mut client) {
     unsafe {
         let cs = (*c).control_state;
 
-        for cp in rb_foreach(&raw mut (*cs).panes).map(NonNull::as_ptr) {
-            rb_remove(&raw mut (*cs).panes, cp);
-            free_(cp);
-        }
+        (*cs).panes.clear();
 
         tailq_init(&raw mut (*cs).pending_list);
         (*cs).pending_count = 0;
@@ -802,10 +733,10 @@ pub unsafe fn control_start(c: *mut client) {
 
         (*c).control_state = xcalloc_::<control_state>(1).as_ptr();
         let cs = (*c).control_state;
-        rb_init(&raw mut (*cs).panes);
+        std::ptr::write(&raw mut (*cs).panes, BTreeMap::new());
         tailq_init(&raw mut (*cs).pending_list);
         tailq_init(&raw mut (*cs).all_blocks);
-        rb_init(&raw mut (*cs).subs);
+        std::ptr::write(&raw mut (*cs).subs, BTreeMap::new());
 
         (*cs).read_event = bufferevent_new(
             (*c).fd,
@@ -850,8 +781,8 @@ pub unsafe fn control_ready(c: *mut client) {
 pub unsafe fn control_discard(c: *mut client) {
     unsafe {
         let cs = (*c).control_state;
-        for cp in rb_foreach(&raw mut (*cs).panes) {
-            control_discard_pane(c, cp.as_ptr());
+        for cp in (*cs).panes.values_mut() {
+            control_discard_pane(c, &mut **cp as *mut control_pane);
         }
         bufferevent_disable((*cs).read_event, EV_READ);
     }
@@ -865,8 +796,9 @@ pub unsafe fn control_stop(c: *mut client) {
         }
         bufferevent_free((*cs).read_event);
 
-        for csub in rb_foreach(&raw mut (*cs).subs).map(NonNull::as_ptr) {
-            control_free_sub(cs, csub);
+        let sub_keys: Vec<String> = (*cs).subs.keys().cloned().collect();
+        for key in sub_keys {
+            control_free_sub(cs, &key);
         }
         if evtimer_initialized(&raw mut (*cs).subs_timer) {
             evtimer_del(&raw mut (*cs).subs_timer);
@@ -910,7 +842,6 @@ pub unsafe fn control_check_subs_session(c: *mut client, csub: *mut control_sub)
 pub unsafe fn control_check_subs_pane(c: *mut client, csub: *mut control_sub) {
     unsafe {
         let s = (*c).session;
-        let mut find: control_sub_pane = zeroed(); //TODO uninit
 
         let wp = window_pane_find_by_id((*csub).id);
         if wp.is_null() || (*wp).fd == -1 {
@@ -927,18 +858,14 @@ pub unsafe fn control_check_subs_pane(c: *mut client, csub: *mut control_sub) {
             let value = format_expand(ft, (*csub).format);
             format_free(ft);
 
-            find.pane = (*wp).id;
-            find.idx = (*wl).idx as u32;
+            let key = ((*wp).id, (*wl).idx as u32);
+            let csp = (*csub).panes.entry(key).or_insert_with(|| control_sub_pane {
+                pane: (*wp).id,
+                idx: (*wl).idx as u32,
+                last: null_mut(),
+            });
 
-            let mut csp = rb_find(&raw mut (*csub).panes, &raw mut find);
-            if csp.is_null() {
-                csp = xcalloc_::<control_sub_pane>(1).as_ptr();
-                (*csp).pane = (*wp).id;
-                (*csp).idx = (*wl).idx as u32;
-                rb_insert(&raw mut (*csub).panes, csp);
-            }
-
-            if !(*csp).last.is_null() && libc::strcmp(value, (*csp).last) == 0 {
+            if !csp.last.is_null() && libc::strcmp(value, csp.last) == 0 {
                 free_(value);
                 continue;
             }
@@ -952,8 +879,8 @@ pub unsafe fn control_check_subs_pane(c: *mut client, csub: *mut control_sub) {
                 (*wp).id,
                 _s(value),
             );
-            free_((*csp).last);
-            (*csp).last = value;
+            free_(csp.last);
+            csp.last = value;
         }
     }
 }
@@ -961,7 +888,6 @@ pub unsafe fn control_check_subs_pane(c: *mut client, csub: *mut control_sub) {
 pub unsafe fn control_check_subs_all_panes(c: *mut client, csub: *mut control_sub) {
     unsafe {
         let s = (*c).session;
-        let mut find: control_sub_pane = zeroed();
 
         for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
             let w = (*wl).window;
@@ -970,18 +896,14 @@ pub unsafe fn control_check_subs_all_panes(c: *mut client, csub: *mut control_su
                 let value = format_expand(ft, (*csub).format);
                 format_free(ft);
 
-                find.pane = (*wp).id;
-                find.idx = (*wl).idx as u32;
+                let key = ((*wp).id, (*wl).idx as u32);
+                let csp = (*csub).panes.entry(key).or_insert_with(|| control_sub_pane {
+                    pane: (*wp).id,
+                    idx: (*wl).idx as u32,
+                    last: null_mut(),
+                });
 
-                let mut csp = rb_find(&raw mut (*csub).panes, &raw mut find);
-                if csp.is_null() {
-                    csp = xcalloc_::<control_sub_pane>(1).as_ptr();
-                    (*csp).pane = (*wp).id;
-                    (*csp).idx = (*wl).idx as u32;
-                    rb_insert(&raw mut (*csub).panes, csp);
-                }
-
-                if !(*csp).last.is_null() && libc::strcmp(value, (*csp).last) == 0 {
+                if !csp.last.is_null() && libc::strcmp(value, csp.last) == 0 {
                     free_(value);
                     continue;
                 }
@@ -995,8 +917,8 @@ pub unsafe fn control_check_subs_all_panes(c: *mut client, csub: *mut control_su
                     (*wp).id,
                     _s(value),
                 );
-                free_((*csp).last);
-                (*csp).last = value;
+                free_(csp.last);
+                csp.last = value;
             }
         }
     }
@@ -1005,7 +927,6 @@ pub unsafe fn control_check_subs_all_panes(c: *mut client, csub: *mut control_su
 pub unsafe fn control_check_subs_window(c: *mut client, csub: *mut control_sub) {
     unsafe {
         let s = (*c).session;
-        let mut find: control_sub_window = zeroed(); // TODO uninit
 
         let w = window_find_by_id((*csub).id);
         if w.is_null() {
@@ -1023,18 +944,14 @@ pub unsafe fn control_check_subs_window(c: *mut client, csub: *mut control_sub) 
             let value = format_expand(ft, (*csub).format);
             format_free(ft);
 
-            find.window = (*w).id;
-            find.idx = (*wl).idx as u32;
+            let key = ((*w).id, (*wl).idx as u32);
+            let csw = (*csub).windows.entry(key).or_insert_with(|| control_sub_window {
+                window: (*w).id,
+                idx: (*wl).idx as u32,
+                last: null_mut(),
+            });
 
-            let mut csw = rb_find(&raw mut (*csub).windows, &raw mut find);
-            if csw.is_null() {
-                csw = xcalloc_::<control_sub_window>(1).as_ptr();
-                (*csw).window = (*w).id;
-                (*csw).idx = (*wl).idx as u32;
-                rb_insert(&raw mut (*csub).windows, csw);
-            }
-
-            if !(*csw).last.is_null() && libc::strcmp(value, (*csw).last) == 0 {
+            if !csw.last.is_null() && libc::strcmp(value, csw.last) == 0 {
                 free_(value);
                 continue;
             }
@@ -1047,8 +964,8 @@ pub unsafe fn control_check_subs_window(c: *mut client, csub: *mut control_sub) 
                 (*wl).idx,
                 _s(value),
             );
-            free_((*csw).last);
-            (*csw).last = value;
+            free_(csw.last);
+            csw.last = value;
         }
     }
 }
@@ -1056,7 +973,6 @@ pub unsafe fn control_check_subs_window(c: *mut client, csub: *mut control_sub) 
 pub unsafe fn control_check_subs_all_windows(c: *mut client, csub: *mut control_sub) {
     unsafe {
         let s = (*c).session;
-        let mut find: control_sub_window = zeroed();
 
         for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
             let w = (*wl).window;
@@ -1065,18 +981,14 @@ pub unsafe fn control_check_subs_all_windows(c: *mut client, csub: *mut control_
             let value = format_expand(ft, (*csub).format);
             format_free(ft);
 
-            find.window = (*w).id;
-            find.idx = (*wl).idx as u32;
+            let key = ((*w).id, (*wl).idx as u32);
+            let csw = (*csub).windows.entry(key).or_insert_with(|| control_sub_window {
+                window: (*w).id,
+                idx: (*wl).idx as u32,
+                last: null_mut(),
+            });
 
-            let mut csw = rb_find(&raw mut (*csub).windows, &raw mut find);
-            if csw.is_null() {
-                csw = xcalloc_::<control_sub_window>(1).as_ptr();
-                (*csw).window = (*w).id;
-                (*csw).idx = (*wl).idx as u32;
-                rb_insert(&raw mut (*csub).windows, csw);
-            }
-
-            if !(*csw).last.is_null() && libc::strcmp(value, (*csw).last) == 0 {
+            if !csw.last.is_null() && libc::strcmp(value, csw.last) == 0 {
                 free_(value);
                 continue;
             }
@@ -1089,8 +1001,8 @@ pub unsafe fn control_check_subs_all_windows(c: *mut client, csub: *mut control_
                 (*wl).idx,
                 _s(value),
             );
-            free_((*csw).last);
-            (*csw).last = value;
+            free_(csw.last);
+            csw.last = value;
         }
     }
 }
@@ -1111,7 +1023,8 @@ pub unsafe extern "C-unwind" fn control_check_subs_timer(
         log_debug!("{}: timer fired", "control_check_subs_timer");
         evtimer_add(&raw mut (*cs).subs_timer, &raw mut tv);
 
-        for csub in rb_foreach(&raw mut (*cs).subs).map(NonNull::as_ptr) {
+        for csub in (*cs).subs.values_mut() {
+            let csub: *mut control_sub = &mut **csub;
             match (*csub).type_ {
                 control_sub_type::CONTROL_SUB_SESSION => control_check_subs_session(c, csub),
                 control_sub_type::CONTROL_SUB_PANE => control_check_subs_pane(c, csub),
@@ -1139,23 +1052,19 @@ pub unsafe fn control_add_sub(
             tv_usec: 0,
         };
 
-        let mut find: control_sub = zeroed();
+        let key = cstr_to_str(name).to_string();
+        control_free_sub(cs, &key);
 
-        find.name = name.cast();
-        let mut csub = rb_find(&raw mut (*cs).subs, &raw mut find);
-        if !csub.is_null() {
-            control_free_sub(cs, csub);
-        }
-
-        csub = xcalloc_::<control_sub>(1).as_ptr();
-        (*csub).name = xstrdup(name).as_ptr();
-        (*csub).type_ = type_;
-        (*csub).id = id as u32;
-        (*csub).format = xstrdup(format).as_ptr();
-        rb_insert(&raw mut (*cs).subs, csub);
-
-        rb_init(&raw mut (*csub).panes);
-        rb_init(&raw mut (*csub).windows);
+        let csub = Box::new(control_sub {
+            name: xstrdup(name).as_ptr(),
+            format: xstrdup(format).as_ptr(),
+            type_,
+            id: id as u32,
+            last: null_mut(),
+            panes: BTreeMap::new(),
+            windows: BTreeMap::new(),
+        });
+        (*cs).subs.insert(key, csub);
 
         if !evtimer_initialized(&raw mut (*cs).subs_timer) {
             evtimer_set(
@@ -1174,13 +1083,9 @@ pub unsafe fn control_remove_sub(c: *mut client, name: *mut u8) {
     unsafe {
         let cs = (*c).control_state;
 
-        let mut find: control_sub = zeroed();
-        find.name = name.cast();
-        let csub = rb_find(&raw mut (*cs).subs, &raw mut find);
-        if !csub.is_null() {
-            control_free_sub(cs, csub);
-        }
-        if rb_empty(&raw mut (*cs).subs) {
+        let key = cstr_to_str(name);
+        control_free_sub(cs, key);
+        if (*cs).subs.is_empty() {
             evtimer_del(&raw mut (*cs).subs_timer);
         }
     }
