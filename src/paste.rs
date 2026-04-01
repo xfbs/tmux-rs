@@ -134,8 +134,10 @@ pub unsafe fn paste_get_name(name: Option<&str>) -> *mut paste_buffer {
             return null_mut();
         }
 
-        (*pbfind.as_mut_ptr()).name =
-            Cow::Borrowed(std::mem::transmute::<&str, &'static str>(name));
+        std::ptr::write(
+            &raw mut (*pbfind.as_mut_ptr()).name,
+            Cow::Borrowed(std::mem::transmute::<&str, &'static str>(name)),
+        );
         rb_find::<_, discr_name_entry>(&raw mut PASTE_BY_NAME, pbfind.as_ptr())
     }
 }
