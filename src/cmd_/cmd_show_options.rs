@@ -221,12 +221,10 @@ pub unsafe fn cmd_show_options_all(
         let mut parent;
 
         if !std::ptr::eq(cmd_get_entry(self_), &CMD_SHOW_HOOKS_ENTRY) {
-            o = options_first(oo);
-            while !o.is_null() {
+            for o in options_entries(oo) {
                 if options_table_entry(o).is_null() {
                     cmd_show_options_print(self_, item, o, -1, 0);
                 }
-                o = options_next(o);
             }
         }
 

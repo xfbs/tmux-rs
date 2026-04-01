@@ -367,12 +367,10 @@ unsafe fn window_customize_find_user_options(
     list: &mut Vec<&str>
 ) {
     unsafe {
-        let mut o = options_first(oo);
         let size = list.len();
-        while !o.is_null() {
+        for o in options_entries(oo) {
             let name = options_name(o);
             if !name.starts_with('@') {
-                o = options_next(o);
                 continue;
             }
             let mut i = 0;
@@ -383,12 +381,9 @@ unsafe fn window_customize_find_user_options(
                 }
             }
             if i != size {
-                o = options_next(o);
                 continue;
             }
             list.push(name);
-
-            o = options_next(o);
         }
     }
 }
@@ -454,11 +449,9 @@ unsafe fn window_customize_build_options(
             window_customize_build_option(data, top, scope, o, ft, filter, fs);
         }
 
-        let mut loop_ = options_first(oo0);
-        while !loop_.is_null() {
+        for loop_ in options_entries(oo0) {
             let name = options_name(loop_);
             if name.starts_with('@') {
-                loop_ = options_next(loop_);
                 continue;
             }
             if !oo2.is_null() {
@@ -476,7 +469,6 @@ unsafe fn window_customize_build_options(
                 scope0
             };
             window_customize_build_option(data, top, scope, o, ft, filter, fs);
-            loop_ = options_next(loop_);
         }
     }
 }

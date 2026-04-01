@@ -15,7 +15,9 @@ use crate::libc::{fnmatch};
 use crate::options_table::OPTIONS_OTHER_NAMES_STR;
 use crate::*;
 
-// Option handling; each option has a name, type and value and is stored in a red-black tree.
+// Option handling; each option has a name, type and value and is stored in a HashMap.
+
+use std::collections::HashMap;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -36,7 +38,6 @@ RB_GENERATE!(
     options_array_cmp
 );
 
-#[repr(C)]
 pub struct options_entry {
     owner: *mut options,
     name: Cow<'static, str>,
@@ -44,12 +45,10 @@ pub struct options_entry {
     value: options_value,
     cached: i32,
     style: style,
-    entry: rb_entry<options_entry>,
 }
 
-#[repr(C)]
 pub struct options {
-    tree: rb_head<options_entry>,
+    tree: HashMap<String, Box<options_entry>>,
     parent: *mut options,
 }
 
@@ -92,11 +91,6 @@ unsafe fn OPTIONS_IS_ARRAY(o: *const options_entry) -> bool {
     }
 }
 
-RB_GENERATE!(options_tree, options_entry, entry, discr_entry, options_cmp);
-
-fn options_cmp(lhs: &options_entry, rhs: &options_entry) -> cmp::Ordering {
-    lhs.name.cmp(&rhs.name)
-}
 
 fn options_map_name(name: &str) -> Option<&'static str> {
     for &options_name_map { from, to} in &OPTIONS_OTHER_NAMES {
@@ -200,20 +194,22 @@ unsafe fn options_value_to_string(
 }
 
 pub unsafe fn options_create(parent: *mut options) -> *mut options {
-    unsafe {
-        let oo = xcalloc1::<options>() as *mut options;
-        rb_init(&raw mut (*oo).tree);
-        (*oo).parent = parent;
-        oo
-    }
+    let oo = Box::new(options {
+        tree: HashMap::new(),
+        parent,
+    });
+    Box::into_raw(oo)
 }
 
 pub unsafe fn options_free(oo: *mut options) {
     unsafe {
-        for o in rb_foreach(&raw mut (*oo).tree) {
-            options_remove(o.as_ptr());
+        let keys: Vec<String> = (*oo).tree.keys().cloned().collect();
+        for key in keys {
+            if let Some(entry) = (*oo).tree.get_mut(&key) {
+                options_remove(&mut **entry as *mut options_entry);
+            }
         }
-        free_(oo);
+        drop(Box::from_raw(oo));
     }
 }
 
@@ -225,58 +221,48 @@ pub fn options_set_parent(oo: &mut options, parent: *mut options) {
     oo.parent = parent;
 }
 
-pub unsafe fn options_first(oo: *mut options) -> *mut options_entry {
-    unsafe { rb_min(&raw mut (*oo).tree) }
+/// Collect all entry pointers in sorted order (by name).
+pub unsafe fn options_entries(oo: *mut options) -> Vec<*mut options_entry> {
+    unsafe {
+        let mut entries: Vec<_> = (*oo)
+            .tree
+            .values_mut()
+            .map(|e| &mut **e as *mut options_entry)
+            .collect();
+        entries.sort_by(|a, b| (**a).name.cmp(&(**b).name));
+        entries
+    }
 }
 
-pub unsafe fn options_next(o: *mut options_entry) -> *mut options_entry {
-    unsafe { rb_next(o) }
-}
 
 pub unsafe fn options_get_only(oo: *mut options, name: &str) -> *mut options_entry {
     unsafe {
-        let name = std::mem::transmute::<&str, &'static str>(name);
-        let mut o = options_entry {
-            name: Cow::Borrowed(name),
-            ..zeroed() // TODO use uninit
-        };
-
-        let found = rb_find(&raw mut (*oo).tree, &raw const o);
-        if found.is_null() {
-            o.name = Cow::Borrowed(options_map_name(name).unwrap_or(name));
-            rb_find(&raw mut (*oo).tree, &o)
-        } else {
-            found
+        if let Some(entry) = (*oo).tree.get_mut(name) {
+            return &mut **entry as *mut options_entry;
         }
-    }
-}
-// consider to remove this one or the other
-#[expect(dead_code)]
-unsafe fn options_get_only_(oo: *mut options, name: &str) -> *mut options_entry {
-    unsafe {
-        let found = rb_find_by(&raw mut (*oo).tree, |oe| {
-            (*oe.name).cmp(name).reverse()
-        });
-        if found.is_null() {
-            let name = options_map_name_str(name);
-            rb_find_by(&raw mut (*oo).tree, |oe| {
-                (*oe.name).cmp(name).reverse()
-            })
-        } else {
-            found
+        // Try mapped name
+        let mapped = options_map_name_str(name);
+        if mapped != name {
+            if let Some(entry) = (*oo).tree.get_mut(mapped) {
+                return &mut **entry as *mut options_entry;
+            }
         }
+        null_mut()
     }
 }
 
 pub unsafe fn options_get_only_const(oo: *const options, name: &str) -> *const options_entry {
     unsafe {
-        let found = rb_find_by_const(&(*oo).tree, |oe| (*oe.name).cmp(name).reverse());
-        if found.is_null() {
-            let name = options_map_name_str(name);
-            rb_find_by_const(&(*oo).tree, |oe| (*oe.name).cmp(name).reverse())
-        } else {
-            found
+        if let Some(entry) = (*oo).tree.get(name) {
+            return &**entry as *const options_entry;
         }
+        let mapped = options_map_name_str(name);
+        if mapped != name {
+            if let Some(entry) = (*oo).tree.get(mapped) {
+                return &**entry as *const options_entry;
+            }
+        }
+        null_mut()
     }
 }
 
@@ -400,40 +386,56 @@ pub unsafe fn options_default_to_string(oe: *const options_table_entry) -> NonNu
 
 unsafe fn options_add(oo: *mut options, name: &str) -> *mut options_entry {
     unsafe {
-        let mut o = options_get_only(oo, name);
-        if !o.is_null() {
-            options_remove(o);
+        // Remove existing entry if present
+        if !options_get_only(oo, name).is_null() {
+            options_remove_by_name(oo, name);
         }
 
-        o = Box::into_raw(Box::new(
-            options_entry {
-                owner: oo,
-                name: Cow::Owned(name.to_string()),
-                tableentry: null(),
-                value: options_value {number: 0},
-                cached: 0,
-                style: zeroed(),
-                entry: rb_entry::default(),
-            }
-        ));
+        let entry = Box::new(options_entry {
+            owner: oo,
+            name: Cow::Owned(name.to_string()),
+            tableentry: null(),
+            value: options_value { number: 0 },
+            cached: 0,
+            style: zeroed(),
+        });
 
-        rb_insert(&raw mut (*oo).tree, o);
-        o
+        let key = name.to_string();
+        (*oo).tree.insert(key.clone(), entry);
+        &mut **(*oo).tree.get_mut(&key).unwrap() as *mut options_entry
+    }
+}
+
+/// Remove an entry by name from the options tree.
+unsafe fn options_remove_by_name(oo: *mut options, name: &str) {
+    unsafe {
+        // Try direct name first, then mapped name
+        let key = if (*oo).tree.contains_key(name) {
+            name.to_string()
+        } else {
+            let mapped = options_map_name_str(name);
+            if (*oo).tree.contains_key(mapped) {
+                mapped.to_string()
+            } else {
+                return;
+            }
+        };
+
+        if let Some(mut entry) = (*oo).tree.remove(&key) {
+            if options_is_array(&mut *entry as *mut options_entry) {
+                options_array_clear(&mut *entry as *mut options_entry);
+            } else {
+                options_value_free(&*entry, &mut entry.value);
+            }
+        }
     }
 }
 
 unsafe fn options_remove(o: *mut options_entry) {
     unsafe {
         let oo = (*o).owner;
-
-        if options_is_array(o) {
-            options_array_clear(o);
-        } else {
-            options_value_free(o, &mut (*o).value);
-        }
-        rb_remove(&mut (*oo).tree, o);
-        (*o).name = Cow::Borrowed("");
-        free_(o);
+        let name = (*o).name.to_string();
+        options_remove_by_name(oo, &name);
     }
 }
 
