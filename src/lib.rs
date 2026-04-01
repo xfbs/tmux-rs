@@ -283,10 +283,8 @@ struct discr_all_entry;
 struct discr_by_uri_entry;
 struct discr_by_inner_entry;
 struct discr_entry;
-struct discr_name_entry;
 struct discr_pending_entry;
 struct discr_sentry;
-struct discr_time_entry;
 struct discr_tree_entry;
 struct discr_wentry;
 
@@ -1914,7 +1912,6 @@ struct args_value {
     // #[entry]
     entry: tailq_entry<args_value>,
 }
-type args_tree = rb_head<args_entry>;
 
 /// Arguments parsing type.
 #[repr(C)]

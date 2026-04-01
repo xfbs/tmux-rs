@@ -376,7 +376,6 @@ pub unsafe fn cmdq_insert_hook_(
         let state = (*item).state;
         let cmd = (*item).cmd;
         let args = cmd_get_args(cmd);
-        let mut ae: *mut args_entry = null_mut();
         let mut flag: u8;
         const SIZEOF_TMP: usize = 32;
         let mut buf: [u8; 32] = zeroed();
@@ -419,8 +418,8 @@ pub unsafe fn cmdq_insert_hook_(
             _ = xsnprintf_!(tmp, SIZEOF_TMP, "hook_argument_{}", i);
             cmdq_add_format!(new_state, tmp, "{}", _s(args_string(args, i)));
         }
-        flag = args_first(args, &raw mut ae);
-        while flag != 0 {
+        for ae in args_entry_list(args) {
+            flag = (*ae).flag;
             let value = args_get(args, flag);
             if value.is_null() {
                 _ = xsnprintf_!(tmp, SIZEOF_TMP, "hook_flag_{}", flag as char);
@@ -438,8 +437,6 @@ pub unsafe fn cmdq_insert_hook_(
                 i += 1;
                 av = args_next_value(av);
             }
-
-            flag = args_next(&raw mut ae);
         }
 
         let mut a = options_array_first(o);

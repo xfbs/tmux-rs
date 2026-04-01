@@ -1,6 +1,7 @@
 // https://man.openbsd.org/tree.3
 // probably best way define a generic struct
 // make the macros call the generic struct
+#![allow(dead_code)] // Some functions unused after migration to BTreeMap/HashMap
 use ::core::cmp::Ordering;
 use ::core::ptr::{NonNull, null_mut};
 
