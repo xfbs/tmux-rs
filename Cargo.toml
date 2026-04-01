@@ -156,3 +156,6 @@ unnested_or_patterns                = "allow" # I think it's more readable the o
 unreadable_literal                  = "allow" # too many color constants
 used_underscore_items               = "allow" # _s and other's will naturally be removed in transition to safer rust
 wildcard_imports                    = "allow" # too many, c style codebase, eventually will be fixed / refactored
+
+[dev-dependencies]
+tempfile = "3.27.0"
