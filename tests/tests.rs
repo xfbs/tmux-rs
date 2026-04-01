@@ -14,3 +14,6 @@ mod window;
 mod window_management;
 mod control_mode;
 mod copy_mode;
+mod status_and_style;
+mod input_keys;
+mod layout;
