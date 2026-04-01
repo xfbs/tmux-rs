@@ -1563,13 +1563,11 @@ bitflags::bitflags! {
 const ENVIRON_HIDDEN: environ_flags = environ_flags::ENVIRON_HIDDEN;
 
 /// Environment variable.
-#[repr(C)]
 struct environ_entry {
     name: Option<NonNull<u8>>,
     value: Option<NonNull<u8>>,
 
     flags: environ_flags,
-    entry: rb_entry<environ_entry>,
 }
 
 /// Client session.

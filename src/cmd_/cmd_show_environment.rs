@@ -131,9 +131,8 @@ unsafe fn cmd_show_environment_exec(self_: *mut cmd, item: *mut cmdq_item) -> cm
             env = (*(*target).s).environ;
         }
 
-        let mut envent;
         if !name.is_null() {
-            envent = environ_find(env, name);
+            let envent = environ_find(env, name);
             if envent.is_null() {
                 cmdq_error!(item, "unknown variable: {}", _s(name));
                 return cmd_retval::CMD_RETURN_ERROR;
@@ -142,10 +141,8 @@ unsafe fn cmd_show_environment_exec(self_: *mut cmd, item: *mut cmdq_item) -> cm
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        envent = environ_first(env);
-        while !envent.is_null() {
-            cmd_show_environment_print(self_, item, envent);
-            envent = environ_next(envent);
+        for entry_ptr in environ_entries(env) {
+            cmd_show_environment_print(self_, item, entry_ptr);
         }
         cmd_retval::CMD_RETURN_NORMAL
     }
