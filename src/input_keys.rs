@@ -11,6 +11,8 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+use std::collections::BTreeMap;
+
 use crate::*;
 use crate::options_::options_get_number_;
 
@@ -18,34 +20,18 @@ use crate::options_::options_get_number_;
 pub struct input_key_entry {
     pub key: key_code,
     pub data: *const u8,
-
-    pub entry: rb_entry<input_key_entry>,
 }
-pub type input_key_tree = rb_head<input_key_entry>;
 
 impl input_key_entry {
     const fn new(key: key_code, data: &'static CStr) -> Self {
         Self {
             key,
             data: data.as_ptr().cast(),
-            entry: unsafe { zeroed() },
         }
     }
 }
 
-/// Input key comparison function.
-pub fn input_key_cmp(ike1: &input_key_entry, ike2: &input_key_entry) -> cmp::Ordering {
-    ike1.key.cmp(&ike2.key)
-}
-
-RB_GENERATE!(
-    input_key_tree,
-    input_key_entry,
-    entry,
-    discr_entry,
-    input_key_cmp
-);
-static mut INPUT_KEY_TREE: input_key_tree = rb_initializer();
+static mut INPUT_KEY_TREE: BTreeMap<key_code, input_key_entry> = BTreeMap::new();
 
 const INPUT_KEY_DEFAULTS_LEN: usize = 83;
 
@@ -155,9 +141,9 @@ static INPUT_KEY_MODIFIERS: [key_code; 9] = [
 /// Look for key in tree.
 pub unsafe fn input_key_get(key: key_code) -> *mut input_key_entry {
     unsafe {
-        let mut entry = MaybeUninit::<input_key_entry>::uninit();
-        (*entry.as_mut_ptr()).key = key;
-        rb_find(&raw mut INPUT_KEY_TREE, entry.as_mut_ptr())
+        (*(&raw mut INPUT_KEY_TREE))
+            .get_mut(&key)
+            .map_or(null_mut(), |e| e as *mut input_key_entry)
     }
 }
 
@@ -180,35 +166,39 @@ pub unsafe fn input_key_split2(c: u32, dst: *mut u8) -> usize {
 /// Build input key tree.
 pub unsafe extern "C-unwind" fn input_key_build() {
     unsafe {
+        let tree = &mut *(&raw mut INPUT_KEY_TREE);
         for i in 0..INPUT_KEY_DEFAULTS_LEN {
-            let ike = &raw mut INPUT_KEY_DEFAULTS[i];
-            if !(*ike).key & KEYC_BUILD_MODIFIERS != 0 {
-                rb_insert(&raw mut INPUT_KEY_TREE, ike);
+            let ike = &INPUT_KEY_DEFAULTS[i];
+            if !ike.key & KEYC_BUILD_MODIFIERS != 0 {
+                tree.insert(ike.key, input_key_entry {
+                    key: ike.key,
+                    data: ike.data,
+                });
                 continue;
             }
 
             for (j, input_key_modifiers_j) in
                 INPUT_KEY_MODIFIERS.iter().copied().enumerate().skip(2)
             {
-                let key = (*ike).key & !KEYC_BUILD_MODIFIERS;
-                let data = xstrdup((*ike).data).as_ptr();
+                let key = ike.key & !KEYC_BUILD_MODIFIERS;
+                let data = xstrdup(ike.data).as_ptr();
                 *data.add(libc::strcspn(data, c!("_"))) = b'0' + j as u8;
 
-                let new = xcalloc1::<input_key_entry>();
-                new.key = key | input_key_modifiers_j;
-                new.data = data;
-                rb_insert(&raw mut INPUT_KEY_TREE, new);
+                tree.insert(key | input_key_modifiers_j, input_key_entry {
+                    key: key | input_key_modifiers_j,
+                    data,
+                });
             }
         }
 
-        for ike in rb_foreach(&raw mut INPUT_KEY_TREE).map(NonNull::as_ptr) {
+        for ike in tree.values() {
             log_debug!(
                 "{}:{} : 0x{:x} ({}) is {}",
                 file!(),
                 line!(),
-                (*ike).key,
-                _s(key_string_lookup_key((*ike).key, 1)),
-                _s((*ike).data)
+                ike.key,
+                _s(key_string_lookup_key(ike.key, 1)),
+                _s(ike.data)
             );
         }
     }
