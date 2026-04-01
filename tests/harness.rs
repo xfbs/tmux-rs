@@ -266,6 +266,11 @@ impl<'a> TmuxCommandBuilder<'a> {
         cmd.args(["-S", &self.harness.socket_path]);
         cmd.args(&self.extra_args);
         cmd.env("TERM", "screen");
+        // Ensure hermetic test environment: prevent user config,
+        // nesting detection, and custom socket paths from leaking in.
+        cmd.env_remove("TMUX");
+        cmd.env_remove("TMUX_CONF");
+        cmd.env_remove("TMUX_TMPDIR");
 
         for (k, v) in &self.env_vars {
             cmd.env(k, v);
@@ -416,6 +421,9 @@ impl PtyClient {
             .args(["-S", harness.socket_path()])
             .args(args)
             .env("TERM", "screen")
+            .env_remove("TMUX")
+            .env_remove("TMUX_CONF")
+            .env_remove("TMUX_TMPDIR")
             .stdin(Stdio::from(slave_stdin))
             .stdout(Stdio::from(slave_stdout))
             .stderr(Stdio::from(slave_stderr))
