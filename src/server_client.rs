@@ -18,11 +18,6 @@ use crate::{
 };
 use crate::options_::*;
 
-/// Compare client windows.
-pub fn server_client_window_cmp(cw1: &client_window, cw2: &client_window) -> std::cmp::Ordering {
-    cw1.window.cmp(&cw2.window)
-}
-
 /// Number of attached clients.
 pub unsafe fn server_client_how_many() -> u32 {
     unsafe {
@@ -264,7 +259,7 @@ pub unsafe fn server_client_create(fd: i32) -> *mut client {
         (*c).out_fd = -1;
 
         (*c).queue = cmdq_new().as_ptr();
-        rb_init(&raw mut (*c).windows);
+        (*c).windows = BTreeMap::new();
         rb_init(&raw mut (*c).files);
 
         (*c).tty.sx = 80;
@@ -419,10 +414,7 @@ pub unsafe fn server_client_lost(c: *mut client) {
             (*cf).error = libc::EINTR;
             file_fire_done(cf);
         }
-        for cw in rb_foreach(&raw mut (*c).windows).map(NonNull::as_ptr) {
-            rb_remove(&raw mut (*c).windows, cw);
-            free_(cw);
-        }
+        (*c).windows.clear();
 
         tailq_remove(&raw mut CLIENTS, c);
         log_debug!("lost client {:p}", c);
@@ -3397,26 +3389,22 @@ pub unsafe fn server_client_get_flags(c: *mut client) -> *const u8 {
 /// Get client window.
 pub unsafe fn server_client_get_client_window(c: *mut client, id: u32) -> *mut client_window {
     unsafe {
-        let mut cw: client_window = client_window {
-            window: id,
-            ..zeroed()
-        };
-
-        rb_find(&raw mut (*c).windows, &raw mut cw)
+        (*c).windows
+            .get_mut(&id)
+            .map_or(null_mut(), |cw| cw as *mut client_window)
     }
 }
 
 /// Add client window.
 pub unsafe fn server_client_add_client_window(c: *mut client, id: u32) -> NonNull<client_window> {
     unsafe {
-        if let Some(cw) = NonNull::new(server_client_get_client_window(c, id)) {
-            cw
-        } else {
-            let cw: &mut client_window = xcalloc1();
-            cw.window = id;
-            rb_insert(&raw mut (*c).windows, cw);
-            NonNull::new(cw).unwrap()
-        }
+        let cw = (*c).windows.entry(id).or_insert(client_window {
+            window: id,
+            pane: null_mut(),
+            sx: 0,
+            sy: 0,
+        });
+        NonNull::new(cw as *mut client_window).unwrap()
     }
 }
 
@@ -3461,10 +3449,10 @@ pub unsafe fn server_client_remove_pane(wp: *mut window_pane) {
         let w = (*wp).window;
 
         for c in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
-            let cw = server_client_get_client_window(c, (*w).id);
-            if !cw.is_null() && (*cw).pane == wp {
-                rb_remove(&raw mut (*c).windows, cw);
-                free_(cw);
+            if let Some(cw) = (*c).windows.get(&(*w).id) {
+                if cw.pane == wp {
+                    (*c).windows.remove(&(*w).id);
+                }
             }
         }
     }

@@ -2191,24 +2191,14 @@ type client_files = rb_head<client_file>;
 RB_GENERATE!(client_files, client_file, entry, discr_entry, file_cmp);
 
 // Client window.
-#[repr(C)]
 struct client_window {
     window: u32,
     pane: *mut window_pane,
 
     sx: u32,
     sy: u32,
-
-    entry: rb_entry<client_window>,
 }
-type client_windows = rb_head<client_window>;
-RB_GENERATE!(
-    client_windows,
-    client_window,
-    entry,
-    discr_entry,
-    server_client_window_cmp
-);
+type client_windows = BTreeMap<u32, client_window>;
 
 // Visible areas not obstructed by overlays.
 const OVERLAY_MAX_RANGES: usize = 3;
