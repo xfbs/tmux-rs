@@ -2218,7 +2218,7 @@ unsafe fn status_prompt_complete_session(
     unsafe {
         let mut n: [u8; 11] = [0; 11];
 
-        for loop_ in rb_foreach(&raw mut SESSIONS).map(NonNull::as_ptr) {
+        for &loop_ in (*(&raw mut SESSIONS)).values() {
             if *s == b'\0'
                 || strncmp(
                     CString::new((*loop_).name.to_string())

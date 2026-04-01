@@ -1570,10 +1570,8 @@ struct environ_entry {
 struct session_group {
     name: Cow<'static, str>,
     sessions: tailq_head<session>,
-
-    entry: rb_entry<session_group>,
 }
-type session_groups = rb_head<session_group>;
+type session_groups = BTreeMap<String, Box<session_group>>;
 
 const SESSION_PASTING: i32 = 0x1;
 const SESSION_ALERTED: i32 = 0x2;
@@ -1611,9 +1609,8 @@ struct session {
     references: i32,
 
     gentry: tailq_entry<session>,
-    entry: rb_entry<session>,
 }
-type sessions = rb_head<session>;
+type sessions = BTreeMap<String, *mut session>;
 impl_tailq_entry!(session, gentry, tailq_entry<session>);
 
 const MOUSE_MASK_BUTTONS: u32 = 195;

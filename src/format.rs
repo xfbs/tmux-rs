@@ -2238,7 +2238,7 @@ pub unsafe fn format_cb_scroll_region_upper(ft: *mut format_tree) -> format_tabl
 /// Callback for `server_sessions`.
 pub unsafe fn format_cb_server_sessions(_ft: *mut format_tree) -> format_table_type {
     unsafe {
-        let n: u32 = rb_foreach(&raw mut SESSIONS).count() as u32;
+        let n: u32 = (*(&raw mut SESSIONS)).len() as u32;
         format!("{n}").into()
     }
 }
@@ -3906,7 +3906,7 @@ pub unsafe fn format_session_name(es: *mut format_expand_state, fmt: *const u8) 
     unsafe {
         let name = format_expand1(es, fmt);
 
-        for s in rb_foreach(&raw mut SESSIONS).map(NonNull::as_ptr) {
+        for &s in (*(&raw mut SESSIONS)).values() {
             if streq_(name, &(*s).name) {
                 free_(name);
                 return xstrdup(c!("1")).as_ptr();
@@ -3926,7 +3926,7 @@ pub unsafe fn format_loop_sessions(es: *mut format_expand_state, fmt: *const u8)
         let mut value: *mut u8 = xcalloc(1, 1).as_ptr().cast();
         let mut valuelen = 1;
 
-        for s in rb_foreach(&raw mut SESSIONS).map(NonNull::as_ptr) {
+        for &s in (*(&raw mut SESSIONS)).values() {
             format_log1!(es, c!("format_loop_sessions"), "session loop: ${}", (*s).id,);
             let nft = format_create(c, item, FORMAT_NONE, (*ft).flags);
             format_defaults(nft, (*ft).c, NonNull::new(s), None, None);

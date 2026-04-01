@@ -56,7 +56,7 @@ unsafe fn cmd_list_windows_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
 
 unsafe fn cmd_list_windows_server(self_: *mut cmd, item: *mut cmdq_item) {
     unsafe {
-        for s in rb_foreach(&raw mut SESSIONS) {
+        for s in (*(&raw mut SESSIONS)).values().map(|&s| NonNull::new(s).unwrap()) {
             cmd_list_windows_session(self_, s, item, 1);
         }
     }

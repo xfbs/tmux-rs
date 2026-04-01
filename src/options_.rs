@@ -1389,8 +1389,8 @@ pub unsafe fn options_push_changes(name: &str) {
             }
         }
 
-        for s in rb_foreach(&raw mut SESSIONS) {
-            status_update_cache(s.as_ptr());
+        for &s in (*(&raw mut SESSIONS)).values() {
+            status_update_cache(s);
         }
 
         recalculate_sizes();

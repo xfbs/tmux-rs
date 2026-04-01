@@ -13,7 +13,7 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use super::*;
 use crate::compat::queue::tailq_foreach;
-use crate::compat::tree::rb_empty;
+
 
 pub static CMD_ATTACH_SESSION_ENTRY: cmd_entry = cmd_entry {
     name: "attach-session",
@@ -48,7 +48,7 @@ pub unsafe fn cmd_attach_session(
 
         let msgtype: msgtype;
 
-        if rb_empty(&raw mut SESSIONS) {
+        if (*(&raw mut SESSIONS)).is_empty() {
             cmdq_error!(item, "no sessions");
             return cmd_retval::CMD_RETURN_ERROR;
         }

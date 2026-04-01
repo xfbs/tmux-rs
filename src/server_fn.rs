@@ -100,7 +100,7 @@ pub unsafe fn server_status_window(w: *mut window) {
         // clients containing this window rather than anywhere it is the
         // current window.
 
-        for s in rb_foreach(&raw mut SESSIONS).map(NonNull::as_ptr) {
+        for &s in (*(&raw mut SESSIONS)).values() {
             if session_has(s, w) {
                 server_status_session(s);
             }
@@ -187,7 +187,7 @@ pub unsafe fn server_kill_pane(wp: *mut window_pane) {
 
 pub unsafe fn server_kill_window(w: *mut window, renumber: i32) {
     unsafe {
-        for s in rb_foreach(&raw mut SESSIONS).map(NonNull::as_ptr) {
+        for &s in (*(&raw mut SESSIONS)).values() {
             if !session_has(s, w) {
                 continue;
             }
@@ -227,8 +227,8 @@ pub unsafe fn server_renumber_session(s: *mut session) {
 
 pub unsafe fn server_renumber_all() {
     unsafe {
-        for s in rb_foreach(&raw mut SESSIONS) {
-            server_renumber_session(s.as_ptr());
+        for &s in (*(&raw mut SESSIONS)).values() {
+            server_renumber_session(s);
         }
     }
 }
@@ -412,7 +412,7 @@ pub unsafe fn server_find_session(
 ) -> *mut session {
     unsafe {
         let mut s_out: *mut session = null_mut();
-        for s_loop in rb_foreach(&raw mut SESSIONS).map(NonNull::as_ptr) {
+        for &s_loop in (*(&raw mut SESSIONS)).values() {
             if s_loop != s && (s_out.is_null() || f(s_loop, s_out) != 0) {
                 s_out = s_loop;
             }
@@ -473,7 +473,7 @@ pub unsafe fn server_destroy_session(s: *mut session) {
 
 pub unsafe fn server_check_unattached() {
     unsafe {
-        for s in rb_foreach(&raw mut SESSIONS).map(NonNull::as_ptr) {
+        for &s in (*(&raw mut SESSIONS)).values() {
             if (*s).attached != 0 {
                 continue;
             }

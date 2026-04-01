@@ -12,7 +12,6 @@
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use crate::compat::tree::{rb_insert, rb_remove};
 use crate::*;
 
 pub static CMD_RENAME_SESSION_ENTRY: cmd_entry = cmd_entry {
@@ -54,9 +53,9 @@ unsafe fn cmd_rename_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
-        rb_remove(&raw mut SESSIONS, s);
-        (*s).name = newname.into();
-        rb_insert(&raw mut SESSIONS, s);
+        (*(&raw mut SESSIONS)).remove(&*(*s).name);
+        (*s).name = newname.clone().into();
+        (*(&raw mut SESSIONS)).insert(newname, s);
 
         server_status_session(s);
         notify_session(c"session-renamed", s);

@@ -11,7 +11,6 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::compat::tree::rb_foreach;
 use crate::*;
 
 pub static CMD_LIST_SESSIONS_ENTRY: cmd_entry = cmd_entry {
@@ -41,7 +40,7 @@ unsafe fn cmd_list_sessions_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         }
         let filter = args_get(args, b'f');
 
-        for (n, s) in rb_foreach(&raw mut SESSIONS).enumerate() {
+        for (n, s) in (*(&raw mut SESSIONS)).values().map(|&s| NonNull::new(s).unwrap()).enumerate() {
             let ft = format_create(
                 cmdq_get_client(item),
                 item,

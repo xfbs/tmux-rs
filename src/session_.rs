@@ -14,42 +14,19 @@
 use crate::*;
 use crate::options_::*;
 
-RB_GENERATE!(sessions, session, entry, discr_entry, session_cmp);
-RB_GENERATE!(
-    session_groups,
-    session_group,
-    entry,
-    discr_entry,
-    session_group_cmp
-);
-
-pub static mut SESSIONS: sessions = unsafe { zeroed() };
+pub static mut SESSIONS: sessions = BTreeMap::new();
 
 pub static NEXT_SESSION_ID: AtomicU32 = AtomicU32::new(0);
 
-pub static mut SESSION_GROUPS: session_groups = rb_initializer();
-
-pub fn session_cmp(s1: &session, s2: &session) -> cmp::Ordering {
-    s1.name.cmp(&s2.name)
-}
-
-pub fn session_group_cmp(s1: &session_group, s2: &session_group) -> cmp::Ordering {
-    s1.name.cmp(&s2.name)
-}
+pub static mut SESSION_GROUPS: session_groups = BTreeMap::new();
 
 pub unsafe fn session_alive(s: *mut session) -> bool {
-    unsafe { rb_foreach(&raw mut SESSIONS).any(|s_loop| s_loop.as_ptr() == s) }
+    unsafe { (*(&raw mut SESSIONS)).values().any(|&s_ptr| s_ptr == s) }
 }
 
 /// Find session by name.
 pub unsafe fn session_find(name: &str) -> *mut session {
-    let mut s = MaybeUninit::<session>::uninit();
-    let s = s.as_mut_ptr();
-
-    unsafe {
-        std::ptr::write(&raw mut (*s).name, Cow::Borrowed(std::mem::transmute::<&str, &'static str>(name)));
-        rb_find(&raw mut SESSIONS, s)
-    }
+    unsafe { (*(&raw mut SESSIONS)).get(name).copied().unwrap_or(null_mut()) }
 }
 
 /// Find session by id parsed from a string.
@@ -68,7 +45,13 @@ pub unsafe fn session_find_by_id_str(s: &str) -> *mut session {
 
 /// Find session by id.
 pub unsafe fn session_find_by_id(id: u32) -> Option<NonNull<session>> {
-    unsafe { rb_foreach(&raw mut SESSIONS).find(|s| (*s.as_ptr()).id == id) }
+    unsafe {
+        (*(&raw mut SESSIONS))
+            .values()
+            .copied()
+            .find(|&s| (*s).id == id)
+            .and_then(NonNull::new)
+    }
 }
 
 impl session {
@@ -112,12 +95,12 @@ impl session {
                         format!("{}", s.id).into()
                     };
 
-                    if rb_find(&raw mut SESSIONS, s.as_mut()).is_null() {
+                    if !(*(&raw mut SESSIONS)).contains_key(&*s.name) {
                         break;
                     }
                 }
             }
-            rb_insert(&raw mut SESSIONS, s.as_mut());
+            (*(&raw mut SESSIONS)).insert(s.name.to_string(), s.as_mut());
 
             log_debug!("new session {} ${}", s.name, s.id);
 
@@ -208,7 +191,7 @@ pub unsafe fn session_destroy(s: *mut session, notify: i32, from: *const u8) {
         }
         (*s).curw = null_mut();
 
-        rb_remove(&raw mut SESSIONS, s);
+        (*(&raw mut SESSIONS)).remove(&*(*s).name);
         if notify != 0 {
             notify_session(c"session-closed", s);
         }
@@ -325,18 +308,21 @@ pub unsafe fn session_update_activity(s: *mut session, from: *mut timeval) {
 /// Find the next usable session.
 pub unsafe fn session_next_session(s: *mut session) -> *mut session {
     unsafe {
-        if rb_empty(&raw mut SESSIONS) || !session_alive(s) {
+        let sessions = &*(&raw mut SESSIONS);
+        if sessions.is_empty() || !session_alive(s) {
             return null_mut();
         }
 
-        let mut s2 = rb_next(s);
-        if s2.is_null() {
-            s2 = rb_min(&raw mut SESSIONS);
-        }
+        let name = &*(*s).name;
+        // Find the next session after this one in sorted order, wrapping around.
+        let s2 = sessions
+            .range::<str, _>((std::ops::Bound::Excluded(name), std::ops::Bound::Unbounded))
+            .next()
+            .map(|(_, &v)| v)
+            .unwrap_or_else(|| *sessions.values().next().unwrap());
         if s2 == s {
             return null_mut();
         }
-
         s2
     }
 }
@@ -344,14 +330,18 @@ pub unsafe fn session_next_session(s: *mut session) -> *mut session {
 /// Find the previous usable session.
 pub unsafe fn session_previous_session(s: *mut session) -> *mut session {
     unsafe {
-        if rb_empty(&raw mut SESSIONS) || !session_alive(s) {
+        let sessions = &*(&raw mut SESSIONS);
+        if sessions.is_empty() || !session_alive(s) {
             return null_mut();
         }
 
-        let mut s2 = rb_prev(s);
-        if s2.is_null() {
-            s2 = rb_max(&raw mut SESSIONS);
-        }
+        let name = &*(*s).name;
+        // Find the previous session before this one in sorted order, wrapping around.
+        let s2 = sessions
+            .range::<str, _>((std::ops::Bound::Unbounded, std::ops::Bound::Excluded(name)))
+            .next_back()
+            .map(|(_, &v)| v)
+            .unwrap_or_else(|| *sessions.values().next_back().unwrap());
         if s2 == s {
             return null_mut();
         }
@@ -553,10 +543,10 @@ pub unsafe fn session_set_current(s: *mut session, wl: *mut winlink) -> i32 {
 /// Find the session group containing a session.
 pub unsafe fn session_group_contains(target: *mut session) -> *mut session_group {
     unsafe {
-        for sg in rb_foreach(&raw mut SESSION_GROUPS) {
-            for s in tailq_foreach(&raw mut (*sg.as_ptr()).sessions) {
+        for sg in (*(&raw mut SESSION_GROUPS)).values_mut() {
+            for s in tailq_foreach(&raw mut sg.sessions) {
                 if s.as_ptr() == target {
-                    return sg.as_ptr();
+                    return &mut **sg as *mut session_group;
                 }
             }
         }
@@ -568,28 +558,28 @@ pub unsafe fn session_group_contains(target: *mut session) -> *mut session_group
 /// Find session group by name.
 pub unsafe fn session_group_find(name: &str) -> *mut session_group {
     unsafe {
-        let mut sg = MaybeUninit::<session_group>::uninit();
-        let sg = sg.as_mut_ptr();
-
-        (*sg).name = Cow::Borrowed(std::mem::transmute::<&str, &'static str>(name));
-        rb_find(&raw mut SESSION_GROUPS, sg)
+        (*(&raw mut SESSION_GROUPS))
+            .get_mut(name)
+            .map(|sg| &mut **sg as *mut session_group)
+            .unwrap_or(null_mut())
     }
 }
 
 /// Create a new session group.
 pub unsafe fn session_group_new(name: &str) -> *mut session_group {
     unsafe {
-        let mut sg = session_group_find(name);
+        let sg = session_group_find(name);
         if !sg.is_null() {
             return sg;
         }
 
-        sg = xcalloc1::<session_group>();
-        (*sg).name = name.to_string().into();
-        tailq_init(&raw mut (*sg).sessions);
+        let mut sg_box: Box<session_group> = Box::new(zeroed());
+        sg_box.name = name.to_string().into();
+        tailq_init(&raw mut sg_box.sessions);
 
-        rb_insert(&raw mut SESSION_GROUPS, sg);
-        sg
+        let sg_groups = &mut *(&raw mut SESSION_GROUPS);
+        sg_groups.insert(name.to_string(), sg_box);
+        &mut **sg_groups.get_mut(name).unwrap() as *mut session_group
     }
 }
 
@@ -612,9 +602,8 @@ pub unsafe fn session_group_remove(s: *mut session) {
         }
         tailq_remove(&raw mut (*sg).sessions, s);
         if tailq_empty(&raw mut (*sg).sessions) {
-            rb_remove(&raw mut SESSION_GROUPS, sg);
-            (*sg).name = Cow::Borrowed("");
-            free_(sg);
+            let name = (*sg).name.to_string();
+            (*(&raw mut SESSION_GROUPS)).remove(&name);
         }
     }
 }

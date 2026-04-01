@@ -14,7 +14,7 @@
 use crate::compat::{
     queue::{tailq_first, tailq_foreach},
     strlcat,
-    tree::{rb_foreach, rb_foreach_const, rb_max, rb_min},
+    tree::{rb_foreach_const, rb_max, rb_min},
 };
 use crate::libc::strcmp;
 use crate::*;
@@ -152,7 +152,7 @@ pub unsafe fn cmd_find_best_session(
                 }
             }
         } else {
-            for s_loop in rb_foreach(&raw mut SESSIONS).map(std::ptr::NonNull::as_ptr) {
+            for &s_loop in (*(&raw mut SESSIONS)).values() {
                 if cmd_find_session_better(s_loop, s, flags) != 0 {
                     s = s_loop;
                 }
@@ -171,7 +171,7 @@ pub unsafe fn cmd_find_best_session_with_window(fs: *mut cmd_find_state) -> i32 
 
         'fail: {
             let mut ssize: u32 = 0;
-            for s in rb_foreach(&raw mut SESSIONS).map(NonNull::as_ptr) {
+            for &s in (*(&raw mut SESSIONS)).values() {
                 if !session_has(s, (*fs).w) {
                     continue;
                 }
@@ -264,7 +264,7 @@ pub unsafe fn cmd_find_get_session(fs: *mut cmd_find_state, session: &str) -> i3
         let session_c = CString::new(session).unwrap();
 
         let mut s: *mut session = null_mut();
-        for s_loop in rb_foreach(&raw mut SESSIONS).map(NonNull::as_ptr) {
+        for &s_loop in (*(&raw mut SESSIONS)).values() {
             if libc::strncmp(
                 session_c.as_ptr().cast(),
                 CString::new((*s_loop).name.to_string())
@@ -286,7 +286,7 @@ pub unsafe fn cmd_find_get_session(fs: *mut cmd_find_state, session: &str) -> i3
         }
 
         s = null_mut();
-        for s_loop in rb_foreach(&raw mut SESSIONS).map(NonNull::as_ptr) {
+        for &s_loop in (*(&raw mut SESSIONS)).values() {
             if libc::fnmatch(
                 session_c.as_ptr().cast(),
                 CString::new((*s_loop).name.to_string())

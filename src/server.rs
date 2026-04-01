@@ -238,7 +238,7 @@ pub unsafe fn server_start(
         WINDOWS = BTreeMap::new();
         ALL_WINDOW_PANES = BTreeMap::new();
         tailq_init(&raw mut CLIENTS);
-        rb_init(&raw mut SESSIONS);
+        SESSIONS = BTreeMap::new();
         key_bindings_init();
         tailq_init(&raw mut MESSAGE_LOG);
         gettimeofday(&raw mut START_TIME, null_mut());
@@ -314,7 +314,7 @@ pub unsafe fn server_loop() -> i32 {
         }
 
         if options_get_number_(GLOBAL_OPTIONS, "exit-unattached") == 0
-            && !rb_empty(&raw mut SESSIONS)
+            && !(*(&raw mut SESSIONS)).is_empty()
         {
             return 0;
         }
@@ -354,7 +354,7 @@ unsafe fn server_send_exit() {
             (*c).session = null_mut();
         }
 
-        for s in rb_foreach(&raw mut SESSIONS).map(NonNull::as_ptr) {
+        for &s in (*(&raw mut SESSIONS)).values() {
             session_destroy(s, 1, c!("server_send_exit"));
         }
     }
@@ -366,7 +366,7 @@ pub unsafe fn server_update_socket() {
         let mut sb: stat = zeroed(); // TODO remove unecessary init
 
         let mut n = 0;
-        for s in rb_foreach(&raw mut SESSIONS).map(std::ptr::NonNull::as_ptr) {
+        for &s in (*(&raw mut SESSIONS)).values() {
             if (*s).attached != 0 {
                 n += 1;
                 break;

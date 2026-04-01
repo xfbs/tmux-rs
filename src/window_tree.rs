@@ -490,7 +490,7 @@ unsafe fn window_tree_build(
 
         let mut l: *mut *mut session = null_mut();
         let mut n: u32 = 0;
-        for s in rb_foreach(&raw mut SESSIONS).map(NonNull::as_ptr) {
+        for &s in (*(&raw mut SESSIONS)).values() {
             if (*data).squash_groups
                 && ({
                     sg = session_group_contains(s);
