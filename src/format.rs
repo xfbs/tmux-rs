@@ -40,7 +40,6 @@ pub const FORMAT_WINDOW: u32 = 0x40000000u32;
 pub type format_cb = unsafe fn(_: *mut format_tree) -> format_table_type;
 
 // Entry in format job tree.
-#[repr(C)]
 pub struct format_job {
     pub client: *mut client,
     pub tag: u32,
@@ -53,29 +52,11 @@ pub struct format_job {
 
     pub job: *mut job,
     pub status: i32,
-
-    pub entry: rb_entry<format_job>,
 }
 
-pub type format_job_tree = rb_head<format_job>;
+pub type format_job_tree = BTreeMap<(u32, String), Box<format_job>>;
 
-pub static mut FORMAT_JOBS: format_job_tree = rb_initializer();
-RB_GENERATE!(
-    format_job_tree,
-    format_job,
-    entry,
-    discr_entry,
-    format_job_cmp
-);
-
-// Format job tree comparison function.
-pub fn format_job_cmp(fj1: &format_job, fj2: &format_job) -> cmp::Ordering {
-    unsafe {
-        fj1.tag
-            .cmp(&fj2.tag)
-            .then_with(|| i32_to_ordering(strcmp(fj1.cmd, fj2.cmd)))
-    }
-}
+pub static mut FORMAT_JOBS: format_job_tree = BTreeMap::new();
 
 bitflags::bitflags! {
     #[repr(transparent)]
@@ -344,30 +325,30 @@ pub unsafe fn format_job_complete(job: *mut job) {
 pub unsafe fn format_job_get(es: *mut format_expand_state, cmd: *mut u8) -> *mut u8 {
     unsafe {
         let ft: *mut format_tree = (*es).ft;
-        let mut fj0 = MaybeUninit::<format_job>::uninit();
-        let fj0 = fj0.as_mut_ptr();
 
         let jobs = if (*ft).client.is_null() {
-            &raw mut FORMAT_JOBS
+            &mut *(&raw mut FORMAT_JOBS)
         } else if !(*(*ft).client).jobs.is_null() {
-            (*(*ft).client).jobs
+            &mut *(*(*ft).client).jobs
         } else {
-            (*(*ft).client).jobs = Box::leak(Box::new(zeroed())) as *mut format_job_tree;
-            rb_init((*(*ft).client).jobs);
-            (*(*ft).client).jobs
+            (*(*ft).client).jobs = Box::into_raw(Box::new(BTreeMap::new()));
+            &mut *(*(*ft).client).jobs
         };
 
-        (*fj0).tag = (*ft).tag;
-        (*fj0).cmd = cmd;
-        let mut fj = rb_find(jobs, fj0);
-        if fj.is_null() {
-            fj = xcalloc1() as *mut format_job;
-            (*fj).client = (*ft).client;
-            (*fj).tag = (*ft).tag;
-            (*fj).cmd = xstrdup(cmd).as_ptr();
-
-            rb_insert(jobs, fj);
-        }
+        let key = ((*ft).tag, cstr_to_str(cmd).to_string());
+        let fj = &mut **jobs.entry(key).or_insert_with(|| {
+            Box::new(format_job {
+                client: (*ft).client,
+                tag: (*ft).tag,
+                cmd: xstrdup(cmd).as_ptr(),
+                expanded: null_mut(),
+                last: 0,
+                out: null_mut(),
+                updated: 0,
+                job: null_mut(),
+                status: 0,
+            })
+        }) as *mut format_job;
 
         let mut next = MaybeUninit::<format_expand_state>::uninit();
         let next = next.as_mut_ptr();
@@ -429,24 +410,24 @@ pub unsafe fn format_job_get(es: *mut format_expand_state, cmd: *mut u8) -> *mut
 pub unsafe fn format_job_tidy(jobs: *mut format_job_tree, force: i32) {
     unsafe {
         let now = libc::time(null_mut());
-        for fj in rb_foreach(jobs) {
-            let fj = fj.as_ptr();
-            if force == 0 && ((*fj).last > now || now - (*fj).last < 3600) {
-                continue;
+        let keys_to_remove: Vec<(u32, String)> = (*jobs)
+            .iter()
+            .filter(|(_, fj)| force != 0 || (fj.last <= now && now - fj.last >= 3600))
+            .map(|(k, _)| k.clone())
+            .collect();
+
+        for key in keys_to_remove {
+            if let Some(fj) = (*jobs).remove(&key) {
+                log_debug!("{}: {}", "format_job_tidy", _s(fj.cmd));
+
+                if !fj.job.is_null() {
+                    job_free(fj.job);
+                }
+
+                free_(fj.expanded);
+                free_(fj.cmd);
+                free_(fj.out);
             }
-            rb_remove(jobs, fj);
-
-            log_debug!("{}: {}", "format_job_tidy", _s((*fj).cmd));
-
-            if !(*fj).job.is_null() {
-                job_free((*fj).job);
-            }
-
-            free_((*fj).expanded);
-            free_((*fj).cmd);
-            free_((*fj).out);
-
-            free_(fj);
         }
     }
 }
