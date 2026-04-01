@@ -12,3 +12,5 @@ mod session;
 mod source_and_misc;
 mod window;
 mod window_management;
+mod control_mode;
+mod copy_mode;

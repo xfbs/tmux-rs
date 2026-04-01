@@ -3,7 +3,7 @@ use super::harness;
 use std::io::Write;
 use std::time::Duration;
 
-use harness::TmuxTestHarness;
+use harness::{PtyClient, TmuxTestHarness};
 
 // ---------------------------------------------------------------------------
 // source-file
@@ -106,7 +106,6 @@ fn pipe_pane_captures_output() {
 // ---------------------------------------------------------------------------
 
 #[test]
-#[ignore = "display-panes requires an attached client"]
 fn display_panes_smoke_test() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session()
@@ -115,13 +114,15 @@ fn display_panes_smoke_test() {
         .assert_success();
     tmux.wait_ready(Duration::from_secs(5));
 
-    // display-panes in detached mode should not error
+    // Attach a PTY client so display-panes has a client to render on
+    let _client = PtyClient::attach(&tmux, 80, 24);
+
+    // display-panes should not error with an attached client
     let result = tmux.cmd().args(["display-panes"]).run();
     result.assert_success();
 }
 
 #[test]
-#[ignore = "display-panes requires an attached client"]
 fn display_panes_with_duration() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session()
@@ -129,6 +130,9 @@ fn display_panes_with_duration() {
         .run()
         .assert_success();
     tmux.wait_ready(Duration::from_secs(5));
+
+    // Attach a PTY client so display-panes has a client to render on
+    let _client = PtyClient::attach(&tmux, 80, 24);
 
     // display-panes with a short duration
     let result = tmux.cmd().args(["display-panes", "-d", "100"]).run();

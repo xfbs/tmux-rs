@@ -2,7 +2,7 @@ use super::harness;
 
 use std::time::Duration;
 
-use harness::TmuxTestHarness;
+use harness::{PtyClient, TmuxTestHarness};
 
 #[test]
 fn list_clients_empty_for_detached_session() {
@@ -129,11 +129,13 @@ fn refresh_client_with_flag() {
 }
 
 #[test]
-#[ignore = "show-messages requires an attached client"]
 fn show_messages_succeeds() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();
     tmux.wait_ready(Duration::from_secs(5));
+
+    // Attach a PTY client so show-messages has a client context
+    let _client = PtyClient::attach(&tmux, 80, 24);
 
     // show-messages should succeed (may have empty output or server messages)
     let result = tmux.cmd().args(["show-messages"]).run();
@@ -141,11 +143,13 @@ fn show_messages_succeeds() {
 }
 
 #[test]
-#[ignore = "show-messages requires an attached client"]
 fn show_messages_after_commands() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();
     tmux.wait_ready(Duration::from_secs(5));
+
+    // Attach a PTY client so show-messages has a client context
+    let _client = PtyClient::attach(&tmux, 80, 24);
 
     // Run a few commands to generate activity
     tmux.cmd()
