@@ -12,6 +12,9 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+
 use crate::*;
 
 const MAX_HYPERLINKS: u32 = 5000;
@@ -20,7 +23,6 @@ static HYPERLINKS_NEXT_EXTERNAL_ID: AtomicU64 = AtomicU64::new(1);
 static GLOBAL_HYPERLINKS_COUNT: AtomicU32 = AtomicU32::new(0);
 
 impl_tailq_entry!(hyperlinks_uri, list_entry, tailq_entry<hyperlinks_uri>);
-#[repr(C)]
 pub struct hyperlinks_uri {
     pub tree: *mut hyperlinks,
 
@@ -29,79 +31,46 @@ pub struct hyperlinks_uri {
     pub external_id: *mut u8,
     pub uri: *mut u8,
 
-    // #[entry]
+    // TAILQ entry for global LRU list — kept as-is
     pub list_entry: tailq_entry<hyperlinks_uri>,
-
-    pub by_inner_entry: rb_entry<hyperlinks_uri>,
-    pub by_uri_entry: rb_entry<hyperlinks_uri>,
 }
-
-pub type hyperlinks_by_uri_tree = rb_head<hyperlinks_uri>;
-pub type hyperlinks_by_inner_tree = rb_head<hyperlinks_uri>;
 
 pub type hyperlinks_list = tailq_head<hyperlinks_uri>;
 
 static mut GLOBAL_HYPERLINKS: hyperlinks_list = TAILQ_HEAD_INITIALIZER!(GLOBAL_HYPERLINKS);
 
-#[repr(C)]
 pub struct hyperlinks {
     pub next_inner: u32,
-    pub by_inner: hyperlinks_by_inner_tree,
-    pub by_uri: hyperlinks_by_uri_tree,
+    /// Primary store: inner ID → hyperlink data (owns the data).
+    pub by_inner: BTreeMap<u32, Box<hyperlinks_uri>>,
+    /// Secondary index: (internal_id, uri) → inner ID.
+    /// Anonymous URIs (empty internal_id) are NOT indexed here.
+    pub by_uri: HashMap<(String, String), u32>,
     pub references: u32,
 }
 
-fn hyperlinks_by_uri_cmp(left: &hyperlinks_uri, right: &hyperlinks_uri) -> cmp::Ordering {
+unsafe fn hyperlinks_remove_inner(hl: *mut hyperlinks, inner: u32) {
     unsafe {
-        if *left.internal_id == b'\0' || *right.internal_id == b'\0' {
-            if *left.internal_id != b'\0' {
-                return cmp::Ordering::Less;
+        // Remove from primary store — get owned Box back
+        if let Some(hlu) = (*hl).by_inner.remove(&inner) {
+            // Remove from global LRU TAILQ (pointer still valid — Box not dropped yet)
+            let hlu_ptr = &*hlu as *const hyperlinks_uri as *mut hyperlinks_uri;
+            tailq_remove::<_, _>(&raw mut GLOBAL_HYPERLINKS, hlu_ptr);
+            GLOBAL_HYPERLINKS_COUNT.fetch_sub(1, atomic::Ordering::Relaxed);
+
+            // Remove from URI secondary index
+            let int_id = cstr_to_str(hlu.internal_id).to_string();
+            let uri_str = cstr_to_str(hlu.uri).to_string();
+            if !int_id.is_empty() {
+                (*hl).by_uri.remove(&(int_id, uri_str));
             }
-            if *right.internal_id != b'\0' {
-                return cmp::Ordering::Greater;
-            }
-            return left.inner.cmp(&right.inner);
+
+            // Free C strings
+            free_(hlu.internal_id);
+            free_(hlu.external_id);
+            free_(hlu.uri);
+            // Box dropped here
         }
-
-        i32_to_ordering(libc::strcmp(left.internal_id, right.internal_id))
-            .then_with(|| i32_to_ordering(crate::libc::strcmp(left.uri, right.uri)))
-    }
-}
-
-RB_GENERATE!(
-    hyperlinks_by_uri_tree,
-    hyperlinks_uri,
-    by_uri_entry,
-    discr_by_uri_entry,
-    hyperlinks_by_uri_cmp
-);
-
-fn hyperlinks_by_inner_cmp(left: &hyperlinks_uri, right: &hyperlinks_uri) -> cmp::Ordering {
-    left.inner.cmp(&right.inner)
-}
-
-RB_GENERATE!(
-    hyperlinks_by_inner_tree,
-    hyperlinks_uri,
-    by_inner_entry,
-    discr_by_inner_entry,
-    hyperlinks_by_inner_cmp
-);
-
-unsafe fn hyperlinks_remove(hlu: *mut hyperlinks_uri) {
-    unsafe {
-        let hl = (*hlu).tree;
-
-        tailq_remove::<_, _>(&raw mut GLOBAL_HYPERLINKS, hlu);
-        GLOBAL_HYPERLINKS_COUNT.fetch_sub(1, atomic::Ordering::Relaxed);
-
-        rb_remove::<_, discr_by_inner_entry>(&raw mut (*hl).by_inner, hlu);
-        rb_remove::<_, discr_by_uri_entry>(&raw mut (*hl).by_uri, hlu);
-
-        free_((*hlu).internal_id);
-        free_((*hlu).external_id);
-        free_((*hlu).uri);
-        free_(hlu);
     }
 }
 
@@ -114,9 +83,6 @@ pub unsafe fn hyperlinks_put(
         let mut uri = null_mut();
         let mut internal_id = null_mut();
 
-        // Anonymous URI are stored with an empty internal ID and the tree
-        // comparator will make sure they never match each other (so each
-        // anonymous URI is unique).
         if internal_id_in.is_null() {
             internal_id_in = c!("");
         }
@@ -132,39 +98,56 @@ pub unsafe fn hyperlinks_put(
             vis_flags::VIS_OCTAL | vis_flags::VIS_CSTYLE,
         );
 
+        // Check if this (internal_id, uri) pair already exists
         if *internal_id_in != b'\0' {
-            let mut find = MaybeUninit::<hyperlinks_uri>::uninit();
-            let find = find.as_mut_ptr();
-            (*find).uri = uri;
-            (*find).internal_id = internal_id;
-
-            let hlu = rb_find::<_, discr_by_uri_entry>(&raw mut (*hl).by_uri, find);
-            if !hlu.is_null() {
+            let int_id_str = cstr_to_str(internal_id).to_string();
+            let uri_str = cstr_to_str(uri).to_string();
+            if let Some(&existing_inner) = (*hl).by_uri.get(&(int_id_str, uri_str)) {
                 free_(uri);
                 free_(internal_id);
-                return (*hlu).inner;
+                return existing_inner;
             }
         }
 
         let id = HYPERLINKS_NEXT_EXTERNAL_ID.fetch_add(1, atomic::Ordering::Relaxed);
         let external_id: *mut u8 = format_nul!("tmux{:X}", id);
 
-        let hlu = xcalloc1::<hyperlinks_uri>() as *mut hyperlinks_uri;
-        (*hlu).inner = (*hl).next_inner;
+        let inner = (*hl).next_inner;
         (*hl).next_inner += 1;
-        (*hlu).internal_id = internal_id;
-        (*hlu).external_id = external_id;
-        (*hlu).uri = uri;
-        (*hlu).tree = hl;
-        rb_insert::<_, discr_by_uri_entry>(&raw mut (*hl).by_uri, hlu);
-        rb_insert::<_, discr_by_inner_entry>(&raw mut (*hl).by_inner, hlu);
 
-        tailq_insert_tail(&raw mut GLOBAL_HYPERLINKS, hlu);
-        if GLOBAL_HYPERLINKS_COUNT.fetch_add(1, atomic::Ordering::Relaxed) + 1 == MAX_HYPERLINKS {
-            hyperlinks_remove(tailq_first(&raw mut GLOBAL_HYPERLINKS));
+        let mut hlu = Box::new(hyperlinks_uri {
+            tree: hl,
+            inner,
+            internal_id,
+            external_id,
+            uri,
+            list_entry: zeroed(),
+        });
+
+        // Add to URI index (only for non-anonymous URIs)
+        let int_id_str = cstr_to_str(internal_id).to_string();
+        if !int_id_str.is_empty() {
+            let uri_str = cstr_to_str(uri).to_string();
+            (*hl).by_uri.insert((int_id_str, uri_str), inner);
         }
 
-        (*hlu).inner
+        // Add to global LRU TAILQ
+        let hlu_ptr = &mut *hlu as *mut hyperlinks_uri;
+        tailq_insert_tail(&raw mut GLOBAL_HYPERLINKS, hlu_ptr);
+        if GLOBAL_HYPERLINKS_COUNT.fetch_add(1, atomic::Ordering::Relaxed) + 1 == MAX_HYPERLINKS {
+            // Evict oldest
+            let oldest = tailq_first(&raw mut GLOBAL_HYPERLINKS);
+            if !oldest.is_null() {
+                let oldest_hl = (*oldest).tree;
+                let oldest_inner = (*oldest).inner;
+                hyperlinks_remove_inner(oldest_hl, oldest_inner);
+            }
+        }
+
+        // Insert into primary store
+        (*hl).by_inner.insert(inner, hlu);
+
+        inner
     }
 }
 
@@ -176,34 +159,28 @@ pub unsafe fn hyperlinks_get(
     external_id_out: *mut *const u8,
 ) -> bool {
     unsafe {
-        let mut find = MaybeUninit::<hyperlinks_uri>::uninit();
-        let find = find.as_mut_ptr();
-        (*find).inner = inner;
-
-        let hlu = rb_find::<_, discr_by_inner_entry>(&raw mut (*hl).by_inner, find);
-        if hlu.is_null() {
+        let Some(hlu) = (*hl).by_inner.get(&inner) else {
             return false;
-        }
+        };
         if !internal_id_out.is_null() {
-            *internal_id_out = (*hlu).internal_id;
+            *internal_id_out = hlu.internal_id;
         }
         if !external_id_out.is_null() {
-            *external_id_out = (*hlu).external_id;
+            *external_id_out = hlu.external_id;
         }
-        *uri_out = (*hlu).uri as _;
+        *uri_out = hlu.uri as _;
         true
     }
 }
 
 pub unsafe fn hyperlinks_init() -> *mut hyperlinks {
-    unsafe {
-        let hl = xcalloc_::<hyperlinks>(1).as_ptr();
-        (*hl).next_inner = 1;
-        rb_init(&raw mut (*hl).by_uri);
-        rb_init(&raw mut (*hl).by_inner);
-        (*hl).references = 1;
-        hl
-    }
+    let hl = Box::new(hyperlinks {
+        next_inner: 1,
+        by_inner: BTreeMap::new(),
+        by_uri: HashMap::new(),
+        references: 1,
+    });
+    Box::into_raw(hl)
 }
 
 pub unsafe fn hyperlinks_copy(hl: *mut hyperlinks) -> *mut hyperlinks {
@@ -215,8 +192,9 @@ pub unsafe fn hyperlinks_copy(hl: *mut hyperlinks) -> *mut hyperlinks {
 
 pub unsafe fn hyperlinks_reset(hl: *mut hyperlinks) {
     unsafe {
-        for hlu in rb_foreach::<_, discr_by_inner_entry>(&raw mut (*hl).by_inner) {
-            hyperlinks_remove(hlu.as_ptr());
+        let inners: Vec<u32> = (*hl).by_inner.keys().copied().collect();
+        for inner in inners {
+            hyperlinks_remove_inner(hl, inner);
         }
     }
 }
@@ -226,7 +204,7 @@ pub unsafe fn hyperlinks_free(hl: *mut hyperlinks) {
         (*hl).references -= 1;
         if (*hl).references == 0 {
             hyperlinks_reset(hl);
-            free_(hl);
+            drop(Box::from_raw(hl));
         }
     }
 }
