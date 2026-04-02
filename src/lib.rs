@@ -953,9 +953,7 @@ enum style_range_type {
     STYLE_RANGE_USER,
 }
 
-impl_tailq_entry!(style_range, entry, tailq_entry<style_range>);
-// #[derive(crate::compat::TailQEntry)]
-#[repr(C)]
+#[derive(Copy, Clone)]
 struct style_range {
     type_: style_range_type,
     argument: u32,
@@ -963,11 +961,8 @@ struct style_range {
     start: u32,
     /// not included
     end: u32,
-
-    // #[entry]
-    entry: tailq_entry<style_range>,
 }
-type style_ranges = tailq_head<style_range>;
+type style_ranges = Vec<style_range>;
 
 /// Style default.
 #[repr(i32)]

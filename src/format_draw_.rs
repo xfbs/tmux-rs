@@ -1295,17 +1295,19 @@ pub unsafe fn format_draw(
 
             // Create ranges to return.
             for fr in tailq_foreach(&mut frs).map(NonNull::as_ptr) {
-                let sr = xcalloc1::<style_range>();
-                sr.type_ = (*fr).type_;
-                sr.argument = (*fr).argument;
+                let mut sr = style_range {
+                    type_: (*fr).type_,
+                    argument: (*fr).argument,
+                    string: [0u8; 16],
+                    start: (*fr).start,
+                    end: (*fr).end,
+                };
                 strlcpy(
                     sr.string.as_mut_ptr(),
                     (*fr).string.as_ptr(),
                     size_of::<[u8; 16]>(),
                 );
-                sr.start = (*fr).start;
-                sr.end = (*fr).end;
-                tailq_insert_tail(srs, sr);
+                (*srs).push(sr);
 
                 match sr.type_ {
                     style_range_type::STYLE_RANGE_NONE => (),

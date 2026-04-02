@@ -277,9 +277,9 @@ pub unsafe fn status_get_range(c: *mut client, x: u32, y: u32) -> *mut style_ran
         if y >= (*sl).entries.len() as u32 {
             return null_mut();
         }
-        for sr in tailq_foreach(&raw mut (*sl).entries[y as usize].ranges).map(NonNull::as_ptr) {
-            if x >= (*sr).start && x < (*sr).end {
-                return sr;
+        for sr in (*sl).entries[y as usize].ranges.iter_mut() {
+            if x >= sr.start && x < sr.end {
+                return sr as *mut style_range;
             }
         }
         null_mut()
@@ -289,10 +289,14 @@ pub unsafe fn status_get_range(c: *mut client, x: u32, y: u32) -> *mut style_ran
 /// Free all ranges.
 unsafe fn status_free_ranges(srs: *mut style_ranges) {
     unsafe {
-        for sr in tailq_foreach(srs).map(NonNull::as_ptr) {
-            tailq_remove(srs, sr);
-            free_(sr);
-        }
+        (*srs).clear();
+    }
+}
+
+/// Drop ranges Vec (for use when the owning struct is being freed).
+unsafe fn status_drop_ranges(srs: *mut style_ranges) {
+    unsafe {
+        std::ptr::drop_in_place(srs);
     }
 }
 
@@ -329,7 +333,7 @@ pub unsafe fn status_init(c: *mut client) {
         let sl = &raw mut (*c).status;
 
         for i in 0..(*sl).entries.len() {
-            tailq_init(&raw mut (*sl).entries[i].ranges);
+            std::ptr::write(&raw mut (*sl).entries[i].ranges, Vec::new());
         }
 
         screen_init(&raw mut (*sl).screen, (*c).tty.sx, 1, 0);
@@ -343,7 +347,7 @@ pub unsafe fn status_free(c: *mut client) {
         let sl = &raw mut (*c).status;
 
         for i in 0..(*sl).entries.len() {
-            status_free_ranges(&raw mut (*sl).entries[i].ranges);
+            status_drop_ranges(&raw mut (*sl).entries[i].ranges);
             free_((*sl).entries[i].expanded);
         }
 

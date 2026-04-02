@@ -11,7 +11,6 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::compat::queue::tailq_foreach;
 use crate::libc::strtol;
 use crate::options_::{options_find_choice, options_get, options_get_number___, options_get_string_, options_table_entry};
 use crate::*;
@@ -136,16 +135,15 @@ unsafe fn cmd_display_menu_get_position(
 
             for line_ in 0..lines {
                 line = line_;
-                let ranges = &raw mut (*tc).status.entries[line as usize].ranges;
-                for sr_ in tailq_foreach(ranges) {
-                    sr = sr_.as_ptr();
-                    if (*sr).type_ != style_range_type::STYLE_RANGE_WINDOW {
+                let ranges = &mut (*tc).status.entries[line as usize].ranges;
+                for sr_ in ranges.iter_mut() {
+                    if sr_.type_ != style_range_type::STYLE_RANGE_WINDOW {
                         continue;
                     }
-                    if (*sr).argument == (*wl).idx as u32 {
+                    if sr_.argument == (*wl).idx as u32 {
+                        sr = sr_ as *mut style_range;
                         break;
                     }
-                    continue;
                 }
                 if !sr.is_null() {
                     break;
