@@ -187,7 +187,9 @@ pub unsafe fn server_kill_pane(wp: *mut window_pane) {
 
 pub unsafe fn server_kill_window(w: *mut window, renumber: i32) {
     unsafe {
-        for &s in (*(&raw mut SESSIONS)).values() {
+        let sessions: Vec<*mut session> =
+            (*(&raw mut SESSIONS)).values().copied().collect();
+        for s in sessions {
             if !session_has(s, w) {
                 continue;
             }
