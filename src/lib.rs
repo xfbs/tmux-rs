@@ -1719,14 +1719,8 @@ struct tty_term {
     expand_context: ExpandContext,
     flags: term_flags,
 
-    entry: list_entry<tty_term>,
 }
-type tty_terms = list_head<tty_term>;
-impl ListEntry<tty_term, discr_entry> for tty_term {
-    unsafe fn field(this: *mut Self) -> *mut list_entry<tty_term> {
-        unsafe { &raw mut (*this).entry }
-    }
-}
+type tty_terms = Vec<*mut tty_term>;
 
 bitflags::bitflags! {
     #[repr(transparent)]

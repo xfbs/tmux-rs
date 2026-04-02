@@ -39,7 +39,7 @@ unsafe fn cmd_show_messages_terminals(
         let tc = cmdq_get_target_client(item);
 
         let mut n = 0u32;
-        for term in list_foreach::<_, discr_entry>(&raw mut TTY_TERMS).map(NonNull::as_ptr) {
+        for &term in (*(&raw mut TTY_TERMS)).iter() {
             if args_has(args, 't') && term != (*tc).tty.term {
                 continue;
             }

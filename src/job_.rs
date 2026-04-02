@@ -56,16 +56,9 @@ pub struct job {
     pub freecb: job_free_cb,
     pub data: *mut c_void,
 
-    pub entry: list_entry<job>,
-}
-impl ListEntry<job, ()> for job {
-    unsafe fn field(this: *mut Self) -> *mut list_entry<job> {
-        unsafe { &raw mut (*this).entry }
-    }
 }
 
-type joblist = list_head<job>;
-static mut ALL_JOBS: joblist = list_head_initializer();
+static mut ALL_JOBS: Vec<*mut job> = Vec::new();
 
 pub unsafe fn job_run(
     cmd: *const u8,
@@ -250,7 +243,7 @@ pub unsafe fn job_run(
 
             strlcpy((*job).tty.as_mut_ptr(), tty.as_ptr().cast(), TTY_NAME_MAX);
 
-            list_insert_head(&raw mut ALL_JOBS, job);
+            (*(&raw mut ALL_JOBS)).push(job);
 
             (*job).updatecb = updatecb;
             (*job).completecb = completecb;
@@ -301,7 +294,7 @@ pub unsafe fn job_transfer(job: *mut job, pid: *mut pid_t, tty: *mut u8, ttylen:
             strlcpy(tty, ((*job).tty).as_mut_ptr(), ttylen);
         }
 
-        list_remove(job);
+        (*(&raw mut ALL_JOBS)).retain(|&j| j != job);
         free_((*job).cmd);
 
         if let Some(freecb) = (*job).freecb
@@ -323,7 +316,7 @@ pub unsafe fn job_free(job: *mut job) {
     unsafe {
         log_debug!("free job {:p}: {}", job, _s((*job).cmd));
 
-        list_remove(job);
+        (*(&raw mut ALL_JOBS)).retain(|&j| j != job);
         free_((*job).cmd);
 
         if let Some(freecb) = (*job).freecb
@@ -419,7 +412,7 @@ unsafe extern "C-unwind" fn job_error_callback(
 
 pub unsafe fn job_check_died(pid: pid_t, status: i32) {
     unsafe {
-        let Some(job) = list_foreach(&raw mut ALL_JOBS).find(|job| pid == (*job.as_ptr()).pid)
+        let Some(job) = (*(&raw mut ALL_JOBS)).iter().find(|&&job| pid == (*job).pid).map(|&job| NonNull::new(job).unwrap())
         else {
             return;
         };
@@ -467,7 +460,7 @@ pub unsafe fn job_get_event(job: *mut job) -> *mut bufferevent {
 
 pub unsafe fn job_kill_all() {
     unsafe {
-        for job in list_foreach(&raw mut ALL_JOBS).map(NonNull::as_ptr) {
+        for job in (*(&raw mut ALL_JOBS)).iter().copied() {
             if (*job).pid != -1 {
                 kill((*job).pid, SIGTERM);
             }
@@ -477,7 +470,7 @@ pub unsafe fn job_kill_all() {
 
 pub unsafe fn job_still_running() -> bool {
     unsafe {
-        list_foreach(&raw mut ALL_JOBS)
+        (*(&raw mut ALL_JOBS)).iter().map(|&j| NonNull::new(j).unwrap())
             .map(NonNull::as_ptr)
             .any(|job| {
                 !(*job).flags.intersects(job_flag::JOB_NOWAIT)
@@ -488,7 +481,7 @@ pub unsafe fn job_still_running() -> bool {
 
 pub unsafe fn job_print_summary(item: *mut cmdq_item, mut blank: i32) {
     unsafe {
-        for (n, job) in list_foreach(&raw mut ALL_JOBS)
+        for (n, job) in (*(&raw mut ALL_JOBS)).iter().map(|&j| NonNull::new(j).unwrap())
             .map(NonNull::as_ptr)
             .enumerate()
         {

@@ -20,7 +20,7 @@ use crate::libc::{fnmatch, memset, strchr, strcmp, strcspn, strncmp};
 use crate::options_::*;
 use crate::*;
 
-pub static mut TTY_TERMS: tty_terms = list_head_initializer();
+pub static mut TTY_TERMS: tty_terms = Vec::new();
 
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -590,7 +590,7 @@ pub unsafe fn tty_term_create(
         (*term).name = xstrdup(name).as_ptr();
         (*term).codes = xcalloc_(tty_term_ncodes() as usize).as_ptr();
         (*term).expand_context = ExpandContext::new();
-        list_insert_head(&raw mut TTY_TERMS, term);
+        (*(&raw mut TTY_TERMS)).push(term);
         'error: {
             // Fill in codes.
             for i in 0..ncaps as usize {
@@ -722,7 +722,7 @@ pub unsafe fn tty_term_free(term: *mut tty_term) {
         }
         free_((*term).codes);
 
-        list_remove(term);
+        (*(&raw mut TTY_TERMS)).retain(|&t| t != term);
         free_((*term).name);
         free_(term);
     }
