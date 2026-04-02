@@ -7,8 +7,19 @@ use harness::TmuxTestHarness;
 /// Set up a tmux session and open a window running `cat -tv` in raw mode,
 /// mirroring the upstream regress/input-keys.sh pattern.
 ///
-/// Returns `(tmux, window_target)`.
-fn setup_cat_window(tmux: &TmuxTestHarness) -> String {
+/// Returns `(harness, window_target)`.
+fn new_harness_with_cat() -> (TmuxTestHarness, String) {
+    let mut tmux = TmuxTestHarness::new();
+    tmux.new_session()
+        .args(["-x", "80", "-y", "24"])
+        .run()
+        .assert_success();
+    tmux.wait_ready(Duration::from_secs(5));
+    tmux.cmd()
+        .args(["set", "-g", "escape-time", "0"])
+        .run()
+        .assert_success();
+
     let result = tmux
         .cmd()
         .args([
@@ -26,17 +37,27 @@ fn setup_cat_window(tmux: &TmuxTestHarness) -> String {
     let window = result.stdout_trimmed();
     // Give cat -tv a moment to start.
     std::thread::sleep(Duration::from_millis(300));
-    window
+    (tmux, window)
 }
 
 /// Send a key to the window, then capture what `cat -tv` printed.
-fn assert_key(tmux: &TmuxTestHarness, key: &str, expected: &str) {
-    let window = setup_cat_window(tmux);
+/// Reuses an existing cat -tv window, clearing the terminal between keys.
+fn assert_key(tmux: &TmuxTestHarness, window: &str, key: &str, expected: &str) {
+    // Reset terminal and clear history so we get a clean capture.
+    tmux.cmd()
+        .args(["send-keys", "-t", window, "-R"])
+        .run()
+        .assert_success();
+    tmux.cmd()
+        .args(["clear-history", "-t", window])
+        .run()
+        .assert_success();
+    std::thread::sleep(Duration::from_millis(50));
 
-    tmux.send_keys(&["-t", &window, key, "EOL"]).assert_success();
-    std::thread::sleep(Duration::from_millis(300));
+    tmux.send_keys(&["-t", window, key, "EOL"]).assert_success();
+    std::thread::sleep(Duration::from_millis(100));
 
-    let captured = tmux.capture_pane_target(&window);
+    let captured = tmux.capture_pane_target(window);
     // The first line should contain <expected>EOL...
     let first_line = captured.lines().next().unwrap_or("");
     let actual = if let Some(pos) = first_line.find("EOL") {
@@ -49,25 +70,6 @@ fn assert_key(tmux: &TmuxTestHarness, key: &str, expected: &str) {
         actual, expected,
         "key={key}: expected {expected:?}, got {actual:?} (full line: {first_line:?})"
     );
-
-    tmux.cmd()
-        .args(["kill-window", "-t", &window])
-        .run()
-        .assert_success();
-}
-
-fn new_harness() -> TmuxTestHarness {
-    let mut tmux = TmuxTestHarness::new();
-    tmux.new_session()
-        .args(["-x", "80", "-y", "24"])
-        .run()
-        .assert_success();
-    tmux.wait_ready(Duration::from_secs(5));
-    tmux.cmd()
-        .args(["set", "-g", "escape-time", "0"])
-        .run()
-        .assert_success();
-    tmux
 }
 
 // ---------------------------------------------------------------------------
@@ -75,7 +77,7 @@ fn new_harness() -> TmuxTestHarness {
 // ---------------------------------------------------------------------------
 #[test]
 fn input_keys_control() {
-    let tmux = new_harness();
+    let (tmux, window) = new_harness_with_cat();
 
     // C-a (^A) through C-z (^Z), skipping C-j which produces newline.
     let cases: Vec<(&str, &str)> = vec![
@@ -109,7 +111,7 @@ fn input_keys_control() {
     ];
 
     for (key, expected) in &cases {
-        assert_key(&tmux, key, expected);
+        assert_key(&tmux, &window, key, expected);
     }
 }
 
@@ -118,12 +120,12 @@ fn input_keys_control() {
 // ---------------------------------------------------------------------------
 #[test]
 fn input_keys_arrows() {
-    let tmux = new_harness();
+    let (tmux, window) = new_harness_with_cat();
 
-    assert_key(&tmux, "Up", "^[[A");
-    assert_key(&tmux, "Down", "^[[B");
-    assert_key(&tmux, "Right", "^[[C");
-    assert_key(&tmux, "Left", "^[[D");
+    assert_key(&tmux, &window, "Up", "^[[A");
+    assert_key(&tmux, &window, "Down", "^[[B");
+    assert_key(&tmux, &window, "Right", "^[[C");
+    assert_key(&tmux, &window, "Left", "^[[D");
 }
 
 // ---------------------------------------------------------------------------
@@ -131,19 +133,19 @@ fn input_keys_arrows() {
 // ---------------------------------------------------------------------------
 #[test]
 fn input_keys_function() {
-    let tmux = new_harness();
+    let (tmux, window) = new_harness_with_cat();
 
-    assert_key(&tmux, "F1", "^[OP");
-    assert_key(&tmux, "F2", "^[OQ");
-    assert_key(&tmux, "F3", "^[OR");
-    assert_key(&tmux, "F4", "^[OS");
-    assert_key(&tmux, "F5", "^[[15~");
-    assert_key(&tmux, "F6", "^[[17~");
-    assert_key(&tmux, "F8", "^[[19~");
-    assert_key(&tmux, "F9", "^[[20~");
-    assert_key(&tmux, "F10", "^[[21~");
-    assert_key(&tmux, "F11", "^[[23~");
-    assert_key(&tmux, "F12", "^[[24~");
+    assert_key(&tmux, &window, "F1", "^[OP");
+    assert_key(&tmux, &window, "F2", "^[OQ");
+    assert_key(&tmux, &window, "F3", "^[OR");
+    assert_key(&tmux, &window, "F4", "^[OS");
+    assert_key(&tmux, &window, "F5", "^[[15~");
+    assert_key(&tmux, &window, "F6", "^[[17~");
+    assert_key(&tmux, &window, "F8", "^[[19~");
+    assert_key(&tmux, &window, "F9", "^[[20~");
+    assert_key(&tmux, &window, "F10", "^[[21~");
+    assert_key(&tmux, &window, "F11", "^[[23~");
+    assert_key(&tmux, &window, "F12", "^[[24~");
 }
 
 // ---------------------------------------------------------------------------
@@ -151,17 +153,17 @@ fn input_keys_function() {
 // ---------------------------------------------------------------------------
 #[test]
 fn input_keys_meta() {
-    let tmux = new_harness();
+    let (tmux, window) = new_harness_with_cat();
 
-    assert_key(&tmux, "M-C-a", "^[^A");
-    assert_key(&tmux, "M-C-b", "^[^B");
-    assert_key(&tmux, "M-C-c", "^[^C");
-    assert_key(&tmux, "M-C-z", "^[^Z");
-    assert_key(&tmux, "M-a", "^[a");
-    assert_key(&tmux, "M-z", "^[z");
-    assert_key(&tmux, "M-Space", "^[ ");
-    assert_key(&tmux, "M-Tab", "^[^I");
-    assert_key(&tmux, "M-BSpace", "^[^?");
+    assert_key(&tmux, &window, "M-C-a", "^[^A");
+    assert_key(&tmux, &window, "M-C-b", "^[^B");
+    assert_key(&tmux, &window, "M-C-c", "^[^C");
+    assert_key(&tmux, &window, "M-C-z", "^[^Z");
+    assert_key(&tmux, &window, "M-a", "^[a");
+    assert_key(&tmux, &window, "M-z", "^[z");
+    assert_key(&tmux, &window, "M-Space", "^[ ");
+    assert_key(&tmux, &window, "M-Tab", "^[^I");
+    assert_key(&tmux, &window, "M-BSpace", "^[^?");
 }
 
 // ---------------------------------------------------------------------------
@@ -169,21 +171,21 @@ fn input_keys_meta() {
 // ---------------------------------------------------------------------------
 #[test]
 fn input_keys_special() {
-    let tmux = new_harness();
+    let (tmux, window) = new_harness_with_cat();
 
-    assert_key(&tmux, "IC", "^[[2~");
-    assert_key(&tmux, "Insert", "^[[2~");
-    assert_key(&tmux, "DC", "^[[3~");
-    assert_key(&tmux, "Delete", "^[[3~");
-    assert_key(&tmux, "Home", "^[[1~");
-    assert_key(&tmux, "End", "^[[4~");
-    assert_key(&tmux, "NPage", "^[[6~");
-    assert_key(&tmux, "PageDown", "^[[6~");
-    assert_key(&tmux, "PgDn", "^[[6~");
-    assert_key(&tmux, "PPage", "^[[5~");
-    assert_key(&tmux, "PageUp", "^[[5~");
-    assert_key(&tmux, "PgUp", "^[[5~");
-    assert_key(&tmux, "BTab", "^[[Z");
+    assert_key(&tmux, &window, "IC", "^[[2~");
+    assert_key(&tmux, &window, "Insert", "^[[2~");
+    assert_key(&tmux, &window, "DC", "^[[3~");
+    assert_key(&tmux, &window, "Delete", "^[[3~");
+    assert_key(&tmux, &window, "Home", "^[[1~");
+    assert_key(&tmux, &window, "End", "^[[4~");
+    assert_key(&tmux, &window, "NPage", "^[[6~");
+    assert_key(&tmux, &window, "PageDown", "^[[6~");
+    assert_key(&tmux, &window, "PgDn", "^[[6~");
+    assert_key(&tmux, &window, "PPage", "^[[5~");
+    assert_key(&tmux, &window, "PageUp", "^[[5~");
+    assert_key(&tmux, &window, "PgUp", "^[[5~");
+    assert_key(&tmux, &window, "BTab", "^[[Z");
 }
 
 // ---------------------------------------------------------------------------
@@ -191,10 +193,10 @@ fn input_keys_special() {
 // ---------------------------------------------------------------------------
 #[test]
 fn input_keys_escape() {
-    let tmux = new_harness();
+    let (tmux, window) = new_harness_with_cat();
 
-    assert_key(&tmux, "Escape", "^[");
-    assert_key(&tmux, "M-Escape", "^[^[");
+    assert_key(&tmux, &window, "Escape", "^[");
+    assert_key(&tmux, &window, "M-Escape", "^[^[");
 }
 
 // ---------------------------------------------------------------------------
@@ -202,10 +204,10 @@ fn input_keys_escape() {
 // ---------------------------------------------------------------------------
 #[test]
 fn input_keys_tab_bspace() {
-    let tmux = new_harness();
+    let (tmux, window) = new_harness_with_cat();
 
-    assert_key(&tmux, "Tab", "^I");
-    assert_key(&tmux, "BSpace", "^?");
+    assert_key(&tmux, &window, "Tab", "^I");
+    assert_key(&tmux, &window, "BSpace", "^?");
 }
 
 // ---------------------------------------------------------------------------
@@ -213,18 +215,18 @@ fn input_keys_tab_bspace() {
 // ---------------------------------------------------------------------------
 #[test]
 fn input_keys_printable() {
-    let tmux = new_harness();
+    let (tmux, window) = new_harness_with_cat();
 
-    assert_key(&tmux, "Space", " ");
-    assert_key(&tmux, "a", "a");
-    assert_key(&tmux, "z", "z");
-    assert_key(&tmux, "A", "A");
-    assert_key(&tmux, "Z", "Z");
-    assert_key(&tmux, "0", "0");
-    assert_key(&tmux, "9", "9");
-    assert_key(&tmux, "!", "!");
-    assert_key(&tmux, "@", "@");
-    assert_key(&tmux, "#", "#");
+    assert_key(&tmux, &window, "Space", " ");
+    assert_key(&tmux, &window, "a", "a");
+    assert_key(&tmux, &window, "z", "z");
+    assert_key(&tmux, &window, "A", "A");
+    assert_key(&tmux, &window, "Z", "Z");
+    assert_key(&tmux, &window, "0", "0");
+    assert_key(&tmux, &window, "9", "9");
+    assert_key(&tmux, &window, "!", "!");
+    assert_key(&tmux, &window, "@", "@");
+    assert_key(&tmux, &window, "#", "#");
 }
 
 // ---------------------------------------------------------------------------
@@ -232,16 +234,16 @@ fn input_keys_printable() {
 // ---------------------------------------------------------------------------
 #[test]
 fn input_keys_keypad() {
-    let tmux = new_harness();
+    let (tmux, window) = new_harness_with_cat();
 
-    assert_key(&tmux, "KP*", "*");
-    assert_key(&tmux, "KP+", "+");
-    assert_key(&tmux, "KP-", "-");
-    assert_key(&tmux, "KP.", ".");
-    assert_key(&tmux, "KP/", "/");
-    assert_key(&tmux, "KP0", "0");
-    assert_key(&tmux, "KP1", "1");
-    assert_key(&tmux, "KP9", "9");
+    assert_key(&tmux, &window, "KP*", "*");
+    assert_key(&tmux, &window, "KP+", "+");
+    assert_key(&tmux, &window, "KP-", "-");
+    assert_key(&tmux, &window, "KP.", ".");
+    assert_key(&tmux, &window, "KP/", "/");
+    assert_key(&tmux, &window, "KP0", "0");
+    assert_key(&tmux, &window, "KP1", "1");
+    assert_key(&tmux, &window, "KP9", "9");
 }
 
 // ---------------------------------------------------------------------------
@@ -249,9 +251,9 @@ fn input_keys_keypad() {
 // ---------------------------------------------------------------------------
 #[test]
 fn input_keys_control_punct() {
-    let tmux = new_harness();
+    let (tmux, window) = new_harness_with_cat();
 
-    assert_key(&tmux, "C-]", "^]");
-    assert_key(&tmux, "C-^", "^^");
-    assert_key(&tmux, "C-_", "^_");
+    assert_key(&tmux, &window, "C-]", "^]");
+    assert_key(&tmux, &window, "C-^", "^^");
+    assert_key(&tmux, &window, "C-_", "^_");
 }
