@@ -15,7 +15,7 @@ use std::collections::HashMap;
 
 use crate::*;
 
-pub type args_values = tailq_head<args_value>;
+pub type args_values = Vec<*mut args_value>;
 
 const ARGS_ENTRY_OPTIONAL_VALUE: c_int = 1;
 pub struct args_entry {
@@ -365,17 +365,17 @@ pub unsafe fn args_copy(args: *mut args, argc: i32, argv: *mut *mut u8) -> *mut 
         cmd_log_argv!(argc, argv, "{__func__}");
 
         let new_args = args_create();
-        for entry in (*args).tree.values().map(|e| &**e as *const args_entry as *mut args_entry) {
-            if tailq_empty(&raw mut (*entry).values) {
-                for _ in 0..(*entry).count {
-                    args_set(new_args, (*entry).flag, null_mut(), 0);
+        for entry in (*args).tree.values() {
+            if entry.values.is_empty() {
+                for _ in 0..entry.count {
+                    args_set(new_args, entry.flag, null_mut(), 0);
                 }
                 continue;
             }
-            for value in tailq_foreach(&raw mut (*entry).values) {
+            for &value in entry.values.iter() {
                 let new_value = xcalloc1();
-                args_copy_copy_value(new_value, value.as_ptr(), argc, argv);
-                args_set(new_args, (*entry).flag, new_value, 0);
+                args_copy_copy_value(new_value, value, argc, argv);
+                args_set(new_args, entry.flag, new_value, 0);
             }
         }
         if (*args).count == 0 {
@@ -416,9 +416,8 @@ pub unsafe fn args_free(args: *mut args) {
         args_free_values((*args).values, (*args).count);
         free_((*args).values);
 
-        for (_, mut entry) in (*args).tree.drain() {
-            for value in tailq_foreach(&raw mut entry.values).map(NonNull::as_ptr) {
-                tailq_remove(&raw mut entry.values, value);
+        for (_, entry) in (*args).tree.drain() {
+            for &value in entry.values.iter() {
                 args_free_value(value);
                 free_(value);
             }
@@ -508,47 +507,46 @@ pub unsafe fn args_print(args: *mut args) -> *mut u8 {
         let mut buf: *mut u8 = xcalloc(1, len).cast().as_ptr();
 
         // Process the flags first.
-        for entry in (*args).tree.values().map(|e| &**e as *const args_entry as *mut args_entry) {
-            if (*entry).flags & ARGS_ENTRY_OPTIONAL_VALUE != 0 {
+        for entry in (*args).tree.values() {
+            if entry.flags & ARGS_ENTRY_OPTIONAL_VALUE != 0 {
                 continue;
             }
-            if !tailq_empty(&raw mut (*entry).values) {
+            if !entry.values.is_empty() {
                 continue;
             }
 
             if *buf == b'\0' {
                 args_print_add!(&raw mut buf, &raw mut len, "-");
             }
-            for _ in 0..(*entry).count {
-                args_print_add!(&raw mut buf, &raw mut len, "{}", (*entry).flag as char);
+            for _ in 0..entry.count {
+                args_print_add!(&raw mut buf, &raw mut len, "{}", entry.flag as char);
             }
         }
 
         // Then the flags with arguments.
-        for entry in (*args).tree.values().map(|e| &**e as *const args_entry as *mut args_entry) {
-            if (*entry).flags & ARGS_ENTRY_OPTIONAL_VALUE != 0 {
+        for entry in (*args).tree.values() {
+            let entry_ptr = &**entry as *const args_entry as *mut args_entry;
+            if entry.flags & ARGS_ENTRY_OPTIONAL_VALUE != 0 {
                 if *buf != b'\0' {
-                    args_print_add!(&raw mut buf, &raw mut len, " -{}", (*entry).flag as char);
+                    args_print_add!(&raw mut buf, &raw mut len, " -{}", entry.flag as char);
                 } else {
-                    args_print_add!(&raw mut buf, &raw mut len, "-{}", (*entry).flag as char,);
+                    args_print_add!(&raw mut buf, &raw mut len, "-{}", entry.flag as char,);
                 }
-                last = entry;
+                last = entry_ptr;
                 continue;
             }
-            if tailq_empty(&raw mut (*entry).values) {
+            if entry.values.is_empty() {
                 continue;
             }
-            for value in tailq_foreach(&raw mut (*entry).values) {
-                {
-                    if *buf != b'\0' {
-                        args_print_add!(&raw mut buf, &raw mut len, " -{}", (*entry).flag as char,);
-                    } else {
-                        args_print_add!(&raw mut buf, &raw mut len, "-{}", (*entry).flag as char,);
-                    }
-                    args_print_add_value(&raw mut buf, &raw mut len, value.as_ptr());
+            for &value in entry.values.iter() {
+                if *buf != b'\0' {
+                    args_print_add!(&raw mut buf, &raw mut len, " -{}", entry.flag as char,);
+                } else {
+                    args_print_add!(&raw mut buf, &raw mut len, "-{}", entry.flag as char,);
                 }
+                args_print_add_value(&raw mut buf, &raw mut len, value);
             }
-            last = entry;
+            last = entry_ptr;
         }
         if !last.is_null() && ((*last).flags & ARGS_ENTRY_OPTIONAL_VALUE != 0) {
             args_print_add!(&raw mut buf, &raw mut len, " --");
@@ -641,19 +639,17 @@ pub unsafe fn args_has(args: *mut args, flag: char) -> bool {
 pub unsafe fn args_set(args: *mut args, flag: c_uchar, value: *mut args_value, flags: i32) {
     unsafe {
         let entry = (*args).tree.entry(flag).or_insert_with(|| {
-            let mut e = Box::new(args_entry {
+            Box::new(args_entry {
                 flag,
-                values: zeroed(),
+                values: Vec::new(),
                 count: 0,
                 flags,
-            });
-            tailq_init(&raw mut e.values);
-            e
+            })
         });
         entry.count += 1;
 
         if !value.is_null() && (*value).type_ != args_type::ARGS_NONE {
-            tailq_insert_tail(&raw mut entry.values, value);
+            entry.values.push(value);
         } else {
             free_(value);
         }
@@ -667,10 +663,10 @@ pub unsafe fn args_get(args: *mut args, flag: u8) -> *const u8 {
         if entry.is_null() {
             return null_mut();
         }
-        if tailq_empty(&raw mut (*entry).values) {
-            return null_mut();
+        match (*entry).values.last() {
+            Some(&v) => (*v).union_.string,
+            None => null_mut(),
         }
-        (*tailq_last(&raw mut (*entry).values)).union_.string
     }
 }
 
@@ -883,20 +879,15 @@ pub unsafe fn args_make_commands_get_command(state: *mut args_command_state) -> 
     }
 }
 
-/// Get first value in argument.
-pub unsafe fn args_first_value(args: *mut args, flag: u8) -> *mut args_value {
+/// Get the values for a flag as a slice.
+pub unsafe fn args_flag_values(args: *mut args, flag: u8) -> &'static [*mut args_value] {
     unsafe {
         let entry = args_find(args, flag);
         if entry.is_null() {
-            return null_mut();
+            return &[];
         }
-        tailq_first(&raw mut (*entry).values)
+        &(*entry).values
     }
-}
-
-/// Get next value in argument.
-pub unsafe fn args_next_value(value: *mut args_value) -> *mut args_value {
-    unsafe { tailq_next(value) }
 }
 
 /// Convert an argument value to a number.
@@ -913,7 +904,7 @@ pub unsafe fn args_strtonum(
             *cause = xstrdup_(c"missing").as_ptr();
             return 0;
         }
-        let value = tailq_last(&raw mut (*entry).values);
+        let value = (*entry).values.last().copied().unwrap_or(null_mut());
         if value.is_null()
             || (*value).type_ != args_type::ARGS_STRING
             || (*value).union_.string.is_null()
@@ -950,7 +941,7 @@ pub unsafe fn args_strtonum_and_expand(
             *cause = xstrdup_(c"missing").as_ptr();
             return 0;
         }
-        let value = tailq_last(&raw mut (*entry).values);
+        let value = (*entry).values.last().copied().unwrap_or(null_mut());
         if value.is_null()
             || (*value).type_ != args_type::ARGS_STRING
             || (*value).union_.string.is_null()
@@ -990,11 +981,11 @@ pub unsafe fn args_percentage(
             *cause = xstrdup_(c"missing").as_ptr();
             return 0;
         }
-        if tailq_empty(&raw mut (*entry).values) {
+        if (*entry).values.is_empty() {
             *cause = xstrdup_(c"empty").as_ptr();
             return 0;
         }
-        let value = (*tailq_last(&raw mut (*entry).values)).union_.string;
+        let value = (**(*entry).values.last().unwrap()).union_.string;
         args_string_percentage(value, minval, maxval, curval, cause)
     }
 }
@@ -1069,11 +1060,11 @@ pub unsafe fn args_percentage_and_expand(
             *cause = xstrdup_(c"missing").as_ptr();
             return 0;
         }
-        if tailq_empty(&raw mut (*entry).values) {
+        if (*entry).values.is_empty() {
             *cause = xstrdup_(c"empty").as_ptr();
             return 0;
         }
-        let value = (*tailq_last(&raw mut (*entry).values)).union_.string;
+        let value = (**(*entry).values.last().unwrap()).union_.string;
         args_string_percentage_and_expand(value, minval, maxval, curval, item, cause)
     }
 }

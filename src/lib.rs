@@ -1846,15 +1846,12 @@ union args_value_union {
     cmdlist: *mut cmd_list,
 }
 
-impl_tailq_entry!(args_value, entry, tailq_entry<args_value>);
 /// Argument value.
 #[repr(C)]
 struct args_value {
     type_: args_type,
     union_: args_value_union,
     cached: *mut u8,
-    // #[entry]
-    entry: tailq_entry<args_value>,
 }
 
 /// Arguments parsing type.

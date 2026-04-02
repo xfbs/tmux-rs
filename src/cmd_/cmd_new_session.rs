@@ -88,7 +88,6 @@ unsafe fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
         let count = args_count(args);
         let mut sc: spawn_context = zeroed();
         let retval;
-        let mut av: *mut args_value;
 
         'fail: {
             if std::ptr::eq(cmd_get_entry(self_), &CMD_HAS_SESSION_ENTRY) {
@@ -296,10 +295,8 @@ unsafe fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
             if !c.is_null() && !args_has(args, 'E') {
                 environ_update(GLOBAL_S_OPTIONS, (*c).environ, env);
             }
-            av = args_first_value(args, b'e');
-            while !av.is_null() {
+            for &av in args_flag_values(args, b'e') {
                 environ_put(env, (*av).union_.string, environ_flags::empty());
-                av = args_next_value(av);
             }
             s = session_create(prefix, newname.as_deref(), cwd, env, oo, tiop);
 

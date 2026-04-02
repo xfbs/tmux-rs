@@ -98,10 +98,8 @@ unsafe fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retv
         args_to_vector(args, &raw mut sc.argc, &raw mut sc.argv);
         sc.environ = environ_create().as_ptr();
 
-        let mut av = args_first_value(args, b'e');
-        while !av.is_null() {
+        for &av in args_flag_values(args, b'e') {
             environ_put(sc.environ, (*av).union_.string, environ_flags::empty());
-            av = args_next_value(av);
         }
 
         sc.idx = idx;
