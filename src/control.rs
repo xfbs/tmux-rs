@@ -15,26 +15,10 @@
 use crate::*;
 use std::collections::BTreeMap;
 
-#[repr(C)]
 pub struct control_block {
     pub size: usize,
     pub line: *mut u8,
     pub t: u64,
-
-    pub entry: tailq_entry<control_block>,
-    pub all_entry: tailq_entry<control_block>,
-}
-
-impl crate::compat::queue::Entry<control_block, discr_entry> for control_block {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<control_block> {
-        unsafe { &raw mut (*this).entry }
-    }
-}
-
-impl crate::compat::queue::Entry<control_block, discr_all_entry> for control_block {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<control_block> {
-        unsafe { &raw mut (*this).all_entry }
-    }
 }
 
 pub const CONTROL_PANE_OFF: i32 = 1;
@@ -50,7 +34,7 @@ pub struct control_pane {
 
     pub pending_flag: i32,
 
-    pub blocks: tailq_head<control_block>,
+    pub blocks: Vec<*mut control_block>,
 }
 pub type control_panes = BTreeMap<u32, Box<control_pane>>;
 
@@ -85,7 +69,7 @@ pub struct control_state {
 
     pub pending_count: u32,
 
-    pub all_blocks: tailq_head<control_block>,
+    pub all_blocks: Vec<*mut control_block>,
 
     pub read_event: *mut bufferevent,
     pub write_event: *mut bufferevent,
@@ -127,7 +111,7 @@ pub unsafe fn control_free_sub(cs: *mut control_state, name: &str) {
 pub unsafe fn control_free_block(cs: *mut control_state, cb: *mut control_block) {
     unsafe {
         free_((*cb).line);
-        tailq_remove::<_, discr_all_entry>(&raw mut (*cs).all_blocks, cb);
+        (*cs).all_blocks.retain(|&p| p != cb);
         free_(cb);
     }
 }
@@ -148,12 +132,14 @@ pub unsafe fn control_add_pane(c: *mut client, wp: *mut window_pane) -> NonNull<
         let id = (*wp).id;
 
         let cp = (*cs).panes.entry(id).or_insert_with(|| {
-            let mut cp: Box<control_pane> = Box::new(zeroed());
-            cp.pane = id;
-            cp.offset = (*wp).offset;
-            cp.queued = (*wp).offset;
-            tailq_init(&raw mut cp.blocks);
-            cp
+            Box::new(control_pane {
+                pane: id,
+                offset: (*wp).offset,
+                queued: (*wp).offset,
+                flags: 0,
+                pending_flag: 0,
+                blocks: Vec::new(),
+            })
         });
 
         NonNull::new_unchecked(&mut **cp as *mut control_pane)
@@ -164,10 +150,10 @@ pub unsafe fn control_discard_pane(c: *mut client, cp: *mut control_pane) {
     unsafe {
         let cs = (*c).control_state;
 
-        for cb in tailq_foreach::<_, discr_entry>(&raw mut (*cp).blocks).map(NonNull::as_ptr) {
-            tailq_remove::<_, discr_entry>(&raw mut (*cp).blocks, cb);
+        for &cb in &(*cp).blocks {
             control_free_block(cs, cb);
         }
+        (*cp).blocks.clear();
     }
 }
 
@@ -298,7 +284,7 @@ pub unsafe fn control_write_(c: *mut client, args: std::fmt::Arguments) {
     unsafe {
         let cs = (*c).control_state;
 
-        if tailq_empty(&raw mut (*cs).all_blocks) {
+        if (*cs).all_blocks.is_empty() {
             control_vwrite(c, args);
             return;
         }
@@ -307,7 +293,7 @@ pub unsafe fn control_write_(c: *mut client, args: std::fmt::Arguments) {
         let mut value = args.to_string();
         value.push('\0');
         (*cb).line = value.leak().as_mut_ptr().cast();
-        tailq_insert_tail::<_, discr_all_entry>(&raw mut (*cs).all_blocks, cb);
+        (*cs).all_blocks.push(cb);
         (*cb).t = get_timer();
 
         log_debug!(
@@ -327,7 +313,7 @@ pub unsafe fn control_check_age(
 ) -> i32 {
     let __func__ = "control_check_age";
     unsafe {
-        let cb = tailq_first(&raw mut (*cp).blocks);
+        let cb = (*cp).blocks.first().copied().unwrap_or(null_mut());
         if cb.is_null() {
             return 0;
         }
@@ -400,10 +386,10 @@ pub unsafe fn control_write_output(c: *mut client, wp: *mut window_pane) {
 
             let cb = xcalloc_::<control_block>(1).as_ptr();
             (*cb).size = new_size;
-            tailq_insert_tail::<_, discr_all_entry>(&raw mut (*cs).all_blocks, cb);
+            (*cs).all_blocks.push(cb);
             (*cb).t = get_timer();
 
-            tailq_insert_tail::<_, discr_entry>(&raw mut (*cp).blocks, cb);
+            (*cp).blocks.push(cb);
             log_debug!(
                 "{}: {}: new output block of {} for %%{}",
                 __func__,
@@ -502,7 +488,7 @@ pub unsafe fn control_all_done(c: *mut client) -> i32 {
     unsafe {
         let cs = (*c).control_state;
 
-        if !tailq_empty(&raw mut (*cs).all_blocks) {
+        if !(*cs).all_blocks.is_empty() {
             return 0;
         }
         (EVBUFFER_LENGTH((*(*cs).write_event).output) == 0) as i32
@@ -514,9 +500,7 @@ pub unsafe fn control_flush_all_blocks(c: *mut client) {
     unsafe {
         let cs = (*c).control_state;
 
-        for cb in
-            tailq_foreach::<_, discr_all_entry>(&raw mut (*cs).all_blocks).map(NonNull::as_ptr)
-        {
+        while let Some(&cb) = (*cs).all_blocks.first() {
             if (*cb).size != 0 {
                 break;
             }
@@ -529,7 +513,9 @@ pub unsafe fn control_flush_all_blocks(c: *mut client) {
 
             bufferevent_write((*cs).write_event, (*cb).line.cast(), strlen((*cb).line));
             bufferevent_write((*cs).write_event, c!("\n").cast(), 1);
-            control_free_block(cs, cb);
+            free_((*cb).line);
+            (*cs).all_blocks.remove(0);
+            free_(cb);
         }
     }
 }
@@ -601,16 +587,15 @@ pub unsafe fn control_write_pending(c: *mut client, cp: *mut control_pane, limit
 
         let wp = control_window_pane(c, (*cp).pane);
         if wp.is_none() || (*wp.unwrap().as_ptr()).fd == -1 {
-            for cb_ in tailq_foreach::<_, discr_entry>(&raw mut (*cp).blocks).map(NonNull::as_ptr) {
-                cb = cb_;
-                tailq_remove::<_, discr_entry>(&raw mut (*cp).blocks, cb);
+            for &cb in &(*cp).blocks {
                 control_free_block(cs, cb);
             }
+            (*cp).blocks.clear();
             control_flush_all_blocks(c);
             return 0;
         }
 
-        while used != limit && !tailq_empty(&raw mut (*cp).blocks) {
+        while used != limit && !(*cp).blocks.is_empty() {
             if control_check_age(c, transmute_ptr(wp), cp) != 0 {
                 if !message.is_null() {
                     evbuffer_free(message);
@@ -619,7 +604,7 @@ pub unsafe fn control_write_pending(c: *mut client, cp: *mut control_pane, limit
                 break;
             }
 
-            cb = tailq_first(&raw mut (*cp).blocks);
+            cb = (&(*cp).blocks)[0];
             let age = t.saturating_sub((*cb).t);
             log_debug!(
                 "{}: {}: output block {} (age {}) for %%{} (used {}/{})",
@@ -642,11 +627,11 @@ pub unsafe fn control_write_pending(c: *mut client, cp: *mut control_pane, limit
 
             (*cb).size -= size;
             if (*cb).size == 0 {
-                tailq_remove::<_, discr_entry>(&raw mut (*cp).blocks, cb);
+                (*cp).blocks.remove(0);
                 control_free_block(cs, cb);
 
-                cb = tailq_first(&raw mut (*cs).all_blocks);
-                if !cb.is_null() && (*cb).size == 0 {
+                let first_all = (*cs).all_blocks.first().copied().unwrap_or(null_mut());
+                if !first_all.is_null() && (*first_all).size == 0 {
                     if wp.is_some() && !message.is_null() {
                         control_write_data(c, message);
                         message = null_mut();
@@ -658,7 +643,7 @@ pub unsafe fn control_write_pending(c: *mut client, cp: *mut control_pane, limit
         if !message.is_null() {
             control_write_data(c, message);
         }
-        !tailq_empty(&raw mut (*cp).blocks) as i32
+        !(*cp).blocks.is_empty() as i32
     }
 }
 
@@ -727,7 +712,7 @@ pub unsafe fn control_start(c: *mut client) {
         let cs = (*c).control_state;
         std::ptr::write(&raw mut (*cs).panes, BTreeMap::new());
         std::ptr::write(&raw mut (*cs).pending_list, Vec::new());
-        tailq_init(&raw mut (*cs).all_blocks);
+        std::ptr::write(&raw mut (*cs).all_blocks, Vec::new());
         std::ptr::write(&raw mut (*cs).subs, BTreeMap::new());
 
         (*cs).read_event = bufferevent_new(
@@ -796,13 +781,17 @@ pub unsafe fn control_stop(c: *mut client) {
             evtimer_del(&raw mut (*cs).subs_timer);
         }
 
-        for cb in
-            tailq_foreach::<_, discr_all_entry>(&raw mut (*cs).all_blocks).map(NonNull::as_ptr)
-        {
-            control_free_block(cs, cb);
+        for &cb in &(*cs).all_blocks {
+            free_((*cb).line);
+            free_(cb);
         }
+        (*cs).all_blocks.clear();
         control_reset_offsets(c);
 
+        std::ptr::drop_in_place(&raw mut (*cs).all_blocks);
+        std::ptr::drop_in_place(&raw mut (*cs).panes);
+        std::ptr::drop_in_place(&raw mut (*cs).pending_list);
+        std::ptr::drop_in_place(&raw mut (*cs).subs);
         free_(cs);
     }
 }
