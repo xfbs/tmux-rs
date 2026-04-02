@@ -279,7 +279,6 @@ const unsafe fn ptr_to_mut_ref<'a, T>(value: *mut T) -> Option<&'a mut T> {
 }
 
 // discriminant structs
-struct discr_all_entry;
 struct discr_entry;
 struct discr_sentry;
 struct discr_wentry;
@@ -991,20 +990,6 @@ struct style {
 }
 
 #[cfg(feature = "sixel")]
-impl crate::compat::queue::Entry<image, discr_all_entry> for image {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<image> {
-        unsafe { &raw mut (*this).all_entry }
-    }
-}
-#[cfg(feature = "sixel")]
-impl crate::compat::queue::Entry<image, discr_entry> for image {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<image> {
-        unsafe { &raw mut (*this).entry }
-    }
-}
-#[cfg(feature = "sixel")]
-#[repr(C)]
-#[derive(Copy, Clone)]
 struct image {
     s: *mut screen,
     data: *mut sixel_image,
@@ -1013,13 +998,10 @@ struct image {
     py: u32,
     sx: u32,
     sy: u32,
-
-    all_entry: tailq_entry<image>,
-    entry: tailq_entry<image>,
 }
 
 #[cfg(feature = "sixel")]
-type images = tailq_head<image>;
+type images = Vec<*mut image>;
 
 /// Cursor style.
 #[repr(i32)]

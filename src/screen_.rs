@@ -79,7 +79,7 @@ pub fn screen_placeholder() -> screen {
         tabs: None,
         sel: null_mut(),
         #[cfg(feature = "sixel")]
-        images: unsafe { zeroed() },
+        images: Vec::new(),
         write_list: null_mut(),
         hyperlinks: null_mut(),
     }
@@ -125,17 +125,12 @@ pub unsafe fn screen_init(s: *mut screen, sx: u32, sy: u32, hlimit: u32) {
                 sel: null_mut(),
 
                 #[cfg(feature = "sixel")]
-                images: zeroed(),
+                images: Vec::new(),
 
                 write_list: null_mut(),
                 hyperlinks: null_mut(),
             },
         );
-
-        // tailq_init is self-referential, so must be called after the
-        // struct is at its final location.
-        #[cfg(feature = "sixel")]
-        tailq_init(&raw mut (*s).images);
 
         screen_reinit(s);
     }

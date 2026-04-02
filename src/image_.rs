@@ -13,19 +13,15 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use crate::*;
 
-static mut ALL_IMAGES: images = TAILQ_HEAD_INITIALIZER!(ALL_IMAGES);
+static mut ALL_IMAGES: Vec<*mut image> = Vec::new();
 
 static mut ALL_IMAGES_COUNT: u32 = 0;
 
-unsafe fn image_free(im: NonNull<image>) {
+unsafe fn image_free_one(im: *mut image) {
     unsafe {
-        let im = im.as_ptr();
-        let s = (*im).s;
-
-        tailq_remove::<_, discr_all_entry>(&raw mut ALL_IMAGES, im);
+        (*(&raw mut ALL_IMAGES)).retain(|&p| p != im);
         ALL_IMAGES_COUNT -= 1;
 
-        tailq_remove::<_, discr_entry>(&raw mut (*s).images, im);
         crate::image_sixel::sixel_free((*im).data);
         free_((*im).fallback);
         free_(im);
@@ -34,11 +30,17 @@ unsafe fn image_free(im: NonNull<image>) {
 
 pub unsafe fn image_free_all(s: *mut screen) -> bool {
     unsafe {
-        let redraw = !tailq_empty(&raw mut (*s).images);
+        let redraw = !(*s).images.is_empty();
 
-        for im in tailq_foreach::<_, discr_entry>(&raw mut (*s).images) {
-            image_free(im);
+        for &im in (*s).images.iter() {
+            (*(&raw mut ALL_IMAGES)).retain(|&p| p != im);
+            ALL_IMAGES_COUNT -= 1;
+
+            crate::image_sixel::sixel_free((*im).data);
+            free_((*im).fallback);
+            free_(im);
         }
+        (*s).images.clear();
         redraw
     }
 }
@@ -86,35 +88,39 @@ pub unsafe fn image_store(s: *mut screen, si: *mut sixel_image) -> *mut image {
             sx: 0,
             sy: 0,
             fallback: null_mut(),
-            all_entry: zeroed(),
-            entry: zeroed(),
         });
 
         (im.sx, im.sy) = crate::image_sixel::sixel_size_in_cells(&*si);
 
         im.fallback = image_fallback(im.sx, im.sy).into_raw().cast();
 
-        tailq_insert_tail::<image, discr_entry>(&raw mut (*s).images, &mut *im);
-        tailq_insert_tail::<image, discr_all_entry>(&raw mut ALL_IMAGES, &mut *im);
+        let im = Box::leak(im);
+        (*s).images.push(im);
+        (*(&raw mut ALL_IMAGES)).push(im);
         ALL_IMAGES_COUNT += 1;
         if ALL_IMAGES_COUNT == 10 {
-            image_free(NonNull::new(tailq_first::<image>(&raw mut ALL_IMAGES)).unwrap());
+            let oldest = *(*(&raw mut ALL_IMAGES)).first().unwrap();
+            let oldest_screen = (*oldest).s;
+            (*oldest_screen).images.retain(|&p| p != oldest);
+            image_free_one(oldest);
         }
 
-        Box::leak(im)
+        im
     }
 }
 
 pub unsafe fn image_check_line(s: *mut screen, py: u32, ny: u32) -> bool {
     unsafe {
         let mut redraw = false;
-
-        for im in tailq_foreach::<_, discr_entry>(&raw mut (*s).images) {
-            if py + ny > (*im.as_ptr()).py && py < (*im.as_ptr()).py + (*im.as_ptr()).sy {
-                image_free(im);
+        (*s).images.retain(|&im| {
+            if py + ny > (*im).py && py < (*im).py + (*im).sy {
+                image_free_one(im);
                 redraw = true;
+                false
+            } else {
+                true
             }
-        }
+        });
         redraw
     }
 }
@@ -122,17 +128,17 @@ pub unsafe fn image_check_line(s: *mut screen, py: u32, ny: u32) -> bool {
 pub unsafe fn image_check_area(s: *mut screen, px: u32, py: u32, nx: u32, ny: u32) -> bool {
     unsafe {
         let mut redraw = false;
-
-        for im in tailq_foreach::<_, discr_entry>(&raw mut (*s).images) {
-            if py + ny <= (*im.as_ptr()).py || py >= (*im.as_ptr()).py + (*im.as_ptr()).sy {
-                continue;
+        (*s).images.retain(|&im| {
+            if py + ny <= (*im).py || py >= (*im).py + (*im).sy {
+                return true;
             }
-            if px + nx <= (*im.as_ptr()).px || px >= (*im.as_ptr()).px + (*im.as_ptr()).sx {
-                continue;
+            if px + nx <= (*im).px || px >= (*im).px + (*im).sx {
+                return true;
             }
-            image_free(im);
+            image_free_one(im);
             redraw = true;
-        }
+            false
+        });
         redraw
     }
 }
@@ -140,44 +146,44 @@ pub unsafe fn image_check_area(s: *mut screen, px: u32, py: u32, nx: u32, ny: u3
 pub unsafe fn image_scroll_up(s: *mut screen, lines: u32) -> bool {
     unsafe {
         let mut redraw = false;
-
-        for im in tailq_foreach::<_, discr_entry>(&raw mut (*s).images) {
-            if (*im.as_ptr()).py >= lines {
-                (*im.as_ptr()).py -= lines;
+        (*s).images.retain(|&im| {
+            if (*im).py >= lines {
+                (*im).py -= lines;
                 redraw = true;
-                continue;
+                return true;
             }
-            if (*im.as_ptr()).py + (*im.as_ptr()).sy <= lines {
-                image_free(im);
+            if (*im).py + (*im).sy <= lines {
+                image_free_one(im);
                 redraw = true;
-                continue;
+                return false;
             }
-            let sx = (*im.as_ptr()).sx;
-            let sy = ((*im.as_ptr()).py + (*im.as_ptr()).sy) - lines;
+            let sx = (*im).sx;
+            let sy = ((*im).py + (*im).sy) - lines;
 
             let new = crate::image_sixel::sixel_scale(
-                (*im.as_ptr()).data,
+                (*im).data,
                 0,
                 0,
                 0,
-                (*im.as_ptr()).sy - sy,
+                (*im).sy - sy,
                 sx,
                 sy,
                 1,
             );
-            crate::image_sixel::sixel_free((*im.as_ptr()).data);
-            (*im.as_ptr()).data = new;
+            crate::image_sixel::sixel_free((*im).data);
+            (*im).data = new;
 
-            (*im.as_ptr()).py = 0;
-            ((*im.as_ptr()).sx, (*im.as_ptr()).sy) =
-                crate::image_sixel::sixel_size_in_cells(&*(*im.as_ptr()).data);
+            (*im).py = 0;
+            ((*im).sx, (*im).sy) =
+                crate::image_sixel::sixel_size_in_cells(&*(*im).data);
 
-            free_((*im.as_ptr()).fallback);
-            (*im.as_ptr()).fallback = image_fallback((*im.as_ptr()).sx, (*im.as_ptr()).sy)
+            free_((*im).fallback);
+            (*im).fallback = image_fallback((*im).sx, (*im).sy)
                 .into_raw()
                 .cast();
             redraw = true;
-        }
+            true
+        });
         redraw
     }
 }
