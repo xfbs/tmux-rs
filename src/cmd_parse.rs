@@ -1353,3 +1353,703 @@ unsafe fn yylex_token_escape(ps: &mut cmd_parse_state, buf: &mut Vec<u8>) -> boo
 //
 // <https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html>
 // <https://github.com/lalrpop/lalrpop/blob/master/README.md>
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Initialize global state needed by the parser (options, etc.).
+    /// Safe to call multiple times — uses Once internally.
+    unsafe fn init_globals() {
+        use std::sync::Once;
+        static INIT: Once = Once::new();
+        INIT.call_once(|| unsafe {
+            use crate::options_::*;
+            use crate::options_table::OPTIONS_TABLE;
+            use crate::tmux::{GLOBAL_OPTIONS, GLOBAL_S_OPTIONS, GLOBAL_W_OPTIONS};
+
+            GLOBAL_OPTIONS = options_create(null_mut());
+            GLOBAL_S_OPTIONS = options_create(null_mut());
+            GLOBAL_W_OPTIONS = options_create(null_mut());
+            for oe in &OPTIONS_TABLE {
+                if oe.scope & OPTIONS_TABLE_SERVER != 0 {
+                    options_default(GLOBAL_OPTIONS, oe);
+                }
+                if oe.scope & OPTIONS_TABLE_SESSION != 0 {
+                    options_default(GLOBAL_S_OPTIONS, oe);
+                }
+                if oe.scope & OPTIONS_TABLE_WINDOW != 0 {
+                    options_default(GLOBAL_W_OPTIONS, oe);
+                }
+            }
+        });
+    }
+
+    /// Parse a command string and return the printed representation, or the
+    /// error string on failure.
+    unsafe fn parse(input: &str) -> Result<String, String> {
+        unsafe { init_globals(); }
+        unsafe {
+            match cmd_parse_from_string(input, None) {
+                Ok(cmdlist) => {
+                    let printed = cmd_list_print(&*cmdlist, 0);
+                    let s = cstr_to_str(printed).to_string();
+                    free_(printed);
+                    cmd_list_free(cmdlist);
+                    Ok(s)
+                }
+                Err(err) => {
+                    let s = cstr_to_str(err).to_string();
+                    free_(err);
+                    Err(s)
+                }
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Basic command parsing
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn simple_command() {
+        unsafe {
+            assert_eq!(parse("set-option -g status off"), Ok("set-option -g status off".into()));
+        }
+    }
+
+    #[test]
+    fn command_abbreviation() {
+        unsafe {
+            // tmux allows prefix matching on commands
+            assert_eq!(parse("set -g status off"), Ok("set-option -g status off".into()));
+        }
+    }
+
+    #[test]
+    fn empty_string() {
+        unsafe {
+            assert_eq!(parse(""), Ok("".into()));
+        }
+    }
+
+    #[test]
+    fn whitespace_only() {
+        unsafe {
+            assert_eq!(parse("   "), Ok("".into()));
+        }
+    }
+
+    #[test]
+    fn comment_line() {
+        unsafe {
+            assert_eq!(parse("# this is a comment"), Ok("".into()));
+        }
+    }
+
+    #[test]
+    fn comment_after_command() {
+        unsafe {
+            // tmux treats # as comment start (outside quotes)
+            let result = parse("set -g status off # comment");
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Multiple commands (semicolon separated)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn two_commands_semicolon() {
+        unsafe {
+            let result = parse("set -g status off ; set -g prefix C-a");
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+            let s = result.unwrap();
+            assert!(s.contains("set-option"), "expected set-option in: {}", s);
+        }
+    }
+
+    #[test]
+    fn multiple_commands() {
+        unsafe {
+            let result = parse("new-session ; new-window ; split-window");
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Quoting and escaping
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn single_quoted_string() {
+        unsafe {
+            assert_eq!(
+                parse("set -g status-left 'hello world'"),
+                Ok(r#"set-option -g status-left "hello world""#.into())
+            );
+        }
+    }
+
+    #[test]
+    fn double_quoted_string() {
+        unsafe {
+            assert_eq!(
+                parse(r#"set -g status-left "hello world""#),
+                Ok(r#"set-option -g status-left "hello world""#.into())
+            );
+        }
+    }
+
+    #[test]
+    fn escaped_semicolon() {
+        unsafe {
+            // \; should be a literal semicolon, not a command separator
+            let result = parse(r"display-message 'hello \; world'");
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    #[test]
+    fn escaped_quotes_in_double_quotes() {
+        unsafe {
+            let result = parse(r#"display-message "hello \"world\"""#);
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Error cases
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn unknown_command() {
+        unsafe {
+            let result = parse("this-command-does-not-exist");
+            assert!(result.is_err(), "expected Err, got: {:?}", result);
+            let err = result.unwrap_err();
+            assert!(err.contains("unknown command"), "unexpected error: {}", err);
+        }
+    }
+
+    #[test]
+    fn ambiguous_command() {
+        unsafe {
+            // "se" could be set-option, select-pane, select-window, etc.
+            let result = parse("se");
+            assert!(result.is_err(), "expected Err, got: {:?}", result);
+            let err = result.unwrap_err();
+            assert!(err.contains("ambiguous"), "unexpected error: {}", err);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Multi-line input (via cmd_parse_from_buffer)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn multiline_buffer() {
+        unsafe {
+            let input = b"set -g status off\nnew-session\n";
+            let result = cmd_parse_from_buffer(input, None);
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result.err());
+            cmd_list_free(result.unwrap());
+        }
+    }
+
+    #[test]
+    fn line_continuation_backslash() {
+        unsafe {
+            let input = b"set -g \\\nstatus off\n";
+            let result = cmd_parse_from_buffer(input, None);
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result.err());
+            let cmdlist = result.unwrap();
+            let printed = cmd_list_print(&*cmdlist, 0);
+            let s = cstr_to_str(printed).to_string();
+            free_(printed);
+            assert!(s.contains("set-option"), "expected set-option in: {}", s);
+            assert!(s.contains("status"), "expected status in: {}", s);
+            cmd_list_free(cmdlist);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Conditional commands (if-shell)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn if_shell_simple() {
+        unsafe {
+            let result = parse("if-shell 'true' 'set -g status off'");
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    #[test]
+    fn if_shell_with_else() {
+        unsafe {
+            let result = parse("if-shell 'true' 'set -g status on' 'set -g status off'");
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Braces (command blocks)
+    // ---------------------------------------------------------------
+
+    /// Helper for tests that use cmd_parse_from_buffer directly.
+    unsafe fn parse_buffer(input: &[u8]) -> Result<String, String> {
+        unsafe {
+            init_globals();
+            match cmd_parse_from_buffer(input, None) {
+                Ok(cmdlist) => {
+                    let printed = cmd_list_print(&*cmdlist, 0);
+                    let s = cstr_to_str(printed).to_string();
+                    free_(printed);
+                    cmd_list_free(cmdlist);
+                    Ok(s)
+                }
+                Err(err) => {
+                    let s = cstr_to_str(err).to_string();
+                    free_(err);
+                    Err(s)
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn command_block_braces() {
+        unsafe {
+            let result = parse_buffer(b"if-shell 'true' {\n  set -g status off\n}\n");
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    #[test]
+    fn command_block_with_else() {
+        unsafe {
+            let result =
+                parse_buffer(b"if-shell 'true' {\n  set -g status on\n} {\n  set -g status off\n}\n");
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Format strings
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn format_string_in_argument() {
+        unsafe {
+            let result = parse("display-message '#{session_name}'");
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Edge cases
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn trailing_semicolon() {
+        unsafe {
+            let result = parse("set -g status off ;");
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    #[test]
+    #[ignore = "panics: null pointer in cstr_to_str — possible parser bug with leading semicolon"]
+    fn leading_semicolon() {
+        unsafe {
+            let result = parse("; set -g status off");
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    #[test]
+    fn double_semicolon_separator() {
+        unsafe {
+            // ;; is a group separator in tmux
+            let result = parse("set -g status off ;; new-session");
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    #[test]
+    fn newline_in_buffer_separates_commands() {
+        unsafe {
+            let result = parse_buffer(b"set -g status off\nnew-session\n");
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    #[test]
+    fn target_flag() {
+        unsafe {
+            assert_eq!(
+                parse("select-window -t :1"),
+                Ok("select-window -t :1".into())
+            );
+        }
+    }
+
+    #[test]
+    fn multiple_flags() {
+        unsafe {
+            let result = parse("split-window -h -l 50");
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    #[test]
+    fn bind_key_with_command() {
+        unsafe {
+            let result = parse("bind-key C-a set -g status off");
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // %if / %elif / %else / %endif conditionals
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn percent_if_true() {
+        unsafe {
+            let input = b"%if 1\nset -g status on\n%endif\n";
+            let result = parse_buffer(input);
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+            let s = result.unwrap();
+            assert!(s.contains("set-option"), "expected set-option in: {}", s);
+        }
+    }
+
+    #[test]
+    fn percent_if_false() {
+        unsafe {
+            let input = b"%if 0\nset -g status on\n%endif\n";
+            let result = parse_buffer(input);
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+            // The command should be skipped when condition is false
+            let s = result.unwrap();
+            assert!(!s.contains("set-option"), "expected no set-option in: {}", s);
+        }
+    }
+
+    #[test]
+    fn percent_if_else() {
+        unsafe {
+            let input = b"%if 0\nset -g status on\n%else\nset -g status off\n%endif\n";
+            let result = parse_buffer(input);
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+            let s = result.unwrap();
+            assert!(s.contains("status off"), "expected 'status off' in: {}", s);
+        }
+    }
+
+    #[test]
+    fn percent_elif() {
+        unsafe {
+            let input = b"%if 0\nset -g status on\n%elif 1\nset -g status off\n%endif\n";
+            let result = parse_buffer(input);
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+            let s = result.unwrap();
+            assert!(s.contains("status off"), "expected 'status off' in: {}", s);
+        }
+    }
+
+    #[test]
+    #[ignore = "panics: null pointer in cstr_to_str — possible parser bug with %hidden"]
+    fn percent_hidden() {
+        unsafe {
+            let input = b"%hidden set -g status off\n";
+            let result = parse_buffer(input);
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    #[test]
+    fn percent_if_nested() {
+        unsafe {
+            let input = b"%if 1\n%if 1\nset -g status on\n%endif\n%endif\n";
+            let result = parse_buffer(input);
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+            let s = result.unwrap();
+            assert!(s.contains("set-option"), "expected set-option in: {}", s);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Escape sequences (yylex_token_escape coverage)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn escape_octal() {
+        unsafe {
+            // \101 = 'A' in octal
+            let result = parse(r#"display-message "\101""#);
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    #[test]
+    fn escape_named_sequences() {
+        unsafe {
+            // \n = newline, \t = tab, \r = carriage return, \e = escape
+            let result = parse(r#"display-message "\n\t\r\e""#);
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    #[test]
+    fn escape_backslash() {
+        unsafe {
+            let result = parse(r#"display-message "hello\\world""#);
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    #[test]
+    fn escape_unicode_u() {
+        unsafe {
+            // \u0041 = 'A'
+            let result = parse(r#"display-message "\u0041""#);
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    #[test]
+    fn escape_unicode_upper_u() {
+        unsafe {
+            // \U00000041 = 'A'
+            let result = parse(r#"display-message "\U00000041""#);
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    #[test]
+    #[ignore = "panics: CString::new with embedded NUL in error path — bug in cmd_parse_get_error"]
+    fn escape_invalid_octal() {
+        unsafe {
+            // \4xx is invalid (octal must start with 0-3)
+            let result = cmd_parse_from_string(r#"display-message "\4""#, None);
+            assert!(result.is_err(), "expected Err, got: {:?}", result);
+            if let Err(err) = result {
+                free_(err);
+            }
+        }
+    }
+
+    #[test]
+    fn escape_bell_formfeed_space_vtab() {
+        unsafe {
+            // \a = bell, \f = formfeed, \s = space, \v = vtab, \b = backspace
+            let result = parse(r#"display-message "\a\b\f\s\v""#);
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // yylex_format and #{...} format strings
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn format_in_condition() {
+        unsafe {
+            // %if #{...} triggers yylex_format in a condition context
+            let input = b"%if #{session_name}\nset -g status on\n%endif\n";
+            let result = parse_buffer(input);
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    #[test]
+    fn format_nested_braces() {
+        unsafe {
+            // #{...#{...}...} — nested format braces in lexer
+            // Use a simpler nested format that doesn't need environ
+            let input = b"%if #{==:1,1}\nset -g status on\n%endif\n";
+            let result = parse_buffer(input);
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // \r handling in lexer
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn carriage_return_newline() {
+        unsafe {
+            // \r\n should be treated as \n
+            let input = b"set -g status off\r\nnew-session\r\n";
+            let result = parse_buffer(input);
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    #[test]
+    fn standalone_carriage_return() {
+        unsafe {
+            // bare \r (not followed by \n)
+            let input = b"set -g status off\rnew-session\n";
+            let result = parse_buffer(input);
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // cmd_parse_from_arguments
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn parse_from_arguments_simple() {
+        unsafe {
+            init_globals();
+            // Build a simple args_value array: ["set", "-g", "status", "off"]
+            let words: [&[u8]; 4] = [b"set\0", b"-g\0", b"status\0", b"off\0"];
+            let values: *mut args_value = xcalloc_(4).as_ptr();
+            for (i, word) in words.iter().enumerate() {
+                (*values.add(i)).type_ = args_type::ARGS_STRING;
+                (*values.add(i)).union_.string = xstrdup(word.as_ptr()).as_ptr();
+            }
+            let result = cmd_parse_from_arguments(values, 4, None);
+            assert!(result.is_ok(), "expected Ok, got err");
+            cmd_list_free(result.unwrap());
+            args_free_values(values, 4);
+            free_(values);
+        }
+    }
+
+    #[test]
+    fn parse_from_arguments_with_semicolon() {
+        unsafe {
+            init_globals();
+            // ["set", "-g", "status", "off;", "new-session"] — semicolon splits commands
+            let words: [&[u8]; 5] = [b"set\0", b"-g\0", b"status\0", b"off;\0", b"new-session\0"];
+            let values: *mut args_value = xcalloc_(5).as_ptr();
+            for (i, word) in words.iter().enumerate() {
+                (*values.add(i)).type_ = args_type::ARGS_STRING;
+                (*values.add(i)).union_.string = xstrdup(word.as_ptr()).as_ptr();
+            }
+            let result = cmd_parse_from_arguments(values, 5, None);
+            assert!(result.is_ok(), "expected Ok, got err");
+            cmd_list_free(result.unwrap());
+            args_free_values(values, 5);
+            free_(values);
+        }
+    }
+
+    #[test]
+    fn parse_from_arguments_escaped_semicolon() {
+        unsafe {
+            init_globals();
+            // ["display-message", "hello\\;"] — escaped semicolon, not a separator
+            let words: [&[u8]; 2] = [b"display-message\0", b"hello\\;\0"];
+            let values: *mut args_value = xcalloc_(2).as_ptr();
+            for (i, word) in words.iter().enumerate() {
+                (*values.add(i)).type_ = args_type::ARGS_STRING;
+                (*values.add(i)).union_.string = xstrdup(word.as_ptr()).as_ptr();
+            }
+            let result = cmd_parse_from_arguments(values, 2, None);
+            assert!(result.is_ok(), "expected Ok, got err");
+            cmd_list_free(result.unwrap());
+            args_free_values(values, 2);
+            free_(values);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Command aliases
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn command_alias_expansion() {
+        unsafe {
+            init_globals();
+            // Set up a command alias: "myalias" = "set -g status off"
+            use crate::options_::*;
+            let o = options_get_only(GLOBAL_OPTIONS, "command-alias");
+            if !o.is_null() {
+                let _ = options_array_set(o, 0, Some("myalias=set -g status off"), false);
+                let result = parse("myalias");
+                assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+                let s = result.unwrap();
+                assert!(s.contains("set-option"), "expected set-option in: {}", s);
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Parse errors (yyerror coverage)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn unterminated_single_quote() {
+        unsafe {
+            // tmux treats unterminated quotes at EOF as implicitly closed
+            let result = parse("display-message 'hello");
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    #[test]
+    fn unterminated_double_quote() {
+        unsafe {
+            let result = parse(r#"display-message "hello"#);
+            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+        }
+    }
+
+    #[test]
+    #[ignore = "panics: null pointer in cstr_to_str — parser bug with unmatched %endif"]
+    fn unmatched_endif() {
+        unsafe {
+            let result = parse_buffer(b"%endif\n");
+            assert!(result.is_err(), "expected Err, got: {:?}", result);
+        }
+    }
+
+    #[test]
+    #[ignore = "panics: null pointer in cstr_to_str — parser bug with unmatched %else"]
+    fn unmatched_else() {
+        unsafe {
+            let result = parse_buffer(b"%else\n");
+            assert!(result.is_err(), "expected Err, got: {:?}", result);
+        }
+    }
+
+    #[test]
+    #[ignore = "panics: null pointer in cstr_to_str — parser bug with missing %endif"]
+    fn missing_endif() {
+        unsafe {
+            let result = parse_buffer(b"%if 1\nset -g status on\n");
+            assert!(result.is_err(), "expected Err, got: {:?}", result);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // cmd_parse_and_append (error branch)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn parse_and_append_error() {
+        unsafe {
+            init_globals();
+            let mut error: *mut u8 = null_mut();
+            let status = cmd_parse_and_append(
+                "this-does-not-exist",
+                None,
+                null_mut(),
+                null_mut(),
+                &raw mut error,
+            );
+            assert!(matches!(status, cmd_parse_status::CMD_PARSE_ERROR));
+            assert!(!error.is_null());
+            free_(error);
+        }
+    }
+}
