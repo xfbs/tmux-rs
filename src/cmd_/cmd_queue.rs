@@ -12,10 +12,6 @@
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use crate::cfg_::cfg_add_cause;
-use crate::compat::queue::{
-    tailq_empty, tailq_first, tailq_insert_after, tailq_insert_tail, tailq_last, tailq_next,
-    tailq_remove,
-};
 use crate::xmalloc::xcalloc1;
 use crate::*;
 use crate::options_::*;
@@ -42,8 +38,6 @@ pub enum cmdq_type {
     CMDQ_CALLBACK,
 }
 
-// #[derive(crate::compat::TailQEntry)]
-impl_tailq_entry!(cmdq_item, entry, tailq_entry<cmdq_item>);
 #[repr(C)]
 pub struct cmdq_item {
     pub name: *mut u8,
@@ -70,12 +64,7 @@ pub struct cmdq_item {
 
     pub cb: cmdq_cb,
     pub data: *mut c_void,
-
-    // #[entry]
-    pub entry: tailq_entry<cmdq_item>,
 }
-
-pub type cmdq_item_list = tailq_head<cmdq_item>;
 
 #[repr(C)]
 pub struct cmdq_state {
@@ -88,10 +77,9 @@ pub struct cmdq_state {
     pub current: cmd_find_state,
 }
 
-#[repr(C)]
 pub struct cmdq_list {
     pub item: *mut cmdq_item,
-    pub list: cmdq_item_list,
+    pub list: Vec<*mut cmdq_item>,
 }
 
 pub unsafe fn cmdq_name(c: *const client) -> *const u8 {
@@ -129,22 +117,19 @@ pub unsafe fn cmdq_get(c: *mut client) -> *mut cmdq_list {
 }
 
 pub fn cmdq_new() -> NonNull<cmdq_list> {
-    let mut queue = Box::new(cmdq_list {
+    let queue = Box::new(cmdq_list {
         item: null_mut(),
-        list: tailq_head {
-            tqh_first: null_mut(),
-            tqh_last: null_mut(),
-        },
+        list: Vec::new(),
     });
-    tailq_init_(&mut queue.list);
     NonNull::new(Box::leak(queue)).unwrap()
 }
 
 pub unsafe fn cmdq_free(queue: *mut cmdq_list) {
     unsafe {
-        if !tailq_empty(&raw mut (*queue).list) {
+        if !(*queue).list.is_empty() {
             fatalx("queue not empty");
         }
+        std::ptr::drop_in_place(&raw mut (*queue).list);
         free_(queue);
     }
 }
@@ -307,7 +292,7 @@ pub unsafe fn cmdq_append(c: *mut client, mut item: *mut cmdq_item) -> *mut cmdq
             (*item).client = c;
 
             (*item).queue = queue;
-            tailq_insert_tail::<_, ()>(&raw mut (*queue).list, item);
+            (*queue).list.push(item);
             log_debug!("{} {}: {}", __func__, _s(cmdq_name(c)), _s((*item).name));
 
             item = next;
@@ -315,7 +300,7 @@ pub unsafe fn cmdq_append(c: *mut client, mut item: *mut cmdq_item) -> *mut cmdq
                 break;
             }
         }
-        tailq_last(&raw mut (*queue).list)
+        *(*queue).list.last().unwrap()
     }
 }
 
@@ -340,7 +325,8 @@ pub unsafe fn cmdq_insert_after(
             (*item).client = c;
 
             (*item).queue = queue;
-            tailq_insert_after(&raw mut (*queue).list, after, item);
+            let pos = (*queue).list.iter().position(|&p| p == after).unwrap();
+            (*queue).list.insert(pos + 1, item);
             log_debug!(
                 "{} {}: {} after {}",
                 "cmdq_insert_after",
@@ -467,7 +453,7 @@ pub unsafe fn cmdq_remove(item: *mut cmdq_item) {
         }
         cmdq_free_state((*item).state);
 
-        tailq_remove(&raw mut (*(*item).queue).list, item);
+        (*(*item).queue).list.retain(|&p| p != item);
 
         free_((*item).name);
         free_(item);
@@ -479,13 +465,15 @@ pub unsafe fn cmdq_remove_group(item: *mut cmdq_item) {
         if (*item).group == 0 {
             return;
         }
-        let mut this = tailq_next(item);
-        while !this.is_null() {
-            let next = tailq_next(this);
-            if (*this).group == (*item).group {
-                cmdq_remove(this);
-            }
-            this = next;
+        let list = &(*(*item).queue).list;
+        let pos = list.iter().position(|&p| p == item).unwrap_or(list.len());
+        let to_remove: Vec<*mut cmdq_item> = list[pos + 1..]
+            .iter()
+            .copied()
+            .filter(|&p| (*p).group == (*item).group)
+            .collect();
+        for this in to_remove {
+            cmdq_remove(this);
         }
     }
 }
@@ -760,11 +748,11 @@ pub unsafe fn cmdq_next(c: *mut client) -> u32 {
         let name = cmdq_name(c);
 
         'waiting: {
-            if tailq_empty(&raw mut (*queue).list) {
+            if (*queue).list.is_empty() {
                 // log_debug!("{} {}: empty", __func__, _s(name));
                 return 0;
             }
-            if (*tailq_first(&raw mut (*queue).list)).flags & CMDQ_WAITING != 0 {
+            if (*(&(*queue).list)[0]).flags & CMDQ_WAITING != 0 {
                 // Too noisy:
                 // log_debug!("{} {}: waiting", __func__, _s(name));
                 return 0;
@@ -772,7 +760,10 @@ pub unsafe fn cmdq_next(c: *mut client) -> u32 {
 
             log_debug!("{} {}: enter", __func__, _s(name));
             loop {
-                (*queue).item = tailq_first(&raw mut (*queue).list);
+                let Some(&first) = (*queue).list.first() else {
+                    break;
+                };
+                (*queue).item = first;
                 let item = (*queue).item;
                 if item.is_null() {
                     break;
