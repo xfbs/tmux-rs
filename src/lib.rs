@@ -1551,7 +1551,7 @@ struct environ_entry {
 #[repr(C)]
 struct session_group {
     name: Cow<'static, str>,
-    sessions: tailq_head<session>,
+    sessions: Vec<*mut session>,
 }
 type session_groups = BTreeMap<String, Box<session_group>>;
 
@@ -1590,10 +1590,8 @@ struct session {
 
     references: i32,
 
-    gentry: tailq_entry<session>,
 }
 type sessions = BTreeMap<String, *mut session>;
-impl_tailq_entry!(session, gentry, tailq_entry<session>);
 
 const MOUSE_MASK_BUTTONS: u32 = 195;
 const MOUSE_MASK_SHIFT: u32 = 4;
@@ -2249,8 +2247,6 @@ bitflags::bitflags! {
     }
 }
 
-impl_tailq_entry!(client, entry, tailq_entry<client>);
-#[repr(C)]
 struct client {
     name: *const u8,
     peer: *mut tmuxpeer,
@@ -2352,10 +2348,8 @@ struct client {
     clipboard_panes: *mut c_uint,
     clipboard_npanes: c_uint,
 
-    // #[entry]
-    entry: tailq_entry<client>,
 }
-type clients = tailq_head<client>;
+type clients = Vec<*mut client>;
 
 /// Control mode subscription type.
 #[repr(i32)]

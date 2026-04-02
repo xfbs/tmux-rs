@@ -543,8 +543,8 @@ pub unsafe fn session_set_current(s: *mut session, wl: *mut winlink) -> i32 {
 pub unsafe fn session_group_contains(target: *mut session) -> *mut session_group {
     unsafe {
         for sg in (*(&raw mut SESSION_GROUPS)).values_mut() {
-            for s in tailq_foreach(&raw mut sg.sessions) {
-                if s.as_ptr() == target {
+            for &s in &sg.sessions {
+                if s == target {
                     return &mut **sg as *mut session_group;
                 }
             }
@@ -572,9 +572,10 @@ pub unsafe fn session_group_new(name: &str) -> *mut session_group {
             return sg;
         }
 
-        let mut sg_box: Box<session_group> = Box::new(zeroed());
-        sg_box.name = name.to_string().into();
-        tailq_init(&raw mut sg_box.sessions);
+        let sg_box = Box::new(session_group {
+            name: name.to_string().into(),
+            sessions: Vec::new(),
+        });
 
         let sg_groups = &mut *(&raw mut SESSION_GROUPS);
         sg_groups.insert(name.to_string(), sg_box);
@@ -586,7 +587,7 @@ pub unsafe fn session_group_new(name: &str) -> *mut session_group {
 pub unsafe fn session_group_add(sg: *mut session_group, s: *mut session) {
     unsafe {
         if session_group_contains(s).is_null() {
-            tailq_insert_tail(&raw mut (*sg).sessions, s);
+            (*sg).sessions.push(s);
         }
     }
 }
@@ -599,8 +600,8 @@ pub unsafe fn session_group_remove(s: *mut session) {
         if sg.is_null() {
             return;
         }
-        tailq_remove(&raw mut (*sg).sessions, s);
-        if tailq_empty(&raw mut (*sg).sessions) {
+        (*sg).sessions.retain(|&p| p != s);
+        if (*sg).sessions.is_empty() {
             let name = (*sg).name.to_string();
             (*(&raw mut SESSION_GROUPS)).remove(&name);
         }
@@ -609,14 +610,14 @@ pub unsafe fn session_group_remove(s: *mut session) {
 
 /// Count number of sessions in session group.
 pub unsafe fn session_group_count(sg: *mut session_group) -> u32 {
-    unsafe { tailq_foreach(&raw mut (*sg).sessions).count() as u32 }
+    unsafe { (*sg).sessions.len() as u32 }
 }
 
 /// Count number of clients attached to sessions in session group.
 pub unsafe fn session_group_attached_count(sg: *mut session_group) -> u32 {
     unsafe {
-        tailq_foreach(&raw mut (*sg).sessions)
-            .map(|s| (*s.as_ptr()).attached)
+        (*sg).sessions.iter()
+            .map(|&s| (*s).attached)
             .sum()
     }
 }
@@ -630,7 +631,7 @@ pub unsafe fn session_group_synchronize_to(s: *mut session) {
         }
 
         let mut target = null_mut();
-        for target_ in tailq_foreach(&raw mut (*sg).sessions).map(std::ptr::NonNull::as_ptr) {
+        for &target_ in &(*sg).sessions {
             target = target_;
             if target != s {
                 break;
@@ -650,7 +651,7 @@ pub unsafe fn session_group_synchronize_from(target: *mut session) {
             return;
         }
 
-        for s in tailq_foreach(&raw mut (*sg).sessions).map(std::ptr::NonNull::as_ptr) {
+        for &s in &(*sg).sessions {
             if s != target {
                 session_group_synchronize1(target, s);
             }

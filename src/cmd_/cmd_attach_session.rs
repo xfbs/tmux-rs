@@ -12,7 +12,7 @@
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use super::*;
-use crate::compat::queue::tailq_foreach;
+
 
 
 pub static CMD_ATTACH_SESSION_ENTRY: cmd_entry = cmd_entry {
@@ -114,7 +114,7 @@ pub unsafe fn cmd_attach_session(
                 } else {
                     msgtype = msgtype::MSG_DETACH;
                 }
-                for c_loop in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+                for c_loop in (&*(&raw mut CLIENTS)).iter().copied() {
                     {
                         if (*c_loop).session != s || c == c_loop {
                             continue;
@@ -144,7 +144,7 @@ pub unsafe fn cmd_attach_session(
                 } else {
                     msgtype::MSG_DETACH
                 };
-                for c_loop in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+                for c_loop in (&*(&raw mut CLIENTS)).iter().copied() {
                     if (*c_loop).session != s || c == c_loop {
                         continue;
                     }

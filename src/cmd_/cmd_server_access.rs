@@ -11,7 +11,7 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::compat::queue::tailq_foreach;
+
 use crate::libc::{getpwnam, getuid};
 use crate::*;
 
@@ -35,7 +35,7 @@ unsafe fn cmd_server_access_deny(item: *mut cmdq_item, pw: *mut libc::passwd) ->
             cmdq_error!(item, "user {} not found", _s((*pw).pw_name));
             return cmd_retval::CMD_RETURN_ERROR;
         }
-        for loop_ in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+        for loop_ in (&*(&raw mut CLIENTS)).iter().copied() {
             let uid = proc_get_peer_uid((*loop_).peer);
             if uid == server_acl_get_uid(user) {
                 (*loop_).exit_message = xstrdup_(c"access not allowed").as_ptr();

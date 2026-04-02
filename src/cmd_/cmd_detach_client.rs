@@ -11,7 +11,7 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::compat::queue::tailq_foreach;
+
 use crate::*;
 
 pub static CMD_DETACH_CLIENT_ENTRY: cmd_entry = cmd_entry {
@@ -68,7 +68,7 @@ pub unsafe fn cmd_detach_client_exec(self_: *mut cmd, item: *mut cmdq_item) -> c
             if s.is_null() {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
-            for loop_ in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+            for loop_ in (&*(&raw mut CLIENTS)).iter().copied() {
                 if (*loop_).session == s {
                     if !cmd.is_null() {
                         server_client_exec(loop_, cmd);
@@ -81,7 +81,7 @@ pub unsafe fn cmd_detach_client_exec(self_: *mut cmd, item: *mut cmdq_item) -> c
         }
 
         if args_has(args, 'a') {
-            for loop_ in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+            for loop_ in (&*(&raw mut CLIENTS)).iter().copied() {
                 if !(*loop_).session.is_null() && loop_ != tc {
                     if !cmd.is_null() {
                         server_client_exec(loop_, cmd);

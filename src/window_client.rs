@@ -105,7 +105,7 @@ pub unsafe fn window_client_build(
         }
         (*data).item_list = Vec::new();
 
-        for c in crate::compat::queue::tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+        for c in (&*(&raw mut CLIENTS)).iter().copied() {
             if (*c).session.is_null() || (*c).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
                 continue;
             }

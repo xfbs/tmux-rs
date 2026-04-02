@@ -1133,7 +1133,7 @@ pub unsafe fn tty_window_offset1(
 /// Update stored offsets for a window and redraw if necessary.
 pub unsafe fn tty_update_window_offset(w: *mut window) {
     unsafe {
-        for c in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+        for c in (&*(&raw mut CLIENTS)).iter().copied() {
             if !(*c).session.is_null()
                 && !(*(*c).session).curw.is_null()
                 && (*(*(*c).session).curw).window == w
@@ -2061,7 +2061,7 @@ pub unsafe fn tty_write(cmdfn: unsafe fn(*mut tty, *const tty_ctx), ctx: *mut tt
             return;
         };
 
-        for c in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+        for c in (&*(&raw mut CLIENTS)).iter().copied() {
             if tty_client_ready(ctx, c) {
                 let state = set_client_cb(ctx, c);
                 if state == -1 {

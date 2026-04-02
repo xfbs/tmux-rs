@@ -497,7 +497,8 @@ unsafe fn window_tree_build(
                     !sg.is_null()
                 })
                 && ((sg == current && s != (*data).fs.s)
-                    || (sg != current && s != tailq_first(&raw mut (*sg).sessions)))
+                    || (sg != current && s != (*sg).sessions.first().copied().unwrap_or(null_mut())))
+
             {
                 continue;
             }

@@ -11,7 +11,7 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::compat::queue::tailq_foreach;
+
 use crate::*;
 
 const LIST_CLIENTS_TEMPLATE: *const u8 = c!(
@@ -54,7 +54,7 @@ unsafe fn cmd_list_clients_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
         let filter = args_get(args, b'f');
 
         let mut idx = 0;
-        for c in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+        for c in (&*(&raw mut CLIENTS)).iter().copied() {
             if (*c).session.is_null() || (!s.is_null() && s != (*c).session) {
                 continue;
             }

@@ -12,7 +12,7 @@
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use crate::compat::{
-    queue::{tailq_first, tailq_foreach},
+    queue::tailq_first,
     strlcat,
 };
 use crate::libc::strcmp;
@@ -96,7 +96,7 @@ pub unsafe fn cmd_find_best_client(mut s: *const session) -> *mut client {
         }
 
         let mut c = null_mut();
-        for c_loop in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+        for c_loop in (&*(&raw mut CLIENTS)).iter().copied() {
             if (*c_loop).session.is_null() {
                 continue;
             }
@@ -1372,7 +1372,7 @@ pub unsafe fn cmd_find_client(
 
         let mut c = null_mut();
         // Check name and path of each client.
-        for c_ in tailq_foreach(&raw mut CLIENTS) {
+        for c_ in (&*(&raw mut CLIENTS)).iter().filter_map(|&p| NonNull::new(p)) {
             c = c_.as_ptr();
             if (*c).session.is_null() {
                 continue;

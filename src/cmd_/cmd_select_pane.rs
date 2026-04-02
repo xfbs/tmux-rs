@@ -11,7 +11,7 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::compat::queue::{tailq_first, tailq_foreach, tailq_next, tailq_prev};
+use crate::compat::queue::{tailq_first, tailq_next, tailq_prev};
 use crate::*;
 use crate::options_::*;
 
@@ -52,7 +52,7 @@ pub unsafe fn cmd_select_pane_redraw(w: *mut window) {
         // Redraw entire window if it is bigger than the client (the
         // offset may change), otherwise just draw borders.
 
-        for c in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+        for c in (&*(&raw mut CLIENTS)).iter().copied() {
             if (*c).session.is_null() || ((*c).flags.intersects(client_flag::CONTROL)) {
                 continue;
             }

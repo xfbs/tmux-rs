@@ -22,7 +22,7 @@ use crate::libc::{
 use crate::*;
 use crate::options_::*;
 
-pub static mut CLIENTS: clients = unsafe { zeroed() };
+pub static mut CLIENTS: clients = Vec::new();
 pub static mut SERVER_PROC: *mut tmuxproc = null_mut();
 pub static mut SERVER_FD: c_int = -1;
 pub static mut SERVER_CLIENT_FLAGS: client_flag = client_flag::empty();
@@ -237,7 +237,7 @@ pub unsafe fn server_start(
         input_key_build();
         WINDOWS = BTreeMap::new();
         ALL_WINDOW_PANES = BTreeMap::new();
-        tailq_init(&raw mut CLIENTS);
+        // CLIENTS is already initialized as Vec::new() in the static.
         SESSIONS = BTreeMap::new();
         key_bindings_init();
         MESSAGE_LOG = Vec::new();
@@ -296,7 +296,7 @@ pub unsafe fn server_loop() -> i32 {
 
         loop {
             let mut items = cmdq_next(null_mut());
-            for c in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+            for c in (&*(&raw mut CLIENTS)).iter().copied() {
                 if (*c).flags.intersects(client_flag::IDENTIFIED) {
                     items += cmdq_next(c);
                 }
@@ -319,7 +319,7 @@ pub unsafe fn server_loop() -> i32 {
             return 0;
         }
 
-        for c in tailq_foreach(&raw mut CLIENTS) {
+        for c in (&*(&raw mut CLIENTS)).iter().filter_map(|&p| NonNull::new(p)) {
             if !(*c.as_ptr()).session.is_null() {
                 return 0;
             }
@@ -328,7 +328,7 @@ pub unsafe fn server_loop() -> i32 {
         // No attached clients therefore want to exit - flush any waiting
         // clients but don't actually exit until they've gone.
         cmd_wait_for_flush();
-        if !tailq_empty(&raw const CLIENTS) {
+        if !(&*(&raw const CLIENTS)).is_empty() {
             return 0;
         }
 
@@ -344,7 +344,7 @@ unsafe fn server_send_exit() {
     unsafe {
         cmd_wait_for_flush();
 
-        for c in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+        for c in (&*(&raw mut CLIENTS)).iter().copied() {
             if (*c).flags.intersects(client_flag::SUSPENDED) {
                 server_client_lost(c);
             } else {

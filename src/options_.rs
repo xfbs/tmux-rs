@@ -1350,13 +1350,13 @@ pub unsafe fn options_push_changes(name: &str) {
         }
 
         if name == "key-table" {
-            for loop_ in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+            for loop_ in (&*(&raw mut CLIENTS)).iter().copied() {
                 server_client_set_key_table(loop_, null_mut());
             }
         }
 
         if name == "user-keys" {
-            for loop_ in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+            for loop_ in (&*(&raw mut CLIENTS)).iter().copied() {
                 if (*loop_).tty.flags.intersects(tty_flags::TTY_OPENED) {
                     tty_keys_build(&mut (*loop_).tty);
                 }
@@ -1395,7 +1395,7 @@ pub unsafe fn options_push_changes(name: &str) {
 
         recalculate_sizes();
 
-        for loop_ in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+        for loop_ in (&*(&raw mut CLIENTS)).iter().copied() {
             if !(*loop_).session.is_null() {
                 server_redraw_client(loop_);
             }

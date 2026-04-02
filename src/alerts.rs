@@ -291,7 +291,7 @@ fn alerts_set_message(wl: &winlink, type_: &str, option: &str) {
         let visual =
             visual_option::try_from(options_get_number___::<i32>(&*(*wl.session).options, option));
 
-        for c in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+        for c in (&*(&raw mut CLIENTS)).iter().copied() {
             if (*c).session != wl.session || (*c).flags.intersects(client_flag::CONTROL) {
                 continue;
             }

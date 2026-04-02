@@ -72,7 +72,7 @@ pub unsafe fn ignore_client_size(c: *mut client) -> i32 {
         if (*c).flags.intersects(client_flag::IGNORESIZE) {
             // Ignore flagged clients if there are any attached clients
             // that aren't flagged.
-            for loop_ in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+            for loop_ in (&*(&raw mut CLIENTS)).iter().copied() {
                 if (*loop_).session.is_null() {
                     continue;
                 }
@@ -97,7 +97,7 @@ pub unsafe fn ignore_client_size(c: *mut client) -> i32 {
 pub unsafe fn clients_with_window(w: *mut window) -> u32 {
     let mut n = 0u32;
     unsafe {
-        for loop_ in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+        for loop_ in (&*(&raw mut CLIENTS)).iter().copied() {
             if ignore_client_size(loop_) != 0 || !session_has((*loop_).session, w) {
                 continue;
             }
@@ -164,7 +164,7 @@ pub unsafe fn clients_calculate_size(
             }
 
             // loop_ over the clients and work out the size.
-            for loop_ in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+            for loop_ in (&*(&raw mut CLIENTS)).iter().copied() {
                 if loop_ != c && ignore_client_size(loop_) != 0 {
                     log_debug!("{}: ignoring {} (1)", __func__, _s((*loop_).name));
                     continue;
@@ -243,7 +243,7 @@ pub unsafe fn clients_calculate_size(
         // Do not allow any size to be larger than the per-client window size
         // if one exists.
         if w.is_null() {
-            for loop_ in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+            for loop_ in (&*(&raw mut CLIENTS)).iter().copied() {
                 if loop_ != c && ignore_client_size(loop_) != 0 {
                     continue;
                 }
@@ -518,7 +518,7 @@ pub unsafe fn recalculate_sizes_now(now: i32) {
 
         // Increment attached count and check the status line size for each
         // client.
-        for c in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+        for c in (&*(&raw mut CLIENTS)).iter().copied() {
             let s = (*c).session;
             if !s.is_null() && !((*c).flags.intersects(CLIENT_UNATTACHEDFLAGS)) {
                 (*s).attached += 1;

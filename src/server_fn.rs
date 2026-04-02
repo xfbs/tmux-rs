@@ -30,7 +30,7 @@ pub unsafe fn server_status_client(c: *mut client) {
 
 pub unsafe fn server_redraw_session(s: *mut session) {
     unsafe {
-        for c in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+        for c in (&*(&raw mut CLIENTS)).iter().copied() {
             if (*c).session == s {
                 server_redraw_client(c);
             }
@@ -44,8 +44,8 @@ pub unsafe fn server_redraw_session_group(s: *mut session) {
         if sg.is_null() {
             server_redraw_session(s);
         } else {
-            for s in tailq_foreach(&raw mut (*sg).sessions) {
-                server_redraw_session(s.as_ptr());
+            for &s in &(*sg).sessions {
+                server_redraw_session(s);
             }
         }
     }
@@ -53,7 +53,7 @@ pub unsafe fn server_redraw_session_group(s: *mut session) {
 
 pub unsafe fn server_status_session(s: *mut session) {
     unsafe {
-        for c in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+        for c in (&*(&raw mut CLIENTS)).iter().copied() {
             if (*c).session == s {
                 server_status_client(c);
             }
@@ -67,8 +67,8 @@ pub unsafe fn server_status_session_group(s: *mut session) {
         if sg.is_null() {
             server_status_session(s);
         } else {
-            for s in tailq_foreach(&raw mut (*sg).sessions) {
-                server_status_session(s.as_ptr());
+            for &s in &(*sg).sessions {
+                server_status_session(s);
             }
         }
     }
@@ -76,7 +76,7 @@ pub unsafe fn server_status_session_group(s: *mut session) {
 
 pub unsafe fn server_redraw_window(w: *mut window) {
     unsafe {
-        for c in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+        for c in (&*(&raw mut CLIENTS)).iter().copied() {
             if !(*c).session.is_null() && (*(*(*c).session).curw).window == w {
                 server_redraw_client(c);
             }
@@ -86,7 +86,7 @@ pub unsafe fn server_redraw_window(w: *mut window) {
 
 pub unsafe fn server_redraw_window_borders(w: *mut window) {
     unsafe {
-        for c in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+        for c in (&*(&raw mut CLIENTS)).iter().copied() {
             if !(*c).session.is_null() && (*(*(*c).session).curw).window == w {
                 (*c).flags |= client_flag::REDRAWBORDERS;
             }
@@ -110,7 +110,7 @@ pub unsafe fn server_status_window(w: *mut window) {
 
 pub unsafe fn server_lock() {
     unsafe {
-        for c in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+        for c in (&*(&raw mut CLIENTS)).iter().copied() {
             if !(*c).session.is_null() {
                 server_lock_client(c);
             }
@@ -120,7 +120,7 @@ pub unsafe fn server_lock() {
 
 pub unsafe fn server_lock_session(s: *mut session) {
     unsafe {
-        for c in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+        for c in (&*(&raw mut CLIENTS)).iter().copied() {
             if (*c).session == s {
                 server_lock_client(c);
             }
@@ -215,8 +215,8 @@ pub unsafe fn server_renumber_session(s: *mut session) {
         if options_get_number_((*s).options, "renumber-windows") != 0 {
             let sg = session_group_contains(s);
             if !sg.is_null() {
-                for s in tailq_foreach(&raw mut (*sg).sessions) {
-                    session_renumber_windows(s.as_ptr());
+                for &s in &(*sg).sessions {
+                    session_renumber_windows(s);
                 }
             } else {
                 session_renumber_windows(s);
@@ -398,7 +398,7 @@ pub unsafe fn server_destroy_session_group(sess: *mut session) {
             server_destroy_session(sess);
             session_destroy(sess, 1, c!("server_destroy_session_group"));
         } else {
-            for s in tailq_foreach(&raw mut (*sg).sessions).map(NonNull::as_ptr) {
+            for &s in &(*sg).sessions {
                 server_destroy_session(s);
                 session_destroy(s, 1, c!("server_destroy_session_group"));
             }
@@ -456,7 +456,7 @@ pub unsafe fn server_destroy_session(s: *mut session) {
         if s_new == s {
             s_new = null_mut();
         }
-        for c in tailq_foreach(&raw mut CLIENTS).map(NonNull::as_ptr) {
+        for c in (&*(&raw mut CLIENTS)).iter().copied() {
             if (*c).session != s {
                 continue;
             }

@@ -198,7 +198,7 @@ pub unsafe fn status_timer_start(c: NonNull<client>) {
 /// Start status timer for all clients.
 pub unsafe fn status_timer_start_all() {
     unsafe {
-        for c in tailq_foreach(&raw mut CLIENTS) {
+        for c in (&*(&raw mut CLIENTS)).iter().filter_map(|&p| NonNull::new(p)) {
             status_timer_start(c);
         }
     }
