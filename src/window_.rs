@@ -999,7 +999,7 @@ pub unsafe fn window_pane_create(
 
         (*wp).fd = -1;
 
-        tailq_init(&raw mut (*wp).modes);
+        std::ptr::write(&raw mut (*wp).modes, Vec::new());
 
         (*wp).resize_queue = Vec::new();
 
@@ -1163,8 +1163,10 @@ pub unsafe fn window_pane_resize(wp: *mut window_pane, sx: u32, sy: u32) {
             (*wp).base.saved_grid.is_null() as i32,
         );
 
-        if let Some(wme) = NonNull::new(tailq_first(&raw mut (*wp).modes)) {
-            ((*(*wme.as_ptr()).mode).resize)(wme, sx, sy);
+        if let Some(&wme) = (*wp).modes.first() {
+            if let Some(wme) = NonNull::new(wme) {
+                ((*(*wme.as_ptr()).mode).resize)(wme, sx, sy);
+            }
         }
     }
 }
@@ -1177,28 +1179,29 @@ pub unsafe fn window_pane_set_mode(
     args: *mut args,
 ) -> i32 {
     unsafe {
-        if !tailq_empty(&raw mut (*wp).modes) && (*tailq_first(&raw mut (*wp).modes)).mode == mode {
+        if !(*wp).modes.is_empty() && (*(&(*wp).modes)[0]).mode == mode {
             return 1;
         }
 
-        let mut wme: *mut window_mode_entry = null_mut();
-        for wme_ in tailq_foreach(&raw mut (*wp).modes).map(NonNull::as_ptr) {
-            wme = wme_;
+        let mut found_idx: Option<usize> = None;
+        for (i, &wme) in (*wp).modes.iter().enumerate() {
             if (*wme).mode == mode {
+                found_idx = Some(i);
                 break;
             }
         }
 
-        if !wme.is_null() {
-            tailq_remove::<_, ()>(&raw mut (*wp).modes, wme);
-            tailq_insert_head(&raw mut (*wp).modes, wme);
+        let wme;
+        if let Some(idx) = found_idx {
+            wme = (*wp).modes.remove(idx);
+            (*wp).modes.insert(0, wme);
         } else {
             wme = xcalloc_::<window_mode_entry>(1).as_ptr();
             (*wme).wp = wp;
             (*wme).swp = swp;
             (*wme).mode = mode;
             (*wme).prefix = 1;
-            tailq_insert_head(&raw mut (*wp).modes, wme);
+            (*wp).modes.insert(0, wme);
             (*wme).screen = ((*(*wme).mode).init)(NonNull::new_unchecked(wme), fs, args);
         }
 
@@ -1216,16 +1219,16 @@ pub unsafe fn window_pane_set_mode(
 pub unsafe fn window_pane_reset_mode(wp: *mut window_pane) {
     let func = "window_pane_reset_mode";
     unsafe {
-        if tailq_empty(&raw mut (*wp).modes) {
+        if (*wp).modes.is_empty() {
             return;
         }
 
-        let wme = tailq_first(&raw mut (*wp).modes);
-        tailq_remove::<_, ()>(&raw mut (*wp).modes, wme);
+        let wme = (*wp).modes.remove(0);
         ((*(*wme).mode).free)(NonNull::new(wme).unwrap());
         free(wme as _);
 
-        if let Some(next) = NonNull::new(tailq_first(&raw mut (*wp).modes)) {
+        if let Some(&next) = (*wp).modes.first() {
+            let next = NonNull::new(next).unwrap();
             log_debug!("{}: next mode is {}", func, (*(*next.as_ptr()).mode).name);
             (*wp).screen = (*next.as_ptr()).screen;
             ((*(*next.as_ptr()).mode).resize)(next, (*wp).sx, (*wp).sy);
@@ -1244,7 +1247,7 @@ pub unsafe fn window_pane_reset_mode(wp: *mut window_pane) {
 
 pub unsafe fn window_pane_reset_mode_all(wp: *mut window_pane) {
     unsafe {
-        while !tailq_empty(&raw mut (*wp).modes) {
+        while !(*wp).modes.is_empty() {
             window_pane_reset_mode(wp);
         }
     }
@@ -1256,7 +1259,7 @@ unsafe fn window_pane_copy_key(wp: *mut window_pane, key: key_code) {
             tailq_foreach::<_, discr_entry>(&raw mut (*(*wp).window).panes).map(NonNull::as_ptr)
         {
             if loop_ != wp
-                && tailq_empty(&raw mut (*loop_).modes)
+                && (*loop_).modes.is_empty()
                 && (*loop_).fd != -1
                 && !(*loop_).flags.intersects(window_pane_flags::PANE_INPUTOFF)
                 && window_pane_visible(loop_)
@@ -1280,7 +1283,8 @@ pub unsafe fn window_pane_key(
         return -1;
     }
     unsafe {
-        if let Some(wme) = NonNull::new(tailq_first(&raw mut (*wp).modes))
+        if let Some(&wme) = (*wp).modes.first()
+            && let Some(wme) = NonNull::new(wme)
             && let Some(key_fn) = (*(*wme.as_ptr()).mode).key
             && !c.is_null()
         {
@@ -1837,15 +1841,11 @@ pub unsafe fn window_pane_default_cursor(wp: *mut window_pane) {
 
 pub unsafe fn window_pane_mode(wp: *mut window_pane) -> i32 {
     unsafe {
-        if !tailq_first(&raw mut (*wp).modes).is_null() {
-            if (*tailq_first(&raw mut (*wp).modes)).mode.addr()
-                == (&raw const WINDOW_COPY_MODE).addr()
-            {
+        if let Some(&wme) = (*wp).modes.first() {
+            if (*wme).mode.addr() == (&raw const WINDOW_COPY_MODE).addr() {
                 return WINDOW_PANE_COPY_MODE;
             }
-            if (*tailq_first(&raw mut (*wp).modes)).mode.addr()
-                == (&raw const WINDOW_VIEW_MODE).addr()
-            {
+            if (*wme).mode.addr() == (&raw const WINDOW_VIEW_MODE).addr() {
                 return WINDOW_PANE_VIEW_MODE;
             }
         }

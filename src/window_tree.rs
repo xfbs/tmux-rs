@@ -982,7 +982,7 @@ unsafe fn window_tree_menu(modedata: NonNull<c_void>, c: *mut client, key: key_c
     unsafe {
         let data: NonNull<window_tree_modedata> = modedata.cast();
         let wp: NonNull<window_pane> = NonNull::new_unchecked((*data.as_ptr()).wp);
-        if let Some(wme) = NonNull::new(tailq_first(&raw mut (*wp.as_ptr()).modes))
+        if let Some(wme) = (*wp.as_ptr()).modes.first().copied().and_then(NonNull::new)
             && (*wme.as_ptr()).data == modedata.as_ptr()
         {
             window_tree_key(wme, c, null_mut(), null_mut(), key, null_mut());

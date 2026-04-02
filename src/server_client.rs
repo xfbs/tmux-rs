@@ -1890,7 +1890,7 @@ pub unsafe fn server_client_key_callback(item: *mut cmdq_item, data: *mut c_void
                 table = if server_client_is_default_key_table(c, (*c).keytable)
                     && !wp.is_null()
                     && ({
-                        wme = tailq_first(&raw mut (*wp).modes);
+                        wme = (*wp).modes.first().copied().unwrap_or(null_mut());
                         !wme.is_null()
                     })
                     && (*(*wme).mode).key_table.is_some()
@@ -2643,7 +2643,7 @@ pub unsafe fn server_client_check_modes(c: *mut client) {
             return;
         }
         for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
-            if let Some(wme) = NonNull::new(tailq_first(&raw mut (*wp).modes))
+            if let Some(wme) = NonNull::new((*wp).modes.first().copied().unwrap_or(null_mut()))
                 && let Some(update) = (*(*wme.as_ptr()).mode).update
             {
                 update(wme);
@@ -3497,7 +3497,7 @@ pub unsafe fn server_client_print(c: *mut client, parse: i32, evb: *mut evbuffer
             }
 
             let wp = server_client_get_pane(c);
-            let wme = tailq_first(&raw mut (*wp).modes);
+            let wme = (*wp).modes.first().copied().unwrap_or(null_mut());
             if wme.is_null() || !std::ptr::eq((*wme).mode, &raw const WINDOW_VIEW_MODE) {
                 window_pane_set_mode(
                     wp,

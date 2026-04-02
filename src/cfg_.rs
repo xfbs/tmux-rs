@@ -277,7 +277,7 @@ pub unsafe fn cfg_show_causes(mut s: *mut session) {
         }
         let wp = (*(*(*s).curw).window).active;
 
-        let wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
+        let wme: *mut window_mode_entry = (*wp).modes.first().copied().unwrap_or(null_mut());
         if wme.is_null() || (*wme).mode != &raw const WINDOW_VIEW_MODE {
             window_pane_set_mode(
                 wp,

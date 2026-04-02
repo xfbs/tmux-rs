@@ -11,7 +11,6 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::compat::queue::tailq_first;
 use crate::libc::strtol;
 use crate::*;
 use crate::options_::*;
@@ -74,7 +73,7 @@ pub unsafe fn cmd_send_keys_inject_key(
             return item;
         }
 
-        let wme = tailq_first(&raw mut (*wp).modes);
+        let wme = (*wp).modes.first().copied().unwrap_or(null_mut());
         if wme.is_null() || (*(*wme).mode).key_table.is_none() {
             if window_pane_key(wp, tc, s, wl, key, null_mut()) != 0 {
                 return null_mut();
@@ -159,7 +158,7 @@ pub unsafe fn cmd_send_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         let mut wp = (*target).wp;
         let event = cmdq_get_event(item);
         let mut m = &raw mut (*event).m;
-        let wme = tailq_first(&raw mut (*wp).modes);
+        let wme = (*wp).modes.first().copied().unwrap_or(null_mut());
         let mut after: *mut cmdq_item = item;
         let mut np: u32 = 1;
         let count = args_count(args);

@@ -1238,8 +1238,6 @@ struct window_mode {
 }
 
 // Active window mode.
-impl_tailq_entry!(window_mode_entry, entry, tailq_entry<window_mode_entry>);
-#[repr(C)]
 struct window_mode_entry {
     wp: *mut window_pane,
     swp: *mut window_pane,
@@ -1249,9 +1247,6 @@ struct window_mode_entry {
 
     screen: *mut screen,
     prefix: u32,
-
-    // #[entry]
-    entry: tailq_entry<window_mode_entry>,
 }
 
 /// Offsets into pane buffer.
@@ -1347,7 +1342,7 @@ struct window_pane {
     status_screen: screen,
     status_size: usize,
 
-    modes: tailq_head<window_mode_entry>,
+    modes: Vec<*mut window_mode_entry>,
 
     searchstr: *mut u8,
     searchregex: i32,

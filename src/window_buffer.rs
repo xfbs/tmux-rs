@@ -298,7 +298,7 @@ pub unsafe fn window_buffer_menu(modedata: NonNull<c_void>, c: *mut client, key:
         let data: NonNull<window_buffer_modedata> = modedata.cast();
         let wp: *mut window_pane = (*data.as_ptr()).wp;
 
-        if let Some(wme) = NonNull::new(tailq_first(&raw mut (*wp).modes))
+        if let Some(wme) = (*wp).modes.first().copied().and_then(NonNull::new)
             && (*wme.as_ptr()).data == modedata.as_ptr()
         {
             window_buffer_key(wme, c, null_mut(), null_mut(), key, null_mut());
@@ -514,7 +514,7 @@ pub unsafe fn window_buffer_edit_close_cb(buf: *mut u8, mut len: usize, arg: *mu
 
         let wp = window_pane_find_by_id((*ed).wp_id);
         if !wp.is_null() {
-            let wme = tailq_first(&raw mut (*wp).modes);
+            let wme = (*wp).modes.first().copied().unwrap_or(null_mut());
             if (*wme).mode == &raw const WINDOW_BUFFER_MODE {
                 let data = (*wme).data as *mut window_buffer_modedata;
                 mode_tree_build((*data).data);

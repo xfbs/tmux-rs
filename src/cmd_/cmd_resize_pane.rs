@@ -11,7 +11,6 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::compat::queue::tailq_empty;
 use crate::*;
 use crate::options_::*;
 
@@ -46,7 +45,7 @@ unsafe fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
         let gd = (*wp).base.grid;
 
         if args_has(args, 'T') {
-            if !tailq_empty(&raw mut (*wp).modes) {
+            if !(*wp).modes.is_empty() {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
             adjust = screen_size_y(&raw mut (*wp).base) - 1 - (*wp).base.cy;

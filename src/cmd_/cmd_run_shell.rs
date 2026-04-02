@@ -12,7 +12,6 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::compat::queue::tailq_first;
 use crate::libc::{WEXITSTATUS, WIFEXITED, WIFSIGNALED, WTERMSIG, memcpy, strtod};
 use crate::*;
 
@@ -86,7 +85,7 @@ pub unsafe fn cmd_run_shell_print(job: *mut job, msg: *const u8) {
             }
         }
 
-        let wme = tailq_first(&raw mut (*wp).modes);
+        let wme = (*wp).modes.first().copied().unwrap_or(null_mut());
         if wme.is_null() || (*wme).mode != &raw const WINDOW_VIEW_MODE {
             window_pane_set_mode(
                 wp,

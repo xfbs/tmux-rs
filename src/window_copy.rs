@@ -228,7 +228,7 @@ pub unsafe extern "C-unwind" fn window_copy_scroll_timer(
 
         evtimer_del(&raw mut (*data).dragtimer);
 
-        if tailq_first(&raw mut (*wp).modes) != wme.as_ptr() {
+        if (*wp).modes.first().copied().unwrap_or(null_mut()) != wme.as_ptr() {
             return;
         }
 
@@ -482,7 +482,7 @@ pub unsafe fn window_copy_init_ctx_cb(_ctx: *mut screen_write_ctx, ttyctx: *mut 
 
 pub unsafe fn window_copy_vadd(wp: *mut window_pane, parse: i32, args: std::fmt::Arguments) {
     unsafe {
-        let wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
+        let wme: *mut window_mode_entry = (*wp).modes.first().copied().unwrap_or(null_mut());
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let backing: *mut screen = (*data).backing;
         let writing: *mut screen = (*data).writing;
@@ -547,7 +547,7 @@ pub unsafe fn window_copy_vadd(wp: *mut window_pane, parse: i32, args: std::fmt:
 
 pub unsafe fn window_copy_pageup(wp: *mut window_pane, half_page: i32) {
     unsafe {
-        window_copy_pageup1(tailq_first(&raw mut (*wp).modes), half_page);
+        window_copy_pageup1((*wp).modes.first().copied().unwrap_or(null_mut()), half_page);
     }
 }
 
@@ -604,7 +604,7 @@ pub unsafe fn window_copy_pageup1(wme: *mut window_mode_entry, half_page: i32) {
 
 pub unsafe fn window_copy_pagedown(wp: *mut window_pane, half_page: i32, scroll_exit: bool) {
     unsafe {
-        if window_copy_pagedown1(tailq_first(&raw mut (*wp).modes), half_page, scroll_exit) {
+        if window_copy_pagedown1((*wp).modes.first().copied().unwrap_or(null_mut()), half_page, scroll_exit) {
             window_pane_reset_mode(wp);
         }
     }
@@ -710,7 +710,7 @@ pub unsafe fn window_copy_next_paragraph(wme: *mut window_mode_entry) {
 
 pub unsafe fn window_copy_get_word(wp: *mut window_pane, x: u32, y: u32) -> String {
     unsafe {
-        let wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
+        let wme: *mut window_mode_entry = (*wp).modes.first().copied().unwrap_or(null_mut());
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let gd = (*data).screen.grid;
 
@@ -720,7 +720,7 @@ pub unsafe fn window_copy_get_word(wp: *mut window_pane, x: u32, y: u32) -> Stri
 
 pub unsafe fn window_copy_get_line(wp: *mut window_pane, y: u32) -> String {
     unsafe {
-        let wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
+        let wme: *mut window_mode_entry = (*wp).modes.first().copied().unwrap_or(null_mut());
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let gd = (*data).screen.grid;
 
@@ -731,7 +731,7 @@ pub unsafe fn window_copy_get_line(wp: *mut window_pane, y: u32) -> String {
 pub unsafe fn window_copy_cursor_hyperlink_cb(ft: *mut format_tree) -> format_table_type {
     unsafe {
         let wp = format_get_pane(ft);
-        let wme = tailq_first(&raw mut (*wp).modes);
+        let wme = (*wp).modes.first().copied().unwrap_or(null_mut());
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let gd = (*data).screen.grid;
 
@@ -749,7 +749,7 @@ pub unsafe fn window_copy_cursor_hyperlink_cb(ft: *mut format_tree) -> format_ta
 pub unsafe fn window_copy_cursor_word_cb(ft: *mut format_tree) -> format_table_type {
     unsafe {
         let wp: *mut window_pane = format_get_pane(ft);
-        let wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
+        let wme: *mut window_mode_entry = (*wp).modes.first().copied().unwrap_or(null_mut());
         let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         window_copy_get_word(wp, (*data).cx, (*data).cy).into()
@@ -759,7 +759,7 @@ pub unsafe fn window_copy_cursor_word_cb(ft: *mut format_tree) -> format_table_t
 pub unsafe fn window_copy_cursor_line_cb(ft: *mut format_tree) -> format_table_type {
     unsafe {
         let wp: *mut window_pane = format_get_pane(ft);
-        let wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
+        let wme: *mut window_mode_entry = (*wp).modes.first().copied().unwrap_or(null_mut());
         let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         window_copy_get_line(wp, (*data).cy).into()
@@ -769,7 +769,7 @@ pub unsafe fn window_copy_cursor_line_cb(ft: *mut format_tree) -> format_table_t
 pub unsafe fn window_copy_search_match_cb(ft: *mut format_tree) -> format_table_type {
     unsafe {
         let wp: *mut window_pane = format_get_pane(ft);
-        let wme: *mut window_mode_entry = tailq_first(&raw mut (*wp).modes);
+        let wme: *mut window_mode_entry = (*wp).modes.first().copied().unwrap_or(null_mut());
         let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         window_copy_match_at_cursor(data)
@@ -6408,7 +6408,7 @@ pub unsafe fn window_copy_move_mouse(m: *mut mouse_event) {
         let Some(wp) = cmd_mouse_pane(m, null_mut(), null_mut()) else {
             return;
         };
-        let wme = tailq_first(&raw mut (*wp.as_ptr()).modes);
+        let wme = (*wp.as_ptr()).modes.first().copied().unwrap_or(null_mut());
         if wme.is_null() {
             return;
         }
@@ -6435,7 +6435,7 @@ pub unsafe fn window_copy_start_drag(c: *mut client, m: *mut mouse_event) {
         let Some(wp) = cmd_mouse_pane(m, null_mut(), null_mut()) else {
             return;
         };
-        let wme = tailq_first(&raw mut (*wp.as_ptr()).modes);
+        let wme = (*wp.as_ptr()).modes.first().copied().unwrap_or(null_mut());
         if wme.is_null() {
             return;
         }
@@ -6500,7 +6500,7 @@ pub unsafe fn window_copy_drag_update(c: *mut client, m: *mut mouse_event) {
         let Some(wp) = cmd_mouse_pane(m, null_mut(), null_mut()) else {
             return;
         };
-        let wme: *mut window_mode_entry = tailq_first(&raw mut (*wp.as_ptr()).modes);
+        let wme: *mut window_mode_entry = (*wp.as_ptr()).modes.first().copied().unwrap_or(null_mut());
         if wme.is_null() {
             return;
         }
@@ -6542,7 +6542,7 @@ pub unsafe fn window_copy_drag_release(c: *mut client, m: *mut mouse_event) {
         let Some(wp) = cmd_mouse_pane(m, null_mut(), null_mut()) else {
             return;
         };
-        let wme = tailq_first(&raw mut (*wp.as_ptr()).modes);
+        let wme = (*wp.as_ptr()).modes.first().copied().unwrap_or(null_mut());
         if wme.is_null() {
             return;
         }

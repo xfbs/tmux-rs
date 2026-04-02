@@ -1134,7 +1134,7 @@ unsafe fn window_customize_menu(modedata: NonNull<c_void>, c: *mut client, key: 
         let data: NonNull<window_customize_modedata> = modedata.cast();
         let wp: *mut window_pane = (*data.as_ptr()).wp;
 
-        let Some(wme) = NonNull::new(tailq_first(&raw mut (*wp).modes)) else {
+        let Some(wme) = (*wp).modes.first().copied().and_then(NonNull::new) else {
             return;
         };
 

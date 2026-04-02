@@ -156,7 +156,7 @@ pub unsafe extern "C-unwind" fn window_clock_timer_callback(
         evtimer_del(&raw mut (*data).timer);
         evtimer_add(&raw mut (*data).timer, &tv);
 
-        if tailq_first(&raw mut (*wp).modes) != wme.as_ptr() {
+        if (*wp).modes.first().copied().unwrap_or(null_mut()) != wme.as_ptr() {
             return;
         }
 

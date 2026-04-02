@@ -1078,7 +1078,7 @@ pub unsafe fn format_cb_pane_in_mode(ft: *mut format_tree) -> format_table_type 
             return format_table_type::None;
         }
 
-        let n = tailq_foreach(&raw mut (*wp).modes).count() as u32;
+        let n = (*wp).modes.len() as u32;
 
         format!("{n}").into()
     }
@@ -1166,7 +1166,7 @@ pub unsafe fn format_cb_mouse_word(ft: *mut format_tree) -> format_table_type {
             return format_table_type::None;
         }
 
-        if !tailq_empty(&raw mut (*wp.as_ptr()).modes) {
+        if !(*wp.as_ptr()).modes.is_empty() {
             if window_pane_mode(wp.as_ptr()) != WINDOW_PANE_NO_MODE {
                 return window_copy_get_word(wp.as_ptr(), x, y).into();
             }
@@ -1213,7 +1213,7 @@ pub unsafe fn format_cb_mouse_line(ft: *mut format_tree) -> format_table_type {
             return format_table_type::None;
         }
 
-        if !tailq_empty(&raw mut (*wp.as_ptr()).modes) {
+        if !(*wp.as_ptr()).modes.is_empty() {
             if window_pane_mode(wp.as_ptr()) != WINDOW_PANE_NO_MODE {
                 return window_copy_get_line(wp.as_ptr(), y).into();
             }
@@ -2091,7 +2091,7 @@ pub unsafe fn format_cb_pane_marked_set(ft: *mut format_tree) -> format_table_ty
 pub unsafe fn format_cb_pane_mode(ft: *mut format_tree) -> format_table_type {
     unsafe {
         if !(*ft).wp.is_null() {
-            let wme = tailq_first(&raw mut (*(*ft).wp).modes);
+            let wme = (*(*ft).wp).modes.first().copied().unwrap_or(null_mut());
             if !wme.is_null() {
                 return (*(*wme).mode).name.into();
             }
@@ -5301,7 +5301,7 @@ pub unsafe fn format_defaults_pane(ft: *mut format_tree, wp: *mut window_pane) {
         }
         (*ft).wp = wp;
 
-        if let Some(wme) = NonNull::new(tailq_first(&raw mut (*wp).modes))
+        if let Some(wme) = (*wp).modes.first().copied().and_then(NonNull::new)
             && let Some(formats) = (*(*wme.as_ptr()).mode).formats
         {
             formats(wme.as_ptr(), ft);

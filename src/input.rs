@@ -992,7 +992,7 @@ pub unsafe fn input_reset(ictx: *mut input_ctx, clear: i32) {
         input_reset_cell(ictx);
 
         if clear != 0 && !wp.is_null() {
-            if tailq_empty(&raw const (*wp).modes) {
+            if (*wp).modes.is_empty() {
                 screen_write_start_pane(sctx, wp, &raw mut (*wp).base);
             } else {
                 screen_write_start(sctx, &raw mut (*wp).base);
@@ -1112,12 +1112,12 @@ pub unsafe fn input_parse_buffer(wp: *mut window_pane, buf: *mut u8, len: usize)
         (*wp).flags |= window_pane_flags::PANE_CHANGED;
 
         // Flag new input while in a mode.
-        if !tailq_empty(&raw const (*wp).modes) {
+        if !(*wp).modes.is_empty() {
             (*wp).flags |= window_pane_flags::PANE_UNSEENCHANGES;
         }
 
         // NULL wp if there is a mode set as don't want to update the tty.
-        if tailq_empty(&raw mut (*wp).modes) {
+        if (*wp).modes.is_empty() {
             screen_write_start_pane(sctx, wp, &raw mut (*wp).base);
         } else {
             screen_write_start(sctx, &raw mut (*wp).base);
