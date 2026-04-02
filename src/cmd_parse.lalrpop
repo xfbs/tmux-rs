@@ -3,6 +3,7 @@ use crate::*;
 use std::sync::atomic::Ordering;
 
 use crate::cmd_parse::{ParsedCommand, ParsedArgument, ElifResult, cmd_parse_state, cstr_to_owned_vec};
+use crate::cmd_parse::{ps_scope_active, ps_current_line, ps_push_scope, ps_pop_scope, ps_set_scope, ps_scope_flag};
 
 use crate::cmd_parse::lexer::Tok;
 use crate::cmd_parse::lexer;
@@ -26,21 +27,11 @@ pub Statements: Vec<ParsedCommand> = {
 pub Statement: Vec<ParsedCommand> = {
     => Vec::new(),
     HiddenAssignment => Vec::new(),
-    <arg1:Condition> => unsafe {
-      if (*ps.as_ptr()).scope.is_none_or(|flag| flag) {
-        arg1
-      } else {
-        drop(arg1);
-        Vec::new()
-      }
+    <arg1:Condition> => {
+      if ps_scope_active(ps) { arg1 } else { drop(arg1); Vec::new() }
     },
-    <arg1:Commands> => unsafe {
-      if (*ps.as_ptr()).scope.is_none_or(|flag| flag) {
-        arg1
-      } else {
-        drop(arg1);
-        Vec::new()
-      }
+    <arg1:Commands> => {
+      if ps_scope_active(ps) { arg1 } else { drop(arg1); Vec::new() }
     }
 };
 
@@ -77,7 +68,7 @@ pub OptionalAssignment: () = { Assignment? };
 pub Assignment: () = {
     <arg1:equals> => unsafe {
       let flags = &(*ps.as_ptr()).input.as_ref().unwrap().flags;
-      if !flags.intersects(cmd_parse_input_flags::CMD_PARSE_PARSEONLY) && (*ps.as_ptr()).scope.is_none_or(|flag| flag) {
+      if !flags.intersects(cmd_parse_input_flags::CMD_PARSE_PARSEONLY) && ps_scope_active(ps) {
         environ_put(GLOBAL_ENVIRON, arg1.as_ptr() as *mut u8, environ_flags::empty());
       }
     }
@@ -86,7 +77,7 @@ pub Assignment: () = {
 pub HiddenAssignment: () = {
     "%hidden" <arg2:equals> => unsafe {
       let flags = &(*ps.as_ptr()).input.as_ref().unwrap().flags;
-      if !flags.intersects(cmd_parse_input_flags::CMD_PARSE_PARSEONLY) && (*ps.as_ptr()).scope.is_none_or(|flag| flag) {
+      if !flags.intersects(cmd_parse_input_flags::CMD_PARSE_PARSEONLY) && ps_scope_active(ps) {
         environ_put(GLOBAL_ENVIRON, arg2.as_ptr() as *mut u8, ENVIRON_HIDDEN);
       }
     }
@@ -95,36 +86,28 @@ pub HiddenAssignment: () = {
 pub IfOpen: bool = {
     "%if" <arg2:Expanded> => unsafe {
       let value = format_true(arg2.as_ptr());
-
-      if let Some(current) = (*ps.as_ptr()).scope {
-        (*ps.as_ptr()).stack.push(current);
-      }
-      (*ps.as_ptr()).scope = Some(value);
-
+      ps_push_scope(ps, value);
       value
     }
 };
 
 pub IfElse: () = {
-    "%else" => unsafe {
-      let old = (*ps.as_ptr()).scope.unwrap();
-      (*ps.as_ptr()).scope = Some(!old);
+    "%else" => {
+      ps_set_scope(ps, !ps_scope_flag(ps));
     }
 };
 
 pub IfElif: bool = {
     "%elif" <arg2:Expanded> => unsafe {
       let value = format_true(arg2.as_ptr());
-
-      (*ps.as_ptr()).scope = Some(value);
-
+      ps_set_scope(ps, value);
       value
     }
 };
 
 pub IfClose: () = {
-    "%endif" => unsafe {
-      (*ps.as_ptr()).scope = (*ps.as_ptr()).stack.pop();
+    "%endif" => {
+      ps_pop_scope(ps);
     }
 };
 
@@ -186,8 +169,8 @@ pub Elif: ElifResult = {
 };
 
 pub Commands: Vec<ParsedCommand> = {
-    <arg1:Command> => unsafe {
-      if !arg1.arguments.is_empty() && (*ps.as_ptr()).scope.is_none_or(|flag| flag) {
+    <arg1:Command> => {
+      if !arg1.arguments.is_empty() && ps_scope_active(ps) {
         vec![arg1]
       } else {
         drop(arg1);
@@ -202,8 +185,8 @@ pub Commands: Vec<ParsedCommand> = {
       arg1
     },
 
-    <mut arg1:Commands> <_arg2:";"> <arg3:Command> => unsafe {
-      if !arg3.arguments.is_empty() && (*ps.as_ptr()).scope.is_none_or(|flag| flag) {
+    <mut arg1:Commands> <_arg2:";"> <arg3:Command> => {
+      if !arg3.arguments.is_empty() && ps_scope_active(ps) {
         arg1.push(arg3);
         arg1
       } else {
@@ -216,22 +199,22 @@ pub Commands: Vec<ParsedCommand> = {
 };
 
 pub Command: ParsedCommand = {
-    Assignment => unsafe {
+    Assignment => {
         ParsedCommand {
-            line: (*ps.as_ptr()).input.as_mut().unwrap().line.load(Ordering::SeqCst),
+            line: ps_current_line(ps),
             arguments: Vec::new(),
         }
     },
-    <_arg1:OptionalAssignment> <arg2:token> => unsafe {
+    <_arg1:OptionalAssignment> <arg2:token> => {
         ParsedCommand {
-            line: (*ps.as_ptr()).input.as_mut().unwrap().line.load(Ordering::SeqCst),
+            line: ps_current_line(ps),
             arguments: vec![ParsedArgument::String(arg2)],
         }
     },
-    <_arg1:OptionalAssignment> <arg2:token> <mut arg3:Arguments> => unsafe {
+    <_arg1:OptionalAssignment> <arg2:token> <mut arg3:Arguments> => {
         arg3.insert(0, ParsedArgument::String(arg2));
         ParsedCommand {
-            line: (*ps.as_ptr()).input.as_mut().unwrap().line.load(Ordering::SeqCst),
+            line: ps_current_line(ps),
             arguments: arg3,
         }
     },

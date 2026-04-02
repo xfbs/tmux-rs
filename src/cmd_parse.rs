@@ -97,6 +97,55 @@ pub struct cmd_parse_state<'a> {
     pub stack: Vec<bool>,
 }
 
+// --- Safe helpers for grammar actions (encapsulate NonNull dereference) ---
+
+/// Check if the current scope is active (no scope, or scope flag is true).
+pub fn ps_scope_active(ps: NonNull<cmd_parse_state>) -> bool {
+    unsafe { (*ps.as_ptr()).scope.is_none_or(|flag| flag) }
+}
+
+/// Get the current line number from the parser input.
+pub fn ps_current_line(ps: NonNull<cmd_parse_state>) -> u32 {
+    unsafe {
+        (*ps.as_ptr())
+            .input
+            .as_ref()
+            .unwrap()
+            .line
+            .load(atomic::Ordering::SeqCst)
+    }
+}
+
+/// Push the current scope onto the stack and set a new scope flag.
+pub fn ps_push_scope(ps: NonNull<cmd_parse_state>, flag: bool) {
+    unsafe {
+        let ps = &mut *ps.as_ptr();
+        if let Some(current) = ps.scope {
+            ps.stack.push(current);
+        }
+        ps.scope = Some(flag);
+    }
+}
+
+/// Pop the scope stack, restoring the previous scope.
+pub fn ps_pop_scope(ps: NonNull<cmd_parse_state>) {
+    unsafe {
+        (*ps.as_ptr()).scope = (*ps.as_ptr()).stack.pop();
+    }
+}
+
+/// Replace the current scope flag (for %else and %elif).
+pub fn ps_set_scope(ps: NonNull<cmd_parse_state>, flag: bool) {
+    unsafe {
+        (*ps.as_ptr()).scope = Some(flag);
+    }
+}
+
+/// Get the current scope flag (for %else inversion).
+pub fn ps_scope_flag(ps: NonNull<cmd_parse_state>) -> bool {
+    unsafe { (*ps.as_ptr()).scope.unwrap() }
+}
+
 /// Convert a *mut u8 C string to an owned Vec<u8> (NUL-terminated). Frees the original.
 pub unsafe fn cstr_to_owned_vec(ptr: *mut u8) -> Vec<u8> {
     unsafe {
