@@ -418,6 +418,9 @@ pub unsafe fn proc_remove_peer(peer: *mut tmuxpeer) {
         imsg_clear(&raw mut (*peer).ibuf);
 
         close((*peer).ibuf.fd);
+        // Drop Vec fields before freeing the struct
+        std::ptr::drop_in_place(&raw mut (*peer).ibuf.fds);
+        std::ptr::drop_in_place(&raw mut (*peer).ibuf.w.bufs);
         free_(peer);
     }
 }

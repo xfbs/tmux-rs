@@ -11,9 +11,6 @@ use ::libc::{
 };
 
 use super::imsg::{ibuf, msgbuf};
-use super::queue::{
-    tailq_first, tailq_foreach, tailq_init, tailq_insert_tail, tailq_next, tailq_remove,
-};
 use super::{freezero, recallocarray::recallocarray};
 use crate::errno;
 
@@ -488,7 +485,7 @@ pub unsafe fn ibuf_write(msgbuf: *mut msgbuf) -> c_int {
                 iov_len: 0,
             }
         }; IOV_MAX];
-        for buf in tailq_foreach(&raw mut (*msgbuf).bufs).map(NonNull::as_ptr) {
+        for &buf in (*msgbuf).bufs.iter() {
             if i as usize >= IOV_MAX {
                 break;
             }
@@ -528,39 +525,39 @@ pub unsafe fn ibuf_write(msgbuf: *mut msgbuf) -> c_int {
     }
 }
 
+/// Initialize a message buffer queue. Must be called before use.
 pub unsafe fn msgbuf_init(msgbuf: *mut msgbuf) {
     unsafe {
         (*msgbuf).queued = 0;
         (*msgbuf).fd = -1;
-        tailq_init(&raw mut (*msgbuf).bufs);
+        std::ptr::write(&raw mut (*msgbuf).bufs, Vec::new());
     }
 }
 
+/// Drain `n` bytes from the front of the message buffer queue, freeing
+/// fully-consumed ibufs.
 unsafe fn msgbuf_drain(msgbuf: *mut msgbuf, mut n: usize) {
     unsafe {
-        let mut buf = tailq_first(&raw mut (*msgbuf).bufs);
-
-        while !buf.is_null() && n > 0 {
-            let next = tailq_next(buf);
+        let mut i = 0;
+        while i < (*msgbuf).bufs.len() && n > 0 {
+            let buf = (&(*msgbuf).bufs)[i];
             if n >= ibuf_size(buf) {
                 n -= ibuf_size(buf);
                 ibuf_dequeue(msgbuf, buf);
+                // don't increment i — next element shifted down
             } else {
                 (*buf).rpos += n;
                 n = 0;
+                i += 1;
             }
-            buf = next;
         }
     }
 }
 
+/// Remove and free all queued ibufs.
 pub unsafe fn msgbuf_clear(msgbuf: *mut msgbuf) {
     unsafe {
-        let mut buf;
-        while {
-            buf = tailq_first(&raw mut (*msgbuf).bufs);
-            !buf.is_null()
-        } {
+        while let Some(&buf) = (*msgbuf).bufs.first() {
             ibuf_dequeue(msgbuf, buf);
         }
     }
@@ -578,7 +575,7 @@ pub unsafe fn msgbuf_write(msgbuf: *mut msgbuf) -> c_int {
             buf: [u8; unsafe { CMSG_SPACE(size_of::<c_int>() as _) as usize }],
         }
 
-        for buf in tailq_foreach(&raw mut (*msgbuf).bufs).map(NonNull::as_ptr) {
+        for &buf in (*msgbuf).bufs.iter() {
             if i as usize >= IOV_MAX {
                 break;
             }
@@ -641,20 +638,22 @@ pub unsafe fn msgbuf_queuelen(msgbuf: *mut msgbuf) -> u32 {
     unsafe { (*msgbuf).queued }
 }
 
+/// Add a buffer to the end of the output queue.
 unsafe fn ibuf_enqueue(msgbuf: *mut msgbuf, buf: *mut ibuf) {
     unsafe {
         if (*buf).max == 0 {
             // if buf lives on the stack
             abort(); /* abort before causing more harm */
         }
-        tailq_insert_tail::<_, _>(&raw mut (*msgbuf).bufs, buf);
+        (*msgbuf).bufs.push(buf);
         (*msgbuf).queued += 1;
     }
 }
 
+/// Remove a buffer from the output queue and free it.
 unsafe fn ibuf_dequeue(msgbuf: *mut msgbuf, buf: *mut ibuf) {
     unsafe {
-        tailq_remove(&raw mut (*msgbuf).bufs, buf);
+        (*msgbuf).bufs.retain(|&p| p != buf);
         (*msgbuf).queued -= 1;
         ibuf_free(buf);
     }

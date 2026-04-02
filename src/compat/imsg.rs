@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 use core::ffi::{c_int, c_uchar, c_void};
-use std::ptr::NonNull;
 use std::{mem::MaybeUninit, ptr::null_mut};
 
 use libc::{
@@ -15,9 +14,6 @@ use super::imsg_buffer::{
     ibuf_free, ibuf_get, ibuf_get_ibuf, ibuf_open, ibuf_rewind, ibuf_size, msgbuf_clear,
     msgbuf_init, msgbuf_write,
 };
-use super::queue::{
-    Entry, tailq_entry, tailq_first, tailq_head, tailq_init, tailq_insert_tail, tailq_remove,
-};
 use crate::errno;
 // begin imsg.h
 
@@ -27,10 +23,11 @@ pub const MAX_IMSGSIZE: usize = 16384;
 
 const IMSGF_HASFD: u16 = 1; // this needs to be u16, i think, but it's u32 in auto generated header
 
+/// IPC message buffer. Holds data being sent or received over the socket.
+/// Allocated with C calloc, freed with ibuf_free.
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct ibuf {
-    pub entry: tailq_entry<ibuf>,
     pub buf: *mut c_uchar,
     pub size: usize,
     pub max: usize,
@@ -38,16 +35,12 @@ pub struct ibuf {
     pub rpos: usize,
     pub fd: c_int,
 }
-impl Entry<ibuf> for ibuf {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<ibuf> {
-        unsafe { &raw mut (*this).entry }
-    }
-}
 
+/// Output message queue. Holds ibuf messages waiting to be written to the socket.
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug)]
 pub struct msgbuf {
-    pub bufs: tailq_head<ibuf>,
+    pub bufs: Vec<*mut ibuf>,
     pub queued: u32,
     pub fd: c_int,
 }
@@ -59,10 +52,12 @@ pub struct ibuf_read {
     pub rptr: *mut u8,
     pub wpos: usize,
 }
+/// IPC message buffer context. Holds the read state, write queue, and
+/// received file descriptors for one end of a unix socket connection.
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug)]
 pub struct imsgbuf {
-    pub fds: tailq_head<imsg_fd>,
+    pub fds: Vec<*mut imsg_fd>,
     pub r: ibuf_read,
     pub w: msgbuf,
     pub fd: c_int,
@@ -90,16 +85,12 @@ pub struct imsg {
 // end imsg.h
 // begin imsg.c
 
+/// A received file descriptor, queued for consumption by the next message
+/// that expects one.
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct imsg_fd {
-    entry: tailq_entry<imsg_fd>,
     fd: i32,
-}
-impl super::queue::Entry<imsg_fd> for imsg_fd {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<imsg_fd> {
-        unsafe { &raw mut (*this).entry }
-    }
 }
 
 static mut IMSG_FD_OVERHEAD: i32 = 0;
@@ -111,7 +102,7 @@ pub unsafe fn imsg_init(imsgbuf: *mut imsgbuf, fd: c_int) {
         (*imsgbuf).fd = fd;
         (*imsgbuf).w.fd = fd;
         (*imsgbuf).pid = std::process::id() as i32;
-        tailq_init(&raw mut (*imsgbuf).fds);
+        std::ptr::write(&raw mut (*imsgbuf).fds, Vec::new());
     }
 }
 
@@ -178,7 +169,7 @@ pub unsafe fn imsg_read(imsgbuf: *mut imsgbuf) -> isize {
                             let fd = *(CMSG_DATA(cmsg) as *mut c_int).add(i as usize);
                             if !ifd.is_null() {
                                 (*ifd).fd = fd;
-                                tailq_insert_tail(&raw mut (*imsgbuf).fds, ifd);
+                                (*imsgbuf).fds.push(ifd);
                                 ifd = null_mut();
                             } else {
                                 close(fd);
@@ -528,16 +519,15 @@ pub unsafe fn imsg_free(imsg: *mut imsg) {
     unsafe { ibuf_free((*imsg).buf) }
 }
 
+/// Pop the next received file descriptor from the queue, or return -1 if empty.
 unsafe fn imsg_dequeue_fd(imsgbuf: *mut imsgbuf) -> i32 {
     unsafe {
-        let Some(ifd) = NonNull::new(tailq_first(&raw mut (*imsgbuf).fds)) else {
+        let Some(ifd) = (*imsgbuf).fds.first().copied() else {
             return -1;
         };
-        #[expect(clippy::shadow_reuse)]
-        let ifd = ifd.as_ptr();
 
         let fd = (*ifd).fd;
-        tailq_remove(&raw mut (*imsgbuf).fds, ifd);
+        (*imsgbuf).fds.remove(0);
         free(ifd as *mut c_void);
 
         fd
