@@ -190,7 +190,7 @@ pub unsafe fn winlink_previous_by_number(
         for _ in 0..n {
             wl = winlink_previous(&raw mut (*s).windows, wl);
             if wl.is_null() {
-                wl = (*(&raw mut (*s).windows)).values().next().copied().unwrap_or(null_mut());
+                wl = (*(&raw mut (*s).windows)).values().next_back().copied().unwrap_or(null_mut());
             }
         }
     }

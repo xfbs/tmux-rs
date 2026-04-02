@@ -835,6 +835,128 @@ fn join_pane_horizontal() {
 }
 
 #[test]
+fn previous_window_wraps_to_last() {
+    let mut tmux = TmuxTestHarness::new();
+    tmux.new_session()
+        .args(["-x", "80", "-y", "24"])
+        .run()
+        .assert_success();
+    tmux.wait_ready(Duration::from_secs(5));
+
+    // Create 3 windows: 0, 1, 2
+    tmux.cmd()
+        .args(["rename-window", "win0"])
+        .run()
+        .assert_success();
+    tmux.cmd()
+        .args(["new-window", "-n", "win1"])
+        .run()
+        .assert_success();
+    tmux.cmd()
+        .args(["new-window", "-n", "win2"])
+        .run()
+        .assert_success();
+
+    // Go to window 0
+    tmux.cmd()
+        .args(["select-window", "-t", ":0"])
+        .run()
+        .assert_success();
+    assert_eq!(tmux.query("#{window_name}"), "win0");
+
+    // previous-window from window 0 should wrap to window 2
+    tmux.cmd()
+        .args(["previous-window"])
+        .run()
+        .assert_success();
+    assert_eq!(
+        tmux.query("#{window_name}"),
+        "win2",
+        "previous-window from first window should wrap to last"
+    );
+}
+
+#[test]
+fn select_window_relative_minus_wraps_to_last() {
+    let mut tmux = TmuxTestHarness::new();
+    tmux.new_session()
+        .args(["-x", "80", "-y", "24"])
+        .run()
+        .assert_success();
+    tmux.wait_ready(Duration::from_secs(5));
+
+    // Create 3 windows: 0, 1, 2
+    tmux.cmd()
+        .args(["rename-window", "win0"])
+        .run()
+        .assert_success();
+    tmux.cmd()
+        .args(["new-window", "-n", "win1"])
+        .run()
+        .assert_success();
+    tmux.cmd()
+        .args(["new-window", "-n", "win2"])
+        .run()
+        .assert_success();
+
+    // Go to window 0
+    tmux.cmd()
+        .args(["select-window", "-t", ":0"])
+        .run()
+        .assert_success();
+    assert_eq!(tmux.query("#{window_name}"), "win0");
+
+    // select-window -t :- from window 0 should wrap to window 2
+    tmux.cmd()
+        .args(["select-window", "-t", ":-"])
+        .run()
+        .assert_success();
+    assert_eq!(
+        tmux.query("#{window_name}"),
+        "win2",
+        "select-window -t :- from first window should wrap to last"
+    );
+}
+
+#[test]
+fn next_window_wraps_to_first() {
+    let mut tmux = TmuxTestHarness::new();
+    tmux.new_session()
+        .args(["-x", "80", "-y", "24"])
+        .run()
+        .assert_success();
+    tmux.wait_ready(Duration::from_secs(5));
+
+    // Create 3 windows: 0, 1, 2
+    tmux.cmd()
+        .args(["rename-window", "win0"])
+        .run()
+        .assert_success();
+    tmux.cmd()
+        .args(["new-window", "-n", "win1"])
+        .run()
+        .assert_success();
+    tmux.cmd()
+        .args(["new-window", "-n", "win2"])
+        .run()
+        .assert_success();
+
+    // We're on window 2 (last created)
+    assert_eq!(tmux.query("#{window_name}"), "win2");
+
+    // next-window from window 2 should wrap to window 0
+    tmux.cmd()
+        .args(["next-window"])
+        .run()
+        .assert_success();
+    assert_eq!(
+        tmux.query("#{window_name}"),
+        "win0",
+        "next-window from last window should wrap to first"
+    );
+}
+
+#[test]
 fn join_pane_same_window_fails() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session()
