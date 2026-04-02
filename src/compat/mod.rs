@@ -9,7 +9,6 @@ pub mod queue;
 pub mod reallocarray;
 pub mod recallocarray;
 pub mod systemd;
-pub mod tree;
 
 mod closefrom;
 mod freezero;
