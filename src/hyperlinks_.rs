@@ -14,30 +14,22 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use std::collections::BTreeMap;
 use std::collections::HashMap;
+use std::collections::VecDeque;
 
 use crate::*;
 
-const MAX_HYPERLINKS: u32 = 5000;
+const MAX_HYPERLINKS: usize = 5000;
 
 static HYPERLINKS_NEXT_EXTERNAL_ID: AtomicU64 = AtomicU64::new(1);
-static GLOBAL_HYPERLINKS_COUNT: AtomicU32 = AtomicU32::new(0);
 
-impl_tailq_entry!(hyperlinks_uri, list_entry, tailq_entry<hyperlinks_uri>);
+/// Global LRU list: (owning hyperlinks tree, inner ID). Front = oldest, back = newest.
+static mut GLOBAL_HYPERLINKS_LRU: VecDeque<(*mut hyperlinks, u32)> = VecDeque::new();
+
 pub struct hyperlinks_uri {
-    pub tree: *mut hyperlinks,
-
-    pub inner: u32,
     pub internal_id: *mut u8,
     pub external_id: *mut u8,
     pub uri: *mut u8,
-
-    // TAILQ entry for global LRU list — kept as-is
-    pub list_entry: tailq_entry<hyperlinks_uri>,
 }
-
-pub type hyperlinks_list = tailq_head<hyperlinks_uri>;
-
-static mut GLOBAL_HYPERLINKS: hyperlinks_list = TAILQ_HEAD_INITIALIZER!(GLOBAL_HYPERLINKS);
 
 pub struct hyperlinks {
     pub next_inner: u32,
@@ -53,10 +45,9 @@ unsafe fn hyperlinks_remove_inner(hl: *mut hyperlinks, inner: u32) {
     unsafe {
         // Remove from primary store — get owned Box back
         if let Some(hlu) = (*hl).by_inner.remove(&inner) {
-            // Remove from global LRU TAILQ (pointer still valid — Box not dropped yet)
-            let hlu_ptr = &*hlu as *const hyperlinks_uri as *mut hyperlinks_uri;
-            tailq_remove::<_, _>(&raw mut GLOBAL_HYPERLINKS, hlu_ptr);
-            GLOBAL_HYPERLINKS_COUNT.fetch_sub(1, atomic::Ordering::Relaxed);
+            // Remove from global LRU
+            let lru = &mut *(&raw mut GLOBAL_HYPERLINKS_LRU);
+            lru.retain(|&(tree, id)| !(tree == hl && id == inner));
 
             // Remove from URI secondary index
             let int_id = cstr_to_str(hlu.internal_id).to_string();
@@ -115,13 +106,10 @@ pub unsafe fn hyperlinks_put(
         let inner = (*hl).next_inner;
         (*hl).next_inner += 1;
 
-        let mut hlu = Box::new(hyperlinks_uri {
-            tree: hl,
-            inner,
+        let hlu = Box::new(hyperlinks_uri {
             internal_id,
             external_id,
             uri,
-            list_entry: zeroed(),
         });
 
         // Add to URI index (only for non-anonymous URIs)
@@ -131,17 +119,13 @@ pub unsafe fn hyperlinks_put(
             (*hl).by_uri.insert((int_id_str, uri_str), inner);
         }
 
-        // Add to global LRU TAILQ
-        let hlu_ptr = &mut *hlu as *mut hyperlinks_uri;
-        tailq_insert_tail(&raw mut GLOBAL_HYPERLINKS, hlu_ptr);
-        if GLOBAL_HYPERLINKS_COUNT.fetch_add(1, atomic::Ordering::Relaxed) + 1 == MAX_HYPERLINKS {
+        // Add to global LRU
+        let lru = &mut *(&raw mut GLOBAL_HYPERLINKS_LRU);
+        lru.push_back((hl, inner));
+        if lru.len() >= MAX_HYPERLINKS {
             // Evict oldest
-            let oldest = tailq_first(&raw mut GLOBAL_HYPERLINKS);
-            if !oldest.is_null() {
-                let oldest_hl = (*oldest).tree;
-                let oldest_inner = (*oldest).inner;
-                hyperlinks_remove_inner(oldest_hl, oldest_inner);
-            }
+            let (oldest_hl, oldest_inner) = lru[0];
+            hyperlinks_remove_inner(oldest_hl, oldest_inner);
         }
 
         // Insert into primary store
