@@ -11,13 +11,7 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::compat::{
-    queue::{
-        tailq_concat, tailq_first, tailq_foreach, tailq_init_, tailq_insert_tail, tailq_next,
-        tailq_remove,
-    },
-    strlcat, strlcpy,
-};
+use crate::compat::{strlcat, strlcpy};
 use crate::libc::{strchr, strlen, strncmp};
 use crate::xmalloc::{xrealloc_, xreallocarray_};
 use crate::*;
@@ -264,23 +258,12 @@ pub static CMD_TABLE: [&cmd_entry; 90] = [
 ];
 
 // Instance of a command.
-#[repr(C)]
 pub struct cmd {
     pub entry: &'static cmd_entry,
     pub args: *mut args,
     pub group: u32,
     pub file: *mut u8,
     pub line: u32,
-
-    pub qentry: tailq_entry<cmd>,
-}
-pub type cmds = tailq_head<cmd>;
-
-pub struct qentry;
-impl Entry<cmd, qentry> for cmd {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<cmd> {
-        unsafe { &raw mut (*this).qentry }
-    }
 }
 
 /// Next group number for new command list.
@@ -549,10 +532,6 @@ pub unsafe fn cmd_parse(
             group: 0,
             file: null_mut(),
             line: 0,
-            qentry: tailq_entry {
-                tqe_next: null_mut(),
-                tqe_prev: null_mut(),
-            },
         }));
 
         if let Some(file) = file {
@@ -583,10 +562,6 @@ pub unsafe fn cmd_copy(cmd: *mut cmd, argc: c_int, argv: *mut *mut u8) -> *mut c
             group: 0,
             file: null_mut(),
             line: 0,
-            qentry: tailq_entry {
-                tqe_next: null_mut(),
-                tqe_prev: null_mut(),
-            },
         }));
 
         if !(*cmd).file.is_null() {
@@ -615,38 +590,32 @@ pub unsafe fn cmd_print(cmd: *mut cmd) -> *mut u8 {
 pub fn cmd_list_new<'a>() -> &'a mut cmd_list {
     let group = CMD_LIST_NEXT_GROUP.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 
-    let list = Box::leak(Box::new(tailq_head {
-        tqh_first: null_mut(),
-        tqh_last: null_mut(),
-    }));
-    tailq_init_(list);
-
     Box::leak(Box::new(cmd_list {
         references: 1,
         group,
-        list: list as _,
+        list: Vec::new(),
     }))
 }
 
 pub unsafe fn cmd_list_append(cmdlist: *mut cmd_list, cmd: *mut cmd) {
     unsafe {
         (*cmd).group = (*cmdlist).group;
-        tailq_insert_tail::<_, qentry>((*cmdlist).list, cmd);
+        (*cmdlist).list.push(cmd);
     }
 }
 
 pub unsafe fn cmd_list_append_all(cmdlist: *mut cmd_list, from: *mut cmd_list) {
     unsafe {
-        for cmd in tailq_foreach::<_, qentry>((*from).list).map(NonNull::as_ptr) {
+        for &cmd in (*from).list.iter() {
             (*cmd).group = (*cmdlist).group;
         }
-        tailq_concat::<_, qentry>((*cmdlist).list, (*from).list);
+        (*cmdlist).list.append(&mut (*from).list);
     }
 }
 
 pub unsafe fn cmd_list_move(cmdlist: *mut cmd_list, from: *mut cmd_list) {
     unsafe {
-        tailq_concat::<_, qentry>((*cmdlist).list, (*from).list);
+        (*cmdlist).list.append(&mut (*from).list);
         (*cmdlist).group = CMD_LIST_NEXT_GROUP.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     }
 }
@@ -658,11 +627,10 @@ pub unsafe fn cmd_list_free(cmdlist: *mut cmd_list) {
             return;
         }
 
-        for cmd in tailq_foreach::<_, qentry>((*cmdlist).list).map(NonNull::as_ptr) {
-            tailq_remove::<_, qentry>((*cmdlist).list, cmd);
+        for &cmd in (*cmdlist).list.iter() {
             cmd_free(cmd);
         }
-        free_((*cmdlist).list);
+        std::ptr::drop_in_place(&raw mut (*cmdlist).list);
         free_(cmdlist);
     }
 }
@@ -679,7 +647,7 @@ pub unsafe fn cmd_list_copy(
         free(s as _);
 
         let new_cmdlist = cmd_list_new();
-        for cmd in tailq_foreach_const(cmdlist.list).map(NonNull::as_ptr) {
+        for &cmd in cmdlist.list.iter() {
             if (*cmd).group != group {
                 new_cmdlist.group =
                     CMD_LIST_NEXT_GROUP.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
@@ -709,7 +677,7 @@ pub fn cmd_list_print(cmdlist: &cmd_list, escaped: c_int) -> *mut u8 {
             c!(" ;; ")
         };
 
-        for cmd in tailq_foreach_const::<_, qentry>(cmdlist.list).map(NonNull::as_ptr) {
+        for (idx, &cmd) in cmdlist.list.iter().enumerate() {
             let this = cmd_print(cmd);
 
             len += strlen(this) + 6;
@@ -717,8 +685,7 @@ pub fn cmd_list_print(cmdlist: &cmd_list, escaped: c_int) -> *mut u8 {
 
             strlcat(buf, this, len);
 
-            let next = tailq_next::<_, _, qentry>(cmd);
-            if !next.is_null() {
+            if let Some(&next) = cmdlist.list.get(idx + 1) {
                 let separator = if (*cmd).group != (*next).group {
                     double_separator
                 } else {
@@ -734,23 +701,20 @@ pub fn cmd_list_print(cmdlist: &cmd_list, escaped: c_int) -> *mut u8 {
     }
 }
 
-pub unsafe fn cmd_list_first(cmdlist: *mut cmd_list) -> *mut cmd {
-    unsafe { tailq_first((*cmdlist).list) }
-}
-
-pub unsafe fn cmd_list_next(cmd: *mut cmd) -> *mut cmd {
-    unsafe { tailq_next::<_, _, qentry>(cmd) }
+/// Get the commands in the list as a slice.
+pub unsafe fn cmd_list_commands(cmdlist: *mut cmd_list) -> &'static [*mut cmd] {
+    unsafe { &(*cmdlist).list }
 }
 
 pub unsafe fn cmd_list_all_have(cmdlist: *mut cmd_list, flag: cmd_flag) -> bool {
     unsafe {
-        tailq_foreach((*cmdlist).list).all(|cmd| (*cmd.as_ptr()).entry.flags.intersects(flag))
+        (*cmdlist).list.iter().all(|&cmd| (*cmd).entry.flags.intersects(flag))
     }
 }
 
 pub unsafe fn cmd_list_any_have(cmdlist: *mut cmd_list, flag: cmd_flag) -> bool {
     unsafe {
-        tailq_foreach((*cmdlist).list).any(|cmd| (*cmd.as_ptr()).entry.flags.intersects(flag))
+        (*cmdlist).list.iter().any(|&cmd| (*cmd).entry.flags.intersects(flag))
     }
 }
 

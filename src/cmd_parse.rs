@@ -197,7 +197,7 @@ pub fn cmd_parse_print_commands(pi: &cmd_parse_input, cmdlist: &cmd_list) {
 
 pub unsafe fn cmd_parse_run_parser(
     ps: &mut cmd_parse_state,
-) -> Result<Vec<ParsedCommand>, *mut u8> {
+) -> Result<Vec<ParsedCommand>, CString> {
     unsafe {
         let retval = yyparse(ps);
         ps.stack.clear();
@@ -208,15 +208,14 @@ pub unsafe fn cmd_parse_run_parser(
             Err(()) => {
                 if ps.error.is_null() {
                     let pi = ps.input.as_ref().unwrap();
-                    ps.error = cmd_parse_get_error(
+                    Err(cmd_parse_get_error(
                         pi.file,
                         pi.line.load(atomic::Ordering::SeqCst),
                         "syntax error",
-                    )
-                    .into_raw()
-                    .cast();
+                    ))
+                } else {
+                    Err(CString::from_raw(ps.error.cast()))
                 }
-                Err(ps.error)
             }
         }
     }
@@ -242,7 +241,7 @@ fn new_cmd_parse_state<'a>() -> Box<cmd_parse_state<'a>> {
 pub unsafe fn cmd_parse_do_file<'a>(
     f: &'a mut std::io::BufReader<std::fs::File>,
     pi: &'a cmd_parse_input<'a>,
-) -> Result<Vec<ParsedCommand>, *mut u8> {
+) -> Result<Vec<ParsedCommand>, CString> {
     unsafe {
         let mut ps = new_cmd_parse_state();
         ps.input = Some(pi);
@@ -254,7 +253,7 @@ pub unsafe fn cmd_parse_do_file<'a>(
 pub unsafe fn cmd_parse_do_buffer<'a>(
     buf: &'a [u8],
     pi: &'a cmd_parse_input<'a>,
-) -> Result<Vec<ParsedCommand>, *mut u8> {
+) -> Result<Vec<ParsedCommand>, CString> {
     unsafe {
         let mut ps = new_cmd_parse_state();
         ps.input = Some(pi);
@@ -299,7 +298,7 @@ pub unsafe fn cmd_parse_expand_alias<'a>(
         {
             return false;
         }
-        *pr = Err(null_mut());
+        *pr = Err(CString::default());
 
         if cmd.arguments.is_empty() {
             *pr = Ok(cmd_list_new());
@@ -363,7 +362,7 @@ pub unsafe fn cmd_parse_build_command(
     unsafe {
         let mut values: *mut args_value = null_mut();
         let mut count: u32 = 0;
-        *pr = cmd_parse_result::Err(null_mut());
+        *pr = cmd_parse_result::Err(CString::default());
 
         // Check alias first — needs a mutable copy of arguments
         {
@@ -433,9 +432,7 @@ pub unsafe fn cmd_parse_build_command(
                         pi.file,
                         pi.line.load(atomic::Ordering::SeqCst),
                         &cause,
-                    )
-                    .into_raw()
-                    .cast());
+                    ));
                     break 'out;
                 }
             }
@@ -457,7 +454,7 @@ pub unsafe fn cmd_parse_build_commands(
         let mut line = u32::MAX;
         let mut current: *mut cmd_list = null_mut();
 
-        *pr = Err(null_mut());
+        *pr = Err(CString::default());
 
         if cmds.is_empty() {
             *pr = Ok(cmd_list_new());
@@ -486,15 +483,15 @@ pub unsafe fn cmd_parse_build_commands(
             pi.line.store(cmd.line, atomic::Ordering::SeqCst);
 
             cmd_parse_build_command(cmd, pi, pr);
-            match *pr {
+            match pr {
                 Err(_err) => {
                     cmd_list_free(result);
                     cmd_list_free(current);
                     return;
                 }
                 Ok(cmdlist) => {
-                    cmd_list_append_all(current, cmdlist);
-                    cmd_list_free(cmdlist);
+                    cmd_list_append_all(current, *cmdlist);
+                    cmd_list_free(*cmdlist);
                 }
             }
         }
@@ -522,7 +519,7 @@ pub unsafe fn cmd_parse_from_file<'a>(
         let pi = pi.unwrap_or(&input);
 
         let cmds = cmd_parse_do_file(f, pi)?;
-        let mut pr = Err(null_mut());
+        let mut pr = Err(CString::default());
         cmd_parse_build_commands(&cmds, pi, &mut pr);
         pr
     }
@@ -549,9 +546,7 @@ pub unsafe fn cmd_parse_and_append(
         match cmd_parse_from_string(s, pi) {
             Err(err) => {
                 if !error.is_null() {
-                    *error = err;
-                } else {
-                    free_(err);
+                    *error = err.into_raw().cast();
                 }
                 cmd_parse_status::CMD_PARSE_ERROR
             }
@@ -575,7 +570,7 @@ pub unsafe fn cmd_parse_from_buffer(buf: &[u8], pi: Option<&cmd_parse_input>) ->
         }
 
         let cmds = cmd_parse_do_buffer(buf, pi)?;
-        let mut pr = Err(null_mut());
+        let mut pr = Err(CString::default());
         cmd_parse_build_commands(&cmds, pi, &mut pr);
         pr
     }
@@ -635,7 +630,7 @@ pub unsafe fn cmd_parse_from_arguments(
             cmds.push(current);
         }
 
-        let mut pr = Err(null_mut());
+        let mut pr = Err(CString::default());
         cmd_parse_build_commands(&cmds, pi, &mut pr);
         pr
     }
@@ -1408,13 +1403,7 @@ mod tests {
                     Ok(s)
                 }
                 Err(err) => {
-                    if err.is_null() {
-                        Err("<null error>".into())
-                    } else {
-                        let s = cstr_to_str(err).to_string();
-                        free_(err);
-                        Err(s)
-                    }
+                    Err(err.to_string_lossy().into_owned())
                 }
             }
         }
@@ -1626,13 +1615,7 @@ mod tests {
                     Ok(s)
                 }
                 Err(err) => {
-                    if err.is_null() {
-                        Err("<null error>".into())
-                    } else {
-                        let s = cstr_to_str(err).to_string();
-                        free_(err);
-                        Err(s)
-                    }
+                    Err(err.to_string_lossy().into_owned())
                 }
             }
         }

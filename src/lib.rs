@@ -1924,11 +1924,10 @@ bitflags::bitflags! {
 }
 
 /// List of commands.
-#[repr(C)]
 struct cmd_list {
     references: i32,
     group: u32,
-    list: *mut cmds,
+    list: Vec<*mut cmd>,
 }
 
 // Command return values.
@@ -1950,7 +1949,7 @@ enum cmd_parse_status {
     CMD_PARSE_SUCCESS,
 }
 
-type cmd_parse_result = Result<*mut cmd_list /* cmdlist */, *mut u8 /* error */>;
+type cmd_parse_result = Result<*mut cmd_list, CString>;
 
 bitflags::bitflags! {
     #[repr(transparent)]

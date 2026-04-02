@@ -133,8 +133,7 @@ pub unsafe fn load_cfg(
         drop(f);
         let cmdlist = match pr {
             Err(error) => {
-                cfg_add_cause!("{}", _s(error));
-                free_(error);
+                cfg_add_cause!("{}", error.to_string_lossy());
                 return -1;
             }
             Ok(cmdlist) => cmdlist,
@@ -193,8 +192,7 @@ pub unsafe fn load_cfg_from_buffer(
 
         let cmdlist = match cmd_parse_from_buffer(buf, Some(&pi)) {
             Err(error) => {
-                cfg_add_cause!("{}", _s(error));
-                free_(error);
+                cfg_add_cause!("{}", error.to_string_lossy());
                 return -1;
             }
             Ok(cmdlist) => cmdlist,

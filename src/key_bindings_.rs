@@ -637,7 +637,7 @@ pub unsafe fn key_bindings_init() {
         for default in DEFAULTS {
             match cmd_parse_from_string(default, None) {
                 Err(error) => {
-                    log_debug!("{}", _s(error));
+                    log_debug!("{}", error.to_string_lossy());
                     fatalx_!("bad default key: {}", default);
                 }
                 Ok(cmdlist) => {

@@ -830,7 +830,7 @@ pub unsafe fn args_make_commands(
 
         match pr {
             Err(err) => {
-                *error = err;
+                *error = err.into_raw().cast();
                 null_mut()
             }
             Ok(cmdlist) => cmdlist,
@@ -868,7 +868,7 @@ pub unsafe fn args_make_commands_free(state: *mut args_command_state) {
 pub unsafe fn args_make_commands_get_command(state: *mut args_command_state) -> *mut u8 {
     unsafe {
         if !(*state).cmdlist.is_null() {
-            let first = cmd_list_first((*state).cmdlist);
+            let first = cmd_list_commands((*state).cmdlist).first().copied().unwrap_or(null_mut());
             if first.is_null() {
                 return xstrdup_(c"").as_ptr();
             }

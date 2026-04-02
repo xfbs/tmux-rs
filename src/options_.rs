@@ -527,7 +527,7 @@ pub unsafe fn options_array_set(
         if OPTIONS_IS_COMMAND(o) {
             let cmdlist = match cmd_parse_from_string(value, None) {
                 Err(error) => {
-                    return Err(CString::from_raw(error.cast()));
+                    return Err(error);
                 }
                 Ok(cmdlist) => cmdlist,
             };

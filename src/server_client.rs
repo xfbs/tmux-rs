@@ -3010,7 +3010,7 @@ pub unsafe fn server_client_dispatch_command(c: *mut client, imsg: *mut imsg) {
             let cmdlist = match cmd_parse_from_arguments(values, argc as u32, None) {
                 Ok(cmdlist) => cmdlist,
                 Err(err) => {
-                    cause = err;
+                    cause = err.into_raw().cast();
                     break 'error;
                 }
             };

@@ -250,9 +250,7 @@ pub unsafe extern "C-unwind" fn client_main(
                     }
                     cmd_list_free(cmdlist);
                 }
-                Err(error) => {
-                    free_(error);
-                }
+                Err(_error) => {}
             }
             args_free_values(values, argc as u32);
             free_(values);

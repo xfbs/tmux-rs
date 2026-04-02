@@ -74,7 +74,7 @@ unsafe fn cmd_confirm_before_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_
         let new_prompt = if !prompt.is_null() {
             format_nul!("{} ", _s(prompt))
         } else {
-            let cmd = cmd_get_entry(cmd_list_first(cdata.cmdlist)).name;
+            let cmd = cmd_get_entry(cmd_list_commands(cdata.cmdlist).first().copied().unwrap_or(null_mut())).name;
             format_nul!("Confirm '{}'? ({}/n) ", cmd, cdata.confirm_key as char)
         };
 

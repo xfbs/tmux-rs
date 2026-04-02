@@ -503,8 +503,8 @@ pub unsafe fn cmdq_get_command(
         let mut last: *mut cmdq_item = null_mut();
         let mut created = false;
 
-        let mut cmd = cmd_list_first(cmdlist);
-        if cmd.is_null() {
+        let cmds = cmd_list_commands(cmdlist);
+        if cmds.is_empty() {
             return cmdq_get_callback!(cmdq_empty_command, null_mut()).as_ptr();
         }
 
@@ -513,7 +513,7 @@ pub unsafe fn cmdq_get_command(
             created = true;
         }
 
-        while !cmd.is_null() {
+        for &cmd in cmds {
             let entry = cmd_get_entry(cmd);
 
             let item = xcalloc1::<cmdq_item>() as *mut cmdq_item;
@@ -536,8 +536,6 @@ pub unsafe fn cmdq_get_command(
                 (*last).next = item;
             }
             last = item;
-
-            cmd = cmd_list_next(cmd);
         }
 
         if created {

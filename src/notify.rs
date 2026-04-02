@@ -101,9 +101,8 @@ pub unsafe fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut notify_entry
                         "{}: can't parse hook {}: {}",
                         __func__,
                         _s((*ne).name),
-                        _s(error)
+                        error.to_string_lossy()
                     );
-                    free_(error);
                 }
                 Ok(cmdlist) => {
                     notify_insert_one_hook(item, ne, cmdlist, state);

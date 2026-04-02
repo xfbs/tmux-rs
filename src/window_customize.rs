@@ -1504,36 +1504,34 @@ pub unsafe fn window_customize_set_command_callback(
         let item = item.as_ptr();
         let data: *mut window_customize_modedata = (*item).data;
         let mut bd: *mut key_binding = null_mut();
-        let error: *mut u8;
 
-        'fail: {
-            if s.is_null() || *s == b'\0' || (*data).dead != 0 {
-                return 0;
-            }
-            if item.is_null() || window_customize_get_key(item, null_mut(), &raw mut bd) == 0 {
-                return 0;
-            }
-
-            let cmdlist = match cmd_parse_from_string(cstr_to_str(s), None) {
-                Ok(cmdlist) => cmdlist,
-                Err(pr_error) => {
-                    error = pr_error;
-                    break 'fail;
-                }
-            };
-            cmd_list_free((*bd).cmdlist);
-            (*bd).cmdlist = cmdlist;
-
-            mode_tree_build((*data).data);
-            mode_tree_draw(&mut *(*data).data);
-            (*(*data).wp).flags |= window_pane_flags::PANE_REDRAW;
-
+        if s.is_null() || *s == b'\0' || (*data).dead != 0 {
             return 0;
         }
-        // 'fail:
-        *error = (*error).to_ascii_uppercase();
-        status_message_set!(c, -1, 1, false, "{}", _s(error));
-        free_(error);
+        if item.is_null() || window_customize_get_key(item, null_mut(), &raw mut bd) == 0 {
+            return 0;
+        }
+
+        let cmdlist = match cmd_parse_from_string(cstr_to_str(s), None) {
+            Ok(cmdlist) => cmdlist,
+            Err(pr_error) => {
+                let msg = pr_error.to_string_lossy().into_owned();
+                let mut chars: Vec<u8> = msg.into_bytes();
+                if let Some(first) = chars.first_mut() {
+                    *first = first.to_ascii_uppercase();
+                }
+                let msg = String::from_utf8(chars).unwrap_or_default();
+                status_message_set!(c, -1, 1, false, "{}", msg);
+                return 0;
+            }
+        };
+        cmd_list_free((*bd).cmdlist);
+        (*bd).cmdlist = cmdlist;
+
+        mode_tree_build((*data).data);
+        mode_tree_draw(&mut *(*data).data);
+        (*(*data).wp).flags |= window_pane_flags::PANE_REDRAW;
+
         0
     }
 }

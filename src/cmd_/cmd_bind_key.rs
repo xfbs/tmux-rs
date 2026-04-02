@@ -73,8 +73,7 @@ unsafe fn cmd_bind_key_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval
 
         match pr {
             Err(error) => {
-                cmdq_error!(item, "{}", _s(error));
-                free_(error);
+                cmdq_error!(item, "{}", error.to_string_lossy());
                 cmd_retval::CMD_RETURN_ERROR
             }
             Ok(cmdlist) => {
