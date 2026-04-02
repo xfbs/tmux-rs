@@ -51,8 +51,8 @@ pub struct ParsedCommand {
 }
 
 pub enum ParsedArgument {
-    /// NUL-terminated C string (owned, will be freed on drop).
-    String(*mut u8),
+    /// NUL-terminated C string (owned Vec<u8>).
+    String(Vec<u8>),
     /// Command block from { ... } braces.
     CommandBlock(Vec<ParsedCommand>),
     /// Pre-parsed command list (reference-counted, from cmd_parse_from_arguments).
@@ -62,7 +62,7 @@ pub enum ParsedArgument {
 impl Drop for ParsedArgument {
     fn drop(&mut self) {
         match self {
-            ParsedArgument::String(ptr) => unsafe { free_(*ptr); },
+            ParsedArgument::String(_) => {} // Vec<u8> drops automatically
             ParsedArgument::CommandBlock(_) => {} // Vec drops recursively
             ParsedArgument::ParsedCommands(cmdlist) => unsafe {
                 if !(*cmdlist).is_null() {
@@ -97,10 +97,14 @@ pub struct cmd_parse_state<'a> {
     pub stack: Vec<bool>,
 }
 
-/// Convert a lexer token pointer to an owned *mut u8.
-/// The caller takes ownership (pointer is NOT freed here).
-pub unsafe fn token_to_ptr(token: Option<NonNull<u8>>) -> *mut u8 {
-    token.map_or(null_mut(), |p| p.as_ptr())
+/// Convert a *mut u8 C string to an owned Vec<u8> (NUL-terminated). Frees the original.
+pub unsafe fn cstr_to_owned_vec(ptr: *mut u8) -> Vec<u8> {
+    unsafe {
+        let len = strlen(ptr) + 1; // include NUL
+        let vec = std::slice::from_raw_parts(ptr, len).to_vec();
+        free_(ptr);
+        vec
+    }
 }
 
 pub unsafe fn cmd_parse_get_error(file: Option<&str>, line: u32, error: &str) -> CString {
@@ -216,7 +220,7 @@ pub fn cmd_parse_log_commands(cmds: &[ParsedCommand], prefix: &str) {
             for (j, arg) in cmd.arguments.iter().enumerate() {
                 match arg {
                     ParsedArgument::String(string) => {
-                        log_debug!("{} {}:{}: {}", prefix, i, j, _s(*string));
+                        log_debug!("{} {}:{}: {}", prefix, i, j, _s(string.as_ptr()));
                     }
                     ParsedArgument::CommandBlock(commands) => {
                         let sub = format!("{} {}:{}", prefix, i, j);
@@ -257,7 +261,7 @@ pub unsafe fn cmd_parse_expand_alias<'a>(
             return true;
         };
 
-        let alias = cmd_get_alias(*name);
+        let alias = cmd_get_alias(name.as_ptr());
         if alias.is_null() {
             return false;
         }
@@ -265,7 +269,7 @@ pub unsafe fn cmd_parse_expand_alias<'a>(
             "{}: {} alias {} = {}",
             __func__,
             pi.line.load(atomic::Ordering::SeqCst),
-            _s(*name),
+            _s(name.as_ptr()),
             _s(alias)
         );
 
@@ -317,7 +321,7 @@ pub unsafe fn cmd_parse_build_command(
             let mut alias_cmd = ParsedCommand {
                 line: cmd.line,
                 arguments: cmd.arguments.iter().map(|arg| match arg {
-                    ParsedArgument::String(s) => ParsedArgument::String(xstrdup(*s).as_ptr()),
+                    ParsedArgument::String(s) => ParsedArgument::String(s.clone()),
                     ParsedArgument::CommandBlock(_) => {
                         // Can't cheaply clone command blocks for alias check.
                         // Aliases only match on first string arg, so this path
@@ -343,7 +347,7 @@ pub unsafe fn cmd_parse_build_command(
                 match arg {
                     ParsedArgument::String(string) => {
                         (*values.add(count as usize)).type_ = args_type::ARGS_STRING;
-                        (*values.add(count as usize)).union_.string = xstrdup(*string).as_ptr();
+                        (*values.add(count as usize)).union_.string = xstrdup(string.as_ptr()).as_ptr();
                     }
                     ParsedArgument::CommandBlock(commands) => {
                         cmd_parse_build_commands(commands, pi, pr);
@@ -546,21 +550,20 @@ pub unsafe fn cmd_parse_from_arguments(
         for i in 0..count {
             let mut end = false;
             if (*values.add(i as usize)).type_ == args_type::ARGS_STRING {
-                let copy = xstrdup((*values.add(i as usize)).union_.string).as_ptr();
-                let mut size = strlen(copy);
-                if size != 0 && *copy.add(size - 1) == b';' {
-                    size -= 1;
-                    *copy.add(size) = b'\0';
-                    if size > 0 && *copy.add(size - 1) == b'\\' {
-                        *copy.add(size - 1) = b';';
+                let src = (*values.add(i as usize)).union_.string;
+                let len = strlen(src);
+                let mut bytes: Vec<u8> = std::slice::from_raw_parts(src, len).to_vec();
+                if !bytes.is_empty() && *bytes.last().unwrap() == b';' {
+                    bytes.pop(); // remove ';'
+                    if !bytes.is_empty() && *bytes.last().unwrap() == b'\\' {
+                        *bytes.last_mut().unwrap() = b';';
                     } else {
                         end = true;
                     }
                 }
-                if !end || size != 0 {
-                    current.arguments.push(ParsedArgument::String(copy));
-                } else {
-                    free_(copy);
+                bytes.push(b'\0'); // NUL terminate
+                if !end || bytes.len() > 1 {
+                    current.arguments.push(ParsedArgument::String(bytes));
                 }
             } else if (*values.add(i as usize)).type_ == args_type::ARGS_COMMANDS {
                 let cmdlist = (*values.add(i as usize)).union_.cmdlist;
@@ -590,20 +593,18 @@ pub unsafe fn cmd_parse_from_arguments(
 }
 
 mod lexer {
-    use core::ptr::NonNull;
-
-    use crate::{cmd_parse_state, transmute_ptr};
+    use crate::cmd_parse_state;
 
     pub struct Lexer<'a> {
-        ps: NonNull<cmd_parse_state<'a>>,
+        ps: std::ptr::NonNull<cmd_parse_state<'a>>,
     }
     impl<'a> Lexer<'a> {
-        pub fn new(ps: NonNull<cmd_parse_state<'a>>) -> Self {
+        pub fn new(ps: std::ptr::NonNull<cmd_parse_state<'a>>) -> Self {
             Lexer { ps }
         }
     }
 
-    #[derive(Copy, Clone, Debug)]
+    #[derive(Clone, Debug)]
     pub enum Tok {
         Newline,
         Semicolon,
@@ -617,9 +618,9 @@ mod lexer {
         Elif,
         Endif,
 
-        Format(Option<NonNull<u8>>),
-        Token(Option<NonNull<u8>>),
-        Equals(Option<NonNull<u8>>),
+        Format(Vec<u8>),
+        Token(Vec<u8>),
+        Equals(Vec<u8>),
     }
     impl std::fmt::Display for Tok {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -634,17 +635,17 @@ mod lexer {
                 Tok::Else => write!(f, "%else"),
                 Tok::Elif => write!(f, "%elif"),
                 Tok::Endif => write!(f, "%endif"),
-                Tok::Format(non_null) => {
+                Tok::Format(v) => {
                     write!(f, "format({})", unsafe {
-                        crate::_s(transmute_ptr(*non_null))
+                        crate::_s(v.as_ptr())
                     })
                 }
-                Tok::Token(non_null) => write!(f, "token({})", unsafe {
-                    crate::_s(transmute_ptr(*non_null))
+                Tok::Token(v) => write!(f, "token({})", unsafe {
+                    crate::_s(v.as_ptr())
                 }),
-                Tok::Equals(non_null) => {
+                Tok::Equals(v) => {
                     write!(f, "equals({})", unsafe {
-                        crate::_s(transmute_ptr(*non_null))
+                        crate::_s(v.as_ptr())
                     })
                 }
             }
@@ -774,7 +775,7 @@ fn yylex_getc(ps: &mut cmd_parse_state) -> i32 {
     }
 }
 
-unsafe fn yylex_get_word(ps: &mut cmd_parse_state, mut ch: i32) -> *mut u8 {
+unsafe fn yylex_get_word(ps: &mut cmd_parse_state, mut ch: i32) -> Vec<u8> {
     unsafe {
         let mut buf = Vec::new();
 
@@ -789,7 +790,7 @@ unsafe fn yylex_get_word(ps: &mut cmd_parse_state, mut ch: i32) -> *mut u8 {
 
         buf.push(b'\0');
         // log_debug("%s: %s", __func__, buf.as_ptr());
-        Box::leak(buf.into_boxed_slice()).as_mut_ptr()
+        buf
     }
 }
 
@@ -857,11 +858,10 @@ unsafe fn yylex_(ps: &mut cmd_parse_state) -> Option<Tok> {
                 // is a comment, ignore up to the end of the line.
                 let mut next = yylex_getc(ps);
                 if condition != 0 && next == '{' as i32 {
-                    let yylval_token = yylex_format(ps);
-                    if yylval_token.is_none() {
-                        return Some(Tok::Error);
+                    match yylex_format(ps) {
+                        None => return Some(Tok::Error),
+                        Some(yylval_token) => return Some(Tok::Format(yylval_token)),
                     }
-                    return Some(Tok::Format(yylval_token));
                 }
                 while next != '\n' as i32 && next != libc::EOF {
                     next = yylex_getc(ps);
@@ -881,68 +881,57 @@ unsafe fn yylex_(ps: &mut cmd_parse_state) -> Option<Tok> {
                 // % is a condition unless it is all % or all numbers,
                 // then it is a token.
                 let yylval_token = yylex_get_word(ps, '%' as i32);
-                let mut cp = yylval_token;
-                while *cp != b'\0' {
-                    if *cp != b'%' && !(*cp as u8).is_ascii_digit() {
-                        break;
-                    }
-                    cp = cp.add(1);
-                }
-                if *cp == b'\0' {
-                    return Some(Tok::Token(NonNull::new(yylval_token)));
+                let all_pct_or_digit = yylval_token.iter()
+                    .take_while(|&&b| b != b'\0')
+                    .all(|&b| b == b'%' || b.is_ascii_digit());
+                if all_pct_or_digit {
+                    return Some(Tok::Token(yylval_token));
                 }
                 ps.condition = 1;
-                if streq_(yylval_token, "%hidden") {
-                    free_(yylval_token);
+                if yylval_token.as_slice() == b"%hidden\0" {
                     return Some(Tok::Hidden);
                 }
-                if streq_(yylval_token, "%if") {
-                    free_(yylval_token);
+                if yylval_token.as_slice() == b"%if\0" {
                     return Some(Tok::If);
                 }
-                if streq_(yylval_token, "%else") {
-                    free_(yylval_token);
+                if yylval_token.as_slice() == b"%else\0" {
                     return Some(Tok::Else);
                 }
-                if streq_(yylval_token, "%elif") {
-                    free_(yylval_token);
+                if yylval_token.as_slice() == b"%elif\0" {
                     return Some(Tok::Elif);
                 }
-                if streq_(yylval_token, "%endif") {
-                    free_(yylval_token);
+                if yylval_token.as_slice() == b"%endif\0" {
                     return Some(Tok::Endif);
                 }
-                free_(yylval_token);
                 return Some(Tok::Error);
             }
 
             // Otherwise this is a token.
-            let token = yylex_token(ps, ch);
-            if token.is_null() {
-                return Some(Tok::Error);
-            }
-            let yylval_token = token;
+            let buf = match yylex_token(ps, ch) {
+                None => return Some(Tok::Error),
+                Some(buf) => buf,
+            };
 
-            if !libc::strchr(token, b'=' as i32).is_null() && yylex_is_var(*token, true) {
-                let mut cp = token.add(1);
-                while *cp != b'=' {
-                    if !yylex_is_var(*cp, false) {
+            if buf.contains(&b'=') && !buf.is_empty() && yylex_is_var(buf[0], true) {
+                let mut i = 1;
+                while i < buf.len() && buf[i] != b'=' {
+                    if !yylex_is_var(buf[i], false) {
                         break;
                     }
-                    cp = cp.add(1);
+                    i += 1;
                 }
-                if *cp == b'=' {
-                    return Some(Tok::Equals(NonNull::new(yylval_token)));
+                if i < buf.len() && buf[i] == b'=' {
+                    return Some(Tok::Equals(buf));
                 }
             }
-            return Some(Tok::Token(NonNull::new(yylval_token)));
+            return Some(Tok::Token(buf));
         }
 
         None
     }
 }
 
-unsafe fn yylex_format(ps: &mut cmd_parse_state) -> Option<NonNull<u8>> {
+unsafe fn yylex_format(ps: &mut cmd_parse_state) -> Option<Vec<u8>> {
     let mut brackets = 1;
     let mut buf = Vec::new();
 
@@ -980,7 +969,7 @@ unsafe fn yylex_format(ps: &mut cmd_parse_state) -> Option<NonNull<u8>> {
 
         buf.push(b'\0');
         // log_debug("%s: %s", __func__, buf.as_ptr());
-        return NonNull::new(Box::leak(buf.into_boxed_slice()).as_mut_ptr());
+        return Some(buf);
     } // error:
 
     None
@@ -1086,7 +1075,7 @@ unsafe fn yylex_token_tilde(ps: &mut cmd_parse_state, buf: &mut Vec<u8>) -> bool
     }
 }
 
-unsafe fn yylex_token(ps: &mut cmd_parse_state, mut ch: i32) -> *mut u8 {
+unsafe fn yylex_token(ps: &mut cmd_parse_state, mut ch: i32) -> Option<Vec<u8>> {
     unsafe {
         #[derive(Copy, Clone, Eq, PartialEq)]
         enum State {
@@ -1215,10 +1204,10 @@ unsafe fn yylex_token(ps: &mut cmd_parse_state, mut ch: i32) -> *mut u8 {
 
             buf.push(b'\0');
             // log_debug("%s: %s", __func__, buf.as_ptr());
-            return Box::leak(buf.into_boxed_slice()).as_mut_ptr();
+            return Some(buf);
         } // error:
 
-        null_mut()
+        None
     }
 }
 
