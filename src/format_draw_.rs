@@ -14,6 +14,7 @@
 use crate::*;
 
 /// Format range.
+#[derive(Copy, Clone)]
 struct format_range {
     index: u32,
     s: *mut screen,
@@ -22,10 +23,8 @@ struct format_range {
     type_: style_range_type,
     argument: u32,
     string: [u8; 16],
-    entry: tailq_entry<format_range>,
 }
-type format_ranges = tailq_head<format_range>;
-impl_tailq_entry!(format_range, entry, tailq_entry<format_range>);
+type format_ranges = Vec<format_range>;
 
 /// Does this range match this style?
 fn format_is_type(fr: &format_range, sy: &style) -> bool {
@@ -49,14 +48,6 @@ fn format_is_type(fr: &format_range, sy: &style) -> bool {
     }
 }
 
-/// Free a range.
-unsafe fn format_free_range(frs: *mut format_ranges, fr: *mut format_range) {
-    unsafe {
-        tailq_remove(frs, fr);
-        free(fr.cast());
-    }
-}
-
 /// Fix range positions.
 unsafe fn format_update_ranges(
     frs: *mut format_ranges,
@@ -70,33 +61,32 @@ unsafe fn format_update_ranges(
             return;
         }
 
-        for fr in tailq_foreach(frs).map(NonNull::as_ptr) {
-            if (*fr).s != s {
-                continue;
+        (*frs).retain_mut(|fr| {
+            if fr.s != s {
+                return true;
             }
 
-            if (*fr).end <= start || (*fr).start >= start + width {
-                format_free_range(frs, fr);
-                continue;
+            if fr.end <= start || fr.start >= start + width {
+                return false;
             }
 
-            if (*fr).start < start {
-                (*fr).start = start;
+            if fr.start < start {
+                fr.start = start;
             }
-            if (*fr).end > start + width {
-                (*fr).end = start + width;
+            if fr.end > start + width {
+                fr.end = start + width;
             }
-            if (*fr).start == (*fr).end {
-                format_free_range(frs, fr);
-                continue;
+            if fr.start == fr.end {
+                return false;
             }
 
-            (*fr).start -= start;
-            (*fr).end -= start;
+            fr.start -= start;
+            fr.end -= start;
 
-            (*fr).start += offset;
-            (*fr).end += offset;
-        }
+            fr.start += offset;
+            fr.end += offset;
+            true
+        });
     }
 }
 
@@ -914,12 +904,11 @@ pub unsafe fn format_draw(
 
         let ud: *mut utf8_data = &raw mut sy.gc.data;
 
-        let mut fr = null_mut();
-        let mut frs: format_ranges = zeroed();
+        let mut fr: *mut format_range = null_mut();
+        let mut frs: format_ranges = Vec::new();
 
         memcpy__(&raw mut current_default, base);
         style_set(&raw mut sy, &raw mut current_default);
-        tailq_init(&raw mut frs);
         // log_debug("%s: %s", __func__, expanded);
 
         // We build three screens for left, right, centre alignment, one for
@@ -1003,11 +992,7 @@ pub unsafe fn format_draw(
                 let end = format_skip(cp.add(2), c!("]"));
                 if end.is_null() {
                     // log_debug("%s: no terminating ] at '%s'", __func__, cp + 2);
-                    for fr_ in tailq_foreach(&raw mut frs).map(NonNull::as_ptr) {
-                        fr = fr_;
-                        // TODO warning this seems to break the aliasing rules
-                        format_free_range(&raw mut frs, fr);
-                    }
+                    frs.clear();
                     break 'out;
                 }
                 let tmp: *mut u8 = xstrndup(cp.add(2), end.offset_from(cp.add(2)) as usize)
@@ -1150,10 +1135,9 @@ pub unsafe fn format_draw(
                     if !fr.is_null() && !format_is_type(&*fr, &sy) {
                         if s[current as usize].cx != (*fr).start {
                             (*fr).end = s[current as usize].cx + 1;
-                            tailq_insert_tail(&raw mut frs, fr);
-                        } else {
-                            free_(fr);
+                            frs.push(*fr);
                         }
+                        free_(fr);
                         fr = null_mut();
                     }
                     if fr.is_null() && sy.range_type != style_range_type::STYLE_RANGE_NONE {
@@ -1184,15 +1168,15 @@ pub unsafe fn format_draw(
             if focus_start != -1 && focus_end != -1 {
                 log_debug!("{}: focus {}-{}", func, focus_start, focus_end);
             }
-            for fr in tailq_foreach(&raw mut frs).map(NonNull::as_ptr) {
+            for fr in &frs {
                 log_debug!(
                     "{}: range {}|{} is {} {}-{}",
                     func,
-                    (*fr).type_ as u32,
-                    (*fr).argument,
-                    NAMES[(*fr).index as usize],
-                    (*fr).start,
-                    (*fr).end
+                    fr.type_ as u32,
+                    fr.argument,
+                    NAMES[fr.index as usize],
+                    fr.start,
+                    fr.end
                 );
             }
 
@@ -1294,17 +1278,17 @@ pub unsafe fn format_draw(
             }
 
             // Create ranges to return.
-            for fr in tailq_foreach(&mut frs).map(NonNull::as_ptr) {
+            for fr in &frs {
                 let mut sr = style_range {
-                    type_: (*fr).type_,
-                    argument: (*fr).argument,
+                    type_: fr.type_,
+                    argument: fr.argument,
                     string: [0u8; 16],
-                    start: (*fr).start,
-                    end: (*fr).end,
+                    start: fr.start,
+                    end: fr.end,
                 };
                 strlcpy(
                     sr.string.as_mut_ptr(),
-                    (*fr).string.as_ptr(),
+                    fr.string.as_ptr(),
                     size_of::<[u8; 16]>(),
                 );
                 (*srs).push(sr);
@@ -1354,7 +1338,6 @@ pub unsafe fn format_draw(
                         );
                     }
                 }
-                format_free_range(&raw mut frs, fr);
             }
         } // out:
 
