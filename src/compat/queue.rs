@@ -10,15 +10,6 @@ pub struct tailq_head<T> {
     pub tqh_last: *mut *mut T,
 }
 
-macro_rules! TAILQ_HEAD_INITIALIZER {
-    ($ident:ident) => {
-        $crate::compat::queue::tailq_head {
-            tqh_first: null_mut(),
-            tqh_last: unsafe { &raw mut $ident.tqh_first },
-        }
-    };
-}
-pub(crate) use TAILQ_HEAD_INITIALIZER;
 
 #[repr(C)]
 #[derive(Copy, Clone)]

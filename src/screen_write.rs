@@ -22,7 +22,6 @@ pub enum screen_write_citem_type {
     Clear,
 }
 
-impl_tailq_entry!(screen_write_citem, entry, tailq_entry<screen_write_citem>);
 #[repr(C)]
 pub struct screen_write_citem {
     x: u32,
@@ -33,25 +32,21 @@ pub struct screen_write_citem {
     bg: u32,
 
     gc: grid_cell,
-
-    entry: tailq_entry<screen_write_citem>,
 }
 
-#[repr(C)]
 pub struct screen_write_cline {
     data: *mut u8,
-    items: tailq_head<screen_write_citem>,
+    items: Vec<*mut screen_write_citem>,
 }
 
-pub static mut SCREEN_WRITE_CITEM_FREELIST: tailq_head<screen_write_citem> =
-    TAILQ_HEAD_INITIALIZER!(SCREEN_WRITE_CITEM_FREELIST);
+static mut SCREEN_WRITE_CITEM_FREELIST: Vec<*mut screen_write_citem> = Vec::new();
 
 unsafe fn screen_write_get_citem() -> NonNull<screen_write_citem> {
     unsafe {
-        if let Some(ci) = NonNull::new(tailq_first(&raw mut SCREEN_WRITE_CITEM_FREELIST)) {
-            tailq_remove(&raw mut SCREEN_WRITE_CITEM_FREELIST, ci.as_ptr());
-            memset0(ci.as_ptr());
-            return ci;
+        let freelist = &mut *(&raw mut SCREEN_WRITE_CITEM_FREELIST);
+        if let Some(ci) = freelist.pop() {
+            memset0(ci);
+            return NonNull::new_unchecked(ci);
         }
         NonNull::new(xcalloc1::<screen_write_citem>()).unwrap()
     }
@@ -59,7 +54,8 @@ unsafe fn screen_write_get_citem() -> NonNull<screen_write_citem> {
 
 unsafe fn screen_write_free_citem(ci: *mut screen_write_citem) {
     unsafe {
-        tailq_insert_tail(&raw mut SCREEN_WRITE_CITEM_FREELIST, ci);
+        let freelist = &mut *(&raw mut SCREEN_WRITE_CITEM_FREELIST);
+        freelist.push(ci);
     }
 }
 
@@ -242,7 +238,7 @@ pub unsafe fn screen_write_make_list(s: *mut screen) {
     unsafe {
         (*s).write_list = xcalloc_(screen_size_y(s) as usize).as_ptr();
         for y in 0..screen_size_y(s) {
-            tailq_init(&raw mut (*(*s).write_list.add(y as usize)).items);
+            std::ptr::write(&raw mut (*(*s).write_list.add(y as usize)).items, Vec::new());
         }
     }
 }
@@ -251,7 +247,9 @@ pub unsafe fn screen_write_make_list(s: *mut screen) {
 pub unsafe fn screen_write_free_list(s: *mut screen) {
     unsafe {
         for y in 0..screen_size_y(s) {
-            free_((*(*s).write_list.add(y as usize)).data);
+            let cl = (*s).write_list.add(y as usize);
+            std::ptr::drop_in_place(&raw mut (*cl).items);
+            free_((*cl).data);
         }
         free_((*s).write_list);
     }
@@ -1408,10 +1406,7 @@ pub unsafe fn screen_write_clearline(ctx: *mut screen_write_ctx, bg: u32) {
         (*ci).used = sx;
         (*ci).type_ = screen_write_citem_type::Clear;
         (*ci).bg = bg;
-        tailq_insert_tail(
-            &raw mut (*(*(*ctx).s).write_list.add((*s).cy as usize)).items,
-            ci,
-        );
+        (*(*(*ctx).s).write_list.add((*s).cy as usize)).items.push(ci);
         (*ctx).item = screen_write_get_citem().as_ptr();
     }
 }
@@ -1447,13 +1442,12 @@ pub unsafe fn screen_write_clearendofline(ctx: *mut screen_write_ctx, bg: u32) {
         (*ci).used = sx - (*s).cx;
         (*ci).type_ = screen_write_citem_type::Clear;
         (*ci).bg = bg;
+        let items = &mut (*(*(*ctx).s).write_list.add((*s).cy as usize)).items;
         if before.is_null() {
-            tailq_insert_tail(
-                &raw mut (*(*(*ctx).s).write_list.add((*s).cy as usize)).items,
-                ci,
-            );
+            items.push(ci);
         } else {
-            tailq_insert_before(before, ci);
+            let pos = items.iter().position(|&p| p == before).unwrap();
+            items.insert(pos, ci);
         }
         (*ctx).item = screen_write_get_citem().as_ptr();
     }
@@ -1489,13 +1483,12 @@ pub unsafe fn screen_write_clearstartofline(ctx: *mut screen_write_ctx, bg: u32)
         (*ci).used = (*s).cx + 1;
         (*ci).type_ = screen_write_citem_type::Clear;
         (*ci).bg = bg;
+        let items = &mut (*(*(*ctx).s).write_list.add((*s).cy as usize)).items;
         if before.is_null() {
-            tailq_insert_tail(
-                &raw mut (*(*(*ctx).s).write_list.add((*s).cy as usize)).items,
-                ci,
-            );
+            items.push(ci);
         } else {
-            tailq_insert_before(before, ci);
+            let pos = items.iter().position(|&p| p == before).unwrap();
+            items.insert(pos, ci);
         }
         (*ctx).item = screen_write_get_citem().as_ptr();
     }
@@ -1843,71 +1836,68 @@ pub unsafe fn screen_write_collect_trim(
 ) -> *mut screen_write_citem {
     unsafe {
         let cl = (*(*ctx).s).write_list.add(y as usize);
+        let items = &mut (*cl).items;
         let mut before = null_mut();
         let sx = x;
         let ex = x + used - 1;
 
-        if tailq_empty(&raw const (*cl).items) {
+        if items.is_empty() {
             return null_mut();
         }
-        for ci in tailq_foreach(&raw mut (*cl).items).map(NonNull::as_ptr) {
+        let mut i = 0;
+        while i < items.len() {
+            let ci = items[i];
             let csx = (*ci).x;
             let cex = (*ci).x + (*ci).used - 1;
 
             // Item is entirely before.
             if cex < sx {
+                i += 1;
                 continue;
-            } // log_debug("%s: %p %u-%u before %u-%u", __func__, ci, csx, cex, sx, ex);
+            }
 
             // Item is entirely after.
             if csx > ex {
-                // log_debug("%s: %p %u-%u after %u-%u", __func__, ci, csx, cex, sx, ex);
                 before = ci;
                 break;
             }
 
             // Item is entirely inside.
             if csx >= sx && cex <= ex {
-                // log_debug("%s: %p %u-%u inside %u-%u", __func__, ci, csx, cex, sx, ex);
-                tailq_remove(&raw mut (*cl).items, ci);
-                screen_write_free_citem(ci);
+                items.remove(i);
                 if csx == 0 && (*ci).wrapped && !wrapped.is_null() {
                     *wrapped = true;
                 }
+                screen_write_free_citem(ci);
                 continue;
             }
 
             // Item under the start.
             if csx < sx && cex >= sx && cex <= ex {
-                // log_debug("%s: %p %u-%u start %u-%u", __func__, ci, csx, cex, sx, ex);
                 (*ci).used = sx - csx;
-                // log_debug("%s: %p now %u-%u", __func__, ci, (*ci).x, (*ci).x + (*ci).used + 1);
+                i += 1;
                 continue;
             }
 
             // Item covers the end.
             if cex > ex && csx >= sx && csx <= ex {
-                // log_debug("%s: %p %u-%u end %u-%u", __func__, ci, csx, cex, sx, ex);
                 (*ci).x = ex + 1;
                 (*ci).used = cex - ex;
-                // log_debug("%s: %p now %u-%u", __func__, ci, (*ci).x, (*ci).x + (*ci).used + 1);
                 before = ci;
                 break;
             }
 
             // Item must cover both sides.
-            // log_debug("%s: %p %u-%u under %u-%u", __func__, ci, csx, cex, sx, ex);
             let ci2 = screen_write_get_citem().as_ptr();
             (*ci2).type_ = (*ci).type_;
             (*ci2).bg = (*ci).bg;
             memcpy__(&raw mut (*ci2).gc, &raw mut (*ci).gc);
-            tailq_insert_after(&raw mut (*cl).items, ci, ci2);
+            items.insert(i + 1, ci2);
 
             (*ci).used = sx - csx;
             (*ci2).x = ex + 1;
             (*ci2).used = cex - ex;
 
-            // log_debug("%s: %p now %u-%u (%p) and %u-%u (%p)", __func__, ci, (*ci).x, (*ci).x + (*ci).used - 1, ci, (*ci2).x, (*ci2).x + (*ci2).used - 1, ci2);
             before = ci2;
             break;
         }
@@ -1918,9 +1908,10 @@ pub unsafe fn screen_write_collect_trim(
 /// Clear collected lines.
 pub unsafe fn screen_write_collect_clear(ctx: *mut screen_write_ctx, y: u32, n: u32) {
     unsafe {
+        let freelist = &mut *(&raw mut SCREEN_WRITE_CITEM_FREELIST);
         for i in y..(y + n) {
             let cl = (*(*ctx).s).write_list.add(i as usize);
-            tailq_concat(&raw mut SCREEN_WRITE_CITEM_FREELIST, &raw mut (*cl).items);
+            freelist.append(&mut (*cl).items);
         }
     }
 }
@@ -1934,12 +1925,11 @@ pub unsafe fn screen_write_collect_scroll(ctx: *mut screen_write_ctx, bg: u32) {
         screen_write_collect_clear(ctx, (*s).rupper, 1);
         let saved = (*(*(*ctx).s).write_list.add((*s).rupper as usize)).data;
         for y in (*s).rupper..(*s).rlower {
-            let cl = (*(*ctx).s).write_list.add(y as usize + 1);
-            tailq_concat(
-                &raw mut (*(*(*ctx).s).write_list.add(y as usize)).items,
-                &raw mut (*cl).items,
-            );
-            (*(*(*ctx).s).write_list.add(y as usize)).data = (*cl).data;
+            let cl_src = (*(*ctx).s).write_list.add(y as usize + 1);
+            let taken = std::mem::take(&mut (*cl_src).items);
+            let cl_dst = (*(*ctx).s).write_list.add(y as usize);
+            (*cl_dst).items = taken;
+            (*cl_dst).data = (*cl_src).data;
         }
         (*(*(*ctx).s).write_list.add((*s).rlower as usize)).data = saved;
 
@@ -1948,10 +1938,7 @@ pub unsafe fn screen_write_collect_scroll(ctx: *mut screen_write_ctx, bg: u32) {
         (*ci).used = screen_size_x(s);
         (*ci).type_ = screen_write_citem_type::Clear;
         (*ci).bg = bg;
-        tailq_insert_tail(
-            &raw mut (*(*(*ctx).s).write_list.add((*s).rlower as usize)).items,
-            ci,
-        );
+        (*(*(*ctx).s).write_list.add((*s).rlower as usize)).items.push(ci);
     }
 }
 
@@ -1985,10 +1972,10 @@ pub unsafe fn screen_write_collect_flush(ctx: *mut screen_write_ctx, scroll_only
         for y in 0..screen_size_y(s) {
             let cl = (*(*ctx).s).write_list.add(y as usize);
             let mut last = u32::MAX;
-            for ci in tailq_foreach(&raw mut (*cl).items).map(NonNull::as_ptr) {
+            for &ci in (*cl).items.iter() {
                 if last != u32::MAX && (*ci).x <= last {
                     panic!("collect list not in order: {} <= {}", (*ci).x, last);
-                } // fatalx("collect list not in order: %u <= %u", (*ci).x, last);
+                }
                 screen_write_set_cursor(ctx, (*ci).x as i32, y as i32);
                 if (*ci).type_ == screen_write_citem_type::Clear {
                     screen_write_initctx(ctx, &raw mut ttyctx, 1);
@@ -2004,11 +1991,12 @@ pub unsafe fn screen_write_collect_flush(ctx: *mut screen_write_ctx, scroll_only
                     tty_write(tty_cmd_cells, &raw mut ttyctx);
                 }
                 items += 1;
-
-                tailq_remove(&raw mut (*cl).items, ci);
-                screen_write_free_citem(ci);
                 last = (*ci).x;
             }
+            for &ci in (*cl).items.iter() {
+                screen_write_free_citem(ci);
+            }
+            (*cl).items.clear();
         }
         (*s).cx = cx;
         (*s).cy = cy;
@@ -2033,10 +2021,12 @@ pub unsafe fn screen_write_collect_end(ctx: *mut screen_write_ctx) {
         let before = screen_write_collect_trim(ctx, (*s).cy, (*s).cx, (*ci).used, &raw mut wrapped);
         (*ci).x = (*s).cx;
         (*ci).wrapped = wrapped;
+        let items = &mut (*cl).items;
         if before.is_null() {
-            tailq_insert_tail(&raw mut (*cl).items, ci);
+            items.push(ci);
         } else {
-            tailq_insert_before(before, ci);
+            let pos = items.iter().position(|&p| p == before).unwrap();
+            items.insert(pos, ci);
         }
         (*ctx).item = screen_write_get_citem().as_ptr();
 
