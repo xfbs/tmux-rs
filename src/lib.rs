@@ -1489,12 +1489,10 @@ enum layout_type {
     LAYOUT_WINDOWPANE,
 }
 
-/// Layout cells queue.
-type layout_cells = tailq_head<layout_cell>;
-
-impl_tailq_entry!(layout_cell, entry, tailq_entry<layout_cell>);
-/// Layout cell.
-#[repr(C)]
+/// A node in the layout tree. Each window has a root layout_cell that
+/// recursively subdivides into LEFTRIGHT or TOPBOTTOM splits. Leaf cells
+/// (LAYOUT_WINDOWPANE) point to a window_pane; interior nodes hold child
+/// cells in a Vec.
 struct layout_cell {
     type_: layout_type,
 
@@ -1507,9 +1505,8 @@ struct layout_cell {
     yoff: u32,
 
     wp: *mut window_pane,
-    cells: layout_cells,
-
-    entry: tailq_entry<layout_cell>,
+    /// Child cells. Empty for LAYOUT_WINDOWPANE leaves.
+    cells: Vec<*mut layout_cell>,
 }
 
 bitflags::bitflags! {

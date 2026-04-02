@@ -258,13 +258,3 @@ where
 }
 
 
-macro_rules! impl_tailq_entry {
-    ($struct_name:ident, $attribute_field_name:ident, $attribute_field_ty:ty) => {
-        impl $crate::compat::queue::Entry<$struct_name> for $struct_name {
-            unsafe fn entry(this: *mut Self) -> *mut $attribute_field_ty {
-                unsafe { &raw mut (*this).$attribute_field_name }
-            }
-        }
-    };
-}
-pub(crate) use impl_tailq_entry;

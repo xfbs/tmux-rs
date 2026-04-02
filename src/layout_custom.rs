@@ -19,7 +19,7 @@ pub unsafe fn layout_find_bottomright(mut lc: *mut layout_cell) -> *mut layout_c
         if (*lc).type_ == layout_type::LAYOUT_WINDOWPANE {
             return lc;
         }
-        lc = tailq_last(&raw mut (*lc).cells);
+        lc = (*lc).cells.last().copied().unwrap_or(null_mut());
         layout_find_bottomright(lc)
     }
 }
@@ -104,8 +104,8 @@ pub unsafe fn layout_append(lc: *mut layout_cell, buf: *mut u8, len: usize) -> i
                 if strlcat(buf, brackets.add(1), len) >= len {
                     return -1;
                 }
-                for lcchild in tailq_foreach(&raw mut (*lc).cells) {
-                    if layout_append(lcchild.as_ptr(), buf, len) != 0 {
+                for &lcchild in (*lc).cells.iter() {
+                    if layout_append(lcchild, buf, len) != 0 {
                         return -1;
                     }
                     if strlcat(buf, c!(","), len) >= len {
@@ -128,7 +128,7 @@ pub unsafe fn layout_check(lc: *mut layout_cell) -> bool {
         match (*lc).type_ {
             layout_type::LAYOUT_WINDOWPANE => (),
             layout_type::LAYOUT_LEFTRIGHT => {
-                for lcchild in tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr) {
+                for &lcchild in (*lc).cells.iter() {
                     if (*lcchild).sy != (*lc).sy {
                         return false;
                     }
@@ -142,7 +142,7 @@ pub unsafe fn layout_check(lc: *mut layout_cell) -> bool {
                 }
             }
             layout_type::LAYOUT_TOPBOTTOM => {
-                for lcchild in tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr) {
+                for &lcchild in (*lc).cells.iter() {
                     if (*lcchild).sx != (*lc).sx {
                         return false;
                     }
@@ -214,14 +214,14 @@ pub unsafe fn layout_parse(w: *mut window, mut layout: *const u8, cause: *mut *m
             match (*lc).type_ {
                 layout_type::LAYOUT_WINDOWPANE => (),
                 layout_type::LAYOUT_LEFTRIGHT => {
-                    for lcchild in tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr) {
+                    for &lcchild in (*lc).cells.iter() {
                         sy = (*lcchild).sy + 1;
                         sx += (*lcchild).sx + 1;
                         continue;
                     }
                 }
                 layout_type::LAYOUT_TOPBOTTOM => {
-                    for lcchild in tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr) {
+                    for &lcchild in (*lc).cells.iter() {
                         sx = (*lcchild).sx + 1;
                         sy += (*lcchild).sy + 1;
                         continue;
@@ -278,7 +278,7 @@ unsafe fn layout_assign(wp: *mut *mut window_pane, lc: *mut layout_cell) {
                 *wp = tailq_next::<_, _, discr_entry>(*wp);
             }
             layout_type::LAYOUT_LEFTRIGHT | layout_type::LAYOUT_TOPBOTTOM => {
-                for lcchild in tailq_foreach(&raw mut (*lc).cells).map(NonNull::as_ptr) {
+                for &lcchild in (*lc).cells.iter() {
                     layout_assign(wp, lcchild);
                 }
             }
@@ -365,7 +365,7 @@ unsafe fn layout_construct(lcparent: *mut layout_cell, layout: *mut *const u8) -
                 if lcchild.is_null() {
                     break 'fail;
                 }
-                tailq_insert_tail(&raw mut (*lc).cells, lcchild);
+                (*lc).cells.push(lcchild);
                 if **layout != b',' {
                     break;
                 }
