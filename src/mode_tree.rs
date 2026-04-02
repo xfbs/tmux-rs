@@ -41,9 +41,6 @@ enum mode_tree_search_dir {
     MODE_TREE_SEARCH_BACKWARD,
 }
 
-pub type mode_tree_list = tailq_head<mode_tree_item>;
-
-#[repr(C)]
 pub struct mode_tree_data {
     dead: i32,
     references: u32,
@@ -63,8 +60,10 @@ pub struct mode_tree_data {
     heightcb: mode_tree_height_cb,
     keycb: mode_tree_key_cb,
 
-    children: mode_tree_list,
-    saved: mode_tree_list,
+    /// Root-level tree items. Rebuilt on each `mode_tree_build` call.
+    children: Vec<*mut mode_tree_item>,
+    /// Previous tree items, kept during rebuild to preserve expanded/tagged state.
+    saved: Vec<*mut mode_tree_item>,
 
     line_list: Vec<mode_tree_line>,
 
@@ -85,6 +84,9 @@ pub struct mode_tree_data {
     search_dir: mode_tree_search_dir,
 }
 
+/// A node in the mode tree. Each item can have child items, forming a
+/// recursive tree (e.g. sessions → windows → panes). Allocated with xcalloc,
+/// so Vec fields must be initialized with `ptr::write`.
 #[repr(C)]
 pub struct mode_tree_item {
     parent: *mut mode_tree_item,
@@ -105,10 +107,8 @@ pub struct mode_tree_item {
     draw_as_parent: i32,
     no_tag: i32,
 
-    children: mode_tree_list,
-    entry: tailq_entry<mode_tree_item>,
+    children: Vec<*mut mode_tree_item>,
 }
-impl_tailq_entry!(mode_tree_item, entry, tailq_entry<mode_tree_item>);
 
 #[repr(C)]
 struct mode_tree_line {
@@ -132,15 +132,61 @@ static MODE_TREE_MENU_ITEMS: [menu_item; 4] = [
     menu_item::new("Cancel", 'q' as u64, null_mut()),
 ];
 
-unsafe fn mode_tree_find_item(mtl: *mut mode_tree_list, tag: u64) -> *mut mode_tree_item {
+/// Return the sibling list that contains `mti` — either its parent's children
+/// or the root children list in `mtd`.
+unsafe fn mode_tree_siblings<'a>(
+    mtd: *mut mode_tree_data,
+    mti: *mut mode_tree_item,
+) -> &'a Vec<*mut mode_tree_item> {
     unsafe {
-        for mti in tailq_foreach(mtl).map(NonNull::as_ptr) {
+        if (*mti).parent.is_null() {
+            &(*mtd).children
+        } else {
+            &(*(*mti).parent).children
+        }
+    }
+}
+
+/// Get the next sibling of `mti`, or null if it's the last in its list.
+unsafe fn mode_tree_next_sibling(
+    mtd: *mut mode_tree_data,
+    mti: *mut mode_tree_item,
+) -> *mut mode_tree_item {
+    unsafe {
+        let siblings = mode_tree_siblings(mtd, mti);
+        let pos = siblings.iter().position(|&p| p == mti);
+        match pos {
+            Some(i) if i + 1 < siblings.len() => siblings[i + 1],
+            _ => null_mut(),
+        }
+    }
+}
+
+/// Get the previous sibling of `mti`, or null if it's the first in its list.
+unsafe fn mode_tree_prev_sibling(
+    mtd: *mut mode_tree_data,
+    mti: *mut mode_tree_item,
+) -> *mut mode_tree_item {
+    unsafe {
+        let siblings = mode_tree_siblings(mtd, mti);
+        let pos = siblings.iter().position(|&p| p == mti);
+        match pos {
+            Some(i) if i > 0 => siblings[i - 1],
+            _ => null_mut(),
+        }
+    }
+}
+
+/// Recursively search for an item with the given tag in a list and its children.
+unsafe fn mode_tree_find_item(mtl: &Vec<*mut mode_tree_item>, tag: u64) -> *mut mode_tree_item {
+    unsafe {
+        for &mti in mtl.iter() {
             if (*mti).tag == tag {
                 return mti;
             }
-
-            if let Some(child) = NonNull::new(mode_tree_find_item(&raw mut (*mti).children, tag)) {
-                return child.as_ptr();
+            let child = mode_tree_find_item(&(*mti).children, tag);
+            if !child.is_null() {
+                return child;
             }
         }
         null_mut()
@@ -149,22 +195,24 @@ unsafe fn mode_tree_find_item(mtl: *mut mode_tree_list, tag: u64) -> *mut mode_t
 
 unsafe fn mode_tree_free_item(mti: *mut mode_tree_item) {
     unsafe {
-        mode_tree_free_items(&raw mut (*mti).children);
+        mode_tree_free_items(&mut (*mti).children);
 
         free_((*mti).name);
         free_((*mti).text);
         free_((*mti).keystr);
 
+        std::ptr::drop_in_place(&raw mut (*mti).children);
         free_(mti);
     }
 }
 
-unsafe fn mode_tree_free_items(mtl: *mut mode_tree_list) {
+/// Free all items in a list and their children recursively, then clear the list.
+unsafe fn mode_tree_free_items(mtl: &mut Vec<*mut mode_tree_item>) {
     unsafe {
-        for mti in tailq_foreach(mtl).map(NonNull::as_ptr) {
-            tailq_remove(mtl, mti);
+        for &mti in mtl.iter() {
             mode_tree_free_item(mti);
         }
+        mtl.clear();
     }
 }
 
@@ -184,25 +232,29 @@ unsafe fn mode_tree_clear_lines(mtd: *mut mode_tree_data) {
     }
 }
 
-unsafe fn mode_tree_build_lines(mtd: *mut mode_tree_data, mtl: *mut mode_tree_list, depth: u32) {
+/// Recursively flatten the tree into `line_list` for rendering. Each item
+/// becomes a `mode_tree_line` entry; expanded items have their children
+/// appended immediately after.
+unsafe fn mode_tree_build_lines(mtd: *mut mode_tree_data, mtl: &Vec<*mut mode_tree_item>, depth: u32) {
     unsafe {
         let mut flat = 1;
+        let last_item = mtl.last().copied().unwrap_or(null_mut());
 
         (*mtd).depth = depth;
-        for mti in tailq_foreach(mtl).map(NonNull::as_ptr) {
+        for &mti in mtl.iter() {
             (*mtd).line_list.push(mode_tree_line {
                 item: mti,
                 depth,
-                last: (mti == tailq_last(mtl)) as i32,
+                last: (mti == last_item) as i32,
                 flat: 0,
             });
 
             (*mti).line = (*mtd).line_list.len() as u32 - 1;
-            if !tailq_empty(&raw const (*mti).children) {
+            if !(*mti).children.is_empty() {
                 flat = 0;
             }
             if (*mti).expanded {
-                mode_tree_build_lines(mtd, &raw mut (*mti).children, depth + 1);
+                mode_tree_build_lines(mtd, &(*mti).children, depth + 1);
             }
 
             if let Some(keycb) = (*mtd).keycb {
@@ -229,7 +281,7 @@ unsafe fn mode_tree_build_lines(mtd: *mut mode_tree_data, mtl: *mut mode_tree_li
                 (*mti).keylen = 0;
             }
         }
-        for mti in tailq_foreach(mtl).map(NonNull::as_ptr) {
+        for &mti in mtl.iter() {
             for line in &mut (*mtd).line_list {
                 if line.item == mti {
                     line.flat = flat;
@@ -239,11 +291,11 @@ unsafe fn mode_tree_build_lines(mtd: *mut mode_tree_data, mtl: *mut mode_tree_li
     }
 }
 
-unsafe fn mode_tree_clear_tagged(mtl: *mut mode_tree_list) {
+unsafe fn mode_tree_clear_tagged(mtl: &Vec<*mut mode_tree_item>) {
     unsafe {
-        for mti in tailq_foreach(mtl).map(NonNull::as_ptr) {
+        for &mti in mtl.iter() {
             (*mti).tagged = 0;
-            mode_tree_clear_tagged(&raw mut (*mti).children);
+            mode_tree_clear_tagged(&(*mti).children);
         }
     }
 }
@@ -426,8 +478,8 @@ pub unsafe fn mode_tree_start(
             dead: 0,
             zoomed: 0,
             sort_crit: mode_tree_sort_criteria::default(),
-            children: zeroed(),
-            saved: zeroed(),
+            children: Vec::new(),
+            saved: Vec::new(),
             line_list: Vec::default(),
             depth: Default::default(),
             width: Default::default(),
@@ -452,8 +504,6 @@ pub unsafe fn mode_tree_start(
             mtd.sort_crit.field = pos as u32;
         }
         mtd.sort_crit.reversed = args_has(args, 'r');
-
-        tailq_init(&mut mtd.children);
 
         *s = &raw mut mtd.screen;
         screen_init(
@@ -517,8 +567,8 @@ pub unsafe fn mode_tree_build(mtd: *mut mode_tree_data) {
             u64::MAX
         };
 
-        tailq_concat(&raw mut (*mtd).saved, &raw mut (*mtd).children);
-        tailq_init(&raw mut (*mtd).children);
+        debug_assert!((*mtd).saved.is_empty());
+        (*mtd).saved = std::mem::take(&mut (*mtd).children);
 
         (*mtd).buildcb.unwrap()(
             NonNull::new((*mtd).modedata).unwrap(),
@@ -526,7 +576,7 @@ pub unsafe fn mode_tree_build(mtd: *mut mode_tree_data) {
             &raw mut tag,
             (*mtd).filter,
         );
-        (*mtd).no_matches = tailq_empty(&raw mut (*mtd).children) as i32;
+        (*mtd).no_matches = (*mtd).children.is_empty() as i32;
         if (*mtd).no_matches != 0 {
             (*mtd).buildcb.unwrap()(
                 NonNull::new((*mtd).modedata).unwrap(),
@@ -536,11 +586,10 @@ pub unsafe fn mode_tree_build(mtd: *mut mode_tree_data) {
             );
         }
 
-        mode_tree_free_items(&raw mut (*mtd).saved);
-        tailq_init(&raw mut (*mtd).saved);
+        mode_tree_free_items(&mut (*mtd).saved);
 
         mode_tree_clear_lines(mtd);
-        mode_tree_build_lines(mtd, &raw mut (*mtd).children, 0);
+        mode_tree_build_lines(mtd, &(*mtd).children, 0);
 
         if !(*mtd).line_list.is_empty() && tag == u64::MAX {
             tag = (*(&(*mtd).line_list)[(*mtd).current as usize].item).tag;
@@ -561,6 +610,9 @@ pub unsafe fn mode_tree_remove_ref(mtd: *mut mode_tree_data) {
     unsafe {
         (*mtd).references -= 1;
         if (*mtd).references == 0 {
+            std::ptr::drop_in_place(&raw mut (*mtd).children);
+            std::ptr::drop_in_place(&raw mut (*mtd).saved);
+            std::ptr::drop_in_place(&raw mut (*mtd).line_list);
             free_(mtd);
         }
     }
@@ -574,7 +626,7 @@ pub unsafe fn mode_tree_free(mtd: *mut mode_tree_data) {
             server_unzoom_window((*wp).window);
         }
 
-        mode_tree_free_items(&raw mut (*mtd).children);
+        mode_tree_free_items(&mut (*mtd).children);
         mode_tree_clear_lines(mtd);
         screen_free(&raw mut (*mtd).screen);
 
@@ -621,7 +673,7 @@ pub unsafe fn mode_tree_add(
             (*mti).text = xstrdup(text).as_ptr();
         }
 
-        let saved = mode_tree_find_item(&raw mut (*mtd).saved, tag);
+        let saved = mode_tree_find_item(&(*mtd).saved, tag);
         if !saved.is_null() {
             if parent.is_null() || (*parent).expanded {
                 (*mti).tagged = (*saved).tagged;
@@ -631,12 +683,12 @@ pub unsafe fn mode_tree_add(
             (*mti).expanded = expanded.unwrap_or(true);
         }
 
-        tailq_init(&raw mut (*mti).children);
+        std::ptr::write(&raw mut (*mti).children, Vec::new());
 
         if !parent.is_null() {
-            tailq_insert_tail(&raw mut (*parent).children, mti);
+            (*parent).children.push(mti);
         } else {
-            tailq_insert_tail(&raw mut (*mtd).children, mti);
+            (*mtd).children.push(mti);
         }
 
         mti
@@ -660,9 +712,9 @@ pub unsafe fn mode_tree_remove(mtd: *mut mode_tree_data, mti: *mut mode_tree_ite
         let parent: *mut mode_tree_item = (*mti).parent;
 
         if !parent.is_null() {
-            tailq_remove(&raw mut (*parent).children, mti);
+            (*parent).children.retain(|&p| p != mti);
         } else {
-            tailq_remove(&raw mut (*mtd).children, mti);
+            (*mtd).children.retain(|&p| p != mti);
         }
         mode_tree_free_item(mti);
     }
@@ -725,7 +777,7 @@ pub unsafe fn mode_tree_draw(mtd: &mut mode_tree_data) {
 
                 let symbol = if mtd.line_list[i].flat != 0 {
                     c!("")
-                } else if tailq_empty(&raw const (*mti).children) {
+                } else if (*mti).children.is_empty() {
                     c!("  ")
                 } else if (*mti).expanded {
                     c!("- ")
@@ -903,11 +955,11 @@ pub unsafe fn mode_tree_search_backward(mtd: *mut mode_tree_data) -> *mut mode_t
         let mut mti = last;
 
         loop {
-            let mut prev = tailq_prev(mti);
+            let mut prev = mode_tree_prev_sibling(mtd, mti);
             if !prev.is_null() {
                 // Point to the last child in the previous subtree.
-                while !tailq_empty(&raw mut (*prev).children) {
-                    prev = tailq_last(&raw mut (*prev).children);
+                while !(*prev).children.is_empty() {
+                    prev = *(*prev).children.last().unwrap();
                 }
                 mti = prev;
             } else {
@@ -916,10 +968,10 @@ pub unsafe fn mode_tree_search_backward(mtd: *mut mode_tree_data) -> *mut mode_t
             }
 
             if mti.is_null() {
-                // Point to the last child in the last root subtree.
-                prev = tailq_last(&raw mut (*mtd).children);
-                while !tailq_empty(&raw mut (*prev).children) {
-                    prev = tailq_last(&raw mut (*prev).children);
+                // Wrap: point to the last child in the last root subtree.
+                prev = (*mtd).children.last().copied().unwrap_or(null_mut());
+                while !prev.is_null() && !(*prev).children.is_empty() {
+                    prev = *(*prev).children.last().unwrap();
                 }
                 mti = prev;
             }
@@ -954,25 +1006,29 @@ pub unsafe fn mode_tree_search_forward(mtd: *mut mode_tree_data) -> *mut mode_tr
         let last = (&(*mtd).line_list)[(*mtd).current as usize].item;
         let mut mti = last;
         loop {
-            if !tailq_empty(&raw mut (*mti).children) {
-                mti = tailq_first(&raw mut (*mti).children);
-            } else if let Some(next) = NonNull::new(tailq_next(mti)) {
+            if !(*mti).children.is_empty() {
+                // Descend into first child.
+                mti = (&(*mti).children)[0];
+            } else if let Some(next) = NonNull::new(mode_tree_next_sibling(mtd, mti)) {
+                // Move to next sibling.
                 mti = next.as_ptr();
             } else {
+                // Walk up the tree looking for a parent with a next sibling.
                 loop {
                     mti = (*mti).parent;
                     if mti.is_null() {
                         break;
                     }
 
-                    if let Some(next) = NonNull::new(tailq_next(mti)) {
+                    if let Some(next) = NonNull::new(mode_tree_next_sibling(mtd, mti)) {
                         mti = next.as_ptr();
                         break;
                     }
                 }
             }
             if mti.is_null() {
-                mti = tailq_first(&raw mut (*mtd).children);
+                // Wrap: go to first root item.
+                mti = (*mtd).children.first().copied().unwrap_or(null_mut());
             }
             if mti == last {
                 break;
@@ -1357,7 +1413,7 @@ pub unsafe fn mode_tree_key(
                             (*parent).tagged = 0;
                             parent = (*parent).parent;
                         }
-                        mode_tree_clear_tagged(&raw mut (*current).children);
+                        mode_tree_clear_tagged(&(*current).children);
                         (*current).tagged = 1;
                     } else {
                         (*current).tagged = 0;
@@ -1416,13 +1472,13 @@ pub unsafe fn mode_tree_key(
                 }
             }
             code::MINUS_META => {
-                for mti in tailq_foreach(&raw mut (*mtd).children).map(NonNull::as_ptr) {
+                for &mti in (*mtd).children.iter() {
                     (*mti).expanded = false;
                 }
                 mode_tree_build(mtd);
             }
             code::PLUS_META => {
-                for mti in tailq_foreach(&raw mut (*mtd).children).map(NonNull::as_ptr) {
+                for &mti in (*mtd).children.iter() {
                     (*mti).expanded = true;
                 }
                 mode_tree_build(mtd);

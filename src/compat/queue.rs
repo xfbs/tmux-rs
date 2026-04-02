@@ -257,20 +257,6 @@ where
     }
 }
 
-#[inline]
-pub unsafe fn tailq_concat<T, D>(head1: *mut tailq_head<T>, head2: *mut tailq_head<T>)
-where
-    T: Entry<T, D>,
-{
-    unsafe {
-        if !tailq_empty::<T>(head2) {
-            *(*head1).tqh_last = (*head2).tqh_first;
-            (*Entry::entry((*head2).tqh_first)).tqe_prev = (*head1).tqh_last;
-            (*head1).tqh_last = (*head2).tqh_last;
-            tailq_init(head2);
-        }
-    }
-}
 
 macro_rules! impl_tailq_entry {
     ($struct_name:ident, $attribute_field_name:ident, $attribute_field_ty:ty) => {
