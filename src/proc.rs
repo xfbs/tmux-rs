@@ -18,7 +18,6 @@ use crate::compat::{
         imsg_read, imsgbuf,
     },
     imsg_buffer::msgbuf_write,
-    queue::{tailq_foreach, tailq_init, tailq_insert_tail, tailq_remove},
     setproctitle_,
 };
 use crate::event_::{signal_add, signal_set};
@@ -45,13 +44,11 @@ pub struct tmuxproc {
     pub ev_sigusr2: event,
     pub ev_sigwinch: event,
 
-    pub peers: tailq_head<tmuxpeer>,
+    pub peers: Vec<*mut tmuxpeer>,
 }
 
 pub const PEER_BAD: i32 = 0x1;
 
-impl_tailq_entry!(tmuxpeer, entry, tailq_entry<tmuxpeer>);
-#[repr(C)]
 pub struct tmuxpeer {
     pub parent: *mut tmuxproc,
 
@@ -63,8 +60,6 @@ pub struct tmuxpeer {
 
     pub dispatchcb: Option<unsafe fn(*mut imsg, *mut c_void)>,
     pub arg: *mut c_void,
-
-    pub entry: tailq_entry<tmuxpeer>,
 }
 
 pub unsafe extern "C-unwind" fn proc_event_cb(_fd: i32, events: i16, arg: *mut c_void) {
@@ -228,7 +223,7 @@ pub fn proc_start(name: &CStr) -> *mut tmuxproc {
 
         let tp = xcalloc1::<tmuxproc>();
         tp.name = xstrdup(name).as_ptr();
-        tailq_init(&raw mut tp.peers);
+        std::ptr::write(&raw mut tp.peers, Vec::new());
 
         tp
     }
@@ -263,7 +258,7 @@ pub unsafe fn proc_loop(tp: *mut tmuxproc, loopcb: Option<unsafe fn() -> i32>) {
 
 pub unsafe fn proc_exit(tp: *mut tmuxproc) {
     unsafe {
-        for peer in tailq_foreach(&raw mut (*tp).peers).map(NonNull::as_ptr) {
+        for &peer in &(*tp).peers {
             imsg_flush(&raw mut (*peer).ibuf);
         }
         (*tp).exit = 1;
@@ -407,7 +402,7 @@ pub unsafe fn proc_add_peer(
         }
 
         log_debug!("add peer {:p}: {} ({:p})", peer, fd, arg);
-        tailq_insert_tail(&raw mut (*tp).peers, peer);
+        (*tp).peers.push(peer);
 
         proc_update_event(peer);
         peer
@@ -416,7 +411,7 @@ pub unsafe fn proc_add_peer(
 
 pub unsafe fn proc_remove_peer(peer: *mut tmuxpeer) {
     unsafe {
-        tailq_remove(&raw mut (*(*peer).parent).peers, peer);
+        (*(*peer).parent).peers.retain(|&p| p != peer);
         log_debug!("remove peer {:p}", peer);
 
         event_del(&raw mut (*peer).event);
