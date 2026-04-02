@@ -14,7 +14,6 @@
 use crate::compat::{
     queue::{tailq_first, tailq_foreach},
     strlcat,
-    tree::{rb_foreach_const, rb_max, rb_min},
 };
 use crate::libc::strcmp;
 use crate::*;
@@ -205,7 +204,7 @@ pub unsafe fn cmd_find_best_winlink_with_window(fs: *mut cmd_find_state) -> i32 
         if !(*(*fs).s).curw.is_null() && (*(*(*fs).s).curw).window == (*fs).w {
             wl = (*(*fs).s).curw;
         } else {
-            for wl_loop in rb_foreach(&raw mut (*(*fs).s).windows).map(NonNull::as_ptr) {
+            for &wl_loop in (*(&raw mut (*(*fs).s).windows)).values() {
                 if (*wl_loop).window == (*fs).w {
                     wl = wl_loop;
                     break;
@@ -412,7 +411,7 @@ pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: 
                     return 0;
                 }
                 "^" => {
-                    (*fs).wl = rb_min(&raw mut (*(*fs).s).windows);
+                    (*fs).wl = (*(&raw mut (*(*fs).s).windows)).values().next().copied().unwrap_or(null_mut());
                     if (*fs).wl.is_null() {
                         return -1;
                     }
@@ -421,7 +420,7 @@ pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: 
                     return 0;
                 }
                 "$" => {
-                    (*fs).wl = rb_max(&raw mut (*(*fs).s).windows);
+                    (*fs).wl = (*(&raw mut (*(*fs).s).windows)).values().next_back().copied().unwrap_or(null_mut());
                     if (*fs).wl.is_null() {
                         return -1;
                     }
@@ -457,7 +456,7 @@ pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: 
         }
 
         (*fs).wl = null_mut();
-        for wl in rb_foreach(&raw mut (*(*fs).s).windows).map(NonNull::as_ptr) {
+        for &wl in (*(&raw mut (*(*fs).s).windows)).values() {
             if streq_((*(*wl).window).name, window) {
                 if !(*fs).wl.is_null() {
                     return -1;
@@ -478,7 +477,7 @@ pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: 
         let window_c = CString::new(window).unwrap();
 
         (*fs).wl = null_mut();
-        for wl in rb_foreach(&raw mut (*(*fs).s).windows).map(NonNull::as_ptr) {
+        for &wl in (*(&raw mut (*(*fs).s).windows)).values() {
             #[expect(clippy::disallowed_methods)]
             if libc::strncmp(window.as_ptr().cast(), (*(*wl).window).name, window.len()) == 0 {
                 if !(*fs).wl.is_null() {
@@ -495,7 +494,7 @@ pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: 
         }
 
         (*fs).wl = null_mut();
-        for wl in rb_foreach(&raw mut (*(*fs).s).windows).map(NonNull::as_ptr) {
+        for &wl in (*(&raw mut (*(*fs).s).windows)).values() {
             if libc::fnmatch(window_c.as_ptr().cast(), (*(*wl).window).name, 0) == 0 {
                 if !(*fs).wl.is_null() {
                     return -1;
@@ -679,8 +678,8 @@ pub unsafe fn cmd_find_valid_state(fs: *const cmd_find_state) -> bool {
             return false;
         }
 
-        if !rb_foreach_const(&raw const (*(*fs).s).windows)
-            .any(|wl| (*wl.as_ptr()).window == (*fs).w && wl.as_ptr() == (*fs).wl)
+        if !(*(*fs).s).windows.values()
+            .any(|&wl| (*wl).window == (*fs).w && wl == (*fs).wl)
         {
             return false;
         }

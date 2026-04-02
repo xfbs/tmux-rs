@@ -73,7 +73,7 @@ fn alerts_check_all(w: &window) -> window_flag {
 
 pub(crate) fn alerts_check_session(s: &session) {
     unsafe {
-        for wl in rb_foreach_const(&raw const s.windows).map(NonNull::as_ptr) {
+        for &wl in s.windows.values() {
             alerts_check_all(&*(*wl).window);
         }
     }

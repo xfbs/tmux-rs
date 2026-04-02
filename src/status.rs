@@ -2123,7 +2123,7 @@ unsafe fn status_prompt_complete_window_menu(
         })) as *mut status_prompt_menu;
 
         let menu = Box::leak(menu_create(""));
-        for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
+        for &wl in (*(&raw mut (*s).windows)).values() {
             let mut tmp;
             if !word.is_null() && *word != b'\0' {
                 tmp = format!("{}", (*wl).idx);

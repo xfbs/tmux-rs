@@ -535,7 +535,7 @@ pub unsafe fn format_cb_session_alerts(ft: *mut format_tree) -> format_table_typ
         }
 
         *alerts = b'\0';
-        for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
+        for &wl in (*(&raw mut (*s).windows)).values() {
             if !(*wl).flags.intersects(WINLINK_ALERTFLAGS) {
                 continue;
             }
@@ -2421,7 +2421,7 @@ pub unsafe fn format_cb_active_window_index(ft: *mut format_tree) -> format_tabl
 pub unsafe fn format_cb_last_window_index(ft: *mut format_tree) -> format_table_type {
     unsafe {
         if !(*ft).s.is_null() {
-            let wl = rb_max(&raw mut (*(*ft).s).windows);
+            let &wl = (*(&raw mut (*(*ft).s).windows)).values().next_back().unwrap();
             return format!("{}", (*wl).idx).into();
         }
         format_table_type::None
@@ -2511,7 +2511,7 @@ pub unsafe fn format_cb_window_cell_width(ft: *mut format_tree) -> format_table_
 pub unsafe fn format_cb_window_end_flag(ft: *mut format_tree) -> format_table_type {
     unsafe {
         if !(*ft).wl.is_null() {
-            if (*ft).wl == rb_max(&raw mut (*(*(*ft).wl).session).windows) {
+            if Some(&(*ft).wl) == (*(&raw mut (*(*(*ft).wl).session).windows)).values().next_back() {
                 return "1".into();
             }
             return "0".into();
@@ -2698,7 +2698,7 @@ pub unsafe fn format_cb_window_silence_flag(ft: *mut format_tree) -> format_tabl
 pub unsafe fn format_cb_window_start_flag(ft: *mut format_tree) -> format_table_type {
     unsafe {
         if !(*ft).wl.is_null() {
-            if (*ft).wl == rb_min(&raw mut (*(*(*ft).wl).session).windows) {
+            if Some(&(*ft).wl) == (*(&raw mut (*(*(*ft).wl).session).windows)).values().next() {
                 return "1".into();
             }
             return "0".into();
@@ -3955,7 +3955,7 @@ pub unsafe fn format_window_name(es: *mut format_expand_state, fmt: *const u8) -
         }
 
         let name = format_expand1(es, fmt);
-        for wl in rb_foreach(&raw mut (*(*ft).s).windows).map(NonNull::as_ptr) {
+        for &wl in (*(&raw mut (*(*ft).s).windows)).values() {
             if strcmp((*(*wl).window).name, name) == 0 {
                 free_(name);
                 return xstrdup(c!("1")).as_ptr();
@@ -3986,7 +3986,7 @@ pub unsafe fn format_loop_windows(es: *mut format_expand_state, fmt: *const u8) 
             active = null_mut();
         }
 
-        for wl in rb_foreach(&raw mut (*(*ft).s).windows).map(NonNull::as_ptr) {
+        for &wl in (*(&raw mut (*(*ft).s).windows)).values() {
             let w = (*wl).window;
             format_log1!(
                 es,

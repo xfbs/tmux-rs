@@ -11,7 +11,6 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::compat::tree::rb_min;
 use crate::libc::{sscanf, tcgetattr};
 use crate::*;
 use crate::options_::*;
@@ -339,7 +338,7 @@ unsafe fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
                 }
                 session_group_add(sg, s);
                 session_group_synchronize_to(s);
-                session_select(s, (*rb_min::<winlink, _>(&raw mut (*s).windows)).idx);
+                session_select(s, (*(*(*(&raw mut (*s).windows)).values().next().unwrap())).idx);
             }
             notify_session(c"session-created", s);
 

@@ -11,7 +11,6 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::compat::tree::rb_foreach;
 use crate::*;
 
 pub static CMD_KILL_SESSION_ENTRY: cmd_entry = cmd_entry {
@@ -39,7 +38,7 @@ unsafe fn cmd_kill_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
         let s = (*target).s;
 
         if args_has(args, 'C') {
-            for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
+            for &wl in (*(&raw mut (*s).windows)).values() {
                 (*(*wl).window).flags &= !WINDOW_ALERTFLAGS;
                 (*wl).flags &= !WINLINK_ALERTFLAGS;
             }

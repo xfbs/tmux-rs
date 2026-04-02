@@ -11,7 +11,6 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::compat::tree::rb_foreach;
 use crate::*;
 
 const NEW_WINDOW_TEMPLATE: *const u8 = c!("#{session_name}:#{window_index}.#{pane_index}");
@@ -54,7 +53,7 @@ unsafe fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retv
         let name = args_get(args, b'n');
         if args_has(args, 'S') && !name.is_null() && (*target).idx == -1 {
             let expanded = format_single(item, cstr_to_str(name), c, s, null_mut(), null_mut());
-            for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
+            for &wl in (*(&raw mut (*s).windows)).values() {
                 if libc::strcmp((*(*wl).window).name, expanded) != 0 {
                     continue;
                 }

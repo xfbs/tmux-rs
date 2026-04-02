@@ -155,7 +155,7 @@ use crate::{
     },
     cmd_parse::*,
     colour::*,
-    compat::{imsg::imsg, queue::*, strtonum, tree::*, *}, /* strtonum need to disambiguate from libc on macos */
+    compat::{imsg::imsg, queue::*, strtonum, *}, /* strtonum need to disambiguate from libc on macos */
     control::{control_write, *},
     control_notify::*,
     environ_::*,
@@ -1474,8 +1474,6 @@ struct winlink {
 
     flags: winlink_flags,
 
-    entry: rb_entry<winlink>,
-
     wentry: tailq_entry<winlink>,
     sentry: tailq_entry<winlink>,
 }
@@ -1492,8 +1490,7 @@ impl crate::compat::queue::Entry<winlink, discr_sentry> for winlink {
     }
 }
 
-type winlinks = rb_head<winlink>;
-// crate::compat::impl_rb_tree_protos!(winlinks, winlink);
+type winlinks = BTreeMap<i32, *mut winlink>;
 type winlink_stack = tailq_head<winlink>;
 // crate::compat::impl_rb_tree_protos!(winlink_stack, winlink);
 

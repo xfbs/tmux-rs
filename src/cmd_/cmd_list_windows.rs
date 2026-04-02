@@ -11,7 +11,6 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::compat::tree::rb_foreach;
 use crate::*;
 
 const LIST_WINDOWS_TEMPLATE: *const u8 = c!(
@@ -85,7 +84,8 @@ unsafe fn cmd_list_windows_session(
         }
         let filter = args_get_(args, 'f');
 
-        for (n, wl) in rb_foreach(&raw mut (*s.as_ptr()).windows).enumerate() {
+        for (n, &wl) in (*(&raw mut (*s.as_ptr()).windows)).values().enumerate() {
+            let wl = NonNull::new(wl).unwrap();
             let ft = format_create(
                 cmdq_get_client(item),
                 item,

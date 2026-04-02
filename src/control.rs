@@ -889,7 +889,7 @@ pub unsafe fn control_check_subs_all_panes(c: *mut client, csub: *mut control_su
     unsafe {
         let s = (*c).session;
 
-        for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
+        for &wl in (*(&raw mut (*s).windows)).values() {
             let w = (*wl).window;
             for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
                 let ft = format_create_defaults(null_mut(), c, s, wl, wp);
@@ -974,7 +974,7 @@ pub unsafe fn control_check_subs_all_windows(c: *mut client, csub: *mut control_
     unsafe {
         let s = (*c).session;
 
-        for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
+        for &wl in (*(&raw mut (*s).windows)).values() {
             let w = (*wl).window;
 
             let ft = format_create_defaults(null_mut(), c, s, wl, null_mut());

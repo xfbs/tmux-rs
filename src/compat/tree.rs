@@ -274,23 +274,6 @@ where
     }
 }
 
-// RB_GENERATE_STATIC name, type, field, cmp
-macro_rules! RB_GENERATE {
-    ($head_ty:ty, $ty:ty, $entry_field:ident, $entry_field_discr:ty, $cmp_fn:ident) => {
-        impl $crate::compat::tree::GetEntry<$ty, $entry_field_discr> for $ty {
-            unsafe fn entry_const(this: *const Self) -> *const rb_entry<$ty> {
-                unsafe { &raw const (*this).$entry_field }
-            }
-            unsafe fn entry_mut(this: *mut Self) -> *mut rb_entry<$ty> {
-                unsafe { &raw mut (*this).$entry_field }
-            }
-            fn cmp(this: &Self, other: &Self) -> std::cmp::Ordering {
-                $cmp_fn(this, other)
-            }
-        }
-    };
-}
-pub(crate) use RB_GENERATE;
 
 unsafe fn rb_minmax_const<T, D>(head: *const rb_head<T>, val: i32) -> *const T
 where

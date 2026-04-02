@@ -417,7 +417,7 @@ unsafe fn window_tree_build_session(
 
         let mut l: *mut *mut winlink = null_mut();
         let mut n = 0;
-        for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
+        for &wl in (*(&raw mut (*s).windows)).values() {
             l = xreallocarray_(l, n + 1).as_ptr();
             *l.add(n) = wl;
             n += 1;
@@ -625,7 +625,7 @@ unsafe fn window_tree_draw_session(
         }
 
         let mut current: u32 = 0;
-        for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
+        for &wl in (*(&raw mut (*s).windows)).values() {
             if wl == (*s).curw {
                 break;
             }
@@ -697,7 +697,7 @@ unsafe fn window_tree_draw_session(
 
         loop_ = 0;
         i = 0;
-        for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
+        for &wl in (*(&raw mut (*s).windows)).values() {
             if loop_ == end {
                 break;
             }
@@ -1401,8 +1401,8 @@ unsafe fn window_tree_mouse(
             };
             mode_tree_expand_current((*data).data);
 
-            for (loop_, wl_) in rb_foreach(&raw mut (*s.as_ptr()).windows).enumerate() {
-                wl = Some(wl_);
+            for (loop_, &wl_) in (*(&raw mut (*s.as_ptr()).windows)).values().enumerate() {
+                wl = NonNull::new(wl_);
                 if loop_ as u32 == (*data).start + x {
                     break;
                 }

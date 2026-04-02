@@ -11,7 +11,7 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::compat::{queue::tailq_foreach, tree::rb_foreach};
+use crate::compat::queue::tailq_foreach;
 use crate::*;
 
 pub static CMD_LIST_PANES_ENTRY: cmd_entry = cmd_entry {
@@ -66,7 +66,7 @@ unsafe fn cmd_list_panes_session(
     type_: i32,
 ) {
     unsafe {
-        for wl in rb_foreach(&raw mut (*s).windows).map(NonNull::as_ptr) {
+        for &wl in (*(&raw mut (*s).windows)).values() {
             cmd_list_panes_window(self_, s, wl, item, type_);
         }
     }

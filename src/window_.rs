@@ -37,22 +37,14 @@ pub struct window_pane_input_data {
     file: *mut client_file,
 }
 
-RB_GENERATE!(winlinks, winlink, entry, discr_entry, winlink_cmp);
-
-
-pub fn winlink_cmp(wl1: &winlink, wl2: &winlink) -> cmp::Ordering {
-    wl1.idx.cmp(&wl2.idx)
-}
-
-
 pub unsafe fn winlink_find_by_window(
     wwl: *mut winlinks,
     w: *mut window,
 ) -> Option<NonNull<winlink>> {
     unsafe {
-        for wl in rb_foreach(wwl) {
-            if (*wl.as_ptr()).window == w {
-                return Some(wl);
+        for &wl in (*wwl).values() {
+            if (*wl).window == w {
+                return NonNull::new(wl);
             }
         }
         None
@@ -65,16 +57,13 @@ pub unsafe fn winlink_find_by_index(wwl: *mut winlinks, idx: i32) -> *mut winlin
             fatalx("bad index");
         }
 
-        let mut wl: winlink = std::mem::zeroed();
-        wl.idx = idx;
-
-        rb_find(wwl, &raw mut wl)
+        (*wwl).get(&idx).copied().unwrap_or(null_mut())
     }
 }
 
 pub unsafe fn winlink_find_by_window_id(wwl: *mut winlinks, id: u32) -> *mut winlink {
     unsafe {
-        for wl in rb_foreach(wwl).map(NonNull::as_ptr) {
+        for &wl in (*wwl).values() {
             if (*(*wl).window).id == id {
                 return wl;
             }
@@ -107,7 +96,7 @@ unsafe fn winlink_next_index(wwl: *mut winlinks, idx: i32) -> i32 {
 }
 
 pub unsafe fn winlink_count(wwl: *mut winlinks) -> u32 {
-    unsafe { rb_foreach(wwl).count() as u32 }
+    unsafe { (*wwl).len() as u32 }
 }
 
 pub unsafe fn winlink_add(wwl: *mut winlinks, mut idx: i32) -> *mut winlink {
@@ -123,7 +112,7 @@ pub unsafe fn winlink_add(wwl: *mut winlinks, mut idx: i32) -> *mut winlink {
 
         let wl: *mut winlink = xcalloc_::<winlink>(1).as_ptr();
         (*wl).idx = idx;
-        rb_insert(wwl, wl);
+        (*wwl).insert(idx, wl);
 
         wl
     }
@@ -150,17 +139,29 @@ pub unsafe fn winlink_remove(wwl: *mut winlinks, wl: *mut winlink) {
             window_remove_ref(w, c!("winlink_remove"));
         }
 
-        rb_remove(wwl, wl);
+        (*wwl).remove(&(*wl).idx);
         free(wl as _);
     }
 }
 
-pub unsafe fn winlink_next(wl: *mut winlink) -> *mut winlink {
-    unsafe { rb_next(wl) }
+pub unsafe fn winlink_next(wwl: *mut winlinks, wl: *mut winlink) -> *mut winlink {
+    unsafe {
+        (*wwl)
+            .range((std::ops::Bound::Excluded((*wl).idx), std::ops::Bound::Unbounded))
+            .next()
+            .map(|(_, &v)| v)
+            .unwrap_or(null_mut())
+    }
 }
 
-pub unsafe fn winlink_previous(wl: *mut winlink) -> *mut winlink {
-    unsafe { rb_prev(wl) }
+pub unsafe fn winlink_previous(wwl: *mut winlinks, wl: *mut winlink) -> *mut winlink {
+    unsafe {
+        (*wwl)
+            .range(..(*wl).idx)
+            .next_back()
+            .map(|(_, &v)| v)
+            .unwrap_or(null_mut())
+    }
 }
 
 pub unsafe fn winlink_next_by_number(
@@ -170,9 +171,9 @@ pub unsafe fn winlink_next_by_number(
 ) -> *mut winlink {
     unsafe {
         for _ in 0..n {
-            wl = rb_next(wl);
+            wl = winlink_next(&raw mut (*s).windows, wl);
             if wl.is_null() {
-                wl = rb_min(&raw mut (*s).windows);
+                wl = (*(&raw mut (*s).windows)).values().next().copied().unwrap_or(null_mut());
             }
         }
     }
@@ -187,9 +188,9 @@ pub unsafe fn winlink_previous_by_number(
 ) -> *mut winlink {
     unsafe {
         for _ in 0..n {
-            wl = rb_prev(wl);
+            wl = winlink_previous(&raw mut (*s).windows, wl);
             if wl.is_null() {
-                wl = rb_min(&raw mut (*s).windows);
+                wl = (*(&raw mut (*s).windows)).values().next().copied().unwrap_or(null_mut());
             }
         }
     }
@@ -1703,9 +1704,9 @@ pub unsafe fn winlink_shuffle_up(s: *mut session, mut wl: *mut winlink, before: 
         // Move everything from last - 1 to idx up a bit.
         while last > idx {
             wl = winlink_find_by_index(&raw mut (*s).windows, last - 1);
-            rb_remove(&raw mut (*s).windows, wl);
+            (*(&raw mut (*s).windows)).remove(&(*wl).idx);
             (*wl).idx += 1;
-            rb_insert(&raw mut (*s).windows, wl);
+            (*(&raw mut (*s).windows)).insert((*wl).idx, wl);
             last -= 1;
         }
 
