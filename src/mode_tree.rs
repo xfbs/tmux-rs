@@ -434,7 +434,7 @@ pub unsafe fn mode_tree_start(
             height: Default::default(),
             offset: Default::default(),
             current: Default::default(),
-            screen: zeroed(),
+            screen: zeroed(), // TODO: change when screen.images becomes Vec
             search: Default::default(),
             filter: if args_has(args, 'f') {
                 xstrdup(args_get_(args, 'f')).as_ptr()

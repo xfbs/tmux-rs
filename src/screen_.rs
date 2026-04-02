@@ -51,27 +51,54 @@ pub unsafe fn screen_free_titles(s: *mut screen) {
 /// Create a new screen.
 pub unsafe fn screen_init(s: *mut screen, sx: u32, sy: u32, hlimit: u32) {
     unsafe {
-        (*s).grid = grid_create(sx, sy, hlimit);
-        (*s).saved_grid = null_mut();
+        // Use ptr::write to atomically write a valid screen value, so the
+        // memory never contains an invalid intermediate state.  This is
+        // important for fields like `tabs` (Option<Rc<…>>) and will be
+        // essential when `images` is migrated from tailq_head to Vec.
+        std::ptr::write(
+            s,
+            screen {
+                grid: grid_create(sx, sy, hlimit),
+                saved_grid: null_mut(),
 
-        (*s).title = xstrdup_(c"").as_ptr();
-        (*s).titles = null_mut();
-        (*s).path = null_mut();
+                title: xstrdup_(c"").as_ptr(),
+                titles: null_mut(),
+                path: null_mut(),
 
-        (*s).cstyle = screen_cursor_style::SCREEN_CURSOR_DEFAULT;
-        (*s).default_cstyle = screen_cursor_style::SCREEN_CURSOR_DEFAULT;
-        (*s).mode = mode_flag::MODE_CURSOR;
-        (*s).default_mode = mode_flag::empty();
-        (*s).ccolour = -1;
-        (*s).default_ccolour = -1;
-        (*s).tabs = None;
-        (*s).sel = null_mut();
+                cx: 0,
+                cy: 0,
 
+                cstyle: screen_cursor_style::SCREEN_CURSOR_DEFAULT,
+                default_cstyle: screen_cursor_style::SCREEN_CURSOR_DEFAULT,
+                ccolour: -1,
+                default_ccolour: -1,
+
+                rupper: 0,
+                rlower: 0,
+
+                mode: mode_flag::MODE_CURSOR,
+                default_mode: mode_flag::empty(),
+
+                saved_cx: 0,
+                saved_cy: 0,
+                saved_cell: zeroed(),
+                saved_flags: 0,
+
+                tabs: None,
+                sel: null_mut(),
+
+                #[cfg(feature = "sixel")]
+                images: zeroed(),
+
+                write_list: null_mut(),
+                hyperlinks: null_mut(),
+            },
+        );
+
+        // tailq_init is self-referential, so must be called after the
+        // struct is at its final location.
         #[cfg(feature = "sixel")]
         tailq_init(&raw mut (*s).images);
-
-        (*s).write_list = null_mut();
-        (*s).hyperlinks = null_mut();
 
         screen_reinit(s);
     }

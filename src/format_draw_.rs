@@ -876,6 +876,7 @@ pub unsafe fn format_draw(
         ];
 
         let os: *mut screen = (*octx).s;
+        // TODO: change to MaybeUninit when screen.images becomes Vec
         let mut s: [screen; TOTAL] = zeroed();
 
         let mut ctx: [screen_write_ctx; TOTAL] = zeroed();

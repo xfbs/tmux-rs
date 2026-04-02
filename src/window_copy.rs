@@ -424,9 +424,9 @@ pub unsafe fn window_copy_view_init(
         let data = window_copy_common_init(wme);
         (*data).viewmode = 1;
 
-        (*data).backing = Box::leak(Box::new(zeroed())) as *mut screen;
+        (*data).backing = Box::into_raw(Box::<screen>::new_uninit()).cast::<screen>();
         screen_init((*data).backing, sx, screen_size_y(base), u32::MAX);
-        (*data).writing = Box::leak(Box::new(zeroed())) as *mut screen;
+        (*data).writing = Box::into_raw(Box::<screen>::new_uninit()).cast::<screen>();
         screen_init((*data).writing, sx, screen_size_y(base), 0);
         (*data).ictx = input_init(null_mut(), null_mut(), null_mut());
         (*data).mx = (*data).cx;
@@ -4306,7 +4306,7 @@ pub unsafe fn window_copy_search(
         let wp: *mut window_pane = (*wme).wp;
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let s: *mut screen = (*data).backing;
-        let mut ss: screen = zeroed();
+        let mut ss = MaybeUninit::<screen>::uninit();
         let mut ctx: screen_write_ctx = zeroed();
         let gd: *mut grid = (*s).grid;
         let str: *mut u8 = (*data).searchstr;
@@ -4339,11 +4339,12 @@ pub unsafe fn window_copy_search(
         let mut fy = screen_hsize((*data).backing) - (*data).oy + (*data).cy;
 
         screen_init(
-            &raw mut ss,
+            ss.as_mut_ptr(),
             screen_write_strlen!("{}", _s(str)) as u32,
             1,
             0,
         );
+        let mut ss = ss.assume_init();
         screen_write_start(&raw mut ctx, &raw mut ss);
         screen_write_nputs!(
             &raw mut ctx,
@@ -4489,7 +4490,7 @@ pub unsafe fn window_copy_search_marks(
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let s: *mut screen = (*data).backing;
-        let mut ss: screen = zeroed();
+        let mut ss = MaybeUninit::<screen>::uninit();
         let mut ctx: screen_write_ctx = zeroed();
         let gd: *mut grid = (*s).grid;
         let mut found: bool;
@@ -4509,8 +4510,8 @@ pub unsafe fn window_copy_search_marks(
         'out: {
             if ssp.is_null() {
                 width = screen_write_strlen!("{}", _s((*data).searchstr)) as u32;
-                screen_init(&raw mut ss, width, 1, 0);
-                screen_write_start(&raw mut ctx, &raw mut ss);
+                screen_init(ss.as_mut_ptr(), width, 1, 0);
+                screen_write_start(&raw mut ctx, ss.as_mut_ptr());
                 screen_write_nputs!(
                     &raw mut ctx,
                     -1,
@@ -4519,7 +4520,7 @@ pub unsafe fn window_copy_search_marks(
                     _s((*data).searchstr),
                 );
                 screen_write_stop(&raw mut ctx);
-                ssp = &raw mut ss;
+                ssp = ss.as_mut_ptr();
             } else {
                 width = screen_size_x(ssp);
             }
@@ -4657,8 +4658,8 @@ pub unsafe fn window_copy_search_marks(
                 break;
             }
         } // out:
-        if ssp == &raw mut ss {
-            screen_free(&raw mut ss);
+        if ssp == ss.as_mut_ptr() {
+            screen_free(ss.as_mut_ptr());
         }
         if regex != 0 {
             libc::regfree(&raw mut reg);
