@@ -283,12 +283,12 @@ fn page_up_down() {
 
     enter_copy_mode(&tmux);
 
-    let y_initial = tmux.query("#{copy_cursor_y}");
+    let _y_initial = tmux.query("#{copy_cursor_y}");
 
     // Page up
     send_copy_cmd(&tmux, "page-up");
     std::thread::sleep(Duration::from_millis(200));
-    let y_after_pgup = tmux.query("#{copy_cursor_y}");
+    let _y_after_pgup = tmux.query("#{copy_cursor_y}");
 
     // After page-up, the cursor_y in the scrollback coordinate system should change
     // (the cursor y stays in the viewport but the scroll offset changes)
@@ -335,7 +335,7 @@ fn history_navigation_scroll_back() {
     std::thread::sleep(Duration::from_millis(200));
 
     // Capture the pane to see if we scrolled back
-    let captured = tmux.capture_pane();
+    let _captured = tmux.capture_pane();
     // The early marker should be visible after scrolling to top
     // (or at least we should be scrolled back significantly)
     let scroll_pos = tmux.query("#{scroll_position}");
