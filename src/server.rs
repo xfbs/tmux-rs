@@ -31,7 +31,7 @@ pub static mut SERVER_EV_ACCEPT: event = unsafe { zeroed() };
 pub static mut SERVER_EV_TIDY: event = unsafe { zeroed() };
 pub static mut MARKED_PANE: cmd_find_state = unsafe { zeroed() };
 pub static mut MESSAGE_NEXT: c_uint = 0;
-pub static mut MESSAGE_LOG: message_list = unsafe { zeroed() };
+pub static mut MESSAGE_LOG: message_list = Vec::new();
 pub static mut CURRENT_TIME: time_t = unsafe { zeroed() };
 
 pub unsafe fn server_set_marked(s: *mut session, wl: *mut winlink, wp: *mut window_pane) {
@@ -240,7 +240,7 @@ pub unsafe fn server_start(
         tailq_init(&raw mut CLIENTS);
         SESSIONS = BTreeMap::new();
         key_bindings_init();
-        tailq_init(&raw mut MESSAGE_LOG);
+        MESSAGE_LOG = Vec::new();
         gettimeofday(&raw mut START_TIME, null_mut());
 
         if cfg!(feature = "systemd") {
@@ -582,22 +582,24 @@ pub unsafe fn server_add_message_(args: std::fmt::Arguments) {
 
         log_debug!("message: {}", _s(s));
 
-        let msg: *mut message_entry = xcalloc1::<message_entry>() as *mut message_entry;
-        gettimeofday(&raw mut (*msg).msg_time, null_mut());
-        (*msg).msg_num = MESSAGE_NEXT + 1;
+        let mut msg_entry = message_entry {
+            msg: s,
+            msg_num: MESSAGE_NEXT + 1,
+            msg_time: zeroed(),
+        };
+        gettimeofday(&raw mut msg_entry.msg_time, null_mut());
         MESSAGE_NEXT += 1;
-        (*msg).msg = s;
 
-        tailq_insert_tail(&raw mut MESSAGE_LOG, msg);
+        (*(&raw mut MESSAGE_LOG)).push(msg_entry);
 
         let limit = options_get_number_(GLOBAL_OPTIONS, "message-limit") as u32;
-        for msg in tailq_foreach(&raw mut MESSAGE_LOG).map(NonNull::as_ptr) {
-            if (*msg).msg_num + limit >= MESSAGE_NEXT {
-                continue;
+        // Evict old messages from the front
+        while let Some(first) = (*(&raw mut MESSAGE_LOG)).first() {
+            if first.msg_num + limit >= MESSAGE_NEXT {
+                break;
             }
-            free_((*msg).msg);
-            tailq_remove(&raw mut MESSAGE_LOG, msg);
-            free_(msg);
+            free_(first.msg);
+            (*(&raw mut MESSAGE_LOG)).remove(0);
         }
     }
 }

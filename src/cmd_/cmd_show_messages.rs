@@ -11,7 +11,6 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::compat::queue::tailq_foreach_reverse;
 use crate::*;
 
 const SHOW_MESSAGES_TEMPLATE: *const u8 = c!("#{t/p:message_time}: #{message_text}");
@@ -88,10 +87,10 @@ unsafe fn cmd_show_messages_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
 
         let ft = format_create_from_target(item);
 
-        for msg in tailq_foreach_reverse(&raw mut crate::server::MESSAGE_LOG).map(NonNull::as_ptr) {
-            format_add!(ft, "message_text", "{}", _s((*msg).msg));
-            format_add!(ft, "message_number", "{}", (*msg).msg_num,);
-            format_add_tv(ft, c!("message_time"), &raw mut (*msg).msg_time);
+        for msg in (*(&raw mut crate::server::MESSAGE_LOG)).iter_mut().rev() {
+            format_add!(ft, "message_text", "{}", _s(msg.msg));
+            format_add!(ft, "message_number", "{}", msg.msg_num,);
+            format_add_tv(ft, c!("message_time"), &raw mut msg.msg_time);
 
             let s = format_expand(ft, SHOW_MESSAGES_TEMPLATE);
             cmdq_print!(item, "{}", _s(s));

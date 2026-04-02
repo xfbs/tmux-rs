@@ -1859,16 +1859,12 @@ struct tty_ctx {
 }
 
 // Saved message entry.
-impl_tailq_entry!(message_entry, entry, tailq_entry<message_entry>);
-#[repr(C)]
 struct message_entry {
     msg: *mut u8,
     msg_num: u32,
     msg_time: timeval,
-
-    entry: tailq_entry<message_entry>,
 }
-type message_list = tailq_head<message_entry>;
+type message_list = Vec<message_entry>;
 
 /// Argument type.
 #[repr(i32)]
