@@ -30,15 +30,7 @@ pub struct screen_sel {
     pub cell: grid_cell,
 }
 
-impl_tailq_entry!(screen_title_entry, entry, tailq_entry<screen_title_entry>);
-/// Entry on title stack.
-#[repr(C)]
-pub struct screen_title_entry {
-    pub text: *mut u8,
-
-    pub entry: tailq_entry<screen_title_entry>,
-}
-pub type screen_titles = tailq_head<screen_title_entry>;
+pub type screen_titles = Vec<*mut u8>;
 
 /// Free titles stack.
 pub unsafe fn screen_free_titles(s: *mut screen) {
@@ -47,14 +39,11 @@ pub unsafe fn screen_free_titles(s: *mut screen) {
             return;
         }
 
-        while let Some(title_entry) = NonNull::new(tailq_first((*s).titles)) {
-            let title_entry = title_entry.as_ptr();
-            tailq_remove((*s).titles, title_entry);
-            free_((*title_entry).text);
-            free_(title_entry);
+        for &text in (*(*s).titles).iter() {
+            free_(text);
         }
 
-        free_((*s).titles);
+        drop(Box::from_raw((*s).titles));
         (*s).titles = null_mut();
     }
 }
@@ -248,18 +237,11 @@ pub unsafe fn screen_set_path(s: *mut screen, path: *const u8) {
 pub unsafe fn screen_push_title(s: *mut screen) {
     unsafe {
         if (*s).titles.is_null() {
-            (*s).titles = Box::leak(Box::new(screen_titles {
-                tqh_first: null_mut(),
-                tqh_last: null_mut(),
-            }));
-            tailq_init((*s).titles);
+            (*s).titles = Box::into_raw(Box::new(Vec::new()));
         }
 
-        let title_entry = Box::leak(Box::new(screen_title_entry {
-            text: xstrdup((*s).title).as_ptr(),
-            entry: tailq_entry::default(),
-        }));
-        tailq_insert_head((*s).titles, title_entry);
+        // Push to front (index 0 = top of stack)
+        (*(*s).titles).insert(0, xstrdup((*s).title).as_ptr());
     }
 }
 
@@ -270,12 +252,10 @@ pub unsafe fn screen_pop_title(s: *mut screen) {
             return;
         }
 
-        if let Some(title_entry) = NonNull::new(tailq_first((*s).titles)) {
-            screen_set_title(s, (*title_entry.as_ptr()).text);
-
-            tailq_remove((*s).titles, title_entry.as_ptr());
-            free_((*title_entry.as_ptr()).text);
-            free_(title_entry.as_ptr());
+        if !(*(*s).titles).is_empty() {
+            let text = (*(*s).titles).remove(0);
+            screen_set_title(s, text);
+            free_(text);
         }
     }
 }

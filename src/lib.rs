@@ -2167,7 +2167,6 @@ type client_files = BTreeMap<i32, Box<client_file>>;
 
 // Client window.
 struct client_window {
-    window: u32,
     pane: *mut window_pane,
 
     sx: u32,

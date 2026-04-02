@@ -62,15 +62,11 @@ impl Entry<control_pane, discr_pending_entry> for control_pane {
 }
 
 pub struct control_sub_pane {
-    pane: u32,
-    idx: u32,
     last: *mut u8,
 }
 pub type control_sub_panes = BTreeMap<(u32, u32), control_sub_pane>;
 
 pub struct control_sub_window {
-    window: u32,
-    idx: u32,
     last: *mut u8,
 }
 pub type control_sub_windows = BTreeMap<(u32, u32), control_sub_window>;
@@ -859,10 +855,7 @@ pub unsafe fn control_check_subs_pane(c: *mut client, csub: *mut control_sub) {
             format_free(ft);
 
             let key = ((*wp).id, (*wl).idx as u32);
-            let csp = (*csub).panes.entry(key).or_insert_with(|| control_sub_pane {
-                pane: (*wp).id,
-                idx: (*wl).idx as u32,
-                last: null_mut(),
+            let csp = (*csub).panes.entry(key).or_insert_with(|| control_sub_pane { last: null_mut(),
             });
 
             if !csp.last.is_null() && libc::strcmp(value, csp.last) == 0 {
@@ -897,10 +890,7 @@ pub unsafe fn control_check_subs_all_panes(c: *mut client, csub: *mut control_su
                 format_free(ft);
 
                 let key = ((*wp).id, (*wl).idx as u32);
-                let csp = (*csub).panes.entry(key).or_insert_with(|| control_sub_pane {
-                    pane: (*wp).id,
-                    idx: (*wl).idx as u32,
-                    last: null_mut(),
+                let csp = (*csub).panes.entry(key).or_insert_with(|| control_sub_pane { last: null_mut(),
                 });
 
                 if !csp.last.is_null() && libc::strcmp(value, csp.last) == 0 {
@@ -945,10 +935,7 @@ pub unsafe fn control_check_subs_window(c: *mut client, csub: *mut control_sub) 
             format_free(ft);
 
             let key = ((*w).id, (*wl).idx as u32);
-            let csw = (*csub).windows.entry(key).or_insert_with(|| control_sub_window {
-                window: (*w).id,
-                idx: (*wl).idx as u32,
-                last: null_mut(),
+            let csw = (*csub).windows.entry(key).or_insert_with(|| control_sub_window { last: null_mut(),
             });
 
             if !csw.last.is_null() && libc::strcmp(value, csw.last) == 0 {
@@ -982,10 +969,7 @@ pub unsafe fn control_check_subs_all_windows(c: *mut client, csub: *mut control_
             format_free(ft);
 
             let key = ((*w).id, (*wl).idx as u32);
-            let csw = (*csub).windows.entry(key).or_insert_with(|| control_sub_window {
-                window: (*w).id,
-                idx: (*wl).idx as u32,
-                last: null_mut(),
+            let csw = (*csub).windows.entry(key).or_insert_with(|| control_sub_window { last: null_mut(),
             });
 
             if !csw.last.is_null() && libc::strcmp(value, csw.last) == 0 {

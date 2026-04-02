@@ -3399,7 +3399,6 @@ pub unsafe fn server_client_get_client_window(c: *mut client, id: u32) -> *mut c
 pub unsafe fn server_client_add_client_window(c: *mut client, id: u32) -> NonNull<client_window> {
     unsafe {
         let cw = (*c).windows.entry(id).or_insert(client_window {
-            window: id,
             pane: null_mut(),
             sx: 0,
             sy: 0,

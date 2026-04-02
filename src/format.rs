@@ -42,7 +42,6 @@ pub type format_cb = unsafe fn(_: *mut format_tree) -> format_table_type;
 // Entry in format job tree.
 pub struct format_job {
     pub client: *mut client,
-    pub tag: u32,
     pub cmd: *mut u8,
     pub expanded: *mut u8,
 
@@ -338,7 +337,6 @@ pub unsafe fn format_job_get(es: *mut format_expand_state, cmd: *mut u8) -> *mut
         let fj = &mut **jobs.entry(key).or_insert_with(|| {
             Box::new(format_job {
                 client: (*ft).client,
-                tag: (*ft).tag,
                 cmd: xstrdup(cmd).as_ptr(),
                 expanded: null_mut(),
                 last: 0,
