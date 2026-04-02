@@ -748,19 +748,19 @@ pub unsafe fn layout_new_pane_size(
         // proportionate to the previous size.
         let mut min: u32 = (PANE_MINIMUM + 1) * (count_left - 1);
         let mut new_size: u32 = if type_ == layout_type::LAYOUT_LEFTRIGHT {
-            if (*lc).sx - available > min {
-                min = (*lc).sx - available;
+            if (*lc).sx.wrapping_sub(available) > min {
+                min = (*lc).sx.wrapping_sub(available);
             }
             ((*lc).sx * size) / previous
         } else {
-            if (*lc).sy - available > min {
-                min = (*lc).sy - available;
+            if (*lc).sy.wrapping_sub(available) > min {
+                min = (*lc).sy.wrapping_sub(available);
             }
             ((*lc).sy * size) / previous
         };
 
         // Check against the maximum and minimum size.
-        let max: u32 = size_left - min;
+        let max: u32 = size_left.wrapping_sub(min);
         if new_size > max {
             new_size = max;
         }
@@ -894,7 +894,7 @@ pub unsafe fn layout_resize_child_cells(w: *mut window, lc: *mut layout_cell) {
                     count - idx as u32,
                     available,
                 );
-                available -= (*lcchild).sx + 1;
+                available = available.wrapping_sub((*lcchild).sx + 1);
             }
             if (*lc).type_ == layout_type::LAYOUT_LEFTRIGHT {
                 (*lcchild).sy = (*lc).sy;
@@ -908,7 +908,7 @@ pub unsafe fn layout_resize_child_cells(w: *mut window, lc: *mut layout_cell) {
                     count - idx as u32,
                     available,
                 );
-                available -= (*lcchild).sy + 1;
+                available = available.wrapping_sub((*lcchild).sy + 1);
             }
             layout_resize_child_cells(w, lcchild);
         }
