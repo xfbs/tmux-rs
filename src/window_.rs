@@ -1001,7 +1001,7 @@ pub unsafe fn window_pane_create(
 
         tailq_init(&raw mut (*wp).modes);
 
-        tailq_init(&raw mut (*wp).resize_queue);
+        (*wp).resize_queue = Vec::new();
 
         (*wp).sx = sx;
         (*wp).sy = sy;
@@ -1057,10 +1057,7 @@ unsafe fn window_pane_destroy(wp: *mut window_pane) {
         if event_initialized(&raw mut (*wp).resize_timer) != 0 {
             event_del(&raw mut (*wp).resize_timer);
         }
-        for r in tailq_foreach(&raw mut (*wp).resize_queue).map(NonNull::as_ptr) {
-            tailq_remove::<_, ()>(&raw mut (*wp).resize_queue, r);
-            free_(r);
-        }
+        (*wp).resize_queue.clear();
 
         (*(&raw mut ALL_WINDOW_PANES)).remove(&(*wp).id);
 
@@ -1142,14 +1139,12 @@ pub unsafe fn window_pane_resize(wp: *mut window_pane, sx: u32, sy: u32) {
             return;
         }
 
-        let r = Box::leak(Box::new(window_pane_resize {
+        (*wp).resize_queue.push(window_pane_resize {
             sx,
             sy,
             osx: (*wp).sx,
             osy: (*wp).sy,
-            entry: tailq_entry::default(),
-        }));
-        tailq_insert_tail(&raw mut (*wp).resize_queue, r);
+        });
 
         (*wp).sx = sx;
         (*wp).sy = sy;

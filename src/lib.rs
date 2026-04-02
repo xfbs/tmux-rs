@@ -1267,19 +1267,15 @@ struct window_pane_offset {
     used: usize,
 }
 
-impl_tailq_entry!(window_pane_resize, entry, tailq_entry<window_pane_resize>);
 /// Queued pane resize.
-#[repr(C)]
+#[derive(Copy, Clone)]
 struct window_pane_resize {
     sx: u32,
     sy: u32,
-
     osx: u32,
     osy: u32,
-
-    entry: tailq_entry<window_pane_resize>,
 }
-type window_pane_resizes = tailq_head<window_pane_resize>;
+type window_pane_resizes = Vec<window_pane_resize>;
 
 bitflags::bitflags! {
     #[repr(transparent)]

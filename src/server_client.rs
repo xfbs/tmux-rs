@@ -2214,7 +2214,8 @@ pub unsafe fn server_client_check_pane_resize(wp: *mut window_pane) {
             tv_usec: 250000,
         };
 
-        if tailq_empty(&raw mut (*wp).resize_queue) {
+        let queue = &mut (*wp).resize_queue;
+        if queue.is_empty() {
             return;
         }
 
@@ -2234,13 +2235,13 @@ pub unsafe fn server_client_check_pane_resize(wp: *mut window_pane) {
             "server_client_check_pane_resize",
             (*wp).id
         );
-        for r in tailq_foreach(&raw mut (*wp).resize_queue).map(NonNull::as_ptr) {
+        for r in queue.iter() {
             log_debug!(
                 "queued resize: {}x{} -> {}x{}",
-                (*r).osx,
-                (*r).osy,
-                (*r).sx,
-                (*r).sy
+                r.osx,
+                r.osy,
+                r.sx,
+                r.sy
             );
         }
 
@@ -2255,35 +2256,29 @@ pub unsafe fn server_client_check_pane_resize(wp: *mut window_pane) {
         //   size. We must resize at least twice to force the application to
         //   redraw. So apply the first and leave the last on the queue for
         //   next time.
-        let first = tailq_first(&raw mut (*wp).resize_queue);
-        let last = tailq_last(&raw mut (*wp).resize_queue);
-        if first == last {
+        let len = queue.len();
+        let first = queue[0];
+        let last = queue[len - 1];
+        if len == 1 {
             // Only one resize.
-            window_pane_send_resize(wp, (*first).sx, (*first).sy);
-            tailq_remove(&raw mut (*wp).resize_queue, first);
-            free_(first);
-        } else if (*last).sx != (*first).osx || (*last).sy != (*first).osy {
+            window_pane_send_resize(wp, first.sx, first.sy);
+            queue.clear();
+        } else if last.sx != first.osx || last.sy != first.osy {
             // Multiple resizes ending up with a different size.
-            window_pane_send_resize(wp, (*last).sx, (*last).sy);
-            for r in tailq_foreach(&raw mut (*wp).resize_queue).map(NonNull::as_ptr) {
-                tailq_remove(&raw mut (*wp).resize_queue, r);
-                free_(r);
-            }
+            window_pane_send_resize(wp, last.sx, last.sy);
+            queue.clear();
         } else {
             // Multiple resizes ending up with the same size. There will
             // not be more than one to the same size in succession so we
             // can just use the last-but-one on the list and leave the last
             // for later. We reduce the time until the next check to avoid
             // a long delay between the resizes.
-            let r = tailq_prev(last);
-            window_pane_send_resize(wp, (*r).sx, (*r).sy);
-            for r in tailq_foreach(&raw mut (*wp).resize_queue).map(NonNull::as_ptr) {
-                if r == last {
-                    break;
-                }
-                tailq_remove(&raw mut (*wp).resize_queue, r);
-                free_(r);
-            }
+            let second_last = queue[len - 2];
+            window_pane_send_resize(wp, second_last.sx, second_last.sy);
+            // Keep only the last entry
+            let kept = last;
+            queue.clear();
+            queue.push(kept);
             tv.tv_usec = 10000;
         }
         evtimer_add(&raw mut (*wp).resize_timer, &raw const tv);
