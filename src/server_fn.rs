@@ -473,7 +473,9 @@ pub unsafe fn server_destroy_session(s: *mut session) {
 
 pub unsafe fn server_check_unattached() {
     unsafe {
-        for &s in (*(&raw mut SESSIONS)).values() {
+        let sessions: Vec<*mut session> =
+            (*(&raw mut SESSIONS)).values().copied().collect();
+        for s in sessions {
             if (*s).attached != 0 {
                 continue;
             }

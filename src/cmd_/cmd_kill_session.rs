@@ -44,7 +44,9 @@ unsafe fn cmd_kill_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
             }
             server_redraw_session(s);
         } else if args_has(args, 'a') {
-            for &sloop in (*(&raw mut SESSIONS)).values() {
+            let sessions: Vec<*mut session> =
+                (*(&raw mut SESSIONS)).values().copied().collect();
+            for sloop in sessions {
                 if sloop != s {
                     server_destroy_session(sloop);
                     session_destroy(sloop, 1, c!("cmd_kill_session_exec"));

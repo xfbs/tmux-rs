@@ -354,7 +354,9 @@ unsafe fn server_send_exit() {
             (*c).session = null_mut();
         }
 
-        for &s in (*(&raw mut SESSIONS)).values() {
+        let sessions: Vec<*mut session> =
+            (*(&raw mut SESSIONS)).values().copied().collect();
+        for s in sessions {
             session_destroy(s, 1, c!("server_send_exit"));
         }
     }
