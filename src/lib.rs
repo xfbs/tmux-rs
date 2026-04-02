@@ -281,7 +281,6 @@ const unsafe fn ptr_to_mut_ref<'a, T>(value: *mut T) -> Option<&'a mut T> {
 // discriminant structs
 struct discr_all_entry;
 struct discr_entry;
-struct discr_pending_entry;
 struct discr_sentry;
 struct discr_wentry;
 

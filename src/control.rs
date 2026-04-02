@@ -49,17 +49,11 @@ pub struct control_pane {
     pub flags: i32,
 
     pub pending_flag: i32,
-    pub pending_entry: tailq_entry<control_pane>,
 
     pub blocks: tailq_head<control_block>,
 }
 pub type control_panes = BTreeMap<u32, Box<control_pane>>;
 
-impl Entry<control_pane, discr_pending_entry> for control_pane {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<control_pane> {
-        unsafe { &raw mut (*this).pending_entry }
-    }
-}
 
 pub struct control_sub_pane {
     last: *mut u8,
@@ -87,7 +81,7 @@ pub type control_subs = BTreeMap<String, Box<control_sub>>;
 pub struct control_state {
     pub panes: control_panes,
 
-    pub pending_list: tailq_head<control_pane>,
+    pub pending_list: Vec<*mut control_pane>,
 
     pub pending_count: u32,
 
@@ -196,7 +190,7 @@ pub unsafe fn control_reset_offsets(c: *mut client) {
 
         (*cs).panes.clear();
 
-        tailq_init(&raw mut (*cs).pending_list);
+        (*cs).pending_list.clear();
         (*cs).pending_count = 0;
     }
 }
@@ -425,7 +419,7 @@ pub unsafe fn control_write_output(c: *mut client, wp: *mut window_pane) {
                     _s((*c).name),
                     (*wp).id
                 );
-                tailq_insert_tail::<_, discr_pending_entry>(&raw mut (*cs).pending_list, cp);
+                (*cs).pending_list.push(cp);
                 (*cp).pending_flag = 1;
                 (*cs).pending_count += 1;
             }
@@ -697,16 +691,18 @@ pub unsafe extern "C-unwind" fn control_write_callback(
                 limit = CONTROL_WRITE_MINIMUM as usize;
             }
 
-            for cp in tailq_foreach::<_, discr_pending_entry>(&raw mut (*cs).pending_list)
-                .map(NonNull::as_ptr)
-            {
+            let pending = &mut (*cs).pending_list;
+            let mut i = 0;
+            while i < pending.len() {
                 if EVBUFFER_LENGTH(evb) >= CONTROL_BUFFER_HIGH as usize {
                     break;
                 }
+                let cp = pending[i];
                 if control_write_pending(c, cp, limit) != 0 {
+                    i += 1;
                     continue;
                 }
-                tailq_remove::<_, discr_pending_entry>(&raw mut (*cs).pending_list, cp);
+                pending.remove(i);
                 (*cp).pending_flag = 0;
                 (*cs).pending_count -= 1;
             }
@@ -730,7 +726,7 @@ pub unsafe fn control_start(c: *mut client) {
         (*c).control_state = xcalloc_::<control_state>(1).as_ptr();
         let cs = (*c).control_state;
         std::ptr::write(&raw mut (*cs).panes, BTreeMap::new());
-        tailq_init(&raw mut (*cs).pending_list);
+        std::ptr::write(&raw mut (*cs).pending_list, Vec::new());
         tailq_init(&raw mut (*cs).all_blocks);
         std::ptr::write(&raw mut (*cs).subs, BTreeMap::new());
 
