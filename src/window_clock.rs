@@ -186,7 +186,7 @@ pub unsafe fn window_clock_init(
         };
 
         let data = Box::leak(Box::new(window_clock_mode_data {
-            screen: zeroed(), // TODO: change when screen.images becomes Vec
+            screen: screen_placeholder(),
             tim: libc::time(null_mut()),
             timer: zeroed(),
         })) as *mut window_clock_mode_data;

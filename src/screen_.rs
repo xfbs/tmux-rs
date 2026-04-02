@@ -48,6 +48,43 @@ pub unsafe fn screen_free_titles(s: *mut screen) {
     }
 }
 
+/// Return a valid but uninitialized-equivalent screen placeholder.
+///
+/// Every field is set to a safe zero/null/None value — no heap allocations.
+/// The caller must follow up with `screen_init` (which overwrites via
+/// `ptr::write`) before using the screen.  This exists so that struct
+/// literals can embed a `screen` field without `zeroed()`, which would be
+/// UB once `images` becomes a `Vec`.
+pub fn screen_placeholder() -> screen {
+    screen {
+        title: null_mut(),
+        path: null_mut(),
+        titles: null_mut(),
+        grid: null_mut(),
+        cx: 0,
+        cy: 0,
+        cstyle: screen_cursor_style::SCREEN_CURSOR_DEFAULT,
+        default_cstyle: screen_cursor_style::SCREEN_CURSOR_DEFAULT,
+        ccolour: 0,
+        default_ccolour: 0,
+        rupper: 0,
+        rlower: 0,
+        mode: mode_flag::empty(),
+        default_mode: mode_flag::empty(),
+        saved_cx: 0,
+        saved_cy: 0,
+        saved_grid: null_mut(),
+        saved_cell: unsafe { zeroed() },
+        saved_flags: 0,
+        tabs: None,
+        sel: null_mut(),
+        #[cfg(feature = "sixel")]
+        images: unsafe { zeroed() },
+        write_list: null_mut(),
+        hyperlinks: null_mut(),
+    }
+}
+
 /// Create a new screen.
 pub unsafe fn screen_init(s: *mut screen, sx: u32, sy: u32, hlimit: u32) {
     unsafe {
