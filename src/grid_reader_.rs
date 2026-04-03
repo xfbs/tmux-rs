@@ -221,9 +221,10 @@ pub unsafe fn grid_reader_cursor_next_word(gr: *mut grid_reader, separators: *co
             } else {
                 loop {
                     (*gr).cx += 1;
+                    // Skip word characters: stop at separator or whitespace.
                     if !(grid_reader_handle_wrap(gr, &raw mut xx, &raw mut yy) != 0
-                        && (!grid_reader_in_set(gr, separators)
-                            || grid_reader_in_set(gr, WHITESPACE)))
+                        && !grid_reader_in_set(gr, separators)
+                        && !grid_reader_in_set(gr, WHITESPACE))
                     {
                         break;
                     }
@@ -410,13 +411,13 @@ pub unsafe fn grid_reader_cursor_jump_back(gr: *mut grid_reader, jc: *mut utf8_d
             px = xx;
             while px > 0 {
                 grid_get_cell((*gr).gd, px - 1, py - 1, gc);
-                if !((*gc).flags.intersects(grid_flag::PADDING)
+                if !(*gc).flags.intersects(grid_flag::PADDING)
                     && (*gc).data.size == (*jc).size
                     && memcmp(
                         (*gc).data.data.as_ptr().cast(),
                         (*jc).data.as_ptr().cast(),
                         (*gc).data.size as usize,
-                    ) == 0)
+                    ) == 0
                 {
                     (*gr).cx = px - 1;
                     (*gr).cy = py - 1;

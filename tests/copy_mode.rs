@@ -544,7 +544,6 @@ fn jump_forward_vi() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs jump-backward does not move cursor (passes with C tmux)"]
 fn jump_backward_vi() {
     let (tmux, mut client) = setup(40, 10);
     set_mode_keys(&tmux, "vi");
@@ -656,7 +655,6 @@ fn append_selection_vi() {
 
 // 5. Word movement: w/b/e (next-word, previous-word, next-word-end)
 #[test]
-#[ignore = "broken: tmux-rs next-word skips too far (passes with C tmux)"]
 fn word_movement_vi() {
     let (tmux, mut client) = setup(40, 10);
     set_mode_keys(&tmux, "vi");
