@@ -12,7 +12,6 @@
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use crate::compat::strlcat;
-use crate::libc::strcmp;
 use crate::*;
 use crate::options_::options_get_number___;
 
@@ -223,7 +222,7 @@ unsafe fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
             let mut tablewidth = 0;
             keywidth = 0;
             for table in key_tables_entries() {
-                if !tablename.is_null() && strcmp((*table).name, tablename) != 0 {
+                if !tablename.is_null() && (*table).name != cstr_to_str(tablename) {
                     continue;
                 }
                 for bd in key_bindings_entries(table) {
@@ -236,7 +235,8 @@ unsafe fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
                         repeat = 1;
                     }
 
-                    width = utf8_cstrwidth((*table).name) as _;
+                    let name_ref = &(*(&raw const (*table).name));
+                    width = name_ref.len() as _;
                     if width > tablewidth {
                         tablewidth = width;
                     }
@@ -253,7 +253,7 @@ unsafe fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
             let mut tmp: NonNull<u8> = xmalloc(tmpsize).cast();
 
             'outer: for table in key_tables_entries() {
-                if !tablename.is_null() && strcmp((*table).name, tablename) != 0 {
+                if !tablename.is_null() && (*table).name != cstr_to_str(tablename) {
                     continue;
                 }
                 for bd in key_bindings_entries(table) {
@@ -273,7 +273,8 @@ unsafe fn cmd_list_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
                     let mut tmpused: usize =
                         xsnprintf_!(tmp.as_ptr(), tmpsize, "{}-T ", r).unwrap() as _;
 
-                    let mut cp = utf8_padcstr((*table).name, tablewidth as _);
+                    let c_table_name = CString::new((*table).name.as_str()).unwrap();
+                    let mut cp = utf8_padcstr(c_table_name.as_ptr().cast(), tablewidth as _);
                     let mut cplen = strlen(cp) + 1;
                     while tmpused + cplen + 1 >= tmpsize {
                         tmpsize *= 2;

@@ -2327,7 +2327,7 @@ type key_bindings = BTreeMap<key_code, Box<key_binding>>;
 
 /// Key table — a named group of key bindings.
 struct key_table {
-    name: *mut u8,
+    name: String,
     activity_time: timeval,
     key_bindings: key_bindings,
     default_key_bindings: key_bindings,

@@ -241,7 +241,7 @@ pub unsafe fn server_client_get_key_table(c: *mut client) -> *const u8 {
 
 /// Is this table the default key table?
 pub unsafe fn server_client_is_default_key_table(c: *mut client, table: *mut key_table) -> bool {
-    unsafe { libc::strcmp((*table).name, server_client_get_key_table(c)) == 0 }
+    unsafe { (*table).name == cstr_to_str(server_client_get_key_table(c)) }
 }
 
 /// Create a new client.
@@ -1912,7 +1912,7 @@ pub unsafe fn server_client_key_callback(item: *mut cmdq_item, data: *mut c_void
                     key0 = key & (KEYC_MASK_KEY | KEYC_MASK_MODIFIERS);
                     if (key0 == (prefix & (KEYC_MASK_KEY | KEYC_MASK_MODIFIERS))
                         || key0 == (prefix2 & (KEYC_MASK_KEY | KEYC_MASK_MODIFIERS)))
-                        && !streq_((*table).name, "prefix")
+                        && (*table).name != "prefix"
                     {
                         server_client_set_key_table(c, c!("prefix"));
                         server_status_client(c);
@@ -1923,9 +1923,9 @@ pub unsafe fn server_client_key_callback(item: *mut cmdq_item, data: *mut c_void
                     'try_again: loop {
                         /* Log key table. */
                         if wp.is_null() {
-                            log_debug!("key table {} (no pane)", _s((*table).name));
+                            log_debug!("key table {} (no pane)", (*table).name);
                         } else {
-                            log_debug!("key table {} (pane %%{})", _s((*table).name), (*wp).id);
+                            log_debug!("key table {} (pane %%{})", (*table).name, (*wp).id);
                         }
                         if (*c).flags.intersects(client_flag::REPEAT) {
                             log_debug!("currently repeating");
@@ -1940,7 +1940,7 @@ pub unsafe fn server_client_key_callback(item: *mut cmdq_item, data: *mut c_void
                          */
                         prefix_delay = options_get_number_(GLOBAL_OPTIONS, "prefix-timeout") as u64;
                         if prefix_delay > 0
-                            && streq_((*table).name, "prefix")
+                            && (*table).name == "prefix"
                             && server_client_key_table_activity_diff(c) > prefix_delay
                         {
                             if !bd.is_null()
@@ -1973,7 +1973,7 @@ pub unsafe fn server_client_key_callback(item: *mut cmdq_item, data: *mut c_void
                             {
                                 log_debug!(
                                     "found in key table {} (not repeating)",
-                                    _s((*table).name)
+                                    (*table).name
                                 );
                                 server_client_set_key_table(c, null_mut());
                                 table = (*c).keytable;
@@ -1982,7 +1982,7 @@ pub unsafe fn server_client_key_callback(item: *mut cmdq_item, data: *mut c_void
                                 server_status_client(c);
                                 continue 'table_changed;
                             }
-                            log_debug!("found in key table {}", _s((*table).name));
+                            log_debug!("found in key table {}", (*table).name);
 
                             /*
                              * Take a reference to this table to make sure the key binding
@@ -2040,7 +2040,7 @@ pub unsafe fn server_client_key_callback(item: *mut cmdq_item, data: *mut c_void
                          * No match in this table. If not in the root table or if repeating
                          * switch the client back to the root table and try again.
                          */
-                        log_debug!("not found in key table {}", _s((*table).name));
+                        log_debug!("not found in key table {}", (*table).name);
                         if !server_client_is_default_key_table(c, table)
                             || (*c).flags.intersects(client_flag::REPEAT)
                         {

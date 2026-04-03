@@ -90,7 +90,7 @@ pub unsafe fn key_bindings_get_table(name: *const u8, create: bool) -> *mut key_
         if create {
             let table = (*(&raw mut KEY_TABLES)).entry(key).or_insert_with(|| {
                 Box::new(key_table {
-                    name: xstrdup(name).as_ptr(),
+                    name: cstr_to_str(name).to_string(),
                     activity_time: timeval {
                         tv_sec: 0,
                         tv_usec: 0,
@@ -134,7 +134,7 @@ pub unsafe fn key_bindings_unref_table(table: *mut key_table) {
             key_binding_free_fields(&mut **bd);
         }
 
-        free_((*table).name);
+        // name: String dropped automatically
     }
 }
 
@@ -240,10 +240,10 @@ pub unsafe fn key_bindings_remove(name: *const u8, key: key_code) {
         }
 
         if (*table).key_bindings.is_empty() && (*table).default_key_bindings.is_empty() {
-            let table_name = cstr_to_str((*table).name).to_string();
+            let table_name = (*table).name.clone();
             if let Some(mut removed) = (*(&raw mut KEY_TABLES)).remove(&table_name) {
                 removed.references -= 1;
-                free_(removed.name);
+                // name: String dropped automatically
             }
         }
     }
