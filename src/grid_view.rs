@@ -11,21 +11,37 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//! Grid view — coordinate translation layer for the visible screen area.
+//!
+//! The grid stores both scrollback history and the visible screen. History
+//! occupies rows `0..hsize`, and the visible area occupies `hsize..hsize+sy`.
+//! This module translates "view coordinates" (where y=0 is the top of the
+//! visible screen) into absolute grid coordinates by adding `hsize` to y.
+//!
+//! All public functions in this module are thin wrappers that apply the
+//! coordinate offset and delegate to the corresponding `grid_*` functions
+//! in [`grid_`](crate::grid_).
+
 use crate::*;
 
+/// Translate view x-coordinate to grid x-coordinate (currently identity).
 fn grid_view_x(_gd: *mut grid, x: u32) -> u32 {
     x
 }
+
+/// Translate view y-coordinate to grid y-coordinate by adding `hsize`.
 unsafe fn grid_view_y(gd: *mut grid, y: u32) -> u32 {
     unsafe { (*gd).hsize + (y) }
 }
 
+/// Get a cell from the visible area at view coordinates (px, py).
 pub unsafe fn grid_view_get_cell(gd: *mut grid, px: u32, py: u32, gc: *mut grid_cell) {
     unsafe {
         grid_get_cell(gd, grid_view_x(gd, px), grid_view_y(gd, py), gc);
     }
 }
 
+/// Set a cell in the visible area at view coordinates (px, py).
 pub unsafe fn grid_view_set_cell(gd: *mut grid, px: u32, py: u32, gc: *const grid_cell) {
     unsafe {
         grid_set_cell(gd, grid_view_x(gd, px), grid_view_y(gd, py), gc);
@@ -51,6 +67,8 @@ pub unsafe fn grid_view_set_cells(
     }
 }
 
+/// Move all visible content into history and clear the screen.
+/// Only moves lines up to the last non-empty line.
 pub unsafe fn grid_view_clear_history(gd: *mut grid, bg: u32) {
     unsafe {
         let mut last = 0u32;
@@ -77,6 +95,7 @@ pub unsafe fn grid_view_clear_history(gd: *mut grid, bg: u32) {
     }
 }
 
+/// Clear a rectangular region in view coordinates.
 pub unsafe fn grid_view_clear(gd: *mut grid, mut px: u32, mut py: u32, nx: u32, ny: u32, bg: u32) {
     unsafe {
         px = grid_view_x(gd, px);
@@ -210,7 +229,7 @@ pub unsafe fn grid_view_delete_cells(gd: *mut grid, mut px: u32, mut py: u32, nx
     }
 }
 
-/// Convert cells into a string.
+/// Convert cells in the visible area into a string.
 pub unsafe fn grid_view_string_cells(gd: *mut grid, mut px: u32, mut py: u32, nx: u32) -> *mut u8 {
     unsafe {
         px = grid_view_x(gd, px);
@@ -225,5 +244,293 @@ pub unsafe fn grid_view_string_cells(gd: *mut grid, mut px: u32, mut py: u32, nx
             grid_string_flags::empty(),
             null_mut(),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Helper: create a grid cell containing a single ASCII character.
+    fn make_char_cell(ch: u8) -> grid_cell {
+        let mut gc = GRID_DEFAULT_CELL;
+        gc.data.data[0] = ch;
+        gc.data.size = 1;
+        gc.data.width = 1;
+        gc
+    }
+
+    /// Helper: read back the character at view coordinates (px, py).
+    unsafe fn read_view_char(gd: *mut grid, px: u32, py: u32) -> u8 {
+        unsafe {
+            let mut gc: grid_cell = std::mem::zeroed();
+            grid_view_get_cell(gd, px, py, &raw mut gc);
+            gc.data.data[0]
+        }
+    }
+
+    /// Helper: extract a string from the view at row py, columns 0..nx.
+    unsafe fn view_row_string(gd: *mut grid, py: u32, nx: u32) -> String {
+        unsafe {
+            let ptr = grid_view_string_cells(gd, 0, py, nx);
+            let s = CStr::from_ptr(ptr.cast()).to_str().unwrap().to_string();
+            free_(ptr);
+            s
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // grid_view_y offset
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn view_y_adds_hsize() {
+        unsafe {
+            let gd = grid_create(10, 5, 100);
+
+            // With hsize=0, view y=0 maps to grid y=0.
+            assert_eq!(grid_view_y(gd, 0), 0);
+            assert_eq!(grid_view_y(gd, 3), 3);
+
+            // Simulate history by scrolling a line into history.
+            grid_scroll_history(gd, 8);
+            assert_eq!((*gd).hsize, 1);
+            assert_eq!(grid_view_y(gd, 0), 1);
+            assert_eq!(grid_view_y(gd, 3), 4);
+
+            grid_destroy(gd);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // grid_view_set_cell / grid_view_get_cell
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn set_and_get_cell_no_history() {
+        unsafe {
+            let gd = grid_create(10, 5, 0);
+            let gc = make_char_cell(b'A');
+
+            grid_view_set_cell(gd, 3, 2, &gc);
+            assert_eq!(read_view_char(gd, 3, 2), b'A');
+
+            grid_destroy(gd);
+        }
+    }
+
+    #[test]
+    fn set_and_get_cell_with_history() {
+        unsafe {
+            let gd = grid_create(10, 5, 100);
+
+            // Write 'X' to view row 0 before scrolling.
+            let gc_x = make_char_cell(b'X');
+            grid_view_set_cell(gd, 0, 0, &gc_x);
+            assert_eq!(read_view_char(gd, 0, 0), b'X');
+
+            // Scroll into history — view row 0 is now a new empty line.
+            grid_scroll_history(gd, 8);
+
+            // 'X' is now in history (grid row 0), not visible view row 0.
+            // View row 0 is now grid row 1 (the new line).
+            assert_ne!(read_view_char(gd, 0, 0), b'X');
+
+            // Write 'Y' to the new view row 0.
+            let gc_y = make_char_cell(b'Y');
+            grid_view_set_cell(gd, 0, 0, &gc_y);
+            assert_eq!(read_view_char(gd, 0, 0), b'Y');
+
+            // The old 'X' should still be in grid row 0 (history).
+            let mut gc_read: grid_cell = std::mem::zeroed();
+            grid_get_cell(gd, 0, 0, &raw mut gc_read);
+            assert_eq!(gc_read.data.data[0], b'X');
+
+            grid_destroy(gd);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // grid_view_clear
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn clear_region() {
+        unsafe {
+            let gd = grid_create(10, 5, 0);
+
+            // Fill row 1 with 'B's.
+            let gc = make_char_cell(b'B');
+            for x in 0..10 {
+                grid_view_set_cell(gd, x, 1, &gc);
+            }
+            assert_eq!(read_view_char(gd, 0, 1), b'B');
+
+            // Clear columns 2..6 on row 1.
+            grid_view_clear(gd, 2, 1, 4, 1, 8);
+
+            // Cleared cells should be default (space).
+            assert_eq!(read_view_char(gd, 2, 1), b' ');
+            assert_eq!(read_view_char(gd, 5, 1), b' ');
+            // Cells outside the cleared range should still be 'B'.
+            assert_eq!(read_view_char(gd, 0, 1), b'B');
+            assert_eq!(read_view_char(gd, 6, 1), b'B');
+
+            grid_destroy(gd);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // grid_view_string_cells
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn string_cells_reads_visible() {
+        unsafe {
+            let gd = grid_create(10, 5, 0);
+
+            // Write "Hello" to view row 0.
+            for (i, ch) in b"Hello".iter().enumerate() {
+                let gc = make_char_cell(*ch);
+                grid_view_set_cell(gd, i as u32, 0, &gc);
+            }
+
+            let s = view_row_string(gd, 0, 5);
+            assert_eq!(s, "Hello");
+
+            grid_destroy(gd);
+        }
+    }
+
+    #[test]
+    fn string_cells_with_history_offset() {
+        unsafe {
+            let gd = grid_create(10, 5, 100);
+
+            // Write "Line0" to view row 0.
+            for (i, ch) in b"Line0".iter().enumerate() {
+                let gc = make_char_cell(*ch);
+                grid_view_set_cell(gd, i as u32, 0, &gc);
+            }
+
+            // Scroll it into history.
+            grid_scroll_history(gd, 8);
+
+            // Write "Line1" to new view row 0.
+            for (i, ch) in b"Line1".iter().enumerate() {
+                let gc = make_char_cell(*ch);
+                grid_view_set_cell(gd, i as u32, 0, &gc);
+            }
+
+            // View should show Line1, not Line0.
+            let s = view_row_string(gd, 0, 5);
+            assert_eq!(s, "Line1");
+
+            grid_destroy(gd);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // grid_view_delete_cells / grid_view_insert_cells
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn delete_cells_shifts_left() {
+        unsafe {
+            let gd = grid_create(10, 5, 0);
+
+            // Write "ABCDE" to row 0.
+            for (i, ch) in b"ABCDE".iter().enumerate() {
+                let gc = make_char_cell(*ch);
+                grid_view_set_cell(gd, i as u32, 0, &gc);
+            }
+
+            // Delete 2 cells starting at column 1 (removes 'B' and 'C').
+            grid_view_delete_cells(gd, 1, 0, 2, 8);
+
+            // 'D' and 'E' should have shifted left.
+            assert_eq!(read_view_char(gd, 0, 0), b'A');
+            assert_eq!(read_view_char(gd, 1, 0), b'D');
+            assert_eq!(read_view_char(gd, 2, 0), b'E');
+
+            grid_destroy(gd);
+        }
+    }
+
+    #[test]
+    fn insert_cells_shifts_right() {
+        unsafe {
+            let gd = grid_create(10, 5, 0);
+
+            // Write "ABCDE" to row 0.
+            for (i, ch) in b"ABCDE".iter().enumerate() {
+                let gc = make_char_cell(*ch);
+                grid_view_set_cell(gd, i as u32, 0, &gc);
+            }
+
+            // Insert 2 cells at column 1.
+            grid_view_insert_cells(gd, 1, 0, 2, 8);
+
+            // 'A' stays, then 2 blank cells, then 'B', 'C', ...
+            assert_eq!(read_view_char(gd, 0, 0), b'A');
+            assert_eq!(read_view_char(gd, 1, 0), b' ');
+            assert_eq!(read_view_char(gd, 2, 0), b' ');
+            assert_eq!(read_view_char(gd, 3, 0), b'B');
+            assert_eq!(read_view_char(gd, 4, 0), b'C');
+
+            grid_destroy(gd);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // grid_view_scroll_region_down
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn scroll_region_down() {
+        unsafe {
+            let gd = grid_create(10, 5, 0);
+
+            // Write a letter to each row.
+            for row in 0..5u32 {
+                let gc = make_char_cell(b'A' + row as u8);
+                grid_view_set_cell(gd, 0, row, &gc);
+            }
+
+            // Scroll rows 1..3 down (inserts blank at top of region).
+            grid_view_scroll_region_down(gd, 1, 3, 8);
+
+            assert_eq!(read_view_char(gd, 0, 0), b'A'); // unchanged
+            assert_eq!(read_view_char(gd, 0, 1), b' '); // new blank
+            assert_eq!(read_view_char(gd, 0, 2), b'B'); // was row 1
+            assert_eq!(read_view_char(gd, 0, 3), b'C'); // was row 2
+            assert_eq!(read_view_char(gd, 0, 4), b'E'); // unchanged
+
+            grid_destroy(gd);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // grid_view_clear_history
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn clear_history_moves_content() {
+        unsafe {
+            let gd = grid_create(10, 5, 100);
+
+            // Write content and verify it exists.
+            let gc = make_char_cell(b'Z');
+            grid_view_set_cell(gd, 0, 0, &gc);
+            assert_eq!((*gd).hsize, 0);
+
+            // clear_history scrolls all visible lines into history.
+            grid_view_clear_history(gd, 8);
+
+            // hsize should have increased (content moved to history).
+            assert!((*gd).hsize > 0);
+
+            grid_destroy(gd);
+        }
     }
 }
