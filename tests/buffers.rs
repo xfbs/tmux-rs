@@ -585,7 +585,6 @@ fn delete_buffer_nonexistent_fails() {
 // ---------------------------------------------------------------------------
 
 #[test]
-#[ignore = "broken: tmux-rs buffer ordering differs from C tmux"]
 fn multiple_buffers_most_recent_is_default() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();

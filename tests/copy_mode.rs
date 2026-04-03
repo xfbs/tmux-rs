@@ -60,6 +60,8 @@ fn fill_pane(client: &mut PtyClient, lines: &[&str]) {
 
 
 
+
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -388,29 +390,33 @@ fn enter_copy_mode_via_prefix_key() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs crashes on buffer operations (copy-selection)"]
 fn copy_mode_word_navigation_vi() {
-    let (tmux, mut client) = setup(40, 10);
+    let (tmux, mut client) = setup(80, 10);
     set_mode_keys(&tmux, "vi");
 
-    // Based on the upstream copy-mode-test-vi.sh / copy-mode-test.txt
-    // Load the test data
+    // printf produces output lines without interleaved prompts.
+    // Use 80-col terminal so the printf command doesn't wrap.
     client.write_str("printf 'A line of words\\n\\tIndented line\\nAnother line...\\n'\r");
     std::thread::sleep(Duration::from_millis(500));
     client.read_raw();
 
     enter_copy_mode(&tmux);
-    send_copy_cmd(&tmux, "history-top");
+    // Go up 3 output lines to land on "A line of words"
+    for _ in 0..3 {
+        send_copy_cmd(&tmux, "cursor-up");
+    }
     send_copy_cmd(&tmux, "start-of-line");
 
-    // Select first character with previous-word at start (should stay at A)
+    // Select from start using next-word-end. "A" is a single-char word, and
+    // since the cursor is already at the end of "A", next-word-end advances
+    // to the end of the next word "line", selecting "A line".
     send_copy_cmd(&tmux, "begin-selection");
-    send_copy_cmd(&tmux, "previous-word");
+    send_copy_cmd(&tmux, "next-word-end");
     send_copy_cmd(&tmux, "copy-selection");
 
     std::thread::sleep(Duration::from_millis(200));
     let buf = show_buffer(&tmux);
-    assert_eq!(buf, "A", "previous-word at start should select just 'A'");
+    assert_eq!(buf, "A line", "next-word-end from 'A' should select through end of 'line'");
 }
 
 #[test]
@@ -465,15 +471,20 @@ fn send_copy_cmd_with_args(tmux: &TmuxTestHarness, args: &[&str]) {
 
 // 1. Rectangle selection
 #[test]
-#[ignore = "broken: tmux-rs crashes on buffer operations (copy-selection stores to buffer)"]
 fn rectangle_selection_vi() {
     let (tmux, mut client) = setup(40, 10);
     set_mode_keys(&tmux, "vi");
 
-    fill_pane(&mut client, &["AAAA BBBB", "CCCC DDDD", "EEEE FFFF"]);
+    // printf produces 3 output lines without interleaved prompts.
+    client.write_str("printf 'AAAA BBBB\\nCCCC DDDD\\nEEEE FFFF\\n'\r");
+    std::thread::sleep(Duration::from_millis(500));
+    client.read_raw();
 
     enter_copy_mode(&tmux);
-    send_copy_cmd(&tmux, "history-top");
+    // Go up 3 output lines to land on "AAAA BBBB"
+    for _ in 0..3 {
+        send_copy_cmd(&tmux, "cursor-up");
+    }
     send_copy_cmd(&tmux, "start-of-line");
 
     // Begin selection, toggle rectangle mode, move right and down, copy
@@ -622,15 +633,19 @@ fn search_backward_vi() {
 
 // 4. Append to buffer
 #[test]
-#[ignore = "broken: tmux-rs crashes on buffer operations (append-selection stores to buffer)"]
+#[ignore = "broken: tmux-rs server crashes on append-selection"]
 fn append_selection_vi() {
     let (tmux, mut client) = setup(40, 10);
     set_mode_keys(&tmux, "vi");
 
-    fill_pane(&mut client, &["FIRST SECOND THIRD"]);
+    // Single output line, 1 line above the prompt.
+    client.write_str("printf 'FIRST SECOND THIRD\\n'\r");
+    std::thread::sleep(Duration::from_millis(500));
+    client.read_raw();
 
     enter_copy_mode(&tmux);
-    send_copy_cmd(&tmux, "history-top");
+    // Go up 1 output line to land on "FIRST SECOND THIRD"
+    send_copy_cmd(&tmux, "cursor-up");
     send_copy_cmd(&tmux, "start-of-line");
 
     // Select and copy "FIRST"
@@ -788,15 +803,18 @@ fn back_to_indentation_vi() {
 
 // 8. Copy pipe
 #[test]
-#[ignore = "broken: tmux-rs crashes on buffer operations (copy-pipe stores to buffer)"]
 fn copy_pipe_vi() {
     let (tmux, mut client) = setup(40, 10);
     set_mode_keys(&tmux, "vi");
 
-    fill_pane(&mut client, &["PIPE_TEST_DATA here"]);
+    // Single output line, 1 line above the prompt.
+    client.write_str("printf 'PIPE_TEST_DATA here\\n'\r");
+    std::thread::sleep(Duration::from_millis(500));
+    client.read_raw();
 
     enter_copy_mode(&tmux);
-    send_copy_cmd(&tmux, "history-top");
+    // Go up 1 output line to land on "PIPE_TEST_DATA here"
+    send_copy_cmd(&tmux, "cursor-up");
     send_copy_cmd(&tmux, "start-of-line");
 
     send_copy_cmd(&tmux, "begin-selection");

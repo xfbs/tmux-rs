@@ -87,25 +87,26 @@ pub unsafe fn paste_buffer_data_(pb: NonNull<paste_buffer>, size: &mut usize) ->
     }
 }
 
-/// Iterate buffers in order (ascending by order field).
-/// Pass null to get the first, pass a buffer to get the next.
+/// Iterate buffers in reverse order (most recent first, matching C tmux's
+/// RB-tree iteration which was descending by order field).
+/// Pass null to get the first (most recent), pass a buffer to get the next.
 pub unsafe fn paste_walk(pb: *mut paste_buffer) -> *mut paste_buffer {
     unsafe {
         let order_vec = &*(&raw mut PASTE_ORDER);
         let names = &*(&raw mut PASTE_BY_NAME);
         if pb.is_null() {
-            // Return first buffer in order
-            for name in order_vec {
+            // Return most recent buffer (last in order vec)
+            for name in order_vec.iter().rev() {
                 if let Some(buf) = names.get(name) {
                     return &**buf as *const paste_buffer as *mut paste_buffer;
                 }
             }
             return null_mut();
         }
-        // Find the next buffer after pb's name
+        // Find the next buffer after pb (going toward oldest)
         let current_name = &(*pb).name;
         let mut found = false;
-        for name in order_vec {
+        for name in order_vec.iter().rev() {
             if found {
                 if let Some(buf) = names.get(name) {
                     return &**buf as *const paste_buffer as *mut paste_buffer;
@@ -125,9 +126,9 @@ pub unsafe fn paste_is_empty() -> bool {
 
 pub unsafe fn paste_get_top(name: *mut Option<&str>) -> *mut paste_buffer {
     unsafe {
-        // Walk in order, find first automatic buffer
+        // Walk in reverse order (most recent first) to find the newest automatic buffer.
         let order_vec = &*(&raw const PASTE_ORDER);
-        for buf_name in order_vec {
+        for buf_name in order_vec.iter().rev() {
             let map = &mut *(&raw mut PASTE_BY_NAME);
             if let Some(buf) = map.get_mut(buf_name) {
                 if buf.automatic != 0 {
@@ -186,8 +187,8 @@ pub unsafe fn paste_add(mut prefix: *const u8, data: *mut u8, size: usize) {
         }
 
         let limit = options_get_number_(GLOBAL_OPTIONS, "buffer-limit");
-        // Remove excess automatic buffers (oldest first = highest order last in reverse)
-        let names_to_check: Vec<String> = (*(&raw mut PASTE_ORDER)).iter().rev().cloned().collect();
+        // Remove excess automatic buffers (oldest first = lowest order first)
+        let names_to_check: Vec<String> = (*(&raw mut PASTE_ORDER)).iter().cloned().collect();
         for buf_name in &names_to_check {
             if (PASTE_NUM_AUTOMATIC as i64) < limit {
                 break;
