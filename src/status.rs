@@ -1110,7 +1110,7 @@ unsafe fn status_prompt_translate_key(
 /// Paste into prompt.
 unsafe fn status_prompt_paste(c: *mut client) -> i32 {
     unsafe {
-        // struct paste_buffer *pb;
+        // struct PasteBuffer *pb;
         // const char *bufdata;
         // size_t size, n, bufsize;
         // u_int i;

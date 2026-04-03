@@ -121,7 +121,7 @@ pub struct format_tree {
     pub wl: *mut winlink,
     pub w: *mut window,
     pub wp: *mut window_pane,
-    pub pb: *mut paste_buffer,
+    pub pb: *mut PasteBuffer,
 
     pub item: *mut cmdq_item,
     pub client: *mut client,
@@ -5319,7 +5319,7 @@ pub unsafe fn format_defaults_pane(ft: *mut format_tree, wp: *mut window_pane) {
 }
 
 /// Set default format keys for paste buffer.
-pub unsafe fn format_defaults_paste_buffer(ft: *mut format_tree, pb: *mut paste_buffer) {
+pub unsafe fn format_defaults_paste_buffer(ft: *mut format_tree, pb: *mut PasteBuffer) {
     unsafe {
         (*ft).pb = pb;
     }

@@ -25,7 +25,7 @@
 //!   Not subject to the automatic buffer limit, not evicted.
 //!
 //! Storage uses two parallel data structures:
-//! - `PASTE_BY_NAME`: a `BTreeMap<String, Box<paste_buffer>>` — primary owner, keyed by name.
+//! - `PASTE_BY_NAME`: a `BTreeMap<String, Box<PasteBuffer>>` — primary owner, keyed by name.
 //! - `PASTE_ORDER`: a `Vec<String>` — names sorted by ascending `order` field (insertion order).
 //!
 //! Iteration via [`paste_walk`] goes in reverse order (newest first), matching the
@@ -38,12 +38,11 @@ use crate::options_::*;
 
 /// A single paste buffer entry.
 ///
-/// Contains the raw buffer data (heap-allocated via `xmalloc`/`xstrdup`),
-/// a name, creation timestamp, whether it was automatically created,
-/// and an order field for sorting by insertion time.
-pub struct paste_buffer {
-    pub data: *mut u8,
-    pub size: usize,
+/// Contains the buffer data as an owned `Vec<u8>`, a name, creation
+/// timestamp, whether it was automatically created, and an order field
+/// for sorting by insertion time.
+pub struct PasteBuffer {
+    pub data: Vec<u8>,
 
     pub name: Cow<'static, str>,
     pub created: time_t,
@@ -56,7 +55,7 @@ static mut PASTE_NEXT_ORDER: u32 = 0;
 static mut PASTE_NUM_AUTOMATIC: u32 = 0;
 
 /// Primary store: name → buffer. Owns all paste buffers.
-static mut PASTE_BY_NAME: BTreeMap<String, Box<paste_buffer>> = BTreeMap::new();
+static mut PASTE_BY_NAME: BTreeMap<String, Box<PasteBuffer>> = BTreeMap::new();
 /// Order index: buffer names sorted by insertion order (ascending order field).
 /// Maintained in sync with PASTE_BY_NAME.
 static mut PASTE_ORDER: Vec<String> = Vec::new();
@@ -85,42 +84,42 @@ unsafe fn paste_order_remove(name: &str) {
 }
 
 /// Returns the name of the given paste buffer.
-pub unsafe fn paste_buffer_name<'a>(pb: NonNull<paste_buffer>) -> &'a str {
+pub unsafe fn paste_buffer_name<'a>(pb: NonNull<PasteBuffer>) -> &'a str {
     unsafe { &(*pb.as_ptr()).name }
 }
 
 /// Returns the insertion order of the given paste buffer.
-pub unsafe fn paste_buffer_order(pb: NonNull<paste_buffer>) -> u32 {
+pub unsafe fn paste_buffer_order(pb: NonNull<PasteBuffer>) -> u32 {
     unsafe { (*pb.as_ptr()).order }
 }
 
 /// Returns the creation timestamp of the given paste buffer.
-pub unsafe fn paste_buffer_created(pb: NonNull<paste_buffer>) -> time_t {
+pub unsafe fn paste_buffer_created(pb: NonNull<PasteBuffer>) -> time_t {
     unsafe { (*pb.as_ptr()).created }
 }
 
-/// Returns the data pointer and optionally writes the buffer size to `size`.
-pub unsafe fn paste_buffer_data(pb: *mut paste_buffer, size: *mut usize) -> *const u8 {
+/// Returns the buffer data as a byte slice and optionally writes the size.
+pub unsafe fn paste_buffer_data(pb: *mut PasteBuffer, size: *mut usize) -> *const u8 {
     unsafe {
         if !size.is_null() {
-            *size = (*pb).size;
+            *size = (*pb).data.len();
         }
-        (*pb).data
+        (*pb).data.as_ptr()
     }
 }
 
-/// Returns the data pointer and writes the buffer size to `size`. Safe-reference variant.
-pub unsafe fn paste_buffer_data_(pb: NonNull<paste_buffer>, size: &mut usize) -> *const u8 {
+/// Returns the buffer data as a byte slice. Safe-reference variant.
+pub unsafe fn paste_buffer_data_(pb: NonNull<PasteBuffer>, size: &mut usize) -> *const u8 {
     unsafe {
-        *size = (*pb.as_ptr()).size;
-        (*pb.as_ptr()).data
+        *size = (*pb.as_ptr()).data.len();
+        (*pb.as_ptr()).data.as_ptr()
     }
 }
 
 /// Iterate buffers in reverse order (most recent first, matching C tmux's
 /// RB-tree iteration which was descending by order field).
 /// Pass null to get the first (most recent), pass a buffer to get the next.
-pub unsafe fn paste_walk(pb: *mut paste_buffer) -> *mut paste_buffer {
+pub unsafe fn paste_walk(pb: *mut PasteBuffer) -> *mut PasteBuffer {
     unsafe {
         let order_vec = &*(&raw mut PASTE_ORDER);
         let names = &*(&raw mut PASTE_BY_NAME);
@@ -128,7 +127,7 @@ pub unsafe fn paste_walk(pb: *mut paste_buffer) -> *mut paste_buffer {
             // Return most recent buffer (last in order vec)
             for name in order_vec.iter().rev() {
                 if let Some(buf) = names.get(name) {
-                    return &**buf as *const paste_buffer as *mut paste_buffer;
+                    return &**buf as *const PasteBuffer as *mut PasteBuffer;
                 }
             }
             return null_mut();
@@ -139,7 +138,7 @@ pub unsafe fn paste_walk(pb: *mut paste_buffer) -> *mut paste_buffer {
         for name in order_vec.iter().rev() {
             if found {
                 if let Some(buf) = names.get(name) {
-                    return &**buf as *const paste_buffer as *mut paste_buffer;
+                    return &**buf as *const PasteBuffer as *mut PasteBuffer;
                 }
             }
             if name.as_str() == current_name.as_ref() {
@@ -157,7 +156,7 @@ pub unsafe fn paste_is_empty() -> bool {
 
 /// Returns the newest automatic paste buffer, or null if none exist.
 /// If `name` is non-null, writes the buffer's name into it.
-pub unsafe fn paste_get_top(name: *mut Option<&str>) -> *mut paste_buffer {
+pub unsafe fn paste_get_top(name: *mut Option<&str>) -> *mut PasteBuffer {
     unsafe {
         // Walk in reverse order (most recent first) to find the newest automatic buffer.
         let order_vec = &*(&raw const PASTE_ORDER);
@@ -165,7 +164,7 @@ pub unsafe fn paste_get_top(name: *mut Option<&str>) -> *mut paste_buffer {
             let map = &mut *(&raw mut PASTE_BY_NAME);
             if let Some(buf) = map.get_mut(buf_name) {
                 if buf.automatic != 0 {
-                    let ptr = &mut **buf as *mut paste_buffer;
+                    let ptr = &mut **buf as *mut PasteBuffer;
                     if !name.is_null() {
                         *name = Some(&(*ptr).name);
                     }
@@ -178,7 +177,7 @@ pub unsafe fn paste_get_top(name: *mut Option<&str>) -> *mut paste_buffer {
 }
 
 /// Looks up a paste buffer by name. Returns null if not found or name is empty/None.
-pub unsafe fn paste_get_name(name: Option<&str>) -> *mut paste_buffer {
+pub unsafe fn paste_get_name(name: Option<&str>) -> *mut PasteBuffer {
     unsafe {
         let Some(name) = name else {
             return null_mut();
@@ -188,14 +187,14 @@ pub unsafe fn paste_get_name(name: Option<&str>) -> *mut paste_buffer {
         }
         (*(&raw mut PASTE_BY_NAME))
             .get_mut(name)
-            .map_or(null_mut(), |pb| &mut **pb as *mut paste_buffer)
+            .map_or(null_mut(), |pb| &mut **pb as *mut PasteBuffer)
     }
 }
 
 /// Frees a paste buffer, removing it from both `PASTE_BY_NAME` and `PASTE_ORDER`.
 /// Decrements `PASTE_NUM_AUTOMATIC` if the buffer was automatic.
 /// Sends a `paste-buffer-deleted` notification.
-pub unsafe fn paste_free(pb: NonNull<paste_buffer>) {
+pub unsafe fn paste_free(pb: NonNull<PasteBuffer>) {
     unsafe {
         let pb = pb.as_ptr();
         let name = (*pb).name.to_string();
@@ -206,9 +205,8 @@ pub unsafe fn paste_free(pb: NonNull<paste_buffer>) {
         }
 
         paste_order_remove(&name);
-        if let Some(removed) = (*(&raw mut PASTE_BY_NAME)).remove(&name) {
-            free_(removed.data);
-        }
+        (*(&raw mut PASTE_BY_NAME)).remove(&name);
+        // Box<PasteBuffer> dropped here — Vec<u8> data freed automatically
     }
 }
 
@@ -238,7 +236,7 @@ pub unsafe fn paste_add(mut prefix: *const u8, data: *mut u8, size: usize) {
                 if buf.automatic != 0 {
                     let nn = NonNull::new(
                         &mut **(*(&raw mut PASTE_BY_NAME)).get_mut(buf_name).unwrap()
-                            as *mut paste_buffer,
+                            as *mut PasteBuffer,
                     )
                     .unwrap();
                     paste_free(nn);
@@ -260,9 +258,11 @@ pub unsafe fn paste_add(mut prefix: *const u8, data: *mut u8, size: usize) {
             }
         }
 
-        let pb = Box::new(paste_buffer {
-            data,
-            size,
+        let owned_data = std::slice::from_raw_parts(data, size).to_vec();
+        free_(data);
+
+        let pb = Box::new(PasteBuffer {
+            data: owned_data,
             name: Cow::Owned(buf_name.clone()),
             created: libc::time(null_mut()),
             automatic: 1,
@@ -375,9 +375,11 @@ pub unsafe fn paste_set(
         let order = PASTE_NEXT_ORDER;
         PASTE_NEXT_ORDER += 1;
 
-        let pb = Box::new(paste_buffer {
-            data,
-            size,
+        let owned_data = std::slice::from_raw_parts(data, size).to_vec();
+        free_(data);
+
+        let pb = Box::new(PasteBuffer {
+            data: owned_data,
             name: Cow::Owned(name.to_string()),
             created: libc::time(null_mut()),
             automatic: 0,
@@ -393,11 +395,11 @@ pub unsafe fn paste_set(
 }
 
 /// Replaces the data in an existing paste buffer without changing its name or order.
-pub unsafe fn paste_replace(pb: NonNull<paste_buffer>, data: *mut u8, size: usize) {
+pub unsafe fn paste_replace(pb: NonNull<PasteBuffer>, data: *mut u8, size: usize) {
     unsafe {
-        free_((*pb.as_ptr()).data);
-        (*pb.as_ptr()).data = data;
-        (*pb.as_ptr()).size = size;
+        let owned_data = std::slice::from_raw_parts(data, size).to_vec();
+        free_(data);
+        (*pb.as_ptr()).data = owned_data;
 
         notify_paste_buffer(&(*pb.as_ptr()).name, false);
     }
@@ -406,11 +408,12 @@ pub unsafe fn paste_replace(pb: NonNull<paste_buffer>, data: *mut u8, size: usiz
 /// Creates a display-friendly sample of a paste buffer's contents.
 /// Truncates to 200 characters and appends "..." if the buffer is longer.
 /// Non-printable characters are vis-encoded.
-pub unsafe fn paste_make_sample(pb: *mut paste_buffer) -> String {
+pub unsafe fn paste_make_sample(pb: *mut PasteBuffer) -> String {
     unsafe {
         let width = 200;
+        let data = &(*pb).data;
 
-        let mut len = (*pb).size;
+        let mut len = data.len();
         if len > width {
             len = width;
         }
@@ -418,11 +421,11 @@ pub unsafe fn paste_make_sample(pb: *mut paste_buffer) -> String {
 
         utf8_strvis_(
             &mut buf,
-            (*pb).data,
+            data.as_ptr(),
             len,
             vis_flags::VIS_OCTAL | vis_flags::VIS_CSTYLE | vis_flags::VIS_TAB | vis_flags::VIS_NL,
         );
-        if (*pb).size > width || buf.len() > width {
+        if data.len() > width || buf.len() > width {
             buf.extend(b"...");
         }
         String::from_utf8(buf).unwrap()
@@ -464,10 +467,7 @@ mod tests {
     /// Reset all paste buffer global state so tests are independent.
     unsafe fn reset_paste_state() {
         unsafe {
-            // Free all buffer data before clearing the map.
-            for (_name, buf) in (*(&raw mut PASTE_BY_NAME)).iter() {
-                free_(buf.data);
-            }
+            // Vec<u8> data is freed automatically when Box<PasteBuffer> drops.
             (*(&raw mut PASTE_BY_NAME)).clear();
             (*(&raw mut PASTE_ORDER)).clear();
             PASTE_NEXT_INDEX = 0;
@@ -531,7 +531,7 @@ mod tests {
 
             let pb = paste_get_name(Some("mybuf"));
             assert!(!pb.is_null());
-            assert_eq!((*pb).size, 5);
+            assert_eq!((*pb).data.len(), 5);
             assert_eq!((*pb).automatic, 0);
         }
     }
@@ -552,7 +552,7 @@ mod tests {
             // Should still be one buffer, with updated data.
             let pb = paste_get_name(Some("buf"));
             assert!(!pb.is_null());
-            assert_eq!((*pb).size, 6);
+            assert_eq!((*pb).data.len(), 6);
             assert_eq!(walk_names().len(), 1);
         }
     }
@@ -623,7 +623,7 @@ mod tests {
             let pb = paste_get_name(Some("buffer0"));
             assert!(!pb.is_null());
             assert_eq!((*pb).automatic, 1);
-            assert_eq!((*pb).size, 6);
+            assert_eq!((*pb).data.len(), 6);
         }
     }
 
@@ -871,7 +871,7 @@ mod tests {
             assert!(paste_get_name(Some("old")).is_null());
             let pb = paste_get_name(Some("new"));
             assert!(!pb.is_null());
-            assert_eq!((*pb).size, 7);
+            assert_eq!((*pb).data.len(), 7);
             // Renamed buffer becomes non-automatic.
             assert_eq!((*pb).automatic, 0);
         }
@@ -896,7 +896,7 @@ mod tests {
             let pb = paste_get_name(Some("to"));
             assert!(!pb.is_null());
             // Should have the source data, not the old target data.
-            assert_eq!((*pb).size, 3);
+            assert_eq!((*pb).data.len(), 3);
         }
     }
 
@@ -960,12 +960,12 @@ mod tests {
             let (d2, s2) = make_data(b"new-data");
             paste_replace(pb, d2, s2);
 
-            assert_eq!((*pb.as_ptr()).size, 8);
+            assert_eq!((*pb.as_ptr()).data.len(), 8);
         }
     }
 
     // ---------------------------------------------------------------
-    // paste_buffer accessors
+    // PasteBuffer accessors
     // ---------------------------------------------------------------
 
     #[test]

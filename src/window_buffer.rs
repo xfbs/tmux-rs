@@ -88,7 +88,7 @@ struct window_buffer_modedata {
 pub struct window_buffer_editdata {
     pub wp_id: u32,
     pub name: String,
-    pub pb: *mut paste_buffer,
+    pub pb: *mut PasteBuffer,
 }
 
 unsafe fn window_buffer_add_item(data: *mut window_buffer_modedata) -> *mut window_buffer_itemdata {
