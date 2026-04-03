@@ -2021,7 +2021,6 @@ unsafe fn status_prompt_complete_list_menu(
     flag: u8,
 ) -> i32 {
     unsafe {
-        let mut item: menu_item = zeroed();
         let lines = status_line_size(c);
         let size = list.len() as u32;
 
@@ -2050,11 +2049,12 @@ unsafe fn status_prompt_complete_list_menu(
 
         let menu = Box::leak(menu_create(""));
         for i in (*spm).start..size {
-            item.name = Cow::Owned((&(*spm).list)[i as usize].to_string());
-            item.key = b'0' as u64 + (i as i64 - (*spm).start as i64) as u64;
-            item.command = SyncCharPtr::null();
+            let item = menu_item {
+                name: Cow::Owned((&(*spm).list)[i as usize].to_string()),
+                key: b'0' as u64 + (i as i64 - (*spm).start as i64) as u64,
+                command: SyncCharPtr::null(),
+            };
             menu_add_item(menu, Some(&item), null_mut(), c, null_mut());
-            drop(item.name);
         }
 
         let py = if options_get_number_((*(*c).session).options, "status-position") == 0 {
@@ -2106,7 +2106,6 @@ unsafe fn status_prompt_complete_window_menu(
     flag: u8,
 ) -> Option<String> {
     unsafe {
-        let mut item: menu_item = zeroed();
         let mut list = Vec::new();
         let lines = status_line_size(c);
 
@@ -2143,11 +2142,12 @@ unsafe fn status_prompt_complete_window_menu(
                 tmp = format!("{}:{} ({})", (*s).name, (*wl).idx, _s((*(*wl).window).name),);
                 list.push(format!("{}:{}", (*s).name, (*wl).idx));
             }
-            item.name = Cow::Owned(tmp);
-            item.key = (b'0' as u64) + list.len() as u64 - 1;
-            item.command = SyncCharPtr::null();
+            let item = menu_item {
+                name: Cow::Owned(tmp),
+                key: (b'0' as u64) + list.len() as u64 - 1,
+                command: SyncCharPtr::null(),
+            };
             menu_add_item(menu, Some(&item), null_mut(), c, null_mut());
-            drop(item.name);
 
             if list.len() == height as usize {
                 break;

@@ -3133,7 +3133,9 @@ pub unsafe fn format_create(
 ) -> *mut format_tree {
     unsafe {
         let ft = xcalloc1::<format_tree>() as *mut format_tree;
-        (*ft).tree = HashMap::new();
+        // xcalloc returns zeroed memory; HashMap is not valid when zeroed,
+        // so we must use ptr::write to avoid dropping the invalid value.
+        std::ptr::write(&raw mut (*ft).tree, HashMap::new());
 
         if !c.is_null() {
             (*ft).client = c;
@@ -3157,6 +3159,8 @@ pub unsafe fn format_free(ft: *mut format_tree) {
             free_(fe.value);
             free_(fe.key);
         }
+        // Drop the HashMap before freeing the raw allocation.
+        std::ptr::drop_in_place(&raw mut (*ft).tree);
 
         if !(*ft).client.is_null() {
             server_client_unref((*ft).client);

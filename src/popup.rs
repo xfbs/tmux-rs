@@ -849,7 +849,9 @@ pub unsafe fn popup_display(
         (*pd).border_cell.attr = grid_attr::empty();
 
         screen_init(&raw mut (*pd).s, jx, jy, 0);
-        (*pd).palette = colour_palette_init();
+        // Use ptr::write to avoid dropping the zeroed colour_palette
+        // (Option<Box<[i32]>> fields are safe when zeroed, but be explicit).
+        std::ptr::write(&raw mut (*pd).palette, colour_palette_init());
         colour_palette_from_option(Some(&mut (*pd).palette), GLOBAL_W_OPTIONS);
 
         memcpy__(&raw mut (*pd).defaults, &raw const GRID_DEFAULT_CELL);

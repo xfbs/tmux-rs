@@ -287,6 +287,8 @@ pub unsafe fn sixel_parse(
             cp = cp.add(1);
 
             si = xcalloc1::<sixel_image>() as *mut sixel_image;
+            // xcalloc returns zeroed memory; Vec is not valid when zeroed.
+            std::ptr::write(&raw mut (*si).colours, Vec::new());
             (*si).xpixel = xpixel;
             (*si).ypixel = ypixel;
 
@@ -350,7 +352,8 @@ pub unsafe fn sixel_free(si: *mut sixel_image) {
         }
         free_((*si).lines);
 
-        (*si).colours = Vec::new();
+        // Drop the Vec before freeing the raw allocation.
+        std::ptr::drop_in_place(&raw mut (*si).colours);
         free_(si);
     }
 }
@@ -435,6 +438,8 @@ pub unsafe fn sixel_scale(
         let tsy = ((sy * ypixel) / 6) * 6;
 
         let new = xcalloc1::<sixel_image>() as *mut sixel_image;
+        // xcalloc returns zeroed memory; Vec is not valid when zeroed.
+        std::ptr::write(&raw mut (*new).colours, Vec::new());
         (*new).xpixel = xpixel;
         (*new).ypixel = ypixel;
 

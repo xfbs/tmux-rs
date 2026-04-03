@@ -281,6 +281,8 @@ pub unsafe fn window_client_init(
 
         let data: *mut window_client_modedata =
             xcalloc1::<window_client_modedata>() as *mut window_client_modedata;
+        // xcalloc returns zeroed memory; Vec is not valid when zeroed.
+        std::ptr::write(&raw mut (*data).item_list, Vec::new());
         (*wme.as_ptr()).data = data.cast();
         (*data).wp = wp;
 
@@ -336,7 +338,8 @@ pub unsafe fn window_client_free(wme: NonNull<window_mode_entry>) {
         for item in (*data).item_list.drain(..) {
             window_client_free_item(item);
         }
-        (*data).item_list = Vec::new();
+        // Drop the Vec before freeing the raw allocation.
+        std::ptr::drop_in_place(&raw mut (*data).item_list);
 
         free_((*data).format);
         free_((*data).key_format);
