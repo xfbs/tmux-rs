@@ -174,13 +174,11 @@ fn alerts_check_bell(w: &window) -> window_flag {
             return window_flag::empty();
         }
 
-        for wl in tailq_foreach_const::<_, crate::discr_wentry>(&raw const w.winlinks) {
-            (*(*wl.as_ptr()).session).flags &= !SESSION_ALERTED;
+        for &wl in w.winlinks.iter() {
+            (*(*wl).session).flags &= !SESSION_ALERTED;
         }
 
-        for wl in tailq_foreach_const::<_, crate::discr_wentry>(&raw const w.winlinks)
-            .map(NonNull::as_ptr)
-        {
+        for &wl in w.winlinks.iter() {
             // Bells are allowed even if there is an existing bell (so do
             // not check WINLINK_BELL).
             let s = (*wl).session;
@@ -213,15 +211,11 @@ fn alerts_check_activity(w: &window) -> window_flag {
             return window_flag::empty();
         }
 
-        for wl in tailq_foreach_const::<_, crate::discr_wentry>(&raw const w.winlinks)
-            .map(NonNull::as_ptr)
-        {
+        for &wl in w.winlinks.iter() {
             (*(*wl).session).flags &= !SESSION_ALERTED;
         }
 
-        for wl in tailq_foreach_const::<_, crate::discr_wentry>(&raw const w.winlinks)
-            .map(NonNull::as_ptr)
-        {
+        for &wl in w.winlinks.iter() {
             let s = (*wl).session;
             if (*s).curw != wl || (*s).attached == 0 {
                 (*wl).flags |= winlink_flags::WINLINK_ACTIVITY;
@@ -252,15 +246,11 @@ fn alerts_check_silence(w: &window) -> window_flag {
             return window_flag::empty();
         }
 
-        for wl in tailq_foreach_const::<_, crate::discr_wentry>(&raw const w.winlinks)
-            .map(NonNull::as_ptr)
-        {
+        for &wl in w.winlinks.iter() {
             (*(*wl).session).flags &= !SESSION_ALERTED;
         }
 
-        for wl in tailq_foreach_const::<_, crate::discr_wentry>(&raw const w.winlinks)
-            .map(NonNull::as_ptr)
-        {
+        for &wl in w.winlinks.iter() {
             if (*wl).flags.intersects(winlink_flags::WINLINK_SILENCE) {
                 continue;
             }

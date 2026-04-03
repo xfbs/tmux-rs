@@ -830,7 +830,7 @@ pub unsafe fn control_check_subs_pane(c: *mut client, csub: *mut control_sub) {
         }
         let w = (*wp).window;
 
-        for wl in tailq_foreach::<_, discr_wentry>(&raw mut (*w).winlinks).map(NonNull::as_ptr) {
+        for &wl in (*w).winlinks.iter() {
             if (*wl).session != s {
                 continue;
             }
@@ -908,9 +908,7 @@ pub unsafe fn control_check_subs_window(c: *mut client, csub: *mut control_sub) 
             return;
         }
 
-        for wl in
-            tailq_foreach::<winlink, discr_wentry>(&raw mut (*w).winlinks).map(NonNull::as_ptr)
-        {
+        for &wl in (*w).winlinks.iter() {
             if (*wl).session != s {
                 continue;
             }

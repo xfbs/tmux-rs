@@ -121,10 +121,10 @@ pub unsafe fn winlink_add(wwl: *mut winlinks, mut idx: i32) -> *mut winlink {
 pub unsafe fn winlink_set_window(wl: *mut winlink, w: *mut window) {
     unsafe {
         if !(*wl).window.is_null() {
-            tailq_remove::<_, discr_wentry>(&raw mut (*(*wl).window).winlinks, wl);
+            (*(*wl).window).winlinks.retain(|&p| p != wl);
             window_remove_ref((*wl).window, c!("winlink_set_window"));
         }
-        tailq_insert_tail::<_, discr_wentry>(&raw mut (*w).winlinks, wl);
+        (*w).winlinks.push(wl);
         (*wl).window = w;
         window_add_ref(w, c!("winlink_set_window"));
     }
@@ -135,7 +135,7 @@ pub unsafe fn winlink_remove(wwl: *mut winlinks, wl: *mut winlink) {
         let w = (*wl).window;
 
         if !w.is_null() {
-            tailq_remove::<_, discr_wentry>(&raw mut (*w).winlinks, wl);
+            (*w).winlinks.retain(|&p| p != wl);
             window_remove_ref(w, c!("winlink_remove"));
         }
 
@@ -205,7 +205,7 @@ pub unsafe fn winlink_stack_push(stack: *mut winlink_stack, wl: *mut winlink) {
 
     unsafe {
         winlink_stack_remove(stack, wl);
-        tailq_insert_head::<_, discr_sentry>(stack, wl);
+        (*stack).insert(0, wl);
         (*wl).flags |= winlink_flags::WINLINK_VISITED;
     }
 }
@@ -213,7 +213,7 @@ pub unsafe fn winlink_stack_push(stack: *mut winlink_stack, wl: *mut winlink) {
 pub unsafe fn winlink_stack_remove(stack: *mut winlink_stack, wl: *mut winlink) {
     unsafe {
         if !wl.is_null() && (*wl).flags.intersects(winlink_flags::WINLINK_VISITED) {
-            tailq_remove::<_, discr_sentry>(stack, wl);
+            (*stack).retain(|&p| p != wl);
             (*wl).flags &= !winlink_flags::WINLINK_VISITED;
         }
     }
@@ -280,7 +280,7 @@ pub unsafe fn window_create(sx: u32, sy: u32, mut xpixel: u32, mut ypixel: u32) 
         (*w).options = options_create(GLOBAL_W_OPTIONS);
 
         (*w).references = 0;
-        tailq_init(&raw mut (*w).winlinks);
+        std::ptr::write(&raw mut (*w).winlinks, Vec::new());
 
         (*w).id = NEXT_WINDOW_ID.fetch_add(1, atomic::Ordering::Relaxed);
         (*(&raw mut WINDOWS)).insert((*w).id, w);
@@ -939,7 +939,7 @@ pub unsafe fn window_printable_flags(wl: *mut winlink, escape: i32) -> *const u8
             FLAGS[pos] = b'*';
             pos += 1;
         }
-        if wl == tailq_first(&raw mut (*s).lastw) {
+        if wl == (*s).lastw.first().copied().unwrap_or(null_mut()) {
             FLAGS[pos] = b'-';
             pos += 1;
         }
@@ -1669,9 +1669,7 @@ pub unsafe fn window_pane_stack_remove(stack: *mut window_panes, wp: *mut window
 pub unsafe fn winlink_clear_flags(wl: *mut winlink) {
     unsafe {
         (*(*wl).window).flags &= !WINDOW_ALERTFLAGS;
-        for loop_ in tailq_foreach::<_, crate::discr_wentry>(&raw mut (*(*wl).window).winlinks)
-            .map(NonNull::as_ptr)
-        {
+        for &loop_ in (*(*wl).window).winlinks.iter() {
             if (*loop_).flags.intersects(WINLINK_ALERTFLAGS) {
                 (*loop_).flags &= !WINLINK_ALERTFLAGS;
                 server_status_session((*loop_).session);

@@ -2165,8 +2165,8 @@ pub unsafe fn server_client_check_window_resize(w: *mut window) {
         }
 
         let mut wl = null_mut();
-        for wl_ in tailq_foreach::<_, discr_wentry>(&raw mut (*w).winlinks) {
-            wl = wl_.as_ptr();
+        for &wl_ in (*w).winlinks.iter() {
+            wl = wl_;
             if (*(*wl).session).attached != 0 && (*(*wl).session).curw == wl {
                 break;
             }

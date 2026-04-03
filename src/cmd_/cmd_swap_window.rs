@@ -12,7 +12,6 @@
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use crate::compat::queue::{tailq_insert_tail, tailq_remove};
 use crate::*;
 
 pub static CMD_SWAP_WINDOW_ENTRY: cmd_entry = cmd_entry {
@@ -60,14 +59,14 @@ unsafe fn cmd_swap_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
         }
 
         let w_dst = (*wl_dst).window;
-        tailq_remove::<_, discr_wentry>(&raw mut (*w_dst).winlinks, wl_dst);
+        (*w_dst).winlinks.retain(|&p| p != wl_dst);
         let w_src = (*wl_src).window;
-        tailq_remove::<_, discr_wentry>(&raw mut (*w_src).winlinks, wl_src);
+        (*w_src).winlinks.retain(|&p| p != wl_src);
 
         (*wl_dst).window = w_src;
-        tailq_insert_tail::<_, discr_wentry>(&raw mut (*w_src).winlinks, wl_dst);
+        (*w_src).winlinks.push(wl_dst);
         (*wl_src).window = w_dst;
-        tailq_insert_tail::<_, discr_wentry>(&raw mut (*w_dst).winlinks, wl_src);
+        (*w_dst).winlinks.push(wl_src);
 
         if args_has(args, 'd') {
             session_select(dst, (*wl_dst).idx);

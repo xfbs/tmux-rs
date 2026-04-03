@@ -574,7 +574,7 @@ pub unsafe fn format_cb_session_stack(ft: *mut format_tree) -> format_table_type
         }
 
         _ = xsnprintf_!(result, SIZEOF_RESULT, "{}", (*(*s).curw).idx);
-        for wl in tailq_foreach::<_, discr_sentry>(&raw mut (*s).lastw).map(NonNull::as_ptr) {
+        for &wl in (*s).lastw.iter() {
             _ = xsnprintf_!(tmp, SIZEOF_TMP, "{}", (*wl).idx);
 
             if *result != b'\0' {
@@ -596,7 +596,7 @@ pub unsafe fn format_cb_window_stack_index(ft: *mut format_tree) -> format_table
 
         let mut idx: u32 = 0;
         let mut wl = null_mut();
-        for wl_ in tailq_foreach::<_, discr_sentry>(&raw mut (*s).lastw).map(NonNull::as_ptr) {
+        for &wl_ in (*s).lastw.iter() {
             wl = wl_;
             idx += 1;
             if wl == (*ft).wl {
@@ -623,7 +623,7 @@ pub unsafe fn format_cb_window_linked_sessions_list(ft: *mut format_tree) -> for
             fatalx("out of memory");
         }
 
-        for wl in tailq_foreach::<_, discr_wentry>(&raw mut (*w).winlinks).map(NonNull::as_ptr) {
+        for &wl in (*w).winlinks.iter() {
             if EVBUFFER_LENGTH(buffer) > 0 {
                 evbuffer_add(buffer, c!(",").cast(), 1);
             }
@@ -650,8 +650,8 @@ pub unsafe fn format_cb_window_active_sessions(ft: *mut format_tree) -> format_t
         }
         let w = (*(*ft).wl).window;
 
-        let n = tailq_foreach::<_, discr_wentry>(&raw mut (*w).winlinks)
-            .filter(|wl| (*(*wl.as_ptr()).session).curw == wl.as_ptr())
+        let n = (*w).winlinks.iter()
+            .filter(|&&wl| (*(*wl).session).curw == wl)
             .count() as u32;
 
         format!("{n}").into()
@@ -671,7 +671,7 @@ pub unsafe fn format_cb_window_active_sessions_list(ft: *mut format_tree) -> for
             fatalx("out of memory");
         }
 
-        for wl in tailq_foreach::<_, discr_wentry>(&raw mut (*w).winlinks).map(NonNull::as_ptr) {
+        for &wl in (*w).winlinks.iter() {
             if (*(*wl).session).curw == wl {
                 if EVBUFFER_LENGTH(buffer) > 0 {
                     evbuffer_add(buffer, c!(",").cast(), 1);
@@ -2572,7 +2572,7 @@ pub unsafe fn format_cb_window_index(ft: *mut format_tree) -> format_table_type 
 pub unsafe fn format_cb_window_last_flag(ft: *mut format_tree) -> format_table_type {
     unsafe {
         if !(*ft).wl.is_null() {
-            if (*ft).wl == tailq_first(&raw mut (*(*(*ft).wl).session).lastw) {
+            if (*ft).wl == (*(*(*ft).wl).session).lastw.first().copied().unwrap_or(null_mut()) {
                 return "1".into();
             }
             return "0".into();

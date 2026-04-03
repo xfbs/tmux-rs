@@ -64,14 +64,14 @@ impl session {
         tio: *mut termios,
     ) -> Box<Self> {
         unsafe {
-            let mut s: Box<session> = Box::new(zeroed());
+            let mut s: Box<session> = Box::new(MaybeUninit::<session>::zeroed().assume_init_read());
             s.references = 1;
             s.flags = 0;
 
             s.cwd = xstrdup(cwd).as_ptr();
 
-            tailq_init(&raw mut s.lastw);
-            s.windows = BTreeMap::new();
+            std::ptr::write(&raw mut s.lastw, Vec::new());
+            std::ptr::write(&raw mut s.windows, BTreeMap::new());
 
             s.environ = env;
             s.options = oo;
@@ -204,8 +204,8 @@ pub unsafe fn session_destroy(s: *mut session, notify: i32, from: *const u8) {
 
         session_group_remove(s);
 
-        while !tailq_empty(&raw mut (*s).lastw) {
-            winlink_stack_remove(&raw mut (*s).lastw, tailq_first(&raw mut (*s).lastw));
+        while let Some(&wl) = (*s).lastw.first() {
+            winlink_stack_remove(&raw mut (*s).lastw, wl);
         }
         while let Some(&wl) = (*(&raw mut (*s).windows)).values().next() {
             notify_session_window(c"window-unlinked", s, (*wl).window);
@@ -395,8 +395,8 @@ pub unsafe fn session_detach(s: *mut session, wl: *mut winlink) -> i32 {
 /// Return if session has window.
 pub unsafe fn session_has(s: *mut session, w: *mut window) -> bool {
     unsafe {
-        tailq_foreach::<_, discr_wentry>(&raw mut (*w).winlinks)
-            .any(|wl| (*wl.as_ptr()).session == s)
+        (*w).winlinks.iter()
+            .any(|&wl| (*wl).session == s)
     }
 }
 
@@ -498,7 +498,7 @@ pub unsafe fn session_select(s: *mut session, idx: i32) -> i32 {
 /// Move session to last used window.
 pub unsafe fn session_last(s: *mut session) -> i32 {
     unsafe {
-        let wl = tailq_first(&raw mut (*s).lastw);
+        let wl = (*s).lastw.first().copied().unwrap_or(null_mut());
         if wl.is_null() {
             return -1;
         }
@@ -663,8 +663,6 @@ pub unsafe fn session_group_synchronize_from(target: *mut session) {
 // winlinks then recreating them, then updating the current window, last window
 // stack and alerts.
 pub unsafe fn session_group_synchronize1(target: *mut session, s: *mut session) {
-    let mut old_lastw = MaybeUninit::<winlink_stack>::uninit();
-
     unsafe {
         // Don't do anything if the session is empty (it'll be destroyed).
         let ww: *mut winlinks = &raw mut (*target).windows;
@@ -701,13 +699,12 @@ pub unsafe fn session_group_synchronize1(target: *mut session, s: *mut session) 
         }
 
         // Fix up the last window stack.
-        memcpy__(old_lastw.as_mut_ptr(), &raw mut (*s).lastw);
-        tailq_init(&raw mut (*s).lastw);
+        let old_lastw = std::mem::take(&mut (*s).lastw);
 
-        for wl in tailq_foreach::<_, discr_sentry>(old_lastw.as_mut_ptr()).map(std::ptr::NonNull::as_ptr) {
+        for &wl in old_lastw.iter() {
             if let Some(wl2) = NonNull::new(winlink_find_by_index(&raw mut (*s).windows, (*wl).idx))
             {
-                tailq_insert_tail::<_, discr_sentry>(&raw mut (*s).lastw, wl2.as_ptr());
+                (*s).lastw.push(wl2.as_ptr());
                 (*wl2.as_ptr()).flags |= winlink_flags::WINLINK_VISITED;
             }
         }
@@ -726,7 +723,6 @@ pub unsafe fn session_group_synchronize1(target: *mut session, s: *mut session) 
 /// Renumber the windows across winlinks attached to a specific session.
 pub unsafe fn session_renumber_windows(s: *mut session) {
     unsafe {
-        let mut old_lastw = MaybeUninit::<winlink_stack>::uninit();
         let mut marked_idx = -1;
 
         // Save and replace old window list.
@@ -755,13 +751,12 @@ pub unsafe fn session_renumber_windows(s: *mut session) {
         }
 
         // Fix the stack of last windows now.
-        memcpy__(old_lastw.as_mut_ptr(), &raw mut (*s).lastw);
-        tailq_init(&raw mut (*s).lastw);
-        for wl in tailq_foreach::<_, discr_sentry>(old_lastw.as_mut_ptr()).map(std::ptr::NonNull::as_ptr) {
+        let old_lastw = std::mem::take(&mut (*s).lastw);
+        for &wl in old_lastw.iter() {
             (*wl).flags &= !winlink_flags::WINLINK_VISITED;
 
             if let Some(wl_new) = winlink_find_by_window(&raw mut (*s).windows, (*wl).window) {
-                tailq_insert_tail::<_, discr_sentry>(&raw mut (*s).lastw, wl_new.as_ptr());
+                (*s).lastw.push(wl_new.as_ptr());
                 (*wl_new.as_ptr()).flags |= winlink_flags::WINLINK_VISITED;
             }
         }

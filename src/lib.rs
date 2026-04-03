@@ -281,7 +281,6 @@ const unsafe fn ptr_to_mut_ref<'a, T>(value: *mut T) -> Option<&'a mut T> {
 // discriminant structs
 struct discr_entry;
 struct discr_sentry;
-struct discr_wentry;
 
 /// Minimum layout cell size, NOT including border lines.
 const PANE_MINIMUM: u32 = 1;
@@ -1414,7 +1413,8 @@ struct window {
     options: *mut options,
 
     references: u32,
-    winlinks: tailq_head<winlink>,
+    /// All winlinks pointing to this window across all sessions.
+    winlinks: Vec<*mut winlink>,
 }
 type windows = BTreeMap<u32, *mut window>;
 
@@ -1432,6 +1432,9 @@ const WINLINK_ALERTFLAGS: winlink_flags = winlink_flags::WINLINK_BELL
     .union(winlink_flags::WINLINK_ACTIVITY)
     .union(winlink_flags::WINLINK_SILENCE);
 
+/// A link between a session and a window. Each session has a BTreeMap of
+/// winlinks keyed by index. Windows track all their winlinks via a Vec,
+/// and sessions track a most-recently-used stack of winlinks.
 #[repr(C)]
 #[derive(Copy, Clone)]
 struct winlink {
@@ -1440,26 +1443,11 @@ struct winlink {
     window: *mut window,
 
     flags: winlink_flags,
-
-    wentry: tailq_entry<winlink>,
-    sentry: tailq_entry<winlink>,
-}
-
-impl crate::compat::queue::Entry<winlink, discr_wentry> for winlink {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<winlink> {
-        unsafe { &raw mut (*this).wentry }
-    }
-}
-
-impl crate::compat::queue::Entry<winlink, discr_sentry> for winlink {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<winlink> {
-        unsafe { &raw mut (*this).sentry }
-    }
 }
 
 type winlinks = BTreeMap<i32, *mut winlink>;
-type winlink_stack = tailq_head<winlink>;
-// crate::compat::impl_rb_tree_protos!(winlink_stack, winlink);
+/// Most-recently-used stack of winlinks in a session. Head = most recent.
+type winlink_stack = Vec<*mut winlink>;
 
 /// Window size option.
 #[repr(i32)]

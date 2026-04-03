@@ -402,7 +402,7 @@ pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: 
         if !exact {
             match window {
                 "!" => {
-                    (*fs).wl = tailq_first(&raw mut (*(*fs).s).lastw);
+                    (*fs).wl = (*(*fs).s).lastw.first().copied().unwrap_or(null_mut());
                     if (*fs).wl.is_null() {
                         return -1;
                     }
