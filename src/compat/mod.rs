@@ -5,7 +5,6 @@ pub mod getopt;
 pub mod getprogname;
 pub mod imsg;
 pub mod imsg_buffer;
-pub mod queue;
 pub mod reallocarray;
 pub mod recallocarray;
 pub mod systemd;
