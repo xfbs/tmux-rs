@@ -29,7 +29,7 @@ use crate::options_::{options, options_create, options_default, options_set_numb
 pub static mut GLOBAL_OPTIONS: *mut options = null_mut();
 pub static mut GLOBAL_S_OPTIONS: *mut options = null_mut();
 pub static mut GLOBAL_W_OPTIONS: *mut options = null_mut();
-pub static mut GLOBAL_ENVIRON: *mut environ = null_mut();
+pub static mut GLOBAL_ENVIRON: *mut Environ = null_mut();
 
 pub static mut START_TIME: timeval = timeval {
     tv_sec: 0,
@@ -138,16 +138,20 @@ unsafe fn expand_path(path: *const u8, home: Option<&CStr>) -> Option<CString> {
                     .cast()
                     .as_ptr()
             };
-            let value = environ_find(GLOBAL_ENVIRON, name);
+            let envent = environ_find(GLOBAL_ENVIRON, name);
             free_(name);
-            if value.is_null() {
+            if envent.is_null() {
                 return None;
             }
+            let val = match (*envent).value {
+                Some(ref v) => String::from_utf8_lossy(v),
+                None => return None,
+            };
             if end.is_null() {
                 end = c!("");
             }
             return Some(
-                CString::new(format!("{}{}", _s(transmute_ptr((*value).value)), _s(end))).unwrap(),
+                CString::new(format!("{}{}", val, _s(end))).unwrap(),
             );
         }
 

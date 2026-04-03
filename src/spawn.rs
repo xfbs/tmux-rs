@@ -237,8 +237,8 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut wi
         let s = (*sc).s;
         let w = (*(*sc).wl).window;
         let new_wp: *mut window_pane;
-        let child: *mut environ;
-        let ee: *mut environ_entry;
+        let child: *mut Environ;
+        let ee: *const EnvironEntry;
         let argv: *mut *mut u8;
         let argvp: *mut *mut u8;
         let argv0: *mut u8;
@@ -358,13 +358,9 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut wi
                 // only unattached clients
                 ee = environ_find((*c).environ, c!("PATH"));
                 if !ee.is_null() {
-                    environ_set!(
-                        child,
-                        c!("PATH"),
-                        environ_flags::empty(),
-                        "{}",
-                        _s(transmute_ptr((*ee).value))
-                    );
+                    if let Some(ref value) = (*ee).value {
+                        environ_set_(child, "PATH", environ_flags::empty(), value.clone());
+                    }
                 }
             }
             if environ_find(child, c!("PATH")).is_null() {

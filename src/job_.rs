@@ -64,7 +64,7 @@ pub unsafe fn job_run(
     cmd: *const u8,
     argc: c_int,
     argv: *mut *mut u8,
-    e: *mut environ,
+    e: *mut Environ,
     s: *mut session,
     cwd: *const u8,
     updatecb: job_update_cb,
@@ -78,7 +78,7 @@ pub unsafe fn job_run(
     let __func__ = "job_run";
     unsafe {
         let job: *mut job;
-        let env: *mut environ;
+        let env: *mut Environ;
         let pid: pid_t;
         let nullfd: i32;
         let mut out: [i32; 2] = [0; 2];

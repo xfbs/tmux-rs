@@ -3474,9 +3474,14 @@ fn format_find(
                 if envent.is_null() {
                     envent = environ_find(GLOBAL_ENVIRON, key);
                 }
-                if !envent.is_null() && (*envent).value.is_some() {
-                    found = xstrdup((*envent).value.unwrap().as_ptr()).as_ptr();
-                    break 'found;
+                if !envent.is_null() {
+                    if let Some(ref value) = (*envent).value {
+                        let p = xmalloc(value.len() + 1).as_ptr().cast::<u8>();
+                        std::ptr::copy_nonoverlapping(value.as_ptr(), p, value.len());
+                        *p.add(value.len()) = b'\0';
+                        found = p;
+                        break 'found;
+                    }
                 }
             }
 

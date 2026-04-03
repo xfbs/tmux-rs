@@ -12,106 +12,99 @@
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use std::collections::BTreeMap;
+use std::ffi::CString;
 
 use crate::*;
 use crate::options_::*;
 
 /// An environment variable store, backed by a sorted BTreeMap.
 ///
-/// Replaces the previous intrusive RB-tree implementation. The keys are
-/// owned C strings (name), values are optional C strings (None = "cleared"
-/// entry that masks an inherited variable).
-pub struct environ {
-    entries: BTreeMap<String, environ_entry>,
+/// Each entry has a name (ASCII key) and an optional value. Entries with
+/// `value = None` are "cleared" — they mask an inherited variable (like
+/// `unset`). Values are arbitrary byte strings since POSIX does not require
+/// environment variable values to be valid UTF-8.
+pub struct Environ {
+    entries: BTreeMap<String, EnvironEntry>,
 }
 
-pub fn environ_create() -> NonNull<environ> {
-    let env = Box::new(environ {
+pub fn environ_create() -> NonNull<Environ> {
+    let env = Box::new(Environ {
         entries: BTreeMap::new(),
     });
     unsafe { NonNull::new_unchecked(Box::into_raw(env)) }
 }
 
-pub unsafe fn environ_free(env: *mut environ) {
+/// Free an environment and all its entries. Since `EnvironEntry` fields are
+/// now owned Rust types (`String`, `Vec<u8>`), dropping the `Box` is sufficient.
+pub unsafe fn environ_free(env: *mut Environ) {
     unsafe {
-        for entry in (*env).entries.values() {
-            free_(transmute_ptr(entry.name));
-            free_(transmute_ptr(entry.value));
-        }
         drop(Box::from_raw(env));
     }
 }
 
 /// Collect all entry pointers in sorted order. Callers that used
 /// `environ_first`/`environ_next` should use this instead.
-pub unsafe fn environ_entries(env: *mut environ) -> Vec<*mut environ_entry> {
+pub unsafe fn environ_entries(env: *mut Environ) -> Vec<*mut EnvironEntry> {
     unsafe {
         (*env)
             .entries
             .values_mut()
-            .map(|e| e as *mut environ_entry)
+            .map(|e| e as *mut EnvironEntry)
             .collect()
     }
 }
 
-
-
-pub unsafe fn environ_copy(srcenv: *mut environ, dstenv: *mut environ) {
+pub unsafe fn environ_copy(srcenv: *mut Environ, dstenv: *mut Environ) {
     unsafe {
         for entry in (*srcenv).entries.values() {
-            if let Some(value) = entry.value {
-                environ_set!(
+            if let Some(ref value) = entry.value {
+                environ_set_(
                     dstenv,
-                    entry.name.unwrap().as_ptr(),
+                    entry.name.as_str(),
                     entry.flags,
-                    "{}",
-                    _s(value.as_ptr()),
+                    value.clone(),
                 );
             } else {
-                environ_clear(dstenv, transmute_ptr(entry.name));
+                environ_clear(dstenv, entry.name.as_str());
             }
         }
     }
 }
 
-pub unsafe fn environ_find(env: *mut environ, name: *const u8) -> *mut environ_entry {
+pub unsafe fn environ_find(env: *mut Environ, name: *const u8) -> *mut EnvironEntry {
     unsafe {
         let key = cstr_to_str(name);
         (*env)
             .entries
             .get_mut(key)
-            .map_or(null_mut(), |e| e as *mut environ_entry)
+            .map_or(null_mut(), |e| e as *mut EnvironEntry)
     }
 }
 
 macro_rules! environ_set {
    ($env:expr, $name:expr, $flags:expr, $fmt:literal $(, $args:expr)* $(,)?) => {
-        crate::environ_::environ_set_($env, $name, $flags, format_args!($fmt $(, $args)*))
+        crate::environ_::environ_set_($env, cstr_to_str($name), $flags, format!($fmt $(, $args)*).into_bytes())
     };
 }
 pub(crate) use environ_set;
+
+/// Set an environment variable. `value` is an owned byte vector.
 pub unsafe fn environ_set_(
-    env: *mut environ,
-    name: *const u8,
+    env: *mut Environ,
+    name: &str,
     flags: environ_flags,
-    args: std::fmt::Arguments,
+    value: Vec<u8>,
 ) {
     unsafe {
-        let key = cstr_to_str(name).to_string();
-        let mut s = args.to_string();
-        s.push('\0');
-        let s = NonNull::new(s.leak().as_mut_ptr().cast());
-
-        if let Some(entry) = (*env).entries.get_mut(&key) {
+        if let Some(entry) = (*env).entries.get_mut(name) {
             entry.flags = flags;
-            free_(transmute_ptr(entry.value));
-            entry.value = s;
+            entry.value = Some(value);
         } else {
             (*env).entries.insert(
-                key,
-                environ_entry {
-                    name: Some(xstrdup(name).cast()),
-                    value: s,
+                name.to_string(),
+                EnvironEntry {
+                    name: name.to_string(),
+                    value: Some(value),
                     flags,
                 },
             );
@@ -119,18 +112,17 @@ pub unsafe fn environ_set_(
     }
 }
 
-pub unsafe fn environ_clear(env: *mut environ, name: *const u8) {
+/// Clear an environment variable (set value to `None`). This masks an
+/// inherited variable — the entry exists but has no value.
+pub unsafe fn environ_clear(env: *mut Environ, name: &str) {
     unsafe {
-        let key = cstr_to_str(name).to_string();
-
-        if let Some(entry) = (*env).entries.get_mut(&key) {
-            free_(transmute_ptr(entry.value));
+        if let Some(entry) = (*env).entries.get_mut(name) {
             entry.value = None;
         } else {
             (*env).entries.insert(
-                key,
-                environ_entry {
-                    name: Some(xstrdup(name).cast()),
+                name.to_string(),
+                EnvironEntry {
+                    name: name.to_string(),
                     value: None,
                     flags: environ_flags::empty(),
                 },
@@ -139,33 +131,28 @@ pub unsafe fn environ_clear(env: *mut environ, name: *const u8) {
     }
 }
 
-pub unsafe fn environ_put(env: *mut environ, var: *const u8, flags: environ_flags) {
+/// Parse a `NAME=VALUE` string and set the variable. Ignores strings
+/// without `=`.
+pub unsafe fn environ_put(env: *mut Environ, var: *const u8, flags: environ_flags) {
     unsafe {
-        let mut value = libc::strchr(var, b'=' as c_int);
-        if value.is_null() {
+        let var_bytes = std::ffi::CStr::from_ptr(var.cast()).to_bytes();
+        let Some(eq_pos) = var_bytes.iter().position(|&b| b == b'=') else {
             return;
-        }
-        value = value.add(1);
-
-        let name: *mut u8 = xstrdup(var).cast().as_ptr();
-        *name.add(libc::strcspn(name, c!("="))) = b'\0';
-
-        environ_set!(env, name, flags, "{}", _s(value));
-        free_(name);
+        };
+        let name = std::str::from_utf8(&var_bytes[..eq_pos]).expect("env var name not UTF-8");
+        let value = var_bytes[eq_pos + 1..].to_vec();
+        environ_set_(env, name, flags, value);
     }
 }
 
-pub unsafe fn environ_unset(env: *mut environ, name: *const u8) {
+pub unsafe fn environ_unset(env: *mut Environ, name: *const u8) {
     unsafe {
         let key = cstr_to_str(name);
-        if let Some(entry) = (*env).entries.remove(key) {
-            free_(transmute_ptr(entry.name));
-            free_(transmute_ptr(entry.value));
-        }
+        (*env).entries.remove(key);
     }
 }
 
-pub unsafe fn environ_update(oo: *mut options, src: *mut environ, dst: *mut environ) {
+pub unsafe fn environ_update(oo: *mut options, src: *mut Environ, dst: *mut Environ) {
     unsafe {
         let mut found;
 
@@ -177,35 +164,36 @@ pub unsafe fn environ_update(oo: *mut options, src: *mut environ, dst: *mut envi
             let ov = options_array_item_value(a);
             found = false;
             for entry in (*src).entries.values() {
-                if libc::fnmatch((*ov).string, transmute_ptr(entry.name), 0) == 0 {
-                    environ_set!(
-                        dst,
-                        transmute_ptr(entry.name),
-                        environ_flags::empty(),
-                        "{}",
-                        _s(transmute_ptr(entry.value)),
-                    );
+                let c_name =
+                    CString::new(entry.name.as_str()).unwrap_or_else(|_| CString::default());
+                if libc::fnmatch((*ov).string, c_name.as_ptr().cast(), 0) == 0 {
+                    if let Some(ref value) = entry.value {
+                        environ_set_(dst, entry.name.as_str(), environ_flags::empty(), value.clone());
+                    }
                     found = true;
                 }
             }
             if !found {
-                environ_clear(dst, (*ov).string);
+                environ_clear(dst, cstr_to_str((*ov).string));
             }
         }
     }
 }
 
-pub unsafe fn environ_push(env: *mut environ) {
+/// Push all non-hidden, non-empty environment variables into the process
+/// environment via `std::env::set_var`.
+pub unsafe fn environ_push(env: *mut Environ) {
     unsafe {
         for entry in (*env).entries.values() {
-            if entry.value.is_some()
-                && *entry.name.unwrap().as_ptr() != b'\0'
-                && !entry.flags.intersects(ENVIRON_HIDDEN)
-            {
-                std::env::set_var(
-                    cstr_to_str(transmute_ptr(entry.name)),
-                    cstr_to_str(transmute_ptr(entry.value)),
-                );
+            if let Some(ref value) = entry.value {
+                if !entry.name.is_empty() && !entry.flags.intersects(ENVIRON_HIDDEN) {
+                    use std::ffi::OsStr;
+                    use std::os::unix::ffi::OsStrExt;
+                    std::env::set_var(
+                        OsStr::new(&entry.name),
+                        OsStr::from_bytes(value),
+                    );
+                }
             }
         }
     }
@@ -218,18 +206,20 @@ macro_rules! environ_log {
 }
 pub(crate) use environ_log;
 
-pub unsafe fn environ_log_(env: *mut environ, args: std::fmt::Arguments) {
+pub unsafe fn environ_log_(env: *mut Environ, args: std::fmt::Arguments) {
     unsafe {
         let prefix = args.to_string();
 
         for entry in (*env).entries.values() {
-            if entry.value.is_some() && *entry.name.unwrap().as_ptr() != b'\0' {
-                log_debug!(
-                    "{}{}={}",
-                    prefix,
-                    _s(transmute_ptr(entry.name)),
-                    _s(transmute_ptr(entry.value))
-                );
+            if let Some(ref value) = entry.value {
+                if !entry.name.is_empty() {
+                    log_debug!(
+                        "{}{}={}",
+                        prefix,
+                        entry.name,
+                        String::from_utf8_lossy(value),
+                    );
+                }
             }
         }
     }
@@ -256,7 +246,7 @@ mod tests {
 
             let entry = environ_find(env, c!("FOO"));
             assert!(!entry.is_null());
-            assert_eq!(_s(transmute_ptr((*entry).value)).to_string(), "bar");
+            assert_eq!((*entry).value.as_deref(), Some(b"bar".as_slice()));
 
             // Non-existent key
             let missing = environ_find(env, c!("NOPE"));
@@ -276,7 +266,7 @@ mod tests {
 
             let entry = environ_find(env, c!("KEY"));
             assert!(!entry.is_null());
-            assert_eq!(_s(transmute_ptr((*entry).value)).to_string(), "second");
+            assert_eq!((*entry).value.as_deref(), Some(b"second".as_slice()));
 
             environ_free(env);
         }
@@ -312,7 +302,7 @@ mod tests {
             let env = environ_create().as_ptr();
 
             environ_set!(env, c!("CLR"), environ_flags::empty(), "{}", "val");
-            environ_clear(env, c!("CLR"));
+            environ_clear(env, cstr_to_str(c!("CLR")));
 
             let entry = environ_find(env, c!("CLR"));
             assert!(!entry.is_null());
@@ -327,7 +317,7 @@ mod tests {
         unsafe {
             let env = environ_create().as_ptr();
 
-            environ_clear(env, c!("NEW"));
+            environ_clear(env, cstr_to_str(c!("NEW")));
 
             let entry = environ_find(env, c!("NEW"));
             assert!(!entry.is_null(), "clear should create entry");
@@ -346,7 +336,7 @@ mod tests {
 
             let entry = environ_find(env, c!("MY_VAR"));
             assert!(!entry.is_null());
-            assert_eq!(_s(transmute_ptr((*entry).value)).to_string(), "hello world");
+            assert_eq!((*entry).value.as_deref(), Some(b"hello world".as_slice()));
 
             environ_free(env);
         }
@@ -379,11 +369,11 @@ mod tests {
 
             let a = environ_find(dst, c!("A"));
             assert!(!a.is_null());
-            assert_eq!(_s(transmute_ptr((*a).value)).to_string(), "1");
+            assert_eq!((*a).value.as_deref(), Some(b"1".as_slice()));
 
             let b = environ_find(dst, c!("B"));
             assert!(!b.is_null());
-            assert_eq!(_s(transmute_ptr((*b).value)).to_string(), "2");
+            assert_eq!((*b).value.as_deref(), Some(b"2".as_slice()));
 
             environ_free(src);
             environ_free(dst);
@@ -403,9 +393,9 @@ mod tests {
             assert_eq!(entries.len(), 3);
 
             // BTreeMap iterates in sorted order
-            assert_eq!(_s(transmute_ptr((*entries[0]).name)).to_string(), "X");
-            assert_eq!(_s(transmute_ptr((*entries[1]).name)).to_string(), "Y");
-            assert_eq!(_s(transmute_ptr((*entries[2]).name)).to_string(), "Z");
+            assert_eq!((*entries[0]).name, "X");
+            assert_eq!((*entries[1]).name, "Y");
+            assert_eq!((*entries[2]).name, "Z");
 
             environ_free(env);
         }
@@ -421,15 +411,15 @@ mod tests {
             let entry = environ_find(env, c!("SECRET"));
             assert!(!entry.is_null());
             assert!((*entry).flags.intersects(ENVIRON_HIDDEN));
-            assert_eq!(_s(transmute_ptr((*entry).value)).to_string(), "hidden_val");
+            assert_eq!((*entry).value.as_deref(), Some(b"hidden_val".as_slice()));
 
             environ_free(env);
         }
     }
 }
 
-pub unsafe fn environ_for_session(s: *mut session, no_term: c_int) -> *mut environ {
-    let env: *mut environ = environ_create().as_ptr();
+pub unsafe fn environ_for_session(s: *mut session, no_term: c_int) -> *mut Environ {
+    let env: *mut Environ = environ_create().as_ptr();
 
     unsafe {
         environ_copy(GLOBAL_ENVIRON, env);
@@ -458,9 +448,9 @@ pub unsafe fn environ_for_session(s: *mut session, no_term: c_int) -> *mut envir
 
         #[cfg(feature = "systemd")]
         {
-            environ_clear(env, c!("LISTEN_PID"));
-            environ_clear(env, c!("LISTEN_FDS"));
-            environ_clear(env, c!("LISTEN_FDNAMES"));
+            environ_clear(env, "LISTEN_PID");
+            environ_clear(env, "LISTEN_FDS");
+            environ_clear(env, "LISTEN_FDNAMES");
         }
 
         let idx = if !s.is_null() { (*s).id as i32 } else { -1 };

@@ -177,8 +177,13 @@ pub unsafe fn server_client_overlay_range(
 pub unsafe fn server_client_check_nested(c: *mut client) -> bool {
     unsafe {
         let envent = environ_find((*c).environ, c!("TMUX"));
-        if envent.is_null() || *transmute_ptr((*envent).value) == b'\0' {
+        if envent.is_null() {
             return false;
+        }
+        match (*envent).value {
+            None => return false,
+            Some(ref v) if v.is_empty() || v[0] == b'\0' => return false,
+            _ => {}
         }
 
         for wp in (*(&raw mut ALL_WINDOW_PANES)).values().map(|wp| NonNull::new(*wp).unwrap()) {

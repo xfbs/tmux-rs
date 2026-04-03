@@ -8,4 +8,7 @@ tmux-*.log
 
 # github wiki in CI
 /wiki
+
+# panic outputs
 server-panic-*.txt
+client-panic*.txt

@@ -771,7 +771,7 @@ pub unsafe fn popup_display(
     py: c_uint,
     sx: c_uint,
     sy: c_uint,
-    env: *mut environ,
+    env: *mut Environ,
     shellcmd: *const u8,
     argc: c_int,
     argv: *mut *mut u8,

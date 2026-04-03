@@ -35,7 +35,7 @@ unsafe fn cmd_set_environment_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
     unsafe {
         let args = cmd_get_args(self_);
         let target = cmdq_get_target(item);
-        let env: *mut environ;
+        let env: *mut Environ;
         let name = args_string(args, 0);
         let mut value: *const u8;
         let tflag;
@@ -90,7 +90,7 @@ unsafe fn cmd_set_environment_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
                     retval = cmd_retval::CMD_RETURN_ERROR;
                     break 'out;
                 }
-                environ_clear(env, name);
+                environ_clear(env, cstr_to_str(name));
             } else {
                 if value.is_null() {
                     cmdq_error!(item, "no value specified");

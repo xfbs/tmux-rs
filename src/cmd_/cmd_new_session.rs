@@ -65,7 +65,7 @@ unsafe fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
         let s;
         let as_;
         let mut groupwith = null_mut();
-        let env: *mut environ;
+        let env: *mut Environ;
         let oo;
         let mut tio: termios = zeroed();
         let tiop;

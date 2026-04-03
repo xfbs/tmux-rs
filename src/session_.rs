@@ -59,7 +59,7 @@ impl session {
         prefix: *const u8,
         name: Option<&str>,
         cwd: *const u8,
-        env: *mut environ,
+        env: *mut Environ,
         oo: *mut options,
         tio: *mut termios,
     ) -> Box<Self> {
@@ -119,7 +119,7 @@ pub unsafe fn session_create(
     prefix: *const u8,
     name: Option<&str>,
     cwd: *const u8,
-    env: *mut environ,
+    env: *mut Environ,
     oo: *mut options,
     tio: *mut termios,
 ) -> *mut session {

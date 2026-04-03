@@ -1065,12 +1065,11 @@ unsafe fn yylex_token_variable(ps: &mut cmd_parse_state, buf: &mut Vec<u8>) -> b
         name[namelen] = b'\0';
 
         let envent = environ_find(GLOBAL_ENVIRON, (&raw const name).cast());
-        if !envent.is_null() && (*envent).value.is_some() {
-            let value = (*envent).value;
-            // log_debug("%s: %s -> %s", __func__, name, value);
-            let value_ptr: *const u8 = transmute_ptr(value);
-            let value_len = libc::strlen(transmute_ptr(value));
-            yylex_append(buf, core::slice::from_raw_parts(value_ptr, value_len));
+        if !envent.is_null() {
+            if let Some(ref value) = (*envent).value {
+                // log_debug("%s: %s -> %s", __func__, name, value);
+                yylex_append(buf, value);
+            }
         }
         true
     }
@@ -1078,7 +1077,7 @@ unsafe fn yylex_token_variable(ps: &mut cmd_parse_state, buf: &mut Vec<u8>) -> b
 
 unsafe fn yylex_token_tilde(ps: &mut cmd_parse_state, buf: &mut Vec<u8>) -> bool {
     unsafe {
-        let mut home = null();
+        let mut home: *const u8 = null();
         let mut namelen: usize = 0;
         let mut name: [u8; 1024] = [0; 1024];
         const SIZEOF_NAME: usize = 1024;
@@ -1100,10 +1099,17 @@ unsafe fn yylex_token_tilde(ps: &mut cmd_parse_state, buf: &mut Vec<u8>) -> bool
 
         if name[0] == b'\0' {
             let envent = environ_find(GLOBAL_ENVIRON, c!("HOME"));
-            if !envent.is_null() && (*(*envent).value.unwrap().as_ptr()) != b'\0' {
-                home = transmute_ptr((*envent).value);
-            } else if let Some(pw) = NonNull::new(libc::getpwuid(libc::getuid())) {
-                home = (*pw.as_ptr()).pw_dir.cast();
+            if !envent.is_null() {
+                if let Some(ref value) = (*envent).value {
+                    if !value.is_empty() {
+                        home = value.as_ptr();
+                    }
+                }
+            }
+            if home.is_null() {
+                if let Some(pw) = NonNull::new(libc::getpwuid(libc::getuid())) {
+                    home = (*pw.as_ptr()).pw_dir.cast();
+                }
             }
         } else if let Some(pw) = NonNull::new(libc::getpwnam((&raw const name).cast())) {
             home = (*pw.as_ptr()).pw_dir.cast();

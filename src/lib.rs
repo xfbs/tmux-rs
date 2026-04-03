@@ -1490,10 +1490,15 @@ bitflags::bitflags! {
 }
 const ENVIRON_HIDDEN: environ_flags = environ_flags::ENVIRON_HIDDEN;
 
-/// Environment variable.
-struct environ_entry {
-    name: Option<NonNull<u8>>,
-    value: Option<NonNull<u8>>,
+/// Environment variable entry.
+///
+/// `name` is always set (the variable name, portable ASCII charset).
+/// `value` is `None` for "cleared" entries that mask an inherited variable
+/// (equivalent to `unset`). Values are arbitrary bytes (`Vec<u8>`) since
+/// POSIX does not require environment variable values to be valid UTF-8.
+struct EnvironEntry {
+    name: String,
+    value: Option<Vec<u8>>,
 
     flags: environ_flags,
 }
@@ -1537,7 +1542,7 @@ struct session {
 
     tio: *mut termios,
 
-    environ: *mut environ,
+    environ: *mut Environ,
 
     references: i32,
 
@@ -2213,7 +2218,7 @@ struct client {
     creation_time: timeval,
     activity_time: timeval,
 
-    environ: *mut environ,
+    environ: *mut Environ,
     jobs: *mut format_job_tree,
 
     title: *mut u8,
@@ -2476,7 +2481,7 @@ struct spawn_context {
     name: *const u8,
     argv: *mut *mut u8,
     argc: i32,
-    environ: *mut environ,
+    environ: *mut Environ,
 
     idx: i32,
     cwd: *const u8,
