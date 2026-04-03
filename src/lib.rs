@@ -1797,13 +1797,13 @@ struct tty_ctx {
     wsy: u32,
 }
 
-// Saved message entry.
-struct message_entry {
-    msg: *mut u8,
+/// Saved message entry for the server message log.
+struct MessageEntry {
+    msg: String,
     msg_num: u32,
     msg_time: timeval,
 }
-type message_list = Vec<message_entry>;
+type MessageLog = Vec<MessageEntry>;
 
 /// Argument type.
 #[repr(i32)]

@@ -88,7 +88,7 @@ unsafe fn cmd_show_messages_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         let ft = format_create_from_target(item);
 
         for msg in (*(&raw mut crate::server::MESSAGE_LOG)).iter_mut().rev() {
-            format_add!(ft, "message_text", "{}", _s(msg.msg));
+            format_add!(ft, "message_text", "{}", msg.msg);
             format_add!(ft, "message_number", "{}", msg.msg_num,);
             format_add_tv(ft, c!("message_time"), &raw mut msg.msg_time);
 

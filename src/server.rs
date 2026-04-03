@@ -31,7 +31,7 @@ pub static mut SERVER_EV_ACCEPT: event = unsafe { zeroed() };
 pub static mut SERVER_EV_TIDY: event = unsafe { zeroed() };
 pub static mut MARKED_PANE: cmd_find_state = unsafe { zeroed() };
 pub static mut MESSAGE_NEXT: c_uint = 0;
-pub static mut MESSAGE_LOG: message_list = Vec::new();
+pub static mut MESSAGE_LOG: MessageLog = Vec::new();
 pub static mut CURRENT_TIME: time_t = unsafe { zeroed() };
 
 pub unsafe fn server_set_marked(s: *mut session, wl: *mut winlink, wp: *mut window_pane) {
@@ -580,13 +580,10 @@ macro_rules! server_add_message {
 pub(crate) use server_add_message;
 pub unsafe fn server_add_message_(args: std::fmt::Arguments) {
     unsafe {
-        let mut s = args.to_string();
-        s.push('\0');
-        let s = s.leak().as_mut_ptr().cast();
+        let s = args.to_string();
+        log_debug!("message: {}", s);
 
-        log_debug!("message: {}", _s(s));
-
-        let mut msg_entry = message_entry {
+        let mut msg_entry = MessageEntry {
             msg: s,
             msg_num: MESSAGE_NEXT + 1,
             msg_time: zeroed(),
@@ -597,12 +594,11 @@ pub unsafe fn server_add_message_(args: std::fmt::Arguments) {
         (*(&raw mut MESSAGE_LOG)).push(msg_entry);
 
         let limit = options_get_number_(GLOBAL_OPTIONS, "message-limit") as u32;
-        // Evict old messages from the front
+        // Evict old messages from the front — Drop handles String cleanup
         while let Some(first) = (*(&raw mut MESSAGE_LOG)).first() {
             if first.msg_num + limit >= MESSAGE_NEXT {
                 break;
             }
-            free_(first.msg);
             (*(&raw mut MESSAGE_LOG)).remove(0);
         }
     }
