@@ -915,7 +915,7 @@ struct grid_reader {
 
 /// Style alignment.
 #[repr(i32)]
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum style_align {
     STYLE_ALIGN_DEFAULT,
     STYLE_ALIGN_LEFT,
@@ -926,7 +926,7 @@ enum style_align {
 
 /// Style list.
 #[repr(i32)]
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum style_list {
     STYLE_LIST_OFF,
     STYLE_LIST_ON,
@@ -937,7 +937,7 @@ enum style_list {
 
 /// Style range.
 #[repr(i32)]
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum style_range_type {
     STYLE_RANGE_NONE,
     STYLE_RANGE_LEFT,
@@ -961,7 +961,7 @@ type style_ranges = Vec<style_range>;
 
 /// Style default.
 #[repr(i32)]
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum style_default_type {
     STYLE_DEFAULT_BASE,
     STYLE_DEFAULT_PUSH,

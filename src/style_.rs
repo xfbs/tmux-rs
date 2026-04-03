@@ -12,6 +12,24 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//! Style parsing and formatting for tmux status line and option values.
+//!
+//! A style is a combination of:
+//! - Terminal attributes (bold, dim, italics, etc.) from [`grid_attr`]
+//! - Foreground/background/underscore colors (`fg=`, `bg=`, `us=`)
+//! - Fill color (`fill=`)
+//! - Alignment (`align=left|centre|right|absolute-centre`)
+//! - List mode (`list=on|focus|left-marker|right-marker`)
+//! - Range type (`range=left|right|pane|window|session|user`)
+//! - Default push/pop (`push-default`, `pop-default`)
+//! - Ignore flag (`ignore`, `noignore`)
+//!
+//! Styles are parsed from comma/space/newline-delimited strings by [`style_parse`]
+//! and formatted back to strings by [`style_tostring`]. The `"default"` keyword
+//! resets colors and attributes to the base grid cell.
+//!
+//! Color value 8 means "default" (terminal default color).
+
 use crate::libc::{snprintf, strchr, strcspn, strncasecmp, strspn};
 use crate::*;
 use crate::options_::*;
@@ -47,6 +65,10 @@ pub unsafe fn style_set_range_string(sy: *mut style, s: *const u8) {
     }
 }
 
+/// Parse a style string into a [`style`] struct.
+/// The `base` grid cell provides default values for the `"default"` keyword.
+/// Returns 0 on success, -1 on parse error (style is restored to its prior state).
+/// Delimiters are spaces, commas, and newlines.
 pub unsafe fn style_parse(sy: *mut style, base: *const grid_cell, mut in_: *const u8) -> i32 {
     unsafe {
         let delimiters = c!(" ,\n");
@@ -266,6 +288,9 @@ pub unsafe fn style_parse(sy: *mut style, base: *const grid_cell, mut in_: *cons
     }
 }
 
+/// Format a [`style`] struct into a comma-separated string.
+/// Returns `"default"` if no style properties are set.
+/// Uses a static buffer — not thread-safe (matches C tmux behavior).
 pub unsafe fn style_tostring(sy: *const style) -> *const u8 {
     type s_type = [i8; 256];
     static mut S_BUF: MaybeUninit<s_type> = MaybeUninit::<s_type>::uninit();
@@ -448,6 +473,7 @@ pub unsafe fn style_tostring(sy: *const style) -> *const u8 {
     }
 }
 
+/// Merge a named style option into a grid cell (additive — OR's attributes).
 pub unsafe fn style_add(
     gc: *mut grid_cell,
     oo: *mut options,
@@ -483,6 +509,7 @@ pub unsafe fn style_add(
     }
 }
 
+/// Reset a grid cell to defaults, then apply a named style option.
 pub unsafe fn style_apply(
     gc: *mut grid_cell,
     oo: *mut options,
@@ -495,6 +522,7 @@ pub unsafe fn style_apply(
     }
 }
 
+/// Initialize a style from a grid cell, resetting all other fields to defaults.
 pub unsafe fn style_set(sy: *mut style, gc: *const grid_cell) {
     unsafe {
         memcpy__(sy, &raw const STYLE_DEFAULT);
@@ -502,8 +530,460 @@ pub unsafe fn style_set(sy: *mut style, gc: *const grid_cell) {
     }
 }
 
+/// Copy a style struct (shallow memcpy).
+/// Copy a style struct (shallow memcpy).
 pub unsafe fn style_copy(dst: *mut style, src: *const style) {
     unsafe {
         memcpy__(dst, src);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::grid_::GRID_DEFAULT_CELL;
+
+    /// Mutex to serialize tests that use style_tostring's static buffer.
+    static STYLE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// Parse a style string starting from STYLE_DEFAULT with GRID_DEFAULT_CELL as base.
+    /// Returns the parsed style on success, or None on error.
+    unsafe fn parse(input: &str) -> Option<style> {
+        unsafe {
+            let mut sy: style = *(&raw const STYLE_DEFAULT);
+            let c = CString::new(input).unwrap();
+            let rc = style_parse(&raw mut sy, &raw const GRID_DEFAULT_CELL, c.as_ptr().cast());
+            if rc == 0 { Some(sy) } else { None }
+        }
+    }
+
+    /// Format a style to string. Caller must hold STYLE_LOCK.
+    unsafe fn tostring(sy: &style) -> String {
+        unsafe {
+            let ptr = style_tostring(sy as *const style);
+            CStr::from_ptr(ptr.cast()).to_str().unwrap().to_string()
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // style_parse — basic cases
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn parse_empty_string() {
+        unsafe {
+            // Empty string is valid — no changes to style.
+            let sy = parse("").unwrap();
+            // STYLE_DEFAULT has us=0 (black), so it's not fully "default".
+            assert_eq!(sy.gc.fg, 8);
+            assert_eq!(sy.gc.bg, 8);
+        }
+    }
+
+    #[test]
+    fn parse_default_keyword() {
+        unsafe {
+            let sy = parse("default").unwrap();
+            assert_eq!(sy.gc.fg, 8);
+            assert_eq!(sy.gc.bg, 8);
+        }
+    }
+
+    #[test]
+    fn parse_invalid_returns_none() {
+        unsafe {
+            assert!(parse("completely-invalid-gibberish").is_none());
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Colors
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn parse_fg_color() {
+        unsafe {
+            let sy = parse("fg=red").unwrap();
+            assert_eq!(sy.gc.fg, 1); // red = colour index 1
+            assert_eq!(tostring(&sy), "fg=red");
+        }
+    }
+
+    #[test]
+    fn parse_bg_color() {
+        unsafe {
+            let sy = parse("bg=blue").unwrap();
+            assert_eq!(sy.gc.bg, 4); // blue = colour index 4
+            assert!(tostring(&sy).contains("bg=blue"));
+        }
+    }
+
+    #[test]
+    fn parse_fg_and_bg() {
+        unsafe {
+            let sy = parse("fg=red,bg=blue").unwrap();
+            assert_eq!(sy.gc.fg, 1);
+            assert_eq!(sy.gc.bg, 4);
+        }
+    }
+
+    #[test]
+    fn parse_us_color() {
+        unsafe {
+            let sy = parse("us=green").unwrap();
+            assert_eq!(sy.gc.us, 2); // green = 2
+            assert!(tostring(&sy).contains("us=green"));
+        }
+    }
+
+    #[test]
+    fn parse_fill_color() {
+        unsafe {
+            let sy = parse("fill=yellow").unwrap();
+            assert_eq!(sy.fill, 3); // yellow = 3
+            assert!(tostring(&sy).contains("fill=yellow"));
+        }
+    }
+
+    #[test]
+    fn parse_invalid_color_is_error() {
+        unsafe {
+            assert!(parse("fg=notacolor").is_none());
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Attributes
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn parse_bold() {
+        unsafe {
+            let sy = parse("bold").unwrap();
+            assert!(sy.gc.attr.intersects(grid_attr::GRID_ATTR_BRIGHT));
+        }
+    }
+
+    #[test]
+    fn parse_multiple_attrs() {
+        unsafe {
+            let sy = parse("bold,italics").unwrap();
+            assert!(sy.gc.attr.intersects(grid_attr::GRID_ATTR_BRIGHT));
+            assert!(sy.gc.attr.intersects(grid_attr::GRID_ATTR_ITALICS));
+        }
+    }
+
+    #[test]
+    fn parse_none_clears_attrs() {
+        unsafe {
+            // First set bold, then clear with none.
+            let mut sy: style = STYLE_DEFAULT;
+            let c1 = CString::new("bold").unwrap();
+            style_parse(&raw mut sy, &raw const GRID_DEFAULT_CELL, c1.as_ptr().cast());
+            assert!(!sy.gc.attr.is_empty());
+
+            let c2 = CString::new("none").unwrap();
+            style_parse(&raw mut sy, &raw const GRID_DEFAULT_CELL, c2.as_ptr().cast());
+            assert!(sy.gc.attr.is_empty());
+        }
+    }
+
+    #[test]
+    fn parse_no_prefix_removes_attr() {
+        unsafe {
+            let mut sy: style = STYLE_DEFAULT;
+            let c1 = CString::new("bold,italics").unwrap();
+            style_parse(&raw mut sy, &raw const GRID_DEFAULT_CELL, c1.as_ptr().cast());
+
+            let c2 = CString::new("nobold").unwrap();
+            style_parse(&raw mut sy, &raw const GRID_DEFAULT_CELL, c2.as_ptr().cast());
+            assert!(!sy.gc.attr.intersects(grid_attr::GRID_ATTR_BRIGHT));
+            assert!(sy.gc.attr.intersects(grid_attr::GRID_ATTR_ITALICS));
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Alignment
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn parse_align_left() {
+        unsafe {
+            let sy = parse("align=left").unwrap();
+            assert_eq!(sy.align, style_align::STYLE_ALIGN_LEFT);
+        }
+    }
+
+    #[test]
+    fn parse_align_centre() {
+        unsafe {
+            let sy = parse("align=centre").unwrap();
+            assert_eq!(sy.align, style_align::STYLE_ALIGN_CENTRE);
+        }
+    }
+
+    #[test]
+    fn parse_align_right() {
+        unsafe {
+            let sy = parse("align=right").unwrap();
+            assert_eq!(sy.align, style_align::STYLE_ALIGN_RIGHT);
+        }
+    }
+
+    #[test]
+    fn parse_align_absolute_centre() {
+        unsafe {
+            let sy = parse("align=absolute-centre").unwrap();
+            assert_eq!(sy.align, style_align::STYLE_ALIGN_ABSOLUTE_CENTRE);
+        }
+    }
+
+    #[test]
+    fn parse_noalign() {
+        unsafe {
+            let mut sy: style = STYLE_DEFAULT;
+            let c1 = CString::new("align=left").unwrap();
+            style_parse(&raw mut sy, &raw const GRID_DEFAULT_CELL, c1.as_ptr().cast());
+            let c2 = CString::new("noalign").unwrap();
+            style_parse(&raw mut sy, &raw const GRID_DEFAULT_CELL, c2.as_ptr().cast());
+            assert_eq!(sy.align, style_align::STYLE_ALIGN_DEFAULT);
+        }
+    }
+
+    #[test]
+    fn parse_invalid_align_is_error() {
+        unsafe {
+            assert!(parse("align=invalid").is_none());
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // List mode
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn parse_list_on() {
+        unsafe {
+            let sy = parse("list=on").unwrap();
+            assert_eq!(sy.list, style_list::STYLE_LIST_ON);
+        }
+    }
+
+    #[test]
+    fn parse_list_focus() {
+        unsafe {
+            let sy = parse("list=focus").unwrap();
+            assert_eq!(sy.list, style_list::STYLE_LIST_FOCUS);
+        }
+    }
+
+    #[test]
+    fn parse_nolist() {
+        unsafe {
+            let mut sy: style = STYLE_DEFAULT;
+            let c1 = CString::new("list=on").unwrap();
+            style_parse(&raw mut sy, &raw const GRID_DEFAULT_CELL, c1.as_ptr().cast());
+            let c2 = CString::new("nolist").unwrap();
+            style_parse(&raw mut sy, &raw const GRID_DEFAULT_CELL, c2.as_ptr().cast());
+            assert_eq!(sy.list, style_list::STYLE_LIST_OFF);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Range
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn parse_range_left() {
+        unsafe {
+            let sy = parse("range=left").unwrap();
+            assert_eq!(sy.range_type, style_range_type::STYLE_RANGE_LEFT);
+        }
+    }
+
+    #[test]
+    fn parse_range_right() {
+        unsafe {
+            let sy = parse("range=right").unwrap();
+            assert_eq!(sy.range_type, style_range_type::STYLE_RANGE_RIGHT);
+        }
+    }
+
+    #[test]
+    fn parse_range_window() {
+        unsafe {
+            let sy = parse("range=window|42").unwrap();
+            assert_eq!(sy.range_type, style_range_type::STYLE_RANGE_WINDOW);
+            assert_eq!(sy.range_argument, 42);
+        }
+    }
+
+    #[test]
+    fn parse_range_pane() {
+        unsafe {
+            let sy = parse("range=pane|%7").unwrap();
+            assert_eq!(sy.range_type, style_range_type::STYLE_RANGE_PANE);
+            assert_eq!(sy.range_argument, 7);
+        }
+    }
+
+    #[test]
+    fn parse_norange() {
+        unsafe {
+            let mut sy: style = STYLE_DEFAULT;
+            let c1 = CString::new("range=left").unwrap();
+            style_parse(&raw mut sy, &raw const GRID_DEFAULT_CELL, c1.as_ptr().cast());
+            let c2 = CString::new("norange").unwrap();
+            style_parse(&raw mut sy, &raw const GRID_DEFAULT_CELL, c2.as_ptr().cast());
+            assert_eq!(sy.range_type, style_range_type::STYLE_RANGE_NONE);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Default push/pop
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn parse_push_default() {
+        unsafe {
+            let sy = parse("push-default").unwrap();
+            assert_eq!(sy.default_type, style_default_type::STYLE_DEFAULT_PUSH);
+        }
+    }
+
+    #[test]
+    fn parse_pop_default() {
+        unsafe {
+            let sy = parse("pop-default").unwrap();
+            assert_eq!(sy.default_type, style_default_type::STYLE_DEFAULT_POP);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Ignore
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn parse_ignore() {
+        unsafe {
+            let sy = parse("ignore").unwrap();
+            assert_eq!(sy.ignore, 1);
+        }
+    }
+
+    #[test]
+    fn parse_noignore() {
+        unsafe {
+            let mut sy: style = STYLE_DEFAULT;
+            let c1 = CString::new("ignore").unwrap();
+            style_parse(&raw mut sy, &raw const GRID_DEFAULT_CELL, c1.as_ptr().cast());
+            let c2 = CString::new("noignore").unwrap();
+            style_parse(&raw mut sy, &raw const GRID_DEFAULT_CELL, c2.as_ptr().cast());
+            assert_eq!(sy.ignore, 0);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Combined styles
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn parse_complex_style() {
+        unsafe {
+            let sy = parse("fg=red,bg=blue,bold,align=centre").unwrap();
+            assert_eq!(sy.gc.fg, 1);
+            assert_eq!(sy.gc.bg, 4);
+            assert!(sy.gc.attr.intersects(grid_attr::GRID_ATTR_BRIGHT));
+            assert_eq!(sy.align, style_align::STYLE_ALIGN_CENTRE);
+        }
+    }
+
+    #[test]
+    fn parse_space_delimited() {
+        unsafe {
+            let sy = parse("fg=red bg=blue").unwrap();
+            assert_eq!(sy.gc.fg, 1);
+            assert_eq!(sy.gc.bg, 4);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // style_tostring
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn tostring_default_has_us_black() {
+        unsafe {
+            let _lock = STYLE_LOCK.lock().unwrap();
+            // STYLE_DEFAULT has us=0 (black), so tostring shows "us=black".
+            let s = tostring(&*(&raw const STYLE_DEFAULT));
+            assert_eq!(s, "us=black");
+        }
+    }
+
+    #[test]
+    fn tostring_round_trip_colors() {
+        unsafe {
+            let _lock = STYLE_LOCK.lock().unwrap();
+            let sy = parse("fg=red").unwrap();
+            let s = tostring(&sy);
+            assert!(s.contains("fg=red"), "got: {s}");
+        }
+    }
+
+    #[test]
+    fn tostring_round_trip_align() {
+        unsafe {
+            let _lock = STYLE_LOCK.lock().unwrap();
+            let sy = parse("align=centre").unwrap();
+            let s = tostring(&sy);
+            assert!(s.contains("align=centre"), "got: {s}");
+        }
+    }
+
+    #[test]
+    fn tostring_round_trip_list() {
+        unsafe {
+            let _lock = STYLE_LOCK.lock().unwrap();
+            let sy = parse("list=on").unwrap();
+            let s = tostring(&sy);
+            assert!(s.contains("list=on"), "got: {s}");
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Error recovery — style restored on failure
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn parse_error_restores_style() {
+        unsafe {
+            let mut sy: style = STYLE_DEFAULT;
+            let c1 = CString::new("fg=red").unwrap();
+            style_parse(&raw mut sy, &raw const GRID_DEFAULT_CELL, c1.as_ptr().cast());
+            let original_fg = sy.gc.fg;
+
+            // This should fail and restore the style.
+            let c2 = CString::new("fg=notacolor").unwrap();
+            let rc = style_parse(&raw mut sy, &raw const GRID_DEFAULT_CELL, c2.as_ptr().cast());
+            assert_eq!(rc, -1);
+            assert_eq!(sy.gc.fg, original_fg);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // style_copy
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn copy_produces_identical_style() {
+        unsafe {
+            let src = parse("fg=red,bold,align=left").unwrap();
+            let mut dst: style = STYLE_DEFAULT;
+            style_copy(&raw mut dst, &raw const src);
+            assert_eq!(dst.gc.fg, src.gc.fg);
+            assert_eq!(dst.gc.attr, src.gc.attr);
+            assert_eq!(dst.align, src.align);
+        }
     }
 }
