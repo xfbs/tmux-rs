@@ -11,6 +11,21 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//! Command argument parsing and management.
+//!
+//! Implements getopt-style flag parsing for tmux commands. Each command defines
+//! an [`args_parse`] template (e.g. `"bt:T:"`) specifying which flags it accepts
+//! and whether they take arguments (`:` suffix, `::` for optional).
+//!
+//! An [`args`] set contains:
+//! - **Flags**: stored in a `HashMap<u8, Box<args_entry>>`, keyed by flag character.
+//!   Each entry tracks a count (for repeated flags like `-vvv`) and optional values.
+//! - **Positional arguments**: a count + pointer to an array of [`args_value`].
+//!
+//! Values can be strings (`ARGS_STRING`), command blocks (`ARGS_COMMANDS`), or
+//! none (`ARGS_NONE`). The `args_escape` function handles shell quoting for
+//! display/serialization.
+
 use std::collections::HashMap;
 
 use crate::*;
@@ -1122,5 +1137,358 @@ pub unsafe fn args_string_percentage_and_expand(
 
         *cause = null_mut();
         ll
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn type_to_string() {
+        assert_eq!(args_type_to_string(args_type::ARGS_NONE), "NONE");
+        assert_eq!(args_type_to_string(args_type::ARGS_STRING), "STRING");
+        assert_eq!(args_type_to_string(args_type::ARGS_COMMANDS), "COMMANDS");
+    }
+
+    #[test]
+    fn create_is_empty() {
+        unsafe {
+            let args = args_create();
+            assert_eq!(args_count(args), 0);
+            assert!(!args_has(args, 'v'));
+            args_free(args);
+        }
+    }
+
+    #[test]
+    fn set_and_has_flag() {
+        unsafe {
+            let args = args_create();
+            args_set(args, b'v', null_mut(), 0);
+            assert!(args_has(args, 'v'));
+            assert!(!args_has(args, 'x'));
+            args_free(args);
+        }
+    }
+
+    #[test]
+    fn set_flag_increments_count() {
+        unsafe {
+            let args = args_create();
+            args_set(args, b'v', null_mut(), 0);
+            args_set(args, b'v', null_mut(), 0);
+            args_set(args, b'v', null_mut(), 0);
+            assert_eq!(args_has_count(args, b'v'), 3);
+            args_free(args);
+        }
+    }
+
+    #[test]
+    fn set_and_get_flag_value() {
+        unsafe {
+            let args = args_create();
+            let value = xcalloc1::<args_value>() as *mut args_value;
+            (*value).type_ = args_type::ARGS_STRING;
+            (*value).union_.string = xstrdup_(c"hello").as_ptr();
+            args_set(args, b't', value, 0);
+
+            let got = args_get(args, b't');
+            assert!(!got.is_null());
+            assert_eq!(CStr::from_ptr(got.cast()).to_str().unwrap(), "hello");
+            args_free(args);
+        }
+    }
+
+    #[test]
+    fn get_missing_flag_returns_null() {
+        unsafe {
+            let args = args_create();
+            assert!(args_get(args, b'z').is_null());
+            args_free(args);
+        }
+    }
+
+    #[test]
+    fn positional_args() {
+        unsafe {
+            let args = args_create();
+            (*args).values = xcalloc_(1).as_ptr();
+            (*args).count = 1;
+            let v = (*args).values;
+            (*v).type_ = args_type::ARGS_STRING;
+            (*v).union_.string = xstrdup_(c"target").as_ptr();
+
+            assert_eq!(args_count(args), 1);
+            assert!(!args_value(args, 0).is_null());
+            assert_eq!(CStr::from_ptr(args_string(args, 0).cast()).to_str().unwrap(), "target");
+            assert!(args_value(args, 1).is_null());
+            assert!(args_string(args, 1).is_null());
+            args_free(args);
+        }
+    }
+
+    #[test]
+    fn entry_list_sorted() {
+        unsafe {
+            let args = args_create();
+            args_set(args, b'z', null_mut(), 0);
+            args_set(args, b'a', null_mut(), 0);
+            args_set(args, b'm', null_mut(), 0);
+
+            let entries = args_entry_list(args);
+            assert_eq!(entries.len(), 3);
+            assert_eq!((*entries[0]).flag, b'a');
+            assert_eq!((*entries[1]).flag, b'm');
+            assert_eq!((*entries[2]).flag, b'z');
+            args_free(args);
+        }
+    }
+
+    #[test]
+    fn percentage_plain_number() {
+        unsafe {
+            let mut cause: *mut u8 = null_mut();
+            let v = CString::new("42").unwrap();
+            let result = args_string_percentage(v.as_ptr().cast(), 0, 100, 200, &raw mut cause);
+            assert_eq!(result, 42);
+            assert!(cause.is_null());
+        }
+    }
+
+    #[test]
+    fn percentage_with_percent() {
+        unsafe {
+            let mut cause: *mut u8 = null_mut();
+            let v = CString::new("50%").unwrap();
+            let result = args_string_percentage(v.as_ptr().cast(), 0, 200, 200, &raw mut cause);
+            assert_eq!(result, 100);
+            assert!(cause.is_null());
+        }
+    }
+
+    #[test]
+    fn percentage_too_small() {
+        unsafe {
+            let mut cause: *mut u8 = null_mut();
+            let v = CString::new("5").unwrap();
+            let result = args_string_percentage(v.as_ptr().cast(), 10, 100, 200, &raw mut cause);
+            assert_eq!(result, 0);
+            assert!(!cause.is_null());
+            free_(cause);
+        }
+    }
+
+    #[test]
+    fn percentage_too_large() {
+        unsafe {
+            let mut cause: *mut u8 = null_mut();
+            let v = CString::new("200").unwrap();
+            let result = args_string_percentage(v.as_ptr().cast(), 0, 100, 200, &raw mut cause);
+            assert_eq!(result, 0);
+            assert!(!cause.is_null());
+            free_(cause);
+        }
+    }
+
+    #[test]
+    fn percentage_empty_string() {
+        unsafe {
+            let mut cause: *mut u8 = null_mut();
+            let v = CString::new("").unwrap();
+            let result = args_string_percentage(v.as_ptr().cast(), 0, 100, 200, &raw mut cause);
+            assert_eq!(result, 0);
+            assert!(!cause.is_null());
+            free_(cause);
+        }
+    }
+
+    #[test]
+    fn escape_empty_string() {
+        unsafe {
+            let s = CString::new("").unwrap();
+            let result = args_escape(s.as_ptr().cast());
+            let escaped = CStr::from_ptr(result.cast()).to_str().unwrap().to_string();
+            assert_eq!(escaped, "''");
+            free_(result);
+        }
+    }
+
+    #[test]
+    fn escape_simple_word() {
+        unsafe {
+            let s = CString::new("hello").unwrap();
+            let result = args_escape(s.as_ptr().cast());
+            let escaped = CStr::from_ptr(result.cast()).to_str().unwrap().to_string();
+            assert_eq!(escaped, "hello");
+            free_(result);
+        }
+    }
+
+    #[test]
+    fn escape_word_with_space() {
+        unsafe {
+            let s = CString::new("hello world").unwrap();
+            let result = args_escape(s.as_ptr().cast());
+            let escaped = CStr::from_ptr(result.cast()).to_str().unwrap().to_string();
+            assert!(escaped.starts_with('\'') || escaped.starts_with('"'), "expected quoted: {escaped}");
+            free_(result);
+        }
+    }
+
+    #[test]
+    fn escape_single_special_char() {
+        unsafe {
+            let s = CString::new("#").unwrap();
+            let result = args_escape(s.as_ptr().cast());
+            let escaped = CStr::from_ptr(result.cast()).to_str().unwrap().to_string();
+            assert_eq!(escaped, "\\#");
+            free_(result);
+        }
+    }
+
+    #[test]
+    fn escape_tilde() {
+        unsafe {
+            let s = CString::new("~").unwrap();
+            let result = args_escape(s.as_ptr().cast());
+            let escaped = CStr::from_ptr(result.cast()).to_str().unwrap().to_string();
+            assert_eq!(escaped, "\\~");
+            free_(result);
+        }
+    }
+
+    /// Helper to create args_value array from string slices.
+    unsafe fn make_values(strs: &[&CStr]) -> (*mut args_value, u32) {
+        unsafe {
+            let count = strs.len() as u32;
+            let values: *mut args_value = xcalloc_(count as usize).as_ptr();
+            for (i, s) in strs.iter().enumerate() {
+                (*values.add(i)).type_ = args_type::ARGS_STRING;
+                (*values.add(i)).union_.string = xstrdup(s.as_ptr().cast()).cast().as_ptr();
+            }
+            (values, count)
+        }
+    }
+
+    #[test]
+    fn parse_no_flags() {
+        unsafe {
+            let parse = args_parse::new("", 0, 1, None);
+            let mut cause: *mut u8 = null_mut();
+            let (values, count) = make_values(&[c"cmd", c"arg1"]);
+
+            let args = args_parse(&raw const parse, values, count, &raw mut cause);
+            assert!(!args.is_null());
+            assert_eq!(args_count(args), 1);
+            assert_eq!(CStr::from_ptr(args_string(args, 0).cast()).to_str().unwrap(), "arg1");
+
+            args_free(args);
+            args_free_values(values, count);
+            free_(values);
+        }
+    }
+
+    #[test]
+    fn parse_simple_flags() {
+        unsafe {
+            let parse = args_parse::new("ab", 0, 0, None);
+            let mut cause: *mut u8 = null_mut();
+            let (values, count) = make_values(&[c"cmd", c"-ab"]);
+
+            let args = args_parse(&raw const parse, values, count, &raw mut cause);
+            assert!(!args.is_null());
+            assert!(args_has(args, 'a'));
+            assert!(args_has(args, 'b'));
+            assert!(!args_has(args, 'c'));
+
+            args_free(args);
+            args_free_values(values, count);
+            free_(values);
+        }
+    }
+
+    #[test]
+    fn parse_flag_with_argument() {
+        unsafe {
+            let parse = args_parse::new("t:", 0, 0, None);
+            let mut cause: *mut u8 = null_mut();
+            let (values, count) = make_values(&[c"cmd", c"-t", c"mysession"]);
+
+            let args = args_parse(&raw const parse, values, count, &raw mut cause);
+            assert!(!args.is_null());
+            assert!(args_has(args, 't'));
+            let t_val = args_get(args, b't');
+            assert!(!t_val.is_null());
+            assert_eq!(CStr::from_ptr(t_val.cast()).to_str().unwrap(), "mysession");
+
+            args_free(args);
+            args_free_values(values, count);
+            free_(values);
+        }
+    }
+
+    #[test]
+    fn parse_unknown_flag_is_error() {
+        unsafe {
+            let parse = args_parse::new("ab", 0, 0, None);
+            let mut cause: *mut u8 = null_mut();
+            let (values, count) = make_values(&[c"cmd", c"-z"]);
+
+            let args = args_parse(&raw const parse, values, count, &raw mut cause);
+            assert!(args.is_null());
+            assert!(!cause.is_null());
+            free_(cause);
+            args_free_values(values, count);
+            free_(values);
+        }
+    }
+
+    #[test]
+    fn parse_too_few_args() {
+        unsafe {
+            let parse = args_parse::new("", 2, 3, None);
+            let mut cause: *mut u8 = null_mut();
+            let (values, count) = make_values(&[c"cmd", c"one"]);
+
+            let args = args_parse(&raw const parse, values, count, &raw mut cause);
+            assert!(args.is_null());
+            assert!(!cause.is_null());
+            free_(cause);
+            args_free_values(values, count);
+            free_(values);
+        }
+    }
+
+    #[test]
+    fn parse_double_dash_stops_flags() {
+        unsafe {
+            let parse = args_parse::new("v", 0, 1, None);
+            let mut cause: *mut u8 = null_mut();
+            let (values, count) = make_values(&[c"cmd", c"--", c"-v"]);
+
+            let args = args_parse(&raw const parse, values, count, &raw mut cause);
+            assert!(!args.is_null());
+            assert!(!args_has(args, 'v'));
+            assert_eq!(args_count(args), 1);
+
+            args_free(args);
+            args_free_values(values, count);
+            free_(values);
+        }
+    }
+
+    #[test]
+    fn parse_empty_returns_empty() {
+        unsafe {
+            let parse = args_parse::new("v", -1, -1, None);
+            let mut cause: *mut u8 = null_mut();
+
+            let args = args_parse(&raw const parse, null_mut(), 0, &raw mut cause);
+            assert!(!args.is_null());
+            assert_eq!(args_count(args), 0);
+            assert!(!args_has(args, 'v'));
+            args_free(args);
+        }
     }
 }
