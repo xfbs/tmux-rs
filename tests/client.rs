@@ -50,7 +50,7 @@ fn detach_client_no_client_errors() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs does not error on nonexistent client target"]
+#[ignore = "broken: tmux-rs client target resolution doesn't error for nonexistent client (passes with C tmux)"]
 fn detach_client_with_nonexistent_target() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session().run().assert_success();

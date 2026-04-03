@@ -475,7 +475,6 @@ fn resize_window_relative_increase() {
 // ---------------------------------------------------------------------------
 
 #[test]
-#[ignore = "broken: tmux-rs remain-on-exit/respawn-window interaction"]
 fn respawn_window_after_process_exit() {
     let mut tmux = TmuxTestHarness::new();
     tmux.new_session()

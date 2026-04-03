@@ -98,12 +98,15 @@ pub unsafe fn spawn_window(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut 
         if (*sc).flags.intersects(spawn_flags::SPAWN_RESPAWN) {
             w = (*(*sc).wl).window;
             if !(*sc).flags.intersects(SPAWN_KILL) {
-                for &wp_ in (*w).panes.iter() {
-                    wp = wp_;
-                    if (*wp).fd != -1 {
-                        break;
-                    }
-                }
+                // Check if any pane is still alive (fd != -1).
+                // In the C code, TAILQ_FOREACH left wp as NULL if no
+                // match was found; replicate that with find().
+                wp = (*w)
+                    .panes
+                    .iter()
+                    .copied()
+                    .find(|&p| (*p).fd != -1)
+                    .unwrap_or(null_mut());
                 if !wp.is_null() {
                     *cause = format_nul!("window {}:{} still active", (*s).name, (*(*sc).wl).idx,);
                     return null_mut();
