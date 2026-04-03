@@ -11,6 +11,17 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//! Regex-based string substitution (like `sed s/pattern/replacement/`).
+//!
+//! Used by tmux's format system (`#{s/pat/repl/:value}`) and window-copy search.
+//! Built on POSIX `regcomp`/`regexec` — supports extended regex syntax and
+//! backreferences `\0`–`\9` in the replacement string.
+//!
+//! The main entry point is [`regsub`], which compiles a pattern, finds all
+//! non-overlapping matches in the input text, and replaces each with the
+//! expanded replacement string. Anchored patterns (`^...`) only replace the
+//! first match.
+
 use core::ffi::c_int;
 
 use xmalloc::xrealloc_;
@@ -18,6 +29,7 @@ use xmalloc::xrealloc_;
 use crate::libc::{memcpy, regcomp, regex_t, regexec, regfree, regmatch_t, strlen};
 use crate::*;
 
+/// Appends a slice of `text[start..end]` to the growing output buffer.
 unsafe fn regsub_copy(
     buf: *mut *mut u8,
     len: *mut isize,
@@ -33,6 +45,8 @@ unsafe fn regsub_copy(
     }
 }
 
+/// Expands backreferences (`\0`–`\9`) in the replacement string `with`,
+/// substituting matched groups from `m`, and appends the result to `buf`.
 pub unsafe fn regsub_expand(
     buf: *mut *mut u8,
     len: *mut isize,
@@ -56,6 +70,9 @@ pub unsafe fn regsub_expand(
                             (*m.add(i as _)).rm_so as usize,
                             (*m.add(i as _)).rm_eo as usize,
                         );
+                        // C used for(...; cp++) so continue still incremented;
+                        // Rust while loop needs explicit advance past the digit.
+                        cp = cp.add(1);
                         continue;
                     }
                 }
@@ -69,6 +86,13 @@ pub unsafe fn regsub_expand(
     }
 }
 
+/// Performs regex substitution on `text`: compiles `pattern` with `flags`,
+/// replaces all non-overlapping matches with `with` (expanding backreferences),
+/// and returns a newly allocated result string.
+///
+/// Returns null if the pattern fails to compile. Returns an empty string
+/// if the input text is empty. Anchored patterns (`^...`) only replace the
+/// first match.
 pub unsafe fn regsub(
     pattern: *const u8,
     with: *const u8,
@@ -160,5 +184,219 @@ pub unsafe fn regsub(
 
         regfree(&raw mut r);
         buf
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Helper: call regsub with Rust strings, return the result as a String.
+    /// Uses REG_EXTENDED by default.
+    unsafe fn sub(pattern: &str, with: &str, text: &str) -> Option<String> {
+        unsafe { sub_flags(pattern, with, text, libc::REG_EXTENDED) }
+    }
+
+    unsafe fn sub_flags(
+        pattern: &str,
+        with: &str,
+        text: &str,
+        flags: c_int,
+    ) -> Option<String> {
+        unsafe {
+            let p = CString::new(pattern).unwrap();
+            let w = CString::new(with).unwrap();
+            let t = CString::new(text).unwrap();
+            let result = regsub(
+                p.as_ptr().cast(),
+                w.as_ptr().cast(),
+                t.as_ptr().cast(),
+                flags,
+            );
+            if result.is_null() {
+                return None;
+            }
+            let s = CStr::from_ptr(result.cast()).to_str().unwrap().to_string();
+            free_(result);
+            Some(s)
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Basic substitution
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn simple_replacement() {
+        unsafe {
+            assert_eq!(sub("foo", "bar", "foo"), Some("bar".into()));
+        }
+    }
+
+    #[test]
+    fn no_match_returns_original() {
+        unsafe {
+            assert_eq!(sub("xyz", "bar", "hello"), Some("hello".into()));
+        }
+    }
+
+    #[test]
+    fn empty_text_returns_empty() {
+        unsafe {
+            assert_eq!(sub("foo", "bar", ""), Some("".into()));
+        }
+    }
+
+    #[test]
+    fn invalid_pattern_returns_none() {
+        unsafe {
+            // Unmatched bracket is invalid in extended regex.
+            assert_eq!(sub("[", "bar", "hello"), None);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Global replacement (all matches)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn replaces_all_matches() {
+        unsafe {
+            assert_eq!(sub("o", "0", "foobar"), Some("f00bar".into()));
+        }
+    }
+
+    #[test]
+    fn replaces_all_non_overlapping() {
+        unsafe {
+            assert_eq!(sub("ab", "X", "ababab"), Some("XXX".into()));
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Anchored patterns (^)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn anchored_replaces_first_only() {
+        unsafe {
+            assert_eq!(sub("^foo", "bar", "foofoo"), Some("barfoo".into()));
+        }
+    }
+
+    #[test]
+    fn anchored_no_match() {
+        unsafe {
+            assert_eq!(sub("^bar", "X", "foobar"), Some("foobar".into()));
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Backreferences
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn backreference_whole_match() {
+        unsafe {
+            assert_eq!(sub("(foo)", "[\\0]", "foo"), Some("[foo]".into()));
+        }
+    }
+
+    #[test]
+    fn backreference_group() {
+        unsafe {
+            assert_eq!(
+                sub("(hello) (world)", "\\2 \\1", "hello world"),
+                Some("world hello".into())
+            );
+        }
+    }
+
+    #[test]
+    fn backreference_nonexistent_group() {
+        unsafe {
+            // \9 doesn't match a group — the digit is kept as a literal.
+            assert_eq!(sub("(foo)", "\\9", "foo"), Some("9".into()));
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Extended regex features
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn character_class() {
+        unsafe {
+            assert_eq!(sub("[0-9]+", "N", "abc123def456"), Some("abcNdefN".into()));
+        }
+    }
+
+    #[test]
+    fn alternation() {
+        unsafe {
+            assert_eq!(sub("cat|dog", "pet", "I have a cat and a dog"), Some("I have a pet and a pet".into()));
+        }
+    }
+
+    #[test]
+    fn dot_star_greedy() {
+        unsafe {
+            assert_eq!(sub("a.*b", "X", "aXXbYYb"), Some("X".into()));
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Case-insensitive matching
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn case_insensitive() {
+        unsafe {
+            assert_eq!(
+                sub_flags("foo", "bar", "FOO", libc::REG_EXTENDED | libc::REG_ICASE),
+                Some("bar".into())
+            );
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Edge cases
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn replacement_longer_than_match() {
+        unsafe {
+            assert_eq!(sub("a", "XYZ", "aaa"), Some("XYZXYZXYZ".into()));
+        }
+    }
+
+    #[test]
+    fn replacement_empty_deletes_matches() {
+        unsafe {
+            assert_eq!(sub("[0-9]", "", "a1b2c3"), Some("abc".into()));
+        }
+    }
+
+    #[test]
+    fn literal_backslash_in_replacement() {
+        unsafe {
+            // \\ in C string is a single backslash followed by a non-digit,
+            // so it should be kept as-is.
+            assert_eq!(sub("x", "\\n", "x"), Some("n".into()));
+        }
+    }
+
+    #[test]
+    fn match_at_end_of_string() {
+        unsafe {
+            assert_eq!(sub("bar$", "X", "foobar"), Some("fooX".into()));
+        }
+    }
+
+    #[test]
+    fn full_string_match() {
+        unsafe {
+            assert_eq!(sub("^.*$", "replaced", "anything"), Some("replaced".into()));
+        }
     }
 }
