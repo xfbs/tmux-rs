@@ -385,7 +385,7 @@ pub unsafe fn server_destroy_pane(wp: *mut window_pane, notify: i32) {
         layout_close_pane(wp);
         window_remove_pane(w, wp);
 
-        if tailq_empty(&raw mut (*w).panes) {
+        if (*w).panes.is_empty() {
             server_kill_window(w, 1);
         } else {
             server_redraw_window(w);

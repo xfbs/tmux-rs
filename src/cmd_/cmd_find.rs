@@ -11,10 +11,7 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::compat::{
-    queue::tailq_first,
-    strlcat,
-};
+use crate::compat::strlcat;
 use crate::libc::strcmp;
 use crate::*;
 
@@ -583,7 +580,7 @@ pub unsafe fn cmd_find_get_pane_with_window(fs: *mut cmd_find_state, pane: &str)
 
         match pane {
             "!" => {
-                (*fs).wp = tailq_first(&raw mut (*(*fs).w).last_panes);
+                (*fs).wp = (*(*fs).w).last_panes.first().copied().unwrap_or(null_mut());
                 if (*fs).wp.is_null() {
                     return -1;
                 }

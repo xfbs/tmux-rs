@@ -317,11 +317,11 @@ unsafe fn window_tree_build_window(
             free_(text);
             free_(name);
 
-            let wp = tailq_first(&raw mut (*(*wl).window).panes);
+            let wp = (*(*wl).window).panes.first().copied().unwrap_or(null_mut());
             if wp.is_null() {
                 break 'empty;
             }
-            if tailq_next::<_, window_pane, discr_entry>(wp).is_null() {
+            if window_pane_next_in_list(wp).is_null() {
                 if !window_tree_filter_pane(s, wl, wp, cstr_to_str_(filter)) {
                     break 'empty;
                 }
@@ -331,9 +331,7 @@ unsafe fn window_tree_build_window(
             l = null_mut();
             n = 0;
 
-            for wp in
-                tailq_foreach::<_, discr_entry>(&raw mut (*(*wl).window).panes).map(NonNull::as_ptr)
-            {
+            for &wp in (*(*wl).window).panes.iter() {
                 if !window_tree_filter_pane(s, wl, wp, cstr_to_str_(filter)) {
                     continue;
                 }
@@ -779,7 +777,7 @@ unsafe fn window_tree_draw_window(
         };
 
         let mut current: u32 = 0;
-        for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+        for &wp in (*w).panes.iter() {
             if wp == (*w).active {
                 break;
             }
@@ -853,7 +851,7 @@ unsafe fn window_tree_draw_window(
 
         let mut i = 0;
         let mut loop_ = 0;
-        for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+        for &wp in (*w).panes.iter() {
             if loop_ == end {
                 break;
             }
@@ -1418,10 +1416,8 @@ unsafe fn window_tree_mouse(
                 return KEYC_NONE;
             };
             mode_tree_expand_current((*data).data);
-            for (loop_, wp_) in
-                tailq_foreach::<_, discr_entry>(&raw mut (*(*wl.as_ptr()).window).panes).enumerate()
-            {
-                wp = Some(wp_);
+            for (loop_, &wp_) in (*(*wl.as_ptr()).window).panes.iter().enumerate() {
+                wp = Some(NonNull::new(wp_).unwrap());
                 if loop_ as u32 == (*data).start + x {
                     break;
                 }

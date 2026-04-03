@@ -2042,7 +2042,7 @@ pub unsafe fn format_cb_pane_key_mode(ft: *mut format_tree) -> format_table_type
 pub unsafe fn format_cb_pane_last(ft: *mut format_tree) -> format_table_type {
     unsafe {
         if !(*ft).wp.is_null() {
-            if (*ft).wp == tailq_first(&raw mut (*(*(*ft).wp).window).last_panes) {
+            if (*ft).wp == (*(*(*ft).wp).window).last_panes.first().copied().unwrap_or(null_mut()) {
                 return "1".into();
             }
             return "0".into();
@@ -4043,7 +4043,7 @@ pub unsafe fn format_loop_panes(es: *mut format_expand_state, fmt: *const u8) ->
 
         let mut next = MaybeUninit::<format_expand_state>::uninit();
         let next = next.as_mut_ptr();
-        for wp in tailq_foreach::<_, discr_entry>(&raw mut (*(*ft).w).panes).map(NonNull::as_ptr) {
+        for &wp in (*(*ft).w).panes.iter() {
             format_log1!(es, c!("format_loop_panes"), "pane loop: %{}", (*wp).id,);
             let use_ = if !active.is_null() && wp == (*(*ft).w).active {
                 active

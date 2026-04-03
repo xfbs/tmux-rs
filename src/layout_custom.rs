@@ -249,7 +249,7 @@ pub unsafe fn layout_parse(w: *mut window, mut layout: *const u8, cause: *mut *m
             (*w).layout_root = lc;
 
             // Assign the panes into the cells.
-            let mut wp = tailq_first(&raw mut (*w).panes);
+            let mut wp = (*w).panes.first().copied().unwrap_or(null_mut());
             layout_assign(&raw mut wp, lc);
 
             // Update pane offsets and sizes.
@@ -275,7 +275,7 @@ unsafe fn layout_assign(wp: *mut *mut window_pane, lc: *mut layout_cell) {
         match (*lc).type_ {
             layout_type::LAYOUT_WINDOWPANE => {
                 layout_make_leaf(lc, *wp);
-                *wp = tailq_next::<_, _, discr_entry>(*wp);
+                *wp = window_pane_next_in_list(*wp);
             }
             layout_type::LAYOUT_LEFTRIGHT | layout_type::LAYOUT_TOPBOTTOM => {
                 for &lcchild in (*lc).cells.iter() {

@@ -11,10 +11,7 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::compat::queue::{
-    tailq_first, tailq_insert_after, tailq_insert_head, tailq_last, tailq_next, tailq_prev,
-    tailq_remove, tailq_replace,
-};
+use crate::window_::{window_pane_next_in_list, window_pane_prev_in_list};
 use crate::*;
 use crate::options_::*;
 
@@ -54,15 +51,15 @@ unsafe fn cmd_swap_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
         'out: {
             if args_has(args, 'D') {
                 src_w = dst_w;
-                src_wp = tailq_next::<_, _, discr_entry>(dst_wp);
+                src_wp = window_pane_next_in_list(dst_wp);
                 if src_wp.is_null() {
-                    src_wp = tailq_first(&raw mut (*dst_w).panes);
+                    src_wp = (*dst_w).panes.first().copied().unwrap_or(null_mut());
                 }
             } else if args_has(args, 'U') {
                 src_w = dst_w;
-                src_wp = tailq_prev::<_, _, discr_entry>(dst_wp);
+                src_wp = window_pane_prev_in_list(dst_wp);
                 if src_wp.is_null() {
-                    src_wp = tailq_last(&raw mut (*dst_w).panes);
+                    src_wp = (*dst_w).panes.last().copied().unwrap_or(null_mut());
                 }
             }
 
@@ -77,16 +74,18 @@ unsafe fn cmd_swap_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
             server_client_remove_pane(src_wp);
             server_client_remove_pane(dst_wp);
 
-            let mut tmp_wp = tailq_prev::<_, _, discr_entry>(dst_wp);
-            tailq_remove::<_, discr_entry>(&raw mut (*dst_w).panes, dst_wp);
-            tailq_replace::<_, discr_entry>(&raw mut (*src_w).panes, src_wp, dst_wp);
+            let mut tmp_wp = window_pane_prev_in_list(dst_wp);
+            (*dst_w).panes.retain(|&p| p != dst_wp);
+            let src_pos = (*src_w).panes.iter().position(|&p| p == src_wp).unwrap();
+            (&mut (*src_w).panes)[src_pos] = dst_wp;
             if tmp_wp == src_wp {
                 tmp_wp = dst_wp;
             }
             if tmp_wp.is_null() {
-                tailq_insert_head::<_, discr_entry>(&raw mut (*dst_w).panes, src_wp);
+                (*dst_w).panes.insert(0, src_wp);
             } else {
-                tailq_insert_after::<_, discr_entry>(&raw mut (*dst_w).panes, tmp_wp, src_wp);
+                let pos = (*dst_w).panes.iter().position(|&p| p == tmp_wp).unwrap();
+                (*dst_w).panes.insert(pos + 1, src_wp);
             }
 
             let src_lc = (*src_wp).layout_cell;

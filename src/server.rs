@@ -536,7 +536,7 @@ unsafe fn server_child_exited(pid: pid_t, status: i32) {
         let windows: Vec<*mut window> =
             (*(&raw mut WINDOWS)).values().copied().collect();
         'outer: for w in windows {
-            for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+            for &wp in (*w).panes.iter() {
                 if (*wp).pid == pid {
                     (*wp).status = status;
                     (*wp).flags |= window_pane_flags::PANE_STATUSREADY;
@@ -562,7 +562,7 @@ unsafe fn server_child_stopped(pid: pid_t, status: i32) {
         }
 
         for w in (*(&raw mut WINDOWS)).values().copied() {
-            for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+            for &wp in (*w).panes.iter() {
                 if (*wp).pid == pid && killpg(pid, SIGCONT) != 0 {
                     kill(pid, SIGCONT);
                 }

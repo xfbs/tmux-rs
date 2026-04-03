@@ -844,11 +844,9 @@ pub unsafe fn server_client_check_mouse(c: *mut client, event: *mut key_event) -
 
                 // Try the pane borders if not zoomed.
                 if !(*(*(*s).curw).window).flags.intersects(window_flag::ZOOMED)
-                    && let Some(wp_) = tailq_foreach::<_, discr_entry>(
-                        &raw mut (*(*(*s).curw).window).panes,
-                    )
-                    .find(|wp| {
-                        let wp = wp.as_ptr();
+                    && let Some(&wp_) = (*(*(*s).curw).window).panes
+                    .iter()
+                    .find(|&&wp| {
                         ((*wp).xoff + (*wp).sx == px
                             && (*wp).yoff <= 1 + py
                             && (*wp).yoff + (*wp).sy >= py)
@@ -857,7 +855,7 @@ pub unsafe fn server_client_check_mouse(c: *mut client, event: *mut key_event) -
                                 && (*wp).xoff + (*wp).sx >= px)
                     })
                 {
-                    wp = wp_.as_ptr();
+                    wp = wp_;
                     where_ = where_::Border;
                 }
 
@@ -2145,7 +2143,7 @@ pub unsafe fn server_client_loop() {
 
         // Any windows will have been redrawn as part of clients, so clear their flags now.
         for w in (*(&raw mut WINDOWS)).values().copied() {
-            for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+            for &wp in (*w).panes.iter() {
                 if (*wp).fd != -1 {
                     server_client_check_pane_resize(wp);
                     server_client_check_pane_buffer(wp);
@@ -2484,9 +2482,7 @@ pub unsafe fn server_client_reset_state(c: *mut client) {
         if options_get_number_(oo, "mouse") != 0 {
             if (*c).overlay_draw.is_none() {
                 mode &= !ALL_MOUSE_MODES;
-                for loop_ in
-                    tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr)
-                {
+                for &loop_ in (*w).panes.iter() {
                     if (*(*loop_).screen)
                         .mode
                         .intersects(mode_flag::MODE_MOUSE_ALL)
@@ -2642,7 +2638,7 @@ pub unsafe fn server_client_check_modes(c: *mut client) {
         if !(*c).flags.intersects(client_flag::REDRAWSTATUS) {
             return;
         }
-        for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+        for &wp in (*w).panes.iter() {
             if let Some(wme) = NonNull::new((*wp).modes.first().copied().unwrap_or(null_mut()))
                 && let Some(update) = (*(*wme.as_ptr()).mode).update
             {
@@ -2692,7 +2688,7 @@ pub unsafe fn server_client_check_redraw(c: *mut client) {
         if (*c).flags.intersects(CLIENT_ALLREDRAWFLAGS) {
             needed = true;
         } else {
-            for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+            for &wp in (*w).panes.iter() {
                 if (*wp).flags.intersects(window_pane_flags::PANE_REDRAW) {
                     needed = true;
                     break;
@@ -2718,8 +2714,7 @@ pub unsafe fn server_client_check_redraw(c: *mut client) {
             }
 
             if !(*c).flags.intersects(client_flag::REDRAWWINDOW) {
-                for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr)
-                {
+                for &wp in (*w).panes.iter() {
                     if (*wp).flags.intersects(window_pane_flags::PANE_REDRAW) {
                         // log_debug("%s: pane %%%u needs redraw", (*c).name, (*wp).id);
                         (*c).redraw_panes |= 1 << bit;
@@ -2751,7 +2746,7 @@ pub unsafe fn server_client_check_redraw(c: *mut client) {
         if !(*c).flags.intersects(client_flag::REDRAWWINDOW) {
             // If not redrawing the entire window, check whether each pane
             // needs to be redrawn.
-            for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+            for &wp in (*w).panes.iter() {
                 redraw = false;
                 if (*wp).flags.intersects(window_pane_flags::PANE_REDRAW) {
                     redraw = true;

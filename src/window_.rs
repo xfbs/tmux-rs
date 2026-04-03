@@ -249,6 +249,28 @@ pub unsafe fn window_update_activity(w: NonNull<window>) {
     }
 }
 
+/// Get the next pane in the window's pane list, or null if this is the last.
+pub unsafe fn window_pane_next_in_list(wp: *mut window_pane) -> *mut window_pane {
+    unsafe {
+        let panes = &(*(*wp).window).panes;
+        match panes.iter().position(|&p| p == wp) {
+            Some(i) if i + 1 < panes.len() => panes[i + 1],
+            _ => null_mut(),
+        }
+    }
+}
+
+/// Get the previous pane in the window's pane list, or null if this is the first.
+pub unsafe fn window_pane_prev_in_list(wp: *mut window_pane) -> *mut window_pane {
+    unsafe {
+        let panes = &(*(*wp).window).panes;
+        match panes.iter().position(|&p| p == wp) {
+            Some(i) if i > 0 => panes[i - 1],
+            _ => null_mut(),
+        }
+    }
+}
+
 pub unsafe fn window_create(sx: u32, sy: u32, mut xpixel: u32, mut ypixel: u32) -> *mut window {
     static NEXT_WINDOW_ID: AtomicU32 = AtomicU32::new(0);
 
@@ -263,8 +285,8 @@ pub unsafe fn window_create(sx: u32, sy: u32, mut xpixel: u32, mut ypixel: u32) 
         (*w).name = xstrdup(c!("")).as_ptr();
         (*w).flags = window_flag::empty();
 
-        tailq_init(&raw mut (*w).panes);
-        tailq_init(&raw mut (*w).last_panes);
+        std::ptr::write(&raw mut (*w).panes, Vec::new());
+        std::ptr::write(&raw mut (*w).last_panes, Vec::new());
         (*w).active = null_mut();
 
         (*w).lastlayout = -1;
@@ -474,7 +496,7 @@ pub unsafe fn window_pane_send_resize(wp: *mut window_pane, sx: u32, sy: u32) {
 }
 
 pub unsafe fn window_has_pane(w: *mut window, wp: *mut window_pane) -> bool {
-    unsafe { tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).any(|wp1| wp1.as_ptr() == wp) }
+    unsafe { (*w).panes.iter().any(|&wp1| wp1 == wp) }
 }
 
 pub unsafe fn window_update_focus(w: *mut window) {
@@ -607,7 +629,7 @@ pub unsafe fn window_redraw_active_switch(w: *mut window, mut wp: *mut window_pa
 
 pub unsafe fn window_get_active_at(w: *mut window, x: u32, y: u32) -> *mut window_pane {
     unsafe {
-        for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+        for &wp in (*w).panes.iter() {
             if !window_pane_visible(wp) {
                 continue;
             }
@@ -683,7 +705,7 @@ pub unsafe fn window_zoom(wp: *mut window_pane) -> i32 {
             window_set_active_pane(w, wp, 1);
         }
 
-        for wp1 in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+        for &wp1 in (*w).panes.iter() {
             (*wp1).saved_layout_cell = (*wp1).layout_cell;
             (*wp1).layout_cell = null_mut();
         }
@@ -708,7 +730,7 @@ pub unsafe fn window_unzoom(w: *mut window, notify: i32) -> i32 {
         (*w).layout_root = (*w).saved_layout_root;
         (*w).saved_layout_root = null_mut();
 
-        for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+        for &wp in (*w).panes.iter() {
             (*wp).layout_cell = (*wp).saved_layout_cell;
             (*wp).saved_layout_cell = null_mut();
         }
@@ -769,22 +791,24 @@ pub unsafe fn window_add_pane(
         }
 
         let wp = window_pane_create(w, (*w).sx, (*w).sy, hlimit);
-        if tailq_empty(&raw mut (*w).panes) {
+        if (*w).panes.is_empty() {
             log_debug!("{}: @{} at start", func, (*w).id);
-            tailq_insert_head::<_, discr_entry>(&raw mut (*w).panes, wp);
+            (*w).panes.insert(0, wp);
         } else if flags.intersects(SPAWN_BEFORE) {
             log_debug!("{}: @{} before %%{}", func, (*w).id, (*wp).id);
             if flags.intersects(SPAWN_FULLSIZE) {
-                tailq_insert_head::<_, discr_entry>(&raw mut (*w).panes, wp);
+                (*w).panes.insert(0, wp);
             } else {
-                tailq_insert_before::<_, discr_entry>(other, wp);
+                let pos = (*w).panes.iter().position(|&p| p == other).unwrap();
+                (*w).panes.insert(pos, wp);
             }
         } else {
             log_debug!("{}: @{} after %%{}", func, (*w).id, (*wp).id);
             if flags.intersects(SPAWN_FULLSIZE) {
-                tailq_insert_tail::<_, discr_entry>(&raw mut (*w).panes, wp);
+                (*w).panes.push(wp);
             } else {
-                tailq_insert_after::<_, discr_entry>(&raw mut (*w).panes, other, wp);
+                let pos = (*w).panes.iter().position(|&p| p == other).unwrap();
+                (*w).panes.insert(pos + 1, wp);
             }
         }
 
@@ -802,11 +826,11 @@ pub unsafe fn window_lost_pane(w: *mut window, wp: *mut window_pane) {
 
         window_pane_stack_remove(&raw mut (*w).last_panes, wp);
         if wp == (*w).active {
-            (*w).active = tailq_first(&raw mut (*w).last_panes);
+            (*w).active = (*w).last_panes.first().copied().unwrap_or(null_mut());
             if (*w).active.is_null() {
-                (*w).active = tailq_prev::<_, _, discr_entry>(wp);
+                (*w).active = window_pane_prev_in_list(wp);
                 if (*w).active.is_null() {
-                    (*w).active = tailq_next::<_, _, discr_entry>(wp);
+                    (*w).active = window_pane_next_in_list(wp);
                 }
             }
             if !(*w).active.is_null() {
@@ -823,7 +847,7 @@ pub unsafe fn window_remove_pane(w: *mut window, wp: *mut window_pane) {
     unsafe {
         window_lost_pane(w, wp);
 
-        tailq_remove::<_, discr_entry>(&raw mut (*w).panes, wp);
+        (*w).panes.retain(|&p| p != wp);
         window_pane_destroy(wp);
     }
 }
@@ -832,7 +856,7 @@ pub unsafe fn window_pane_at_index(w: *mut window, idx: u32) -> *mut window_pane
     unsafe {
         let mut n: u32 = options_get_number___::<u32>(&*(*w).options, "pane-base-index");
 
-        for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+        for &wp in (*w).panes.iter() {
             if n == idx {
                 return wp;
             }
@@ -850,9 +874,9 @@ pub unsafe fn window_pane_next_by_number(
 ) -> *mut window_pane {
     unsafe {
         for _ in 0..n {
-            wp = tailq_next::<_, _, discr_entry>(wp);
+            wp = window_pane_next_in_list(wp);
             if wp.is_null() {
-                wp = tailq_first(&raw mut (*w).panes);
+                wp = (*w).panes.first().copied().unwrap_or(null_mut());
             }
         }
     }
@@ -867,9 +891,9 @@ pub unsafe fn window_pane_previous_by_number(
 ) -> *mut window_pane {
     unsafe {
         for _ in 0..n {
-            wp = tailq_prev::<_, _, discr_entry>(wp);
+            wp = window_pane_prev_in_list(wp);
             if wp.is_null() {
-                wp = tailq_last(&raw mut (*w).panes);
+                wp = (*w).panes.last().copied().unwrap_or(null_mut());
             }
         }
     }
@@ -882,7 +906,7 @@ pub unsafe fn window_pane_index(wp: *mut window_pane, i: *mut u32) -> i32 {
         let w = (*wp).window;
 
         *i = options_get_number___::<u32>(&*(*w).options, "pane-base-index") as _;
-        for wq in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+        for &wq in (*w).panes.iter() {
             if wp == wq {
                 return 0;
             }
@@ -893,20 +917,18 @@ pub unsafe fn window_pane_index(wp: *mut window_pane, i: *mut u32) -> i32 {
 }
 
 pub unsafe fn window_count_panes(w: *mut window) -> u32 {
-    unsafe { tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).count() as u32 }
+    unsafe { (*w).panes.len() as u32 }
 }
 
 pub unsafe fn window_destroy_panes(w: *mut window) {
-    let mut wp: *mut window_pane;
     unsafe {
-        while !tailq_empty(&raw mut (*w).last_panes) {
-            wp = tailq_first(&raw mut (*w).last_panes);
-            window_pane_stack_remove(&raw mut (*w).last_panes, wp);
+        // Clear visited flags for all panes in last_panes stack
+        for &wp in (*w).last_panes.iter() {
+            (*wp).flags &= !window_pane_flags::PANE_VISITED;
         }
+        (*w).last_panes.clear();
 
-        while !tailq_empty(&raw mut (*w).panes) {
-            wp = tailq_first(&raw mut (*w).panes);
-            tailq_remove::<_, discr_entry>(&raw mut (*w).panes, wp);
+        while let Some(wp) = (*w).panes.pop() {
             window_pane_destroy(wp);
         }
     }
@@ -1255,9 +1277,7 @@ pub unsafe fn window_pane_reset_mode_all(wp: *mut window_pane) {
 
 unsafe fn window_pane_copy_key(wp: *mut window_pane, key: key_code) {
     unsafe {
-        for loop_ in
-            tailq_foreach::<_, discr_entry>(&raw mut (*(*wp).window).panes).map(NonNull::as_ptr)
-        {
+        for &loop_ in (*(*wp).window).panes.iter() {
             if loop_ != wp
                 && (*loop_).modes.is_empty()
                 && (*loop_).fd != -1
@@ -1444,7 +1464,7 @@ pub unsafe fn window_pane_find_up(wp: *mut window_pane) -> *mut window_pane {
         let left = (*wp).xoff;
         let right = (*wp).xoff + (*wp).sx;
 
-        for next in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+        for &next in (*w).panes.iter() {
             if next == wp {
                 continue;
             }
@@ -1512,7 +1532,7 @@ pub unsafe fn window_pane_find_down(wp: *mut window_pane) -> *mut window_pane {
         let left = (*wp).xoff;
         let right = (*wp).xoff + (*wp).sx;
 
-        for next in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+        for &next in (*w).panes.iter() {
             if next == wp {
                 continue;
             }
@@ -1563,7 +1583,7 @@ pub unsafe fn window_pane_find_left(wp: *mut window_pane) -> *mut window_pane {
         let top = (*wp).yoff;
         let bottom = (*wp).yoff + (*wp).sy;
 
-        for next in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+        for &next in (*w).panes.iter() {
             if next == wp {
                 continue;
             }
@@ -1614,7 +1634,7 @@ pub unsafe fn window_pane_find_right(wp: *mut window_pane) -> *mut window_pane {
         let top = (*wp).yoff;
         let bottom = (*wp).yoff + (*wp).sy;
 
-        for next in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+        for &next in (*w).panes.iter() {
             if next == wp {
                 continue;
             }
@@ -1646,20 +1666,20 @@ pub unsafe fn window_pane_find_right(wp: *mut window_pane) -> *mut window_pane {
     }
 }
 
-pub unsafe fn window_pane_stack_push(stack: *mut window_panes, wp: *mut window_pane) {
+pub unsafe fn window_pane_stack_push(stack: *mut Vec<*mut window_pane>, wp: *mut window_pane) {
     unsafe {
         if !wp.is_null() {
             window_pane_stack_remove(stack, wp);
-            tailq_insert_head::<_, discr_sentry>(stack, wp);
+            (*stack).insert(0, wp);
             (*wp).flags |= window_pane_flags::PANE_VISITED;
         }
     }
 }
 
-pub unsafe fn window_pane_stack_remove(stack: *mut window_panes, wp: *mut window_pane) {
+pub unsafe fn window_pane_stack_remove(stack: *mut Vec<*mut window_pane>, wp: *mut window_pane) {
     unsafe {
         if !wp.is_null() && (*wp).flags.intersects(window_pane_flags::PANE_VISITED) {
-            tailq_remove::<_, crate::discr_sentry>(stack, wp);
+            (*stack).retain(|&p| p != wp);
             (*wp).flags &= !window_pane_flags::PANE_VISITED;
         }
     }

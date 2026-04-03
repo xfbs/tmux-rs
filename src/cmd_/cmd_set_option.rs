@@ -11,7 +11,6 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::compat::queue::tailq_foreach;
 use crate::*;
 use crate::options_::*;
 
@@ -180,9 +179,7 @@ pub unsafe fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_
 
                 // Change the option.
                 if args_has(args, 'U') && scope == OPTIONS_TABLE_WINDOW {
-                    for loop_ in tailq_foreach::<_, discr_entry>(&raw mut (*(*target).w).panes)
-                        .map(NonNull::as_ptr)
-                    {
+                    for &loop_ in (*(*target).w).panes.iter() {
                         let po = options_get_only((*loop_).options, &name);
                         if po.is_null() {
                             continue;

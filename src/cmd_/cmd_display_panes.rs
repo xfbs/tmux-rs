@@ -11,7 +11,6 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::compat::queue::tailq_foreach;
 use crate::*;
 use crate::options_::options_get_number___;
 
@@ -236,7 +235,7 @@ unsafe fn cmd_display_panes_draw(c: *mut client, _data: *mut c_void, ctx: *mut s
             (*w).id
         );
 
-        for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+        for &wp in (*w).panes.iter() {
             if window_pane_visible(wp) {
                 cmd_display_panes_draw_pane(ctx, wp);
             }

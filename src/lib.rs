@@ -155,7 +155,7 @@ use crate::{
     },
     cmd_parse::*,
     colour::*,
-    compat::{imsg::imsg, queue::*, strtonum, *}, /* strtonum need to disambiguate from libc on macos */
+    compat::{imsg::imsg, strtonum, *}, /* strtonum need to disambiguate from libc on macos */
     control::{control_write, *},
     control_notify::*,
     environ_::*,
@@ -279,8 +279,6 @@ const unsafe fn ptr_to_mut_ref<'a, T>(value: *mut T) -> Option<&'a mut T> {
 }
 
 // discriminant structs
-struct discr_entry;
-struct discr_sentry;
 
 /// Minimum layout cell size, NOT including border lines.
 const PANE_MINIMUM: u32 = 1;
@@ -1334,24 +1332,8 @@ struct window_pane {
     control_bg: i32,
     control_fg: i32,
 
-    /// link in list of all panes
-    entry: tailq_entry<window_pane>,
-    /// link in list of last visited
-    sentry: tailq_entry<window_pane>,
 }
-type window_panes = tailq_head<window_pane>;
 type window_pane_tree = BTreeMap<u32, *mut window_pane>;
-
-impl Entry<window_pane, discr_entry> for window_pane {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<window_pane> {
-        unsafe { &raw mut (*this).entry }
-    }
-}
-impl Entry<window_pane, discr_sentry> for window_pane {
-    unsafe fn entry(this: *mut Self) -> *mut tailq_entry<window_pane> {
-        unsafe { &raw mut (*this).sentry }
-    }
-}
 
 bitflags::bitflags! {
     #[repr(transparent)]
@@ -1385,8 +1367,10 @@ struct window {
     activity_time: timeval,
 
     active: *mut window_pane,
-    last_panes: window_panes,
-    panes: window_panes,
+    /// Stack of last-visited panes (MRU order, head = most recent).
+    last_panes: Vec<*mut window_pane>,
+    /// Ordered list of all panes in this window.
+    panes: Vec<*mut window_pane>,
 
     lastlayout: i32,
     layout_root: *mut layout_cell,

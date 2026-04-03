@@ -98,8 +98,7 @@ pub unsafe fn spawn_window(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut 
         if (*sc).flags.intersects(spawn_flags::SPAWN_RESPAWN) {
             w = (*(*sc).wl).window;
             if !(*sc).flags.intersects(SPAWN_KILL) {
-                for wp_ in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr)
-                {
+                for &wp_ in (*w).panes.iter() {
                     wp = wp_;
                     if (*wp).fd != -1 {
                         break;
@@ -111,13 +110,13 @@ pub unsafe fn spawn_window(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut 
                 }
             }
 
-            (*sc).wp0 = tailq_first(&raw mut (*w).panes);
-            tailq_remove::<_, discr_entry>(&raw mut (*w).panes, (*sc).wp0);
+            (*sc).wp0 = (*w).panes.first().copied().unwrap_or(null_mut());
+            (*w).panes.retain(|&p| p != (*sc).wp0);
 
             layout_free(w);
             window_destroy_panes(w);
 
-            tailq_insert_head::<_, discr_entry>(&raw mut (*w).panes, (*sc).wp0);
+            (*w).panes.insert(0, (*sc).wp0);
             window_pane_resize((*sc).wp0, (*w).sx, (*w).sy);
 
             layout_init(w, (*sc).wp0);

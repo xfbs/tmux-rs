@@ -281,8 +281,7 @@ pub unsafe fn layout_fix_panes(w: *mut window, skip: *mut window_pane) {
             pane_status::try_from(options_get_number_((*w).options, "pane-border-status") as i32)
                 .unwrap();
 
-        for wp in tailq_foreach::<window_pane, discr_entry>(&raw mut (*w).panes) {
-            let wp = wp.as_ptr();
+        for &wp in (*w).panes.iter() {
             let lc = (*wp).layout_cell;
             if lc.is_null() || wp == skip {
                 continue;

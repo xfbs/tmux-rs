@@ -86,12 +86,12 @@ pub unsafe fn screen_redraw_border_set(
 /// Return if window has only two panes.
 pub unsafe fn screen_redraw_two_panes(w: *mut window, direction: i32) -> bool {
     unsafe {
-        let wp: *mut window_pane =
-            tailq_next::<_, _, discr_entry>(tailq_first(&raw mut (*w).panes));
+        let first = (*w).panes.first().copied().unwrap_or(null_mut());
+        let wp: *mut window_pane = window_pane_next_in_list(first);
         if wp.is_null() {
             return false; /* one pane */
         }
-        if !tailq_next::<_, _, discr_entry>(wp).is_null() {
+        if !window_pane_next_in_list(wp).is_null() {
             return false; /* more than two panes */
         }
         if direction == 0 && (*wp).xoff == 0 {
@@ -212,7 +212,7 @@ pub unsafe fn screen_redraw_cell_border(ctx: *mut screen_redraw_ctx, px: u32, py
 
         // Check all the panes
         let mut result = 0;
-        for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+        for &wp in (*w).panes.iter() {
             if !window_pane_visible(wp) {
                 continue;
             }
@@ -356,9 +356,9 @@ pub unsafe fn screen_redraw_check_cell(
                     }
                 }
                 // next1
-                wp = tailq_next::<_, _, discr_entry>(wp);
+                wp = window_pane_next_in_list(wp);
                 if wp.is_null() {
-                    wp = tailq_first(&raw mut (*w).panes);
+                    wp = (*w).panes.first().copied().unwrap_or(null_mut());
                 }
                 if wp == active {
                     break;
@@ -387,9 +387,9 @@ pub unsafe fn screen_redraw_check_cell(
                 return screen_redraw_type_of_cell(ctx, px, py);
             }
             // next2
-            wp = tailq_next::<_, _, discr_entry>(wp);
+            wp = window_pane_next_in_list(wp);
             if wp.is_null() {
-                wp = tailq_first(&raw mut (*w).panes);
+                wp = (*w).panes.first().copied().unwrap_or(null_mut());
             }
             if wp == active {
                 break;
@@ -517,7 +517,7 @@ pub unsafe fn screen_redraw_draw_pane_status(ctx: *mut screen_redraw_ctx) {
             (*w).id,
         );
 
-        for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+        for &wp in (*w).panes.iter() {
             if !window_pane_visible(wp) {
                 continue;
             }
@@ -602,9 +602,7 @@ unsafe fn screen_redraw_update(c: *mut client, mut flags: client_flag) -> client
                 .unwrap_or_default();
             redraw = 0;
 
-            // Safe replacement for TAILQ_FOREACH macro
-            let mut wp = (*w).panes.tqh_first;
-            while !wp.is_null() {
+            for &wp in (*w).panes.iter() {
                 if screen_redraw_make_pane_status(
                     c,
                     NonNull::new_unchecked(wp),
@@ -614,7 +612,6 @@ unsafe fn screen_redraw_update(c: *mut client, mut flags: client_flag) -> client
                 {
                     redraw = 1;
                 }
-                wp = (*wp).entry.tqe_next;
             }
 
             if redraw != 0 {
@@ -894,7 +891,7 @@ pub unsafe fn screen_redraw_draw_borders(ctx: *mut screen_redraw_ctx) {
             (*w).id,
         );
 
-        for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+        for &wp in (*w).panes.iter() {
             (*wp).border_gc_set = 0;
         }
 
@@ -919,7 +916,7 @@ pub unsafe fn screen_redraw_draw_panes(ctx: *mut screen_redraw_ctx) {
             (*w).id
         );
 
-        for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+        for &wp in (*w).panes.iter() {
             if window_pane_visible(wp) {
                 screen_redraw_draw_pane(ctx, wp);
             }

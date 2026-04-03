@@ -11,7 +11,7 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::compat::queue::{tailq_first, tailq_next, tailq_prev};
+use crate::window_::{window_pane_next_in_list, window_pane_prev_in_list};
 use crate::*;
 use crate::options_::*;
 
@@ -89,11 +89,11 @@ pub unsafe fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
         if std::ptr::eq(entry, &CMD_LAST_PANE_ENTRY) || args_has(args, 'l') {
             // Check for no last pane found in case the other pane was
             // spawned without being visited (for example split-window -d).
-            lastwp = tailq_first(&raw mut (*w).last_panes);
+            lastwp = (*w).last_panes.first().copied().unwrap_or(null_mut());
             if lastwp.is_null() && window_count_panes(w) == 2 {
-                lastwp = tailq_prev::<_, _, discr_entry>((*w).active);
+                lastwp = window_pane_prev_in_list((*w).active);
                 if lastwp.is_null() {
-                    lastwp = tailq_next::<_, _, discr_entry>((*w).active);
+                    lastwp = window_pane_next_in_list((*w).active);
                 }
             }
             if lastwp.is_null() {

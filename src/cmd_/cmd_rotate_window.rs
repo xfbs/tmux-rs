@@ -11,10 +11,7 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::compat::queue::{
-    tailq_first, tailq_foreach, tailq_foreach_reverse, tailq_insert_head, tailq_insert_tail,
-    tailq_last, tailq_next, tailq_prev, tailq_remove,
-};
+use crate::window_::{window_pane_next_in_list, window_pane_prev_in_list};
 use crate::*;
 
 pub static CMD_ROTATE_WINDOW_ENTRY: cmd_entry = cmd_entry {
@@ -52,9 +49,9 @@ unsafe fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         window_push_zoom(w, false, args_has(args, 'Z'));
 
         if args_has(args, 'D') {
-            wp = tailq_last(&raw mut (*w).panes);
-            tailq_remove::<_, discr_entry>(&raw mut (*w).panes, wp);
-            tailq_insert_head::<_, discr_entry>(&raw mut (*w).panes, wp);
+            wp = (*w).panes.last().copied().unwrap_or(null_mut());
+            (*w).panes.retain(|&p| p != wp);
+            (*w).panes.insert(0, wp);
 
             lc = (*wp).layout_cell;
             xoff = (*wp).xoff;
@@ -63,9 +60,9 @@ unsafe fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
             sx = (*wp).sx;
             sy = (*wp).sy;
 
-            for wp_ in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+            for &wp_ in (*w).panes.iter() {
                 wp = wp_;
-                let wp2 = tailq_next::<_, _, discr_entry>(wp);
+                let wp2 = window_pane_next_in_list(wp);
                 if wp2.is_null() {
                     break;
                 }
@@ -85,25 +82,23 @@ unsafe fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
             (*wp).yoff = yoff;
             window_pane_resize(wp, sx, sy);
 
-            wp = tailq_prev::<_, _, discr_entry>((*w).active);
+            wp = window_pane_prev_in_list((*w).active);
             if wp.is_null() {
-                wp = tailq_last(&raw mut (*w).panes);
+                wp = (*w).panes.last().copied().unwrap_or(null_mut());
             }
         } else {
-            wp = tailq_first(&raw mut (*w).panes);
-            tailq_remove::<_, discr_entry>(&raw mut (*w).panes, wp);
-            tailq_insert_tail::<_, discr_entry>(&raw mut (*w).panes, wp);
+            wp = (*w).panes.first().copied().unwrap_or(null_mut());
+            (*w).panes.retain(|&p| p != wp);
+            (*w).panes.push(wp);
 
             lc = (*wp).layout_cell;
             xoff = (*wp).xoff;
             yoff = (*wp).yoff;
             sx = (*wp).sx;
             sy = (*wp).sy;
-            for wp_ in
-                tailq_foreach_reverse::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr)
-            {
+            for &wp_ in (*w).panes.iter().rev() {
                 wp = wp_;
-                let wp2 = tailq_prev::<_, _, discr_entry>(wp);
+                let wp2 = window_pane_prev_in_list(wp);
                 if wp2.is_null() {
                     break;
                 }
@@ -123,9 +118,9 @@ unsafe fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
             (*wp).yoff = yoff;
             window_pane_resize(wp, sx, sy);
 
-            wp = tailq_next::<_, _, discr_entry>((*w).active);
+            wp = window_pane_next_in_list((*w).active);
             if wp.is_null() {
-                wp = tailq_first(&raw mut (*w).panes);
+                wp = (*w).panes.first().copied().unwrap_or(null_mut());
             }
         }
 

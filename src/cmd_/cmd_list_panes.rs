@@ -11,7 +11,6 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::compat::queue::tailq_foreach;
 use crate::*;
 
 pub static CMD_LIST_PANES_ENTRY: cmd_entry = cmd_entry {
@@ -123,7 +122,7 @@ fn cmd_list_panes_window(
         }
         let filter = args_get_(args, 'f');
 
-        for (n, wp) in tailq_foreach::<_, discr_entry>(&raw mut (*(*wl).window).panes).enumerate() {
+        for (n, &wp) in (*(*wl).window).panes.iter().enumerate() {
             let ft = format_create(
                 cmdq_get_client(item),
                 item,
@@ -131,7 +130,7 @@ fn cmd_list_panes_window(
                 format_flags::empty(),
             );
             format_add!(ft, "line", "{n}");
-            format_defaults(ft, null_mut(), NonNull::new(s), NonNull::new(wl), Some(wp));
+            format_defaults(ft, null_mut(), NonNull::new(s), NonNull::new(wl), NonNull::new(wp));
 
             let flag;
             if !filter.is_null() {

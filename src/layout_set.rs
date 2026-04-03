@@ -156,7 +156,7 @@ pub unsafe fn layout_set_even(w: *mut window, type_: layout_type) {
         layout_make_node(lc, type_);
 
         // Build new leaf cells.
-        for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
+        for &wp in (*w).panes.iter() {
             let lcnew = layout_create_cell(lc);
             layout_make_leaf(lcnew, wp);
             (*lcnew).sx = (*w).sx;
@@ -259,14 +259,14 @@ pub unsafe fn layout_set_main_h(w: *mut window) {
         // Create the main pane.
         let lcmain = layout_create_cell(lc);
         layout_set_size(lcmain, sx, mainh, 0, 0);
-        layout_make_leaf(lcmain, tailq_first(&raw mut (*w).panes));
+        layout_make_leaf(lcmain, (*w).panes.first().copied().unwrap_or(null_mut()));
         (*lc).cells.push(lcmain);
 
         // Create the other pane.
         let lcother = layout_create_cell(lc);
         layout_set_size(lcother, sx, otherh, 0, 0);
         if n == 1 {
-            let wp = tailq_next::<_, _, discr_entry>(tailq_first(&raw mut (*w).panes));
+            let wp = window_pane_next_in_list((*w).panes.first().copied().unwrap_or(null_mut()));
             layout_make_leaf(lcother, wp);
             (*lc).cells.push(lcother);
         } else {
@@ -274,8 +274,8 @@ pub unsafe fn layout_set_main_h(w: *mut window) {
             (*lc).cells.push(lcother);
 
             // Add the remaining panes as children.
-            for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
-                if wp == tailq_first(&raw mut (*w).panes) {
+            for &wp in (*w).panes.iter() {
+                if wp == (*w).panes.first().copied().unwrap_or(null_mut()) {
                     continue;
                 }
                 let lcchild = layout_create_cell(lcother);
@@ -362,7 +362,7 @@ pub unsafe fn layout_set_main_h_mirrored(w: *mut window) {
         let lcother = layout_create_cell(lc);
         layout_set_size(lcother, sx, otherh, 0, 0);
         if n == 1 {
-            let wp = tailq_next::<_, _, discr_entry>(tailq_first(&raw mut (*w).panes));
+            let wp = window_pane_next_in_list((*w).panes.first().copied().unwrap_or(null_mut()));
             layout_make_leaf(lcother, wp);
             (*lc).cells.push(lcother);
         } else {
@@ -370,8 +370,8 @@ pub unsafe fn layout_set_main_h_mirrored(w: *mut window) {
             (*lc).cells.push(lcother);
 
             // Add the remaining panes as children.
-            for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
-                if wp == tailq_first(&raw mut (*w).panes) {
+            for &wp in (*w).panes.iter() {
+                if wp == (*w).panes.first().copied().unwrap_or(null_mut()) {
                     continue;
                 }
                 let lcchild = layout_create_cell(lcother);
@@ -385,7 +385,7 @@ pub unsafe fn layout_set_main_h_mirrored(w: *mut window) {
         // Create the main pane.
         let lcmain = layout_create_cell(lc);
         layout_set_size(lcmain, sx, mainh, 0, 0);
-        layout_make_leaf(lcmain, tailq_first(&raw mut (*w).panes));
+        layout_make_leaf(lcmain, (*w).panes.first().copied().unwrap_or(null_mut()));
         (*lc).cells.push(lcmain);
 
         // Fix cell offsets.
@@ -464,14 +464,14 @@ pub unsafe fn layout_set_main_v(w: *mut window) {
         // Create the main pane.
         let lcmain = layout_create_cell(lc);
         layout_set_size(lcmain, mainw, sy, 0, 0);
-        layout_make_leaf(lcmain, tailq_first(&raw mut (*w).panes));
+        layout_make_leaf(lcmain, (*w).panes.first().copied().unwrap_or(null_mut()));
         (*lc).cells.push(lcmain);
 
         // Create the other pane.
         let lcother = layout_create_cell(lc);
         layout_set_size(lcother, otherw, sy, 0, 0);
         if n == 1 {
-            let wp = tailq_next::<_, _, discr_entry>(tailq_first(&raw mut (*w).panes));
+            let wp = window_pane_next_in_list((*w).panes.first().copied().unwrap_or(null_mut()));
             layout_make_leaf(lcother, wp);
             (*lc).cells.push(lcother);
         } else {
@@ -479,8 +479,8 @@ pub unsafe fn layout_set_main_v(w: *mut window) {
             (*lc).cells.push(lcother);
 
             // Add the remaining panes as children.
-            for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
-                if wp == tailq_first(&raw mut (*w).panes) {
+            for &wp in (*w).panes.iter() {
+                if wp == (*w).panes.first().copied().unwrap_or(null_mut()) {
                     continue;
                 }
                 let lcchild = layout_create_cell(lcother);
@@ -567,7 +567,7 @@ pub unsafe fn layout_set_main_v_mirrored(w: *mut window) {
         let lcother = layout_create_cell(lc);
         layout_set_size(lcother, otherw, sy, 0, 0);
         if n == 1 {
-            let wp = tailq_next::<_, _, discr_entry>(tailq_first(&raw mut (*w).panes));
+            let wp = window_pane_next_in_list((*w).panes.first().copied().unwrap_or(null_mut()));
             layout_make_leaf(lcother, wp);
             (*lc).cells.push(lcother);
         } else {
@@ -575,8 +575,8 @@ pub unsafe fn layout_set_main_v_mirrored(w: *mut window) {
             (*lc).cells.push(lcother);
 
             // Add the remaining panes as children.
-            for wp in tailq_foreach::<_, discr_entry>(&raw mut (*w).panes).map(NonNull::as_ptr) {
-                if wp == tailq_first(&raw mut (*w).panes) {
+            for &wp in (*w).panes.iter() {
+                if wp == (*w).panes.first().copied().unwrap_or(null_mut()) {
                     continue;
                 }
                 let lcchild = layout_create_cell(lcother);
@@ -590,7 +590,7 @@ pub unsafe fn layout_set_main_v_mirrored(w: *mut window) {
         // Create the main pane.
         let lcmain = layout_create_cell(lc);
         layout_set_size(lcmain, mainw, sy, 0, 0);
-        layout_make_leaf(lcmain, tailq_first(&raw mut (*w).panes));
+        layout_make_leaf(lcmain, (*w).panes.first().copied().unwrap_or(null_mut()));
         (*lc).cells.push(lcmain);
 
         // Fix cell offsets.
@@ -653,7 +653,7 @@ pub unsafe fn layout_set_tiled(w: *mut window) {
         layout_make_node(lc, layout_type::LAYOUT_TOPBOTTOM);
 
         // Create a grid of the cells.
-        let mut wp = tailq_first(&raw mut (*w).panes);
+        let mut wp = (*w).panes.first().copied().unwrap_or(null_mut());
         for j in 0..rows {
             // If this is the last cell, all done.
             if wp.is_null() {
@@ -668,7 +668,7 @@ pub unsafe fn layout_set_tiled(w: *mut window) {
             // If only one column, just use the row directly.
             if n - (j * columns) == 1 || columns == 1 {
                 layout_make_leaf(lcrow, wp);
-                wp = tailq_next::<_, _, discr_entry>(wp);
+                wp = window_pane_next_in_list(wp);
                 continue;
             }
 
@@ -684,7 +684,7 @@ pub unsafe fn layout_set_tiled(w: *mut window) {
                 (*lcrow).cells.push(lcchild);
 
                 // Move to the next cell.
-                wp = tailq_next::<_, _, discr_entry>(wp);
+                wp = window_pane_next_in_list(wp);
                 if wp.is_null() {
                     break;
                 }
