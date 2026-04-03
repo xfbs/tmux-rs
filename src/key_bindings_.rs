@@ -80,7 +80,7 @@ static mut KEY_TABLES: key_tables = BTreeMap::new();
 unsafe fn key_binding_free_fields(bd: &mut key_binding) {
     unsafe {
         cmd_list_free(bd.cmdlist);
-        free_(bd.note);
+        bd.note = None;
     }
 }
 
@@ -182,11 +182,10 @@ pub unsafe fn key_bindings_add(
         if cmdlist.is_null() {
             // Just update note on existing binding
             if let Some(bd) = (*table).key_bindings.get_mut(&masked_key) {
-                free_(bd.note);
                 bd.note = if !note.is_null() {
-                    xstrdup(note).as_ptr()
+                    Some(cstr_to_str(note).to_string())
                 } else {
-                    null_mut()
+                    None
                 };
             }
             return;
@@ -200,9 +199,9 @@ pub unsafe fn key_bindings_add(
         let bd = key_binding {
             key: masked_key,
             note: if !note.is_null() {
-                xstrdup(note).as_ptr()
+                Some(cstr_to_str(note).to_string())
             } else {
-                null_mut()
+                None
             },
             flags: if repeat { KEY_BINDING_REPEAT } else { 0 },
             cmdlist,
@@ -271,12 +270,7 @@ pub unsafe fn key_bindings_reset(name: *const u8, key: key_code) {
         (*bd).cmdlist = (*dd).cmdlist;
         (*(*bd).cmdlist).references += 1;
 
-        free_((*bd).note);
-        if !(*dd).note.is_null() {
-            (*bd).note = xstrdup((*dd).note).as_ptr();
-        } else {
-            (*bd).note = null_mut();
-        }
+        (*bd).note = (*dd).note.clone();
         (*bd).flags = (*dd).flags;
     }
 }
@@ -328,11 +322,7 @@ unsafe fn key_bindings_init_done(_item: *mut cmdq_item, _data: *mut c_void) -> c
                 .map(|(&key, bd)| {
                     let new_bd = key_binding {
                         key: bd.key,
-                        note: if !bd.note.is_null() {
-                            xstrdup(bd.note).as_ptr()
-                        } else {
-                            null_mut()
-                        },
+                        note: bd.note.clone(),
                         flags: bd.flags,
                         cmdlist: bd.cmdlist,
                     };

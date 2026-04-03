@@ -2319,7 +2319,7 @@ const KEY_BINDING_REPEAT: i32 = 0x1;
 struct key_binding {
     key: key_code,
     cmdlist: *mut cmd_list,
-    note: *mut u8,
+    note: Option<String>,
 
     flags: i32,
 }

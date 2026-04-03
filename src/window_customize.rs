@@ -500,8 +500,8 @@ unsafe fn window_customize_build_keys(
 
         for bd in key_bindings_entries(kt) {
             format_add!(ft, "key", "{}", _s(key_string_lookup_key((*bd).key, 0)),);
-            if !(*bd).note.is_null() {
-                format_add!(ft, "key_note", "{}", _s((*bd).note));
+            if let Some(ref note) = (*bd).note {
+                format_add!(ft, "key_note", "{}", note);
             }
             if !filter.is_null() {
                 let expanded = format_expand(ft, filter);
@@ -547,8 +547,8 @@ unsafe fn window_customize_build_keys(
             mode_tree_no_tag(mti);
             free_(text);
 
-            if !(*bd).note.is_null() {
-                text = format_nul!("#[ignore]{}", _s((*bd).note));
+            if let Some(ref note) = (*bd).note {
+                text = format_nul!("#[ignore]{}", note);
             } else {
                 text = xstrdup(c!("")).as_ptr();
             }
@@ -697,11 +697,8 @@ unsafe fn window_customize_draw_key(
             return;
         }
 
-        let mut note: *const u8 = (*bd).note;
-        if note.is_null() {
-            note = c!("There is no note for this key.");
-        }
-        if *note != b'\0' && *note.add(libc::strlen(note) - 1) != b'.' {
+        let note_str = (*bd).note.as_deref().unwrap_or("There is no note for this key.");
+        if !note_str.is_empty() && !note_str.ends_with('.') {
             period = c!(".");
         }
         if !screen_write_text!(
@@ -712,7 +709,7 @@ unsafe fn window_customize_draw_key(
             0,
             &GRID_DEFAULT_CELL,
             "{}{}",
-            _s(note),
+            note_str,
             _s(period),
         ) {
             return;
@@ -1554,8 +1551,7 @@ pub unsafe fn window_customize_set_note_callback(
             return 0;
         }
 
-        free_((*bd).note);
-        (*bd).note = xstrdup(s).as_ptr();
+        (*bd).note = Some(cstr_to_str(s).to_string());
 
         mode_tree_build((*data).data);
         mode_tree_draw(&mut *(*data).data);
@@ -1625,15 +1621,12 @@ pub unsafe fn window_customize_set_key(
             });
 
             (*data).references += 1;
+            let note_cstr = std::ffi::CString::new((*bd).note.as_deref().unwrap_or("")).unwrap();
             status_prompt_set(
                 c,
                 null_mut(),
                 prompt,
-                if (*bd).note.is_null() {
-                    c!("")
-                } else {
-                    (*bd).note
-                },
+                note_cstr.as_ptr().cast(),
                 window_customize_set_note_callback,
                 window_customize_free_item_callback,
                 Box::leak(new_item),

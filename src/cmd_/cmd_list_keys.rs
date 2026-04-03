@@ -53,8 +53,7 @@ unsafe fn cmd_list_keys_get_width(tablename: *const u8, only: key_code) -> u32 {
         for bd in key_bindings_entries(table) {
             if (only != KEYC_UNKNOWN && (*bd).key != only)
                 || KEYC_IS_MOUSE((*bd).key)
-                || (*bd).note.is_null()
-                || *(*bd).note == b'\0'
+                || (*bd).note.as_ref().is_none_or(|s| s.is_empty())
             {
                 continue;
             }
@@ -86,17 +85,17 @@ unsafe fn cmd_list_keys_print_notes(
         for bd in key_bindings_entries(table) {
             if (only != KEYC_UNKNOWN && (*bd).key != only)
                 || KEYC_IS_MOUSE((*bd).key)
-                || (((*bd).note.is_null() || *(*bd).note == b'\0') && !args_has(args, 'a'))
+                || ((*bd).note.as_ref().is_none_or(|s| s.is_empty()) && !args_has(args, 'a'))
             {
                 continue;
             }
             found = 1;
             let key = key_string_lookup_key((*bd).key, 0);
 
-            let note = if (*bd).note.is_null() || *(*bd).note == b'\0' {
+            let note = if (*bd).note.as_ref().is_none_or(|s| s.is_empty()) {
                 cmd_list_print(&*(*bd).cmdlist, 1)
             } else {
-                xstrdup((*bd).note).as_ptr()
+                xstrdup__((*bd).note.as_deref().unwrap_or(""))
             };
 
             let tmp = utf8_padcstr(key, keywidth + 1);
