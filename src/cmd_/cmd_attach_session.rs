@@ -124,7 +124,7 @@ pub unsafe fn cmd_attach_session(
                 }
             }
             if !eflag {
-                environ_update((*s).options, (*c).environ, (*s).environ);
+                environ_update((*s).options, &*(*c).environ, &mut *(*s).environ);
             }
 
             server_client_set_session(c, s);
@@ -152,7 +152,7 @@ pub unsafe fn cmd_attach_session(
                 }
             }
             if !eflag {
-                environ_update((*s).options, (*c).environ, (*s).environ);
+                environ_update((*s).options, &*(*c).environ, &mut *(*s).environ);
             }
 
             server_client_set_session(c, s);

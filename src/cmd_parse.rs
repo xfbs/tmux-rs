@@ -1064,9 +1064,9 @@ unsafe fn yylex_token_variable(ps: &mut cmd_parse_state, buf: &mut Vec<u8>) -> b
         }
         name[namelen] = b'\0';
 
-        let envent = environ_find(GLOBAL_ENVIRON, (&raw const name).cast());
-        if !envent.is_null() {
-            if let Some(ref value) = (*envent).value {
+        let envent = environ_find_raw(&*GLOBAL_ENVIRON, (&raw const name).cast());
+        if let Some(envent) = envent {
+            if let Some(ref value) = envent.value {
                 // log_debug("%s: %s -> %s", __func__, name, value);
                 yylex_append(buf, value);
             }
@@ -1098,9 +1098,9 @@ unsafe fn yylex_token_tilde(ps: &mut cmd_parse_state, buf: &mut Vec<u8>) -> bool
         name[namelen] = b'\0';
 
         if name[0] == b'\0' {
-            let envent = environ_find(GLOBAL_ENVIRON, c!("HOME"));
-            if !envent.is_null() {
-                if let Some(ref value) = (*envent).value {
+            let envent = environ_find_raw(&*GLOBAL_ENVIRON, c!("HOME"));
+            if let Some(envent) = envent {
+                if let Some(ref value) = envent.value {
                     if !value.is_empty() {
                         home = value.as_ptr();
                     }

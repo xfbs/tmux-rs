@@ -96,7 +96,7 @@ pub unsafe fn job_run(
         'fail: {
             env = environ_for_session(s, !CFG_FINISHED.load(atomic::Ordering::Acquire) as i32);
             if !e.is_null() {
-                environ_copy(e, env);
+                environ_copy(&*e, &mut *env);
             }
 
             if !flags.intersects(job_flag::JOB_DEFAULTSHELL) {
@@ -174,7 +174,7 @@ pub unsafe fn job_run(
                         fatal("chdir failed");
                     }
 
-                    environ_push(env);
+                    environ_push(&*env);
                     environ_free(env);
 
                     if !flags.intersects(job_flag::JOB_PTY) {

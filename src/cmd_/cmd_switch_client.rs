@@ -116,7 +116,7 @@ unsafe fn cmd_switch_client_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         }
 
         if !args_has(args, 'E') {
-            environ_update((*s).options, (*tc).environ, (*s).environ);
+            environ_update((*s).options, &*(*tc).environ, &mut *(*s).environ);
         }
 
         server_client_set_session(tc, s);

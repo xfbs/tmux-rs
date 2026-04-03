@@ -34,7 +34,7 @@ pub static CMD_SHOW_ENVIRONMENT_ENTRY: cmd_entry = cmd_entry {
 
 /// Escape a value for shell double-quote context. Characters that POSIX
 /// interprets inside double quotes (`$`, `` ` ``, `"`, `\`) are backslash-escaped.
-unsafe fn cmd_show_environment_escape(value: &[u8]) -> String {
+fn cmd_show_environment_escape(value: &[u8]) -> String {
     let mut out = String::with_capacity(value.len() * 2);
     for &c in value {
         if c == b'$' || c == b'`' || c == b'"' || c == b'\\' {
@@ -48,43 +48,43 @@ unsafe fn cmd_show_environment_escape(value: &[u8]) -> String {
 unsafe fn cmd_show_environment_print(
     self_: *mut cmd,
     item: *mut cmdq_item,
-    envent: *mut EnvironEntry,
+    envent: &EnvironEntry,
 ) {
     unsafe {
         let args = cmd_get_args(self_);
 
-        if !args_has(args, 'h') && (*envent).flags.intersects(ENVIRON_HIDDEN) {
+        if !args_has(args, 'h') && envent.flags.intersects(ENVIRON_HIDDEN) {
             return;
         }
-        if args_has(args, 'h') && !(*envent).flags.intersects(ENVIRON_HIDDEN) {
+        if args_has(args, 'h') && !envent.flags.intersects(ENVIRON_HIDDEN) {
             return;
         }
 
         if !args_has(args, 's') {
-            if let Some(ref value) = (*envent).value {
+            if let Some(ref value) = envent.value {
                 cmdq_print!(
                     item,
                     "{}={}",
-                    (*envent).name,
+                    envent.name,
                     String::from_utf8_lossy(value),
                 );
             } else {
-                cmdq_print!(item, "-{}", (*envent).name);
+                cmdq_print!(item, "-{}", envent.name);
             }
             return;
         }
 
-        if let Some(ref value) = (*envent).value {
+        if let Some(ref value) = envent.value {
             let escaped = cmd_show_environment_escape(value);
             cmdq_print!(
                 item,
                 "{}=\"{}\"; export {};",
-                (*envent).name,
+                envent.name,
                 escaped,
-                (*envent).name,
+                envent.name,
             );
         } else {
-            cmdq_print!(item, "unset {};", (*envent).name);
+            cmdq_print!(item, "unset {};", envent.name);
         }
     }
 }
@@ -118,17 +118,16 @@ unsafe fn cmd_show_environment_exec(self_: *mut cmd, item: *mut cmdq_item) -> cm
         }
 
         if !name.is_null() {
-            let envent = environ_find(env, name);
-            if envent.is_null() {
+            let Some(envent) = environ_find_raw(&*env, name) else {
                 cmdq_error!(item, "unknown variable: {}", _s(name));
                 return cmd_retval::CMD_RETURN_ERROR;
-            }
+            };
             cmd_show_environment_print(self_, item, envent);
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        for entry_ptr in environ_entries(env) {
-            cmd_show_environment_print(self_, item, entry_ptr);
+        for entry in environ_entries(&*env) {
+            cmd_show_environment_print(self_, item, entry);
         }
         cmd_retval::CMD_RETURN_NORMAL
     }

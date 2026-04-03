@@ -83,14 +83,14 @@ unsafe fn cmd_set_environment_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
                     retval = cmd_retval::CMD_RETURN_ERROR;
                     break 'out;
                 }
-                environ_unset(env, name);
+                environ_unset(&mut *env, name);
             } else if args_has(args, 'r') {
                 if !value.is_null() {
                     cmdq_error!(item, "can't specify a value with -r");
                     retval = cmd_retval::CMD_RETURN_ERROR;
                     break 'out;
                 }
-                environ_clear(env, cstr_to_str(name));
+                environ_clear(&mut *env, cstr_to_str(name));
             } else {
                 if value.is_null() {
                     cmdq_error!(item, "no value specified");

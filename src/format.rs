@@ -3467,15 +3467,15 @@ fn format_find(
             }
 
             if !modifiers.intersects(format_modifiers::FORMAT_TIMESTRING) {
-                let mut envent = null_mut();
+                let mut envent = None;
                 if !(*ft).s.is_null() {
-                    envent = environ_find((*(*ft).s).environ, key);
+                    envent = environ_find_raw(&*(*(*ft).s).environ, key);
                 }
-                if envent.is_null() {
-                    envent = environ_find(GLOBAL_ENVIRON, key);
+                if envent.is_none() {
+                    envent = environ_find_raw(&*GLOBAL_ENVIRON, key);
                 }
-                if !envent.is_null() {
-                    if let Some(ref value) = (*envent).value {
+                if let Some(envent) = envent {
+                    if let Some(ref value) = envent.value {
                         let p = xmalloc(value.len() + 1).as_ptr().cast::<u8>();
                         std::ptr::copy_nonoverlapping(value.as_ptr(), p, value.len());
                         *p.add(value.len()) = b'\0';

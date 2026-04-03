@@ -138,12 +138,12 @@ unsafe fn expand_path(path: *const u8, home: Option<&CStr>) -> Option<CString> {
                     .cast()
                     .as_ptr()
             };
-            let envent = environ_find(GLOBAL_ENVIRON, name);
+            let envent = environ_find_raw(&*GLOBAL_ENVIRON, name);
             free_(name);
-            if envent.is_null() {
+            let Some(envent) = envent else {
                 return None;
-            }
-            let val = match (*envent).value {
+            };
+            let val = match envent.value {
                 Some(ref v) => String::from_utf8_lossy(v),
                 None => return None,
             };
@@ -402,7 +402,7 @@ pub unsafe fn tmux_main(mut argc: i32, mut argv: *mut *mut u8, _env: *mut *mut u
 
         let mut var = environ;
         while !(*var).is_null() {
-            environ_put(GLOBAL_ENVIRON, *var, environ_flags::empty());
+            environ_put(&mut *GLOBAL_ENVIRON, *var, environ_flags::empty());
             var = var.add(1);
         }
 

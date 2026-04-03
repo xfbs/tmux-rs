@@ -238,7 +238,6 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut wi
         let w = (*(*sc).wl).window;
         let new_wp: *mut window_pane;
         let child: *mut Environ;
-        let ee: *const EnvironEntry;
         let argv: *mut *mut u8;
         let argvp: *mut *mut u8;
         let argv0: *mut u8;
@@ -341,7 +340,7 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut wi
             // Create an environment for this pane.
             child = environ_for_session(s, 0);
             if !(*sc).environ.is_null() {
-                environ_copy((*sc).environ, child);
+                environ_copy(&*(*sc).environ, &mut *child);
             }
             environ_set!(
                 child,
@@ -356,14 +355,13 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut wi
             // myprogram" wouldn't work if myprogram isn't in the session's path.
             if !c.is_null() && (*c).session.is_null() {
                 // only unattached clients
-                ee = environ_find((*c).environ, c!("PATH"));
-                if !ee.is_null() {
-                    if let Some(ref value) = (*ee).value {
-                        environ_set_(child, "PATH", environ_flags::empty(), value.clone());
+                if let Some(ee) = environ_find_raw(&*(*c).environ, c!("PATH")) {
+                    if let Some(ref value) = ee.value {
+                        environ_set_(&mut *child, "PATH", environ_flags::empty(), value.clone());
                     }
                 }
             }
-            if environ_find(child, c!("PATH")).is_null() {
+            if environ_find_raw(&*child, c!("PATH")).is_none() {
                 environ_set!(
                     child,
                     c!("PATH"),
@@ -511,7 +509,7 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut wi
             closefrom(STDERR_FILENO + 1);
             sigprocmask(SIG_SETMASK, &raw mut oldset, null_mut());
             log_close();
-            environ_push(child);
+            environ_push(&*child);
 
             // If given multiple arguments, use execvp(). Copy the arguments to
             // ensure they end in a NULL.
