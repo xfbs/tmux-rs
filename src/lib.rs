@@ -711,7 +711,7 @@ fn COLOUR_DEFAULT(c: i32) -> bool {
 bitflags::bitflags! {
     /// Grid flags.
     #[repr(transparent)]
-    #[derive(Copy, Clone, Eq, PartialEq)]
+    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
     struct grid_attr : u16 {
         const GRID_ATTR_BRIGHT = 0x1;
         const GRID_ATTR_DIM = 0x2;
