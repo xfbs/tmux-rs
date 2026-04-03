@@ -58,6 +58,8 @@ fn fill_pane(client: &mut PtyClient, lines: &[&str]) {
     client.read_raw(); // drain
 }
 
+
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -519,7 +521,6 @@ fn rectangle_toggle_vi() {
 
 // 2. Jump to character
 #[test]
-    #[ignore = "test logic: cursor position assumption incorrect"]
 fn jump_forward_vi() {
     let (tmux, mut client) = setup(40, 10);
     set_mode_keys(&tmux, "vi");
@@ -527,7 +528,8 @@ fn jump_forward_vi() {
     fill_pane(&mut client, &["abcdefghij"]);
 
     enter_copy_mode(&tmux);
-    send_copy_cmd(&tmux, "history-top");
+    // Go up 1 line from the prompt to land on the echoed output line.
+    send_copy_cmd(&tmux, "cursor-up");
     send_copy_cmd(&tmux, "start-of-line");
 
     let x_before = tmux.query("#{copy_cursor_x}");
@@ -542,7 +544,7 @@ fn jump_forward_vi() {
 }
 
 #[test]
-    #[ignore = "test logic: cursor position assumption incorrect"]
+#[ignore = "broken: tmux-rs jump-backward does not move cursor (passes with C tmux)"]
 fn jump_backward_vi() {
     let (tmux, mut client) = setup(40, 10);
     set_mode_keys(&tmux, "vi");
@@ -550,7 +552,8 @@ fn jump_backward_vi() {
     fill_pane(&mut client, &["abcdefghij"]);
 
     enter_copy_mode(&tmux);
-    send_copy_cmd(&tmux, "history-top");
+    // Go up 1 line from the prompt to land on the echoed output line.
+    send_copy_cmd(&tmux, "cursor-up");
     send_copy_cmd(&tmux, "start-of-line");
 
     // Move to end first
@@ -565,7 +568,6 @@ fn jump_backward_vi() {
 }
 
 #[test]
-    #[ignore = "test logic: cursor position assumption incorrect"]
 fn jump_again_vi() {
     let (tmux, mut client) = setup(40, 10);
     set_mode_keys(&tmux, "vi");
@@ -573,7 +575,8 @@ fn jump_again_vi() {
     fill_pane(&mut client, &["abcaefaghi"]);
 
     enter_copy_mode(&tmux);
-    send_copy_cmd(&tmux, "history-top");
+    // Go up 1 line from the prompt to land on the echoed output line.
+    send_copy_cmd(&tmux, "cursor-up");
     send_copy_cmd(&tmux, "start-of-line");
 
     // jump-forward to 'a' -- from col 0 which is 'a', should find next 'a' at col 3
@@ -581,10 +584,10 @@ fn jump_again_vi() {
     let x1 = tmux.query("#{copy_cursor_x}");
     assert_eq!(x1, "3", "first jump-forward 'a' should land at col 3");
 
-    // jump-again should find the next 'a' at col 5
+    // jump-again should find the next 'a' at col 6
     send_copy_cmd(&tmux, "jump-again");
     let x2 = tmux.query("#{copy_cursor_x}");
-    assert_eq!(x2, "5", "jump-again should land at col 5 (third 'a')");
+    assert_eq!(x2, "6", "jump-again should land at col 6 (third 'a')");
 
     send_copy_cmd(&tmux, "cancel");
 }
@@ -653,7 +656,7 @@ fn append_selection_vi() {
 
 // 5. Word movement: w/b/e (next-word, previous-word, next-word-end)
 #[test]
-    #[ignore = "test logic: cursor position assumption incorrect"]
+#[ignore = "broken: tmux-rs next-word skips too far (passes with C tmux)"]
 fn word_movement_vi() {
     let (tmux, mut client) = setup(40, 10);
     set_mode_keys(&tmux, "vi");
@@ -661,7 +664,8 @@ fn word_movement_vi() {
     fill_pane(&mut client, &["one two three four"]);
 
     enter_copy_mode(&tmux);
-    send_copy_cmd(&tmux, "history-top");
+    // Go up 1 line from the prompt to land on the echoed output line.
+    send_copy_cmd(&tmux, "cursor-up");
     send_copy_cmd(&tmux, "start-of-line");
 
     // Cursor at col 0 ("one")
@@ -757,7 +761,6 @@ fn start_end_of_line_vi() {
 }
 
 #[test]
-    #[ignore = "test logic: cursor position assumption incorrect"]
 fn back_to_indentation_vi() {
     let (tmux, mut client) = setup(40, 10);
     set_mode_keys(&tmux, "vi");
@@ -768,9 +771,8 @@ fn back_to_indentation_vi() {
     client.read_raw();
 
     enter_copy_mode(&tmux);
-    send_copy_cmd(&tmux, "history-top");
-
-    // Navigate to the indented line
+    // Go up 1 line from the prompt to land on the indented output line.
+    send_copy_cmd(&tmux, "cursor-up");
     send_copy_cmd(&tmux, "start-of-line");
     let x_start = tmux.query("#{copy_cursor_x}");
     assert_eq!(x_start, "0", "start-of-line should be at col 0");

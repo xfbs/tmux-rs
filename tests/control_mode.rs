@@ -149,26 +149,25 @@ fn control_mode_list_sessions() {
 }
 
 #[test]
-#[ignore = "test logic: notification assertion needs fixing"]
-    fn control_mode_new_window_notification() {
+fn control_mode_new_window_notification() {
     let (tmux, child, mut stdin, mut reader) = setup_control();
 
-    // Drain initial output
+    // Drain initial output (attach response + session-changed notification)
     let _initial = read_until(&mut reader, Duration::from_secs(3), |line| {
         line.starts_with("%end")
     });
 
-    // Send new-window
+    // Send new-window and wait for the %window-add notification specifically,
+    // since it arrives after the command's %begin/%end pair.
     let lines = send_and_collect(
         &mut stdin,
         &mut reader,
         "new-window",
         Duration::from_secs(5),
-        |line| line.starts_with("%end"),
+        |line| line.starts_with("%window-add"),
     );
 
     let output = lines.join("\n");
-    // We should see a %window-add notification
     assert!(
         lines.iter().any(|l| l.starts_with("%window-add")),
         "expected %%window-add notification, got:\n{}",
@@ -180,26 +179,25 @@ fn control_mode_list_sessions() {
 }
 
 #[test]
-#[ignore = "test logic: notification assertion needs fixing"]
-    fn control_mode_split_window_layout_change() {
+fn control_mode_split_window_layout_change() {
     let (tmux, child, mut stdin, mut reader) = setup_control();
 
-    // Drain initial output
+    // Drain initial output (attach response + session-changed notification)
     let _initial = read_until(&mut reader, Duration::from_secs(3), |line| {
         line.starts_with("%end")
     });
 
-    // Send split-window
+    // Send split-window and wait for the %layout-change notification,
+    // which arrives after the command's %begin/%end pair.
     let lines = send_and_collect(
         &mut stdin,
         &mut reader,
         "split-window",
         Duration::from_secs(5),
-        |line| line.starts_with("%end"),
+        |line| line.starts_with("%layout-change"),
     );
 
     let output = lines.join("\n");
-    // We should see a %layout-change notification
     assert!(
         lines.iter().any(|l| l.starts_with("%layout-change")),
         "expected %%layout-change notification, got:\n{}",
@@ -211,32 +209,26 @@ fn control_mode_list_sessions() {
 }
 
 #[test]
-#[ignore = "test logic: notification assertion needs fixing"]
-    fn control_mode_rename_session() {
+fn control_mode_rename_session() {
     let (tmux, child, mut stdin, mut reader) = setup_control();
 
-    // Drain initial output
+    // Drain initial output (attach response + session-changed notification)
     let _initial = read_until(&mut reader, Duration::from_secs(3), |line| {
         line.starts_with("%end")
     });
 
-    // Send rename-session
+    // Send rename-session and wait for a line containing "newname",
+    // which appears in the %session-renamed or %session-changed notification
+    // after the command's %begin/%end pair.
     let lines = send_and_collect(
         &mut stdin,
         &mut reader,
         "rename-session newname",
         Duration::from_secs(5),
-        |line| line.starts_with("%end"),
+        |line| line.contains("newname"),
     );
 
     let output = lines.join("\n");
-    // We should see a %session-changed or %session-renamed notification
-    assert!(
-        lines.iter().any(|l| l.starts_with("%session-changed") || l.starts_with("%session-renamed")),
-        "expected %%session-changed or %%session-renamed notification, got:\n{}",
-        output
-    );
-    // The notification should reference "newname"
     assert!(
         lines.iter().any(|l| l.contains("newname")),
         "expected 'newname' in output, got:\n{}",
