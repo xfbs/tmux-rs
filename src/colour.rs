@@ -153,15 +153,7 @@ pub fn colour_tostring(c: i32) -> Cow<'static, str> {
 
 /// Convert colour from string.
 pub fn colour_fromstring(s: &str) -> i32 {
-    if s.chars().next().is_some_and(|c| c == '#') && s.len() == 7 {
-        let cp = s.trim_start_matches(|c: char| c.is_ascii_hexdigit());
-        if cp.is_empty() {
-            return -1;
-        }
-
-        if s.len() < 7 {
-            return -1;
-        }
+    if s.as_bytes().first() == Some(&b'#') && s.len() == 7 && s.is_ascii() {
         if let (Ok(r), Ok(g), Ok(b)) = (
             u8::from_str_radix(&s[1..3], 16),
             u8::from_str_radix(&s[3..5], 16),
@@ -173,14 +165,14 @@ pub fn colour_fromstring(s: &str) -> i32 {
         }
     }
 
-    if s.len() > 6 && s[..6].eq_ignore_ascii_case("colour") {
+    if s.len() > 6 && s.as_bytes()[..6].eq_ignore_ascii_case(b"colour") {
         let Ok(n) = strtonum_(&s[6..], 0i32, 255) else {
             return -1;
         };
         return n | COLOUR_FLAG_256;
     }
 
-    if s.len() > 5 && s[..5].eq_ignore_ascii_case("color") {
+    if s.len() > 5 && s.as_bytes()[..5].eq_ignore_ascii_case(b"color") {
         let Ok(n) = strtonum_(&s[5..], 0i32, 255) else {
             return -1;
         };

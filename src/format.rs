@@ -3667,7 +3667,7 @@ pub unsafe fn format_true(s: *const u8) -> bool {
 
 /// Check if modifier end.
 pub fn format_is_end(c: u8) -> bool {
-    c == b';' || c == b':'
+    c == b'\0' || c == b';' || c == b':'
 }
 
 /// Add to modifier list.
@@ -3735,6 +3735,9 @@ pub unsafe fn format_build_modifiers(
             // Skip any separator character.
             if *cp == b';' {
                 cp = cp.add(1);
+            }
+            if *cp == b'\0' || *cp == b':' {
+                break;
             }
 
             // Check single character modifiers with no arguments.
@@ -4927,6 +4930,11 @@ pub unsafe fn format_expand1(es: *mut format_expand_state, mut fmt: *const u8) -
             }
             fmt = fmt.add(1);
 
+            // Trailing '#' at end of format string — nothing follows.
+            if *fmt == b'\0' {
+                break;
+            }
+
             let ch: u8 = *fmt;
             fmt = fmt.add(1);
             let mut brackets;
@@ -5460,6 +5468,10 @@ pub fn fuzz_format_expand(input: &[u8]) {
         use crate::options_::*;
         use crate::options_table::OPTIONS_TABLE;
         use crate::tmux::{GLOBAL_OPTIONS, GLOBAL_S_OPTIONS, GLOBAL_W_OPTIONS};
+        use crate::tmux::GLOBAL_ENVIRON;
+        use crate::environ_::environ_create;
+
+        GLOBAL_ENVIRON = environ_create().as_ptr();
 
         GLOBAL_OPTIONS = options_create(null_mut());
         GLOBAL_S_OPTIONS = options_create(null_mut());

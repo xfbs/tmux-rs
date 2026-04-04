@@ -60,6 +60,10 @@ pub unsafe fn regsub_expand(
         while *cp != b'\0' {
             if *cp == b'\\' {
                 cp = cp.add(1);
+                // Trailing backslash at end of replacement string.
+                if *cp == b'\0' {
+                    break;
+                }
                 if *cp >= b'0' as _ && *cp <= b'9' as _ {
                     let i = (*cp - b'0') as u32;
                     if i < n && (*m.add(i as _)).rm_so != (*m.add(i as _)).rm_eo {

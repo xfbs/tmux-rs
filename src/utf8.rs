@@ -491,6 +491,7 @@ pub unsafe fn utf8_strvis(
                 src = src.add(1);
                 while src < end && more == utf8_state::UTF8_MORE {
                     more = utf8_append(&raw mut ud, *src);
+                    src = src.add(1);
                 }
                 if more == utf8_state::UTF8_DONE {
                     // UTF-8 character finished.
@@ -535,6 +536,7 @@ pub unsafe fn utf8_strvis_(dst: &mut Vec<u8>, mut src: *const u8, len: usize, fl
                 src = src.add(1);
                 while src < end && more == utf8_state::UTF8_MORE {
                     more = utf8_append(&raw mut ud, *src);
+                    src = src.add(1);
                 }
                 if more == utf8_state::UTF8_DONE {
                     // UTF-8 character finished.

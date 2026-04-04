@@ -14,7 +14,10 @@ struct RegsubInput {
 fuzz_target!(|input: RegsubInput| {
     sandbox::enable("regsub");
 
-    // Regex substitution: pattern + replacement + text → result string.
-    // Pure computation using POSIX regcomp/regexec. No side effects.
+    // Limit input sizes to avoid POSIX regex OOM on pathological patterns.
+    if input.pattern.len() > 32 || input.replacement.len() > 32 || input.text.len() > 32 {
+        return;
+    }
+
     tmux_rs_new::regsub::fuzz_regsub(&input.pattern, &input.replacement, &input.text);
 });

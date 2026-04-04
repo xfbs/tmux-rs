@@ -648,7 +648,10 @@ pub fn fuzz_cmd_parse(input: &[u8]) {
         use crate::options_::*;
         use crate::options_table::OPTIONS_TABLE;
         use crate::tmux::{GLOBAL_OPTIONS, GLOBAL_S_OPTIONS, GLOBAL_W_OPTIONS};
+        use crate::tmux::GLOBAL_ENVIRON;
+        use crate::environ_::environ_create;
 
+        GLOBAL_ENVIRON = environ_create().as_ptr();
         GLOBAL_OPTIONS = options_create(null_mut());
         GLOBAL_S_OPTIONS = options_create(null_mut());
         GLOBAL_W_OPTIONS = options_create(null_mut());
