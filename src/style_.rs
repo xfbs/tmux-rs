@@ -59,6 +59,17 @@ pub static mut STYLE_DEFAULT: style = style {
     default_type: style_default_type::STYLE_DEFAULT_BASE,
 };
 
+/// Fuzz-friendly wrapper: parses a NUL-terminated byte slice as a style string.
+/// Returns 0 on success, -1 on error. Encapsulates private types so fuzz targets
+/// don't need to import `style` or `grid_cell`.
+#[cfg(fuzzing)]
+pub fn fuzz_style_parse(input: &[u8]) -> i32 {
+    unsafe {
+        let mut sy = *(&raw const STYLE_DEFAULT);
+        style_parse(&raw mut sy, &raw const grid_::GRID_DEFAULT_CELL, input.as_ptr())
+    }
+}
+
 pub unsafe fn style_set_range_string(sy: *mut style, s: *const u8) {
     unsafe {
         strlcpy(&raw mut (*sy).range_string as _, s, 16); // TODO use better sizeof

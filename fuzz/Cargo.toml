@@ -22,3 +22,24 @@ path = "fuzz_targets/colour_find_rgb.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "style_parse"
+path = "fuzz_targets/style_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "key_string_lookup"
+path = "fuzz_targets/key_string_lookup.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "colour_fromstring"
+path = "fuzz_targets/colour_fromstring.rs"
+test = false
+doc = false
+bench = false
