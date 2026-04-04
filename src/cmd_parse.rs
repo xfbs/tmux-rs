@@ -1097,16 +1097,19 @@ unsafe fn yylex_token_tilde(ps: &mut cmd_parse_state, buf: &mut Vec<u8>) -> bool
         }
         name[namelen] = b'\0';
 
+        // home_bytes holds the value if it came from environ (Vec<u8>),
+        // so the pointer into it stays valid for the yylex_append call.
+        let mut home_bytes: Option<&[u8]> = None;
         if name[0] == b'\0' {
             let envent = environ_find_raw(&*GLOBAL_ENVIRON, c!("HOME"));
             if let Some(envent) = envent {
                 if let Some(ref value) = envent.value {
                     if !value.is_empty() {
-                        home = value.as_ptr();
+                        home_bytes = Some(value.as_slice());
                     }
                 }
             }
-            if home.is_null() {
+            if home_bytes.is_none() {
                 if let Some(pw) = NonNull::new(libc::getpwuid(libc::getuid())) {
                     home = (*pw.as_ptr()).pw_dir.cast();
                 }
@@ -1114,13 +1117,19 @@ unsafe fn yylex_token_tilde(ps: &mut cmd_parse_state, buf: &mut Vec<u8>) -> bool
         } else if let Some(pw) = NonNull::new(libc::getpwnam((&raw const name).cast())) {
             home = (*pw.as_ptr()).pw_dir.cast();
         }
-        if home.is_null() {
+
+        // Resolve the home directory as a byte slice
+        let home_slice = if let Some(bytes) = home_bytes {
+            bytes
+        } else if !home.is_null() {
+            let home_len = strlen(home);
+            core::slice::from_raw_parts(home, home_len)
+        } else {
             return false;
-        }
+        };
 
         // log_debug("%s: ~%s -> %s", __func__, name, home);
-        let home_len = strlen(home);
-        yylex_append(buf, core::slice::from_raw_parts(home, home_len));
+        yylex_append(buf, home_slice);
         true
     }
 }
