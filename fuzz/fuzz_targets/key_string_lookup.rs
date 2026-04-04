@@ -1,9 +1,12 @@
 #![no_main]
 
+mod sandbox;
+
 use libfuzzer_sys::fuzz_target;
-use tmux_rs_new::key_string::key_string_lookup_string;
 
 fuzz_target!(|data: &[u8]| {
+    sandbox::enable("key_string_lookup");
+
     // key_string_lookup_string expects a NUL-terminated C string.
     if data.contains(&0) {
         return;
@@ -15,6 +18,6 @@ fuzz_target!(|data: &[u8]| {
 
     unsafe {
         // Returns KEYC_UNKNOWN or a valid key_code. Either is fine.
-        let _ = key_string_lookup_string(cstr.as_ptr());
+        let _ = tmux_rs_new::key_string::key_string_lookup_string(cstr.as_ptr());
     }
 });

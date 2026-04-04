@@ -1,8 +1,12 @@
 #![no_main]
 
+mod sandbox;
+
 use libfuzzer_sys::fuzz_target;
 
 fuzz_target!(|data: &[u8]| {
+    sandbox::enable("style_parse");
+
     // style_parse expects a NUL-terminated C string.
     // Skip inputs that contain interior NULs.
     if data.contains(&0) {

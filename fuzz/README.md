@@ -9,9 +9,10 @@ Requires nightly Rust and `cargo-fuzz`:
 | Target | Function | Type |
 |--------|----------|------|
 | `colour_find_rgb` | `colour_find_rgb(r, g, b)` | Differential (vs old revision) |
-| `style_parse` | `style_parse(style, base, input)` | Crash detection |
-| `key_string_lookup` | `key_string_lookup_string(input)` | Crash detection |
-| `colour_fromstring` | `colour_fromstring(input)` | Crash detection |
+| `style_parse` | `style_parse(style, base, input)` | Crash detection, sandboxed |
+| `key_string_lookup` | `key_string_lookup_string(input)` | Crash detection, sandboxed |
+| `colour_fromstring` | `colour_fromstring(input)` | Crash detection, sandboxed |
+| `cmd_parse` | `cmd_parse_from_buffer(input)` | Crash detection, sandboxed |
 
 ## Commands
 
@@ -37,12 +38,17 @@ Minimize a crash artifact:
 
 ## Safety
 
-All current fuzz targets exercise **pure parsing functions** that do not execute
-commands, write files, or perform I/O. This is intentional — tmux can execute
-arbitrary shell commands, so fuzz targets must never reach the command execution
-layer.
+Most fuzz targets are sandboxed with **Landlock** (Linux kernel security module).
+The sandbox denies all filesystem writes except to the fuzz corpus and artifact
+directories. Child processes inherit these restrictions, so even if code under
+test spawns a shell command, it cannot modify the filesystem.
 
-When adding new targets, restrict to functions that:
-- Parse input into data structures (style_parse, key_string_lookup_string, etc.)
-- Perform computation without side effects (colour_find_rgb, etc.)
-- Do NOT feed into cmdq, cmd_exec, or spawn
+The sandbox requires Linux 5.13+ with Landlock enabled (check `cat /sys/kernel/security/lsm`).
+It is configured with `CompatLevel::HardRequirement` — the fuzzer refuses to run
+if Landlock is not available.
+
+When adding new targets:
+- Add `mod sandbox;` and call `sandbox::enable("target_name")` at the top of the fuzz closure
+- Prefer functions that parse input without executing (style_parse, cmd_parse, etc.)
+- The sandbox makes it safe to fuzz functions that *might* reach execution paths,
+  but avoid targeting cmd_exec or spawn directly

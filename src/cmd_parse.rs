@@ -636,6 +636,43 @@ pub unsafe fn cmd_parse_from_arguments(
     }
 }
 
+/// Fuzz-friendly wrapper: parses a byte slice as a tmux command buffer.
+/// Initializes globals once, then parses without executing. Returns true
+/// on successful parse, false on parse error. Either outcome is fine —
+/// we're looking for crashes/panics.
+#[cfg(fuzzing)]
+pub fn fuzz_cmd_parse(input: &[u8]) {
+    use std::sync::Once;
+    static INIT: Once = Once::new();
+    INIT.call_once(|| unsafe {
+        use crate::options_::*;
+        use crate::options_table::OPTIONS_TABLE;
+        use crate::tmux::{GLOBAL_OPTIONS, GLOBAL_S_OPTIONS, GLOBAL_W_OPTIONS};
+
+        GLOBAL_OPTIONS = options_create(null_mut());
+        GLOBAL_S_OPTIONS = options_create(null_mut());
+        GLOBAL_W_OPTIONS = options_create(null_mut());
+        for oe in &OPTIONS_TABLE {
+            if oe.scope & OPTIONS_TABLE_SERVER != 0 {
+                options_default(GLOBAL_OPTIONS, oe);
+            }
+            if oe.scope & OPTIONS_TABLE_SESSION != 0 {
+                options_default(GLOBAL_S_OPTIONS, oe);
+            }
+            if oe.scope & OPTIONS_TABLE_WINDOW != 0 {
+                options_default(GLOBAL_W_OPTIONS, oe);
+            }
+        }
+    });
+
+    unsafe {
+        let result = cmd_parse_from_buffer(input, None);
+        if let Ok(cmdlist) = result {
+            cmd_list_free(cmdlist);
+        }
+    }
+}
+
 mod lexer {
     use crate::cmd_parse_state;
 
