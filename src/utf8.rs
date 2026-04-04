@@ -865,6 +865,30 @@ pub unsafe fn utf8_cstrhas(s: *const u8, ud: *const utf8_data) -> bool {
     }
 }
 
+/// Fuzz-friendly wrapper: feeds arbitrary bytes through the UTF-8 decoder
+/// state machine (utf8_open/utf8_append). Pure computation, no side effects.
+#[cfg(fuzzing)]
+pub fn fuzz_utf8_decode(data: &[u8]) {
+    unsafe {
+        let mut ud: utf8_data = std::mem::zeroed();
+        let mut in_sequence = false;
+
+        for &byte in data {
+            if !in_sequence {
+                match utf8_open(&raw mut ud, byte) {
+                    utf8_state::UTF8_MORE => in_sequence = true,
+                    _ => {} // ASCII, error, or done — stay outside sequence
+                }
+            } else {
+                match utf8_append(&raw mut ud, byte) {
+                    utf8_state::UTF8_MORE => {} // still collecting
+                    _ => in_sequence = false,   // done or error — reset
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

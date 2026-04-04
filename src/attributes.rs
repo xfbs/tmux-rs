@@ -25,6 +25,18 @@ use std::borrow::Cow;
 
 use crate::grid_attr;
 
+/// Fuzz-friendly wrapper: parse → format → parse round-trip.
+/// Panics if the round-trip produces a different result.
+#[cfg(fuzzing)]
+pub fn fuzz_attributes_round_trip(input: &str) {
+    if let Ok(attr) = attributes_fromstring(input) {
+        let formatted = attributes_tostring(attr);
+        let attr2 = attributes_fromstring(&formatted)
+            .expect("round-trip parse failed");
+        assert_eq!(attr, attr2, "round-trip mismatch: {input:?} → {formatted:?}");
+    }
+}
+
 /// Converts a [`grid_attr`] bitflag set into a comma-separated string.
 /// Returns `"none"` for empty attributes. Trailing comma is included in output
 /// for non-empty sets (matches C tmux behavior).

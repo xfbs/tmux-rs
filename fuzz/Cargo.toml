@@ -51,3 +51,38 @@ path = "fuzz_targets/cmd_parse.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "input_parse"
+path = "fuzz_targets/input_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "format_expand"
+path = "fuzz_targets/format_expand.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "regsub"
+path = "fuzz_targets/regsub.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "utf8_decode"
+path = "fuzz_targets/utf8_decode.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "attributes"
+path = "fuzz_targets/attributes.rs"
+test = false
+doc = false
+bench = false

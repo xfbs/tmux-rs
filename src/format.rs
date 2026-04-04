@@ -5448,3 +5448,53 @@ pub unsafe fn format_grid_hyperlink(
         Some(cstr_to_str(uri).to_string())
     }
 }
+
+/// Fuzz-friendly wrapper: expands a format string with FORMAT_NOJOBS and null
+/// context (no client, session, window, or pane). Cannot execute shell commands.
+/// Initializes global options once.
+#[cfg(fuzzing)]
+pub fn fuzz_format_expand(input: &[u8]) {
+    use std::sync::Once;
+    static INIT: Once = Once::new();
+    INIT.call_once(|| unsafe {
+        use crate::options_::*;
+        use crate::options_table::OPTIONS_TABLE;
+        use crate::tmux::{GLOBAL_OPTIONS, GLOBAL_S_OPTIONS, GLOBAL_W_OPTIONS};
+
+        GLOBAL_OPTIONS = options_create(null_mut());
+        GLOBAL_S_OPTIONS = options_create(null_mut());
+        GLOBAL_W_OPTIONS = options_create(null_mut());
+        for oe in &OPTIONS_TABLE {
+            if oe.scope & OPTIONS_TABLE_SERVER != 0 {
+                options_default(GLOBAL_OPTIONS, oe);
+            }
+            if oe.scope & OPTIONS_TABLE_SESSION != 0 {
+                options_default(GLOBAL_S_OPTIONS, oe);
+            }
+            if oe.scope & OPTIONS_TABLE_WINDOW != 0 {
+                options_default(GLOBAL_W_OPTIONS, oe);
+            }
+        }
+    });
+
+    // Must be NUL-terminated for C interop.
+    if input.contains(&0) {
+        return;
+    }
+    let mut cstr = Vec::with_capacity(input.len() + 1);
+    cstr.extend_from_slice(input);
+    cstr.push(0);
+
+    unsafe {
+        let ft = format_create(
+            null_mut(),
+            null_mut(),
+            FORMAT_NONE,
+            format_flags::FORMAT_NOJOBS,
+        );
+        format_defaults(ft, null_mut(), None, None, None);
+        let result = format_expand(ft, cstr.as_ptr());
+        free_(result);
+        format_free(ft);
+    }
+}

@@ -3126,6 +3126,67 @@ pub unsafe fn input_reply_clipboard(
     }
 }
 
+/// Fuzz-friendly wrapper: feeds arbitrary bytes through the input parser state
+/// machine. Creates an input_ctx with null window_pane (no TTY output), a real
+/// screen to write to, and processes the input. No shell commands are executed.
+#[cfg(fuzzing)]
+pub fn fuzz_input_parse(data: &[u8]) {
+    use std::sync::Once;
+    static INIT: Once = Once::new();
+
+    // Leaked resources — these are created once and reused across fuzz iterations.
+    // This is intentional: the fuzzer runs millions of iterations and we don't want
+    // allocation overhead per call. The input_ctx is reset between calls.
+    static mut ICTX: *mut input_ctx = std::ptr::null_mut();
+    static mut SCREEN: *mut screen = std::ptr::null_mut();
+
+    INIT.call_once(|| unsafe {
+        // Input parser needs global options for some escape sequence handling.
+        use crate::options_::*;
+        use crate::options_table::OPTIONS_TABLE;
+        use crate::tmux::{GLOBAL_OPTIONS, GLOBAL_S_OPTIONS, GLOBAL_W_OPTIONS};
+
+        GLOBAL_OPTIONS = options_create(null_mut());
+        GLOBAL_S_OPTIONS = options_create(null_mut());
+        GLOBAL_W_OPTIONS = options_create(null_mut());
+        for oe in &OPTIONS_TABLE {
+            if oe.scope & OPTIONS_TABLE_SERVER != 0 {
+                options_default(GLOBAL_OPTIONS, oe);
+            }
+            if oe.scope & OPTIONS_TABLE_SESSION != 0 {
+                options_default(GLOBAL_S_OPTIONS, oe);
+            }
+            if oe.scope & OPTIONS_TABLE_WINDOW != 0 {
+                options_default(GLOBAL_W_OPTIONS, oe);
+            }
+        }
+
+        let palette = Box::leak(Box::new(crate::colour::colour_palette_init()));
+        ICTX = input_init(null_mut(), null_mut(), &raw mut *palette);
+
+        SCREEN = xcalloc1::<screen>() as *mut screen;
+        crate::screen_::screen_init(SCREEN, 80, 24, 1000);
+    });
+
+    if data.is_empty() {
+        return;
+    }
+
+    unsafe {
+        // Reset the input parser to ground state between iterations.
+        input_reset(ICTX, 0);
+
+        input_parse_screen(
+            ICTX,
+            SCREEN,
+            None,
+            null_mut(),
+            data.as_ptr() as *mut u8,
+            data.len(),
+        );
+    }
+}
+
 #[cfg(test)]
 #[allow(dangerous_implicit_autorefs, unsafe_op_in_unsafe_fn)]
 mod tests {

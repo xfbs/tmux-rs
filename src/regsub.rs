@@ -187,6 +187,38 @@ pub unsafe fn regsub(
     }
 }
 
+/// Fuzz-friendly wrapper: runs regex substitution with three NUL-terminated
+/// byte slices (pattern, replacement, text). Pure computation, no side effects.
+#[cfg(fuzzing)]
+pub fn fuzz_regsub(pattern: &[u8], with: &[u8], text: &[u8]) {
+    // All three must be NUL-terminated C strings with no interior NULs.
+    if pattern.contains(&0) || with.contains(&0) || text.contains(&0) {
+        return;
+    }
+    if pattern.is_empty() {
+        return;
+    }
+
+    let mut pat = Vec::with_capacity(pattern.len() + 1);
+    pat.extend_from_slice(pattern);
+    pat.push(0);
+
+    let mut w = Vec::with_capacity(with.len() + 1);
+    w.extend_from_slice(with);
+    w.push(0);
+
+    let mut t = Vec::with_capacity(text.len() + 1);
+    t.extend_from_slice(text);
+    t.push(0);
+
+    unsafe {
+        let result = regsub(pat.as_ptr(), w.as_ptr(), t.as_ptr(), crate::libc::REG_EXTENDED);
+        if !result.is_null() {
+            crate::free_(result);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
