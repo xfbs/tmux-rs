@@ -379,7 +379,7 @@ unsafe fn server_send_exit() {
         }
 
         let sessions: Vec<*mut session> =
-            (*(&raw mut SESSIONS)).values().copied().collect();
+            sessions_iter().collect();
         for s in sessions {
             session_destroy(s, 1, c!("server_send_exit"));
         }
@@ -392,7 +392,7 @@ pub unsafe fn server_update_socket() {
         let mut sb: stat = zeroed(); // TODO remove unecessary init
 
         let mut n = 0;
-        for &s in (*(&raw mut SESSIONS)).values() {
+        for s in sessions_iter() {
             if (*s).attached != 0 {
                 n += 1;
                 break;

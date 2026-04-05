@@ -100,7 +100,7 @@ pub unsafe fn server_status_window(w: *mut window) {
         // clients containing this window rather than anywhere it is the
         // current window.
 
-        for &s in (*(&raw mut SESSIONS)).values() {
+        for s in sessions_iter() {
             if session_has(s, w) {
                 server_status_session(s);
             }
@@ -188,7 +188,7 @@ pub unsafe fn server_kill_pane(wp: *mut window_pane) {
 pub unsafe fn server_kill_window(w: *mut window, renumber: i32) {
     unsafe {
         let sessions: Vec<*mut session> =
-            (*(&raw mut SESSIONS)).values().copied().collect();
+            sessions_iter().collect();
         for s in sessions {
             if !session_has(s, w) {
                 continue;
@@ -229,7 +229,7 @@ pub unsafe fn server_renumber_session(s: *mut session) {
 
 pub unsafe fn server_renumber_all() {
     unsafe {
-        for &s in (*(&raw mut SESSIONS)).values() {
+        for s in sessions_iter() {
             server_renumber_session(s);
         }
     }
@@ -414,7 +414,7 @@ pub unsafe fn server_find_session(
 ) -> *mut session {
     unsafe {
         let mut s_out: *mut session = null_mut();
-        for &s_loop in (*(&raw mut SESSIONS)).values() {
+        for s_loop in sessions_iter() {
             if s_loop != s && (s_out.is_null() || f(s_loop, s_out) != 0) {
                 s_out = s_loop;
             }
@@ -476,7 +476,7 @@ pub unsafe fn server_destroy_session(s: *mut session) {
 pub unsafe fn server_check_unattached() {
     unsafe {
         let sessions: Vec<*mut session> =
-            (*(&raw mut SESSIONS)).values().copied().collect();
+            sessions_iter().collect();
         for s in sessions {
             if (*s).attached != 0 {
                 continue;

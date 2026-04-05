@@ -2222,7 +2222,7 @@ unsafe fn status_prompt_complete_session(
     unsafe {
         let mut n: [u8; 11] = [0; 11];
 
-        for &loop_ in (*(&raw mut SESSIONS)).values() {
+        for loop_ in sessions_iter() {
             if *s == b'\0'
                 || strncmp(
                     CString::new((*loop_).name.to_string())

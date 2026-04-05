@@ -1389,7 +1389,7 @@ pub unsafe fn options_push_changes(name: &str) {
             }
         }
 
-        for &s in (*(&raw mut SESSIONS)).values() {
+        for s in sessions_iter() {
             status_update_cache(s);
         }
 

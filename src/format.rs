@@ -3916,7 +3916,7 @@ pub unsafe fn format_session_name(es: *mut format_expand_state, fmt: *const u8) 
     unsafe {
         let name = format_expand1(es, fmt);
 
-        for &s in (*(&raw mut SESSIONS)).values() {
+        for s in sessions_iter() {
             if streq_(name, &(*s).name) {
                 free_(name);
                 return xstrdup(c!("1")).as_ptr();
@@ -3936,7 +3936,7 @@ pub unsafe fn format_loop_sessions(es: *mut format_expand_state, fmt: *const u8)
         let mut value: *mut u8 = xcalloc(1, 1).as_ptr().cast();
         let mut valuelen = 1;
 
-        for &s in (*(&raw mut SESSIONS)).values() {
+        for s in sessions_iter() {
             format_log1!(es, c!("format_loop_sessions"), "session loop: ${}", (*s).id,);
             let nft = format_create(c, item, FORMAT_NONE, (*ft).flags);
             format_defaults(nft, (*ft).c, NonNull::new(s), None, None);

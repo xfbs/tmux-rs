@@ -25,14 +25,19 @@ pub static NEXT_SESSION_ID: AtomicU32 = AtomicU32::new(0);
 
 pub static mut SESSION_GROUPS: session_groups = BTreeMap::new();
 
-/// Iterate over all live sessions as `*mut session` pointers.
-#[allow(dead_code)] // Will be used when SESSIONS iteration is migrated
+/// Iterate over all **alive** sessions as `*mut session` pointers.
+///
+/// Uses the `SESSIONS` name index (not `SESSION_REGISTRY`), because
+/// destroyed sessions remain in the registry until their reference count
+/// drains. Callers expect to only see live, usable sessions.
 #[inline]
 pub unsafe fn sessions_iter() -> impl Iterator<Item = *mut session> {
     unsafe {
-        (*(&raw mut SESSION_REGISTRY))
-            .values_mut()
-            .map(|b| &mut **b as *mut session)
+        (*(&raw mut SESSIONS))
+            .values()
+            .copied()
+            .collect::<Vec<_>>()
+            .into_iter()
     }
 }
 

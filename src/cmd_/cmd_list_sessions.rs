@@ -40,7 +40,7 @@ unsafe fn cmd_list_sessions_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         }
         let filter = args_get(args, b'f');
 
-        for (n, s) in (*(&raw mut SESSIONS)).values().map(|&s| NonNull::new(s).unwrap()).enumerate() {
+        for (n, s) in sessions_iter().map(|s| NonNull::new(s).unwrap()).enumerate() {
             let ft = format_create(
                 cmdq_get_client(item),
                 item,

@@ -488,7 +488,7 @@ unsafe fn window_tree_build(
 
         let mut l: *mut *mut session = null_mut();
         let mut n: u32 = 0;
-        for &s in (*(&raw mut SESSIONS)).values() {
+        for s in sessions_iter() {
             if (*data).squash_groups
                 && ({
                     sg = session_group_contains(s);

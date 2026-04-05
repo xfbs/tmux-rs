@@ -52,7 +52,7 @@ unsafe fn cmd_list_panes_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retv
 
 unsafe fn cmd_list_panes_server(self_: *mut cmd, item: *mut cmdq_item) {
     unsafe {
-        for &s in (*(&raw mut SESSIONS)).values() {
+        for s in sessions_iter() {
             cmd_list_panes_session(self_, s, item, 2);
         }
     }

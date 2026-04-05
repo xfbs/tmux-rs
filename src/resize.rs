@@ -511,7 +511,7 @@ pub unsafe fn recalculate_sizes_now(now: i32) {
 
         // Clear attached count and update saved status line information for
         // each session.
-        for &s in (*(&raw mut SESSIONS)).values() {
+        for s in sessions_iter() {
             (*s).attached = 0;
             status_update_cache(s);
         }

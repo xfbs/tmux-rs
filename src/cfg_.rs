@@ -267,7 +267,7 @@ pub unsafe fn cfg_show_causes(mut s: *mut session) {
             if !c.is_null() && !(*c).session.is_null() {
                 s = (*c).session;
             } else {
-                s = (*(&raw mut SESSIONS)).values().next().copied().unwrap_or(null_mut());
+                s = sessions_iter().next().unwrap_or(null_mut());
             }
         }
         if s.is_null() || (*s).attached == 0 {
