@@ -16,10 +16,40 @@ use crate::options_::*;
 
 pub static mut SESSIONS: sessions = BTreeMap::new();
 
+/// Central registry owning all session allocations. `Box<session>` provides a
+/// stable heap address, so `*mut session` pointers derived from it remain valid
+/// for the lifetime of the registry entry.
+pub static mut SESSION_REGISTRY: BTreeMap<SessionId, Box<session>> = BTreeMap::new();
+
 pub static NEXT_SESSION_ID: AtomicU32 = AtomicU32::new(0);
 
 pub static mut SESSION_GROUPS: session_groups = BTreeMap::new();
 
+/// Iterate over all live sessions as `*mut session` pointers.
+#[allow(dead_code)] // Will be used when SESSIONS iteration is migrated
+#[inline]
+pub unsafe fn sessions_iter() -> impl Iterator<Item = *mut session> {
+    unsafe {
+        (*(&raw mut SESSION_REGISTRY))
+            .values_mut()
+            .map(|b| &mut **b as *mut session)
+    }
+}
+
+/// Look up a session by ID in the global registry.
+pub unsafe fn session_from_id(id: SessionId) -> Option<*mut session> {
+    unsafe {
+        (*(&raw mut SESSION_REGISTRY))
+            .get_mut(&id)
+            .map(|b| &mut **b as *mut session)
+    }
+}
+
+/// Check whether a session is still alive (not yet destroyed).
+///
+/// Uses the `SESSIONS` name index, not `SESSION_REGISTRY`, because a destroyed
+/// session remains in the registry until its reference count reaches zero and
+/// `session_free` runs.
 pub unsafe fn session_alive(s: *mut session) -> bool {
     unsafe { (*(&raw mut SESSIONS)).values().any(|&s_ptr| s_ptr == s) }
 }
@@ -43,15 +73,9 @@ pub unsafe fn session_find_by_id_str(s: &str) -> *mut session {
     }
 }
 
-/// Find session by id.
+/// Find session by id. O(log n) via `SESSION_REGISTRY`.
 pub unsafe fn session_find_by_id(id: u32) -> Option<NonNull<session>> {
-    unsafe {
-        (*(&raw mut SESSIONS))
-            .values()
-            .copied()
-            .find(|&s| (*s).id == id)
-            .and_then(NonNull::new)
-    }
+    unsafe { session_from_id(SessionId(id)).and_then(NonNull::new) }
 }
 
 impl session {
@@ -115,6 +139,10 @@ impl session {
 }
 
 /// Create a new session.
+///
+/// Allocates the session in `SESSION_REGISTRY`. The `Box` in the registry
+/// provides a stable heap address, so the returned `*mut session` is valid
+/// for the lifetime of the registry entry.
 pub unsafe fn session_create(
     prefix: *const u8,
     name: Option<&str>,
@@ -123,7 +151,12 @@ pub unsafe fn session_create(
     oo: *mut options,
     tio: *mut termios,
 ) -> *mut session {
-    unsafe { Box::leak(session::create(prefix, name, cwd, env, oo, tio)) }
+    unsafe {
+        let boxed = session::create(prefix, name, cwd, env, oo, tio);
+        let id = SessionId(boxed.id);
+        let s = (*(&raw mut SESSION_REGISTRY)).entry(id).or_insert(boxed);
+        &mut **s as *mut session
+    }
 }
 
 /// Add a reference to a session.
@@ -161,6 +194,10 @@ pub unsafe fn session_remove_ref(s: *mut session, from: *const u8) {
 }
 
 /// Free session.
+///
+/// Removes the session from `SESSION_REGISTRY`, which drops the `Box<session>`
+/// and deallocates the memory. The `*mut session` pointer becomes invalid after
+/// this call.
 pub unsafe extern "C-unwind" fn session_free(_fd: i32, _events: i16, arg: *mut c_void) {
     unsafe {
         let s = arg as *mut session;
@@ -175,7 +212,14 @@ pub unsafe extern "C-unwind" fn session_free(_fd: i32, _events: i16, arg: *mut c
             environ_free((*s).environ);
             options_free((*s).options);
             (*s).name = Cow::Borrowed("");
-            free_(s);
+            // Remove from registry and free the memory. We use Box::into_raw
+            // + free_() to match the old behavior — the old code called free_()
+            // directly, which doesn't run Rust Drop on the session fields.
+            // The Vec/BTreeMap fields were already emptied in session_destroy,
+            // and the Cow name was replaced above, so no Drop is needed.
+            if let Some(boxed) = (*(&raw mut SESSION_REGISTRY)).remove(&SessionId((*s).id)) {
+                free_(Box::into_raw(boxed));
+            }
         }
     }
 }

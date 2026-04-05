@@ -1514,7 +1514,13 @@ type session_groups = BTreeMap<String, Box<session_group>>;
 const SESSION_PASTING: i32 = 0x1;
 const SESSION_ALERTED: i32 = 0x2;
 
-#[repr(C)]
+/// Unique session identifier, wrapping the existing tmux session `id` field.
+///
+/// Monotonically increasing via `NEXT_SESSION_ID`, never reused.
+/// Used as the key into `SESSION_REGISTRY` for ID-based ownership.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct SessionId(pub u32);
+
 struct session {
     id: u32,
     name: Cow<'static, str>,
