@@ -14,13 +14,12 @@
 use crate::*;
 use crate::options_::*;
 
-#[repr(C)]
 pub struct notify_entry {
     pub name: *mut u8,
     pub fs: cmd_find_state,
     pub formats: *mut format_tree,
 
-    pub client: *mut client,
+    pub client: Option<ClientId>,
     pub session: *mut session,
     pub window: *mut window,
     pub pane: i32,
@@ -148,10 +147,12 @@ pub unsafe fn notify_callback(item: *mut cmdq_item, data: *mut c_void) -> cmd_re
             control_notify_window_renamed((*ne).window);
         }
         if streq_((*ne).name, "client-session-changed") {
-            control_notify_client_session_changed((*ne).client);
+            let c = (*ne).client.and_then(|id| client_from_id(id)).unwrap_or(null_mut());
+            control_notify_client_session_changed(c);
         }
         if streq_((*ne).name, "client-detached") {
-            control_notify_client_detached((*ne).client);
+            let c = (*ne).client.and_then(|id| client_from_id(id)).unwrap_or(null_mut());
+            control_notify_client_detached(c);
         }
         if streq_((*ne).name, "session-renamed") {
             control_notify_session_renamed((*ne).session);
@@ -174,8 +175,8 @@ pub unsafe fn notify_callback(item: *mut cmdq_item, data: *mut c_void) -> cmd_re
 
         notify_insert_hook(item, ne);
 
-        if !(*ne).client.is_null() {
-            server_client_unref((*ne).client);
+        if let Some(c) = (*ne).client.and_then(|id| client_from_id(id)) {
+            server_client_unref(c);
         }
         if !(*ne).session.is_null() {
             session_remove_ref((*ne).session, __func__);
@@ -217,7 +218,7 @@ pub unsafe fn notify_add(
         let ne = xcalloc1::<notify_entry>() as *mut notify_entry;
         (*ne).name = xstrdup(name.as_ptr().cast()).as_ptr();
 
-        (*ne).client = c;
+        (*ne).client = if c.is_null() { None } else { Some((*c).id) };
         (*ne).session = s;
         (*ne).window = w;
         (*ne).pane = if !wp.is_null() { (*wp).id as i32 } else { -1 };
@@ -276,7 +277,8 @@ pub unsafe fn notify_hook(item: *mut cmdq_item, name: *mut u8) {
         ne.name = name;
         cmd_find_copy_state(&raw mut ne.fs, target);
 
-        ne.client = cmdq_get_client(item);
+        let c = cmdq_get_client(item);
+        ne.client = if c.is_null() { None } else { Some((*c).id) };
         ne.session = (*target).s;
         ne.window = (*target).w;
         ne.pane = if !(*target).wp.is_null() {

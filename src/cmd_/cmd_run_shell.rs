@@ -33,9 +33,8 @@ pub static CMD_RUN_SHELL_ENTRY: cmd_entry = cmd_entry {
     source: cmd_entry_flag::zeroed(),
 };
 
-#[repr(C)]
 pub struct cmd_run_shell_data<'a> {
-    pub client: *mut client,
+    pub client: Option<ClientId>,
     pub cmd: *mut u8,
     pub state: *mut args_command_state<'a>,
     pub cwd: *mut u8,
@@ -74,8 +73,11 @@ pub unsafe fn cmd_run_shell_print(job: *mut job, msg: *const u8) {
                 cmdq_print!((*cdata).item, "{}", _s(msg));
                 return;
             }
-            if !(*cdata).item.is_null() && !(*cdata).client.is_null() {
-                wp = server_client_get_pane((*cdata).client);
+            if !(*cdata).item.is_null() {
+                let c = (*cdata).client.and_then(|id| client_from_id(id)).unwrap_or(null_mut());
+                if !c.is_null() {
+                    wp = server_client_get_pane(c);
+                }
             }
             if wp.is_null() && cmd_find_from_nothing(&raw mut fs, cmd_find_flags::empty()) == 0 {
                 wp = fs.wp;
@@ -140,14 +142,14 @@ pub unsafe fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         }
 
         if wait {
-            (*cdata).client = c;
+            (*cdata).client = if c.is_null() { None } else { Some((*c).id) };
             (*cdata).item = item;
         } else {
-            (*cdata).client = tc;
+            (*cdata).client = if tc.is_null() { None } else { Some((*tc).id) };
             (*cdata).flags |= job_flag::JOB_NOWAIT;
         }
-        if !(*cdata).client.is_null() {
-            (*(*cdata).client).references += 1;
+        if let Some(c) = (*cdata).client.and_then(|id| client_from_id(id)) {
+            (*c).references += 1;
         }
         if args_has(args, 'c') {
             (*cdata).cwd = xstrdup(args_get_(args, 'c')).as_ptr();
@@ -189,7 +191,7 @@ pub unsafe extern "C-unwind" fn cmd_run_shell_timer(
 ) {
     unsafe {
         let cdata = cdata.as_ptr();
-        let c = (*cdata).client;
+        let c = (*cdata).client.and_then(|id| client_from_id(id)).unwrap_or(null_mut());
         let cmd = (*cdata).cmd;
         let item = (*cdata).item;
         let mut error = null_mut::<u8>();
@@ -320,8 +322,8 @@ pub unsafe fn cmd_run_shell_free(data: *mut c_void) {
         if !(*cdata).s.is_null() {
             session_remove_ref((*cdata).s, __func__);
         }
-        if !(*cdata).client.is_null() {
-            server_client_unref((*cdata).client);
+        if let Some(c) = (*cdata).client.and_then(|id| client_from_id(id)) {
+            server_client_unref(c);
         }
         if !(*cdata).state.is_null() {
             args_make_commands_free((*cdata).state);

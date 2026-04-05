@@ -28,9 +28,8 @@ pub static CMD_LOAD_BUFFER_ENTRY: cmd_entry = cmd_entry {
     target: cmd_entry_flag::zeroed(),
 };
 
-#[repr(C)]
 pub struct cmd_load_buffer_data {
-    pub client: *mut client,
+    pub client: Option<ClientId>,
     pub item: *mut cmdq_item,
     pub name: *mut u8,
 }
@@ -45,7 +44,7 @@ unsafe fn cmd_load_buffer_done(
 ) {
     unsafe {
         let cdata = data as *mut cmd_load_buffer_data;
-        let tc = (*cdata).client;
+        let tc = (*cdata).client.and_then(|id| client_from_id(id)).unwrap_or(null_mut());
         let item = (*cdata).item;
         let bdata = EVBUFFER_DATA(buffer);
         let bsize = EVBUFFER_LENGTH(buffer);
@@ -99,8 +98,8 @@ unsafe fn cmd_load_buffer_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
             (*cdata).name = xstrdup(bufname).as_ptr();
         }
         if args_has(args, 'w') && !tc.is_null() {
-            (*cdata).client = tc;
-            (*(*cdata).client).references += 1;
+            (*cdata).client = Some((*tc).id);
+            (*tc).references += 1;
         }
 
         let path = format_single_from_target(item, args_string(args, 0));

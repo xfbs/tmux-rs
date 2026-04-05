@@ -33,12 +33,11 @@ pub static CMD_IF_SHELL_ENTRY: cmd_entry = cmd_entry {
     source: cmd_entry_flag::zeroed(),
 };
 
-#[repr(C)]
 pub struct cmd_if_shell_data<'a> {
     pub cmd_if: *mut args_command_state<'a>,
     pub cmd_else: *mut args_command_state<'a>,
 
-    pub client: *mut client,
+    pub client: Option<ClientId>,
     pub item: *mut cmdq_item,
 }
 
@@ -86,13 +85,14 @@ unsafe fn cmd_if_shell_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval
         }
 
         if wait {
-            (*cdata).client = cmdq_get_client(item);
+            let c = cmdq_get_client(item);
+            (*cdata).client = if c.is_null() { None } else { Some((*c).id) };
             (*cdata).item = item;
         } else {
-            (*cdata).client = tc;
+            (*cdata).client = if tc.is_null() { None } else { Some((*tc).id) };
         }
-        if !(*cdata).client.is_null() {
-            (*(*cdata).client).references += 1;
+        if let Some(c) = (*cdata).client.and_then(|id| client_from_id(id)) {
+            (*c).references += 1;
         }
 
         if job_run(
@@ -129,7 +129,7 @@ unsafe fn cmd_if_shell_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval
 unsafe fn cmd_if_shell_callback(job: *mut job) {
     unsafe {
         let cdata = job_get_data(job) as *mut cmd_if_shell_data;
-        let c = (*cdata).client;
+        let c = (*cdata).client.and_then(|id| client_from_id(id)).unwrap_or(null_mut());
         let item = (*cdata).item;
         let mut error: *mut u8 = null_mut();
 
@@ -175,8 +175,8 @@ unsafe fn cmd_if_shell_free(data: *mut c_void) {
     unsafe {
         let cdata = data as *mut cmd_if_shell_data;
 
-        if !(*cdata).client.is_null() {
-            server_client_unref((*cdata).client);
+        if let Some(c) = (*cdata).client.and_then(|id| client_from_id(id)) {
+            server_client_unref(c);
         }
 
         if !(*cdata).cmd_else.is_null() {
