@@ -166,14 +166,16 @@ pub fn colour_fromstring(s: &str) -> i32 {
     }
 
     if s.len() > 6 && s.as_bytes()[..6].eq_ignore_ascii_case(b"colour") {
-        let Ok(n) = strtonum_(&s[6..], 0i32, 255) else {
+        let Some(rest) = s.get(6..) else { return -1 };
+        let Ok(n) = strtonum_(rest, 0i32, 255) else {
             return -1;
         };
         return n | COLOUR_FLAG_256;
     }
 
     if s.len() > 5 && s.as_bytes()[..5].eq_ignore_ascii_case(b"color") {
-        let Ok(n) = strtonum_(&s[5..], 0i32, 255) else {
+        let Some(rest) = s.get(5..) else { return -1 };
+        let Ok(n) = strtonum_(rest, 0i32, 255) else {
             return -1;
         };
         return n | COLOUR_FLAG_256;
@@ -1651,5 +1653,23 @@ mod tests {
         let s = "#abcdef";
         let c = colour_fromstring(s);
         assert_eq!(colour_tostring(c), s);
+    }
+
+    /// Regression: slicing "color"/"colour" prefix at byte offset 5/6 could
+    /// split a multi-byte UTF-8 character, causing a panic.
+    #[test]
+    fn fromstring_multibyte_no_panic() {
+        // 6 bytes: NUL + ͊ (2 bytes) + ']' + ͊ (2 bytes) — looks like len > 5
+        // but byte offset 5 falls inside the final ͊.
+        let s = "\x00\u{034a}]\u{034a}";
+        assert_eq!(s.len(), 6);
+        assert_eq!(colour_fromstring(s), -1);
+
+        // 7 bytes with "colour" prefix but non-ASCII suffix.
+        let s = "colour\u{00e9}";
+        assert_eq!(colour_fromstring(s), -1);
+
+        let s = "color\u{00e9}";
+        assert_eq!(colour_fromstring(s), -1);
     }
 }

@@ -235,13 +235,15 @@ pub unsafe fn style_parse(sy: *mut style, base: *const grid_cell, mut in_: *cons
                         break 'error;
                     }
                 } else if end > 5 && strncasecmp(tmp, c!("fill="), 5) == 0 {
-                    let value = colour_fromstring(cstr_to_str(tmp.add(5)));
+                    let Some(s) = cstr_to_str_(tmp.add(5)) else { break 'error };
+                    let value = colour_fromstring(s);
                     if value == -1 {
                         break 'error;
                     }
                     (*sy).fill = value;
                 } else if end > 3 && strncasecmp(tmp.add(1), c!("g="), 2) == 0 {
-                    let value = colour_fromstring(cstr_to_str(tmp.add(3)));
+                    let Some(s) = cstr_to_str_(tmp.add(3)) else { break 'error };
+                    let value = colour_fromstring(s);
                     if value == -1 {
                         break 'error;
                     }
@@ -261,7 +263,8 @@ pub unsafe fn style_parse(sy: *mut style, base: *const grid_cell, mut in_: *cons
                         break 'error;
                     }
                 } else if end > 3 && strncasecmp(tmp, c!("us="), 3) == 0 {
-                    let value = colour_fromstring(cstr_to_str(tmp.add(3)));
+                    let Some(s) = cstr_to_str_(tmp.add(3)) else { break 'error };
+                    let value = colour_fromstring(s);
                     if value == -1 {
                         break 'error;
                     }
@@ -273,12 +276,14 @@ pub unsafe fn style_parse(sy: *mut style, base: *const grid_cell, mut in_: *cons
                 } else if strcaseeq_(tmp, "none") {
                     (*sy).gc.attr = grid_attr::empty();
                 } else if end > 2 && strncasecmp(tmp, c!("no"), 2) == 0 {
-                    let Ok(value) = attributes_fromstring(cstr_to_str(tmp.add(2))) else {
+                    let Some(s) = cstr_to_str_(tmp.add(2)) else { break 'error };
+                    let Ok(value) = attributes_fromstring(s) else {
                         break 'error;
                     };
                     (*sy).gc.attr &= !value;
                 } else {
-                    let Ok(value) = attributes_fromstring(cstr_to_str(tmp)) else {
+                    let Some(s) = cstr_to_str_(tmp) else { break 'error };
+                    let Ok(value) = attributes_fromstring(s) else {
                         break 'error;
                     };
                     (*sy).gc.attr |= value;
@@ -995,6 +1000,24 @@ mod tests {
             assert_eq!(dst.gc.fg, src.gc.fg);
             assert_eq!(dst.gc.attr, src.gc.attr);
             assert_eq!(dst.align, src.align);
+        }
+    }
+
+    /// Regression: style_parse panicked on non-UTF-8 input because cstr_to_str
+    /// was used instead of the fallible cstr_to_str_. Now returns -1.
+    #[test]
+    fn non_utf8_returns_error() {
+        unsafe {
+            // Single byte 0xd0 is an incomplete UTF-8 lead byte.
+            let input = b"\xd0\0";
+            let mut sy = STYLE_DEFAULT;
+            let ret = style_parse(&raw mut sy, &raw const STYLE_DEFAULT.gc, input.as_ptr());
+            assert_eq!(ret, -1);
+
+            // "fg=" followed by non-UTF-8
+            let input = b"fg=\xc3\x28\0";
+            let ret = style_parse(&raw mut sy, &raw const STYLE_DEFAULT.gc, input.as_ptr());
+            assert_eq!(ret, -1);
         }
     }
 }

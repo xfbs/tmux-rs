@@ -2661,7 +2661,7 @@ pub(crate) fn i32_to_ordering(value: i32) -> std::cmp::Ordering {
 }
 
 pub(crate) unsafe fn cstr_to_str<'a>(ptr: *const u8) -> &'a str {
-    unsafe { cstr_to_str_(ptr).unwrap() }
+    unsafe { cstr_to_str_(ptr).expect("cstr_to_str: null or non-UTF-8 pointer") }
 }
 
 pub(crate) unsafe fn cstr_to_str_<'a>(ptr: *const u8) -> Option<&'a str> {
@@ -2673,7 +2673,7 @@ pub(crate) unsafe fn cstr_to_str_<'a>(ptr: *const u8) -> Option<&'a str> {
 
         let bytes = std::slice::from_raw_parts(ptr.cast::<u8>(), len);
 
-        Some(std::str::from_utf8(bytes).expect("bad cstr_to_str"))
+        std::str::from_utf8(bytes).ok()
     }
 }
 
