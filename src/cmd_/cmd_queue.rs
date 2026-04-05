@@ -26,6 +26,11 @@ pub(crate) use cmdq_get_callback;
 
 use crate::libc::{getpwuid, getuid};
 
+/// Convert a `*mut client` to `Option<ClientId>`.
+unsafe fn client_to_id(c: *mut client) -> Option<ClientId> {
+    if c.is_null() { None } else { unsafe { Some((*c).id) } }
+}
+
 // Command queue flags.
 pub const CMDQ_FIRED: i32 = 0x1;
 pub const CMDQ_WAITING: i32 = 0x2;
@@ -38,14 +43,13 @@ pub enum cmdq_type {
     CMDQ_CALLBACK,
 }
 
-#[repr(C)]
 pub struct cmdq_item {
     pub name: *mut u8,
     pub queue: *mut cmdq_list,
     pub next: *mut cmdq_item,
 
-    pub client: *mut client,
-    pub target_client: *mut client,
+    pub client: Option<ClientId>,
+    pub target_client: Option<ClientId>,
 
     pub type_: cmdq_type,
     pub group: u32,
@@ -139,11 +143,21 @@ pub unsafe fn cmdq_get_name(item: *mut cmdq_item) -> *mut u8 {
 }
 
 pub unsafe fn cmdq_get_client(item: *mut cmdq_item) -> *mut client {
-    unsafe { (*item).client }
+    unsafe {
+        (*item)
+            .client
+            .and_then(|id| client_from_id(id))
+            .unwrap_or(null_mut())
+    }
 }
 
 pub unsafe fn cmdq_get_target_client(item: *mut cmdq_item) -> *mut client {
-    unsafe { (*item).target_client }
+    unsafe {
+        (*item)
+            .target_client
+            .and_then(|id| client_from_id(id))
+            .unwrap_or(null_mut())
+    }
 }
 
 pub unsafe fn cmdq_get_state(item: *mut cmdq_item) -> *mut cmdq_state {
@@ -289,7 +303,7 @@ pub unsafe fn cmdq_append(c: *mut client, mut item: *mut cmdq_item) -> *mut cmdq
             if !c.is_null() {
                 (*c).references += 1;
             }
-            (*item).client = c;
+            (*item).client = client_to_id(c);
 
             (*item).queue = queue;
             (*queue).list.push(item);
@@ -311,7 +325,8 @@ pub unsafe fn cmdq_insert_after(
     mut item: *mut cmdq_item,
 ) -> *mut cmdq_item {
     unsafe {
-        let c = (*after).client;
+        let client_id = (*after).client;
+        let c = client_id.and_then(|id| client_from_id(id)).unwrap_or(null_mut());
         let queue = (*after).queue;
 
         loop {
@@ -322,7 +337,7 @@ pub unsafe fn cmdq_insert_after(
             if !c.is_null() {
                 (*c).references += 1;
             }
-            (*item).client = c;
+            (*item).client = client_id;
 
             (*item).queue = queue;
             let pos = (*queue).list.iter().position(|&p| p == after).unwrap();
@@ -445,8 +460,8 @@ pub unsafe fn cmdq_continue(item: *mut cmdq_item) {
 
 pub unsafe fn cmdq_remove(item: *mut cmdq_item) {
     unsafe {
-        if !(*item).client.is_null() {
-            server_client_unref((*item).client);
+        if let Some(c) = (*item).client.and_then(|id| client_from_id(id)) {
+            server_client_unref(c);
         }
         if !(*item).cmdlist.is_null() {
             cmd_list_free((*item).cmdlist);
@@ -540,7 +555,7 @@ pub unsafe fn cmdq_find_flag(
 ) -> cmd_retval {
     unsafe {
         if (*flag).flag == 0 {
-            cmd_find_from_client(fs, (*item).target_client, cmd_find_flags::empty());
+            cmd_find_from_client(fs, cmdq_get_target_client(item), cmd_find_flags::empty());
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
@@ -556,7 +571,7 @@ pub unsafe fn cmdq_find_flag(
 
 pub unsafe fn cmdq_add_message(item: *mut cmdq_item) {
     unsafe {
-        let c = (*item).client;
+        let c = cmdq_get_client(item);
         let state = (*item).state;
         let user;
 
@@ -591,7 +606,7 @@ pub unsafe fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
     let __func__ = "cmdq_fire_command";
 
     unsafe {
-        let name = cmdq_name((*item).client);
+        let name = cmdq_name(cmdq_get_client(item));
         let state = (*item).state;
         let cmd = (*item).cmd;
         let args = cmd_get_args(cmd);
@@ -619,8 +634,8 @@ pub unsafe fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
                 .intersects(cmdq_state_flags::CMDQ_STATE_CONTROL);
             cmdq_guard(item, c!("begin"), flags);
 
-            if (*item).client.is_null() {
-                (*item).client = cmd_find_client(item, None, 1);
+            if (*item).client.is_none() {
+                (*item).client = client_to_id(cmd_find_client(item, None, 1));
             }
 
             if entry.flags.intersects(cmd_flag::CMD_CLIENT_CANFAIL) {
@@ -641,7 +656,7 @@ pub unsafe fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
             } else {
                 tc = cmd_find_client(item, None, 1);
             }
-            (*item).target_client = tc;
+            (*item).target_client = client_to_id(tc);
 
             retval = cmdq_find_flag(item, &raw mut (*item).source, &entry.source);
             if retval == cmd_retval::CMD_RETURN_ERROR {
@@ -664,8 +679,11 @@ pub unsafe fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
                     &raw mut (*item).target
                 } else if cmd_find_valid_state(&raw mut (*(*item).state).current) {
                     &raw mut (*(*item).state).current
-                } else if cmd_find_from_client(&raw mut fs, (*item).client, cmd_find_flags::empty())
-                    == 0
+                } else if cmd_find_from_client(
+                    &raw mut fs,
+                    cmdq_get_client(item),
+                    cmd_find_flags::empty(),
+                ) == 0
                 {
                     &raw mut fs
                 } else {
@@ -682,8 +700,11 @@ pub unsafe fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
                 fsp = &raw mut (*item).target;
             } else if cmd_find_valid_state(&raw mut (*(*item).state).current) {
                 fsp = &raw mut (*(*item).state).current;
-            } else if cmd_find_from_client(&raw mut fs, (*item).client, cmd_find_flags::empty())
-                == 0
+            } else if cmd_find_from_client(
+                &raw mut fs,
+                cmdq_get_client(item),
+                cmd_find_flags::empty(),
+            ) == 0
             {
                 fsp = &raw mut fs;
             }
@@ -833,7 +854,7 @@ pub unsafe fn cmdq_running(c: *mut client) -> *mut cmdq_item {
 
 pub unsafe fn cmdq_guard(item: *mut cmdq_item, guard: *const u8, flags: bool) {
     unsafe {
-        let c = (*item).client;
+        let c = cmdq_get_client(item);
         let t = (*item).time;
         let number = (*item).number;
 
@@ -845,7 +866,7 @@ pub unsafe fn cmdq_guard(item: *mut cmdq_item, guard: *const u8, flags: bool) {
 
 pub unsafe fn cmdq_print_data(item: *mut cmdq_item, parse: i32, evb: *mut evbuffer) {
     unsafe {
-        server_client_print((*item).client, parse, evb);
+        server_client_print(cmdq_get_client(item), parse, evb);
     }
 }
 
@@ -877,7 +898,7 @@ macro_rules! cmdq_error {
 pub(crate) use cmdq_error;
 pub unsafe fn cmdq_error_(item: *mut cmdq_item, args: std::fmt::Arguments) {
     unsafe {
-        let c = (*item).client;
+        let c = cmdq_get_client(item);
         let cmd = (*item).cmd;
         let mut file = null();
         let line = AtomicU32::new(0);
