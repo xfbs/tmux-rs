@@ -23,6 +23,12 @@ use crate::*;
 use crate::options_::*;
 
 pub static mut CLIENTS: clients = Vec::new();
+/// Central registry owning all client allocations. `Box<client>` provides a stable
+/// heap address, so `*mut client` pointers derived from it remain valid for the
+/// lifetime of the registry entry.
+pub static mut CLIENT_REGISTRY: BTreeMap<ClientId, Box<client>> = BTreeMap::new();
+/// Monotonically increasing counter for generating unique `ClientId` values.
+pub static mut NEXT_CLIENT_ID: u64 = 1;
 pub static mut SERVER_PROC: *mut tmuxproc = null_mut();
 pub static mut SERVER_FD: c_int = -1;
 pub static mut SERVER_CLIENT_FLAGS: client_flag = client_flag::empty();

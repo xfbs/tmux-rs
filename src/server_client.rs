@@ -245,11 +245,29 @@ pub unsafe fn server_client_is_default_key_table(c: *mut client, table: *mut key
 }
 
 /// Create a new client.
+///
+/// Allocates the client in the global `CLIENT_REGISTRY` (as a `Box<client>`),
+/// assigns a unique `ClientId`, and returns the raw pointer. The `Box` in the
+/// registry provides a stable heap address, so the returned `*mut client` is
+/// valid for the lifetime of the registry entry.
 pub unsafe fn server_client_create(fd: i32) -> *mut client {
     unsafe {
         setblocking(fd, 0);
 
+        // Allocate and register with a unique ClientId.
+        // Uses xcalloc1 (zeroed malloc) for the allocation — same as before.
+        // The raw pointer is wrapped in a Box via from_raw so the registry
+        // owns the allocation. The Box uses the same allocator (libc malloc)
+        // as xcalloc1 via the global allocator, so this is safe.
+        let id = ClientId(NEXT_CLIENT_ID);
+        NEXT_CLIENT_ID += 1;
         let c: *mut client = xcalloc1();
+        (*c).id = id;
+        let boxed = Box::from_raw(c);
+        (*(&raw mut CLIENT_REGISTRY)).insert(id, boxed);
+        // c remains valid — Box::from_raw moved ownership to the registry,
+        // but the heap address is stable.
+
         (*c).references = 1;
         (*c).peer = proc_add_peer(SERVER_PROC, fd, Some(server_client_dispatch), c.cast());
 
@@ -484,6 +502,20 @@ pub unsafe fn server_client_lost(c: *mut client) {
     }
 }
 
+/// Look up a client by ID in the global registry.
+#[allow(dead_code)] // Phase 2.1.2 will add callers
+///
+/// Returns a raw pointer to the client, or `None` if the client has been freed
+/// (removed from the registry). The returned pointer is valid as long as the
+/// registry entry exists.
+pub unsafe fn client_from_id(id: ClientId) -> Option<*mut client> {
+    unsafe {
+        (*(&raw mut CLIENT_REGISTRY))
+            .get_mut(&id)
+            .map(|b| &mut **b as *mut client)
+    }
+}
+
 /// Remove reference from a client.
 pub unsafe fn server_client_unref(c: *mut client) {
     unsafe {
@@ -503,6 +535,10 @@ pub unsafe fn server_client_unref(c: *mut client) {
 }
 
 /// Free dead client.
+///
+/// Removes the client from `CLIENT_REGISTRY`, which drops the `Box<client>`
+/// and deallocates the memory. The `*mut client` pointer becomes invalid after
+/// this call.
 pub unsafe extern "C-unwind" fn server_client_free(_fd: i32, _events: i16, arg: *mut c_void) {
     unsafe {
         let c: *mut client = arg.cast();
@@ -512,7 +548,9 @@ pub unsafe extern "C-unwind" fn server_client_free(_fd: i32, _events: i16, arg: 
 
         if (*c).references == 0 {
             free_((*c).name.cast_mut());
-            free_(c);
+            // Remove from registry — the Box drop deallocates the client.
+            let removed = (*(&raw mut CLIENT_REGISTRY)).remove(&(*c).id);
+            debug_assert!(removed.is_some(), "client {:?} not found in registry", (*c).id);
         }
     }
 }

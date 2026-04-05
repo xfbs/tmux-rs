@@ -2199,7 +2199,16 @@ bitflags::bitflags! {
     }
 }
 
+/// Unique, monotonically increasing client identifier.
+///
+/// IDs are never reused (monotonic `u64`), eliminating ABA problems.
+/// Used as the key into `CLIENT_REGISTRY` for ID-based ownership.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ClientId(pub u64);
+
 struct client {
+    /// Unique identifier for this client in the global registry.
+    id: ClientId,
     name: *const u8,
     peer: *mut tmuxpeer,
     queue: *mut cmdq_list,
