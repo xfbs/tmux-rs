@@ -2351,7 +2351,7 @@ union options_value {
 
 // Option table entries.
 #[repr(i32)]
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum options_table_type {
     OPTIONS_TABLE_STRING,
     OPTIONS_TABLE_NUMBER,

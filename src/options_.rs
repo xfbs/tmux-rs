@@ -1403,6 +1403,722 @@ pub unsafe fn options_push_changes(name: &str) {
     }
 }
 
+#[cfg(test)]
+#[allow(dangerous_implicit_autorefs, unsafe_op_in_unsafe_fn)]
+mod tests {
+    use super::*;
+    use crate::options_table::OPTIONS_TABLE;
+    use std::sync::Mutex;
+
+    /// Mutex to serialize tests that access global options state.
+    static OPTIONS_LOCK: Mutex<()> = Mutex::new(());
+
+    /// Create a standalone options tree with global options as parent.
+    /// Caller must hold OPTIONS_LOCK.
+    unsafe fn init_globals() {
+        use std::sync::Once;
+        static INIT: Once = Once::new();
+        INIT.call_once(|| unsafe {
+            use crate::tmux::{GLOBAL_OPTIONS, GLOBAL_S_OPTIONS, GLOBAL_W_OPTIONS};
+            GLOBAL_OPTIONS = options_create(null_mut());
+            GLOBAL_S_OPTIONS = options_create(null_mut());
+            GLOBAL_W_OPTIONS = options_create(null_mut());
+            for oe in &OPTIONS_TABLE {
+                if oe.scope & OPTIONS_TABLE_SERVER != 0 {
+                    options_default(GLOBAL_OPTIONS, oe);
+                }
+                if oe.scope & OPTIONS_TABLE_SESSION != 0 {
+                    options_default(GLOBAL_S_OPTIONS, oe);
+                }
+                if oe.scope & OPTIONS_TABLE_WINDOW != 0 {
+                    options_default(GLOBAL_W_OPTIONS, oe);
+                }
+            }
+        });
+    }
+
+    // ---------------------------------------------------------------
+    // options_parse — pure function, no global state needed
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn parse_simple_name() {
+        assert_eq!(options_parse("status"), Some(("status".to_string(), -1)));
+    }
+
+    #[test]
+    fn parse_name_with_index() {
+        assert_eq!(
+            options_parse("command-alias[0]"),
+            Some(("command-alias".to_string(), 0))
+        );
+    }
+
+    #[test]
+    fn parse_name_with_large_index() {
+        assert_eq!(
+            options_parse("command-alias[42]"),
+            Some(("command-alias".to_string(), 42))
+        );
+    }
+
+    #[test]
+    fn parse_empty_name() {
+        assert_eq!(options_parse(""), None);
+    }
+
+    #[test]
+    fn parse_no_closing_bracket() {
+        assert_eq!(options_parse("foo[3"), None);
+    }
+
+    #[test]
+    fn parse_bracket_not_at_end() {
+        assert_eq!(options_parse("foo[3]bar"), None);
+    }
+
+    #[test]
+    fn parse_user_option() {
+        assert_eq!(
+            options_parse("@my-option"),
+            Some(("@my-option".to_string(), -1))
+        );
+    }
+
+    #[test]
+    fn parse_user_option_with_index() {
+        assert_eq!(
+            options_parse("@my-option[5]"),
+            Some(("@my-option".to_string(), 5))
+        );
+    }
+
+    // ---------------------------------------------------------------
+    // options_create / options_free — lifecycle
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn create_and_free() {
+        unsafe {
+            let oo = options_create(null_mut());
+            assert!(!oo.is_null());
+            assert!((*oo).parent.is_null());
+            assert!((*oo).tree.is_empty());
+            options_free(oo);
+        }
+    }
+
+    #[test]
+    fn create_with_parent() {
+        unsafe {
+            let parent = options_create(null_mut());
+            let child = options_create(parent);
+            assert_eq!((*child).parent, parent);
+            options_free(child);
+            options_free(parent);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // options_default — create option with default value from table
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn default_string_option() {
+        let _lock = OPTIONS_LOCK.lock().unwrap();
+        unsafe {
+            init_globals();
+            let oo = options_create(null_mut());
+
+            // Find a string option from the table (e.g., "default-shell")
+            let oe = OPTIONS_TABLE
+                .iter()
+                .find(|oe| oe.name == "default-terminal")
+                .unwrap();
+            assert_eq!(oe.type_, options_table_type::OPTIONS_TABLE_STRING);
+
+            let o = options_default(oo, oe);
+            assert!(!o.is_null());
+            assert!(OPTIONS_IS_STRING(o));
+
+            options_free(oo);
+        }
+    }
+
+    #[test]
+    fn default_number_option() {
+        let _lock = OPTIONS_LOCK.lock().unwrap();
+        unsafe {
+            init_globals();
+            let oo = options_create(null_mut());
+
+            // "base-index" is a number option, default 0
+            let oe = OPTIONS_TABLE
+                .iter()
+                .find(|oe| oe.name == "base-index")
+                .unwrap();
+            assert_eq!(oe.type_, options_table_type::OPTIONS_TABLE_NUMBER);
+
+            let o = options_default(oo, oe);
+            assert!(!o.is_null());
+            assert!(OPTIONS_IS_NUMBER(o));
+            assert_eq!((*o).value.number, 0);
+
+            options_free(oo);
+        }
+    }
+
+    #[test]
+    fn default_flag_option() {
+        let _lock = OPTIONS_LOCK.lock().unwrap();
+        unsafe {
+            init_globals();
+            let oo = options_create(null_mut());
+
+            // "mouse" is a flag option, default off (0)
+            let oe = OPTIONS_TABLE
+                .iter()
+                .find(|oe| oe.name == "mouse")
+                .unwrap();
+            assert_eq!(oe.type_, options_table_type::OPTIONS_TABLE_FLAG);
+
+            let o = options_default(oo, oe);
+            assert!(!o.is_null());
+            assert_eq!((*o).value.number, 0);
+
+            options_free(oo);
+        }
+    }
+
+    #[test]
+    fn default_choice_option() {
+        let _lock = OPTIONS_LOCK.lock().unwrap();
+        unsafe {
+            init_globals();
+            let oo = options_create(null_mut());
+
+            // "status" is a choice option (off, on, 2, 3, 4, 5), default "on" (index 1)
+            let oe = OPTIONS_TABLE
+                .iter()
+                .find(|oe| oe.name == "status")
+                .unwrap();
+            assert_eq!(oe.type_, options_table_type::OPTIONS_TABLE_CHOICE);
+
+            let o = options_default(oo, oe);
+            assert!(!o.is_null());
+            assert_eq!((*o).value.number, oe.default_num);
+
+            options_free(oo);
+        }
+    }
+
+    #[test]
+    fn default_colour_option() {
+        let _lock = OPTIONS_LOCK.lock().unwrap();
+        unsafe {
+            init_globals();
+            let oo = options_create(null_mut());
+
+            let oe = OPTIONS_TABLE
+                .iter()
+                .find(|oe| oe.name == "display-panes-colour")
+                .unwrap();
+            assert_eq!(oe.type_, options_table_type::OPTIONS_TABLE_COLOUR);
+
+            let o = options_default(oo, oe);
+            assert!(!o.is_null());
+            assert_eq!((*o).value.number, oe.default_num);
+
+            options_free(oo);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // options_get / options_set — get/set with parent lookup
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn set_and_get_number() {
+        let _lock = OPTIONS_LOCK.lock().unwrap();
+        unsafe {
+            init_globals();
+            let parent = options_create(null_mut());
+            let oe = OPTIONS_TABLE
+                .iter()
+                .find(|oe| oe.name == "base-index")
+                .unwrap();
+            options_default(parent, oe);
+
+            // Parent has default (0), set child to 1
+            let child = options_create(parent);
+            options_default(child, oe);
+            options_set_number(child, "base-index", 1);
+
+            assert_eq!(options_get_number_(child, "base-index"), 1);
+            assert_eq!(options_get_number_(parent, "base-index"), 0);
+
+            options_free(child);
+            options_free(parent);
+        }
+    }
+
+    #[test]
+    fn get_falls_through_to_parent() {
+        let _lock = OPTIONS_LOCK.lock().unwrap();
+        unsafe {
+            init_globals();
+            let parent = options_create(null_mut());
+            let oe = OPTIONS_TABLE
+                .iter()
+                .find(|oe| oe.name == "base-index")
+                .unwrap();
+            options_default(parent, oe);
+            options_set_number(parent, "base-index", 7);
+
+            // Child has no "base-index" — should fall through to parent
+            let child = options_create(parent);
+            assert_eq!(options_get_number_(child, "base-index"), 7);
+
+            options_free(child);
+            options_free(parent);
+        }
+    }
+
+    #[test]
+    fn set_and_get_user_string_option() {
+        unsafe {
+            let oo = options_create(null_mut());
+            options_set_string!(oo, "@my-var", false, "hello");
+
+            let val = options_get_string(oo, "@my-var");
+            assert!(!val.is_null());
+            assert_eq!(cstr_to_str(val), "hello");
+
+            options_free(oo);
+        }
+    }
+
+    #[test]
+    fn set_string_append() {
+        unsafe {
+            let oo = options_create(null_mut());
+            options_set_string!(oo, "@test", false, "hello");
+            options_set_string!(oo, "@test", true, " world");
+
+            let val = options_get_string(oo, "@test");
+            assert_eq!(cstr_to_str(val), "hello world");
+
+            options_free(oo);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // options_to_string — value formatting
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn to_string_number() {
+        let _lock = OPTIONS_LOCK.lock().unwrap();
+        unsafe {
+            init_globals();
+            let oo = options_create(null_mut());
+            let oe = OPTIONS_TABLE
+                .iter()
+                .find(|oe| oe.name == "base-index")
+                .unwrap();
+            options_default(oo, oe);
+            options_set_number(oo, "base-index", 42);
+
+            let o = options_get_only(oo, "base-index");
+            let s = options_to_string(o, -1, 0);
+            assert_eq!(cstr_to_str(s), "42");
+            free_(s);
+
+            options_free(oo);
+        }
+    }
+
+    #[test]
+    fn to_string_flag() {
+        let _lock = OPTIONS_LOCK.lock().unwrap();
+        unsafe {
+            init_globals();
+            let oo = options_create(null_mut());
+            let oe = OPTIONS_TABLE
+                .iter()
+                .find(|oe| oe.name == "mouse")
+                .unwrap();
+            options_default(oo, oe);
+
+            let o = options_get_only(oo, "mouse");
+
+            // Default is off
+            let s = options_to_string(o, -1, 0);
+            assert_eq!(cstr_to_str(s), "off");
+            free_(s);
+
+            // Set to on
+            options_set_number(oo, "mouse", 1);
+            let s = options_to_string(o, -1, 0);
+            assert_eq!(cstr_to_str(s), "on");
+            free_(s);
+
+            // Numeric mode
+            let s = options_to_string(o, -1, 1);
+            assert_eq!(cstr_to_str(s), "1");
+            free_(s);
+
+            options_free(oo);
+        }
+    }
+
+    #[test]
+    fn to_string_choice() {
+        let _lock = OPTIONS_LOCK.lock().unwrap();
+        unsafe {
+            init_globals();
+            let oo = options_create(null_mut());
+            let oe = OPTIONS_TABLE
+                .iter()
+                .find(|oe| oe.name == "status")
+                .unwrap();
+            options_default(oo, oe);
+
+            let o = options_get_only(oo, "status");
+            let s = options_to_string(o, -1, 0);
+            // Default "status" is "on" (index 1)
+            assert_eq!(cstr_to_str(s), "on");
+            free_(s);
+
+            options_free(oo);
+        }
+    }
+
+    #[test]
+    fn to_string_user_string() {
+        unsafe {
+            let oo = options_create(null_mut());
+            options_set_string!(oo, "@foo", false, "bar baz");
+
+            let o = options_get_only(oo, "@foo");
+            let s = options_to_string(o, -1, 0);
+            assert_eq!(cstr_to_str(s), "bar baz");
+            free_(s);
+
+            options_free(oo);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // options_from_string — parse typed values
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn from_string_flag_on() {
+        let _lock = OPTIONS_LOCK.lock().unwrap();
+        unsafe {
+            init_globals();
+            let oo = options_create(null_mut());
+            let oe = OPTIONS_TABLE
+                .iter()
+                .find(|oe| oe.name == "mouse")
+                .unwrap();
+            options_default(oo, oe);
+
+            assert!(options_from_string(oo, oe, "mouse", c!("on"), false).is_ok());
+            assert_eq!(options_get_number_(oo, "mouse"), 1);
+
+            assert!(options_from_string(oo, oe, "mouse", c!("off"), false).is_ok());
+            assert_eq!(options_get_number_(oo, "mouse"), 0);
+
+            options_free(oo);
+        }
+    }
+
+    #[test]
+    fn from_string_flag_toggle() {
+        let _lock = OPTIONS_LOCK.lock().unwrap();
+        unsafe {
+            init_globals();
+            let oo = options_create(null_mut());
+            let oe = OPTIONS_TABLE
+                .iter()
+                .find(|oe| oe.name == "mouse")
+                .unwrap();
+            options_default(oo, oe);
+
+            // Toggle: null value flips the flag
+            assert_eq!(options_get_number_(oo, "mouse"), 0);
+            assert!(options_from_string(oo, oe, "mouse", null(), false).is_ok());
+            assert_eq!(options_get_number_(oo, "mouse"), 1);
+            assert!(options_from_string(oo, oe, "mouse", null(), false).is_ok());
+            assert_eq!(options_get_number_(oo, "mouse"), 0);
+
+            options_free(oo);
+        }
+    }
+
+    #[test]
+    fn from_string_flag_bad_value() {
+        let _lock = OPTIONS_LOCK.lock().unwrap();
+        unsafe {
+            init_globals();
+            let oo = options_create(null_mut());
+            let oe = OPTIONS_TABLE
+                .iter()
+                .find(|oe| oe.name == "mouse")
+                .unwrap();
+            options_default(oo, oe);
+
+            let result = options_from_string(oo, oe, "mouse", c!("maybe"), false);
+            assert!(result.is_err());
+
+            options_free(oo);
+        }
+    }
+
+    #[test]
+    fn from_string_number() {
+        let _lock = OPTIONS_LOCK.lock().unwrap();
+        unsafe {
+            init_globals();
+            let oo = options_create(null_mut());
+            let oe = OPTIONS_TABLE
+                .iter()
+                .find(|oe| oe.name == "base-index")
+                .unwrap();
+            options_default(oo, oe);
+
+            assert!(options_from_string(oo, oe, "base-index", c!("5"), false).is_ok());
+            assert_eq!(options_get_number_(oo, "base-index"), 5);
+
+            options_free(oo);
+        }
+    }
+
+    #[test]
+    fn from_string_number_out_of_range() {
+        let _lock = OPTIONS_LOCK.lock().unwrap();
+        unsafe {
+            init_globals();
+            let oo = options_create(null_mut());
+            let oe = OPTIONS_TABLE
+                .iter()
+                .find(|oe| oe.name == "base-index")
+                .unwrap();
+            options_default(oo, oe);
+
+            // base-index max is i32::MAX — test exceeding it
+            let result = options_from_string(oo, oe, "base-index", c!("-1"), false);
+            assert!(result.is_err(), "negative value should be rejected (min=0)");
+
+            options_free(oo);
+        }
+    }
+
+    #[test]
+    fn from_string_choice() {
+        let _lock = OPTIONS_LOCK.lock().unwrap();
+        unsafe {
+            init_globals();
+            let oo = options_create(null_mut());
+            let oe = OPTIONS_TABLE
+                .iter()
+                .find(|oe| oe.name == "status")
+                .unwrap();
+            options_default(oo, oe);
+
+            assert!(options_from_string(oo, oe, "status", c!("off"), false).is_ok());
+            assert_eq!(options_get_number_(oo, "status"), 0);
+
+            assert!(options_from_string(oo, oe, "status", c!("on"), false).is_ok());
+            assert_eq!(options_get_number_(oo, "status"), 1);
+
+            let result = options_from_string(oo, oe, "status", c!("invalid"), false);
+            assert!(result.is_err());
+
+            options_free(oo);
+        }
+    }
+
+    #[test]
+    fn from_string_colour() {
+        let _lock = OPTIONS_LOCK.lock().unwrap();
+        unsafe {
+            init_globals();
+            let oo = options_create(null_mut());
+            let oe = OPTIONS_TABLE
+                .iter()
+                .find(|oe| oe.name == "display-panes-colour")
+                .unwrap();
+            options_default(oo, oe);
+
+            assert!(options_from_string(oo, oe, "display-panes-colour", c!("red"), false).is_ok());
+
+            let result =
+                options_from_string(oo, oe, "display-panes-colour", c!("notacolour"), false);
+            assert!(result.is_err());
+
+            options_free(oo);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // options_match — prefix matching
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn match_exact() {
+        let _lock = OPTIONS_LOCK.lock().unwrap();
+        unsafe {
+            init_globals();
+            let mut idx = 0i32;
+            let mut ambiguous = 0i32;
+            let result = options_match("status", &raw mut idx, &raw mut ambiguous);
+            assert_eq!(result.as_deref(), Some("status"));
+            assert_eq!(idx, -1);
+            assert_eq!(ambiguous, 0);
+        }
+    }
+
+    #[test]
+    fn match_prefix() {
+        let _lock = OPTIONS_LOCK.lock().unwrap();
+        unsafe {
+            init_globals();
+            let mut idx = 0i32;
+            let mut ambiguous = 0i32;
+            // "base-i" should match "base-index" uniquely
+            let result = options_match("base-i", &raw mut idx, &raw mut ambiguous);
+            assert_eq!(result.as_deref(), Some("base-index"));
+        }
+    }
+
+    #[test]
+    fn match_ambiguous() {
+        let _lock = OPTIONS_LOCK.lock().unwrap();
+        unsafe {
+            init_globals();
+            let mut idx = 0i32;
+            let mut ambiguous = 0i32;
+            // "status-" matches multiple options (status-style, status-position, etc.)
+            let result = options_match("status-", &raw mut idx, &raw mut ambiguous);
+            assert!(result.is_none());
+            assert_eq!(ambiguous, 1);
+        }
+    }
+
+    #[test]
+    fn match_unknown() {
+        let _lock = OPTIONS_LOCK.lock().unwrap();
+        unsafe {
+            init_globals();
+            let mut idx = 0i32;
+            let mut ambiguous = 0i32;
+            let result =
+                options_match("nonexistent-option", &raw mut idx, &raw mut ambiguous);
+            assert!(result.is_none());
+            assert_eq!(ambiguous, 0);
+        }
+    }
+
+    #[test]
+    fn match_user_option() {
+        let _lock = OPTIONS_LOCK.lock().unwrap();
+        unsafe {
+            init_globals();
+            let mut idx = 0i32;
+            let mut ambiguous = 0i32;
+            // User options (@-prefixed) are returned as-is, no table lookup
+            let result = options_match("@my-thing", &raw mut idx, &raw mut ambiguous);
+            assert_eq!(result.as_deref(), Some("@my-thing"));
+            assert_eq!(ambiguous, 0);
+        }
+    }
+
+    #[test]
+    fn match_with_index() {
+        let _lock = OPTIONS_LOCK.lock().unwrap();
+        unsafe {
+            init_globals();
+            let mut idx = 0i32;
+            let mut ambiguous = 0i32;
+            let result = options_match("command-alias[3]", &raw mut idx, &raw mut ambiguous);
+            assert_eq!(result.as_deref(), Some("command-alias"));
+            assert_eq!(idx, 3);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // options_map_name — name aliasing (color → colour)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn map_name_color_to_colour() {
+        assert_eq!(
+            options_map_name("display-panes-color"),
+            Some("display-panes-colour")
+        );
+    }
+
+    #[test]
+    fn map_name_no_mapping() {
+        assert_eq!(options_map_name("status"), None);
+    }
+
+    #[test]
+    fn map_name_cursor_color() {
+        assert_eq!(options_map_name("cursor-color"), Some("cursor-colour"));
+    }
+
+    // ---------------------------------------------------------------
+    // options_entries — iteration
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn entries_returns_sorted() {
+        unsafe {
+            let oo = options_create(null_mut());
+            options_set_string!(oo, "@zebra", false, "z");
+            options_set_string!(oo, "@alpha", false, "a");
+            options_set_string!(oo, "@middle", false, "m");
+
+            let entries = options_entries(oo);
+            assert_eq!(entries.len(), 3);
+            assert_eq!(options_name(entries[0]), "@alpha");
+            assert_eq!(options_name(entries[1]), "@middle");
+            assert_eq!(options_name(entries[2]), "@zebra");
+
+            options_free(oo);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // options_get_only vs options_get — scope behavior
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn get_only_does_not_check_parent() {
+        unsafe {
+            let parent = options_create(null_mut());
+            options_set_string!(parent, "@foo", false, "parent-value");
+
+            let child = options_create(parent);
+            // get_only should not find @foo in child
+            let o = options_get_only(child, "@foo");
+            assert!(o.is_null());
+
+            // But get should find it via parent
+            let o = options_get(&mut *child, "@foo");
+            assert!(!o.is_null());
+            assert_eq!(cstr_to_str((*o).value.string), "parent-value");
+
+            options_free(child);
+            options_free(parent);
+        }
+    }
+}
+
 // note one difference was that this function previously could avoid allocation on error
 pub unsafe fn options_remove_or_default(o: *mut options_entry, idx: i32) -> Result<(), CString> {
     unsafe {
