@@ -2212,6 +2212,7 @@ struct client {
     pid: pid_t,
     fd: c_int,
     out_fd: c_int,
+    #[allow(dead_code)]
     event: event,
     retval: c_int,
 

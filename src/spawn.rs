@@ -89,8 +89,6 @@ pub unsafe fn spawn_window(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut 
         let s = (*sc).s;
         let mut idx = (*sc).idx;
         let mut w: *mut window;
-        let mut wp = null_mut();
-
         spawn_log("spawn_window", sc);
 
         // If the window already exists, we are respawning, so destroy all the
@@ -101,13 +99,12 @@ pub unsafe fn spawn_window(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut 
                 // Check if any pane is still alive (fd != -1).
                 // In the C code, TAILQ_FOREACH left wp as NULL if no
                 // match was found; replicate that with find().
-                wp = (*w)
+                let alive = (*w)
                     .panes
                     .iter()
                     .copied()
-                    .find(|&p| (*p).fd != -1)
-                    .unwrap_or(null_mut());
-                if !wp.is_null() {
+                    .any(|p| (*p).fd != -1);
+                if alive {
                     *cause = format_nul!("window {}:{} still active", (*s).name, (*(*sc).wl).idx,);
                     return null_mut();
                 }
@@ -192,7 +189,7 @@ pub unsafe fn spawn_window(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut 
         (*sc).flags |= SPAWN_NONOTIFY;
 
         // Spawn the pane.
-        wp = spawn_pane(sc, cause);
+        let wp = spawn_pane(sc, cause);
         if wp.is_null() {
             if !(*sc).flags.intersects(SPAWN_RESPAWN) {
                 winlink_remove(&raw mut (*s).windows, (*sc).wl);
