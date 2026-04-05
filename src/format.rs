@@ -432,7 +432,7 @@ pub unsafe fn format_job_tidy(jobs: *mut format_job_tree, force: i32) {
 pub unsafe fn format_tidy_jobs() {
     unsafe {
         format_job_tidy(&raw mut FORMAT_JOBS, 0);
-        for c in (&*(&raw mut CLIENTS)).iter().copied() {
+        for c in clients_iter() {
             if !(*c).jobs.is_null() {
                 format_job_tidy((*c).jobs, 0);
             }
@@ -497,7 +497,7 @@ pub unsafe fn format_cb_session_attached_list(ft: *mut format_tree) -> format_ta
             fatalx("out of memory");
         }
 
-        for loop_ in (&*(&raw mut CLIENTS)).iter().copied() {
+        for loop_ in clients_iter() {
             if (*loop_).session == s {
                 if EVBUFFER_LENGTH(buffer) > 0 {
                     evbuffer_add(buffer, c!(",").cast(), 1);
@@ -701,7 +701,7 @@ pub unsafe fn format_cb_window_active_clients(ft: *mut format_tree) -> format_ta
         let w = (*(*ft).wl).window;
 
         let mut n = 0u32;
-        for loop_ in (&*(&raw mut CLIENTS)).iter().copied() {
+        for loop_ in clients_iter() {
             let client_session = (*loop_).session;
             if client_session.is_null() {
                 continue;
@@ -729,7 +729,7 @@ pub unsafe fn format_cb_window_active_clients_list(ft: *mut format_tree) -> form
             fatalx("out of memory");
         }
 
-        for loop_ in (&*(&raw mut CLIENTS)).iter().copied() {
+        for loop_ in clients_iter() {
             let client_session = (*loop_).session;
             if client_session.is_null() {
                 continue;
@@ -1043,7 +1043,7 @@ pub unsafe fn format_cb_session_group_attached_list(ft: *mut format_tree) -> for
             fatalx("out of memory");
         }
 
-        for loop_ in (&*(&raw mut CLIENTS)).iter().copied() {
+        for loop_ in clients_iter() {
             let client_session = (*loop_).session;
             if client_session.is_null() {
                 continue;
@@ -4100,7 +4100,7 @@ pub unsafe fn format_loop_clients(es: *mut format_expand_state, fmt: *const u8) 
         let mut value = xcalloc(1, 1).as_ptr();
         let mut valuelen = 1;
 
-        for c in (&*(&raw mut CLIENTS)).iter().copied() {
+        for c in clients_iter() {
             format_log1!(
                 es,
                 c!("format_loop_clients"),

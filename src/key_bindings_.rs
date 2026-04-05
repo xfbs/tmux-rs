@@ -282,7 +282,7 @@ pub unsafe fn key_bindings_remove_table(name: *const u8) {
             .get_mut(&key)
             .map_or(null_mut(), |t| &mut **t as *mut key_table);
         if !table_ptr.is_null() {
-            for c in (&*(&raw mut CLIENTS)).iter().copied() {
+            for c in clients_iter() {
                 if (*c).keytable == table_ptr {
                     server_client_set_key_table(c, null_mut());
                 }

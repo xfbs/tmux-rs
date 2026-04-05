@@ -22,13 +22,31 @@ use crate::libc::{
 use crate::*;
 use crate::options_::*;
 
-pub static mut CLIENTS: clients = Vec::new();
 /// Central registry owning all client allocations. `Box<client>` provides a stable
 /// heap address, so `*mut client` pointers derived from it remain valid for the
 /// lifetime of the registry entry.
 pub static mut CLIENT_REGISTRY: BTreeMap<ClientId, Box<client>> = BTreeMap::new();
 /// Monotonically increasing counter for generating unique `ClientId` values.
 pub static mut NEXT_CLIENT_ID: u64 = 1;
+
+/// Iterate over all live clients as `*mut client` pointers.
+///
+/// Iterate over all clients via the `CLIENT_REGISTRY`.
+/// Returns pointers derived from the `CLIENT_REGISTRY` `Box` entries.
+#[inline]
+pub unsafe fn clients_iter() -> impl Iterator<Item = *mut client> {
+    unsafe {
+        (*(&raw mut CLIENT_REGISTRY))
+            .values_mut()
+            .map(|b| &mut **b as *mut client)
+    }
+}
+
+/// Number of clients in the registry.
+#[inline]
+pub unsafe fn clients_count() -> usize {
+    unsafe { (*(&raw const CLIENT_REGISTRY)).len() }
+}
 pub static mut SERVER_PROC: *mut tmuxproc = null_mut();
 pub static mut SERVER_FD: c_int = -1;
 pub static mut SERVER_CLIENT_FLAGS: client_flag = client_flag::empty();
@@ -243,7 +261,7 @@ pub unsafe fn server_start(
         input_key_build();
         WINDOWS = BTreeMap::new();
         ALL_WINDOW_PANES = BTreeMap::new();
-        // CLIENTS is already initialized as Vec::new() in the static.
+        // CLIENT_REGISTRY is already initialized as BTreeMap::new() in the static.
         SESSIONS = BTreeMap::new();
         key_bindings_init();
         MESSAGE_LOG = Vec::new();
@@ -302,7 +320,7 @@ pub unsafe fn server_loop() -> i32 {
 
         loop {
             let mut items = cmdq_next(null_mut());
-            for c in (&*(&raw mut CLIENTS)).iter().copied() {
+            for c in clients_iter() {
                 if (*c).flags.intersects(client_flag::IDENTIFIED) {
                     items += cmdq_next(c);
                 }
@@ -325,8 +343,8 @@ pub unsafe fn server_loop() -> i32 {
             return 0;
         }
 
-        for c in (&*(&raw mut CLIENTS)).iter().filter_map(|&p| NonNull::new(p)) {
-            if !(*c.as_ptr()).session.is_null() {
+        for c in clients_iter() {
+            if !(*c).session.is_null() {
                 return 0;
             }
         }
@@ -334,7 +352,7 @@ pub unsafe fn server_loop() -> i32 {
         // No attached clients therefore want to exit - flush any waiting
         // clients but don't actually exit until they've gone.
         cmd_wait_for_flush();
-        if !(&*(&raw const CLIENTS)).is_empty() {
+        if clients_count() > 0 {
             return 0;
         }
 
@@ -350,7 +368,7 @@ unsafe fn server_send_exit() {
     unsafe {
         cmd_wait_for_flush();
 
-        for c in (&*(&raw mut CLIENTS)).iter().copied() {
+        for c in clients_iter() {
             if (*c).flags.intersects(client_flag::SUSPENDED) {
                 server_client_lost(c);
             } else {

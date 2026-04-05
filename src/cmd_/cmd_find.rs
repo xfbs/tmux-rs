@@ -97,7 +97,7 @@ pub unsafe fn cmd_find_best_client(mut s: *const session) -> *mut client {
         }
 
         let mut c = null_mut();
-        for c_loop in (&*(&raw mut CLIENTS)).iter().copied() {
+        for c_loop in clients_iter() {
             if (*c_loop).session.is_null() {
                 continue;
             }
@@ -1373,8 +1373,8 @@ pub unsafe fn cmd_find_client(
 
         let mut c = null_mut();
         // Check name and path of each client.
-        for c_ in (&*(&raw mut CLIENTS)).iter().filter_map(|&p| NonNull::new(p)) {
-            c = c_.as_ptr();
+        for c_ in clients_iter() {
+            c = c_;
             if (*c).session.is_null() {
                 continue;
             }

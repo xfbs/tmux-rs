@@ -2311,7 +2311,6 @@ struct client {
     clipboard_npanes: c_uint,
 
 }
-type clients = Vec<*mut client>;
 
 /// Control mode subscription type.
 #[repr(i32)]

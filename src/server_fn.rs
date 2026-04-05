@@ -30,7 +30,7 @@ pub unsafe fn server_status_client(c: *mut client) {
 
 pub unsafe fn server_redraw_session(s: *mut session) {
     unsafe {
-        for c in (&*(&raw mut CLIENTS)).iter().copied() {
+        for c in clients_iter() {
             if (*c).session == s {
                 server_redraw_client(c);
             }
@@ -53,7 +53,7 @@ pub unsafe fn server_redraw_session_group(s: *mut session) {
 
 pub unsafe fn server_status_session(s: *mut session) {
     unsafe {
-        for c in (&*(&raw mut CLIENTS)).iter().copied() {
+        for c in clients_iter() {
             if (*c).session == s {
                 server_status_client(c);
             }
@@ -76,7 +76,7 @@ pub unsafe fn server_status_session_group(s: *mut session) {
 
 pub unsafe fn server_redraw_window(w: *mut window) {
     unsafe {
-        for c in (&*(&raw mut CLIENTS)).iter().copied() {
+        for c in clients_iter() {
             if !(*c).session.is_null() && (*(*(*c).session).curw).window == w {
                 server_redraw_client(c);
             }
@@ -86,7 +86,7 @@ pub unsafe fn server_redraw_window(w: *mut window) {
 
 pub unsafe fn server_redraw_window_borders(w: *mut window) {
     unsafe {
-        for c in (&*(&raw mut CLIENTS)).iter().copied() {
+        for c in clients_iter() {
             if !(*c).session.is_null() && (*(*(*c).session).curw).window == w {
                 (*c).flags |= client_flag::REDRAWBORDERS;
             }
@@ -110,7 +110,7 @@ pub unsafe fn server_status_window(w: *mut window) {
 
 pub unsafe fn server_lock() {
     unsafe {
-        for c in (&*(&raw mut CLIENTS)).iter().copied() {
+        for c in clients_iter() {
             if !(*c).session.is_null() {
                 server_lock_client(c);
             }
@@ -120,7 +120,7 @@ pub unsafe fn server_lock() {
 
 pub unsafe fn server_lock_session(s: *mut session) {
     unsafe {
-        for c in (&*(&raw mut CLIENTS)).iter().copied() {
+        for c in clients_iter() {
             if (*c).session == s {
                 server_lock_client(c);
             }
@@ -458,7 +458,7 @@ pub unsafe fn server_destroy_session(s: *mut session) {
         if s_new == s {
             s_new = null_mut();
         }
-        for c in (&*(&raw mut CLIENTS)).iter().copied() {
+        for c in clients_iter() {
             if (*c).session != s {
                 continue;
             }

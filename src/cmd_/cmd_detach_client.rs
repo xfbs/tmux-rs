@@ -68,7 +68,7 @@ pub unsafe fn cmd_detach_client_exec(self_: *mut cmd, item: *mut cmdq_item) -> c
             if s.is_null() {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
-            for loop_ in (&*(&raw mut CLIENTS)).iter().copied() {
+            for loop_ in clients_iter() {
                 if (*loop_).session == s {
                     if !cmd.is_null() {
                         server_client_exec(loop_, cmd);
@@ -81,7 +81,7 @@ pub unsafe fn cmd_detach_client_exec(self_: *mut cmd, item: *mut cmdq_item) -> c
         }
 
         if args_has(args, 'a') {
-            for loop_ in (&*(&raw mut CLIENTS)).iter().copied() {
+            for loop_ in clients_iter() {
                 if !(*loop_).session.is_null() && loop_ != tc {
                     if !cmd.is_null() {
                         server_client_exec(loop_, cmd);

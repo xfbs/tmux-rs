@@ -52,7 +52,7 @@ pub unsafe fn cmd_select_pane_redraw(w: *mut window) {
         // Redraw entire window if it is bigger than the client (the
         // offset may change), otherwise just draw borders.
 
-        for c in (&*(&raw mut CLIENTS)).iter().copied() {
+        for c in clients_iter() {
             if (*c).session.is_null() || ((*c).flags.intersects(client_flag::CONTROL)) {
                 continue;
             }

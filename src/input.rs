@@ -2725,7 +2725,7 @@ unsafe fn input_osc_8(ictx: *mut input_ctx, p: *const u8) {
 unsafe fn input_get_fg_client(wp: *mut window_pane) -> i32 {
     unsafe {
         let w = (*wp).window;
-        for loop_ in (&*(&raw mut CLIENTS)).iter().copied() {
+        for loop_ in clients_iter() {
             if (*loop_).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
                 continue;
             }
@@ -2747,7 +2747,7 @@ unsafe fn input_get_bg_client(wp: *mut window_pane) -> i32 {
     unsafe {
         let w = (*wp).window;
 
-        for loop_ in (&*(&raw mut CLIENTS)).iter().copied() {
+        for loop_ in clients_iter() {
             if (*loop_).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
                 continue;
             }
@@ -2771,8 +2771,8 @@ unsafe fn input_get_bg_control_client(wp: *mut window_pane) -> i32 {
             return -1;
         }
 
-        if (&*(&raw mut CLIENTS)).iter().filter_map(|&p| NonNull::new(p))
-            .any(|c| (*c.as_ptr()).flags.intersects(client_flag::CONTROL))
+        if clients_iter()
+            .any(|c| (*c).flags.intersects(client_flag::CONTROL))
         {
             return (*wp).control_bg;
         }
@@ -2789,8 +2789,8 @@ unsafe fn input_get_fg_control_client(wp: *mut window_pane) -> i32 {
             return -1;
         }
 
-        if (&*(&raw mut CLIENTS)).iter().filter_map(|&p| NonNull::new(p))
-            .any(|c| (*c.as_ptr()).flags.intersects(client_flag::CONTROL))
+        if clients_iter()
+            .any(|c| (*c).flags.intersects(client_flag::CONTROL))
         {
             return (*wp).control_fg;
         }

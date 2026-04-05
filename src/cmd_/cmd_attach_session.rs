@@ -114,7 +114,7 @@ pub unsafe fn cmd_attach_session(
                 } else {
                     msgtype = msgtype::MSG_DETACH;
                 }
-                for c_loop in (&*(&raw mut CLIENTS)).iter().copied() {
+                for c_loop in clients_iter() {
                     {
                         if (*c_loop).session != s || c == c_loop {
                             continue;
@@ -144,7 +144,7 @@ pub unsafe fn cmd_attach_session(
                 } else {
                     msgtype::MSG_DETACH
                 };
-                for c_loop in (&*(&raw mut CLIENTS)).iter().copied() {
+                for c_loop in clients_iter() {
                     if (*c_loop).session != s || c == c_loop {
                         continue;
                     }

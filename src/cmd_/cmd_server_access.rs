@@ -35,7 +35,7 @@ unsafe fn cmd_server_access_deny(item: *mut cmdq_item, pw: *mut libc::passwd) ->
             cmdq_error!(item, "user {} not found", _s((*pw).pw_name));
             return cmd_retval::CMD_RETURN_ERROR;
         }
-        for loop_ in (&*(&raw mut CLIENTS)).iter().copied() {
+        for loop_ in clients_iter() {
             let uid = proc_get_peer_uid((*loop_).peer);
             if uid == server_acl_get_uid(user) {
                 (*loop_).exit_message = xstrdup_(c"access not allowed").as_ptr();

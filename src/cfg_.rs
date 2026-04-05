@@ -64,7 +64,7 @@ pub fn start_cfg() {
     // front - we need to get in before MSG_COMMAND.
 
     unsafe {
-        let c = (&*(&raw mut CLIENTS)).first().copied().unwrap_or(null_mut());
+        let c = clients_iter().next().unwrap_or(null_mut());
         CFG_CLIENT = c;
         if !c.is_null() {
             CFG_ITEM = cmdq_get_callback!(cfg_client_done, null_mut()).as_ptr();
@@ -250,7 +250,7 @@ pub unsafe fn cfg_print_causes(item: *mut cmdq_item) {
 
 pub unsafe fn cfg_show_causes(mut s: *mut session) {
     unsafe {
-        let c = (&*(&raw mut CLIENTS)).first().copied().unwrap_or(null_mut());
+        let c = clients_iter().next().unwrap_or(null_mut());
 
         if CFG_CAUSES.lock().unwrap().is_empty() {
             return;

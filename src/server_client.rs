@@ -21,10 +21,10 @@ use crate::options_::*;
 /// Number of attached clients.
 pub unsafe fn server_client_how_many() -> u32 {
     unsafe {
-        (&*(&raw mut CLIENTS)).iter().filter_map(|&p| NonNull::new(p))
-            .filter(|c| {
-                !(*c.as_ptr()).session.is_null()
-                    && !(*c.as_ptr()).flags.intersects(CLIENT_UNATTACHEDFLAGS)
+        clients_iter()
+            .filter(|&c| {
+                !(*c).session.is_null()
+                    && !(*c).flags.intersects(CLIENT_UNATTACHEDFLAGS)
             })
             .count() as u32
     }
@@ -305,8 +305,7 @@ pub unsafe fn server_client_create(fd: i32) -> *mut client {
             NonNull::new_unchecked(c),
         );
 
-        (*(&raw mut CLIENTS)).push(c);
-        log_debug!("new client {:p}", c);
+        log_debug!("new client {:p} ({:?})", c, (*c).id);
         c
     }
 }
@@ -370,7 +369,7 @@ pub unsafe fn server_client_attached_lost(c: *mut client) {
             }
 
             let mut found: *mut client = null_mut();
-            for loop_ in (&*(&raw mut CLIENTS)).iter().copied() {
+            for loop_ in clients_iter() {
                 let s = (*loop_).session;
                 if loop_ == c || s.is_null() || (*(*s).curw).window != w {
                     continue;
@@ -439,8 +438,7 @@ pub unsafe fn server_client_lost(c: *mut client) {
         }
         (*c).windows.clear();
 
-        (*(&raw mut CLIENTS)).retain(|&p| p != c);
-        log_debug!("lost client {:p}", c);
+        log_debug!("lost client {:p} ({:?})", c, (*c).id);
 
         if (*c).flags.intersects(client_flag::ATTACHED) {
             server_client_attached_lost(c);
@@ -503,7 +501,6 @@ pub unsafe fn server_client_lost(c: *mut client) {
 }
 
 /// Look up a client by ID in the global registry.
-#[allow(dead_code)] // Phase 2.1.2 will add callers
 ///
 /// Returns a raw pointer to the client, or `None` if the client has been freed
 /// (removed from the registry). The returned pointer is valid as long as the
@@ -2175,7 +2172,7 @@ pub unsafe fn server_client_loop() {
         }
 
         // Check clients.
-        for c in (&*(&raw mut CLIENTS)).iter().copied() {
+        for c in clients_iter() {
             server_client_check_exit(c);
             if !(*c).session.is_null() {
                 server_client_check_modes(c);
@@ -2344,7 +2341,7 @@ pub unsafe fn server_client_check_pane_buffer(wp: *mut window_pane) {
             if (*wp).pipe_fd != -1 && (*wp).pipe_offset.used < minimum {
                 minimum = (*wp).pipe_offset.used;
             }
-            for c in (&*(&raw mut CLIENTS)).iter().copied() {
+            for c in clients_iter() {
                 if (*c).session.is_null() {
                     continue;
                 }
@@ -2397,7 +2394,7 @@ pub unsafe fn server_client_check_pane_buffer(wp: *mut window_pane) {
                 if (*wp).pipe_fd != -1 {
                     (*wp).pipe_offset.used -= (*wp).base_offset;
                 }
-                for c in (&*(&raw mut CLIENTS)).iter().copied() {
+                for c in clients_iter() {
                     if (*c).session.is_null() || !(*c).flags.intersects(client_flag::CONTROL) {
                         continue;
                     }
@@ -3233,7 +3230,7 @@ pub unsafe fn server_client_dispatch_identify(c: *mut client, imsg: *mut imsg) {
         // config has not been loaded - they might have been run from inside it
         if !(*c).flags.intersects(client_flag::EXIT)
             && !CFG_FINISHED.load(atomic::Ordering::Acquire)
-            && c == (&*(&raw mut CLIENTS)).first().copied().unwrap_or(null_mut())
+            && c == clients_iter().next().unwrap_or(null_mut())
         {
             start_cfg();
         }
@@ -3480,7 +3477,7 @@ pub unsafe fn server_client_remove_pane(wp: *mut window_pane) {
     unsafe {
         let w = (*wp).window;
 
-        for c in (&*(&raw mut CLIENTS)).iter().copied() {
+        for c in clients_iter() {
             if let Some(cw) = (*c).windows.get(&(*w).id) {
                 if cw.pane == wp {
                     (*c).windows.remove(&(*w).id);
