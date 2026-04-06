@@ -83,7 +83,7 @@ pub struct window_copy_cmd_state {
     m: *mut mouse_event,
 
     c: *mut client,
-    s: *mut session,
+    s: Option<SessionId>,
     wl: *mut winlink,
 }
 
@@ -943,7 +943,7 @@ pub unsafe fn window_copy_cmd_append_selection(
 ) -> window_copy_cmd_action {
     unsafe {
         let wme: *mut window_mode_entry = (*cs).wme;
-        let s = (*cs).s;
+        let s = (*cs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
 
         if !s.is_null() {
             window_copy_append_selection(wme);
@@ -958,7 +958,7 @@ pub unsafe fn window_copy_cmd_append_selection_and_cancel(
 ) -> window_copy_cmd_action {
     unsafe {
         let wme = (*cs).wme;
-        let s = (*cs).s;
+        let s = (*cs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
 
         if !s.is_null() {
             window_copy_append_selection(wme);
@@ -1050,7 +1050,7 @@ pub unsafe fn window_copy_do_copy_end_of_line(
     unsafe {
         let wme = (*cs).wme;
         let c = (*cs).c;
-        let s = (*cs).s;
+        let s = (*cs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*cs).wl;
         let wp = (*wme).wp;
         let count = args_count((*cs).args);
@@ -1140,7 +1140,7 @@ pub unsafe fn window_copy_do_copy_line(
     unsafe {
         let wme: *mut window_mode_entry = (*cs).wme;
         let c = (*cs).c;
-        let s = (*cs).s;
+        let s = (*cs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*cs).wl;
         let wp = (*wme).wp;
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -1230,7 +1230,7 @@ pub unsafe fn window_copy_cmd_copy_selection_no_clear(
     unsafe {
         let wme: *mut window_mode_entry = (*cs).wme;
         let c: *mut client = (*cs).c;
-        let s: *mut session = (*cs).s;
+        let s: *mut session = (*cs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl: *mut winlink = (*cs).wl;
         let wp: *mut window_pane = (*wme).wp;
         let mut prefix = null_mut();
@@ -1919,7 +1919,7 @@ pub unsafe fn window_copy_cmd_next_word(cs: *mut window_copy_cmd_state) -> windo
         let wme: *mut window_mode_entry = (*cs).wme;
         let mut np = (*wme).prefix;
 
-        let separators = options_get_string_((*(*cs).s).options, "word-separators");
+        let separators = options_get_string_((*(*cs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).options, "word-separators");
 
         while np != 0 {
             window_copy_cursor_next_word(wme, separators);
@@ -1936,7 +1936,7 @@ pub unsafe fn window_copy_cmd_next_word_end(
         let wme: *mut window_mode_entry = (*cs).wme;
         let mut np = (*wme).prefix;
 
-        let separators = options_get_string_((*(*cs).s).options, "word-separators");
+        let separators = options_get_string_((*(*cs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).options, "word-separators");
 
         while np != 0 {
             window_copy_cursor_next_word_end(wme, separators, 0);
@@ -2043,7 +2043,7 @@ pub unsafe fn window_copy_cmd_previous_word(
         let wme: *mut window_mode_entry = (*cs).wme;
         let mut np = (*wme).prefix;
 
-        let separators = options_get_string_((*(*cs).s).options, "word-separators");
+        let separators = options_get_string_((*(*cs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).options, "word-separators");
 
         while np != 0 {
             window_copy_cursor_previous_word(wme, separators, 1);
@@ -2231,7 +2231,7 @@ pub unsafe fn window_copy_cmd_select_word(
 ) -> window_copy_cmd_action {
     unsafe {
         let wme: *mut window_mode_entry = (*cs).wme;
-        let session_options: *mut options = (*(*cs).s).options;
+        let session_options: *mut options = (*(*cs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).options;
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         // u_int px, py, nextx, nexty;
 
@@ -2322,7 +2322,7 @@ pub unsafe fn window_copy_cmd_copy_pipe_no_clear(
     unsafe {
         let wme: *mut window_mode_entry = (*cs).wme;
         let c: *mut client = (*cs).c;
-        let s: *mut session = (*cs).s;
+        let s: *mut session = (*cs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl: *mut winlink = (*cs).wl;
         let wp: *mut window_pane = (*wme).wp;
         let mut command = null_mut();
@@ -2373,7 +2373,7 @@ pub unsafe fn window_copy_cmd_pipe_no_clear(
     unsafe {
         let wme: *mut window_mode_entry = (*cs).wme;
         let c: *mut client = (*cs).c;
-        let s: *mut session = (*cs).s;
+        let s: *mut session = (*cs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl: *mut winlink = (*cs).wl;
         let wp: *mut window_pane = (*wme).wp;
         let mut command = null_mut();
@@ -3423,7 +3423,7 @@ pub unsafe fn window_copy_command(
         cs.m = m;
 
         cs.c = c;
-        cs.s = s;
+        cs.s = if s.is_null() { None } else { Some(SessionId((*s).id)) };
         cs.wl = wl;
 
         let mut action = window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;

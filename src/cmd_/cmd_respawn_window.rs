@@ -42,7 +42,7 @@ unsafe fn cmd_respawn_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_
         let mut cause: *mut u8 = null_mut();
 
         sc.item = item;
-        sc.s = s;
+        sc.s = if s.is_null() { None } else { Some(SessionId((*s).id)) };
         sc.wl = wl;
         sc.tc = tc;
 

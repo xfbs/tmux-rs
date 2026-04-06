@@ -25,7 +25,7 @@ use crate::options_::*;
 
 pub unsafe fn spawn_log(from: &str, sc: *mut spawn_context) {
     unsafe {
-        let s = (*sc).s;
+        let s = (*sc).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*sc).wl;
         let wp0 = (*sc).wp0;
         let name = cmdq_get_name((*sc).item);
@@ -86,7 +86,7 @@ pub unsafe fn spawn_window(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut 
     unsafe {
         let item = (*sc).item;
         let c = cmdq_get_client(item);
-        let s = (*sc).s;
+        let s = (*sc).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let mut idx = (*sc).idx;
         let mut w: *mut window;
         spawn_log("spawn_window", sc);
@@ -231,7 +231,7 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut wi
         let item = (*sc).item;
         let target = cmdq_get_target(item);
         let c = cmdq_get_client(item);
-        let s = (*sc).s;
+        let s = (*sc).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let w = (*(*sc).wl).window;
         let new_wp: *mut window_pane;
         let child: *mut Environ;

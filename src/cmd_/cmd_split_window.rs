@@ -108,7 +108,7 @@ unsafe fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
 
         let mut sc: spawn_context = zeroed();
         sc.item = item;
-        sc.s = s;
+        sc.s = if s.is_null() { None } else { Some(SessionId((*s).id)) };
         sc.wl = wl;
 
         sc.wp0 = wp;

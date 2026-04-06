@@ -117,7 +117,7 @@ pub struct format_tree {
     pub type_: format_type,
 
     pub c: *mut client,
-    pub s: *mut session,
+    pub s: Option<SessionId>,
     pub wl: *mut winlink,
     pub w: *mut window,
     pub wp: *mut window_pane,
@@ -486,7 +486,7 @@ pub unsafe fn format_cb_pid(_ft: *mut format_tree) -> format_table_type {
 /// Callback for `session_attached_list`.
 pub unsafe fn format_cb_session_attached_list(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s;
+        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
 
         if s.is_null() {
             return format_table_type::None;
@@ -520,7 +520,7 @@ pub unsafe fn format_cb_session_attached_list(ft: *mut format_tree) -> format_ta
 /// Callback for `session_alerts`.
 pub unsafe fn format_cb_session_alerts(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        let s: *mut session = (*ft).s;
+        let s: *mut session = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         const SIZEOF_ALERTS: usize = 1024;
         const SIZEOF_TMP: usize = 16;
         let mut alerts = MaybeUninit::<[u8; 1024]>::uninit();
@@ -560,7 +560,7 @@ pub unsafe fn format_cb_session_alerts(ft: *mut format_tree) -> format_table_typ
 /// Callback for `session_stack`.
 pub unsafe fn format_cb_session_stack(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s;
+        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         const SIZEOF_RESULT: usize = 1024;
         const SIZEOF_TMP: usize = 16;
 
@@ -998,7 +998,7 @@ pub unsafe fn format_cb_pane_bg(ft: *mut format_tree) -> format_table_type {
 /// Callback for `session_group_list`.
 pub unsafe fn format_cb_session_group_list(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s;
+        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if s.is_null() {
             return format_table_type::None;
         }
@@ -1034,7 +1034,7 @@ pub unsafe fn format_cb_session_group_list(ft: *mut format_tree) -> format_table
 /// Callback for `session_group_attached_list`.
 pub unsafe fn format_cb_session_group_attached_list(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s;
+        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if s.is_null() {
             return format_table_type::None;
         }
@@ -2253,8 +2253,9 @@ pub unsafe fn format_cb_server_sessions(_ft: *mut format_tree) -> format_table_t
 /// Callback for `session_attached`.
 pub unsafe fn format_cb_session_attached(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).s.is_null() {
-            return format!("{}", (*(*ft).s).attached).into();
+        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if !s.is_null() {
+            return format!("{}", (*s).attached).into();
         }
         format_table_type::None
     }
@@ -2273,8 +2274,9 @@ pub unsafe fn format_cb_session_format(ft: *mut format_tree) -> format_table_typ
 /// Callback for `session_group`.
 pub unsafe fn format_cb_session_group(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).s.is_null() {
-            let sg = session_group_contains((*ft).s);
+        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if !s.is_null() {
+            let sg = session_group_contains(s);
             if !sg.is_null() {
                 return format!("{}", (*sg).name).into();
             }
@@ -2286,8 +2288,9 @@ pub unsafe fn format_cb_session_group(ft: *mut format_tree) -> format_table_type
 /// Callback for `session_group_attached`.
 pub unsafe fn format_cb_session_group_attached(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).s.is_null() {
-            let sg = session_group_contains((*ft).s);
+        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if !s.is_null() {
+            let sg = session_group_contains(s);
             if !sg.is_null() {
                 return format!("{}", session_group_attached_count(sg)).into();
             }
@@ -2299,8 +2302,9 @@ pub unsafe fn format_cb_session_group_attached(ft: *mut format_tree) -> format_t
 /// Callback for `session_group_many_attached`.
 pub unsafe fn format_cb_session_group_many_attached(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).s.is_null() {
-            let sg = session_group_contains((*ft).s);
+        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if !s.is_null() {
+            let sg = session_group_contains(s);
             if !sg.is_null() {
                 if session_group_attached_count(sg) > 1 {
                     return "1".into();
@@ -2315,8 +2319,9 @@ pub unsafe fn format_cb_session_group_many_attached(ft: *mut format_tree) -> for
 /// Callback for `session_group_size`.
 pub unsafe fn format_cb_session_group_size(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).s.is_null() {
-            let sg = session_group_contains((*ft).s);
+        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if !s.is_null() {
+            let sg = session_group_contains(s);
             if !sg.is_null() {
                 return format!("{}", session_group_count(sg)).into();
             }
@@ -2328,8 +2333,9 @@ pub unsafe fn format_cb_session_group_size(ft: *mut format_tree) -> format_table
 /// Callback for `session_grouped`.
 pub unsafe fn format_cb_session_grouped(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).s.is_null() {
-            if !session_group_contains((*ft).s).is_null() {
+        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if !s.is_null() {
+            if !session_group_contains(s).is_null() {
                 return "1".into();
             }
             return "0".into();
@@ -2341,8 +2347,9 @@ pub unsafe fn format_cb_session_grouped(ft: *mut format_tree) -> format_table_ty
 /// Callback for `session_id`.
 pub unsafe fn format_cb_session_id(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).s.is_null() {
-            return format!("${}", (*(*ft).s).id).into();
+        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if !s.is_null() {
+            return format!("${}", (*s).id).into();
         }
         format_table_type::None
     }
@@ -2351,8 +2358,9 @@ pub unsafe fn format_cb_session_id(ft: *mut format_tree) -> format_table_type {
 /// Callback for `session_many_attached`.
 pub unsafe fn format_cb_session_many_attached(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).s.is_null() {
-            if (*(*ft).s).attached > 1 {
+        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if !s.is_null() {
+            if (*s).attached > 1 {
                 return "1".into();
             }
             return "0".into();
@@ -2364,8 +2372,9 @@ pub unsafe fn format_cb_session_many_attached(ft: *mut format_tree) -> format_ta
 /// Callback for `session_marked`.
 pub unsafe fn format_cb_session_marked(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).s.is_null() {
-            if server_check_marked() && MARKED_PANE.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()) == (*ft).s {
+        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if !s.is_null() {
+            if server_check_marked() && MARKED_PANE.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()) == s {
                 return "1".into();
             }
             return "0".into();
@@ -2377,8 +2386,9 @@ pub unsafe fn format_cb_session_marked(ft: *mut format_tree) -> format_table_typ
 /// Callback for `session_name`.
 pub unsafe fn format_cb_session_name(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).s.is_null() {
-            return format!("{}", (*(*ft).s).name).into();
+        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if !s.is_null() {
+            return format!("{}", (*s).name).into();
         }
         format_table_type::None
     }
@@ -2387,8 +2397,9 @@ pub unsafe fn format_cb_session_name(ft: *mut format_tree) -> format_table_type 
 /// Callback for `session_path`.
 pub unsafe fn format_cb_session_path(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).s.is_null() {
-            return format!("{}", _s((*(*ft).s).cwd)).into();
+        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if !s.is_null() {
+            return format!("{}", _s((*s).cwd)).into();
         }
         format_table_type::None
     }
@@ -2397,8 +2408,9 @@ pub unsafe fn format_cb_session_path(ft: *mut format_tree) -> format_table_type 
 /// Callback for `session_windows`.
 pub unsafe fn format_cb_session_windows(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).s.is_null() {
-            return format!("{}", winlink_count(&raw mut (*(*ft).s).windows)).into();
+        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if !s.is_null() {
+            return format!("{}", winlink_count(&raw mut (*s).windows)).into();
         }
         format_table_type::None
     }
@@ -2417,8 +2429,9 @@ pub fn format_cb_version(_ft: *mut format_tree) -> format_table_type {
 /// Callback for `active_window_index`.
 pub unsafe fn format_cb_active_window_index(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).s.is_null() {
-            return format!("{}", (*(*(*ft).s).curw).idx).into();
+        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if !s.is_null() {
+            return format!("{}", (*(*s).curw).idx).into();
         }
         format_table_type::None
     }
@@ -2427,8 +2440,9 @@ pub unsafe fn format_cb_active_window_index(ft: *mut format_tree) -> format_tabl
 /// Callback for `last_window_index`.
 pub unsafe fn format_cb_last_window_index(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).s.is_null() {
-            let &wl = (*(&raw mut (*(*ft).s).windows)).values().next_back().unwrap();
+        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if !s.is_null() {
+            let &wl = (*(&raw mut (*s).windows)).values().next_back().unwrap();
             return format!("{}", (*wl).idx).into();
         }
         format_table_type::None
@@ -2792,8 +2806,9 @@ pub unsafe fn format_cb_client_created(ft: *mut format_tree) -> format_table_typ
 /// Callback for `session_activity`.
 pub unsafe fn format_cb_session_activity(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).s.is_null() {
-            return format_table_type::Time((*(*ft).s).activity_time);
+        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if !s.is_null() {
+            return format_table_type::Time((*s).activity_time);
         }
         format_table_type::None
     }
@@ -2802,8 +2817,9 @@ pub unsafe fn format_cb_session_activity(ft: *mut format_tree) -> format_table_t
 /// Callback for `session_created`.
 pub unsafe fn format_cb_session_created(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).s.is_null() {
-            return format_table_type::Time((*(*ft).s).creation_time);
+        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if !s.is_null() {
+            return format_table_type::Time((*s).creation_time);
         }
         format_table_type::None
     }
@@ -2812,8 +2828,9 @@ pub unsafe fn format_cb_session_created(ft: *mut format_tree) -> format_table_ty
 /// Callback for `session_last_attached`.
 pub unsafe fn format_cb_session_last_attached(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).s.is_null() {
-            return format_table_type::Time((*(*ft).s).last_attached_time);
+        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if !s.is_null() {
+            return format_table_type::Time((*s).last_attached_time);
         }
         format_table_type::None
     }
@@ -3438,8 +3455,11 @@ fn format_find(
             if o.is_null() {
                 o = options_parse_get(GLOBAL_W_OPTIONS, cstr_to_str(key), &raw mut idx, 0);
             }
-            if o.is_null() && !(*ft).s.is_null() {
-                o = options_parse_get((*(*ft).s).options, cstr_to_str(key), &raw mut idx, 0);
+            {
+                let fts = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+                if o.is_null() && !fts.is_null() {
+                    o = options_parse_get((*fts).options, cstr_to_str(key), &raw mut idx, 0);
+                }
             }
             if o.is_null() {
                 o = options_parse_get(GLOBAL_S_OPTIONS, cstr_to_str(key), &raw mut idx, 0);
@@ -3482,8 +3502,9 @@ fn format_find(
 
             if !modifiers.intersects(format_modifiers::FORMAT_TIMESTRING) {
                 let mut envent = None;
-                if !(*ft).s.is_null() {
-                    envent = environ_find_raw(&*(*(*ft).s).environ, key);
+                let fts = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+                if !fts.is_null() {
+                    envent = environ_find_raw(&*(*fts).environ, key);
                 }
                 if envent.is_none() {
                     envent = environ_find_raw(&*GLOBAL_ENVIRON, key);
@@ -3973,13 +3994,14 @@ pub unsafe fn format_loop_sessions(es: *mut format_expand_state, fmt: *const u8)
 pub unsafe fn format_window_name(es: *mut format_expand_state, fmt: *const u8) -> *mut u8 {
     unsafe {
         let ft = (*es).ft;
-        if (*ft).s.is_null() {
+        let fts = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if fts.is_null() {
             format_log1!(es, c!("format_window_name"), "window name but no session",);
             return null_mut();
         }
 
         let name = format_expand1(es, fmt);
-        for &wl in (*(&raw mut (*(*ft).s).windows)).values() {
+        for &wl in (*(&raw mut (*fts).windows)).values() {
             if strcmp((*(*wl).window).name, name) == 0 {
                 free_(name);
                 return xstrdup(c!("1")).as_ptr();
@@ -4000,7 +4022,8 @@ pub unsafe fn format_loop_windows(es: *mut format_expand_state, fmt: *const u8) 
         let mut value: *mut u8 = xcalloc(1, 1).as_ptr().cast();
         let mut valuelen = 1;
 
-        if (*ft).s.is_null() {
+        let fts = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if fts.is_null() {
             format_log1!(es, c!("format_loop_windows"), "window loop but no session",);
             return null_mut();
         }
@@ -4010,7 +4033,7 @@ pub unsafe fn format_loop_windows(es: *mut format_expand_state, fmt: *const u8) 
             active = null_mut();
         }
 
-        for &wl in (*(&raw mut (*(*ft).s).windows)).values() {
+        for &wl in (*(&raw mut (*fts).windows)).values() {
             let w = (*wl).window;
             format_log1!(
                 es,
@@ -4019,14 +4042,14 @@ pub unsafe fn format_loop_windows(es: *mut format_expand_state, fmt: *const u8) 
                 (*wl).idx,
                 (*w).id,
             );
-            let use_ = if !active.is_null() && wl == (*(*ft).s).curw {
+            let use_ = if !active.is_null() && wl == (*fts).curw {
                 active
             } else {
                 all
             };
 
             let nft = format_create(c, item, FORMAT_WINDOW as i32 | (*w).id as i32, (*ft).flags);
-            format_defaults(nft, (*ft).c, NonNull::new((*ft).s), NonNull::new(wl), None);
+            format_defaults(nft, (*ft).c, NonNull::new(fts), NonNull::new(wl), None);
             let mut next = zeroed();
             format_copy_state(&raw mut next, es, format_expand_flags::empty());
             next.ft = nft;
@@ -4080,7 +4103,7 @@ pub unsafe fn format_loop_panes(es: *mut format_expand_state, fmt: *const u8) ->
             format_defaults(
                 nft,
                 (*ft).c,
-                NonNull::new((*ft).s),
+                NonNull::new((*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())),
                 NonNull::new((*ft).wl),
                 NonNull::new(wp),
             );
@@ -4125,7 +4148,7 @@ pub unsafe fn format_loop_clients(es: *mut format_expand_state, fmt: *const u8) 
             format_defaults(
                 nft,
                 c,
-                NonNull::new((*ft).s),
+                NonNull::new((*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())),
                 NonNull::new((*ft).wl),
                 NonNull::new((*ft).wp),
             );
@@ -5293,15 +5316,16 @@ pub unsafe fn format_defaults(
 /// Set default format keys for a session.
 pub unsafe fn format_defaults_session(ft: *mut format_tree, s: *mut session) {
     unsafe {
-        (*ft).s = s;
+        (*ft).s = if s.is_null() { None } else { Some(SessionId((*s).id)) };
     }
 }
 
 /// Set default format keys for a client.
 pub unsafe fn format_defaults_client(ft: *mut format_tree, c: *mut client) {
     unsafe {
-        if (*ft).s.is_null() {
-            (*ft).s = client_get_session(c);
+        if (*ft).s.is_none() {
+            let s = client_get_session(c);
+            (*ft).s = if s.is_null() { None } else { Some(SessionId((*s).id)) };
         }
         (*ft).c = c;
     }

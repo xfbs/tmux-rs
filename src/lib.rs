@@ -2486,7 +2486,7 @@ const SPAWN_ZOOM: spawn_flags = spawn_flags::SPAWN_ZOOM;
 struct spawn_context {
     item: *mut cmdq_item,
 
-    s: *mut session,
+    s: Option<SessionId>,
     wl: *mut winlink,
     tc: *mut client,
 

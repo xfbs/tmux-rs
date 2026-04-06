@@ -39,7 +39,7 @@ pub struct cmd_run_shell_data<'a> {
     pub state: *mut args_command_state<'a>,
     pub cwd: *mut u8,
     pub item: *mut cmdq_item,
-    pub s: *mut session,
+    pub s: Option<SessionId>,
     pub wp_id: i32,
     pub timer: event,
     pub flags: job_flag,
@@ -157,7 +157,7 @@ pub unsafe fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
             (*cdata).cwd = xstrdup(server_client_get_cwd(c, s)).as_ptr();
         }
 
-        (*cdata).s = s;
+        (*cdata).s = if s.is_null() { None } else { Some(SessionId((*s).id)) };
         if !s.is_null() {
             session_add_ref(s, __func__);
         }
@@ -209,7 +209,7 @@ pub unsafe extern "C-unwind" fn cmd_run_shell_timer(
                 0,
                 null_mut(),
                 null_mut(),
-                (*cdata).s,
+                (*cdata).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()),
                 (*cdata).cwd,
                 None,
                 Some(cmd_run_shell_callback),
@@ -319,8 +319,9 @@ pub unsafe fn cmd_run_shell_free(data: *mut c_void) {
         let cdata = data as *mut cmd_run_shell_data;
 
         evtimer_del(&raw mut (*cdata).timer);
-        if !(*cdata).s.is_null() {
-            session_remove_ref((*cdata).s, __func__);
+        let cs = (*cdata).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if !cs.is_null() {
+            session_remove_ref(cs, __func__);
         }
         if let Some(c) = (*cdata).client.and_then(|id| client_from_id(id)) {
             server_client_unref(c);

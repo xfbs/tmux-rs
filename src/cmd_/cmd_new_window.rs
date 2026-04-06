@@ -91,7 +91,7 @@ unsafe fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retv
         }
 
         sc.item = item;
-        sc.s = s;
+        sc.s = if s.is_null() { None } else { Some(SessionId((*s).id)) };
         sc.tc = tc;
 
         sc.name = args_get(args, b'n');

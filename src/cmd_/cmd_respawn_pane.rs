@@ -39,7 +39,7 @@ unsafe fn cmd_respawn_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
         let mut cause = null_mut();
 
         sc.item = item;
-        sc.s = s;
+        sc.s = if s.is_null() { None } else { Some(SessionId((*s).id)) };
         sc.wl = wl;
 
         sc.wp0 = wp;

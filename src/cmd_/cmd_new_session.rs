@@ -302,7 +302,7 @@ unsafe fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
 
             // Spawn the initial window.
             sc.item = item;
-            sc.s = s;
+            sc.s = if s.is_null() { None } else { Some(SessionId((*s).id)) };
             if !detached {
                 sc.tc = c;
             }
