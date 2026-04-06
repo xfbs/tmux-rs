@@ -61,7 +61,7 @@ pub static mut CURRENT_TIME: time_t = unsafe { zeroed() };
 pub unsafe fn server_set_marked(s: *mut session, wl: *mut winlink, wp: *mut window_pane) {
     unsafe {
         cmd_find_clear_state(&raw mut MARKED_PANE, cmd_find_flags::empty());
-        MARKED_PANE.s = s;
+        MARKED_PANE.s = if s.is_null() { None } else { Some(SessionId((*s).id)) };
         MARKED_PANE.wl = wl;
         MARKED_PANE.w = (*wl).window;
         MARKED_PANE.wp = wp;
@@ -80,7 +80,7 @@ pub unsafe fn server_is_marked(s: *mut session, wl: *mut winlink, wp: *mut windo
     }
 
     unsafe {
-        if MARKED_PANE.s != s || MARKED_PANE.wl != wl {
+        if MARKED_PANE.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()) != s || MARKED_PANE.wl != wl {
             return false;
         }
         if MARKED_PANE.wp != wp {

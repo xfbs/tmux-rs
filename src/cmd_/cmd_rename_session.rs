@@ -36,7 +36,7 @@ unsafe fn cmd_rename_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_
     unsafe {
         let args = cmd_get_args(self_);
         let target = cmdq_get_target(item);
-        let s = (*target).s;
+        let s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
 
         let tmp = format_single_from_target(item, args_string(args, 0));
         let Some(newname) = session_check_name(tmp) else {

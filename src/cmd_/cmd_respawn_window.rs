@@ -37,7 +37,7 @@ unsafe fn cmd_respawn_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_
         let target = cmdq_get_target(item);
         let mut sc: spawn_context = zeroed();
         let tc = cmdq_get_target_client(item);
-        let s = (*target).s;
+        let s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*target).wl;
         let mut cause: *mut u8 = null_mut();
 

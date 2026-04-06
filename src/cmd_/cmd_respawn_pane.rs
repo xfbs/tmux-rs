@@ -33,7 +33,7 @@ unsafe fn cmd_respawn_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
         let args = cmd_get_args(self_);
         let target = cmdq_get_target(item);
         let mut sc: spawn_context = zeroed();
-        let s = (*target).s;
+        let s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*target).wl;
         let wp = (*target).wp;
         let mut cause = null_mut();

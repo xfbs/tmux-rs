@@ -42,7 +42,7 @@ unsafe fn cmd_list_clients_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
         let target = cmdq_get_target(item);
 
         let s = if args_has(args, 't') {
-            (*target).s
+            (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())
         } else {
             null_mut()
         };

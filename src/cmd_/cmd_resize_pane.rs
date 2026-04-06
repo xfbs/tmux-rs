@@ -37,7 +37,7 @@ unsafe fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
         let wl = (*target).wl;
         let w = (*wl).window;
         let c = cmdq_get_client(item);
-        let mut s = (*target).s;
+        let mut s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let mut cause: *mut u8 = null_mut();
         let mut adjust;
         let x: i32;

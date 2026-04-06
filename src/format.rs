@@ -2359,7 +2359,7 @@ pub unsafe fn format_cb_session_many_attached(ft: *mut format_tree) -> format_ta
 pub unsafe fn format_cb_session_marked(ft: *mut format_tree) -> format_table_type {
     unsafe {
         if !(*ft).s.is_null() {
-            if server_check_marked() && MARKED_PANE.s == (*ft).s {
+            if server_check_marked() && MARKED_PANE.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()) == (*ft).s {
                 return "1".into();
             }
             return "0".into();
@@ -5147,7 +5147,7 @@ pub unsafe fn format_single_from_state(
     c: *mut client,
     fs: *mut cmd_find_state,
 ) -> *mut u8 {
-    unsafe { format_single(item, fmt, c, (*fs).s, (*fs).wl, (*fs).wp) }
+    unsafe { format_single(item, fmt, c, (*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()), (*fs).wl, (*fs).wp) }
 }
 
 /// Expand a single string using target.
@@ -5189,7 +5189,7 @@ pub unsafe fn format_create_from_state(
     c: *mut client,
     fs: *mut cmd_find_state,
 ) -> *mut format_tree {
-    unsafe { format_create_defaults(item, c, (*fs).s, (*fs).wl, (*fs).wp) }
+    unsafe { format_create_defaults(item, c, (*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()), (*fs).wl, (*fs).wp) }
 }
 
 /// Create and add defaults using target.

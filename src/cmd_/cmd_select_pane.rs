@@ -79,7 +79,7 @@ pub unsafe fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
         let c = cmdq_get_client(item);
         let wl = (*target).wl;
         let w = (*wl).window;
-        let s = (*target).s;
+        let s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let mut wp = (*target).wp;
         let oo = (*wp).options;
 

@@ -62,7 +62,7 @@ unsafe fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
 
         let mut curval: u32 = 0;
 
-        let dst_s = (*target).s;
+        let dst_s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let dst_wl = (*target).wl;
         let dst_wp = (*target).wp;
         let dst_w = (*dst_wl).window;

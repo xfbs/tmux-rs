@@ -56,7 +56,7 @@ unsafe fn cmd_move_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
         let source = cmdq_get_source(item);
         let mut target = zeroed();
         let tflag = args_get(args, b't');
-        let src = (*source).s;
+        let src = (*source).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*source).wl;
         let mut cause = null_mut();
 
@@ -72,9 +72,10 @@ unsafe fn cmd_move_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
                 return cmd_retval::CMD_RETURN_ERROR;
             }
 
-            session_renumber_windows(target.s);
+            let target_s = target.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            session_renumber_windows(target_s);
             recalculate_sizes();
-            server_status_session(target.s);
+            server_status_session(target_s);
 
             return cmd_retval::CMD_RETURN_NORMAL;
         }
@@ -88,7 +89,7 @@ unsafe fn cmd_move_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
         {
             return cmd_retval::CMD_RETURN_ERROR;
         }
-        let dst = target.s;
+        let dst = target.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let mut idx = target.idx;
 
         let kflag = args_has(args, 'k');

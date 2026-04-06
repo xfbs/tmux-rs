@@ -38,7 +38,7 @@ unsafe fn cmd_resize_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         let target = cmdq_get_target(item);
         let wl = (*target).wl;
         let w = (*wl).window;
-        let s = (*target).s;
+        let s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let mut cause = null_mut();
         let mut xpixel = 0u32;
         let mut ypixel = 0u32;

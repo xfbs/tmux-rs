@@ -177,7 +177,7 @@ pub unsafe fn window_buffer_build(
         }
 
         if cmd_find_valid_state(&raw mut (*data).fs) {
-            s = NonNull::new((*data).fs.s);
+            s = NonNull::new((*data).fs.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()));
             wl = NonNull::new((*data).fs.wl);
             wp = NonNull::new((*data).fs.wp);
         }
@@ -322,7 +322,7 @@ pub unsafe fn window_buffer_get_key(
         let mut wp = None;
 
         if cmd_find_valid_state(&raw mut (*data.as_ptr()).fs) {
-            s = NonNull::new((*data.as_ptr()).fs.s);
+            s = NonNull::new((*data.as_ptr()).fs.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()));
             wl = NonNull::new((*data.as_ptr()).fs.wl);
             wp = NonNull::new((*data.as_ptr()).fs.wp);
         }

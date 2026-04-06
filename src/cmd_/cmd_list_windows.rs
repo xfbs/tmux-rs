@@ -46,7 +46,7 @@ unsafe fn cmd_list_windows_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
         if args_has(args, 'a') {
             cmd_list_windows_server(self_, item);
         } else {
-            cmd_list_windows_session(self_, NonNull::new_unchecked((*target).s), item, 0);
+            cmd_list_windows_session(self_, NonNull::new_unchecked((*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())), item, 0);
         }
 
         cmd_retval::CMD_RETURN_NORMAL

@@ -40,8 +40,8 @@ pub unsafe fn cmd_break_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_
         let source = cmdq_get_source(item);
         let tc = cmdq_get_target_client(item);
         let mut wl = (*source).wl;
-        let src_s = (*source).s;
-        let dst_s = (*target).s;
+        let src_s = (*source).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let dst_s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wp = (*source).wp;
         let mut w = (*wl).window;
 

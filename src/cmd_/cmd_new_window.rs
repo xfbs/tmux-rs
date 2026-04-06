@@ -41,7 +41,7 @@ unsafe fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retv
         let target = cmdq_get_target(item);
         let mut sc: spawn_context = zeroed();
         let tc = cmdq_get_target_client(item);
-        let s = (*target).s;
+        let s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*target).wl;
         let mut new_wl: *mut winlink = null_mut();
         let mut idx = (*target).idx;

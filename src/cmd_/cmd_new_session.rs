@@ -116,7 +116,7 @@ unsafe fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
                 as_ = if let Some(nn) = newname.as_deref() {
                     session_find(nn)
                 } else {
-                    (*target).s
+                    (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())
                 };
                 if !as_.is_null() {
                     retval = cmd_attach_session(
@@ -142,7 +142,7 @@ unsafe fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
             // Is this going to be part of a session group?
             group = args_get_(args, 't');
             if !group.is_null() {
-                groupwith = (*target).s;
+                groupwith = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
                 sg = if groupwith.is_null() {
                     session_group_find(cstr_to_str(group))
                 } else {

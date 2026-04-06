@@ -967,7 +967,7 @@ pub unsafe fn options_scope_from_name(
     cause: *mut *mut u8,
 ) -> i32 {
     unsafe {
-        let s = (*fs).s;
+        let s = (*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*fs).wl;
         let wp = (*fs).wp;
         let target = args_get_(args, 't');
@@ -1053,7 +1053,7 @@ pub unsafe fn options_scope_from_flags(
     cause: *mut *mut u8,
 ) -> i32 {
     unsafe {
-        let s = (*fs).s;
+        let s = (*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*fs).wl;
         let wp = (*fs).wp;
         let target = args_get_(args, 't');

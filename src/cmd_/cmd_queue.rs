@@ -689,7 +689,7 @@ pub unsafe fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
                 } else {
                     break 'out;
                 };
-                cmdq_insert_hook!((*fsp).s, item, fsp, "after-{}", entry.name);
+                cmdq_insert_hook!((*fsp).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()), item, fsp, "after-{}", entry.name);
             }
         }
 
@@ -709,7 +709,7 @@ pub unsafe fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
                 fsp = &raw mut fs;
             }
             cmdq_insert_hook!(
-                if !fsp.is_null() { (*fsp).s } else { null_mut() },
+                if !fsp.is_null() { (*fsp).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()) } else { null_mut() },
                 item,
                 fsp,
                 "command-error"

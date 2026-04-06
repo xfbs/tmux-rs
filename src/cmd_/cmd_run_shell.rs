@@ -108,7 +108,7 @@ pub unsafe fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         let target = cmdq_get_target(item);
         let c = cmdq_get_client(item);
         let tc = cmdq_get_target_client(item);
-        let s = (*target).s;
+        let s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wp = (*target).wp;
         let mut d: f64 = 0.0;
         let mut end: *mut u8 = null_mut();

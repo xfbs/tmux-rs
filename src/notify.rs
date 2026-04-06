@@ -66,10 +66,10 @@ pub unsafe fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut notify_entry
             cmd_find_copy_state(&raw mut fs, &raw mut (*ne).fs);
         }
 
-        let mut oo = if fs.s.is_null() {
+        let mut oo = if fs.s.is_none() {
             GLOBAL_S_OPTIONS
         } else {
-            (*fs.s).options
+            (*fs.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).options
         };
         let mut o = options_get(&mut *oo, cstr_to_str((*ne).name));
         if o.is_null() && !fs.wp.is_null() {
@@ -191,8 +191,8 @@ pub unsafe fn notify_callback(item: *mut cmdq_item, data: *mut c_void) -> cmd_re
             window_remove_ref((*ne).window, __func__);
         }
 
-        if !(*ne).fs.s.is_null() {
-            session_remove_ref((*ne).fs.s, __func__);
+        if !(*ne).fs.s.is_none() {
+            session_remove_ref((*ne).fs.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()), __func__);
         }
 
         format_free((*ne).formats);
@@ -263,8 +263,8 @@ pub unsafe fn notify_add(
         }
 
         cmd_find_copy_state(&raw mut (*ne).fs, fs);
-        if !(*ne).fs.s.is_null() {
-            session_add_ref((*ne).fs.s, __func__);
+        if !(*ne).fs.s.is_none() {
+            session_add_ref((*ne).fs.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()), __func__);
         } /* cmd_find_valid_state needs session */
 
         cmdq_append(
@@ -285,7 +285,7 @@ pub unsafe fn notify_hook(item: *mut cmdq_item, name: *mut u8) {
 
         let c = cmdq_get_client(item);
         ne.client = if c.is_null() { None } else { Some((*c).id) };
-        ne.session = if (*target).s.is_null() { None } else { Some(SessionId((*(*target).s).id)) };
+        ne.session = if (*target).s.is_none() { None } else { Some(SessionId((*(*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).id)) };
         ne.window = (*target).w;
         ne.pane = if !(*target).wp.is_null() {
             (*(*target).wp).id as i32

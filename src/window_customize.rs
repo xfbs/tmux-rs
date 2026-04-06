@@ -126,7 +126,7 @@ unsafe fn window_customize_get_tree(
             | window_customize_scope::WINDOW_CUSTOMIZE_KEY => null_mut(),
             window_customize_scope::WINDOW_CUSTOMIZE_SERVER => GLOBAL_OPTIONS,
             window_customize_scope::WINDOW_CUSTOMIZE_GLOBAL_SESSION => GLOBAL_S_OPTIONS,
-            window_customize_scope::WINDOW_CUSTOMIZE_SESSION => (*(*fs).s).options,
+            window_customize_scope::WINDOW_CUSTOMIZE_SESSION => (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).options,
             window_customize_scope::WINDOW_CUSTOMIZE_GLOBAL_WINDOW => GLOBAL_W_OPTIONS,
             window_customize_scope::WINDOW_CUSTOMIZE_WINDOW => (*(*fs).w).options,
             window_customize_scope::WINDOW_CUSTOMIZE_PANE => (*(*fs).wp).options,
@@ -193,7 +193,7 @@ unsafe fn window_customize_scope_text(
                 format_nul!("pane {}", idx)
             }
             window_customize_scope::WINDOW_CUSTOMIZE_SESSION => {
-                format_nul!("session {}", (*(*fs).s).name)
+                format_nul!("session {}", (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).name)
             }
             window_customize_scope::WINDOW_CUSTOMIZE_WINDOW => {
                 format_nul!("window {}", (*(*fs).wl).idx)
@@ -638,7 +638,7 @@ unsafe fn window_customize_build(
             window_customize_scope::WINDOW_CUSTOMIZE_GLOBAL_SESSION,
             GLOBAL_S_OPTIONS,
             window_customize_scope::WINDOW_CUSTOMIZE_SESSION,
-            (*fs.s).options,
+            (*fs.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).options,
             window_customize_scope::WINDOW_CUSTOMIZE_NONE,
             null_mut(),
             ft,

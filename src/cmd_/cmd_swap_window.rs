@@ -41,8 +41,8 @@ unsafe fn cmd_swap_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
         let args = cmd_get_args(self_);
         let source = cmdq_get_source(item);
         let target = cmdq_get_target(item);
-        let src = (*source).s;
-        let dst = (*target).s;
+        let src = (*source).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let dst = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl_src = (*source).wl;
         let wl_dst = (*target).wl;
 

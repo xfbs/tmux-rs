@@ -337,7 +337,7 @@ unsafe fn cmd_display_menu_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
         let mut px: u32 = 0;
         let mut py: u32 = 0;
         let count = args_count(args);
-        let o = (*(*(*(*target).s).curw).window).options;
+        let o = (*(*(*(*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).curw).window).options;
 
         if (*tc).overlay_draw.is_some() {
             return cmd_retval::CMD_RETURN_NORMAL;
@@ -455,7 +455,7 @@ unsafe fn cmd_display_popup_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
     unsafe {
         let args = cmd_get_args(self_);
         let target = cmdq_get_target(item);
-        let s = (*target).s;
+        let s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let tc = cmdq_get_target_client(item);
         let tty = &raw mut (*tc).tty;
         let style = args_get(args, b's');

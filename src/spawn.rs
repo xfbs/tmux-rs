@@ -254,15 +254,15 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut wi
             spawn_log("spawn_pane", sc);
 
             if !(*sc).cwd.is_null() {
-                cwd = format_single(item, cstr_to_str((*sc).cwd), c, (*target).s, null_mut(), null_mut());
+                cwd = format_single(item, cstr_to_str((*sc).cwd), c, (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()), null_mut(), null_mut());
                 if *cwd != b'/' {
                     new_cwd =
-                        format_nul!("{}/{}", _s(server_client_get_cwd(c, (*target).s)), _s(cwd));
+                        format_nul!("{}/{}", _s(server_client_get_cwd(c, (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()))), _s(cwd));
                     free_(cwd);
                     cwd = new_cwd;
                 }
             } else if !(*sc).flags.intersects(SPAWN_RESPAWN) {
-                cwd = xstrdup(server_client_get_cwd(c, (*target).s)).as_ptr();
+                cwd = xstrdup(server_client_get_cwd(c, (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()))).as_ptr();
             } else {
                 cwd = null_mut();
             }

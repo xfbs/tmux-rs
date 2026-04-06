@@ -93,7 +93,7 @@ unsafe fn cmd_select_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         let current = cmdq_get_current(item);
         let target = cmdq_get_target(item);
         let wl = (*target).wl;
-        let s = (*target).s;
+        let s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
 
         let mut next = std::ptr::eq(cmd_get_entry(self_), &CMD_NEXT_WINDOW_ENTRY);
         if args_has(args, 'n') {
@@ -138,7 +138,7 @@ unsafe fn cmd_select_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
                     cmdq_error!(item, "no last window");
                     return cmd_retval::CMD_RETURN_ERROR;
                 }
-                if (*current).s == s {
+                if (*current).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()) == s {
                     cmd_find_from_session(current, s, cmd_find_flags::empty());
                 }
                 server_redraw_session(s);

@@ -64,7 +64,7 @@ pub unsafe fn cmd_detach_client_exec(self_: *mut cmd, item: *mut cmdq_item) -> c
         };
 
         if args_has(args, 's') {
-            let s = (*source).s;
+            let s = (*source).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
             if s.is_null() {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }

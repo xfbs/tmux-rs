@@ -477,7 +477,7 @@ unsafe fn window_tree_build(
         let mut sg: *mut session_group;
 
         // u_int n, i;
-        let current = session_group_contains((*data).fs.s);
+        let current = session_group_contains((*data).fs.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()));
 
         for i in 0..(*data).item_size {
             window_tree_free_item(*(*data).item_list.add(i as usize));
@@ -494,7 +494,7 @@ unsafe fn window_tree_build(
                     sg = session_group_contains(s);
                     !sg.is_null()
                 })
-                && ((sg == current && s != (*data).fs.s)
+                && ((sg == current && s != (*data).fs.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()))
                     || (sg != current && s != (*sg).sessions.first().copied().unwrap_or(null_mut())))
 
             {
@@ -536,7 +536,7 @@ unsafe fn window_tree_build(
 
         match (*data).type_ {
             window_tree_type::WINDOW_TREE_NONE => (),
-            window_tree_type::WINDOW_TREE_SESSION => *tag = (*data).fs.s as u64,
+            window_tree_type::WINDOW_TREE_SESSION => *tag = (*data).fs.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()) as u64,
             window_tree_type::WINDOW_TREE_WINDOW => *tag = (*data).fs.wl as u64,
             window_tree_type::WINDOW_TREE_PANE => {
                 if window_count_panes((*(*data).fs.wl).window) == 1 {
@@ -1477,7 +1477,7 @@ unsafe fn window_tree_key(
                 b'<' => (*data).offset -= 1,
                 b'>' => (*data).offset += 1,
                 b'H' => {
-                    mode_tree_expand((*data).data, (*fsp).s as u64);
+                    mode_tree_expand((*data).data, (*fsp).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()) as u64);
                     mode_tree_expand((*data).data, (*fsp).wl as u64);
                     if !mode_tree_set_current((*data).data, (*wme.as_ptr()).wp as u64) {
                         mode_tree_set_current((*data).data, (*fsp).wl as u64);

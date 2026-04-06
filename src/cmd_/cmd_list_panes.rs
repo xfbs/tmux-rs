@@ -35,7 +35,7 @@ unsafe fn cmd_list_panes_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retv
     unsafe {
         let args = cmd_get_args(self_);
         let target = cmdq_get_target(item);
-        let s = (*target).s;
+        let s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*target).wl;
 
         if args_has(args, 'a') {

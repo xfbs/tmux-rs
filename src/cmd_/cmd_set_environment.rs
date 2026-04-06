@@ -64,7 +64,7 @@ unsafe fn cmd_set_environment_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
             if args_has(args, 'g') {
                 env = GLOBAL_ENVIRON;
             } else {
-                if (*target).s.is_null() {
+                if (*target).s.is_none() {
                     tflag = args_get_(args, 't');
                     if !tflag.is_null() {
                         cmdq_error!(item, "no such session: {}", _s(tflag));
@@ -74,7 +74,7 @@ unsafe fn cmd_set_environment_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
                     retval = cmd_retval::CMD_RETURN_ERROR;
                     break 'out;
                 }
-                env = (*(*target).s).environ;
+                env = (*(*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).environ;
             }
 
             if args_has(args, 'u') {

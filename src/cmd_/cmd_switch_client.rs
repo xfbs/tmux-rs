@@ -47,7 +47,7 @@ unsafe fn cmd_switch_client_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         if cmd_find_target(&raw mut target, item, cstr_to_str_(tflag), type_, flags) != 0 {
             return cmd_retval::CMD_RETURN_ERROR;
         }
-        let mut s = target.s;
+        let mut s = target.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = target.wl;
         let wp = target.wp;
 

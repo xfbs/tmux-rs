@@ -57,7 +57,7 @@ unsafe fn cmd_kill_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
         let wl = (*target).wl;
         //*loop;
         let w = (*wl).window;
-        let s = (*target).s;
+        let s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let mut found;
 
         if std::ptr::eq(cmd_get_entry(self_), &CMD_UNLINK_WINDOW_ENTRY) {

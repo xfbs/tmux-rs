@@ -55,7 +55,7 @@ pub unsafe fn cmd_send_keys_inject_key(
     unsafe {
         let target = cmdq_get_target(item);
         let tc = cmdq_get_target_client(item);
-        let s = (*target).s;
+        let s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*target).wl;
         let wp = (*target).wp;
 
@@ -153,7 +153,7 @@ pub unsafe fn cmd_send_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         let args = cmd_get_args(self_);
         let target = cmdq_get_target(item);
         let tc = cmdq_get_target_client(item);
-        let mut s = (*target).s;
+        let mut s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*target).wl;
         let mut wp = (*target).wp;
         let event = cmdq_get_event(item);

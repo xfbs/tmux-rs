@@ -49,7 +49,7 @@ unsafe fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
         let args = cmd_get_args(self_);
         let target = cmdq_get_target(item);
         let tc = cmdq_get_target_client(item);
-        let s = (*target).s;
+        let s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*target).wl;
         let wp = (*target).wp;
         let mut cause: *mut u8 = null_mut();

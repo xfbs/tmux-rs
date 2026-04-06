@@ -38,7 +38,7 @@ pub unsafe fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         let target = cmdq_get_target(item);
         let tc = cmdq_get_target_client(item);
         let wp = (*target).wp;
-        let s = (*target).s;
+        let s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*target).wl;
         let wpo = &raw mut (*wp).pipe_offset;
         let mut pipe_fd: [i32; 2] = [0; 2];

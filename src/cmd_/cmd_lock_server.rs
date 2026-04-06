@@ -65,7 +65,7 @@ unsafe fn cmd_lock_server_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
         if std::ptr::eq(cmd_get_entry(self_), &CMD_LOCK_SERVER_ENTRY) {
             server_lock();
         } else if std::ptr::eq(cmd_get_entry(self_), &CMD_LOCK_SESSION_ENTRY) {
-            server_lock_session((*target).s);
+            server_lock_session((*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()));
         } else {
             server_lock_client(tc);
         }

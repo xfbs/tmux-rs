@@ -54,7 +54,7 @@ pub Expanded: Vec<u8> = {
         fs.as_ptr()
       };
       let ft = format_create(null_mut(), (*pi).item, FORMAT_NONE, flags);
-      format_defaults(ft, c, NonNull::new((*fsp).s), NonNull::new((*fsp).wl), NonNull::new((*fsp).wp));
+      format_defaults(ft, c, NonNull::new((*fsp).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())), NonNull::new((*fsp).wl), NonNull::new((*fsp).wp));
 
       let value = format_expand(ft, arg1.as_ptr());
       format_free(ft);

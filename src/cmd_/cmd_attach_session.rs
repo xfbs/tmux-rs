@@ -78,7 +78,7 @@ pub unsafe fn cmd_attach_session(
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
-        let s = target.s;
+        let s = target.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = target.wl;
         let wp = target.wp;
 

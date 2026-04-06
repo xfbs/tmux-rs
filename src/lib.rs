@@ -1881,7 +1881,7 @@ struct cmd_find_state {
     flags: cmd_find_flags,
     current: *mut cmd_find_state,
 
-    s: *mut session,
+    s: Option<SessionId>,
     wl: *mut winlink,
     w: *mut window,
     wp: *mut window_pane,
