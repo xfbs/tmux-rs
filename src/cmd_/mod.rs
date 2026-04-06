@@ -813,7 +813,7 @@ pub unsafe fn cmd_mouse_pane(
             wp = NonNull::new((*(*wl.as_ptr()).window).active);
         } else {
             wp = Some(NonNull::new(window_pane_find_by_id((*m).wp as u32))?);
-            if !window_has_pane((*wl.as_ptr()).window, wp.unwrap().as_ptr()) {
+            if !window_has_pane(&*(*wl.as_ptr()).window, wp.unwrap().as_ptr()) {
                 return None;
             }
         }

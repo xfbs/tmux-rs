@@ -2684,7 +2684,7 @@ pub unsafe fn format_cb_window_offset_y(ft: &format_tree) -> format_table_type {
 pub unsafe fn format_cb_window_panes(ft: &format_tree) -> format_table_type {
     unsafe {
         if !(*ft).w.is_null() {
-            return format!("{}", window_count_panes((*ft).w)).into();
+            return format!("{}", window_count_panes(&*(*ft).w)).into();
         }
         format_table_type::None
     }

@@ -277,7 +277,7 @@ unsafe fn cmd_display_panes_key(c: *mut client, data: *mut c_void, event: *mut k
             return -1;
         }
 
-        let wp = window_pane_at_index(w, index);
+        let wp = window_pane_at_index(&*w, index);
         if wp.is_null() {
             return 1;
         }

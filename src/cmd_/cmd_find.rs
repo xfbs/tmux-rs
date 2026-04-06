@@ -639,7 +639,7 @@ pub unsafe fn cmd_find_get_pane_with_window(fs: *mut cmd_find_state, pane: &str)
         }
 
         if let Ok(idx) = strtonum_(pane, 0, i32::MAX) {
-            (*fs).wp = window_pane_at_index((*fs).w, idx as u32);
+            (*fs).wp = window_pane_at_index(&*(*fs).w, idx as u32);
             if !(*fs).wp.is_null() {
                 return 0;
             }
@@ -689,7 +689,7 @@ pub unsafe fn cmd_find_valid_state(fs: *const cmd_find_state) -> bool {
             return false;
         }
 
-        window_has_pane((*fs).w, (*fs).wp)
+        window_has_pane(&*(*fs).w, (*fs).wp)
     }
 }
 

@@ -179,7 +179,7 @@ unsafe fn window_tree_pull_item(
         *wp = std::mem::transmute::<*mut window_pane, Option<NonNull<window_pane>>>(
             window_pane_find_by_id((*item.as_ptr()).pane as u32),
         );
-        if !window_has_pane((*(*wlp).unwrap().as_ptr()).window, transmute_ptr(*wp)) {
+        if !window_has_pane(&*(*(*wlp).unwrap().as_ptr()).window, transmute_ptr(*wp)) {
             *wp = None;
         }
         if (*wp).is_none() {
@@ -539,7 +539,7 @@ unsafe fn window_tree_build(
             window_tree_type::WINDOW_TREE_SESSION => *tag = (*data).fs.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()) as u64,
             window_tree_type::WINDOW_TREE_WINDOW => *tag = (*data).fs.wl as u64,
             window_tree_type::WINDOW_TREE_PANE => {
-                if window_count_panes((*(*data).fs.wl).window) == 1 {
+                if window_count_panes(&*(*(*data).fs.wl).window) == 1 {
                     *tag = (*data).fs.wl as u64;
                 } else {
                     *tag = (*data).fs.wp as u64;
@@ -764,7 +764,7 @@ unsafe fn window_tree_draw_window(
         // int colour, active_colour, left, right;
         // char *label;
 
-        let total = window_count_panes(w);
+        let total = window_count_panes(&*w);
 
         memcpy__(&raw mut gc, &raw const GRID_DEFAULT_CELL);
         let colour: i32 = options_get_number_(oo, "display-panes-colour") as i32;

@@ -363,19 +363,19 @@ unsafe fn window_destroy(w: *mut window) {
     }
 }
 
-pub unsafe fn window_pane_destroy_ready(wp: *mut window_pane) -> bool {
+pub unsafe fn window_pane_destroy_ready(wp: &window_pane) -> bool {
     let mut n = 0;
     unsafe {
-        if (*wp).pipe_fd != -1 {
-            if EVBUFFER_LENGTH((*(*wp).pipe_event).output) != 0 {
+        if wp.pipe_fd != -1 {
+            if EVBUFFER_LENGTH((*wp.pipe_event).output) != 0 {
                 return false;
             }
-            if ioctl((*wp).fd, FIONREAD, &raw mut n) != -1 && n > 0 {
+            if ioctl(wp.fd, FIONREAD, &raw mut n) != -1 && n > 0 {
                 return false;
             }
         }
 
-        if !(*wp).flags.intersects(window_pane_flags::PANE_EXITED) {
+        if !wp.flags.intersects(window_pane_flags::PANE_EXITED) {
             return false;
         }
     }
@@ -495,8 +495,8 @@ pub unsafe fn window_pane_send_resize(wp: *mut window_pane, sx: u32, sy: u32) {
     }
 }
 
-pub unsafe fn window_has_pane(w: *mut window, wp: *mut window_pane) -> bool {
-    unsafe { (*w).panes.iter().any(|&wp1| wp1 == wp) }
+pub fn window_has_pane(w: &window, wp: *mut window_pane) -> bool {
+    w.panes.iter().any(|&wp1| wp1 == wp)
 }
 
 pub unsafe fn window_update_focus(w: *mut window) {
@@ -697,7 +697,7 @@ pub unsafe fn window_zoom(wp: *mut window_pane) -> i32 {
             return -1;
         }
 
-        if window_count_panes(w) == 1 {
+        if window_count_panes(&*w) == 1 {
             return -1;
         }
 
@@ -852,11 +852,11 @@ pub unsafe fn window_remove_pane(w: *mut window, wp: *mut window_pane) {
     }
 }
 
-pub unsafe fn window_pane_at_index(w: *mut window, idx: u32) -> *mut window_pane {
+pub unsafe fn window_pane_at_index(w: &window, idx: u32) -> *mut window_pane {
     unsafe {
-        let mut n: u32 = options_get_number___::<u32>(&*(*w).options, "pane-base-index");
+        let mut n: u32 = options_get_number___::<u32>(&*w.options, "pane-base-index");
 
-        for &wp in (*w).panes.iter() {
+        for &wp in w.panes.iter() {
             if n == idx {
                 return wp;
             }
@@ -916,8 +916,8 @@ pub unsafe fn window_pane_index(wp: *mut window_pane, i: *mut u32) -> i32 {
     }
 }
 
-pub unsafe fn window_count_panes(w: *mut window) -> u32 {
-    unsafe { (*w).panes.len() as u32 }
+pub fn window_count_panes(w: &window) -> u32 {
+    w.panes.len() as u32
 }
 
 pub unsafe fn window_destroy_panes(w: *mut window) {
@@ -1129,7 +1129,7 @@ unsafe extern "C-unwind" fn window_pane_error_callback(
         log_debug!("%%{} error", (*wp).id);
         (*wp).flags |= window_pane_flags::PANE_EXITED;
 
-        if window_pane_destroy_ready(wp) {
+        if window_pane_destroy_ready(&*wp) {
             server_destroy_pane(wp, 1);
         }
     }

@@ -130,7 +130,7 @@ pub unsafe fn layout_set_even(w: *mut window, type_: layout_type) {
         layout_print_cell((*w).layout_root, __func__, 1);
 
         // Get number of panes.
-        let n = window_count_panes(w);
+        let n = window_count_panes(&*w);
         if n <= 1 {
             return;
         }
@@ -204,7 +204,7 @@ pub unsafe fn layout_set_main_h(w: *mut window) {
         layout_print_cell((*w).layout_root, __func__, 1);
 
         // Get number of panes.
-        let mut n = window_count_panes(w);
+        let mut n = window_count_panes(&*w);
         if n <= 1 {
             return;
         }
@@ -307,7 +307,7 @@ pub unsafe fn layout_set_main_h_mirrored(w: *mut window) {
         layout_print_cell((*w).layout_root, __func__, 1);
 
         // Get number of panes.
-        let mut n = window_count_panes(w);
+        let mut n = window_count_panes(&*w);
         if n <= 1 {
             return;
         }
@@ -408,7 +408,7 @@ pub unsafe fn layout_set_main_v(w: *mut window) {
         layout_print_cell((*w).layout_root, __func__, 1);
 
         // Get number of panes.
-        let mut n = window_count_panes(w);
+        let mut n = window_count_panes(&*w);
         if n <= 1 {
             return;
         }
@@ -511,7 +511,7 @@ pub unsafe fn layout_set_main_v_mirrored(w: *mut window) {
         layout_print_cell((*w).layout_root, __func__, 1);
 
         // Get number of panes.
-        let mut n = window_count_panes(w);
+        let mut n = window_count_panes(&*w);
         if n <= 1 {
             return;
         }
@@ -612,7 +612,7 @@ pub unsafe fn layout_set_tiled(w: *mut window) {
         layout_print_cell((*w).layout_root, __func__, 1);
 
         // Get number of panes.
-        let n = window_count_panes(w);
+        let n = window_count_panes(&*w);
         if n <= 1 {
             return;
         }

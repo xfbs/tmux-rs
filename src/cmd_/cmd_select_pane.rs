@@ -90,7 +90,7 @@ pub unsafe fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
             // Check for no last pane found in case the other pane was
             // spawned without being visited (for example split-window -d).
             lastwp = (*w).last_panes.first().copied().unwrap_or(null_mut());
-            if lastwp.is_null() && window_count_panes(w) == 2 {
+            if lastwp.is_null() && window_count_panes(&*w) == 2 {
                 lastwp = window_pane_prev_in_list((*w).active);
                 if lastwp.is_null() {
                     lastwp = window_pane_next_in_list((*w).active);
