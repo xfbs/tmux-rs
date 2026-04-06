@@ -517,10 +517,10 @@ pub unsafe fn window_pane_update_focus(wp: *mut window_pane) {
                 focused = false;
             } else {
                 for c in clients_iter() {
-                    if !(*c).session.is_null()
-                        && (*(*c).session).attached != 0
+                    if !client_get_session(c).is_null()
+                        && (*client_get_session(c)).attached != 0
                         && (*c).flags.intersects(client_flag::FOCUSED)
-                        && (*(*(*c).session).curw).window == (*wp).window
+                        && (*(*client_get_session(c)).curw).window == (*wp).window
                     {
                         focused = true;
                         break;
@@ -1110,7 +1110,7 @@ unsafe extern "C-unwind" fn window_pane_read_callback(_bufev: *mut bufferevent, 
 
         log_debug!("%%{} has {} bytes", (*wp).id, size);
         for c in clients_iter() {
-            if !(*c).session.is_null() && (*c).flags.intersects(client_flag::CONTROL) {
+            if !client_get_session(c).is_null() && (*c).flags.intersects(client_flag::CONTROL) {
                 control_write_output(c, wp);
             }
         }
@@ -1780,7 +1780,7 @@ pub unsafe fn window_pane_start_input(
         {
             return 1;
         }
-        if !(*c).session.is_null() {
+        if !client_get_session(c).is_null() {
             return 1;
         }
 

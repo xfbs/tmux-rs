@@ -41,7 +41,7 @@ unsafe fn cmd_display_panes_draw_pane(ctx: *mut screen_redraw_ctx, wp: *mut wind
     unsafe {
         let c = (*ctx).c;
         let tty = &raw mut (*c).tty;
-        let s = (*c).session;
+        let s = client_get_session(c);
         let oo = &*(*s).options;
         let w = (*wp).window;
 
@@ -226,7 +226,7 @@ unsafe fn cmd_display_panes_draw_pane(ctx: *mut screen_redraw_ctx, wp: *mut wind
 
 unsafe fn cmd_display_panes_draw(c: *mut client, _data: *mut c_void, ctx: *mut screen_redraw_ctx) {
     unsafe {
-        let w: *mut window = (*(*(*c).session).curw).window;
+        let w: *mut window = (*(*client_get_session(c)).curw).window;
 
         log_debug!(
             "{}: {} @{}",
@@ -259,7 +259,7 @@ unsafe fn cmd_display_panes_key(c: *mut client, data: *mut c_void, event: *mut k
     unsafe {
         let cdata = data as *mut cmd_display_panes_data;
         let item = (*cdata).item;
-        let w = (*(*(*c).session).curw).window;
+        let w = (*(*client_get_session(c)).curw).window;
 
         let index: u32;
         let key: key_code;
@@ -306,7 +306,7 @@ unsafe fn cmd_display_panes_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
     unsafe {
         let args = cmd_get_args(self_);
         let tc = cmdq_get_target_client(item);
-        let s = (*tc).session;
+        let s = client_get_session(tc);
         let delay: u32;
         let mut cause = null_mut();
         let wait = !args_has(args, 'b');

@@ -135,7 +135,7 @@ unsafe fn cmd_confirm_before_callback(
 
         // out:
         if !item.is_null() {
-            if !cmdq_get_client(item).is_null() && (*cmdq_get_client(item)).session.is_null() {
+            if !cmdq_get_client(item).is_null() && client_get_session(cmdq_get_client(item)).is_null() {
                 (*cmdq_get_client(item)).retval = retcode;
             }
             cmdq_continue(item);

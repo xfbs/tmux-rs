@@ -1396,7 +1396,7 @@ pub unsafe fn options_push_changes(name: &str) {
         recalculate_sizes();
 
         for loop_ in clients_iter() {
-            if !(*loop_).session.is_null() {
+            if !client_get_session(loop_).is_null() {
                 server_redraw_client(loop_);
             }
         }

@@ -148,7 +148,7 @@ unsafe fn cmd_select_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
             }
             cmdq_insert_hook!(s, item, current, "after-select-window");
         }
-        if !c.is_null() && !(*c).session.is_null() {
+        if !c.is_null() && !client_get_session(c).is_null() {
             (*(*(*s).curw).window).latest = c as _;
         }
         recalculate_sizes();

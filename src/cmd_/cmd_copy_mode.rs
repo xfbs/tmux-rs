@@ -62,7 +62,7 @@ unsafe fn cmd_copy_mode_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
             if wp.is_none() {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
-            if c.is_null() || (*c).session != s {
+            if c.is_null() || client_get_session(c) != s {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
         }

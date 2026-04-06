@@ -31,7 +31,7 @@ pub unsafe fn server_status_client(c: *mut client) {
 pub unsafe fn server_redraw_session(s: *mut session) {
     unsafe {
         for c in clients_iter() {
-            if (*c).session == s {
+            if client_get_session(c) == s {
                 server_redraw_client(c);
             }
         }
@@ -54,7 +54,7 @@ pub unsafe fn server_redraw_session_group(s: *mut session) {
 pub unsafe fn server_status_session(s: *mut session) {
     unsafe {
         for c in clients_iter() {
-            if (*c).session == s {
+            if client_get_session(c) == s {
                 server_status_client(c);
             }
         }
@@ -77,7 +77,7 @@ pub unsafe fn server_status_session_group(s: *mut session) {
 pub unsafe fn server_redraw_window(w: *mut window) {
     unsafe {
         for c in clients_iter() {
-            if !(*c).session.is_null() && (*(*(*c).session).curw).window == w {
+            if !client_get_session(c).is_null() && (*(*client_get_session(c)).curw).window == w {
                 server_redraw_client(c);
             }
         }
@@ -87,7 +87,7 @@ pub unsafe fn server_redraw_window(w: *mut window) {
 pub unsafe fn server_redraw_window_borders(w: *mut window) {
     unsafe {
         for c in clients_iter() {
-            if !(*c).session.is_null() && (*(*(*c).session).curw).window == w {
+            if !client_get_session(c).is_null() && (*(*client_get_session(c)).curw).window == w {
                 (*c).flags |= client_flag::REDRAWBORDERS;
             }
         }
@@ -111,7 +111,7 @@ pub unsafe fn server_status_window(w: *mut window) {
 pub unsafe fn server_lock() {
     unsafe {
         for c in clients_iter() {
-            if !(*c).session.is_null() {
+            if !client_get_session(c).is_null() {
                 server_lock_client(c);
             }
         }
@@ -121,7 +121,7 @@ pub unsafe fn server_lock() {
 pub unsafe fn server_lock_session(s: *mut session) {
     unsafe {
         for c in clients_iter() {
-            if (*c).session == s {
+            if client_get_session(c) == s {
                 server_lock_client(c);
             }
         }
@@ -138,7 +138,7 @@ pub unsafe fn server_lock_client(c: *mut client) {
             return;
         }
 
-        let cmd = options_get_string_((*(*c).session).options, "lock-command");
+        let cmd = options_get_string_((*client_get_session(c)).options, "lock-command");
         if *cmd == b'\0' || strlen(cmd) + 1 > MAX_IMSGSIZE - IMSG_HEADER_SIZE {
             return;
         }
@@ -459,11 +459,11 @@ pub unsafe fn server_destroy_session(s: *mut session) {
             s_new = null_mut();
         }
         for c in clients_iter() {
-            if (*c).session != s {
+            if client_get_session(c) != s {
                 continue;
             }
-            (*c).session = null_mut();
-            (*c).last_session = null_mut();
+            (*c).session = None;
+            (*c).last_session = None;
             server_client_set_session(c, s_new);
             if s_new.is_null() {
                 (*c).flags |= client_flag::EXIT;

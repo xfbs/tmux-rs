@@ -173,7 +173,7 @@ unsafe fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
 
             // Is this client already attached?
             already_attached = false;
-            if !c.is_null() && !(*c).session.is_null() {
+            if !c.is_null() && !client_get_session(c).is_null() {
                 already_attached = true;
             }
 
@@ -349,7 +349,7 @@ unsafe fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
                     if !(*c).flags.intersects(client_flag::CONTROL) {
                         proc_send((*c).peer, msgtype::MSG_READY, -1, null(), 0);
                     }
-                } else if !(*c).session.is_null() {
+                } else if !client_get_session(c).is_null() {
                     (*c).last_session = (*c).session;
                 }
                 server_client_set_session(c, s);

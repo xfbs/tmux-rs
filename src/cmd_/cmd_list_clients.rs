@@ -55,7 +55,7 @@ unsafe fn cmd_list_clients_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
 
         let mut idx = 0;
         for c in clients_iter() {
-            if (*c).session.is_null() || (!s.is_null() && s != (*c).session) {
+            if client_get_session(c).is_null() || (!s.is_null() && s != client_get_session(c)) {
                 continue;
             }
 

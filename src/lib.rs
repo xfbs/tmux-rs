@@ -2293,8 +2293,8 @@ struct client {
     prompt_type: prompt_type,
     prompt_cursor: c_int,
 
-    session: *mut session,
-    last_session: *mut session,
+    session: Option<SessionId>,
+    last_session: Option<SessionId>,
 
     references: c_int,
 

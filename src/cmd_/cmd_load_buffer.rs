@@ -70,7 +70,7 @@ unsafe fn cmd_load_buffer_done(
                 free_(cause);
                 free_(copy);
             } else if !tc.is_null()
-                && !(*tc).session.is_null()
+                && !client_get_session(tc).is_null()
                 && !(*tc).flags.intersects(client_flag::DEAD)
             {
                 tty_set_selection(&raw mut (*tc).tty, c!(""), copy as _, bsize);

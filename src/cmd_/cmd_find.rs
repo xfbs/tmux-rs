@@ -98,10 +98,10 @@ pub unsafe fn cmd_find_best_client(mut s: *const session) -> *mut client {
 
         let mut c = null_mut();
         for c_loop in clients_iter() {
-            if (*c_loop).session.is_null() {
+            if client_get_session(c_loop).is_null() {
                 continue;
             }
-            if !s.is_null() && !std::ptr::eq((*c_loop).session, s) {
+            if !s.is_null() && !std::ptr::eq(client_get_session(c_loop), s) {
                 continue;
             }
             if cmd_find_client_better(c_loop, c) != 0 {
@@ -249,8 +249,8 @@ pub unsafe fn cmd_find_get_session(fs: *mut cmd_find_state, session: &str) -> i3
         }
 
         let c = cmd_find_client(null_mut(), Some(session), 1);
-        if !c.is_null() && !(*c).session.is_null() {
-            (*fs).s = (*c).session;
+        if !c.is_null() && !client_get_session(c).is_null() {
+            (*fs).s = client_get_session(c);
             return 0;
         }
 
@@ -899,15 +899,15 @@ pub unsafe fn cmd_find_from_client(
                 return cmd_find_from_nothing(fs, flags);
             }
 
-            if !(*c).session.is_null() {
+            if !client_get_session(c).is_null() {
                 cmd_find_clear_state(fs, flags);
 
                 (*fs).wp = server_client_get_pane(c);
                 if (*fs).wp.is_null() {
-                    cmd_find_from_session(fs, (*c).session, flags);
+                    cmd_find_from_session(fs, client_get_session(c), flags);
                     return 0;
                 }
-                (*fs).s = (*c).session;
+                (*fs).s = client_get_session(c);
                 (*fs).wl = (*(*fs).s).curw;
                 (*fs).w = (*(*fs).wl).window;
 
@@ -1322,7 +1322,7 @@ pub unsafe fn cmd_find_current_client(item: *mut cmdq_item, quiet: i32) -> *mut 
         if !item.is_null() {
             c = cmdq_get_client(item);
         }
-        if !c.is_null() && !(*c).session.is_null() {
+        if !c.is_null() && !client_get_session(c).is_null() {
             return c;
         }
 
@@ -1375,7 +1375,7 @@ pub unsafe fn cmd_find_client(
         // Check name and path of each client.
         for c_ in clients_iter() {
             c = c_;
-            if (*c).session.is_null() {
+            if client_get_session(c).is_null() {
                 continue;
             }
             if streq_((*c).name, copy) {

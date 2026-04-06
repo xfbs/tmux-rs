@@ -57,7 +57,7 @@ unsafe fn cmd_source_file_complete(c: *mut client, cdata: *mut cmd_source_file_d
         if CFG_FINISHED.load(atomic::Ordering::Acquire) {
             if (*cdata).retval == cmd_retval::CMD_RETURN_ERROR
                 && !c.is_null()
-                && (*c).session.is_null()
+                && client_get_session(c).is_null()
             {
                 (*c).retval = 1;
             }

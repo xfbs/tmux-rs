@@ -42,10 +42,10 @@ pub unsafe fn control_notify_window_layout_changed(w: *mut window) {
     unsafe {
         for c in clients_iter() {
             {
-                if !CONTROL_SHOULD_NOTIFY_CLIENT!(c) || (*c).session.is_null() {
+                if !CONTROL_SHOULD_NOTIFY_CLIENT!(c) || client_get_session(c).is_null() {
                     continue;
                 }
-                let s = (*c).session;
+                let s = client_get_session(c);
 
                 if winlink_find_by_window_id(&raw mut (*s).windows, (*w).id).is_null() {
                     continue;
@@ -92,10 +92,10 @@ pub unsafe fn control_notify_window_unlinked(_s: *mut session, w: *mut window) {
     unsafe {
         for c in clients_iter() {
             {
-                if !CONTROL_SHOULD_NOTIFY_CLIENT!(c) || (*c).session.is_null() {
+                if !CONTROL_SHOULD_NOTIFY_CLIENT!(c) || client_get_session(c).is_null() {
                     continue;
                 }
-                let cs = (*c).session;
+                let cs = client_get_session(c);
 
                 if !winlink_find_by_window_id(&raw mut (*cs).windows, (*w).id).is_null() {
                     control_write!(c, "%window-close @{}", (*w).id);
@@ -111,10 +111,10 @@ pub unsafe fn control_notify_window_linked(_s: *mut session, w: *mut window) {
     unsafe {
         for c in clients_iter() {
             {
-                if !CONTROL_SHOULD_NOTIFY_CLIENT!(c) || (*c).session.is_null() {
+                if !CONTROL_SHOULD_NOTIFY_CLIENT!(c) || client_get_session(c).is_null() {
                     continue;
                 }
-                let cs = (*c).session;
+                let cs = client_get_session(c);
 
                 if !winlink_find_by_window_id(&raw mut (*cs).windows, (*w).id).is_null() {
                     control_write!(c, "%window-add @{}", (*w).id);
@@ -130,10 +130,10 @@ pub unsafe fn control_notify_window_renamed(w: *mut window) {
     unsafe {
         for c in clients_iter() {
             {
-                if !CONTROL_SHOULD_NOTIFY_CLIENT!(c) || (*c).session.is_null() {
+                if !CONTROL_SHOULD_NOTIFY_CLIENT!(c) || client_get_session(c).is_null() {
                     continue;
                 }
-                let cs = (*c).session;
+                let cs = client_get_session(c);
 
                 if !winlink_find_by_window_id(&raw mut (*cs).windows, (*w).id).is_null() {
                     control_write!(c, "%window-renamed @{} {}", (*w).id, _s((*w).name));
@@ -147,14 +147,14 @@ pub unsafe fn control_notify_window_renamed(w: *mut window) {
 
 pub unsafe fn control_notify_client_session_changed(cc: *mut client) {
     unsafe {
-        if (*cc).session.is_null() {
+        if client_get_session(cc).is_null() {
             return;
         }
-        let s = (*cc).session;
+        let s = client_get_session(cc);
 
         for c in clients_iter() {
             {
-                if !CONTROL_SHOULD_NOTIFY_CLIENT!(c) || (*c).session.is_null() {
+                if !CONTROL_SHOULD_NOTIFY_CLIENT!(c) || client_get_session(c).is_null() {
                     continue;
                 }
 

@@ -107,7 +107,7 @@ pub unsafe fn cmd_attach_session(
         }
 
         (*c).last_session = (*c).session;
-        if !(*c).session.is_null() {
+        if !client_get_session(c).is_null() {
             if dflag || xflag {
                 if xflag {
                     msgtype = msgtype::MSG_DETACHKILL;
@@ -116,7 +116,7 @@ pub unsafe fn cmd_attach_session(
                 }
                 for c_loop in clients_iter() {
                     {
-                        if (*c_loop).session != s || c == c_loop {
+                        if client_get_session(c_loop) != s || c == c_loop {
                             continue;
                         }
                         server_client_detach(c_loop, msgtype);
@@ -145,7 +145,7 @@ pub unsafe fn cmd_attach_session(
                     msgtype::MSG_DETACH
                 };
                 for c_loop in clients_iter() {
-                    if (*c_loop).session != s || c == c_loop {
+                    if client_get_session(c_loop) != s || c == c_loop {
                         continue;
                     }
                     server_client_detach(c_loop, msgtype);

@@ -151,7 +151,7 @@ pub unsafe fn status_prompt_save_history() {
 unsafe extern "C-unwind" fn status_timer_callback(_fd: i32, _events: i16, c: NonNull<client>) {
     unsafe {
         let c = c.as_ptr();
-        let s: *mut session = (*c).session;
+        let s: *mut session = client_get_session(c);
 
         evtimer_del(&raw mut (*c).status.timer);
 
@@ -177,7 +177,7 @@ unsafe extern "C-unwind" fn status_timer_callback(_fd: i32, _events: i16, c: Non
 /// Start status timer for client.
 pub unsafe fn status_timer_start(c: NonNull<client>) {
     unsafe {
-        let s: *mut session = (*c.as_ptr()).session;
+        let s: *mut session = client_get_session(c.as_ptr());
 
         if event_initialized(&raw mut (*c.as_ptr()).status.timer) != 0 {
             evtimer_del(&raw mut (*c.as_ptr()).status.timer);
@@ -221,7 +221,7 @@ pub unsafe fn status_update_cache(s: *mut session) {
 /// Get screen line of status line. -1 means off.
 pub unsafe fn status_at_line(c: *mut client) -> i32 {
     unsafe {
-        let s: *mut session = (*c).session;
+        let s: *mut session = client_get_session(c);
 
         if (*c)
             .flags
@@ -239,7 +239,7 @@ pub unsafe fn status_at_line(c: *mut client) -> i32 {
 /// Get size of status line for client's session. 0 means off.
 pub unsafe fn status_line_size(c: *mut client) -> u32 {
     unsafe {
-        let s: *mut session = (*c).session;
+        let s: *mut session = client_get_session(c);
 
         if (*c)
             .flags
@@ -257,7 +257,7 @@ pub unsafe fn status_line_size(c: *mut client) -> u32 {
 /// Get the prompt line number for client's session. 1 means at the bottom.
 unsafe fn status_prompt_line_at(c: *mut client) -> u32 {
     unsafe {
-        let s = (*c).session;
+        let s = client_get_session(c);
 
         if (*c)
             .flags
@@ -368,7 +368,7 @@ pub unsafe fn status_redraw(c: *mut client) -> i32 {
     unsafe {
         let sl = &raw mut (*c).status;
         // status_line_entry *sle;
-        let s = (*c).session;
+        let s = client_get_session(c);
         let mut ctx: screen_write_ctx = zeroed();
         let mut gc: grid_cell = zeroed();
 
@@ -527,7 +527,7 @@ pub unsafe fn status_message_set_(
         // With delay -1, the display-time option is used; zero means wait for
         // key press; more than zero is the actual delay time in milliseconds.
         if delay == -1 {
-            delay = options_get_number_((*(*c).session).options, "display-time") as i32;
+            delay = options_get_number_((*client_get_session(c)).options, "display-time") as i32;
         }
         if delay > 0 {
             tv.tv_sec = (delay / 1000) as libc::time_t;
@@ -587,7 +587,7 @@ pub unsafe fn status_message_redraw(c: *mut client) -> i32 {
     unsafe {
         let sl = &raw mut (*c).status;
         let mut ctx: screen_write_ctx = zeroed();
-        let s = (*c).session;
+        let s = client_get_session(c);
         // size_t len;
         // u_int lines, offset, messageline;
         let mut gc: grid_cell = zeroed();
@@ -806,7 +806,7 @@ pub unsafe fn status_prompt_redraw(c: *mut client) -> i32 {
         let sl = &raw mut (*c).status;
         let mut ctx: screen_write_ctx = zeroed();
 
-        let s = (*c).session;
+        let s = client_get_session(c);
 
         let offset: u32;
 
@@ -1412,7 +1412,7 @@ unsafe fn status_prompt_backward_word(c: *mut client, separators: *const u8) {
 /// Handle keys in prompt.
 pub unsafe fn status_prompt_key(c: *mut client, mut key: key_code) -> i32 {
     unsafe {
-        let oo = (*(*c).session).options;
+        let oo = (*client_get_session(c)).options;
         let mut s;
         let cp;
         let mut prefix = b'=';
@@ -1457,7 +1457,7 @@ pub unsafe fn status_prompt_key(c: *mut client, mut key: key_code) -> i32 {
                     key &= !KEYC_MASK_FLAGS;
 
                     let keys = modekey::try_from(options_get_number_(
-                        (*(*c).session).options,
+                        (*client_get_session(c)).options,
                         "status-keys",
                     ) as i32);
                     if keys == Ok(modekey::MODEKEY_VI) {
@@ -2057,7 +2057,7 @@ unsafe fn status_prompt_complete_list_menu(
             menu_add_item(menu, Some(&item), null_mut(), c, null_mut());
         }
 
-        let py = if options_get_number_((*(*c).session).options, "status-position") == 0 {
+        let py = if options_get_number_((*client_get_session(c)).options, "status-position") == 0 {
             lines
         } else {
             (*c).tty.sy - 3 - height
@@ -2174,7 +2174,7 @@ unsafe fn status_prompt_complete_window_menu(
 
         (*spm).list = list;
 
-        let py = if options_get_number_((*(*c).session).options, "status-position") == 0 {
+        let py = if options_get_number_((*client_get_session(c)).options, "status-position") == 0 {
             lines
         } else {
             (*c).tty.sy - 3 - height
@@ -2305,7 +2305,7 @@ unsafe fn status_prompt_complete(c: *mut client, word: *const u8, mut offset: u3
 
             // If this is a window completion, open the window menu.
             if (*c).prompt_type == prompt_type::PROMPT_TYPE_WINDOW_TARGET {
-                out = status_prompt_complete_window_menu(c, (*c).session, s, offset, b'\0');
+                out = status_prompt_complete_window_menu(c, client_get_session(c), s, offset, b'\0');
                 break 'found;
             }
             colon = libc::strchr(s, b':' as i32);
@@ -2319,7 +2319,7 @@ unsafe fn status_prompt_complete(c: *mut client, word: *const u8, mut offset: u3
             // If there is a colon but no period, find session and show a menu.
             if libc::strchr(colon.add(1), b'.' as i32).is_null() {
                 if *s == b':' {
-                    session = (*c).session;
+                    session = client_get_session(c);
                 } else {
                     copy = xstrdup(s).as_ptr();
                     *libc::strchr(copy, b':' as i32) = b'\0';

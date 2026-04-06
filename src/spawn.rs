@@ -350,7 +350,7 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut wi
             // Then the PATH environment variable. The session one is replaced from
             // the client if there is one because otherwise running "tmux new
             // myprogram" wouldn't work if myprogram isn't in the session's path.
-            if !c.is_null() && (*c).session.is_null() {
+            if !c.is_null() && client_get_session(c).is_null() {
                 // only unattached clients
                 if let Some(ee) = environ_find_raw(&*(*c).environ, c!("PATH")) {
                     if let Some(ref value) = ee.value {

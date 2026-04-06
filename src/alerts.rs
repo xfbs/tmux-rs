@@ -282,7 +282,7 @@ fn alerts_set_message(wl: &winlink, type_: &str, option: &str) {
             visual_option::try_from(options_get_number___::<i32>(&*(*wl.session).options, option));
 
         for c in clients_iter() {
-            if (*c).session != wl.session || (*c).flags.intersects(client_flag::CONTROL) {
+            if client_get_session(c) != wl.session || (*c).flags.intersects(client_flag::CONTROL) {
                 continue;
             }
 
@@ -295,7 +295,7 @@ fn alerts_set_message(wl: &winlink, type_: &str, option: &str) {
             if matches!(visual, Ok(visual_option::VISUAL_OFF)) {
                 continue;
             }
-            if std::ptr::eq((*(*c).session).curw, wl) {
+            if std::ptr::eq((*client_get_session(c)).curw, wl) {
                 status_message_set!(c, -1, 1, false, "{type_} in current window",);
             } else {
                 status_message_set!(c, -1, 1, false, "{type_} in window {}", wl.idx);

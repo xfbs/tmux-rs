@@ -96,7 +96,7 @@ unsafe fn cmd_display_menu_get_position(
         let tty = &raw mut (*tc).tty;
         let target = cmdq_get_target(item);
         let event = cmdq_get_event(item);
-        let s = (*tc).session;
+        let s = client_get_session(tc);
         let wl = (*target).wl;
         let wp = (*target).wp;
         let mut sr = null_mut();

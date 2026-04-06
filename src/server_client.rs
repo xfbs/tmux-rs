@@ -23,7 +23,7 @@ pub unsafe fn server_client_how_many() -> u32 {
     unsafe {
         clients_iter()
             .filter(|&c| {
-                !(*c).session.is_null()
+                !client_get_session(c).is_null()
                     && !(*c).flags.intersects(CLIENT_UNATTACHEDFLAGS)
             })
             .count() as u32
@@ -226,7 +226,7 @@ pub unsafe fn server_client_key_table_activity_diff(c: *mut client) -> u64 {
 /// Get default key table.
 pub unsafe fn server_client_get_key_table(c: *mut client) -> *const u8 {
     unsafe {
-        let s = (*c).session;
+        let s = client_get_session(c);
         if s.is_null() {
             return c!("root");
         }
@@ -370,7 +370,7 @@ pub unsafe fn server_client_attached_lost(c: *mut client) {
 
             let mut found: *mut client = null_mut();
             for loop_ in clients_iter() {
-                let s = (*loop_).session;
+                let s = client_get_session(loop_);
                 if loop_ == c || s.is_null() || (*(*s).curw).window != w {
                     continue;
                 }
@@ -388,17 +388,39 @@ pub unsafe fn server_client_attached_lost(c: *mut client) {
     }
 }
 
+/// Get the client's current session as a raw pointer.
+/// Returns null if no session is attached or the session has been freed.
+#[inline]
+pub unsafe fn client_get_session(c: *const client) -> *mut session {
+    unsafe {
+        (*c).session
+            .and_then(|id| session_from_id(id))
+            .unwrap_or(null_mut())
+    }
+}
+
+/// Get the client's last session as a raw pointer.
+#[inline]
+pub unsafe fn client_get_last_session(c: *const client) -> *mut session {
+    unsafe {
+        (*c).last_session
+            .and_then(|id| session_from_id(id))
+            .unwrap_or(null_mut())
+    }
+}
+
 /// Set client session.
 pub unsafe fn server_client_set_session(c: *mut client, s: *mut session) {
     unsafe {
-        let old = (*c).session;
+        let new_id = if s.is_null() { None } else { Some(SessionId((*s).id)) };
+        let old = client_get_session(c);
 
-        if !s.is_null() && !(*c).session.is_null() && (*c).session != s {
+        if !s.is_null() && (*c).session.is_some() && (*c).session != new_id {
             (*c).last_session = (*c).session;
         } else if s.is_null() {
-            (*c).last_session = null_mut();
+            (*c).last_session = None;
         }
-        (*c).session = s;
+        (*c).session = new_id;
         (*c).flags |= client_flag::FOCUSED;
 
         if !old.is_null() && !(*old).curw.is_null() {
@@ -555,7 +577,7 @@ pub unsafe extern "C-unwind" fn server_client_free(_fd: i32, _events: i16, arg: 
 /// Suspend a client.
 pub unsafe fn server_client_suspend(c: *mut client) {
     unsafe {
-        let s: *mut session = (*c).session;
+        let s: *mut session = client_get_session(c);
 
         if s.is_null() || (*c).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
             return;
@@ -570,7 +592,7 @@ pub unsafe fn server_client_suspend(c: *mut client) {
 /// Detach a client.
 pub unsafe fn server_client_detach(c: *mut client, msgtype: msgtype) {
     unsafe {
-        let s = (*c).session;
+        let s = client_get_session(c);
 
         if s.is_null() || (*c).flags.intersects(CLIENT_NODETACHFLAGS) {
             return;
@@ -587,7 +609,7 @@ pub unsafe fn server_client_detach(c: *mut client, msgtype: msgtype) {
 /// Execute command to replace a client.
 pub unsafe fn server_client_exec(c: *mut client, cmd: *const u8) {
     unsafe {
-        let s = (*c).session;
+        let s = client_get_session(c);
         if *cmd == b'\0' {
             return;
         }
@@ -622,7 +644,7 @@ pub unsafe fn server_client_exec(c: *mut client, cmd: *const u8) {
 pub unsafe fn server_client_check_mouse(c: *mut client, event: *mut key_event) -> key_code {
     unsafe {
         let m = &raw mut (*event).m;
-        let s = (*c).session;
+        let s = client_get_session(c);
         let fs: *mut session;
 
         let fwl: *mut winlink;
@@ -1818,10 +1840,10 @@ pub unsafe fn server_client_assume_paste(s: *mut session) -> bool {
 /// Has the latest client changed?
 pub unsafe fn server_client_update_latest(c: *mut client) {
     unsafe {
-        if (*c).session.is_null() {
+        if client_get_session(c).is_null() {
             return;
         }
-        let w = (*(*(*c).session).curw).window;
+        let w = (*(*client_get_session(c)).curw).window;
 
         if (*w).latest == c.cast() {
             return;
@@ -1845,7 +1867,7 @@ pub unsafe fn server_client_key_callback(item: *mut cmdq_item, data: *mut c_void
         let event = data as *mut key_event;
         let mut key = (*event).key;
         let m = &raw mut (*event).m;
-        let s = (*c).session;
+        let s = client_get_session(c);
 
         let mut tv: libc::timeval = zeroed();
         let mut bd: *mut key_binding;
@@ -2123,7 +2145,7 @@ pub unsafe fn server_client_key_callback(item: *mut cmdq_item, data: *mut c_void
 /// Handle a key event.
 pub unsafe fn server_client_handle_key(c: *mut client, event: *mut key_event) -> i32 {
     unsafe {
-        let s = (*c).session;
+        let s = client_get_session(c);
 
         // Check the client is good to accept input.
         if s.is_null() || (*c).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
@@ -2174,7 +2196,7 @@ pub unsafe fn server_client_loop() {
         // Check clients.
         for c in clients_iter() {
             server_client_check_exit(c);
-            if !(*c).session.is_null() {
+            if !client_get_session(c).is_null() {
                 server_client_check_modes(c);
                 server_client_check_redraw(c);
                 server_client_reset_state(c);
@@ -2342,7 +2364,7 @@ pub unsafe fn server_client_check_pane_buffer(wp: *mut window_pane) {
                 minimum = (*wp).pipe_offset.used;
             }
             for c in clients_iter() {
-                if (*c).session.is_null() {
+                if client_get_session(c).is_null() {
                     continue;
                 }
                 attached_clients += 1;
@@ -2395,7 +2417,7 @@ pub unsafe fn server_client_check_pane_buffer(wp: *mut window_pane) {
                     (*wp).pipe_offset.used -= (*wp).base_offset;
                 }
                 for c in clients_iter() {
-                    if (*c).session.is_null() || !(*c).flags.intersects(client_flag::CONTROL) {
+                    if client_get_session(c).is_null() || !(*c).flags.intersects(client_flag::CONTROL) {
                         continue;
                     }
                     wpo = control_pane_offset(c, wp, &raw mut flag);
@@ -2432,10 +2454,10 @@ pub unsafe fn server_client_check_pane_buffer(wp: *mut window_pane) {
 pub unsafe fn server_client_reset_state(c: *mut client) {
     unsafe {
         let tty = &raw mut (*c).tty;
-        let w = (*(*(*c).session).curw).window;
+        let w = (*(*client_get_session(c)).curw).window;
         let wp = server_client_get_pane(c);
         let mut s = null_mut();
-        let oo = (*(*c).session).options;
+        let oo = (*client_get_session(c)).options;
         let mut mode = mode_flag::empty();
         let mut cursor;
 
@@ -2480,7 +2502,7 @@ pub unsafe fn server_client_reset_state(c: *mut client) {
 
         // Move cursor to pane cursor and offset.
         if !(*c).prompt_string.is_null() {
-            n = options_get_number_((*(*c).session).options, "status-position") as i32;
+            n = options_get_number_((*client_get_session(c)).options, "status-position") as i32;
             if n == 0 {
                 cy = 0;
             } else {
@@ -2667,7 +2689,7 @@ pub unsafe extern "C-unwind" fn server_client_redraw_timer(_fd: i32, _events: i1
 // updated and it is done when the status line is redrawn.
 pub unsafe fn server_client_check_modes(c: *mut client) {
     unsafe {
-        let w = (*(*(*c).session).curw).window;
+        let w = (*(*client_get_session(c)).curw).window;
 
         if (*c)
             .flags
@@ -2692,9 +2714,9 @@ pub unsafe fn server_client_check_modes(c: *mut client) {
 pub unsafe fn server_client_check_redraw(c: *mut client) {
     static mut EV: event = unsafe { zeroed() };
     unsafe {
-        let s = (*c).session;
+        let s = client_get_session(c);
         let tty = &raw mut (*c).tty;
-        let w = (*(*(*c).session).curw).window;
+        let w = (*(*client_get_session(c)).curw).window;
 
         let mode = (*tty).mode;
         let mut client_flags: client_flag = client_flag::empty();
@@ -2834,7 +2856,7 @@ pub unsafe fn server_client_check_redraw(c: *mut client) {
 /// Set client title.
 pub unsafe fn server_client_set_title(c: *mut client) {
     unsafe {
-        let s = (*c).session;
+        let s = client_get_session(c);
 
         let template = options_get_string_((*s).options, "set-titles-string");
 
@@ -2856,7 +2878,7 @@ pub unsafe fn server_client_set_title(c: *mut client) {
 /// Set client path.
 pub unsafe fn server_client_set_path(c: *mut client) {
     unsafe {
-        let s = (*c).session;
+        let s = client_get_session(c);
 
         if (*s).curw.is_null() {
             return;
@@ -2920,7 +2942,7 @@ pub unsafe fn server_client_dispatch(imsg: *mut imsg, arg: *mut c_void) {
                         server_client_clear_overlay(c);
                     }
                     server_redraw_client(c);
-                    if !(*c).session.is_null() {
+                    if !client_get_session(c).is_null() {
                         notify_client(c"client-resized", c);
                     }
                 }
@@ -2944,10 +2966,10 @@ pub unsafe fn server_client_dispatch(imsg: *mut imsg, arg: *mut c_void) {
                 }
                 (*c).flags &= !client_flag::SUSPENDED;
 
-                if (*c).fd == -1 || (*c).session.is_null() {
+                if (*c).fd == -1 || client_get_session(c).is_null() {
                     return;
                 } /* exited already */
-                let s = (*c).session;
+                let s = client_get_session(c);
 
                 if libc::gettimeofday(&raw mut (*c).activity_time, null_mut()) != 0 {
                     fatal("gettimeofday failed");
@@ -3261,12 +3283,12 @@ pub unsafe fn server_client_get_cwd(c: *const client, s: *const session) -> *con
     unsafe {
         if !CFG_FINISHED.load(atomic::Ordering::Acquire) && !CFG_CLIENT.is_null() {
             (*CFG_CLIENT).cwd
-        } else if !c.is_null() && (*c).session.is_null() && !(*c).cwd.is_null() {
+        } else if !c.is_null() && client_get_session(c).is_null() && !(*c).cwd.is_null() {
             (*c).cwd
         } else if !s.is_null() && !(*s).cwd.is_null() {
             (*s).cwd
         } else if !c.is_null()
-            && let session = (*c).session
+            && let session = client_get_session(c)
             && !session.is_null()
             && !(*session).cwd.is_null()
         {
@@ -3440,7 +3462,7 @@ pub unsafe fn server_client_add_client_window(c: *mut client, id: u32) -> NonNul
 /// Get client active pane.
 pub unsafe fn server_client_get_pane(c: *mut client) -> *mut window_pane {
     unsafe {
-        let s = (*c).session;
+        let s = client_get_session(c);
 
         if s.is_null() {
             return null_mut();
@@ -3460,7 +3482,7 @@ pub unsafe fn server_client_get_pane(c: *mut client) -> *mut window_pane {
 // Set client active pane.
 pub unsafe fn server_client_set_pane(c: *mut client, wp: *mut window_pane) {
     unsafe {
-        let s = (*c).session;
+        let s = client_get_session(c);
 
         if s.is_null() {
             return;
@@ -3514,7 +3536,7 @@ pub unsafe fn server_client_print(c: *mut client, parse: i32, evb: *mut evbuffer
                 break 'out;
             }
 
-            if (*c).session.is_null() || (*c).flags.intersects(client_flag::CONTROL) {
+            if client_get_session(c).is_null() || (*c).flags.intersects(client_flag::CONTROL) {
                 if !(*c).flags.intersects(client_flag::UTF8) {
                     let sanitized = utf8_sanitize(msg);
                     if (*c).flags.intersects(client_flag::CONTROL) {

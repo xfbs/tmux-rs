@@ -62,7 +62,7 @@ unsafe fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
             if !(*event).m.valid || cmd_mouse_window(&raw mut (*event).m, &raw mut s).is_none() {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
-            if c.is_null() || (*c).session != s {
+            if c.is_null() || client_get_session(c) != s {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
             (*c).tty.mouse_drag_update = Some(cmd_resize_pane_mouse_update);

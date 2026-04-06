@@ -87,7 +87,7 @@ unsafe fn cmd_save_buffer_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
         let bufdata = paste_buffer_data_(pb, &mut bufsize);
 
         if std::ptr::eq(cmd_get_entry(self_), &CMD_SHOW_BUFFER_ENTRY) {
-            if !(*c).session.is_null() || (*c).flags.intersects(client_flag::CONTROL) {
+            if !client_get_session(c).is_null() || (*c).flags.intersects(client_flag::CONTROL) {
                 evb = evbuffer_new();
                 if evb.is_null() {
                     fatalx("out of memory");

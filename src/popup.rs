@@ -341,7 +341,7 @@ pub fn popup_free_cb(c: *mut client, data: *mut c_void) {
 
         if !item.is_null() {
             let client = cmdq_get_client(item);
-            if !client.is_null() && (*client).session.is_null() {
+            if !client.is_null() && client_get_session(client).is_null() {
                 (*client).retval = (*pd).status;
             }
             cmdq_continue(item);
@@ -408,7 +408,7 @@ pub fn popup_resize_cb(c: *mut client, data: *mut c_void) {
 pub fn popup_make_pane(pd: *mut popup_data, type_: layout_type) {
     unsafe {
         let c = (*pd).c;
-        let s = (*c).session;
+        let s = client_get_session(c);
         let w = (*(*s).curw).window;
         let wp = (*w).active;
 
@@ -788,7 +788,7 @@ pub unsafe fn popup_display(
         let o = if !s.is_null() {
             (*(*(*s).curw).window).options
         } else {
-            (*(*(*(*c).session).curw).window).options
+            (*(*(*client_get_session(c)).curw).window).options
         };
 
         lines = if lines == box_lines::BOX_LINES_DEFAULT {

@@ -498,7 +498,7 @@ pub unsafe fn format_cb_session_attached_list(ft: *mut format_tree) -> format_ta
         }
 
         for loop_ in clients_iter() {
-            if (*loop_).session == s {
+            if client_get_session(loop_) == s {
                 if EVBUFFER_LENGTH(buffer) > 0 {
                     evbuffer_add(buffer, c!(",").cast(), 1);
                 }
@@ -702,7 +702,7 @@ pub unsafe fn format_cb_window_active_clients(ft: *mut format_tree) -> format_ta
 
         let mut n = 0u32;
         for loop_ in clients_iter() {
-            let client_session = (*loop_).session;
+            let client_session = client_get_session(loop_);
             if client_session.is_null() {
                 continue;
             }
@@ -730,7 +730,7 @@ pub unsafe fn format_cb_window_active_clients_list(ft: *mut format_tree) -> form
         }
 
         for loop_ in clients_iter() {
-            let client_session = (*loop_).session;
+            let client_session = client_get_session(loop_);
             if client_session.is_null() {
                 continue;
             }
@@ -1044,7 +1044,7 @@ pub unsafe fn format_cb_session_group_attached_list(ft: *mut format_tree) -> for
         }
 
         for loop_ in clients_iter() {
-            let client_session = (*loop_).session;
+            let client_session = client_get_session(loop_);
             if client_session.is_null() {
                 continue;
             }
@@ -1412,11 +1412,11 @@ pub unsafe fn format_cb_client_key_table(ft: *mut format_tree) -> format_table_t
 
 pub unsafe fn format_cb_client_last_session(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null()
-            && !(*(*ft).c).last_session.is_null()
-            && session_alive((*(*ft).c).last_session)
-        {
-            return format!("{}", (*(*(*ft).c).last_session).name).into();
+        if !(*ft).c.is_null() {
+            let ls = client_get_last_session((*ft).c);
+            if !ls.is_null() && session_alive(ls) {
+                return format!("{}", (*ls).name).into();
+            }
         }
         format_table_type::None
     }
@@ -1468,8 +1468,11 @@ pub unsafe fn format_cb_client_readonly(ft: *mut format_tree) -> format_table_ty
 
 pub unsafe fn format_cb_client_session(ft: *mut format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() && !(*(*ft).c).session.is_null() {
-            return format!("{}", (*(*(*ft).c).session).name).into();
+        if !(*ft).c.is_null() {
+            let s = client_get_session((*ft).c);
+            if !s.is_null() {
+                return format!("{}", (*s).name).into();
+            }
         }
         format_table_type::None
     }
@@ -5232,7 +5235,7 @@ pub unsafe fn format_defaults(
             log_debug!("{}: wp=none", function_name!());
         }
 
-        if !c.is_null() && !s.is_null() && (*c).session != s {
+        if !c.is_null() && !s.is_null() && client_get_session(c) != s {
             log_debug!("{}: session does not match", function_name!());
         }
 
@@ -5247,7 +5250,7 @@ pub unsafe fn format_defaults(
         };
 
         if s.is_null() && !c.is_null() {
-            s = (*c).session;
+            s = client_get_session(c);
         }
         if wl.is_null() && !s.is_null() {
             wl = (*s).curw;
@@ -5287,7 +5290,7 @@ pub unsafe fn format_defaults_session(ft: *mut format_tree, s: *mut session) {
 pub unsafe fn format_defaults_client(ft: *mut format_tree, c: *mut client) {
     unsafe {
         if (*ft).s.is_null() {
-            (*ft).s = (*c).session;
+            (*ft).s = client_get_session(c);
         }
         (*ft).c = c;
     }

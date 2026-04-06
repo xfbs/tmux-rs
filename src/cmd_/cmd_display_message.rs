@@ -104,7 +104,7 @@ unsafe fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
         // displayed if -p is not given. But it makes sense to use it for the
         // formats too, assuming it matches the session. If it doesn't, use the
         // best client for the session.
-        let c = if !tc.is_null() && (*tc).session == s {
+        let c = if !tc.is_null() && client_get_session(tc) == s {
             tc
         } else if !s.is_null() {
             cmd_find_best_client(s)

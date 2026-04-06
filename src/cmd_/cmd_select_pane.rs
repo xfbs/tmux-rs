@@ -53,16 +53,16 @@ pub unsafe fn cmd_select_pane_redraw(w: *mut window) {
         // offset may change), otherwise just draw borders.
 
         for c in clients_iter() {
-            if (*c).session.is_null() || ((*c).flags.intersects(client_flag::CONTROL)) {
+            if client_get_session(c).is_null() || ((*c).flags.intersects(client_flag::CONTROL)) {
                 continue;
             }
-            if (*(*(*c).session).curw).window == w && tty_window_bigger(&raw mut (*c).tty) {
+            if (*(*client_get_session(c)).curw).window == w && tty_window_bigger(&raw mut (*c).tty) {
                 server_redraw_client(c);
             } else {
-                if (*(*(*c).session).curw).window == w {
+                if (*(*client_get_session(c)).curw).window == w {
                     (*c).flags |= client_flag::REDRAWBORDERS;
                 }
-                if session_has((*c).session, w) {
+                if session_has(client_get_session(c), w) {
                     (*c).flags |= client_flag::REDRAWSTATUS;
                 }
             }
@@ -217,7 +217,7 @@ pub unsafe fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
         }
 
         let activewp = if !c.is_null()
-            && !(*c).session.is_null()
+            && !client_get_session(c).is_null()
             && ((*c).flags.intersects(client_flag::ACTIVEPANE))
         {
             server_client_get_pane(c)
@@ -232,7 +232,7 @@ pub unsafe fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
         }
         window_redraw_active_switch(w, wp);
         if !c.is_null()
-            && !(*c).session.is_null()
+            && !client_get_session(c).is_null()
             && ((*c).flags.intersects(client_flag::ACTIVEPANE))
         {
             server_client_set_pane(c, wp);

@@ -73,20 +73,20 @@ unsafe fn cmd_switch_client_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         }
 
         if args_has(args, 'n') {
-            s = session_next_session((*tc).session);
+            s = session_next_session(client_get_session(tc));
             if s.is_null() {
                 cmdq_error!(item, "can't find next session");
                 return cmd_retval::CMD_RETURN_ERROR;
             }
         } else if args_has(args, 'p') {
-            s = session_previous_session((*tc).session);
+            s = session_previous_session(client_get_session(tc));
             if s.is_null() {
                 cmdq_error!(item, "can't find previous session");
                 return cmd_retval::CMD_RETURN_ERROR;
             }
         } else if args_has(args, 'l') {
-            if !(*tc).last_session.is_null() && session_alive((*tc).last_session) {
-                s = (*tc).last_session;
+            if !client_get_last_session(tc).is_null() && session_alive(client_get_last_session(tc)) {
+                s = client_get_last_session(tc);
             } else {
                 s = null_mut();
             }

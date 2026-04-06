@@ -198,7 +198,7 @@ pub unsafe fn screen_redraw_pane_border(
 pub unsafe fn screen_redraw_cell_border(ctx: *mut screen_redraw_ctx, px: u32, py: u32) -> i32 {
     unsafe {
         let c = (*ctx).c;
-        let w = (*(*(*c).session).curw).window;
+        let w = (*(*client_get_session(c)).curw).window;
 
         // Outside the window?
         if px > (*w).sx || py > (*w).sy {
@@ -243,7 +243,7 @@ pub unsafe fn screen_redraw_type_of_cell(
     unsafe {
         let c = (*ctx).c;
         let pane_status = (*ctx).pane_status;
-        let w = (*(*(*c).session).curw).window;
+        let w = (*(*client_get_session(c)).curw).window;
         let sx = (*w).sx;
         let sy = (*w).sy;
         let mut borders = 0;
@@ -317,7 +317,7 @@ pub unsafe fn screen_redraw_check_cell(
 ) -> cell_type {
     unsafe {
         let c = (*ctx).c;
-        let w = (*(*(*c).session).curw).window;
+        let w = (*(*client_get_session(c)).curw).window;
         let mut wp: *mut window_pane;
         let mut active: *mut window_pane;
         let pane_status = (*ctx).pane_status;
@@ -440,8 +440,8 @@ pub unsafe fn screen_redraw_make_pane_status(
         format_defaults(
             ft,
             c,
-            NonNull::new((*c).session),
-            NonNull::new((*(*c).session).curw),
+            NonNull::new(client_get_session(c)),
+            NonNull::new((*client_get_session(c)).curw),
             Some(wp),
         );
 
@@ -508,7 +508,7 @@ pub unsafe fn screen_redraw_make_pane_status(
 pub unsafe fn screen_redraw_draw_pane_status(ctx: *mut screen_redraw_ctx) {
     unsafe {
         let c = (*ctx).c;
-        let w = (*(*(*c).session).curw).window;
+        let w = (*(*client_get_session(c)).curw).window;
         let tty = &raw mut (*c).tty;
         log_debug!(
             "{}: {} @{}",
@@ -575,7 +575,7 @@ pub unsafe fn screen_redraw_draw_pane_status(ctx: *mut screen_redraw_ctx) {
 /// Update status line and change flags if unchanged.
 unsafe fn screen_redraw_update(c: *mut client, mut flags: client_flag) -> client_flag {
     unsafe {
-        let w = (*(*(*c).session).curw).window;
+        let w = (*(*client_get_session(c)).curw).window;
         let wo = (*w).options;
         let mut ctx = MaybeUninit::<screen_redraw_ctx>::uninit();
 
@@ -625,7 +625,7 @@ unsafe fn screen_redraw_update(c: *mut client, mut flags: client_flag) -> client
 /// Set up redraw context.
 pub unsafe fn screen_redraw_set_context(c: *mut client, ctx: *mut screen_redraw_ctx) {
     unsafe {
-        let s = (*c).session;
+        let s = client_get_session(c);
         let oo = (*s).options;
         let w = (*(*s).curw).window;
         let wo = (*w).options;
@@ -748,7 +748,7 @@ pub unsafe fn screen_redraw_draw_borders_style(
 ) -> *const grid_cell {
     unsafe {
         let c = (*ctx).c;
-        let s = (*c).session;
+        let s = client_get_session(c);
         let w = (*(*s).curw).window;
         let active = server_client_get_pane(c);
         let oo = (*w).options;
@@ -779,7 +779,7 @@ pub unsafe fn screen_redraw_draw_borders_style(
 pub unsafe fn screen_redraw_draw_borders_cell(ctx: *mut screen_redraw_ctx, i: u32, j: u32) {
     unsafe {
         let c = (*ctx).c;
-        let s = (*c).session;
+        let s = client_get_session(c);
         let w = (*(*s).curw).window;
         let oo = (*w).options;
         let tty = &raw mut (*c).tty;
@@ -881,7 +881,7 @@ pub unsafe fn screen_redraw_draw_borders_cell(ctx: *mut screen_redraw_ctx, i: u3
 pub unsafe fn screen_redraw_draw_borders(ctx: *mut screen_redraw_ctx) {
     unsafe {
         let c = (*ctx).c;
-        let s = (*c).session;
+        let s = client_get_session(c);
         let w = (*(*s).curw).window;
 
         log_debug!(
@@ -907,7 +907,7 @@ pub unsafe fn screen_redraw_draw_borders(ctx: *mut screen_redraw_ctx) {
 pub unsafe fn screen_redraw_draw_panes(ctx: *mut screen_redraw_ctx) {
     unsafe {
         let c = (*ctx).c;
-        let w = (*(*(*c).session).curw).window;
+        let w = (*(*client_get_session(c)).curw).window;
 
         log_debug!(
             "{}: {} @{}",
@@ -928,7 +928,7 @@ pub unsafe fn screen_redraw_draw_panes(ctx: *mut screen_redraw_ctx) {
 pub unsafe fn screen_redraw_draw_status(ctx: *mut screen_redraw_ctx) {
     unsafe {
         let c = (*ctx).c;
-        let w = (*(*(*c).session).curw).window;
+        let w = (*(*client_get_session(c)).curw).window;
         let tty = &raw mut (*c).tty;
         let s = (*c).status.active;
 
@@ -965,7 +965,7 @@ pub unsafe fn screen_redraw_draw_status(ctx: *mut screen_redraw_ctx) {
 pub unsafe fn screen_redraw_draw_pane(ctx: *mut screen_redraw_ctx, wp: *mut window_pane) {
     unsafe {
         let c = (*ctx).c;
-        let w = (*(*(*c).session).curw).window;
+        let w = (*(*client_get_session(c)).curw).window;
         let tty = &raw mut (*c).tty;
         let s = (*wp).screen;
         let palette = &raw mut (*wp).palette;

@@ -344,7 +344,7 @@ pub unsafe fn server_loop() -> i32 {
         }
 
         for c in clients_iter() {
-            if !(*c).session.is_null() {
+            if !client_get_session(c).is_null() {
                 return 0;
             }
         }
@@ -375,7 +375,7 @@ unsafe fn server_send_exit() {
                 (*c).flags |= client_flag::EXIT;
                 (*c).exit_type = exit_type::CLIENT_EXIT_SHUTDOWN;
             }
-            (*c).session = null_mut();
+            (*c).session = None;
         }
 
         let sessions: Vec<*mut session> =

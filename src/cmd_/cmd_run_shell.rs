@@ -305,7 +305,7 @@ pub unsafe fn cmd_run_shell_callback(job: *mut job) {
         free_(msg);
 
         if !item.is_null() {
-            if !cmdq_get_client(item).is_null() && (*cmdq_get_client(item)).session.is_null() {
+            if !cmdq_get_client(item).is_null() && client_get_session(cmdq_get_client(item)).is_null() {
                 (*cmdq_get_client(item)).retval = retcode;
             }
             cmdq_continue(item);

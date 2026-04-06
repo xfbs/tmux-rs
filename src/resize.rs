@@ -63,7 +63,7 @@ pub unsafe fn resize_window(w: *mut window, mut sx: u32, mut sy: u32, xpixel: i3
 
 pub unsafe fn ignore_client_size(c: *mut client) -> i32 {
     unsafe {
-        if (*c).session.is_null() {
+        if client_get_session(c).is_null() {
             return 1;
         }
         if (*c).flags.intersects(CLIENT_NOSIZEFLAGS) {
@@ -73,7 +73,7 @@ pub unsafe fn ignore_client_size(c: *mut client) -> i32 {
             // Ignore flagged clients if there are any attached clients
             // that aren't flagged.
             for loop_ in clients_iter() {
-                if (*loop_).session.is_null() {
+                if client_get_session(loop_).is_null() {
                     continue;
                 }
                 if (*loop_).flags.intersects(CLIENT_NOSIZEFLAGS) {
@@ -98,7 +98,7 @@ pub unsafe fn clients_with_window(w: *mut window) -> u32 {
     let mut n = 0u32;
     unsafe {
         for loop_ in clients_iter() {
-            if ignore_client_size(loop_) != 0 || !session_has((*loop_).session, w) {
+            if ignore_client_size(loop_) != 0 || !session_has(client_get_session(loop_), w) {
                 continue;
             }
             n += 1;
@@ -315,10 +315,10 @@ pub unsafe fn default_window_size_skip_client(
         if type_ == window_size_option::WINDOW_SIZE_LATEST {
             return false;
         }
-        if !w.is_null() && !session_has((*loop_).session, w) {
+        if !w.is_null() && !session_has(client_get_session(loop_), w) {
             return true;
         }
-        if w.is_null() && (*loop_).session != s {
+        if w.is_null() && client_get_session(loop_) != s {
             return true;
         }
     }
@@ -410,14 +410,14 @@ pub unsafe fn recalculate_size_skip_client(
         // If the current flag is set, then skip any client where this window
         // is not the current window - this is used for aggressive-resize.
         // Otherwise skip any session that doesn't contain the window.
-        if (*(*loop_).session).curw.is_null() {
+        if (*client_get_session(loop_)).curw.is_null() {
             return true;
         }
         if current {
-            return (*(*(*loop_).session).curw).window != w;
+            return (*(*client_get_session(loop_)).curw).window != w;
         }
 
-        !session_has((*loop_).session, w)
+        !session_has(client_get_session(loop_), w)
     }
 }
 
@@ -519,7 +519,7 @@ pub unsafe fn recalculate_sizes_now(now: i32) {
         // Increment attached count and check the status line size for each
         // client.
         for c in clients_iter() {
-            let s = (*c).session;
+            let s = client_get_session(c);
             if !s.is_null() && !((*c).flags.intersects(CLIENT_UNATTACHEDFLAGS)) {
                 (*s).attached += 1;
             }

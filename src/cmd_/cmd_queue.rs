@@ -588,7 +588,7 @@ pub unsafe fn cmdq_add_message(item: *mut cmdq_item) {
             } else {
                 user = xstrdup(c!("")).as_ptr();
             }
-            if !(*c).session.is_null() && (*state).event.key != KEYC_NONE {
+            if !client_get_session(c).is_null() && (*state).event.key != KEYC_NONE {
                 let key = key_string_lookup_key((*state).event.key, 0);
                 server_add_message!("{}{} key {}: {}", _s((*c).name), _s(user), _s(key), _s(tmp));
             } else {
@@ -912,7 +912,7 @@ pub unsafe fn cmdq_error_(item: *mut cmdq_item, args: std::fmt::Arguments) {
         if c.is_null() {
             cmd_get_source(cmd, &raw mut file, &line);
             cfg_add_cause!("{}:{}: {}", _s(file), line.into_inner(), _s(msg));
-        } else if (*c).session.is_null() || (*c).flags.intersects(client_flag::CONTROL) {
+        } else if client_get_session(c).is_null() || (*c).flags.intersects(client_flag::CONTROL) {
             server_add_message!("{} message: {}", _s((*c).name), _s(msg));
             if !(*c).flags.intersects(client_flag::UTF8) {
                 let tmp = msg;

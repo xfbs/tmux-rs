@@ -106,7 +106,7 @@ pub unsafe fn window_client_build(
         (*data).item_list = Vec::new();
 
         for c in clients_iter() {
-            if (*c).session.is_null() || (*c).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
+            if client_get_session(c).is_null() || (*c).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
                 continue;
             }
 
@@ -206,10 +206,10 @@ pub unsafe fn window_client_draw(
         let cx = (*s).cx;
         let cy = (*s).cy;
 
-        if (*c).session.is_null() || (*c).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
+        if client_get_session(c).is_null() || (*c).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
             return;
         }
-        let wp = (*(*(*(*c).session).curw).window).active;
+        let wp = (*(*(*client_get_session(c)).curw).window).active;
 
         let mut lines = status_line_size(c);
         if lines >= sy {

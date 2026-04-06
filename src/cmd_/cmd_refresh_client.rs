@@ -301,7 +301,7 @@ pub unsafe fn cmd_refresh_client_exec(self_: *mut cmd, item: *mut cmdq_item) -> 
                 if args_has(args, 'c') {
                     (*tc).pan_window = null_mut();
                 } else {
-                    let w = (*(*(*tc).session).curw).window;
+                    let w = (*(*client_get_session(tc)).curw).window;
                     if (*tc).pan_window != w.cast() {
                         (*tc).pan_window = w.cast();
                         (*tc).pan_ox = (*tty).oox;

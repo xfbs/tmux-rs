@@ -159,12 +159,12 @@ pub unsafe fn control_discard_pane(c: *mut client, cp: *mut control_pane) {
 
 pub unsafe fn control_window_pane(c: *mut client, pane: u32) -> Option<NonNull<window_pane>> {
     unsafe {
-        if (*c).session.is_null() {
+        if client_get_session(c).is_null() {
             return None;
         }
         let wp = NonNull::new(window_pane_find_by_id(pane))?;
 
-        winlink_find_by_window(&raw mut (*(*c).session).windows, (*wp.as_ptr()).window)?;
+        winlink_find_by_window(&raw mut (*client_get_session(c)).windows, (*wp.as_ptr()).window)?;
 
         Some(wp)
     }
@@ -359,7 +359,7 @@ pub unsafe fn control_write_output(c: *mut client, wp: *mut window_pane) {
         let mut new_size = 0usize;
 
         'ignore: {
-            if winlink_find_by_window(&raw mut (*(*c).session).windows, (*wp).window).is_none() {
+            if winlink_find_by_window(&raw mut (*client_get_session(c)).windows, (*wp).window).is_none() {
                 return;
             }
 
@@ -798,7 +798,7 @@ pub unsafe fn control_stop(c: *mut client) {
 
 pub unsafe fn control_check_subs_session(c: *mut client, csub: *mut control_sub) {
     unsafe {
-        let s = (*c).session;
+        let s = client_get_session(c);
 
         let ft = format_create_defaults(null_mut(), c, s, null_mut(), null_mut());
         let value = format_expand(ft, (*csub).format);
@@ -822,7 +822,7 @@ pub unsafe fn control_check_subs_session(c: *mut client, csub: *mut control_sub)
 
 pub unsafe fn control_check_subs_pane(c: *mut client, csub: *mut control_sub) {
     unsafe {
-        let s = (*c).session;
+        let s = client_get_session(c);
 
         let wp = window_pane_find_by_id((*csub).id);
         if wp.is_null() || (*wp).fd == -1 {
@@ -865,7 +865,7 @@ pub unsafe fn control_check_subs_pane(c: *mut client, csub: *mut control_sub) {
 
 pub unsafe fn control_check_subs_all_panes(c: *mut client, csub: *mut control_sub) {
     unsafe {
-        let s = (*c).session;
+        let s = client_get_session(c);
 
         for &wl in (*(&raw mut (*s).windows)).values() {
             let w = (*wl).window;
@@ -901,7 +901,7 @@ pub unsafe fn control_check_subs_all_panes(c: *mut client, csub: *mut control_su
 
 pub unsafe fn control_check_subs_window(c: *mut client, csub: *mut control_sub) {
     unsafe {
-        let s = (*c).session;
+        let s = client_get_session(c);
 
         let w = window_find_by_id((*csub).id);
         if w.is_null() {
@@ -942,7 +942,7 @@ pub unsafe fn control_check_subs_window(c: *mut client, csub: *mut control_sub) 
 
 pub unsafe fn control_check_subs_all_windows(c: *mut client, csub: *mut control_sub) {
     unsafe {
-        let s = (*c).session;
+        let s = client_get_session(c);
 
         for &wl in (*(&raw mut (*s).windows)).values() {
             let w = (*wl).window;
