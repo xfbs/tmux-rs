@@ -728,9 +728,9 @@ pub unsafe fn window_copy_get_line(wp: *mut window_pane, y: u32) -> String {
     }
 }
 
-pub unsafe fn window_copy_cursor_hyperlink_cb(ft: *mut format_tree) -> format_table_type {
+pub unsafe fn window_copy_cursor_hyperlink_cb(ft: &format_tree) -> format_table_type {
     unsafe {
-        let wp = format_get_pane(ft);
+        let wp = format_get_pane(ft as *const _ as *mut _);
         let wme = (*wp).modes.first().copied().unwrap_or(null_mut());
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let gd = (*data).screen.grid;
@@ -746,9 +746,9 @@ pub unsafe fn window_copy_cursor_hyperlink_cb(ft: *mut format_tree) -> format_ta
     }
 }
 
-pub unsafe fn window_copy_cursor_word_cb(ft: *mut format_tree) -> format_table_type {
+pub unsafe fn window_copy_cursor_word_cb(ft: &format_tree) -> format_table_type {
     unsafe {
-        let wp: *mut window_pane = format_get_pane(ft);
+        let wp: *mut window_pane = format_get_pane(ft as *const _ as *mut _);
         let wme: *mut window_mode_entry = (*wp).modes.first().copied().unwrap_or(null_mut());
         let data: *mut window_copy_mode_data = (*wme).data.cast();
 
@@ -756,9 +756,9 @@ pub unsafe fn window_copy_cursor_word_cb(ft: *mut format_tree) -> format_table_t
     }
 }
 
-pub unsafe fn window_copy_cursor_line_cb(ft: *mut format_tree) -> format_table_type {
+pub unsafe fn window_copy_cursor_line_cb(ft: &format_tree) -> format_table_type {
     unsafe {
-        let wp: *mut window_pane = format_get_pane(ft);
+        let wp: *mut window_pane = format_get_pane(ft as *const _ as *mut _);
         let wme: *mut window_mode_entry = (*wp).modes.first().copied().unwrap_or(null_mut());
         let data: *mut window_copy_mode_data = (*wme).data.cast();
 
@@ -766,9 +766,9 @@ pub unsafe fn window_copy_cursor_line_cb(ft: *mut format_tree) -> format_table_t
     }
 }
 
-pub unsafe fn window_copy_search_match_cb(ft: *mut format_tree) -> format_table_type {
+pub unsafe fn window_copy_search_match_cb(ft: &format_tree) -> format_table_type {
     unsafe {
-        let wp: *mut window_pane = format_get_pane(ft);
+        let wp: *mut window_pane = format_get_pane(ft as *const _ as *mut _);
         let wme: *mut window_mode_entry = (*wp).modes.first().copied().unwrap_or(null_mut());
         let data: *mut window_copy_mode_data = (*wme).data.cast();
 

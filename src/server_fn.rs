@@ -487,14 +487,14 @@ pub unsafe fn server_check_unattached() {
                 2 => {
                     // keep-last
                     let sg = session_group_contains(s);
-                    if sg.is_null() || session_group_count(sg) <= 1 {
+                    if sg.is_null() || session_group_count(&*sg) <= 1 {
                         continue;
                     }
                 }
                 3 => {
                     // keep-group
                     let sg = session_group_contains(s);
-                    if !sg.is_null() && session_group_count(sg) == 1 {
+                    if !sg.is_null() && session_group_count(&*sg) == 1 {
                         continue;
                     }
                 }

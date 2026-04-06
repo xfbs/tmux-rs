@@ -455,7 +455,7 @@ pub unsafe fn session_is_linked(s: *mut session, w: *mut window) -> bool {
     unsafe {
         let sg = session_group_contains(s);
         if !sg.is_null() {
-            return (*w).references != session_group_count(sg);
+            return (*w).references != session_group_count(&*sg);
         }
         (*w).references != 1
     }
@@ -659,17 +659,18 @@ pub unsafe fn session_group_remove(s: *mut session) {
 }
 
 /// Count number of sessions in session group.
-pub unsafe fn session_group_count(sg: *mut session_group) -> u32 {
-    unsafe { (*sg).sessions.len() as u32 }
+pub fn session_group_count(sg: &session_group) -> u32 {
+    sg.sessions.len() as u32
 }
 
 /// Count number of clients attached to sessions in session group.
-pub unsafe fn session_group_attached_count(sg: *mut session_group) -> u32 {
-    unsafe {
-        (*sg).sessions.iter()
-            .map(|&s| (*s).attached)
-            .sum()
-    }
+///
+/// Sums `attached` across the group's sessions. The session pointers are
+/// still raw, so the dereference stays inside an `unsafe` block.
+pub fn session_group_attached_count(sg: &session_group) -> u32 {
+    sg.sessions.iter()
+        .map(|&s| unsafe { (*s).attached })
+        .sum()
 }
 
 /// Synchronize a session to its session group.
