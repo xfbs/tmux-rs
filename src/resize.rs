@@ -98,7 +98,7 @@ pub unsafe fn clients_with_window(w: *mut window) -> u32 {
     let mut n = 0u32;
     unsafe {
         for loop_ in clients_iter() {
-            if ignore_client_size(loop_) != 0 || !session_has(client_get_session(loop_), w) {
+            if ignore_client_size(loop_) != 0 || !session_has(client_get_session(loop_), &*w) {
                 continue;
             }
             n += 1;
@@ -315,7 +315,7 @@ pub unsafe fn default_window_size_skip_client(
         if type_ == window_size_option::WINDOW_SIZE_LATEST {
             return false;
         }
-        if !w.is_null() && !session_has(client_get_session(loop_), w) {
+        if !w.is_null() && !session_has(client_get_session(loop_), &*w) {
             return true;
         }
         if w.is_null() && client_get_session(loop_) != s {
@@ -417,7 +417,7 @@ pub unsafe fn recalculate_size_skip_client(
             return (*(*client_get_session(loop_)).curw).window != w;
         }
 
-        !session_has(client_get_session(loop_), w)
+        !session_has(client_get_session(loop_), &*w)
     }
 }
 

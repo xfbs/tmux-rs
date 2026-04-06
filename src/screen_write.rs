@@ -127,7 +127,7 @@ unsafe fn screen_write_set_client_cb(ttyctx: *mut tty_ctx, c: *mut client) -> i3
         let wp: *mut window_pane = (*ttyctx).arg.cast();
 
         if (*ttyctx).allow_invisible_panes != 0 {
-            if session_has(client_get_session(c), (*wp).window) {
+            if session_has(client_get_session(c), &*(*wp).window) {
                 return 1;
             }
             return 0;

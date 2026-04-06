@@ -172,7 +172,7 @@ pub unsafe fn cmd_find_best_session_with_window(fs: *mut cmd_find_state) -> i32 
         'fail: {
             let mut ssize: u32 = 0;
             for s in sessions_iter() {
-                if !session_has(s, (*fs).w) {
+                if !session_has(s, &*(*fs).w) {
                     continue;
                 }
                 slist = xreallocarray_(slist, ssize as usize + 1).as_ptr();
@@ -358,7 +358,7 @@ pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: 
 
         if window.starts_with('@') {
             (*fs).w = window_find_by_id_str(window);
-            if (*fs).w.is_null() || !session_has((*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()), (*fs).w) {
+            if (*fs).w.is_null() || !session_has((*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()), &*(*fs).w) {
                 return -1;
             }
             return cmd_find_best_winlink_with_window(fs);

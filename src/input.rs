@@ -2729,7 +2729,7 @@ unsafe fn input_get_fg_client(wp: *mut window_pane) -> i32 {
             if (*loop_).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
                 continue;
             }
-            if client_get_session(loop_).is_null() || !session_has(client_get_session(loop_), w) {
+            if client_get_session(loop_).is_null() || !session_has(client_get_session(loop_), &*w) {
                 continue;
             }
             if (*loop_).tty.fg == -1 {
@@ -2751,7 +2751,7 @@ unsafe fn input_get_bg_client(wp: *mut window_pane) -> i32 {
             if (*loop_).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
                 continue;
             }
-            if client_get_session(loop_).is_null() || !session_has(client_get_session(loop_), w) {
+            if client_get_session(loop_).is_null() || !session_has(client_get_session(loop_), &*w) {
                 continue;
             }
             if (*loop_).tty.bg == -1 {

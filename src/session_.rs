@@ -442,12 +442,16 @@ pub unsafe fn session_detach(s: *mut session, wl: *mut winlink) -> i32 {
 }
 
 /// Return if session has window.
-pub unsafe fn session_has(s: *mut session, w: *mut window) -> bool {
-    unsafe {
-        let target = if s.is_null() { None } else { Some(SessionId((*s).id)) };
-        (*w).winlinks.iter()
-            .any(|&wl| (*wl).session == target)
+///
+/// `s` may be null (e.g. when called with `client_get_session()` for an
+/// unattached client) — in that case the answer is always `false`.
+pub unsafe fn session_has(s: *mut session, w: &window) -> bool {
+    if s.is_null() {
+        return false;
     }
+    let target = Some(SessionId(unsafe { (*s).id }));
+    w.winlinks.iter()
+        .any(|&wl| unsafe { (*wl).session } == target)
 }
 
 /// Return 1 if a window is linked outside this session (not including session groups). The window must be in this session!

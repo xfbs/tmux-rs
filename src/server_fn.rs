@@ -101,7 +101,7 @@ pub unsafe fn server_status_window(w: *mut window) {
         // current window.
 
         for s in sessions_iter() {
-            if session_has(s, w) {
+            if session_has(s, &*w) {
                 server_status_session(s);
             }
         }
@@ -190,7 +190,7 @@ pub unsafe fn server_kill_window(w: *mut window, renumber: i32) {
         let sessions: Vec<*mut session> =
             sessions_iter().collect();
         for s in sessions {
-            if !session_has(s, w) {
+            if !session_has(s, &*w) {
                 continue;
             }
 
