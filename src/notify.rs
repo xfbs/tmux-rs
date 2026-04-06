@@ -20,7 +20,7 @@ pub struct notify_entry {
     pub formats: *mut format_tree,
 
     pub client: Option<ClientId>,
-    pub session: *mut session,
+    pub session: Option<SessionId>,
     pub window: *mut window,
     pub pane: i32,
     pub pbname: *mut u8,
@@ -138,10 +138,12 @@ pub unsafe fn notify_callback(item: *mut cmdq_item, data: *mut c_void) -> cmd_re
             control_notify_window_pane_changed((*ne).window);
         }
         if streq_((*ne).name, "window-unlinked") {
-            control_notify_window_unlinked((*ne).session, (*ne).window);
+            let s = (*ne).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            control_notify_window_unlinked(s, (*ne).window);
         }
         if streq_((*ne).name, "window-linked") {
-            control_notify_window_linked((*ne).session, (*ne).window);
+            let s = (*ne).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            control_notify_window_linked(s, (*ne).window);
         }
         if streq_((*ne).name, "window-renamed") {
             control_notify_window_renamed((*ne).window);
@@ -155,16 +157,20 @@ pub unsafe fn notify_callback(item: *mut cmdq_item, data: *mut c_void) -> cmd_re
             control_notify_client_detached(c);
         }
         if streq_((*ne).name, "session-renamed") {
-            control_notify_session_renamed((*ne).session);
+            let s = (*ne).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            control_notify_session_renamed(s);
         }
         if streq_((*ne).name, "session-created") {
-            control_notify_session_created((*ne).session);
+            let s = (*ne).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            control_notify_session_created(s);
         }
         if streq_((*ne).name, "session-closed") {
-            control_notify_session_closed((*ne).session);
+            let s = (*ne).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            control_notify_session_closed(s);
         }
         if streq_((*ne).name, "session-window-changed") {
-            control_notify_session_window_changed((*ne).session);
+            let s = (*ne).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            control_notify_session_window_changed(s);
         }
         if streq_((*ne).name, "paste-buffer-changed") {
             control_notify_paste_buffer_changed((*ne).pbname);
@@ -178,8 +184,8 @@ pub unsafe fn notify_callback(item: *mut cmdq_item, data: *mut c_void) -> cmd_re
         if let Some(c) = (*ne).client.and_then(|id| client_from_id(id)) {
             server_client_unref(c);
         }
-        if !(*ne).session.is_null() {
-            session_remove_ref((*ne).session, __func__);
+        if let Some(s) = (*ne).session.and_then(|id| session_from_id(id)) {
+            session_remove_ref(s, __func__);
         }
         if !(*ne).window.is_null() {
             window_remove_ref((*ne).window, __func__);
@@ -219,7 +225,7 @@ pub unsafe fn notify_add(
         (*ne).name = xstrdup(name.as_ptr().cast()).as_ptr();
 
         (*ne).client = if c.is_null() { None } else { Some((*c).id) };
-        (*ne).session = s;
+        (*ne).session = if s.is_null() { None } else { Some(SessionId((*s).id)) };
         (*ne).window = w;
         (*ne).pane = if !wp.is_null() { (*wp).id as i32 } else { -1 };
         (*ne).pbname = if let Some(pbname) = pbname {
@@ -279,7 +285,7 @@ pub unsafe fn notify_hook(item: *mut cmdq_item, name: *mut u8) {
 
         let c = cmdq_get_client(item);
         ne.client = if c.is_null() { None } else { Some((*c).id) };
-        ne.session = (*target).s;
+        ne.session = if (*target).s.is_null() { None } else { Some(SessionId((*(*target).s).id)) };
         ne.window = (*target).w;
         ne.pane = if !(*target).wp.is_null() {
             (*(*target).wp).id as i32
