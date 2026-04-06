@@ -180,7 +180,7 @@ pub unsafe fn spawn_window(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut 
             if (*s).curw.is_null() {
                 (*s).curw = (*sc).wl;
             }
-            (*(*sc).wl).session = s;
+            (*(*sc).wl).session = Some(SessionId((*s).id));
             (*w).latest = (*sc).tc.cast();
             winlink_set_window((*sc).wl, w);
         } else {

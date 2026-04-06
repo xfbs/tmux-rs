@@ -411,7 +411,7 @@ pub unsafe fn session_attach(
             *cause = format_nul!("index in use: {}", idx);
             return null_mut();
         }
-        (*wl).session = s;
+        (*wl).session = Some(SessionId((*s).id));
         winlink_set_window(wl, w);
         notify_session_window(c"window-linked", s, w);
 
@@ -444,8 +444,9 @@ pub unsafe fn session_detach(s: *mut session, wl: *mut winlink) -> i32 {
 /// Return if session has window.
 pub unsafe fn session_has(s: *mut session, w: *mut window) -> bool {
     unsafe {
+        let target = if s.is_null() { None } else { Some(SessionId((*s).id)) };
         (*w).winlinks.iter()
-            .any(|&wl| (*wl).session == s)
+            .any(|&wl| (*wl).session == target)
     }
 }
 
@@ -734,7 +735,7 @@ pub unsafe fn session_group_synchronize1(target: *mut session, s: *mut session) 
         // Link all the windows from the target.
         for &wl in (*ww).values() {
             let wl2 = winlink_add(&raw mut (*s).windows, (*wl).idx);
-            (*wl2).session = s;
+            (*wl2).session = Some(SessionId((*s).id));
             winlink_set_window(wl2, (*wl).window);
             notify_session_window(c"window-linked", s, (*wl2).window);
             (*wl2).flags |= (*wl).flags & WINLINK_ALERTFLAGS;
@@ -785,7 +786,7 @@ pub unsafe fn session_renumber_windows(s: *mut session) {
         let old_values: Vec<*mut winlink> = old_wins.values().copied().collect();
         for wl in old_values.iter().copied() {
             let wl_new = winlink_add(&raw mut (*s).windows, new_idx);
-            (*wl_new).session = s;
+            (*wl_new).session = Some(SessionId((*s).id));
             winlink_set_window(wl_new, (*wl).window);
             (*wl_new).flags |= (*wl).flags & WINLINK_ALERTFLAGS;
 

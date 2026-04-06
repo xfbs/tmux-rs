@@ -1423,7 +1423,7 @@ const WINLINK_ALERTFLAGS: winlink_flags = winlink_flags::WINLINK_BELL
 #[derive(Copy, Clone)]
 struct winlink {
     idx: i32,
-    session: *mut session,
+    session: Option<SessionId>,
     window: *mut window,
 
     flags: winlink_flags,

@@ -58,10 +58,14 @@ unsafe extern "C-unwind" fn alerts_callback(_fd: c_int, _events: c_short, _arg: 
 
 fn alerts_action_applies(wl: &winlink, name: &str) -> bool {
     unsafe {
-        match alert_option::try_from(options_get_number___::<i32>(&*(*wl.session).options, name)) {
+        let s = wl.session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if s.is_null() {
+            return false;
+        }
+        match alert_option::try_from(options_get_number___::<i32>(&*(*s).options, name)) {
             Ok(alert_option::ALERT_ANY) => true,
-            Ok(alert_option::ALERT_CURRENT) => std::ptr::eq(wl, (*wl.session).curw),
-            Ok(alert_option::ALERT_OTHER) => !std::ptr::eq(wl, (*wl.session).curw),
+            Ok(alert_option::ALERT_CURRENT) => std::ptr::eq(wl, (*s).curw),
+            Ok(alert_option::ALERT_OTHER) => !std::ptr::eq(wl, (*s).curw),
             _ => false,
         }
     }
@@ -175,13 +179,15 @@ fn alerts_check_bell(w: &window) -> window_flag {
         }
 
         for &wl in w.winlinks.iter() {
-            (*(*wl).session).flags &= !SESSION_ALERTED;
+            let s = (*wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            if !s.is_null() { (*s).flags &= !SESSION_ALERTED; }
         }
 
         for &wl in w.winlinks.iter() {
             // Bells are allowed even if there is an existing bell (so do
             // not check WINLINK_BELL).
-            let s = (*wl).session;
+            let s = (*wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            if s.is_null() { continue; }
             if (*s).curw != wl || (*s).attached == 0 {
                 (*wl).flags |= winlink_flags::WINLINK_BELL;
                 server_status_session(s);
@@ -212,11 +218,13 @@ fn alerts_check_activity(w: &window) -> window_flag {
         }
 
         for &wl in w.winlinks.iter() {
-            (*(*wl).session).flags &= !SESSION_ALERTED;
+            let s = (*wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            if !s.is_null() { (*s).flags &= !SESSION_ALERTED; }
         }
 
         for &wl in w.winlinks.iter() {
-            let s = (*wl).session;
+            let s = (*wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            if s.is_null() { continue; }
             if (*s).curw != wl || (*s).attached == 0 {
                 (*wl).flags |= winlink_flags::WINLINK_ACTIVITY;
                 server_status_session(s);
@@ -247,14 +255,16 @@ fn alerts_check_silence(w: &window) -> window_flag {
         }
 
         for &wl in w.winlinks.iter() {
-            (*(*wl).session).flags &= !SESSION_ALERTED;
+            let s = (*wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            if !s.is_null() { (*s).flags &= !SESSION_ALERTED; }
         }
 
         for &wl in w.winlinks.iter() {
             if (*wl).flags.intersects(winlink_flags::WINLINK_SILENCE) {
                 continue;
             }
-            let s = (*wl).session;
+            let s = (*wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            if s.is_null() { continue; }
             if (*s).curw != wl || (*s).attached == 0 {
                 (*wl).flags |= winlink_flags::WINLINK_SILENCE;
                 server_status_session(s);
@@ -278,11 +288,13 @@ fn alerts_check_silence(w: &window) -> window_flag {
 
 fn alerts_set_message(wl: &winlink, type_: &str, option: &str) {
     unsafe {
+        let s = wl.session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if s.is_null() { return; }
         let visual =
-            visual_option::try_from(options_get_number___::<i32>(&*(*wl.session).options, option));
+            visual_option::try_from(options_get_number___::<i32>(&*(*s).options, option));
 
         for c in clients_iter() {
-            if client_get_session(c) != wl.session || (*c).flags.intersects(client_flag::CONTROL) {
+            if client_get_session(c) != s || (*c).flags.intersects(client_flag::CONTROL) {
                 continue;
             }
 

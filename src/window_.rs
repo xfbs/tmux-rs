@@ -938,7 +938,7 @@ pub unsafe fn window_printable_flags(wl: *mut winlink, escape: i32) -> *const u8
     static mut FLAGS: [u8; 32] = [0; 32];
 
     unsafe {
-        let s = (*wl).session;
+        let s = (*wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
 
         let mut pos = 0;
         if (*wl).flags.intersects(winlink_flags::WINLINK_ACTIVITY) {
@@ -957,11 +957,11 @@ pub unsafe fn window_printable_flags(wl: *mut winlink, escape: i32) -> *const u8
             FLAGS[pos] = b'~';
             pos += 1;
         }
-        if wl == (*s).curw {
+        if !s.is_null() && wl == (*s).curw {
             FLAGS[pos] = b'*';
             pos += 1;
         }
-        if wl == (*s).lastw.first().copied().unwrap_or(null_mut()) {
+        if !s.is_null() && wl == (*s).lastw.first().copied().unwrap_or(null_mut()) {
             FLAGS[pos] = b'-';
             pos += 1;
         }
@@ -1692,7 +1692,7 @@ pub unsafe fn winlink_clear_flags(wl: *mut winlink) {
         for &loop_ in (*(*wl).window).winlinks.iter() {
             if (*loop_).flags.intersects(WINLINK_ALERTFLAGS) {
                 (*loop_).flags &= !WINLINK_ALERTFLAGS;
-                server_status_session((*loop_).session);
+                server_status_session((*loop_).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut()));
             }
         }
     }

@@ -2227,7 +2227,8 @@ pub unsafe fn server_client_check_window_resize(w: *mut window) {
         let mut wl = null_mut();
         for &wl_ in (*w).winlinks.iter() {
             wl = wl_;
-            if (*(*wl).session).attached != 0 && (*(*wl).session).curw == wl {
+            let s = (*wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            if !s.is_null() && (*s).attached != 0 && (*s).curw == wl {
                 break;
             }
         }

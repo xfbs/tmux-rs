@@ -831,7 +831,7 @@ pub unsafe fn control_check_subs_pane(c: *mut client, csub: *mut control_sub) {
         let w = (*wp).window;
 
         for &wl in (*w).winlinks.iter() {
-            if (*wl).session != s {
+            if (*wl).session != (if s.is_null() { None } else { Some(SessionId((*s).id)) }) {
                 continue;
             }
 
@@ -909,7 +909,7 @@ pub unsafe fn control_check_subs_window(c: *mut client, csub: *mut control_sub) 
         }
 
         for &wl in (*w).winlinks.iter() {
-            if (*wl).session != s {
+            if (*wl).session != (if s.is_null() { None } else { Some(SessionId((*s).id)) }) {
                 continue;
             }
 

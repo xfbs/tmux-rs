@@ -592,7 +592,8 @@ pub unsafe fn format_cb_window_stack_index(ft: *mut format_tree) -> format_table
         if (*ft).wl.is_null() {
             return format_table_type::None;
         }
-        let s = (*(*ft).wl).session;
+        let s = (*(*ft).wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if s.is_null() { return "0".into(); }
 
         let mut idx: u32 = 0;
         let mut wl = null_mut();
@@ -627,7 +628,8 @@ pub unsafe fn format_cb_window_linked_sessions_list(ft: *mut format_tree) -> for
             if EVBUFFER_LENGTH(buffer) > 0 {
                 evbuffer_add(buffer, c!(",").cast(), 1);
             }
-            evbuffer_add_printf!(buffer, "{}", (*(*wl).session).name);
+            let s = (*wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            if !s.is_null() { evbuffer_add_printf!(buffer, "{}", (*s).name); }
         }
 
         let size = EVBUFFER_LENGTH(buffer);
@@ -651,7 +653,10 @@ pub unsafe fn format_cb_window_active_sessions(ft: *mut format_tree) -> format_t
         let w = (*(*ft).wl).window;
 
         let n = (*w).winlinks.iter()
-            .filter(|&&wl| (*(*wl).session).curw == wl)
+            .filter(|&&wl| {
+                let s = (*wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+                !s.is_null() && (*s).curw == wl
+            })
             .count() as u32;
 
         format!("{n}").into()
@@ -672,11 +677,12 @@ pub unsafe fn format_cb_window_active_sessions_list(ft: *mut format_tree) -> for
         }
 
         for &wl in (*w).winlinks.iter() {
-            if (*(*wl).session).curw == wl {
+            let s = (*wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            if !s.is_null() && (*s).curw == wl {
                 if EVBUFFER_LENGTH(buffer) > 0 {
                     evbuffer_add(buffer, c!(",").cast(), 1);
                 }
-                evbuffer_add_printf!(buffer, "{}", (*(*wl).session).name);
+                evbuffer_add_printf!(buffer, "{}", (*s).name);
             }
         }
 
@@ -2433,7 +2439,8 @@ pub unsafe fn format_cb_last_window_index(ft: *mut format_tree) -> format_table_
 pub unsafe fn format_cb_window_active(ft: *mut format_tree) -> format_table_type {
     unsafe {
         if !(*ft).wl.is_null() {
-            if (*ft).wl == (*(*(*ft).wl).session).curw {
+            let s = (*(*ft).wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            if !s.is_null() && (*ft).wl == (*s).curw {
                 return "1".into();
             }
             return "0".into();
@@ -2512,7 +2519,8 @@ pub unsafe fn format_cb_window_cell_width(ft: *mut format_tree) -> format_table_
 pub unsafe fn format_cb_window_end_flag(ft: *mut format_tree) -> format_table_type {
     unsafe {
         if !(*ft).wl.is_null() {
-            if Some(&(*ft).wl) == (*(&raw mut (*(*(*ft).wl).session).windows)).values().next_back() {
+            let s = (*(*ft).wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            if !s.is_null() && Some(&(*ft).wl) == (*(&raw mut (*s).windows)).values().next_back() {
                 return "1".into();
             }
             return "0".into();
@@ -2575,7 +2583,8 @@ pub unsafe fn format_cb_window_index(ft: *mut format_tree) -> format_table_type 
 pub unsafe fn format_cb_window_last_flag(ft: *mut format_tree) -> format_table_type {
     unsafe {
         if !(*ft).wl.is_null() {
-            if (*ft).wl == (*(*(*ft).wl).session).lastw.first().copied().unwrap_or(null_mut()) {
+            let s = (*(*ft).wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            if !s.is_null() && (*ft).wl == (*s).lastw.first().copied().unwrap_or(null_mut()) {
                 return "1".into();
             }
             return "0".into();
@@ -2588,7 +2597,8 @@ pub unsafe fn format_cb_window_last_flag(ft: *mut format_tree) -> format_table_t
 pub unsafe fn format_cb_window_linked(ft: *mut format_tree) -> format_table_type {
     unsafe {
         if !(*ft).wl.is_null() {
-            if session_is_linked((*(*ft).wl).session, (*(*ft).wl).window) {
+            let s = (*(*ft).wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            if session_is_linked(s, (*(*ft).wl).window) {
                 return "1".into();
             }
             return "0".into();
@@ -2699,7 +2709,8 @@ pub unsafe fn format_cb_window_silence_flag(ft: *mut format_tree) -> format_tabl
 pub unsafe fn format_cb_window_start_flag(ft: *mut format_tree) -> format_table_type {
     unsafe {
         if !(*ft).wl.is_null() {
-            if Some(&(*ft).wl) == (*(&raw mut (*(*(*ft).wl).session).windows)).values().next() {
+            let s = (*(*ft).wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            if !s.is_null() && Some(&(*ft).wl) == (*(&raw mut (*s).windows)).values().next() {
                 return "1".into();
             }
             return "0".into();

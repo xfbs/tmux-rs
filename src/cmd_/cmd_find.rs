@@ -753,7 +753,7 @@ pub unsafe fn cmd_find_from_winlink(
     unsafe {
         cmd_find_clear_state(fs, flags);
 
-        (*fs).s = { let __p = (*wl).session; if __p.is_null() { None } else { Some(SessionId((*__p).id)) } };
+        (*fs).s = (*wl).session;
         (*fs).wl = wl;
         (*fs).w = (*wl).window;
         (*fs).wp = (*(*wl).window).active;
@@ -817,7 +817,7 @@ pub unsafe fn cmd_find_from_winlink_pane(
     unsafe {
         cmd_find_clear_state(fs, flags);
 
-        (*fs).s = { let __p = (*wl).session; if __p.is_null() { None } else { Some(SessionId((*__p).id)) } };
+        (*fs).s = (*wl).session;
         (*fs).wl = wl;
         (*fs).idx = (*(*fs).wl).idx;
         (*fs).w = (*(*fs).wl).window;

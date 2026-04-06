@@ -349,7 +349,7 @@ pub unsafe fn notify_winlink(name: &'static CStr, wl: *mut winlink) {
             name,
             &raw mut fs,
             null_mut(),
-            (*wl).session,
+            (*wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut()),
             (*wl).window,
             null_mut(),
             None,
