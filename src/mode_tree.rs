@@ -1244,7 +1244,7 @@ pub unsafe fn mode_tree_key(
         let mut y: u32 = 0;
 
         if KEYC_IS_MOUSE(*key) && !m.is_null() {
-            if cmd_mouse_at(pane_ptr_from_id((*mtd).wp), m, &raw mut x, &raw mut y, 0) != 0 {
+            if cmd_mouse_at(pane_ptr_from_id((*mtd).wp), &*m, &raw mut x, &raw mut y, 0) != 0 {
                 *key = KEYC_NONE;
                 return 0;
             }

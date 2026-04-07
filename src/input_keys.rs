@@ -664,7 +664,7 @@ pub unsafe fn input_key_mouse(wp: *mut window_pane, m: *mut mouse_event) {
         if (*m).ignore != 0 || !(*s).mode.intersects(ALL_MOUSE_MODES) {
             return;
         }
-        if cmd_mouse_at(wp, m, &raw mut x, &raw mut y, 0) != 0 {
+        if cmd_mouse_at(wp, &*m, &raw mut x, &raw mut y, 0) != 0 {
             return;
         }
         if !window_pane_visible(wp) {

@@ -58,7 +58,7 @@ unsafe fn cmd_copy_mode_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
         }
 
         if args_has(args, 'M') {
-            let wp = cmd_mouse_pane(&raw mut (*event).m, &raw mut s, null_mut());
+            let wp = cmd_mouse_pane(&(*event).m, &raw mut s, null_mut());
             if wp.is_none() {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }

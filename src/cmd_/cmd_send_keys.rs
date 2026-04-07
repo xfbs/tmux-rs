@@ -193,7 +193,7 @@ pub unsafe fn cmd_send_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         }
 
         if args_has(args, 'M') {
-            wp = transmute_ptr(cmd_mouse_pane(m, &raw mut s, null_mut()));
+            wp = transmute_ptr(cmd_mouse_pane(&*m, &raw mut s, null_mut()));
             if wp.is_null() {
                 cmdq_error!(item, "no mouse target");
                 return cmd_retval::CMD_RETURN_ERROR;

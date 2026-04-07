@@ -1165,12 +1165,12 @@ pub unsafe fn format_cb_mouse_word(ft: &format_tree) -> format_table_type {
         if !(*ft).m.valid {
             return format_table_type::None;
         }
-        let Some(wp) = cmd_mouse_pane(&ft.m as *const _ as *mut _, null_mut(), null_mut()) else {
+        let Some(wp) = cmd_mouse_pane(&ft.m, null_mut(), null_mut()) else {
             return format_table_type::None;
         };
         let mut x = 0;
         let mut y = 0;
-        if cmd_mouse_at(wp.as_ptr(), &ft.m as *const _ as *mut _, &mut x, &mut y, 0) != 0 {
+        if cmd_mouse_at(wp.as_ptr(), &ft.m, &mut x, &mut y, 0) != 0 {
             return format_table_type::None;
         }
 
@@ -1191,12 +1191,12 @@ pub unsafe fn format_cb_mouse_hyperlink(ft: &format_tree) -> format_table_type {
         if !(*ft).m.valid {
             return format_table_type::None;
         }
-        let Some(wp) = cmd_mouse_pane(&ft.m as *const _ as *mut _, null_mut(), null_mut()) else {
+        let Some(wp) = cmd_mouse_pane(&ft.m, null_mut(), null_mut()) else {
             return format_table_type::None;
         };
         let mut x = 0;
         let mut y = 0;
-        if cmd_mouse_at(wp.as_ptr(), &ft.m as *const _ as *mut _, &mut x, &mut y, 0) != 0 {
+        if cmd_mouse_at(wp.as_ptr(), &ft.m, &mut x, &mut y, 0) != 0 {
             return format_table_type::None;
         }
         let gd = (*wp.as_ptr()).base.grid;
@@ -1212,12 +1212,12 @@ pub unsafe fn format_cb_mouse_line(ft: &format_tree) -> format_table_type {
         if !(*ft).m.valid {
             return format_table_type::None;
         }
-        let Some(wp) = cmd_mouse_pane(&ft.m as *const _ as *mut _, null_mut(), null_mut()) else {
+        let Some(wp) = cmd_mouse_pane(&ft.m, null_mut(), null_mut()) else {
             return format_table_type::None;
         };
         let mut x = 0;
         let mut y = 0;
-        if cmd_mouse_at(wp.as_ptr(), &ft.m as *const _ as *mut _, &mut x, &mut y, 0) != 0 {
+        if cmd_mouse_at(wp.as_ptr(), &ft.m, &mut x, &mut y, 0) != 0 {
             return format_table_type::None;
         }
 
@@ -1732,7 +1732,7 @@ pub unsafe fn format_cb_mouse_button_flag(ft: &format_tree) -> format_table_type
 pub unsafe fn format_cb_mouse_pane(ft: &format_tree) -> format_table_type {
     unsafe {
         if (*ft).m.valid {
-            if let Some(wp) = cmd_mouse_pane(&ft.m as *const _ as *mut _, null_mut(), null_mut()) {
+            if let Some(wp) = cmd_mouse_pane(&ft.m, null_mut(), null_mut()) {
                 return format!("%{}", (*wp.as_ptr()).id).into();
             }
             return format_table_type::None;
@@ -1790,11 +1790,11 @@ pub unsafe fn format_cb_mouse_x(ft: &format_tree) -> format_table_type {
         if !(*ft).m.valid {
             return format_table_type::None;
         }
-        let wp = cmd_mouse_pane(&ft.m as *const _ as *mut _, null_mut(), null_mut());
+        let wp = cmd_mouse_pane(&ft.m, null_mut(), null_mut());
         let mut x: u32 = 0;
         let mut y: u32 = 0;
         if let Some(wp) = wp
-            && cmd_mouse_at(wp.as_ptr(), &ft.m as *const _ as *mut _, &mut x, &mut y, 0) == 0
+            && cmd_mouse_at(wp.as_ptr(), &ft.m, &mut x, &mut y, 0) == 0
         {
             return format!("{x}").into();
         }
@@ -1816,11 +1816,11 @@ pub unsafe fn format_cb_mouse_y(ft: &format_tree) -> format_table_type {
         if !(*ft).m.valid {
             return format_table_type::None;
         }
-        let wp = cmd_mouse_pane(&ft.m as *const _ as *mut _, null_mut(), null_mut());
+        let wp = cmd_mouse_pane(&ft.m, null_mut(), null_mut());
         let mut x: u32 = 0;
         let mut y: u32 = 0;
         if let Some(wp) = wp
-            && cmd_mouse_at(wp.as_ptr(), &ft.m as *const _ as *mut _, &mut x, &mut y, 0) == 0
+            && cmd_mouse_at(wp.as_ptr(), &ft.m, &mut x, &mut y, 0) == 0
         {
             return format!("{y}").into();
         }
@@ -3154,8 +3154,8 @@ pub unsafe fn format_merge(ft: *mut format_tree, from: *mut format_tree) {
     }
 }
 
-pub unsafe fn format_get_pane(ft: *mut format_tree) -> *mut window_pane {
-    unsafe { (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut()) }
+pub unsafe fn format_get_pane(ft: &format_tree) -> *mut window_pane {
+    unsafe { ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut()) }
 }
 
 pub unsafe fn format_create_add_item(ft: *mut format_tree, item: *mut cmdq_item) {

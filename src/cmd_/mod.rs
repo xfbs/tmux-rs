@@ -718,7 +718,7 @@ pub unsafe fn cmd_list_any_have(cmdlist: *mut cmd_list, flag: cmd_flag) -> bool 
 
 pub unsafe fn cmd_mouse_at(
     wp: *mut window_pane,
-    m: *mut mouse_event,
+    m: &mouse_event,
     xp: *mut c_uint,
     yp: *mut c_uint,
     last: c_int,
@@ -728,11 +728,11 @@ pub unsafe fn cmd_mouse_at(
         let mut y: u32;
 
         if last != 0 {
-            x = (*m).lx + (*m).ox;
-            y = (*m).ly + (*m).oy;
+            x = m.lx + m.ox;
+            y = m.ly + m.oy;
         } else {
-            x = (*m).x + (*m).ox;
-            y = (*m).y + (*m).oy;
+            x = m.x + m.ox;
+            y = m.y + m.oy;
         }
         log_debug!(
             "{}: x={}, y={}{}",
@@ -742,8 +742,8 @@ pub unsafe fn cmd_mouse_at(
             if last != 0 { " (last)" } else { "" }
         );
 
-        if (*m).statusat == 0 && y >= (*m).statuslines {
-            y -= (*m).statuslines;
+        if m.statusat == 0 && y >= m.statuslines {
+            y -= m.statuslines;
         }
 
         if x < (*wp).xoff || x >= (*wp).xoff + (*wp).sx {
@@ -765,27 +765,27 @@ pub unsafe fn cmd_mouse_at(
 }
 
 pub unsafe fn cmd_mouse_window(
-    m: *mut mouse_event,
+    m: &mouse_event,
     sp: *mut *mut session,
 ) -> Option<NonNull<winlink>> {
     unsafe {
         let s: *mut session;
 
-        if !(*m).valid {
+        if !m.valid {
             return None;
         }
-        if (*m).s == -1
+        if m.s == -1
             || ({
-                s = transmute_ptr(session_find_by_id((*m).s as u32));
+                s = transmute_ptr(session_find_by_id(m.s as u32));
                 s.is_null()
             })
         {
             return None;
         }
-        let wl = if (*m).w == -1 {
+        let wl = if m.w == -1 {
             NonNull::new((*s).curw)
         } else {
-            let w = window_find_by_id((*m).w as u32);
+            let w = window_find_by_id(m.w as u32);
             if w.is_null() {
                 return None;
             }
@@ -799,7 +799,7 @@ pub unsafe fn cmd_mouse_window(
 }
 
 pub unsafe fn cmd_mouse_pane(
-    m: *mut mouse_event,
+    m: &mouse_event,
     sp: *mut *mut session,
     wlp: *mut *mut winlink,
 ) -> Option<NonNull<window_pane>> {
@@ -807,10 +807,10 @@ pub unsafe fn cmd_mouse_pane(
         let wl = cmd_mouse_window(m, sp)?;
         let wp;
 
-        if (*m).wp == -1 {
+        if m.wp == -1 {
             wp = NonNull::new(window_active_pane(winlink_window(wl.as_ptr())));
         } else {
-            wp = Some(NonNull::new(window_pane_find_by_id((*m).wp as u32))?);
+            wp = Some(NonNull::new(window_pane_find_by_id(m.wp as u32))?);
             if !window_has_pane(&*winlink_window(wl.as_ptr()), wp.unwrap().as_ptr()) {
                 return None;
             }

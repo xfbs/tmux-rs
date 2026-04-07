@@ -896,7 +896,7 @@ pub unsafe fn cmd_find_from_mouse(
         }
 
         let mut s_tmp: *mut session = (*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
-        { let __p = transmute_ptr(cmd_mouse_pane(m, &raw mut s_tmp, &raw mut (*fs).wl)); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+        { let __p = transmute_ptr(cmd_mouse_pane(&*m, &raw mut s_tmp, &raw mut (*fs).wl)); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
         (*fs).s = if s_tmp.is_null() { None } else { Some(SessionId((*s_tmp).id)) };
         if (*fs).wp.is_none() {
             cmd_find_clear_state(fs, flags);
@@ -1070,14 +1070,14 @@ pub unsafe fn cmd_find_target(
             match type_ {
                 cmd_find_type::CMD_FIND_PANE => {
                     let mut s_tmp: *mut session = (*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
-                    { let __p: *mut window_pane = transmute_ptr(cmd_mouse_pane(m, &raw mut s_tmp, &raw mut (*fs).wl)); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+                    { let __p: *mut window_pane = transmute_ptr(cmd_mouse_pane(&*m, &raw mut s_tmp, &raw mut (*fs).wl)); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
                     (*fs).s = if s_tmp.is_null() { None } else { Some(SessionId((*s_tmp).id)) };
                     if !(*fs).wp.is_none() {
                         (*fs).w = (*(*fs).wl).window;
                     } else {
                         // FALLTHROUGH; copied from below
                         let mut s_tmp2: *mut session = (*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
-                        (*fs).wl = transmute_ptr(cmd_mouse_window(m, &raw mut s_tmp2));
+                        (*fs).wl = transmute_ptr(cmd_mouse_window(&*m, &raw mut s_tmp2));
                         (*fs).s = if s_tmp2.is_null() { None } else { Some(SessionId((*s_tmp2).id)) };
                         if (*fs).wl.is_null() && (*fs).s.is_some() {
                             (*fs).wl = (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).curw;
@@ -1091,7 +1091,7 @@ pub unsafe fn cmd_find_target(
                 }
                 cmd_find_type::CMD_FIND_WINDOW | cmd_find_type::CMD_FIND_SESSION => {
                     let mut s_tmp: *mut session = (*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
-                    (*fs).wl = transmute_ptr(cmd_mouse_window(m, &raw mut s_tmp));
+                    (*fs).wl = transmute_ptr(cmd_mouse_window(&*m, &raw mut s_tmp));
                     (*fs).s = if s_tmp.is_null() { None } else { Some(SessionId((*s_tmp).id)) };
                     if (*fs).wl.is_null() && (*fs).s.is_some() {
                         (*fs).wl = (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).curw;

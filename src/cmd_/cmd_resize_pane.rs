@@ -58,7 +58,7 @@ unsafe fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
         }
 
         if args_has(args, 'M') {
-            if !(*event).m.valid || cmd_mouse_window(&raw mut (*event).m, &raw mut s).is_none() {
+            if !(*event).m.valid || cmd_mouse_window(&(*event).m, &raw mut s).is_none() {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
             if c.is_null() || client_get_session(c) != s {
@@ -153,7 +153,7 @@ unsafe fn cmd_resize_pane_mouse_update(c: *mut client, m: *mut mouse_event) {
         let mut cells: [*mut layout_cell; OFFSETS.len()] = zeroed();
         let mut resizes: u32 = 0;
 
-        let wl: *mut winlink = transmute_ptr(cmd_mouse_window(m, null_mut()));
+        let wl: *mut winlink = transmute_ptr(cmd_mouse_window(&*m, null_mut()));
         if wl.is_null() {
             (*c).tty.mouse_drag_update = None;
             return;
