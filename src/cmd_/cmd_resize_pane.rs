@@ -33,7 +33,7 @@ unsafe fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
         let args = cmd_get_args(self_);
         let target = cmdq_get_target(item);
         let event = cmdq_get_event(item);
-        let wp = (*target).wp;
+        let wp = (*target).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         let wl = (*target).wl;
         let w = winlink_window(wl);
         let c = cmdq_get_client(item);

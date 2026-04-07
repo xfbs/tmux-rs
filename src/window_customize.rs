@@ -129,7 +129,7 @@ unsafe fn window_customize_get_tree(
             window_customize_scope::WINDOW_CUSTOMIZE_SESSION => (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).options,
             window_customize_scope::WINDOW_CUSTOMIZE_GLOBAL_WINDOW => GLOBAL_W_OPTIONS,
             window_customize_scope::WINDOW_CUSTOMIZE_WINDOW => (*(*fs).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut())).options,
-            window_customize_scope::WINDOW_CUSTOMIZE_PANE => (*(*fs).wp).options,
+            window_customize_scope::WINDOW_CUSTOMIZE_PANE => (*(*fs).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).options,
         }
     }
 }
@@ -189,7 +189,7 @@ unsafe fn window_customize_scope_text(
 
         match scope {
             window_customize_scope::WINDOW_CUSTOMIZE_PANE => {
-                window_pane_index((*fs).wp, &raw mut idx);
+                window_pane_index((*fs).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut()), &raw mut idx);
                 format_nul!("pane {}", idx)
             }
             window_customize_scope::WINDOW_CUSTOMIZE_SESSION => {
@@ -654,7 +654,7 @@ unsafe fn window_customize_build(
             window_customize_scope::WINDOW_CUSTOMIZE_WINDOW,
             (*fs.w.and_then(|id| window_from_id(id)).unwrap_or(null_mut())).options,
             window_customize_scope::WINDOW_CUSTOMIZE_PANE,
-            (*fs.wp).options,
+            (*fs.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).options,
             ft,
             filter,
             &raw mut fs,

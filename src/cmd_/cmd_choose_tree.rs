@@ -78,7 +78,7 @@ unsafe fn cmd_choose_tree_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
     unsafe {
         let args = cmd_get_args(self_);
         let target = cmdq_get_target(item);
-        let wp = (*target).wp;
+        let wp = (*target).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
 
         let mode = if std::ptr::eq(cmd_get_entry(self_), &CMD_CHOOSE_BUFFER_ENTRY) {
             if paste_is_empty() {

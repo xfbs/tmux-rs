@@ -949,7 +949,7 @@ pub unsafe fn window_lost_pane(w: *mut window, wp: *mut window_pane) {
     unsafe {
         log_debug!("{}: @{} pane %%{}", "window_lost_pane", (*w).id, (*wp).id);
 
-        if wp == MARKED_PANE.wp {
+        if MARKED_PANE.wp == Some(PaneId((*wp).id)) {
             server_clear_marked();
         }
 

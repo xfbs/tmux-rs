@@ -214,7 +214,7 @@ unsafe fn cmd_capture_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
     unsafe {
         let args = cmd_get_args(self_);
         let c = cmdq_get_client(item);
-        let wp = (*cmdq_get_target(item)).wp;
+        let wp = (*cmdq_get_target(item)).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
 
         if std::ptr::eq(cmd_get_entry(self_), &CMD_CLEAR_HISTORY_ENTRY) {
             window_pane_reset_mode_all(wp);

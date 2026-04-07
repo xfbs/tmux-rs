@@ -529,11 +529,11 @@ pub unsafe fn cmd_find_get_pane(fs: *mut cmd_find_state, pane: &str, only: bool)
         log_debug!("{}: {}", __func__, pane);
 
         if pane.starts_with('%') {
-            (*fs).wp = window_pane_find_by_id_str(pane);
-            if (*fs).wp.is_null() {
+            { let __p = window_pane_find_by_id_str(pane); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+            if (*fs).wp.is_none() {
                 return -1;
             }
-            (*fs).w = (*(*fs).wp).window;
+            (*fs).w = (*(*fs).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).window;
             return cmd_find_best_session_with_window(fs);
         }
 
@@ -548,7 +548,7 @@ pub unsafe fn cmd_find_get_pane(fs: *mut cmd_find_state, pane: &str, only: bool)
 
         if !only && cmd_find_get_window(fs, pane, false) == 0 {
             let fs_w = (*fs).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-            (*fs).wp = (*fs_w).active;
+            { let __p = (*fs_w).active; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
             return 0;
         }
     }
@@ -561,11 +561,11 @@ pub unsafe fn cmd_find_get_pane_with_session(fs: *mut cmd_find_state, pane: &str
         log_debug!("{}: {}", __func__, pane);
 
         if pane.starts_with('%') {
-            (*fs).wp = window_pane_find_by_id_str(pane);
-            if (*fs).wp.is_null() {
+            { let __p = window_pane_find_by_id_str(pane); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+            if (*fs).wp.is_none() {
                 return -1;
             }
-            (*fs).w = (*(*fs).wp).window;
+            (*fs).w = (*(*fs).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).window;
             return cmd_find_best_winlink_with_window(fs);
         }
 
@@ -584,11 +584,11 @@ pub unsafe fn cmd_find_get_pane_with_window(fs: *mut cmd_find_state, pane: &str)
         let fs_w = (*fs).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
 
         if pane.starts_with('%') {
-            (*fs).wp = window_pane_find_by_id_str(pane);
-            if (*fs).wp.is_null() {
+            { let __p = window_pane_find_by_id_str(pane); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+            if (*fs).wp.is_none() {
                 return -1;
             }
-            let wp_w_opt = (*(*fs).wp).window;
+            let wp_w_opt = (*(*fs).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).window;
             if wp_w_opt != (*fs).w {
                 return -1;
             }
@@ -597,36 +597,36 @@ pub unsafe fn cmd_find_get_pane_with_window(fs: *mut cmd_find_state, pane: &str)
 
         match pane {
             "!" => {
-                (*fs).wp = (*fs_w).last_panes.first().copied().unwrap_or(null_mut());
-                if (*fs).wp.is_null() {
+                { let __p = (*fs_w).last_panes.first().copied().unwrap_or(null_mut()); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+                if (*fs).wp.is_none() {
                     return -1;
                 }
                 return 0;
             }
             "{up-of}" => {
-                (*fs).wp = window_pane_find_up((*fs_w).active);
-                if (*fs).wp.is_null() {
+                { let __p = window_pane_find_up((*fs_w).active); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+                if (*fs).wp.is_none() {
                     return -1;
                 }
                 return 0;
             }
             "{down-of}" => {
-                (*fs).wp = window_pane_find_down((*fs_w).active);
-                if (*fs).wp.is_null() {
+                { let __p = window_pane_find_down((*fs_w).active); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+                if (*fs).wp.is_none() {
                     return -1;
                 }
                 return 0;
             }
             "{left-of}" => {
-                (*fs).wp = window_pane_find_left((*fs_w).active);
-                if (*fs).wp.is_null() {
+                { let __p = window_pane_find_left((*fs_w).active); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+                if (*fs).wp.is_none() {
                     return -1;
                 }
                 return 0;
             }
             "{right-of}" => {
-                (*fs).wp = window_pane_find_right((*fs_w).active);
-                if (*fs).wp.is_null() {
+                { let __p = window_pane_find_right((*fs_w).active); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+                if (*fs).wp.is_none() {
                     return -1;
                 }
                 return 0;
@@ -642,24 +642,24 @@ pub unsafe fn cmd_find_get_pane_with_window(fs: *mut cmd_find_state, pane: &str)
             };
             let wp = (*fs_w).active;
             if pane.starts_with('+') {
-                (*fs).wp = window_pane_next_by_number(fs_w, wp, n);
+                { let __p = window_pane_next_by_number(fs_w, wp, n); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
             } else {
-                (*fs).wp = window_pane_previous_by_number(fs_w, wp, n);
+                { let __p = window_pane_previous_by_number(fs_w, wp, n); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
             }
-            if !(*fs).wp.is_null() {
+            if !(*fs).wp.is_none() {
                 return 0;
             }
         }
 
         if let Ok(idx) = strtonum_(pane, 0, i32::MAX) {
-            (*fs).wp = window_pane_at_index(&*fs_w, idx as u32);
-            if !(*fs).wp.is_null() {
+            { let __p = window_pane_at_index(&*fs_w, idx as u32); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+            if !(*fs).wp.is_none() {
                 return 0;
             }
         }
 
-        (*fs).wp = window_find_string(fs_w, pane);
-        if !(*fs).wp.is_null() {
+        { let __p = window_find_string(fs_w, pane); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+        if !(*fs).wp.is_none() {
             return 0;
         }
     }
@@ -678,13 +678,13 @@ pub unsafe fn cmd_find_clear_state(fs: *mut cmd_find_state, flags: cmd_find_flag
 
 pub unsafe fn cmd_find_empty_state(fs: *const cmd_find_state) -> i32 {
     unsafe {
-        ((*fs).s.is_none() && (*fs).wl.is_null() && (*fs).w.is_none() && (*fs).wp.is_null()) as i32
+        ((*fs).s.is_none() && (*fs).wl.is_null() && (*fs).w.is_none() && (*fs).wp.is_none()) as i32
     }
 }
 
 pub unsafe fn cmd_find_valid_state(fs: *const cmd_find_state) -> bool {
     unsafe {
-        if (*fs).s.is_none() || (*fs).wl.is_null() || (*fs).w.is_none() || (*fs).wp.is_null() {
+        if (*fs).s.is_none() || (*fs).wl.is_null() || (*fs).w.is_none() || (*fs).wp.is_none() {
             return false;
         }
 
@@ -704,7 +704,7 @@ pub unsafe fn cmd_find_valid_state(fs: *const cmd_find_state) -> bool {
             return false;
         }
 
-        window_has_pane(&*fs_w, (*fs).wp)
+        window_has_pane(&*fs_w, (*fs).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut()))
     }
 }
 
@@ -730,8 +730,8 @@ pub unsafe fn cmd_find_log_state(prefix: *const u8, fs: *const cmd_find_state) {
         } else {
             log_debug!("{}: wl=none", _s(prefix));
         }
-        if !(*fs).wp.is_null() {
-            log_debug!("{}: wp=%%{}", _s(prefix), (*(*fs).wp).id);
+        if !(*fs).wp.is_none() {
+            log_debug!("{}: wp=%%{}", _s(prefix), (*(*fs).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).id);
         } else {
             log_debug!("{}: wp=none", _s(prefix));
         }
@@ -755,7 +755,7 @@ pub unsafe fn cmd_find_from_session(
         (*fs).wl = (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).curw;
         (*fs).w = (*(*fs).wl).window;
         let fs_w = (*fs).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-        (*fs).wp = (*fs_w).active;
+        { let __p = (*fs_w).active; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
 
         cmd_find_log_state(c!("cmd_find_from_session"), fs);
     }
@@ -773,7 +773,7 @@ pub unsafe fn cmd_find_from_winlink(
         (*fs).wl = wl;
         (*fs).w = (*wl).window;
         let fs_w = (*fs).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-        (*fs).wp = if fs_w.is_null() { null_mut() } else { (*fs_w).active };
+        { let __p = if fs_w.is_null() { null_mut() } else { (*fs_w).active }; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
 
         cmd_find_log_state(c!("cmd_find_from_winlink"), fs);
     }
@@ -795,7 +795,7 @@ pub unsafe fn cmd_find_from_session_window(
             return -1;
         }
         let fs_w = (*fs).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-        (*fs).wp = (*fs_w).active;
+        { let __p = (*fs_w).active; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
 
         cmd_find_log_state(c!("cmd_find_from_session_window"), fs);
     }
@@ -820,7 +820,7 @@ pub unsafe fn cmd_find_from_window(
             return -1;
         }
         let fs_w = (*fs).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-        (*fs).wp = (*fs_w).active;
+        { let __p = (*fs_w).active; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
 
         cmd_find_log_state(c!("cmd_find_from_window"), fs);
         0
@@ -840,7 +840,7 @@ pub unsafe fn cmd_find_from_winlink_pane(
         (*fs).wl = wl;
         (*fs).idx = (*(*fs).wl).idx;
         (*fs).w = (*(*fs).wl).window;
-        (*fs).wp = wp;
+        { let __p = wp; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
 
         cmd_find_log_state(c!("cmd_find_from_winlink_pane"), fs);
     }
@@ -855,7 +855,7 @@ pub unsafe fn cmd_find_from_pane(
         if cmd_find_from_window(fs, window_pane_window(wp), flags) != 0 {
             return -1;
         }
-        (*fs).wp = wp;
+        { let __p = wp; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
 
         cmd_find_log_state(c!("cmd_find_from_pane"), fs);
     }
@@ -876,7 +876,7 @@ pub unsafe fn cmd_find_from_nothing(fs: *mut cmd_find_state, flags: cmd_find_fla
         (*fs).idx = (*(*fs).wl).idx;
         (*fs).w = (*(*fs).wl).window;
         let fs_w = (*fs).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-        (*fs).wp = (*fs_w).active;
+        { let __p = (*fs_w).active; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
 
         cmd_find_log_state(c!("cmd_find_from_nothing"), fs);
     }
@@ -896,9 +896,9 @@ pub unsafe fn cmd_find_from_mouse(
         }
 
         let mut s_tmp: *mut session = (*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
-        (*fs).wp = transmute_ptr(cmd_mouse_pane(m, &raw mut s_tmp, &raw mut (*fs).wl));
+        { let __p = transmute_ptr(cmd_mouse_pane(m, &raw mut s_tmp, &raw mut (*fs).wl)); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
         (*fs).s = if s_tmp.is_null() { None } else { Some(SessionId((*s_tmp).id)) };
-        if (*fs).wp.is_null() {
+        if (*fs).wp.is_none() {
             cmd_find_clear_state(fs, flags);
             return -1;
         }
@@ -924,8 +924,8 @@ pub unsafe fn cmd_find_from_client(
             if !client_get_session(c).is_null() {
                 cmd_find_clear_state(fs, flags);
 
-                (*fs).wp = server_client_get_pane(c);
-                if (*fs).wp.is_null() {
+                { let __p = server_client_get_pane(c); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+                if (*fs).wp.is_none() {
                     cmd_find_from_session(fs, client_get_session(c), flags);
                     return 0;
                 }
@@ -950,7 +950,7 @@ pub unsafe fn cmd_find_from_client(
             (*fs).wl = (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).curw;
             (*fs).w = (*(*fs).wl).window;
             let fs_w = (*fs).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-            (*fs).wp = (*fs_w).active;
+            { let __p = (*fs_w).active; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
 
             cmd_find_log_state(__func__, fs);
             return 0;
@@ -1070,10 +1070,9 @@ pub unsafe fn cmd_find_target(
             match type_ {
                 cmd_find_type::CMD_FIND_PANE => {
                     let mut s_tmp: *mut session = (*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
-                    (*fs).wp =
-                        transmute_ptr(cmd_mouse_pane(m, &raw mut s_tmp, &raw mut (*fs).wl));
+                    { let __p: *mut window_pane = transmute_ptr(cmd_mouse_pane(m, &raw mut s_tmp, &raw mut (*fs).wl)); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
                     (*fs).s = if s_tmp.is_null() { None } else { Some(SessionId((*s_tmp).id)) };
-                    if !(*fs).wp.is_null() {
+                    if !(*fs).wp.is_none() {
                         (*fs).w = (*(*fs).wl).window;
                     } else {
                         // FALLTHROUGH; copied from below
@@ -1086,7 +1085,7 @@ pub unsafe fn cmd_find_target(
                         if !(*fs).wl.is_null() {
                             (*fs).w = (*(*fs).wl).window;
                             let fs_w = (*fs).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-                            (*fs).wp = (*fs_w).active;
+                            { let __p = (*fs_w).active; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
                         }
                     }
                 }
@@ -1100,11 +1099,11 @@ pub unsafe fn cmd_find_target(
                     if !(*fs).wl.is_null() {
                         (*fs).w = (*(*fs).wl).window;
                         let fs_w = (*fs).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-                        (*fs).wp = (*fs_w).active;
+                        { let __p = (*fs_w).active; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
                     }
                 }
             }
-            if (*fs).wp.is_null() {
+            if (*fs).wp.is_none() {
                 if !flags.intersects(cmd_find_flags::CMD_FIND_QUIET) {
                     cmdq_error!(item, "no mouse target");
                 }
@@ -1229,7 +1228,7 @@ pub unsafe fn cmd_find_target(
                     (*fs).idx = -1;
                     (*fs).w = (*(*fs).wl).window;
                     let fs_w = (*fs).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-                    (*fs).wp = (*fs_w).active;
+                    { let __p = (*fs_w).active; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
                     found!(fs);
                 }
                 (Some(window), None) => {
@@ -1238,7 +1237,7 @@ pub unsafe fn cmd_find_target(
                     }
                     if !(*fs).wl.is_null() {
                         let w_pane = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-                        if !w_pane.is_null() { (*fs).wp = (*w_pane).active; }
+                        if !w_pane.is_null() { let __p = (*w_pane).active; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
                     }
                     found!(fs);
                 }
@@ -1276,7 +1275,7 @@ pub unsafe fn cmd_find_target(
                 }
                 if !(*fs).wl.is_null() {
                     let w_p = winlink_window((*fs).wl);
-                    if !w_p.is_null() { (*fs).wp = (*w_p).active; }
+                    if !w_p.is_null() { let __p = (*w_p).active; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
                 }
                 found!(fs);
             }

@@ -51,7 +51,7 @@ unsafe fn cmd_display_message_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
         let tc = cmdq_get_target_client(item);
         let s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*target).wl;
-        let wp = (*target).wp;
+        let wp = (*target).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         let mut delay = -1;
         let nflag = args_has(args, 'N');
         let count = args_count(args);

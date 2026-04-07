@@ -40,9 +40,9 @@ unsafe fn cmd_swap_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
         let target = cmdq_get_target(item);
 
         let dst_w = winlink_window((*target).wl);
-        let dst_wp = (*target).wp;
+        let dst_wp = (*target).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         let mut src_w = winlink_window((*source).wl);
-        let mut src_wp = (*source).wp;
+        let mut src_wp = (*source).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
 
         if window_push_zoom(dst_w, false, args_has(args, 'Z')) {
             server_redraw_window(dst_w);

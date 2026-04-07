@@ -542,7 +542,7 @@ unsafe fn window_tree_build(
                 if window_count_panes(&*winlink_window((*data).fs.wl)) == 1 {
                     *tag = (*data).fs.wl as u64;
                 } else {
-                    *tag = (*data).fs.wp as u64;
+                    *tag = (*data).fs.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut()) as u64;
                 }
             }
         }

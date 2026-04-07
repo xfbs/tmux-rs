@@ -64,7 +64,7 @@ pub unsafe fn server_set_marked(s: *mut session, wl: *mut winlink, wp: *mut wind
         MARKED_PANE.s = if s.is_null() { None } else { Some(SessionId((*s).id)) };
         MARKED_PANE.wl = wl;
         MARKED_PANE.w = if wl.is_null() { None } else { (*wl).window };
-        MARKED_PANE.wp = wp;
+        MARKED_PANE.wp = if wp.is_null() { None } else { Some(PaneId((*wp).id)) };
     }
 }
 
@@ -83,7 +83,8 @@ pub unsafe fn server_is_marked(s: *mut session, wl: *mut winlink, wp: *mut windo
         if MARKED_PANE.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()) != s || MARKED_PANE.wl != wl {
             return false;
         }
-        if MARKED_PANE.wp != wp {
+        let mp_wp = MARKED_PANE.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+        if mp_wp != wp {
             return false;
         }
         server_check_marked()

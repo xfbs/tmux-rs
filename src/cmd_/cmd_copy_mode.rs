@@ -50,7 +50,7 @@ unsafe fn cmd_copy_mode_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
         let target = cmdq_get_target(item);
         let c = cmdq_get_client(item);
         let mut s = null_mut();
-        let wp = (*target).wp;
+        let wp = (*target).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
 
         if args_has(args, 'q') {
             window_pane_reset_mode_all(wp);
@@ -79,7 +79,7 @@ unsafe fn cmd_copy_mode_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
         }
 
         let swp = if args_has(args, 's') {
-            (*source).wp
+            (*source).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())
         } else {
             wp
         };

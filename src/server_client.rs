@@ -1922,7 +1922,7 @@ pub unsafe fn server_client_key_callback(item: *mut cmdq_item, data: *mut c_void
                 {
                     cmd_find_from_client(&raw mut fs, c, cmd_find_flags::empty());
                 }
-                wp = fs.wp;
+                wp = fs.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
 
                 // Forward mouse keys if disabled.
                 if KEYC_IS_MOUSE(key) && options_get_number_((*s).options, "mouse") == 0 {

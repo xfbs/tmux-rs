@@ -35,7 +35,7 @@ unsafe fn cmd_respawn_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
         let mut sc: spawn_context = zeroed();
         let s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*target).wl;
-        let wp = (*target).wp;
+        let wp = (*target).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
 
         sc.item = item;
         sc.s = if s.is_null() { None } else { Some(SessionId((*s).id)) };

@@ -63,13 +63,13 @@ unsafe fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
 
         let dst_s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let dst_wl = (*target).wl;
-        let dst_wp = (*target).wp;
+        let dst_wp = (*target).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         let dst_w = winlink_window(dst_wl);
         let dst_idx = (*dst_wl).idx;
         server_unzoom_window(dst_w);
 
         let src_wl = (*source).wl;
-        let src_wp = (*source).wp;
+        let src_wp = (*source).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         let src_w = winlink_window(src_wl);
         server_unzoom_window(src_w);
 

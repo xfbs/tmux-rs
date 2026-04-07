@@ -72,8 +72,9 @@ pub unsafe fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut notify_entry
             (*fs.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).options
         };
         let mut o = options_get(&mut *oo, cstr_to_str((*ne).name));
-        if o.is_null() && !fs.wp.is_null() {
-            oo = (*fs.wp).options;
+        if o.is_null() && fs.wp.is_some() {
+            let fs_wp = fs.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+            oo = (*fs_wp).options;
             o = options_get(&mut *oo, cstr_to_str((*ne).name));
         }
         if o.is_null() && !fs.wl.is_null() {
@@ -288,8 +289,8 @@ pub unsafe fn notify_hook(item: *mut cmdq_item, name: *mut u8) {
         ne.client = if c.is_null() { None } else { Some((*c).id) };
         ne.session = if (*target).s.is_none() { None } else { Some(SessionId((*(*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).id)) };
         ne.window = (*target).w;
-        ne.pane = if !(*target).wp.is_null() {
-            (*(*target).wp).id as i32
+        ne.pane = if let Some(PaneId(id)) = (*target).wp {
+            id as i32
         } else {
             -1
         };

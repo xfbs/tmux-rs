@@ -79,7 +79,7 @@ pub unsafe fn cmd_attach_session(
 
         let s = target.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = target.wl;
-        let wp = target.wp;
+        let wp = target.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
 
         if !wl.is_null() {
             if !wp.is_null() {

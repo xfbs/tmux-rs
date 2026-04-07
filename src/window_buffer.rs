@@ -179,7 +179,7 @@ pub unsafe fn window_buffer_build(
         if cmd_find_valid_state(&raw mut (*data).fs) {
             s = NonNull::new((*data).fs.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()));
             wl = NonNull::new((*data).fs.wl);
-            wp = NonNull::new((*data).fs.wp);
+            wp = NonNull::new((*data).fs.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut()));
         }
 
         for i in 0..(*data).item_size {
@@ -324,7 +324,7 @@ pub unsafe fn window_buffer_get_key(
         if cmd_find_valid_state(&raw mut (*data.as_ptr()).fs) {
             s = NonNull::new((*data.as_ptr()).fs.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()));
             wl = NonNull::new((*data.as_ptr()).fs.wl);
-            wp = NonNull::new((*data.as_ptr()).fs.wp);
+            wp = NonNull::new((*data.as_ptr()).fs.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut()));
         }
         let Some(pb) = NonNull::new(paste_get_name(Some(&(*item.as_ptr()).name))) else {
             return KEYC_NONE;

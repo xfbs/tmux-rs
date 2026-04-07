@@ -94,7 +94,7 @@ unsafe fn cmd_display_menu_get_position(
         let event = cmdq_get_event(item);
         let s = client_get_session(tc);
         let wl = (*target).wl;
-        let wp = (*target).wp;
+        let wp = (*target).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         let mut sr = null_mut();
         let mut line: u32 = 0;
         let mut ox: u32 = 0;

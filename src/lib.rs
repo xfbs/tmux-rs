@@ -1945,7 +1945,7 @@ struct cmd_find_state {
     s: Option<SessionId>,
     wl: *mut winlink,
     w: Option<WindowId>,
-    wp: *mut window_pane,
+    wp: Option<PaneId>,
     idx: i32,
 }
 

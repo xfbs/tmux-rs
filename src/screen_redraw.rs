@@ -820,8 +820,9 @@ pub unsafe fn screen_redraw_draw_borders_cell(ctx: *mut screen_redraw_ctx, i: u3
             }
             memcpy__(&raw mut gc, tmp);
 
-            if server_is_marked(s, (*s).curw, MARKED_PANE.wp)
-                && screen_redraw_check_is(ctx, x, y, MARKED_PANE.wp)
+            let marked_wp = MARKED_PANE.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+            if server_is_marked(s, (*s).curw, marked_wp)
+                && screen_redraw_check_is(ctx, x, y, marked_wp)
             {
                 gc.attr ^= grid_attr::GRID_ATTR_REVERSE;
             }

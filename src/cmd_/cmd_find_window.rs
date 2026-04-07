@@ -32,7 +32,7 @@ unsafe fn cmd_find_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
     unsafe {
         let args = cmd_get_args(self_);
         let target = cmdq_get_target(item);
-        let wp = (*target).wp;
+        let wp = (*target).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         let s = args_string(args, 0);
         let mut suffix = c!("");
         let mut star = c!("*");

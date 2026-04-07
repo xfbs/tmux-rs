@@ -76,7 +76,7 @@ pub unsafe fn cmd_run_shell_print(job: *mut job, msg: *const u8) {
                 }
             }
             if wp.is_null() && cmd_find_from_nothing(&raw mut fs, cmd_find_flags::empty()) == 0 {
-                wp = fs.wp;
+                wp = fs.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
             }
             if wp.is_null() {
                 return;
@@ -105,7 +105,7 @@ pub unsafe fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         let c = cmdq_get_client(item);
         let tc = cmdq_get_target_client(item);
         let s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
-        let wp = (*target).wp;
+        let wp = (*target).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         let mut d: f64 = 0.0;
         let mut end: *mut u8 = null_mut();
         let wait = !args_has(args, 'b');

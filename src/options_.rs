@@ -968,7 +968,7 @@ pub unsafe fn options_scope_from_name(
     unsafe {
         let s = (*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*fs).wl;
-        let wp = (*fs).wp;
+        let wp = (*fs).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         let target = args_get_(args, 't');
 
         if name.starts_with('@') {
@@ -1050,7 +1050,7 @@ pub unsafe fn options_scope_from_flags(
     unsafe {
         let s = (*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*fs).wl;
-        let wp = (*fs).wp;
+        let wp = (*fs).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         let target = args_get_(args, 't');
 
         if args_has(args, 's') {

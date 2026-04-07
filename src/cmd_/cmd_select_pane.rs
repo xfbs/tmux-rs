@@ -80,7 +80,7 @@ pub unsafe fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
         let wl = (*target).wl;
         let w = winlink_window(wl);
         let s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
-        let mut wp = (*target).wp;
+        let mut wp = (*target).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         let oo = (*wp).options;
 
         let mut lastwp: *mut window_pane;
@@ -129,7 +129,7 @@ pub unsafe fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
             if server_check_marked() {
-                lastwp = MARKED_PANE.wp;
+                lastwp = MARKED_PANE.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
             } else {
                 lastwp = null_mut();
             }
@@ -139,7 +139,7 @@ pub unsafe fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
             } else {
                 server_set_marked(s, wl, wp);
             }
-            markedwp = MARKED_PANE.wp;
+            markedwp = MARKED_PANE.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
 
             if !lastwp.is_null() {
                 (*lastwp).flags |=

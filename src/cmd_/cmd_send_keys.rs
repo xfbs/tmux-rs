@@ -57,7 +57,7 @@ pub unsafe fn cmd_send_keys_inject_key(
         let tc = cmdq_get_target_client(item);
         let s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*target).wl;
-        let wp = (*target).wp;
+        let wp = (*target).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
 
         if args_has(args, 'K') {
             if tc.is_null() {
@@ -155,7 +155,7 @@ pub unsafe fn cmd_send_keys_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         let tc = cmdq_get_target_client(item);
         let mut s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*target).wl;
-        let mut wp = (*target).wp;
+        let mut wp = (*target).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         let event = cmdq_get_event(item);
         let mut m = &raw mut (*event).m;
         let wme = (*wp).modes.first().copied().unwrap_or(null_mut());
