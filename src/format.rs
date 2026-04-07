@@ -1507,10 +1507,7 @@ pub unsafe fn format_cb_client_termname(ft: &format_tree) -> format_table_type {
 pub unsafe fn format_cb_client_termtype(ft: &format_tree) -> format_table_type {
     unsafe {
         if !(*ft).c.is_null() {
-            if (*(*ft).c).term_type.is_null() {
-                return "".into();
-            }
-            return format!("{}", _s((*(*ft).c).term_type)).into();
+            return (*(*ft).c).term_type.clone().unwrap_or_default().into();
         }
         format_table_type::None
     }

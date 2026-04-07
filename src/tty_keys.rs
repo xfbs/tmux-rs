@@ -2096,8 +2096,9 @@ unsafe fn tty_keys_extended_device_attributes(
         }
         // log_debug( c!("%s: received extended DA %.*s\0"), (*c).name, *size as i32, buf);
 
-        free_((*c).term_type);
-        (*c).term_type = xstrdup(tmp.as_ptr()).as_ptr();
+        // tmp is NUL-terminated at index (i - 1); the trailing NUL was just written.
+        let tt_bytes = &tmp[..i.saturating_sub(1)];
+        (*c).term_type = Some(String::from_utf8_lossy(tt_bytes).into_owned());
 
         tty_update_features(tty);
         (*tty).flags |= tty_flags::TTY_HAVEXDA;

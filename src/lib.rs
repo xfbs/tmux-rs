@@ -2302,7 +2302,7 @@ struct client {
 
     term_name: Option<String>,
     term_features: c_int,
-    term_type: *mut u8,
+    term_type: Option<String>,
     term_caps: *mut *mut u8,
     term_ncaps: c_uint,
 

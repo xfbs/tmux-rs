@@ -470,7 +470,7 @@ pub unsafe fn server_client_lost(c: *mut client) {
         // server_client_free. Calling drop_in_place here would double-free.
         free_((*c).clipboard_panes);
 
-        free_((*c).term_type);
+        // term_type is Option<String>, dropped automatically by Box drop.
         tty_term_free_list((*c).term_caps, (*c).term_ncaps);
 
         status_free(c);
