@@ -474,7 +474,7 @@ pub unsafe fn server_client_lost(c: *mut client) {
 
         status_free(c);
 
-        free_((*c).title);
+        std::ptr::drop_in_place(&raw mut (*c).title);
         free_((*c).cwd.cast_mut()); // TODO cast away const
 
         evtimer_del(&raw mut (*c).repeat_timer);
@@ -2856,13 +2856,18 @@ pub unsafe fn server_client_set_title(c: *mut client) {
         let ft = format_create(c, null_mut(), FORMAT_NONE, format_flags::empty());
         format_defaults(ft, c, None, None, None);
 
-        let title = format_expand_time(ft, template);
-        if (*c).title.is_null() || libc::strcmp(title, (*c).title) != 0 {
-            free_((*c).title);
-            (*c).title = xstrdup(title).as_ptr();
-            tty_set_title(&raw mut (*c).tty, (*c).title);
+        let title_ptr = format_expand_time(ft, template);
+        let new_title = std::ffi::CStr::from_ptr(title_ptr as *const i8)
+            .to_string_lossy()
+            .into_owned();
+        if (*c).title.as_deref() != Some(new_title.as_str()) {
+            // Reuse the freshly-allocated C string for tty_set_title to avoid
+            // an extra allocation, then store the owned String in the field.
+            tty_set_title(&raw mut (*c).tty, title_ptr);
+            std::ptr::drop_in_place(&raw mut (*c).title);
+            std::ptr::write(&raw mut (*c).title, Some(new_title));
         }
-        free_(title);
+        free_(title_ptr);
 
         format_free(ft);
     }

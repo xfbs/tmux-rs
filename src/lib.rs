@@ -2296,7 +2296,7 @@ struct client {
     environ: *mut Environ,
     jobs: *mut format_job_tree,
 
-    title: *mut u8,
+    title: Option<String>,
     path: *mut u8,
     cwd: *const u8,
 
