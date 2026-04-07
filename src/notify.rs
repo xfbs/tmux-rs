@@ -247,7 +247,7 @@ pub unsafe fn notify_add(
         }
         if !w.is_null() {
             format_add!((*ne).formats, "hook_window", "@{}", (*w).id,);
-            format_add!((*ne).formats, "hook_window_name", "{}", _s((*w).name));
+            format_add!((*ne).formats, "hook_window_name", "{}", (*w).name.as_deref().unwrap_or(""));
         }
         if !wp.is_null() {
             format_add!((*ne).formats, "hook_pane", "%%{}", (*wp).id);

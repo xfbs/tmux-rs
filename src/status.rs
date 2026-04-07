@@ -2147,10 +2147,10 @@ unsafe fn status_prompt_complete_window_menu(
             }
 
             if (*c).prompt_type == prompt_type::PROMPT_TYPE_WINDOW_TARGET {
-                tmp = format!("{} ({})", (*wl).idx, _s((*winlink_window(wl)).name),);
+                tmp = format!("{} ({})", (*wl).idx, (*winlink_window(wl)).name.as_deref().unwrap_or(""));
                 list.push(format!("{}", (*wl).idx));
             } else {
-                tmp = format!("{}:{} ({})", (*s).name, (*wl).idx, _s((*winlink_window(wl)).name),);
+                tmp = format!("{}:{} ({})", (*s).name, (*wl).idx, (*winlink_window(wl)).name.as_deref().unwrap_or(""));
                 list.push(format!("{}:{}", (*s).name, (*wl).idx));
             }
             let item = menu_item {

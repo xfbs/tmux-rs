@@ -468,7 +468,7 @@ pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: 
         (*fs).wl = null_mut();
         for &wl in (*(&raw mut (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).windows)).values() {
             let w_iter = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-            if !w_iter.is_null() && streq_((*w_iter).name, window) {
+            if !w_iter.is_null() && (*w_iter).name.as_deref() == Some(window) {
                 if !(*fs).wl.is_null() {
                     return -1;
                 }
@@ -491,7 +491,7 @@ pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: 
         for &wl in (*(&raw mut (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).windows)).values() {
             #[expect(clippy::disallowed_methods)]
             let w_iter = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-            if !w_iter.is_null() && libc::strncmp(window.as_ptr().cast(), (*w_iter).name, window.len()) == 0 {
+            if !w_iter.is_null() && (*w_iter).name.as_deref().map(|n| n.starts_with(window)).unwrap_or(false) {
                 if !(*fs).wl.is_null() {
                     return -1;
                 }
@@ -508,7 +508,8 @@ pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: 
         (*fs).wl = null_mut();
         for &wl in (*(&raw mut (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).windows)).values() {
             let w_iter = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-            if !w_iter.is_null() && libc::fnmatch(window_c.as_ptr().cast(), (*w_iter).name, 0) == 0 {
+            let n_c = (*w_iter).name.as_deref().and_then(|n| std::ffi::CString::new(n).ok());
+            if !w_iter.is_null() && n_c.as_ref().map(|c| libc::fnmatch(window_c.as_ptr().cast(), c.as_ptr().cast(), 0) == 0).unwrap_or(false) {
                 if !(*fs).wl.is_null() {
                     return -1;
                 }

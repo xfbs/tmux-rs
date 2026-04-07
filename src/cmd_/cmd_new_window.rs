@@ -53,7 +53,7 @@ unsafe fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retv
         if args_has(args, 'S') && !name.is_null() && (*target).idx == -1 {
             let expanded = format_single(item, cstr_to_str(name), c, s, null_mut(), null_mut());
             for &wl in (*(&raw mut (*s).windows)).values() {
-                if libc::strcmp((*winlink_window(wl)).name, expanded) != 0 {
+                if (*winlink_window(wl)).name.as_deref() != Some(cstr_to_str(expanded)) {
                     continue;
                 }
                 if new_wl.is_null() {

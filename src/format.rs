@@ -2653,7 +2653,7 @@ pub unsafe fn format_cb_window_name(ft: &format_tree) -> format_table_type {
     unsafe {
         let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
         if !w.is_null() {
-            return format!("{}", _s((*w).name)).into();
+            return (*w).name.clone().unwrap_or_default().into();
         }
         format_table_type::None
     }
@@ -4013,7 +4013,7 @@ pub unsafe fn format_window_name(es: *mut format_expand_state, fmt: *const u8) -
         let name = format_expand1(es, fmt);
         for &wl in (*(&raw mut (*fts).windows)).values() {
             let w_n = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-            if !w_n.is_null() && strcmp((*w_n).name, name) == 0 {
+            if !w_n.is_null() && streq_(name, (*w_n).name.as_deref().unwrap_or("")) {
                 free_(name);
                 return xstrdup(c!("1")).as_ptr();
             }

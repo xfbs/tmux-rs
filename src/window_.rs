@@ -434,7 +434,9 @@ pub unsafe fn window_create(sx: u32, sy: u32, mut xpixel: u32, mut ypixel: u32) 
         let mut boxed: Box<window> = Box::new(MaybeUninit::<window>::zeroed().assume_init_read());
         let w: *mut window = &mut *boxed;
 
-        (*w).name = xstrdup(c!("")).as_ptr();
+        // xcalloc'd zero bytes are NOT a guaranteed-valid `Option<String>::None`.
+        // Write None explicitly so reads of `name` don't observe a "zeroed Some".
+        std::ptr::write(&raw mut (*w).name, Some(String::new()));
         (*w).flags = window_flag::empty();
 
         std::ptr::write(&raw mut (*w).panes, Vec::new());
@@ -521,7 +523,9 @@ unsafe fn window_destroy(w: *mut window) {
         options_free((*w).options);
         free((*w).fill_character as _);
 
-        free((*w).name as _);
+        // `name` is `Option<String>` and is dropped automatically by `Box`'s drop
+        // when we remove the entry from `WINDOW_REGISTRY` below. Don't manually
+        // drop it here — that would double-free.
 
         // Drop the Box from the registry. This deallocates the window.
         let _ = (*(&raw mut WINDOW_REGISTRY)).remove(&WindowId((*w).id));
@@ -580,12 +584,11 @@ pub unsafe fn window_remove_ref(w: *mut window, from: *const u8) {
 
 pub unsafe fn window_set_name(w: *mut window, new_name: *const u8) {
     unsafe {
-        free_((*w).name);
-        utf8_stravis(
-            &raw mut (*w).name,
+        let visited = utf8_stravis_(
             new_name,
             vis_flags::VIS_OCTAL | vis_flags::VIS_CSTYLE | vis_flags::VIS_TAB | vis_flags::VIS_NL,
         );
+        (*w).name = Some(String::from_utf8_lossy(&visited).into_owned());
         notify_window(c"window-renamed", w);
     }
 }

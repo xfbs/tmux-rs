@@ -196,15 +196,17 @@ pub unsafe fn spawn_window(sc: *mut spawn_context) -> Result<NonNull<winlink>, S
 
         // Set the name of the new window.
         if !(*sc).flags.intersects(SPAWN_RESPAWN) {
-            free_((*w).name);
             if !(*sc).name.is_null() {
-                (*w).name = format_single(item, cstr_to_str((*sc).name), c, s, null_mut(), null_mut());
+                let p = format_single(item, cstr_to_str((*sc).name), c, s, null_mut(), null_mut());
+                (*w).name = Some(
+                    std::ffi::CStr::from_ptr(p as *const i8)
+                        .to_string_lossy()
+                        .into_owned(),
+                );
+                free_(p);
                 options_set_number((*w).options, "automatic-rename", 0);
             } else {
-                (*w).name = CString::new(default_window_name(w))
-                    .unwrap()
-                    .into_raw()
-                    .cast();
+                (*w).name = Some(default_window_name(w));
             }
         }
 

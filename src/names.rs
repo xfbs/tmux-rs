@@ -27,7 +27,7 @@
 //!   the active pane's command or shell.
 
 use crate::event_::{event_add, event_initialized};
-use crate::libc::{gettimeofday, memcpy, strchr, strcmp, strcspn, strlen, strncmp};
+use crate::libc::{gettimeofday, memcpy, strchr, strcspn, strlen, strncmp};
 use crate::*;
 use crate::options_::*;
 
@@ -115,13 +115,15 @@ pub unsafe fn check_window_name(w: *mut window) {
         (*active).flags &= !window_pane_flags::PANE_CHANGED;
 
         let name = format_window_name(w);
-        if strcmp(name, (*w).name) != 0 {
-            log_debug!("@{} name {} (was {})", (*w).id, _s(name), _s((*w).name));
+        let name_str = std::ffi::CStr::from_ptr(name as *const i8).to_string_lossy();
+        let cur = (*w).name.as_deref().unwrap_or("");
+        if name_str != cur {
+            log_debug!("@{} name {} (was {})", (*w).id, name_str, cur);
             window_set_name(w, name);
             server_redraw_window_borders(w);
             server_status_window(w);
         } else {
-            log_debug!("@{} not changed (still {})", (*w).id, _s((*w).name));
+            log_debug!("@{} not changed (still {})", (*w).id, cur);
         }
 
         free(name as _);

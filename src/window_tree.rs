@@ -434,7 +434,7 @@ unsafe fn window_tree_build_session(
                     let wb = winlink_window(*b);
                     timer::new(&raw const (*wa).activity_time)
                         .cmp(&timer::new(&raw const (*wb).activity_time))
-                        .then_with(|| i32_to_ordering(libc::strcmp((*wa).name, (*wb).name)))
+                        .then_with(|| (*wa).name.cmp(&(*wb).name))
                         .maybe_reverse((*sort_crit).reversed)
                 });
             }
@@ -442,8 +442,7 @@ unsafe fn window_tree_build_session(
                 winlink_list.sort_by(|a, b| {
                     let wa = winlink_window(*a);
                     let wb = winlink_window(*b);
-                    i32_to_ordering(libc::strcmp((*wa).name, (*wb).name))
-                        .maybe_reverse((*sort_crit).reversed)
+                    (*wa).name.cmp(&(*wb).name).maybe_reverse((*sort_crit).reversed)
                 });
             }
             Err(_) => (),
@@ -726,7 +725,7 @@ unsafe fn window_tree_draw_session(
             screen_write_cursormove(ctx, (cx + offset) as i32, cy as i32, 0);
             screen_write_preview(ctx, &raw mut (*window_active_pane(w)).base, width, sy);
 
-            label = format_nul!(" {}:{} ", (*wl).idx, _s((*w).name));
+            label = format_nul!(" {}:{} ", (*wl).idx, (*w).name.as_deref().unwrap_or(""));
             if strlen(label) > width as usize {
                 label = format_nul!(" {} ", (*wl).idx);
             }
@@ -955,7 +954,9 @@ unsafe fn window_tree_search(
             }
             window_tree_type::WINDOW_TREE_WINDOW => {
                 if let (Some(_s), Some(wl)) = (s, wl) {
-                    return !libc::strstr((*winlink_window(wl.as_ptr())).name, ss).is_null();
+                    return (*winlink_window(wl.as_ptr())).name.as_deref()
+                        .map(|n| n.contains(cstr_to_str(ss)))
+                        .unwrap_or(false);
                 }
             }
             window_tree_type::WINDOW_TREE_PANE => {

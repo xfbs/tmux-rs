@@ -1355,7 +1355,7 @@ struct window {
     id: u32,
     latest: *mut c_void,
 
-    name: *mut u8,
+    name: Option<String>,
     name_event: event,
     name_time: timeval,
 
