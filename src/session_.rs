@@ -455,13 +455,13 @@ pub unsafe fn session_has(s: *mut session, w: &window) -> bool {
 }
 
 /// Return 1 if a window is linked outside this session (not including session groups). The window must be in this session!
-pub unsafe fn session_is_linked(s: *mut session, w: *mut window) -> bool {
+pub unsafe fn session_is_linked(s: *mut session, w: &window) -> bool {
     unsafe {
         let sg = session_group_contains(s);
         if !sg.is_null() {
-            return (*w).references != session_group_count(&*sg);
+            return w.references != session_group_count(&*sg);
         }
-        (*w).references != 1
+        w.references != 1
     }
 }
 

@@ -94,11 +94,11 @@ pub unsafe fn ignore_client_size(c: *mut client) -> i32 {
     }
 }
 
-pub unsafe fn clients_with_window(w: *mut window) -> u32 {
+pub unsafe fn clients_with_window(w: &window) -> u32 {
     let mut n = 0u32;
     unsafe {
         for loop_ in clients_iter() {
-            if ignore_client_size(loop_) != 0 || !session_has(client_get_session(loop_), &*w) {
+            if ignore_client_size(loop_) != 0 || !session_has(client_get_session(loop_), w) {
                 continue;
             }
             n += 1;
@@ -155,7 +155,7 @@ pub unsafe fn clients_calculate_size(
             // For latest, count the number of clients with this window. We only
             // care if there is more than one.
             if type_ == window_size_option::WINDOW_SIZE_LATEST && !w.is_null() {
-                n = clients_with_window(w);
+                n = clients_with_window(&*w);
             }
 
             // Skip setting the size if manual

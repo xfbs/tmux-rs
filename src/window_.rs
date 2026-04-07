@@ -792,9 +792,9 @@ pub unsafe fn window_redraw_active_switch(w: *mut window, mut wp: *mut window_pa
     }
 }
 
-pub unsafe fn window_get_active_at(w: *mut window, x: u32, y: u32) -> *mut window_pane {
+pub unsafe fn window_get_active_at(w: &window, x: u32, y: u32) -> *mut window_pane {
     unsafe {
-        for &wp in (*w).panes.iter() {
+        for &wp in w.panes.iter() {
             if !window_pane_visible(wp) {
                 continue;
             }
@@ -810,16 +810,16 @@ pub unsafe fn window_get_active_at(w: *mut window, x: u32, y: u32) -> *mut windo
     }
 }
 
-pub unsafe fn window_find_string(w: *mut window, s: &str) -> *mut window_pane {
+pub unsafe fn window_find_string(w: &window, s: &str) -> *mut window_pane {
     unsafe {
         let mut top: u32 = 0;
-        let mut bottom: u32 = (*w).sy - 1;
+        let mut bottom: u32 = w.sy - 1;
 
-        let mut x = (*w).sx / 2;
-        let mut y = (*w).sy / 2;
+        let mut x = w.sx / 2;
+        let mut y = w.sy / 2;
 
         let status: Result<pane_status, _> =
-            options_get_number___::<i32>(&*(*w).options, "pane-border-status").try_into();
+            options_get_number___::<i32>(&*w.options, "pane-border-status").try_into();
         match status {
             Ok(pane_status::PANE_STATUS_TOP) => top += 1,
             Ok(pane_status::PANE_STATUS_BOTTOM) => bottom -= 1,
@@ -833,18 +833,18 @@ pub unsafe fn window_find_string(w: *mut window, s: &str) -> *mut window_pane {
         } else if s.eq_ignore_ascii_case("left") {
             x = 0;
         } else if s.eq_ignore_ascii_case("right") {
-            x = (*w).sx - 1;
+            x = w.sx - 1;
         } else if s.eq_ignore_ascii_case("top-left") {
             x = 0;
             y = top;
         } else if s.eq_ignore_ascii_case("top-right") {
-            x = (*w).sx - 1;
+            x = w.sx - 1;
             y = top;
         } else if s.eq_ignore_ascii_case("bottom-left") {
             x = 0;
             y = bottom;
         } else if s.eq_ignore_ascii_case("bottom-right") {
-            x = (*w).sx - 1;
+            x = w.sx - 1;
             y = bottom;
         } else {
             return null_mut();

@@ -2617,7 +2617,7 @@ pub unsafe fn format_cb_window_linked(ft: &format_tree) -> format_table_type {
         if !(*ft).wl.is_null() {
             let s = (*(*ft).wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
             let w_link = (*(*ft).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-            if session_is_linked(s, w_link) {
+            if session_is_linked(s, &*w_link) {
                 return "1".into();
             }
             return "0".into();

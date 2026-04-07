@@ -917,7 +917,7 @@ pub unsafe fn server_client_check_mouse(c: *mut client, event: *mut key_event) -
 
                 // Otherwise try inside the pane.
                 if where_ == where_::Nowhere {
-                    wp = window_get_active_at(winlink_window((*s).curw), px, py);
+                    wp = window_get_active_at(&*winlink_window((*s).curw), px, py);
                     if !wp.is_null() {
                         where_ = where_::Pane;
                     } else {

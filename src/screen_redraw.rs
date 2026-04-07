@@ -32,7 +32,7 @@ const BORDER_MARKERS: [u8; 6] = [b' ', b' ', b'+', b',', b'.', b'-'];
 
 /// Get cell border character.
 pub unsafe fn screen_redraw_border_set(
-    w: *mut window,
+    w: &window,
     wp: *mut window_pane,
     pane_lines: pane_lines,
     cell_type: cell_type,
@@ -41,8 +41,8 @@ pub unsafe fn screen_redraw_border_set(
     unsafe {
         let mut idx: u32 = 0;
 
-        if cell_type == cell_type::CELL_OUTSIDE && !(*w).fill_character.is_null() {
-            utf8_copy(&mut (*gc).data, (*w).fill_character);
+        if cell_type == cell_type::CELL_OUTSIDE && !w.fill_character.is_null() {
+            utf8_copy(&mut (*gc).data, w.fill_character);
             return;
         }
 
@@ -84,9 +84,9 @@ pub unsafe fn screen_redraw_border_set(
 }
 
 /// Return if window has only two panes.
-pub unsafe fn screen_redraw_two_panes(w: *mut window, direction: i32) -> bool {
+pub unsafe fn screen_redraw_two_panes(w: &window, direction: i32) -> bool {
     unsafe {
-        let first = (*w).panes.first().copied().unwrap_or(null_mut());
+        let first = w.panes.first().copied().unwrap_or(null_mut());
         let wp: *mut window_pane = window_pane_next_in_list(first);
         if wp.is_null() {
             return false; /* one pane */
@@ -136,7 +136,7 @@ pub unsafe fn screen_redraw_pane_border(
 
         // Left/right borders
         if pane_status == pane_status::PANE_STATUS_OFF {
-            if screen_redraw_two_panes(window_pane_window(wp), 0) && split != 0 {
+            if screen_redraw_two_panes(&*window_pane_window(wp), 0) && split != 0 {
                 if (*wp).xoff == 0 && px == (*wp).sx && py <= (*wp).sy / 2 {
                     return screen_redraw_border_type::SCREEN_REDRAW_BORDER_RIGHT;
                 }
@@ -162,7 +162,7 @@ pub unsafe fn screen_redraw_pane_border(
 
         // Top/bottom borders
         if pane_status == pane_status::PANE_STATUS_OFF {
-            if screen_redraw_two_panes(window_pane_window(wp), 1) && split != 0 {
+            if screen_redraw_two_panes(&*window_pane_window(wp), 1) && split != 0 {
                 if (*wp).yoff == 0 && py == (*wp).sy && px <= (*wp).sx / 2 {
                     return screen_redraw_border_type::SCREEN_REDRAW_BORDER_BOTTOM;
                 }
@@ -476,7 +476,7 @@ pub unsafe fn screen_redraw_make_pane_status(
                 py = (*wp).yoff + (*wp).sy;
             }
             let cell_type = screen_redraw_type_of_cell(rctx, px, py);
-            screen_redraw_border_set(w, wp, pane_lines, cell_type, &raw mut gc);
+            screen_redraw_border_set(&*w, wp, pane_lines, cell_type, &raw mut gc);
             screen_write_cell(ctx.as_mut_ptr(), &raw const gc);
         }
         gc.attr &= !grid_attr::GRID_ATTR_CHARSET;
@@ -827,7 +827,7 @@ pub unsafe fn screen_redraw_draw_borders_cell(ctx: *mut screen_redraw_ctx, i: u3
                 gc.attr ^= grid_attr::GRID_ATTR_REVERSE;
             }
         }
-        screen_redraw_border_set(w, wp, (*ctx).pane_lines, cell_type, &raw mut gc);
+        screen_redraw_border_set(&*w, wp, (*ctx).pane_lines, cell_type, &raw mut gc);
 
         let isolates = cell_type == cell_type::CELL_TOPBOTTOM
             && (*c).flags.intersects(client_flag::UTF8)

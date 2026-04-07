@@ -658,7 +658,7 @@ pub unsafe fn cmd_find_get_pane_with_window(fs: *mut cmd_find_state, pane: &str)
             }
         }
 
-        { let __p = window_find_string(fs_w, pane); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+        { let __p = window_find_string(&*fs_w, pane); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
         if !(*fs).wp.is_none() {
             return 0;
         }

@@ -61,7 +61,7 @@ unsafe fn cmd_kill_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
         let mut found;
 
         if std::ptr::eq(cmd_get_entry(self_), &CMD_UNLINK_WINDOW_ENTRY) {
-            if !args_has(args, 'k') && !session_is_linked(s, w) {
+            if !args_has(args, 'k') && !session_is_linked(s, &*w) {
                 cmdq_error!(item, "window only linked to one session");
                 return cmd_retval::CMD_RETURN_ERROR;
             }
