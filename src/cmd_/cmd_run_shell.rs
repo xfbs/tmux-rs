@@ -45,11 +45,7 @@ pub struct cmd_run_shell_data<'a> {
     pub flags: job_flag,
 }
 
-pub unsafe fn cmd_run_shell_args_parse(
-    args: *mut args,
-    _idx: u32,
-    _cause: *mut *mut u8,
-) -> args_parse_type {
+pub unsafe fn cmd_run_shell_args_parse(args: *mut args, _idx: u32) -> args_parse_type {
     unsafe {
         if args_has(args, 'C') {
             return args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING;

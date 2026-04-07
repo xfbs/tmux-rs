@@ -46,11 +46,7 @@ pub static CMD_DISPLAY_POPUP_ENTRY: cmd_entry = cmd_entry {
     source: cmd_entry_flag::zeroed(),
 };
 
-unsafe fn cmd_display_menu_args_parse(
-    args: *mut args,
-    idx: u32,
-    _cause: *mut *mut u8,
-) -> args_parse_type {
+unsafe fn cmd_display_menu_args_parse(args: *mut args, idx: u32) -> args_parse_type {
     let mut i: u32 = 0;
 
     let mut type_;

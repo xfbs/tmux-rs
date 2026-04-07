@@ -282,23 +282,10 @@ pub unsafe fn args_parse(
                 );
 
                 if let Some(cb) = (*parse).cb {
-                    // cb still takes the legacy C-style cause out-param;
-                    // marshal it into Err(Some(..)) on invalid.
-                    let mut cb_cause: *mut u8 = null_mut();
-                    type_ = cb(args, args.count, &raw mut cb_cause);
+                    type_ = cb(args, args.count);
                     if type_ == args_parse_type::ARGS_PARSE_INVALID {
-                        let msg = if cb_cause.is_null() {
-                            None
-                        } else {
-                            let s = _s(cb_cause).to_string();
-                            free_(cb_cause);
-                            Some(s)
-                        };
                         args_free(args);
-                        return Err(msg);
-                    }
-                    if !cb_cause.is_null() {
-                        free_(cb_cause);
+                        return Err(None);
                     }
                 } else {
                     type_ = args_parse_type::ARGS_PARSE_STRING;

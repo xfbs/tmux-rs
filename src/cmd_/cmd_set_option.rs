@@ -68,11 +68,7 @@ pub static CMD_SET_HOOK_ENTRY: cmd_entry = cmd_entry {
     source: cmd_entry_flag::zeroed(),
 };
 
-pub fn cmd_set_option_args_parse(
-    _args: *mut args,
-    idx: u32,
-    _cause: *mut *mut u8,
-) -> args_parse_type {
+pub unsafe fn cmd_set_option_args_parse(_args: *mut args, idx: u32) -> args_parse_type {
     match idx {
         1 => args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING,
         _ => args_parse_type::ARGS_PARSE_STRING,

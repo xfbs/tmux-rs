@@ -47,11 +47,7 @@ struct cmd_command_prompt_cdata<'a> {
     argv: *mut *mut u8,
 }
 
-fn cmd_command_prompt_args_parse(
-    _args: *mut args,
-    _idx: u32,
-    _cause: *mut *mut u8,
-) -> args_parse_type {
+unsafe fn cmd_command_prompt_args_parse(_args: *mut args, _idx: u32) -> args_parse_type {
     args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING
 }
 
