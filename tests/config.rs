@@ -87,3 +87,41 @@ fn run_shell_captures_output() {
     // the tmux within the shell, which uses the client binary path
     // This may not work with different server/client binaries
 }
+
+// Ported from regress/if-shell-nested.sh
+// Tests that running tmux from within an if-shell config conditional works.
+#[test]
+fn if_shell_nested_tmux_invocation() {
+    let tmux = TmuxTestHarness::new();
+    let bin = harness::client_bin();
+    let socket = tmux.socket_path().to_string();
+
+    // Write a config that uses if-shell to invoke tmux itself
+    let mut tmpfile = tempfile::NamedTempFile::new().expect("failed to create temp file");
+    writeln!(
+        tmpfile,
+        "if '{} -S {} run \"true\"' 'set -s @done yes'",
+        bin.display(),
+        socket
+    )
+    .unwrap();
+    tmpfile.flush().unwrap();
+
+    // Start a new session with the config
+    tmux.cmd()
+        .args([
+            &format!("-f{}", tmpfile.path().display()),
+            "new-session",
+            "-d",
+        ])
+        .env("TERM", "xterm")
+        .run()
+        .assert_success();
+    tmux.wait_ready(Duration::from_secs(5));
+
+    // Allow the if-shell command to complete
+    std::thread::sleep(Duration::from_millis(800));
+
+    let val = tmux.cmd().args(["show", "-vs", "@done"]).run().stdout_trimmed();
+    assert_eq!(val, "yes");
+}

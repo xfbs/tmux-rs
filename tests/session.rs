@@ -1,5 +1,6 @@
 use super::harness;
 
+use std::io::Write;
 use std::time::Duration;
 
 use harness::TmuxTestHarness;
@@ -141,4 +142,65 @@ fn new_session_no_client() {
     let clients = tmux.cmd().args(["list-clients"]).run();
     // No clients should be attached (output should be empty)
     assert_eq!(clients.stdout_trimmed(), "");
+}
+
+// Ported from regress/new-session-environment.sh
+// Verifies that tmux propagates the calling environment to the first session.
+#[test]
+fn new_session_environment_propagation() {
+    let tmux = TmuxTestHarness::new();
+    let bin = harness::server_bin();
+
+    // Make a script that dumps a few env vars + cwd
+    let outfile = tempfile::NamedTempFile::new().unwrap();
+    let outpath = outfile.path().to_path_buf();
+
+    let mut script = tempfile::NamedTempFile::new().unwrap();
+    writeln!(
+        script,
+        "(\n\
+         echo TERM=$TERM\n\
+         echo PWD=$(pwd)\n\
+         echo PATH=$PATH\n\
+         echo SHELL=$SHELL\n\
+         echo TEST=$TEST\n\
+         ) >{}",
+        outpath.display()
+    )
+    .unwrap();
+    script.flush().unwrap();
+    let script_path = script.path().to_path_buf();
+
+    // Config: new -- /bin/sh script
+    let mut conf = tempfile::NamedTempFile::new().unwrap();
+    writeln!(conf, "new -- /bin/sh {}", script_path.display()).unwrap();
+    conf.flush().unwrap();
+
+    // Run tmux start with a fully cleared environment, cwd=/
+    let status = std::process::Command::new(&bin)
+        .args([
+            "-S",
+            tmux.socket_path(),
+            &format!("-f{}", conf.path().display()),
+            "start",
+        ])
+        .current_dir("/")
+        .env_clear()
+        .env("TERM", "ansi")
+        .env("TEST", "test1")
+        .env("PATH", "1")
+        .env("SHELL", "/bin/sh")
+        .status()
+        .expect("failed to spawn tmux");
+    assert!(status.success());
+
+    std::thread::sleep(Duration::from_secs(1));
+
+    let contents = std::fs::read_to_string(&outpath).unwrap_or_default();
+    // Note: TERM ends up being the default-terminal value tmux picks, not the
+    // input "ansi" — tmux normalises it. We only assert on values we control.
+    assert!(contents.contains("PWD=/"), "got: {contents}");
+    assert!(contents.contains("PATH=1"), "got: {contents}");
+    assert!(contents.contains("SHELL=/bin/sh"), "got: {contents}");
+    assert!(contents.contains("TEST=test1"), "got: {contents}");
 }

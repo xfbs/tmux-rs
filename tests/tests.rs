@@ -17,3 +17,8 @@ mod copy_mode;
 mod status_and_style;
 mod input_keys;
 mod layout;
+mod utf8;
+mod terminal;
+mod cursor;
+mod capture_pane;
+mod style;
