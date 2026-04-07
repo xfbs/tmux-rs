@@ -27,7 +27,46 @@ pub const DEFAULT_YPIXEL: u32 = 32;
 
 pub static mut WINDOWS: windows = BTreeMap::new();
 
+/// Central registry owning all window allocations. `Box<window>` provides a
+/// stable heap address, so `*mut window` pointers derived from it remain valid
+/// for the lifetime of the registry entry.
+pub static mut WINDOW_REGISTRY: BTreeMap<WindowId, Box<window>> = BTreeMap::new();
+
+pub static NEXT_WINDOW_ID: AtomicU32 = AtomicU32::new(0);
+
 pub static mut ALL_WINDOW_PANES: window_pane_tree = BTreeMap::new();
+
+/// Iterate over all **alive** windows as `*mut window` pointers.
+///
+/// Uses the `WINDOWS` id index (not `WINDOW_REGISTRY`), because destroyed
+/// windows remain in the registry until their reference count drains.
+/// Callers expect to only see live, usable windows.
+#[allow(dead_code, reason = "introduced for Phase 2.3.0 foundation; used in 2.3.1+")]
+#[inline]
+pub unsafe fn windows_iter() -> impl Iterator<Item = *mut window> {
+    unsafe {
+        (*(&raw mut WINDOWS))
+            .values()
+            .copied()
+            .collect::<Vec<_>>()
+            .into_iter()
+    }
+}
+
+/// Look up a window by ID in the global registry.
+///
+/// Returns the registry-stable raw pointer, or `None` if no allocation exists
+/// for that ID. Note: the returned pointer may refer to a destroyed window
+/// whose reference count has not yet drained — use `WINDOWS` lookup if you
+/// need an *alive* window.
+#[allow(dead_code, reason = "introduced for Phase 2.3.0 foundation; used in 2.3.1+")]
+pub unsafe fn window_from_id(id: WindowId) -> Option<*mut window> {
+    unsafe {
+        (*(&raw mut WINDOW_REGISTRY))
+            .get_mut(&id)
+            .map(|b| &mut **b as *mut window)
+    }
+}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -271,9 +310,12 @@ pub unsafe fn window_pane_prev_in_list(wp: *mut window_pane) -> *mut window_pane
     }
 }
 
+/// Create a new window.
+///
+/// Allocates the window in `WINDOW_REGISTRY`. The `Box` in the registry
+/// provides a stable heap address, so the returned `*mut window` is valid
+/// for the lifetime of the registry entry.
 pub unsafe fn window_create(sx: u32, sy: u32, mut xpixel: u32, mut ypixel: u32) -> *mut window {
-    static NEXT_WINDOW_ID: AtomicU32 = AtomicU32::new(0);
-
     if xpixel == 0 {
         xpixel = DEFAULT_XPIXEL;
     }
@@ -281,7 +323,9 @@ pub unsafe fn window_create(sx: u32, sy: u32, mut xpixel: u32, mut ypixel: u32) 
         ypixel = DEFAULT_YPIXEL;
     }
     unsafe {
-        let w: *mut window = xcalloc_::<window>(1).as_ptr();
+        let mut boxed: Box<window> = Box::new(MaybeUninit::<window>::zeroed().assume_init_read());
+        let w: *mut window = &mut *boxed;
+
         (*w).name = xstrdup(c!("")).as_ptr();
         (*w).flags = window_flag::empty();
 
@@ -305,24 +349,35 @@ pub unsafe fn window_create(sx: u32, sy: u32, mut xpixel: u32, mut ypixel: u32) 
         std::ptr::write(&raw mut (*w).winlinks, Vec::new());
 
         (*w).id = NEXT_WINDOW_ID.fetch_add(1, atomic::Ordering::Relaxed);
-        (*(&raw mut WINDOWS)).insert((*w).id, w);
+        let id = WindowId((*w).id);
 
-        window_set_fill_character(NonNull::new_unchecked(w));
-        window_update_activity(NonNull::new_unchecked(w));
+        // Insert into the registry (owns the Box) and the alive set.
+        let entry = (*(&raw mut WINDOW_REGISTRY)).entry(id).or_insert(boxed);
+        let w_stable: *mut window = &mut **entry;
+        (*(&raw mut WINDOWS)).insert((*w_stable).id, w_stable);
+
+        window_set_fill_character(NonNull::new_unchecked(w_stable));
+        window_update_activity(NonNull::new_unchecked(w_stable));
 
         log_debug!(
             "{}: @{} create {}x{} ({}x{})",
             "window_create",
-            (*w).id,
+            (*w_stable).id,
             sx,
             sy,
-            (*w).xpixel,
-            (*w).ypixel,
+            (*w_stable).xpixel,
+            (*w_stable).ypixel,
         );
-        w
+        w_stable
     }
 }
 
+/// Free a window after its reference count drains.
+///
+/// Removes the window from `WINDOW_REGISTRY`, which drops the `Box<window>`
+/// and reclaims the allocation. Field cleanup that the old `free()` path did
+/// (panes, layout, options, events) is performed first while the box is still
+/// in the registry.
 unsafe fn window_destroy(w: *mut window) {
     unsafe {
         log_debug!(
@@ -359,7 +414,9 @@ unsafe fn window_destroy(w: *mut window) {
         free((*w).fill_character as _);
 
         free((*w).name as _);
-        free(w as _);
+
+        // Drop the Box from the registry. This deallocates the window.
+        let _ = (*(&raw mut WINDOW_REGISTRY)).remove(&WindowId((*w).id));
     }
 }
 

@@ -1521,6 +1521,13 @@ const SESSION_ALERTED: i32 = 0x2;
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SessionId(pub u32);
 
+/// Stable identifier for a window allocation.
+///
+/// Monotonically increasing via `NEXT_WINDOW_ID`, never reused.
+/// Used as the key into `WINDOW_REGISTRY` for ID-based ownership.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct WindowId(pub u32);
+
 struct session {
     id: u32,
     name: Cow<'static, str>,
