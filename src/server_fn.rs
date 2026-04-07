@@ -170,7 +170,7 @@ pub unsafe fn server_lock_client(c: *mut client) {
 
 pub unsafe fn server_kill_pane(wp: *mut window_pane) {
     unsafe {
-        let w = (*wp).window;
+        let w = window_pane_window(wp);
 
         if window_count_panes(&*w) == 1 {
             server_kill_window(w, 1);
@@ -301,7 +301,7 @@ pub unsafe fn server_unlink_window(s: *mut session, wl: *mut winlink) {
 
 pub unsafe fn server_destroy_pane(wp: *mut window_pane, notify: i32) {
     unsafe {
-        let w = (*wp).window;
+        let w = window_pane_window(wp);
         let mut ctx: MaybeUninit<screen_write_ctx> = MaybeUninit::<screen_write_ctx>::uninit();
         let ctx = ctx.as_mut_ptr();
 

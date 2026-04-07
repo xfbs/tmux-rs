@@ -92,8 +92,9 @@ pub unsafe fn cmd_break_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_
         window_lost_pane(w, wp);
         layout_close_pane(wp);
 
-        (*wp).window = window_create((*w).sx, (*w).sy, (*w).xpixel, (*w).ypixel);
-        w = (*wp).window;
+        let new_w = window_create((*w).sx, (*w).sy, (*w).xpixel, (*w).ypixel);
+        window_pane_set_window(wp, new_w);
+        w = new_w;
 
         options_set_parent(&mut *(*wp).options, (*w).options);
         (*wp).flags |= window_pane_flags::PANE_STYLECHANGED;

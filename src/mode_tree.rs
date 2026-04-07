@@ -523,9 +523,9 @@ pub unsafe fn mode_tree_zoom(mtd: *mut mode_tree_data, args: *mut args) {
         let wp: *mut window_pane = (*mtd).wp;
 
         if args_has(args, 'Z') {
-            (*mtd).zoomed = ((*(*wp).window).flags & window_flag::ZOOMED).bits();
+            (*mtd).zoomed = ((*window_pane_window(wp)).flags & window_flag::ZOOMED).bits();
             if (*mtd).zoomed == 0 && window_zoom(wp) == 0 {
-                server_redraw_window((*wp).window);
+                server_redraw_window(window_pane_window(wp));
             }
         } else {
             (*mtd).zoomed = -1;
@@ -623,7 +623,7 @@ pub unsafe fn mode_tree_free(mtd: *mut mode_tree_data) {
         let wp = (*mtd).wp;
 
         if (*mtd).zoomed == 0 {
-            server_unzoom_window((*wp).window);
+            server_unzoom_window(window_pane_window(wp));
         }
 
         mode_tree_free_items(&mut (*mtd).children);
@@ -724,7 +724,7 @@ pub unsafe fn mode_tree_draw(mtd: &mut mode_tree_data) {
     unsafe {
         let wp = mtd.wp;
         let s = &raw mut mtd.screen;
-        let oo = (*(*wp).window).options;
+        let oo = (*window_pane_window(wp)).options;
         let mut ctx: screen_write_ctx = zeroed();
 
         let mut gc0: grid_cell = zeroed();

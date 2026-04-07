@@ -342,7 +342,7 @@ pub unsafe fn window_copy_common_init(wme: *mut window_mode_entry) -> *mut windo
             0,
         );
         (*data).modekeys =
-            modekey::try_from(options_get_number_((*(*wp).window).options, "mode-keys") as i32)
+            modekey::try_from(options_get_number_((*window_pane_window(wp)).options, "mode-keys") as i32)
                 .expect("invalid modekey");
 
         evtimer_set(
@@ -894,7 +894,7 @@ pub unsafe fn window_copy_key_table(wme: *mut window_mode_entry) -> *const u8 {
     unsafe {
         if matches!(
             modekey::try_from(
-                options_get_number_((*(*(*wme).wp).window).options, "mode-keys") as i32
+                options_get_number_((*window_pane_window((*wme).wp)).options, "mode-keys") as i32
             ),
             Ok(modekey::MODEKEY_VI)
         ) {
@@ -3442,7 +3442,7 @@ pub unsafe fn window_copy_command(
 
         if libc::strncmp(command, c!("search-"), 7) != 0 && !(*data).searchmark.is_null() {
             let keys = modekey::try_from(options_get_number_(
-                (*(*(*wme).wp).window).options,
+                (*window_pane_window((*wme).wp)).options,
                 "mode-keys",
             ) as i32);
             if clear == window_copy_cmd_clear::WINDOW_COPY_CMD_CLEAR_EMACS_ONLY
@@ -4355,11 +4355,11 @@ pub unsafe fn window_copy_search(
         );
         screen_write_stop(&raw mut ctx);
 
-        let wrapflag = options_get_number_((*(*wp).window).options, "wrap-search") as i32;
+        let wrapflag = options_get_number_((*window_pane_window(wp)).options, "wrap-search") as i32;
         let cis = window_copy_is_lowercase(str) as i32;
 
         let keys =
-            modekey::try_from(options_get_number_((*(*wp).window).options, "mode-keys") as i32);
+            modekey::try_from(options_get_number_((*window_pane_window(wp)).options, "mode-keys") as i32);
 
         let endline = if direction != 0 {
             // Behave according to mode-keys. If it is emacs, search forward
@@ -4820,7 +4820,7 @@ pub unsafe fn window_copy_update_style(
         let cy = screen_hsize((*data).backing) - (*data).oy + (*data).cy;
         if let Ok(mut cursor) = window_copy_search_mark_at(data, (*data).cx, cy) {
             let keys =
-                modekey::try_from(options_get_number_((*(*wp).window).options, "mode-keys") as i32);
+                modekey::try_from(options_get_number_((*window_pane_window(wp)).options, "mode-keys") as i32);
             if cursor != 0 && keys == Ok(modekey::MODEKEY_EMACS) && (*data).searchdirection != 0 {
                 if *(*data).searchmark.add(cursor as usize - 1) as u32 == mark {
                     cursor -= 1;
@@ -4891,7 +4891,7 @@ pub unsafe fn window_copy_write_line(
         let wp: *mut window_pane = (*wme).wp;
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let s: *mut screen = &raw mut (*data).screen;
-        let oo: *mut options = (*(*wp).window).options;
+        let oo: *mut options = (*window_pane_window(wp)).options;
         let gl: *mut grid_line;
         let mut gc: grid_cell = zeroed();
         let mut mgc: grid_cell = zeroed();
@@ -5253,7 +5253,7 @@ pub unsafe fn window_copy_set_selection(
         let wp: *mut window_pane = (*wme).wp;
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let s: *mut screen = &raw mut (*data).screen;
-        let oo: *mut options = (*(*wp).window).options;
+        let oo: *mut options = (*window_pane_window(wp)).options;
         let mut gc: grid_cell = zeroed();
 
         window_copy_synchronize_cursor(wme, no_reset);
@@ -5371,7 +5371,7 @@ pub unsafe fn window_copy_get_selection(wme: *mut window_mode_entry, len: *mut u
         // bottom-right-most, regardless of copy direction. If it is vi, also
         // keep bottom-right-most character.
         let keys =
-            modekey::try_from(options_get_number_((*(*wp).window).options, "mode-keys") as i32);
+            modekey::try_from(options_get_number_((*window_pane_window(wp)).options, "mode-keys") as i32);
         if (*data).rectflag {
             // Need to ignore the column with the cursor in it, which for
             // rectangular copy means knowing which side the cursor is on.
@@ -6129,7 +6129,7 @@ pub unsafe fn window_copy_cursor_next_word_end_pos(
     unsafe {
         let wp: *mut window_pane = (*wme).wp;
         let data: *mut window_copy_mode_data = (*wme).data.cast();
-        let oo: *mut options = (*(*wp).window).options;
+        let oo: *mut options = (*window_pane_window(wp)).options;
         let back_s: *mut screen = (*data).backing;
         let mut gr: grid_reader = zeroed();
 
@@ -6163,7 +6163,7 @@ pub unsafe fn window_copy_cursor_next_word_end(
     unsafe {
         let wp: *mut window_pane = (*wme).wp;
         let data: *mut window_copy_mode_data = (*wme).data.cast();
-        let oo: *mut options = (*(*wp).window).options;
+        let oo: *mut options = (*window_pane_window(wp)).options;
         let back_s: *mut screen = (*data).backing;
         let mut gr: grid_reader = zeroed();
 
@@ -6236,7 +6236,7 @@ pub unsafe fn window_copy_cursor_previous_word(
 ) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
-        let w: *mut window = (*(*wme).wp).window;
+        let w: *mut window = window_pane_window((*wme).wp);
         let back_s: *mut screen = (*data).backing;
         let mut gr: grid_reader = zeroed();
 

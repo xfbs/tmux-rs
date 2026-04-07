@@ -168,6 +168,28 @@ pub unsafe fn winlink_window(wl: *mut winlink) -> *mut window {
     }
 }
 
+/// Resolve a window_pane's owner window through the registry.
+///
+/// Returns null if the pane has no owner (None) or the owner's allocation
+/// has been reclaimed. Most callers can assume non-null since panes are
+/// always created against a window.
+#[inline]
+pub unsafe fn window_pane_window(wp: *mut window_pane) -> *mut window {
+    unsafe {
+        (*wp).window
+            .and_then(|id| window_from_id(id))
+            .unwrap_or(null_mut())
+    }
+}
+
+/// Set a window_pane's owner window field from a `*mut window` (possibly null).
+#[inline]
+pub unsafe fn window_pane_set_window(wp: *mut window_pane, w: *mut window) {
+    unsafe {
+        (*wp).window = if w.is_null() { None } else { Some(WindowId((*w).id)) };
+    }
+}
+
 pub unsafe fn winlink_set_window(wl: *mut winlink, w: *mut window) {
     unsafe {
         let prev = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
@@ -303,7 +325,7 @@ pub unsafe fn window_update_activity(w: NonNull<window>) {
 /// Get the next pane in the window's pane list, or null if this is the last.
 pub unsafe fn window_pane_next_in_list(wp: *mut window_pane) -> *mut window_pane {
     unsafe {
-        let panes = &(*(*wp).window).panes;
+        let panes = &(*window_pane_window(wp)).panes;
         match panes.iter().position(|&p| p == wp) {
             Some(i) if i + 1 < panes.len() => panes[i + 1],
             _ => null_mut(),
@@ -314,7 +336,7 @@ pub unsafe fn window_pane_next_in_list(wp: *mut window_pane) -> *mut window_pane
 /// Get the previous pane in the window's pane list, or null if this is the first.
 pub unsafe fn window_pane_prev_in_list(wp: *mut window_pane) -> *mut window_pane {
     unsafe {
-        let panes = &(*(*wp).window).panes;
+        let panes = &(*window_pane_window(wp)).panes;
         match panes.iter().position(|&p| p == wp) {
             Some(i) if i > 0 => panes[i - 1],
             _ => null_mut(),
@@ -534,7 +556,7 @@ pub unsafe fn window_resize(w: *mut window, sx: u32, sy: u32, mut xpixel: i32, m
 
 pub unsafe fn window_pane_send_resize(wp: *mut window_pane, sx: u32, sy: u32) {
     unsafe {
-        let w = (*wp).window;
+        let w = window_pane_window(wp);
         let mut ws: winsize = core::mem::zeroed();
 
         if (*wp).fd == -1 {
@@ -582,14 +604,14 @@ pub unsafe fn window_pane_update_focus(wp: *mut window_pane) {
         let mut focused = false;
 
         if !wp.is_null() && !(*wp).flags.intersects(window_pane_flags::PANE_EXITED) {
-            if wp != (*(*wp).window).active {
+            if wp != (*window_pane_window(wp)).active {
                 focused = false;
             } else {
                 for c in clients_iter() {
                     if !client_get_session(c).is_null()
                         && (*client_get_session(c)).attached != 0
                         && (*c).flags.intersects(client_flag::FOCUSED)
-                        && winlink_window((*client_get_session(c)).curw) == (*wp).window
+                        && winlink_window((*client_get_session(c)).curw) == window_pane_window(wp)
                     {
                         focused = true;
                         break;
@@ -760,7 +782,7 @@ pub unsafe fn window_find_string(w: *mut window, s: &str) -> *mut window_pane {
 
 pub unsafe fn window_zoom(wp: *mut window_pane) -> i32 {
     unsafe {
-        let w = (*wp).window;
+        let w = window_pane_window(wp);
 
         if (*w).flags.intersects(window_flag::ZOOMED) {
             return -1;
@@ -972,7 +994,7 @@ pub unsafe fn window_pane_previous_by_number(
 
 pub unsafe fn window_pane_index(wp: *mut window_pane, i: *mut u32) -> i32 {
     unsafe {
-        let w = (*wp).window;
+        let w = window_pane_window(wp);
 
         *i = options_get_number___::<u32>(&*(*w).options, "pane-base-index") as _;
         for &wq in (*w).panes.iter() {
@@ -1081,7 +1103,7 @@ pub unsafe fn window_pane_create(
     unsafe {
         let mut host: [u8; HOST_NAME_MAX + 1] = zeroed();
         let wp: *mut window_pane = xcalloc_::<window_pane>(1).as_ptr();
-        (*wp).window = w;
+        window_pane_set_window(wp, w);
         (*wp).options = options_create((*w).options);
         (*wp).flags = window_pane_flags::PANE_STYLECHANGED;
 
@@ -1300,8 +1322,8 @@ pub unsafe fn window_pane_set_mode(
         (*wp).screen = (*wme).screen;
         (*wp).flags |= window_pane_flags::PANE_REDRAW | window_pane_flags::PANE_CHANGED;
 
-        server_redraw_window_borders((*wp).window);
-        server_status_window((*wp).window);
+        server_redraw_window_borders(window_pane_window(wp));
+        server_status_window(window_pane_window(wp));
         notify_pane(c"pane-mode-changed", wp);
 
         0
@@ -1331,8 +1353,8 @@ pub unsafe fn window_pane_reset_mode(wp: *mut window_pane) {
         }
         (*wp).flags |= window_pane_flags::PANE_REDRAW | window_pane_flags::PANE_CHANGED;
 
-        server_redraw_window_borders((*wp).window);
-        server_status_window((*wp).window);
+        server_redraw_window_borders(window_pane_window(wp));
+        server_status_window(window_pane_window(wp));
         notify_pane(c"pane-mode-changed", wp);
     }
 }
@@ -1347,7 +1369,7 @@ pub unsafe fn window_pane_reset_mode_all(wp: *mut window_pane) {
 
 unsafe fn window_pane_copy_key(wp: *mut window_pane, key: key_code) {
     unsafe {
-        for &loop_ in (*(*wp).window).panes.iter() {
+        for &loop_ in (*window_pane_window(wp)).panes.iter() {
             if loop_ != wp
                 && (*loop_).modes.is_empty()
                 && (*loop_).fd != -1
@@ -1404,10 +1426,10 @@ pub unsafe fn window_pane_key(
 
 pub unsafe fn window_pane_visible(wp: *const window_pane) -> bool {
     unsafe {
-        if !(*(*wp).window).flags.intersects(window_flag::ZOOMED) {
+        if !(*window_pane_window(wp as *mut window_pane)).flags.intersects(window_flag::ZOOMED) {
             return true;
         }
-        std::ptr::eq(wp, (*(*wp).window).active)
+        std::ptr::eq(wp, (*window_pane_window(wp as *mut window_pane)).active)
     }
 }
 
@@ -1504,7 +1526,7 @@ pub unsafe fn window_pane_find_up(wp: *mut window_pane) -> *mut window_pane {
         if wp.is_null() {
             return null_mut();
         }
-        let w = (*wp).window;
+        let w = window_pane_window(wp);
         let status: pane_status = options_get_number___::<i32>(&*(*w).options, "pane-border-status")
             .try_into()
             .unwrap();
@@ -1572,7 +1594,7 @@ pub unsafe fn window_pane_find_down(wp: *mut window_pane) -> *mut window_pane {
         if wp.is_null() {
             return null_mut();
         }
-        let w = (*wp).window;
+        let w = window_pane_window(wp);
         let status: pane_status = options_get_number___::<i32>(&*(*w).options, "pane-border-status")
             .try_into()
             .unwrap();
@@ -1640,7 +1662,7 @@ pub unsafe fn window_pane_find_left(wp: *mut window_pane) -> *mut window_pane {
         return null_mut();
     }
     unsafe {
-        let w = (*wp).window;
+        let w = window_pane_window(wp);
 
         let mut list: *mut *mut window_pane = null_mut();
         let mut size = 0;
@@ -1691,7 +1713,7 @@ pub unsafe fn window_pane_find_right(wp: *mut window_pane) -> *mut window_pane {
         return null_mut();
     }
     unsafe {
-        let w = (*wp).window;
+        let w = window_pane_window(wp);
 
         let mut list: *mut *mut window_pane = null_mut();
         let mut size = 0;

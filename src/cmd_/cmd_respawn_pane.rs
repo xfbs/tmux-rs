@@ -70,8 +70,8 @@ unsafe fn cmd_respawn_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
         }
 
         (*wp).flags |= window_pane_flags::PANE_REDRAW;
-        server_redraw_window_borders((*wp).window);
-        server_status_window((*wp).window);
+        server_redraw_window_borders(window_pane_window(wp));
+        server_status_window(window_pane_window(wp));
 
         if !sc.argv.is_null() {
             cmd_free_argv(sc.argc, sc.argv);

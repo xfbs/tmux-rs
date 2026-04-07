@@ -95,7 +95,7 @@ unsafe fn screen_write_set_cursor(ctx: *mut screen_write_ctx, mut cx: i32, mut c
         if wp.is_null() {
             return;
         }
-        let w = (*wp).window;
+        let w = window_pane_window(wp);
 
         if event_initialized(&raw mut (*w).offset_timer) == 0 {
             evtimer_set(
@@ -127,13 +127,13 @@ unsafe fn screen_write_set_client_cb(ttyctx: *mut tty_ctx, c: *mut client) -> i3
         let wp: *mut window_pane = (*ttyctx).arg.cast();
 
         if (*ttyctx).allow_invisible_panes != 0 {
-            if session_has(client_get_session(c), &*(*wp).window) {
+            if session_has(client_get_session(c), &*window_pane_window(wp)) {
                 return 1;
             }
             return 0;
         }
 
-        if winlink_window((*client_get_session(c)).curw) != (*wp).window {
+        if winlink_window((*client_get_session(c)).curw) != window_pane_window(wp) {
             return 0;
         }
         if (*wp).layout_cell.is_null() {
@@ -219,7 +219,7 @@ unsafe fn screen_write_initctx(ctx: *mut screen_write_ctx, ttyctx: *mut tty_ctx,
             // move the cursor); for other panes, always use it, since the
             // cursor will have to move.
             if !(*ctx).wp.is_null() {
-                if (*ctx).wp != (*(*(*ctx).wp).window).active {
+                if (*ctx).wp != (*window_pane_window((*ctx).wp)).active {
                     (*ttyctx).num = 1;
                 } else {
                     (*ttyctx).num = sync as u32;

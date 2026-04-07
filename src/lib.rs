@@ -1272,7 +1272,7 @@ struct window_pane {
     id: u32,
     active_point: u32,
 
-    window: *mut window,
+    window: Option<WindowId>,
     options: *mut options,
 
     layout_cell: *mut layout_cell,

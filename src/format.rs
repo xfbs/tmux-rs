@@ -1100,7 +1100,7 @@ pub unsafe fn format_cb_pane_at_top(ft: &format_tree) -> format_table_type {
             return format_table_type::None;
         }
 
-        let w = (*wp).window;
+        let w = window_pane_window(wp);
         let status: i64 = options_get_number___(&*(*w).options, "pane-border-status");
         let flag = if status == pane_status::PANE_STATUS_TOP as i64 {
             (*wp).yoff == 1
@@ -1120,7 +1120,7 @@ pub unsafe fn format_cb_pane_at_bottom(ft: &format_tree) -> format_table_type {
             return format_table_type::None;
         }
 
-        let w = (*wp).window;
+        let w = window_pane_window(wp);
         let status: i64 = options_get_number___(&*(*w).options, "pane-border-status");
         let flag = if status == pane_status::PANE_STATUS_BOTTOM as i64 {
             (*wp).yoff + (*wp).sy == (*w).sy - 1
@@ -1859,7 +1859,7 @@ pub unsafe fn format_cb_origin_flag(ft: &format_tree) -> format_table_type {
 pub unsafe fn format_cb_pane_active(ft: &format_tree) -> format_table_type {
     unsafe {
         if !(*ft).wp.is_null() {
-            if (*ft).wp == (*(*(*ft).wp).window).active {
+            if (*ft).wp == (*window_pane_window((*ft).wp)).active {
                 return "1".into();
             }
             return "0".into();
@@ -1885,7 +1885,7 @@ pub unsafe fn format_cb_pane_at_left(ft: &format_tree) -> format_table_type {
 pub unsafe fn format_cb_pane_at_right(ft: &format_tree) -> format_table_type {
     unsafe {
         if !(*ft).wp.is_null() {
-            if (*(*ft).wp).xoff + (*(*ft).wp).sx == (*(*(*ft).wp).window).sx {
+            if (*(*ft).wp).xoff + (*(*ft).wp).sx == (*window_pane_window((*ft).wp)).sx {
                 return "1".into();
             }
             return "0".into();
@@ -2051,7 +2051,7 @@ pub unsafe fn format_cb_pane_key_mode(ft: &format_tree) -> format_table_type {
 pub unsafe fn format_cb_pane_last(ft: &format_tree) -> format_table_type {
     unsafe {
         if !(*ft).wp.is_null() {
-            if (*ft).wp == (*(*(*ft).wp).window).last_panes.first().copied().unwrap_or(null_mut()) {
+            if (*ft).wp == (*window_pane_window((*ft).wp)).last_panes.first().copied().unwrap_or(null_mut()) {
                 return "1".into();
             }
             return "0".into();
@@ -5366,7 +5366,7 @@ pub unsafe fn format_defaults_winlink(ft: *mut format_tree, wl: *mut winlink) {
 pub unsafe fn format_defaults_pane(ft: *mut format_tree, wp: *mut window_pane) {
     unsafe {
         if (*ft).w.is_none() {
-            format_defaults_window(ft, (*wp).window);
+            format_defaults_window(ft, window_pane_window(wp));
         }
         (*ft).wp = wp;
 

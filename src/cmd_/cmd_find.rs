@@ -533,7 +533,7 @@ pub unsafe fn cmd_find_get_pane(fs: *mut cmd_find_state, pane: &str, only: bool)
             if (*fs).wp.is_null() {
                 return -1;
             }
-            { let __p = (*(*fs).wp).window; (*fs).w = if __p.is_null() { None } else { Some(WindowId((*__p).id)) }; }
+            (*fs).w = (*(*fs).wp).window;
             return cmd_find_best_session_with_window(fs);
         }
 
@@ -565,7 +565,7 @@ pub unsafe fn cmd_find_get_pane_with_session(fs: *mut cmd_find_state, pane: &str
             if (*fs).wp.is_null() {
                 return -1;
             }
-            { let __p = (*(*fs).wp).window; (*fs).w = if __p.is_null() { None } else { Some(WindowId((*__p).id)) }; }
+            (*fs).w = (*(*fs).wp).window;
             return cmd_find_best_winlink_with_window(fs);
         }
 
@@ -588,7 +588,7 @@ pub unsafe fn cmd_find_get_pane_with_window(fs: *mut cmd_find_state, pane: &str)
             if (*fs).wp.is_null() {
                 return -1;
             }
-            let wp_w_opt = { let __p = (*(*fs).wp).window; if __p.is_null() { None } else { Some(WindowId((*__p).id)) } };
+            let wp_w_opt = (*(*fs).wp).window;
             if wp_w_opt != (*fs).w {
                 return -1;
             }
@@ -852,7 +852,7 @@ pub unsafe fn cmd_find_from_pane(
     flags: cmd_find_flags,
 ) -> i32 {
     unsafe {
-        if cmd_find_from_window(fs, (*wp).window, flags) != 0 {
+        if cmd_find_from_window(fs, window_pane_window(wp), flags) != 0 {
             return -1;
         }
         (*fs).wp = wp;
@@ -943,7 +943,7 @@ pub unsafe fn cmd_find_from_client(
                 break 'unknown_pane;
             }
 
-            { let __p = (*wp).window; (*fs).w = if __p.is_null() { None } else { Some(WindowId((*__p).id)) }; }
+            (*fs).w = (*wp).window;
             if cmd_find_best_session_with_window(fs) != 0 {
                 break 'unknown_pane;
             }
@@ -1368,7 +1368,7 @@ pub unsafe fn cmd_find_current_client(item: *mut cmdq_item, quiet: i32) -> *mut 
             })
         {
             cmd_find_clear_state(&raw mut fs, cmd_find_flags::CMD_FIND_QUIET);
-            { let __p = (*wp).window; fs.w = if __p.is_null() { None } else { Some(WindowId((*__p).id)) }; }
+            fs.w = (*wp).window;
             if cmd_find_best_session_with_window(&raw mut fs) == 0 {
                 found = cmd_find_best_client(fs.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()));
             }

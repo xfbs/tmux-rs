@@ -102,12 +102,12 @@ pub unsafe fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
             }
             if args_has(args, 'e') {
                 (*lastwp).flags &= !window_pane_flags::PANE_INPUTOFF;
-                server_redraw_window_borders((*lastwp).window);
-                server_status_window((*lastwp).window);
+                server_redraw_window_borders(window_pane_window(lastwp));
+                server_status_window(window_pane_window(lastwp));
             } else if args_has(args, 'd') {
                 (*lastwp).flags |= window_pane_flags::PANE_INPUTOFF;
-                server_redraw_window_borders((*lastwp).window);
-                server_status_window((*lastwp).window);
+                server_redraw_window_borders(window_pane_window(lastwp));
+                server_status_window(window_pane_window(lastwp));
             } else {
                 if window_push_zoom(w, false, args_has(args, 'Z')) {
                     server_redraw_window(w);
@@ -144,14 +144,14 @@ pub unsafe fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
             if !lastwp.is_null() {
                 (*lastwp).flags |=
                     window_pane_flags::PANE_REDRAW | window_pane_flags::PANE_STYLECHANGED;
-                server_redraw_window_borders((*lastwp).window);
-                server_status_window((*lastwp).window);
+                server_redraw_window_borders(window_pane_window(lastwp));
+                server_status_window(window_pane_window(lastwp));
             }
             if !markedwp.is_null() {
                 (*markedwp).flags |=
                     window_pane_flags::PANE_REDRAW | window_pane_flags::PANE_STYLECHANGED;
-                server_redraw_window_borders((*markedwp).window);
-                server_status_window((*markedwp).window);
+                server_redraw_window_borders(window_pane_window(markedwp));
+                server_status_window(window_pane_window(markedwp));
             }
             return cmd_retval::CMD_RETURN_NORMAL;
         }
@@ -194,14 +194,14 @@ pub unsafe fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
 
         if args_has(args, 'e') {
             (*wp).flags &= !window_pane_flags::PANE_INPUTOFF;
-            server_redraw_window_borders((*wp).window);
-            server_status_window((*wp).window);
+            server_redraw_window_borders(window_pane_window(wp));
+            server_status_window(window_pane_window(wp));
             return cmd_retval::CMD_RETURN_NORMAL;
         }
         if args_has(args, 'd') {
             (*wp).flags |= window_pane_flags::PANE_INPUTOFF;
-            server_redraw_window_borders((*wp).window);
-            server_status_window((*wp).window);
+            server_redraw_window_borders(window_pane_window(wp));
+            server_status_window(window_pane_window(wp));
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
@@ -209,8 +209,8 @@ pub unsafe fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
             let title = format_single_from_target(item, args_get_(args, 'T'));
             if screen_set_title(&raw mut (*wp).base, title) != 0 {
                 notify_pane(c"pane-title-changed", wp);
-                server_redraw_window_borders((*wp).window);
-                server_status_window((*wp).window);
+                server_redraw_window_borders(window_pane_window(wp));
+                server_status_window(window_pane_window(wp));
             }
             free_(title);
             return cmd_retval::CMD_RETURN_NORMAL;

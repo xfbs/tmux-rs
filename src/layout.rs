@@ -641,7 +641,7 @@ pub unsafe fn layout_resize_pane(
             lc = layout_prev_sibling(lc);
         }
 
-        layout_resize_layout((*wp).window, lc, type_, change, opposite);
+        layout_resize_layout(window_pane_window(wp), lc, type_, change, opposite);
     }
 }
 
@@ -741,9 +741,9 @@ pub unsafe fn layout_assign_pane(lc: *mut layout_cell, wp: *mut window_pane, do_
     unsafe {
         layout_make_leaf(lc, wp);
         if do_not_resize != 0 {
-            layout_fix_panes((*wp).window, wp);
+            layout_fix_panes(window_pane_window(wp), wp);
         } else {
-            layout_fix_panes((*wp).window, null_mut());
+            layout_fix_panes(window_pane_window(wp), null_mut());
         }
     }
 }
@@ -951,12 +951,12 @@ pub unsafe fn layout_split_pane(
         // If full_size is specified, add a new cell at the top of the window
         // layout. Otherwise, split the cell for the current pane.
         let lc: *mut layout_cell = if full_size {
-            (*(*wp).window).layout_root
+            (*window_pane_window(wp)).layout_root
         } else {
             (*wp).layout_cell
         };
         let status = pane_status::try_from(options_get_number_(
-            (*(*wp).window).options,
+            (*window_pane_window(wp)).options,
             "pane-border-status",
         ) as i32)
         .unwrap();
@@ -975,7 +975,7 @@ pub unsafe fn layout_split_pane(
                 }
             }
             layout_type::LAYOUT_TOPBOTTOM => {
-                if layout_add_border((*wp).window, lc, status) {
+                if layout_add_border(window_pane_window(wp), lc, status) {
                     minimum = PANE_MINIMUM * 2 + 2;
                 } else {
                     minimum = PANE_MINIMUM * 2 + 1;
@@ -1018,7 +1018,7 @@ pub unsafe fn layout_split_pane(
         };
 
         // Confirm there is enough space for full size pane.
-        if full_size && !layout_set_size_check((*wp).window, lc, type_, new_size as i32) {
+        if full_size && !layout_set_size_check(window_pane_window(wp), lc, type_, new_size as i32) {
             return null_mut();
         }
 
@@ -1044,11 +1044,11 @@ pub unsafe fn layout_split_pane(
             // must be resized before inserting the new cell.
             if (*lc).type_ == layout_type::LAYOUT_LEFTRIGHT {
                 (*lc).sx = new_size;
-                layout_resize_child_cells((*wp).window, lc);
+                layout_resize_child_cells(window_pane_window(wp), lc);
                 (*lc).sx = saved_size;
             } else if (*lc).type_ == layout_type::LAYOUT_TOPBOTTOM {
                 (*lc).sy = new_size;
-                layout_resize_child_cells((*wp).window, lc);
+                layout_resize_child_cells(window_pane_window(wp), lc);
                 (*lc).sy = saved_size;
             }
             resize_first = 1;
@@ -1074,7 +1074,7 @@ pub unsafe fn layout_split_pane(
             layout_make_node(lcparent, type_);
             layout_set_size(lcparent, sx, sy, xoff, yoff);
             if (*lc).parent.is_null() {
-                (*(*wp).window).layout_root = lcparent;
+                (*window_pane_window(wp)).layout_root = lcparent;
             } else {
                 let pos = (*(*lc).parent).cells.iter().position(|&p| p == lc).unwrap();
                 (&mut (*(*lc).parent).cells)[pos] = lcparent;
@@ -1111,9 +1111,9 @@ pub unsafe fn layout_split_pane(
 
         if full_size {
             if resize_first == 0 {
-                layout_resize_child_cells((*wp).window, lc);
+                layout_resize_child_cells(window_pane_window(wp), lc);
             }
-            layout_fix_offsets((*wp).window);
+            layout_fix_offsets(window_pane_window(wp));
         } else {
             layout_make_leaf(lc, wp);
         }
@@ -1125,7 +1125,7 @@ pub unsafe fn layout_split_pane(
 /// Destroy the cell associated with a pane.
 pub unsafe fn layout_close_pane(wp: *mut window_pane) {
     unsafe {
-        let w = (*wp).window;
+        let w = window_pane_window(wp);
 
         // Remove the cell
         layout_destroy_cell(w, (*wp).layout_cell, &raw mut (*w).layout_root);
@@ -1222,7 +1222,7 @@ pub unsafe fn layout_spread_out(wp: *mut window_pane) {
             return;
         }
 
-        let w = (*wp).window;
+        let w = window_pane_window(wp);
         while !parent.is_null() {
             if layout_spread_cell(w, parent) != 0 {
                 layout_fix_offsets(w);

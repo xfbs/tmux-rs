@@ -164,7 +164,7 @@ pub unsafe fn control_window_pane(c: *mut client, pane: u32) -> Option<NonNull<w
         }
         let wp = NonNull::new(window_pane_find_by_id(pane))?;
 
-        winlink_find_by_window(&raw mut (*client_get_session(c)).windows, (*wp.as_ptr()).window)?;
+        winlink_find_by_window(&raw mut (*client_get_session(c)).windows, window_pane_window(wp.as_ptr()))?;
 
         Some(wp)
     }
@@ -359,7 +359,7 @@ pub unsafe fn control_write_output(c: *mut client, wp: *mut window_pane) {
         let mut new_size = 0usize;
 
         'ignore: {
-            if winlink_find_by_window(&raw mut (*client_get_session(c)).windows, (*wp).window).is_none() {
+            if winlink_find_by_window(&raw mut (*client_get_session(c)).windows, window_pane_window(wp)).is_none() {
                 return;
             }
 
@@ -828,7 +828,7 @@ pub unsafe fn control_check_subs_pane(c: *mut client, csub: *mut control_sub) {
         if wp.is_null() || (*wp).fd == -1 {
             return;
         }
-        let w = (*wp).window;
+        let w = window_pane_window(wp);
 
         for &wl in (*w).winlinks.iter() {
             if (*wl).session != (if s.is_null() { None } else { Some(SessionId((*s).id)) }) {

@@ -95,10 +95,10 @@ unsafe fn cmd_swap_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
             (*dst_lc).wp = src_wp;
             (*src_wp).layout_cell = dst_lc;
 
-            (*src_wp).window = dst_w;
+            window_pane_set_window(src_wp, dst_w);
             options_set_parent(&mut *(*src_wp).options, (*dst_w).options);
             (*src_wp).flags |= window_pane_flags::PANE_STYLECHANGED;
-            (*dst_wp).window = src_w;
+            window_pane_set_window(dst_wp, src_w);
             options_set_parent(&mut *(*dst_wp).options, (*src_w).options);
             (*dst_wp).flags |= window_pane_flags::PANE_STYLECHANGED;
 

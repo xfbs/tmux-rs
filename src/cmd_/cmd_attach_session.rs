@@ -83,7 +83,7 @@ pub unsafe fn cmd_attach_session(
 
         if !wl.is_null() {
             if !wp.is_null() {
-                window_set_active_pane((*wp).window, wp, 1);
+                window_set_active_pane(window_pane_window(wp), wp, 1);
             }
             session_set_current(s, wl);
             if !wp.is_null() {

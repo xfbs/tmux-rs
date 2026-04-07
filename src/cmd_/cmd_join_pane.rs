@@ -137,7 +137,7 @@ unsafe fn cmd_join_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
         window_lost_pane(src_w, src_wp);
         (*src_w).panes.retain(|&p| p != src_wp);
 
-        (*src_wp).window = dst_w;
+        window_pane_set_window(src_wp, dst_w);
         options_set_parent(&mut *(*src_wp).options, (*dst_w).options);
         (*src_wp).flags |= window_pane_flags::PANE_STYLECHANGED;
         if flags.intersects(SPAWN_BEFORE) {

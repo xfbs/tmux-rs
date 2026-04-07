@@ -930,7 +930,7 @@ pub unsafe fn server_client_check_mouse(c: *mut client, event: *mut key_event) -
                     log_debug!("mouse on pane %%{} border", (*wp).id);
                 }
                 (*m).wp = (*wp).id as i32;
-                (*m).w = (*(*wp).window).id as i32;
+                (*m).w = (*window_pane_window(wp)).id as i32;
             }
 
             // Stop dragging if needed.
@@ -3491,7 +3491,7 @@ pub unsafe fn server_client_set_pane(c: *mut client, wp: *mut window_pane) {
 /// Remove pane from client lists.
 pub unsafe fn server_client_remove_pane(wp: *mut window_pane) {
     unsafe {
-        let w = (*wp).window;
+        let w = window_pane_window(wp);
 
         for c in clients_iter() {
             if let Some(cw) = (*c).windows.get(&(*w).id) {

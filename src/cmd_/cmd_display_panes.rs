@@ -43,7 +43,7 @@ unsafe fn cmd_display_panes_draw_pane(ctx: *mut screen_redraw_ctx, wp: *mut wind
         let tty = &raw mut (*c).tty;
         let s = client_get_session(c);
         let oo = &*(*s).options;
-        let w = (*wp).window;
+        let w = window_pane_window(wp);
 
         'out: {
             if (*wp).xoff + (*wp).sx <= (*ctx).ox

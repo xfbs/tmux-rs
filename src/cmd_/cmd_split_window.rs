@@ -81,7 +81,7 @@ unsafe fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
             }
         }
 
-        window_push_zoom((*wp).window, true, args_has(args, 'Z'));
+        window_push_zoom(window_pane_window(wp), true, args_has(args, 'Z'));
         let mut input = args_has(args, 'I') && count == 0;
 
         let mut flags = spawn_flags::empty();
@@ -145,7 +145,7 @@ unsafe fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
                 Err(cause) => {
                     server_client_remove_pane(new_wp);
                     layout_close_pane(new_wp);
-                    window_remove_pane((*wp).window, new_wp);
+                    window_remove_pane(window_pane_window(wp), new_wp);
                     cmdq_error!(item, "{}", cause);
                     if !sc.argv.is_null() {
                         cmd_free_argv(sc.argc, sc.argv);
@@ -162,8 +162,8 @@ unsafe fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
         if !args_has(args, 'd') {
             cmd_find_from_winlink_pane(current, wl, new_wp, cmd_find_flags::empty());
         }
-        window_pop_zoom((*wp).window);
-        server_redraw_window((*wp).window);
+        window_pop_zoom(window_pane_window(wp));
+        server_redraw_window(window_pane_window(wp));
         server_status_session(s);
 
         if args_has(args, 'P') {

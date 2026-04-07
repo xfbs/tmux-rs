@@ -1108,7 +1108,7 @@ pub unsafe fn input_parse_buffer(wp: *mut window_pane, buf: *mut u8, len: usize)
             return;
         }
 
-        window_update_activity(NonNull::new((*wp).window).unwrap());
+        window_update_activity(NonNull::new(window_pane_window(wp)).unwrap());
         (*wp).flags |= window_pane_flags::PANE_CHANGED;
 
         // Flag new input while in a mode.
@@ -1397,7 +1397,7 @@ unsafe fn input_c0_dispatch(ictx: *mut input_ctx) -> i32 {
         match (*ictx).ch as u8 {
             NUL | BEL => {
                 if !wp.is_null() {
-                    alerts_queue(NonNull::new((*wp).window).unwrap(), window_flag::BELL);
+                    alerts_queue(NonNull::new(window_pane_window(wp)).unwrap(), window_flag::BELL);
                 }
             }
             BS => screen_write_backspace(sctx),
@@ -1961,7 +1961,7 @@ unsafe fn input_csi_dispatch_winops(ictx: *mut input_ctx) {
         let y: u32 = screen_size_y(s);
 
         if !wp.is_null() {
-            w = (*wp).window;
+            w = window_pane_window(wp);
         }
 
         let mut n: i32;
@@ -2348,7 +2348,7 @@ unsafe fn input_dcs_dispatch(ictx: *mut input_ctx) -> i32 {
             use crate::image_sixel::sixel_parse;
             use crate::screen_write::screen_write_sixelimage;
 
-            let w = (*wp).window;
+            let w = window_pane_window(wp);
             if *buf == b'q'
                 && let Some(si) = NonNull::new(sixel_parse(buf, len, (*w).xpixel, (*w).ypixel))
             {
@@ -2432,8 +2432,8 @@ unsafe fn input_exit_osc(ictx: *mut input_ctx) {
                     && screen_set_title((*sctx).s, p.cast()) != 0
                 {
                     notify_pane(c"pane-title-changed", wp);
-                    server_redraw_window_borders((*wp).window);
-                    server_status_window((*wp).window);
+                    server_redraw_window_borders(window_pane_window(wp));
+                    server_status_window(window_pane_window(wp));
                 }
             }
             4 => input_osc_4(ictx, p.cast()),
@@ -2441,8 +2441,8 @@ unsafe fn input_exit_osc(ictx: *mut input_ctx) {
                 if utf8_isvalid(p.cast()) {
                     screen_set_path((*sctx).s, p.cast());
                     if !wp.is_null() {
-                        server_redraw_window_borders((*wp).window);
-                        server_status_window((*wp).window);
+                        server_redraw_window_borders(window_pane_window(wp));
+                        server_status_window(window_pane_window(wp));
                     }
                 }
             }
@@ -2485,8 +2485,8 @@ unsafe fn input_exit_apc(ictx: *mut input_ctx) {
 
         if screen_set_title((*sctx).s, (*ictx).input_buf.cast()) != 0 && !wp.is_null() {
             notify_pane(c"pane-title-changed", wp);
-            server_redraw_window_borders((*wp).window);
-            server_status_window((*wp).window);
+            server_redraw_window_borders(window_pane_window(wp));
+            server_status_window(window_pane_window(wp));
         }
     }
 }
@@ -2525,7 +2525,7 @@ unsafe fn input_exit_rename(ictx: *mut input_ctx) {
         if !utf8_isvalid((*ictx).input_buf.cast()) {
             return;
         }
-        let w = (*wp).window;
+        let w = window_pane_window(wp);
 
         if (*ictx).input_len == 0 {
             if let Some(o) = NonNull::new(options_get_only((*w).options, "automatic-rename")) {
@@ -2724,7 +2724,7 @@ unsafe fn input_osc_8(ictx: *mut input_ctx, p: *const u8) {
 /// There isn't much to choose between them so just use the first.
 unsafe fn input_get_fg_client(wp: *mut window_pane) -> i32 {
     unsafe {
-        let w = (*wp).window;
+        let w = window_pane_window(wp);
         for loop_ in clients_iter() {
             if (*loop_).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
                 continue;
@@ -2745,7 +2745,7 @@ unsafe fn input_get_fg_client(wp: *mut window_pane) -> i32 {
 /// Get a client with a background for the pane.
 unsafe fn input_get_bg_client(wp: *mut window_pane) -> i32 {
     unsafe {
-        let w = (*wp).window;
+        let w = window_pane_window(wp);
 
         for loop_ in clients_iter() {
             if (*loop_).flags.intersects(CLIENT_UNATTACHEDFLAGS) {

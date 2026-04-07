@@ -1944,7 +1944,7 @@ pub unsafe fn tty_set_client_cb(ttyctx: *mut tty_ctx, c: *mut client) -> i32 {
     unsafe {
         let wp: *mut window_pane = (*ttyctx).arg.cast();
 
-        if winlink_window((*client_get_session(c)).curw) != (*wp).window {
+        if winlink_window((*client_get_session(c)).curw) != window_pane_window(wp) {
             return 0;
         }
         if (*wp).layout_cell.is_null() {
@@ -3760,7 +3760,7 @@ pub unsafe fn tty_default_colours(gc: *mut grid_cell, wp: *mut window_pane) {
         }
 
         if (*gc).fg == 8 {
-            if wp == (*(*wp).window).active && (*wp).cached_active_gc.fg != 8 {
+            if wp == (*window_pane_window(wp)).active && (*wp).cached_active_gc.fg != 8 {
                 (*gc).fg = (*wp).cached_active_gc.fg;
             } else {
                 (*gc).fg = (*wp).cached_gc.fg;
@@ -3768,7 +3768,7 @@ pub unsafe fn tty_default_colours(gc: *mut grid_cell, wp: *mut window_pane) {
         }
 
         if (*gc).bg == 8 {
-            if wp == (*(*wp).window).active && (*wp).cached_active_gc.bg != 8 {
+            if wp == (*window_pane_window(wp)).active && (*wp).cached_active_gc.bg != 8 {
                 (*gc).bg = (*wp).cached_active_gc.bg;
             } else {
                 (*gc).bg = (*wp).cached_gc.bg;

@@ -112,7 +112,7 @@ pub unsafe fn screen_redraw_pane_border(
     py: u32,
 ) -> screen_redraw_border_type {
     unsafe {
-        let oo = (*(*wp).window).options;
+        let oo = (*window_pane_window(wp)).options;
         let mut split = 0;
         let ex = (*wp).xoff + (*wp).sx;
         let ey = (*wp).yoff + (*wp).sy;
@@ -136,7 +136,7 @@ pub unsafe fn screen_redraw_pane_border(
 
         // Left/right borders
         if pane_status == pane_status::PANE_STATUS_OFF {
-            if screen_redraw_two_panes((*wp).window, 0) && split != 0 {
+            if screen_redraw_two_panes(window_pane_window(wp), 0) && split != 0 {
                 if (*wp).xoff == 0 && px == (*wp).sx && py <= (*wp).sy / 2 {
                     return screen_redraw_border_type::SCREEN_REDRAW_BORDER_RIGHT;
                 }
@@ -162,7 +162,7 @@ pub unsafe fn screen_redraw_pane_border(
 
         // Top/bottom borders
         if pane_status == pane_status::PANE_STATUS_OFF {
-            if screen_redraw_two_panes((*wp).window, 1) && split != 0 {
+            if screen_redraw_two_panes(window_pane_window(wp), 1) && split != 0 {
                 if (*wp).yoff == 0 && py == (*wp).sy && px <= (*wp).sx / 2 {
                     return screen_redraw_border_type::SCREEN_REDRAW_BORDER_BOTTOM;
                 }
@@ -422,7 +422,7 @@ pub unsafe fn screen_redraw_make_pane_status(
     pane_lines: pane_lines,
 ) -> i32 {
     unsafe {
-        let w = (*wp.as_ptr()).window;
+        let w = window_pane_window(wp.as_ptr());
         let mut gc: grid_cell = std::mem::zeroed();
         let width: u32;
         let mut px: u32;
