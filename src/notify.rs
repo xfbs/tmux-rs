@@ -21,7 +21,7 @@ pub struct notify_entry {
 
     pub client: Option<ClientId>,
     pub session: Option<SessionId>,
-    pub window: *mut window,
+    pub window: Option<WindowId>,
     pub pane: i32,
     pub pbname: *mut u8,
 }
@@ -131,22 +131,23 @@ pub unsafe fn notify_callback(item: *mut cmdq_item, data: *mut c_void) -> cmd_re
         if streq_((*ne).name, "pane-mode-changed") {
             control_notify_pane_mode_changed((*ne).pane);
         }
+        let w = (*ne).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
         if streq_((*ne).name, "window-layout-changed") {
-            control_notify_window_layout_changed((*ne).window);
+            control_notify_window_layout_changed(w);
         }
         if streq_((*ne).name, "window-pane-changed") {
-            control_notify_window_pane_changed((*ne).window);
+            control_notify_window_pane_changed(w);
         }
         if streq_((*ne).name, "window-unlinked") {
             let s = (*ne).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
-            control_notify_window_unlinked(s, (*ne).window);
+            control_notify_window_unlinked(s, w);
         }
         if streq_((*ne).name, "window-linked") {
             let s = (*ne).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
-            control_notify_window_linked(s, (*ne).window);
+            control_notify_window_linked(s, w);
         }
         if streq_((*ne).name, "window-renamed") {
-            control_notify_window_renamed((*ne).window);
+            control_notify_window_renamed(w);
         }
         if streq_((*ne).name, "client-session-changed") {
             let c = (*ne).client.and_then(|id| client_from_id(id)).unwrap_or(null_mut());
@@ -187,8 +188,8 @@ pub unsafe fn notify_callback(item: *mut cmdq_item, data: *mut c_void) -> cmd_re
         if let Some(s) = (*ne).session.and_then(|id| session_from_id(id)) {
             session_remove_ref(s, __func__);
         }
-        if !(*ne).window.is_null() {
-            window_remove_ref((*ne).window, __func__);
+        if let Some(w) = (*ne).window.and_then(|id| window_from_id(id)) {
+            window_remove_ref(w, __func__);
         }
 
         if !(*ne).fs.s.is_none() {
@@ -226,7 +227,7 @@ pub unsafe fn notify_add(
 
         (*ne).client = if c.is_null() { None } else { Some((*c).id) };
         (*ne).session = if s.is_null() { None } else { Some(SessionId((*s).id)) };
-        (*ne).window = w;
+        (*ne).window = if w.is_null() { None } else { Some(WindowId((*w).id)) };
         (*ne).pane = if !wp.is_null() { (*wp).id as i32 } else { -1 };
         (*ne).pbname = if let Some(pbname) = pbname {
             xstrdup__(pbname)
@@ -286,7 +287,7 @@ pub unsafe fn notify_hook(item: *mut cmdq_item, name: *mut u8) {
         let c = cmdq_get_client(item);
         ne.client = if c.is_null() { None } else { Some((*c).id) };
         ne.session = if (*target).s.is_none() { None } else { Some(SessionId((*(*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).id)) };
-        ne.window = (*target).w;
+        ne.window = if (*target).w.is_null() { None } else { Some(WindowId((*(*target).w).id)) };
         ne.pane = if !(*target).wp.is_null() {
             (*(*target).wp).id as i32
         } else {

@@ -119,7 +119,7 @@ pub struct format_tree {
     pub c: *mut client,
     pub s: Option<SessionId>,
     pub wl: *mut winlink,
-    pub w: *mut window,
+    pub w: Option<WindowId>,
     pub wp: *mut window_pane,
     pub pb: *mut PasteBuffer,
 
@@ -764,7 +764,7 @@ pub unsafe fn format_cb_window_active_clients_list(ft: &format_tree) -> format_t
 /// Callback for `window_layout`.
 pub unsafe fn format_cb_window_layout(ft: &format_tree) -> format_table_type {
     unsafe {
-        let w = (*ft).w;
+        let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
 
         if w.is_null() {
             return format_table_type::None;
@@ -784,7 +784,7 @@ pub unsafe fn format_cb_window_layout(ft: &format_tree) -> format_table_type {
 /// Callback for `window_visible_layout`.
 pub unsafe fn format_cb_window_visible_layout(ft: &format_tree) -> format_table_type {
     unsafe {
-        let w = (*ft).w;
+        let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
 
         if w.is_null() {
             return format_table_type::None;
@@ -2508,8 +2508,9 @@ pub unsafe fn format_cb_window_bigger(ft: &format_tree) -> format_table_type {
 /// Callback for `window_cell_height`.
 pub unsafe fn format_cb_window_cell_height(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).w.is_null() {
-            return format!("{}", (*(*ft).w).ypixel).into();
+        let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        if !w.is_null() {
+            return format!("{}", (*w).ypixel).into();
         }
         format_table_type::None
     }
@@ -2518,8 +2519,9 @@ pub unsafe fn format_cb_window_cell_height(ft: &format_tree) -> format_table_typ
 /// Callback for `window_cell_width`.
 pub unsafe fn format_cb_window_cell_width(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).w.is_null() {
-            return format!("{}", (*(*ft).w).xpixel).into();
+        let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        if !w.is_null() {
+            return format!("{}", (*w).xpixel).into();
         }
         format_table_type::None
     }
@@ -2560,8 +2562,9 @@ pub unsafe fn format_cb_window_format(ft: &format_tree) -> format_table_type {
 /// Callback for `window_height`.
 pub unsafe fn format_cb_window_height(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).w.is_null() {
-            return format!("{}", (*(*ft).w).sy).into();
+        let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        if !w.is_null() {
+            return format!("{}", (*w).sy).into();
         }
         format_table_type::None
     }
@@ -2570,8 +2573,9 @@ pub unsafe fn format_cb_window_height(ft: &format_tree) -> format_table_type {
 /// Callback for `window_id`.
 pub unsafe fn format_cb_window_id(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).w.is_null() {
-            return format!("@{}", (*(*ft).w).id).into();
+        let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        if !w.is_null() {
+            return format!("@{}", (*w).id).into();
         }
         format_table_type::None
     }
@@ -2641,8 +2645,9 @@ pub unsafe fn format_cb_window_marked_flag(ft: &format_tree) -> format_table_typ
 /// Callback for `window_name`.
 pub unsafe fn format_cb_window_name(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).w.is_null() {
-            return format!("{}", _s((*(*ft).w).name)).into();
+        let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        if !w.is_null() {
+            return format!("{}", _s((*w).name)).into();
         }
         format_table_type::None
     }
@@ -2683,8 +2688,9 @@ pub unsafe fn format_cb_window_offset_y(ft: &format_tree) -> format_table_type {
 /// Callback for `window_panes`.
 pub unsafe fn format_cb_window_panes(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).w.is_null() {
-            return format!("{}", window_count_panes(&*(*ft).w)).into();
+        let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        if !w.is_null() {
+            return format!("{}", window_count_panes(&*w)).into();
         }
         format_table_type::None
     }
@@ -2730,8 +2736,9 @@ pub unsafe fn format_cb_window_start_flag(ft: &format_tree) -> format_table_type
 /// Callback for `window_width`.
 pub unsafe fn format_cb_window_width(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).w.is_null() {
-            return format!("{}", (*(*ft).w).sx).into();
+        let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        if !w.is_null() {
+            return format!("{}", (*w).sx).into();
         }
         format_table_type::None
     }
@@ -2740,8 +2747,9 @@ pub unsafe fn format_cb_window_width(ft: &format_tree) -> format_table_type {
 /// Callback for `window_zoomed_flag`.
 pub unsafe fn format_cb_window_zoomed_flag(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).w.is_null() {
-            if (*(*ft).w).flags.intersects(window_flag::ZOOMED) {
+        let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        if !w.is_null() {
+            if (*w).flags.intersects(window_flag::ZOOMED) {
                 return "1".into();
             }
             return "0".into();
@@ -2838,8 +2846,9 @@ pub unsafe fn format_cb_start_time(_ft: &format_tree) -> format_table_type {
 /// Callback for `window_activity`.
 pub unsafe fn format_cb_window_activity(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).w.is_null() {
-            return format_table_type::Time((*(*ft).w).activity_time);
+        let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        if !w.is_null() {
+            return format_table_type::Time((*w).activity_time);
         }
         format_table_type::None
     }
@@ -3443,8 +3452,9 @@ fn format_find(
             if o.is_null() && !(*ft).wp.is_null() {
                 o = options_parse_get((*(*ft).wp).options, cstr_to_str(key), &raw mut idx, 0);
             }
-            if o.is_null() && !(*ft).w.is_null() {
-                o = options_parse_get((*(*ft).w).options, cstr_to_str(key), &raw mut idx, 0);
+            let ftw = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+            if o.is_null() && !ftw.is_null() {
+                o = options_parse_get((*ftw).options, cstr_to_str(key), &raw mut idx, 0);
             }
             if o.is_null() {
                 o = options_parse_get(GLOBAL_W_OPTIONS, cstr_to_str(key), &raw mut idx, 0);
@@ -4069,7 +4079,8 @@ pub unsafe fn format_loop_panes(es: *mut format_expand_state, fmt: *const u8) ->
         let c = (*ft).client;
         let item = (*ft).item;
 
-        if (*ft).w.is_null() {
+        let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        if w.is_null() {
             format_log1!(es, c!("format_loop_panes"), "pane loop but no window");
             return null_mut();
         }
@@ -4086,9 +4097,9 @@ pub unsafe fn format_loop_panes(es: *mut format_expand_state, fmt: *const u8) ->
 
         let mut next = MaybeUninit::<format_expand_state>::uninit();
         let next = next.as_mut_ptr();
-        for &wp in (*(*ft).w).panes.iter() {
+        for &wp in (*w).panes.iter() {
             format_log1!(es, c!("format_loop_panes"), "pane loop: %{}", (*wp).id,);
-            let use_ = if !active.is_null() && wp == (*(*ft).w).active {
+            let use_ = if !active.is_null() && wp == (*w).active {
                 active
             } else {
                 all
@@ -5328,14 +5339,14 @@ pub unsafe fn format_defaults_client(ft: *mut format_tree, c: *mut client) {
 /// Set default format keys for a window.
 pub unsafe fn format_defaults_window(ft: *mut format_tree, w: *mut window) {
     unsafe {
-        (*ft).w = w;
+        (*ft).w = if w.is_null() { None } else { Some(WindowId((*w).id)) };
     }
 }
 
 /// Set default format keys for a winlink.
 pub unsafe fn format_defaults_winlink(ft: *mut format_tree, wl: *mut winlink) {
     unsafe {
-        if (*ft).w.is_null() {
+        if (*ft).w.is_none() {
             format_defaults_window(ft, (*wl).window);
         }
         (*ft).wl = wl;
@@ -5345,7 +5356,7 @@ pub unsafe fn format_defaults_winlink(ft: *mut format_tree, wl: *mut winlink) {
 /// Set default format keys for a window pane.
 pub unsafe fn format_defaults_pane(ft: *mut format_tree, wp: *mut window_pane) {
     unsafe {
-        if (*ft).w.is_null() {
+        if (*ft).w.is_none() {
             format_defaults_window(ft, (*wp).window);
         }
         (*ft).wp = wp;
