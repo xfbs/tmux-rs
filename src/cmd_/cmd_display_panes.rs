@@ -308,7 +308,6 @@ unsafe fn cmd_display_panes_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         let tc = cmdq_get_target_client(item);
         let s = client_get_session(tc);
         let delay: u32;
-        let mut cause = null_mut();
         let wait = !args_has(args, 'b');
 
         if (*tc).overlay_draw.is_some() {
@@ -316,12 +315,13 @@ unsafe fn cmd_display_panes_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         }
 
         if args_has(args, 'd') {
-            delay = args_strtonum(args, b'd', 0, u32::MAX as i64, &raw mut cause) as u32;
-            if !cause.is_null() {
-                cmdq_error!(item, "delay {}", _s(cause));
-                free_(cause);
-                return cmd_retval::CMD_RETURN_ERROR;
-            }
+            delay = match args_strtonum(args, b'd', 0, u32::MAX as i64) {
+                Ok(v) => v as u32,
+                Err(cause) => {
+                    cmdq_error!(item, "delay {}", cause);
+                    return cmd_retval::CMD_RETURN_ERROR;
+                }
+            };
         } else {
             delay = options_get_number___(&*(*s).options, "display-panes-time");
         }
