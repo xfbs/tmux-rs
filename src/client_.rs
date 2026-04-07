@@ -230,7 +230,7 @@ pub unsafe extern "C-unwind" fn client_main(
         let mut saved_tio: termios = zeroed();
         let mut caps: *mut *mut u8 = null_mut();
         let mut ncaps: u32 = 0;
-        let values: *mut args_value;
+        let values: Vec<args_value>;
 
         if !SHELL_COMMAND.is_null() {
             msg = msgtype::MSG_SHELL;
@@ -242,7 +242,7 @@ pub unsafe extern "C-unwind" fn client_main(
             msg = msgtype::MSG_COMMAND;
 
             values = args_from_vector(argc, argv);
-            match cmd_parse_from_arguments(values, argc as u32, None) {
+            match cmd_parse_from_arguments(&values, None) {
                 Ok(cmdlist) => {
                     if cmd_list_any_have(cmdlist, cmd_flag::CMD_STARTSERVER) {
                         flags |= client_flag::STARTSERVER;
@@ -251,8 +251,7 @@ pub unsafe extern "C-unwind" fn client_main(
                 }
                 Err(_error) => {}
             }
-            args_free_values(values, argc as u32);
-            free_(values);
+            // values Vec drops, freeing string allocations.
         }
 
         CLIENT_PROC = proc_start(c"client");

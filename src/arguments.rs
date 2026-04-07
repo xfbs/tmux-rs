@@ -27,6 +27,7 @@
 //! display/serialization.
 
 use std::collections::HashMap;
+use std::ffi::CStr;
 
 use crate::*;
 
@@ -41,8 +42,7 @@ pub struct args_entry {
 
 pub struct args {
     pub tree: HashMap<u8, Box<args_entry>>,
-    pub count: u32,
-    pub values: *mut args_value,
+    pub values: Vec<args_value>,
 }
 
 #[repr(C)]
@@ -65,41 +65,30 @@ pub fn args_find_ref(args: &args, flag: c_uchar) -> Option<&args_entry> {
     args.tree.get(&flag).map(|e| &**e)
 }
 
-pub unsafe fn args_copy_value(to: *mut args_value, from: *const args_value) {
-    unsafe {
-        (*to).type_ = (*from).type_;
-        match (*from).type_ {
-            args_type::ARGS_NONE => (),
-            args_type::ARGS_COMMANDS => {
-                (*to).union_.cmdlist = (*from).union_.cmdlist;
-                (*(*to).union_.cmdlist).references += 1;
-            }
-            args_type::ARGS_STRING => {
-                (*to).union_.string = xstrdup((*from).union_.string).cast().as_ptr();
-            }
-        }
+pub fn args_type_to_string(value: &args_value) -> &'static str {
+    match value {
+        args_value::None => "NONE",
+        args_value::String { .. } => "STRING",
+        args_value::Commands { .. } => "COMMANDS",
     }
 }
 
-pub fn args_type_to_string(type_: args_type) -> &'static str {
-    match type_ {
-        args_type::ARGS_NONE => "NONE",
-        args_type::ARGS_STRING => "STRING",
-        args_type::ARGS_COMMANDS => "COMMANDS",
-    }
-}
-
+/// Return a value as a NUL-terminated C string pointer. For Commands variants
+/// the printable form is computed lazily (on first access) and cached.
 pub unsafe fn args_value_as_string(value: &args_value) -> *const u8 {
     unsafe {
-        match value.type_ {
-            args_type::ARGS_NONE => c!(""),
-            args_type::ARGS_STRING => value.union_.string,
-            args_type::ARGS_COMMANDS => {
-                if value.cached.get().is_null() {
-                    value.cached.set(cmd_list_print(&*value.union_.cmdlist, 0));
-                }
-                value.cached.get()
-            }
+        match value {
+            args_value::None => c!(""),
+            args_value::String { string } => string.as_ptr().cast(),
+            args_value::Commands { cmdlist, cached } => cached
+                .get_or_init(|| {
+                    let p = cmd_list_print(&**cmdlist, 0);
+                    let cs = CStr::from_ptr(p.cast()).to_owned();
+                    free_(p);
+                    cs
+                })
+                .as_ptr()
+                .cast(),
         }
     }
 }
@@ -108,8 +97,7 @@ impl args {
     fn create() -> Box<Self> {
         Box::new(Self {
             tree: HashMap::new(),
-            count: 0,
-            values: null_mut(),
+            values: Vec::new(),
         })
     }
 }
@@ -119,57 +107,43 @@ pub fn args_create<'a>() -> &'a mut args {
 }
 
 pub unsafe fn args_parse_flag_argument(
-    values: *const args_value,
-    count: u32,
+    values: &[args_value],
     args: *mut args,
-    i: *mut u32,
+    i: &mut usize,
     string: *const u8,
     flag: i32,
     optional_argument: bool,
 ) -> Result<(), String> {
-    let argument: *const args_value;
-    let new: *mut args_value;
     unsafe {
-        'out: {
-            new = xcalloc(1, size_of::<args_value>()).cast().as_ptr();
-
-            if *string != b'\0' {
-                (*new).type_ = args_type::ARGS_STRING;
-                (*new).union_.string = xstrdup(string).cast().as_ptr();
-                break 'out;
-            }
-
-            if *i == count {
-                argument = null_mut();
+        let value = if *string != b'\0' {
+            args_value::new_string(xstrdup(string).as_ptr())
+        } else {
+            let argument = if *i >= values.len() {
+                None
             } else {
-                argument = values.add(*i as usize);
-                if (*argument).type_ != args_type::ARGS_STRING {
-                    args_free_value(&mut *new);
-                    free(new as _);
+                let arg = &values[*i];
+                if !matches!(arg, args_value::String { .. }) {
                     return Err(format!("-{} argument must be a string", flag as u8 as char));
                 }
-            }
+                Some(arg)
+            };
 
-            if argument.is_null() {
-                args_free_value(&mut *new);
-                free(new as _);
+            let Some(argument) = argument else {
                 if optional_argument {
                     log_debug!("{}: -{} (optional)", "args_parse_flag_argument", flag);
-                    args_set(args, flag as c_uchar, null_mut(), ARGS_ENTRY_OPTIONAL_VALUE);
-                    return Ok(()); /* either - or end */
+                    args_set(args, flag as c_uchar, None, ARGS_ENTRY_OPTIONAL_VALUE);
+                    return Ok(());
                 }
                 return Err(format!("-{} expects an argument", flag as u8 as char));
-            }
+            };
 
-            args_copy_value(new, argument);
-            (*i) += 1;
+            *i += 1;
+            argument.clone()
+        };
 
-            break 'out;
-        }
-        // out:
-        let s = args_value_as_string(&*new);
+        let s = args_value_as_string(&value);
         log_debug!("{}: -{} = {}", "args_parse_flag_argument", flag, _s(s));
-        args_set(args, flag as c_uchar, new, 0);
+        args_set(args, flag as c_uchar, Some(value), 0);
     }
 
     Ok(())
@@ -178,19 +152,18 @@ pub unsafe fn args_parse_flag_argument(
 #[expect(clippy::needless_borrow, reason = "false positive")]
 pub unsafe fn args_parse_flags(
     parse: *const args_parse,
-    values: *const args_value,
-    count: u32,
+    values: &[args_value],
     args: *mut args,
-    i: *mut u32,
+    i: &mut usize,
 ) -> Result<i32, Option<String>> {
     let __func__ = "args_parse_flags";
     unsafe {
-        let value = values.add(*i as usize);
-        if (*value).type_ != args_type::ARGS_STRING {
+        let value = &values[*i];
+        let args_value::String { string: string_cs } = value else {
             return Ok(1);
-        }
+        };
 
-        let mut string = (*value).union_.string;
+        let mut string = string_cs.as_ptr() as *const u8;
         log_debug!("{}: next {}", __func__, _s(string));
         if ({
             let tmp = *string != b'-';
@@ -200,7 +173,7 @@ pub unsafe fn args_parse_flags(
         {
             return Ok(1);
         }
-        (*i) += 1;
+        *i += 1;
         if *string == b'-' && *string.add(1) == b'\0' {
             return Ok(1);
         }
@@ -223,13 +196,12 @@ pub unsafe fn args_parse_flags(
             };
             if found + 1 >= (&(*parse).template).len() || (*parse).template.as_bytes()[found + 1] != b':' {
                 log_debug!("{}: -{}", __func__, flag as char);
-                args_set(args, flag, null_mut(), 0);
+                args_set(args, flag, None, 0);
                 continue;
             }
             let optional_argument = found + 2 < (&(*parse).template).len() && (*parse).template.as_bytes()[found + 2] == b':';
             return args_parse_flag_argument(
                 values,
-                count,
                 args,
                 i,
                 string,
@@ -245,22 +217,21 @@ pub unsafe fn args_parse_flags(
 /// Parse arguments into a new argument set.
 pub unsafe fn args_parse(
     parse: *const args_parse,
-    values: *mut args_value,
-    count: u32,
+    values: &[args_value],
 ) -> Result<*mut args, Option<String>> {
     let __func__ = "args_parse";
     unsafe {
         let mut type_: args_parse_type;
 
-        if count == 0 {
+        if values.is_empty() {
             return Ok(args_create());
         }
 
         let args = args_create();
 
-        let mut i: u32 = 1;
-        while i < count {
-            match args_parse_flags(parse, values, count, args, &raw mut i) {
+        let mut i: usize = 1;
+        while i < values.len() {
+            match args_parse_flags(parse, values, args, &mut i) {
                 Ok(1) => break,
                 Ok(_) => {}
                 Err(e) => {
@@ -269,22 +240,22 @@ pub unsafe fn args_parse(
                 }
             }
         }
-        log_debug!("{}: flags end at {} of {}", __func__, i, count);
-        if i != count {
-            while i < count {
-                let value = values.add(i as usize);
+        log_debug!("{}: flags end at {} of {}", __func__, i, values.len());
+        if i != values.len() {
+            while i < values.len() {
+                let value = &values[i];
 
-                let s = args_value_as_string(&*value);
+                let s = args_value_as_string(value);
                 log_debug!(
                     "{}: {} = {} (type {})",
                     __func__,
                     i,
                     _s(s),
-                    args_type_to_string((*value).type_),
+                    args_type_to_string(value),
                 );
 
                 if let Some(cb) = (*parse).cb {
-                    type_ = cb(args, args.count);
+                    type_ = cb(args, args.values.len() as u32);
                     if type_ == args_parse_type::ARGS_PARSE_INVALID {
                         args_free(args);
                         return Err(None);
@@ -293,47 +264,44 @@ pub unsafe fn args_parse(
                     type_ = args_parse_type::ARGS_PARSE_STRING;
                 }
 
-                args.values = xrecallocarray(
-                    args.values.cast(),
-                    args.count as usize,
-                    args.count as usize + 1,
-                    size_of::<args_value>(),
-                )
-                .cast()
-                .as_ptr();
-                let new = args.values.add(args.count as usize);
-                args.count += 1;
-
                 match type_ {
                     args_parse_type::ARGS_PARSE_INVALID => fatalx("unexpected argument type"),
                     args_parse_type::ARGS_PARSE_STRING => {
-                        if (*value).type_ != args_type::ARGS_STRING {
-                            let msg = format!("argument {} must be \"string\"", args.count);
+                        if !matches!(value, args_value::String { .. }) {
+                            let msg = format!(
+                                "argument {} must be \"string\"",
+                                args.values.len() + 1
+                            );
                             args_free(args);
                             return Err(Some(msg));
                         }
-                        args_copy_value(new, value);
+                        args.values.push(value.clone());
                     }
-                    args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING => args_copy_value(new, value),
+                    args_parse_type::ARGS_PARSE_COMMANDS_OR_STRING => {
+                        args.values.push(value.clone());
+                    }
                     args_parse_type::ARGS_PARSE_COMMANDS => {
-                        if (*value).type_ != args_type::ARGS_COMMANDS {
-                            let msg = format!("argument {} must be {{ commands }}", args.count);
+                        if !matches!(value, args_value::Commands { .. }) {
+                            let msg = format!(
+                                "argument {} must be {{ commands }}",
+                                args.values.len() + 1
+                            );
                             args_free(args);
                             return Err(Some(msg));
                         }
-                        args_copy_value(new, value);
+                        args.values.push(value.clone());
                     }
                 }
                 i += 1;
             }
         }
 
-        if (*parse).lower != -1 && args.count < (*parse).lower as u32 {
+        if (*parse).lower != -1 && (args.values.len() as i32) < (*parse).lower {
             let msg = format!("too few arguments (need at least {})", (*parse).lower);
             args_free(args);
             return Err(Some(msg));
         }
-        if (*parse).upper != -1 && args.count > (*parse).upper as u32 {
+        if (*parse).upper != -1 && (args.values.len() as i32) > (*parse).upper {
             let msg = format!("too many arguments (need at most {})", (*parse).upper);
             args_free(args);
             return Err(Some(msg));
@@ -342,28 +310,27 @@ pub unsafe fn args_parse(
     }
 }
 
-pub unsafe fn args_copy_copy_value(
-    to: *mut args_value,
-    from: *const args_value,
+/// Copy an `args_value` while expanding `%N` template references.
+unsafe fn args_copy_value_expanded(
+    from: &args_value,
     argc: i32,
     argv: *mut *mut u8,
-) {
+) -> args_value {
     unsafe {
-        (*to).type_ = (*from).type_;
-        match (*from).type_ {
-            args_type::ARGS_NONE => (),
-            args_type::ARGS_STRING => {
-                let mut expanded = xstrdup((*from).union_.string).as_ptr();
+        match from {
+            args_value::None => args_value::None,
+            args_value::String { string } => {
+                let mut expanded = xstrdup(string.as_ptr().cast()).as_ptr();
                 for i in 0..argc {
                     let s =
                         cmd_template_replace(expanded, cstr_to_str_(*argv.add(i as usize)), i + 1);
                     free_(expanded);
                     expanded = s;
                 }
-                (*to).union_.string = expanded;
+                args_value::new_string(expanded)
             }
-            args_type::ARGS_COMMANDS => {
-                (*to).union_.cmdlist = cmd_list_copy(&*(*from).union_.cmdlist, argc, argv);
+            args_value::Commands { cmdlist, .. } => {
+                args_value::new_commands(cmd_list_copy(&**cmdlist, argc, argv))
             }
         }
     }
@@ -379,60 +346,28 @@ pub unsafe fn args_copy(args: *mut args, argc: i32, argv: *mut *mut u8) -> *mut 
         for entry in (*args).tree.values() {
             if entry.values.is_empty() {
                 for _ in 0..entry.count {
-                    args_set(new_args, entry.flag, null_mut(), 0);
+                    args_set(new_args, entry.flag, None, 0);
                 }
                 continue;
             }
             for value in entry.values.iter() {
-                let new_value = xcalloc1();
-                args_copy_copy_value(new_value, value, argc, argv);
-                args_set(new_args, entry.flag, new_value, 0);
+                let new_value = args_copy_value_expanded(value, argc, argv);
+                args_set(new_args, entry.flag, Some(new_value), 0);
             }
         }
-        if (*args).count == 0 {
-            return new_args;
-        }
-        new_args.count = (*args).count;
-        new_args.values = xcalloc_((*args).count as usize).as_ptr();
-        for i in 0..(*args).count {
-            let new_value = new_args.values.add(i as usize);
-            args_copy_copy_value(new_value, (*args).values.add(i as usize), argc, argv);
+        for value in &(*args).values {
+            new_args
+                .values
+                .push(args_copy_value_expanded(value, argc, argv));
         }
 
         new_args
     }
 }
 
-pub unsafe fn args_free_value(value: &mut args_value) {
-    unsafe {
-        match value.type_ {
-            args_type::ARGS_NONE => (),
-            args_type::ARGS_STRING => free_(value.union_.string),
-            args_type::ARGS_COMMANDS => cmd_list_free(value.union_.cmdlist),
-        }
-        free_(value.cached.get());
-    }
-}
-
-pub unsafe fn args_free_values(values: *mut args_value, count: u32) {
-    unsafe {
-        for i in 0..count {
-            args_free_value(&mut *values.add(i as usize));
-        }
-    }
-}
-
 pub unsafe fn args_free(args: *mut args) {
     unsafe {
-        args_free_values((*args).values, (*args).count);
-        free_((*args).values);
-
-        for (_, mut entry) in (*args).tree.drain() {
-            for value in entry.values.iter_mut() {
-                args_free_value(value);
-            }
-        }
-
+        // Drop the Box; args_value Drop impls will free CStrings and cmd_lists.
         drop(Box::from_raw(args));
     }
 }
@@ -442,15 +377,14 @@ pub unsafe fn args_to_vector(args: *const args, argc: *mut i32, argv: *mut *mut 
         *argc = 0;
         *argv = null_mut();
 
-        for i in 0..(*args).count {
-            match (*(*args).values.add(i as usize)).type_ {
-                args_type::ARGS_NONE => (),
-                args_type::ARGS_STRING => {
-                    cmd_append_argv(argc, argv, (*(*args).values.add(i as usize)).union_.string);
+        for value in &(*args).values {
+            match value {
+                args_value::None => (),
+                args_value::String { string } => {
+                    cmd_append_argv(argc, argv, string.as_ptr().cast());
                 }
-                args_type::ARGS_COMMANDS => {
-                    let s =
-                        cmd_list_print(&*(*(*args).values.add(i as usize)).union_.cmdlist, 0);
+                args_value::Commands { cmdlist, .. } => {
+                    let s = cmd_list_print(&**cmdlist, 0);
                     cmd_append_argv(argc, argv, s);
                     free_(s);
                 }
@@ -459,12 +393,11 @@ pub unsafe fn args_to_vector(args: *const args, argc: *mut i32, argv: *mut *mut 
     }
 }
 
-pub unsafe fn args_from_vector(argc: i32, argv: *const *mut u8) -> *mut args_value {
+pub unsafe fn args_from_vector(argc: i32, argv: *const *mut u8) -> Vec<args_value> {
     unsafe {
-        let values: *mut args_value = xcalloc_(argc as usize).as_ptr();
+        let mut values = Vec::with_capacity(argc as usize);
         for i in 0..argc {
-            (*values.add(i as usize)).type_ = args_type::ARGS_STRING;
-            (*values.add(i as usize)).union_.string = xstrdup(*argv.add(i as usize)).as_ptr();
+            values.push(args_value::new_string(xstrdup(*argv.add(i as usize)).as_ptr()));
         }
         values
     }
@@ -487,21 +420,21 @@ pub unsafe fn args_print_add_(buf: *mut *mut u8, len: *mut usize, fmt: std::fmt:
     }
 }
 
-pub unsafe fn args_print_add_value(buf: *mut *mut u8, len: *mut usize, value: *const args_value) {
+pub unsafe fn args_print_add_value(buf: *mut *mut u8, len: *mut usize, value: &args_value) {
     unsafe {
         if **buf != b'\0' {
             args_print_add!(buf, len, " ");
         }
 
-        match (*value).type_ {
-            args_type::ARGS_NONE => (),
-            args_type::ARGS_COMMANDS => {
-                let expanded = cmd_list_print(&*(*value).union_.cmdlist, 0);
+        match value {
+            args_value::None => (),
+            args_value::Commands { cmdlist, .. } => {
+                let expanded = cmd_list_print(&**cmdlist, 0);
                 args_print_add!(buf, len, "{{ {} }}", _s(expanded));
                 free_(expanded);
             }
-            args_type::ARGS_STRING => {
-                let expanded = args_escape((*value).union_.string);
+            args_value::String { string } => {
+                let expanded = args_escape(string.as_ptr().cast());
                 args_print_add!(buf, len, "{}", _s(expanded));
                 free_(expanded);
             }
@@ -563,8 +496,8 @@ pub unsafe fn args_print(args: *mut args) -> *mut u8 {
         }
 
         // And finally the argument vector.
-        for i in 0..(*args).count {
-            args_print_add_value(&raw mut buf, &raw mut len, (*args).values.add(i as usize));
+        for value in &(*args).values {
+            args_print_add_value(&raw mut buf, &raw mut len, value);
         }
 
         buf
@@ -642,7 +575,7 @@ pub unsafe fn args_has(args: *mut args, flag: char) -> bool {
     }
 }
 
-pub unsafe fn args_set(args: *mut args, flag: c_uchar, value: *mut args_value, flags: i32) {
+pub fn args_set(args: *mut args, flag: c_uchar, value: Option<args_value>, flags: i32) {
     unsafe {
         let entry = (*args).tree.entry(flag).or_insert_with(|| {
             Box::new(args_entry {
@@ -653,12 +586,10 @@ pub unsafe fn args_set(args: *mut args, flag: c_uchar, value: *mut args_value, f
             })
         });
         entry.count += 1;
-
-        if !value.is_null() && (*value).type_ != args_type::ARGS_NONE {
-            entry.values.push(std::ptr::read(value));
-            free_(value);
-        } else {
-            free_(value);
+        if let Some(value) = value
+            && !matches!(value, args_value::None)
+        {
+            entry.values.push(value);
         }
     }
 }
@@ -671,8 +602,8 @@ pub unsafe fn args_get(args: *mut args, flag: u8) -> *const u8 {
             return null_mut();
         }
         match (*entry).values.last() {
-            Some(v) => v.union_.string,
-            None => null_mut(),
+            Some(args_value::String { string }) => string.as_ptr().cast(),
+            _ => null_mut(),
         }
     }
 }
@@ -692,31 +623,26 @@ pub unsafe fn args_entry_list(args: *mut args) -> Vec<*mut args_entry> {
 
 /// Get argument count.
 pub unsafe fn args_count(args: *const args) -> u32 {
-    unsafe { (*args).count }
+    unsafe { (*args).values.len() as u32 }
 }
 
-/// Get argument values.
-pub unsafe fn args_values(args: *mut args) -> *mut args_value {
-    unsafe { (*args).values }
+/// Get argument values as a slice.
+pub unsafe fn args_values<'a>(args: *mut args) -> &'a [args_value] {
+    unsafe { &(*args).values }
 }
 
-/// Get argument value.
-pub unsafe fn args_value(args: *mut args, idx: u32) -> *mut args_value {
-    unsafe {
-        if idx >= (*args).count {
-            return null_mut();
-        }
-        (*args).values.add(idx as usize)
-    }
+/// Get a single argument value by index, or `None` if out of range.
+pub unsafe fn args_value<'a>(args: *mut args, idx: u32) -> Option<&'a args_value> {
+    unsafe { (&(*args).values).get(idx as usize) }
 }
 
-/// Return argument as string.
+/// Return argument as string. Returns null if `idx` is out of range.
 pub unsafe fn args_string(args: *mut args, idx: u32) -> *const u8 {
     unsafe {
-        if idx >= (*args).count {
-            return null();
+        match (&(*args).values).get(idx as usize) {
+            Some(v) => args_value_as_string(v),
+            None => null(),
         }
-        args_value_as_string(&*(*args).values.add(idx as usize))
     }
 }
 
@@ -759,14 +685,22 @@ pub unsafe fn args_make_commands_prepare<'a>(
 
         let state = xcalloc1::<args_command_state>() as *mut args_command_state;
 
-        let cmd = if idx < (*args).count {
-            let value = (*args).values.add(idx as usize);
-            if (*value).type_ == args_type::ARGS_COMMANDS {
-                (*state).cmdlist = (*value).union_.cmdlist;
-                (*(*state).cmdlist).references += 1;
-                return state;
+        let cmd = if (idx as usize) < (*args).values.len() {
+            let value = &(&(*args).values)[idx as usize];
+            match value {
+                args_value::Commands { cmdlist, .. } => {
+                    (*state).cmdlist = *cmdlist;
+                    (*(*state).cmdlist).references += 1;
+                    return state;
+                }
+                args_value::String { string } => string.as_ptr() as *const u8,
+                args_value::None => {
+                    if default_command.is_null() {
+                        fatalx("argument out of range");
+                    }
+                    default_command
+                }
             }
-            (*value).union_.string
         } else {
             if default_command.is_null() {
                 fatalx("argument out of range");
@@ -909,14 +843,10 @@ pub unsafe fn args_strtonum(
         if entry.is_null() {
             return Err("missing".into());
         }
-        let Some(value) = (*entry).values.last() else {
+        let Some(args_value::String { string }) = (*entry).values.last() else {
             return Err("missing".into());
         };
-        if value.type_ != args_type::ARGS_STRING || value.union_.string.is_null() {
-            return Err("missing".into());
-        }
-
-        strtonum(value.union_.string, minval, maxval)
+        strtonum(string.as_ptr().cast(), minval, maxval)
             .map_err(|errstr| errstr.to_string_lossy().into_owned())
     }
 }
@@ -934,14 +864,10 @@ pub unsafe fn args_strtonum_and_expand(
         if entry.is_null() {
             return Err("missing".into());
         }
-        let Some(value) = (*entry).values.last() else {
+        let Some(args_value::String { string }) = (*entry).values.last() else {
             return Err("missing".into());
         };
-        if value.type_ != args_type::ARGS_STRING || value.union_.string.is_null() {
-            return Err("missing".into());
-        }
-
-        let formatted = format_single_from_target(item, value.union_.string);
+        let formatted = format_single_from_target(item, string.as_ptr().cast());
         let tmp = strtonum(formatted, minval, maxval);
         free_(formatted);
         tmp.map_err(|errstr| errstr.to_string_lossy().into_owned())
@@ -961,10 +887,10 @@ pub unsafe fn args_percentage(
         if entry.is_null() {
             return Err("missing".into());
         }
-        if (*entry).values.is_empty() {
+        let Some(args_value::String { string }) = (*entry).values.last() else {
             return Err("empty".into());
-        }
-        let value = (*entry).values.last().unwrap().union_.string;
+        };
+        let value = string.as_ptr().cast();
         args_string_percentage(value, minval, maxval, curval)
     }
 }
@@ -1020,10 +946,10 @@ pub unsafe fn args_percentage_and_expand(
         if entry.is_null() {
             return Err("missing".into());
         }
-        if (*entry).values.is_empty() {
+        let Some(args_value::String { string }) = (*entry).values.last() else {
             return Err("empty".into());
-        }
-        let value = (*entry).values.last().unwrap().union_.string;
+        };
+        let value = string.as_ptr().cast();
         args_string_percentage_and_expand(value, minval, maxval, curval, item)
     }
 }
@@ -1073,9 +999,11 @@ mod tests {
 
     #[test]
     fn type_to_string() {
-        assert_eq!(args_type_to_string(args_type::ARGS_NONE), "NONE");
-        assert_eq!(args_type_to_string(args_type::ARGS_STRING), "STRING");
-        assert_eq!(args_type_to_string(args_type::ARGS_COMMANDS), "COMMANDS");
+        assert_eq!(args_type_to_string(&args_value::None), "NONE");
+        unsafe {
+            let s = args_value::new_string(xstrdup_(c"x").as_ptr());
+            assert_eq!(args_type_to_string(&s), "STRING");
+        }
     }
 
     #[test]
@@ -1092,7 +1020,7 @@ mod tests {
     fn set_and_has_flag() {
         unsafe {
             let args = args_create();
-            args_set(args, b'v', null_mut(), 0);
+            args_set(args, b'v', None, 0);
             assert!(args_has(args, 'v'));
             assert!(!args_has(args, 'x'));
             args_free(args);
@@ -1103,9 +1031,9 @@ mod tests {
     fn set_flag_increments_count() {
         unsafe {
             let args = args_create();
-            args_set(args, b'v', null_mut(), 0);
-            args_set(args, b'v', null_mut(), 0);
-            args_set(args, b'v', null_mut(), 0);
+            args_set(args, b'v', None, 0);
+            args_set(args, b'v', None, 0);
+            args_set(args, b'v', None, 0);
             assert_eq!(args_has_count(args, b'v'), 3);
             args_free(args);
         }
@@ -1115,10 +1043,8 @@ mod tests {
     fn set_and_get_flag_value() {
         unsafe {
             let args = args_create();
-            let value = xcalloc1::<args_value>() as *mut args_value;
-            (*value).type_ = args_type::ARGS_STRING;
-            (*value).union_.string = xstrdup_(c"hello").as_ptr();
-            args_set(args, b't', value, 0);
+            let value = args_value::new_string(xstrdup_(c"hello").as_ptr());
+            args_set(args, b't', Some(value), 0);
 
             let got = args_get(args, b't');
             assert!(!got.is_null());
@@ -1140,16 +1066,12 @@ mod tests {
     fn positional_args() {
         unsafe {
             let args = args_create();
-            (*args).values = xcalloc_(1).as_ptr();
-            (*args).count = 1;
-            let v = (*args).values;
-            (*v).type_ = args_type::ARGS_STRING;
-            (*v).union_.string = xstrdup_(c"target").as_ptr();
+            (*args).values.push(args_value::new_string(xstrdup_(c"target").as_ptr()));
 
             assert_eq!(args_count(args), 1);
-            assert!(!args_value(args, 0).is_null());
+            assert!(args_value(args, 0).is_some());
             assert_eq!(CStr::from_ptr(args_string(args, 0).cast()).to_str().unwrap(), "target");
-            assert!(args_value(args, 1).is_null());
+            assert!(args_value(args, 1).is_none());
             assert!(args_string(args, 1).is_null());
             args_free(args);
         }
@@ -1159,9 +1081,9 @@ mod tests {
     fn entry_list_sorted() {
         unsafe {
             let args = args_create();
-            args_set(args, b'z', null_mut(), 0);
-            args_set(args, b'a', null_mut(), 0);
-            args_set(args, b'm', null_mut(), 0);
+            args_set(args, b'z', None, 0);
+            args_set(args, b'a', None, 0);
+            args_set(args, b'm', None, 0);
 
             let entries = args_entry_list(args);
             assert_eq!(entries.len(), 3);
@@ -1272,16 +1194,12 @@ mod tests {
         }
     }
 
-    /// Helper to create args_value array from string slices.
-    unsafe fn make_values(strs: &[&CStr]) -> (*mut args_value, u32) {
+    /// Helper to create an `args_value` Vec from `&CStr` slices.
+    unsafe fn make_values(strs: &[&CStr]) -> Vec<args_value> {
         unsafe {
-            let count = strs.len() as u32;
-            let values: *mut args_value = xcalloc_(count as usize).as_ptr();
-            for (i, s) in strs.iter().enumerate() {
-                (*values.add(i)).type_ = args_type::ARGS_STRING;
-                (*values.add(i)).union_.string = xstrdup(s.as_ptr().cast()).cast().as_ptr();
-            }
-            (values, count)
+            strs.iter()
+                .map(|s| args_value::new_string(xstrdup(s.as_ptr().cast()).cast().as_ptr()))
+                .collect()
         }
     }
 
@@ -1289,16 +1207,14 @@ mod tests {
     fn parse_no_flags() {
         unsafe {
             let parse = args_parse::new("", 0, 1, None);
-            let (values, count) = make_values(&[c"cmd", c"arg1"]);
+            let values = make_values(&[c"cmd", c"arg1"]);
 
-            let args = args_parse(&raw const parse, values, count).unwrap();
+            let args = args_parse(&raw const parse, &values).unwrap();
             assert!(!args.is_null());
             assert_eq!(args_count(args), 1);
             assert_eq!(CStr::from_ptr(args_string(args, 0).cast()).to_str().unwrap(), "arg1");
 
             args_free(args);
-            args_free_values(values, count);
-            free_(values);
         }
     }
 
@@ -1306,17 +1222,15 @@ mod tests {
     fn parse_simple_flags() {
         unsafe {
             let parse = args_parse::new("ab", 0, 0, None);
-            let (values, count) = make_values(&[c"cmd", c"-ab"]);
+            let values = make_values(&[c"cmd", c"-ab"]);
 
-            let args = args_parse(&raw const parse, values, count).unwrap();
+            let args = args_parse(&raw const parse, &values).unwrap();
             assert!(!args.is_null());
             assert!(args_has(args, 'a'));
             assert!(args_has(args, 'b'));
             assert!(!args_has(args, 'c'));
 
             args_free(args);
-            args_free_values(values, count);
-            free_(values);
         }
     }
 
@@ -1324,9 +1238,9 @@ mod tests {
     fn parse_flag_with_argument() {
         unsafe {
             let parse = args_parse::new("t:", 0, 0, None);
-            let (values, count) = make_values(&[c"cmd", c"-t", c"mysession"]);
+            let values = make_values(&[c"cmd", c"-t", c"mysession"]);
 
-            let args = args_parse(&raw const parse, values, count).unwrap();
+            let args = args_parse(&raw const parse, &values).unwrap();
             assert!(!args.is_null());
             assert!(args_has(args, 't'));
             let t_val = args_get(args, b't');
@@ -1334,8 +1248,6 @@ mod tests {
             assert_eq!(CStr::from_ptr(t_val.cast()).to_str().unwrap(), "mysession");
 
             args_free(args);
-            args_free_values(values, count);
-            free_(values);
         }
     }
 
@@ -1343,12 +1255,10 @@ mod tests {
     fn parse_unknown_flag_is_error() {
         unsafe {
             let parse = args_parse::new("ab", 0, 0, None);
-            let (values, count) = make_values(&[c"cmd", c"-z"]);
+            let values = make_values(&[c"cmd", c"-z"]);
 
-            let result = args_parse(&raw const parse, values, count);
+            let result = args_parse(&raw const parse, &values);
             assert!(matches!(result, Err(Some(_))));
-            args_free_values(values, count);
-            free_(values);
         }
     }
 
@@ -1356,12 +1266,10 @@ mod tests {
     fn parse_too_few_args() {
         unsafe {
             let parse = args_parse::new("", 2, 3, None);
-            let (values, count) = make_values(&[c"cmd", c"one"]);
+            let values = make_values(&[c"cmd", c"one"]);
 
-            let result = args_parse(&raw const parse, values, count);
+            let result = args_parse(&raw const parse, &values);
             assert!(matches!(result, Err(Some(_))));
-            args_free_values(values, count);
-            free_(values);
         }
     }
 
@@ -1369,16 +1277,14 @@ mod tests {
     fn parse_double_dash_stops_flags() {
         unsafe {
             let parse = args_parse::new("v", 0, 1, None);
-            let (values, count) = make_values(&[c"cmd", c"--", c"-v"]);
+            let values = make_values(&[c"cmd", c"--", c"-v"]);
 
-            let args = args_parse(&raw const parse, values, count).unwrap();
+            let args = args_parse(&raw const parse, &values).unwrap();
             assert!(!args.is_null());
             assert!(!args_has(args, 'v'));
             assert_eq!(args_count(args), 1);
 
             args_free(args);
-            args_free_values(values, count);
-            free_(values);
         }
     }
 
@@ -1387,7 +1293,7 @@ mod tests {
         unsafe {
             let parse = args_parse::new("v", -1, -1, None);
 
-            let args = args_parse(&raw const parse, null_mut(), 0).unwrap();
+            let args = args_parse(&raw const parse, &[]).unwrap();
             assert!(!args.is_null());
             assert_eq!(args_count(args), 0);
             assert!(!args_has(args, 'v'));

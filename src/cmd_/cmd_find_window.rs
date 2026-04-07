@@ -58,10 +58,7 @@ unsafe fn cmd_find_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
             t = true;
         }
 
-        let filter = xcalloc_::<args_value>(1).as_ptr();
-        (*filter).type_ = args_type::ARGS_STRING;
-
-        (*filter).union_.string = if c && n && t {
+        let filter_string: *mut u8 = if c && n && t {
             format_nul!(
                 "#{{||:#{{C{}:{}}},#{{||:#{{m{}:{}{}{},#{{window_name}}}},#{{m{}:{}{}{},#{{pane_title}}}}}}}}",
                 _s(suffix),
@@ -129,9 +126,9 @@ unsafe fn cmd_find_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
 
         let new_args: *mut args = args_create();
         if args_has(args, 'Z') {
-            args_set(new_args, b'Z', null_mut(), 0);
+            args_set(new_args, b'Z', None, 0);
         }
-        args_set(new_args, b'f', filter, 0);
+        args_set(new_args, b'f', Some(args_value::new_string(filter_string)), 0);
 
         window_pane_set_mode(
             wp,

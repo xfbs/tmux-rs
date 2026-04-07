@@ -503,18 +503,18 @@ pub fn cmd_find(name: &str) -> Result<&'static cmd_entry, String> {
 }
 
 pub unsafe fn cmd_parse(
-    values: *mut args_value,
-    count: c_uint,
+    values: &[args_value],
     file: Option<&str>,
     line: c_uint,
 ) -> Result<*mut cmd, String> {
     unsafe {
-        if count == 0 || (*values).type_ != args_type::ARGS_STRING {
+        if values.is_empty() || !matches!(&values[0], args_value::String { .. }) {
             return Err("no command".to_string());
         }
-        let entry = cmd_find(cstr_to_str((*values).union_.string))?;
+        let args_value::String { string } = &values[0] else { unreachable!() };
+        let entry = cmd_find(cstr_to_str(string.as_ptr().cast()))?;
 
-        let args = match args_parse(&entry.args, values, count) {
+        let args = match args_parse(&entry.args, values) {
             Ok(args) => args,
             Err(None) => {
                 return Err(format!("usage: {} {}", entry.name, entry.usage));

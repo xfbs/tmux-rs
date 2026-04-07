@@ -1811,27 +1811,74 @@ struct MessageEntry {
 }
 type MessageLog = Vec<MessageEntry>;
 
-/// Argument type.
-#[repr(i32)]
-#[derive(Copy, Clone, Eq, PartialEq)]
-enum args_type {
-    ARGS_NONE,
-    ARGS_STRING,
-    ARGS_COMMANDS,
+/// Argument value (tagged union as Rust enum).
+///
+/// Replaces the C-style `args_type` + `args_value_union` pair. The string variant
+/// owns its allocation via `CString`; the commands variant carries a refcounted
+/// `*mut cmd_list` and a lazily-populated cached printable form.
+enum args_value {
+    #[expect(dead_code)]
+    None,
+    String {
+        string: std::ffi::CString,
+    },
+    Commands {
+        cmdlist: *mut cmd_list,
+        cached: std::cell::OnceCell<std::ffi::CString>,
+    },
 }
 
-#[repr(C)]
-union args_value_union {
-    string: *mut u8,
-    cmdlist: *mut cmd_list,
+impl args_value {
+    /// Create a `String` variant by taking ownership of a raw `*mut u8` produced
+    /// by `xstrdup`/`xmalloc`. The pointer must be NUL-terminated. The returned
+    /// `args_value`'s `Drop` will `free()` the underlying allocation via the
+    /// CString destructor (the global allocator wraps libc malloc/free).
+    ///
+    /// # Safety
+    /// `ptr` must be a valid, NUL-terminated, malloc-allocated C string with
+    /// no other owner.
+    unsafe fn new_string(ptr: *mut u8) -> Self {
+        args_value::String {
+            string: unsafe { std::ffi::CString::from_raw(ptr.cast()) },
+        }
+    }
+
+    /// Create a `Commands` variant. Does NOT bump the refcount; the caller is
+    /// responsible for ensuring the cmdlist refcount accounts for this owner.
+    fn new_commands(cmdlist: *mut cmd_list) -> Self {
+        args_value::Commands {
+            cmdlist,
+            cached: std::cell::OnceCell::new(),
+        }
+    }
 }
 
-/// Argument value.
-#[repr(C)]
-struct args_value {
-    type_: args_type,
-    union_: args_value_union,
-    cached: std::cell::Cell<*mut u8>,
+impl Clone for args_value {
+    fn clone(&self) -> Self {
+        unsafe {
+            match self {
+                args_value::None => args_value::None,
+                args_value::String { string } => args_value::String { string: string.clone() },
+                args_value::Commands { cmdlist, .. } => {
+                    (**cmdlist).references += 1;
+                    args_value::Commands {
+                        cmdlist: *cmdlist,
+                        cached: std::cell::OnceCell::new(),
+                    }
+                }
+            }
+        }
+    }
+}
+
+impl Drop for args_value {
+    fn drop(&mut self) {
+        // CString/OnceCell<CString> handle their own deallocation.
+        // Only the cmdlist needs manual cleanup.
+        if let args_value::Commands { cmdlist, .. } = self {
+            unsafe { cmd_list_free(*cmdlist); }
+        }
+    }
 }
 
 /// Arguments parsing type.

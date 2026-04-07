@@ -15,7 +15,6 @@ use std::io::Read as _;
 use std::ops::BitAndAssign as _;
 use std::ops::BitOrAssign as _;
 
-use crate::xmalloc::xrecallocarray__;
 use crate::*;
 
 #[expect(unused_imports)]
@@ -360,8 +359,7 @@ pub unsafe fn cmd_parse_build_command(
     pr: &mut cmd_parse_result,
 ) {
     unsafe {
-        let mut values: *mut args_value = null_mut();
-        let mut count: u32 = 0;
+        let mut values: Vec<args_value> = Vec::new();
         *pr = cmd_parse_result::Err(CString::default());
 
         // Check alias first — needs a mutable copy of arguments
@@ -390,35 +388,28 @@ pub unsafe fn cmd_parse_build_command(
 
         'out: {
             for arg in cmd.arguments.iter() {
-                values = xrecallocarray__::<args_value>(values, count as usize, count as usize + 1)
-                    .as_ptr();
                 match arg {
                     ParsedArgument::String(string) => {
-                        (*values.add(count as usize)).type_ = args_type::ARGS_STRING;
-                        (*values.add(count as usize)).union_.string = xstrdup(string.as_ptr()).as_ptr();
+                        values.push(args_value::new_string(xstrdup(string.as_ptr()).as_ptr()));
                     }
                     ParsedArgument::CommandBlock(commands) => {
                         cmd_parse_build_commands(commands, pi, pr);
                         match *pr {
                             Err(_) => break 'out,
                             Ok(cmdlist) => {
-                                (*values.add(count as _)).type_ = args_type::ARGS_COMMANDS;
-                                (*values.add(count as _)).union_.cmdlist = cmdlist;
+                                values.push(args_value::new_commands(cmdlist));
                             }
                         }
                     }
                     ParsedArgument::ParsedCommands(cmdlist) => {
-                        (*values.add(count as _)).type_ = args_type::ARGS_COMMANDS;
-                        (*values.add(count as _)).union_.cmdlist = *cmdlist;
-                        (*(*values.add(count as _)).union_.cmdlist).references += 1;
+                        (**cmdlist).references += 1;
+                        values.push(args_value::new_commands(*cmdlist));
                     }
                 }
-                count += 1;
             }
 
             match cmd_parse(
-                values,
-                count,
+                &values,
                 pi.file,
                 pi.line.load(atomic::Ordering::SeqCst),
             ) {
@@ -437,11 +428,7 @@ pub unsafe fn cmd_parse_build_command(
                 }
             }
         }
-        // out:
-        for idx in 0..count {
-            args_free_value(&mut *values.add(idx as usize));
-        }
-        free_(values);
+        // values Vec drops, freeing CStrings and decrementing cmdlist refs.
     }
 }
 
@@ -577,8 +564,7 @@ pub unsafe fn cmd_parse_from_buffer(buf: &[u8], pi: Option<&cmd_parse_input>) ->
 }
 
 pub unsafe fn cmd_parse_from_arguments(
-    values: *mut args_value,
-    count: u32,
+    values: &[args_value],
     pi: Option<&mut cmd_parse_input>,
 ) -> cmd_parse_result {
     unsafe {
@@ -591,32 +577,32 @@ pub unsafe fn cmd_parse_from_arguments(
             arguments: Vec::new(),
         };
 
-        for i in 0..count {
+        for value in values {
             let mut end = false;
-            if (*values.add(i as usize)).type_ == args_type::ARGS_STRING {
-                let src = (*values.add(i as usize)).union_.string;
-                let len = strlen(src);
-                let mut bytes: Vec<u8> = std::slice::from_raw_parts(src, len).to_vec();
-                if !bytes.is_empty() && *bytes.last().unwrap() == b';' {
-                    bytes.pop(); // remove ';'
-                    if !bytes.is_empty() && *bytes.last().unwrap() == b'\\' {
-                        *bytes.last_mut().unwrap() = b';';
-                    } else {
-                        end = true;
+            match value {
+                args_value::String { string } => {
+                    let src = string.as_bytes();
+                    let mut bytes: Vec<u8> = src.to_vec();
+                    if !bytes.is_empty() && *bytes.last().unwrap() == b';' {
+                        bytes.pop();
+                        if !bytes.is_empty() && *bytes.last().unwrap() == b'\\' {
+                            *bytes.last_mut().unwrap() = b';';
+                        } else {
+                            end = true;
+                        }
+                    }
+                    bytes.push(b'\0');
+                    if !end || bytes.len() > 1 {
+                        current.arguments.push(ParsedArgument::String(bytes));
                     }
                 }
-                bytes.push(b'\0'); // NUL terminate
-                if !end || bytes.len() > 1 {
-                    current.arguments.push(ParsedArgument::String(bytes));
+                args_value::Commands { cmdlist, .. } => {
+                    (**cmdlist).references += 1;
+                    current
+                        .arguments
+                        .push(ParsedArgument::ParsedCommands(*cmdlist));
                 }
-            } else if (*values.add(i as usize)).type_ == args_type::ARGS_COMMANDS {
-                let cmdlist = (*values.add(i as usize)).union_.cmdlist;
-                (*cmdlist).references += 1;
-                current
-                    .arguments
-                    .push(ParsedArgument::ParsedCommands(cmdlist));
-            } else {
-                fatalx("unknown argument type");
+                args_value::None => fatalx("unknown argument type"),
             }
             if end {
                 cmds.push(current);
@@ -1961,22 +1947,24 @@ mod tests {
     // cmd_parse_from_arguments
     // ---------------------------------------------------------------
 
+    /// Build a `Vec<args_value>` of String variants from NUL-terminated byte slices.
+    unsafe fn make_string_values(words: &[&[u8]]) -> Vec<args_value> {
+        unsafe {
+            words
+                .iter()
+                .map(|w| args_value::new_string(xstrdup(w.as_ptr()).as_ptr()))
+                .collect()
+        }
+    }
+
     #[test]
     fn parse_from_arguments_simple() {
         unsafe {
             init_globals();
-            // Build a simple args_value array: ["set", "-g", "status", "off"]
-            let words: [&[u8]; 4] = [b"set\0", b"-g\0", b"status\0", b"off\0"];
-            let values: *mut args_value = xcalloc_(4).as_ptr();
-            for (i, word) in words.iter().enumerate() {
-                (*values.add(i)).type_ = args_type::ARGS_STRING;
-                (*values.add(i)).union_.string = xstrdup(word.as_ptr()).as_ptr();
-            }
-            let result = cmd_parse_from_arguments(values, 4, None);
+            let values = make_string_values(&[b"set\0", b"-g\0", b"status\0", b"off\0"]);
+            let result = cmd_parse_from_arguments(&values, None);
             assert!(result.is_ok(), "expected Ok, got err");
             cmd_list_free(result.unwrap());
-            args_free_values(values, 4);
-            free_(values);
         }
     }
 
@@ -1984,18 +1972,16 @@ mod tests {
     fn parse_from_arguments_with_semicolon() {
         unsafe {
             init_globals();
-            // ["set", "-g", "status", "off;", "new-session"] — semicolon splits commands
-            let words: [&[u8]; 5] = [b"set\0", b"-g\0", b"status\0", b"off;\0", b"new-session\0"];
-            let values: *mut args_value = xcalloc_(5).as_ptr();
-            for (i, word) in words.iter().enumerate() {
-                (*values.add(i)).type_ = args_type::ARGS_STRING;
-                (*values.add(i)).union_.string = xstrdup(word.as_ptr()).as_ptr();
-            }
-            let result = cmd_parse_from_arguments(values, 5, None);
+            let values = make_string_values(&[
+                b"set\0",
+                b"-g\0",
+                b"status\0",
+                b"off;\0",
+                b"new-session\0",
+            ]);
+            let result = cmd_parse_from_arguments(&values, None);
             assert!(result.is_ok(), "expected Ok, got err");
             cmd_list_free(result.unwrap());
-            args_free_values(values, 5);
-            free_(values);
         }
     }
 
@@ -2003,18 +1989,10 @@ mod tests {
     fn parse_from_arguments_escaped_semicolon() {
         unsafe {
             init_globals();
-            // ["display-message", "hello\\;"] — escaped semicolon, not a separator
-            let words: [&[u8]; 2] = [b"display-message\0", b"hello\\;\0"];
-            let values: *mut args_value = xcalloc_(2).as_ptr();
-            for (i, word) in words.iter().enumerate() {
-                (*values.add(i)).type_ = args_type::ARGS_STRING;
-                (*values.add(i)).union_.string = xstrdup(word.as_ptr()).as_ptr();
-            }
-            let result = cmd_parse_from_arguments(values, 2, None);
+            let values = make_string_values(&[b"display-message\0", b"hello\\;\0"]);
+            let result = cmd_parse_from_arguments(&values, None);
             assert!(result.is_ok(), "expected Ok, got err");
             cmd_list_free(result.unwrap());
-            args_free_values(values, 2);
-            free_(values);
         }
     }
 

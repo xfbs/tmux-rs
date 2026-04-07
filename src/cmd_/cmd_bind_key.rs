@@ -58,17 +58,18 @@ unsafe fn cmd_bind_key_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        let value = args_value(args, 1);
-        if count == 2 && (*value).type_ == args_type::ARGS_COMMANDS {
-            key_bindings_add(tablename, key, note, repeat, (*value).union_.cmdlist);
-            (*(*value).union_.cmdlist).references += 1;
+        if count == 2
+            && let Some(args_value::Commands { cmdlist, .. }) = args_value(args, 1)
+        {
+            key_bindings_add(tablename, key, note, repeat, *cmdlist);
+            (**cmdlist).references += 1;
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
         let pr = if count == 2 {
             cmd_parse_from_string(cstr_to_str(args_string(args, 1)), None)
         } else {
-            cmd_parse_from_arguments(args_values(args).add(1), count - 1, None)
+            cmd_parse_from_arguments(&args_values(args)[1..], None)
         };
 
         match pr {

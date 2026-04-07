@@ -3059,15 +3059,14 @@ pub unsafe fn server_client_dispatch_command(c: *mut client, imsg: *mut imsg) {
             }
 
             values = args_from_vector(argc, argv);
-            let cmdlist = match cmd_parse_from_arguments(values, argc as u32, None) {
+            let cmdlist = match cmd_parse_from_arguments(&values, None) {
                 Ok(cmdlist) => cmdlist,
                 Err(err) => {
                     cause = err.into_raw().cast();
                     break 'error;
                 }
             };
-            args_free_values(values, argc as u32);
-            free_(values);
+            drop(values);
             cmd_free_argv(argc, argv);
 
             if (*c).flags.intersects(client_flag::READONLY)

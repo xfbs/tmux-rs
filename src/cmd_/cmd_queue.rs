@@ -432,7 +432,9 @@ pub unsafe fn cmdq_insert_hook_(
 
             for (i, av) in args_flag_values(args, flag).iter().enumerate() {
                 _ = xsnprintf_!(tmp, SIZEOF_TMP, "hook_flag_{}_{}", flag as char, i);
-                cmdq_add_format!(new_state, tmp, "{}", _s(av.union_.string));
+                if let args_value::String { string } = av {
+                    cmdq_add_format!(new_state, tmp, "{}", _s(string.as_ptr().cast::<u8>()));
+                }
             }
         }
 

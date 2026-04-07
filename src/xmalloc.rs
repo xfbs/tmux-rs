@@ -88,30 +88,6 @@ pub unsafe fn xreallocarray_<T>(ptr: *mut T, nmemb: usize) -> NonNull<T> {
     }
 }
 
-pub unsafe fn xrecallocarray(
-    ptr: *mut c_void,
-    oldnmemb: usize,
-    nmemb: usize,
-    size: usize,
-) -> NonNull<c_void> {
-    unsafe { xrecallocarray_(ptr, oldnmemb, nmemb, size) }
-}
-
-pub unsafe fn xrecallocarray_<T>(
-    ptr: *mut T,
-    oldnmemb: usize,
-    nmemb: usize,
-    size: usize,
-) -> NonNull<T> {
-    if nmemb == 0 || size == 0 {
-        panic!("xrecallocarray: zero size");
-    }
-
-    NonNull::new(unsafe { recallocarray(ptr as *mut c_void, oldnmemb, nmemb, size) })
-        .unwrap_or_else(|| panic!("xrecallocarray: allocating {nmemb} * {size}"))
-        .cast()
-}
-
 pub unsafe fn xrecallocarray__<T>(ptr: *mut T, oldnmemb: usize, nmemb: usize) -> NonNull<T> {
     let size = size_of::<T>();
     if nmemb == 0 || size == 0 {

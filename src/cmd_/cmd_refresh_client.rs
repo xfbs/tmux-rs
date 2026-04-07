@@ -355,7 +355,9 @@ pub unsafe fn cmd_refresh_client_exec(self_: *mut cmd, item: *mut cmdq_item) -> 
                     break 'not_control_client;
                 }
                 for av in args_flag_values(args, b'A') {
-                    cmd_refresh_client_update_offset(tc, av.union_.string);
+                    if let args_value::String { string } = av {
+                        cmd_refresh_client_update_offset(tc, string.as_ptr().cast());
+                    }
                 }
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
@@ -364,7 +366,9 @@ pub unsafe fn cmd_refresh_client_exec(self_: *mut cmd, item: *mut cmdq_item) -> 
                     break 'not_control_client;
                 }
                 for av in args_flag_values(args, b'B') {
-                    cmd_refresh_client_update_subscription(tc, av.union_.string);
+                    if let args_value::String { string } = av {
+                        cmd_refresh_client_update_subscription(tc, string.as_ptr().cast());
+                    }
                 }
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
