@@ -2334,7 +2334,7 @@ struct client {
 
     message_ignore_keys: c_int,
     message_ignore_styles: c_int,
-    message_string: *mut u8,
+    message_string: Option<String>,
     message_timer: event,
 
     prompt_string: *mut u8,

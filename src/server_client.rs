@@ -482,7 +482,7 @@ pub unsafe fn server_client_lost(c: *mut client) {
 
         key_bindings_unref_table((*c).keytable);
 
-        free_((*c).message_string);
+        // message_string is Option<String>, dropped automatically by Box drop.
         if event_initialized(&raw mut (*c).message_timer) != 0 {
             evtimer_del(&raw mut (*c).message_timer);
         }
@@ -2148,7 +2148,7 @@ pub unsafe fn server_client_handle_key(c: *mut client, event: *mut key_event) ->
         // case. The queue might be blocked so they need to be processed
         // immediately rather than queued.
         if !(*c).flags.intersects(client_flag::READONLY) {
-            if !(*c).message_string.is_null() {
+            if (*c).message_string.is_some() {
                 if (*c).message_ignore_keys != 0 {
                     return 0;
                 }

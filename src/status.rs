@@ -159,7 +159,7 @@ unsafe extern "C-unwind" fn status_timer_callback(_fd: i32, _events: i16, c: Non
             return;
         }
 
-        if (*c).message_string.is_null() && (*c).prompt_string.is_null() {
+        if (*c).message_string.is_none() && (*c).prompt_string.is_null() {
             (*c).flags |= client_flag::REDRAWSTATUS;
         }
 
@@ -508,7 +508,7 @@ pub unsafe fn status_message_set_(
 ) {
     unsafe {
         let mut tv: timeval = zeroed();
-        let mut s = args.to_string();
+        let s = args.to_string();
 
         // log_debug("%s: %s", __func__, s);
 
@@ -519,10 +519,8 @@ pub unsafe fn status_message_set_(
 
         status_message_clear(NonNull::new_unchecked(c));
         status_push_screen(c);
-        s.push('\0');
-        let s = s.leak().as_mut_ptr().cast();
-        (*c).message_string = s;
-        server_add_message!("{} message: {}", _s((*c).name), _s(s));
+        server_add_message!("{} message: {}", _s((*c).name), s);
+        (*c).message_string = Some(s);
 
         // With delay -1, the display-time option is used; zero means wait for
         // key press; more than zero is the actual delay time in milliseconds.
@@ -559,12 +557,11 @@ pub unsafe fn status_message_set_(
 pub unsafe fn status_message_clear(c: NonNull<client>) {
     unsafe {
         let c = c.as_ptr();
-        if (*c).message_string.is_null() {
+        if (*c).message_string.is_none() {
             return;
         }
 
-        free_((*c).message_string);
-        (*c).message_string = null_mut();
+        (*c).message_string = None;
 
         if (*c).prompt_string.is_null() {
             (*c).tty.flags &= !(tty_flags::TTY_NOCURSOR | tty_flags::TTY_FREEZE);
@@ -609,7 +606,8 @@ pub unsafe fn status_message_redraw(c: *mut client) -> i32 {
             messageline = lines - 1;
         }
 
-        let mut len = screen_write_strlen!("{}", _s((*c).message_string));
+        let msg = (*c).message_string.as_deref().unwrap_or("");
+        let mut len = screen_write_strlen!("{}", msg);
         if len > (*c).tty.sx as usize {
             len = (*c).tty.sx as usize;
         }
@@ -638,14 +636,14 @@ pub unsafe fn status_message_redraw(c: *mut client) -> i32 {
                 len as isize,
                 &raw mut gc,
                 "{}",
-                _s((*c).message_string),
+                msg,
             );
         } else {
             format_draw(
                 &raw mut ctx,
                 &raw const gc,
                 (*c).tty.sx,
-                cstr_to_str((*c).message_string),
+                msg,
                 null_mut(),
                 0,
             );
