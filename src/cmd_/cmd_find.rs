@@ -12,7 +12,6 @@
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use crate::compat::strlcat;
-use crate::libc::strcmp;
 use crate::*;
 
 static CMD_FIND_SESSION_TABLE: [[&str; 2]; 0] = [];
@@ -53,7 +52,10 @@ pub unsafe fn cmd_find_inside_pane(c: *mut client) -> *mut window_pane {
         let mut wp: *mut window_pane = null_mut();
         for wp_ in (*(&raw mut ALL_WINDOW_PANES)).values().map(|wp| NonNull::new(*wp).unwrap()) {
             wp = wp_.as_ptr();
-            if (*wp).fd != -1 && strcmp((*wp).tty.as_ptr(), (*c).ttyname) == 0 {
+            if (*wp).fd != -1
+                && let Some(tn) = (*c).ttyname.as_deref()
+                && std::ffi::CStr::from_ptr((*wp).tty.as_ptr() as *const i8).to_bytes() == tn.as_bytes()
+            {
                 break;
             }
         }
@@ -1415,16 +1417,19 @@ pub unsafe fn cmd_find_client(
                 break;
             }
 
-            if *(*c).ttyname == b'\0' {
+            let Some(tn) = (*c).ttyname.as_deref() else {
+                continue;
+            };
+            if tn.is_empty() {
                 continue;
             }
-            if streq_((*c).ttyname, copy) {
+            if tn == copy {
                 break;
             }
-            if libc::strncmp((*c).ttyname, _PATH_DEV, SIZEOF_PATH_DEV - 1) != 0 {
-                continue;
-            }
-            if streq_((*c).ttyname.add(SIZEOF_PATH_DEV - 1), copy) {
+            // Try matching against the tty path with the leading "/dev/" stripped.
+            if let Some(stripped) = tn.strip_prefix("/dev/")
+                && stripped == copy
+            {
                 break;
             }
 

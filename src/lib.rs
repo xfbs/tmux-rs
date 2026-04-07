@@ -248,10 +248,8 @@ const _PATH_TTY: *const u8 = c!("/dev/tty");
 const _PATH_BSHELL: *const u8 = c!("/bin/sh");
 const _PATH_BSHELL_STR: &str = "/bin/sh";
 const _PATH_DEFPATH: *const u8 = c!("/usr/bin:/bin");
-const _PATH_DEV: *const u8 = c!("/dev/");
 const _PATH_DEVNULL: *const u8 = c!("/dev/null");
 const _PATH_VI: &str = "/usr/bin/vi";
-const SIZEOF_PATH_DEV: usize = 6;
 const TTY_NAME_MAX: usize = 32;
 
 #[inline]
@@ -2308,7 +2306,7 @@ struct client {
     term_caps: *mut *mut u8,
     term_ncaps: c_uint,
 
-    ttyname: *mut u8,
+    ttyname: Option<String>,
     tty: tty,
 
     written: usize,

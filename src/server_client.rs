@@ -187,7 +187,9 @@ pub unsafe fn server_client_check_nested(c: *mut client) -> bool {
         }
 
         for wp in (*(&raw mut ALL_WINDOW_PANES)).values().map(|wp| NonNull::new(*wp).unwrap()) {
-            if libc::strcmp((&raw const (*wp.as_ptr()).tty) as _, (*c).ttyname) == 0 {
+            if let Some(tn) = (*c).ttyname.as_deref()
+                && std::ffi::CStr::from_ptr((&raw const (*wp.as_ptr()).tty) as *const i8).to_bytes() == tn.as_bytes()
+            {
                 return true;
             }
         }
@@ -313,33 +315,29 @@ pub unsafe fn server_client_create(fd: i32) -> *mut client {
 /// Open client terminal if needed.
 pub unsafe fn server_client_open(c: *mut client) -> Result<(), String> {
     unsafe {
-        let mut ttynam = _PATH_TTY;
-
         if (*c).flags.intersects(client_flag::CONTROL) {
             return Ok(());
         }
 
-        if libc::strcmp((*c).ttyname, ttynam) == 0
-            || ((libc::isatty(libc::STDIN_FILENO) != 0
-                && ({
-                    ttynam = libc::ttyname(libc::STDIN_FILENO);
-                    !ttynam.is_null()
-                })
-                && libc::strcmp((*c).ttyname, ttynam) == 0)
-                || (libc::isatty(libc::STDOUT_FILENO) != 0
-                    && ({
-                        ttynam = libc::ttyname(libc::STDOUT_FILENO);
-                        !ttynam.is_null()
-                    })
-                    && libc::strcmp((*c).ttyname, ttynam) == 0)
-                || (libc::isatty(libc::STDERR_FILENO) != 0
-                    && ({
-                        ttynam = libc::ttyname(libc::STDERR_FILENO);
-                        !ttynam.is_null()
-                    })
-                    && libc::strcmp((*c).ttyname, ttynam) == 0))
-        {
-            return Err(format!("can't use {}", _s((*c).ttyname)));
+        // Compare client ttyname against /dev/tty and the names of stdin/stdout/stderr
+        // — refuse to reuse the server's own tty as a client tty.
+        let tn_bytes: &[u8] = match (*c).ttyname.as_deref() {
+            Some(s) => s.as_bytes(),
+            None => return Err("can't use ".to_string()),
+        };
+        let cstr_eq = |p: *mut u8| -> bool {
+            !p.is_null() && std::ffi::CStr::from_ptr(p as *const i8).to_bytes() == tn_bytes
+        };
+        let path_tty_bytes = std::ffi::CStr::from_ptr(_PATH_TTY as *const i8).to_bytes();
+        let conflict = tn_bytes == path_tty_bytes
+            || (libc::isatty(libc::STDIN_FILENO) != 0
+                && cstr_eq(libc::ttyname(libc::STDIN_FILENO)))
+            || (libc::isatty(libc::STDOUT_FILENO) != 0
+                && cstr_eq(libc::ttyname(libc::STDOUT_FILENO)))
+            || (libc::isatty(libc::STDERR_FILENO) != 0
+                && cstr_eq(libc::ttyname(libc::STDERR_FILENO)));
+        if conflict {
+            return Err(format!("can't use {}", (*c).ttyname.as_deref().unwrap_or("")));
         }
 
         if !(*c).flags.intersects(client_flag::TERMINAL) {
@@ -467,7 +465,7 @@ pub unsafe fn server_client_lost(c: *mut client) {
         if (*c).flags.intersects(client_flag::TERMINAL) {
             tty_free(&raw mut (*c).tty);
         }
-        free_((*c).ttyname);
+        std::ptr::drop_in_place(&raw mut (*c).ttyname);
         free_((*c).clipboard_panes);
 
         free_((*c).term_name);
@@ -3161,7 +3159,12 @@ pub unsafe fn server_client_dispatch_identify(c: *mut client, imsg: *mut imsg) {
                 if datalen == 0 || *data.cast::<u8>().add((datalen - 1) as usize) != b'\0' {
                     fatalx("bad MSG_IDENTIFY_TTYNAME string");
                 }
-                (*c).ttyname = xstrdup(data.cast()).as_ptr();
+                // datalen includes trailing NUL
+                let bytes = std::slice::from_raw_parts(data.cast::<u8>(), (datalen - 1) as usize);
+                std::ptr::write(
+                    &raw mut (*c).ttyname,
+                    Some(String::from_utf8_lossy(bytes).into_owned()),
+                );
                 // log_debug("client %p IDENTIFY_TTYNAME %s", c, data);
             }
             msgtype::MSG_IDENTIFY_CWD => {
@@ -3215,10 +3218,9 @@ pub unsafe fn server_client_dispatch_identify(c: *mut client, imsg: *mut imsg) {
         }
         (*c).flags |= client_flag::IDENTIFIED;
 
-        let name = if *(*c).ttyname != b'\0' {
-            xstrdup((*c).ttyname).as_ptr()
-        } else {
-            format_nul!("client-{}", (*c).pid)
+        let name = match (*c).ttyname.as_deref() {
+            Some(s) if !s.is_empty() => xstrdup__(s),
+            _ => format_nul!("client-{}", (*c).pid),
         };
         (*c).name = name;
         // log_debug("client %p name is %s", c, (*c).name);

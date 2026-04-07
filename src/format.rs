@@ -1519,7 +1519,7 @@ pub unsafe fn format_cb_client_termtype(ft: &format_tree) -> format_table_type {
 pub unsafe fn format_cb_client_tty(ft: &format_tree) -> format_table_type {
     unsafe {
         if !(*ft).c.is_null() {
-            return format!("{}", _s((*(*ft).c).ttyname)).into();
+            return (*(*ft).c).ttyname.clone().unwrap_or_default().into();
         }
         format_table_type::None
     }
