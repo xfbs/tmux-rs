@@ -202,11 +202,13 @@ pub unsafe fn cmd_find_best_winlink_with_window(fs: *mut cmd_find_state) -> i32 
         log_debug!("{}: window is @{}", __func__, (*(*fs).w).id);
 
         let mut wl = null_mut();
-        if !(*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).curw.is_null() && (*(*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).curw).window == (*fs).w {
-            wl = (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).curw;
+        let target_w = if (*fs).w.is_null() { None } else { Some(WindowId((*(*fs).w).id)) };
+        let s_ptr = (*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        if !(*s_ptr).curw.is_null() && (*(*s_ptr).curw).window == target_w {
+            wl = (*s_ptr).curw;
         } else {
-            for &wl_loop in (*(&raw mut (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).windows)).values() {
-                if (*wl_loop).window == (*fs).w {
+            for &wl_loop in (*(&raw mut (*s_ptr).windows)).values() {
+                if (*wl_loop).window == target_w {
                     wl = wl_loop;
                     break;
                 }
@@ -331,7 +333,7 @@ pub unsafe fn cmd_find_get_window(fs: *mut cmd_find_state, window: &str, only: b
 
         if !only && cmd_find_get_session(fs, window) == 0 {
             (*fs).wl = (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).curw;
-            (*fs).w = (*(*fs).wl).window;
+            (*fs).w = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
             if !(*fs)
                 .flags
                 .intersects(cmd_find_flags::CMD_FIND_WINDOW_INDEX)
@@ -354,7 +356,7 @@ pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: 
             .intersects(cmd_find_flags::CMD_FIND_EXACT_WINDOW);
 
         (*fs).wl = (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).curw;
-        (*fs).w = (*(*fs).wl).window;
+        (*fs).w = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
 
         if window.starts_with('@') {
             (*fs).w = window_find_by_id_str(window);
@@ -395,7 +397,7 @@ pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: 
             }
             if !(*fs).wl.is_null() {
                 (*fs).idx = (*(*fs).wl).idx;
-                (*fs).w = (*(*fs).wl).window;
+                (*fs).w = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
                 return 0;
             }
         }
@@ -408,7 +410,7 @@ pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: 
                         return -1;
                     }
                     (*fs).idx = (*(*fs).wl).idx;
-                    (*fs).w = (*(*fs).wl).window;
+                    (*fs).w = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
                     return 0;
                 }
                 "^" => {
@@ -417,7 +419,7 @@ pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: 
                         return -1;
                     }
                     (*fs).idx = (*(*fs).wl).idx;
-                    (*fs).w = (*(*fs).wl).window;
+                    (*fs).w = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
                     return 0;
                 }
                 "$" => {
@@ -426,7 +428,7 @@ pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: 
                         return -1;
                     }
                     (*fs).idx = (*(*fs).wl).idx;
-                    (*fs).w = (*(*fs).wl).window;
+                    (*fs).w = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
                     return 0;
                 }
                 _ => (),
@@ -443,7 +445,7 @@ pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: 
                 (*fs).wl = winlink_find_by_index(&raw mut (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).windows, idx);
                 if !(*fs).wl.is_null() {
                     (*fs).idx = (*(*fs).wl).idx;
-                    (*fs).w = (*(*fs).wl).window;
+                    (*fs).w = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
                     return 0;
                 }
                 if (*fs)
@@ -458,7 +460,8 @@ pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: 
 
         (*fs).wl = null_mut();
         for &wl in (*(&raw mut (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).windows)).values() {
-            if streq_((*(*wl).window).name, window) {
+            let w_iter = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+            if !w_iter.is_null() && streq_((*w_iter).name, window) {
                 if !(*fs).wl.is_null() {
                     return -1;
                 }
@@ -468,7 +471,7 @@ pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: 
 
         if !(*fs).wl.is_null() {
             (*fs).idx = (*(*fs).wl).idx;
-            (*fs).w = (*(*fs).wl).window;
+            (*fs).w = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
             return 0;
         }
 
@@ -480,7 +483,8 @@ pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: 
         (*fs).wl = null_mut();
         for &wl in (*(&raw mut (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).windows)).values() {
             #[expect(clippy::disallowed_methods)]
-            if libc::strncmp(window.as_ptr().cast(), (*(*wl).window).name, window.len()) == 0 {
+            let w_iter = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+            if !w_iter.is_null() && libc::strncmp(window.as_ptr().cast(), (*w_iter).name, window.len()) == 0 {
                 if !(*fs).wl.is_null() {
                     return -1;
                 }
@@ -490,13 +494,14 @@ pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: 
 
         if !(*fs).wl.is_null() {
             (*fs).idx = (*(*fs).wl).idx;
-            (*fs).w = (*(*fs).wl).window;
+            (*fs).w = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
             return 0;
         }
 
         (*fs).wl = null_mut();
         for &wl in (*(&raw mut (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).windows)).values() {
-            if libc::fnmatch(window_c.as_ptr().cast(), (*(*wl).window).name, 0) == 0 {
+            let w_iter = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+            if !w_iter.is_null() && libc::fnmatch(window_c.as_ptr().cast(), (*w_iter).name, 0) == 0 {
                 if !(*fs).wl.is_null() {
                     return -1;
                 }
@@ -506,7 +511,7 @@ pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: 
 
         if !(*fs).wl.is_null() {
             (*fs).idx = (*(*fs).wl).idx;
-            (*fs).w = (*(*fs).wl).window;
+            (*fs).w = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
             return 0;
         }
     }
@@ -560,7 +565,7 @@ pub unsafe fn cmd_find_get_pane_with_session(fs: *mut cmd_find_state, pane: &str
 
         (*fs).wl = (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).curw;
         (*fs).idx = (*(*fs).wl).idx;
-        (*fs).w = (*(*fs).wl).window;
+        (*fs).w = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
 
         cmd_find_get_pane_with_window(fs, pane)
     }
@@ -679,13 +684,14 @@ pub unsafe fn cmd_find_valid_state(fs: *const cmd_find_state) -> bool {
             return false;
         }
 
+        let target_w = if (*fs).w.is_null() { None } else { Some(WindowId((*(*fs).w).id)) };
         if !(*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).windows.values()
-            .any(|&wl| (*wl).window == (*fs).w && wl == (*fs).wl)
+            .any(|&wl| (*wl).window == target_w && wl == (*fs).wl)
         {
             return false;
         }
 
-        if (*fs).w != (*(*fs).wl).window {
+        if target_w != (*(*fs).wl).window {
             return false;
         }
 
@@ -738,7 +744,7 @@ pub unsafe fn cmd_find_from_session(
 
         (*fs).s = { let __p = s; if __p.is_null() { None } else { Some(SessionId((*__p).id)) } };
         (*fs).wl = (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).curw;
-        (*fs).w = (*(*fs).wl).window;
+        (*fs).w = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
         (*fs).wp = (*(*fs).w).active;
 
         cmd_find_log_state(c!("cmd_find_from_session"), fs);
@@ -755,8 +761,8 @@ pub unsafe fn cmd_find_from_winlink(
 
         (*fs).s = (*wl).session;
         (*fs).wl = wl;
-        (*fs).w = (*wl).window;
-        (*fs).wp = (*(*wl).window).active;
+        (*fs).w = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        (*fs).wp = if (*fs).w.is_null() { null_mut() } else { (*(*fs).w).active };
 
         cmd_find_log_state(c!("cmd_find_from_winlink"), fs);
     }
@@ -820,7 +826,7 @@ pub unsafe fn cmd_find_from_winlink_pane(
         (*fs).s = (*wl).session;
         (*fs).wl = wl;
         (*fs).idx = (*(*fs).wl).idx;
-        (*fs).w = (*(*fs).wl).window;
+        (*fs).w = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
         (*fs).wp = wp;
 
         cmd_find_log_state(c!("cmd_find_from_winlink_pane"), fs);
@@ -855,7 +861,7 @@ pub unsafe fn cmd_find_from_nothing(fs: *mut cmd_find_state, flags: cmd_find_fla
         }
         (*fs).wl = (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).curw;
         (*fs).idx = (*(*fs).wl).idx;
-        (*fs).w = (*(*fs).wl).window;
+        (*fs).w = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
         (*fs).wp = (*(*fs).w).active;
 
         cmd_find_log_state(c!("cmd_find_from_nothing"), fs);
@@ -882,7 +888,7 @@ pub unsafe fn cmd_find_from_mouse(
             cmd_find_clear_state(fs, flags);
             return -1;
         }
-        (*fs).w = (*(*fs).wl).window;
+        (*fs).w = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
 
         cmd_find_log_state(c!("cmd_find_from_mouse"), fs);
     }
@@ -911,7 +917,7 @@ pub unsafe fn cmd_find_from_client(
                 }
                 (*fs).s = { let __p = client_get_session(c); if __p.is_null() { None } else { Some(SessionId((*__p).id)) } };
                 (*fs).wl = (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).curw;
-                (*fs).w = (*(*fs).wl).window;
+                (*fs).w = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
 
                 cmd_find_log_state(__func__, fs);
                 return 0;
@@ -928,7 +934,7 @@ pub unsafe fn cmd_find_from_client(
                 break 'unknown_pane;
             }
             (*fs).wl = (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).curw;
-            (*fs).w = (*(*fs).wl).window;
+            (*fs).w = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
             (*fs).wp = (*(*fs).w).active;
 
             cmd_find_log_state(__func__, fs);
@@ -1053,7 +1059,7 @@ pub unsafe fn cmd_find_target(
                         transmute_ptr(cmd_mouse_pane(m, &raw mut s_tmp, &raw mut (*fs).wl));
                     (*fs).s = if s_tmp.is_null() { None } else { Some(SessionId((*s_tmp).id)) };
                     if !(*fs).wp.is_null() {
-                        (*fs).w = (*(*fs).wl).window;
+                        (*fs).w = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
                     } else {
                         // FALLTHROUGH; copied from below
                         let mut s_tmp2: *mut session = (*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
@@ -1063,7 +1069,7 @@ pub unsafe fn cmd_find_target(
                             (*fs).wl = (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).curw;
                         }
                         if !(*fs).wl.is_null() {
-                            (*fs).w = (*(*fs).wl).window;
+                            (*fs).w = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
                             (*fs).wp = (*(*fs).w).active;
                         }
                     }
@@ -1076,7 +1082,7 @@ pub unsafe fn cmd_find_target(
                         (*fs).wl = (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).curw;
                     }
                     if !(*fs).wl.is_null() {
-                        (*fs).w = (*(*fs).wl).window;
+                        (*fs).w = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
                         (*fs).wp = (*(*fs).w).active;
                     }
                 }
@@ -1204,7 +1210,7 @@ pub unsafe fn cmd_find_target(
                 (None, None) => {
                     (*fs).wl = (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).curw;
                     (*fs).idx = -1;
-                    (*fs).w = (*(*fs).wl).window;
+                    (*fs).w = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
                     (*fs).wp = (*(*fs).w).active;
                     found!(fs);
                 }
@@ -1213,7 +1219,8 @@ pub unsafe fn cmd_find_target(
                         no_window!(item, window, fs, flags);
                     }
                     if !(*fs).wl.is_null() {
-                        (*fs).wp = (*(*(*fs).wl).window).active;
+                        let w_pane = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+                        if !w_pane.is_null() { (*fs).wp = (*w_pane).active; }
                     }
                     found!(fs);
                 }
@@ -1250,7 +1257,8 @@ pub unsafe fn cmd_find_target(
                     no_window!(item, window, fs, flags);
                 }
                 if !(*fs).wl.is_null() {
-                    (*fs).wp = (*(*(*fs).wl).window).active;
+                    let w_p = winlink_window((*fs).wl);
+                    if !w_p.is_null() { (*fs).wp = (*w_p).active; }
                 }
                 found!(fs);
             }

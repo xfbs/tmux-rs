@@ -868,7 +868,7 @@ pub unsafe fn control_check_subs_all_panes(c: *mut client, csub: *mut control_su
         let s = client_get_session(c);
 
         for &wl in (*(&raw mut (*s).windows)).values() {
-            let w = (*wl).window;
+            let w = winlink_window(wl);
             for &wp in (*w).panes.iter() {
                 let ft = format_create_defaults(null_mut(), c, s, wl, wp);
                 let value = format_expand(ft, (*csub).format);
@@ -945,7 +945,7 @@ pub unsafe fn control_check_subs_all_windows(c: *mut client, csub: *mut control_
         let s = client_get_session(c);
 
         for &wl in (*(&raw mut (*s).windows)).values() {
-            let w = (*wl).window;
+            let w = winlink_window(wl);
 
             let ft = format_create_defaults(null_mut(), c, s, wl, null_mut());
             let value = format_expand(ft, (*csub).format);

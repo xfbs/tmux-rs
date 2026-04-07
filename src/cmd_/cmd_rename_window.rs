@@ -39,11 +39,11 @@ unsafe fn cmd_rename_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         let wl = (*target).wl;
 
         let newname = format_single_from_target(item, args_string(args, 0));
-        window_set_name((*wl).window, newname);
-        options_set_number((*(*wl).window).options, "automatic-rename", 0);
+        window_set_name(winlink_window(wl), newname);
+        options_set_number((*winlink_window(wl)).options, "automatic-rename", 0);
 
-        server_redraw_window_borders((*wl).window);
-        server_status_window((*wl).window);
+        server_redraw_window_borders(winlink_window(wl));
+        server_status_window(winlink_window(wl));
         free_(newname);
     }
 

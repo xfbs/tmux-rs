@@ -56,10 +56,10 @@ pub unsafe fn cmd_select_pane_redraw(w: *mut window) {
             if client_get_session(c).is_null() || ((*c).flags.intersects(client_flag::CONTROL)) {
                 continue;
             }
-            if (*(*client_get_session(c)).curw).window == w && tty_window_bigger(&raw mut (*c).tty) {
+            if winlink_window((*client_get_session(c)).curw) == w && tty_window_bigger(&raw mut (*c).tty) {
                 server_redraw_client(c);
             } else {
-                if (*(*client_get_session(c)).curw).window == w {
+                if winlink_window((*client_get_session(c)).curw) == w {
                     (*c).flags |= client_flag::REDRAWBORDERS;
                 }
                 if session_has(client_get_session(c), &*w) {
@@ -78,7 +78,7 @@ pub unsafe fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
         let target = cmdq_get_target(item);
         let c = cmdq_get_client(item);
         let wl = (*target).wl;
-        let w = (*wl).window;
+        let w = winlink_window(wl);
         let s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let mut wp = (*target).wp;
         let oo = (*wp).options;

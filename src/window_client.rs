@@ -209,7 +209,7 @@ pub unsafe fn window_client_draw(
         if client_get_session(c).is_null() || (*c).flags.intersects(CLIENT_UNATTACHEDFLAGS) {
             return;
         }
-        let wp = (*(*(*client_get_session(c)).curw).window).active;
+        let wp = (*winlink_window((*client_get_session(c)).curw)).active;
 
         let mut lines = status_line_size(c);
         if lines >= sy {

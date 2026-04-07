@@ -94,7 +94,7 @@ pub unsafe fn spawn_window(sc: *mut spawn_context) -> Result<NonNull<winlink>, S
         // If the window already exists, we are respawning, so destroy all the
         // panes except one.
         if (*sc).flags.intersects(spawn_flags::SPAWN_RESPAWN) {
-            w = (*(*sc).wl).window;
+            w = (*(*sc).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
             if !(*sc).flags.intersects(SPAWN_KILL) {
                 // Check if any pane is still alive (fd != -1).
                 // In the C code, TAILQ_FOREACH left wp as NULL if no
@@ -134,7 +134,8 @@ pub unsafe fn spawn_window(sc: *mut spawn_context) -> Result<NonNull<winlink>, S
                 // Can't use session_detach as it will destroy session
                 // if this makes it empty.
                 (*wl).flags &= !WINLINK_ALERTFLAGS;
-                notify_session_window(c"window-unlinked", s, (*wl).window);
+                let w_unlink = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+                notify_session_window(c"window-unlinked", s, w_unlink);
                 winlink_stack_remove(&raw mut (*s).lastw, wl);
                 winlink_remove(&raw mut (*s).windows, wl);
 
@@ -227,7 +228,7 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context) -> Result<NonNull<window_pane>,
         let target = cmdq_get_target(item);
         let c = cmdq_get_client(item);
         let s = (*sc).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
-        let w = (*(*sc).wl).window;
+        let w = (*(*sc).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
         let new_wp: *mut window_pane;
         let child: *mut Environ;
         let argv: *mut *mut u8;

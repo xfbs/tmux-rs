@@ -68,7 +68,7 @@ unsafe fn cmd_select_layout_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         let args = cmd_get_args(self_);
         let target = cmdq_get_target(item);
         let wl = (*target).wl;
-        let w = (*wl).window;
+        let w = winlink_window(wl);
         let wp = (*target).wp;
 
         server_unzoom_window(w);

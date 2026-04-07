@@ -154,7 +154,7 @@ unsafe fn window_tree_pull_item(
                 (*(*sp).unwrap().as_ptr()).curw,
             );
             *wp = std::mem::transmute::<*mut window_pane, Option<NonNull<window_pane>>>(
-                (*(*(*wlp).unwrap().as_ptr()).window).active,
+                (*winlink_window((*wlp).unwrap().as_ptr())).active,
             );
             return;
         }
@@ -171,7 +171,7 @@ unsafe fn window_tree_pull_item(
 
         if (*item.as_ptr()).type_ == window_tree_type::WINDOW_TREE_WINDOW {
             *wp = std::mem::transmute::<*mut window_pane, Option<NonNull<window_pane>>>(
-                (*(*(*wlp).unwrap().as_ptr()).window).active,
+                (*winlink_window((*wlp).unwrap().as_ptr())).active,
             );
             return;
         }
@@ -179,7 +179,7 @@ unsafe fn window_tree_pull_item(
         *wp = std::mem::transmute::<*mut window_pane, Option<NonNull<window_pane>>>(
             window_pane_find_by_id((*item.as_ptr()).pane as u32),
         );
-        if !window_has_pane(&*(*(*wlp).unwrap().as_ptr()).window, transmute_ptr(*wp)) {
+        if !window_has_pane(&*winlink_window((*wlp).unwrap().as_ptr()), transmute_ptr(*wp)) {
             *wp = None;
         }
         if (*wp).is_none() {
@@ -317,7 +317,7 @@ unsafe fn window_tree_build_window(
             free_(text);
             free_(name);
 
-            let wp = (*(*wl).window).panes.first().copied().unwrap_or(null_mut());
+            let wp = (*winlink_window(wl)).panes.first().copied().unwrap_or(null_mut());
             if wp.is_null() {
                 break 'empty;
             }
@@ -331,7 +331,7 @@ unsafe fn window_tree_build_window(
             l = null_mut();
             n = 0;
 
-            for &wp in (*(*wl).window).panes.iter() {
+            for &wp in (*winlink_window(wl)).panes.iter() {
                 if !window_tree_filter_pane(s, wl, wp, cstr_to_str_(filter)) {
                     continue;
                 }
@@ -430,8 +430,8 @@ unsafe fn window_tree_build_session(
             }
             Ok(window_tree_sort_type::WINDOW_TREE_BY_TIME) => {
                 winlink_list.sort_by(|a, b| {
-                    let wa = (**a).window;
-                    let wb = (**b).window;
+                    let wa = winlink_window(*a);
+                    let wb = winlink_window(*b);
                     timer::new(&raw const (*wa).activity_time)
                         .cmp(&timer::new(&raw const (*wb).activity_time))
                         .then_with(|| i32_to_ordering(libc::strcmp((*wa).name, (*wb).name)))
@@ -440,8 +440,8 @@ unsafe fn window_tree_build_session(
             }
             Ok(window_tree_sort_type::WINDOW_TREE_BY_NAME) => {
                 winlink_list.sort_by(|a, b| {
-                    let wa = (**a).window;
-                    let wb = (**b).window;
+                    let wa = winlink_window(*a);
+                    let wb = winlink_window(*b);
                     i32_to_ordering(libc::strcmp((*wa).name, (*wb).name))
                         .maybe_reverse((*sort_crit).reversed)
                 });
@@ -539,7 +539,7 @@ unsafe fn window_tree_build(
             window_tree_type::WINDOW_TREE_SESSION => *tag = (*data).fs.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()) as u64,
             window_tree_type::WINDOW_TREE_WINDOW => *tag = (*data).fs.wl as u64,
             window_tree_type::WINDOW_TREE_PANE => {
-                if window_count_panes(&*(*(*data).fs.wl).window) == 1 {
+                if window_count_panes(&*winlink_window((*data).fs.wl)) == 1 {
                     *tag = (*data).fs.wl as u64;
                 } else {
                     *tag = (*data).fs.wp as u64;
@@ -704,7 +704,7 @@ unsafe fn window_tree_draw_session(
                 loop_ += 1;
                 continue;
             }
-            let w = (*wl).window;
+            let w = winlink_window(wl);
 
             if wl == (*s).curw {
                 gc.fg = active_colour as i32;
@@ -922,7 +922,7 @@ unsafe fn window_tree_draw(
             window_tree_type::WINDOW_TREE_WINDOW => window_tree_draw_window(
                 modedata.cast(),
                 transmute_ptr(sp),
-                (*transmute_ptr(wlp)).window,
+                winlink_window(transmute_ptr(wlp)),
                 ctx,
                 sx,
                 sy,
@@ -955,7 +955,7 @@ unsafe fn window_tree_search(
             }
             window_tree_type::WINDOW_TREE_WINDOW => {
                 if let (Some(_s), Some(wl)) = (s, wl) {
-                    return !libc::strstr((*(*wl.as_ptr()).window).name, ss).is_null();
+                    return !libc::strstr((*winlink_window(wl.as_ptr())).name, ss).is_null();
                 }
             }
             window_tree_type::WINDOW_TREE_PANE => {
@@ -1282,7 +1282,7 @@ unsafe fn window_tree_kill_each(
             }
             window_tree_type::WINDOW_TREE_WINDOW => {
                 if let Some(wl) = wl {
-                    server_kill_window((*wl.as_ptr()).window, 0);
+                    server_kill_window(winlink_window(wl.as_ptr()), 0);
                 }
             }
             window_tree_type::WINDOW_TREE_PANE => {
@@ -1416,7 +1416,7 @@ unsafe fn window_tree_mouse(
                 return KEYC_NONE;
             };
             mode_tree_expand_current((*data).data);
-            for (loop_, &wp_) in (*(*wl.as_ptr()).window).panes.iter().enumerate() {
+            for (loop_, &wp_) in (*winlink_window(wl.as_ptr())).panes.iter().enumerate() {
                 wp = Some(NonNull::new(wp_).unwrap());
                 if loop_ as u32 == (*data).start + x {
                     break;

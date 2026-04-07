@@ -71,7 +71,7 @@ unsafe fn cmd_respawn_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
-        server_redraw_window((*wl).window);
+        server_redraw_window(winlink_window(wl));
 
         if !sc.argv.is_null() {
             cmd_free_argv(sc.argc, sc.argv);

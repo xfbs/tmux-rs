@@ -1424,7 +1424,7 @@ const WINLINK_ALERTFLAGS: winlink_flags = winlink_flags::WINLINK_BELL
 struct winlink {
     idx: i32,
     session: Option<SessionId>,
-    window: *mut window,
+    window: Option<WindowId>,
 
     flags: winlink_flags,
 }

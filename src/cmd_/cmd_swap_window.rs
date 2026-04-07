@@ -54,18 +54,18 @@ unsafe fn cmd_swap_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
             return cmd_retval::CMD_RETURN_ERROR;
         }
 
-        if (*wl_dst).window == (*wl_src).window {
+        if winlink_window(wl_dst) == winlink_window(wl_src) {
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        let w_dst = (*wl_dst).window;
+        let w_dst = winlink_window(wl_dst);
         (*w_dst).winlinks.retain(|&p| p != wl_dst);
-        let w_src = (*wl_src).window;
+        let w_src = winlink_window(wl_src);
         (*w_src).winlinks.retain(|&p| p != wl_src);
 
-        (*wl_dst).window = w_src;
+        (*wl_dst).window = Some(WindowId((*w_src).id));
         (*w_src).winlinks.push(wl_dst);
-        (*wl_src).window = w_dst;
+        (*wl_src).window = Some(WindowId((*w_dst).id));
         (*w_dst).winlinks.push(wl_src);
 
         if args_has(args, 'd') {

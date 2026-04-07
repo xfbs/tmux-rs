@@ -240,7 +240,7 @@ pub unsafe fn control_notify_session_window_changed(s: *mut session) {
                     c,
                     "%session-window-changed ${} @{}",
                     (*s).id,
-                    (*(*(*s).curw).window).id,
+                    (*winlink_window((*s).curw)).id,
                 );
             }
         }

@@ -78,7 +78,8 @@ fn alerts_check_all(w: &window) -> window_flag {
 pub(crate) fn alerts_check_session(s: &session) {
     unsafe {
         for &wl in s.windows.values() {
-            alerts_check_all(&*(*wl).window);
+            let w = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+            if !w.is_null() { alerts_check_all(&*w); }
         }
     }
 }

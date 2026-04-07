@@ -77,7 +77,7 @@ pub unsafe fn server_status_session_group(s: *mut session) {
 pub unsafe fn server_redraw_window(w: *mut window) {
     unsafe {
         for c in clients_iter() {
-            if !client_get_session(c).is_null() && (*(*client_get_session(c)).curw).window == w {
+            if !client_get_session(c).is_null() && winlink_window((*client_get_session(c)).curw) == w {
                 server_redraw_client(c);
             }
         }
@@ -87,7 +87,7 @@ pub unsafe fn server_redraw_window(w: *mut window) {
 pub unsafe fn server_redraw_window_borders(w: *mut window) {
     unsafe {
         for c in clients_iter() {
-            if !client_get_session(c).is_null() && (*(*client_get_session(c)).curw).window == w {
+            if !client_get_session(c).is_null() && winlink_window((*client_get_session(c)).curw) == w {
                 (*c).flags |= client_flag::REDRAWBORDERS;
             }
         }
@@ -256,13 +256,13 @@ pub unsafe fn server_link_window(
             dstwl = winlink_find_by_index(&raw mut (*dst).windows, dstidx);
         }
         if !dstwl.is_null() {
-            if (*dstwl).window == (*srcwl).window {
+            if winlink_window(dstwl) == winlink_window(srcwl) {
                 return Err(format!("same index: {}", dstidx));
             }
             if killflag {
                 // Can't use session_detach as it will destroy session
                 // if this makes it empty.
-                notify_session_window(c"window-unlinked", dst, (*dstwl).window);
+                notify_session_window(c"window-unlinked", dst, winlink_window(dstwl));
                 (*dstwl).flags &= !WINLINK_ALERTFLAGS;
                 winlink_stack_remove(&raw mut (*dst).lastw, dstwl);
                 winlink_remove(&raw mut (*dst).windows, dstwl);
@@ -278,7 +278,7 @@ pub unsafe fn server_link_window(
         if dstidx == -1 {
             dstidx = -1 - options_get_number_((*dst).options, "base-index") as i32;
         }
-        dstwl = session_attach(dst, (*srcwl).window, dstidx)?;
+        dstwl = session_attach(dst, winlink_window(srcwl), dstidx)?;
 
         if selectflag {
             session_select(dst, (*dstwl).idx);

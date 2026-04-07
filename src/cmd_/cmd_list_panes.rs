@@ -122,7 +122,7 @@ fn cmd_list_panes_window(
         }
         let filter = args_get_(args, 'f');
 
-        for (n, &wp) in (*(*wl).window).panes.iter().enumerate() {
+        for (n, &wp) in (*winlink_window(wl)).panes.iter().enumerate() {
             let ft = format_create(
                 cmdq_get_client(item),
                 item,

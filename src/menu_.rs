@@ -552,7 +552,7 @@ pub unsafe fn menu_set_style(
     option: *const u8,
 ) {
     unsafe {
-        let o = (*(*(*client_get_session(c)).curw).window).options;
+        let o = (*winlink_window((*client_get_session(c)).curw)).options;
 
         memcpy__(gc, &raw const GRID_DEFAULT_CELL);
         style_apply(gc, o, option, null_mut());
@@ -590,7 +590,7 @@ pub unsafe fn menu_prepare(
         let mut choice;
         let mut name: &str;
 
-        let o = (*(*(*client_get_session(c)).curw).window).options;
+        let o = (*winlink_window((*client_get_session(c)).curw)).options;
 
         if (*c).tty.sx < (*menu).width + 4 || (*c).tty.sy < (*menu).items.len() as u32 + 2 {
             return null_mut();

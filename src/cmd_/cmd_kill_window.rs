@@ -56,7 +56,7 @@ unsafe fn cmd_kill_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
         let target = cmdq_get_target(item);
         let wl = (*target).wl;
         //*loop;
-        let w = (*wl).window;
+        let w = winlink_window(wl);
         let s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let mut found;
 
@@ -79,8 +79,8 @@ unsafe fn cmd_kill_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
             loop {
                 found = 0;
                 for &loop_ in (*(&raw mut (*s).windows)).values() {
-                    if (*loop_).window != (*wl).window {
-                        server_kill_window((*loop_).window, 0);
+                    if winlink_window(loop_) != winlink_window(wl) {
+                        server_kill_window(winlink_window(loop_), 0);
                         found += 1;
                         break;
                     }
@@ -95,13 +95,13 @@ unsafe fn cmd_kill_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
             // kill it as well.
             found = 0;
             for &loop_ in (*(&raw mut (*s).windows)).values() {
-                if (*loop_).window == (*wl).window {
+                if winlink_window(loop_) == winlink_window(wl) {
                     found += 1;
                 }
             }
             if found > 1 {
                 {
-                    server_kill_window((*wl).window, 0);
+                    server_kill_window(winlink_window(wl), 0);
                 }
             }
 
@@ -109,7 +109,7 @@ unsafe fn cmd_kill_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        server_kill_window((*wl).window, 1);
+        server_kill_window(winlink_window(wl), 1);
         cmd_retval::CMD_RETURN_NORMAL
     }
 }

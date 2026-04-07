@@ -808,10 +808,10 @@ pub unsafe fn cmd_mouse_pane(
         let wp;
 
         if (*m).wp == -1 {
-            wp = NonNull::new((*(*wl.as_ptr()).window).active);
+            wp = NonNull::new((*winlink_window(wl.as_ptr())).active);
         } else {
             wp = Some(NonNull::new(window_pane_find_by_id((*m).wp as u32))?);
-            if !window_has_pane(&*(*wl.as_ptr()).window, wp.unwrap().as_ptr()) {
+            if !window_has_pane(&*winlink_window(wl.as_ptr()), wp.unwrap().as_ptr()) {
                 return None;
             }
         }

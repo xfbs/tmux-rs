@@ -1018,7 +1018,7 @@ pub unsafe fn options_scope_from_name(
                     } else if wl.is_null() {
                         Err("no current window".into())
                     } else {
-                        *oo = (*(*wl).window).options;
+                        *oo = (*winlink_window(wl)).options;
                         Ok(OPTIONS_TABLE_WINDOW)
                     }
                 }
@@ -1032,7 +1032,7 @@ pub unsafe fn options_scope_from_name(
                 } else if wl.is_null() {
                     Err("no current window".into())
                 } else {
-                    *oo = (*(*wl).window).options;
+                    *oo = (*winlink_window(wl)).options;
                     Ok(OPTIONS_TABLE_WINDOW)
                 }
             }
@@ -1080,7 +1080,7 @@ pub unsafe fn options_scope_from_flags(
                     return Err("no current window".into());
                 }
             }
-            *oo = (*(*wl).window).options;
+            *oo = (*winlink_window(wl)).options;
             Ok(OPTIONS_TABLE_WINDOW)
         } else {
             if args_has(args, 'g') {

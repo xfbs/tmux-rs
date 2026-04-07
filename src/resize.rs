@@ -414,7 +414,7 @@ pub unsafe fn recalculate_size_skip_client(
             return true;
         }
         if current {
-            return (*(*client_get_session(loop_)).curw).window != w;
+            return winlink_window((*client_get_session(loop_)).curw) != w;
         }
 
         !session_has(client_get_session(loop_), &*w)

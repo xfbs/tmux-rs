@@ -53,7 +53,7 @@ unsafe fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retv
         if args_has(args, 'S') && !name.is_null() && (*target).idx == -1 {
             let expanded = format_single(item, cstr_to_str(name), c, s, null_mut(), null_mut());
             for &wl in (*(&raw mut (*s).windows)).values() {
-                if libc::strcmp((*(*wl).window).name, expanded) != 0 {
+                if libc::strcmp((*winlink_window(wl)).name, expanded) != 0 {
                     continue;
                 }
                 if new_wl.is_null() {
@@ -74,7 +74,7 @@ unsafe fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retv
                     server_redraw_session(s);
                 }
                 if !c.is_null() && !client_get_session(c).is_null() {
-                    (*(*(*s).curw).window).latest = c as _;
+                    (*winlink_window((*s).curw)).latest = c as _;
                 }
                 recalculate_sizes();
                 return cmd_retval::CMD_RETURN_NORMAL;
@@ -137,7 +137,7 @@ unsafe fn cmd_new_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retv
             if template.is_null() {
                 template = NEW_WINDOW_TEMPLATE;
             }
-            let cp = format_single(item, cstr_to_str(template), tc, s, new_wl, (*(*new_wl).window).active);
+            let cp = format_single(item, cstr_to_str(template), tc, s, new_wl, (*winlink_window(new_wl)).active);
             cmdq_print!(item, "{}", _s(cp));
             free_(cp);
         }

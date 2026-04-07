@@ -77,7 +77,7 @@ pub unsafe fn notify_insert_hook(mut item: *mut cmdq_item, ne: *mut notify_entry
             o = options_get(&mut *oo, cstr_to_str((*ne).name));
         }
         if o.is_null() && !fs.wl.is_null() {
-            oo = (*(*fs.wl).window).options;
+            oo = (*winlink_window(fs.wl)).options;
             o = options_get(&mut *oo, cstr_to_str((*ne).name));
         }
         if o.is_null() {
@@ -351,7 +351,7 @@ pub unsafe fn notify_winlink(name: &'static CStr, wl: *mut winlink) {
             &raw mut fs,
             null_mut(),
             (*wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut()),
-            (*wl).window,
+            (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut()),
             null_mut(),
             None,
         );

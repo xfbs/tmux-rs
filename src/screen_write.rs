@@ -133,7 +133,7 @@ unsafe fn screen_write_set_client_cb(ttyctx: *mut tty_ctx, c: *mut client) -> i3
             return 0;
         }
 
-        if (*(*client_get_session(c)).curw).window != (*wp).window {
+        if winlink_window((*client_get_session(c)).curw) != (*wp).window {
             return 0;
         }
         if (*wp).layout_cell.is_null() {

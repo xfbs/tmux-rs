@@ -80,8 +80,9 @@ pub unsafe fn winlink_find_by_window(
     w: *mut window,
 ) -> Option<NonNull<winlink>> {
     unsafe {
+        let target = if w.is_null() { None } else { Some(WindowId((*w).id)) };
         for &wl in (*wwl).values() {
-            if (*wl).window == w {
+            if (*wl).window == target {
                 return NonNull::new(wl);
             }
         }
@@ -102,7 +103,7 @@ pub unsafe fn winlink_find_by_index(wwl: *mut winlinks, idx: i32) -> *mut winlin
 pub unsafe fn winlink_find_by_window_id(wwl: *mut winlinks, id: u32) -> *mut winlink {
     unsafe {
         for &wl in (*wwl).values() {
-            if (*(*wl).window).id == id {
+            if (*wl).window == Some(WindowId(id)) {
                 return wl;
             }
         }
@@ -156,21 +157,33 @@ pub unsafe fn winlink_add(wwl: *mut winlinks, mut idx: i32) -> *mut winlink {
     }
 }
 
+/// Resolve `winlink.window` (an `Option<WindowId>`) to the underlying
+/// `*mut window`, or null if absent.
+#[inline]
+pub unsafe fn winlink_window(wl: *mut winlink) -> *mut window {
+    unsafe {
+        (*wl).window
+            .and_then(|id| window_from_id(id))
+            .unwrap_or(null_mut())
+    }
+}
+
 pub unsafe fn winlink_set_window(wl: *mut winlink, w: *mut window) {
     unsafe {
-        if !(*wl).window.is_null() {
-            (*(*wl).window).winlinks.retain(|&p| p != wl);
-            window_remove_ref((*wl).window, c!("winlink_set_window"));
+        let prev = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        if !prev.is_null() {
+            (*prev).winlinks.retain(|&p| p != wl);
+            window_remove_ref(prev, c!("winlink_set_window"));
         }
         (*w).winlinks.push(wl);
-        (*wl).window = w;
+        (*wl).window = Some(WindowId((*w).id));
         window_add_ref(w, c!("winlink_set_window"));
     }
 }
 
 pub unsafe fn winlink_remove(wwl: *mut winlinks, wl: *mut winlink) {
     unsafe {
-        let w = (*wl).window;
+        let w = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
 
         if !w.is_null() {
             (*w).winlinks.retain(|&p| p != wl);
@@ -576,7 +589,7 @@ pub unsafe fn window_pane_update_focus(wp: *mut window_pane) {
                     if !client_get_session(c).is_null()
                         && (*client_get_session(c)).attached != 0
                         && (*c).flags.intersects(client_flag::FOCUSED)
-                        && (*(*client_get_session(c)).curw).window == (*wp).window
+                        && winlink_window((*client_get_session(c)).curw) == (*wp).window
                     {
                         focused = true;
                         break;
@@ -1025,7 +1038,8 @@ pub unsafe fn window_printable_flags(wl: *mut winlink, escape: i32) -> *const u8
             FLAGS[pos] = b'M';
             pos += 1;
         }
-        if (*(*wl).window).flags.intersects(window_flag::ZOOMED) {
+        let w_zoom = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        if !w_zoom.is_null() && (*w_zoom).flags.intersects(window_flag::ZOOMED) {
             FLAGS[pos] = b'Z';
             pos += 1;
         }
@@ -1744,8 +1758,10 @@ pub unsafe fn window_pane_stack_remove(stack: *mut Vec<*mut window_pane>, wp: *m
 /// Clear alert flags for a winlink
 pub unsafe fn winlink_clear_flags(wl: *mut winlink) {
     unsafe {
-        (*(*wl).window).flags &= !WINDOW_ALERTFLAGS;
-        for &loop_ in (*(*wl).window).winlinks.iter() {
+        let w = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        if w.is_null() { return; }
+        (*w).flags &= !WINDOW_ALERTFLAGS;
+        for &loop_ in (*w).winlinks.iter() {
             if (*loop_).flags.intersects(WINLINK_ALERTFLAGS) {
                 (*loop_).flags &= !WINLINK_ALERTFLAGS;
                 server_status_session((*loop_).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut()));

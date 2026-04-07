@@ -36,16 +36,16 @@ unsafe fn cmd_kill_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
         let wp = (*target).wp;
 
         if args_has(args, 'a') {
-            server_unzoom_window((*wl).window);
-            for &loopwp in (*(*wl).window).panes.iter() {
+            server_unzoom_window(winlink_window(wl));
+            for &loopwp in (*winlink_window(wl)).panes.iter() {
                 if loopwp == wp {
                     continue;
                 }
                 server_client_remove_pane(loopwp);
                 layout_close_pane(loopwp);
-                window_remove_pane((*wl).window, loopwp);
+                window_remove_pane(winlink_window(wl), loopwp);
             }
-            server_redraw_window((*wl).window);
+            server_redraw_window(winlink_window(wl));
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 

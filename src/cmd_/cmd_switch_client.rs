@@ -98,8 +98,8 @@ unsafe fn cmd_switch_client_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
             if cmdq_get_client(item).is_null() {
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
-            if !wl.is_null() && !wp.is_null() && wp != (*(*wl).window).active {
-                let w = (*wl).window;
+            if !wl.is_null() && !wp.is_null() && wp != (*winlink_window(wl)).active {
+                let w = winlink_window(wl);
                 if window_push_zoom(w, false, args_has(args, 'Z')) {
                     server_redraw_window(w);
                 }

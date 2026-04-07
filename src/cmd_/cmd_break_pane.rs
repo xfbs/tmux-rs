@@ -43,7 +43,7 @@ pub unsafe fn cmd_break_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_
         let src_s = (*source).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let dst_s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wp = (*source).wp;
-        let mut w = (*wl).window;
+        let mut w = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
 
         let name: *mut u8;
         let cp: *mut u8;

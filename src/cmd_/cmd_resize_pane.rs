@@ -35,7 +35,7 @@ unsafe fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
         let event = cmdq_get_event(item);
         let wp = (*target).wp;
         let wl = (*target).wl;
-        let w = (*wl).window;
+        let w = winlink_window(wl);
         let c = cmdq_get_client(item);
         let mut s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let mut adjust;
@@ -137,7 +137,7 @@ unsafe fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
         } else if args_has(args, 'D') {
             layout_resize_pane(wp, layout_type::LAYOUT_TOPBOTTOM, adjust as i32, 1);
         }
-        server_redraw_window((*wl).window);
+        server_redraw_window(winlink_window(wl));
     }
 
     cmd_retval::CMD_RETURN_NORMAL
@@ -158,7 +158,7 @@ unsafe fn cmd_resize_pane_mouse_update(c: *mut client, m: *mut mouse_event) {
             (*c).tty.mouse_drag_update = None;
             return;
         }
-        let w: *mut window = (*wl).window;
+        let w: *mut window = winlink_window(wl);
 
         y = (*m).y + (*m).oy;
         let x: u32 = (*m).x + (*m).ox;

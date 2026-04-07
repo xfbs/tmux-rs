@@ -39,7 +39,7 @@ unsafe fn cmd_kill_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
 
         if args_has(args, 'C') {
             for &wl in (*(&raw mut (*s).windows)).values() {
-                (*(*wl).window).flags &= !WINDOW_ALERTFLAGS;
+                (*winlink_window(wl)).flags &= !WINDOW_ALERTFLAGS;
                 (*wl).flags &= !WINLINK_ALERTFLAGS;
             }
             server_redraw_session(s);

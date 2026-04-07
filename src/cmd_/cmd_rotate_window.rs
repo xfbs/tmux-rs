@@ -38,7 +38,7 @@ unsafe fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         let current = cmdq_get_current(item);
         let target = cmdq_get_target(item);
         let wl = (*target).wl;
-        let w = (*wl).window;
+        let w = winlink_window(wl);
         let mut wp: *mut window_pane;
         let lc: *mut layout_cell;
         let sx: u32;

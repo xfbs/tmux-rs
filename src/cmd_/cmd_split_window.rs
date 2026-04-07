@@ -37,7 +37,7 @@ unsafe fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
         let tc = cmdq_get_target_client(item);
         let s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*target).wl;
-        let w = (*wl).window;
+        let w = winlink_window(wl);
         let wp = (*target).wp;
         let count = args_count(args);
         let mut curval = 0;
