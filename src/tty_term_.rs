@@ -581,8 +581,7 @@ pub unsafe fn tty_term_create(
     caps: *mut *mut u8,
     ncaps: u32,
     feat: *mut i32,
-    cause: *mut *mut u8,
-) -> *mut tty_term {
+) -> Result<*mut tty_term, String> {
     unsafe {
         log_debug!("adding term {}", _s(name));
         let term = xcalloc1::<tty_term>() as *mut tty_term;
@@ -591,7 +590,7 @@ pub unsafe fn tty_term_create(
         (*term).codes = xcalloc_(tty_term_ncodes() as usize).as_ptr();
         (*term).expand_context = ExpandContext::new();
         (*(&raw mut TTY_TERMS)).push(term);
-        'error: {
+        {
             // Fill in codes.
             for i in 0..ncaps as usize {
                 let namelen = strcspn(*caps.add(i), c!("="));
@@ -655,12 +654,12 @@ pub unsafe fn tty_term_create(
 
             // These are always required.
             if !tty_term_has(term, tty_code_code::TTYC_CLEAR) {
-                *cause = format_nul!("terminal does not support clear");
-                break 'error;
+                tty_term_free(term);
+                return Err("terminal does not support clear".to_string());
             }
             if !tty_term_has(term, tty_code_code::TTYC_CUP) {
-                *cause = format_nul!("terminal does not support cup");
-                break 'error;
+                tty_term_free(term);
+                return Err("terminal does not support cup".to_string());
             }
 
             // If TERM has XT or clear starts with CSI then it is safe to assume
@@ -702,12 +701,8 @@ pub unsafe fn tty_term_create(
                 );
             }
 
-            return term;
+            Ok(term)
         }
-
-        // error:
-        tty_term_free(term);
-        null_mut()
     }
 }
 
@@ -733,24 +728,29 @@ pub unsafe fn tty_term_read_list(
     _fd: i32,
     caps: *mut *mut *mut u8,
     ncaps: *mut u32,
-    cause: *mut *mut u8,
-) -> i32 {
+) -> Result<(), String> {
     unsafe {
         let mut tmp = [0u8; 11];
 
         let Ok(terminfo_path) = locate(cstr_to_str(name)) else {
-            *cause = format_nul!("can't find terminfo database for terminal: {}", _s(name));
-            return -1;
+            return Err(format!(
+                "can't find terminfo database for terminal: {}",
+                _s(name)
+            ));
         };
 
         let Ok(terminfo_buffer) = std::fs::read(terminfo_path) else {
-            *cause = format_nul!("can't read terminfo database for terminal: {}", _s(name));
-            return -1;
+            return Err(format!(
+                "can't read terminfo database for terminal: {}",
+                _s(name)
+            ));
         };
 
         let Ok(terminfo) = parse(&terminfo_buffer) else {
-            *cause = format_nul!("can't parse terminfo database for terminal: {}", _s(name));
-            return -1;
+            return Err(format!(
+                "can't parse terminfo database for terminal: {}",
+                _s(name)
+            ));
         };
 
         *ncaps = 0;
@@ -789,7 +789,7 @@ pub unsafe fn tty_term_read_list(
             (*ncaps) += 1;
         }
 
-        0
+        Ok(())
     }
 }
 

@@ -94,7 +94,7 @@ pub unsafe fn server_check_marked() -> bool {
     unsafe { cmd_find_valid_state(&raw mut MARKED_PANE) }
 }
 
-pub unsafe fn server_create_socket(flags: client_flag, cause: *mut *mut u8) -> c_int {
+pub unsafe fn server_create_socket(flags: client_flag) -> Result<c_int, String> {
     unsafe {
         'fail: {
             let mut sa: sockaddr_un = zeroed();
@@ -138,18 +138,15 @@ pub unsafe fn server_create_socket(flags: client_flag, cause: *mut *mut u8) -> c
             }
             setblocking(fd, 0);
 
-            return fd;
+            return Ok(fd);
         }
 
         // fail:
-        if !cause.is_null() {
-            *cause = format_nul!(
-                "error creating {} ({})",
-                _s(SOCKET_PATH),
-                strerror(errno!())
-            );
-        }
-        -1
+        Err(format!(
+            "error creating {} ({})",
+            _s(SOCKET_PATH),
+            strerror(errno!())
+        ))
     }
 }
 
@@ -272,7 +269,13 @@ pub unsafe fn server_start(
             SERVER_FD =
                 crate::compat::systemd::systemd_create_socket(flags.bits() as i32, &raw mut cause);
         } else {
-            SERVER_FD = server_create_socket(flags, &raw mut cause);
+            match server_create_socket(flags) {
+                Ok(fd) => SERVER_FD = fd,
+                Err(msg) => {
+                    SERVER_FD = -1;
+                    cause = format_nul!("{}", msg);
+                }
+            }
         }
         if SERVER_FD != -1 {
             server_update_socket();
@@ -508,8 +511,7 @@ unsafe fn server_signal(sig: i32) {
             libc::SIGCHLD => server_child_signal(),
             libc::SIGUSR1 => {
                 event_del(&raw mut SERVER_EV_ACCEPT);
-                let fd = server_create_socket(SERVER_CLIENT_FLAGS, null_mut());
-                if fd != -1 {
+                if let Ok(fd) = server_create_socket(SERVER_CLIENT_FLAGS) {
                     close(SERVER_FD);
                     SERVER_FD = fd;
                     server_update_socket();

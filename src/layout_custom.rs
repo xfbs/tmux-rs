@@ -160,32 +160,31 @@ pub unsafe fn layout_check(lc: *mut layout_cell) -> bool {
     true
 }
 
-pub unsafe fn layout_parse(w: *mut window, mut layout: *const u8, cause: *mut *mut u8) -> i32 {
+pub unsafe fn layout_parse(w: *mut window, mut layout: *const u8) -> Result<(), String> {
     let __func__ = c!("layout_parse");
     unsafe {
         let mut lc: *mut layout_cell;
         let mut csum: u16 = 0;
+        #[allow(unused_assignments)]
+        let mut err_msg: Option<String> = None;
 
         'fail: {
             // Check validity.
             if sscanf(layout.cast(), c"%hx,".as_ptr(), &raw mut csum) != 1 {
-                *cause = xstrdup_(c"invalid layout").as_ptr();
-                return -1;
+                return Err("invalid layout".to_string());
             }
             layout = layout.add(5);
             if csum != layout_checksum(layout) {
-                *cause = xstrdup_(c"invalid layout").as_ptr();
-                return -1;
+                return Err("invalid layout".to_string());
             }
 
             // Build the layout.
             lc = layout_construct(null_mut(), &raw mut layout);
             if lc.is_null() {
-                *cause = xstrdup_(c"invalid layout").as_ptr();
-                return -1;
+                return Err("invalid layout".to_string());
             }
             if *layout != b'\0' {
-                *cause = xstrdup_(c"invalid layout").as_ptr();
+                err_msg = Some("invalid layout".to_string());
                 break 'fail;
             }
 
@@ -194,7 +193,7 @@ pub unsafe fn layout_parse(w: *mut window, mut layout: *const u8, cause: *mut *m
                 let npanes = window_count_panes(&*w);
                 let ncells = layout_count_cells(lc);
                 if npanes > ncells {
-                    *cause = format_nul!("have {} panes but need {}", npanes, ncells);
+                    err_msg = Some(format!("have {} panes but need {}", npanes, ncells));
                     break 'fail;
                 }
                 if npanes == ncells {
@@ -237,7 +236,7 @@ pub unsafe fn layout_parse(w: *mut window, mut layout: *const u8, cause: *mut *m
 
             // Check the new layout.
             if !layout_check(lc) {
-                *cause = xstrdup_(c"size mismatch after applying layout").as_ptr();
+                err_msg = Some("size mismatch after applying layout".to_string());
                 break 'fail;
             }
 
@@ -261,11 +260,11 @@ pub unsafe fn layout_parse(w: *mut window, mut layout: *const u8, cause: *mut *m
 
             notify_window(c"window-layout-changed", w);
 
-            return 0;
+            return Ok(());
         }
         // fail:
         layout_free_cell(lc);
-        -1
+        Err(err_msg.unwrap_or_else(|| "invalid layout".to_string()))
     }
 }
 

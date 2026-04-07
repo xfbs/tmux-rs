@@ -211,61 +211,56 @@ unsafe fn expand_paths(s: &str, paths: &mut Vec<CString>, ignore_errors: i32) {
     }
 }
 
-unsafe fn make_label(mut label: *const u8, cause: *mut *mut u8) -> *const u8 {
+unsafe fn make_label(mut label: *const u8) -> Result<*const u8, String> {
     let mut paths: Vec<CString> = Vec::new();
     let base: *mut u8;
     let mut sb: stat = unsafe { zeroed() }; // TODO use uninit
 
     unsafe {
-        'fail: {
-            *cause = null_mut();
-            if label.is_null() {
-                label = c!("default");
-            }
-            let uid = getuid();
+        if label.is_null() {
+            label = c!("default");
+        }
+        let uid = getuid();
 
-            expand_paths(TMUX_SOCK, &mut paths, 1);
-            if paths.is_empty() {
-                *cause = format_nul!("no suitable socket path");
-                return null_mut();
-            }
+        expand_paths(TMUX_SOCK, &mut paths, 1);
+        if paths.is_empty() {
+            return Err("no suitable socket path".to_string());
+        }
 
-            paths.truncate(1);
-            let mut path = paths.pop().unwrap(); /* can only have one socket! */
+        paths.truncate(1);
+        let mut path = paths.pop().unwrap(); /* can only have one socket! */
 
-            base = format_nul!("{}/tmux-rs-{}", path.to_string_lossy(), uid);
+        base = format_nul!("{}/tmux-rs-{}", path.to_string_lossy(), uid);
+        let err: Option<String> = 'check: {
             if mkdir(base.cast(), S_IRWXU) != 0 && errno!() != EEXIST {
-                *cause = format_nul!(
+                break 'check Some(format!(
                     "couldn't create directory {} ({})",
                     _s(base),
                     strerror(errno!())
-                );
-                break 'fail;
+                ));
             }
             if lstat(base.cast(), &raw mut sb) != 0 {
-                *cause = format_nul!(
+                break 'check Some(format!(
                     "couldn't read directory {} ({})",
                     _s(base),
                     strerror(errno!()),
-                );
-                break 'fail;
+                ));
             }
             if !S_ISDIR(sb.st_mode) {
-                *cause = format_nul!("{} is not a directory", _s(base));
-                break 'fail;
+                break 'check Some(format!("{} is not a directory", _s(base)));
             }
             if sb.st_uid != uid || (sb.st_mode & S_IRWXO) != 0 {
-                *cause = format_nul!("directory {} has unsafe permissions", _s(base));
-                break 'fail;
+                break 'check Some(format!("directory {} has unsafe permissions", _s(base)));
             }
-            path = CString::new(format!("{}/{}", _s(base), _s(label))).unwrap();
+            None
+        };
+        if let Some(msg) = err {
             free_(base);
-            return path.into_raw().cast();
+            return Err(msg);
         }
-
-        // fail:
+        path = CString::new(format!("{}/{}", _s(base), _s(label))).unwrap();
         free_(base);
-        null_mut()
+        Ok(path.into_raw().cast())
     }
 }
 
@@ -370,7 +365,6 @@ pub unsafe fn tmux_main(mut argc: i32, mut argv: *mut *mut u8, _env: *mut *mut u
 
     unsafe {
         // setproctitle_init(argc, argv.cast(), env.cast());
-        let mut cause: *mut u8 = null_mut();
         let mut path: *const u8 = null_mut();
         let mut label: *mut u8 = null_mut();
         let mut feat: i32 = 0;
@@ -561,13 +555,12 @@ pub unsafe fn tmux_main(mut argc: i32, mut argv: *mut *mut u8, _env: *mut *mut u
             path = tmp;
         }
         if path.is_null() {
-            path = make_label(label.cast(), &raw mut cause);
-            if path.is_null() {
-                if !cause.is_null() {
-                    eprintln!("{}", _s(cause));
-                    free(cause as _);
+            match make_label(label.cast()) {
+                Ok(p) => path = p,
+                Err(cause) => {
+                    eprintln!("{}", cause);
+                    std::process::exit(1);
                 }
-                std::process::exit(1);
             }
             flags |= client_flag::DEFAULTSOCKET;
         }

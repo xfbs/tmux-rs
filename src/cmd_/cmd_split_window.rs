@@ -39,7 +39,6 @@ unsafe fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
         let wl = (*target).wl;
         let w = (*wl).window;
         let wp = (*target).wp;
-        let mut cause = null_mut();
         let count = args_count(args);
         let mut curval = 0;
 
@@ -140,23 +139,22 @@ unsafe fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
             }
         };
         if input {
-            match window_pane_start_input(new_wp, item, &raw mut cause) {
-                -1 => {
+            match window_pane_start_input(new_wp, item) {
+                Err(cause) => {
                     server_client_remove_pane(new_wp);
                     layout_close_pane(new_wp);
                     window_remove_pane((*wp).window, new_wp);
-                    cmdq_error!(item, "{}", _s(cause));
-                    free_(cause);
+                    cmdq_error!(item, "{}", cause);
                     if !sc.argv.is_null() {
                         cmd_free_argv(sc.argc, sc.argv);
                     }
                     environ_free(sc.environ);
                     return cmd_retval::CMD_RETURN_ERROR;
                 }
-                1 => {
+                Ok(1) => {
                     input = false;
                 }
-                _ => (),
+                Ok(_) => (),
             }
         }
         if !args_has(args, 'd') {

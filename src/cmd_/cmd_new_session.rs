@@ -73,7 +73,6 @@ unsafe fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
         let errstr: *const u8 = null();
         let group: *const u8;
         let mut tmp: *const u8;
-        let mut cause = null_mut();
         let mut cwd = null_mut();
         let cp;
         let name;
@@ -213,9 +212,11 @@ unsafe fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
             }
 
             // Open the terminal if necessary.
-            if !detached && !already_attached && server_client_open(c, &raw mut cause) != 0 {
-                cmdq_error!(item, "open terminal failed: {}", _s(cause));
-                free_(cause);
+            if !detached
+                && !already_attached
+                && let Err(cause_msg) = server_client_open(c)
+            {
+                cmdq_error!(item, "open terminal failed: {}", cause_msg);
                 break 'fail;
             }
 

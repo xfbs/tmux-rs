@@ -58,7 +58,6 @@ unsafe fn cmd_move_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
         let tflag = args_get(args, b't');
         let src = (*source).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*source).wl;
-        let mut cause = null_mut();
 
         if args_has(args, 'r') {
             if cmd_find_target(
@@ -108,9 +107,8 @@ unsafe fn cmd_move_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
             }
         }
 
-        if server_link_window(src, wl, dst, idx, kflag, !dflag, &raw mut cause) != 0 {
-            cmdq_error!(item, "{}", _s(cause));
-            free_(cause);
+        if let Err(cause) = server_link_window(src, wl, dst, idx, kflag, !dflag) {
+            cmdq_error!(item, "{}", cause);
             return cmd_retval::CMD_RETURN_ERROR;
         }
         if std::ptr::eq(cmd_get_entry(self_), &CMD_MOVE_WINDOW_ENTRY) {
