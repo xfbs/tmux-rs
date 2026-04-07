@@ -91,9 +91,9 @@ pub unsafe fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
             // spawned without being visited (for example split-window -d).
             lastwp = (*w).last_panes.first().copied().unwrap_or(null_mut());
             if lastwp.is_null() && window_count_panes(&*w) == 2 {
-                lastwp = window_pane_prev_in_list((*w).active);
+                lastwp = window_pane_prev_in_list(window_active_pane(w));
                 if lastwp.is_null() {
-                    lastwp = window_pane_next_in_list((*w).active);
+                    lastwp = window_pane_next_in_list(window_active_pane(w));
                 }
             }
             if lastwp.is_null() {
@@ -222,7 +222,7 @@ pub unsafe fn cmd_select_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
         {
             server_client_get_pane(c)
         } else {
-            (*w).active
+            window_active_pane(w)
         };
         if wp == activewp {
             return cmd_retval::CMD_RETURN_NORMAL;

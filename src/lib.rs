@@ -1366,7 +1366,7 @@ struct window {
 
     activity_time: timeval,
 
-    active: *mut window_pane,
+    active: Option<PaneId>,
     /// Stack of last-visited panes (MRU order, head = most recent).
     last_panes: Vec<*mut window_pane>,
     /// Ordered list of all panes in this window.

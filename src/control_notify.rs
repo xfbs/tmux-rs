@@ -81,7 +81,7 @@ pub unsafe fn control_notify_window_pane_changed(w: *mut window) {
                     c,
                     "%window-pane-changed @{} %{}",
                     (*w).id,
-                    (*(*w).active).id,
+                    (*window_active_pane(w)).id,
                 );
             }
         }

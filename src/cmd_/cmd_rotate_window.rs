@@ -82,7 +82,7 @@ unsafe fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
             (*wp).yoff = yoff;
             window_pane_resize(wp, sx, sy);
 
-            wp = window_pane_prev_in_list((*w).active);
+            wp = window_pane_prev_in_list(window_active_pane(w));
             if wp.is_null() {
                 wp = (*w).panes.last().copied().unwrap_or(null_mut());
             }
@@ -118,7 +118,7 @@ unsafe fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
             (*wp).yoff = yoff;
             window_pane_resize(wp, sx, sy);
 
-            wp = window_pane_next_in_list((*w).active);
+            wp = window_pane_next_in_list(window_active_pane(w));
             if wp.is_null() {
                 wp = (*w).panes.first().copied().unwrap_or(null_mut());
             }

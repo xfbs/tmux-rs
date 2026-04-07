@@ -548,7 +548,7 @@ pub unsafe fn cmd_find_get_pane(fs: *mut cmd_find_state, pane: &str, only: bool)
 
         if !only && cmd_find_get_window(fs, pane, false) == 0 {
             let fs_w = (*fs).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-            { let __p = (*fs_w).active; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+            { let __p = window_active_pane(fs_w); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
             return 0;
         }
     }
@@ -604,28 +604,28 @@ pub unsafe fn cmd_find_get_pane_with_window(fs: *mut cmd_find_state, pane: &str)
                 return 0;
             }
             "{up-of}" => {
-                { let __p = window_pane_find_up((*fs_w).active); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+                { let __p = window_pane_find_up(window_active_pane(fs_w)); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
                 if (*fs).wp.is_none() {
                     return -1;
                 }
                 return 0;
             }
             "{down-of}" => {
-                { let __p = window_pane_find_down((*fs_w).active); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+                { let __p = window_pane_find_down(window_active_pane(fs_w)); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
                 if (*fs).wp.is_none() {
                     return -1;
                 }
                 return 0;
             }
             "{left-of}" => {
-                { let __p = window_pane_find_left((*fs_w).active); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+                { let __p = window_pane_find_left(window_active_pane(fs_w)); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
                 if (*fs).wp.is_none() {
                     return -1;
                 }
                 return 0;
             }
             "{right-of}" => {
-                { let __p = window_pane_find_right((*fs_w).active); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+                { let __p = window_pane_find_right(window_active_pane(fs_w)); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
                 if (*fs).wp.is_none() {
                     return -1;
                 }
@@ -640,7 +640,7 @@ pub unsafe fn cmd_find_get_pane_with_window(fs: *mut cmd_find_state, pane: &str)
             } else {
                 1
             };
-            let wp = (*fs_w).active;
+            let wp = window_active_pane(fs_w);
             if pane.starts_with('+') {
                 { let __p = window_pane_next_by_number(fs_w, wp, n); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
             } else {
@@ -755,7 +755,7 @@ pub unsafe fn cmd_find_from_session(
         (*fs).wl = (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).curw;
         (*fs).w = (*(*fs).wl).window;
         let fs_w = (*fs).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-        { let __p = (*fs_w).active; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+        { let __p = window_active_pane(fs_w); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
 
         cmd_find_log_state(c!("cmd_find_from_session"), fs);
     }
@@ -773,7 +773,7 @@ pub unsafe fn cmd_find_from_winlink(
         (*fs).wl = wl;
         (*fs).w = (*wl).window;
         let fs_w = (*fs).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-        { let __p = if fs_w.is_null() { null_mut() } else { (*fs_w).active }; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+        { let __p = window_active_pane(fs_w); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
 
         cmd_find_log_state(c!("cmd_find_from_winlink"), fs);
     }
@@ -795,7 +795,7 @@ pub unsafe fn cmd_find_from_session_window(
             return -1;
         }
         let fs_w = (*fs).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-        { let __p = (*fs_w).active; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+        { let __p = window_active_pane(fs_w); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
 
         cmd_find_log_state(c!("cmd_find_from_session_window"), fs);
     }
@@ -820,7 +820,7 @@ pub unsafe fn cmd_find_from_window(
             return -1;
         }
         let fs_w = (*fs).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-        { let __p = (*fs_w).active; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+        { let __p = window_active_pane(fs_w); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
 
         cmd_find_log_state(c!("cmd_find_from_window"), fs);
         0
@@ -876,7 +876,7 @@ pub unsafe fn cmd_find_from_nothing(fs: *mut cmd_find_state, flags: cmd_find_fla
         (*fs).idx = (*(*fs).wl).idx;
         (*fs).w = (*(*fs).wl).window;
         let fs_w = (*fs).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-        { let __p = (*fs_w).active; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+        { let __p = window_active_pane(fs_w); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
 
         cmd_find_log_state(c!("cmd_find_from_nothing"), fs);
     }
@@ -950,7 +950,7 @@ pub unsafe fn cmd_find_from_client(
             (*fs).wl = (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).curw;
             (*fs).w = (*(*fs).wl).window;
             let fs_w = (*fs).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-            { let __p = (*fs_w).active; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+            { let __p = window_active_pane(fs_w); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
 
             cmd_find_log_state(__func__, fs);
             return 0;
@@ -1085,7 +1085,7 @@ pub unsafe fn cmd_find_target(
                         if !(*fs).wl.is_null() {
                             (*fs).w = (*(*fs).wl).window;
                             let fs_w = (*fs).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-                            { let __p = (*fs_w).active; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+                            { let __p = window_active_pane(fs_w); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
                         }
                     }
                 }
@@ -1099,7 +1099,7 @@ pub unsafe fn cmd_find_target(
                     if !(*fs).wl.is_null() {
                         (*fs).w = (*(*fs).wl).window;
                         let fs_w = (*fs).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-                        { let __p = (*fs_w).active; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+                        { let __p = window_active_pane(fs_w); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
                     }
                 }
             }
@@ -1228,7 +1228,7 @@ pub unsafe fn cmd_find_target(
                     (*fs).idx = -1;
                     (*fs).w = (*(*fs).wl).window;
                     let fs_w = (*fs).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-                    { let __p = (*fs_w).active; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+                    { let __p = window_active_pane(fs_w); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
                     found!(fs);
                 }
                 (Some(window), None) => {
@@ -1237,7 +1237,7 @@ pub unsafe fn cmd_find_target(
                     }
                     if !(*fs).wl.is_null() {
                         let w_pane = (*(*fs).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-                        if !w_pane.is_null() { let __p = (*w_pane).active; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+                        if !w_pane.is_null() { let __p = window_active_pane(w_pane); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
                     }
                     found!(fs);
                 }
@@ -1275,7 +1275,7 @@ pub unsafe fn cmd_find_target(
                 }
                 if !(*fs).wl.is_null() {
                     let w_p = winlink_window((*fs).wl);
-                    if !w_p.is_null() { let __p = (*w_p).active; (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
+                    if !w_p.is_null() { let __p = window_active_pane(w_p); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
                 }
                 found!(fs);
             }

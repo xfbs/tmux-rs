@@ -65,7 +65,8 @@ pub unsafe fn check_window_name(w: *mut window) {
         let mut tv: timeval = zeroed();
         let mut next: timeval = zeroed();
 
-        if (*w).active.is_null() {
+        let active = window_active_pane(w);
+        if active.is_null() {
             return;
         }
 
@@ -73,7 +74,7 @@ pub unsafe fn check_window_name(w: *mut window) {
             return;
         }
 
-        if !(*(*w).active)
+        if !(*active)
             .flags
             .intersects(window_pane_flags::PANE_CHANGED)
         {
@@ -111,7 +112,7 @@ pub unsafe fn check_window_name(w: *mut window) {
             evtimer_del(&raw mut (*w).name_event);
         }
 
-        (*(*w).active).flags &= !window_pane_flags::PANE_CHANGED;
+        (*active).flags &= !window_pane_flags::PANE_CHANGED;
 
         let name = format_window_name(w);
         if strcmp(name, (*w).name) != 0 {
@@ -130,16 +131,17 @@ pub unsafe fn check_window_name(w: *mut window) {
 /// Returns the default name for a window based on the active pane's command.
 pub unsafe fn default_window_name(w: *mut window) -> String {
     unsafe {
-        if (*w).active.is_null() {
+        let active = window_active_pane(w);
+        if active.is_null() {
             return String::new();
         }
 
         let cmd =
-            CString::new(cmd_stringify_argv((*(*w).active).argc, (*(*w).active).argv)).unwrap();
+            CString::new(cmd_stringify_argv((*active).argc, (*active).argv)).unwrap();
         if !cmd.is_empty() {
             parse_window_name(cmd.as_ptr().cast())
         } else {
-            parse_window_name((*(*w).active).shell)
+            parse_window_name((*active).shell)
         }
     }
 }
@@ -153,7 +155,7 @@ unsafe fn format_window_name(w: *mut window) -> *const u8 {
             format_flags::empty(),
         );
         format_defaults_window(ft, w);
-        format_defaults_pane(ft, (*w).active);
+        format_defaults_pane(ft, window_active_pane(w));
 
         let fmt = options_get_string_((*w).options, "automatic-rename-format");
         let name = format_expand(ft, fmt);

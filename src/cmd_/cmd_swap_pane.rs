@@ -122,10 +122,10 @@ unsafe fn cmd_swap_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
                     window_set_active_pane(src_w, tmp_wp, 1);
                 }
             } else {
-                if (*src_w).active == src_wp {
+                if window_active_pane(src_w) == src_wp {
                     window_set_active_pane(src_w, dst_wp, 1);
                 }
-                if (*dst_w).active == dst_wp {
+                if window_active_pane(dst_w) == dst_wp {
                     window_set_active_pane(dst_w, src_wp, 1);
                 }
             }

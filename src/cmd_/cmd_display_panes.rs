@@ -117,7 +117,7 @@ unsafe fn cmd_display_panes_draw_pane(ctx: *mut screen_redraw_ctx, wp: *mut wind
 
             let mut fgc = GRID_DEFAULT_CELL;
             let mut bgc = GRID_DEFAULT_CELL;
-            if (*w).active == wp {
+            if window_active_pane(w) == wp {
                 fgc.fg = active_colour;
                 bgc.bg = active_colour;
             } else {

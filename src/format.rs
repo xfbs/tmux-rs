@@ -1860,7 +1860,7 @@ pub unsafe fn format_cb_pane_active(ft: &format_tree) -> format_table_type {
     unsafe {
         let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         if !wp.is_null() {
-            if wp == (*window_pane_window(wp)).active {
+            if wp == window_active_pane(window_pane_window(wp)) {
                 return "1".into();
             }
             return "0".into();
@@ -4110,7 +4110,7 @@ pub unsafe fn format_loop_panes(es: *mut format_expand_state, fmt: *const u8) ->
         let next = next.as_mut_ptr();
         for &wp in (*w).panes.iter() {
             format_log1!(es, c!("format_loop_panes"), "pane loop: %{}", (*wp).id,);
-            let use_ = if !active.is_null() && wp == (*w).active {
+            let use_ = if !active.is_null() && wp == window_active_pane(w) {
                 active
             } else {
                 all
@@ -5307,7 +5307,7 @@ pub unsafe fn format_defaults(
         }
         if wp.is_null() && !wl.is_null() {
             let w_a = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-            if !w_a.is_null() { wp = (*w_a).active; }
+            if !w_a.is_null() { wp = window_active_pane(w_a); }
         }
 
         if !c.is_null() {

@@ -99,7 +99,7 @@ pub unsafe fn cmd_break_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_
         options_set_parent(&mut *(*wp).options, (*w).options);
         (*wp).flags |= window_pane_flags::PANE_STYLECHANGED;
         (*w).panes.insert(0, wp);
-        (*w).active = wp;
+        window_set_active_pane_field(w, wp);
         (*w).latest = tc as *mut c_void;
 
         if !args_has(args, 'n') {

@@ -410,7 +410,7 @@ pub fn popup_make_pane(pd: *mut popup_data, type_: layout_type) {
         let c = (*pd).c;
         let s = client_get_session(c);
         let w = winlink_window((*s).curw);
-        let wp = (*w).active;
+        let wp = window_active_pane(w);
 
         window_unzoom(w, 1);
 

@@ -2878,10 +2878,11 @@ pub unsafe fn server_client_set_path(c: *mut client) {
         if (*s).curw.is_null() {
             return;
         }
-        let path = if (*(*winlink_window((*s).curw)).active).base.path.is_null() {
+        let active = window_active_pane(winlink_window((*s).curw));
+        let path = if (*active).base.path.is_null() {
             c!("")
         } else {
-            (*(*winlink_window((*s).curw)).active).base.path
+            (*active).base.path
         };
         if (*c).path.is_null() || libc::strcmp(path, (*c).path) != 0 {
             free_((*c).path);
@@ -3463,11 +3464,11 @@ pub unsafe fn server_client_get_pane(c: *mut client) -> *mut window_pane {
         }
 
         if !(*c).flags.intersects(client_flag::ACTIVEPANE) {
-            return (*winlink_window((*s).curw)).active;
+            return window_active_pane(winlink_window((*s).curw));
         }
         let cw = server_client_get_client_window(c, (*winlink_window((*s).curw)).id);
         if cw.is_null() {
-            return (*winlink_window((*s).curw)).active;
+            return window_active_pane(winlink_window((*s).curw));
         }
         (*cw).pane
     }

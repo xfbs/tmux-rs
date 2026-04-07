@@ -219,7 +219,7 @@ unsafe fn screen_write_initctx(ctx: *mut screen_write_ctx, ttyctx: *mut tty_ctx,
             // move the cursor); for other panes, always use it, since the
             // cursor will have to move.
             if !(*ctx).wp.is_null() {
-                if (*ctx).wp != (*window_pane_window((*ctx).wp)).active {
+                if (*ctx).wp != window_active_pane(window_pane_window((*ctx).wp)) {
                     (*ttyctx).num = 1;
                 } else {
                     (*ttyctx).num = sync as u32;

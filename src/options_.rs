@@ -1314,11 +1314,12 @@ pub unsafe fn options_push_changes(name: &str) {
 
         if name == "automatic-rename" {
             for w in windows_iter() {
-                if (*w).active.is_null() {
+                let active = window_active_pane(w);
+                if active.is_null() {
                     continue;
                 }
                 if options_get_number((*w).options, name) != 0 {
-                    (*(*w).active).flags |= window_pane_flags::PANE_CHANGED;
+                    (*active).flags |= window_pane_flags::PANE_CHANGED;
                 }
             }
         }

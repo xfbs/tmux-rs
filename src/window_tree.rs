@@ -154,7 +154,7 @@ unsafe fn window_tree_pull_item(
                 (*(*sp).unwrap().as_ptr()).curw,
             );
             *wp = std::mem::transmute::<*mut window_pane, Option<NonNull<window_pane>>>(
-                (*winlink_window((*wlp).unwrap().as_ptr())).active,
+                window_active_pane(winlink_window((*wlp).unwrap().as_ptr())),
             );
             return;
         }
@@ -171,7 +171,7 @@ unsafe fn window_tree_pull_item(
 
         if (*item.as_ptr()).type_ == window_tree_type::WINDOW_TREE_WINDOW {
             *wp = std::mem::transmute::<*mut window_pane, Option<NonNull<window_pane>>>(
-                (*winlink_window((*wlp).unwrap().as_ptr())).active,
+                window_active_pane(winlink_window((*wlp).unwrap().as_ptr())),
             );
             return;
         }
@@ -724,7 +724,7 @@ unsafe fn window_tree_draw_session(
             }
 
             screen_write_cursormove(ctx, (cx + offset) as i32, cy as i32, 0);
-            screen_write_preview(ctx, &raw mut (*(*w).active).base, width, sy);
+            screen_write_preview(ctx, &raw mut (*window_active_pane(w)).base, width, sy);
 
             label = format_nul!(" {}:{} ", (*wl).idx, _s((*w).name));
             if strlen(label) > width as usize {
@@ -778,7 +778,7 @@ unsafe fn window_tree_draw_window(
 
         let mut current: u32 = 0;
         for &wp in (*w).panes.iter() {
-            if wp == (*w).active {
+            if wp == window_active_pane(w) {
                 break;
             }
             current += 1;
@@ -860,7 +860,7 @@ unsafe fn window_tree_draw_window(
                 continue;
             }
 
-            if wp == (*w).active {
+            if wp == window_active_pane(w) {
                 gc.fg = active_colour;
             } else {
                 gc.fg = colour;

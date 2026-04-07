@@ -119,7 +119,7 @@ pub unsafe fn spawn_window(sc: *mut spawn_context) -> Result<NonNull<winlink>, S
             window_pane_resize((*sc).wp0, (*w).sx, (*w).sy);
 
             layout_init(w, (*sc).wp0);
-            (*w).active = null_mut();
+            (*w).active = None;
             window_set_active_pane(w, (*sc).wp0, 0);
         }
 
@@ -562,7 +562,7 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context) -> Result<NonNull<window_pane>,
         if (*sc).flags.intersects(SPAWN_RESPAWN) {
             return Ok(NonNull::new(new_wp).unwrap());
         }
-        if !(*sc).flags.intersects(SPAWN_DETACHED) || (*w).active.is_null() {
+        if !(*sc).flags.intersects(SPAWN_DETACHED) || (*w).active.is_none() {
             if (*sc).flags.intersects(SPAWN_NONOTIFY) {
                 window_set_active_pane(w, new_wp, 0);
             } else {

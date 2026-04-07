@@ -808,7 +808,7 @@ pub unsafe fn cmd_mouse_pane(
         let wp;
 
         if (*m).wp == -1 {
-            wp = NonNull::new((*winlink_window(wl.as_ptr())).active);
+            wp = NonNull::new(window_active_pane(winlink_window(wl.as_ptr())));
         } else {
             wp = Some(NonNull::new(window_pane_find_by_id((*m).wp as u32))?);
             if !window_has_pane(&*winlink_window(wl.as_ptr()), wp.unwrap().as_ptr()) {

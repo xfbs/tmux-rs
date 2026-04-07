@@ -50,7 +50,7 @@ pub unsafe fn resize_window(w: *mut window, mut sx: u32, mut sy: u32, xpixel: i3
 
         // Restore the window zoom state.
         if zoomed {
-            window_zoom((*w).active);
+            window_zoom(window_active_pane(w));
         }
 
         tty_update_window_offset(w);
@@ -434,7 +434,7 @@ pub unsafe fn recalculate_size(w: *mut window, now: i32) {
 
         // Do not attempt to resize windows which have no pane, they must be on
         // the way to destruction.
-        if (*w).active.is_null() {
+        if (*w).active.is_none() {
             return;
         }
         log_debug!("{}: @{} is {}x{}", __func__, (*w).id, (*w).sx, (*w).sy);

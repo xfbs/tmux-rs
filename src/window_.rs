@@ -228,6 +228,27 @@ pub unsafe fn window_pane_set_window(wp: *mut window_pane, w: *mut window) {
     }
 }
 
+/// Resolve a window's active pane through the registry.
+///
+/// Returns null if the window has no active pane (None) or the pane's
+/// allocation has been reclaimed.
+#[inline]
+pub unsafe fn window_active_pane(w: *mut window) -> *mut window_pane {
+    unsafe {
+        (*w).active
+            .and_then(|id| pane_from_id(id))
+            .unwrap_or(null_mut())
+    }
+}
+
+/// Set a window's active pane field from a `*mut window_pane` (possibly null).
+#[inline]
+pub unsafe fn window_set_active_pane_field(w: *mut window, wp: *mut window_pane) {
+    unsafe {
+        (*w).active = if wp.is_null() { None } else { Some(PaneId((*wp).id)) };
+    }
+}
+
 pub unsafe fn winlink_set_window(wl: *mut winlink, w: *mut window) {
     unsafe {
         let prev = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
@@ -403,7 +424,7 @@ pub unsafe fn window_create(sx: u32, sy: u32, mut xpixel: u32, mut ypixel: u32) 
 
         std::ptr::write(&raw mut (*w).panes, Vec::new());
         std::ptr::write(&raw mut (*w).last_panes, Vec::new());
-        (*w).active = null_mut();
+        (*w).active = None;
 
         (*w).lastlayout = -1;
         (*w).layout_root = null_mut();
@@ -632,7 +653,7 @@ pub unsafe fn window_update_focus(w: *mut window) {
     unsafe {
         if !w.is_null() {
             log_debug!("{}: @{}", "window_update_focus", (*w).id);
-            window_pane_update_focus((*w).active);
+            window_pane_update_focus(window_active_pane(w));
         }
     }
 }
@@ -642,7 +663,7 @@ pub unsafe fn window_pane_update_focus(wp: *mut window_pane) {
         let mut focused = false;
 
         if !wp.is_null() && !(*wp).flags.intersects(window_pane_flags::PANE_EXITED) {
-            if wp != (*window_pane_window(wp)).active {
+            if wp != window_active_pane(window_pane_window(wp)) {
                 focused = false;
             } else {
                 for c in clients_iter() {
@@ -688,21 +709,21 @@ pub unsafe fn window_set_active_pane(w: *mut window, wp: *mut window_pane, notif
     unsafe {
         log_debug!("{}: pane %%{}", "window_set_active_pane", (*wp).id);
 
-        if wp == (*w).active {
+        if wp == window_active_pane(w) {
             return 0;
         }
-        lastwp = (*w).active;
+        lastwp = window_active_pane(w);
 
         window_pane_stack_remove(&raw mut (*w).last_panes, wp);
         window_pane_stack_push(&raw mut (*w).last_panes, lastwp);
 
-        (*w).active = wp;
-        (*(*w).active).active_point = NEXT_ACTIVE_POINT.fetch_add(1, atomic::Ordering::Relaxed);
-        (*(*w).active).flags |= window_pane_flags::PANE_CHANGED;
+        window_set_active_pane_field(w, wp);
+        (*wp).active_point = NEXT_ACTIVE_POINT.fetch_add(1, atomic::Ordering::Relaxed);
+        (*wp).flags |= window_pane_flags::PANE_CHANGED;
 
         if options_get_number___::<i64>(&*GLOBAL_OPTIONS, "focus-events") != 0 {
             window_pane_update_focus(lastwp);
-            window_pane_update_focus((*w).active);
+            window_pane_update_focus(wp);
         }
 
         tty_update_window_offset(w);
@@ -724,7 +745,7 @@ fn window_pane_get_palette(wp: Option<&window_pane>, c: i32) -> i32 {
 
 pub unsafe fn window_redraw_active_switch(w: *mut window, mut wp: *mut window_pane) {
     unsafe {
-        if wp == (*w).active {
+        if wp == window_active_pane(w) {
             return;
         }
 
@@ -748,10 +769,10 @@ pub unsafe fn window_redraw_active_switch(w: *mut window, mut wp: *mut window_pa
                     }
                 }
             }
-            if wp == (*w).active {
+            if wp == window_active_pane(w) {
                 break;
             }
-            wp = (*w).active;
+            wp = window_active_pane(w);
         }
     }
 }
@@ -830,7 +851,7 @@ pub unsafe fn window_zoom(wp: *mut window_pane) -> i32 {
             return -1;
         }
 
-        if (*w).active != wp {
+        if window_active_pane(w) != wp {
             window_set_active_pane(w, wp, 1);
         }
 
@@ -900,7 +921,7 @@ pub unsafe fn window_pop_zoom(w: *mut window) -> bool {
             (*w).flags.intersects(window_flag::WASZOOMED) as i32,
         );
         if (*w).flags.intersects(window_flag::WASZOOMED) {
-            return window_zoom((*w).active) == 0;
+            return window_zoom(window_active_pane(w)) == 0;
         }
     }
 
@@ -916,7 +937,7 @@ pub unsafe fn window_add_pane(
     let func = "window_add_pane";
     unsafe {
         if other.is_null() {
-            other = (*w).active;
+            other = window_active_pane(w);
         }
 
         let wp = window_pane_create(w, (*w).sx, (*w).sy, hlimit);
@@ -954,17 +975,18 @@ pub unsafe fn window_lost_pane(w: *mut window, wp: *mut window_pane) {
         }
 
         window_pane_stack_remove(&raw mut (*w).last_panes, wp);
-        if wp == (*w).active {
-            (*w).active = (*w).last_panes.first().copied().unwrap_or(null_mut());
-            if (*w).active.is_null() {
-                (*w).active = window_pane_prev_in_list(wp);
-                if (*w).active.is_null() {
-                    (*w).active = window_pane_next_in_list(wp);
+        if wp == window_active_pane(w) {
+            let mut new_active = (*w).last_panes.first().copied().unwrap_or(null_mut());
+            if new_active.is_null() {
+                new_active = window_pane_prev_in_list(wp);
+                if new_active.is_null() {
+                    new_active = window_pane_next_in_list(wp);
                 }
             }
-            if !(*w).active.is_null() {
-                window_pane_stack_remove(&raw mut (*w).last_panes, (*w).active);
-                (*(*w).active).flags |= window_pane_flags::PANE_CHANGED;
+            window_set_active_pane_field(w, new_active);
+            if !new_active.is_null() {
+                window_pane_stack_remove(&raw mut (*w).last_panes, new_active);
+                (*new_active).flags |= window_pane_flags::PANE_CHANGED;
                 notify_window(c"window-pane-changed", w);
                 window_update_focus(w);
             }
@@ -1479,7 +1501,7 @@ pub unsafe fn window_pane_visible(wp: *const window_pane) -> bool {
         if !(*window_pane_window(wp as *mut window_pane)).flags.intersects(window_flag::ZOOMED) {
             return true;
         }
-        std::ptr::eq(wp, (*window_pane_window(wp as *mut window_pane)).active)
+        std::ptr::eq(wp, window_active_pane(window_pane_window(wp as *mut window_pane)))
     }
 }
 
