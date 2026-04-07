@@ -475,6 +475,7 @@ pub unsafe fn server_client_lost(c: *mut client) {
         status_free(c);
 
         std::ptr::drop_in_place(&raw mut (*c).title);
+        std::ptr::drop_in_place(&raw mut (*c).path);
         free_((*c).cwd.cast_mut()); // TODO cast away const
 
         evtimer_del(&raw mut (*c).repeat_timer);
@@ -2882,15 +2883,18 @@ pub unsafe fn server_client_set_path(c: *mut client) {
             return;
         }
         let active = window_active_pane(winlink_window((*s).curw));
-        let path = if (*active).base.path.is_null() {
+        let path_ptr = if (*active).base.path.is_null() {
             c!("")
         } else {
             (*active).base.path
         };
-        if (*c).path.is_null() || libc::strcmp(path, (*c).path) != 0 {
-            free_((*c).path);
-            (*c).path = xstrdup(path).as_ptr();
-            tty_set_path(&raw mut (*c).tty, (*c).path);
+        let new_path = std::ffi::CStr::from_ptr(path_ptr as *const i8)
+            .to_string_lossy()
+            .into_owned();
+        if (*c).path.as_deref() != Some(new_path.as_str()) {
+            tty_set_path(&raw mut (*c).tty, path_ptr);
+            std::ptr::drop_in_place(&raw mut (*c).path);
+            std::ptr::write(&raw mut (*c).path, Some(new_path));
         }
     }
 }

@@ -2297,7 +2297,7 @@ struct client {
     jobs: *mut format_job_tree,
 
     title: Option<String>,
-    path: *mut u8,
+    path: Option<String>,
     cwd: *const u8,
 
     term_name: *mut u8,
