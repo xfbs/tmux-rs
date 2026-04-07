@@ -1498,7 +1498,7 @@ pub unsafe fn format_cb_client_termfeatures(ft: &format_tree) -> format_table_ty
 pub unsafe fn format_cb_client_termname(ft: &format_tree) -> format_table_type {
     unsafe {
         if !(*ft).c.is_null() {
-            return format!("{}", _s((*(*ft).c).term_name)).into();
+            return (*(*ft).c).term_name.clone().unwrap_or_default().into();
         }
         format_table_type::None
     }

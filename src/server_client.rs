@@ -465,17 +465,16 @@ pub unsafe fn server_client_lost(c: *mut client) {
         if (*c).flags.intersects(client_flag::TERMINAL) {
             tty_free(&raw mut (*c).tty);
         }
-        std::ptr::drop_in_place(&raw mut (*c).ttyname);
+        // Note: ttyname / term_name / title / path are Option<String> and are
+        // dropped automatically when the Box<client> is dropped in
+        // server_client_free. Calling drop_in_place here would double-free.
         free_((*c).clipboard_panes);
 
-        free_((*c).term_name);
         free_((*c).term_type);
         tty_term_free_list((*c).term_caps, (*c).term_ncaps);
 
         status_free(c);
 
-        std::ptr::drop_in_place(&raw mut (*c).title);
-        std::ptr::drop_in_place(&raw mut (*c).path);
         free_((*c).cwd.cast_mut()); // TODO cast away const
 
         evtimer_del(&raw mut (*c).repeat_timer);
@@ -3147,11 +3146,13 @@ pub unsafe fn server_client_dispatch_identify(c: *mut client, imsg: *mut imsg) {
                 if datalen == 0 || *data.cast::<u8>().add((datalen - 1) as usize) != b'\0' {
                     fatalx("bad MSG_IDENTIFY_TERM string");
                 }
-                if *data.cast::<u8>() == b'\0' {
-                    (*c).term_name = xstrdup(c!("unknown")).as_ptr();
+                let bytes = std::slice::from_raw_parts(data.cast::<u8>(), (datalen - 1) as usize);
+                let name = if bytes.is_empty() {
+                    "unknown".to_string()
                 } else {
-                    (*c).term_name = xstrdup(data.cast()).as_ptr();
-                }
+                    String::from_utf8_lossy(bytes).into_owned()
+                };
+                (*c).term_name = Some(name);
                 // log_debug("client %p IDENTIFY_TERM %s", c, data);
             }
             msgtype::MSG_IDENTIFY_TERMINFO => {

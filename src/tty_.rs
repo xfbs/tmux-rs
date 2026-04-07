@@ -254,9 +254,11 @@ pub unsafe fn tty_open(tty: *mut tty) -> Result<(), String> {
     unsafe {
         let c = (*tty).client;
 
+        let term_name_c = std::ffi::CString::new((*c).term_name.as_deref().unwrap_or(""))
+            .expect("term_name contains NUL");
         match tty_term_create(
             tty,
-            (*c).term_name,
+            term_name_c.as_ptr() as *mut u8,
             (*c).term_caps,
             (*c).term_ncaps,
             &raw mut (*c).term_features,

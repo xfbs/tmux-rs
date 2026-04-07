@@ -2300,7 +2300,7 @@ struct client {
     path: Option<String>,
     cwd: *const u8,
 
-    term_name: *mut u8,
+    term_name: Option<String>,
     term_features: c_int,
     term_type: *mut u8,
     term_caps: *mut *mut u8,
