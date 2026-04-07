@@ -221,9 +221,9 @@ unsafe fn layout_fix_offsets1(lc: *mut layout_cell) {
 }
 
 /// Update cell offsets based on their sizes.
-pub unsafe fn layout_fix_offsets(w: *mut window) {
+pub unsafe fn layout_fix_offsets(w: &window) {
     unsafe {
-        let lc = (*w).layout_root;
+        let lc = w.layout_root;
         (*lc).xoff = 0;
         (*lc).yoff = 0;
         layout_fix_offsets1(lc);
@@ -231,9 +231,9 @@ pub unsafe fn layout_fix_offsets(w: *mut window) {
 }
 
 /// Is this a top cell?
-unsafe fn layout_cell_is_top(w: *mut window, mut lc: *mut layout_cell) -> c_int {
+unsafe fn layout_cell_is_top(w: &window, mut lc: *mut layout_cell) -> c_int {
     unsafe {
-        while lc != (*w).layout_root {
+        while lc != w.layout_root {
             let next = (*lc).parent;
             if (*next).type_ == layout_type::LAYOUT_TOPBOTTOM
                 && lc != (*next).cells.first().copied().unwrap_or(null_mut())
@@ -247,9 +247,9 @@ unsafe fn layout_cell_is_top(w: *mut window, mut lc: *mut layout_cell) -> c_int 
 }
 
 /// Is this a bottom cell?
-unsafe fn layout_cell_is_bottom(w: *mut window, mut lc: *mut layout_cell) -> c_int {
+unsafe fn layout_cell_is_bottom(w: &window, mut lc: *mut layout_cell) -> c_int {
     unsafe {
-        while lc != (*w).layout_root {
+        while lc != w.layout_root {
             let next = (*lc).parent;
             if (*next).type_ == layout_type::LAYOUT_TOPBOTTOM
                 && lc != (*next).cells.last().copied().unwrap_or(null_mut())
@@ -264,7 +264,7 @@ unsafe fn layout_cell_is_bottom(w: *mut window, mut lc: *mut layout_cell) -> c_i
 
 /// Returns 1 if we need to add an extra line for the pane status line. This is
 /// the case for the most upper or lower panes only.
-unsafe fn layout_add_border(w: *mut window, lc: *mut layout_cell, status: pane_status) -> bool {
+unsafe fn layout_add_border(w: &window, lc: *mut layout_cell, status: pane_status) -> bool {
     unsafe {
         if status == pane_status::PANE_STATUS_TOP {
             return layout_cell_is_top(w, lc) != 0;
@@ -277,13 +277,13 @@ unsafe fn layout_add_border(w: *mut window, lc: *mut layout_cell, status: pane_s
 }
 
 /// Update pane offsets and sizes based on their cells.
-pub unsafe fn layout_fix_panes(w: *mut window, skip: *mut window_pane) {
+pub unsafe fn layout_fix_panes(w: &window, skip: *mut window_pane) {
     unsafe {
         let status: pane_status =
-            pane_status::try_from(options_get_number_((*w).options, "pane-border-status") as i32)
+            pane_status::try_from(options_get_number_(w.options, "pane-border-status") as i32)
                 .unwrap();
 
-        for &wp in (*w).panes.iter() {
+        for &wp in w.panes.iter() {
             let lc = (*wp).layout_cell;
             if lc.is_null() || wp == skip {
                 continue;
@@ -321,13 +321,13 @@ pub unsafe fn layout_count_cells(lc: *mut layout_cell) -> u32 {
 }
 
 /// Calculate how much size is available to be removed from a cell.
-pub unsafe fn layout_resize_check(w: *mut window, lc: *mut layout_cell, type_: layout_type) -> u32 {
+pub unsafe fn layout_resize_check(w: &window, lc: *mut layout_cell, type_: layout_type) -> u32 {
     unsafe {
         let mut available: u32;
         let mut minimum: u32;
 
         let status: pane_status =
-            pane_status::try_from(options_get_number_((*w).options, "pane-border-status") as i32)
+            pane_status::try_from(options_get_number_(w.options, "pane-border-status") as i32)
                 .unwrap();
 
         if (*lc).type_ == layout_type::LAYOUT_WINDOWPANE {
@@ -352,13 +352,13 @@ pub unsafe fn layout_resize_check(w: *mut window, lc: *mut layout_cell, type_: l
             // Same type: total of available space in all child cells.
             available = 0;
             for &lcchild in (*lc).cells.iter() {
-                available += layout_resize_check(w, lcchild, type_);
+                available += layout_resize_check(&*w, lcchild, type_);
             }
         } else {
             // Different type: minimum of available space in child cells.
             minimum = u32::MAX;
             for &lcchild in (*lc).cells.iter() {
-                available = layout_resize_check(w, lcchild, type_);
+                available = layout_resize_check(&*w, lcchild, type_);
                 if available < minimum {
                     minimum = available;
                 }
@@ -411,7 +411,7 @@ pub unsafe fn layout_resize_adjust(
                     change -= 1;
                     continue;
                 }
-                if layout_resize_check(w, lcchild, type_) > 0 {
+                if layout_resize_check(&*w, lcchild, type_) > 0 {
                     layout_resize_adjust(w, lcchild, type_, -1);
                     change += 1;
                 }
@@ -483,7 +483,7 @@ pub unsafe fn layout_init(w: *mut window, wp: *mut window_pane) {
         (*w).layout_root = lc;
         layout_set_size(lc, (*w).sx, (*w).sy, 0, 0);
         layout_make_leaf(lc, wp);
-        layout_fix_panes(w, std::ptr::null_mut());
+        layout_fix_panes(&*w, std::ptr::null_mut());
     }
 }
 
@@ -510,7 +510,7 @@ pub unsafe fn layout_resize(w: *mut window, sx: c_uint, sy: c_uint) {
         // out proportionately - this should leave the layout fitting the new
         // window size.
         let mut xchange = sx as c_int - (*lc).sx as c_int;
-        let xlimit = layout_resize_check(w, lc, layout_type::LAYOUT_LEFTRIGHT) as i32;
+        let xlimit = layout_resize_check(&*w, lc, layout_type::LAYOUT_LEFTRIGHT) as i32;
         if xchange < 0 && xchange < -xlimit {
             xchange = -xlimit;
         }
@@ -528,7 +528,7 @@ pub unsafe fn layout_resize(w: *mut window, sx: c_uint, sy: c_uint) {
 
         // Adjust vertically in a similar fashion.
         let mut ychange = sy as c_int - (*lc).sy as c_int;
-        let ylimit = layout_resize_check(w, lc, layout_type::LAYOUT_TOPBOTTOM) as i32;
+        let ylimit = layout_resize_check(&*w, lc, layout_type::LAYOUT_TOPBOTTOM) as i32;
         if ychange < 0 && ychange < -ylimit {
             ychange = -ylimit;
         }
@@ -545,8 +545,8 @@ pub unsafe fn layout_resize(w: *mut window, sx: c_uint, sy: c_uint) {
         }
 
         // Fix cell offsets.
-        layout_fix_offsets(w);
-        layout_fix_panes(w, std::ptr::null_mut());
+        layout_fix_offsets(&*w);
+        layout_fix_panes(&*w, std::ptr::null_mut());
     }
 }
 
@@ -612,8 +612,8 @@ pub unsafe fn layout_resize_layout(
         }
 
         // Fix cell offsets
-        layout_fix_offsets(w);
-        layout_fix_panes(w, null_mut());
+        layout_fix_offsets(&*w);
+        layout_fix_panes(&*w, null_mut());
         notify_window(c"window-layout-changed", w);
     }
 }
@@ -664,7 +664,7 @@ pub unsafe fn layout_resize_pane_grow(
         // Look towards the tail for a suitable cell for reduction
         let mut lcremove = layout_next_sibling(lc);
         while !lcremove.is_null() {
-            size = layout_resize_check(w, lcremove, type_);
+            size = layout_resize_check(&*w, lcremove, type_);
             if size > 0 {
                 break;
             }
@@ -675,7 +675,7 @@ pub unsafe fn layout_resize_pane_grow(
         if opposite != 0 && lcremove.is_null() {
             lcremove = layout_prev_sibling(lc);
             while !lcremove.is_null() {
-                size = layout_resize_check(w, lcremove, type_);
+                size = layout_resize_check(&*w, lcremove, type_);
                 if size > 0 {
                     break;
                 }
@@ -709,7 +709,7 @@ pub unsafe fn layout_resize_pane_shrink(
         // Shrinking. Find cell to remove from by walking towards head
         let mut lcremove = lc;
         loop {
-            size = layout_resize_check(w, lcremove, type_);
+            size = layout_resize_check(&*w, lcremove, type_);
             if size != 0 {
                 break;
             }
@@ -743,9 +743,9 @@ pub unsafe fn layout_assign_pane(lc: *mut layout_cell, wp: *mut window_pane, do_
     unsafe {
         layout_make_leaf(lc, wp);
         if do_not_resize != 0 {
-            layout_fix_panes(window_pane_window(wp), wp);
+            layout_fix_panes(&*window_pane_window(wp), wp);
         } else {
-            layout_fix_panes(window_pane_window(wp), null_mut());
+            layout_fix_panes(&*window_pane_window(wp), null_mut());
         }
     }
 }
@@ -767,7 +767,7 @@ pub unsafe fn layout_new_pane_size(
         }
 
         // How much is available in this parent?
-        let available: u32 = layout_resize_check(w, lc, type_);
+        let available: u32 = layout_resize_check(&*w, lc, type_);
 
         // Work out the minimum size of this cell and the new size
         // proportionate to the previous size.
@@ -977,7 +977,7 @@ pub unsafe fn layout_split_pane(
                 }
             }
             layout_type::LAYOUT_TOPBOTTOM => {
-                if layout_add_border(window_pane_window(wp), lc, status) {
+                if layout_add_border(&*window_pane_window(wp), lc, status) {
                     minimum = PANE_MINIMUM * 2 + 2;
                 } else {
                     minimum = PANE_MINIMUM * 2 + 1;
@@ -1115,7 +1115,7 @@ pub unsafe fn layout_split_pane(
             if resize_first == 0 {
                 layout_resize_child_cells(window_pane_window(wp), lc);
             }
-            layout_fix_offsets(window_pane_window(wp));
+            layout_fix_offsets(&*window_pane_window(wp));
         } else {
             layout_make_leaf(lc, wp);
         }
@@ -1134,8 +1134,8 @@ pub unsafe fn layout_close_pane(wp: *mut window_pane) {
 
         // Fix pane offsets and sizes
         if !(*w).layout_root.is_null() {
-            layout_fix_offsets(w);
-            layout_fix_panes(w, null_mut());
+            layout_fix_offsets(&*w);
+            layout_fix_panes(&*w, null_mut());
         }
         notify_window(c"window-layout-changed", w);
     }
@@ -1158,7 +1158,7 @@ pub unsafe fn layout_spread_cell(w: *mut window, parent: *mut layout_cell) -> c_
         let size = match (*parent).type_ {
             layout_type::LAYOUT_LEFTRIGHT => (*parent).sx,
             layout_type::LAYOUT_TOPBOTTOM => {
-                if layout_add_border(w, parent, status) {
+                if layout_add_border(&*w, parent, status) {
                     (*parent).sy - 1
                 } else {
                     (*parent).sy
@@ -1191,7 +1191,7 @@ pub unsafe fn layout_spread_cell(w: *mut window, parent: *mut layout_cell) -> c_
                     change
                 }
                 layout_type::LAYOUT_TOPBOTTOM => {
-                    let this = if layout_add_border(w, lc, status) {
+                    let this = if layout_add_border(&*w, lc, status) {
                         each + 1
                     } else {
                         each
@@ -1227,8 +1227,8 @@ pub unsafe fn layout_spread_out(wp: *mut window_pane) {
         let w = window_pane_window(wp);
         while !parent.is_null() {
             if layout_spread_cell(w, parent) != 0 {
-                layout_fix_offsets(w);
-                layout_fix_panes(w, null_mut());
+                layout_fix_offsets(&*w);
+                layout_fix_panes(&*w, null_mut());
                 break;
             }
             parent = (*parent).parent;

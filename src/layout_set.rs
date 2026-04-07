@@ -168,8 +168,8 @@ pub unsafe fn layout_set_even(w: *mut window, type_: layout_type) {
         layout_spread_cell(w, lc);
 
         // Fix cell offsets.
-        layout_fix_offsets(w);
-        layout_fix_panes(w, null_mut());
+        layout_fix_offsets(&*w);
+        layout_fix_panes(&*w, null_mut());
 
         layout_print_cell((*w).layout_root, __func__, 1);
 
@@ -281,8 +281,8 @@ pub unsafe fn layout_set_main_h(w: *mut window) {
         }
 
         // Fix cell offsets.
-        layout_fix_offsets(w);
-        layout_fix_panes(w, null_mut());
+        layout_fix_offsets(&*w);
+        layout_fix_panes(&*w, null_mut());
 
         layout_print_cell((*w).layout_root, __func__, 1);
 
@@ -380,8 +380,8 @@ pub unsafe fn layout_set_main_h_mirrored(w: *mut window) {
         (*lc).cells.push(lcmain);
 
         // Fix cell offsets.
-        layout_fix_offsets(w);
-        layout_fix_panes(w, null_mut());
+        layout_fix_offsets(&*w);
+        layout_fix_panes(&*w, null_mut());
 
         layout_print_cell((*w).layout_root, __func__, 1);
 
@@ -479,8 +479,8 @@ pub unsafe fn layout_set_main_v(w: *mut window) {
         }
 
         // Fix cell offsets.
-        layout_fix_offsets(w);
-        layout_fix_panes(w, null_mut());
+        layout_fix_offsets(&*w);
+        layout_fix_panes(&*w, null_mut());
 
         layout_print_cell((*w).layout_root, __func__, 1);
 
@@ -577,8 +577,8 @@ pub unsafe fn layout_set_main_v_mirrored(w: *mut window) {
         (*lc).cells.push(lcmain);
 
         // Fix cell offsets.
-        layout_fix_offsets(w);
-        layout_fix_panes(w, null_mut());
+        layout_fix_offsets(&*w);
+        layout_fix_panes(&*w, null_mut());
 
         layout_print_cell((*w).layout_root, __func__, 1);
 
@@ -704,8 +704,8 @@ pub unsafe fn layout_set_tiled(w: *mut window) {
         }
 
         // Fix cell offsets.
-        layout_fix_offsets(w);
-        layout_fix_panes(w, null_mut());
+        layout_fix_offsets(&*w);
+        layout_fix_panes(&*w, null_mut());
 
         layout_print_cell((*w).layout_root, __func__, 1);
 

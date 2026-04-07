@@ -253,8 +253,8 @@ pub unsafe fn layout_parse(w: *mut window, mut layout: *const u8) -> Result<(), 
             layout_assign(&raw mut wp, lc);
 
             // Update pane offsets and sizes.
-            layout_fix_offsets(w);
-            layout_fix_panes(w, null_mut());
+            layout_fix_offsets(&*w);
+            layout_fix_panes(&*w, null_mut());
             recalculate_sizes();
 
             layout_print_cell(lc, __func__, 0);

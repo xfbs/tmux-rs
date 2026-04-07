@@ -1378,7 +1378,7 @@ pub unsafe fn options_push_changes(name: &str) {
 
         if name == "pane-border-status" {
             for w in windows_iter() {
-                layout_fix_panes(w, null_mut());
+                layout_fix_panes(&*w, null_mut());
             }
         }
 

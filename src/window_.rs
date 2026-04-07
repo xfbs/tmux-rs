@@ -899,7 +899,7 @@ pub unsafe fn window_unzoom(w: *mut window, notify: i32) -> i32 {
             (*wp).layout_cell = (*wp).saved_layout_cell;
             (*wp).saved_layout_cell = null_mut();
         }
-        layout_fix_panes(w, null_mut());
+        layout_fix_panes(&*w, null_mut());
 
         if notify != 0 {
             notify_window(c"window-layout-changed", w);
