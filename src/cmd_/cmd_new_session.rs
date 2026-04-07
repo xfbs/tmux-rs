@@ -296,8 +296,8 @@ unsafe fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
             if !c.is_null() && !args_has(args, 'E') {
                 environ_update(GLOBAL_S_OPTIONS, &*(*c).environ, &mut *env);
             }
-            for &av in args_flag_values(args, b'e') {
-                environ_put(&mut *env, (*av).union_.string, environ_flags::empty());
+            for av in args_flag_values(args, b'e') {
+                environ_put(&mut *env, av.union_.string, environ_flags::empty());
             }
             s = session_create(prefix, newname.as_deref(), cwd, env, oo, tiop);
 

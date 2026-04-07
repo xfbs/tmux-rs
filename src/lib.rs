@@ -1831,7 +1831,7 @@ union args_value_union {
 struct args_value {
     type_: args_type,
     union_: args_value_union,
-    cached: *mut u8,
+    cached: std::cell::Cell<*mut u8>,
 }
 
 /// Arguments parsing type.

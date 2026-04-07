@@ -112,8 +112,8 @@ unsafe fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
         args_to_vector(args, &raw mut sc.argc, &raw mut sc.argv);
         sc.environ = environ_create().as_ptr();
 
-        for &av in args_flag_values(args, b'e') {
-            environ_put(&mut *sc.environ, (*av).union_.string, environ_flags::empty());
+        for av in args_flag_values(args, b'e') {
+            environ_put(&mut *sc.environ, av.union_.string, environ_flags::empty());
         }
 
         sc.idx = -1;

@@ -30,12 +30,10 @@ use std::collections::HashMap;
 
 use crate::*;
 
-pub type args_values = Vec<*mut args_value>;
-
 const ARGS_ENTRY_OPTIONAL_VALUE: c_int = 1;
 pub struct args_entry {
     pub flag: c_uchar,
-    pub values: args_values,
+    pub values: Vec<args_value>,
     pub count: c_uint,
 
     pub flags: c_int,
@@ -63,6 +61,10 @@ pub unsafe fn args_find(args: *mut args, flag: c_uchar) -> *mut args_entry {
     }
 }
 
+pub fn args_find_ref(args: &args, flag: c_uchar) -> Option<&args_entry> {
+    args.tree.get(&flag).map(|e| &**e)
+}
+
 pub unsafe fn args_copy_value(to: *mut args_value, from: *const args_value) {
     unsafe {
         (*to).type_ = (*from).type_;
@@ -87,16 +89,16 @@ pub fn args_type_to_string(type_: args_type) -> &'static str {
     }
 }
 
-pub unsafe fn args_value_as_string(value: *mut args_value) -> *const u8 {
+pub unsafe fn args_value_as_string(value: &args_value) -> *const u8 {
     unsafe {
-        match (*value).type_ {
+        match value.type_ {
             args_type::ARGS_NONE => c!(""),
-            args_type::ARGS_STRING => (*value).union_.string,
+            args_type::ARGS_STRING => value.union_.string,
             args_type::ARGS_COMMANDS => {
-                if (*value).cached.is_null() {
-                    (*value).cached = cmd_list_print(&*(*value).union_.cmdlist, 0);
+                if value.cached.get().is_null() {
+                    value.cached.set(cmd_list_print(&*value.union_.cmdlist, 0));
                 }
-                (*value).cached
+                value.cached.get()
             }
         }
     }
@@ -142,14 +144,14 @@ pub unsafe fn args_parse_flag_argument(
             } else {
                 argument = values.add(*i as usize);
                 if (*argument).type_ != args_type::ARGS_STRING {
-                    args_free_value(new);
+                    args_free_value(&mut *new);
                     free(new as _);
                     return Err(format!("-{} argument must be a string", flag as u8 as char));
                 }
             }
 
             if argument.is_null() {
-                args_free_value(new);
+                args_free_value(&mut *new);
                 free(new as _);
                 if optional_argument {
                     log_debug!("{}: -{} (optional)", "args_parse_flag_argument", flag);
@@ -165,7 +167,7 @@ pub unsafe fn args_parse_flag_argument(
             break 'out;
         }
         // out:
-        let s = args_value_as_string(new);
+        let s = args_value_as_string(&*new);
         log_debug!("{}: -{} = {}", "args_parse_flag_argument", flag, _s(s));
         args_set(args, flag as c_uchar, new, 0);
     }
@@ -272,7 +274,7 @@ pub unsafe fn args_parse(
             while i < count {
                 let value = values.add(i as usize);
 
-                let s = args_value_as_string(value);
+                let s = args_value_as_string(&*value);
                 log_debug!(
                     "{}: {} = {} (type {})",
                     __func__,
@@ -381,7 +383,7 @@ pub unsafe fn args_copy(args: *mut args, argc: i32, argv: *mut *mut u8) -> *mut 
                 }
                 continue;
             }
-            for &value in entry.values.iter() {
+            for value in entry.values.iter() {
                 let new_value = xcalloc1();
                 args_copy_copy_value(new_value, value, argc, argv);
                 args_set(new_args, entry.flag, new_value, 0);
@@ -401,21 +403,21 @@ pub unsafe fn args_copy(args: *mut args, argc: i32, argv: *mut *mut u8) -> *mut 
     }
 }
 
-pub unsafe fn args_free_value(value: *mut args_value) {
+pub unsafe fn args_free_value(value: &mut args_value) {
     unsafe {
-        match (*value).type_ {
+        match value.type_ {
             args_type::ARGS_NONE => (),
-            args_type::ARGS_STRING => free_((*value).union_.string),
-            args_type::ARGS_COMMANDS => cmd_list_free((*value).union_.cmdlist),
+            args_type::ARGS_STRING => free_(value.union_.string),
+            args_type::ARGS_COMMANDS => cmd_list_free(value.union_.cmdlist),
         }
-        free_((*value).cached);
+        free_(value.cached.get());
     }
 }
 
 pub unsafe fn args_free_values(values: *mut args_value, count: u32) {
     unsafe {
         for i in 0..count {
-            args_free_value(values.add(i as usize));
+            args_free_value(&mut *values.add(i as usize));
         }
     }
 }
@@ -425,10 +427,9 @@ pub unsafe fn args_free(args: *mut args) {
         args_free_values((*args).values, (*args).count);
         free_((*args).values);
 
-        for (_, entry) in (*args).tree.drain() {
-            for &value in entry.values.iter() {
+        for (_, mut entry) in (*args).tree.drain() {
+            for value in entry.values.iter_mut() {
                 args_free_value(value);
-                free_(value);
             }
         }
 
@@ -547,7 +548,7 @@ pub unsafe fn args_print(args: *mut args) -> *mut u8 {
             if entry.values.is_empty() {
                 continue;
             }
-            for &value in entry.values.iter() {
+            for value in entry.values.iter() {
                 if *buf != b'\0' {
                     args_print_add!(&raw mut buf, &raw mut len, " -{}", entry.flag as char,);
                 } else {
@@ -624,24 +625,20 @@ pub unsafe fn args_escape(s: *const u8) -> *mut u8 {
 // so it would be confusing to use
 pub unsafe fn args_has_count(args: *mut args, flag: u8) -> i32 {
     unsafe {
-        let entry = args_find(args, flag);
-        if entry.is_null() {
-            return 0;
+        match args_find_ref(&*args, flag) {
+            Some(entry) => entry.count as i32,
+            None => 0,
         }
-        (*entry).count as i32
     }
 }
 
 pub unsafe fn args_has(args: *mut args, flag: char) -> bool {
     debug_assert!(flag.is_ascii());
-
     unsafe {
-        let flag = flag as u8;
-        let entry = args_find(args, flag);
-        if entry.is_null() {
-            return false;
+        match args_find_ref(&*args, flag as u8) {
+            Some(entry) => entry.count != 0,
+            None => false,
         }
-        (*entry).count != 0
     }
 }
 
@@ -658,7 +655,8 @@ pub unsafe fn args_set(args: *mut args, flag: c_uchar, value: *mut args_value, f
         entry.count += 1;
 
         if !value.is_null() && (*value).type_ != args_type::ARGS_NONE {
-            entry.values.push(value);
+            entry.values.push(std::ptr::read(value));
+            free_(value);
         } else {
             free_(value);
         }
@@ -673,7 +671,7 @@ pub unsafe fn args_get(args: *mut args, flag: u8) -> *const u8 {
             return null_mut();
         }
         match (*entry).values.last() {
-            Some(&v) => (*v).union_.string,
+            Some(v) => v.union_.string,
             None => null_mut(),
         }
     }
@@ -718,7 +716,7 @@ pub unsafe fn args_string(args: *mut args, idx: u32) -> *const u8 {
         if idx >= (*args).count {
             return null();
         }
-        args_value_as_string((*args).values.add(idx as usize))
+        args_value_as_string(&*(*args).values.add(idx as usize))
     }
 }
 
@@ -889,7 +887,7 @@ pub unsafe fn args_make_commands_get_command(state: *mut args_command_state) -> 
 }
 
 /// Get the values for a flag as a slice.
-pub unsafe fn args_flag_values(args: *mut args, flag: u8) -> &'static [*mut args_value] {
+pub unsafe fn args_flag_values<'a>(args: *mut args, flag: u8) -> &'a [args_value] {
     unsafe {
         let entry = args_find(args, flag);
         if entry.is_null() {
@@ -911,15 +909,14 @@ pub unsafe fn args_strtonum(
         if entry.is_null() {
             return Err("missing".into());
         }
-        let value = (*entry).values.last().copied().unwrap_or(null_mut());
-        if value.is_null()
-            || (*value).type_ != args_type::ARGS_STRING
-            || (*value).union_.string.is_null()
-        {
+        let Some(value) = (*entry).values.last() else {
+            return Err("missing".into());
+        };
+        if value.type_ != args_type::ARGS_STRING || value.union_.string.is_null() {
             return Err("missing".into());
         }
 
-        strtonum((*value).union_.string, minval, maxval)
+        strtonum(value.union_.string, minval, maxval)
             .map_err(|errstr| errstr.to_string_lossy().into_owned())
     }
 }
@@ -937,15 +934,14 @@ pub unsafe fn args_strtonum_and_expand(
         if entry.is_null() {
             return Err("missing".into());
         }
-        let value = (*entry).values.last().copied().unwrap_or(null_mut());
-        if value.is_null()
-            || (*value).type_ != args_type::ARGS_STRING
-            || (*value).union_.string.is_null()
-        {
+        let Some(value) = (*entry).values.last() else {
+            return Err("missing".into());
+        };
+        if value.type_ != args_type::ARGS_STRING || value.union_.string.is_null() {
             return Err("missing".into());
         }
 
-        let formatted = format_single_from_target(item, (*value).union_.string);
+        let formatted = format_single_from_target(item, value.union_.string);
         let tmp = strtonum(formatted, minval, maxval);
         free_(formatted);
         tmp.map_err(|errstr| errstr.to_string_lossy().into_owned())
@@ -968,7 +964,7 @@ pub unsafe fn args_percentage(
         if (*entry).values.is_empty() {
             return Err("empty".into());
         }
-        let value = (**(*entry).values.last().unwrap()).union_.string;
+        let value = (*entry).values.last().unwrap().union_.string;
         args_string_percentage(value, minval, maxval, curval)
     }
 }
@@ -1027,7 +1023,7 @@ pub unsafe fn args_percentage_and_expand(
         if (*entry).values.is_empty() {
             return Err("empty".into());
         }
-        let value = (**(*entry).values.last().unwrap()).union_.string;
+        let value = (*entry).values.last().unwrap().union_.string;
         args_string_percentage_and_expand(value, minval, maxval, curval, item)
     }
 }

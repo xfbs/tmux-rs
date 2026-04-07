@@ -430,9 +430,9 @@ pub unsafe fn cmdq_insert_hook_(
                 cmdq_add_format!(new_state, tmp, "{}", _s(value));
             }
 
-            for (i, &av) in args_flag_values(args, flag).iter().enumerate() {
+            for (i, av) in args_flag_values(args, flag).iter().enumerate() {
                 _ = xsnprintf_!(tmp, SIZEOF_TMP, "hook_flag_{}_{}", flag as char, i);
-                cmdq_add_format!(new_state, tmp, "{}", _s((*av).union_.string));
+                cmdq_add_format!(new_state, tmp, "{}", _s(av.union_.string));
             }
         }
 

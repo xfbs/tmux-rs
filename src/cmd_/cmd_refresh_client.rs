@@ -354,8 +354,8 @@ pub unsafe fn cmd_refresh_client_exec(self_: *mut cmd, item: *mut cmdq_item) -> 
                 if !(*tc).flags.intersects(client_flag::CONTROL) {
                     break 'not_control_client;
                 }
-                for &av in args_flag_values(args, b'A') {
-                    cmd_refresh_client_update_offset(tc, (*av).union_.string);
+                for av in args_flag_values(args, b'A') {
+                    cmd_refresh_client_update_offset(tc, av.union_.string);
                 }
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
@@ -363,8 +363,8 @@ pub unsafe fn cmd_refresh_client_exec(self_: *mut cmd, item: *mut cmdq_item) -> 
                 if !(*tc).flags.intersects(client_flag::CONTROL) {
                     break 'not_control_client;
                 }
-                for &av in args_flag_values(args, b'B') {
-                    cmd_refresh_client_update_subscription(tc, (*av).union_.string);
+                for av in args_flag_values(args, b'B') {
+                    cmd_refresh_client_update_subscription(tc, av.union_.string);
                 }
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
