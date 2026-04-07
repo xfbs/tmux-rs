@@ -1264,7 +1264,8 @@ unsafe fn window_pane_destroy(wp: *mut window_pane) {
         (*(&raw mut ALL_WINDOW_PANES)).remove(&(*wp).id);
 
         options_free((*wp).options);
-        free((*wp).cwd as _);
+        // `cwd` is `Option<PathBuf>` and is dropped automatically by Box drop
+        // when we remove from PANE_REGISTRY below.
         free((*wp).shell as _);
         cmd_free_argv((*wp).argc, (*wp).argv);
         colour_palette_free(Some(&mut (*wp).palette));

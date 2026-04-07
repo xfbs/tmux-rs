@@ -820,10 +820,10 @@ pub unsafe fn format_cb_start_path(ft: &format_tree) -> format_table_type {
             return format_table_type::None;
         }
 
-        if (*wp).cwd.is_null() {
-            return "".into();
+        match (*wp).cwd.as_deref() {
+            None => "".into(),
+            Some(p) => p.display().to_string().into(),
         }
-        format!("{}", _s((*wp).cwd)).into()
     }
 }
 

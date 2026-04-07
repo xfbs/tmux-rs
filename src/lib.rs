@@ -132,6 +132,7 @@ use std::{
         CStr, CString, c_int, c_long, c_longlong, c_short, c_uchar, c_uint, c_ulonglong, c_void,
     },
     mem::{MaybeUninit, size_of, zeroed},
+    path::PathBuf,
     ptr::{NonNull, addr_of, addr_of_mut, null, null_mut},
     rc::Rc,
     sync::{
@@ -1287,7 +1288,7 @@ struct window_pane {
     argc: i32,
     argv: *mut *mut u8,
     shell: *mut u8,
-    cwd: *mut u8,
+    cwd: Option<PathBuf>,
 
     pid: pid_t,
     tty: [u8; TTY_NAME_MAX],

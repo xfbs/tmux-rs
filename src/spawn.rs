@@ -322,8 +322,12 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context) -> Result<NonNull<window_pane>,
                 argv = (*sc).argv;
             }
             if !cwd.is_null() {
-                free_((*new_wp).cwd);
-                (*new_wp).cwd = cwd;
+                (*new_wp).cwd = Some(PathBuf::from(
+                    std::ffi::CStr::from_ptr(cwd as *const i8)
+                        .to_string_lossy()
+                        .into_owned(),
+                ));
+                free_(cwd);
             }
 
             // Replace the stored arguments if there are new ones. If not, the
@@ -391,7 +395,7 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context) -> Result<NonNull<window_pane>,
                 let cp = cmd_stringify_argv((*new_wp).argc, (*new_wp).argv);
                 log_debug!("spawn_pane: cmd={}", cp);
             }
-            log_debug!("spawn_pane: cwd={}", _s((*new_wp).cwd));
+            log_debug!("spawn_pane: cwd={}", (*new_wp).cwd.as_deref().map(|p| p.display().to_string()).unwrap_or_default());
             cmd_log_argv!((*new_wp).argc, (*new_wp).argv, "spawn_pan");
             environ_log!(child, "spawn_pan: environment ");
 
@@ -456,13 +460,13 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context) -> Result<NonNull<window_pane>,
 
             // Child process. Change to the working directory or home if that
             // fails.
-            if std::env::set_current_dir(cstr_to_str((*new_wp).cwd)).is_ok() {
+            if (*new_wp).cwd.as_deref().map(|p| std::env::set_current_dir(p).is_ok()).unwrap_or(false) {
                 environ_set!(
                     child,
                     c!("PWD"),
                     environ_flags::empty(),
                     "{}",
-                    _s((*new_wp).cwd)
+                    (*new_wp).cwd.as_deref().unwrap().display()
                 );
             } else if let Some(tmp) = find_home()
                 && std::env::set_current_dir(tmp.to_str().expect("TODO")).is_ok()
