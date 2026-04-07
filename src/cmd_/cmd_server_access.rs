@@ -38,7 +38,7 @@ unsafe fn cmd_server_access_deny(item: *mut cmdq_item, pw: *mut libc::passwd) ->
         for loop_ in clients_iter() {
             let uid = proc_get_peer_uid((*loop_).peer);
             if uid == server_acl_get_uid(user) {
-                (*loop_).exit_message = xstrdup_(c"access not allowed").as_ptr();
+                (*loop_).exit_message = Some("access not allowed".to_string());
                 (*loop_).flags |= client_flag::EXIT;
             }
         }

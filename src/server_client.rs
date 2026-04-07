@@ -594,7 +594,7 @@ pub unsafe fn server_client_detach(c: *mut client, msgtype: msgtype) {
 
         (*c).exit_type = exit_type::CLIENT_EXIT_DETACH;
         (*c).exit_msgtype = msgtype;
-        (*c).exit_session = xstrdup__(&(*s).name);
+        (*c).exit_session = Some((*s).name.to_string());
     }
 }
 
@@ -2610,8 +2610,6 @@ pub unsafe extern "C-unwind" fn server_client_click_timer(
 /// Check if client should be exited.
 pub unsafe fn server_client_check_exit(c: *mut client) {
     unsafe {
-        let name = (*c).exit_session;
-
         if (*c)
             .flags
             .intersects(client_flag::DEAD | client_flag::EXITED)
@@ -2637,18 +2635,19 @@ pub unsafe fn server_client_check_exit(c: *mut client) {
 
         match (*c).exit_type {
             exit_type::CLIENT_EXIT_RETURN => {
-                let msize = if !(*c).exit_message.is_null() {
-                    strlen((*c).exit_message) + 1
-                } else {
-                    0
-                };
+                // Pack as: i32 retval + (optional NUL-terminated message)
+                let msg_with_nul: Option<std::ffi::CString> = (*c)
+                    .exit_message
+                    .as_deref()
+                    .map(|s| std::ffi::CString::new(s).unwrap_or_default());
+                let msize = msg_with_nul.as_ref().map_or(0, |c| c.as_bytes_with_nul().len());
                 let size = size_of::<i32>() + msize;
                 let data = xmalloc(size).as_ptr();
                 libc::memcpy(data, (&raw mut (*c).retval).cast(), size_of::<i32>());
-                if !(*c).exit_message.is_null() {
+                if let Some(ref m) = msg_with_nul {
                     libc::memcpy(
                         data.add(size_of::<i32>()).cast(),
-                        (*c).exit_message.cast(),
+                        m.as_ptr().cast(),
                         msize,
                     );
                 }
@@ -2659,17 +2658,18 @@ pub unsafe fn server_client_check_exit(c: *mut client) {
                 proc_send((*c).peer, msgtype::MSG_SHUTDOWN, -1, null(), 0);
             }
             exit_type::CLIENT_EXIT_DETACH => {
+                let name_c = std::ffi::CString::new((*c).exit_session.as_deref().unwrap_or(""))
+                    .unwrap_or_default();
                 proc_send(
                     (*c).peer,
                     (*c).exit_msgtype,
                     -1,
-                    name.cast(),
-                    libc::strlen(name) + 1,
+                    name_c.as_ptr().cast(),
+                    name_c.as_bytes_with_nul().len(),
                 );
             }
         }
-        free_((*c).exit_session);
-        free_((*c).exit_message);
+        // exit_session / exit_message are Option<String>, dropped by Box drop.
     }
 }
 

@@ -295,7 +295,12 @@ pub unsafe fn server_start(
 
         if !cause.is_null() {
             if !c.is_null() {
-                (*c).exit_message = cause;
+                (*c).exit_message = Some(
+                    std::ffi::CStr::from_ptr(cause as *const i8)
+                        .to_string_lossy()
+                        .into_owned(),
+                );
+                free_(cause);
                 (*c).flags |= client_flag::EXIT;
             } else {
                 eprintln!("{}", _s(cause));
@@ -457,7 +462,7 @@ unsafe extern "C-unwind" fn server_accept(fd: i32, events: i16, _data: *mut c_vo
         }
         let c = server_client_create(newfd);
         if server_acl_join(c) == 0 {
-            (*c).exit_message = xmalloc::xstrdup(c!("access not allowed")).cast().as_ptr();
+            (*c).exit_message = Some("access not allowed".to_string());
             (*c).flags |= client_flag::EXIT;
         }
     }

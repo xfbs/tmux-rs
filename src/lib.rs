@@ -2325,8 +2325,8 @@ struct client {
 
     exit_type: exit_type,
     exit_msgtype: msgtype,
-    exit_session: *mut u8,
-    exit_message: *mut u8,
+    exit_session: Option<String>,
+    exit_message: Option<String>,
 
     keytable: *mut key_table,
 
