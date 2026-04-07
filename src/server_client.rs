@@ -357,7 +357,7 @@ pub unsafe fn server_client_attached_lost(c: *mut client) {
 
         // By this point the session in the client has been cleared so walk all
         // windows to find any with this client as the latest.
-        for w in (*(&raw mut WINDOWS)).values().copied() {
+        for w in windows_iter() {
             if (*w).latest.cast() != c {
                 continue;
             }
@@ -2183,7 +2183,7 @@ pub unsafe fn server_client_handle_key(c: *mut client, event: *mut key_event) ->
 pub unsafe fn server_client_loop() {
     unsafe {
         // Check for window resize. This is done before redrawing.
-        for w in (*(&raw mut WINDOWS)).values().copied() {
+        for w in windows_iter() {
             server_client_check_window_resize(w);
         }
 
@@ -2198,7 +2198,7 @@ pub unsafe fn server_client_loop() {
         }
 
         // Any windows will have been redrawn as part of clients, so clear their flags now.
-        for w in (*(&raw mut WINDOWS)).values().copied() {
+        for w in windows_iter() {
             for &wp in (*w).panes.iter() {
                 if (*wp).fd != -1 {
                     server_client_check_pane_resize(wp);

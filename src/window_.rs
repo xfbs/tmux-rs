@@ -41,7 +41,6 @@ pub static mut ALL_WINDOW_PANES: window_pane_tree = BTreeMap::new();
 /// Uses the `WINDOWS` id index (not `WINDOW_REGISTRY`), because destroyed
 /// windows remain in the registry until their reference count drains.
 /// Callers expect to only see live, usable windows.
-#[allow(dead_code, reason = "introduced for Phase 2.3.0 foundation; used in 2.3.1+")]
 #[inline]
 pub unsafe fn windows_iter() -> impl Iterator<Item = *mut window> {
     unsafe {

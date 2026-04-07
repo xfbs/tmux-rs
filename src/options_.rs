@@ -1313,7 +1313,7 @@ pub unsafe fn options_push_changes(name: &str) {
         log_debug!("{}: {}", _s(__func__), name);
 
         if name == "automatic-rename" {
-            for w in (*(&raw mut WINDOWS)).values().copied() {
+            for w in windows_iter() {
                 if (*w).active.is_null() {
                     continue;
                 }
@@ -1336,8 +1336,8 @@ pub unsafe fn options_push_changes(name: &str) {
         }
 
         if name == "fill-character" {
-            for w in (*(&raw mut WINDOWS)).values().map(|w| NonNull::new(*w).unwrap()) {
-                window_set_fill_character(w);
+            for w in windows_iter() {
+                window_set_fill_character(NonNull::new(w).unwrap());
             }
         }
 
@@ -1376,8 +1376,8 @@ pub unsafe fn options_push_changes(name: &str) {
         }
 
         if name == "pane-border-status" {
-            for w in (*(&raw mut WINDOWS)).values().map(|w| NonNull::new(*w).unwrap()) {
-                layout_fix_panes(w.as_ptr(), null_mut());
+            for w in windows_iter() {
+                layout_fix_panes(w, null_mut());
             }
         }
 

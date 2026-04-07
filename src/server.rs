@@ -559,9 +559,7 @@ unsafe fn server_child_signal() {
 
 unsafe fn server_child_exited(pid: pid_t, status: i32) {
     unsafe {
-        let windows: Vec<*mut window> =
-            (*(&raw mut WINDOWS)).values().copied().collect();
-        'outer: for w in windows {
+        'outer: for w in windows_iter() {
             for &wp in (*w).panes.iter() {
                 if (*wp).pid == pid {
                     (*wp).status = status;
@@ -587,7 +585,7 @@ unsafe fn server_child_stopped(pid: pid_t, status: i32) {
             return;
         }
 
-        for w in (*(&raw mut WINDOWS)).values().copied() {
+        for w in windows_iter() {
             for &wp in (*w).panes.iter() {
                 if (*wp).pid == pid && killpg(pid, SIGCONT) != 0 {
                     kill(pid, SIGCONT);
