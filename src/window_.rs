@@ -36,6 +36,44 @@ pub static NEXT_WINDOW_ID: AtomicU32 = AtomicU32::new(0);
 
 pub static mut ALL_WINDOW_PANES: window_pane_tree = BTreeMap::new();
 
+/// Central registry owning all window_pane allocations. `Box<window_pane>`
+/// provides a stable heap address, so `*mut window_pane` pointers derived
+/// from it remain valid for the lifetime of the registry entry.
+pub static mut PANE_REGISTRY: BTreeMap<PaneId, Box<window_pane>> = BTreeMap::new();
+
+pub static NEXT_WINDOW_PANE_ID: AtomicU32 = AtomicU32::new(0);
+
+/// Iterate over all **alive** panes as `*mut window_pane` pointers.
+///
+/// Uses `ALL_WINDOW_PANES` (alive set), not `PANE_REGISTRY`, because
+/// destroyed panes remain in the registry until reclaimed.
+#[allow(dead_code, reason = "introduced for Phase 2.3.6 foundation; used in 2.3.7+")]
+#[inline]
+pub unsafe fn panes_iter() -> impl Iterator<Item = *mut window_pane> {
+    unsafe {
+        (*(&raw mut ALL_WINDOW_PANES))
+            .values()
+            .copied()
+            .collect::<Vec<_>>()
+            .into_iter()
+    }
+}
+
+/// Look up a window_pane by ID in the global registry.
+///
+/// Returns the registry-stable raw pointer, or `None` if no allocation exists
+/// for that ID. Note: the returned pointer may refer to a destroyed pane that
+/// hasn't yet been reclaimed — use `ALL_WINDOW_PANES` lookup if you need an
+/// *alive* pane.
+#[allow(dead_code, reason = "introduced for Phase 2.3.6 foundation; used in 2.3.7+")]
+pub unsafe fn pane_from_id(id: PaneId) -> Option<*mut window_pane> {
+    unsafe {
+        (*(&raw mut PANE_REGISTRY))
+            .get_mut(&id)
+            .map(|b| &mut **b as *mut window_pane)
+    }
+}
+
 /// Iterate over all **alive** windows as `*mut window` pointers.
 ///
 /// Uses the `WINDOWS` id index (not `WINDOW_REGISTRY`), because destroyed
@@ -1092,23 +1130,33 @@ pub unsafe fn window_pane_find_by_id(id: u32) -> *mut window_pane {
     }
 }
 
+/// Create a new window_pane.
+///
+/// Allocates the pane in `PANE_REGISTRY`. The `Box` in the registry
+/// provides a stable heap address, so the returned `*mut window_pane`
+/// is valid for the lifetime of the registry entry.
 pub unsafe fn window_pane_create(
     w: *mut window,
     sx: u32,
     sy: u32,
     hlimit: u32,
 ) -> *mut window_pane {
-    static NEXT_WINDOW_PANE_ID: AtomicU32 = AtomicU32::new(0);
-
     unsafe {
         let mut host: [u8; HOST_NAME_MAX + 1] = zeroed();
-        let wp: *mut window_pane = xcalloc_::<window_pane>(1).as_ptr();
+        let mut boxed: Box<window_pane> =
+            Box::new(MaybeUninit::<window_pane>::zeroed().assume_init_read());
+        let wp: *mut window_pane = &mut *boxed;
+
         window_pane_set_window(wp, w);
         (*wp).options = options_create((*w).options);
         (*wp).flags = window_pane_flags::PANE_STYLECHANGED;
 
         (*wp).id = NEXT_WINDOW_PANE_ID.fetch_add(1, atomic::Ordering::Relaxed);
+        let pid = PaneId((*wp).id);
 
+        // Insert into the registry (owns the Box) and the alive set.
+        let entry = (*(&raw mut PANE_REGISTRY)).entry(pid).or_insert(boxed);
+        let wp: *mut window_pane = &mut **entry;
         (*(&raw mut ALL_WINDOW_PANES)).insert((*wp).id, wp);
 
         (*wp).fd = -1;
@@ -1180,7 +1228,9 @@ unsafe fn window_pane_destroy(wp: *mut window_pane) {
         free((*wp).shell as _);
         cmd_free_argv((*wp).argc, (*wp).argv);
         colour_palette_free(Some(&mut (*wp).palette));
-        free(wp as _);
+
+        // Drop the Box from the registry. This deallocates the pane.
+        let _ = (*(&raw mut PANE_REGISTRY)).remove(&PaneId((*wp).id));
     }
 }
 

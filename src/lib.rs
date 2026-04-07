@@ -1528,6 +1528,13 @@ pub struct SessionId(pub u32);
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct WindowId(pub u32);
 
+/// Stable identifier for a window_pane allocation.
+///
+/// Monotonically increasing via `NEXT_WINDOW_PANE_ID`, never reused.
+/// Used as the key into `PANE_REGISTRY` for ID-based ownership.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct PaneId(pub u32);
+
 struct session {
     id: u32,
     name: Cow<'static, str>,
