@@ -1028,7 +1028,7 @@ unsafe fn window_tree_init(
     args: *mut args,
 ) -> *mut screen {
     unsafe {
-        let wp: *mut window_pane = (*wme.as_ptr()).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*wme.as_ptr()).wp);
         // window_tree_modedata *data;
         // screen *s;
         let mut s = null_mut();
@@ -1440,7 +1440,7 @@ unsafe fn window_tree_key(
     m: *mut mouse_event,
 ) {
     unsafe {
-        let wp = (*wme.as_ptr()).wp;
+        let wp = pane_ptr_from_id((*wme.as_ptr()).wp);
         let data = (*wme.as_ptr()).data as *mut window_tree_modedata;
 
         let mut prompt: *mut u8 = null_mut();
@@ -1479,7 +1479,7 @@ unsafe fn window_tree_key(
                 b'H' => {
                     mode_tree_expand((*data).data, (*fsp).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()) as u64);
                     mode_tree_expand((*data).data, (*fsp).wl as u64);
-                    if !mode_tree_set_current((*data).data, (*wme.as_ptr()).wp as u64) {
+                    if !mode_tree_set_current((*data).data, pane_ptr_from_id((*wme.as_ptr()).wp) as u64) {
                         mode_tree_set_current((*data).data, (*fsp).wl as u64);
                     }
                 }

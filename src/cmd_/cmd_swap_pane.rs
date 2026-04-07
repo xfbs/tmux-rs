@@ -90,9 +90,9 @@ unsafe fn cmd_swap_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
 
             let src_lc = (*src_wp).layout_cell;
             let dst_lc = (*dst_wp).layout_cell;
-            (*src_lc).wp = dst_wp;
+            (*src_lc).wp = pane_id_from_ptr(dst_wp);
             (*dst_wp).layout_cell = src_lc;
-            (*dst_lc).wp = src_wp;
+            (*dst_lc).wp = pane_id_from_ptr(src_wp);
             (*src_wp).layout_cell = dst_lc;
 
             window_pane_set_window(src_wp, dst_w);

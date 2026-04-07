@@ -1154,7 +1154,7 @@ pub unsafe fn window_customize_init(
     args: *mut args,
 ) -> *mut screen {
     unsafe {
-        let wp = (*wme.as_ptr()).wp;
+        let wp = pane_ptr_from_id((*wme.as_ptr()).wp);
         let mut s: *mut screen = null_mut();
 
         let data: *mut window_customize_modedata = xcalloc1() as *mut window_customize_modedata;
@@ -1805,7 +1805,7 @@ pub unsafe fn window_customize_key(
     m: *mut mouse_event,
 ) {
     unsafe {
-        let wp: *mut window_pane = (*wme.as_ptr()).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*wme.as_ptr()).wp);
         let data: *mut window_customize_modedata = (*wme.as_ptr()).data.cast();
         let mut item: *mut window_customize_itemdata =
             mode_tree_get_current((*data).data).cast().as_ptr();

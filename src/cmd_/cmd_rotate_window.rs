@@ -68,7 +68,7 @@ unsafe fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
                 }
                 (*wp).layout_cell = (*wp2).layout_cell;
                 if !(*wp).layout_cell.is_null() {
-                    (*(*wp).layout_cell).wp = wp;
+                    (*(*wp).layout_cell).wp = pane_id_from_ptr(wp);
                 }
                 (*wp).xoff = (*wp2).xoff;
                 (*wp).yoff = (*wp2).yoff;
@@ -76,7 +76,7 @@ unsafe fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
             }
             (*wp).layout_cell = lc;
             if !(*wp).layout_cell.is_null() {
-                (*(*wp).layout_cell).wp = wp;
+                (*(*wp).layout_cell).wp = pane_id_from_ptr(wp);
             }
             (*wp).xoff = xoff;
             (*wp).yoff = yoff;
@@ -104,7 +104,7 @@ unsafe fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
                 }
                 (*wp).layout_cell = (*wp2).layout_cell;
                 if !(*wp).layout_cell.is_null() {
-                    (*(*wp).layout_cell).wp = wp;
+                    (*(*wp).layout_cell).wp = pane_id_from_ptr(wp);
                 }
                 (*wp).xoff = (*wp2).xoff;
                 (*wp).yoff = (*wp2).yoff;
@@ -112,7 +112,7 @@ unsafe fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
             }
             (*wp).layout_cell = lc;
             if !(*wp).layout_cell.is_null() {
-                (*(*wp).layout_cell).wp = wp;
+                (*(*wp).layout_cell).wp = pane_id_from_ptr(wp);
             }
             (*wp).xoff = xoff;
             (*wp).yoff = yoff;

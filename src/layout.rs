@@ -56,7 +56,7 @@ pub unsafe fn layout_create_cell(lcparent: *mut layout_cell) -> *mut layout_cell
         sy: u32::MAX,
         xoff: u32::MAX,
         yoff: u32::MAX,
-        wp: null_mut(),
+        wp: None,
         cells: Vec::new(),
     }))
 }
@@ -72,8 +72,9 @@ pub unsafe fn layout_free_cell(lc: *mut layout_cell) {
                 (*lc).cells.clear();
             }
             layout_type::LAYOUT_WINDOWPANE => {
-                if !(*lc).wp.is_null() {
-                    (*(*lc).wp).layout_cell = null_mut();
+                let __wp = pane_ptr_from_id((*lc).wp);
+                if !__wp.is_null() {
+                    (*__wp).layout_cell = null_mut();
                 }
             }
         }
@@ -98,7 +99,7 @@ pub unsafe fn layout_print_cell(lc: *mut layout_cell, hdr: *const u8, n: u32) {
             lc as *mut c_void,
             type_str.to_string_lossy(),
             (*lc).parent as *mut c_void,
-            (*lc).wp as *mut c_void,
+            pane_ptr_from_id((*lc).wp) as *mut c_void,
             (*lc).xoff,
             (*lc).yoff,
             (*lc).sx,
@@ -171,7 +172,7 @@ pub unsafe fn layout_make_leaf(lc: *mut layout_cell, wp: *mut window_pane) {
         (*lc).type_ = layout_type::LAYOUT_WINDOWPANE;
         (*lc).cells.clear();
         (*wp).layout_cell = lc;
-        (*lc).wp = wp;
+        (*lc).wp = pane_id_from_ptr(wp);
     }
 }
 
@@ -184,10 +185,11 @@ pub unsafe fn layout_make_node(lc: *mut layout_cell, type_: layout_type) {
         (*lc).type_ = type_;
         (*lc).cells.clear();
 
-        if !(*lc).wp.is_null() {
-            (*(*lc).wp).layout_cell = null_mut();
+        let __wp = pane_ptr_from_id((*lc).wp);
+        if !__wp.is_null() {
+            (*__wp).layout_cell = null_mut();
         }
-        (*lc).wp = null_mut();
+        (*lc).wp = None;
     }
 }
 

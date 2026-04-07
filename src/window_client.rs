@@ -276,7 +276,7 @@ pub unsafe fn window_client_init(
     args: *mut args,
 ) -> *mut screen {
     unsafe {
-        let wp: *mut window_pane = (*wme.as_ptr()).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*wme.as_ptr()).wp);
         let mut s: *mut screen = null_mut();
 
         let data: *mut window_client_modedata =
@@ -401,7 +401,7 @@ pub unsafe fn window_client_key(
     m: *mut mouse_event,
 ) {
     unsafe {
-        let wp = (*wme.as_ptr()).wp;
+        let wp = pane_ptr_from_id((*wme.as_ptr()).wp);
         let data = (*wme.as_ptr()).data as *mut window_client_modedata;
         let mtd: *mut mode_tree_data = (*data).data;
 

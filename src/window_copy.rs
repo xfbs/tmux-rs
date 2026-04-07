@@ -219,7 +219,7 @@ pub unsafe extern "C-unwind" fn window_copy_scroll_timer(
     wme: NonNull<window_mode_entry>,
 ) {
     unsafe {
-        let wp: *mut window_pane = (*wme.as_ptr()).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*wme.as_ptr()).wp);
         let data: *mut window_copy_mode_data = (*wme.as_ptr()).data.cast();
         let mut tv = libc::timeval {
             tv_sec: 0,
@@ -308,7 +308,7 @@ pub unsafe fn window_copy_clone_screen(
 
 pub unsafe fn window_copy_common_init(wme: *mut window_mode_entry) -> *mut window_copy_mode_data {
     unsafe {
-        let wp = (*wme).wp;
+        let wp = pane_ptr_from_id((*wme).wp);
         let base = &raw mut (*wp).base;
 
         let data: *mut window_copy_mode_data = xcalloc1::<window_copy_mode_data>();
@@ -362,7 +362,7 @@ pub unsafe fn window_copy_init(
 ) -> *mut screen {
     let wme = wme.as_ptr();
     unsafe {
-        let wp = (*wme).swp;
+        let wp = pane_ptr_from_id((*wme).swp);
         let base = &raw mut (*wp).base;
         let mut ctx: screen_write_ctx = zeroed();
         let mut cx = 0;
@@ -416,7 +416,7 @@ pub unsafe fn window_copy_view_init(
 ) -> *mut screen {
     let wme = wme.as_ptr();
     unsafe {
-        let wp = (*wme).wp;
+        let wp = pane_ptr_from_id((*wme).wp);
         // struct window_copy_mode_data *data;
         let base: *mut screen = &raw mut (*wp).base;
         let sx = screen_size_x(base);
@@ -894,7 +894,7 @@ pub unsafe fn window_copy_key_table(wme: *mut window_mode_entry) -> *const u8 {
     unsafe {
         if matches!(
             modekey::try_from(
-                options_get_number_((*window_pane_window((*wme).wp)).options, "mode-keys") as i32
+                options_get_number_((*window_pane_window(pane_ptr_from_id((*wme).wp))).options, "mode-keys") as i32
             ),
             Ok(modekey::MODEKEY_VI)
         ) {
@@ -922,7 +922,7 @@ pub unsafe fn window_copy_expand_search_string(cs: *mut window_copy_cmd_state) -
                 null_mut(),
                 null_mut(),
                 null_mut(),
-                (*wme).wp,
+                pane_ptr_from_id((*wme).wp),
             );
             if *expanded == b'\0' {
                 free_(expanded);
@@ -1052,7 +1052,7 @@ pub unsafe fn window_copy_do_copy_end_of_line(
         let c = (*cs).c;
         let s = (*cs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*cs).wl;
-        let wp = (*wme).wp;
+        let wp = pane_ptr_from_id((*wme).wp);
         let count = args_count((*cs).args);
         let mut np = (*wme).prefix;
         let data: *mut window_copy_mode_data = (*wme).data.cast();
@@ -1142,7 +1142,7 @@ pub unsafe fn window_copy_do_copy_line(
         let c = (*cs).c;
         let s = (*cs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*cs).wl;
-        let wp = (*wme).wp;
+        let wp = pane_ptr_from_id((*wme).wp);
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let count = args_count((*cs).args);
         let mut np = (*wme).prefix;
@@ -1232,7 +1232,7 @@ pub unsafe fn window_copy_cmd_copy_selection_no_clear(
         let c: *mut client = (*cs).c;
         let s: *mut session = (*cs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl: *mut winlink = (*cs).wl;
-        let wp: *mut window_pane = (*wme).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*wme).wp);
         let mut prefix = null_mut();
         let arg1 = args_string((*cs).args, 1);
 
@@ -2324,7 +2324,7 @@ pub unsafe fn window_copy_cmd_copy_pipe_no_clear(
         let c: *mut client = (*cs).c;
         let s: *mut session = (*cs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl: *mut winlink = (*cs).wl;
-        let wp: *mut window_pane = (*wme).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*wme).wp);
         let mut command = null_mut();
         let mut prefix = null_mut();
         let arg1 = args_string((*cs).args, 1);
@@ -2375,7 +2375,7 @@ pub unsafe fn window_copy_cmd_pipe_no_clear(
         let c: *mut client = (*cs).c;
         let s: *mut session = (*cs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl: *mut winlink = (*cs).wl;
-        let wp: *mut window_pane = (*wme).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*wme).wp);
         let mut command = null_mut();
         let arg1 = args_string((*cs).args, 1);
 
@@ -2765,7 +2765,7 @@ pub unsafe fn window_copy_cmd_refresh_from_pane(
 ) -> window_copy_cmd_action {
     unsafe {
         let wme: *mut window_mode_entry = (*cs).wme;
-        let wp: *mut window_pane = (*wme).swp;
+        let wp: *mut window_pane = pane_ptr_from_id((*wme).swp);
         let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         if (*data).viewmode != 0 {
@@ -3442,7 +3442,7 @@ pub unsafe fn window_copy_command(
 
         if libc::strncmp(command, c!("search-"), 7) != 0 && !(*data).searchmark.is_null() {
             let keys = modekey::try_from(options_get_number_(
-                (*window_pane_window((*wme).wp)).options,
+                (*window_pane_window(pane_ptr_from_id((*wme).wp))).options,
                 "mode-keys",
             ) as i32);
             if clear == window_copy_cmd_clear::WINDOW_COPY_CMD_CLEAR_EMACS_ONLY
@@ -3462,7 +3462,7 @@ pub unsafe fn window_copy_command(
         (*wme).prefix = 1;
 
         if action == window_copy_cmd_action::WINDOW_COPY_CMD_CANCEL {
-            window_pane_reset_mode((*wme).wp);
+            window_pane_reset_mode(pane_ptr_from_id((*wme).wp));
         } else if action == window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW {
             window_copy_redraw_screen(wme);
         }
@@ -4303,7 +4303,7 @@ pub unsafe fn window_copy_search(
     mut regex: i32,
 ) -> bool {
     unsafe {
-        let wp: *mut window_pane = (*wme).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*wme).wp);
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let s: *mut screen = (*data).backing;
         let mut ss = MaybeUninit::<screen>::uninit();
@@ -4783,7 +4783,7 @@ pub unsafe fn window_copy_update_style(
     mkgc: *const grid_cell,
 ) {
     unsafe {
-        let wp: *mut window_pane = (*wme).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*wme).wp);
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut start: u32 = 0;
         let mut end: u32 = 0;
@@ -4888,7 +4888,7 @@ pub unsafe fn window_copy_write_line(
     py: u32,
 ) {
     unsafe {
-        let wp: *mut window_pane = (*wme).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*wme).wp);
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let s: *mut screen = &raw mut (*data).screen;
         let oo: *mut options = (*window_pane_window(wp)).options;
@@ -5036,7 +5036,7 @@ pub unsafe fn window_copy_redraw_selection(wme: *mut window_mode_entry, old_y: u
 
 pub unsafe fn window_copy_redraw_lines(wme: *mut window_mode_entry, py: u32, ny: u32) {
     unsafe {
-        let wp: *mut window_pane = (*wme).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*wme).wp);
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut ctx: screen_write_ctx = zeroed();
 
@@ -5153,7 +5153,7 @@ pub unsafe fn window_copy_synchronize_cursor(wme: *mut window_mode_entry, no_res
 
 pub unsafe fn window_copy_update_cursor(wme: *mut window_mode_entry, cx: u32, cy: u32) {
     unsafe {
-        let wp: *mut window_pane = (*wme).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*wme).wp);
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let s: *mut screen = &raw mut (*data).screen;
         let mut ctx: screen_write_ctx = zeroed();
@@ -5250,7 +5250,7 @@ pub unsafe fn window_copy_set_selection(
     no_reset: i32,
 ) -> i32 {
     unsafe {
-        let wp: *mut window_pane = (*wme).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*wme).wp);
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let s: *mut screen = &raw mut (*data).screen;
         let oo: *mut options = (*window_pane_window(wp)).options;
@@ -5314,7 +5314,7 @@ pub unsafe fn window_copy_set_selection(
 
 pub unsafe fn window_copy_get_selection(wme: *mut window_mode_entry, len: *mut usize) -> *mut u8 {
     unsafe {
-        let wp: *mut window_pane = (*wme).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*wme).wp);
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let s: *mut screen = &raw mut (*data).screen;
 
@@ -5449,7 +5449,7 @@ pub unsafe fn window_copy_copy_buffer(
     len: usize,
 ) {
     unsafe {
-        let wp: *mut window_pane = (*wme).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*wme).wp);
         let mut ctx: screen_write_ctx = zeroed();
 
         if options_get_number_(GLOBAL_OPTIONS, "set-clipboard") != 0 {
@@ -5531,7 +5531,7 @@ pub unsafe fn window_copy_copy_selection(wme: *mut window_mode_entry, prefix: *c
 
 pub unsafe fn window_copy_append_selection(wme: *mut window_mode_entry) {
     unsafe {
-        let wp: *mut window_pane = (*wme).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*wme).wp);
         let mut ctx: screen_write_ctx = zeroed();
         let mut bufsize = 0;
         let mut len: usize = 0;
@@ -6127,7 +6127,7 @@ pub unsafe fn window_copy_cursor_next_word_end_pos(
     ppy: *mut u32,
 ) {
     unsafe {
-        let wp: *mut window_pane = (*wme).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*wme).wp);
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let oo: *mut options = (*window_pane_window(wp)).options;
         let back_s: *mut screen = (*data).backing;
@@ -6161,7 +6161,7 @@ pub unsafe fn window_copy_cursor_next_word_end(
     no_reset: i32,
 ) {
     unsafe {
-        let wp: *mut window_pane = (*wme).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*wme).wp);
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let oo: *mut options = (*window_pane_window(wp)).options;
         let back_s: *mut screen = (*data).backing;
@@ -6236,7 +6236,7 @@ pub unsafe fn window_copy_cursor_previous_word(
 ) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
-        let w: *mut window = window_pane_window((*wme).wp);
+        let w: *mut window = window_pane_window(pane_ptr_from_id((*wme).wp));
         let back_s: *mut screen = (*data).backing;
         let mut gr: grid_reader = zeroed();
 
@@ -6313,7 +6313,7 @@ pub unsafe fn window_copy_cursor_prompt(
 
 pub unsafe fn window_copy_scroll_up(wme: *mut window_mode_entry, mut ny: u32) {
     unsafe {
-        let wp: *mut window_pane = (*wme).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*wme).wp);
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let s: *mut screen = &raw mut (*data).screen;
         let mut ctx: screen_write_ctx = zeroed();
@@ -6352,7 +6352,7 @@ pub unsafe fn window_copy_scroll_up(wme: *mut window_mode_entry, mut ny: u32) {
 
 pub unsafe fn window_copy_scroll_down(wme: *mut window_mode_entry, mut ny: u32) {
     unsafe {
-        let wp: *mut window_pane = (*wme).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*wme).wp);
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let s: *mut screen = &raw mut (*data).screen;
         let mut ctx: screen_write_ctx = zeroed();

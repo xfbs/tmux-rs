@@ -1065,7 +1065,7 @@ const SCREEN_WRITE_SYNC: i32 = 0x1;
 type screen_write_init_ctx_cb = Option<unsafe fn(*mut screen_write_ctx, *mut tty_ctx)>;
 #[repr(C)]
 struct screen_write_ctx {
-    wp: *mut window_pane,
+    wp: Option<PaneId>,
     s: *mut screen,
 
     flags: i32,
@@ -1218,8 +1218,8 @@ struct window_mode {
 
 // Active window mode.
 struct window_mode_entry {
-    wp: *mut window_pane,
-    swp: *mut window_pane,
+    wp: Option<PaneId>,
+    swp: Option<PaneId>,
 
     mode: *const window_mode,
     data: *mut c_void,
@@ -1476,7 +1476,7 @@ struct layout_cell {
     xoff: u32,
     yoff: u32,
 
-    wp: *mut window_pane,
+    wp: Option<PaneId>,
     /// Child cells. Empty for LAYOUT_WINDOWPANE leaves.
     cells: Vec<*mut layout_cell>,
 }
@@ -2169,7 +2169,7 @@ type client_files = BTreeMap<i32, Box<client_file>>;
 
 // Client window.
 struct client_window {
-    pane: *mut window_pane,
+    pane: Option<PaneId>,
 
     sx: u32,
     sy: u32,
@@ -2551,7 +2551,7 @@ struct spawn_context {
     wl: *mut winlink,
     tc: *mut client,
 
-    wp0: *mut window_pane,
+    wp0: Option<PaneId>,
     lc: *mut layout_cell,
 
     name: *const u8,

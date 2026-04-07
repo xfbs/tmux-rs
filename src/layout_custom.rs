@@ -63,7 +63,8 @@ pub unsafe fn layout_append(lc: *mut layout_cell, buf: *mut u8, len: usize) -> i
             return -1;
         }
 
-        let tmplen = if !(*lc).wp.is_null() {
+        let __wp_lc = pane_ptr_from_id((*lc).wp);
+        let tmplen = if !__wp_lc.is_null() {
             xsnprintf_!(
                 tmp,
                 sizeof_tmp,
@@ -72,7 +73,7 @@ pub unsafe fn layout_append(lc: *mut layout_cell, buf: *mut u8, len: usize) -> i
                 (*lc).sy,
                 (*lc).xoff,
                 (*lc).yoff,
-                (*(*lc).wp).id,
+                (*__wp_lc).id,
             )
             .unwrap()
         } else {

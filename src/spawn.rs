@@ -27,7 +27,7 @@ pub unsafe fn spawn_log(from: &str, sc: *mut spawn_context) {
     unsafe {
         let s = (*sc).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         let wl = (*sc).wl;
-        let wp0 = (*sc).wp0;
+        let wp0 = pane_ptr_from_id((*sc).wp0);
         let name = cmdq_get_name((*sc).item);
         type tmp_type = [u8; 128];
         let mut tmp = MaybeUninit::<tmp_type>::uninit();
@@ -109,18 +109,19 @@ pub unsafe fn spawn_window(sc: *mut spawn_context) -> Result<NonNull<winlink>, S
                 }
             }
 
-            (*sc).wp0 = (*w).panes.first().copied().unwrap_or(null_mut());
-            (*w).panes.retain(|&p| p != (*sc).wp0);
+            let wp0_new = (*w).panes.first().copied().unwrap_or(null_mut());
+            (*sc).wp0 = pane_id_from_ptr(wp0_new);
+            (*w).panes.retain(|&p| p != wp0_new);
 
             layout_free(w);
             window_destroy_panes(w);
 
-            (*w).panes.insert(0, (*sc).wp0);
-            window_pane_resize((*sc).wp0, (*w).sx, (*w).sy);
+            (*w).panes.insert(0, wp0_new);
+            window_pane_resize(wp0_new, (*w).sx, (*w).sy);
 
-            layout_init(w, (*sc).wp0);
+            layout_init(w, wp0_new);
             (*w).active = None;
-            window_set_active_pane(w, (*sc).wp0, 0);
+            window_set_active_pane(w, wp0_new, 0);
         }
 
         // Otherwise we have no window so we will need to create one. First
@@ -246,6 +247,7 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context) -> Result<NonNull<window_pane>,
         let mut oldset: libc::sigset_t = zeroed();
         let key: key_code;
 
+        let wp0 = pane_ptr_from_id((*sc).wp0);
         'complete: {
             spawn_log("spawn_pane", sc);
 
@@ -267,8 +269,8 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context) -> Result<NonNull<window_pane>,
             // either create a new cell or assign to the one we are given.
             hlimit = options_get_number_((*s).options, "history-limit") as u32;
             if (*sc).flags.intersects(SPAWN_RESPAWN) {
-                if (*(*sc).wp0).fd != -1 && !(*sc).flags.intersects(SPAWN_KILL) {
-                    window_pane_index((*sc).wp0, &raw mut idx);
+                if (*wp0).fd != -1 && !(*sc).flags.intersects(SPAWN_KILL) {
+                    window_pane_index(wp0, &raw mut idx);
                     let msg = format!(
                         "pane {}:{}.{} still active",
                         (*s).name,
@@ -278,22 +280,22 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context) -> Result<NonNull<window_pane>,
                     free_(cwd);
                     return Err(msg);
                 }
-                if (*(*sc).wp0).fd != -1 {
-                    bufferevent_free((*(*sc).wp0).event);
-                    close((*(*sc).wp0).fd);
+                if (*wp0).fd != -1 {
+                    bufferevent_free((*wp0).event);
+                    close((*wp0).fd);
                 }
-                window_pane_reset_mode_all((*sc).wp0);
-                screen_reinit(&raw mut (*(*sc).wp0).base);
-                input_free((*(*sc).wp0).ictx);
-                (*(*sc).wp0).ictx = null_mut();
-                new_wp = (*sc).wp0;
+                window_pane_reset_mode_all(wp0);
+                screen_reinit(&raw mut (*wp0).base);
+                input_free((*wp0).ictx);
+                (*wp0).ictx = null_mut();
+                new_wp = wp0;
                 (*new_wp).flags &=
                     !(window_pane_flags::PANE_STATUSREADY | window_pane_flags::PANE_STATUSDRAWN);
             } else if (*sc).lc.is_null() {
                 new_wp = window_add_pane(w, null_mut(), hlimit, (*sc).flags);
                 layout_init(w, new_wp);
             } else {
-                new_wp = window_add_pane(w, (*sc).wp0, hlimit, (*sc).flags);
+                new_wp = window_add_pane(w, wp0, hlimit, (*sc).flags);
                 if (*sc).flags.intersects(SPAWN_ZOOM) {
                     layout_assign_pane((*sc).lc, new_wp, 1);
                 } else {

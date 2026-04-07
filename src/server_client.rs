@@ -3446,7 +3446,7 @@ pub unsafe fn server_client_get_client_window(c: *mut client, id: u32) -> *mut c
 pub unsafe fn server_client_add_client_window(c: *mut client, id: u32) -> NonNull<client_window> {
     unsafe {
         let cw = (*c).windows.entry(id).or_insert(client_window {
-            pane: null_mut(),
+            pane: None,
             sx: 0,
             sy: 0,
         });
@@ -3470,7 +3470,7 @@ pub unsafe fn server_client_get_pane(c: *mut client) -> *mut window_pane {
         if cw.is_null() {
             return window_active_pane(winlink_window((*s).curw));
         }
-        (*cw).pane
+        pane_ptr_from_id((*cw).pane)
     }
 }
 
@@ -3484,7 +3484,7 @@ pub unsafe fn server_client_set_pane(c: *mut client, wp: *mut window_pane) {
         }
 
         let cw = server_client_add_client_window(c, (*winlink_window((*s).curw)).id).as_ptr();
-        (*cw).pane = wp;
+        (*cw).pane = pane_id_from_ptr(wp);
         // log_debug("%s pane now %%%u", (*c).name, (*wp).id);
     }
 }
@@ -3496,7 +3496,7 @@ pub unsafe fn server_client_remove_pane(wp: *mut window_pane) {
 
         for c in clients_iter() {
             if let Some(cw) = (*c).windows.get(&(*w).id) {
-                if cw.pane == wp {
+                if pane_ptr_from_id(cw.pane) == wp {
                     (*c).windows.remove(&(*w).id);
                 }
             }

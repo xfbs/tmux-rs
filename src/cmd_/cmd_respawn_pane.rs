@@ -41,7 +41,7 @@ unsafe fn cmd_respawn_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
         sc.s = if s.is_null() { None } else { Some(SessionId((*s).id)) };
         sc.wl = wl;
 
-        sc.wp0 = wp;
+        sc.wp0 = pane_id_from_ptr(wp);
 
         args_to_vector(args, &raw mut sc.argc, &raw mut sc.argv);
         sc.environ = environ_create().as_ptr();

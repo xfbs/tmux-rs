@@ -143,7 +143,7 @@ pub unsafe extern "C-unwind" fn window_clock_timer_callback(
     wme: NonNull<window_mode_entry>,
 ) {
     unsafe {
-        let wp = (*wme.as_ptr()).wp;
+        let wp = pane_ptr_from_id((*wme.as_ptr()).wp);
         let data = (*wme.as_ptr()).data as *mut window_clock_mode_data;
         let mut now: libc::tm = zeroed();
         let mut then: libc::tm = zeroed();
@@ -179,7 +179,7 @@ pub unsafe fn window_clock_init(
     _args: *mut args,
 ) -> *mut screen {
     unsafe {
-        let wp: *mut window_pane = (*wme.as_ptr()).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*wme.as_ptr()).wp);
         let mut tv = timeval {
             tv_sec: 1,
             tv_usec: 0,
@@ -239,13 +239,13 @@ pub unsafe fn window_clock_key(
     _m: *mut mouse_event,
 ) {
     unsafe {
-        window_pane_reset_mode((*wme.as_ptr()).wp);
+        window_pane_reset_mode(pane_ptr_from_id((*wme.as_ptr()).wp));
     }
 }
 
 pub unsafe fn window_clock_draw_screen(wme: NonNull<window_mode_entry>) {
     unsafe {
-        let wp = (*wme.as_ptr()).wp;
+        let wp = pane_ptr_from_id((*wme.as_ptr()).wp);
         let data = (*wme.as_ptr()).data as *mut window_clock_mode_data;
         let mut ctx: screen_write_ctx = zeroed();
         let s = &raw mut (*data).screen;

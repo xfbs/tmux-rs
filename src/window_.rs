@@ -249,6 +249,21 @@ pub unsafe fn window_set_active_pane_field(w: *mut window, wp: *mut window_pane)
     }
 }
 
+/// Convert a `*mut window_pane` (possibly null) to `Option<PaneId>`.
+#[inline]
+pub unsafe fn pane_id_from_ptr(wp: *mut window_pane) -> Option<PaneId> {
+    unsafe {
+        if wp.is_null() { None } else { Some(PaneId((*wp).id)) }
+    }
+}
+
+/// Resolve `Option<PaneId>` to a `*mut window_pane`, returning null if None or
+/// the allocation has been reclaimed.
+#[inline]
+pub unsafe fn pane_ptr_from_id(id: Option<PaneId>) -> *mut window_pane {
+    unsafe { id.and_then(|i| pane_from_id(i)).unwrap_or(null_mut()) }
+}
+
 pub unsafe fn winlink_set_window(wl: *mut winlink, w: *mut window) {
     unsafe {
         let prev = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
@@ -1383,8 +1398,8 @@ pub unsafe fn window_pane_set_mode(
             (*wp).modes.insert(0, wme);
         } else {
             wme = xcalloc_::<window_mode_entry>(1).as_ptr();
-            (*wme).wp = wp;
-            (*wme).swp = swp;
+            (*wme).wp = pane_id_from_ptr(wp);
+            (*wme).swp = pane_id_from_ptr(swp);
             (*wme).mode = mode;
             (*wme).prefix = 1;
             (*wp).modes.insert(0, wme);

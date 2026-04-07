@@ -106,7 +106,7 @@ unsafe fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
         sc.s = if s.is_null() { None } else { Some(SessionId((*s).id)) };
         sc.wl = wl;
 
-        sc.wp0 = wp;
+        sc.wp0 = pane_id_from_ptr(wp);
         sc.lc = lc;
 
         args_to_vector(args, &raw mut sc.argc, &raw mut sc.argv);

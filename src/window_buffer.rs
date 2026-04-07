@@ -351,7 +351,7 @@ pub unsafe fn window_buffer_init(
 ) -> *mut screen {
     unsafe {
         let mut s = null_mut();
-        let wp = (*wme.as_ptr()).wp;
+        let wp = pane_ptr_from_id((*wme.as_ptr()).wp);
         let data = xcalloc1::<window_buffer_modedata>();
         (*wme.as_ptr()).data = data as *mut window_buffer_modedata as *mut c_void;
         data.wp = wp;
@@ -563,7 +563,7 @@ pub unsafe fn window_buffer_key(
     m: *mut mouse_event,
 ) {
     unsafe {
-        let wp = (*wme.as_ptr()).wp;
+        let wp = pane_ptr_from_id((*wme.as_ptr()).wp);
         let data = (*wme.as_ptr()).data as *mut window_buffer_modedata;
         let mtd: *mut mode_tree_data = (*data).data;
         let mut finished;
