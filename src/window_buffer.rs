@@ -73,7 +73,7 @@ struct window_buffer_itemdata {
 }
 
 struct window_buffer_modedata {
-    wp: *mut window_pane,
+    wp: Option<PaneId>,
     fs: cmd_find_state,
 
     data: *mut mode_tree_data,
@@ -299,7 +299,7 @@ pub unsafe fn window_buffer_search(
 pub unsafe fn window_buffer_menu(modedata: NonNull<c_void>, c: *mut client, key: key_code) {
     unsafe {
         let data: NonNull<window_buffer_modedata> = modedata.cast();
-        let wp: *mut window_pane = (*data.as_ptr()).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*data.as_ptr()).wp);
 
         if let Some(wme) = (*wp).modes.first().copied().and_then(NonNull::new)
             && (*wme.as_ptr()).data == modedata.as_ptr()
@@ -354,7 +354,7 @@ pub unsafe fn window_buffer_init(
         let wp = pane_ptr_from_id((*wme.as_ptr()).wp);
         let data = xcalloc1::<window_buffer_modedata>();
         (*wme.as_ptr()).data = data as *mut window_buffer_modedata as *mut c_void;
-        data.wp = wp;
+        data.wp = pane_id_from_ptr(wp);
         cmd_find_copy_state(&raw mut data.fs, fs);
 
         if args.is_null() || !args_has(args, 'F') {
@@ -432,7 +432,7 @@ pub unsafe fn window_buffer_update(wme: NonNull<window_mode_entry>) {
 
         mode_tree_build((*data).data);
         mode_tree_draw(&mut *(*data).data);
-        (*(*data).wp).flags |= window_pane_flags::PANE_REDRAW;
+        (*pane_ptr_from_id((*data).wp)).flags |= window_pane_flags::PANE_REDRAW;
     }
 }
 
@@ -542,7 +542,7 @@ unsafe fn window_buffer_start_edit(
         let buf = paste_buffer_data_(pb, &mut len);
 
         let ed = Box::leak(Box::new(window_buffer_editdata {
-            wp_id: (*(*data).wp).id,
+            wp_id: (*pane_ptr_from_id((*data).wp)).id,
             name: paste_buffer_name(pb).to_string(),
             pb: pb.as_ptr(),
         })) as *mut window_buffer_editdata;

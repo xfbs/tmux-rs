@@ -87,7 +87,7 @@ enum input_end_type {
 /// Input parser context.
 #[repr(C)]
 pub struct input_ctx {
-    wp: *mut window_pane,
+    wp: Option<PaneId>,
     event: *mut bufferevent,
     ctx: screen_write_ctx,
     palette: *mut colour_palette,
@@ -940,7 +940,7 @@ pub unsafe fn input_init(
 ) -> *mut input_ctx {
     unsafe {
         let ictx = Box::into_raw(Box::new(input_ctx {
-            wp,
+            wp: pane_id_from_ptr(wp),
             event: bev,
             palette,
             input_space: INPUT_BUF_START,
@@ -987,7 +987,7 @@ pub unsafe fn input_free(ictx: *mut input_ctx) {
 pub unsafe fn input_reset(ictx: *mut input_ctx, clear: i32) {
     unsafe {
         let sctx = &raw mut (*ictx).ctx;
-        let wp = (*ictx).wp;
+        let wp = pane_ptr_from_id((*ictx).wp);
 
         input_reset_cell(ictx);
 
@@ -1374,7 +1374,7 @@ unsafe fn input_c0_dispatch(ictx: *mut input_ctx) -> i32 {
     let func = "input_c0_dispatch";
     unsafe {
         let sctx = &raw mut (*ictx).ctx;
-        let wp = (*ictx).wp;
+        let wp = pane_ptr_from_id((*ictx).wp);
         let s = (*sctx).s;
 
         (*ictx).utf8started = 0; /* can't be valid UTF-8 */
@@ -1955,7 +1955,7 @@ unsafe fn input_csi_dispatch_winops(ictx: *mut input_ctx) {
     unsafe {
         let sctx = &(*ictx).ctx;
         let s = sctx.s;
-        let wp = (*ictx).wp;
+        let wp = pane_ptr_from_id((*ictx).wp);
         let mut w: *mut window = null_mut();
         let x: u32 = screen_size_x(s);
         let y: u32 = screen_size_y(s);
@@ -2326,7 +2326,7 @@ unsafe fn input_dcs_dispatch(ictx: *mut input_ctx) -> i32 {
     unsafe {
         let func = "input_dcs_dispatch";
 
-        let wp = (*ictx).wp;
+        let wp = pane_ptr_from_id((*ictx).wp);
         let sctx = &raw mut (*ictx).ctx;
         let buf = (*ictx).input_buf;
         let len = (*ictx).input_len;
@@ -2392,7 +2392,7 @@ unsafe fn input_enter_osc(ictx: *mut input_ctx) {
 unsafe fn input_exit_osc(ictx: *mut input_ctx) {
     unsafe {
         let sctx = &raw mut (*ictx).ctx;
-        let wp = (*ictx).wp;
+        let wp = pane_ptr_from_id((*ictx).wp);
         let mut p = (*ictx).input_buf;
 
         if (*ictx).flags.intersects(input_flags::INPUT_DISCARD) {
@@ -2476,7 +2476,7 @@ unsafe fn input_enter_apc(ictx: *mut input_ctx) {
 unsafe fn input_exit_apc(ictx: *mut input_ctx) {
     unsafe {
         let sctx = &raw mut (*ictx).ctx;
-        let wp = (*ictx).wp;
+        let wp = pane_ptr_from_id((*ictx).wp);
 
         if (*ictx).flags.intersects(input_flags::INPUT_DISCARD) {
             return;
@@ -2505,7 +2505,7 @@ unsafe fn input_enter_rename(ictx: *mut input_ctx) {
 /// Rename terminator (ST) received.
 unsafe fn input_exit_rename(ictx: *mut input_ctx) {
     unsafe {
-        let wp = (*ictx).wp;
+        let wp = pane_ptr_from_id((*ictx).wp);
 
         if wp.is_null() {
             return;
@@ -2513,7 +2513,7 @@ unsafe fn input_exit_rename(ictx: *mut input_ctx) {
         if (*ictx).flags.intersects(input_flags::INPUT_DISCARD) {
             return;
         }
-        if options_get_number_((*(*ictx).wp).options, "allow-rename") == 0 {
+        if options_get_number_((*pane_ptr_from_id((*ictx).wp)).options, "allow-rename") == 0 {
             return;
         }
         log_debug!(
@@ -2801,7 +2801,7 @@ unsafe fn input_get_fg_control_client(wp: *mut window_pane) -> i32 {
 /// Handle the OSC 10 sequence for setting and querying foreground colour.
 unsafe fn input_osc_10(ictx: *mut input_ctx, p: *const u8) {
     unsafe {
-        let wp = (*ictx).wp;
+        let wp = pane_ptr_from_id((*ictx).wp);
         let mut defaults: grid_cell = zeroed();
         let mut c;
 
@@ -2840,7 +2840,7 @@ unsafe fn input_osc_10(ictx: *mut input_ctx, p: *const u8) {
 /// Handle the OSC 110 sequence for resetting foreground colour.
 unsafe fn input_osc_110(ictx: *mut input_ctx, p: *const u8) {
     unsafe {
-        let wp = (*ictx).wp;
+        let wp = pane_ptr_from_id((*ictx).wp);
 
         if *p != b'\0' {
             return;
@@ -2859,7 +2859,7 @@ unsafe fn input_osc_110(ictx: *mut input_ctx, p: *const u8) {
 /// Handle the OSC 11 sequence for setting and querying background colour.
 unsafe fn input_osc_11(ictx: *mut input_ctx, p: *const u8) {
     unsafe {
-        let wp = (*ictx).wp;
+        let wp = pane_ptr_from_id((*ictx).wp);
         let mut defaults: grid_cell = zeroed();
 
         let mut c;
@@ -2899,7 +2899,7 @@ unsafe fn input_osc_11(ictx: *mut input_ctx, p: *const u8) {
 /// Handle the OSC 111 sequence for resetting background colour.
 unsafe fn input_osc_111(ictx: *mut input_ctx, p: *const u8) {
     unsafe {
-        let wp = (*ictx).wp;
+        let wp = pane_ptr_from_id((*ictx).wp);
 
         if *p != b'\0' {
             return;
@@ -2917,7 +2917,7 @@ unsafe fn input_osc_111(ictx: *mut input_ctx, p: *const u8) {
 /// Handle the OSC 12 sequence for setting and querying cursor colour.
 unsafe fn input_osc_12(ictx: *mut input_ctx, p: *const u8) {
     unsafe {
-        let wp = (*ictx).wp;
+        let wp = pane_ptr_from_id((*ictx).wp);
         let mut c;
 
         if streq_(p, "?") {
@@ -2974,7 +2974,7 @@ unsafe fn input_osc_52(ictx: *mut input_ctx, p: *const u8) {
     let __func__ = "input_osc_52";
 
     unsafe {
-        let wp = (*ictx).wp;
+        let wp = pane_ptr_from_id((*ictx).wp);
         let mut buf: *const u8 = null_mut();
         let mut len: usize = 0;
 

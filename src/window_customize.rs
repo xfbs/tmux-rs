@@ -84,7 +84,7 @@ pub struct window_customize_itemdata {
 
 #[repr(C)]
 pub struct window_customize_modedata {
-    wp: *mut window_pane,
+    wp: Option<PaneId>,
     dead: i32,
     references: i32,
 
@@ -149,7 +149,7 @@ unsafe fn window_customize_check_item(
         if cmd_find_valid_state(&raw mut (*data).fs) {
             cmd_find_copy_state(fsp, &raw mut (*data).fs);
         } else {
-            cmd_find_from_pane(fsp, (*data).wp, cmd_find_flags::empty());
+            cmd_find_from_pane(fsp, pane_ptr_from_id((*data).wp), cmd_find_flags::empty());
         }
 
         (*item).oo == window_customize_get_tree((*item).scope, fsp)
@@ -610,7 +610,7 @@ unsafe fn window_customize_build(
         if cmd_find_valid_state(&raw mut (*data).fs) {
             cmd_find_copy_state(&raw mut fs, &raw mut (*data).fs);
         } else {
-            cmd_find_from_pane(&raw mut fs, (*data).wp, cmd_find_flags::empty());
+            cmd_find_from_pane(&raw mut fs, pane_ptr_from_id((*data).wp), cmd_find_flags::empty());
         }
 
         let mut ft = format_create_from_state(null_mut(), null_mut(), &raw mut fs);
@@ -1130,7 +1130,7 @@ unsafe fn window_customize_draw(
 unsafe fn window_customize_menu(modedata: NonNull<c_void>, c: *mut client, key: key_code) {
     unsafe {
         let data: NonNull<window_customize_modedata> = modedata.cast();
-        let wp: *mut window_pane = (*data.as_ptr()).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*data.as_ptr()).wp);
 
         let Some(wme) = (*wp).modes.first().copied().and_then(NonNull::new) else {
             return;
@@ -1159,7 +1159,7 @@ pub unsafe fn window_customize_init(
 
         let data: *mut window_customize_modedata = xcalloc1() as *mut window_customize_modedata;
         (*wme.as_ptr()).data = data.cast();
-        (*data).wp = wp;
+        (*data).wp = pane_id_from_ptr(wp);
         (*data).references = 1;
 
         memcpy__(&raw mut (*data).fs, fs);
@@ -1298,7 +1298,7 @@ pub unsafe fn window_customize_set_option_callback(
         options_push_changes(name);
         mode_tree_build((*data).data);
         mode_tree_draw(&mut *(*data).data);
-        (*(*data).wp).flags |= window_pane_flags::PANE_REDRAW;
+        (*pane_ptr_from_id((*data).wp)).flags |= window_pane_flags::PANE_REDRAW;
 
         0
     }
@@ -1528,7 +1528,7 @@ pub unsafe fn window_customize_set_command_callback(
 
         mode_tree_build((*data).data);
         mode_tree_draw(&mut *(*data).data);
-        (*(*data).wp).flags |= window_pane_flags::PANE_REDRAW;
+        (*pane_ptr_from_id((*data).wp)).flags |= window_pane_flags::PANE_REDRAW;
 
         0
     }
@@ -1556,7 +1556,7 @@ pub unsafe fn window_customize_set_note_callback(
 
         mode_tree_build((*data).data);
         mode_tree_draw(&mut *(*data).data);
-        (*(*data).wp).flags |= window_pane_flags::PANE_REDRAW;
+        (*pane_ptr_from_id((*data).wp)).flags |= window_pane_flags::PANE_REDRAW;
 
         0
     }
@@ -1759,7 +1759,7 @@ pub unsafe fn window_customize_change_current_callback(
         }
         mode_tree_build((*data).data);
         mode_tree_draw(&mut *(*data).data);
-        (*(*data).wp).flags |= window_pane_flags::PANE_REDRAW;
+        (*pane_ptr_from_id((*data).wp)).flags |= window_pane_flags::PANE_REDRAW;
 
         0
     }
@@ -1790,7 +1790,7 @@ pub unsafe fn window_customize_change_tagged_callback(
         );
         mode_tree_build(&mut *(*data).data);
         mode_tree_draw(&mut *(*data).data);
-        (*(*data).wp).flags |= window_pane_flags::PANE_REDRAW;
+        (*pane_ptr_from_id((*data).wp)).flags |= window_pane_flags::PANE_REDRAW;
 
         0
     }

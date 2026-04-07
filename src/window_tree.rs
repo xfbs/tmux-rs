@@ -108,7 +108,7 @@ struct window_tree_itemdata {
 
 #[repr(C)]
 struct window_tree_modedata {
-    wp: *mut window_pane,
+    wp: Option<PaneId>,
     dead: i32,
     references: i32,
 
@@ -980,7 +980,7 @@ unsafe fn window_tree_search(
 unsafe fn window_tree_menu(modedata: NonNull<c_void>, c: *mut client, key: key_code) {
     unsafe {
         let data: NonNull<window_tree_modedata> = modedata.cast();
-        let wp: NonNull<window_pane> = NonNull::new_unchecked((*data.as_ptr()).wp);
+        let wp: NonNull<window_pane> = NonNull::new_unchecked(pane_ptr_from_id((*data.as_ptr()).wp));
         if let Some(wme) = (*wp.as_ptr()).modes.first().copied().and_then(NonNull::new)
             && (*wme.as_ptr()).data == modedata.as_ptr()
         {
@@ -1035,7 +1035,7 @@ unsafe fn window_tree_init(
 
         let data: *mut window_tree_modedata = xcalloc1::<'static, window_tree_modedata>();
         (*wme.as_ptr()).data = data.cast();
-        (*data).wp = wp;
+        (*data).wp = pane_id_from_ptr(wp);
         (*data).references = 1;
 
         if args_has(args, 's') {
@@ -1133,7 +1133,7 @@ unsafe fn window_tree_update(wme: NonNull<window_mode_entry>) {
 
         mode_tree_build((*data).data);
         mode_tree_draw(&mut *(*data).data);
-        (*(*data).wp).flags |= window_pane_flags::PANE_REDRAW;
+        (*pane_ptr_from_id((*data).wp)).flags |= window_pane_flags::PANE_REDRAW;
     }
 }
 
@@ -1212,7 +1212,7 @@ unsafe fn window_tree_command_done(_: *mut cmdq_item, modedata: *mut c_void) -> 
         if (*data.as_ptr()).dead == 0 {
             mode_tree_build((*data.as_ptr()).data);
             mode_tree_draw(&mut *(*data.as_ptr()).data);
-            (*(*data.as_ptr()).wp).flags |= window_pane_flags::PANE_REDRAW;
+            (*pane_ptr_from_id((*data.as_ptr()).wp)).flags |= window_pane_flags::PANE_REDRAW;
         }
         window_tree_destroy(data);
 

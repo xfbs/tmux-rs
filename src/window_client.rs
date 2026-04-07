@@ -61,7 +61,7 @@ pub struct window_client_itemdata {
 
 #[repr(C)]
 pub struct window_client_modedata {
-    wp: *mut window_pane,
+    wp: Option<PaneId>,
 
     data: *mut mode_tree_data,
     format: *mut u8,
@@ -239,7 +239,7 @@ pub unsafe fn window_client_draw(
 pub unsafe fn window_client_menu(modedata: NonNull<c_void>, c: *mut client, key: key_code) {
     unsafe {
         let data: NonNull<window_client_modedata> = modedata.cast();
-        let wp: *mut window_pane = (*data.as_ptr()).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*data.as_ptr()).wp);
 
         if let Some(wme) = (*wp).modes.first().copied().and_then(NonNull::new)
             && (*wme.as_ptr()).data == modedata.as_ptr()
@@ -284,7 +284,7 @@ pub unsafe fn window_client_init(
         // xcalloc returns zeroed memory; Vec is not valid when zeroed.
         std::ptr::write(&raw mut (*data).item_list, Vec::new());
         (*wme.as_ptr()).data = data.cast();
-        (*data).wp = wp;
+        (*data).wp = pane_id_from_ptr(wp);
 
         if args.is_null() || !args_has(args, 'F') {
             (*data).format = xstrdup__(WINDOW_CLIENT_DEFAULT_FORMAT);
@@ -363,7 +363,7 @@ pub unsafe fn window_client_update(wme: NonNull<window_mode_entry>) {
 
         mode_tree_build((*data).data);
         mode_tree_draw(&mut *(*data).data);
-        (*(*data).wp).flags |= window_pane_flags::PANE_REDRAW;
+        (*pane_ptr_from_id((*data).wp)).flags |= window_pane_flags::PANE_REDRAW;
     }
 }
 

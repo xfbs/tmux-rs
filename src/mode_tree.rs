@@ -46,7 +46,7 @@ pub struct mode_tree_data {
     references: u32,
     zoomed: i32,
 
-    wp: *mut window_pane,
+    wp: Option<PaneId>,
     modedata: *mut c_void,
     menu: &'static [menu_item],
 
@@ -463,7 +463,7 @@ pub unsafe fn mode_tree_start(
     unsafe {
         let mut mtd = Box::new(mode_tree_data {
             references: 1,
-            wp,
+            wp: pane_id_from_ptr(wp),
             modedata,
             menu,
             sort_list,
@@ -520,7 +520,7 @@ pub unsafe fn mode_tree_start(
 
 pub unsafe fn mode_tree_zoom(mtd: *mut mode_tree_data, args: *mut args) {
     unsafe {
-        let wp: *mut window_pane = (*mtd).wp;
+        let wp: *mut window_pane = pane_ptr_from_id((*mtd).wp);
 
         if args_has(args, 'Z') {
             (*mtd).zoomed = ((*window_pane_window(wp)).flags & window_flag::ZOOMED).bits();
@@ -620,7 +620,7 @@ pub unsafe fn mode_tree_remove_ref(mtd: *mut mode_tree_data) {
 
 pub unsafe fn mode_tree_free(mtd: *mut mode_tree_data) {
     unsafe {
-        let wp = (*mtd).wp;
+        let wp = pane_ptr_from_id((*mtd).wp);
 
         if (*mtd).zoomed == 0 {
             server_unzoom_window(window_pane_window(wp));
@@ -647,7 +647,7 @@ pub unsafe fn mode_tree_resize(mtd: *mut mode_tree_data, sx: u32, sy: u32) {
         mode_tree_build(mtd);
         mode_tree_draw(&mut *mtd);
 
-        (*(*mtd).wp).flags |= window_pane_flags::PANE_REDRAW;
+        (*pane_ptr_from_id((*mtd).wp)).flags |= window_pane_flags::PANE_REDRAW;
     }
 }
 
@@ -722,7 +722,7 @@ pub unsafe fn mode_tree_remove(mtd: *mut mode_tree_data, mti: *mut mode_tree_ite
 
 pub unsafe fn mode_tree_draw(mtd: &mut mode_tree_data) {
     unsafe {
-        let wp = mtd.wp;
+        let wp = pane_ptr_from_id(mtd.wp);
         let s = &raw mut mtd.screen;
         let oo = (*window_pane_window(wp)).options;
         let mut ctx: screen_write_ctx = zeroed();
@@ -1072,7 +1072,7 @@ pub unsafe fn mode_tree_search_set(mtd: *mut mode_tree_data) {
         mode_tree_build(mtd);
         mode_tree_set_current(mtd, tag);
         mode_tree_draw(&mut *mtd);
-        (*(*mtd).wp).flags |= window_pane_flags::PANE_REDRAW;
+        (*pane_ptr_from_id((*mtd).wp)).flags |= window_pane_flags::PANE_REDRAW;
     }
 }
 
@@ -1131,7 +1131,7 @@ pub unsafe fn mode_tree_filter_callback(
 
         mode_tree_build(mtd);
         mode_tree_draw(&mut *mtd);
-        (*(*mtd).wp).flags |= window_pane_flags::PANE_REDRAW;
+        (*pane_ptr_from_id((*mtd).wp)).flags |= window_pane_flags::PANE_REDRAW;
 
         0
     }
@@ -1244,7 +1244,7 @@ pub unsafe fn mode_tree_key(
         let mut y: u32 = 0;
 
         if KEYC_IS_MOUSE(*key) && !m.is_null() {
-            if cmd_mouse_at((*mtd).wp, m, &raw mut x, &raw mut y, 0) != 0 {
+            if cmd_mouse_at(pane_ptr_from_id((*mtd).wp), m, &raw mut x, &raw mut y, 0) != 0 {
                 *key = KEYC_NONE;
                 return 0;
             }
