@@ -76,7 +76,6 @@ unsafe fn cmd_show_options_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
         let target = cmdq_get_target(item);
         let mut oo: *mut options = null_mut();
         let argument: *mut u8;
-        let mut cause: *mut u8 = null_mut();
 
         let mut idx = 0;
         let mut ambiguous = 0;
@@ -88,16 +87,16 @@ unsafe fn cmd_show_options_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
         'fail: {
             'out: {
                 if args_count(args) == 0 {
-                    let scope =
-                        options_scope_from_flags(args, window, target, &raw mut oo, &raw mut cause);
-                    if scope == OPTIONS_TABLE_NONE {
-                        if args_has(args, 'q') {
-                            return cmd_retval::CMD_RETURN_NORMAL;
+                    let scope = match options_scope_from_flags(args, window, target, &raw mut oo) {
+                        Ok(s) => s,
+                        Err(cause) => {
+                            if args_has(args, 'q') {
+                                return cmd_retval::CMD_RETURN_NORMAL;
+                            }
+                            cmdq_error!(item, "{}", cause);
+                            return cmd_retval::CMD_RETURN_ERROR;
                         }
-                        cmdq_error!(item, "{}", _s(cause));
-                        free_(cause);
-                        return cmd_retval::CMD_RETURN_ERROR;
-                    }
+                    };
                     return cmd_show_options_all(self_, item, scope, oo);
                 }
                 argument = format_single_from_target(item, args_string(args, 0));
@@ -113,22 +112,22 @@ unsafe fn cmd_show_options_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
                     }
                     break 'fail;
                 };
-                let scope = options_scope_from_name(
+                let _scope = match options_scope_from_name(
                     args,
                     window,
                     &name,
                     target,
                     &raw mut oo,
-                    &raw mut cause,
-                );
-                if scope == OPTIONS_TABLE_NONE {
-                    if args_has(args, 'q') {
-                        break 'out;
+                ) {
+                    Ok(s) => s,
+                    Err(cause) => {
+                        if args_has(args, 'q') {
+                            break 'out;
+                        }
+                        cmdq_error!(item, "{}", cause);
+                        break 'fail;
                     }
-                    cmdq_error!(item, "{}", _s(cause));
-                    free_(cause);
-                    break 'fail;
-                }
+                };
                 o = options_get_only(oo, &name);
                 if args_has(args, 'A') && o.is_null() {
                     o = options_get(&mut *oo, &name);
