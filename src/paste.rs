@@ -278,38 +278,20 @@ pub unsafe fn paste_add(mut prefix: *const u8, data: *mut u8, size: usize) {
 
 /// Renames a paste buffer. If `newname` already exists, the old buffer with that
 /// name is freed first. The renamed buffer becomes non-automatic.
-/// Returns 0 on success, -1 on error (writes error message to `cause`).
-pub unsafe fn paste_rename(
-    oldname: Option<&str>,
-    newname: Option<&str>,
-    cause: *mut *mut u8,
-) -> i32 {
+pub fn paste_rename(oldname: Option<&str>, newname: Option<&str>) -> Result<(), String> {
     unsafe {
-        if !cause.is_null() {
-            *cause = null_mut();
-        }
-
         if oldname.is_none_or(str::is_empty) {
-            if !cause.is_null() {
-                *cause = xstrdup_(c"no buffer").as_ptr();
-            }
-            return -1;
+            return Err("no buffer".to_string());
         }
         if newname.is_none_or(str::is_empty) {
-            if !cause.is_null() {
-                *cause = xstrdup_(c"new name is empty").as_ptr();
-            }
-            return -1;
+            return Err("new name is empty".to_string());
         }
 
         let oldname = oldname.unwrap();
         let newname = newname.unwrap();
 
         if (*(&raw mut PASTE_BY_NAME)).get(oldname).is_none() {
-            if !cause.is_null() {
-                *cause = format_nul!("no buffer {}", oldname);
-            }
-            return -1;
+            return Err(format!("no buffer {}", oldname));
         }
 
         // Remove buffer with new name if it exists
@@ -334,37 +316,29 @@ pub unsafe fn paste_rename(
         notify_paste_buffer(oldname, true);
         notify_paste_buffer(newname, false);
     }
-    0
+    Ok(())
 }
 
 /// Creates or replaces a named paste buffer. If `name` is None, delegates to
 /// [`paste_add`] to create an automatic buffer. If a buffer with the same name
-/// exists, it is freed first. Returns 0 on success, -1 on error.
+/// exists, it is freed first.
 pub unsafe fn paste_set(
     data: *mut u8,
     size: usize,
     name: Option<&str>,
-    cause: *mut *mut u8,
-) -> i32 {
+) -> Result<(), String> {
     unsafe {
-        if !cause.is_null() {
-            *cause = null_mut();
-        }
-
         if size == 0 {
             free_(data);
-            return 0;
+            return Ok(());
         }
         let Some(name) = name else {
             paste_add(null_mut(), data, size);
-            return 0;
+            return Ok(());
         };
 
         if name.is_empty() {
-            if !cause.is_null() {
-                *cause = xstrdup_(c"empty buffer name").as_ptr();
-            }
-            return -1;
+            return Err("empty buffer name".to_string());
         }
 
         // Remove existing buffer with this name
@@ -391,7 +365,7 @@ pub unsafe fn paste_set(
 
         notify_paste_buffer(name, false);
     }
-    0
+    Ok(())
 }
 
 /// Replaces the data in an existing paste buffer without changing its name or order.
@@ -525,8 +499,7 @@ mod tests {
             reset_paste_state();
 
             let (data, size) = make_data(b"hello");
-            let rc = paste_set(data, size, Some("mybuf"), null_mut());
-            assert_eq!(rc, 0);
+            paste_set(data, size, Some("mybuf")).unwrap();
             assert!(!paste_is_empty());
 
             let pb = paste_get_name(Some("mybuf"));
@@ -544,10 +517,10 @@ mod tests {
             reset_paste_state();
 
             let (d1, s1) = make_data(b"first");
-            paste_set(d1, s1, Some("buf"), null_mut());
+            paste_set(d1, s1, Some("buf")).unwrap();
 
             let (d2, s2) = make_data(b"second");
-            paste_set(d2, s2, Some("buf"), null_mut());
+            paste_set(d2, s2, Some("buf")).unwrap();
 
             // Should still be one buffer, with updated data.
             let pb = paste_get_name(Some("buf"));
@@ -565,11 +538,7 @@ mod tests {
             reset_paste_state();
 
             let (data, size) = make_data(b"hello");
-            let mut cause: *mut u8 = null_mut();
-            let rc = paste_set(data, size, Some(""), &raw mut cause);
-            assert_eq!(rc, -1);
-            assert!(!cause.is_null());
-            free_(cause);
+            assert!(paste_set(data, size, Some("")).is_err());
         }
     }
 
@@ -581,8 +550,7 @@ mod tests {
             reset_paste_state();
 
             let (data, _) = make_data(b"x");
-            let rc = paste_set(data, 0, Some("buf"), null_mut());
-            assert_eq!(rc, 0);
+            paste_set(data, 0, Some("buf")).unwrap();
             assert!(paste_is_empty());
         }
     }
@@ -595,8 +563,7 @@ mod tests {
             reset_paste_state();
 
             let (data, size) = make_data(b"auto");
-            let rc = paste_set(data, size, None, null_mut());
-            assert_eq!(rc, 0);
+            paste_set(data, size, None).unwrap();
             assert!(!paste_is_empty());
 
             // Should have created an automatic buffer named "buffer0".
@@ -723,11 +690,11 @@ mod tests {
             reset_paste_state();
 
             let (d1, s1) = make_data(b"first");
-            paste_set(d1, s1, Some("aaa"), null_mut());
+            paste_set(d1, s1, Some("aaa")).unwrap();
             let (d2, s2) = make_data(b"second");
-            paste_set(d2, s2, Some("bbb"), null_mut());
+            paste_set(d2, s2, Some("bbb")).unwrap();
             let (d3, s3) = make_data(b"third");
-            paste_set(d3, s3, Some("ccc"), null_mut());
+            paste_set(d3, s3, Some("ccc")).unwrap();
 
             let names = walk_names();
             assert_eq!(names, vec!["ccc", "bbb", "aaa"]);
@@ -747,7 +714,7 @@ mod tests {
 
             // Add a named buffer then two automatic ones.
             let (d1, s1) = make_data(b"named");
-            paste_set(d1, s1, Some("manual"), null_mut());
+            paste_set(d1, s1, Some("manual")).unwrap();
             let (d2, s2) = make_data(b"auto1");
             paste_add(null_mut(), d2, s2);
             let (d3, s3) = make_data(b"auto2");
@@ -769,7 +736,7 @@ mod tests {
 
             // Only named buffers — get_top should return null.
             let (d, s) = make_data(b"named");
-            paste_set(d, s, Some("manual"), null_mut());
+            paste_set(d, s, Some("manual")).unwrap();
 
             assert!(paste_get_top(null_mut()).is_null());
         }
@@ -821,7 +788,7 @@ mod tests {
             reset_paste_state();
 
             let (data, size) = make_data(b"to-delete");
-            paste_set(data, size, Some("del"), null_mut());
+            paste_set(data, size, Some("del")).unwrap();
             assert!(!paste_get_name(Some("del")).is_null());
 
             let pb = NonNull::new(paste_get_name(Some("del"))).unwrap();
@@ -863,10 +830,9 @@ mod tests {
             reset_paste_state();
 
             let (data, size) = make_data(b"content");
-            paste_set(data, size, Some("old"), null_mut());
+            paste_set(data, size, Some("old")).unwrap();
 
-            let rc = paste_rename(Some("old"), Some("new"), null_mut());
-            assert_eq!(rc, 0);
+            paste_rename(Some("old"), Some("new")).unwrap();
 
             assert!(paste_get_name(Some("old")).is_null());
             let pb = paste_get_name(Some("new"));
@@ -885,12 +851,11 @@ mod tests {
             reset_paste_state();
 
             let (d1, s1) = make_data(b"src");
-            paste_set(d1, s1, Some("from"), null_mut());
+            paste_set(d1, s1, Some("from")).unwrap();
             let (d2, s2) = make_data(b"dst-old");
-            paste_set(d2, s2, Some("to"), null_mut());
+            paste_set(d2, s2, Some("to")).unwrap();
 
-            let rc = paste_rename(Some("from"), Some("to"), null_mut());
-            assert_eq!(rc, 0);
+            paste_rename(Some("from"), Some("to")).unwrap();
 
             assert!(paste_get_name(Some("from")).is_null());
             let pb = paste_get_name(Some("to"));
@@ -907,11 +872,7 @@ mod tests {
             let _lock = PASTE_LOCK.lock().unwrap();
             reset_paste_state();
 
-            let mut cause: *mut u8 = null_mut();
-            let rc = paste_rename(Some("nope"), Some("new"), &raw mut cause);
-            assert_eq!(rc, -1);
-            assert!(!cause.is_null());
-            free_(cause);
+            assert!(paste_rename(Some("nope"), Some("new")).is_err());
         }
     }
 
@@ -922,8 +883,7 @@ mod tests {
             let _lock = PASTE_LOCK.lock().unwrap();
             reset_paste_state();
 
-            let rc = paste_rename(None, Some("new"), null_mut());
-            assert_eq!(rc, -1);
+            assert!(paste_rename(None, Some("new")).is_err());
         }
     }
 
@@ -935,10 +895,9 @@ mod tests {
             reset_paste_state();
 
             let (data, size) = make_data(b"x");
-            paste_set(data, size, Some("buf"), null_mut());
+            paste_set(data, size, Some("buf")).unwrap();
 
-            let rc = paste_rename(Some("buf"), None, null_mut());
-            assert_eq!(rc, -1);
+            assert!(paste_rename(Some("buf"), None).is_err());
         }
     }
 
@@ -954,7 +913,7 @@ mod tests {
             reset_paste_state();
 
             let (d1, s1) = make_data(b"old");
-            paste_set(d1, s1, Some("buf"), null_mut());
+            paste_set(d1, s1, Some("buf")).unwrap();
 
             let pb = NonNull::new(paste_get_name(Some("buf"))).unwrap();
             let (d2, s2) = make_data(b"new-data");
@@ -976,7 +935,7 @@ mod tests {
             reset_paste_state();
 
             let (data, size) = make_data(b"test");
-            paste_set(data, size, Some("acc"), null_mut());
+            paste_set(data, size, Some("acc")).unwrap();
 
             let pb = NonNull::new(paste_get_name(Some("acc"))).unwrap();
             assert_eq!(paste_buffer_name(pb), "acc");
@@ -1001,7 +960,7 @@ mod tests {
             reset_paste_state();
 
             let (data, size) = make_data(b"hello world");
-            paste_set(data, size, Some("s"), null_mut());
+            paste_set(data, size, Some("s")).unwrap();
 
             let pb = paste_get_name(Some("s"));
             let sample = paste_make_sample(pb);
@@ -1019,7 +978,7 @@ mod tests {
             // Create a buffer longer than 200 bytes.
             let long_data = vec![b'x'; 300];
             let (data, size) = make_data(&long_data);
-            paste_set(data, size, Some("long"), null_mut());
+            paste_set(data, size, Some("long")).unwrap();
 
             let pb = paste_get_name(Some("long"));
             let sample = paste_make_sample(pb);
@@ -1042,11 +1001,11 @@ mod tests {
 
             // Add mix of named and automatic buffers.
             let (d1, s1) = make_data(b"n1");
-            paste_set(d1, s1, Some("named1"), null_mut());
+            paste_set(d1, s1, Some("named1")).unwrap();
             let (d2, s2) = make_data(b"a1");
             paste_add(null_mut(), d2, s2);
             let (d3, s3) = make_data(b"n2");
-            paste_set(d3, s3, Some("named2"), null_mut());
+            paste_set(d3, s3, Some("named2")).unwrap();
 
             // Walk should return newest first.
             let names = walk_names();

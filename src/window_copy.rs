@@ -5559,9 +5559,7 @@ pub unsafe fn window_copy_append_selection(wme: *mut window_mode_entry) {
         // Own the buffer name before paste_set, which may free the buffer
         // that the borrowed &str points into.
         let bufname_owned = bufname.map(|s| s.to_string());
-        if paste_set(buf, len, bufname_owned.as_deref(), null_mut()) != 0 {
-            free_(buf);
-        }
+        let _ = paste_set(buf, len, bufname_owned.as_deref());
     }
 }
 
