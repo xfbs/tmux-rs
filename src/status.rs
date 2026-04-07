@@ -159,7 +159,7 @@ unsafe extern "C-unwind" fn status_timer_callback(_fd: i32, _events: i16, c: Non
             return;
         }
 
-        if (*c).message_string.is_none() && (*c).prompt_string.is_null() {
+        if (*c).message_string.is_none() && (*c).prompt_string.is_none() {
             (*c).flags |= client_flag::REDRAWSTATUS;
         }
 
@@ -563,7 +563,7 @@ pub unsafe fn status_message_clear(c: NonNull<client>) {
 
         (*c).message_string = None;
 
-        if (*c).prompt_string.is_null() {
+        if (*c).prompt_string.is_none() {
             (*c).tty.flags &= !(tty_flags::TTY_NOCURSOR | tty_flags::TTY_FREEZE);
         }
         (*c).flags |= CLIENT_ALLREDRAWFLAGS; /* was frozen and may have changed */
@@ -693,7 +693,13 @@ pub unsafe fn status_prompt_set<T>(
         status_prompt_clear(c);
         status_push_screen(c);
 
-        (*c).prompt_string = format_expand_time(ft, msg);
+        let prompt_ptr = format_expand_time(ft, msg);
+        (*c).prompt_string = Some(
+            std::ffi::CStr::from_ptr(prompt_ptr as *const i8)
+                .to_string_lossy()
+                .into_owned(),
+        );
+        free_(prompt_ptr);
 
         if flags.intersects(prompt_flags::PROMPT_INCREMENTAL) {
             (*c).prompt_last = xstrdup(tmp).as_ptr();
@@ -741,7 +747,7 @@ pub unsafe fn status_prompt_set<T>(
 /// Remove status line prompt.
 pub unsafe fn status_prompt_clear(c: *mut client) {
     unsafe {
-        if (*c).prompt_string.is_null() {
+        if (*c).prompt_string.is_none() {
             return;
         }
 
@@ -754,8 +760,7 @@ pub unsafe fn status_prompt_clear(c: *mut client) {
         free_((*c).prompt_last);
         (*c).prompt_last = null_mut();
 
-        free_((*c).prompt_string);
-        (*c).prompt_string = null_mut();
+        (*c).prompt_string = None;
 
         free_((*c).prompt_buffer);
         (*c).prompt_buffer = null_mut();
@@ -778,8 +783,13 @@ pub unsafe fn status_prompt_update(c: *mut client, msg: *const u8, input: *const
 
         let tmp = format_expand_time(ft, input);
 
-        free_((*c).prompt_string);
-        (*c).prompt_string = format_expand_time(ft, msg);
+        let prompt_ptr = format_expand_time(ft, msg);
+        (*c).prompt_string = Some(
+            std::ffi::CStr::from_ptr(prompt_ptr as *const i8)
+                .to_string_lossy()
+                .into_owned(),
+        );
+        free_(prompt_ptr);
 
         free_((*c).prompt_buffer);
         (*c).prompt_buffer = utf8_fromcstr(tmp);
@@ -840,7 +850,8 @@ pub unsafe fn status_prompt_redraw(c: *mut client) -> i32 {
             memcpy__(&raw mut cursorgc, &raw const gc);
             cursorgc.attr ^= grid_attr::GRID_ATTR_REVERSE;
 
-            let mut start = format_width(cstr_to_str((*c).prompt_string));
+            let prompt_owned = (*c).prompt_string.clone().unwrap_or_default();
+            let mut start = format_width(&prompt_owned);
             if start > (*c).tty.sx {
                 start = (*c).tty.sx;
             }
@@ -863,7 +874,7 @@ pub unsafe fn status_prompt_redraw(c: *mut client) -> i32 {
                 &raw mut ctx,
                 &raw const gc,
                 start,
-                cstr_to_str((*c).prompt_string),
+                &prompt_owned,
                 null_mut(),
                 0,
             );
@@ -2060,7 +2071,9 @@ unsafe fn status_prompt_complete_list_menu(
         } else {
             (*c).tty.sy - 3 - height
         };
-        offset += utf8_cstrwidth((*c).prompt_string);
+        let prompt_c = std::ffi::CString::new((*c).prompt_string.as_deref().unwrap_or(""))
+            .unwrap_or_default();
+        offset += utf8_cstrwidth(prompt_c.as_ptr() as *const u8);
         if offset > 2 {
             offset -= 2;
         } else {
@@ -2177,7 +2190,9 @@ unsafe fn status_prompt_complete_window_menu(
         } else {
             (*c).tty.sy - 3 - height
         };
-        offset += utf8_cstrwidth((*c).prompt_string);
+        let prompt_c = std::ffi::CString::new((*c).prompt_string.as_deref().unwrap_or(""))
+            .unwrap_or_default();
+        offset += utf8_cstrwidth(prompt_c.as_ptr() as *const u8);
         if offset > 2 {
             offset -= 2;
         } else {

@@ -2337,7 +2337,7 @@ struct client {
     message_string: Option<String>,
     message_timer: event,
 
-    prompt_string: *mut u8,
+    prompt_string: Option<String>,
     prompt_buffer: *mut utf8_data,
     prompt_last: *mut u8,
     prompt_index: usize,

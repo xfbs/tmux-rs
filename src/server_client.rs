@@ -265,6 +265,19 @@ pub unsafe fn server_client_create(fd: i32) -> *mut client {
         NEXT_CLIENT_ID += 1;
         let c: *mut client = xcalloc1();
         (*c).id = id;
+        // Explicitly initialize Option<String> fields. xcalloc1 zeroes the
+        // memory, but `Option<String>::None` is not guaranteed to be the
+        // all-zeros bit pattern unless the compiler decides to apply niche
+        // optimization through Vec → RawVec → NonNull. Belt-and-suspenders.
+        std::ptr::write(&raw mut (*c).ttyname, None);
+        std::ptr::write(&raw mut (*c).title, None);
+        std::ptr::write(&raw mut (*c).path, None);
+        std::ptr::write(&raw mut (*c).term_name, None);
+        std::ptr::write(&raw mut (*c).term_type, None);
+        std::ptr::write(&raw mut (*c).message_string, None);
+        std::ptr::write(&raw mut (*c).prompt_string, None);
+        std::ptr::write(&raw mut (*c).exit_session, None);
+        std::ptr::write(&raw mut (*c).exit_message, None);
         let boxed = Box::from_raw(c);
         (*(&raw mut CLIENT_REGISTRY)).insert(id, boxed);
         // c remains valid — Box::from_raw moved ownership to the registry,
@@ -488,7 +501,7 @@ pub unsafe fn server_client_lost(c: *mut client) {
         }
 
         free_((*c).prompt_saved);
-        free_((*c).prompt_string);
+        // prompt_string is Option<String>, dropped automatically by Box drop.
         free_((*c).prompt_buffer);
 
         format_lost_client(c);
@@ -2165,7 +2178,7 @@ pub unsafe fn server_client_handle_key(c: *mut client, event: *mut key_event) ->
                 }
             }
             server_client_clear_overlay(c);
-            if !(*c).prompt_string.is_null() && status_prompt_key(c, (*event).key) == 0 {
+            if (*c).prompt_string.is_some() && status_prompt_key(c, (*event).key) == 0 {
                 return 0;
             }
         }
@@ -2494,7 +2507,7 @@ pub unsafe fn server_client_reset_state(c: *mut client) {
         tty_margin_off(tty);
 
         // Move cursor to pane cursor and offset.
-        if !(*c).prompt_string.is_null() {
+        if (*c).prompt_string.is_some() {
             n = options_get_number_((*client_get_session(c)).options, "status-position") as i32;
             if n == 0 {
                 cy = 0;
@@ -2552,7 +2565,7 @@ pub unsafe fn server_client_reset_state(c: *mut client) {
         }
 
         // Clear bracketed paste mode if at the prompt.
-        if (*c).overlay_draw.is_none() && !(*c).prompt_string.is_null() {
+        if (*c).overlay_draw.is_none() && (*c).prompt_string.is_some() {
             mode &= !mode_flag::MODE_BRACKETPASTE;
         }
 
