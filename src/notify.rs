@@ -287,7 +287,7 @@ pub unsafe fn notify_hook(item: *mut cmdq_item, name: *mut u8) {
         let c = cmdq_get_client(item);
         ne.client = if c.is_null() { None } else { Some((*c).id) };
         ne.session = if (*target).s.is_none() { None } else { Some(SessionId((*(*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).id)) };
-        ne.window = if (*target).w.is_null() { None } else { Some(WindowId((*(*target).w).id)) };
+        ne.window = (*target).w;
         ne.pane = if !(*target).wp.is_null() {
             (*(*target).wp).id as i32
         } else {
