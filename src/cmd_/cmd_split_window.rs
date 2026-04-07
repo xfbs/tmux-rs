@@ -128,16 +128,17 @@ unsafe fn cmd_split_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
             sc.flags |= SPAWN_ZOOM;
         }
 
-        let new_wp = spawn_pane(&raw mut sc, &raw mut cause);
-        if new_wp.is_null() {
-            cmdq_error!(item, "create pane failed: {}", _s(cause));
-            free_(cause);
-            if !sc.argv.is_null() {
-                cmd_free_argv(sc.argc, sc.argv);
+        let new_wp = match spawn_pane(&raw mut sc) {
+            Ok(wp) => wp.as_ptr(),
+            Err(cause) => {
+                cmdq_error!(item, "create pane failed: {}", cause);
+                if !sc.argv.is_null() {
+                    cmd_free_argv(sc.argc, sc.argv);
+                }
+                environ_free(sc.environ);
+                return cmd_retval::CMD_RETURN_ERROR;
             }
-            environ_free(sc.environ);
-            return cmd_retval::CMD_RETURN_ERROR;
-        }
+        };
         if input {
             match window_pane_start_input(new_wp, item, &raw mut cause) {
                 -1 => {

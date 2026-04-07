@@ -315,10 +315,9 @@ unsafe fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
 
             sc.flags = spawn_flags::empty();
 
-            if spawn_window(&raw mut sc, &raw mut cause).is_null() {
+            if let Err(cause) = spawn_window(&raw mut sc) {
                 session_destroy(s, 0, __func__);
-                cmdq_error!(item, "create window failed: {}", _s(cause));
-                free_(cause);
+                cmdq_error!(item, "create window failed: {}", cause);
                 break 'fail;
             }
 

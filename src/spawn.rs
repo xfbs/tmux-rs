@@ -82,7 +82,7 @@ pub unsafe fn spawn_log(from: &str, sc: *mut spawn_context) {
     }
 }
 
-pub unsafe fn spawn_window(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut winlink {
+pub unsafe fn spawn_window(sc: *mut spawn_context) -> Result<NonNull<winlink>, String> {
     unsafe {
         let item = (*sc).item;
         let c = cmdq_get_client(item);
@@ -105,8 +105,7 @@ pub unsafe fn spawn_window(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut 
                     .copied()
                     .any(|p| (*p).fd != -1);
                 if alive {
-                    *cause = format_nul!("window {}:{} still active", (*s).name, (*(*sc).wl).idx,);
-                    return null_mut();
+                    return Err(format!("window {}:{} still active", (*s).name, (*(*sc).wl).idx));
                 }
             }
 
@@ -129,8 +128,7 @@ pub unsafe fn spawn_window(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut 
         if !(*sc).flags.intersects(SPAWN_RESPAWN) && idx != -1 {
             let wl = winlink_find_by_index(&raw mut (*s).windows, idx);
             if !wl.is_null() && !(*sc).flags.intersects(SPAWN_KILL) {
-                *cause = format_nul!("index {} in use", idx);
-                return null_mut();
+                return Err(format!("index {} in use", idx));
             }
             if !wl.is_null() {
                 // Can't use session_detach as it will destroy session
@@ -154,8 +152,7 @@ pub unsafe fn spawn_window(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut 
             }
             (*sc).wl = winlink_add(&raw mut (*s).windows, idx);
             if (*sc).wl.is_null() {
-                *cause = format_nul!("couldn't add window {}", idx);
-                return null_mut();
+                return Err(format!("couldn't add window {}", idx));
             }
             let mut sx = 0u32;
             let mut sy = 0u32;
@@ -174,8 +171,7 @@ pub unsafe fn spawn_window(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut 
             w = window_create(sx, sy, xpixel, ypixel);
             if w.is_null() {
                 winlink_remove(&raw mut (*s).windows, (*sc).wl);
-                *cause = format_nul!("couldn't create window {idx}");
-                return null_mut();
+                return Err(format!("couldn't create window {idx}"));
             }
             if (*s).curw.is_null() {
                 (*s).curw = (*sc).wl;
@@ -189,12 +185,11 @@ pub unsafe fn spawn_window(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut 
         (*sc).flags |= SPAWN_NONOTIFY;
 
         // Spawn the pane.
-        let wp = spawn_pane(sc, cause);
-        if wp.is_null() {
+        if let Err(e) = spawn_pane(sc) {
             if !(*sc).flags.intersects(SPAWN_RESPAWN) {
                 winlink_remove(&raw mut (*s).windows, (*sc).wl);
             }
-            return null_mut();
+            return Err(e);
         }
 
         // Set the name of the new window.
@@ -222,11 +217,11 @@ pub unsafe fn spawn_window(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut 
         }
 
         session_group_synchronize_from(s);
-        (*sc).wl
+        Ok(NonNull::new((*sc).wl).unwrap())
     }
 }
 
-pub unsafe fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut window_pane {
+pub unsafe fn spawn_pane(sc: *mut spawn_context) -> Result<NonNull<window_pane>, String> {
     unsafe {
         let item = (*sc).item;
         let target = cmdq_get_target(item);
@@ -273,14 +268,14 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut wi
             if (*sc).flags.intersects(SPAWN_RESPAWN) {
                 if (*(*sc).wp0).fd != -1 && !(*sc).flags.intersects(SPAWN_KILL) {
                     window_pane_index((*sc).wp0, &raw mut idx);
-                    *cause = format_nul!(
+                    let msg = format!(
                         "pane {}:{}.{} still active",
                         (*s).name,
                         (*(*sc).wl).idx,
                         idx
                     );
                     free_(cwd);
-                    return null_mut();
+                    return Err(msg);
                 }
                 if (*(*sc).wp0).fd != -1 {
                     bufferevent_free((*(*sc).wp0).event);
@@ -423,7 +418,7 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut wi
                 &raw mut ws,
             );
             if (*new_wp).pid == -1 {
-                *cause = format_nul!("fork failed: {}", strerror(errno!()));
+                let msg = format!("fork failed: {}", strerror(errno!()));
                 (*new_wp).fd = -1;
                 if !(*sc).flags.intersects(SPAWN_RESPAWN) {
                     server_client_remove_pane(new_wp);
@@ -432,7 +427,7 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut wi
                 }
                 sigprocmask(SIG_SETMASK, &raw mut oldset, null_mut());
                 environ_free(child);
-                return null_mut();
+                return Err(msg);
             }
 
             // In the parent process, everything is done now.
@@ -441,13 +436,14 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut wi
                 {
                     // Move the child process into a new cgroup for systemd-oomd
                     // isolation.
-                    if (systemd_move_pid_to_new_cgroup((*new_wp).pid, cause) < 0) {
+                    let mut cg_cause: *mut u8 = null_mut();
+                    if (systemd_move_pid_to_new_cgroup((*new_wp).pid, &raw mut cg_cause) < 0) {
                         log_debug!(
                             "{}: moving pane to new cgroup failed: {}",
                             _s(__func__),
-                            _s(*cause)
+                            _s(cg_cause)
                         );
-                        free_(*cause);
+                        free_(cg_cause);
                     }
                 }
                 break 'complete;
@@ -563,7 +559,7 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut wi
         environ_free(child);
 
         if (*sc).flags.intersects(SPAWN_RESPAWN) {
-            return new_wp;
+            return Ok(NonNull::new(new_wp).unwrap());
         }
         if !(*sc).flags.intersects(SPAWN_DETACHED) || (*w).active.is_null() {
             if (*sc).flags.intersects(SPAWN_NONOTIFY) {
@@ -576,6 +572,6 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context, cause: *mut *mut u8) -> *mut wi
             notify_window(c"window-layout-changed", w);
         }
 
-        new_wp
+        Ok(NonNull::new(new_wp).unwrap())
     }
 }
