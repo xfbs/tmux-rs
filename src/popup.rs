@@ -437,7 +437,11 @@ pub fn popup_make_pane(pd: *mut popup_data, type_: layout_type) {
         if !checkshell_(shell) {
             shell = _PATH_BSHELL;
         }
-        (*new_wp).shell = xstrdup(shell).as_ptr();
+        (*new_wp).shell = Some(PathBuf::from(
+            std::ffi::CStr::from_ptr(shell as *const i8)
+                .to_string_lossy()
+                .into_owned(),
+        ));
 
         window_pane_set_event(new_wp);
         window_set_active_pane(w, new_wp, 1);

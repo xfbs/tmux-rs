@@ -832,7 +832,7 @@ pub unsafe fn format_cb_current_command(ft: &format_tree) -> format_table_type {
     unsafe {
         let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
 
-        if wp.is_null() || (*wp).shell.is_null() {
+        if wp.is_null() || (*wp).shell.is_none() {
             return format_table_type::None;
         }
 
@@ -845,7 +845,11 @@ pub unsafe fn format_cb_current_command(ft: &format_tree) -> format_table_type {
                 .cast();
             if cmd.is_null() || *cmd == b'\0' {
                 free_(cmd);
-                cmd = xstrdup((*wp).shell).as_ptr().cast();
+                let shell_c = std::ffi::CString::new(
+                    (*wp).shell.as_deref().unwrap().to_string_lossy().as_bytes(),
+                )
+                .unwrap();
+                cmd = xstrdup(shell_c.as_ptr().cast()).as_ptr().cast();
             }
         }
         let value = parse_window_name(cmd);

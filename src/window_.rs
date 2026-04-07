@@ -1201,6 +1201,11 @@ pub unsafe fn window_pane_create(
 
         (*wp).fd = -1;
 
+        // xcalloc'd zero bytes are NOT a guaranteed-valid `Option<PathBuf>::None`.
+        // Write None explicitly so reads of cwd/shell don't observe a "zeroed Some".
+        std::ptr::write(&raw mut (*wp).cwd, None);
+        std::ptr::write(&raw mut (*wp).shell, None);
+
         std::ptr::write(&raw mut (*wp).modes, Vec::new());
 
         (*wp).resize_queue = Vec::new();
@@ -1264,9 +1269,8 @@ unsafe fn window_pane_destroy(wp: *mut window_pane) {
         (*(&raw mut ALL_WINDOW_PANES)).remove(&(*wp).id);
 
         options_free((*wp).options);
-        // `cwd` is `Option<PathBuf>` and is dropped automatically by Box drop
-        // when we remove from PANE_REGISTRY below.
-        free((*wp).shell as _);
+        // `cwd` and `shell` are `Option<PathBuf>` and are dropped automatically
+        // by Box drop when we remove from PANE_REGISTRY below.
         cmd_free_argv((*wp).argc, (*wp).argv);
         colour_palette_free(Some(&mut (*wp).palette));
 

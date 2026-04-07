@@ -1287,7 +1287,7 @@ struct window_pane {
 
     argc: i32,
     argv: *mut *mut u8,
-    shell: *mut u8,
+    shell: Option<PathBuf>,
     cwd: Option<PathBuf>,
 
     pid: pid_t,

@@ -143,7 +143,12 @@ pub unsafe fn default_window_name(w: *mut window) -> String {
         if !cmd.is_empty() {
             parse_window_name(cmd.as_ptr().cast())
         } else {
-            parse_window_name((*active).shell)
+            let shell_c = (*active).shell.as_deref()
+                .and_then(|p| std::ffi::CString::new(p.to_string_lossy().as_bytes()).ok());
+            match shell_c {
+                Some(c) => parse_window_name(c.as_ptr().cast()),
+                None => String::new(),
+            }
         }
     }
 }

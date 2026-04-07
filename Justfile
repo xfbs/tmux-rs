@@ -24,9 +24,10 @@ check:
   RUSTDOCFLAGS="-Dwarnings" cargo doc --no-deps
   cargo clippy -- -Dwarnings
 
+# run tmux-rs under valgrind, in release mode (for manual testing)
 valgrind:
-  cargo build
-  valgrind --log-file=target/valgrind-$RANDOM.txt ./target/debug/tmux-rs
+  cargo build --release
+  valgrind --log-file=target/valgrind-$RANDOM.txt ./target/release/tmux-rs
 
 # run fuzz targets that are known-clean (no crashes) for a short soak test
 fuzz duration="10":

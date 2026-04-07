@@ -16,7 +16,7 @@ use std::path::Path;
 use crate::compat::{closefrom, fdforkpty::fdforkpty};
 use crate::libc::{
     _exit, SIG_BLOCK, SIG_SETMASK, STDERR_FILENO, STDIN_FILENO, TCSANOW, VERASE, close, execl,
-    execvp, sigfillset, sigprocmask, strrchr, tcgetattr, tcsetattr,
+    execvp, sigfillset, sigprocmask, tcgetattr, tcsetattr,
 };
 #[cfg(feature = "utempter")]
 use crate::utempter::utempter_add_record;
@@ -378,19 +378,23 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context) -> Result<NonNull<window_pane>,
                 if !checkshell_(tmp) {
                     tmp = _PATH_BSHELL;
                 }
-                free_((*new_wp).shell);
-                (*new_wp).shell = xstrdup(tmp).as_ptr();
+                (*new_wp).shell = Some(PathBuf::from(
+                    std::ffi::CStr::from_ptr(tmp as *const i8)
+                        .to_string_lossy()
+                        .into_owned(),
+                ));
             }
+            let shell_display = (*new_wp).shell.as_deref().map(|p| p.display().to_string()).unwrap_or_default();
             environ_set!(
                 child,
                 c!("SHELL"),
                 environ_flags::empty(),
                 "{}",
-                _s((*new_wp).shell)
+                shell_display
             );
 
             // Log the arguments we are going to use.
-            log_debug!("spawn_pane: shell={}", _s((*new_wp).shell));
+            log_debug!("spawn_pane: shell={}", shell_display);
             if (*new_wp).argc != 0 {
                 let cp = cmd_stringify_argv((*new_wp).argc, (*new_wp).argv);
                 log_debug!("spawn_pane: cmd={}", cp);
@@ -523,16 +527,19 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context) -> Result<NonNull<window_pane>,
 
             // If one argument, pass it to $SHELL -c. Otherwise create a login
             // shell.
-            let cp = strrchr((*new_wp).shell, b'/' as i32);
+            let shell_path = (*new_wp).shell.as_deref().unwrap();
+            let shell_str = shell_path.to_string_lossy();
+            let shell_c = std::ffi::CString::new(shell_str.as_bytes()).unwrap();
+            let basename = shell_path
+                .file_name()
+                .map(|f| f.to_string_lossy().into_owned())
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| shell_str.into_owned());
             if (*new_wp).argc == 1 {
                 let tmp = *(*new_wp).argv;
-                argv0 = if !cp.is_null() && *cp.add(1) != b'\0' {
-                    format_nul!("{}", _s(cp.add(1)))
-                } else {
-                    format_nul!("{}", _s((*new_wp).shell))
-                };
+                argv0 = format_nul!("{}", basename);
                 execl(
-                    (*new_wp).shell.cast(),
+                    shell_c.as_ptr().cast(),
                     argv0.cast(),
                     c!("-c"),
                     tmp,
@@ -540,12 +547,8 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context) -> Result<NonNull<window_pane>,
                 );
                 _exit(1);
             }
-            argv0 = if !cp.is_null() && *cp.add(1) != b'\0' {
-                format_nul!("-{}", _s(cp.add(1)))
-            } else {
-                format_nul!("-{}", _s((*new_wp).shell))
-            };
-            execl((*new_wp).shell.cast(), argv0.cast(), null_mut::<u8>());
+            argv0 = format_nul!("-{}", basename);
+            execl(shell_c.as_ptr().cast(), argv0.cast(), null_mut::<u8>());
             _exit(1);
         }
 
