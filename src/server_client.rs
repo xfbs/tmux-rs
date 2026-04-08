@@ -553,6 +553,7 @@ pub unsafe fn client_from_id(id: ClientId) -> Option<*mut client> {
 /// but the caller must not also hold a `*mut client` to the same ID and
 /// mutate through it while the reference is alive. There's no borrow
 /// checker enforcement of this in the current hybrid state — be careful.
+#[allow(dead_code, reason = "Phase 2.4 hook; used opportunistically going forward")]
 pub unsafe fn client_ref(id: ClientId) -> Option<&'static client> {
     unsafe {
         (*(&raw const CLIENT_REGISTRY))

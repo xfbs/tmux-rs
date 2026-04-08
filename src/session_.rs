@@ -50,6 +50,18 @@ pub unsafe fn session_from_id(id: SessionId) -> Option<*mut session> {
     }
 }
 
+/// Look up a session by ID and return a shared reference, suitable for
+/// read-only access. See `client_ref` for the rationale and aliasing
+/// caveats — same convention applies.
+#[allow(dead_code, reason = "Phase 2.4 hook; used opportunistically going forward")]
+pub unsafe fn session_ref(id: SessionId) -> Option<&'static session> {
+    unsafe {
+        (*(&raw const SESSION_REGISTRY))
+            .get(&id)
+            .map(|b| &**b as &session)
+    }
+}
+
 /// Check whether a session is still alive (not yet destroyed).
 ///
 /// Uses the `SESSIONS` name index, not `SESSION_REGISTRY`, because a destroyed

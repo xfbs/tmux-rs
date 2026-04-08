@@ -74,6 +74,18 @@ pub unsafe fn pane_from_id(id: PaneId) -> Option<*mut window_pane> {
     }
 }
 
+/// Look up a pane by ID and return a shared reference, suitable for
+/// read-only access. See `client_ref` for the rationale and aliasing
+/// caveats — same convention applies.
+#[allow(dead_code, reason = "Phase 2.4 hook; used opportunistically going forward")]
+pub unsafe fn pane_ref(id: PaneId) -> Option<&'static window_pane> {
+    unsafe {
+        (*(&raw const PANE_REGISTRY))
+            .get(&id)
+            .map(|b| &**b as &window_pane)
+    }
+}
+
 /// Iterate over all **alive** windows as `*mut window` pointers.
 ///
 /// Uses the `WINDOWS` id index (not `WINDOW_REGISTRY`), because destroyed
@@ -102,6 +114,18 @@ pub unsafe fn window_from_id(id: WindowId) -> Option<*mut window> {
         (*(&raw mut WINDOW_REGISTRY))
             .get_mut(&id)
             .map(|b| &mut **b as *mut window)
+    }
+}
+
+/// Look up a window by ID and return a shared reference, suitable for
+/// read-only access. See `client_ref` for the rationale and aliasing
+/// caveats — same convention applies.
+#[allow(dead_code, reason = "Phase 2.4 hook; used opportunistically going forward")]
+pub unsafe fn window_ref(id: WindowId) -> Option<&'static window> {
+    unsafe {
+        (*(&raw const WINDOW_REGISTRY))
+            .get(&id)
+            .map(|b| &**b as &window)
     }
 }
 
