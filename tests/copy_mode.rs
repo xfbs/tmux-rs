@@ -167,39 +167,27 @@ fn cursor_movement_vi() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs crashes on buffer operations (copy-selection stores to buffer)"]
 fn copy_selection_vi() {
+    // Originally written using `send-keys -X search-backward` (no arg)
+    // followed by typing the search term as keys — same broken pattern as
+    // the original search_vi_forward (search-backward with no arg is a
+    // no-op, the prompt is opened by the `?` vi binding via command-prompt).
+    // Rewritten to pass the search term as an argument.
     let (tmux, mut client) = setup(80, 24);
     set_mode_keys(&tmux, "vi");
 
-    // Echo known text
-    client.write_str("echo 'SELECTME hello world'\r");
-    std::thread::sleep(Duration::from_millis(500));
-    client.read_raw();
+    fill_pane(&mut client, &["SELECTME hello world"]);
 
     enter_copy_mode(&tmux);
+    send_copy_cmd_with_args(&tmux, &["search-backward", "SELECTME"]);
+    std::thread::sleep(Duration::from_millis(200));
 
-    // Go to the line with our text: search for it
-    tmux.send_keys(&["-X", "search-backward", "-X"]).assert_success();
-    // Actually, use the search command properly
-    send_copy_cmd(&tmux, "cancel");
-
-    // Re-enter copy mode and use history-top + navigate
-    enter_copy_mode(&tmux);
-    // Search backward for SELECTME
-    tmux.send_keys(&["-X", "search-backward"]).assert_success();
-    std::thread::sleep(Duration::from_millis(100));
-    // Type the search term
-    tmux.send_keys(&["SELECTME", "Enter"]).assert_success();
-    std::thread::sleep(Duration::from_millis(300));
-
-    // Now cursor should be on SELECTME. Select the word.
+    // Cursor should now be at the start of SELECTME. Select the word.
     send_copy_cmd(&tmux, "begin-selection");
-    // Move to end of word
     send_copy_cmd(&tmux, "next-word-end");
     send_copy_cmd(&tmux, "copy-selection");
-
     std::thread::sleep(Duration::from_millis(200));
+
     let buf = show_buffer(&tmux);
     assert!(
         buf.contains("SELECTME"),
@@ -237,38 +225,42 @@ fn copy_selection_with_send_keys() {
 }
 
 #[test]
-#[ignore = "broken: tmux-rs hangs during copy-mode search"]
 fn search_vi_forward() {
+    // Originally written as `send-keys -X search-backward` with no arg, which
+    // is a no-op in both C tmux and tmux-rs (the prompt is opened by the `?`
+    // vi binding via `command-prompt`, not by the X command itself). The test
+    // would hang because the follow-up FINDME_MARKER keys got interpreted as
+    // random vi-copy commands. Rewritten to use search-forward with the term
+    // as an argument — same path that `search_backward_vi` exercises.
     let (tmux, mut client) = setup(80, 24);
     set_mode_keys(&tmux, "vi");
 
-    // Put some known text
-    client.write_str("echo 'FINDME_MARKER somewhere in output'\r");
-    std::thread::sleep(Duration::from_millis(500));
-    client.read_raw();
+    // Put some known text. "echo 'FINDME...'" appears once on the input line
+    // and once on the output line; cursor starts on the prompt below both.
+    fill_pane(&mut client, &["FINDME_MARKER somewhere in output"]);
 
     enter_copy_mode(&tmux);
 
-    // In vi copy mode, search backward with ?
-    tmux.send_keys(&["-X", "search-backward"]).assert_success();
-    std::thread::sleep(Duration::from_millis(100));
-    tmux.send_keys(&["FINDME_MARKER", "Enter"]).assert_success();
-    std::thread::sleep(Duration::from_millis(300));
+    // Move cursor to top of pane so that search-forward has content below.
+    send_copy_cmd(&tmux, "history-top");
 
-    // Cursor should now be on the line containing FINDME_MARKER
-    // Verify by selecting from cursor to end of word and copying
+    send_copy_cmd_with_args(&tmux, &["search-forward", "FINDME_MARKER"]);
+    std::thread::sleep(Duration::from_millis(200));
+
+    // After a successful search-forward, the cursor sits on the match.
+    // Select the next 13 chars (length of "FINDME_MARKER") and copy them —
+    // the buffer should contain the marker.
     send_copy_cmd(&tmux, "begin-selection");
-    // Select through the marker text
     for _ in 0..12 {
         send_copy_cmd(&tmux, "cursor-right");
     }
     send_copy_cmd(&tmux, "copy-selection");
-
     std::thread::sleep(Duration::from_millis(200));
+
     let buf = show_buffer(&tmux);
     assert!(
         buf.contains("FINDME_MARKER"),
-        "search should have found FINDME_MARKER, buffer: {buf:?}"
+        "search-forward then copy-selection should yield FINDME_MARKER, got: {buf:?}"
     );
 }
 
