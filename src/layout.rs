@@ -64,6 +64,7 @@ pub unsafe fn layout_create_cell(lcparent: *mut layout_cell) -> *mut layout_cell
         yoff: u32::MAX,
         wp: None,
         cells: Vec::new(),
+        arena_owned: false,
     }))
 }
 
@@ -90,11 +91,22 @@ pub unsafe fn layout_create_cell_in(
             yoff: u32::MAX,
             wp: None,
             cells: Vec::new(),
+            arena_owned: true,
         })
     }
 }
 
 /// Recursively free a layout cell and all its children.
+///
+/// During the Phase 2.5 migration, the tree may contain a mix of legacy
+/// `Box::leak` cells (`arena_owned == false`) and arena-owned cells
+/// (`arena_owned == true`). Both kinds need their structural state torn
+/// down here (clearing `wp.layout_cell` back-pointers and recursing into
+/// children), but only legacy cells are reclaimed by `free_()`. Arena
+/// cells are reclaimed when the window's `LayoutArena` drops at window
+/// destruction time. This means arena cells freed mid-window-lifetime
+/// linger in their slot until then — acceptable because layout cells per
+/// window are at most a few dozen. Step 5 replaces this function entirely.
 pub unsafe fn layout_free_cell(lc: *mut layout_cell) {
     unsafe {
         match (*lc).type_ {
@@ -110,6 +122,16 @@ pub unsafe fn layout_free_cell(lc: *mut layout_cell) {
                     (*__wp).layout_cell = null_mut();
                 }
             }
+        }
+
+        if (*lc).arena_owned {
+            // The arena owns the Box; do not free here. Drop will happen
+            // via window destruction (LayoutArena::drop). Note that we
+            // intentionally do NOT call drop_in_place on `cells` either,
+            // because the arena Box still owns the cell and its fields.
+            // Reset `cells` to empty so a stale traversal would see no
+            // children — same observable end-state as the legacy path.
+            return;
         }
 
         std::ptr::drop_in_place(&raw mut (*lc).cells);
@@ -512,7 +534,7 @@ pub unsafe fn layout_destroy_cell(
 
 pub unsafe fn layout_init(w: *mut window, wp: *mut window_pane) {
     unsafe {
-        let lc = layout_create_cell(std::ptr::null_mut());
+        let (_lc_id, lc) = layout_create_cell_in(w, std::ptr::null_mut());
         (*w).layout_root = lc;
         layout_set_size(lc, (*w).sx, (*w).sy, 0, 0);
         layout_make_leaf(lc, wp);
@@ -982,6 +1004,7 @@ pub unsafe fn layout_split_pane(
         let minimum: u32;
         let mut resize_first: u32 = 0;
         let full_size = flags.intersects(SPAWN_FULLSIZE);
+        let w = window_pane_window(wp);
 
         // If full_size is specified, add a new cell at the top of the window
         // layout. Otherwise, split the cell for the current pane.
@@ -1064,7 +1087,7 @@ pub unsafe fn layout_split_pane(
             // If the parent exists and is of the same type as the split,
             // create a new cell and insert it after this one.
             lcparent = (*lc).parent;
-            lcnew = layout_create_cell(lcparent);
+            lcnew = layout_create_cell_in(w, lcparent).1;
             if flags.intersects(SPAWN_BEFORE) {
                 let pos = (*lcparent).cells.iter().position(|&p| p == lc).unwrap();
                 (*lcparent).cells.insert(pos, lcnew);
@@ -1089,7 +1112,7 @@ pub unsafe fn layout_split_pane(
             resize_first = 1;
 
             // Create the new cell.
-            lcnew = layout_create_cell(lc);
+            lcnew = layout_create_cell_in(w, lc).1;
             let size = saved_size - 1 - new_size;
             if (*lc).type_ == layout_type::LAYOUT_LEFTRIGHT {
                 layout_set_size(lcnew, size, sy, 0, 0);
@@ -1105,11 +1128,11 @@ pub unsafe fn layout_split_pane(
             // Otherwise create a new parent and insert it.
 
             // Create and insert the replacement parent.
-            lcparent = layout_create_cell((*lc).parent);
+            lcparent = layout_create_cell_in(w, (*lc).parent).1;
             layout_make_node(lcparent, type_);
             layout_set_size(lcparent, sx, sy, xoff, yoff);
             if (*lc).parent.is_null() {
-                (*window_pane_window(wp)).layout_root = lcparent;
+                (*w).layout_root = lcparent;
             } else {
                 let pos = (*(*lc).parent).cells.iter().position(|&p| p == lc).unwrap();
                 (&mut (*(*lc).parent).cells)[pos] = lcparent;
@@ -1120,7 +1143,7 @@ pub unsafe fn layout_split_pane(
             (*lcparent).cells.insert(0, lc);
 
             // Create the new child cell.
-            lcnew = layout_create_cell(lcparent);
+            lcnew = layout_create_cell_in(w, lcparent).1;
             if flags.intersects(SPAWN_BEFORE) {
                 (*lcparent).cells.insert(0, lcnew);
             } else {
