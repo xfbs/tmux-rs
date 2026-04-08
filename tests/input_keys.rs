@@ -257,3 +257,97 @@ fn input_keys_control_punct() {
     assert_key(&tmux, &window, "C-^", "^^");
     assert_key(&tmux, &window, "C-_", "^_");
 }
+
+// ---------------------------------------------------------------------------
+// 11. Extended keys (CSI u / xterm modifyOtherKeys)
+// ---------------------------------------------------------------------------
+//
+// Ported from the second half of regress/input-keys.sh (the
+// `assert_extended_key` block after `set -g extended-keys always`). With
+// extended-keys enabled, modifier combinations on F-keys, arrows, and the
+// Home/End/PageUp/Down/Insert/Delete cluster encode as `^[[<base>;<mods>~`
+// or `^[[1;<mods><letter>` where the modifier digit is:
+//   2 = S-, 3 = M-, 4 = S-M-, 5 = C-, 6 = S-C-, 7 = C-M-, 8 = S-C-M-.
+fn enable_extended_keys(tmux: &TmuxTestHarness) {
+    tmux.cmd()
+        .args(["set", "-g", "extended-keys", "always"])
+        .run()
+        .assert_success();
+}
+
+/// Assert all 7 modifier combinations of an extended key. `pattern` should
+/// contain `_` where the modifier digit goes (e.g., `^[[1;_A` for arrow Up).
+fn assert_extended_key(
+    tmux: &TmuxTestHarness,
+    window: &str,
+    base: &str,
+    pattern: &str,
+) {
+    for (mods, digit) in [
+        ("S-", '2'),
+        ("M-", '3'),
+        ("S-M-", '4'),
+        ("C-", '5'),
+        ("S-C-", '6'),
+        ("C-M-", '7'),
+        ("S-C-M-", '8'),
+    ] {
+        let key = format!("{mods}{base}");
+        let expected = pattern.replace('_', &digit.to_string());
+        assert_key(tmux, window, &key, &expected);
+    }
+}
+
+#[test]
+fn input_keys_extended_arrows() {
+    let (tmux, window) = new_harness_with_cat();
+    enable_extended_keys(&tmux);
+
+    assert_extended_key(&tmux, &window, "Up", "^[[1;_A");
+    assert_extended_key(&tmux, &window, "Down", "^[[1;_B");
+    assert_extended_key(&tmux, &window, "Right", "^[[1;_C");
+    assert_extended_key(&tmux, &window, "Left", "^[[1;_D");
+}
+
+#[test]
+fn input_keys_extended_navigation() {
+    let (tmux, window) = new_harness_with_cat();
+    enable_extended_keys(&tmux);
+
+    assert_extended_key(&tmux, &window, "Home", "^[[1;_H");
+    assert_extended_key(&tmux, &window, "End", "^[[1;_F");
+    assert_extended_key(&tmux, &window, "PPage", "^[[5;_~");
+    assert_extended_key(&tmux, &window, "NPage", "^[[6;_~");
+    assert_extended_key(&tmux, &window, "Insert", "^[[2;_~");
+    assert_extended_key(&tmux, &window, "Delete", "^[[3;_~");
+}
+
+#[test]
+fn input_keys_extended_function() {
+    let (tmux, window) = new_harness_with_cat();
+    enable_extended_keys(&tmux);
+
+    assert_extended_key(&tmux, &window, "F1", "^[[1;_P");
+    assert_extended_key(&tmux, &window, "F2", "^[[1;_Q");
+    assert_extended_key(&tmux, &window, "F3", "^[[1;_R");
+    assert_extended_key(&tmux, &window, "F4", "^[[1;_S");
+    assert_extended_key(&tmux, &window, "F5", "^[[15;_~");
+    assert_extended_key(&tmux, &window, "F6", "^[[17;_~");
+    assert_extended_key(&tmux, &window, "F8", "^[[19;_~");
+    assert_extended_key(&tmux, &window, "F9", "^[[20;_~");
+    assert_extended_key(&tmux, &window, "F10", "^[[21;_~");
+    assert_extended_key(&tmux, &window, "F11", "^[[23;_~");
+    assert_extended_key(&tmux, &window, "F12", "^[[24;_~");
+}
+
+#[test]
+fn input_keys_ctrl_tab() {
+    // With extended-keys enabled, C-Tab and C-S-Tab encode via the
+    // modifyOtherKeys CSI 27 form. Without extended-keys both produce a
+    // bare ^I — both C tmux 3.5a and tmux-rs agree on that fallback.
+    let (tmux, window) = new_harness_with_cat();
+    enable_extended_keys(&tmux);
+
+    assert_key(&tmux, &window, "C-Tab", "^[[27;5;9~");
+    assert_key(&tmux, &window, "C-S-Tab", "^[[27;6;9~");
+}
