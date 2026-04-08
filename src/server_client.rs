@@ -3306,15 +3306,7 @@ pub unsafe fn server_client_dispatch_shell(c: *mut client) {
 pub unsafe fn server_client_get_cwd(c: *const client, s: *const session) -> PathBuf {
     unsafe {
         let from_session_ptr = |sp: *const session| -> Option<PathBuf> {
-            if !sp.is_null() && !(*sp).cwd.is_null() {
-                Some(PathBuf::from(
-                    std::ffi::CStr::from_ptr((*sp).cwd as *const i8)
-                        .to_string_lossy()
-                        .into_owned(),
-                ))
-            } else {
-                None
-            }
+            if !sp.is_null() { (*sp).cwd.clone() } else { None }
         };
         if !CFG_FINISHED.load(atomic::Ordering::Acquire) && !CFG_CLIENT.is_null() {
             if let Some(p) = (*CFG_CLIENT).cwd.clone() {

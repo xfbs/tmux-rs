@@ -95,8 +95,12 @@ pub unsafe fn cmd_attach_session(
 
         if !cflag.is_null() {
             cwd = format_single(item, cstr_to_str(cflag), c, s, wl, wp);
-            free_((*s).cwd);
-            (*s).cwd = cwd;
+            (*s).cwd = Some(PathBuf::from(
+                std::ffi::CStr::from_ptr(cwd as *const i8)
+                    .to_string_lossy()
+                    .into_owned(),
+            ));
+            free_(cwd);
         }
         if !fflag.is_null() {
             server_client_set_flags(c, fflag);

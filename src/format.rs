@@ -2404,7 +2404,7 @@ pub unsafe fn format_cb_session_path(ft: &format_tree) -> format_table_type {
     unsafe {
         let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if !s.is_null() {
-            return format!("{}", _s((*s).cwd)).into();
+            return (*s).cwd.as_deref().map(|p| p.display().to_string()).unwrap_or_default().into();
         }
         format_table_type::None
     }

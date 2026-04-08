@@ -1537,7 +1537,7 @@ pub struct PaneId(pub u32);
 struct session {
     id: u32,
     name: Cow<'static, str>,
-    cwd: *mut u8,
+    cwd: Option<PathBuf>,
 
     creation_time: timeval,
     last_attached_time: timeval,

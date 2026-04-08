@@ -97,7 +97,16 @@ impl session {
             s.references = 1;
             s.flags = 0;
 
-            s.cwd = xstrdup(cwd).as_ptr();
+            // xcalloc'd zero bytes are NOT a guaranteed-valid Option<PathBuf>::None,
+            // so initialize via ptr::write before any read.
+            std::ptr::write(
+                &raw mut s.cwd,
+                Some(PathBuf::from(
+                    std::ffi::CStr::from_ptr(cwd as *const i8)
+                        .to_string_lossy()
+                        .into_owned(),
+                )),
+            );
 
             std::ptr::write(&raw mut s.lastw, Vec::new());
             std::ptr::write(&raw mut s.windows, BTreeMap::new());
@@ -217,14 +226,10 @@ pub unsafe extern "C-unwind" fn session_free(_fd: i32, _events: i16, arg: *mut c
             environ_free((*s).environ);
             options_free((*s).options);
             (*s).name = Cow::Borrowed("");
-            // Remove from registry and free the memory. We use Box::into_raw
-            // + free_() to match the old behavior — the old code called free_()
-            // directly, which doesn't run Rust Drop on the session fields.
-            // The Vec/BTreeMap fields were already emptied in session_destroy,
-            // and the Cow name was replaced above, so no Drop is needed.
-            if let Some(boxed) = (*(&raw mut SESSION_REGISTRY)).remove(&SessionId((*s).id)) {
-                free_(Box::into_raw(boxed));
-            }
+            // Drop the Box from the registry. Box drop runs Drop on all fields,
+            // including `cwd: Option<PathBuf>`. (The Vec/BTreeMap fields were
+            // already emptied in session_destroy; the Cow name was replaced above.)
+            let _ = (*(&raw mut SESSION_REGISTRY)).remove(&SessionId((*s).id));
         }
     }
 }
@@ -262,7 +267,7 @@ pub unsafe fn session_destroy(s: *mut session, notify: i32, from: *const u8) {
             winlink_remove(&raw mut (*s).windows, wl);
         }
 
-        free_((*s).cwd);
+        // `cwd` is `Option<PathBuf>`, dropped automatically by Box drop in session_free.
 
         session_remove_ref(s, __func__);
     }
