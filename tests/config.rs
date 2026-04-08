@@ -62,6 +62,105 @@ fn if_shell_with_succeeding_command() {
     assert_eq!(val, "yes");
 }
 
+// Ported from regress/if-shell-error.sh
+// An unknown command nested inside an if-shell branch in a config file should
+// be reported as %config-error in control-mode output, not crash the server.
+#[test]
+fn if_shell_unknown_command_in_config() {
+    let tmux = TmuxTestHarness::new();
+
+    let mut tmpfile = tempfile::NamedTempFile::new().expect("temp file");
+    writeln!(tmpfile, "if 'true' 'wibble wobble'").unwrap();
+    tmpfile.flush().unwrap();
+    let tmp_path = tmpfile.path().display().to_string();
+
+    // Use -C control mode + new-session, which prints %config-error lines
+    // for any errors encountered while loading -f.
+    let result = tmux.cmd()
+        .args([&format!("-f{}", tmp_path), "-C", "new"])
+        .stdin("")
+        .run();
+    let stdout = result.stdout_str();
+    let needle = format!("%config-error {}:1: {}:1: unknown command: wibble", tmp_path, tmp_path);
+    assert!(
+        stdout.contains(&needle),
+        "expected {needle:?} in control output, got: {stdout:?}"
+    );
+}
+
+// Ported from regress/if-shell-error.sh (second case)
+// `source` of a file containing an unknown command should report the error
+// in control mode and not crash. Note: the original regress script grep'd
+// for a `%config-error` prefix, but C tmux 3.5a actually emits the bare
+// error here (the prefix is only used when -f config is loaded at startup),
+// so we just check the error text appears.
+#[test]
+fn source_unknown_command_reports_error() {
+    let tmux = TmuxTestHarness::new();
+
+    let mut tmpfile = tempfile::NamedTempFile::new().expect("temp file");
+    writeln!(tmpfile, "wibble wobble").unwrap();
+    tmpfile.flush().unwrap();
+    let tmp_path = tmpfile.path().display().to_string();
+
+    let input = format!("source {}\n", tmp_path);
+    let result = tmux.cmd().args(["-C", "new"]).stdin(&input).run();
+    let stdout = result.stdout_str();
+    let needle = format!("{}:1: unknown command: wibble", tmp_path);
+    assert!(
+        stdout.contains(&needle),
+        "expected {needle:?} in control output, got: {stdout:?}"
+    );
+}
+
+// Ported from regress/if-shell-TERM.sh
+// TERM should be inherited from the launching environment when if-shell
+// runs at config-load time, not be the tmux-internal default.
+#[test]
+fn if_shell_term_from_outside() {
+    // xterm branch
+    {
+        let tmux = TmuxTestHarness::new();
+        let mut tmpfile = tempfile::NamedTempFile::new().expect("temp file");
+        writeln!(
+            tmpfile,
+            "if '[ \"$TERM\" = \"xterm\" ]' 'set -g default-terminal vt220' 'set -g default-terminal ansi'"
+        ).unwrap();
+        tmpfile.flush().unwrap();
+
+        tmux.cmd()
+            .args([&format!("-f{}", tmpfile.path().display()), "new-session", "-d"])
+            .env("TERM", "xterm")
+            .run()
+            .assert_success();
+        tmux.wait_ready(Duration::from_secs(5));
+
+        let val = tmux.cmd().args(["show", "-vg", "default-terminal"]).run().stdout_trimmed();
+        assert_eq!(val, "vt220", "xterm branch should pick vt220");
+    }
+
+    // screen branch (else)
+    {
+        let tmux = TmuxTestHarness::new();
+        let mut tmpfile = tempfile::NamedTempFile::new().expect("temp file");
+        writeln!(
+            tmpfile,
+            "if '[ \"$TERM\" = \"xterm\" ]' 'set -g default-terminal vt220' 'set -g default-terminal ansi'"
+        ).unwrap();
+        tmpfile.flush().unwrap();
+
+        tmux.cmd()
+            .args([&format!("-f{}", tmpfile.path().display()), "new-session", "-d"])
+            .env("TERM", "screen")
+            .run()
+            .assert_success();
+        tmux.wait_ready(Duration::from_secs(5));
+
+        let val = tmux.cmd().args(["show", "-vg", "default-terminal"]).run().stdout_trimmed();
+        assert_eq!(val, "ansi", "non-xterm branch should pick ansi");
+    }
+}
+
 // Ported from regress/run-shell-output.sh
 #[test]
 fn run_shell_captures_output() {

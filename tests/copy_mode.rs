@@ -449,6 +449,134 @@ fn half_page_up_down() {
     send_copy_cmd(&tmux, "cancel");
 }
 
+// Ported from regress/copy-mode-test-emacs.sh.
+// Exercises word/space navigation and selection in emacs copy mode against
+// a fixed input file. The shape mirrors the upstream regress script:
+// each block sends a sequence of motion / select / copy commands and
+// asserts the resulting paste-buffer contents.
+#[test]
+fn copy_mode_emacs_word_navigation() {
+    let mut tmux = TmuxTestHarness::new();
+    // The pane runs `cat copy-mode-test.txt` to render the file, then
+    // moves the cursor to (15,9) and runs `cat` again so the pane stays
+    // alive. window-size manual locks the pane to 40x10.
+    let test_file = std::fs::canonicalize("regress/copy-mode-test.txt")
+        .expect("regress/copy-mode-test.txt missing");
+    let cmd = format!("cat {}; printf '\\e[9;15H'; cat", test_file.display());
+    tmux.new_session()
+        .args(["-x", "40", "-y", "10", &cmd])
+        .run()
+        .assert_success();
+    tmux.wait_ready(Duration::from_secs(5));
+
+    tmux.cmd().args(["set", "-g", "window-size", "manual"]).run().assert_success();
+    tmux.cmd().args(["set-window-option", "-g", "mode-keys", "emacs"]).run().assert_success();
+    tmux.cmd().args(["set-window-option", "-g", "word-separators", ""]).run().assert_success();
+    // Wait for the cat output to fully populate the pane before entering
+    // copy mode.
+    std::thread::sleep(Duration::from_millis(300));
+    tmux.cmd().args(["copy-mode"]).run().assert_success();
+    tmux.send_keys(&["-X", "history-top"]).assert_success();
+    tmux.send_keys(&["-X", "start-of-line"]).assert_success();
+
+    // Helper: run -X cmd then sleep briefly to let the pane catch up.
+    let x = |cmd: &str| {
+        tmux.send_keys(&["-X", cmd]).assert_success();
+    };
+    let buf = || tmux.cmd().args(["show-buffer"]).run().stdout_str();
+
+    // previous-word / previous-space at start-of-text yield empty selection.
+    x("begin-selection");
+    x("previous-word");
+    x("previous-space");
+    x("previous-word");
+    x("copy-selection");
+    assert_eq!(buf(), "", "previous-word at start should yield empty");
+
+    // next-word-end does not skip single-letter words.
+    x("next-word-end");
+    x("begin-selection");
+    x("previous-word");
+    x("copy-selection");
+    assert_eq!(buf(), "A", "next-word-end should land on single-letter word A");
+
+    // next-word-end wraps around indented line breaks. Note: the upstream
+    // regress script asserts "words\n\tIndented" but the tab in
+    // copy-mode-test.txt is rendered as 8 spaces in the grid (both C tmux
+    // 3.5a and tmux-rs do this), so the captured selection contains spaces.
+    x("next-word"); x("next-word"); x("next-word");
+    x("begin-selection");
+    x("next-word-end"); x("next-word-end");
+    x("copy-selection");
+    assert_eq!(buf(), "words\n        Indented");
+
+    // next-word wraps around un-indented line breaks.
+    x("next-word");
+    x("begin-selection");
+    x("next-word");
+    x("copy-selection");
+    assert_eq!(buf(), "line\n");
+
+    // next-word-end treats periods as letters.
+    x("next-word");
+    x("begin-selection");
+    x("next-word-end");
+    x("copy-selection");
+    assert_eq!(buf(), "line...");
+
+    // previous-word and next-word treat periods as letters.
+    x("previous-word");
+    x("begin-selection");
+    x("next-word");
+    x("copy-selection");
+    assert_eq!(buf(), "line...\n");
+
+    // previous-space and next-space treat periods as letters.
+    x("previous-space");
+    x("begin-selection");
+    x("next-space");
+    x("copy-selection");
+    assert_eq!(buf(), "line...\n");
+
+    // next-word and next-word-end treat other symbols as letters.
+    x("begin-selection");
+    x("next-word"); x("next-word");
+    x("next-word-end"); x("next-word-end");
+    x("copy-selection");
+    assert_eq!(buf(), "... @nd then $ym_bols[]{}");
+
+    // previous-word treats other symbols as letters and next-word wraps
+    // around for indented symbols.
+    x("previous-word");
+    x("begin-selection");
+    x("next-word");
+    x("copy-selection");
+    assert_eq!(buf(), "$ym_bols[]{}\n ");
+
+    // next-word-end treats digits as letters.
+    x("next-word-end");
+    x("begin-selection");
+    x("next-word-end");
+    x("copy-selection");
+    assert_eq!(buf(), " 500xyz");
+
+    // previous-word treats digits as letters.
+    x("begin-selection");
+    x("previous-word");
+    x("copy-selection");
+    assert_eq!(buf(), "500xyz");
+
+    // next-word, next-word-end, next-space, next-space-end stop at end of text.
+    // The upstream regress assertion is "500xyz", but the cursor actually
+    // walks into the trailing empty pane lines on both C tmux 3.5a and
+    // tmux-rs, so the captured selection contains trailing newlines. Both
+    // implementations agree, so we test the bug-compatible behavior.
+    x("begin-selection");
+    x("next-word"); x("next-word-end"); x("next-word"); x("next-space"); x("next-space-end");
+    x("copy-selection");
+    assert_eq!(buf(), "500xyz\n\n\n\n\n");
+}
+
 // ---------------------------------------------------------------------------
 // New tests: broader copy-mode coverage
 // ---------------------------------------------------------------------------
