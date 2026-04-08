@@ -604,7 +604,6 @@ fn jump_again_vi() {
 
 // 3. Search backward
 #[test]
-    #[ignore = "broken: tmux-rs search in copy mode"]
 fn search_backward_vi() {
     let (tmux, mut client) = setup(40, 10);
     set_mode_keys(&tmux, "vi");

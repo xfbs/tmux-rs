@@ -3567,9 +3567,9 @@ pub unsafe fn window_copy_search_lr(
 
         let endline = (*gd).hsize + (*gd).sy - 1;
         for ax in first..last {
-            let mut bx = 0;
-            for bx_ in 0..(*sgd).sx {
-                bx = bx_;
+            // C-style: bx ends at sgd.sx on full match, otherwise stops early.
+            let mut bx: u32 = 0;
+            while bx < (*sgd).sx {
                 let mut px = ax + bx;
                 let mut pywrap = py;
                 // Wrap line.
@@ -3585,10 +3585,10 @@ pub unsafe fn window_copy_search_lr(
                 if px >= (*gd).sx {
                     break;
                 }
-                let matched = window_copy_search_compare(gd, px, pywrap, sgd, bx, cis);
-                if !matched {
+                if !window_copy_search_compare(gd, px, pywrap, sgd, bx, cis) {
                     break;
                 }
+                bx += 1;
             }
             if bx == (*sgd).sx {
                 *ppx = ax;
@@ -3614,9 +3614,9 @@ pub unsafe fn window_copy_search_rl(
 
         let mut ax = last;
         while ax > first {
-            let mut bx = 0;
-            for bx_ in 0..(*sgd).sx {
-                bx = bx_;
+            // C-style: bx ends at sgd.sx on full match, otherwise stops early.
+            let mut bx: u32 = 0;
+            while bx < (*sgd).sx {
                 let mut px = ax - 1 + bx;
                 let mut pywrap = py;
                 // Wrap line.
@@ -3632,10 +3632,10 @@ pub unsafe fn window_copy_search_rl(
                 if px >= (*gd).sx {
                     break;
                 }
-                let matched = window_copy_search_compare(gd, px, pywrap, sgd, bx, cis);
-                if !matched {
+                if !window_copy_search_compare(gd, px, pywrap, sgd, bx, cis) {
                     break;
                 }
+                bx += 1;
             }
             if bx == (*sgd).sx {
                 *ppx = ax - 1;
