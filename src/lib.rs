@@ -1503,14 +1503,22 @@ pub struct LayoutCellId(u32);
 /// `LayoutCellId`s). Dropping the arena drops every cell in one shot, which
 /// replaces the recursive `layout_free_cell` walk currently in `layout.rs`.
 ///
-/// Slots are stored as `Option<layout_cell>` so that `remove` can leave a hole
-/// without shifting other indices. Removed slot indices land on `free_list`
-/// and are reused by the next `alloc`. This keeps the arena dense without
-/// invalidating live IDs.
+/// Slots are stored as `Option<Box<layout_cell>>` so that:
+/// 1. `remove` can leave a hole without shifting other indices, and
+/// 2. each cell has a stable heap address — Vec growth never moves the
+///    cell itself, only the slot pointer in the Vec. This is load-bearing
+///    during the migration: code that still holds `*mut layout_cell` and
+///    code that holds `LayoutCellId` can refer to the same live cell at
+///    the same time without UB. Once Step 6 completes and nothing outside
+///    the arena holds raw pointers, we could collapse to inline storage,
+///    but the Box overhead is negligible (handful of cells per window).
+///
+/// Removed slot indices land on `free_list` and are reused by the next
+/// `alloc`. This keeps the arena dense without invalidating live IDs.
 #[derive(Default)]
 #[allow(dead_code)] // wired up incrementally in Phase 2.5
 pub struct LayoutArena {
-    cells: Vec<Option<layout_cell>>,
+    cells: Vec<Option<Box<layout_cell>>>,
     free_list: Vec<u32>,
     /// The current root of the layout tree, if any.
     root: Option<LayoutCellId>,
@@ -1527,35 +1535,70 @@ impl LayoutArena {
 
     /// Insert `cell` into the arena and return its stable id.
     pub(crate) fn alloc(&mut self, cell: layout_cell) -> LayoutCellId {
+        let boxed = Box::new(cell);
         if let Some(idx) = self.free_list.pop() {
-            self.cells[idx as usize] = Some(cell);
+            self.cells[idx as usize] = Some(boxed);
             LayoutCellId(idx)
         } else {
             let idx = self.cells.len() as u32;
-            self.cells.push(Some(cell));
+            self.cells.push(Some(boxed));
             LayoutCellId(idx)
         }
     }
 
+    /// Allocate `cell` and return both the id and a raw pointer to the
+    /// stable heap location. Used during the Phase 2.5 migration so that
+    /// code still holding `*mut layout_cell` keeps working while the
+    /// arena owns the box. The pointer is valid until the slot is
+    /// `remove`d or the arena is dropped.
+    pub(crate) fn alloc_with_ptr(
+        &mut self,
+        cell: layout_cell,
+    ) -> (LayoutCellId, *mut layout_cell) {
+        let id = self.alloc(cell);
+        let ptr: *mut layout_cell = self.cells[id.0 as usize]
+            .as_mut()
+            .map(|b| &mut **b as *mut layout_cell)
+            .expect("just-allocated slot must be Some");
+        (id, ptr)
+    }
+
     /// Borrow a cell by id, or `None` if the slot is empty / out of range.
     pub(crate) fn get(&self, id: LayoutCellId) -> Option<&layout_cell> {
-        self.cells.get(id.0 as usize).and_then(|slot| slot.as_ref())
+        self.cells
+            .get(id.0 as usize)
+            .and_then(|slot| slot.as_deref())
     }
 
     /// Mutably borrow a cell by id.
     pub(crate) fn get_mut(&mut self, id: LayoutCellId) -> Option<&mut layout_cell> {
-        self.cells.get_mut(id.0 as usize).and_then(|slot| slot.as_mut())
+        self.cells
+            .get_mut(id.0 as usize)
+            .and_then(|slot| slot.as_deref_mut())
     }
 
-    /// Remove a cell, returning its contents and recycling the slot.
+    /// Get a raw pointer to a cell by id, or null. The pointer is stable
+    /// across other arena operations as long as the slot is not removed.
+    pub(crate) fn get_ptr(&mut self, id: LayoutCellId) -> *mut layout_cell {
+        match self.cells.get_mut(id.0 as usize).and_then(|s| s.as_mut()) {
+            Some(b) => &mut **b as *mut layout_cell,
+            None => std::ptr::null_mut(),
+        }
+    }
+
+    /// Remove a cell, dropping it and recycling the slot.
     /// Does **not** recursively remove children — callers that want a full
     /// subtree teardown should walk children first or just `clear()` the
     /// whole arena (which is what window destruction does).
-    pub(crate) fn remove(&mut self, id: LayoutCellId) -> Option<layout_cell> {
-        let slot = self.cells.get_mut(id.0 as usize)?;
-        let cell = slot.take()?;
+    pub(crate) fn remove(&mut self, id: LayoutCellId) -> bool {
+        let Some(slot) = self.cells.get_mut(id.0 as usize) else {
+            return false;
+        };
+        if slot.take().is_none() {
+            return false;
+        }
         self.free_list.push(id.0);
-        Some(cell)
+        true
     }
 
     /// Drop every cell and reset the arena to empty.
@@ -1611,19 +1654,32 @@ mod layout_arena_tests {
     fn remove_recycles_slot() {
         let mut a = LayoutArena::new();
         let id1 = a.alloc(dummy());
-        a.remove(id1).unwrap();
+        assert!(a.remove(id1));
         let id2 = a.alloc(dummy());
         assert_eq!(id1, id2, "freed slot should be reused");
         assert!(a.get(id1).is_some());
     }
 
     #[test]
-    fn remove_twice_is_none() {
+    fn remove_twice_is_false() {
         let mut a = LayoutArena::new();
         let id = a.alloc(dummy());
-        assert!(a.remove(id).is_some());
-        assert!(a.remove(id).is_none());
+        assert!(a.remove(id));
+        assert!(!a.remove(id));
         assert!(a.get(id).is_none());
+    }
+
+    #[test]
+    fn alloc_with_ptr_round_trip() {
+        let mut a = LayoutArena::new();
+        let (id, ptr) = a.alloc_with_ptr(dummy());
+        assert!(!ptr.is_null());
+        assert_eq!(a.get_ptr(id), ptr, "ptr stable across get_ptr");
+        // Allocate more to force a Vec realloc; ptr must remain valid.
+        for _ in 0..64 {
+            a.alloc(dummy());
+        }
+        assert_eq!(a.get_ptr(id), ptr, "ptr stable across Vec growth");
     }
 
     #[test]

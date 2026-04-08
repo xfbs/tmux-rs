@@ -48,6 +48,12 @@ unsafe fn layout_prev_sibling(lc: *mut layout_cell) -> *mut layout_cell {
 }
 
 /// Allocate a new layout cell with the given parent.
+///
+/// Legacy allocator: leaks a Box so the cell has a stable address but no
+/// owner — `layout_free_cell` recursively reclaims the memory. New code
+/// should prefer [`layout_create_cell_in`], which routes allocation
+/// through the window's `LayoutArena` so the window's drop reclaims
+/// every cell at once. See PLAN.md §2.5 for the migration plan.
 pub unsafe fn layout_create_cell(lcparent: *mut layout_cell) -> *mut layout_cell {
     Box::leak(Box::new(layout_cell {
         type_: layout_type::LAYOUT_WINDOWPANE,
@@ -59,6 +65,33 @@ pub unsafe fn layout_create_cell(lcparent: *mut layout_cell) -> *mut layout_cell
         wp: None,
         cells: Vec::new(),
     }))
+}
+
+/// Allocate a new layout cell into `w`'s arena and return both the
+/// stable id and a raw pointer for callers that haven't been migrated to
+/// IDs yet. The pointer remains valid until the cell is removed via
+/// [`LayoutArena::remove`] or the window (and its arena) is dropped.
+///
+/// This is the Phase 2.5 replacement for [`layout_create_cell`]. As call
+/// sites are flipped to use this function (Step 3b), the arena gradually
+/// becomes the sole owner of every layout cell for that window.
+#[allow(dead_code)] // wired up incrementally in Phase 2.5 step 3b
+pub unsafe fn layout_create_cell_in(
+    w: *mut window,
+    lcparent: *mut layout_cell,
+) -> (LayoutCellId, *mut layout_cell) {
+    unsafe {
+        (*w).layout.alloc_with_ptr(layout_cell {
+            type_: layout_type::LAYOUT_WINDOWPANE,
+            parent: lcparent,
+            sx: u32::MAX,
+            sy: u32::MAX,
+            xoff: u32::MAX,
+            yoff: u32::MAX,
+            wp: None,
+            cells: Vec::new(),
+        })
+    }
 }
 
 /// Recursively free a layout cell and all its children.
