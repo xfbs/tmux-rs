@@ -1480,6 +1480,170 @@ struct layout_cell {
     cells: Vec<*mut layout_cell>,
 }
 
+/// Stable handle to a `layout_cell` stored in a [`LayoutArena`].
+///
+/// Indices are scoped to the arena that issued them — passing a `LayoutCellId`
+/// from one window's arena to another is a bug. Slots are recycled via the
+/// arena's free-list, so the same `LayoutCellId` may eventually refer to a
+/// different cell after a `remove`/`alloc` round-trip. We accept this for now
+/// because layout cells are always rebuilt en masse on resize/split, so stale
+/// IDs don't survive across operations in practice. If that ever stops being
+/// true, upgrade to a generational scheme (e.g. the `slotmap` crate).
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct LayoutCellId(u32);
+
+/// Per-window arena that owns every `layout_cell` for that window.
+///
+/// The arena is the *only* owner of layout cells. The tree shape lives inside
+/// the cells themselves (each cell stores its parent and children as
+/// `LayoutCellId`s). Dropping the arena drops every cell in one shot, which
+/// replaces the recursive `layout_free_cell` walk currently in `layout.rs`.
+///
+/// Slots are stored as `Option<layout_cell>` so that `remove` can leave a hole
+/// without shifting other indices. Removed slot indices land on `free_list`
+/// and are reused by the next `alloc`. This keeps the arena dense without
+/// invalidating live IDs.
+#[derive(Default)]
+#[allow(dead_code)] // wired up incrementally in Phase 2.5
+pub struct LayoutArena {
+    cells: Vec<Option<layout_cell>>,
+    free_list: Vec<u32>,
+    /// The current root of the layout tree, if any.
+    root: Option<LayoutCellId>,
+    /// A previously-saved layout root (used by zoom/restore). Replaces the
+    /// `window.saved_layout_root` raw-pointer field.
+    saved_root: Option<LayoutCellId>,
+}
+
+#[allow(dead_code)] // wired up incrementally in Phase 2.5
+impl LayoutArena {
+    pub(crate) fn new() -> Self {
+        Self::default()
+    }
+
+    /// Insert `cell` into the arena and return its stable id.
+    pub(crate) fn alloc(&mut self, cell: layout_cell) -> LayoutCellId {
+        if let Some(idx) = self.free_list.pop() {
+            self.cells[idx as usize] = Some(cell);
+            LayoutCellId(idx)
+        } else {
+            let idx = self.cells.len() as u32;
+            self.cells.push(Some(cell));
+            LayoutCellId(idx)
+        }
+    }
+
+    /// Borrow a cell by id, or `None` if the slot is empty / out of range.
+    pub(crate) fn get(&self, id: LayoutCellId) -> Option<&layout_cell> {
+        self.cells.get(id.0 as usize).and_then(|slot| slot.as_ref())
+    }
+
+    /// Mutably borrow a cell by id.
+    pub(crate) fn get_mut(&mut self, id: LayoutCellId) -> Option<&mut layout_cell> {
+        self.cells.get_mut(id.0 as usize).and_then(|slot| slot.as_mut())
+    }
+
+    /// Remove a cell, returning its contents and recycling the slot.
+    /// Does **not** recursively remove children — callers that want a full
+    /// subtree teardown should walk children first or just `clear()` the
+    /// whole arena (which is what window destruction does).
+    pub(crate) fn remove(&mut self, id: LayoutCellId) -> Option<layout_cell> {
+        let slot = self.cells.get_mut(id.0 as usize)?;
+        let cell = slot.take()?;
+        self.free_list.push(id.0);
+        Some(cell)
+    }
+
+    /// Drop every cell and reset the arena to empty.
+    pub(crate) fn clear(&mut self) {
+        self.cells.clear();
+        self.free_list.clear();
+        self.root = None;
+        self.saved_root = None;
+    }
+
+    pub(crate) fn root(&self) -> Option<LayoutCellId> {
+        self.root
+    }
+
+    pub(crate) fn set_root(&mut self, root: Option<LayoutCellId>) {
+        self.root = root;
+    }
+
+    pub(crate) fn saved_root(&self) -> Option<LayoutCellId> {
+        self.saved_root
+    }
+
+    pub(crate) fn set_saved_root(&mut self, root: Option<LayoutCellId>) {
+        self.saved_root = root;
+    }
+}
+
+#[cfg(test)]
+mod layout_arena_tests {
+    use super::*;
+
+    fn dummy() -> layout_cell {
+        layout_cell {
+            type_: layout_type::LAYOUT_WINDOWPANE,
+            parent: std::ptr::null_mut(),
+            sx: 0,
+            sy: 0,
+            xoff: 0,
+            yoff: 0,
+            wp: None,
+            cells: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn alloc_get() {
+        let mut a = LayoutArena::new();
+        let id = a.alloc(dummy());
+        assert!(a.get(id).is_some());
+    }
+
+    #[test]
+    fn remove_recycles_slot() {
+        let mut a = LayoutArena::new();
+        let id1 = a.alloc(dummy());
+        a.remove(id1).unwrap();
+        let id2 = a.alloc(dummy());
+        assert_eq!(id1, id2, "freed slot should be reused");
+        assert!(a.get(id1).is_some());
+    }
+
+    #[test]
+    fn remove_twice_is_none() {
+        let mut a = LayoutArena::new();
+        let id = a.alloc(dummy());
+        assert!(a.remove(id).is_some());
+        assert!(a.remove(id).is_none());
+        assert!(a.get(id).is_none());
+    }
+
+    #[test]
+    fn clear_drops_everything() {
+        let mut a = LayoutArena::new();
+        let id = a.alloc(dummy());
+        a.set_root(Some(id));
+        a.clear();
+        assert!(a.get(id).is_none());
+        assert_eq!(a.root(), None);
+    }
+
+    #[test]
+    fn root_and_saved_root_independent() {
+        let mut a = LayoutArena::new();
+        let id1 = a.alloc(dummy());
+        let id2 = a.alloc(dummy());
+        a.set_root(Some(id1));
+        a.set_saved_root(Some(id2));
+        assert_eq!(a.root(), Some(id1));
+        assert_eq!(a.saved_root(), Some(id2));
+    }
+}
+
 bitflags::bitflags! {
     #[repr(transparent)]
     #[derive(Copy, Clone)]
