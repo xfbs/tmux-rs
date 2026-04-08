@@ -1407,35 +1407,37 @@ pub unsafe fn cmd_find_client(
         // Trim a single trailing colon if any.
         let copy = target.strip_suffix(':').unwrap_or(target);
 
-        let mut c = null_mut();
-        // Check name and path of each client.
-        for c_ in clients_iter() {
-            c = c_;
-            if client_get_session(c).is_null() {
-                continue;
-            }
-            if streq_((*c).name, copy) {
-                break;
-            }
-
-            let Some(tn) = (*c).ttyname.as_deref() else {
-                continue;
-            };
-            if tn.is_empty() {
-                continue;
-            }
-            if tn == copy {
-                break;
-            }
-            // Try matching against the tty path with the leading "/dev/" stripped.
-            if let Some(stripped) = tn.strip_prefix("/dev/")
-                && stripped == copy
-            {
-                break;
-            }
-
-            continue;
-        }
+        // Check name and path of each client. Use Iterator::find so the
+        // result is None when no client matches — a Rust for-loop would
+        // leave the iteration variable pointing at the last visited client
+        // (TAILQ_FOREACH leaves NULL at end; for-loop does not).
+        let c = clients_iter()
+            .find(|&c| {
+                if client_get_session(c).is_null() {
+                    return false;
+                }
+                if streq_((*c).name, copy) {
+                    return true;
+                }
+                let Some(tn) = (*c).ttyname.as_deref() else {
+                    return false;
+                };
+                if tn.is_empty() {
+                    return false;
+                }
+                if tn == copy {
+                    return true;
+                }
+                // Try matching against the tty path with the leading
+                // "/dev/" stripped.
+                if let Some(stripped) = tn.strip_prefix("/dev/")
+                    && stripped == copy
+                {
+                    return true;
+                }
+                false
+            })
+            .unwrap_or(null_mut());
 
         if c.is_null() && quiet == 0 {
             cmdq_error!(item, "can't find client: {}", copy);
