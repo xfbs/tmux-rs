@@ -469,6 +469,11 @@ pub unsafe fn window_create(sx: u32, sy: u32, mut xpixel: u32, mut ypixel: u32) 
 
         (*w).lastlayout = -1;
         (*w).layout_root = null_mut();
+        // xcalloc'd zero bytes are not a valid LayoutArena (the inner Vec
+        // would be UB on first use). Initialize explicitly. The Box drop
+        // in `window_destroy` will run LayoutArena's Drop, so no manual
+        // teardown is needed.
+        std::ptr::write(&raw mut (*w).layout, LayoutArena::new());
 
         (*w).sx = sx;
         (*w).sy = sy;

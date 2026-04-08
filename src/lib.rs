@@ -1375,6 +1375,10 @@ struct window {
     layout_root: *mut layout_cell,
     saved_layout_root: *mut layout_cell,
     old_layout: *mut u8,
+    /// Phase 2.5 parallel infrastructure: arena that will eventually own
+    /// every layout_cell for this window. Currently empty and unused — see
+    /// PLAN.md §2.5 for the migration plan.
+    layout: LayoutArena,
 
     sx: u32,
     sy: u32,
