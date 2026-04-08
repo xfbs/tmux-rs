@@ -1322,7 +1322,7 @@ struct window_pane {
 
     modes: Vec<*mut window_mode_entry>,
 
-    searchstr: *mut u8,
+    searchstr: Option<String>,
     searchregex: i32,
 
     border_gc_set: i32,

@@ -194,7 +194,7 @@ pub struct window_copy_mode_data {
     searchtype: window_copy,
     searchdirection: i32,
     searchregex: i32,
-    searchstr: *mut u8,
+    searchstr: Option<String>,
     searchmark: *mut u8,
     searchcount: i32,
     searchmore: i32,
@@ -314,18 +314,21 @@ pub unsafe fn window_copy_common_init(wme: *mut window_mode_entry) -> *mut windo
         let data: *mut window_copy_mode_data = xcalloc1::<window_copy_mode_data>();
         (*wme).data = data.cast();
 
+        // xcalloc'd zero bytes are NOT a guaranteed-valid Option<String>::None.
+        std::ptr::write(&raw mut (*data).searchstr, None);
+
         (*data).cursordrag = cursordrag::CURSORDRAG_NONE;
         (*data).lineflag = line_sel::LINE_SEL_NONE;
         (*data).selflag = selflag::SEL_CHAR;
 
-        if !(*wp).searchstr.is_null() {
+        if (*wp).searchstr.is_some() {
             (*data).searchtype = window_copy::WINDOW_COPY_SEARCHUP;
             (*data).searchregex = (*wp).searchregex;
-            (*data).searchstr = xstrdup((*wp).searchstr).as_ptr();
+            (*data).searchstr = (*wp).searchstr.clone();
         } else {
             (*data).searchtype = window_copy::WINDOW_COPY_OFF;
             (*data).searchregex = 0;
-            (*data).searchstr = null_mut();
+            (*data).searchstr = None;
         }
         (*data).searcho = -1;
         (*data).searchx = -1;
@@ -445,7 +448,9 @@ pub unsafe fn window_copy_free(wme: NonNull<window_mode_entry>) {
         evtimer_del(&raw mut (*data).dragtimer);
 
         free_((*data).searchmark);
-        free_((*data).searchstr);
+        // searchstr is Option<String>; data is xcalloc'd + free_()'d, not Box-managed,
+        // so drop the field manually before the backing memory is freed.
+        std::ptr::drop_in_place(&raw mut (*data).searchstr);
         free_((*data).jumpchar);
 
         if !(*data).writing.is_null() {
@@ -928,11 +933,18 @@ pub unsafe fn window_copy_expand_search_string(cs: *mut window_copy_cmd_state) -
                 free_(expanded);
                 return false;
             }
-            free_((*data).searchstr);
-            (*data).searchstr = expanded;
+            (*data).searchstr = Some(
+                std::ffi::CStr::from_ptr(expanded as *const i8)
+                    .to_string_lossy()
+                    .into_owned(),
+            );
+            free_(expanded);
         } else {
-            free_((*data).searchstr);
-            (*data).searchstr = xstrdup(ss).as_ptr();
+            (*data).searchstr = Some(
+                std::ffi::CStr::from_ptr(ss as *const i8)
+                    .to_string_lossy()
+                    .into_owned(),
+            );
         }
         true
     }
@@ -2558,7 +2570,7 @@ pub unsafe fn window_copy_cmd_search_backward(
             return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;
         }
 
-        if !(*data).searchstr.is_null() {
+        if (*data).searchstr.is_some() {
             (*data).searchtype = window_copy::WINDOW_COPY_SEARCHUP;
             (*data).searchregex = 1;
             (*data).timeout = 0;
@@ -2583,7 +2595,7 @@ pub unsafe fn window_copy_cmd_search_backward_text(
             return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;
         }
 
-        if !(*data).searchstr.is_null() {
+        if (*data).searchstr.is_some() {
             (*data).searchtype = window_copy::WINDOW_COPY_SEARCHUP;
             (*data).searchregex = 0;
             (*data).timeout = 0;
@@ -2608,7 +2620,7 @@ pub unsafe fn window_copy_cmd_search_forward(
             return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;
         }
 
-        if !(*data).searchstr.is_null() {
+        if (*data).searchstr.is_some() {
             (*data).searchtype = window_copy::WINDOW_COPY_SEARCHDOWN;
             (*data).searchregex = 1;
             (*data).timeout = 0;
@@ -2633,7 +2645,7 @@ pub unsafe fn window_copy_cmd_search_forward_text(
             return window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;
         }
 
-        if !(*data).searchstr.is_null() {
+        if (*data).searchstr.is_some() {
             (*data).searchtype = window_copy::WINDOW_COPY_SEARCHDOWN;
             (*data).searchregex = 0;
             (*data).timeout = 0;
@@ -2653,7 +2665,7 @@ pub unsafe fn window_copy_cmd_search_backward_incremental(
         let wme: *mut window_mode_entry = (*cs).wme;
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut arg1 = args_string((*cs).args, 1);
-        let ss = (*data).searchstr;
+        let ss = (*data).searchstr.clone();
         let mut action = window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;
 
         (*data).timeout = 0;
@@ -2662,11 +2674,12 @@ pub unsafe fn window_copy_cmd_search_backward_incremental(
 
         let prefix = *arg1;
         arg1 = arg1.add(1);
+        let arg1_str = std::ffi::CStr::from_ptr(arg1 as *const i8).to_string_lossy();
         if (*data).searchx == -1 || (*data).searchy == -1 {
             (*data).searchx = (*data).cx as i32;
             (*data).searchy = (*data).cy as i32;
             (*data).searcho = (*data).oy as i32;
-        } else if !ss.is_null() && libc::strcmp(arg1, ss) != 0 {
+        } else if ss.as_deref().map(|s| s != arg1_str.as_ref()).unwrap_or(false) {
             (*data).cx = (*data).searchx as u32;
             (*data).cy = (*data).searchy as u32;
             (*data).oy = (*data).searcho as u32;
@@ -2676,12 +2689,12 @@ pub unsafe fn window_copy_cmd_search_backward_incremental(
             window_copy_clear_marks(wme);
             return window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW;
         }
+        let arg1_owned = arg1_str.into_owned();
         match prefix as u8 {
             b'=' | b'-' => {
                 (*data).searchtype = window_copy::WINDOW_COPY_SEARCHUP;
                 (*data).searchregex = 0;
-                free_((*data).searchstr);
-                (*data).searchstr = xstrdup(arg1).as_ptr();
+                (*data).searchstr = Some(arg1_owned);
                 if !window_copy_search_up(wme, 0) {
                     window_copy_clear_marks(wme);
                     return window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW;
@@ -2690,8 +2703,7 @@ pub unsafe fn window_copy_cmd_search_backward_incremental(
             b'+' => {
                 (*data).searchtype = window_copy::WINDOW_COPY_SEARCHDOWN;
                 (*data).searchregex = 0;
-                free_((*data).searchstr);
-                (*data).searchstr = xstrdup(arg1).as_ptr();
+                (*data).searchstr = Some(arg1_owned);
                 if !window_copy_search_down(wme, 0) {
                     window_copy_clear_marks(wme);
                     return window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW;
@@ -2710,7 +2722,7 @@ pub unsafe fn window_copy_cmd_search_forward_incremental(
         let wme: *mut window_mode_entry = (*cs).wme;
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let mut arg1 = args_string((*cs).args, 1);
-        let ss = (*data).searchstr;
+        let ss = (*data).searchstr.clone();
         let mut action = window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING;
 
         (*data).timeout = 0;
@@ -2719,11 +2731,12 @@ pub unsafe fn window_copy_cmd_search_forward_incremental(
 
         let prefix = *arg1;
         arg1 = arg1.add(1);
+        let arg1_str = std::ffi::CStr::from_ptr(arg1 as *const i8).to_string_lossy();
         if (*data).searchx == -1 || (*data).searchy == -1 {
             (*data).searchx = (*data).cx as i32;
             (*data).searchy = (*data).cy as i32;
             (*data).searcho = (*data).oy as i32;
-        } else if !ss.is_null() && libc::strcmp(arg1, ss) != 0 {
+        } else if ss.as_deref().map(|s| s != arg1_str.as_ref()).unwrap_or(false) {
             (*data).cx = (*data).searchx as u32;
             (*data).cy = (*data).searchy as u32;
             (*data).oy = (*data).searcho as u32;
@@ -2733,12 +2746,12 @@ pub unsafe fn window_copy_cmd_search_forward_incremental(
             window_copy_clear_marks(wme);
             return window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW;
         }
+        let arg1_owned = arg1_str.into_owned();
         match prefix as u8 {
             b'=' | b'+' => {
                 (*data).searchtype = window_copy::WINDOW_COPY_SEARCHDOWN;
                 (*data).searchregex = 0;
-                free_((*data).searchstr);
-                (*data).searchstr = xstrdup(arg1).as_ptr();
+                (*data).searchstr = Some(arg1_owned);
                 if !window_copy_search_down(wme, 0) {
                     window_copy_clear_marks(wme);
                     return window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW;
@@ -2747,8 +2760,7 @@ pub unsafe fn window_copy_cmd_search_forward_incremental(
             b'-' => {
                 (*data).searchtype = window_copy::WINDOW_COPY_SEARCHUP;
                 (*data).searchregex = 0;
-                free_((*data).searchstr);
-                (*data).searchstr = xstrdup(arg1).as_ptr();
+                (*data).searchstr = Some(arg1_owned);
                 if !window_copy_search_up(wme, 0) {
                     window_copy_clear_marks(wme);
                     return window_copy_cmd_action::WINDOW_COPY_CMD_REDRAW;
@@ -4309,7 +4321,11 @@ pub unsafe fn window_copy_search(
         let mut ss = MaybeUninit::<screen>::uninit();
         let mut ctx: screen_write_ctx = zeroed();
         let gd: *mut grid = (*s).grid;
-        let str: *mut u8 = (*data).searchstr;
+        // Build a CString of the search string for the C interop calls below
+        // (strcspn, strlen via screen_write_strlen, etc).
+        let str_owned: String = (*data).searchstr.clone().unwrap_or_default();
+        let str_cstring = std::ffi::CString::new(str_owned.as_bytes()).unwrap_or_default();
+        let str: *mut u8 = str_cstring.as_ptr() as *mut u8;
         let visible_only: i32;
 
         if regex != 0 && *str.add(libc::strcspn(str, c!("^$*+()?[].\\"))) == b'\0' {
@@ -4322,17 +4338,16 @@ pub unsafe fn window_copy_search(
             return false;
         }
 
-        if (*data).searchall != 0 || (*wp).searchstr.is_null() || (*wp).searchregex != regex {
+        if (*data).searchall != 0 || (*wp).searchstr.is_none() || (*wp).searchregex != regex {
             visible_only = 0;
             (*data).searchall = 0;
         } else {
-            visible_only = (libc::strcmp((*wp).searchstr, str) == 0) as i32;
+            visible_only = ((*wp).searchstr.as_deref() == Some(str_owned.as_str())) as i32;
         }
         if visible_only == 0 && !(*data).searchmark.is_null() {
             window_copy_clear_marks(wme);
         }
-        free_((*wp).searchstr);
-        (*wp).searchstr = xstrdup(str).as_ptr();
+        (*wp).searchstr = Some(str_owned);
         (*wp).searchregex = regex;
 
         let mut fx = (*data).cx;
@@ -4508,8 +4523,10 @@ pub unsafe fn window_copy_search_marks(
         let mut reg: libc::regex_t = zeroed();
         let mut stop: u64 = 0;
         'out: {
+            let search_owned = (*data).searchstr.clone().unwrap_or_default();
+            let search_c = std::ffi::CString::new(search_owned.as_bytes()).unwrap_or_default();
             if ssp.is_null() {
-                width = screen_write_strlen!("{}", _s((*data).searchstr)) as u32;
+                width = screen_write_strlen!("{}", search_owned) as u32;
                 screen_init(ss.as_mut_ptr(), width, 1, 0);
                 screen_write_start(&raw mut ctx, ss.as_mut_ptr());
                 screen_write_nputs!(
@@ -4517,7 +4534,7 @@ pub unsafe fn window_copy_search_marks(
                     -1,
                     &raw const GRID_DEFAULT_CELL,
                     "{}",
-                    _s((*data).searchstr),
+                    search_owned,
                 );
                 screen_write_stop(&raw mut ctx);
                 ssp = ss.as_mut_ptr();
@@ -4525,7 +4542,7 @@ pub unsafe fn window_copy_search_marks(
                 width = screen_size_x(ssp);
             }
 
-            let cis = window_copy_is_lowercase((*data).searchstr) as i32;
+            let cis = window_copy_is_lowercase(search_c.as_ptr().cast()) as i32;
 
             if regex != 0 {
                 let mut sbuf = xmalloc(ssize as usize).as_ptr().cast();

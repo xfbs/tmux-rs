@@ -1205,6 +1205,7 @@ pub unsafe fn window_pane_create(
         // Write None explicitly so reads of cwd/shell don't observe a "zeroed Some".
         std::ptr::write(&raw mut (*wp).cwd, None);
         std::ptr::write(&raw mut (*wp).shell, None);
+        std::ptr::write(&raw mut (*wp).searchstr, None);
 
         std::ptr::write(&raw mut (*wp).modes, Vec::new());
 
@@ -1238,7 +1239,7 @@ pub unsafe fn window_pane_create(
 unsafe fn window_pane_destroy(wp: *mut window_pane) {
     unsafe {
         window_pane_reset_mode_all(wp);
-        free((*wp).searchstr as _);
+        // `searchstr` is `Option<String>`, dropped automatically by Box drop.
 
         if (*wp).fd != -1 {
             #[cfg(feature = "utempter")]

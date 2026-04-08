@@ -2167,10 +2167,8 @@ pub unsafe fn format_cb_pane_right(ft: &format_tree) -> format_table_type {
 pub unsafe fn format_cb_pane_search_string(ft: &format_tree) -> format_table_type {
     unsafe {
         if (*ft).wp.is_some() {
-            if (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).searchstr.is_null() {
-                return "".into();
-            }
-            return format!("{}", _s((*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).searchstr)).into();
+            let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+            return (*wp).searchstr.clone().unwrap_or_default().into();
         }
         format_table_type::None
     }
