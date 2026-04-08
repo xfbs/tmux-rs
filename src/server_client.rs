@@ -541,6 +541,26 @@ pub unsafe fn client_from_id(id: ClientId) -> Option<*mut client> {
     }
 }
 
+/// Look up a client by ID and return a shared reference, suitable for
+/// read-only access. Returns `None` if the client has been freed.
+///
+/// Part of the Phase 2.4 structural lift: callers that only read from a
+/// client should use this in preference to `client_from_id`. The returned
+/// reference borrows from the registry for `'static` (the registry lives
+/// for the program duration).
+///
+/// **Aliasing rule:** Multiple `&client` references can coexist freely,
+/// but the caller must not also hold a `*mut client` to the same ID and
+/// mutate through it while the reference is alive. There's no borrow
+/// checker enforcement of this in the current hybrid state — be careful.
+pub unsafe fn client_ref(id: ClientId) -> Option<&'static client> {
+    unsafe {
+        (*(&raw const CLIENT_REGISTRY))
+            .get(&id)
+            .map(|b| &**b as &client)
+    }
+}
+
 /// Remove reference from a client.
 pub unsafe fn server_client_unref(c: *mut client) {
     unsafe {

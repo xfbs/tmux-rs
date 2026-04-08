@@ -86,19 +86,19 @@ pub struct cmdq_list {
     pub list: Vec<*mut cmdq_item>,
 }
 
-pub unsafe fn cmdq_name(c: *const client) -> *const u8 {
+pub unsafe fn cmdq_name(c: Option<&client>) -> *const u8 {
     static mut BUF: [u8; 256] = [0; 256];
     let s = &raw mut BUF as *mut u8;
 
-    if c.is_null() {
+    let Some(c) = c else {
         return c!("<global>");
-    }
+    };
 
     unsafe {
-        if !(*c).name.is_null() {
-            _ = xsnprintf_!(s, 256, "<{}>", _s((*c).name));
+        if !c.name.is_null() {
+            _ = xsnprintf_!(s, 256, "<{}>", _s(c.name));
         } else {
-            _ = xsnprintf_!(s, 256, "<{:p}>", c);
+            _ = xsnprintf_!(s, 256, "<{:p}>", c as *const client);
         }
     }
 
@@ -307,7 +307,7 @@ pub unsafe fn cmdq_append(c: *mut client, mut item: *mut cmdq_item) -> *mut cmdq
 
             (*item).queue = queue;
             (*queue).list.push(item);
-            log_debug!("{} {}: {}", __func__, _s(cmdq_name(c)), _s((*item).name));
+            log_debug!("{} {}: {}", __func__, _s(cmdq_name(c.as_ref())), _s((*item).name));
 
             item = next;
             if item.is_null() {
@@ -345,7 +345,7 @@ pub unsafe fn cmdq_insert_after(
             log_debug!(
                 "{} {}: {} after {}",
                 "cmdq_insert_after",
-                _s(cmdq_name(c)),
+                _s(cmdq_name(c.as_ref())),
                 _s((*item).name),
                 _s((*after).name),
             );
@@ -608,7 +608,7 @@ pub unsafe fn cmdq_fire_command(item: *mut cmdq_item) -> cmd_retval {
     let __func__ = "cmdq_fire_command";
 
     unsafe {
-        let name = cmdq_name(cmdq_get_client(item));
+        let name = cmdq_name(cmdq_get_client(item).as_ref());
         let state = (*item).state;
         let cmd = (*item).cmd;
         let args = cmd_get_args(cmd);
@@ -768,7 +768,7 @@ pub unsafe fn cmdq_next(c: *mut client) -> u32 {
 
     unsafe {
         let queue = cmdq_get(c);
-        let name = cmdq_name(c);
+        let name = cmdq_name(c.as_ref());
 
         'waiting: {
             if (*queue).list.is_empty() {
