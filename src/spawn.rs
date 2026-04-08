@@ -253,16 +253,19 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context) -> Result<NonNull<window_pane>,
         'complete: {
             spawn_log("spawn_pane", sc);
 
+            let target_s = (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
             if !(*sc).cwd.is_null() {
-                cwd = format_single(item, cstr_to_str((*sc).cwd), c, (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()), null_mut(), null_mut());
+                cwd = format_single(item, cstr_to_str((*sc).cwd), c, target_s, null_mut(), null_mut());
                 if *cwd != b'/' {
-                    new_cwd =
-                        format_nul!("{}/{}", _s(server_client_get_cwd(c, (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()))), _s(cwd));
+                    let base = server_client_get_cwd(c, target_s);
+                    new_cwd = format_nul!("{}/{}", base.display(), _s(cwd));
                     free_(cwd);
                     cwd = new_cwd;
                 }
             } else if !(*sc).flags.intersects(SPAWN_RESPAWN) {
-                cwd = xstrdup(server_client_get_cwd(c, (*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()))).as_ptr();
+                let base = server_client_get_cwd(c, target_s);
+                let base_c = std::ffi::CString::new(base.to_string_lossy().as_bytes()).unwrap_or_default();
+                cwd = xstrdup(base_c.as_ptr().cast()).as_ptr();
             } else {
                 cwd = null_mut();
             }

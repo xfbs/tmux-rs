@@ -150,7 +150,9 @@ pub unsafe fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         if args_has(args, 'c') {
             (*cdata).cwd = xstrdup(args_get_(args, 'c')).as_ptr();
         } else {
-            (*cdata).cwd = xstrdup(server_client_get_cwd(c, s)).as_ptr();
+            let p = server_client_get_cwd(c, s);
+            let pc = std::ffi::CString::new(p.to_string_lossy().as_bytes()).unwrap_or_default();
+            (*cdata).cwd = xstrdup(pc.as_ptr().cast()).as_ptr();
         }
 
         (*cdata).s = if s.is_null() { None } else { Some(SessionId((*s).id)) };

@@ -278,6 +278,7 @@ pub unsafe fn server_client_create(fd: i32) -> *mut client {
         std::ptr::write(&raw mut (*c).prompt_string, None);
         std::ptr::write(&raw mut (*c).exit_session, None);
         std::ptr::write(&raw mut (*c).exit_message, None);
+        std::ptr::write(&raw mut (*c).cwd, None);
         let boxed = Box::from_raw(c);
         (*(&raw mut CLIENT_REGISTRY)).insert(id, boxed);
         // c remains valid — Box::from_raw moved ownership to the registry,
@@ -488,7 +489,7 @@ pub unsafe fn server_client_lost(c: *mut client) {
 
         status_free(c);
 
-        free_((*c).cwd.cast_mut()); // TODO cast away const
+        // `cwd` is `Option<PathBuf>`, dropped automatically by Box drop.
 
         evtimer_del(&raw mut (*c).repeat_timer);
         evtimer_del(&raw mut (*c).click_timer);
@@ -3195,11 +3196,14 @@ pub unsafe fn server_client_dispatch_identify(c: *mut client, imsg: *mut imsg) {
                     // fatalx("bad MSG_IDENTIFY_CWD string");
                 }
                 if libc::access(data.cast(), libc::X_OK) == 0 {
-                    (*c).cwd = xstrdup(data.cast()).as_ptr();
+                    let bytes = std::ffi::CStr::from_ptr(data.cast::<i8>())
+                        .to_string_lossy()
+                        .into_owned();
+                    (*c).cwd = Some(PathBuf::from(bytes));
                 } else if let Some(home) = find_home() {
-                    (*c).cwd = xstrdup_(home).as_ptr();
+                    (*c).cwd = Some(PathBuf::from(home.to_string_lossy().into_owned()));
                 } else {
-                    (*c).cwd = xstrdup(c!("/")).as_ptr();
+                    (*c).cwd = Some(PathBuf::from("/"));
                 }
                 // log_debug("client %p IDENTIFY_CWD %s", c, data);
             }
@@ -3299,25 +3303,42 @@ pub unsafe fn server_client_dispatch_shell(c: *mut client) {
 }
 
 /// Get client working directory.
-pub unsafe fn server_client_get_cwd(c: *const client, s: *const session) -> *const u8 {
+pub unsafe fn server_client_get_cwd(c: *const client, s: *const session) -> PathBuf {
     unsafe {
+        let from_session_ptr = |sp: *const session| -> Option<PathBuf> {
+            if !sp.is_null() && !(*sp).cwd.is_null() {
+                Some(PathBuf::from(
+                    std::ffi::CStr::from_ptr((*sp).cwd as *const i8)
+                        .to_string_lossy()
+                        .into_owned(),
+                ))
+            } else {
+                None
+            }
+        };
         if !CFG_FINISHED.load(atomic::Ordering::Acquire) && !CFG_CLIENT.is_null() {
-            (*CFG_CLIENT).cwd
-        } else if !c.is_null() && client_get_session(c).is_null() && !(*c).cwd.is_null() {
-            (*c).cwd
-        } else if !s.is_null() && !(*s).cwd.is_null() {
-            (*s).cwd
-        } else if !c.is_null()
-            && let session = client_get_session(c)
-            && !session.is_null()
-            && !(*session).cwd.is_null()
-        {
-            (*session).cwd
-        } else if let Some(home) = find_home() {
-            home.as_ptr().cast()
-        } else {
-            c!("/")
+            if let Some(p) = (*CFG_CLIENT).cwd.clone() {
+                return p;
+            }
         }
+        if !c.is_null() && client_get_session(c).is_null()
+            && let Some(p) = (*c).cwd.clone()
+        {
+            return p;
+        }
+        if let Some(p) = from_session_ptr(s) {
+            return p;
+        }
+        if !c.is_null() {
+            let session = client_get_session(c);
+            if let Some(p) = from_session_ptr(session) {
+                return p;
+            }
+        }
+        if let Some(home) = find_home() {
+            return PathBuf::from(home.to_string_lossy().into_owned());
+        }
+        PathBuf::from("/")
     }
 }
 

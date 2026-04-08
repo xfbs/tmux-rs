@@ -181,7 +181,11 @@ unsafe fn cmd_new_session_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
             cwd = if !tmp.is_null() {
                 format_single(item, cstr_to_str(tmp), c, null_mut(), null_mut(), null_mut())
             } else {
-                xstrdup(server_client_get_cwd(c, null_mut())).as_ptr()
+                {
+                    let p = server_client_get_cwd(c, null_mut());
+                    let pc = std::ffi::CString::new(p.to_string_lossy().as_bytes()).unwrap_or_default();
+                    xstrdup(pc.as_ptr().cast()).as_ptr()
+                }
             };
 
             // If this is a new client, check for nesting and save the termios

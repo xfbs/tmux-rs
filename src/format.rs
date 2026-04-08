@@ -367,13 +367,15 @@ pub unsafe fn format_job_get(es: *mut format_expand_state, cmd: *mut u8) -> *mut
             job_free((*fj).job);
         }
         if force || ((*fj).job.is_null() && (*fj).last != t) {
+            let cwd_path = server_client_get_cwd((*ft).client, null_mut());
+            let cwd_c = std::ffi::CString::new(cwd_path.to_string_lossy().as_bytes()).unwrap_or_default();
             (*fj).job = job_run(
                 expanded,
                 0,
                 null_mut(),
                 null_mut(),
                 null_mut(),
-                server_client_get_cwd((*ft).client, null_mut()),
+                cwd_c.as_ptr().cast(),
                 Some(format_job_update),
                 Some(format_job_complete),
                 None,

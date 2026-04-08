@@ -27,9 +27,10 @@ pub unsafe fn file_get_path(c: *mut client, file: *const u8) -> NonNull<u8> {
         if *file == b'/' {
             xstrdup(file)
         } else {
+            let base = server_client_get_cwd(c, null_mut());
             NonNull::new(format_nul!(
                 "{}/{}",
-                _s(server_client_get_cwd(c, null_mut())),
+                base.display(),
                 _s(file)
             ))
             .unwrap()

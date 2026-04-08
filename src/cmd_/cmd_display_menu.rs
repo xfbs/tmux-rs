@@ -521,7 +521,11 @@ unsafe fn cmd_display_popup_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         let cwd = if !value.is_null() {
             format_single_from_target(item, value)
         } else {
-            xstrdup(server_client_get_cwd(tc, s)).as_ptr()
+            {
+                let p = server_client_get_cwd(tc, s);
+                let pc = std::ffi::CString::new(p.to_string_lossy().as_bytes()).unwrap_or_default();
+                xstrdup(pc.as_ptr().cast()).as_ptr()
+            }
         };
         let mut shellcmd = null();
         if count == 0 {

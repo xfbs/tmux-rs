@@ -2299,7 +2299,7 @@ struct client {
 
     title: Option<String>,
     path: Option<String>,
-    cwd: *const u8,
+    cwd: Option<PathBuf>,
 
     term_name: Option<String>,
     term_features: c_int,

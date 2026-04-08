@@ -186,7 +186,9 @@ unsafe fn cmd_source_file_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
             (*cdata).flags |= cmd_parse_input_flags::CMD_PARSE_VERBOSE;
         }
 
-        let cwd = cmd_source_file_quote_for_glob(server_client_get_cwd(c, null_mut()));
+        let cwd_path = server_client_get_cwd(c, null_mut());
+        let cwd_c = std::ffi::CString::new(cwd_path.to_string_lossy().as_bytes()).unwrap_or_default();
+        let cwd = cmd_source_file_quote_for_glob(cwd_c.as_ptr().cast());
 
         for i in 0..args_count(args) {
             let mut path = args_string(args, i);

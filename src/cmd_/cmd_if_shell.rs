@@ -95,13 +95,15 @@ unsafe fn cmd_if_shell_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval
             (*c).references += 1;
         }
 
+        let cwd_path = server_client_get_cwd(cmdq_get_client(item), s);
+        let cwd_c = std::ffi::CString::new(cwd_path.to_string_lossy().as_bytes()).unwrap_or_default();
         if job_run(
             shellcmd,
             0,
             null_mut(),
             null_mut(),
             s,
-            server_client_get_cwd(cmdq_get_client(item), s),
+            cwd_c.as_ptr().cast(),
             None,
             Some(cmd_if_shell_callback),
             Some(cmd_if_shell_free),
