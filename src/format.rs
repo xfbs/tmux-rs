@@ -774,12 +774,12 @@ pub unsafe fn format_cb_window_layout(ft: &format_tree) -> format_table_type {
             return format_table_type::None;
         }
 
-        if !(*w).saved_layout_root.is_null() {
-            return layout_dump((*w).saved_layout_root)
+        if !window_saved_layout_root(w).is_null() {
+            return layout_dump(window_saved_layout_root(w))
                 .map(Into::into)
                 .unwrap_or_default();
         }
-        layout_dump((*w).layout_root)
+        layout_dump(window_layout_root(w))
             .map(Into::into)
             .unwrap_or_default()
     }
@@ -794,7 +794,7 @@ pub unsafe fn format_cb_window_visible_layout(ft: &format_tree) -> format_table_
             return format_table_type::None;
         }
 
-        layout_dump((*w).layout_root)
+        layout_dump(window_layout_root(w))
             .map(Into::into)
             .unwrap_or_default()
     }

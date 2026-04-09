@@ -243,7 +243,7 @@ unsafe fn layout_fix_offsets1(lc: *mut layout_cell) {
 /// Update cell offsets based on their sizes.
 pub unsafe fn layout_fix_offsets(w: &window) {
     unsafe {
-        let lc = w.layout_root;
+        let lc = window_layout_root(w as *const _ as *mut window);
         (*lc).xoff = 0;
         (*lc).yoff = 0;
         layout_fix_offsets1(lc);
@@ -253,7 +253,7 @@ pub unsafe fn layout_fix_offsets(w: &window) {
 /// Is this a top cell?
 unsafe fn layout_cell_is_top(w: &window, mut lc: *mut layout_cell) -> c_int {
     unsafe {
-        while lc != w.layout_root {
+        while lc != window_layout_root(w as *const _ as *mut window) {
             let next = (*lc).parent;
             if (*next).type_ == layout_type::LAYOUT_TOPBOTTOM
                 && lc != (*next).cells.first().copied().unwrap_or(null_mut())
@@ -269,7 +269,7 @@ unsafe fn layout_cell_is_top(w: &window, mut lc: *mut layout_cell) -> c_int {
 /// Is this a bottom cell?
 unsafe fn layout_cell_is_bottom(w: &window, mut lc: *mut layout_cell) -> c_int {
     unsafe {
-        while lc != w.layout_root {
+        while lc != window_layout_root(w as *const _ as *mut window) {
             let next = (*lc).parent;
             if (*next).type_ == layout_type::LAYOUT_TOPBOTTOM
                 && lc != (*next).cells.last().copied().unwrap_or(null_mut())
@@ -500,7 +500,7 @@ pub unsafe fn layout_destroy_cell(
 pub unsafe fn layout_init(w: *mut window, wp: *mut window_pane) {
     unsafe {
         let (_lc_id, lc) = layout_create_cell_in(w, std::ptr::null_mut());
-        (*w).layout_root = lc;
+        window_set_layout_root(w, lc);
         layout_set_size(lc, (*w).sx, (*w).sy, 0, 0);
         layout_make_leaf(lc, wp);
         layout_fix_panes(&*w, std::ptr::null_mut());
@@ -509,14 +509,14 @@ pub unsafe fn layout_init(w: *mut window, wp: *mut window_pane) {
 
 pub unsafe fn layout_free(w: *mut window) {
     unsafe {
-        layout_free_cell((*w).layout_root);
+        layout_free_cell(window_layout_root(w));
     }
 }
 
 /// Resize the entire layout after window resize.
 pub unsafe fn layout_resize(w: *mut window, sx: c_uint, sy: c_uint) {
     unsafe {
-        let lc = (*w).layout_root;
+        let lc = window_layout_root(w);
 
         // Adjust horizontally. Do not attempt to reduce the layout lower than
         // the minimum (more than the amount returned by layout_resize_check).
@@ -974,7 +974,7 @@ pub unsafe fn layout_split_pane(
         // If full_size is specified, add a new cell at the top of the window
         // layout. Otherwise, split the cell for the current pane.
         let lc: *mut layout_cell = if full_size {
-            (*window_pane_window(wp)).layout_root
+            window_layout_root(window_pane_window(wp))
         } else {
             pane_layout_cell(wp)
         };
@@ -1097,7 +1097,7 @@ pub unsafe fn layout_split_pane(
             layout_make_node(lcparent, type_);
             layout_set_size(lcparent, sx, sy, xoff, yoff);
             if (*lc).parent.is_null() {
-                (*w).layout_root = lcparent;
+                window_set_layout_root(w, lcparent);
             } else {
                 let pos = (*(*lc).parent).cells.iter().position(|&p| p == lc).unwrap();
                 (&mut (*(*lc).parent).cells)[pos] = lcparent;
@@ -1151,10 +1151,16 @@ pub unsafe fn layout_close_pane(wp: *mut window_pane) {
         let w = window_pane_window(wp);
 
         // Remove the cell
-        layout_destroy_cell(w, pane_layout_cell(wp), &raw mut (*w).layout_root);
+        // Bridge: layout_destroy_cell mutates `*lcroot`. After step 5
+        // flips window.layout_root to live inside the arena, we can't
+        // pass &raw mut to it directly — instead, route through a local
+        // and propagate any change back via the accessor.
+        let mut lcroot = window_layout_root(w);
+        layout_destroy_cell(w, pane_layout_cell(wp), &raw mut lcroot);
+        window_set_layout_root(w, lcroot);
 
         // Fix pane offsets and sizes
-        if !(*w).layout_root.is_null() {
+        if !window_layout_root(w).is_null() {
             layout_fix_offsets(&*w);
             layout_fix_panes(&*w, null_mut());
         }

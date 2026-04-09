@@ -54,7 +54,7 @@ pub unsafe fn control_notify_window_layout_changed(w: *mut window) {
                 // When the last pane in a window is closed it won't have a
                 // layout root and we don't need to inform the client about the
                 // layout change because the whole window will go away soon.
-                if (*w).layout_root.is_null() {
+                if window_layout_root(w).is_null() {
                     continue;
                 }
 

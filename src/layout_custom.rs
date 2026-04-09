@@ -245,8 +245,8 @@ pub unsafe fn layout_parse(w: *mut window, mut layout: *const u8) -> Result<(), 
             window_resize(w, (*lc).sx, (*lc).sy, -1, -1);
 
             // Destroy the old layout and swap to the new.
-            layout_free_cell((*w).layout_root);
-            (*w).layout_root = lc;
+            layout_free_cell(window_layout_root(w));
+            window_set_layout_root(w, lc);
 
             // Assign the panes into the cells.
             let mut wp = (*w).panes.first().copied().unwrap_or(null_mut());

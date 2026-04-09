@@ -127,7 +127,7 @@ pub unsafe fn layout_set_even(w: *mut window, type_: layout_type) {
         let mut sx: u32;
         let mut sy: u32;
 
-        layout_print_cell((*w).layout_root, __func__, 1);
+        layout_print_cell(window_layout_root(w), __func__, 1);
 
         // Get number of panes.
         let n = window_count_panes(&*w);
@@ -138,7 +138,7 @@ pub unsafe fn layout_set_even(w: *mut window, type_: layout_type) {
         // Free the old root and construct a new.
         layout_free(w);
         let lc = layout_create_cell_in(w, null_mut()).1;
-        (*w).layout_root = lc;
+        window_set_layout_root(w, lc);
         if type_ == layout_type::LAYOUT_LEFTRIGHT {
             sx = (n * (PANE_MINIMUM + 1)) - 1;
             if sx < (*w).sx {
@@ -171,7 +171,7 @@ pub unsafe fn layout_set_even(w: *mut window, type_: layout_type) {
         layout_fix_offsets(&*w);
         layout_fix_panes(&*w, null_mut());
 
-        layout_print_cell((*w).layout_root, __func__, 1);
+        layout_print_cell(window_layout_root(w), __func__, 1);
 
         window_resize(w, (*lc).sx, (*lc).sy, -1, -1);
         notify_window(c"window-layout-changed", w);
@@ -197,7 +197,7 @@ pub unsafe fn layout_set_main_h(w: *mut window) {
         // struct window_pane *wp;
         // struct layout_cell *lc, *lcmain, *lcother, *lcchild;
         // u_int n, mainh, otherh, sx, sy;
-        layout_print_cell((*w).layout_root, __func__, 1);
+        layout_print_cell(window_layout_root(w), __func__, 1);
 
         // Get number of panes.
         let mut n = window_count_panes(&*w);
@@ -246,7 +246,7 @@ pub unsafe fn layout_set_main_h(w: *mut window) {
         // Free old tree and create a new root.
         layout_free(w);
         let lc = layout_create_cell_in(w, null_mut()).1;
-        (*w).layout_root = lc;
+        window_set_layout_root(w, lc);
         layout_set_size(lc, sx, mainh + otherh + 1, 0, 0);
         layout_make_node(lc, layout_type::LAYOUT_TOPBOTTOM);
 
@@ -284,7 +284,7 @@ pub unsafe fn layout_set_main_h(w: *mut window) {
         layout_fix_offsets(&*w);
         layout_fix_panes(&*w, null_mut());
 
-        layout_print_cell((*w).layout_root, __func__, 1);
+        layout_print_cell(window_layout_root(w), __func__, 1);
 
         window_resize(w, (*lc).sx, (*lc).sy, -1, -1);
         notify_window(c"window-layout-changed", w);
@@ -297,7 +297,7 @@ pub unsafe fn layout_set_main_h_mirrored(w: *mut window) {
     unsafe {
         let mut otherh: u32;
 
-        layout_print_cell((*w).layout_root, __func__, 1);
+        layout_print_cell(window_layout_root(w), __func__, 1);
 
         // Get number of panes.
         let mut n = window_count_panes(&*w);
@@ -345,7 +345,7 @@ pub unsafe fn layout_set_main_h_mirrored(w: *mut window) {
         // Free old tree and create a new root.
         layout_free(w);
         let lc = layout_create_cell_in(w, null_mut()).1;
-        (*w).layout_root = lc;
+        window_set_layout_root(w, lc);
         layout_set_size(lc, sx, mainh + otherh + 1, 0, 0);
         layout_make_node(lc, layout_type::LAYOUT_TOPBOTTOM);
 
@@ -383,7 +383,7 @@ pub unsafe fn layout_set_main_h_mirrored(w: *mut window) {
         layout_fix_offsets(&*w);
         layout_fix_panes(&*w, null_mut());
 
-        layout_print_cell((*w).layout_root, __func__, 1);
+        layout_print_cell(window_layout_root(w), __func__, 1);
 
         window_resize(w, (*lc).sx, (*lc).sy, -1, -1);
         notify_window(c"window-layout-changed", w);
@@ -395,7 +395,7 @@ pub unsafe fn layout_set_main_v(w: *mut window) {
     let __func__ = c!("layout_set_main_v");
 
     unsafe {
-        layout_print_cell((*w).layout_root, __func__, 1);
+        layout_print_cell(window_layout_root(w), __func__, 1);
 
         // Get number of panes.
         let mut n = window_count_panes(&*w);
@@ -444,7 +444,7 @@ pub unsafe fn layout_set_main_v(w: *mut window) {
         // Free old tree and create a new root.
         layout_free(w);
         let lc = layout_create_cell_in(w, null_mut()).1;
-        (*w).layout_root = lc;
+        window_set_layout_root(w, lc);
         layout_set_size(lc, mainw + otherw + 1, sy, 0, 0);
         layout_make_node(lc, layout_type::LAYOUT_LEFTRIGHT);
 
@@ -482,7 +482,7 @@ pub unsafe fn layout_set_main_v(w: *mut window) {
         layout_fix_offsets(&*w);
         layout_fix_panes(&*w, null_mut());
 
-        layout_print_cell((*w).layout_root, __func__, 1);
+        layout_print_cell(window_layout_root(w), __func__, 1);
 
         window_resize(w, (*lc).sx, (*lc).sy, -1, -1);
         notify_window(c"window-layout-changed", w);
@@ -493,7 +493,7 @@ pub unsafe fn layout_set_main_v(w: *mut window) {
 pub unsafe fn layout_set_main_v_mirrored(w: *mut window) {
     let __func__ = c!("layout_set_main_v_mirrored");
     unsafe {
-        layout_print_cell((*w).layout_root, __func__, 1);
+        layout_print_cell(window_layout_root(w), __func__, 1);
 
         // Get number of panes.
         let mut n = window_count_panes(&*w);
@@ -542,7 +542,7 @@ pub unsafe fn layout_set_main_v_mirrored(w: *mut window) {
         // Free old tree and create a new root.
         layout_free(w);
         let lc = layout_create_cell_in(w, null_mut()).1;
-        (*w).layout_root = lc;
+        window_set_layout_root(w, lc);
         layout_set_size(lc, mainw + otherw + 1, sy, 0, 0);
         layout_make_node(lc, layout_type::LAYOUT_LEFTRIGHT);
 
@@ -580,7 +580,7 @@ pub unsafe fn layout_set_main_v_mirrored(w: *mut window) {
         layout_fix_offsets(&*w);
         layout_fix_panes(&*w, null_mut());
 
-        layout_print_cell((*w).layout_root, __func__, 1);
+        layout_print_cell(window_layout_root(w), __func__, 1);
 
         window_resize(w, (*lc).sx, (*lc).sy, -1, -1);
         notify_window(c"window-layout-changed", w);
@@ -592,7 +592,7 @@ pub unsafe fn layout_set_tiled(w: *mut window) {
     let __func__ = c!("layout_set_tiled");
 
     unsafe {
-        layout_print_cell((*w).layout_root, __func__, 1);
+        layout_print_cell(window_layout_root(w), __func__, 1);
 
         // Get number of panes.
         let n = window_count_panes(&*w);
@@ -623,7 +623,7 @@ pub unsafe fn layout_set_tiled(w: *mut window) {
         // Free old tree and create a new root.
         layout_free(w);
         let lc = layout_create_cell_in(w, null_mut()).1;
-        (*w).layout_root = lc;
+        window_set_layout_root(w, lc);
         let mut sx = ((width + 1) * columns) - 1;
         if sx < (*w).sx {
             sx = (*w).sx;
@@ -707,7 +707,7 @@ pub unsafe fn layout_set_tiled(w: *mut window) {
         layout_fix_offsets(&*w);
         layout_fix_panes(&*w, null_mut());
 
-        layout_print_cell((*w).layout_root, __func__, 1);
+        layout_print_cell(window_layout_root(w), __func__, 1);
 
         window_resize(w, (*lc).sx, (*lc).sy, -1, -1);
         notify_window(c"window-layout-changed", w);

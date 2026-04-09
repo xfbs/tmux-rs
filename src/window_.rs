@@ -333,6 +333,39 @@ pub unsafe fn pane_set_layout_cell(wp: *mut window_pane, lc: *mut layout_cell) {
     }
 }
 
+/// Read a window's `layout_root` as a raw pointer.
+///
+/// Phase 2.5 step 5 accessor: bridge for the eventual flip from
+/// `window.layout_root: *mut layout_cell` to using the arena's
+/// `root: Option<LayoutCellId>` directly. Currently a direct field
+/// read.
+#[inline]
+pub unsafe fn window_layout_root(w: *mut window) -> *mut layout_cell {
+    unsafe { (*w).layout_root }
+}
+
+/// Write a window's `layout_root` from a raw pointer.
+///
+/// Phase 2.5 step 5 accessor — see [`window_layout_root`]. After the
+/// flip, this resolves `lc` to a `LayoutCellId` via the window's arena
+/// and stores it in `arena.root`.
+#[inline]
+pub unsafe fn window_set_layout_root(w: *mut window, lc: *mut layout_cell) {
+    unsafe { (*w).layout_root = lc }
+}
+
+/// Read a window's `saved_layout_root` as a raw pointer.
+#[inline]
+pub unsafe fn window_saved_layout_root(w: *mut window) -> *mut layout_cell {
+    unsafe { (*w).saved_layout_root }
+}
+
+/// Write a window's `saved_layout_root` from a raw pointer.
+#[inline]
+pub unsafe fn window_set_saved_layout_root(w: *mut window, lc: *mut layout_cell) {
+    unsafe { (*w).saved_layout_root = lc }
+}
+
 /// Read the pane's `saved_layout_cell` field as a raw pointer.
 ///
 /// Mirrors [`pane_layout_cell`] for the zoom-save slot. Resolves the
@@ -616,11 +649,11 @@ unsafe fn window_destroy(w: *mut window) {
         window_unzoom(w, 0);
         (*(&raw mut WINDOWS)).remove(&(*w).id);
 
-        if !(*w).layout_root.is_null() {
-            layout_free_cell((*w).layout_root);
+        if !window_layout_root(w).is_null() {
+            layout_free_cell(window_layout_root(w));
         }
-        if !(*w).saved_layout_root.is_null() {
-            layout_free_cell((*w).saved_layout_root);
+        if !window_saved_layout_root(w).is_null() {
+            layout_free_cell(window_saved_layout_root(w));
         }
         free((*w).old_layout as _);
 
@@ -995,7 +1028,7 @@ pub unsafe fn window_zoom(wp: *mut window_pane) -> i32 {
             pane_set_layout_cell(wp1, null_mut());
         }
 
-        (*w).saved_layout_root = (*w).layout_root;
+        window_set_saved_layout_root(w, window_layout_root(w));
         layout_init(w, wp);
         (*w).flags |= window_flag::ZOOMED;
         notify_window(c"window-layout-changed", w);
@@ -1012,8 +1045,8 @@ pub unsafe fn window_unzoom(w: *mut window, notify: i32) -> i32 {
 
         (*w).flags &= !window_flag::ZOOMED;
         layout_free(w);
-        (*w).layout_root = (*w).saved_layout_root;
-        (*w).saved_layout_root = null_mut();
+        window_set_layout_root(w, window_saved_layout_root(w));
+        window_set_saved_layout_root(w, null_mut());
 
         for &wp in (*w).panes.iter() {
             pane_set_layout_cell(wp, pane_saved_layout_cell(wp));

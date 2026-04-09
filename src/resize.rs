@@ -31,11 +31,11 @@ pub unsafe fn resize_window(w: *mut window, mut sx: u32, mut sy: u32, xpixel: i3
         layout_resize(w, sx, sy);
 
         // Resize the window, it can be no smaller than the layout.
-        if sx < (*(*w).layout_root).sx {
-            sx = (*(*w).layout_root).sx;
+        if sx < (*window_layout_root(w)).sx {
+            sx = (*window_layout_root(w)).sx;
         }
-        if sy < (*(*w).layout_root).sy {
-            sy = (*(*w).layout_root).sy;
+        if sy < (*window_layout_root(w)).sy {
+            sy = (*window_layout_root(w)).sy;
         }
         window_resize(w, sx, sy, xpixel, ypixel);
         log_debug!(
@@ -44,8 +44,8 @@ pub unsafe fn resize_window(w: *mut window, mut sx: u32, mut sy: u32, xpixel: i3
             (*w).id,
             sx,
             sy,
-            (*(*w).layout_root).sx,
-            (*(*w).layout_root).sy,
+            (*window_layout_root(w)).sx,
+            (*window_layout_root(w)).sy,
         );
 
         // Restore the window zoom state.
