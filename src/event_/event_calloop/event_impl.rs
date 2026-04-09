@@ -7,7 +7,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ffi::{c_int, c_short, c_void};
 use std::io;
-use std::os::fd::{BorrowedFd, FromRawFd, OwnedFd};
+use std::os::fd::{FromRawFd, OwnedFd};
 use std::time::Duration;
 
 use calloop::generic::Generic;
@@ -44,6 +44,16 @@ struct LoopData {
     ready: Vec<ReadyEvent>,
 }
 
+/// An event on an fd that epoll can't monitor (regular files, etc.).
+/// Treated as always-ready — fires on every event_loop iteration.
+struct FallbackEvent {
+    id: u64,
+    fd: c_int,
+    events: c_short,
+    callback: Option<unsafe extern "C-unwind" fn(arg1: c_int, arg2: c_short, arg3: *mut c_void)>,
+    arg: *mut c_void,
+}
+
 /// The calloop-backed event base.
 ///
 /// Owns the calloop `EventLoop` and tracks registrations.
@@ -51,6 +61,9 @@ pub(crate) struct EventBase {
     event_loop: EventLoop<'static, LoopData>,
     handle: LoopHandle<'static, LoopData>,
     registrations: HashMap<u64, Registration>,
+    /// Events on non-epolable fds (regular files, etc.).  These fire on
+    /// every `event_loop` iteration because the fd is always ready.
+    fallback_events: HashMap<u64, FallbackEvent>,
     next_id: u64,
 }
 
@@ -62,6 +75,7 @@ impl EventBase {
             event_loop,
             handle,
             registrations: HashMap::new(),
+            fallback_events: HashMap::new(),
             next_id: 1,
         })
     }
@@ -175,8 +189,10 @@ pub unsafe fn event_add(ev_ptr: *mut event, timeout: *const timeval) -> c_int {
         ev.ev_timeout = unsafe { *timeout };
     }
 
-    let has_timeout = !timeout.is_null()
-        && unsafe { (*timeout).tv_sec != 0 || (*timeout).tv_usec != 0 };
+    // A non-null timeout pointer is always valid, even if {0,0} — that means
+    // "fire immediately on next dispatch" (zero-duration timer).  The old code
+    // treated {0,0} as "no timeout", which made event_once(..., NULL) a no-op.
+    let has_timeout = !timeout.is_null();
     let timeout_duration = if has_timeout {
         Some(timeval_to_duration(unsafe { &*timeout }))
     } else {
@@ -187,6 +203,7 @@ pub unsafe fn event_add(ev_ptr: *mut event, timeout: *const timeval) -> c_int {
     if let Some(reg) = base.registrations.remove(&ev.id) {
         base.handle.remove(reg.token);
     }
+    base.fallback_events.remove(&ev.id);
 
     let id = ev.id;
     let fd = ev.ev_fd;
@@ -235,7 +252,7 @@ pub unsafe fn event_add(ev_ptr: *mut event, timeout: *const timeval) -> c_int {
         let owned_fd = unsafe { OwnedFd::from_raw_fd(dup_fd) };
         let generic = Generic::new(owned_fd, interest, Mode::Level);
 
-        if let Ok(token) = base.handle.insert_source(generic, move |readiness, _, data| {
+        match base.handle.insert_source(generic, move |readiness, _, data| {
             let mut fired: c_short = 0;
             if readiness.readable {
                 fired |= EV_READ;
@@ -252,13 +269,24 @@ pub unsafe fn event_add(ev_ptr: *mut event, timeout: *const timeval) -> c_int {
                     arg,
                 });
             }
-            // Always continue — we handle persistence via event_del in user
-            // callbacks. Using PostAction::Remove would cause calloop to
-            // internally remove the source, but our registrations HashMap
-            // and ev.added flag would go stale.
             Ok(PostAction::Continue)
         }) {
-            base.registrations.insert(id, Registration { token });
+            Ok(token) => {
+                base.registrations.insert(id, Registration { token });
+            }
+            Err(_) => {
+                // epoll_ctl(ADD) returns EPERM for regular files and some
+                // special fds.  libevent falls back to poll()/select();
+                // we emulate that by treating the fd as always-ready and
+                // firing the callback on every event_loop iteration.
+                base.fallback_events.insert(id, FallbackEvent {
+                    id,
+                    fd,
+                    events: events & (EV_READ | EV_WRITE),
+                    callback,
+                    arg,
+                });
+            }
         }
 
         ev.added = true;
@@ -307,6 +335,7 @@ pub unsafe fn event_del(ev_ptr: *mut event) -> c_int {
         if let Some(reg) = base.registrations.remove(&ev.id) {
             base.handle.remove(reg.token);
         }
+        base.fallback_events.remove(&ev.id);
     }
 
     ev.added = false;
@@ -389,6 +418,18 @@ pub unsafe fn event_loop(flags: c_int) -> c_int {
         data.ready.append(&mut cell.borrow_mut());
     });
 
+    // Drain fallback events (non-epolable fds like regular files).
+    // These are always ready, so they fire on every iteration.
+    for fb in base.fallback_events.values() {
+        data.ready.push(ReadyEvent {
+            id: fb.id,
+            fd: fb.fd,
+            events: fb.events,
+            callback: fb.callback,
+            arg: fb.arg,
+        });
+    }
+
     if (flags & EVLOOP_NONBLOCK) != 0 {
         let _ = base.event_loop.dispatch(Some(Duration::ZERO), &mut data);
     } else if !data.ready.is_empty() {
@@ -413,6 +454,12 @@ pub unsafe fn event_loop(flags: c_int) -> c_int {
     0
 }
 
+/// Create a one-shot event that fires once and is automatically freed.
+///
+/// Matches libevent2's `event_base_once` semantics: when `events` includes
+/// `EV_TIMEOUT` and `tv` is NULL, a zero-duration timer is used so the
+/// callback fires on the next event loop iteration (libevent substitutes
+/// `{0, 0}` for NULL tv in the EV_TIMEOUT case).
 pub unsafe fn event_once(
     fd: c_int,
     events: c_short,
@@ -423,7 +470,17 @@ pub unsafe fn event_once(
     let ev = Box::into_raw(Box::new(unsafe { std::mem::zeroed::<event>() }));
     unsafe {
         event_set(ev, fd, events & !EV_PERSIST, cb, arg);
-        event_add(ev, tv)
+
+        if tv.is_null() && (events & EV_TIMEOUT) != 0 {
+            // libevent2 treats NULL tv + EV_TIMEOUT as zero timeout (fire
+            // immediately).  Without this, deferred callbacks like
+            // file_fire_done, file_push_cb, server_client_free, and
+            // session_free would never fire.
+            let zero_tv = timeval { tv_sec: 0, tv_usec: 0 };
+            event_add(ev, &zero_tv)
+        } else {
+            event_add(ev, tv)
+        }
     }
 }
 
