@@ -180,7 +180,7 @@ pub unsafe fn layout_parse(w: *mut window, mut layout: *const u8) -> Result<(), 
             }
 
             // Build the layout.
-            lc = layout_construct(null_mut(), &raw mut layout);
+            lc = layout_construct(w, null_mut(), &raw mut layout);
             if lc.is_null() {
                 return Err("invalid layout".to_string());
             }
@@ -287,7 +287,11 @@ unsafe fn layout_assign(wp: *mut *mut window_pane, lc: *mut layout_cell) {
 }
 
 /// Construct a cell from all or part of a layout tree.
-unsafe fn layout_construct(lcparent: *mut layout_cell, layout: *mut *const u8) -> *mut layout_cell {
+unsafe fn layout_construct(
+    w: *mut window,
+    lcparent: *mut layout_cell,
+    layout: *mut *const u8,
+) -> *mut layout_cell {
     unsafe {
         let lc;
         let mut sx = 0u32;
@@ -346,7 +350,7 @@ unsafe fn layout_construct(lcparent: *mut layout_cell, layout: *mut *const u8) -
                 }
             }
 
-            lc = layout_create_cell(lcparent);
+            lc = layout_create_cell_in(w, lcparent).1;
             (*lc).sx = sx;
             (*lc).sy = sy;
             (*lc).xoff = xoff;
@@ -361,7 +365,7 @@ unsafe fn layout_construct(lcparent: *mut layout_cell, layout: *mut *const u8) -
 
             loop {
                 (*layout) = (*layout).add(1);
-                let lcchild = layout_construct(lc, layout);
+                let lcchild = layout_construct(w, lc, layout);
                 if lcchild.is_null() {
                     break 'fail;
                 }

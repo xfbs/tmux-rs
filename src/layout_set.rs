@@ -137,7 +137,7 @@ pub unsafe fn layout_set_even(w: *mut window, type_: layout_type) {
 
         // Free the old root and construct a new.
         layout_free(w);
-        let lc = layout_create_cell(null_mut());
+        let lc = layout_create_cell_in(w, null_mut()).1;
         (*w).layout_root = lc;
         if type_ == layout_type::LAYOUT_LEFTRIGHT {
             sx = (n * (PANE_MINIMUM + 1)) - 1;
@@ -157,7 +157,7 @@ pub unsafe fn layout_set_even(w: *mut window, type_: layout_type) {
 
         // Build new leaf cells.
         for &wp in (*w).panes.iter() {
-            let lcnew = layout_create_cell(lc);
+            let lcnew = layout_create_cell_in(w, lc).1;
             layout_make_leaf(lcnew, wp);
             (*lcnew).sx = (*w).sx;
             (*lcnew).sy = (*w).sy;
@@ -245,19 +245,19 @@ pub unsafe fn layout_set_main_h(w: *mut window) {
 
         // Free old tree and create a new root.
         layout_free(w);
-        let lc = layout_create_cell(null_mut());
+        let lc = layout_create_cell_in(w, null_mut()).1;
         (*w).layout_root = lc;
         layout_set_size(lc, sx, mainh + otherh + 1, 0, 0);
         layout_make_node(lc, layout_type::LAYOUT_TOPBOTTOM);
 
         // Create the main pane.
-        let lcmain = layout_create_cell(lc);
+        let lcmain = layout_create_cell_in(w, lc).1;
         layout_set_size(lcmain, sx, mainh, 0, 0);
         layout_make_leaf(lcmain, (*w).panes.first().copied().unwrap_or(null_mut()));
         (*lc).cells.push(lcmain);
 
         // Create the other pane.
-        let lcother = layout_create_cell(lc);
+        let lcother = layout_create_cell_in(w, lc).1;
         layout_set_size(lcother, sx, otherh, 0, 0);
         if n == 1 {
             let wp = window_pane_next_in_list((*w).panes.first().copied().unwrap_or(null_mut()));
@@ -272,7 +272,7 @@ pub unsafe fn layout_set_main_h(w: *mut window) {
                 if wp == (*w).panes.first().copied().unwrap_or(null_mut()) {
                     continue;
                 }
-                let lcchild = layout_create_cell(lcother);
+                let lcchild = layout_create_cell_in(w, lcother).1;
                 layout_set_size(lcchild, PANE_MINIMUM, otherh, 0, 0);
                 layout_make_leaf(lcchild, wp);
                 (*lcother).cells.push(lcchild);
@@ -344,13 +344,13 @@ pub unsafe fn layout_set_main_h_mirrored(w: *mut window) {
 
         // Free old tree and create a new root.
         layout_free(w);
-        let lc = layout_create_cell(null_mut());
+        let lc = layout_create_cell_in(w, null_mut()).1;
         (*w).layout_root = lc;
         layout_set_size(lc, sx, mainh + otherh + 1, 0, 0);
         layout_make_node(lc, layout_type::LAYOUT_TOPBOTTOM);
 
         // Create the other pane.
-        let lcother = layout_create_cell(lc);
+        let lcother = layout_create_cell_in(w, lc).1;
         layout_set_size(lcother, sx, otherh, 0, 0);
         if n == 1 {
             let wp = window_pane_next_in_list((*w).panes.first().copied().unwrap_or(null_mut()));
@@ -365,7 +365,7 @@ pub unsafe fn layout_set_main_h_mirrored(w: *mut window) {
                 if wp == (*w).panes.first().copied().unwrap_or(null_mut()) {
                     continue;
                 }
-                let lcchild = layout_create_cell(lcother);
+                let lcchild = layout_create_cell_in(w, lcother).1;
                 layout_set_size(lcchild, PANE_MINIMUM, otherh, 0, 0);
                 layout_make_leaf(lcchild, wp);
                 (*lcother).cells.push(lcchild);
@@ -374,7 +374,7 @@ pub unsafe fn layout_set_main_h_mirrored(w: *mut window) {
         }
 
         // Create the main pane.
-        let lcmain = layout_create_cell(lc);
+        let lcmain = layout_create_cell_in(w, lc).1;
         layout_set_size(lcmain, sx, mainh, 0, 0);
         layout_make_leaf(lcmain, (*w).panes.first().copied().unwrap_or(null_mut()));
         (*lc).cells.push(lcmain);
@@ -443,19 +443,19 @@ pub unsafe fn layout_set_main_v(w: *mut window) {
 
         // Free old tree and create a new root.
         layout_free(w);
-        let lc = layout_create_cell(null_mut());
+        let lc = layout_create_cell_in(w, null_mut()).1;
         (*w).layout_root = lc;
         layout_set_size(lc, mainw + otherw + 1, sy, 0, 0);
         layout_make_node(lc, layout_type::LAYOUT_LEFTRIGHT);
 
         // Create the main pane.
-        let lcmain = layout_create_cell(lc);
+        let lcmain = layout_create_cell_in(w, lc).1;
         layout_set_size(lcmain, mainw, sy, 0, 0);
         layout_make_leaf(lcmain, (*w).panes.first().copied().unwrap_or(null_mut()));
         (*lc).cells.push(lcmain);
 
         // Create the other pane.
-        let lcother = layout_create_cell(lc);
+        let lcother = layout_create_cell_in(w, lc).1;
         layout_set_size(lcother, otherw, sy, 0, 0);
         if n == 1 {
             let wp = window_pane_next_in_list((*w).panes.first().copied().unwrap_or(null_mut()));
@@ -470,7 +470,7 @@ pub unsafe fn layout_set_main_v(w: *mut window) {
                 if wp == (*w).panes.first().copied().unwrap_or(null_mut()) {
                     continue;
                 }
-                let lcchild = layout_create_cell(lcother);
+                let lcchild = layout_create_cell_in(w, lcother).1;
                 layout_set_size(lcchild, otherw, PANE_MINIMUM, 0, 0);
                 layout_make_leaf(lcchild, wp);
                 (*lcother).cells.push(lcchild);
@@ -541,13 +541,13 @@ pub unsafe fn layout_set_main_v_mirrored(w: *mut window) {
 
         // Free old tree and create a new root.
         layout_free(w);
-        let lc = layout_create_cell(null_mut());
+        let lc = layout_create_cell_in(w, null_mut()).1;
         (*w).layout_root = lc;
         layout_set_size(lc, mainw + otherw + 1, sy, 0, 0);
         layout_make_node(lc, layout_type::LAYOUT_LEFTRIGHT);
 
         // Create the other pane.
-        let lcother = layout_create_cell(lc);
+        let lcother = layout_create_cell_in(w, lc).1;
         layout_set_size(lcother, otherw, sy, 0, 0);
         if n == 1 {
             let wp = window_pane_next_in_list((*w).panes.first().copied().unwrap_or(null_mut()));
@@ -562,7 +562,7 @@ pub unsafe fn layout_set_main_v_mirrored(w: *mut window) {
                 if wp == (*w).panes.first().copied().unwrap_or(null_mut()) {
                     continue;
                 }
-                let lcchild = layout_create_cell(lcother);
+                let lcchild = layout_create_cell_in(w, lcother).1;
                 layout_set_size(lcchild, otherw, PANE_MINIMUM, 0, 0);
                 layout_make_leaf(lcchild, wp);
                 (*lcother).cells.push(lcchild);
@@ -571,7 +571,7 @@ pub unsafe fn layout_set_main_v_mirrored(w: *mut window) {
         }
 
         // Create the main pane.
-        let lcmain = layout_create_cell(lc);
+        let lcmain = layout_create_cell_in(w, lc).1;
         layout_set_size(lcmain, mainw, sy, 0, 0);
         layout_make_leaf(lcmain, (*w).panes.first().copied().unwrap_or(null_mut()));
         (*lc).cells.push(lcmain);
@@ -622,7 +622,7 @@ pub unsafe fn layout_set_tiled(w: *mut window) {
 
         // Free old tree and create a new root.
         layout_free(w);
-        let lc = layout_create_cell(null_mut());
+        let lc = layout_create_cell_in(w, null_mut()).1;
         (*w).layout_root = lc;
         let mut sx = ((width + 1) * columns) - 1;
         if sx < (*w).sx {
@@ -644,7 +644,7 @@ pub unsafe fn layout_set_tiled(w: *mut window) {
             }
 
             // Create the new row.
-            let lcrow = layout_create_cell(lc);
+            let lcrow = layout_create_cell_in(w, lc).1;
             layout_set_size(lcrow, (*w).sx, height, 0, 0);
             (*lc).cells.push(lcrow);
 
@@ -661,7 +661,7 @@ pub unsafe fn layout_set_tiled(w: *mut window) {
             for i_ in 0..columns {
                 i = i_;
                 // Create and add a pane cell.
-                let lcchild = layout_create_cell(lcrow);
+                let lcchild = layout_create_cell_in(w, lcrow).1;
                 layout_set_size(lcchild, width, height, 0, 0);
                 layout_make_leaf(lcchild, wp);
                 (*lcrow).cells.push(lcchild);
