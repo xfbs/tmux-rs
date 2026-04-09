@@ -16,7 +16,13 @@ fn new_window_with_command() {
         .run()
         .assert_success();
 
-    let cmd = tmux.query("#{pane_current_command}");
+    // The new window's pane needs time to exec into `cat`. Poll until the
+    // process name changes from the default shell.
+    let cmd = tmux.wait_for(
+        "#{pane_current_command}",
+        |v| v == "cat",
+        Duration::from_secs(5),
+    );
     assert_eq!(cmd, "cat");
 }
 

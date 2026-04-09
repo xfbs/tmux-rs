@@ -210,6 +210,30 @@ impl TmuxTestHarness {
         );
     }
 
+    /// Poll a tmux format query until the returned value satisfies `pred`,
+    /// or panic after `timeout`. Useful when a command's side effect
+    /// (new-window, split-window, etc.) takes time to become visible.
+    pub fn wait_for(
+        &self,
+        format: &str,
+        pred: impl Fn(&str) -> bool,
+        timeout: Duration,
+    ) -> String {
+        let start = Instant::now();
+        loop {
+            let val = self.query(format);
+            if pred(&val) {
+                return val;
+            }
+            if start.elapsed() >= timeout {
+                panic!(
+                    "wait_for({format:?}) timed out after {timeout:?}, last value: {val:?}"
+                );
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        }
+    }
+
     /// Kill the server.
     pub fn kill_server(&self) {
         let _ = self.cmd().args(["kill-server"]).run();
