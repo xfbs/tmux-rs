@@ -364,20 +364,12 @@ unsafe fn window_customize_find_user_options(
     list: &mut Vec<&str>
 ) {
     unsafe {
-        let size = list.len();
         for o in options_entries(oo) {
             let name = options_name(o);
             if !name.starts_with('@') {
                 continue;
             }
-            let mut i = 0;
-            for j in 0..size {
-                i = j;
-                if list[i] == name {
-                    break;
-                }
-            }
-            if i != size {
+            if list.contains(&name) {
                 continue;
             }
             list.push(name);

@@ -1362,9 +1362,7 @@ unsafe fn yylex_token_escape(ps: &mut cmd_parse_state, buf: &mut Vec<u8>) -> boo
             yylex_append1(buf, ch as u8);
             return true;
         } // unicode:
-        let mut i = 0;
-        for i_ in 0..size {
-            i = i_;
+        for i in 0..size {
             let ch = yylex_getc(ps);
             if ch == libc::EOF || ch == '\n' as i32 {
                 return false;
@@ -1375,7 +1373,7 @@ unsafe fn yylex_token_escape(ps: &mut cmd_parse_state, buf: &mut Vec<u8>) -> boo
             }
             s[i] = ch as u8;
         }
-        s[i] = b'\0';
+        s[size] = b'\0';
 
         if (size == 4 && libc::sscanf((&raw mut s).cast(), c"%4x".as_ptr(), &raw mut tmp) != 1)
             || (size == 8 && libc::sscanf((&raw mut s).cast(), c"%8x".as_ptr(), &raw mut tmp) != 1)
@@ -1859,18 +1857,37 @@ mod tests {
     #[test]
     fn escape_unicode_u() {
         unsafe {
-            // \u0041 = 'A'
+            // \u0041 = 'A' — all 4 hex digits must be consumed
             let result = parse(r#"display-message "\u0041""#);
-            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+            let printed = result.unwrap();
+            assert!(printed.contains('A'), "expected 'A' in output, got: {}", printed);
         }
     }
 
     #[test]
     fn escape_unicode_upper_u() {
         unsafe {
-            // \U00000041 = 'A'
+            // \U00000041 = 'A' — all 8 hex digits must be consumed
             let result = parse(r#"display-message "\U00000041""#);
-            assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+            let printed = result.unwrap();
+            assert!(printed.contains('A'), "expected 'A' in output, got: {}", printed);
+        }
+    }
+
+    #[test]
+    fn escape_unicode_last_digit_matters() {
+        unsafe {
+            // \u0042 = 'B' — before the fix, only 3 hex digits were consumed
+            // (NUL was written at s[3] instead of s[4]), so \u0042 would parse
+            // as \u004 = U+0004 (control char), not U+0042 ('B').
+            let result = parse(r#"display-message "\u0042""#);
+            let printed = result.unwrap();
+            assert!(printed.contains('B'), "expected 'B' in output, got: {}", printed);
+
+            // Similarly for \U: \U00000043 = 'C'
+            let result = parse(r#"display-message "\U00000043""#);
+            let printed = result.unwrap();
+            assert!(printed.contains('C'), "expected 'C' in output, got: {}", printed);
         }
     }
 
