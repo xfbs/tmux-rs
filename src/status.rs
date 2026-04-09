@@ -294,9 +294,12 @@ unsafe fn status_free_ranges(srs: *mut style_ranges) {
 }
 
 /// Drop ranges Vec (for use when the owning struct is being freed).
+/// After dropping, writes an empty Vec so a later automatic Drop
+/// (e.g. when the owning `client` Box is freed) is a no-op.
 unsafe fn status_drop_ranges(srs: *mut style_ranges) {
     unsafe {
         std::ptr::drop_in_place(srs);
+        std::ptr::write(srs, Vec::new());
     }
 }
 

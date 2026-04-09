@@ -26,8 +26,11 @@ check:
 
 # run tmux-rs under valgrind, in release mode (for manual testing)
 valgrind:
+  #!/usr/bin/env bash
   cargo build --release
-  valgrind --log-file=target/valgrind-$RANDOM.txt ./target/release/tmux-rs
+  ID=$RANDOM
+  valgrind --log-file=target/valgrind-$ID.txt ./target/release/tmux-rs
+  cat target/valgrind-$ID.txt
 
 # run fuzz targets that are known-clean (no crashes) for a short soak test
 fuzz duration="10":
