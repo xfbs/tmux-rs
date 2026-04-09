@@ -925,8 +925,8 @@ pub unsafe fn window_zoom(wp: *mut window_pane) -> i32 {
         }
 
         for &wp1 in (*w).panes.iter() {
-            (*wp1).saved_layout_cell = (*wp1).layout_cell;
-            (*wp1).layout_cell = null_mut();
+            (*wp1).saved_layout_cell = pane_layout_cell(wp1);
+            pane_set_layout_cell(wp1, null_mut());
         }
 
         (*w).saved_layout_root = (*w).layout_root;
@@ -950,7 +950,7 @@ pub unsafe fn window_unzoom(w: *mut window, notify: i32) -> i32 {
         (*w).saved_layout_root = null_mut();
 
         for &wp in (*w).panes.iter() {
-            (*wp).layout_cell = (*wp).saved_layout_cell;
+            pane_set_layout_cell(wp, (*wp).saved_layout_cell);
             (*wp).saved_layout_cell = null_mut();
         }
         layout_fix_panes(&*w, null_mut());

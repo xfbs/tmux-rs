@@ -53,7 +53,7 @@ unsafe fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
             (*w).panes.retain(|&p| p != wp);
             (*w).panes.insert(0, wp);
 
-            lc = (*wp).layout_cell;
+            lc = pane_layout_cell(wp);
             xoff = (*wp).xoff;
             yoff = (*wp).yoff;
 
@@ -66,17 +66,17 @@ unsafe fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
                 if wp2.is_null() {
                     break;
                 }
-                (*wp).layout_cell = (*wp2).layout_cell;
-                if !(*wp).layout_cell.is_null() {
-                    (*(*wp).layout_cell).wp = pane_id_from_ptr(wp);
+                pane_set_layout_cell(wp, pane_layout_cell(wp2));
+                if !pane_layout_cell(wp).is_null() {
+                    (*pane_layout_cell(wp)).wp = pane_id_from_ptr(wp);
                 }
                 (*wp).xoff = (*wp2).xoff;
                 (*wp).yoff = (*wp2).yoff;
                 window_pane_resize(wp, (*wp2).sx, (*wp2).sy);
             }
-            (*wp).layout_cell = lc;
-            if !(*wp).layout_cell.is_null() {
-                (*(*wp).layout_cell).wp = pane_id_from_ptr(wp);
+            pane_set_layout_cell(wp, lc);
+            if !pane_layout_cell(wp).is_null() {
+                (*pane_layout_cell(wp)).wp = pane_id_from_ptr(wp);
             }
             (*wp).xoff = xoff;
             (*wp).yoff = yoff;
@@ -91,7 +91,7 @@ unsafe fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
             (*w).panes.retain(|&p| p != wp);
             (*w).panes.push(wp);
 
-            lc = (*wp).layout_cell;
+            lc = pane_layout_cell(wp);
             xoff = (*wp).xoff;
             yoff = (*wp).yoff;
             sx = (*wp).sx;
@@ -102,17 +102,17 @@ unsafe fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
                 if wp2.is_null() {
                     break;
                 }
-                (*wp).layout_cell = (*wp2).layout_cell;
-                if !(*wp).layout_cell.is_null() {
-                    (*(*wp).layout_cell).wp = pane_id_from_ptr(wp);
+                pane_set_layout_cell(wp, pane_layout_cell(wp2));
+                if !pane_layout_cell(wp).is_null() {
+                    (*pane_layout_cell(wp)).wp = pane_id_from_ptr(wp);
                 }
                 (*wp).xoff = (*wp2).xoff;
                 (*wp).yoff = (*wp2).yoff;
                 window_pane_resize(wp, (*wp2).sx, (*wp2).sy);
             }
-            (*wp).layout_cell = lc;
-            if !(*wp).layout_cell.is_null() {
-                (*(*wp).layout_cell).wp = pane_id_from_ptr(wp);
+            pane_set_layout_cell(wp, lc);
+            if !pane_layout_cell(wp).is_null() {
+                (*pane_layout_cell(wp)).wp = pane_id_from_ptr(wp);
             }
             (*wp).xoff = xoff;
             (*wp).yoff = yoff;

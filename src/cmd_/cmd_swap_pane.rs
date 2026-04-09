@@ -88,12 +88,12 @@ unsafe fn cmd_swap_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
                 (*dst_w).panes.insert(pos + 1, src_wp);
             }
 
-            let src_lc = (*src_wp).layout_cell;
-            let dst_lc = (*dst_wp).layout_cell;
+            let src_lc = pane_layout_cell(src_wp);
+            let dst_lc = pane_layout_cell(dst_wp);
             (*src_lc).wp = pane_id_from_ptr(dst_wp);
-            (*dst_wp).layout_cell = src_lc;
+            pane_set_layout_cell(dst_wp, src_lc);
             (*dst_lc).wp = pane_id_from_ptr(src_wp);
-            (*src_wp).layout_cell = dst_lc;
+            pane_set_layout_cell(src_wp, dst_lc);
 
             window_pane_set_window(src_wp, dst_w);
             options_set_parent(&mut *(*src_wp).options, (*dst_w).options);

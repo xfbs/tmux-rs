@@ -97,7 +97,7 @@ pub unsafe fn layout_free_cell(lc: *mut layout_cell) {
             layout_type::LAYOUT_WINDOWPANE => {
                 let __wp = pane_ptr_from_id((*lc).wp);
                 if !__wp.is_null() {
-                    (*__wp).layout_cell = null_mut();
+                    pane_set_layout_cell(__wp, null_mut());
                 }
             }
         }
@@ -191,7 +191,7 @@ pub unsafe fn layout_make_leaf(lc: *mut layout_cell, wp: *mut window_pane) {
     unsafe {
         (*lc).type_ = layout_type::LAYOUT_WINDOWPANE;
         (*lc).cells.clear();
-        (*wp).layout_cell = lc;
+        pane_set_layout_cell(wp, lc);
         (*lc).wp = pane_id_from_ptr(wp);
     }
 }
@@ -207,7 +207,7 @@ pub unsafe fn layout_make_node(lc: *mut layout_cell, type_: layout_type) {
 
         let __wp = pane_ptr_from_id((*lc).wp);
         if !__wp.is_null() {
-            (*__wp).layout_cell = null_mut();
+            pane_set_layout_cell(__wp, null_mut());
         }
         (*lc).wp = None;
     }
@@ -304,7 +304,7 @@ pub unsafe fn layout_fix_panes(w: &window, skip: *mut window_pane) {
                 .unwrap();
 
         for &wp in w.panes.iter() {
-            let lc = (*wp).layout_cell;
+            let lc = pane_layout_cell(wp);
             if lc.is_null() || wp == skip {
                 continue;
             }
@@ -573,7 +573,7 @@ pub unsafe fn layout_resize(w: *mut window, sx: c_uint, sy: c_uint) {
 /// Resize a pane to an absolute size.
 pub unsafe fn layout_resize_pane_to(wp: *mut window_pane, type_: layout_type, new_size: u32) {
     unsafe {
-        let mut lc = (*wp).layout_cell;
+        let mut lc = pane_layout_cell(wp);
         let mut lcparent;
 
         // Find next parent of the same type
@@ -645,7 +645,7 @@ pub unsafe fn layout_resize_pane(
     opposite: c_int,
 ) {
     unsafe {
-        let mut lc = (*wp).layout_cell;
+        let mut lc = pane_layout_cell(wp);
         let mut lcparent;
 
         // Find next parent of the same type
@@ -976,7 +976,7 @@ pub unsafe fn layout_split_pane(
         let lc: *mut layout_cell = if full_size {
             (*window_pane_window(wp)).layout_root
         } else {
-            (*wp).layout_cell
+            pane_layout_cell(wp)
         };
         let status = pane_status::try_from(options_get_number_(
             (*window_pane_window(wp)).options,
@@ -1151,7 +1151,7 @@ pub unsafe fn layout_close_pane(wp: *mut window_pane) {
         let w = window_pane_window(wp);
 
         // Remove the cell
-        layout_destroy_cell(w, (*wp).layout_cell, &raw mut (*w).layout_root);
+        layout_destroy_cell(w, pane_layout_cell(wp), &raw mut (*w).layout_root);
 
         // Fix pane offsets and sizes
         if !(*w).layout_root.is_null() {
@@ -1236,7 +1236,7 @@ pub unsafe fn layout_spread_cell(w: *mut window, parent: *mut layout_cell) -> c_
 /// Spread out a pane and its parent cells
 pub unsafe fn layout_spread_out(wp: *mut window_pane) {
     unsafe {
-        let mut parent = (*wp).layout_cell;
+        let mut parent = pane_layout_cell(wp);
         if parent.is_null() {
             return;
         }
