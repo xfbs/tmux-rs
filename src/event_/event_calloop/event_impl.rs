@@ -136,6 +136,11 @@ pub unsafe fn event_init() -> *mut event_base {
 pub unsafe fn event_reinit(_base: *mut event_base) -> c_int {
     // After fork: create a fresh event loop. The old one's epoll fd is
     // an inherited copy and won't work correctly in the child.
+    //
+    // Note: the old EventBase is intentionally leaked (not dropped) because
+    // proc_clear_signals already called event_del on events that reference
+    // the old base, and dropping it would double-free calloop's internal
+    // signal state (signalfd/signal_hook).
     match EventBase::new() {
         Ok(base) => {
             let ptr = Box::into_raw(Box::new(base));
@@ -215,17 +220,27 @@ pub unsafe fn event_add(ev_ptr: *mut event, timeout: *const timeval) -> c_int {
     // --- Signal events ---
     if (events & EV_SIGNAL) != 0 {
         if let Some(signal) = signal_from_number(fd) {
-            if let Ok(signals) = Signals::new(&[signal]) {
-                if let Ok(token) = base.handle.insert_source(signals, move |evt, _, data| {
-                    data.ready.push(ReadyEvent {
-                        id,
-                        fd: evt.signal() as c_int,
-                        events: EV_SIGNAL,
-                        callback,
-                        arg,
-                    });
-                }) {
-                    base.registrations.insert(id, Registration { token });
+            match Signals::new(&[signal]) {
+                Ok(signals) => {
+                    match base.handle.insert_source(signals, move |evt, _, data| {
+                        data.ready.push(ReadyEvent {
+                            id,
+                            fd: evt.signal() as c_int,
+                            events: EV_SIGNAL,
+                            callback,
+                            arg,
+                        });
+                    }) {
+                        Ok(token) => {
+                            base.registrations.insert(id, Registration { token });
+                        }
+                        Err(e) => {
+                            log_debug!("event_add: signal insert_source failed for signal {fd}: {e}");
+                        }
+                    }
+                }
+                Err(e) => {
+                    log_debug!("event_add: Signals::new failed for signal {fd}: {e}");
                 }
             }
         }
@@ -430,8 +445,14 @@ pub unsafe fn event_loop(flags: c_int) -> c_int {
         });
     }
 
+    let has_fallback = !base.fallback_events.is_empty();
     if (flags & EVLOOP_NONBLOCK) != 0 {
         let _ = base.event_loop.dispatch(Some(Duration::ZERO), &mut data);
+    } else if has_fallback {
+        // Fallback events (non-epolable fds) are always ready, so data.ready
+        // is never empty when they exist.  We still need to poll epoll for
+        // real I/O and signals, but can't block forever — use a short timeout.
+        let _ = base.event_loop.dispatch(Some(Duration::from_millis(1)), &mut data);
     } else if !data.ready.is_empty() {
         // Already have events from event_active — don't block.
     } else {
