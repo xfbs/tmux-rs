@@ -203,7 +203,7 @@ unsafe fn cmd_resize_pane_mouse_update(c: *mut client, m: *mut mouse_event) {
         }
 
         for i in 0..ncells {
-            let type_ = (*(*cells[i as usize]).parent).type_;
+            let type_ = (*lc_parent(w, cells[i as usize])).type_;
             if y != ly && type_ == layout_type::LAYOUT_TOPBOTTOM {
                 layout_resize_layout(w, cells[i as usize], type_, y as i32 - ly as i32, 0);
                 resizes += 1;

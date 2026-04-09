@@ -15,11 +15,25 @@
 use crate::*;
 use crate::options_::*;
 
+/// Resolve a layout cell's parent id to a `*mut layout_cell` via the
+/// window's arena. Returns null if the cell has no parent (`None`).
+/// The window parameter is required because arena-issued ids are
+/// scoped to the window that owns the tree.
+#[inline]
+pub(crate) unsafe fn lc_parent(w: *mut window, lc: *mut layout_cell) -> *mut layout_cell {
+    unsafe {
+        match (*lc).parent {
+            Some(id) => (*w).layout.get_ptr(id),
+            None => null_mut(),
+        }
+    }
+}
+
 /// Get the next sibling of `lc` in its parent's children list, or null
 /// if `lc` is the last child (or the root cell).
-unsafe fn layout_next_sibling(lc: *mut layout_cell) -> *mut layout_cell {
+unsafe fn layout_next_sibling(w: *mut window, lc: *mut layout_cell) -> *mut layout_cell {
     unsafe {
-        let parent = (*lc).parent;
+        let parent = lc_parent(w, lc);
         if parent.is_null() {
             return null_mut();
         }
@@ -33,9 +47,9 @@ unsafe fn layout_next_sibling(lc: *mut layout_cell) -> *mut layout_cell {
 
 /// Get the previous sibling of `lc` in its parent's children list, or null
 /// if `lc` is the first child (or the root cell).
-unsafe fn layout_prev_sibling(lc: *mut layout_cell) -> *mut layout_cell {
+unsafe fn layout_prev_sibling(w: *mut window, lc: *mut layout_cell) -> *mut layout_cell {
     unsafe {
-        let parent = (*lc).parent;
+        let parent = lc_parent(w, lc);
         if parent.is_null() {
             return null_mut();
         }
@@ -60,9 +74,16 @@ pub unsafe fn layout_create_cell_in(
     lcparent: *mut layout_cell,
 ) -> (LayoutCellId, *mut layout_cell) {
     unsafe {
+        // Resolve the parent pointer to an arena id for storage. If the
+        // parent is null (root cell), store None.
+        let parent_id = if lcparent.is_null() {
+            None
+        } else {
+            (*w).layout.id_of_ptr(lcparent)
+        };
         (*w).layout.alloc_with_ptr(layout_cell {
             type_: layout_type::LAYOUT_WINDOWPANE,
-            parent: lcparent,
+            parent: parent_id,
             sx: u32::MAX,
             sy: u32::MAX,
             xoff: u32::MAX,
@@ -113,12 +134,12 @@ pub unsafe fn layout_print_cell(lc: *mut layout_cell, hdr: *const u8, n: u32) {
         };
 
         log_debug!(
-            "{}:{}{:p} type {} [parent {:p}] wp={:p} [{},{} {}x{}]",
+            "{}:{}{:p} type {} [parent {:?}] wp={:p} [{},{} {}x{}]",
             _s(hdr),
             if n == 0 { "" } else { " " },
             lc as *mut c_void,
             type_str.to_string_lossy(),
-            (*lc).parent as *mut c_void,
+            (*lc).parent,
             pane_ptr_from_id((*lc).wp) as *mut c_void,
             (*lc).xoff,
             (*lc).yoff,
@@ -254,7 +275,7 @@ pub unsafe fn layout_fix_offsets(w: &window) {
 unsafe fn layout_cell_is_top(w: &window, mut lc: *mut layout_cell) -> c_int {
     unsafe {
         while lc != window_layout_root(w as *const _ as *mut window) {
-            let next = (*lc).parent;
+            let next = lc_parent(w as *const _ as *mut window, lc);
             if (*next).type_ == layout_type::LAYOUT_TOPBOTTOM
                 && lc != (*next).cells.first().copied().unwrap_or(null_mut())
             {
@@ -270,7 +291,7 @@ unsafe fn layout_cell_is_top(w: &window, mut lc: *mut layout_cell) -> c_int {
 unsafe fn layout_cell_is_bottom(w: &window, mut lc: *mut layout_cell) -> c_int {
     unsafe {
         while lc != window_layout_root(w as *const _ as *mut window) {
-            let next = (*lc).parent;
+            let next = lc_parent(w as *const _ as *mut window, lc);
             if (*next).type_ == layout_type::LAYOUT_TOPBOTTOM
                 && lc != (*next).cells.last().copied().unwrap_or(null_mut())
             {
@@ -447,7 +468,7 @@ pub unsafe fn layout_destroy_cell(
     lcroot: *mut *mut layout_cell,
 ) {
     unsafe {
-        let lcparent = (*lc).parent;
+        let lcparent = lc_parent(w, lc);
 
         // If no parent, this is the last pane so window close is imminent and
         // there is no need to resize anything.
@@ -459,9 +480,9 @@ pub unsafe fn layout_destroy_cell(
 
         // Merge the space into the previous or next cell
         let lcother: *mut layout_cell = if lc == (*lcparent).cells.first().copied().unwrap_or(null_mut()) {
-            layout_next_sibling(lc)
+            layout_next_sibling(w, lc)
         } else {
-            layout_prev_sibling(lc)
+            layout_prev_sibling(w, lc)
         };
 
         if !lcother.is_null() {
@@ -479,17 +500,17 @@ pub unsafe fn layout_destroy_cell(
         // If the parent now has one cell, remove the parent from the tree and
         // replace it by that cell
         let lc = (*lcparent).cells.first().copied().unwrap_or(null_mut());
-        if layout_next_sibling(lc).is_null() {
+        if layout_next_sibling(w, lc).is_null() {
             (*lcparent).cells.retain(|&p| p != lc);
 
             (*lc).parent = (*lcparent).parent;
-            if (*lc).parent.is_null() {
+            if (*lc).parent.is_none() {
                 (*lc).xoff = 0;
                 (*lc).yoff = 0;
                 *lcroot = lc;
             } else {
-                let pos = (*(*lc).parent).cells.iter().position(|&p| p == lcparent).unwrap();
-                (&mut (*(*lc).parent).cells)[pos] = lc;
+                let pos = (*lc_parent(w, lc)).cells.iter().position(|&p| p == lcparent).unwrap();
+                (&mut (*lc_parent(w, lc)).cells)[pos] = lc;
             }
 
             layout_free_cell(lcparent);
@@ -573,14 +594,15 @@ pub unsafe fn layout_resize(w: *mut window, sx: c_uint, sy: c_uint) {
 /// Resize a pane to an absolute size.
 pub unsafe fn layout_resize_pane_to(wp: *mut window_pane, type_: layout_type, new_size: u32) {
     unsafe {
+        let w = window_pane_window(wp);
         let mut lc = pane_layout_cell(wp);
         let mut lcparent;
 
         // Find next parent of the same type
-        lcparent = (*lc).parent;
+        lcparent = lc_parent(w, lc);
         while !lcparent.is_null() && (*lcparent).type_ != type_ {
             lc = lcparent;
-            lcparent = (*lc).parent;
+            lcparent = lc_parent(w, lc);
         }
         if lcparent.is_null() {
             return;
@@ -645,14 +667,15 @@ pub unsafe fn layout_resize_pane(
     opposite: c_int,
 ) {
     unsafe {
+        let w = window_pane_window(wp);
         let mut lc = pane_layout_cell(wp);
         let mut lcparent;
 
         // Find next parent of the same type
-        lcparent = (*lc).parent;
+        lcparent = lc_parent(w, lc);
         while !lcparent.is_null() && (*lcparent).type_ != type_ {
             lc = lcparent;
-            lcparent = (*lc).parent;
+            lcparent = lc_parent(w, lc);
         }
         if lcparent.is_null() {
             return;
@@ -660,7 +683,7 @@ pub unsafe fn layout_resize_pane(
 
         // If this is the last cell, move back one
         if lc == (*lcparent).cells.last().copied().unwrap_or(null_mut()) {
-            lc = layout_prev_sibling(lc);
+            lc = layout_prev_sibling(w, lc);
         }
 
         layout_resize_layout(window_pane_window(wp), lc, type_, change, opposite);
@@ -682,24 +705,24 @@ pub unsafe fn layout_resize_pane_grow(
         let lcadd = lc;
 
         // Look towards the tail for a suitable cell for reduction
-        let mut lcremove = layout_next_sibling(lc);
+        let mut lcremove = layout_next_sibling(w, lc);
         while !lcremove.is_null() {
             size = layout_resize_check(&*w, lcremove, type_);
             if size > 0 {
                 break;
             }
-            lcremove = layout_next_sibling(lcremove);
+            lcremove = layout_next_sibling(w, lcremove);
         }
 
         // If none found, look towards the head
         if opposite != 0 && lcremove.is_null() {
-            lcremove = layout_prev_sibling(lc);
+            lcremove = layout_prev_sibling(w, lc);
             while !lcremove.is_null() {
                 size = layout_resize_check(&*w, lcremove, type_);
                 if size > 0 {
                     break;
                 }
-                lcremove = layout_prev_sibling(lcremove);
+                lcremove = layout_prev_sibling(w, lcremove);
             }
         }
         if lcremove.is_null() {
@@ -733,7 +756,7 @@ pub unsafe fn layout_resize_pane_shrink(
             if size != 0 {
                 break;
             }
-            lcremove = layout_prev_sibling(lcremove);
+            lcremove = layout_prev_sibling(w, lcremove);
             if lcremove.is_null() {
                 break;
             }
@@ -743,7 +766,7 @@ pub unsafe fn layout_resize_pane_shrink(
         }
 
         // And add onto the next cell (from the original cell)
-        let lcadd = layout_next_sibling(lc);
+        let lcadd = layout_next_sibling(w, lc);
         if lcadd.is_null() {
             return 0;
         }
@@ -1048,10 +1071,10 @@ pub unsafe fn layout_split_pane(
         let lcparent: *mut layout_cell;
         let lcnew: *mut layout_cell;
 
-        if !(*lc).parent.is_null() && (*(*lc).parent).type_ == type_ {
+        if !(*lc).parent.is_none() && (*lc_parent(w, lc)).type_ == type_ {
             // If the parent exists and is of the same type as the split,
             // create a new cell and insert it after this one.
-            lcparent = (*lc).parent;
+            lcparent = lc_parent(w, lc);
             lcnew = layout_create_cell_in(w, lcparent).1;
             if flags.intersects(SPAWN_BEFORE) {
                 let pos = (*lcparent).cells.iter().position(|&p| p == lc).unwrap();
@@ -1060,7 +1083,7 @@ pub unsafe fn layout_split_pane(
                 let pos = (*lcparent).cells.iter().position(|&p| p == lc).unwrap();
                 (*lcparent).cells.insert(pos + 1, lcnew);
             }
-        } else if full_size && (*lc).parent.is_null() && (*lc).type_ == type_ {
+        } else if full_size && (*lc).parent.is_none() && (*lc).type_ == type_ {
             // If the new full size pane is the same type as the root
             // split, insert the new pane under the existing root cell
             // instead of creating a new root cell. The existing layout
@@ -1093,18 +1116,18 @@ pub unsafe fn layout_split_pane(
             // Otherwise create a new parent and insert it.
 
             // Create and insert the replacement parent.
-            lcparent = layout_create_cell_in(w, (*lc).parent).1;
+            lcparent = layout_create_cell_in(w, lc_parent(w, lc)).1;
             layout_make_node(lcparent, type_);
             layout_set_size(lcparent, sx, sy, xoff, yoff);
-            if (*lc).parent.is_null() {
+            if (*lc).parent.is_none() {
                 window_set_layout_root(w, lcparent);
             } else {
-                let pos = (*(*lc).parent).cells.iter().position(|&p| p == lc).unwrap();
-                (&mut (*(*lc).parent).cells)[pos] = lcparent;
+                let pos = (*lc_parent(w, lc)).cells.iter().position(|&p| p == lc).unwrap();
+                (&mut (*lc_parent(w, lc)).cells)[pos] = lcparent;
             }
 
             // Insert the old cell.
-            (*lc).parent = lcparent;
+            (*lc).parent = (*w).layout.id_of_ptr(lcparent);
             (*lcparent).cells.insert(0, lc);
 
             // Create the new child cell.
@@ -1242,23 +1265,22 @@ pub unsafe fn layout_spread_cell(w: *mut window, parent: *mut layout_cell) -> c_
 /// Spread out a pane and its parent cells
 pub unsafe fn layout_spread_out(wp: *mut window_pane) {
     unsafe {
+        let w = window_pane_window(wp);
         let mut parent = pane_layout_cell(wp);
         if parent.is_null() {
             return;
         }
-        parent = (*parent).parent;
+        parent = lc_parent(w, parent);
         if parent.is_null() {
             return;
         }
-
-        let w = window_pane_window(wp);
         while !parent.is_null() {
             if layout_spread_cell(w, parent) != 0 {
                 layout_fix_offsets(&*w);
                 layout_fix_panes(&*w, null_mut());
                 break;
             }
-            parent = (*parent).parent;
+            parent = lc_parent(w, parent);
         }
     }
 }

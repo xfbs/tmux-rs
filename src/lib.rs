@@ -1478,7 +1478,7 @@ enum layout_type {
 struct layout_cell {
     type_: layout_type,
 
-    parent: *mut layout_cell,
+    parent: Option<LayoutCellId>,
 
     sx: u32,
     sy: u32,
@@ -1668,7 +1668,7 @@ mod layout_arena_tests {
     fn dummy() -> layout_cell {
         layout_cell {
             type_: layout_type::LAYOUT_WINDOWPANE,
-            parent: std::ptr::null_mut(),
+            parent: None,
             sx: 0,
             sy: 0,
             xoff: 0,
