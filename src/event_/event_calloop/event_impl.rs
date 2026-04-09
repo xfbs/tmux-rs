@@ -7,7 +7,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ffi::{c_int, c_short, c_void};
 use std::io;
-use std::os::fd::{FromRawFd, OwnedFd};
+use std::os::fd::{BorrowedFd, FromRawFd, OwnedFd};
 use std::time::Duration;
 
 use calloop::generic::Generic;
@@ -36,6 +36,7 @@ struct ReadyEvent {
 struct Registration {
     token: RegistrationToken,
 }
+
 
 /// Shared state passed to calloop callbacks and the dispatch loop.
 struct LoopData {
@@ -170,22 +171,9 @@ pub unsafe fn event_add(ev_ptr: *mut event, timeout: *const timeval) -> c_int {
     }
     let base = unsafe { &mut *base_ptr };
 
-    // If already added, remove the old source first.
-    if ev.added {
-        if let Some(reg) = base.registrations.remove(&ev.id) {
-            base.handle.remove(reg.token);
-        }
-    }
-
     if !timeout.is_null() {
         ev.ev_timeout = unsafe { *timeout };
     }
-
-    let id = ev.id;
-    let fd = ev.ev_fd;
-    let events = ev.ev_events;
-    let callback = ev.ev_callback;
-    let arg = ev.ev_arg;
 
     let has_timeout = !timeout.is_null()
         && unsafe { (*timeout).tv_sec != 0 || (*timeout).tv_usec != 0 };
@@ -195,36 +183,32 @@ pub unsafe fn event_add(ev_ptr: *mut event, timeout: *const timeval) -> c_int {
         None
     };
 
+    // Remove existing registration if any, then re-register.
+    if let Some(reg) = base.registrations.remove(&ev.id) {
+        base.handle.remove(reg.token);
+    }
+
+    let id = ev.id;
+    let fd = ev.ev_fd;
+    let events = ev.ev_events;
+    let callback = ev.ev_callback;
+    let arg = ev.ev_arg;
     let persist = (events & EV_PERSIST) != 0;
 
     // --- Signal events ---
     if (events & EV_SIGNAL) != 0 {
-        let signum = fd;
-        if let Some(signal) = signal_from_number(signum) {
-            match Signals::new(&[signal]) {
-                Ok(signals) => {
-                    let result = base.handle.insert_source(signals, move |evt, _metadata, data| {
-                        data.ready.push(ReadyEvent {
-                            id,
-                            fd: evt.signal() as c_int,
-                            events: EV_SIGNAL,
-                            callback,
-                            arg,
-                        });
+        if let Some(signal) = signal_from_number(fd) {
+            if let Ok(signals) = Signals::new(&[signal]) {
+                if let Ok(token) = base.handle.insert_source(signals, move |evt, _, data| {
+                    data.ready.push(ReadyEvent {
+                        id,
+                        fd: evt.signal() as c_int,
+                        events: EV_SIGNAL,
+                        callback,
+                        arg,
                     });
-                    match result {
-                        Ok(token) => {
-                            base.registrations.insert(id, Registration { token });
-                        }
-                        Err(e) => {
-                            log_debug!("event_add: signal source failed: {e}");
-                            return -1;
-                        }
-                    }
-                }
-                Err(e) => {
-                    log_debug!("event_add: Signals::new failed: {e}");
-                    return -1;
+                }) {
+                    base.registrations.insert(id, Registration { token });
                 }
             }
         }
@@ -241,16 +225,17 @@ pub unsafe fn event_add(ev_ptr: *mut event, timeout: *const timeval) -> c_int {
             _ => unreachable!(),
         };
 
-        // dup() the fd so calloop gets its own registration.
+        // dup() the fd so calloop gets its own epoll registration.
+        // Multiple events can watch the same fd (e.g. bufferevent's ev_read
+        // + ev_write), and epoll only allows one registration per fd.
         let dup_fd = unsafe { libc::dup(fd) };
         if dup_fd < 0 {
-            log_debug!("event_add: dup failed fd={fd}");
             return -1;
         }
         let owned_fd = unsafe { OwnedFd::from_raw_fd(dup_fd) };
         let generic = Generic::new(owned_fd, interest, Mode::Level);
 
-        let result = base.handle.insert_source(generic, move |readiness, _metadata, data| {
+        if let Ok(token) = base.handle.insert_source(generic, move |readiness, _, data| {
             let mut fired: c_short = 0;
             if readiness.readable {
                 fired |= EV_READ;
@@ -261,23 +246,19 @@ pub unsafe fn event_add(ev_ptr: *mut event, timeout: *const timeval) -> c_int {
             if fired != 0 {
                 data.ready.push(ReadyEvent {
                     id,
-                    fd, // original fd, not the dup
+                    fd,
                     events: fired,
                     callback,
                     arg,
                 });
             }
-            Ok(if persist { PostAction::Continue } else { PostAction::Remove })
-        });
-
-        match result {
-            Ok(token) => {
-                base.registrations.insert(id, Registration { token });
-            }
-            Err(e) => {
-                log_debug!("event_add: generic source failed fd={fd}: {e}");
-                return -1;
-            }
+            // Always continue — we handle persistence via event_del in user
+            // callbacks. Using PostAction::Remove would cause calloop to
+            // internally remove the source, but our registrations HashMap
+            // and ev.added flag would go stale.
+            Ok(PostAction::Continue)
+        }) {
+            base.registrations.insert(id, Registration { token });
         }
 
         ev.added = true;
@@ -287,7 +268,7 @@ pub unsafe fn event_add(ev_ptr: *mut event, timeout: *const timeval) -> c_int {
     // --- Pure timer (fd == -1, no signal, timeout set) ---
     if let Some(dur) = timeout_duration {
         let timer = Timer::from_duration(dur);
-        let result = base.handle.insert_source(timer, move |_deadline, _metadata, data| {
+        if let Ok(token) = base.handle.insert_source(timer, move |_, _, data| {
             data.ready.push(ReadyEvent {
                 id,
                 fd,
@@ -300,21 +281,13 @@ pub unsafe fn event_add(ev_ptr: *mut event, timeout: *const timeval) -> c_int {
             } else {
                 TimeoutAction::Drop
             }
-        });
-        match result {
-            Ok(token) => {
-                base.registrations.insert(id, Registration { token });
-            }
-            Err(e) => {
-                log_debug!("event_add: timer source failed: {e}");
-                return -1;
-            }
+        }) {
+            base.registrations.insert(id, Registration { token });
         }
         ev.added = true;
         return 0;
     }
 
-    // Nothing to register (no fd, no timeout, no signal).
     ev.added = true;
     0
 }
@@ -400,6 +373,7 @@ pub unsafe fn event_initialized(ev_ptr: *const event) -> c_int {
     let ev = unsafe { &*ev_ptr };
     (ev.id != 0) as c_int
 }
+
 
 pub unsafe fn event_loop(flags: c_int) -> c_int {
     let base_ptr = unsafe { GLOBAL_BASE };
