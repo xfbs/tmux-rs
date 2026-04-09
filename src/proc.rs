@@ -340,6 +340,19 @@ pub unsafe fn proc_set_signals(tp: *mut tmuxproc, signalcb: Option<unsafe fn(i32
     }
 }
 
+/// Clear signal event registrations and optionally reset signal dispositions.
+///
+/// When `defaults` is 0, this is called in the server process itself (e.g. after
+/// the initial fork in `server_start`) and we must go through `event_del` to
+/// properly unregister calloop sources from this process's event loop.
+///
+/// When `defaults` is non-zero, this is called in a **forked child** that is
+/// about to `exec()` (spawn_pane, job_run, pipe-pane, etc.).  In that case we
+/// must NOT call `event_del`, because calloop's unregister path issues
+/// `epoll_ctl(DEL)` which operates on the **shared kernel epoll instance**,
+/// removing the parent server's signal registrations.  The child's copies of
+/// the signalfd/epoll file descriptors will be closed by `closefrom()` or
+/// `exec()`'s CLOEXEC without affecting the parent.
 pub unsafe fn proc_clear_signals(tp: *mut tmuxproc, defaults: i32) {
     unsafe {
         let mut sa: sigaction = zeroed();
@@ -351,16 +364,19 @@ pub unsafe fn proc_clear_signals(tp: *mut tmuxproc, defaults: i32) {
         sigaction(SIGPIPE, &raw mut sa, null_mut());
         sigaction(SIGTSTP, &raw mut sa, null_mut());
 
-        event_del(&raw mut (*tp).ev_sigint);
-        event_del(&raw mut (*tp).ev_sighup);
-        event_del(&raw mut (*tp).ev_sigchld);
-        event_del(&raw mut (*tp).ev_sigcont);
-        event_del(&raw mut (*tp).ev_sigterm);
-        event_del(&raw mut (*tp).ev_sigusr1);
-        event_del(&raw mut (*tp).ev_sigusr2);
-        event_del(&raw mut (*tp).ev_sigwinch);
-
-        if defaults != 0 {
+        if defaults == 0 {
+            // Server process: properly unregister from our own event loop.
+            event_del(&raw mut (*tp).ev_sigint);
+            event_del(&raw mut (*tp).ev_sighup);
+            event_del(&raw mut (*tp).ev_sigchld);
+            event_del(&raw mut (*tp).ev_sigcont);
+            event_del(&raw mut (*tp).ev_sigterm);
+            event_del(&raw mut (*tp).ev_sigusr1);
+            event_del(&raw mut (*tp).ev_sigusr2);
+            event_del(&raw mut (*tp).ev_sigwinch);
+        } else {
+            // Forked child: reset signal dispositions to defaults.
+            // Do NOT call event_del — it would corrupt the parent's epoll.
             sigaction(SIGINT, &sa, null_mut());
             sigaction(SIGQUIT, &sa, null_mut());
             sigaction(SIGHUP, &sa, null_mut());
