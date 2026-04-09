@@ -1279,9 +1279,10 @@ struct window_pane {
     /// step 4 migrated this from `*mut layout_cell` to a stable
     /// arena-issued id.
     layout_cell: Option<LayoutCellId>,
-    /// Saved leaf cell during zoom (still raw — see PLAN.md §2.5
-    /// "step 4 substep 6" for the planned migration).
-    saved_layout_cell: *mut layout_cell,
+    /// Pre-zoom snapshot of `layout_cell`. Resolved through
+    /// `pane_saved_layout_cell` / `pane_set_saved_layout_cell`. Lives
+    /// in the same per-window arena as `layout_cell`.
+    saved_layout_cell: Option<LayoutCellId>,
 
     sx: u32,
     sy: u32,

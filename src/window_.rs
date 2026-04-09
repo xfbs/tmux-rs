@@ -333,6 +333,49 @@ pub unsafe fn pane_set_layout_cell(wp: *mut window_pane, lc: *mut layout_cell) {
     }
 }
 
+/// Read the pane's `saved_layout_cell` field as a raw pointer.
+///
+/// Mirrors [`pane_layout_cell`] for the zoom-save slot. Resolves the
+/// stored id through the pane's current window's arena.
+pub unsafe fn pane_saved_layout_cell(wp: *mut window_pane) -> *mut layout_cell {
+    unsafe {
+        let id = match (*wp).saved_layout_cell {
+            Some(id) => id,
+            None => return null_mut(),
+        };
+        let w = window_pane_window(wp);
+        if w.is_null() {
+            return null_mut();
+        }
+        (*w).layout.get_ptr(id)
+    }
+}
+
+/// Write the pane's `saved_layout_cell` field from a raw pointer.
+///
+/// Mirrors [`pane_set_layout_cell`]. The cell must live in the pane's
+/// current window's arena. (For the zoom-save slot this is trivially
+/// true since both saved and live cells inhabit the same per-window
+/// arena.)
+pub unsafe fn pane_set_saved_layout_cell(wp: *mut window_pane, lc: *mut layout_cell) {
+    unsafe {
+        if lc.is_null() {
+            (*wp).saved_layout_cell = None;
+            return;
+        }
+        let w = window_pane_window(wp);
+        if w.is_null() {
+            (*wp).saved_layout_cell = None;
+            return;
+        }
+        (*wp).saved_layout_cell = (*w).layout.id_of_ptr(lc);
+        debug_assert!(
+            (*wp).saved_layout_cell.is_some(),
+            "pane_set_saved_layout_cell: pointer not found in pane's window arena",
+        );
+    }
+}
+
 pub unsafe fn winlink_set_window(wl: *mut winlink, w: *mut window) {
     unsafe {
         let prev = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
@@ -948,7 +991,7 @@ pub unsafe fn window_zoom(wp: *mut window_pane) -> i32 {
         }
 
         for &wp1 in (*w).panes.iter() {
-            (*wp1).saved_layout_cell = pane_layout_cell(wp1);
+            pane_set_saved_layout_cell(wp1, pane_layout_cell(wp1));
             pane_set_layout_cell(wp1, null_mut());
         }
 
@@ -973,8 +1016,8 @@ pub unsafe fn window_unzoom(w: *mut window, notify: i32) -> i32 {
         (*w).saved_layout_root = null_mut();
 
         for &wp in (*w).panes.iter() {
-            pane_set_layout_cell(wp, (*wp).saved_layout_cell);
-            (*wp).saved_layout_cell = null_mut();
+            pane_set_layout_cell(wp, pane_saved_layout_cell(wp));
+            pane_set_saved_layout_cell(wp, null_mut());
         }
         layout_fix_panes(&*w, null_mut());
 
@@ -1283,6 +1326,7 @@ pub unsafe fn window_pane_create(
         // Same rule for `layout_cell` (Option<LayoutCellId>): zero-initialize
         // explicitly. The pane's layout cell is set later by layout_make_leaf.
         std::ptr::write(&raw mut (*wp).layout_cell, None);
+        std::ptr::write(&raw mut (*wp).saved_layout_cell, None);
 
         std::ptr::write(&raw mut (*wp).modes, Vec::new());
 
