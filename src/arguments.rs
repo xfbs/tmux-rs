@@ -45,7 +45,6 @@ pub struct args {
     pub values: Vec<args_value>,
 }
 
-#[repr(C)]
 pub struct args_command_state<'a> {
     pub cmdlist: *mut cmd_list,
     pub cmd: *mut u8,

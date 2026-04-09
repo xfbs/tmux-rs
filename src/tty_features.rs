@@ -14,7 +14,6 @@
 use crate::*;
 
 unsafe impl Sync for tty_feature {}
-#[repr(C)]
 struct tty_feature {
     name: &'static str,
     capabilities: &'static [&'static str],

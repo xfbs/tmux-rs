@@ -37,7 +37,6 @@ pub(crate) type utf8_char = c_uint;
 // characters are stored.
 pub(crate) const UTF8_SIZE: usize = 21;
 
-#[repr(C)]
 #[derive(Copy, Clone)]
 pub(crate) struct utf8_data {
     pub(crate) data: [u8; UTF8_SIZE], /* TODO if we make this private we can only expose the initialized part */

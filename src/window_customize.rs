@@ -69,7 +69,6 @@ enum window_customize_change {
     WINDOW_CUSTOMIZE_RESET,
 }
 
-#[repr(C)]
 pub struct window_customize_itemdata {
     data: *mut window_customize_modedata,
     scope: window_customize_scope,
@@ -82,7 +81,6 @@ pub struct window_customize_itemdata {
     idx: i32,
 }
 
-#[repr(C)]
 pub struct window_customize_modedata {
     wp: Option<PaneId>,
     dead: i32,

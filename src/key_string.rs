@@ -15,7 +15,6 @@ use crate::libc::{memcpy, snprintf, sscanf};
 use crate::*;
 
 unsafe impl Sync for key_string_table_entry {}
-#[repr(C)]
 #[derive(Copy, Clone)]
 struct key_string_table_entry {
     string: &'static str,

@@ -17,13 +17,11 @@ pub const SIXEL_COLOUR_REGISTERS: u32 = 1024;
 const SIXEL_WIDTH_LIMIT: u32 = 10000;
 const SIXEL_HEIGHT_LIMIT: u32 = 10000;
 
-#[repr(C)]
 struct sixel_line {
     x: u32,
     data: *mut u16,
 }
 
-#[repr(C)]
 pub struct sixel_image {
     x: u32,
     y: u32,

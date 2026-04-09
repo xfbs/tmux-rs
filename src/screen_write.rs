@@ -22,7 +22,6 @@ pub enum screen_write_citem_type {
     Clear,
 }
 
-#[repr(C)]
 pub struct screen_write_citem {
     x: u32,
     wrapped: bool,

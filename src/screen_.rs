@@ -15,7 +15,6 @@ use crate::*;
 use crate::options_::*;
 
 /// Selected area in screen.
-#[repr(C)]
 pub struct screen_sel {
     pub hidden: i32,
     pub rectangle: i32,

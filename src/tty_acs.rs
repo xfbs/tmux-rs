@@ -28,7 +28,6 @@
 use crate::*;
 
 /// Forward ACS table entry: maps an ACS key byte to a NUL-terminated UTF-8 sequence.
-#[repr(C)]
 pub struct tty_acs_entry {
     pub key: u8,
     pub string: &'static [u8; 4],
@@ -80,7 +79,6 @@ static TTY_ACS_TABLE: [tty_acs_entry; 36] = [
 ];
 
 /// Reverse ACS table entry: maps a UTF-8 byte sequence back to its ACS key byte.
-#[repr(C)]
 pub struct tty_acs_reverse_entry {
     pub string: &'static [u8; 4],
     pub key: u8,

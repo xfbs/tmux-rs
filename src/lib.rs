@@ -808,7 +808,7 @@ const SIMPLE_BORDERS: [u8; 13] = [
 const PADDED_BORDERS: [u8; 13] = [b' '; 13];
 
 /// Grid cell data.
-#[repr(C)]
+
 #[derive(Copy, Clone)]
 struct grid_cell {
     data: utf8_data,
@@ -843,7 +843,7 @@ impl grid_cell {
 }
 
 /// Grid extended cell entry.
-#[repr(C)]
+
 struct grid_extd_entry {
     data: utf8_char,
     attr: u16,
@@ -863,20 +863,20 @@ struct grid_cell_entry_data {
     data: u8,
 }
 
-#[repr(C)]
+
 union grid_cell_entry_union {
     offset: u32,
     data: grid_cell_entry_data,
 }
 
-#[repr(C)]
+
 struct grid_cell_entry {
     union_: grid_cell_entry_union,
     flags: grid_flag,
 }
 
 /// Grid line.
-#[repr(C)]
+
 struct grid_line {
     celldata: *mut grid_cell_entry,
     cellused: u32,
@@ -892,7 +892,7 @@ struct grid_line {
 const GRID_HISTORY: i32 = 0x1; // scroll lines into history
 
 /// Entire grid of cells.
-#[repr(C)]
+
 struct grid {
     flags: i32,
 
@@ -907,7 +907,7 @@ struct grid {
 }
 
 /// Virtual cursor in a grid.
-#[repr(C)]
+
 struct grid_reader {
     gd: *mut grid,
     cx: u32,
@@ -970,7 +970,7 @@ enum style_default_type {
 }
 
 /// Style option.
-#[repr(C)]
+
 #[derive(Copy, Clone)]
 struct style {
     gc: grid_cell,
@@ -1012,7 +1012,7 @@ enum screen_cursor_style {
 }
 
 /// Virtual screen.
-#[repr(C)]
+
 #[derive(Clone)]
 struct screen {
     title: *mut u8,
@@ -1064,7 +1064,7 @@ const SCREEN_WRITE_SYNC: i32 = 0x1;
 
 // Screen write context.
 type screen_write_init_ctx_cb = Option<unsafe fn(*mut screen_write_ctx, *mut tty_ctx)>;
-#[repr(C)]
+
 struct screen_write_ctx {
     wp: Option<PaneId>,
     s: *mut screen,
@@ -1122,7 +1122,7 @@ const WINDOW_PANE_COPY_MODE: i32 = 1;
 const WINDOW_PANE_VIEW_MODE: i32 = 2;
 
 // Screen redraw context.
-#[repr(C)]
+
 struct screen_redraw_ctx {
     c: *mut client,
 
@@ -1155,7 +1155,7 @@ unsafe fn screen_hlimit(s: *const screen) -> u32 {
 }
 
 /// Menu.
-#[repr(C)]
+
 #[derive(Default)]
 struct menu_item {
     name: Cow<'static, str>,
@@ -1172,7 +1172,7 @@ impl menu_item {
     }
 }
 
-#[repr(C)]
+
 struct menu {
     title: String,
     items: Vec<menu_item>,
@@ -1183,7 +1183,7 @@ type menu_choice_cb = Option<unsafe fn(*mut menu, u32, key_code, *mut c_void)>;
 #[expect(clippy::type_complexity)]
 /// Window mode. Windows can be in several modes and this is used to call the
 /// right function to handle input and output.
-#[repr(C)]
+
 struct window_mode {
     name: &'static str,
     default_format: Option<&'static str>,
@@ -1230,7 +1230,7 @@ struct window_mode_entry {
 }
 
 /// Offsets into pane buffer.
-#[repr(C)]
+
 #[derive(Copy, Clone)]
 struct window_pane_offset {
     used: usize,
@@ -1268,7 +1268,7 @@ bitflags::bitflags! {
 }
 
 /// Child window structure.
-#[repr(C)]
+
 struct window_pane {
     id: u32,
     active_point: u32,
@@ -1360,7 +1360,7 @@ const WINDOW_ALERTFLAGS: window_flag = window_flag::BELL
     .union(window_flag::SILENCE);
 
 /// Window structure.
-#[repr(C)]
+
 struct window {
     id: u32,
     latest: *mut c_void,
@@ -1431,7 +1431,7 @@ const WINLINK_ALERTFLAGS: winlink_flags = winlink_flags::WINLINK_BELL
 /// A link between a session and a window. Each session has a BTreeMap of
 /// winlinks keyed by index. Windows track all their winlinks via a Vec,
 /// and sessions track a most-recently-used stack of winlinks.
-#[repr(C)]
+
 #[derive(Copy, Clone)]
 struct winlink {
     idx: i32,
@@ -1779,7 +1779,7 @@ struct EnvironEntry {
 }
 
 /// Client session.
-#[repr(C)]
+
 struct session_group {
     name: Cow<'static, str>,
     sessions: Vec<*mut session>,
@@ -1889,7 +1889,7 @@ fn MOUSE_RELEASE(b: u32) -> bool {
 }
 
 /// Mouse input.
-#[repr(C)]
+
 #[derive(Copy, Clone)]
 struct mouse_event {
     valid: bool,
@@ -1920,7 +1920,7 @@ struct mouse_event {
 }
 
 /// Key event.
-#[repr(C)]
+
 struct key_event {
     key: key_code,
     m: mouse_event,
@@ -1941,7 +1941,7 @@ bitflags::bitflags! {
 }
 
 /// Terminal definition.
-#[repr(C)]
+
 struct tty_term {
     name: *mut u8,
     tty: *mut tty,
@@ -1979,7 +1979,7 @@ const TTY_ALL_REQUEST_FLAGS: tty_flags = tty_flags::TTY_HAVEDA
     .union(tty_flags::TTY_HAVEXDA);
 
 /// Client terminal.
-#[repr(C)]
+
 struct tty {
     client: *mut client,
     start_timer: event,
@@ -2043,7 +2043,7 @@ struct tty {
 type tty_ctx_redraw_cb = Option<unsafe fn(*const tty_ctx)>;
 type tty_ctx_set_client_cb = Option<unsafe fn(*mut tty_ctx, *mut client) -> i32>;
 
-#[repr(C)]
+
 struct tty_ctx {
     s: *mut screen,
 
@@ -2171,7 +2171,7 @@ impl Drop for args_value {
 }
 
 /// Arguments parsing type.
-#[repr(C)]
+
 #[derive(Eq, PartialEq)]
 enum args_parse_type {
     ARGS_PARSE_INVALID,
@@ -2182,7 +2182,7 @@ enum args_parse_type {
 }
 
 type args_parse_cb = Option<unsafe fn(*mut args, u32) -> args_parse_type>;
-#[repr(C)]
+
 struct args_parse {
     template: &'static str,
     lower: i32,
@@ -2202,7 +2202,7 @@ impl args_parse {
 }
 
 /// Command find structures.
-#[repr(C)]
+
 #[derive(Copy, Clone, Default)]
 enum cmd_find_type {
     #[default]
@@ -2211,7 +2211,7 @@ enum cmd_find_type {
     CMD_FIND_SESSION,
 }
 
-#[repr(C)]
+
 #[derive(Copy, Clone, Default)]
 struct cmd_find_state {
     flags: cmd_find_flags,
@@ -2307,7 +2307,7 @@ impl std::ops::BitAndAssign<cmd_parse_input_flags> for &AtomicCmdParseInputFlags
     }
 }
 
-#[repr(C)]
+
 #[derive(Default)]
 struct cmd_parse_input<'a> {
     flags: AtomicCmdParseInputFlags,
@@ -2335,7 +2335,7 @@ bitflags::bitflags! {
 type cmdq_cb = Option<unsafe fn(*mut cmdq_item, *mut c_void) -> cmd_retval>;
 
 // Command definition flag.
-#[repr(C)]
+
 #[derive(Copy, Clone, Default)]
 struct cmd_entry_flag {
     flag: u8,
@@ -2371,7 +2371,7 @@ bitflags::bitflags! {
 }
 
 // Command definition.
-#[repr(C)]
+
 struct cmd_entry {
     name: &'static str,
     alias: Option<&'static str>,
@@ -2389,12 +2389,12 @@ struct cmd_entry {
 
 // Status line.
 const STATUS_LINES_LIMIT: usize = 5;
-#[repr(C)]
+
 struct status_line_entry {
     expanded: *mut u8,
     ranges: style_ranges,
 }
-#[repr(C)]
+
 struct status_line {
     timer: event,
 
@@ -2453,7 +2453,7 @@ type client_windows = BTreeMap<u32, client_window>;
 
 // Visible areas not obstructed by overlays.
 const OVERLAY_MAX_RANGES: usize = 3;
-#[repr(C)]
+
 struct overlay_ranges {
     px: [u32; OVERLAY_MAX_RANGES],
     nx: [u32; OVERLAY_MAX_RANGES],
@@ -2690,7 +2690,7 @@ type key_tables = BTreeMap<String, Box<key_table>>;
 // Option data.
 type options_array = BTreeMap<u32, options_array_item>;
 
-#[repr(C)]
+
 #[derive(Copy, Clone)]
 union options_value {
     string: *mut u8,
@@ -2725,7 +2725,7 @@ const OPTIONS_TABLE_IS_STYLE: i32 = 0x4;
 
 unsafe impl Sync for options_table_entry {}
 
-#[repr(C)]
+
 struct options_table_entry {
     name: &'static str,
     alternative_name: *mut u8,
@@ -2770,7 +2770,7 @@ impl options_table_entry {
     }
 }
 
-#[repr(C)]
+
 struct options_name_map_str {
     from: &'static str,
     to: &'static str,
@@ -2781,7 +2781,7 @@ impl options_name_map_str {
     }
 }
 
-#[repr(C)]
+
 struct options_name_map {
     from: &'static str,
     to: &'static str,
@@ -2818,7 +2818,7 @@ const SPAWN_EMPTY: spawn_flags = spawn_flags::SPAWN_EMPTY;
 const SPAWN_ZOOM: spawn_flags = spawn_flags::SPAWN_ZOOM;
 
 /// Spawn common context.
-#[repr(C)]
+
 struct spawn_context {
     item: *mut cmdq_item,
 
@@ -2841,7 +2841,7 @@ struct spawn_context {
 }
 
 /// Mode tree sort order.
-#[repr(C)]
+
 #[derive(Default)]
 struct mode_tree_sort_criteria {
     field: u32,

@@ -50,6 +50,9 @@ fuzz duration="10":
 careful:
   cargo +nightly careful test -- --test-threads=1
 
+asan:
+  ASAN_OPTIONS=detect_leaks=0 RUSTFLAGS="-Zsanitizer=address" cargo +nightly nextest run --target x86_64-unknown-linux-gnu
+
 sanitizer:
   ASAN_OPTIONS=detect_leaks=0 RUSTFLAGS="-Zsanitizer=address" cargo +nightly test --target x86_64-unknown-linux-gnu -- --test-threads=1
 

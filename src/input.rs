@@ -38,7 +38,6 @@ use crate::*;
 use crate::options_::{options_get_number_, options_get_only, options_remove_or_default, options_set_number};
 
 // Input parser cell.
-#[repr(C)]
 struct input_cell {
     cell: grid_cell,
     set: i32,
@@ -53,14 +52,12 @@ enum input_param_type {
     INPUT_NUMBER,
     INPUT_STRING,
 }
-#[repr(C)]
 union input_param_union {
     num: i32,
     str: *mut u8,
 }
 
 /// Input parser argument.
-#[repr(C)]
 struct input_param {
     type_: input_param_type,
     union_: input_param_union,
@@ -70,7 +67,6 @@ const INPUT_BUF_START: usize = 32;
 const INPUT_BUF_LIMIT: usize = 1048576;
 
 bitflags::bitflags! {
-    #[repr(C)]
     pub struct input_flags : i32 {
         const INPUT_DISCARD = 0x1;
         const INPUT_LAST = 0x2;
@@ -85,7 +81,6 @@ enum input_end_type {
 }
 
 /// Input parser context.
-#[repr(C)]
 pub struct input_ctx {
     wp: Option<PaneId>,
     event: *mut bufferevent,
@@ -130,7 +125,6 @@ pub struct input_ctx {
 }
 
 // Command table entry.
-#[repr(C)]
 struct input_table_entry {
     ch: i32,
     interm: SyncCharPtr,
@@ -283,7 +277,6 @@ static INPUT_CSI_TABLE: [input_table_entry; 40] = [
 ];
 
 /// Input transition.
-#[repr(C)]
 #[derive(Copy, Clone)]
 pub struct input_transition {
     first: i32,
@@ -321,7 +314,6 @@ impl input_transition {
 }
 
 // Input state.
-#[repr(C)]
 pub struct input_state {
     name: SyncCharPtr,
     enter: Option<unsafe fn(*mut input_ctx)>,

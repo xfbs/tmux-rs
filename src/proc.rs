@@ -28,7 +28,6 @@ use crate::libc::{
 };
 use crate::*;
 
-#[repr(C)]
 pub struct tmuxproc {
     pub name: *const u8,
     pub exit: i32,

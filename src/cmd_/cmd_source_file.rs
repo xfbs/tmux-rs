@@ -32,7 +32,6 @@ pub static CMD_SOURCE_FILE_ENTRY: cmd_entry = cmd_entry {
     source: cmd_entry_flag::zeroed(),
 };
 
-#[repr(C)]
 pub struct cmd_source_file_data {
     pub item: *mut cmdq_item,
     pub flags: cmd_parse_input_flags,

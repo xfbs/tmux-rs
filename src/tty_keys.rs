@@ -20,7 +20,6 @@ use crate::options_::*;
 // into a ternary tree.
 
 // A key tree entry.
-#[repr(C)]
 pub struct tty_key {
     ch: u8,
     key: key_code,
@@ -32,7 +31,6 @@ pub struct tty_key {
 }
 
 /// Default raw keys.
-#[repr(C)]
 struct tty_default_key_raw {
     string: SyncCharPtr,
     key: key_code,
@@ -200,7 +198,6 @@ static TTY_DEFAULT_RAW_KEYS: [tty_default_key_raw; 100] = [
 ];
 
 /// Default xterm keys.
-#[repr(C)]
 struct tty_default_key_xterm {
     template: SyncCharPtr,
     key: key_code,
@@ -263,7 +260,6 @@ static TTY_DEFAULT_XTERM_MODIFIERS: [key_code; 10] = [
 // Default terminfo(5) keys. Any keys that have builtin modifiers (that is,
 // where the key itself contains the modifiers) has the KEYC_XTERM flag set so
 // a leading escape is not treated as meta (and probably removed).
-#[repr(C)]
 struct tty_default_key_code {
     code: tty_code_code,
     key: key_code,

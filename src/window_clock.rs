@@ -28,7 +28,6 @@ pub static WINDOW_CLOCK_MODE: window_mode = window_mode {
     formats: None,
 };
 
-#[repr(C)]
 pub struct window_clock_mode_data {
     pub screen: screen,
     pub tim: time_t,

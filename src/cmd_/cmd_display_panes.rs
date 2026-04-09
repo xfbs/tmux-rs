@@ -27,7 +27,6 @@ pub static CMD_DISPLAY_PANES_ENTRY: cmd_entry = cmd_entry {
     target: cmd_entry_flag::zeroed(),
 };
 
-#[repr(C)]
 pub struct cmd_display_panes_data<'a> {
     pub item: *mut cmdq_item,
     pub state: *mut args_command_state<'a>,

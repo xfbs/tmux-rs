@@ -18,7 +18,6 @@ use crate::libc::strncmp;
 use crate::*;
 use crate::options_::*;
 
-#[repr(C)]
 struct status_prompt_menu {
     c: *mut client,
     start: u32,

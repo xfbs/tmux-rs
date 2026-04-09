@@ -892,7 +892,6 @@ pub fn colour_byname(name: &str) -> i32 {
 }
 
 // Replacement palette.
-#[repr(C)]
 #[derive(Clone)]
 pub(crate) struct colour_palette {
     pub(crate) fg: i32,

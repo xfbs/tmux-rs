@@ -35,7 +35,6 @@ pub enum dragging_state {
     Size,
 }
 
-#[repr(C)]
 pub struct popup_data {
     pub c: *mut client,
     pub item: *mut cmdq_item,
@@ -80,7 +79,6 @@ pub struct popup_data {
     pub lb: u32,
 }
 
-#[repr(C)]
 pub struct popup_editor {
     pub path: *mut u8,
     pub cb: popup_finish_edit_cb,

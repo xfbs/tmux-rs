@@ -98,7 +98,6 @@ enum window_tree_type {
     WINDOW_TREE_PANE,
 }
 
-#[repr(C)]
 struct window_tree_itemdata {
     type_: window_tree_type,
     session: i32,
@@ -106,7 +105,6 @@ struct window_tree_itemdata {
     pane: i32,
 }
 
-#[repr(C)]
 struct window_tree_modedata {
     wp: Option<PaneId>,
     dead: i32,

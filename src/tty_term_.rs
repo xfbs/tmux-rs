@@ -31,20 +31,17 @@ pub enum tty_code_type {
     Flag,
 }
 
-#[repr(C)]
 pub union tty_code_union {
     string: *mut u8,
     number: i32,
     flag: i32,
 }
 
-#[repr(C)]
 pub struct tty_code {
     pub type_: tty_code_type,
     pub value: tty_code_union,
 }
 
-#[repr(C)]
 pub struct tty_term_code_entry {
     pub type_: tty_code_type,
     pub name: SyncCharPtr,

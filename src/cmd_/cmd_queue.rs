@@ -70,7 +70,6 @@ pub struct cmdq_item {
     pub data: *mut c_void,
 }
 
-#[repr(C)]
 pub struct cmdq_state {
     pub references: i32,
     pub flags: cmdq_state_flags,

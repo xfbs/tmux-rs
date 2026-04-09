@@ -54,12 +54,10 @@ pub enum window_client_sort_type {
 }
 static WINDOW_CLIENT_SORT_LIST: [&str; 4] = ["name", "size", "creation", "activity"];
 
-#[repr(C)]
 pub struct window_client_itemdata {
     c: *mut client,
 }
 
-#[repr(C)]
 pub struct window_client_modedata {
     wp: Option<PaneId>,
 

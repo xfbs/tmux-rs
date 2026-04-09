@@ -129,7 +129,6 @@ pub unsafe fn window_ref(id: WindowId) -> Option<&'static window> {
     }
 }
 
-#[repr(C)]
 #[derive(Copy, Clone)]
 pub struct window_pane_input_data {
     item: *mut cmdq_item,

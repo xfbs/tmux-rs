@@ -46,7 +46,6 @@ pub type bufferevent_event_cb =
     Option<unsafe extern "C-unwind" fn(bev: *mut bufferevent, what: c_short, ctx: *mut c_void)>;
 pub type event_log_cb = Option<unsafe extern "C-unwind" fn(severity: c_int, msg: *const u8)>;
 
-#[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct event_watermark {
     pub low: usize,

@@ -34,7 +34,6 @@ pub type mode_tree_key_cb =
 pub type mode_tree_each_cb =
     Option<unsafe fn(_: NonNull<c_void>, _: NonNull<c_void>, _: *mut client, _: key_code)>;
 
-#[repr(C)]
 #[derive(Copy, Clone, Eq, PartialEq)]
 enum mode_tree_search_dir {
     MODE_TREE_SEARCH_FORWARD,
@@ -87,7 +86,6 @@ pub struct mode_tree_data {
 /// A node in the mode tree. Each item can have child items, forming a
 /// recursive tree (e.g. sessions → windows → panes). Allocated with xcalloc,
 /// so Vec fields must be initialized with `ptr::write`.
-#[repr(C)]
 pub struct mode_tree_item {
     parent: *mut mode_tree_item,
     itemdata: *mut c_void,
@@ -110,7 +108,6 @@ pub struct mode_tree_item {
     children: Vec<*mut mode_tree_item>,
 }
 
-#[repr(C)]
 struct mode_tree_line {
     item: *mut mode_tree_item,
     depth: u32,
@@ -118,7 +115,6 @@ struct mode_tree_line {
     flat: i32,
 }
 
-#[repr(C)]
 struct mode_tree_menu {
     data: *mut mode_tree_data,
     c: *mut client,

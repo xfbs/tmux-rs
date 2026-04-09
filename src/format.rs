@@ -134,7 +134,6 @@ pub struct format_tree {
 }
 
 /// Format expand state.
-#[repr(C)]
 pub struct format_expand_state {
     pub ft: *mut format_tree,
     pub loop_: u32,
@@ -144,7 +143,6 @@ pub struct format_expand_state {
 }
 
 /// Format modifier.
-#[repr(C)]
 pub struct format_modifier {
     pub modifier: [u8; 3],
     pub size: u32,
@@ -2925,7 +2923,6 @@ impl From<&'static str> for format_table_type {
 }
 
 /// Format table entry.
-#[repr(C)]
 pub struct format_table_entry {
     key: &'static str,
     cb: format_cb,

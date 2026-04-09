@@ -76,7 +76,6 @@ pub enum window_copy_cmd_clear {
     WINDOW_COPY_CMD_CLEAR_EMACS_ONLY,
 }
 
-#[repr(C)]
 pub struct window_copy_cmd_state {
     wme: *mut window_mode_entry,
     args: *mut args,
@@ -135,7 +134,6 @@ const WINDOW_COPY_DRAG_REPEAT_TIME: libc::suseconds_t = 50000;
 // directly at that pane's screen structure (&wp->base); when backed by a list
 // of output-lines from a command, it points at a newly-allocated screen
 // structure (which is deallocated when the mode ends).
-#[repr(C)]
 pub struct window_copy_mode_data {
     screen: screen,
 
@@ -2799,7 +2797,6 @@ pub unsafe fn window_copy_cmd_refresh_from_pane(
     }
 }
 
-#[repr(C)]
 struct window_copy_cmd_table_entry {
     command: &'static str,
     minargs: u32,

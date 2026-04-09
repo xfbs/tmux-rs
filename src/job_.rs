@@ -36,7 +36,6 @@ pub enum job_state {
     JOB_CLOSED = 2,
 }
 
-#[repr(C)]
 #[derive(Default)]
 pub struct job {
     pub state: job_state,
