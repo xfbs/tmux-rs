@@ -1482,14 +1482,6 @@ struct layout_cell {
     wp: Option<PaneId>,
     /// Child cells. Empty for LAYOUT_WINDOWPANE leaves.
     cells: Vec<*mut layout_cell>,
-    /// TODO(phase 2.5 step 6): remove. Transient flag distinguishing
-    /// arena-owned cells (allocated via `layout_create_cell_in`, reclaimed
-    /// when the window's `LayoutArena` drops) from legacy `Box::leak`
-    /// cells (allocated via `layout_create_cell`, reclaimed by
-    /// `layout_free_cell` calling `free_()`). When Step 3b finishes
-    /// flipping every call site to the arena, this field is always true
-    /// and can be deleted along with the legacy allocator.
-    arena_owned: bool,
 }
 
 /// Stable handle to a `layout_cell` stored in a [`LayoutArena`].
@@ -1648,7 +1640,6 @@ mod layout_arena_tests {
             yoff: 0,
             wp: None,
             cells: Vec::new(),
-            arena_owned: false,
         }
     }
 

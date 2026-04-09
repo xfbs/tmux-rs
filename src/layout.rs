@@ -47,36 +47,14 @@ unsafe fn layout_prev_sibling(lc: *mut layout_cell) -> *mut layout_cell {
     }
 }
 
-/// Allocate a new layout cell with the given parent.
-///
-/// Legacy allocator: leaks a Box so the cell has a stable address but no
-/// owner — `layout_free_cell` recursively reclaims the memory. New code
-/// should prefer [`layout_create_cell_in`], which routes allocation
-/// through the window's `LayoutArena` so the window's drop reclaims
-/// every cell at once. See PLAN.md §2.5 for the migration plan.
-pub unsafe fn layout_create_cell(lcparent: *mut layout_cell) -> *mut layout_cell {
-    Box::leak(Box::new(layout_cell {
-        type_: layout_type::LAYOUT_WINDOWPANE,
-        parent: lcparent,
-        sx: u32::MAX,
-        sy: u32::MAX,
-        xoff: u32::MAX,
-        yoff: u32::MAX,
-        wp: None,
-        cells: Vec::new(),
-        arena_owned: false,
-    }))
-}
-
 /// Allocate a new layout cell into `w`'s arena and return both the
-/// stable id and a raw pointer for callers that haven't been migrated to
-/// IDs yet. The pointer remains valid until the cell is removed via
-/// [`LayoutArena::remove`] or the window (and its arena) is dropped.
+/// stable id and a raw pointer. The pointer remains valid until the
+/// cell is removed via [`LayoutArena::remove`] or the window (and its
+/// arena) is dropped.
 ///
-/// This is the Phase 2.5 replacement for [`layout_create_cell`]. As call
-/// sites are flipped to use this function (Step 3b), the arena gradually
-/// becomes the sole owner of every layout cell for that window.
-#[allow(dead_code)] // wired up incrementally in Phase 2.5 step 3b
+/// During Phase 2.5 the dual return is required because most callers
+/// still hold raw pointers; once Steps 4 and 5 migrate the field types
+/// to `Option<LayoutCellId>`, the pointer return can go away.
 pub unsafe fn layout_create_cell_in(
     w: *mut window,
     lcparent: *mut layout_cell,
@@ -91,22 +69,22 @@ pub unsafe fn layout_create_cell_in(
             yoff: u32::MAX,
             wp: None,
             cells: Vec::new(),
-            arena_owned: true,
         })
     }
 }
 
-/// Recursively free a layout cell and all its children.
+/// Recursively detach a layout cell subtree from the live layout.
 ///
-/// During the Phase 2.5 migration, the tree may contain a mix of legacy
-/// `Box::leak` cells (`arena_owned == false`) and arena-owned cells
-/// (`arena_owned == true`). Both kinds need their structural state torn
-/// down here (clearing `wp.layout_cell` back-pointers and recursing into
-/// children), but only legacy cells are reclaimed by `free_()`. Arena
-/// cells are reclaimed when the window's `LayoutArena` drops at window
-/// destruction time. This means arena cells freed mid-window-lifetime
-/// linger in their slot until then — acceptable because layout cells per
-/// window are at most a few dozen. Step 5 replaces this function entirely.
+/// Walks the subtree clearing `wp.layout_cell` back-pointers and emptying
+/// each cell's `cells` Vec so subsequent traversals see no children. The
+/// underlying Box storage is **not** reclaimed here — the window's
+/// `LayoutArena` owns every cell and reclaims them all in one shot when
+/// the window is dropped. This means a cell freed mid-window-lifetime
+/// lingers in its arena slot until window destruction, which is fine
+/// because layout cells per window are at most a few dozen.
+///
+/// Step 5 will replace this function with `arena.remove(id)` once the
+/// `*mut layout_cell` callers are gone.
 pub unsafe fn layout_free_cell(lc: *mut layout_cell) {
     unsafe {
         match (*lc).type_ {
@@ -123,19 +101,6 @@ pub unsafe fn layout_free_cell(lc: *mut layout_cell) {
                 }
             }
         }
-
-        if (*lc).arena_owned {
-            // The arena owns the Box; do not free here. Drop will happen
-            // via window destruction (LayoutArena::drop). Note that we
-            // intentionally do NOT call drop_in_place on `cells` either,
-            // because the arena Box still owns the cell and its fields.
-            // Reset `cells` to empty so a stale traversal would see no
-            // children — same observable end-state as the legacy path.
-            return;
-        }
-
-        std::ptr::drop_in_place(&raw mut (*lc).cells);
-        free_(lc);
     }
 }
 
