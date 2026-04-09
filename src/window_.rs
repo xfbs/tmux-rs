@@ -290,24 +290,47 @@ pub unsafe fn pane_ptr_from_id(id: Option<PaneId>) -> *mut window_pane {
 
 /// Read the pane's `layout_cell` field as a raw pointer.
 ///
-/// Phase 2.5 step 4 accessor: this currently just dereferences the
-/// `*mut layout_cell` field directly, but its purpose is to centralize
-/// the read so that step 4.5 can flip the field type to
-/// `Option<LayoutCellId>` by changing only the accessor body. Callers
-/// remain unchanged across the field flip.
-#[inline]
+/// Resolves the pane's stored `LayoutCellId` through its current
+/// window's [`LayoutArena`]. Returns null if the pane has no layout
+/// cell, the pane's window has been reclaimed, or the id no longer
+/// resolves to a live arena slot.
 pub unsafe fn pane_layout_cell(wp: *mut window_pane) -> *mut layout_cell {
-    unsafe { (*wp).layout_cell }
+    unsafe {
+        let id = match (*wp).layout_cell {
+            Some(id) => id,
+            None => return null_mut(),
+        };
+        let w = window_pane_window(wp);
+        if w.is_null() {
+            return null_mut();
+        }
+        (*w).layout.get_ptr(id)
+    }
 }
 
 /// Write the pane's `layout_cell` field from a raw pointer.
 ///
-/// Phase 2.5 step 4 accessor — see [`pane_layout_cell`]. After the
-/// field flip, this will resolve `lc` to a `LayoutCellId` via the
-/// arena's `id_of_ptr`. For now it's a direct field write.
-#[inline]
+/// Stores `lc`'s arena-issued id. The cell **must** live in the pane's
+/// current window's arena — `cmd_swap_pane` reorders its assignments
+/// to satisfy this invariant for cross-window swaps. If `lc` is null,
+/// the field is cleared.
 pub unsafe fn pane_set_layout_cell(wp: *mut window_pane, lc: *mut layout_cell) {
-    unsafe { (*wp).layout_cell = lc }
+    unsafe {
+        if lc.is_null() {
+            (*wp).layout_cell = None;
+            return;
+        }
+        let w = window_pane_window(wp);
+        if w.is_null() {
+            (*wp).layout_cell = None;
+            return;
+        }
+        (*wp).layout_cell = (*w).layout.id_of_ptr(lc);
+        debug_assert!(
+            (*wp).layout_cell.is_some(),
+            "pane_set_layout_cell: pointer not found in pane's window arena",
+        );
+    }
 }
 
 pub unsafe fn winlink_set_window(wl: *mut winlink, w: *mut window) {
@@ -1257,6 +1280,9 @@ pub unsafe fn window_pane_create(
         std::ptr::write(&raw mut (*wp).cwd, None);
         std::ptr::write(&raw mut (*wp).shell, None);
         std::ptr::write(&raw mut (*wp).searchstr, None);
+        // Same rule for `layout_cell` (Option<LayoutCellId>): zero-initialize
+        // explicitly. The pane's layout cell is set later by layout_make_leaf.
+        std::ptr::write(&raw mut (*wp).layout_cell, None);
 
         std::ptr::write(&raw mut (*wp).modes, Vec::new());
 

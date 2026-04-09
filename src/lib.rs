@@ -1274,7 +1274,13 @@ struct window_pane {
     window: Option<WindowId>,
     options: *mut options,
 
-    layout_cell: *mut layout_cell,
+    /// The pane's leaf cell in its window's layout arena. Resolved
+    /// through `pane_layout_cell` / `pane_set_layout_cell`. Phase 2.5
+    /// step 4 migrated this from `*mut layout_cell` to a stable
+    /// arena-issued id.
+    layout_cell: Option<LayoutCellId>,
+    /// Saved leaf cell during zoom (still raw — see PLAN.md §2.5
+    /// "step 4 substep 6" for the planned migration).
     saved_layout_cell: *mut layout_cell,
 
     sx: u32,
@@ -1599,9 +1605,17 @@ impl LayoutArena {
 
     /// Get a raw pointer to a cell by id, or null. The pointer is stable
     /// across other arena operations as long as the slot is not removed.
-    pub(crate) fn get_ptr(&mut self, id: LayoutCellId) -> *mut layout_cell {
-        match self.cells.get_mut(id.0 as usize).and_then(|s| s.as_mut()) {
-            Some(b) => &mut **b as *mut layout_cell,
+    ///
+    /// Takes `&self` because the returned pointer is the *mut to the
+    /// box's heap location — we don't need a mutable borrow on the arena
+    /// to read that address. Callers that mutate through the returned
+    /// pointer are observing the same aliasing model the rest of the
+    /// codebase already operates under (raw pointers all the way down).
+    pub(crate) fn get_ptr(&self, id: LayoutCellId) -> *mut layout_cell {
+        match self.cells.get(id.0 as usize).and_then(|s| s.as_ref()) {
+            // The Box owns the cell; cast through *const to *mut to get
+            // the stable heap pointer without going through &mut.
+            Some(b) => &**b as *const layout_cell as *mut layout_cell,
             None => std::ptr::null_mut(),
         }
     }
