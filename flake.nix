@@ -54,7 +54,6 @@
 
             # libraries we link with (per build.rs)
             buildInputs = [
-              pkgs.libevent
               pkgs.ncurses
             ];
           }

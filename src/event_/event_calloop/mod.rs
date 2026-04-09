@@ -16,9 +16,8 @@ use ::libc::timeval;
 
 /// calloop-backed event struct.
 ///
-/// Replaces libevent's `struct event` with a simplified layout.
+/// Event registration handle.
 /// No code outside event_.rs should access fields directly.
-#[repr(C)]
 pub struct event {
     /// Unique id assigned by `event_set` (0 = uninitialized).
     pub(crate) id: u64,
@@ -42,16 +41,13 @@ pub struct event {
 }
 
 /// Opaque event_base handle.
-#[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct event_base {
     _unused: [u8; 0],
 }
 
-/// calloop-backed bufferevent struct.
-///
-/// Provides buffered I/O on a file descriptor with read/write callbacks.
-#[repr(C)]
+/// Bufferevent struct — provides buffered I/O on a file descriptor with
+/// read/write/error callbacks.
 pub struct bufferevent {
     pub ev_base: *mut event_base,
     pub ev_read: event,

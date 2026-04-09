@@ -30,10 +30,10 @@ not something else.
 
 ### Linux
 
-Like `tmux`, it requires `libevent2` and terminfo database (usually packaged with ncurses).
+It requires a terminfo database (usually packaged with ncurses).
 
 ```sh
-sudo apt-get install libncurses libevent-dev
+sudo apt-get install libncurses
 cargo install tmux-rs
 tmux-rs
 ```
@@ -41,7 +41,7 @@ tmux-rs
 ### macOS
 
 ```sh
-brew install libevent ncurses
+brew install ncurses
 cargo install tmux-rs
 tmux-rs
 ```

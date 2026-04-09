@@ -54,21 +54,14 @@ pub struct event_watermark {
 }
 
 // ---------------------------------------------------------------------------
-// Backend selection
+// Backend — calloop-based event loop
 // ---------------------------------------------------------------------------
 
-#[cfg(feature = "event-calloop")]
 mod event_calloop;
-#[cfg(feature = "event-calloop")]
 pub use event_calloop::*;
 
-#[cfg(not(feature = "event-calloop"))]
-mod event_libevent;
-#[cfg(not(feature = "event-calloop"))]
-pub use event_libevent::*;
-
 // ---------------------------------------------------------------------------
-// Shared helpers (both backends) — these delegate to backend-provided functions
+// Shared helpers — these delegate to backend-provided functions
 // ---------------------------------------------------------------------------
 
 macro_rules! evbuffer_add_printf {

@@ -20,8 +20,7 @@ autotests = false
 # they just exist to make matching upstream's
 # configuration options easier. However, sixel support is implemented
 [features]
-default     = ["sixel", "event-calloop"]
-event-calloop = ["calloop"]
+default     = ["sixel"]
 cgroups     = []
 hyperlinks  = []
 iutf8       = []
@@ -40,7 +39,7 @@ dynamic     = []
 
 [dependencies]
 bitflags     = { version = "2.9.1" }
-calloop      = { version = "0.14.4", optional = true, features = ["signals"] }
+calloop      = { version = "0.14.4", features = ["signals"] }
 lalrpop-util = { version = "0.22.2", default-features = false, features = ["unicode"] }
 libc         = { version = "0.2.174" }
 memchr       = { version = "2.7.6" }
@@ -56,7 +55,7 @@ name = "integration"
 path = "tests/tests.rs"
 
 [lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(fuzzing)', 'cfg(feature, values("event-calloop"))'] }
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(fuzzing)'] }
 
 [lints.clippy]
 # # All about Lints

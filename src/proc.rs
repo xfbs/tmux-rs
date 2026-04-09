@@ -212,7 +212,7 @@ pub fn proc_start(name: &CStr) -> *mut tmuxproc {
             _s((*u).version.as_ptr()),
         );
         log_debug!(
-            "using libevent {} {}",
+            "using {} {}",
             _s(event_get_version()),
             _s(event_get_method())
         );
@@ -392,18 +392,14 @@ pub unsafe fn proc_clear_signals(tp: *mut tmuxproc, defaults: i32) {
 
 /// Unblock the signals that calloop's signalfd keeps masked.
 ///
-/// The calloop event backend blocks signals (INT, HUP, CHLD, CONT, TERM,
-/// USR1, USR2, WINCH) so they are delivered to the signalfd rather than to
+/// The event backend blocks signals (INT, HUP, CHLD, CONT, TERM, USR1,
+/// USR2, WINCH) so they are delivered to the signalfd rather than to
 /// signal handlers.  Forked children inherit this mask, and the callers'
 /// `sigprocmask(SIG_SETMASK, &oldset)` restores it — but `oldset` was
 /// captured while the signals were blocked, so it keeps them blocked.
 ///
 /// Call this in forked children **after** restoring `oldset` to ensure the
 /// child process can receive signals normally before `exec()`.
-///
-/// With the libevent backend this is unnecessary because libevent uses
-/// `sigaction` handlers, not signalfd, so signals are never blocked.
-#[cfg(feature = "event-calloop")]
 pub unsafe fn proc_unblock_signals() {
     unsafe {
         let mut unblock: sigset_t = zeroed();
@@ -419,10 +415,6 @@ pub unsafe fn proc_unblock_signals() {
         sigprocmask(SIG_UNBLOCK, &raw mut unblock, null_mut());
     }
 }
-
-/// No-op with libevent — signals are never blocked for delivery.
-#[cfg(not(feature = "event-calloop"))]
-pub unsafe fn proc_unblock_signals() {}
 
 pub unsafe fn proc_add_peer(
     tp: *mut tmuxproc,
