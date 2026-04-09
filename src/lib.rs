@@ -1487,8 +1487,9 @@ struct layout_cell {
     yoff: u32,
 
     wp: Option<PaneId>,
-    /// Child cells. Empty for LAYOUT_WINDOWPANE leaves.
-    cells: Vec<*mut layout_cell>,
+    /// Child cell ids. Empty for LAYOUT_WINDOWPANE leaves. Resolved
+    /// through the window's `LayoutArena` via `get_ptr`.
+    cells: Vec<LayoutCellId>,
 }
 
 /// Stable handle to a `layout_cell` stored in a [`LayoutArena`].

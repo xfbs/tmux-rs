@@ -775,11 +775,11 @@ pub unsafe fn format_cb_window_layout(ft: &format_tree) -> format_table_type {
         }
 
         if !window_saved_layout_root(w).is_null() {
-            return layout_dump(window_saved_layout_root(w))
+            return layout_dump(w, window_saved_layout_root(w))
                 .map(Into::into)
                 .unwrap_or_default();
         }
-        layout_dump(window_layout_root(w))
+        layout_dump(w, window_layout_root(w))
             .map(Into::into)
             .unwrap_or_default()
     }
@@ -794,7 +794,7 @@ pub unsafe fn format_cb_window_visible_layout(ft: &format_tree) -> format_table_
             return format_table_type::None;
         }
 
-        layout_dump(window_layout_root(w))
+        layout_dump(w, window_layout_root(w))
             .map(Into::into)
             .unwrap_or_default()
     }

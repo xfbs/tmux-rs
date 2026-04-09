@@ -678,10 +678,10 @@ unsafe fn window_destroy(w: *mut window) {
         (*(&raw mut WINDOWS)).remove(&(*w).id);
 
         if !window_layout_root(w).is_null() {
-            layout_free_cell(window_layout_root(w));
+            layout_free_cell(w, window_layout_root(w));
         }
         if !window_saved_layout_root(w).is_null() {
-            layout_free_cell(window_saved_layout_root(w));
+            layout_free_cell(w, window_saved_layout_root(w));
         }
         free((*w).old_layout as _);
 

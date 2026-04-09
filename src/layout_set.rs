@@ -127,7 +127,7 @@ pub unsafe fn layout_set_even(w: *mut window, type_: layout_type) {
         let mut sx: u32;
         let mut sy: u32;
 
-        layout_print_cell(window_layout_root(w), __func__, 1);
+        layout_print_cell(w, window_layout_root(w), __func__, 1);
 
         // Get number of panes.
         let n = window_count_panes(&*w);
@@ -161,7 +161,7 @@ pub unsafe fn layout_set_even(w: *mut window, type_: layout_type) {
             layout_make_leaf(lcnew, wp);
             (*lcnew).sx = (*w).sx;
             (*lcnew).sy = (*w).sy;
-            (*lc).cells.push(lcnew);
+            (*lc).cells.push(lc_id(w, lcnew));
         }
 
         // Spread out cells.
@@ -171,7 +171,7 @@ pub unsafe fn layout_set_even(w: *mut window, type_: layout_type) {
         layout_fix_offsets(&*w);
         layout_fix_panes(&*w, null_mut());
 
-        layout_print_cell(window_layout_root(w), __func__, 1);
+        layout_print_cell(w, window_layout_root(w), __func__, 1);
 
         window_resize(w, (*lc).sx, (*lc).sy, -1, -1);
         notify_window(c"window-layout-changed", w);
@@ -197,7 +197,7 @@ pub unsafe fn layout_set_main_h(w: *mut window) {
         // struct window_pane *wp;
         // struct layout_cell *lc, *lcmain, *lcother, *lcchild;
         // u_int n, mainh, otherh, sx, sy;
-        layout_print_cell(window_layout_root(w), __func__, 1);
+        layout_print_cell(w, window_layout_root(w), __func__, 1);
 
         // Get number of panes.
         let mut n = window_count_panes(&*w);
@@ -254,7 +254,7 @@ pub unsafe fn layout_set_main_h(w: *mut window) {
         let lcmain = layout_create_cell_in(w, lc).1;
         layout_set_size(lcmain, sx, mainh, 0, 0);
         layout_make_leaf(lcmain, (*w).panes.first().copied().unwrap_or(null_mut()));
-        (*lc).cells.push(lcmain);
+        (*lc).cells.push(lc_id(w, lcmain));
 
         // Create the other pane.
         let lcother = layout_create_cell_in(w, lc).1;
@@ -262,10 +262,10 @@ pub unsafe fn layout_set_main_h(w: *mut window) {
         if n == 1 {
             let wp = window_pane_next_in_list((*w).panes.first().copied().unwrap_or(null_mut()));
             layout_make_leaf(lcother, wp);
-            (*lc).cells.push(lcother);
+            (*lc).cells.push(lc_id(w, lcother));
         } else {
             layout_make_node(lcother, layout_type::LAYOUT_LEFTRIGHT);
-            (*lc).cells.push(lcother);
+            (*lc).cells.push(lc_id(w, lcother));
 
             // Add the remaining panes as children.
             for &wp in (*w).panes.iter() {
@@ -275,7 +275,7 @@ pub unsafe fn layout_set_main_h(w: *mut window) {
                 let lcchild = layout_create_cell_in(w, lcother).1;
                 layout_set_size(lcchild, PANE_MINIMUM, otherh, 0, 0);
                 layout_make_leaf(lcchild, wp);
-                (*lcother).cells.push(lcchild);
+                (*lcother).cells.push(lc_id(w, lcchild));
             }
             layout_spread_cell(w, lcother);
         }
@@ -284,7 +284,7 @@ pub unsafe fn layout_set_main_h(w: *mut window) {
         layout_fix_offsets(&*w);
         layout_fix_panes(&*w, null_mut());
 
-        layout_print_cell(window_layout_root(w), __func__, 1);
+        layout_print_cell(w, window_layout_root(w), __func__, 1);
 
         window_resize(w, (*lc).sx, (*lc).sy, -1, -1);
         notify_window(c"window-layout-changed", w);
@@ -297,7 +297,7 @@ pub unsafe fn layout_set_main_h_mirrored(w: *mut window) {
     unsafe {
         let mut otherh: u32;
 
-        layout_print_cell(window_layout_root(w), __func__, 1);
+        layout_print_cell(w, window_layout_root(w), __func__, 1);
 
         // Get number of panes.
         let mut n = window_count_panes(&*w);
@@ -355,10 +355,10 @@ pub unsafe fn layout_set_main_h_mirrored(w: *mut window) {
         if n == 1 {
             let wp = window_pane_next_in_list((*w).panes.first().copied().unwrap_or(null_mut()));
             layout_make_leaf(lcother, wp);
-            (*lc).cells.push(lcother);
+            (*lc).cells.push(lc_id(w, lcother));
         } else {
             layout_make_node(lcother, layout_type::LAYOUT_LEFTRIGHT);
-            (*lc).cells.push(lcother);
+            (*lc).cells.push(lc_id(w, lcother));
 
             // Add the remaining panes as children.
             for &wp in (*w).panes.iter() {
@@ -368,7 +368,7 @@ pub unsafe fn layout_set_main_h_mirrored(w: *mut window) {
                 let lcchild = layout_create_cell_in(w, lcother).1;
                 layout_set_size(lcchild, PANE_MINIMUM, otherh, 0, 0);
                 layout_make_leaf(lcchild, wp);
-                (*lcother).cells.push(lcchild);
+                (*lcother).cells.push(lc_id(w, lcchild));
             }
             layout_spread_cell(w, lcother);
         }
@@ -377,13 +377,13 @@ pub unsafe fn layout_set_main_h_mirrored(w: *mut window) {
         let lcmain = layout_create_cell_in(w, lc).1;
         layout_set_size(lcmain, sx, mainh, 0, 0);
         layout_make_leaf(lcmain, (*w).panes.first().copied().unwrap_or(null_mut()));
-        (*lc).cells.push(lcmain);
+        (*lc).cells.push(lc_id(w, lcmain));
 
         // Fix cell offsets.
         layout_fix_offsets(&*w);
         layout_fix_panes(&*w, null_mut());
 
-        layout_print_cell(window_layout_root(w), __func__, 1);
+        layout_print_cell(w, window_layout_root(w), __func__, 1);
 
         window_resize(w, (*lc).sx, (*lc).sy, -1, -1);
         notify_window(c"window-layout-changed", w);
@@ -395,7 +395,7 @@ pub unsafe fn layout_set_main_v(w: *mut window) {
     let __func__ = c!("layout_set_main_v");
 
     unsafe {
-        layout_print_cell(window_layout_root(w), __func__, 1);
+        layout_print_cell(w, window_layout_root(w), __func__, 1);
 
         // Get number of panes.
         let mut n = window_count_panes(&*w);
@@ -452,7 +452,7 @@ pub unsafe fn layout_set_main_v(w: *mut window) {
         let lcmain = layout_create_cell_in(w, lc).1;
         layout_set_size(lcmain, mainw, sy, 0, 0);
         layout_make_leaf(lcmain, (*w).panes.first().copied().unwrap_or(null_mut()));
-        (*lc).cells.push(lcmain);
+        (*lc).cells.push(lc_id(w, lcmain));
 
         // Create the other pane.
         let lcother = layout_create_cell_in(w, lc).1;
@@ -460,10 +460,10 @@ pub unsafe fn layout_set_main_v(w: *mut window) {
         if n == 1 {
             let wp = window_pane_next_in_list((*w).panes.first().copied().unwrap_or(null_mut()));
             layout_make_leaf(lcother, wp);
-            (*lc).cells.push(lcother);
+            (*lc).cells.push(lc_id(w, lcother));
         } else {
             layout_make_node(lcother, layout_type::LAYOUT_TOPBOTTOM);
-            (*lc).cells.push(lcother);
+            (*lc).cells.push(lc_id(w, lcother));
 
             // Add the remaining panes as children.
             for &wp in (*w).panes.iter() {
@@ -473,7 +473,7 @@ pub unsafe fn layout_set_main_v(w: *mut window) {
                 let lcchild = layout_create_cell_in(w, lcother).1;
                 layout_set_size(lcchild, otherw, PANE_MINIMUM, 0, 0);
                 layout_make_leaf(lcchild, wp);
-                (*lcother).cells.push(lcchild);
+                (*lcother).cells.push(lc_id(w, lcchild));
             }
             layout_spread_cell(w, lcother);
         }
@@ -482,7 +482,7 @@ pub unsafe fn layout_set_main_v(w: *mut window) {
         layout_fix_offsets(&*w);
         layout_fix_panes(&*w, null_mut());
 
-        layout_print_cell(window_layout_root(w), __func__, 1);
+        layout_print_cell(w, window_layout_root(w), __func__, 1);
 
         window_resize(w, (*lc).sx, (*lc).sy, -1, -1);
         notify_window(c"window-layout-changed", w);
@@ -493,7 +493,7 @@ pub unsafe fn layout_set_main_v(w: *mut window) {
 pub unsafe fn layout_set_main_v_mirrored(w: *mut window) {
     let __func__ = c!("layout_set_main_v_mirrored");
     unsafe {
-        layout_print_cell(window_layout_root(w), __func__, 1);
+        layout_print_cell(w, window_layout_root(w), __func__, 1);
 
         // Get number of panes.
         let mut n = window_count_panes(&*w);
@@ -552,10 +552,10 @@ pub unsafe fn layout_set_main_v_mirrored(w: *mut window) {
         if n == 1 {
             let wp = window_pane_next_in_list((*w).panes.first().copied().unwrap_or(null_mut()));
             layout_make_leaf(lcother, wp);
-            (*lc).cells.push(lcother);
+            (*lc).cells.push(lc_id(w, lcother));
         } else {
             layout_make_node(lcother, layout_type::LAYOUT_TOPBOTTOM);
-            (*lc).cells.push(lcother);
+            (*lc).cells.push(lc_id(w, lcother));
 
             // Add the remaining panes as children.
             for &wp in (*w).panes.iter() {
@@ -565,7 +565,7 @@ pub unsafe fn layout_set_main_v_mirrored(w: *mut window) {
                 let lcchild = layout_create_cell_in(w, lcother).1;
                 layout_set_size(lcchild, otherw, PANE_MINIMUM, 0, 0);
                 layout_make_leaf(lcchild, wp);
-                (*lcother).cells.push(lcchild);
+                (*lcother).cells.push(lc_id(w, lcchild));
             }
             layout_spread_cell(w, lcother);
         }
@@ -574,13 +574,13 @@ pub unsafe fn layout_set_main_v_mirrored(w: *mut window) {
         let lcmain = layout_create_cell_in(w, lc).1;
         layout_set_size(lcmain, mainw, sy, 0, 0);
         layout_make_leaf(lcmain, (*w).panes.first().copied().unwrap_or(null_mut()));
-        (*lc).cells.push(lcmain);
+        (*lc).cells.push(lc_id(w, lcmain));
 
         // Fix cell offsets.
         layout_fix_offsets(&*w);
         layout_fix_panes(&*w, null_mut());
 
-        layout_print_cell(window_layout_root(w), __func__, 1);
+        layout_print_cell(w, window_layout_root(w), __func__, 1);
 
         window_resize(w, (*lc).sx, (*lc).sy, -1, -1);
         notify_window(c"window-layout-changed", w);
@@ -592,7 +592,7 @@ pub unsafe fn layout_set_tiled(w: *mut window) {
     let __func__ = c!("layout_set_tiled");
 
     unsafe {
-        layout_print_cell(window_layout_root(w), __func__, 1);
+        layout_print_cell(w, window_layout_root(w), __func__, 1);
 
         // Get number of panes.
         let n = window_count_panes(&*w);
@@ -646,7 +646,7 @@ pub unsafe fn layout_set_tiled(w: *mut window) {
             // Create the new row.
             let lcrow = layout_create_cell_in(w, lc).1;
             layout_set_size(lcrow, (*w).sx, height, 0, 0);
-            (*lc).cells.push(lcrow);
+            (*lc).cells.push(lc_id(w, lcrow));
 
             // If only one column, just use the row directly.
             if n - (j * columns) == 1 || columns == 1 {
@@ -664,7 +664,7 @@ pub unsafe fn layout_set_tiled(w: *mut window) {
                 let lcchild = layout_create_cell_in(w, lcrow).1;
                 layout_set_size(lcchild, width, height, 0, 0);
                 layout_make_leaf(lcchild, wp);
-                (*lcrow).cells.push(lcchild);
+                (*lcrow).cells.push(lc_id(w, lcchild));
 
                 // Move to the next cell.
                 wp = window_pane_next_in_list(wp);
@@ -682,7 +682,7 @@ pub unsafe fn layout_set_tiled(w: *mut window) {
             if (*w).sx <= used {
                 continue;
             }
-            let lcchild = (*lcrow).cells.last().copied().unwrap_or(null_mut());
+            let lcchild = (*lcrow).cells.last().copied().map(|id| lc_ptr(w, id)).unwrap_or(null_mut());
             layout_resize_adjust(
                 w,
                 lcchild,
@@ -694,7 +694,7 @@ pub unsafe fn layout_set_tiled(w: *mut window) {
         // Adjust the last row height to fit if necessary.
         let used = (rows * height) + rows - 1;
         if (*w).sy > used {
-            let lcrow = (*lc).cells.last().copied().unwrap_or(null_mut());
+            let lcrow = (*lc).cells.last().copied().map(|id| lc_ptr(w, id)).unwrap_or(null_mut());
             layout_resize_adjust(
                 w,
                 lcrow,
@@ -707,7 +707,7 @@ pub unsafe fn layout_set_tiled(w: *mut window) {
         layout_fix_offsets(&*w);
         layout_fix_panes(&*w, null_mut());
 
-        layout_print_cell(window_layout_root(w), __func__, 1);
+        layout_print_cell(w, window_layout_root(w), __func__, 1);
 
         window_resize(w, (*lc).sx, (*lc).sy, -1, -1);
         notify_window(c"window-layout-changed", w);

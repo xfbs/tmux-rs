@@ -86,7 +86,7 @@ unsafe fn cmd_select_layout_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
                 }
 
                 oldlayout = (*w).old_layout;
-                (*w).old_layout = layout_dump(window_layout_root(w))
+                (*w).old_layout = layout_dump(w, window_layout_root(w))
                     .map(|s| CString::new(s).unwrap().into_raw().cast())
                     .unwrap_or_default();
 

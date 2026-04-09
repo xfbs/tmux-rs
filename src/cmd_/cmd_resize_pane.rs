@@ -176,7 +176,7 @@ unsafe fn cmd_resize_pane_mouse_update(c: *mut client, m: *mut mouse_event) {
         }
 
         for offset in OFFSETS {
-            let mut lc = layout_search_by_border(
+            let mut lc = layout_search_by_border(w, 
                 window_layout_root(w),
                 (lx as i32 + offset[0]).max(0) as u32,
                 (ly as i32 + offset[1]).max(0) as u32,

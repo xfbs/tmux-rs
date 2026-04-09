@@ -14,13 +14,13 @@
 use crate::libc::sscanf;
 use crate::*;
 
-pub unsafe fn layout_find_bottomright(mut lc: *mut layout_cell) -> *mut layout_cell {
+pub unsafe fn layout_find_bottomright(w: *mut window, mut lc: *mut layout_cell) -> *mut layout_cell {
     unsafe {
         if (*lc).type_ == layout_type::LAYOUT_WINDOWPANE {
             return lc;
         }
-        lc = (*lc).cells.last().copied().unwrap_or(null_mut());
-        layout_find_bottomright(lc)
+        lc = (*lc).cells.last().copied().map(|id| lc_ptr(w, id)).unwrap_or(null_mut());
+        layout_find_bottomright(w, lc)
     }
 }
 
@@ -37,13 +37,13 @@ pub unsafe fn layout_checksum(mut layout: *const u8) -> u16 {
 }
 
 /// Dump layout as a string.
-pub unsafe fn layout_dump(root: *mut layout_cell) -> Option<String> {
+pub unsafe fn layout_dump(w: *mut window, root: *mut layout_cell) -> Option<String> {
     unsafe {
         let mut layout: MaybeUninit<[u8; 8192]> = MaybeUninit::<[u8; 8192]>::uninit();
         let layout = layout.as_mut_ptr() as *mut u8;
 
         *layout = b'\0' as _;
-        if layout_append(root, layout, 8192) != 0 {
+        if layout_append(w, root, layout, 8192) != 0 {
             return None;
         }
 
@@ -51,7 +51,7 @@ pub unsafe fn layout_dump(root: *mut layout_cell) -> Option<String> {
     }
 }
 
-pub unsafe fn layout_append(lc: *mut layout_cell, buf: *mut u8, len: usize) -> i32 {
+pub unsafe fn layout_append(w: *mut window, lc: *mut layout_cell, buf: *mut u8, len: usize) -> i32 {
     unsafe {
         let sizeof_tmp = 64;
         let mut tmp = MaybeUninit::<[u8; 64]>::uninit();
@@ -105,8 +105,8 @@ pub unsafe fn layout_append(lc: *mut layout_cell, buf: *mut u8, len: usize) -> i
                 if strlcat(buf, brackets.add(1), len) >= len {
                     return -1;
                 }
-                for &lcchild in (*lc).cells.iter() {
-                    if layout_append(lcchild, buf, len) != 0 {
+                for &lcchild in lc_children(w, lc).iter() {
+                    if layout_append(w, lcchild, buf, len) != 0 {
                         return -1;
                     }
                     if strlcat(buf, c!(","), len) >= len {
@@ -122,18 +122,18 @@ pub unsafe fn layout_append(lc: *mut layout_cell, buf: *mut u8, len: usize) -> i
 }
 
 /// Check layout sizes fit.
-pub unsafe fn layout_check(lc: *mut layout_cell) -> bool {
+pub unsafe fn layout_check(w: *mut window, lc: *mut layout_cell) -> bool {
     unsafe {
         let mut n = 0u32;
 
         match (*lc).type_ {
             layout_type::LAYOUT_WINDOWPANE => (),
             layout_type::LAYOUT_LEFTRIGHT => {
-                for &lcchild in (*lc).cells.iter() {
+                for &lcchild in lc_children(w, lc).iter() {
                     if (*lcchild).sy != (*lc).sy {
                         return false;
                     }
-                    if !layout_check(lcchild) {
+                    if !layout_check(w, lcchild) {
                         return false;
                     }
                     n += (*lcchild).sx + 1;
@@ -143,11 +143,11 @@ pub unsafe fn layout_check(lc: *mut layout_cell) -> bool {
                 }
             }
             layout_type::LAYOUT_TOPBOTTOM => {
-                for &lcchild in (*lc).cells.iter() {
+                for &lcchild in lc_children(w, lc).iter() {
                     if (*lcchild).sx != (*lc).sx {
                         return false;
                     }
-                    if !layout_check(lcchild) {
+                    if !layout_check(w, lcchild) {
                         return false;
                     }
                     n += (*lcchild).sy + 1;
@@ -192,7 +192,7 @@ pub unsafe fn layout_parse(w: *mut window, mut layout: *const u8) -> Result<(), 
             // Check this window will fit into the layout.
             loop {
                 let npanes = window_count_panes(&*w);
-                let ncells = layout_count_cells(lc);
+                let ncells = layout_count_cells(w, lc);
                 if npanes > ncells {
                     err_msg = Some(format!("have {} panes but need {}", npanes, ncells));
                     break 'fail;
@@ -202,7 +202,7 @@ pub unsafe fn layout_parse(w: *mut window, mut layout: *const u8) -> Result<(), 
                 }
 
                 // Fewer panes than cells - close the bottom right.
-                let lcchild = layout_find_bottomright(lc);
+                let lcchild = layout_find_bottomright(w, lc);
                 layout_destroy_cell(w, lcchild, &raw mut lc);
             }
 
@@ -214,14 +214,14 @@ pub unsafe fn layout_parse(w: *mut window, mut layout: *const u8) -> Result<(), 
             match (*lc).type_ {
                 layout_type::LAYOUT_WINDOWPANE => (),
                 layout_type::LAYOUT_LEFTRIGHT => {
-                    for &lcchild in (*lc).cells.iter() {
+                    for &lcchild in lc_children(w, lc).iter() {
                         sy = (*lcchild).sy + 1;
                         sx += (*lcchild).sx + 1;
                         continue;
                     }
                 }
                 layout_type::LAYOUT_TOPBOTTOM => {
-                    for &lcchild in (*lc).cells.iter() {
+                    for &lcchild in lc_children(w, lc).iter() {
                         sx = (*lcchild).sx + 1;
                         sy += (*lcchild).sy + 1;
                         continue;
@@ -230,13 +230,13 @@ pub unsafe fn layout_parse(w: *mut window, mut layout: *const u8) -> Result<(), 
             }
             if (*lc).type_ != layout_type::LAYOUT_WINDOWPANE && ((*lc).sx != sx || (*lc).sy != sy) {
                 log_debug!("fix layout {},{} to {},{}", (*lc).sx, (*lc).sy, sx, sy);
-                layout_print_cell(lc, __func__, 0);
+                layout_print_cell(w, lc, __func__, 0);
                 (*lc).sx = sx - 1;
                 (*lc).sy = sy - 1;
             }
 
             // Check the new layout.
-            if !layout_check(lc) {
+            if !layout_check(w, lc) {
                 err_msg = Some("size mismatch after applying layout".to_string());
                 break 'fail;
             }
@@ -245,32 +245,32 @@ pub unsafe fn layout_parse(w: *mut window, mut layout: *const u8) -> Result<(), 
             window_resize(w, (*lc).sx, (*lc).sy, -1, -1);
 
             // Destroy the old layout and swap to the new.
-            layout_free_cell(window_layout_root(w));
+            layout_free_cell(w, window_layout_root(w));
             window_set_layout_root(w, lc);
 
             // Assign the panes into the cells.
             let mut wp = (*w).panes.first().copied().unwrap_or(null_mut());
-            layout_assign(&raw mut wp, lc);
+            layout_assign(w, &raw mut wp, lc);
 
             // Update pane offsets and sizes.
             layout_fix_offsets(&*w);
             layout_fix_panes(&*w, null_mut());
             recalculate_sizes();
 
-            layout_print_cell(lc, __func__, 0);
+            layout_print_cell(w, lc, __func__, 0);
 
             notify_window(c"window-layout-changed", w);
 
             return Ok(());
         }
         // fail:
-        layout_free_cell(lc);
+        layout_free_cell(w, lc);
         Err(err_msg.unwrap_or_else(|| "invalid layout".to_string()))
     }
 }
 
 /// Assign panes into cells.
-unsafe fn layout_assign(wp: *mut *mut window_pane, lc: *mut layout_cell) {
+unsafe fn layout_assign(w: *mut window, wp: *mut *mut window_pane, lc: *mut layout_cell) {
     unsafe {
         match (*lc).type_ {
             layout_type::LAYOUT_WINDOWPANE => {
@@ -278,8 +278,8 @@ unsafe fn layout_assign(wp: *mut *mut window_pane, lc: *mut layout_cell) {
                 *wp = window_pane_next_in_list(*wp);
             }
             layout_type::LAYOUT_LEFTRIGHT | layout_type::LAYOUT_TOPBOTTOM => {
-                for &lcchild in (*lc).cells.iter() {
-                    layout_assign(wp, lcchild);
+                for &lcchild in lc_children(w, lc).iter() {
+                    layout_assign(w, wp, lcchild);
                 }
             }
         }
@@ -369,7 +369,7 @@ unsafe fn layout_construct(
                 if lcchild.is_null() {
                     break 'fail;
                 }
-                (*lc).cells.push(lcchild);
+                (*lc).cells.push(lc_id(w, lcchild));
                 if **layout != b',' {
                     break;
                 }
@@ -393,7 +393,7 @@ unsafe fn layout_construct(
             return lc;
         }
         // fail:
-        layout_free_cell(lc);
+        layout_free_cell(w, lc);
         null_mut()
     }
 }
