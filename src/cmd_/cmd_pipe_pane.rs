@@ -119,6 +119,7 @@ pub unsafe fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
             0 => {
                 proc_clear_signals(SERVER_PROC, 1);
                 sigprocmask(SIG_SETMASK, &oldset, null_mut());
+                proc_unblock_signals();
                 close(pipe_fd[0]);
 
                 let null_fd = open(_PATH_DEVNULL, O_WRONLY, 0);

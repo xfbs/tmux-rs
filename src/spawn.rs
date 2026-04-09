@@ -517,6 +517,7 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context) -> Result<NonNull<window_pane>,
             proc_clear_signals(SERVER_PROC, 1);
             closefrom(STDERR_FILENO + 1);
             sigprocmask(SIG_SETMASK, &raw mut oldset, null_mut());
+            proc_unblock_signals();
             log_close();
             environ_push(&*child);
 

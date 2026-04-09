@@ -164,6 +164,7 @@ pub unsafe fn job_run(
                 0 => {
                     proc_clear_signals(SERVER_PROC, 1);
                     sigprocmask(SIG_SETMASK, oldset.as_mut_ptr(), null_mut());
+                    proc_unblock_signals();
 
                     if (cwd.is_null() || std::env::set_current_dir(cstr_to_str(cwd)).is_err())
                         && find_home().is_none_or(|home| {

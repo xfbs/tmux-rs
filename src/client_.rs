@@ -564,6 +564,7 @@ unsafe fn client_exec(shell: *mut u8, shellcmd: *mut u8) {
         std::env::set_var("SHELL", shell_str);
 
         proc_clear_signals(CLIENT_PROC, 1);
+        proc_unblock_signals();
 
         setblocking(STDIN_FILENO, 1);
         setblocking(STDOUT_FILENO, 1);
