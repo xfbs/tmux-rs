@@ -1379,12 +1379,12 @@ struct window {
     panes: Vec<*mut window_pane>,
 
     lastlayout: i32,
-    layout_root: *mut layout_cell,
-    saved_layout_root: *mut layout_cell,
     old_layout: *mut u8,
-    /// Phase 2.5 parallel infrastructure: arena that will eventually own
-    /// every layout_cell for this window. Currently empty and unused — see
-    /// PLAN.md §2.5 for the migration plan.
+    /// Owns every `layout_cell` for this window, plus the live root and
+    /// the zoom-saved root as `Option<LayoutCellId>` slots. Reads and
+    /// writes go through `window_layout_root` / `window_set_layout_root`
+    /// (and the `saved_*` variants) — those resolve through the arena's
+    /// `root` / `saved_root` fields.
     layout: LayoutArena,
 
     sx: u32,

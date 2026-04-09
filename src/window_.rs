@@ -333,37 +333,64 @@ pub unsafe fn pane_set_layout_cell(wp: *mut window_pane, lc: *mut layout_cell) {
     }
 }
 
-/// Read a window's `layout_root` as a raw pointer.
+/// Read a window's layout root as a raw pointer.
 ///
-/// Phase 2.5 step 5 accessor: bridge for the eventual flip from
-/// `window.layout_root: *mut layout_cell` to using the arena's
-/// `root: Option<LayoutCellId>` directly. Currently a direct field
-/// read.
-#[inline]
+/// Resolves the arena's `root: Option<LayoutCellId>` slot through
+/// `LayoutArena::get_ptr`. Returns null if there is no root or the
+/// id no longer resolves to a live arena slot.
 pub unsafe fn window_layout_root(w: *mut window) -> *mut layout_cell {
-    unsafe { (*w).layout_root }
+    unsafe {
+        match (*w).layout.root() {
+            Some(id) => (*w).layout.get_ptr(id),
+            None => null_mut(),
+        }
+    }
 }
 
-/// Write a window's `layout_root` from a raw pointer.
+/// Write a window's layout root from a raw pointer.
 ///
-/// Phase 2.5 step 5 accessor — see [`window_layout_root`]. After the
-/// flip, this resolves `lc` to a `LayoutCellId` via the window's arena
-/// and stores it in `arena.root`.
-#[inline]
+/// Stores the arena id of `lc` in the window's `LayoutArena::root`
+/// slot. The cell **must** live in this window's arena. If `lc` is
+/// null, the slot is cleared.
 pub unsafe fn window_set_layout_root(w: *mut window, lc: *mut layout_cell) {
-    unsafe { (*w).layout_root = lc }
+    unsafe {
+        if lc.is_null() {
+            (*w).layout.set_root(None);
+            return;
+        }
+        let id = (*w).layout.id_of_ptr(lc);
+        debug_assert!(
+            id.is_some(),
+            "window_set_layout_root: pointer not found in this window's arena",
+        );
+        (*w).layout.set_root(id);
+    }
 }
 
-/// Read a window's `saved_layout_root` as a raw pointer.
-#[inline]
+/// Read a window's saved layout root (zoom-save slot) as a raw pointer.
 pub unsafe fn window_saved_layout_root(w: *mut window) -> *mut layout_cell {
-    unsafe { (*w).saved_layout_root }
+    unsafe {
+        match (*w).layout.saved_root() {
+            Some(id) => (*w).layout.get_ptr(id),
+            None => null_mut(),
+        }
+    }
 }
 
-/// Write a window's `saved_layout_root` from a raw pointer.
-#[inline]
+/// Write a window's saved layout root from a raw pointer.
 pub unsafe fn window_set_saved_layout_root(w: *mut window, lc: *mut layout_cell) {
-    unsafe { (*w).saved_layout_root = lc }
+    unsafe {
+        if lc.is_null() {
+            (*w).layout.set_saved_root(None);
+            return;
+        }
+        let id = (*w).layout.id_of_ptr(lc);
+        debug_assert!(
+            id.is_some(),
+            "window_set_saved_layout_root: pointer not found in this window's arena",
+        );
+        (*w).layout.set_saved_root(id);
+    }
 }
 
 /// Read the pane's `saved_layout_cell` field as a raw pointer.
@@ -589,11 +616,12 @@ pub unsafe fn window_create(sx: u32, sy: u32, mut xpixel: u32, mut ypixel: u32) 
         (*w).active = None;
 
         (*w).lastlayout = -1;
-        (*w).layout_root = null_mut();
         // xcalloc'd zero bytes are not a valid LayoutArena (the inner Vec
         // would be UB on first use). Initialize explicitly. The Box drop
         // in `window_destroy` will run LayoutArena's Drop, so no manual
-        // teardown is needed.
+        // teardown is needed. The arena's `root` and `saved_root` slots
+        // start as None, which is the new home of the former `layout_root`
+        // / `saved_layout_root` raw-pointer fields.
         std::ptr::write(&raw mut (*w).layout, LayoutArena::new());
 
         (*w).sx = sx;
