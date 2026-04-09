@@ -4,7 +4,7 @@
 //! `event_loop`, `event_active`, `event_pending`, etc.
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ffi::{c_int, c_short, c_void};
 use std::io;
 use std::os::fd::{FromRawFd, OwnedFd};
@@ -353,6 +353,10 @@ pub unsafe fn event_del(ev_ptr: *mut event) -> c_int {
         base.fallback_events.remove(&ev.id);
     }
 
+    // Mark this event as cancelled so the dispatch loop skips it if it
+    // was already collected as ready in this iteration.
+    CANCELLED.with(|cell| { cell.borrow_mut().insert(ev.id); });
+
     ev.added = false;
     0
 }
@@ -379,6 +383,11 @@ pub unsafe fn event_active(ev_ptr: *mut event, res: c_int, _ncalls: c_short) {
 
 thread_local! {
     static PENDING_ACTIVE: RefCell<Vec<ReadyEvent>> = const { RefCell::new(Vec::new()) };
+    /// Event IDs deleted during a dispatch cycle.  Checked before firing each
+    /// callback so we skip events whose underlying resource was freed by an
+    /// earlier callback in the same iteration (e.g. SIGCHLD destroying a pane
+    /// whose read event is also ready).
+    static CANCELLED: RefCell<HashSet<u64>> = RefCell::new(HashSet::new());
 }
 
 pub unsafe fn event_pending(ev_ptr: *const event, events: c_short, tv: *mut timeval) -> c_int {
@@ -465,8 +474,17 @@ pub unsafe fn event_loop(flags: c_int) -> c_int {
         data.ready.append(&mut cell.borrow_mut());
     });
 
-    // Dispatch all ready events.
+    // Clear the cancelled set before dispatching.
+    CANCELLED.with(|cell| cell.borrow_mut().clear());
+
+    // Dispatch all ready events, skipping any that were cancelled by an
+    // earlier callback in this cycle (e.g. SIGCHLD handler destroying a
+    // pane whose bufferevent read event is also in the ready list).
     for ready in data.ready {
+        let cancelled = CANCELLED.with(|cell| cell.borrow().contains(&ready.id));
+        if cancelled {
+            continue;
+        }
         if let Some(cb) = ready.callback {
             unsafe { cb(ready.fd, ready.events, ready.arg); }
         }
