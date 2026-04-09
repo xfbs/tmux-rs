@@ -88,19 +88,34 @@ unsafe fn cmd_swap_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retva
                 (*dst_w).panes.insert(pos + 1, src_wp);
             }
 
+            // Capture each pane's layout_cell pointer before any field
+            // changes. src_lc lives in src_w.layout, dst_lc in dst_w.layout.
             let src_lc = pane_layout_cell(src_wp);
             let dst_lc = pane_layout_cell(dst_wp);
+            // Re-aim the cells' back-pointers at their new panes.
             (*src_lc).wp = pane_id_from_ptr(dst_wp);
-            pane_set_layout_cell(dst_wp, src_lc);
             (*dst_lc).wp = pane_id_from_ptr(src_wp);
-            pane_set_layout_cell(src_wp, dst_lc);
 
+            // Move panes to their new windows BEFORE writing the swapped
+            // layout_cell fields. This keeps the per-window-arena invariant
+            // intact at every point: after this pair of calls, src_wp lives
+            // in dst_w (whose arena owns dst_lc) and dst_wp lives in src_w
+            // (whose arena owns src_lc), so the layout_cell writes below
+            // immediately satisfy "pane.layout_cell lives in pane's window
+            // arena". Both setters touch only `wp.window`, never layout_cell,
+            // so the temporarily-stale layout_cell field is unobserved.
             window_pane_set_window(src_wp, dst_w);
             options_set_parent(&mut *(*src_wp).options, (*dst_w).options);
             (*src_wp).flags |= window_pane_flags::PANE_STYLECHANGED;
             window_pane_set_window(dst_wp, src_w);
             options_set_parent(&mut *(*dst_wp).options, (*src_w).options);
             (*dst_wp).flags |= window_pane_flags::PANE_STYLECHANGED;
+
+            // Now both panes are in their new windows; write the swapped
+            // layout_cell fields. Each pane gets the layout_cell that lives
+            // in its current window's arena.
+            pane_set_layout_cell(src_wp, dst_lc);
+            pane_set_layout_cell(dst_wp, src_lc);
 
             let sx = (*src_wp).sx;
             let sy = (*src_wp).sy;
