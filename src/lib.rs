@@ -34,6 +34,8 @@ pub(crate) use crate::libc::{free_, memcpy_, memcpy__, streq_};
 
 // libevent2
 mod event_;
+// Phase 3.0: Pure-Rust evbuffer replacement
+pub mod evbuffer_;
 use terminfo_lean::expand::ExpandContext;
 
 use crate::event_::*;
