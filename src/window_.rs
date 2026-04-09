@@ -288,6 +288,28 @@ pub unsafe fn pane_ptr_from_id(id: Option<PaneId>) -> *mut window_pane {
     unsafe { id.and_then(|i| pane_from_id(i)).unwrap_or(null_mut()) }
 }
 
+/// Read the pane's `layout_cell` field as a raw pointer.
+///
+/// Phase 2.5 step 4 accessor: this currently just dereferences the
+/// `*mut layout_cell` field directly, but its purpose is to centralize
+/// the read so that step 4.5 can flip the field type to
+/// `Option<LayoutCellId>` by changing only the accessor body. Callers
+/// remain unchanged across the field flip.
+#[inline]
+pub unsafe fn pane_layout_cell(wp: *mut window_pane) -> *mut layout_cell {
+    unsafe { (*wp).layout_cell }
+}
+
+/// Write the pane's `layout_cell` field from a raw pointer.
+///
+/// Phase 2.5 step 4 accessor — see [`pane_layout_cell`]. After the
+/// field flip, this will resolve `lc` to a `LayoutCellId` via the
+/// arena's `id_of_ptr`. For now it's a direct field write.
+#[inline]
+pub unsafe fn pane_set_layout_cell(wp: *mut window_pane, lc: *mut layout_cell) {
+    unsafe { (*wp).layout_cell = lc }
+}
+
 pub unsafe fn winlink_set_window(wl: *mut winlink, w: *mut window) {
     unsafe {
         let prev = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());

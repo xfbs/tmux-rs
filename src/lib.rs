@@ -1563,6 +1563,26 @@ impl LayoutArena {
         (id, ptr)
     }
 
+    /// Linear scan to find the id of the cell at heap address `ptr`,
+    /// or `None` if no slot in this arena owns that pointer. Used by
+    /// the Phase 2.5 step 4 migration to bridge raw `*mut layout_cell`
+    /// reads/writes through the arena. With at most a few dozen cells
+    /// per window, the linear scan is faster than maintaining a
+    /// separate ptr→id index.
+    pub(crate) fn id_of_ptr(&self, ptr: *const layout_cell) -> Option<LayoutCellId> {
+        if ptr.is_null() {
+            return None;
+        }
+        for (idx, slot) in self.cells.iter().enumerate() {
+            if let Some(boxed) = slot
+                && std::ptr::eq(&**boxed, ptr)
+            {
+                return Some(LayoutCellId(idx as u32));
+            }
+        }
+        None
+    }
+
     /// Borrow a cell by id, or `None` if the slot is empty / out of range.
     pub(crate) fn get(&self, id: LayoutCellId) -> Option<&layout_cell> {
         self.cells
@@ -1667,6 +1687,20 @@ mod layout_arena_tests {
         assert!(a.remove(id));
         assert!(!a.remove(id));
         assert!(a.get(id).is_none());
+    }
+
+    #[test]
+    fn id_of_ptr_finds_allocated_cells() {
+        let mut a = LayoutArena::new();
+        let (id1, ptr1) = a.alloc_with_ptr(dummy());
+        let (id2, ptr2) = a.alloc_with_ptr(dummy());
+        assert_eq!(a.id_of_ptr(ptr1), Some(id1));
+        assert_eq!(a.id_of_ptr(ptr2), Some(id2));
+        assert_eq!(a.id_of_ptr(std::ptr::null()), None);
+        // After remove, lookup returns None.
+        a.remove(id1);
+        assert_eq!(a.id_of_ptr(ptr1), None);
+        assert_eq!(a.id_of_ptr(ptr2), Some(id2));
     }
 
     #[test]
