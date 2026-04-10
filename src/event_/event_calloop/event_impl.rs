@@ -10,6 +10,61 @@ use std::io;
 use std::os::fd::{FromRawFd, OwnedFd};
 use std::time::Duration;
 
+// ---------------------------------------------------------------------------
+// Safe timer API
+// ---------------------------------------------------------------------------
+
+/// RAII handle for a registered timer.  Dropping it deregisters the timer
+/// from the event loop automatically.
+pub struct TimerHandle {
+    id: u64,
+}
+
+impl Drop for TimerHandle {
+    fn drop(&mut self) {
+        let base_ptr = unsafe { GLOBAL_BASE };
+        if base_ptr.is_null() {
+            return;
+        }
+        let base = unsafe { &mut *base_ptr };
+        if let Some(reg) = base.registrations.remove(&self.id) {
+            base.handle.remove(reg.token);
+        }
+        base.timer_callbacks.remove(&self.id);
+        // Mark cancelled so any already-queued ReadyEvent for this id is
+        // skipped in the current dispatch cycle.
+        CANCELLED.with(|cell| { cell.borrow_mut().insert(self.id); });
+    }
+}
+
+/// Register a one-shot timer that fires after `duration` and calls `callback`.
+///
+/// Returns `Some(TimerHandle)` on success.  Drop the handle to cancel.
+pub fn timer_add(duration: Duration, callback: Box<dyn Fn()>) -> Option<TimerHandle> {
+    let base_ptr = unsafe { GLOBAL_BASE };
+    if base_ptr.is_null() {
+        return None;
+    }
+    let base = unsafe { &mut *base_ptr };
+    let id = base.alloc_id();
+
+    let timer = Timer::from_duration(duration);
+    let token = base.handle.insert_source(timer, move |_, _, data| {
+        data.ready.push(ReadyEvent {
+            id,
+            fd: -1,
+            events: super::super::EV_TIMEOUT,
+            callback: None,
+            arg: std::ptr::null_mut(),
+        });
+        TimeoutAction::Drop
+    }).ok()?;
+
+    base.registrations.insert(id, Registration { token });
+    base.timer_callbacks.insert(id, callback);
+    Some(TimerHandle { id })
+}
+
 use calloop::generic::Generic;
 use calloop::signals::{Signal, Signals};
 use calloop::timer::{TimeoutAction, Timer};
@@ -64,6 +119,8 @@ pub(crate) struct EventBase {
     /// Events on non-epolable fds (regular files, etc.).  These fire on
     /// every `event_loop` iteration because the fd is always ready.
     fallback_events: HashMap<u64, FallbackEvent>,
+    /// Closures for safe timer API (`timer_add`).  Keyed by event id.
+    timer_callbacks: HashMap<u64, Box<dyn Fn()>>,
     next_id: u64,
 }
 
@@ -76,6 +133,7 @@ impl EventBase {
             handle,
             registrations: HashMap::new(),
             fallback_events: HashMap::new(),
+            timer_callbacks: HashMap::new(),
             next_id: 1,
         })
     }
@@ -487,6 +545,8 @@ pub unsafe fn event_loop(flags: c_int) -> c_int {
         }
         if let Some(cb) = ready.callback {
             unsafe { cb(ready.fd, ready.events, ready.arg); }
+        } else if let Some(cb) = base.timer_callbacks.get(&ready.id) {
+            cb();
         }
     }
 

@@ -11,6 +11,8 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+use std::time::Duration;
+
 use crate::*;
 use crate::options_::*;
 
@@ -120,6 +122,7 @@ impl session {
                 )),
             );
 
+            std::ptr::write(&raw mut s.lock_timer, None);
             std::ptr::write(&raw mut s.lastw, Vec::new());
             std::ptr::write(&raw mut s.windows, BTreeMap::new());
 
@@ -264,9 +267,8 @@ pub unsafe fn session_destroy(s: *mut session, notify: i32, from: *const u8) {
 
         free_((*s).tio);
 
-        if event_initialized(&raw mut (*s).lock_timer) != 0 {
-            event_del(&raw mut (*s).lock_timer);
-        }
+        // Drop the timer handle to deregister from the event loop.
+        (*s).lock_timer = None;
 
         session_group_remove(s);
 
@@ -308,24 +310,6 @@ pub unsafe fn session_check_name(name: *const u8) -> Option<String> {
     }
 }
 
-/// Lock session if it has timed out.
-pub unsafe extern "C-unwind" fn session_lock_timer(_fd: i32, _events: i16, s: NonNull<session>) {
-    unsafe {
-        if (*s.as_ptr()).attached == 0 {
-            return;
-        }
-
-        log_debug!(
-            "session {} locked, activity time {}",
-            (*s.as_ptr()).name,
-            (*s.as_ptr()).activity_time.tv_sec,
-        );
-
-        server_lock_session(s.as_ptr());
-        recalculate_sizes();
-    }
-}
-
 /// Update activity time.
 pub unsafe fn session_update_activity(s: *mut session, from: *mut timeval) {
     unsafe {
@@ -348,24 +332,29 @@ pub unsafe fn session_update_activity(s: *mut session, from: *mut timeval) {
             (*last).tv_usec,
         );
 
-        if evtimer_initialized(&raw mut (*s).lock_timer) {
-            evtimer_del(&raw mut (*s).lock_timer);
-        } else {
-            evtimer_set(
-                &raw mut (*s).lock_timer,
-                session_lock_timer,
-                NonNull::new(s).unwrap(),
-            );
-        }
+        // Cancel any existing lock timer.
+        (*s).lock_timer = None;
 
         if (*s).attached != 0 {
-            let tv = timeval {
-                tv_sec: options_get_number_((*s).options, "lock-after-time"),
-                tv_usec: 0,
-            };
-
-            if tv.tv_sec != 0 {
-                evtimer_add(&raw mut (*s).lock_timer, &tv);
+            let lock_after = options_get_number_((*s).options, "lock-after-time");
+            if lock_after != 0 {
+                let sid = SessionId((*s).id);
+                (*s).lock_timer = timer_add(
+                    Duration::from_secs(lock_after as u64),
+                    Box::new(move || {
+                        let Some(s) = session_from_id(sid) else { return };
+                        if (*s).attached == 0 {
+                            return;
+                        }
+                        log_debug!(
+                            "session {} locked, activity time {}",
+                            (*s).name,
+                            (*s).activity_time.tv_sec,
+                        );
+                        server_lock_session(s);
+                        recalculate_sizes();
+                    }),
+                );
             }
         }
     }

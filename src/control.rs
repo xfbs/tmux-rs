@@ -12,8 +12,10 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use crate::*;
 use std::collections::BTreeMap;
+use std::time::Duration;
+
+use crate::*;
 
 pub struct control_block {
     pub size: usize,
@@ -75,7 +77,7 @@ pub struct control_state {
     pub write_event: *mut bufferevent,
 
     pub subs: control_subs,
-    pub subs_timer: event,
+    pub subs_timer: Option<TimerHandle>,
 }
 
 /// Low and high watermarks.
@@ -714,6 +716,7 @@ pub unsafe fn control_start(c: *mut client) {
         std::ptr::write(&raw mut (*cs).pending_list, Vec::new());
         std::ptr::write(&raw mut (*cs).all_blocks, Vec::new());
         std::ptr::write(&raw mut (*cs).subs, BTreeMap::new());
+        std::ptr::write(&raw mut (*cs).subs_timer, None);
 
         (*cs).read_event = bufferevent_new(
             (*c).fd,
@@ -777,9 +780,7 @@ pub unsafe fn control_stop(c: *mut client) {
         for key in sub_keys {
             control_free_sub(cs, &key);
         }
-        if evtimer_initialized(&raw mut (*cs).subs_timer) {
-            evtimer_del(&raw mut (*cs).subs_timer);
-        }
+        (*cs).subs_timer = None;
 
         for &cb in &(*cs).all_blocks {
             free_((*cb).line);
@@ -974,21 +975,19 @@ pub unsafe fn control_check_subs_all_windows(c: *mut client, csub: *mut control_
     }
 }
 
-pub unsafe extern "C-unwind" fn control_check_subs_timer(
-    _fd: i32,
-    _events: i16,
-    c: NonNull<client>,
-) {
+/// Control subscription timer callback: check subs and re-arm.
+unsafe fn control_check_subs_timer_fire(cid: ClientId) {
     unsafe {
-        let c: *mut client = c.as_ptr();
+        let Some(c) = client_from_id(cid) else { return };
         let cs = (*c).control_state;
-        let mut tv = timeval {
-            tv_sec: 1,
-            tv_usec: 0,
-        };
 
         log_debug!("{}: timer fired", "control_check_subs_timer");
-        evtimer_add(&raw mut (*cs).subs_timer, &raw mut tv);
+
+        // Re-arm for next check.
+        (*cs).subs_timer = timer_add(
+            Duration::from_secs(1),
+            Box::new(move || unsafe { control_check_subs_timer_fire(cid) }),
+        );
 
         for csub in (*cs).subs.values_mut() {
             let csub: *mut control_sub = &mut **csub;
@@ -1033,15 +1032,12 @@ pub unsafe fn control_add_sub(
         });
         (*cs).subs.insert(key, csub);
 
-        if !evtimer_initialized(&raw mut (*cs).subs_timer) {
-            evtimer_set(
-                &raw mut (*cs).subs_timer,
-                control_check_subs_timer,
-                NonNull::new(c).unwrap(),
+        if (*cs).subs_timer.is_none() {
+            let cid = (*c).id;
+            (*cs).subs_timer = timer_add(
+                Duration::from_secs(1),
+                Box::new(move || unsafe { control_check_subs_timer_fire(cid) }),
             );
-        }
-        if evtimer_pending(&raw mut (*cs).subs_timer, null_mut()) == 0 {
-            evtimer_add(&raw mut (*cs).subs_timer, &tv);
         }
     }
 }
@@ -1053,7 +1049,7 @@ pub unsafe fn control_remove_sub(c: *mut client, name: *mut u8) {
         let key = cstr_to_str(name);
         control_free_sub(cs, key);
         if (*cs).subs.is_empty() {
-            evtimer_del(&raw mut (*cs).subs_timer);
+            (*cs).subs_timer = None;
         }
     }
 }

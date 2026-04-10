@@ -11,6 +11,8 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+use std::time::Duration;
+
 use crate::compat::b64::b64_pton;
 use crate::*;
 use crate::options_::*;
@@ -1254,9 +1256,9 @@ pub unsafe fn tty_keys_next(tty: *mut tty) -> i32 {
 
                     // If timer is going, check for expiration.
                     if (*tty).flags.intersects(tty_flags::TTY_TIMER) {
-                        if evtimer_initialized(&raw mut (*tty).key_timer)
-                            && evtimer_pending(&raw mut (*tty).key_timer, null_mut()) == 0
-                        {
+                        if (*tty).key_timer.is_none() {
+                            // Timer was armed but has already fired (handle cleared
+                            // in the callback) — treat as expired.
                             expired = 1;
                             continue 'first_key;
                         }
@@ -1272,15 +1274,12 @@ pub unsafe fn tty_keys_next(tty: *mut tty) -> i32 {
                     tv.tv_usec = ((delay % 1000) * 1000) as libc::suseconds_t;
 
                     // Start the timer.
-                    if event_initialized(&raw const (*tty).key_timer) != 0 {
-                        evtimer_del(&raw mut (*tty).key_timer);
-                    }
-                    evtimer_set(
-                        &raw mut (*tty).key_timer,
-                        tty_keys_callback,
-                        NonNull::new(tty).unwrap(),
+                    (*tty).key_timer = None;
+                    let cid = (*c).id;
+                    (*tty).key_timer = timer_add(
+                        Duration::from_millis(delay as u64),
+                        Box::new(move || unsafe { tty_keys_timer_fire(cid) }),
                     );
-                    evtimer_add(&raw mut (*tty).key_timer, &raw const tv);
 
                     (*tty).flags |= tty_flags::TTY_TIMER;
                     return 0;
@@ -1302,9 +1301,7 @@ pub unsafe fn tty_keys_next(tty: *mut tty) -> i32 {
                 evbuffer_drain((*tty).in_, size);
 
                 // Remove key timer.
-                if event_initialized(&raw const (*tty).key_timer) != 0 {
-                    evtimer_del(&raw mut (*tty).key_timer);
-                }
+                (*tty).key_timer = None;
                 (*tty).flags &= !tty_flags::TTY_TIMER;
 
                 // Check for focus events.
@@ -1340,11 +1337,15 @@ pub unsafe fn tty_keys_next(tty: *mut tty) -> i32 {
     }
 }
 
-/// Key timer callback.
-unsafe extern "C-unwind" fn tty_keys_callback(_fd: i32, _events: i16, tty: NonNull<tty>) {
+/// Key timer callback: the escape-time has elapsed, process the partial key.
+unsafe fn tty_keys_timer_fire(cid: ClientId) {
     unsafe {
-        if (*tty.as_ptr()).flags.intersects(tty_flags::TTY_TIMER) {
-            while tty_keys_next(tty.as_ptr()) != 0 {}
+        let Some(c) = client_from_id(cid) else { return };
+        let tty = &raw mut (*c).tty;
+        // Clear the handle so the "expired" check (`key_timer.is_none()`) works.
+        (*tty).key_timer = None;
+        if (*tty).flags.intersects(tty_flags::TTY_TIMER) {
+            while tty_keys_next(tty) != 0 {}
         }
     }
 }
@@ -1767,7 +1768,7 @@ unsafe fn tty_keys_clipboard(
             return 0;
         }
         (*tty).flags &= !tty_flags::TTY_OSC52QUERY;
-        evtimer_del(&raw mut (*tty).clipboard_timer);
+        (*tty).clipboard_timer = None;
 
         // It has to be a string so copy it.
         let copy: *mut u8 = xmalloc(end + 1).as_ptr().cast();

@@ -1311,7 +1311,7 @@ struct window_pane {
     base_offset: usize,
 
     resize_queue: window_pane_resizes,
-    resize_timer: event,
+    resize_timer: Option<TimerHandle>,
 
     ictx: *mut input_ctx,
 
@@ -1366,11 +1366,11 @@ struct window {
     latest: *mut c_void,
 
     name: Option<String>,
-    name_event: event,
+    name_event: Option<TimerHandle>,
     name_time: timeval,
 
-    alerts_timer: event,
-    offset_timer: event,
+    alerts_timer: Option<TimerHandle>,
+    offset_timer: Option<TimerHandle>,
 
     activity_time: timeval,
 
@@ -1820,7 +1820,7 @@ struct session {
     activity_time: timeval,
     last_activity_time: timeval,
 
-    lock_timer: event,
+    lock_timer: Option<TimerHandle>,
 
     curw: *mut winlink,
     lastw: winlink_stack,
@@ -1982,8 +1982,8 @@ const TTY_ALL_REQUEST_FLAGS: tty_flags = tty_flags::TTY_HAVEDA
 
 struct tty {
     client: *mut client,
-    start_timer: event,
-    clipboard_timer: event,
+    start_timer: Option<TimerHandle>,
+    clipboard_timer: Option<TimerHandle>,
     last_requests: time_t,
 
     sx: u32,
@@ -2017,7 +2017,7 @@ struct tty {
     in_: *mut evbuffer,
     event_out: event,
     out: *mut evbuffer,
-    timer: event,
+    timer: Option<TimerHandle>,
     discarded: usize,
 
     tio: termios,
@@ -2036,7 +2036,7 @@ struct tty {
     mouse_drag_update: Option<unsafe fn(*mut client, *mut mouse_event)>,
     mouse_drag_release: Option<unsafe fn(*mut client, *mut mouse_event)>,
 
-    key_timer: event,
+    key_timer: Option<TimerHandle>,
     key_tree: *mut tty_key,
 }
 
@@ -2396,7 +2396,7 @@ struct status_line_entry {
 }
 
 struct status_line {
-    timer: event,
+    timer: Option<TimerHandle>,
 
     screen: screen,
     active: *mut screen,
@@ -2563,8 +2563,6 @@ struct client {
     pid: pid_t,
     fd: c_int,
     out_fd: c_int,
-    #[allow(dead_code)]
-    event: event,
     retval: c_int,
 
     creation_time: timeval,
@@ -2590,9 +2588,9 @@ struct client {
     discarded: usize,
     redraw: usize,
 
-    repeat_timer: event,
+    repeat_timer: Option<TimerHandle>,
 
-    click_timer: event,
+    click_timer: Option<TimerHandle>,
     click_button: c_uint,
     click_event: mouse_event,
 
@@ -2612,7 +2610,7 @@ struct client {
     message_ignore_keys: c_int,
     message_ignore_styles: c_int,
     message_string: Option<String>,
-    message_timer: event,
+    message_timer: Option<TimerHandle>,
 
     prompt_string: Option<String>,
     prompt_buffer: *mut utf8_data,
@@ -2645,7 +2643,7 @@ struct client {
     overlay_free: overlay_free_cb,
     overlay_resize: overlay_resize_cb,
     overlay_data: *mut c_void,
-    overlay_timer: event,
+    overlay_timer: Option<TimerHandle>,
 
     files: client_files,
 

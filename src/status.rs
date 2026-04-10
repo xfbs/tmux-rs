@@ -13,6 +13,7 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 use std::io::BufRead;
 use std::io::Write;
+use std::time::Duration;
 
 use crate::libc::strncmp;
 use crate::*;
@@ -146,13 +147,14 @@ pub unsafe fn status_prompt_save_history() {
     }
 }
 
-/// Status timer callback.
-unsafe extern "C-unwind" fn status_timer_callback(_fd: i32, _events: i16, c: NonNull<client>) {
+/// Fire the status timer for a client: redraw the status line and re-arm.
+unsafe fn status_timer_fire(cid: ClientId) {
     unsafe {
-        let c = c.as_ptr();
+        let Some(c) = client_from_id(cid) else { return };
         let s: *mut session = client_get_session(c);
 
-        evtimer_del(&raw mut (*c).status.timer);
+        // Cancel existing timer before potentially re-arming.
+        (*c).status.timer = None;
 
         if s.is_null() {
             return;
@@ -162,34 +164,28 @@ unsafe extern "C-unwind" fn status_timer_callback(_fd: i32, _events: i16, c: Non
             (*c).flags |= client_flag::REDRAWSTATUS;
         }
 
-        let mut tv: timeval = zeroed();
-        timerclear(&raw mut tv);
-        tv.tv_sec = options_get_number_((*s).options, "status-interval");
-
-        if tv.tv_sec != 0 {
-            evtimer_add(&raw mut (*c).status.timer, &raw const tv);
+        let interval = options_get_number_((*s).options, "status-interval");
+        if interval != 0 {
+            (*c).status.timer = timer_add(
+                Duration::from_secs(interval as u64),
+                Box::new(move || unsafe { status_timer_fire(cid) }),
+            );
         }
-        log_debug!("client {:p}, status interval {}", c, tv.tv_sec);
+        log_debug!("client {:p}, status interval {}", c, interval);
     }
 }
 
 /// Start status timer for client.
 pub unsafe fn status_timer_start(c: NonNull<client>) {
     unsafe {
-        let s: *mut session = client_get_session(c.as_ptr());
+        let c = c.as_ptr();
+        let s: *mut session = client_get_session(c);
 
-        if event_initialized(&raw mut (*c.as_ptr()).status.timer) != 0 {
-            evtimer_del(&raw mut (*c.as_ptr()).status.timer);
-        } else {
-            evtimer_set(
-                &raw mut (*c.as_ptr()).status.timer,
-                status_timer_callback,
-                c,
-            );
-        }
+        // Cancel any existing timer.
+        (*c).status.timer = None;
 
         if !s.is_null() && options_get_number_((*s).options, "status") != 0 {
-            status_timer_callback(-1, 0, c);
+            status_timer_fire((*c).id);
         }
     }
 }
@@ -334,6 +330,7 @@ pub unsafe fn status_init(c: *mut client) {
     unsafe {
         let sl = &raw mut (*c).status;
 
+        std::ptr::write(&raw mut (*sl).timer, None);
         for i in 0..(*sl).entries.len() {
             std::ptr::write(&raw mut (*sl).entries[i].ranges, Vec::new());
         }
@@ -353,9 +350,7 @@ pub unsafe fn status_free(c: *mut client) {
             free_((*sl).entries[i].expanded);
         }
 
-        if event_initialized(&raw mut (*sl).timer) != 0 {
-            evtimer_del(&raw mut (*sl).timer);
-        }
+        (*sl).timer = None;
 
         if (*sl).active != &raw mut (*sl).screen {
             screen_free((*sl).active);
@@ -533,16 +528,12 @@ pub unsafe fn status_message_set_(
             tv.tv_sec = (delay / 1000) as libc::time_t;
             tv.tv_usec = (delay as libc::suseconds_t % 1000) * (1000 as libc::suseconds_t);
 
-            if event_initialized(&raw mut (*c).message_timer) != 0 {
-                evtimer_del(&raw mut (*c).message_timer);
-            }
-            evtimer_set(
-                &raw mut (*c).message_timer,
-                status_message_callback,
-                NonNull::new_unchecked(c),
+            (*c).message_timer = None;
+            let cid = (*c).id;
+            (*c).message_timer = timer_add(
+                Duration::from_millis(delay as u64),
+                Box::new(move || unsafe { status_message_timer_fire(cid) }),
             );
-
-            evtimer_add(&raw mut (*c).message_timer, &raw mut tv);
         }
 
         if delay != 0 {
@@ -575,9 +566,10 @@ pub unsafe fn status_message_clear(c: NonNull<client>) {
 }
 
 /// Clear status line message after timer expires.
-unsafe extern "C-unwind" fn status_message_callback(_fd: i32, _event: i16, data: NonNull<client>) {
+unsafe fn status_message_timer_fire(cid: ClientId) {
     unsafe {
-        status_message_clear(data);
+        let Some(c) = client_from_id(cid) else { return };
+        status_message_clear(NonNull::new_unchecked(c));
     }
 }
 

@@ -608,6 +608,9 @@ pub unsafe fn window_create(sx: u32, sy: u32, mut xpixel: u32, mut ypixel: u32) 
         // xcalloc'd zero bytes are NOT a guaranteed-valid `Option<String>::None`.
         // Write None explicitly so reads of `name` don't observe a "zeroed Some".
         std::ptr::write(&raw mut (*w).name, Some(String::new()));
+        std::ptr::write(&raw mut (*w).name_event, None);
+        std::ptr::write(&raw mut (*w).alerts_timer, None);
+        std::ptr::write(&raw mut (*w).offset_timer, None);
         (*w).flags = window_flag::empty();
 
         std::ptr::write(&raw mut (*w).panes, Vec::new());
@@ -686,16 +689,11 @@ unsafe fn window_destroy(w: *mut window) {
 
         window_destroy_panes(w);
 
-        if event_initialized(&raw mut (*w).name_event) != 0 {
-            event_del(&raw mut (*w).name_event);
-        }
-
-        if event_initialized(&raw mut (*w).alerts_timer) != 0 {
-            event_del(&raw mut (*w).alerts_timer);
-        }
-        if event_initialized(&raw mut (*w).offset_timer) != 0 {
-            event_del(&raw mut (*w).offset_timer);
-        }
+        // Drop timer handles to deregister from event loop.
+        // (Also dropped automatically by Box drop below, but explicit is clearer.)
+        (*w).name_event = None;
+        (*w).alerts_timer = None;
+        (*w).offset_timer = None;
 
         options_free((*w).options);
         free((*w).fill_character as _);
@@ -1391,6 +1389,7 @@ pub unsafe fn window_pane_create(
         std::ptr::write(&raw mut (*wp).modes, Vec::new());
 
         (*wp).resize_queue = Vec::new();
+        std::ptr::write(&raw mut (*wp).resize_timer, None);
 
         (*wp).sx = sx;
         (*wp).sy = sy;
@@ -1443,9 +1442,7 @@ unsafe fn window_pane_destroy(wp: *mut window_pane) {
             close((*wp).pipe_fd);
         }
 
-        if event_initialized(&raw mut (*wp).resize_timer) != 0 {
-            event_del(&raw mut (*wp).resize_timer);
-        }
+        (*wp).resize_timer = None;
         (*wp).resize_queue.clear();
 
         (*(&raw mut ALL_WINDOW_PANES)).remove(&(*wp).id);

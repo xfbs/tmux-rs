@@ -12,6 +12,8 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+use std::time::Duration;
+
 use crate::libc::{WEXITSTATUS, WIFEXITED, WIFSIGNALED, WTERMSIG, memcpy, strtod};
 use crate::*;
 
@@ -41,7 +43,7 @@ pub struct cmd_run_shell_data<'a> {
     pub item: *mut cmdq_item,
     pub s: Option<SessionId>,
     pub wp_id: i32,
-    pub timer: event,
+    pub timer: Option<TimerHandle>,
     pub flags: job_flag,
 }
 
@@ -122,6 +124,7 @@ pub unsafe fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         }
 
         let cdata = xcalloc1::<cmd_run_shell_data>() as *mut cmd_run_shell_data;
+        std::ptr::write(&raw mut (*cdata).timer, None);
         if !args_has(args, 'C') {
             let cmd = args_string(args, 0);
             if !cmd.is_null() {
@@ -160,20 +163,16 @@ pub unsafe fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
             session_add_ref(s, __func__);
         }
 
-        evtimer_set(
-            &raw mut (*cdata).timer,
-            cmd_run_shell_timer,
-            NonNull::new(cdata).unwrap(),
-        );
-        if !delay.is_null() {
-            let mut tv: timeval = timeval {
-                tv_sec: d as time_t,
-                tv_usec: (d - (d as time_t as f64)) as libc::suseconds_t * 1000000,
-            };
-            evtimer_add(&raw mut (*cdata).timer, &raw mut tv);
+        let duration = if !delay.is_null() {
+            let secs = d as u64;
+            let usecs = ((d - secs as f64) * 1_000_000.0) as u64;
+            Duration::from_secs(secs) + Duration::from_micros(usecs)
         } else {
-            event_active(&raw mut (*cdata).timer, EV_TIMEOUT as i32, 1);
-        }
+            Duration::ZERO
+        };
+        (*cdata).timer = timer_add(duration, Box::new(move || unsafe {
+            cmd_run_shell_timer_fire(cdata);
+        }));
 
         if !wait {
             return cmd_retval::CMD_RETURN_NORMAL;
@@ -182,13 +181,9 @@ pub unsafe fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
     cmd_retval::CMD_RETURN_WAIT
 }
 
-pub unsafe extern "C-unwind" fn cmd_run_shell_timer(
-    _fd: i32,
-    _events: i16,
-    cdata: NonNull<cmd_run_shell_data>,
-) {
+/// Run-shell timer callback: either starts the job or continues the command queue.
+unsafe fn cmd_run_shell_timer_fire(cdata: *mut cmd_run_shell_data) {
     unsafe {
-        let cdata = cdata.as_ptr();
         let c = (*cdata).client.and_then(|id| client_from_id(id)).unwrap_or(null_mut());
         let cmd = (*cdata).cmd;
         let item = (*cdata).item;
@@ -316,7 +311,7 @@ pub unsafe fn cmd_run_shell_free(data: *mut c_void) {
         let __func__ = c!("cmd_run_shell_free");
         let cdata = data as *mut cmd_run_shell_data;
 
-        evtimer_del(&raw mut (*cdata).timer);
+        std::ptr::drop_in_place(&raw mut (*cdata).timer);
         let cs = (*cdata).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if !cs.is_null() {
             session_remove_ref(cs, __func__);

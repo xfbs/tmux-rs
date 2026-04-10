@@ -11,6 +11,8 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+use std::time::Duration;
+
 use crate::*;
 use crate::options_::{options_get_number___};
 
@@ -30,10 +32,12 @@ thread_local! {
     static ALERTS_LIST: RefCell<LinkedList<NonNull<window>>> = const { RefCell::new(LinkedList::new()) };
 }
 
-unsafe extern "C-unwind" fn alerts_timer(_fd: i32, _events: i16, w: NonNull<window>) {
+/// Alerts timer callback: fires when silence timeout expires.
+unsafe fn alerts_timer_fire(wid: WindowId) {
     unsafe {
-        log_debug!("@{} alerts timer expired", (*w.as_ptr()).id);
-        alerts_queue(w, window_flag::SILENCE);
+        let Some(w) = window_from_id(wid) else { return };
+        log_debug!("@{} alerts timer expired", (*w).id);
+        alerts_queue(NonNull::new_unchecked(w), window_flag::SILENCE);
     }
 }
 
@@ -116,22 +120,20 @@ pub(crate) unsafe fn alerts_reset_all() {
 
 unsafe fn alerts_reset(w: NonNull<window>) {
     unsafe {
-        if event_initialized(&raw const (*w.as_ptr()).alerts_timer) == 0 {
-            evtimer_set(&raw mut (*w.as_ptr()).alerts_timer, alerts_timer, w);
-        }
-
         let w = w.as_ptr();
         (*w).flags &= !window_flag::SILENCE;
-        event_del(&raw mut (*w).alerts_timer);
 
-        let mut tv = timeval {
-            tv_sec: options_get_number___(&*(*w).options, "monitor-silence"),
-            tv_usec: 0,
-        };
+        // Cancel any existing timer.
+        (*w).alerts_timer = None;
 
-        log_debug!("@{} alerts timer reset {}", (*w).id, tv.tv_sec);
-        if tv.tv_sec != 0 {
-            event_add(&raw mut (*w).alerts_timer, &raw mut tv);
+        let silence: i64 = options_get_number___(&*(*w).options, "monitor-silence");
+        log_debug!("@{} alerts timer reset {}", (*w).id, silence);
+        if silence != 0 {
+            let wid = WindowId((*w).id);
+            (*w).alerts_timer = timer_add(
+                Duration::from_secs(silence as u64),
+                Box::new(move || unsafe { alerts_timer_fire(wid) }),
+            );
         }
     }
 }

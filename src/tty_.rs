@@ -11,6 +11,8 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+use std::time::Duration;
+
 use crate::*;
 use crate::{colour::colour_split_rgb, compat::b64::b64_ntop};
 use crate::options_::*;
@@ -74,6 +76,11 @@ pub unsafe fn tty_init(tty: *mut tty, c: *mut client) -> i32 {
 
         memset0(tty);
         (*tty).client = c;
+
+        std::ptr::write(&raw mut (*tty).start_timer, None);
+        std::ptr::write(&raw mut (*tty).clipboard_timer, None);
+        std::ptr::write(&raw mut (*tty).timer, None);
+        std::ptr::write(&raw mut (*tty).key_timer, None);
 
         (*tty).cstyle = screen_cursor_style::SCREEN_CURSOR_DEFAULT;
         (*tty).ccolour = -1;
@@ -157,14 +164,11 @@ pub unsafe extern "C-unwind" fn tty_read_callback(_fd: i32, _events: i16, data: 
     }
 }
 
-pub unsafe extern "C-unwind" fn tty_timer_callback(_fd: i32, _events: i16, tty: NonNull<tty>) {
+/// Block-timer callback: checks discard level and re-arms if still above threshold.
+unsafe fn tty_timer_fire(cid: ClientId) {
     unsafe {
-        let tty = tty.as_ptr();
-        let c = (*tty).client;
-        let mut tv = libc::timeval {
-            tv_sec: 0,
-            tv_usec: TTY_BLOCK_INTERVAL,
-        };
+        let Some(c) = client_from_id(cid) else { return };
+        let tty = &raw mut (*c).tty;
 
         // log_debug("%s: %zu discarded", (*c).name, (*tty).discarded);
 
@@ -177,7 +181,12 @@ pub unsafe extern "C-unwind" fn tty_timer_callback(_fd: i32, _events: i16, tty: 
             return;
         }
         (*tty).discarded = 0;
-        evtimer_add(&raw mut (*tty).timer, &raw mut tv);
+        // Cancel existing handle before re-arming.
+        (*tty).timer = None;
+        (*tty).timer = timer_add(
+            Duration::from_micros(TTY_BLOCK_INTERVAL as u64),
+            Box::new(move || tty_timer_fire(cid)),
+        );
     }
 }
 
@@ -185,10 +194,6 @@ pub unsafe fn tty_block_maybe(tty: *mut tty) -> i32 {
     unsafe {
         let c = (*tty).client;
         let size = EVBUFFER_LENGTH((*tty).out);
-        let tv = libc::timeval {
-            tv_sec: 0,
-            tv_usec: TTY_BLOCK_INTERVAL,
-        };
 
         if size == 0 {
             (*tty).flags &= !tty_flags::TTY_NOBLOCK;
@@ -210,8 +215,12 @@ pub unsafe fn tty_block_maybe(tty: *mut tty) -> i32 {
         evbuffer_drain((*tty).out, size);
         (*c).discarded += size;
 
+        let cid = (*c).id;
         (*tty).discarded = 0;
-        evtimer_add(&raw mut (*tty).timer, &raw const tv);
+        (*tty).timer = timer_add(
+            Duration::from_micros(TTY_BLOCK_INTERVAL as u64),
+            Box::new(move || tty_timer_fire(cid)),
+        );
         1
     }
 }
@@ -301,11 +310,7 @@ pub unsafe fn tty_open(tty: *mut tty) -> Result<(), String> {
             fatal("out of memory");
         }
 
-        evtimer_set(
-            &raw mut (*tty).timer,
-            tty_timer_callback,
-            NonNull::new_unchecked(tty),
-        );
+        // Timer is armed on demand (tty_block_maybe), not at open time.
 
         tty_start_tty(tty);
         tty_keys_build(tty);
@@ -314,14 +319,11 @@ pub unsafe fn tty_open(tty: *mut tty) -> Result<(), String> {
     }
 }
 
-pub unsafe extern "C-unwind" fn tty_start_timer_callback(
-    _fd: i32,
-    _events: i16,
-    tty: NonNull<tty>,
-) {
+/// Start-timer callback: fires once after terminal setup to finalize feature detection.
+unsafe fn tty_start_timer_fire(cid: ClientId) {
     unsafe {
-        let tty = tty.as_ptr();
-        let c = (*tty).client;
+        let Some(c) = client_from_id(cid) else { return };
+        let tty = &raw mut (*c).tty;
 
         log_debug!("{}: start timer fired", _s((*c).name));
         if (*tty)
@@ -338,10 +340,6 @@ pub unsafe fn tty_start_tty(tty: *mut tty) {
     unsafe {
         let c = (*tty).client;
         let mut tio: libc::termios = zeroed();
-        let tv = libc::timeval {
-            tv_sec: TTY_QUERY_TIMEOUT as i64,
-            tv_usec: 0,
-        };
 
         setblocking((*c).fd, 0);
         event_add(&raw mut (*tty).event_in, null_mut());
@@ -392,12 +390,11 @@ pub unsafe fn tty_start_tty(tty: *mut tty) {
             tty_putcode(tty, tty_code_code::TTYC_ENBP);
         }
 
-        evtimer_set(
-            &raw mut (*tty).start_timer,
-            tty_start_timer_callback,
-            NonNull::new_unchecked(tty),
+        let cid = (*c).id;
+        (*tty).start_timer = timer_add(
+            Duration::from_secs(TTY_QUERY_TIMEOUT as u64),
+            Box::new(move || tty_start_timer_fire(cid)),
         );
-        evtimer_add(&raw mut (*tty).start_timer, &raw const tv);
 
         (*tty).flags |= tty_flags::TTY_STARTED;
         tty_invalidate(tty);
@@ -468,9 +465,9 @@ pub unsafe fn tty_stop_tty(tty: *mut tty) {
         }
         (*tty).flags &= !tty_flags::TTY_STARTED;
 
-        evtimer_del(&raw mut (*tty).start_timer);
+        (*tty).start_timer = None;
 
-        event_del(&raw mut (*tty).timer);
+        (*tty).timer = None;
         (*tty).flags &= !tty_flags::TTY_BLOCK;
 
         event_del(&raw mut (*tty).event_in);
@@ -541,9 +538,7 @@ pub unsafe fn tty_stop_tty(tty: *mut tty) {
 
 pub unsafe fn tty_close(tty: *mut tty) {
     unsafe {
-        if event_initialized(&raw mut (*tty).key_timer) != 0 {
-            evtimer_del(&raw mut (*tty).key_timer);
-        }
+        (*tty).key_timer = None;
         tty_stop_tty(tty);
 
         if (*tty).flags.intersects(tty_flags::TTY_OPENED) {
@@ -3794,30 +3789,22 @@ pub unsafe fn tty_default_attributes(
     }
 }
 
-pub unsafe extern "C-unwind" fn tty_clipboard_query_callback(
-    _fd: i32,
-    _events: i16,
-    tty: NonNull<tty>,
-) {
+/// Clipboard query timeout callback: clears OSC 52 query state.
+unsafe fn tty_clipboard_query_fire(cid: ClientId) {
     unsafe {
-        let c = (*tty.as_ptr()).client;
+        let Some(c) = client_from_id(cid) else { return };
 
         (*c).flags &= !client_flag::CLIPBOARDBUFFER;
         free_((*c).clipboard_panes);
         (*c).clipboard_panes = null_mut();
         (*c).clipboard_npanes = 0;
 
-        (*tty.as_ptr()).flags &= !tty_flags::TTY_OSC52QUERY;
+        (*c).tty.flags &= !tty_flags::TTY_OSC52QUERY;
     }
 }
 
 pub unsafe fn tty_clipboard_query(tty: *mut tty) {
     unsafe {
-        let tv = libc::timeval {
-            tv_sec: TTY_QUERY_TIMEOUT as i64,
-            tv_usec: 0,
-        };
-
         if (!(*tty).flags.intersects(tty_flags::TTY_STARTED))
             || ((*tty).flags.intersects(tty_flags::TTY_OSC52QUERY))
         {
@@ -3825,12 +3812,11 @@ pub unsafe fn tty_clipboard_query(tty: *mut tty) {
         }
         tty_putcode_ss(tty, tty_code_code::TTYC_MS, c!(""), c!("?"));
 
+        let cid = (*(*tty).client).id;
         (*tty).flags |= tty_flags::TTY_OSC52QUERY;
-        evtimer_set(
-            &raw mut (*tty).clipboard_timer,
-            tty_clipboard_query_callback,
-            NonNull::new_unchecked(tty),
+        (*tty).clipboard_timer = timer_add(
+            Duration::from_secs(TTY_QUERY_TIMEOUT as u64),
+            Box::new(move || tty_clipboard_query_fire(cid)),
         );
-        evtimer_add(&raw mut (*tty).clipboard_timer, &tv);
     }
 }

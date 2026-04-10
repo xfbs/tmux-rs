@@ -11,6 +11,8 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+use std::time::Duration;
+
 use crate::options_::*;
 use crate::*;
 
@@ -208,34 +210,42 @@ pub struct window_copy_mode_data {
     jumptype: window_copy,
     jumpchar: *mut utf8_data,
 
-    dragtimer: event,
+    dragtimer: Option<TimerHandle>,
 }
 
-pub unsafe extern "C-unwind" fn window_copy_scroll_timer(
-    _fd: i32,
-    _events: i16,
-    wme: NonNull<window_mode_entry>,
-) {
+/// Arm the drag-scroll timer for copy mode.  The closure captures the pane ID
+/// and re-looks-up the mode entry when it fires.
+unsafe fn window_copy_drag_arm(data: *mut window_copy_mode_data, pane_id: PaneId) {
     unsafe {
-        let wp: *mut window_pane = pane_ptr_from_id((*wme.as_ptr()).wp);
-        let data: *mut window_copy_mode_data = (*wme.as_ptr()).data.cast();
-        let mut tv = libc::timeval {
-            tv_sec: 0,
-            tv_usec: WINDOW_COPY_DRAG_REPEAT_TIME,
-        };
+        (*data).dragtimer = timer_add(
+            Duration::from_micros(WINDOW_COPY_DRAG_REPEAT_TIME as u64),
+            Box::new(move || { window_copy_scroll_timer_fire(pane_id) }),
+        );
+    }
+}
 
-        evtimer_del(&raw mut (*data).dragtimer);
-
-        if (*wp).modes.first().copied().unwrap_or(null_mut()) != wme.as_ptr() {
+/// Drag-scroll timer callback: scroll up/down while the mouse is at the pane edge.
+unsafe fn window_copy_scroll_timer_fire(pane_id: PaneId) {
+    unsafe {
+        let wp = pane_ptr_from_id(Some(pane_id));
+        if wp.is_null() {
             return;
         }
+        let wme = (*wp).modes.first().copied().unwrap_or(null_mut());
+        if wme.is_null() {
+            return;
+        }
+        let data: *mut window_copy_mode_data = (*wme).data.cast();
+
+        // Cancel existing timer (will re-arm below if still at edge).
+        (*data).dragtimer = None;
 
         if (*data).cy == 0 {
-            evtimer_add(&raw mut (*data).dragtimer, &raw mut tv);
-            window_copy_cursor_up(wme.as_ptr(), 1);
+            window_copy_drag_arm(data, pane_id);
+            window_copy_cursor_up(wme, 1);
         } else if (*data).cy == screen_size_y(&raw mut (*data).screen) - 1 {
-            evtimer_add(&raw mut (*data).dragtimer, &raw mut tv);
-            window_copy_cursor_down(wme.as_ptr(), 1);
+            window_copy_drag_arm(data, pane_id);
+            window_copy_cursor_down(wme, 1);
         }
     }
 }
@@ -346,11 +356,7 @@ pub unsafe fn window_copy_common_init(wme: *mut window_mode_entry) -> *mut windo
             modekey::try_from(options_get_number_((*window_pane_window(wp)).options, "mode-keys") as i32)
                 .expect("invalid modekey");
 
-        evtimer_set(
-            &raw mut (*data).dragtimer,
-            window_copy_scroll_timer,
-            NonNull::new(wme).unwrap(),
-        );
+        (*data).dragtimer = None;
 
         data
     }
@@ -443,7 +449,8 @@ pub unsafe fn window_copy_free(wme: NonNull<window_mode_entry>) {
         let wme = wme.as_ptr();
         let data: *mut window_copy_mode_data = (*wme).data.cast();
 
-        evtimer_del(&raw mut (*data).dragtimer);
+        // Drop the timer handle to deregister (also needed before free_() below).
+        std::ptr::drop_in_place(&raw mut (*data).dragtimer);
 
         free_((*data).searchmark);
         // searchstr is Option<String>; data is xcalloc'd + free_()'d, not Box-managed,
@@ -6504,11 +6511,6 @@ pub unsafe fn window_copy_drag_update(c: *mut client, m: *mut mouse_event) {
         let mut x: u32 = 0;
         let mut y: u32 = 0;
 
-        let mut tv: libc::timeval = libc::timeval {
-            tv_sec: 0,
-            tv_usec: WINDOW_COPY_DRAG_REPEAT_TIME,
-        };
-
         if c.is_null() {
             return;
         }
@@ -6525,7 +6527,7 @@ pub unsafe fn window_copy_drag_update(c: *mut client, m: *mut mouse_event) {
         }
 
         let data: *mut window_copy_mode_data = (*wme).data.cast();
-        evtimer_del(&raw mut (*data).dragtimer);
+        (*data).dragtimer = None;
 
         if cmd_mouse_at(wp.as_ptr(), &*m, &raw mut x, &raw mut y, 0) != 0 {
             return;
@@ -6537,12 +6539,13 @@ pub unsafe fn window_copy_drag_update(c: *mut client, m: *mut mouse_event) {
         if window_copy_update_selection(wme, 1, 0) != 0 {
             window_copy_redraw_selection(wme, old_cy);
         }
+        let pane_id = (*wme).wp.unwrap();
         if old_cy != (*data).cy || old_cx == (*data).cx {
             if y == 0 {
-                evtimer_add(&raw mut (*data).dragtimer, &raw mut tv);
+                window_copy_drag_arm(data, pane_id);
                 window_copy_cursor_up(wme, 1);
             } else if y == screen_size_y(&(*data).screen) - 1 {
-                evtimer_add(&raw mut (*data).dragtimer, &raw mut tv);
+                window_copy_drag_arm(data, pane_id);
                 window_copy_cursor_down(wme, 1);
             }
         }
@@ -6568,7 +6571,7 @@ pub unsafe fn window_copy_drag_release(c: *mut client, m: *mut mouse_event) {
         }
 
         let data: *mut window_copy_mode_data = (*wme).data.cast();
-        evtimer_del(&raw mut (*data).dragtimer);
+        (*data).dragtimer = None;
     }
 }
 

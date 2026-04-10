@@ -11,6 +11,8 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+use std::time::Duration;
+
 use crate::options_::options_get_number_;
 use crate::*;
 
@@ -64,9 +66,11 @@ unsafe fn ctx_wp(ctx: *mut screen_write_ctx) -> *mut window_pane {
     unsafe { pane_ptr_from_id((*ctx).wp) }
 }
 
-unsafe extern "C-unwind" fn screen_write_offset_timer(_fd: i32, _events: i16, w: NonNull<window>) {
+/// Offset timer callback: updates window scroll offset for all TTYs.
+unsafe fn screen_write_offset_timer_fire(wid: WindowId) {
     unsafe {
-        tty_update_window_offset(w.as_ptr());
+        let Some(w) = window_from_id(wid) else { return };
+        tty_update_window_offset(w);
     }
 }
 
@@ -75,10 +79,6 @@ unsafe fn screen_write_set_cursor(ctx: *mut screen_write_ctx, mut cx: i32, mut c
     unsafe {
         let wp = ctx_wp(ctx);
         let s = (*ctx).s;
-        let tv: timeval = timeval {
-            tv_usec: 10000,
-            tv_sec: 0,
-        };
 
         if cx != -1 && cx as u32 == (*s).cx && cy != -1 && cy as u32 == (*s).cy {
             return;
@@ -102,15 +102,12 @@ unsafe fn screen_write_set_cursor(ctx: *mut screen_write_ctx, mut cx: i32, mut c
         }
         let w = window_pane_window(wp);
 
-        if event_initialized(&raw mut (*w).offset_timer) == 0 {
-            evtimer_set(
-                &raw mut (*w).offset_timer,
-                screen_write_offset_timer,
-                NonNull::new_unchecked(w),
+        if (*w).offset_timer.is_none() {
+            let wid = WindowId((*w).id);
+            (*w).offset_timer = timer_add(
+                Duration::from_micros(10000),
+                Box::new(move || unsafe { screen_write_offset_timer_fire(wid) }),
             );
-        }
-        if evtimer_pending(&raw mut (*w).offset_timer, null_mut()) == 0 {
-            evtimer_add(&raw mut (*w).offset_timer, &raw const tv);
         }
     }
 }

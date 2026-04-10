@@ -11,6 +11,8 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+use std::time::Duration;
+
 use crate::*;
 use crate::options_::*;
 
@@ -31,7 +33,7 @@ pub static WINDOW_CLOCK_MODE: window_mode = window_mode {
 pub struct window_clock_mode_data {
     pub screen: screen,
     pub tim: time_t,
-    pub timer: event,
+    pub timer: Option<TimerHandle>,
 }
 
 #[rustfmt::skip]
@@ -136,30 +138,36 @@ pub static WINDOW_CLOCK_TABLE: [[[u8; 5]; 5]; 14] = [
     ],
 ];
 
-pub unsafe extern "C-unwind" fn window_clock_timer_callback(
-    _fd: i32,
-    _events: i16,
-    wme: NonNull<window_mode_entry>,
-) {
+/// Arm the clock-mode 1-second refresh timer.
+unsafe fn window_clock_arm_timer(data: *mut window_clock_mode_data, pane_id: PaneId) {
     unsafe {
-        let wp = pane_ptr_from_id((*wme.as_ptr()).wp);
-        let data = (*wme.as_ptr()).data as *mut window_clock_mode_data;
-        let mut now: libc::tm = zeroed();
-        let mut then: libc::tm = zeroed();
-        let mut t: time_t;
-        let tv: timeval = timeval {
-            tv_sec: 1,
-            tv_usec: 0,
-        };
+        (*data).timer = timer_add(
+            Duration::from_secs(1),
+            Box::new(move || unsafe { window_clock_timer_fire(pane_id) }),
+        );
+    }
+}
 
-        evtimer_del(&raw mut (*data).timer);
-        evtimer_add(&raw mut (*data).timer, &tv);
-
-        if (*wp).modes.first().copied().unwrap_or(null_mut()) != wme.as_ptr() {
+/// Clock-mode timer callback: re-arm and redraw if the minute changed.
+unsafe fn window_clock_timer_fire(pane_id: PaneId) {
+    unsafe {
+        let wp = pane_ptr_from_id(Some(pane_id));
+        if wp.is_null() {
             return;
         }
+        let wme = (*wp).modes.first().copied().unwrap_or(null_mut());
+        if wme.is_null() {
+            return;
+        }
+        let data = (*wme).data as *mut window_clock_mode_data;
 
-        t = libc::time(null_mut());
+        // Cancel old and re-arm.
+        (*data).timer = None;
+        window_clock_arm_timer(data, pane_id);
+
+        let mut now: libc::tm = zeroed();
+        let mut then: libc::tm = zeroed();
+        let mut t: time_t = libc::time(null_mut());
         libc::gmtime_r(&raw mut t, &raw mut now);
         libc::gmtime_r(&raw mut (*data).tim, &raw mut then);
         if now.tm_min == then.tm_min {
@@ -167,7 +175,7 @@ pub unsafe extern "C-unwind" fn window_clock_timer_callback(
         }
         (*data).tim = t;
 
-        window_clock_draw_screen(wme);
+        window_clock_draw_screen(NonNull::new_unchecked(wme));
         (*wp).flags |= window_pane_flags::PANE_REDRAW;
     }
 }
@@ -179,20 +187,16 @@ pub unsafe fn window_clock_init(
 ) -> *mut screen {
     unsafe {
         let wp: *mut window_pane = pane_ptr_from_id((*wme.as_ptr()).wp);
-        let mut tv = timeval {
-            tv_sec: 1,
-            tv_usec: 0,
-        };
 
         let data = Box::leak(Box::new(window_clock_mode_data {
             screen: screen_placeholder(),
             tim: libc::time(null_mut()),
-            timer: zeroed(),
+            timer: None,
         })) as *mut window_clock_mode_data;
         (*wme.as_ptr()).data = data.cast();
 
-        evtimer_set(&raw mut (*data).timer, window_clock_timer_callback, wme);
-        evtimer_add(&raw mut (*data).timer, &raw mut tv);
+        let pane_id = (*wme.as_ptr()).wp.unwrap();
+        window_clock_arm_timer(data, pane_id);
 
         let s = &raw mut (*data).screen;
         screen_init(
@@ -213,7 +217,7 @@ pub unsafe fn window_clock_free(wme: NonNull<window_mode_entry>) {
     unsafe {
         let data = (*wme.as_ptr()).data as *mut window_clock_mode_data;
 
-        evtimer_del(&raw mut (*data).timer);
+        std::ptr::drop_in_place(&raw mut (*data).timer);
         screen_free(&raw mut (*data).screen);
         free_(data);
     }

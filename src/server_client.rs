@@ -11,6 +11,8 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+use std::time::Duration;
+
 use crate::*;
 use crate::{
     compat::imsg::{IMSG_HEADER_SIZE, imsg_get_fd},
@@ -31,13 +33,10 @@ pub unsafe fn server_client_how_many() -> u32 {
 }
 
 /// Overlay timer callback.
-pub unsafe extern "C-unwind" fn server_client_overlay_timer(
-    _fd: i32,
-    _events: i16,
-    c: NonNull<client>,
-) {
+unsafe fn server_client_overlay_timer_fire(cid: ClientId) {
     unsafe {
-        server_client_clear_overlay(c.as_ptr());
+        let Some(c) = client_from_id(cid) else { return };
+        server_client_clear_overlay(c);
     }
 }
 
@@ -63,16 +62,13 @@ pub unsafe fn server_client_set_overlay(
             tv_usec: ((delay % 1000) * 1000) as libc::suseconds_t,
         };
 
-        if event_initialized(&raw mut (*c).overlay_timer) != 0 {
-            evtimer_del(&raw mut (*c).overlay_timer);
-        }
-        evtimer_set(
-            &raw mut (*c).overlay_timer,
-            server_client_overlay_timer,
-            NonNull::new_unchecked(c),
-        );
+        (*c).overlay_timer = None;
         if delay != 0 {
-            evtimer_add(&raw mut (*c).overlay_timer, &tv);
+            let cid = (*c).id;
+            (*c).overlay_timer = timer_add(
+                Duration::from_millis(delay as u64),
+                Box::new(move || unsafe { server_client_overlay_timer_fire(cid) }),
+            );
         }
 
         (*c).overlay_check = checkcb;
@@ -100,9 +96,7 @@ pub unsafe fn server_client_clear_overlay(c: *mut client) {
             return;
         }
 
-        if event_initialized(&raw mut (*c).overlay_timer) != 0 {
-            evtimer_del(&raw mut (*c).overlay_timer);
-        }
+        (*c).overlay_timer = None;
 
         if let Some(overlay_free) = (*c).overlay_free {
             overlay_free(c, (*c).overlay_data);
@@ -310,16 +304,10 @@ pub unsafe fn server_client_create(fd: i32) -> *mut client {
         (*c).keytable = key_bindings_get_table(c!("root"), true);
         (*(*c).keytable).references += 1;
 
-        evtimer_set(
-            &raw mut (*c).repeat_timer,
-            server_client_repeat_timer,
-            NonNull::new_unchecked(c),
-        );
-        evtimer_set(
-            &raw mut (*c).click_timer,
-            server_client_click_timer,
-            NonNull::new_unchecked(c),
-        );
+        std::ptr::write(&raw mut (*c).repeat_timer, None);
+        std::ptr::write(&raw mut (*c).click_timer, None);
+        std::ptr::write(&raw mut (*c).message_timer, None);
+        std::ptr::write(&raw mut (*c).overlay_timer, None);
 
         log_debug!("new client {:p} ({:?})", c, (*c).id);
         c
@@ -491,15 +479,13 @@ pub unsafe fn server_client_lost(c: *mut client) {
 
         // `cwd` is `Option<PathBuf>`, dropped automatically by Box drop.
 
-        evtimer_del(&raw mut (*c).repeat_timer);
-        evtimer_del(&raw mut (*c).click_timer);
+        (*c).repeat_timer = None;
+        (*c).click_timer = None;
 
         key_bindings_unref_table((*c).keytable);
 
         // message_string is Option<String>, dropped automatically by Box drop.
-        if event_initialized(&raw mut (*c).message_timer) != 0 {
-            evtimer_del(&raw mut (*c).message_timer);
-        }
+        (*c).message_timer = None;
 
         free_((*c).prompt_saved);
         // prompt_string is Option<String>, dropped automatically by Box drop.
@@ -785,7 +771,7 @@ pub unsafe fn server_client_check_mouse(c: *mut client, event: *mut key_event) -
                     log_debug!("up at {},{}", x, y);
                 } else {
                     if (*c).flags.intersects(client_flag::DOUBLECLICK) {
-                        evtimer_del(&raw mut (*c).click_timer);
+                        (*c).click_timer = None;
                         (*c).flags &= !client_flag::DOUBLECLICK;
                         if (*m).b == (*c).click_button {
                             type_ = type_::Second;
@@ -796,7 +782,7 @@ pub unsafe fn server_client_check_mouse(c: *mut client, event: *mut key_event) -
                             (*c).flags |= client_flag::TRIPLECLICK;
                         }
                     } else if (*c).flags.intersects(client_flag::TRIPLECLICK) {
-                        evtimer_del(&raw mut (*c).click_timer);
+                        (*c).click_timer = None;
                         (*c).flags &= !client_flag::TRIPLECLICK;
                         if (*m).b == (*c).click_button {
                             type_ = type_::Triple;
@@ -825,8 +811,13 @@ pub unsafe fn server_client_check_mouse(c: *mut client, event: *mut key_event) -
                         log_debug!("click timer started");
                         tv.tv_sec = KEYC_CLICK_TIMEOUT as i64 / 1000;
                         tv.tv_usec = ((KEYC_CLICK_TIMEOUT % 1000) * 1000) as libc::suseconds_t;
-                        evtimer_del(&raw mut (*c).click_timer);
-                        evtimer_add(&raw mut (*c).click_timer, &raw const tv);
+                        (*c).click_timer = None;
+                        let cid = (*c).id;
+                        let timeout_ms = KEYC_CLICK_TIMEOUT as u64;
+                        (*c).click_timer = timer_add(
+                            Duration::from_millis(timeout_ms),
+                            Box::new(move || unsafe { server_client_click_timer_fire(cid) }),
+                        );
                     }
                 }
             } // have_event:
@@ -2082,10 +2073,12 @@ pub unsafe fn server_client_key_callback(item: *mut cmdq_item, data: *mut c_void
                             if xtimeout != 0 && (*bd).flags & KEY_BINDING_REPEAT != 0 {
                                 (*c).flags |= client_flag::REPEAT;
 
-                                tv.tv_sec = xtimeout as libc::time_t / 1000;
-                                tv.tv_usec = (xtimeout as libc::suseconds_t % 1000) * 1000;
-                                evtimer_del(&raw mut (*c).repeat_timer);
-                                evtimer_add(&raw mut (*c).repeat_timer, &tv);
+                                (*c).repeat_timer = None;
+                                let cid = (*c).id;
+                                (*c).repeat_timer = timer_add(
+                                    Duration::from_millis(xtimeout as u64),
+                                    Box::new(move || unsafe { server_client_repeat_timer_fire(cid) }),
+                                );
                             } else {
                                 (*c).flags &= !client_flag::REPEAT;
                                 server_client_set_key_table(c, null_mut());
@@ -2278,43 +2271,33 @@ pub unsafe fn server_client_check_window_resize(w: *mut window) {
     }
 }
 
-/// Resize timer event.
-pub unsafe extern "C-unwind" fn server_client_resize_timer(
-    _fd: i32,
-    _events: i16,
-    wp: NonNull<window_pane>,
-) {
+/// Resize timer callback: logs expiry and allows the next resize check.
+unsafe fn server_client_resize_timer_fire(pid: PaneId) {
     unsafe {
+        let wp = pane_ptr_from_id(Some(pid));
+        if wp.is_null() {
+            return;
+        }
         log_debug!(
             "{}: %%{} resize timer expired",
             "server_client_resize_timer",
-            (*wp.as_ptr()).id
+            (*wp).id
         );
-        evtimer_del(&raw mut (*wp.as_ptr()).resize_timer);
+        (*wp).resize_timer = None;
     }
 }
 
 /// Check if pane should be resized.
 pub unsafe fn server_client_check_pane_resize(wp: *mut window_pane) {
     unsafe {
-        let mut tv: libc::timeval = libc::timeval {
-            tv_sec: 0,
-            tv_usec: 250000,
-        };
+        let mut timeout_usec: i64 = 250000;
 
         let queue = &mut (*wp).resize_queue;
         if queue.is_empty() {
             return;
         }
 
-        if event_initialized(&raw mut (*wp).resize_timer) == 0 {
-            evtimer_set(
-                &raw mut (*wp).resize_timer,
-                server_client_resize_timer,
-                NonNull::new_unchecked(wp.cast()),
-            );
-        }
-        if evtimer_pending(&raw mut (*wp).resize_timer, null_mut()) != 0 {
+        if (*wp).resize_timer.is_some() {
             return;
         }
 
@@ -2367,9 +2350,13 @@ pub unsafe fn server_client_check_pane_resize(wp: *mut window_pane) {
             let kept = last;
             queue.clear();
             queue.push(kept);
-            tv.tv_usec = 10000;
+            timeout_usec = 10000;
         }
-        evtimer_add(&raw mut (*wp).resize_timer, &raw const tv);
+        let pid = PaneId((*wp).id);
+        (*wp).resize_timer = timer_add(
+            Duration::from_micros(timeout_usec as u64),
+            Box::new(move || unsafe { server_client_resize_timer_fire(pid) }),
+        );
     }
 }
 
@@ -2602,14 +2589,9 @@ pub unsafe fn server_client_reset_state(c: *mut client) {
 }
 
 /// Repeat time callback.
-pub unsafe extern "C-unwind" fn server_client_repeat_timer(
-    _fd: i32,
-    _events: i16,
-    c: NonNull<client>,
-) {
+unsafe fn server_client_repeat_timer_fire(cid: ClientId) {
     unsafe {
-        let c = c.as_ptr();
-
+        let Some(c) = client_from_id(cid) else { return };
         if (*c).flags.intersects(client_flag::REPEAT) {
             server_client_set_key_table(c, null_mut());
             (*c).flags &= !client_flag::REPEAT;
@@ -2619,17 +2601,12 @@ pub unsafe extern "C-unwind" fn server_client_repeat_timer(
 }
 
 /// Double-click callback.
-pub unsafe extern "C-unwind" fn server_client_click_timer(
-    _fd: i32,
-    _events: i16,
-    c: NonNull<client>,
-) {
+unsafe fn server_client_click_timer_fire(cid: ClientId) {
     unsafe {
-        let c = c.as_ptr();
+        let Some(c) = client_from_id(cid) else { return };
         log_debug!("click timer expired");
 
         if (*c).flags.intersects(client_flag::TRIPLECLICK) {
-            // Waiting for a third click that hasn't happened, so this must have been a double click.
             let event = Box::leak(Box::new(key_event {
                 key: keyc::KEYC_DOUBLECLICK as u64,
                 m: (*c).click_event,

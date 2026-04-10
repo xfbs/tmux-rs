@@ -26,20 +26,11 @@
 //! - [`default_window_name`]: Returns the default name for a window based on
 //!   the active pane's command or shell.
 
-use crate::event_::{event_add, event_initialized};
+use std::time::Duration;
+
 use crate::libc::{gettimeofday, memcpy, strchr, strcspn, strlen, strncmp};
 use crate::*;
 use crate::options_::*;
-
-pub unsafe extern "C-unwind" fn name_time_callback(
-    _fd: c_int,
-    _events: c_short,
-    w: NonNull<window>,
-) {
-    unsafe {
-        log_debug!("@{} timer expired", (*w.as_ptr()).id);
-    }
-}
 
 /// Returns 0 if the name update interval has elapsed, or the remaining
 /// microseconds if the timer hasn't expired yet.
@@ -63,7 +54,6 @@ pub unsafe fn name_time_expired(w: *mut window, tv: *mut timeval) -> c_int {
 pub unsafe fn check_window_name(w: *mut window) {
     unsafe {
         let mut tv: timeval = zeroed();
-        let mut next: timeval = zeroed();
 
         let active = window_active_pane(w);
         if active.is_null() {
@@ -86,18 +76,16 @@ pub unsafe fn check_window_name(w: *mut window) {
         gettimeofday(&raw mut tv, null_mut());
         let left = name_time_expired(w, &raw mut tv);
         if left != 0 {
-            if event_initialized(&raw mut (*w).name_event) == 0 {
-                evtimer_set(
-                    &raw mut (*w).name_event,
-                    name_time_callback,
-                    NonNull::new_unchecked(w),
-                );
-            }
-            if evtimer_pending(&raw mut (*w).name_event, null_mut()) == 0 {
+            if (*w).name_event.is_none() {
                 log_debug!("@{} timer queued ({})", (*w).id, left);
-                timerclear(&raw mut next);
-                next.tv_usec = left as libc::suseconds_t;
-                event_add(&raw mut (*w).name_event, &raw const next);
+                let wid = WindowId((*w).id);
+                (*w).name_event = timer_add(
+                    Duration::from_micros(left as u64),
+                    Box::new(move || {
+                        let Some(w) = window_from_id(wid) else { return };
+                        unsafe { log_debug!("@{} timer expired", (*w).id) };
+                    }),
+                );
             } else {
                 log_debug!("@{} timer already queued ({})", (*w).id, left);
             }
@@ -108,9 +96,7 @@ pub unsafe fn check_window_name(w: *mut window) {
             &raw const tv as _,
             size_of::<timeval>(),
         );
-        if event_initialized(&raw mut (*w).name_event) != 0 {
-            evtimer_del(&raw mut (*w).name_event);
-        }
+        (*w).name_event = None;
 
         (*active).flags &= !window_pane_flags::PANE_CHANGED;
 
