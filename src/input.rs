@@ -32,6 +32,8 @@
 //!
 //! - Special handling for ESC inside a DCS to allow arbitrary byte sequences to
 //!   be passed to the underlying terminals.
+use std::time::Duration;
+
 use crate::compat::b64::{b64_ntop, b64_pton};
 use crate::libc::{strchr, strpbrk, strtol};
 use crate::*;
@@ -118,7 +120,7 @@ pub struct input_ctx {
 
     state: *const input_state,
 
-    timer: event,
+    timer: Option<TimerHandle>,
 
     /// All input received since we were last in the ground state. Sent to control clients on connection.
     since_ground: *mut evbuffer,
@@ -855,30 +857,36 @@ unsafe fn input_table_compare(
     }
 }
 
-/// Timer
-///
-/// if this expires then have been waiting for a terminator for too long, so reset to ground.
-unsafe extern "C-unwind" fn input_timer_callback(_fd: i32, _events: i16, ictx: NonNull<input_ctx>) {
+/// Input timer callback: waited too long for a terminator, reset to ground.
+unsafe fn input_timer_fire(pane_id: PaneId) {
     unsafe {
+        let wp = pane_ptr_from_id(Some(pane_id));
+        if wp.is_null() {
+            return;
+        }
+        let ictx = (*wp).ictx;
+        if ictx.is_null() {
+            return;
+        }
         log_debug!(
             "{}: {} expired",
             "input_timer_callback",
-            _s((*(*ictx.as_ptr()).state).name.as_ptr())
+            _s((*(*ictx).state).name.as_ptr())
         );
-        input_reset(ictx.as_ptr(), 0);
+        input_reset(ictx, 0);
     }
 }
 
 /// Start the timer.
 unsafe fn input_start_timer(ictx: *mut input_ctx) {
     unsafe {
-        let tv: timeval = timeval {
-            tv_sec: 5,
-            tv_usec: 0,
-        };
-
-        event_del(&raw mut (*ictx).timer);
-        event_add(&raw mut (*ictx).timer, &raw const tv);
+        (*ictx).timer = None;
+        if let Some(pid) = (*ictx).wp {
+            (*ictx).timer = timer_add(
+                Duration::from_secs(5),
+                Box::new(move || unsafe { input_timer_fire(pid) }),
+            );
+        }
     }
 }
 
@@ -945,11 +953,9 @@ pub unsafe fn input_init(
             fatalx("out of memory");
         }
 
-        evtimer_set(
-            &raw mut (*ictx).timer,
-            input_timer_callback,
-            NonNull::new(ictx).unwrap(),
-        );
+        // timer field is already None from ..zeroed() — but write explicitly
+        // since zeroed Option<TimerHandle> is not guaranteed safe.
+        std::ptr::write(&raw mut (*ictx).timer, None);
 
         input_reset(ictx, 0);
         ictx
@@ -965,7 +971,7 @@ pub unsafe fn input_free(ictx: *mut input_ctx) {
             }
         }
 
-        event_del(&raw mut (*ictx).timer);
+        std::ptr::drop_in_place(&raw mut (*ictx).timer);
 
         free_((*ictx).input_buf);
         evbuffer_free((*ictx).since_ground);
@@ -1249,7 +1255,7 @@ unsafe fn input_reply_(ictx: *mut input_ctx, args: std::fmt::Arguments) {
 /// Clear saved state.
 unsafe fn input_clear(ictx: *mut input_ctx) {
     unsafe {
-        event_del(&raw mut (*ictx).timer);
+        (*ictx).timer = None;
 
         (*ictx).interm_buf[0] = b'\0';
         (*ictx).interm_len = 0;
@@ -1269,7 +1275,7 @@ unsafe fn input_clear(ictx: *mut input_ctx) {
 /// Reset for ground state.
 unsafe fn input_ground(ictx: *mut input_ctx) {
     unsafe {
-        event_del(&raw mut (*ictx).timer);
+        (*ictx).timer = None;
         evbuffer_drain((*ictx).since_ground, EVBUFFER_LENGTH((*ictx).since_ground));
 
         if (*ictx).input_space > INPUT_BUF_START {
