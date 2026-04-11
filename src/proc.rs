@@ -20,7 +20,6 @@ use crate::compat::{
     imsg_buffer::msgbuf_write,
     setproctitle_,
 };
-use crate::event_::{signal_add, signal_set};
 use crate::libc::{
     AF_UNIX, EAGAIN, PF_UNSPEC, SA_RESTART, SIG_DFL, SIG_IGN, SIGCHLD, SIGCONT, SIGHUP, SIGINT,
     SIGPIPE, SIGQUIT, SIGTERM, SIGTSTP, SIGTTIN, SIGTTOU, SIGUSR1, SIGUSR2, SIGWINCH, close, gid_t,
@@ -34,14 +33,14 @@ pub struct tmuxproc {
 
     pub signalcb: Option<unsafe fn(i32)>,
 
-    pub ev_sigint: event,
-    pub ev_sighup: event,
-    pub ev_sigchld: event,
-    pub ev_sigcont: event,
-    pub ev_sigterm: event,
-    pub ev_sigusr1: event,
-    pub ev_sigusr2: event,
-    pub ev_sigwinch: event,
+    pub ev_sigint: Option<SignalHandle>,
+    pub ev_sighup: Option<SignalHandle>,
+    pub ev_sigchld: Option<SignalHandle>,
+    pub ev_sigcont: Option<SignalHandle>,
+    pub ev_sigterm: Option<SignalHandle>,
+    pub ev_sigusr1: Option<SignalHandle>,
+    pub ev_sigusr2: Option<SignalHandle>,
+    pub ev_sigwinch: Option<SignalHandle>,
 
     pub peers: Vec<*mut tmuxpeer>,
 }
@@ -116,13 +115,6 @@ pub unsafe extern "C-unwind" fn proc_event_cb(_fd: i32, events: i16, arg: *mut c
     }
 }
 
-pub unsafe extern "C-unwind" fn proc_signal_cb(signo: i32, _events: i16, arg: *mut c_void) {
-    unsafe {
-        let tp = arg as *mut tmuxproc;
-
-        ((*tp).signalcb.unwrap())(signo);
-    }
-}
 
 pub unsafe fn peer_check_version(peer: *mut tmuxpeer, imsg: *mut imsg) -> i32 {
     unsafe {
@@ -223,6 +215,14 @@ pub fn proc_start(name: &CStr) -> *mut tmuxproc {
         let tp = xcalloc1::<tmuxproc>();
         tp.name = xstrdup(name).as_ptr();
         std::ptr::write(&raw mut tp.peers, Vec::new());
+        std::ptr::write(&raw mut tp.ev_sigint, None);
+        std::ptr::write(&raw mut tp.ev_sighup, None);
+        std::ptr::write(&raw mut tp.ev_sigchld, None);
+        std::ptr::write(&raw mut tp.ev_sigcont, None);
+        std::ptr::write(&raw mut tp.ev_sigterm, None);
+        std::ptr::write(&raw mut tp.ev_sigusr1, None);
+        std::ptr::write(&raw mut tp.ev_sigusr2, None);
+        std::ptr::write(&raw mut tp.ev_sigwinch, None);
 
         tp
     }
@@ -280,62 +280,15 @@ pub unsafe fn proc_set_signals(tp: *mut tmuxproc, signalcb: Option<unsafe fn(i32
         sigaction(SIGTTOU, &sa, null_mut());
         sigaction(SIGQUIT, &sa, null_mut());
 
-        signal_set(
-            &raw mut (*tp).ev_sigint,
-            SIGINT,
-            Some(proc_signal_cb),
-            tp.cast(),
-        );
-        signal_add(&raw mut (*tp).ev_sigint, null_mut());
-        signal_set(
-            &raw mut (*tp).ev_sighup,
-            SIGHUP,
-            Some(proc_signal_cb),
-            tp.cast(),
-        );
-        signal_add(&raw mut (*tp).ev_sighup, null_mut());
-        signal_set(
-            &raw mut (*tp).ev_sigchld,
-            SIGCHLD,
-            Some(proc_signal_cb),
-            tp.cast(),
-        );
-        signal_add(&raw mut (*tp).ev_sigchld, null_mut());
-        signal_set(
-            &raw mut (*tp).ev_sigcont,
-            SIGCONT,
-            Some(proc_signal_cb),
-            tp.cast(),
-        );
-        signal_add(&raw mut (*tp).ev_sigcont, null_mut());
-        signal_set(
-            &raw mut (*tp).ev_sigterm,
-            SIGTERM,
-            Some(proc_signal_cb),
-            tp.cast(),
-        );
-        signal_add(&raw mut (*tp).ev_sigterm, null_mut());
-        signal_set(
-            &raw mut (*tp).ev_sigusr1,
-            SIGUSR1,
-            Some(proc_signal_cb),
-            tp.cast(),
-        );
-        signal_add(&raw mut (*tp).ev_sigusr1, null_mut());
-        signal_set(
-            &raw mut (*tp).ev_sigusr2,
-            SIGUSR2,
-            Some(proc_signal_cb),
-            tp.cast(),
-        );
-        signal_add(&raw mut (*tp).ev_sigusr2, null_mut());
-        signal_set(
-            &raw mut (*tp).ev_sigwinch,
-            SIGWINCH,
-            Some(proc_signal_cb),
-            tp.cast(),
-        );
-        signal_add(&raw mut (*tp).ev_sigwinch, null_mut());
+        let cb = signalcb.unwrap();
+        (*tp).ev_sigint = signal_register(SIGINT, Box::new(move || cb(SIGINT)));
+        (*tp).ev_sighup = signal_register(SIGHUP, Box::new(move || cb(SIGHUP)));
+        (*tp).ev_sigchld = signal_register(SIGCHLD, Box::new(move || cb(SIGCHLD)));
+        (*tp).ev_sigcont = signal_register(SIGCONT, Box::new(move || cb(SIGCONT)));
+        (*tp).ev_sigterm = signal_register(SIGTERM, Box::new(move || cb(SIGTERM)));
+        (*tp).ev_sigusr1 = signal_register(SIGUSR1, Box::new(move || cb(SIGUSR1)));
+        (*tp).ev_sigusr2 = signal_register(SIGUSR2, Box::new(move || cb(SIGUSR2)));
+        (*tp).ev_sigwinch = signal_register(SIGWINCH, Box::new(move || cb(SIGWINCH)));
     }
 }
 
@@ -365,17 +318,29 @@ pub unsafe fn proc_clear_signals(tp: *mut tmuxproc, defaults: i32) {
 
         if defaults == 0 {
             // Server process: properly unregister from our own event loop.
-            event_del(&raw mut (*tp).ev_sigint);
-            event_del(&raw mut (*tp).ev_sighup);
-            event_del(&raw mut (*tp).ev_sigchld);
-            event_del(&raw mut (*tp).ev_sigcont);
-            event_del(&raw mut (*tp).ev_sigterm);
-            event_del(&raw mut (*tp).ev_sigusr1);
-            event_del(&raw mut (*tp).ev_sigusr2);
-            event_del(&raw mut (*tp).ev_sigwinch);
+            (*tp).ev_sigint = None;
+            (*tp).ev_sighup = None;
+            (*tp).ev_sigchld = None;
+            (*tp).ev_sigcont = None;
+            (*tp).ev_sigterm = None;
+            (*tp).ev_sigusr1 = None;
+            (*tp).ev_sigusr2 = None;
+            (*tp).ev_sigwinch = None;
         } else {
             // Forked child: reset signal dispositions to defaults.
-            // Do NOT call event_del — it would corrupt the parent's epoll.
+            // Do NOT drop the SignalHandles — their Drop impl would call
+            // epoll_ctl(DEL) on the shared kernel epoll, corrupting the
+            // parent's event loop.  Forget them instead; the child will
+            // exec() shortly and the leaked memory is harmless.
+            std::mem::forget((*tp).ev_sigint.take());
+            std::mem::forget((*tp).ev_sighup.take());
+            std::mem::forget((*tp).ev_sigchld.take());
+            std::mem::forget((*tp).ev_sigcont.take());
+            std::mem::forget((*tp).ev_sigterm.take());
+            std::mem::forget((*tp).ev_sigusr1.take());
+            std::mem::forget((*tp).ev_sigusr2.take());
+            std::mem::forget((*tp).ev_sigwinch.take());
+
             sigaction(SIGINT, &sa, null_mut());
             sigaction(SIGQUIT, &sa, null_mut());
             sigaction(SIGHUP, &sa, null_mut());

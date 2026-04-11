@@ -37,6 +37,63 @@ impl Drop for TimerHandle {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Safe signal API
+// ---------------------------------------------------------------------------
+
+/// RAII handle for a registered signal.  Dropping it deregisters the signal
+/// handler from the event loop automatically.
+pub struct SignalHandle {
+    id: u64,
+}
+
+impl Drop for SignalHandle {
+    fn drop(&mut self) {
+        let base_ptr = unsafe { GLOBAL_BASE };
+        if base_ptr.is_null() {
+            return;
+        }
+        let base = unsafe { &mut *base_ptr };
+        if let Some(reg) = base.registrations.remove(&self.id) {
+            base.handle.remove(reg.token);
+        }
+        base.timer_callbacks.remove(&self.id);
+        CANCELLED.with(|cell| { cell.borrow_mut().insert(self.id); });
+    }
+}
+
+/// Register a signal handler that calls `callback` when `signum` is delivered.
+///
+/// Returns `Some(SignalHandle)` on success.  Drop the handle to deregister.
+pub fn signal_register(signum: c_int, callback: Box<dyn Fn()>) -> Option<SignalHandle> {
+    let base_ptr = unsafe { GLOBAL_BASE };
+    if base_ptr.is_null() {
+        return None;
+    }
+    let base = unsafe { &mut *base_ptr };
+    let id = base.alloc_id();
+
+    let signal = signal_from_number(signum)?;
+    let signals = Signals::new(&[signal]).ok()?;
+    let token = base.handle.insert_source(signals, move |_, _, data| {
+        data.ready.push(ReadyEvent {
+            id,
+            fd: signum,
+            events: super::super::EV_SIGNAL,
+            callback: None,
+            arg: std::ptr::null_mut(),
+        });
+    }).ok()?;
+
+    base.registrations.insert(id, Registration { token });
+    base.timer_callbacks.insert(id, callback);
+    Some(SignalHandle { id })
+}
+
+// ---------------------------------------------------------------------------
+// Safe timer API (continued)
+// ---------------------------------------------------------------------------
+
 /// Register a one-shot timer that fires after `duration` and calls `callback`.
 ///
 /// Returns `Some(TimerHandle)` on success.  Drop the handle to cancel.
