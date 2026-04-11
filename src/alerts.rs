@@ -41,7 +41,7 @@ unsafe fn alerts_timer_fire(wid: WindowId) {
     }
 }
 
-unsafe extern "C-unwind" fn alerts_callback(_fd: c_int, _events: c_short, _arg: *mut c_void) {
+unsafe fn alerts_callback() {
     unsafe {
         ALERTS_LIST.with_borrow_mut(|alerts_list| {
             while let Some(w) = alerts_list.pop_front() {
@@ -159,13 +159,7 @@ pub(crate) unsafe fn alerts_queue(w: NonNull<window>, flags: window_flag) {
 
             if ALERTS_FIRED.load(atomic::Ordering::Acquire) == 0 {
                 log_debug!("alerts check queued (by @{})", (*w).id);
-                event_once(
-                    -1,
-                    EV_TIMEOUT,
-                    Some(alerts_callback),
-                    null_mut(),
-                    null_mut(),
-                );
+                defer(Box::new(|| unsafe { alerts_callback() }));
                 ALERTS_FIRED.store(1, atomic::Ordering::Release);
             }
         }

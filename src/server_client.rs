@@ -555,13 +555,8 @@ pub unsafe fn server_client_unref(c: *mut client) {
 
         (*c).references -= 1;
         if (*c).references == 0 {
-            event_once(
-                -1,
-                EV_TIMEOUT,
-                Some(server_client_free),
-                c.cast(),
-                null_mut(),
-            );
+            let cid = (*c).id;
+            defer(Box::new(move || unsafe { server_client_free_deferred(cid) }));
         }
     }
 }
@@ -569,11 +564,10 @@ pub unsafe fn server_client_unref(c: *mut client) {
 /// Free dead client.
 ///
 /// Removes the client from `CLIENT_REGISTRY`, which drops the `Box<client>`
-/// and deallocates the memory. The `*mut client` pointer becomes invalid after
-/// this call.
-pub unsafe extern "C-unwind" fn server_client_free(_fd: i32, _events: i16, arg: *mut c_void) {
+/// and deallocates the memory.
+unsafe fn server_client_free_deferred(cid: ClientId) {
     unsafe {
-        let c: *mut client = arg.cast();
+        let Some(c) = client_from_id(cid) else { return };
         log_debug!("free client {:p} ({} references)", c, (*c).references);
 
         cmdq_free((*c).queue);
@@ -581,8 +575,8 @@ pub unsafe extern "C-unwind" fn server_client_free(_fd: i32, _events: i16, arg: 
         if (*c).references == 0 {
             free_((*c).name.cast_mut());
             // Remove from registry — the Box drop deallocates the client.
-            let removed = (*(&raw mut CLIENT_REGISTRY)).remove(&(*c).id);
-            debug_assert!(removed.is_some(), "client {:?} not found in registry", (*c).id);
+            let removed = (*(&raw mut CLIENT_REGISTRY)).remove(&cid);
+            debug_assert!(removed.is_some(), "client {:?} not found in registry", cid);
         }
     }
 }

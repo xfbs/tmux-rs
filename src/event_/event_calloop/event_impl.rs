@@ -38,6 +38,44 @@ impl Drop for TimerHandle {
 }
 
 // ---------------------------------------------------------------------------
+// Safe deferred callback API
+// ---------------------------------------------------------------------------
+
+/// Defer a callback to fire on the next event loop iteration.
+///
+/// Used for resource cleanup where the callback needs to run *after* the
+/// current call stack unwinds — e.g. `server_client_free` must not run
+/// while we're still inside a callback that references the client.
+///
+/// The callback is `FnOnce` — it fires exactly once, then is dropped.
+/// Unlike `timer_add`, this returns no handle: the caller cannot cancel
+/// the deferred work.
+pub fn defer(callback: Box<dyn FnOnce()>) {
+    let base_ptr = unsafe { GLOBAL_BASE };
+    if base_ptr.is_null() {
+        return;
+    }
+    let base = unsafe { &mut *base_ptr };
+    let id = base.alloc_id();
+
+    let timer = Timer::immediate();
+    let res = base.handle.insert_source(timer, move |_, _, data| {
+        data.ready.push(ReadyEvent {
+            id,
+            fd: -1,
+            events: super::super::EV_TIMEOUT,
+            callback: None,
+            arg: std::ptr::null_mut(),
+        });
+        TimeoutAction::Drop
+    });
+    if let Ok(token) = res {
+        base.registrations.insert(id, Registration { token });
+        base.deferred_callbacks.insert(id, Some(callback));
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Safe signal API
 // ---------------------------------------------------------------------------
 
@@ -178,6 +216,9 @@ pub(crate) struct EventBase {
     fallback_events: HashMap<u64, FallbackEvent>,
     /// Closures for safe timer API (`timer_add`).  Keyed by event id.
     timer_callbacks: HashMap<u64, Box<dyn Fn()>>,
+    /// One-shot closures for `defer()`.  Option so dispatch can `.take()`
+    /// and move out the FnOnce.  Keyed by event id.
+    deferred_callbacks: HashMap<u64, Option<Box<dyn FnOnce()>>>,
     next_id: u64,
 }
 
@@ -191,6 +232,7 @@ impl EventBase {
             registrations: HashMap::new(),
             fallback_events: HashMap::new(),
             timer_callbacks: HashMap::new(),
+            deferred_callbacks: HashMap::new(),
             next_id: 1,
         })
     }
@@ -604,40 +646,17 @@ pub unsafe fn event_loop(flags: c_int) -> c_int {
             unsafe { cb(ready.fd, ready.events, ready.arg); }
         } else if let Some(cb) = base.timer_callbacks.get(&ready.id) {
             cb();
+        } else if let Some(slot) = base.deferred_callbacks.get_mut(&ready.id)
+            && let Some(cb) = slot.take()
+        {
+            // One-shot: remove the registration and invoke the FnOnce.
+            base.deferred_callbacks.remove(&ready.id);
+            base.registrations.remove(&ready.id);
+            cb();
         }
     }
 
     0
-}
-
-/// Create a one-shot event that fires once and is automatically freed.
-///
-/// Matches libevent2's `event_base_once` semantics: when `events` includes
-/// `EV_TIMEOUT` and `tv` is NULL, a zero-duration timer is used so the
-/// callback fires on the next event loop iteration (libevent substitutes
-/// `{0, 0}` for NULL tv in the EV_TIMEOUT case).
-pub unsafe fn event_once(
-    fd: c_int,
-    events: c_short,
-    cb: Option<unsafe extern "C-unwind" fn(arg1: c_int, arg2: c_short, arg3: *mut c_void)>,
-    arg: *mut c_void,
-    tv: *const timeval,
-) -> c_int {
-    let ev = Box::into_raw(Box::new(unsafe { std::mem::zeroed::<event>() }));
-    unsafe {
-        event_set(ev, fd, events & !EV_PERSIST, cb, arg);
-
-        if tv.is_null() && (events & EV_TIMEOUT) != 0 {
-            // libevent2 treats NULL tv + EV_TIMEOUT as zero timeout (fire
-            // immediately).  Without this, deferred callbacks like
-            // file_fire_done, file_push_cb, server_client_free, and
-            // session_free would never fire.
-            let zero_tv = timeval { tv_sec: 0, tv_usec: 0 };
-            event_add(ev, &zero_tv)
-        } else {
-            event_add(ev, tv)
-        }
-    }
 }
 
 static VERSION_STR: &[u8] = b"calloop-event/1.0\0";

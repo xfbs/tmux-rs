@@ -149,9 +149,8 @@ pub unsafe fn file_free(cf: *mut client_file) {
     }
 }
 
-pub unsafe extern "C-unwind" fn file_fire_done_cb(_fd: i32, _events: i16, arg: *mut c_void) {
+unsafe fn file_fire_done_cb(cf: *mut client_file) {
     unsafe {
-        let cf: *mut client_file = arg as _;
         let c: *mut client = (*cf).c;
 
         if let Some(cb) = (*cf).cb
@@ -164,9 +163,7 @@ pub unsafe extern "C-unwind" fn file_fire_done_cb(_fd: i32, _events: i16, arg: *
 }
 
 pub unsafe fn file_fire_done(cf: *mut client_file) {
-    unsafe {
-        event_once(-1, EV_TIMEOUT, Some(file_fire_done_cb), cf as _, null_mut());
-    }
+    defer(Box::new(move || unsafe { file_fire_done_cb(cf) }));
 }
 
 pub unsafe fn file_fire_read(cf: *mut client_file) {
@@ -500,8 +497,7 @@ pub unsafe fn file_cancel(cf: *mut client_file) {
     }
 }
 
-pub unsafe extern "C-unwind" fn file_push_cb(_fd: i32, _events: i16, arg: *mut c_void) {
-    let cf = arg as *mut client_file;
+unsafe fn file_push_cb(cf: *mut client_file) {
 
     unsafe {
         if (*cf).c.is_null() || !(*(*cf).c).flags.intersects(client_flag::DEAD) {
@@ -553,7 +549,7 @@ pub unsafe fn file_push(cf: *mut client_file) {
         }
         if left != 0 {
             (*cf).references += 1;
-            event_once(-1, EV_TIMEOUT, Some(file_push_cb), cf.cast(), null());
+            defer(Box::new(move || unsafe { file_push_cb(cf) }));
         } else if (*cf).stream > 2 {
             let close: msg_write_close = msg_write_close {
                 stream: (*cf).stream,

@@ -217,7 +217,8 @@ pub unsafe fn session_remove_ref(s: *mut session, from: *const u8) {
         );
 
         if (*s).references == 0 {
-            event_once(-1, EV_TIMEOUT, Some(session_free), s.cast(), null_mut());
+            let sid = SessionId((*s).id);
+            defer(Box::new(move || unsafe { session_free_deferred(sid) }));
         }
     }
 }
@@ -225,11 +226,10 @@ pub unsafe fn session_remove_ref(s: *mut session, from: *const u8) {
 /// Free session.
 ///
 /// Removes the session from `SESSION_REGISTRY`, which drops the `Box<session>`
-/// and deallocates the memory. The `*mut session` pointer becomes invalid after
-/// this call.
-pub unsafe extern "C-unwind" fn session_free(_fd: i32, _events: i16, arg: *mut c_void) {
+/// and deallocates the memory.
+unsafe fn session_free_deferred(sid: SessionId) {
     unsafe {
-        let s = arg as *mut session;
+        let Some(s) = session_from_id(sid) else { return };
 
         log_debug!(
             "session {} freed ({} references)",
@@ -244,7 +244,7 @@ pub unsafe extern "C-unwind" fn session_free(_fd: i32, _events: i16, arg: *mut c
             // Drop the Box from the registry. Box drop runs Drop on all fields,
             // including `cwd: Option<PathBuf>`. (The Vec/BTreeMap fields were
             // already emptied in session_destroy; the Cow name was replaced above.)
-            let _ = (*(&raw mut SESSION_REGISTRY)).remove(&SessionId((*s).id));
+            let _ = (*(&raw mut SESSION_REGISTRY)).remove(&sid);
         }
     }
 }
