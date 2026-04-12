@@ -5511,7 +5511,7 @@ pub unsafe fn window_copy_pipe_run(
                 -1,
                 -1,
             );
-            bufferevent_write(job_get_event(job), buf.cast(), *len);
+            job_write(job, buf.cast(), *len);
         }
         buf.cast()
     }

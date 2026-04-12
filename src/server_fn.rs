@@ -316,8 +316,8 @@ pub unsafe fn server_destroy_pane(wp: *mut window_pane, notify: i32) {
             {
                 utempter_remove_record((*wp).fd);
             }
-            bufferevent_free((*wp).event);
-            (*wp).event = null_mut();
+            (*wp).event_read = None;
+            (*wp).event_write = None;
             close((*wp).fd);
             (*wp).fd = -1;
         }

@@ -239,7 +239,7 @@ pub unsafe fn format_copy_state(
 pub unsafe fn format_job_update(job: *mut job) {
     unsafe {
         let fj = job_get_data(job) as *mut format_job;
-        let evb: *mut evbuffer = (*job_get_event(job)).input;
+        let evb: *mut evbuffer = job_get_input(job);
         let mut line: *mut u8 = null_mut();
 
         while let Some(next) = NonNull::new(evbuffer_readline(evb)) {
@@ -276,7 +276,7 @@ pub unsafe fn format_job_update(job: *mut job) {
 pub unsafe fn format_job_complete(job: *mut job) {
     unsafe {
         let fj = job_get_data(job) as *mut format_job;
-        let evb: *mut evbuffer = (*job_get_event(job)).input;
+        let evb: *mut evbuffer = job_get_input(job);
 
         (*fj).job = null_mut();
 

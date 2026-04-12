@@ -48,7 +48,14 @@ pub struct job {
     pub status: i32,
 
     pub fd: c_int,
-    pub event: *mut bufferevent,
+    /// Buffered data read from the subprocess fd.
+    pub event_input: crate::evbuffer_::Evbuffer,
+    /// Buffered data to write to the subprocess fd.
+    pub event_output: crate::evbuffer_::Evbuffer,
+    /// Calloop read registration for the subprocess fd.
+    pub event_read: Option<IoHandle>,
+    /// Calloop write registration for the subprocess fd.
+    pub event_write: Option<IoHandle>,
 
     pub updatecb: job_update_cb,
     pub completecb: job_complete_cb,
@@ -258,17 +265,17 @@ pub unsafe fn job_run(
             }
             setblocking((*job).fd, 0);
 
-            (*job).event = bufferevent_new(
+            let job_ptr = job;
+            (*job).event_read = io_register(
                 (*job).fd,
-                Some(job_read_callback),
-                Some(job_write_callback),
-                Some(job_error_callback),
-                job as *mut c_void,
+                EV_READ,
+                Box::new(move |_fd, _events| unsafe { job_read_fire(job_ptr, (*job_ptr).fd) }),
             );
-            if (*job).event.is_null() {
-                fatalx("out of memory");
-            }
-            bufferevent_enable((*job).event, EV_READ | EV_WRITE);
+            (*job).event_write = io_register(
+                (*job).fd,
+                EV_WRITE,
+                Box::new(move |_fd, _events| unsafe { job_write_fire(job_ptr, (*job_ptr).fd) }),
+            );
 
             log_debug!("run job {:p}: {} pid {}", job, _s((*job).cmd), (*job).pid);
             return job;
@@ -303,9 +310,11 @@ pub unsafe fn job_transfer(job: *mut job, pid: *mut pid_t, tty: *mut u8, ttylen:
             freecb((*job).data);
         }
 
-        if !(*job).event.is_null() {
-            bufferevent_free((*job).event);
-        }
+        // Drop owned fields before free_().
+        std::ptr::drop_in_place(&raw mut (*job).event_read);
+        std::ptr::drop_in_place(&raw mut (*job).event_write);
+        std::ptr::drop_in_place(&raw mut (*job).event_input);
+        std::ptr::drop_in_place(&raw mut (*job).event_output);
 
         free_(job);
         fd
@@ -327,9 +336,11 @@ pub unsafe fn job_free(job: *mut job) {
         if (*job).pid != -1 {
             kill((*job).pid, SIGTERM);
         }
-        if !((*job).event).is_null() {
-            bufferevent_free((*job).event);
-        }
+        // Drop owned fields (IoHandles deregister from calloop, Evbuffers free memory).
+        std::ptr::drop_in_place(&raw mut (*job).event_read);
+        std::ptr::drop_in_place(&raw mut (*job).event_write);
+        std::ptr::drop_in_place(&raw mut (*job).event_input);
+        std::ptr::drop_in_place(&raw mut (*job).event_output);
         if (*job).fd != -1 {
             close((*job).fd);
         }
@@ -355,20 +366,39 @@ pub unsafe fn job_resize(job: *mut job, sx: c_uint, sy: c_uint) {
     }
 }
 
-unsafe extern "C-unwind" fn job_read_callback(_bufev: *mut bufferevent, data: *mut c_void) {
-    let job = data as *mut job;
-
+/// Read callback: reads data from the subprocess fd into event_input,
+/// then invokes the job's update callback.
+unsafe fn job_read_fire(job: *mut job, fd: c_int) {
     unsafe {
-        if let Some(updatecb) = (*job).updatecb {
-            updatecb(job);
+        let n = (*job).event_input.read_from_fd(fd, 4096);
+        if n > 0 {
+            if let Some(updatecb) = (*job).updatecb {
+                updatecb(job);
+            }
+        } else if n == 0
+            || (n < 0
+                && std::io::Error::last_os_error().kind() != std::io::ErrorKind::WouldBlock)
+        {
+            job_error_fire(job);
         }
     }
 }
-unsafe extern "C-unwind" fn job_write_callback(_bufev: *mut bufferevent, data: *mut c_void) {
-    unsafe {
-        let job = data as *mut job;
-        let len = EVBUFFER_LENGTH(EVBUFFER_OUTPUT((*job).event));
 
+/// Write callback: drains event_output to the subprocess fd.
+unsafe fn job_write_fire(job: *mut job, fd: c_int) {
+    unsafe {
+        if (*job).event_output.len() > 0 {
+            let n = (*job).event_output.write_to_fd(fd);
+            if n < 0 {
+                if std::io::Error::last_os_error().kind() == std::io::ErrorKind::WouldBlock {
+                    return;
+                }
+                job_error_fire(job);
+                return;
+            }
+        }
+
+        let len = (*job).event_output.len();
         log_debug!(
             "job write {:p}: {}, pid {}, output left {}",
             job,
@@ -379,18 +409,13 @@ unsafe extern "C-unwind" fn job_write_callback(_bufev: *mut bufferevent, data: *
 
         if len == 0 && !(*job).flags.intersects(job_flag::JOB_KEEPWRITE) {
             shutdown((*job).fd, SHUT_WR);
-            bufferevent_disable((*job).event, EV_WRITE);
+            (*job).event_write = None;
         }
     }
 }
 
-unsafe extern "C-unwind" fn job_error_callback(
-    _bufev: *mut bufferevent,
-    _events: libc::c_short,
-    data: *mut c_void,
-) {
-    let job: *mut job = data.cast();
-
+/// Error/EOF handler for the job's fd.
+unsafe fn job_error_fire(job: *mut job) {
     unsafe {
         log_debug!(
             "job error {:p}: {}, pid {}",
@@ -404,7 +429,7 @@ unsafe extern "C-unwind" fn job_error_callback(
             }
             job_free(job);
         } else {
-            bufferevent_disable((*job).event, EV_READ);
+            (*job).event_read = None;
             (*job).state = job_state::JOB_CLOSED;
         }
     }
@@ -454,8 +479,30 @@ pub unsafe fn job_get_data(job: *mut job) -> *mut c_void {
     unsafe { (*job).data }
 }
 
-pub unsafe fn job_get_event(job: *mut job) -> *mut bufferevent {
-    unsafe { (*job).event }
+/// Returns a pointer to the job's input buffer (data read from subprocess).
+pub unsafe fn job_get_input(job: *mut job) -> *mut crate::evbuffer_::Evbuffer {
+    unsafe { &raw mut (*job).event_input }
+}
+
+/// Returns a pointer to the job's output buffer (data to write to subprocess).
+pub unsafe fn job_get_output(job: *mut job) -> *mut crate::evbuffer_::Evbuffer {
+    unsafe { &raw mut (*job).event_output }
+}
+
+/// Write data to the job's subprocess. Arms the write event if needed.
+pub unsafe fn job_write(job: *mut job, data: *const c_void, size: usize) {
+    unsafe {
+        let slice = std::slice::from_raw_parts(data.cast::<u8>(), size);
+        (*job).event_output.add(slice);
+        if (*job).event_write.is_none() && (*job).fd >= 0 {
+            let job_ptr = job;
+            (*job).event_write = io_register(
+                (*job).fd,
+                EV_WRITE,
+                Box::new(move |_fd, _events| unsafe { job_write_fire(job_ptr, (*job_ptr).fd) }),
+            );
+        }
+    }
 }
 
 pub unsafe fn job_kill_all() {

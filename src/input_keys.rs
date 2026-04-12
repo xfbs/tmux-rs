@@ -219,26 +219,35 @@ pub unsafe fn input_key_pane(wp: *mut window_pane, key: key_code, m: *mut mouse_
         if KEYC_IS_MOUSE(key) {
             if !m.is_null() && (*m).wp != -1 && (*m).wp as u32 == (*wp).id {
                 input_key_mouse(wp, m);
+                if !(*wp).event_output.is_empty() {
+                    window_pane_arm_write(wp);
+                }
             }
             return 0;
         }
-        input_key((*wp).screen, (*wp).event, key)
+        let ret = input_key((*wp).screen, &raw mut (*wp).event_output, key);
+        // Arm the write IoHandle to flush output to the PTY fd.
+        if !(*wp).event_output.is_empty() {
+            window_pane_arm_write(wp);
+        }
+        ret
     }
 }
 
 pub unsafe fn input_key_write(
     from: *const u8,
-    bev: *mut bufferevent,
+    bev: *mut evbuffer,
     data: *const u8,
     size: usize,
 ) {
     unsafe {
         log_debug!("input_key_write {0}: {2:1$}", _s(from), size, _s(data));
-        bufferevent_write(bev, data.cast(), size);
+        let slice = std::slice::from_raw_parts(data, size);
+        (*bev).add(slice);
     }
 }
 
-pub unsafe fn input_key_extended(bev: *mut bufferevent, mut key: key_code) -> i32 {
+pub unsafe fn input_key_extended(bev: *mut evbuffer, mut key: key_code) -> i32 {
     let __func__ = c!("input_key_extended");
     unsafe {
         let sizeof_tmp = 64;
@@ -312,7 +321,7 @@ static STANDARD_MAP: [SyncCharPtr; 2] = [
 /// Outputs the key in the "standard" mode. This is by far the most
 /// complicated output mode, with a lot of remapping in order to
 /// emulate quirks of terminals that today can be only found in museums.
-pub unsafe fn input_key_vt10x(bev: *mut bufferevent, mut key: key_code) -> i32 {
+pub unsafe fn input_key_vt10x(bev: *mut evbuffer, mut key: key_code) -> i32 {
     let __func__ = c!("input_key_vt10x");
     unsafe {
         let mut ud: utf8_data = zeroed(); // TODO use uninit
@@ -373,7 +382,7 @@ pub unsafe fn input_key_vt10x(bev: *mut bufferevent, mut key: key_code) -> i32 {
 }
 
 /// Pick keys that are reported as vt10x keys in modifyOtherKeys=1 mode.
-pub unsafe fn input_key_mode1(bev: *mut bufferevent, key: key_code) -> i32 {
+pub unsafe fn input_key_mode1(bev: *mut evbuffer, key: key_code) -> i32 {
     unsafe {
         log_debug!("{}: key in {}", "input_key_mode1", key);
 
@@ -400,7 +409,7 @@ pub unsafe fn input_key_mode1(bev: *mut bufferevent, key: key_code) -> i32 {
 }
 
 /// Translate a key code into an output key sequence.
-pub unsafe fn input_key(s: *mut screen, bev: *mut bufferevent, mut key: key_code) -> i32 {
+pub unsafe fn input_key(s: *mut screen, bev: *mut evbuffer, mut key: key_code) -> i32 {
     let __func__ = c!("input_key");
     unsafe {
         let mut ike: *mut input_key_entry = null_mut();
@@ -674,6 +683,6 @@ pub unsafe fn input_key_mouse(wp: *mut window_pane, m: *mut mouse_event) {
             return;
         }
         log_debug!("writing mouse {1:0$} to %{2}", len, _s(buf), (*wp).id);
-        input_key_write(__func__, (*wp).event, buf, len);
+        input_key_write(__func__, &raw mut (*wp).event_output, buf, len);
     }
 }

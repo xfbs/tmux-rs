@@ -2357,7 +2357,7 @@ pub unsafe fn server_client_check_pane_resize(wp: *mut window_pane) {
 /// Check pane buffer size.
 pub unsafe fn server_client_check_pane_buffer(wp: *mut window_pane) {
     unsafe {
-        let evb = (*(*wp).event).input;
+        let evb = &raw mut (*wp).event_input;
         let mut minimum: usize;
         let mut wpo: *mut window_pane_offset;
         let mut off = 1;
@@ -2446,9 +2446,9 @@ pub unsafe fn server_client_check_pane_buffer(wp: *mut window_pane) {
         // accept any more data.
         // log_debug("%s: pane %%%u is %s", __func__, (*wp).id, off ? "off" : "on");
         if off != 0 {
-            bufferevent_disable((*wp).event, EV_READ);
+            (*wp).event_read = None;
         } else {
-            bufferevent_enable((*wp).event, EV_READ);
+            window_pane_arm_read(wp);
         }
     }
 }

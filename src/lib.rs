@@ -1305,7 +1305,14 @@ struct window_pane {
     dead_time: timeval,
 
     fd: i32,
-    event: *mut bufferevent,
+    /// Buffered data read from the PTY fd.
+    event_input: evbuffer_::Evbuffer,
+    /// Buffered data to write to the PTY fd.
+    event_output: evbuffer_::Evbuffer,
+    /// Calloop read registration for the PTY fd.
+    event_read: Option<IoHandle>,
+    /// Calloop write registration for the PTY fd.
+    event_write: Option<IoHandle>,
 
     offset: window_pane_offset,
     base_offset: usize,

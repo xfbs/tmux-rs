@@ -873,14 +873,16 @@ pub unsafe fn window_pane_update_focus(wp: *mut window_pane) {
             if !focused && (*wp).flags.intersects(window_pane_flags::PANE_FOCUSED) {
                 log_debug!("{}: %%{} focus out", "window_pane_update_focus", (*wp).id);
                 if (*wp).base.mode.intersects(mode_flag::MODE_FOCUSON) {
-                    bufferevent_write((*wp).event, c!("\x1b[O") as _, 3);
+                    (*wp).event_output.add(b"\x1b[O");
+                    window_pane_arm_write(wp);
                 }
                 notify_pane(c"pane-focus-out", wp);
                 (*wp).flags &= !window_pane_flags::PANE_FOCUSED;
             } else if focused && !(*wp).flags.intersects(window_pane_flags::PANE_FOCUSED) {
                 log_debug!("{}: %%{} focus in", "window_pane_update_focus", (*wp).id);
                 if (*wp).base.mode.intersects(mode_flag::MODE_FOCUSON) {
-                    bufferevent_write((*wp).event, c!("\x1b[I") as _, 3);
+                    (*wp).event_output.add(b"\x1b[I");
+                    window_pane_arm_write(wp);
                 }
                 notify_pane(c"pane-focus-in", wp);
                 (*wp).flags |= window_pane_flags::PANE_FOCUSED;
@@ -1426,7 +1428,8 @@ unsafe fn window_pane_destroy(wp: *mut window_pane) {
             {
                 utempter_remove_record((*wp).fd);
             }
-            bufferevent_free((*wp).event);
+            (*wp).event_read = None;
+            (*wp).event_write = None;
             close((*wp).fd);
         }
         if !(*wp).ictx.is_null() {
@@ -1459,12 +1462,31 @@ unsafe fn window_pane_destroy(wp: *mut window_pane) {
     }
 }
 
-unsafe extern "C-unwind" fn window_pane_read_callback(_bufev: *mut bufferevent, data: *mut c_void) {
+/// Read callback: reads PTY data into event_input, forwards to pipe and
+/// control clients, then parses via the input state machine.
+/// Drops the read IoHandle after each read to implement backpressure —
+/// `server_client_check_pane_buffer` re-arms it when ready.
+unsafe fn window_pane_read_fire(pid: PaneId) {
     unsafe {
-        let wp: *mut window_pane = data as _;
-        let evb: *mut evbuffer = (*(*wp).event).input;
+        let Some(wp) = pane_from_id(pid) else { return };
+        let n = (*wp).event_input.read_from_fd((*wp).fd, 4096);
+        if n <= 0 {
+            if n < 0
+                && std::io::Error::last_os_error().kind() == std::io::ErrorKind::WouldBlock
+            {
+                return;
+            }
+            // EOF or error on the PTY.
+            log_debug!("%%{} error", (*wp).id);
+            (*wp).flags |= window_pane_flags::PANE_EXITED;
+            if window_pane_destroy_ready(&*wp) {
+                server_destroy_pane(wp, 1);
+            }
+            return;
+        }
+
         let wpo: *mut window_pane_offset = &raw mut (*wp).pipe_offset;
-        let size = EVBUFFER_LENGTH(evb);
+        let size = (*wp).event_input.len();
         let mut new_size: usize = 0;
 
         if (*wp).pipe_fd != -1 {
@@ -1472,14 +1494,14 @@ unsafe extern "C-unwind" fn window_pane_read_callback(_bufev: *mut bufferevent, 
             if new_size > 0 {
                 let slice = std::slice::from_raw_parts(new_data as *const u8, new_size);
                 (*wp).pipe_output.add(slice);
-                // Arm the write IoHandle if not already registered.
+                // Arm the pipe write IoHandle if not already registered.
                 if (*wp).pipe_write.is_none() {
-                    let pid = PaneId((*wp).id);
+                    let pipe_pid = pid;
                     (*wp).pipe_write = io_register(
                         (*wp).pipe_fd,
                         EV_WRITE,
                         Box::new(move |_fd, _events| unsafe {
-                            crate::cmd_::cmd_pipe_pane::cmd_pipe_pane_write_fire(pid)
+                            crate::cmd_::cmd_pipe_pane::cmd_pipe_pane_write_fire(pipe_pid)
                         }),
                     );
                 }
@@ -1494,22 +1516,76 @@ unsafe extern "C-unwind" fn window_pane_read_callback(_bufev: *mut bufferevent, 
             }
         }
         input_parse_pane(wp);
-        bufferevent_disable((*wp).event, EV_READ);
+        // Arm write if input_parse generated any reply data (e.g. terminal queries).
+        if !(*wp).event_output.is_empty() {
+            window_pane_arm_write(wp);
+        }
+        // Drop the read IoHandle to apply backpressure.
+        // server_client_check_pane_buffer will re-arm when ready.
+        (*wp).event_read = None;
     }
 }
 
-unsafe extern "C-unwind" fn window_pane_error_callback(
-    _bufev: *mut bufferevent,
-    _what: c_short,
-    data: *mut c_void,
-) {
-    let wp: *mut window_pane = data as _;
+/// Arm the read IoHandle for a pane's PTY fd.
+pub unsafe fn window_pane_arm_read(wp: *mut window_pane) {
     unsafe {
-        log_debug!("%%{} error", (*wp).id);
-        (*wp).flags |= window_pane_flags::PANE_EXITED;
+        if (*wp).event_read.is_none() && (*wp).fd >= 0 {
+            let pid = PaneId((*wp).id);
+            (*wp).event_read = io_register(
+                (*wp).fd,
+                EV_READ,
+                Box::new(move |_fd, _events| unsafe { window_pane_read_fire(pid) }),
+            );
+        }
+    }
+}
 
-        if window_pane_destroy_ready(&*wp) {
-            server_destroy_pane(wp, 1);
+/// Write data to a pane's PTY output buffer and arm the write IoHandle.
+/// Drop-in replacement for `bufferevent_write((*wp).event, data, size)`.
+pub unsafe fn window_pane_write_to_pty(wp: *mut window_pane, data: *const c_void, size: usize) {
+    unsafe {
+        let slice = std::slice::from_raw_parts(data.cast::<u8>(), size);
+        (*wp).event_output.add(slice);
+        window_pane_arm_write(wp);
+    }
+}
+
+/// Arm the write IoHandle for a pane's PTY fd.
+pub unsafe fn window_pane_arm_write(wp: *mut window_pane) {
+    unsafe {
+        if (*wp).event_write.is_none() && (*wp).fd >= 0 {
+            let pid = PaneId((*wp).id);
+            (*wp).event_write = io_register(
+                (*wp).fd,
+                EV_WRITE,
+                Box::new(move |_fd, _events| unsafe { window_pane_write_fire(pid) }),
+            );
+        }
+    }
+}
+
+/// Write callback: drains event_output to the PTY fd.
+unsafe fn window_pane_write_fire(pid: PaneId) {
+    unsafe {
+        let Some(wp) = pane_from_id(pid) else { return };
+
+        if (*wp).event_output.len() > 0 {
+            let n = (*wp).event_output.write_to_fd((*wp).fd);
+            if n < 0 {
+                if std::io::Error::last_os_error().kind() == std::io::ErrorKind::WouldBlock {
+                    return;
+                }
+                // Write error — treat as pane exit.
+                (*wp).flags |= window_pane_flags::PANE_EXITED;
+                if window_pane_destroy_ready(&*wp) {
+                    server_destroy_pane(wp, 1);
+                }
+                return;
+            }
+        }
+
+        if (*wp).event_output.is_empty() {
+            (*wp).event_write = None;
         }
     }
 }
@@ -1518,19 +1594,10 @@ pub unsafe fn window_pane_set_event(wp: *mut window_pane) {
     unsafe {
         setblocking((*wp).fd, 0);
 
-        (*wp).event = bufferevent_new(
-            (*wp).fd,
-            Some(window_pane_read_callback),
-            None,
-            Some(window_pane_error_callback),
-            wp as _,
-        );
-        if (*wp).event.is_null() {
-            fatalx("out of memory");
-        }
-        (*wp).ictx = input_init(wp, (*wp).event, &raw mut (*wp).palette);
+        (*wp).ictx = input_init(wp, &raw mut (*wp).event_output, &raw mut (*wp).palette);
 
-        bufferevent_enable((*wp).event, EV_READ | EV_WRITE);
+        // Arm read; write is armed on demand.
+        window_pane_arm_read(wp);
     }
 }
 
@@ -2183,8 +2250,8 @@ pub unsafe fn window_pane_get_new_data(
     unsafe {
         let used = (*wpo).used - (*wp).base_offset;
 
-        *size = EVBUFFER_LENGTH((*(*wp).event).input) - used;
-        EVBUFFER_DATA((*(*wp).event).input).add(used) as _
+        *size = (*wp).event_input.len() - used;
+        (*wp).event_input.as_mut_ptr().add(used) as _
     }
 }
 
@@ -2196,8 +2263,8 @@ pub unsafe fn window_pane_update_used_data(
     unsafe {
         let used = (*wpo).used - (*wp).base_offset;
 
-        if size > EVBUFFER_LENGTH((*(*wp).event).input) - used {
-            size = EVBUFFER_LENGTH((*(*wp).event).input) - used;
+        if size > (*wp).event_input.len() - used {
+            size = (*wp).event_input.len() - used;
         }
         (*wpo).used += size;
     }

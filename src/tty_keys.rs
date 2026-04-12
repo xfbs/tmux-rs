@@ -1796,7 +1796,7 @@ unsafe fn tty_keys_clipboard(
         while i < (*c).clipboard_npanes {
             wp = window_pane_find_by_id(*(*c).clipboard_panes.add(i as usize));
             if !wp.is_null() {
-                input_reply_clipboard((*wp).event, out, outlen as usize, c!("\x1b\\"));
+                input_reply_clipboard(&raw mut (*wp).event_output, out, outlen as usize, c!("\x1b\\"));
             }
             i += 1;
         }

@@ -219,7 +219,7 @@ unsafe fn cmd_pipe_pane_read_fire(pid: PaneId) {
         log_debug!("%%{} pipe read {}", (*wp).id, available);
 
         // Forward pipe data to the pane's PTY (still a bufferevent).
-        bufferevent_write((*wp).event, (*wp).pipe_input.as_mut_ptr().cast(), available);
+        window_pane_write_to_pty(wp, (*wp).pipe_input.as_mut_ptr().cast(), available);
         (*wp).pipe_input.drain(available);
 
         if window_pane_destroy_ready(&*wp) {

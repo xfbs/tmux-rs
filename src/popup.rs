@@ -463,7 +463,7 @@ pub fn popup_menu_done(_menu: *mut menu, _choice: u32, key: key_code, data: *mut
                 if let Some(pb) = NonNull::new(paste_get_top(null_mut())) {
                     let mut len: usize = 0;
                     let buf = paste_buffer_data_(pb, &mut len);
-                    bufferevent_write(job_get_event((*pd).job), buf as *const c_void, len);
+                    job_write((*pd).job, buf as *const c_void, len);
                 }
             }
             b'F' => {
@@ -660,10 +660,10 @@ pub unsafe fn popup_key_cb(c: *mut client, data: *mut c_void, event: *mut key_ev
                         {
                             return 0;
                         }
-                        bufferevent_write(job_get_event((*pd).job), buf.cast(), len);
+                        job_write((*pd).job, buf.cast(), len);
                         return 0;
                     }
-                    input_key(&raw mut (*pd).s, job_get_event((*pd).job), (*event).key);
+                    input_key(&raw mut (*pd).s, job_get_output((*pd).job), (*event).key);
                 }
                 return 0;
             }
@@ -711,7 +711,7 @@ pub unsafe fn popup_key_cb(c: *mut client, data: *mut c_void, event: *mut key_ev
 pub unsafe fn popup_job_update_cb(job: *mut job) {
     unsafe {
         let pd = job_get_data(job) as *mut popup_data;
-        let evb = (*job_get_event(job)).input;
+        let evb = job_get_input(job);
         let c = (*pd).c;
         let s = &raw mut (*pd).s;
         let data = EVBUFFER_DATA(evb);
@@ -901,7 +901,7 @@ pub unsafe fn popup_display(
             jx as i32,
             jy as i32,
         );
-        (*pd).ictx = input_init(null_mut(), job_get_event((*pd).job), &raw mut (*pd).palette);
+        (*pd).ictx = input_init(null_mut(), job_get_output((*pd).job), &raw mut (*pd).palette);
 
         server_client_set_overlay(
             c,

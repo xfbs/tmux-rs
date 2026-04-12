@@ -286,7 +286,8 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context) -> Result<NonNull<window_pane>,
                     return Err(msg);
                 }
                 if (*wp0).fd != -1 {
-                    bufferevent_free((*wp0).event);
+                    (*wp0).event_read = None;
+                    (*wp0).event_write = None;
                     close((*wp0).fd);
                 }
                 window_pane_reset_mode_all(wp0);

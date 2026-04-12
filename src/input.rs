@@ -85,7 +85,9 @@ enum input_end_type {
 /// Input parser context.
 pub struct input_ctx {
     wp: Option<PaneId>,
-    event: *mut bufferevent,
+    /// Output buffer for replies (terminal query responses).
+    /// Borrowed — not owned by input_ctx.
+    event: *mut evbuffer,
     ctx: screen_write_ctx,
     palette: *mut colour_palette,
 
@@ -935,13 +937,13 @@ unsafe fn input_restore_state(ictx: *mut input_ctx) {
 /// Initialise input parser.
 pub unsafe fn input_init(
     wp: *mut window_pane,
-    bev: *mut bufferevent,
+    evb: *mut evbuffer,
     palette: *mut colour_palette,
 ) -> *mut input_ctx {
     unsafe {
         let ictx = Box::into_raw(Box::new(input_ctx {
             wp: pane_id_from_ptr(wp),
-            event: bev,
+            event: evb,
             palette,
             input_space: INPUT_BUF_START,
             input_buf: xmalloc(INPUT_BUF_START).as_ptr().cast(),
@@ -1238,17 +1240,18 @@ macro_rules! input_reply {
         crate::input::input_reply_($ictx, format_args!($($args),*))
     };
 }
-/// Reply to terminal query.
+/// Reply to terminal query — writes response data to the output buffer.
 unsafe fn input_reply_(ictx: *mut input_ctx, args: std::fmt::Arguments) {
     unsafe {
-        let bev = (*ictx).event;
-        if bev.is_null() {
+        let evb = (*ictx).event;
+        if evb.is_null() {
             return;
         }
 
         let reply = CString::new(args.to_string()).unwrap();
         log_debug!("input_reply: {}", _s(reply.as_ptr()));
-        bufferevent_write(bev, reply.as_ptr().cast(), strlen(reply.as_ptr().cast()));
+        let data = std::slice::from_raw_parts(reply.as_ptr().cast::<u8>(), strlen(reply.as_ptr().cast()));
+        (*evb).add(data);
     }
 }
 
@@ -3092,7 +3095,7 @@ unsafe fn input_osc_104(ictx: *mut input_ctx, p: *const u8) {
 }
 
 pub unsafe fn input_reply_clipboard(
-    bev: *mut bufferevent,
+    evb: *mut evbuffer,
     buf: *const u8,
     len: usize,
     end: *const u8,
@@ -3115,11 +3118,13 @@ pub unsafe fn input_reply_clipboard(
             }
         }
 
-        bufferevent_write(bev, c!("\x1b]52;;").cast(), 6);
+        (*evb).add(b"\x1b]52;;");
         if outlen != 0 {
-            bufferevent_write(bev, out.cast(), outlen as usize);
+            let data = std::slice::from_raw_parts(out, outlen as usize);
+            (*evb).add(data);
         }
-        bufferevent_write(bev, end.cast(), strlen(end));
+        let end_data = std::slice::from_raw_parts(end, strlen(end));
+        (*evb).add(end_data);
         free_(out);
     }
 }

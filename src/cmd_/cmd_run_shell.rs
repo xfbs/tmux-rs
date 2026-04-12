@@ -246,7 +246,7 @@ unsafe fn cmd_run_shell_timer_fire(cdata: *mut cmd_run_shell_data) {
 pub unsafe fn cmd_run_shell_callback(job: *mut job) {
     unsafe {
         let cdata = job_get_data(job) as *mut cmd_run_shell_data;
-        let event = job_get_event(job);
+        let evb = job_get_input(job);
         let item = (*cdata).item;
         let cmd = (*cdata).cmd;
         let mut msg = null_mut();
@@ -255,7 +255,7 @@ pub unsafe fn cmd_run_shell_callback(job: *mut job) {
         let mut line;
         loop {
             line = evbuffer_readln(
-                (*event).input,
+                evb,
                 null_mut(),
                 evbuffer_eol_style::EVBUFFER_EOL_LF,
             );
@@ -268,10 +268,10 @@ pub unsafe fn cmd_run_shell_callback(job: *mut job) {
             }
         }
 
-        let size = EVBUFFER_LENGTH((*event).input);
+        let size = EVBUFFER_LENGTH(evb);
         if size != 0 {
             line = xmalloc(size + 1).cast().as_ptr();
-            memcpy(line.cast(), EVBUFFER_DATA((*event).input).cast(), size);
+            memcpy(line.cast(), EVBUFFER_DATA(evb).cast(), size);
             *line.add(size) = b'\0';
 
             cmd_run_shell_print(job, line);
