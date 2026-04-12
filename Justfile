@@ -54,7 +54,7 @@ asan:
   ASAN_OPTIONS=detect_leaks=0 RUSTFLAGS="-Zsanitizer=address" cargo +nightly nextest run --target x86_64-unknown-linux-gnu
 
 sanitizer:
-  ASAN_OPTIONS=detect_leaks=0 RUSTFLAGS="-Zsanitizer=address" cargo +nightly test --target x86_64-unknown-linux-gnu -- --test-threads=1
+  ASAN_OPTIONS=detect_leaks=0 RUSTFLAGS="-Zsanitizer=address" cargo +nightly test --target x86_64-unknown-linux-gnu --no-fail-fast -- --test-threads=1
 
 progress:
   @echo "$(rg unsafe | wc -l) unsafe, $(rg '\*mut' | wc -l) mut pointers"

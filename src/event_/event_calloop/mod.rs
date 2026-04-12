@@ -1,44 +1,13 @@
-//! calloop-backed event loop replacement for libevent2.
+//! calloop-backed event loop.
 //!
-//! This module provides drop-in replacements for libevent's `event`,
-//! `bufferevent`, and `evbuffer` types, backed by calloop. The public
-//! API matches libevent's C signatures so existing call sites compile
-//! unchanged.
+//! Provides safe RAII wrappers (TimerHandle, SignalHandle, IoHandle, defer)
+//! and the core event_init/event_loop dispatch.
 
 mod event_impl;
-mod bufferevent_impl;
 
-use std::ffi::{c_int, c_short, c_void};
+use std::ffi::{c_int, c_void};
 
-use super::{bufferevent_data_cb, bufferevent_event_cb, event_log_cb, event_watermark};
 use crate::evbuffer_::Evbuffer;
-use ::libc::timeval;
-
-/// calloop-backed event struct.
-///
-/// Event registration handle.
-/// No code outside event_.rs should access fields directly.
-pub struct event {
-    /// Unique id assigned by `event_set` (0 = uninitialized).
-    pub(crate) id: u64,
-    /// File descriptor, or -1 for timers.
-    pub(crate) ev_fd: c_int,
-    /// Event flags (`EV_READ`, `EV_WRITE`, `EV_SIGNAL`, `EV_PERSIST`, `EV_TIMEOUT`).
-    pub(crate) ev_events: c_short,
-    /// Pending result flags (set when the event fires).
-    pub(crate) ev_res: c_short,
-    /// Callback function.
-    pub(crate) ev_callback:
-        Option<unsafe extern "C-unwind" fn(arg1: c_int, arg2: c_short, arg3: *mut c_void)>,
-    /// Callback argument.
-    pub(crate) ev_arg: *mut c_void,
-    /// Pointer to the event base this event is registered with.
-    pub(crate) ev_base: *mut event_base,
-    /// Timeout value.
-    pub(crate) ev_timeout: timeval,
-    /// Whether this event is currently registered (has a calloop source).
-    pub(crate) added: bool,
-}
 
 /// Opaque event_base handle.
 #[derive(Debug, Copy, Clone)]
@@ -46,27 +15,7 @@ pub struct event_base {
     _unused: [u8; 0],
 }
 
-/// Bufferevent struct — provides buffered I/O on a file descriptor with
-/// read/write/error callbacks.
-pub struct bufferevent {
-    pub ev_base: *mut event_base,
-    pub ev_read: event,
-    pub ev_write: event,
-    pub input: *mut Evbuffer,
-    pub output: *mut Evbuffer,
-    pub wm_read: event_watermark,
-    pub wm_write: event_watermark,
-    pub readcb: bufferevent_data_cb,
-    pub writecb: bufferevent_data_cb,
-    pub errorcb: bufferevent_event_cb,
-    pub cbarg: *mut c_void,
-    pub timeout_read: timeval,
-    pub timeout_write: timeval,
-    pub enabled: c_short,
-}
-
 // Re-export all public API functions.
-pub use bufferevent_impl::*;
 pub use event_impl::*;
 
 // Re-export Evbuffer as evbuffer so existing code using `*mut evbuffer` works.
