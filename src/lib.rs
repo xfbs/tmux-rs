@@ -1320,7 +1320,14 @@ struct window_pane {
     palette: colour_palette,
 
     pipe_fd: i32,
-    pipe_event: *mut bufferevent,
+    /// Buffered data to write to the pipe fd (pane output → pipe process).
+    pipe_output: evbuffer_::Evbuffer,
+    /// Buffered data read from the pipe fd (pipe process → pane input).
+    pipe_input: evbuffer_::Evbuffer,
+    /// Calloop read registration for the pipe fd.
+    pipe_read: Option<IoHandle>,
+    /// Calloop write registration for the pipe fd.
+    pipe_write: Option<IoHandle>,
     pipe_offset: window_pane_offset,
 
     screen: *mut screen,

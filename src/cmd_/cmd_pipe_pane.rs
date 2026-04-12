@@ -56,7 +56,8 @@ pub unsafe fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         // Destroy the old pipe.
         let old_fd = (*wp).pipe_fd;
         if (*wp).pipe_fd != -1 {
-            bufferevent_free((*wp).pipe_event);
+            (*wp).pipe_read = None;
+            (*wp).pipe_write = None;
             close((*wp).pipe_fd);
             (*wp).pipe_fd = -1;
 
@@ -169,21 +170,24 @@ pub unsafe fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
                 memcpy__(wpo, &raw mut (*wp).offset);
 
                 setblocking((*wp).pipe_fd, 0);
-                (*wp).pipe_event = bufferevent_new(
-                    (*wp).pipe_fd,
-                    Some(cmd_pipe_pane_read_callback),
-                    Some(cmd_pipe_pane_write_callback),
-                    Some(cmd_pipe_pane_error_callback),
-                    wp.cast(),
-                );
-                if (*wp).pipe_event.is_null() {
-                    fatalx("out of memory");
-                }
+                let pid = PaneId((*wp).id);
                 if out {
-                    bufferevent_enable((*wp).pipe_event, EV_WRITE);
+                    (*wp).pipe_write = io_register(
+                        (*wp).pipe_fd,
+                        EV_WRITE,
+                        Box::new(move |_fd, _events| unsafe {
+                            cmd_pipe_pane_write_fire(pid);
+                        }),
+                    );
                 }
                 if in_ {
-                    bufferevent_enable((*wp).pipe_event, EV_READ);
+                    (*wp).pipe_read = io_register(
+                        (*wp).pipe_fd,
+                        EV_READ,
+                        Box::new(move |_fd, _events| unsafe {
+                            cmd_pipe_pane_read_fire(pid);
+                        }),
+                    );
                 }
 
                 free_(cmd);
@@ -193,19 +197,30 @@ pub unsafe fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
     }
 }
 
-pub unsafe extern "C-unwind" fn cmd_pipe_pane_read_callback(
-    _bufev: *mut bufferevent,
-    data: *mut c_void,
-) {
+/// Read callback: reads data from the pipe fd into pipe_input,
+/// then writes it to the pane's PTY via bufferevent_write.
+unsafe fn cmd_pipe_pane_read_fire(pid: PaneId) {
     unsafe {
-        let wp: *mut window_pane = data as *mut window_pane;
-        let evb = (*(*wp).pipe_event).input;
+        let Some(wp) = pane_from_id(pid) else { return };
 
-        let available = EVBUFFER_LENGTH(evb);
+        let n = (*wp).pipe_input.read_from_fd((*wp).pipe_fd, 4096);
+        if n <= 0 {
+            if n < 0
+                && std::io::Error::last_os_error().kind() == std::io::ErrorKind::WouldBlock
+            {
+                return;
+            }
+            // EOF or error on the pipe.
+            cmd_pipe_pane_error_fire(wp);
+            return;
+        }
+
+        let available = (*wp).pipe_input.len();
         log_debug!("%%{} pipe read {}", (*wp).id, available);
 
-        bufferevent_write((*wp).event, EVBUFFER_DATA(evb).cast(), available);
-        evbuffer_drain(evb, available);
+        // Forward pipe data to the pane's PTY (still a bufferevent).
+        bufferevent_write((*wp).event, (*wp).pipe_input.as_mut_ptr().cast(), available);
+        (*wp).pipe_input.drain(available);
 
         if window_pane_destroy_ready(&*wp) {
             server_destroy_pane(wp, 1);
@@ -213,32 +228,43 @@ pub unsafe extern "C-unwind" fn cmd_pipe_pane_read_callback(
     }
 }
 
-pub unsafe extern "C-unwind" fn cmd_pipe_pane_write_callback(
-    _bufev: *mut bufferevent,
-    data: *mut c_void,
-) {
+/// Write callback: drains pipe_output to the pipe fd.
+/// When the buffer is empty, drops the write IoHandle.
+pub unsafe fn cmd_pipe_pane_write_fire(pid: PaneId) {
     unsafe {
-        let wp: *mut window_pane = data as *mut window_pane;
+        let Some(wp) = pane_from_id(pid) else { return };
 
-        log_debug!("%%{} pipe empty", (*wp).id);
+        if (*wp).pipe_output.len() > 0 {
+            let n = (*wp).pipe_output.write_to_fd((*wp).pipe_fd);
+            if n < 0 {
+                if std::io::Error::last_os_error().kind() == std::io::ErrorKind::WouldBlock {
+                    return;
+                }
+                // Write error on the pipe.
+                cmd_pipe_pane_error_fire(wp);
+                return;
+            }
+        }
 
-        if window_pane_destroy_ready(&*wp) {
-            server_destroy_pane(wp, 1);
+        if (*wp).pipe_output.is_empty() {
+            log_debug!("%%{} pipe empty", (*wp).id);
+            // Drop the write IoHandle — will be re-armed when new data arrives.
+            (*wp).pipe_write = None;
+
+            if window_pane_destroy_ready(&*wp) {
+                server_destroy_pane(wp, 1);
+            }
         }
     }
 }
 
-pub unsafe extern "C-unwind" fn cmd_pipe_pane_error_callback(
-    _bufev: *mut bufferevent,
-    _what: i16,
-    data: *mut c_void,
-) {
+/// Error/EOF handler for the pipe fd.
+unsafe fn cmd_pipe_pane_error_fire(wp: *mut window_pane) {
     unsafe {
-        let wp: *mut window_pane = data as *mut window_pane;
-
         log_debug!("%%{} pipe error", (*wp).id);
 
-        bufferevent_free((*wp).pipe_event);
+        (*wp).pipe_read = None;
+        (*wp).pipe_write = None;
         close((*wp).pipe_fd);
         (*wp).pipe_fd = -1;
 

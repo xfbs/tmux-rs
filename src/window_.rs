@@ -711,7 +711,7 @@ pub unsafe fn window_pane_destroy_ready(wp: &window_pane) -> bool {
     let mut n = 0;
     unsafe {
         if wp.pipe_fd != -1 {
-            if EVBUFFER_LENGTH((*wp.pipe_event).output) != 0 {
+            if !wp.pipe_output.is_empty() {
                 return false;
             }
             if ioctl(wp.fd, FIONREAD, &raw mut n) != -1 && n > 0 {
@@ -1438,7 +1438,8 @@ unsafe fn window_pane_destroy(wp: *mut window_pane) {
         screen_free(&raw mut (*wp).base);
 
         if (*wp).pipe_fd != -1 {
-            bufferevent_free((*wp).pipe_event);
+            (*wp).pipe_read = None;
+            (*wp).pipe_write = None;
             close((*wp).pipe_fd);
         }
 
@@ -1469,7 +1470,19 @@ unsafe extern "C-unwind" fn window_pane_read_callback(_bufev: *mut bufferevent, 
         if (*wp).pipe_fd != -1 {
             let new_data = window_pane_get_new_data(wp, wpo, &raw mut new_size);
             if new_size > 0 {
-                bufferevent_write((*wp).pipe_event, new_data, new_size);
+                let slice = std::slice::from_raw_parts(new_data as *const u8, new_size);
+                (*wp).pipe_output.add(slice);
+                // Arm the write IoHandle if not already registered.
+                if (*wp).pipe_write.is_none() {
+                    let pid = PaneId((*wp).id);
+                    (*wp).pipe_write = io_register(
+                        (*wp).pipe_fd,
+                        EV_WRITE,
+                        Box::new(move |_fd, _events| unsafe {
+                            crate::cmd_::cmd_pipe_pane::cmd_pipe_pane_write_fire(pid)
+                        }),
+                    );
+                }
                 window_pane_update_used_data(wp, wpo, new_size);
             }
         }
