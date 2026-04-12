@@ -61,7 +61,8 @@ pub unsafe fn file_create_with_peer(
             peer,
             tree: files,
             path: null_mut(),
-            event: null_mut(),
+            event_buf: crate::evbuffer_::Evbuffer::new(),
+            event_io: None,
             fd: 0,
             error: 0,
             closed: 0,
@@ -101,7 +102,8 @@ pub unsafe fn file_create_with_client(
             peer,
             tree,
             path: null_mut(),
-            event: null_mut(),
+            event_buf: crate::evbuffer_::Evbuffer::new(),
+            event_io: None,
             fd: 0,
             error: 0,
             closed: 0,
@@ -572,10 +574,10 @@ pub unsafe fn file_write_left(files: *mut client_files) -> c_int {
 
     unsafe {
         for cf in (*files).values() {
-            if cf.event.is_null() {
+            if cf.event_io.is_none() {
                 continue;
             }
-            left = EVBUFFER_LENGTH((*cf.event).output);
+            left = cf.event_buf.len();
             if left != 0 {
                 waiting += 1;
                 log_debug!("file {} {} bytes left", cf.stream, left);
@@ -586,42 +588,42 @@ pub unsafe fn file_write_left(files: *mut client_files) -> c_int {
     (waiting != 0) as i32
 }
 
-pub unsafe extern "C-unwind" fn file_write_error_callback(
-    _bev: *mut bufferevent,
-    _what: i16,
-    arg: *mut c_void,
-) {
+/// Write callback: drains event_buf to the file fd.
+/// When buffer is fully drained, notifies the user callback
+/// and frees the file if it has been closed.
+unsafe fn file_write_fire(cf: *mut client_file) {
     unsafe {
-        let cf = arg as *mut client_file;
-
-        log_debug!("write error file {}", (*cf).stream);
-
-        bufferevent_free((*cf).event);
-        (*cf).event = null_mut();
-
-        close((*cf).fd);
-        (*cf).fd = -1;
-
-        if let Some(cb) = (*cf).cb {
-            cb(null_mut(), null_mut(), 0, -1, null_mut(), (*cf).data);
-        }
-    }
-}
-
-pub unsafe extern "C-unwind" fn file_write_callback(_bev: *mut bufferevent, arg: *mut c_void) {
-    unsafe {
-        let cf = arg as *mut client_file;
-
-        log_debug!("write check file {}", (*cf).stream);
-
-        if let Some(cb) = (*cf).cb {
-            cb(null_mut(), null_mut(), 0, -1, null_mut(), (*cf).data);
+        if (*cf).event_buf.len() > 0 {
+            let n = (*cf).event_buf.write_to_fd((*cf).fd);
+            if n < 0 {
+                if std::io::Error::last_os_error().kind() == std::io::ErrorKind::WouldBlock {
+                    return;
+                }
+                // Write error.
+                log_debug!("write error file {}", (*cf).stream);
+                (*cf).event_io = None;
+                close((*cf).fd);
+                (*cf).fd = -1;
+                if let Some(cb) = (*cf).cb {
+                    cb(null_mut(), null_mut(), 0, -1, null_mut(), (*cf).data);
+                }
+                return;
+            }
         }
 
-        if (*cf).closed != 0 && EVBUFFER_LENGTH((*(*cf).event).output) == 0 {
-            bufferevent_free((*cf).event);
-            close((*cf).fd);
-            file_free(cf);
+        if (*cf).event_buf.is_empty() {
+            // Output fully drained — drop the write IoHandle.
+            (*cf).event_io = None;
+
+            log_debug!("write check file {}", (*cf).stream);
+            if let Some(cb) = (*cf).cb {
+                cb(null_mut(), null_mut(), 0, -1, null_mut(), (*cf).data);
+            }
+
+            if (*cf).closed != 0 {
+                close((*cf).fd);
+                file_free(cf);
+            }
         }
     }
 }
@@ -682,17 +684,12 @@ pub unsafe fn file_write_open(
                 break 'reply;
             }
 
-            (*cf).event = bufferevent_new(
+            let cf_ptr = cf;
+            (*cf).event_io = io_register(
                 (*cf).fd,
-                None,
-                Some(file_write_callback),
-                Some(file_write_error_callback),
-                cf.cast(),
+                EV_WRITE,
+                Box::new(move |_fd, _events| unsafe { file_write_fire(cf_ptr) }),
             );
-            if (*cf).event.is_null() {
-                fatalx("out of memory");
-            }
-            bufferevent_enable((*cf).event, EV_WRITE);
             break 'reply;
         }
         // reply:
@@ -728,8 +725,18 @@ pub unsafe fn file_write_data(files: *mut client_files, imsg: *mut imsg) {
         }
         log_debug!("write {} to file {}", size, (*cf).stream);
 
-        if !(*cf).event.is_null() {
-            bufferevent_write((*cf).event, msg.add(1).cast(), size);
+        if (*cf).fd >= 0 {
+            let data = std::slice::from_raw_parts(msg.add(1) as *const u8, size);
+            (*cf).event_buf.add(data);
+            // Arm write IoHandle if not already registered.
+            if (*cf).event_io.is_none() {
+                let cf_ptr = cf;
+                (*cf).event_io = io_register(
+                    (*cf).fd,
+                    EV_WRITE,
+                    Box::new(move |_fd, _events| unsafe { file_write_fire(cf_ptr) }),
+                );
+            }
         }
     }
 }
@@ -750,10 +757,8 @@ pub unsafe fn file_write_close(files: *mut client_files, imsg: *mut imsg) {
         }
         log_debug!("close file {}", (*cf).stream);
 
-        if (*cf).event.is_null() || EVBUFFER_LENGTH((*(*cf).event).output) == 0 {
-            if !(*cf).event.is_null() {
-                bufferevent_free((*cf).event);
-            }
+        if (*cf).event_io.is_none() || (*cf).event_buf.is_empty() {
+            (*cf).event_io = None;
             if (*cf).fd != -1 {
                 close((*cf).fd);
             }
@@ -762,14 +767,9 @@ pub unsafe fn file_write_close(files: *mut client_files, imsg: *mut imsg) {
     }
 }
 
-pub unsafe extern "C-unwind" fn file_read_error_callback(
-    _bev: *mut bufferevent,
-    _what: i16,
-    arg: *mut c_void,
-) {
+/// Read error/EOF handler: sends MSG_READ_DONE, cleans up the file.
+unsafe fn file_read_error_fire(cf: *mut client_file) {
     unsafe {
-        let cf = arg as *mut client_file;
-
         log_debug!("read error file {}", (*cf).stream);
 
         let msg: msg_read_done = msg_read_done {
@@ -784,20 +784,33 @@ pub unsafe extern "C-unwind" fn file_read_error_callback(
             size_of::<msg_read_done>(),
         );
 
-        bufferevent_free((*cf).event);
+        (*cf).event_io = None;
         close((*cf).fd);
         file_free(cf);
     }
 }
 
-pub unsafe extern "C-unwind" fn file_read_callback(_bev: *mut bufferevent, arg: *mut c_void) {
-    let cf = arg as *mut client_file;
+/// Read callback: reads data from the file fd into event_buf,
+/// then sends it via IPC in MSG_READ chunks.
+unsafe fn file_read_fire(cf: *mut client_file) {
     unsafe {
+        let n = (*cf).event_buf.read_from_fd((*cf).fd, 4096);
+        if n <= 0 {
+            if n < 0
+                && std::io::Error::last_os_error().kind() == std::io::ErrorKind::WouldBlock
+            {
+                return;
+            }
+            // EOF or error.
+            file_read_error_fire(cf);
+            return;
+        }
+
         let mut msg: Vec<u8> = Vec::with_capacity(size_of::<msg_read_data>());
 
         loop {
-            let bdata = EVBUFFER_DATA((*(*cf).event).input);
-            let mut bsize = EVBUFFER_LENGTH((*(*cf).event).input);
+            let bdata = (*cf).event_buf.as_mut_ptr();
+            let mut bsize = (*cf).event_buf.len();
 
             if bsize == 0 {
                 break;
@@ -830,7 +843,7 @@ pub unsafe extern "C-unwind" fn file_read_callback(_bev: *mut bufferevent, arg: 
                 msglen,
             );
 
-            evbuffer_drain((*(*cf).event).input, bsize);
+            (*cf).event_buf.drain(bsize);
         }
     }
 }
@@ -893,17 +906,12 @@ pub unsafe fn file_read_open(
                 break 'reply;
             }
 
-            (*cf).event = bufferevent_new(
+            let cf_ptr = cf;
+            (*cf).event_io = io_register(
                 (*cf).fd,
-                Some(file_read_callback),
-                None,
-                Some(file_read_error_callback),
-                cf.cast(),
+                EV_READ,
+                Box::new(move |_fd, _events| unsafe { file_read_fire(cf_ptr) }),
             );
-            if (*cf).event.is_null() {
-                fatalx("out of memory");
-            }
-            bufferevent_enable((*cf).event, EV_READ);
             return;
         }
         // reply:
@@ -937,7 +945,7 @@ pub unsafe fn file_read_cancel(files: *mut client_files, imsg: *mut imsg) {
         }
         log_debug!("cancel file {}", (*cf).stream);
 
-        file_read_error_callback(null_mut(), 0, cf.cast());
+        file_read_error_fire(cf);
     }
 }
 

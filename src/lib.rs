@@ -2431,7 +2431,11 @@ struct client_file {
 
     path: *mut u8,
     buffer: *mut evbuffer,
-    event: *mut bufferevent,
+
+    /// I/O buffer for local file operations (output in write mode, input in read mode).
+    event_buf: evbuffer_::Evbuffer,
+    /// Calloop I/O registration for the local file fd.
+    event_io: Option<IoHandle>,
 
     fd: i32,
     error: i32,
