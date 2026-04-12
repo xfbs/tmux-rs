@@ -11,6 +11,7 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+use std::time::Duration;
 use crate::compat::ACCESSPERMS;
 use crate::libc::{
     AF_UNIX, ECHILD, ENAMETOOLONG, S_IRGRP, S_IROTH, S_IRUSR, S_IRWXG, S_IRWXO, S_IXGRP, S_IXOTH,
@@ -51,8 +52,11 @@ pub static mut SERVER_PROC: *mut tmuxproc = null_mut();
 pub static mut SERVER_FD: c_int = -1;
 pub static mut SERVER_CLIENT_FLAGS: client_flag = client_flag::empty();
 pub static mut SERVER_EXIT: c_int = 0;
-pub static mut SERVER_EV_ACCEPT: event = unsafe { zeroed() };
-pub static mut SERVER_EV_TIDY: event = unsafe { zeroed() };
+/// Accept event: either an IoHandle (listening for connections) or TimerHandle (retry timeout).
+pub static mut SERVER_EV_ACCEPT_IO: Option<IoHandle> = None;
+pub static mut SERVER_EV_ACCEPT_TIMER: Option<TimerHandle> = None;
+/// Hourly tidy timer.
+pub static mut SERVER_EV_TIDY: Option<TimerHandle> = None;
 pub static mut MARKED_PANE: cmd_find_state = unsafe { zeroed() };
 pub static mut MESSAGE_NEXT: c_uint = 0;
 pub static mut MESSAGE_LOG: MessageLog = Vec::new();
@@ -151,12 +155,8 @@ pub unsafe fn server_create_socket(flags: client_flag) -> Result<c_int, String> 
     }
 }
 
-/// Tidy up every hour.
-unsafe extern "C-unwind" fn server_tidy_event(_fd: i32, _events: i16, _data: *mut c_void) {
-    let tv = timeval {
-        tv_sec: 3600,
-        tv_usec: 0,
-    };
+/// Tidy up every hour — self-rearming timer.
+unsafe fn server_tidy_fire() {
     unsafe {
         let t = get_timer();
 
@@ -172,7 +172,11 @@ unsafe extern "C-unwind" fn server_tidy_event(_fd: i32, _events: i16, _data: *mu
             "server_tidy_event",
             get_timer() - t
         );
-        event_add(&raw mut SERVER_EV_TIDY, &raw const tv);
+        // Re-arm for next hour.
+        (*(&raw mut SERVER_EV_TIDY)) = timer_add(
+            Duration::from_secs(3600),
+            Box::new(|| unsafe { server_tidy_fire() }),
+        );
     }
 }
 
@@ -308,8 +312,10 @@ pub unsafe fn server_start(
             }
         }
 
-        evtimer_set_no_args(&raw mut SERVER_EV_TIDY, server_tidy_event);
-        evtimer_add(&raw mut SERVER_EV_TIDY, &raw const tv);
+        (*(&raw mut SERVER_EV_TIDY)) = timer_add(
+            Duration::from_secs(3600),
+            Box::new(|| unsafe { server_tidy_fire() }),
+        );
 
         server_acl_init();
 
@@ -433,17 +439,20 @@ pub unsafe fn server_update_socket() {
     }
 }
 
-unsafe extern "C-unwind" fn server_accept(fd: i32, events: i16, _data: *mut c_void) {
+/// Accept callback: accepts a new client connection on SERVER_FD.
+unsafe fn server_accept_fire(readable: bool) {
     unsafe {
-        let mut sa: sockaddr_storage = zeroed(); // TODO remove this init
-        let mut slen: socklen_t = size_of::<sockaddr_storage>() as socklen_t;
-
+        // Re-arm for next accept.
         server_add_accept(0);
-        if events & EV_READ == 0 {
+
+        if !readable {
             return;
         }
 
-        let newfd = accept(fd, &raw mut sa as _, &raw mut slen);
+        let mut sa: sockaddr_storage = zeroed();
+        let mut slen: socklen_t = size_of::<sockaddr_storage>() as socklen_t;
+
+        let newfd = accept(SERVER_FD, &raw mut sa as _, &raw mut slen);
         if newfd == -1 {
             match errno!() {
                 libc::EAGAIN | libc::EINTR | libc::ECONNABORTED => return,
@@ -470,37 +479,27 @@ unsafe extern "C-unwind" fn server_accept(fd: i32, events: i16, _data: *mut c_vo
 
 pub unsafe fn server_add_accept(timeout: c_int) {
     unsafe {
-        let mut tv = timeval {
-            tv_sec: timeout as i64,
-            tv_usec: 0,
-        };
-
         if SERVER_FD == -1 {
             return;
         }
 
-        if event_initialized(&raw mut SERVER_EV_ACCEPT) != 0 {
-            event_del(&raw mut SERVER_EV_ACCEPT);
-        }
+        // Drop any existing accept registration.
+        (*(&raw mut SERVER_EV_ACCEPT_IO)) = None;
+        (*(&raw mut SERVER_EV_ACCEPT_TIMER)) = None;
 
         if timeout == 0 {
-            event_set(
-                &raw mut SERVER_EV_ACCEPT,
+            // Watch for incoming connections.
+            (*(&raw mut SERVER_EV_ACCEPT_IO)) = io_register(
                 SERVER_FD,
                 EV_READ,
-                Some(server_accept),
-                null_mut(),
+                Box::new(|_fd, _events| unsafe { server_accept_fire(true) }),
             );
-            event_add(&raw mut SERVER_EV_ACCEPT, null_mut());
         } else {
-            event_set(
-                &raw mut SERVER_EV_ACCEPT,
-                SERVER_FD,
-                EV_TIMEOUT,
-                Some(server_accept),
-                null_mut(),
+            // Back off — retry after timeout.
+            (*(&raw mut SERVER_EV_ACCEPT_TIMER)) = timer_add(
+                Duration::from_secs(timeout as u64),
+                Box::new(|| unsafe { server_accept_fire(false) }),
             );
-            event_add(&raw mut SERVER_EV_ACCEPT, &raw mut tv);
         }
     }
 }
@@ -516,7 +515,8 @@ unsafe fn server_signal(sig: i32) {
             }
             libc::SIGCHLD => server_child_signal(),
             libc::SIGUSR1 => {
-                event_del(&raw mut SERVER_EV_ACCEPT);
+                (*(&raw mut SERVER_EV_ACCEPT_IO)) = None;
+                (*(&raw mut SERVER_EV_ACCEPT_TIMER)) = None;
                 if let Ok(fd) = server_create_socket(SERVER_CLIENT_FLAGS) {
                     close(SERVER_FD);
                     SERVER_FD = fd;

@@ -2680,7 +2680,7 @@ pub unsafe fn server_client_check_exit(c: *mut client) {
 }
 
 /// Redraw timer callback.
-pub unsafe extern "C-unwind" fn server_client_redraw_timer(_fd: i32, _events: i16, _: *mut c_void) {
+unsafe fn server_client_redraw_timer_fire() {
     log_debug!("redraw timer fired");
 }
 
@@ -2711,7 +2711,7 @@ pub unsafe fn server_client_check_modes(c: *mut client) {
 
 /// Check for client redraws.
 pub unsafe fn server_client_check_redraw(c: *mut client) {
-    static mut EV: event = unsafe { zeroed() };
+    static mut EV: Option<TimerHandle> = None;
     unsafe {
         let s = client_get_session(c);
         let tty = &raw mut (*c).tty;
@@ -2721,10 +2721,6 @@ pub unsafe fn server_client_check_redraw(c: *mut client) {
         let mut client_flags: client_flag = client_flag::empty();
         let mut redraw;
         let mut bit: u32 = 0;
-        let tv = libc::timeval {
-            tv_sec: 0,
-            tv_usec: 1000,
-        };
         let left;
 
         if (*c)
@@ -2766,12 +2762,12 @@ pub unsafe fn server_client_check_redraw(c: *mut client) {
             })
         {
             // log_debug("%s: redraw deferred (%zu left)", (*c).name, left);
-            if !evtimer_initialized(&raw mut EV) {
-                evtimer_set_no_args(&raw mut EV, server_client_redraw_timer);
-            }
-            if evtimer_pending(&raw mut EV, null_mut()) == 0 {
+            if (*(&raw const EV)).is_none() {
                 log_debug!("redraw timer started");
-                evtimer_add(&raw mut EV, &raw const tv);
+                (*(&raw mut EV)) = timer_add(
+                    Duration::from_micros(1000),
+                    Box::new(|| unsafe { server_client_redraw_timer_fire() }),
+                );
             }
 
             if !(*c).flags.intersects(client_flag::REDRAWWINDOW) {
