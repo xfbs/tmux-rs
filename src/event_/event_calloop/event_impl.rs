@@ -38,6 +38,108 @@ impl Drop for TimerHandle {
 }
 
 // ---------------------------------------------------------------------------
+// Safe I/O event API
+// ---------------------------------------------------------------------------
+
+/// RAII handle for a registered I/O event.  Dropping it deregisters the
+/// fd from the event loop.
+pub struct IoHandle {
+    id: u64,
+}
+
+impl Drop for IoHandle {
+    fn drop(&mut self) {
+        let base_ptr = unsafe { GLOBAL_BASE };
+        if base_ptr.is_null() {
+            return;
+        }
+        let base = unsafe { &mut *base_ptr };
+        if let Some(reg) = base.registrations.remove(&self.id) {
+            base.handle.remove(reg.token);
+        }
+        base.timer_callbacks.remove(&self.id);
+        base.fallback_events.remove(&self.id);
+        CANCELLED.with(|cell| { cell.borrow_mut().insert(self.id); });
+    }
+}
+
+/// Register an I/O event that calls `callback` when the fd is readable
+/// and/or writable.  The callback receives `(fd, fired_events)`.
+///
+/// `events` should be a combination of `EV_READ` and `EV_WRITE`.
+/// `EV_PERSIST` is always implied — the registration stays active until
+/// dropped.
+///
+/// Returns `Some(IoHandle)` on success.  Drop the handle to deregister.
+pub fn io_register(
+    fd: c_int,
+    events: c_short,
+    callback: Box<dyn Fn(c_int, c_short)>,
+) -> Option<IoHandle> {
+    let base_ptr = unsafe { GLOBAL_BASE };
+    if base_ptr.is_null() || fd < 0 {
+        return None;
+    }
+    let base = unsafe { &mut *base_ptr };
+    let id = base.alloc_id();
+
+    let interest = match ((events & super::super::EV_READ) != 0, (events & super::super::EV_WRITE) != 0) {
+        (true, true) => Interest::BOTH,
+        (true, false) => Interest::READ,
+        (false, true) => Interest::WRITE,
+        _ => return None,
+    };
+
+    // Dup the fd so calloop gets its own epoll registration.
+    let dup_fd = unsafe { libc::dup(fd) };
+    if dup_fd < 0 {
+        return None;
+    }
+    let owned_fd = unsafe { OwnedFd::from_raw_fd(dup_fd) };
+    let generic = Generic::new(owned_fd, interest, Mode::Level);
+
+    match base.handle.insert_source(generic, move |readiness, _, data| {
+        let mut fired: c_short = 0;
+        if readiness.readable {
+            fired |= super::super::EV_READ;
+        }
+        if readiness.writable {
+            fired |= super::super::EV_WRITE;
+        }
+        if fired != 0 {
+            data.ready.push(ReadyEvent {
+                id,
+                fd,
+                events: fired,
+                callback: None,
+                arg: std::ptr::null_mut(),
+            });
+        }
+        Ok(PostAction::Continue)
+    }) {
+        Ok(token) => {
+            base.registrations.insert(id, Registration { token });
+            // Store the callback as a Fn(c_int, c_short) wrapper.
+            base.io_callbacks.insert(id, callback);
+            Some(IoHandle { id })
+        }
+        Err(_) => {
+            // Non-epolable fd (regular file, etc.) — store as fallback.
+            // The closure is called from the fallback drain path.
+            base.fallback_events.insert(id, FallbackEvent {
+                id,
+                fd,
+                events: events & (super::super::EV_READ | super::super::EV_WRITE),
+                callback: None,
+                arg: std::ptr::null_mut(),
+            });
+            base.io_callbacks.insert(id, callback);
+            Some(IoHandle { id })
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Safe deferred callback API
 // ---------------------------------------------------------------------------
 
@@ -216,6 +318,9 @@ pub(crate) struct EventBase {
     fallback_events: HashMap<u64, FallbackEvent>,
     /// Closures for safe timer API (`timer_add`).  Keyed by event id.
     timer_callbacks: HashMap<u64, Box<dyn Fn()>>,
+    /// Closures for safe I/O API (`io_register`).  Keyed by event id.
+    /// Takes `(fd, fired_events)`.
+    io_callbacks: HashMap<u64, Box<dyn Fn(c_int, c_short)>>,
     /// One-shot closures for `defer()`.  Option so dispatch can `.take()`
     /// and move out the FnOnce.  Keyed by event id.
     deferred_callbacks: HashMap<u64, Option<Box<dyn FnOnce()>>>,
@@ -232,6 +337,7 @@ impl EventBase {
             registrations: HashMap::new(),
             fallback_events: HashMap::new(),
             timer_callbacks: HashMap::new(),
+            io_callbacks: HashMap::new(),
             deferred_callbacks: HashMap::new(),
             next_id: 1,
         })
@@ -644,6 +750,8 @@ pub unsafe fn event_loop(flags: c_int) -> c_int {
         }
         if let Some(cb) = ready.callback {
             unsafe { cb(ready.fd, ready.events, ready.arg); }
+        } else if let Some(cb) = base.io_callbacks.get(&ready.id) {
+            cb(ready.fd, ready.events);
         } else if let Some(cb) = base.timer_callbacks.get(&ready.id) {
             cb();
         } else if let Some(slot) = base.deferred_callbacks.get_mut(&ready.id)

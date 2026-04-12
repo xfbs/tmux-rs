@@ -51,7 +51,7 @@ pub struct tmuxpeer {
     pub parent: *mut tmuxproc,
 
     pub ibuf: imsgbuf,
-    pub event: event,
+    pub event: Option<IoHandle>,
     pub uid: uid_t,
 
     pub flags: i32,
@@ -60,9 +60,9 @@ pub struct tmuxpeer {
     pub arg: *mut c_void,
 }
 
-pub unsafe extern "C-unwind" fn proc_event_cb(_fd: i32, events: i16, arg: *mut c_void) {
+/// Peer I/O callback — called when the peer fd is readable or writable.
+pub unsafe fn proc_event_cb_fire(peer: *mut tmuxpeer, events: i16) {
     unsafe {
-        let peer = arg as *mut tmuxpeer;
         let mut imsg: MaybeUninit<imsg> = MaybeUninit::<imsg>::uninit();
         let imsg = imsg.as_mut_ptr();
 
@@ -133,21 +133,18 @@ pub unsafe fn peer_check_version(peer: *mut tmuxpeer, imsg: *mut imsg) -> i32 {
 
 pub unsafe fn proc_update_event(peer: *mut tmuxpeer) {
     unsafe {
-        event_del(&raw mut (*peer).event);
+        // Drop existing registration and re-register with current interest.
+        (*peer).event = None;
 
         let mut events: i16 = EV_READ;
         if (*peer).ibuf.w.queued > 0 {
             events |= EV_WRITE;
         }
-        event_set(
-            &raw mut (*peer).event,
+        (*peer).event = io_register(
             (*peer).ibuf.fd,
             events,
-            Some(proc_event_cb),
-            peer.cast(),
+            Box::new(move |_fd, fired| unsafe { proc_event_cb_fire(peer, fired) }),
         );
-
-        event_add(&raw mut (*peer).event, null_mut());
     }
 }
 
@@ -395,13 +392,7 @@ pub unsafe fn proc_add_peer(
         (*peer).arg = arg;
 
         imsg_init(&raw mut (*peer).ibuf, fd);
-        event_set(
-            &raw mut (*peer).event,
-            fd,
-            EV_READ,
-            Some(proc_event_cb),
-            peer.cast(), // TODO could be ub if this and function below both write
-        );
+        std::ptr::write(&raw mut (*peer).event, None);
 
         if getpeereid(fd, &raw mut (*peer).uid, &raw mut gid) != 0 {
             (*peer).uid = -1i32 as uid_t;
@@ -420,7 +411,7 @@ pub unsafe fn proc_remove_peer(peer: *mut tmuxpeer) {
         (*(*peer).parent).peers.retain(|&p| p != peer);
         log_debug!("remove peer {:p}", peer);
 
-        event_del(&raw mut (*peer).event);
+        std::ptr::drop_in_place(&raw mut (*peer).event);
         imsg_clear(&raw mut (*peer).ibuf);
 
         close((*peer).ibuf.fd);

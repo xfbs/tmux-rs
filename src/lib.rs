@@ -2013,9 +2013,9 @@ struct tty {
     rleft: u32,
     rright: u32,
 
-    event_in: event,
+    event_in: Option<IoHandle>,
     in_: *mut evbuffer,
-    event_out: event,
+    event_out: Option<IoHandle>,
     out: *mut evbuffer,
     timer: Option<TimerHandle>,
     discarded: usize,

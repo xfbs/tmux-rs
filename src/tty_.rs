@@ -77,6 +77,8 @@ pub unsafe fn tty_init(tty: *mut tty, c: *mut client) -> i32 {
         memset0(tty);
         (*tty).client = c;
 
+        std::ptr::write(&raw mut (*tty).event_in, None);
+        std::ptr::write(&raw mut (*tty).event_out, None);
         std::ptr::write(&raw mut (*tty).start_timer, None);
         std::ptr::write(&raw mut (*tty).clipboard_timer, None);
         std::ptr::write(&raw mut (*tty).timer, None);
@@ -140,10 +142,11 @@ pub unsafe fn tty_set_size(tty: *mut tty, sx: u32, sy: u32, xpixel: u32, ypixel:
     }
 }
 
-pub unsafe extern "C-unwind" fn tty_read_callback(_fd: i32, _events: i16, data: *mut c_void) {
+/// TTY read callback — invoked when the client fd has data to read.
+unsafe fn tty_read_callback_fire(cid: ClientId) {
     unsafe {
-        let tty = data as *mut tty;
-        let c = (*tty).client;
+        let Some(c) = client_from_id(cid) else { return };
+        let tty = &raw mut (*c).tty;
         let name = (*c).name;
         let size = EVBUFFER_LENGTH((*tty).in_);
 
@@ -154,8 +157,8 @@ pub unsafe extern "C-unwind" fn tty_read_callback(_fd: i32, _events: i16, data: 
             } else {
                 log_debug!("{}: read error: {}", _s(name), strerror(errno!()));
             }
-            event_del(&raw mut (*tty).event_in);
-            server_client_lost((*tty).client);
+            (*tty).event_in = None;
+            server_client_lost(c);
             return;
         }
         log_debug!("{}: read {} bytes (already {})", _s(name), nread, size);
@@ -225,18 +228,19 @@ pub unsafe fn tty_block_maybe(tty: *mut tty) -> i32 {
     }
 }
 
-pub unsafe extern "C-unwind" fn tty_write_callback(_fd: i32, _events: i16, data: *mut c_void) {
+/// TTY write callback — invoked when the client fd is writable.
+unsafe fn tty_write_callback_fire(cid: ClientId) {
     unsafe {
-        let tty = data as *mut tty;
-        let c = (*tty).client;
-        let _size = EVBUFFER_LENGTH((*tty).out);
+        let Some(c) = client_from_id(cid) else { return };
+        let tty = &raw mut (*c).tty;
+
+        // Drop the one-shot write handle so we stop getting write-ready events.
+        (*tty).event_out = None;
 
         let nwrite: i32 = evbuffer_write((*tty).out, (*c).fd);
         if nwrite == -1 {
             return;
         }
-        // this log is too noisy
-        // log_debug!("{}: wrote {} bytes (of {})", _s((*c).name), nwrite, size);
 
         if (*c).redraw > 0 {
             if nwrite as usize >= (*c).redraw {
@@ -254,7 +258,21 @@ pub unsafe extern "C-unwind" fn tty_write_callback(_fd: i32, _events: i16, data:
         }
 
         if EVBUFFER_LENGTH((*tty).out) != 0 {
-            event_add(&raw mut (*tty).event_out, null_mut());
+            tty_arm_write(tty, cid);
+        }
+    }
+}
+
+/// Arm the one-shot write event for the tty.
+unsafe fn tty_arm_write(tty: *mut tty, cid: ClientId) {
+    unsafe {
+        let c = (*tty).client;
+        if (*tty).event_out.is_none() {
+            (*tty).event_out = io_register(
+                (*c).fd,
+                EV_WRITE,
+                Box::new(move |_fd, _events| unsafe { tty_write_callback_fire(cid) }),
+            );
         }
     }
 }
@@ -286,25 +304,18 @@ pub unsafe fn tty_open(tty: *mut tty) -> Result<(), String> {
             | tty_flags::TTY_BLOCK
             | tty_flags::TTY_TIMER);
 
-        event_set(
-            &raw mut (*tty).event_in,
+        let cid = (*c).id;
+        (*tty).event_in = io_register(
             (*c).fd,
-            EV_PERSIST | EV_READ,
-            Some(tty_read_callback),
-            tty.cast(),
+            EV_READ,
+            Box::new(move |_fd, _events| unsafe { tty_read_callback_fire(cid) }),
         );
         (*tty).in_ = evbuffer_new();
         if (*tty).in_.is_null() {
             fatal("out of memory");
         }
 
-        event_set(
-            &raw mut (*tty).event_out,
-            (*c).fd,
-            EV_WRITE,
-            Some(tty_write_callback),
-            tty.cast(),
-        );
+        // event_out is armed on demand (tty_arm_write), not at open time.
         (*tty).out = evbuffer_new();
         if (*tty).out.is_null() {
             fatal("out of memory");
@@ -342,7 +353,7 @@ pub unsafe fn tty_start_tty(tty: *mut tty) {
         let mut tio: libc::termios = zeroed();
 
         setblocking((*c).fd, 0);
-        event_add(&raw mut (*tty).event_in, null_mut());
+        // event_in is already registered (io_register in tty_open).
 
         memcpy__(&raw mut tio, &raw const (*tty).tio);
         tio.c_iflag &= !(libc::IXON
@@ -470,8 +481,8 @@ pub unsafe fn tty_stop_tty(tty: *mut tty) {
         (*tty).timer = None;
         (*tty).flags &= !tty_flags::TTY_BLOCK;
 
-        event_del(&raw mut (*tty).event_in);
-        event_del(&raw mut (*tty).event_out);
+        (*tty).event_in = None;
+        (*tty).event_out = None;
 
         // Be flexible about error handling and try not kill the server just
         // because the fd is invalid. Things like ssh -t can easily leave us
@@ -543,9 +554,9 @@ pub unsafe fn tty_close(tty: *mut tty) {
 
         if (*tty).flags.intersects(tty_flags::TTY_OPENED) {
             evbuffer_free((*tty).in_);
-            event_del(&raw mut (*tty).event_in);
+            (*tty).event_in = None;
             evbuffer_free((*tty).out);
-            event_del(&raw mut (*tty).event_out);
+            (*tty).event_out = None;
 
             tty_term_free((*tty).term);
             tty_keys_free(tty);
@@ -675,7 +686,7 @@ pub unsafe fn tty_add(tty: *mut tty, buf: *const u8, len: usize) {
             libc::write(TTY_LOG_FD, buf.cast(), len);
         }
         if (*tty).flags.intersects(tty_flags::TTY_STARTED) {
-            event_add(&raw mut (*tty).event_out, null_mut());
+            tty_arm_write(tty, (*c).id);
         }
     }
 }
