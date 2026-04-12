@@ -73,8 +73,14 @@ pub struct control_state {
 
     pub all_blocks: Vec<*mut control_block>,
 
-    pub read_event: *mut bufferevent,
-    pub write_event: *mut bufferevent,
+    /// Buffered data read from the control client fd.
+    pub read_input: crate::evbuffer_::Evbuffer,
+    /// Calloop read registration for the control client fd.
+    pub read_io: Option<IoHandle>,
+    /// Buffered data to write to the control client (or out_fd).
+    pub write_output: crate::evbuffer_::Evbuffer,
+    /// Calloop write registration for the control client (or out_fd).
+    pub write_io: Option<IoHandle>,
 
     pub subs: control_subs,
     pub subs_timer: Option<TimerHandle>,
@@ -86,6 +92,37 @@ pub const CONTROL_BUFFER_HIGH: i32 = 8192;
 
 /// Minimum to write to each client.
 pub const CONTROL_WRITE_MINIMUM: i32 = 32;
+
+/// Write data to a control client's output buffer and arm the write IoHandle.
+unsafe fn control_write_bytes(c: *mut client, data: &[u8]) {
+    unsafe {
+        let cs = (*c).control_state;
+        (*cs).write_output.add(data);
+        control_arm_write(c);
+    }
+}
+
+/// Arm the write IoHandle if it's not already registered.
+unsafe fn control_arm_write(c: *mut client) {
+    unsafe {
+        let cs = (*c).control_state;
+        if (*cs).write_io.is_none() {
+            let write_fd = if (*c).flags.intersects(client_flag::CONTROLCONTROL) {
+                (*c).fd
+            } else {
+                (*c).out_fd
+            };
+            if write_fd >= 0 {
+                let cid = (*c).id;
+                (*cs).write_io = io_register(
+                    write_fd,
+                    EV_WRITE,
+                    Box::new(move |_fd, _events| unsafe { control_write_fire(cid) }),
+                );
+            }
+        }
+    }
+}
 
 /// Maximum age for clients that are not using pause mode.
 pub const CONTROL_MAXIMUM_AGE: u64 = 300000;
@@ -205,7 +242,7 @@ pub unsafe fn control_pane_offset(
             *off = 1;
             return null_mut();
         }
-        *off = (EVBUFFER_LENGTH((*(*cs).write_event).output) >= CONTROL_BUFFER_LOW as usize) as i32;
+        *off = ((*cs).write_output.len() >= CONTROL_BUFFER_LOW as usize) as i32;
         &raw mut (*cp).offset
     }
 }
@@ -254,6 +291,9 @@ pub unsafe fn control_pause_pane(c: *mut client, wp: *mut window_pane) {
 pub unsafe fn control_vwrite(c: *mut client, args: std::fmt::Arguments) {
     unsafe {
         let cs = (*c).control_state;
+        if cs.is_null() {
+            return;
+        }
 
         let mut s = args.to_string();
         s.push('\0');
@@ -266,10 +306,10 @@ pub unsafe fn control_vwrite(c: *mut client, args: std::fmt::Arguments) {
             _s(s_ptr)
         );
 
-        bufferevent_write((*cs).write_event, s_ptr.cast(), strlen(s_ptr));
-        bufferevent_write((*cs).write_event, c!("\n").cast(), 1);
-
-        bufferevent_enable((*cs).write_event, EV_WRITE);
+        let len = strlen(s_ptr);
+        let data = std::slice::from_raw_parts(s_ptr, len);
+        control_write_bytes(c, data);
+        control_write_bytes(c, b"\n");
         // `s` (the String) is dropped here, freeing the buffer.
         // Do NOT call free_() — the memory is owned by the Rust String.
     }
@@ -285,6 +325,9 @@ pub(crate) use control_write;
 pub unsafe fn control_write_(c: *mut client, args: std::fmt::Arguments) {
     unsafe {
         let cs = (*c).control_state;
+        if cs.is_null() {
+            return;
+        }
 
         if (*cs).all_blocks.is_empty() {
             control_vwrite(c, args);
@@ -304,7 +347,7 @@ pub unsafe fn control_write_(c: *mut client, args: std::fmt::Arguments) {
             _s((*c).name),
             _s((*cb).line)
         );
-        bufferevent_enable((*cs).write_event, EV_WRITE);
+        control_arm_write(c);
     }
 }
 
@@ -411,7 +454,7 @@ pub unsafe fn control_write_output(c: *mut client, wp: *mut window_pane) {
                 (*cp).pending_flag = 1;
                 (*cs).pending_count += 1;
             }
-            bufferevent_enable((*cs).write_event, EV_WRITE);
+            control_arm_write(c);
             return;
         }
         // ignore:
@@ -440,25 +483,28 @@ pub unsafe fn control_error(item: *mut cmdq_item, data: *mut c_void) -> cmd_retv
     cmd_retval::CMD_RETURN_NORMAL
 }
 
-pub unsafe extern "C-unwind" fn control_error_callback(
-    _bufev: *mut bufferevent,
-    _what: i16,
-    data: *mut c_void,
-) {
-    let c: *mut client = data.cast();
 
-    unsafe {
-        (*c).flags |= client_flag::EXIT;
-    }
-}
-
-pub unsafe extern "C-unwind" fn control_read_callback(_bufev: *mut bufferevent, data: *mut c_void) {
+/// Read callback: reads data from the control client fd, parses lines as commands.
+unsafe fn control_read_fire(cid: ClientId) {
     let __func__ = "control_read_callback";
-    let c: *mut client = data.cast();
 
     unsafe {
+        let Some(c) = client_from_id(cid) else { return };
         let cs = (*c).control_state;
-        let buffer = (*(*cs).read_event).input;
+
+        let n = (*cs).read_input.read_from_fd((*c).fd, 4096);
+        if n <= 0 {
+            if n < 0
+                && std::io::Error::last_os_error().kind() == std::io::ErrorKind::WouldBlock
+            {
+                return;
+            }
+            // EOF or error.
+            (*c).flags |= client_flag::EXIT;
+            return;
+        }
+
+        let buffer = &raw mut (*cs).read_input;
         let mut error = null_mut();
 
         loop {
@@ -493,7 +539,7 @@ pub unsafe fn control_all_done(c: *mut client) -> i32 {
         if !(*cs).all_blocks.is_empty() {
             return 0;
         }
-        (EVBUFFER_LENGTH((*(*cs).write_event).output) == 0) as i32
+        (*cs).write_output.is_empty() as i32
     }
 }
 
@@ -513,8 +559,9 @@ pub unsafe fn control_flush_all_blocks(c: *mut client) {
                 _s((*cb).line)
             );
 
-            bufferevent_write((*cs).write_event, (*cb).line.cast(), strlen((*cb).line));
-            bufferevent_write((*cs).write_event, c!("\n").cast(), 1);
+            let line_data = std::slice::from_raw_parts((*cb).line, strlen((*cb).line));
+            (*cs).write_output.add(line_data);
+            (*cs).write_output.add(b"\n");
             free_((*cb).line);
             (*cs).all_blocks.remove(0);
             free_(cb);
@@ -573,7 +620,9 @@ pub unsafe fn control_write_data(c: *mut client, message: *mut evbuffer) {
         );
 
         evbuffer_add(message, c!("\n").cast(), 1);
-        bufferevent_write_buffer((*cs).write_event, message);
+        let data = std::slice::from_raw_parts(EVBUFFER_DATA(message), EVBUFFER_LENGTH(message));
+        (*cs).write_output.add(data);
+        control_arm_write(c);
         evbuffer_free(message);
     }
 }
@@ -649,22 +698,38 @@ pub unsafe fn control_write_pending(c: *mut client, cp: *mut control_pane, limit
     }
 }
 
-pub unsafe extern "C-unwind" fn control_write_callback(
-    _bufev: *mut bufferevent,
-    data: *mut c_void,
-) {
+/// Write callback: drains write_output to the control client fd,
+/// then flushes pending pane output blocks if there's room.
+unsafe fn control_write_fire(cid: ClientId) {
     unsafe {
-        let c: *mut client = data.cast();
+        let Some(c) = client_from_id(cid) else { return };
         let cs = (*c).control_state;
-        let evb = (*(*cs).write_event).output;
+
+        // Drain buffered data to the fd.
+        if (*cs).write_output.len() > 0 {
+            let write_fd = if (*c).flags.intersects(client_flag::CONTROLCONTROL) {
+                (*c).fd
+            } else {
+                (*c).out_fd
+            };
+            let n = (*cs).write_output.write_to_fd(write_fd);
+            if n < 0 {
+                if std::io::Error::last_os_error().kind() == std::io::ErrorKind::WouldBlock {
+                    return;
+                }
+                // Write error — exit.
+                (*c).flags |= client_flag::EXIT;
+                return;
+            }
+        }
 
         control_flush_all_blocks(c);
 
-        while EVBUFFER_LENGTH(evb) < CONTROL_BUFFER_HIGH as usize {
+        while (*cs).write_output.len() < CONTROL_BUFFER_HIGH as usize {
             if (*cs).pending_count == 0 {
                 break;
             }
-            let space = CONTROL_BUFFER_HIGH as usize - EVBUFFER_LENGTH(evb);
+            let space = CONTROL_BUFFER_HIGH as usize - (*cs).write_output.len();
             log_debug!(
                 "{}: {}: {} bytes available, {} panes",
                 "control_write_callback",
@@ -681,7 +746,7 @@ pub unsafe extern "C-unwind" fn control_write_callback(
             let pending = &mut (*cs).pending_list;
             let mut i = 0;
             while i < pending.len() {
-                if EVBUFFER_LENGTH(evb) >= CONTROL_BUFFER_HIGH as usize {
+                if (*cs).write_output.len() >= CONTROL_BUFFER_HIGH as usize {
                     break;
                 }
                 let cp = pending[i];
@@ -694,8 +759,8 @@ pub unsafe extern "C-unwind" fn control_write_callback(
                 (*cs).pending_count -= 1;
             }
         }
-        if EVBUFFER_LENGTH(evb) == 0 {
-            bufferevent_disable((*cs).write_event, EV_WRITE);
+        if (*cs).write_output.is_empty() {
+            (*cs).write_io = None; // deregisters from calloop
         }
     }
 }
@@ -717,44 +782,33 @@ pub unsafe fn control_start(c: *mut client) {
         std::ptr::write(&raw mut (*cs).all_blocks, Vec::new());
         std::ptr::write(&raw mut (*cs).subs, BTreeMap::new());
         std::ptr::write(&raw mut (*cs).subs_timer, None);
+        std::ptr::write(&raw mut (*cs).read_input, crate::evbuffer_::Evbuffer::new());
+        std::ptr::write(&raw mut (*cs).read_io, None);
+        std::ptr::write(&raw mut (*cs).write_output, crate::evbuffer_::Evbuffer::new());
+        std::ptr::write(&raw mut (*cs).write_io, None);
 
-        (*cs).read_event = bufferevent_new(
-            (*c).fd,
-            Some(control_read_callback),
-            Some(control_write_callback),
-            Some(control_error_callback),
-            c.cast(),
-        );
-        if (*cs).read_event.is_null() {
-            fatalx("out of memory");
-        }
+        // Read IoHandle is armed later in control_ready(), after the client
+        // is fully set up and config is loaded.
+        // Write IoHandle is armed on demand (control_arm_write).
 
         if (*c).flags.intersects(client_flag::CONTROLCONTROL) {
-            (*cs).write_event = (*cs).read_event;
-        } else {
-            (*cs).write_event = bufferevent_new(
-                (*c).out_fd,
-                None,
-                Some(control_write_callback),
-                Some(control_error_callback),
-                c.cast(),
-            );
-            if (*cs).write_event.is_null() {
-                fatalx("out of memory");
-            }
-        }
-        bufferevent_setwatermark((*cs).write_event, EV_WRITE, CONTROL_BUFFER_LOW as usize, 0);
-
-        if (*c).flags.intersects(client_flag::CONTROLCONTROL) {
-            bufferevent_write((*cs).write_event, c!("\x1bP1000p").cast(), 7);
-            bufferevent_enable((*cs).write_event, EV_WRITE);
+            control_write_bytes(c, b"\x1bP1000p");
         }
     }
 }
 
 pub unsafe fn control_ready(c: *mut client) {
     unsafe {
-        bufferevent_enable((*(*c).control_state).read_event, EV_READ);
+        let cs = (*c).control_state;
+        // Re-arm the read IoHandle if it was dropped by control_discard.
+        if (*cs).read_io.is_none() {
+            let cid = (*c).id;
+            (*cs).read_io = io_register(
+                (*c).fd,
+                EV_READ,
+                Box::new(move |_fd, _events| unsafe { control_read_fire(cid) }),
+            );
+        }
     }
 }
 
@@ -764,17 +818,17 @@ pub unsafe fn control_discard(c: *mut client) {
         for cp in (*cs).panes.values_mut() {
             control_discard_pane(c, &mut **cp as *mut control_pane);
         }
-        bufferevent_disable((*cs).read_event, EV_READ);
+        // Drop the read IoHandle to stop reading.
+        (*cs).read_io = None;
     }
 }
 
 pub unsafe fn control_stop(c: *mut client) {
     unsafe {
         let cs = (*c).control_state;
-        if !(*c).flags.intersects(client_flag::CONTROLCONTROL) {
-            bufferevent_free((*cs).write_event);
-        }
-        bufferevent_free((*cs).read_event);
+        // Drop IoHandles (deregisters from calloop).
+        (*cs).read_io = None;
+        (*cs).write_io = None;
 
         let sub_keys: Vec<String> = (*cs).subs.keys().cloned().collect();
         for key in sub_keys {
@@ -789,11 +843,16 @@ pub unsafe fn control_stop(c: *mut client) {
         (*cs).all_blocks.clear();
         control_reset_offsets(c);
 
+        std::ptr::drop_in_place(&raw mut (*cs).read_input);
+        std::ptr::drop_in_place(&raw mut (*cs).read_io);
+        std::ptr::drop_in_place(&raw mut (*cs).write_output);
+        std::ptr::drop_in_place(&raw mut (*cs).write_io);
         std::ptr::drop_in_place(&raw mut (*cs).all_blocks);
         std::ptr::drop_in_place(&raw mut (*cs).panes);
         std::ptr::drop_in_place(&raw mut (*cs).pending_list);
         std::ptr::drop_in_place(&raw mut (*cs).subs);
         free_(cs);
+        (*c).control_state = null_mut();
     }
 }
 
