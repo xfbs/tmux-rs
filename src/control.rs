@@ -158,6 +158,9 @@ pub unsafe fn control_free_block(cs: *mut control_state, cb: *mut control_block)
 pub unsafe fn control_get_pane(c: *mut client, wp: *mut window_pane) -> *mut control_pane {
     unsafe {
         let cs = (*c).control_state;
+        if cs.is_null() {
+            return null_mut();
+        }
         match (*cs).panes.get_mut(&(*wp).id) {
             Some(cp) => &mut **cp as *mut control_pane,
             None => null_mut(),
