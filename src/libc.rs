@@ -205,15 +205,6 @@ pub unsafe fn regexec(
     unsafe { ::libc::regexec(preg, input.cast(), nmatch, pmatch, eflags) }
 }
 
-#[inline]
-pub unsafe fn timerclear(tv: *mut timeval) {
-    // implemented as a macro by most libc's
-    unsafe {
-        (*tv).tv_sec = 0;
-        (*tv).tv_usec = 0;
-    }
-}
-
 /// result must be initialized after this function
 #[inline]
 pub unsafe fn timersub(a: *const timeval, b: *const timeval, result: *mut timeval) {

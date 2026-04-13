@@ -886,7 +886,7 @@ unsafe fn input_start_timer(ictx: *mut input_ctx) {
         if let Some(pid) = (*ictx).wp {
             (*ictx).timer = timer_add(
                 Duration::from_secs(5),
-                Box::new(move || unsafe { input_timer_fire(pid) }),
+                Box::new(move || input_timer_fire(pid)),
             );
         }
     }

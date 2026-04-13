@@ -551,7 +551,7 @@ pub unsafe fn file_push(cf: *mut client_file) {
         }
         if left != 0 {
             (*cf).references += 1;
-            defer(Box::new(move || unsafe { file_push_cb(cf) }));
+            defer(Box::new(move || file_push_cb(cf)));
         } else if (*cf).stream > 2 {
             let close: msg_write_close = msg_write_close {
                 stream: (*cf).stream,
@@ -688,7 +688,7 @@ pub unsafe fn file_write_open(
             (*cf).event_io = io_register(
                 (*cf).fd,
                 EV_WRITE,
-                Box::new(move |_fd, _events| unsafe { file_write_fire(cf_ptr) }),
+                Box::new(move |_fd, _events| file_write_fire(cf_ptr)),
             );
             break 'reply;
         }
@@ -734,7 +734,7 @@ pub unsafe fn file_write_data(files: *mut client_files, imsg: *mut imsg) {
                 (*cf).event_io = io_register(
                     (*cf).fd,
                     EV_WRITE,
-                    Box::new(move |_fd, _events| unsafe { file_write_fire(cf_ptr) }),
+                    Box::new(move |_fd, _events| file_write_fire(cf_ptr)),
                 );
             }
         }
@@ -910,7 +910,7 @@ pub unsafe fn file_read_open(
             (*cf).event_io = io_register(
                 (*cf).fd,
                 EV_READ,
-                Box::new(move |_fd, _events| unsafe { file_read_fire(cf_ptr) }),
+                Box::new(move |_fd, _events| file_read_fire(cf_ptr)),
             );
             return;
         }

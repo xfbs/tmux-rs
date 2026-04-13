@@ -175,7 +175,7 @@ pub unsafe fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
                     (*wp).pipe_write = io_register(
                         (*wp).pipe_fd,
                         EV_WRITE,
-                        Box::new(move |_fd, _events| unsafe {
+                        Box::new(move |_fd, _events| {
                             cmd_pipe_pane_write_fire(pid);
                         }),
                     );
@@ -184,7 +184,7 @@ pub unsafe fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
                     (*wp).pipe_read = io_register(
                         (*wp).pipe_fd,
                         EV_READ,
-                        Box::new(move |_fd, _events| unsafe {
+                        Box::new(move |_fd, _events| {
                             cmd_pipe_pane_read_fire(pid);
                         }),
                     );

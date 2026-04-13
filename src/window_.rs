@@ -47,7 +47,7 @@ pub static NEXT_WINDOW_PANE_ID: AtomicU32 = AtomicU32::new(0);
 ///
 /// Uses `ALL_WINDOW_PANES` (alive set), not `PANE_REGISTRY`, because
 /// destroyed panes remain in the registry until reclaimed.
-#[expect(dead_code, reason = "introduced for Phase 2.3.6 foundation; used in 2.3.7+")]
+#[allow(dead_code)]
 #[inline]
 pub unsafe fn panes_iter() -> impl Iterator<Item = *mut window_pane> {
     unsafe {
@@ -65,7 +65,6 @@ pub unsafe fn panes_iter() -> impl Iterator<Item = *mut window_pane> {
 /// for that ID. Note: the returned pointer may refer to a destroyed pane that
 /// hasn't yet been reclaimed — use `ALL_WINDOW_PANES` lookup if you need an
 /// *alive* pane.
-#[expect(dead_code, reason = "introduced for Phase 2.3.6 foundation; used in 2.3.7+")]
 pub unsafe fn pane_from_id(id: PaneId) -> Option<*mut window_pane> {
     unsafe {
         (*(&raw mut PANE_REGISTRY))
@@ -108,7 +107,6 @@ pub unsafe fn windows_iter() -> impl Iterator<Item = *mut window> {
 /// for that ID. Note: the returned pointer may refer to a destroyed window
 /// whose reference count has not yet drained — use `WINDOWS` lookup if you
 /// need an *alive* window.
-#[expect(dead_code, reason = "introduced for Phase 2.3.0 foundation; used in 2.3.1+")]
 pub unsafe fn window_from_id(id: WindowId) -> Option<*mut window> {
     unsafe {
         (*(&raw mut WINDOW_REGISTRY))
@@ -1498,7 +1496,7 @@ unsafe fn window_pane_read_fire(pid: PaneId) {
                     (*wp).pipe_write = io_register(
                         (*wp).pipe_fd,
                         EV_WRITE,
-                        Box::new(move |_fd, _events| unsafe {
+                        Box::new(move |_fd, _events| {
                             crate::cmd_::cmd_pipe_pane::cmd_pipe_pane_write_fire(pipe_pid);
                         }),
                     );
@@ -1532,7 +1530,7 @@ pub unsafe fn window_pane_arm_read(wp: *mut window_pane) {
             (*wp).event_read = io_register(
                 (*wp).fd,
                 EV_READ,
-                Box::new(move |_fd, _events| unsafe { window_pane_read_fire(pid) }),
+                Box::new(move |_fd, _events| window_pane_read_fire(pid)),
             );
         }
     }
@@ -1556,7 +1554,7 @@ pub unsafe fn window_pane_arm_write(wp: *mut window_pane) {
             (*wp).event_write = io_register(
                 (*wp).fd,
                 EV_WRITE,
-                Box::new(move |_fd, _events| unsafe { window_pane_write_fire(pid) }),
+                Box::new(move |_fd, _events| window_pane_write_fire(pid)),
             );
         }
     }

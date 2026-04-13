@@ -170,7 +170,7 @@ pub unsafe fn cmd_run_shell_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         } else {
             Duration::ZERO
         };
-        (*cdata).timer = timer_add(duration, Box::new(move || unsafe {
+        (*cdata).timer = timer_add(duration, Box::new(move || {
             cmd_run_shell_timer_fire(cdata);
         }));
 

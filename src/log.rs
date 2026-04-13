@@ -62,7 +62,7 @@ pub fn log_open(name: &CStr) {
     };
 
     *LOG_FILE.lock().unwrap() = Some(LineWriter::new(file));
-    unsafe { event_set_log_callback(Some(log_event_cb)) };
+    event_set_log_callback(Some(log_event_cb));
 }
 
 pub fn log_toggle(name: &CStr) {
@@ -102,9 +102,7 @@ pub fn log_close() {
             }
         }
 
-        unsafe {
-            event_set_log_callback(None);
-        }
+        event_set_log_callback(None);
     }
 }
 

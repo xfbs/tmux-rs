@@ -143,7 +143,7 @@ pub unsafe fn proc_update_event(peer: *mut tmuxpeer) {
         (*peer).event = io_register(
             (*peer).ibuf.fd,
             events,
-            Box::new(move |_fd, fired| unsafe { proc_event_cb_fire(peer, fired) }),
+            Box::new(move |_fd, fired| proc_event_cb_fire(peer, fired)),
         );
     }
 }

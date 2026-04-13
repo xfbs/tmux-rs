@@ -1035,7 +1035,6 @@ unsafe fn tty_keys_next1(
 pub unsafe fn tty_keys_next(tty: *mut tty) -> i32 {
     unsafe {
         let c = (*tty).client;
-        let mut tv: timeval = zeroed();
         let mut size: usize = 0;
         let mut expired = 0;
         let mut key: key_code = 0;
@@ -1270,15 +1269,12 @@ pub unsafe fn tty_keys_next(tty: *mut tty) -> i32 {
                     if delay == 0 {
                         delay = 1;
                     }
-                    tv.tv_sec = delay / 1000;
-                    tv.tv_usec = ((delay % 1000) * 1000) as libc::suseconds_t;
-
                     // Start the timer.
                     (*tty).key_timer = None;
                     let cid = (*c).id;
                     (*tty).key_timer = timer_add(
                         Duration::from_millis(delay as u64),
-                        Box::new(move || unsafe { tty_keys_timer_fire(cid) }),
+                        Box::new(move || tty_keys_timer_fire(cid)),
                     );
 
                     (*tty).flags |= tty_flags::TTY_TIMER;

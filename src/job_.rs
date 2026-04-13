@@ -269,12 +269,12 @@ pub unsafe fn job_run(
             (*job).event_read = io_register(
                 (*job).fd,
                 EV_READ,
-                Box::new(move |_fd, _events| unsafe { job_read_fire(job_ptr, (*job_ptr).fd) }),
+                Box::new(move |_fd, _events| job_read_fire(job_ptr, (*job_ptr).fd)),
             );
             (*job).event_write = io_register(
                 (*job).fd,
                 EV_WRITE,
-                Box::new(move |_fd, _events| unsafe { job_write_fire(job_ptr, (*job_ptr).fd) }),
+                Box::new(move |_fd, _events| job_write_fire(job_ptr, (*job_ptr).fd)),
             );
 
             log_debug!("run job {:p}: {} pid {}", job, _s((*job).cmd), (*job).pid);
@@ -499,7 +499,7 @@ pub unsafe fn job_write(job: *mut job, data: *const c_void, size: usize) {
             (*job).event_write = io_register(
                 (*job).fd,
                 EV_WRITE,
-                Box::new(move |_fd, _events| unsafe { job_write_fire(job_ptr, (*job_ptr).fd) }),
+                Box::new(move |_fd, _events| job_write_fire(job_ptr, (*job_ptr).fd)),
             );
         }
     }

@@ -117,7 +117,7 @@ unsafe fn control_arm_write(c: *mut client) {
                 (*cs).write_io = io_register(
                     write_fd,
                     EV_WRITE,
-                    Box::new(move |_fd, _events| unsafe { control_write_fire(cid) }),
+                    Box::new(move |_fd, _events| control_write_fire(cid)),
                 );
             }
         }
@@ -806,7 +806,7 @@ pub unsafe fn control_ready(c: *mut client) {
             (*cs).read_io = io_register(
                 (*c).fd,
                 EV_READ,
-                Box::new(move |_fd, _events| unsafe { control_read_fire(cid) }),
+                Box::new(move |_fd, _events| control_read_fire(cid)),
             );
         }
     }
@@ -1045,7 +1045,7 @@ unsafe fn control_check_subs_timer_fire(cid: ClientId) {
         // Re-arm for next check.
         (*cs).subs_timer = timer_add(
             Duration::from_secs(1),
-            Box::new(move || unsafe { control_check_subs_timer_fire(cid) }),
+            Box::new(move || control_check_subs_timer_fire(cid)),
         );
 
         for csub in (*cs).subs.values_mut() {
@@ -1095,7 +1095,7 @@ pub unsafe fn control_add_sub(
             let cid = (*c).id;
             (*cs).subs_timer = timer_add(
                 Duration::from_secs(1),
-                Box::new(move || unsafe { control_check_subs_timer_fire(cid) }),
+                Box::new(move || control_check_subs_timer_fire(cid)),
             );
         }
     }

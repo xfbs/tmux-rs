@@ -106,7 +106,7 @@ unsafe fn screen_write_set_cursor(ctx: *mut screen_write_ctx, mut cx: i32, mut c
             let wid = WindowId((*w).id);
             (*w).offset_timer = timer_add(
                 Duration::from_micros(10000),
-                Box::new(move || unsafe { screen_write_offset_timer_fire(wid) }),
+                Box::new(move || screen_write_offset_timer_fire(wid)),
             );
         }
     }

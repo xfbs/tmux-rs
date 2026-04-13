@@ -175,7 +175,7 @@ unsafe fn server_tidy_fire() {
         // Re-arm for next hour.
         (*(&raw mut SERVER_EV_TIDY)) = timer_add(
             Duration::from_secs(3600),
-            Box::new(|| unsafe { server_tidy_fire() }),
+            Box::new(|| server_tidy_fire()),
         );
     }
 }
@@ -314,7 +314,7 @@ pub unsafe fn server_start(
 
         (*(&raw mut SERVER_EV_TIDY)) = timer_add(
             Duration::from_secs(3600),
-            Box::new(|| unsafe { server_tidy_fire() }),
+            Box::new(|| server_tidy_fire()),
         );
 
         server_acl_init();
@@ -492,13 +492,13 @@ pub unsafe fn server_add_accept(timeout: c_int) {
             (*(&raw mut SERVER_EV_ACCEPT_IO)) = io_register(
                 SERVER_FD,
                 EV_READ,
-                Box::new(|_fd, _events| unsafe { server_accept_fire(true) }),
+                Box::new(|_fd, _events| server_accept_fire(true)),
             );
         } else {
             // Back off — retry after timeout.
             (*(&raw mut SERVER_EV_ACCEPT_TIMER)) = timer_add(
                 Duration::from_secs(timeout as u64),
-                Box::new(|| unsafe { server_accept_fire(false) }),
+                Box::new(|| server_accept_fire(false)),
             );
         }
     }

@@ -67,7 +67,7 @@ pub unsafe fn server_client_set_overlay(
             let cid = (*c).id;
             (*c).overlay_timer = timer_add(
                 Duration::from_millis(delay as u64),
-                Box::new(move || unsafe { server_client_overlay_timer_fire(cid) }),
+                Box::new(move || server_client_overlay_timer_fire(cid)),
             );
         }
 
@@ -556,7 +556,7 @@ pub unsafe fn server_client_unref(c: *mut client) {
         (*c).references -= 1;
         if (*c).references == 0 {
             let cid = (*c).id;
-            defer(Box::new(move || unsafe { server_client_free_deferred(cid) }));
+            defer(Box::new(move || server_client_free_deferred(cid)));
         }
     }
 }
@@ -669,7 +669,6 @@ pub unsafe fn server_client_check_mouse(c: *mut client, event: *mut key_event) -
         let mut ignore = 0;
 
         let mut key: key_code = 0;
-        let mut tv: libc::timeval = zeroed();
         let sr: *mut style_range;
 
         #[derive(Copy, Clone, Eq, PartialEq)]
@@ -803,14 +802,12 @@ pub unsafe fn server_client_check_mouse(c: *mut client, event: *mut key_event) -
                         (*c).click_button = (*m).b;
 
                         log_debug!("click timer started");
-                        tv.tv_sec = KEYC_CLICK_TIMEOUT as i64 / 1000;
-                        tv.tv_usec = ((KEYC_CLICK_TIMEOUT % 1000) * 1000) as libc::suseconds_t;
                         (*c).click_timer = None;
                         let cid = (*c).id;
                         let timeout_ms = KEYC_CLICK_TIMEOUT as u64;
                         (*c).click_timer = timer_add(
                             Duration::from_millis(timeout_ms),
-                            Box::new(move || unsafe { server_client_click_timer_fire(cid) }),
+                            Box::new(move || server_client_click_timer_fire(cid)),
                         );
                     }
                 }
@@ -2071,7 +2068,7 @@ pub unsafe fn server_client_key_callback(item: *mut cmdq_item, data: *mut c_void
                                 let cid = (*c).id;
                                 (*c).repeat_timer = timer_add(
                                     Duration::from_millis(xtimeout as u64),
-                                    Box::new(move || unsafe { server_client_repeat_timer_fire(cid) }),
+                                    Box::new(move || server_client_repeat_timer_fire(cid)),
                                 );
                             } else {
                                 (*c).flags &= !client_flag::REPEAT;
@@ -2349,7 +2346,7 @@ pub unsafe fn server_client_check_pane_resize(wp: *mut window_pane) {
         let pid = PaneId((*wp).id);
         (*wp).resize_timer = timer_add(
             Duration::from_micros(timeout_usec as u64),
-            Box::new(move || unsafe { server_client_resize_timer_fire(pid) }),
+            Box::new(move || server_client_resize_timer_fire(pid)),
         );
     }
 }
@@ -2766,7 +2763,7 @@ pub unsafe fn server_client_check_redraw(c: *mut client) {
                 log_debug!("redraw timer started");
                 (*(&raw mut EV)) = timer_add(
                     Duration::from_micros(1000),
-                    Box::new(|| unsafe { server_client_redraw_timer_fire() }),
+                    Box::new(|| server_client_redraw_timer_fire()),
                 );
             }
 

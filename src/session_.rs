@@ -218,7 +218,7 @@ pub unsafe fn session_remove_ref(s: *mut session, from: *const u8) {
 
         if (*s).references == 0 {
             let sid = SessionId((*s).id);
-            defer(Box::new(move || unsafe { session_free_deferred(sid) }));
+            defer(Box::new(move || session_free_deferred(sid)));
         }
     }
 }

@@ -143,7 +143,7 @@ unsafe fn window_clock_arm_timer(data: *mut window_clock_mode_data, pane_id: Pan
     unsafe {
         (*data).timer = timer_add(
             Duration::from_secs(1),
-            Box::new(move || unsafe { window_clock_timer_fire(pane_id) }),
+            Box::new(move || window_clock_timer_fire(pane_id)),
         );
     }
 }

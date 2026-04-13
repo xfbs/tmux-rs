@@ -132,7 +132,7 @@ unsafe fn alerts_reset(w: NonNull<window>) {
             let wid = WindowId((*w).id);
             (*w).alerts_timer = timer_add(
                 Duration::from_secs(silence as u64),
-                Box::new(move || unsafe { alerts_timer_fire(wid) }),
+                Box::new(move || alerts_timer_fire(wid)),
             );
         }
     }
@@ -159,7 +159,7 @@ pub(crate) unsafe fn alerts_queue(w: NonNull<window>, flags: window_flag) {
 
             if ALERTS_FIRED.load(atomic::Ordering::Acquire) == 0 {
                 log_debug!("alerts check queued (by @{})", (*w).id);
-                defer(Box::new(|| unsafe { alerts_callback() }));
+                defer(Box::new(|| alerts_callback()));
                 ALERTS_FIRED.store(1, atomic::Ordering::Release);
             }
         }

@@ -168,7 +168,7 @@ unsafe fn status_timer_fire(cid: ClientId) {
         if interval != 0 {
             (*c).status.timer = timer_add(
                 Duration::from_secs(interval as u64),
-                Box::new(move || unsafe { status_timer_fire(cid) }),
+                Box::new(move || status_timer_fire(cid)),
             );
         }
         log_debug!("client {:p}, status interval {}", c, interval);
@@ -504,7 +504,6 @@ pub unsafe fn status_message_set_(
     args: std::fmt::Arguments,
 ) {
     unsafe {
-        let mut tv: timeval = zeroed();
         let s = args.to_string();
 
         // log_debug("%s: %s", __func__, s);
@@ -525,14 +524,11 @@ pub unsafe fn status_message_set_(
             delay = options_get_number_((*client_get_session(c)).options, "display-time") as i32;
         }
         if delay > 0 {
-            tv.tv_sec = (delay / 1000) as libc::time_t;
-            tv.tv_usec = (delay as libc::suseconds_t % 1000) * (1000 as libc::suseconds_t);
-
             (*c).message_timer = None;
             let cid = (*c).id;
             (*c).message_timer = timer_add(
                 Duration::from_millis(delay as u64),
-                Box::new(move || unsafe { status_message_timer_fire(cid) }),
+                Box::new(move || status_message_timer_fire(cid)),
             );
         }
 

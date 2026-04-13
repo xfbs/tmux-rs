@@ -1563,7 +1563,6 @@ pub struct LayoutCellId(u32);
 /// Removed slot indices land on `free_list` and are reused by the next
 /// `alloc`. This keeps the arena dense without invalidating live IDs.
 #[derive(Default)]
-#[expect(dead_code)] // wired up incrementally in Phase 2.5
 pub struct LayoutArena {
     cells: Vec<Option<Box<layout_cell>>>,
     free_list: Vec<u32>,
@@ -1574,7 +1573,7 @@ pub struct LayoutArena {
     saved_root: Option<LayoutCellId>,
 }
 
-#[expect(dead_code)] // wired up incrementally in Phase 2.5
+#[allow(dead_code)] // wired up incrementally in Phase 2.5
 impl LayoutArena {
     pub(crate) fn new() -> Self {
         Self::default()
@@ -2734,6 +2733,7 @@ type options_array = BTreeMap<u32, options_array_item>;
 union options_value {
     string: *mut u8,
     number: c_longlong,
+    #[allow(dead_code)]
     style: style,
     array: *mut options_array,
     cmdlist: *mut cmd_list,
@@ -2767,6 +2767,7 @@ unsafe impl Sync for options_table_entry {}
 
 struct options_table_entry {
     name: &'static str,
+    #[allow(dead_code)]
     alternative_name: *mut u8,
     type_: options_table_type,
     scope: i32,

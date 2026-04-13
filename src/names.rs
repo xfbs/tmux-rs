@@ -83,7 +83,7 @@ pub unsafe fn check_window_name(w: *mut window) {
                     Duration::from_micros(left as u64),
                     Box::new(move || {
                         let Some(w) = window_from_id(wid) else { return };
-                        unsafe { log_debug!("@{} timer expired", (*w).id) };
+                        log_debug!("@{} timer expired", (*w).id);
                     }),
                 );
             } else {

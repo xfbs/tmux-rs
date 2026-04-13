@@ -271,7 +271,7 @@ unsafe fn tty_arm_write(tty: *mut tty, cid: ClientId) {
             (*tty).event_out = io_register(
                 (*c).fd,
                 EV_WRITE,
-                Box::new(move |_fd, _events| unsafe { tty_write_callback_fire(cid) }),
+                Box::new(move |_fd, _events| tty_write_callback_fire(cid)),
             );
         }
     }
@@ -308,7 +308,7 @@ pub unsafe fn tty_open(tty: *mut tty) -> Result<(), String> {
         (*tty).event_in = io_register(
             (*c).fd,
             EV_READ,
-            Box::new(move |_fd, _events| unsafe { tty_read_callback_fire(cid) }),
+            Box::new(move |_fd, _events| tty_read_callback_fire(cid)),
         );
         (*tty).in_ = evbuffer_new();
         if (*tty).in_.is_null() {
