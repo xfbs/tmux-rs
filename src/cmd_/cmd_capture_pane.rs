@@ -116,8 +116,9 @@ unsafe fn cmd_capture_pane_history(
 
         let sx = screen_size_x(&raw mut (*wp).base);
         if args_has(args, 'a') {
-            gd = (*wp).base.saved_grid;
-            if gd.is_null() {
+            if let Some(sg) = (*wp).base.saved_grid {
+                gd = sg;
+            } else {
                 if !args_has(args, 'q') {
                     cmdq_error!(item, "no alternate screen");
                     return null_mut();

@@ -1300,7 +1300,7 @@ pub unsafe fn format_cb_mouse_status_range(ft: &format_tree) -> format_table_typ
 pub unsafe fn format_cb_alternate_on(ft: &format_tree) -> format_table_type {
     unsafe {
         if (*ft).wp.is_some() {
-            if !(*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.saved_grid.is_null() {
+            if (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.saved_grid.is_some() {
                 return "1".into();
             }
             return "0".into();

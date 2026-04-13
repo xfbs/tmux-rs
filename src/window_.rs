@@ -1628,7 +1628,7 @@ pub unsafe fn window_pane_resize(wp: *mut window_pane, sx: u32, sy: u32) {
             &raw mut (*wp).base,
             sx,
             sy,
-            (*wp).base.saved_grid.is_null() as i32,
+            (*wp).base.saved_grid.is_none() as i32,
         );
 
         if let Some(&wme) = (*wp).modes.first() {

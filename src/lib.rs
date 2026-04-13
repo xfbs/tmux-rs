@@ -1068,7 +1068,7 @@ struct screen {
 
     saved_cx: u32,
     saved_cy: u32,
-    saved_grid: *mut grid,
+    saved_grid: Option<*mut grid>,
     saved_cell: grid_cell,
     saved_flags: i32,
 

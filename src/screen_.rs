@@ -65,7 +65,7 @@ pub fn screen_placeholder() -> screen {
         default_mode: mode_flag::empty(),
         saved_cx: 0,
         saved_cy: 0,
-        saved_grid: null_mut(),
+        saved_grid: None,
         saved_cell: unsafe { zeroed() },
         saved_flags: 0,
         tabs: None,
@@ -88,7 +88,7 @@ pub unsafe fn screen_init(s: *mut screen, sx: u32, sy: u32, hlimit: u32) {
             s,
             screen {
                 grid: grid_create(sx, sy, hlimit),
-                saved_grid: null_mut(),
+                saved_grid: None,
 
                 title: xstrdup_(c"").as_ptr(),
                 titles: Vec::new(),
@@ -144,7 +144,7 @@ pub unsafe fn screen_reinit(s: *mut screen) {
             (*s).mode = ((*s).mode & !EXTENDED_KEY_MODES) | mode_flag::MODE_KEYS_EXTENDED;
         }
 
-        if !(*s).saved_grid.is_null() {
+        if !(*s).saved_grid.is_none() {
             screen_alternate_off(s, null_mut(), 0);
         }
         (*s).saved_cx = u32::MAX;
@@ -187,8 +187,8 @@ pub unsafe fn screen_free(s: *mut screen) {
             screen_write_free_list(s);
         }
 
-        if !(*s).saved_grid.is_null() {
-            grid_destroy((*s).saved_grid);
+        if let Some(sg) = (*s).saved_grid.take() {
+            grid_destroy(sg);
         }
         grid_destroy((*s).grid);
 
@@ -694,14 +694,15 @@ unsafe fn screen_reflow(s: *mut screen, new_x: u32, cx: *mut u32, cy: *mut u32, 
 /// history is not updated.
 pub unsafe fn screen_alternate_on(s: *mut screen, gc: *mut grid_cell, cursor: i32) {
     unsafe {
-        if !(*s).saved_grid.is_null() {
+        if !(*s).saved_grid.is_none() {
             return;
         }
         let sx = screen_size_x(s);
         let sy = screen_size_y(s);
 
-        (*s).saved_grid = grid_create(sx, sy, 0);
-        grid_duplicate_lines((*s).saved_grid, 0, (*s).grid, screen_hsize(s), sy);
+        let sg = grid_create(sx, sy, 0);
+        (*s).saved_grid = Some(sg);
+        grid_duplicate_lines(sg, 0, (*s).grid, screen_hsize(s), sy);
         if cursor != 0 {
             (*s).saved_cx = (*s).cx;
             (*s).saved_cy = (*s).cy;
@@ -723,8 +724,8 @@ pub unsafe fn screen_alternate_off(s: *mut screen, gc: *mut grid_cell, cursor: i
 
         // If the current size is different, temporarily resize to the old size
         // before copying back.
-        if !(*s).saved_grid.is_null() {
-            screen_resize(s, (*(*s).saved_grid).sx, (*(*s).saved_grid).sy, 0);
+        if let Some(sg) = (*s).saved_grid {
+            screen_resize(s, (*sg).sx, (*sg).sy, 0);
         }
 
         // Restore the cursor position and cell. This happens even if not
@@ -738,7 +739,7 @@ pub unsafe fn screen_alternate_off(s: *mut screen, gc: *mut grid_cell, cursor: i
         }
 
         // If not in the alternate screen, do nothing more.
-        if (*s).saved_grid.is_null() {
+        if (*s).saved_grid.is_none() {
             if (*s).cx > screen_size_x(s) - 1 {
                 (*s).cx = screen_size_x(s) - 1;
             }
@@ -749,12 +750,13 @@ pub unsafe fn screen_alternate_off(s: *mut screen, gc: *mut grid_cell, cursor: i
         }
 
         // Restore the saved grid.
+        let sg = (*s).saved_grid.unwrap();
         grid_duplicate_lines(
             (*s).grid,
             screen_hsize(s),
-            (*s).saved_grid,
+            sg,
             0,
-            (*(*s).saved_grid).sy,
+            (*sg).sy,
         );
 
         // Turn history back on (so resize can use it) and then resize back to
@@ -764,8 +766,8 @@ pub unsafe fn screen_alternate_off(s: *mut screen, gc: *mut grid_cell, cursor: i
         }
         screen_resize(s, sx, sy, 1);
 
-        grid_destroy((*s).saved_grid);
-        (*s).saved_grid = null_mut();
+        grid_destroy(sg);
+        (*s).saved_grid = None;
 
         if (*s).cx > screen_size_x(s) - 1 {
             (*s).cx = screen_size_x(s) - 1;
@@ -1313,7 +1315,7 @@ mod tests {
         assert!(s.title.is_null());
         assert!(s.path.is_null());
         assert!(s.grid.is_null());
-        assert!(s.saved_grid.is_null());
+        assert!(s.saved_grid.is_none());
         assert!(s.sel.is_none());
         assert!(s.tabs.is_none());
         assert_eq!(s.cx, 0);
