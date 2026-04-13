@@ -153,14 +153,13 @@ unsafe fn grid_extended_cell(
 }
 
 /// Free up unused extended cells.
-unsafe fn grid_compact_line(gl: *mut grid_line) {
+unsafe fn grid_compact_line(gl: &mut grid_line) {
     unsafe {
-        if (&(*gl).extddata).is_empty() {
+        if gl.extddata.is_empty() {
             return;
         }
 
         // Count extended cells
-        let gl = &mut *gl;
         let new_extdsize = gl.celldata.iter()
             .filter(|gce| gce.flags.contains(grid_flag::EXTENDED))
             .count();
@@ -266,7 +265,7 @@ pub unsafe fn grid_cells_equal(gc1: *const grid_cell, gc2: *const grid_cell) -> 
 /// Free one line.
 unsafe fn grid_free_line(gd: *mut grid, py: c_uint) {
     unsafe {
-        let gl = &mut *(*gd).linedata.as_mut_ptr().add(py as usize);
+        let gl = &mut (&mut (*gd).linedata)[py as usize];
         gl.celldata = Vec::new();
         gl.cellused = 0;
         gl.extddata = Vec::new();
@@ -467,8 +466,7 @@ pub unsafe fn grid_scroll_history_region(
 /// Expand line to fit to cell.
 unsafe fn grid_expand_line(gd: *mut grid, py: c_uint, mut sx: c_uint, bg: c_uint) {
     unsafe {
-        let gl = (*gd).linedata.as_mut_ptr().add(py as usize);
-        let old_len = (*gl).celldata.len() as u32;
+        let old_len = (&(*gd).linedata)[py as usize].celldata.len() as u32;
         if sx <= old_len {
             return;
         }
@@ -481,7 +479,7 @@ unsafe fn grid_expand_line(gd: *mut grid, py: c_uint, mut sx: c_uint, bg: c_uint
             sx = (*gd).sx;
         }
 
-        (*gl).celldata.resize(sx as usize, GRID_CLEARED_ENTRY);
+        (&mut (*gd).linedata)[py as usize].celldata.resize(sx as usize, GRID_CLEARED_ENTRY);
 
         for xx in old_len..sx {
             grid_clear_cell(gd, xx, py, bg);
@@ -492,10 +490,8 @@ unsafe fn grid_expand_line(gd: *mut grid, py: c_uint, mut sx: c_uint, bg: c_uint
 /// Empty a line and set background colour if needed.
 pub unsafe fn grid_empty_line(gd: *mut grid, py: c_uint, bg: c_uint) {
     unsafe {
-        let gl = (*gd).linedata.as_mut_ptr().add(py as usize);
-        // Drop old Vecs and write a fresh empty line.
-        std::ptr::drop_in_place(gl);
-        std::ptr::write(gl, grid_line::new());
+        // Replace the old line with a fresh empty one (old Vecs drop via assignment).
+        (&mut (*gd).linedata)[py as usize] = grid_line::new();
         if !COLOUR_DEFAULT(bg as i32) {
             grid_expand_line(gd, py, (*gd).sx, bg);
         }
@@ -506,7 +502,9 @@ pub unsafe fn grid_empty_line(gd: *mut grid, py: c_uint, bg: c_uint) {
 /// the old data was bitwise-moved to another location).
 unsafe fn grid_init_line(gd: *mut grid, py: c_uint, bg: c_uint) {
     unsafe {
-        let gl = (*gd).linedata.as_mut_ptr().add(py as usize);
+        // Write a fresh line. The old value was bitwise-moved away, so we must
+        // NOT drop it. Use ptr::write to avoid the implicit drop from assignment.
+        let gl = (&mut (*gd).linedata).as_mut_ptr().add(py as usize);
         std::ptr::write(gl, grid_line::new());
         if !COLOUR_DEFAULT(bg as i32) {
             grid_expand_line(gd, py, (*gd).sx, bg);
@@ -525,9 +523,8 @@ pub unsafe fn grid_peek_line(gd: *mut grid, py: c_uint) -> *mut grid_line {
 }
 
 /// Get cell from line.
-unsafe fn grid_get_cell1(gl: *mut grid_line, px: c_uint, gc: *mut grid_cell) {
+unsafe fn grid_get_cell1(gl: &grid_line, px: c_uint, gc: *mut grid_cell) {
     unsafe {
-        let gl = &*gl;
         let gce = &gl.celldata[px as usize];
 
         if gce.flags.contains(grid_flag::EXTENDED) {
@@ -570,7 +567,7 @@ pub unsafe fn grid_get_cell(gd: *mut grid, px: c_uint, py: c_uint, gc: *mut grid
         {
             std::ptr::copy(&raw const GRID_DEFAULT_CELL, gc, 1);
         } else {
-            grid_get_cell1(&mut (&mut (*gd).linedata)[py as usize], px, gc);
+            grid_get_cell1(&(&(*gd).linedata)[py as usize], px, gc);
         }
     }
 }
@@ -665,11 +662,10 @@ pub unsafe fn grid_clear(
         }
 
         for yy in py..py + ny {
-            let gl = (*gd).linedata.as_mut_ptr().add(yy as usize);
-
             let mut sx = (*gd).sx;
-            if sx > (*gl).celldata.len() as u32 {
-                sx = (*gl).celldata.len() as u32;
+            let celldata_len = (&(*gd).linedata)[yy as usize].celldata.len() as u32;
+            if sx > celldata_len {
+                sx = celldata_len;
             }
             let mut ox = nx;
             if COLOUR_DEFAULT(bg as i32) {
@@ -744,9 +740,10 @@ pub unsafe fn grid_move_lines(gd: *mut grid, dy: c_uint, py: c_uint, ny: c_uint,
             (&mut (*gd).linedata)[dy as usize - 1].flags &= !grid_line_flag::WRAPPED;
         }
 
-        // Move the lines (memmove semantics — handles overlap)
-        let src = (*gd).linedata.as_mut_ptr().add(py as usize);
-        let dst = (*gd).linedata.as_mut_ptr().add(dy as usize);
+        // Move the lines (memmove semantics — handles overlap).
+        // Can't use copy_within because grid_line is not Copy (contains Vec).
+        let src = (&mut (*gd).linedata).as_mut_ptr().add(py as usize);
+        let dst = (&mut (*gd).linedata).as_mut_ptr().add(dy as usize);
         std::ptr::copy(src, dst, ny as usize);
 
         // Wipe source lines that are outside the destination range.
@@ -780,15 +777,14 @@ pub unsafe fn grid_move_cells(
         if grid_check_y(gd, c!("grid_move_cells"), py) != 0 {
             return;
         }
-        let gl = (*gd).linedata.as_mut_ptr().add(py as usize);
-
         grid_expand_line(gd, py, px + nx, 8);
         grid_expand_line(gd, py, dx + nx, 8);
 
-        (*gl).celldata.copy_within(px as usize..(px + nx) as usize, dx as usize);
+        let gl = &mut (&mut (*gd).linedata)[py as usize];
+        gl.celldata.copy_within(px as usize..(px + nx) as usize, dx as usize);
 
-        if dx + nx > (*gl).cellused {
-            (*gl).cellused = dx + nx;
+        if dx + nx > gl.cellused {
+            gl.cellused = dx + nx;
         }
 
         // Wipe any cells that have been moved
@@ -1403,7 +1399,7 @@ unsafe fn grid_reflow_join(
             }
 
             // Is destination line now full? Copy first char separately
-            grid_get_cell1((*gd).linedata.as_mut_ptr().add(line as usize), 0, &mut gc);
+            grid_get_cell1(&(&(*gd).linedata)[line as usize], 0, &mut gc);
             if width + gc.data.width as u32 > sx {
                 break;
             }
@@ -1415,7 +1411,7 @@ unsafe fn grid_reflow_join(
             from = (*gd).linedata.as_mut_ptr().add(line as usize);
             want = 1;
             while want < (*from).cellused {
-                grid_get_cell1(from, want, &mut gc);
+                grid_get_cell1(&*from, want, &mut gc);
                 if width + gc.data.width as u32 > sx {
                     break;
                 }
@@ -1481,7 +1477,7 @@ unsafe fn grid_reflow_split(target: *mut grid, gd: *mut grid, sx: u32, yy: u32, 
             let mut lines = 2;
             let mut width = 0;
             for i in at..used {
-                grid_get_cell1(gl, i, &mut gc);
+                grid_get_cell1(&*gl, i, &mut gc);
                 if width + gc.data.width as u32 > sx {
                     lines += 1;
                     width = 0;
@@ -1499,7 +1495,7 @@ unsafe fn grid_reflow_split(target: *mut grid, gd: *mut grid, sx: u32, yy: u32, 
         let mut width = 0;
         let mut xx = 0;
         for i in at..used {
-            grid_get_cell1(gl, i, &raw mut gc);
+            grid_get_cell1(&*gl, i, &raw mut gc);
             if width + gc.data.width as u32 > sx {
                 (&mut (*target).linedata)[line as usize].flags |= grid_line_flag::WRAPPED;
 
@@ -1565,7 +1561,7 @@ pub unsafe fn grid_reflow(gd: *mut grid, sx: u32) {
                 }
             } else {
                 for i in 0..(*gl).cellused {
-                    grid_get_cell1(gl, i, &mut gc);
+                    grid_get_cell1(&*gl, i, &mut gc);
                     if at == 0 && width + gc.data.width as u32 > sx {
                         at = i;
                     }
